@@ -1,0 +1,4 @@
+/* TitleBar — custom window chrome */
+/* All CSS for this exists in global.css already:
+   .titlebar, .titlebar-controls, .titlebar-btn, .titlebar-btn.close
+   This file is intentionally empty — styles come from global.css */

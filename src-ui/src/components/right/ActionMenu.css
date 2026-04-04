@@ -1,0 +1,145 @@
+/* ActionMenu.css */
+
+.action-menu-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 20px;
+  background: var(--bg-primary, #1a1917);
+  color: var(--fg-primary, #e8e4de);
+  border-radius: 12px;
+  font-family: system-ui, -apple-system, sans-serif;
+  animation: slideIn 0.2s ease-out;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.action-menu-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.action-menu-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #c4956a; /* Brand color */
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.action-menu-close {
+  background: transparent;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px; border-radius: 4px;
+}
+
+.action-menu-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+/* Slash Commands List */
+.action-menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+}
+
+.action-menu-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 12px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.action-menu-item:hover {
+  background: rgba(196, 149, 106, 0.1); /* brand tinted */
+  border-color: rgba(196, 149, 106, 0.3);
+  transform: translateY(-1px);
+}
+
+.action-icon {
+  font-size: 18px;
+  opacity: 0.9;
+  margin-top: 2px;
+}
+
+.action-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.action-title {
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.action-cmd {
+  font-family: 'Cascadia Mono', monospace;
+  font-size: 12px;
+  color: rgba(232, 228, 222, 0.5);
+  background: rgba(0, 0, 0, 0.2);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.action-desc {
+  font-size: 12px;
+  color: rgba(232, 228, 222, 0.5);
+  line-height: 1.4;
+}
+
+/* Hotkeys Grid */
+.action-hotkeys-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+.hotkey-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.hotkey-item:last-child {
+  border-bottom: none;
+}
+
+.hotkey-desc {
+  font-size: 13px;
+  color: rgba(232, 228, 222, 0.8);
+}
+
+.hotkey-keys {
+  font-family: inherit;
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 4px 8px;
+  border-radius: 4px;
+  color: #fff;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.2);
+}

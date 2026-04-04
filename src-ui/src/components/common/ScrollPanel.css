@@ -1,0 +1,38 @@
+/* ScrollPanel — the shared scrollable container */
+/* Core guarantee: flex:1 + min-height:0 + floating scrollbar */
+
+.scroll-panel {
+  flex: 1;
+  min-height: 0;        /* Critical for WebView2 flex scroll */
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* No scrollbar-gutter needed — WebKit custom scrollbars are overlay by default */
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.scroll-panel:hover {
+  scrollbar-color: rgba(120, 120, 120, 0.4) transparent;
+}
+
+/* Thin WebKit scrollbar — floating & auto-hide */
+.scroll-panel::-webkit-scrollbar {
+  width: 6px;
+}
+.scroll-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scroll-panel::-webkit-scrollbar-thumb {
+  background: transparent;  /* completely hidden when not hovering */
+  border-radius: 3px;
+  transition: background 0.2s; /* Note: webkit doesn't natively transition scrollbar colors, but we use :hover states */
+}
+/* Reveal on hover of the container */
+.scroll-panel:hover::-webkit-scrollbar-thumb {
+  background: rgba(120, 120, 120, 0.3);
+}
+/* Darken on thumb hover */
+.scroll-panel::-webkit-scrollbar-thumb:hover {
+  background: rgba(120, 120, 120, 0.55);
+}
+

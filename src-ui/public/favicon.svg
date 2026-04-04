@@ -1,0 +1,9 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- Rounded square background -->
+  <rect width="1024" height="1024" rx="234" fill="#1e1d1b" />
+  
+  <!-- Triangle Icon - Slightly reduced size to add breathing room from the edges -->
+  <svg x="152" y="152" width="720" height="720" viewBox="0 0 24 24" overflow="visible">
+     <path d="M12 2L2 22h20L12 2z" fill="none" stroke="#c4956a" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+</svg>

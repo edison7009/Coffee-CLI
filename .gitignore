@@ -1,0 +1,63 @@
+# Rust
+/target
+*.pdb
+
+# Node / Frontend
+node_modules/
+dist/
+.vite/
+
+# Tauri generated
+src-tauri/target/
+/gen
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Hedge Coding runtime
+.hedgecoding/
+*.xml
+*.prompt
+tmp/
+
+# Environment & secrets
+.env
+.env.local
+models.json
+
+# Dev artifacts & logs
+docs/
+*.log
+check_err.txt
+diff.txt
+error.log
+dev.bat
+/2
+
+# Legacy files
+/ui
+/reference
+ico.png
+
+# Root-level node (Tauri plugin installed at root)
+/package.json
+/package-lock.json
+
+# Agent config (local dev)
+.agent/
+
+# Free Code sidecar build
+.free-code-build/
+binaries/
+
+# Temp build output
+cargo_check_output.txt
