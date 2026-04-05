@@ -84,51 +84,7 @@ main:
             ls -lh target/release/bundle/deb/ 2>/dev/null || true
             ls -lh target/release/bundle/appimage/ 2>/dev/null || true
 
-    # ─── Windows Build (x86_64) ────────────────────────────────────────
-    - name: build-windows
-      docker:
-        image: rust:latest
-      env:
-        CARGO_TERM_COLOR: always
-        RUST_BACKTRACE: 1
-      stages:
-        - name: Install cross-compile toolchain
-          script: |
-            apt-get update -y
-            apt-get install -y curl wget git pkg-config libssl-dev \
-              gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64 \
-              nsis unzip file
-            rustup target add x86_64-pc-windows-gnu
-            rustc --version
-            echo "✅ Windows cross-compile toolchain ready"
-
-        - name: Install Node.js
-          script: |
-            curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
-            apt-get install -y nodejs
-            node --version
-
-        - name: Install frontend dependencies
-          script: |
-            cd src-ui
-            npm install --no-audit --no-fund
-            cd ..
-
-        - name: Build frontend
-          script: |
-            cd src-ui
-            npm run build
-            cd ..
-
-        - name: Cross-compile Rust backend for Windows
-          script: |
-            # Cross-compile the Tauri backend for Windows
-            # Note: Full Tauri bundle (MSI/NSIS) requires native Windows.
-            # This produces the .exe binary for testing.
-            cargo build --release --target x86_64-pc-windows-gnu 2>&1 || {
-              echo "⚠️ Cross-compile note: Full Tauri Windows bundle requires native Windows environment."
-              echo "   The .exe binary may still be available in target/x86_64-pc-windows-gnu/release/"
-              true
-            }
-            echo "═══ Windows Build Artifacts ═══"
-            find target/x86_64-pc-windows-gnu/release -maxdepth 1 -name "*.exe" 2>/dev/null | head -10 || true
+    # ── NOTE ──────────────────────────────────────────────────────────────
+    # Windows & macOS builds require native runners (WebView2 / Cocoa).
+    # - Windows: build locally with `cargo tauri build`
+    # - macOS: use GitHub Actions with macos-latest runner
