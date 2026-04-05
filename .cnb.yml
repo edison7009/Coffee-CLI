@@ -44,7 +44,7 @@ main:
         - name: Install frontend dependencies
           script: |
             cd src-ui
-            npm ci
+            npm install --no-audit --no-fund
             cd ..
 
         - name: Build free-code sidecar
