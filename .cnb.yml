@@ -34,35 +34,23 @@ main:
             node --version
             npm --version
 
-        - name: Install Bun (for free-code sidecar)
-          script: |
-            curl -fsSL https://bun.sh/install | bash
-            export BUN_INSTALL="$HOME/.bun"
-            export PATH="$BUN_INSTALL/bin:$PATH"
-            bun --version
-
         - name: Install frontend dependencies
           script: |
             cd src-ui
             npm install --no-audit --no-fund
             cd ..
 
-        - name: Build free-code sidecar
+        - name: Check free-code sidecar
           script: |
-            export BUN_INSTALL="$HOME/.bun"
-            export PATH="$BUN_INSTALL/bin:$PATH"
-            # Clone and build free-code
-            git clone --depth=1 https://github.com/paoloanzn/free-code.git .free-code-build
-            cd .free-code-build
-            bun install
-            bun run compile
-            # Copy binary next to where Tauri will package it
-            mkdir -p ../binaries
-            cp dist/cli ../binaries/free-code
-            chmod +x ../binaries/free-code
-            cd ..
-            echo "✅ free-code sidecar binary ready"
-            ls -lh binaries/
+            # free-code sidecar binary is optional.
+            # When available, place pre-built binary in binaries/ directory.
+            # Coffee Mode falls back to claude CLI if sidecar is not bundled.
+            if [ -f "binaries/free-code" ]; then
+              echo "✅ free-code sidecar binary found"
+              ls -lh binaries/free-code
+            else
+              echo "ℹ️ No free-code sidecar — will use claude CLI fallback"
+            fi
 
         - name: Build frontend
           script: |

@@ -264,13 +264,14 @@ fn tier_terminal_start(
         Some("gemini") => ("gemini-cli".to_string(), vec![]),
         Some("openclaw") => ("openclaw".to_string(), vec![]),
         Some("freecode") => {
-            // Built-in sidecar: try binaries/ next to executable, then fall back to PATH
+            // Strategy: bundled sidecar binary > claude in PATH
+            // When bundled binary exists, use it (pre-built free-code).
+            // Otherwise, fall back to the standard claude CLI.
             let sidecar_name = if cfg!(target_os = "windows") {
                 "free-code.exe"
             } else {
                 "free-code"
             };
-            // Check bundled location first (next to the app executable)
             let bundled_path = std::env::current_exe()
                 .ok()
                 .and_then(|exe| exe.parent().map(|p| p.join(sidecar_name)))
@@ -278,8 +279,8 @@ fn tier_terminal_start(
             match bundled_path {
                 Some(path) => (path.to_string_lossy().to_string(), vec![]),
                 None => {
-                    // Fall back to PATH (user built free-code separately)
-                    ("free-code".to_string(), vec![])
+                    // Fall back to claude CLI (same engine, different branding)
+                    ("claude".to_string(), vec![])
                 }
             }
         },
