@@ -1,0 +1,88 @@
+# Coffee Mode — Multi-platform CI Pipeline
+# Triggers on push to main branch
+
+main:
+  push:
+    # ─── Linux Build (x86_64) ──────────────────────────────────────────
+    - name: build-linux
+      docker:
+        image: ubuntu:22.04
+      env:
+        CARGO_TERM_COLOR: always
+        RUST_BACKTRACE: 1
+      stages:
+        - name: Install system dependencies
+          script: |
+            apt-get update -y
+            apt-get install -y \
+              build-essential curl wget git pkg-config \
+              libssl-dev libgtk-3-dev libwebkit2gtk-4.1-dev \
+              libayatana-appindicator3-dev librsvg2-dev \
+              unzip file
+
+        - name: Install Rust
+          script: |
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+            . "$HOME/.cargo/env"
+            rustc --version
+            cargo --version
+
+        - name: Install Node.js
+          script: |
+            curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+            apt-get install -y nodejs
+            node --version
+            npm --version
+
+        - name: Install Bun (for free-code sidecar)
+          script: |
+            curl -fsSL https://bun.sh/install | bash
+            export BUN_INSTALL="$HOME/.bun"
+            export PATH="$BUN_INSTALL/bin:$PATH"
+            bun --version
+
+        - name: Install frontend dependencies
+          script: |
+            cd src-ui
+            npm ci
+            cd ..
+
+        - name: Build free-code sidecar
+          script: |
+            export BUN_INSTALL="$HOME/.bun"
+            export PATH="$BUN_INSTALL/bin:$PATH"
+            # Clone and build free-code
+            git clone --depth=1 https://github.com/paoloanzn/free-code.git .free-code-build
+            cd .free-code-build
+            bun install
+            bun run compile
+            # Copy binary next to where Tauri will package it
+            mkdir -p ../binaries
+            cp dist/cli ../binaries/free-code
+            chmod +x ../binaries/free-code
+            cd ..
+            echo "✅ free-code sidecar binary ready"
+            ls -lh binaries/
+
+        - name: Build frontend
+          script: |
+            cd src-ui
+            npm run build
+            cd ..
+
+        - name: Build Tauri (Linux .deb + .AppImage)
+          script: |
+            . "$HOME/.cargo/env"
+            cargo install tauri-cli --version "^2"
+            cargo tauri build
+            echo "═══ Build Artifacts ═══"
+            find target/release/bundle -type f \( -name "*.deb" -o -name "*.AppImage" -o -name "*.rpm" \) | head -20
+
+        - name: Upload artifacts
+          script: |
+            echo "📦 Linux build artifacts:"
+            ls -lh target/release/bundle/deb/ 2>/dev/null || true
+            ls -lh target/release/bundle/appimage/ 2>/dev/null || true
+            # CNB artifact upload (if available)
+            # cnb-artifact-upload target/release/bundle/deb/*.deb
+            # cnb-artifact-upload target/release/bundle/appimage/*.AppImage
