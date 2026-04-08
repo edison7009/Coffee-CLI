@@ -51,13 +51,17 @@ main:
             rm -rf .opencode-upstream
             git clone https://cnb.cool/Coffee-2026/Coffee-Code.git .opencode-upstream
             cd .opencode-upstream
+            # Remove lockfile to prevent tarball integrity hash mismatches for optional deps (like sst-win32)
+            rm -f bun.lock
             bun install --no-verify
             cd packages/opencode
             # Heartbeat: prevent CNB from killing silent long-running compilation
             ( while true; do sleep 120; echo "[heartbeat] still compiling... $(date)"; done ) &
             HEARTBEAT_PID=$!
+            trap "kill $HEARTBEAT_PID 2>/dev/null" EXIT
             bun run build --single --skip-embed-web-ui
             kill $HEARTBEAT_PID 2>/dev/null || true
+            trap - EXIT
             # Copy the compiled binary to Coffee Mode binaries/
             mkdir -p ../../../binaries
             cp dist/opencode-linux-x64/bin/opencode ../../../binaries/coffeecode
