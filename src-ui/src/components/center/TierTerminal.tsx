@@ -189,6 +189,11 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
       const isVisible = wrapper ? (wrapper as HTMLElement).style.display !== 'none' : false;
       if (!isVisible) return; // Don't steal focus if this terminal is hidden
       setTimeout(() => {
+        // Re-evaluate visibility here because React might have hidden this session
+        // between the mouseup event and this timeout executing (e.g. dragging or switching tabs)
+        const stillVisible = wrapper ? (wrapper as HTMLElement).style.display !== 'none' : false;
+        if (!stillVisible) return;
+
         const active = document.activeElement;
         // If the officially focused element is a REAL text input/textarea (like the chat box), let them type.
         if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA') && !active.classList.contains('xterm-helper-textarea')) {
@@ -308,6 +313,12 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
     let lastHasInput = false;
     const menuInterval = setInterval(() => {
       if (!term.buffer.active) return;
+      
+      // Skip scanning if this terminal isn't currently visible
+      const wrapper = termRef.current?.closest('[data-session-id]');
+      const isVisible = wrapper ? (wrapper as HTMLElement).style.display !== 'none' : false;
+      if (!isVisible) return;
+
       const buffer = term.buffer.active;
       // Scan the entire visible viewport from top to bottom
       // rather than stopping at the blinking cursor's Y position, because tool menus 
