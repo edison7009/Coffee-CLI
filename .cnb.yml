@@ -80,13 +80,14 @@ main:
             npm run build
             cd ..
 
-        - name: Build Tauri (Linux .deb + .AppImage)
+        - name: Build Tauri (Linux .deb only)
           script: |
             . "$HOME/.cargo/env"
             cargo install tauri-cli --version "^2"
-            cargo tauri build
+            # Limit bundling to .deb to avoid FUSE mount errors from AppImage in Docker
+            cargo tauri build --bundles deb
             echo "═══ Build Artifacts ═══"
-            find target/release/bundle -type f \( -name "*.deb" -o -name "*.AppImage" -o -name "*.rpm" \) | head -20
+            find target/release/bundle -type f -name "*.deb" | head -20
 
         - name: Upload artifacts
           script: |
