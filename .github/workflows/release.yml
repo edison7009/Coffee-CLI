@@ -1,4 +1,4 @@
-name: Multi-Platform Release
+name: Release
 
 on:
   push:
@@ -6,19 +6,31 @@ on:
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   release:
     strategy:
       fail-fast: false
       matrix:
-        platform: [macos-latest, ubuntu-22.04, windows-latest]
+        include:
+          - platform: windows-latest
+            args: ''
+          - platform: macos-latest
+            args: '--target aarch64-apple-darwin'
+          - platform: macos-latest
+            args: '--target x86_64-apple-darwin'
+          - platform: ubuntu-22.04
+            args: ''
+
     runs-on: ${{ matrix.platform }}
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install dependencies (Ubuntu only)
+      - name: Install system dependencies (Linux)
         if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
@@ -28,31 +40,31 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+          cache-dependency-path: src-ui/package-lock.json
 
-      - name: Install frontend dependencies
+      - name: Install & build frontend
         run: |
           cd src-ui
-          npm install
-
-      - name: Build frontend
-        run: |
-          cd src-ui
+          npm ci
           npm run build
 
-      - name: Setup Rust ecosystem
+      - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
 
-      - name: Build Tauri app
+      - name: Build & publish
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          # Automatically attaches artifacts to the GitHub release draft
           tagName: v__VERSION__
-          releaseName: "Coffee CLI v__VERSION__"
-          releaseBody: "Automated release — Coffee Code is installed separately"
+          releaseName: 'Coffee CLI v__VERSION__'
+          releaseBody: 'See the assets below for platform-specific installers.'
           releaseDraft: false
           prerelease: false
+          args: ${{ matrix.args }}
