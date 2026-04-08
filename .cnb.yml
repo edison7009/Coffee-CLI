@@ -49,6 +49,7 @@ main:
             # 我们直接在流水线里暴力拉取最新的 Coffee-Code 源码
             rm -rf .opencode-upstream
             git clone https://cnb.cool/Coffee-2026/Coffee-Code.git .opencode-upstream
+            cp scripts/rename.cjs .opencode-upstream/
             cd .opencode-upstream
             # 运行批量套壳/品牌混淆脚本
             node rename.cjs
