@@ -41,32 +41,20 @@ main:
             node --version
             npm --version
 
-        - name: Build CoffeeCode CLI binary
+        - name: Download Pre-compiled CoffeeCode Engine
           script: |
-            export BUN_INSTALL="$HOME/.bun"
-            export PATH="$BUN_INSTALL/bin:$PATH"
-            # Skip integrity checks for cross-platform optional tarballs (e.g. sst-win32-x64)
-            export BUN_CONFIG_NO_VERIFY=1
-            # Clone fresh upstream source
-            rm -rf .opencode-upstream
-            git clone https://cnb.cool/Coffee-2026/Coffee-Code.git .opencode-upstream
-            cd .opencode-upstream
-            # Remove lockfile to prevent tarball integrity hash mismatches for optional deps (like sst-win32)
-            rm -f bun.lock
-            bun install --no-verify
-            cd packages/opencode
-            # Heartbeat: prevent CNB from killing silent long-running compilation
-            ( while true; do sleep 120; echo "[heartbeat] still compiling... $(date)"; done ) &
-            HEARTBEAT_PID=$!
-            trap "kill $HEARTBEAT_PID 2>/dev/null" EXIT
-            bun run build --single --skip-embed-web-ui
-            kill $HEARTBEAT_PID 2>/dev/null || true
-            trap - EXIT
-            # Copy the compiled binary to Coffee Mode binaries/
-            mkdir -p ../../../binaries
-            cp dist/opencode-linux-x64/bin/opencode ../../../binaries/coffeecode
-            echo "✅ CoffeeCode binary built successfully"
-            ls -lh ../../../binaries/coffeecode
+            echo "📥 Fetching pre-compiled engine to skip JIT build..."
+            mkdir -p binaries
+            
+            # [关键]：请将下面的 URL 替换为 Coffee-Code 仓库真实生成的二进制件直链下载地址
+            # 如果是 CNB 制品库，参考命令： curl -H "Authorization: token $CNB_TOKEN" -L -o binaries/coffeecode "你的制品库直连"
+            DOWNLOAD_URL="https://cnb.cool/Coffee-2026/Coffee-Code/-/releases/download/latest/coffeecode-linux-x64"
+            
+            curl -L -o binaries/coffeecode "$DOWNLOAD_URL"
+            chmod +x binaries/coffeecode
+            
+            echo "✅ CoffeeCode binary downloaded directly!"
+            ls -lh binaries/coffeecode
 
         - name: Install frontend dependencies
           script: |
