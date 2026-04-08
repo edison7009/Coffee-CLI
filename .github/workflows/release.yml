@@ -1,0 +1,61 @@
+name: Multi-Platform Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  release:
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [macos-latest, ubuntu-22.04, windows-latest]
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies (Ubuntu only)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install frontend dependencies
+        run: |
+          cd src-ui
+          npm install
+
+      - name: Build frontend
+        run: |
+          cd src-ui
+          npm run build
+
+      - name: Setup Rust ecosystem
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: Prepare binary placeholder folder
+        # Ensure the binaries folder exists so Tauri package resources check passes
+        run: mkdir -p binaries && echo "dummy" > binaries/.keep
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # Automatically attaches artifacts to the GitHub release draft
+          tagName: v__VERSION__
+          releaseName: "Coffee CLI v__VERSION__"
+          releaseBody: "Automated Release for Coffee CLI without bundled upstream engines"
+          releaseDraft: true
+          prerelease: false
