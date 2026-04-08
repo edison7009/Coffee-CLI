@@ -90,8 +90,10 @@ main:
             find target/release/bundle -type f -name "*.deb" | head -20
 
         - name: Upload artifacts
+          exports:
+            artifacts: target/release/bundle/deb/*.deb
           script: |
-            echo "📦 Linux build artifacts:"
+            echo "📦 Exporting Linux build artifacts to CNB pipeline attachments..."
             ls -lh target/release/bundle/deb/ 2>/dev/null || true
             ls -lh target/release/bundle/appimage/ 2>/dev/null || true
 
