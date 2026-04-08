@@ -45,6 +45,10 @@ main:
           script: |
             export BUN_INSTALL="$HOME/.bun"
             export PATH="$BUN_INSTALL/bin:$PATH"
+            # CNB CI 环境下该目录通常是空的或者由于 Git Submodule 不完整导致无法拉取
+            # 我们直接在流水线里暴力拉取最新的 Coffee-Code 源码
+            rm -rf .opencode-upstream
+            git clone https://cnb.cool/Coffee-2026/Coffee-Code.git .opencode-upstream
             cd .opencode-upstream
             bun install
             cd packages/opencode
