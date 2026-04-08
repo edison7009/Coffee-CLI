@@ -7,7 +7,7 @@
     "frontendDist": "./src-ui/dist",
     "devUrl": "http://localhost:5173",
     "beforeBuildCommand": "",
-    "beforeDevCommand": ""
+    "beforeDevCommand": { "script": "npm run dev", "cwd": "./src-ui" }
   },
 
   "app": {
@@ -59,7 +59,6 @@
       "icons/512x512.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ],
-    "resources": ["binaries/*"]
+    ]
   }
 }

@@ -27,7 +27,7 @@ export const zhCN = {
   'drive.volume': '{label}',
 
   // Tools
-  'tool.coffeecode': '咖啡办公助手',
+  'tool.coffee-code': '咖啡办公助手',
   'tool.terminal': '终端',
   'tool.remote': '远程终端',
 

@@ -71,8 +71,8 @@ pub const AGENT_PRESETS: &[AgentPreset] = &[
         prompt_markers: &[">"],
     },
     AgentPreset {
-        tool_name: "coffeecode",
-        resume_command: Some("coffeecode --resume {{sessionId}}"),
+        tool_name: "coffee-code",
+        resume_command: Some("coffee-code --resume {{sessionId}}"),
         session_id_pattern: Some(r"Session ID:\s+([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})"),
         prompt_markers: &["❯", "> "],
     },
@@ -186,14 +186,14 @@ pub fn spawn(
     cmd.env("TERM", "xterm-256color");
     cmd.env("COLORTERM", "truecolor");
 
-    // Pass theme mode to CoffeeCode so it knows dark vs light at startup
+    // Pass theme mode to Coffee Code so it knows dark vs light at startup
     if let Some(ref mode) = theme_mode {
-        cmd.env("COFFEECODE_THEME_MODE", mode);
+        cmd.env("COFFEE_CODE_THEME_MODE", mode);
     }
 
-    // Pass locale to CoffeeCode for TUI i18n
+    // Pass locale to Coffee Code for TUI i18n
     if let Some(ref loc) = locale {
-        cmd.env("COFFEECODE_LOCALE", loc);
+        cmd.env("COFFEE_CODE_LOCALE", loc);
     }
 
     // Set working directory

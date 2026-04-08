@@ -28,7 +28,7 @@ export const en = {
   'drive.volume': '{label}',
 
   // Tools
-  'tool.coffeecode': 'Coffee Code',
+  'tool.coffee-code': 'Coffee Code',
   'tool.terminal': 'Terminal',
   'tool.remote': 'Remote Terminal',
 

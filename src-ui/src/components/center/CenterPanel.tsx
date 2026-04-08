@@ -396,7 +396,7 @@ export function CenterPanel() {
   const renderTabContent = (session: typeof terminals[0], isActive: boolean) => {
     switch (session.tool) {
       case 'claude': return { icon: <SvgClaude />, title: 'Claude Code' };
-      case 'coffeecode': return { icon: <SvgCoffeeCode />, title: 'Coffee Code' };
+      case 'coffee-code': return { icon: <SvgCoffeeCode />, title: 'Coffee Code' };
       case 'codex': return { icon: <SvgCodex />, title: 'Codex CLI' };
       case 'gemini': return { icon: <SvgGemini />, title: 'Gemini CLI' };
       case 'remote': return { icon: <TerminalIcon />, title: t('tool.remote') };
@@ -495,7 +495,7 @@ export function CenterPanel() {
                   <div className="launchpad-inner">
                     <div className="launchpad-grid">
                       {[
-                        { key: 'coffeecode' as ToolType, label: t('tool.coffeecode'), icon: <SvgCoffeeCode /> },
+                        { key: 'coffee-code' as ToolType, label: t('tool.coffee-code'), icon: <SvgCoffeeCode /> },
                         { key: 'claude' as ToolType, label: 'Claude Code', icon: <SvgClaude /> },
                         { key: 'codex' as ToolType, label: 'Codex CLI', icon: <SvgCodex /> },
                         { key: 'gemini' as ToolType, label: 'Gemini CLI', icon: <SvgGemini /> },

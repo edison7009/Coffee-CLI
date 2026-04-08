@@ -44,9 +44,6 @@ jobs:
         with:
           targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
-      - name: Prepare binary placeholder folder
-        # Ensure the binaries folder exists so Tauri package resources check passes
-        run: mkdir -p binaries && echo "dummy" > binaries/.keep
 
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
@@ -56,6 +53,6 @@ jobs:
           # Automatically attaches artifacts to the GitHub release draft
           tagName: v__VERSION__
           releaseName: "Coffee CLI v__VERSION__"
-          releaseBody: "Automated Release for Coffee CLI without bundled upstream engines"
-          releaseDraft: true
+          releaseBody: "Automated release — Coffee Code is installed separately"
+          releaseDraft: false
           prerelease: false

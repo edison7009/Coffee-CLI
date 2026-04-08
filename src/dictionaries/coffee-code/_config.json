@@ -1,6 +1,6 @@
 {
-  "commands": ["coffeecode"],
-  "patterns": ["CoffeeCode v", "OpenCode v"],
+  "commands": ["coffee-code"],
+  "patterns": ["Coffee Code v", "OpenCode v"],
   "panel": {
     "menuButton": {
       "label": "Menu",

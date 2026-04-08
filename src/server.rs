@@ -256,8 +256,8 @@ fn check_tools_installed() -> std::collections::HashMap<String, bool> {
         ("codex", "codex"),
         ("gemini", "gemini-cli"),
         ("openclaw", "openclaw"),
+        ("coffee-code", "coffee-code"),
         // remote is always available — it's just SSH (built into the OS)
-        // coffeecode is always available — it's a bundled sidecar binary
     ];
     let mut result = std::collections::HashMap::new();
     for (key, bin) in tools {
@@ -280,48 +280,6 @@ fn check_tools_installed() -> std::collections::HashMap<String, bool> {
         };
         result.insert(key.to_string(), found);
     }
-    // CoffeeCode: check sidecar binary → PATH → dev source (bun)
-    let coffeecode_available = {
-        let sidecar_name = if cfg!(target_os = "windows") { "coffeecode.exe" } else { "coffeecode" };
-        let has_sidecar = std::env::current_exe()
-            .ok()
-            .and_then(|exe| exe.parent().map(|p| p.join(sidecar_name)))
-            .map(|p| p.exists())
-            .unwrap_or(false);
-
-        let in_path = if cfg!(target_os = "windows") {
-            std::process::Command::new("where")
-                .arg("coffeecode")
-                .stdout(std::process::Stdio::null())
-                .stderr(std::process::Stdio::null())
-                .status()
-                .map(|s| s.success())
-                .unwrap_or(false)
-        } else {
-            std::process::Command::new("which")
-                .arg("coffeecode")
-                .stdout(std::process::Stdio::null())
-                .stderr(std::process::Stdio::null())
-                .status()
-                .map(|s| s.success())
-                .unwrap_or(false)
-        };
-
-        // Dev source: check .opencode-upstream exists (debug builds run via bun)
-        let has_dev_source = std::env::current_exe()
-            .ok()
-            .and_then(|exe| {
-                exe.parent()
-                    .and_then(|p| p.parent())
-                    .and_then(|p| p.parent())
-                    .map(|p| p.join(".opencode-upstream/packages/opencode/src/index.ts"))
-            })
-            .map(|p| p.exists())
-            .unwrap_or(false);
-
-        has_sidecar || in_path || has_dev_source
-    };
-    result.insert("coffeecode".to_string(), coffeecode_available);
     // Terminal is always available — it's the system shell
     result.insert("terminal".to_string(), true);
     result
@@ -693,82 +651,29 @@ fn tier_terminal_start(
                 return Err("ws".to_string());
             }
         },
-        Some("coffeecode") => {
-            #[cfg(debug_assertions)]
-            {
-                let app_root = std::env::current_exe().ok().and_then(|exe| {
-                    exe.parent()
-                        .and_then(|p| p.parent())
-                        .and_then(|p| p.parent())
-                        .map(|p| p.to_path_buf())
-                }).unwrap_or_else(|| dir.clone());
+        Some("coffee-code") => {
+            let found = if cfg!(target_os = "windows") {
+                std::process::Command::new("where")
+                    .arg("coffee-code")
+                    .stdout(std::process::Stdio::null())
+                    .stderr(std::process::Stdio::null())
+                    .status()
+                    .map(|s| s.success())
+                    .unwrap_or(false)
+            } else {
+                std::process::Command::new("which")
+                    .arg("coffee-code")
+                    .stdout(std::process::Stdio::null())
+                    .stderr(std::process::Stdio::null())
+                    .status()
+                    .map(|s| s.success())
+                    .unwrap_or(false)
+            };
 
-                let dev_entry = app_root.join(".opencode-upstream/packages/opencode/src/index.ts");
-                eprintln!("[CoffeeCode] Dev mode — app_root={:?}, entry={:?}, exists={}", app_root, dev_entry, dev_entry.exists());
-
-                if dev_entry.exists() {
-                    let pkg_dir = app_root.join(".opencode-upstream/packages/opencode");
-                    ("bun".to_string(), vec![
-                        "run".to_string(),
-                        format!("--cwd={}", pkg_dir.to_string_lossy()),
-                        "--conditions=browser".to_string(),
-                        dev_entry.to_string_lossy().to_string(),
-                    ])
-                } else {
-                    return Err(format!(
-                        "CoffeeCode dev source not found at {:?}.\n\
-                         Make sure .opencode-upstream exists in the project root.",
-                        dev_entry
-                    ));
-                }
-            }
-
-            #[cfg(not(debug_assertions))]
-            {
-                use tauri::Manager;
-                let sidecar_name = if cfg!(target_os = "windows") { "coffeecode.exe" } else { "coffeecode" };
-                let bundled_path = app.path()
-                    .resource_dir()
-                    .map(|mut p| {
-                        p.push("binaries");
-                        p.push(sidecar_name);
-                        p
-                    })
-                    .ok()
-                    .filter(|p| p.exists());
-
-                if let Some(path) = bundled_path {
-                    (path.to_string_lossy().to_string(), vec![])
-                } else {
-                    let in_path = if cfg!(target_os = "windows") {
-                        std::process::Command::new("where")
-                            .arg("coffeecode")
-                            .stdout(std::process::Stdio::null())
-                            .stderr(std::process::Stdio::null())
-                            .status()
-                            .map(|s| s.success())
-                            .unwrap_or(false)
-                    } else {
-                        std::process::Command::new("which")
-                            .arg("coffeecode")
-                            .stdout(std::process::Stdio::null())
-                            .stderr(std::process::Stdio::null())
-                            .status()
-                            .map(|s| s.success())
-                            .unwrap_or(false)
-                    };
-
-                    if in_path {
-                        ("coffeecode".to_string(), vec![])
-                    } else {
-                        return Err(
-                            "CoffeeCode CLI not found. Please install it first:\n\
-                             1. Download from https://cnb.cool/Coffee-2026/Coffee-Code/releases\n\
-                             2. Or build from source: cd .opencode-upstream && bun install && bun run build --single"
-                            .to_string()
-                        );
-                    }
-                }
+            if found {
+                ("coffee-code".to_string(), vec![])
+            } else {
+                return Err("COFFEE_CODE_NOT_INSTALLED".to_string());
             }
         },
         _ => if cfg!(target_os = "windows") {
@@ -944,7 +849,7 @@ fn sessions_file_path() -> PathBuf {
 }
 
 #[tauri::command]
-fn get_resumable_sessions(state: State<'_, AppState>) -> Result<Vec<SavedSession>, String> {
+fn get_resumable_sessions(_state: State<'_, AppState>) -> Result<Vec<SavedSession>, String> {
     // Also include live sessions that have captured tokens
     let mut result: Vec<SavedSession> = Vec::new();
 
