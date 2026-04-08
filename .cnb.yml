@@ -91,11 +91,12 @@ main:
 
         - name: Upload artifacts
           exports:
-            artifacts: target/release/bundle/deb/*.deb
+            artifacts: coffee-cli-linux-amd64.deb
           script: |
             echo "📦 Exporting Linux build artifacts to CNB pipeline attachments..."
             ls -lh target/release/bundle/deb/ 2>/dev/null || true
-            ls -lh target/release/bundle/appimage/ 2>/dev/null || true
+            # 兼容 CNB 导出限制：把带空格和未知版本号的 .deb 名字安全重命名为标准的无空格短文件名
+            mv target/release/bundle/deb/*.deb coffee-cli-linux-amd64.deb
 
     # ── NOTE ──────────────────────────────────────────────────────────────
     # Windows & macOS builds require native runners (WebView2 / Cocoa).
