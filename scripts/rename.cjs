@@ -17,9 +17,6 @@ function processDirectory(dir) {
         try {
             let content = fs.readFileSync(fullPath, 'utf8');
             let newContent = content
-              .replace(/opencode/g, 'coffeecode')
-              .replace(/coffeecode-gitlab-auth/g, 'opencode-gitlab-auth')
-              .replace(/coffeecode-poe-auth/g, 'opencode-poe-auth')
               .replace(/OpenCode/g, 'CoffeeCode')
               .replace(/OPENCODE/g, 'COFFEECODE');
               
