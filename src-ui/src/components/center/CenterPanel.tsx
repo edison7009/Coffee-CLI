@@ -28,20 +28,6 @@ const SvgCodex = () => (
   </svg>
 );
 
-const SvgRemote = () => (
-  <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
-    <rect x="1" y="3" width="22" height="18" rx="3" fill="url(#remote-bg)" />
-    <path d="M7 10l3 3-3 3" stroke="#1E1E2E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    <line x1="13" y1="16" x2="17" y2="16" stroke="#1E1E2E" strokeWidth="2" strokeLinecap="round" />
-    <defs>
-      <linearGradient gradientUnits="userSpaceOnUse" id="remote-bg" x1="1" x2="23" y1="3" y2="21">
-        <stop stopColor="#4ade80"></stop>
-        <stop offset="1" stopColor="#22d3ee"></stop>
-      </linearGradient>
-    </defs>
-  </svg>
-);
-
 const SvgGemini = () => (
   <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
     <path d="M0 4.391A4.391 4.391 0 014.391 0h15.217A4.391 4.391 0 0124 4.391v15.217A4.391 4.391 0 0119.608 24H4.391A4.391 4.391 0 010 19.608V4.391z" fill="url(#lobe-icons-gemini-cli-fill)"></path>
