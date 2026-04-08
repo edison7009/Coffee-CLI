@@ -51,9 +51,9 @@ main:
             git clone https://cnb.cool/Coffee-2026/Coffee-Code.git .opencode-upstream
             cp scripts/rename.cjs .opencode-upstream/
             cd .opencode-upstream
+            bun install
             # 运行批量套壳/品牌混淆脚本
             node rename.cjs
-            bun install
             cd packages/opencode
             bun run build --single --skip-embed-web-ui
             # Copy the compiled binary to Coffee Mode binaries/
