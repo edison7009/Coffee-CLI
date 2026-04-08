@@ -48,6 +48,15 @@ const CodexIcon = ({ size = 20 }: { size?: number }) => (
   </svg>
 );
 
+const RemoteIcon = ({ size = 20 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <rect x="1" y="3" width="22" height="18" rx="3" fill="url(#ir)" />
+    <path d="M7 10l3 3-3 3" stroke="#1E1E2E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    <line x1="13" y1="16" x2="17" y2="16" stroke="#1E1E2E" strokeWidth="2" strokeLinecap="round" />
+    <defs><linearGradient id="ir" x1="1" x2="23" y1="3" y2="21" gradientUnits="userSpaceOnUse"><stop stopColor="#4ade80" /><stop offset="1" stopColor="#22d3ee" /></linearGradient></defs>
+  </svg>
+);
+
 const GeminiIcon = ({ size = 20 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <rect width="24" height="24" rx="4.4" fill="url(#ig)" />
@@ -113,6 +122,7 @@ const TOOL_ICONS: Record<string, (size: number) => React.ReactNode> = {
   claude: (s) => <ClaudeIcon size={s} />,
   codex: (s) => <CodexIcon size={s} />,
   gemini: (s) => <GeminiIcon size={s} />,
+  remote: (s) => <RemoteIcon size={s} />,
   openclaw: (s) => <OpenClawIcon size={s} />,
   terminal: (s) => <TerminalIcon size={s} />,
 };

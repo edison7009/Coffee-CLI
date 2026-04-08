@@ -617,6 +617,13 @@ export function Explorer() {
   const [activeTab, setActiveTab] = useState<'workspace' | 'computer'>('workspace');
   const [drives, setDrives] = useState<DriveInfo[]>([]);
 
+  // Automatically switch to "My Computer" tab when a remote terminal is focused
+  useEffect(() => {
+    if (activeSession?.tool === 'remote') {
+      setActiveTab('computer');
+    }
+  }, [state.activeTerminalId, activeSession?.tool]);
+
   const handleOpenFolder = async (e: React.MouseEvent) => {
     e.stopPropagation();
     try {

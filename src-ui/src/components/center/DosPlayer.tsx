@@ -8,7 +8,13 @@ import { useAppState } from '../../store/app-state';
 import './DosPlayer.css';
 
 // ─── IndexedDB File-Level Save Storage ───
-const SAVE_FILE_PATTERNS = [/^\d+\.RPG$/i, /^SETUP\.DAT$/i];
+const SAVE_FILE_PATTERNS = [
+  /^\d+\.RPG$/i,     // Paladin (Sword and Fairy)
+  /^SETUP\.DAT$/i,   // Paladin Config
+  /\.SAV$/i,         // Red Alert, Richman 3, common DOS saves
+  /\.DSG$/i,         // DOOM saves
+  /\.SC2$/i          // SimCity 2000 saves
+];
 
 const initDB = () => new Promise<IDBDatabase>((resolve, reject) => {
   const req = indexedDB.open('CoffeePlaySaves', 2);
@@ -116,6 +122,7 @@ export function DosPlayer({ sessionId }: { sessionId: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const userMutedRef = useRef(false);
   const ciRef = useRef<any>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
   const cleanupRef = useRef<(() => void) | null>(null);
   const activeGameRef = useRef<string | null>(null);
   activeGameRef.current = activeGame;
@@ -232,6 +239,7 @@ export function DosPlayer({ sessionId }: { sessionId: string }) {
 
         // ── Audio ──
         const audioCtx = new AudioContext({ sampleRate: ci.soundFrequency() || 44100 });
+        audioCtxRef.current = audioCtx;
         const bufferSize = 2048;
         let audioQueue: Float32Array[] = [];
 
@@ -260,7 +268,7 @@ export function DosPlayer({ sessionId }: { sessionId: string }) {
         };
         scriptNode.connect(audioCtx.destination);
 
-        const resumeAudio = () => { audioCtx.resume(); };
+        const resumeAudio = () => { if (!userMutedRef.current && state.activeTerminalId === sessionId) audioCtx.resume(); };
         document.addEventListener('click', resumeAudio, { once: true });
         document.addEventListener('keydown', resumeAudio, { once: true });
 
@@ -428,10 +436,14 @@ export function DosPlayer({ sessionId }: { sessionId: string }) {
 
     if (e.key === 'F9') {
       e.preventDefault();
-      // Toggle audio via suspend/resume on the audio context
-      const audioElements = document.querySelectorAll('audio');
-      audioElements.forEach(a => a.muted = !a.muted);
       userMutedRef.current = !userMutedRef.current;
+      if (userMutedRef.current) {
+        audioCtxRef.current?.suspend().catch(() => {});
+      } else {
+        if (state.activeTerminalId === sessionId) {
+          audioCtxRef.current?.resume().catch(() => {});
+        }
+      }
     }
 
     if (e.key === 'F10') {
@@ -440,6 +452,8 @@ export function DosPlayer({ sessionId }: { sessionId: string }) {
       
       if (isActiveTab) {
         if (ciRef.current) {
+          try { ciRef.current.pause(); } catch(e) {}
+          audioCtxRef.current?.suspend().catch(() => {});
           extractSaveFiles(ciRef.current)
             .then(files => saveGameFiles(activeGame, files))
             .catch(() => {});
@@ -458,6 +472,12 @@ export function DosPlayer({ sessionId }: { sessionId: string }) {
       } else {
         dispatch({ type: 'SET_TERMINAL_HIDDEN', id: sessionId, isHidden: false });
         dispatch({ type: 'SET_ACTIVE_TERMINAL', id: sessionId });
+        if (ciRef.current) {
+          try { ciRef.current.resume(); } catch(e) {}
+          if (!userMutedRef.current) {
+            audioCtxRef.current?.resume().catch(() => {});
+          }
+        }
         setTimeout(() => canvasRef.current?.focus(), 100);
       }
     }
@@ -616,6 +636,15 @@ export function DosPlayer({ sessionId }: { sessionId: string }) {
               <span className="splash-dot" />
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── Minimalist Hotkey HUD ── */}
+      {!showSplash && (
+        <div className="dos-hud-hint">
+          <span>[F9] {state.currentLang.startsWith('zh') ? '静音' : 'Mute'}</span>
+          <span className="separator">·</span>
+          <span>[F10] {state.currentLang.startsWith('zh') ? '老板键' : 'Boss Key'}</span>
         </div>
       )}
     </div>

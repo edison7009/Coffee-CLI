@@ -205,3 +205,41 @@
   color: #6b6762;
   letter-spacing: 1px;
 }
+
+/* ─── Minimalist HUD Overlay ─── */
+
+.dos-hud-hint {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  color: var(--text-3);
+  padding: 8px 18px;
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 500;
+  font-family: 'Cascadia Mono', Consolas, monospace;
+  letter-spacing: 0.5px;
+  pointer-events: auto;
+  transition: all 0.3s ease;
+  z-index: 10;
+  display: flex;
+  gap: 12px;
+  cursor: default;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  opacity: 0.3; /* Default faintly visible */
+}
+
+.dos-hud-hint:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dos-hud-hint .separator {
+  opacity: 0.4;
+}

@@ -256,6 +256,7 @@ fn check_tools_installed() -> std::collections::HashMap<String, bool> {
         ("codex", "codex"),
         ("gemini", "gemini-cli"),
         ("openclaw", "openclaw"),
+        // remote is always available — it's just SSH (built into the OS)
         // coffeecode is always available — it's a bundled sidecar binary
     ];
     let mut result = std::collections::HashMap::new();
@@ -618,6 +619,7 @@ fn copy_dir_all(src: &std::path::Path, dest: &std::path::Path) -> std::io::Resul
 fn tier_terminal_start(
     session_id: String,
     tool: Option<String>,
+    tool_data: Option<String>,
     cols: u16,
     rows: u16,
     theme_mode: Option<String>,
@@ -633,10 +635,65 @@ fn tier_terminal_start(
         Some("codex")    => ("codex".to_string(),  vec![]),
         Some("gemini")   => ("gemini-cli".to_string(), vec![]),
         Some("openclaw") => ("openclaw".to_string(), vec![]),
+        Some("remote") => {
+            // Parse connection info from toolData JSON
+            let data = tool_data.as_deref().unwrap_or("{}");
+            let conn: serde_json::Value = serde_json::from_str(data)
+                .map_err(|e| format!("Invalid remote connection data: {}", e))?;
+
+            let protocol = conn["protocol"].as_str().unwrap_or("ssh");
+            let host = conn["host"].as_str().unwrap_or("localhost");
+            let port = conn["port"].as_u64().unwrap_or(if protocol == "ssh" { 22 } else { 7681 });
+            let username = conn["username"].as_str().unwrap_or("root");
+            let _password = conn["password"].as_str().unwrap_or("");
+
+            if protocol == "ssh" {
+                // Build SSH command — user will type password interactively in PTY
+                let mut ssh_args = vec![
+                    "-o".to_string(),
+                    "StrictHostKeyChecking=no".to_string(),
+                    "-p".to_string(),
+                    port.to_string(),
+                    format!("{}@{}", username, host),
+                ];
+
+                // If password is provided, try to use sshpass for auto-login
+                // Otherwise user types password in terminal
+                if !_password.is_empty() {
+                    // Check if sshpass is available
+                    let has_sshpass = if cfg!(target_os = "windows") {
+                        false // sshpass not typically available on Windows
+                    } else {
+                        std::process::Command::new("which")
+                            .arg("sshpass")
+                            .stdout(std::process::Stdio::null())
+                            .stderr(std::process::Stdio::null())
+                            .status()
+                            .map(|s| s.success())
+                            .unwrap_or(false)
+                    };
+
+                    if has_sshpass {
+                        let mut full_args = vec![
+                            "-p".to_string(),
+                            _password.to_string(),
+                            "ssh".to_string(),
+                        ];
+                        full_args.append(&mut ssh_args);
+                        ("sshpass".to_string(), full_args)
+                    } else {
+                        ("ssh".to_string(), ssh_args)
+                    }
+                } else {
+                    ("ssh".to_string(), ssh_args)
+                }
+            } else {
+                // WebSocket protocol — not handled by PTY backend
+                // Frontend will handle this via xterm.js AttachAddon directly
+                return Err("ws".to_string());
+            }
+        },
         Some("coffeecode") => {
-            // ── DEBUG builds ──────────────────────────────────────────────
-            // Always run from source via bun so code changes take effect immediately.
-            // Skip sidecar binary AND PATH to avoid stale executables.
             #[cfg(debug_assertions)]
             {
                 let app_root = std::env::current_exe().ok().and_then(|exe| {
@@ -666,14 +723,18 @@ fn tier_terminal_start(
                 }
             }
 
-            // ── RELEASE builds ────────────────────────────────────────────
-            // Sidecar binary → PATH → error
             #[cfg(not(debug_assertions))]
             {
+                use tauri::Manager;
                 let sidecar_name = if cfg!(target_os = "windows") { "coffeecode.exe" } else { "coffeecode" };
-                let bundled_path = std::env::current_exe()
+                let bundled_path = app.path()
+                    .resource_dir()
+                    .map(|mut p| {
+                        p.push("binaries");
+                        p.push(sidecar_name);
+                        p
+                    })
                     .ok()
-                    .and_then(|exe| exe.parent().map(|p| p.join(sidecar_name)))
                     .filter(|p| p.exists());
 
                 if let Some(path) = bundled_path {

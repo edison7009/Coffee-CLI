@@ -29,6 +29,17 @@ export const zhCN = {
   // Tools
   'tool.coffeecode': '咖啡办公助手',
   'tool.terminal': '终端',
+  'tool.remote': '远程终端',
+
+  // Remote Terminal
+  'remote.title': '远程终端',
+  'remote.host': '服务器地址',
+  'remote.host_placeholder': '例如 192.168.1.100',
+  'remote.username': '用户名',
+  'remote.password': '密码',
+  'remote.connect': '连接',
+  'remote.connecting': '连接中...',
+  'remote.connect_failed': '连接失败',
 
   'tab.new': '选择工具',
 

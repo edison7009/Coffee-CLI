@@ -58,7 +58,7 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
   const toolLabel: Record<string, string> = {
     claude: 'Claude Code', coffeecode: t('tool.coffeecode'),
     codex: 'Codex CLI', gemini: 'Gemini CLI', openclaw: 'OpenClaw',
-    terminal: t('tool.terminal'),
+    remote: t('tool.remote'), terminal: t('tool.terminal'),
   };
 
   // ── xterm.js init ────────────────────────────────────────────────────────
@@ -209,12 +209,32 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
     // the frontend has registered its listeners, causing a blank terminal.
 
     const startPty = async () => {
+      const session = state.terminals.find(s => s.id === sessionId);
+      const toolData = session?.toolData;
+      let remoteConfig: any = {};
+      try {
+        if (tool === 'remote' && toolData) remoteConfig = JSON.parse(toolData);
+      } catch (e) {}
+      let hasInjectedPassword = false;
+
       // Register all listeners first and wait for them to be ready
       const outputUn = await listen<TerminalOutputEvent>('tier-terminal-output', (event) => {
         if (!mounted || event.payload.id !== sessionId) return;
         // Strip out the ANSI code that shows the cursor (CSI ? 25 h) so it never reappears
         const data = event.payload.data.replace(/\x1b\[\?25h/g, '');
         xtermRef.current?.write(data);
+        
+        // Handle SSH Auto-login via Password injection
+        if (tool === 'remote' && remoteConfig.protocol === 'ssh' && remoteConfig.password && !hasInjectedPassword) {
+          if (data.toLowerCase().includes('password:')) {
+            hasInjectedPassword = true;
+            // Delay slightly to ensure PTY is ready to accept input after flushing prompt
+            setTimeout(() => {
+              commands.tierTerminalRawWrite(sessionId, remoteConfig.password + '\r').catch(() => {});
+            }, 200);
+          }
+        }
+
         // Detect alternate screen buffer entry — the universal TUI "ready" signal
         if (data.includes('\x1b[?1049h') || data.includes('\x1b[?47h')) {
           altScreenRef.current = true;
@@ -254,7 +274,7 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
       const initialRows = term.rows || 24;
 
       try {
-        await commands.tierTerminalStart(sessionId, tool, initialCols, initialRows, state.currentTheme, state.currentLang);
+        await commands.tierTerminalStart(sessionId, tool, initialCols, initialRows, state.currentTheme, state.currentLang, toolData);
 
         // Synchronize the workspace (left panel) to mirror the tool's starting directory
         try {

@@ -6,7 +6,7 @@ import type { ScanResult, ModelConfig } from '../tauri';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type ToolType = 'claude' | 'codex' | 'gemini' | 'openclaw' | 'coffeecode' | 'arcade' | 'terminal' | null;
+export type ToolType = 'claude' | 'codex' | 'gemini' | 'openclaw' | 'coffeecode' | 'arcade' | 'terminal' | 'remote' | null;
 export type AgentStatus = 'working' | 'idle' | 'wait_input';
 
 export interface TerminalMenu {

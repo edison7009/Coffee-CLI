@@ -30,6 +30,17 @@ export const en = {
   // Tools
   'tool.coffeecode': 'Coffee Code',
   'tool.terminal': 'Terminal',
+  'tool.remote': 'Remote Terminal',
+
+  // Remote Terminal
+  'remote.title': 'Remote Terminal',
+  'remote.host': 'Host',
+  'remote.host_placeholder': 'e.g. 192.168.1.100',
+  'remote.username': 'Username',
+  'remote.password': 'Password',
+  'remote.connect': 'Connect',
+  'remote.connecting': 'Connecting...',
+  'remote.connect_failed': 'Connection Failed',
 
   // Tab
   'tab.new': 'Select Tool',

@@ -471,3 +471,224 @@
   border-color: #34d399;
   box-shadow: 0 12px 40px rgba(52, 211, 153, 0.25), 0 0 0 1px rgba(52, 211, 153, 0.3);
 }
+
+/* ─── Terminal Card Subtle Remote Hint ─── */
+
+.remote-link-hint {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  font-size: 11px;
+  color: var(--text-3);
+  font-weight: 500;
+  transition: color 0.2s;
+  letter-spacing: 0.3px;
+  opacity: 0.6;
+}
+
+.remote-link-hint:hover {
+  color: var(--accent);
+  opacity: 1;
+}
+
+.launchpad-card {
+  position: relative;
+}
+
+/* ─── Remote Terminal Connection Form ─── */
+
+.remote-form-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(6px);
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.remote-form-card {
+  width: 380px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+}
+
+.remote-form-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+.remote-form-header span {
+  flex: 1;
+}
+
+.remote-form-close {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+  color: var(--text-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.remote-form-close:hover {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+}
+
+.remote-form-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Protocol Toggle */
+.remote-protocol-toggle {
+  display: flex;
+  gap: 2px;
+  background: var(--bg-card);
+  border-radius: 10px;
+  padding: 3px;
+  border: 1px solid var(--border);
+}
+
+.remote-proto-btn {
+  flex: 1;
+  padding: 7px 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-2);
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  letter-spacing: 0.3px;
+}
+
+.remote-proto-btn.active {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.remote-proto-btn:not(.active):hover {
+  color: var(--text-1);
+}
+
+.remote-form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.remote-form-row label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.remote-form-host-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.remote-input {
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-family: 'Cascadia Mono', 'Cascadia Code', Consolas, monospace;
+  color: var(--text-1);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.remote-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(196, 149, 106, 0.15);
+}
+
+.remote-input::placeholder {
+  color: var(--text-2);
+  opacity: 0.5;
+}
+
+.remote-input-host {
+  flex: 1;
+}
+
+.remote-input-port {
+  width: 70px;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.remote-port-sep {
+  color: var(--text-2);
+  font-size: 16px;
+  font-weight: 500;
+  opacity: 0.5;
+}
+
+.remote-connect-btn {
+  width: 100%;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent);
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 4px;
+}
+
+.remote-connect-btn:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.remote-connect-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.remote-connect-btn.status-connecting {
+  opacity: 0.8;
+  cursor: wait;
+}
+
+.remote-connect-btn.status-failed {
+  background: #ef4444;
+  color: #fff;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
+}

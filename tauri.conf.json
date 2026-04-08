@@ -59,6 +59,7 @@
       "icons/512x512.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "resources": ["binaries/*"]
   }
 }

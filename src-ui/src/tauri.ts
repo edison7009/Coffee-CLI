@@ -116,8 +116,8 @@ export const commands = {
     invoke<GitStatusResponse | null>('get_git_status'),
 
   // Tier Terminal API
-  tierTerminalStart: (sessionId: string, tool: string | null, cols: number, rows: number, themeMode: string, locale?: string) => 
-    invoke<void>('tier_terminal_start', { sessionId, tool, cols, rows, themeMode, locale: locale ?? null }),
+  tierTerminalStart: (sessionId: string, tool: string | null, cols: number, rows: number, themeMode: string, locale?: string, toolData?: string) => 
+    invoke<void>('tier_terminal_start', { sessionId, tool, toolData: toolData ?? null, cols, rows, themeMode, locale: locale ?? null }),
   tierTerminalInput: (sessionId: string, data: string) => 
     invoke<void>('tier_terminal_input', { sessionId, data }),
   /** Raw write to PTY — does NOT trigger agent-status detection.

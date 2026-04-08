@@ -202,6 +202,12 @@
     0 0 16px rgba(238, 77, 93, 0.25);
 }
 
+.island-pill.glow-remote {
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.3),
+    0 0 16px rgba(74, 222, 128, 0.25);
+}
+
 .island-pill.glow-openclaw {
   box-shadow:
     0 4px 16px rgba(0, 0, 0, 0.3),

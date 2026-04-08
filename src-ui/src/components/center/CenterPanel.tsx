@@ -28,6 +28,20 @@ const SvgCodex = () => (
   </svg>
 );
 
+const SvgRemote = () => (
+  <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
+    <rect x="1" y="3" width="22" height="18" rx="3" fill="url(#remote-bg)" />
+    <path d="M7 10l3 3-3 3" stroke="#1E1E2E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    <line x1="13" y1="16" x2="17" y2="16" stroke="#1E1E2E" strokeWidth="2" strokeLinecap="round" />
+    <defs>
+      <linearGradient gradientUnits="userSpaceOnUse" id="remote-bg" x1="1" x2="23" y1="3" y2="21">
+        <stop stopColor="#4ade80"></stop>
+        <stop offset="1" stopColor="#22d3ee"></stop>
+      </linearGradient>
+    </defs>
+  </svg>
+);
+
 const SvgGemini = () => (
   <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
     <path d="M0 4.391A4.391 4.391 0 014.391 0h15.217A4.391 4.391 0 0124 4.391v15.217A4.391 4.391 0 0119.608 24H4.391A4.391 4.391 0 010 19.608V4.391z" fill="url(#lobe-icons-gemini-cli-fill)"></path>
@@ -130,6 +144,30 @@ export function CenterPanel() {
   const [showArcadeGames, setShowArcadeGames] = useState(false);
   const [arcadeGames, setArcadeGames] = useState<{name:string;path:string;size:number}[]>([]);
   const [disableDrawer, setDisableDrawer] = useState(false);
+
+  // ── Remote Terminal SSH form state ─────────────────────────────────────────
+  const [showRemoteForm, setShowRemoteForm] = useState(false);
+  const [remoteProtocol, setRemoteProtocol] = useState<'ssh' | 'ws'>('ssh');
+  const [sshHost, setSshHost] = useState('');
+  const [sshPort, setSshPort] = useState('22');
+  const [sshUser, setSshUser] = useState('');
+  const [sshPass, setSshPass] = useState('');
+  const [connStatus, setConnStatus] = useState<'idle' | 'connecting' | 'failed'>('idle');
+
+  // Load sticky config
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('coffee_remote_cfg');
+      if (saved) {
+        const c = JSON.parse(saved);
+        if (c.protocol) setRemoteProtocol(c.protocol);
+        if (c.host) setSshHost(c.host);
+        if (c.port) setSshPort(String(c.port));
+        if (c.username) setSshUser(c.username);
+        if (c.password) setSshPass(c.password);
+      }
+    } catch (e) {}
+  }, []);
 
   // Derived state — must be before hooks that depend on it
   const activeSession = terminals.find(t => t.id === activeTerminalId);
@@ -312,9 +350,9 @@ export function CenterPanel() {
     }
   };
 
-  const selectTool = (tool: ToolType) => {
+  const selectTool = (tool: ToolType, toolData?: string) => {
     if (activeTerminalId) {
-      dispatch({ type: 'SET_TERMINAL_TOOL', id: activeTerminalId, tool });
+      dispatch({ type: 'SET_TERMINAL_TOOL', id: activeTerminalId, tool, toolData });
       // Notify island overlay about tool assignment
       if (isTauri) {
         import('@tauri-apps/api/event').then(({ emit }) => {
@@ -322,6 +360,42 @@ export function CenterPanel() {
         });
       }
     }
+  };
+
+  const handleRemoteConnect = async () => {
+    if (!sshHost.trim()) return;
+    if (remoteProtocol === 'ssh' && !sshUser.trim()) return;
+    
+    setConnStatus('connecting');
+
+    // MOCK: Simulate network validation delay
+    // If user enters 'fail' or '0.0.0.0', simulate an unsuccessful connection
+    const isMockFailure = sshHost.trim().toLowerCase() === 'fail' || sshHost.trim() === '0.0.0.0';
+    await new Promise(r => setTimeout(r, 800));
+
+    if (isMockFailure) {
+      setConnStatus('failed');
+      setTimeout(() => setConnStatus('idle'), 3000);
+      return;
+    }
+
+    const connDataObj = {
+      protocol: remoteProtocol,
+      host: sshHost.trim(),
+      port: parseInt(sshPort) || (remoteProtocol === 'ssh' ? 22 : 7681),
+      username: sshUser.trim(),
+      password: sshPass,
+    };
+    
+    try {
+      localStorage.setItem('coffee_remote_cfg', JSON.stringify(connDataObj));
+    } catch(e) {}
+
+    const connData = JSON.stringify(connDataObj);
+    
+    selectTool('remote', connData);
+    setShowRemoteForm(false);
+    setConnStatus('idle');
   };
 
   const ARCADE_META: Record<string, {icon:string; key: 'game.pal' | 'game.redalert' | 'game.doom' | 'game.richman3' | 'game.simcity2000'}> = {
@@ -339,6 +413,7 @@ export function CenterPanel() {
       case 'coffeecode': return { icon: <SvgCoffeeCode />, title: 'Coffee Code' };
       case 'codex': return { icon: <SvgCodex />, title: 'Codex CLI' };
       case 'gemini': return { icon: <SvgGemini />, title: 'Gemini CLI' };
+      case 'remote': return { icon: <TerminalIcon />, title: t('tool.remote') };
       case 'openclaw': return { icon: <SvgOpenClaw />, title: 'OpenClaw' };
       case 'terminal': return { icon: <TerminalIcon />, title: t('tool.terminal') };
       case 'arcade': {
@@ -439,7 +514,6 @@ export function CenterPanel() {
                         { key: 'codex' as ToolType, label: 'Codex CLI', icon: <SvgCodex /> },
                         { key: 'gemini' as ToolType, label: 'Gemini CLI', icon: <SvgGemini /> },
                         { key: 'openclaw' as ToolType, label: 'OpenClaw', icon: <SvgOpenClaw /> },
-                        { key: 'terminal' as ToolType, label: t('tool.terminal'), icon: <TerminalIcon /> },
                       ].map(tool => {
                         const installed = toolsInstalled[tool?.key ?? ''] !== false;
                         return (
@@ -453,7 +527,111 @@ export function CenterPanel() {
                           </div>
                         );
                       })}
+
+                      {/* Terminal card with subtle Remote link */}
+                      <div
+                        className="launchpad-card"
+                        onClick={() => selectTool('terminal')}
+                      >
+                        <div className="launchpad-icon"><TerminalIcon /></div>
+                        <span>{t('tool.terminal')}</span>
+                        
+                        <div 
+                          className="remote-link-hint"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowRemoteForm(true);
+                          }}
+                        >
+                          {state.currentLang === 'en' ? 'Remote' : t('tool.remote' as any)}
+                        </div>
+                      </div>
                     </div>
+
+                    {/* ─── Remote Terminal Connection Form ─── */}
+                    {showRemoteForm && (
+                      <div className="remote-form-overlay">
+                        <div className="remote-form-card">
+                          <div className="remote-form-header">
+                            <TerminalIcon />
+                            <span>{t('remote.title' as any)}</span>
+                            <button className="remote-form-close" onClick={() => setShowRemoteForm(false)}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            </button>
+                          </div>
+                          <div className="remote-form-body">
+                            {/* Protocol Toggle */}
+                            <div className="remote-protocol-toggle">
+                              <button
+                                className={`remote-proto-btn ${remoteProtocol === 'ssh' ? 'active' : ''}`}
+                                onClick={() => { setRemoteProtocol('ssh'); setSshPort('22'); }}
+                              >SSH</button>
+                              <button
+                                className={`remote-proto-btn ${remoteProtocol === 'ws' ? 'active' : ''}`}
+                                onClick={() => { setRemoteProtocol('ws'); setSshPort('7681'); }}
+                              >WebSocket</button>
+                            </div>
+                            <div className="remote-form-row">
+                              <label>{t('remote.host' as any)}</label>
+                              <div className="remote-form-host-row">
+                                <input
+                                  type="text"
+                                  placeholder={t('remote.host_placeholder' as any) || "192.168.1.100"}
+                                  value={sshHost}
+                                  onChange={e => setSshHost(e.target.value)}
+                                  className="remote-input remote-input-host"
+                                  autoFocus
+                                  onKeyDown={e => e.key === 'Enter' && handleRemoteConnect()}
+                                />
+                                <span className="remote-port-sep">:</span>
+                                <input
+                                  type="text"
+                                  placeholder={remoteProtocol === 'ssh' ? '22' : '7681'}
+                                  value={sshPort}
+                                  onChange={e => setSshPort(e.target.value)}
+                                  className="remote-input remote-input-port"
+                                  onKeyDown={e => e.key === 'Enter' && handleRemoteConnect()}
+                                />
+                              </div>
+                            </div>
+                            {remoteProtocol === 'ssh' && (
+                              <>
+                                <div className="remote-form-row">
+                                  <label>{t('remote.username' as any)}</label>
+                                  <input
+                                    type="text"
+                                    placeholder="root"
+                                    value={sshUser}
+                                    onChange={e => setSshUser(e.target.value)}
+                                    className="remote-input"
+                                    onKeyDown={e => e.key === 'Enter' && handleRemoteConnect()}
+                                  />
+                                </div>
+                                <div className="remote-form-row">
+                                  <label>{t('remote.password' as any)}</label>
+                                  <input
+                                    type="password"
+                                    value={sshPass}
+                                    onChange={e => setSshPass(e.target.value)}
+                                    className="remote-input"
+                                    onKeyDown={e => e.key === 'Enter' && handleRemoteConnect()}
+                                  />
+                                </div>
+                              </>
+                            )}
+                            <button
+                              className={`remote-connect-btn status-${connStatus}`}
+                              onClick={handleRemoteConnect}
+                              disabled={!sshHost.trim() || (remoteProtocol === 'ssh' && !sshUser.trim()) || connStatus !== 'idle'}
+                            >
+                              {connStatus === 'connecting' && t('remote.connecting' as any)}
+                              {connStatus === 'failed' && t('remote.connect_failed' as any)}
+                              {connStatus === 'idle' && t('remote.connect' as any)}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Resumable Sessions */}
                     {resumableSessions.length > 0 && (
@@ -466,6 +644,7 @@ export function CenterPanel() {
                                 case 'claude': return <SvgClaude />;
                                 case 'codex': return <SvgCodex />;
                                 case 'gemini': return <SvgGemini />;
+                                case 'remote': return <TerminalIcon />;
                                 case 'openclaw': return <SvgOpenClaw />;
                                 default: return null;
                               }
@@ -475,6 +654,7 @@ export function CenterPanel() {
                                 case 'claude': return 'Claude Code';
                                 case 'codex': return 'Codex CLI';
                                 case 'gemini': return 'Gemini CLI';
+                                case 'remote': return t('tool.remote');
                                 case 'openclaw': return 'OpenClaw';
                                 case 'terminal': return t('tool.terminal');
                                 default: return saved.tool;
