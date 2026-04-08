@@ -11,9 +11,11 @@ declare global {
   }
 }
 
-const isTauri = typeof window !== 'undefined' &&
+// isTauri: evaluated once at module load.
+// Tauri injects __TAURI_INTERNALS__ synchronously before any scripts run.
+export const isTauri =
+  typeof window !== 'undefined' &&
   (!!window.__TAURI_INTERNALS__ || !!window.__TAURI__);
-
 
 // Resolve the invoke function across Tauri v1 / v2
 function resolveInvoke(): ((cmd: string, args?: Record<string, unknown>) => Promise<unknown>) | null {
@@ -40,8 +42,6 @@ export async function invoke<T>(cmd: string, args?: Record<string, unknown>): Pr
   if (!_invoke) throw new Error('Tauri IPC not available');
   return _invoke(cmd, args) as Promise<T>;
 }
-
-export { isTauri };
 
 // ─── Type Definitions ────────────────────────────────────────────────────────
 
@@ -83,6 +83,19 @@ export interface SavedSession {
   saved_at: string;
 }
 
+export interface DriveInfo {
+  path: string;
+  label: string;
+  kind: string;
+}
+
+export interface DirEntryInfo {
+  name: string;
+  path: string;
+  is_dir: boolean;
+  size: number;
+}
+
 // ─── Typed Commands ──────────────────────────────────────────────────────────
 
 export const commands = {
@@ -103,8 +116,8 @@ export const commands = {
     invoke<GitStatusResponse | null>('get_git_status'),
 
   // Tier Terminal API
-  tierTerminalStart: (sessionId: string, tool: string | null, cols: number, rows: number) => 
-    invoke<void>('tier_terminal_start', { sessionId, tool, cols, rows }),
+  tierTerminalStart: (sessionId: string, tool: string | null, cols: number, rows: number, themeMode: string, locale?: string) => 
+    invoke<void>('tier_terminal_start', { sessionId, tool, cols, rows, themeMode, locale: locale ?? null }),
   tierTerminalInput: (sessionId: string, data: string) => 
     invoke<void>('tier_terminal_input', { sessionId, data }),
   /** Raw write to PTY — does NOT trigger agent-status detection.
@@ -113,6 +126,8 @@ export const commands = {
     invoke<void>('tier_terminal_raw_write', { sessionId, data }),
   tierTerminalKill: (sessionId: string) => 
     invoke<void>('tier_terminal_kill', { sessionId }),
+  tierTerminalResize: (sessionId: string, cols: number, rows: number) =>
+    invoke<void>('tier_terminal_resize', { sessionId, cols, rows }),
 
   // Session Resume
   getResumableSessions: () => invoke<SavedSession[]>('get_resumable_sessions'),
@@ -126,4 +141,30 @@ export const commands = {
 
   // Tool availability detection
   checkToolsInstalled: () => invoke<Record<string, boolean>>('check_tools_installed'),
+
+  // File system browsing (My Computer tab)
+  listDrives: () => invoke<DriveInfo[]>('list_drives'),
+  listDirectory: (path: string) => invoke<DirEntryInfo[]>('list_directory', { path }),
+
+  // File system operations
+  fsDelete: (path: string) => invoke<void>('fs_delete', { path }),
+  fsRename: (path: string, newName: string) => invoke<void>('fs_rename', { path, newName }),
+  fsPaste: (action: string, srcPath: string, targetDir: string) =>
+    invoke<void>('fs_paste', { action, srcPath, targetDir }),
+  showInFolder: (path: string) => invoke<void>('show_in_folder', { path }),
+
+  // Arcade (Coffee Play)
+  listJsdosBundles: () => invoke<{ name: string; path: string; size: number }[]>('list_jsdos_bundles'),
+
+  // Task Board persistence (~/.coffee-cli/tasks.json)
+  loadTasks: () => invoke<string>('load_tasks'),
+  saveTasks: (data: string) => invoke<void>('save_tasks', { data }),
+
+  // Multi-window: detach tab into new window
+  createDetachedWindow: (sessionId: string, tool: string, toolData?: string) =>
+    invoke<void>('create_detached_window', { sessionId, tool, toolData }),
+
+  // Multi-window: replay terminal history for detached window
+  getTerminalBuffer: (sessionId: string) =>
+    invoke<string[]>('get_terminal_buffer', { sessionId }),
 };

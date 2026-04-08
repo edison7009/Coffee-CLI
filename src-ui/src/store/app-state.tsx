@@ -1,4 +1,4 @@
-// Coffee Mode — Global App State (React Context)
+// Coffee CLI — Global App State (React Context)
 
 import { createContext, useContext, useReducer } from 'react';
 import type { ReactNode } from 'react';
@@ -6,7 +6,7 @@ import type { ScanResult, ModelConfig } from '../tauri';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type ToolType = 'claude' | 'codex' | 'gemini' | 'openclaw' | 'freecode' | null;
+export type ToolType = 'claude' | 'codex' | 'gemini' | 'openclaw' | 'coffeecode' | 'arcade' | 'terminal' | null;
 export type AgentStatus = 'working' | 'idle' | 'wait_input';
 
 export interface TerminalMenu {
@@ -17,10 +17,14 @@ export interface TerminalMenu {
 export interface TerminalSession {
   id: string;
   tool: ToolType;
+  toolData?: string;  // Extra context for the tool (e.g. game filename for arcade)
   folderPath: string | null;
   scanData: ScanResult | null;
   agentStatus: AgentStatus;
   menu: TerminalMenu | null;
+  hasInputText: boolean;
+  restartKey?: number;
+  isHidden?: boolean;
 }
 
 // ─── State Shape ─────────────────────────────────────────────────────────────
@@ -50,9 +54,12 @@ type Action =
   | { type: 'ADD_TERMINAL'; session: TerminalSession }
   | { type: 'REMOVE_TERMINAL'; id: string }
   | { type: 'SET_ACTIVE_TERMINAL'; id: string | null }
-  | { type: 'SET_TERMINAL_TOOL'; id: string; tool: ToolType }
+  | { type: 'SET_TERMINAL_TOOL'; id: string; tool: ToolType; toolData?: string }
   | { type: 'SET_AGENT_STATUS'; id: string; status: AgentStatus }
-  | { type: 'SET_TERMINAL_MENU'; id: string; menu: TerminalMenu | null };
+  | { type: 'SET_TERMINAL_MENU'; id: string; menu: TerminalMenu | null }
+  | { type: 'SET_HAS_INPUT_TEXT'; id: string; hasInputText: boolean }
+  | { type: 'SET_TERMINAL_HIDDEN'; id: string; isHidden: boolean }
+  | { type: 'RESTART_TERMINAL'; id: string; newId: string };
 
 // ─── Reducer ─────────────────────────────────────────────────────────────────
 
@@ -92,7 +99,7 @@ function reducer(state: AppState, action: Action): AppState {
       if (newTerminals.length === 0) {
         const defaultId = crypto.randomUUID();
         const folderPath = state.terminals.length > 0 ? state.terminals[0].folderPath : null;
-        newTerminals = [{ id: defaultId, tool: null, folderPath, scanData: null, agentStatus: 'idle', menu: null }];
+        newTerminals = [{ id: defaultId, tool: null, folderPath, scanData: null, agentStatus: 'idle', menu: null, hasInputText: false }];
         newActiveId = defaultId;
       } else if (state.activeTerminalId === action.id) {
          newActiveId = newTerminals[newTerminals.length - 1].id;
@@ -104,7 +111,7 @@ function reducer(state: AppState, action: Action): AppState {
     case 'SET_TERMINAL_TOOL':
       return {
         ...state,
-        terminals: state.terminals.map(t => t.id === action.id ? { ...t, tool: action.tool } : t)
+        terminals: state.terminals.map(t => t.id === action.id ? { ...t, tool: action.tool, toolData: action.toolData } : t)
       };
     case 'SET_AGENT_STATUS':
       return {
@@ -115,6 +122,24 @@ function reducer(state: AppState, action: Action): AppState {
       return {
         ...state,
         terminals: state.terminals.map(t => t.id === action.id ? { ...t, menu: action.menu } : t)
+      };
+    case 'SET_HAS_INPUT_TEXT':
+      return {
+        ...state,
+        terminals: state.terminals.map(t => t.id === action.id ? { ...t, hasInputText: action.hasInputText } : t)
+      };
+    case 'SET_TERMINAL_HIDDEN':
+      return {
+        ...state,
+        terminals: state.terminals.map(t => t.id === action.id ? { ...t, isHidden: action.isHidden } : t)
+      };
+    case 'RESTART_TERMINAL':
+      return {
+        ...state,
+        terminals: state.terminals.map(t =>
+          t.id === action.id ? { ...t, id: action.newId } : t
+        ),
+        activeTerminalId: state.activeTerminalId === action.id ? action.newId : state.activeTerminalId
       };
     default:
       return state;
@@ -146,7 +171,7 @@ function getInitialState(): AppState {
     currentTheme: theme,
     currentLang: lang,
     modelConfig: null,
-    terminals: [{ id: defaultTerminalId, tool: null, folderPath, scanData: null, agentStatus: 'idle' as AgentStatus, menu: null }],
+    terminals: [{ id: defaultTerminalId, tool: null, folderPath, scanData: null, agentStatus: 'idle' as AgentStatus, menu: null, hasInputText: false }],
     activeTerminalId: defaultTerminalId,
   };
 }

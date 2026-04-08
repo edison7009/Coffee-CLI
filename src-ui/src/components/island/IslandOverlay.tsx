@@ -88,11 +88,33 @@ const CoffeeBrandIcon = ({ size = 20 }: { size?: number }) => (
   </svg>
 );
 
+const detectOS = (): 'win' | 'mac' | 'linux' => {
+  const ua = navigator.userAgent.toLowerCase();
+  if (ua.includes('win')) return 'win';
+  if (ua.includes('mac')) return 'mac';
+  return 'linux';
+};
+
+const TERMINAL_ICON_SRC: Record<string, string> = {
+  win: '/icons/powershell.svg',
+  mac: '/icons/macos-terminal.png',
+  linux: '/icons/linux-terminal.png',
+};
+
+const TerminalIcon = ({ size = 20 }: { size?: number }) => (
+  <img
+    src={TERMINAL_ICON_SRC[detectOS()]}
+    alt=""
+    style={{ width: size, height: size, borderRadius: 3, objectFit: 'contain' }}
+  />
+);
+
 const TOOL_ICONS: Record<string, (size: number) => React.ReactNode> = {
   claude: (s) => <ClaudeIcon size={s} />,
   codex: (s) => <CodexIcon size={s} />,
   gemini: (s) => <GeminiIcon size={s} />,
   openclaw: (s) => <OpenClawIcon size={s} />,
+  terminal: (s) => <TerminalIcon size={s} />,
 };
 
 // ─── Priority ───────────────────────────────────────────────────────────────
@@ -280,7 +302,7 @@ export function IslandOverlay() {
             </span>
           </button>
           <span className="island-status-text" data-tauri-drag-region>
-            Coffee Mode
+            Coffee CLI
           </span>
           <button className="island-close" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); handleClose(); }}>
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">

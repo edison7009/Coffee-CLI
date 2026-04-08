@@ -1,0 +1,21 @@
+{
+  "hotkeys": [
+    { "keys": "↑ ↓ ← →", "desc": "Move character" },
+    { "keys": "Space", "desc": "Interact / Confirm", "important": true },
+    { "keys": "Esc", "desc": "Open game menu", "important": true },
+    { "keys": "Enter", "desc": "Confirm / Skip dialogue" },
+    { "keys": "W", "desc": "Walk mode" },
+    { "keys": "S", "desc": "Status screen" },
+    { "keys": "I", "desc": "Inventory" },
+    { "keys": "M", "desc": "Magic spells" },
+    { "keys": "Q", "desc": "Equipment" },
+    { "keys": "F9", "desc": "Toggle Music" },
+    { "keys": "F10", "desc": "Boss Key (Hide)", "important": true }
+  ],
+  "tips": [
+    {
+      "title": "Coffee Play Arcade",
+      "body": "Play classic DOS games right inside Coffee CLI. Press F10 to hide to a work tab instantly. Press F9 to toggle music."
+    }
+  ]
+}

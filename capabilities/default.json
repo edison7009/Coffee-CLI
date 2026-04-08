@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2/capability",
   "identifier": "default",
-  "description": "Default capabilities for Coffee Mode",
-  "windows": ["main", "island"],
+  "description": "Default capabilities for Coffee CLI",
+  "windows": ["main", "island", "detached-*"],
   "permissions": [
     "core:default",
     "core:window:allow-start-dragging",
@@ -17,6 +17,8 @@
     "core:window:allow-set-size",
     "core:window:allow-set-position",
     "core:window:allow-set-ignore-cursor-events",
+    "core:window:allow-create",
+    "core:webview:allow-create-webview-window",
     "core:event:default",
     "core:event:allow-emit",
     "core:event:allow-listen",
@@ -24,6 +26,7 @@
     "global-shortcut:allow-register",
     "global-shortcut:allow-unregister",
     "global-shortcut:allow-unregister-all",
-    "global-shortcut:allow-is-registered"
+    "global-shortcut:allow-is-registered",
+    "dialog:default"
   ]
 }

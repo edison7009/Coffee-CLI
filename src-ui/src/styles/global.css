@@ -1,7 +1,10 @@
 /* ═══════════════════════════════════════════════════════
-   Coffee Mode — 3-Panel IDE App Styling
+   Coffee CLI — 3-Panel IDE App Styling
    Theme: Claude (Warm Dark) & Codex (Light Glass)
    ═══════════════════════════════════════════════════════ */
+
+/* ─── Web Fonts ─── */
+@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&display=swap');
 
 /* ─── Local Fonts (no CDN — works offline in WebView2) ── */
 @font-face {
@@ -54,7 +57,6 @@
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
 /* ─── Auto-hiding Scrollbars (Global) ────────────────── */
-/* Keep consistent physical width to prevent layout jitter, but hide thumb */
 * {
     scrollbar-width: thin; /* Firefox */
     scrollbar-color: transparent transparent;
@@ -99,12 +101,14 @@
 }
 
 :root {
-    /* Local Inter font for English, premium system fallbacks for CJK (PingFang for iOS/Mac, YaHei for Windows) */
+    /* Local Inter font for English, premium system fallbacks for CJK */
     --font: 'Inter', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Noto Sans SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+    --font-serif: 'Lora', ui-serif, Georgia, Cambria, "Times New Roman", 'PingFang SC', 'Noto Sans SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
     --mono: 'Cascadia Code', 'Cascadia Mono', Consolas, 'Courier New', monospace;
     --radius-sm: 8px;
-    --radius-md: 12px;
-    --radius-lg: 16px;
+    --radius-md: 16px;
+    --radius-lg: 24px;
+    --radius-pill: 9999px;
     --transition: 0.2s ease;
     
     /* Panel Config */
@@ -113,23 +117,23 @@
     --gap: 16px;
 }
 
-/* ─── Dark Theme (Claude-inspired) ───────────────────── */
+/* ─── Dark Theme (Claude-inspired & Espresso) ──────────── */
 [data-theme="dark"] {
-    --bg-app: #1e1d1b;
-    --bg-panel: rgba(40, 39, 36, 0.95);
-    --bg-card: rgba(46, 45, 42, 0.8);
-    --bg-input: #35342f;
-    --bg-input-focus: #3d3c37;
+    --bg-app: #1a1917; /* Deep Espresso */
+    --bg-panel: #22201e; /* Minimal contrast */
+    --bg-card: rgba(255, 255, 255, 0.03);
+    --bg-input: #292624;
+    --bg-input-focus: #312e2b;
     --bg-hover: rgba(255, 255, 255, 0.05);
     --bg-active: rgba(255, 255, 255, 0.08);
 
-    --border: rgba(255, 255, 255, 0.08);
-    --border-input: rgba(255, 255, 255, 0.12);
-    --border-focus: rgba(255, 255, 255, 0.25);
+    --border: rgba(255, 255, 255, 0.04);
+    --border-input: rgba(255, 255, 255, 0.06);
+    --border-focus: rgba(255, 255, 255, 0.15);
 
-    --text-1: #e8e4de;
-    --text-2: #b5b0a6;
-    --text-3: #7a766e;
+    --text-1: #e4e1db;
+    --text-2: #aca79e;
+    --text-3: #807b74;
 
     --accent: #c4956a;
     --accent-hover: #d4a57a;
@@ -140,28 +144,28 @@
     --red: #e07070;
     --blue: #78a8d4;
 
-    --shadow-panel: 0 8px 32px rgba(0, 0, 0, 0.3);
+    --shadow-panel: 0 16px 48px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.15);
     --glass-blur: blur(24px);
 
-    --bg-titlebar: rgba(0, 0, 0, 0.2);
-    --bg-terminal: #1a1917; /* Dark theme terminal background */
+    --bg-titlebar: rgba(0, 0, 0, 0.1);
+    --bg-terminal: #1a1917; /* Same as background for seamless terminal */
 }
 
-/* ─── Light Theme (Claude Paper Style, soft and warm) ─── */
+/* ─── Light Theme (Latte / Warm Ivory Parchment) ──────── */
 [data-theme="light"] {
-    --bg-app: #f4f3ee; /* 护眼暖米色背景 */
-    --bg-panel: rgba(253, 252, 249, 0.95); /* 柔和的偏暖白面板，减少刺眼感 */
+    --bg-app: #FAFAF7; /* Clean ivory */
+    --bg-panel: rgba(255, 255, 255, 0.7); /* Breathable transparency */
     --bg-card: #ffffff;
     --bg-input: #ffffff;
     --bg-input-focus: #ffffff;
     --bg-hover: rgba(0, 0, 0, 0.04);
     --bg-active: rgba(0, 0, 0, 0.08);
 
-    --border: rgba(0, 0, 0, 0.08);
-    --border-input: rgba(0, 0, 0, 0.12);
-    --border-focus: rgba(196, 149, 106, 0.5);
+    --border: rgba(0, 0, 0, 0.06); /* Softer borders */
+    --border-input: rgba(0, 0, 0, 0.1);
+    --border-focus: rgba(196, 149, 106, 0.3);
 
-    --text-1: #2d2c2a; /* 舍弃纯黑，使用深暖灰/碳色，对比度更舒适 */
+    --text-1: #2B2825; /* Soft charcoal, less harsh than pure black */
     --text-2: #6b6965;
     --text-3: #9e9c98;
 
@@ -174,11 +178,11 @@
     --red: #ff3b30;
     --blue: #78a8d4;
 
-    --shadow-panel: 0 4px 24px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02);
-    --glass-blur: blur(24px);
+    --shadow-panel: 0 16px 48px rgba(0, 0, 0, 0.06), 0 4px 16px rgba(0, 0, 0, 0.03); /* Claude-like soft diffuse shadow */
+    --glass-blur: blur(28px);
 
-    --bg-titlebar: rgba(0, 0, 0, 0.04);
-    --bg-terminal: #f4f3ee; /* Light theme terminal background */
+    --bg-titlebar: rgba(0, 0, 0, 0.03);
+    --bg-terminal: #FAFAF7; /* Seamless */
 }
 
 /* ─── App Shell ──────────────────────────────────────── */
@@ -189,7 +193,6 @@ html {
     height: 100%;
     overflow: hidden;
     background: transparent;
-    border-radius: 10px;
 }
 
 body {
@@ -203,8 +206,6 @@ body {
     -webkit-font-smoothing: antialiased;
     display: flex;
     flex-direction: column;
-    border-radius: 10px;
-    box-shadow: inset 0 0 0 1px rgba(120, 120, 120, 0.15);
 }
 
 /* React root — must be in height chain for WebView2 */
@@ -254,10 +255,6 @@ body {
     color: var(--text-1);
 }
 
-.titlebar-btn.close {
-    border-top-right-radius: 10px; /* matches window radius exactly */
-}
-
 .titlebar-btn.close:hover {
     background: #e81123;
     color: #ffffff;
@@ -268,8 +265,8 @@ body {
     flex: 1;           /* fills space below titlebar */
     min-height: 0;     /* WebView2: allows shrink */
     width: 100%;
-    padding: var(--gap);
-    gap: var(--gap);
+    padding: 0; /* Fully edge-to-edge */
+    gap: 0; /* Fully edge-to-edge */
 }
 
 /* ─── Panels ─────────────────────────────────────────── */
@@ -280,11 +277,11 @@ body {
     flex-direction: column;
     min-height: 0;       /* WebView2 flex fix */
     background: var(--bg-panel);
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--border);
+    border-radius: 0; /* Remove rounded corners for flush design */
+    border: none; /* Rely on hairline dividers instead */
     backdrop-filter: var(--glass-blur);
     -webkit-backdrop-filter: var(--glass-blur);
-    box-shadow: var(--shadow-panel);
+    box-shadow: none; /* Remove floating shadows */
     overflow: hidden;
 }
 
@@ -293,7 +290,7 @@ body {
     justify-content: space-between;
     align-items: center;
     padding: 12px 16px;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--border); /* Slightly keep it for structure, but low opacity */
     flex-shrink: 0;
 }
 
@@ -311,6 +308,7 @@ body {
     width: var(--w-left);
     min-width: var(--w-left);
     flex-shrink: 0;
+    border-right: 1px solid var(--border); /* Edge-to-edge hairline divider */
 }
 
 /* Explorer panel-content: overflow hidden so welcome state flex-center works */
@@ -322,9 +320,12 @@ body {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-weight: 700;
-    font-size: 14px;
-    letter-spacing: -0.01em;
+    font-weight: 600;
+    font-style: italic;
+    font-family: var(--font-serif);
+    font-size: 16px;
+    letter-spacing: 0.02em;
+    color: var(--text-1); /* Stark white text contrasting the accent icon */
 }
 
 .brand-icon {
@@ -421,7 +422,7 @@ body {
     display: flex;
     align-items: center;
     padding: 8px 12px;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--border); /* Hairline divider */
     gap: 4px;
     background: transparent;
     flex-wrap: nowrap;
@@ -433,14 +434,14 @@ body {
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 6px 10px;
+    padding: 6px 14px; /* Increased horizontal padding */
     border: none;
     background: none;
     color: var(--text-2);
     font-family: var(--font);
     font-size: 13px;
     font-weight: 500;
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-pill); /* Pill shaped! */
     cursor: pointer;
     transition: background 0.2s ease, color 0.2s ease;
     white-space: nowrap;
@@ -464,14 +465,14 @@ body {
 }
 
 .action-btn {
-    padding: 5px 12px;
+    padding: 6px 16px;
     border: 1px solid var(--accent);
     background: var(--accent);
     color: white;
     font-family: var(--font);
     font-size: 12px;
     font-weight: 600;
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-pill); /* Pill shaped */
     cursor: pointer;
     transition: all var(--transition);
 }
@@ -479,9 +480,10 @@ body {
 .action-btn:hover { background: var(--accent-hover); }
 .action-btn.outline {
     background: transparent;
-    color: var(--accent);
+    border: 1px solid var(--border-focus); /* Softer outline */
+    color: var(--text-1);
 }
-.action-btn.outline:hover { background: var(--accent-bg); }
+.action-btn.outline:hover { background: var(--accent-bg); border-color: var(--accent); color: var(--accent) }
 
 /* Main content area — must have explicit flex constraints so child .view heights resolve correctly in Tauri WebView */
 .main-content {
@@ -786,10 +788,12 @@ body {
 }
 
 .empty-title {
-    font-size: 15px;
-    font-weight: 700;
+    font-family: var(--font-serif, var(--font));
+    font-size: 20px;
+    font-weight: 500;
     color: var(--text-1);
     margin: 0 0 6px 0;
+    letter-spacing: 0.02em;
 }
 
 .empty-sub {
@@ -811,7 +815,7 @@ body {
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
     box-shadow: none;
-    border: none;
+    border-left: 1px solid var(--border); /* Edge-to-edge hairline divider */
     border-radius: 0;
     overflow: visible;
 }
@@ -1041,39 +1045,40 @@ body {
     overflow-y: auto;
     padding: 32px 40px;
     font-family: var(--font);
-    font-size: 14px;
-    line-height: 1.7;
+    font-size: 16px;
+    line-height: 1.8;
+    letter-spacing: 0.015em;
     color: var(--text-1);
 }
 
 .hedge-content h1 {
-    font-size: 24px;
+    font-size: 26px;
     font-weight: 700;
-    margin-bottom: 8px;
-    letter-spacing: -0.02em;
+    margin-bottom: 12px;
+    letter-spacing: -0.01em;
     color: var(--text-1);
 }
 
 .hedge-content h2 {
-    font-size: 18px;
+    font-size: 20px;
     font-weight: 600;
-    margin-top: 32px;
-    margin-bottom: 12px;
+    margin-top: 36px;
+    margin-bottom: 16px;
     padding-bottom: 8px;
     border-bottom: 1px solid var(--border);
     color: var(--text-1);
 }
 
 .hedge-content h3 {
-    font-size: 15px;
+    font-size: 17px;
     font-weight: 600;
-    margin-top: 24px;
-    margin-bottom: 8px;
+    margin-top: 28px;
+    margin-bottom: 12px;
     color: var(--text-1);
 }
 
 .hedge-content p {
-    margin-bottom: 12px;
+    margin-bottom: 16px;
     color: var(--text-2);
 }
 

@@ -364,5 +364,29 @@
       "title": "✍️ 翻译本地化",
       "body": "『@产品手册.docx 翻译成地道英文，要有科技感不要机翻腔』"
     }
+  ],
+  "slashCommands": [
+    { "key": "c", "command": "/compact", "title": "Compact Context", "desc": "Summarizes and compresses conversation history", "icon": "🧹" },
+    { "key": "x", "command": "/clear", "title": "Clear Chat", "desc": "Start a fresh conversation", "icon": "🗑️" },
+    { "key": "b", "command": "/bug", "title": "Report Bug", "desc": "Send feedback to anthropic", "icon": "🐞" },
+    { "key": "i", "command": "/init", "title": "Initialize Project", "desc": "Create CLAUDE.md guidelines", "icon": "📝" },
+    { "key": "l", "command": "/login", "title": "Login", "desc": "Authenticate with Anthropic", "icon": "🔑" },
+    { "key": "h", "command": "/help", "title": "Help Instructions", "desc": "Show full CLI documentation", "icon": "💡" }
+  ],
+  "hotkeys": [
+    { "keys": "!", "desc": "bash mode" },
+    { "keys": "/", "desc": "commands" },
+    { "keys": "@", "desc": "file paths" },
+    { "keys": "&", "desc": "background" },
+    { "keys": "Double tap ESC", "desc": "clear input" },
+    { "keys": "Shift + Tab", "desc": "auto-accept edits" },
+    { "keys": "Ctrl + O", "desc": "verbose output" },
+    { "keys": "Ctrl + T", "desc": "toggle tasks" },
+    { "keys": "Ctrl + Shift + -", "desc": "undo" },
+    { "keys": "Alt + V", "desc": "paste images" },
+    { "keys": "Meta + P", "desc": "switch model" },
+    { "keys": "Meta + O", "desc": "toggle fast mode" },
+    { "keys": "Ctrl + S", "desc": "stash prompt" },
+    { "keys": "Ctrl + G", "desc": "edit in $EDITOR" }
   ]
 }

@@ -1,4 +1,4 @@
-// Coffee Mode — Git Intelligence Module
+// Coffee CLI — Git Intelligence Module
 // Reads working tree diff and formats it for Super Prompt injection.
 
 use git2::{Repository, DiffOptions, DiffFormat, Delta};

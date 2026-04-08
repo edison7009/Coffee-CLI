@@ -1,4 +1,4 @@
-// Coffee Mode — Directory scanner using the `ignore` crate
+// Coffee CLI — Directory scanner using the `ignore` crate
 // Same engine as ripgrep — respects .gitignore automatically
 
 use crate::config::{MAX_DEPTH, MAX_FILES, MAX_FILE_SIZE};

@@ -685,11 +685,11 @@ impl VtProcessor {
 
 // ─── Bootstrap ───────────────────────────────────────────────────────────────
 
-/// Seeds default dictionaries into ~/.CoffeeMode/dictionaries/ on first run.
+/// Seeds default dictionaries into ~/.CoffeeCLI/dictionaries/ on first run.
 /// Uses directory structure: tool-name/_config.json + lang.json
 pub fn bootstrap_dictionaries() {
     let Some(home) = dirs::home_dir() else { return };
-    let dict_dir = home.join(".CoffeeMode").join("dictionaries");
+    let dict_dir = home.join(".coffee-cli").join("dictionaries");
 
     // Define tool directories and their files
     let tools: &[(&str, &[(&str, &str)])] = &[
@@ -718,7 +718,7 @@ pub fn bootstrap_dictionaries() {
 
 /// Get the dictionaries directory path.
 pub fn dictionaries_dir() -> Option<std::path::PathBuf> {
-    dirs::home_dir().map(|h| h.join(".CoffeeMode").join("dictionaries"))
+    dirs::home_dir().map(|h| h.join(".coffee-cli").join("dictionaries"))
 }
 
 #[cfg(test)]

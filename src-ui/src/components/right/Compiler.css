@@ -578,7 +578,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 0;
+  padding: 16px; /* Edge-to-edge layout requires explicit internal padding */
   background: transparent;
   border-bottom: none;
 }
@@ -600,6 +600,21 @@
 
 .menu-master-btn:hover {
   background: rgba(196, 149, 106, 0.2);
+}
+
+.menu-master-btn.normal {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.menu-master-btn.normal:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-1);
+}
+
+.menu-master-btn.normal kbd {
+  color: var(--text-3);
 }
 
 .menu-master-btn kbd {
@@ -724,7 +739,7 @@
 .guide-panel {
   display: flex;
   flex-direction: column;
-  padding: 0;
+  padding: 16px; /* Give breathing room to the guide panel */
   gap: 10px;
   flex: 1;
 }
@@ -846,7 +861,7 @@
   font-size: 15px;
   font-weight: 600;
   letter-spacing: 0.5px;
-  color: var(--text-1);
+  color: var(--text-2);
   line-height: 1.4;
   margin-bottom: 6px;
   padding-right: 54px; /* 防止过长的标题与右上角按钮重叠 */
@@ -858,7 +873,7 @@
   font-family: var(--font);
   font-size: 13.5px;
   font-weight: 400;
-  color: rgba(255, 255, 255, 0.85); /* 高清高亮，摆脱灰暗感 */
+  color: var(--text-2); /* 修复在浅色模式下文本消失的 Bug，并适配咖啡色系 */
   line-height: 1.7;
   white-space: pre-wrap;
   letter-spacing: 0.4px;
@@ -1020,3 +1035,101 @@
   flex-shrink: 0;
 }
 
+/* ─── Global Guide Article (Minimalist Markdown Reader) ──────────────────────── */
+
+.global-article-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 32px 32px 24px 32px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: transparent;
+}
+
+.global-article-content {
+  width: 100%;
+}
+
+.global-article-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 32px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.nav-btn {
+  background: transparent;
+  color: var(--text-3);
+  border: none;
+  cursor: pointer;
+  font-family: var(--font);
+  font-size: 13px;
+  transition: color 0.15s ease;
+  padding: 4px;
+}
+
+.nav-btn:hover:not(:disabled) {
+  color: var(--text-1);
+}
+
+.nav-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.nav-dots {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.nav-dot:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.nav-dot.active {
+  background: var(--accent, #c4956a);
+  transform: scale(1.4);
+}
+
+.article-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text-1);
+  margin: 0 0 24px 0;
+  font-family: var(--font);
+  line-height: 1.4;
+}
+
+.article-p {
+  font-size: 13px;
+  line-height: 1.8;
+  color: rgba(255, 255, 255, 0.65);
+  margin: 0 0 16px 0;
+  font-family: var(--font);
+}
+
+.article-inline-code {
+  background: rgba(196, 149, 106, 0.08);
+  border: 1px solid rgba(196, 149, 106, 0.15);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 11.5px;
+  font-family: var(--mono, monospace);
+  color: var(--accent, #c4956a);
+  white-space: nowrap;
+}

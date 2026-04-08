@@ -1,5 +1,5 @@
 @echo off
-echo Starting Coffee Mode Dev...
+echo Starting Coffee CLI Dev...
 
 cd /d "%~dp0"
 

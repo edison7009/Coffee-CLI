@@ -1,0 +1,19 @@
+{
+  "commands": ["coffeecode"],
+  "patterns": ["CoffeeCode v", "OpenCode v"],
+  "panel": {
+    "menuButton": {
+      "label": "Menu",
+      "triggerKey": "/",
+      "closeKey": "\u007f",
+      "icon": "menu"
+    },
+    "helpButton": {
+      "label": "Commands",
+      "triggerKey": "\u0010",
+      "closeKey": "\u001b",
+      "icon": "help",
+      "note": "Ctrl+P"
+    }
+  }
+}

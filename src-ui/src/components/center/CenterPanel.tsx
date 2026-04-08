@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { TierTerminal } from './TierTerminal';
+import { DosPlayer } from './DosPlayer';
 import { ErrorBoundary } from '../common/ErrorBoundary';
 import { useAppState, type ToolType, type AgentStatus } from '../../store/app-state';
 import { isTauri, commands, type SavedSession } from '../../tauri';
@@ -57,21 +58,58 @@ const SvgOpenClaw = () => (
   </svg>
 );
 
-const SvgFreeCode = () => (
-  <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
-    <rect x="1" y="1" width="22" height="22" rx="6" fill="url(#fc-bg)"/>
-    <path d="M12 7.5V6a3 3 0 0 0-3 3v1.5h6V9a3 3 0 0 0-3-3z" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" fill="none" opacity="0.85"/>
-    <rect x="7.5" y="11" width="9" height="7" rx="1.5" fill="#fff" opacity="0.9"/>
-    <circle cx="12" cy="14.5" r="1.2" fill="url(#fc-bg)"/>
-    <line x1="12" y1="15.5" x2="12" y2="16.5" stroke="url(#fc-bg)" strokeWidth="1.2" strokeLinecap="round"/>
+const SvgCoffeeCode = () => (
+  <svg width="1em" height="1em" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
     <defs>
-      <linearGradient id="fc-bg" x1="1" y1="1" x2="23" y2="23" gradientUnits="userSpaceOnUse">
-        <stop stopColor="#D97757"/>
-        <stop offset="1" stopColor="#B85C3A"/>
-      </linearGradient>
+      <mask id="ccIconMask">
+        <path fill="none" stroke="#fff" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M12 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M16 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4">
+          <animate attributeName="d" dur="3s" repeatCount="indefinite" values="M8 0c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M12 0c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M16 0c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4;M8 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M12 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M16 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4"/>
+        </path>
+        <path d="M4 7h16v0h-16v12h16v-32h-16Z">
+          <animate fill="freeze" attributeName="d" begin="1s" dur="0.6s" to="M4 2h16v5h-16v12h16v-24h-16Z"/>
+        </path>
+      </mask>
     </defs>
+    <g stroke="#C4956A" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2">
+      <path fill="#C4956A" fillOpacity="0" strokeDasharray="48" d="M17 9v9c0 1.66 -1.34 3 -3 3h-6c-1.66 0 -3 -1.34 -3 -3v-9Z">
+        <animate fill="freeze" attributeName="stroke-dashoffset" dur="0.6s" values="48;0"/>
+        <animate fill="freeze" attributeName="fill-opacity" begin="1.6s" dur="0.4s" to="1"/>
+      </path>
+      <path fill="none" strokeDasharray="16" strokeDashoffset="16" d="M17 9h3c0.55 0 1 0.45 1 1v3c0 0.55 -0.45 1 -1 1h-3">
+        <animate fill="freeze" attributeName="stroke-dashoffset" begin="0.6s" dur="0.3s" to="0"/>
+      </path>
+    </g>
+    <path fill="#C4956A" d="M0 0h24v24H0z" mask="url(#ccIconMask)"/>
   </svg>
 );
+
+// ── Platform-aware Terminal Icon & Label ─────────────────────────────────────
+
+const detectOS = (): 'win' | 'mac' | 'linux' => {
+  const ua = navigator.userAgent.toLowerCase();
+  if (ua.includes('win')) return 'win';
+  if (ua.includes('mac')) return 'mac';
+  return 'linux';
+};
+
+const TERMINAL_ICON: Record<string, string> = {
+  win: '/icons/powershell.svg',
+  mac: '/icons/macos-terminal.png',
+  linux: '/icons/linux-terminal.png',
+};
+
+const TerminalIcon = () => {
+  const os = detectOS();
+  return (
+    <img
+      src={TERMINAL_ICON[os]}
+      alt=""
+      style={{ width: '1em', height: '1em', borderRadius: 3, objectFit: 'contain', flexShrink: 0 }}
+    />
+  );
+};
+
+// (terminal label now from i18n: t('tool.terminal'))
 
 const SvgPlus = ({ active }: { active: boolean }) => (
   <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, color: active ? 'var(--accent)' : 'inherit' }}>
@@ -89,6 +127,9 @@ export function CenterPanel() {
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [resumableSessions, setResumableSessions] = useState<SavedSession[]>([]);
   const [toolsInstalled, setToolsInstalled] = useState<Record<string, boolean>>({});
+  const [showArcadeGames, setShowArcadeGames] = useState(false);
+  const [arcadeGames, setArcadeGames] = useState<{name:string;path:string;size:number}[]>([]);
+  const [disableDrawer, setDisableDrawer] = useState(false);
 
   // Derived state — must be before hooks that depend on it
   const activeSession = terminals.find(t => t.id === activeTerminalId);
@@ -234,10 +275,10 @@ export function CenterPanel() {
             // Detect meaningful transitions
             if (prev === 'working' && status === 'idle') {
               playChime('complete');
-              sendNotification('Coffee Mode', 'Agent has finished working.');
+              sendNotification('Coffee CLI', 'Agent has finished working.');
             } else if (prev === 'working' && status === 'wait_input') {
               playChime('attention');
-              sendNotification('Coffee Mode', 'Agent needs your input.');
+              sendNotification('Coffee CLI', 'Agent needs your input.');
             }
 
             dispatch({ type: 'SET_AGENT_STATUS', id, status: status as AgentStatus });
@@ -256,7 +297,7 @@ export function CenterPanel() {
     }
     dispatch({
       type: 'ADD_TERMINAL',
-      session: { id: crypto.randomUUID(), tool: null, folderPath: null, scanData: null, agentStatus: 'idle' as const, menu: null }
+      session: { id: crypto.randomUUID(), tool: null, folderPath: null, scanData: null, agentStatus: 'idle' as const, menu: null, hasInputText: false }
     });
   };
 
@@ -283,14 +324,32 @@ export function CenterPanel() {
     }
   };
 
+  const ARCADE_META: Record<string, {icon:string; key: 'game.pal' | 'game.redalert' | 'game.doom' | 'game.richman3' | 'game.simcity2000'}> = {
+    'pal_premium.jsdos': { icon: '/icons/pal.jpg', key: 'game.pal' },
+    'redalert.jsdos': { icon: '/icons/redalert.png', key: 'game.redalert' },
+    'doom.jsdos': { icon: '/icons/doom.png', key: 'game.doom' },
+    'richman3.jsdos': { icon: '/icons/richman3.png', key: 'game.richman3' },
+    'simcity2000.jsdos': { icon: '/icons/simcity2000.png', key: 'game.simcity2000' },
+  };
+
   // Helper to render the correct icon and title based on tool type
-  const renderTabContent = (tool: ToolType, isActive: boolean) => {
-    switch (tool) {
+  const renderTabContent = (session: typeof terminals[0], isActive: boolean) => {
+    switch (session.tool) {
       case 'claude': return { icon: <SvgClaude />, title: 'Claude Code' };
-      case 'codex': return { icon: <SvgCodex />, title: 'Codex' };
+      case 'coffeecode': return { icon: <SvgCoffeeCode />, title: 'Coffee Code' };
+      case 'codex': return { icon: <SvgCodex />, title: 'Codex CLI' };
       case 'gemini': return { icon: <SvgGemini />, title: 'Gemini CLI' };
       case 'openclaw': return { icon: <SvgOpenClaw />, title: 'OpenClaw' };
-      case 'freecode': return { icon: <SvgFreeCode />, title: 'Free Code' };
+      case 'terminal': return { icon: <TerminalIcon />, title: t('tool.terminal') };
+      case 'arcade': {
+        const gameName = session.toolData || '';
+        const m = ARCADE_META[gameName.toLowerCase()];
+        if (m) {
+          const title = t(m.key);
+          return { icon: <img src={m.icon} alt="" style={{ width: '1em', height: '1em', borderRadius: 3, objectFit: 'cover' }} />, title };
+        }
+        return { icon: <span style={{ fontSize: '1em' }}>🎮</span>, title: 'Coffee Play' };
+      }
       default: return { icon: <SvgPlus active={isActive} />, title: t('tab.new') };
     }
   };
@@ -299,8 +358,10 @@ export function CenterPanel() {
     <>
       <div className="chrome-tabs-header">
         {terminals.map(session => {
+          if (session.isHidden && session.id !== activeTerminalId) return null;
+          
           const isActive = session.id === activeTerminalId;
-          const { icon, title } = renderTabContent(session.tool, isActive);
+          const { icon, title } = renderTabContent(session, isActive);
 
           return (
             <div 
@@ -344,6 +405,7 @@ export function CenterPanel() {
           <div 
             key={t.id} 
             className="terminal-wrapper"
+            data-session-id={t.id}
             style={{ 
               display: t.id === activeTerminalId ? 'flex' : 'none',
               width: '100%',
@@ -351,95 +413,174 @@ export function CenterPanel() {
               position: 'relative'
             }}
           >
-            {/* Floating close buttons removed in favor of Tab-integrated controls */}
-            <ErrorBoundary fallbackLabel="Tier Terminal Error">
-              <TierTerminal sessionId={t.id} tool={t.tool} />
-            </ErrorBoundary>
+            {t.tool === 'arcade' ? (
+              <DosPlayer sessionId={t.id} />
+            ) : (
+              <ErrorBoundary key={`err-${t.id}-${t.restartKey || 0}`} fallbackLabel="Tier Terminal Error">
+                <TierTerminal key={`tier-${t.id}-${t.restartKey || 0}`} sessionId={t.id} tool={t.tool} />
+              </ErrorBoundary>
+            )}
           </div>
         ) : null)}
 
         {isLaunchpadMode && activeTerminalId && (
           <div className="launchpad-container" style={{ position: 'relative' }}>
             {/* Close button removed: handles via Tab bar */}
-            <div className="launchpad-inner">
-              <div className="launchpad-grid">
-                {[
-                  { key: 'claude' as ToolType, label: 'Claude Code', icon: <SvgClaude /> },
-                  { key: 'freecode' as ToolType, label: 'Free Code', icon: <SvgFreeCode /> },
-                  { key: 'codex' as ToolType, label: 'Codex', icon: <SvgCodex /> },
-                  { key: 'gemini' as ToolType, label: 'Gemini CLI', icon: <SvgGemini /> },
-                  { key: 'openclaw' as ToolType, label: 'OpenClaw', icon: <SvgOpenClaw /> },
-                ].map(tool => {
-                  const installed = toolsInstalled[tool?.key ?? ''] !== false;
-                  return (
-                    <div
-                      key={tool.key}
-                      className={`launchpad-card ${!installed ? 'launchpad-card-disabled' : ''}`}
-                      onClick={() => installed && selectTool(tool.key)}
-                    >
-                      <div className="launchpad-icon">{tool.icon}</div>
-                      <span>{tool.label}</span>
+            <div className="launchpad-slider-viewport">
+              <div className={`launchpad-slider-track ${showArcadeGames ? 'slide-to-games' : ''}`}>
+                
+                {/* ─── Page 1: Tools ─── */}
+                <div className="launchpad-page">
+                  <div className="launchpad-inner">
+                    <div className="launchpad-grid">
+                      {[
+                        { key: 'coffeecode' as ToolType, label: t('tool.coffeecode'), icon: <SvgCoffeeCode /> },
+                        { key: 'claude' as ToolType, label: 'Claude Code', icon: <SvgClaude /> },
+                        { key: 'codex' as ToolType, label: 'Codex CLI', icon: <SvgCodex /> },
+                        { key: 'gemini' as ToolType, label: 'Gemini CLI', icon: <SvgGemini /> },
+                        { key: 'openclaw' as ToolType, label: 'OpenClaw', icon: <SvgOpenClaw /> },
+                        { key: 'terminal' as ToolType, label: t('tool.terminal'), icon: <TerminalIcon /> },
+                      ].map(tool => {
+                        const installed = toolsInstalled[tool?.key ?? ''] !== false;
+                        return (
+                          <div
+                            key={tool.key}
+                            className={`launchpad-card ${!installed ? 'launchpad-card-disabled' : ''}`}
+                            onClick={() => installed && selectTool(tool.key)}
+                          >
+                            <div className="launchpad-icon">{tool.icon}</div>
+                            <span>{tool.label}</span>
+                          </div>
+                        );
+                      })}
                     </div>
-                  );
-                })}
-              </div>
 
-              {/* Resumable Sessions */}
-              {resumableSessions.length > 0 && (
-                <div className="resume-section">
-                  <div className="resume-section-title">Resumable Sessions</div>
-                  <div className="resume-list">
-                    {resumableSessions.map(saved => {
-                      const toolIcon = (() => {
-                        switch (saved.tool) {
-                          case 'claude': return <SvgClaude />;
-                          case 'codex': return <SvgCodex />;
-                          case 'gemini': return <SvgGemini />;
-                          case 'openclaw': return <SvgOpenClaw />;
-                          default: return null;
-                        }
-                      })();
-                      const toolTitle = (() => {
-                        switch (saved.tool) {
-                          case 'claude': return 'Claude Code';
-                          case 'codex': return 'Codex';
-                          case 'gemini': return 'Gemini CLI';
-                          case 'openclaw': return 'OpenClaw';
-                          default: return saved.tool;
-                        }
-                      })();
-                      return (
-                        <div
-                          key={saved.id}
-                          className="resume-card"
-                          onClick={() => {
-                            if (!activeTerminalId || !saved.session_token) return;
-                            dispatch({ type: 'SET_TERMINAL_TOOL', id: activeTerminalId, tool: saved.tool as ToolType });
-                            commands.tierTerminalResume(
-                              saved.id, activeTerminalId, saved.tool,
-                              saved.session_token, 80, 24
-                            ).then(() => {
-                              setResumableSessions(prev => prev.filter(s => s.id !== saved.id));
-                            }).catch((err) => {
-                              setToastMsg(`Resume failed: ${err}`);
-                            });
-                          }}
-                        >
-                          <span className="resume-card-icon">{toolIcon}</span>
-                          <span className="resume-card-info">
-                            <span className="resume-card-title">{toolTitle}</span>
-                            <span className="resume-card-token">{saved.session_token?.slice(0, 8)}...</span>
-                          </span>
-                          <span className="resume-card-badge">Resume</span>
+                    {/* Resumable Sessions */}
+                    {resumableSessions.length > 0 && (
+                      <div className="resume-section">
+                        <div className="resume-section-title">Resumable Sessions</div>
+                        <div className="resume-list">
+                          {resumableSessions.map(saved => {
+                            const toolIcon = (() => {
+                              switch (saved.tool) {
+                                case 'claude': return <SvgClaude />;
+                                case 'codex': return <SvgCodex />;
+                                case 'gemini': return <SvgGemini />;
+                                case 'openclaw': return <SvgOpenClaw />;
+                                default: return null;
+                              }
+                            })();
+                            const toolTitle = (() => {
+                              switch (saved.tool) {
+                                case 'claude': return 'Claude Code';
+                                case 'codex': return 'Codex CLI';
+                                case 'gemini': return 'Gemini CLI';
+                                case 'openclaw': return 'OpenClaw';
+                                case 'terminal': return t('tool.terminal');
+                                default: return saved.tool;
+                              }
+                            })();
+                            return (
+                              <div
+                                key={saved.id}
+                                className="resume-card"
+                                onClick={() => {
+                                  if (!activeTerminalId || !saved.session_token) return;
+                                  dispatch({ type: 'SET_TERMINAL_TOOL', id: activeTerminalId, tool: saved.tool as ToolType });
+                                  commands.tierTerminalResume(
+                                    saved.id, activeTerminalId, saved.tool,
+                                    saved.session_token, 80, 24
+                                  ).then(() => {
+                                    setResumableSessions(prev => prev.filter(s => s.id !== saved.id));
+                                  }).catch((err) => {
+                                    setToastMsg(`Resume failed: ${err}`);
+                                  });
+                                }}
+                              >
+                                <span className="resume-card-icon">{toolIcon}</span>
+                                <span className="resume-card-info">
+                                  <span className="resume-card-title">{toolTitle}</span>
+                                  <span className="resume-card-token">{saved.session_token?.slice(0, 8)}...</span>
+                                </span>
+                                <span className="resume-card-badge">Resume</span>
+                              </div>
+                            );
+                          })}
                         </div>
-                      );
-                    })}
+                      </div>
+                    )}
                   </div>
                 </div>
-              )}
+
+                {/* ─── Page 2: Arcade (Games) ─── */}
+                <div className="launchpad-page">
+                  <div className="launchpad-inner">
+                    <div className="launchpad-grid">
+                      {arcadeGames.map(game => {
+                        const name = game.name.replace(/\.jsdos$/i, '').replace(/[_-]/g, ' ');
+                        const m = ARCADE_META[game.name.toLowerCase()];
+                        const title = m ? t(m.key) : name;
+                        const icon = m?.icon;
+                        return (
+                          <div
+                            key={game.name}
+                            className="launchpad-card"
+                            onClick={() => {
+                              setShowArcadeGames(false);
+                              selectTool('arcade');
+                              // Set game name in toolData so tab shows correct title and DosPlayer auto-launches
+                              const sid = state.activeTerminalId;
+                              if (sid) dispatch({ type: 'SET_TERMINAL_TOOL', id: sid, tool: 'arcade', toolData: game.name });
+                            }}
+                          >
+                            <div className="launchpad-icon">
+                              {icon
+                                ? <img src={icon} alt={title} style={{ width: '1.4em', height: '1.4em', borderRadius: 4, objectFit: 'cover' }} />
+                                : '🎮'}
+                            </div>
+                            <span>{title}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+                
+              </div>
+            </div>
+
+            {/* Global Mode switch button */}
+            <div style={{ position: 'absolute', bottom: 18, right: 18 }}>
+              <button
+                className={`mode-switch-btn ${disableDrawer ? 'instant-click' : ''}`}
+                onClick={() => {
+                  setDisableDrawer(true);
+                  setTimeout(() => setDisableDrawer(false), 500);
+                  
+                  if (!showArcadeGames) {
+                    setShowArcadeGames(true);
+                    if (isTauri) {
+                      commands.listJsdosBundles().then((b: any[]) => setArcadeGames(b)).catch(() => {});
+                    }
+                  } else {
+                    setShowArcadeGames(false);
+                  }
+                }}
+              >
+                <div className="mode-switch-drawer">
+                  {!showArcadeGames 
+                    ? (state.currentLang.startsWith('zh') ? '\u653e\u677e\u4e00\u4e0b' : 'Take a break')
+                    : (state.currentLang.startsWith('zh') ? '\u56de\u5230\u5de5\u4f5c' : 'Back to work')}
+                </div>
+                <div className="mode-switch-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="M16 21l4-4-4-4"/><path d="M20 17H4"/>
+                  </svg>
+                </div>
+              </button>
             </div>
           </div>
-        )}
+                )}
       </div>
     </>
   );

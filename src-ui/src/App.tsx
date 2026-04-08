@@ -6,7 +6,7 @@ import { isTauri, retryInvoke, commands } from './tauri';
 import { TitleBar } from './components/common/TitleBar';
 import { Explorer } from './components/left/Explorer';
 import { CenterPanel } from './components/center/CenterPanel';
-import { Compiler } from './components/right/Compiler';
+import { RightPanel } from './components/right/Compiler';
 import './styles/global.css';
 
 export function App() {
@@ -60,9 +60,9 @@ export function App() {
           <CenterPanel />
         </main>
 
-        {/* Right: Compiler / cost estimator */}
+        {/* Right: Task Board + Tool Controls */}
         <aside className="panel panel-right">
-          <Compiler />
+          <RightPanel />
         </aside>
       </div>
     </>

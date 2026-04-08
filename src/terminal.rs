@@ -71,8 +71,8 @@ pub const AGENT_PRESETS: &[AgentPreset] = &[
         prompt_markers: &[">"],
     },
     AgentPreset {
-        tool_name: "freecode",
-        resume_command: Some("free-code --resume {{sessionId}}"),
+        tool_name: "coffeecode",
+        resume_command: Some("coffeecode --resume {{sessionId}}"),
         session_id_pattern: Some(r"Session ID:\s+([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})"),
         prompt_markers: &["❯", "> "],
     },
@@ -92,11 +92,12 @@ pub struct TerminalSession {
     /// Captured session token for resume (e.g. Claude Session ID)
     pub session_token: Mutex<Option<String>>,
     /// Hold PTY master alive — dropping this kills the terminal pipe
-    _master: Arc<Mutex<Option<Box<dyn portable_pty::MasterPty + Send>>>>,
+    pub(crate) _master: Arc<Mutex<Option<Box<dyn portable_pty::MasterPty + Send>>>>,
     /// Shared activity state for status detection.
-    /// The input handler (`tier_terminal_input`) writes `user_submitted_at`;
-    /// the ticker thread reads it to decide working vs idle.
     pub activity: Arc<Mutex<SessionActivity>>,
+    /// Ring buffer of recent base64-encoded output chunks for history replay
+    /// (detached windows call get_terminal_buffer to receive this)
+    pub output_buffer: Arc<Mutex<Vec<String>>>,
 }
 
 pub type SharedSession = Arc<Mutex<std::collections::HashMap<String, TerminalSession>>>;
@@ -143,6 +144,8 @@ pub fn spawn(
     initial_cols: u16,
     initial_rows: u16,
     tool_name: Option<String>,
+    theme_mode: Option<String>,
+    locale: Option<String>,
 ) -> anyhow::Result<()> {
     use portable_pty::{CommandBuilder, PtySize, native_pty_system};
 
@@ -183,12 +186,23 @@ pub fn spawn(
     cmd.env("TERM", "xterm-256color");
     cmd.env("COLORTERM", "truecolor");
 
+    // Pass theme mode to CoffeeCode so it knows dark vs light at startup
+    if let Some(ref mode) = theme_mode {
+        cmd.env("COFFEECODE_THEME_MODE", mode);
+    }
+
+    // Pass locale to CoffeeCode for TUI i18n
+    if let Some(ref loc) = locale {
+        cmd.env("COFFEECODE_LOCALE", loc);
+    }
+
     // Set working directory
     if let Some(dir) = &cwd {
         let path = std::path::Path::new(dir);
         if path.exists() && path.is_dir() {
             eprintln!("[Tier Terminal] CWD: {}", dir);
             cmd.cwd(dir);
+            cmd.env("COFFEE_MODE_CWD", dir);
         }
     }
 
@@ -235,10 +249,12 @@ pub fn spawn(
     }));
 
     // Store session (with shared writer reference + master kept alive + activity)
+    let output_buffer: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
     {
         let writer_clone = writer.clone();
         let master_clone = master_arc.clone();
         let activity_clone = activity.clone();
+        let buffer_clone = output_buffer.clone();
         let mut map = session.lock().unwrap();
         map.insert(session_id.clone(), TerminalSession {
             writer: Box::new(SharedWriter(writer_clone)),
@@ -247,6 +263,7 @@ pub fn spawn(
             session_token: Mutex::new(None),
             _master: master_clone,
             activity: activity_clone,
+            output_buffer: buffer_clone,
         });
     }
 
@@ -359,6 +376,7 @@ pub fn spawn(
         }
     });
 
+    let output_buffer_for_reader = output_buffer.clone();
     std::thread::spawn(move || {
         let mut buf = [0u8; 4096];
         let mut vt = translation::VtProcessor::new(translation_engine);
@@ -420,10 +438,21 @@ pub fn spawn(
                     }
 
                     // Send translated ANSI stream to xterm.js
+                    let data_clone = data.clone();
                     let _ = app_out.emit(
                         "tier-terminal-output",
                         TerminalOutput { id: session_id_out.clone(), data },
                     );
+
+                    // Append to ring buffer for detached window history replay
+                    if let Ok(mut buf) = output_buffer_for_reader.lock() {
+                        buf.push(data_clone);
+                        // Cap at 2000 chunks (~8MB) to bound memory
+                        if buf.len() > 2000 {
+                            let drain = buf.len() - 2000;
+                            buf.drain(..drain);
+                        }
+                    }
 
                     // CWD change notification (OSC 7)
                     if let Some(new_cwd) = cwd_change {

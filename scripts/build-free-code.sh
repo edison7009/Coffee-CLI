@@ -24,7 +24,7 @@ REPO_URL="https://github.com/paoloanzn/free-code.git"
 BRANCH="main"
 
 echo "═══════════════════════════════════════════════════════"
-echo "  Coffee Mode — Free Code Sidecar Builder"
+echo "  Coffee CLI — Free Code Sidecar Builder"
 echo "═══════════════════════════════════════════════════════"
 
 # ── 1. Check prerequisites ──────────────────────────────────

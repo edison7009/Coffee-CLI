@@ -1,4 +1,4 @@
-// Coffee Mode — Default configuration constants
+// Coffee CLI — Default configuration constants
 
 /// Maximum directory depth to scan
 pub const MAX_DEPTH: usize = 8;

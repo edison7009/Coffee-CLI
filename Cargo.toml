@@ -1,5 +1,5 @@
 [package]
-name = "coffee-mode"
+name = "coffee-cli"
 version = "0.1.0"
 edition = "2021"
 description = "Lightweight Multi-layer AI CLI Terminal"
@@ -10,7 +10,7 @@ categories = ["command-line-utilities", "development-tools"]
 build = "build.rs"
 
 [[bin]]
-name = "coffee-mode"
+name = "coffee-cli"
 path = "src/main.rs"
 
 [build-dependencies]

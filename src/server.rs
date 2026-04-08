@@ -7,7 +7,7 @@ use crate::translation;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::Mutex;
-use tauri::{State, Manager};
+use tauri::{State, Manager, Emitter};
 use tauri_plugin_dialog::DialogExt;
 
 /// Shared app state
@@ -93,7 +93,7 @@ fn scan_project(
 
         // Save last directory for next launch
         if let Some(home) = dirs::home_dir() {
-            let rc_dir = home.join(".CoffeeMode");
+            let rc_dir = home.join(".coffee-cli");
             let _ = std::fs::create_dir_all(&rc_dir);
             let last_dir_file = rc_dir.join("last_dir.txt");
             let _ = std::fs::write(&last_dir_file, &p);
@@ -127,7 +127,7 @@ fn scan_project(
 fn get_model(_state: State<'_, AppState>) -> Result<ModelInfo, String> {
     let models_path = dirs::home_dir()
         .ok_or_else(|| "Cannot determine home directory".to_string())?
-        .join(".CoffeeMode")
+        .join(".coffee-cli")
         .join("models.json");
 
     let content = std::fs::read_to_string(&models_path)
@@ -179,9 +179,15 @@ fn window_maximize(window: tauri::Window) {
 }
 
 #[tauri::command]
-fn window_close(app: tauri::AppHandle) {
-    // Close entire application (main window + island overlay)
-    app.exit(0);
+fn window_close(window: tauri::Window, app: tauri::AppHandle) {
+    let label = window.label().to_string();
+    if label == "main" {
+        // Main window: close entire application (including island + all detached)
+        app.exit(0);
+    } else {
+        // Detached window: just close this one
+        let _ = window.close();
+    }
 }
 
 #[tauri::command]
@@ -191,6 +197,41 @@ fn show_main_window(app: tauri::AppHandle) {
         let _ = window.unminimize();
         let _ = window.set_focus();
     }
+}
+
+/// Spawn a new independent Coffee CLI window.
+/// Each window is a fully standalone instance with its own tabs.
+#[tauri::command]
+fn create_detached_window(
+    app: tauri::AppHandle,
+    _session_id: String,
+    _tool: String,
+    _tool_data: Option<String>,
+) -> Result<(), String> {
+    let ts = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis();
+    let label = format!("detached-{}", ts);
+
+    let window = tauri::WebviewWindowBuilder::new(
+        &app,
+        &label,
+        tauri::WebviewUrl::App("index.html".into()),
+    )
+    .title("Coffee CLI")
+    .inner_size(1200.0, 800.0)
+    .min_inner_size(900.0, 600.0)
+    .decorations(false)
+    .shadow(false)
+    .center()
+    .build()
+    .map_err(|e| format!("Failed to create window: {}", e))?;
+
+    #[cfg(debug_assertions)]
+    window.open_devtools();
+
+    Ok(())
 }
 
 #[tauri::command]
@@ -215,7 +256,7 @@ fn check_tools_installed() -> std::collections::HashMap<String, bool> {
         ("codex", "codex"),
         ("gemini", "gemini-cli"),
         ("openclaw", "openclaw"),
-        // freecode is always available — it's a bundled sidecar binary
+        // coffeecode is always available — it's a bundled sidecar binary
     ];
     let mut result = std::collections::HashMap::new();
     for (key, bin) in tools {
@@ -238,9 +279,337 @@ fn check_tools_installed() -> std::collections::HashMap<String, bool> {
         };
         result.insert(key.to_string(), found);
     }
-    // Bundled sidecar — always available
-    result.insert("freecode".to_string(), true);
+    // CoffeeCode: check sidecar binary → PATH → dev source (bun)
+    let coffeecode_available = {
+        let sidecar_name = if cfg!(target_os = "windows") { "coffeecode.exe" } else { "coffeecode" };
+        let has_sidecar = std::env::current_exe()
+            .ok()
+            .and_then(|exe| exe.parent().map(|p| p.join(sidecar_name)))
+            .map(|p| p.exists())
+            .unwrap_or(false);
+
+        let in_path = if cfg!(target_os = "windows") {
+            std::process::Command::new("where")
+                .arg("coffeecode")
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null())
+                .status()
+                .map(|s| s.success())
+                .unwrap_or(false)
+        } else {
+            std::process::Command::new("which")
+                .arg("coffeecode")
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null())
+                .status()
+                .map(|s| s.success())
+                .unwrap_or(false)
+        };
+
+        // Dev source: check .opencode-upstream exists (debug builds run via bun)
+        let has_dev_source = std::env::current_exe()
+            .ok()
+            .and_then(|exe| {
+                exe.parent()
+                    .and_then(|p| p.parent())
+                    .and_then(|p| p.parent())
+                    .map(|p| p.join(".opencode-upstream/packages/opencode/src/index.ts"))
+            })
+            .map(|p| p.exists())
+            .unwrap_or(false);
+
+        has_sidecar || in_path || has_dev_source
+    };
+    result.insert("coffeecode".to_string(), coffeecode_available);
+    // Terminal is always available — it's the system shell
+    result.insert("terminal".to_string(), true);
     result
+}
+
+// ─── File System Browsing API ────────────────────────────────────────────────
+
+/// Information about a single drive / mount point
+#[derive(Serialize)]
+struct DriveInfo {
+    path: String,
+    label: String,
+    /// Semantic kind used by frontend for icon selection and i18n.
+    /// Values: "desktop", "downloads", "documents", "pictures", "music", "videos", "home", "drive", "root", "volume"
+    kind: String,
+}
+
+/// Information about a single directory entry (file or folder)
+#[derive(Serialize)]
+struct DirEntry {
+    name: String,
+    path: String,
+    is_dir: bool,
+    size: u64,
+}
+
+/// List all available drives (Windows) or common mount points (Unix)
+#[tauri::command]
+fn list_drives() -> Vec<DriveInfo> {
+    let mut drives: Vec<DriveInfo> = Vec::new();
+
+    // ── Quick Access locations (order matches Windows Explorer) ──
+
+    if let Some(desktop) = dirs::desktop_dir() {
+        if desktop.exists() {
+            drives.push(DriveInfo {
+                path: desktop.to_string_lossy().to_string(),
+                label: "Desktop".to_string(),
+                kind: "desktop".to_string(),
+            });
+        }
+    }
+
+    if let Some(dl) = dirs::download_dir() {
+        if dl.exists() {
+            drives.push(DriveInfo {
+                path: dl.to_string_lossy().to_string(),
+                label: "Downloads".to_string(),
+                kind: "downloads".to_string(),
+            });
+        }
+    }
+
+    if let Some(docs) = dirs::document_dir() {
+        if docs.exists() {
+            drives.push(DriveInfo {
+                path: docs.to_string_lossy().to_string(),
+                label: "Documents".to_string(),
+                kind: "documents".to_string(),
+            });
+        }
+    }
+
+    if let Some(pics) = dirs::picture_dir() {
+        if pics.exists() {
+            drives.push(DriveInfo {
+                path: pics.to_string_lossy().to_string(),
+                label: "Pictures".to_string(),
+                kind: "pictures".to_string(),
+            });
+        }
+    }
+
+    if let Some(music) = dirs::audio_dir() {
+        if music.exists() {
+            drives.push(DriveInfo {
+                path: music.to_string_lossy().to_string(),
+                label: "Music".to_string(),
+                kind: "music".to_string(),
+            });
+        }
+    }
+
+    if let Some(videos) = dirs::video_dir() {
+        if videos.exists() {
+            drives.push(DriveInfo {
+                path: videos.to_string_lossy().to_string(),
+                label: "Videos".to_string(),
+                kind: "videos".to_string(),
+            });
+        }
+    }
+
+    // Home directory
+    if let Some(home) = dirs::home_dir() {
+        drives.push(DriveInfo {
+            path: home.to_string_lossy().to_string(),
+            label: "Home".to_string(),
+            kind: "home".to_string(),
+        });
+    }
+
+    // ── Disk Drives ──
+
+    #[cfg(target_os = "windows")]
+    {
+        for letter in b'A'..=b'Z' {
+            let drive_path = format!("{}:\\", letter as char);
+            let p = std::path::Path::new(&drive_path);
+            if p.exists() {
+                drives.push(DriveInfo {
+                    path: drive_path.clone(),
+                    label: format!("{}", letter as char),
+                    kind: "drive".to_string(),
+                });
+            }
+        }
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        let root = std::path::Path::new("/");
+        if root.exists() {
+            drives.push(DriveInfo {
+                path: "/".to_string(),
+                label: "Root (/)".to_string(),
+                kind: "root".to_string(),
+            });
+        }
+        if cfg!(target_os = "macos") {
+            if let Ok(entries) = std::fs::read_dir("/Volumes") {
+                for entry in entries.flatten() {
+                    if entry.path().is_dir() {
+                        drives.push(DriveInfo {
+                            path: entry.path().to_string_lossy().to_string(),
+                            label: entry.file_name().to_string_lossy().to_string(),
+                            kind: "volume".to_string(),
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    drives
+}
+
+/// List the immediate children of a directory.
+/// Returns files and subdirectories sorted: directories first, then files, both alphabetical.
+#[tauri::command]
+fn list_directory(path: String) -> Result<Vec<DirEntry>, String> {
+    let dir = std::path::Path::new(&path);
+    if !dir.is_dir() {
+        return Err(format!("Not a directory: {}", path));
+    }
+
+    let mut entries: Vec<DirEntry> = Vec::new();
+
+    let read_dir = std::fs::read_dir(dir).map_err(|e| format!("Cannot read directory: {}", e))?;
+
+    for entry in read_dir {
+        let entry = match entry {
+            Ok(e) => e,
+            Err(_) => continue, // Skip unreadable entries
+        };
+        let name = entry.file_name().to_string_lossy().to_string();
+
+        // Skip hidden files/dirs (start with .)
+        if name.starts_with('.') {
+            continue;
+        }
+
+        let metadata = match entry.metadata() {
+            Ok(m) => m,
+            Err(_) => continue, // Skip unreadable entries
+        };
+
+        entries.push(DirEntry {
+            name,
+            path: entry.path().to_string_lossy().to_string(),
+            is_dir: metadata.is_dir(),
+            size: metadata.len(),
+        });
+    }
+
+    // Sort: directories first, then files, both alphabetical (case insensitive)
+    entries.sort_by(|a, b| {
+        if a.is_dir != b.is_dir {
+            return if a.is_dir { std::cmp::Ordering::Less } else { std::cmp::Ordering::Greater };
+        }
+        a.name.to_lowercase().cmp(&b.name.to_lowercase())
+    });
+
+    Ok(entries)
+}
+
+// ─── File System Operations ───────────────────────────────────────────────────
+
+/// Open the native file explorer and highlight / reveal the given path.
+#[tauri::command]
+fn show_in_folder(path: String) -> Result<(), String> {
+    let p = std::path::Path::new(&path);
+    #[cfg(target_os = "windows")]
+    {
+        // explorer /select, highlights the item in its parent folder
+        std::process::Command::new("explorer")
+            .arg("/select,")
+            .arg(p)
+            .spawn()
+            .map_err(|e| format!("Failed to open Explorer: {e}"))?;
+    }
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg("-R") // Reveal in Finder
+            .arg(p)
+            .spawn()
+            .map_err(|e| format!("Failed to open Finder: {e}"))?;
+    }
+    #[cfg(target_os = "linux")]
+    {
+        // Open the parent directory; most Linux file managers don't support select
+        let dir = if p.is_dir() { p.to_path_buf() } else { p.parent().unwrap_or(p).to_path_buf() };
+        std::process::Command::new("xdg-open")
+            .arg(dir)
+            .spawn()
+            .map_err(|e| format!("Failed to open file manager: {e}"))?;
+    }
+    Ok(())
+}
+
+/// Delete a file or directory permanently (no recycle bin).
+#[tauri::command]
+fn fs_delete(path: String) -> Result<(), String> {
+    let p = std::path::Path::new(&path);
+    if p.is_dir() {
+        std::fs::remove_dir_all(p).map_err(|e| format!("Delete failed: {e}"))
+    } else {
+        std::fs::remove_file(p).map_err(|e| format!("Delete failed: {e}"))
+    }
+}
+
+/// Rename / move a path to a new name within the same parent directory.
+#[tauri::command]
+fn fs_rename(path: String, new_name: String) -> Result<(), String> {
+    let src = std::path::Path::new(&path);
+    let dest = src.parent()
+        .ok_or_else(|| "No parent directory".to_string())?
+        .join(&new_name);
+    std::fs::rename(src, dest).map_err(|e| format!("Rename failed: {e}"))
+}
+
+/// Paste (copy or move) a file/directory into a target directory.
+/// `action` is either "copy" or "cut".
+#[tauri::command]
+fn fs_paste(action: String, src_path: String, target_dir: String) -> Result<(), String> {
+    let src = std::path::Path::new(&src_path);
+    let file_name = src.file_name().ok_or("Invalid source path")?;
+    let dest = std::path::Path::new(&target_dir).join(file_name);
+
+    match action.as_str() {
+        "cut" => {
+            std::fs::rename(&src, &dest).map_err(|e| format!("Move failed: {e}"))
+        }
+        "copy" => {
+            if src.is_dir() {
+                copy_dir_all(src, &dest).map_err(|e| format!("Copy dir failed: {e}"))
+            } else {
+                std::fs::copy(&src, &dest).map(|_| ()).map_err(|e| format!("Copy failed: {e}"))
+            }
+        }
+        _ => Err(format!("Unknown action: {action}")),
+    }
+}
+
+/// Recursively copy a directory and all its contents.
+fn copy_dir_all(src: &std::path::Path, dest: &std::path::Path) -> std::io::Result<()> {
+    std::fs::create_dir_all(dest)?;
+    for entry in std::fs::read_dir(src)? {
+        let entry = entry?;
+        let ty = entry.file_type()?;
+        let target = dest.join(entry.file_name());
+        if ty.is_dir() {
+            copy_dir_all(&entry.path(), &target)?;
+        } else {
+            std::fs::copy(entry.path(), target)?;
+        }
+    }
+    Ok(())
 }
 
 // ─── Tier Terminal API ────────────────────────────────────────────────────────
@@ -251,36 +620,93 @@ fn tier_terminal_start(
     tool: Option<String>,
     cols: u16,
     rows: u16,
+    theme_mode: Option<String>,
+    locale: Option<String>,
     app: tauri::AppHandle,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
     let dir = state.project_dir.lock().map_err(|e| e.to_string())?.clone();
-    
+
     // Map the requested tool to an actual CLI command.
-    // portable-pty handles ConPTY + environment properly, no shell wrapper needed.
     let (cmd, args): (String, Vec<String>) = match tool.as_deref() {
-        Some("claude") => ("claude".to_string(), vec![]),
-        Some("codex")  => ("codex".to_string(),  vec![]),
-        Some("gemini") => ("gemini-cli".to_string(), vec![]),
+        Some("claude")   => ("claude".to_string(), vec![]),
+        Some("codex")    => ("codex".to_string(),  vec![]),
+        Some("gemini")   => ("gemini-cli".to_string(), vec![]),
         Some("openclaw") => ("openclaw".to_string(), vec![]),
-        Some("freecode") => {
-            // Strategy: bundled sidecar binary > claude in PATH
-            // When bundled binary exists, use it (pre-built free-code).
-            // Otherwise, fall back to the standard claude CLI.
-            let sidecar_name = if cfg!(target_os = "windows") {
-                "free-code.exe"
-            } else {
-                "free-code"
-            };
-            let bundled_path = std::env::current_exe()
-                .ok()
-                .and_then(|exe| exe.parent().map(|p| p.join(sidecar_name)))
-                .filter(|p| p.exists());
-            match bundled_path {
-                Some(path) => (path.to_string_lossy().to_string(), vec![]),
-                None => {
-                    // Fall back to claude CLI (same engine, different branding)
-                    ("claude".to_string(), vec![])
+        Some("coffeecode") => {
+            // ── DEBUG builds ──────────────────────────────────────────────
+            // Always run from source via bun so code changes take effect immediately.
+            // Skip sidecar binary AND PATH to avoid stale executables.
+            #[cfg(debug_assertions)]
+            {
+                let app_root = std::env::current_exe().ok().and_then(|exe| {
+                    exe.parent()
+                        .and_then(|p| p.parent())
+                        .and_then(|p| p.parent())
+                        .map(|p| p.to_path_buf())
+                }).unwrap_or_else(|| dir.clone());
+
+                let dev_entry = app_root.join(".opencode-upstream/packages/opencode/src/index.ts");
+                eprintln!("[CoffeeCode] Dev mode — app_root={:?}, entry={:?}, exists={}", app_root, dev_entry, dev_entry.exists());
+
+                if dev_entry.exists() {
+                    let pkg_dir = app_root.join(".opencode-upstream/packages/opencode");
+                    ("bun".to_string(), vec![
+                        "run".to_string(),
+                        format!("--cwd={}", pkg_dir.to_string_lossy()),
+                        "--conditions=browser".to_string(),
+                        dev_entry.to_string_lossy().to_string(),
+                    ])
+                } else {
+                    return Err(format!(
+                        "CoffeeCode dev source not found at {:?}.\n\
+                         Make sure .opencode-upstream exists in the project root.",
+                        dev_entry
+                    ));
+                }
+            }
+
+            // ── RELEASE builds ────────────────────────────────────────────
+            // Sidecar binary → PATH → error
+            #[cfg(not(debug_assertions))]
+            {
+                let sidecar_name = if cfg!(target_os = "windows") { "coffeecode.exe" } else { "coffeecode" };
+                let bundled_path = std::env::current_exe()
+                    .ok()
+                    .and_then(|exe| exe.parent().map(|p| p.join(sidecar_name)))
+                    .filter(|p| p.exists());
+
+                if let Some(path) = bundled_path {
+                    (path.to_string_lossy().to_string(), vec![])
+                } else {
+                    let in_path = if cfg!(target_os = "windows") {
+                        std::process::Command::new("where")
+                            .arg("coffeecode")
+                            .stdout(std::process::Stdio::null())
+                            .stderr(std::process::Stdio::null())
+                            .status()
+                            .map(|s| s.success())
+                            .unwrap_or(false)
+                    } else {
+                        std::process::Command::new("which")
+                            .arg("coffeecode")
+                            .stdout(std::process::Stdio::null())
+                            .stderr(std::process::Stdio::null())
+                            .status()
+                            .map(|s| s.success())
+                            .unwrap_or(false)
+                    };
+
+                    if in_path {
+                        ("coffeecode".to_string(), vec![])
+                    } else {
+                        return Err(
+                            "CoffeeCode CLI not found. Please install it first:\n\
+                             1. Download from https://cnb.cool/Coffee-2026/Coffee-Code/releases\n\
+                             2. Or build from source: cd .opencode-upstream && bun install && bun run build --single"
+                            .to_string()
+                        );
+                    }
                 }
             }
         },
@@ -291,10 +717,16 @@ fn tier_terminal_start(
         }
     };
 
+    // If a session with the same ID already exists (e.g. restart-in-place),
+    // forcefully kill and remove it before spawning a fresh one.
     {
-        let lock = state.terminal_session.lock().unwrap();
-        if lock.contains_key(&session_id) {
-            return Ok(()); // Session already running
+        let mut lock = state.terminal_session.lock().unwrap();
+        if let Some(old_session) = lock.remove(&session_id) {
+            eprintln!("[Tier Terminal] Killing existing session {} for restart", session_id);
+            let _ = old_session.kill_tx.send(());
+            // Brief pause to let the OS reclaim PTY resources
+            drop(lock);
+            std::thread::sleep(std::time::Duration::from_millis(200));
         }
     }
 
@@ -317,10 +749,13 @@ fn tier_terminal_start(
         cols,
         rows,
         tool_name,
+        theme_mode,
+        locale,
     ).map_err(|e| format!("Failed to spawn PTY: {}", e))?;
 
     Ok(())
 }
+
 
 #[tauri::command]
 fn set_translation_lang(
@@ -403,6 +838,30 @@ fn tier_terminal_kill(session_id: String, state: State<'_, AppState>) -> Result<
     Ok(())
 }
 
+#[tauri::command]
+fn tier_terminal_resize(
+    session_id: String,
+    cols: u16,
+    rows: u16,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    use portable_pty::PtySize;
+    let map = state.terminal_session.lock().unwrap();
+    if let Some(session) = map.get(&session_id) {
+        let master_guard = session._master.lock().unwrap();
+        if let Some(ref master) = *master_guard {
+            let size = PtySize {
+                rows,
+                cols,
+                pixel_width: 0,
+                pixel_height: 0,
+            };
+            master.resize(size).map_err(|e| format!("Resize failed: {}", e))?;
+        }
+    }
+    Ok(())
+}
+
 // ─── Session Resume API ──────────────────────────────────────────────────────
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -418,7 +877,7 @@ struct SavedSession {
 fn sessions_file_path() -> PathBuf {
     let dir = dirs::home_dir()
         .unwrap_or_else(|| PathBuf::from("."))
-        .join(".CoffeeMode");
+        .join(".coffee-cli");
     let _ = std::fs::create_dir_all(&dir);
     dir.join("sessions.json")
 }
@@ -483,6 +942,8 @@ fn tier_terminal_resume(
         cols,
         rows,
         Some(tool),
+        None, // theme_mode: resume sessions use default detection
+        None, // locale: resume sessions use env detection
     ).map_err(|e| format!("Failed to resume: {}", e))?;
 
     // Remove from saved sessions file
@@ -544,6 +1005,101 @@ fn save_sessions(session: &terminal::SharedSession) {
     }
 }
 
+// ─── Coffee Play (Arcade) ────────────────────────────────────────────────────
+
+#[derive(Serialize)]
+struct JsdosBundle {
+    name: String,
+    path: String,
+    size: u64,
+}
+
+/// List all .jsdos game bundles in the `play` directory next to the executable
+/// (or in the project root during development).
+#[tauri::command]
+fn list_jsdos_bundles() -> Vec<JsdosBundle> {
+    let mut bundles = Vec::new();
+
+    // Try several candidate directories:
+    // 1. Next to the executable (production)
+    // 2. Current working directory / play  (development)
+    let mut candidates: Vec<PathBuf> = Vec::new();
+
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(parent) = exe.parent() {
+            candidates.push(parent.join("play"));
+        }
+    }
+    candidates.push(PathBuf::from("play"));
+    candidates.push(PathBuf::from("src-ui/public/play"));
+
+    for play_dir in &candidates {
+        if !play_dir.is_dir() { continue; }
+        if let Ok(entries) = std::fs::read_dir(play_dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.extension().map(|e| e.to_ascii_lowercase()) == Some(std::ffi::OsString::from("jsdos")) {
+                    if let Ok(meta) = entry.metadata() {
+                        bundles.push(JsdosBundle {
+                            name: entry.file_name().to_string_lossy().to_string(),
+                            path: path.to_string_lossy().to_string(),
+                            size: meta.len(),
+                        });
+                    }
+                }
+            }
+        }
+        if !bundles.is_empty() { break; } // Use first directory that has games
+    }
+
+    bundles
+}
+
+// ─── Terminal Buffer Replay (for detached windows) ───────────────────────────
+
+#[tauri::command]
+fn get_terminal_buffer(session_id: String, state: State<'_, AppState>) -> Result<Vec<String>, String> {
+    let map = state.terminal_session.lock().map_err(|e| e.to_string())?;
+    if let Some(session) = map.get(&session_id) {
+        let buf = session.output_buffer.lock().map_err(|e| e.to_string())?;
+        Ok(buf.clone())
+    } else {
+        Ok(vec![])
+    }
+}
+
+// ─── Task Board Persistence ──────────────────────────────────────────────────
+
+fn tasks_file_path() -> PathBuf {
+    let dir = dirs::home_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join(".coffee-cli");
+    let _ = std::fs::create_dir_all(&dir);
+    dir.join("tasks.json")
+}
+
+#[tauri::command]
+fn load_tasks() -> Result<String, String> {
+    let path = tasks_file_path();
+    if path.exists() {
+        std::fs::read_to_string(&path)
+            .map_err(|e| format!("Failed to read tasks: {}", e))
+    } else {
+        Ok("[]".to_string())
+    }
+}
+
+#[tauri::command]
+fn save_tasks(data: String, app: tauri::AppHandle) -> Result<(), String> {
+    let path = tasks_file_path();
+    std::fs::write(&path, &data)
+        .map_err(|e| format!("Failed to save tasks: {}", e))?;
+    // Notify all windows so other instances can reload
+    let _ = app.emit("tasks-changed", &data);
+    Ok(())
+}
+
+
 pub fn start_ui(project_dir: PathBuf) -> anyhow::Result<()> {
     let (tx, rx) = std::sync::mpsc::channel();
     let abs_dir = std::fs::canonicalize(&project_dir).unwrap_or_else(|_| project_dir.clone());
@@ -576,15 +1132,28 @@ pub fn start_ui(project_dir: PathBuf) -> anyhow::Result<()> {
             window_maximize,
             window_close,
             show_main_window,
+            create_detached_window,
             tier_terminal_start,
             tier_terminal_input,
             tier_terminal_raw_write,
             tier_terminal_kill,
+            tier_terminal_resize,
             tier_terminal_resume,
             get_resumable_sessions,
             set_translation_lang,
+
             get_translation_entries,
             check_tools_installed,
+            list_drives,
+            list_directory,
+            show_in_folder,
+            fs_delete,
+            fs_rename,
+            fs_paste,
+            list_jsdos_bundles,
+            get_terminal_buffer,
+            load_tasks,
+            save_tasks,
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {

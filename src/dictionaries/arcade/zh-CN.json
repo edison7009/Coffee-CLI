@@ -1,0 +1,21 @@
+{
+  "hotkeys": [
+    { "keys": "↑ ↓ ← →", "desc": "移动角色" },
+    { "keys": "Space", "desc": "互动 / 确认", "important": true },
+    { "keys": "Esc", "desc": "打开游戏菜单", "important": true },
+    { "keys": "Enter", "desc": "确认 / 跳过对话" },
+    { "keys": "W", "desc": "步行模式" },
+    { "keys": "S", "desc": "状态画面" },
+    { "keys": "I", "desc": "道具栏" },
+    { "keys": "M", "desc": "仙术" },
+    { "keys": "Q", "desc": "装备" },
+    { "keys": "F9", "desc": "开关音乐" },
+    { "keys": "F10", "desc": "老板键 (隐藏)", "important": true }
+  ],
+  "tips": [
+    {
+      "title": "Coffee Play 街机",
+      "body": "在 Coffee CLI 中玩经典 DOS 游戏。随时按 F10 瞬间隐藏，按 F9 可开关音乐。"
+    }
+  ]
+}

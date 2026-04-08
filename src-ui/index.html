@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Coffee Mode — Your Multi-Agent AI Terminal Companion." />
-    <title>Coffee Mode</title>
+    <meta name="description" content="Coffee CLI — Your Multi-Agent AI Terminal Companion." />
+    <title>Coffee CLI</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <!-- Apply theme BEFORE React renders to prevent flash of unstyled variables -->
     <script>
@@ -14,6 +14,8 @@
         document.documentElement.setAttribute('data-theme', theme);
       })();
     </script>
+    <!-- emulators: DOSBox WASM engine for Coffee Play arcade (no UI deps) -->
+    <script src="/js-dos/emulators/emulators.js"></script>
   </head>
   <body>
     <div id="root"></div>

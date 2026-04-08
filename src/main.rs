@@ -13,10 +13,10 @@ use std::path::PathBuf;
 
 fn bootstrap_user_config() {
     let Some(home) = dirs::home_dir() else { return };
-    let hc_dir = home.join(".CoffeeMode");
+    let hc_dir = home.join(".coffee-cli");
 
     if let Err(e) = std::fs::create_dir_all(&hc_dir) {
-        eprintln!("[CC] Could not create ~/.CoffeeMode: {}", e);
+        eprintln!("[CC] Could not create ~/.coffee-cli: {}", e);
         return;
     }
 
@@ -25,7 +25,7 @@ fn bootstrap_user_config() {
 
     let template = r#"[
   {
-    "name": "Coffee Mode Default",
+    "name": "Coffee CLI Default",
     "modelId": "default",
     "baseUrl": "http://localhost:11434/v1"
   }
@@ -39,7 +39,7 @@ fn bootstrap_user_config() {
 fn get_initial_dir() -> PathBuf {
     let home = dirs::home_dir();
     if let Some(h) = &home {
-        let last_dir_file = h.join(".CoffeeMode").join("last_dir.txt");
+        let last_dir_file = h.join(".coffee-cli").join("last_dir.txt");
         if let Ok(content) = std::fs::read_to_string(&last_dir_file) {
             let path = PathBuf::from(content.trim());
             if path.is_dir() {

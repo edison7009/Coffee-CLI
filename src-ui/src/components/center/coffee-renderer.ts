@@ -1,4 +1,4 @@
-// coffee-renderer.ts — Coffee Mode Overlay Renderer
+// coffee-renderer.ts — Coffee CLI Overlay Renderer
 // Reads xterm.js buffer → extracts cell metrics → renders translation patches only.
 // xterm.js handles ALL normal rendering (WebGL). This overlay ONLY paints
 // translated text over specific regions, keeping everything else transparent.

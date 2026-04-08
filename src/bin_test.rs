@@ -15,7 +15,7 @@ fn main() {
     let mut cmd = CommandBuilder::new("cmd.exe");
     cmd.arg("/c");
     cmd.arg("claude");
-    cmd.cwd("D:\\Coffee Mode");
+    cmd.cwd("D:\\Coffee CLI");
 
     for (key, val) in std::env::vars() {
         cmd.env(key, val);

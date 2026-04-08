@@ -11,6 +11,7 @@ import { setTranslationEntries } from './coffee-translation';
 import { listen } from '@tauri-apps/api/event';
 import { commands } from '../../tauri';
 import { useAppState, type ToolType } from '../../store/app-state';
+import { useT } from '../../i18n/useT';
 import '@xterm/xterm/css/xterm.css';
 import './TierTerminal.css';
 
@@ -32,6 +33,9 @@ interface CwdEvent {
   cwd: string;
 }
 
+// Sessions being detached to a new window — skip kill on unmount
+export const detachedSessions = new Set<string>();
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: ToolType }) {
@@ -41,6 +45,21 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
   const xtermRef = useRef<Terminal | null>(null);
   const fitRef   = useRef<FitAddon | null>(null);
   const coffeeRef = useRef<CoffeeOverlayRef>(null);
+
+  // ── Startup splash state ─────────────────────────────────────────────────
+  const [showSplash, setShowSplash] = useState(true);
+  const [splashFading, setSplashFading] = useState(false);
+  const splashStartRef = useRef(Date.now());
+  const altScreenRef = useRef(false); // True when TUI enters alternate screen buffer
+  const tuiReadyRef = useRef(false); // True when TUI shows an interactive menu or prompt
+
+  const t = useT();
+
+  const toolLabel: Record<string, string> = {
+    claude: 'Claude Code', coffeecode: t('tool.coffeecode'),
+    codex: 'Codex CLI', gemini: 'Gemini CLI', openclaw: 'OpenClaw',
+    terminal: t('tool.terminal'),
+  };
 
   // ── xterm.js init ────────────────────────────────────────────────────────
 
@@ -160,10 +179,15 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
     term.focus();
 
     // ─── Unified Global Focus Enforcer ───────────────────────────────────────
-    // UX requirement: "The terminal area governs operations on both sides... the entire interface's focus IS the terminal."
-    // We forcibly pull focus back to XTerm if the user clicks any non-input area or focuses a button.
+    // CRITICAL: Only steal focus if THIS session is the currently active terminal.
+    // Without this check, all background TierTerminal instances fight over focus,
+    // causing the "tab switching makes terminal go blank" bug.
     const enforceFocus = () => {
       if (!mounted) return;
+      // Check if this session is the active one via data attribute on the container
+      const wrapper = termRef.current?.closest('[data-session-id]');
+      const isVisible = wrapper ? (wrapper as HTMLElement).style.display !== 'none' : false;
+      if (!isVisible) return; // Don't steal focus if this terminal is hidden
       setTimeout(() => {
         const active = document.activeElement;
         // If the officially focused element is a REAL text input/textarea (like the chat box), let them type.
@@ -191,6 +215,10 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
         // Strip out the ANSI code that shows the cursor (CSI ? 25 h) so it never reappears
         const data = event.payload.data.replace(/\x1b\[\?25h/g, '');
         xtermRef.current?.write(data);
+        // Detect alternate screen buffer entry — the universal TUI "ready" signal
+        if (data.includes('\x1b[?1049h') || data.includes('\x1b[?47h')) {
+          altScreenRef.current = true;
+        }
       });
       if (mounted) unlisteners.push(outputUn); else { outputUn(); return; }
 
@@ -226,7 +254,7 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
       const initialRows = term.rows || 24;
 
       try {
-        await commands.tierTerminalStart(sessionId, tool, initialCols, initialRows);
+        await commands.tierTerminalStart(sessionId, tool, initialCols, initialRows, state.currentTheme, state.currentLang);
 
         // Synchronize the workspace (left panel) to mirror the tool's starting directory
         try {
@@ -257,6 +285,7 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
     // Continuously scan the bottom viewport for interactive CLI menu formats
     // (e.g. Inquirer.js output like "❯ 1. Yes \n  2. No")
     let lastMenuStr = '';
+    let lastHasInput = false;
     const menuInterval = setInterval(() => {
       if (!term.buffer.active) return;
       const buffer = term.buffer.active;
@@ -377,6 +406,7 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
 
       // If we found options and they differ from the last state, update global store!
       const currentMenuStr = JSON.stringify({ options, activeIndex });
+      if (options.length > 0) tuiReadyRef.current = true;
       if (currentMenuStr !== lastMenuStr) {
         lastMenuStr = currentMenuStr;
         dispatch({ 
@@ -385,13 +415,51 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
           menu: options.length > 0 ? { options, activeIndex } : null 
         });
       }
+
+      // ─── Prompt Input Text Detection ────────────────────────────────────
+      const cursorRow = buffer.baseY + buffer.cursorY;
+      const cursorLine = buffer.getLine(cursorRow);
+      let detectedInput = false;
+
+      if (cursorLine) {
+        // Only look at the text strictly before the user's cursor
+        const textBeforeCursor = cursorLine.translateToString(false, 0, buffer.cursorX);
+        const trimmedText = textBeforeCursor.trimEnd();
+
+        if (trimmedText.length > 0) {
+          const lastChar = trimmedText.charAt(trimmedText.length - 1);
+          // Standard CLI prompt markers or TUI box borders
+          const isPromptMarker = /[>❯$%#│┃║?:]/.test(lastChar);
+          detectedInput = !isPromptMarker;
+        }
+      }
+
+      if (detectedInput) tuiReadyRef.current = true;
+      if (detectedInput !== lastHasInput) {
+        lastHasInput = detectedInput;
+        dispatch({ type: 'SET_HAS_INPUT_TEXT', id: sessionId, hasInputText: detectedInput });
+      }
     }, 150); // Fast enough to perfectly track arrow keys!
 
 
 
-    // Resize observer
-    const ro = new ResizeObserver(() => {
+    // Resize observer — CRITICAL: Never call fit() when the container is hidden
+    // (display:none gives zero dimensions, causing xterm to collapse to 1 column)
+    const ro = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      const { width, height } = entry.contentRect;
+      // Skip if container has zero dimensions (hidden tab)
+      if (width < 10 || height < 10) return;
       try { fit.fit(); } catch {}
+      // Notify PTY backend of the new size so the CLI tool can redraw
+      try {
+        const cols = term.cols;
+        const rows = term.rows;
+        if (cols > 0 && rows > 0) {
+          commands.tierTerminalResize(sessionId, cols, rows).catch(() => {});
+        }
+      } catch {}
     });
     ro.observe(termRef.current!);
 
@@ -404,7 +472,12 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
       term.dispose();
       xtermRef.current = null;
       unlisteners.forEach(u => u());
-      commands.tierTerminalKill(sessionId).catch(() => {});
+      // Skip kill if this session was detached to a new window
+      if (detachedSessions.has(sessionId)) {
+        detachedSessions.delete(sessionId);
+      } else {
+        commands.tierTerminalKill(sessionId).catch(() => {});
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -422,17 +495,69 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
     };
   }, [state.currentTheme]);
 
+  // ── Active tab focus restoration ─────────────────────────────────────────
+  // When this session becomes the active tab, force focus + refit.
+  // Fixes: switching tabs makes terminal go blank because the xterm canvas
+  // lost focus while hidden and the ResizeObserver may have misfired.
+  useEffect(() => {
+    const isActive = state.activeTerminalId === sessionId;
+    if (!isActive) return;
+    // Longer delay to ensure parent div is fully display:flex with proper dimensions
+    const t = setTimeout(() => {
+      fitRef.current?.fit();
+      xtermRef.current?.focus();
+      // Also notify PTY of the correct size after refit
+      const term = xtermRef.current;
+      if (term && term.cols > 0 && term.rows > 0) {
+        commands.tierTerminalResize(sessionId, term.cols, term.rows).catch(() => {});
+      }
+    }, 150);
+    return () => clearTimeout(t);
+  }, [state.activeTerminalId, sessionId]);
+
   // ── Translation language sync ───────────────────────────────────────────
   // VT layer is always disabled ("en") — CoffeeOverlay handles all translation
   // at the rendering layer to avoid double-translation corruption.
 
   useEffect(() => {
-    // Always disable VT-layer translation.
+    // Only disable VT-layer translation from the active session to avoid race conditions.
     // CoffeeOverlay reads pristine English text from xterm.js buffer
-    // and paints translations via Canvas overlay. If VT translates first,
-    // the buffer contains mixed Chinese/English and sentence matching breaks.
+    // and paints translations via Canvas overlay.
+    const isActive = state.activeTerminalId === sessionId;
+    if (!isActive) return;
     commands.setTranslationLang('en').catch(() => {});
-  }, []);
+  }, [state.activeTerminalId, sessionId]);
+
+  // ── Startup splash dismissal ────────────────────────────────────────────
+  // Detect real TUI via alternate screen buffer entry (\x1b[?1049h).
+  // This precisely distinguishes "database migration text" from "actual TUI rendered".
+  useEffect(() => {
+    if (!showSplash) return;
+    let dismissed = false;
+    const dismiss = () => {
+      if (dismissed) return;
+      dismissed = true;
+      setSplashFading(true);
+      setTimeout(() => setShowSplash(false), 600);
+    };
+    const poll = setInterval(() => {
+      const elapsed = Date.now() - splashStartRef.current;
+      if (elapsed < 800) return; // brief branding flash
+      // Primary signal: TUI has entered alternate screen OR presented interactable menu/prompt
+      if (altScreenRef.current || tuiReadyRef.current) {
+        dismiss();
+        clearInterval(poll);
+        return;
+      }
+      // Fallback timeout: terminal shell is fast (3s), AI CLI tools are slower (15s)
+      const maxWait = tool === 'terminal' ? 3000 : 15000;
+      if (elapsed > maxWait) {
+        dismiss();
+        clearInterval(poll);
+      }
+    }, 150);
+    return () => clearInterval(poll);
+  }, [showSplash]);
 
   // ── Render ───────────────────────────────────────────────────────────────
 
@@ -455,7 +580,7 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
     }
 
     // Determine tool name for dictionary lookup
-    const toolDictMap: Record<string, string> = { 'claude': 'claude-code', 'freecode': 'free-code' };
+    const toolDictMap: Record<string, string> = { 'claude': 'claude-code', 'coffeecode': 'coffeecode' };
     const toolDict = toolDictMap[tool || ''] || (tool || '');
     if (!toolDict) return;
 
@@ -496,6 +621,52 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
         visible={coffeeEnabled}
         onFallback={handleOverlayFallback}
       />
+
+      {/* Startup splash — covers ugly init output with branded loading screen */}
+      {showSplash && (
+        <div
+          className={`tier-loading-splash ${splashFading ? 'fade-out' : ''}`}
+          style={{ background: terminalBg }}
+        >
+          {/* Animated coffee cup + label + dots — grouped as one visual unit */}
+          <div className="splash-group">
+            <div className="splash-icon">
+              <svg width="48" height="48" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <mask id={`splashMask-${sessionId}`}>
+                    <path fill="none" stroke="#fff" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                      d="M8 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M12 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M16 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4">
+                      <animate attributeName="d" dur="3s" repeatCount="indefinite"
+                        values="M8 0c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M12 0c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M16 0c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4;M8 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M12 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M16 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4"/>
+                    </path>
+                    <path d="M4 7h16v0h-16v12h16v-32h-16Z">
+                      <animate fill="freeze" attributeName="d" begin="1s" dur="0.6s" to="M4 2h16v5h-16v12h16v-24h-16Z"/>
+                    </path>
+                  </mask>
+                </defs>
+                <g stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2">
+                  <path fill="currentColor" fillOpacity="0" strokeDasharray="48"
+                    d="M17 9v9c0 1.66 -1.34 3 -3 3h-6c-1.66 0 -3 -1.34 -3 -3v-9Z">
+                    <animate fill="freeze" attributeName="stroke-dashoffset" dur="0.6s" values="48;0"/>
+                    <animate fill="freeze" attributeName="fill-opacity" begin="1.6s" dur="0.4s" to="1"/>
+                  </path>
+                  <path fill="none" strokeDasharray="16" strokeDashoffset="16"
+                    d="M17 9h3c0.55 0 1 0.45 1 1v3c0 0.55 -0.45 1 -1 1h-3">
+                    <animate fill="freeze" attributeName="stroke-dashoffset" begin="0.6s" dur="0.3s" to="0"/>
+                  </path>
+                </g>
+                <path fill="currentColor" d="M0 0h24v24H0z" mask={`url(#splashMask-${sessionId})`}/>
+              </svg>
+            </div>
+            <span className="splash-label">{(tool && toolLabel[tool]) || 'Loading'}</span>
+            <div className="splash-dots">
+              <span className="splash-dot" />
+              <span className="splash-dot" />
+              <span className="splash-dot" />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

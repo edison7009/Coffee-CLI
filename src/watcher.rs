@@ -1,4 +1,4 @@
-// Coffee Mode — Filesystem Watcher Module
+// Coffee CLI — Filesystem Watcher Module
 // Listens for real-time file changes and streams them to the frontend terminal.
 
 use notify::{RecursiveMode, Watcher, EventKind, event::ModifyKind};

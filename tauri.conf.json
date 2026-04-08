@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Coffee Mode",
+  "productName": "Coffee CLI",
   "version": "0.1.6",
   "identifier": "com.coffeemode.desktop",
   "build": {
@@ -13,7 +13,7 @@
   "app": {
     "windows": [
       {
-        "title": "Coffee Mode",
+        "title": "Coffee CLI",
         "label": "main",
         "width": 1600,
         "height": 900,
