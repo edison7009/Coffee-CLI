@@ -45,17 +45,19 @@ main:
           script: |
             export BUN_INSTALL="$HOME/.bun"
             export PATH="$BUN_INSTALL/bin:$PATH"
-            # CNB CI 环境下该目录通常是空的或者由于 Git Submodule 不完整导致无法拉取
-            # 我们直接在流水线里暴力拉取最新的 Coffee-Code 源码
+            # Skip integrity checks for cross-platform optional tarballs (e.g. sst-win32-x64)
+            export BUN_CONFIG_NO_VERIFY=1
+            # Clone fresh upstream source
             rm -rf .opencode-upstream
             git clone https://cnb.cool/Coffee-2026/Coffee-Code.git .opencode-upstream
-            cp scripts/rename.cjs .opencode-upstream/
             cd .opencode-upstream
-            # 运行批量套壳/品牌混淆脚本
-            node rename.cjs
-            bun install
+            bun install --no-verify
             cd packages/opencode
+            # Heartbeat: prevent CNB from killing silent long-running compilation
+            ( while true; do sleep 120; echo "[heartbeat] still compiling... $(date)"; done ) &
+            HEARTBEAT_PID=$!
             bun run build --single --skip-embed-web-ui
+            kill $HEARTBEAT_PID 2>/dev/null || true
             # Copy the compiled binary to Coffee Mode binaries/
             mkdir -p ../../../binaries
             cp dist/opencode-linux-x64/bin/opencode ../../../binaries/coffeecode
