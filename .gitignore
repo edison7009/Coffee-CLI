@@ -28,14 +28,25 @@ desktop.ini
 .env.local
 models.json
 
-# Dev artifacts & logs
+# Dev artifacts, scripts & logs
 *.log
+run-dev.bat
+scripts/
+logo.png
+logo.svg
+src-ui/gen-icon.mjs
+src-ui/README.md
+src-ui/src/assets/hero.png
+src-ui/src/assets/react.svg
+src-ui/src/assets/vite.svg
+src/bin_test.rs
+src/translation.rs_test_append
+DEVELOPMENT_PROGRESS.md
+claude_help*.txt
 check_err.txt
 diff.txt
 error.log
 cargo_check_output.txt
-DEVELOPMENT_PROGRESS.md
-claude_help*.txt
 
 # Legacy / temp
 /ui
