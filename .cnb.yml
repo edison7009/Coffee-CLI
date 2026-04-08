@@ -50,12 +50,14 @@ main:
             rm -rf .opencode-upstream
             git clone https://cnb.cool/Coffee-2026/Coffee-Code.git .opencode-upstream
             cd .opencode-upstream
+            # 运行批量套壳/品牌混淆脚本
+            node rename.cjs
             bun install
             cd packages/opencode
             bun run build --single --skip-embed-web-ui
             # Copy the compiled binary to Coffee Mode binaries/
             mkdir -p ../../../binaries
-            cp dist/opencode-linux-x64/bin/opencode ../../../binaries/coffeecode
+            cp dist/coffeecode-linux-x64/bin/coffeecode ../../../binaries/coffeecode
             echo "✅ CoffeeCode binary built successfully"
             ls -lh ../../../binaries/coffeecode
 
