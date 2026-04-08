@@ -58,7 +58,7 @@ main:
             bun run build --single --skip-embed-web-ui
             # Copy the compiled binary to Coffee Mode binaries/
             mkdir -p ../../../binaries
-            cp dist/coffeecode-linux-x64/bin/coffeecode ../../../binaries/coffeecode
+            cp dist/opencode-linux-x64/bin/opencode ../../../binaries/coffeecode
             echo "✅ CoffeeCode binary built successfully"
             ls -lh ../../../binaries/coffeecode
 
