@@ -142,17 +142,12 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+  scrollbar-width: none; /* Firefox: hide scrollbar */
 }
 
+/* Chrome/Safari/Edge: hide scrollbar but allow scrolling */
 .task-list::-webkit-scrollbar {
-  width: 4px;
-}
-
-.task-list::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 2px;
+  display: none;
 }
 
 /* ─── Section Headers ───────────────────────────────────────────────────────── */
