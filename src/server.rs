@@ -987,9 +987,16 @@ fn list_jsdos_bundles() -> Vec<JsdosBundle> {
     let mut bundles = Vec::new();
 
     // Try several candidate directories:
-    // 1. Next to the executable (production)
-    // 2. Current working directory / play  (development)
+    // 1. User data directory ~/.coffee-cli/play/ (production + development)
+    // 2. Next to the executable (production)
+    // 3. Current working directory / play (development)
+    // 4. Source tree (development)
     let mut candidates: Vec<PathBuf> = Vec::new();
+
+    // Primary: user data directory (works on all platforms, all build modes)
+    if let Some(home) = dirs::home_dir() {
+        candidates.push(home.join(".coffee-cli").join("play"));
+    }
 
     if let Ok(exe) = std::env::current_exe() {
         if let Some(parent) = exe.parent() {

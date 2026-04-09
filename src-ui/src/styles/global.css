@@ -3,8 +3,10 @@
    Theme: Claude (Warm Dark) & Codex (Light Glass)
    ═══════════════════════════════════════════════════════ */
 
-/* ─── Web Fonts ─── */
-@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&display=swap');
+/* ─── Web Fonts ───
+   NOTE: Google Fonts @import REMOVED — it is render-blocking and causes
+   30+ second startup freezes when offline or behind firewalls (e.g. China GFW).
+   Lora was only used for brand text; --font-serif falls back to Georgia/Cambria. */
 
 /* ─── Local Fonts (no CDN — works offline in WebView2) ── */
 @font-face {
@@ -279,8 +281,8 @@ body {
     background: var(--bg-panel);
     border-radius: 0; /* Remove rounded corners for flush design */
     border: none; /* Rely on hairline dividers instead */
-    backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
+    /* backdrop-filter removed from base — too expensive on transparent windows.
+       Only panels with semi-transparent backgrounds should use it (panel-left). */
     box-shadow: none; /* Remove floating shadows */
     overflow: hidden;
 }
@@ -309,6 +311,8 @@ body {
     min-width: var(--w-left);
     flex-shrink: 0;
     border-right: 1px solid var(--border); /* Edge-to-edge hairline divider */
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
 }
 
 /* Explorer panel-content: overflow hidden so welcome state flex-center works */
@@ -415,6 +419,10 @@ body {
     min-height: 0;
     display: flex;
     flex-direction: column;
+    /* No backdrop-filter — terminal uses opaque background + WebGL rendering.
+       Blur here causes severe flickering in WebView2 release builds. */
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
 }
 
 

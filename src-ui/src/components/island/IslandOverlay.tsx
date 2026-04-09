@@ -221,7 +221,30 @@ export function IslandOverlay() {
       });
     }).then(u => unlisteners.push(u));
 
-    return () => unlisteners.forEach(u => u());
+    // ── Stale agent cleanup ───────────────────────────────────────────────
+    // When a PTY process exits naturally (not via manual tab close), the Rust
+    // backend stops emitting agent-status events but the main window may not
+    // send island-session-remove. Periodically prune agents that have gone
+    // silent for 30s — they are dead sessions that left ghost icons.
+    const cleanupInterval = setInterval(() => {
+      const now = Date.now();
+      setAgents(prev => {
+        let changed = false;
+        const next = new Map(prev);
+        for (const [id, agent] of next) {
+          if (now - agent.updatedAt > 30_000) {
+            next.delete(id);
+            changed = true;
+          }
+        }
+        return changed ? next : prev;
+      });
+    }, 10_000);
+
+    return () => {
+      unlisteners.forEach(u => u());
+      clearInterval(cleanupInterval);
+    };
   }, []);
 
   const [minimized, setMinimized] = useState(false);

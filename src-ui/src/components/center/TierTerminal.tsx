@@ -71,23 +71,19 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
 
     const isDark = state.currentTheme === 'dark';
     const term = new Terminal({
-      fontFamily: "'Cascadia Mono', 'Cascadia Code', Consolas, monospace",
+      fontFamily: "'Cascadia Mono', 'Cascadia Code', Consolas, 'Ubuntu Mono', 'DejaVu Sans Mono', 'Liberation Mono', monospace",
       fontSize: 14,
       lineHeight: 1.3,
       letterSpacing: 0,
       fontWeight: '400',
       customGlyphs: true,
-      // Hide xterm.js cursor — CLI tools (Claude Code, Codex, etc.) manage
-      // their own cursor positioning via ANSI CSI sequences. Showing xterm's
-      // cursor causes it to jump around following the tool's internal redraws.
       cursorStyle: 'bar' as const,
-      cursorBlink: false,
-      cursorInactiveStyle: 'none',
+      cursorBlink: true,
       scrollback: 5000,
       theme: isDark ? {
         background:  '#1a1917',
         foreground:  '#e8e4de',
-        cursor:      '#1a1917', // Match background to hide completely
+        cursor:      '#e8e4de',
         cursorAccent: '#1a1917',
         selectionBackground: 'rgba(196,149,106,0.3)',
         black:       '#1a1917',
@@ -102,7 +98,7 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
       } : {
         background:  '#f4f3ee',
         foreground:  '#2d2c2a',
-        cursor:      '#f4f3ee', // Match background to hide completely
+        cursor:      '#2d2c2a',
         cursorAccent: '#f4f3ee',
         selectionBackground: 'rgba(196,149,106,0.25)',
         black:       '#2d2c2a',
@@ -120,9 +116,6 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
     const fit = new FitAddon();
     term.loadAddon(fit);
     term.open(termRef.current);
-    
-    // Forcefully hide the cursor immediately at startup
-    term.write('\x1b[?25l');
 
     // GPU-accelerated rendering via WebGL (falls back to Canvas2D)
     try {
@@ -225,9 +218,7 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
       // Register all listeners first and wait for them to be ready
       const outputUn = await listen<TerminalOutputEvent>('tier-terminal-output', (event) => {
         if (!mounted || event.payload.id !== sessionId) return;
-        // Strip out the ANSI code that shows the cursor (CSI ? 25 h) so it never reappears
-        const data = event.payload.data.replace(/\x1b\[\?25h/g, '');
-        xtermRef.current?.write(data);
+        xtermRef.current?.write(event.payload.data);
         
         // Handle SSH Auto-login via Password injection
         if (tool === 'remote' && remoteConfig.protocol === 'ssh' && remoteConfig.password && !hasInjectedPassword) {
@@ -470,7 +461,7 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
         lastHasInput = detectedInput;
         dispatch({ type: 'SET_HAS_INPUT_TEXT', id: sessionId, hasInputText: detectedInput });
       }
-    }, 150); // Fast enough to perfectly track arrow keys!
+    }, 300); // Responsive enough for arrow-key tracking while saving CPU
 
 
 
@@ -520,9 +511,9 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
     if (!term) return;
     const isDark = state.currentTheme === 'dark';
     term.options.theme = isDark ? {
-      background: '#1a1917', foreground: '#e8e4de', cursor: 'transparent', cursorAccent: '#1a1917'
+      background: '#1a1917', foreground: '#e8e4de', cursor: '#e8e4de', cursorAccent: '#1a1917'
     } : {
-      background: '#f4f3ee', foreground: '#2d2c2a', cursor: 'transparent', cursorAccent: '#f4f3ee'
+      background: '#f4f3ee', foreground: '#2d2c2a', cursor: '#2d2c2a', cursorAccent: '#f4f3ee'
     };
   }, [state.currentTheme]);
 

@@ -421,6 +421,38 @@ fn load_lang_file(path: &Path) -> anyhow::Result<Vec<CompiledEntry>> {
     Ok(entries)
 }
 
+// ─── URL Percent-Decoding ────────────────────────────────────────────────────
+// Decode %XX sequences in file:// URIs from OSC 7 to actual path characters.
+
+fn percent_decode(input: &str) -> String {
+    let mut result = Vec::with_capacity(input.len());
+    let bytes = input.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'%' && i + 2 < bytes.len() {
+            let hi = bytes[i + 1];
+            let lo = bytes[i + 2];
+            if let (Some(h), Some(l)) = (hex_val(hi), hex_val(lo)) {
+                result.push(h * 16 + l);
+                i += 3;
+                continue;
+            }
+        }
+        result.push(bytes[i]);
+        i += 1;
+    }
+    String::from_utf8(result).unwrap_or_else(|_| input.to_string())
+}
+
+fn hex_val(b: u8) -> Option<u8> {
+    match b {
+        b'0'..=b'9' => Some(b - b'0'),
+        b'A'..=b'F' => Some(b - b'A' + 10),
+        b'a'..=b'f' => Some(b - b'a' + 10),
+        _ => None,
+    }
+}
+
 // ─── VT Stream Processor ─────────────────────────────────────────────────────
 // Parses raw PTY bytes through the VTE state machine, extracts translatable
 // text lines, and reassembles them with ANSI sequences preserved.
@@ -620,17 +652,36 @@ impl vte::Perform for VtPerformer {
         if params.first().map(|p| *p == b"7").unwrap_or(false) {
             if let Some(url_bytes) = params.get(1) {
                 if let Ok(url) = std::str::from_utf8(url_bytes) {
-                    let path = if let Some(rest) = url.strip_prefix("file:///") {
-                        rest.to_string()
-                    } else if let Some(rest) = url.strip_prefix("file://") {
-                        rest.splitn(2, '/').nth(1)
-                            .map(|p| format!("/{}" , p))
-                            .unwrap_or_default()
+                    let path = if let Some(rest) = url.strip_prefix("file://") {
+                        // Format: file://<hostname>/<path> or file:///<path>
+                        // On Linux:  file://hostname/home/user  or  file:///home/user
+                        // On Windows: file:///C:/Users/...
+                        if rest.starts_with('/') {
+                            // file:///path — no hostname
+                            // On Windows: rest = "/C:/Users/..." → strip leading /
+                            // On Linux:   rest = "/home/user" → keep as-is
+                            #[cfg(target_os = "windows")]
+                            {
+                                // Strip the leading "/" for Windows drive paths like /C:/Users
+                                let trimmed = rest.strip_prefix('/').unwrap_or(rest);
+                                trimmed.to_string()
+                            }
+                            #[cfg(not(target_os = "windows"))]
+                            {
+                                rest.to_string() // "/home/user" — already absolute
+                            }
+                        } else {
+                            // file://hostname/path — extract path after hostname
+                            rest.splitn(2, '/').nth(1)
+                                .map(|p| format!("/{}", p))
+                                .unwrap_or_default()
+                        }
                     } else {
                         url.to_string()
                     };
 
-                    let decoded = path.replace("%20", " ").replace("%3A", ":");
+                    // Full percent-decoding for URL-encoded paths
+                    let decoded = percent_decode(&path);
                     if !decoded.is_empty() {
                         self.cwd_change = Some(decoded);
                     }

@@ -112,7 +112,10 @@ export const CoffeeOverlay = forwardRef<CoffeeOverlayRef, CoffeeOverlayProps>(({
     }
   }, [visible, xtermRef, updateMetrics, onFallback]);
 
-  // ── Animation frame loop ──────────────────────────────────────────────
+  // ── Throttled render loop ─────────────────────────────────────────────
+  // The overlay only needs to repaint when terminal content changes.
+  // Using a 200ms interval (5fps) instead of requestAnimationFrame (60fps)
+  // to avoid burning CPU/GPU — translation text is static between updates.
 
   useEffect(() => {
     if (!visible) return;
@@ -120,17 +123,16 @@ export const CoffeeOverlay = forwardRef<CoffeeOverlayRef, CoffeeOverlayProps>(({
     // Initial metrics calculation
     updateMetrics();
 
-    let running = true;
-    const loop = () => {
-      if (!running) return;
+    // Render once immediately
+    render();
+
+    // Then re-render periodically at a low frequency
+    const interval = setInterval(() => {
       render();
-      rafRef.current = requestAnimationFrame(loop);
-    };
-    rafRef.current = requestAnimationFrame(loop);
+    }, 200);
 
     return () => {
-      running = false;
-      cancelAnimationFrame(rafRef.current);
+      clearInterval(interval);
     };
   }, [visible, render, updateMetrics]);
 

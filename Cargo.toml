@@ -1,6 +1,6 @@
 [package]
 name = "coffee-cli"
-version = "0.1.6"
+version = "0.1.11"
 edition = "2021"
 description = "Lightweight Multi-layer AI CLI Terminal"
 license = "MIT"

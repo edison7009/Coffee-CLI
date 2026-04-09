@@ -46,7 +46,7 @@ const LIGHT_PALETTE = [
 
 export function createConfig(isDark: boolean): RendererConfig {
   return {
-    fontFamily: "'Cascadia Mono', 'Cascadia Code', Consolas, monospace",
+    fontFamily: "'Cascadia Mono', 'Cascadia Code', Consolas, 'Ubuntu Mono', 'DejaVu Sans Mono', 'Liberation Mono', monospace",
     fontSize: 14,
     lineHeight: 1.3,
     devicePixelRatio: window.devicePixelRatio || 1,

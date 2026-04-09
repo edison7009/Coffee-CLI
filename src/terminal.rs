@@ -196,6 +196,26 @@ pub fn spawn(
         cmd.env("COFFEE_CODE_LOCALE", loc);
     }
 
+    // ── Linux/macOS: Enable OSC 7 CWD reporting ────────────────────────────
+    // Unlike Windows PowerShell which natively emits OSC 7, bash/zsh on Linux
+    // do NOT send CWD change notifications by default. Without this, the left
+    // panel workspace tree cannot track directory changes after startup.
+    // We inject PROMPT_COMMAND (bash) to emit OSC 7 on every prompt cycle.
+    // Zsh uses precmd_functions instead, configured via ZDOTDIR or direct hook.
+    #[cfg(not(target_os = "windows"))]
+    {
+        // For bash: PROMPT_COMMAND runs before each prompt display
+        // Append (don't overwrite) to preserve user's existing PROMPT_COMMAND
+        let osc7_cmd = r#"printf "\033]7;file://%s%s\033\\" "$(hostname)" "$(pwd)""#;
+        let existing_prompt_cmd = std::env::var("PROMPT_COMMAND").unwrap_or_default();
+        let new_prompt_cmd = if existing_prompt_cmd.is_empty() {
+            osc7_cmd.to_string()
+        } else {
+            format!("{};{}", existing_prompt_cmd, osc7_cmd)
+        };
+        cmd.env("PROMPT_COMMAND", &new_prompt_cmd);
+    }
+
     // Set working directory
     if let Some(dir) = &cwd {
         let path = std::path::Path::new(dir);

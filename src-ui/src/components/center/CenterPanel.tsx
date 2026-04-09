@@ -169,30 +169,48 @@ export function CenterPanel() {
 
   // ── Island bridge: show island only when main window is MINIMIZED ──
   // When the window is visible (even unfocused), tab dots are sufficient.
+  // Detection strategy:
+  //   1. Poll isMinimized() every 500ms (works on Windows/macOS)
+  //   2. Fallback: browser visibilitychange event (fires on Linux when minimized)
   useEffect(() => {
     if (!isTauri) return;
     let polling: ReturnType<typeof setInterval> | null = null;
     let wasMinimized = false;
 
-    // Poll minimize state every 500ms (Tauri v2 doesn't expose onMinimize on web)
+    const setMinimized = (minimized: boolean) => {
+      if (minimized && !wasMinimized) {
+        wasMinimized = true;
+        import('@tauri-apps/api/event').then(({ emit }) => {
+          emit('main-window-minimized');
+        });
+      } else if (!minimized && wasMinimized) {
+        wasMinimized = false;
+        import('@tauri-apps/api/event').then(({ emit }) => {
+          emit('main-window-restored');
+        });
+      }
+    };
+
+    // Primary: Poll isMinimized() (reliable on Windows/macOS)
     (async () => {
       const { getCurrentWindow } = await import('@tauri-apps/api/window');
       const mainWin = getCurrentWindow();
-      const { emit } = await import('@tauri-apps/api/event');
 
       polling = setInterval(async () => {
         try {
           const minimized = await mainWin.isMinimized();
-          if (minimized && !wasMinimized) {
-            wasMinimized = true;
-            emit('main-window-minimized');
-          } else if (!minimized && wasMinimized) {
-            wasMinimized = false;
-            emit('main-window-restored');
-          }
+          setMinimized(minimized);
         } catch { /* window not ready */ }
       }, 500);
     })();
+
+    // Fallback: browser visibilitychange (fires reliably on Linux WMs)
+    // When a window is minimized on Linux, document.visibilityState → 'hidden'
+    const onVisibilityChange = () => {
+      const hidden = document.visibilityState === 'hidden';
+      setMinimized(hidden);
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
 
     // Listen for island-clicked → restore & focus main window + switch tab
     let unlisten: (() => void) | null = null;
@@ -211,6 +229,7 @@ export function CenterPanel() {
 
     return () => {
       if (polling) clearInterval(polling);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
       unlisten?.();
     };
   }, [dispatch]);

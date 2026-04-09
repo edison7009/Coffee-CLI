@@ -70,3 +70,7 @@ binaries/
 # Upstream dev sources
 .test-opencode
 .opencode-upstream
+
+# Game bundles (user-downloaded to ~/.coffee-cli/play/ at runtime)
+/play/
+src-ui/public/play/*.jsdos
