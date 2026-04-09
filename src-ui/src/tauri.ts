@@ -137,6 +137,7 @@ export const commands = {
   readNativeSession: (filePath: string) => invoke<string>('read_native_session', { filePath }),
   tierTerminalResume: (sessionId: string, savedSessionId: string, tool: string, sessionToken: string, cols: number, rows: number, cwd: string) =>
     invoke<void>('tier_terminal_resume', { sessionId, savedSessionId, tool, sessionToken, cols, rows, cwd }),
+  checkNetworkPort: (host: string, port: number) => invoke<boolean>('check_network_port', { host, port }),
 
   // Translation
   setTranslationLang: (lang: string) => invoke<void>('set_translation_lang', { lang }),

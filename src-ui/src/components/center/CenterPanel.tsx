@@ -4,6 +4,14 @@ import { DosPlayer } from './DosPlayer';
 import { ChatReader } from './ChatReader';
 import { ErrorBoundary } from '../common/ErrorBoundary';
 import { useAppState, type ToolType, type AgentStatus } from '../../store/app-state';
+
+export interface RemoteHistoryItem {
+  id: string;
+  protocol: 'ssh' | 'ws';
+  host: string;
+  port: string;
+  user: string;
+}
 import { isTauri, commands, type SavedSession } from '../../tauri';
 import { useT } from '../../i18n/useT';
 import './CenterPanel.css';
@@ -121,8 +129,30 @@ export function CenterPanel() {
   const [remoteProtocol, setRemoteProtocol] = useState<'ssh' | 'ws'>('ssh');
   const [sshHost, setSshHost] = useState('');
   const [sshPort, setSshPort] = useState('22');
-  const [sshUser, setSshUser] = useState('');
+  const [sshUser, setSshUser] = useState('root');
   const [sshPass, setSshPass] = useState('');
+  
+  const [remoteHistory, setRemoteHistory] = useState<RemoteHistoryItem[]>(() => {
+    try { return JSON.parse(localStorage.getItem('remote_terminal_history') || '[]'); } catch { return []; }
+  });
+
+  const saveRemoteHistory = (item: Omit<RemoteHistoryItem, 'id'>) => {
+    setRemoteHistory(prev => {
+      const filtered = prev.filter(p => !(p.host === item.host && p.port === item.port && p.protocol === item.protocol));
+      const next = [{ id: crypto.randomUUID(), ...item }, ...filtered].slice(0, 10);
+      localStorage.setItem('remote_terminal_history', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const deleteRemoteHistory = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setRemoteHistory(prev => {
+      const next = prev.filter(p => p.id !== id);
+      localStorage.setItem('remote_terminal_history', JSON.stringify(next));
+      return next;
+    });
+  };
   const [connStatus, setConnStatus] = useState<'idle' | 'connecting' | 'failed'>('idle');
 
   // Load sticky config
@@ -358,12 +388,19 @@ export function CenterPanel() {
     
     setConnStatus('connecting');
 
-    // MOCK: Simulate network validation delay
-    // If user enters 'fail' or '0.0.0.0', simulate an unsuccessful connection
-    const isMockFailure = sshHost.trim().toLowerCase() === 'fail' || sshHost.trim() === '0.0.0.0';
-    await new Promise(r => setTimeout(r, 800));
+    saveRemoteHistory({ protocol: remoteProtocol, host: sshHost.trim(), port: sshPort.trim(), user: sshUser.trim() });
 
-    if (isMockFailure) {
+    // Validate network connection using real TCP check instead of mock
+    let isOffline = false;
+    try {
+      const portNum = parseInt(sshPort) || (remoteProtocol === 'ssh' ? 22 : 7681);
+      const isReachable = await commands.checkNetworkPort(sshHost.trim(), portNum);
+      if (!isReachable) isOffline = true;
+    } catch(err) {
+      isOffline = true;
+    }
+
+    if (isOffline) {
       setConnStatus('failed');
       setTimeout(() => setConnStatus('idle'), 3000);
       return;
@@ -569,8 +606,9 @@ export function CenterPanel() {
                     {/* ─── Remote Terminal Connection Form ─── */}
                     {showRemoteForm && (
                       <div className="remote-form-overlay">
-                        <div className="remote-form-card">
-                          <div className="remote-form-header">
+                        <div className="remote-form-wrapper">
+                          <div className="remote-form-card">
+                            <div className="remote-form-header">
                             <TerminalIcon />
                             <span>{t('remote.title' as any)}</span>
                             <button className="remote-form-close" onClick={() => setShowRemoteForm(false)}>
@@ -648,8 +686,63 @@ export function CenterPanel() {
                             </button>
                           </div>
                         </div>
+
+                        {/* History Pills */}
+                        {remoteHistory.length > 0 && (
+                          <div className="remote-history-pills">
+                            {remoteHistory.map(item => (
+                              <div
+                                key={item.id}
+                                className={`remote-pill remote-pill-${item.protocol}`}
+                                onClick={async () => {
+                                  setRemoteProtocol(item.protocol);
+                                  setSshHost(item.host);
+                                  setSshPort(item.port);
+                                  if (item.protocol === 'ssh') setSshUser(item.user);
+                                  
+                                  setConnStatus('connecting');
+                                  saveRemoteHistory(item); // Refresh history order
+                                  
+                                  let isOffline = false;
+                                  try {
+                                    const portNum = parseInt(item.port) || (item.protocol === 'ssh' ? 22 : 7681);
+                                    const isReachable = await commands.checkNetworkPort(item.host.trim(), portNum);
+                                    if (!isReachable) isOffline = true;
+                                  } catch(err) {
+                                    isOffline = true;
+                                  }
+
+                                  if (isOffline) {
+                                    setConnStatus('failed');
+                                    setTimeout(() => setConnStatus('idle'), 3000);
+                                    return;
+                                  }
+
+                                  const connDataObj = {
+                                    protocol: item.protocol,
+                                    host: item.host.trim(),
+                                    port: parseInt(item.port) || (item.protocol === 'ssh' ? 22 : 7681),
+                                    username: item.user || '',
+                                    password: sshPass,
+                                  };
+                                  try { localStorage.setItem('coffee_remote_cfg', JSON.stringify(connDataObj)); } catch(e) {}
+                                  selectTool('remote', JSON.stringify(connDataObj));
+                                  setShowRemoteForm(false);
+                                  setConnStatus('idle');
+                                }}
+                              >
+                                <span className="remote-pill-proto">{item.protocol}</span>
+                                <span>{item.host}</span>
+                                <button className="remote-pill-close" onClick={(e) => deleteRemoteHistory(item.id, e)}>
+                                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </div>
+                  )}
 
                     {/* Resumable Sessions */}
                     {resumableSessions.length > 0 && (

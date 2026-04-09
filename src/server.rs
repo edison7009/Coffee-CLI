@@ -1183,6 +1183,29 @@ fn save_tasks(data: String, app: tauri::AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+async fn check_network_port(host: String, port: u16) -> Result<bool, String> {
+    use std::time::Duration;
+    use std::net::ToSocketAddrs;
+    
+    let target = format!("{}:{}", host, port);
+    
+    // Run blocking network check in a dedicated blocking task to avoid stalling the async runtime
+    let reachable = tauri::async_runtime::spawn_blocking(move || {
+        match target.to_socket_addrs() {
+            Ok(mut addrs) => {
+                if let Some(addr) = addrs.next() {
+                    std::net::TcpStream::connect_timeout(&addr, Duration::from_secs(3)).is_ok()
+                } else {
+                    false
+                }
+            },
+            Err(_) => false
+        }
+    }).await.unwrap_or(false);
+
+    Ok(reachable)
+}
 
 pub fn start_ui(project_dir: PathBuf) -> anyhow::Result<()> {
     let (tx, rx) = std::sync::mpsc::channel();
@@ -1226,6 +1249,7 @@ pub fn start_ui(project_dir: PathBuf) -> anyhow::Result<()> {
             get_resumable_sessions,
             get_native_history,
             read_native_session,
+            check_network_port,
             set_translation_lang,
 
             get_translation_entries,
