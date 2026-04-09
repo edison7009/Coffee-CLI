@@ -58,8 +58,20 @@ export function DetachedTerminal({ sessionId, tool }: { sessionId: string; tool:
     term.open(termRef.current);
 
     try {
-      const webgl = new WebglAddon();
-      term.loadAddon(webgl);
+      const testCanvas = document.createElement('canvas');
+      const gl = testCanvas.getContext('webgl') || testCanvas.getContext('experimental-webgl');
+      let hasDedicatedGpu = false;
+      if (gl) {
+        const debugExt = (gl as WebGLRenderingContext).getExtension('WEBGL_debug_renderer_info');
+        if (debugExt) {
+          const renderer = (gl as WebGLRenderingContext).getParameter(debugExt.UNMASKED_RENDERER_WEBGL) as string;
+          hasDedicatedGpu = /nvidia|geforce|radeon|amd|rx\s?\d|arc\s?a/i.test(renderer);
+        }
+      }
+      if (hasDedicatedGpu) {
+        const webgl = new WebglAddon();
+        term.loadAddon(webgl);
+      }
     } catch {}
 
     // Keyboard input → PTY

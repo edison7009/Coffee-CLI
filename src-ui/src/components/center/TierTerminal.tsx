@@ -117,15 +117,29 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
     term.loadAddon(fit);
     term.open(termRef.current);
 
-    // GPU-accelerated rendering via WebGL (falls back to Canvas2D)
+    // GPU-accelerated rendering: only enable WebGL if a dedicated GPU is detected.
+    // On integrated-only GPUs (office laptops), WebGL falls back to CPU software
+    // rendering which causes severe heat and fan noise. Canvas2D is far lighter.
     try {
-      const webgl = new WebglAddon();
-      webgl.onContextLoss(() => {
-        webgl.dispose();
-      });
-      term.loadAddon(webgl);
+      const testCanvas = document.createElement('canvas');
+      const gl = testCanvas.getContext('webgl') || testCanvas.getContext('experimental-webgl');
+      let hasDedicatedGpu = false;
+      if (gl) {
+        const debugExt = (gl as WebGLRenderingContext).getExtension('WEBGL_debug_renderer_info');
+        if (debugExt) {
+          const renderer = (gl as WebGLRenderingContext).getParameter(debugExt.UNMASKED_RENDERER_WEBGL) as string;
+          // Dedicated GPU keywords: NVIDIA, AMD, Radeon, GeForce, Arc, etc.
+          hasDedicatedGpu = /nvidia|geforce|radeon|amd|rx\s?\d|arc\s?a/i.test(renderer);
+          console.log(`[TierTerminal] GPU: ${renderer} → ${hasDedicatedGpu ? 'WebGL' : 'Canvas2D'}`);
+        }
+      }
+      if (hasDedicatedGpu) {
+        const webgl = new WebglAddon();
+        webgl.onContextLoss(() => { webgl.dispose(); });
+        term.loadAddon(webgl);
+      }
     } catch {
-      console.warn('[TierTerminal] WebGL not available, using Canvas2D fallback');
+      console.warn('[TierTerminal] WebGL probe failed, using Canvas2D fallback');
     }
 
     fit.fit();

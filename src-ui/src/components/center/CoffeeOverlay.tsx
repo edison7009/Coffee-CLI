@@ -111,27 +111,49 @@ export const CoffeeOverlay = forwardRef<CoffeeOverlayRef, CoffeeOverlayProps>(({
     }
   }, [visible, xtermRef, updateMetrics, onFallback]);
 
-  // ── Throttled render loop ─────────────────────────────────────────────
-  // The overlay only needs to repaint when terminal content changes.
-  // Using a 200ms interval (5fps) instead of requestAnimationFrame (60fps)
-  // to avoid burning CPU/GPU — translation text is static between updates.
+  // ── Dirty-flag render loop ─────────────────────────────────────────────
+  // Only repaint when the terminal buffer actually changes (new data arrives).
+  // This drops CPU usage to near-zero when the terminal is idle, fixing
+  // severe fan noise on laptops without dedicated GPUs.
+
+  const dirtyRef = useRef(false);
+  const rafRef = useRef<number>(0);
 
   useEffect(() => {
     if (!visible) return;
+    const term = xtermRef.current;
+    if (!term) return;
 
     // Initial metrics calculation
     updateMetrics();
 
+    // Mark dirty when terminal receives new data
+    const onWrite = term.onWriteParsed(() => {
+      dirtyRef.current = true;
+    });
+
+    // Also mark dirty on scroll
+    const onScroll = term.onScroll(() => {
+      dirtyRef.current = true;
+    });
+
     // Render once immediately
     render();
 
-    // Then re-render periodically at a low frequency
-    const interval = setInterval(() => {
-      render();
-    }, 200);
+    // RAF loop: only render when dirty, then sleep
+    const loop = () => {
+      if (dirtyRef.current) {
+        dirtyRef.current = false;
+        render();
+      }
+      rafRef.current = requestAnimationFrame(loop);
+    };
+    rafRef.current = requestAnimationFrame(loop);
 
     return () => {
-      clearInterval(interval);
+      onWrite.dispose();
+      onScroll.dispose();
+      cancelAnimationFrame(rafRef.current);
     };
   }, [visible, render, updateMetrics]);
 
