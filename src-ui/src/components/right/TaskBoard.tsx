@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { useT } from '../../i18n/useT';
 import { useAppState } from '../../store/app-state';
 import { isTauri, commands } from '../../tauri';
+import type { SavedSession } from '../../tauri';
 import './TaskBoard.css';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -93,6 +94,19 @@ export function TaskBoard() {
   const [addingId, setAddingId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
+  const [activeTab, setActiveTab] = useState<'tasks' | 'sessions'>('tasks');
+  const [resumableSessions, setResumableSessions] = useState<SavedSession[]>([]);
+  const [sessionSearchQuery, setSessionSearchQuery] = useState('');
+
+  // Fetch true backend sessions when activating the sessions tab
+  useEffect(() => {
+    if (activeTab === 'sessions' && isTauri) {
+      commands.getResumableSessions()
+        .then(sessions => setResumableSessions(sessions || []))
+        .catch(console.error);
+    }
+  }, [activeTab]);
+
   // Inline title editing
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
@@ -108,18 +122,36 @@ export function TaskBoard() {
   });
 
   const inputRef = useRef<HTMLInputElement>(null);
-  const skipNextSyncRef = useRef(false); // Prevent echo from our own save
+  const skipNextSyncRef = useRef(false); // Used to ignore external/initial load syncs
+  const isLoadedRef = useRef(false);
+  const pendingEchoesRef = useRef<Set<string>>(new Set());
 
   // Load tasks from Rust backend on mount
   useEffect(() => {
-    loadTasksFromBackend().then(setTasks);
+    loadTasksFromBackend().then(data => {
+      isLoadedRef.current = true;
+      skipNextSyncRef.current = true; // Prevent saving the initialized data purely due to React effect
+      setTasks(data);
+    });
   }, []);
 
   // Save tasks to Rust backend whenever tasks change
   useEffect(() => {
-    // Skip saving the initial empty array (before load completes)
-    if (tasks.length === 0 && !skipNextSyncRef.current) return;
-    skipNextSyncRef.current = false;
+    if (!isLoadedRef.current) return;
+    if (skipNextSyncRef.current) {
+      skipNextSyncRef.current = false;
+      return;
+    }
+
+    const dataStr = JSON.stringify(tasks);
+    pendingEchoesRef.current.add(dataStr);
+    
+    // Prevent unbounded memory growth if echoes get dropped
+    if (pendingEchoesRef.current.size > 20) {
+      pendingEchoesRef.current.clear();
+      pendingEchoesRef.current.add(dataStr);
+    }
+    
     saveTasksToBackend(tasks);
   }, [tasks]);
 
@@ -129,9 +161,15 @@ export function TaskBoard() {
     let unlisten: (() => void) | null = null;
     import('@tauri-apps/api/event').then(({ listen }) => {
       listen<string>('tasks-changed', (event) => {
+        // IGNORE OUR OWN ECHOES to prevent rubber-banding jitter
+        if (pendingEchoesRef.current.has(event.payload)) {
+          pendingEchoesRef.current.delete(event.payload);
+          return;
+        }
+        
         try {
           const updated: TaskItem[] = JSON.parse(event.payload);
-          skipNextSyncRef.current = true;
+          skipNextSyncRef.current = true; // Mark incoming external data so we don't circularly save it
           setTasks(updated);
         } catch {}
       }).then(u => { unlisten = u; });
@@ -148,16 +186,20 @@ export function TaskBoard() {
 
   // ─── Task Actions ─────────────────────────────────────────────────────────
   const handleAdd = useCallback(() => {
-    const title = inputValue.trim();
-    if (!title) return;
+    const randomSuffix = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    // Using explicit string cast since the dynamic key might be parsed tightly by the compiler
+    const title = t('task.default_title' as any, { id: randomSuffix });
     const newTask: TaskItem = {
       id: crypto.randomUUID(), title, status: 'todo', createdAt: Date.now()
     };
     setAddingId(newTask.id);
     setTasks(prev => [newTask, ...prev]);
-    setInputValue('');
     setTimeout(() => setAddingId(null), 400);
-  }, [inputValue]);
+    setTimeout(() => {
+      setEditingId(newTask.id);
+      setEditingTitle(title);
+    }, 50);
+  }, [t]);
 
   const handleToggle = useCallback((id: string) => {
     setTasks(prev => prev.map(t => t.id === id ? { ...t, status: NEXT_STATUS[t.status] } : t));
@@ -241,9 +283,14 @@ export function TaskBoard() {
       // Hit test — use ORIGINAL positions, not shifted positions
       // Cache rects on first drag frame to avoid feedback loop
       if (!listRef.current) return;
+      
+      // For hit testing, we only care about cards
       const allCards = listRef.current.querySelectorAll<HTMLElement>('[data-task-id]');
+      
+      // For visual shifting (FLIP), we must include cards AND section headers
+      const allShiftingEls = listRef.current.querySelectorAll<HTMLElement>('[data-task-id], .task-section-header');
 
-      // Build original rects (subtract any existing transform)
+      // Build original rects for hit testing
       const cardRects: { el: HTMLElement; id: string; top: number; bottom: number; height: number }[] = [];
       for (const card of allCards) {
         const cid = card.dataset.taskId!;
@@ -302,23 +349,40 @@ export function TaskBoard() {
 
       dropTargetRef.current = bestTarget;
 
-      // ── Live FLIP: shift cards via direct DOM manipulation (bypasses React) ──
+      // ── Live FLIP: shift cards and headers via direct DOM manipulation ──
+      // Build the ordered list of DOM elements we want to visually shift
+      const shiftTargets: { el: HTMLElement; id: string | null; isHeader: boolean; section: TaskStatus | null}[] = [];
+      for (const el of allShiftingEls) {
+        if (el.dataset.taskId === id) continue; // skip the dragging placeholder
+        shiftTargets.push({
+          el,
+          id: el.dataset.taskId || null,
+          isHeader: el.classList.contains('task-section-header'),
+          section: el.classList.contains('task-section-header') ? el.parentElement!.dataset.section as TaskStatus : null
+        });
+      }
+
       const draggedHeight = rect.height + 10; // card height + gap
       let shouldShift = false;
-      for (const cr of cardRects) {
-        if (bestTarget.id && cr.id === bestTarget.id && bestTarget.position === 'before') {
+      for (const st of shiftTargets) {
+        if (bestTarget.id && st.id === bestTarget.id && bestTarget.position === 'before') {
           shouldShift = true;
         }
 
         if (shouldShift) {
-          cr.el.style.transform = `translateY(${draggedHeight}px)`;
-          cr.el.style.transition = 'transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)';
+          st.el.style.transform = `translateY(${draggedHeight}px)`;
+          st.el.style.transition = 'transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)';
         } else {
-          cr.el.style.transform = '';
-          cr.el.style.transition = 'transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)';
+          st.el.style.transform = '';
+          st.el.style.transition = 'transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)';
         }
 
-        if (bestTarget.id && cr.id === bestTarget.id && bestTarget.position === 'after') {
+        if (bestTarget.id && st.id === bestTarget.id && bestTarget.position === 'after') {
+          shouldShift = true;
+        }
+        
+        // If dropping into an empty section, shift everything AFTER the section header
+        if (!shouldShift && !bestTarget.id && st.isHeader && st.section === bestTarget.status) {
           shouldShift = true;
         }
       }
@@ -327,6 +391,15 @@ export function TaskBoard() {
     const onUp = () => {
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
+
+      // Clean up transform hints on all shifting elements
+      const allShiftingEls = listRef.current?.querySelectorAll<HTMLElement>('[data-task-id], .task-section-header');
+      if (allShiftingEls) {
+        for (const el of allShiftingEls) {
+          el.style.transform = '';
+          el.style.transition = '';
+        }
+      }
 
       // Remove ghost
       if (ghostRef.current) {
@@ -426,30 +499,33 @@ export function TaskBoard() {
 
   return (
     <div className="task-board">
-      {/* ── Input ── */}
-      <div className="task-input-area">
-        <input
-          ref={inputRef}
-          className="task-input"
-          type="text"
-          placeholder={t('task.input_placeholder')}
-          value={inputValue}
-          onChange={e => setInputValue(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAdd(); } }}
-        />
-        <button
-          className={`task-add-btn ${inputValue.trim() ? 'active' : ''}`}
-          onClick={handleAdd}
-          disabled={!inputValue.trim()}
-        >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="9 10 4 15 9 20" /><path d="M20 4v7a4 4 0 0 1-4 4H4" />
-          </svg>
+      {/* ── User Profile Header ── */}
+      <div className="panel-header">
+        <div className="brand">
+          <img src="https://i.pravatar.cc/150?u=a042581f4e29026024d" alt="avatar" style={{ width: 24, height: 24, borderRadius: '50%' }} />
+          <span>Eben</span>
+        </div>
+        <div className="header-actions">
+          <div className="icon-btn xs"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg></div>
+          <div className="icon-btn xs"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg></div>
+        </div>
+      </div>
+
+      {/* ── Tabs Header ── */}
+      <div className="right-tabs" style={{ position: 'relative' }}>
+        <div className={`right-tab-indicator ${activeTab}`} />
+        <button className={`right-tab ${activeTab === 'tasks' ? 'active' : ''}`} onClick={() => setActiveTab('tasks')}>
+          {t('task.tab.tasks' as any) || 'Tasks'}
+        </button>
+        <button className={`right-tab ${activeTab === 'sessions' ? 'active' : ''}`} onClick={() => setActiveTab('sessions')}>
+          {t('task.tab.sessions' as any) || 'Recent Sessions'}
         </button>
       </div>
 
-      {/* ── Task List ── */}
-      <div ref={listRef} className="task-list">
+      {activeTab === 'tasks' && (
+        <>
+          {/* ── Task List ── */}
+          <div ref={listRef} className="task-list" style={{ paddingBottom: '80px' }}>
         {STATUS_ORDER.map(status => {
           const sectionTasks = tasks.filter(t => t.status === status);
           if (sectionTasks.length === 0 && !dragId) return null;
@@ -620,6 +696,131 @@ export function TaskBoard() {
           );
         })()}
       </div>
+
+      {/* ── Floating Action Button (FAB) ── */}
+      <div className="task-fab-container">
+        <button 
+          className="task-fab-simple" 
+          onClick={handleAdd}
+        >
+          <div className="task-fab-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+          </div>
+        </button>
+      </div>
+
+      </>
+    )}
+
+    {activeTab === 'sessions' && (() => {
+        // Fallback to mock session ONLY if developing in browser without Tauri
+        const baseSessions: SavedSession[] = isTauri ? resumableSessions : resumableSessions.length > 0 ? resumableSessions : [
+          { id: 'mock-1', name: 'build a flash card website', tool: 'claude', cwd: '~/projects/flashcards', session_token: 'tk1', saved_at: new Date().toISOString(), preview: null },
+          { id: 'mock-2', name: 'build a snake game', tool: 'claude', cwd: '~/projects/snake', session_token: 'tk2', saved_at: new Date(Date.now() - 3600000).toISOString(), preview: null },
+          { id: 'mock-3', name: 'refactor components', tool: 'codex', cwd: '~/projects/coffee', session_token: 'tk3', saved_at: new Date(Date.now() - 86400000 * 2).toISOString(), preview: null },
+        ];
+
+        const filteredSessions = baseSessions.filter(s => {
+          if (!sessionSearchQuery) return true;
+          return s.name.toLowerCase().includes(sessionSearchQuery.toLowerCase());
+        });
+
+        const handleResume = (saved: SavedSession) => {
+          if (!saved.session_token) return;
+          
+          let targetId = state.activeTerminalId;
+          const currentTerminal = state.terminals.find(t => t.id === targetId);
+          
+          if (currentTerminal?.tool !== null) {
+            // Active terminal busy, spawn a new tab
+            targetId = crypto.randomUUID();
+            dispatch({ 
+              type: 'ADD_TERMINAL', 
+              session: { id: targetId, tool: saved.tool as any, folderPath: saved.cwd, scanData: null, agentStatus: 'idle', menu: null, hasInputText: false } 
+            });
+          } else if (targetId) {
+            // Adopt empty launchpad
+            dispatch({ type: 'SET_TERMINAL_TOOL', id: targetId, tool: saved.tool as any });
+            dispatch({ type: 'SET_FOLDER', path: saved.cwd });
+          }
+
+          if (!targetId) return;
+
+          commands.tierTerminalResume(
+            saved.id, targetId, saved.tool, saved.session_token, 80, 24
+          ).then(() => {
+            // Remove the session from local view list since it's active now
+            setResumableSessions(prev => prev.filter(s => s.id !== saved.id));
+          }).catch(console.error);
+        };
+
+        return (
+          <>
+            <div className="agent-session-search-wrap">
+              <svg className="agent-session-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input 
+                type="text" 
+                className="agent-session-search" 
+                placeholder={t('task.search_sessions' as any) || 'Search sessions...'}
+                value={sessionSearchQuery}
+                onChange={e => setSessionSearchQuery(e.target.value)}
+              />
+            </div>
+            <div className="task-list" style={{ marginTop: '0', paddingBottom: '20px' }}>
+            {filteredSessions.map(session => {
+              const dateDiff = Date.now() - new Date(session.saved_at).getTime();
+              const timeDisplay = dateDiff < 3600000 ? 'Just now' : dateDiff < 86400000 ? 'Today' : 'Yesterday';
+              
+              const renderToolIcon = (tool: string) => {
+                const t = tool.toLowerCase();
+                let bg = '#666', text = tool[0].toUpperCase();
+                if (t === 'claude') { bg = '#d56e54'; text = 'C'; }
+                else if (t === 'codex') { bg = '#4d88ff'; text = 'Cx'; }
+                else if (t === 'gemini') { bg = '#8e62d4'; text = 'G'; }
+                else if (t === 'openclaw') { bg = '#e74c3c'; text = 'O'; }
+                return (
+                  <div style={{
+                    width: 18, height: 18, borderRadius: 4, background: bg, color: '#fff', 
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                    fontSize: 11, fontWeight: 'bold'
+                  }}>
+                    {text}
+                  </div>
+                );
+              };
+
+              return (
+                <div key={session.id} className="task-card resume-card" onClick={() => handleResume(session)}>
+                  <div className="resume-card-content">
+                    <span className="resume-card-title">{session.name}</span>
+                    <div className="resume-card-meta">
+                      <div className="resume-card-tool">
+                        {renderToolIcon(session.tool)}
+                        <span>{session.tool === 'terminal' ? 'Local' : session.tool.replace(/^\w/, c => c.toUpperCase())}</span>
+                      </div>
+                      <span className="resume-card-time">{timeDisplay}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            
+            {filteredSessions.length === 0 && (
+              <div className="task-empty">
+                <div className="task-empty-text">{t('menu.no_recent' as any) || 'No recent sessions'}</div>
+              </div>
+            )}
+          </div>
+        </>
+        );
+      })()}
+
     </div>
   );
 }
