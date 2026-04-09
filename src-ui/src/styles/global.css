@@ -325,8 +325,7 @@ body {
     align-items: center;
     gap: 8px;
     font-weight: 600;
-    font-style: italic;
-    font-family: var(--font-serif);
+    font-family: var(--font, system-ui);
     font-size: 16px;
     letter-spacing: 0.02em;
     color: var(--text-1); /* Stark white text contrasting the accent icon */

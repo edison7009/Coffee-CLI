@@ -58,7 +58,7 @@ export const zhCN = {
   'task.greeting.afternoon': '下午好，还有什么要做的？',
   'task.greeting.evening': '晚上好，想干点什么大事？',
   'task.tab.tasks': '任务',
-  'task.tab.sessions': '历史对话',
+  'task.tab.sessions': '历史',
   'task.default_title': '新任务',
   'task.search_sessions': '搜索历史对话...',
   'menu.no_recent': '没有任何近期会话',

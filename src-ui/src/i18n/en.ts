@@ -60,7 +60,7 @@ export const en = {
   'task.greeting.afternoon': 'Afternoon, anything left to do?',
   'task.greeting.evening': 'Evening. Feeling ambitious?',
   'task.tab.tasks': 'Tasks',
-  'task.tab.sessions': 'Recent Sessions',
+  'task.tab.sessions': 'History',
   'task.default_title': 'New Task',
   'task.search_sessions': 'Search sessions...',
   'menu.no_recent': 'No recent sessions found',

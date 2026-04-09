@@ -513,7 +513,6 @@ export function TaskBoard() {
 
       {/* ── Tabs Header ── */}
       <div className="right-tabs" style={{ position: 'relative' }}>
-        <div className={`right-tab-indicator ${activeTab}`} />
         <button className={`right-tab ${activeTab === 'tasks' ? 'active' : ''}`} onClick={() => setActiveTab('tasks')}>
           {t('task.tab.tasks' as any) || 'Tasks'}
         </button>
