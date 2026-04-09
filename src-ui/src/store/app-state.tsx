@@ -6,7 +6,7 @@ import type { ScanResult, ModelConfig } from '../tauri';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type ToolType = 'claude' | 'codex' | 'gemini' | 'openclaw' | 'coffee-code' | 'arcade' | 'terminal' | 'remote' | null;
+export type ToolType = 'claude' | 'codex' | 'gemini' | 'openclaw' | 'opencode' | 'arcade' | 'terminal' | 'remote' | 'history' | null;
 export type AgentStatus = 'working' | 'idle' | 'wait_input';
 
 export interface TerminalMenu {
@@ -59,7 +59,8 @@ type Action =
   | { type: 'SET_TERMINAL_MENU'; id: string; menu: TerminalMenu | null }
   | { type: 'SET_HAS_INPUT_TEXT'; id: string; hasInputText: boolean }
   | { type: 'SET_TERMINAL_HIDDEN'; id: string; isHidden: boolean }
-  | { type: 'RESTART_TERMINAL'; id: string; newId: string };
+  | { type: 'RESTART_TERMINAL'; id: string; newId: string }
+  | { type: 'OPEN_HISTORY_TAB'; sessionData: string; folderPath: string };
 
 // ─── Reducer ─────────────────────────────────────────────────────────────────
 
@@ -141,6 +142,34 @@ function reducer(state: AppState, action: Action): AppState {
         ),
         activeTerminalId: state.activeTerminalId === action.id ? action.newId : state.activeTerminalId
       };
+    case 'OPEN_HISTORY_TAB': {
+      const existingHistoryTab = state.terminals.find(t => t.tool === 'history');
+      if (existingHistoryTab) {
+        return {
+          ...state,
+          terminals: state.terminals.map(t => 
+            t.id === existingHistoryTab.id ? { ...t, toolData: action.sessionData, folderPath: action.folderPath } : t
+          ),
+          activeTerminalId: existingHistoryTab.id
+        };
+      } else {
+        const newId = crypto.randomUUID();
+        return {
+          ...state,
+          terminals: [...state.terminals, {
+            id: newId,
+            tool: 'history',
+            toolData: action.sessionData,
+            folderPath: action.folderPath,
+            scanData: null,
+            agentStatus: 'idle',
+            menu: null,
+            hasInputText: false
+          }],
+          activeTerminalId: newId
+        };
+      }
+    }
     default:
       return state;
   }

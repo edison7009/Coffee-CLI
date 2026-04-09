@@ -1,6 +1,6 @@
 // Tool Dictionary Loader — resolves panel config + localized data per tool type
 //
-// Each tool (claude-code, coffee-code, etc.) has its own dictionary under
+// Each tool (claude-code, opencode, etc.) has its own dictionary under
 // src/dictionaries/<tool>/. The _config.json defines panel button triggers,
 // and <lang>.json provides slashCommands, hotkeys, guides, and tips.
 
@@ -13,16 +13,8 @@ import type { ToolType } from '../store/app-state';
 import claudeConfig from '../../../src/dictionaries/claude-code/_config.json';
 import claudeZhCN from '../../../src/dictionaries/claude-code/zh-CN.json';
 
-import coffeeCodeConfig from '../../../src/dictionaries/coffee-code/_config.json';
-import coffeeCodeZhCN from '../../../src/dictionaries/coffee-code/zh-CN.json';
-
-import globalConfig from '../../../src/dictionaries/global/_config.json';
-import globalZhCN from '../../../src/dictionaries/global/zh-CN.json';
-import globalEn from '../../../src/dictionaries/global/en.json';
-
-import arcadeConfig from '../../../src/dictionaries/arcade/_config.json';
-import arcadeZhCN from '../../../src/dictionaries/arcade/zh-CN.json';
-import arcadeEn from '../../../src/dictionaries/arcade/en.json';
+import openCodeConfig from '../../../src/dictionaries/opencode/_config.json';
+import openCodeZhCN from '../../../src/dictionaries/opencode/zh-CN.json';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -66,30 +58,22 @@ export interface ToolDictionary {
 
 const configMap: Record<string, any> = {
   'claude-code': claudeConfig,
-  'coffee-code': coffeeCodeConfig,
-  'global': globalConfig,
-  'arcade': arcadeConfig,
+  'opencode': openCodeConfig,
 };
 
 // lang -> { toolDir -> data }
 const dataMap: Record<string, Record<string, any>> = {
   'zh-CN': {
     'claude-code': claudeZhCN,
-    'coffee-code': coffeeCodeZhCN,
-    'global': globalZhCN,
-    'arcade': arcadeZhCN,
+    'opencode': openCodeZhCN,
   },
-  'en': {
-    'global': globalEn,
-    'arcade': arcadeEn,
-  }
+  'en': {}
 };
 
 // ToolType -> dictionary directory name
 const toolDirMap: Record<string, string> = {
   claude: 'claude-code',
-  'coffee-code': 'coffee-code',
-  arcade: 'arcade',
+  opencode: 'opencode',
 };
 
 // ─── Default Fallback ────────────────────────────────────────────────────────
@@ -100,15 +84,13 @@ const DEFAULT_PANEL: PanelConfig = {
 };
 
 function getGlobalFallback(_lang: string): ToolDictionary {
-  const config = configMap['global'];
-  const langData = dataMap[_lang]?.['global'] ?? dataMap['zh-CN']?.['global'];
   return {
-    panel: config?.panel ?? DEFAULT_PANEL,
+    panel: DEFAULT_PANEL,
     slashCommands: [],
     hotkeys: [],
     guides: {},
-    tips: langData?.tips ?? [],
-    articles: langData?.articles ?? [],
+    tips: [],
+    articles: [],
   };
 }
 

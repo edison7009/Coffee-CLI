@@ -1,5 +1,5 @@
 {
-  "commands": ["coffee-code"],
+  "commands": ["opencode"],
   "patterns": ["Coffee Code v", "OpenCode v"],
   "panel": {
     "menuButton": {

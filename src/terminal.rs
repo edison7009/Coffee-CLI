@@ -71,8 +71,8 @@ pub const AGENT_PRESETS: &[AgentPreset] = &[
         prompt_markers: &[">"],
     },
     AgentPreset {
-        tool_name: "coffee-code",
-        resume_command: Some("coffee-code --resume {{sessionId}}"),
+        tool_name: "opencode",
+        resume_command: Some("opencode --session {{sessionId}}"),
         session_id_pattern: Some(r"Session ID:\s+([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})"),
         prompt_markers: &["❯", "> "],
     },

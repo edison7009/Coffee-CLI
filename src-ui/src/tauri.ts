@@ -81,6 +81,8 @@ export interface SavedSession {
   cwd: string;
   session_token: string | null;
   saved_at: string;
+  file_path?: string;
+  turn_count?: number;
 }
 
 export interface DriveInfo {
@@ -132,8 +134,9 @@ export const commands = {
   // Session Resume
   getResumableSessions: () => invoke<SavedSession[]>('get_resumable_sessions'),
   getNativeHistory: () => invoke<SavedSession[]>('get_native_history'),
-  tierTerminalResume: (sessionId: string, savedSessionId: string, tool: string, sessionToken: string, cols: number, rows: number) =>
-    invoke<void>('tier_terminal_resume', { sessionId, savedSessionId, tool, sessionToken, cols, rows }),
+  readNativeSession: (filePath: string) => invoke<string>('read_native_session', { filePath }),
+  tierTerminalResume: (sessionId: string, savedSessionId: string, tool: string, sessionToken: string, cols: number, rows: number, cwd: string) =>
+    invoke<void>('tier_terminal_resume', { sessionId, savedSessionId, tool, sessionToken, cols, rows, cwd }),
 
   // Translation
   setTranslationLang: (lang: string) => invoke<void>('set_translation_lang', { lang }),

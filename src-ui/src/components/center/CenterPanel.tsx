@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { TierTerminal } from './TierTerminal';
 import { DosPlayer } from './DosPlayer';
+import { ChatReader } from './ChatReader';
 import { ErrorBoundary } from '../common/ErrorBoundary';
 import { useAppState, type ToolType, type AgentStatus } from '../../store/app-state';
 import { isTauri, commands, type SavedSession } from '../../tauri';
@@ -58,28 +59,12 @@ const SvgOpenClaw = () => (
   </svg>
 );
 
-const SvgCoffeeCode = () => (
-  <svg width="1em" height="1em" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
-    <defs>
-      <mask id="ccIconMask">
-        <path fill="none" stroke="#fff" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M12 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M16 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4">
-          <animate attributeName="d" dur="3s" repeatCount="indefinite" values="M8 0c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M12 0c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M16 0c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4;M8 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M12 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M16 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4"/>
-        </path>
-        <path d="M4 7h16v0h-16v12h16v-32h-16Z">
-          <animate fill="freeze" attributeName="d" begin="1s" dur="0.6s" to="M4 2h16v5h-16v12h16v-24h-16Z"/>
-        </path>
-      </mask>
-    </defs>
-    <g stroke="#C4956A" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2">
-      <path fill="#C4956A" fillOpacity="0" strokeDasharray="48" d="M17 9v9c0 1.66 -1.34 3 -3 3h-6c-1.66 0 -3 -1.34 -3 -3v-9Z">
-        <animate fill="freeze" attributeName="stroke-dashoffset" dur="0.6s" values="48;0"/>
-        <animate fill="freeze" attributeName="fill-opacity" begin="1.6s" dur="0.4s" to="1"/>
-      </path>
-      <path fill="none" strokeDasharray="16" strokeDashoffset="16" d="M17 9h3c0.55 0 1 0.45 1 1v3c0 0.55 -0.45 1 -1 1h-3">
-        <animate fill="freeze" attributeName="stroke-dashoffset" begin="0.6s" dur="0.3s" to="0"/>
-      </path>
-    </g>
-    <path fill="#C4956A" d="M0 0h24v24H0z" mask="url(#ccIconMask)"/>
+const SvgOpenCode = () => (
+  <svg width="1em" height="1em" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
+    <path d="M0 0 C31.68 0 63.36 0 96 0 C96 31.68 96 63.36 96 96 C64.32 96 32.64 96 0 96 C0 64.32 0 32.64 0 0 Z" fill="#131010" transform="translate(0,0)"/>
+    <path d="M0 0 C15.84 0 31.68 0 48 0 C48 19.8 48 39.6 48 60 C32.16 60 16.32 60 0 60 C0 40.2 0 20.4 0 0 Z" fill="#FFFFFF" transform="translate(24,18)"/>
+    <path d="M0 0 C7.92 0 15.84 0 24 0 C24 11.88 24 23.76 24 36 C16.08 36 8.16 36 0 36 C0 24.12 0 12.24 0 0 Z" fill="#5A5858" transform="translate(36,30)"/>
+    <path d="M0 0 C7.92 0 15.84 0 24 0 C24 3.96 24 7.92 24 12 C16.08 12 8.16 12 0 12 C0 8.04 0 4.08 0 0 Z" fill="#131010" transform="translate(36,30)"/>
   </svg>
 );
 
@@ -415,7 +400,7 @@ export function CenterPanel() {
   const renderTabContent = (session: typeof terminals[0], isActive: boolean) => {
     switch (session.tool) {
       case 'claude': return { icon: <SvgClaude />, title: 'Claude Code' };
-      case 'coffee-code': return { icon: <SvgCoffeeCode />, title: 'Coffee Code' };
+      case 'opencode': return { icon: <SvgOpenCode />, title: 'OpenCode' };
       case 'codex': return { icon: <SvgCodex />, title: 'Codex CLI' };
       case 'gemini': return { icon: <SvgGemini />, title: 'Gemini CLI' };
       case 'remote': {
@@ -443,6 +428,19 @@ export function CenterPanel() {
         }
         return { icon: <span style={{ fontSize: '1em' }}>🎮</span>, title: 'Coffee Play' };
       }
+      case 'history': {
+        let titleParam = '回看历史';
+        if (session.toolData) {
+          try {
+            const parsed = JSON.parse(session.toolData);
+            if (parsed.name) titleParam = parsed.name; // Use the session name instead for the tab
+          } catch (e) {}
+        }
+        return { 
+          icon: <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M12 8v4l3 3"></path><circle cx="12" cy="12" r="10"></circle></svg>, 
+          title: titleParam 
+        };
+      }
       default: return { icon: <SvgPlus active={isActive} />, title: t('tab.new') };
     }
   };
@@ -463,7 +461,7 @@ export function CenterPanel() {
               onClick={() => dispatch({ type: 'SET_ACTIVE_TERMINAL', id: session.id })}
             >
               {icon}
-              <span className="tab-title" style={{ flex: 1, minWidth: 0, textOverflow: 'ellipsis', overflow: 'hidden' }}>{title}</span>
+              <span className="tab-title" style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{title}</span>
               <div className="tab-actions">
                 {session.tool && <span className="tab-health-dot connected" />}
                 <button 
@@ -506,7 +504,9 @@ export function CenterPanel() {
               position: 'relative'
             }}
           >
-            {t.tool === 'arcade' ? (
+            {t.tool === 'history' ? (
+              <ChatReader sessionId={t.id} />
+            ) : t.tool === 'arcade' ? (
               <DosPlayer sessionId={t.id} />
             ) : (
               <ErrorBoundary key={`err-${t.id}-${t.restartKey || 0}`} fallbackLabel="Tier Terminal Error">
@@ -526,12 +526,12 @@ export function CenterPanel() {
                 <div className="launchpad-page">
                   <div className="launchpad-inner">
                     <div className="launchpad-grid">
-                      {[
-                        { key: 'coffee-code' as ToolType, label: t('tool.coffee-code'), icon: <SvgCoffeeCode /> },
+                      {[ 
                         { key: 'claude' as ToolType, label: 'Claude Code', icon: <SvgClaude /> },
                         { key: 'codex' as ToolType, label: 'Codex CLI', icon: <SvgCodex /> },
                         { key: 'gemini' as ToolType, label: 'Gemini CLI', icon: <SvgGemini /> },
                         { key: 'openclaw' as ToolType, label: 'OpenClaw', icon: <SvgOpenClaw /> },
+                        { key: 'opencode' as ToolType, label: 'OpenCode', icon: <SvgOpenCode /> },
                       ].map(tool => {
                         const installed = toolsInstalled[tool?.key ?? ''] !== false;
                         return (
@@ -685,9 +685,11 @@ export function CenterPanel() {
                                 onClick={() => {
                                   if (!activeTerminalId || !saved.session_token) return;
                                   dispatch({ type: 'SET_TERMINAL_TOOL', id: activeTerminalId, tool: saved.tool as ToolType });
+                                  dispatch({ type: 'SET_FOLDER', path: saved.cwd });
+                                  commands.scanFolder(saved.cwd).catch(console.error);
                                   commands.tierTerminalResume(
                                     saved.id, activeTerminalId, saved.tool,
-                                    saved.session_token, 80, 24
+                                    saved.session_token, 80, 24, saved.cwd
                                   ).then(() => {
                                     setResumableSessions(prev => prev.filter(s => s.id !== saved.id));
                                   }).catch((err) => {

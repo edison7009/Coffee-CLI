@@ -1,6 +1,0 @@
-{
-  "panel": {
-    "menuButton": { "label": "Menu", "triggerKey": "", "closeKey": "", "icon": "menu", "note": "" },
-    "helpButton": { "label": "Controls", "triggerKey": "", "closeKey": "", "icon": "help", "note": "?" }
-  }
-}

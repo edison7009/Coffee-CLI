@@ -210,8 +210,8 @@ fn create_detached_window(
 ) -> Result<(), String> {
     let ts = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_millis();
+        .map(|d| d.as_millis())
+        .unwrap_or_default();
     let label = format!("detached-{}", ts);
 
     let window = tauri::WebviewWindowBuilder::new(
@@ -256,7 +256,7 @@ fn check_tools_installed() -> std::collections::HashMap<String, bool> {
         ("codex", "codex"),
         ("gemini", "gemini-cli"),
         ("openclaw", "openclaw"),
-        ("coffee-code", "coffee-code"),
+        ("opencode", "opencode"),
         // remote is always available — it's just SSH (built into the OS)
     ];
     let mut result = std::collections::HashMap::new();
@@ -593,6 +593,7 @@ fn tier_terminal_start(
         Some("codex")    => ("codex".to_string(),  vec![]),
         Some("gemini")   => ("gemini-cli".to_string(), vec![]),
         Some("openclaw") => ("openclaw".to_string(), vec![]),
+        Some("opencode") => ("opencode".to_string(), vec![]),
         Some("remote") => {
             // Parse connection info from toolData JSON
             let data = tool_data.as_deref().unwrap_or("{}");
@@ -651,31 +652,7 @@ fn tier_terminal_start(
                 return Err("ws".to_string());
             }
         },
-        Some("coffee-code") => {
-            let found = if cfg!(target_os = "windows") {
-                std::process::Command::new("where")
-                    .arg("coffee-code")
-                    .stdout(std::process::Stdio::null())
-                    .stderr(std::process::Stdio::null())
-                    .status()
-                    .map(|s| s.success())
-                    .unwrap_or(false)
-            } else {
-                std::process::Command::new("which")
-                    .arg("coffee-code")
-                    .stdout(std::process::Stdio::null())
-                    .stderr(std::process::Stdio::null())
-                    .status()
-                    .map(|s| s.success())
-                    .unwrap_or(false)
-            };
 
-            if found {
-                ("coffee-code".to_string(), vec![])
-            } else {
-                return Err("COFFEE_CODE_NOT_INSTALLED".to_string());
-            }
-        },
         _ => if cfg!(target_os = "windows") {
             ("powershell.exe".to_string(), vec!["-NoExit".to_string()])
         } else {
@@ -838,6 +815,8 @@ struct SavedSession {
     cwd: String,
     session_token: Option<String>,
     saved_at: String,
+    file_path: Option<String>,
+    turn_count: Option<u32>,
 }
 
 fn sessions_file_path() -> PathBuf {
@@ -857,6 +836,7 @@ fn parse_claude_jsonl(file_path: &std::path::Path) -> Option<SavedSession> {
     let mut cwd = String::new();
     let mut updated_at = String::new();
     let mut title = String::new();
+    let mut total_messages = 0;
 
     for line in reader.lines().map_while(Result::ok) {
         if let Ok(value) = serde_json::from_str::<serde_json::Value>(&line) {
@@ -866,15 +846,60 @@ fn parse_claude_jsonl(file_path: &std::path::Path) -> Option<SavedSession> {
             if let Some(c) = value.get("cwd").and_then(|v| v.as_str()) {
                 if cwd.is_empty() && !c.is_empty() { cwd = c.to_string(); }
             }
-            if let Some(message) = value.get("message").and_then(|v| v.as_str()) {
-                if title.is_empty() && !message.is_empty() {
-                    let mut chars = message.chars();
-                    let t: String = chars.by_ref().take(40).collect();
-                    title = if chars.next().is_some() { format!("{}...", t) } else { t };
+            if let Some(msg_obj) = value.get("message").and_then(|v| v.as_object()) {
+                if let Some(role) = msg_obj.get("role").and_then(|v| v.as_str()) {
+                    if role == "user" || role == "assistant" {
+                        total_messages += 1;
+                    }
+                    if role == "user" && title.is_empty() {
+                        if let Some(content_str) = msg_obj.get("content").and_then(|v| v.as_str()) {
+                            let content_safe = content_str.replace('\n', " ");
+                            let mut chars = content_safe.chars();
+                            let t: String = chars.by_ref().take(40).collect();
+                            title = if chars.next().is_some() { format!("{}...", t) } else { t };
+                        } else if let Some(content_arr) = msg_obj.get("content").and_then(|v| v.as_array()) {
+                            // Extract text from object array
+                            for block in content_arr {
+                                if let Some(t) = block.get("type").and_then(|v| v.as_str()) {
+                                    if t == "text" {
+                                        if let Some(text) = block.get("text").and_then(|v| v.as_str()) {
+                                            let safe_text = text.replace('\n', " ");
+                                            let mut chars = safe_text.chars();
+                                            let chunk: String = chars.by_ref().take(40).collect();
+                                            title = if chars.next().is_some() { format!("{}...", chunk) } else { chunk };
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
     }
+    
+    // Fallback: If cwd is still empty, derive it from the parent project folder name
+    // e.g., "D--Coffee-Code" -> "D:\Coffee-Code", "C--Users--..." -> "C:\Users\..."
+    if cwd.is_empty() {
+        if let Some(parent) = file_path.parent() {
+            if let Some(folder_name) = parent.file_name().and_then(|n| n.to_str()) {
+                if folder_name.contains("--") {
+                    let mut parts = folder_name.split("--");
+                    if let Some(drive) = parts.next() {
+                        let rest: Vec<&str> = parts.collect();
+                        let decoded_path = if cfg!(target_os = "windows") {
+                            format!("{}:\\{}", drive, rest.join("\\"))
+                        } else {
+                            format!("/{}/{}", drive, rest.join("/"))
+                        };
+                        cwd = decoded_path;
+                    }
+                }
+            }
+        }
+    }
+    let turn_count = (total_messages / 2) as u32;
     
     // Fallback date from file metadata
     if let Ok(meta) = std::fs::metadata(file_path) {
@@ -896,7 +921,14 @@ fn parse_claude_jsonl(file_path: &std::path::Path) -> Option<SavedSession> {
         cwd,
         session_token: Some(session_id),
         saved_at: updated_at,
+        file_path: Some(file_path.to_string_lossy().into_owned()),
+        turn_count: Some(turn_count),
     })
+}
+
+#[tauri::command]
+fn read_native_session(file_path: String) -> Result<String, String> {
+    std::fs::read_to_string(&file_path).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -951,10 +983,10 @@ fn tier_terminal_resume(
     session_token: String,
     cols: u16,
     rows: u16,
+    cwd: String,
     app: tauri::AppHandle,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
-    let dir = state.project_dir.lock().map_err(|e| e.to_string())?.clone();
 
     let preset = terminal::find_preset(&tool)
         .ok_or_else(|| format!("Unknown tool: {}", tool))?;
@@ -980,7 +1012,7 @@ fn tier_terminal_resume(
         state.translation_engine.clone(),
         program,
         args,
-        Some(dir.to_string_lossy().to_string()),
+        Some(cwd),
         "en".to_string(),
         cols,
         rows,
@@ -1020,7 +1052,9 @@ fn save_sessions(session: &terminal::SharedSession) {
                         tool: tool.clone(),
                         cwd: String::new(), // CWD tracked on frontend
                         session_token: Some(token),
-                        saved_at: format!("{:?}", std::time::SystemTime::now()),
+                        saved_at: std::time::SystemTime::now().duration_since(std::time::SystemTime::UNIX_EPOCH).unwrap().as_millis().to_string(),
+                        file_path: None,
+                        turn_count: None,
                     });
                 }
             }
@@ -1191,6 +1225,7 @@ pub fn start_ui(project_dir: PathBuf) -> anyhow::Result<()> {
             tier_terminal_resume,
             get_resumable_sessions,
             get_native_history,
+            read_native_session,
             set_translation_lang,
 
             get_translation_entries,

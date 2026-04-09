@@ -56,7 +56,7 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
   const t = useT();
 
   const toolLabel: Record<string, string> = {
-    claude: 'Claude Code', 'coffee-code': t('tool.coffee-code'),
+    claude: 'Claude Code', 'opencode': 'OpenCode',
     codex: 'Codex CLI', gemini: 'Gemini CLI', openclaw: 'OpenClaw',
     remote: t('tool.remote'), terminal: t('tool.terminal'),
   };
@@ -595,7 +595,7 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
     }
 
     // Determine tool name for dictionary lookup
-    const toolDictMap: Record<string, string> = { 'claude': 'claude-code', 'coffee-code': 'coffee-code' };
+    const toolDictMap: Record<string, string> = { 'claude': 'claude-code', 'opencode': 'opencode' };
     const toolDict = toolDictMap[tool || ''] || (tool || '');
     if (!toolDict) return;
 

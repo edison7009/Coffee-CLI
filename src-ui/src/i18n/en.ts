@@ -28,7 +28,6 @@ export const en = {
   'drive.volume': '{label}',
 
   // Tools
-  'tool.coffee-code': 'Coffee Code',
   'tool.terminal': 'Terminal',
   'tool.remote': 'Remote Terminal',
 
@@ -64,6 +63,17 @@ export const en = {
   'task.default_title': 'New Task',
   'task.search_sessions': 'Search sessions...',
   'menu.no_recent': 'No recent sessions found',
+  'task.turns': '{count} turns',
+
+  // Actions
+  'action.close': 'Close',
+  'action.resume_terminal': 'Continue this session',
+
+  // Time
+  'time.just_now': 'Just now',
+  'time.today': 'Today',
+  'time.yesterday': 'Yesterday',
+  'time.days_ago': '{days} days ago',
 
   // Arcade Games
   'game.pal': 'Sword and Fairy',

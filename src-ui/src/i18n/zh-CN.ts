@@ -27,7 +27,6 @@ export const zhCN = {
   'drive.volume': '{label}',
 
   // Tools
-  'tool.coffee-code': '咖啡办公助手',
   'tool.terminal': '终端',
   'tool.remote': '远程终端',
 
@@ -62,6 +61,17 @@ export const zhCN = {
   'task.default_title': '新任务',
   'task.search_sessions': '搜索历史对话...',
   'menu.no_recent': '没有任何近期会话',
+  'task.turns': '{count} 轮对话',
+
+  // Actions
+  'action.close': '关闭',
+  'action.resume_terminal': '继续本轮对话',
+
+  // Time
+  'time.just_now': '刚刚',
+  'time.today': '今天',
+  'time.yesterday': '昨天',
+  'time.days_ago': '{days}天前',
 
   // Arcade Games
   'game.pal': '仙剑奇侠传',

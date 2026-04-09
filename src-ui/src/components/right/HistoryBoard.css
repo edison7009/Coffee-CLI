@@ -30,6 +30,9 @@
   font-family: var(--font, system-ui);
   font-weight: 500;
   line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .history-card-meta {
@@ -38,13 +41,13 @@
   justify-content: space-between;
 }
 
-.history-card-tool {
+.history-card-tool-wrap {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  color: var(--text-2, rgba(255, 255, 255, 0.6));
-  font-weight: 600;
+  gap: 8px;
+  font-size: 10.5px;
+  color: var(--text-2, rgba(255, 255, 255, 0.45));
+  font-weight: 500;
   letter-spacing: 0.02em;
 }
 
