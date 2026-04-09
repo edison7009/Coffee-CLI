@@ -258,17 +258,21 @@ impl TranslationEngine {
     }
 
     /// Try to detect the active tool from a line of output.
-    fn try_detect_tool_from_output(&self, line: &str) {
+    /// Returns Some(tool_name) if a NEW tool was detected (state changed).
+    pub fn try_detect_tool_from_output(&self, line: &str) -> Option<String> {
         let mut active = self.active_tool.lock().unwrap();
         for dict in &self.dictionaries {
             if dict.matches_output(line) {
                 if active.as_deref() != Some(&dict.tool) {
                     eprintln!("[Translation] Tool detected from output: {}", dict.tool);
-                    *active = Some(dict.tool.clone());
+                    let tool_name = dict.tool.clone();
+                    *active = Some(tool_name.clone());
+                    return Some(tool_name);
                 }
-                return;
+                return None;
             }
         }
+        None
     }
 
     /// Translate a single line of plain text (with ANSI already stripped).

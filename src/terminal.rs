@@ -399,6 +399,7 @@ pub fn spawn(
     let output_buffer_for_reader = output_buffer.clone();
     std::thread::spawn(move || {
         let mut buf = [0u8; 4096];
+        let translation_engine_for_detect = translation_engine.clone();
         let mut vt = translation::VtProcessor::new(translation_engine);
 
         let ansi_re = regex::Regex::new(r"\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\].*?(?:\x07|\x1b\\)|\x1b.").unwrap();
@@ -452,6 +453,26 @@ pub fn spawn(
                                         }
                                     }
                                     token_captured = true;
+                                }
+                            }
+                        }
+                    }
+
+                    // Dynamic tool detection from output stream
+                    // When user types `claude` or `opencode` in a plain terminal/SSH,
+                    // this detects the tool signature and notifies the frontend to
+                    // hot-load the corresponding translation dictionary.
+                    if !stripped.is_empty() {
+                        for line in stripped.lines() {
+                            let trimmed = line.trim();
+                            if trimmed.len() > 3 {
+                                if let Some(detected_tool) = translation_engine_for_detect.try_detect_tool_from_output(trimmed) {
+                                    #[derive(Serialize, Clone)]
+                                    struct ToolDetected { id: String, tool: String }
+                                    let _ = app_out.emit("tool-detected", ToolDetected {
+                                        id: session_id_out.clone(),
+                                        tool: detected_tool,
+                                    });
                                 }
                             }
                         }

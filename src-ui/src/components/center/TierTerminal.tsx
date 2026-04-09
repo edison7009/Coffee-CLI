@@ -600,6 +600,25 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
   const [coffeeEnabled, setCoffeeEnabled] = useState(state.currentLang !== 'en');
 
   // Load translation entries from Rust backend
+  // Supports both:
+  // 1. Static tool assignment (Launchpad click → tool prop set at creation)
+  // 2. Dynamic detection (user types `claude` in plain shell/SSH → backend emits event)
+  const [detectedTool, setDetectedTool] = useState<string | null>(null);
+
+  // Listen for dynamic tool detection from PTY output stream
+  useEffect(() => {
+    let unlistener: (() => void) | null = null;
+    import('@tauri-apps/api/event').then(({ listen }) => {
+      listen<{ id: string; tool: string }>('tool-detected', (event) => {
+        if (event.payload.id === sessionId) {
+          console.log(`[TierTerminal] Dynamic tool detected: ${event.payload.tool}`);
+          setDetectedTool(event.payload.tool);
+        }
+      }).then(u => { unlistener = u; });
+    });
+    return () => { unlistener?.(); };
+  }, [sessionId]);
+
   useEffect(() => {
     const lang = state.currentLang;
     if (lang === 'en') {
@@ -609,11 +628,12 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
     }
 
     // Determine tool name for dictionary lookup
+    // Priority: dynamic detection > static tool prop
     const toolDictMap: Record<string, string> = { 'claude': 'claude-code', 'opencode': 'opencode' };
-    const toolDict = toolDictMap[tool || ''] || (tool || '');
-    if (!toolDict) return;
+    const effectiveTool = detectedTool || toolDictMap[tool || ''] || (tool || '');
+    if (!effectiveTool || effectiveTool === 'terminal' || effectiveTool === 'remote') return;
 
-    commands.getTranslationEntries(toolDict, lang).then((entries: [string, string][]) => {
+    commands.getTranslationEntries(effectiveTool, lang).then((entries: [string, string][]) => {
       const formatted = entries.map(([pattern, translation]) => ({
         pattern,
         translation,
@@ -625,7 +645,7 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
     }).catch(() => {
       setCoffeeEnabled(false);
     });
-  }, [state.currentLang, tool]);
+  }, [state.currentLang, tool, detectedTool]);
 
   // Fallback handler: if CoffeeOverlay reports failure, degrade gracefully
   const handleOverlayFallback = () => {
