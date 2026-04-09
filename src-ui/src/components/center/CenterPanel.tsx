@@ -418,7 +418,20 @@ export function CenterPanel() {
       case 'coffee-code': return { icon: <SvgCoffeeCode />, title: 'Coffee Code' };
       case 'codex': return { icon: <SvgCodex />, title: 'Codex CLI' };
       case 'gemini': return { icon: <SvgGemini />, title: 'Gemini CLI' };
-      case 'remote': return { icon: <TerminalIcon />, title: t('tool.remote') };
+      case 'remote': {
+        let title = t('tool.remote') as string;
+        if (session.toolData) {
+          try {
+            const data = JSON.parse(session.toolData);
+            if (data.protocol === 'ssh' && data.username && data.host) {
+              title = `${data.username}@${data.host}`;
+            } else if (data.host) {
+              title = data.host;
+            }
+          } catch (e) {}
+        }
+        return { icon: <TerminalIcon />, title };
+      }
       case 'openclaw': return { icon: <SvgOpenClaw />, title: 'OpenClaw' };
       case 'terminal': return { icon: <TerminalIcon />, title: t('tool.terminal') };
       case 'arcade': {

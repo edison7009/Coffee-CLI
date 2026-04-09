@@ -153,14 +153,7 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
           }
         }
 
-        // Paste: Ctrl+V / Cmd+V
-        if (cmdOrCtrl && e.code === 'KeyV') {
-          navigator.clipboard.readText().then(text => {
-            // Send pasted text to the backend
-            commands.tierTerminalInput(sessionId, text).catch(() => {});
-          });
-          return false;
-        }
+
       }
       return true; // Let xterm handle all other keys natively
     });
