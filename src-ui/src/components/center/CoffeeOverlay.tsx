@@ -32,7 +32,6 @@ export interface CoffeeOverlayRef {
 export const CoffeeOverlay = forwardRef<CoffeeOverlayRef, CoffeeOverlayProps>(({ xtermRef, xtermContainerRef, theme, visible, onFallback }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const configRef = useRef<RendererConfig>(createConfig(theme === 'dark'));
-  const rafRef = useRef<number>(0);
   const selectionRef = useRef<SelectionRange | null>(null);
   const metricsRef = useRef<CellMetrics>({ cellWidth: 8, cellHeight: 18, offsetX: 0, offsetY: 0 });
   const failedRef = useRef(false);

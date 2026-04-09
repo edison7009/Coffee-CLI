@@ -222,7 +222,7 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
         
         // Handle SSH Auto-login via Password injection
         if (tool === 'remote' && remoteConfig.protocol === 'ssh' && remoteConfig.password && !hasInjectedPassword) {
-          if (data.toLowerCase().includes('password:')) {
+          if (event.payload.data.toLowerCase().includes('password:')) {
             hasInjectedPassword = true;
             // Delay slightly to ensure PTY is ready to accept input after flushing prompt
             setTimeout(() => {
@@ -232,7 +232,7 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
         }
 
         // Detect alternate screen buffer entry — the universal TUI "ready" signal
-        if (data.includes('\x1b[?1049h') || data.includes('\x1b[?47h')) {
+        if (event.payload.data.includes('\x1b[?1049h') || event.payload.data.includes('\x1b[?47h')) {
           altScreenRef.current = true;
         }
       });
