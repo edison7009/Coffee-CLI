@@ -249,6 +249,30 @@ async fn pick_folder(app: tauri::AppHandle) -> Result<String, String> {
 
 // ─── Tool Availability Detection ─────────────────────────────────────────────
 
+#[cfg(target_os = "windows")]
+fn check_tool_windows(bin: &str) -> bool {
+    use std::os::windows::process::CommandExt;
+    std::process::Command::new("where")
+        .arg(bin)
+        .creation_flags(0x08000000) // CREATE_NO_WINDOW
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false)
+}
+
+#[cfg(not(target_os = "windows"))]
+fn check_tool_unix(bin: &str) -> bool {
+    std::process::Command::new("which")
+        .arg(bin)
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false)
+}
+
 #[tauri::command]
 fn check_tools_installed() -> std::collections::HashMap<String, bool> {
     let tools = vec![
@@ -261,23 +285,12 @@ fn check_tools_installed() -> std::collections::HashMap<String, bool> {
     ];
     let mut result = std::collections::HashMap::new();
     for (key, bin) in tools {
-        let found = if cfg!(target_os = "windows") {
-            std::process::Command::new("where")
-                .arg(bin)
-                .stdout(std::process::Stdio::null())
-                .stderr(std::process::Stdio::null())
-                .status()
-                .map(|s| s.success())
-                .unwrap_or(false)
-        } else {
-            std::process::Command::new("which")
-                .arg(bin)
-                .stdout(std::process::Stdio::null())
-                .stderr(std::process::Stdio::null())
-                .status()
-                .map(|s| s.success())
-                .unwrap_or(false)
-        };
+        #[cfg(target_os = "windows")]
+        let found = check_tool_windows(bin);
+        
+        #[cfg(not(target_os = "windows"))]
+        let found = check_tool_unix(bin);
+        
         result.insert(key.to_string(), found);
     }
     // Terminal is always available — it's the system shell

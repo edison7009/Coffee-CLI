@@ -117,29 +117,38 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
     term.loadAddon(fit);
     term.open(termRef.current);
 
-    // GPU-accelerated rendering: only enable WebGL if a dedicated GPU is detected.
-    // On integrated-only GPUs (office laptops), WebGL falls back to CPU software
-    // rendering which causes severe heat and fan noise. Canvas2D is far lighter.
+    // GPU-accelerated rendering: only enable WebGL if a dedicated GPU is detected OR if on Linux.
+    // On Windows/Mac integrated GPUs, WebGL can cause heat, but on Linux DOM renderer has sever font spacing bugs.
+    let useWebgl = false;
     try {
-      const testCanvas = document.createElement('canvas');
-      const gl = testCanvas.getContext('webgl') || testCanvas.getContext('experimental-webgl');
-      let hasDedicatedGpu = false;
-      if (gl) {
-        const debugExt = (gl as WebGLRenderingContext).getExtension('WEBGL_debug_renderer_info');
-        if (debugExt) {
-          const renderer = (gl as WebGLRenderingContext).getParameter(debugExt.UNMASKED_RENDERER_WEBGL) as string;
-          // Dedicated GPU keywords: NVIDIA, AMD, Radeon, GeForce, Arc, etc.
-          hasDedicatedGpu = /nvidia|geforce|radeon|amd|rx\s?\d|arc\s?a/i.test(renderer);
-          console.log(`[TierTerminal] GPU: ${renderer} → ${hasDedicatedGpu ? 'WebGL' : 'Canvas2D'}`);
+      const isLinux = navigator.userAgent.toLowerCase().includes('linux');
+      if (isLinux) {
+        useWebgl = true;
+      } else {
+        const testCanvas = document.createElement('canvas');
+        const gl = testCanvas.getContext('webgl') || testCanvas.getContext('experimental-webgl');
+        if (gl) {
+          const debugExt = (gl as WebGLRenderingContext).getExtension('WEBGL_debug_renderer_info');
+          if (debugExt) {
+            const renderer = (gl as WebGLRenderingContext).getParameter(debugExt.UNMASKED_RENDERER_WEBGL) as string;
+            // Dedicated GPU keywords: NVIDIA, AMD, Radeon, GeForce, Arc, etc.
+            useWebgl = /nvidia|geforce|radeon|amd|rx\s?\d|arc\s?a/i.test(renderer);
+            console.log(`[TierTerminal] GPU: ${renderer} → ${useWebgl ? 'WebGL' : 'DOM'}`);
+          }
         }
       }
-      if (hasDedicatedGpu) {
+    } catch {
+      console.warn('[TierTerminal] WebGL probe failed');
+    }
+
+    if (useWebgl) {
+      try {
         const webgl = new WebglAddon();
         webgl.onContextLoss(() => { webgl.dispose(); });
         term.loadAddon(webgl);
+      } catch (err) {
+        console.error('[TierTerminal] WebGL instantiation failed, falling back to DOM renderer', err);
       }
-    } catch {
-      console.warn('[TierTerminal] WebGL probe failed, using Canvas2D fallback');
     }
 
     fit.fit();
@@ -647,6 +656,33 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
     });
   }, [state.currentLang, tool, detectedTool]);
 
+  // ── Image Preview (Lightbox) ─────────────────────────────────────────────
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+
+  const handleImageClick = useCallback(async (url: string) => {
+    let rawPath = url;
+    // Extract path from markdown ![alt](path) if it matches
+    const mdMatch = url.match(/!\[.*?\]\((.*?)\)/);
+    if (mdMatch) {
+      rawPath = mdMatch[1];
+    }
+    
+    // If it's a generic http/https URL, use it directly
+    if (rawPath.startsWith('http://') || rawPath.startsWith('https://')) {
+      setPreviewImage(rawPath);
+      return;
+    }
+
+    try {
+      // It's a local path, safely convert to tauri custom protocol
+      const { convertFileSrc } = await import('@tauri-apps/api/core');
+      const safeSrc = convertFileSrc(rawPath);
+      setPreviewImage(safeSrc);
+    } catch {
+      setPreviewImage(rawPath);
+    }
+  }, []);
+
   // Fallback handler: if CoffeeOverlay reports failure, degrade gracefully
   const handleOverlayFallback = () => {
     console.warn('[TierTerminal] Coffee Overlay degraded → falling back to xterm.js native');
@@ -669,7 +705,39 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
         theme={isDark ? 'dark' : 'light'}
         visible={coffeeEnabled}
         onFallback={handleOverlayFallback}
+        onImageClick={handleImageClick}
       />
+
+      {/* Image Preview Lightbox */}
+      {previewImage && (
+        <div 
+          className="tier-lightbox" 
+          onClick={() => setPreviewImage(null)}
+          style={{
+            position: 'absolute',
+            top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0, 0, 0, 0.7)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            cursor: 'zoom-out'
+          }}
+        >
+          <img 
+            src={previewImage} 
+            alt="Preview" 
+            style={{
+              maxWidth: '90%',
+              maxHeight: '90%',
+              objectFit: 'contain',
+              borderRadius: '8px',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.5)'
+            }}
+          />
+        </div>
+      )}
 
       {/* Startup splash — covers ugly init output with branded loading screen */}
       {showSplash && (

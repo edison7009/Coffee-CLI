@@ -41,15 +41,8 @@
 /* ─── Local CJK Fonts (fallback for non-Mac users) ── */
 @font-face {
     font-family: 'Noto Sans SC';
-    src: url('/fonts/noto-sans-sc-400.otf') format('opentype');
-    font-weight: 400;
-    font-style: normal;
-    font-display: swap;
-}
-@font-face {
-    font-family: 'Noto Sans SC';
     src: url('/fonts/noto-sans-sc-500.otf') format('opentype');
-    font-weight: 500;
+    font-weight: 400 500; /* Use this font for both normal and medium weights */
     font-style: normal;
     font-display: swap;
 }

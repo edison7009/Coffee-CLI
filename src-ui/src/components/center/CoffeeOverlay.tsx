@@ -10,9 +10,11 @@ import {
   getSelectedText,
   createConfig,
   computeCellMetrics,
+  findInlineImages,
   type RendererConfig,
   type SelectionRange,
   type CellMetrics,
+  type InlineImage,
 } from './coffee-renderer';
 
 interface CoffeeOverlayProps {
@@ -22,6 +24,7 @@ interface CoffeeOverlayProps {
   theme: 'dark' | 'light';
   visible: boolean;
   onFallback?: () => void;
+  onImageClick?: (url: string) => void;
 }
 
 export interface CoffeeOverlayRef {
@@ -29,8 +32,9 @@ export interface CoffeeOverlayRef {
   copySelection: () => boolean;
 }
 
-export const CoffeeOverlay = forwardRef<CoffeeOverlayRef, CoffeeOverlayProps>(({ xtermRef, xtermContainerRef, theme, visible, onFallback }, ref) => {
+export const CoffeeOverlay = forwardRef<CoffeeOverlayRef, CoffeeOverlayProps>(({ xtermRef, xtermContainerRef, theme, visible, onFallback, onImageClick }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const iconContainerRef = useRef<HTMLDivElement>(null);
   const configRef = useRef<RendererConfig>(createConfig(theme === 'dark'));
   const selectionRef = useRef<SelectionRange | null>(null);
   const metricsRef = useRef<CellMetrics>({ cellWidth: 8, cellHeight: 18, offsetX: 0, offsetY: 0 });
@@ -103,13 +107,19 @@ export const CoffeeOverlay = forwardRef<CoffeeOverlayRef, CoffeeOverlayProps>(({
       config.devicePixelRatio = dpr;
 
       renderTranslationOverlay(term, ctx, w, h, config, metricsRef.current);
+      
+      // Inline Image Icon sync
+      if (iconContainerRef.current) {
+        const images = findInlineImages(term);
+        syncImageIcons(iconContainerRef.current, images, metricsRef.current, term.buffer.active.viewportY, onImageClick);
+      }
     } catch {
       if (!failedRef.current) {
         failedRef.current = true;
         onFallback?.();
       }
     }
-  }, [visible, xtermRef, updateMetrics, onFallback]);
+  }, [visible, xtermRef, updateMetrics, onFallback, onImageClick]);
 
   // ── Dirty-flag render loop ─────────────────────────────────────────────
   // Only repaint when the terminal buffer actually changes (new data arrives).
@@ -166,18 +176,105 @@ export const CoffeeOverlay = forwardRef<CoffeeOverlayRef, CoffeeOverlayProps>(({
   if (!visible) return null;
 
   return (
-    <canvas
-      ref={canvasRef}
-      className="coffee-overlay-canvas"
-      onClick={handleClick}
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        pointerEvents: 'none', // Let all input pass through to xterm.js
-      }}
-    />
+    <>
+      <canvas
+        ref={canvasRef}
+        className="coffee-overlay-canvas"
+        onClick={handleClick}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none', // Let all input pass through to xterm.js
+        }}
+      />
+      <div 
+        ref={iconContainerRef} 
+        className="coffee-overlay-icons"
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+        }}
+      />
+    </>
   );
 });
+
+// ── Image Icon DOM Syncing ────────────────────────────────────────────────
+
+function syncImageIcons(
+  container: HTMLDivElement,
+  images: InlineImage[],
+  metrics: CellMetrics,
+  viewportY: number,
+  onImageClick?: (url: string) => void
+) {
+  const children = container.children;
+  
+  for (let i = 0; i < images.length; i++) {
+    const img = images[i];
+    let el = children[i] as HTMLDivElement | undefined;
+    
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'inline-image-icon';
+      el.innerHTML = '🖼️';
+      el.style.position = 'absolute';
+      el.style.cursor = 'pointer';
+      el.style.pointerEvents = 'auto'; // Make it clickable!
+      el.style.padding = '0 3px';
+      el.style.fontSize = '11px';
+      el.style.lineHeight = '1';
+      el.style.display = 'flex';
+      el.style.alignItems = 'center';
+      el.style.justifyContent = 'center';
+      el.style.background = 'rgba(255, 255, 255, 0.15)';
+      el.style.border = '1px solid rgba(255, 255, 255, 0.2)';
+      el.style.borderRadius = '4px';
+      el.style.backdropFilter = 'blur(4px)';
+      el.style.transition = 'background 0.2s, transform 0.1s';
+      
+      el.onmouseenter = () => {
+        el!.style.background = 'rgba(255, 255, 255, 0.3)';
+        el!.style.transform = 'scale(1.1)';
+      };
+      el.onmouseleave = () => {
+        el!.style.background = 'rgba(255, 255, 255, 0.15)';
+        el!.style.transform = 'scale(1)';
+      };
+      // Keep it completely hidden normally unless we have valid metrics
+      el.style.display = 'none';
+      container.appendChild(el);
+    }
+    
+    // Update position
+    // x is offset by the end column plus a little padding
+    const x = metrics.offsetX + img.colEnd * metrics.cellWidth + 6;
+    const y = metrics.offsetY + (img.row - viewportY) * metrics.cellHeight;
+    const height = 18;
+    const top = y + (metrics.cellHeight - height) / 2;
+    
+    el.style.display = 'flex';
+    el.style.left = `${x}px`;
+    el.style.top = `${top}px`;
+    el.style.height = `${height}px`;
+    
+    el.onclick = (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      onImageClick?.(img.url);
+    };
+  }
+  
+  // Hide remaining unused pooled elements
+  for (let i = images.length; i < children.length; i++) {
+    (children[i] as HTMLElement).style.display = 'none';
+  }
+}
+

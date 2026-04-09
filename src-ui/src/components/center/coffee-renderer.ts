@@ -379,3 +379,42 @@ export function getSelectedText(term: Terminal, sel: SelectionRange): string {
 
   return text;
 }
+
+// ─── Image Detection ────────────────────────────────────────────────────────
+
+export interface InlineImage {
+  id: string;
+  row: number;         // Absolute row in buffer
+  colStart: number;    // Column start of the path
+  colEnd: number;      // Column end of the path
+  url: string;         // The actual path/url
+}
+
+const IMAGE_REGEX = /(?:[A-Za-z]:\\[\w\-. \\\\]+\.(?:png|jpg|jpeg|webp|gif|svg))|(?:\/[\w\-.\/]+\.(?:png|jpg|jpeg|webp|gif|svg))|https?:\/\/[^\s"'()]+?\.(?:png|jpg|jpeg|webp|gif|svg)/gi;
+
+export function findInlineImages(term: Terminal): InlineImage[] {
+  const images: InlineImage[] = [];
+  const buffer = term.buffer.active;
+  const startRow = buffer.viewportY;
+  const endRow = startRow + term.rows - 1;
+
+  for (let row = startRow; row <= endRow; row++) {
+    const line = buffer.getLine(row);
+    if (!line) continue;
+    const text = line.translateToString(true);
+    
+    let match;
+    IMAGE_REGEX.lastIndex = 0;
+    while ((match = IMAGE_REGEX.exec(text)) !== null) {
+      images.push({
+        id: `img-${row}-${match.index}`,
+        row,
+        colStart: match.index,
+        colEnd: match.index + match[0].length,
+        url: match[0],
+      });
+    }
+  }
+
+  return images;
+}

@@ -116,7 +116,7 @@ declare const emulators: any;
 export function DosPlayer({ sessionId }: { sessionId: string }) {
   const { state, dispatch } = useAppState();
   const [games, setGames] = useState<GameBundle[]>([]);
-  const [activeGame, setActiveGame] = useState<string | null>(null);
+  const [activeGame, setActiveGame] = useState<{name: string, url: string} | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -124,7 +124,7 @@ export function DosPlayer({ sessionId }: { sessionId: string }) {
   const ciRef = useRef<any>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const cleanupRef = useRef<(() => void) | null>(null);
-  const activeGameRef = useRef<string | null>(null);
+  const activeGameRef = useRef<{name: string, url: string} | null>(null);
   activeGameRef.current = activeGame;
 
   // ── Startup splash ──
@@ -140,7 +140,7 @@ export function DosPlayer({ sessionId }: { sessionId: string }) {
       const ci = ciRef.current;
       const game = activeGameRef.current;
       if (ci && game) {
-        extractSaveFiles(ci).then(files => saveGameFiles(game, files)).catch(() => {});
+        extractSaveFiles(ci).then(files => saveGameFiles(game.name, files)).catch(() => {});
       }
     };
     const onBeforeUnload = () => emergencySave();
@@ -157,7 +157,17 @@ export function DosPlayer({ sessionId }: { sessionId: string }) {
   useEffect(() => {
     if (!isTauri) { setLoading(false); return; }
     commands.listJsdosBundles()
-      .then((bundles: GameBundle[]) => { setGames(bundles); setLoading(false); })
+      .then((bundles: GameBundle[]) => { 
+        if (!bundles.some(b => b.name.toLowerCase().includes('pal'))) {
+          bundles.push({
+            name: 'pal.jsdos',
+            path: 'https://6.binary.dos.lol/48a58be784ad5b08135a4b0f9fc18a32b42c827f0901ddf7787422556cff64da.zip',
+            size: 0
+          });
+        }
+        setGames(bundles); 
+        setLoading(false); 
+      })
       .catch(() => setLoading(false));
   }, []);
 
@@ -181,11 +191,11 @@ export function DosPlayer({ sessionId }: { sessionId: string }) {
 
         emulators.pathPrefix = '/js-dos/emulators/';
 
-        const response = await fetch(activeGame);
-        if (!response.ok) throw new Error(`Failed to fetch ${activeGame}: ${response.status}`);
+        const response = await fetch(activeGame.url);
+        if (!response.ok) throw new Error(`Failed to fetch ${activeGame.url}: ${response.status}`);
         const bundleData = new Uint8Array(await response.arrayBuffer());
 
-        const savedFiles = await loadGameFiles(activeGame);
+        const savedFiles = await loadGameFiles(activeGame.name);
         if (cancelled) return;
 
         const initFs: any[] = [bundleData];
@@ -351,7 +361,7 @@ export function DosPlayer({ sessionId }: { sessionId: string }) {
 
         // ── Mouse input ──
         // Only FPS/RTS games need Pointer Lock (cursor confinement)
-        const needsPointerLock = activeGame?.includes('doom') || activeGame?.includes('redalert');
+        const needsPointerLock = activeGame?.name.includes('doom') || activeGame?.name.includes('redalert');
         let virtualX = 0.5, virtualY = 0.5;
 
         canvas.addEventListener('pointermove', (e: PointerEvent) => {
@@ -397,7 +407,7 @@ export function DosPlayer({ sessionId }: { sessionId: string }) {
           clearInterval(autoSaveTimer);
           if (ciRef.current) {
             extractSaveFiles(ciRef.current)
-              .then(files => saveGameFiles(activeGame, files))
+              .then(files => saveGameFiles(activeGame.name, files))
               .catch(() => {});
           }
           window.removeEventListener('keydown', onKeyDown, true);
@@ -422,7 +432,7 @@ export function DosPlayer({ sessionId }: { sessionId: string }) {
         const finalCi = ciRef.current;
         const currentActive = activeGame;
         extractSaveFiles(finalCi)
-          .then(files => currentActive ? saveGameFiles(currentActive, files) : null)
+          .then(files => currentActive ? saveGameFiles(currentActive.name, files) : null)
           .then(() => finalCi.exit())
           .catch(() => { finalCi.exit(); });
         ciRef.current = null;
@@ -455,7 +465,7 @@ export function DosPlayer({ sessionId }: { sessionId: string }) {
           try { ciRef.current.pause(); } catch(e) {}
           audioCtxRef.current?.suspend().catch(() => {});
           extractSaveFiles(ciRef.current)
-            .then(files => saveGameFiles(activeGame, files))
+            .then(files => saveGameFiles(activeGame.name, files))
             .catch(() => {});
         }
         dispatch({ type: 'SET_TERMINAL_HIDDEN', id: sessionId, isHidden: true });
@@ -490,7 +500,10 @@ export function DosPlayer({ sessionId }: { sessionId: string }) {
 
 
   const handleLaunch = (game: GameBundle) => {
-    setActiveGame(`/play/${game.name}`);
+    setActiveGame({
+      name: game.name,
+      url: game.path.startsWith('http') ? game.path : `/play/${game.name}`
+    });
     setError(null);
     firstFrameRef.current = false;
     splashStartRef.current = Date.now();
@@ -625,8 +638,7 @@ export function DosPlayer({ sessionId }: { sessionId: string }) {
               style={state.currentLang.startsWith('zh') ? { fontStyle: 'normal', fontWeight: 600, letterSpacing: '0.08em' } : undefined}
             >{(() => {
               if (activeGame) {
-                const gameName = activeGame.split('/').pop() || '';
-                return getGameInfo(gameName).title;
+                return getGameInfo(activeGame.name).title;
               }
               return 'Loading...';
             })()}</span>

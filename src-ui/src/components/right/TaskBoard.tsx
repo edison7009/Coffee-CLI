@@ -486,7 +486,8 @@ export function TaskBoard() {
 
   return (
     <div className="task-board">
-      {/* ── User Profile Header ── */}
+      {/* ── User Profile Header (Hidden for now, planned for next version) ── */}
+      {/* 
       <div className="panel-header">
         <div className="brand">
           <img src="https://i.pravatar.cc/150?u=a042581f4e29026024d" alt="avatar" style={{ width: 24, height: 24, borderRadius: '50%' }} />
@@ -497,6 +498,7 @@ export function TaskBoard() {
           <div className="icon-btn xs"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg></div>
         </div>
       </div>
+      */}
 
       {/* ── Tabs Header ── */}
       <div className="right-tabs" style={{ position: 'relative' }}>

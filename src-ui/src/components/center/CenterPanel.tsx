@@ -213,17 +213,23 @@ export function CenterPanel() {
 
       polling = setInterval(async () => {
         try {
-          const minimized = await mainWin.isMinimized();
-          setMinimized(minimized);
+          const isMin = await mainWin.isMinimized();
+          const isHidden = document.visibilityState === 'hidden';
+          setMinimized(isMin || isHidden);
         } catch { /* window not ready */ }
       }, 500);
     })();
 
     // Fallback: browser visibilitychange (fires reliably on Linux WMs)
     // When a window is minimized on Linux, document.visibilityState → 'hidden'
-    const onVisibilityChange = () => {
-      const hidden = document.visibilityState === 'hidden';
-      setMinimized(hidden);
+    const onVisibilityChange = async () => {
+      const isHidden = document.visibilityState === 'hidden';
+      let isMin = false;
+      try {
+        const { getCurrentWindow } = await import('@tauri-apps/api/window');
+        isMin = await getCurrentWindow().isMinimized();
+      } catch {}
+      setMinimized(isMin || isHidden);
     };
     document.addEventListener('visibilitychange', onVisibilityChange);
 
