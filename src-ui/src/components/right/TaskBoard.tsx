@@ -3,8 +3,8 @@ import type { ReactNode } from 'react';
 import { useT } from '../../i18n/useT';
 import { useAppState } from '../../store/app-state';
 import { isTauri, commands } from '../../tauri';
-import type { SavedSession } from '../../tauri';
 import './TaskBoard.css';
+import { HistoryBoard } from './HistoryBoard';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -89,23 +89,11 @@ export function TaskBoard() {
   const { state } = useAppState();
   const isZh = state.currentLang.startsWith('zh');
   const [tasks, setTasks] = useState<TaskItem[]>([]);
-  const [inputValue, setInputValue] = useState('');
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [addingId, setAddingId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState<'tasks' | 'sessions'>('tasks');
-  const [resumableSessions, setResumableSessions] = useState<SavedSession[]>([]);
-  const [sessionSearchQuery, setSessionSearchQuery] = useState('');
-
-  // Fetch true backend sessions when activating the sessions tab
-  useEffect(() => {
-    if (activeTab === 'sessions' && isTauri) {
-      commands.getResumableSessions()
-        .then(sessions => setResumableSessions(sessions || []))
-        .catch(console.error);
-    }
-  }, [activeTab]);
 
   // Inline title editing
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -121,7 +109,6 @@ export function TaskBoard() {
     id: null, status: null, position: 'after'
   });
 
-  const inputRef = useRef<HTMLInputElement>(null);
   const skipNextSyncRef = useRef(false); // Used to ignore external/initial load syncs
   const isLoadedRef = useRef(false);
   const pendingEchoesRef = useRef<Set<string>>(new Set());
@@ -714,111 +701,9 @@ export function TaskBoard() {
       </>
     )}
 
-    {activeTab === 'sessions' && (() => {
-        // Fallback to mock session ONLY if developing in browser without Tauri
-        const baseSessions: SavedSession[] = isTauri ? resumableSessions : resumableSessions.length > 0 ? resumableSessions : [
-          { id: 'mock-1', name: 'build a flash card website', tool: 'claude', cwd: '~/projects/flashcards', session_token: 'tk1', saved_at: new Date().toISOString(), preview: null },
-          { id: 'mock-2', name: 'build a snake game', tool: 'claude', cwd: '~/projects/snake', session_token: 'tk2', saved_at: new Date(Date.now() - 3600000).toISOString(), preview: null },
-          { id: 'mock-3', name: 'refactor components', tool: 'codex', cwd: '~/projects/coffee', session_token: 'tk3', saved_at: new Date(Date.now() - 86400000 * 2).toISOString(), preview: null },
-        ];
-
-        const filteredSessions = baseSessions.filter(s => {
-          if (!sessionSearchQuery) return true;
-          return s.name.toLowerCase().includes(sessionSearchQuery.toLowerCase());
-        });
-
-        const handleResume = (saved: SavedSession) => {
-          if (!saved.session_token) return;
-          
-          let targetId = state.activeTerminalId;
-          const currentTerminal = state.terminals.find(t => t.id === targetId);
-          
-          if (currentTerminal?.tool !== null) {
-            // Active terminal busy, spawn a new tab
-            targetId = crypto.randomUUID();
-            dispatch({ 
-              type: 'ADD_TERMINAL', 
-              session: { id: targetId, tool: saved.tool as any, folderPath: saved.cwd, scanData: null, agentStatus: 'idle', menu: null, hasInputText: false } 
-            });
-          } else if (targetId) {
-            // Adopt empty launchpad
-            dispatch({ type: 'SET_TERMINAL_TOOL', id: targetId, tool: saved.tool as any });
-            dispatch({ type: 'SET_FOLDER', path: saved.cwd });
-          }
-
-          if (!targetId) return;
-
-          commands.tierTerminalResume(
-            saved.id, targetId, saved.tool, saved.session_token, 80, 24
-          ).then(() => {
-            // Remove the session from local view list since it's active now
-            setResumableSessions(prev => prev.filter(s => s.id !== saved.id));
-          }).catch(console.error);
-        };
-
-        return (
-          <>
-            <div className="agent-session-search-wrap">
-              <svg className="agent-session-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-              </svg>
-              <input 
-                type="text" 
-                className="agent-session-search" 
-                placeholder={t('task.search_sessions' as any) || 'Search sessions...'}
-                value={sessionSearchQuery}
-                onChange={e => setSessionSearchQuery(e.target.value)}
-              />
-            </div>
-            <div className="task-list" style={{ marginTop: '0', paddingBottom: '20px' }}>
-            {filteredSessions.map(session => {
-              const dateDiff = Date.now() - new Date(session.saved_at).getTime();
-              const timeDisplay = dateDiff < 3600000 ? 'Just now' : dateDiff < 86400000 ? 'Today' : 'Yesterday';
-              
-              const renderToolIcon = (tool: string) => {
-                const t = tool.toLowerCase();
-                let bg = '#666', text = tool[0].toUpperCase();
-                if (t === 'claude') { bg = '#d56e54'; text = 'C'; }
-                else if (t === 'codex') { bg = '#4d88ff'; text = 'Cx'; }
-                else if (t === 'gemini') { bg = '#8e62d4'; text = 'G'; }
-                else if (t === 'openclaw') { bg = '#e74c3c'; text = 'O'; }
-                return (
-                  <div style={{
-                    width: 18, height: 18, borderRadius: 4, background: bg, color: '#fff', 
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', 
-                    fontSize: 11, fontWeight: 'bold'
-                  }}>
-                    {text}
-                  </div>
-                );
-              };
-
-              return (
-                <div key={session.id} className="task-card resume-card" onClick={() => handleResume(session)}>
-                  <div className="resume-card-content">
-                    <span className="resume-card-title">{session.name}</span>
-                    <div className="resume-card-meta">
-                      <div className="resume-card-tool">
-                        {renderToolIcon(session.tool)}
-                        <span>{session.tool === 'terminal' ? 'Local' : session.tool.replace(/^\w/, c => c.toUpperCase())}</span>
-                      </div>
-                      <span className="resume-card-time">{timeDisplay}</span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-            
-            {filteredSessions.length === 0 && (
-              <div className="task-empty">
-                <div className="task-empty-text">{t('menu.no_recent' as any) || 'No recent sessions'}</div>
-              </div>
-            )}
-          </div>
-        </>
-        );
-      })()}
+    {activeTab === 'sessions' && (
+      <HistoryBoard />
+    )}
 
     </div>
   );

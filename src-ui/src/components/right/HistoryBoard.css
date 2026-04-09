@@ -1,0 +1,91 @@
+/* ── History Card (Recent Sessions) ── */
+
+.history-card {
+  padding: 12px 14px;
+  margin-bottom: 6px;
+  cursor: default !important;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+  transition: background 0.2s, transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.history-card:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.history-card:active {
+  transform: scale(0.98);
+}
+
+.history-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.history-card-title {
+  font-size: 13px;
+  color: var(--text-1, #e8e4de);
+  font-family: var(--font, system-ui);
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.history-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.history-card-tool {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-2, rgba(255, 255, 255, 0.6));
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.history-card-time {
+  font-size: 10px;
+  color: var(--text-3, rgba(255, 255, 255, 0.3));
+  font-weight: 500;
+}
+
+.agent-session-search-wrap {
+  position: relative;
+  margin-bottom: 12px;
+}
+
+.agent-session-search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-3, rgba(255, 255, 255, 0.3));
+}
+
+.agent-session-search {
+  width: 100%;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 8px 10px 8px 32px;
+  color: var(--text-1, #e8e4de);
+  font-size: 13px;
+  font-family: var(--font, system-ui);
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.agent-session-search::placeholder {
+  color: var(--text-3, rgba(255, 255, 255, 0.3));
+}
+
+.agent-session-search:focus {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.1);
+}

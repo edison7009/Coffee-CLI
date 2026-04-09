@@ -131,6 +131,7 @@ export const commands = {
 
   // Session Resume
   getResumableSessions: () => invoke<SavedSession[]>('get_resumable_sessions'),
+  getNativeHistory: () => invoke<SavedSession[]>('get_native_history'),
   tierTerminalResume: (sessionId: string, savedSessionId: string, tool: string, sessionToken: string, cols: number, rows: number) =>
     invoke<void>('tier_terminal_resume', { sessionId, savedSessionId, tool, sessionToken, cols, rows }),
 

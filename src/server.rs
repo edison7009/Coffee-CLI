@@ -848,12 +848,60 @@ fn sessions_file_path() -> PathBuf {
     dir.join("sessions.json")
 }
 
+fn parse_claude_jsonl(file_path: &std::path::Path) -> Option<SavedSession> {
+    use std::io::BufRead;
+    let file = std::fs::File::open(file_path).ok()?;
+    let reader = std::io::BufReader::new(file);
+
+    let mut session_id = file_path.file_stem()?.to_string_lossy().to_string();
+    let mut cwd = String::new();
+    let mut updated_at = String::new();
+    let mut title = String::new();
+
+    for line in reader.lines().map_while(Result::ok) {
+        if let Ok(value) = serde_json::from_str::<serde_json::Value>(&line) {
+            if let Some(s) = value.get("sessionId").and_then(|v| v.as_str()) {
+                if !s.is_empty() { session_id = s.to_string(); }
+            }
+            if let Some(c) = value.get("cwd").and_then(|v| v.as_str()) {
+                if cwd.is_empty() && !c.is_empty() { cwd = c.to_string(); }
+            }
+            if let Some(message) = value.get("message").and_then(|v| v.as_str()) {
+                if title.is_empty() && !message.is_empty() {
+                    let mut chars = message.chars();
+                    let t: String = chars.by_ref().take(40).collect();
+                    title = if chars.next().is_some() { format!("{}...", t) } else { t };
+                }
+            }
+        }
+    }
+    
+    // Fallback date from file metadata
+    if let Ok(meta) = std::fs::metadata(file_path) {
+        if let Ok(mod_time) = meta.modified() {
+            if let Ok(dur) = mod_time.duration_since(std::time::SystemTime::UNIX_EPOCH) {
+                updated_at = dur.as_millis().to_string();
+            }
+        }
+    }
+
+    if title.is_empty() {
+        title = "Claude Session".to_string();
+    }
+
+    Some(SavedSession {
+        id: format!("claude_native_{}", session_id),
+        name: title,
+        tool: "claude".to_string(),
+        cwd,
+        session_token: Some(session_id),
+        saved_at: updated_at,
+    })
+}
+
 #[tauri::command]
 fn get_resumable_sessions(_state: State<'_, AppState>) -> Result<Vec<SavedSession>, String> {
-    // Also include live sessions that have captured tokens
     let mut result: Vec<SavedSession> = Vec::new();
-
-    // Load from persisted file
     let path = sessions_file_path();
     if path.exists() {
         if let Ok(content) = std::fs::read_to_string(&path) {
@@ -862,7 +910,36 @@ fn get_resumable_sessions(_state: State<'_, AppState>) -> Result<Vec<SavedSessio
             }
         }
     }
+    Ok(result)
+}
 
+#[tauri::command]
+fn get_native_history(_state: State<'_, AppState>) -> Result<Vec<SavedSession>, String> {
+    let mut result: Vec<SavedSession> = Vec::new();
+
+    if let Some(home) = dirs::home_dir() {
+        let projects_dir = home.join(".claude").join("projects");
+        if projects_dir.is_dir() {
+            if let Ok(entries) = std::fs::read_dir(projects_dir) {
+                for entry in entries.flatten() {
+                    if entry.path().is_dir() {
+                        if let Ok(files) = std::fs::read_dir(entry.path()) {
+                            for file in files.flatten() {
+                                let fpath = file.path();
+                                if fpath.extension().and_then(|e| e.to_str()) == Some("jsonl") {
+                                    if let Some(session) = parse_claude_jsonl(&fpath) {
+                                        result.push(session);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    result.sort_by(|a, b| b.saved_at.cmp(&a.saved_at));
     Ok(result)
 }
 
@@ -1113,6 +1190,7 @@ pub fn start_ui(project_dir: PathBuf) -> anyhow::Result<()> {
             tier_terminal_resize,
             tier_terminal_resume,
             get_resumable_sessions,
+            get_native_history,
             set_translation_lang,
 
             get_translation_entries,

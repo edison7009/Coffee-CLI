@@ -624,31 +624,31 @@
   transform: rotate(90deg);
 }
 
-/* ─── Resume Card (Recent Sessions) ─────────────────────────────────────────── */
+/* ── History Card (Recent Sessions) ── */
 
-.resume-card {
+.history-card {
   padding: 12px 14px;
   margin-bottom: 6px;
   cursor: default !important;
   transition: background 0.2s, transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
-.resume-card:hover {
+.history-card:hover {
   transform: translateY(-1px);
   background: rgba(255, 255, 255, 0.05);
 }
 
-.resume-card:active {
+.history-card:active {
   transform: scale(0.98);
 }
 
-.resume-card-content {
+.history-card-content {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.resume-card-title {
+.history-card-title {
   font-size: 13px;
   color: var(--text-1, #e8e4de);
   font-family: var(--font, system-ui);
@@ -656,13 +656,13 @@
   line-height: 1.4;
 }
 
-.resume-card-meta {
+.history-card-meta {
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
-.resume-card-tool {
+.history-card-tool {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -672,7 +672,7 @@
   letter-spacing: 0.02em;
 }
 
-.resume-card-time {
+.history-card-time {
   font-size: 10px;
   color: var(--text-3, rgba(255, 255, 255, 0.3));
   font-weight: 500;
