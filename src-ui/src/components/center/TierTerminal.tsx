@@ -2,7 +2,7 @@
 // Layer 1: xterm.js (ANSI parsing + keyboard + WebGL GPU rendering)
 // Layer 2: Coffee Overlay (Pretext + Canvas 2D, auto-enabled with smart fallback)
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebglAddon } from '@xterm/addon-webgl';

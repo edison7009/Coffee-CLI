@@ -398,7 +398,7 @@ export function DosPlayer({ sessionId }: { sessionId: string }) {
           if (ciRef.current) {
             try {
               const files = await extractSaveFiles(ciRef.current);
-              if (files.length > 0) await saveGameFiles(activeGame, files);
+              if (files.length > 0) await saveGameFiles(activeGame.name, files);
             } catch (e) { console.error('[DosPlayer] Auto-save failed:', e); }
           }
         }, 10000);
