@@ -56,7 +56,6 @@ dev.bat
 /2
 tmp/
 /backup-0.1.15/
-/screenshot/
 fragments.json
 missing.json
 merge_claude_dict.js
