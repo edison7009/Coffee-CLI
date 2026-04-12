@@ -183,7 +183,7 @@ fn create_detached_window(
         .unwrap_or_default();
     let label = format!("detached-{}", ts);
 
-    let window = tauri::WebviewWindowBuilder::new(
+    let _window = tauri::WebviewWindowBuilder::new(
         &app,
         &label,
         tauri::WebviewUrl::App("index.html".into()),
@@ -198,7 +198,7 @@ fn create_detached_window(
     .map_err(|e| format!("Failed to create window: {}", e))?;
 
     #[cfg(debug_assertions)]
-    window.open_devtools();
+    _window.open_devtools();
 
     Ok(())
 }
@@ -463,7 +463,7 @@ fn list_directory(path: String) -> Result<Vec<DirEntry>, String> {
 /// Open the native file explorer and highlight / reveal the given path.
 #[tauri::command]
 fn show_in_folder(path: String) -> Result<(), String> {
-    let _p = std::path::Path::new(&path);
+    let p = std::path::Path::new(&path);
     #[cfg(target_os = "windows")]
     {
         // explorer /select, highlights the item in its parent folder.
