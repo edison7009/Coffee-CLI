@@ -17,10 +17,16 @@ jobs:
         include:
           - platform: windows-latest
             args: ''
+            label: Windows x64
           - platform: macos-latest
             args: '--target aarch64-apple-darwin'
+            label: macOS Apple Silicon
+          - platform: macos-latest
+            args: '--target x86_64-apple-darwin'
+            label: macOS Intel
           - platform: ubuntu-22.04
             args: ''
+            label: Linux x64
 
     runs-on: ${{ matrix.platform }}
 
@@ -50,10 +56,12 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin' || '' }}
+          targets: ${{ contains(matrix.args, 'aarch64-apple-darwin') && 'aarch64-apple-darwin' || contains(matrix.args, 'x86_64-apple-darwin') && 'x86_64-apple-darwin' || '' }}
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.label }}
 
       - name: Build & publish
         uses: tauri-apps/tauri-action@v0
@@ -62,7 +70,28 @@ jobs:
         with:
           tagName: v__VERSION__
           releaseName: 'Coffee CLI v__VERSION__'
-          releaseBody: 'See the assets below for platform-specific installers.'
+          releaseBody: |
+            ## Install
+
+            **Windows**
+            ```powershell
+            irm https://raw.githubusercontent.com/edison7009/Coffee-CLI/main/install/install.ps1 | iex
+            ```
+
+            **macOS / Linux**
+            ```bash
+            curl -fsSL https://raw.githubusercontent.com/edison7009/Coffee-CLI/main/install/install.sh | sh
+            ```
+
+            Or download the installer for your platform from the assets below.
+
+            | Platform | File |
+            |---|---|
+            | Windows x64 | `Coffee.CLI_*_x64-setup.exe` |
+            | macOS Apple Silicon | `Coffee.CLI_*_aarch64.dmg` |
+            | macOS Intel | `Coffee.CLI_*_x64.dmg` |
+            | Linux (Debian/Ubuntu) | `coffee-cli_*_amd64.deb` |
+            | Linux (AppImage) | `Coffee.CLI_*_amd64.AppImage` |
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}

@@ -112,9 +112,32 @@ Connect to remote machines over SSH. Run agents on servers without leaving Coffe
   </tr>
 </table>
 
-### Download
+### Install
 
-Go to [Releases](https://github.com/edison7009/Coffee-CLI/releases) to download the latest version for your platform.
+**Windows**
+```powershell
+irm https://raw.githubusercontent.com/edison7009/Coffee-CLI/main/install/install.ps1 | iex
+```
+
+**macOS** (Apple Silicon & Intel)
+```bash
+curl -fsSL https://raw.githubusercontent.com/edison7009/Coffee-CLI/main/install/install.sh | sh
+```
+
+**Linux** (Debian / Ubuntu / AppImage)
+```bash
+curl -fsSL https://raw.githubusercontent.com/edison7009/Coffee-CLI/main/install/install.sh | sh
+```
+
+Or download directly from [Releases](https://github.com/edison7009/Coffee-CLI/releases).
+
+| Platform | Installer |
+|---|---|
+| Windows x64 | `.exe` setup |
+| macOS Apple Silicon | `.dmg` |
+| macOS Intel | `.dmg` |
+| Linux Debian/Ubuntu | `.deb` |
+| Linux universal | `.AppImage` |
 
 ### Build from Source
 
@@ -171,6 +194,25 @@ Coffee CLI 同时消除两道门槛：**不需要终端经验，不需要懂英�
 
 #### 远程终端
 通过 SSH 连接远程机器，在服务器上运行 Agent，无需离开 Coffee CLI。
+
+### 安装
+
+**Windows**
+```powershell
+irm https://raw.githubusercontent.com/edison7009/Coffee-CLI/main/install/install.ps1 | iex
+```
+
+**macOS**（Apple Silicon 和 Intel 均支持）
+```bash
+curl -fsSL https://raw.githubusercontent.com/edison7009/Coffee-CLI/main/install/install.sh | sh
+```
+
+**Linux**（Debian / Ubuntu / AppImage）
+```bash
+curl -fsSL https://raw.githubusercontent.com/edison7009/Coffee-CLI/main/install/install.sh | sh
+```
+
+也可以直接从 [Releases](https://github.com/edison7009/Coffee-CLI/releases) 下载对应平台的安装包。
 
 ---
 

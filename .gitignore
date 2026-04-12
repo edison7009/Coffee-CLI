@@ -31,7 +31,9 @@ models.json
 # Dev artifacts, scripts & logs
 *.log
 run-dev.bat
-scripts/
+scripts/clean-dictionary.js
+scripts/merge-taekchef-dict.js
+scripts/taekchef-translations.json
 logo.png
 logo.svg
 src-ui/gen-icon.mjs
