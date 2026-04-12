@@ -209,16 +209,16 @@ function ContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: () => voi
 // ─── Language Dropdown ───────────────────────────────────────────────────────
 
 const LANGUAGES = [
-  { code: 'en',    label: 'English',    flag: '🇺🇸', glyph: 'A' },
-  { code: 'zh-CN', label: '简体中文',   flag: '🇨🇳', glyph: '文' },
-  { code: 'zh-TW', label: '繁體中文',   flag: '🇹🇼', glyph: '文' },
-  { code: 'ja',    label: '日本語',     flag: '🇯🇵', glyph: 'あ' },
-  { code: 'ko',    label: '한국어',     flag: '🇰🇷', glyph: '가' },
-  { code: 'es',    label: 'Español',    flag: '🇪🇸', glyph: 'Ñ' },
-  { code: 'fr',    label: 'Français',   flag: '🇫🇷', glyph: 'Fr' },
-  { code: 'de',    label: 'Deutsch',    flag: '🇩🇪', glyph: 'De' },
-  { code: 'pt',    label: 'Português',  flag: '🇧🇷', glyph: 'Pt' },
-  { code: 'ru',    label: 'Русский',    flag: '🇷🇺', glyph: 'Я' },
+  { code: 'en',    label: 'English',    glyph: 'A'  },
+  { code: 'zh-CN', label: '简体中文',   glyph: '文' },
+  { code: 'zh-TW', label: '繁體中文',   glyph: '文' },
+  { code: 'ja',    label: '日本語',     glyph: 'あ' },
+  { code: 'ko',    label: '한국어',     glyph: '가' },
+  { code: 'es',    label: 'Español',    glyph: 'Ñ'  },
+  { code: 'fr',    label: 'Français',   glyph: 'Fr' },
+  { code: 'de',    label: 'Deutsch',    glyph: 'De' },
+  { code: 'pt',    label: 'Português',  glyph: 'Pt' },
+  { code: 'ru',    label: 'Русский',    glyph: 'Я'  },
 ];
 
 function getLangGlyph(code: string): string {
@@ -263,7 +263,7 @@ function LangDropdown({ anchorRef, currentLang, onSelect, onClose }: {
           className={`ctx-menu-item ${lang.code === currentLang ? 'lang-active' : ''}`}
           onClick={() => onSelect(lang.code)}
         >
-          <span style={{ fontSize: 14, width: 20, textAlign: 'center', flexShrink: 0 }}>{lang.flag}</span>
+          <span style={{ fontSize: 14, width: 20, textAlign: 'center', flexShrink: 0 }}>{lang.glyph}</span>
           <span style={{ flex: 1 }}>{lang.label}</span>
           {lang.code === currentLang && <span style={{ fontSize: 12, opacity: 0.7 }}>✓</span>}
         </button>
