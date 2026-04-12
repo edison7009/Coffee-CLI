@@ -363,6 +363,70 @@
     {
       "pattern": "Use this skill to configure the Claude Code harness via settings.json.",
       "translation": "Usa esta habilidad para configurar Claude Code mediante settings.json."
+    },
+    {
+      "pattern": "! for bash mode",
+      "translation": "! modo bash"
+    },
+    {
+      "pattern": "/ for commands",
+      "translation": "/ comandos"
+    },
+    {
+      "pattern": "@ for file paths",
+      "translation": "@ rutas de archivo"
+    },
+    {
+      "pattern": "& for background",
+      "translation": "& segundo plano"
+    },
+    {
+      "pattern": "/btw for side question",
+      "translation": "/btw pregunta lateral"
+    },
+    {
+      "pattern": "double tap esc to clear input",
+      "translation": "Esc doble para borrar entrada"
+    },
+    {
+      "pattern": "shift + tab to auto-accept edits",
+      "translation": "Shift+Tab aceptar ediciones"
+    },
+    {
+      "pattern": "ctrl + o for verbose output",
+      "translation": "Ctrl+O salida detallada"
+    },
+    {
+      "pattern": "ctrl + t to toggle tasks",
+      "translation": "Ctrl+T mostrar/ocultar tareas"
+    },
+    {
+      "pattern": "backslash (\\) + return (⏎) for newline",
+      "translation": "barra invertida (\\) + Enter (⏎) nueva línea"
+    },
+    {
+      "pattern": "ctrl + shift + - to undo",
+      "translation": "Ctrl+Shift+- deshacer"
+    },
+    {
+      "pattern": "alt + v to paste images",
+      "translation": "Alt+V pegar imágenes"
+    },
+    {
+      "pattern": "alt + p to switch model",
+      "translation": "Alt+P cambiar modelo"
+    },
+    {
+      "pattern": "ctrl + s to stash prompt",
+      "translation": "Ctrl+S guardar prompt"
+    },
+    {
+      "pattern": "ctrl + g to edit in $EDITOR",
+      "translation": "Ctrl+G editar en $EDITOR"
+    },
+    {
+      "pattern": "/keybindings to customize",
+      "translation": "/keybindings personalizar"
     }
   ]
 }

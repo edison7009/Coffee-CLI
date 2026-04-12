@@ -363,6 +363,70 @@
     {
       "pattern": "Use this skill to configure the Claude Code harness via settings.json.",
       "translation": "이 스킬로 settings.json을 통해 Claude Code를 구성합니다."
+    },
+    {
+      "pattern": "! for bash mode",
+      "translation": "! bash 모드"
+    },
+    {
+      "pattern": "/ for commands",
+      "translation": "/ 명령어"
+    },
+    {
+      "pattern": "@ for file paths",
+      "translation": "@ 파일 경로"
+    },
+    {
+      "pattern": "& for background",
+      "translation": "& 백그라운드"
+    },
+    {
+      "pattern": "/btw for side question",
+      "translation": "/btw 사이드 질문"
+    },
+    {
+      "pattern": "double tap esc to clear input",
+      "translation": "Esc 두 번으로 입력 지우기"
+    },
+    {
+      "pattern": "shift + tab to auto-accept edits",
+      "translation": "Shift+Tab 자동 수락"
+    },
+    {
+      "pattern": "ctrl + o for verbose output",
+      "translation": "Ctrl+O 상세 출력"
+    },
+    {
+      "pattern": "ctrl + t to toggle tasks",
+      "translation": "Ctrl+T 작업 창 전환"
+    },
+    {
+      "pattern": "backslash (\\) + return (⏎) for newline",
+      "translation": "백슬래시 (\\) + Enter (⏎) 줄바꿈"
+    },
+    {
+      "pattern": "ctrl + shift + - to undo",
+      "translation": "Ctrl+Shift+- 실행 취소"
+    },
+    {
+      "pattern": "alt + v to paste images",
+      "translation": "Alt+V 이미지 붙여넣기"
+    },
+    {
+      "pattern": "alt + p to switch model",
+      "translation": "Alt+P 모델 전환"
+    },
+    {
+      "pattern": "ctrl + s to stash prompt",
+      "translation": "Ctrl+S 입력 임시 저장"
+    },
+    {
+      "pattern": "ctrl + g to edit in $EDITOR",
+      "translation": "Ctrl+G $EDITOR에서 편집"
+    },
+    {
+      "pattern": "/keybindings to customize",
+      "translation": "/keybindings 단축키 설정"
     }
   ]
 }

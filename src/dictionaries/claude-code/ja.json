@@ -363,6 +363,70 @@
     {
       "pattern": "Use this skill to configure the Claude Code harness via settings.json.",
       "translation": "このスキルで settings.json を使って Claude Code を設定します。"
+    },
+    {
+      "pattern": "! for bash mode",
+      "translation": "! Bash モード"
+    },
+    {
+      "pattern": "/ for commands",
+      "translation": "/ コマンド"
+    },
+    {
+      "pattern": "@ for file paths",
+      "translation": "@ ファイルパス"
+    },
+    {
+      "pattern": "& for background",
+      "translation": "& バックグラウンド"
+    },
+    {
+      "pattern": "/btw for side question",
+      "translation": "/btw サブ質問"
+    },
+    {
+      "pattern": "double tap esc to clear input",
+      "translation": "Esc 2回で入力をクリア"
+    },
+    {
+      "pattern": "shift + tab to auto-accept edits",
+      "translation": "Shift+Tab で編集を自動承認"
+    },
+    {
+      "pattern": "ctrl + o for verbose output",
+      "translation": "Ctrl+O 詳細出力"
+    },
+    {
+      "pattern": "ctrl + t to toggle tasks",
+      "translation": "Ctrl+T タスク表示切替"
+    },
+    {
+      "pattern": "backslash (\\) + return (⏎) for newline",
+      "translation": "バックスラッシュ (\\) + Enter (⏎) 改行"
+    },
+    {
+      "pattern": "ctrl + shift + - to undo",
+      "translation": "Ctrl+Shift+- 元に戻す"
+    },
+    {
+      "pattern": "alt + v to paste images",
+      "translation": "Alt+V 画像を貼り付け"
+    },
+    {
+      "pattern": "alt + p to switch model",
+      "translation": "Alt+P モデル切替"
+    },
+    {
+      "pattern": "ctrl + s to stash prompt",
+      "translation": "Ctrl+S 入力を退避"
+    },
+    {
+      "pattern": "ctrl + g to edit in $EDITOR",
+      "translation": "Ctrl+G $EDITOR で編集"
+    },
+    {
+      "pattern": "/keybindings to customize",
+      "translation": "/keybindings でカスタマイズ"
     }
   ]
 }

@@ -363,6 +363,70 @@
     {
       "pattern": "Use this skill to configure the Claude Code harness via settings.json.",
       "translation": "使用此技能通过 settings.json 配置 Claude Code。"
+    },
+    {
+      "pattern": "! for bash mode",
+      "translation": "! bash 模式"
+    },
+    {
+      "pattern": "/ for commands",
+      "translation": "/ 输入命令"
+    },
+    {
+      "pattern": "@ for file paths",
+      "translation": "@ 引用文件"
+    },
+    {
+      "pattern": "& for background",
+      "translation": "& 后台执行"
+    },
+    {
+      "pattern": "/btw for side question",
+      "translation": "/btw 旁支问题"
+    },
+    {
+      "pattern": "double tap esc to clear input",
+      "translation": "双击 Esc 清空输入"
+    },
+    {
+      "pattern": "shift + tab to auto-accept edits",
+      "translation": "Shift+Tab 自动接受编辑"
+    },
+    {
+      "pattern": "ctrl + o for verbose output",
+      "translation": "Ctrl+O 详细输出"
+    },
+    {
+      "pattern": "ctrl + t to toggle tasks",
+      "translation": "Ctrl+T 切换任务面板"
+    },
+    {
+      "pattern": "backslash (\\) + return (⏎) for newline",
+      "translation": "反斜杠 (\\) + Enter (⏎) 换行"
+    },
+    {
+      "pattern": "ctrl + shift + - to undo",
+      "translation": "Ctrl+Shift+- 撤销"
+    },
+    {
+      "pattern": "alt + v to paste images",
+      "translation": "Alt+V 粘贴图片"
+    },
+    {
+      "pattern": "alt + p to switch model",
+      "translation": "Alt+P 切换模型"
+    },
+    {
+      "pattern": "ctrl + s to stash prompt",
+      "translation": "Ctrl+S 暂存输入"
+    },
+    {
+      "pattern": "ctrl + g to edit in $EDITOR",
+      "translation": "Ctrl+G 在 $EDITOR 中编辑"
+    },
+    {
+      "pattern": "/keybindings to customize",
+      "translation": "/keybindings 自定义快捷键"
     }
   ]
 }
