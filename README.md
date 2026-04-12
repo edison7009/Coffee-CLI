@@ -134,8 +134,7 @@ Or download directly from [Releases](https://github.com/edison7009/Coffee-CLI/re
 | Platform | Installer |
 |---|---|
 | Windows x64 | `.exe` setup |
-| macOS Apple Silicon | `.dmg` |
-| macOS Intel | `.dmg` |
+| macOS Apple Silicon (M1+) | `.dmg` |
 | Linux Debian/Ubuntu | `.deb` |
 | Linux universal | `.AppImage` |
 
