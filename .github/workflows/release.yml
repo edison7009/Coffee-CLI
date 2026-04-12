@@ -21,7 +21,7 @@ jobs:
           - platform: macos-latest
             args: '--target aarch64-apple-darwin'
             label: macOS Apple Silicon
-          - platform: macos-latest
+          - platform: macos-13
             args: '--target x86_64-apple-darwin'
             label: macOS Intel
           - platform: ubuntu-22.04
@@ -56,7 +56,7 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ contains(matrix.args, 'aarch64-apple-darwin') && 'aarch64-apple-darwin' || contains(matrix.args, 'x86_64-apple-darwin') && 'x86_64-apple-darwin' || '' }}
+          targets: ${{ contains(matrix.args, 'aarch64-apple-darwin') && 'aarch64-apple-darwin' || '' }}
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
