@@ -59,7 +59,7 @@ const getToolIcon = (tool: string) => {
   }
 };
 
-const getToolName = (tool: string, lang: string) => {
+const getToolName = (tool: string, _lang: string) => {
   switch (tool) {
     case 'claude': return 'Claude Code';
     case 'codex': return 'Codex CLI';

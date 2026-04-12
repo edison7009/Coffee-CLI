@@ -36,7 +36,7 @@ export interface CoffeeOverlayRef {
   resumeRendering: () => void;
 }
 
-export const CoffeeOverlay = forwardRef<CoffeeOverlayRef, CoffeeOverlayProps>(({ xtermRef, xtermContainerRef, theme, visible, onFallback, onImageClick }, ref) => {
+export const CoffeeOverlay = forwardRef<CoffeeOverlayRef, CoffeeOverlayProps>(({ xtermRef, xtermContainerRef: _xtermContainerRef, theme, visible, onFallback, onImageClick }, ref) => {
   const shadowContainerRef = useRef<HTMLDivElement>(null);
   const shadowTermRef = useRef<Terminal | null>(null);
   const shadowFitRef = useRef<FitAddon | null>(null);

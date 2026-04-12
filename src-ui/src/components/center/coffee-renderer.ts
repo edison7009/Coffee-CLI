@@ -117,7 +117,7 @@ let _logged = false;
  */
 export function renderToShadowTerminal(
   source: Terminal,
-  target: Terminal,
+  _target: Terminal,
 ): string {
   const buffer = source.buffer.active;
   const hasDict = hasTranslations();
