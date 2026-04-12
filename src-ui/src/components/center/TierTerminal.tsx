@@ -79,11 +79,12 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
     const unlisteners: (() => void)[] = [];
 
     const isDark = state.currentTheme === 'dark';
+    const isLinux = navigator.userAgent.toLowerCase().includes('linux');
     const term = new Terminal({
-      fontFamily: "'Cascadia Mono', 'Cascadia Code', 'SF Mono', Menlo, Monaco, Consolas, 'Ubuntu Mono', 'DejaVu Sans Mono', 'Liberation Mono', 'Courier New', monospace",
+      fontFamily: "'Cascadia Mono', 'Cascadia Code', 'SF Mono', Menlo, Monaco, Consolas, 'Ubuntu Mono', 'Noto Mono', 'DejaVu Sans Mono', 'Liberation Mono', 'Courier New', monospace",
       fontSize: 14,
       lineHeight: 1.3,
-      letterSpacing: 0,
+      letterSpacing: isLinux ? -0.5 : 0,
       fontWeight: '400',
       customGlyphs: true,
       cursorStyle: 'bar' as const,
@@ -130,10 +131,9 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
     term.open(termRef.current);
 
     // GPU-accelerated rendering: only enable WebGL if a dedicated GPU is detected OR if on Linux.
-    // On Windows/Mac integrated GPUs, WebGL can cause heat, but on Linux DOM renderer has sever font spacing bugs.
+    // On Windows/Mac integrated GPUs, WebGL can cause heat, but on Linux DOM renderer has severe font spacing bugs.
     let useWebgl = false;
     try {
-      const isLinux = navigator.userAgent.toLowerCase().includes('linux');
       if (isLinux) {
         useWebgl = true;
       } else {
