@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Coffee Play</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #1a1917; }
+  #dos { width: 100%; height: 100%; }
+  #err { color: #C4956A; font-family: monospace; font-size: 12px; padding: 20px; white-space: pre-wrap; }
+</style>
+<link rel="stylesheet" href="/js-dos/js-dos.css">
+</head>
+<body>
+<div id="dos"></div>
+<div id="err"></div>
+<script>
+  // Capture any script errors
+  window.onerror = function(msg, src, line, col, err) {
+    document.getElementById('err').textContent += 'Error: ' + msg + '\nSource: ' + src + ':' + line + '\n';
+  };
+</script>
+<script src="/js-dos/js-dos.js" onerror="document.getElementById('err').textContent='Failed to load js-dos.js'"></script>
+<script>
+  var errEl = document.getElementById('err');
+  var bundlePath = window.location.hash ? window.location.hash.slice(1) : null;
+
+  errEl.textContent = 'Debug:\n';
+  errEl.textContent += '  bundlePath: ' + bundlePath + '\n';
+  errEl.textContent += '  window.Dos: ' + typeof window.Dos + '\n';
+  errEl.textContent += '  typeof emulators: ' + typeof emulators + '\n';
+
+  try {
+    if (bundlePath && typeof window.Dos === 'function') {
+      errEl.style.display = 'none';
+      Dos(document.getElementById('dos'), {
+        url: bundlePath,
+        pathPrefix: '/js-dos/emulators/',
+        theme: 'dark',
+        noSocialLinks: true,
+      });
+    }
+  } catch(e) {
+    errEl.textContent += '  Init error: ' + e.message + '\n' + e.stack;
+  }
+</script>
+</body>
+</html>

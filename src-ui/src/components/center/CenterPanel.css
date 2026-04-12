@@ -1,0 +1,775 @@
+.main-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-terminal);
+  border-top: none;
+  border-radius: 0; /* Fully flush, edge to edge */
+}
+
+.chrome-tabs-header {
+  display: flex;
+  align-items: flex-end;
+  padding: 8px 12px 0 12px;
+  border-bottom: none;
+  position: relative;
+  z-index: 10;
+  gap: 2px;
+}
+
+.chrome-tab {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-2);
+  background: transparent;
+  border-radius: 10px 10px 0 0;
+  cursor: pointer;
+  user-select: none;
+  min-width: 140px;
+  max-width: 220px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.chrome-tab:hover:not(.active) {
+  background: var(--bg-hover);
+}
+
+.chrome-tab.active {
+  color: var(--text-1);
+  background: var(--bg-terminal);
+  z-index: 2;
+  /* Prevent active tab from lagging behind during theme changes (flash bug) */
+  transition: color 0.15s;
+}
+
+/* Chrome 'flare' pseudo-elements bridging the tab to the terminal background */
+.chrome-tab.active::before,
+.chrome-tab.active::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  width: 12px;
+  height: 12px;
+  pointer-events: none;
+}
+
+.chrome-tab.active::before {
+  left: -12px;
+  background: radial-gradient(circle at top left, transparent 12px, var(--bg-terminal) 12.5px);
+}
+
+.chrome-tab.active::after {
+  right: -12px;
+  background: radial-gradient(circle at top right, transparent 12px, var(--bg-terminal) 12.5px);
+}
+
+.chrome-tab-new {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-2);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  margin-left: 6px;
+  margin-bottom: 5px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.chrome-tab-new:hover {
+  background: var(--bg-hover);
+  color: var(--text-1);
+}
+
+/* ─── Tab Actions (Health Dot + Close Button) ─── */
+.tab-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-left: auto;
+  position: relative;
+}
+
+.tab-health-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  position: absolute;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.tab-health-dot.connected {
+  background: #34d399;
+  box-shadow: 0 0 4px rgba(52, 211, 153, 0.4);
+}
+
+.tab-health-dot.disconnected {
+  background: #ef4444;
+  box-shadow: 0 0 4px rgba(239, 68, 68, 0.4);
+}
+
+.tab-close-btn {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  background: transparent;
+  border: none;
+  color: var(--text-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: absolute;
+  opacity: 0;
+  transform: scale(0.6);
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease, background-color 0.15s, color 0.15s;
+}
+
+.chrome-tab:hover .tab-health-dot {
+  opacity: 0;
+  transform: scale(0.4);
+  pointer-events: none;
+}
+
+.chrome-tab:hover .tab-close-btn {
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
+}
+
+.tab-close-btn:hover {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+/* ─── Terminal Wrapper ─── */
+
+.terminal-wrapper {
+  position: relative;
+  flex-direction: column;
+}
+
+/* ─── Launchpad Grid Overlay ─── */
+.launchpad-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.launchpad-slider-viewport {
+  width: 100%;
+  height: 100%;
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+.launchpad-slider-track {
+  display: flex;
+  width: 200%;
+  height: 100%;
+  transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.launchpad-slider-track.slide-to-games {
+  transform: translateX(-50%);
+}
+
+.launchpad-page {
+  width: 50%;
+  height: 100%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+}
+
+.launchpad-inner {
+  max-width: 540px;
+  width: 100%;
+  padding: 32px;
+}
+
+.launchpad-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  width: 100%;
+}
+
+.launchpad-card {
+  background: var(--bg-card);
+  border: 1px solid transparent; /* Hide border, use shadow for separation */
+  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+  border-radius: var(--radius-md);
+  padding: 16px 24px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 20px;
+  height: 80px;
+  cursor: pointer;
+  transition: box-shadow 0.25s, transform 0.25s, background-color 0.2s;
+}
+
+.launchpad-card:hover {
+  transform: translateY(-2px);
+  background-color: var(--bg-card);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+}
+
+/* Disabled state — tool not installed */
+.launchpad-card-disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: auto;
+  position: relative;
+}
+
+.launchpad-card-disabled:hover {
+  border-color: var(--border);
+  background-color: var(--bg-card);
+  box-shadow: none;
+}
+
+
+.launchpad-icon {
+  font-size: 36px; /* Increased icon size */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.launchpad-card span {
+  font-size: 18px; /* Increased text size */
+  font-weight: 500;
+  color: var(--text-1);
+  white-space: nowrap;
+}
+
+/* ─── Premium Toast Notification ─── */
+
+@keyframes slideDownToast {
+  0% { transform: translate(-50%, -200%); opacity: 0; }
+  15% { transform: translate(-50%, 0); opacity: 1; }
+  85% { transform: translate(-50%, 0); opacity: 1; }
+  100% { transform: translate(-50%, -200%); opacity: 0; }
+}
+
+.toast-notification {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-panel);
+  color: var(--text-1);
+  border: 1px solid var(--border);
+  padding: 10px 20px;
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: slideDownToast 3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  pointer-events: none;
+}
+
+/* ─── Resumable Sessions ─── */
+
+.resume-section {
+  margin-top: 24px;
+  width: 100%;
+}
+
+.resume-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+  padding-left: 4px;
+}
+
+.resume-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.resume-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--bg-card);
+  border: 1px solid transparent;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: transform 0.2s, background-color 0.2s, box-shadow 0.2s;
+}
+
+.resume-card:hover {
+  transform: translateY(-2px);
+  background-color: var(--bg-card);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.06);
+}
+
+.resume-card-icon {
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.resume-card-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.resume-card-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-1);
+}
+
+.resume-card-token {
+  font-size: 11px;
+  color: var(--text-3, var(--text-2));
+  font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+  opacity: 0.7;
+}
+
+.resume-card-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: #34d399;
+  background: rgba(52, 211, 153, 0.12);
+  padding: 3px 10px;
+  border-radius: 12px;
+  flex-shrink: 0;
+  letter-spacing: 0.3px;
+}
+
+/* ─── Mode Switch Button (Arcade vs Tools) ─────────────── */
+.mode-switch-btn {
+  display: flex;
+  align-items: center;
+  height: 36px;
+  min-width: 36px;
+  padding: 0 5px; /* Ensures circular shape when drawer is closed (24px + 5px + 5px + 2px border = 36px) */
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  color: var(--text-2);
+  cursor: pointer;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mode-switch-btn:hover {
+  color: var(--text-1);
+}
+
+.mode-switch-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: 13px;
+  color: var(--accent);
+  background: transparent;
+  transition: transform 0.4s ease;
+}
+
+.mode-switch-btn:hover .mode-switch-icon {
+  transform: rotate(180deg);
+}
+
+.mode-switch-drawer {
+  max-width: 0;
+  opacity: 0;
+  white-space: nowrap;
+  font-size: 12.5px;
+  font-weight: 500;
+  margin-right: 0;
+  /* Un-hover transitions (immediate snap back) */
+  transition: max-width 0.2s ease, opacity 0.2s ease, margin 0.2s ease;
+}
+
+/* Delay expansion so it only triggers on sustained hover (0.3s delay) */
+.mode-switch-btn:hover .mode-switch-drawer {
+  max-width: 120px;
+  opacity: 1;
+  margin-left: 12px; /* Needs strong padding to clear the 18px rounded pill edge */
+  margin-right: 4px; /* Reduced gap since the icon itself has some internal whitespace */
+  transition: max-width 0.35s cubic-bezier(0.4, 0, 0.2, 1) 0.3s, 
+              opacity 0.25s ease 0.3s, 
+              margin 0.25s ease 0.3s;
+}
+
+.mode-switch-btn.instant-click .mode-switch-drawer {
+  transition: none !important;
+  max-width: 0 !important;
+  opacity: 0 !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+/* ─── Tab Drag Ghost (drag-to-detach feedback) ─── */
+
+.tab-drag-ghost {
+  position: fixed;
+  padding: 8px 20px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-1);
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(12px);
+  pointer-events: none;
+  z-index: 9999;
+  white-space: nowrap;
+  opacity: 0.92;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.tab-drag-ghost.ready {
+  border-color: #34d399;
+  box-shadow: 0 12px 40px rgba(52, 211, 153, 0.25), 0 0 0 1px rgba(52, 211, 153, 0.3);
+}
+
+/* ─── Terminal Card Subtle Remote Hint ─── */
+
+.remote-link-hint {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  font-size: 11px;
+  color: var(--text-3);
+  font-weight: 500;
+  transition: color 0.2s;
+  letter-spacing: 0.3px;
+  opacity: 0.6;
+}
+
+.remote-link-hint:hover {
+  color: var(--accent);
+  opacity: 1;
+}
+
+.launchpad-card {
+  position: relative;
+}
+
+/* ─── Remote Terminal Connection Form ─── */
+
+.remote-form-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(6px);
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.remote-form-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  /* Soft optical center compensation */
+  margin-top: -4vh; 
+}
+
+.remote-history-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  max-width: 440px;
+}
+
+.remote-pill {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: all 0.2s;
+  color: var(--text-2);
+}
+
+.remote-pill:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.remote-pill-ws {
+  color: #cca47b;
+  border-color: rgba(204, 164, 123, 0.2);
+}
+.remote-pill-ws:hover {
+  border-color: rgba(204, 164, 123, 0.4);
+}
+
+.remote-pill-ssh {
+  color: #8da2b3;
+  border-color: rgba(141, 162, 179, 0.2);
+}
+.remote-pill-ssh:hover {
+  border-color: rgba(141, 162, 179, 0.4);
+}
+
+.remote-pill-proto {
+  font-size: 10px;
+  font-weight: 700;
+  opacity: 0.7;
+  margin-right: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.remote-pill-close {
+  margin-left: 8px;
+  background: transparent;
+  border: none;
+  color: currentColor;
+  opacity: 0.5;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.remote-pill-close:hover {
+  opacity: 1;
+  background: rgba(255, 85, 85, 0.2);
+  color: #ff5555;
+}
+
+
+.remote-form-card {
+  width: 380px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+}
+
+.remote-form-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+.remote-form-header span {
+  flex: 1;
+}
+
+.remote-form-close {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+  color: var(--text-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.remote-form-close:hover {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+}
+
+.remote-form-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Protocol Toggle */
+.remote-protocol-toggle {
+  display: flex;
+  gap: 2px;
+  background: var(--bg-card);
+  border-radius: 10px;
+  padding: 3px;
+  border: 1px solid var(--border);
+}
+
+.remote-proto-btn {
+  flex: 1;
+  padding: 7px 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-2);
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  letter-spacing: 0.3px;
+}
+
+.remote-proto-btn.active {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.remote-proto-btn:not(.active):hover {
+  color: var(--text-1);
+}
+
+.remote-form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.remote-form-row label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.remote-form-host-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.remote-input {
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-family: 'Cascadia Mono', 'Cascadia Code', Consolas, monospace;
+  color: var(--text-1);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.remote-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(196, 149, 106, 0.15);
+}
+
+.remote-input::placeholder {
+  color: var(--text-2);
+  opacity: 0.5;
+}
+
+.remote-input-host {
+  flex: 1;
+}
+
+.remote-input-port {
+  width: 70px;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.remote-port-sep {
+  color: var(--text-2);
+  font-size: 16px;
+  font-weight: 500;
+  opacity: 0.5;
+}
+
+.remote-connect-btn {
+  width: 100%;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent);
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 4px;
+}
+
+.remote-connect-btn:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.remote-connect-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.remote-connect-btn.status-connecting {
+  opacity: 0.8;
+  cursor: wait;
+}
+
+.remote-connect-btn.status-failed {
+  background: #ef4444;
+  color: #fff;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
+}

@@ -1,0 +1,637 @@
+/* TierTerminal.css — Pure terminal container styles */
+
+/* ─── Shell Layout ──────────────────────────────────────────── */
+.tier-terminal {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* ─── xterm.js container ────────────────────────────────────── */
+.tier-xterm-wrap {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    background: transparent;
+}
+
+.tier-xterm {
+    width: 100%;
+    height: 100%;
+}
+
+/* xterm.js overrides — match our design */
+.tier-xterm .xterm,
+.coffee-overlay-shadow .xterm {
+    padding: 20px 0 20px 24px; /* 0 padding on right so scrollbar docks to the edge */
+}
+
+/* A2 shadow terminal: transparent viewport so container background shows through */
+.coffee-overlay-shadow .xterm-viewport {
+    background: transparent !important;
+    scrollbar-width: none !important;
+    overflow: hidden !important;
+}
+.coffee-overlay-shadow .xterm-viewport::-webkit-scrollbar {
+    display: none !important;
+}
+/* Hide A2 cursor (A2 is display-only) */
+.coffee-overlay-shadow .xterm-cursor,
+.coffee-overlay-shadow .xterm-cursor-layer {
+    display: none !important;
+    opacity: 0 !important;
+}
+
+
+
+.tier-xterm .xterm-viewport {
+    border-radius: 0;
+    background: transparent !important;
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+}
+
+.tier-xterm .xterm-viewport:hover {
+    scrollbar-color: rgba(120, 120, 120, 0.4) transparent;
+}
+
+.tier-xterm .xterm-viewport::-webkit-scrollbar {
+    width: 6px;
+    background: transparent;
+}
+
+.tier-xterm .xterm-viewport::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.tier-xterm .xterm-viewport::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 3px;
+    transition: background 0.2s;
+}
+
+.tier-xterm .xterm-viewport:hover::-webkit-scrollbar-thumb {
+    background: rgba(120, 120, 120, 0.3);
+}
+
+.tier-xterm .xterm-viewport::-webkit-scrollbar-thumb:hover {
+    background: rgba(120, 120, 120, 0.55);
+}
+
+/* Completely hide native xterm cursor */
+.tier-xterm .xterm-cursor,
+.tier-xterm .xterm-cursor-layer {
+    display: none !important;
+    opacity: 0 !important;
+}
+
+/* When CoffeeCode is in light mode (invert filter), hide the native OS scrollbar.
+   The OS scrollbar is immune to CSS filter and renders as a black stripe in light mode.
+   Full-screen TUI tools manage their own scrolling, so xterm scrollbar is not needed. */
+.tier-xterm.tui-inverted .xterm-viewport {
+    scrollbar-width: none !important;
+    overflow: hidden !important;
+}
+
+.tier-xterm.tui-inverted .xterm-viewport::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+}
+
+/* ─── Startup Loading Splash ───────────────────────────────── */
+.tier-loading-splash {
+    position: absolute;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tier-loading-splash.fade-out {
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Inner group — icon + label + dots are tightly grouped together */
+.splash-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Animated coffee icon container */
+.splash-icon {
+    width: 48px;
+    height: 48px;
+    color: var(--accent, #C4956A);
+}
+
+/* Tool name label */
+.splash-label {
+    font-family: var(--font-serif, var(--font));
+    font-size: 20px; /* Increased for premium greeting feel */
+    font-weight: 500;
+    color: var(--text-1); /* Brighter for contrast */
+    letter-spacing: 0.02em;
+    font-style: italic; /* Elegant touch */
+}
+
+/* CJK override: Chinese serif fonts lack true italic → use normal weight with wider spacing */
+:root:lang(zh) .splash-label,
+html[lang^="zh"] .splash-label {
+    font-style: normal;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+}
+
+/* Three-dot loading indicator */
+.splash-dots {
+    display: flex;
+    gap: 6px;
+    margin-top: 2px;
+}
+
+.splash-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent, #C4956A);
+    animation: splash-dot-pulse 1.4s ease-in-out infinite;
+}
+
+.splash-dot:nth-child(2) { animation-delay: 0.2s; }
+.splash-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes splash-dot-pulse {
+    0%, 80%, 100% { transform: scale(0.5); opacity: 0.3; }
+    40% { transform: scale(1); opacity: 1; }
+}
+
+/* ─── LLM Translate Button (Floating, Top-Right) ──────────── */
+
+.translate-fab-wrapper {
+    position: absolute;
+    top: 10px;
+    right: 16px;
+    z-index: 50;
+}
+
+.translate-fab {
+    display: flex;
+    align-items: center;
+    height: 32px;
+    min-width: 32px;
+    padding: 0 4px;
+    background: rgba(30, 30, 30, 0.75);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    color: var(--text-2);
+    cursor: pointer;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0.6;
+}
+
+.translate-fab:hover {
+    opacity: 1;
+    background: rgba(30, 30, 30, 0.9);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+.translate-fab-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    font-size: 14px;
+}
+
+.translate-fab-flag {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent, #C4956A);
+    line-height: 1;
+}
+
+/* Drawer text — expand on hover, grows leftward (icon stays on right) */
+.translate-fab-label {
+    max-width: 0;
+    opacity: 0;
+    white-space: nowrap;
+    font-size: 12px;
+    font-weight: 500;
+    margin-left: 0;
+    margin-right: 0;
+    transition: max-width 0.2s ease, opacity 0.2s ease, margin 0.2s ease;
+}
+
+.translate-fab:hover .translate-fab-label {
+    max-width: 80px;
+    opacity: 1;
+    margin-left: 4px;
+    margin-right: 6px;
+    transition: max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1) 0.2s,
+                opacity 0.25s ease 0.2s,
+                margin 0.25s ease 0.2s;
+}
+
+/* ─── Translate Dropdown Menu ─────────────────────────────── */
+
+.translate-dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    min-width: 180px;
+    background: var(--bg-panel, rgba(30, 30, 30, 0.95));
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+    border-radius: 12px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+    padding: 6px;
+    animation: translateDropIn 0.15s ease;
+    z-index: 60;
+}
+
+@keyframes translateDropIn {
+    from { opacity: 0; transform: translateY(-8px) scale(0.96); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.translate-lang-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-1);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+    border: none;
+    background: transparent;
+    width: 100%;
+    text-align: left;
+}
+
+.translate-lang-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.translate-lang-flag {
+    font-size: 12px;
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.06);
+    font-weight: 600;
+    color: var(--accent, #C4956A);
+}
+
+/* Divider */
+.translate-divider {
+    height: 1px;
+    background: var(--border, rgba(255, 255, 255, 0.08));
+    margin: 4px 8px;
+}
+
+/* Settings toggle */
+.translate-settings-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-2);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    border: none;
+    background: transparent;
+    width: 100%;
+    text-align: left;
+}
+
+.translate-settings-btn:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-1);
+}
+
+/* ─── Settings Panel (inline in dropdown) ─────────────────── */
+
+.translate-config {
+    padding: 8px 6px 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.translate-config-row {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.translate-config-row label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding-left: 2px;
+}
+
+.translate-config-input {
+    width: 100%;
+    padding: 7px 10px;
+    font-size: 12px;
+    font-family: 'Cascadia Mono', 'Cascadia Code', Consolas, monospace;
+    color: var(--text-1);
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+    border-radius: 8px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.translate-config-input:focus {
+    border-color: var(--accent);
+}
+
+.translate-config-input::placeholder {
+    color: var(--text-2);
+    opacity: 0.4;
+}
+
+.translate-config-save {
+    padding: 7px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #fff;
+    background: var(--accent, #C4956A);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    margin-top: 2px;
+}
+
+.translate-config-save:hover {
+    opacity: 0.85;
+}
+
+/* ─── Loading state ───────────────────────────────────────── */
+
+.translate-fab.translating {
+    opacity: 1;
+}
+
+@keyframes translate-spin {
+    to { transform: rotate(360deg); }
+}
+
+.translate-spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-top-color: var(--accent, #C4956A);
+    border-radius: 50%;
+    animation: translate-spin 0.8s linear infinite;
+    flex-shrink: 0;
+}
+
+/* Error flash */
+.translate-fab.error {
+    border-color: #ef4444;
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.3);
+}
+
+/* ─── Translate Settings Panel ────────────────────────────── */
+
+.ts-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(4px);
+    z-index: 70;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    padding: 10px 16px 0 0;
+}
+
+.ts-panel {
+    width: 320px;
+    background: var(--bg-panel, #1a1a1a);
+    border: 1px solid var(--border, rgba(255,255,255,0.1));
+    border-radius: 12px;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 16px;
+    animation: tsSlideIn 0.15s ease;
+}
+
+@keyframes tsSlideIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.ts-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.ts-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-1);
+}
+
+.ts-close {
+    background: none;
+    border: none;
+    color: var(--text-2);
+    font-size: 14px;
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 4px;
+    line-height: 1;
+    transition: color 0.15s;
+}
+
+.ts-close:hover { color: var(--text-1); }
+
+.ts-section-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--text-2);
+    margin-bottom: -8px;
+}
+
+.ts-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.ts-preset-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-2);
+    background: none;
+    border: 1px solid var(--border, rgba(255,255,255,0.1));
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: var(--font);
+}
+
+.ts-preset-btn:hover {
+    color: var(--text-1);
+    border-color: rgba(255,255,255,0.25);
+}
+
+.ts-preset-btn.active {
+    color: var(--accent, #C4956A);
+    border-color: var(--accent, #C4956A);
+    background: rgba(196, 149, 106, 0.08);
+}
+
+.ts-free-tag {
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--text-2);
+    opacity: 0.7;
+    letter-spacing: 0.3px;
+}
+
+.ts-preset-btn.active .ts-free-tag {
+    color: var(--accent, #C4956A);
+    opacity: 0.8;
+}
+
+.ts-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.ts-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.ts-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-2);
+    padding-left: 2px;
+}
+
+.ts-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 7px 10px;
+    font-size: 12px;
+    font-family: 'Cascadia Mono', 'Cascadia Code', Consolas, monospace;
+    color: var(--text-1);
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border, rgba(255,255,255,0.1));
+    border-radius: 7px;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.ts-input:focus { border-color: var(--accent, #C4956A); }
+
+.ts-input::placeholder {
+    color: var(--text-2);
+    opacity: 0.4;
+}
+
+.ts-key-link {
+    background: none;
+    border: none;
+    color: var(--accent, #C4956A);
+    font-size: 11px;
+    font-family: var(--font);
+    cursor: pointer;
+    padding: 0;
+    text-align: left;
+    opacity: 0.8;
+    transition: opacity 0.15s;
+}
+
+.ts-key-link:hover { opacity: 1; }
+
+.ts-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding-top: 2px;
+}
+
+.ts-btn-cancel,
+.ts-btn-save {
+    padding: 6px 16px;
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: var(--font);
+}
+
+.ts-btn-cancel {
+    background: none;
+    border: 1px solid var(--border, rgba(255,255,255,0.1));
+    color: var(--text-2);
+}
+
+.ts-btn-cancel:hover {
+    color: var(--text-1);
+    border-color: rgba(255,255,255,0.25);
+}
+
+.ts-btn-save {
+    background: var(--accent, #C4956A);
+    border: 1px solid transparent;
+    color: #fff;
+    font-weight: 600;
+}
+
+.ts-btn-save:hover:not(:disabled) { opacity: 0.85; }
+
+.ts-btn-save:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+

@@ -1,0 +1,493 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/x-icon" href="../icons/icon.ico">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Claude Code Professional Tutorial - 10 modules covering Slash Commands, Memory, Skills, Subagents, MCP, Hooks, Plugins, Checkpoints, Advanced Features, and CLI. Powered by Coffee OPC.">
+  <title>Claude Code Course | Coffee OPC</title>
+
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/courses.css">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <header class="navbar">
+    <a href="../index.html" class="logo" style="text-decoration:none;">
+      <svg class="dynamic-brand-logo" width="24" height="24" viewBox="0 0 24 24" overflow="visible" xmlns="http://www.w3.org/2000/svg">
+        <defs><mask id="SVG5AkzhcyZ"><path fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M12 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M16 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4"/></mask></defs><g stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path fill="currentColor" fill-opacity="0" stroke-dasharray="48" d="M17 9v9c0 1.66 -1.34 3 -3 3h-6c-1.66 0 -3 -1.34 -3 -3v-9Z"><animate fill="freeze" attributeName="stroke-dashoffset" dur="0.6s" values="48;0"/><animate fill="freeze" attributeName="fill-opacity" begin="1.6s" dur="0.4s" to="1"/></path><path fill="none" stroke-dasharray="16" stroke-dashoffset="16" d="M17 9h3c0.55 0 1 0.45 1 1v3c0 0.55 -0.45 1 -1 1h-3"><animate fill="freeze" attributeName="stroke-dashoffset" begin="0.6s" dur="0.3s" to="0"/></path></g><path fill="currentColor" d="M0 0h24v24H0z" mask="url(#SVG5AkzhcyZ)"/>
+      </svg>
+      <span>Coffee OPC</span>
+    </a>
+    <!-- Course Tabs (inline in navbar) -->
+    <nav class="course-tabs" id="course-tabs">
+      <a href="claude-code.html" class="course-tab active">Claude Code</a>
+      <a href="codex.html" class="course-tab">Codex</a>
+      <a href="opencode.html" class="course-tab">OpenCode</a>
+      <a href="openclaw.html" class="course-tab">OpenClaw</a>
+    </nav>
+    <nav class="nav-links">
+      <button class="icon-switch" id="theme-toggle" aria-label="Toggle Theme">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="theme-icon"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg>
+      </button>
+      <button class="lang-switch" id="lang-toggle">English / 中文</button>
+    </nav>
+  </header>
+
+  <main class="course-page-wrapper doc-layout">
+
+    <!-- Left Sidebar -->
+    <aside class="doc-sidebar" id="sidebar">
+      <nav class="toc-nav" id="module-nav">
+        <h3 class="toc-title" id="modules-title">Claude Code Modules</h3>
+        <a href="#01-slash-commands" class="module-link" data-module="01-slash-commands">01. Slash Commands</a>
+        <a href="#02-memory" class="module-link" data-module="02-memory">02. Memory</a>
+        <a href="#03-skills" class="module-link" data-module="03-skills">03. Skills</a>
+        <a href="#04-subagents" class="module-link" data-module="04-subagents">04. Subagents</a>
+        <a href="#05-mcp" class="module-link" data-module="05-mcp">05. MCP Protocol</a>
+        <a href="#06-hooks" class="module-link" data-module="06-hooks">06. Hooks</a>
+        <a href="#07-plugins" class="module-link" data-module="07-plugins">07. Plugins</a>
+        <a href="#08-checkpoints" class="module-link" data-module="08-checkpoints">08. Checkpoints</a>
+        <a href="#09-advanced-features" class="module-link" data-module="09-advanced-features">09. Advanced Features</a>
+        <a href="#10-cli" class="module-link" data-module="10-cli">10. CLI Reference</a>
+      </nav>
+
+      <div class="section-toc-area" style="margin-top:2rem; padding-top: 1.5rem; border-top: 1px solid var(--glass-border)">
+        <h3 class="toc-title" id="sections-title">Page Sections</h3>
+        <nav class="toc-nav" id="section-nav">
+          <!-- Auto-generated from h2 headings -->
+        </nav>
+      </div>
+    </aside>
+
+    <!-- Content Area -->
+    <div class="doc-content">
+      <a href="../index.html" class="back-nav" id="back-nav">&larr; Back to Coffee CLI</a>
+
+      <header class="doc-header" id="doc-header">
+        <h1 class="course-headline" id="module-title">Claude Code</h1>
+        <p class="course-subtitle" id="module-desc">Select a module from the sidebar to begin.</p>
+      </header>
+
+      <article class="markdown-body" id="article-body">
+        <!-- Rendered markdown goes here -->
+      </article>
+
+      <!-- Module navigation -->
+      <div id="module-nav-footer" style="margin-top: 3rem; display: flex; justify-content: space-between; border-top: 1px solid var(--glass-border); padding-top: 2rem;">
+      </div>
+
+      <!-- Source Attribution (bottom) -->
+      <footer style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--glass-border); font-size: 0.8rem; color: var(--text-secondary); opacity: 0.6;">
+        <span>Open Source &middot; MIT License &middot; </span>
+        <a href="https://github.com/luongnv89/claude-howto" target="_blank" rel="noopener" style="color: var(--text-secondary);">luongnv89/claude-howto</a>
+        <span> &middot; Claude Code v2.1.97</span>
+      </footer>
+
+    </div>
+  </main>
+
+  <script src="claude-code/modules.js"></script>
+  <script>
+  (function() {
+    // ===== Theme Toggle =====
+    const toggleBtn = document.getElementById("theme-toggle");
+    const savedTheme = localStorage.getItem("coffee-theme");
+    const systemPrefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    let currentTheme = savedTheme ? savedTheme : (systemPrefersDark ? "dark" : "light");
+
+    function updateThemeUI() {
+      document.documentElement.setAttribute("data-theme", currentTheme);
+      if(toggleBtn) {
+        const svg = toggleBtn.querySelector("svg");
+        svg.innerHTML = currentTheme === 'dark'
+          ? '<path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41M12 17a5 5 0 1 1 0-10 5 5 0 0 1 0 10Z"></path>'
+          : '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>';
+      }
+    }
+    updateThemeUI();
+    if(toggleBtn) {
+      toggleBtn.addEventListener("click", () => {
+        currentTheme = currentTheme === "dark" ? "light" : "dark";
+        localStorage.setItem("coffee-theme", currentTheme);
+        updateThemeUI();
+      });
+    }
+
+    // ===== Language State =====
+    let currentLang = localStorage.getItem("coffee-cli-lang") || (navigator.language.includes("zh") ? "zh" : "en");
+
+    // ===== Module Data =====
+    const MODULES = [
+      { id: "01-slash-commands", title: "01. Slash Commands", titleZh: "01. Slash Commands\uff08\u659c\u6760\u547d\u4ee4\uff09" },
+      { id: "02-memory",         title: "02. Memory",         titleZh: "02. Memory\uff08\u8bb0\u5fc6\u7cfb\u7edf\uff09" },
+      { id: "03-skills",         title: "03. Skills",         titleZh: "03. Skills\uff08\u6280\u80fd\uff09" },
+      { id: "04-subagents",      title: "04. Subagents",      titleZh: "04. Subagents\uff08\u5b50\u4ee3\u7406\uff09" },
+      { id: "05-mcp",            title: "05. MCP Protocol",   titleZh: "05. MCP\uff08\u6a21\u578b\u4e0a\u4e0b\u6587\u534f\u8bae\uff09" },
+      { id: "06-hooks",          title: "06. Hooks",          titleZh: "06. Hooks\uff08\u94a9\u5b50\uff09" },
+      { id: "07-plugins",        title: "07. Plugins",        titleZh: "07. Plugins\uff08\u63d2\u4ef6\uff09" },
+      { id: "08-checkpoints",    title: "08. Checkpoints",    titleZh: "08. Checkpoints\uff08\u68c0\u67e5\u70b9\uff09" },
+      { id: "09-advanced-features", title: "09. Advanced Features", titleZh: "09. Advanced Features\uff08\u9ad8\u7ea7\u529f\u80fd\uff09" },
+      { id: "10-cli",            title: "10. CLI Reference",  titleZh: "10. CLI Reference\uff08\u547d\u4ee4\u884c\u53c2\u8003\uff09" },
+    ];
+
+    const articleEl = document.getElementById("article-body");
+    const titleEl = document.getElementById("module-title");
+    const descEl = document.getElementById("module-desc");
+    const loadingEl = document.getElementById("loading-indicator");
+    const sectionNav = document.getElementById("section-nav");
+    const navFooter = document.getElementById("module-nav-footer");
+    const moduleLinks = document.querySelectorAll(".module-link");
+
+    let currentModuleIdx = -1;
+
+    // ===== Lightweight Markdown-to-HTML =====
+    function renderMarkdown(md) {
+      // Remove picture/HTML header blocks (multi-line)
+      md = md.replace(/<picture[\s\S]*?<\/picture>/gi, '');
+      // Remove individual HTML tags that leak from source markdown
+      md = md.replace(/^\s*<\/?(?:picture|source|img)[^>]*>\s*$/gim, '');
+      // Remove anchor-only lines like <a id="..."></a>
+      md = md.replace(/^\s*<a\s+id="[^"]*"\s*>\s*<\/a>\s*$/gim, '');
+      // Remove badge images
+      md = md.replace(/<p[\s\S]*?<\/p>/gi, function(m) {
+        if (m.includes('badge') || m.includes('img.shields')) return '';
+        return m;
+      });
+      // Remove badge lines
+      md = md.replace(/\[!\[.*?\]\(https:\/\/img\.shields\.io.*?\)\]\(.*?\)\n?/g, '');
+      md = md.replace(/\[!\[.*?\]\(https:\/\/api\.star-history\.com.*?\)\]\(.*?\)\n?/g, '');
+      // Remove markdown image lines (![](...))
+      md = md.replace(/^!\[.*?\]\(.*?\)\s*$/gm, '');
+
+      let lines = md.split('\n');
+      let html = '';
+      let inCodeBlock = false;
+      let codeContent = '';
+      let inTable = false;
+      let tableRows = [];
+      let inList = false;
+      let listType = '';
+      let listItems = [];
+
+      // Split a markdown table row by | but respect backtick-wrapped content
+      function splitTableRow(line) {
+        // Remove leading and trailing |
+        line = line.replace(/^\|/, '').replace(/\|$/, '');
+        const cells = [];
+        let current = '';
+        let inBacktick = false;
+        for (let i = 0; i < line.length; i++) {
+          const ch = line[i];
+          if (ch === '`') {
+            inBacktick = !inBacktick;
+            current += ch;
+          } else if (ch === '\\' && i + 1 < line.length && line[i + 1] === '|') {
+            // Escaped pipe: treat as literal |
+            current += '|';
+            i++; // skip next char
+          } else if (ch === '|' && !inBacktick) {
+            cells.push(current);
+            current = '';
+          } else {
+            current += ch;
+          }
+        }
+        cells.push(current);
+        return cells;
+      }
+
+      function flushList() {
+        if (!inList) return;
+        const tag = listType === 'ol' ? 'ol' : 'ul';
+        html += `<${tag}>` + listItems.join('') + `</${tag}>`;
+        inList = false;
+        listItems = [];
+      }
+
+      function flushTable() {
+        if (!inTable) return;
+        let t = '<table><thead><tr>';
+        const headers = tableRows[0];
+        headers.forEach(h => { t += `<th>${inlineMarkdown(h.trim())}</th>`; });
+        t += '</tr></thead><tbody>';
+        for (let i = 2; i < tableRows.length; i++) {
+          t += '<tr>';
+          tableRows[i].forEach(c => { t += `<td>${inlineMarkdown(c.trim())}</td>`; });
+          t += '</tr>';
+        }
+        t += '</tbody></table>';
+        html += t;
+        inTable = false;
+        tableRows = [];
+      }
+
+      function inlineMarkdown(text) {
+        // Bold
+        text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        // Inline code
+        text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+        // Links
+        text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, function(m, t, u) {
+          if (u.startsWith('../') || u.startsWith('./') || u.endsWith('.md')) {
+            // Internal repo link - make it a hash navigation
+            return `<span class="internal-ref">${t}</span>`;
+          }
+          return `<a href="${u}" target="_blank" rel="noopener">${t}</a>`;
+        });
+        // Italic
+        text = text.replace(/\*(.+?)\*/g, '<em>$1</em>');
+        return text;
+      }
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+
+        // Code blocks
+        if (line.startsWith('```')) {
+          if (inCodeBlock) {
+            html += `<pre><code>${escapeHtml(codeContent.trimEnd())}</code></pre>`;
+            codeContent = '';
+            inCodeBlock = false;
+          } else {
+            flushList();
+            flushTable();
+            inCodeBlock = true;
+          }
+          continue;
+        }
+        if (inCodeBlock) {
+          codeContent += line + '\n';
+          continue;
+        }
+
+        // Table detection
+        if (line.startsWith('|') && line.endsWith('|')) {
+          flushList();
+          // Smart split: ignore | inside backticks and escaped \|
+          const cells = splitTableRow(line);
+          if (!inTable) {
+            inTable = true;
+            tableRows = [cells];
+          } else {
+            tableRows.push(cells);
+          }
+          continue;
+        } else if (inTable) {
+          flushTable();
+        }
+
+        // Headings
+        const headingMatch = line.match(/^(#{1,6})\s+(.+)$/);
+        if (headingMatch) {
+          flushList();
+          const level = headingMatch[1].length;
+          const text = headingMatch[2];
+          const id = text.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fff]+/g, '-').replace(/^-|-$/g, '');
+          html += `<h${level} id="${id}">${inlineMarkdown(text)}</h${level}>`;
+          continue;
+        }
+
+        // Horizontal rule
+        if (line.match(/^-{3,}$/) || line.match(/^\*{3,}$/)) {
+          flushList();
+          continue;
+        }
+
+        // Ordered list
+        const olMatch = line.match(/^(\d+)\.\s+(.+)$/);
+        if (olMatch) {
+          if (!inList || listType !== 'ol') {
+            flushList();
+            inList = true;
+            listType = 'ol';
+          }
+          listItems.push(`<li>${inlineMarkdown(olMatch[2])}</li>`);
+          continue;
+        }
+
+        // Unordered list
+        const ulMatch = line.match(/^[-*]\s+(.+)$/);
+        if (ulMatch) {
+          if (!inList || listType !== 'ul') {
+            flushList();
+            inList = true;
+            listType = 'ul';
+          }
+          listItems.push(`<li>${inlineMarkdown(ulMatch[1])}</li>`);
+          continue;
+        }
+
+        // Blockquote
+        if (line.startsWith('> ')) {
+          flushList();
+          html += `<blockquote><p>${inlineMarkdown(line.slice(2))}</p></blockquote>`;
+          continue;
+        }
+
+        // Empty line
+        if (line.trim() === '') {
+          flushList();
+          continue;
+        }
+
+        // Skip pure HTML tag lines (e.g. <picture>, <source>, <img>, </picture>, <a id="..."></a>)
+        if (/^\s*<\/?[a-z][^>]*>\s*$/i.test(line.trim())) {
+          flushList();
+          continue;
+        }
+
+        // Paragraph
+        flushList();
+        html += `<p>${inlineMarkdown(line)}</p>`;
+      }
+
+      flushList();
+      flushTable();
+
+      return html;
+    }
+
+    function escapeHtml(text) {
+      return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    // ===== Section TOC =====
+    function buildSectionTOC(html) {
+      sectionNav.innerHTML = '';
+      const tmp = document.createElement('div');
+      tmp.innerHTML = html;
+      const h2s = tmp.querySelectorAll('h2');
+      h2s.forEach(h => {
+        const a = document.createElement('a');
+        a.href = '#' + h.id;
+        a.textContent = h.textContent;
+        a.addEventListener('click', (e) => {
+          e.preventDefault();
+          document.getElementById(h.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+        sectionNav.appendChild(a);
+      });
+    }
+
+    // ===== Nav Footer =====
+    function buildNavFooter(idx) {
+      let left = '', right = '';
+      if (idx > 0) {
+        const prev = MODULES[idx - 1];
+        left = `<a href="#${prev.id}" class="nav-prev" style="text-decoration:none; display:flex; align-items:center; gap:0.5rem; font-weight:600; color: var(--text-primary);">&larr; ${prev.title}</a>`;
+      }
+      if (idx < MODULES.length - 1) {
+        const next = MODULES[idx + 1];
+        right = `<a href="#${next.id}" class="nav-next" style="text-decoration:none; display:flex; align-items:center; gap:0.5rem; font-weight:600; color: var(--text-primary);">${next.title} &rarr;</a>`;
+      }
+      navFooter.innerHTML = `<span>${left}</span><span>${right}</span>`;
+    }
+
+    // ===== Load Module =====
+    function loadModule(moduleId) {
+      const idx = MODULES.findIndex(m => m.id === moduleId);
+      if (idx === -1) return;
+      currentModuleIdx = idx;
+      const mod = MODULES[idx];
+
+      // Update active sidebar
+      moduleLinks.forEach(l => l.classList.remove('active'));
+      document.querySelector(`[data-module="${moduleId}"]`)?.classList.add('active');
+
+      const displayTitle = currentLang === 'zh' ? mod.titleZh : mod.title;
+      titleEl.textContent = displayTitle;
+
+      // Read from inline COURSE_DATA (bilingual: COURSE_DATA.zh / COURSE_DATA.en)
+      const langData = typeof COURSE_DATA !== 'undefined' ? COURSE_DATA[currentLang] : null;
+      const md = langData ? langData[moduleId] : null;
+      if (!md) {
+        articleEl.innerHTML = `<p style="color: var(--text-secondary);">Module data not found: ${moduleId}</p>`;
+        return;
+      }
+
+      // Render
+      const html = renderMarkdown(md);
+      articleEl.innerHTML = html;
+
+      // Extract first paragraph as description
+      const firstP = md.match(/^(?!#)(?![-*>|`\[])[^\n]+/m);
+      descEl.textContent = firstP ? firstP[0].replace(/\*\*/g, '').substring(0, 200) : '';
+
+      // Build section TOC
+      buildSectionTOC(html);
+
+      // Build footer nav
+      buildNavFooter(idx);
+
+      // Scroll to top
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+
+      // Update title
+      document.title = `${displayTitle} | Claude Code - Coffee OPC`;
+    }
+
+    // ===== Hash Router =====
+    function onHashChange() {
+      const hash = location.hash.replace('#', '') || '01-slash-commands';
+      loadModule(hash);
+    }
+
+    window.addEventListener('hashchange', onHashChange);
+
+    // Initial load
+    document.addEventListener('DOMContentLoaded', () => {
+      onHashChange();
+    });
+
+    // If DOM already loaded
+    if (document.readyState !== 'loading') {
+      onHashChange();
+    }
+    // ===== Language Toggle =====
+    const langToggle = document.getElementById("lang-toggle");
+
+    function updateLangUI() {
+      document.documentElement.lang = currentLang;
+      langToggle.textContent = currentLang === "en" ? "English / \u4e2d\u6587" : "\u4e2d\u6587 / English";
+
+      // Update sidebar module names
+      const modulesTitle = document.getElementById("modules-title");
+      const sectionsTitle = document.getElementById("sections-title");
+      if (modulesTitle) modulesTitle.textContent = currentLang === "zh" ? "Claude Code \u8bfe\u7a0b\u6a21\u5757" : "Claude Code Modules";
+      if (sectionsTitle) sectionsTitle.textContent = currentLang === "zh" ? "\u7ae0\u8282\u5bfc\u822a" : "Page Sections";
+
+      // Update sidebar link text
+      moduleLinks.forEach(link => {
+        const modId = link.getAttribute("data-module");
+        const mod = MODULES.find(m => m.id === modId);
+        if (mod) {
+          link.textContent = currentLang === "zh" ? mod.titleZh : mod.title;
+        }
+      });
+
+      // Update back-nav and default description
+      const backNav = document.getElementById("back-nav");
+      if (backNav) backNav.innerHTML = currentLang === "zh" ? "&larr; \u8fd4\u56de Coffee CLI" : "&larr; Back to Coffee CLI";
+    }
+
+    updateLangUI();
+
+    if (langToggle) {
+      langToggle.addEventListener("click", () => {
+        currentLang = currentLang === "en" ? "zh" : "en";
+        localStorage.setItem("coffee-cli-lang", currentLang);
+        updateLangUI();
+        // Reload current module in the new language
+        const currentHash = location.hash.replace('#', '') || '01-slash-commands';
+        loadModule(currentHash);
+      });
+    }
+  })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,368 @@
+{
+  "entries": [
+    {
+      "pattern": "Quick safety check: Is this a project you created or one you trust? (Like your own code, a well-known open source project, or work from your team). If not, take a moment to review what's in this folder first.",
+      "translation": "快速安全檢查：這是你建立的或信任的專案嗎？(例如你自己的程式碼、知名開源專案或團隊的工作)。如果不是，請先花點時間檢視此資料夾中的內容。"
+    },
+    {
+      "pattern": "Claude Code'll be able to read, edit, and execute files here.",
+      "translation": "Claude Code 將能夠讀取、編輯和執行此處的檔案。"
+    },
+    {
+      "pattern": "Security guide",
+      "translation": "安全指南"
+    },
+    {
+      "pattern": "Yes, I trust this folder",
+      "translation": "是的，我信任此目錄"
+    },
+    {
+      "pattern": "No, exit",
+      "translation": "否，退出"
+    },
+    {
+      "pattern": "Enter to confirm",
+      "translation": "Enter 確認"
+    },
+    {
+      "pattern": "Esc to cancel",
+      "translation": "Esc 取消"
+    },
+    {
+      "pattern": "with Low effort",
+      "translation": "輕度模式"
+    },
+    {
+      "pattern": "with Medium effort",
+      "translation": "中等模式"
+    },
+    {
+      "pattern": "with high effort",
+      "translation": "強力模式"
+    },
+    {
+      "pattern": "with Max effort",
+      "translation": "極致模式"
+    },
+    {
+      "pattern": "Tips for getting started",
+      "translation": "新手入門指南"
+    },
+    {
+      "pattern": "Run /init to create a CLAUDE.md file with instructions for Claude",
+      "translation": "執行 /init 建立包含 Claude 使用說明的 CLAUDE.md 檔案"
+    },
+    {
+      "pattern": "Note: You have launched claude in your home directory. For the best experience, launch it in a project directory instead.",
+      "translation": "注意：你在主目錄啟動了 Claude。為獲得最佳體驗，請從專案目錄啟動。"
+    },
+    {
+      "pattern": "Recent activity",
+      "translation": "最近的活動"
+    },
+    {
+      "pattern": "No recent activity",
+      "translation": "暫無最近的活動"
+    },
+    {
+      "pattern": "for shortcuts",
+      "translation": "查看快捷鍵"
+    },
+    {
+      "pattern": "Welcome back",
+      "translation": "歡迎回來"
+    },
+    {
+      "pattern": "Accessing workspace:",
+      "translation": "正在存取工作區："
+    },
+    {
+      "pattern": "esc to interrupt",
+      "translation": "按 Esc 中斷"
+    },
+    {
+      "pattern": "Tab to complete",
+      "translation": "Tab 補全"
+    },
+    {
+      "pattern": "Enter to add",
+      "translation": "Enter 新增"
+    },
+    {
+      "pattern": "Add a new working directory",
+      "translation": "新增一個新的工作目錄"
+    },
+    {
+      "pattern": "Configure the Advisor Tool to consult a stronger model for guidance at key moments during a task",
+      "translation": "設定顧問工具，在任務關鍵時刻諮詢更強的模型以獲取指導"
+    },
+    {
+      "pattern": "Manage agent configurations",
+      "translation": "管理 Agent 設定"
+    },
+    {
+      "pattern": "Spawn a remote Claude Code session that monitors and autofixes the current PR",
+      "translation": "啟動遠端 Claude Code 工作階段，監視並自動修復目前 PR"
+    },
+    {
+      "pattern": "Create a branch of the current conversation at this point",
+      "translation": "在此建立目前對話的分支"
+    },
+    {
+      "pattern": "Ask a quick side question without interrupting the main conversation",
+      "translation": "快速提問，不打斷主對話"
+    },
+    {
+      "pattern": "Claude in Chrome (Beta) settings",
+      "translation": "Claude Chrome 擴充（Beta）設定"
+    },
+    {
+      "pattern": "Clear conversation history and free up context",
+      "translation": "清除對話歷史並釋放上下文"
+    },
+    {
+      "pattern": "Set the prompt bar color for this session",
+      "translation": "為此工作階段設定提示列顏色"
+    },
+    {
+      "pattern": "Clear conversation history but keep a summary in context. Optional: /compact [instructions for summarization]",
+      "translation": "清除對話歷史但保留摘要。可選：/compact [摘要指令]"
+    },
+    {
+      "pattern": "Open config panel",
+      "translation": "開啟設定面板"
+    },
+    {
+      "pattern": "Visualize current context usage as a colored grid",
+      "translation": "以彩色網格視覺化目前上下文使用量"
+    },
+    {
+      "pattern": "Copy Claude's last response to clipboard (or /copy N for the Nth-latest)",
+      "translation": "複製 Claude 最後回覆到剪貼簿（/copy N 複製第 N 則）"
+    },
+    {
+      "pattern": "Continue the current session in Claude Desktop",
+      "translation": "在 Claude Desktop 中繼續目前工作階段"
+    },
+    {
+      "pattern": "View uncommitted changes and per-turn diffs",
+      "translation": "檢視未提交的變更和每輪差異"
+    },
+    {
+      "pattern": "Diagnose and verify your Claude Code installation and settings",
+      "translation": "診斷並驗證 Claude Code 的安裝和設定"
+    },
+    {
+      "pattern": "Set effort level for model usage",
+      "translation": "設定模型使用的努力級別"
+    },
+    {
+      "pattern": "Exit the REPL",
+      "translation": "退出 REPL"
+    },
+    {
+      "pattern": "Export the current conversation to a file or clipboard",
+      "translation": "將目前對話匯出為檔案或剪貼簿"
+    },
+    {
+      "pattern": "Configure extra usage to keep working when limits are hit",
+      "translation": "設定額外用量，在達到限制時繼續工作"
+    },
+    {
+      "pattern": "Toggle fast mode (Opus 4.6 only)",
+      "translation": "切換快速模式（僅 Opus 4.6）"
+    },
+    {
+      "pattern": "Submit feedback about Claude Code",
+      "translation": "提交關於 Claude Code 的意見回饋"
+    },
+    {
+      "pattern": "Show help and available commands",
+      "translation": "顯示說明和可用命令"
+    },
+    {
+      "pattern": "View hook configurations for tool events",
+      "translation": "檢視工具事件的 Hook 設定"
+    },
+    {
+      "pattern": "Manage IDE integrations and show status",
+      "translation": "管理 IDE 整合並顯示狀態"
+    },
+    {
+      "pattern": "Set up Claude GitHub Actions for a repository",
+      "translation": "為儲存庫設定 Claude GitHub Actions"
+    },
+    {
+      "pattern": "Install the Claude Slack app",
+      "translation": "安裝 Claude Slack 應用程式"
+    },
+    {
+      "pattern": "Open or create your keybindings configuration file",
+      "translation": "開啟或建立快捷鍵設定檔"
+    },
+    {
+      "pattern": "Sign in with your Anthropic account",
+      "translation": "使用 Anthropic 帳戶登入"
+    },
+    {
+      "pattern": "Sign out from your Anthropic account",
+      "translation": "退出 Anthropic 帳戶"
+    },
+    {
+      "pattern": "Manage MCP servers",
+      "translation": "管理 MCP 伺服器"
+    },
+    {
+      "pattern": "Edit Claude memory files",
+      "translation": "編輯 Claude 記憶檔案"
+    },
+    {
+      "pattern": "Show QR code to download the Claude mobile app",
+      "translation": "顯示 QR 碼以下載 Claude 行動應用程式"
+    },
+    {
+      "pattern": "Set the AI model for Claude Code",
+      "translation": "設定 Claude Code 的 AI 模型"
+    },
+    {
+      "pattern": "Manage allow & deny tool permission rules",
+      "translation": "管理允許和拒絕工具權限規則"
+    },
+    {
+      "pattern": "Enable plan mode or view the current session plan",
+      "translation": "啟用計畫模式或檢視目前工作階段計畫"
+    },
+    {
+      "pattern": "Manage Claude Code plugins",
+      "translation": "管理 Claude Code 外掛"
+    },
+    {
+      "pattern": "Discover Claude Code features through quick interactive lessons",
+      "translation": "透過快速互動教學探索 Claude Code 功能"
+    },
+    {
+      "pattern": "View release notes",
+      "translation": "檢視發行說明"
+    },
+    {
+      "pattern": "Activate pending plugin changes in the current session",
+      "translation": "在目前工作階段中啟用待生效的外掛變更"
+    },
+    {
+      "pattern": "Configure the default remote environment for teleport sessions",
+      "translation": "設定遠端傳送工作階段的預設環境"
+    },
+    {
+      "pattern": "Rename the current conversation",
+      "translation": "重新命名目前對話"
+    },
+    {
+      "pattern": "Resume a previous conversation",
+      "translation": "恢復之前的對話"
+    },
+    {
+      "pattern": "Restore the code and/or conversation to a previous point",
+      "translation": "將程式碼和/或對話還原到之前的節點"
+    },
+    {
+      "pattern": "List available skills",
+      "translation": "列出可用技能"
+    },
+    {
+      "pattern": "Show your Claude Code usage statistics and activity",
+      "translation": "顯示 Claude Code 使用統計和活動"
+    },
+    {
+      "pattern": "Show Claude Code status including version, model, account, API connectivity, and tool statuses",
+      "translation": "顯示 Claude Code 狀態，包括版本、模型、帳戶、API 連線和工具狀態"
+    },
+    {
+      "pattern": "Order Claude Code stickers",
+      "translation": "訂購 Claude Code 貼紙"
+    },
+    {
+      "pattern": "List and manage background tasks",
+      "translation": "列出和管理背景工作"
+    },
+    {
+      "pattern": "Resume a Claude Code session from claude.ai",
+      "translation": "從 claude.ai 恢復 Claude Code 工作階段"
+    },
+    {
+      "pattern": "Install Shift+Enter key binding for newlines",
+      "translation": "安裝 Shift+Enter 換行快捷鍵"
+    },
+    {
+      "pattern": "Change the theme",
+      "translation": "變更主題"
+    },
+    {
+      "pattern": "Upgrade to Max for higher rate limits and more Opus",
+      "translation": "升級到 Max 以獲得更高速率限制和更多 Opus"
+    },
+    {
+      "pattern": "Show plan usage limits",
+      "translation": "顯示方案使用限制"
+    },
+    {
+      "pattern": "Toggle voice mode",
+      "translation": "切換語音模式"
+    },
+    {
+      "pattern": "Setup Claude Code on the web (requires connecting your GitHub account)",
+      "translation": "在網頁上設定 Claude Code（需要連接 GitHub 帳戶）"
+    },
+    {
+      "pattern": "Research and plan a large-scale change, then execute it in parallel across 5\u201330 isolated worktree agents that each open a PR. (bundled)",
+      "translation": "研究和規劃大規模變更，然後在 5-30 個隔離的工作樹代理中並行執行。（綑綁）"
+    },
+    {
+      "pattern": "Build, debug, and optimize Claude API / Anthropic SDK apps.",
+      "translation": "建置、除錯和最佳化 Claude API / Anthropic SDK 應用程式。"
+    },
+    {
+      "pattern": "Enable debug logging for this session and help diagnose issues (bundled)",
+      "translation": "為此工作階段啟用除錯日誌並協助診斷問題（綑綁）"
+    },
+    {
+      "pattern": "Initialize a new CLAUDE.md file with codebase documentation",
+      "translation": "初始化包含程式碼庫文件的 CLAUDE.md 檔案"
+    },
+    {
+      "pattern": "Generate a report analyzing your Claude Code sessions",
+      "translation": "產生 Claude Code 工作階段分析報告"
+    },
+    {
+      "pattern": "Run a prompt or slash command on a recurring interval (e.g. /loop 5m /foo). Omit the interval to let the model self-pace. (bundled)",
+      "translation": "按循環間隔執行提示或斜線命令（例如 /loop 5m /foo）。省略間隔讓模型自行調度。（綑綁）"
+    },
+    {
+      "pattern": "Review a pull request",
+      "translation": "審查 Pull Request"
+    },
+    {
+      "pattern": "Create, update, list, or run scheduled remote agents (triggers) that execute on a cron schedule. (bundled)",
+      "translation": "建立、更新、列出或執行按 cron 計畫執行的遠端代理。（綑綁）"
+    },
+    {
+      "pattern": "Complete a security review of the pending changes on the current branch",
+      "translation": "對目前分支的待處理變更進行安全審查"
+    },
+    {
+      "pattern": "Review changed code for reuse, quality, and efficiency, then fix any issues found. (bundled)",
+      "translation": "審查程式碼的復用性、品質和效率，並修復問題。（綑綁）"
+    },
+    {
+      "pattern": "Set up Claude Code's status line UI",
+      "translation": "設定 Claude Code 的狀態列 UI"
+    },
+    {
+      "pattern": "Help teammates ramp on Claude Code with a guide from your usage",
+      "translation": "用你的使用經驗協助隊友快速上手 Claude Code"
+    },
+    {
+      "pattern": "Use this skill to configure the Claude Code harness via settings.json.",
+      "translation": "使用此技能透過 settings.json 設定 Claude Code。"
+    }
+  ]
+}

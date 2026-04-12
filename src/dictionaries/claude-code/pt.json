@@ -1,0 +1,368 @@
+{
+  "entries": [
+    {
+      "pattern": "Quick safety check: Is this a project you created or one you trust? (Like your own code, a well-known open source project, or work from your team). If not, take a moment to review what's in this folder first.",
+      "translation": "Verificação rápida de segurança: este é um projeto que você criou ou no qual confia? (Como seu próprio código, um projeto de código aberto conhecido ou o trabalho da sua equipe). Se não, reserve um momento para analisar o conteúdo desta pasta primeiro."
+    },
+    {
+      "pattern": "Claude Code'll be able to read, edit, and execute files here.",
+      "translation": "O Claude Code poderá ler, editar e executar arquivos aqui."
+    },
+    {
+      "pattern": "Security guide",
+      "translation": "Guia de segurança"
+    },
+    {
+      "pattern": "Yes, I trust this folder",
+      "translation": "Sim, confio nesta pasta"
+    },
+    {
+      "pattern": "No, exit",
+      "translation": "Não, sair"
+    },
+    {
+      "pattern": "Enter to confirm",
+      "translation": "Enter para confirmar"
+    },
+    {
+      "pattern": "Esc to cancel",
+      "translation": "Esc para cancelar"
+    },
+    {
+      "pattern": "with Low effort",
+      "translation": "modo leve"
+    },
+    {
+      "pattern": "with Medium effort",
+      "translation": "modo médio"
+    },
+    {
+      "pattern": "with high effort",
+      "translation": "modo intenso"
+    },
+    {
+      "pattern": "with Max effort",
+      "translation": "modo máximo"
+    },
+    {
+      "pattern": "Tips for getting started",
+      "translation": "Dicas para começar"
+    },
+    {
+      "pattern": "Run /init to create a CLAUDE.md file with instructions for Claude",
+      "translation": "Execute /init para criar um arquivo CLAUDE.md com instruções para o Claude"
+    },
+    {
+      "pattern": "Note: You have launched claude in your home directory. For the best experience, launch it in a project directory instead.",
+      "translation": "Observação: você iniciou o Claude no seu diretório pessoal. Para a melhor experiência, inicie-o em um diretório de projeto."
+    },
+    {
+      "pattern": "Recent activity",
+      "translation": "Atividade recente"
+    },
+    {
+      "pattern": "No recent activity",
+      "translation": "Nenhuma atividade recente"
+    },
+    {
+      "pattern": "for shortcuts",
+      "translation": "para ver atalhos"
+    },
+    {
+      "pattern": "Welcome back",
+      "translation": "Bem-vindo de volta"
+    },
+    {
+      "pattern": "Accessing workspace:",
+      "translation": "Acessando espaço de trabalho:"
+    },
+    {
+      "pattern": "esc to interrupt",
+      "translation": "Esc para interromper"
+    },
+    {
+      "pattern": "Tab to complete",
+      "translation": "Tab para completar"
+    },
+    {
+      "pattern": "Enter to add",
+      "translation": "Enter para adicionar"
+    },
+    {
+      "pattern": "Add a new working directory",
+      "translation": "Adicionar um novo diretório de trabalho"
+    },
+    {
+      "pattern": "Configure the Advisor Tool to consult a stronger model for guidance at key moments during a task",
+      "translation": "Configure a ferramenta Advisor para consultar um modelo mais forte nos momentos-chave de uma tarefa"
+    },
+    {
+      "pattern": "Manage agent configurations",
+      "translation": "Gerenciar configurações de agentes"
+    },
+    {
+      "pattern": "Spawn a remote Claude Code session that monitors and autofixes the current PR",
+      "translation": "Iniciar uma sessão remota do Claude Code que monitora e corrige automaticamente o PR atual"
+    },
+    {
+      "pattern": "Create a branch of the current conversation at this point",
+      "translation": "Criar uma ramificação da conversa atual neste ponto"
+    },
+    {
+      "pattern": "Ask a quick side question without interrupting the main conversation",
+      "translation": "Fazer uma pergunta rápida sem interromper a conversa principal"
+    },
+    {
+      "pattern": "Claude in Chrome (Beta) settings",
+      "translation": "Configurações do Claude no Chrome (Beta)"
+    },
+    {
+      "pattern": "Clear conversation history and free up context",
+      "translation": "Limpar o histórico da conversa e liberar contexto"
+    },
+    {
+      "pattern": "Set the prompt bar color for this session",
+      "translation": "Definir a cor da barra de prompt para esta sessão"
+    },
+    {
+      "pattern": "Clear conversation history but keep a summary in context. Optional: /compact [instructions for summarization]",
+      "translation": "Limpar o histórico mas manter um resumo no contexto. Opcional: /compact [instruções de resumo]"
+    },
+    {
+      "pattern": "Open config panel",
+      "translation": "Abrir painel de configurações"
+    },
+    {
+      "pattern": "Visualize current context usage as a colored grid",
+      "translation": "Visualizar o uso atual do contexto como uma grade colorida"
+    },
+    {
+      "pattern": "Copy Claude's last response to clipboard (or /copy N for the Nth-latest)",
+      "translation": "Copiar a última resposta do Claude para a área de transferência (ou /copy N para a enésima)"
+    },
+    {
+      "pattern": "Continue the current session in Claude Desktop",
+      "translation": "Continuar a sessão atual no Claude Desktop"
+    },
+    {
+      "pattern": "View uncommitted changes and per-turn diffs",
+      "translation": "Ver alterações não comitadas e diffs por turno"
+    },
+    {
+      "pattern": "Diagnose and verify your Claude Code installation and settings",
+      "translation": "Diagnosticar e verificar a instalação e as configurações do Claude Code"
+    },
+    {
+      "pattern": "Set effort level for model usage",
+      "translation": "Definir o nível de esforço para uso do modelo"
+    },
+    {
+      "pattern": "Exit the REPL",
+      "translation": "Sair do REPL"
+    },
+    {
+      "pattern": "Export the current conversation to a file or clipboard",
+      "translation": "Exportar a conversa atual para um arquivo ou área de transferência"
+    },
+    {
+      "pattern": "Configure extra usage to keep working when limits are hit",
+      "translation": "Configurar uso adicional para continuar trabalhando quando os limites forem atingidos"
+    },
+    {
+      "pattern": "Toggle fast mode (Opus 4.6 only)",
+      "translation": "Alternar modo rápido (apenas Opus 4.6)"
+    },
+    {
+      "pattern": "Submit feedback about Claude Code",
+      "translation": "Enviar feedback sobre o Claude Code"
+    },
+    {
+      "pattern": "Show help and available commands",
+      "translation": "Mostrar ajuda e comandos disponíveis"
+    },
+    {
+      "pattern": "View hook configurations for tool events",
+      "translation": "Ver configurações de hooks para eventos de ferramentas"
+    },
+    {
+      "pattern": "Manage IDE integrations and show status",
+      "translation": "Gerenciar integrações de IDE e mostrar status"
+    },
+    {
+      "pattern": "Set up Claude GitHub Actions for a repository",
+      "translation": "Configurar o Claude GitHub Actions para um repositório"
+    },
+    {
+      "pattern": "Install the Claude Slack app",
+      "translation": "Instalar o aplicativo do Claude para Slack"
+    },
+    {
+      "pattern": "Open or create your keybindings configuration file",
+      "translation": "Abrir ou criar seu arquivo de configuração de atalhos de teclado"
+    },
+    {
+      "pattern": "Sign in with your Anthropic account",
+      "translation": "Entrar com sua conta Anthropic"
+    },
+    {
+      "pattern": "Sign out from your Anthropic account",
+      "translation": "Sair da sua conta Anthropic"
+    },
+    {
+      "pattern": "Manage MCP servers",
+      "translation": "Gerenciar servidores MCP"
+    },
+    {
+      "pattern": "Edit Claude memory files",
+      "translation": "Editar arquivos de memória do Claude"
+    },
+    {
+      "pattern": "Show QR code to download the Claude mobile app",
+      "translation": "Mostrar código QR para baixar o aplicativo móvel do Claude"
+    },
+    {
+      "pattern": "Set the AI model for Claude Code",
+      "translation": "Definir o modelo de IA para o Claude Code"
+    },
+    {
+      "pattern": "Manage allow & deny tool permission rules",
+      "translation": "Gerenciar regras de permissão de ferramentas (permitir/negar)"
+    },
+    {
+      "pattern": "Enable plan mode or view the current session plan",
+      "translation": "Ativar o modo plano ou visualizar o plano da sessão atual"
+    },
+    {
+      "pattern": "Manage Claude Code plugins",
+      "translation": "Gerenciar plugins do Claude Code"
+    },
+    {
+      "pattern": "Discover Claude Code features through quick interactive lessons",
+      "translation": "Descubra os recursos do Claude Code por meio de lições interativas rápidas"
+    },
+    {
+      "pattern": "View release notes",
+      "translation": "Ver notas da versão"
+    },
+    {
+      "pattern": "Activate pending plugin changes in the current session",
+      "translation": "Ativar alterações pendentes de plugins na sessão atual"
+    },
+    {
+      "pattern": "Configure the default remote environment for teleport sessions",
+      "translation": "Configurar o ambiente remoto padrão para sessões de teleport"
+    },
+    {
+      "pattern": "Rename the current conversation",
+      "translation": "Renomear a conversa atual"
+    },
+    {
+      "pattern": "Resume a previous conversation",
+      "translation": "Retomar uma conversa anterior"
+    },
+    {
+      "pattern": "Restore the code and/or conversation to a previous point",
+      "translation": "Restaurar o código e/ou a conversa para um ponto anterior"
+    },
+    {
+      "pattern": "List available skills",
+      "translation": "Listar habilidades disponíveis"
+    },
+    {
+      "pattern": "Show your Claude Code usage statistics and activity",
+      "translation": "Mostrar suas estatísticas de uso e atividade do Claude Code"
+    },
+    {
+      "pattern": "Show Claude Code status including version, model, account, API connectivity, and tool statuses",
+      "translation": "Mostrar o status do Claude Code, incluindo versão, modelo, conta, conectividade da API e status das ferramentas"
+    },
+    {
+      "pattern": "Order Claude Code stickers",
+      "translation": "Encomendar adesivos do Claude Code"
+    },
+    {
+      "pattern": "List and manage background tasks",
+      "translation": "Listar e gerenciar tarefas em segundo plano"
+    },
+    {
+      "pattern": "Resume a Claude Code session from claude.ai",
+      "translation": "Retomar uma sessão do Claude Code a partir do claude.ai"
+    },
+    {
+      "pattern": "Install Shift+Enter key binding for newlines",
+      "translation": "Instalar o atalho Shift+Enter para quebras de linha"
+    },
+    {
+      "pattern": "Change the theme",
+      "translation": "Alterar o tema"
+    },
+    {
+      "pattern": "Upgrade to Max for higher rate limits and more Opus",
+      "translation": "Atualize para o Max para obter limites maiores e mais Opus"
+    },
+    {
+      "pattern": "Show plan usage limits",
+      "translation": "Mostrar os limites de uso do plano"
+    },
+    {
+      "pattern": "Toggle voice mode",
+      "translation": "Alternar modo de voz"
+    },
+    {
+      "pattern": "Setup Claude Code on the web (requires connecting your GitHub account)",
+      "translation": "Configurar o Claude Code na web (requer conectar sua conta do GitHub)"
+    },
+    {
+      "pattern": "Research and plan a large-scale change, then execute it in parallel across 5\u201330 isolated worktree agents that each open a PR. (bundled)",
+      "translation": "Pesquisar e planejar uma mudança em larga escala e executá-la em paralelo em 5-30 agentes de worktree isolados, cada um abrindo um PR. (agrupado)"
+    },
+    {
+      "pattern": "Build, debug, and optimize Claude API / Anthropic SDK apps.",
+      "translation": "Construir, depurar e otimizar apps com Claude API / Anthropic SDK."
+    },
+    {
+      "pattern": "Enable debug logging for this session and help diagnose issues (bundled)",
+      "translation": "Ativar logs de depuração para esta sessão e ajudar a diagnosticar problemas (agrupado)"
+    },
+    {
+      "pattern": "Initialize a new CLAUDE.md file with codebase documentation",
+      "translation": "Inicializar um novo arquivo CLAUDE.md com a documentação do código"
+    },
+    {
+      "pattern": "Generate a report analyzing your Claude Code sessions",
+      "translation": "Gerar um relatório analisando suas sessões do Claude Code"
+    },
+    {
+      "pattern": "Run a prompt or slash command on a recurring interval (e.g. /loop 5m /foo). Omit the interval to let the model self-pace. (bundled)",
+      "translation": "Executar um prompt ou comando de barra em intervalos recorrentes (ex.: /loop 5m /foo). Omita o intervalo para deixar o modelo se auto-ajustar. (agrupado)"
+    },
+    {
+      "pattern": "Review a pull request",
+      "translation": "Revisar um pull request"
+    },
+    {
+      "pattern": "Create, update, list, or run scheduled remote agents (triggers) that execute on a cron schedule. (bundled)",
+      "translation": "Criar, atualizar, listar ou executar agentes remotos agendados (triggers) seguindo um cronograma cron. (agrupado)"
+    },
+    {
+      "pattern": "Complete a security review of the pending changes on the current branch",
+      "translation": "Realizar uma revisão de segurança das alterações pendentes no branch atual"
+    },
+    {
+      "pattern": "Review changed code for reuse, quality, and efficiency, then fix any issues found. (bundled)",
+      "translation": "Revisar o código alterado quanto a reutilização, qualidade e eficiência, e corrigir os problemas encontrados. (agrupado)"
+    },
+    {
+      "pattern": "Set up Claude Code's status line UI",
+      "translation": "Configurar a interface da barra de status do Claude Code"
+    },
+    {
+      "pattern": "Help teammates ramp on Claude Code with a guide from your usage",
+      "translation": "Ajude os colegas a aprender o Claude Code com um guia baseado no seu uso"
+    },
+    {
+      "pattern": "Use this skill to configure the Claude Code harness via settings.json.",
+      "translation": "Use esta habilidade para configurar o Claude Code via settings.json."
+    }
+  ]
+}

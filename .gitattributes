@@ -1,0 +1,11 @@
+# .gitattributes
+# GitHub Linguist settings to make Rust the dominant language in the repository stats
+# We mark frontend UI and utility scripts as 'vendored' so they don't bloat the language bar.
+
+src-ui/** linguist-vendored
+*.sh linguist-vendored
+*.ps1 linguist-vendored
+*.bat linguist-vendored
+*.css linguist-vendored
+*.html linguist-vendored
+*.js linguist-vendored

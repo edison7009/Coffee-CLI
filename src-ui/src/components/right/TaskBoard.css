@@ -1,0 +1,679 @@
+/* TaskBoard.css — iOS-style premium task board */
+
+/* ─── Container ─────────────────────────────────────────────────────────────── */
+
+.task-board {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 16px;
+  gap: 12px;
+  overflow: hidden;
+}
+
+/* Global cursor override — desktop native (Apple HIG) */
+.task-board * {
+  cursor: default !important;
+}
+
+/* Pull the user profile header up to negate the 16px container padding and perfectly align with left pane */
+/* Also negate the 12px flex gap of .task-board so it doesn't push the tabs too far down */
+.task-board .panel-header {
+  margin: -16px -16px -12px -16px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.task-board input,
+.task-board textarea {
+  cursor: text !important;
+}
+
+/* ─── Input Area ────────────────────────────────────────────────────────────── */
+
+.task-input-area {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-panel, rgba(28, 28, 30, 0.65));
+  backdrop-filter: var(--glass-blur, blur(12px));
+  -webkit-backdrop-filter: var(--glass-blur, blur(12px));
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  border-radius: 12px;
+  padding: 8px 10px 8px 14px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  flex-shrink: 0;
+}
+
+.right-tabs {
+  position: relative;
+  display: flex;
+  background: var(--bg-card);
+  border: none;
+  border-radius: 8px;
+  padding: 4px;
+  margin: 12px 0 8px 0;
+  flex-shrink: 0;
+}
+
+.right-tab {
+  flex: 1; /* 50% */
+  padding: 6px 0;
+  background: transparent;
+  border: none;
+  color: var(--text-3);
+  font-family: var(--font, system-ui);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: default;
+  transition: color 0.15s ease;
+  text-align: center;
+  outline: none;
+  position: relative;
+  z-index: 2;
+}
+
+.right-tab:hover:not(.active) {
+  color: color-mix(in srgb, var(--text-3) 75%, transparent);
+}
+
+.right-tab.active {
+  color: var(--text-1);
+  background: transparent;
+}
+
+/* No focus glow — clean native feel */
+
+.task-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-1, #e8e4de);
+  font-family: var(--font, system-ui);
+  font-size: 14px;
+  line-height: 1.4;
+  min-width: 0;
+}
+
+.task-input::placeholder {
+  color: var(--text-3, rgba(255, 255, 255, 0.3));
+}
+
+
+.task-add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: none;
+  background: rgba(196, 149, 106, 0.1);
+  color: rgba(196, 149, 106, 0.35);
+  transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  flex-shrink: 0;
+}
+
+.task-add-btn.active {
+  background: #8b6142;
+  color: #fff;
+}
+
+.task-add-btn.active:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(139, 97, 66, 0.5);
+}
+
+.task-add-btn:disabled {
+  opacity: 0.5;
+}
+
+/* ─── Task List ─────────────────────────────────────────────────────────────── */
+
+.task-list {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  scrollbar-width: none; /* Firefox: hide scrollbar */
+}
+
+/* Chrome/Safari/Edge: hide scrollbar but allow scrolling */
+.task-list::-webkit-scrollbar {
+  display: none;
+}
+
+/* ─── Section Headers ───────────────────────────────────────────────────────── */
+
+.task-section-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 4px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-3, rgba(255, 255, 255, 0.35));
+  user-select: none;
+}
+
+.task-section-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.task-section-dot.todo {
+  background: var(--text-3, rgba(255, 255, 255, 0.3));
+}
+
+.task-section-dot.working {
+  background: var(--accent, #c4956a);
+  box-shadow: 0 0 6px rgba(196, 149, 106, 0.5);
+  animation: dot-pulse 2s ease-in-out infinite;
+}
+
+.task-section-dot.done {
+  background: #4ade80;
+}
+
+@keyframes dot-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.task-section-count {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-3, rgba(255, 255, 255, 0.25));
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1px 6px;
+  border-radius: 8px;
+  min-width: 16px;
+  text-align: center;
+}
+
+/* ─── Droppable Area ────────────────────────────────────────────────────────── */
+
+.task-droppable-area {
+  min-height: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* When actively dragging, empty sections show a drop target zone */
+.task-section-wrapper.empty-drop-zone .task-droppable-area {
+  min-height: 42px;
+  border: 1.5px dashed rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.task-section-wrapper.empty-drop-zone .task-droppable-area:hover {
+  border-color: rgba(196, 149, 106, 0.3);
+  background: rgba(196, 149, 106, 0.04);
+}
+
+/* ─── Task Card ─────────────────────────────────────────────────────────────── */
+
+.task-card {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  transform-origin: top center;
+  overflow: hidden;
+  /* Only animate properties that don't conflict with drag transforms */
+  transition: background-color 0.25s, opacity 0.25s, margin-top 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.task-card-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 8px 10px 10px;
+}
+
+.task-card:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.task-card.working {
+  background: rgba(196, 149, 106, 0.06);
+  border-left: 2px solid rgba(196, 149, 106, 0.4);
+}
+
+.task-card.working .task-card-row {
+  padding-left: 8px;
+}
+
+.task-card.expanded {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.task-card.done {
+  opacity: 0.5;
+}
+
+/* ─── Drag: Placeholder (original card collapses out) ────────────────────────── */
+
+.task-card.dragging-placeholder {
+  opacity: 0 !important;
+  max-height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: hidden;
+  pointer-events: none;
+  transition: max-height 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
+              opacity 0.15s,
+              padding 0.2s,
+              margin 0.2s;
+}
+
+/* ─── Drag: Floating Ghost Clone ────────────────────────────────────────────── */
+
+.task-card-ghost {
+  position: fixed;
+  z-index: 99999;
+  pointer-events: none;
+  opacity: 0.92;
+  border-radius: 10px;
+  box-shadow: 0 20px 30px -8px rgba(0, 0, 0, 0.5), 0 8px 12px -4px rgba(0, 0, 0, 0.3);
+  background: rgba(40, 40, 42, 0.98);
+  transform: scale(1.03);
+  will-change: left, top;
+  /* Inherit text styles */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ─── Drag: FLIP Shift Animation ────────────────────────────────────────────── */
+
+.task-card.shift-down {
+  transform: translateY(44px);
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* ─── Add Animation ─────────────────────────────────────────────────────────── */
+
+.task-card.adding {
+  animation: task-slide-in 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+@keyframes task-slide-in {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.95);
+    max-height: 0;
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    max-height: 200px;
+  }
+}
+
+/* ─── Remove Animation ──────────────────────────────────────────────────────── */
+
+.task-card.removing {
+  animation: task-slide-out 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+@keyframes task-slide-out {
+  0% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    max-height: 200px;
+    margin-bottom: 2px;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(40px) scale(0.95);
+    max-height: 0;
+    margin-bottom: 0;
+  }
+}
+
+/* ─── Checkbox ──────────────────────────────────────────────────────────────── */
+
+.task-check-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  padding: 14px 12px;
+  margin: -14px -2px -14px -12px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.task-check-btn:active {
+  transform: scale(0.8);
+}
+
+.task-checkbox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.task-checkbox.todo {
+  color: var(--text-3, rgba(255, 255, 255, 0.25));
+}
+
+.task-checkbox.working {
+  color: var(--accent, #c4956a);
+}
+
+.task-checkbox.done {
+  color: #4ade80;
+}
+
+.pulse-dot {
+  animation: checkbox-pulse 2s ease-in-out infinite;
+}
+
+@keyframes checkbox-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* ─── Task Title ────────────────────────────────────────────────────────────── */
+
+.task-title {
+  flex: 1;
+  font-size: 13px;
+  font-family: var(--font, system-ui);
+  color: var(--text-1, #e8e4de);
+  line-height: 1.4;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.task-title.completed {
+  text-decoration: line-through;
+  color: var(--text-3, rgba(255, 255, 255, 0.3));
+}
+
+/* Inline title edit — seamless, no border, same sizing as title */
+.task-title-edit {
+  flex: 1;
+  font-size: 13px;
+  font-family: var(--font, system-ui);
+  color: var(--text-1, #e8e4de);
+  line-height: 1.4;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  outline: none;
+}
+
+/* ─── Confirm Edit Button (checkmark) ───────────────────────────────────────── */
+
+.task-confirm-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: rgba(74, 222, 128, 0.12);
+  border: none;
+  color: #4ade80;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.task-confirm-btn:hover {
+  background: rgba(74, 222, 128, 0.25);
+}
+
+/* ─── Description Area ──────────────────────────────────────────────────────── */
+
+.task-desc-area {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.task-desc-area.open {
+  grid-template-rows: 1fr;
+}
+
+.task-desc-area-inner {
+  overflow: hidden;
+  opacity: 0;
+  padding: 0 10px 0 38px;
+  transform: translateY(-4px);
+  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  pointer-events: none;
+}
+
+.task-desc-area.open .task-desc-area-inner {
+  opacity: 1;
+  padding: 0 10px 10px 38px;
+  transform: translateY(0);
+  pointer-events: auto;
+  transition-delay: 0.05s;
+}
+
+.task-desc-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: var(--text-2, rgba(255, 255, 255, 0.6));
+  font-family: var(--font, system-ui);
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 0;
+  resize: vertical;
+  min-height: 48px;
+  max-height: 300px;
+  outline: none;
+}
+
+.task-desc-input::placeholder {
+  color: var(--text-3, rgba(255, 255, 255, 0.3));
+}
+
+/* ─── Edit Button ───────────────────────────────────────────────────────────── */
+
+.task-edit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  color: var(--text-3, rgba(255, 255, 255, 0.15));
+  transition: all 0.2s;
+  flex-shrink: 0;
+  opacity: 0;
+}
+
+.task-card:hover .task-edit-btn {
+  opacity: 1;
+}
+
+.task-edit-btn:hover {
+  color: var(--text-1, #e8e4de);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* ─── Delete Button ─────────────────────────────────────────────────────────── */
+
+.task-delete-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  color: var(--text-3, rgba(255, 255, 255, 0.15));
+  transition: all 0.2s;
+  flex-shrink: 0;
+  opacity: 0;
+}
+
+.task-card:hover .task-delete-btn {
+  opacity: 1;
+}
+
+.task-delete-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+/* ─── Empty State ───────────────────────────────────────────────────────────── */
+
+.task-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  gap: 8px;
+  padding: 40px 20px;
+  opacity: 1; /* Restored to full opacity for clarity */
+  user-select: none;
+}
+
+.task-empty-icon {
+  font-size: 32px;
+  margin-bottom: 6px;
+  color: var(--accent); /* Highlight icon */
+}
+
+.task-empty-text {
+  font-size: 15px;
+  font-weight: 600;
+  font-family: var(--font-sans, var(--font, system-ui));
+  letter-spacing: 0.02em;
+  color: var(--text-1, #e8e4de);
+}
+
+.task-empty-sub {
+  font-size: 13px;
+  color: var(--text-2, rgba(255, 255, 255, 0.6));
+}
+
+/* ─── Floating Action Button ────────────────────────────────────────────────── */
+
+.task-fab-container {
+  position: absolute;
+  bottom: 24px;
+  right: 24px;
+  z-index: 100;
+}
+
+.task-fab-simple {
+  width: 48px;
+  height: 48px;
+  border-radius: 24px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--accent) 40%, transparent);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  cursor: default !important;
+}
+
+.task-fab-simple:hover {
+  transform: scale(1.08) translateY(-2px);
+  box-shadow: 0 8px 16px color-mix(in srgb, var(--accent) 55%, transparent);
+  background: var(--accent-hover);
+}
+
+.task-fab-simple:active {
+  transform: scale(0.95);
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--accent) 60%, transparent);
+}
+
+.task-fab-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s ease;
+}
+
+.task-fab-simple:hover .task-fab-icon {
+  transform: rotate(90deg);
+}
+
+/* ── History Card (Recent Sessions) ── */
+
+.history-card {
+  padding: 12px 14px;
+  margin-bottom: 6px;
+  cursor: default !important;
+  transition: background 0.2s, transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.history-card:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.history-card:active {
+  transform: scale(0.98);
+}
+
+.history-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.history-card-title {
+  font-size: 13px;
+  color: var(--text-1, #e8e4de);
+  font-family: var(--font, system-ui);
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.history-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.history-card-tool {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-2, rgba(255, 255, 255, 0.6));
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.history-card-time {
+  font-size: 10px;
+  color: var(--text-3, rgba(255, 255, 255, 0.3));
+  font-weight: 500;
+}

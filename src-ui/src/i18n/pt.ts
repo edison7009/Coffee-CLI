@@ -1,0 +1,86 @@
+export const pt = {
+  'app.title': 'Coffee CLI',
+  'explorer.tab.computer': 'Meu Computador',
+  'explorer.tab.workspace': 'Área de trabalho',
+  'explorer.workspace.select-dir': 'Clique para selecionar o diretório de trabalho',
+
+  // Context Menu
+  'menu.copy_abs': 'Copiar caminho absoluto',
+  'menu.copy_rel': 'Copiar caminho relativo',
+  'menu.copy_ref': 'Copiar como @reference',
+  'menu.cut': 'Recortar',
+  'menu.copy': 'Copiar',
+  'menu.paste': 'Colar',
+  'menu.rename': 'Renomear',
+  'menu.delete': 'Excluir',
+  'menu.show_in_folder': 'Mostrar no explorador',
+
+  // Drive kinds (Quick Access)
+  'drive.desktop': 'Área de trabalho',
+  'drive.downloads': 'Downloads',
+  'drive.documents': 'Documentos',
+  'drive.pictures': 'Imagens',
+  'drive.music': 'Música',
+  'drive.videos': 'Vídeos',
+  'drive.home': 'Início',
+  'drive.drive': 'Unidade {label}',
+  'drive.root': 'Raiz (/)',
+  'drive.volume': '{label}',
+
+  // Tools
+  'tool.terminal': 'Terminal',
+  'tool.remote': 'Terminal remoto',
+  'tool.remote.short': 'Remoto',
+  'tool.installer': 'Instalador',
+
+  // Remote Terminal
+  'remote.title': 'Terminal remoto',
+  'remote.host': 'Host',
+  'remote.host_placeholder': 'ex. 192.168.1.100',
+  'remote.username': 'Usuário',
+  'remote.password': 'Senha',
+  'remote.connect': 'Conectar',
+  'remote.connecting': 'Conectando...',
+  'remote.connect_failed': 'Falha na conexão',
+
+  'tab.new': 'Selecionar ferramenta',
+
+  // Island
+  'island.status.working': 'Pensando...',
+  'island.status.wait_input': 'Aguardando entrada',
+  'island.status.idle': 'Aguardando entrada',
+
+  // Task Board
+  'task.input_placeholder': 'Escrever uma tarefa...',
+  'task.notes_placeholder': 'Adicionar notas...',
+  'task.section.working': 'Em andamento',
+  'task.section.todo': 'A fazer',
+  'task.section.done': 'Concluído',
+  'task.greeting.morning': 'Bom dia, qual é o plano?',
+  'task.greeting.afternoon': 'Boa tarde, algo pendente?',
+  'task.greeting.evening': 'Boa noite. Algo ambicioso?',
+  'task.tab.tasks': 'Tarefas',
+  'task.tab.sessions': 'Histórico',
+  'task.default_title': 'Nova tarefa',
+  'task.search_sessions': 'Buscar sessões...',
+  'menu.no_recent': 'Nenhuma sessão recente',
+  'task.turns': '{count} turnos',
+
+  // Actions
+  'action.close': 'Fechar',
+  'action.resume_terminal': 'Continuar esta sessão',
+
+  // Time
+  'time.just_now': 'Agora mesmo',
+  'time.today': 'Hoje',
+  'time.yesterday': 'Ontem',
+  'time.days_ago': 'Há {days} dias',
+
+  // Arcade Games
+  'game.pal': 'Sword and Fairy',
+  'game.stardom': 'Stardom',
+
+  // Session
+  'session.max': 'É possível ter no máximo 5 sessões abertas ao mesmo tempo.',
+
+} as const;

@@ -1,0 +1,90 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/x-icon" href="../icons/icon.ico">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Codex Agent Course - Coffee OPC University. Coming soon.">
+  <title>Codex Course | Coffee OPC</title>
+
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/courses.css">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <header class="navbar">
+    <a href="../index.html" class="logo" style="text-decoration:none;">
+      <svg class="dynamic-brand-logo" width="24" height="24" viewBox="0 0 24 24" overflow="visible" xmlns="http://www.w3.org/2000/svg">
+        <defs><mask id="SVG5AkzhcyZ"><path fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M12 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M16 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4"/></mask></defs><g stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path fill="currentColor" fill-opacity="0" stroke-dasharray="48" d="M17 9v9c0 1.66 -1.34 3 -3 3h-6c-1.66 0 -3 -1.34 -3 -3v-9Z"><animate fill="freeze" attributeName="stroke-dashoffset" dur="0.6s" values="48;0"/><animate fill="freeze" attributeName="fill-opacity" begin="1.6s" dur="0.4s" to="1"/></path><path fill="none" stroke-dasharray="16" stroke-dashoffset="16" d="M17 9h3c0.55 0 1 0.45 1 1v3c0 0.55 -0.45 1 -1 1h-3"><animate fill="freeze" attributeName="stroke-dashoffset" begin="0.6s" dur="0.3s" to="0"/></path></g><path fill="currentColor" d="M0 0h24v24H0z" mask="url(#SVG5AkzhcyZ)"/>
+      </svg>
+      <span>Coffee OPC</span>
+    </a>
+    <nav class="course-tabs">
+      <a href="claude-code.html" class="course-tab">Claude Code</a>
+      <a href="codex.html" class="course-tab active">Codex</a>
+      <a href="opencode.html" class="course-tab">OpenCode</a>
+      <a href="openclaw.html" class="course-tab">OpenClaw</a>
+    </nav>
+    <nav class="nav-links">
+      <button class="icon-switch" id="theme-toggle" aria-label="Toggle Theme">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="theme-icon"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg>
+      </button>
+      <button class="lang-switch" id="lang-toggle">English / 中文</button>
+    </nav>
+  </header>
+
+  <main class="course-placeholder">
+    <div class="placeholder-content">
+      <h1 id="placeholder-title">Codex</h1>
+      <p id="placeholder-msg">Course under development...</p>
+      <a href="claude-code.html" class="placeholder-link" id="placeholder-link">&larr; Back to Claude Code Course</a>
+    </div>
+  </main>
+
+  <script>
+  (function() {
+    // Theme toggle
+    const theme = localStorage.getItem("coffee-cli-theme") || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", theme);
+    const themeBtn = document.getElementById("theme-toggle");
+    if (themeBtn) {
+      themeBtn.addEventListener("click", () => {
+        const next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+        document.documentElement.setAttribute("data-theme", next);
+        localStorage.setItem("coffee-cli-theme", next);
+      });
+    }
+
+    // Language toggle
+    const langToggle = document.getElementById("lang-toggle");
+    let currentLang = localStorage.getItem("coffee-cli-lang") || (navigator.language.includes("zh") ? "zh" : "en");
+
+    function updateLangUI() {
+      document.documentElement.lang = currentLang;
+      langToggle.textContent = currentLang === "en" ? "English / \u4e2d\u6587" : "\u4e2d\u6587 / English";
+      document.getElementById("placeholder-msg").textContent = currentLang === "zh"
+        ? "\u8bfe\u7a0b\u6b63\u5728\u5f00\u53d1\u4e2d..."
+        : "Course under development...";
+      document.getElementById("placeholder-link").innerHTML = currentLang === "zh"
+        ? "&larr; \u8fd4\u56de Claude Code \u8bfe\u7a0b"
+        : "&larr; Back to Claude Code Course";
+    }
+
+    updateLangUI();
+
+    if (langToggle) {
+      langToggle.addEventListener("click", () => {
+        currentLang = currentLang === "en" ? "zh" : "en";
+        localStorage.setItem("coffee-cli-lang", currentLang);
+        updateLangUI();
+      });
+    }
+  })();
+  </script>
+
+</body>
+</html>

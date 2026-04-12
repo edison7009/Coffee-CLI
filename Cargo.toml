@@ -1,0 +1,61 @@
+[package]
+name = "coffee-cli"
+version = "0.1.15"
+edition = "2021"
+description = "Lightweight Multi-layer AI CLI Terminal"
+license = "MIT"
+repository = "https://github.com/edison7009/Coffee-CLI"
+keywords = ["ai", "prompt", "coding", "llm", "tree-sitter"]
+categories = ["command-line-utilities", "development-tools"]
+build = "build.rs"
+
+[[bin]]
+name = "coffee-cli"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# Tier Terminal — PTY (portable-pty, WezTerm's cross-platform PTY library)
+portable-pty = "0.9"
+tokio = { version = "1", features = ["full"] }
+
+# Terminal Translation — VT parser + pattern matching
+vte = "0.13"
+regex = "1"
+aho-corasick = "1"
+unicode-width = "0.2"
+
+# CLI
+clap = { version = "4", features = ["derive"] }
+
+# Tauri
+tauri = { version = "2", features = [] }
+tauri-plugin-log = "2"
+tauri-plugin-dialog = "2"
+
+# Directory scanning (.gitignore aware, same engine as ripgrep)
+ignore = "0.4"
+
+# Utility libraries
+# Utilities
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+anyhow = "1"
+
+log = "0.4"
+dirs = "5"
+image = "0.25.10"
+base64 = "0.22.1"
+git2 = "0.19"
+notify = "6.1.1"
+rusqlite = { version = "0.32", features = ["bundled"] }
+
+[profile.release]
+opt-level = "z"
+lto = true
+strip = true
+
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-global-shortcut = "2"
