@@ -498,7 +498,7 @@ export function CenterPanel() {
               {icon}
               <span className="tab-title" style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{title}</span>
               <div className="tab-actions">
-                {session.tool && <span className="tab-health-dot connected" />}
+                {session.tool && <span className={`tab-health-dot ${session.agentStatus === 'wait_input' ? 'wait_input' : 'connected'}`} />}
                 <button 
                    className="tab-close-btn" 
                    onClick={(e) => handleCloseTab(e, session.id)}

@@ -253,38 +253,58 @@ export const CoffeeOverlay = forwardRef<CoffeeOverlayRef, CoffeeOverlayProps>(({
 
     dirtyRef.current = true;
 
+    // ── Self-terminating RAF loop ─────────────────────────────────────────
+    // Key fix: the old loop rescheduled unconditionally every frame (60fps),
+    // preventing the CPU from entering idle states even when the terminal was
+    // completely still. On laptops without a GPU this caused constant heating.
+    //
+    // New design: loop stops itself when there is nothing to render.
+    // markDirty() restarts it when new content arrives.
+    const loop = () => {
+      if (dirtyRef.current) {
+        dirtyRef.current = false;
+        render();
+        rafRef.current = requestAnimationFrame(loop); // more work may follow
+      } else {
+        rafRef.current = 0; // idle — stop until markDirty wakes us up
+      }
+    };
+
+    const startLoop = () => {
+      if (rafRef.current === 0) {
+        rafRef.current = requestAnimationFrame(loop);
+      }
+    };
+
     // Ink/React-terminal frameworks redraw menus via multiple write() calls
     // in rapid succession (CSI erase + CSI move + text for each column).
     // If we render between writes, we read an incomplete buffer where some
     // characters are missing (e.g. "V ew" instead of "View").
     // Solution: debounce — wait until writes stop for 50ms before rendering.
+    // markDirty also restarts the loop so no frame is missed after it stopped.
     let writeTimer: ReturnType<typeof setTimeout>;
     const markDirty = () => {
       clearTimeout(writeTimer);
-      writeTimer = setTimeout(() => { dirtyRef.current = true; }, 50);
+      writeTimer = setTimeout(() => {
+        dirtyRef.current = true;
+        startLoop();
+      }, 50);
     };
 
     const onWrite = term.onWriteParsed(markDirty);
     const onScroll = term.onScroll(markDirty);
 
-    // Render once immediately
-    render();
-
-    // RAF loop
-    const loop = () => {
-      if (dirtyRef.current) {
-        dirtyRef.current = false;
-        render();
-      }
-      rafRef.current = requestAnimationFrame(loop);
-    };
-    rafRef.current = requestAnimationFrame(loop);
+    // Kick off first render
+    startLoop();
 
     return () => {
       clearTimeout(writeTimer);
       onWrite.dispose();
       onScroll.dispose();
-      cancelAnimationFrame(rafRef.current);
+      if (rafRef.current !== 0) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = 0;
+      }
     };
   }, [visible, render]);
 

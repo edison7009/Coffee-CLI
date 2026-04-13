@@ -643,6 +643,13 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
   // that cannot be patched via source replacement).
   const [coffeeEnabled, setCoffeeEnabled] = useState(state.currentLang !== 'en');
 
+  // Sync coffeeEnabled when language changes.
+  // useState initial value only runs once at mount — if the user starts in 'en'
+  // and then switches to Chinese, coffeeEnabled stays false without this sync.
+  useEffect(() => {
+    setCoffeeEnabled(state.currentLang !== 'en');
+  }, [state.currentLang]);
+
   // Load translation entries from Rust backend
   // Supports both:
   // 1. Static tool assignment (Launchpad click → tool prop set at creation)

@@ -121,6 +121,11 @@
   box-shadow: 0 0 4px rgba(239, 68, 68, 0.4);
 }
 
+.tab-health-dot.wait_input {
+  background: #60a5fa;
+  box-shadow: 0 0 4px rgba(96, 165, 250, 0.5);
+}
+
 .tab-close-btn {
   width: 18px;
   height: 18px;

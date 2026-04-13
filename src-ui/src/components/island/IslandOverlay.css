@@ -208,10 +208,22 @@
     0 0 16px rgba(74, 222, 128, 0.25);
 }
 
-.island-pill.glow-openclaw {
+.island-pill.glow-opencode {
   box-shadow:
     0 4px 16px rgba(0, 0, 0, 0.3),
     0 0 16px rgba(255, 77, 77, 0.25);
+}
+
+.island-pill.glow-hermes {
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.3),
+    0 0 16px rgba(255, 255, 255, 0.12);
+}
+
+.island-pill.glow-terminal {
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.3),
+    0 0 16px rgba(100, 200, 100, 0.18);
 }
 
 .island-pill.glow-brand {
