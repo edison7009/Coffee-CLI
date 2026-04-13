@@ -7,7 +7,7 @@
 // unrelated global state changes (agent status, other tabs' folder changes,
 // etc.) don't cascade into this component.
 
-import { memo, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebglAddon } from '@xterm/addon-webgl';
@@ -471,18 +471,8 @@ function TierTerminalImpl({
   );
 }
 
-// React.memo with a custom comparator. TierTerminal only re-renders when one
-// of these props actually changes. Unrelated global state updates (agent
-// status events, other tabs' folder changes, task board edits, etc.) are
-// fully filtered out.
-export const TierTerminal = memo(TierTerminalImpl, (prev, next) => {
-  return (
-    prev.sessionId  === next.sessionId  &&
-    prev.tool       === next.tool       &&
-    prev.theme      === next.theme      &&
-    prev.lang       === next.lang       &&
-    prev.isActive   === next.isActive   &&
-    prev.toolData   === next.toolData   &&
-    prev.folderPath === next.folderPath
-  );
-});
+// Temporarily exported without memo wrapper while investigating a
+// regression where CLI tools wouldn't launch. All other perf wins (split
+// contexts, useAppDispatch, focus registry, pty-event-bus, tab-switch rAF,
+// dead menu scanner removal) are still active.
+export const TierTerminal = TierTerminalImpl;
