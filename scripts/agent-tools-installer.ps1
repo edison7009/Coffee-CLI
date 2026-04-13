@@ -184,14 +184,116 @@ Read-Host "  All set! Press Enter to open the menu" | Out-Null
 
 $registryArgs = if ($isChina) { @("--registry=https://registry.npmmirror.com") } else { @() }
 
+# ── Language Pack Helpers ─────────────────────────────────────────────────────
+
+$LANG_PACK_BASE_URL = "https://raw.githubusercontent.com/edison7009/Coffee-CLI/main/language-packs"
+
+# Available language packs. Add new ones here when translation data ships.
+$LANGUAGE_PACKS = @(
+    @{ Code = "zh-CN"; Label = "简体中文"; English = "Simplified Chinese" }
+)
+
+function Get-ActiveLanguage {
+    $f = Join-Path $env:USERPROFILE ".coffee-cli\active-language"
+    if (Test-Path $f) { return (Get-Content $f -Raw).Trim() }
+    return ""
+}
+
+function Get-LangLabel($code) {
+    $pack = $LANGUAGE_PACKS | Where-Object { $_.Code -eq $code } | Select-Object -First 1
+    if ($pack) { return $pack.Label }
+    return $code
+}
+
+function Invoke-LangPackInstall($code, $label) {
+    Write-Host "`n  Installing language pack: $label..." -ForegroundColor Cyan
+    $url = "$LANG_PACK_BASE_URL/$code/install.ps1"
+    try {
+        $script = (Invoke-WebRequest -Uri $url -UseBasicParsing).Content
+        Invoke-Expression $script
+    } catch {
+        Write-Host "`n  [Error] Install failed: $_" -ForegroundColor Red
+    }
+    Pause-Return
+}
+
+function Invoke-LangPackUninstall($code, $label) {
+    Write-Host "`n  Uninstalling language pack: $label..." -ForegroundColor Yellow
+    $url = "$LANG_PACK_BASE_URL/$code/uninstall.ps1"
+    try {
+        $script = (Invoke-WebRequest -Uri $url -UseBasicParsing).Content
+        Invoke-Expression $script
+    } catch {
+        Write-Host "`n  [Error] Uninstall failed: $_" -ForegroundColor Red
+    }
+    Pause-Return
+}
+
+function Invoke-LanguagePackAction($targetCode, $targetLabel) {
+    $activeCode = Get-ActiveLanguage
+    $activeLabel = if ($activeCode) { Get-LangLabel $activeCode } else { "" }
+
+    # Special case: target = "en" means restore original
+    if ($targetCode -eq "en") {
+        if ($activeCode -eq "") {
+            Write-Host "`n  Claude Code is already in English. Nothing to do." -ForegroundColor Cyan
+            Pause-Return
+            return
+        }
+        Write-Host "`n  Currently active language pack: $activeLabel" -ForegroundColor Yellow
+        Write-Host "  This will restore Claude Code to original English."
+        if (-not (Ask-YN "  Continue?")) { return }
+        Invoke-LangPackUninstall $activeCode $activeLabel
+        return
+    }
+
+    # Repeat install (re-patch, e.g. after Claude Code upgrade)
+    if ($activeCode -eq $targetCode) {
+        Write-Host "`n  $targetLabel is already active." -ForegroundColor Yellow
+        Write-Host "    1. Uninstall (restore English)"
+        Write-Host "    2. Re-apply patch (fix after Claude Code upgrade)"
+        $sub = Read-Host "  Choose [1/2/cancel]"
+        switch ($sub) {
+            "1" { Invoke-LangPackUninstall $targetCode $targetLabel }
+            "2" { Invoke-LangPackInstall $targetCode $targetLabel }
+            default { Write-Host "  Cancelled." }
+        }
+        return
+    }
+
+    # Switch from one language to another
+    if ($activeCode -ne "" -and $activeCode -ne $targetCode) {
+        Write-Host "`n  Currently active language pack: $activeLabel" -ForegroundColor Yellow
+        Write-Host "  Switching to $targetLabel will:"
+        Write-Host "    1. Uninstall $activeLabel"
+        Write-Host "    2. Restore English from backup"
+        Write-Host "    3. Apply $targetLabel patch"
+        if (-not (Ask-YN "  Continue?")) { return }
+        Invoke-LangPackUninstall $activeCode $activeLabel
+        Invoke-LangPackInstall $targetCode $targetLabel
+        return
+    }
+
+    # Clean install
+    Write-Host "`n  Will install $targetLabel language pack." -ForegroundColor Cyan
+    if (-not (Ask-YN "  Continue?")) { return }
+    Invoke-LangPackInstall $targetCode $targetLabel
+}
+
 while ($true) {
     Clear-Host
+
+    $activeCode = Get-ActiveLanguage
+    $activeMark = if ($activeCode) { " (current: $(Get-LangLabel $activeCode))" } else { "" }
 
     Write-Host "`n=== Install ===" -ForegroundColor Cyan
     Write-Host "  1.  Claude Code"
     Write-Host "  2.  OpenAI Codex CLI"
     Write-Host "  3.  OpenCode CLI"
     Write-Host "  4.  Hermes (Nous Research)"
+    Write-Host "`n=== Language Packs$activeMark ===" -ForegroundColor Cyan
+    Write-Host "  L1. 简体中文 (Simplified Chinese)"
+    Write-Host "  LE. English (restore default)"
     Write-Host "`n=== Uninstall ===" -ForegroundColor Yellow
     Write-Host "  5.  Claude Code"
     Write-Host "  6.  OpenAI Codex CLI"
@@ -258,6 +360,10 @@ while ($true) {
                 }
             }
         }
+        "L1" { Invoke-LanguagePackAction "zh-CN" "简体中文" }
+        "l1" { Invoke-LanguagePackAction "zh-CN" "简体中文" }
+        "LE" { Invoke-LanguagePackAction "en"    "English" }
+        "le" { Invoke-LanguagePackAction "en"    "English" }
         "q" {
             Write-Host "`n  Goodbye!`n"
             break

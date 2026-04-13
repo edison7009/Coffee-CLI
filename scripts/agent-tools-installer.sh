@@ -238,16 +238,129 @@ setup_npm_mirror
 echo -en "  All set! Press Enter to open the menu..."
 read -r
 
+# ── Language Pack Helpers ─────────────────────────────────────────────────────
+
+LANG_PACK_BASE_URL="https://raw.githubusercontent.com/edison7009/Coffee-CLI/main/language-packs"
+ACTIVE_LANG_FILE="$HOME/.coffee-cli/active-language"
+
+get_active_lang() {
+    [ -f "$ACTIVE_LANG_FILE" ] && cat "$ACTIVE_LANG_FILE" || echo ""
+}
+
+get_lang_label() {
+    case "$1" in
+        zh-CN) echo "简体中文" ;;
+        ja-JP) echo "日本語" ;;
+        ko-KR) echo "한국어" ;;
+        *)     echo "$1" ;;
+    esac
+}
+
+ask_yn() {
+    printf "  %s [Y/n] " "$1"
+    read -r reply
+    [ -z "$reply" ] || [ "$reply" = "y" ] || [ "$reply" = "Y" ]
+}
+
+invoke_lang_pack_install() {
+    local code="$1" label="$2"
+    echo -e "\n${CYAN}  Installing language pack: ${label}...${RESET}\n"
+    if curl -fsSL "$LANG_PACK_BASE_URL/$code/install.sh" | sh; then
+        :
+    else
+        echo -e "\n${RED}  [Error] Install failed.${RESET}"
+    fi
+    echo -en "\n  Press Enter to return to menu..."
+    read -r
+}
+
+invoke_lang_pack_uninstall() {
+    local code="$1" label="$2"
+    echo -e "\n${YELLOW}  Uninstalling language pack: ${label}...${RESET}\n"
+    if curl -fsSL "$LANG_PACK_BASE_URL/$code/uninstall.sh" | sh; then
+        :
+    else
+        echo -e "\n${RED}  [Error] Uninstall failed.${RESET}"
+    fi
+    echo -en "\n  Press Enter to return to menu..."
+    read -r
+}
+
+invoke_language_pack_action() {
+    local target_code="$1" target_label="$2"
+    local active_code active_label
+    active_code=$(get_active_lang)
+    active_label=$(get_lang_label "$active_code")
+
+    # Restore English
+    if [ "$target_code" = "en" ]; then
+        if [ -z "$active_code" ]; then
+            echo -e "\n${CYAN}  Claude Code is already in English. Nothing to do.${RESET}"
+            echo -en "\n  Press Enter to return to menu..."
+            read -r
+            return
+        fi
+        echo -e "\n${YELLOW}  Currently active language pack: ${active_label}${RESET}"
+        echo "  This will restore Claude Code to original English."
+        if ! ask_yn "  Continue?"; then return; fi
+        invoke_lang_pack_uninstall "$active_code" "$active_label"
+        return
+    fi
+
+    # Repeat install
+    if [ "$active_code" = "$target_code" ]; then
+        echo -e "\n${YELLOW}  ${target_label} is already active.${RESET}"
+        echo "    1. Uninstall (restore English)"
+        echo "    2. Re-apply patch (fix after Claude Code upgrade)"
+        printf "  Choose [1/2/cancel]: "
+        read -r sub
+        case "$sub" in
+            1) invoke_lang_pack_uninstall "$target_code" "$target_label" ;;
+            2) invoke_lang_pack_install "$target_code" "$target_label" ;;
+            *) echo "  Cancelled." ;;
+        esac
+        return
+    fi
+
+    # Switch language
+    if [ -n "$active_code" ] && [ "$active_code" != "$target_code" ]; then
+        echo -e "\n${YELLOW}  Currently active language pack: ${active_label}${RESET}"
+        echo "  Switching to ${target_label} will:"
+        echo "    1. Uninstall ${active_label}"
+        echo "    2. Restore English from backup"
+        echo "    3. Apply ${target_label} patch"
+        if ! ask_yn "  Continue?"; then return; fi
+        invoke_lang_pack_uninstall "$active_code" "$active_label"
+        invoke_lang_pack_install "$target_code" "$target_label"
+        return
+    fi
+
+    # Clean install
+    echo -e "\n${CYAN}  Will install ${target_label} language pack.${RESET}"
+    if ! ask_yn "  Continue?"; then return; fi
+    invoke_lang_pack_install "$target_code" "$target_label"
+}
+
 # ── Menu Loop ─────────────────────────────────────────────────────────────────
 
 while true; do
     clear
+
+    active_code=$(get_active_lang)
+    if [ -n "$active_code" ]; then
+        active_mark=" (current: $(get_lang_label "$active_code"))"
+    else
+        active_mark=""
+    fi
 
     echo -e "${CYAN}=== Install ===${RESET}"
     echo "  1.  Claude Code"
     echo "  2.  OpenAI Codex CLI"
     echo "  3.  OpenCode CLI"
     echo "  4.  Hermes (Nous Research)"
+    echo -e "\n${CYAN}=== Language Packs${active_mark} ===${RESET}"
+    echo "  L1. 简体中文 (Simplified Chinese)"
+    echo "  LE. English (restore default)"
     echo -e "\n${YELLOW}=== Uninstall ===${RESET}"
     echo "  5.  Claude Code"
     echo "  6.  OpenAI Codex CLI"
@@ -309,6 +422,12 @@ while true; do
             else
                 run_uninstall "Hermes" pip uninstall hermes-agent -y
             fi
+            ;;
+        L1|l1)
+            invoke_language_pack_action "zh-CN" "简体中文"
+            ;;
+        LE|le)
+            invoke_language_pack_action "en" "English"
             ;;
         q|Q)
             echo -e "\n  Goodbye!\n"
