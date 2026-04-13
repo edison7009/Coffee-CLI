@@ -143,7 +143,7 @@
     --glass-blur: blur(24px);
 
     --bg-titlebar: rgba(0, 0, 0, 0.1);
-    --bg-terminal: #1a1917; /* Same as background for seamless terminal */
+    --bg-terminal: #0c0c0c; /* True terminal black, like Windows Terminal / iTerm2 */
 }
 
 /* ─── Light Theme (Latte / Warm Ivory Parchment) ──────── */

@@ -38,10 +38,10 @@ export function DetachedTerminal({ sessionId, tool }: { sessionId: string; tool:
       allowProposedApi: true,
       scrollback: 5000,
       theme: isDark ? {
-        background:  '#1a1917',
+        background:  '#0c0c0c',
         foreground:  '#e8e4de',
         cursor:      '#c4956a',
-        cursorAccent: '#1a1917',
+        cursorAccent: '#0c0c0c',
         selectionBackground: 'rgba(196,149,106,0.3)',
       } : {
         background:  '#f4f3ee',
@@ -136,7 +136,7 @@ export function DetachedTerminal({ sessionId, tool }: { sessionId: string; tool:
   }, []);
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: isDark ? '#1a1917' : '#f4f3ee' }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: isDark ? '#0c0c0c' : '#f4f3ee' }}>
       <div style={{
         padding: '6px 16px',
         fontSize: 12,

@@ -85,12 +85,12 @@ export function TierTerminal({ sessionId, tool, isActive: _isActive = true }: { 
       cursorBlink: tool !== 'claude',
       scrollback: 5000,
       theme: isDark ? {
-        background:  '#1a1917',
+        background:  '#0c0c0c',
         foreground:  '#e8e4de',
-        cursor:      tool === 'claude' ? '#1a1917' : '#e8e4de',
-        cursorAccent: '#1a1917',
+        cursor:      tool === 'claude' ? '#0c0c0c' : '#e8e4de',
+        cursorAccent: '#0c0c0c',
         selectionBackground: 'rgba(196,149,106,0.3)',
-        black:       '#1a1917',
+        black:       '#0c0c0c',
         red:         '#e07070',
         green:       '#7ec77e',
         yellow:      '#d4a846',
@@ -544,8 +544,8 @@ export function TierTerminal({ sessionId, tool, isActive: _isActive = true }: { 
     // Claude Code manages its own cursor — keep xterm cursor invisible
     const hideCursor = tool === 'claude';
     term.options.theme = isDark ? {
-      background: '#1a1917', foreground: '#e8e4de',
-      cursor: hideCursor ? '#1a1917' : '#e8e4de', cursorAccent: '#1a1917'
+      background: '#0c0c0c', foreground: '#e8e4de',
+      cursor: hideCursor ? '#0c0c0c' : '#e8e4de', cursorAccent: '#0c0c0c'
     } : {
       background: '#f4f3ee', foreground: '#2d2c2a',
       cursor: hideCursor ? '#f4f3ee' : '#2d2c2a', cursorAccent: '#f4f3ee'
@@ -606,7 +606,7 @@ export function TierTerminal({ sessionId, tool, isActive: _isActive = true }: { 
   // ── Render ───────────────────────────────────────────────────────────────
 
   const isDark = state.currentTheme === 'dark';
-  const terminalBg = isDark ? '#1a1917' : '#f4f3ee';
+  const terminalBg = isDark ? '#0c0c0c' : '#f4f3ee';
 
   return (
     <div className="tier-terminal" style={{ background: terminalBg, position: 'relative' }}>
