@@ -45,10 +45,6 @@ export const ja = {
 
   'tab.new': 'ツールを選択',
 
-  // Island
-  'island.status.working': '考え中...',
-  'island.status.wait_input': '入力待ち',
-  'island.status.idle': '入力待ち',
 
   // Task Board
   'task.input_placeholder': 'タスクを入力...',
@@ -82,5 +78,21 @@ export const ja = {
 
   // Session
   'session.max': '同時に開けるセッションは最大 5 つです。',
+
+  // Theme Menu
+  'theme.section.color': 'カラー',
+  'theme.section.shape': 'シェイプ',
+  'theme.section.presets': 'プリセット',
+  'theme.color.light': 'ライト',
+  'theme.color.dark': 'ダーク',
+  'theme.color.cappuccino': 'コードダーク',
+  'theme.color.sakura': '夜桜',
+  'theme.color.lavender': 'ラベンダー',
+  'theme.color.mint': 'ミント',
+  'theme.preset.cappuccino_slab': 'コードダーク · Slab',
+  'theme.preset.sakura_blade': '夜桜 · Blade',
+  'theme.preset.mint_sharp': 'ミント · Sharp',
+  'theme.preset.lavender_panel': 'ラベンダー · Panel',
+  'theme.preset.light_soft': 'ライト · Soft',
 
 } as const;

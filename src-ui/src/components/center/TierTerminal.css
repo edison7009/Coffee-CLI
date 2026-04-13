@@ -16,6 +16,11 @@
     min-height: 0;
     overflow: hidden;
     background: transparent;
+    /* Padding lives HERE so FitAddon reads the correct content-box dimensions.
+       FitAddon reads parentElement.clientWidth — putting padding on the inner
+       .xterm element (which FitAddon never sees) caused a ~3-col mismatch that
+       made PTY width > visual rendering area, breaking TUI adaptive layouts. */
+    padding: 20px 0 20px 24px; /* 0 right so scrollbar docks to the edge */
 }
 
 .tier-xterm {
@@ -25,12 +30,13 @@
 
 /* xterm.js overrides — match our design */
 .tier-xterm .xterm {
-    padding: 20px 0 20px 24px; /* 0 padding on right so scrollbar docks to the edge */
+    padding: 0; /* Padding is on .tier-xterm-wrap; do not add padding here */
 }
 
 .tier-xterm .xterm-viewport {
     border-radius: 0;
     background: transparent !important;
+    overflow-y: overlay !important; /* scrollbar floats on top, does not consume width */
     scrollbar-width: thin;
     scrollbar-color: transparent transparent;
 }
@@ -50,7 +56,7 @@
 
 .tier-xterm .xterm-viewport::-webkit-scrollbar-thumb {
     background: transparent;
-    border-radius: 3px;
+    border-radius: var(--radius-xs);
     transition: background 0.2s;
 }
 
@@ -154,4 +160,54 @@ html[lang^="zh"] .splash-label {
 @keyframes splash-dot-pulse {
     0%, 80%, 100% { transform: scale(0.5); opacity: 0.3; }
     40% { transform: scale(1); opacity: 1; }
+}
+
+/* ─── Launch Failure Fallback Overlay ──────────────────────── */
+.tier-launch-failed {
+    position: absolute;
+    inset: 0;
+    z-index: 90;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    animation: launchFailedFadeIn 0.5s ease;
+}
+
+@keyframes launchFailedFadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.launch-failed-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    max-width: 320px;
+    text-align: center;
+}
+
+.launch-failed-title {
+    font-family: var(--font-serif, var(--font));
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--text-1);
+    letter-spacing: 0.02em;
+    font-style: italic;
+}
+
+.launch-failed-hint {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--accent, #C4956A);
+    opacity: 0.9;
+}
+
+.launch-failed-sub {
+    font-size: 12px;
+    color: var(--text-2, #9e9c98);
+    opacity: 0.6;
+    line-height: 1.5;
 }

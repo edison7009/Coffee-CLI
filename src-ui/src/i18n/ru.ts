@@ -45,10 +45,7 @@ export const ru = {
 
   'tab.new': 'Выбрать инструмент',
 
-  // Island
-  'island.status.working': 'Думаю...',
-  'island.status.wait_input': 'Ожидание ввода',
-  'island.status.idle': 'Ожидание ввода',
+
 
   // Task Board
   'task.input_placeholder': 'Написать задачу...',
@@ -82,5 +79,21 @@ export const ru = {
 
   // Session
   'session.max': 'Можно открывать не более 5 сессий одновременно.',
+
+  // Theme Menu
+  'theme.section.color': 'Цвета',
+  'theme.section.shape': 'Форма',
+  'theme.section.presets': 'Шаблоны',
+  'theme.color.light': 'Светлая',
+  'theme.color.dark': 'Тёмная',
+  'theme.color.cappuccino': 'Code Dark',
+  'theme.color.sakura': 'Сакура',
+  'theme.color.lavender': 'Лаванда',
+  'theme.color.mint': 'Мята',
+  'theme.preset.cappuccino_slab': 'Code Dark · Slab',
+  'theme.preset.sakura_blade': 'Сакура · Blade',
+  'theme.preset.mint_sharp': 'Мята · Sharp',
+  'theme.preset.lavender_panel': 'Лаванда · Panel',
+  'theme.preset.light_soft': 'Светлая · Soft',
 
 } as const;

@@ -14,7 +14,7 @@ import { WebglAddon } from '@xterm/addon-webgl';
 import { subscribeTerminalEvents } from '../../lib/pty-event-bus';
 import { registerTerminalFocus } from '../../lib/focus-registry';
 import { commands } from '../../tauri';
-import { useAppDispatch, type ToolType } from '../../store/app-state';
+import { useAppDispatch, type ToolType, type ThemeColor } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
 import '@xterm/xterm/css/xterm.css';
 import './TierTerminal.css';
@@ -29,7 +29,7 @@ export const detachedSessions = new Set<string>();
 interface TierTerminalProps {
   sessionId: string;
   tool: ToolType;
-  theme: 'dark' | 'light';
+  theme: ThemeColor;
   lang: string;
   isActive: boolean;
   toolData?: string;
@@ -54,6 +54,11 @@ function TierTerminalImpl({
   const splashStartRef = useRef(Date.now());
   const altScreenRef = useRef(false); // True when TUI enters alternate screen buffer
 
+  // ── Launch failure detection ─────────────────────────────────────────────
+  const hasOutputRef = useRef(false); // Set to true when PTY emits visible output
+  const [processExited, setProcessExited] = useState(false);
+  const [startFailed, setStartFailed] = useState(false);
+
   const t = useT();
 
   const toolLabel: Record<string, string> = {
@@ -70,7 +75,7 @@ function TierTerminalImpl({
     let mounted = true;
     const unlisteners: (() => void)[] = [];
 
-    const isDark = theme === 'dark';
+    const isDark = theme !== 'light';
     const isLinux = navigator.userAgent.toLowerCase().includes('linux');
     const term = new Terminal({
       fontFamily: "'Cascadia Mono', 'Cascadia Code', 'SF Mono', Menlo, Monaco, Consolas, 'Ubuntu Mono', 'Noto Mono', 'DejaVu Sans Mono', 'Liberation Mono', 'Courier New', monospace",
@@ -200,6 +205,7 @@ function TierTerminalImpl({
     // the frontend has registered its listeners, causing a blank terminal.
 
     const startPty = async () => {
+      try {
       let remoteConfig: any = {};
       try {
         if (tool === 'remote' && toolData) remoteConfig = JSON.parse(toolData);
@@ -212,6 +218,7 @@ function TierTerminalImpl({
       const unsubEvents = await subscribeTerminalEvents(sessionId, {
         onOutput: (data) => {
           if (!mounted) return;
+          hasOutputRef.current = true;
           xtermRef.current?.write(data);
 
           // Handle SSH Auto-login via Password injection
@@ -231,6 +238,7 @@ function TierTerminalImpl({
         },
         onStatus: (running, exitCode) => {
           if (!mounted || running) return;
+          setProcessExited(true);
           const msg = exitCode === 0
             ? '\r\n\x1b[32m[Process exited normally]\x1b[0m\r\n'
             : `\r\n\x1b[31m[Process exited with code ${exitCode}]\x1b[0m\r\n`;
@@ -255,8 +263,20 @@ function TierTerminalImpl({
       const initialCols = term.cols || 80;
       const initialRows = term.rows || 24;
 
-      try {
         await commands.tierTerminalStart(sessionId, tool, initialCols, initialRows, theme, lang, toolData, folderPath ?? undefined);
+
+        // After PTY is running, wait two frames for layout to settle then
+        // send the true terminal size. This fixes TUI adaptive-width tools
+        // (Claude Code, etc.) that respond to SIGWINCH — the initial fit may
+        // have run before the container reached its final dimensions.
+        await new Promise<void>(r => requestAnimationFrame(() => requestAnimationFrame(() => r())));
+        if (mounted && fitRef.current && xtermRef.current) {
+          fitRef.current.fit();
+          const t2 = xtermRef.current;
+          if (t2.cols > 0 && t2.rows > 0) {
+            commands.tierTerminalResize(sessionId, t2.cols, t2.rows).catch(() => {});
+          }
+        }
 
         // Trust prompt is now shown to the user (with translation overlay).
         // Previously auto-skipped, but user wants to see the translated trust screen.
@@ -286,7 +306,9 @@ function TierTerminalImpl({
           }, 1000);
         }
       } catch (err) {
+        console.warn('[TierTerminal] startPty failed:', err);
         term.writeln(`\x1b[31mFailed to start terminal: ${err}\x1b[0m`);
+        if (mounted) setStartFailed(true);
       }
     };
 
@@ -336,7 +358,7 @@ function TierTerminalImpl({
   useEffect(() => {
     const term = xtermRef.current;
     if (!term) return;
-    const isDark = theme === 'dark';
+    const isDark = theme !== 'light';
     // Claude Code manages its own cursor — keep xterm cursor invisible
     const hideCursor = tool === 'claude';
     term.options.theme = isDark ? {
@@ -377,6 +399,8 @@ function TierTerminalImpl({
   // ── Startup splash dismissal ────────────────────────────────────────────
   // Detect real TUI via alternate screen buffer entry (\x1b[?1049h).
   // This precisely distinguishes "database migration text" from "actual TUI rendered".
+  // Also: dismiss immediately if the process exited or IPC failed — no need to
+  // make the user wait the full timeout when the tool clearly can't start.
   useEffect(() => {
     if (!showSplash) return;
     let dismissed = false;
@@ -389,6 +413,12 @@ function TierTerminalImpl({
     const poll = setInterval(() => {
       const elapsed = Date.now() - splashStartRef.current;
       if (elapsed < 800) return; // brief branding flash
+      // Immediate bail-out: process already exited or IPC call failed
+      if (processExited || startFailed) {
+        dismiss();
+        clearInterval(poll);
+        return;
+      }
       // Primary signal: TUI has entered alternate screen buffer (\x1b[?1049h),
       // set by the PTY output handler. Covers Claude/Codex/OpenCode/Hermes.
       if (altScreenRef.current) {
@@ -405,11 +435,14 @@ function TierTerminalImpl({
       }
     }, 150);
     return () => clearInterval(poll);
-  }, [showSplash]);
+  }, [showSplash, processExited, startFailed]);
 
   // ── Render ───────────────────────────────────────────────────────────────
 
-  const terminalBg = theme === 'dark' ? '#0c0c0c' : '#f4f3ee';
+  const terminalBg = theme === 'light' ? '#f4f3ee' : '#0c0c0c';
+
+  // Show fallback UI when splash is gone but terminal has no content
+  const showFallback = !showSplash && !hasOutputRef.current && (processExited || startFailed);
 
   return (
     <div className="tier-terminal" style={{ background: terminalBg, position: 'relative' }}>
@@ -417,6 +450,30 @@ function TierTerminalImpl({
       <div className="tier-xterm-wrap">
         <div ref={termRef} className="tier-xterm" />
       </div>
+
+      {/* Fallback UI when tool fails to launch or exits before producing output */}
+      {showFallback && (
+        <div className="tier-launch-failed" style={{ background: terminalBg }}>
+          <div className="launch-failed-group">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--accent, #C4956A)', opacity: 0.7 }}>
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            <span className="launch-failed-title">
+              {(tool && toolLabel[tool]) || 'Tool'}
+            </span>
+            <span className="launch-failed-hint">
+              {startFailed
+                ? t('launch.error.ipc_failed' as any) || 'Could not connect to backend'
+                : t('launch.error.tool_exited' as any) || 'Process exited unexpectedly'}
+            </span>
+            <span className="launch-failed-sub">
+              {t('launch.error.check_install' as any) || 'Make sure the tool is installed and available in your PATH'}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Startup splash — covers ugly init output with branded loading screen */}
       {showSplash && (

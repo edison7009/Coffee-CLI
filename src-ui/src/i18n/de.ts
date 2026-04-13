@@ -45,10 +45,7 @@ export const de = {
 
   'tab.new': 'Werkzeug wählen',
 
-  // Island
-  'island.status.working': 'Denkt nach...',
-  'island.status.wait_input': 'Wartet auf Eingabe',
-  'island.status.idle': 'Wartet auf Eingabe',
+
 
   // Task Board
   'task.input_placeholder': 'Aufgabe eingeben...',
@@ -82,5 +79,21 @@ export const de = {
 
   // Session
   'session.max': 'Es können maximal 5 Sitzungen gleichzeitig geöffnet sein.',
+
+  // Theme Menu
+  'theme.section.color': 'Farben',
+  'theme.section.shape': 'Form',
+  'theme.section.presets': 'Vorlagen',
+  'theme.color.light': 'Hell',
+  'theme.color.dark': 'Dunkel',
+  'theme.color.cappuccino': 'Code Dark',
+  'theme.color.sakura': 'Sakura',
+  'theme.color.lavender': 'Lavendel',
+  'theme.color.mint': 'Minze',
+  'theme.preset.cappuccino_slab': 'Code Dark · Slab',
+  'theme.preset.sakura_blade': 'Sakura · Blade',
+  'theme.preset.mint_sharp': 'Minze · Sharp',
+  'theme.preset.lavender_panel': 'Lavendel · Panel',
+  'theme.preset.light_soft': 'Hell · Soft',
 
 } as const;

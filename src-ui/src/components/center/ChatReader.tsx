@@ -145,7 +145,7 @@ export function ChatReader({ sessionId }: { sessionId: string }) {
       targetId = crypto.randomUUID();
       dispatch({ 
         type: 'ADD_TERMINAL', 
-        session: { id: targetId, tool: currentSession.tool as any, folderPath: currentSession.cwd, scanData: null, agentStatus: 'idle' }
+        session: { id: targetId, tool: currentSession.tool as any, folderPath: currentSession.cwd, scanData: null }
       });
     } else if (targetId) {
       dispatch({ type: 'SET_TERMINAL_TOOL', id: targetId, tool: currentSession.tool as any });

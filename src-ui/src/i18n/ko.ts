@@ -45,10 +45,6 @@ export const ko = {
 
   'tab.new': '도구 선택',
 
-  // Island
-  'island.status.working': '생각 중...',
-  'island.status.wait_input': '입력 대기 중',
-  'island.status.idle': '입력 대기 중',
 
   // Task Board
   'task.input_placeholder': '할 일 입력...',
@@ -82,5 +78,21 @@ export const ko = {
 
   // Session
   'session.max': '동시에 최대 5개의 세션만 열 수 있습니다.',
+
+  // Theme Menu
+  'theme.section.color': '색상',
+  'theme.section.shape': '형태',
+  'theme.section.presets': '추천 조합',
+  'theme.color.light': '라이트',
+  'theme.color.dark': '다크',
+  'theme.color.cappuccino': '코드 다크',
+  'theme.color.sakura': '사쿠라',
+  'theme.color.lavender': '라벤더',
+  'theme.color.mint': '민트',
+  'theme.preset.cappuccino_slab': '코드 다크 · Slab',
+  'theme.preset.sakura_blade': '사쿠라 · Blade',
+  'theme.preset.mint_sharp': '민트 · Sharp',
+  'theme.preset.lavender_panel': '라벤더 · Panel',
+  'theme.preset.light_soft': '라이트 · Soft',
 
 } as const;

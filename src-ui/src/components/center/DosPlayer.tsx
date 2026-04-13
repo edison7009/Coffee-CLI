@@ -172,10 +172,7 @@ export function DosPlayer({ sessionId }: { sessionId: string }) {
       .catch(() => setLoading(false));
   }, []);
 
-  // Report game state
-  useEffect(() => {
-    dispatch({ type: 'SET_AGENT_STATUS', id: sessionId, status: activeGame ? 'working' : 'idle' });
-  }, [activeGame, dispatch, sessionId]);
+  // (agentStatus reporting removed — SET_AGENT_STATUS is no longer in the action type)
 
   // ── Launch emulator ──
   useEffect(() => {
@@ -496,7 +493,7 @@ export function DosPlayer({ sessionId }: { sessionId: string }) {
         } else {
           dispatch({ 
             type: 'ADD_TERMINAL', 
-            session: { id: crypto.randomUUID(), tool: null, folderPath: null, scanData: null, agentStatus: 'idle' }
+            session: { id: crypto.randomUUID(), tool: null, folderPath: null, scanData: null }
           });
         }
       } else {
@@ -584,7 +581,7 @@ export function DosPlayer({ sessionId }: { sessionId: string }) {
                   <div key={game.name} className="launchpad-card" onClick={() => handleLaunch(game)}>
                     <div className="launchpad-icon">
                       {info.icon 
-                        ? <img src={info.icon} alt={info.title} style={{ width: '1.4em', height: '1.4em', borderRadius: 4, objectFit: 'cover' }} />
+                        ? <img src={info.icon} alt={info.title} style={{ width: '1.4em', height: '1.4em', borderRadius: 'var(--radius-xs)', objectFit: 'cover' }} />
                         : '\ud83c\udfae'}
                     </div>
                     <span>{info.title}</span>

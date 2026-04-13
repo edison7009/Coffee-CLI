@@ -45,10 +45,6 @@ export const zhCN = {
 
   'tab.new': '选择工具',
 
-  // Island
-  'island.status.working': '思考中...',
-  'island.status.wait_input': '等待输入',
-  'island.status.idle': '等待输入', // fallback: same as wait_input
 
   // Task Board
   'task.input_placeholder': '写下一个任务...',
@@ -82,5 +78,21 @@ export const zhCN = {
 
   // Session
   'session.max': '最多只能同时打开 5 个会话。',
+
+  // Theme Menu
+  'theme.section.color': '配色',
+  'theme.section.shape': '形态',
+  'theme.section.presets': '推荐组合',
+  'theme.color.light': '明亮',
+  'theme.color.dark': '暗黑',
+  'theme.color.cappuccino': '代码夜',
+  'theme.color.sakura': '夜樱',
+  'theme.color.lavender': '薰衣草雾',
+  'theme.color.mint': '薄荷深海',
+  'theme.preset.cappuccino_slab': '代码夜 · Slab',
+  'theme.preset.sakura_blade': '夜樱 · Blade',
+  'theme.preset.mint_sharp': '薄荷 · Sharp',
+  'theme.preset.lavender_panel': '薰衣草 · Panel',
+  'theme.preset.light_soft': '明亮 · Soft',
 
 } as const;

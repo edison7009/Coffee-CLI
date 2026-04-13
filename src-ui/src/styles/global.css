@@ -49,7 +49,7 @@
 
 
 /* ─── Base Reset ─────────────────────────────────────── */
-*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; cursor: default !important; }
 
 /* ─── Auto-hiding Scrollbars (Global) ────────────────── */
 * {
@@ -100,16 +100,105 @@
     --font: 'Inter', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Noto Sans SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
     --font-serif: 'Lora', ui-serif, Georgia, Cambria, "Times New Roman", 'PingFang SC', 'Noto Sans SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
     --mono: 'Cascadia Code', 'Cascadia Mono', 'SF Mono', Menlo, Monaco, Consolas, 'Courier New', monospace;
+    --radius-xs: 4px;
     --radius-sm: 8px;
     --radius-md: 16px;
     --radius-lg: 24px;
     --radius-pill: 9999px;
     --transition: 0.2s ease;
-    
+
     /* Panel Config */
     --w-left: 320px;
     --w-right: 320px;
     --gap: 16px;
+
+    /* ─── Shape form defaults (overridden by [data-shape]) ──────── */
+    --shape-radius-tab: 10px 10px 0 0;
+    --shape-radius-panel: var(--radius-md);
+    --shape-radius-btn: var(--radius-sm);
+    --shape-radius-pill: var(--radius-pill);
+    --shape-edge-light-top: transparent;
+    --shape-edge-light-bottom: transparent;
+    --shape-accent-stripe-width: 0px;
+    --shape-border-strength: 1;
+}
+
+/* ═══════════════════════════════════════════════════════
+   SHAPE FORMS — orthogonal to color theme
+   Applied via [data-shape] on <html>. Overrides radius vars
+   so existing var(--radius-sm/md/lg/pill) consumers react.
+   ═══════════════════════════════════════════════════════ */
+
+/* Soft — current rounded look (default) */
+[data-shape="soft"] {
+    --radius-xs: 4px;
+    --radius-sm: 8px;
+    --radius-md: 16px;
+    --radius-lg: 24px;
+    --radius-pill: 9999px;
+    --shape-radius-tab: 10px 10px 0 0;
+    --shape-radius-panel: 16px;
+    --shape-radius-btn: 8px;
+    --shape-radius-pill: 9999px;
+}
+
+/* Slab — micro-rounded + directional light edges (立体石板) */
+[data-shape="slab"] {
+    --radius-xs: 2px;
+    --radius-sm: 3px;
+    --radius-md: 4px;
+    --radius-lg: 6px;
+    --radius-pill: 4px;
+    --shape-radius-tab: 3px 3px 0 0;
+    --shape-radius-panel: 4px;
+    --shape-radius-btn: 3px;
+    --shape-radius-pill: 4px;
+    --shape-edge-light-top: rgba(255, 255, 255, 0.07);
+    --shape-edge-light-bottom: rgba(0, 0, 0, 0.35);
+    --shape-border-strength: 1.25;
+}
+
+/* Sharp Terminal — fully flat, VSCode default */
+[data-shape="sharp"] {
+    --radius-xs: 0px;
+    --radius-sm: 0px;
+    --radius-md: 0px;
+    --radius-lg: 0px;
+    --radius-pill: 0px;
+    --shape-radius-tab: 0;
+    --shape-radius-panel: 0;
+    --shape-radius-btn: 0;
+    --shape-radius-pill: 0;
+    --shape-border-strength: 1.5;
+}
+
+/* Blade — flat + left accent stripe (JetBrains/Cursor) */
+[data-shape="blade"] {
+    --radius-xs: 0px;
+    --radius-sm: 0px;
+    --radius-md: 0px;
+    --radius-lg: 0px;
+    --radius-pill: 0px;
+    --shape-radius-tab: 0;
+    --shape-radius-panel: 0;
+    --shape-radius-btn: 0;
+    --shape-radius-pill: 0;
+    --shape-accent-stripe-width: 3px;
+    --shape-border-strength: 1.25;
+}
+
+/* Panel — flat + hard dividers (tmux/老终端) */
+[data-shape="panel"] {
+    --radius-xs: 0px;
+    --radius-sm: 0px;
+    --radius-md: 0px;
+    --radius-lg: 0px;
+    --radius-pill: 0px;
+    --shape-radius-tab: 0;
+    --shape-radius-panel: 0;
+    --shape-radius-btn: 0;
+    --shape-radius-pill: 0;
+    --shape-border-strength: 2;
 }
 
 /* ─── Dark Theme (Claude-inspired & Espresso) ──────────── */
@@ -178,6 +267,142 @@
 
     --bg-titlebar: rgba(0, 0, 0, 0.03);
     --bg-terminal: #FAFAF7; /* Seamless */
+}
+
+/* ─── Code Dark (代码夜) — Cursor IDE faithful palette ──────── */
+[data-theme="cappuccino"] {
+    --bg-app: #1a1a1a;
+    --bg-panel: #252525;
+    --bg-card: rgba(255, 255, 255, 0.03);
+    --bg-input: #3a3a3a;
+    --bg-input-focus: #444444;
+    --bg-hover: rgba(255, 255, 255, 0.05);
+    --bg-active: rgba(255, 255, 255, 0.08);
+
+    --border: #333333;
+    --border-input: #3a3a3a;
+    --border-focus: #555555;
+
+    --text-1: #cccccc;
+    --text-2: #808080;
+    --text-3: #555555;
+
+    --accent: #4a4a4a;
+    --accent-hover: #5a5a5a;
+    --accent-active: #3a3a3a;
+    --accent-bg: rgba(255, 255, 255, 0.05);
+
+    --green: #4ec9b0;
+    --red: #f14c4c;
+    --blue: #569cd6;
+
+    --shadow-panel: 0 16px 48px rgba(0, 0, 0, 0.6), 0 4px 16px rgba(0, 0, 0, 0.4);
+    --glass-blur: blur(24px);
+
+    --bg-titlebar: rgba(0, 0, 0, 0.35);
+    --bg-terminal: #141414;
+}
+
+/* ─── Sakura Noir (夜樱) — pink on deep plum ──────── */
+[data-theme="sakura"] {
+    --bg-app: #1a1520;
+    --bg-panel: #221b28;
+    --bg-card: rgba(248, 180, 200, 0.035);
+    --bg-input: #2a2230;
+    --bg-input-focus: #322838;
+    --bg-hover: rgba(248, 180, 200, 0.06);
+    --bg-active: rgba(248, 180, 200, 0.1);
+
+    --border: rgba(248, 180, 200, 0.06);
+    --border-input: rgba(248, 180, 200, 0.09);
+    --border-focus: rgba(248, 180, 200, 0.4);
+
+    --text-1: #f0e4ea;
+    --text-2: #c4b0bc;
+    --text-3: #8a7684;
+
+    --accent: #f8b4c8;
+    --accent-hover: #ffc6d6;
+    --accent-active: #e89cb4;
+    --accent-bg: rgba(248, 180, 200, 0.14);
+
+    --green: #a8dcc0;
+    --red: #ff8098;
+    --blue: #b4a8e0;
+
+    --shadow-panel: 0 16px 48px rgba(40, 10, 30, 0.45), 0 4px 16px rgba(20, 5, 15, 0.2);
+    --glass-blur: blur(24px);
+
+    --bg-titlebar: rgba(0, 0, 0, 0.15);
+    --bg-terminal: #0a0810;
+}
+
+/* ─── Lavender Mist (薰衣草雾) — lilac on deep violet-grey ──────── */
+[data-theme="lavender"] {
+    --bg-app: #1a1826;
+    --bg-panel: #221f2e;
+    --bg-card: rgba(200, 182, 255, 0.035);
+    --bg-input: #2a2638;
+    --bg-input-focus: #322d42;
+    --bg-hover: rgba(200, 182, 255, 0.06);
+    --bg-active: rgba(200, 182, 255, 0.1);
+
+    --border: rgba(200, 182, 255, 0.07);
+    --border-input: rgba(200, 182, 255, 0.1);
+    --border-focus: rgba(200, 182, 255, 0.38);
+
+    --text-1: #e8e4f2;
+    --text-2: #b8b0cc;
+    --text-3: #7e7890;
+
+    --accent: #c8b6ff;
+    --accent-hover: #d8c8ff;
+    --accent-active: #b0a0ec;
+    --accent-bg: rgba(200, 182, 255, 0.13);
+
+    --green: #a8d4b8;
+    --red: #f09090;
+    --blue: #a0b8e4;
+
+    --shadow-panel: 0 16px 48px rgba(20, 15, 40, 0.45), 0 4px 16px rgba(10, 8, 20, 0.2);
+    --glass-blur: blur(24px);
+
+    --bg-titlebar: rgba(0, 0, 0, 0.15);
+    --bg-terminal: #0a0814;
+}
+
+/* ─── Mint Abyss (薄荷深海) — mint on deep teal-black ──────── */
+[data-theme="mint"] {
+    --bg-app: #0f1e1c;
+    --bg-panel: #142623;
+    --bg-card: rgba(122, 232, 200, 0.035);
+    --bg-input: #1a2e2a;
+    --bg-input-focus: #203832;
+    --bg-hover: rgba(122, 232, 200, 0.06);
+    --bg-active: rgba(122, 232, 200, 0.1);
+
+    --border: rgba(122, 232, 200, 0.07);
+    --border-input: rgba(122, 232, 200, 0.1);
+    --border-focus: rgba(122, 232, 200, 0.38);
+
+    --text-1: #e0f0ea;
+    --text-2: #a0c4b8;
+    --text-3: #688478;
+
+    --accent: #7ae8c8;
+    --accent-hover: #94f2d6;
+    --accent-active: #60d0b0;
+    --accent-bg: rgba(122, 232, 200, 0.13);
+
+    --green: #7ae8c8;
+    --red: #ff8878;
+    --blue: #78c8d4;
+
+    --shadow-panel: 0 16px 48px rgba(0, 15, 12, 0.45), 0 4px 16px rgba(0, 8, 6, 0.2);
+    --glass-blur: blur(24px);
+
+    --bg-titlebar: rgba(0, 0, 0, 0.15);
+    --bg-terminal: #050c0a;
 }
 
 /* ─── App Shell ──────────────────────────────────────── */
@@ -1609,4 +1834,80 @@ body {
 .costintel-thead span:nth-child(2),
 .costintel-thead span:nth-child(3) {
     text-align: right;
+}
+
+/* ═══════════════════════════════════════════════════════
+   SHAPE-SPECIFIC VISUAL OVERRIDES
+   Run after base styles so they override per shape.
+   ═══════════════════════════════════════════════════════ */
+
+/* ─── Slab: directional light edges (立体石板) ─────────────
+   Inset box-shadow on the 3 panels simulates light from the
+   top-left — brighter top/left, darker bottom/right. */
+[data-shape="slab"] .panel-left,
+[data-shape="slab"] .panel-center,
+[data-shape="slab"] .panel-right {
+    box-shadow:
+        inset 1px 1px 0 0 var(--shape-edge-light-top),
+        inset -1px -1px 0 0 var(--shape-edge-light-bottom);
+}
+
+[data-shape="slab"] .chrome-tab.active {
+    box-shadow:
+        inset 1px 1px 0 0 var(--shape-edge-light-top),
+        inset -1px 0 0 0 var(--shape-edge-light-bottom);
+}
+
+[data-shape="slab"] .task-card,
+[data-shape="slab"] .launchpad-card,
+[data-shape="slab"] .guide-card,
+[data-shape="slab"] .remote-form-card,
+[data-shape="slab"] .chat-input-container {
+    box-shadow:
+        inset 1px 1px 0 0 var(--shape-edge-light-top),
+        inset -1px -1px 0 0 var(--shape-edge-light-bottom),
+        0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* ─── Sharp / Panel: strengthen hairline dividers ───────── */
+[data-shape="sharp"] .panel-left,
+[data-shape="panel"] .panel-left {
+    border-right-color: rgba(255, 255, 255, 0.15);
+}
+
+[data-shape="sharp"] .panel-right,
+[data-shape="panel"] .panel-right {
+    border-left-color: rgba(255, 255, 255, 0.15);
+}
+
+[data-shape="sharp"] .chrome-tab.active,
+[data-shape="panel"] .chrome-tab.active {
+    box-shadow: inset 0 2px 0 0 var(--accent); /* VSCode-style top accent bar */
+}
+
+/* ─── Blade: left accent stripe on active tab + cards ──── */
+[data-shape="blade"] .chrome-tab.active {
+    box-shadow: inset var(--shape-accent-stripe-width) 0 0 0 var(--accent);
+}
+
+[data-shape="blade"] .task-card:hover,
+[data-shape="blade"] .explorer-tab.active {
+    box-shadow: inset var(--shape-accent-stripe-width) 0 0 0 var(--accent);
+}
+
+[data-shape="blade"] .panel-left {
+    border-right: 1px solid var(--border);
+}
+[data-shape="blade"] .panel-right {
+    border-left: 1px solid var(--border);
+}
+
+/* ─── Panel: hard dividers between explorer-tabs ────────── */
+[data-shape="panel"] .explorer-tabs {
+    background: transparent;
+    border-bottom: 1px solid var(--border);
+    padding: 0;
+}
+[data-shape="panel"] .explorer-tab + .explorer-tab {
+    border-left: 1px solid var(--border);
 }

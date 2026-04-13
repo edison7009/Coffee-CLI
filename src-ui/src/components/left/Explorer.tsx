@@ -3,9 +3,10 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useAppState } from '../../store/app-state';
+import type { ThemeColor, ThemeShape } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
 import { ScrollPanel } from '../common/ScrollPanel';
-import { isTauri, commands } from '../../tauri';
+import { commands } from '../../tauri';
 import type { FileEntry, DriveInfo, DirEntryInfo } from '../../tauri';
 import './Explorer.css';
 
@@ -269,6 +270,114 @@ function LangDropdown({ anchorRef, currentLang, onSelect, onClose }: {
           {lang.code === currentLang && <span style={{ fontSize: 12, opacity: 0.7 }}>✓</span>}
         </button>
       ))}
+    </div>,
+    document.body
+  );
+}
+
+// ─── Theme Menu (color × shape) ──────────────────────────────────────────────
+
+const THEME_COLORS: { code: ThemeColor; labelKey: string; swatch: string; ring: string }[] = [
+  { code: 'light',      labelKey: 'theme.color.light',      swatch: '#FAFAF7', ring: '#c4956a' },
+  { code: 'dark',       labelKey: 'theme.color.dark',       swatch: '#1a1917', ring: '#c4956a' },
+  { code: 'cappuccino', labelKey: 'theme.color.cappuccino', swatch: '#1a1a1a', ring: '#4a4a4a' },
+  { code: 'sakura',     labelKey: 'theme.color.sakura',     swatch: '#221b28', ring: '#f8b4c8' },
+  { code: 'lavender',   labelKey: 'theme.color.lavender',   swatch: '#221f2e', ring: '#c8b6ff' },
+  { code: 'mint',       labelKey: 'theme.color.mint',       swatch: '#142623', ring: '#7ae8c8' },
+];
+
+const THEME_SHAPES: { code: ThemeShape; label: string }[] = [
+  { code: 'soft',  label: 'Soft'  },
+  { code: 'slab',  label: 'Slab'  },
+  { code: 'sharp', label: 'Sharp' },
+  { code: 'blade', label: 'Blade' },
+  { code: 'panel', label: 'Panel' },
+];
+
+const THEME_PRESETS: { labelKey: string; theme: ThemeColor; shape: ThemeShape }[] = [
+  { labelKey: 'theme.preset.cappuccino_slab', theme: 'cappuccino', shape: 'slab'  },
+  { labelKey: 'theme.preset.sakura_blade',    theme: 'sakura',     shape: 'blade' },
+  { labelKey: 'theme.preset.mint_sharp',      theme: 'mint',       shape: 'sharp' },
+  { labelKey: 'theme.preset.lavender_panel',  theme: 'lavender',   shape: 'panel' },
+  { labelKey: 'theme.preset.light_soft',      theme: 'light',      shape: 'soft'  },
+];
+
+function ThemeMenu({ anchorRef, currentTheme, currentShape, onSelectTheme, onSelectShape, onSelectPreset, onClose, t }: {
+  anchorRef: React.RefObject<HTMLButtonElement | null>;
+  currentTheme: ThemeColor;
+  currentShape: ThemeShape;
+  onSelectTheme: (t: ThemeColor) => void;
+  onSelectShape: (s: ThemeShape) => void;
+  onSelectPreset: (t: ThemeColor, s: ThemeShape) => void;
+  onClose: () => void;
+  t: (key: any) => string;
+}) {
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const close = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) onClose();
+    };
+    const closeKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('mousedown', close);
+    document.addEventListener('keydown', closeKey);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      document.removeEventListener('keydown', closeKey);
+    };
+  }, [onClose]);
+
+  const rect = anchorRef.current?.getBoundingClientRect();
+  const style: React.CSSProperties = {
+    position: 'fixed',
+    top: rect ? rect.bottom + 6 : 0,
+    left: rect ? Math.max(8, rect.left - 120) : 0,
+    minWidth: 260,
+  };
+
+  return createPortal(
+    <div className="ctx-menu theme-menu" ref={menuRef} style={style}>
+      <div className="theme-menu-section-label">{t('theme.section.color')}</div>
+      <div className="theme-swatch-grid">
+        {THEME_COLORS.map(c => (
+          <button
+            key={c.code}
+            className={`theme-swatch ${c.code === currentTheme ? 'active' : ''}`}
+            onClick={() => onSelectTheme(c.code)}
+            style={{ background: c.swatch, ['--swatch-ring' as any]: c.ring }}
+          >
+            <span className="theme-swatch-label">{t(c.labelKey as any)}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="ctx-menu-divider" />
+      <div className="theme-menu-section-label">{t('theme.section.shape')}</div>
+      <div className="theme-shape-row">
+        {THEME_SHAPES.map(s => (
+          <button
+            key={s.code}
+            className={`theme-shape-chip ${s.code === currentShape ? 'active' : ''}`}
+            onClick={() => onSelectShape(s.code)}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="ctx-menu-divider" />
+      <div className="theme-menu-section-label">{t('theme.section.presets')}</div>
+      <div className="theme-preset-list">
+        {THEME_PRESETS.map(p => (
+          <button
+            key={p.labelKey}
+            className={`theme-preset-item ${p.theme === currentTheme && p.shape === currentShape ? 'active' : ''}`}
+            onClick={() => onSelectPreset(p.theme, p.shape)}
+          >
+            {t(p.labelKey as any)}
+          </button>
+        ))}
+      </div>
     </div>,
     document.body
   );
@@ -672,15 +781,14 @@ export function Explorer() {
 
   const files = scanData?.files || [];
 
-  const toggleTheme = () => {
-    dispatch({ type: 'SET_THEME', theme: state.currentTheme === 'dark' ? 'light' : 'dark' });
-  };
+  // Theme menu state
+  const [themeMenuOpen, setThemeMenuOpen] = useState(false);
+  const themeBtnRef = useRef<HTMLButtonElement>(null);
 
   // Language dropdown state
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
   const langBtnRef = useRef<HTMLButtonElement>(null);
 
-  const [islandForced, setIslandForced] = useState(false);
   const [activeTab, setActiveTab] = useState<'workspace' | 'computer'>('workspace');
   const [drives, setDrives] = useState<DriveInfo[]>([]);
 
@@ -723,17 +831,7 @@ export function Explorer() {
     }
   }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    let unlisten: (() => void) | undefined;
-    if (isTauri) {
-      import('@tauri-apps/api/event').then(({ listen }) => {
-        listen<{ forced: boolean }>('island-state-sync', (e) => {
-          setIslandForced(e.payload.forced);
-        }).then(u => unlisten = u);
-      }).catch(() => {});
-    }
-    return () => unlisten?.();
-  }, []);
+
 
   // When any fs operation touches a path inside the workspace folder, re-scan so the
   // Workspace tab tree stays in sync (BrowserDirNode handles the Computer tab itself).
@@ -752,15 +850,6 @@ export function Explorer() {
     window.addEventListener('fs-refresh', handler);
     return () => window.removeEventListener('fs-refresh', handler);
   }, [folderPath, dispatch]);
-
-  const toggleIsland = () => {
-    const next = !islandForced;
-    setIslandForced(next);
-    import('@tauri-apps/api/event').then(({ emit }) => {
-      emit('island-toggle', { forceShow: next });
-    }).catch(() => {});
-  };
-
 
 
   const treeRoot = useMemo(() => buildTree(files), [files]);
@@ -796,21 +885,25 @@ export function Explorer() {
         </div>
         
         <div className="window-controls">
-          <button className="icon-btn xs" onClick={toggleTheme}>
-            {state.currentTheme === 'dark' ? '🌙' : '☀️'}
+          <button
+            ref={themeBtnRef}
+            className="icon-btn xs"
+            onClick={() => setThemeMenuOpen(v => !v)}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="13.5" cy="6.5" r="2.5" />
+              <circle cx="6" cy="12" r="3" />
+              <circle cx="17" cy="15.5" r="2" />
+              <circle cx="9" cy="18.5" r="1.5" />
+              <path d="M21 12a9 9 0 1 1-9-9c0 5 4 9 9 9Z" />
+            </svg>
           </button>
           <button
             ref={langBtnRef}
             className="icon-btn xs lang-btn lang-glyph"
             onClick={() => setLangDropdownOpen(!langDropdownOpen)}
-            title="Language"
           >
             {getLangGlyph(state.currentLang)}
-          </button>
-          <button className={`icon-btn xs ${islandForced ? 'island-active' : ''}`} onClick={toggleIsland}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill={islandForced ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect width="16" height="6" x="4" y="9" rx="3" />
-            </svg>
           </button>
         </div>
       </div>
@@ -834,7 +927,6 @@ export function Explorer() {
         <button
           className="workspace-dir-btn"
           onClick={handleOpenFolder}
-          title={activeSession.folderPath || undefined}
         >
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
             <path d="m6 14 1.45-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.55 6a2 2 0 0 1-1.94 1.5H4a2 2 0 0 1-2-2V5c0-1.1.9-2 2-2h3.93a2 2 0 0 1 1.66.9l.82 1.2a2 2 0 0 0 1.66.9H18a2 2 0 0 1 2 2v2"></path>
@@ -883,8 +975,8 @@ export function Explorer() {
             <div className="file-tree-container" style={{ pointerEvents: 'none' }}>
               {Array.from({ length: 12 }).map((_, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 8px', opacity: Math.max(0.1, 1 - i * 0.08) }}>
-                  <div className="shimmer-box" style={{ width: 14, height: 14, borderRadius: 2, flexShrink: 0 }}></div>
-                  <div className="shimmer-box" style={{ width: `${30 + (i * 7) % 40}%`, height: 12, borderRadius: 2 }}></div>
+                  <div className="shimmer-box" style={{ width: 14, height: 14, borderRadius: 'var(--radius-xs)', flexShrink: 0 }}></div>
+                  <div className="shimmer-box" style={{ width: `${30 + (i * 7) % 40}%`, height: 12, borderRadius: 'var(--radius-xs)' }}></div>
                 </div>
               ))}
             </div>
@@ -921,6 +1013,23 @@ export function Explorer() {
             setLangDropdownOpen(false);
           }}
           onClose={() => setLangDropdownOpen(false)}
+        />
+      )}
+
+      {/* Theme menu (color × shape) */}
+      {themeMenuOpen && (
+        <ThemeMenu
+          anchorRef={themeBtnRef}
+          currentTheme={state.currentTheme}
+          currentShape={state.currentShape}
+          onSelectTheme={(t) => dispatch({ type: 'SET_THEME', theme: t })}
+          onSelectShape={(s) => dispatch({ type: 'SET_SHAPE', shape: s })}
+          onSelectPreset={(t, s) => {
+            dispatch({ type: 'SET_THEME', theme: t });
+            dispatch({ type: 'SET_SHAPE', shape: s });
+          }}
+          onClose={() => setThemeMenuOpen(false)}
+          t={t}
         />
       )}
     </div>

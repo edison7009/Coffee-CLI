@@ -45,10 +45,7 @@ export const pt = {
 
   'tab.new': 'Selecionar ferramenta',
 
-  // Island
-  'island.status.working': 'Pensando...',
-  'island.status.wait_input': 'Aguardando entrada',
-  'island.status.idle': 'Aguardando entrada',
+
 
   // Task Board
   'task.input_placeholder': 'Escrever uma tarefa...',
@@ -82,5 +79,21 @@ export const pt = {
 
   // Session
   'session.max': 'É possível ter no máximo 5 sessões abertas ao mesmo tempo.',
+
+  // Theme Menu
+  'theme.section.color': 'Cores',
+  'theme.section.shape': 'Forma',
+  'theme.section.presets': 'Combinações',
+  'theme.color.light': 'Claro',
+  'theme.color.dark': 'Escuro',
+  'theme.color.cappuccino': 'Code Dark',
+  'theme.color.sakura': 'Sakura',
+  'theme.color.lavender': 'Lavanda',
+  'theme.color.mint': 'Menta',
+  'theme.preset.cappuccino_slab': 'Code Dark · Slab',
+  'theme.preset.sakura_blade': 'Sakura · Blade',
+  'theme.preset.mint_sharp': 'Menta · Sharp',
+  'theme.preset.lavender_panel': 'Lavanda · Panel',
+  'theme.preset.light_soft': 'Claro · Soft',
 
 } as const;

@@ -47,10 +47,7 @@ export const vi = {
   // Tab
   'tab.new': 'Chọn công cụ',
 
-  // Island
-  'island.status.working': 'Đang suy nghĩ...',
-  'island.status.wait_input': 'Đang chờ nhập',
-  'island.status.idle': 'Đang chờ nhập',
+
 
   // Task Board
   'task.input_placeholder': 'Viết một nhiệm vụ...',
@@ -84,4 +81,20 @@ export const vi = {
 
   // Session
   'session.max': 'Tối đa 5 phiên có thể mở cùng lúc.',
+
+  // Theme Menu
+  'theme.section.color': 'Màu sắc',
+  'theme.section.shape': 'Hình dạng',
+  'theme.section.presets': 'Gợi ý',
+  'theme.color.light': 'Sáng',
+  'theme.color.dark': 'Tối',
+  'theme.color.cappuccino': 'Code Dark',
+  'theme.color.sakura': 'Sakura',
+  'theme.color.lavender': 'Oải hương',
+  'theme.color.mint': 'Bạc hà',
+  'theme.preset.cappuccino_slab': 'Code Dark · Slab',
+  'theme.preset.sakura_blade': 'Sakura · Blade',
+  'theme.preset.mint_sharp': 'Bạc hà · Sharp',
+  'theme.preset.lavender_panel': 'Oải hương · Panel',
+  'theme.preset.light_soft': 'Sáng · Soft',
 };

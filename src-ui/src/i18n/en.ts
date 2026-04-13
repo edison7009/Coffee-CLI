@@ -47,10 +47,6 @@ export const en = {
   // Tab
   'tab.new': 'Select Tool',
 
-  // Island
-  'island.status.working': 'Thinking...',
-  'island.status.wait_input': 'Waiting for input',
-  'island.status.idle': 'Waiting for input', // fallback: same as wait_input
 
   // Task Board
   'task.input_placeholder': 'Write a task...',
@@ -84,6 +80,22 @@ export const en = {
 
   // Session
   'session.max': 'Maximum 5 sessions can be open at once.',
+
+  // Theme Menu
+  'theme.section.color': 'Colors',
+  'theme.section.shape': 'Shape',
+  'theme.section.presets': 'Presets',
+  'theme.color.light': 'Light',
+  'theme.color.dark': 'Dark',
+  'theme.color.cappuccino': 'Code Dark',
+  'theme.color.sakura': 'Sakura',
+  'theme.color.lavender': 'Lavender',
+  'theme.color.mint': 'Mint',
+  'theme.preset.cappuccino_slab': 'Code Dark \u00b7 Slab',
+  'theme.preset.sakura_blade': 'Sakura \u00b7 Blade',
+  'theme.preset.mint_sharp': 'Mint \u00b7 Sharp',
+  'theme.preset.lavender_panel': 'Lavender \u00b7 Panel',
+  'theme.preset.light_soft': 'Light \u00b7 Soft',
 
 } as const;
 
