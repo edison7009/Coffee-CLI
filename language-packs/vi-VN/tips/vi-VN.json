@@ -1,0 +1,168 @@
+{
+  "tips": [
+    {
+      "id": "new-user-warmup",
+      "text": "Bắt đầu với các tính năng nhỏ hoặc sửa lỗi, yêu cầu Claude đề xuất kế hoạch và xác minh các chỉnh sửa được đề xuất"
+    },
+    {
+      "id": "plan-mode-for-complex-tasks",
+      "text": "Sử dụng Chế độ lập kế hoạch để chuẩn bị cho một yêu cầu phức tạp trước khi thực hiện thay đổi. Nhấn Shift+Tab hai lần để bật."
+    },
+    {
+      "id": "default-permission-mode-config",
+      "text": "Sử dụng /config để thay đổi chế độ cấp phép mặc định của bạn (bao gồm Chế độ kế hoạch)"
+    },
+    {
+      "id": "git-worktrees",
+      "text": "Sử dụng cây công việc git để chạy song song nhiều phiên Claude."
+    },
+    {
+      "id": "color-when-multi-clauding",
+      "text": "Chạy nhiều phiên Claude? Sử dụng /color và /rename để phân biệt chúng trong nháy mắt."
+    },
+    {
+      "id": "terminal-setup",
+      "text": "Chạy /terminal-setup để cho phép tích hợp thiết bị đầu cuối thuận tiện như Shift + Enter cho dòng mới và hơn thế nữa"
+    },
+    {
+      "id": "shift-enter",
+      "text": "Nhấn Shift+Enter để gửi tin nhắn nhiều dòng"
+    },
+    {
+      "id": "shift-enter-setup",
+      "text": "Chạy /terminal-setup để bật Shift+Enter cho các dòng mới"
+    },
+    {
+      "id": "memory-command",
+      "text": "Sử dụng /memory để xem và quản lý bộ nhớ Claude"
+    },
+    {
+      "id": "theme-command",
+      "text": "Sử dụng /theme để thay đổi chủ đề màu"
+    },
+    {
+      "id": "colorterm-truecolor",
+      "text": "Hãy thử đặt biến môi trường COLORTERM=truecolor để có màu sắc phong phú hơn"
+    },
+    {
+      "id": "powershell-tool-env",
+      "text": "Đặt CLAUDE_CODE_USE_POWERSHELL_TOOL=1 để bật công cụ PowerShell (xem trước)"
+    },
+    {
+      "id": "status-line",
+      "text": "Sử dụng /statusline để thiết lập dòng trạng thái tùy chỉnh sẽ hiển thị bên dưới hộp nhập"
+    },
+    {
+      "id": "prompt-queue",
+      "text": "Nhấn Enter để xếp hàng các tin nhắn bổ sung trong khi Claude đang làm việc."
+    },
+    {
+      "id": "enter-to-steer-in-relatime",
+      "text": "Gửi tin nhắn cho Claude trong khi nó hoạt động để điều khiển Claude theo thời gian thực"
+    },
+    {
+      "id": "todo-list",
+      "text": "Yêu cầu Claude tạo danh sách việc cần làm khi thực hiện các nhiệm vụ phức tạp để theo dõi tiến độ và luôn đi đúng hướng"
+    },
+    {
+      "id": "vscode-command-install",
+      "text": "Mở Bảng lệnh (Cmd+Shift+P) và chạy \"Lệnh Shell: Cài đặt lệnh 'code' trong PATH\" để kích hoạt tích hợp IDE"
+    },
+    {
+      "id": "ide-upsell-external-terminal",
+      "text": "Kết nối Claude với IDE của bạn thông qua /ide"
+    },
+    {
+      "id": "install-github-app",
+      "text": "Chạy /install-github-app để gắn thẻ @claude ngay từ các vấn đề và PR trên Github của bạn"
+    },
+    {
+      "id": "install-slack-app",
+      "text": "Chạy /install-slack-app để sử dụng Claude trong Slack"
+    },
+    {
+      "id": "permissions",
+      "text": "Sử dụng /permissions để phê duyệt trước và từ chối trước các công cụ bash, chỉnh sửa và MCP"
+    },
+    {
+      "id": "drag-and-drop-images",
+      "text": "Bạn có biết bạn có thể kéo và thả các tập tin hình ảnh vào terminal của mình không?"
+    },
+    {
+      "id": "paste-images-mac",
+      "text": "Dán hình ảnh vào Mã Claude bằng control+v (không phải cmd+v!)"
+    },
+    {
+      "id": "double-esc",
+      "text": "Nhấn đúp esc để tua lại cuộc trò chuyện về thời điểm trước đó"
+    },
+    {
+      "id": "double-esc-code-restore",
+      "text": "Nhấn đúp esc để tua lại mã và/hoặc cuộc trò chuyện về thời điểm trước đó"
+    },
+    {
+      "id": "continue",
+      "text": "Chạy claude --continue hoặc claude --resume để tiếp tục cuộc trò chuyện"
+    },
+    {
+      "id": "rename-conversation",
+      "text": "Đặt tên cho cuộc trò chuyện của bạn bằng /đổi tên để dễ dàng tìm thấy chúng trong /tiếp tục sau"
+    },
+    {
+      "id": "custom-commands",
+      "text": "Tạo kỹ năng bằng cách thêm tệp .md vào .claude/skills/ trong dự án của bạn hoặc ~/.claude/skills/ cho các kỹ năng hoạt động trong bất kỳ dự án nào"
+    },
+    {
+      "id": "shift-tab",
+      "text": "Nhấn Shift+Tab để chuyển đổi giữa chế độ mặc định, chế độ chỉnh sửa tự động chấp nhận và chế độ kế hoạch"
+    },
+    {
+      "id": "image-paste",
+      "text": "Sử dụng Ctrl+V để dán hình ảnh từ clipboard của bạn"
+    },
+    {
+      "id": "custom-agents",
+      "text": "Sử dụng /agent để tối ưu hóa các tác vụ cụ thể. Ví dụ. Kiến trúc sư phần mềm, Người viết mã, Người đánh giá mã"
+    },
+    {
+      "id": "agent-flag",
+      "text": "Sử dụng --agent <agent_name> để bắt đầu cuộc trò chuyện trực tiếp với đại lý phụ"
+    },
+    {
+      "id": "desktop-app",
+      "text": "Chạy Mã Claude cục bộ hoặc từ xa bằng ứng dụng máy tính để bàn Claude: clau.de/desktop"
+    },
+    {
+      "id": "desktop-shortcut",
+      "text": "Tiếp tục phiên của bạn trong Claude Code Desktop với /desktop"
+    },
+    {
+      "id": "web-app",
+      "text": "Chạy các tác vụ trên đám mây trong khi bạn tiếp tục mã hóa cục bộ qua clau.de/web"
+    },
+    {
+      "id": "mobile-app",
+      "text": "/mobile để sử dụng Mã Claude từ ứng dụng Claude trên điện thoại của bạn"
+    },
+    {
+      "id": "effort-high-nudge",
+      "text": "Sử dụng /effort cao để có câu trả lời một lần tốt hơn. Claude suy nghĩ kỹ trước."
+    },
+    {
+      "id": "subagent-fanout-nudge",
+      "text": "Đối với những nhiệm vụ lớn, hãy bảo Claude sử dụng các đặc vụ phụ. Chúng hoạt động song song và giữ cho luồng chính của bạn luôn sạch sẽ."
+    },
+    {
+      "id": "loop-command-nudge",
+      "text": "/loop chạy bất kỳ lời nhắc nào theo lịch trình định kỳ. Tuyệt vời để giám sát việc triển khai, chăm sóc PR hoặc trạng thái thăm dò ý kiến."
+    },
+    {
+      "id": "guest-passes",
+      "text": "Bạn có thẻ khách miễn phí để chia sẻ qua /passes"
+    },
+    {
+      "id": "feedback-command",
+      "text": "Hãy sử dụng /phản hồi để giúp chúng tôi cải thiện!"
+    }
+  ]
+}

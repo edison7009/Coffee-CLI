@@ -1,0 +1,168 @@
+{
+  "tips": [
+    {
+      "id": "new-user-warmup",
+      "text": "Beginnen Sie mit kleinen Funktionen oder Fehlerbehebungen, bitten Sie Claude, einen Plan vorzuschlagen, und überprüfen Sie die vorgeschlagenen Änderungen"
+    },
+    {
+      "id": "plan-mode-for-complex-tasks",
+      "text": "Verwenden Sie den Planmodus, um sich auf eine komplexe Anfrage vorzubereiten, bevor Sie Änderungen vornehmen. Drücken Sie zum Aktivieren zweimal Umschalt+Tab."
+    },
+    {
+      "id": "default-permission-mode-config",
+      "text": "Verwenden Sie /config, um Ihren Standard-Berechtigungsmodus (einschließlich Planmodus) zu ändern."
+    },
+    {
+      "id": "git-worktrees",
+      "text": "Verwenden Sie Git Worktrees, um mehrere Claude-Sitzungen parallel auszuführen."
+    },
+    {
+      "id": "color-when-multi-clauding",
+      "text": "Mehrere Claude-Sitzungen durchführen? Verwenden Sie /color und /rename, um sie auf einen Blick zu unterscheiden."
+    },
+    {
+      "id": "terminal-setup",
+      "text": "Führen Sie /terminal-setup aus, um eine praktische Terminalintegration wie Umschalt + Eingabetaste für neue Leitungen und mehr zu ermöglichen"
+    },
+    {
+      "id": "shift-enter",
+      "text": "Drücken Sie Umschalt+Eingabetaste, um eine mehrzeilige Nachricht zu senden"
+    },
+    {
+      "id": "shift-enter-setup",
+      "text": "Führen Sie /terminal-setup aus, um Umschalt+Eingabetaste für neue Zeilen zu aktivieren"
+    },
+    {
+      "id": "memory-command",
+      "text": "Verwenden Sie /memory, um den Claude-Speicher anzuzeigen und zu verwalten"
+    },
+    {
+      "id": "theme-command",
+      "text": "Verwenden Sie /theme, um das Farbthema zu ändern"
+    },
+    {
+      "id": "colorterm-truecolor",
+      "text": "Versuchen Sie, die Umgebungsvariable COLORTERM=truecolor für kräftigere Farben festzulegen"
+    },
+    {
+      "id": "powershell-tool-env",
+      "text": "Legen Sie CLAUDE_CODE_USE_POWERSHELL_TOOL=1 fest, um das PowerShell-Tool (Vorschau) zu aktivieren."
+    },
+    {
+      "id": "status-line",
+      "text": "Verwenden Sie /statusline, um eine benutzerdefinierte Statuszeile einzurichten, die unter dem Eingabefeld angezeigt wird"
+    },
+    {
+      "id": "prompt-queue",
+      "text": "Drücken Sie die Eingabetaste, um zusätzliche Nachrichten in die Warteschlange zu stellen, während Claude arbeitet."
+    },
+    {
+      "id": "enter-to-steer-in-relatime",
+      "text": "Senden Sie Nachrichten an Claude, während es daran arbeitet, Claude in Echtzeit zu steuern"
+    },
+    {
+      "id": "todo-list",
+      "text": "Bitten Sie Claude, bei der Arbeit an komplexen Aufgaben eine Aufgabenliste zu erstellen, um den Fortschritt zu verfolgen und auf dem richtigen Weg zu bleiben"
+    },
+    {
+      "id": "vscode-command-install",
+      "text": "Öffnen Sie die Befehlspalette (Befehl+Umschalt+P) und führen Sie „Shell-Befehl: Befehl „Code“ in PATH installieren“ aus, um die IDE-Integration zu aktivieren"
+    },
+    {
+      "id": "ide-upsell-external-terminal",
+      "text": "Verbinden Sie Claude über /ide mit Ihrer IDE"
+    },
+    {
+      "id": "install-github-app",
+      "text": "Führen Sie /install-github-app aus, um @claude direkt in Ihren Github-Problemen und PRs zu taggen"
+    },
+    {
+      "id": "install-slack-app",
+      "text": "Führen Sie /install-slack-app aus, um Claude in Slack zu verwenden"
+    },
+    {
+      "id": "permissions",
+      "text": "Verwenden Sie /permissions, um Bash-, Bearbeitungs- und MCP-Tools vorab zu genehmigen und abzulehnen"
+    },
+    {
+      "id": "drag-and-drop-images",
+      "text": "Wussten Sie, dass Sie Bilddateien per Drag & Drop in Ihr Terminal ziehen können?"
+    },
+    {
+      "id": "paste-images-mac",
+      "text": "Fügen Sie Bilder mit Strg+V (nicht Cmd+V!) in Claude Code ein."
+    },
+    {
+      "id": "double-esc",
+      "text": "Doppeltippen Sie auf Esc, um das Gespräch zu einem früheren Zeitpunkt zurückzuspulen"
+    },
+    {
+      "id": "double-esc-code-restore",
+      "text": "Doppeltippen Sie auf Esc, um den Code und/oder die Konversation zu einem früheren Zeitpunkt zurückzuspulen"
+    },
+    {
+      "id": "continue",
+      "text": "Führen Sie claude --continue oder claude --resume aus, um ein Gespräch fortzusetzen"
+    },
+    {
+      "id": "rename-conversation",
+      "text": "Benennen Sie Ihre Konversationen mit /rename, um sie später in /resume leicht wiederzufinden"
+    },
+    {
+      "id": "custom-commands",
+      "text": "Erstellen Sie Fertigkeiten, indem Sie .md-Dateien zu .claude/skills/ in Ihrem Projekt oder ~/.claude/skills/ für Fertigkeiten hinzufügen, die in jedem Projekt funktionieren"
+    },
+    {
+      "id": "shift-tab",
+      "text": "Drücken Sie Umschalt+Tab, um zwischen Standardmodus, Bearbeitungsmodus für automatische Annahme und Planmodus zu wechseln"
+    },
+    {
+      "id": "image-paste",
+      "text": "Verwenden Sie Strg+V, um Bilder aus Ihrer Zwischenablage einzufügen"
+    },
+    {
+      "id": "custom-agents",
+      "text": "Verwenden Sie /agents, um bestimmte Aufgaben zu optimieren. Z.B. Software-Architekt, Code-Autor, Code-Reviewer"
+    },
+    {
+      "id": "agent-flag",
+      "text": "Verwenden Sie --agent <agent_name>, um direkt eine Konversation mit einem Subagenten zu starten"
+    },
+    {
+      "id": "desktop-app",
+      "text": "Führen Sie Claude Code lokal oder remote mit der Claude-Desktop-App aus: clau.de/desktop"
+    },
+    {
+      "id": "desktop-shortcut",
+      "text": "Setzen Sie Ihre Sitzung in Claude Code Desktop mit /desktop fort"
+    },
+    {
+      "id": "web-app",
+      "text": "Führen Sie Aufgaben in der Cloud aus, während Sie lokal über clau.de/web programmieren"
+    },
+    {
+      "id": "mobile-app",
+      "text": "/mobile, um Claude Code über die Claude-App auf Ihrem Telefon zu verwenden"
+    },
+    {
+      "id": "effort-high-nudge",
+      "text": "Verwenden Sie /effort high für bessere One-Shot-Antworten. Claude denkt zuerst darüber nach."
+    },
+    {
+      "id": "subagent-fanout-nudge",
+      "text": "Sagen Sie Claude für große Aufgaben, dass er Subagenten verwenden soll. Sie arbeiten parallel und halten Ihren Hauptthread sauber."
+    },
+    {
+      "id": "loop-command-nudge",
+      "text": "/loop führt jede Eingabeaufforderung nach einem wiederkehrenden Zeitplan aus. Ideal zum Überwachen von Einsätzen, zum Babysitten von PRs oder zum Abfragen des Status."
+    },
+    {
+      "id": "guest-passes",
+      "text": "Sie haben kostenlose Gastpässe, die Sie über /passes teilen können"
+    },
+    {
+      "id": "feedback-command",
+      "text": "Nutzen Sie /feedback, um uns zu helfen, uns zu verbessern!"
+    }
+  ]
+}

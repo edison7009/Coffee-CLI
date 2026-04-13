@@ -1,0 +1,5854 @@
+[
+  {
+    "en": " (MCP)",
+    "zh": " (MCP)"
+  },
+  {
+    "en": " (installed)",
+    "zh": " (instalado)"
+  },
+  {
+    "en": " (p to expand)",
+    "zh": " (p para expandir)"
+  },
+  {
+    "en": " (required to block unix domain sockets)",
+    "zh": " (necessário para bloquear soquetes de domínio unix)"
+  },
+  {
+    "en": " (truncated)",
+    "zh": " (truncado)"
+  },
+  {
+    "en": " (untracked)",
+    "zh": " (não rastreado)"
+  },
+  {
+    "en": " Accept  ",
+    "zh": " Aceitar  "
+  },
+  {
+    "en": " Cancel",
+    "zh": " Cancelar"
+  },
+  {
+    "en": " Decline",
+    "zh": " Declínio"
+  },
+  {
+    "en": " Directories ",
+    "zh": " Diretórios "
+  },
+  {
+    "en": " Generating agent from description...",
+    "zh": " Gerando agente a partir da descrição..."
+  },
+  {
+    "en": " Mode ",
+    "zh": " Modo "
+  },
+  {
+    "en": " Reopen URL  ",
+    "zh": " Reabrir URL  "
+  },
+  {
+    "en": " Rules ",
+    "zh": " Regras "
+  },
+  {
+    "en": " Voice mode is now available · /voice to enable",
+    "zh": " O modo de voz agora está disponível · /voz para ativar"
+  },
+  {
+    "en": " [Community Managed]",
+    "zh": " [Gerenciado pela comunidade]"
+  },
+  {
+    "en": " [destructive]",
+    "zh": " [destrutivo]"
+  },
+  {
+    "en": " [open-world]",
+    "zh": " [mundo aberto]"
+  },
+  {
+    "en": " [read-only]",
+    "zh": " [somente leitura]"
+  },
+  {
+    "en": " back",
+    "zh": " voltar"
+  },
+  {
+    "en": " for Quick Launch",
+    "zh": " para lançamento rápido"
+  },
+  {
+    "en": " navigate · ",
+    "zh": " navegar · "
+  },
+  {
+    "en": " or ",
+    "zh": " ou "
+  },
+  {
+    "en": " ready · shift+↓ to view",
+    "zh": " pronto · shift+↓ para visualizar"
+  },
+  {
+    "en": " to cancel",
+    "zh": " cancelar"
+  },
+  {
+    "en": " to edit this plan in ",
+    "zh": " para editar este plano em "
+  },
+  {
+    "en": " to get started",
+    "zh": " para começar"
+  },
+  {
+    "en": " to reference files or lines in your input",
+    "zh": " para fazer referência a arquivos ou linhas em sua entrada"
+  },
+  {
+    "en": " to save ",
+    "zh": " para salvar "
+  },
+  {
+    "en": " tokens · /autocompact",
+    "zh": " tokens · /autocompactar"
+  },
+  {
+    "en": " · ./path/to/marketplace",
+    "zh": " · ./caminho/para/marketplace"
+  },
+  {
+    "en": " · /agents",
+    "zh": " · /agentes"
+  },
+  {
+    "en": " · /agents to manage",
+    "zh": " · /agentes para gerenciar"
+  },
+  {
+    "en": " · /dream to run",
+    "zh": " · /sonho em correr"
+  },
+  {
+    "en": " · /mcp",
+    "zh": " · /mcp"
+  },
+  {
+    "en": " · /memory",
+    "zh": " · /memória"
+  },
+  {
+    "en": " · /memory to edit",
+    "zh": " · /memória para editar"
+  },
+  {
+    "en": " · /permissions",
+    "zh": " · /permissões"
+  },
+  {
+    "en": " · /plugin for details",
+    "zh": " · /plugin para detalhes"
+  },
+  {
+    "en": " · /sandbox",
+    "zh": " · /caixa de areia"
+  },
+  {
+    "en": " · /skills",
+    "zh": " · /habilidades"
+  },
+  {
+    "en": " · Design an implementation strategy",
+    "zh": " · Desenhar uma estratégia de implementação"
+  },
+  {
+    "en": " · Enter to view",
+    "zh": " · Entre para ver"
+  },
+  {
+    "en": " · Explore the codebase thoroughly",
+    "zh": " · Explore a base de código completamente"
+  },
+  {
+    "en": " · Identify existing patterns",
+    "zh": " · Identificar padrões existentes"
+  },
+  {
+    "en": " · Marked for update",
+    "zh": " · Marcado para atualização"
+  },
+  {
+    "en": " · Present a plan for your approval",
+    "zh": " · Apresentar um plano para sua aprovação"
+  },
+  {
+    "en": " · Run /reload-plugins to apply",
+    "zh": " · Execute /reload-plugins para aplicar"
+  },
+  {
+    "en": " · enter to collapse",
+    "zh": " · entrar para entrar em colapso"
+  },
+  {
+    "en": " · enter to view",
+    "zh": " · entre para ver"
+  },
+  {
+    "en": " · owner/repo (GitHub)",
+    "zh": " · proprietário/repositório (GitHub)"
+  },
+  {
+    "en": "! for bash mode",
+    "zh": "! para modo bash"
+  },
+  {
+    "en": "& for background",
+    "zh": "& para plano de fundo"
+  },
+  {
+    "en": "((empty message))",
+    "zh": "((mensagem vazia))"
+  },
+  {
+    "en": "(Command copied to clipboard)",
+    "zh": "(Comando copiado para a área de transferência)"
+  },
+  {
+    "en": "(No changes)",
+    "zh": "(Sem alterações)"
+  },
+  {
+    "en": "(No content)",
+    "zh": "(Sem conteúdo)"
+  },
+  {
+    "en": "(No resources found)",
+    "zh": "(Nenhum recurso encontrado)"
+  },
+  {
+    "en": "(OSC 777)",
+    "zh": "(OSC 777)"
+  },
+  {
+    "en": "(OSC 9)",
+    "zh": "(OSC 9)"
+  },
+  {
+    "en": "(OSC 99)",
+    "zh": "(OSC 99)"
+  },
+  {
+    "en": "(Original working directory)",
+    "zh": "(Diretório de trabalho original)"
+  },
+  {
+    "en": "(already granted)",
+    "zh": "(já concedido)"
+  },
+  {
+    "en": "(esc to give additional instructions)",
+    "zh": "(esc para dar instruções adicionais)"
+  },
+  {
+    "en": "(esc to interrupt ",
+    "zh": "(esc para interromper "
+  },
+  {
+    "en": "(not installed)",
+    "zh": "(não instalado)"
+  },
+  {
+    "en": "(press esc to close)",
+    "zh": "(pressione esc para fechar)"
+  },
+  {
+    "en": "(required)",
+    "zh": "(obrigatório)"
+  },
+  {
+    "en": "(tab to switch, esc to close)",
+    "zh": "(tab para alternar, esc para fechar)"
+  },
+  {
+    "en": "-- INSERT --",
+    "zh": "-- INSERIR --"
+  },
+  {
+    "en": ".github/workflows/claude.yml",
+    "zh": ".github/workflows/claude.yml"
+  },
+  {
+    "en": "/ for commands",
+    "zh": "/ para comandos"
+  },
+  {
+    "en": "/btw for side question",
+    "zh": "/btw para pergunta paralela"
+  },
+  {
+    "en": "/keybindings to customize",
+    "zh": "/ atalhos de teclado para personalizar"
+  },
+  {
+    "en": "/plan to preview",
+    "zh": "/planeja visualizar"
+  },
+  {
+    "en": "/rename to add a name",
+    "zh": "/renomear para adicionar um nome"
+  },
+  {
+    "en": "/usage is only available for subscription plans.",
+    "zh": "/usage está disponível apenas para planos de assinatura."
+  },
+  {
+    "en": "? for shortcuts",
+    "zh": "? para atalhos"
+  },
+  {
+    "en": "@ for file paths",
+    "zh": "@ para caminhos de arquivo"
+  },
+  {
+    "en": "ANTHROPIC_API_KEY already exists in repository secrets!",
+    "zh": "ANTHROPIC_API_KEY já existe nos segredos do repositório!"
+  },
+  {
+    "en": "API key",
+    "zh": "Chave de API"
+  },
+  {
+    "en": "API usage billing",
+    "zh": "Faturamento de uso de API"
+  },
+  {
+    "en": "AWS profile (SSO or named profile)",
+    "zh": "Perfil AWS (SSO ou perfil nomeado)"
+  },
+  {
+    "en": "Accept edits",
+    "zh": "Aceitar edições"
+  },
+  {
+    "en": "Accept terms · Help improve Claude: OFF",
+    "zh": "Aceitar os termos · Ajude a melhorar Claude: OFF"
+  },
+  {
+    "en": "Accept terms · Help improve Claude: OFF (for emails with your domain)",
+    "zh": "Aceitar os termos · Ajude a melhorar Claude: DESLIGADO (para e-mails com seu domínio)"
+  },
+  {
+    "en": "Accept terms · Help improve Claude: ON",
+    "zh": "Aceitar os termos · Ajude a melhorar Claude: ON"
+  },
+  {
+    "en": "Access denied to specific paths outside allowed directories",
+    "zh": "Acesso negado a caminhos específicos fora dos diretórios permitidos"
+  },
+  {
+    "en": "Access denied.",
+    "zh": "Acesso negado."
+  },
+  {
+    "en": "Access key + secret",
+    "zh": "Chave de acesso + segredo"
+  },
+  {
+    "en": "Accessibility and Screen Recording permissions are required. Call request_access to show the permission panel.",
+    "zh": "São necessárias permissões de acessibilidade e gravação de tela. Chame request_access para mostrar o painel de permissão."
+  },
+  {
+    "en": "Action: ",
+    "zh": "Ação: "
+  },
+  {
+    "en": "Activate pending plugin changes in the current session",
+    "zh": "Ative alterações de plugin pendentes na sessão atual"
+  },
+  {
+    "en": "Add Marketplace",
+    "zh": "Adicionar mercado"
+  },
+  {
+    "en": "Add a marketplace first using the Marketplaces tab.",
+    "zh": "Adicione um mercado primeiro usando a guia Mercados."
+  },
+  {
+    "en": "Additional CA cert(s)",
+    "zh": "Certificado(s) CA adicional(is)"
+  },
+  {
+    "en": "Afternoon (12-18)",
+    "zh": "Tarde (12-18)"
+  },
+  {
+    "en": "Agent MCPs",
+    "zh": "Agente MCP"
+  },
+  {
+    "en": "Agent Parse Errors",
+    "zh": "Erros de análise do agente"
+  },
+  {
+    "en": "Agent idle",
+    "zh": "Agente inativo"
+  },
+  {
+    "en": "All available plugins are already installed.",
+    "zh": "Todos os plugins disponíveis já estão instalados."
+  },
+  {
+    "en": "All background agents stopped",
+    "zh": "Todos os agentes em segundo plano pararam"
+  },
+  {
+    "en": "All plugins from our internal marketplace are vetted and approved.",
+    "zh": "Todos os plugins do nosso mercado interno são avaliados e aprovados."
+  },
+  {
+    "en": "All plugins from this marketplace are already installed.",
+    "zh": "Todos os plugins deste mercado já estão instalados."
+  },
+  {
+    "en": "Allow external CLAUDE.md file imports?",
+    "zh": "Permitir importações externas de arquivos CLAUDE.md?"
+  },
+  {
+    "en": "Allow possible downgrade to stable version",
+    "zh": "Permitir possível downgrade para versão estável"
+  },
+  {
+    "en": "Allow unsandboxed fallback:",
+    "zh": "Permitir substituto sem sandbox:"
+  },
+  {
+    "en": "Allowed Unix Sockets:",
+    "zh": "Soquetes Unix permitidos:"
+  },
+  {
+    "en": "Allowed by auto mode classifier",
+    "zh": "Permitido pelo classificador de modo automático"
+  },
+  {
+    "en": "Also requested:",
+    "zh": "Também solicitado:"
+  },
+  {
+    "en": "Also try: ",
+    "zh": "Tente também: "
+  },
+  {
+    "en": "Always copy full response",
+    "zh": "Sempre copie a resposta completa"
+  },
+  {
+    "en": "Amazon Bedrock, Microsoft Foundry, or Vertex AI",
+    "zh": "Amazon Bedrock, Microsoft Foundry ou Vertex AI"
+  },
+  {
+    "en": "Answering...",
+    "zh": "Respondendo..."
+  },
+  {
+    "en": "Answering…",
+    "zh": "Respondendo…"
+  },
+  {
+    "en": "Anthropic base URL",
+    "zh": "URL base antrópica"
+  },
+  {
+    "en": "Any Bash command",
+    "zh": "Qualquer comando Bash"
+  },
+  {
+    "en": "Append a system prompt to the default system prompt",
+    "zh": "Anexar um prompt do sistema ao prompt padrão do sistema"
+  },
+  {
+    "en": "Are you sure you want to delete the agent",
+    "zh": "Tem certeza de que deseja excluir o agente"
+  },
+  {
+    "en": "Are you sure you want to delete this permission rule?",
+    "zh": "Tem certeza de que deseja excluir esta regra de permissão?"
+  },
+  {
+    "en": "Args: ",
+    "zh": "Argumentos: "
+  },
+  {
+    "en": "Ask a quick side question without interrupting the main conversation",
+    "zh": "Faça uma pergunta paralela rápida sem interromper a conversa principal"
+  },
+  {
+    "en": "Ask a repository admin to run this command if setup fails",
+    "zh": "Peça a um administrador do repositório para executar este comando se a configuração falhar"
+  },
+  {
+    "en": "Async agent",
+    "zh": "Agente assíncrono"
+  },
+  {
+    "en": "Async hook ",
+    "zh": "Gancho assíncrono "
+  },
+  {
+    "en": "Auth method",
+    "zh": "Método de autenticação"
+  },
+  {
+    "en": "Auth token",
+    "zh": "Token de autenticação"
+  },
+  {
+    "en": "Auth: ",
+    "zh": "Autenticação: "
+  },
+  {
+    "en": "Author: ",
+    "zh": "Autor: "
+  },
+  {
+    "en": "Auto mode",
+    "zh": "Modo automático"
+  },
+  {
+    "en": "Auto-allow mode:",
+    "zh": "Modo de permissão automática:"
+  },
+  {
+    "en": "Auto-compact",
+    "zh": "Compactar automaticamente"
+  },
+  {
+    "en": "Auto-compact is currently disabled (see /config)",
+    "zh": "A compactação automática está atualmente desativada (veja /config)"
+  },
+  {
+    "en": "Auto-compact when context is full",
+    "zh": "Compactar automaticamente quando o contexto estiver cheio"
+  },
+  {
+    "en": "Auto-compact window: ",
+    "zh": "Janela de compactação automática: "
+  },
+  {
+    "en": "Auto-connect to IDE (external terminal)",
+    "zh": "Conexão automática ao IDE (terminal externo)"
+  },
+  {
+    "en": "Auto-install IDE extension",
+    "zh": "Extensão IDE de instalação automática"
+  },
+  {
+    "en": "Auto-update channel",
+    "zh": "Atualizar canal automaticamente"
+  },
+  {
+    "en": "Auto-update enabled. Claude Code will automatically update this marketplace and its installed plugins.",
+    "zh": "Atualização automática ativada. Claude Code atualizará automaticamente este mercado e seus plugins instalados."
+  },
+  {
+    "en": "Auto-updating…",
+    "zh": "Atualização automática…"
+  },
+  {
+    "en": "Autocompact",
+    "zh": "Autocompactar"
+  },
+  {
+    "en": "Autocompact buffer",
+    "zh": "Buffer de compactação automática"
+  },
+  {
+    "en": "Autocompact is disabled",
+    "zh": "A compactação automática está desativada"
+  },
+  {
+    "en": "Automatic color",
+    "zh": "Cor automática"
+  },
+  {
+    "en": "Back to plugin list",
+    "zh": "Voltar à lista de plugins"
+  },
+  {
+    "en": "Background process cannot read terminal input",
+    "zh": "O processo em segundo plano não pode ler a entrada do terminal"
+  },
+  {
+    "en": "Background process cannot write to terminal output",
+    "zh": "O processo em segundo plano não pode gravar na saída do terminal"
+  },
+  {
+    "en": "Bad request:",
+    "zh": "Pedido ruim:"
+  },
+  {
+    "en": "Balanced performance - best for most agents",
+    "zh": "Desempenho equilibrado – melhor para a maioria dos agentes"
+  },
+  {
+    "en": "Be comprehensive for best results",
+    "zh": "Seja abrangente para obter melhores resultados"
+  },
+  {
+    "en": "Bedrock API key (bearer token)",
+    "zh": "Chave de API Bedrock (token de portador)"
+  },
+  {
+    "en": "Bedrock base URL",
+    "zh": "URL base fundamental"
+  },
+  {
+    "en": "Before compacting, ask me what to preserve",
+    "zh": "Antes de compactar, pergunte-me o que preservar"
+  },
+  {
+    "en": "Behavior ",
+    "zh": "Comportamento "
+  },
+  {
+    "en": "Binary file",
+    "zh": "Arquivo binário"
+  },
+  {
+    "en": "Binary file - cannot display diff",
+    "zh": "Arquivo binário - não é possível exibir diferenças"
+  },
+  {
+    "en": "Brief explanation of the classification decision",
+    "zh": "Breve explicação da decisão de classificação"
+  },
+  {
+    "en": "Broken pipe - server closed connection unexpectedly",
+    "zh": "Tubo quebrado - o servidor encerrou a conexão inesperadamente"
+  },
+  {
+    "en": "Browser didn't open automatically. URL is shown in UI.",
+    "zh": "O navegador não abriu automaticamente. O URL é mostrado na IU."
+  },
+  {
+    "en": "Browser didn't open? Use the url below to sign in",
+    "zh": "O navegador não abriu? Use o URL abaixo para fazer login"
+  },
+  {
+    "en": "Browser switching is only available with bridge connections.",
+    "zh": "A troca de navegador só está disponível com conexões em ponte."
+  },
+  {
+    "en": "Bug Report",
+    "zh": "Relatório de erros"
+  },
+  {
+    "en": "Built-in Hooks",
+    "zh": "Ganchos embutidos"
+  },
+  {
+    "en": "Built-in MCPs",
+    "zh": "MCPs integrados"
+  },
+  {
+    "en": "Built-in agents",
+    "zh": "Agentes integrados"
+  },
+  {
+    "en": "Bypass Permissions",
+    "zh": "Ignorar permissões"
+  },
+  {
+    "en": "CLAUDE_CODE_AUTO_COMPACT_WINDOW is set and takes precedence. Unset it to change this setting here.",
+    "zh": "CLAUDE_CODE_AUTO_COMPACT_WINDOW está definido e tem precedência. Desmarque-o para alterar esta configuração aqui."
+  },
+  {
+    "en": "CLI arg agents",
+    "zh": "Agentes de argumento CLI"
+  },
+  {
+    "en": "Can Anthropic look at your session transcript to help us improve Claude Code?",
+    "zh": "A Anthropic pode analisar a transcrição da sua sessão para nos ajudar a melhorar o Claude Code?"
+  },
+  {
+    "en": "Can Claude...",
+    "zh": "Cláudio pode..."
+  },
+  {
+    "en": "Cancelled ",
+    "zh": "Cancelado "
+  },
+  {
+    "en": "Cancelled: ",
+    "zh": "Cancelado: "
+  },
+  {
+    "en": "Cannot block unix domain sockets (see Dependencies tab)",
+    "zh": "Não é possível bloquear soquetes de domínio unix (consulte a guia Dependências)"
+  },
+  {
+    "en": "Capabilities: ",
+    "zh": "Capacidades: "
+  },
+  {
+    "en": "Changing thinking mode mid-conversation will increase latency and may reduce quality. For best results, set this at the start of a session.",
+    "zh": "Alterar o modo de pensamento no meio da conversa aumentará a latência e poderá reduzir a qualidade. Para obter melhores resultados, defina isso no início de uma sessão."
+  },
+  {
+    "en": "Channels are not currently available",
+    "zh": "Os canais não estão disponíveis no momento"
+  },
+  {
+    "en": "Channels require claude.ai authentication · run /login, then restart",
+    "zh": "Os canais exigem autenticação claude.ai · execute /login e reinicie"
+  },
+  {
+    "en": "Chat about this",
+    "zh": "Converse sobre isso"
+  },
+  {
+    "en": "Check for new plugins later or add more marketplaces.",
+    "zh": "Verifique se há novos plug-ins posteriormente ou adicione mais mercados."
+  },
+  {
+    "en": "Check your internet connection",
+    "zh": "Verifique sua conexão com a internet"
+  },
+  {
+    "en": "Check your network connection.",
+    "zh": "Verifique sua conexão de rede."
+  },
+  {
+    "en": "Checking connectivity...",
+    "zh": "Verificando conectividade..."
+  },
+  {
+    "en": "Checking for updates",
+    "zh": "Verificando atualizações"
+  },
+  {
+    "en": "Checking installation status...",
+    "zh": "Verificando o status da instalação..."
+  },
+  {
+    "en": "Checking installation status…",
+    "zh": "Verificando o status da instalação…"
+  },
+  {
+    "en": "Checking out branch",
+    "zh": "Verificando filial"
+  },
+  {
+    "en": "Choose an option:",
+    "zh": "Escolha uma opção:"
+  },
+  {
+    "en": "Choose different models…",
+    "zh": "Escolha modelos diferentes…"
+  },
+  {
+    "en": "Choose the text style that looks best with your terminal",
+    "zh": "Escolha o estilo de texto que melhor combina com seu terminal"
+  },
+  {
+    "en": "Chrome extension not detected · https://claude.ai/chrome to install",
+    "zh": "Extensão do Chrome não detectada · https://claude.ai/chrome para instalar"
+  },
+  {
+    "en": "Claude Code",
+    "zh": "Claude Code"
+  },
+  {
+    "en": "Claude Code Browser Extension Native Host",
+    "zh": "Host nativo da extensão do navegador de código Claude"
+  },
+  {
+    "en": "Claude Code Review - Automated code review on new PRs",
+    "zh": "Claude Code Review - Revisão automatizada de código em novos PRs"
+  },
+  {
+    "en": "Claude Code installation completed successfully",
+    "zh": "Instalação do Claude Code concluída com sucesso"
+  },
+  {
+    "en": "Claude Code is an agentic coding CLI based on the Anthropic API.",
+    "zh": "Claude Code é uma CLI de codificação de agente baseada na API Antrópica."
+  },
+  {
+    "en": "Claude Code reads this from AWS_REGION, not ~/.aws/config — set it explicitly even if your profile has a region.",
+    "zh": "Claude Code lê isso em AWS_REGION, não em ~/.aws/config - defina-o explicitamente, mesmo que seu perfil tenha uma região."
+  },
+  {
+    "en": "Claude Code successfully installed!",
+    "zh": "Código Claude instalado com sucesso!"
+  },
+  {
+    "en": "Claude Code uses the standard AWS credential chain. Pick the method you already use with the AWS CLI.",
+    "zh": "Claude Code usa a cadeia de credenciais padrão da AWS. Escolha o método que você já usa com a AWS CLI."
+  },
+  {
+    "en": "Claude Code will be able to read files in this directory and make edits when auto-accept edits is on.",
+    "zh": "Claude Code poderá ler arquivos neste diretório e fazer edições quando a aceitação automática de edições estiver ativada."
+  },
+  {
+    "en": "Claude Code will no longer have access to files in this directory.",
+    "zh": "Claude Code não terá mais acesso aos arquivos deste diretório."
+  },
+  {
+    "en": "Claude Code will restart to apply.",
+    "zh": "Claude Code será reiniciado para aplicação."
+  },
+  {
+    "en": "Claude can make mistakes",
+    "zh": "Claude pode cometer erros"
+  },
+  {
+    "en": "Claude checkpoints your files before every edit. Press",
+    "zh": "Claude verifica seus arquivos antes de cada edição. Imprensa"
+  },
+  {
+    "en": "Claude explains its implementation choices and codebase patterns",
+    "zh": "Claude explica suas opções de implementação e padrões de base de código"
+  },
+  {
+    "en": "Claude found these results:",
+    "zh": "Claude encontrou estes resultados:"
+  },
+  {
+    "en": "Claude in Chrome enabled by default",
+    "zh": "Claude no Chrome ativado por padrão"
+  },
+  {
+    "en": "Claude in Chrome is not supported in WSL at this time.",
+    "zh": "Claude no Chrome não é compatível com WSL no momento."
+  },
+  {
+    "en": "Claude in Chrome requires a claude.ai subscription",
+    "zh": "Claude no Chrome requer uma assinatura Claude.ai"
+  },
+  {
+    "en": "Claude in Chrome requires a claude.ai subscription.",
+    "zh": "Claude no Chrome requer uma assinatura claude.ai."
+  },
+  {
+    "en": "Claude is now exploring and designing an implementation approach.",
+    "zh": "Claude está agora explorando e projetando uma abordagem de implementação."
+  },
+  {
+    "en": "Claude is waiting for your input",
+    "zh": "Claude está aguardando sua opinião"
+  },
+  {
+    "en": "Claude pauses and asks you to write small pieces of code for hands-on practice",
+    "zh": "Claude faz uma pausa e pede que você escreva pequenos trechos de código para praticar"
+  },
+  {
+    "en": "Claude will respond without extended thinking",
+    "zh": "Claude responderá sem pensar muito"
+  },
+  {
+    "en": "Claude will think before responding",
+    "zh": "Claude vai pensar antes de responder"
+  },
+  {
+    "en": "Cleaning up old npm installations...",
+    "zh": "Limpando instalações antigas do npm..."
+  },
+  {
+    "en": "Clear authentication",
+    "zh": "Autenticação clara"
+  },
+  {
+    "en": "Clear conversation and start with only the plan",
+    "zh": "Limpe a conversa e comece apenas com o plano"
+  },
+  {
+    "en": "Clear conversation history and free up context",
+    "zh": "Limpe o histórico de conversas e libere contexto"
+  },
+  {
+    "en": "Cloud Authentication",
+    "zh": "Autenticação na nuvem"
+  },
+  {
+    "en": "Command: ",
+    "zh": "Comando: "
+  },
+  {
+    "en": "Commands cannot run outside the sandbox under any circumstances.",
+    "zh": "Os comandos não podem ser executados fora da sandbox em nenhuma circunstância."
+  },
+  {
+    "en": "Commands recently denied by the auto mode classifier.",
+    "zh": "Comandos negados recentemente pelo classificador de modo automático."
+  },
+  {
+    "en": "Compact buffer",
+    "zh": "Buffer compacto"
+  },
+  {
+    "en": "Compact summary",
+    "zh": "Resumo compacto"
+  },
+  {
+    "en": "Compacted ",
+    "zh": "Compactado "
+  },
+  {
+    "en": "Compacting conversation",
+    "zh": "Compactando conversa"
+  },
+  {
+    "en": "Compacting conversation…",
+    "zh": "Compactando conversa…"
+  },
+  {
+    "en": "Compaction canceled.",
+    "zh": "Compactação cancelada."
+  },
+  {
+    "en": "Compaction interrupted · This may be due to network issues — please try again.",
+    "zh": "Compactação interrompida · Isso pode ocorrer devido a problemas de rede. Tente novamente."
+  },
+  {
+    "en": "Complete a security review of the pending changes on the current branch",
+    "zh": "Conclua uma revisão de segurança das alterações pendentes na filial atual"
+  },
+  {
+    "en": "Computer Use",
+    "zh": "Uso do computador"
+  },
+  {
+    "en": "Computer Use needs macOS permissions",
+    "zh": "O uso do computador precisa de permissões do macOS"
+  },
+  {
+    "en": "Computer Use wants to control these apps",
+    "zh": "O uso do computador quer controlar esses aplicativos"
+  },
+  {
+    "en": "Config change rejected",
+    "zh": "Alteração de configuração rejeitada"
+  },
+  {
+    "en": "Config location: ",
+    "zh": "Local de configuração: "
+  },
+  {
+    "en": "Configure Mode:",
+    "zh": "Modo de configuração:"
+  },
+  {
+    "en": "Configure Overrides:",
+    "zh": "Configurar substituições:"
+  },
+  {
+    "en": "Configure extra usage to keep working when limits are hit",
+    "zh": "Configure o uso extra para continuar trabalhando quando os limites forem atingidos"
+  },
+  {
+    "en": "Configure options",
+    "zh": "Configurar opções"
+  },
+  {
+    "en": "Configure the auto-compact window size",
+    "zh": "Configure o tamanho da janela de compactação automática"
+  },
+  {
+    "en": "Configure the default remote environment for teleport sessions",
+    "zh": "Configure o ambiente remoto padrão para sessões de teletransporte"
+  },
+  {
+    "en": "Connect Claude on the web to GitHub?",
+    "zh": "Conectar Claude na web ao GitHub?"
+  },
+  {
+    "en": "Connect this terminal for remote-control sessions",
+    "zh": "Conecte este terminal para sessões de controle remoto"
+  },
+  {
+    "en": "Connect to an IDE for integrated development features.",
+    "zh": "Conecte-se a um IDE para obter recursos de desenvolvimento integrados."
+  },
+  {
+    "en": "Connection error.",
+    "zh": "Erro de conexão."
+  },
+  {
+    "en": "Connection refused - server may be down",
+    "zh": "Conexão recusada - o servidor pode estar inoperante"
+  },
+  {
+    "en": "Connection was closed before it was established.",
+    "zh": "A conexão foi encerrada antes de ser estabelecida."
+  },
+  {
+    "en": "Contact your administrator.",
+    "zh": "Entre em contato com seu administrador."
+  },
+  {
+    "en": "Contact your system administrator for more information.",
+    "zh": "Entre em contato com o administrador do sistema para obter mais informações."
+  },
+  {
+    "en": "Context Usage",
+    "zh": "Uso de contexto"
+  },
+  {
+    "en": "Context Usage Warnings",
+    "zh": "Avisos de uso de contexto"
+  },
+  {
+    "en": "Context limit reached · /compact or /clear to continue",
+    "zh": "Limite de contexto atingido · /compact ou /clear para continuar"
+  },
+  {
+    "en": "Continue the current session in Claude Desktop",
+    "zh": "Continuar a sessão atual no Claude Desktop"
+  },
+  {
+    "en": "Continue the most recent conversation in the current directory",
+    "zh": "Continuar a conversa mais recente no diretório atual"
+  },
+  {
+    "en": "Continue this conversation",
+    "zh": "Continuar esta conversa"
+  },
+  {
+    "en": "Continue to run and watch for changes",
+    "zh": "Continue a correr e observe as alterações"
+  },
+  {
+    "en": "Continue without these settings",
+    "zh": "Continuar sem essas configurações"
+  },
+  {
+    "en": "Continue without using this MCP server",
+    "zh": "Continue sem usar este servidor MCP"
+  },
+  {
+    "en": "Conversation compacted",
+    "zh": "Conversa compactada"
+  },
+  {
+    "en": "Conversation copied to clipboard",
+    "zh": "Conversa copiada para a área de transferência"
+  },
+  {
+    "en": "Copy on select",
+    "zh": "Copiar na seleção"
+  },
+  {
+    "en": "Copy the conversation to your system clipboard",
+    "zh": "Copie a conversa para a área de transferência do sistema"
+  },
+  {
+    "en": "Copy to clipboard",
+    "zh": "Copiar para a área de transferência"
+  },
+  {
+    "en": "Create Authentication Token",
+    "zh": "Criar token de autenticação"
+  },
+  {
+    "en": "Create GitHub Actions workflow",
+    "zh": "Criar fluxo de trabalho do GitHub Actions"
+  },
+  {
+    "en": "Create a branch of the current conversation at this point",
+    "zh": "Crie uma ramificação da conversa atual neste momento"
+  },
+  {
+    "en": "Create a git commit",
+    "zh": "Crie um commit git"
+  },
+  {
+    "en": "Create a long-lived token with your Claude subscription",
+    "zh": "Crie um token de longa duração com sua assinatura Claude"
+  },
+  {
+    "en": "Create a new animation from scratch",
+    "zh": "Crie uma nova animação do zero"
+  },
+  {
+    "en": "Create a remote session with the given description",
+    "zh": "Crie uma sessão remota com a descrição fornecida"
+  },
+  {
+    "en": "Create new agent",
+    "zh": "Criar novo agente"
+  },
+  {
+    "en": "Create or list command aliases",
+    "zh": "Criar ou listar aliases de comando"
+  },
+  {
+    "en": "Create skills in .claude/skills/ or ~/.claude/skills/",
+    "zh": "Crie habilidades em .claude/skills/ ou ~/.claude/skills/"
+  },
+  {
+    "en": "Create verifier skill(s) for automated verification of code changes",
+    "zh": "Crie habilidades de verificação para verificação automatizada de alterações de código"
+  },
+  {
+    "en": "Creating a long-lived token for GitHub Actions",
+    "zh": "Criando um token de longa duração para GitHub Actions"
+  },
+  {
+    "en": "Credit balance too low · Add funds: https://platform.claude.com/settings/billing",
+    "zh": "Saldo de crédito muito baixo · Adicione fundos: https://platform.claude.com/settings/billing"
+  },
+  {
+    "en": "Ctrl+d to show debug info",
+    "zh": "Ctrl+d para mostrar informações de depuração"
+  },
+  {
+    "en": "Ctrl-D to hide debug info",
+    "zh": "Ctrl-D para ocultar informações de depuração"
+  },
+  {
+    "en": "Current Plan",
+    "zh": "Plano Atual"
+  },
+  {
+    "en": "Custom agents",
+    "zh": "Agentes personalizados"
+  },
+  {
+    "en": "Custom model",
+    "zh": "Modelo personalizado"
+  },
+  {
+    "en": "Custom tip",
+    "zh": "Dica personalizada"
+  },
+  {
+    "en": "Dark mode",
+    "zh": "Modo escuro"
+  },
+  {
+    "en": "Dark mode (ANSI colors only)",
+    "zh": "Modo escuro (somente cores ANSI)"
+  },
+  {
+    "en": "Dark mode (colorblind-friendly)",
+    "zh": "Modo escuro (para daltônicos)"
+  },
+  {
+    "en": "Data Privacy",
+    "zh": "Privacidade de dados"
+  },
+  {
+    "en": "Debug mode",
+    "zh": "Modo de depuração"
+  },
+  {
+    "en": "Debug mode enabled",
+    "zh": "Modo de depuração ativado"
+  },
+  {
+    "en": "Default (recommended)",
+    "zh": "Padrão (recomendado)"
+  },
+  {
+    "en": "Default permission mode",
+    "zh": "Modo de permissão padrão"
+  },
+  {
+    "en": "Default region",
+    "zh": "Região padrão"
+  },
+  {
+    "en": "Default teammate model",
+    "zh": "Modelo de companheiro de equipe padrão"
+  },
+  {
+    "en": "Default view",
+    "zh": "Visualização padrão"
+  },
+  {
+    "en": "Delete agent",
+    "zh": "Excluir agente"
+  },
+  {
+    "en": "Delete it along with the plugin?",
+    "zh": "Excluí-lo junto com o plugin?"
+  },
+  {
+    "en": "Describe the issue below:",
+    "zh": "Descreva o problema abaixo:"
+  },
+  {
+    "en": "Description (tell Claude when to use this agent)",
+    "zh": "Descrição (diga a Claude quando usar este agente)"
+  },
+  {
+    "en": "Diagnose and verify your Claude Code installation and settings",
+    "zh": "Diagnosticar e verificar a instalação e configurações do Claude Code"
+  },
+  {
+    "en": "Diff tool",
+    "zh": "Ferramenta de comparação"
+  },
+  {
+    "en": "Disable Claude in Chrome integration",
+    "zh": "Desativar Claude na integração do Chrome"
+  },
+  {
+    "en": "Disable plugin",
+    "zh": "Desativar plug-in"
+  },
+  {
+    "en": "Discover Claude Code features through quick interactive lessons",
+    "zh": "Descubra os recursos do Claude Code através de aulas interativas rápidas"
+  },
+  {
+    "en": "Discover plugins",
+    "zh": "Descubra plug-ins"
+  },
+  {
+    "en": "Do you want to make this edit to",
+    "zh": "Você quer fazer esta edição para"
+  },
+  {
+    "en": "Do you want to proceed?",
+    "zh": "Você quer prosseguir?"
+  },
+  {
+    "en": "Do you want to use this API key?",
+    "zh": "Você deseja usar esta chave de API?"
+  },
+  {
+    "en": "Do you wish to disable auto-connect to IDE?",
+    "zh": "Deseja desativar a conexão automática ao IDE?"
+  },
+  {
+    "en": "Do you wish to enable auto-connect to IDE?",
+    "zh": "Deseja ativar a conexão automática ao IDE?"
+  },
+  {
+    "en": "Does Claude...",
+    "zh": "Cláudio..."
+  },
+  {
+    "en": "Don't ask again",
+    "zh": "Não pergunte novamente"
+  },
+  {
+    "en": "Don't ask me again",
+    "zh": "Não me pergunte de novo"
+  },
+  {
+    "en": "Due to prompt injection risks, only use it with code you trust",
+    "zh": "Devido aos riscos de injeção imediata, use-o apenas com código em que você confia"
+  },
+  {
+    "en": "Each candidate is tested with a one-token request:",
+    "zh": "Cada candidato é testado com uma solicitação de um token:"
+  },
+  {
+    "en": "Each subagent has its own context window, custom system prompt, and specific tools.",
+    "zh": "Cada subagente possui sua própria janela de contexto, prompt de sistema personalizado e ferramentas específicas."
+  },
+  {
+    "en": "Edit Failed",
+    "zh": "Falha na edição"
+  },
+  {
+    "en": "Edit agent",
+    "zh": "Editar agente"
+  },
+  {
+    "en": "Edit and press Enter to retry, or Esc to cancel",
+    "zh": "Edite e pressione Enter para tentar novamente ou Esc para cancelar"
+  },
+  {
+    "en": "Edit color",
+    "zh": "Editar cor"
+  },
+  {
+    "en": "Edit content",
+    "zh": "Editar conteúdo"
+  },
+  {
+    "en": "Edit model",
+    "zh": "Editar modelo"
+  },
+  {
+    "en": "Edit tools",
+    "zh": "Ferramentas de edição"
+  },
+  {
+    "en": "Editor mode",
+    "zh": "Modo editor"
+  },
+  {
+    "en": "Enable Claude in Chrome integration",
+    "zh": "Habilite Claude na integração do Chrome"
+  },
+  {
+    "en": "Enable Remote Control for all sessions",
+    "zh": "Habilite o controle remoto para todas as sessões"
+  },
+  {
+    "en": "Enable Remote Control for this session",
+    "zh": "Habilite o controle remoto para esta sessão"
+  },
+  {
+    "en": "Enable auth status messages in SDK mode",
+    "zh": "Habilitar mensagens de status de autenticação no modo SDK"
+  },
+  {
+    "en": "Enable debug logging for this session and help diagnose issues",
+    "zh": "Ative o registro de depuração para esta sessão e ajude a diagnosticar problemas"
+  },
+  {
+    "en": "Enable extended thinking (false to disable)",
+    "zh": "Ativar pensamento estendido (falso para desativar)"
+  },
+  {
+    "en": "Enable file checkpointing for code rewind",
+    "zh": "Habilitar ponto de verificação de arquivo para retrocesso de código"
+  },
+  {
+    "en": "Enable or disable thinking for this session.",
+    "zh": "Ative ou desative o pensamento para esta sessão."
+  },
+  {
+    "en": "Enable plugin",
+    "zh": "Habilitar plug-in"
+  },
+  {
+    "en": "Enable todo/task tracking",
+    "zh": "Ativar rastreamento de tarefas/tarefas"
+  },
+  {
+    "en": "Enable voice dictation (hold-to-talk)",
+    "zh": "Ativar ditado de voz (manter para falar)"
+  },
+  {
+    "en": "Enable with latest channel",
+    "zh": "Ativar com canal mais recente"
+  },
+  {
+    "en": "Enable with stable channel",
+    "zh": "Habilitar com canal estável"
+  },
+  {
+    "en": "Enter ",
+    "zh": "Digitar "
+  },
+  {
+    "en": "Enter a unique identifier for your agent:",
+    "zh": "Insira um identificador exclusivo para seu agente:"
+  },
+  {
+    "en": "Enter new secret name (alphanumeric with underscores):",
+    "zh": "Insira o novo nome secreto (alfanumérico com sublinhados):"
+  },
+  {
+    "en": "Enter plan mode?",
+    "zh": "Entrar no modo de plano?"
+  },
+  {
+    "en": "Enter the path to the directory:",
+    "zh": "Digite o caminho para o diretório:"
+  },
+  {
+    "en": "Enter the system prompt for your agent:",
+    "zh": "Insira o prompt do sistema para seu agente:"
+  },
+  {
+    "en": "Enter to apply",
+    "zh": "Entre para se inscrever"
+  },
+  {
+    "en": "Enter to auth",
+    "zh": "Entre para autenticação"
+  },
+  {
+    "en": "Enter to confirm · Esc to cancel",
+    "zh": "Enter para confirmar · Esc para cancelar"
+  },
+  {
+    "en": "Enter to confirm · Esc to skip",
+    "zh": "Enter para confirmar · Esc para pular"
+  },
+  {
+    "en": "Enter to select · Esc to continue",
+    "zh": "Enter para selecionar · Esc para continuar"
+  },
+  {
+    "en": "Enter to view",
+    "zh": "Entre para ver"
+  },
+  {
+    "en": "Enter view",
+    "zh": "Entrar na visualização"
+  },
+  {
+    "en": "Enter your preferred response and voice language:",
+    "zh": "Insira sua resposta preferida e idioma de voz:"
+  },
+  {
+    "en": "Enter: Save configuration",
+    "zh": "Digite: Salvar configuração"
+  },
+  {
+    "en": "Enterprise MCPs",
+    "zh": "MCPs empresariais"
+  },
+  {
+    "en": "Environment Variables",
+    "zh": "Variáveis ​​de ambiente"
+  },
+  {
+    "en": "Error editing file",
+    "zh": "Erro ao editar arquivo"
+  },
+  {
+    "en": "Error editing notebook",
+    "zh": "Erro ao editar o bloco de anotações"
+  },
+  {
+    "en": "Error loading Claude Code sessions",
+    "zh": "Erro ao carregar sessões do Claude Code"
+  },
+  {
+    "en": "Error reading file",
+    "zh": "Erro ao ler o arquivo"
+  },
+  {
+    "en": "Error searching files",
+    "zh": "Erro ao pesquisar arquivos"
+  },
+  {
+    "en": "Error writing file",
+    "zh": "Erro ao gravar arquivo"
+  },
+  {
+    "en": "Esc to cancel",
+    "zh": "Esc para cancelar"
+  },
+  {
+    "en": "Esc to close",
+    "zh": "Esc para fechar"
+  },
+  {
+    "en": "Esc to exit",
+    "zh": "Esc para sair"
+  },
+  {
+    "en": "Esc to go back",
+    "zh": "Esc para voltar"
+  },
+  {
+    "en": "Estimated usage by category",
+    "zh": "Uso estimado por categoria"
+  },
+  {
+    "en": "Evening (18-24)",
+    "zh": "Noite (18-24)"
+  },
+  {
+    "en": "Evidence of sandbox-caused failures includes:",
+    "zh": "As evidências de falhas causadas pelo sandbox incluem:"
+  },
+  {
+    "en": "Excluded Commands:",
+    "zh": "Comandos excluídos:"
+  },
+  {
+    "en": "Existing Workflow Found",
+    "zh": "Fluxo de trabalho existente encontrado"
+  },
+  {
+    "en": "Exit and fix manually",
+    "zh": "Saia e corrija manualmente"
+  },
+  {
+    "en": "Exit plan mode?",
+    "zh": "Sair do modo de plano?"
+  },
+  {
+    "en": "Explanation unavailable",
+    "zh": "Explicação indisponível"
+  },
+  {
+    "en": "Export Conversation",
+    "zh": "Exportar conversa"
+  },
+  {
+    "en": "Export the current conversation to a file or clipboard",
+    "zh": "Exporte a conversa atual para um arquivo ou área de transferência"
+  },
+  {
+    "en": "External CLAUDE.md includes",
+    "zh": "CLAUDE.md externo inclui"
+  },
+  {
+    "en": "External imports:",
+    "zh": "Importações externas:"
+  },
+  {
+    "en": "Extra usage",
+    "zh": "Uso extra"
+  },
+  {
+    "en": "Extra usage not enabled · /extra-usage to enable",
+    "zh": "Uso extra não ativado · /extra-usage para ativar"
+  },
+  {
+    "en": "Failed to install ",
+    "zh": "Falha ao instalar "
+  },
+  {
+    "en": "Failed to load marketplace data.",
+    "zh": "Falha ao carregar dados do mercado."
+  },
+  {
+    "en": "Failed to resume agent: ",
+    "zh": "Falha ao retomar o agente: "
+  },
+  {
+    "en": "Failed to resume session",
+    "zh": "Falha ao retomar a sessão"
+  },
+  {
+    "en": "Failed to save marketplace retry info · Check ~/.claude.json permissions",
+    "zh": "Falha ao salvar informações de nova tentativa do mercado · Verifique as permissões ~/.claude.json"
+  },
+  {
+    "en": "Failed to spawn process - check command and permissions",
+    "zh": "Falha ao gerar o processo - verifique o comando e as permissões"
+  },
+  {
+    "en": "Failed: ",
+    "zh": "Fracassado: "
+  },
+  {
+    "en": "Fast and efficient for simple tasks",
+    "zh": "Rápido e eficiente para tarefas simples"
+  },
+  {
+    "en": "Fast mode",
+    "zh": "Modo rápido"
+  },
+  {
+    "en": "Fast mode OFF",
+    "zh": "Modo rápido DESLIGADO"
+  },
+  {
+    "en": "Feedback: ",
+    "zh": "Opinião: "
+  },
+  {
+    "en": "Fetching session logs",
+    "zh": "Buscando logs de sessão"
+  },
+  {
+    "en": "Fetching…",
+    "zh": "Buscando…"
+  },
+  {
+    "en": "File Changed",
+    "zh": "Arquivo alterado"
+  },
+  {
+    "en": "File must be read first",
+    "zh": "O arquivo deve ser lido primeiro"
+  },
+  {
+    "en": "File not found",
+    "zh": "Arquivo não encontrado"
+  },
+  {
+    "en": "Files with errors are skipped entirely, not just the invalid settings.",
+    "zh": "Os arquivos com erros são totalmente ignorados, não apenas as configurações inválidas."
+  },
+  {
+    "en": "Filesystem Read Restrictions:",
+    "zh": "Restrições de leitura do sistema de arquivos:"
+  },
+  {
+    "en": "Filesystem Write Restrictions:",
+    "zh": "Restrições de gravação do sistema de arquivos:"
+  },
+  {
+    "en": "Fix errors",
+    "zh": "Corrigir erros"
+  },
+  {
+    "en": "Follow the prompts to authenticate with GitHub",
+    "zh": "Siga as instruções para autenticar com GitHub"
+  },
+  {
+    "en": "For manual setup instructions, see:",
+    "zh": "Para obter instruções de configuração manual, consulte:"
+  },
+  {
+    "en": "For more information on Claude Code on the web:",
+    "zh": "Para mais informações sobre Claude Code na web:"
+  },
+  {
+    "en": "For the optimal coding experience, enable the recommended settings",
+    "zh": "Para uma experiência de codificação ideal, ative as configurações recomendadas"
+  },
+  {
+    "en": "Full name: ",
+    "zh": "Nome completo: "
+  },
+  {
+    "en": "Full response",
+    "zh": "Resposta completa"
+  },
+  {
+    "en": "GCP project",
+    "zh": "Projeto GCP"
+  },
+  {
+    "en": "Generate a report analyzing your Claude Code sessions",
+    "zh": "Gere um relatório analisando suas sessões do Claude Code"
+  },
+  {
+    "en": "Generate with Claude (recommended)",
+    "zh": "Gerar com Claude (recomendado)"
+  },
+  {
+    "en": "Generate your personalized animation",
+    "zh": "Gere sua animação personalizada"
+  },
+  {
+    "en": "Generating QR code…",
+    "zh": "Gerando código QR…"
+  },
+  {
+    "en": "Get the current weather for a location",
+    "zh": "Obtenha o clima atual para um local"
+  },
+  {
+    "en": "Getting branch info",
+    "zh": "Obtendo informações da filial"
+  },
+  {
+    "en": "Git is required to install marketplaces.",
+    "zh": "O Git é necessário para instalar mercados."
+  },
+  {
+    "en": "Go back",
+    "zh": "Volte"
+  },
+  {
+    "en": "Go back and fix",
+    "zh": "Volte e conserte"
+  },
+  {
+    "en": "Got it, thanks!",
+    "zh": "Entendi, obrigado!"
+  },
+  {
+    "en": "Guest passes are not currently available.",
+    "zh": "Os passes para convidados não estão disponíveis no momento."
+  },
+  {
+    "en": "Have an administrator set channelsEnabled: true in managed settings to enable",
+    "zh": "Peça a um administrador que defina canaisEnabled: true nas configurações gerenciadas para ativar"
+  },
+  {
+    "en": "Having trouble? See manual setup instructions at:",
+    "zh": "Está com problemas? Consulte as instruções de configuração manual em:"
+  },
+  {
+    "en": "Help improve Claude",
+    "zh": "Ajude a melhorar Claude"
+  },
+  {
+    "en": "Help teammates ramp on Claude Code with a guide from your usage",
+    "zh": "Ajude seus colegas de equipe a desenvolver o Claude Code com um guia de seu uso"
+  },
+  {
+    "en": "Here is Claude's plan:",
+    "zh": "Aqui está o plano de Claude:"
+  },
+  {
+    "en": "Hook Structure",
+    "zh": "Estrutura do Gancho"
+  },
+  {
+    "en": "Hook details",
+    "zh": "Detalhes do gancho"
+  },
+  {
+    "en": "Hooks only",
+    "zh": "Apenas ganchos"
+  },
+  {
+    "en": "Host unreachable - network connectivity issue",
+    "zh": "Host inacessível – problema de conectividade de rede"
+  },
+  {
+    "en": "How do I...",
+    "zh": "Como eu..."
+  },
+  {
+    "en": "How should the plan be implemented?",
+    "zh": "Como o plano deve ser implementado?"
+  },
+  {
+    "en": "How thinking content appears in the response",
+    "zh": "Como o conteúdo pensante aparece na resposta"
+  },
+  {
+    "en": "How this affects data retention",
+    "zh": "Como isso afeta a retenção de dados"
+  },
+  {
+    "en": "How to fix:",
+    "zh": "Como consertar:"
+  },
+  {
+    "en": "How would you like to handle this?",
+    "zh": "Como você gostaria de lidar com isso?"
+  },
+  {
+    "en": "I am using this for local development",
+    "zh": "Estou usando isso para o desenvolvimento local"
+  },
+  {
+    "en": "If the redirect page shows a connection error, paste the URL from your browser's address bar:",
+    "zh": "Se a página de redirecionamento mostrar um erro de conexão, cole o URL da barra de endereço do seu navegador:"
+  },
+  {
+    "en": "If this is an SSO profile, run `aws sso login --profile NAME` first.",
+    "zh": "Se este for um perfil SSO, execute `aws sso login --profile NAME` primeiro."
+  },
+  {
+    "en": "If your browser doesn't open automatically, copy this URL manually:",
+    "zh": "Se o seu navegador não abrir automaticamente, copie este URL manualmente:"
+  },
+  {
+    "en": "Implement here",
+    "zh": "Implemente aqui"
+  },
+  {
+    "en": "Import MCP Servers from Claude Desktop",
+    "zh": "Importe servidores MCP do Claude Desktop"
+  },
+  {
+    "en": "Important: Make sure to grant access to this specific repository",
+    "zh": "Importante: certifique-se de conceder acesso a este repositório específico"
+  },
+  {
+    "en": "In plan mode, Claude will:",
+    "zh": "No modo plano, Claude irá:"
+  },
+  {
+    "en": "In progress… · ",
+    "zh": "Em andamento… · "
+  },
+  {
+    "en": "Inbound messages will be silently dropped",
+    "zh": "As mensagens recebidas serão descartadas silenciosamente"
+  },
+  {
+    "en": "Individual Tools:",
+    "zh": "Ferramentas individuais:"
+  },
+  {
+    "en": "Inherit from parent",
+    "zh": "Herdar do pai"
+  },
+  {
+    "en": "Inject bridge failure states for manual recovery testing",
+    "zh": "Injetar estados de falha de ponte para testes de recuperação manuais"
+  },
+  {
+    "en": "Inject plan into the current conversation",
+    "zh": "Injetar plano na conversa atual"
+  },
+  {
+    "en": "Install Chrome extension",
+    "zh": "Instale a extensão do Chrome"
+  },
+  {
+    "en": "Install GitHub App",
+    "zh": "Instale o aplicativo GitHub"
+  },
+  {
+    "en": "Install Plugins",
+    "zh": "Instalar plug-ins"
+  },
+  {
+    "en": "Install for all collaborators on this repository (project scope)",
+    "zh": "Instalar para todos os colaboradores deste repositório (escopo do projeto)"
+  },
+  {
+    "en": "Install for you (user scope)",
+    "zh": "Instale para você (escopo do usuário)"
+  },
+  {
+    "en": "Install for you, in this repo only (local scope)",
+    "zh": "Instale para você, apenas neste repositório (escopo local)"
+  },
+  {
+    "en": "Install it2 now",
+    "zh": "Instale-o2 agora"
+  },
+  {
+    "en": "Install plugins",
+    "zh": "Instalar plug-ins"
+  },
+  {
+    "en": "Install the Claude GitHub App",
+    "zh": "Instale o aplicativo Claude GitHub"
+  },
+  {
+    "en": "Installation failed",
+    "zh": "Falha na instalação"
+  },
+  {
+    "en": "Installed components:",
+    "zh": "Componentes instalados:"
+  },
+  {
+    "en": "Interrupted ",
+    "zh": "Interrompido "
+  },
+  {
+    "en": "Invalid Key.",
+    "zh": "Chave inválida."
+  },
+  {
+    "en": "Invalid Settings",
+    "zh": "Configurações inválidas"
+  },
+  {
+    "en": "Keep worktree",
+    "zh": "Manter a árvore de trabalho"
+  },
+  {
+    "en": "Keep worktree and tmux session",
+    "zh": "Mantenha a sessão worktree e tmux"
+  },
+  {
+    "en": "Keep worktree, kill tmux session",
+    "zh": "Mantenha a árvore de trabalho, mate a sessão do tmux"
+  },
+  {
+    "en": "Keeping worktree…",
+    "zh": "Mantendo a árvore de trabalho…"
+  },
+  {
+    "en": "Key binding mode",
+    "zh": "Modo de ligação de teclas"
+  },
+  {
+    "en": "Key pressed.",
+    "zh": "Tecla pressionada."
+  },
+  {
+    "en": "Keybinding Configuration Issues",
+    "zh": "Problemas de configuração de atalhos de teclado"
+  },
+  {
+    "en": "Kick off a long task, close your laptop, check progress from your phone.",
+    "zh": "Inicie uma tarefa longa, feche seu laptop e verifique o progresso em seu telefone."
+  },
+  {
+    "en": "LSP operation failed",
+    "zh": "Falha na operação LSP"
+  },
+  {
+    "en": "LSP provides code intelligence like go-to-definition and error checking",
+    "zh": "LSP fornece inteligência de código, como definição e verificação de erros"
+  },
+  {
+    "en": "Large file - diff exceeds 1 MB limit",
+    "zh": "Arquivo grande - a diferença excede o limite de 1 MB"
+  },
+  {
+    "en": "Large file modified",
+    "zh": "Arquivo grande modificado"
+  },
+  {
+    "en": "Learn more",
+    "zh": "Saber mais"
+  },
+  {
+    "en": "Leave empty for default (English)",
+    "zh": "Deixe em branco por padrão (inglês)"
+  },
+  {
+    "en": "Let me try...",
+    "zh": "Deixe-me tentar..."
+  },
+  {
+    "en": "Let's go!",
+    "zh": "Vamos!"
+  },
+  {
+    "en": "Light mode",
+    "zh": "Modo claro"
+  },
+  {
+    "en": "Light mode (ANSI colors only)",
+    "zh": "Modo claro (somente cores ANSI)"
+  },
+  {
+    "en": "Light mode (colorblind-friendly)",
+    "zh": "Modo claro (para daltônicos)"
+  },
+  {
+    "en": "List all files currently in context",
+    "zh": "Liste todos os arquivos atualmente no contexto"
+  },
+  {
+    "en": "Load failed",
+    "zh": "Falha no carregamento"
+  },
+  {
+    "en": "Loading Claude Code sessions…",
+    "zh": "Carregando sessões do Claude Code…"
+  },
+  {
+    "en": "Loading conversations…",
+    "zh": "Carregando conversas…"
+  },
+  {
+    "en": "Loading guest pass information…",
+    "zh": "Carregando informações do passe de convidado…"
+  },
+  {
+    "en": "Loading output styles…",
+    "zh": "Carregando estilos de saída…"
+  },
+  {
+    "en": "Loading output…",
+    "zh": "Carregando saída…"
+  },
+  {
+    "en": "Loading usage data…",
+    "zh": "Carregando dados de uso…"
+  },
+  {
+    "en": "Local MCPs",
+    "zh": "MCP locais"
+  },
+  {
+    "en": "Local agents",
+    "zh": "Agentes locais"
+  },
+  {
+    "en": "Location: ",
+    "zh": "Localização: "
+  },
+  {
+    "en": "Log in to Claude",
+    "zh": "Faça login no Cláudio"
+  },
+  {
+    "en": "Logged in as",
+    "zh": "Logado como"
+  },
+  {
+    "en": "Logging to: ",
+    "zh": "Registrando em: "
+  },
+  {
+    "en": "Login method",
+    "zh": "Método de login"
+  },
+  {
+    "en": "Login successful. Press ",
+    "zh": "Login bem-sucedido. Imprensa "
+  },
+  {
+    "en": "Login with Claude account",
+    "zh": "Faça login com a conta Claude"
+  },
+  {
+    "en": "Long context that holds up",
+    "zh": "Contexto longo que se sustenta"
+  },
+  {
+    "en": "Looking at...",
+    "zh": "Olhando para..."
+  },
+  {
+    "en": "Looks good",
+    "zh": "Parece bom"
+  },
+  {
+    "en": "MCP Config Diagnostics",
+    "zh": "Diagnóstico de configuração do MCP"
+  },
+  {
+    "en": "MCP Servers:",
+    "zh": "Servidores MCP:"
+  },
+  {
+    "en": "MCP documentation",
+    "zh": "Documentação MCP"
+  },
+  {
+    "en": "MCP servers",
+    "zh": "Servidores MCP"
+  },
+  {
+    "en": "MCP tools",
+    "zh": "Ferramentas MCP"
+  },
+  {
+    "en": "Manage IDE integrations and show status",
+    "zh": "Gerenciar integrações IDE e mostrar status"
+  },
+  {
+    "en": "Manage allow & deny tool permission rules",
+    "zh": "Gerenciar regras de permissão da ferramenta permitir e negar"
+  },
+  {
+    "en": "Manage marketplaces",
+    "zh": "Gerenciar mercados"
+  },
+  {
+    "en": "Manage permissions",
+    "zh": "Gerenciar permissões"
+  },
+  {
+    "en": "Manage plugins",
+    "zh": "Gerenciar plug-ins"
+  },
+  {
+    "en": "Managed agents",
+    "zh": "Agentes gerenciados"
+  },
+  {
+    "en": "Managed by your organization — contact your admin",
+    "zh": "Gerenciado pela sua organização – entre em contato com seu administrador"
+  },
+  {
+    "en": "Manual configuration",
+    "zh": "Configuração manual"
+  },
+  {
+    "en": "Memory files",
+    "zh": "Arquivos de memória"
+  },
+  {
+    "en": "Message ",
+    "zh": "Mensagem "
+  },
+  {
+    "en": "Microcompact",
+    "zh": "Microcompacto"
+  },
+  {
+    "en": "Microsoft Foundry base URL",
+    "zh": "URL base do Microsoft Foundry"
+  },
+  {
+    "en": "Microsoft Foundry resource",
+    "zh": "Recurso Microsoft Foundry"
+  },
+  {
+    "en": "Model determines the agent's reasoning capabilities and speed.",
+    "zh": "O modelo determina a capacidade e a velocidade de raciocínio do agente."
+  },
+  {
+    "en": "More workflow examples (issue triage, CI fixes, etc.) at:",
+    "zh": "Mais exemplos de fluxo de trabalho (triagem de problemas, correções de IC, etc.) em:"
+  },
+  {
+    "en": "Morning (6-12)",
+    "zh": "Manhã (6-12)"
+  },
+  {
+    "en": "Most capable for complex reasoning tasks",
+    "zh": "Mais capaz para tarefas de raciocínio complexas"
+  },
+  {
+    "en": "NetworkError when attempting to fetch resource",
+    "zh": "NetworkError ao tentar buscar recurso"
+  },
+  {
+    "en": "Never mind",
+    "zh": "Deixa para lá"
+  },
+  {
+    "en": "New file not yet staged.",
+    "zh": "Novo arquivo ainda não preparado."
+  },
+  {
+    "en": "Next steps:",
+    "zh": "Próximas etapas:"
+  },
+  {
+    "en": "Next: Run ",
+    "zh": "Próximo: Executar "
+  },
+  {
+    "en": "Night (0-6)",
+    "zh": "Noite (0-6)"
+  },
+  {
+    "en": "No Sandbox",
+    "zh": "Sem caixa de areia"
+  },
+  {
+    "en": "No advisor",
+    "zh": "Nenhum conselheiro"
+  },
+  {
+    "en": "No agents found. Create specialized subagents that Claude can delegate to.",
+    "zh": "Nenhum agente encontrado. Crie subagentes especializados aos quais Claude possa delegar."
+  },
+  {
+    "en": "No cells found in notebook",
+    "zh": "Nenhuma célula encontrada no notebook"
+  },
+  {
+    "en": "No changed files",
+    "zh": "Nenhum arquivo alterado"
+  },
+  {
+    "en": "No changes detected",
+    "zh": "Nenhuma alteração detectada"
+  },
+  {
+    "en": "No code changes",
+    "zh": "Nenhuma alteração de código"
+  },
+  {
+    "en": "No conversations found to resume.",
+    "zh": "Nenhuma conversa encontrada para ser retomada."
+  },
+  {
+    "en": "No diff content",
+    "zh": "Sem conteúdo diferente"
+  },
+  {
+    "en": "No hooks configured for this event.",
+    "zh": "Nenhum gancho configurado para este evento."
+  },
+  {
+    "en": "No info yet",
+    "zh": "Nenhuma informação ainda"
+  },
+  {
+    "en": "No matching sessions found.",
+    "zh": "Nenhuma sessão correspondente encontrada."
+  },
+  {
+    "en": "No messages to compact",
+    "zh": "Nenhuma mensagem para compactar"
+  },
+  {
+    "en": "No model usage data available",
+    "zh": "Nenhum dado de uso do modelo disponível"
+  },
+  {
+    "en": "No new plugins available to install.",
+    "zh": "Nenhum novo plug-in disponível para instalação."
+  },
+  {
+    "en": "No other browsers available to switch to. Open Chrome with the Claude extension in another browser to switch.",
+    "zh": "Nenhum outro navegador disponível para mudar. Abra o Chrome com a extensão Claude em outro navegador para mudar."
+  },
+  {
+    "en": "No output available",
+    "zh": "Nenhuma saída disponível"
+  },
+  {
+    "en": "No plan found",
+    "zh": "Nenhum plano encontrado"
+  },
+  {
+    "en": "No plugin errors",
+    "zh": "Sem erros de plug-in"
+  },
+  {
+    "en": "No plugins available.",
+    "zh": "Nenhum plug-in disponível."
+  },
+  {
+    "en": "No recent denials. Commands denied by the auto mode classifier will appear here.",
+    "zh": "Nenhuma negação recente. Os comandos negados pelo classificador de modo automático aparecerão aqui."
+  },
+  {
+    "en": "No response",
+    "zh": "Sem resposta"
+  },
+  {
+    "en": "No response.",
+    "zh": "Nenhuma resposta."
+  },
+  {
+    "en": "No scheduled jobs",
+    "zh": "Nenhum trabalho agendado"
+  },
+  {
+    "en": "No stats available yet. Start using Claude Code!",
+    "zh": "Nenhuma estatística disponível ainda. Comece a usar o Código Claude!"
+  },
+  {
+    "en": "No task output available",
+    "zh": "Nenhuma saída de tarefa disponível"
+  },
+  {
+    "en": "No tasks currently running",
+    "zh": "Nenhuma tarefa em execução no momento"
+  },
+  {
+    "en": "No teammates",
+    "zh": "Sem companheiros de equipe"
+  },
+  {
+    "en": "No tools available",
+    "zh": "Nenhuma ferramenta disponível"
+  },
+  {
+    "en": "No, and don't show plugin installation hints again",
+    "zh": "Não, e não mostre dicas de instalação de plugins novamente"
+  },
+  {
+    "en": "No, cancel",
+    "zh": "Não, cancelar"
+  },
+  {
+    "en": "No, disable external imports",
+    "zh": "Não, desative as importações externas"
+  },
+  {
+    "en": "No, exit",
+    "zh": "Sem saída"
+  },
+  {
+    "en": "No, keep planning",
+    "zh": "Não, continue planejando"
+  },
+  {
+    "en": "No, not now",
+    "zh": "Não, agora não"
+  },
+  {
+    "en": "No, refine with Ultraplan on Claude Code on the web",
+    "zh": "Não, refine com Ultraplan no Claude Code na web"
+  },
+  {
+    "en": "No, start implementing now",
+    "zh": "Não, comece a implementar agora"
+  },
+  {
+    "en": "Not connected",
+    "zh": "Não conectado"
+  },
+  {
+    "en": "Not detected",
+    "zh": "Não detectado"
+  },
+  {
+    "en": "Not enough messages to compact.",
+    "zh": "Não há mensagens suficientes para compactar."
+  },
+  {
+    "en": "Not in remote mode. Start with `claude --remote` to use this command.",
+    "zh": "Não no modo remoto. Comece com `claude --remote` para usar este comando."
+  },
+  {
+    "en": "Not now",
+    "zh": "Agora não"
+  },
+  {
+    "en": "Not working",
+    "zh": "Não está funcionando"
+  },
+  {
+    "en": "Note: Only one Claude Code instance can be connected to VS Code at a time.",
+    "zh": "Nota: Apenas uma instância do Claude Code pode ser conectada ao VS Code por vez."
+  },
+  {
+    "en": "Note: Some servers already exist with the same name. If selected, they will be imported with a numbered suffix.",
+    "zh": "Nota: Já existem alguns servidores com o mesmo nome. Se selecionados, eles serão importados com um sufixo numerado."
+  },
+  {
+    "en": "Notifications",
+    "zh": "Notificações"
+  },
+  {
+    "en": "Now using extra usage",
+    "zh": "Agora usando uso extra"
+  },
+  {
+    "en": "OAuth token",
+    "zh": "Token OAuth"
+  },
+  {
+    "en": "October 8, 2025",
+    "zh": "8 de outubro de 2025"
+  },
+  {
+    "en": "On a team?",
+    "zh": "Em uma equipe?"
+  },
+  {
+    "en": "Only hooks from managed settings can run. User-defined hooks from ~/.claude/settings.json, .claude/settings.json, and .claude/settings.local.json are blocked.",
+    "zh": "Somente ganchos de configurações gerenciadas podem ser executados. Hooks definidos pelo usuário de ~/.claude/settings.json, .claude/settings.json e .claude/settings.local.json são bloqueados."
+  },
+  {
+    "en": "Only needed for temporary credentials from STS. Leave empty for long-lived keys.",
+    "zh": "Necessário apenas para credenciais temporárias do STS. Deixe em branco para chaves de longa duração."
+  },
+  {
+    "en": "Open System Settings → Accessibility",
+    "zh": "Abra Configurações do sistema → Acessibilidade"
+  },
+  {
+    "en": "Open auto-memory folder",
+    "zh": "Abra a pasta de memória automática"
+  },
+  {
+    "en": "Open homepage",
+    "zh": "Abrir página inicial"
+  },
+  {
+    "en": "Open in browser: ",
+    "zh": "Abra no navegador: "
+  },
+  {
+    "en": "Open in editor",
+    "zh": "Abrir no editor"
+  },
+  {
+    "en": "Open team memory folder",
+    "zh": "Abra a pasta de memória da equipe"
+  },
+  {
+    "en": "Opening browser to sign in…",
+    "zh": "Abrindo o navegador para fazer login…"
+  },
+  {
+    "en": "Option as Meta",
+    "zh": "Opção como Meta"
+  },
+  {
+    "en": "Opus (1M context)",
+    "zh": "Opus (contexto 1M)"
+  },
+  {
+    "en": "Opus Plan Mode",
+    "zh": "Modo Plano Opus"
+  },
+  {
+    "en": "Output Style",
+    "zh": "Estilo de saída"
+  },
+  {
+    "en": "Output style",
+    "zh": "Estilo de saída"
+  },
+  {
+    "en": "Override settings are managed by a higher-priority configuration and cannot be changed locally.",
+    "zh": "As configurações de substituição são gerenciadas por uma configuração de prioridade mais alta e não podem ser alteradas localmente."
+  },
+  {
+    "en": "Pasting text…",
+    "zh": "Colando texto…"
+  },
+  {
+    "en": "Pending changes:",
+    "zh": "Alterações pendentes:"
+  },
+  {
+    "en": "Permission mode",
+    "zh": "Modo de permissão"
+  },
+  {
+    "en": "Permission request sent to team ",
+    "zh": "Solicitação de permissão enviada à equipe "
+  },
+  {
+    "en": "Personal (~/.claude/agents/)",
+    "zh": "Pessoal (~/.claude/agentes/)"
+  },
+  {
+    "en": "Pin the working models",
+    "zh": "Fixe os modelos de trabalho"
+  },
+  {
+    "en": "Plan Mode",
+    "zh": "Modo de planejamento"
+  },
+  {
+    "en": "Plan file: ",
+    "zh": "Arquivo de plano: "
+  },
+  {
+    "en": "Plan saved!",
+    "zh": "Plano salvo!"
+  },
+  {
+    "en": "Plan to implement",
+    "zh": "Plano para implementar"
+  },
+  {
+    "en": "Plan updated",
+    "zh": "Plano atualizado"
+  },
+  {
+    "en": "Planning: ",
+    "zh": "Planejamento: "
+  },
+  {
+    "en": "Play animation",
+    "zh": "Reproduzir animação"
+  },
+  {
+    "en": "Please check your internet connection and network settings.",
+    "zh": "Verifique sua conexão com a Internet e configurações de rede."
+  },
+  {
+    "en": "Please enter a repository name to continue",
+    "zh": "Por favor insira um nome de repositório para continuar"
+  },
+  {
+    "en": "Please install git and restart Claude Code.",
+    "zh": "Instale o git e reinicie o Claude Code."
+  },
+  {
+    "en": "Please restart your IDE and try again.",
+    "zh": "Reinicie seu IDE e tente novamente."
+  },
+  {
+    "en": "Please revise your plan based on the feedback and call ExitPlanMode again.",
+    "zh": "Revise seu plano com base no feedback e ligue para ExitPlanMode novamente."
+  },
+  {
+    "en": "Please select how you'd like to continue",
+    "zh": "Selecione como você deseja continuar"
+  },
+  {
+    "en": "Please select the servers you want to import:",
+    "zh": "Selecione os servidores que deseja importar:"
+  },
+  {
+    "en": "Plugin Command Usage:",
+    "zh": "Uso do comando do plug-in:"
+  },
+  {
+    "en": "Plugin Details",
+    "zh": "Detalhes do plug-in"
+  },
+  {
+    "en": "Plugin Errors",
+    "zh": "Erros de plug-in"
+  },
+  {
+    "en": "Plugin Hooks",
+    "zh": "Ganchos de plug-in"
+  },
+  {
+    "en": "Plugin agents",
+    "zh": "Agentes de plug-in"
+  },
+  {
+    "en": "Plugin details",
+    "zh": "Detalhes do plug-in"
+  },
+  {
+    "en": "Plugin options",
+    "zh": "Opções de plug-in"
+  },
+  {
+    "en": "Plugin skill",
+    "zh": "Habilidade de plug-in"
+  },
+  {
+    "en": "Pre-fill the prompt input with text without submitting it",
+    "zh": "Preencha previamente a entrada do prompt com texto sem enviá-lo"
+  },
+  {
+    "en": "Pre-populate email address on the login page",
+    "zh": "Preencher previamente o endereço de e-mail na página de login"
+  },
+  {
+    "en": "Press Ctrl+C to exit and start a new conversation.",
+    "zh": "Pressione Ctrl+C para sair e iniciar uma nova conversa."
+  },
+  {
+    "en": "Press Enter once you've installed the app",
+    "zh": "Pressione Enter depois de instalar o aplicativo"
+  },
+  {
+    "en": "Press Enter or Esc to go back",
+    "zh": "Pressione Enter ou Esc para voltar"
+  },
+  {
+    "en": "Press Enter to continue",
+    "zh": "Pressione Enter para continuar"
+  },
+  {
+    "en": "Press Enter to continue anyway, or Ctrl+C to exit and fix issues",
+    "zh": "Pressione Enter para continuar mesmo assim ou Ctrl+C para sair e corrigir problemas"
+  },
+  {
+    "en": "Press Enter to try again, or any other key to cancel",
+    "zh": "Pressione Enter para tentar novamente ou qualquer outra tecla para cancelar"
+  },
+  {
+    "en": "Press Enter when ready to verify…",
+    "zh": "Pressione Enter quando estiver pronto para verificar…"
+  },
+  {
+    "en": "Press Option+Enter to send a multi-line message",
+    "zh": "Pressione Option+Enter para enviar uma mensagem multilinha"
+  },
+  {
+    "en": "Press Shift+Enter to send a multi-line message",
+    "zh": "Pressione Shift+Enter para enviar uma mensagem multilinha"
+  },
+  {
+    "en": "Press any key to continue…",
+    "zh": "Pressione qualquer tecla para continuar…"
+  },
+  {
+    "en": "Press any key to exit",
+    "zh": "Pressione qualquer tecla para sair"
+  },
+  {
+    "en": "Press any key to return to API key selection",
+    "zh": "Pressione qualquer tecla para retornar à seleção da chave API"
+  },
+  {
+    "en": "Press up to edit queued messages",
+    "zh": "Pressione para cima para editar mensagens na fila"
+  },
+  {
+    "en": "Press ↑↓ to navigate · Enter to select · Esc to go back",
+    "zh": "Pressione ↑↓ para navegar · Enter para selecionar · Esc para voltar"
+  },
+  {
+    "en": "Press ↑↓ to navigate, Enter to select, Esc to cancel",
+    "zh": "Pressione ↑↓ para navegar, Enter para selecionar, Esc para cancelar"
+  },
+  {
+    "en": "Print detailed performance stats",
+    "zh": "Imprima estatísticas de desempenho detalhadas"
+  },
+  {
+    "en": "Pro, Max, Team, or Enterprise",
+    "zh": "Pro, Max, Equipe ou Empresa"
+  },
+  {
+    "en": "Proceed with Extra Usage billing",
+    "zh": "Prossiga com a cobrança por uso extra"
+  },
+  {
+    "en": "Processing changes…",
+    "zh": "Processando alterações…"
+  },
+  {
+    "en": "Project (.claude/agents/)",
+    "zh": "Projeto (.claude/agentes/)"
+  },
+  {
+    "en": "Project MCPs",
+    "zh": "MCPs do projeto"
+  },
+  {
+    "en": "Project agents",
+    "zh": "Agentes de projeto"
+  },
+  {
+    "en": "Project settings",
+    "zh": "Configurações do projeto"
+  },
+  {
+    "en": "Project settings (local)",
+    "zh": "Configurações do projeto (local)"
+  },
+  {
+    "en": "Prompt suggestions",
+    "zh": "Sugestões imediatas"
+  },
+  {
+    "en": "Provide an explanation of a shell command",
+    "zh": "Forneça uma explicação de um comando shell"
+  },
+  {
+    "en": "Re-authenticate",
+    "zh": "Reautenticar"
+  },
+  {
+    "en": "Read aborted",
+    "zh": "Leitura abortada"
+  },
+  {
+    "en": "Ready to code?",
+    "zh": "Pronto para codificar?"
+  },
+  {
+    "en": "Ready to submit your answers?",
+    "zh": "Pronto para enviar suas respostas?"
+  },
+  {
+    "en": "Reason ",
+    "zh": "Razão "
+  },
+  {
+    "en": "Recent messages",
+    "zh": "Mensagens recentes"
+  },
+  {
+    "en": "Reduce motion",
+    "zh": "Reduzir o movimento"
+  },
+  {
+    "en": "Regenerate",
+    "zh": "Regenerado"
+  },
+  {
+    "en": "Release notes",
+    "zh": "Notas de lançamento"
+  },
+  {
+    "en": "Relive your year of coding with Claude.",
+    "zh": "Reviva seu ano de programação com Claude."
+  },
+  {
+    "en": "Remote Control active",
+    "zh": "Controle remoto ativo"
+  },
+  {
+    "en": "Remote Control connecting…",
+    "zh": "Conexão de controle remoto…"
+  },
+  {
+    "en": "Remote Control failed",
+    "zh": "Falha no controle remoto"
+  },
+  {
+    "en": "Remote Control reconnecting",
+    "zh": "Reconectando o controle remoto"
+  },
+  {
+    "en": "Remote agents",
+    "zh": "Agentes remotos"
+  },
+  {
+    "en": "Remote session",
+    "zh": "Sessão remota"
+  },
+  {
+    "en": "Remote task",
+    "zh": "Tarefa remota"
+  },
+  {
+    "en": "Remove marketplace",
+    "zh": "Remover mercado"
+  },
+  {
+    "en": "Remove worktree",
+    "zh": "Remover árvore de trabalho"
+  },
+  {
+    "en": "Remove worktree and tmux session",
+    "zh": "Remover worktree e sessão tmux"
+  },
+  {
+    "en": "Removing worktree…",
+    "zh": "Removendo árvore de trabalho…"
+  },
+  {
+    "en": "Rename session:",
+    "zh": "Renomear sessão:"
+  },
+  {
+    "en": "Request timed out.",
+    "zh": "A solicitação expirou."
+  },
+  {
+    "en": "Request was aborted.",
+    "zh": "A solicitação foi abortada."
+  },
+  {
+    "en": "Requested permissions:",
+    "zh": "Permissões solicitadas:"
+  },
+  {
+    "en": "Require plan mode before implementation",
+    "zh": "Exigir modo de plano antes da implementação"
+  },
+  {
+    "en": "Requires the Chrome extension. Get started at",
+    "zh": "Requer a extensão do Chrome. Comece em"
+  },
+  {
+    "en": "Reset with default configuration",
+    "zh": "Redefinir com configuração padrão"
+  },
+  {
+    "en": "Respect .gitignore in file picker",
+    "zh": "Respeite .gitignore no seletor de arquivos"
+  },
+  {
+    "en": "Restore code",
+    "zh": "Código de restauração"
+  },
+  {
+    "en": "Restore code and conversation",
+    "zh": "Restaurar código e conversa"
+  },
+  {
+    "en": "Restore conversation",
+    "zh": "Restaurar conversa"
+  },
+  {
+    "en": "Resume a Claude Code session from claude.ai",
+    "zh": "Retomar uma sessão do Claude Code em claude.ai"
+  },
+  {
+    "en": "Resume a teleport session, optionally specify session ID",
+    "zh": "Retomar uma sessão de teletransporte, opcionalmente especificar o ID da sessão"
+  },
+  {
+    "en": "Resume from summary (recommended)",
+    "zh": "Currículo do resumo (recomendado)"
+  },
+  {
+    "en": "Resume full session as-is",
+    "zh": "Retomar a sessão completa como está"
+  },
+  {
+    "en": "Resuming conversation…",
+    "zh": "Retomando a conversa…"
+  },
+  {
+    "en": "Resuming session…",
+    "zh": "Retomando sessão…"
+  },
+  {
+    "en": "Retrying in ",
+    "zh": "Tentando novamente em "
+  },
+  {
+    "en": "Retrying…",
+    "zh": "Tentando novamente…"
+  },
+  {
+    "en": "Return here after authenticating in your browser.",
+    "zh": "Volte aqui após autenticar em seu navegador."
+  },
+  {
+    "en": "Return here after authenticating in your browser. Press Esc to go back.",
+    "zh": "Volte aqui após autenticar em seu navegador. Pressione Esc para voltar."
+  },
+  {
+    "en": "Review and manage your privacy settings at",
+    "zh": "Revise e gerencie suas configurações de privacidade em"
+  },
+  {
+    "en": "Rewind code (checkpoints)",
+    "zh": "Código de retrocesso (pontos de verificação)"
+  },
+  {
+    "en": "Rule details",
+    "zh": "Detalhes da regra"
+  },
+  {
+    "en": "Run /reload-plugins to apply changes",
+    "zh": "Execute /reload-plugins para aplicar as alterações"
+  },
+  {
+    "en": "Run Setup and SessionStart:startup hooks, then exit",
+    "zh": "Execute Setup e SessionStart:startup hooks e saia"
+  },
+  {
+    "en": "Run Setup hooks with init trigger, then continue",
+    "zh": "Execute os ganchos de configuração com o gatilho init e continue"
+  },
+  {
+    "en": "Run Setup hooks with maintenance trigger, then continue",
+    "zh": "Execute ganchos de configuração com gatilho de manutenção e continue"
+  },
+  {
+    "en": "Run a command on SLURM cluster nodes",
+    "zh": "Execute um comando em nós de cluster SLURM"
+  },
+  {
+    "en": "Run ultraplan",
+    "zh": "Execute o ultraplano"
+  },
+  {
+    "en": "Running ",
+    "zh": "Correndo "
+  },
+  {
+    "en": "Running PostCompact hooks…",
+    "zh": "Executando ganchos PostCompact…"
+  },
+  {
+    "en": "Running PreCompact hooks…",
+    "zh": "Executando ganchos PreCompact…"
+  },
+  {
+    "en": "Running feedback capture...",
+    "zh": "Executando captura de feedback..."
+  },
+  {
+    "en": "Running…",
+    "zh": "Correndo…"
+  },
+  {
+    "en": "Runs in Claude Code on the web. When the plan is ready,",
+    "zh": "Funciona em Claude Code na web. Quando o plano estiver pronto,"
+  },
+  {
+    "en": "Sandbox",
+    "zh": "Caixa de areia"
+  },
+  {
+    "en": "Sandbox is not enabled",
+    "zh": "Sandbox não está ativado"
+  },
+  {
+    "en": "Sandbox is not enabled. Enable sandbox to configure override settings.",
+    "zh": "A sandbox não está habilitada. Habilite o sandbox para definir configurações de substituição."
+  },
+  {
+    "en": "Save and close editor to continue...",
+    "zh": "Salve e feche o editor para continuar..."
+  },
+  {
+    "en": "Save anyway (skip verification)",
+    "zh": "Salve mesmo assim (ignorar verificação)"
+  },
+  {
+    "en": "Save file to continue…",
+    "zh": "Salve o arquivo para continuar…"
+  },
+  {
+    "en": "Save the conversation to a file in the current directory",
+    "zh": "Salve a conversa em um arquivo no diretório atual"
+  },
+  {
+    "en": "Save to file",
+    "zh": "Salvar em arquivo"
+  },
+  {
+    "en": "Saving a memory is a two-step process:",
+    "zh": "Salvar uma memória é um processo de duas etapas:"
+  },
+  {
+    "en": "Scope: ",
+    "zh": "Escopo: "
+  },
+  {
+    "en": "Searched for",
+    "zh": "Procurado por"
+  },
+  {
+    "en": "Searching for",
+    "zh": "Procurando por"
+  },
+  {
+    "en": "Searching: ",
+    "zh": "Pesquisando: "
+  },
+  {
+    "en": "Security guide",
+    "zh": "Guia de segurança"
+  },
+  {
+    "en": "Security notes:",
+    "zh": "Notas de segurança:"
+  },
+  {
+    "en": "See https://code.claude.com/docs/en/network-config",
+    "zh": "Consulte https://code.claude.com/docs/en/network-config"
+  },
+  {
+    "en": "Select GitHub repository",
+    "zh": "Selecione o repositório GitHub"
+  },
+  {
+    "en": "Select GitHub workflows to install",
+    "zh": "Selecione fluxos de trabalho do GitHub para instalar"
+  },
+  {
+    "en": "Select IDE",
+    "zh": "Selecione o IDE"
+  },
+  {
+    "en": "Select a version to view its notes.",
+    "zh": "Selecione uma versão para ver suas notas."
+  },
+  {
+    "en": "Select an IDE to open the project",
+    "zh": "Selecione um IDE para abrir o projeto"
+  },
+  {
+    "en": "Select auto-compact window: ",
+    "zh": "Selecione a janela de compactação automática: "
+  },
+  {
+    "en": "Select content to copy:",
+    "zh": "Selecione o conteúdo a ser copiado:"
+  },
+  {
+    "en": "Select export method:",
+    "zh": "Selecione o método de exportação:"
+  },
+  {
+    "en": "Select login method:",
+    "zh": "Selecione o método de login:"
+  },
+  {
+    "en": "Select marketplace",
+    "zh": "Selecione o mercado"
+  },
+  {
+    "en": "Select model",
+    "zh": "Selecione o modelo"
+  },
+  {
+    "en": "Send message as a new conversation",
+    "zh": "Enviar mensagem como uma nova conversa"
+  },
+  {
+    "en": "Server created",
+    "zh": "Servidor criado"
+  },
+  {
+    "en": "Server disabled during reconnection, stopping retry",
+    "zh": "Servidor desativado durante a reconexão, interrompendo novas tentativas"
+  },
+  {
+    "en": "Server is disabled, skipping automatic reconnection",
+    "zh": "O servidor está desativado, ignorando a reconexão automática"
+  },
+  {
+    "en": "Session Hooks",
+    "zh": "Ganchos de sessão"
+  },
+  {
+    "en": "Session ID",
+    "zh": "ID da sessão"
+  },
+  {
+    "en": "Session URL",
+    "zh": "URL da sessão"
+  },
+  {
+    "en": "Session name",
+    "zh": "Nome da sessão"
+  },
+  {
+    "en": "Set Stop hook (this session only)",
+    "zh": "Definir gancho Stop (somente nesta sessão)"
+  },
+  {
+    "en": "Set the prompt bar color for this session",
+    "zh": "Defina a cor da barra de prompt para esta sessão"
+  },
+  {
+    "en": "Set up Claude Code's status line UI",
+    "zh": "Configure a IU da linha de status do Claude Code"
+  },
+  {
+    "en": "Set up Claude GitHub Actions for a repository",
+    "zh": "Configure Claude GitHub Actions para um repositório"
+  },
+  {
+    "en": "Setting sources",
+    "zh": "Configurando fontes"
+  },
+  {
+    "en": "Setting up launcher and shell integration...",
+    "zh": "Configurando o iniciador e a integração do shell..."
+  },
+  {
+    "en": "Settings Error",
+    "zh": "Erro de configurações"
+  },
+  {
+    "en": "Settings requiring approval:",
+    "zh": "Configurações que requerem aprovação:"
+  },
+  {
+    "en": "Setup Claude Code on the web (requires connecting your GitHub account)",
+    "zh": "Configure o Claude Code na web (requer conectar sua conta GitHub)"
+  },
+  {
+    "en": "Shell command failed",
+    "zh": "Comando Shell falhou"
+  },
+  {
+    "en": "Show PR status footer",
+    "zh": "Mostrar rodapé de status de PR"
+  },
+  {
+    "en": "Show QR code to download the Claude mobile app",
+    "zh": "Mostre o código QR para baixar o aplicativo móvel Claude"
+  },
+  {
+    "en": "Show all",
+    "zh": "Mostrar tudo"
+  },
+  {
+    "en": "Show detailed debug output",
+    "zh": "Mostrar saída de depuração detalhada"
+  },
+  {
+    "en": "Show help and available commands",
+    "zh": "Mostrar ajuda e comandos disponíveis"
+  },
+  {
+    "en": "Show options when rate limit is reached",
+    "zh": "Mostrar opções quando o limite de taxa for atingido"
+  },
+  {
+    "en": "Show remote session URL and QR code",
+    "zh": "Mostrar URL da sessão remota e código QR"
+  },
+  {
+    "en": "Show status in terminal tab",
+    "zh": "Mostrar status na guia do terminal"
+  },
+  {
+    "en": "Show the total cost and duration of the current session",
+    "zh": "Mostrar o custo total e a duração da sessão atual"
+  },
+  {
+    "en": "Show tips",
+    "zh": "Mostrar dicas"
+  },
+  {
+    "en": "Show turn duration",
+    "zh": "Mostrar duração do turno"
+  },
+  {
+    "en": "Show your Claude Code usage statistics and activity",
+    "zh": "Mostre suas estatísticas e atividades de uso do Código Claude"
+  },
+  {
+    "en": "Showing last ",
+    "zh": "Mostrando por último "
+  },
+  {
+    "en": "Shutting down",
+    "zh": "Desligando"
+  },
+  {
+    "en": "Sign out from your Anthropic account",
+    "zh": "Saia da sua conta Antrópica"
+  },
+  {
+    "en": "Signal that this session was launched from a deep link",
+    "zh": "Sinalizar que esta sessão foi iniciada a partir de um link direto"
+  },
+  {
+    "en": "Skills only",
+    "zh": "Apenas habilidades"
+  },
+  {
+    "en": "Skip interview and plan immediately",
+    "zh": "Pule a entrevista e planeje imediatamente"
+  },
+  {
+    "en": "Skip — use Claude Code defaults (auto-updates)",
+    "zh": "Pular – use os padrões do Claude Code (atualizações automáticas)"
+  },
+  {
+    "en": "Sonnet (1M context)",
+    "zh": "Soneto (contexto 1M)"
+  },
+  {
+    "en": "Sorry, Claude Code encountered an error",
+    "zh": "Desculpe, Claude Code encontrou um erro"
+  },
+  {
+    "en": "Sorry, Claude encountered an error",
+    "zh": "Desculpe, Claude encontrou um erro"
+  },
+  {
+    "en": "Spawn a remote Claude Code session that monitors and autofixes the current PR",
+    "zh": "Gere uma sessão remota do Claude Code que monitora e corrige automaticamente o PR atual"
+  },
+  {
+    "en": "Start new session",
+    "zh": "Iniciar nova sessão"
+  },
+  {
+    "en": "Started a session on the web and want to move it here? Run",
+    "zh": "Iniciou uma sessão na web e deseja movê-la para cá? Correr"
+  },
+  {
+    "en": "Stash changes and continue",
+    "zh": "Armazene as alterações e continue"
+  },
+  {
+    "en": "Stashing changes...",
+    "zh": "Armazenando alterações..."
+  },
+  {
+    "en": "Status: ",
+    "zh": "Status: "
+  },
+  {
+    "en": "Stop and wait for limit to reset",
+    "zh": "Pare e espere que o limite seja redefinido"
+  },
+  {
+    "en": "Stop ultraplan",
+    "zh": "Pare o ultraplano"
+  },
+  {
+    "en": "Stop ultrareview",
+    "zh": "Pare a ultrarevisão"
+  },
+  {
+    "en": "Store this token securely. You won't be able to see it again.",
+    "zh": "Armazene este token com segurança. Você não poderá vê-lo novamente."
+  },
+  {
+    "en": "Strict sandbox mode:",
+    "zh": "Modo sandbox estrito:"
+  },
+  {
+    "en": "Subagents and workflows also run as tasks — it is all one queue.",
+    "zh": "Subagentes e fluxos de trabalho também são executados como tarefas – tudo em uma fila."
+  },
+  {
+    "en": "Submit Feedback / Bug Report",
+    "zh": "Enviar feedback/relatório de bug"
+  },
+  {
+    "en": "Submit answers",
+    "zh": "Enviar respostas"
+  },
+  {
+    "en": "Submit feedback about Claude Code",
+    "zh": "Enviar feedback sobre o Código Claude"
+  },
+  {
+    "en": "Successfully logged out from your Anthropic account.",
+    "zh": "Desconectado da sua conta Antrópica com sucesso."
+  },
+  {
+    "en": "Suggestion ",
+    "zh": "Sugestão "
+  },
+  {
+    "en": "Suggestions ",
+    "zh": "Sugestões "
+  },
+  {
+    "en": "Summarize from here",
+    "zh": "Resuma daqui"
+  },
+  {
+    "en": "Summarized conversation",
+    "zh": "Conversa resumida"
+  },
+  {
+    "en": "Switch to the Marketplaces tab to view allowed sources.",
+    "zh": "Mude para a guia Marketplaces para visualizar as fontes permitidas."
+  },
+  {
+    "en": "Switched to worktree on branch ",
+    "zh": "Mudou para worktree no branch "
+  },
+  {
+    "en": "System Diagnostics",
+    "zh": "Diagnóstico do sistema"
+  },
+  {
+    "en": "System prompt",
+    "zh": "Alerta do sistema"
+  },
+  {
+    "en": "Tab created",
+    "zh": "Guia criada"
+  },
+  {
+    "en": "Tab: Next field · Enter: Save and continue",
+    "zh": "Aba: Próximo campo · Enter: Salvar e continuar"
+  },
+  {
+    "en": "Task is still running…",
+    "zh": "A tarefa ainda está em execução…"
+  },
+  {
+    "en": "Task not ready",
+    "zh": "A tarefa não está pronta"
+  },
+  {
+    "en": "Teammate is continuing to work. You may request shutdown again later.",
+    "zh": "O companheiro de equipe continua trabalhando. Você pode solicitar o desligamento novamente mais tarde."
+  },
+  {
+    "en": "Teammates will now appear as split panes.",
+    "zh": "Os companheiros de equipe agora aparecerão como painéis divididos."
+  },
+  {
+    "en": "Teleport requires a Claude account",
+    "zh": "Teletransporte requer uma conta Claude"
+  },
+  {
+    "en": "Teleport requires a Claude.ai account.",
+    "zh": "Teleporte requer uma conta Claude.ai."
+  },
+  {
+    "en": "Teleport to Repo",
+    "zh": "Teleporte para Repo"
+  },
+  {
+    "en": "Teleporting to session…",
+    "zh": "Teleportando para a sessão…"
+  },
+  {
+    "en": "Terminal progress bar",
+    "zh": "Barra de progresso do terminal"
+  },
+  {
+    "en": "Thank you for your report!",
+    "zh": "Obrigado pelo seu relatório!"
+  },
+  {
+    "en": "Thanks for the feedback!",
+    "zh": "Obrigado pelo feedback!"
+  },
+  {
+    "en": "The code has not changed (nothing will be restored).",
+    "zh": "O código não mudou (nada será restaurado)."
+  },
+  {
+    "en": "The code will be unchanged.",
+    "zh": "O código permanecerá inalterado."
+  },
+  {
+    "en": "The following patterns will be ignored:",
+    "zh": "Os seguintes padrões serão ignorados:"
+  },
+  {
+    "en": "The sandbox has the following restrictions:",
+    "zh": "A sandbox tem as seguintes restrições:"
+  },
+  {
+    "en": "Thinking mode",
+    "zh": "Modo de pensamento"
+  },
+  {
+    "en": "This archives the remote session and stops local tracking. The review will not complete and any findings so far are discarded.",
+    "zh": "Isso arquiva a sessão remota e interrompe o rastreamento local. A revisão não será concluída e quaisquer conclusões até agora serão descartadas."
+  },
+  {
+    "en": "This changes how Claude Code communicates with you",
+    "zh": "Isso muda a forma como Claude Code se comunica com você"
+  },
+  {
+    "en": "This command requires approval",
+    "zh": "Este comando requer aprovação"
+  },
+  {
+    "en": "This conversation is from a different directory.",
+    "zh": "Esta conversa é de um diretório diferente."
+  },
+  {
+    "en": "This enables teammates to appear as split panes within your current window.",
+    "zh": "Isso permite que os colegas de equipe apareçam como painéis divididos na janela atual."
+  },
+  {
+    "en": "This has the same effect as uninstalling, without affecting other contributors.",
+    "zh": "Isto tem o mesmo efeito que a desinstalação, sem afetar outros contribuidores."
+  },
+  {
+    "en": "This may take a few moments.",
+    "zh": "Isso pode levar alguns instantes."
+  },
+  {
+    "en": "This may take a few seconds.",
+    "zh": "Isso pode levar alguns segundos."
+  },
+  {
+    "en": "This may take a moment.",
+    "zh": "Isso pode demorar um pouco."
+  },
+  {
+    "en": "This prompt will launch an ultraplan session in Claude Code on the web",
+    "zh": "Este prompt iniciará uma sessão ultraplan em Claude Code na web"
+  },
+  {
+    "en": "This rule is configured by managed settings and cannot be modified.",
+    "zh": "Esta regra é definida por configurações gerenciadas e não pode ser modificada."
+  },
+  {
+    "en": "This server connects only when running the agent.",
+    "zh": "Este servidor se conecta apenas durante a execução do agente."
+  },
+  {
+    "en": "This tool is consuming a significant portion of context.",
+    "zh": "Esta ferramenta está consumindo uma parte significativa do contexto."
+  },
+  {
+    "en": "This will disable Remote Control for this session.",
+    "zh": "Isso desativará o Controle Remoto para esta sessão."
+  },
+  {
+    "en": "This will terminate the Claude Code on the web session.",
+    "zh": "Isso encerrará a sessão do Código Claude na web."
+  },
+  {
+    "en": "Tip: You can enable auto-connect to IDE in /config or with the --ide flag",
+    "zh": "Dica: você pode ativar a conexão automática ao IDE em /config ou com o sinalizador --ide"
+  },
+  {
+    "en": "To add hooks, edit settings.json directly or ask Claude.",
+    "zh": "Para adicionar ganchos, edite settings.json diretamente ou pergunte a Claude."
+  },
+  {
+    "en": "To modify or remove this hook, edit settings.json directly or ask Claude to help.",
+    "zh": "Para modificar ou remover este gancho, edite settings.json diretamente ou peça ajuda a Claude."
+  },
+  {
+    "en": "Toggle thinking mode",
+    "zh": "Alternar modo de pensamento"
+  },
+  {
+    "en": "Tokens per Day",
+    "zh": "Tokens por dia"
+  },
+  {
+    "en": "Tool Failed",
+    "zh": "Falha na ferramenta"
+  },
+  {
+    "en": "Tool loaded.",
+    "zh": "Ferramenta carregada."
+  },
+  {
+    "en": "Tool name: ",
+    "zh": "Nome da ferramenta: "
+  },
+  {
+    "en": "Tool use is not allowed during compaction",
+    "zh": "O uso de ferramentas não é permitido durante a compactação"
+  },
+  {
+    "en": "Tool use rejected",
+    "zh": "Uso de ferramenta rejeitado"
+  },
+  {
+    "en": "Tool: ",
+    "zh": "Ferramenta: "
+  },
+  {
+    "en": "Tools: ",
+    "zh": "Ferramentas: "
+  },
+  {
+    "en": "Triggered by:",
+    "zh": "Acionado por:"
+  },
+  {
+    "en": "Try again",
+    "zh": "Tente novamente"
+  },
+  {
+    "en": "Try creating: Code Reviewer, Code Simplifier, Security Reviewer, Tech Lead, or UX Reviewer.",
+    "zh": "Tente criar: Revisor de Código, Simplificador de Código, Revisor de Segurança, Líder Técnico ou Revisor UX."
+  },
+  {
+    "en": "Try running /plugin to manually install the think-back plugin.",
+    "zh": "Tente executar /plugin para instalar manualmente o plugin think-back."
+  },
+  {
+    "en": "Try running with --force to override checks",
+    "zh": "Tente executar com --force para substituir as verificações"
+  },
+  {
+    "en": "Type a different name…",
+    "zh": "Digite um nome diferente…"
+  },
+  {
+    "en": "Type something…",
+    "zh": "Digite algo…"
+  },
+  {
+    "en": "Type: ",
+    "zh": "Tipo: "
+  },
+  {
+    "en": "URL: ",
+    "zh": "URL: "
+  },
+  {
+    "en": "Unable to connect to Anthropic services",
+    "zh": "Não foi possível conectar-se aos serviços da Antrópico"
+  },
+  {
+    "en": "Unchanged since last read",
+    "zh": "Inalterado desde a última leitura"
+  },
+  {
+    "en": "Unknown Error",
+    "zh": "Erro desconhecido"
+  },
+  {
+    "en": "Unknown error",
+    "zh": "Erro desconhecido"
+  },
+  {
+    "en": "Unknown error occurred",
+    "zh": "Ocorreu um erro desconhecido"
+  },
+  {
+    "en": "Unreachable Permission Rules",
+    "zh": "Regras de permissão inacessíveis"
+  },
+  {
+    "en": "Update available! Run:",
+    "zh": "Atualização disponível! Correr:"
+  },
+  {
+    "en": "Update marketplace",
+    "zh": "Atualizar mercado"
+  },
+  {
+    "en": "Update now",
+    "zh": "Atualizar agora"
+  },
+  {
+    "en": "Update workflow file with latest version",
+    "zh": "Atualizar arquivo de fluxo de trabalho com a versão mais recente"
+  },
+  {
+    "en": "Updated plan",
+    "zh": "Plano atualizado"
+  },
+  {
+    "en": "Updates to Consumer Terms and Policies",
+    "zh": "Atualizações nos Termos e Políticas do Consumidor"
+  },
+  {
+    "en": "Updates to data retention ",
+    "zh": "Atualizações na retenção de dados "
+  },
+  {
+    "en": "Updating marketplace…",
+    "zh": "Atualizando mercado…"
+  },
+  {
+    "en": "Updating…",
+    "zh": "Atualizando…"
+  },
+  {
+    "en": "Upgrade to Max for higher rate limits and more Opus",
+    "zh": "Atualize para Max para limites de taxa mais altos e mais Opus"
+  },
+  {
+    "en": "Upgrade to Team plan",
+    "zh": "Atualize para o plano Team"
+  },
+  {
+    "en": "Upgrade your plan",
+    "zh": "Atualize seu plano"
+  },
+  {
+    "en": "Usage: ",
+    "zh": "Uso: "
+  },
+  {
+    "en": "Use /btw to ask a quick side question without interrupting Claude's current work",
+    "zh": "Use /btw para fazer uma pergunta paralela rápida sem interromper o trabalho atual de Claude"
+  },
+  {
+    "en": "Use /clear to start fresh when switching topics and free up context",
+    "zh": "Use /clear para começar do zero ao mudar de tópico e liberar contexto"
+  },
+  {
+    "en": "Use /issue to report model behavior issues.",
+    "zh": "Use /issue para relatar problemas de comportamento do modelo."
+  },
+  {
+    "en": "Use Claude Code's terminal setup?",
+    "zh": "Usar a configuração do terminal do Claude Code?"
+  },
+  {
+    "en": "Use Claude subscription (default)",
+    "zh": "Usar assinatura do Claude (padrão)"
+  },
+  {
+    "en": "Use auto mode during plan",
+    "zh": "Use o modo automático durante o plano"
+  },
+  {
+    "en": "Use credentials already in my environment",
+    "zh": "Usar credenciais já em meu ambiente"
+  },
+  {
+    "en": "Use the same model as the main conversation",
+    "zh": "Use o mesmo modelo da conversa principal"
+  },
+  {
+    "en": "Use this MCP server",
+    "zh": "Use este servidor MCP"
+  },
+  {
+    "en": "Use this token by setting: export CLAUDE_CODE_OAUTH_TOKEN=<token>",
+    "zh": "Use este token configurando: export CLAUDE_CODE_OAUTH_TOKEN=<token>"
+  },
+  {
+    "en": "Use tmux instead",
+    "zh": "Use tmux em vez disso"
+  },
+  {
+    "en": "Used by: ",
+    "zh": "Usado por: "
+  },
+  {
+    "en": "User MCPs",
+    "zh": "MCPs de usuários"
+  },
+  {
+    "en": "User aborted",
+    "zh": "Usuário anulado"
+  },
+  {
+    "en": "User agents",
+    "zh": "Agentes de usuário"
+  },
+  {
+    "en": "User answered Claude's questions:",
+    "zh": "O usuário respondeu às perguntas de Claude:"
+  },
+  {
+    "en": "User canceled.",
+    "zh": "Usuário cancelado."
+  },
+  {
+    "en": "User declined to answer questions",
+    "zh": "O usuário se recusou a responder perguntas"
+  },
+  {
+    "en": "User rejected Claude's plan:",
+    "zh": "O usuário rejeitou o plano de Claude:"
+  },
+  {
+    "en": "User settings",
+    "zh": "Configurações do usuário"
+  },
+  {
+    "en": "Using 3rd-party platforms",
+    "zh": "Usando plataformas de terceiros"
+  },
+  {
+    "en": "Using token for GitHub Actions setup…",
+    "zh": "Usando token para configuração do GitHub Actions…"
+  },
+  {
+    "en": "Validating repository…",
+    "zh": "Validando repositório…"
+  },
+  {
+    "en": "Validating session",
+    "zh": "Validando sessão"
+  },
+  {
+    "en": "Verbose output",
+    "zh": "Saída detalhada"
+  },
+  {
+    "en": "Verification failed",
+    "zh": "Falha na verificação"
+  },
+  {
+    "en": "Version Locks",
+    "zh": "Bloqueios de versão"
+  },
+  {
+    "en": "Version: ",
+    "zh": "Versão: "
+  },
+  {
+    "en": "Vertex base URL",
+    "zh": "URL base do vértice"
+  },
+  {
+    "en": "View agent",
+    "zh": "Ver agente"
+  },
+  {
+    "en": "View and update your privacy settings",
+    "zh": "Visualize e atualize suas configurações de privacidade"
+  },
+  {
+    "en": "View hook configurations for tool events",
+    "zh": "Visualizar configurações de gancho para eventos de ferramenta"
+  },
+  {
+    "en": "View on GitHub",
+    "zh": "Ver no GitHub"
+  },
+  {
+    "en": "View repository",
+    "zh": "Ver repositório"
+  },
+  {
+    "en": "View the latest workflow template at:",
+    "zh": "Veja o modelo de fluxo de trabalho mais recente em:"
+  },
+  {
+    "en": "View tools",
+    "zh": "Ver ferramentas"
+  },
+  {
+    "en": "View uncommitted changes and per-turn diffs",
+    "zh": "Ver alterações não confirmadas e diferenças por turno"
+  },
+  {
+    "en": "Visualize current context usage as a colored grid",
+    "zh": "Visualize o uso do contexto atual como uma grade colorida"
+  },
+  {
+    "en": "Voice: processing…",
+    "zh": "Voz: processando…"
+  },
+  {
+    "en": "Waiting for permission…",
+    "zh": "Aguardando permissão…"
+  },
+  {
+    "en": "Waiting for team lead to review and approve...",
+    "zh": "Aguardando o líder da equipe revisar e aprovar..."
+  },
+  {
+    "en": "Waiting for the server to confirm completion…",
+    "zh": "Aguardando o servidor confirmar a conclusão…"
+  },
+  {
+    "en": "Warning: Multiple installations found",
+    "zh": "Aviso: múltiplas instalações encontradas"
+  },
+  {
+    "en": "We are experiencing high demand for Opus 4.",
+    "zh": "Estamos enfrentando uma alta demanda pelo Opus 4."
+  },
+  {
+    "en": "We found some potential issues, but you can continue anyway",
+    "zh": "Encontramos alguns possíveis problemas, mas você pode continuar mesmo assim"
+  },
+  {
+    "en": "We'll create a personalized ASCII animation celebrating your journey.",
+    "zh": "Criaremos uma animação ASCII personalizada celebrando sua jornada."
+  },
+  {
+    "en": "We'll create a workflow file in your repository for each one you select.",
+    "zh": "Criaremos um arquivo de fluxo de trabalho em seu repositório para cada um que você selecionar."
+  },
+  {
+    "en": "Web Search",
+    "zh": "Pesquisa na Web"
+  },
+  {
+    "en": "Web search",
+    "zh": "Pesquisa na web"
+  },
+  {
+    "en": "Welcome to Claude Code",
+    "zh": "Bem-vindo ao Código Claude"
+  },
+  {
+    "en": "What do you want to do?",
+    "zh": "O que você quer fazer?"
+  },
+  {
+    "en": "What would you like to do?",
+    "zh": "O que você gostaria de fazer?"
+  },
+  {
+    "en": "What you see by default",
+    "zh": "O que você vê por padrão"
+  },
+  {
+    "en": "What's new",
+    "zh": "O que há de novo"
+  },
+  {
+    "en": "When hooks are disabled:",
+    "zh": "Quando os ganchos estão desabilitados:"
+  },
+  {
+    "en": "When should Claude use this agent?",
+    "zh": "Quando Claude deve usar este agente?"
+  },
+  {
+    "en": "When you see evidence of sandbox-caused failure:",
+    "zh": "Ao ver evidências de falha causada pelo sandbox:"
+  },
+  {
+    "en": "Will install:",
+    "zh": "Irá instalar:"
+  },
+  {
+    "en": "Works at three levels: repo, your home directory (all projects), and per-directory overrides.",
+    "zh": "Funciona em três níveis: repositório, seu diretório inicial (todos os projetos) e substituições por diretório."
+  },
+  {
+    "en": "Workspace ID",
+    "zh": "ID do espaço de trabalho"
+  },
+  {
+    "en": "Would you like to install this LSP plugin?",
+    "zh": "Gostaria de instalar este plugin LSP?"
+  },
+  {
+    "en": "Would you like to proceed?",
+    "zh": "Você gostaria de prosseguir?"
+  },
+  {
+    "en": "Would you like to stash these changes and continue with teleport?",
+    "zh": "Você gostaria de esconder essas mudanças e continuar com o teletransporte?"
+  },
+  {
+    "en": "Yes, I accept",
+    "zh": "Sim, eu aceito"
+  },
+  {
+    "en": "Yes, I trust these settings",
+    "zh": "Sim, confio nessas configurações"
+  },
+  {
+    "en": "Yes, I trust this folder",
+    "zh": "Sim, confio nesta pasta"
+  },
+  {
+    "en": "Yes, allow all edits during this session",
+    "zh": "Sim, permitir todas as edições durante esta sessão"
+  },
+  {
+    "en": "Yes, allow all edits in ",
+    "zh": "Sim, permitir todas as edições em "
+  },
+  {
+    "en": "Yes, allow external imports",
+    "zh": "Sim, permitir importações externas"
+  },
+  {
+    "en": "Yes, and allow Claude to edit its own settings for this session",
+    "zh": "Sim, e permita que Claude edite suas próprias configurações para esta sessão"
+  },
+  {
+    "en": "Yes, and always allow access to ",
+    "zh": "Sim, e sempre permita o acesso a "
+  },
+  {
+    "en": "Yes, and bypass permissions",
+    "zh": "Sim, e ignorar permissões"
+  },
+  {
+    "en": "Yes, and don't ask again for",
+    "zh": "Sim, e não pergunte novamente"
+  },
+  {
+    "en": "Yes, and make it my default mode",
+    "zh": "Sim, e torne-o meu modo padrão"
+  },
+  {
+    "en": "Yes, and remember this directory",
+    "zh": "Sim, e lembre-se deste diretório"
+  },
+  {
+    "en": "Yes, and use auto mode",
+    "zh": "Sim, e use o modo automático"
+  },
+  {
+    "en": "Yes, auto-accept edits",
+    "zh": "Sim, aceitar edições automaticamente"
+  },
+  {
+    "en": "Yes, delete",
+    "zh": "Sim, excluir"
+  },
+  {
+    "en": "Yes, enable auto mode",
+    "zh": "Sim, ative o modo automático"
+  },
+  {
+    "en": "Yes, enter plan mode",
+    "zh": "Sim, entre no modo de plano"
+  },
+  {
+    "en": "Yes, for this session",
+    "zh": "Sim, para esta sessão"
+  },
+  {
+    "en": "Yes, install ",
+    "zh": "Sim, instale "
+  },
+  {
+    "en": "Yes, manually approve edits",
+    "zh": "Sim, aprove edições manualmente"
+  },
+  {
+    "en": "Yes, use recommended settings",
+    "zh": "Sim, use as configurações recomendadas"
+  },
+  {
+    "en": "You can also configure this in /config or with the --ide flag",
+    "zh": "Você também pode configurar isso em /config ou com o sinalizador --ide"
+  },
+  {
+    "en": "You can help improve Claude ",
+    "zh": "Você pode ajudar a melhorar Claude "
+  },
+  {
+    "en": "You can try installing manually:",
+    "zh": "Você pode tentar instalar manualmente:"
+  },
+  {
+    "en": "You have been invoked in the following environment: ",
+    "zh": "Você foi invocado no seguinte ambiente: "
+  },
+  {
+    "en": "You must select at least one workflow to continue",
+    "zh": "Você deve selecionar pelo menos um fluxo de trabalho para continuar"
+  },
+  {
+    "en": "You should always review Claude's responses, especially when",
+    "zh": "Você deve sempre revisar as respostas de Claude, especialmente quando"
+  },
+  {
+    "en": "Your Claude Pro/Max subscription will be used by Claude Code.",
+    "zh": "Sua assinatura Claude Pro/Max será usada pelo Claude Code."
+  },
+  {
+    "en": "Your bash commands will be sandboxed. Disable with /sandbox.",
+    "zh": "Seus comandos bash serão colocados em sandbox. Desative com /sandbox."
+  },
+  {
+    "en": "Your choice takes effect immediately upon confirmation.",
+    "zh": "Sua escolha entra em vigor imediatamente após a confirmação."
+  },
+  {
+    "en": "Your local credentials are used to authenticate with GitHub",
+    "zh": "Suas credenciais locais são usadas para autenticação no GitHub"
+  },
+  {
+    "en": "Your organization policy does not allow any external marketplaces.",
+    "zh": "A política da sua organização não permite mercados externos."
+  },
+  {
+    "en": "Your organization restricts which marketplaces can be added.",
+    "zh": "Sua organização restringe quais mercados podem ser adicionados."
+  },
+  {
+    "en": "Your responses should be short and concise.",
+    "zh": "Suas respostas devem ser curtas e concisas."
+  },
+  {
+    "en": "[Image data detected and sent to Claude]",
+    "zh": "[Dados de imagem detectados e enviados para Claude]"
+  },
+  {
+    "en": "[Image]",
+    "zh": "[Imagem]"
+  },
+  {
+    "en": "[View Tab]",
+    "zh": "[Visualizar guia]"
+  },
+  {
+    "en": "[Warning]",
+    "zh": "[Aviso]"
+  },
+  {
+    "en": "[awaiting approval]",
+    "zh": "[aguardando aprovação]"
+  },
+  {
+    "en": "[hidden] ",
+    "zh": "[escondido] "
+  },
+  {
+    "en": "[idle] ",
+    "zh": "[parado] "
+  },
+  {
+    "en": "[stopping]",
+    "zh": "[parando]"
+  },
+  {
+    "en": "accept edits",
+    "zh": "aceitar edições"
+  },
+  {
+    "en": "accept edits on",
+    "zh": "aceitar edições em"
+  },
+  {
+    "en": "and tell Claude what to do differently",
+    "zh": "e diga a Claude o que fazer de diferente"
+  },
+  {
+    "en": "and tell Claude what to do next",
+    "zh": "e diga a Claude o que fazer a seguir"
+  },
+  {
+    "en": "auto mode on",
+    "zh": "modo automático ativado"
+  },
+  {
+    "en": "built-in (macOS)",
+    "zh": "integrado (macOS)"
+  },
+  {
+    "en": "claude --help",
+    "zh": "claude --help"
+  },
+  {
+    "en": "claude doctor",
+    "zh": "médico claudio"
+  },
+  {
+    "en": "ctrl + z to suspend",
+    "zh": "ctrl + z para suspender"
+  },
+  {
+    "en": "ctrl-g to edit in ",
+    "zh": "ctrl-g para editar em "
+  },
+  {
+    "en": "d to disconnect · space for QR code · Enter/Esc to close",
+    "zh": "d para desconectar · espaço para código QR · Enter/Esc para fechar"
+  },
+  {
+    "en": "double tap esc to clear input",
+    "zh": "toque duas vezes em esc para limpar a entrada"
+  },
+  {
+    "en": "false (for emails with your domain)",
+    "zh": "false (para e-mails com seu domínio)"
+  },
+  {
+    "en": "hatching a coding buddy…",
+    "zh": "chocando um amigo de codificação…"
+  },
+  {
+    "en": "iTerm2 Split Pane Setup",
+    "zh": "Configuração do painel dividido do iTerm2"
+  },
+  {
+    "en": "indexing… ",
+    "zh": "indexação… "
+  },
+  {
+    "en": "interactive setup",
+    "zh": "configuração interativa"
+  },
+  {
+    "en": "it'll watch you work and occasionally have opinions",
+    "zh": "ele observará você trabalhar e ocasionalmente terá opiniões"
+  },
+  {
+    "en": "keep holding…",
+    "zh": "continue segurando…"
+  },
+  {
+    "en": "last said",
+    "zh": "último dito"
+  },
+  {
+    "en": "mTLS client cert",
+    "zh": "certificado de cliente mTLS"
+  },
+  {
+    "en": "mTLS client key",
+    "zh": "Chave do cliente mTLS"
+  },
+  {
+    "en": "new task? ",
+    "zh": "nova tarefa? "
+  },
+  {
+    "en": "new task? /clear to save ",
+    "zh": "nova tarefa? /limpar para salvar "
+  },
+  {
+    "en": "no matches ",
+    "zh": "sem correspondências "
+  },
+  {
+    "en": "not found",
+    "zh": "não encontrado"
+  },
+  {
+    "en": "not installed",
+    "zh": "não instalado"
+  },
+  {
+    "en": "not set",
+    "zh": "não definido"
+  },
+  {
+    "en": "opens docs",
+    "zh": "abre documentos"
+  },
+  {
+    "en": "plan mode on",
+    "zh": "modo de planejamento ativado"
+  },
+  {
+    "en": "press any key",
+    "zh": "pressione qualquer tecla"
+  },
+  {
+    "en": "sandbox disabled",
+    "zh": "sandbox desabilitada"
+  },
+  {
+    "en": "say its name to get its take · /buddy pet · /buddy off",
+    "zh": "diga o nome dele para receber sua opinião · /buddy pet · /buddy off"
+  },
+  {
+    "en": "to see all)",
+    "zh": "para ver tudo)"
+  },
+  {
+    "en": "your buddy won't count toward your usage",
+    "zh": "seu amigo não contará para seu uso"
+  },
+  {
+    "en": "· Component summary not available for remote plugin",
+    "zh": "· Resumo do componente não disponível para plugin remoto"
+  },
+  {
+    "en": "· Components will be discovered at installation",
+    "zh": "· Os componentes serão descobertos na instalação"
+  },
+  {
+    "en": "· No hook commands will execute",
+    "zh": "· Nenhum comando de gancho será executado"
+  },
+  {
+    "en": "· Run in another terminal: security unlock-keychain",
+    "zh": "· Execute em outro terminal: chaveiro de desbloqueio de segurança"
+  },
+  {
+    "en": "· StatusLine will not be displayed",
+    "zh": "· StatusLine não será exibido"
+  },
+  {
+    "en": "· Tool operations will proceed without hook validation",
+    "zh": "· As operações da ferramenta continuarão sem validação do gancho"
+  },
+  {
+    "en": "· What should Claude do instead?",
+    "zh": "· O que Claude deveria fazer em vez disso?"
+  },
+  {
+    "en": "… diff truncated (exceeded 400 line limit)",
+    "zh": "… diff truncado (excedeu o limite de 400 linhas)"
+  },
+  {
+    "en": "← → to adjust",
+    "zh": "← → ajustar"
+  },
+  {
+    "en": "↑/↓ to select · Enter to continue",
+    "zh": "↑/↓ para selecionar · Enter para continuar"
+  },
+  {
+    "en": "└ Failed to fetch versions",
+    "zh": "└ Falha ao buscar versões"
+  },
+  {
+    "en": "└ No active version locks",
+    "zh": "└ Nenhum bloqueio de versão ativo"
+  },
+  {
+    "en": "└ Run /sandbox for install instructions",
+    "zh": "└ Execute /sandbox para obter instruções de instalação"
+  },
+  {
+    "en": "⚠ Warning: Glob patterns not fully supported on Linux",
+    "zh": "⚠ Aviso: Padrões Glob não são totalmente suportados no Linux"
+  },
+  {
+    "en": "✓ Anthropic marketplace installed · /plugin to see available plugins",
+    "zh": "✓ Mercado Antrópico instalado · /plugin para ver plugins disponíveis"
+  },
+  {
+    "en": "✓ Authentication token created successfully!",
+    "zh": "✓ Token de autenticação criado com sucesso!"
+  },
+  {
+    "en": "✓ GitHub Actions workflow created!",
+    "zh": "✓ Fluxo de trabalho do GitHub Actions criado!"
+  },
+  {
+    "en": "✓ Long-lived authentication token created successfully!",
+    "zh": "✓ Token de autenticação de longa duração criado com sucesso!"
+  },
+  {
+    "en": "✓ Update installed · Restart to apply",
+    "zh": "✓ Atualização instalada · Reinicie para aplicar"
+  },
+  {
+    "en": "✓ Update installed · Restart to update",
+    "zh": "✓ Atualização instalada · Reinicie para atualizar"
+  },
+  {
+    "en": "✓ Using existing ANTHROPIC_API_KEY secret",
+    "zh": "✓ Usando o segredo ANTHROPIC_API_KEY existente"
+  },
+  {
+    "en": "✓ iTerm2 split pane support is ready",
+    "zh": "✓ O suporte ao painel dividido do iTerm2 está pronto"
+  },
+  {
+    "en": "✓ it2 installed successfully",
+    "zh": "✓ it2 instalado com sucesso"
+  },
+  {
+    "en": "✨ SHINY ✨",
+    "zh": "✨ BRILHANTE ✨"
+  },
+  {
+    "en": "✻ Conversation compacted (",
+    "zh": "✻ Conversa compactada ("
+  },
+  {
+    "en": "✻ Thinking…",
+    "zh": "✻ Pensando…"
+  },
+  {
+    "en": "⧉ open files",
+    "zh": "⧉ abrir arquivos"
+  },
+  {
+    "en": "⧉ selected lines",
+    "zh": "⧉ linhas selecionadas"
+  },
+  {
+    "en": "Same Claude Code with visual diffs, live app preview, parallel sessions, and more.",
+    "zh": "O mesmo código Claude com diferenças visuais, visualização de aplicativos ao vivo, sessões paralelas e muito mais."
+  },
+  {
+    "en": "Claude wants to enter plan mode to explore and design an implementation approach.",
+    "zh": "Claude deseja entrar no modo de planejamento para explorar e projetar uma abordagem de implementação."
+  },
+  {
+    "en": "Restore files to state at the specified user message and exit (requires --resume)",
+    "zh": "Restaurar arquivos para o estado da mensagem do usuário especificado e sair (requer --resume)"
+  },
+  {
+    "en": "Automatically connect to IDE on startup if exactly one valid IDE is available",
+    "zh": "Conecte-se automaticamente ao IDE na inicialização se exatamente um IDE válido estiver disponível"
+  },
+  {
+    "en": "Start an interactive session with Remote Control enabled (optionally named)",
+    "zh": "Inicie uma sessão interativa com o Controle Remoto habilitado (nome opcional)"
+  },
+  {
+    "en": "Print the version this session is running (not what autoupdate downloaded)",
+    "zh": "Imprima a versão que esta sessão está executando (não a que a atualização automática baixou)"
+  },
+  {
+    "en": "Write debug logs to a specific file path (implicitly enables debug mode)",
+    "zh": "Gravar logs de depuração em um caminho de arquivo específico (habilita implicitamente o modo de depuração)"
+  },
+  {
+    "en": "Server name can only contain letters, numbers, hyphens, and underscores",
+    "zh": "O nome do servidor só pode conter letras, números, hifens e sublinhados"
+  },
+  {
+    "en": "What is the name of the service I should give sensitive permissions to?",
+    "zh": "Qual é o nome do serviço ao qual devo conceder permissões confidenciais?"
+  },
+  {
+    "en": "Comma-separated list of setting sources to load (user, project, local).",
+    "zh": "Lista separada por vírgulas de fontes de configuração para carregar (usuário, projeto, local)."
+  },
+  {
+    "en": "Transport type (stdio, sse, http). Defaults to stdio if not specified.",
+    "zh": "Tipo de transporte (stdio, sse, http). O padrão é stdio se não for especificado."
+  },
+  {
+    "en": "Read system prompt from a file and append to the default system prompt",
+    "zh": "Leia o prompt do sistema de um arquivo e anexe ao prompt padrão do sistema"
+  },
+  {
+    "en": "Create a new git worktree for this session (optionally specify a name)",
+    "zh": "Crie uma nova árvore de trabalho git para esta sessão (opcionalmente, especifique um nome)"
+  },
+  {
+    "en": "Maximum dollar amount to spend on API calls (only works with --print)",
+    "zh": "Valor máximo em dólares para gastar em chamadas de API (funciona apenas com --print)"
+  },
+  {
+    "en": "Use a specific session ID for the conversation (must be a valid UUID)",
+    "zh": "Use um ID de sessão específico para a conversa (deve ser um UUID válido)"
+  },
+  {
+    "en": "Teleport will switch git branches. The following changes were found:",
+    "zh": "Teleport mudará os ramos git. As seguintes alterações foram encontradas:"
+  },
+  {
+    "en": "Report the security classification result for the agent action",
+    "zh": "Relate o resultado da classificação de segurança para a ação do agente"
+  },
+  {
+    "en": "Effort level for the current session (low, medium, high, max)",
+    "zh": "Nível de esforço para a sessão atual (baixo, médio, alto, máximo)"
+  },
+  {
+    "en": "Agent for the current session. Overrides the 'agent' setting.",
+    "zh": "Agente para a sessão atual. Substitui a configuração de 'agente'."
+  },
+  {
+    "en": "Include available plugins from marketplaces (requires --json)",
+    "zh": "Inclui plug-ins disponíveis nos mercados (requer --json)"
+  },
+  {
+    "en": "Tab ID to identify which tab group this operation applies to",
+    "zh": "ID da guia para identificar a qual grupo de guias esta operação se aplica"
+  },
+  {
+    "en": "Verify a code change does what it should by running the app.",
+    "zh": "Verifique se uma alteração de código faz o que deveria executando o aplicativo."
+  },
+  {
+    "en": "Server command must have at least one element (the command)",
+    "zh": "O comando do servidor deve ter pelo menos um elemento (o comando)"
+  },
+  {
+    "en": "Long builds and test suites do not have to block you. Add",
+    "zh": "Compilações longas e suítes de testes não precisam bloquear você. Adicionar"
+  },
+  {
+    "en": "Please use --channels to run a list of approved channels.",
+    "zh": "Use --channels para executar uma lista de canais aprovados."
+  },
+  {
+    "en": "You can also try the manual setup steps if needed:",
+    "zh": "Você também pode tentar as etapas de configuração manual, se necessário:"
+  },
+  {
+    "en": "Additional directories to allow tool access to",
+    "zh": "Diretórios adicionais para permitir acesso à ferramenta"
+  },
+  {
+    "en": "The Internet connection appears to be offline",
+    "zh": "A conexão com a Internet parece estar off-line"
+  },
+  {
+    "en": "Opening browser to IdP authorization endpoint",
+    "zh": "Abrindo o navegador para o endpoint de autorização do IdP"
+  },
+  {
+    "en": "Force installation even if already installed",
+    "zh": "Forçar a instalação mesmo que já esteja instalada"
+  },
+  {
+    "en": "Directory that contains virtual environments",
+    "zh": "Diretório que contém ambientes virtuais"
+  },
+  {
+    "en": "This session is available via Remote Control",
+    "zh": "Esta sessão está disponível via Controle Remoto"
+  },
+  {
+    "en": "Parent session ID for analytics correlation",
+    "zh": "ID da sessão pai para correlação analítica"
+  },
+  {
+    "en": "Use the configuration file at this location",
+    "zh": "Use o arquivo de configuração neste local"
+  },
+  {
+    "en": "For times without dates, use today's date.",
+    "zh": "Para horários sem datas, use a data de hoje."
+  },
+  {
+    "en": "Show Claude logo watermark (default: true)",
+    "zh": "Mostrar marca d'água do logotipo de Claude (padrão: verdadeiro)"
+  },
+  {
+    "en": "Opens teammates in a separate tmux session",
+    "zh": "Abre companheiros de equipe em uma sessão tmux separada"
+  },
+  {
+    "en": "Override verbose mode setting from config",
+    "zh": "Substituir a configuração do modo detalhado da configuração"
+  },
+  {
+    "en": "Ensure you have access to this repository",
+    "zh": "Certifique-se de ter acesso a este repositório"
+  },
+  {
+    "en": "Run claude --teleport from a checkout of ",
+    "zh": "Execute claude --teleport a partir de um checkout de "
+  },
+  {
+    "en": "Opens a secure connection to claude.ai.",
+    "zh": "Abre uma conexão segura com claude.ai."
+  },
+  {
+    "en": "Where your Bedrock models are enabled.",
+    "zh": "Onde seus modelos Bedrock estão habilitados."
+  },
+  {
+    "en": "Write unit tests for all new utilities",
+    "zh": "Escreva testes unitários para todos os novos utilitários"
+  },
+  {
+    "en": "Error: Unable to create remote session",
+    "zh": "Erro: Não é possível criar sessão remota"
+  },
+  {
+    "en": "You are a helpful code reviewer who...",
+    "zh": "Você é um revisor de código útil que..."
+  },
+  {
+    "en": "Invalid npm package name format",
+    "zh": "Formato de nome de pacote npm inválido"
+  },
+  {
+    "en": "Remove directory from workspace?",
+    "zh": "Remover diretório do espaço de trabalho?"
+  },
+  {
+    "en": "Claude in Chrome (Beta) settings",
+    "zh": "Claude nas configurações do Chrome (Beta)"
+  },
+  {
+    "en": "Set effort level for model usage",
+    "zh": "Definir nível de esforço para uso do modelo"
+  },
+  {
+    "en": "Default - trusted network access",
+    "zh": "Padrão – acesso à rede confiável"
+  },
+  {
+    "en": "Effort set to high for this turn",
+    "zh": "Esforço definido como alto para este turno"
+  },
+  {
+    "en": "Install Claude Code native build",
+    "zh": "Instale a versão nativa do Claude Code"
+  },
+  {
+    "en": "Installing Claude Code native build ",
+    "zh": "Instalando a versão nativa do Claude Code "
+  },
+  {
+    "en": "Team name for swarm coordination",
+    "zh": "Nome da equipe para coordenação do enxame"
+  },
+  {
+    "en": "Amazon Bedrock (Mantle) base URL",
+    "zh": "URL base do Amazon Bedrock (Mantle)"
+  },
+  {
+    "en": "Reason, if the condition was not met",
+    "zh": "Motivo, se a condição não foi atendida"
+  },
+  {
+    "en": "Delay for a specified amount of time",
+    "zh": "Atraso por um determinado período de tempo"
+  },
+  {
+    "en": "Custom agent type for this teammate",
+    "zh": "Tipo de agente personalizado para este colega de equipe"
+  },
+  {
+    "en": "Claude Code installation failed",
+    "zh": "A instalação do código Claude falhou"
+  },
+  {
+    "en": "Number of pull requests created",
+    "zh": "Número de solicitações pull criadas"
+  },
+  {
+    "en": "Cost of the Claude Code session",
+    "zh": "Custo da sessão do Código Claude"
+  },
+  {
+    "en": "Number of tokens used",
+    "zh": "Número de tokens usados"
+  },
+  {
+    "en": "Request for process information",
+    "zh": "Solicitação de informações do processo"
+  },
+  {
+    "en": "Anthropic's agentic coding tool",
+    "zh": "Ferramenta de codificação agente da Anthropic"
+  },
+  {
+    "en": "Count of CLI sessions started",
+    "zh": "Contagem de sessões CLI iniciadas"
+  },
+  {
+    "en": "Number of git commits created",
+    "zh": "Número de commits git criados"
+  },
+  {
+    "en": "Total active time in seconds",
+    "zh": "Tempo ativo total em segundos"
+  },
+  {
+    "en": "Fixed port for OAuth callback (for servers requiring pre-registered redirect URIs)",
+    "zh": "Porta fixa para retorno de chamada OAuth (para servidores que exigem URIs de redirecionamento pré-registrados)"
+  },
+  {
+    "en": "The stable channel may have an older version than what you're currently running (",
+    "zh": "O canal estável pode ter uma versão mais antiga do que a que você está executando atualmente ("
+  },
+  {
+    "en": "Prefix for auto-generated Remote Control session names (default: hostname)",
+    "zh": "Prefixo para nomes de sessão de controle remoto gerados automaticamente (padrão: nome do host)"
+  },
+  {
+    "en": "Source contains multiple documents; please use YAML.parseAllDocuments()",
+    "zh": "A fonte contém vários documentos; por favor use YAML.parseAllDocuments()"
+  },
+  {
+    "en": "Show orange circles at click locations (default: true)",
+    "zh": "Mostrar círculos laranja nos locais dos cliques (padrão: verdadeiro)"
+  },
+  {
+    "en": "Show black labels describing actions (default: true)",
+    "zh": "Mostrar rótulos pretos descrevendo ações (padrão: verdadeiro)"
+  },
+  {
+    "en": "Show orange progress bar at bottom (default: true)",
+    "zh": "Mostrar barra de progresso laranja na parte inferior (padrão: verdadeiro)"
+  },
+  {
+    "en": "Show red arrows for drag actions (default: true)",
+    "zh": "Mostrar setas vermelhas para ações de arrastar (padrão: verdadeiro)"
+  },
+  {
+    "en": "Set a session-only Stop hook with a quick prompt",
+    "zh": "Defina um gancho Stop somente para sessão com um prompt rápido"
+  },
+  {
+    "en": "Network connection failures to non-whitelisted hosts",
+    "zh": "Falhas de conexão de rede com hosts não incluídos na lista de permissões"
+  },
+  {
+    "en": "Package name cannot contain path traversal patterns",
+    "zh": "O nome do pacote não pode conter padrões de passagem de caminho"
+  },
+  {
+    "en": "Redirection handling is disabled, skipping redirect",
+    "zh": "O tratamento de redirecionamento está desativado, ignorando o redirecionamento"
+  },
+  {
+    "en": "Channel notifications re-registered after reconnect",
+    "zh": "Notificações de canal registradas novamente após reconexão"
+  },
+  {
+    "en": "Failed to send idle notification to team leader",
+    "zh": "Falha ao enviar notificação de inatividade ao líder da equipe"
+  },
+  {
+    "en": "Discarded in favor of other hedged attempt",
+    "zh": "Descartado em favor de outra tentativa protegida"
+  },
+  {
+    "en": "Token refresh already in progress, reusing existing promise",
+    "zh": "Atualização do token já em andamento, reutilizando a promessa existente"
+  },
+  {
+    "en": "Pending response rejected since connection got disposed",
+    "zh": "Resposta pendente rejeitada porque a conexão foi descartada"
+  },
+  {
+    "en": "Server does not support token revocation",
+    "zh": "O servidor não suporta revogação de token"
+  },
+  {
+    "en": "Reconnection failed after authentication",
+    "zh": "A reconexão falhou após a autenticação"
+  },
+  {
+    "en": "Graceful shutdown requested by team lead",
+    "zh": "Desligamento normal solicitado pelo líder da equipe"
+  },
+  {
+    "en": "Same key defined twice in one context",
+    "zh": "A mesma chave definida duas vezes em um contexto"
+  },
+  {
+    "en": "Maximum number of redirects exceeded",
+    "zh": "Número máximo de redirecionamentos excedido"
+  },
+  {
+    "en": "Skip workflow update (configure secrets only)",
+    "zh": "Ignorar atualização do fluxo de trabalho (configurar apenas segredos)"
+  },
+  {
+    "en": "Request body larger than maxBodyLength limit",
+    "zh": "Corpo da solicitação maior que o limite maxBodyLength"
+  },
+  {
+    "en": "Completing auth flow with authorization code",
+    "zh": "Concluindo o fluxo de autenticação com código de autorização"
+  },
+  {
+    "en": "Config parsing failed with error",
+    "zh": "A análise de configuração falhou com erro"
+  },
+  {
+    "en": "Channel notifications registered",
+    "zh": "Notificações de canal registradas"
+  },
+  {
+    "en": "Redirecting to authorization URL",
+    "zh": "Redirecionando para URL de autorização"
+  },
+  {
+    "en": "Channel closed before call started",
+    "zh": "Canal fechado antes do início da chamada"
+  },
+  {
+    "en": "Denied by auto mode classifier ",
+    "zh": "Negado pelo classificador de modo automático "
+  },
+  {
+    "en": "Screenshot via chrome extension",
+    "zh": "Captura de tela via extensão do Chrome"
+  },
+  {
+    "en": "When issuing multiple commands:",
+    "zh": "Ao emitir vários comandos:"
+  },
+  {
+    "en": "What is the termination clause?",
+    "zh": "Qual é a cláusula de rescisão?"
+  },
+  {
+    "en": "Floating point arithmetic error",
+    "zh": "Erro aritmético de ponto flutuante"
+  },
+  {
+    "en": "Network request outside of sandbox",
+    "zh": "Solicitação de rede fora do sandbox"
+  },
+  {
+    "en": "Map comment with trailing content",
+    "zh": "Comentário do mapa com conteúdo final"
+  },
+  {
+    "en": "The ID of the shortcut to execute",
+    "zh": "O ID do atalho a ser executado"
+  },
+  {
+    "en": "Failed to discover OAuth metadata",
+    "zh": "Falha ao descobrir metadados OAuth"
+  },
+  {
+    "en": "WARNING: Loading development channels",
+    "zh": "AVISO: Carregando canais de desenvolvimento"
+  },
+  {
+    "en": "The body has already been consumed.",
+    "zh": "O corpo já foi consumido."
+  },
+  {
+    "en": "Please install the app for repository: ",
+    "zh": "Instale o aplicativo para repositório: "
+  },
+  {
+    "en": "Windows: winget install --id GitHub.cli",
+    "zh": "Windows: instalação winget --id GitHub.cli"
+  },
+  {
+    "en": "Terrible customer service, never again.",
+    "zh": "Péssimo atendimento ao cliente, nunca mais."
+  },
+  {
+    "en": "Create type stub file(s) for import",
+    "zh": "Criar arquivo(s) stub de tipo para importação"
+  },
+  {
+    "en": "A simple common HTTP client specifically for Google APIs and services.",
+    "zh": "Um cliente HTTP comum simples especificamente para APIs e serviços do Google."
+  },
+  {
+    "en": "Received ListRoots request from server",
+    "zh": "Solicitação ListRoots recebida do servidor"
+  },
+  {
+    "en": "Received auth code via manual callback URL",
+    "zh": "Código de autenticação recebido por URL de retorno de chamada manual"
+  },
+  {
+    "en": "Client cancelled task execution.",
+    "zh": "O cliente cancelou a execução da tarefa."
+  },
+  {
+    "en": "Cleanup timeout reached, stopping process monitoring",
+    "zh": "O tempo limite de limpeza foi atingido, interrompendo o monitoramento do processo"
+  },
+  {
+    "en": "Connection is already listening",
+    "zh": "A conexão já está escutando"
+  },
+  {
+    "en": "Tooltip body text. Explain what the user is looking at and why it matters. ",
+    "zh": "Texto do corpo da dica de ferramenta. Explique o que o usuário está vendo e por que isso é importante. "
+  },
+  {
+    "en": "Using persisted auth server metadata for refresh",
+    "zh": "Usando metadados do servidor de autenticação persistente para atualização"
+  },
+  {
+    "en": "Another process refreshed tokens, using those",
+    "zh": "Outro processo atualizou tokens, usando aqueles"
+  },
+  {
+    "en": "Work item lease expired, fetching fresh token",
+    "zh": "A concessão do item de trabalho expirou, buscando novo token"
+  },
+  {
+    "en": "Preserved step-up auth state across revocation",
+    "zh": "Estado de autenticação intensificada preservado durante a revogação"
+  },
+  {
+    "en": "Command should be emulated but is not implemented",
+    "zh": "O comando deveria ser emulado, mas não foi implementado"
+  },
+  {
+    "en": "Opening handshake has timed out",
+    "zh": "O handshake de abertura expirou"
+  },
+  {
+    "en": "Create a new secret with a different name",
+    "zh": "Crie um novo segredo com um nome diferente"
+  },
+  {
+    "en": "Listening for channel messages from: ",
+    "zh": "Ouvindo mensagens do canal de: "
+  },
+  {
+    "en": "Invalid response body, expected a web ReadableStream",
+    "zh": "Corpo de resposta inválido, esperado um ReadableStream da web"
+  },
+  {
+    "en": "Starting new login following /upgrade. Exit with Ctrl-C to use existing account.",
+    "zh": "Iniciando novo login após /upgrade. Saia com Ctrl-C para usar a conta existente."
+  },
+  {
+    "en": "You can disconnect remote access anytime by running /remote-control again.",
+    "zh": "Você pode desconectar o acesso remoto a qualquer momento executando /remote-control novamente."
+  },
+  {
+    "en": "If this is a new task, clearing context will save usage and be faster.",
+    "zh": "Se esta for uma tarefa nova, limpar o contexto economizará o uso e será mais rápido."
+  },
+  {
+    "en": "An update to our Consumer Terms and Privacy Policy will take effect on",
+    "zh": "Uma atualização em nossos Termos do Consumidor e Política de Privacidade entrará em vigor em"
+  },
+  {
+    "en": "We've updated our Consumer Terms and Privacy Policy.",
+    "zh": "Atualizamos nossos Termos do Consumidor e Política de Privacidade."
+  },
+  {
+    "en": " report the issue at https://github.com/anthropics/claude-code/issues",
+    "zh": " relate o problema em https://github.com/anthropics/claude-code/issues"
+  },
+  {
+    "en": "Advisor has reviewed the conversation and will apply the feedback",
+    "zh": "O consultor revisou a conversa e aplicará o feedback"
+  },
+  {
+    "en": "If your browser doesn't open automatically, copy this URL manually",
+    "zh": "Se o seu navegador não abrir automaticamente, copie este URL manualmente"
+  },
+  {
+    "en": "If your browser didn't open automatically, copy this URL manually",
+    "zh": "Se o seu navegador não abriu automaticamente, copie este URL manualmente"
+  },
+  {
+    "en": "To use native iTerm2 split panes for teammates, you need the",
+    "zh": "Para usar painéis divididos nativos do iTerm2 para colegas de equipe, você precisa do"
+  },
+  {
+    "en": "These will be written to ~/.claude/settings.json under env:",
+    "zh": "Eles serão gravados em ~/.claude/settings.json em env:"
+  },
+  {
+    "en": "Restore the code and/or conversation to the point before…",
+    "zh": "Restaure o código e/ou conversa ao ponto anterior…"
+  },
+  {
+    "en": "Restore and fork the conversation to the point before…",
+    "zh": "Restaure e dirija a conversa ao ponto anterior…"
+  },
+  {
+    "en": "Restore the code and/or conversation to a previous point",
+    "zh": "Restaure o código e/ou conversa para um ponto anterior"
+  },
+  {
+    "en": "Disable it just for you in .claude/settings.local.json?",
+    "zh": "Desative-o apenas para você em .claude/settings.local.json?"
+  },
+  {
+    "en": "Plan files for current session are allowed for reading",
+    "zh": "Os arquivos de plano da sessão atual podem ser lidos"
+  },
+  {
+    "en": "Plan files for current session are allowed for writing",
+    "zh": "Os arquivos de plano da sessão atual podem ser gravados"
+  },
+  {
+    "en": "You can always enable it later with /remote-control.",
+    "zh": "Você sempre pode habilitá-lo mais tarde com /controle remoto."
+  },
+  {
+    "en": "Opening browser to sign in with your Claude account…",
+    "zh": "Abrindo o navegador para fazer login com sua conta Claude…"
+  },
+  {
+    "en": "Type to filter · Enter/↓ select · ↑ tabs · Esc clear",
+    "zh": "Digite para filtrar · Enter/↓ selecione · ↑ guias · Esc limpar"
+  },
+  {
+    "en": "Do you want to allow Claude to fetch this content?",
+    "zh": "Deseja permitir que Claude busque este conteúdo?"
+  },
+  {
+    "en": "If your browser doesn't open automatically, visit:",
+    "zh": "Se o seu navegador não abrir automaticamente, visite:"
+  },
+  {
+    "en": "You've spent $5 on the Anthropic API this session.",
+    "zh": "Você gastou US$ 5 na API Antrópica nesta sessão."
+  },
+  {
+    "en": "Opening browser to install the Claude GitHub App…",
+    "zh": "Abrindo o navegador para instalar o aplicativo Claude GitHub…"
+  },
+  {
+    "en": "To continue immediately, use /model to switch to",
+    "zh": "Para continuar imediatamente, use /model para mudar para"
+  },
+  {
+    "en": "Auto-updates are disabled in development builds.",
+    "zh": "As atualizações automáticas estão desativadas nas compilações de desenvolvimento."
+  },
+  {
+    "en": " instead of Claude account subscription token. Either unset",
+    "zh": " em vez do token de assinatura da conta Claude. Ou não definido"
+  },
+  {
+    "en": "instead of Anthropic Console key. Either unset",
+    "zh": "em vez da chave do Console Antrópico. Ou não definido"
+  },
+  {
+    "en": "Opening Slack app installation page in browser…",
+    "zh": "Abrindo a página de instalação do aplicativo Slack no navegador…"
+  },
+  {
+    "en": "· You may need to restart iTerm2 after enabling",
+    "zh": "· Pode ser necessário reiniciar o iTerm2 após ativar"
+  },
+  {
+    "en": "A browser window will open for authentication",
+    "zh": "Uma janela do navegador será aberta para autenticação"
+  },
+  {
+    "en": "Restarting Claude Code to apply the new model…",
+    "zh": "Reiniciando o Claude Code para aplicar o novo modelo…"
+  },
+  {
+    "en": "A Claude workflow file already exists in this repository.",
+    "zh": "Um arquivo de fluxo de trabalho do Claude já existe neste repositório."
+  },
+  {
+    "en": "User has approved exiting plan mode. You can now proceed.",
+    "zh": "O usuário aprovou a saída do modo de plano. Agora você pode prosseguir."
+  },
+  {
+    "en": "Plan flow interrupted. Return to your terminal and retry.",
+    "zh": "Fluxo do plano interrompido. Volte ao seu terminal e tente novamente."
+  },
+  {
+    "en": "Plan teleported. Return to your terminal to continue.",
+    "zh": "Plano teletransportado. Retorne ao seu terminal para continuar."
+  },
+  {
+    "en": "User defined timeout for device code polling reached",
+    "zh": "O tempo limite definido pelo usuário para pesquisa de código do dispositivo foi atingido"
+  },
+  {
+    "en": "User answers collected by the permission component",
+    "zh": "Respostas do usuário coletadas pelo componente de permissão"
+  },
+  {
+    "en": "Checking GCP credentials validity for auth refresh",
+    "zh": "Verificando a validade das credenciais do GCP para atualização de autenticação"
+  },
+  {
+    "en": "Fetching AWS caller identity for credential export command",
+    "zh": "Buscando a identidade do chamador da AWS para o comando de exportação de credenciais"
+  },
+  {
+    "en": "Fetching AWS caller identity for AWS auth refresh command",
+    "zh": "Buscando a identidade do chamador da AWS para o comando de atualização de autenticação da AWS"
+  },
+  {
+    "en": "Restarting caffeinate to maintain sleep prevention",
+    "zh": "Reiniciando a cafeína para manter a prevenção do sono"
+  },
+  {
+    "en": "User interruption with CTRL-BREAK",
+    "zh": "Interrupção do usuário com CTRL-BREAK"
+  },
+  {
+    "en": "User interruption with CTRL-C",
+    "zh": "Interrupção do usuário com CTRL-C"
+  },
+  {
+    "en": "User force closed",
+    "zh": "Usuário forçado fechado"
+  },
+  {
+    "en": "User cancelled the flow.",
+    "zh": "O usuário cancelou o fluxo."
+  },
+  {
+    "en": "User denied permission",
+    "zh": "Permissão negada ao usuário"
+  },
+  {
+    "en": "User rejected tool use",
+    "zh": "Uso de ferramenta rejeitado pelo usuário"
+  },
+  {
+    "en": "User declined to enter plan mode",
+    "zh": "O usuário recusou entrar no modo de plano"
+  },
+  {
+    "en": "User approved Claude's plan",
+    "zh": "O usuário aprovou o plano de Claude"
+  },
+  {
+    "en": "User Rejected Action",
+    "zh": "Ação rejeitada pelo usuário"
+  },
+  {
+    "en": "User Stopped Early",
+    "zh": "O usuário foi interrompido antecipadamente"
+  },
+  {
+    "en": "User Rejected",
+    "zh": "Usuário rejeitado"
+  },
+  {
+    "en": "User Unclear",
+    "zh": "Usuário não está claro"
+  },
+  {
+    "en": "User Settings",
+    "zh": "Configurações do usuário"
+  },
+  {
+    "en": "User memory",
+    "zh": "Memória do usuário"
+  },
+  {
+    "en": "User Data",
+    "zh": "Dados do usuário"
+  },
+  {
+    "en": "Do you want to allow this connection?",
+    "zh": "Deseja permitir esta conexão?"
+  },
+  {
+    "en": "Establishing connection to MCP server",
+    "zh": "Estabelecendo conexão com o servidor MCP"
+  },
+  {
+    "en": "Connecting GitHub to Claude…",
+    "zh": "Conectando o GitHub ao Claude…"
+  },
+  {
+    "en": "Connecting to",
+    "zh": "Conectando-se a"
+  },
+  {
+    "en": "Reconnecting to",
+    "zh": "Reconectando-se a"
+  },
+  {
+    "en": "Plan submitted for team lead approval",
+    "zh": "Plano enviado para aprovação do líder da equipe"
+  },
+  {
+    "en": "Waiting for team lead approval",
+    "zh": "Aguardando aprovação do líder da equipe"
+  },
+  {
+    "en": "Plan Approval Request from",
+    "zh": "Solicitação de aprovação do plano de"
+  },
+  {
+    "en": "Plan needs revision",
+    "zh": "Plano precisa de revisão"
+  },
+  {
+    "en": "Ultraplan approved",
+    "zh": "Ultraplan aprovado"
+  },
+  {
+    "en": "Submitting report…",
+    "zh": "Enviando relatório…"
+  },
+  {
+    "en": "Think Back on 2025 with Claude Code",
+    "zh": "Pense em 2025 com Claude Code"
+  },
+  {
+    "en": "is here · it'll chime in as you code",
+    "zh": "está aqui · ele soará enquanto você codifica"
+  },
+  {
+    "en": "sync cycle modes for all · Esc close",
+    "zh": "modos de ciclo de sincronização para todos · Esc fechar"
+  },
+  {
+    "en": "Thanks for sharing your transcript!",
+    "zh": "Obrigado por compartilhar sua transcrição!"
+  },
+  {
+    "en": "No, maybe later with /terminal-setup",
+    "zh": "Não, talvez mais tarde com /terminal-setup"
+  },
+  {
+    "en": "Do you have feedback about the plan?",
+    "zh": "Você tem feedback sobre o plano?"
+  },
+  {
+    "en": "You have not answered all questions",
+    "zh": "Você não respondeu todas as perguntas"
+  },
+  {
+    "en": "Fetching your Claude Code sessions…",
+    "zh": "Buscando suas sessões do Claude Code…"
+  },
+  {
+    "en": "Sending a test request to Bedrock…",
+    "zh": "Enviando uma solicitação de teste para Bedrock…"
+  },
+  {
+    "en": "Checking GitHub CLI installation…",
+    "zh": "Verificando a instalação do GitHub CLI…"
+  },
+  {
+    "en": "Checking thinkback installation…",
+    "zh": "Verificando a instalação do thinkback…"
+  },
+  {
+    "en": "Checking candidate",
+    "zh": "Verificando candidato"
+  },
+  {
+    "en": "Checking login status…",
+    "zh": "Verificando o status de login…"
+  },
+  {
+    "en": "Checking git status",
+    "zh": "Verificando o status do git"
+  },
+  {
+    "en": "Checking for Claude Desktop…",
+    "zh": "Procurando por Claude Desktop…"
+  },
+  {
+    "en": "Claude account with subscription ·",
+    "zh": "Conta Claude com assinatura ·"
+  },
+  {
+    "en": "Claude wants to exit plan mode",
+    "zh": "Claude quer sair do modo plano"
+  },
+  {
+    "en": "Claude Code will always reject requests to use denied tools.",
+    "zh": "Claude Code sempre rejeitará solicitações de uso de ferramentas negadas."
+  },
+  {
+    "en": "To change this later, run /theme",
+    "zh": "Para alterar isso mais tarde, execute /theme"
+  },
+  {
+    "en": "Opening sticker page in browser…",
+    "zh": "Abrindo a página de adesivos no navegador…"
+  },
+  {
+    "en": "Loading your Claude Code stats…",
+    "zh": "Carregando suas estatísticas do Código Claude…"
+  },
+  {
+    "en": "How do you authenticate to AWS?",
+    "zh": "Como você se autentica na AWS?"
+  },
+  {
+    "en": "Select any you wish to enable.",
+    "zh": "Selecione qualquer um que você deseja ativar."
+  },
+  {
+    "en": "Select a session to resume",
+    "zh": "Selecione uma sessão para retomar"
+  },
+  {
+    "en": "Confirm you want to restore",
+    "zh": "Confirme que deseja restaurar"
+  },
+  {
+    "en": "Would you like to install it?",
+    "zh": "Você gostaria de instalá-lo?"
+  },
+  {
+    "en": "Would you like to:",
+    "zh": "Você gostaria de:"
+  },
+  {
+    "en": "Working Directory Has Changes",
+    "zh": "O diretório de trabalho sofreu alterações"
+  },
+  {
+    "en": "Hooks Restricted by Policy",
+    "zh": "Ganchos restritos pela política"
+  },
+  {
+    "en": "Hook Configuration - Disabled",
+    "zh": "Configuração do Gancho - Desativado"
+  },
+  {
+    "en": "hook returned blocking error",
+    "zh": "gancho retornou erro de bloqueio"
+  },
+  {
+    "en": "hook stopped continuation:",
+    "zh": "gancho parou continuação:"
+  },
+  {
+    "en": "hook warning",
+    "zh": "aviso de gancho"
+  },
+  {
+    "en": "hook error",
+    "zh": "erro de gancho"
+  },
+  {
+    "en": "No Claude Code sessions found",
+    "zh": "Nenhuma sessão do Claude Code encontrada"
+  },
+  {
+    "en": "No remote environments available.",
+    "zh": "Nenhum ambiente remoto disponível."
+  },
+  {
+    "en": "No marketplaces configured.",
+    "zh": "Nenhum mercado configurado."
+  },
+  {
+    "en": "No custom commands found",
+    "zh": "Nenhum comando personalizado encontrado"
+  },
+  {
+    "en": "No skills found",
+    "zh": "Nenhuma habilidade encontrada"
+  },
+  {
+    "en": "No agents found",
+    "zh": "Nenhum agente encontrado"
+  },
+  {
+    "en": "No preview available",
+    "zh": "Nenhuma visualização disponível"
+  },
+  {
+    "en": "No code restore",
+    "zh": "Sem restauração de código"
+  },
+  {
+    "en": "Nothing to rewind to yet.",
+    "zh": "Nada para retroceder ainda."
+  },
+  {
+    "en": "Removed from marketplace · reason:",
+    "zh": "Removido do mercado · motivo:"
+  },
+  {
+    "en": "Removed from marketplace",
+    "zh": "Removido do mercado"
+  },
+  {
+    "en": "Removed empty socket directory",
+    "zh": "Diretório de soquete vazio removido"
+  },
+  {
+    "en": "Removed worktree",
+    "zh": "Árvore de trabalho removida"
+  },
+  {
+    "en": "Adding marketplace to configuration…",
+    "zh": "Adicionando mercado à configuração…"
+  },
+  {
+    "en": "Adding marketplace...",
+    "zh": "Adicionando mercado..."
+  },
+  {
+    "en": "Loading marketplaces...",
+    "zh": "Carregando mercados..."
+  },
+  {
+    "en": "Loading marketplaces…",
+    "zh": "Carregando mercados…"
+  },
+  {
+    "en": "Loading installed plugins…",
+    "zh": "Carregando plug-ins instalados…"
+  },
+  {
+    "en": "Loading environments…",
+    "zh": "Carregando ambientes…"
+  },
+  {
+    "en": "Loading session…",
+    "zh": "Carregando sessão…"
+  },
+  {
+    "en": "Loading thinkback skill…",
+    "zh": "Carregando habilidade de reflexão…"
+  },
+  {
+    "en": "Loading stats…",
+    "zh": "Carregando estatísticas…"
+  },
+  {
+    "en": "Processing authentication…",
+    "zh": "Processando autenticação…"
+  },
+  {
+    "en": "Starting authentication…",
+    "zh": "Iniciando autenticação…"
+  },
+  {
+    "en": "Authenticating with",
+    "zh": "Autenticando com"
+  },
+  {
+    "en": "Verifying credentials",
+    "zh": "Verificando credenciais"
+  },
+  {
+    "en": "Verifying it2 can communicate with iTerm2…",
+    "zh": "Verificando que it2 pode se comunicar com iTerm2…"
+  },
+  {
+    "en": "Calling AWS STS and Bedrock…",
+    "zh": "Chamando AWS STS e Bedrock…"
+  },
+  {
+    "en": "Reading ~/.aws/config…",
+    "zh": "Lendo ~/.aws/config…"
+  },
+  {
+    "en": "Sending token request to endpoint:",
+    "zh": "Enviando solicitação de token ao endpoint:"
+  },
+  {
+    "en": "Sending ping with timeout",
+    "zh": "Enviando ping com tempo limite"
+  },
+  {
+    "en": "Sending SIGINT to MCP server process",
+    "zh": "Enviando SIGINT para o processo do servidor MCP"
+  },
+  {
+    "en": "Fetching web page",
+    "zh": "Buscando página da web"
+  },
+  {
+    "en": "Teleporting session…",
+    "zh": "Sessão de teletransporte…"
+  },
+  {
+    "en": "Teleport failed:",
+    "zh": "Falha no teletransporte:"
+  },
+  {
+    "en": "Searching with Claude…",
+    "zh": "Pesquisando com Claude…"
+  },
+  {
+    "en": "Searching…",
+    "zh": "Procurando…"
+  },
+  {
+    "en": "Opening in Claude Desktop…",
+    "zh": "Abrindo no Claude Desktop…"
+  },
+  {
+    "en": "Opening Claude Desktop…",
+    "zh": "Abrindo o Claude Desktop…"
+  },
+  {
+    "en": "Opening pull request page",
+    "zh": "Abrindo a página de pull request"
+  },
+  {
+    "en": "Opening your options…",
+    "zh": "Abrindo suas opções…"
+  },
+  {
+    "en": "Let's get started.",
+    "zh": "Vamos começar."
+  },
+  {
+    "en": "All powered up",
+    "zh": "Tudo ligado"
+  },
+  {
+    "en": "Please wait…",
+    "zh": "Por favor, aguarde…"
+  },
+  {
+    "en": "to share detailed feedback anytime.",
+    "zh": "para compartilhar feedback detalhado a qualquer momento."
+  },
+  {
+    "en": "Sharing transcript",
+    "zh": "Transcrição de compartilhamento"
+  },
+  {
+    "en": "Completed task",
+    "zh": "Tarefa concluída"
+  },
+  {
+    "en": "Waiting for task",
+    "zh": "Aguardando tarefa"
+  },
+  {
+    "en": "Remote agent launched",
+    "zh": "Agente remoto lançado"
+  },
+  {
+    "en": "Backgrounded agent",
+    "zh": "Agente em segundo plano"
+  },
+  {
+    "en": "Background tasks",
+    "zh": "Tarefas em segundo plano"
+  },
+  {
+    "en": "view tasks",
+    "zh": "ver tarefas"
+  },
+  {
+    "en": "stop agents",
+    "zh": "parar agentes"
+  },
+  {
+    "en": "stop all agents",
+    "zh": "parar todos os agentes"
+  },
+  {
+    "en": "Active days:",
+    "zh": "Dias ativos:"
+  },
+  {
+    "en": "Most active day:",
+    "zh": "Dia mais ativo:"
+  },
+  {
+    "en": "Longest session:",
+    "zh": "Sessão mais longa:"
+  },
+  {
+    "en": "Longest streak:",
+    "zh": "Sequência mais longa:"
+  },
+  {
+    "en": "Current streak:",
+    "zh": "Sequência atual:"
+  },
+  {
+    "en": "Shot distribution",
+    "zh": "Distribuição de tiros"
+  },
+  {
+    "en": "Total tokens:",
+    "zh": "Totais de fichas:"
+  },
+  {
+    "en": "Free space:",
+    "zh": "Espaço livre:"
+  },
+  {
+    "en": "Favorite model:",
+    "zh": "Modelo favorito:"
+  },
+  {
+    "en": "Currently pinned:",
+    "zh": "Atualmente fixado:"
+  },
+  {
+    "en": "Currently using:",
+    "zh": "Atualmente usando:"
+  },
+  {
+    "en": "Currently using",
+    "zh": "Atualmente usando"
+  },
+  {
+    "en": "Latest available:",
+    "zh": "Últimos disponíveis:"
+  },
+  {
+    "en": "files changed",
+    "zh": "arquivos alterados"
+  },
+  {
+    "en": "e.g., Help me write unit tests for my code...",
+    "zh": "por exemplo, ajude-me a escrever testes de unidade para meu código..."
+  },
+  {
+    "en": "e.g. Has Claude completed all requested tasks?",
+    "zh": "por exemplo Claude completou todas as tarefas solicitadas?"
+  },
+  {
+    "en": "e.g., use this agent after you're done writing code...",
+    "zh": "por exemplo, use este agente depois de terminar de escrever o código..."
+  },
+  {
+    "en": "e.g., test-runner, tech-lead, etc",
+    "zh": "por exemplo, executor de testes, líder técnico, etc."
+  },
+  {
+    "en": "Returned to",
+    "zh": "Retornou para"
+  },
+  {
+    "en": "Updated cell",
+    "zh": "Célula atualizada"
+  },
+  {
+    "en": "Listed directory",
+    "zh": "Diretório listado"
+  },
+  {
+    "en": "Referenced file",
+    "zh": "Arquivo referenciado"
+  },
+  {
+    "en": "Referenced PDF",
+    "zh": "PDF referenciado"
+  },
+  {
+    "en": "Opened changes in",
+    "zh": "Mudanças abertas em"
+  },
+  {
+    "en": "Enter to continue ·",
+    "zh": "Entre para continuar ·"
+  },
+  {
+    "en": "Enter to select ·",
+    "zh": "Entre para selecionar ·"
+  },
+  {
+    "en": "Enter to continue",
+    "zh": "Entre para continuar"
+  },
+  {
+    "en": "Tab to switch focus",
+    "zh": "Tab para mudar o foco"
+  },
+  {
+    "en": "toggle selection",
+    "zh": "alternar seleção"
+  },
+  {
+    "en": "toggle branch",
+    "zh": "alternar ramo"
+  },
+  {
+    "en": "mark done",
+    "zh": "marcar como concluído"
+  },
+  {
+    "en": "open in editor",
+    "zh": "abrir no editor"
+  },
+  {
+    "en": "expand history",
+    "zh": "expandir histórico"
+  },
+  {
+    "en": "Type to filter",
+    "zh": "Digite para filtrar"
+  },
+  {
+    "en": "Type to search",
+    "zh": "Digite para pesquisar"
+  },
+  {
+    "en": "type to search",
+    "zh": "digite para pesquisar"
+  },
+  {
+    "en": "Type to Search",
+    "zh": "Digite para pesquisar"
+  },
+  {
+    "en": "Type to enter text",
+    "zh": "Digite para inserir texto"
+  },
+  {
+    "en": "Search settings…",
+    "zh": "Configurações de pesquisa…"
+  },
+  {
+    "en": "search history",
+    "zh": "histórico de pesquisa"
+  },
+  {
+    "en": "apply changes",
+    "zh": "aplicar alterações"
+  },
+  {
+    "en": "confirm and save",
+    "zh": "confirme e salve"
+  },
+  {
+    "en": "Review your answers",
+    "zh": "Revise suas respostas"
+  },
+  {
+    "en": "Enter filename:",
+    "zh": "Digite o nome do arquivo:"
+  },
+  {
+    "en": "Enter marketplace source:",
+    "zh": "Insira a fonte do mercado:"
+  },
+  {
+    "en": "Enter new session name",
+    "zh": "Insira o novo nome da sessão"
+  },
+  {
+    "en": "Choose location",
+    "zh": "Escolha o local"
+  },
+  {
+    "en": "Select tools",
+    "zh": "Selecione ferramentas"
+  },
+  {
+    "en": "Browse default commands:",
+    "zh": "Navegue pelos comandos padrão:"
+  },
+  {
+    "en": "Browse custom commands:",
+    "zh": "Procure comandos personalizados:"
+  },
+  {
+    "en": "Creation method",
+    "zh": "Método de criação"
+  },
+  {
+    "en": "Preferred output style",
+    "zh": "Estilo de saída preferido"
+  },
+  {
+    "en": "Status message:",
+    "zh": "Mensagem de estado:"
+  },
+  {
+    "en": "Current setting:",
+    "zh": "Configuração atual:"
+  },
+  {
+    "en": "Default value used when the user provides nothing",
+    "zh": "Valor padrão usado quando o usuário não fornece nada"
+  },
+  {
+    "en": "Configure agent memory",
+    "zh": "Configurar memória do agente"
+  },
+  {
+    "en": "Add directory to workspace",
+    "zh": "Adicionar diretório ao espaço de trabalho"
+  },
+  {
+    "en": "Delete this hook",
+    "zh": "Exclua este gancho"
+  },
+  {
+    "en": "Delete hook",
+    "zh": "Excluir gancho"
+  },
+  {
+    "en": "add hook",
+    "zh": "adicionar gancho"
+  },
+  {
+    "en": "update hook",
+    "zh": "gancho de atualização"
+  },
+  {
+    "en": "plugin - Manage installed plugins",
+    "zh": "plugin - Gerenciar plugins instalados"
+  },
+  {
+    "en": "Plugin Recommendation",
+    "zh": "Recomendação de plug-in"
+  },
+  {
+    "en": "LSP Plugin Recommendation",
+    "zh": "Recomendação de plug-in LSP"
+  },
+  {
+    "en": "Advisor disabled",
+    "zh": "Consultor desativado"
+  },
+  {
+    "en": "Advisor Tool",
+    "zh": "Ferramenta Consultor"
+  },
+  {
+    "en": "Advisor model for the server-side advisor tool.",
+    "zh": "Modelo de conselheiro para a ferramenta de conselheiro do lado do servidor."
+  },
+  {
+    "en": "Agent MCP",
+    "zh": "Agente MCP"
+  },
+  {
+    "en": "active agent",
+    "zh": "agente ativo"
+  },
+  {
+    "en": "active shell",
+    "zh": "shell ativo"
+  },
+  {
+    "en": "Remote Control",
+    "zh": "Controle remoto"
+  },
+  {
+    "en": "Disconnect this session",
+    "zh": "Desconectar esta sessão"
+  },
+  {
+    "en": "Reconnect extension",
+    "zh": "Reconectar extensão"
+  },
+  {
+    "en": "Ultrareview billing",
+    "zh": "Faturamento Ultrareview"
+  },
+  {
+    "en": "Autofix PR",
+    "zh": "PR de correção automática"
+  },
+  {
+    "en": "to switch model",
+    "zh": "mudar de modelo"
+  },
+  {
+    "en": "to toggle fast mode",
+    "zh": "para alternar o modo rápido"
+  },
+  {
+    "en": "to toggle thinking",
+    "zh": "para alternar o pensamento"
+  },
+  {
+    "en": "to toggle tasks",
+    "zh": "para alternar tarefas"
+  },
+  {
+    "en": "to connect.",
+    "zh": "para conectar."
+  },
+  {
+    "en": "to undo",
+    "zh": "desfazer"
+  },
+  {
+    "en": "to view",
+    "zh": "ver"
+  },
+  {
+    "en": "to save,",
+    "zh": "para salvar,"
+  },
+  {
+    "en": "to speak",
+    "zh": "falar"
+  },
+  {
+    "en": "to toggle",
+    "zh": "alternar"
+  },
+  {
+    "en": "more below",
+    "zh": "mais abaixo"
+  },
+  {
+    "en": "more…",
+    "zh": "mais…"
+  },
+  {
+    "en": "all projects",
+    "zh": "todos os projetos"
+  },
+  {
+    "en": "all worktrees",
+    "zh": "todas as árvores de trabalho"
+  },
+  {
+    "en": "reject all",
+    "zh": "rejeitar tudo"
+  },
+  {
+    "en": "Permissions:",
+    "zh": "Permissões:"
+  },
+  {
+    "en": "Network Restrictions",
+    "zh": "Restrições de rede"
+  },
+  {
+    "en": "Network Access",
+    "zh": "Acesso à rede"
+  },
+  {
+    "en": "Strict sandbox mode",
+    "zh": "Modo sandbox estrito"
+  },
+  {
+    "en": "Configuration Error",
+    "zh": "Erro de configuração"
+  },
+  {
+    "en": "Setup Warnings",
+    "zh": "Avisos de configuração"
+  },
+  {
+    "en": "Contains warnings",
+    "zh": "Contém avisos"
+  },
+  {
+    "en": "Missing dependencies",
+    "zh": "Dependências ausentes"
+  },
+  {
+    "en": "Auto-compact window reset to model default",
+    "zh": "Janela de compactação automática redefinida para o padrão do modelo"
+  },
+  {
+    "en": "Auto-registered claude-cli:// deep link protocol handler",
+    "zh": "Claude-cli: // manipulador de protocolo de link direto registrado automaticamente"
+  },
+  {
+    "en": "WARNING: Claude Code running in 跳过权限检查 mode",
+    "zh": "AVISO: Código Claude sendo executado no modo 跳过权限检查"
+  },
+  {
+    "en": "WARNING: Failed to turn on autofix for this PR",
+    "zh": "AVISO: Falha ao ativar a correção automática para este PR"
+  },
+  {
+    "en": "WARNING:",
+    "zh": "AVISO:"
+  },
+  {
+    "en": "You've hit your fast limit",
+    "zh": "Você atingiu seu limite rápido"
+  },
+  {
+    "en": "You've used",
+    "zh": "Você usou"
+  },
+  {
+    "en": "You can either:",
+    "zh": "Você pode:"
+  },
+  {
+    "en": "Sent a message to",
+    "zh": "Enviou uma mensagem para"
+  },
+  {
+    "en": "Flagged on",
+    "zh": "Marcado em"
+  },
+  {
+    "en": "again to exit",
+    "zh": "novamente para sair"
+  },
+  {
+    "en": "New here? Run",
+    "zh": "Novo aqui? Correr"
+  },
+  {
+    "en": "For more help:",
+    "zh": "Para obter mais ajuda:"
+  },
+  {
+    "en": "For more info, use",
+    "zh": "Para mais informações, use"
+  },
+  {
+    "en": "For more details see:",
+    "zh": "Para mais detalhes consulte:"
+  },
+  {
+    "en": "run /terminal-setup",
+    "zh": "execute /configuração do terminal"
+  },
+  {
+    "en": "From your shell:",
+    "zh": "Da sua concha:"
+  },
+  {
+    "en": "unrecognized:",
+    "zh": "não reconhecido:"
+  },
+  {
+    "en": "Unrecognized:",
+    "zh": "Não reconhecido:"
+  },
+  {
+    "en": "Screen Recording:",
+    "zh": "Gravação de tela:"
+  },
+  {
+    "en": "Hover info",
+    "zh": "Informações ao passar o mouse"
+  },
+  {
+    "en": "OAuth error:",
+    "zh": "Erro OAuth:"
+  },
+  {
+    "en": "Task #",
+    "zh": "Tarefa #"
+  },
+  {
+    "en": "Enter to",
+    "zh": "Entre para"
+  },
+  {
+    "en": "Never for",
+    "zh": "Nunca por"
+  },
+  {
+    "en": "Session: ",
+    "zh": "Sessão: "
+  },
+  {
+    "en": "Hooks: ",
+    "zh": "Ganchos: "
+  },
+  {
+    "en": "Agents: ",
+    "zh": "Agentes: "
+  },
+  {
+    "en": "Skills: ",
+    "zh": "Habilidades: "
+  },
+  {
+    "en": "Commands: ",
+    "zh": "Comandos: "
+  },
+  {
+    "en": "Edit file",
+    "zh": "Editar arquivo"
+  },
+  {
+    "en": "Enter",
+    "zh": "Digitar"
+  },
+  {
+    "en": "PR #",
+    "zh": "RP#"
+  },
+  {
+    "en": "URL",
+    "zh": "URL"
+  },
+  {
+    "en": "• Updated",
+    "zh": "• Atualizado"
+  },
+  {
+    "en": "• Remove",
+    "zh": "• Remover"
+  },
+  {
+    "en": "• Update",
+    "zh": "• Atualizar"
+  },
+  {
+    "en": "• Agents:",
+    "zh": "• Agentes:"
+  },
+  {
+    "en": "• Hooks:",
+    "zh": "• Ganchos:"
+  },
+  {
+    "en": "• Skills:",
+    "zh": "• Habilidades:"
+  },
+  {
+    "en": "• Commands:",
+    "zh": "• Comandos:"
+  },
+  {
+    "en": "• Cmd+Esc",
+    "zh": "• Cmd+Esc"
+  },
+  {
+    "en": "∴ Thinking",
+    "zh": "∴ Pensando"
+  },
+  {
+    "en": "⧉ Selected",
+    "zh": "⧉ Selecionado"
+  },
+  {
+    "en": "⧉ In",
+    "zh": "⧉ Em"
+  },
+  {
+    "en": "←/→ source",
+    "zh": "←/→ fonte"
+  },
+  {
+    "en": "↑/↓ select",
+    "zh": "↑/↓ selecione"
+  },
+  {
+    "en": "Plan → Edit → Execute",
+    "zh": "Planejar → Editar → Executar"
+  }
+]

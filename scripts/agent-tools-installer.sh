@@ -252,9 +252,18 @@ get_lang_label() {
         zh-CN) echo "简体中文" ;;
         ja-JP) echo "日本語" ;;
         ko-KR) echo "한국어" ;;
+        es-ES) echo "Español" ;;
+        fr-FR) echo "Français" ;;
+        de-DE) echo "Deutsch" ;;
+        pt-BR) echo "Português (BR)" ;;
+        ru-RU) echo "Русский" ;;
+        vi-VN) echo "Tiếng Việt" ;;
         *)     echo "$1" ;;
     esac
 }
+
+# Parallel arrays for menu dispatch by index
+LANG_CODES=("zh-CN" "ja-JP" "ko-KR" "es-ES" "fr-FR" "de-DE" "pt-BR" "ru-RU" "vi-VN")
 
 ask_yn() {
     printf "  %s [Y/n] " "$1"
@@ -359,8 +368,16 @@ while true; do
     echo "  3.  OpenCode CLI"
     echo "  4.  Hermes (Nous Research)"
     echo -e "\n${CYAN}=== Language Packs${active_mark} ===${RESET}"
-    echo "  L1. 简体中文 (Simplified Chinese)"
-    echo "  LE. English (restore default)"
+    echo "  L1. 简体中文         (Simplified Chinese)"
+    echo "  L2. 日本語           (Japanese)"
+    echo "  L3. 한국어           (Korean)"
+    echo "  L4. Español          (Spanish)"
+    echo "  L5. Français         (French)"
+    echo "  L6. Deutsch          (German)"
+    echo "  L7. Português (BR)   (Portuguese, Brazil)"
+    echo "  L8. Русский          (Russian)"
+    echo "  L9. Tiếng Việt       (Vietnamese)"
+    echo "  LE. English          (restore default)"
     echo -e "\n${YELLOW}=== Uninstall ===${RESET}"
     echo "  5.  Claude Code"
     echo "  6.  OpenAI Codex CLI"
@@ -423,8 +440,16 @@ while true; do
                 run_uninstall "Hermes" pip uninstall hermes-agent -y
             fi
             ;;
-        L1|l1)
-            invoke_language_pack_action "zh-CN" "简体中文"
+        L[1-9]|l[1-9])
+            idx=$(( ${choice#[Ll]} - 1 ))
+            if [ $idx -lt ${#LANG_CODES[@]} ]; then
+                code="${LANG_CODES[$idx]}"
+                label=$(get_lang_label "$code")
+                invoke_language_pack_action "$code" "$label"
+            else
+                echo -e "${RED}  Invalid language pack option.${RESET}"
+                sleep 1
+            fi
             ;;
         LE|le)
             invoke_language_pack_action "en" "English"

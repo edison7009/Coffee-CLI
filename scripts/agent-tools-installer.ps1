@@ -190,7 +190,15 @@ $LANG_PACK_BASE_URL = "https://raw.githubusercontent.com/edison7009/Coffee-CLI/m
 
 # Available language packs. Add new ones here when translation data ships.
 $LANGUAGE_PACKS = @(
-    @{ Code = "zh-CN"; Label = "简体中文"; English = "Simplified Chinese" }
+    @{ Code = "zh-CN"; Label = "简体中文";      English = "Simplified Chinese" },
+    @{ Code = "ja-JP"; Label = "日本語";        English = "Japanese"           },
+    @{ Code = "ko-KR"; Label = "한국어";        English = "Korean"             },
+    @{ Code = "es-ES"; Label = "Español";       English = "Spanish"            },
+    @{ Code = "fr-FR"; Label = "Français";      English = "French"             },
+    @{ Code = "de-DE"; Label = "Deutsch";       English = "German"             },
+    @{ Code = "pt-BR"; Label = "Português (BR)"; English = "Portuguese (Brazil)" },
+    @{ Code = "ru-RU"; Label = "Русский";       English = "Russian"            },
+    @{ Code = "vi-VN"; Label = "Tiếng Việt";    English = "Vietnamese"         }
 )
 
 function Get-ActiveLanguage {
@@ -292,8 +300,16 @@ while ($true) {
     Write-Host "  3.  OpenCode CLI"
     Write-Host "  4.  Hermes (Nous Research)"
     Write-Host "`n=== Language Packs$activeMark ===" -ForegroundColor Cyan
-    Write-Host "  L1. 简体中文 (Simplified Chinese)"
-    Write-Host "  LE. English (restore default)"
+    Write-Host "  L1. 简体中文         (Simplified Chinese)"
+    Write-Host "  L2. 日本語           (Japanese)"
+    Write-Host "  L3. 한국어           (Korean)"
+    Write-Host "  L4. Español          (Spanish)"
+    Write-Host "  L5. Français         (French)"
+    Write-Host "  L6. Deutsch          (German)"
+    Write-Host "  L7. Português (BR)   (Portuguese, Brazil)"
+    Write-Host "  L8. Русский          (Russian)"
+    Write-Host "  L9. Tiếng Việt       (Vietnamese)"
+    Write-Host "  LE. English           (restore default)"
     Write-Host "`n=== Uninstall ===" -ForegroundColor Yellow
     Write-Host "  5.  Claude Code"
     Write-Host "  6.  OpenAI Codex CLI"
@@ -360,10 +376,17 @@ while ($true) {
                 }
             }
         }
-        "L1" { Invoke-LanguagePackAction "zh-CN" "简体中文" }
-        "l1" { Invoke-LanguagePackAction "zh-CN" "简体中文" }
-        "LE" { Invoke-LanguagePackAction "en"    "English" }
-        "le" { Invoke-LanguagePackAction "en"    "English" }
+        { $_ -match "^[Ll]([1-9])$" } {
+            $idx = [int]$matches[1] - 1
+            if ($idx -lt $LANGUAGE_PACKS.Count) {
+                $pack = $LANGUAGE_PACKS[$idx]
+                Invoke-LanguagePackAction $pack.Code $pack.Label
+            } else {
+                Write-Host "  Invalid language pack option." -ForegroundColor Red
+                Start-Sleep -Seconds 1
+            }
+        }
+        { $_ -eq "LE" -or $_ -eq "le" } { Invoke-LanguagePackAction "en" "English" }
         "q" {
             Write-Host "`n  Goodbye!`n"
             break
