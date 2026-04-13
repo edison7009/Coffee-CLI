@@ -7,7 +7,8 @@ import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebglAddon } from '@xterm/addon-webgl';
 import { CoffeeOverlay, type CoffeeOverlayRef } from './CoffeeOverlay';
-import { setTranslationEntries, setLLMTranslationEntries } from './coffee-translation';
+import { HoverTranslation } from './HoverTranslation';
+import { TranslationEngine } from './coffee-translation';
 import {
   loadLLMConfig, saveLLMConfig, extractTextSegments, translateSegments,
   TRANSLATE_LANGUAGES,
@@ -46,13 +47,18 @@ export const detachedSessions = new Set<string>();
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: ToolType }) {
+export function TierTerminal({ sessionId, tool, isActive = true }: { sessionId: string; tool: ToolType; isActive?: boolean }) {
   const { state, dispatch } = useAppState();
 
   const termRef  = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<Terminal | null>(null);
   const fitRef   = useRef<FitAddon | null>(null);
   const coffeeRef = useRef<CoffeeOverlayRef>(null);
+  // Per-instance translation engine — isolated from other tabs so multi-tool
+  // multi-language sessions don't clobber each other's dictionaries.
+  const engineRef = useRef<TranslationEngine | null>(null);
+  if (engineRef.current === null) engineRef.current = new TranslationEngine();
+  const engine = engineRef.current;
 
 
   // ── Startup splash state ─────────────────────────────────────────────────
@@ -674,7 +680,7 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
     const lang = state.currentLang;
     if (lang === 'en') {
       setCoffeeEnabled(false);
-      setTranslationEntries([]);
+      engine.setStaticEntries([]);
       return;
     }
 
@@ -689,7 +695,7 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
         pattern,
         translation,
       }));
-      setTranslationEntries(formatted);
+      engine.setStaticEntries(formatted);
       if (formatted.length > 0) {
         setCoffeeEnabled(true);
       }
@@ -697,6 +703,19 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
       setCoffeeEnabled(false);
     });
   }, [state.currentLang, tool, detectedTool]);
+
+  // ── Pause A2 RAF loop when this tab is not active ─────────────────────────
+  // Background tabs stay mounted (CenterPanel uses display:none). Without this
+  // every hidden tab keeps running its full RAF + translateLine + ANSI rebuild
+  // loop, multiplying CPU cost per tab. We reuse pauseRendering rather than
+  // disposing A2 so switching back to the tab is instant (no WebGL re-init).
+  useEffect(() => {
+    if (isActive) {
+      coffeeRef.current?.resumeRendering();
+    } else {
+      coffeeRef.current?.pauseRendering();
+    }
+  }, [isActive]);
 
   // ── Image Preview (Lightbox) ─────────────────────────────────────────────
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -747,7 +766,7 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
       // 3. Feed into the existing dictionary render pipeline
       //    This makes the normal render loop pick up the translations automatically!
       if (entries.length > 0) {
-        setLLMTranslationEntries(entries);
+        engine.setLLMEntries(entries);
         // Force a re-render of A2 by marking dirty
         coffeeRef.current?.resumeRendering();
       }
@@ -805,10 +824,23 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
         ref={coffeeRef}
         xtermRef={xtermRef}
         xtermContainerRef={termRef}
+        engine={engine}
         theme={isDark ? 'dark' : 'light'}
         visible={coffeeEnabled && state.showOverlay}
         onFallback={handleOverlayFallback}
         onImageClick={handleImageClick}
+      />
+
+      {/* Hover translation: Dr.eye-style tooltip, alternative to A2 full-screen.
+          Active when the user enables it AND a translatable language is set.
+          Naturally complements showOverlay=false (pure original A1 + tooltip),
+          but doesn't conflict if both are on. */}
+      <HoverTranslation
+        xtermRef={xtermRef}
+        xtermContainerRef={termRef}
+        engine={engine}
+        theme={isDark ? 'dark' : 'light'}
+        visible={coffeeEnabled && state.hoverEnabled}
       />
 
       {/* ── LLM Translate FAB ─────────────────────────────────────────── */}

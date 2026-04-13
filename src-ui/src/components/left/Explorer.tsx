@@ -821,6 +821,19 @@ export function Explorer() {
               <path d="M2 4l4 4 4-4z" />
             </svg>
           </button>
+          <button
+            className={`icon-btn xs ${state.hoverEnabled ? 'hover-active' : ''}`}
+            onClick={() => {
+              dispatch({ type: 'TOGGLE_HOVER' });
+              try { localStorage.setItem('cc-hover-enabled', state.hoverEnabled ? '0' : '1'); } catch {}
+            }}
+            disabled={state.currentLang === 'en'}
+            title={state.currentLang === 'en' ? undefined : (state.hoverEnabled ? 'Disable hover translation' : 'Enable hover translation')}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 3l7 19 2-8 8-2L3 3z" />
+            </svg>
+          </button>
           <button className={`icon-btn xs ${islandForced ? 'island-active' : ''}`} onClick={toggleIsland}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill={islandForced ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect width="16" height="6" x="4" y="9" rx="3" />

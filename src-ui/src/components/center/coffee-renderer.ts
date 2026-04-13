@@ -5,7 +5,7 @@
 // xterm.js handles everything: box drawing, block elements, fonts, DPR — automatically.
 
 import type { Terminal } from '@xterm/xterm';
-import { translateLine, hasTranslations, findFullPattern } from './coffee-translation';
+import type { TranslationEngine } from './coffee-translation';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -108,19 +108,70 @@ function isCJKChar(ch: string): boolean {
 let _logged = false;
 
 /**
+ * Per-row body cache entry. Stores the SGR/text body for one row keyed by
+ * (cols + skipIn + lineText). When the same row produces the same key on the
+ * next frame, we skip translateLine + cell iteration and reuse the body.
+ *
+ * outSkip is the value of skipColsNextRow at the END of body computation.
+ * Reusing it on cache hit preserves cross-line skip propagation.
+ */
+interface RowCacheEntry {
+  key: string;
+  body: string;
+  outSkip: number;
+}
+
+/**
+ * Renderer state carried across frames by CoffeeOverlay. One instance per
+ * shadow terminal. Holds the per-row body cache and the engine generation
+ * the cache was built against.
+ */
+export interface RendererState {
+  rowCache: (RowCacheEntry | null)[];
+  lastGen: number;
+  lastCols: number;
+  lastRows: number;
+}
+
+export function createRendererState(): RendererState {
+  return {
+    rowCache: [],
+    lastGen: -1,
+    lastCols: -1,
+    lastRows: -1,
+  };
+}
+
+/**
  * Render the translation overlay by reading A1's buffer and writing
  * ANSI sequences to A2 (the shadow terminal).
- * 
+ *
  * A2 is a standalone xterm.js instance with NO PTY connection.
  * It uses the exact same WebGL rendering pipeline as A1, so box-drawing,
  * block elements, fonts, and DPR are all handled identically.
+ *
+ * Per-row body cache: rows whose (cols + skipIn + lineText) tuple is unchanged
+ * from the previous frame skip translateLine + cell iteration entirely. This
+ * is the dominant case for TUI menus (Claude Code's prompt screen) where most
+ * rows are static frame-to-frame and only a spinner/typing indicator changes.
  */
 export function renderToShadowTerminal(
   source: Terminal,
   _target: Terminal,
+  engine: TranslationEngine,
+  state: RendererState,
 ): string {
   const buffer = source.buffer.active;
-  const hasDict = hasTranslations();
+  const hasDict = engine.hasTranslations();
+  const gen = engine.generation;
+
+  // Invalidate cache on dictionary or geometry change.
+  if (state.lastGen !== gen || state.lastCols !== source.cols || state.lastRows !== source.rows) {
+    state.rowCache = new Array(source.rows).fill(null);
+    state.lastGen = gen;
+    state.lastCols = source.cols;
+    state.lastRows = source.rows;
+  }
 
   if (!_logged) {
     console.log('[CoffeeRenderer] A2 Shadow Terminal mode.', {
@@ -150,8 +201,7 @@ export function renderToShadowTerminal(
     if (!line) continue;
 
     const lineText = line.translateToString(false);
-
-
+    const skipIn = skipColsNextRow;
 
     // Move cursor to start of this row (1-indexed).
     frame += cursorTo(row + 1, 1);
@@ -160,8 +210,8 @@ export function renderToShadowTerminal(
     // IMPORTANT: Do NOT ESC[2K here — it would erase the overflow content that
     // xterm.js auto-wrapped from the previous row's translation.
     let col = 0;
-    if (skipColsNextRow > 0) {
-      const skipOnThisRow = Math.min(skipColsNextRow, source.cols);
+    if (skipIn > 0) {
+      const skipOnThisRow = Math.min(skipIn, source.cols);
       col = skipOnThisRow;
       // Position cursor past the overflow area
       if (col < source.cols) {
@@ -169,8 +219,8 @@ export function renderToShadowTerminal(
       }
       // Clear only from the skip position to end of line (preserve overflow text)
       frame += `${ESC}K`; // EL 0 = Erase from cursor to end of line
-      // If overflow spans multiple rows, carry the remainder forward
-      skipColsNextRow = skipColsNextRow - skipOnThisRow;
+      // Carry the remainder forward; body iteration may add more.
+      skipColsNextRow = skipIn - skipOnThisRow;
     } else {
       // No overflow — safe to erase entire line to prevent CJK ghosts.
       // CJK ghost fix: if previous frame wrote a 2-col wide char (e.g. "程")
@@ -179,8 +229,23 @@ export function renderToShadowTerminal(
       frame += `${ESC}2K`; // EL 2 = Erase entire line
     }
 
+    // Per-row body cache lookup. Key encodes everything that affects the body
+    // output: terminal width, incoming skip from previous row's overflow, and
+    // the line text itself. If hit, reuse the body string and propagate the
+    // cached outSkip so cross-line skip state stays consistent.
+    const cacheKey = `${source.cols}|${skipIn}|${lineText}`;
+    const cached = state.rowCache[row];
+    if (cached !== null && cached !== undefined && cached.key === cacheKey) {
+      frame += cached.body;
+      skipColsNextRow = cached.outSkip;
+      continue;
+    }
+
+    // Cache miss — compute body from scratch and remember it for next frame.
+    const bodyStart = frame.length;
+
     // Get translation matches for this line
-    const matches = hasDict ? translateLine(lineText) : [];
+    const matches = hasDict ? engine.translateLine(lineText) : [];
     const matchMap = new Map<number, { translatedText: string; colEnd: number; originalText: string }>();
     for (const m of matches) {
       matchMap.set(m.colStart, { translatedText: m.translatedText, colEnd: m.colEnd, originalText: m.originalText });
@@ -216,7 +281,7 @@ export function renderToShadowTerminal(
         // A prefix match means the original English text was truncated at the line edge
         // (the terminal clipped the sentence mid-word). In that case the translation should
         // also clip at the right edge, not overflow to the next row.
-        const fullPattern = findFullPattern(match.originalText);
+        const fullPattern = engine.findFullPattern(match.originalText);
         const isPrefixMatch = fullPattern !== null;
 
         if (totalTransCols <= matchCols) {
@@ -302,7 +367,13 @@ export function renderToShadowTerminal(
       }
     }
 
-
+    // Store the freshly-computed body in the per-row cache so the next frame
+    // can short-circuit if this row is unchanged.
+    state.rowCache[row] = {
+      key: cacheKey,
+      body: frame.slice(bodyStart),
+      outSkip: skipColsNextRow,
+    };
   }
 
   // Reset SGR and show cursor

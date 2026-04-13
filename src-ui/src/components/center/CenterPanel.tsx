@@ -545,7 +545,7 @@ export function CenterPanel() {
               <DosPlayer sessionId={t.id} />
             ) : (
               <ErrorBoundary key={`err-${t.id}-${t.restartKey || 0}`} fallbackLabel="Tier Terminal Error">
-                <TierTerminal key={`tier-${t.id}-${t.restartKey || 0}`} sessionId={t.id} tool={t.tool} />
+                <TierTerminal key={`tier-${t.id}-${t.restartKey || 0}`} sessionId={t.id} tool={t.tool} isActive={t.id === activeTerminalId} />
               </ErrorBoundary>
             )}
           </div>

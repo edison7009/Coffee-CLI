@@ -9,16 +9,21 @@ import { WebglAddon } from '@xterm/addon-webgl';
 import { FitAddon } from '@xterm/addon-fit';
 import {
   renderToShadowTerminal,
+  createRendererState,
   getSelectedText,
   findInlineImages,
   type SelectionRange,
   type InlineImage,
+  type RendererState,
 } from './coffee-renderer';
+import type { TranslationEngine } from './coffee-translation';
 
 interface CoffeeOverlayProps {
   xtermRef: React.RefObject<Terminal | null>;
   /** Container element of xterm.js A1 for sizing reference */
   xtermContainerRef: React.RefObject<HTMLDivElement | null>;
+  /** Per-instance translation engine owned by the parent TierTerminal. */
+  engine: TranslationEngine;
   theme: 'dark' | 'light';
   visible: boolean;
   onFallback?: () => void;
@@ -36,7 +41,7 @@ export interface CoffeeOverlayRef {
   resumeRendering: () => void;
 }
 
-export const CoffeeOverlay = forwardRef<CoffeeOverlayRef, CoffeeOverlayProps>(({ xtermRef, xtermContainerRef: _xtermContainerRef, theme, visible, onFallback, onImageClick }, ref) => {
+export const CoffeeOverlay = forwardRef<CoffeeOverlayRef, CoffeeOverlayProps>(({ xtermRef, xtermContainerRef: _xtermContainerRef, engine, theme, visible, onFallback, onImageClick }, ref) => {
   const shadowContainerRef = useRef<HTMLDivElement>(null);
   const shadowTermRef = useRef<Terminal | null>(null);
   const shadowFitRef = useRef<FitAddon | null>(null);
@@ -46,6 +51,10 @@ export const CoffeeOverlay = forwardRef<CoffeeOverlayRef, CoffeeOverlayProps>(({
   const dirtyRef = useRef(true);
   const rafRef = useRef(0);
   const renderPausedRef = useRef(false);
+  // Per-row body cache state for the renderer. Lives across frames so cached
+  // row bodies survive between RAF ticks. Reset whenever the engine generation
+  // or terminal geometry changes (the renderer detects this internally).
+  const rendererStateRef = useRef<RendererState>(createRendererState());
 
   // ── Selection handling ──────────────────────────────────────────────────
   useImperativeHandle(ref, () => ({
@@ -215,7 +224,7 @@ export const CoffeeOverlay = forwardRef<CoffeeOverlayRef, CoffeeOverlayProps>(({
     }
 
     try {
-      const frame = renderToShadowTerminal(source, target);
+      const frame = renderToShadowTerminal(source, target, engine, rendererStateRef.current);
 
       // Lock: prevent new renders until A2 finishes parsing this frame
       writeBusyRef.current = true;
@@ -244,7 +253,7 @@ export const CoffeeOverlay = forwardRef<CoffeeOverlayRef, CoffeeOverlayProps>(({
         onFallback?.();
       }
     }
-  }, [visible, xtermRef, onFallback, onImageClick]);
+  }, [visible, xtermRef, engine, onFallback, onImageClick]);
 
   // ── Subscribe to A1 updates ─────────────────────────────────────────────
   useEffect(() => {
