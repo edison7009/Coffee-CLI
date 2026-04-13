@@ -138,6 +138,10 @@ export const commands = {
     invoke<void>('tier_terminal_resume', { sessionId, savedSessionId, tool, sessionToken, cols, rows, cwd }),
   checkNetworkPort: (host: string, port: number) => invoke<boolean>('check_network_port', { host, port }),
 
+  // Installer — write script to a temp file and return its path
+  writeTempScript: (content: string, extension: string) =>
+    invoke<string>('write_temp_script', { content, extension }),
+
   // Tool availability detection
   checkToolsInstalled: () => invoke<Record<string, boolean>>('check_tools_installed'),
 

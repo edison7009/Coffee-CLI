@@ -261,28 +261,24 @@ function TierTerminalImpl({
         // Trust prompt is now shown to the user (with translation overlay).
         // Previously auto-skipped, but user wants to see the translated trust screen.
 
-        // For installer, auto-type the cross-platform native install commands
+        // For installer, write the script to a temp file via a Rust command
+        // and execute it by path. We used to base64-encode the script inline
+        // via `powershell -EncodedCommand`, but the installer.ps1 grew past
+        // Windows CMD's 8191-char command line limit once Language Packs
+        // menus were added — the command would be echoed instead of run.
         if (tool === 'installer') {
-          setTimeout(() => {
+          setTimeout(async () => {
             try {
-              const os = window.navigator.userAgent.toLowerCase().includes('windows') ? 'win' : 'other';
-              let installCmd = '';
-
-              if (os === 'win') {
-                // PowerShell -EncodedCommand requires UTF-16LE base64 encoding
-                let binary = '';
-                for (let i = 0; i < ps1Script.length; i++) {
-                    const charCode = ps1Script.charCodeAt(i);
-                    binary += String.fromCharCode(charCode & 0xFF, (charCode >> 8) & 0xFF);
-                }
-                const b64 = btoa(binary);
-                installCmd = `powershell -NoProfile -ExecutionPolicy Bypass -EncodedCommand ${b64}\r`;
+              const isWin = window.navigator.userAgent.toLowerCase().includes('windows');
+              if (isWin) {
+                const tempPath = await commands.writeTempScript(ps1Script, 'ps1');
+                const cmd = `powershell -NoProfile -ExecutionPolicy Bypass -File "${tempPath}"\r`;
+                commands.tierTerminalRawWrite(sessionId, cmd).catch(() => {});
               } else {
-                const b64 = btoa(unescape(encodeURIComponent(shScript)));
-                installCmd = `echo "${b64}" | base64 -d | bash\r`;
+                const tempPath = await commands.writeTempScript(shScript, 'sh');
+                const cmd = `bash "${tempPath}"\r`;
+                commands.tierTerminalRawWrite(sessionId, cmd).catch(() => {});
               }
-              
-              commands.tierTerminalRawWrite(sessionId, installCmd).catch(() => {});
             } catch (err) {
               console.error("Failed to launch standalone installer script", err);
               commands.tierTerminalRawWrite(sessionId, `Write-Host "Failed to launch installer script: ${err}" -ForegroundColor Red\r`).catch(() => {});
