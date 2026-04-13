@@ -73,30 +73,27 @@ export function HoverTranslation({
 
     // Read xterm's CSS cell metrics. xterm.js exposes them via the internal
     // _core API (same path CoffeeOverlay uses for image icon positioning).
-    const getCellMetrics = (): { cellW: number; cellH: number; padX: number; padY: number } | null => {
+    // Only cellH + padY are needed (row is purely a function of vertical
+    // position); col-precision tooltips would also need cellW + padX.
+    const getCellMetrics = (): { cellH: number; padY: number } | null => {
       const core = (term as any)._core;
       const dims = core?._renderService?.dimensions;
-      const cellW = dims?.css?.cell?.width;
       const cellH = dims?.css?.cell?.height;
-      if (!cellW || !cellH) return null;
-      // The xterm container has CSS padding (see TierTerminal.css). The
-      // .xterm element is the actual canvas surface inside that padding.
+      if (!cellH) return null;
       const xtermEl = container.querySelector('.xterm') as HTMLElement | null;
       const cs = xtermEl ? window.getComputedStyle(xtermEl) : null;
-      const padX = cs ? parseFloat(cs.paddingLeft) || 0 : 0;
       const padY = cs ? parseFloat(cs.paddingTop) || 0 : 0;
-      return { cellW, cellH, padX, padY };
+      return { cellH, padY };
     };
 
     const onMove = (e: MouseEvent) => {
       const rect = container.getBoundingClientRect();
-      const localX = e.clientX - rect.left;
       const localY = e.clientY - rect.top;
 
       const m = getCellMetrics();
       if (!m) return;
 
-      const { cellW, cellH, padX, padY } = m;
+      const { cellH, padY } = m;
       const row = Math.floor((localY - padY) / cellH);
       if (row < 0 || row >= term.rows) {
         if (lastRowRef.current !== -1) {
@@ -137,8 +134,6 @@ export function HoverTranslation({
 
       const rowTop = padY + row * cellH;
       const rowBottom = rowTop + cellH;
-      // Suppress unused warning for localX — kept for future col-precision needs.
-      void localX;
       setTooltip({ text: preview, rowTop, rowBottom });
     };
 
