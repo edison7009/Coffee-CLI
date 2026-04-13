@@ -37,9 +37,15 @@ interface CwdEvent {
 // Sessions being detached to a new window — skip kill on unmount
 export const detachedSessions = new Set<string>();
 
+// Hoisted regexes for the menu-extraction loop. Compiling these once instead
+// of per-line-per-tick saves a meaningful chunk of CPU for the scanner.
+const MENU_NUM_RE   = /^([\s>❯*]*?)(\d+)[.)]\s+(.*)$/;
+const MENU_SLASH_RE = /^([\s>❯*]*?)(\/[\w-]+)\s+(.*)$/;
+const MENU_RADIO_RE = /^([\s>❯*]*?)([O◯◉\-•])\s+(.*)$/i;
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export function TierTerminal({ sessionId, tool, isActive: _isActive = true }: { sessionId: string; tool: ToolType; isActive?: boolean }) {
+export function TierTerminal({ sessionId, tool, isActive = true }: { sessionId: string; tool: ToolType; isActive?: boolean }) {
   const { state, dispatch } = useAppState();
 
   const termRef  = useRef<HTMLDivElement>(null);
@@ -325,175 +331,6 @@ export function TierTerminal({ sessionId, tool, isActive: _isActive = true }: { 
 
     startPty();
 
-    // ─── Dynamic Prompt Extractor Loop ───────────────────────────────────────
-    // Continuously scan the bottom viewport for interactive CLI menu formats
-    // (e.g. Inquirer.js output like "❯ 1. Yes \n  2. No")
-    let lastMenuStr = '';
-    let lastHasInput = false;
-    const menuInterval = setInterval(() => {
-      if (!term.buffer.active) return;
-      
-      // Skip scanning if this terminal isn't currently visible
-      const wrapper = termRef.current?.closest('[data-session-id]');
-      const isVisible = wrapper ? (wrapper as HTMLElement).style.display !== 'none' : false;
-      if (!isVisible) return;
-
-      const buffer = term.buffer.active;
-      // Scan the entire visible viewport from top to bottom
-      // rather than stopping at the blinking cursor's Y position, because tool menus
-      // are often drawn below the cursor, and can span more than 20 lines!
-      const startRow = buffer.viewportY;
-      const endRow = startRow + term.rows - 1;
-
-      const allMenuBlocks: any[][] = [];
-      let currentBlock: any[] = [];
-
-      for (let i = startRow; i <= endRow; i++) {
-        const line = buffer.getLine(i);
-        if (!line) continue;
-        const textRaw = line.translateToString(true);
-        const text = textRaw.trimEnd();
-
-        // Empty lines don't break a menu cluster
-        if (text.length === 0) continue;
-
-        // Detect three common interactive lists formats:
-        // 1. Numbered lists: "❯ 1. Yes" or "  2. No"
-        // 2. Slash command lists: "  /statusline    Set up Claude..."
-        // 3. Radio styles: "  - Option" or "❯ O Talk to codebase"
-        const numMatch = text.match(/^([\s>❯*]*?)(\d+)[.)]\s+(.*)$/);
-        const slashMatch = text.match(/^([\s>❯*]*?)(\/[\w-]+)\s+(.*)$/);
-        const radioMatch = text.match(/^([\s>❯*]*?)([O◯◉\-•])\s+(.*)$/i);
-
-        let fg = 0, bg = 0, inverse = 0;
-        const firstVisibleIdx = text.search(/\S/);
-        if (firstVisibleIdx !== -1) {
-           const cell = line.getCell(firstVisibleIdx);
-           if (cell) {
-               fg = cell.getFgColor();
-               bg = cell.getBgColor();
-               inverse = cell.isInverse();
-           }
-        }
-
-        if (numMatch || slashMatch || radioMatch) {
-          let parsed: any = null;
-          if (numMatch) {
-            parsed = { badge: numMatch[2], text: numMatch[3], actionText: numMatch[2] + '\r', _prefix: numMatch[1], _fg: fg, _bg: bg, _inv: inverse };
-          } else if (slashMatch) {
-            parsed = { badge: slashMatch[2], text: slashMatch[3], actionText: slashMatch[2] + '\r', _prefix: slashMatch[1], _fg: fg, _bg: bg, _inv: inverse };
-          } else if (radioMatch) {
-            parsed = { badge: radioMatch[2], text: radioMatch[3], actionText: null, _prefix: radioMatch[1], _fg: fg, _bg: bg, _inv: inverse };
-          }
-          if (parsed) currentBlock.push(parsed);
-        } else {
-          // This line is NOT a menu item.
-          // Decide if it breaks the current contiguous block of options.
-          if (currentBlock.length > 0) {
-            // Tolerance: If it's heavily indented, it's likely a wrapped multiline description from the previous option.
-            if (textRaw.match(/^\s{2,}/)) {
-              continue;
-            }
-            // Otherwise, it's a left-aligned log message, history divider, or prompt.
-            // This definitively ends the current cluster.
-            allMenuBlocks.push(currentBlock);
-            currentBlock = [];
-          }
-        }
-      }
-
-      // Push any remaining uncommitted block
-      if (currentBlock.length > 0) {
-        allMenuBlocks.push(currentBlock);
-      }
-
-      // The TRUE interactive menu is fundamentally the LAST complete cluster rendered to the screen.
-      // E.g., this cleanly ignores historical bullet lists (like `- Shortcuts`) pushed upwards into history.
-      const rawOptions = allMenuBlocks.length > 0 ? allMenuBlocks[allMenuBlocks.length - 1] : [];
-      
-      let activeIndex = 0;
-      // Synthesize final options list with proper sequential indexes
-      const options = rawOptions.map((opt, idx) => ({ ...opt, index: idx }));
-
-      // Determine activeIndex by Outlier Detection
-      activeIndex = 0;
-      if (options.length > 0) {
-        // Find if any option has explicit marker
-        const explicitIdx = options.findIndex((opt: any) => opt._prefix.includes('>') || opt._prefix.includes('❯'));
-        if (explicitIdx !== -1) {
-          activeIndex = explicitIdx;
-        } else {
-          // Find the most common styling (FG + BG + INV) -> this is the "inactive default"
-          const styleCounts: Record<string, number> = {};
-          options.forEach((opt: any) => {
-            const key = `${opt._fg}-${opt._bg}-${opt._inv}`;
-            styleCounts[key] = (styleCounts[key] || 0) + 1;
-          });
-
-          // Sort styles by frequency descending
-          const sortedStyles = Object.entries(styleCounts).sort((a, b) => b[1] - a[1]);
-          
-          if (sortedStyles.length > 1) {
-            // There's more than one style. The active item is the OUTLIER (the one with the lowest frequency, usually 1)
-            // Or explicitly, the one that is NOT the most frequent style.
-            const dominantStyle = sortedStyles[0][0];
-            const outlierIdx = options.findIndex((opt: any) => {
-              const key = `${opt._fg}-${opt._bg}-${opt._inv}`;
-              return key !== dominantStyle;
-            });
-            if (outlierIdx !== -1) {
-              activeIndex = outlierIdx;
-            }
-          } else {
-            // sortedStyles.length === 1. Every matched line has the EXACT same color style.
-            // Since there is no explicit > marker, and no color differences, this is highly likely 
-            // a static text table (like the '?' help menu) that happened to match our regex.
-            // We should discard it so the UI doesn't incorrectly display it.
-            options.length = 0;
-          }
-        }
-      }
-
-      // If we found options and they differ from the last state, update global store!
-      const currentMenuStr = JSON.stringify({ options, activeIndex });
-      if (options.length > 0) tuiReadyRef.current = true;
-      if (currentMenuStr !== lastMenuStr) {
-        lastMenuStr = currentMenuStr;
-        dispatch({ 
-          type: 'SET_TERMINAL_MENU', 
-          id: sessionId, 
-          menu: options.length > 0 ? { options, activeIndex } : null 
-        });
-      }
-
-      // ─── Prompt Input Text Detection ────────────────────────────────────
-      const cursorRow = buffer.viewportY + buffer.cursorY;
-      const cursorLine = buffer.getLine(cursorRow);
-      let detectedInput = false;
-
-      if (cursorLine) {
-        // Only look at the text strictly before the user's cursor
-        const textBeforeCursor = cursorLine.translateToString(false, 0, buffer.cursorX);
-        const trimmedText = textBeforeCursor.trimEnd();
-
-        if (trimmedText.length > 0) {
-          const lastChar = trimmedText.charAt(trimmedText.length - 1);
-          // Standard CLI prompt markers or TUI box borders
-          const isPromptMarker = /[>❯$%#│┃║?:]/.test(lastChar);
-          detectedInput = !isPromptMarker;
-          
-          // If we see a classic prompt marker, the TUI is definitely ready and waiting for interaction!
-          if (isPromptMarker) tuiReadyRef.current = true;
-        }
-      }
-
-      if (detectedInput) tuiReadyRef.current = true;
-      if (detectedInput !== lastHasInput) {
-        lastHasInput = detectedInput;
-        dispatch({ type: 'SET_HAS_INPUT_TEXT', id: sessionId, hasInputText: detectedInput });
-      }
-    }, 300); // Responsive enough for arrow-key tracking while saving CPU
-
 
 
     // Resize observer — CRITICAL: Never call fit() when the container is hidden
@@ -518,7 +355,6 @@ export function TierTerminal({ sessionId, tool, isActive: _isActive = true }: { 
 
     return () => {
       mounted = false;
-      clearInterval(menuInterval);
       window.removeEventListener('focusin', enforceFocus);
       window.removeEventListener('mouseup', enforceFocus);
       ro.disconnect();
@@ -534,6 +370,140 @@ export function TierTerminal({ sessionId, tool, isActive: _isActive = true }: { 
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ─── Menu / hasInput extractor (active tab only) ─────────────────────────
+  // Scans the visible xterm viewport for interactive CLI menus
+  // (Inquirer.js numbered lists, slash command menus, radio options) and for
+  // the "user is typing" indicator. Dispatches SET_TERMINAL_MENU and
+  // SET_HAS_INPUT_TEXT to the global store on change.
+  //
+  // This used to run every 300ms on every mounted TierTerminal regardless of
+  // visibility, with an early-return DOM check. Now it only runs on the tab
+  // that is actually active — 10 tabs = 1 scanner instead of 10. Regexes are
+  // hoisted to module-level constants to avoid per-line recompilation.
+  useEffect(() => {
+    if (!isActive) return;
+    const term = xtermRef.current;
+    if (!term) return;
+
+    let lastMenuStr = '';
+    let lastHasInput = false;
+
+    const scan = () => {
+      if (!term.buffer.active) return;
+      const buffer = term.buffer.active;
+      const startRow = buffer.viewportY;
+      const endRow = startRow + term.rows - 1;
+
+      const allMenuBlocks: any[][] = [];
+      let currentBlock: any[] = [];
+
+      for (let i = startRow; i <= endRow; i++) {
+        const line = buffer.getLine(i);
+        if (!line) continue;
+        const textRaw = line.translateToString(true);
+        const text = textRaw.trimEnd();
+        if (text.length === 0) continue;
+
+        const numMatch   = MENU_NUM_RE.exec(text);
+        const slashMatch = MENU_SLASH_RE.exec(text);
+        const radioMatch = MENU_RADIO_RE.exec(text);
+
+        let fg = 0, bg = 0, inverse = 0;
+        const firstVisibleIdx = text.search(/\S/);
+        if (firstVisibleIdx !== -1) {
+          const cell = line.getCell(firstVisibleIdx);
+          if (cell) {
+            fg = cell.getFgColor();
+            bg = cell.getBgColor();
+            inverse = cell.isInverse();
+          }
+        }
+
+        if (numMatch || slashMatch || radioMatch) {
+          let parsed: any = null;
+          if (numMatch) {
+            parsed = { badge: numMatch[2], text: numMatch[3], actionText: numMatch[2] + '\r', _prefix: numMatch[1], _fg: fg, _bg: bg, _inv: inverse };
+          } else if (slashMatch) {
+            parsed = { badge: slashMatch[2], text: slashMatch[3], actionText: slashMatch[2] + '\r', _prefix: slashMatch[1], _fg: fg, _bg: bg, _inv: inverse };
+          } else if (radioMatch) {
+            parsed = { badge: radioMatch[2], text: radioMatch[3], actionText: null, _prefix: radioMatch[1], _fg: fg, _bg: bg, _inv: inverse };
+          }
+          if (parsed) currentBlock.push(parsed);
+        } else if (currentBlock.length > 0) {
+          // Heavily indented wrap lines belong to the previous option
+          if (!textRaw.startsWith('  ')) {
+            allMenuBlocks.push(currentBlock);
+            currentBlock = [];
+          }
+        }
+      }
+      if (currentBlock.length > 0) allMenuBlocks.push(currentBlock);
+
+      const rawOptions = allMenuBlocks.length > 0 ? allMenuBlocks[allMenuBlocks.length - 1] : [];
+      const options = rawOptions.map((opt, idx) => ({ ...opt, index: idx }));
+
+      let activeIndex = 0;
+      if (options.length > 0) {
+        const explicitIdx = options.findIndex((opt: any) => opt._prefix.includes('>') || opt._prefix.includes('❯'));
+        if (explicitIdx !== -1) {
+          activeIndex = explicitIdx;
+        } else {
+          const styleCounts: Record<string, number> = {};
+          options.forEach((opt: any) => {
+            const key = `${opt._fg}-${opt._bg}-${opt._inv}`;
+            styleCounts[key] = (styleCounts[key] || 0) + 1;
+          });
+          const sortedStyles = Object.entries(styleCounts).sort((a, b) => b[1] - a[1]);
+          if (sortedStyles.length > 1) {
+            const dominantStyle = sortedStyles[0][0];
+            const outlierIdx = options.findIndex((opt: any) => {
+              const key = `${opt._fg}-${opt._bg}-${opt._inv}`;
+              return key !== dominantStyle;
+            });
+            if (outlierIdx !== -1) activeIndex = outlierIdx;
+          } else {
+            // All items same style — probably a static help table, discard.
+            options.length = 0;
+          }
+        }
+      }
+
+      const currentMenuStr = JSON.stringify({ options, activeIndex });
+      if (options.length > 0) tuiReadyRef.current = true;
+      if (currentMenuStr !== lastMenuStr) {
+        lastMenuStr = currentMenuStr;
+        dispatch({
+          type: 'SET_TERMINAL_MENU',
+          id: sessionId,
+          menu: options.length > 0 ? { options, activeIndex } : null,
+        });
+      }
+
+      // hasInput detection
+      const cursorRow = buffer.viewportY + buffer.cursorY;
+      const cursorLine = buffer.getLine(cursorRow);
+      let detectedInput = false;
+      if (cursorLine) {
+        const textBeforeCursor = cursorLine.translateToString(false, 0, buffer.cursorX);
+        const trimmedText = textBeforeCursor.trimEnd();
+        if (trimmedText.length > 0) {
+          const lastChar = trimmedText.charAt(trimmedText.length - 1);
+          const isPromptMarker = /[>❯$%#│┃║?:]/.test(lastChar);
+          detectedInput = !isPromptMarker;
+          if (isPromptMarker) tuiReadyRef.current = true;
+        }
+      }
+      if (detectedInput) tuiReadyRef.current = true;
+      if (detectedInput !== lastHasInput) {
+        lastHasInput = detectedInput;
+        dispatch({ type: 'SET_HAS_INPUT_TEXT', id: sessionId, hasInputText: detectedInput });
+      }
+    };
+
+    const menuInterval = setInterval(scan, 300);
+    return () => clearInterval(menuInterval);
+  }, [isActive, sessionId, dispatch]);
 
   // ── Theme sync ───────────────────────────────────────────────────────────
 
