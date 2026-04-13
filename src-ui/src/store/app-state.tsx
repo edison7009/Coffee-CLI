@@ -33,7 +33,6 @@ export interface AppState {
   // UI
   currentTheme: 'dark' | 'light';
   currentLang: string;
-  showOverlay: boolean;   // A1/A2 toggle: false = show original A1, true = show translated A2
 
   // Model
   modelConfig: ModelConfig | null;
@@ -51,7 +50,6 @@ type Action =
   | { type: 'SET_SCAN'; data: ScanResult }
   | { type: 'SET_THEME'; theme: 'dark' | 'light' }
   | { type: 'SET_LANG'; lang: string }
-  | { type: 'TOGGLE_OVERLAY' }
   | { type: 'SET_MODEL'; model: ModelConfig }
   | { type: 'ADD_TERMINAL'; session: TerminalSession }
   | { type: 'REMOVE_TERMINAL'; id: string }
@@ -86,9 +84,7 @@ function reducer(state: AppState, action: Action): AppState {
     case 'SET_THEME':
       return { ...state, currentTheme: action.theme };
     case 'SET_LANG':
-      return { ...state, currentLang: action.lang, showOverlay: true };
-    case 'TOGGLE_OVERLAY':
-      return { ...state, showOverlay: !state.showOverlay };
+      return { ...state, currentLang: action.lang };
     case 'SET_MODEL':
       return { ...state, modelConfig: action.model };
     case 'ADD_TERMINAL':
@@ -203,7 +199,6 @@ function getInitialState(): AppState {
   return {
     currentTheme: theme,
     currentLang: lang,
-    showOverlay: true,
     modelConfig: null,
     terminals: [{ id: defaultTerminalId, tool: null, folderPath, scanData: null, agentStatus: 'idle' as AgentStatus, menu: null, hasInputText: false }],
     activeTerminalId: defaultTerminalId,

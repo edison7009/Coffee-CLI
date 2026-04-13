@@ -674,12 +674,6 @@ export function Explorer() {
   const toggleTheme = () => {
     dispatch({ type: 'SET_THEME', theme: state.currentTheme === 'dark' ? 'light' : 'dark' });
   };
-  // Language icon: toggles A1/A2 overlay visibility for the active terminal.
-  // The dropdown (chevron button) is used to change language instead.
-  const toggleLang = () => {
-    if (state.currentLang === 'en') return; // no overlay when lang is English
-    dispatch({ type: 'TOGGLE_OVERLAY' });
-  };
 
   // Language dropdown state
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
@@ -805,21 +799,12 @@ export function Explorer() {
             {state.currentTheme === 'dark' ? '🌙' : '☀️'}
           </button>
           <button
-            className={`icon-btn xs lang-btn lang-glyph${state.currentLang !== 'en' && !state.showOverlay ? ' overlay-off' : ''}`}
-            onClick={toggleLang}
-            disabled={state.currentLang === 'en'}
-            title={state.currentLang === 'en' ? undefined : state.showOverlay ? 'Show original (A1)' : 'Show translation (A2)'}
-          >
-            {state.currentLang !== 'en' && !state.showOverlay ? 'A' : getLangGlyph(state.currentLang)}
-          </button>
-          <button
             ref={langBtnRef}
-            className="icon-btn xs lang-dropdown-trigger"
+            className="icon-btn xs lang-btn lang-glyph"
             onClick={() => setLangDropdownOpen(!langDropdownOpen)}
+            title="Language"
           >
-            <svg width="8" height="8" viewBox="0 0 12 12" fill="currentColor">
-              <path d="M2 4l4 4 4-4z" />
-            </svg>
+            {getLangGlyph(state.currentLang)}
           </button>
           <button className={`icon-btn xs ${islandForced ? 'island-active' : ''}`} onClick={toggleIsland}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill={islandForced ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

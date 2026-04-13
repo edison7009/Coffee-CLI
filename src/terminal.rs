@@ -1,14 +1,46 @@
 // terminal.rs — Tier Terminal PTY backend
 // Uses portable-pty (WezTerm's cross-platform PTY library) for reliable
 // ConPTY support on Windows and native PTY on Unix.
-// Streams raw PTY output through translation engine to frontend via Tauri events.
+// Streams raw PTY bytes to xterm.js verbatim; only OSC 7 (cwd change) is
+// extracted server-side for the workspace tree.
 
 use serde::Serialize;
 use std::io::{Read, Write};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 use tauri::{AppHandle, Emitter};
-use crate::translation;
+
+/// Extract the path from an OSC 7 cwd notification if present in the chunk.
+/// OSC 7 format: ESC ] 7 ; file://<host>/<path> (BEL or ESC \)
+/// Returns the percent-decoded `<path>` portion (with leading `/`), or None.
+fn extract_osc7_cwd(data: &[u8]) -> Option<String> {
+    let prefix = b"\x1b]7;file://";
+    let start = data.windows(prefix.len()).position(|w| w == prefix)? + prefix.len();
+    let rest = &data[start..];
+    let end = rest.iter().position(|&b| b == 0x07 || b == 0x1b)?;
+    let raw = std::str::from_utf8(&rest[..end]).ok()?;
+    // Skip hostname: keep everything from the first `/` onward.
+    let path_start = raw.find('/')?;
+    let path = &raw[path_start..];
+    // Percent-decode (basic %XX handling)
+    let bytes = path.as_bytes();
+    let mut decoded: Vec<u8> = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'%' && i + 2 < bytes.len() {
+            if let Ok(s) = std::str::from_utf8(&bytes[i + 1..i + 3]) {
+                if let Ok(b) = u8::from_str_radix(s, 16) {
+                    decoded.push(b);
+                    i += 3;
+                    continue;
+                }
+            }
+        }
+        decoded.push(bytes[i]);
+        i += 1;
+    }
+    String::from_utf8(decoded).ok()
+}
 
 // ─── Public Types ─────────────────────────────────────────
 
@@ -133,7 +165,6 @@ pub fn spawn(
     app: AppHandle,
     session_id: String,
     session: SharedSession,
-    translation_engine: Arc<translation::TranslationEngine>,
     program: String,
     args: Vec<String>,
     cwd: Option<String>,
@@ -194,8 +225,6 @@ pub fn spawn(
     // Pass locale to tool for i18n
     if let Some(ref loc) = locale {
         cmd.env("COFFEE_CODE_LOCALE", loc);
-        // Set translation engine language BEFORE any PTY output arrives
-        translation_engine.set_lang(loc);
     }
 
     // ── Linux/macOS: Enable OSC 7 CWD reporting ────────────────────────────
@@ -403,8 +432,6 @@ pub fn spawn(
     let output_buffer_for_reader = output_buffer.clone();
     std::thread::spawn(move || {
         let mut buf = [0u8; 4096];
-        let translation_engine_for_detect = translation_engine.clone();
-        let mut vt = translation::VtProcessor::new(translation_engine);
 
         let ansi_re = regex::Regex::new(r"\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\].*?(?:\x07|\x1b\\)|\x1b.").unwrap();
         let mut token_captured = false;
@@ -416,9 +443,10 @@ pub fn spawn(
                     break;
                 }
                 Ok(n) => {
-                    // Process raw PTY output through the translation engine
-                    let (processed, cwd_change) = vt.process(&buf[..n]);
-                    let data = String::from_utf8_lossy(&processed).to_string();
+                    // Pure passthrough: raw PTY bytes go straight to xterm.js.
+                    let chunk = &buf[..n];
+                    let cwd_change = extract_osc7_cwd(chunk);
+                    let data = String::from_utf8_lossy(chunk).to_string();
                     let stripped = ansi_re.replace_all(&data, "").to_string();
 
 
@@ -463,27 +491,7 @@ pub fn spawn(
                         }
                     }
 
-                    // Dynamic tool detection from output stream
-                    // When user types `claude` in a plain terminal/SSH,
-                    // this detects the tool signature and notifies the frontend to
-                    // hot-load the corresponding translation dictionary.
-                    if !stripped.is_empty() {
-                        for line in stripped.lines() {
-                            let trimmed = line.trim();
-                            if trimmed.len() > 3 {
-                                if let Some(detected_tool) = translation_engine_for_detect.try_detect_tool_from_output(trimmed) {
-                                    #[derive(Serialize, Clone)]
-                                    struct ToolDetected { id: String, tool: String }
-                                    let _ = app_out.emit("tool-detected", ToolDetected {
-                                        id: session_id_out.clone(),
-                                        tool: detected_tool,
-                                    });
-                                }
-                            }
-                        }
-                    }
-
-                    // Send translated ANSI stream to xterm.js
+                    // Send raw ANSI stream to xterm.js
                     let data_clone = data.clone();
                     let _ = app_out.emit(
                         "tier-terminal-output",

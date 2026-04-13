@@ -1,6 +1,6 @@
 [package]
 name = "coffee-cli"
-version = "0.1.21"
+version = "0.2.0"
 edition = "2021"
 description = "Lightweight Multi-layer AI CLI Terminal"
 license = "MIT"
@@ -21,11 +21,8 @@ tauri-build = { version = "2", features = [] }
 portable-pty = "0.9"
 tokio = { version = "1", features = ["full"] }
 
-# Terminal Translation — VT parser + pattern matching
-vte = "0.13"
+# Regex (used by terminal.rs for ANSI strip)
 regex = "1"
-aho-corasick = "1"
-unicode-width = "0.2"
 
 # CLI
 clap = { version = "4", features = ["derive"] }

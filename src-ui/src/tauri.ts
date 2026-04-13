@@ -138,11 +138,6 @@ export const commands = {
     invoke<void>('tier_terminal_resume', { sessionId, savedSessionId, tool, sessionToken, cols, rows, cwd }),
   checkNetworkPort: (host: string, port: number) => invoke<boolean>('check_network_port', { host, port }),
 
-  // Translation
-  setTranslationLang: (lang: string) => invoke<void>('set_translation_lang', { lang }),
-  getTranslationEntries: (tool: string, lang: string) =>
-    invoke<[string, string][]>('get_translation_entries', { tool, lang }),
-
   // Tool availability detection
   checkToolsInstalled: () => invoke<Record<string, boolean>>('check_tools_installed'),
 

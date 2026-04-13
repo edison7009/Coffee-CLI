@@ -3,7 +3,6 @@
 mod config;
 mod scanner;
 mod terminal;
-mod translation;
 mod server;
 
 use anyhow::Result;
@@ -40,7 +39,6 @@ fn get_initial_dir() -> PathBuf {
 
 fn main() -> Result<()> {
     bootstrap_user_config();
-    translation::bootstrap_dictionaries();
     let dir_path = get_initial_dir();
     server::start_ui(dir_path)
 }

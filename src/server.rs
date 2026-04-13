@@ -1,6 +1,5 @@
 use crate::scanner;
 use crate::terminal;
-use crate::translation;
 
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -12,7 +11,6 @@ use tauri_plugin_dialog::DialogExt;
 pub struct AppState {
     pub project_dir: Mutex<PathBuf>,
     pub terminal_session: terminal::SharedSession,
-    pub translation_engine: std::sync::Arc<translation::TranslationEngine>,
 }
 
 #[derive(Serialize)]
@@ -660,9 +658,6 @@ fn tier_terminal_start(
         }
     }
 
-    // Detect tool from command for translation dictionary selection
-    state.translation_engine.detect_tool_from_command(&cmd);
-
     // Determine the CWD to pass to the Agent:
     // 1. If workspace has an explicit dir (from open-folder or resume) → use it
     // 2. Otherwise default to user's home dir (matches most agents' default)
@@ -681,7 +676,6 @@ fn tier_terminal_start(
         app.clone(),
         session_id.clone(),
         state.terminal_session.clone(),
-        state.translation_engine.clone(),
         cmd,
         args,
         spawn_cwd,
@@ -708,26 +702,6 @@ fn tier_terminal_start(
     Ok(())
 }
 
-
-#[tauri::command]
-fn set_translation_lang(
-    lang: String,
-    state: State<'_, AppState>,
-) -> Result<(), String> {
-    state.translation_engine.set_lang(&lang);
-    Ok(())
-}
-
-/// Export translation entries for the CoffeeOverlay renderer.
-/// Returns pattern-translation pairs for the given tool and language.
-#[tauri::command]
-fn get_translation_entries(
-    tool: String,
-    lang: String,
-    state: State<'_, AppState>,
-) -> Vec<(String, String)> {
-    state.translation_engine.get_entries_for_frontend(&tool, &lang)
-}
 
 #[tauri::command]
 fn tier_terminal_input(
@@ -1241,8 +1215,6 @@ fn tier_terminal_resume(
     let program = parts[0].to_string();
     let args: Vec<String> = parts[1..].iter().map(|s| s.to_string()).collect();
 
-    state.translation_engine.detect_tool_from_command(&program);
-
     let actual_cwd = cwd.clone();
     let emit_session_id = saved_session_id.clone();
 
@@ -1250,7 +1222,6 @@ fn tier_terminal_resume(
         app.clone(),
         saved_session_id,
         state.terminal_session.clone(),
-        state.translation_engine.clone(),
         program,
         args,
         Some(cwd),
@@ -1444,11 +1415,6 @@ async fn check_network_port(host: String, port: u16) -> Result<bool, String> {
 }
 
 pub fn start_ui(project_dir: PathBuf) -> anyhow::Result<()> {
-    // Initialize translation engine with user's dictionaries
-    let dict_dir = translation::dictionaries_dir()
-        .unwrap_or_else(|| PathBuf::from("."));
-    let engine = translation::TranslationEngine::load(&dict_dir, "en");
-
     // Create shared session BEFORE the builder so we can clone it for the exit handler
     let terminal_session = terminal::SharedSession::default();
 
@@ -1458,7 +1424,6 @@ pub fn start_ui(project_dir: PathBuf) -> anyhow::Result<()> {
         .manage(AppState {
             project_dir: Mutex::new(project_dir),
             terminal_session,
-            translation_engine: engine,
         })
         .invoke_handler(tauri::generate_handler![
             scan_project,
@@ -1478,9 +1443,6 @@ pub fn start_ui(project_dir: PathBuf) -> anyhow::Result<()> {
             get_native_history,
             read_native_session,
             check_network_port,
-            set_translation_lang,
-
-            get_translation_entries,
             check_tools_installed,
             list_drives,
             list_directory,

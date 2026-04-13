@@ -1,19 +1,11 @@
-// TierTerminal.tsx — Dual-layer terminal renderer
-// Layer 1: xterm.js (ANSI parsing + keyboard + WebGL GPU rendering)
-// Layer 2: Coffee Overlay (Canvas 2D, auto-enabled with smart fallback)
+// TierTerminal.tsx — xterm.js terminal renderer with PTY backend
+// Pure terminal: no translation, no overlay. Translation lives in language packs
+// installed separately via the one-click installer.
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebglAddon } from '@xterm/addon-webgl';
-import { CoffeeOverlay, type CoffeeOverlayRef } from './CoffeeOverlay';
-import { RowTranslateButtons } from './RowTranslateButtons';
-import { TranslationEngine } from './coffee-translation';
-import {
-  loadLLMConfig, saveLLMConfig, extractTextSegments, translateSegments,
-  TRANSLATE_LANGUAGES,
-} from './llm-translate';
-import { TranslateSettings } from './TranslateSettings';
 import { listen } from '@tauri-apps/api/event';
 import { commands } from '../../tauri';
 import { useAppState, type ToolType } from '../../store/app-state';
@@ -47,19 +39,12 @@ export const detachedSessions = new Set<string>();
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export function TierTerminal({ sessionId, tool, isActive = true }: { sessionId: string; tool: ToolType; isActive?: boolean }) {
+export function TierTerminal({ sessionId, tool, isActive: _isActive = true }: { sessionId: string; tool: ToolType; isActive?: boolean }) {
   const { state, dispatch } = useAppState();
 
   const termRef  = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<Terminal | null>(null);
   const fitRef   = useRef<FitAddon | null>(null);
-  const coffeeRef = useRef<CoffeeOverlayRef>(null);
-  // Per-instance translation engine — isolated from other tabs so multi-tool
-  // multi-language sessions don't clobber each other's dictionaries.
-  const engineRef = useRef<TranslationEngine | null>(null);
-  if (engineRef.current === null) engineRef.current = new TranslationEngine();
-  const engine = engineRef.current;
-
 
   // ── Startup splash state ─────────────────────────────────────────────────
   const [showSplash, setShowSplash] = useState(true);
@@ -182,12 +167,8 @@ export function TierTerminal({ sessionId, tool, isActive = true }: { sessionId: 
         const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
         const cmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
 
-        // Copy: Ctrl+C / Cmd+C (check CoffeeOverlay first, then fallback to xterm)
+        // Copy: Ctrl+C / Cmd+C
         if (cmdOrCtrl && e.code === 'KeyC') {
-          if (coffeeRef.current?.hasSelection()) {
-            coffeeRef.current.copySelection();
-            return false;
-          }
           if (term.hasSelection()) {
             navigator.clipboard.writeText(term.getSelection());
             return false; // Stop xterm from handling it (prevents SIGINT)
@@ -591,21 +572,6 @@ export function TierTerminal({ sessionId, tool, isActive = true }: { sessionId: 
     return () => clearTimeout(t);
   }, [state.activeTerminalId, sessionId]);
 
-  // ── Translation Path: ALL tools use CoffeeOverlay (B-Paper Mapping) ──────
-  // VT stream-layer translation is permanently disabled — it cannot work because:
-  // 1. ANSI fragmentation: Claude Code wraps every word in color spans, shattering text
-  // 2. Performance: 1000+ dictionary lookups per PTY chunk causes severe lag
-  // 3. Color corruption: translated text shifts ANSI color boundaries
-  // See docs/coffee-overlay-translation.md for full architecture documentation.
-
-  // Always disable VT stream translation — CoffeeOverlay handles everything
-  useEffect(() => {
-    const isActive = state.activeTerminalId === sessionId;
-    if (!isActive) return;
-    // Force VT layer to 'en' (passthrough, no translation) for ALL tools
-    commands.setTranslationLang('en').catch(() => {});
-  }, [state.activeTerminalId, sessionId, state.currentLang]);
-
   // ── Startup splash dismissal ────────────────────────────────────────────
   // Detect real TUI via alternate screen buffer entry (\x1b[?1049h).
   // This precisely distinguishes "database migration text" from "actual TUI rendered".
@@ -642,313 +608,12 @@ export function TierTerminal({ sessionId, tool, isActive = true }: { sessionId: 
   const isDark = state.currentTheme === 'dark';
   const terminalBg = isDark ? '#1a1917' : '#f4f3ee';
 
-  // ── CoffeeOverlay + Translation ──────────────────────────────────────────
-  // Source-code replacement (à la mine-auto-cli) is now the primary translation
-  // method. Canvas Overlay (B-Paper) is DISABLED to avoid double-translation
-  // artifacts. The overlay infrastructure is kept for future use (e.g. tools
-  // that cannot be patched via source replacement).
-  const [coffeeEnabled, setCoffeeEnabled] = useState(state.currentLang !== 'en');
-
-  // Sync coffeeEnabled when language changes.
-  // useState initial value only runs once at mount — if the user starts in 'en'
-  // and then switches to Chinese, coffeeEnabled stays false without this sync.
-  useEffect(() => {
-    setCoffeeEnabled(state.currentLang !== 'en');
-  }, [state.currentLang]);
-
-  // Load translation entries from Rust backend
-  // Supports both:
-  // 1. Static tool assignment (Launchpad click → tool prop set at creation)
-  // 2. Dynamic detection (user types `claude` in plain shell/SSH → backend emits event)
-  const [detectedTool, setDetectedTool] = useState<string | null>(null);
-
-  // Listen for dynamic tool detection from PTY output stream
-  useEffect(() => {
-    let unlistener: (() => void) | null = null;
-    import('@tauri-apps/api/event').then(({ listen }) => {
-      listen<{ id: string; tool: string }>('tool-detected', (event) => {
-        if (event.payload.id === sessionId) {
-          console.log(`[TierTerminal] Dynamic tool detected: ${event.payload.tool}`);
-          setDetectedTool(event.payload.tool);
-        }
-      }).then(u => { unlistener = u; });
-    });
-    return () => { unlistener?.(); };
-  }, [sessionId]);
-
-  useEffect(() => {
-    const lang = state.currentLang;
-    if (lang === 'en') {
-      setCoffeeEnabled(false);
-      engine.setStaticEntries([]);
-      return;
-    }
-
-    // Determine tool name for dictionary lookup
-    // Priority: dynamic detection > static tool prop
-    const toolDictMap: Record<string, string> = { 'claude': 'claude-code' };
-    const effectiveTool = detectedTool || toolDictMap[tool || ''] || (tool || '');
-    if (!effectiveTool || effectiveTool === 'terminal' || effectiveTool === 'remote') return;
-
-    commands.getTranslationEntries(effectiveTool, lang).then((entries: [string, string][]) => {
-      const formatted = entries.map(([pattern, translation]) => ({
-        pattern,
-        translation,
-      }));
-      engine.setStaticEntries(formatted);
-      if (formatted.length > 0) {
-        setCoffeeEnabled(true);
-      }
-    }).catch(() => {
-      setCoffeeEnabled(false);
-    });
-  }, [state.currentLang, tool, detectedTool]);
-
-  // ── Pause A2 RAF loop when this tab is not active ─────────────────────────
-  // Background tabs stay mounted (CenterPanel uses display:none). Without this
-  // every hidden tab keeps running its full RAF + translateLine + ANSI rebuild
-  // loop, multiplying CPU cost per tab. We reuse pauseRendering rather than
-  // disposing A2 so switching back to the tab is instant (no WebGL re-init).
-  useEffect(() => {
-    if (isActive) {
-      coffeeRef.current?.resumeRendering();
-    } else {
-      coffeeRef.current?.pauseRendering();
-    }
-  }, [isActive]);
-
-  // ── Image Preview (Lightbox) ─────────────────────────────────────────────
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
-
-  // ── LLM Translate ────────────────────────────────────────────────────────
-  const [showTransMenu, setShowTransMenu] = useState(false);
-  const [showTransSettings, setShowTransSettings] = useState(false);
-  const [transStatus, setTransStatus] = useState<'idle' | 'translating' | 'error'>('idle');
-  const transAbortRef = useRef<AbortController | null>(null);
-  const [lastLang, setLastLang] = useState<string>(() => {
-    try { return localStorage.getItem('coffee_translate_lang') || ''; } catch { return ''; }
-  });
-
-  const handleTranslate = useCallback(async (langCode: string) => {
-    setShowTransMenu(false);
-    // Remember language choice
-    setLastLang(langCode);
-    try { localStorage.setItem('coffee_translate_lang', langCode); } catch {}
-    const config = loadLLMConfig();
-    if (!config || !config.baseUrl || !config.apiKey) {
-      // No config — open settings panel
-      setShowTransSettings(true);
-      return;
-    }
-    const terminal = xtermRef.current;
-    if (!terminal) return;
-
-    // Ensure A2 shadow terminal is enabled (it may be disabled for non-Claude tools)
-    setCoffeeEnabled(true);
-
-    // Abort any in-flight request
-    transAbortRef.current?.abort();
-    const abortCtrl = new AbortController();
-    transAbortRef.current = abortCtrl;
-
-    setTransStatus('translating');
-    try {
-      // 1. Extract text segments with hash keys
-      const segments = extractTextSegments(terminal);
-      if (segments.length === 0) {
-        setTransStatus('idle');
-        return;
-      }
-
-      // 2. Send to LLM → get back TranslationEntry[] (pattern → translation)
-      const entries = await translateSegments(segments, langCode, config, abortCtrl.signal);
-
-      // 3. Feed into the existing dictionary render pipeline
-      //    This makes the normal render loop pick up the translations automatically!
-      if (entries.length > 0) {
-        engine.setLLMEntries(entries);
-        // Force a re-render of A2 by marking dirty
-        coffeeRef.current?.resumeRendering();
-      }
-
-      setTransStatus('idle');
-    } catch (err: any) {
-      if (err?.name === 'AbortError') return;
-      console.error('[LLM Translate] Error:', err);
-      setTransStatus('error');
-      setTimeout(() => setTransStatus('idle'), 2000);
-    }
-  }, []);
-
-
-  const handleImageClick = useCallback(async (url: string) => {
-    let rawPath = url;
-    // Extract path from markdown ![alt](path) if it matches
-    const mdMatch = url.match(/!\[.*?\]\((.*?)\)/);
-    if (mdMatch) {
-      rawPath = mdMatch[1];
-    }
-    
-    // If it's a generic http/https URL, use it directly
-    if (rawPath.startsWith('http://') || rawPath.startsWith('https://')) {
-      setPreviewImage(rawPath);
-      return;
-    }
-
-    try {
-      // It's a local path, safely convert to tauri custom protocol
-      const { convertFileSrc } = await import('@tauri-apps/api/core');
-      const safeSrc = convertFileSrc(rawPath);
-      setPreviewImage(safeSrc);
-    } catch {
-      setPreviewImage(rawPath);
-    }
-  }, []);
-
-  // Fallback handler: if CoffeeOverlay reports failure, degrade gracefully
-  const handleOverlayFallback = () => {
-    console.warn('[TierTerminal] Coffee Overlay degraded → falling back to xterm.js native');
-    setCoffeeEnabled(false);
-  };
-
   return (
     <div className="tier-terminal" style={{ background: terminalBg, position: 'relative' }}>
-      {/* xterm.js: ALWAYS visible. Handles all rendering, input, and scrolling. */}
+      {/* xterm.js: handles all rendering, input, and scrolling. */}
       <div className="tier-xterm-wrap">
         <div ref={termRef} className="tier-xterm" />
       </div>
-
-      {/* CoffeeOverlay: transparent Canvas on top of xterm.js.
-          Only paints translation patches — everything else shows through. */}
-      <CoffeeOverlay
-        ref={coffeeRef}
-        xtermRef={xtermRef}
-        xtermContainerRef={termRef}
-        engine={engine}
-        theme={isDark ? 'dark' : 'light'}
-        visible={coffeeEnabled && state.showOverlay}
-        onFallback={handleOverlayFallback}
-        onImageClick={handleImageClick}
-      />
-
-      {/* Per-row LLM translate buttons. Active whenever a non-English language
-          is set, regardless of A1/A2 toggle. Each row gets a small ▶ button
-          on the left; click → LLM translates that row → engine learns it →
-          A2 cache invalidates → row renders translated next frame. */}
-      <RowTranslateButtons
-        xtermRef={xtermRef}
-        xtermContainerRef={termRef}
-        engine={engine}
-        visible={isActive && state.currentLang !== 'en'}
-        targetLang={state.currentLang}
-        theme={isDark ? 'dark' : 'light'}
-      />
-
-
-      {/* ── LLM Translate FAB ─────────────────────────────────────────── */}
-      <div className="translate-fab-wrapper">
-        <div
-          className={`translate-fab ${transStatus}`}
-          onContextMenu={(e) => {
-            e.preventDefault();
-            setShowTransMenu(prev => !prev);
-          }}
-        >
-          <span
-            className="translate-fab-label"
-            onClick={() => setShowTransMenu(prev => !prev)}
-          >{lastLang ? TRANSLATE_LANGUAGES.find(l => l.code === lastLang)?.label || 'Translate' : 'Translate'}</span>
-          <div
-            className="translate-fab-icon"
-            onClick={() => {
-              if (transStatus === 'translating') {
-                transAbortRef.current?.abort();
-                setTransStatus('idle');
-              } else if (lastLang) {
-                handleTranslate(lastLang);
-              } else {
-                setShowTransMenu(prev => !prev);
-              }
-            }}
-          >
-            {transStatus === 'translating'
-              ? <div className="translate-spinner" />
-              : lastLang
-                ? <span className="translate-fab-flag">{TRANSLATE_LANGUAGES.find(l => l.code === lastLang)?.flag || '🌐'}</span>
-                : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 8l6 0"/><path d="M4 14l6 0"/><path d="M2 5h12"/><path d="M7 2v3"/><path d="M11 3c0 4.4-3.6 8-8 8"/><path d="M5 3c0 2.8 2 5.4 5.3 8"/><path d="M14 13l4 8"/><path d="M18 21l2-5"/><path d="M15 18h6"/></svg>
-            }
-          </div>
-        </div>
-
-        {/* Dropdown — outside of translate-fab to avoid overflow:hidden clipping */}
-        {showTransMenu && (
-          <>
-            <div
-              style={{ position: 'fixed', inset: 0, zIndex: 55 }}
-              onClick={() => setShowTransMenu(false)}
-            />
-            <div className="translate-dropdown" onClick={e => e.stopPropagation()}>
-              {TRANSLATE_LANGUAGES.map(lang => (
-                <button
-                  key={lang.code}
-                  className="translate-lang-item"
-                  onClick={() => handleTranslate(lang.code)}
-                >
-                  <span className="translate-lang-flag">{lang.flag}</span>
-                  <span>{lang.label}</span>
-                </button>
-              ))}
-              <div className="translate-divider" />
-              <button
-                className="translate-settings-btn"
-                onClick={() => { setShowTransMenu(false); setShowTransSettings(true); }}
-              >
-                <span>Settings</span>
-              </button>
-            </div>
-          </>
-        )}
-
-        {/* Translate Settings Panel */}
-        {showTransSettings && (
-          <TranslateSettings
-            initialConfig={loadLLMConfig() ?? { baseUrl: '', apiKey: '', model: '' }}
-            onSave={cfg => { saveLLMConfig(cfg); setShowTransSettings(false); }}
-            onClose={() => setShowTransSettings(false)}
-          />
-        )}
-      </div>
-
-      {/* Image Preview Lightbox */}
-      {previewImage && (
-        <div 
-          className="tier-lightbox" 
-          onClick={() => setPreviewImage(null)}
-          style={{
-            position: 'absolute',
-            top: 0, left: 0, right: 0, bottom: 0,
-            background: 'rgba(0, 0, 0, 0.7)',
-            backdropFilter: 'blur(8px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999,
-            cursor: 'zoom-out'
-          }}
-        >
-          <img 
-            src={previewImage} 
-            alt="Preview" 
-            style={{
-              maxWidth: '90%',
-              maxHeight: '90%',
-              objectFit: 'contain',
-              borderRadius: '8px',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.5)'
-            }}
-          />
-        </div>
-      )}
 
       {/* Startup splash — covers ugly init output with branded loading screen */}
       {showSplash && (
