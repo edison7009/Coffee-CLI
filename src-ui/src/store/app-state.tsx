@@ -9,11 +9,6 @@ import type { ScanResult, ModelConfig } from '../tauri';
 export type ToolType = 'claude' | 'codex' | 'installer' | 'hermes' | 'opencode' | 'arcade' | 'terminal' | 'remote' | 'history' | null;
 export type AgentStatus = 'working' | 'idle' | 'wait_input';
 
-export interface TerminalMenu {
-  options: { index: number; badge: string; text: string; actionText?: string | null }[];
-  activeIndex: number;
-}
-
 export interface TerminalSession {
   id: string;
   tool: ToolType;
@@ -21,8 +16,6 @@ export interface TerminalSession {
   folderPath: string | null;
   scanData: ScanResult | null;
   agentStatus: AgentStatus;
-  menu: TerminalMenu | null;
-  hasInputText: boolean;
   restartKey?: number;
   isHidden?: boolean;
 }
@@ -56,8 +49,6 @@ type Action =
   | { type: 'SET_ACTIVE_TERMINAL'; id: string | null }
   | { type: 'SET_TERMINAL_TOOL'; id: string; tool: ToolType; toolData?: string }
   | { type: 'SET_AGENT_STATUS'; id: string; status: AgentStatus }
-  | { type: 'SET_TERMINAL_MENU'; id: string; menu: TerminalMenu | null }
-  | { type: 'SET_HAS_INPUT_TEXT'; id: string; hasInputText: boolean }
   | { type: 'SET_TERMINAL_HIDDEN'; id: string; isHidden: boolean }
   | { type: 'RESTART_TERMINAL'; id: string; newId: string }
   | { type: 'OPEN_HISTORY_TAB'; sessionData: string; folderPath: string };
@@ -100,7 +91,7 @@ function reducer(state: AppState, action: Action): AppState {
       if (newTerminals.length === 0) {
         const defaultId = crypto.randomUUID();
         const folderPath = state.terminals.length > 0 ? state.terminals[0].folderPath : null;
-        newTerminals = [{ id: defaultId, tool: null, folderPath, scanData: null, agentStatus: 'idle', menu: null, hasInputText: false }];
+        newTerminals = [{ id: defaultId, tool: null, folderPath, scanData: null, agentStatus: 'idle' }];
         newActiveId = defaultId;
       } else if (state.activeTerminalId === action.id) {
          newActiveId = newTerminals[newTerminals.length - 1].id;
@@ -118,16 +109,6 @@ function reducer(state: AppState, action: Action): AppState {
       return {
         ...state,
         terminals: state.terminals.map(t => t.id === action.id ? { ...t, agentStatus: action.status } : t)
-      };
-    case 'SET_TERMINAL_MENU':
-      return {
-        ...state,
-        terminals: state.terminals.map(t => t.id === action.id ? { ...t, menu: action.menu } : t)
-      };
-    case 'SET_HAS_INPUT_TEXT':
-      return {
-        ...state,
-        terminals: state.terminals.map(t => t.id === action.id ? { ...t, hasInputText: action.hasInputText } : t)
       };
     case 'SET_TERMINAL_HIDDEN':
       return {
@@ -163,8 +144,6 @@ function reducer(state: AppState, action: Action): AppState {
             folderPath: action.folderPath,
             scanData: null,
             agentStatus: 'idle',
-            menu: null,
-            hasInputText: false
           }],
           activeTerminalId: newId
         };
@@ -200,7 +179,7 @@ function getInitialState(): AppState {
     currentTheme: theme,
     currentLang: lang,
     modelConfig: null,
-    terminals: [{ id: defaultTerminalId, tool: null, folderPath, scanData: null, agentStatus: 'idle' as AgentStatus, menu: null, hasInputText: false }],
+    terminals: [{ id: defaultTerminalId, tool: null, folderPath, scanData: null, agentStatus: 'idle' as AgentStatus }],
     activeTerminalId: defaultTerminalId,
   };
 }

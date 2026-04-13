@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebglAddon } from '@xterm/addon-webgl';
-import { listen } from '@tauri-apps/api/event';
+import { subscribeTerminalEvents } from '../../lib/pty-event-bus';
 import { commands } from '../../tauri';
 import { useAppState, type ToolType } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
@@ -17,35 +17,12 @@ import './TierTerminal.css';
 import ps1Script from '../../../../scripts/agent-tools-installer.ps1?raw';
 import shScript from '../../../../scripts/agent-tools-installer.sh?raw';
 
-// ─── Event Payloads ──────────────────────────────────────────────────────────
-interface TerminalOutputEvent {
-  id: string;
-  data: string;
-}
-
-interface TerminalStatusEvent {
-  id: string;
-  running: boolean;
-  exit_code: number | null;
-}
-
-interface CwdEvent {
-  id: string;
-  cwd: string;
-}
-
 // Sessions being detached to a new window — skip kill on unmount
 export const detachedSessions = new Set<string>();
 
-// Hoisted regexes for the menu-extraction loop. Compiling these once instead
-// of per-line-per-tick saves a meaningful chunk of CPU for the scanner.
-const MENU_NUM_RE   = /^([\s>❯*]*?)(\d+)[.)]\s+(.*)$/;
-const MENU_SLASH_RE = /^([\s>❯*]*?)(\/[\w-]+)\s+(.*)$/;
-const MENU_RADIO_RE = /^([\s>❯*]*?)([O◯◉\-•])\s+(.*)$/i;
-
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export function TierTerminal({ sessionId, tool, isActive = true }: { sessionId: string; tool: ToolType; isActive?: boolean }) {
+export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: ToolType }) {
   const { state, dispatch } = useAppState();
 
   const termRef  = useRef<HTMLDivElement>(null);
@@ -57,7 +34,6 @@ export function TierTerminal({ sessionId, tool, isActive = true }: { sessionId: 
   const [splashFading, setSplashFading] = useState(false);
   const splashStartRef = useRef(Date.now());
   const altScreenRef = useRef(false); // True when TUI enters alternate screen buffer
-  const tuiReadyRef = useRef(false); // True when TUI shows an interactive menu or prompt
 
   const t = useT();
 
@@ -236,53 +212,48 @@ export function TierTerminal({ sessionId, tool, isActive = true }: { sessionId: 
       } catch (e) {}
       let hasInjectedPassword = false;
 
-      // Register all listeners first and wait for them to be ready
-      const outputUn = await listen<TerminalOutputEvent>('tier-terminal-output', (event) => {
-        if (!mounted || event.payload.id !== sessionId) return;
-        xtermRef.current?.write(event.payload.data);
-        
-        // Handle SSH Auto-login via Password injection
-        if (tool === 'remote' && remoteConfig.protocol === 'ssh' && remoteConfig.password && !hasInjectedPassword) {
-          if (event.payload.data.toLowerCase().includes('password:')) {
-            hasInjectedPassword = true;
-            // Delay slightly to ensure PTY is ready to accept input after flushing prompt
-            setTimeout(() => {
-              commands.tierTerminalRawWrite(sessionId, remoteConfig.password + '\r').catch(() => {});
-            }, 200);
+      // Subscribe to PTY events via the singleton bus. One listen() call per
+      // event type lives in the bus; we just register per-session handlers
+      // into a Map. No N-tab fan-out on hot path.
+      const unsubEvents = await subscribeTerminalEvents(sessionId, {
+        onOutput: (data) => {
+          if (!mounted) return;
+          xtermRef.current?.write(data);
+
+          // Handle SSH Auto-login via Password injection
+          if (tool === 'remote' && remoteConfig.protocol === 'ssh' && remoteConfig.password && !hasInjectedPassword) {
+            if (data.toLowerCase().includes('password:')) {
+              hasInjectedPassword = true;
+              setTimeout(() => {
+                commands.tierTerminalRawWrite(sessionId, remoteConfig.password + '\r').catch(() => {});
+              }, 200);
+            }
           }
-        }
 
-        // Detect alternate screen buffer entry — the universal TUI "ready" signal
-        if (event.payload.data.includes('\x1b[?1049h') || event.payload.data.includes('\x1b[?47h')) {
-          altScreenRef.current = true;
-        }
-      });
-      if (mounted) unlisteners.push(outputUn); else { outputUn(); return; }
-
-      const statusUn = await listen<TerminalStatusEvent>('tier-terminal-status', (event) => {
-        if (!mounted || event.payload.id !== sessionId) return;
-        if (!event.payload.running) {
-          const code = event.payload.exit_code;
-          const msg = code === 0
+          // Detect alternate screen buffer entry — the universal TUI "ready" signal
+          if (data.includes('\x1b[?1049h') || data.includes('\x1b[?47h')) {
+            altScreenRef.current = true;
+          }
+        },
+        onStatus: (running, exitCode) => {
+          if (!mounted || running) return;
+          const msg = exitCode === 0
             ? '\r\n\x1b[32m[Process exited normally]\x1b[0m\r\n'
-            : `\r\n\x1b[31m[Process exited with code ${code}]\x1b[0m\r\n`;
+            : `\r\n\x1b[31m[Process exited with code ${exitCode}]\x1b[0m\r\n`;
           xtermRef.current?.write(msg);
-        }
+        },
+        onCwd: async (cwd) => {
+          if (!mounted) return;
+          dispatch({ type: 'SET_FOLDER', path: cwd });
+          try {
+            const data = await commands.scanFolder(cwd);
+            if (mounted) dispatch({ type: 'SET_SCAN', data });
+          } catch (e) {
+            console.warn('[Terminal] CWD scan failed:', e);
+          }
+        },
       });
-      if (mounted) unlisteners.push(statusUn); else { statusUn(); return; }
-
-      const cwdUn = await listen<CwdEvent>('tier-terminal-cwd', async (event) => {
-        if (!mounted || event.payload.id !== sessionId) return;
-        const newPath = event.payload.cwd;
-        dispatch({ type: 'SET_FOLDER', path: newPath });
-        try {
-          const data = await commands.scanFolder(newPath);
-          if (mounted) dispatch({ type: 'SET_SCAN', data });
-        } catch (e) {
-          console.warn('[Terminal] CWD scan failed:', e);
-        }
-      });
-      if (mounted) unlisteners.push(cwdUn); else { cwdUn(); return; }
+      if (mounted) unlisteners.push(unsubEvents); else { unsubEvents(); return; }
 
       // All listeners registered — NOW start the PTY process
       if (!mounted) return;
@@ -371,140 +342,6 @@ export function TierTerminal({ sessionId, tool, isActive = true }: { sessionId: 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ─── Menu / hasInput extractor (active tab only) ─────────────────────────
-  // Scans the visible xterm viewport for interactive CLI menus
-  // (Inquirer.js numbered lists, slash command menus, radio options) and for
-  // the "user is typing" indicator. Dispatches SET_TERMINAL_MENU and
-  // SET_HAS_INPUT_TEXT to the global store on change.
-  //
-  // This used to run every 300ms on every mounted TierTerminal regardless of
-  // visibility, with an early-return DOM check. Now it only runs on the tab
-  // that is actually active — 10 tabs = 1 scanner instead of 10. Regexes are
-  // hoisted to module-level constants to avoid per-line recompilation.
-  useEffect(() => {
-    if (!isActive) return;
-    const term = xtermRef.current;
-    if (!term) return;
-
-    let lastMenuStr = '';
-    let lastHasInput = false;
-
-    const scan = () => {
-      if (!term.buffer.active) return;
-      const buffer = term.buffer.active;
-      const startRow = buffer.viewportY;
-      const endRow = startRow + term.rows - 1;
-
-      const allMenuBlocks: any[][] = [];
-      let currentBlock: any[] = [];
-
-      for (let i = startRow; i <= endRow; i++) {
-        const line = buffer.getLine(i);
-        if (!line) continue;
-        const textRaw = line.translateToString(true);
-        const text = textRaw.trimEnd();
-        if (text.length === 0) continue;
-
-        const numMatch   = MENU_NUM_RE.exec(text);
-        const slashMatch = MENU_SLASH_RE.exec(text);
-        const radioMatch = MENU_RADIO_RE.exec(text);
-
-        let fg = 0, bg = 0, inverse = 0;
-        const firstVisibleIdx = text.search(/\S/);
-        if (firstVisibleIdx !== -1) {
-          const cell = line.getCell(firstVisibleIdx);
-          if (cell) {
-            fg = cell.getFgColor();
-            bg = cell.getBgColor();
-            inverse = cell.isInverse();
-          }
-        }
-
-        if (numMatch || slashMatch || radioMatch) {
-          let parsed: any = null;
-          if (numMatch) {
-            parsed = { badge: numMatch[2], text: numMatch[3], actionText: numMatch[2] + '\r', _prefix: numMatch[1], _fg: fg, _bg: bg, _inv: inverse };
-          } else if (slashMatch) {
-            parsed = { badge: slashMatch[2], text: slashMatch[3], actionText: slashMatch[2] + '\r', _prefix: slashMatch[1], _fg: fg, _bg: bg, _inv: inverse };
-          } else if (radioMatch) {
-            parsed = { badge: radioMatch[2], text: radioMatch[3], actionText: null, _prefix: radioMatch[1], _fg: fg, _bg: bg, _inv: inverse };
-          }
-          if (parsed) currentBlock.push(parsed);
-        } else if (currentBlock.length > 0) {
-          // Heavily indented wrap lines belong to the previous option
-          if (!textRaw.startsWith('  ')) {
-            allMenuBlocks.push(currentBlock);
-            currentBlock = [];
-          }
-        }
-      }
-      if (currentBlock.length > 0) allMenuBlocks.push(currentBlock);
-
-      const rawOptions = allMenuBlocks.length > 0 ? allMenuBlocks[allMenuBlocks.length - 1] : [];
-      const options = rawOptions.map((opt, idx) => ({ ...opt, index: idx }));
-
-      let activeIndex = 0;
-      if (options.length > 0) {
-        const explicitIdx = options.findIndex((opt: any) => opt._prefix.includes('>') || opt._prefix.includes('❯'));
-        if (explicitIdx !== -1) {
-          activeIndex = explicitIdx;
-        } else {
-          const styleCounts: Record<string, number> = {};
-          options.forEach((opt: any) => {
-            const key = `${opt._fg}-${opt._bg}-${opt._inv}`;
-            styleCounts[key] = (styleCounts[key] || 0) + 1;
-          });
-          const sortedStyles = Object.entries(styleCounts).sort((a, b) => b[1] - a[1]);
-          if (sortedStyles.length > 1) {
-            const dominantStyle = sortedStyles[0][0];
-            const outlierIdx = options.findIndex((opt: any) => {
-              const key = `${opt._fg}-${opt._bg}-${opt._inv}`;
-              return key !== dominantStyle;
-            });
-            if (outlierIdx !== -1) activeIndex = outlierIdx;
-          } else {
-            // All items same style — probably a static help table, discard.
-            options.length = 0;
-          }
-        }
-      }
-
-      const currentMenuStr = JSON.stringify({ options, activeIndex });
-      if (options.length > 0) tuiReadyRef.current = true;
-      if (currentMenuStr !== lastMenuStr) {
-        lastMenuStr = currentMenuStr;
-        dispatch({
-          type: 'SET_TERMINAL_MENU',
-          id: sessionId,
-          menu: options.length > 0 ? { options, activeIndex } : null,
-        });
-      }
-
-      // hasInput detection
-      const cursorRow = buffer.viewportY + buffer.cursorY;
-      const cursorLine = buffer.getLine(cursorRow);
-      let detectedInput = false;
-      if (cursorLine) {
-        const textBeforeCursor = cursorLine.translateToString(false, 0, buffer.cursorX);
-        const trimmedText = textBeforeCursor.trimEnd();
-        if (trimmedText.length > 0) {
-          const lastChar = trimmedText.charAt(trimmedText.length - 1);
-          const isPromptMarker = /[>❯$%#│┃║?:]/.test(lastChar);
-          detectedInput = !isPromptMarker;
-          if (isPromptMarker) tuiReadyRef.current = true;
-        }
-      }
-      if (detectedInput) tuiReadyRef.current = true;
-      if (detectedInput !== lastHasInput) {
-        lastHasInput = detectedInput;
-        dispatch({ type: 'SET_HAS_INPUT_TEXT', id: sessionId, hasInputText: detectedInput });
-      }
-    };
-
-    const menuInterval = setInterval(scan, 300);
-    return () => clearInterval(menuInterval);
-  }, [isActive, sessionId, dispatch]);
-
   // ── Theme sync ───────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -565,14 +402,16 @@ export function TierTerminal({ sessionId, tool, isActive = true }: { sessionId: 
     const poll = setInterval(() => {
       const elapsed = Date.now() - splashStartRef.current;
       if (elapsed < 800) return; // brief branding flash
-      // Primary signal: TUI has entered alternate screen OR presented interactable menu/prompt
-      if (altScreenRef.current || tuiReadyRef.current) {
+      // Primary signal: TUI has entered alternate screen buffer (\x1b[?1049h),
+      // set by the PTY output handler. Covers Claude/Codex/OpenCode/Hermes.
+      if (altScreenRef.current) {
         dismiss();
         clearInterval(poll);
         return;
       }
-      // Fallback timeout: terminal shell is fast (3s), AI CLI tools are slower (15s)
-      const maxWait = tool === 'terminal' ? 3000 : 15000;
+      // Fallback timeout: shell + installer are fast (3s), AI CLI tools may
+      // take longer (15s) before the first meaningful frame.
+      const maxWait = (tool === 'terminal' || tool === 'installer') ? 3000 : 15000;
       if (elapsed > maxWait) {
         dismiss();
         clearInterval(poll);

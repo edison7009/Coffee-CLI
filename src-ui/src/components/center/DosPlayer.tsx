@@ -496,7 +496,7 @@ export function DosPlayer({ sessionId }: { sessionId: string }) {
         } else {
           dispatch({ 
             type: 'ADD_TERMINAL', 
-            session: { id: crypto.randomUUID(), tool: null, folderPath: null, scanData: null, agentStatus: 'idle', menu: null, hasInputText: false } 
+            session: { id: crypto.randomUUID(), tool: null, folderPath: null, scanData: null, agentStatus: 'idle' }
           });
         }
       } else {

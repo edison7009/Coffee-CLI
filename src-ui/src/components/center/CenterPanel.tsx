@@ -352,7 +352,7 @@ export function CenterPanel() {
     }
     dispatch({
       type: 'ADD_TERMINAL',
-      session: { id: crypto.randomUUID(), tool: null, folderPath: null, scanData: null, agentStatus: 'idle' as const, menu: null, hasInputText: false }
+      session: { id: crypto.randomUUID(), tool: null, folderPath: null, scanData: null, agentStatus: 'idle' as const }
     });
   };
 
@@ -545,7 +545,7 @@ export function CenterPanel() {
               <DosPlayer sessionId={t.id} />
             ) : (
               <ErrorBoundary key={`err-${t.id}-${t.restartKey || 0}`} fallbackLabel="Tier Terminal Error">
-                <TierTerminal key={`tier-${t.id}-${t.restartKey || 0}`} sessionId={t.id} tool={t.tool} isActive={t.id === activeTerminalId} />
+                <TierTerminal key={`tier-${t.id}-${t.restartKey || 0}`} sessionId={t.id} tool={t.tool} />
               </ErrorBoundary>
             )}
           </div>
