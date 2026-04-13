@@ -219,6 +219,7 @@ const LANGUAGES = [
   { code: 'de',    label: 'Deutsch',    glyph: 'De' },
   { code: 'pt',    label: 'Português',  glyph: 'Pt' },
   { code: 'ru',    label: 'Русский',    glyph: 'Я'  },
+  { code: 'vi',    label: 'Tiếng Việt', glyph: 'Vi' },
 ];
 
 function getLangGlyph(code: string): string {

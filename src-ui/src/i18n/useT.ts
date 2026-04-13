@@ -10,9 +10,10 @@ import { fr } from './fr';
 import { de } from './de';
 import { pt } from './pt';
 import { ru } from './ru';
+import { vi } from './vi';
 
 const strings: Record<string, Record<string, string>> = {
-  en, 'zh-CN': zhCN, 'zh-TW': zhTW, ja, ko, es, fr, de, pt, ru,
+  en, 'zh-CN': zhCN, 'zh-TW': zhTW, ja, ko, es, fr, de, pt, ru, vi,
 };
 
 export function useT() {
