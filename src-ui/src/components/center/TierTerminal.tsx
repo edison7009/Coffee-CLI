@@ -553,23 +553,31 @@ export function TierTerminal({ sessionId, tool, isActive: _isActive = true }: { 
   }, [state.currentTheme]);
 
   // ── Active tab focus restoration ─────────────────────────────────────────
-  // When this session becomes the active tab, force focus + refit.
-  // Fixes: switching tabs makes terminal go blank because the xterm canvas
-  // lost focus while hidden and the ResizeObserver may have misfired.
+  // Cache last-sent size so we skip redundant PTY resize calls when tab
+  // switches back to the same dimensions (no window resize in between).
+  const lastResizeRef = useRef<{ cols: number; rows: number } | null>(null);
+
+  // When this session becomes the active tab, refit + focus after layout.
+  // Uses double-rAF instead of a 150ms setTimeout so perceived switch latency
+  // drops from 150ms to ~32ms (two frames). Fit is fast; the only reason to
+  // wait was to let React+browser flush display:none -> flex layout.
   useEffect(() => {
     const isActive = state.activeTerminalId === sessionId;
     if (!isActive) return;
-    // Longer delay to ensure parent div is fully display:flex with proper dimensions
-    const t = setTimeout(() => {
-      fitRef.current?.fit();
-      xtermRef.current?.focus();
-      // Also notify PTY of the correct size after refit
-      const term = xtermRef.current;
-      if (term && term.cols > 0 && term.rows > 0) {
+    let f1 = 0, f2 = 0;
+    f1 = requestAnimationFrame(() => {
+      f2 = requestAnimationFrame(() => {
+        fitRef.current?.fit();
+        xtermRef.current?.focus();
+        const term = xtermRef.current;
+        if (!term || term.cols <= 0 || term.rows <= 0) return;
+        const prev = lastResizeRef.current;
+        if (prev && prev.cols === term.cols && prev.rows === term.rows) return;
+        lastResizeRef.current = { cols: term.cols, rows: term.rows };
         commands.tierTerminalResize(sessionId, term.cols, term.rows).catch(() => {});
-      }
-    }, 150);
-    return () => clearTimeout(t);
+      });
+    });
+    return () => { cancelAnimationFrame(f1); cancelAnimationFrame(f2); };
   }, [state.activeTerminalId, sessionId]);
 
   // ── Startup splash dismissal ────────────────────────────────────────────
