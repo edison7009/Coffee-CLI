@@ -1,14 +1,20 @@
 // TierTerminal.tsx — xterm.js terminal renderer with PTY backend
 // Pure terminal: no translation, no overlay. Translation lives in language packs
 // installed separately via the one-click installer.
+//
+// Perf note: this component is wrapped in React.memo at the bottom of this
+// file. All state that affects rendering is passed in via props so that
+// unrelated global state changes (agent status, other tabs' folder changes,
+// etc.) don't cascade into this component.
 
-import { useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebglAddon } from '@xterm/addon-webgl';
 import { subscribeTerminalEvents } from '../../lib/pty-event-bus';
+import { registerTerminalFocus } from '../../lib/focus-registry';
 import { commands } from '../../tauri';
-import { useAppState, type ToolType } from '../../store/app-state';
+import { useAppDispatch, type ToolType } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
 import '@xterm/xterm/css/xterm.css';
 import './TierTerminal.css';
@@ -20,10 +26,23 @@ import shScript from '../../../../scripts/agent-tools-installer.sh?raw';
 // Sessions being detached to a new window — skip kill on unmount
 export const detachedSessions = new Set<string>();
 
+interface TierTerminalProps {
+  sessionId: string;
+  tool: ToolType;
+  theme: 'dark' | 'light';
+  lang: string;
+  isActive: boolean;
+  toolData?: string;
+  folderPath?: string | null;
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: ToolType }) {
-  const { state, dispatch } = useAppState();
+function TierTerminalImpl({
+  sessionId, tool, theme, lang, isActive, toolData, folderPath,
+}: TierTerminalProps) {
+  // Dispatch-only subscription. Never re-renders this component.
+  const dispatch = useAppDispatch();
 
   const termRef  = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<Terminal | null>(null);
@@ -51,7 +70,7 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
     let mounted = true;
     const unlisteners: (() => void)[] = [];
 
-    const isDark = state.currentTheme === 'dark';
+    const isDark = theme === 'dark';
     const isLinux = navigator.userAgent.toLowerCase().includes('linux');
     const term = new Terminal({
       fontFamily: "'Cascadia Mono', 'Cascadia Code', 'SF Mono', Menlo, Monaco, Consolas, 'Ubuntu Mono', 'Noto Mono', 'DejaVu Sans Mono', 'Liberation Mono', 'Courier New', monospace",
@@ -168,44 +187,19 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
     // Auto-focus so keyboard input works immediately
     term.focus();
 
-    // ─── Unified Global Focus Enforcer ───────────────────────────────────────
-    // CRITICAL: Only steal focus if THIS session is the currently active terminal.
-    // Without this check, all background TierTerminal instances fight over focus,
-    // causing the "tab switching makes terminal go blank" bug.
-    const enforceFocus = () => {
-      if (!mounted) return;
-      // Check if this session is the active one via data attribute on the container
-      const wrapper = termRef.current?.closest('[data-session-id]');
-      const isVisible = wrapper ? (wrapper as HTMLElement).style.display !== 'none' : false;
-      if (!isVisible) return; // Don't steal focus if this terminal is hidden
-      setTimeout(() => {
-        // Re-evaluate visibility here because React might have hidden this session
-        // between the mouseup event and this timeout executing (e.g. dragging or switching tabs)
-        const stillVisible = wrapper ? (wrapper as HTMLElement).style.display !== 'none' : false;
-        if (!stillVisible) return;
-
-        const active = document.activeElement;
-        // If the officially focused element is a REAL text input/textarea (like the chat box), let them type.
-        if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA') && !active.classList.contains('xterm-helper-textarea')) {
-          return;
-        }
-        // Otherwise, steal focus back for the terminal!
-        term.focus();
-      }, 10); // Small delay to let browser settle the focus shift first
-    };
-
-    // Whenever focus shifts anywhere in the app, evaluate if we need to steal it back
-    window.addEventListener('focusin', enforceFocus);
-    // Also listen to mouseup in case focus lands on document.body (which doesn't natively trigger focusin)
-    window.addEventListener('mouseup', enforceFocus);
+    // Register focus function in the singleton focus registry.
+    // CenterPanel handles the global focusin/mouseup listener and routes
+    // focus to the active terminal — each tab no longer needs its own pair
+    // of window listeners.
+    const unregisterFocus = registerTerminalFocus(sessionId, () => {
+      xtermRef.current?.focus();
+    });
 
     // ── Register event listeners BEFORE starting PTY ──────────────────────
     // This prevents the race condition where PTY output arrives before
     // the frontend has registered its listeners, causing a blank terminal.
 
     const startPty = async () => {
-      const session = state.terminals.find(s => s.id === sessionId);
-      const toolData = session?.toolData;
       let remoteConfig: any = {};
       try {
         if (tool === 'remote' && toolData) remoteConfig = JSON.parse(toolData);
@@ -262,7 +256,7 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
       const initialRows = term.rows || 24;
 
       try {
-        await commands.tierTerminalStart(sessionId, tool, initialCols, initialRows, state.currentTheme, state.currentLang, toolData, session?.folderPath ?? undefined);
+        await commands.tierTerminalStart(sessionId, tool, initialCols, initialRows, theme, lang, toolData, folderPath ?? undefined);
 
         // Trust prompt is now shown to the user (with translation overlay).
         // Previously auto-skipped, but user wants to see the translated trust screen.
@@ -326,8 +320,7 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
 
     return () => {
       mounted = false;
-      window.removeEventListener('focusin', enforceFocus);
-      window.removeEventListener('mouseup', enforceFocus);
+      unregisterFocus();
       ro.disconnect();
       term.dispose();
       xtermRef.current = null;
@@ -347,7 +340,7 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
   useEffect(() => {
     const term = xtermRef.current;
     if (!term) return;
-    const isDark = state.currentTheme === 'dark';
+    const isDark = theme === 'dark';
     // Claude Code manages its own cursor — keep xterm cursor invisible
     const hideCursor = tool === 'claude';
     term.options.theme = isDark ? {
@@ -357,7 +350,7 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
       background: '#f4f3ee', foreground: '#2d2c2a',
       cursor: hideCursor ? '#f4f3ee' : '#2d2c2a', cursorAccent: '#f4f3ee'
     };
-  }, [state.currentTheme]);
+  }, [theme, tool]);
 
   // ── Active tab focus restoration ─────────────────────────────────────────
   // Cache last-sent size so we skip redundant PTY resize calls when tab
@@ -366,10 +359,8 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
 
   // When this session becomes the active tab, refit + focus after layout.
   // Uses double-rAF instead of a 150ms setTimeout so perceived switch latency
-  // drops from 150ms to ~32ms (two frames). Fit is fast; the only reason to
-  // wait was to let React+browser flush display:none -> flex layout.
+  // drops from 150ms to ~32ms (two frames).
   useEffect(() => {
-    const isActive = state.activeTerminalId === sessionId;
     if (!isActive) return;
     let f1 = 0, f2 = 0;
     f1 = requestAnimationFrame(() => {
@@ -385,7 +376,7 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
       });
     });
     return () => { cancelAnimationFrame(f1); cancelAnimationFrame(f2); };
-  }, [state.activeTerminalId, sessionId]);
+  }, [isActive, sessionId]);
 
   // ── Startup splash dismissal ────────────────────────────────────────────
   // Detect real TUI via alternate screen buffer entry (\x1b[?1049h).
@@ -422,8 +413,7 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
 
   // ── Render ───────────────────────────────────────────────────────────────
 
-  const isDark = state.currentTheme === 'dark';
-  const terminalBg = isDark ? '#0c0c0c' : '#f4f3ee';
+  const terminalBg = theme === 'dark' ? '#0c0c0c' : '#f4f3ee';
 
   return (
     <div className="tier-terminal" style={{ background: terminalBg, position: 'relative' }}>
@@ -480,3 +470,19 @@ export function TierTerminal({ sessionId, tool }: { sessionId: string; tool: Too
     </div>
   );
 }
+
+// React.memo with a custom comparator. TierTerminal only re-renders when one
+// of these props actually changes. Unrelated global state updates (agent
+// status events, other tabs' folder changes, task board edits, etc.) are
+// fully filtered out.
+export const TierTerminal = memo(TierTerminalImpl, (prev, next) => {
+  return (
+    prev.sessionId  === next.sessionId  &&
+    prev.tool       === next.tool       &&
+    prev.theme      === next.theme      &&
+    prev.lang       === next.lang       &&
+    prev.isActive   === next.isActive   &&
+    prev.toolData   === next.toolData   &&
+    prev.folderPath === next.folderPath
+  );
+});

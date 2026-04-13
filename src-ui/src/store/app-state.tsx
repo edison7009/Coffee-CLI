@@ -185,7 +185,17 @@ function getInitialState(): AppState {
 }
 
 // ─── Context ─────────────────────────────────────────────────────────────────
+//
+// Two separate contexts so components that only need to dispatch (not read
+// state) don't get re-rendered on every state change. This is what lets the
+// React.memo'd TierTerminal skip re-renders when unrelated state updates fire.
 
+const StateContext = createContext<AppState | null>(null);
+const DispatchContext = createContext<React.Dispatch<Action> | null>(null);
+
+// Kept for backward compatibility with existing consumers that read both
+// state and dispatch from a single hook. New code should prefer the split
+// hooks below.
 const AppContext = createContext<{
   state: AppState;
   dispatch: React.Dispatch<Action>;
@@ -193,15 +203,39 @@ const AppContext = createContext<{
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined, getInitialState);
+  // The combined-context value has to be recomputed whenever state changes,
+  // so keeping the split contexts lets hot components subscribe only to the
+  // half they care about.
+  const combined = { state, dispatch };
   return (
-    <AppContext.Provider value={{ state, dispatch }}>
-      {children}
-    </AppContext.Provider>
+    <DispatchContext.Provider value={dispatch}>
+      <StateContext.Provider value={state}>
+        <AppContext.Provider value={combined}>
+          {children}
+        </AppContext.Provider>
+      </StateContext.Provider>
+    </DispatchContext.Provider>
   );
 }
 
 export function useAppState() {
   const ctx = useContext(AppContext);
   if (!ctx) throw new Error('useAppState must be inside AppProvider');
+  return ctx;
+}
+
+/**
+ * Dispatch-only hook for components that don't need to read state.
+ *
+ * Components using this hook do NOT re-render when state changes — the
+ * DispatchContext value (the dispatch function itself) is stable across
+ * every render, so useContext never triggers a subscription update.
+ *
+ * Use this in any hot-path component (e.g. TierTerminal) that reads all of
+ * its state via props and only needs to call dispatch() in event handlers.
+ */
+export function useAppDispatch(): React.Dispatch<Action> {
+  const ctx = useContext(DispatchContext);
+  if (!ctx) throw new Error('useAppDispatch must be inside AppProvider');
   return ctx;
 }

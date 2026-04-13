@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { focusTerminal } from '../../lib/focus-registry';
 import { TierTerminal } from './TierTerminal';
 import { DosPlayer } from './DosPlayer';
 import { ChatReader } from './ChatReader';
@@ -137,6 +138,32 @@ export function CenterPanel() {
     });
   };
   const [connStatus, setConnStatus] = useState<'idle' | 'connecting' | 'failed'>('idle');
+
+  // ── Global focus enforcer ────────────────────────────────────────────────
+  // One pair of window listeners for the whole app (previously each
+  // TierTerminal added its own focusin + mouseup handlers, causing O(N)
+  // dispatch per click with N tabs). When focus wanders to the body or a
+  // non-input element, steal it back for the currently active terminal.
+  const activeIdRef = useRef(activeTerminalId);
+  useEffect(() => { activeIdRef.current = activeTerminalId; }, [activeTerminalId]);
+  useEffect(() => {
+    const enforce = () => {
+      setTimeout(() => {
+        const el = document.activeElement;
+        if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') && !el.classList.contains('xterm-helper-textarea')) {
+          return; // user is typing in a real input, leave them alone
+        }
+        const id = activeIdRef.current;
+        if (id) focusTerminal(id);
+      }, 10);
+    };
+    window.addEventListener('focusin', enforce);
+    window.addEventListener('mouseup', enforce);
+    return () => {
+      window.removeEventListener('focusin', enforce);
+      window.removeEventListener('mouseup', enforce);
+    };
+  }, []);
 
   // Load sticky config
   useEffect(() => {
@@ -545,7 +572,16 @@ export function CenterPanel() {
               <DosPlayer sessionId={t.id} />
             ) : (
               <ErrorBoundary key={`err-${t.id}-${t.restartKey || 0}`} fallbackLabel="Tier Terminal Error">
-                <TierTerminal key={`tier-${t.id}-${t.restartKey || 0}`} sessionId={t.id} tool={t.tool} />
+                <TierTerminal
+                  key={`tier-${t.id}-${t.restartKey || 0}`}
+                  sessionId={t.id}
+                  tool={t.tool}
+                  theme={state.currentTheme}
+                  lang={state.currentLang}
+                  isActive={t.id === activeTerminalId}
+                  toolData={t.toolData}
+                  folderPath={t.folderPath}
+                />
               </ErrorBoundary>
             )}
           </div>
