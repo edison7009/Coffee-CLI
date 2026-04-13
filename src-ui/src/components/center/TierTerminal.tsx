@@ -7,7 +7,7 @@ import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebglAddon } from '@xterm/addon-webgl';
 import { CoffeeOverlay, type CoffeeOverlayRef } from './CoffeeOverlay';
-import { HoverTranslation } from './HoverTranslation';
+import { RowTranslateButtons } from './RowTranslateButtons';
 import { TranslationEngine } from './coffee-translation';
 import {
   loadLLMConfig, saveLLMConfig, extractTextSegments, translateSegments,
@@ -831,17 +831,19 @@ export function TierTerminal({ sessionId, tool, isActive = true }: { sessionId: 
         onImageClick={handleImageClick}
       />
 
-      {/* Hover translation: Dr.eye-style tooltip, alternative to A2 full-screen.
-          Active when the user enables it AND a translatable language is set.
-          Naturally complements showOverlay=false (pure original A1 + tooltip),
-          but doesn't conflict if both are on. */}
-      <HoverTranslation
+      {/* Per-row LLM translate buttons. Active whenever a non-English language
+          is set, regardless of A1/A2 toggle. Each row gets a small ▶ button
+          on the left; click → LLM translates that row → engine learns it →
+          A2 cache invalidates → row renders translated next frame. */}
+      <RowTranslateButtons
         xtermRef={xtermRef}
         xtermContainerRef={termRef}
         engine={engine}
+        visible={isActive && state.currentLang !== 'en'}
+        targetLang={state.currentLang}
         theme={isDark ? 'dark' : 'light'}
-        visible={coffeeEnabled && state.hoverEnabled}
       />
+
 
       {/* ── LLM Translate FAB ─────────────────────────────────────────── */}
       <div className="translate-fab-wrapper">

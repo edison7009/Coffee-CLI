@@ -51,6 +51,33 @@ export class TranslationEngine {
     this.rebuild();
   }
 
+  /**
+   * Append LLM entries without wiping existing ones. New entries with the
+   * same pattern as an existing entry replace it (latest wins). Used by the
+   * per-row click-to-translate feature so each click teaches the engine
+   * incrementally instead of clobbering everything from the bulk FAB.
+   */
+  addLLMEntries(newEntries: TranslationEntry[]): void {
+    if (newEntries.length === 0) return;
+    const byPattern = new Map<string, TranslationEntry>();
+    for (const e of this.llmEntries) byPattern.set(e.pattern, e);
+    for (const e of newEntries) byPattern.set(e.pattern, e);
+    this.llmEntries = Array.from(byPattern.values());
+    this.rebuild();
+  }
+
+  /**
+   * Remove a specific pattern from the LLM entries. Used by the per-row
+   * untranslate button: clicking the ✗ on a translated row removes that
+   * pattern from the engine, which makes the row (and any other row matching
+   * the same pattern) revert to the original on the next frame.
+   */
+  removeLLMEntry(pattern: string): void {
+    const before = this.llmEntries.length;
+    this.llmEntries = this.llmEntries.filter(e => e.pattern !== pattern);
+    if (this.llmEntries.length !== before) this.rebuild();
+  }
+
   /** Drop only the LLM entries; keep the static dictionary. */
   clearLLMEntries(): void {
     this.llmEntries = [];
