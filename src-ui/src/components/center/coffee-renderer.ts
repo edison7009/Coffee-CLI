@@ -185,8 +185,13 @@ export function renderToShadowTerminal(
   // Build the entire frame as one string, then write once (performance)
   let frame = '';
 
-  // Hide cursor during redraw to avoid flicker
+  // Hide xterm's system cursor for the entire frame — we render the content
+  // cursor manually as a reverse-video cell below.
   frame += `${ESC}?25l`;
+
+  // Capture cursor position before the loop so every row can reference it.
+  const cursorRow = buffer.cursorY;
+  const cursorCol = buffer.cursorX;
 
   // When a translation overflows the current line, xterm.js auto-wraps it to
   // the next line(s). We track how many columns were consumed by the overflow
@@ -231,9 +236,12 @@ export function renderToShadowTerminal(
 
     // Per-row body cache lookup. Key encodes everything that affects the body
     // output: terminal width, incoming skip from previous row's overflow, and
-    // the line text itself. If hit, reuse the body string and propagate the
-    // cached outSkip so cross-line skip state stays consistent.
-    const cacheKey = `${source.cols}|${skipIn}|${lineText}`;
+    // the line text itself. For the cursor row we also include cursorCol so
+    // left/right arrow movement (same text, different cursor position) busts
+    // the cache and re-renders the reverse-video cursor cell.
+    const cacheKey = row === cursorRow
+      ? `${source.cols}|${skipIn}|${lineText}|cur:${cursorCol}`
+      : `${source.cols}|${skipIn}|${lineText}`;
     const cached = state.rowCache[row];
     if (cached !== null && cached !== undefined && cached.key === cacheKey) {
       frame += cached.body;
@@ -347,7 +355,11 @@ export function renderToShadowTerminal(
       }
 
       // ── Original character: copy as-is with its styling ──
-      const sgr = cellSGR(cell);
+      // If this is the cursor cell, append reverse-video so it renders as a
+      // block cursor. This replaces xterm's cursor layer (which is hidden in
+      // A2 via CSS) with a manually-painted content cursor.
+      const isCursorCell = row === cursorRow && col === cursorCol;
+      const sgr = isCursorCell ? cellSGR(cell) + `${ESC}7m` : cellSGR(cell);
       if (sgr !== lastSGR) { frame += sgr; lastSGR = sgr; }
 
       const char = cell.getChars();
@@ -376,9 +388,9 @@ export function renderToShadowTerminal(
     };
   }
 
-  // Reset SGR and show cursor
+  // Reset SGR. xterm cursor stays hidden (ESC[?25l above) — cursor is painted
+  // as a reverse-video content cell, not via the xterm cursor layer.
   frame += RESET;
-  frame += `${ESC}?25h`;
 
   // Return the frame string — caller is responsible for writing it
   // to A2 at the right time (preventing write queue buildup).

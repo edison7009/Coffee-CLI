@@ -38,11 +38,19 @@
 .coffee-overlay-shadow .xterm-viewport::-webkit-scrollbar {
     display: none !important;
 }
-/* Hide A2 cursor (A2 is display-only) */
+/* Hide A2 xterm cursor layer — it tracks the OS input position, not the
+   application content cursor. Content cursor is painted as a reverse-video
+   cell directly in the rendered frame by coffee-renderer. */
 .coffee-overlay-shadow .xterm-cursor,
 .coffee-overlay-shadow .xterm-cursor-layer {
     display: none !important;
-    opacity: 0 !important;
+}
+/* Hide A2 input textarea — prevents Windows IME from latching onto it.
+   pointerEvents:none on the container is not enough; IME bypasses pointer events
+   at the OS level and can find any textarea in the DOM. This causes layout shift
+   and broken auto-wrap when composing Chinese/Japanese input. */
+.coffee-overlay-shadow .xterm-helper-textarea {
+    display: none !important;
 }
 
 
