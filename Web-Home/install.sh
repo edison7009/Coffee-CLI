@@ -1,6 +1,6 @@
 #!/bin/sh
-# Coffee CLI — macOS / Linux Installer
-# Usage: curl -fsSL https://raw.githubusercontent.com/edison7009/Coffee-CLI/main/install/install.sh | sh
+# Coffee CLI — macOS / Linux Installer / Updater
+# Usage: curl -fsSL https://coffeecli.com/install.sh | sh
 
 set -e
 
@@ -10,6 +10,7 @@ API="https://api.github.com/repos/$REPO/releases/latest"
 CYAN='\033[0;36m'
 GREEN='\033[0;32m'
 GRAY='\033[0;90m'
+YELLOW='\033[0;33m'
 RED='\033[0;31m'
 RESET='\033[0m'
 
@@ -20,23 +21,47 @@ echo "  ${GRAY}────────────────────${RES
 # Fetch latest release JSON
 echo "  ${GRAY}Fetching latest release...${RESET}"
 RELEASE=$(curl -fsSL "$API")
-VERSION=$(echo "$RELEASE" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/' | head -1)
-echo "  ${GREEN}Latest: $VERSION${RESET}"
+LATEST_TAG=$(echo "$RELEASE" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/' | head -1)
+LATEST_VER=$(echo "$LATEST_TAG" | sed 's/^v//')
+echo "  ${GREEN}Latest : $LATEST_TAG${RESET}"
 
 OS=$(uname -s)
 ARCH=$(uname -m)
 
 # ── macOS ──────────────────────────────────────────────────────────────────────
 if [ "$OS" = "Darwin" ]; then
+
+  # Detect installed version
+  INSTALLED_VER=""
+  APP_PATH="/Applications/Coffee CLI.app"
+  if [ -d "$APP_PATH" ]; then
+    INSTALLED_VER=$(defaults read "$APP_PATH/Contents/Info" CFBundleShortVersionString 2>/dev/null || true)
+  fi
+
+  if [ -n "$INSTALLED_VER" ]; then
+    echo "  ${GRAY}Installed: v$INSTALLED_VER${RESET}"
+    if [ "$INSTALLED_VER" = "$LATEST_VER" ]; then
+      echo ""
+      echo "  ${GREEN}Coffee CLI is already up to date (v$INSTALLED_VER).${RESET}"
+      echo ""
+      exit 0
+    fi
+    echo "  ${YELLOW}Upgrading v$INSTALLED_VER  →  v$LATEST_VER ...${RESET}"
+  else
+    echo "  ${GRAY}Not installed — performing fresh install...${RESET}"
+  fi
+
+  # Apple Silicon only (no Intel build in CI)
   if [ "$ARCH" = "arm64" ]; then
     PATTERN="aarch64.dmg"
   else
-    PATTERN="x64.dmg"
+    echo "  ${YELLOW}Note: No native Intel build available. Running via Rosetta 2.${RESET}"
+    PATTERN="aarch64.dmg"
   fi
 
   URL=$(echo "$RELEASE" | grep '"browser_download_url"' | grep "$PATTERN" | sed -E 's/.*"([^"]+)".*/\1/' | head -1)
   if [ -z "$URL" ]; then
-    echo "  ${RED}ERROR: No macOS DMG found for $ARCH in release assets.${RESET}"
+    echo "  ${RED}ERROR: No macOS DMG found in release assets.${RESET}"
     exit 1
   fi
 
@@ -55,11 +80,34 @@ if [ "$OS" = "Darwin" ]; then
   rm "$TMP"
 
   echo ""
-  echo "  ${GREEN}Done! Coffee CLI $VERSION installed.${RESET}"
+  echo "  ${GREEN}Done! Coffee CLI $LATEST_TAG installed.${RESET}"
   echo "  ${GRAY}Launch it from /Applications or Spotlight.${RESET}"
 
 # ── Linux ──────────────────────────────────────────────────────────────────────
 elif [ "$OS" = "Linux" ]; then
+
+  # Detect installed version
+  INSTALLED_VER=""
+  if command -v coffee-cli > /dev/null 2>&1; then
+    INSTALLED_VER=$(coffee-cli --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)
+  fi
+  if [ -z "$INSTALLED_VER" ] && command -v dpkg > /dev/null 2>&1; then
+    INSTALLED_VER=$(dpkg -s coffee-cli 2>/dev/null | grep '^Version:' | sed 's/Version: //' || true)
+  fi
+
+  if [ -n "$INSTALLED_VER" ]; then
+    echo "  ${GRAY}Installed: v$INSTALLED_VER${RESET}"
+    if [ "$INSTALLED_VER" = "$LATEST_VER" ]; then
+      echo ""
+      echo "  ${GREEN}Coffee CLI is already up to date (v$INSTALLED_VER).${RESET}"
+      echo ""
+      exit 0
+    fi
+    echo "  ${YELLOW}Upgrading v$INSTALLED_VER  →  v$LATEST_VER ...${RESET}"
+  else
+    echo "  ${GRAY}Not installed — performing fresh install...${RESET}"
+  fi
+
   # Prefer .deb if dpkg is available, fall back to AppImage
   if command -v dpkg > /dev/null 2>&1; then
     URL=$(echo "$RELEASE" | grep '"browser_download_url"' | grep "amd64.deb" | sed -E 's/.*"([^"]+)".*/\1/' | head -1)
@@ -72,7 +120,7 @@ elif [ "$OS" = "Linux" ]; then
       sudo dpkg -i "$TMP"
       rm "$TMP"
       echo ""
-      echo "  ${GREEN}Done! Coffee CLI $VERSION installed.${RESET}"
+      echo "  ${GREEN}Done! Coffee CLI $LATEST_TAG installed.${RESET}"
       exit 0
     fi
   fi
@@ -85,13 +133,14 @@ elif [ "$OS" = "Linux" ]; then
   fi
 
   DEST="$HOME/.local/bin/coffee-cli"
+  mkdir -p "$HOME/.local/bin"
   FILENAME=$(basename "$URL")
   echo "  ${GRAY}Downloading $FILENAME...${RESET}"
   curl -fsSL "$URL" -o "$DEST"
   chmod +x "$DEST"
 
   echo ""
-  echo "  ${GREEN}Done! Coffee CLI $VERSION installed to $DEST${RESET}"
+  echo "  ${GREEN}Done! Coffee CLI $LATEST_TAG installed to $DEST${RESET}"
   echo "  ${GRAY}Make sure ~/.local/bin is in your PATH.${RESET}"
 
 else
