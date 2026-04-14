@@ -497,7 +497,7 @@ fn write_temp_script(content: String, extension: String) -> Result<String, Strin
 /// Open the native file explorer and highlight / reveal the given path.
 #[tauri::command]
 fn show_in_folder(path: String) -> Result<(), String> {
-    let _p = std::path::Path::new(&path);
+    let p = std::path::Path::new(&path);
     #[cfg(target_os = "windows")]
     {
         // explorer /select, highlights the item in its parent folder.
