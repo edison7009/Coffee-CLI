@@ -5,7 +5,7 @@
   margin-bottom: 6px;
   cursor: default !important;
   background: rgba(255, 255, 255, 0.03);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   transition: background 0.2s, transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
@@ -75,7 +75,7 @@
   box-sizing: border-box;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 8px 10px 8px 32px;
   color: var(--text-1, #e8e4de);
   font-size: 13px;

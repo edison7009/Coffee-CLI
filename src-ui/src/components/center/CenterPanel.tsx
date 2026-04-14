@@ -4,7 +4,7 @@ import { TierTerminal } from './TierTerminal';
 import { DosPlayer } from './DosPlayer';
 import { ChatReader } from './ChatReader';
 import { ErrorBoundary } from '../common/ErrorBoundary';
-import { useAppState, type ToolType, type AgentStatus } from '../../store/app-state';
+import { useAppState, type ToolType } from '../../store/app-state';
 
 export interface RemoteHistoryItem {
   id: string;
@@ -55,10 +55,7 @@ const SvgOpenCode = () => (
 );
 
 const SvgHermes = () => (
-  <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
-    <rect width="24" height="24" rx="4" fill="#111"/>
-    <text x="12" y="17" textAnchor="middle" fontFamily="serif" fontWeight="bold" fontSize="14" fill="#fff">N</text>
-  </svg>
+  <img src="/icons/hermes.png" alt="Hermes" style={{ width: '1em', height: '1em', flexShrink: 0, borderRadius: 'var(--radius-xs)', objectFit: 'cover' }} />
 );
 
 // ── Platform-aware Terminal Icon & Label ─────────────────────────────────────
@@ -82,7 +79,7 @@ const TerminalIcon = () => {
     <img
       src={TERMINAL_ICON[os]}
       alt=""
-      style={{ width: '1em', height: '1em', borderRadius: 3, objectFit: 'contain', flexShrink: 0 }}
+      style={{ width: '1em', height: '1em', borderRadius: 'var(--radius-xs)', objectFit: 'contain', flexShrink: 0 }}
     />
   );
 };
@@ -186,93 +183,6 @@ export function CenterPanel() {
 
 
 
-  // ── Island bridge: show island only when main window is MINIMIZED ──
-  // When the window is visible (even unfocused), tab dots are sufficient.
-  // Detection strategy:
-  //   1. Poll isMinimized() every 500ms (works on Windows/macOS)
-  //   2. Fallback: browser visibilitychange event (fires on Linux when minimized)
-  useEffect(() => {
-    if (!isTauri) return;
-    let polling: ReturnType<typeof setInterval> | null = null;
-    let wasMinimized = false;
-
-    const setMinimized = (minimized: boolean) => {
-      if (minimized && !wasMinimized) {
-        wasMinimized = true;
-        import('@tauri-apps/api/event').then(({ emit }) => {
-          emit('main-window-minimized');
-        });
-      } else if (!minimized && wasMinimized) {
-        wasMinimized = false;
-        import('@tauri-apps/api/event').then(({ emit }) => {
-          emit('main-window-restored');
-        });
-      }
-    };
-
-    // Primary: Poll window state (cross-platform safe wrapper)
-    (async () => {
-      // In Tauri v2/v1, window getters can throw NotSupported errors on Linux WMs.
-      // We must catch them individually so they don't break the boolean resolution.
-      try {
-        const { getCurrentWindow } = await import('@tauri-apps/api/window');
-        const mainWin = getCurrentWindow();
-
-        polling = setInterval(async () => {
-          let isMin = false;
-          let isVis = true;
-          
-          try { isMin = await mainWin.isMinimized(); } catch { /* ignore OS unsupported */ }
-          try { isVis = await mainWin.isVisible(); } catch { /* ignore OS unsupported */ }
-          
-          const isDocHidden = document.visibilityState === 'hidden';
-          
-          // Island triggers if explicitly minimized, completely invisible (e.g. macOS closed to dock), 
-          // or document explicitly suspended by the engine.
-          setMinimized(isMin || !isVis || isDocHidden);
-        }, 500);
-      } catch {
-        console.warn('Failed to initialized window poller');
-      }
-    })();
-
-    // Fallback: browser visibilitychange (fires reliably on Linux WMs when window suspended)
-    const onVisibilityChange = async () => {
-      const isDocHidden = document.visibilityState === 'hidden';
-      let isMin = false;
-      let isVis = true;
-      try {
-        const { getCurrentWindow } = await import('@tauri-apps/api/window');
-        const mainWin = getCurrentWindow();
-        try { isMin = await mainWin.isMinimized(); } catch {}
-        try { isVis = await mainWin.isVisible(); } catch {}
-      } catch {}
-      setMinimized(isMin || !isVis || isDocHidden);
-    };
-    document.addEventListener('visibilitychange', onVisibilityChange);
-
-    // Listen for island-clicked → restore & focus main window + switch tab
-    let unlisten: (() => void) | null = null;
-    import('@tauri-apps/api/event').then(({ listen }) => {
-      listen<{ agentId: string }>('island-clicked', async (event) => {
-        const { getCurrentWindow } = await import('@tauri-apps/api/window');
-        const win = getCurrentWindow();
-        await win.show();
-        await win.unminimize();
-        await win.setFocus();
-        if (event.payload?.agentId) {
-          dispatch({ type: 'SET_ACTIVE_TERMINAL', id: event.payload.agentId });
-        }
-      }).then(u => { unlisten = u; });
-    });
-
-    return () => {
-      if (polling) clearInterval(polling);
-      document.removeEventListener('visibilitychange', onVisibilityChange);
-      unlisten?.();
-    };
-  }, [dispatch]);
-
   // Detect tool availability each time Launchpad is shown
   useEffect(() => {
     if (!isTauri || !isLaunchpadMode) return;
@@ -289,88 +199,6 @@ export function CenterPanel() {
     }
   }, [toastMsg]);
 
-  // Listen for agent-status events from the backend
-  // + Notification system: sound + system notification on key state transitions
-  useEffect(() => {
-    // Request notification permission on first mount
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission().catch(() => {});
-    }
-
-    // Track previous status per session to detect transitions
-    const prevStatus = new Map<string, string>();
-
-    // Subtle notification chime using Web Audio API
-    const playChime = (type: 'complete' | 'attention') => {
-      try {
-        const ctx = new AudioContext();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        gain.gain.value = 0.08; // very subtle
-
-        if (type === 'complete') {
-          // Two-tone ascending chime = "done!"
-          osc.frequency.value = 523; // C5
-          osc.start();
-          osc.frequency.setValueAtTime(659, ctx.currentTime + 0.12); // E5
-          osc.stop(ctx.currentTime + 0.25);
-        } else {
-          // Single soft tone = "needs attention"
-          osc.frequency.value = 440; // A4
-          osc.start();
-          osc.stop(ctx.currentTime + 0.15);
-        }
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
-        osc.onended = () => ctx.close();
-      } catch { /* audio not available */ }
-    };
-
-    const sendNotification = (title: string, body: string) => {
-      // Only notify when app is not focused (avoid interrupting active users)
-      if (document.hasFocus()) return;
-
-      if ('Notification' in window && Notification.permission === 'granted') {
-        const n = new Notification(title, {
-          body,
-          icon: '/coffee-icon.png',
-          silent: true, // we play our own chime
-        });
-        // Auto-close after 5s
-        setTimeout(() => n.close(), 5000);
-        // Click notification → focus app
-        n.onclick = () => { window.focus(); n.close(); };
-      }
-    };
-
-    let unlisten: (() => void) | null = null;
-    (async () => {
-      try {
-        const { listen } = await import('@tauri-apps/api/event');
-        unlisten = await listen<{ id: string; status: string }>('agent-status', (event) => {
-          const { id, status } = event.payload;
-          if (status === 'working' || status === 'idle' || status === 'wait_input') {
-            const prev = prevStatus.get(id);
-            prevStatus.set(id, status);
-
-            // Detect meaningful transitions
-            if (prev === 'working' && status === 'idle') {
-              playChime('complete');
-              sendNotification('Coffee CLI', 'Agent has finished working.');
-            } else if (prev === 'working' && status === 'wait_input') {
-              playChime('attention');
-              sendNotification('Coffee CLI', 'Agent needs your input.');
-            }
-
-            dispatch({ type: 'SET_AGENT_STATUS', id, status: status as AgentStatus });
-          }
-        });
-      } catch { /* not in Tauri context */ }
-    })();
-    return () => { unlisten?.(); };
-  }, [dispatch]);
-
 
   const handleAddTab = () => {
     if (terminals.length >= 5) {
@@ -379,30 +207,18 @@ export function CenterPanel() {
     }
     dispatch({
       type: 'ADD_TERMINAL',
-      session: { id: crypto.randomUUID(), tool: null, folderPath: null, scanData: null, agentStatus: 'idle' as const }
+      session: { id: crypto.randomUUID(), tool: null, folderPath: null, scanData: null }
     });
   };
 
   const handleCloseTab = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     dispatch({ type: 'REMOVE_TERMINAL', id });
-    // Notify island overlay to remove session
-    if (isTauri) {
-      import('@tauri-apps/api/event').then(({ emit }) => {
-        emit('island-session-remove', { id });
-      });
-    }
   };
 
   const selectTool = (tool: ToolType, toolData?: string) => {
     if (activeTerminalId) {
       dispatch({ type: 'SET_TERMINAL_TOOL', id: activeTerminalId, tool, toolData });
-      // Notify island overlay about tool assignment
-      if (isTauri) {
-        import('@tauri-apps/api/event').then(({ emit }) => {
-          emit('island-tool-assign', { id: activeTerminalId, tool });
-        });
-      }
     }
   };
 
@@ -486,7 +302,7 @@ export function CenterPanel() {
         const m = ARCADE_META[gameName.toLowerCase()];
         if (m) {
           const title = t(m.key as any);
-          return { icon: <img src={m.icon} alt="" style={{ width: '1em', height: '1em', borderRadius: 3, objectFit: 'cover' }} />, title };
+          return { icon: <img src={m.icon} alt="" style={{ width: '1em', height: '1em', borderRadius: 'var(--radius-xs)', objectFit: 'cover' }} />, title };
         }
         return { icon: <span style={{ fontSize: '1em' }}>🎮</span>, title: 'Coffee Play' };
       }
@@ -525,11 +341,9 @@ export function CenterPanel() {
               {icon}
               <span className="tab-title" style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{title}</span>
               <div className="tab-actions">
-                {session.tool && <span className={`tab-health-dot ${session.agentStatus === 'wait_input' ? 'wait_input' : 'connected'}`} />}
                 <button 
                    className="tab-close-btn" 
                    onClick={(e) => handleCloseTab(e, session.id)}
-                   style={{ opacity: !session.tool ? 1 : undefined, transform: !session.tool ? 'scale(1)' : undefined, pointerEvents: !session.tool ? 'auto' : undefined }}
                 >
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -804,7 +618,7 @@ export function CenterPanel() {
                           >
                             <div className="launchpad-icon">
                               {icon
-                                ? <img src={icon} alt={title} style={{ width: '1.4em', height: '1.4em', borderRadius: 4, objectFit: 'cover' }} />
+                                ? <img src={icon} alt={title} style={{ width: '1.4em', height: '1.4em', borderRadius: 'var(--radius-xs)', objectFit: 'cover' }} />
                                 : '🎮'}
                             </div>
                             <span>{title}</span>

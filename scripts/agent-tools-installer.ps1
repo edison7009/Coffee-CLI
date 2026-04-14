@@ -288,112 +288,148 @@ function Invoke-LanguagePackAction($targetCode, $targetLabel) {
     Invoke-LangPackInstall $targetCode $targetLabel
 }
 
-while ($true) {
-    Clear-Host
+# ── Arrow-Key Interactive Menu ────────────────────────────────────────────────
+
+function Draw-Menu {
+    param([array]$Items, [int]$Sel)
 
     $activeCode = Get-ActiveLanguage
-    $activeMark = if ($activeCode) { " (current: $(Get-LangLabel $activeCode))" } else { "" }
+    $activeMark = if ($activeCode) { " [active: $(Get-LangLabel $activeCode)]" } else { "" }
 
-    Write-Host "`n=== Install ===" -ForegroundColor Cyan
-    Write-Host "  1.  Claude Code"
-    Write-Host "  2.  OpenAI Codex CLI"
-    Write-Host "  3.  OpenCode CLI"
-    Write-Host "  4.  Hermes (Nous Research)"
-    Write-Host "`n=== Language Packs$activeMark ===" -ForegroundColor Cyan
-    Write-Host "  L1. 简体中文         (Simplified Chinese)"
-    Write-Host "  L2. 日本語           (Japanese)"
-    Write-Host "  L3. 한국어           (Korean)"
-    Write-Host "  L4. Español          (Spanish)"
-    Write-Host "  L5. Français         (French)"
-    Write-Host "  L6. Deutsch          (German)"
-    Write-Host "  L7. Português (BR)   (Portuguese, Brazil)"
-    Write-Host "  L8. Русский          (Russian)"
-    Write-Host "  L9. Tiếng Việt       (Vietnamese)"
-    Write-Host "  LE. English           (restore default)"
-    Write-Host "`n=== Uninstall ===" -ForegroundColor Yellow
-    Write-Host "  5.  Claude Code"
-    Write-Host "  6.  OpenAI Codex CLI"
-    Write-Host "  7.  OpenCode CLI"
-    Write-Host "  8.  Hermes"
-    Write-Host "`n  q.  Quit" -ForegroundColor DarkGray
-    Write-Host "--------------------------------"
+    [Console]::SetCursorPosition(0, 0)
+    Write-Host "                                                                        "
+    [Console]::SetCursorPosition(0, 0)
+    Write-Host ""
+    Write-Host "  Agent Installer                        " -ForegroundColor Cyan
+    Write-Host "  Arrow keys to move, Enter to select, Esc to quit" -ForegroundColor DarkGray
+    Write-Host ""
 
-    $choice = Read-Host ">>> Select"
+    $lastSec = ""
+    for ($i = 0; $i -lt $Items.Count; $i++) {
+        $sec = $Items[$i].Section
+        # Section headers
+        if ($sec -ne $lastSec) {
+            $lastSec = $sec
+            switch ($sec) {
+                "install"   { Write-Host "  --- Install ---                                  " -ForegroundColor Cyan }
+                "lang"      { Write-Host "  --- Language Packs (Claude Code only)$activeMark ---" -ForegroundColor Cyan }
+                "uninstall" { Write-Host "  --- Uninstall ---                                " -ForegroundColor Yellow }
+            }
+        }
 
-    switch ($choice) {
-        "1" {
-            Write-Host "`n  Installing Claude Code...`n" -ForegroundColor Cyan
-            $ok = Run-Install "Claude Code" {
-                npm install -g @anthropic-ai/claude-code @registryArgs
-            }
-            if ($ok) { Show-Success "Claude Code" "https://claude.ai/code" "claude --version" }
-        }
-        "2" {
-            Write-Host "`n  Installing OpenAI Codex CLI...`n" -ForegroundColor Cyan
-            $ok = Run-Install "OpenAI Codex" {
-                npm install -g @openai/codex@latest @registryArgs
-            }
-            if ($ok) { Show-Success "OpenAI Codex CLI" "https://github.com/openai/codex" "codex --version" }
-        }
-        "3" {
-            Write-Host "`n  Installing OpenCode CLI...`n" -ForegroundColor Cyan
-            $ok = Run-Install "OpenCode" {
-                npm install -g opencode-ai@latest @registryArgs
-            }
-            if ($ok) { Show-Success "OpenCode CLI" "https://opencode.ai" "opencode --version" }
-        }
-        "4" {
-            Write-Host "`n  Installing Hermes (Nous Research)...`n" -ForegroundColor Cyan
-            $ok = Run-Install "Hermes" {
-                if (Get-Command uv -ErrorAction SilentlyContinue) {
-                    uv pip install hermes-agent
-                } else {
-                    Write-Host "  uv not found, trying pip..." -ForegroundColor Yellow
-                    pip install hermes-agent
-                }
-            }
-            if ($ok) { Show-Success "Hermes" "https://hermes-agent.nousresearch.com" "hermes --version" }
-        }
-        "5" {
-            Write-Host "`n  Uninstalling Claude Code...`n" -ForegroundColor Yellow
-            Run-Uninstall "Claude Code" { npm uninstall -g @anthropic-ai/claude-code }
-        }
-        "6" {
-            Write-Host "`n  Uninstalling OpenAI Codex CLI...`n" -ForegroundColor Yellow
-            Run-Uninstall "OpenAI Codex CLI" { npm uninstall -g @openai/codex }
-        }
-        "7" {
-            Write-Host "`n  Uninstalling OpenCode CLI...`n" -ForegroundColor Yellow
-            Run-Uninstall "OpenCode CLI" { npm uninstall -g opencode-ai }
-        }
-        "8" {
-            Write-Host "`n  Uninstalling Hermes...`n" -ForegroundColor Yellow
-            Run-Uninstall "Hermes" {
-                if (Get-Command uv -ErrorAction SilentlyContinue) {
-                    uv pip uninstall hermes-agent -y
-                } else {
-                    pip uninstall hermes-agent -y
-                }
-            }
-        }
-        { $_ -match "^[Ll]([1-9])$" } {
-            $idx = [int]$matches[1] - 1
-            if ($idx -lt $LANGUAGE_PACKS.Count) {
-                $pack = $LANGUAGE_PACKS[$idx]
-                Invoke-LanguagePackAction $pack.Code $pack.Label
-            } else {
-                Write-Host "  Invalid language pack option." -ForegroundColor Red
-                Start-Sleep -Seconds 1
-            }
-        }
-        { $_ -eq "LE" -or $_ -eq "le" } { Invoke-LanguagePackAction "en" "English" }
-        "q" {
-            Write-Host "`n  Goodbye!`n"
-            break
-        }
-        default {
-            Write-Host "  Invalid option." -ForegroundColor Red
-            Start-Sleep -Seconds 1
+        $label = $Items[$i].Label
+        $pad = $label.PadRight(52)
+        if ($i -eq $Sel) {
+            Write-Host "  > $pad" -ForegroundColor White -BackgroundColor DarkCyan
+        } else {
+            Write-Host "    $pad"
         }
     }
+    Write-Host ""
+    Write-Host "                                                              "
+}
+
+# Build flat menu items list
+$menu = @()
+$menu += @{ Section = "install"; Label = "Claude Code";            Action = "i-claude"   }
+$menu += @{ Section = "install"; Label = "OpenAI Codex CLI";       Action = "i-codex"    }
+$menu += @{ Section = "install"; Label = "OpenCode CLI";           Action = "i-opencode" }
+$menu += @{ Section = "install"; Label = "Hermes (Nous Research)"; Action = "i-hermes"   }
+for ($i = 0; $i -lt $LANGUAGE_PACKS.Count; $i++) {
+    $lp = $LANGUAGE_PACKS[$i]
+    $menu += @{ Section = "lang"; Label = "$($lp.Label) ($($lp.English))"; Action = "lang-$($lp.Code)" }
+}
+$menu += @{ Section = "lang"; Label = "English (restore default)"; Action = "lang-en" }
+$menu += @{ Section = "uninstall"; Label = "Claude Code";            Action = "u-claude"   }
+$menu += @{ Section = "uninstall"; Label = "OpenAI Codex CLI";       Action = "u-codex"    }
+$menu += @{ Section = "uninstall"; Label = "OpenCode CLI";           Action = "u-opencode" }
+$menu += @{ Section = "uninstall"; Label = "Hermes";                 Action = "u-hermes"   }
+
+$sel = 0
+[Console]::CursorVisible = $false
+
+try {
+    Clear-Host
+    while ($true) {
+        Draw-Menu -Items $menu -Sel $sel
+
+        $key = [Console]::ReadKey($true)
+
+        switch ($key.Key) {
+            "UpArrow" {
+                $sel--
+                if ($sel -lt 0) { $sel = $menu.Count - 1 }
+            }
+            "DownArrow" {
+                $sel++
+                if ($sel -ge $menu.Count) { $sel = 0 }
+            }
+            "Enter" {
+                $act = $menu[$sel].Action
+                [Console]::CursorVisible = $true
+                Clear-Host
+
+                switch -Wildcard ($act) {
+                    "i-claude" {
+                        Write-Host "`n  Installing Claude Code...`n" -ForegroundColor Cyan
+                        $ok = Run-Install "Claude Code" { npm install -g @anthropic-ai/claude-code @registryArgs }
+                        if ($ok) { Show-Success "Claude Code" "https://claude.ai/code" "claude --version" }
+                    }
+                    "i-codex" {
+                        Write-Host "`n  Installing OpenAI Codex CLI...`n" -ForegroundColor Cyan
+                        $ok = Run-Install "OpenAI Codex" { npm install -g @openai/codex@latest @registryArgs }
+                        if ($ok) { Show-Success "OpenAI Codex CLI" "https://github.com/openai/codex" "codex --version" }
+                    }
+                    "i-opencode" {
+                        Write-Host "`n  Installing OpenCode CLI...`n" -ForegroundColor Cyan
+                        $ok = Run-Install "OpenCode" { npm install -g opencode-ai@latest @registryArgs }
+                        if ($ok) { Show-Success "OpenCode CLI" "https://opencode.ai" "opencode --version" }
+                    }
+                    "i-hermes" {
+                        Write-Host "`n  Installing Hermes (Nous Research)...`n" -ForegroundColor Cyan
+                        $ok = Run-Install "Hermes" {
+                            if (Get-Command uv -ErrorAction SilentlyContinue) { uv pip install hermes-agent }
+                            else { Write-Host "  uv not found, trying pip..." -ForegroundColor Yellow; pip install hermes-agent }
+                        }
+                        if ($ok) { Show-Success "Hermes" "https://hermes-agent.nousresearch.com" "hermes --version" }
+                    }
+                    "lang-en" { Invoke-LanguagePackAction "en" "English" }
+                    "lang-*" {
+                        $code = $act -replace "^lang-", ""
+                        $pack = $LANGUAGE_PACKS | Where-Object { $_.Code -eq $code } | Select-Object -First 1
+                        if ($pack) { Invoke-LanguagePackAction $pack.Code $pack.Label }
+                    }
+                    "u-claude" {
+                        Write-Host "`n  Uninstalling Claude Code...`n" -ForegroundColor Yellow
+                        Run-Uninstall "Claude Code" { npm uninstall -g @anthropic-ai/claude-code }
+                    }
+                    "u-codex" {
+                        Write-Host "`n  Uninstalling OpenAI Codex CLI...`n" -ForegroundColor Yellow
+                        Run-Uninstall "OpenAI Codex CLI" { npm uninstall -g @openai/codex }
+                    }
+                    "u-opencode" {
+                        Write-Host "`n  Uninstalling OpenCode CLI...`n" -ForegroundColor Yellow
+                        Run-Uninstall "OpenCode CLI" { npm uninstall -g opencode-ai }
+                    }
+                    "u-hermes" {
+                        Write-Host "`n  Uninstalling Hermes...`n" -ForegroundColor Yellow
+                        Run-Uninstall "Hermes" {
+                            if (Get-Command uv -ErrorAction SilentlyContinue) { uv pip uninstall hermes-agent -y }
+                            else { pip uninstall hermes-agent -y }
+                        }
+                    }
+                }
+
+                [Console]::CursorVisible = $false
+                Clear-Host
+            }
+            "Escape" {
+                Clear-Host
+                Write-Host "`n  Goodbye!`n"
+                return
+            }
+        }
+    }
+} finally {
+    [Console]::CursorVisible = $true
 }

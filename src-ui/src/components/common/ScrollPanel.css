@@ -24,7 +24,7 @@
 }
 .scroll-panel::-webkit-scrollbar-thumb {
   background: transparent;  /* completely hidden when not hovering */
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   transition: background 0.2s; /* Note: webkit doesn't natively transition scrollbar colors, but we use :hover states */
 }
 /* Reveal on hover of the container */

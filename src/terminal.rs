@@ -379,11 +379,11 @@ pub fn spawn(
                 tail.contains(m.as_str()) || act.recent_text.trim_end().ends_with(m.as_str())
             });
 
-            // ── 2-State Detection for Dynamic Island ─────────────────────
+            // ── 2-State Agent Status Detection ──────────────────────────
             //
-            // The island only shows two states: "working" and "wait_input".
-            // "working" = agent is processing YOUR request (you pressed Enter).
-            // "wait_input" = agent is at its prompt, waiting for you.
+            // Two states: "working" and "wait_input".
+            // "working" = agent is processing the user's request.
+            // "wait_input" = agent is at its prompt, waiting for input.
             //
             // Detection rules:
             //

@@ -78,13 +78,23 @@ export async function subscribeTerminalEvents(
 ): Promise<() => void> {
   await ensureInit();
 
-  if (handlers.onOutput) outputHandlers.set(sessionId, handlers.onOutput);
-  if (handlers.onStatus) statusHandlers.set(sessionId, handlers.onStatus);
-  if (handlers.onCwd) cwdHandlers.set(sessionId, handlers.onCwd);
+  // Capture references to the handlers we just registered.
+  // The unsub function must only remove OUR handlers, not a newer mount's.
+  const myOutput = handlers.onOutput;
+  const myStatus = handlers.onStatus;
+  const myCwd = handlers.onCwd;
+
+  if (myOutput) outputHandlers.set(sessionId, myOutput);
+  if (myStatus) statusHandlers.set(sessionId, myStatus);
+  if (myCwd) cwdHandlers.set(sessionId, myCwd);
 
   return () => {
-    outputHandlers.delete(sessionId);
-    statusHandlers.delete(sessionId);
-    cwdHandlers.delete(sessionId);
+    // Only delete if the registered handler is still ours.
+    // React Strict Mode double-mounts with the same sessionId: the second
+    // mount overwrites the Map entry, so the first mount's stale unsub must
+    // NOT blow away the second mount's live handler.
+    if (myOutput && outputHandlers.get(sessionId) === myOutput) outputHandlers.delete(sessionId);
+    if (myStatus && statusHandlers.get(sessionId) === myStatus) statusHandlers.delete(sessionId);
+    if (myCwd && cwdHandlers.get(sessionId) === myCwd) cwdHandlers.delete(sessionId);
   };
 }

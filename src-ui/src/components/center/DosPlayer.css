@@ -74,7 +74,7 @@
 .dos-game-card {
   width: 160px;
   height: 120px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.06);
   display: flex;
@@ -133,7 +133,7 @@
 .dos-empty-hint code {
   background: rgba(255, 255, 255, 0.06);
   padding: 1px 6px;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   font-size: 10px;
 }
 
@@ -169,7 +169,7 @@
   font-family: 'Cascadia Mono', monospace;
   font-size: 12px;
   padding: 8px 28px;
-  border-radius: 6px;
+  border-radius: var(--radius-xs);
   border: 1px solid rgba(196, 149, 106, 0.3);
   background: rgba(196, 149, 106, 0.1);
   color: #C4956A;
@@ -217,7 +217,7 @@
   backdrop-filter: blur(8px);
   color: var(--text-3);
   padding: 8px 18px;
-  border-radius: 100px;
+  border-radius: var(--radius-pill);
   font-size: 11px;
   font-weight: 500;
   font-family: 'Cascadia Mono', Consolas, monospace;

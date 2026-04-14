@@ -1,6 +1,6 @@
 [package]
 name = "coffee-cli"
-version = "0.2.3"
+version = "0.2.4"
 edition = "2021"
 description = "Lightweight Multi-layer AI CLI Terminal"
 license = "MIT"
@@ -28,7 +28,7 @@ regex = "1"
 clap = { version = "4", features = ["derive"] }
 
 # Tauri
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["devtools"] }
 tauri-plugin-log = "2"
 tauri-plugin-dialog = "2"
 

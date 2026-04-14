@@ -30,7 +30,7 @@
   font-weight: 500;
   color: var(--text-2);
   background: transparent;
-  border-radius: 10px 10px 0 0;
+  border-radius: var(--shape-radius-tab);
   cursor: pointer;
   user-select: none;
   min-width: 140px;
@@ -103,33 +103,10 @@
   position: relative;
 }
 
-.tab-health-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  position: absolute;
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
-
-.tab-health-dot.connected {
-  background: #34d399;
-  box-shadow: 0 0 4px rgba(52, 211, 153, 0.4);
-}
-
-.tab-health-dot.disconnected {
-  background: #ef4444;
-  box-shadow: 0 0 4px rgba(239, 68, 68, 0.4);
-}
-
-.tab-health-dot.wait_input {
-  background: #60a5fa;
-  box-shadow: 0 0 4px rgba(96, 165, 250, 0.5);
-}
-
 .tab-close-btn {
   width: 18px;
   height: 18px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   background: transparent;
   border: none;
   color: var(--text-2);
@@ -137,17 +114,10 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  position: absolute;
   opacity: 0;
   transform: scale(0.6);
   pointer-events: none;
   transition: opacity 0.2s ease, transform 0.2s ease, background-color 0.15s, color 0.15s;
-}
-
-.chrome-tab:hover .tab-health-dot {
-  opacity: 0;
-  transform: scale(0.4);
-  pointer-events: none;
 }
 
 .chrome-tab:hover .tab-close-btn {
@@ -291,7 +261,7 @@
   color: var(--text-1);
   border: 1px solid var(--border);
   padding: 10px 20px;
-  border-radius: 20px;
+  border-radius: var(--radius-md);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   z-index: 1000;
   font-size: 14px;
@@ -379,7 +349,7 @@
   color: #34d399;
   background: rgba(52, 211, 153, 0.12);
   padding: 3px 10px;
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   flex-shrink: 0;
   letter-spacing: 0.3px;
 }
@@ -393,7 +363,7 @@
   padding: 0 5px; /* Ensures circular shape when drawer is closed (24px + 5px + 5px + 2px border = 36px) */
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: var(--radius-md);
   color: var(--text-2);
   cursor: pointer;
   overflow: hidden;
@@ -462,7 +432,7 @@
   color: var(--text-1);
   background: var(--bg-panel);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
   backdrop-filter: blur(12px);
   pointer-events: none;
@@ -540,7 +510,7 @@
   display: flex;
   align-items: center;
   background: rgba(255, 255, 255, 0.04);
-  border-radius: 20px;
+  border-radius: var(--radius-pill);
   padding: 5px 12px;
   font-size: 12px;
   cursor: pointer;
@@ -604,7 +574,7 @@
   width: 380px;
   background: var(--bg-panel);
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: var(--radius-md);
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
   overflow: hidden;
 }
@@ -627,7 +597,7 @@
 .remote-form-close {
   width: 28px;
   height: 28px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: transparent;
   border: none;
   color: var(--text-2);
@@ -655,7 +625,7 @@
   display: flex;
   gap: 2px;
   background: var(--bg-card);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   padding: 3px;
   border: 1px solid var(--border);
 }
@@ -668,7 +638,7 @@
   color: var(--text-2);
   background: transparent;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all 0.2s ease;
   letter-spacing: 0.3px;
@@ -712,7 +682,7 @@
   color: var(--text-1);
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
@@ -752,7 +722,7 @@
   color: #fff;
   background: var(--accent);
   border: none;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all 0.2s;
   margin-top: 4px;

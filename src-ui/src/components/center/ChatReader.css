@@ -60,7 +60,7 @@
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   font-size: 13px;
   font-weight: 600;
   cursor: default !important;
@@ -115,7 +115,7 @@
 }
 .chat-reader-body::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
 }
 .chat-reader-body::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.2);
@@ -140,7 +140,7 @@
 
 .chat-bubble {
   padding: 14px 18px;
-  border-radius: 16px;
+  border-radius: var(--radius-md);
   font-size: 14px;
   line-height: 1.6;
   font-family: var(--font, system-ui);

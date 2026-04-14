@@ -55,7 +55,7 @@ const getToolIcon = (tool: string) => {
     case 'installer': return <SvgInstaller />;
     case 'hermes': return <SvgHermes />;
     case 'opencode': return <SvgOpenCode />;
-    default: return <div style={{width: 14, height: 14, borderRadius: 3, background: '#555'}}/>;
+    default: return <div style={{width: 14, height: 14, borderRadius: 'var(--radius-xs)', background: '#555'}}/>;
   }
 };
 

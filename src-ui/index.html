@@ -6,12 +6,15 @@
     <meta name="description" content="Coffee CLI — Your Multi-Agent AI Terminal Companion." />
     <title>Coffee CLI</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <!-- Apply theme BEFORE React renders to prevent flash of unstyled variables -->
+    <!-- Apply theme + shape BEFORE React renders to prevent flash of unstyled variables -->
     <script>
       (function() {
         var theme = 'dark';
-        try { theme = localStorage.getItem('hc-theme') || 'dark'; } catch(e) {}
+        var shape = 'soft';
+        try { theme = localStorage.getItem('cc-theme') || 'dark'; } catch(e) {}
+        try { shape = localStorage.getItem('cc-shape') || 'soft'; } catch(e) {}
         document.documentElement.setAttribute('data-theme', theme);
+        document.documentElement.setAttribute('data-shape', shape);
       })();
     </script>
     <!-- emulators: DOSBox WASM engine for Coffee Play arcade (no UI deps) -->

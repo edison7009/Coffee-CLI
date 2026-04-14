@@ -149,7 +149,7 @@ fn window_maximize(window: tauri::Window) {
 fn window_close(window: tauri::Window, app: tauri::AppHandle) {
     let label = window.label().to_string();
     if label == "main" {
-        // Main window: close entire application (including island + all detached)
+        // Main window: close entire application (including all detached windows)
         app.exit(0);
     } else {
         // Detached window: just close this one
@@ -194,9 +194,6 @@ fn create_detached_window(
     .center()
     .build()
     .map_err(|e| format!("Failed to create window: {}", e))?;
-
-    #[cfg(debug_assertions)]
-    _window.open_devtools();
 
     Ok(())
 }
@@ -478,6 +475,12 @@ fn write_temp_script(content: String, extension: String) -> Result<String, Strin
     let path = tmp_dir.join(&filename);
     let mut file = std::fs::File::create(&path)
         .map_err(|e| format!("Failed to create temp script: {}", e))?;
+    // Windows PowerShell 5.x reads .ps1 files using the system codepage (e.g. GBK)
+    // unless the file starts with a UTF-8 BOM. Without BOM, CJK characters are garbled.
+    if ext == "ps1" {
+        file.write_all(b"\xEF\xBB\xBF")
+            .map_err(|e| format!("Failed to write BOM: {}", e))?;
+    }
     file.write_all(content.as_bytes())
         .map_err(|e| format!("Failed to write temp script: {}", e))?;
     // Make executable on Unix
@@ -494,7 +497,7 @@ fn write_temp_script(content: String, extension: String) -> Result<String, Strin
 /// Open the native file explorer and highlight / reveal the given path.
 #[tauri::command]
 fn show_in_folder(path: String) -> Result<(), String> {
-    let p = std::path::Path::new(&path);
+    let _p = std::path::Path::new(&path);
     #[cfg(target_os = "windows")]
     {
         // explorer /select, highlights the item in its parent folder.
@@ -1491,16 +1494,7 @@ pub fn start_ui(project_dir: PathBuf) -> anyhow::Result<()> {
             load_tasks,
             save_tasks,
         ])
-        .setup(|app| {
-            if cfg!(debug_assertions) {
-                app.handle().plugin(
-                    tauri_plugin_log::Builder::default()
-                        .level(log::LevelFilter::Info)
-                        .build(),
-                )?;
-            }
-
-
+        .setup(|_app| {
             Ok(())
         })
         .run(tauri::generate_context!())

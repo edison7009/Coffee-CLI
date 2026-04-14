@@ -12,11 +12,16 @@ import './styles/global.css';
 export function App() {
   const { state, dispatch } = useAppState();
 
-  // Apply theme on mount and change — must sync with the inline script in index.html
+  // Apply theme + shape on mount and change — must sync with the inline script in index.html
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', state.currentTheme);
     try { localStorage.setItem('cc-theme', state.currentTheme); } catch {}
   }, [state.currentTheme]);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-shape', state.currentShape);
+    try { localStorage.setItem('cc-shape', state.currentShape); } catch {}
+  }, [state.currentShape]);
 
   // Startup: resolve IPC, load model config
   useEffect(() => {
@@ -32,6 +37,20 @@ export function App() {
     }, 100);
     return () => clearTimeout(timer);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Suppress the default browser right-click menu. Desktop apps should not
+  // expose "Back / Reload / Save As / Print / Inspect" to end users.
+  // The left Explorer panel is exempt — it has its own custom file context menu.
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      // Allow custom context menu inside the Explorer panel
+      if (target.closest('.panel-left')) return;
+      e.preventDefault();
+    };
+    document.addEventListener('contextmenu', handler);
+    return () => document.removeEventListener('contextmenu', handler);
+  }, []);
 
   return (
     <>

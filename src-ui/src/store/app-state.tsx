@@ -7,7 +7,11 @@ import type { ScanResult, ModelConfig } from '../tauri';
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export type ToolType = 'claude' | 'codex' | 'installer' | 'hermes' | 'opencode' | 'arcade' | 'terminal' | 'remote' | 'history' | null;
-export type AgentStatus = 'working' | 'idle' | 'wait_input';
+
+// Theme: color palette (orthogonal to shape)
+export type ThemeColor = 'dark' | 'light' | 'cappuccino' | 'sakura' | 'lavender' | 'mint';
+// Theme: shape form (orthogonal to color)
+export type ThemeShape = 'soft' | 'slab' | 'sharp' | 'blade' | 'panel';
 
 export interface TerminalSession {
   id: string;
@@ -15,7 +19,6 @@ export interface TerminalSession {
   toolData?: string;  // Extra context for the tool (e.g. game filename for arcade)
   folderPath: string | null;
   scanData: ScanResult | null;
-  agentStatus: AgentStatus;
   restartKey?: number;
   isHidden?: boolean;
 }
@@ -24,7 +27,8 @@ export interface TerminalSession {
 
 export interface AppState {
   // UI
-  currentTheme: 'dark' | 'light';
+  currentTheme: ThemeColor;
+  currentShape: ThemeShape;
   currentLang: string;
 
   // Model
@@ -41,14 +45,14 @@ type Action =
   | { type: 'SET_FOLDER'; path: string }
   | { type: 'CLEAR_FOLDER' }
   | { type: 'SET_SCAN'; data: ScanResult }
-  | { type: 'SET_THEME'; theme: 'dark' | 'light' }
+  | { type: 'SET_THEME'; theme: ThemeColor }
+  | { type: 'SET_SHAPE'; shape: ThemeShape }
   | { type: 'SET_LANG'; lang: string }
   | { type: 'SET_MODEL'; model: ModelConfig }
   | { type: 'ADD_TERMINAL'; session: TerminalSession }
   | { type: 'REMOVE_TERMINAL'; id: string }
   | { type: 'SET_ACTIVE_TERMINAL'; id: string | null }
   | { type: 'SET_TERMINAL_TOOL'; id: string; tool: ToolType; toolData?: string }
-  | { type: 'SET_AGENT_STATUS'; id: string; status: AgentStatus }
   | { type: 'SET_TERMINAL_HIDDEN'; id: string; isHidden: boolean }
   | { type: 'RESTART_TERMINAL'; id: string; newId: string }
   | { type: 'OPEN_HISTORY_TAB'; sessionData: string; folderPath: string };
@@ -74,6 +78,8 @@ function reducer(state: AppState, action: Action): AppState {
       };
     case 'SET_THEME':
       return { ...state, currentTheme: action.theme };
+    case 'SET_SHAPE':
+      return { ...state, currentShape: action.shape };
     case 'SET_LANG':
       return { ...state, currentLang: action.lang };
     case 'SET_MODEL':
@@ -91,7 +97,7 @@ function reducer(state: AppState, action: Action): AppState {
       if (newTerminals.length === 0) {
         const defaultId = crypto.randomUUID();
         const folderPath = state.terminals.length > 0 ? state.terminals[0].folderPath : null;
-        newTerminals = [{ id: defaultId, tool: null, folderPath, scanData: null, agentStatus: 'idle' }];
+        newTerminals = [{ id: defaultId, tool: null, folderPath, scanData: null }];
         newActiveId = defaultId;
       } else if (state.activeTerminalId === action.id) {
          newActiveId = newTerminals[newTerminals.length - 1].id;
@@ -104,11 +110,6 @@ function reducer(state: AppState, action: Action): AppState {
       return {
         ...state,
         terminals: state.terminals.map(t => t.id === action.id ? { ...t, tool: action.tool, toolData: action.toolData } : t)
-      };
-    case 'SET_AGENT_STATUS':
-      return {
-        ...state,
-        terminals: state.terminals.map(t => t.id === action.id ? { ...t, agentStatus: action.status } : t)
       };
     case 'SET_TERMINAL_HIDDEN':
       return {
@@ -143,7 +144,6 @@ function reducer(state: AppState, action: Action): AppState {
             toolData: action.sessionData,
             folderPath: action.folderPath,
             scanData: null,
-            agentStatus: 'idle',
           }],
           activeTerminalId: newId
         };
@@ -156,14 +156,23 @@ function reducer(state: AppState, action: Action): AppState {
 
 // ─── Initial State ────────────────────────────────────────────────────────────
 
+const VALID_THEMES: ThemeColor[] = ['dark', 'light', 'cappuccino', 'sakura', 'lavender', 'mint'];
+const VALID_SHAPES: ThemeShape[] = ['soft', 'slab', 'sharp', 'blade', 'panel'];
+
 function getInitialState(): AppState {
-  let theme: 'dark' | 'light' = 'dark';
+  let theme: ThemeColor = 'dark';
+  let shape: ThemeShape = 'soft';
   let lang = 'zh-CN';
   let folderPath: string | null = null;
 
   try {
-    const savedTheme = localStorage.getItem('cc-theme') as 'dark' | 'light' | null;
-    if (savedTheme) theme = savedTheme;
+    const savedTheme = localStorage.getItem('cc-theme') as ThemeColor | null;
+    if (savedTheme && VALID_THEMES.includes(savedTheme)) theme = savedTheme;
+  } catch {}
+
+  try {
+    const savedShape = localStorage.getItem('cc-shape') as ThemeShape | null;
+    if (savedShape && VALID_SHAPES.includes(savedShape)) shape = savedShape;
   } catch {}
 
   try { folderPath = localStorage.getItem('cc-folder'); } catch {}
@@ -177,9 +186,10 @@ function getInitialState(): AppState {
 
   return {
     currentTheme: theme,
+    currentShape: shape,
     currentLang: lang,
     modelConfig: null,
-    terminals: [{ id: defaultTerminalId, tool: null, folderPath, scanData: null, agentStatus: 'idle' as AgentStatus }],
+    terminals: [{ id: defaultTerminalId, tool: null, folderPath, scanData: null }],
     activeTerminalId: defaultTerminalId,
   };
 }

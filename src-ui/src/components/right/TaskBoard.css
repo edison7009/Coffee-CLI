@@ -42,7 +42,7 @@
   backdrop-filter: var(--glass-blur, blur(12px));
   -webkit-backdrop-filter: var(--glass-blur, blur(12px));
   border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   padding: 8px 10px 8px 14px;
   transition: border-color 0.2s, box-shadow 0.2s;
   flex-shrink: 0;
@@ -53,7 +53,7 @@
   display: flex;
   background: var(--bg-card);
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 4px;
   margin: 12px 0 8px 0;
   flex-shrink: 0;
@@ -111,7 +111,7 @@
   justify-content: center;
   width: 28px;
   height: 28px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   border: none;
   background: rgba(196, 149, 106, 0.1);
   color: rgba(196, 149, 106, 0.35);
@@ -198,7 +198,7 @@
   color: var(--text-3, rgba(255, 255, 255, 0.25));
   background: rgba(255, 255, 255, 0.05);
   padding: 1px 6px;
-  border-radius: 8px;
+  border-radius: var(--radius-pill);
   min-width: 16px;
   text-align: center;
 }
@@ -216,7 +216,7 @@
 .task-section-wrapper.empty-drop-zone .task-droppable-area {
   min-height: 42px;
   border: 1.5px dashed rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   transition: border-color 0.2s, background-color 0.2s;
 }
 
@@ -231,7 +231,7 @@
   display: flex;
   flex-direction: column;
   padding: 0;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.03);
   transform-origin: top center;
   overflow: hidden;
@@ -289,7 +289,7 @@
   z-index: 99999;
   pointer-events: none;
   opacity: 0.92;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   box-shadow: 0 20px 30px -8px rgba(0, 0, 0, 0.5), 0 8px 12px -4px rgba(0, 0, 0, 0.3);
   background: rgba(40, 40, 42, 0.98);
   transform: scale(1.03);
@@ -358,7 +358,7 @@
   padding: 14px 12px;
   margin: -14px -2px -14px -12px;
   flex-shrink: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
@@ -433,7 +433,7 @@
   justify-content: center;
   width: 22px;
   height: 22px;
-  border-radius: 6px;
+  border-radius: var(--radius-xs);
   background: rgba(74, 222, 128, 0.12);
   border: none;
   color: #4ade80;
@@ -501,7 +501,7 @@
   justify-content: center;
   width: 22px;
   height: 22px;
-  border-radius: 6px;
+  border-radius: var(--radius-xs);
   background: transparent;
   border: none;
   color: var(--text-3, rgba(255, 255, 255, 0.15));
@@ -527,7 +527,7 @@
   justify-content: center;
   width: 22px;
   height: 22px;
-  border-radius: 6px;
+  border-radius: var(--radius-xs);
   background: transparent;
   border: none;
   color: var(--text-3, rgba(255, 255, 255, 0.15));
@@ -590,7 +590,7 @@
 .task-fab-simple {
   width: 48px;
   height: 48px;
-  border-radius: 24px;
+  border-radius: var(--radius-pill);
   background: var(--accent);
   color: #fff;
   border: none;
