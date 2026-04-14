@@ -376,7 +376,7 @@ while true; do
 
     echo -e "${CYAN}=== Install ===${RESET}"
     echo "  1.  Claude Code"
-    echo "  2.  OpenAI Codex CLI"
+    echo "  2.  Qwen Code"
     echo "  3.  OpenCode CLI"
     echo "  4.  Hermes (Nous Research)"
     echo -e "\n${CYAN}=== Language Packs${active_mark} ===${RESET}"
@@ -392,9 +392,8 @@ while true; do
     echo "  LE. English          (restore default)"
     echo -e "\n${YELLOW}=== Uninstall ===${RESET}"
     echo "  5.  Claude Code"
-    echo "  6.  OpenAI Codex CLI"
-    echo "  7.  OpenCode CLI"
-    echo "  8.  Hermes"
+    echo "  6.  OpenCode CLI"
+    echo "  7.  Hermes"
     echo -e "\n${GRAY}  q.  Quit${RESET}"
     echo "--------------------------------"
 
@@ -409,10 +408,13 @@ while true; do
             fi
             ;;
         2)
-            echo -e "\n${CYAN}  Installing OpenAI Codex CLI...${RESET}\n"
-            # shellcheck disable=SC2086
-            if run_install "OpenAI Codex" npm install -g @openai/codex@latest $registryArgs; then
-                print_success "OpenAI Codex CLI" "https://github.com/openai/codex" "codex --version"
+            echo -e "\n${CYAN}  Installing Qwen Code...${RESET}\n"
+            if bash -c "$(curl -fsSL https://qwen-code-assets.oss-cn-hangzhou.aliyuncs.com/installation/install-qwen.sh)" -s --source qwenchat; then
+                print_success "Qwen Code" "https://qwen.ai/qwencode" "qwen --version"
+            else
+                echo -e "\n${RED}  [Error] Installation failed. See output above.${RESET}"
+                echo -en "  Press Enter to return to menu..."
+                read -r
             fi
             ;;
         3)
@@ -437,14 +439,10 @@ while true; do
             run_uninstall "Claude Code" npm uninstall -g @anthropic-ai/claude-code
             ;;
         6)
-            echo -e "\n${YELLOW}  Uninstalling OpenAI Codex CLI...${RESET}\n"
-            run_uninstall "OpenAI Codex CLI" npm uninstall -g @openai/codex
-            ;;
-        7)
             echo -e "\n${YELLOW}  Uninstalling OpenCode CLI...${RESET}\n"
             run_uninstall "OpenCode CLI" npm uninstall -g opencode-ai
             ;;
-        8)
+        7)
             echo -e "\n${YELLOW}  Uninstalling Hermes...${RESET}\n"
             if command -v uv &>/dev/null; then
                 run_uninstall "Hermes" uv pip uninstall hermes-agent -y

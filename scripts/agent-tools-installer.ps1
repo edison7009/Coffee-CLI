@@ -364,7 +364,7 @@ function Draw-Menu {
 # Build flat menu items list
 $menu = @()
 $menu += @{ Section = "install"; Label = "Claude Code";            Action = "i-claude"   }
-$menu += @{ Section = "install"; Label = "OpenAI Codex CLI";       Action = "i-codex"    }
+$menu += @{ Section = "install"; Label = "Qwen Code";              Action = "i-qwen"     }
 $menu += @{ Section = "install"; Label = "OpenCode CLI";           Action = "i-opencode" }
 $menu += @{ Section = "install"; Label = "Hermes (Nous Research)"; Action = "i-hermes"   }
 for ($i = 0; $i -lt $LANGUAGE_PACKS.Count; $i++) {
@@ -373,7 +373,6 @@ for ($i = 0; $i -lt $LANGUAGE_PACKS.Count; $i++) {
 }
 $menu += @{ Section = "lang"; Label = "English (restore default)"; Action = "lang-en" }
 $menu += @{ Section = "uninstall"; Label = "Claude Code";            Action = "u-claude"   }
-$menu += @{ Section = "uninstall"; Label = "OpenAI Codex CLI";       Action = "u-codex"    }
 $menu += @{ Section = "uninstall"; Label = "OpenCode CLI";           Action = "u-opencode" }
 $menu += @{ Section = "uninstall"; Label = "Hermes";                 Action = "u-hermes"   }
 
@@ -407,10 +406,14 @@ try {
                         $ok = Run-Install "Claude Code" { npm install -g @anthropic-ai/claude-code }
                         if ($ok) { Show-Success "Claude Code" "https://claude.ai/code" "claude --version" }
                     }
-                    "i-codex" {
-                        Write-Host "`n  Installing OpenAI Codex CLI...`n" -ForegroundColor Cyan
-                        $ok = Run-Install "OpenAI Codex" { npm install -g @openai/codex@latest }
-                        if ($ok) { Show-Success "OpenAI Codex CLI" "https://github.com/openai/codex" "codex --version" }
+                    "i-qwen" {
+                        Write-Host "`n  Installing Qwen Code...`n" -ForegroundColor Cyan
+                        $ok = Run-Install "Qwen Code" {
+                            $batPath = "$env:TEMP\install-qwen.bat"
+                            Invoke-WebRequest -Uri "https://qwen-code-assets.oss-cn-hangzhou.aliyuncs.com/installation/install-qwen.bat" -OutFile $batPath -UseBasicParsing -ErrorAction Stop
+                            & cmd /c "$batPath --source qwenchat"
+                        }
+                        if ($ok) { Show-Success "Qwen Code" "https://qwen.ai/qwencode" "qwen --version" }
                     }
                     "i-opencode" {
                         Write-Host "`n  Installing OpenCode CLI...`n" -ForegroundColor Cyan
@@ -434,10 +437,6 @@ try {
                     "u-claude" {
                         Write-Host "`n  Uninstalling Claude Code...`n" -ForegroundColor Yellow
                         Run-Uninstall "Claude Code" { npm uninstall -g @anthropic-ai/claude-code }
-                    }
-                    "u-codex" {
-                        Write-Host "`n  Uninstalling OpenAI Codex CLI...`n" -ForegroundColor Yellow
-                        Run-Uninstall "OpenAI Codex CLI" { npm uninstall -g @openai/codex }
                     }
                     "u-opencode" {
                         Write-Host "`n  Uninstalling OpenCode CLI...`n" -ForegroundColor Yellow
