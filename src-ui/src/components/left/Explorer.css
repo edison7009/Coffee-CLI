@@ -472,6 +472,64 @@
   font-weight: 600;
 }
 
+/* ─── Icon Theme Filters (CSS filter group — auto-follows color scheme) ─── */
+
+/* default: no filter, use native SVG colors */
+.explorer-panel[data-icon-theme="minimal"] .icon-svg {
+  filter: grayscale(1) brightness(1.15);
+}
+.explorer-panel[data-icon-theme="neon"] .icon-svg {
+  filter: saturate(2.5) brightness(1.15) contrast(1.1);
+}
+.explorer-panel[data-icon-theme="retro"] .icon-svg {
+  filter: sepia(0.85) saturate(1.6) hue-rotate(-10deg);
+}
+.explorer-panel[data-icon-theme="ocean"] .icon-svg {
+  filter: saturate(1.5) hue-rotate(160deg) brightness(1.05);
+}
+/* Art themes: no CSS filter — icons supply their own colors */
+.explorer-panel[data-icon-theme="flat"] .icon-svg,
+.explorer-panel[data-icon-theme="outline"] .icon-svg,
+.explorer-panel[data-icon-theme="pixel"] .icon-svg,
+.explorer-panel[data-icon-theme="gradient"] .icon-svg,
+.explorer-panel[data-icon-theme="round"] .icon-svg,
+.explorer-panel[data-icon-theme="glow"] .icon-svg,
+.explorer-panel[data-icon-theme="pastel"] .icon-svg {
+  filter: none;
+}
+
+/* Icon theme picker chips (folder thumbnail style) */
+.icon-theme-row {
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.icon-theme-chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.icon-theme-chip:hover {
+  background: var(--bg-hover, rgba(255,255,255,0.08));
+  border-color: var(--border-soft, rgba(255,255,255,0.2));
+}
+.icon-theme-chip.active {
+  border-color: var(--accent, #4fc3f7);
+  background: var(--bg-selected, rgba(79,195,247,0.12));
+}
+.icon-theme-chip img {
+  display: block;
+  pointer-events: none;
+}
+
+
 /* ─── Inline Rename Input ─────────────────────────────────────────────────── */
 
 /* The rename wrapper sits in exact same flow position as the name span */

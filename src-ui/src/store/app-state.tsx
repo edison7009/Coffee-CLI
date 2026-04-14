@@ -2,16 +2,20 @@
 
 import { createContext, useContext, useReducer } from 'react';
 import type { ReactNode } from 'react';
-import type { ScanResult, ModelConfig } from '../tauri';
+import type { ScanResult } from '../tauri';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type ToolType = 'claude' | 'codex' | 'installer' | 'hermes' | 'opencode' | 'arcade' | 'terminal' | 'remote' | 'history' | null;
+export type ToolType = 'claude' | 'codex' | 'qwen' | 'installer' | 'hermes' | 'opencode' | 'arcade' | 'terminal' | 'remote' | 'history' | null;
 
 // Theme: color palette (orthogonal to shape)
 export type ThemeColor = 'dark' | 'light' | 'cappuccino' | 'sakura' | 'lavender' | 'mint';
 // Theme: shape form (orthogonal to color)
 export type ThemeShape = 'soft' | 'slab' | 'sharp' | 'blade' | 'panel';
+// Icon theme: visual style for file/folder icons in the explorer
+// CSS-filter group (auto-follows color scheme): minimal, neon, retro, ocean
+// SVG art-style group (own icon sets): flat, outline, pixel
+export type IconTheme = 'default' | 'minimal' | 'neon' | 'retro' | 'ocean' | 'flat' | 'outline' | 'pixel' | 'gradient' | 'round' | 'glow' | 'pastel';
 
 export interface TerminalSession {
   id: string;
@@ -30,9 +34,7 @@ export interface AppState {
   currentTheme: ThemeColor;
   currentShape: ThemeShape;
   currentLang: string;
-
-  // Model
-  modelConfig: ModelConfig | null;
+  iconTheme: IconTheme;
 
   // Terminals
   terminals: TerminalSession[];
@@ -47,8 +49,8 @@ type Action =
   | { type: 'SET_SCAN'; data: ScanResult }
   | { type: 'SET_THEME'; theme: ThemeColor }
   | { type: 'SET_SHAPE'; shape: ThemeShape }
+  | { type: 'SET_ICON_THEME'; theme: IconTheme }
   | { type: 'SET_LANG'; lang: string }
-  | { type: 'SET_MODEL'; model: ModelConfig }
   | { type: 'ADD_TERMINAL'; session: TerminalSession }
   | { type: 'REMOVE_TERMINAL'; id: string }
   | { type: 'SET_ACTIVE_TERMINAL'; id: string | null }
@@ -80,10 +82,10 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, currentTheme: action.theme };
     case 'SET_SHAPE':
       return { ...state, currentShape: action.shape };
+    case 'SET_ICON_THEME':
+      return { ...state, iconTheme: action.theme };
     case 'SET_LANG':
       return { ...state, currentLang: action.lang };
-    case 'SET_MODEL':
-      return { ...state, modelConfig: action.model };
     case 'ADD_TERMINAL':
       return { 
         ...state, 
@@ -158,10 +160,12 @@ function reducer(state: AppState, action: Action): AppState {
 
 const VALID_THEMES: ThemeColor[] = ['dark', 'light', 'cappuccino', 'sakura', 'lavender', 'mint'];
 const VALID_SHAPES: ThemeShape[] = ['soft', 'slab', 'sharp', 'blade', 'panel'];
+const VALID_ICON_THEMES: IconTheme[] = ['default', 'minimal', 'neon', 'retro', 'ocean', 'flat', 'outline', 'pixel', 'gradient', 'round', 'glow', 'pastel'];
 
 function getInitialState(): AppState {
   let theme: ThemeColor = 'dark';
   let shape: ThemeShape = 'soft';
+  let iconTheme: IconTheme = 'default';
   let lang = 'zh-CN';
   let folderPath: string | null = null;
 
@@ -173,6 +177,11 @@ function getInitialState(): AppState {
   try {
     const savedShape = localStorage.getItem('cc-shape') as ThemeShape | null;
     if (savedShape && VALID_SHAPES.includes(savedShape)) shape = savedShape;
+  } catch {}
+
+  try {
+    const savedIconTheme = localStorage.getItem('cc-icon-theme') as IconTheme | null;
+    if (savedIconTheme && VALID_ICON_THEMES.includes(savedIconTheme)) iconTheme = savedIconTheme;
   } catch {}
 
   try { folderPath = localStorage.getItem('cc-folder'); } catch {}
@@ -187,8 +196,8 @@ function getInitialState(): AppState {
   return {
     currentTheme: theme,
     currentShape: shape,
+    iconTheme,
     currentLang: lang,
-    modelConfig: null,
     terminals: [{ id: defaultTerminalId, tool: null, folderPath, scanData: null }],
     activeTerminalId: defaultTerminalId,
   };

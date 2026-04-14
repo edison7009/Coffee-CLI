@@ -79,6 +79,7 @@ export const es = {
   'theme.section.color': 'Colores',
   'theme.section.shape': 'Forma',
   'theme.section.presets': 'Combinaciones',
+  'theme.section.icons': 'Iconos',
   'theme.color.light': 'Claro',
   'theme.color.dark': 'Oscuro',
   'theme.color.cappuccino': 'Code Dark',

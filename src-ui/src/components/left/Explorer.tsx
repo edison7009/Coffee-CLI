@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useAppState } from '../../store/app-state';
-import type { ThemeColor, ThemeShape } from '../../store/app-state';
+import type { ThemeColor, ThemeShape, IconTheme } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
 import { ScrollPanel } from '../common/ScrollPanel';
 import { commands } from '../../tauri';
@@ -302,13 +302,26 @@ const THEME_PRESETS: { labelKey: string; theme: ThemeColor; shape: ThemeShape }[
   { labelKey: 'theme.preset.light_soft',      theme: 'light',      shape: 'soft'  },
 ];
 
-function ThemeMenu({ anchorRef, currentTheme, currentShape, onSelectTheme, onSelectShape, onSelectPreset, onClose, t }: {
+const ICON_ART_THEMES: { id: IconTheme; folderSrc: string }[] = [
+  { id: 'default',  folderSrc: '/icons/folder-closed.svg'                    },
+  { id: 'flat',     folderSrc: '/icons/themes/flat/folder-closed.svg'        },
+  { id: 'outline',  folderSrc: '/icons/themes/outline/folder-closed.svg'     },
+  { id: 'pixel',    folderSrc: '/icons/themes/pixel/folder-closed.svg'       },
+  { id: 'gradient', folderSrc: '/icons/themes/gradient/folder-closed.svg'    },
+  { id: 'round',    folderSrc: '/icons/themes/round/folder-closed.svg'       },
+  { id: 'glow',     folderSrc: '/icons/themes/glow/folder-closed.svg'        },
+  { id: 'pastel',   folderSrc: '/icons/themes/pastel/folder-closed.svg'      },
+];
+
+function ThemeMenu({ anchorRef, currentTheme, currentShape, currentIconTheme, onSelectTheme, onSelectShape, onSelectPreset, onSelectIconTheme, onClose, t }: {
   anchorRef: React.RefObject<HTMLButtonElement | null>;
   currentTheme: ThemeColor;
   currentShape: ThemeShape;
+  currentIconTheme: IconTheme;
   onSelectTheme: (t: ThemeColor) => void;
   onSelectShape: (s: ThemeShape) => void;
   onSelectPreset: (t: ThemeColor, s: ThemeShape) => void;
+  onSelectIconTheme: (t: IconTheme) => void;
   onClose: () => void;
   t: (key: any) => string;
 }) {
@@ -378,6 +391,20 @@ function ThemeMenu({ anchorRef, currentTheme, currentShape, onSelectTheme, onSel
           </button>
         ))}
       </div>
+
+      <div className="ctx-menu-divider" />
+      <div className="theme-menu-section-label">{t('theme.section.icons')}</div>
+      <div className="theme-shape-row icon-theme-row">
+        {ICON_ART_THEMES.map(({ id, folderSrc }) => (
+          <button
+            key={id}
+            className={`icon-theme-chip ${currentIconTheme === id ? 'active' : ''}`}
+            onClick={() => onSelectIconTheme(id)}
+          >
+            <img src={folderSrc} alt={id} width="22" height="22" />
+          </button>
+        ))}
+      </div>
     </div>,
     document.body
   );
@@ -386,6 +413,27 @@ function ThemeMenu({ anchorRef, currentTheme, currentShape, onSelectTheme, onSel
 function formatBytes(b: number) {
   return b < 1024 ? b + ' B' : (b / 1024).toFixed(1) + ' KB';
 }
+
+// ─── Icon Themes ──────────────────────────────────────────────────────────────
+
+// Art-style themes have real SVG assets in /icons/themes/<id>/.
+// Filter themes reuse the default icons and rely on CSS filters in Explorer.css.
+const ART_THEMES = new Set<IconTheme>(['flat', 'outline', 'pixel', 'gradient', 'round', 'glow', 'pastel']);
+
+/** Returns the correct icon path for folder/file icons based on active theme. */
+function getIconPath(theme: IconTheme, name: string): string {
+  if (ART_THEMES.has(theme)) return `/icons/themes/${theme}/${name}`;
+  return `/icons/${name}`; // default + filter themes use root icons
+}
+
+/** Returns the correct path for a language-specific file icon.
+ *  Art themes have their own icon sets; filter/default themes use root /icons/. */
+function getFileIconSrc(ext: string, theme: IconTheme): string {
+  const name = getFileIcon(ext);
+  if (ART_THEMES.has(theme)) return `/icons/themes/${theme}/${name}`;
+  return `/icons/${name}`;
+}
+
 
 function getFileIcon(ext: string): string {
   const m: Record<string, string> = {
@@ -428,6 +476,7 @@ function DirNode({ name, node, folderPath, onCtxMenu }: {
   folderPath: string;
   onCtxMenu: (menu: CtxMenuState) => void;
 }) {
+  const { state: { iconTheme } } = useAppState();
   const [open, setOpen] = useState(false);
 
   const children = Object.entries(node.children).sort(([aK, aV], [bK, bV]) => {
@@ -488,7 +537,7 @@ function DirNode({ name, node, folderPath, onCtxMenu }: {
       >
         <span className={`tree-arrow ${open ? '' : 'closed'}`}>▾</span>
         <span className="tree-icon">
-          <img src={open ? '/icons/folder-open.svg' : '/icons/folder-closed.svg'} alt="dir" className="icon-svg" />
+          <img src={getIconPath(iconTheme, open ? 'folder-open.svg' : 'folder-closed.svg')} alt="dir" className="icon-svg" />
         </span>
         <span className="tree-name" style={{ display: renaming ? 'none' : undefined }}>{name}</span>
         <input
@@ -524,7 +573,7 @@ function FileNode({ name, file, folderPath, onCtxMenu }: {
   folderPath: string;
   onCtxMenu: (menu: CtxMenuState) => void;
 }) {
-  const icon = getFileIcon(file.extension);
+  const { state: { iconTheme } } = useAppState();
   const badge = file.symbols.length > 0 ? `${file.symbols.length} sym` : formatBytes(file.size);
   const [renaming, setRenaming] = useState(false);
   const [renameVal, setRenameVal] = useState(name);
@@ -559,7 +608,7 @@ function FileNode({ name, file, folderPath, onCtxMenu }: {
   return (
     <div className={`tree-file ${renaming ? 'renaming' : ''}`} onContextMenu={handleCtxMenu}>
       <span className="tree-icon">
-        <img src={`/icons/${icon}`} alt="err" className="icon-svg" onError={(e) => (e.currentTarget.src = '/icons/file.svg')} />
+        <img src={getFileIconSrc(file.extension, iconTheme)} alt="err" className="icon-svg" onError={(e) => (e.currentTarget.src = getIconPath(iconTheme, 'file.svg'))} />
       </span>
       <span className="tree-fname" style={{ display: renaming ? 'none' : undefined }}>{name}</span>
       <input
@@ -590,6 +639,7 @@ const DRIVE_ICONS: Record<string, string> = {};
 /** A single expandable directory node for the "My Computer" tab.
  *  Loads children lazily from the backend on first expand. */
 function BrowserDirNode({ name, dirPath, icon, onCtxMenu }: { name: string; dirPath: string; icon?: string; onCtxMenu: (menu: CtxMenuState) => void }) {
+  const { state: { iconTheme } } = useAppState();
   const [open, setOpen] = useState(false);
   const [children, setChildren] = useState<DirEntryInfo[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -663,7 +713,7 @@ function BrowserDirNode({ name, dirPath, icon, onCtxMenu }: { name: string; dirP
       <div className={`tree-dir-header ${renaming ? 'renaming' : ''}`} onClick={() => !renaming && toggle()} onContextMenu={handleDirCtxMenu}>
         <span className={`tree-arrow ${open ? '' : 'closed'}`}>▾</span>
         <span className="tree-icon">
-          <img src={icon || (open ? '/icons/folder-open.svg' : '/icons/folder-closed.svg')} alt="dir" className="icon-svg" />
+          <img src={icon || getIconPath(iconTheme, open ? 'folder-open.svg' : 'folder-closed.svg')} alt="dir" className="icon-svg" />
         </span>
         <span className="tree-name" style={{ display: renaming ? 'none' : undefined }}>{name}</span>
         <input
@@ -705,6 +755,7 @@ function BrowserFileNode({ entry, parentDirPath, onCtxMenu }: {
   parentDirPath: string;
   onCtxMenu: (menu: CtxMenuState) => void;
 }) {
+  const { state: { iconTheme } } = useAppState();
   const [renaming, setRenaming] = useState(false);
   const [renameVal, setRenameVal] = useState(entry.name);
   const renameInputRef = useRef<HTMLInputElement>(null);
@@ -739,10 +790,10 @@ function BrowserFileNode({ entry, parentDirPath, onCtxMenu }: {
     <div className={`tree-file ${renaming ? 'renaming' : ''}`} onContextMenu={handleCtxMenu}>
       <span className="tree-icon">
         <img
-          src={`/icons/${getFileIcon(entry.name.split('.').pop() || '')}`}
+          src={getFileIconSrc(entry.name.split('.').pop() || '', iconTheme)}
           alt="file"
           className="icon-svg"
-          onError={(e) => (e.currentTarget.src = '/icons/file.svg')}
+          onError={(e) => (e.currentTarget.src = getIconPath(iconTheme, 'file.svg'))}
         />
       </span>
       <span className="tree-fname" style={{ display: renaming ? 'none' : undefined }}>{entry.name}</span>
@@ -855,7 +906,7 @@ export function Explorer() {
   const treeRoot = useMemo(() => buildTree(files), [files]);
 
   return (
-    <div className="panel panel-left explorer-panel">
+    <div className="panel panel-left explorer-panel" data-icon-theme={state.iconTheme}>
       {/* Brand + theme/lang controls */}
       <div className="panel-header">
         <div className="brand">
@@ -1016,17 +1067,22 @@ export function Explorer() {
         />
       )}
 
-      {/* Theme menu (color × shape) */}
+      {/* Theme menu (color × shape × icon style) */}
       {themeMenuOpen && (
         <ThemeMenu
           anchorRef={themeBtnRef}
           currentTheme={state.currentTheme}
           currentShape={state.currentShape}
+          currentIconTheme={state.iconTheme}
           onSelectTheme={(t) => dispatch({ type: 'SET_THEME', theme: t })}
           onSelectShape={(s) => dispatch({ type: 'SET_SHAPE', shape: s })}
           onSelectPreset={(t, s) => {
             dispatch({ type: 'SET_THEME', theme: t });
             dispatch({ type: 'SET_SHAPE', shape: s });
+          }}
+          onSelectIconTheme={(t) => {
+            dispatch({ type: 'SET_ICON_THEME', theme: t });
+            try { localStorage.setItem('cc-icon-theme', t); } catch {}
           }}
           onClose={() => setThemeMenuOpen(false)}
           t={t}

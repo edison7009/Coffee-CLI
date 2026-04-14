@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" shape-rendering="crispEdges">
+  <rect fill="#902808" width="32" height="32"/>
+  <rect fill="#E34F26" width="30" height="30" x="1" y="1"/>
+  <rect fill="#FF6F46" width="30" height="4" x="1" y="1"/>
+  <rect fill="#902808" width="30" height="2" x="1" y="29"/>
+  <text x="16" y="16" text-anchor="middle" dominant-baseline="central" font-family="system-ui,sans-serif" font-size="9" font-weight="900" fill="#ffffff">HTML</text>
+</svg>

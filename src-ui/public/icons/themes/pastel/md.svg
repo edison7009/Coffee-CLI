@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect fill="#ECEFF1" width="32" height="32" rx="8"/>
+  <circle fill="#78909C" cx="26" cy="6" r="3"/>
+  <text x="16" y="16" text-anchor="middle" dominant-baseline="central" font-family="system-ui,sans-serif" font-size="11" font-weight="700" fill="#37474F">MD</text>
+</svg>

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect fill="#3776AB" width="32" height="32" rx="4"/>
+  <rect fill="#FFD43B" width="32" height="10" y="22" rx="0 0 4 4"/>
+  <text x="16" y="14" text-anchor="middle" dominant-baseline="central" font-family="system-ui,sans-serif" font-size="16" font-weight="800" fill="#ffffff">Py</text>
+</svg>

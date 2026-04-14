@@ -79,6 +79,7 @@ export const zhTW = {
   'theme.section.color': '配色',
   'theme.section.shape': '形態',
   'theme.section.presets': '推薦組合',
+  'theme.section.icons': '圖示風格',
   'theme.color.light': '明亮',
   'theme.color.dark': '暗黑',
   'theme.color.cappuccino': '代碼夜',

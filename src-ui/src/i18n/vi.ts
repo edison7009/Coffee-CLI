@@ -82,6 +82,7 @@ export const vi = {
   'theme.section.color': 'Màu sắc',
   'theme.section.shape': 'Hình dạng',
   'theme.section.presets': 'Gợi ý',
+  'theme.section.icons': 'Biểu tượng',
   'theme.color.light': 'Sáng',
   'theme.color.dark': 'Tối',
   'theme.color.cappuccino': 'Code Dark',

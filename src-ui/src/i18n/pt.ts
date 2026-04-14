@@ -80,6 +80,7 @@ export const pt = {
   'theme.section.color': 'Cores',
   'theme.section.shape': 'Forma',
   'theme.section.presets': 'Combinações',
+  'theme.section.icons': 'Ícones',
   'theme.color.light': 'Claro',
   'theme.color.dark': 'Escuro',
   'theme.color.cappuccino': 'Code Dark',

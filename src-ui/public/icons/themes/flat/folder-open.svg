@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Tab -->
+  <rect fill="#E65100" x="2" y="6" width="13" height="5" rx="1.5"/>
+  <!-- Back panel -->
+  <rect fill="#E65100" x="2" y="10" width="28" height="3" rx="1.5"/>
+  <!-- Open folder body (trapezoid via path) -->
+  <path fill="#FFA726" d="M2 13h28L26 25.5a1.5 1.5 0 0 1-1.44 1.08H5.44A1.5 1.5 0 0 1 4 25.5L2 13z"/>
+  <!-- Highlight strip -->
+  <rect fill="#FFD54F" x="2" y="13" width="28" height="3"/>
+</svg>

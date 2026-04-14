@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" shape-rendering="crispEdges">
+  <rect fill="#1A3A60" width="32" height="32"/>
+  <rect fill="#3776AB" width="30" height="30" x="1" y="1"/>
+  <rect fill="#5796CB" width="30" height="4" x="1" y="1"/>
+  <rect fill="#1A3A60" width="30" height="6" x="1" y="25"/>
+  <rect fill="#FFD43B" width="30" height="6" x="1" y="25"/>
+  <text x="16" y="14" text-anchor="middle" dominant-baseline="central" font-family="system-ui,sans-serif" font-size="13" font-weight="900" fill="#ffffff">Py</text>
+</svg>

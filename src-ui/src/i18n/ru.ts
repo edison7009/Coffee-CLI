@@ -80,6 +80,7 @@ export const ru = {
   'theme.section.color': 'Цвета',
   'theme.section.shape': 'Форма',
   'theme.section.presets': 'Шаблоны',
+  'theme.section.icons': 'Иконки',
   'theme.color.light': 'Светлая',
   'theme.color.dark': 'Тёмная',
   'theme.color.cappuccino': 'Code Dark',

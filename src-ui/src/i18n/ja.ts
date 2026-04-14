@@ -79,6 +79,7 @@ export const ja = {
   'theme.section.color': 'カラー',
   'theme.section.shape': 'シェイプ',
   'theme.section.presets': 'プリセット',
+  'theme.section.icons': 'アイコン',
   'theme.color.light': 'ライト',
   'theme.color.dark': 'ダーク',
   'theme.color.cappuccino': 'コードダーク',

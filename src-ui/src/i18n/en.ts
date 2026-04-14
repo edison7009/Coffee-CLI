@@ -81,6 +81,7 @@ export const en = {
   'theme.section.color': 'Colors',
   'theme.section.shape': 'Shape',
   'theme.section.presets': 'Presets',
+  'theme.section.icons': 'Icon Style',
   'theme.color.light': 'Light',
   'theme.color.dark': 'Dark',
   'theme.color.cappuccino': 'Code Dark',

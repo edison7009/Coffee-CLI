@@ -79,6 +79,7 @@ export const zhCN = {
   'theme.section.color': '配色',
   'theme.section.shape': '形态',
   'theme.section.presets': '推荐组合',
+  'theme.section.icons': '图标风格',
   'theme.color.light': '明亮',
   'theme.color.dark': '暗黑',
   'theme.color.cappuccino': '代码夜',

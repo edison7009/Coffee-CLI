@@ -79,6 +79,7 @@ export const ko = {
   'theme.section.color': '색상',
   'theme.section.shape': '형태',
   'theme.section.presets': '추천 조합',
+  'theme.section.icons': '아이콘 스타일',
   'theme.color.light': '라이트',
   'theme.color.dark': '다크',
   'theme.color.cappuccino': '코드 다크',

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" shape-rendering="crispEdges">
+  <rect fill="#101010" width="32" height="32"/>
+  <rect fill="#292929" width="30" height="30" x="1" y="1"/>
+  <rect fill="#393939" width="30" height="4" x="1" y="1"/>
+  <rect fill="#101010" width="30" height="2" x="1" y="29"/>
+  <text x="16" y="16" text-anchor="middle" dominant-baseline="central" font-family="monospace,system-ui" font-size="12" font-weight="900" fill="#FFC107">{ }</text>
+</svg>

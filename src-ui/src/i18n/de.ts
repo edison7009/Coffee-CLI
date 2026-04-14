@@ -80,6 +80,7 @@ export const de = {
   'theme.section.color': 'Farben',
   'theme.section.shape': 'Form',
   'theme.section.presets': 'Vorlagen',
+  'theme.section.icons': 'Icon-Stil',
   'theme.color.light': 'Hell',
   'theme.color.dark': 'Dunkel',
   'theme.color.cappuccino': 'Code Dark',
