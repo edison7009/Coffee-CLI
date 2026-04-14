@@ -105,7 +105,7 @@ export default {
           "Content-Type": "application/octet-stream",
           "Content-Disposition": `attachment; filename="${filename}"`,
           "Content-Length": fileRes.headers.get("Content-Length") || "",
-          "Cache-Control": "public, max-age=86400",
+          "Cache-Control": "no-cache",
           "Access-Control-Allow-Origin": "*",
         }
       })
