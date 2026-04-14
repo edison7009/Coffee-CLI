@@ -186,7 +186,19 @@ $registryArgs = if ($isChina) { @("--registry=https://registry.npmmirror.com") }
 
 # ── Language Pack Helpers ─────────────────────────────────────────────────────
 
-$LANG_PACK_BASE_URL = "https://raw.githubusercontent.com/edison7009/Coffee-CLI/main/language-packs"
+$LANG_PACK_CF_URL     = "https://coffeecli.com/lang-packs"
+$LANG_PACK_GITHUB_URL = "https://raw.githubusercontent.com/edison7009/Coffee-CLI/main/language-packs"
+
+function Invoke-LangScript($relPath) {
+    # Try Cloudflare first, fall back to GitHub raw
+    foreach ($base in @($LANG_PACK_CF_URL, $LANG_PACK_GITHUB_URL)) {
+        try {
+            $content = (Invoke-WebRequest -Uri "$base/$relPath" -UseBasicParsing -TimeoutSec 10 -ErrorAction Stop).Content
+            return $content
+        } catch { }
+    }
+    throw "Failed to fetch $relPath from both Cloudflare and GitHub."
+}
 
 # Available language packs. Add new ones here when translation data ships.
 $LANGUAGE_PACKS = @(
@@ -215,9 +227,8 @@ function Get-LangLabel($code) {
 
 function Invoke-LangPackInstall($code, $label) {
     Write-Host "`n  Installing language pack: $label..." -ForegroundColor Cyan
-    $url = "$LANG_PACK_BASE_URL/$code/install.ps1"
     try {
-        $script = (Invoke-WebRequest -Uri $url -UseBasicParsing).Content
+        $script = Invoke-LangScript "$code/install.ps1"
         Invoke-Expression $script
     } catch {
         Write-Host "`n  [Error] Install failed: $_" -ForegroundColor Red
@@ -227,9 +238,8 @@ function Invoke-LangPackInstall($code, $label) {
 
 function Invoke-LangPackUninstall($code, $label) {
     Write-Host "`n  Uninstalling language pack: $label..." -ForegroundColor Yellow
-    $url = "$LANG_PACK_BASE_URL/$code/uninstall.ps1"
     try {
-        $script = (Invoke-WebRequest -Uri $url -UseBasicParsing).Content
+        $script = Invoke-LangScript "$code/uninstall.ps1"
         Invoke-Expression $script
     } catch {
         Write-Host "`n  [Error] Uninstall failed: $_" -ForegroundColor Red
