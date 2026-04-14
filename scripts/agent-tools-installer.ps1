@@ -193,10 +193,17 @@ function Invoke-LangScript($relPath) {
     # Try Cloudflare first, fall back to GitHub raw
     foreach ($base in @($LANG_PACK_CF_URL, $LANG_PACK_GITHUB_URL)) {
         try {
-            $content = (Invoke-WebRequest -Uri "$base/$relPath" -UseBasicParsing -TimeoutSec 10 -ErrorAction Stop).Content
-            # Guard: if the server returned an HTML page (e.g. SPA 404 redirect),
-            # skip this source rather than executing web page markup as PowerShell.
-            if ($content -match '(?i)^\s*<!DOCTYPE|^\s*<html') { continue }
+            $resp = Invoke-WebRequest -Uri "$base/$relPath" -UseBasicParsing -TimeoutSec 10 -ErrorAction Stop
+            # Cloudflare Pages may serve .ps1 as application/octet-stream, causing
+            # PowerShell 5's .Content to return a Byte[] instead of a String.
+            # Always decode as UTF-8 so Invoke-Expression receives a String.
+            $content = if ($resp.Content -is [byte[]]) {
+                [System.Text.Encoding]::UTF8.GetString($resp.Content)
+            } else {
+                [string]$resp.Content
+            }
+            # Guard: skip HTML pages (e.g. SPA 404 redirect from coffeecli.com).
+            if ($content -match '(?i)<!DOCTYPE|<html') { continue }
             return $content
         } catch { }
     }
