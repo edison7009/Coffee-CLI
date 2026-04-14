@@ -23,14 +23,11 @@ export function App() {
     try { localStorage.setItem('cc-shape', state.currentShape); } catch {}
   }, [state.currentShape]);
 
-  // Startup: resolve IPC, load model config
+  // Startup: resolve IPC
   useEffect(() => {
-    const timer = setTimeout(async () => {
-      retryInvoke();
-
-}, 100);
+    const timer = setTimeout(retryInvoke, 100);
     return () => clearTimeout(timer);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   // Suppress the default browser right-click menu. Desktop apps should not
   // expose "Back / Reload / Save As / Print / Inspect" to end users.

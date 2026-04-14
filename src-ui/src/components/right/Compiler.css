@@ -10,17 +10,6 @@
     background: transparent;
 }
 
-/* Header style for chat/console panel */
-.chat-model-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 16px 20px;
-    background: transparent;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-}
-
 /* Chat history area that expands */
 .chat-history-area {
     flex: 1;
@@ -29,42 +18,6 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
-}
-.model-icon-bare {
-    width: 44px;
-    height: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.model-icon-big {
-    width: 40px;
-    height: 40px;
-    object-fit: contain;
-    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.25));
-}
-
-.model-icon-fallback {
-    font-size: 22px;
-    font-weight: 800;
-    color: var(--text-2);
-}
-
-.model-endpoint {
-    font-size: 11px;
-    color: var(--text-3);
-    font-family: var(--mono);
-    margin-top: 2px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.model-info {
-    flex: 1;
-    min-width: 0;
 }
 
 /* 2. 负值收益 */
