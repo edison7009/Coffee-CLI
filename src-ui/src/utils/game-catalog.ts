@@ -5,10 +5,12 @@ export interface RemoteGameEntry {
   title: string;     // localised display name
   icon: string;      // absolute URL on coffeecli.com
   download: string;  // absolute download URL (GitHub releases)
+  dosbox_conf?: string; // remote dosbox.conf — injected at runtime via bundleUpdateConfig
 }
 
 interface GameCatalogJson {
   version: number;
+  game_configs?: Record<string, { dosbox_conf?: string }>;
   catalogs: Record<string, RemoteGameEntry[]>;
 }
 
@@ -34,9 +36,15 @@ function fetchCatalogJson(): Promise<GameCatalogJson> {
  */
 export async function fetchGameCatalog(lang: string): Promise<RemoteGameEntry[]> {
   const json = await fetchCatalogJson();
-  const { catalogs } = json;
-  return catalogs[lang]
+  const { catalogs, game_configs } = json;
+  const entries = catalogs[lang]
     ?? catalogs[lang.split('-')[0]]
     ?? catalogs['default']
     ?? [];
+  if (!game_configs) return entries;
+  // Merge per-game remote config (dosbox_conf) into each entry
+  return entries.map(e => {
+    const cfg = game_configs[e.id];
+    return cfg ? { ...e, ...cfg } : e;
+  });
 }

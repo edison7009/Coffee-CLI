@@ -108,7 +108,7 @@ const extractSaveFiles = async (ci: any): Promise<SavedFile[]> => {
   }
 };
 
-interface GameBundle { name: string; path: string; size: number; icon?: string; title?: string }
+interface GameBundle { name: string; path: string; size: number; icon?: string; title?: string; dosbox_conf?: string }
 
 // emulators is loaded globally from index.html
 declare const emulators: any;
@@ -116,7 +116,7 @@ declare const emulators: any;
 export function DosPlayer({ sessionId }: { sessionId: string }) {
   const { state, dispatch } = useAppState();
   const [games, setGames] = useState<GameBundle[]>([]);
-  const [activeGame, setActiveGame] = useState<{name: string, url: string} | null>(null);
+  const [activeGame, setActiveGame] = useState<{name: string, url: string, dosbox_conf?: string} | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -124,7 +124,7 @@ export function DosPlayer({ sessionId }: { sessionId: string }) {
   const ciRef = useRef<any>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const cleanupRef = useRef<(() => void) | null>(null);
-  const activeGameRef = useRef<{name: string, url: string} | null>(null);
+  const activeGameRef = useRef<{name: string, url: string, dosbox_conf?: string} | null>(null);
   activeGameRef.current = activeGame;
 
   // ── Startup splash ──
@@ -156,8 +156,10 @@ export function DosPlayer({ sessionId }: { sessionId: string }) {
   // Load available games: build list from remote catalog, mark locally cached entries
   useEffect(() => {
     if (!isTauri) { setLoading(false); return; }
-    Promise.all([commands.listJsdosBundles(), fetchGameCatalog(state.currentLang)])
-      .then(([localBundles, catalog]: [GameBundle[], RemoteGameEntry[]]) => {
+    Promise.allSettled([commands.listJsdosBundles(), fetchGameCatalog(state.currentLang)])
+      .then(([bundlesResult, catalogResult]) => {
+        const localBundles: GameBundle[] = bundlesResult.status === 'fulfilled' ? bundlesResult.value : [];
+        const catalog: RemoteGameEntry[] = catalogResult.status === 'fulfilled' ? catalogResult.value : [];
         const games: GameBundle[] = catalog.map(entry => {
           const cached = localBundles.find(b => b.name.toLowerCase() === entry.file.toLowerCase());
           return {
@@ -166,12 +168,12 @@ export function DosPlayer({ sessionId }: { sessionId: string }) {
             size: cached ? cached.size : 0,
             icon: entry.icon,
             title: entry.title,
+            dosbox_conf: entry.dosbox_conf,
           };
         });
         setGames(games);
         setLoading(false);
-      })
-      .catch(() => setLoading(false));
+      });
   }, [state.currentLang]);
 
   // (agentStatus reporting removed — SET_AGENT_STATUS is no longer in the action type)
@@ -212,6 +214,19 @@ export function DosPlayer({ sessionId }: { sessionId: string }) {
           // Local file path — read via Rust backend IPC
           const bytes = await commands.readJsdosBundle(activeGame.url);
           bundleData = new Uint8Array(bytes);
+        }
+
+        // Apply remote dosbox.conf if provided — fixes bundles with wrong path separators
+        // or missing config, and allows tuning without repackaging the .jsdos file.
+        if (activeGame.dosbox_conf && typeof emulators.bundleUpdateConfig === 'function') {
+          try {
+            bundleData = await emulators.bundleUpdateConfig(bundleData, {
+              dosboxConf: activeGame.dosbox_conf,
+              jsdosConf: { version: '8.xx' },
+            });
+          } catch (e) {
+            console.warn('[DosPlayer] bundleUpdateConfig failed, using original bundle:', e);
+          }
         }
 
         const savedFiles = await loadGameFiles(activeGame.name);
@@ -519,10 +534,7 @@ export function DosPlayer({ sessionId }: { sessionId: string }) {
 
 
   const handleLaunch = (game: GameBundle) => {
-    // For local paths, pass path directly (will be read via IPC)
-    // For remote URLs, pass URL directly (will be fetched)
-    const url = game.path.startsWith('http') ? game.path : game.path;
-    setActiveGame({ name: game.name, url });
+    setActiveGame({ name: game.name, url: game.path, dosbox_conf: game.dosbox_conf });
     setError(null);
     firstFrameRef.current = false;
     splashStartRef.current = Date.now();
