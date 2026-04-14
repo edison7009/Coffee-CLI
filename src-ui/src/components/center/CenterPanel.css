@@ -33,9 +33,34 @@
   border-radius: var(--shape-radius-tab);
   cursor: pointer;
   user-select: none;
+  flex: 1;
   min-width: 140px;
   max-width: 220px;
   transition: background 0.15s, color 0.15s;
+}
+
+/* 5–6 tabs: compress, show truncated title */
+.chrome-tabs-header[data-count="5"] .chrome-tab,
+.chrome-tabs-header[data-count="6"] .chrome-tab {
+  min-width: 90px;
+  max-width: 160px;
+  padding: 0 10px;
+}
+
+/* 7–8 tabs: icon only, title hidden */
+.chrome-tabs-header[data-count="7"] .chrome-tab,
+.chrome-tabs-header[data-count="8"] .chrome-tab {
+  min-width: 44px;
+  max-width: 72px;
+  padding: 0 10px;
+  gap: 0;
+}
+
+.chrome-tabs-header[data-count="7"] .tab-title,
+.chrome-tabs-header[data-count="8"] .tab-title,
+.chrome-tabs-header[data-count="7"] .tab-actions,
+.chrome-tabs-header[data-count="8"] .tab-actions {
+  display: none;
 }
 
 .chrome-tab:hover:not(.active) {
@@ -226,6 +251,7 @@
   background-color: var(--bg-card);
   box-shadow: none;
 }
+
 
 
 .launchpad-icon {
