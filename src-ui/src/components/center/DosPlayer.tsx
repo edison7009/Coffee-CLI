@@ -395,7 +395,7 @@ export function DosPlayer({ sessionId }: { sessionId: string }) {
 
         // ── Mouse input ──
         // Only FPS/RTS games need Pointer Lock (cursor confinement)
-        const needsPointerLock = activeGame?.name.includes('doom') || activeGame?.name.includes('redalert');
+        const needsPointerLock = activeGame?.name.includes('redalert');
         let virtualX = 0.5, virtualY = 0.5;
 
         canvas.addEventListener('pointermove', (e: PointerEvent) => {
