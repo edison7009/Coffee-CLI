@@ -392,8 +392,9 @@ while true; do
     echo "  LE. English          (restore default)"
     echo -e "\n${YELLOW}=== Uninstall ===${RESET}"
     echo "  5.  Claude Code"
-    echo "  6.  OpenCode CLI"
-    echo "  7.  Hermes"
+    echo "  6.  Qwen Code"
+    echo "  7.  OpenCode CLI"
+    echo "  8.  Hermes"
     echo -e "\n${GRAY}  q.  Quit${RESET}"
     echo "--------------------------------"
 
@@ -439,10 +440,14 @@ while true; do
             run_uninstall "Claude Code" npm uninstall -g @anthropic-ai/claude-code
             ;;
         6)
+            echo -e "\n${YELLOW}  Uninstalling Qwen Code...${RESET}\n"
+            run_uninstall "Qwen Code" npm uninstall -g @qwen-code/qwen-code
+            ;;
+        7)
             echo -e "\n${YELLOW}  Uninstalling OpenCode CLI...${RESET}\n"
             run_uninstall "OpenCode CLI" npm uninstall -g opencode-ai
             ;;
-        7)
+        8)
             echo -e "\n${YELLOW}  Uninstalling Hermes...${RESET}\n"
             if command -v uv &>/dev/null; then
                 run_uninstall "Hermes" uv pip uninstall hermes-agent -y

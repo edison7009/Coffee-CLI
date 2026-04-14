@@ -373,6 +373,7 @@ for ($i = 0; $i -lt $LANGUAGE_PACKS.Count; $i++) {
 }
 $menu += @{ Section = "lang"; Label = "English (restore default)"; Action = "lang-en" }
 $menu += @{ Section = "uninstall"; Label = "Claude Code";            Action = "u-claude"   }
+$menu += @{ Section = "uninstall"; Label = "Qwen Code";              Action = "u-qwen"     }
 $menu += @{ Section = "uninstall"; Label = "OpenCode CLI";           Action = "u-opencode" }
 $menu += @{ Section = "uninstall"; Label = "Hermes";                 Action = "u-hermes"   }
 
@@ -437,6 +438,10 @@ try {
                     "u-claude" {
                         Write-Host "`n  Uninstalling Claude Code...`n" -ForegroundColor Yellow
                         Run-Uninstall "Claude Code" { npm uninstall -g @anthropic-ai/claude-code }
+                    }
+                    "u-qwen" {
+                        Write-Host "`n  Uninstalling Qwen Code...`n" -ForegroundColor Yellow
+                        Run-Uninstall "Qwen Code" { npm uninstall -g "@qwen-code/qwen-code" }
                     }
                     "u-opencode" {
                         Write-Host "`n  Uninstalling OpenCode CLI...`n" -ForegroundColor Yellow
