@@ -73,10 +73,6 @@ export const pt = {
   'time.yesterday': 'Ontem',
   'time.days_ago': 'Há {days} dias',
 
-  // Arcade Games
-  'game.pal': 'Sword and Fairy',
-  'game.stardom': 'Stardom',
-
   // Session
   'session.max': 'É possível ter no máximo 5 sessões abertas ao mesmo tempo.',
 

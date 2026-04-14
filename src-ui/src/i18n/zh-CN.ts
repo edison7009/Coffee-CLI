@@ -72,10 +72,6 @@ export const zhCN = {
   'time.yesterday': '昨天',
   'time.days_ago': '{days}天前',
 
-  // Arcade Games
-  'game.pal': '仙剑奇侠传',
-  'game.stardom': '明星志愿',
-
   // Session
   'session.max': '最多只能同时打开 5 个会话。',
 

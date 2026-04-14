@@ -75,10 +75,6 @@ export const vi = {
   'time.yesterday': 'Hôm qua',
   'time.days_ago': '{days} ngày trước',
 
-  // Arcade Games
-  'game.pal': 'Tiên Kiếm Kỳ Hiệp',
-  'game.stardom': 'Stardom',
-
   // Session
   'session.max': 'Tối đa 5 phiên có thể mở cùng lúc.',
 

@@ -15,6 +15,7 @@ export interface RemoteHistoryItem {
 }
 import { isTauri, commands } from '../../tauri';
 import { useT } from '../../i18n/useT';
+import { fetchGameCatalog, type RemoteGameEntry } from '../../utils/game-catalog';
 import './CenterPanel.css';
 
 // SVG Definitions for reusability
@@ -102,7 +103,8 @@ export function CenterPanel() {
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [toolsInstalled, setToolsInstalled] = useState<Record<string, boolean>>({});
   const [showArcadeGames, setShowArcadeGames] = useState(false);
-  const [arcadeGames, setArcadeGames] = useState<{name:string;path:string;size:number}[]>([]);
+  const [arcadeGames, setArcadeGames] = useState<{name:string;path:string;size:number;icon?:string;title?:string}[]>([]);
+  const [gameCatalog, setGameCatalog] = useState<RemoteGameEntry[]>([]);
   const [disableDrawer, setDisableDrawer] = useState(false);
 
   // ── Remote Terminal SSH form state ─────────────────────────────────────────
@@ -265,14 +267,10 @@ export function CenterPanel() {
     setConnStatus('idle');
   };
 
-  const ARCADE_META: Record<string, {icon:string; key: 'game.pal' | 'game.stardom' | 'game.redalert' | 'game.doom' | 'game.richman3' | 'game.simcity2000'}> = {
-    'pal.jsdos':         { icon: '/icons/pal.jpg',         key: 'game.pal' },
-    'stardom.jsdos':     { icon: '/icons/stardom.webp',    key: 'game.stardom' },
-    'redalert.jsdos':    { icon: '/icons/redalert.png',    key: 'game.redalert' },
-    'doom.jsdos':        { icon: '/icons/doom.png',         key: 'game.doom' },
-    'richman3.jsdos':    { icon: '/icons/richman3.png',    key: 'game.richman3' },
-    'simcity2000.jsdos': { icon: '/icons/simcity2000.png', key: 'game.simcity2000' },
-  };
+  // Game catalog loaded from coffeecli.com/play/game.json, re-resolved on lang change
+  useEffect(() => {
+    fetchGameCatalog(state.currentLang).then(setGameCatalog).catch(() => {});
+  }, [state.currentLang]);
 
   // Helper to render the correct icon and title based on tool type
   const renderTabContent = (session: typeof terminals[0], isActive: boolean) => {
@@ -299,10 +297,9 @@ export function CenterPanel() {
       case 'terminal': return { icon: <TerminalIcon />, title: t('tool.terminal') };
       case 'arcade': {
         const gameName = session.toolData || '';
-        const m = ARCADE_META[gameName.toLowerCase()];
-        if (m) {
-          const title = t(m.key as any);
-          return { icon: <img src={m.icon} alt="" style={{ width: '1em', height: '1em', borderRadius: 'var(--radius-xs)', objectFit: 'cover' }} />, title };
+        const meta = gameCatalog.find(m => m.file.toLowerCase() === gameName.toLowerCase());
+        if (meta) {
+          return { icon: <img src={meta.icon} alt="" style={{ width: '1em', height: '1em', borderRadius: 'var(--radius-xs)', objectFit: 'cover' }} />, title: meta.title };
         }
         return { icon: <span style={{ fontSize: '1em' }}>🎮</span>, title: 'Coffee Play' };
       }
@@ -600,10 +597,7 @@ export function CenterPanel() {
                   <div className="launchpad-inner">
                     <div className="launchpad-grid">
                       {arcadeGames.map(game => {
-                        const name = game.name.replace(/\.jsdos$/i, '').replace(/[_-]/g, ' ');
-                        const m = ARCADE_META[game.name.toLowerCase()];
-                        const title = m ? t(m.key as any) : name;
-                        const icon = m?.icon;
+                        const title = game.title || game.name.replace(/\.jsdos$/i, '').replace(/[_-]/g, ' ');
                         return (
                           <div
                             key={game.name}
@@ -611,14 +605,13 @@ export function CenterPanel() {
                             onClick={() => {
                               setShowArcadeGames(false);
                               selectTool('arcade');
-                              // Set game name in toolData so tab shows correct title and DosPlayer auto-launches
                               const sid = state.activeTerminalId;
                               if (sid) dispatch({ type: 'SET_TERMINAL_TOOL', id: sid, tool: 'arcade', toolData: game.name });
                             }}
                           >
                             <div className="launchpad-icon">
-                              {icon
-                                ? <img src={icon} alt={title} style={{ width: '1.4em', height: '1.4em', borderRadius: 'var(--radius-xs)', objectFit: 'cover' }} />
+                              {game.icon
+                                ? <img src={game.icon} alt={title} style={{ width: '1.4em', height: '1.4em', borderRadius: 'var(--radius-xs)', objectFit: 'cover' }} />
                                 : '🎮'}
                             </div>
                             <span>{title}</span>
@@ -643,18 +636,14 @@ export function CenterPanel() {
                   if (!showArcadeGames) {
                     setShowArcadeGames(true);
                     if (isTauri) {
-                      commands.listJsdosBundles().then((b: any[]) => {
-                        const remoteAssets = [
-                          { name: 'pal.jsdos', path: 'https://raw.githubusercontent.com/edison7009/Coffee-CLI/game-assets/play/pal.jsdos?v=3', size: 0 },
-                          { name: 'stardom.jsdos', path: 'https://raw.githubusercontent.com/edison7009/Coffee-CLI/game-assets/play/stardom.jsdos?v=3', size: 0 }
-                        ];
-                        for (const asset of remoteAssets) {
-                          if (!b.some((game: any) => game.name.toLowerCase() === asset.name)) {
-                            b.push(asset);
-                          }
-                        }
-                        setArcadeGames(b);
-                      }).catch(() => {});
+                      Promise.all([commands.listJsdosBundles(), fetchGameCatalog(state.currentLang)])
+                        .then(([localBundles, catalog]: [any[], RemoteGameEntry[]]) => {
+                          const games = catalog.map(entry => {
+                            const cached = localBundles.find((b: any) => b.name.toLowerCase() === entry.file.toLowerCase());
+                            return { name: entry.file, path: cached ? cached.path : entry.download, size: cached ? cached.size : 0, icon: entry.icon, title: entry.title };
+                          });
+                          setArcadeGames(games);
+                        }).catch(() => {});
                     }
                   } else {
                     setShowArcadeGames(false);

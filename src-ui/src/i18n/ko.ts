@@ -72,10 +72,6 @@ export const ko = {
   'time.yesterday': '어제',
   'time.days_ago': '{days}일 전',
 
-  // Arcade Games
-  'game.pal': '선검기협전',
-  'game.stardom': 'Stardom',
-
   // Session
   'session.max': '동시에 최대 5개의 세션만 열 수 있습니다.',
 

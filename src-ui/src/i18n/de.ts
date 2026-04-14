@@ -73,10 +73,6 @@ export const de = {
   'time.yesterday': 'Gestern',
   'time.days_ago': 'Vor {days} Tagen',
 
-  // Arcade Games
-  'game.pal': 'Sword and Fairy',
-  'game.stardom': 'Stardom',
-
   // Session
   'session.max': 'Es können maximal 5 Sitzungen gleichzeitig geöffnet sein.',
 

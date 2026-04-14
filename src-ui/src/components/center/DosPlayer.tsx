@@ -5,6 +5,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { isTauri, commands } from '../../tauri';
 import { useAppState } from '../../store/app-state';
+import { fetchGameCatalog, type RemoteGameEntry } from '../../utils/game-catalog';
 import './DosPlayer.css';
 
 // ─── IndexedDB File-Level Save Storage ───
@@ -107,7 +108,7 @@ const extractSaveFiles = async (ci: any): Promise<SavedFile[]> => {
   }
 };
 
-interface GameBundle { name: string; path: string; size: number }
+interface GameBundle { name: string; path: string; size: number; icon?: string; title?: string }
 
 // emulators is loaded globally from index.html
 declare const emulators: any;
@@ -152,25 +153,26 @@ export function DosPlayer({ sessionId }: { sessionId: string }) {
     };
   }, []);
 
-  // Load available games
+  // Load available games: build list from remote catalog, mark locally cached entries
   useEffect(() => {
     if (!isTauri) { setLoading(false); return; }
-    commands.listJsdosBundles()
-      .then((bundles: GameBundle[]) => { 
-        const remoteAssets = [
-          { name: 'pal.jsdos', path: 'https://raw.githubusercontent.com/edison7009/Coffee-CLI/game-assets/play/pal.jsdos?v=3', size: 0 },
-          { name: 'stardom.jsdos', path: 'https://raw.githubusercontent.com/edison7009/Coffee-CLI/game-assets/play/stardom.jsdos?v=3', size: 0 }
-        ];
-        for (const asset of remoteAssets) {
-          if (!bundles.some(b => b.name.toLowerCase() === asset.name)) {
-            bundles.push(asset);
-          }
-        }
-        setGames(bundles); 
-        setLoading(false); 
+    Promise.all([commands.listJsdosBundles(), fetchGameCatalog(state.currentLang)])
+      .then(([localBundles, catalog]: [GameBundle[], RemoteGameEntry[]]) => {
+        const games: GameBundle[] = catalog.map(entry => {
+          const cached = localBundles.find(b => b.name.toLowerCase() === entry.file.toLowerCase());
+          return {
+            name: entry.file,
+            path: cached ? cached.path : entry.download,
+            size: cached ? cached.size : 0,
+            icon: entry.icon,
+            title: entry.title,
+          };
+        });
+        setGames(games);
+        setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, []);
+  }, [state.currentLang]);
 
   // (agentStatus reporting removed — SET_AGENT_STATUS is no longer in the action type)
 
@@ -571,20 +573,15 @@ export function DosPlayer({ sessionId }: { sessionId: string }) {
           {games.length > 0 ? (
             <div className="launchpad-grid">
               {games.map(game => {
-                const n = game.name.toLowerCase();
-                const zh = state.currentLang.startsWith('zh');
-                const info = 
-                  n.includes('pal')      ? { icon: '/icons/pal.jpg',      title: zh ? '\u4ed9\u5251\u5947\u4fa0\u4f20' : 'Sword and Fairy' } :
-                  n.includes('stardom')  ? { icon: '/icons/stardom.webp', title: zh ? '\u660e\u661f\u5fd7\u613f' : 'Stardom' } :
-                  { icon: '', title: game.name.replace(/\.jsdos$/i, '') };
+                const title = game.title || game.name.replace(/\.jsdos$/i, '');
                 return (
                   <div key={game.name} className="launchpad-card" onClick={() => handleLaunch(game)}>
                     <div className="launchpad-icon">
-                      {info.icon 
-                        ? <img src={info.icon} alt={info.title} style={{ width: '1.4em', height: '1.4em', borderRadius: 'var(--radius-xs)', objectFit: 'cover' }} />
+                      {game.icon
+                        ? <img src={game.icon} alt={title} style={{ width: '1.4em', height: '1.4em', borderRadius: 'var(--radius-xs)', objectFit: 'cover' }} />
                         : '\ud83c\udfae'}
                     </div>
-                    <span>{info.title}</span>
+                    <span>{title}</span>
                   </div>
                 );
               })}

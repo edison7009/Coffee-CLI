@@ -72,10 +72,6 @@ export const zhTW = {
   'time.yesterday': '昨天',
   'time.days_ago': '{days} 天前',
 
-  // Arcade Games
-  'game.pal': '仙劍奇俠傳',
-  'game.stardom': '明星志願',
-
   // Session
   'session.max': '最多只能同時開啟 5 個會話。',
 

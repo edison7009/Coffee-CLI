@@ -73,10 +73,6 @@ export const ru = {
   'time.yesterday': 'Вчера',
   'time.days_ago': '{days} дн. назад',
 
-  // Arcade Games
-  'game.pal': 'Sword and Fairy',
-  'game.stardom': 'Stardom',
-
   // Session
   'session.max': 'Можно открывать не более 5 сессий одновременно.',
 

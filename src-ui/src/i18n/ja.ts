@@ -72,10 +72,6 @@ export const ja = {
   'time.yesterday': '昨日',
   'time.days_ago': '{days} 日前',
 
-  // Arcade Games
-  'game.pal': '仙剣奇侠伝',
-  'game.stardom': 'Stardom',
-
   // Session
   'session.max': '同時に開けるセッションは最大 5 つです。',
 
