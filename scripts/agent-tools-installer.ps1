@@ -194,6 +194,9 @@ function Invoke-LangScript($relPath) {
     foreach ($base in @($LANG_PACK_CF_URL, $LANG_PACK_GITHUB_URL)) {
         try {
             $content = (Invoke-WebRequest -Uri "$base/$relPath" -UseBasicParsing -TimeoutSec 10 -ErrorAction Stop).Content
+            # Guard: if the server returned an HTML page (e.g. SPA 404 redirect),
+            # skip this source rather than executing web page markup as PowerShell.
+            if ($content -match '(?i)^\s*<!DOCTYPE|^\s*<html') { continue }
             return $content
         } catch { }
     }
