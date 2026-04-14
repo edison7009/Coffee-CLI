@@ -233,8 +233,17 @@ function Get-LangLabel($code) {
     return $code
 }
 
+function Get-LangEnglish($code) {
+    $pack = $LANGUAGE_PACKS | Where-Object { $_.Code -eq $code } | Select-Object -First 1
+    if ($pack) { return $pack.English }
+    return $code
+}
+
 function Invoke-LangPackInstall($code, $label) {
-    Write-Host "`n  Installing language pack: $label..." -ForegroundColor Cyan
+    $english = Get-LangEnglish $code
+    # Use English name in progress line — CJK wide chars double-render in ConPTY.
+    # The inner install.ps1 (run via Invoke-Expression) displays the native name correctly.
+    Write-Host "`n  Installing language pack: $english..." -ForegroundColor Cyan
     try {
         $script = Invoke-LangScript "$code/install.ps1"
         Invoke-Expression $script
@@ -245,7 +254,8 @@ function Invoke-LangPackInstall($code, $label) {
 }
 
 function Invoke-LangPackUninstall($code, $label) {
-    Write-Host "`n  Uninstalling language pack: $label..." -ForegroundColor Yellow
+    $english = Get-LangEnglish $code
+    Write-Host "`n  Uninstalling language pack: $english..." -ForegroundColor Yellow
     try {
         $script = Invoke-LangScript "$code/uninstall.ps1"
         Invoke-Expression $script
@@ -257,7 +267,8 @@ function Invoke-LangPackUninstall($code, $label) {
 
 function Invoke-LanguagePackAction($targetCode, $targetLabel) {
     $activeCode = Get-ActiveLanguage
-    $activeLabel = if ($activeCode) { Get-LangLabel $activeCode } else { "" }
+    $activeEnglish = if ($activeCode) { Get-LangEnglish $activeCode } else { "" }
+    $targetEnglish = Get-LangEnglish $targetCode
 
     # Special case: target = "en" means restore original
     if ($targetCode -eq "en") {
@@ -266,16 +277,16 @@ function Invoke-LanguagePackAction($targetCode, $targetLabel) {
             Pause-Return
             return
         }
-        Write-Host "`n  Currently active language pack: $activeLabel" -ForegroundColor Yellow
+        Write-Host "`n  Currently active language pack: $activeEnglish" -ForegroundColor Yellow
         Write-Host "  This will restore Claude Code to original English."
         if (-not (Ask-YN "  Continue?")) { return }
-        Invoke-LangPackUninstall $activeCode $activeLabel
+        Invoke-LangPackUninstall $activeCode $activeEnglish
         return
     }
 
     # Repeat install (re-patch, e.g. after Claude Code upgrade)
     if ($activeCode -eq $targetCode) {
-        Write-Host "`n  $targetLabel is already active." -ForegroundColor Yellow
+        Write-Host "`n  $targetEnglish is already active." -ForegroundColor Yellow
         Write-Host "    1. Uninstall (restore English)"
         Write-Host "    2. Re-apply patch (fix after Claude Code upgrade)"
         $sub = Read-Host "  Choose [1/2/cancel]"
@@ -289,19 +300,19 @@ function Invoke-LanguagePackAction($targetCode, $targetLabel) {
 
     # Switch from one language to another
     if ($activeCode -ne "" -and $activeCode -ne $targetCode) {
-        Write-Host "`n  Currently active language pack: $activeLabel" -ForegroundColor Yellow
-        Write-Host "  Switching to $targetLabel will:"
-        Write-Host "    1. Uninstall $activeLabel"
+        Write-Host "`n  Currently active language pack: $activeEnglish" -ForegroundColor Yellow
+        Write-Host "  Switching to $targetEnglish will:"
+        Write-Host "    1. Uninstall $activeEnglish"
         Write-Host "    2. Restore English from backup"
-        Write-Host "    3. Apply $targetLabel patch"
+        Write-Host "    3. Apply $targetEnglish patch"
         if (-not (Ask-YN "  Continue?")) { return }
-        Invoke-LangPackUninstall $activeCode $activeLabel
+        Invoke-LangPackUninstall $activeCode $activeEnglish
         Invoke-LangPackInstall $targetCode $targetLabel
         return
     }
 
     # Clean install
-    Write-Host "`n  Will install $targetLabel language pack." -ForegroundColor Cyan
+    Write-Host "`n  Will install $targetEnglish language pack." -ForegroundColor Cyan
     if (-not (Ask-YN "  Continue?")) { return }
     Invoke-LangPackInstall $targetCode $targetLabel
 }
