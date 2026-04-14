@@ -106,6 +106,7 @@ export default {
           "Content-Disposition": `attachment; filename="${filename}"`,
           "Content-Length": fileRes.headers.get("Content-Length") || "",
           "Cache-Control": "public, max-age=86400",
+          "Access-Control-Allow-Origin": "*",
         }
       })
     }
