@@ -472,31 +472,6 @@
   font-weight: 600;
 }
 
-/* ─── Icon Theme Filters (CSS filter group — auto-follows color scheme) ─── */
-
-/* default: no filter, use native SVG colors */
-.explorer-panel[data-icon-theme="minimal"] .icon-svg {
-  filter: grayscale(1) brightness(1.15);
-}
-.explorer-panel[data-icon-theme="neon"] .icon-svg {
-  filter: saturate(2.5) brightness(1.15) contrast(1.1);
-}
-.explorer-panel[data-icon-theme="retro"] .icon-svg {
-  filter: sepia(0.85) saturate(1.6) hue-rotate(-10deg);
-}
-.explorer-panel[data-icon-theme="ocean"] .icon-svg {
-  filter: saturate(1.5) hue-rotate(160deg) brightness(1.05);
-}
-/* Art themes: no CSS filter — icons supply their own colors */
-.explorer-panel[data-icon-theme="flat"] .icon-svg,
-.explorer-panel[data-icon-theme="outline"] .icon-svg,
-.explorer-panel[data-icon-theme="pixel"] .icon-svg,
-.explorer-panel[data-icon-theme="gradient"] .icon-svg,
-.explorer-panel[data-icon-theme="round"] .icon-svg,
-.explorer-panel[data-icon-theme="glow"] .icon-svg,
-.explorer-panel[data-icon-theme="pastel"] .icon-svg {
-  filter: none;
-}
 
 /* Icon theme picker chips (folder thumbnail style) */
 .icon-theme-row {

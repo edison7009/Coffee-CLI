@@ -13,9 +13,8 @@ export type ThemeColor = 'dark' | 'light' | 'cappuccino' | 'sakura' | 'lavender'
 // Theme: shape form (orthogonal to color)
 export type ThemeShape = 'soft' | 'slab' | 'sharp' | 'blade' | 'panel';
 // Icon theme: visual style for file/folder icons in the explorer
-// CSS-filter group (auto-follows color scheme): minimal, neon, retro, ocean
-// SVG art-style group (own icon sets): flat, outline, pixel
-export type IconTheme = 'default' | 'minimal' | 'neon' | 'retro' | 'ocean' | 'flat' | 'outline' | 'pixel' | 'gradient' | 'round' | 'glow' | 'pastel';
+// SVG art-style group (own icon sets): flat, outline, pixel, gradient, round, glow, pastel
+export type IconTheme = 'default' | 'flat' | 'outline' | 'pixel' | 'gradient' | 'round' | 'glow' | 'pastel';
 
 export interface TerminalSession {
   id: string;
@@ -160,7 +159,7 @@ function reducer(state: AppState, action: Action): AppState {
 
 const VALID_THEMES: ThemeColor[] = ['dark', 'light', 'cappuccino', 'sakura', 'lavender', 'mint'];
 const VALID_SHAPES: ThemeShape[] = ['soft', 'slab', 'sharp', 'blade', 'panel'];
-const VALID_ICON_THEMES: IconTheme[] = ['default', 'minimal', 'neon', 'retro', 'ocean', 'flat', 'outline', 'pixel', 'gradient', 'round', 'glow', 'pastel'];
+const VALID_ICON_THEMES: IconTheme[] = ['default', 'flat', 'outline', 'pixel', 'gradient', 'round', 'glow', 'pastel'];
 
 function getInitialState(): AppState {
   let theme: ThemeColor = 'dark';
