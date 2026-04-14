@@ -6,7 +6,7 @@ $repo = "edison7009/Coffee-CLI"
 
 Write-Host ""
 Write-Host "  Coffee CLI Installer" -ForegroundColor Cyan
-Write-Host "  ────────────────────" -ForegroundColor DarkGray
+Write-Host "  --------------------" -ForegroundColor DarkGray
 
 # Get latest release
 Write-Host "  Fetching latest release..." -ForegroundColor Gray
