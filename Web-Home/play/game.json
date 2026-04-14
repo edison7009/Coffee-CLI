@@ -9,14 +9,14 @@
         "file": "pal.jsdos",
         "title": "仙剑奇侠传",
         "icon": "https://coffeecli.com/play/icons/pal.jpg",
-        "download": "https://github.com/edison7009/Coffee-CLI/releases/download/game-assets/pal.jsdos"
+        "download": "https://coffeecli.com/play/pal.jsdos"
       },
       {
         "id": "stardom",
         "file": "stardom.jsdos",
         "title": "明星志愿",
         "icon": "https://coffeecli.com/play/icons/stardom.webp",
-        "download": "https://github.com/edison7009/Coffee-CLI/releases/download/game-assets/stardom.jsdos"
+        "download": "https://coffeecli.com/play/stardom.jsdos"
       }
     ],
     "zh-TW": [
@@ -25,14 +25,14 @@
         "file": "pal.jsdos",
         "title": "仙劍奇俠傳",
         "icon": "https://coffeecli.com/play/icons/pal.jpg",
-        "download": "https://github.com/edison7009/Coffee-CLI/releases/download/game-assets/pal.jsdos"
+        "download": "https://coffeecli.com/play/pal.jsdos"
       },
       {
         "id": "stardom",
         "file": "stardom.jsdos",
         "title": "明星志願",
         "icon": "https://coffeecli.com/play/icons/stardom.webp",
-        "download": "https://github.com/edison7009/Coffee-CLI/releases/download/game-assets/stardom.jsdos"
+        "download": "https://coffeecli.com/play/stardom.jsdos"
       }
     ],
     "ja": [],
