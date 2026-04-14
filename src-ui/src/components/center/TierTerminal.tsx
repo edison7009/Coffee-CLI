@@ -19,9 +19,20 @@ import { useT } from '../../i18n/useT';
 import '@xterm/xterm/css/xterm.css';
 import './TierTerminal.css';
 
-// Import standalone scripts at build time to avoid runtime path/permission issues
-import ps1Script from '../../../../scripts/agent-tools-installer.ps1?raw';
-import shScript from '../../../../scripts/agent-tools-installer.sh?raw';
+// Installer scripts are fetched at runtime from CF (hot-updatable, no release needed).
+// Falls back to GitHub raw if CF is unreachable.
+const INSTALLER_CF     = 'https://coffeecli.com/installer';
+const INSTALLER_GITHUB = 'https://raw.githubusercontent.com/edison7009/Coffee-CLI/main/scripts';
+
+async function fetchInstallerScript(filename: string): Promise<string> {
+  for (const base of [INSTALLER_CF, INSTALLER_GITHUB]) {
+    try {
+      const res = await fetch(`${base}/${filename}`, { cache: 'no-store' });
+      if (res.ok) return await res.text();
+    } catch { /* try next */ }
+  }
+  throw new Error(`Failed to fetch installer script from both Cloudflare and GitHub.`);
+}
 
 // Sessions being detached to a new window — skip kill on unmount
 export const detachedSessions = new Set<string>();
@@ -291,11 +302,13 @@ function TierTerminalImpl({
             try {
               const isWin = window.navigator.userAgent.toLowerCase().includes('windows');
               if (isWin) {
-                const tempPath = await commands.writeTempScript(ps1Script, 'ps1');
+                const script = await fetchInstallerScript('agent-tools-installer.ps1');
+                const tempPath = await commands.writeTempScript(script, 'ps1');
                 const cmd = `powershell -NoProfile -ExecutionPolicy Bypass -File "${tempPath}"\r`;
                 commands.tierTerminalRawWrite(sessionId, cmd).catch(() => {});
               } else {
-                const tempPath = await commands.writeTempScript(shScript, 'sh');
+                const script = await fetchInstallerScript('agent-tools-installer.sh');
+                const tempPath = await commands.writeTempScript(script, 'sh');
                 const cmd = `bash "${tempPath}"\r`;
                 commands.tierTerminalRawWrite(sessionId, cmd).catch(() => {});
               }
