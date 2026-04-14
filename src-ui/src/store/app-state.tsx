@@ -6,7 +6,7 @@ import type { ScanResult } from '../tauri';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type ToolType = 'claude' | 'codex' | 'qwen' | 'installer' | 'hermes' | 'opencode' | 'arcade' | 'terminal' | 'remote' | 'history' | null;
+export type ToolType = 'claude' | 'qwen' | 'installer' | 'hermes' | 'opencode' | 'arcade' | 'terminal' | 'remote' | 'history' | null;
 
 // Theme: color palette (orthogonal to shape)
 export type ThemeColor = 'dark' | 'light' | 'cappuccino' | 'sakura' | 'lavender' | 'mint';

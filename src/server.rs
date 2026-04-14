@@ -30,38 +30,6 @@ struct ScanResponse {
     skipped: Vec<String>,
 }
 
-#[derive(Serialize)]
-struct ModelInfo {
-    name: String,
-    model_id: String,
-    base_url: String,
-    configured: bool,
-}
-
-#[derive(Deserialize)]
-struct ModelConfig {
-    name: String,
-    #[serde(rename = "modelId")]
-    model_id: String,
-    #[serde(rename = "baseUrl")]
-    base_url: String,
-    #[serde(rename = "apiKey", default)]
-    api_key: String,
-}
-
-
-// Helper: highly naive fallback replacing trailing commas
-fn strip_trailing_commas(s: &str) -> String {
-    let mut res = s.to_string();
-    // 粗略处理 JSON 尾随逗号的问题，不依赖 regex
-    res = res.replace(",\n}", "\n}");
-    res = res.replace(",\n]", "\n]");
-    res = res.replace(",\r\n}", "\r\n}");
-    res = res.replace(",\r\n]", "\r\n]");
-    res = res.replace(", }", " }");
-    res = res.replace(", ]", " ]");
-    res
-}
 
 #[tauri::command]
 fn scan_project(
@@ -98,38 +66,6 @@ fn scan_project(
         files,
         total_scanned: scan_result.total_scanned,
         skipped: scan_result.skipped,
-    })
-}
-
-#[tauri::command]
-fn get_model(_state: State<'_, AppState>) -> Result<ModelInfo, String> {
-    let models_path = dirs::home_dir()
-        .ok_or_else(|| "Cannot determine home directory".to_string())?
-        .join(".coffee-cli")
-        .join("models.json");
-
-    let content = std::fs::read_to_string(&models_path)
-        .map_err(|_| "models.json not found".to_string())?;
-
-    let cleaned = strip_trailing_commas(&content);
-
-    let model: ModelConfig = serde_json::from_str::<ModelConfig>(&cleaned)
-        .or_else(|_| {
-            serde_json::from_str::<Vec<ModelConfig>>(&cleaned)
-                .map(|v| v.into_iter().next().unwrap_or_else(|| ModelConfig {
-                    name: "Not configured".to_string(),
-                    model_id: String::new(),
-                    base_url: String::new(),
-                    api_key: String::new(),
-                }))
-        })
-        .map_err(|e| format!("Failed to parse models.json: {}", e))?;
-
-    Ok(ModelInfo {
-        name: model.name,
-        model_id: model.model_id,
-        base_url: model.base_url,
-        configured: !model.api_key.is_empty(),
     })
 }
 
@@ -241,8 +177,7 @@ fn check_tool_unix(bin: &str) -> bool {
 fn check_tools_installed() -> std::collections::HashMap<String, bool> {
     let tools = vec![
         ("claude", "claude"),
-        ("codex", "codex"),
-        ("gemini", "gemini-cli"),
+        ("qwen", "qwen"),
         ("hermes", "hermes"),
         ("opencode", "opencode"),
         // remote is always available — it's just SSH (built into the OS)
@@ -251,10 +186,10 @@ fn check_tools_installed() -> std::collections::HashMap<String, bool> {
     for (key, bin) in tools {
         #[cfg(target_os = "windows")]
         let found = check_tool_windows(bin);
-        
+
         #[cfg(not(target_os = "windows"))]
         let found = check_tool_unix(bin);
-        
+
         result.insert(key.to_string(), found);
     }
     // Terminal is always available — it's the system shell
@@ -531,34 +466,56 @@ fn show_in_folder(path: String) -> Result<(), String> {
     Ok(())
 }
 
+/// Validate that a path is safe to operate on:
+/// - Canonicalizes the path (resolves `..` and symlinks)
+/// - Rejects paths with fewer than 3 components (drive root, OS dirs, etc.)
+fn validate_fs_path(path: &str) -> Result<std::path::PathBuf, String> {
+    let canonical = std::path::Path::new(path)
+        .canonicalize()
+        .map_err(|e| format!("Invalid path: {e}"))?;
+    // Require at least 3 components, e.g. C:\Users\foo or /home/user
+    // This blocks C:\, C:\Windows, /, /etc, /usr, etc.
+    if canonical.components().count() < 3 {
+        return Err("Operation rejected: path is too shallow (system-level directory)".to_string());
+    }
+    Ok(canonical)
+}
+
 /// Delete a file or directory permanently (no recycle bin).
 #[tauri::command]
 fn fs_delete(path: String) -> Result<(), String> {
-    let p = std::path::Path::new(&path);
+    let p = validate_fs_path(&path)?;
     if p.is_dir() {
-        std::fs::remove_dir_all(p).map_err(|e| format!("Delete failed: {e}"))
+        std::fs::remove_dir_all(&p).map_err(|e| format!("Delete failed: {e}"))
     } else {
-        std::fs::remove_file(p).map_err(|e| format!("Delete failed: {e}"))
+        std::fs::remove_file(&p).map_err(|e| format!("Delete failed: {e}"))
     }
 }
 
 /// Rename / move a path to a new name within the same parent directory.
 #[tauri::command]
 fn fs_rename(path: String, new_name: String) -> Result<(), String> {
-    let src = std::path::Path::new(&path);
+    let src = validate_fs_path(&path)?;
     let dest = src.parent()
         .ok_or_else(|| "No parent directory".to_string())?
         .join(&new_name);
-    std::fs::rename(src, dest).map_err(|e| format!("Rename failed: {e}"))
+    std::fs::rename(&src, dest).map_err(|e| format!("Rename failed: {e}"))
 }
 
 /// Paste (copy or move) a file/directory into a target directory.
 /// `action` is either "copy" or "cut".
 #[tauri::command]
 fn fs_paste(action: String, src_path: String, target_dir: String) -> Result<(), String> {
-    let src = std::path::Path::new(&src_path);
+    let src = validate_fs_path(&src_path)?;
+    // target_dir may not exist yet for copy — validate its parent instead
+    let target_canonical = std::path::Path::new(&target_dir)
+        .canonicalize()
+        .map_err(|e| format!("Invalid target directory: {e}"))?;
+    if target_canonical.components().count() < 3 {
+        return Err("Operation rejected: target is a system-level directory".to_string());
+    }
     let file_name = src.file_name().ok_or("Invalid source path")?;
-    let dest = std::path::Path::new(&target_dir).join(file_name);
+    let dest = target_canonical.join(file_name);
 
     match action.as_str() {
         "cut" => {
@@ -566,7 +523,7 @@ fn fs_paste(action: String, src_path: String, target_dir: String) -> Result<(), 
         }
         "copy" => {
             if src.is_dir() {
-                copy_dir_all(src, &dest).map_err(|e| format!("Copy dir failed: {e}"))
+                copy_dir_all(&src, &dest).map_err(|e| format!("Copy dir failed: {e}"))
             } else {
                 std::fs::copy(&src, &dest).map(|_| ()).map_err(|e| format!("Copy failed: {e}"))
             }
@@ -613,8 +570,8 @@ fn tier_terminal_start(
     // Map the requested tool to an actual CLI command.
     let (cmd, args): (String, Vec<String>) = match tool.as_deref() {
         Some("claude")   => ("claude".to_string(), vec![]),
-        Some("codex")    => ("codex".to_string(),  vec![]),
-        Some("hermes") => ("hermes".to_string(), vec![]),
+        Some("qwen")     => ("qwen".to_string(),   vec![]),
+        Some("hermes")   => ("hermes".to_string(), vec![]),
         Some("opencode") => ("opencode".to_string(), vec![]),
         Some("remote") => {
             // Parse connection info from toolData JSON
@@ -746,29 +703,35 @@ fn tier_terminal_input(
     data: String,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
-    let mut map = state.terminal_session.lock().unwrap();
-    if let Some(session) = map.get_mut(&session_id) {
-        use std::io::Write;
-        session.writer.write_all(data.as_bytes())
-            .map_err(|e| format!("Write failed: {}", e))?;
-        session.writer.flush()
-            .map_err(|e| format!("Flush failed: {}", e))?;
+    // Step 1: grab Arc handles while holding the map lock (cheap clones, no IO)
+    let (writer_arc, activity_arc) = {
+        let map = state.terminal_session.lock().unwrap();
+        match map.get(&session_id) {
+            Some(s) => (s.writer_lock.clone(), s.activity.clone()),
+            None => return Err(format!("No active terminal session for id: {}", session_id)),
+        }
+    };
+    // Map lock released — other tabs can now proceed concurrently
 
-        // ── Dual-signal: detect user prompt submission ────────────────────
-        // Only trigger "working" when user presses Enter while agent is at prompt.
-        // System-generated input (auto-skip) uses tier_terminal_raw_write instead.
-        if data.contains('\r') || data.contains('\n') {
-            if let Ok(mut act) = session.activity.lock() {
-                if act.last_status == "wait_input" {
-                    act.user_submitted_at = Some(std::time::Instant::now());
-                }
+    // Step 2: PTY write (syscall, may block under back-pressure)
+    use std::io::Write;
+    let mut w = writer_arc.lock().map_err(|e| format!("Writer lock poisoned: {}", e))?;
+    w.write_all(data.as_bytes()).map_err(|e| format!("Write failed: {}", e))?;
+    w.flush().map_err(|e| format!("Flush failed: {}", e))?;
+    drop(w);
+
+    // Step 3: Dual-signal — detect user prompt submission
+    // Only trigger "working" when user presses Enter while agent is at prompt.
+    // System-generated input (auto-skip) uses tier_terminal_raw_write instead.
+    if data.contains('\r') || data.contains('\n') {
+        if let Ok(mut act) = activity_arc.lock() {
+            if act.last_status == "wait_input" {
+                act.user_submitted_at = Some(std::time::Instant::now());
             }
         }
-
-        Ok(())
-    } else {
-        Err(format!("No active terminal session for id: {}", session_id))
     }
+
+    Ok(())
 }
 
 /// Raw write to PTY without triggering agent-status detection.
@@ -779,17 +742,20 @@ fn tier_terminal_raw_write(
     data: String,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
-    let mut map = state.terminal_session.lock().unwrap();
-    if let Some(session) = map.get_mut(&session_id) {
-        use std::io::Write;
-        session.writer.write_all(data.as_bytes())
-            .map_err(|e| format!("Write failed: {}", e))?;
-        session.writer.flush()
-            .map_err(|e| format!("Flush failed: {}", e))?;
-        Ok(())
-    } else {
-        Err(format!("No active terminal session for id: {}", session_id))
-    }
+    // Grab writer Arc, release map lock before PTY I/O
+    let writer_arc = {
+        let map = state.terminal_session.lock().unwrap();
+        match map.get(&session_id) {
+            Some(s) => s.writer_lock.clone(),
+            None => return Err(format!("No active terminal session for id: {}", session_id)),
+        }
+    };
+
+    use std::io::Write;
+    let mut w = writer_arc.lock().map_err(|e| format!("Writer lock poisoned: {}", e))?;
+    w.write_all(data.as_bytes()).map_err(|e| format!("Write failed: {}", e))?;
+    w.flush().map_err(|e| format!("Flush failed: {}", e))?;
+    Ok(())
 }
 
 #[tauri::command]
@@ -895,7 +861,7 @@ fn parse_agent_jsonl(file_path: &std::path::Path, tool_name: &str) -> Option<Sav
                                     if t == "text" || t == "input_text" {
                                         if let Some(text) = block.get("text").and_then(|v| v.as_str()) {
                                             if text.trim().starts_with("<environment_context>") {
-                                                continue; // skip codex automated prompt
+                                                continue; // skip automated environment context prompts
                                             }
                                             let safe_text = text.replace('\n', " ");
                                             let mut chars = safe_text.chars();
@@ -967,7 +933,29 @@ fn parse_agent_jsonl(file_path: &std::path::Path, tool_name: &str) -> Option<Sav
 
 #[tauri::command]
 fn read_native_session(file_path: String) -> Result<String, String> {
-    std::fs::read_to_string(&file_path).map_err(|e| e.to_string())
+    let path = std::path::Path::new(&file_path);
+
+    // Only allow .jsonl / .json files
+    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+    if ext != "jsonl" && ext != "json" {
+        return Err("Only .jsonl and .json files are allowed".to_string());
+    }
+
+    // Canonicalize to resolve any `..` or symlink traversal
+    let canonical = path.canonicalize().map_err(|e| format!("Invalid path: {e}"))?;
+
+    // Must reside under a known agent data directory
+    let home = dirs::home_dir().ok_or("Cannot determine home directory")?;
+    let allowed: &[std::path::PathBuf] = &[
+        home.join(".claude"),
+        home.join(".hermes"),
+        home.join(".local").join("share").join("opencode"),
+    ];
+    if !allowed.iter().any(|prefix| canonical.starts_with(prefix)) {
+        return Err("Access denied: path is outside allowed agent data directories".to_string());
+    }
+
+    std::fs::read_to_string(&canonical).map_err(|e| e.to_string())
 }
 
 fn find_jsonl_sessions_recursively(dir: std::path::PathBuf, depth: u8, tool: &str, result: &mut Vec<SavedSession>) {
@@ -1207,11 +1195,7 @@ fn get_native_history(_state: State<'_, AppState>) -> Result<Vec<SavedSession>, 
         let claude_dir = home.join(".claude").join("projects");
         find_jsonl_sessions_recursively(claude_dir, 2, "claude", &mut result);
 
-        // 2. Codex (Max depth 4: sessions/YYYY/MM/DD/*.jsonl)
-        let codex_dir = home.join(".codex").join("sessions");
-        find_jsonl_sessions_recursively(codex_dir, 4, "codex", &mut result);
-
-        // 3. Hermes (sessions/session_*.json — flat directory, JSON format)
+        // 2. Hermes (sessions/session_*.json — flat directory, JSON format)
         let hermes_dir = home.join(".hermes").join("sessions");
         find_hermes_sessions(hermes_dir, &mut result);
 
@@ -1239,18 +1223,25 @@ fn tier_terminal_resume(
 
     let preset = terminal::find_preset(&tool)
         .ok_or_else(|| format!("Unknown tool: {}", tool))?;
-    let resume_cmd = preset.resume_command
+    let resume_program = preset.resume_program
         .ok_or_else(|| format!("Tool '{}' does not support resume", tool))?;
 
-    // Replace {{sessionId}} placeholder
-    let full_cmd = resume_cmd.replace("{{sessionId}}", &session_token);
-    let parts: Vec<&str> = full_cmd.split_whitespace().collect();
-    if parts.is_empty() {
-        return Err("Empty resume command".to_string());
+    // Validate session_token against the tool's token_format.
+    // Prevents flag injection: "uuid --dangerously-skip-permissions" would fail this check.
+    if let Some(fmt) = preset.token_format {
+        let re = regex::Regex::new(fmt)
+            .map_err(|e| format!("Invalid token format pattern: {e}"))?;
+        if !re.is_match(&session_token) {
+            return Err(format!("Invalid session token format for tool '{}'", tool));
+        }
     }
 
-    let program = parts[0].to_string();
-    let args: Vec<String> = parts[1..].iter().map(|s| s.to_string()).collect();
+    // Build args without string interpolation: token is always a separate element,
+    // never concatenated into a command string that gets split by whitespace.
+    let program = resume_program.to_string();
+    let mut args: Vec<String> = preset.resume_args_before.iter().map(|s| s.to_string()).collect();
+    args.push(session_token.clone());
+    args.extend(preset.resume_args_after.iter().map(|s| s.to_string()));
 
     let actual_cwd = cwd.clone();
     let emit_session_id = saved_session_id.clone();
@@ -1419,12 +1410,59 @@ fn load_tasks() -> Result<String, String> {
 
 #[tauri::command]
 fn save_tasks(data: String, app: tauri::AppHandle) -> Result<(), String> {
+    // Validate JSON before writing to disk — guards against corrupted broadcasts
+    serde_json::from_str::<serde_json::Value>(&data)
+        .map_err(|e| format!("Invalid task data (not valid JSON): {e}"))?;
     let path = tasks_file_path();
     std::fs::write(&path, &data)
         .map_err(|e| format!("Failed to save tasks: {}", e))?;
     // Notify all windows so other instances can reload
     let _ = app.emit("tasks-changed", &data);
     Ok(())
+}
+
+// ─── Credential Store (OS Keychain) ──────────────────────────────────────────
+
+const KEYRING_SERVICE: &str = "coffee-cli";
+
+/// Persist a remote password in the OS keychain (Windows Credential Manager /
+/// macOS Keychain / Linux Secret Service). The key is `username@host`.
+#[tauri::command]
+fn save_password(host: String, username: String, password: String) -> Result<(), String> {
+    let account = format!("{}@{}", username, host);
+    keyring::Entry::new(KEYRING_SERVICE, &account)
+        .map_err(|e| e.to_string())?
+        .set_password(&password)
+        .map_err(|e| e.to_string())
+}
+
+/// Load a previously saved password from the OS keychain.
+/// Returns `None` if no entry exists (user hasn't saved one yet).
+#[tauri::command]
+fn load_password(host: String, username: String) -> Result<Option<String>, String> {
+    let account = format!("{}@{}", username, host);
+    match keyring::Entry::new(KEYRING_SERVICE, &account)
+        .map_err(|e| e.to_string())?
+        .get_password()
+    {
+        Ok(pw) => Ok(Some(pw)),
+        Err(keyring::Error::NoEntry) => Ok(None),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+/// Remove a saved password from the OS keychain (e.g. user clicked "forget").
+#[tauri::command]
+fn delete_password(host: String, username: String) -> Result<(), String> {
+    let account = format!("{}@{}", username, host);
+    match keyring::Entry::new(KEYRING_SERVICE, &account)
+        .map_err(|e| e.to_string())?
+        .delete_credential()
+    {
+        Ok(()) => Ok(()),
+        Err(keyring::Error::NoEntry) => Ok(()), // already gone, not an error
+        Err(e) => Err(e.to_string()),
+    }
 }
 
 #[tauri::command]
@@ -1464,7 +1502,6 @@ pub fn start_ui(project_dir: PathBuf) -> anyhow::Result<()> {
         })
         .invoke_handler(tauri::generate_handler![
             scan_project,
-            get_model,
             pick_folder,
             window_minimize,
             window_maximize,
@@ -1494,6 +1531,9 @@ pub fn start_ui(project_dir: PathBuf) -> anyhow::Result<()> {
             get_terminal_buffer,
             load_tasks,
             save_tasks,
+            save_password,
+            load_password,
+            delete_password,
         ])
         .setup(|_app| {
             Ok(())

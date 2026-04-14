@@ -37,20 +37,6 @@ const SvgQwen = () => (
   </svg>
 );
 
-const SvgCodex = () => (
-  <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
-    <path d="M19.503 0H4.496A4.496 4.496 0 000 4.496v15.007A4.496 4.496 0 004.496 24h15.007A4.496 4.496 0 0024 19.503V4.496A4.496 4.496 0 0019.503 0z" fill="#fff"></path>
-    <path d="M9.064 3.344a4.578 4.578 0 012.285-.312c1 .115 1.891.54 2.673 1.275.01.01.024.017.037.021a.09.09 0 00.043 0 4.55 4.55 0 013.046.275l.047.022.116.057a4.581 4.581 0 012.188 2.399c.209.51.313 1.041.315 1.595a4.24 4.24 0 01-.134 1.223.123.123 0 00.03.115c.594.607.988 1.33 1.183 2.17.289 1.425-.007 2.71-.887 3.854l-.136.166a4.548 4.548 0 01-2.201 1.388.123.123 0 00-.081.076c-.191.551-.383 1.023-.74 1.494-.9 1.187-2.222 1.846-3.711 1.838-1.187-.006-2.239-.44-3.157-1.302a.107.107 0 00-.105-.024c-.388.125-.78.143-1.204.138a4.441 4.441 0 01-1.945-.466 4.544 4.544 0 01-1.61-1.335c-.152-.202-.303-.392-.414-.617a5.81 5.81 0 01-.37-.961 4.582 4.582 0 01-.014-2.298.124.124 0 00.006-.056.085.085 0 00-.027-.048 4.467 4.467 0 01-1.034-1.651 3.896 3.896 0 01-.251-1.192 5.189 5.189 0 01.141-1.6c.337-1.112.982-1.985 1.933-2.618.212-.141.413-.251.601-.33.215-.089.43-.164.646-.227a.098.098 0 00.065-.066 4.51 4.51 0 01.829-1.615 4.535 4.535 0 011.837-1.388zm3.482 10.565a.637.637 0 000 1.272h3.636a.637.637 0 100-1.272h-3.636zM8.462 9.23a.637.637 0 00-1.106.631l1.272 2.224-1.266 2.136a.636.636 0 101.095.649l1.454-2.455a.636.636 0 00.005-.64L8.462 9.23z" fill="url(#lobe-icons-codex-fill)"></path>
-    <defs>
-      <linearGradient gradientUnits="userSpaceOnUse" id="lobe-icons-codex-fill" x1="12" x2="12" y1="3" y2="21">
-        <stop stopColor="#B1A7FF"></stop>
-        <stop offset=".5" stopColor="#7A9DFF"></stop>
-        <stop offset="1" stopColor="#3941FF"></stop>
-      </linearGradient>
-    </defs>
-  </svg>
-);
-
 const SvgInstaller = () => (
   <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
     <circle cx="12" cy="12" r="10" stroke="#C4956A" strokeWidth="2"/>
@@ -176,7 +162,7 @@ export function CenterPanel() {
     };
   }, []);
 
-  // Load sticky config
+  // Load sticky config — non-sensitive fields from localStorage, password from OS keychain
   useEffect(() => {
     try {
       const saved = localStorage.getItem('coffee_remote_cfg');
@@ -186,7 +172,11 @@ export function CenterPanel() {
         if (c.host) setSshHost(c.host);
         if (c.port) setSshPort(String(c.port));
         if (c.username) setSshUser(c.username);
-        if (c.password) setSshPass(c.password);
+        if (isTauri && c.host && c.username) {
+          commands.loadPassword(c.host, c.username)
+            .then(pw => { if (pw) setSshPass(pw); })
+            .catch(() => {});
+        }
       }
     } catch (e) {}
   }, []);
@@ -265,15 +255,21 @@ export function CenterPanel() {
       host: sshHost.trim(),
       port: parseInt(sshPort) || (remoteProtocol === 'ssh' ? 22 : 7681),
       username: sshUser.trim(),
-      password: sshPass,
+      // password intentionally omitted — stored in OS keychain, not localStorage
     };
-    
+
     try {
       localStorage.setItem('coffee_remote_cfg', JSON.stringify(connDataObj));
     } catch(e) {}
 
-    const connData = JSON.stringify(connDataObj);
-    
+    // Save password to OS keychain (Windows Credential Manager / macOS Keychain)
+    if (isTauri && sshPass) {
+      commands.savePassword(sshHost.trim(), sshUser.trim(), sshPass).catch(() => {});
+    }
+
+    // connData sent in-memory to Rust for the connection — includes password
+    const connData = JSON.stringify({ ...connDataObj, password: sshPass });
+
     selectTool('remote', connData);
     setShowRemoteForm(false);
     setConnStatus('idle');
@@ -303,7 +299,6 @@ export function CenterPanel() {
   const renderTabContent = (session: typeof terminals[0], isActive: boolean) => {
     switch (session.tool) {
       case 'claude': return { icon: <SvgClaude />, title: 'Claude Code' };
-      case 'codex': return { icon: <SvgCodex />, title: 'Codex CLI' };
       case 'qwen': return { icon: <SvgQwen />, title: 'Qwen Code' };
       case 'hermes': return { icon: <SvgHermes />, title: 'Hermes' };
       case 'opencode': return { icon: <SvgOpenCode />, title: 'OpenCode' };
@@ -361,7 +356,6 @@ export function CenterPanel() {
             <div
               key={session.id}
               className={`chrome-tab ${isActive ? 'active' : ''}`}
-              title={title}
               onClick={() => dispatch({ type: 'SET_ACTIVE_TERMINAL', id: session.id })}
             >
               {icon}
@@ -597,10 +591,21 @@ export function CenterPanel() {
                                     host: item.host.trim(),
                                     port: parseInt(item.port) || (item.protocol === 'ssh' ? 22 : 7681),
                                     username: item.user || '',
-                                    password: sshPass,
+                                    // password omitted from localStorage
                                   };
                                   try { localStorage.setItem('coffee_remote_cfg', JSON.stringify(connDataObj)); } catch(e) {}
-                                  selectTool('remote', JSON.stringify(connDataObj));
+                                  // Load password for this specific host from keychain, fall back to current sshPass state
+                                  const doConnect = (pw: string) => {
+                                    if (isTauri && pw) commands.savePassword(item.host.trim(), item.user || '', pw).catch(() => {});
+                                    selectTool('remote', JSON.stringify({ ...connDataObj, password: pw }));
+                                  };
+                                  if (isTauri && item.host && item.user) {
+                                    commands.loadPassword(item.host.trim(), item.user)
+                                      .then(pw => doConnect(pw ?? sshPass))
+                                      .catch(() => doConnect(sshPass));
+                                  } else {
+                                    doConnect(sshPass);
+                                  }
                                   setShowRemoteForm(false);
                                   setConnStatus('idle');
                                 }}

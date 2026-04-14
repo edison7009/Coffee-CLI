@@ -73,8 +73,17 @@ pub struct AgentStatusEvent {
 
 pub struct AgentPreset {
     pub tool_name: &'static str,
-    pub resume_command: Option<&'static str>,
+    /// Program name for resume (e.g. "claude")
+    pub resume_program: Option<&'static str>,
+    /// Args inserted BEFORE the session token (e.g. &["--resume"])
+    pub resume_args_before: &'static [&'static str],
+    /// Args inserted AFTER the session token (e.g. &["--no-alt-screen"])
+    pub resume_args_after: &'static [&'static str],
+    /// Regex matched against PTY output to *capture* the session token.
     pub session_id_pattern: Option<&'static str>,
+    /// Anchored regex that validates a standalone token string before use in
+    /// a resume command.  Prevents flag injection (e.g. "id --skip-permissions").
+    pub token_format: Option<&'static str>,
     /// Characters that indicate the agent is waiting for user input
     pub prompt_markers: &'static [&'static str],
 }
@@ -82,26 +91,29 @@ pub struct AgentPreset {
 pub const AGENT_PRESETS: &[AgentPreset] = &[
     AgentPreset {
         tool_name: "claude",
-        resume_command: Some("claude --resume {{sessionId}}"),
+        resume_program: Some("claude"),
+        resume_args_before: &["--resume"],
+        resume_args_after: &[],
         session_id_pattern: Some(r"Session ID:\s+([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})"),
+        token_format: Some(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"),
         prompt_markers: &["❯", "> "],
     },
     AgentPreset {
-        tool_name: "codex",
-        resume_command: Some("codex resume {{sessionId}} --no-alt-screen"),
-        session_id_pattern: Some(r"Session:\s+([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})"),
-        prompt_markers: &["•"],
-    },
-    AgentPreset {
         tool_name: "gemini",
-        resume_command: Some("gemini --resume {{sessionId}}"),
+        resume_program: Some("gemini"),
+        resume_args_before: &["--resume"],
+        resume_args_after: &[],
         session_id_pattern: Some(r"Session ID:\s+([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})"),
+        token_format: Some(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"),
         prompt_markers: &["✦"],
     },
     AgentPreset {
         tool_name: "hermes",
-        resume_command: Some("hermes --resume {{sessionId}}"),
+        resume_program: Some("hermes"),
+        resume_args_before: &["--resume"],
+        resume_args_after: &[],
         session_id_pattern: Some(r"(\d{8}_\d{6}_[0-9a-f]{6})"),
+        token_format: Some(r"^\d{8}_\d{6}_[0-9a-f]{6}$"),
         prompt_markers: &["❯"],
     },
 ];
@@ -113,9 +125,11 @@ pub fn find_preset(tool_name: &str) -> Option<&'static AgentPreset> {
 // ─── Shared Session State ─────────────────────────────────
 
 pub struct TerminalSession {
-    pub writer: Box<dyn Write + Send>,
+    /// Cloneable Arc for write operations — lets callers release the session map
+    /// lock before doing PTY I/O, preventing multi-tab starvation.
+    pub writer_lock: Arc<Mutex<Box<dyn Write + Send>>>,
     pub kill_tx: std::sync::mpsc::Sender<()>,
-    /// The tool name (e.g. "claude", "codex") for this session
+    /// The tool name (e.g. "claude", "qwen") for this session
     #[allow(dead_code)]
     pub tool_name: Option<String>,
     /// Captured session token for resume (e.g. Claude Session ID)
@@ -135,6 +149,8 @@ pub type SharedSession = Arc<Mutex<std::collections::HashMap<String, TerminalSes
 /// Shared between the reader thread, ticker thread, and the input handler
 /// so that user-submitted-Enter can immediately signal "working".
 pub struct SessionActivity {
+    /// Set to false by the reader thread after EOF cleanup; ticker exits on next check.
+    pub alive: bool,
     pub last_output_at: Instant,
     pub burst_start: Option<Instant>,
     pub last_status: String,
@@ -145,17 +161,6 @@ pub struct SessionActivity {
     pub user_submitted_at: Option<Instant>,
 }
 
-/// Thread-safe Write wrapper so multiple threads can write to the PTY
-struct SharedWriter(Arc<Mutex<Box<dyn Write + Send>>>);
-
-impl Write for SharedWriter {
-    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        self.0.lock().map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?.write(buf)
-    }
-    fn flush(&mut self) -> std::io::Result<()> {
-        self.0.lock().map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?.flush()
-    }
-}
 
 // ─── Spawn ────────────────────────────────────────────────
 
@@ -286,12 +291,22 @@ pub fn spawn(
     let master_arc: Arc<Mutex<Option<Box<dyn portable_pty::MasterPty + Send>>>> =
         Arc::new(Mutex::new(Some(pair.master)));
 
-    let (kill_tx, _kill_rx) = std::sync::mpsc::channel::<()>();
+    let (kill_tx, kill_rx) = std::sync::mpsc::channel::<()>();
+
+    // ── Kill thread: drop PTY master on signal → reader gets EOF → cleanup runs
+    let master_for_kill = master_arc.clone();
+    std::thread::spawn(move || {
+        let _ = kill_rx.recv(); // block until kill_tx.send(()) or sender dropped
+        if let Ok(mut guard) = master_for_kill.lock() {
+            *guard = None; // drop PTY master → pipe closes
+        }
+    });
 
     // Shared activity state for status detection across threads
     // Initialize last_output_at in the past so the first ticker check doesn't
     // falsely report "working" (silence_ms starts > 800ms).
     let activity = Arc::new(Mutex::new(SessionActivity {
+        alive: true,
         last_output_at: Instant::now() - std::time::Duration::from_secs(2),
         burst_start: None,
         last_status: "wait_input".to_string(),
@@ -308,7 +323,7 @@ pub fn spawn(
         let buffer_clone = output_buffer.clone();
         let mut map = session.lock().unwrap();
         map.insert(session_id.clone(), TerminalSession {
-            writer: Box::new(SharedWriter(writer_clone)),
+            writer_lock: writer_clone,
             kill_tx,
             tool_name: tool_name.clone(),
             session_token: Mutex::new(None),
@@ -355,8 +370,9 @@ pub fn spawn(
             std::thread::sleep(std::time::Duration::from_millis(500));
             let mut act = match activity_for_ticker.lock() {
                 Ok(a) => a,
-                Err(_) => break, // session dropped
+                Err(_) => break,
             };
+            if !act.alive { break; } // session cleaned up, stop ticker
 
             let now = Instant::now();
             let silence_ms = now.duration_since(act.last_output_at).as_millis() as u64;
@@ -529,6 +545,11 @@ pub fn spawn(
         // ── Reader EOF = process tree fully exited → cleanup ──────────────
         eprintln!("[Tier Terminal] Reader thread exiting, cleaning up session");
 
+        // Signal ticker thread to stop on its next iteration
+        if let Ok(mut act) = activity.lock() {
+            act.alive = false;
+        }
+
         // Emit final idle status
         let _ = app_out.emit("agent-status", AgentStatusEvent {
             id: session_id_out.clone(),
@@ -573,4 +594,136 @@ fn resolve_program(name: &str) -> String {
         }
     }
     name.to_string()
+}
+
+// ─── Unit Tests ───────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── extract_osc7_cwd ──────────────────────────────────────────────────────
+
+    /// Helper: wrap a path string in OSC 7 with BEL terminator
+    fn osc7_bel(host: &str, path: &str) -> Vec<u8> {
+        format!("\x1b]7;file://{}{}\x07", host, path).into_bytes()
+    }
+
+    /// Helper: wrap a path string in OSC 7 with ST (ESC \) terminator
+    fn osc7_st(host: &str, path: &str) -> Vec<u8> {
+        format!("\x1b]7;file://{}{}\x1b\\", host, path).into_bytes()
+    }
+
+    #[test]
+    fn osc7_basic_with_hostname() {
+        let data = osc7_bel("myhost", "/home/user/projects");
+        assert_eq!(extract_osc7_cwd(&data), Some("/home/user/projects".to_string()));
+    }
+
+    #[test]
+    fn osc7_no_hostname() {
+        // file:///path — hostname omitted, first `/` is the path start
+        let data = osc7_bel("", "/tmp/workspace");
+        assert_eq!(extract_osc7_cwd(&data), Some("/tmp/workspace".to_string()));
+    }
+
+    #[test]
+    fn osc7_st_terminator() {
+        let data = osc7_st("host", "/var/log");
+        assert_eq!(extract_osc7_cwd(&data), Some("/var/log".to_string()));
+    }
+
+    #[test]
+    fn osc7_percent_encoded_space() {
+        let data = osc7_bel("host", "/home/user/my%20project");
+        assert_eq!(extract_osc7_cwd(&data), Some("/home/user/my project".to_string()));
+    }
+
+    #[test]
+    fn osc7_percent_encoded_chinese() {
+        // "咖啡" percent-encoded UTF-8
+        let data = osc7_bel("host", "/%E5%92%96%E5%95%A1");
+        assert_eq!(extract_osc7_cwd(&data), Some("/咖啡".to_string()));
+    }
+
+    #[test]
+    fn osc7_embedded_in_larger_buffer() {
+        let mut data = b"some output before\r\n".to_vec();
+        data.extend(osc7_bel("host", "/some/dir"));
+        data.extend(b"\r\nmore output after");
+        assert_eq!(extract_osc7_cwd(&data), Some("/some/dir".to_string()));
+    }
+
+    #[test]
+    fn osc7_absent_returns_none() {
+        let data = b"ordinary terminal output\r\n$ ls";
+        assert_eq!(extract_osc7_cwd(data), None);
+    }
+
+    #[test]
+    fn osc7_windows_style_path() {
+        // PowerShell emits file:///C:/Users/foo
+        let data = osc7_bel("", "/C:/Users/foo/project");
+        assert_eq!(extract_osc7_cwd(&data), Some("/C:/Users/foo/project".to_string()));
+    }
+
+    // ── find_preset ───────────────────────────────────────────────────────────
+
+    #[test]
+    fn find_preset_known_tools() {
+        for tool in &["claude", "gemini", "hermes"] {
+            assert!(find_preset(tool).is_some(), "preset not found for {tool}");
+        }
+    }
+
+    #[test]
+    fn find_preset_unknown_returns_none() {
+        assert!(find_preset("codex").is_none());
+        assert!(find_preset("").is_none());
+        assert!(find_preset("gpt").is_none());
+    }
+
+    #[test]
+    fn find_preset_resume_program_matches_tool() {
+        let p = find_preset("claude").unwrap();
+        assert_eq!(p.resume_program, Some("claude"));
+        assert_eq!(p.resume_args_before, &["--resume"]);
+        assert!(p.resume_args_after.is_empty());
+    }
+
+    // ── session_id_pattern (injection guard) ──────────────────────────────────
+
+    /// Confirm that valid tokens are accepted and injected flag strings are rejected.
+    /// Mirrors the validation logic in tier_terminal_resume.
+    fn token_matches(tool: &str, token: &str) -> bool {
+        let preset = find_preset(tool).unwrap();
+        match preset.token_format {
+            Some(fmt) => regex::Regex::new(fmt).unwrap().is_match(token),
+            None => false,
+        }
+    }
+
+    #[test]
+    fn claude_token_valid_uuid() {
+        assert!(token_matches("claude", "a1b2c3d4-e5f6-7890-abcd-ef1234567890"));
+    }
+
+    #[test]
+    fn claude_token_rejects_injection() {
+        // Attacker appends extra flag — must be rejected
+        assert!(!token_matches("claude", "a1b2c3d4-e5f6-7890-abcd-ef1234567890 --dangerously-skip-permissions"));
+        assert!(!token_matches("claude", ""));
+        assert!(!token_matches("claude", "../../etc/passwd"));
+    }
+
+    #[test]
+    fn hermes_token_valid_format() {
+        assert!(token_matches("hermes", "20240115_143022_a1b2c3"));
+    }
+
+    #[test]
+    fn hermes_token_rejects_invalid() {
+        assert!(!token_matches("hermes", "not-a-hermes-token"));
+        assert!(!token_matches("hermes", "20240115_143022_a1b2c3 --extra"));
+    }
 }

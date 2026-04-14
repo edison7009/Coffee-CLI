@@ -76,7 +76,7 @@ export function ChatReader({ sessionId }: { sessionId: string }) {
                 } else if (Array.isArray(msgObj.content)) {
                   for (const block of msgObj.content) {
                     if (block.type === 'text' || block.type === 'input_text') {
-                      // Skip Codex environment_context and agent session startup prompts
+                      // Skip automated environment_context and agent session startup prompts
                       if (block.text && typeof block.text === 'string') {
                         if (block.text.trim().startsWith('<environment_context>')) continue;
                         if (block.text.includes('Run your Session Startup sequence')) continue;

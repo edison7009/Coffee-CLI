@@ -1,6 +1,6 @@
 [package]
 name = "coffee-cli"
-version = "0.2.10"
+version = "0.2.11"
 edition = "2021"
 description = "Lightweight Multi-layer AI CLI Terminal"
 license = "MIT"
@@ -48,6 +48,7 @@ base64 = "0.22.1"
 git2 = "0.19"
 notify = "6.1.1"
 rusqlite = { version = "0.32", features = ["bundled"] }
+keyring = "3"
 
 [profile.release]
 opt-level = "z"

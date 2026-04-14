@@ -8,106 +8,6 @@ import { useAppState } from '../../store/app-state';
 import { fetchGameCatalog, type RemoteGameEntry } from '../../utils/game-catalog';
 import './DosPlayer.css';
 
-// ─── IndexedDB File-Level Save Storage ───
-const SAVE_FILE_PATTERNS = [
-  /^\d+\.RPG$/i,     // Paladin (Sword and Fairy)
-  /^SETUP\.DAT$/i,   // Paladin Config
-  /\.SAV$/i,         // Common DOS saves (Prince of Persia: prince.sav)
-  /\.SSS$/i,         // Stardom saves
-  /\.DSG$/i,         // DOOM saves (DOOMSAV0.DSG ~ DOOMSAV5.DSG)
-];
-
-const initDB = () => new Promise<IDBDatabase>((resolve, reject) => {
-  const req = indexedDB.open('CoffeePlaySaves', 2);
-  req.onupgradeneeded = () => {
-    const db = req.result;
-    if (!db.objectStoreNames.contains('files')) {
-      db.createObjectStore('files');
-    }
-  };
-  req.onsuccess = () => resolve(req.result);
-  req.onerror = () => reject(req.error);
-});
-
-interface SavedFile { path: string; contents: Uint8Array }
-
-const saveGameFiles = async (gameId: string, files: SavedFile[]) => {
-  if (files.length === 0) return;
-  try {
-    const db = await initDB();
-    const tx = db.transaction('files', 'readwrite');
-    const store = tx.objectStore('files');
-    for (const f of files) {
-      store.put(f.contents, `${gameId}::${f.path}`);
-    }
-    await new Promise<void>((resolve, reject) => {
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
-    });
-  } catch (e) {
-    console.error('[DosPlayer] Failed to save game files:', e);
-  }
-};
-
-const loadGameFiles = async (gameId: string): Promise<SavedFile[]> => {
-  try {
-    const db = await initDB();
-    const tx = db.transaction('files', 'readonly');
-    const store = tx.objectStore('files');
-    const allKeys = await new Promise<IDBValidKey[]>((resolve, reject) => {
-      const req = store.getAllKeys();
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => reject(req.error);
-    });
-    const prefix = `${gameId}::`;
-    const matchingKeys = allKeys.filter(k => typeof k === 'string' && k.startsWith(prefix)) as string[];
-    const files: SavedFile[] = [];
-    for (const key of matchingKeys) {
-      const data = await new Promise<Uint8Array | null>((resolve, reject) => {
-        const tx2 = db.transaction('files', 'readonly');
-        const req = tx2.objectStore('files').get(key);
-        req.onsuccess = () => resolve(req.result as Uint8Array || null);
-        req.onerror = () => reject(req.error);
-      });
-      if (data) {
-        files.push({ path: key.slice(prefix.length), contents: data });
-      }
-    }
-    return files;
-  } catch (e) {
-    console.error('[DosPlayer] Failed to load game files:', e);
-    return [];
-  }
-};
-
-const extractSaveFiles = async (ci: any): Promise<SavedFile[]> => {
-  const files: SavedFile[] = [];
-  try {
-    const tree = await ci.fsTree();
-    const walk = (node: any, parentPath: string) => {
-      if (!node) return;
-      const name = node.name || '';
-      const fullPath = parentPath ? `${parentPath}/${name}` : name;
-      if (node.nodes) {
-        for (const child of node.nodes) walk(child, fullPath);
-      } else {
-        if (SAVE_FILE_PATTERNS.some(p => p.test(name))) {
-          files.push({ path: name, contents: new Uint8Array(0) });
-        }
-      }
-    };
-    walk(tree, '');
-    for (let i = 0; i < files.length; i++) {
-      try {
-        files[i].contents = await ci.fsReadFile(files[i].path);
-      } catch { /* file may not exist yet */ }
-    }
-    return files.filter(f => f.contents.length > 0);
-  } catch (e) {
-    console.error('[DosPlayer] Failed to extract save files:', e);
-    return [];
-  }
-};
 
 interface GameBundle { name: string; path: string; size: number; icon?: string; title?: string; dosbox_conf?: string }
 
@@ -128,31 +28,18 @@ export function DosPlayer({ sessionId }: { sessionId: string }) {
   const activeGameRef = useRef<{name: string, url: string, title?: string, dosbox_conf?: string} | null>(null);
   activeGameRef.current = activeGame;
 
+  // Track whether this game session is the focused tab — read inside capture-phase listeners
+  // which close over a stale copy of state, so we need a ref that's always current.
+  const isActiveSessionRef = useRef(false);
+  const terminal = state.terminals.find(t => t.id === sessionId);
+  isActiveSessionRef.current = state.activeTerminalId === sessionId && !terminal?.isHidden;
+
   // ── Startup splash ──
   const [showSplash, setShowSplash] = useState(true);
   const [splashFading, setSplashFading] = useState(false);
   const firstFrameRef = useRef(false);
   const splashStartRef = useRef(Date.now());
   const frameCountRef = useRef(0);
-
-  // Emergency save
-  useEffect(() => {
-    const emergencySave = () => {
-      const ci = ciRef.current;
-      const game = activeGameRef.current;
-      if (ci && game) {
-        extractSaveFiles(ci).then(files => saveGameFiles(game.name, files)).catch(() => {});
-      }
-    };
-    const onBeforeUnload = () => emergencySave();
-    const onVisChange = () => { if (document.hidden) emergencySave(); };
-    window.addEventListener('beforeunload', onBeforeUnload);
-    document.addEventListener('visibilitychange', onVisChange);
-    return () => {
-      window.removeEventListener('beforeunload', onBeforeUnload);
-      document.removeEventListener('visibilitychange', onVisChange);
-    };
-  }, []);
 
   // Load available games: build list from remote catalog, mark locally cached entries
   useEffect(() => {
@@ -230,15 +117,9 @@ export function DosPlayer({ sessionId }: { sessionId: string }) {
           }
         }
 
-        const savedFiles = await loadGameFiles(activeGame.name);
         if (cancelled) return;
 
-        const initFs: any[] = [bundleData];
-        for (const f of savedFiles) {
-          initFs.push({ path: f.path, contents: f.contents });
-        }
-
-        const ci = await emulators.dosboxWorker(initFs);
+        const ci = await emulators.dosboxWorker([bundleData]);
         if (cancelled) { ci.exit(); return; }
 
         ciRef.current = ci;
@@ -371,6 +252,10 @@ export function DosPlayer({ sessionId }: { sessionId: string }) {
         };
 
         const gameKeyHandler = (e: KeyboardEvent, pressed: boolean) => {
+          // Only intercept keys when this game tab is the active focused tab.
+          // Without this guard, the capture-phase listener steals input from
+          // other tabs (xterm.js, etc.) while the game runs in the background.
+          if (!isActiveSessionRef.current) return;
           // F9/F10/F12 reserved for Coffee CLI / DevTools
           if (e.code === 'F10' || e.code === 'F9' || e.code === 'F12') return;
           let domKc = e.keyCode;
@@ -428,23 +313,7 @@ export function DosPlayer({ sessionId }: { sessionId: string }) {
         canvas.addEventListener('contextmenu', (e: Event) => e.preventDefault());
         canvas.focus();
 
-        // Auto save timer
-        const autoSaveTimer = setInterval(async () => {
-          if (ciRef.current) {
-            try {
-              const files = await extractSaveFiles(ciRef.current);
-              if (files.length > 0) await saveGameFiles(activeGame.name, files);
-            } catch (e) { console.error('[DosPlayer] Auto-save failed:', e); }
-          }
-        }, 10000);
-
         cleanupRef.current = () => {
-          clearInterval(autoSaveTimer);
-          if (ciRef.current) {
-            extractSaveFiles(ciRef.current)
-              .then(files => saveGameFiles(activeGame.name, files))
-              .catch(() => {});
-          }
           window.removeEventListener('keydown', onKeyDown, true);
           window.removeEventListener('keyup', onKeyUp, true);
           scriptNode.disconnect();
@@ -465,11 +334,7 @@ export function DosPlayer({ sessionId }: { sessionId: string }) {
       cleanupRef.current = null;
       if (ciRef.current) {
         const finalCi = ciRef.current;
-        const currentActive = activeGame;
-        extractSaveFiles(finalCi)
-          .then(files => currentActive ? saveGameFiles(currentActive.name, files) : null)
-          .then(() => finalCi.exit())
-          .catch(() => { finalCi.exit(); });
+        finalCi.exit();
         ciRef.current = null;
       }
     };
@@ -499,9 +364,6 @@ export function DosPlayer({ sessionId }: { sessionId: string }) {
         if (ciRef.current) {
           try { ciRef.current.pause(); } catch(e) {}
           audioCtxRef.current?.suspend().catch(() => {});
-          extractSaveFiles(ciRef.current)
-            .then(files => saveGameFiles(activeGame.name, files))
-            .catch(() => {});
         }
         dispatch({ type: 'SET_TERMINAL_HIDDEN', id: sessionId, isHidden: true });
         

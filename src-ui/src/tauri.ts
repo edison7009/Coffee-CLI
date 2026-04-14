@@ -60,14 +60,6 @@ export interface ScanResult {
   skipped: string[];
 }
 
-export interface ModelConfig {
-  name: string;
-  model_id: string;
-  base_url: string;
-  /** true when an API key is present in models.json */
-  configured: boolean;
-}
-
 export interface GitStatusResponse {
   files_changed: number;
   insertions: number;
@@ -105,8 +97,6 @@ export const commands = {
 
   scanFolder: (path: string | null) =>
     invoke<ScanResult>('scan_project', { path }),
-
-  loadModel: () => invoke<ModelConfig>('get_model'),
 
   // Window decorators
   windowMinimize: () => invoke<void>('window_minimize'),
@@ -172,4 +162,12 @@ export const commands = {
   // Multi-window: replay terminal history for detached window
   getTerminalBuffer: (sessionId: string) =>
     invoke<string[]>('get_terminal_buffer', { sessionId }),
+
+  // Credential store — passwords live in OS keychain, never in localStorage
+  savePassword: (host: string, username: string, password: string) =>
+    invoke<void>('save_password', { host, username, password }),
+  loadPassword: (host: string, username: string) =>
+    invoke<string | null>('load_password', { host, username }),
+  deletePassword: (host: string, username: string) =>
+    invoke<void>('delete_password', { host, username }),
 };
