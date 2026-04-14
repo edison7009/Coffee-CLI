@@ -188,24 +188,26 @@ $LANG_PACK_CF_URL     = "https://coffeecli.com/lang-packs"
 $LANG_PACK_GITHUB_URL = "https://raw.githubusercontent.com/edison7009/Coffee-CLI/main/language-packs"
 
 function Invoke-LangScript($relPath) {
-    # Try Cloudflare first, fall back to GitHub raw
+    $errors = @()
     foreach ($base in @($LANG_PACK_CF_URL, $LANG_PACK_GITHUB_URL)) {
+        $url = "$base/$relPath"
         try {
-            $resp = Invoke-WebRequest -Uri "$base/$relPath" -UseBasicParsing -TimeoutSec 10 -ErrorAction Stop
-            # Cloudflare Pages may serve .ps1 as application/octet-stream, causing
-            # PowerShell 5's .Content to return a Byte[] instead of a String.
-            # Always decode as UTF-8 so Invoke-Expression receives a String.
+            $resp = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 30 -ErrorAction Stop
             $content = if ($resp.Content -is [byte[]]) {
                 [System.Text.Encoding]::UTF8.GetString($resp.Content)
             } else {
                 [string]$resp.Content
             }
-            # Guard: skip HTML pages (e.g. SPA 404 redirect from coffeecli.com).
-            if ($content -match '(?i)<!DOCTYPE|<html') { continue }
+            if ($content -match '(?i)<!DOCTYPE|<html') {
+                $errors += "  $url -> returned HTML (not a script)"
+                continue
+            }
             return $content
-        } catch { }
+        } catch {
+            $errors += "  $url -> $($_.Exception.Message)"
+        }
     }
-    throw "Failed to fetch $relPath from both Cloudflare and GitHub."
+    throw "Failed to fetch $relPath`n$($errors -join `"`n`")"
 }
 
 # Available language packs. Add new ones here when translation data ships.
