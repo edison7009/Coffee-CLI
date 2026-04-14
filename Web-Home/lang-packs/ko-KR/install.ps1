@@ -8,7 +8,18 @@ $OutputEncoding = [System.Text.Encoding]::UTF8
 
 $LANG_CODE = "ko-KR"
 $LANG_LABEL = "한국어"
-$REPO_URL = "https://raw.githubusercontent.com/edison7009/Coffee-CLI/main/language-packs/ko-KR"
+$CF_URL = "https://coffeecli.com/lang-packs/ko-KR"
+$GH_URL = "https://raw.githubusercontent.com/edison7009/Coffee-CLI/main/language-packs/ko-KR"
+
+function Download-Asset($filename, $dest) {
+    foreach ($base in @($CF_URL, $GH_URL)) {
+        try {
+            Invoke-WebRequest -Uri "$base/$filename" -OutFile $dest -UseBasicParsing -TimeoutSec 20 -ErrorAction Stop
+            return
+        } catch { }
+    }
+    throw "Failed to download $filename from both Cloudflare and GitHub."
+}
 
 Write-Host ""
 Write-Host "  Coffee CLI Language Pack — $LANG_LABEL" -ForegroundColor Cyan
@@ -58,8 +69,8 @@ $TMP = Join-Path $env:TEMP "coffee-langpack-$([guid]::NewGuid().ToString('N'))"
 New-Item -ItemType Directory -Force -Path $TMP | Out-Null
 try {
     Write-Host "  Downloading patcher and dictionary..." -ForegroundColor DarkGray
-    Invoke-WebRequest -Uri "$REPO_URL/patch-cli.js" -OutFile (Join-Path $TMP "patch-cli.js") -UseBasicParsing
-    Invoke-WebRequest -Uri "$REPO_URL/cli-translations.json" -OutFile (Join-Path $TMP "cli-translations.json") -UseBasicParsing
+    Download-Asset "patch-cli.js" (Join-Path $TMP "patch-cli.js")
+    Download-Asset "cli-translations.json" (Join-Path $TMP "cli-translations.json")
 
     # 6. Apply patch
     Write-Host "  Applying $LANG_LABEL patch..." -ForegroundColor DarkGray

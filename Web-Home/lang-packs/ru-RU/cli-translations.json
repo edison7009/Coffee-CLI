@@ -1,0 +1,5854 @@
+[
+  {
+    "en": " (MCP)",
+    "zh": " (МКП)"
+  },
+  {
+    "en": " (installed)",
+    "zh": " (установлен)"
+  },
+  {
+    "en": " (p to expand)",
+    "zh": " (p, чтобы развернуть)"
+  },
+  {
+    "en": " (required to block unix domain sockets)",
+    "zh": " (требуется для блокировки сокетов домена unix)"
+  },
+  {
+    "en": " (truncated)",
+    "zh": " (усечено)"
+  },
+  {
+    "en": " (untracked)",
+    "zh": " (без отслеживания)"
+  },
+  {
+    "en": " Accept  ",
+    "zh": " Принимать  "
+  },
+  {
+    "en": " Cancel",
+    "zh": " Отмена"
+  },
+  {
+    "en": " Decline",
+    "zh": " Отклонить"
+  },
+  {
+    "en": " Directories ",
+    "zh": " Каталоги "
+  },
+  {
+    "en": " Generating agent from description...",
+    "zh": " Генерирующий агент из описания..."
+  },
+  {
+    "en": " Mode ",
+    "zh": " Режим "
+  },
+  {
+    "en": " Reopen URL  ",
+    "zh": " Повторно открыть URL  "
+  },
+  {
+    "en": " Rules ",
+    "zh": " Правила "
+  },
+  {
+    "en": " Voice mode is now available · /voice to enable",
+    "zh": " Голосовой режим теперь доступен · /voice, чтобы включить"
+  },
+  {
+    "en": " [Community Managed]",
+    "zh": " [Управляется сообществом]"
+  },
+  {
+    "en": " [destructive]",
+    "zh": " [разрушительный]"
+  },
+  {
+    "en": " [open-world]",
+    "zh": " [открытый мир]"
+  },
+  {
+    "en": " [read-only]",
+    "zh": " [только для чтения]"
+  },
+  {
+    "en": " back",
+    "zh": " назад"
+  },
+  {
+    "en": " for Quick Launch",
+    "zh": " для быстрого запуска"
+  },
+  {
+    "en": " navigate · ",
+    "zh": " ориентироваться · "
+  },
+  {
+    "en": " or ",
+    "zh": " или "
+  },
+  {
+    "en": " ready · shift+↓ to view",
+    "zh": " готов · Shift+↓ для просмотра"
+  },
+  {
+    "en": " to cancel",
+    "zh": " отменить"
+  },
+  {
+    "en": " to edit this plan in ",
+    "zh": " изменить этот план в "
+  },
+  {
+    "en": " to get started",
+    "zh": " чтобы начать"
+  },
+  {
+    "en": " to reference files or lines in your input",
+    "zh": " для ссылки на файлы или строки во входных данных"
+  },
+  {
+    "en": " to save ",
+    "zh": " сохранить "
+  },
+  {
+    "en": " tokens · /autocompact",
+    "zh": " жетоны · /autocompact"
+  },
+  {
+    "en": " · ./path/to/marketplace",
+    "zh": " · ./путь/к/рынку"
+  },
+  {
+    "en": " · /agents",
+    "zh": " · /агенты"
+  },
+  {
+    "en": " · /agents to manage",
+    "zh": " · /агенты для управления"
+  },
+  {
+    "en": " · /dream to run",
+    "zh": " · /мечтаю бежать"
+  },
+  {
+    "en": " · /mcp",
+    "zh": " · /мкп"
+  },
+  {
+    "en": " · /memory",
+    "zh": " · /память"
+  },
+  {
+    "en": " · /memory to edit",
+    "zh": " · /память для редактирования"
+  },
+  {
+    "en": " · /permissions",
+    "zh": " · /разрешения"
+  },
+  {
+    "en": " · /plugin for details",
+    "zh": " · /plugin для подробностей"
+  },
+  {
+    "en": " · /sandbox",
+    "zh": " · /песочница"
+  },
+  {
+    "en": " · /skills",
+    "zh": " · /навыки"
+  },
+  {
+    "en": " · Design an implementation strategy",
+    "zh": " · Разработать стратегию внедрения"
+  },
+  {
+    "en": " · Enter to view",
+    "zh": " · Войдите, чтобы просмотреть"
+  },
+  {
+    "en": " · Explore the codebase thoroughly",
+    "zh": " · Тщательно изучить кодовую базу"
+  },
+  {
+    "en": " · Identify existing patterns",
+    "zh": " · Выявить существующие закономерности"
+  },
+  {
+    "en": " · Marked for update",
+    "zh": " · Отмечено для обновления"
+  },
+  {
+    "en": " · Present a plan for your approval",
+    "zh": " · Представить план на ваше одобрение"
+  },
+  {
+    "en": " · Run /reload-plugins to apply",
+    "zh": " · Запустите /reload-plugins, чтобы применить"
+  },
+  {
+    "en": " · enter to collapse",
+    "zh": " · войти, чтобы свернуть"
+  },
+  {
+    "en": " · enter to view",
+    "zh": " · войдите, чтобы просмотреть"
+  },
+  {
+    "en": " · owner/repo (GitHub)",
+    "zh": " · владелец/репозиторий (GitHub)"
+  },
+  {
+    "en": "! for bash mode",
+    "zh": "! для режима bash"
+  },
+  {
+    "en": "& for background",
+    "zh": "и для фона"
+  },
+  {
+    "en": "((empty message))",
+    "zh": "((пустое сообщение))"
+  },
+  {
+    "en": "(Command copied to clipboard)",
+    "zh": "(Команда скопирована в буфер обмена)"
+  },
+  {
+    "en": "(No changes)",
+    "zh": "(Без изменений)"
+  },
+  {
+    "en": "(No content)",
+    "zh": "(Нет контента)"
+  },
+  {
+    "en": "(No resources found)",
+    "zh": "(Ресурсы не найдены)"
+  },
+  {
+    "en": "(OSC 777)",
+    "zh": "(ОСК 777)"
+  },
+  {
+    "en": "(OSC 9)",
+    "zh": "(ОСК 9)"
+  },
+  {
+    "en": "(OSC 99)",
+    "zh": "(ОСК 99)"
+  },
+  {
+    "en": "(Original working directory)",
+    "zh": "(Исходный рабочий каталог)"
+  },
+  {
+    "en": "(already granted)",
+    "zh": "(уже предоставлено)"
+  },
+  {
+    "en": "(esc to give additional instructions)",
+    "zh": "(esc для получения дополнительных инструкций)"
+  },
+  {
+    "en": "(esc to interrupt ",
+    "zh": "(esc, чтобы прервать "
+  },
+  {
+    "en": "(not installed)",
+    "zh": "(не установлен)"
+  },
+  {
+    "en": "(press esc to close)",
+    "zh": "(нажмите esc, чтобы закрыть)"
+  },
+  {
+    "en": "(required)",
+    "zh": "(необходимый)"
+  },
+  {
+    "en": "(tab to switch, esc to close)",
+    "zh": "(вкладка для переключения, esc для закрытия)"
+  },
+  {
+    "en": "-- INSERT --",
+    "zh": "-- ВСТАВЛЯТЬ --"
+  },
+  {
+    "en": ".github/workflows/claude.yml",
+    "zh": ".github/workflows/claude.yml"
+  },
+  {
+    "en": "/ for commands",
+    "zh": "/ для команд"
+  },
+  {
+    "en": "/btw for side question",
+    "zh": "/кстати, дополнительный вопрос"
+  },
+  {
+    "en": "/keybindings to customize",
+    "zh": "/сочетания клавиш для настройки"
+  },
+  {
+    "en": "/plan to preview",
+    "zh": "/планирую предварительный просмотр"
+  },
+  {
+    "en": "/rename to add a name",
+    "zh": "/rename, чтобы добавить имя"
+  },
+  {
+    "en": "/usage is only available for subscription plans.",
+    "zh": "/usage доступен только для планов подписки."
+  },
+  {
+    "en": "? for shortcuts",
+    "zh": "? для ярлыков"
+  },
+  {
+    "en": "@ for file paths",
+    "zh": "@ для путей к файлам"
+  },
+  {
+    "en": "ANTHROPIC_API_KEY already exists in repository secrets!",
+    "zh": "ANTHROPIC_API_KEY уже существует в секретах репозитория!"
+  },
+  {
+    "en": "API key",
+    "zh": "API-ключ"
+  },
+  {
+    "en": "API usage billing",
+    "zh": "Биллинг за использование API"
+  },
+  {
+    "en": "AWS profile (SSO or named profile)",
+    "zh": "Профиль AWS (SSO или именованный профиль)"
+  },
+  {
+    "en": "Accept edits",
+    "zh": "Принять изменения"
+  },
+  {
+    "en": "Accept terms · Help improve Claude: OFF",
+    "zh": "Принять условия · Помогите улучшить Клод: ВЫКЛ."
+  },
+  {
+    "en": "Accept terms · Help improve Claude: OFF (for emails with your domain)",
+    "zh": "Принять условия · Помогите улучшить Claude: OFF (для электронной почты с вашим доменом)"
+  },
+  {
+    "en": "Accept terms · Help improve Claude: ON",
+    "zh": "Принять условия · Помогите улучшить Клод: ВКЛ."
+  },
+  {
+    "en": "Access denied to specific paths outside allowed directories",
+    "zh": "Доступ запрещен к определенным путям за пределами разрешенных каталогов"
+  },
+  {
+    "en": "Access denied.",
+    "zh": "Доступ запрещен."
+  },
+  {
+    "en": "Access key + secret",
+    "zh": "Ключ доступа + секрет"
+  },
+  {
+    "en": "Accessibility and Screen Recording permissions are required. Call request_access to show the permission panel.",
+    "zh": "Требуются разрешения на доступность и запись экрана. Вызовите request_access, чтобы показать панель разрешений."
+  },
+  {
+    "en": "Action: ",
+    "zh": "Действие: "
+  },
+  {
+    "en": "Activate pending plugin changes in the current session",
+    "zh": "Активировать ожидающие изменения плагина в текущем сеансе"
+  },
+  {
+    "en": "Add Marketplace",
+    "zh": "Добавить торговую площадку"
+  },
+  {
+    "en": "Add a marketplace first using the Marketplaces tab.",
+    "zh": "Сначала добавьте торговую площадку на вкладке «Торговые площадки»."
+  },
+  {
+    "en": "Additional CA cert(s)",
+    "zh": "Дополнительные сертификаты CA"
+  },
+  {
+    "en": "Afternoon (12-18)",
+    "zh": "День (12-18)"
+  },
+  {
+    "en": "Agent MCPs",
+    "zh": "Агент MCP"
+  },
+  {
+    "en": "Agent Parse Errors",
+    "zh": "Ошибки анализа агента"
+  },
+  {
+    "en": "Agent idle",
+    "zh": "Агент простаивает"
+  },
+  {
+    "en": "All available plugins are already installed.",
+    "zh": "Все доступные плагины уже установлены."
+  },
+  {
+    "en": "All background agents stopped",
+    "zh": "Все фоновые агенты остановлены"
+  },
+  {
+    "en": "All plugins from our internal marketplace are vetted and approved.",
+    "zh": "Все плагины с нашего внутреннего рынка проверены и одобрены."
+  },
+  {
+    "en": "All plugins from this marketplace are already installed.",
+    "zh": "Все плагины из этого маркетплейса уже установлены."
+  },
+  {
+    "en": "Allow external CLAUDE.md file imports?",
+    "zh": "Разрешить импорт внешнего файла CLAUDE.md?"
+  },
+  {
+    "en": "Allow possible downgrade to stable version",
+    "zh": "Разрешить возможный переход на стабильную версию"
+  },
+  {
+    "en": "Allow unsandboxed fallback:",
+    "zh": "Разрешить резервный вариант без песочницы:"
+  },
+  {
+    "en": "Allowed Unix Sockets:",
+    "zh": "Разрешенные сокеты Unix:"
+  },
+  {
+    "en": "Allowed by auto mode classifier",
+    "zh": "Разрешено классификатором автоматического режима"
+  },
+  {
+    "en": "Also requested:",
+    "zh": "Также просил:"
+  },
+  {
+    "en": "Also try: ",
+    "zh": "Также попробуйте: "
+  },
+  {
+    "en": "Always copy full response",
+    "zh": "Всегда копировать полный ответ"
+  },
+  {
+    "en": "Amazon Bedrock, Microsoft Foundry, or Vertex AI",
+    "zh": "Amazon Bedrock, Microsoft Foundry или Vertex AI"
+  },
+  {
+    "en": "Answering...",
+    "zh": "Отвечаю..."
+  },
+  {
+    "en": "Answering…",
+    "zh": "Отвечаю…"
+  },
+  {
+    "en": "Anthropic base URL",
+    "zh": "Антропный базовый URL"
+  },
+  {
+    "en": "Any Bash command",
+    "zh": "Любая команда Bash"
+  },
+  {
+    "en": "Append a system prompt to the default system prompt",
+    "zh": "Добавить системную подсказку к системной подсказке по умолчанию"
+  },
+  {
+    "en": "Are you sure you want to delete the agent",
+    "zh": "Вы уверены, что хотите удалить агента?"
+  },
+  {
+    "en": "Are you sure you want to delete this permission rule?",
+    "zh": "Вы уверены, что хотите удалить это правило разрешения?"
+  },
+  {
+    "en": "Args: ",
+    "zh": "Аргументы: "
+  },
+  {
+    "en": "Ask a quick side question without interrupting the main conversation",
+    "zh": "Задайте небольшой дополнительный вопрос, не прерывая основного разговора."
+  },
+  {
+    "en": "Ask a repository admin to run this command if setup fails",
+    "zh": "Попросите администратора репозитория запустить эту команду, если установка не удалась."
+  },
+  {
+    "en": "Async agent",
+    "zh": "Асинхронный агент"
+  },
+  {
+    "en": "Async hook ",
+    "zh": "Асинхронный крючок "
+  },
+  {
+    "en": "Auth method",
+    "zh": "Метод аутентификации"
+  },
+  {
+    "en": "Auth token",
+    "zh": "Токен авторизации"
+  },
+  {
+    "en": "Auth: ",
+    "zh": "Автор: "
+  },
+  {
+    "en": "Author: ",
+    "zh": "Автор: "
+  },
+  {
+    "en": "Auto mode",
+    "zh": "Автоматический режим"
+  },
+  {
+    "en": "Auto-allow mode:",
+    "zh": "Режим автоматического разрешения:"
+  },
+  {
+    "en": "Auto-compact",
+    "zh": "Авто-компактный"
+  },
+  {
+    "en": "Auto-compact is currently disabled (see /config)",
+    "zh": "Автоматическое сжатие в настоящее время отключено (см. /config)."
+  },
+  {
+    "en": "Auto-compact when context is full",
+    "zh": "Автоматическое сжатие, когда контекст заполнен"
+  },
+  {
+    "en": "Auto-compact window: ",
+    "zh": "Автосжатое окно: "
+  },
+  {
+    "en": "Auto-connect to IDE (external terminal)",
+    "zh": "Автоматическое подключение к IDE (внешний терминал)"
+  },
+  {
+    "en": "Auto-install IDE extension",
+    "zh": "Автоматическая установка расширения IDE"
+  },
+  {
+    "en": "Auto-update channel",
+    "zh": "Автообновление канала"
+  },
+  {
+    "en": "Auto-update enabled. Claude Code will automatically update this marketplace and its installed plugins.",
+    "zh": "Автообновление включено. Claude Code автоматически обновит этот магазин и установленные плагины."
+  },
+  {
+    "en": "Auto-updating…",
+    "zh": "Автообновление…"
+  },
+  {
+    "en": "Autocompact",
+    "zh": "Автокомпакт"
+  },
+  {
+    "en": "Autocompact buffer",
+    "zh": "Автокомпактный буфер"
+  },
+  {
+    "en": "Autocompact is disabled",
+    "zh": "Автосжатие отключено"
+  },
+  {
+    "en": "Automatic color",
+    "zh": "Автоматический цвет"
+  },
+  {
+    "en": "Back to plugin list",
+    "zh": "Вернуться к списку плагинов"
+  },
+  {
+    "en": "Background process cannot read terminal input",
+    "zh": "Фоновый процесс не может прочитать входные данные терминала"
+  },
+  {
+    "en": "Background process cannot write to terminal output",
+    "zh": "Фоновый процесс не может записывать данные на вывод терминала"
+  },
+  {
+    "en": "Bad request:",
+    "zh": "Неправильный запрос:"
+  },
+  {
+    "en": "Balanced performance - best for most agents",
+    "zh": "Сбалансированная производительность — лучшая для большинства агентов"
+  },
+  {
+    "en": "Be comprehensive for best results",
+    "zh": "Будьте комплексными для достижения наилучших результатов"
+  },
+  {
+    "en": "Bedrock API key (bearer token)",
+    "zh": "Ключ API Bedrock (токен на предъявителя)"
+  },
+  {
+    "en": "Bedrock base URL",
+    "zh": "Базовый URL-адрес основы"
+  },
+  {
+    "en": "Before compacting, ask me what to preserve",
+    "zh": "Прежде чем уплотнять, спросите меня, что сохранить"
+  },
+  {
+    "en": "Behavior ",
+    "zh": "Поведение "
+  },
+  {
+    "en": "Binary file",
+    "zh": "Бинарный файл"
+  },
+  {
+    "en": "Binary file - cannot display diff",
+    "zh": "Бинарный файл – невозможно отобразить разницу"
+  },
+  {
+    "en": "Brief explanation of the classification decision",
+    "zh": "Краткое объяснение решения о классификации"
+  },
+  {
+    "en": "Broken pipe - server closed connection unexpectedly",
+    "zh": "Сломанный канал - сервер неожиданно закрыл соединение"
+  },
+  {
+    "en": "Browser didn't open automatically. URL is shown in UI.",
+    "zh": "Браузер не открылся автоматически. URL-адрес отображается в пользовательском интерфейсе."
+  },
+  {
+    "en": "Browser didn't open? Use the url below to sign in",
+    "zh": "Браузер не открылся? Используйте URL-адрес ниже, чтобы войти"
+  },
+  {
+    "en": "Browser switching is only available with bridge connections.",
+    "zh": "Переключение браузера доступно только при мостовом соединении."
+  },
+  {
+    "en": "Bug Report",
+    "zh": "Отчет об ошибке"
+  },
+  {
+    "en": "Built-in Hooks",
+    "zh": "Встроенные крючки"
+  },
+  {
+    "en": "Built-in MCPs",
+    "zh": "Встроенные MCP"
+  },
+  {
+    "en": "Built-in agents",
+    "zh": "Встроенные агенты"
+  },
+  {
+    "en": "Bypass Permissions",
+    "zh": "Обход разрешений"
+  },
+  {
+    "en": "CLAUDE_CODE_AUTO_COMPACT_WINDOW is set and takes precedence. Unset it to change this setting here.",
+    "zh": "CLAUDE_CODE_AUTO_COMPACT_WINDOW установлен и имеет приоритет. Отмените настройку, чтобы изменить этот параметр здесь."
+  },
+  {
+    "en": "CLI arg agents",
+    "zh": "Агенты аргументов CLI"
+  },
+  {
+    "en": "Can Anthropic look at your session transcript to help us improve Claude Code?",
+    "zh": "Может ли Anthropic просмотреть стенограмму вашего сеанса, чтобы помочь нам улучшить Claude Code?"
+  },
+  {
+    "en": "Can Claude...",
+    "zh": "Может Клод..."
+  },
+  {
+    "en": "Cancelled ",
+    "zh": "Отменено "
+  },
+  {
+    "en": "Cancelled: ",
+    "zh": "Отменено: "
+  },
+  {
+    "en": "Cannot block unix domain sockets (see Dependencies tab)",
+    "zh": "Невозможно заблокировать сокеты домена unix (см. вкладку «Зависимости»)."
+  },
+  {
+    "en": "Capabilities: ",
+    "zh": "Возможности: "
+  },
+  {
+    "en": "Changing thinking mode mid-conversation will increase latency and may reduce quality. For best results, set this at the start of a session.",
+    "zh": "Изменение режима мышления в середине разговора приведет к увеличению задержки и снижению качества. Для достижения наилучших результатов установите это значение в начале сеанса."
+  },
+  {
+    "en": "Channels are not currently available",
+    "zh": "Каналы в данный момент недоступны"
+  },
+  {
+    "en": "Channels require claude.ai authentication · run /login, then restart",
+    "zh": "Каналы требуют аутентификации claude.ai · запустите /login, затем перезапустите"
+  },
+  {
+    "en": "Chat about this",
+    "zh": "Поговорите об этом"
+  },
+  {
+    "en": "Check for new plugins later or add more marketplaces.",
+    "zh": "Проверьте наличие новых плагинов позже или добавьте больше торговых площадок."
+  },
+  {
+    "en": "Check your internet connection",
+    "zh": "Проверьте подключение к Интернету"
+  },
+  {
+    "en": "Check your network connection.",
+    "zh": "Проверьте сетевое соединение."
+  },
+  {
+    "en": "Checking connectivity...",
+    "zh": "Проверяем подключение..."
+  },
+  {
+    "en": "Checking for updates",
+    "zh": "Проверка обновлений"
+  },
+  {
+    "en": "Checking installation status...",
+    "zh": "Проверка статуса установки..."
+  },
+  {
+    "en": "Checking installation status…",
+    "zh": "Проверка статуса установки…"
+  },
+  {
+    "en": "Checking out branch",
+    "zh": "Проверка филиала"
+  },
+  {
+    "en": "Choose an option:",
+    "zh": "Выберите вариант:"
+  },
+  {
+    "en": "Choose different models…",
+    "zh": "Выбирайте разные модели…"
+  },
+  {
+    "en": "Choose the text style that looks best with your terminal",
+    "zh": "Выберите стиль текста, который лучше всего смотрится на вашем терминале"
+  },
+  {
+    "en": "Chrome extension not detected · https://claude.ai/chrome to install",
+    "zh": "Расширение Chrome не обнаружено · https://claude.ai/chrome для установки"
+  },
+  {
+    "en": "Claude Code",
+    "zh": "Claude Code"
+  },
+  {
+    "en": "Claude Code Browser Extension Native Host",
+    "zh": "Расширение браузера Claude Code Собственный хост"
+  },
+  {
+    "en": "Claude Code Review - Automated code review on new PRs",
+    "zh": "Claude Code Review — Автоматизированная проверка кода по новым PR."
+  },
+  {
+    "en": "Claude Code installation completed successfully",
+    "zh": "Установка Claude Code успешно завершена"
+  },
+  {
+    "en": "Claude Code is an agentic coding CLI based on the Anthropic API.",
+    "zh": "Claude Code — это агентный CLI для кодирования, основанный на Anthropic API."
+  },
+  {
+    "en": "Claude Code reads this from AWS_REGION, not ~/.aws/config — set it explicitly even if your profile has a region.",
+    "zh": "Клод Код считывает это из AWS_REGION, а не из ~/.aws/config — задайте его явно, даже если в вашем профиле есть регион."
+  },
+  {
+    "en": "Claude Code successfully installed!",
+    "zh": "Код Клода успешно установлен!"
+  },
+  {
+    "en": "Claude Code uses the standard AWS credential chain. Pick the method you already use with the AWS CLI.",
+    "zh": "Claude Code использует стандартную цепочку учетных данных AWS. Выберите метод, который вы уже используете с интерфейсом командной строки AWS."
+  },
+  {
+    "en": "Claude Code will be able to read files in this directory and make edits when auto-accept edits is on.",
+    "zh": "Клод Код сможет читать файлы в этом каталоге и вносить изменения, если включено автоматическое принятие изменений."
+  },
+  {
+    "en": "Claude Code will no longer have access to files in this directory.",
+    "zh": "Клод Код больше не будет иметь доступа к файлам в этом каталоге."
+  },
+  {
+    "en": "Claude Code will restart to apply.",
+    "zh": "Клод Код перезапустится для применения."
+  },
+  {
+    "en": "Claude can make mistakes",
+    "zh": "Клод может ошибаться"
+  },
+  {
+    "en": "Claude checkpoints your files before every edit. Press",
+    "zh": "Клод проверяет ваши файлы перед каждым редактированием. Нажимать"
+  },
+  {
+    "en": "Claude explains its implementation choices and codebase patterns",
+    "zh": "Клод объясняет варианты реализации и шаблоны кодовой базы."
+  },
+  {
+    "en": "Claude found these results:",
+    "zh": "Клод нашел следующие результаты:"
+  },
+  {
+    "en": "Claude in Chrome enabled by default",
+    "zh": "Клод в Chrome включен по умолчанию"
+  },
+  {
+    "en": "Claude in Chrome is not supported in WSL at this time.",
+    "zh": "Клод в Chrome в настоящее время не поддерживается в WSL."
+  },
+  {
+    "en": "Claude in Chrome requires a claude.ai subscription",
+    "zh": "Для Клода в Chrome требуется подписка на claude.ai."
+  },
+  {
+    "en": "Claude in Chrome requires a claude.ai subscription.",
+    "zh": "Для работы Клода в Chrome требуется подписка на claude.ai."
+  },
+  {
+    "en": "Claude is now exploring and designing an implementation approach.",
+    "zh": "Сейчас Клод изучает и разрабатывает подход к реализации."
+  },
+  {
+    "en": "Claude is waiting for your input",
+    "zh": "Клод ждет вашего ответа"
+  },
+  {
+    "en": "Claude pauses and asks you to write small pieces of code for hands-on practice",
+    "zh": "Клод делает паузу и просит вас написать небольшие фрагменты кода для практической практики."
+  },
+  {
+    "en": "Claude will respond without extended thinking",
+    "zh": "Клод ответит, не долго раздумывая."
+  },
+  {
+    "en": "Claude will think before responding",
+    "zh": "Клод подумает, прежде чем ответить"
+  },
+  {
+    "en": "Cleaning up old npm installations...",
+    "zh": "Очистка старых установок npm..."
+  },
+  {
+    "en": "Clear authentication",
+    "zh": "Очистить аутентификацию"
+  },
+  {
+    "en": "Clear conversation and start with only the plan",
+    "zh": "Четкий разговор и начните только с плана"
+  },
+  {
+    "en": "Clear conversation history and free up context",
+    "zh": "Очистить историю разговоров и освободить контекст"
+  },
+  {
+    "en": "Cloud Authentication",
+    "zh": "Облачная аутентификация"
+  },
+  {
+    "en": "Command: ",
+    "zh": "Команда: "
+  },
+  {
+    "en": "Commands cannot run outside the sandbox under any circumstances.",
+    "zh": "Команды ни при каких обстоятельствах не могут выполняться за пределами песочницы."
+  },
+  {
+    "en": "Commands recently denied by the auto mode classifier.",
+    "zh": "Команды, недавно отклоненные классификатором автоматического режима."
+  },
+  {
+    "en": "Compact buffer",
+    "zh": "Компактный буфер"
+  },
+  {
+    "en": "Compact summary",
+    "zh": "Компактное резюме"
+  },
+  {
+    "en": "Compacted ",
+    "zh": "Уплотненный "
+  },
+  {
+    "en": "Compacting conversation",
+    "zh": "Сжатие разговора"
+  },
+  {
+    "en": "Compacting conversation…",
+    "zh": "Сжатие разговора…"
+  },
+  {
+    "en": "Compaction canceled.",
+    "zh": "Уплотнение отменено."
+  },
+  {
+    "en": "Compaction interrupted · This may be due to network issues — please try again.",
+    "zh": "Уплотнение прервано · Это может быть связано с проблемами сети. Повторите попытку."
+  },
+  {
+    "en": "Complete a security review of the pending changes on the current branch",
+    "zh": "Завершить проверку безопасности ожидающих изменений в текущей ветке."
+  },
+  {
+    "en": "Computer Use",
+    "zh": "Использование компьютера"
+  },
+  {
+    "en": "Computer Use needs macOS permissions",
+    "zh": "Для использования компьютера необходимы разрешения macOS"
+  },
+  {
+    "en": "Computer Use wants to control these apps",
+    "zh": "Использование компьютера хочет контролировать эти приложения."
+  },
+  {
+    "en": "Config change rejected",
+    "zh": "Изменение конфигурации отклонено"
+  },
+  {
+    "en": "Config location: ",
+    "zh": "Местоположение конфигурации: "
+  },
+  {
+    "en": "Configure Mode:",
+    "zh": "Режим настройки:"
+  },
+  {
+    "en": "Configure Overrides:",
+    "zh": "Настройте переопределения:"
+  },
+  {
+    "en": "Configure extra usage to keep working when limits are hit",
+    "zh": "Настройте дополнительное использование, чтобы продолжать работу при достижении ограничений."
+  },
+  {
+    "en": "Configure options",
+    "zh": "Настроить параметры"
+  },
+  {
+    "en": "Configure the auto-compact window size",
+    "zh": "Настройка размера автоматического сжатия окна"
+  },
+  {
+    "en": "Configure the default remote environment for teleport sessions",
+    "zh": "Настройте удаленную среду по умолчанию для сеансов телепортации."
+  },
+  {
+    "en": "Connect Claude on the web to GitHub?",
+    "zh": "Подключить Клода в Интернете к GitHub?"
+  },
+  {
+    "en": "Connect this terminal for remote-control sessions",
+    "zh": "Подключите этот терминал для сеансов удаленного управления."
+  },
+  {
+    "en": "Connect to an IDE for integrated development features.",
+    "zh": "Подключитесь к IDE для интегрированных функций разработки."
+  },
+  {
+    "en": "Connection error.",
+    "zh": "Ошибка подключения."
+  },
+  {
+    "en": "Connection refused - server may be down",
+    "zh": "Соединение отклонено – возможно, сервер не работает"
+  },
+  {
+    "en": "Connection was closed before it was established.",
+    "zh": "Соединение было закрыто до того, как оно было установлено."
+  },
+  {
+    "en": "Contact your administrator.",
+    "zh": "Свяжитесь со своим администратором."
+  },
+  {
+    "en": "Contact your system administrator for more information.",
+    "zh": "Для получения дополнительной информации обратитесь к своему системному администратору."
+  },
+  {
+    "en": "Context Usage",
+    "zh": "Использование контекста"
+  },
+  {
+    "en": "Context Usage Warnings",
+    "zh": "Предупреждения об использовании контекста"
+  },
+  {
+    "en": "Context limit reached · /compact or /clear to continue",
+    "zh": "Достигнут предел контекста · /compact или /clear, чтобы продолжить"
+  },
+  {
+    "en": "Continue the current session in Claude Desktop",
+    "zh": "Продолжить текущий сеанс в Claude Desktop"
+  },
+  {
+    "en": "Continue the most recent conversation in the current directory",
+    "zh": "Продолжить самый последний разговор в текущем каталоге"
+  },
+  {
+    "en": "Continue this conversation",
+    "zh": "Продолжить этот разговор"
+  },
+  {
+    "en": "Continue to run and watch for changes",
+    "zh": "Продолжайте бегать и следить за изменениями"
+  },
+  {
+    "en": "Continue without these settings",
+    "zh": "Продолжить без этих настроек"
+  },
+  {
+    "en": "Continue without using this MCP server",
+    "zh": "Продолжить без использования этого сервера MCP"
+  },
+  {
+    "en": "Conversation compacted",
+    "zh": "Разговор сжат"
+  },
+  {
+    "en": "Conversation copied to clipboard",
+    "zh": "Разговор скопирован в буфер обмена."
+  },
+  {
+    "en": "Copy on select",
+    "zh": "Копировать при выборе"
+  },
+  {
+    "en": "Copy the conversation to your system clipboard",
+    "zh": "Скопируйте разговор в системный буфер обмена."
+  },
+  {
+    "en": "Copy to clipboard",
+    "zh": "Скопировать в буфер обмена"
+  },
+  {
+    "en": "Create Authentication Token",
+    "zh": "Создать токен аутентификации"
+  },
+  {
+    "en": "Create GitHub Actions workflow",
+    "zh": "Создание рабочего процесса действий GitHub"
+  },
+  {
+    "en": "Create a branch of the current conversation at this point",
+    "zh": "На этом этапе создайте ветку текущего разговора."
+  },
+  {
+    "en": "Create a git commit",
+    "zh": "Создать git-коммит"
+  },
+  {
+    "en": "Create a long-lived token with your Claude subscription",
+    "zh": "Создайте долгосрочный токен с помощью своей подписки Claude."
+  },
+  {
+    "en": "Create a new animation from scratch",
+    "zh": "Создать новую анимацию с нуля"
+  },
+  {
+    "en": "Create a remote session with the given description",
+    "zh": "Создать удаленный сеанс с данным описанием"
+  },
+  {
+    "en": "Create new agent",
+    "zh": "Создать нового агента"
+  },
+  {
+    "en": "Create or list command aliases",
+    "zh": "Создайте или перечислите псевдонимы команд"
+  },
+  {
+    "en": "Create skills in .claude/skills/ or ~/.claude/skills/",
+    "zh": "Создайте навыки в .claude/skills/ или ~/.claude/skills/."
+  },
+  {
+    "en": "Create verifier skill(s) for automated verification of code changes",
+    "zh": "Создайте навыки верификатора для автоматической проверки изменений кода."
+  },
+  {
+    "en": "Creating a long-lived token for GitHub Actions",
+    "zh": "Создание долгоживущего токена для действий GitHub"
+  },
+  {
+    "en": "Credit balance too low · Add funds: https://platform.claude.com/settings/billing",
+    "zh": "Кредитный баланс слишком низкий · Добавить средства: https://platform.claude.com/settings/billing"
+  },
+  {
+    "en": "Ctrl+d to show debug info",
+    "zh": "Ctrl+d, чтобы показать информацию об отладке"
+  },
+  {
+    "en": "Ctrl-D to hide debug info",
+    "zh": "Ctrl-D, чтобы скрыть информацию об отладке"
+  },
+  {
+    "en": "Current Plan",
+    "zh": "Текущий план"
+  },
+  {
+    "en": "Custom agents",
+    "zh": "Пользовательские агенты"
+  },
+  {
+    "en": "Custom model",
+    "zh": "Пользовательская модель"
+  },
+  {
+    "en": "Custom tip",
+    "zh": "Пользовательский совет"
+  },
+  {
+    "en": "Dark mode",
+    "zh": "Темный режим"
+  },
+  {
+    "en": "Dark mode (ANSI colors only)",
+    "zh": "Темный режим (только цвета ANSI)"
+  },
+  {
+    "en": "Dark mode (colorblind-friendly)",
+    "zh": "Темный режим (удобен для дальтоников)"
+  },
+  {
+    "en": "Data Privacy",
+    "zh": "Конфиденциальность данных"
+  },
+  {
+    "en": "Debug mode",
+    "zh": "Режим отладки"
+  },
+  {
+    "en": "Debug mode enabled",
+    "zh": "Режим отладки включен"
+  },
+  {
+    "en": "Default (recommended)",
+    "zh": "По умолчанию (рекомендуется)"
+  },
+  {
+    "en": "Default permission mode",
+    "zh": "Режим разрешений по умолчанию"
+  },
+  {
+    "en": "Default region",
+    "zh": "Регион по умолчанию"
+  },
+  {
+    "en": "Default teammate model",
+    "zh": "Модель товарища по команде по умолчанию"
+  },
+  {
+    "en": "Default view",
+    "zh": "Вид по умолчанию"
+  },
+  {
+    "en": "Delete agent",
+    "zh": "Удалить агента"
+  },
+  {
+    "en": "Delete it along with the plugin?",
+    "zh": "Удалить его вместе с плагином?"
+  },
+  {
+    "en": "Describe the issue below:",
+    "zh": "Опишите проблему ниже:"
+  },
+  {
+    "en": "Description (tell Claude when to use this agent)",
+    "zh": "Описание (сообщите Клоду, когда использовать этот агент)"
+  },
+  {
+    "en": "Diagnose and verify your Claude Code installation and settings",
+    "zh": "Диагностика и проверка установки и настроек Claude Code."
+  },
+  {
+    "en": "Diff tool",
+    "zh": "Инструмент сравнения"
+  },
+  {
+    "en": "Disable Claude in Chrome integration",
+    "zh": "Отключить Клода в интеграции Chrome"
+  },
+  {
+    "en": "Disable plugin",
+    "zh": "Отключить плагин"
+  },
+  {
+    "en": "Discover Claude Code features through quick interactive lessons",
+    "zh": "Откройте для себя возможности Claude Code с помощью быстрых интерактивных уроков"
+  },
+  {
+    "en": "Discover plugins",
+    "zh": "Откройте для себя плагины"
+  },
+  {
+    "en": "Do you want to make this edit to",
+    "zh": "Хотите внести это изменение в"
+  },
+  {
+    "en": "Do you want to proceed?",
+    "zh": "Хотите продолжить?"
+  },
+  {
+    "en": "Do you want to use this API key?",
+    "zh": "Хотите использовать этот ключ API?"
+  },
+  {
+    "en": "Do you wish to disable auto-connect to IDE?",
+    "zh": "Вы хотите отключить автоматическое подключение к IDE?"
+  },
+  {
+    "en": "Do you wish to enable auto-connect to IDE?",
+    "zh": "Хотите включить автоматическое подключение к IDE?"
+  },
+  {
+    "en": "Does Claude...",
+    "zh": "Клод..."
+  },
+  {
+    "en": "Don't ask again",
+    "zh": "Не спрашивай больше"
+  },
+  {
+    "en": "Don't ask me again",
+    "zh": "Не спрашивай меня больше"
+  },
+  {
+    "en": "Due to prompt injection risks, only use it with code you trust",
+    "zh": "Из-за риска быстрого внедрения используйте его только с кодом, которому вы доверяете."
+  },
+  {
+    "en": "Each candidate is tested with a one-token request:",
+    "zh": "Каждый кандидат тестируется с помощью запроса с одним токеном:"
+  },
+  {
+    "en": "Each subagent has its own context window, custom system prompt, and specific tools.",
+    "zh": "Каждый субагент имеет собственное контекстное окно, настраиваемую системную подсказку и специальные инструменты."
+  },
+  {
+    "en": "Edit Failed",
+    "zh": "Редактировать не удалось"
+  },
+  {
+    "en": "Edit agent",
+    "zh": "Редактировать агента"
+  },
+  {
+    "en": "Edit and press Enter to retry, or Esc to cancel",
+    "zh": "Измените и нажмите Enter, чтобы повторить попытку, или Esc, чтобы отменить."
+  },
+  {
+    "en": "Edit color",
+    "zh": "Изменить цвет"
+  },
+  {
+    "en": "Edit content",
+    "zh": "Редактировать контент"
+  },
+  {
+    "en": "Edit model",
+    "zh": "Редактировать модель"
+  },
+  {
+    "en": "Edit tools",
+    "zh": "Инструменты редактирования"
+  },
+  {
+    "en": "Editor mode",
+    "zh": "Режим редактора"
+  },
+  {
+    "en": "Enable Claude in Chrome integration",
+    "zh": "Включить Клода в интеграции Chrome"
+  },
+  {
+    "en": "Enable Remote Control for all sessions",
+    "zh": "Включить удаленное управление для всех сеансов"
+  },
+  {
+    "en": "Enable Remote Control for this session",
+    "zh": "Включить удаленное управление для этого сеанса"
+  },
+  {
+    "en": "Enable auth status messages in SDK mode",
+    "zh": "Включить сообщения о статусе аутентификации в режиме SDK"
+  },
+  {
+    "en": "Enable debug logging for this session and help diagnose issues",
+    "zh": "Включите ведение журнала отладки для этого сеанса и помогите диагностировать проблемы."
+  },
+  {
+    "en": "Enable extended thinking (false to disable)",
+    "zh": "Включить расширенное мышление (false, чтобы отключить)"
+  },
+  {
+    "en": "Enable file checkpointing for code rewind",
+    "zh": "Включить проверку файлов для перемотки кода"
+  },
+  {
+    "en": "Enable or disable thinking for this session.",
+    "zh": "Включите или отключите мышление для этого сеанса."
+  },
+  {
+    "en": "Enable plugin",
+    "zh": "Включить плагин"
+  },
+  {
+    "en": "Enable todo/task tracking",
+    "zh": "Включить отслеживание дел/задач"
+  },
+  {
+    "en": "Enable voice dictation (hold-to-talk)",
+    "zh": "Включить голосовую диктовку (удерживать и говорить)"
+  },
+  {
+    "en": "Enable with latest channel",
+    "zh": "Включить с последним каналом"
+  },
+  {
+    "en": "Enable with stable channel",
+    "zh": "Включить со стабильным каналом"
+  },
+  {
+    "en": "Enter ",
+    "zh": "Входить "
+  },
+  {
+    "en": "Enter a unique identifier for your agent:",
+    "zh": "Введите уникальный идентификатор вашего агента:"
+  },
+  {
+    "en": "Enter new secret name (alphanumeric with underscores):",
+    "zh": "Введите новое секретное имя (буквенно-цифровое с подчеркиванием):"
+  },
+  {
+    "en": "Enter plan mode?",
+    "zh": "Войти в режим плана?"
+  },
+  {
+    "en": "Enter the path to the directory:",
+    "zh": "Введите путь к каталогу:"
+  },
+  {
+    "en": "Enter the system prompt for your agent:",
+    "zh": "Введите системное приглашение для вашего агента:"
+  },
+  {
+    "en": "Enter to apply",
+    "zh": "Войдите, чтобы подать заявку"
+  },
+  {
+    "en": "Enter to auth",
+    "zh": "Войдите для авторизации"
+  },
+  {
+    "en": "Enter to confirm · Esc to cancel",
+    "zh": "Enter для подтверждения · Esc для отмены"
+  },
+  {
+    "en": "Enter to confirm · Esc to skip",
+    "zh": "Enter для подтверждения · Esc для пропуска"
+  },
+  {
+    "en": "Enter to select · Esc to continue",
+    "zh": "Enter, чтобы выбрать · Esc, чтобы продолжить"
+  },
+  {
+    "en": "Enter to view",
+    "zh": "Войдите, чтобы просмотреть"
+  },
+  {
+    "en": "Enter view",
+    "zh": "Войти в представление"
+  },
+  {
+    "en": "Enter your preferred response and voice language:",
+    "zh": "Введите предпочитаемый ответ и язык озвучки:"
+  },
+  {
+    "en": "Enter: Save configuration",
+    "zh": "Введите: Сохранить конфигурацию"
+  },
+  {
+    "en": "Enterprise MCPs",
+    "zh": "Корпоративные MCP"
+  },
+  {
+    "en": "Environment Variables",
+    "zh": "Переменные среды"
+  },
+  {
+    "en": "Error editing file",
+    "zh": "Ошибка редактирования файла"
+  },
+  {
+    "en": "Error editing notebook",
+    "zh": "Ошибка редактирования блокнота."
+  },
+  {
+    "en": "Error loading Claude Code sessions",
+    "zh": "Ошибка загрузки сеансов Claude Code."
+  },
+  {
+    "en": "Error reading file",
+    "zh": "Ошибка чтения файла"
+  },
+  {
+    "en": "Error searching files",
+    "zh": "Ошибка поиска файлов"
+  },
+  {
+    "en": "Error writing file",
+    "zh": "Ошибка записи файла"
+  },
+  {
+    "en": "Esc to cancel",
+    "zh": "Esc для отмены"
+  },
+  {
+    "en": "Esc to close",
+    "zh": "Esc, чтобы закрыть"
+  },
+  {
+    "en": "Esc to exit",
+    "zh": "Esc для выхода"
+  },
+  {
+    "en": "Esc to go back",
+    "zh": "Esc, чтобы вернуться назад"
+  },
+  {
+    "en": "Estimated usage by category",
+    "zh": "Предполагаемое использование по категориям"
+  },
+  {
+    "en": "Evening (18-24)",
+    "zh": "Вечер (18-24)"
+  },
+  {
+    "en": "Evidence of sandbox-caused failures includes:",
+    "zh": "Свидетельства сбоев, вызванных песочницей, включают в себя:"
+  },
+  {
+    "en": "Excluded Commands:",
+    "zh": "Исключенные команды:"
+  },
+  {
+    "en": "Existing Workflow Found",
+    "zh": "Обнаружен существующий рабочий процесс"
+  },
+  {
+    "en": "Exit and fix manually",
+    "zh": "Выйти и исправить вручную"
+  },
+  {
+    "en": "Exit plan mode?",
+    "zh": "Выйти из режима планирования?"
+  },
+  {
+    "en": "Explanation unavailable",
+    "zh": "Объяснение недоступно"
+  },
+  {
+    "en": "Export Conversation",
+    "zh": "Экспортный разговор"
+  },
+  {
+    "en": "Export the current conversation to a file or clipboard",
+    "zh": "Экспортируйте текущий разговор в файл или буфер обмена."
+  },
+  {
+    "en": "External CLAUDE.md includes",
+    "zh": "Внешний CLAUDE.md включает в себя"
+  },
+  {
+    "en": "External imports:",
+    "zh": "Внешний импорт:"
+  },
+  {
+    "en": "Extra usage",
+    "zh": "Дополнительное использование"
+  },
+  {
+    "en": "Extra usage not enabled · /extra-usage to enable",
+    "zh": "Дополнительное использование не включено · /extra-usage, чтобы включить"
+  },
+  {
+    "en": "Failed to install ",
+    "zh": "Не удалось установить "
+  },
+  {
+    "en": "Failed to load marketplace data.",
+    "zh": "Не удалось загрузить данные торговой площадки."
+  },
+  {
+    "en": "Failed to resume agent: ",
+    "zh": "Не удалось возобновить работу агента: "
+  },
+  {
+    "en": "Failed to resume session",
+    "zh": "Не удалось возобновить сеанс."
+  },
+  {
+    "en": "Failed to save marketplace retry info · Check ~/.claude.json permissions",
+    "zh": "Не удалось сохранить информацию о повторных попытках торговой площадки. · Проверьте разрешения ~/.claude.json."
+  },
+  {
+    "en": "Failed to spawn process - check command and permissions",
+    "zh": "Не удалось запустить процесс. Проверьте команду и разрешения."
+  },
+  {
+    "en": "Failed: ",
+    "zh": "Неуспешный: "
+  },
+  {
+    "en": "Fast and efficient for simple tasks",
+    "zh": "Быстро и эффективно для простых задач"
+  },
+  {
+    "en": "Fast mode",
+    "zh": "Быстрый режим"
+  },
+  {
+    "en": "Fast mode OFF",
+    "zh": "Быстрый режим ВЫКЛ."
+  },
+  {
+    "en": "Feedback: ",
+    "zh": "Обратная связь: "
+  },
+  {
+    "en": "Fetching session logs",
+    "zh": "Получение журналов сеансов"
+  },
+  {
+    "en": "Fetching…",
+    "zh": "Получение…"
+  },
+  {
+    "en": "File Changed",
+    "zh": "Файл изменен"
+  },
+  {
+    "en": "File must be read first",
+    "zh": "Файл необходимо сначала прочитать"
+  },
+  {
+    "en": "File not found",
+    "zh": "Файл не найден"
+  },
+  {
+    "en": "Files with errors are skipped entirely, not just the invalid settings.",
+    "zh": "Файлы с ошибками пропускаются целиком, а не только с неверными настройками."
+  },
+  {
+    "en": "Filesystem Read Restrictions:",
+    "zh": "Ограничения чтения файловой системы:"
+  },
+  {
+    "en": "Filesystem Write Restrictions:",
+    "zh": "Ограничения записи файловой системы:"
+  },
+  {
+    "en": "Fix errors",
+    "zh": "Исправить ошибки"
+  },
+  {
+    "en": "Follow the prompts to authenticate with GitHub",
+    "zh": "Следуйте инструкциям для аутентификации с помощью GitHub."
+  },
+  {
+    "en": "For manual setup instructions, see:",
+    "zh": "Инструкции по ручной настройке см.:"
+  },
+  {
+    "en": "For more information on Claude Code on the web:",
+    "zh": "Дополнительную информацию о Claude Code можно найти в Интернете:"
+  },
+  {
+    "en": "For the optimal coding experience, enable the recommended settings",
+    "zh": "Для оптимального процесса кодирования включите рекомендуемые настройки."
+  },
+  {
+    "en": "Full name: ",
+    "zh": "Полное имя: "
+  },
+  {
+    "en": "Full response",
+    "zh": "Полный ответ"
+  },
+  {
+    "en": "GCP project",
+    "zh": "проект GCP"
+  },
+  {
+    "en": "Generate a report analyzing your Claude Code sessions",
+    "zh": "Создайте отчет с анализом ваших сеансов Claude Code."
+  },
+  {
+    "en": "Generate with Claude (recommended)",
+    "zh": "Создать с помощью Клода (рекомендуется)"
+  },
+  {
+    "en": "Generate your personalized animation",
+    "zh": "Создайте свою персонализированную анимацию"
+  },
+  {
+    "en": "Generating QR code…",
+    "zh": "Генерация QR-кода…"
+  },
+  {
+    "en": "Get the current weather for a location",
+    "zh": "Получить текущую погоду для определенного местоположения"
+  },
+  {
+    "en": "Getting branch info",
+    "zh": "Получение информации о филиале"
+  },
+  {
+    "en": "Git is required to install marketplaces.",
+    "zh": "Git необходим для установки торговых площадок."
+  },
+  {
+    "en": "Go back",
+    "zh": "Возвращаться"
+  },
+  {
+    "en": "Go back and fix",
+    "zh": "Вернитесь и исправьте"
+  },
+  {
+    "en": "Got it, thanks!",
+    "zh": "Понял, спасибо!"
+  },
+  {
+    "en": "Guest passes are not currently available.",
+    "zh": "Гостевые пропуска в настоящее время недоступны."
+  },
+  {
+    "en": "Have an administrator set channelsEnabled: true in managed settings to enable",
+    "zh": "Попросите администратора установить ChannelEnabled: true в управляемых настройках, чтобы включить"
+  },
+  {
+    "en": "Having trouble? See manual setup instructions at:",
+    "zh": "Возникли проблемы? Инструкции по ручной настройке см. по адресу:"
+  },
+  {
+    "en": "Help improve Claude",
+    "zh": "Помогите улучшить Клода"
+  },
+  {
+    "en": "Help teammates ramp on Claude Code with a guide from your usage",
+    "zh": "Помогите товарищам по команде осваивать Claude Code с помощью руководства, основанного на вашем опыте использования."
+  },
+  {
+    "en": "Here is Claude's plan:",
+    "zh": "Вот план Клода:"
+  },
+  {
+    "en": "Hook Structure",
+    "zh": "Структура крючка"
+  },
+  {
+    "en": "Hook details",
+    "zh": "Детали крючка"
+  },
+  {
+    "en": "Hooks only",
+    "zh": "Только крючки"
+  },
+  {
+    "en": "Host unreachable - network connectivity issue",
+    "zh": "Хост недоступен – проблема с сетевым подключением"
+  },
+  {
+    "en": "How do I...",
+    "zh": "Как мне..."
+  },
+  {
+    "en": "How should the plan be implemented?",
+    "zh": "Как следует реализовать план?"
+  },
+  {
+    "en": "How thinking content appears in the response",
+    "zh": "Как мыслительное содержание проявляется в ответе"
+  },
+  {
+    "en": "How this affects data retention",
+    "zh": "Как это влияет на сохранение данных"
+  },
+  {
+    "en": "How to fix:",
+    "zh": "Как исправить:"
+  },
+  {
+    "en": "How would you like to handle this?",
+    "zh": "Как бы вы хотели с этим справиться?"
+  },
+  {
+    "en": "I am using this for local development",
+    "zh": "Я использую это для локального развития"
+  },
+  {
+    "en": "If the redirect page shows a connection error, paste the URL from your browser's address bar:",
+    "zh": "Если на странице перенаправления отображается ошибка подключения, вставьте URL-адрес из адресной строки браузера:"
+  },
+  {
+    "en": "If this is an SSO profile, run `aws sso login --profile NAME` first.",
+    "zh": "Если это профиль единого входа, сначала запустите `aws sso login --profile NAME`."
+  },
+  {
+    "en": "If your browser doesn't open automatically, copy this URL manually:",
+    "zh": "Если ваш браузер не открывается автоматически, скопируйте этот URL вручную:"
+  },
+  {
+    "en": "Implement here",
+    "zh": "Реализуйте здесь"
+  },
+  {
+    "en": "Import MCP Servers from Claude Desktop",
+    "zh": "Импортируйте серверы MCP из Claude Desktop"
+  },
+  {
+    "en": "Important: Make sure to grant access to this specific repository",
+    "zh": "Важно: обязательно предоставьте доступ к этому конкретному репозиторию."
+  },
+  {
+    "en": "In plan mode, Claude will:",
+    "zh": "В режиме плана Клод будет:"
+  },
+  {
+    "en": "In progress… · ",
+    "zh": "В ходе выполнения… · "
+  },
+  {
+    "en": "Inbound messages will be silently dropped",
+    "zh": "Входящие сообщения будут автоматически удаляться"
+  },
+  {
+    "en": "Individual Tools:",
+    "zh": "Индивидуальные инструменты:"
+  },
+  {
+    "en": "Inherit from parent",
+    "zh": "Наследовать от родителя"
+  },
+  {
+    "en": "Inject bridge failure states for manual recovery testing",
+    "zh": "Внедрение состояний отказа моста для ручного тестирования восстановления."
+  },
+  {
+    "en": "Inject plan into the current conversation",
+    "zh": "Внедрить план в текущий разговор"
+  },
+  {
+    "en": "Install Chrome extension",
+    "zh": "Установить расширение Chrome"
+  },
+  {
+    "en": "Install GitHub App",
+    "zh": "Установите приложение GitHub"
+  },
+  {
+    "en": "Install Plugins",
+    "zh": "Установить плагины"
+  },
+  {
+    "en": "Install for all collaborators on this repository (project scope)",
+    "zh": "Установить для всех соавторов в этом репозитории (объем проекта)"
+  },
+  {
+    "en": "Install for you (user scope)",
+    "zh": "Установить для вас (область пользователя)"
+  },
+  {
+    "en": "Install for you, in this repo only (local scope)",
+    "zh": "Установите для себя только в этом репо (локально)"
+  },
+  {
+    "en": "Install it2 now",
+    "zh": "Установите его2 сейчас"
+  },
+  {
+    "en": "Install plugins",
+    "zh": "Установить плагины"
+  },
+  {
+    "en": "Install the Claude GitHub App",
+    "zh": "Установите приложение Клода GitHub"
+  },
+  {
+    "en": "Installation failed",
+    "zh": "Установка не удалась"
+  },
+  {
+    "en": "Installed components:",
+    "zh": "Установленные компоненты:"
+  },
+  {
+    "en": "Interrupted ",
+    "zh": "Прервано "
+  },
+  {
+    "en": "Invalid Key.",
+    "zh": "Неверный ключ."
+  },
+  {
+    "en": "Invalid Settings",
+    "zh": "Неверные настройки"
+  },
+  {
+    "en": "Keep worktree",
+    "zh": "Сохранить рабочее дерево"
+  },
+  {
+    "en": "Keep worktree and tmux session",
+    "zh": "Сохранять рабочее дерево и сеанс tmux"
+  },
+  {
+    "en": "Keep worktree, kill tmux session",
+    "zh": "Сохранить рабочее дерево, убить сеанс tmux"
+  },
+  {
+    "en": "Keeping worktree…",
+    "zh": "Сохранение рабочего дерева…"
+  },
+  {
+    "en": "Key binding mode",
+    "zh": "Режим привязки клавиш"
+  },
+  {
+    "en": "Key pressed.",
+    "zh": "Клавиша нажата."
+  },
+  {
+    "en": "Keybinding Configuration Issues",
+    "zh": "Проблемы с настройкой привязки клавиш"
+  },
+  {
+    "en": "Kick off a long task, close your laptop, check progress from your phone.",
+    "zh": "Запустите длительную задачу, закройте ноутбук и проверьте прогресс с телефона."
+  },
+  {
+    "en": "LSP operation failed",
+    "zh": "Операция LSP не удалась"
+  },
+  {
+    "en": "LSP provides code intelligence like go-to-definition and error checking",
+    "zh": "LSP обеспечивает анализ кода, например переход к определению и проверку ошибок."
+  },
+  {
+    "en": "Large file - diff exceeds 1 MB limit",
+    "zh": "Большой файл – разница превышает лимит в 1 МБ."
+  },
+  {
+    "en": "Large file modified",
+    "zh": "Большой файл изменен"
+  },
+  {
+    "en": "Learn more",
+    "zh": "Узнать больше"
+  },
+  {
+    "en": "Leave empty for default (English)",
+    "zh": "Оставьте пустым по умолчанию (английский)"
+  },
+  {
+    "en": "Let me try...",
+    "zh": "Дай мне попробовать..."
+  },
+  {
+    "en": "Let's go!",
+    "zh": "Пойдем!"
+  },
+  {
+    "en": "Light mode",
+    "zh": "Светлый режим"
+  },
+  {
+    "en": "Light mode (ANSI colors only)",
+    "zh": "Светлый режим (только цвета ANSI)"
+  },
+  {
+    "en": "Light mode (colorblind-friendly)",
+    "zh": "Светлый режим (для дальтоников)"
+  },
+  {
+    "en": "List all files currently in context",
+    "zh": "Список всех файлов, находящихся в данный момент в контексте"
+  },
+  {
+    "en": "Load failed",
+    "zh": "Загрузка не удалась"
+  },
+  {
+    "en": "Loading Claude Code sessions…",
+    "zh": "Загрузка сеансов Claude Code…"
+  },
+  {
+    "en": "Loading conversations…",
+    "zh": "Загрузка разговоров…"
+  },
+  {
+    "en": "Loading guest pass information…",
+    "zh": "Загрузка информации о гостевом пропуске…"
+  },
+  {
+    "en": "Loading output styles…",
+    "zh": "Загрузка стилей вывода…"
+  },
+  {
+    "en": "Loading output…",
+    "zh": "Загрузка вывода…"
+  },
+  {
+    "en": "Loading usage data…",
+    "zh": "Загрузка данных об использовании…"
+  },
+  {
+    "en": "Local MCPs",
+    "zh": "Местные MCP"
+  },
+  {
+    "en": "Local agents",
+    "zh": "Местные агенты"
+  },
+  {
+    "en": "Location: ",
+    "zh": "Расположение: "
+  },
+  {
+    "en": "Log in to Claude",
+    "zh": "Войти в Клод"
+  },
+  {
+    "en": "Logged in as",
+    "zh": "Вошёл как"
+  },
+  {
+    "en": "Logging to: ",
+    "zh": "Вход в: "
+  },
+  {
+    "en": "Login method",
+    "zh": "Способ входа"
+  },
+  {
+    "en": "Login successful. Press ",
+    "zh": "Вход успешен. Нажимать "
+  },
+  {
+    "en": "Login with Claude account",
+    "zh": "Войти под учетной записью Claude"
+  },
+  {
+    "en": "Long context that holds up",
+    "zh": "Длинный контекст, который выдерживает критику"
+  },
+  {
+    "en": "Looking at...",
+    "zh": "Глядя на..."
+  },
+  {
+    "en": "Looks good",
+    "zh": "Выглядит хорошо"
+  },
+  {
+    "en": "MCP Config Diagnostics",
+    "zh": "Диагностика конфигурации MCP"
+  },
+  {
+    "en": "MCP Servers:",
+    "zh": "MCP-серверы:"
+  },
+  {
+    "en": "MCP documentation",
+    "zh": "Документация MCP"
+  },
+  {
+    "en": "MCP servers",
+    "zh": "MCP-серверы"
+  },
+  {
+    "en": "MCP tools",
+    "zh": "Инструменты MCP"
+  },
+  {
+    "en": "Manage IDE integrations and show status",
+    "zh": "Управление интеграцией IDE и отображение статуса"
+  },
+  {
+    "en": "Manage allow & deny tool permission rules",
+    "zh": "Управление правилами разрешения и запрета инструментов"
+  },
+  {
+    "en": "Manage marketplaces",
+    "zh": "Управление торговыми площадками"
+  },
+  {
+    "en": "Manage permissions",
+    "zh": "Управление разрешениями"
+  },
+  {
+    "en": "Manage plugins",
+    "zh": "Управление плагинами"
+  },
+  {
+    "en": "Managed agents",
+    "zh": "Управляемые агенты"
+  },
+  {
+    "en": "Managed by your organization — contact your admin",
+    "zh": "Управляется вашей организацией — обратитесь к администратору."
+  },
+  {
+    "en": "Manual configuration",
+    "zh": "Ручная настройка"
+  },
+  {
+    "en": "Memory files",
+    "zh": "Файлы памяти"
+  },
+  {
+    "en": "Message ",
+    "zh": "Сообщение "
+  },
+  {
+    "en": "Microcompact",
+    "zh": "Микрокомпакт"
+  },
+  {
+    "en": "Microsoft Foundry base URL",
+    "zh": "Базовый URL-адрес Microsoft Foundry"
+  },
+  {
+    "en": "Microsoft Foundry resource",
+    "zh": "Ресурс Microsoft Foundry"
+  },
+  {
+    "en": "Model determines the agent's reasoning capabilities and speed.",
+    "zh": "Модель определяет возможности и скорость рассуждения агента."
+  },
+  {
+    "en": "More workflow examples (issue triage, CI fixes, etc.) at:",
+    "zh": "Дополнительные примеры рабочих процессов (сортировка проблем, исправления CI и т. д.) по адресу:"
+  },
+  {
+    "en": "Morning (6-12)",
+    "zh": "Утро (6-12)"
+  },
+  {
+    "en": "Most capable for complex reasoning tasks",
+    "zh": "Наиболее способен решать сложные логические задачи."
+  },
+  {
+    "en": "NetworkError when attempting to fetch resource",
+    "zh": "NetworkError при попытке получить ресурс"
+  },
+  {
+    "en": "Never mind",
+    "zh": "Неважно"
+  },
+  {
+    "en": "New file not yet staged.",
+    "zh": "Новый файл еще не подготовлен."
+  },
+  {
+    "en": "Next steps:",
+    "zh": "Следующие шаги:"
+  },
+  {
+    "en": "Next: Run ",
+    "zh": "Далее: Бежать "
+  },
+  {
+    "en": "Night (0-6)",
+    "zh": "Ночь (0-6)"
+  },
+  {
+    "en": "No Sandbox",
+    "zh": "Нет песочницы"
+  },
+  {
+    "en": "No advisor",
+    "zh": "Нет советника"
+  },
+  {
+    "en": "No agents found. Create specialized subagents that Claude can delegate to.",
+    "zh": "Агенты не найдены. Создайте специализированные субагенты, которым Клод сможет делегировать полномочия."
+  },
+  {
+    "en": "No cells found in notebook",
+    "zh": "В блокноте не найдено ячеек"
+  },
+  {
+    "en": "No changed files",
+    "zh": "Нет измененных файлов"
+  },
+  {
+    "en": "No changes detected",
+    "zh": "Никаких изменений не обнаружено"
+  },
+  {
+    "en": "No code changes",
+    "zh": "Никаких изменений кода"
+  },
+  {
+    "en": "No conversations found to resume.",
+    "zh": "Не найдено ни одного разговора, который можно было бы возобновить."
+  },
+  {
+    "en": "No diff content",
+    "zh": "Нет различий в контенте"
+  },
+  {
+    "en": "No hooks configured for this event.",
+    "zh": "Для этого события не настроены перехватчики."
+  },
+  {
+    "en": "No info yet",
+    "zh": "Пока нет информации"
+  },
+  {
+    "en": "No matching sessions found.",
+    "zh": "Соответствующие сеансы не найдены."
+  },
+  {
+    "en": "No messages to compact",
+    "zh": "Нет сообщений для сжатия"
+  },
+  {
+    "en": "No model usage data available",
+    "zh": "Данные об использовании модели отсутствуют."
+  },
+  {
+    "en": "No new plugins available to install.",
+    "zh": "Новых плагинов для установки нет."
+  },
+  {
+    "en": "No other browsers available to switch to. Open Chrome with the Claude extension in another browser to switch.",
+    "zh": "Нет других браузеров, на которые можно переключиться. Откройте Chrome с расширением Claude в другом браузере, чтобы переключиться."
+  },
+  {
+    "en": "No output available",
+    "zh": "Нет доступных выходных данных"
+  },
+  {
+    "en": "No plan found",
+    "zh": "План не найден"
+  },
+  {
+    "en": "No plugin errors",
+    "zh": "Нет ошибок плагина"
+  },
+  {
+    "en": "No plugins available.",
+    "zh": "Нет доступных плагинов."
+  },
+  {
+    "en": "No recent denials. Commands denied by the auto mode classifier will appear here.",
+    "zh": "Никаких недавних опровержений. Здесь появятся команды, запрещенные классификатором автоматического режима."
+  },
+  {
+    "en": "No response",
+    "zh": "Нет ответа"
+  },
+  {
+    "en": "No response.",
+    "zh": "Никакого ответа."
+  },
+  {
+    "en": "No scheduled jobs",
+    "zh": "Нет запланированных заданий"
+  },
+  {
+    "en": "No stats available yet. Start using Claude Code!",
+    "zh": "Статистики пока нет. Начните использовать Клод Код!"
+  },
+  {
+    "en": "No task output available",
+    "zh": "Нет доступных выходных данных задачи"
+  },
+  {
+    "en": "No tasks currently running",
+    "zh": "В данный момент нет запущенных задач"
+  },
+  {
+    "en": "No teammates",
+    "zh": "Нет товарищей по команде"
+  },
+  {
+    "en": "No tools available",
+    "zh": "Нет доступных инструментов"
+  },
+  {
+    "en": "No, and don't show plugin installation hints again",
+    "zh": "Нет, и больше не показывать подсказки по установке плагина."
+  },
+  {
+    "en": "No, cancel",
+    "zh": "Нет, отменить"
+  },
+  {
+    "en": "No, disable external imports",
+    "zh": "Нет, отключить внешний импорт"
+  },
+  {
+    "en": "No, exit",
+    "zh": "Нет выхода"
+  },
+  {
+    "en": "No, keep planning",
+    "zh": "Нет, продолжайте планировать"
+  },
+  {
+    "en": "No, not now",
+    "zh": "Нет, не сейчас"
+  },
+  {
+    "en": "No, refine with Ultraplan on Claude Code on the web",
+    "zh": "Нет, уточните с помощью Ultraplan на Claude Code в Интернете."
+  },
+  {
+    "en": "No, start implementing now",
+    "zh": "Нет, начать реализацию прямо сейчас"
+  },
+  {
+    "en": "Not connected",
+    "zh": "Не подключено"
+  },
+  {
+    "en": "Not detected",
+    "zh": "Не обнаружено"
+  },
+  {
+    "en": "Not enough messages to compact.",
+    "zh": "Недостаточно сообщений для сжатия."
+  },
+  {
+    "en": "Not in remote mode. Start with `claude --remote` to use this command.",
+    "zh": "Не в удаленном режиме. Чтобы использовать эту команду, начните с `claude --remote`."
+  },
+  {
+    "en": "Not now",
+    "zh": "Не сейчас"
+  },
+  {
+    "en": "Not working",
+    "zh": "Не работает"
+  },
+  {
+    "en": "Note: Only one Claude Code instance can be connected to VS Code at a time.",
+    "zh": "Примечание. Одновременно к VS Code можно подключить только один экземпляр Claude Code."
+  },
+  {
+    "en": "Note: Some servers already exist with the same name. If selected, they will be imported with a numbered suffix.",
+    "zh": "Примечание. Некоторые серверы с таким именем уже существуют. Если этот флажок установлен, они будут импортированы с нумерованным суффиксом."
+  },
+  {
+    "en": "Notifications",
+    "zh": "Уведомления"
+  },
+  {
+    "en": "Now using extra usage",
+    "zh": "Теперь используется дополнительное использование"
+  },
+  {
+    "en": "OAuth token",
+    "zh": "Токен OAuth"
+  },
+  {
+    "en": "October 8, 2025",
+    "zh": "8 октября 2025 г."
+  },
+  {
+    "en": "On a team?",
+    "zh": "В команде?"
+  },
+  {
+    "en": "Only hooks from managed settings can run. User-defined hooks from ~/.claude/settings.json, .claude/settings.json, and .claude/settings.local.json are blocked.",
+    "zh": "Могут работать только перехватчики из управляемых настроек. Пользовательские перехватчики из ~/.claude/settings.json, .claude/settings.json и .claude/settings.local.json блокируются."
+  },
+  {
+    "en": "Only needed for temporary credentials from STS. Leave empty for long-lived keys.",
+    "zh": "Требуется только для временных учетных данных от STS. Оставьте пустым для долгоживущих ключей."
+  },
+  {
+    "en": "Open System Settings → Accessibility",
+    "zh": "Откройте «Настройки системы» → «Доступность»."
+  },
+  {
+    "en": "Open auto-memory folder",
+    "zh": "Открыть папку автопамяти"
+  },
+  {
+    "en": "Open homepage",
+    "zh": "Открыть домашнюю страницу"
+  },
+  {
+    "en": "Open in browser: ",
+    "zh": "Открыть в браузере: "
+  },
+  {
+    "en": "Open in editor",
+    "zh": "Открыть в редакторе"
+  },
+  {
+    "en": "Open team memory folder",
+    "zh": "Открыть папку командной памяти"
+  },
+  {
+    "en": "Opening browser to sign in…",
+    "zh": "Открытие браузера для входа…"
+  },
+  {
+    "en": "Option as Meta",
+    "zh": "Вариант как мета"
+  },
+  {
+    "en": "Opus (1M context)",
+    "zh": "Опус (контекст 1М)"
+  },
+  {
+    "en": "Opus Plan Mode",
+    "zh": "Режим плана Опус"
+  },
+  {
+    "en": "Output Style",
+    "zh": "Стиль вывода"
+  },
+  {
+    "en": "Output style",
+    "zh": "Стиль вывода"
+  },
+  {
+    "en": "Override settings are managed by a higher-priority configuration and cannot be changed locally.",
+    "zh": "Параметры переопределения управляются конфигурацией с более высоким приоритетом и не могут быть изменены локально."
+  },
+  {
+    "en": "Pasting text…",
+    "zh": "Вставка текста…"
+  },
+  {
+    "en": "Pending changes:",
+    "zh": "Ожидаемые изменения:"
+  },
+  {
+    "en": "Permission mode",
+    "zh": "Режим разрешений"
+  },
+  {
+    "en": "Permission request sent to team ",
+    "zh": "Запрос на разрешение отправлен в команду "
+  },
+  {
+    "en": "Personal (~/.claude/agents/)",
+    "zh": "Личное (~/.claude/agents/)"
+  },
+  {
+    "en": "Pin the working models",
+    "zh": "Закрепите рабочие модели"
+  },
+  {
+    "en": "Plan Mode",
+    "zh": "Режим планирования"
+  },
+  {
+    "en": "Plan file: ",
+    "zh": "Файл плана: "
+  },
+  {
+    "en": "Plan saved!",
+    "zh": "План сохранен!"
+  },
+  {
+    "en": "Plan to implement",
+    "zh": "План реализации"
+  },
+  {
+    "en": "Plan updated",
+    "zh": "План обновлен"
+  },
+  {
+    "en": "Planning: ",
+    "zh": "Планирование: "
+  },
+  {
+    "en": "Play animation",
+    "zh": "Воспроизвести анимацию"
+  },
+  {
+    "en": "Please check your internet connection and network settings.",
+    "zh": "Пожалуйста, проверьте подключение к Интернету и настройки сети."
+  },
+  {
+    "en": "Please enter a repository name to continue",
+    "zh": "Пожалуйста, введите имя репозитория, чтобы продолжить"
+  },
+  {
+    "en": "Please install git and restart Claude Code.",
+    "zh": "Пожалуйста, установите git и перезапустите Claude Code."
+  },
+  {
+    "en": "Please restart your IDE and try again.",
+    "zh": "Пожалуйста, перезапустите вашу IDE и повторите попытку."
+  },
+  {
+    "en": "Please revise your plan based on the feedback and call ExitPlanMode again.",
+    "zh": "Пожалуйста, измените свой план на основе отзывов и снова позвоните ExitPlanMode."
+  },
+  {
+    "en": "Please select how you'd like to continue",
+    "zh": "Пожалуйста, выберите, как вы хотите продолжить"
+  },
+  {
+    "en": "Please select the servers you want to import:",
+    "zh": "Пожалуйста, выберите серверы, которые вы хотите импортировать:"
+  },
+  {
+    "en": "Plugin Command Usage:",
+    "zh": "Использование команд плагина:"
+  },
+  {
+    "en": "Plugin Details",
+    "zh": "Подробности о плагине"
+  },
+  {
+    "en": "Plugin Errors",
+    "zh": "Ошибки плагина"
+  },
+  {
+    "en": "Plugin Hooks",
+    "zh": "Плагины-хуки"
+  },
+  {
+    "en": "Plugin agents",
+    "zh": "Плагины-агенты"
+  },
+  {
+    "en": "Plugin details",
+    "zh": "Подробности о плагине"
+  },
+  {
+    "en": "Plugin options",
+    "zh": "Опции плагина"
+  },
+  {
+    "en": "Plugin skill",
+    "zh": "Навык плагина"
+  },
+  {
+    "en": "Pre-fill the prompt input with text without submitting it",
+    "zh": "Предварительно заполните поле ввода текстом, не отправляя его."
+  },
+  {
+    "en": "Pre-populate email address on the login page",
+    "zh": "Предварительно заполните адрес электронной почты на странице входа в систему."
+  },
+  {
+    "en": "Press Ctrl+C to exit and start a new conversation.",
+    "zh": "Нажмите Ctrl+C, чтобы выйти и начать новый разговор."
+  },
+  {
+    "en": "Press Enter once you've installed the app",
+    "zh": "Нажмите Enter после установки приложения."
+  },
+  {
+    "en": "Press Enter or Esc to go back",
+    "zh": "Нажмите Enter или Esc, чтобы вернуться назад."
+  },
+  {
+    "en": "Press Enter to continue",
+    "zh": "Нажмите Enter, чтобы продолжить"
+  },
+  {
+    "en": "Press Enter to continue anyway, or Ctrl+C to exit and fix issues",
+    "zh": "Нажмите Enter, чтобы продолжить, или Ctrl+C, чтобы выйти и исправить проблемы."
+  },
+  {
+    "en": "Press Enter to try again, or any other key to cancel",
+    "zh": "Нажмите Enter, чтобы повторить попытку, или любую другую клавишу, чтобы отменить."
+  },
+  {
+    "en": "Press Enter when ready to verify…",
+    "zh": "Нажмите Enter, когда будете готовы подтвердить…"
+  },
+  {
+    "en": "Press Option+Enter to send a multi-line message",
+    "zh": "Нажмите Option+Enter, чтобы отправить многострочное сообщение."
+  },
+  {
+    "en": "Press Shift+Enter to send a multi-line message",
+    "zh": "Нажмите Shift+Enter, чтобы отправить многострочное сообщение."
+  },
+  {
+    "en": "Press any key to continue…",
+    "zh": "Нажмите любую клавишу, чтобы продолжить…"
+  },
+  {
+    "en": "Press any key to exit",
+    "zh": "Нажмите любую клавишу, чтобы выйти"
+  },
+  {
+    "en": "Press any key to return to API key selection",
+    "zh": "Нажмите любую клавишу, чтобы вернуться к выбору ключа API."
+  },
+  {
+    "en": "Press up to edit queued messages",
+    "zh": "Нажмите вверх, чтобы редактировать сообщения в очереди"
+  },
+  {
+    "en": "Press ↑↓ to navigate · Enter to select · Esc to go back",
+    "zh": "Нажмите ↑↓ для навигации · Enter для выбора · Esc для возврата"
+  },
+  {
+    "en": "Press ↑↓ to navigate, Enter to select, Esc to cancel",
+    "zh": "Нажмите ↑↓ для навигации, Enter для выбора, Esc для отмены."
+  },
+  {
+    "en": "Print detailed performance stats",
+    "zh": "Распечатать подробную статистику производительности"
+  },
+  {
+    "en": "Pro, Max, Team, or Enterprise",
+    "zh": "Pro, Max, Team или Enterprise"
+  },
+  {
+    "en": "Proceed with Extra Usage billing",
+    "zh": "Продолжить выставление счетов за дополнительное использование"
+  },
+  {
+    "en": "Processing changes…",
+    "zh": "Обработка изменений…"
+  },
+  {
+    "en": "Project (.claude/agents/)",
+    "zh": "Проект (.claude/агенты/)"
+  },
+  {
+    "en": "Project MCPs",
+    "zh": "Проектные MCP"
+  },
+  {
+    "en": "Project agents",
+    "zh": "Агенты проекта"
+  },
+  {
+    "en": "Project settings",
+    "zh": "Настройки проекта"
+  },
+  {
+    "en": "Project settings (local)",
+    "zh": "Настройки проекта (локальные)"
+  },
+  {
+    "en": "Prompt suggestions",
+    "zh": "Подскажите предложения"
+  },
+  {
+    "en": "Provide an explanation of a shell command",
+    "zh": "Предоставить объяснение команды оболочки"
+  },
+  {
+    "en": "Re-authenticate",
+    "zh": "Повторная аутентификация"
+  },
+  {
+    "en": "Read aborted",
+    "zh": "Чтение прервано"
+  },
+  {
+    "en": "Ready to code?",
+    "zh": "Готовы кодировать?"
+  },
+  {
+    "en": "Ready to submit your answers?",
+    "zh": "Готовы отправить свои ответы?"
+  },
+  {
+    "en": "Reason ",
+    "zh": "Причина "
+  },
+  {
+    "en": "Recent messages",
+    "zh": "Последние сообщения"
+  },
+  {
+    "en": "Reduce motion",
+    "zh": "Уменьшите движение"
+  },
+  {
+    "en": "Regenerate",
+    "zh": "Регенерировать"
+  },
+  {
+    "en": "Release notes",
+    "zh": "Примечания к выпуску"
+  },
+  {
+    "en": "Relive your year of coding with Claude.",
+    "zh": "Вспомните год программирования вместе с Клодом."
+  },
+  {
+    "en": "Remote Control active",
+    "zh": "Дистанционное управление активно"
+  },
+  {
+    "en": "Remote Control connecting…",
+    "zh": "Подключение пульта дистанционного управления…"
+  },
+  {
+    "en": "Remote Control failed",
+    "zh": "Дистанционное управление не удалось"
+  },
+  {
+    "en": "Remote Control reconnecting",
+    "zh": "Повторное подключение пульта дистанционного управления"
+  },
+  {
+    "en": "Remote agents",
+    "zh": "Удаленные агенты"
+  },
+  {
+    "en": "Remote session",
+    "zh": "Удаленный сеанс"
+  },
+  {
+    "en": "Remote task",
+    "zh": "Удаленная задача"
+  },
+  {
+    "en": "Remove marketplace",
+    "zh": "Удалить торговую площадку"
+  },
+  {
+    "en": "Remove worktree",
+    "zh": "Удалить рабочее дерево"
+  },
+  {
+    "en": "Remove worktree and tmux session",
+    "zh": "Удалить рабочее дерево и сеанс tmux"
+  },
+  {
+    "en": "Removing worktree…",
+    "zh": "Удаление рабочего дерева…"
+  },
+  {
+    "en": "Rename session:",
+    "zh": "Переименование сеанса:"
+  },
+  {
+    "en": "Request timed out.",
+    "zh": "Время запроса истекло."
+  },
+  {
+    "en": "Request was aborted.",
+    "zh": "Запрос был прерван."
+  },
+  {
+    "en": "Requested permissions:",
+    "zh": "Запрошенные разрешения:"
+  },
+  {
+    "en": "Require plan mode before implementation",
+    "zh": "Требовать режим плана перед реализацией"
+  },
+  {
+    "en": "Requires the Chrome extension. Get started at",
+    "zh": "Требуется расширение Chrome. Начните с"
+  },
+  {
+    "en": "Reset with default configuration",
+    "zh": "Сброс с использованием конфигурации по умолчанию"
+  },
+  {
+    "en": "Respect .gitignore in file picker",
+    "zh": "Уважайте .gitignore в средстве выбора файлов."
+  },
+  {
+    "en": "Restore code",
+    "zh": "Восстановить код"
+  },
+  {
+    "en": "Restore code and conversation",
+    "zh": "Восстановить код и разговор"
+  },
+  {
+    "en": "Restore conversation",
+    "zh": "Восстановить разговор"
+  },
+  {
+    "en": "Resume a Claude Code session from claude.ai",
+    "zh": "Возобновите сеанс Claude Code с сайта claude.ai."
+  },
+  {
+    "en": "Resume a teleport session, optionally specify session ID",
+    "zh": "Возобновите сеанс телепортации, при необходимости укажите идентификатор сеанса."
+  },
+  {
+    "en": "Resume from summary (recommended)",
+    "zh": "Резюме из резюме (рекомендуется)"
+  },
+  {
+    "en": "Resume full session as-is",
+    "zh": "Возобновить полный сеанс как есть"
+  },
+  {
+    "en": "Resuming conversation…",
+    "zh": "Возобновление разговора…"
+  },
+  {
+    "en": "Resuming session…",
+    "zh": "Возобновление сеанса…"
+  },
+  {
+    "en": "Retrying in ",
+    "zh": "Повторная попытка через "
+  },
+  {
+    "en": "Retrying…",
+    "zh": "Повторная попытка…"
+  },
+  {
+    "en": "Return here after authenticating in your browser.",
+    "zh": "Вернитесь сюда после аутентификации в браузере."
+  },
+  {
+    "en": "Return here after authenticating in your browser. Press Esc to go back.",
+    "zh": "Вернитесь сюда после аутентификации в браузере. Нажмите Esc, чтобы вернуться."
+  },
+  {
+    "en": "Review and manage your privacy settings at",
+    "zh": "Просматривайте и управляйте настройками конфиденциальности на странице"
+  },
+  {
+    "en": "Rewind code (checkpoints)",
+    "zh": "Код перемотки (контрольные точки)"
+  },
+  {
+    "en": "Rule details",
+    "zh": "Подробности правила"
+  },
+  {
+    "en": "Run /reload-plugins to apply changes",
+    "zh": "Запустите /reload-plugins, чтобы применить изменения."
+  },
+  {
+    "en": "Run Setup and SessionStart:startup hooks, then exit",
+    "zh": "Запустите программу установки и SessionStart:перехватчики запуска, затем выйдите."
+  },
+  {
+    "en": "Run Setup hooks with init trigger, then continue",
+    "zh": "Запустите перехватчики установки с помощью триггера инициализации, затем продолжите."
+  },
+  {
+    "en": "Run Setup hooks with maintenance trigger, then continue",
+    "zh": "Запустите перехватчики установки с триггером обслуживания, затем продолжите."
+  },
+  {
+    "en": "Run a command on SLURM cluster nodes",
+    "zh": "Запустите команду на узлах кластера SLURM."
+  },
+  {
+    "en": "Run ultraplan",
+    "zh": "Запустить ультраплан"
+  },
+  {
+    "en": "Running ",
+    "zh": "Бег "
+  },
+  {
+    "en": "Running PostCompact hooks…",
+    "zh": "Запуск хуков PostCompact…"
+  },
+  {
+    "en": "Running PreCompact hooks…",
+    "zh": "Запуск хуков PreCompact…"
+  },
+  {
+    "en": "Running feedback capture...",
+    "zh": "Запускаем сбор отзывов..."
+  },
+  {
+    "en": "Running…",
+    "zh": "Бег…"
+  },
+  {
+    "en": "Runs in Claude Code on the web. When the plan is ready,",
+    "zh": "Работает в Claude Code в Интернете. Когда план будет готов,"
+  },
+  {
+    "en": "Sandbox",
+    "zh": "Песочница"
+  },
+  {
+    "en": "Sandbox is not enabled",
+    "zh": "Песочница не включена"
+  },
+  {
+    "en": "Sandbox is not enabled. Enable sandbox to configure override settings.",
+    "zh": "Песочница не включена. Включите песочницу, чтобы настроить параметры переопределения."
+  },
+  {
+    "en": "Save and close editor to continue...",
+    "zh": "Сохраните и закройте редактор, чтобы продолжить..."
+  },
+  {
+    "en": "Save anyway (skip verification)",
+    "zh": "Все равно сохранить (пропустить проверку)"
+  },
+  {
+    "en": "Save file to continue…",
+    "zh": "Сохраните файл, чтобы продолжить…"
+  },
+  {
+    "en": "Save the conversation to a file in the current directory",
+    "zh": "Сохранить разговор в файл в текущем каталоге"
+  },
+  {
+    "en": "Save to file",
+    "zh": "Сохранить в файл"
+  },
+  {
+    "en": "Saving a memory is a two-step process:",
+    "zh": "Сохранение памяти представляет собой двухэтапный процесс:"
+  },
+  {
+    "en": "Scope: ",
+    "zh": "Объем: "
+  },
+  {
+    "en": "Searched for",
+    "zh": "Искал"
+  },
+  {
+    "en": "Searching for",
+    "zh": "Поиск"
+  },
+  {
+    "en": "Searching: ",
+    "zh": "Идет поиск: "
+  },
+  {
+    "en": "Security guide",
+    "zh": "Руководство по безопасности"
+  },
+  {
+    "en": "Security notes:",
+    "zh": "Примечания по безопасности:"
+  },
+  {
+    "en": "See https://code.claude.com/docs/en/network-config",
+    "zh": "См. https://code.claude.com/docs/en/network-config."
+  },
+  {
+    "en": "Select GitHub repository",
+    "zh": "Выберите репозиторий GitHub"
+  },
+  {
+    "en": "Select GitHub workflows to install",
+    "zh": "Выберите рабочие процессы GitHub для установки"
+  },
+  {
+    "en": "Select IDE",
+    "zh": "Выберите IDE"
+  },
+  {
+    "en": "Select a version to view its notes.",
+    "zh": "Выберите версию, чтобы просмотреть ее примечания."
+  },
+  {
+    "en": "Select an IDE to open the project",
+    "zh": "Выберите IDE, чтобы открыть проект"
+  },
+  {
+    "en": "Select auto-compact window: ",
+    "zh": "Выберите автосжатое окно: "
+  },
+  {
+    "en": "Select content to copy:",
+    "zh": "Выберите контент для копирования:"
+  },
+  {
+    "en": "Select export method:",
+    "zh": "Выберите метод экспорта:"
+  },
+  {
+    "en": "Select login method:",
+    "zh": "Выберите способ входа:"
+  },
+  {
+    "en": "Select marketplace",
+    "zh": "Выберите торговую площадку"
+  },
+  {
+    "en": "Select model",
+    "zh": "Выберите модель"
+  },
+  {
+    "en": "Send message as a new conversation",
+    "zh": "Отправить сообщение как новый разговор"
+  },
+  {
+    "en": "Server created",
+    "zh": "Сервер создан"
+  },
+  {
+    "en": "Server disabled during reconnection, stopping retry",
+    "zh": "Сервер отключен во время повторного подключения, повторная попытка прекращена"
+  },
+  {
+    "en": "Server is disabled, skipping automatic reconnection",
+    "zh": "Сервер отключен, автоматическое переподключение отсутствует."
+  },
+  {
+    "en": "Session Hooks",
+    "zh": "Перехватчики сеансов"
+  },
+  {
+    "en": "Session ID",
+    "zh": "Идентификатор сеанса"
+  },
+  {
+    "en": "Session URL",
+    "zh": "URL-адрес сеанса"
+  },
+  {
+    "en": "Session name",
+    "zh": "Имя сеанса"
+  },
+  {
+    "en": "Set Stop hook (this session only)",
+    "zh": "Установить ловушку Stop (только для этого сеанса)"
+  },
+  {
+    "en": "Set the prompt bar color for this session",
+    "zh": "Установите цвет панели подсказок для этого сеанса"
+  },
+  {
+    "en": "Set up Claude Code's status line UI",
+    "zh": "Настройте пользовательский интерфейс строки состояния Claude Code"
+  },
+  {
+    "en": "Set up Claude GitHub Actions for a repository",
+    "zh": "Настройте действия Claude GitHub для репозитория."
+  },
+  {
+    "en": "Setting sources",
+    "zh": "Настройка источников"
+  },
+  {
+    "en": "Setting up launcher and shell integration...",
+    "zh": "Настройка интеграции лаунчера и оболочки..."
+  },
+  {
+    "en": "Settings Error",
+    "zh": "Ошибка настроек"
+  },
+  {
+    "en": "Settings requiring approval:",
+    "zh": "Настройки, требующие одобрения:"
+  },
+  {
+    "en": "Setup Claude Code on the web (requires connecting your GitHub account)",
+    "zh": "Настройте Claude Code через Интернет (требуется подключение вашей учетной записи GitHub)"
+  },
+  {
+    "en": "Shell command failed",
+    "zh": "Команда оболочки не удалась"
+  },
+  {
+    "en": "Show PR status footer",
+    "zh": "Показать нижний колонтитул статуса PR"
+  },
+  {
+    "en": "Show QR code to download the Claude mobile app",
+    "zh": "Покажите QR-код, чтобы загрузить мобильное приложение Claude"
+  },
+  {
+    "en": "Show all",
+    "zh": "Показать все"
+  },
+  {
+    "en": "Show detailed debug output",
+    "zh": "Показать подробный вывод отладки"
+  },
+  {
+    "en": "Show help and available commands",
+    "zh": "Показать справку и доступные команды"
+  },
+  {
+    "en": "Show options when rate limit is reached",
+    "zh": "Показать параметры при достижении ограничения скорости"
+  },
+  {
+    "en": "Show remote session URL and QR code",
+    "zh": "Показать URL-адрес удаленного сеанса и QR-код"
+  },
+  {
+    "en": "Show status in terminal tab",
+    "zh": "Показать статус на вкладке терминала"
+  },
+  {
+    "en": "Show the total cost and duration of the current session",
+    "zh": "Показать общую стоимость и продолжительность текущего сеанса"
+  },
+  {
+    "en": "Show tips",
+    "zh": "Показать советы"
+  },
+  {
+    "en": "Show turn duration",
+    "zh": "Показать продолжительность хода"
+  },
+  {
+    "en": "Show your Claude Code usage statistics and activity",
+    "zh": "Покажите статистику использования и активность вашего Claude Code"
+  },
+  {
+    "en": "Showing last ",
+    "zh": "Показаны последними "
+  },
+  {
+    "en": "Shutting down",
+    "zh": "Выключение"
+  },
+  {
+    "en": "Sign out from your Anthropic account",
+    "zh": "Выйдите из своей учетной записи Anthropic"
+  },
+  {
+    "en": "Signal that this session was launched from a deep link",
+    "zh": "Сигнал о том, что этот сеанс был запущен по глубокой ссылке"
+  },
+  {
+    "en": "Skills only",
+    "zh": "Только навыки"
+  },
+  {
+    "en": "Skip interview and plan immediately",
+    "zh": "Пропустите собеседование и планируйте немедленно"
+  },
+  {
+    "en": "Skip — use Claude Code defaults (auto-updates)",
+    "zh": "Пропустить — использовать настройки Claude Code по умолчанию (автообновления)."
+  },
+  {
+    "en": "Sonnet (1M context)",
+    "zh": "Сонет (контекст 1M)"
+  },
+  {
+    "en": "Sorry, Claude Code encountered an error",
+    "zh": "Извините, Клод Код обнаружил ошибку"
+  },
+  {
+    "en": "Sorry, Claude encountered an error",
+    "zh": "Извините, Клод столкнулся с ошибкой"
+  },
+  {
+    "en": "Spawn a remote Claude Code session that monitors and autofixes the current PR",
+    "zh": "Создать удаленный сеанс Claude Code, который отслеживает и автоматически исправляет текущий PR."
+  },
+  {
+    "en": "Start new session",
+    "zh": "Начать новый сеанс"
+  },
+  {
+    "en": "Started a session on the web and want to move it here? Run",
+    "zh": "Начали сеанс в Интернете и хотите перенести его сюда? Бегать"
+  },
+  {
+    "en": "Stash changes and continue",
+    "zh": "Сохраните изменения и продолжайте"
+  },
+  {
+    "en": "Stashing changes...",
+    "zh": "Сохранение изменений..."
+  },
+  {
+    "en": "Status: ",
+    "zh": "Статус: "
+  },
+  {
+    "en": "Stop and wait for limit to reset",
+    "zh": "Остановитесь и дождитесь сброса лимита."
+  },
+  {
+    "en": "Stop ultraplan",
+    "zh": "Стоп ультраплан"
+  },
+  {
+    "en": "Stop ultrareview",
+    "zh": "Стоп ультраревю"
+  },
+  {
+    "en": "Store this token securely. You won't be able to see it again.",
+    "zh": "Храните этот токен в надежном месте. Вы больше не сможете его увидеть."
+  },
+  {
+    "en": "Strict sandbox mode:",
+    "zh": "Строгий режим песочницы:"
+  },
+  {
+    "en": "Subagents and workflows also run as tasks — it is all one queue.",
+    "zh": "Субагенты и рабочие процессы также запускаются как задачи — это все одна очередь."
+  },
+  {
+    "en": "Submit Feedback / Bug Report",
+    "zh": "Отправить отзыв/отчет об ошибке"
+  },
+  {
+    "en": "Submit answers",
+    "zh": "Отправить ответы"
+  },
+  {
+    "en": "Submit feedback about Claude Code",
+    "zh": "Отправить отзыв о Claude Code"
+  },
+  {
+    "en": "Successfully logged out from your Anthropic account.",
+    "zh": "Успешно выполнен выход из вашей учетной записи Anthropic."
+  },
+  {
+    "en": "Suggestion ",
+    "zh": "Предположение "
+  },
+  {
+    "en": "Suggestions ",
+    "zh": "Предложения "
+  },
+  {
+    "en": "Summarize from here",
+    "zh": "Подведем итоги отсюда"
+  },
+  {
+    "en": "Summarized conversation",
+    "zh": "Итоговый разговор"
+  },
+  {
+    "en": "Switch to the Marketplaces tab to view allowed sources.",
+    "zh": "Перейдите на вкладку «Торговые площадки», чтобы просмотреть разрешенные источники."
+  },
+  {
+    "en": "Switched to worktree on branch ",
+    "zh": "Переключено на рабочее дерево ветки "
+  },
+  {
+    "en": "System Diagnostics",
+    "zh": "Диагностика системы"
+  },
+  {
+    "en": "System prompt",
+    "zh": "Системная подсказка"
+  },
+  {
+    "en": "Tab created",
+    "zh": "Вкладка создана"
+  },
+  {
+    "en": "Tab: Next field · Enter: Save and continue",
+    "zh": "Вкладка: Следующее поле · Введите: Сохранить и продолжить."
+  },
+  {
+    "en": "Task is still running…",
+    "zh": "Задача все еще выполняется…"
+  },
+  {
+    "en": "Task not ready",
+    "zh": "Задача не готова"
+  },
+  {
+    "en": "Teammate is continuing to work. You may request shutdown again later.",
+    "zh": "Товарищ по команде продолжает работать. Вы можете снова запросить выключение позже."
+  },
+  {
+    "en": "Teammates will now appear as split panes.",
+    "zh": "Товарищи по команде теперь будут отображаться в виде разделенных панелей."
+  },
+  {
+    "en": "Teleport requires a Claude account",
+    "zh": "Телепорт требует учетной записи Клода"
+  },
+  {
+    "en": "Teleport requires a Claude.ai account.",
+    "zh": "Для Teleport требуется учетная запись Claude.ai."
+  },
+  {
+    "en": "Teleport to Repo",
+    "zh": "Телепортироваться в Репо"
+  },
+  {
+    "en": "Teleporting to session…",
+    "zh": "Телепортация в сессию…"
+  },
+  {
+    "en": "Terminal progress bar",
+    "zh": "Индикатор выполнения терминала"
+  },
+  {
+    "en": "Thank you for your report!",
+    "zh": "Спасибо за ваш отчет!"
+  },
+  {
+    "en": "Thanks for the feedback!",
+    "zh": "Спасибо за отзыв!"
+  },
+  {
+    "en": "The code has not changed (nothing will be restored).",
+    "zh": "Код не менялся (ничего не восстановится)."
+  },
+  {
+    "en": "The code will be unchanged.",
+    "zh": "Код останется неизменным."
+  },
+  {
+    "en": "The following patterns will be ignored:",
+    "zh": "Следующие шаблоны будут игнорироваться:"
+  },
+  {
+    "en": "The sandbox has the following restrictions:",
+    "zh": "Песочница имеет следующие ограничения:"
+  },
+  {
+    "en": "Thinking mode",
+    "zh": "Режим мышления"
+  },
+  {
+    "en": "This archives the remote session and stops local tracking. The review will not complete and any findings so far are discarded.",
+    "zh": "Это архивирует удаленный сеанс и останавливает локальное отслеживание. Проверка не будет завершена, и все полученные на данный момент результаты будут отброшены."
+  },
+  {
+    "en": "This changes how Claude Code communicates with you",
+    "zh": "Это меняет то, как Клод Код общается с вами."
+  },
+  {
+    "en": "This command requires approval",
+    "zh": "Эта команда требует одобрения"
+  },
+  {
+    "en": "This conversation is from a different directory.",
+    "zh": "Этот разговор из другого каталога."
+  },
+  {
+    "en": "This enables teammates to appear as split panes within your current window.",
+    "zh": "Это позволяет товарищам по команде отображаться в виде разделенных панелей в текущем окне."
+  },
+  {
+    "en": "This has the same effect as uninstalling, without affecting other contributors.",
+    "zh": "Это имеет тот же эффект, что и удаление, не затрагивая других участников."
+  },
+  {
+    "en": "This may take a few moments.",
+    "zh": "Это может занять несколько минут."
+  },
+  {
+    "en": "This may take a few seconds.",
+    "zh": "Это может занять несколько секунд."
+  },
+  {
+    "en": "This may take a moment.",
+    "zh": "Это может занять некоторое время."
+  },
+  {
+    "en": "This prompt will launch an ultraplan session in Claude Code on the web",
+    "zh": "Это приглашение запустит сеанс ультраплана в Claude Code в Интернете."
+  },
+  {
+    "en": "This rule is configured by managed settings and cannot be modified.",
+    "zh": "Это правило настраивается управляемыми параметрами и не может быть изменено."
+  },
+  {
+    "en": "This server connects only when running the agent.",
+    "zh": "Этот сервер подключается только при запуске агента."
+  },
+  {
+    "en": "This tool is consuming a significant portion of context.",
+    "zh": "Этот инструмент потребляет значительную часть контекста."
+  },
+  {
+    "en": "This will disable Remote Control for this session.",
+    "zh": "Это отключит удаленное управление для этого сеанса."
+  },
+  {
+    "en": "This will terminate the Claude Code on the web session.",
+    "zh": "Это завершит работу Claude Code в веб-сеансе."
+  },
+  {
+    "en": "Tip: You can enable auto-connect to IDE in /config or with the --ide flag",
+    "zh": "Совет. Вы можете включить автоматическое подключение к IDE в /config или с помощью флага --ide."
+  },
+  {
+    "en": "To add hooks, edit settings.json directly or ask Claude.",
+    "zh": "Чтобы добавить хуки, отредактируйте файл settings.json напрямую или спросите Клода."
+  },
+  {
+    "en": "To modify or remove this hook, edit settings.json directly or ask Claude to help.",
+    "zh": "Чтобы изменить или удалить этот крючок, отредактируйте файл settings.json напрямую или попросите Клода помочь."
+  },
+  {
+    "en": "Toggle thinking mode",
+    "zh": "Переключить режим мышления"
+  },
+  {
+    "en": "Tokens per Day",
+    "zh": "Токенов в день"
+  },
+  {
+    "en": "Tool Failed",
+    "zh": "Инструмент не работает"
+  },
+  {
+    "en": "Tool loaded.",
+    "zh": "Инструмент загружен."
+  },
+  {
+    "en": "Tool name: ",
+    "zh": "Название инструмента: "
+  },
+  {
+    "en": "Tool use is not allowed during compaction",
+    "zh": "Использование инструмента во время уплотнения не допускается."
+  },
+  {
+    "en": "Tool use rejected",
+    "zh": "Использование инструмента отклонено"
+  },
+  {
+    "en": "Tool: ",
+    "zh": "Инструмент: "
+  },
+  {
+    "en": "Tools: ",
+    "zh": "Инструменты: "
+  },
+  {
+    "en": "Triggered by:",
+    "zh": "Спровоцировано:"
+  },
+  {
+    "en": "Try again",
+    "zh": "Попробуйте еще раз"
+  },
+  {
+    "en": "Try creating: Code Reviewer, Code Simplifier, Security Reviewer, Tech Lead, or UX Reviewer.",
+    "zh": "Попробуйте создать: Code Reviewer, Code Simplifier, Security Reviewer, Tech Lead или UX Reviewer."
+  },
+  {
+    "en": "Try running /plugin to manually install the think-back plugin.",
+    "zh": "Попробуйте запустить /plugin, чтобы вручную установить плагин think-back."
+  },
+  {
+    "en": "Try running with --force to override checks",
+    "zh": "Попробуйте запустить с --force, чтобы переопределить проверки."
+  },
+  {
+    "en": "Type a different name…",
+    "zh": "Введите другое имя…"
+  },
+  {
+    "en": "Type something…",
+    "zh": "Напечатайте что-нибудь…"
+  },
+  {
+    "en": "Type: ",
+    "zh": "Тип: "
+  },
+  {
+    "en": "URL: ",
+    "zh": "URL-адрес: "
+  },
+  {
+    "en": "Unable to connect to Anthropic services",
+    "zh": "Невозможно подключиться к сервисам Anthropic."
+  },
+  {
+    "en": "Unchanged since last read",
+    "zh": "Без изменений с момента последнего прочтения"
+  },
+  {
+    "en": "Unknown Error",
+    "zh": "Неизвестная ошибка"
+  },
+  {
+    "en": "Unknown error",
+    "zh": "Неизвестная ошибка"
+  },
+  {
+    "en": "Unknown error occurred",
+    "zh": "Произошла неизвестная ошибка"
+  },
+  {
+    "en": "Unreachable Permission Rules",
+    "zh": "Правила недоступных разрешений"
+  },
+  {
+    "en": "Update available! Run:",
+    "zh": "Доступно обновление! Бегать:"
+  },
+  {
+    "en": "Update marketplace",
+    "zh": "Обновить торговую площадку"
+  },
+  {
+    "en": "Update now",
+    "zh": "Обновить сейчас"
+  },
+  {
+    "en": "Update workflow file with latest version",
+    "zh": "Обновить файл рабочего процесса до последней версии"
+  },
+  {
+    "en": "Updated plan",
+    "zh": "Обновленный план"
+  },
+  {
+    "en": "Updates to Consumer Terms and Policies",
+    "zh": "Обновления условий и политик для потребителей"
+  },
+  {
+    "en": "Updates to data retention ",
+    "zh": "Обновления в хранении данных "
+  },
+  {
+    "en": "Updating marketplace…",
+    "zh": "Обновление торговой площадки…"
+  },
+  {
+    "en": "Updating…",
+    "zh": "Обновление…"
+  },
+  {
+    "en": "Upgrade to Max for higher rate limits and more Opus",
+    "zh": "Обновите до Max, чтобы получить более высокие лимиты скорости и больше Opus"
+  },
+  {
+    "en": "Upgrade to Team plan",
+    "zh": "Перейти на групповой план"
+  },
+  {
+    "en": "Upgrade your plan",
+    "zh": "Обновите свой план"
+  },
+  {
+    "en": "Usage: ",
+    "zh": "Использование: "
+  },
+  {
+    "en": "Use /btw to ask a quick side question without interrupting Claude's current work",
+    "zh": "Используйте /btw, чтобы задать небольшой дополнительный вопрос, не прерывая текущую работу Клода."
+  },
+  {
+    "en": "Use /clear to start fresh when switching topics and free up context",
+    "zh": "Используйте /clear, чтобы начать заново при переключении тем и освободить контекст."
+  },
+  {
+    "en": "Use /issue to report model behavior issues.",
+    "zh": "Используйте /issue, чтобы сообщить о проблемах с поведением модели."
+  },
+  {
+    "en": "Use Claude Code's terminal setup?",
+    "zh": "Использовать настройку терминала Клода Кода?"
+  },
+  {
+    "en": "Use Claude subscription (default)",
+    "zh": "Использовать подписку Claude (по умолчанию)"
+  },
+  {
+    "en": "Use auto mode during plan",
+    "zh": "Использовать автоматический режим во время планирования"
+  },
+  {
+    "en": "Use credentials already in my environment",
+    "zh": "Использовать учетные данные, уже имеющиеся в моей среде"
+  },
+  {
+    "en": "Use the same model as the main conversation",
+    "zh": "Используйте ту же модель, что и основной разговор."
+  },
+  {
+    "en": "Use this MCP server",
+    "zh": "Используйте этот сервер MCP"
+  },
+  {
+    "en": "Use this token by setting: export CLAUDE_CODE_OAUTH_TOKEN=<token>",
+    "zh": "Используйте этот токен, установив: экспорт CLAUDE_CODE_OAUTH_TOKEN=<токен>"
+  },
+  {
+    "en": "Use tmux instead",
+    "zh": "Вместо этого используйте tmux"
+  },
+  {
+    "en": "Used by: ",
+    "zh": "Используется: "
+  },
+  {
+    "en": "User MCPs",
+    "zh": "Пользовательские MCP"
+  },
+  {
+    "en": "User aborted",
+    "zh": "Пользователь прерван"
+  },
+  {
+    "en": "User agents",
+    "zh": "Пользовательские агенты"
+  },
+  {
+    "en": "User answered Claude's questions:",
+    "zh": "Пользователь ответил на вопросы Клода:"
+  },
+  {
+    "en": "User canceled.",
+    "zh": "Пользователь отменен."
+  },
+  {
+    "en": "User declined to answer questions",
+    "zh": "Пользователь отказался отвечать на вопросы"
+  },
+  {
+    "en": "User rejected Claude's plan:",
+    "zh": "Пользователь отверг план Клода:"
+  },
+  {
+    "en": "User settings",
+    "zh": "Пользовательские настройки"
+  },
+  {
+    "en": "Using 3rd-party platforms",
+    "zh": "Использование сторонних платформ"
+  },
+  {
+    "en": "Using token for GitHub Actions setup…",
+    "zh": "Использование токена для настройки действий GitHub…"
+  },
+  {
+    "en": "Validating repository…",
+    "zh": "Проверка репозитория…"
+  },
+  {
+    "en": "Validating session",
+    "zh": "Проверка сеанса"
+  },
+  {
+    "en": "Verbose output",
+    "zh": "Подробный вывод"
+  },
+  {
+    "en": "Verification failed",
+    "zh": "Проверка не удалась"
+  },
+  {
+    "en": "Version Locks",
+    "zh": "Блокировки версий"
+  },
+  {
+    "en": "Version: ",
+    "zh": "Версия: "
+  },
+  {
+    "en": "Vertex base URL",
+    "zh": "Базовый URL вершины"
+  },
+  {
+    "en": "View agent",
+    "zh": "Посмотреть агента"
+  },
+  {
+    "en": "View and update your privacy settings",
+    "zh": "Просмотр и обновление настроек конфиденциальности"
+  },
+  {
+    "en": "View hook configurations for tool events",
+    "zh": "Просмотр конфигураций перехватчиков для событий инструмента"
+  },
+  {
+    "en": "View on GitHub",
+    "zh": "Посмотреть на GitHub"
+  },
+  {
+    "en": "View repository",
+    "zh": "Посмотреть репозиторий"
+  },
+  {
+    "en": "View the latest workflow template at:",
+    "zh": "Посмотреть последний шаблон рабочего процесса можно по адресу:"
+  },
+  {
+    "en": "View tools",
+    "zh": "Просмотр инструментов"
+  },
+  {
+    "en": "View uncommitted changes and per-turn diffs",
+    "zh": "Просмотр незафиксированных изменений и различий за ход."
+  },
+  {
+    "en": "Visualize current context usage as a colored grid",
+    "zh": "Визуализируйте текущее использование контекста в виде цветной сетки."
+  },
+  {
+    "en": "Voice: processing…",
+    "zh": "Голос: обработка…"
+  },
+  {
+    "en": "Waiting for permission…",
+    "zh": "Жду разрешения…"
+  },
+  {
+    "en": "Waiting for team lead to review and approve...",
+    "zh": "Ждем, пока руководитель группы рассмотрит и одобрит..."
+  },
+  {
+    "en": "Waiting for the server to confirm completion…",
+    "zh": "Ожидание подтверждения сервера о завершении…"
+  },
+  {
+    "en": "Warning: Multiple installations found",
+    "zh": "Внимание: обнаружено несколько установок."
+  },
+  {
+    "en": "We are experiencing high demand for Opus 4.",
+    "zh": "Мы наблюдаем высокий спрос на Opus 4."
+  },
+  {
+    "en": "We found some potential issues, but you can continue anyway",
+    "zh": "Мы обнаружили некоторые потенциальные проблемы, но вы все равно можете продолжить."
+  },
+  {
+    "en": "We'll create a personalized ASCII animation celebrating your journey.",
+    "zh": "Мы создадим персонализированную ASCII-анимацию, посвященную вашему путешествию."
+  },
+  {
+    "en": "We'll create a workflow file in your repository for each one you select.",
+    "zh": "Мы создадим файл рабочего процесса в вашем репозитории для каждого выбранного вами файла."
+  },
+  {
+    "en": "Web Search",
+    "zh": "Веб-поиск"
+  },
+  {
+    "en": "Web search",
+    "zh": "Веб-поиск"
+  },
+  {
+    "en": "Welcome to Claude Code",
+    "zh": "Добро пожаловать в Клод Код"
+  },
+  {
+    "en": "What do you want to do?",
+    "zh": "Что ты хочешь делать?"
+  },
+  {
+    "en": "What would you like to do?",
+    "zh": "Что бы вы хотели сделать?"
+  },
+  {
+    "en": "What you see by default",
+    "zh": "Что вы видите по умолчанию"
+  },
+  {
+    "en": "What's new",
+    "zh": "Что нового"
+  },
+  {
+    "en": "When hooks are disabled:",
+    "zh": "Когда хуки отключены:"
+  },
+  {
+    "en": "When should Claude use this agent?",
+    "zh": "Когда Клоду следует использовать этот агент?"
+  },
+  {
+    "en": "When you see evidence of sandbox-caused failure:",
+    "zh": "Когда вы видите свидетельства сбоя, вызванного песочницей:"
+  },
+  {
+    "en": "Will install:",
+    "zh": "Буду устанавливать:"
+  },
+  {
+    "en": "Works at three levels: repo, your home directory (all projects), and per-directory overrides.",
+    "zh": "Работает на трех уровнях: репозиторий, ваш домашний каталог (все проекты) и переопределения для каждого каталога."
+  },
+  {
+    "en": "Workspace ID",
+    "zh": "Идентификатор рабочей области"
+  },
+  {
+    "en": "Would you like to install this LSP plugin?",
+    "zh": "Хотите установить этот плагин LSP?"
+  },
+  {
+    "en": "Would you like to proceed?",
+    "zh": "Хотите продолжить?"
+  },
+  {
+    "en": "Would you like to stash these changes and continue with teleport?",
+    "zh": "Хотите сохранить эти изменения и продолжить телепортацию?"
+  },
+  {
+    "en": "Yes, I accept",
+    "zh": "Да, я принимаю"
+  },
+  {
+    "en": "Yes, I trust these settings",
+    "zh": "Да, я доверяю этим настройкам"
+  },
+  {
+    "en": "Yes, I trust this folder",
+    "zh": "Да, я доверяю этой папке"
+  },
+  {
+    "en": "Yes, allow all edits during this session",
+    "zh": "Да, разрешить все изменения во время этого сеанса"
+  },
+  {
+    "en": "Yes, allow all edits in ",
+    "zh": "Да, разрешить все изменения в "
+  },
+  {
+    "en": "Yes, allow external imports",
+    "zh": "Да, разрешить внешний импорт"
+  },
+  {
+    "en": "Yes, and allow Claude to edit its own settings for this session",
+    "zh": "Да, и разрешить Клоду редактировать собственные настройки для этого сеанса."
+  },
+  {
+    "en": "Yes, and always allow access to ",
+    "zh": "Да, и всегда разрешать доступ "
+  },
+  {
+    "en": "Yes, and bypass permissions",
+    "zh": "Да, и обойти разрешения"
+  },
+  {
+    "en": "Yes, and don't ask again for",
+    "zh": "Да, и больше не спрашивай"
+  },
+  {
+    "en": "Yes, and make it my default mode",
+    "zh": "Да, и сделать это моим режимом по умолчанию"
+  },
+  {
+    "en": "Yes, and remember this directory",
+    "zh": "Да, и запомни этот каталог"
+  },
+  {
+    "en": "Yes, and use auto mode",
+    "zh": "Да, и использовать автоматический режим"
+  },
+  {
+    "en": "Yes, auto-accept edits",
+    "zh": "Да, автоматически принимать изменения"
+  },
+  {
+    "en": "Yes, delete",
+    "zh": "Да, удалить"
+  },
+  {
+    "en": "Yes, enable auto mode",
+    "zh": "Да, включить автоматический режим"
+  },
+  {
+    "en": "Yes, enter plan mode",
+    "zh": "Да, войти в режим плана"
+  },
+  {
+    "en": "Yes, for this session",
+    "zh": "Да, для этой сессии"
+  },
+  {
+    "en": "Yes, install ",
+    "zh": "Да, установить "
+  },
+  {
+    "en": "Yes, manually approve edits",
+    "zh": "Да, утверждать изменения вручную"
+  },
+  {
+    "en": "Yes, use recommended settings",
+    "zh": "Да, использовать рекомендуемые настройки"
+  },
+  {
+    "en": "You can also configure this in /config or with the --ide flag",
+    "zh": "Вы также можете настроить это в /config или с помощью флага --ide."
+  },
+  {
+    "en": "You can help improve Claude ",
+    "zh": "Вы можете помочь улучшить Клода "
+  },
+  {
+    "en": "You can try installing manually:",
+    "zh": "Вы можете попробовать установить вручную:"
+  },
+  {
+    "en": "You have been invoked in the following environment: ",
+    "zh": "Вы были вызваны в следующей среде: "
+  },
+  {
+    "en": "You must select at least one workflow to continue",
+    "zh": "Чтобы продолжить, необходимо выбрать хотя бы один рабочий процесс."
+  },
+  {
+    "en": "You should always review Claude's responses, especially when",
+    "zh": "Вам всегда следует просматривать ответы Клода, особенно когда"
+  },
+  {
+    "en": "Your Claude Pro/Max subscription will be used by Claude Code.",
+    "zh": "Ваша подписка Claude Pro/Max будет использоваться Claude Code."
+  },
+  {
+    "en": "Your bash commands will be sandboxed. Disable with /sandbox.",
+    "zh": "Ваши команды bash будут помещены в песочницу. Отключите с помощью /sandbox."
+  },
+  {
+    "en": "Your choice takes effect immediately upon confirmation.",
+    "zh": "Ваш выбор вступает в силу сразу после подтверждения."
+  },
+  {
+    "en": "Your local credentials are used to authenticate with GitHub",
+    "zh": "Ваши локальные учетные данные используются для аутентификации на GitHub."
+  },
+  {
+    "en": "Your organization policy does not allow any external marketplaces.",
+    "zh": "Политика вашей организации не допускает использование внешних торговых площадок."
+  },
+  {
+    "en": "Your organization restricts which marketplaces can be added.",
+    "zh": "Ваша организация ограничивает количество добавляемых торговых площадок."
+  },
+  {
+    "en": "Your responses should be short and concise.",
+    "zh": "Ваши ответы должны быть краткими и лаконичными."
+  },
+  {
+    "en": "[Image data detected and sent to Claude]",
+    "zh": "[Данные изображения обнаружены и отправлены Клоду]"
+  },
+  {
+    "en": "[Image]",
+    "zh": "[Изображение]"
+  },
+  {
+    "en": "[View Tab]",
+    "zh": "[Вкладка «Просмотр»]"
+  },
+  {
+    "en": "[Warning]",
+    "zh": "[Предупреждение]"
+  },
+  {
+    "en": "[awaiting approval]",
+    "zh": "[ожидает одобрения]"
+  },
+  {
+    "en": "[hidden] ",
+    "zh": "[скрытый] "
+  },
+  {
+    "en": "[idle] ",
+    "zh": "[праздный] "
+  },
+  {
+    "en": "[stopping]",
+    "zh": "[останавливаясь]"
+  },
+  {
+    "en": "accept edits",
+    "zh": "принять изменения"
+  },
+  {
+    "en": "accept edits on",
+    "zh": "принять изменения на"
+  },
+  {
+    "en": "and tell Claude what to do differently",
+    "zh": "и скажи Клоду, что делать по-другому"
+  },
+  {
+    "en": "and tell Claude what to do next",
+    "zh": "и скажи Клоду, что делать дальше"
+  },
+  {
+    "en": "auto mode on",
+    "zh": "автоматический режим включен"
+  },
+  {
+    "en": "built-in (macOS)",
+    "zh": "встроенный (macOS)"
+  },
+  {
+    "en": "claude --help",
+    "zh": "Клод --помогите"
+  },
+  {
+    "en": "claude doctor",
+    "zh": "Клод доктор"
+  },
+  {
+    "en": "ctrl + z to suspend",
+    "zh": "Ctrl + Z, чтобы приостановить"
+  },
+  {
+    "en": "ctrl-g to edit in ",
+    "zh": "Ctrl-G для редактирования "
+  },
+  {
+    "en": "d to disconnect · space for QR code · Enter/Esc to close",
+    "zh": "d для отключения · место для QR-кода · Enter/Esc для закрытия"
+  },
+  {
+    "en": "double tap esc to clear input",
+    "zh": "дважды нажмите esc, чтобы очистить ввод"
+  },
+  {
+    "en": "false (for emails with your domain)",
+    "zh": "false (для писем с вашим доменом)"
+  },
+  {
+    "en": "hatching a coding buddy…",
+    "zh": "вынашиваю приятеля по программированию…"
+  },
+  {
+    "en": "iTerm2 Split Pane Setup",
+    "zh": "Настройка разделенной панели iTerm2"
+  },
+  {
+    "en": "indexing… ",
+    "zh": "индексация… "
+  },
+  {
+    "en": "interactive setup",
+    "zh": "интерактивная настройка"
+  },
+  {
+    "en": "it'll watch you work and occasionally have opinions",
+    "zh": "он будет наблюдать за вашей работой и иногда высказывать свое мнение"
+  },
+  {
+    "en": "keep holding…",
+    "zh": "продолжай держать…"
+  },
+  {
+    "en": "last said",
+    "zh": "последний сказал"
+  },
+  {
+    "en": "mTLS client cert",
+    "zh": "сертификат клиента mTLS"
+  },
+  {
+    "en": "mTLS client key",
+    "zh": "ключ клиента mTLS"
+  },
+  {
+    "en": "new task? ",
+    "zh": "новая задача? "
+  },
+  {
+    "en": "new task? /clear to save ",
+    "zh": "новая задача? /очистить для сохранения "
+  },
+  {
+    "en": "no matches ",
+    "zh": "нет совпадений "
+  },
+  {
+    "en": "not found",
+    "zh": "не найдено"
+  },
+  {
+    "en": "not installed",
+    "zh": "не установлен"
+  },
+  {
+    "en": "not set",
+    "zh": "не установлено"
+  },
+  {
+    "en": "opens docs",
+    "zh": "открывает документы"
+  },
+  {
+    "en": "plan mode on",
+    "zh": "режим планирования включен"
+  },
+  {
+    "en": "press any key",
+    "zh": "нажмите любую клавишу"
+  },
+  {
+    "en": "sandbox disabled",
+    "zh": "песочница отключена"
+  },
+  {
+    "en": "say its name to get its take · /buddy pet · /buddy off",
+    "zh": "произнеси его имя, чтобы получить пользу · /buddy pet · /buddy off"
+  },
+  {
+    "en": "to see all)",
+    "zh": "чтобы увидеть все)"
+  },
+  {
+    "en": "your buddy won't count toward your usage",
+    "zh": "твой приятель не будет учитываться в твоем использовании"
+  },
+  {
+    "en": "· Component summary not available for remote plugin",
+    "zh": "· Сводная информация о компонентах недоступна для удаленного плагина."
+  },
+  {
+    "en": "· Components will be discovered at installation",
+    "zh": "· Компоненты будут обнаружены при установке"
+  },
+  {
+    "en": "· No hook commands will execute",
+    "zh": "· Никакие команды перехвата не будут выполняться"
+  },
+  {
+    "en": "· Run in another terminal: security unlock-keychain",
+    "zh": "· Запустите в другом терминале: брелок разблокировки безопасности"
+  },
+  {
+    "en": "· StatusLine will not be displayed",
+    "zh": "· Строка статуса не будет отображаться"
+  },
+  {
+    "en": "· Tool operations will proceed without hook validation",
+    "zh": "· Операции с инструментом будут продолжаться без проверки крюка"
+  },
+  {
+    "en": "· What should Claude do instead?",
+    "zh": "· Что вместо этого должен сделать Клод?"
+  },
+  {
+    "en": "… diff truncated (exceeded 400 line limit)",
+    "zh": "… разница усечена (превышено ограничение в 400 строк)"
+  },
+  {
+    "en": "← → to adjust",
+    "zh": "← → чтобы настроить"
+  },
+  {
+    "en": "↑/↓ to select · Enter to continue",
+    "zh": "↑/↓ для выбора · Enter для продолжения"
+  },
+  {
+    "en": "└ Failed to fetch versions",
+    "zh": "└ Не удалось получить версии."
+  },
+  {
+    "en": "└ No active version locks",
+    "zh": "└ Нет блокировки активной версии"
+  },
+  {
+    "en": "└ Run /sandbox for install instructions",
+    "zh": "└ Запустите /sandbox для получения инструкций по установке."
+  },
+  {
+    "en": "⚠ Warning: Glob patterns not fully supported on Linux",
+    "zh": "⚠ Внимание: шаблоны Glob не полностью поддерживаются в Linux."
+  },
+  {
+    "en": "✓ Anthropic marketplace installed · /plugin to see available plugins",
+    "zh": "✓ Установлена ​​торговая площадка Anthropic · /plugin для просмотра доступных плагинов."
+  },
+  {
+    "en": "✓ Authentication token created successfully!",
+    "zh": "✓ Токен аутентификации успешно создан!"
+  },
+  {
+    "en": "✓ GitHub Actions workflow created!",
+    "zh": "✓ Создан рабочий процесс GitHub Actions!"
+  },
+  {
+    "en": "✓ Long-lived authentication token created successfully!",
+    "zh": "✓ Долгосрочный токен аутентификации успешно создан!"
+  },
+  {
+    "en": "✓ Update installed · Restart to apply",
+    "zh": "✓ Обновление установлено · Перезапустите, чтобы применить"
+  },
+  {
+    "en": "✓ Update installed · Restart to update",
+    "zh": "✓ Обновление установлено · Перезапустите, чтобы обновить"
+  },
+  {
+    "en": "✓ Using existing ANTHROPIC_API_KEY secret",
+    "zh": "✓ Использование существующего секрета ANTHROPIC_API_KEY."
+  },
+  {
+    "en": "✓ iTerm2 split pane support is ready",
+    "zh": "✓ Поддержка разделенной панели iTerm2 готова"
+  },
+  {
+    "en": "✓ it2 installed successfully",
+    "zh": "✓ it2 успешно установлен"
+  },
+  {
+    "en": "✨ SHINY ✨",
+    "zh": "✨ БЛЕСТЯЩИЙ ✨"
+  },
+  {
+    "en": "✻ Conversation compacted (",
+    "zh": "✻ Разговор сжат ("
+  },
+  {
+    "en": "✻ Thinking…",
+    "zh": "✻ Думаю…"
+  },
+  {
+    "en": "⧉ open files",
+    "zh": "⧉ открывать файлы"
+  },
+  {
+    "en": "⧉ selected lines",
+    "zh": "⧉ выделенные строки"
+  },
+  {
+    "en": "Same Claude Code with visual diffs, live app preview, parallel sessions, and more.",
+    "zh": "Тот же код Клода с визуальными различиями, предварительным просмотром приложения в реальном времени, параллельными сеансами и многим другим."
+  },
+  {
+    "en": "Claude wants to enter plan mode to explore and design an implementation approach.",
+    "zh": "Клод хочет перейти в режим планирования, чтобы изучить и разработать подход к реализации."
+  },
+  {
+    "en": "Restore files to state at the specified user message and exit (requires --resume)",
+    "zh": "Восстановить файлы до состояния указанного пользовательского сообщения и выйти (требуется --resume)"
+  },
+  {
+    "en": "Automatically connect to IDE on startup if exactly one valid IDE is available",
+    "zh": "Автоматически подключаться к IDE при запуске, если доступна ровно одна действующая IDE."
+  },
+  {
+    "en": "Start an interactive session with Remote Control enabled (optionally named)",
+    "zh": "Запуск интерактивного сеанса с включенным удаленным управлением (необязательное имя)"
+  },
+  {
+    "en": "Print the version this session is running (not what autoupdate downloaded)",
+    "zh": "Распечатайте версию, запущенную в этом сеансе (а не то, какое загруженное автообновление)"
+  },
+  {
+    "en": "Write debug logs to a specific file path (implicitly enables debug mode)",
+    "zh": "Записывать журналы отладки в определенный путь к файлу (неявно включает режим отладки)"
+  },
+  {
+    "en": "Server name can only contain letters, numbers, hyphens, and underscores",
+    "zh": "Имя сервера может содержать только буквы, цифры, дефисы и символы подчеркивания."
+  },
+  {
+    "en": "What is the name of the service I should give sensitive permissions to?",
+    "zh": "Как называется служба, которой я должен предоставить конфиденциальные разрешения?"
+  },
+  {
+    "en": "Comma-separated list of setting sources to load (user, project, local).",
+    "zh": "Разделенный запятыми список источников настроек для загрузки (пользователь, проект, локальный)."
+  },
+  {
+    "en": "Transport type (stdio, sse, http). Defaults to stdio if not specified.",
+    "zh": "Тип транспорта (stdio, sse, http). По умолчанию используется stdio, если не указано иное."
+  },
+  {
+    "en": "Read system prompt from a file and append to the default system prompt",
+    "zh": "Прочитайте системное приглашение из файла и добавьте его к системному приглашению по умолчанию."
+  },
+  {
+    "en": "Create a new git worktree for this session (optionally specify a name)",
+    "zh": "Создайте новое рабочее дерево git для этого сеанса (при необходимости укажите имя)."
+  },
+  {
+    "en": "Maximum dollar amount to spend on API calls (only works with --print)",
+    "zh": "Максимальная сумма в долларах, которую можно потратить на вызовы API (работает только с --print)"
+  },
+  {
+    "en": "Use a specific session ID for the conversation (must be a valid UUID)",
+    "zh": "Используйте для разговора определенный идентификатор сеанса (должен быть действительным UUID)."
+  },
+  {
+    "en": "Teleport will switch git branches. The following changes were found:",
+    "zh": "Teleport переключит ветки git. Были обнаружены следующие изменения:"
+  },
+  {
+    "en": "Report the security classification result for the agent action",
+    "zh": "Сообщить о результате классификации безопасности для действия агента"
+  },
+  {
+    "en": "Effort level for the current session (low, medium, high, max)",
+    "zh": "Уровень усилий для текущего сеанса (низкий, средний, высокий, максимальный)"
+  },
+  {
+    "en": "Agent for the current session. Overrides the 'agent' setting.",
+    "zh": "Агент для текущего сеанса. Переопределяет настройку «агент»."
+  },
+  {
+    "en": "Include available plugins from marketplaces (requires --json)",
+    "zh": "Включить доступные плагины с торговых площадок (требуется --json)"
+  },
+  {
+    "en": "Tab ID to identify which tab group this operation applies to",
+    "zh": "Идентификатор вкладки, чтобы определить, к какой группе вкладок применяется эта операция."
+  },
+  {
+    "en": "Verify a code change does what it should by running the app.",
+    "zh": "Убедитесь, что изменение кода делает то, что должно, запустив приложение."
+  },
+  {
+    "en": "Server command must have at least one element (the command)",
+    "zh": "Команда сервера должна содержать хотя бы один элемент (команду)"
+  },
+  {
+    "en": "Long builds and test suites do not have to block you. Add",
+    "zh": "Длинные сборки и наборы тестов не должны вас блокировать. Добавлять"
+  },
+  {
+    "en": "Please use --channels to run a list of approved channels.",
+    "zh": "Используйте --channels, чтобы просмотреть список одобренных каналов."
+  },
+  {
+    "en": "You can also try the manual setup steps if needed:",
+    "zh": "При необходимости вы также можете попробовать выполнить настройку вручную:"
+  },
+  {
+    "en": "Additional directories to allow tool access to",
+    "zh": "Дополнительные каталоги для доступа к инструментам"
+  },
+  {
+    "en": "The Internet connection appears to be offline",
+    "zh": "Подключение к Интернету отсутствует"
+  },
+  {
+    "en": "Opening browser to IdP authorization endpoint",
+    "zh": "Открытие браузера для конечной точки авторизации IdP"
+  },
+  {
+    "en": "Force installation even if already installed",
+    "zh": "Принудительная установка, даже если она уже установлена."
+  },
+  {
+    "en": "Directory that contains virtual environments",
+    "zh": "Каталог, содержащий виртуальные среды"
+  },
+  {
+    "en": "This session is available via Remote Control",
+    "zh": "Этот сеанс доступен через удаленное управление"
+  },
+  {
+    "en": "Parent session ID for analytics correlation",
+    "zh": "Идентификатор родительского сеанса для корреляции аналитики"
+  },
+  {
+    "en": "Use the configuration file at this location",
+    "zh": "Используйте файл конфигурации в этом месте"
+  },
+  {
+    "en": "For times without dates, use today's date.",
+    "zh": "Для времени без дат используйте сегодняшнюю дату."
+  },
+  {
+    "en": "Show Claude logo watermark (default: true)",
+    "zh": "Показывать водяной знак логотипа Клода (по умолчанию: true)"
+  },
+  {
+    "en": "Opens teammates in a separate tmux session",
+    "zh": "Открывает товарищей по команде в отдельном сеансе tmux."
+  },
+  {
+    "en": "Override verbose mode setting from config",
+    "zh": "Переопределить настройку подробного режима из конфигурации"
+  },
+  {
+    "en": "Ensure you have access to this repository",
+    "zh": "Убедитесь, что у вас есть доступ к этому репозиторию"
+  },
+  {
+    "en": "Run claude --teleport from a checkout of ",
+    "zh": "Запустите claude --teleport с кассы "
+  },
+  {
+    "en": "Opens a secure connection to claude.ai.",
+    "zh": "Открывает безопасное соединение с claude.ai."
+  },
+  {
+    "en": "Where your Bedrock models are enabled.",
+    "zh": "Где включены ваши модели Bedrock."
+  },
+  {
+    "en": "Write unit tests for all new utilities",
+    "zh": "Написание модульных тестов для всех новых утилит."
+  },
+  {
+    "en": "Error: Unable to create remote session",
+    "zh": "Ошибка: невозможно создать удаленный сеанс."
+  },
+  {
+    "en": "You are a helpful code reviewer who...",
+    "zh": "Вы полезный рецензент кода, который..."
+  },
+  {
+    "en": "Invalid npm package name format",
+    "zh": "Неверный формат имени пакета npm."
+  },
+  {
+    "en": "Remove directory from workspace?",
+    "zh": "Удалить каталог из рабочей области?"
+  },
+  {
+    "en": "Claude in Chrome (Beta) settings",
+    "zh": "Клод в настройках Chrome (бета)"
+  },
+  {
+    "en": "Set effort level for model usage",
+    "zh": "Установите уровень усилий для использования модели"
+  },
+  {
+    "en": "Default - trusted network access",
+    "zh": "По умолчанию — доверенный доступ к сети."
+  },
+  {
+    "en": "Effort set to high for this turn",
+    "zh": "Для этого хода установлены высокие усилия"
+  },
+  {
+    "en": "Install Claude Code native build",
+    "zh": "Установите собственную сборку Claude Code"
+  },
+  {
+    "en": "Installing Claude Code native build ",
+    "zh": "Установка собственной сборки Claude Code "
+  },
+  {
+    "en": "Team name for swarm coordination",
+    "zh": "Название команды для координации роя"
+  },
+  {
+    "en": "Amazon Bedrock (Mantle) base URL",
+    "zh": "Базовый URL-адрес Amazon Bedrock (Mantle)"
+  },
+  {
+    "en": "Reason, if the condition was not met",
+    "zh": "Причина, если условие не выполнено"
+  },
+  {
+    "en": "Delay for a specified amount of time",
+    "zh": "Задержка на определенное время"
+  },
+  {
+    "en": "Custom agent type for this teammate",
+    "zh": "Пользовательский тип агента для этого товарища по команде"
+  },
+  {
+    "en": "Claude Code installation failed",
+    "zh": "Установка Claude Code не удалась"
+  },
+  {
+    "en": "Number of pull requests created",
+    "zh": "Количество созданных запросов на включение"
+  },
+  {
+    "en": "Cost of the Claude Code session",
+    "zh": "Стоимость сеанса Клод Код"
+  },
+  {
+    "en": "Number of tokens used",
+    "zh": "Количество использованных токенов"
+  },
+  {
+    "en": "Request for process information",
+    "zh": "Запрос информации о процессе"
+  },
+  {
+    "en": "Anthropic's agentic coding tool",
+    "zh": "Инструмент агентного кодирования Anthropic"
+  },
+  {
+    "en": "Count of CLI sessions started",
+    "zh": "Количество запущенных сеансов CLI"
+  },
+  {
+    "en": "Number of git commits created",
+    "zh": "Количество созданных git-коммитов"
+  },
+  {
+    "en": "Total active time in seconds",
+    "zh": "Общее активное время в секундах"
+  },
+  {
+    "en": "Fixed port for OAuth callback (for servers requiring pre-registered redirect URIs)",
+    "zh": "Фиксированный порт для обратного вызова OAuth (для серверов, требующих предварительно зарегистрированные URI перенаправления)"
+  },
+  {
+    "en": "The stable channel may have an older version than what you're currently running (",
+    "zh": "Стабильный канал может иметь более старую версию, чем та, которую вы используете в данный момент ("
+  },
+  {
+    "en": "Prefix for auto-generated Remote Control session names (default: hostname)",
+    "zh": "Префикс для автоматически создаваемых имен сеансов удаленного управления (по умолчанию: имя хоста)"
+  },
+  {
+    "en": "Source contains multiple documents; please use YAML.parseAllDocuments()",
+    "zh": "Источник содержит несколько документов; пожалуйста, используйте YAML.parseAllDocuments()"
+  },
+  {
+    "en": "Show orange circles at click locations (default: true)",
+    "zh": "Показывать оранжевые круги в местах щелчков (по умолчанию: true)"
+  },
+  {
+    "en": "Show black labels describing actions (default: true)",
+    "zh": "Показывать черные метки, описывающие действия (по умолчанию: true)"
+  },
+  {
+    "en": "Show orange progress bar at bottom (default: true)",
+    "zh": "Показывать оранжевый индикатор выполнения внизу (по умолчанию: true)"
+  },
+  {
+    "en": "Show red arrows for drag actions (default: true)",
+    "zh": "Показывать красные стрелки для действий перетаскивания (по умолчанию: true)"
+  },
+  {
+    "en": "Set a session-only Stop hook with a quick prompt",
+    "zh": "Установите перехватчик остановки только для сеанса с быстрой подсказкой"
+  },
+  {
+    "en": "Network connection failures to non-whitelisted hosts",
+    "zh": "Сбои сетевого подключения к хостам, не внесенным в белый список"
+  },
+  {
+    "en": "Package name cannot contain path traversal patterns",
+    "zh": "Имя пакета не может содержать шаблоны обхода пути."
+  },
+  {
+    "en": "Redirection handling is disabled, skipping redirect",
+    "zh": "Обработка перенаправления отключена, перенаправление пропускается."
+  },
+  {
+    "en": "Channel notifications re-registered after reconnect",
+    "zh": "Уведомления канала перерегистрируются после повторного подключения"
+  },
+  {
+    "en": "Failed to send idle notification to team leader",
+    "zh": "Не удалось отправить уведомление о простое руководителю группы."
+  },
+  {
+    "en": "Discarded in favor of other hedged attempt",
+    "zh": "Отброшено в пользу другой попытки хеджирования"
+  },
+  {
+    "en": "Token refresh already in progress, reusing existing promise",
+    "zh": "Обновление токена уже выполняется, повторно используется существующее обещание"
+  },
+  {
+    "en": "Pending response rejected since connection got disposed",
+    "zh": "Ожидающий ответ отклонен, поскольку соединение было удалено"
+  },
+  {
+    "en": "Server does not support token revocation",
+    "zh": "Сервер не поддерживает отзыв токена"
+  },
+  {
+    "en": "Reconnection failed after authentication",
+    "zh": "Не удалось повторно подключиться после аутентификации"
+  },
+  {
+    "en": "Graceful shutdown requested by team lead",
+    "zh": "Грамотное завершение работы по запросу руководителя группы"
+  },
+  {
+    "en": "Same key defined twice in one context",
+    "zh": "Один и тот же ключ определен дважды в одном контексте"
+  },
+  {
+    "en": "Maximum number of redirects exceeded",
+    "zh": "Превышено максимальное количество перенаправлений"
+  },
+  {
+    "en": "Skip workflow update (configure secrets only)",
+    "zh": "Пропустить обновление рабочего процесса (только настройка секретов)"
+  },
+  {
+    "en": "Request body larger than maxBodyLength limit",
+    "zh": "Тело запроса превышает предел maxBodyLength"
+  },
+  {
+    "en": "Completing auth flow with authorization code",
+    "zh": "Завершение процесса аутентификации с помощью кода авторизации"
+  },
+  {
+    "en": "Config parsing failed with error",
+    "zh": "Анализ конфигурации завершился с ошибкой."
+  },
+  {
+    "en": "Channel notifications registered",
+    "zh": "Уведомления канала зарегистрированы"
+  },
+  {
+    "en": "Redirecting to authorization URL",
+    "zh": "Перенаправление на URL авторизации"
+  },
+  {
+    "en": "Channel closed before call started",
+    "zh": "Канал закрыт до начала звонка"
+  },
+  {
+    "en": "Denied by auto mode classifier ",
+    "zh": "Запрещено классификатором автоматического режима "
+  },
+  {
+    "en": "Screenshot via chrome extension",
+    "zh": "Скриншот через расширение Chrome"
+  },
+  {
+    "en": "When issuing multiple commands:",
+    "zh": "При подаче нескольких команд:"
+  },
+  {
+    "en": "What is the termination clause?",
+    "zh": "Что такое положение о расторжении?"
+  },
+  {
+    "en": "Floating point arithmetic error",
+    "zh": "Ошибка арифметики с плавающей запятой"
+  },
+  {
+    "en": "Network request outside of sandbox",
+    "zh": "Сетевой запрос за пределами песочницы"
+  },
+  {
+    "en": "Map comment with trailing content",
+    "zh": "Комментарий к карте с конечным содержимым"
+  },
+  {
+    "en": "The ID of the shortcut to execute",
+    "zh": "Идентификатор ярлыка для выполнения"
+  },
+  {
+    "en": "Failed to discover OAuth metadata",
+    "zh": "Не удалось обнаружить метаданные OAuth."
+  },
+  {
+    "en": "WARNING: Loading development channels",
+    "zh": "ВНИМАНИЕ: Загрузка каналов разработки"
+  },
+  {
+    "en": "The body has already been consumed.",
+    "zh": "Тело уже израсходовано."
+  },
+  {
+    "en": "Please install the app for repository: ",
+    "zh": "Пожалуйста, установите приложение для репозитория: "
+  },
+  {
+    "en": "Windows: winget install --id GitHub.cli",
+    "zh": "Windows: установка winget --id GitHub.cli"
+  },
+  {
+    "en": "Terrible customer service, never again.",
+    "zh": "Ужасное обслуживание клиентов, больше никогда."
+  },
+  {
+    "en": "Create type stub file(s) for import",
+    "zh": "Создайте файл-заглушку типа для импорта."
+  },
+  {
+    "en": "A simple common HTTP client specifically for Google APIs and services.",
+    "zh": "Простой общий HTTP-клиент, специально предназначенный для API и сервисов Google."
+  },
+  {
+    "en": "Received ListRoots request from server",
+    "zh": "Получен запрос ListRoots с сервера."
+  },
+  {
+    "en": "Received auth code via manual callback URL",
+    "zh": "Получен код авторизации через URL-адрес обратного вызова вручную."
+  },
+  {
+    "en": "Client cancelled task execution.",
+    "zh": "Клиент отменил выполнение задачи."
+  },
+  {
+    "en": "Cleanup timeout reached, stopping process monitoring",
+    "zh": "Истекло время очистки, мониторинг процесса прекращен."
+  },
+  {
+    "en": "Connection is already listening",
+    "zh": "Соединение уже прослушивает"
+  },
+  {
+    "en": "Tooltip body text. Explain what the user is looking at and why it matters. ",
+    "zh": "Основной текст подсказки. Объясните, на что смотрит пользователь и почему это важно. "
+  },
+  {
+    "en": "Using persisted auth server metadata for refresh",
+    "zh": "Использование постоянных метаданных сервера аутентификации для обновления"
+  },
+  {
+    "en": "Another process refreshed tokens, using those",
+    "zh": "Другой процесс обновил токены, используя эти"
+  },
+  {
+    "en": "Work item lease expired, fetching fresh token",
+    "zh": "Срок аренды рабочего элемента истек, получен новый токен"
+  },
+  {
+    "en": "Preserved step-up auth state across revocation",
+    "zh": "Сохранение состояния поэтапной аутентификации при отзыве"
+  },
+  {
+    "en": "Command should be emulated but is not implemented",
+    "zh": "Команда должна быть эмулирована, но не реализована"
+  },
+  {
+    "en": "Opening handshake has timed out",
+    "zh": "Время открытия рукопожатия истекло"
+  },
+  {
+    "en": "Create a new secret with a different name",
+    "zh": "Создайте новый секрет с другим именем"
+  },
+  {
+    "en": "Listening for channel messages from: ",
+    "zh": "Прослушивание сообщений канала от: "
+  },
+  {
+    "en": "Invalid response body, expected a web ReadableStream",
+    "zh": "Недопустимый текст ответа, ожидается веб-ReadableStream."
+  },
+  {
+    "en": "Starting new login following /upgrade. Exit with Ctrl-C to use existing account.",
+    "zh": "Начинаем новый вход в систему после /upgrade. Выйдите с помощью Ctrl-C, чтобы использовать существующую учетную запись."
+  },
+  {
+    "en": "You can disconnect remote access anytime by running /remote-control again.",
+    "zh": "Вы можете отключить удаленный доступ в любое время, снова запустив /remote-control."
+  },
+  {
+    "en": "If this is a new task, clearing context will save usage and be faster.",
+    "zh": "Если это новая задача, очистка контекста позволит сэкономить использование и выполнить ее быстрее."
+  },
+  {
+    "en": "An update to our Consumer Terms and Privacy Policy will take effect on",
+    "zh": "Обновление наших Условий для потребителей и Политики конфиденциальности вступит в силу"
+  },
+  {
+    "en": "We've updated our Consumer Terms and Privacy Policy.",
+    "zh": "Мы обновили наши Условия для потребителей и Политику конфиденциальности."
+  },
+  {
+    "en": " report the issue at https://github.com/anthropics/claude-code/issues",
+    "zh": " сообщите о проблеме по адресу https://github.com/anthropics/claude-code/issues."
+  },
+  {
+    "en": "Advisor has reviewed the conversation and will apply the feedback",
+    "zh": "Консультант рассмотрел беседу и применит отзыв."
+  },
+  {
+    "en": "If your browser doesn't open automatically, copy this URL manually",
+    "zh": "Если ваш браузер не открывается автоматически, скопируйте этот URL вручную."
+  },
+  {
+    "en": "If your browser didn't open automatically, copy this URL manually",
+    "zh": "Если ваш браузер не открылся автоматически, скопируйте этот URL вручную."
+  },
+  {
+    "en": "To use native iTerm2 split panes for teammates, you need the",
+    "zh": "Чтобы использовать встроенные разделенные панели iTerm2 для товарищей по команде, вам понадобится"
+  },
+  {
+    "en": "These will be written to ~/.claude/settings.json under env:",
+    "zh": "Они будут записаны в ~/.claude/settings.json в env:"
+  },
+  {
+    "en": "Restore the code and/or conversation to the point before…",
+    "zh": "Восстановите код и/или разговор до точки, предшествующей…"
+  },
+  {
+    "en": "Restore and fork the conversation to the point before…",
+    "zh": "Восстановите и разветвите разговор до предыдущей точки…"
+  },
+  {
+    "en": "Restore the code and/or conversation to a previous point",
+    "zh": "Восстановить код и/или разговор на предыдущую точку"
+  },
+  {
+    "en": "Disable it just for you in .claude/settings.local.json?",
+    "zh": "Отключите его специально для себя в .claude/settings.local.json?"
+  },
+  {
+    "en": "Plan files for current session are allowed for reading",
+    "zh": "Файлы планов текущего сеанса разрешены для чтения."
+  },
+  {
+    "en": "Plan files for current session are allowed for writing",
+    "zh": "Файлы планов для текущей сессии разрешены к записи."
+  },
+  {
+    "en": "You can always enable it later with /remote-control.",
+    "zh": "Вы всегда можете включить его позже с помощью /remote-control."
+  },
+  {
+    "en": "Opening browser to sign in with your Claude account…",
+    "zh": "Открытие браузера для входа в свою учетную запись Claude…"
+  },
+  {
+    "en": "Type to filter · Enter/↓ select · ↑ tabs · Esc clear",
+    "zh": "Введите фильтр · Ввод/↓ выбор · ↑ вкладки · Esc очистить"
+  },
+  {
+    "en": "Do you want to allow Claude to fetch this content?",
+    "zh": "Вы хотите разрешить Клоду получать этот контент?"
+  },
+  {
+    "en": "If your browser doesn't open automatically, visit:",
+    "zh": "Если ваш браузер не открывается автоматически, посетите:"
+  },
+  {
+    "en": "You've spent $5 on the Anthropic API this session.",
+    "zh": "В этом сеансе вы потратили 5 долларов США на Anthropic API."
+  },
+  {
+    "en": "Opening browser to install the Claude GitHub App…",
+    "zh": "Открытие браузера для установки приложения Claude GitHub…"
+  },
+  {
+    "en": "To continue immediately, use /model to switch to",
+    "zh": "Чтобы продолжить немедленно, используйте /model для переключения на"
+  },
+  {
+    "en": "Auto-updates are disabled in development builds.",
+    "zh": "В разрабатываемых сборках автоматические обновления отключены."
+  },
+  {
+    "en": " instead of Claude account subscription token. Either unset",
+    "zh": " вместо токена подписки на аккаунт Claude. Либо не установлено"
+  },
+  {
+    "en": "instead of Anthropic Console key. Either unset",
+    "zh": "вместо ключа Anthropic Console. Либо не установлено"
+  },
+  {
+    "en": "Opening Slack app installation page in browser…",
+    "zh": "Открытие страницы установки приложения Slack в браузере…"
+  },
+  {
+    "en": "· You may need to restart iTerm2 after enabling",
+    "zh": "· Возможно, вам придется перезапустить iTerm2 после включения"
+  },
+  {
+    "en": "A browser window will open for authentication",
+    "zh": "Откроется окно браузера для аутентификации."
+  },
+  {
+    "en": "Restarting Claude Code to apply the new model…",
+    "zh": "Перезапуск Claude Code, чтобы применить новую модель…"
+  },
+  {
+    "en": "A Claude workflow file already exists in this repository.",
+    "zh": "Файл рабочего процесса Claude уже существует в этом репозитории."
+  },
+  {
+    "en": "User has approved exiting plan mode. You can now proceed.",
+    "zh": "Пользователь одобрил выход из режима плана. Теперь вы можете продолжить."
+  },
+  {
+    "en": "Plan flow interrupted. Return to your terminal and retry.",
+    "zh": "Выполнение плана прервано. Вернитесь к своему терминалу и повторите попытку."
+  },
+  {
+    "en": "Plan teleported. Return to your terminal to continue.",
+    "zh": "План телепортировался. Вернитесь к своему терминалу, чтобы продолжить."
+  },
+  {
+    "en": "User defined timeout for device code polling reached",
+    "zh": "Достигнуто заданное пользователем время ожидания для опроса кода устройства."
+  },
+  {
+    "en": "User answers collected by the permission component",
+    "zh": "Ответы пользователей, собранные компонентом разрешений"
+  },
+  {
+    "en": "Checking GCP credentials validity for auth refresh",
+    "zh": "Проверка действительности учетных данных GCP для обновления аутентификации"
+  },
+  {
+    "en": "Fetching AWS caller identity for credential export command",
+    "zh": "Получение идентификатора вызывающего абонента AWS для команды экспорта учетных данных"
+  },
+  {
+    "en": "Fetching AWS caller identity for AWS auth refresh command",
+    "zh": "Получение идентификатора вызывающего абонента AWS для команды обновления аутентификации AWS"
+  },
+  {
+    "en": "Restarting caffeinate to maintain sleep prevention",
+    "zh": "Возобновление приема кофеина для предотвращения сна"
+  },
+  {
+    "en": "User interruption with CTRL-BREAK",
+    "zh": "Прерывание пользователя с помощью CTRL-BREAK"
+  },
+  {
+    "en": "User interruption with CTRL-C",
+    "zh": "Прерывание пользователя с помощью CTRL-C"
+  },
+  {
+    "en": "User force closed",
+    "zh": "Пользователь принудительно закрыт"
+  },
+  {
+    "en": "User cancelled the flow.",
+    "zh": "Пользователь отменил поток."
+  },
+  {
+    "en": "User denied permission",
+    "zh": "Пользователю отказано в разрешении"
+  },
+  {
+    "en": "User rejected tool use",
+    "zh": "Пользователь отклонил использование инструмента"
+  },
+  {
+    "en": "User declined to enter plan mode",
+    "zh": "Пользователь отказался войти в режим плана"
+  },
+  {
+    "en": "User approved Claude's plan",
+    "zh": "Пользователь одобрил план Клода"
+  },
+  {
+    "en": "User Rejected Action",
+    "zh": "Пользователь отклонил действие"
+  },
+  {
+    "en": "User Stopped Early",
+    "zh": "Пользователь остановлен раньше времени"
+  },
+  {
+    "en": "User Rejected",
+    "zh": "Пользователь отклонен"
+  },
+  {
+    "en": "User Unclear",
+    "zh": "Пользователь неясен"
+  },
+  {
+    "en": "User Settings",
+    "zh": "Пользовательские настройки"
+  },
+  {
+    "en": "User memory",
+    "zh": "Пользовательская память"
+  },
+  {
+    "en": "User Data",
+    "zh": "Пользовательские данные"
+  },
+  {
+    "en": "Do you want to allow this connection?",
+    "zh": "Разрешить это соединение?"
+  },
+  {
+    "en": "Establishing connection to MCP server",
+    "zh": "Установление соединения с сервером MCP"
+  },
+  {
+    "en": "Connecting GitHub to Claude…",
+    "zh": "Подключение GitHub к Клоду…"
+  },
+  {
+    "en": "Connecting to",
+    "zh": "Подключение к"
+  },
+  {
+    "en": "Reconnecting to",
+    "zh": "Повторное подключение к"
+  },
+  {
+    "en": "Plan submitted for team lead approval",
+    "zh": "План отправлен на утверждение руководителю группы"
+  },
+  {
+    "en": "Waiting for team lead approval",
+    "zh": "Ожидание одобрения руководителя группы"
+  },
+  {
+    "en": "Plan Approval Request from",
+    "zh": "Запрос на утверждение плана от"
+  },
+  {
+    "en": "Plan needs revision",
+    "zh": "План требует пересмотра"
+  },
+  {
+    "en": "Ultraplan approved",
+    "zh": "Ультраплан одобрен"
+  },
+  {
+    "en": "Submitting report…",
+    "zh": "Отправка отчета…"
+  },
+  {
+    "en": "Think Back on 2025 with Claude Code",
+    "zh": "Вспомните 2025 год с Клодом Кодом"
+  },
+  {
+    "en": "is here · it'll chime in as you code",
+    "zh": "здесь · он будет звонить, когда вы будете писать код"
+  },
+  {
+    "en": "sync cycle modes for all · Esc close",
+    "zh": "синхронизировать режимы цикла для всех · Esc закрыть"
+  },
+  {
+    "en": "Thanks for sharing your transcript!",
+    "zh": "Спасибо, что поделились своей стенограммой!"
+  },
+  {
+    "en": "No, maybe later with /terminal-setup",
+    "zh": "Нет, возможно, позже с помощью /terminal-setup"
+  },
+  {
+    "en": "Do you have feedback about the plan?",
+    "zh": "Есть ли у вас отзывы о плане?"
+  },
+  {
+    "en": "You have not answered all questions",
+    "zh": "Вы ответили не на все вопросы"
+  },
+  {
+    "en": "Fetching your Claude Code sessions…",
+    "zh": "Получение сеансов Claude Code…"
+  },
+  {
+    "en": "Sending a test request to Bedrock…",
+    "zh": "Отправка тестового запроса в Bedrock…"
+  },
+  {
+    "en": "Checking GitHub CLI installation…",
+    "zh": "Проверка установки GitHub CLI…"
+  },
+  {
+    "en": "Checking thinkback installation…",
+    "zh": "Проверка установки thinkback…"
+  },
+  {
+    "en": "Checking candidate",
+    "zh": "Проверка кандидата"
+  },
+  {
+    "en": "Checking login status…",
+    "zh": "Проверка статуса входа…"
+  },
+  {
+    "en": "Checking git status",
+    "zh": "Проверка статуса git"
+  },
+  {
+    "en": "Checking for Claude Desktop…",
+    "zh": "Проверка наличия Claude Desktop…"
+  },
+  {
+    "en": "Claude account with subscription ·",
+    "zh": "Аккаунт Клода с подпиской ·"
+  },
+  {
+    "en": "Claude wants to exit plan mode",
+    "zh": "Клод хочет выйти из режима планирования"
+  },
+  {
+    "en": "Claude Code will always reject requests to use denied tools.",
+    "zh": "Claude Code всегда отклоняет запросы на использование запрещенных инструментов."
+  },
+  {
+    "en": "To change this later, run /theme",
+    "zh": "Чтобы изменить это позже, запустите /theme"
+  },
+  {
+    "en": "Opening sticker page in browser…",
+    "zh": "Открытие страницы стикеров в браузере…"
+  },
+  {
+    "en": "Loading your Claude Code stats…",
+    "zh": "Загрузка статистики вашего Клода Кода…"
+  },
+  {
+    "en": "How do you authenticate to AWS?",
+    "zh": "Как вы проходите аутентификацию в AWS?"
+  },
+  {
+    "en": "Select any you wish to enable.",
+    "zh": "Выберите любой, который хотите включить."
+  },
+  {
+    "en": "Select a session to resume",
+    "zh": "Выберите сеанс для возобновления"
+  },
+  {
+    "en": "Confirm you want to restore",
+    "zh": "Подтвердите, что хотите восстановить"
+  },
+  {
+    "en": "Would you like to install it?",
+    "zh": "Хотите установить его?"
+  },
+  {
+    "en": "Would you like to:",
+    "zh": "Вы не хотите:"
+  },
+  {
+    "en": "Working Directory Has Changes",
+    "zh": "В рабочем каталоге есть изменения"
+  },
+  {
+    "en": "Hooks Restricted by Policy",
+    "zh": "Хуки, ограниченные политикой"
+  },
+  {
+    "en": "Hook Configuration - Disabled",
+    "zh": "Конфигурация перехватчика – отключено"
+  },
+  {
+    "en": "hook returned blocking error",
+    "zh": "хук возвратил ошибку блокировки"
+  },
+  {
+    "en": "hook stopped continuation:",
+    "zh": "крючок остановился, продолжение:"
+  },
+  {
+    "en": "hook warning",
+    "zh": "предупреждение о крючке"
+  },
+  {
+    "en": "hook error",
+    "zh": "ошибка перехвата"
+  },
+  {
+    "en": "No Claude Code sessions found",
+    "zh": "Сеансы Claude Code не найдены"
+  },
+  {
+    "en": "No remote environments available.",
+    "zh": "Нет доступных удаленных сред."
+  },
+  {
+    "en": "No marketplaces configured.",
+    "zh": "Торговые площадки не настроены."
+  },
+  {
+    "en": "No custom commands found",
+    "zh": "Пользовательские команды не найдены"
+  },
+  {
+    "en": "No skills found",
+    "zh": "Навыки не найдены"
+  },
+  {
+    "en": "No agents found",
+    "zh": "Агенты не найдены"
+  },
+  {
+    "en": "No preview available",
+    "zh": "Предварительный просмотр недоступен"
+  },
+  {
+    "en": "No code restore",
+    "zh": "Без восстановления кода"
+  },
+  {
+    "en": "Nothing to rewind to yet.",
+    "zh": "Пока не к чему перематывать."
+  },
+  {
+    "en": "Removed from marketplace · reason:",
+    "zh": "Удален с торговой площадки · причина:"
+  },
+  {
+    "en": "Removed from marketplace",
+    "zh": "Удален с торговой площадки"
+  },
+  {
+    "en": "Removed empty socket directory",
+    "zh": "Удален пустой каталог сокетов."
+  },
+  {
+    "en": "Removed worktree",
+    "zh": "Удалено рабочее дерево"
+  },
+  {
+    "en": "Adding marketplace to configuration…",
+    "zh": "Добавление торговой площадки в конфигурацию…"
+  },
+  {
+    "en": "Adding marketplace...",
+    "zh": "Добавление торговой площадки..."
+  },
+  {
+    "en": "Loading marketplaces...",
+    "zh": "Загрузка торговых площадок..."
+  },
+  {
+    "en": "Loading marketplaces…",
+    "zh": "Загрузка торговых площадок…"
+  },
+  {
+    "en": "Loading installed plugins…",
+    "zh": "Загрузка установленных плагинов…"
+  },
+  {
+    "en": "Loading environments…",
+    "zh": "Загрузка сред…"
+  },
+  {
+    "en": "Loading session…",
+    "zh": "Загрузка сеанса…"
+  },
+  {
+    "en": "Loading thinkback skill…",
+    "zh": "Загрузка навыка размышления…"
+  },
+  {
+    "en": "Loading stats…",
+    "zh": "Загрузка статистики…"
+  },
+  {
+    "en": "Processing authentication…",
+    "zh": "Обработка аутентификации…"
+  },
+  {
+    "en": "Starting authentication…",
+    "zh": "Запускаем аутентификацию…"
+  },
+  {
+    "en": "Authenticating with",
+    "zh": "Аутентификация с помощью"
+  },
+  {
+    "en": "Verifying credentials",
+    "zh": "Проверка учетных данных"
+  },
+  {
+    "en": "Verifying it2 can communicate with iTerm2…",
+    "zh": "Проверка того, что it2 может взаимодействовать с iTerm2…"
+  },
+  {
+    "en": "Calling AWS STS and Bedrock…",
+    "zh": "Звонок в AWS STS и Bedrock…"
+  },
+  {
+    "en": "Reading ~/.aws/config…",
+    "zh": "Чтение ~/.aws/config…"
+  },
+  {
+    "en": "Sending token request to endpoint:",
+    "zh": "Отправка запроса токена в конечную точку:"
+  },
+  {
+    "en": "Sending ping with timeout",
+    "zh": "Отправка пинга с таймаутом"
+  },
+  {
+    "en": "Sending SIGINT to MCP server process",
+    "zh": "Отправка SIGINT в процесс сервера MCP"
+  },
+  {
+    "en": "Fetching web page",
+    "zh": "Получение веб-страницы"
+  },
+  {
+    "en": "Teleporting session…",
+    "zh": "Сеанс телепортации…"
+  },
+  {
+    "en": "Teleport failed:",
+    "zh": "Телепорт не удался:"
+  },
+  {
+    "en": "Searching with Claude…",
+    "zh": "Поиски с Клодом…"
+  },
+  {
+    "en": "Searching…",
+    "zh": "Идет поиск…"
+  },
+  {
+    "en": "Opening in Claude Desktop…",
+    "zh": "Открытие в Claude Desktop…"
+  },
+  {
+    "en": "Opening Claude Desktop…",
+    "zh": "Открытие рабочего стола Claude…"
+  },
+  {
+    "en": "Opening pull request page",
+    "zh": "Открытие страницы запроса на включение"
+  },
+  {
+    "en": "Opening your options…",
+    "zh": "Открываем возможности…"
+  },
+  {
+    "en": "Let's get started.",
+    "zh": "Давайте начнем."
+  },
+  {
+    "en": "All powered up",
+    "zh": "Все включено"
+  },
+  {
+    "en": "Please wait…",
+    "zh": "Пожалуйста, подождите…"
+  },
+  {
+    "en": "to share detailed feedback anytime.",
+    "zh": "чтобы поделиться подробным отзывом в любое время."
+  },
+  {
+    "en": "Sharing transcript",
+    "zh": "Публикация расшифровки"
+  },
+  {
+    "en": "Completed task",
+    "zh": "Выполнено задание"
+  },
+  {
+    "en": "Waiting for task",
+    "zh": "Ожидание задачи"
+  },
+  {
+    "en": "Remote agent launched",
+    "zh": "Удаленный агент запущен"
+  },
+  {
+    "en": "Backgrounded agent",
+    "zh": "Опытный агент"
+  },
+  {
+    "en": "Background tasks",
+    "zh": "Фоновые задачи"
+  },
+  {
+    "en": "view tasks",
+    "zh": "просмотреть задачи"
+  },
+  {
+    "en": "stop agents",
+    "zh": "остановить агентов"
+  },
+  {
+    "en": "stop all agents",
+    "zh": "остановить всех агентов"
+  },
+  {
+    "en": "Active days:",
+    "zh": "Активные дни:"
+  },
+  {
+    "en": "Most active day:",
+    "zh": "Самый активный день:"
+  },
+  {
+    "en": "Longest session:",
+    "zh": "Самая длинная сессия:"
+  },
+  {
+    "en": "Longest streak:",
+    "zh": "Самая длинная серия:"
+  },
+  {
+    "en": "Current streak:",
+    "zh": "Текущая серия:"
+  },
+  {
+    "en": "Shot distribution",
+    "zh": "Распределение выстрелов"
+  },
+  {
+    "en": "Total tokens:",
+    "zh": "Всего жетонов:"
+  },
+  {
+    "en": "Free space:",
+    "zh": "Свободное место:"
+  },
+  {
+    "en": "Favorite model:",
+    "zh": "Любимая модель:"
+  },
+  {
+    "en": "Currently pinned:",
+    "zh": "На данный момент закреплено:"
+  },
+  {
+    "en": "Currently using:",
+    "zh": "В настоящее время используется:"
+  },
+  {
+    "en": "Currently using",
+    "zh": "В настоящее время использую"
+  },
+  {
+    "en": "Latest available:",
+    "zh": "Последние доступные:"
+  },
+  {
+    "en": "files changed",
+    "zh": "файлы изменены"
+  },
+  {
+    "en": "e.g., Help me write unit tests for my code...",
+    "zh": "например, Помогите мне написать модульные тесты для моего кода..."
+  },
+  {
+    "en": "e.g. Has Claude completed all requested tasks?",
+    "zh": "например Выполнил ли Клод все запрошенные задания?"
+  },
+  {
+    "en": "e.g., use this agent after you're done writing code...",
+    "zh": "например, используйте этот агент после того, как закончите писать код..."
+  },
+  {
+    "en": "e.g., test-runner, tech-lead, etc",
+    "zh": "например, тестировщик, технический руководитель и т. д."
+  },
+  {
+    "en": "Returned to",
+    "zh": "Вернулся в"
+  },
+  {
+    "en": "Updated cell",
+    "zh": "Обновленная ячейка"
+  },
+  {
+    "en": "Listed directory",
+    "zh": "Перечисленный каталог"
+  },
+  {
+    "en": "Referenced file",
+    "zh": "Файл ссылки"
+  },
+  {
+    "en": "Referenced PDF",
+    "zh": "Ссылочный PDF-файл"
+  },
+  {
+    "en": "Opened changes in",
+    "zh": "Открыты изменения в"
+  },
+  {
+    "en": "Enter to continue ·",
+    "zh": "Войдите, чтобы продолжить ·"
+  },
+  {
+    "en": "Enter to select ·",
+    "zh": "Войдите, чтобы выбрать ·"
+  },
+  {
+    "en": "Enter to continue",
+    "zh": "Войдите, чтобы продолжить"
+  },
+  {
+    "en": "Tab to switch focus",
+    "zh": "Вкладка для переключения фокуса"
+  },
+  {
+    "en": "toggle selection",
+    "zh": "переключить выбор"
+  },
+  {
+    "en": "toggle branch",
+    "zh": "переключить ветку"
+  },
+  {
+    "en": "mark done",
+    "zh": "отметка выполнено"
+  },
+  {
+    "en": "open in editor",
+    "zh": "открыть в редакторе"
+  },
+  {
+    "en": "expand history",
+    "zh": "расширить историю"
+  },
+  {
+    "en": "Type to filter",
+    "zh": "Введите фильтр"
+  },
+  {
+    "en": "Type to search",
+    "zh": "Введите для поиска"
+  },
+  {
+    "en": "type to search",
+    "zh": "введите для поиска"
+  },
+  {
+    "en": "Type to Search",
+    "zh": "Введите текст для поиска"
+  },
+  {
+    "en": "Type to enter text",
+    "zh": "Введите текст"
+  },
+  {
+    "en": "Search settings…",
+    "zh": "Настройки поиска…"
+  },
+  {
+    "en": "search history",
+    "zh": "история поиска"
+  },
+  {
+    "en": "apply changes",
+    "zh": "применить изменения"
+  },
+  {
+    "en": "confirm and save",
+    "zh": "подтвердите и сохраните"
+  },
+  {
+    "en": "Review your answers",
+    "zh": "Просмотрите свои ответы"
+  },
+  {
+    "en": "Enter filename:",
+    "zh": "Введите имя файла:"
+  },
+  {
+    "en": "Enter marketplace source:",
+    "zh": "Введите источник торговой площадки:"
+  },
+  {
+    "en": "Enter new session name",
+    "zh": "Введите новое имя сеанса"
+  },
+  {
+    "en": "Choose location",
+    "zh": "Выберите местоположение"
+  },
+  {
+    "en": "Select tools",
+    "zh": "Выберите инструменты"
+  },
+  {
+    "en": "Browse default commands:",
+    "zh": "Просмотрите команды по умолчанию:"
+  },
+  {
+    "en": "Browse custom commands:",
+    "zh": "Просмотрите пользовательские команды:"
+  },
+  {
+    "en": "Creation method",
+    "zh": "Метод создания"
+  },
+  {
+    "en": "Preferred output style",
+    "zh": "Предпочтительный стиль вывода"
+  },
+  {
+    "en": "Status message:",
+    "zh": "Сообщение о состоянии:"
+  },
+  {
+    "en": "Current setting:",
+    "zh": "Текущая настройка:"
+  },
+  {
+    "en": "Default value used when the user provides nothing",
+    "zh": "Значение по умолчанию, используемое, когда пользователь ничего не предоставляет"
+  },
+  {
+    "en": "Configure agent memory",
+    "zh": "Настройка памяти агента"
+  },
+  {
+    "en": "Add directory to workspace",
+    "zh": "Добавить каталог в рабочую область"
+  },
+  {
+    "en": "Delete this hook",
+    "zh": "Удалить этот крючок"
+  },
+  {
+    "en": "Delete hook",
+    "zh": "Удалить хук"
+  },
+  {
+    "en": "add hook",
+    "zh": "добавить крючок"
+  },
+  {
+    "en": "update hook",
+    "zh": "обновить хук"
+  },
+  {
+    "en": "plugin - Manage installed plugins",
+    "zh": "плагин — управление установленными плагинами."
+  },
+  {
+    "en": "Plugin Recommendation",
+    "zh": "Рекомендации по плагину"
+  },
+  {
+    "en": "LSP Plugin Recommendation",
+    "zh": "Рекомендации по плагину LSP"
+  },
+  {
+    "en": "Advisor disabled",
+    "zh": "Советник отключен"
+  },
+  {
+    "en": "Advisor Tool",
+    "zh": "Советник"
+  },
+  {
+    "en": "Advisor model for the server-side advisor tool.",
+    "zh": "Модель советника для серверного инструмента-советника."
+  },
+  {
+    "en": "Agent MCP",
+    "zh": "Агент МСР"
+  },
+  {
+    "en": "active agent",
+    "zh": "активный агент"
+  },
+  {
+    "en": "active shell",
+    "zh": "активная оболочка"
+  },
+  {
+    "en": "Remote Control",
+    "zh": "Пульт дистанционного управления"
+  },
+  {
+    "en": "Disconnect this session",
+    "zh": "Отключить этот сеанс"
+  },
+  {
+    "en": "Reconnect extension",
+    "zh": "Повторно подключить расширение"
+  },
+  {
+    "en": "Ultrareview billing",
+    "zh": "Ультраревю биллинг"
+  },
+  {
+    "en": "Autofix PR",
+    "zh": "Автофикс PR"
+  },
+  {
+    "en": "to switch model",
+    "zh": "переключить модель"
+  },
+  {
+    "en": "to toggle fast mode",
+    "zh": "переключить быстрый режим"
+  },
+  {
+    "en": "to toggle thinking",
+    "zh": "переключить мышление"
+  },
+  {
+    "en": "to toggle tasks",
+    "zh": "для переключения задач"
+  },
+  {
+    "en": "to connect.",
+    "zh": "для подключения."
+  },
+  {
+    "en": "to undo",
+    "zh": "отменить"
+  },
+  {
+    "en": "to view",
+    "zh": "для просмотра"
+  },
+  {
+    "en": "to save,",
+    "zh": "сохранить,"
+  },
+  {
+    "en": "to speak",
+    "zh": "говорить"
+  },
+  {
+    "en": "to toggle",
+    "zh": "переключать"
+  },
+  {
+    "en": "more below",
+    "zh": "подробнее ниже"
+  },
+  {
+    "en": "more…",
+    "zh": "более…"
+  },
+  {
+    "en": "all projects",
+    "zh": "все проекты"
+  },
+  {
+    "en": "all worktrees",
+    "zh": "все рабочие деревья"
+  },
+  {
+    "en": "reject all",
+    "zh": "отвергнуть все"
+  },
+  {
+    "en": "Permissions:",
+    "zh": "Разрешения:"
+  },
+  {
+    "en": "Network Restrictions",
+    "zh": "Сетевые ограничения"
+  },
+  {
+    "en": "Network Access",
+    "zh": "Доступ к сети"
+  },
+  {
+    "en": "Strict sandbox mode",
+    "zh": "Строгий режим песочницы"
+  },
+  {
+    "en": "Configuration Error",
+    "zh": "Ошибка конфигурации"
+  },
+  {
+    "en": "Setup Warnings",
+    "zh": "Предупреждения при настройке"
+  },
+  {
+    "en": "Contains warnings",
+    "zh": "Содержит предупреждения"
+  },
+  {
+    "en": "Missing dependencies",
+    "zh": "Отсутствующие зависимости"
+  },
+  {
+    "en": "Auto-compact window reset to model default",
+    "zh": "Автоматический сброс окна до значений модели по умолчанию"
+  },
+  {
+    "en": "Auto-registered claude-cli:// deep link protocol handler",
+    "zh": "Автоматически зарегистрированный обработчик протокола глубоких ссылок claude-cli://"
+  },
+  {
+    "en": "WARNING: Claude Code running in 跳过权限检查 mode",
+    "zh": "ВНИМАНИЕ: код Claude работает в режиме 跳过权限检查."
+  },
+  {
+    "en": "WARNING: Failed to turn on autofix for this PR",
+    "zh": "ВНИМАНИЕ: не удалось включить автоисправление для этого PR."
+  },
+  {
+    "en": "WARNING:",
+    "zh": "ПРЕДУПРЕЖДЕНИЕ:"
+  },
+  {
+    "en": "You've hit your fast limit",
+    "zh": "Вы исчерпали свой лимит скорости"
+  },
+  {
+    "en": "You've used",
+    "zh": "Вы использовали"
+  },
+  {
+    "en": "You can either:",
+    "zh": "Вы можете:"
+  },
+  {
+    "en": "Sent a message to",
+    "zh": "Отправил сообщение на"
+  },
+  {
+    "en": "Flagged on",
+    "zh": "Отмечено включено"
+  },
+  {
+    "en": "again to exit",
+    "zh": "еще раз, чтобы выйти"
+  },
+  {
+    "en": "New here? Run",
+    "zh": "Впервые здесь? Бегать"
+  },
+  {
+    "en": "For more help:",
+    "zh": "Для получения дополнительной помощи:"
+  },
+  {
+    "en": "For more info, use",
+    "zh": "Для получения дополнительной информации используйте"
+  },
+  {
+    "en": "For more details see:",
+    "zh": "Более подробную информацию см.:"
+  },
+  {
+    "en": "run /terminal-setup",
+    "zh": "запустить /настройка терминала"
+  },
+  {
+    "en": "From your shell:",
+    "zh": "Из вашей оболочки:"
+  },
+  {
+    "en": "unrecognized:",
+    "zh": "непризнанный:"
+  },
+  {
+    "en": "Unrecognized:",
+    "zh": "Непризнанный:"
+  },
+  {
+    "en": "Screen Recording:",
+    "zh": "Запись экрана:"
+  },
+  {
+    "en": "Hover info",
+    "zh": "Информация при наведении"
+  },
+  {
+    "en": "OAuth error:",
+    "zh": "Ошибка OAuth:"
+  },
+  {
+    "en": "Task #",
+    "zh": "Задача #"
+  },
+  {
+    "en": "Enter to",
+    "zh": "Войдите в"
+  },
+  {
+    "en": "Never for",
+    "zh": "Никогда для"
+  },
+  {
+    "en": "Session: ",
+    "zh": "Сессия: "
+  },
+  {
+    "en": "Hooks: ",
+    "zh": "Крючки: "
+  },
+  {
+    "en": "Agents: ",
+    "zh": "Агенты: "
+  },
+  {
+    "en": "Skills: ",
+    "zh": "Навыки: "
+  },
+  {
+    "en": "Commands: ",
+    "zh": "Команды: "
+  },
+  {
+    "en": "Edit file",
+    "zh": "Редактировать файл"
+  },
+  {
+    "en": "Enter",
+    "zh": "Входить"
+  },
+  {
+    "en": "PR #",
+    "zh": "PR №"
+  },
+  {
+    "en": "URL",
+    "zh": "URL-адрес"
+  },
+  {
+    "en": "• Updated",
+    "zh": "• Обновлено"
+  },
+  {
+    "en": "• Remove",
+    "zh": "• Удалять"
+  },
+  {
+    "en": "• Update",
+    "zh": "• Обновлять"
+  },
+  {
+    "en": "• Agents:",
+    "zh": "• Агенты:"
+  },
+  {
+    "en": "• Hooks:",
+    "zh": "• Крючки:"
+  },
+  {
+    "en": "• Skills:",
+    "zh": "• Навыки:"
+  },
+  {
+    "en": "• Commands:",
+    "zh": "• Команды:"
+  },
+  {
+    "en": "• Cmd+Esc",
+    "zh": "• Cmd+Esc"
+  },
+  {
+    "en": "∴ Thinking",
+    "zh": "∴ Мышление"
+  },
+  {
+    "en": "⧉ Selected",
+    "zh": "⧉ Выбрано"
+  },
+  {
+    "en": "⧉ In",
+    "zh": "⧉ В"
+  },
+  {
+    "en": "←/→ source",
+    "zh": "←/→ источник"
+  },
+  {
+    "en": "↑/↓ select",
+    "zh": "↑/↓ выбрать"
+  },
+  {
+    "en": "Plan → Edit → Execute",
+    "zh": "План → Редактировать → Выполнить"
+  }
+]

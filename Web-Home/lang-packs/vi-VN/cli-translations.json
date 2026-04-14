@@ -1,0 +1,5854 @@
+[
+  {
+    "en": " (MCP)",
+    "zh": " (MCP)"
+  },
+  {
+    "en": " (installed)",
+    "zh": " (đã cài đặt)"
+  },
+  {
+    "en": " (p to expand)",
+    "zh": " (p để mở rộng)"
+  },
+  {
+    "en": " (required to block unix domain sockets)",
+    "zh": " (bắt buộc để chặn ổ cắm tên miền unix)"
+  },
+  {
+    "en": " (truncated)",
+    "zh": " (cắt ngắn)"
+  },
+  {
+    "en": " (untracked)",
+    "zh": " (không bị theo dõi)"
+  },
+  {
+    "en": " Accept  ",
+    "zh": " Chấp nhận  "
+  },
+  {
+    "en": " Cancel",
+    "zh": " Hủy bỏ"
+  },
+  {
+    "en": " Decline",
+    "zh": " Sự suy sụp"
+  },
+  {
+    "en": " Directories ",
+    "zh": " Thư mục "
+  },
+  {
+    "en": " Generating agent from description...",
+    "zh": " Tạo tác nhân từ mô tả..."
+  },
+  {
+    "en": " Mode ",
+    "zh": " Cách thức "
+  },
+  {
+    "en": " Reopen URL  ",
+    "zh": " Mở lại URL  "
+  },
+  {
+    "en": " Rules ",
+    "zh": " Quy tắc "
+  },
+  {
+    "en": " Voice mode is now available · /voice to enable",
+    "zh": " Chế độ giọng nói hiện đã có sẵn · /giọng nói để bật"
+  },
+  {
+    "en": " [Community Managed]",
+    "zh": " [Cộng đồng quản lý]"
+  },
+  {
+    "en": " [destructive]",
+    "zh": " [phá hoại]"
+  },
+  {
+    "en": " [open-world]",
+    "zh": " [thế giới mở]"
+  },
+  {
+    "en": " [read-only]",
+    "zh": " [chỉ đọc]"
+  },
+  {
+    "en": " back",
+    "zh": " mặt sau"
+  },
+  {
+    "en": " for Quick Launch",
+    "zh": " để khởi động nhanh"
+  },
+  {
+    "en": " navigate · ",
+    "zh": " điều hướng · "
+  },
+  {
+    "en": " or ",
+    "zh": " hoặc "
+  },
+  {
+    "en": " ready · shift+↓ to view",
+    "zh": " sẵn sàng · shift+↓ để xem"
+  },
+  {
+    "en": " to cancel",
+    "zh": " hủy bỏ"
+  },
+  {
+    "en": " to edit this plan in ",
+    "zh": " để chỉnh sửa kế hoạch này trong "
+  },
+  {
+    "en": " to get started",
+    "zh": " để bắt đầu"
+  },
+  {
+    "en": " to reference files or lines in your input",
+    "zh": " để tham chiếu các tập tin hoặc dòng trong đầu vào của bạn"
+  },
+  {
+    "en": " to save ",
+    "zh": " để tiết kiệm "
+  },
+  {
+    "en": " tokens · /autocompact",
+    "zh": " mã thông báo · /autocompact"
+  },
+  {
+    "en": " · ./path/to/marketplace",
+    "zh": " · ./path/to/marketplace"
+  },
+  {
+    "en": " · /agents",
+    "zh": " · /đại lý"
+  },
+  {
+    "en": " · /agents to manage",
+    "zh": " · /đại lý để quản lý"
+  },
+  {
+    "en": " · /dream to run",
+    "zh": " · /mơ được chạy"
+  },
+  {
+    "en": " · /mcp",
+    "zh": " · /mcp"
+  },
+  {
+    "en": " · /memory",
+    "zh": " · /ký ức"
+  },
+  {
+    "en": " · /memory to edit",
+    "zh": " · /bộ nhớ để chỉnh sửa"
+  },
+  {
+    "en": " · /permissions",
+    "zh": " · /quyền"
+  },
+  {
+    "en": " · /plugin for details",
+    "zh": " · /plugin để biết chi tiết"
+  },
+  {
+    "en": " · /sandbox",
+    "zh": " · /hộp cát"
+  },
+  {
+    "en": " · /skills",
+    "zh": " · /kỹ năng"
+  },
+  {
+    "en": " · Design an implementation strategy",
+    "zh": " · Thiết kế chiến lược thực hiện"
+  },
+  {
+    "en": " · Enter to view",
+    "zh": " · Vào để xem"
+  },
+  {
+    "en": " · Explore the codebase thoroughly",
+    "zh": " · Khám phá cơ sở mã một cách kỹ lưỡng"
+  },
+  {
+    "en": " · Identify existing patterns",
+    "zh": " · Xác định các mẫu hiện có"
+  },
+  {
+    "en": " · Marked for update",
+    "zh": " · Đánh dấu để cập nhật"
+  },
+  {
+    "en": " · Present a plan for your approval",
+    "zh": " · Trình bày kế hoạch để bạn phê duyệt"
+  },
+  {
+    "en": " · Run /reload-plugins to apply",
+    "zh": " · Chạy /reload-plugins để áp dụng"
+  },
+  {
+    "en": " · enter to collapse",
+    "zh": " · đi vào để sụp đổ"
+  },
+  {
+    "en": " · enter to view",
+    "zh": " · vào để xem"
+  },
+  {
+    "en": " · owner/repo (GitHub)",
+    "zh": " · chủ sở hữu/repo (GitHub)"
+  },
+  {
+    "en": "! for bash mode",
+    "zh": "! cho chế độ bash"
+  },
+  {
+    "en": "& for background",
+    "zh": "& cho nền"
+  },
+  {
+    "en": "((empty message))",
+    "zh": "((tin nhắn trống))"
+  },
+  {
+    "en": "(Command copied to clipboard)",
+    "zh": "(Lệnh được sao chép vào clipboard)"
+  },
+  {
+    "en": "(No changes)",
+    "zh": "(Không có thay đổi)"
+  },
+  {
+    "en": "(No content)",
+    "zh": "(Không có nội dung)"
+  },
+  {
+    "en": "(No resources found)",
+    "zh": "(Không tìm thấy tài nguyên)"
+  },
+  {
+    "en": "(OSC 777)",
+    "zh": "(OSC 777)"
+  },
+  {
+    "en": "(OSC 9)",
+    "zh": "(OSC 9)"
+  },
+  {
+    "en": "(OSC 99)",
+    "zh": "(OSC 99)"
+  },
+  {
+    "en": "(Original working directory)",
+    "zh": "(Thư mục làm việc gốc)"
+  },
+  {
+    "en": "(already granted)",
+    "zh": "(đã được cấp)"
+  },
+  {
+    "en": "(esc to give additional instructions)",
+    "zh": "(esc để đưa ra hướng dẫn bổ sung)"
+  },
+  {
+    "en": "(esc to interrupt ",
+    "zh": "(esc để làm gián đoạn "
+  },
+  {
+    "en": "(not installed)",
+    "zh": "(chưa được cài đặt)"
+  },
+  {
+    "en": "(press esc to close)",
+    "zh": "(nhấn esc để đóng)"
+  },
+  {
+    "en": "(required)",
+    "zh": "(yêu cầu)"
+  },
+  {
+    "en": "(tab to switch, esc to close)",
+    "zh": "(tab để chuyển, esc để đóng)"
+  },
+  {
+    "en": "-- INSERT --",
+    "zh": "-- CHÈN --"
+  },
+  {
+    "en": ".github/workflows/claude.yml",
+    "zh": ".github/workflows/claude.yml"
+  },
+  {
+    "en": "/ for commands",
+    "zh": "/ cho các lệnh"
+  },
+  {
+    "en": "/btw for side question",
+    "zh": "/btw cho câu hỏi phụ"
+  },
+  {
+    "en": "/keybindings to customize",
+    "zh": "/keybind để tùy chỉnh"
+  },
+  {
+    "en": "/plan to preview",
+    "zh": "/dự định xem trước"
+  },
+  {
+    "en": "/rename to add a name",
+    "zh": "/đổi tên để thêm tên"
+  },
+  {
+    "en": "/usage is only available for subscription plans.",
+    "zh": "/use chỉ khả dụng cho các gói đăng ký."
+  },
+  {
+    "en": "? for shortcuts",
+    "zh": "? cho các phím tắt"
+  },
+  {
+    "en": "@ for file paths",
+    "zh": "@ cho đường dẫn tệp"
+  },
+  {
+    "en": "ANTHROPIC_API_KEY already exists in repository secrets!",
+    "zh": "ANTHOPIC_API_KEY đã tồn tại trong kho lưu trữ bí mật!"
+  },
+  {
+    "en": "API key",
+    "zh": "Khóa API"
+  },
+  {
+    "en": "API usage billing",
+    "zh": "Thanh toán sử dụng API"
+  },
+  {
+    "en": "AWS profile (SSO or named profile)",
+    "zh": "Hồ sơ AWS (SSO hoặc hồ sơ được đặt tên)"
+  },
+  {
+    "en": "Accept edits",
+    "zh": "Chấp nhận chỉnh sửa"
+  },
+  {
+    "en": "Accept terms · Help improve Claude: OFF",
+    "zh": "Chấp nhận điều khoản · Giúp cải thiện Claude: TẮT"
+  },
+  {
+    "en": "Accept terms · Help improve Claude: OFF (for emails with your domain)",
+    "zh": "Chấp nhận điều khoản · Giúp cải thiện Claude: TẮT (đối với email có tên miền của bạn)"
+  },
+  {
+    "en": "Accept terms · Help improve Claude: ON",
+    "zh": "Chấp nhận điều khoản · Giúp cải thiện Claude: BẬT"
+  },
+  {
+    "en": "Access denied to specific paths outside allowed directories",
+    "zh": "Truy cập bị từ chối vào các đường dẫn cụ thể bên ngoài các thư mục được phép"
+  },
+  {
+    "en": "Access denied.",
+    "zh": "Truy cập bị từ chối."
+  },
+  {
+    "en": "Access key + secret",
+    "zh": "Khóa truy cập + bí mật"
+  },
+  {
+    "en": "Accessibility and Screen Recording permissions are required. Call request_access to show the permission panel.",
+    "zh": "Cần có quyền truy cập và ghi màn hình. Gọi request_access để hiển thị bảng quyền."
+  },
+  {
+    "en": "Action: ",
+    "zh": "Hoạt động: "
+  },
+  {
+    "en": "Activate pending plugin changes in the current session",
+    "zh": "Kích hoạt các thay đổi plugin đang chờ xử lý trong phiên hiện tại"
+  },
+  {
+    "en": "Add Marketplace",
+    "zh": "Thêm thị trường"
+  },
+  {
+    "en": "Add a marketplace first using the Marketplaces tab.",
+    "zh": "Trước tiên hãy thêm thị trường bằng tab Thị trường."
+  },
+  {
+    "en": "Additional CA cert(s)",
+    "zh": "(Các) chứng chỉ CA bổ sung"
+  },
+  {
+    "en": "Afternoon (12-18)",
+    "zh": "Chiều (12-18)"
+  },
+  {
+    "en": "Agent MCPs",
+    "zh": "Đại lý MCP"
+  },
+  {
+    "en": "Agent Parse Errors",
+    "zh": "Lỗi phân tích tác nhân"
+  },
+  {
+    "en": "Agent idle",
+    "zh": "Đại lý nhàn rỗi"
+  },
+  {
+    "en": "All available plugins are already installed.",
+    "zh": "Tất cả các plugin có sẵn đã được cài đặt."
+  },
+  {
+    "en": "All background agents stopped",
+    "zh": "Tất cả các tác nhân nền đã dừng"
+  },
+  {
+    "en": "All plugins from our internal marketplace are vetted and approved.",
+    "zh": "Tất cả các plugin từ thị trường nội bộ của chúng tôi đều được hiệu đính và phê duyệt."
+  },
+  {
+    "en": "All plugins from this marketplace are already installed.",
+    "zh": "Tất cả các plugin từ thị trường này đã được cài đặt."
+  },
+  {
+    "en": "Allow external CLAUDE.md file imports?",
+    "zh": "Cho phép nhập tệp CLAUDE.md bên ngoài?"
+  },
+  {
+    "en": "Allow possible downgrade to stable version",
+    "zh": "Cho phép hạ cấp xuống phiên bản ổn định"
+  },
+  {
+    "en": "Allow unsandboxed fallback:",
+    "zh": "Cho phép dự phòng không có hộp cát:"
+  },
+  {
+    "en": "Allowed Unix Sockets:",
+    "zh": "Ổ cắm Unix được phép:"
+  },
+  {
+    "en": "Allowed by auto mode classifier",
+    "zh": "Được phép bởi trình phân loại chế độ tự động"
+  },
+  {
+    "en": "Also requested:",
+    "zh": "Cũng được yêu cầu:"
+  },
+  {
+    "en": "Also try: ",
+    "zh": "Ngoài ra hãy thử: "
+  },
+  {
+    "en": "Always copy full response",
+    "zh": "Luôn sao chép toàn bộ câu trả lời"
+  },
+  {
+    "en": "Amazon Bedrock, Microsoft Foundry, or Vertex AI",
+    "zh": "Amazon Bedrock, Microsoft Foundry hoặc Vertex AI"
+  },
+  {
+    "en": "Answering...",
+    "zh": "Đang trả lời..."
+  },
+  {
+    "en": "Answering…",
+    "zh": "Đang trả lời…"
+  },
+  {
+    "en": "Anthropic base URL",
+    "zh": "URL cơ sở nhân loại"
+  },
+  {
+    "en": "Any Bash command",
+    "zh": "Bất kỳ lệnh Bash nào"
+  },
+  {
+    "en": "Append a system prompt to the default system prompt",
+    "zh": "Nối lời nhắc hệ thống vào lời nhắc hệ thống mặc định"
+  },
+  {
+    "en": "Are you sure you want to delete the agent",
+    "zh": "Bạn có chắc chắn muốn xóa đại lý"
+  },
+  {
+    "en": "Are you sure you want to delete this permission rule?",
+    "zh": "Bạn có chắc chắn muốn xóa quy tắc cấp phép này không?"
+  },
+  {
+    "en": "Args: ",
+    "zh": "Lập luận: "
+  },
+  {
+    "en": "Ask a quick side question without interrupting the main conversation",
+    "zh": "Đặt câu hỏi phụ nhanh mà không làm gián đoạn cuộc trò chuyện chính"
+  },
+  {
+    "en": "Ask a repository admin to run this command if setup fails",
+    "zh": "Yêu cầu quản trị viên kho lưu trữ chạy lệnh này nếu thiết lập không thành công"
+  },
+  {
+    "en": "Async agent",
+    "zh": "Đại lý không đồng bộ"
+  },
+  {
+    "en": "Async hook ",
+    "zh": "Móc không đồng bộ "
+  },
+  {
+    "en": "Auth method",
+    "zh": "Phương thức xác thực"
+  },
+  {
+    "en": "Auth token",
+    "zh": "Mã thông báo xác thực"
+  },
+  {
+    "en": "Auth: ",
+    "zh": "Xác thực: "
+  },
+  {
+    "en": "Author: ",
+    "zh": "Tác giả: "
+  },
+  {
+    "en": "Auto mode",
+    "zh": "Chế độ tự động"
+  },
+  {
+    "en": "Auto-allow mode:",
+    "zh": "Chế độ tự động cho phép:"
+  },
+  {
+    "en": "Auto-compact",
+    "zh": "Tự động thu gọn"
+  },
+  {
+    "en": "Auto-compact is currently disabled (see /config)",
+    "zh": "Tính năng tự động thu gọn hiện bị tắt (xem/config)"
+  },
+  {
+    "en": "Auto-compact when context is full",
+    "zh": "Tự động thu gọn khi ngữ cảnh đầy"
+  },
+  {
+    "en": "Auto-compact window: ",
+    "zh": "Cửa sổ tự động thu gọn: "
+  },
+  {
+    "en": "Auto-connect to IDE (external terminal)",
+    "zh": "Tự động kết nối với IDE (thiết bị đầu cuối bên ngoài)"
+  },
+  {
+    "en": "Auto-install IDE extension",
+    "zh": "Tự động cài đặt tiện ích mở rộng IDE"
+  },
+  {
+    "en": "Auto-update channel",
+    "zh": "Kênh tự động cập nhật"
+  },
+  {
+    "en": "Auto-update enabled. Claude Code will automatically update this marketplace and its installed plugins.",
+    "zh": "Đã bật tự động cập nhật. Claude Code sẽ tự động cập nhật thị trường này và các plugin đã cài đặt của nó."
+  },
+  {
+    "en": "Auto-updating…",
+    "zh": "Đang tự động cập nhật…"
+  },
+  {
+    "en": "Autocompact",
+    "zh": "Tự động nén"
+  },
+  {
+    "en": "Autocompact buffer",
+    "zh": "Bộ đệm tự động nén"
+  },
+  {
+    "en": "Autocompact is disabled",
+    "zh": "Tính năng tự động nén bị tắt"
+  },
+  {
+    "en": "Automatic color",
+    "zh": "Màu tự động"
+  },
+  {
+    "en": "Back to plugin list",
+    "zh": "Quay lại danh sách plugin"
+  },
+  {
+    "en": "Background process cannot read terminal input",
+    "zh": "Quá trình nền không thể đọc đầu vào của thiết bị đầu cuối"
+  },
+  {
+    "en": "Background process cannot write to terminal output",
+    "zh": "Quá trình nền không thể ghi vào đầu ra thiết bị đầu cuối"
+  },
+  {
+    "en": "Bad request:",
+    "zh": "Yêu cầu xấu:"
+  },
+  {
+    "en": "Balanced performance - best for most agents",
+    "zh": "Hiệu suất cân bằng - tốt nhất cho hầu hết các đại lý"
+  },
+  {
+    "en": "Be comprehensive for best results",
+    "zh": "Hãy toàn diện để có kết quả tốt nhất"
+  },
+  {
+    "en": "Bedrock API key (bearer token)",
+    "zh": "Khóa API Bedrock (mã thông báo mang)"
+  },
+  {
+    "en": "Bedrock base URL",
+    "zh": "URL cơ sở nền tảng"
+  },
+  {
+    "en": "Before compacting, ask me what to preserve",
+    "zh": "Trước khi nén hỏi cần bảo quản gì"
+  },
+  {
+    "en": "Behavior ",
+    "zh": "Hành vi "
+  },
+  {
+    "en": "Binary file",
+    "zh": "Tệp nhị phân"
+  },
+  {
+    "en": "Binary file - cannot display diff",
+    "zh": "Tệp nhị phân - không thể hiển thị khác biệt"
+  },
+  {
+    "en": "Brief explanation of the classification decision",
+    "zh": "Giải thích ngắn gọn về quyết định phân loại"
+  },
+  {
+    "en": "Broken pipe - server closed connection unexpectedly",
+    "zh": "Đường ống bị hỏng - máy chủ đóng kết nối đột ngột"
+  },
+  {
+    "en": "Browser didn't open automatically. URL is shown in UI.",
+    "zh": "Trình duyệt không tự động mở. URL được hiển thị trong giao diện người dùng."
+  },
+  {
+    "en": "Browser didn't open? Use the url below to sign in",
+    "zh": "Trình duyệt không mở? Sử dụng url bên dưới để đăng nhập"
+  },
+  {
+    "en": "Browser switching is only available with bridge connections.",
+    "zh": "Chuyển đổi trình duyệt chỉ khả dụng với các kết nối cầu nối."
+  },
+  {
+    "en": "Bug Report",
+    "zh": "Báo cáo lỗi"
+  },
+  {
+    "en": "Built-in Hooks",
+    "zh": "Móc tích hợp"
+  },
+  {
+    "en": "Built-in MCPs",
+    "zh": "MCP tích hợp"
+  },
+  {
+    "en": "Built-in agents",
+    "zh": "Đại lý tích hợp"
+  },
+  {
+    "en": "Bypass Permissions",
+    "zh": "Bỏ qua quyền"
+  },
+  {
+    "en": "CLAUDE_CODE_AUTO_COMPACT_WINDOW is set and takes precedence. Unset it to change this setting here.",
+    "zh": "CLAUDE_CODE_AUTO_COMPACT_WINDOW được đặt và được ưu tiên. Bỏ đặt nó để thay đổi cài đặt này ở đây."
+  },
+  {
+    "en": "CLI arg agents",
+    "zh": "Đại lý đối số CLI"
+  },
+  {
+    "en": "Can Anthropic look at your session transcript to help us improve Claude Code?",
+    "zh": "Anthropic có thể xem bản ghi phiên của bạn để giúp chúng tôi cải thiện Mã Claude không?"
+  },
+  {
+    "en": "Can Claude...",
+    "zh": "Claude có thể..."
+  },
+  {
+    "en": "Cancelled ",
+    "zh": "Đã hủy "
+  },
+  {
+    "en": "Cancelled: ",
+    "zh": "Đã hủy: "
+  },
+  {
+    "en": "Cannot block unix domain sockets (see Dependencies tab)",
+    "zh": "Không thể chặn ổ cắm miền unix (xem tab Phụ thuộc)"
+  },
+  {
+    "en": "Capabilities: ",
+    "zh": "Khả năng: "
+  },
+  {
+    "en": "Changing thinking mode mid-conversation will increase latency and may reduce quality. For best results, set this at the start of a session.",
+    "zh": "Thay đổi chế độ suy nghĩ giữa cuộc trò chuyện sẽ làm tăng độ trễ và có thể làm giảm chất lượng. Để có kết quả tốt nhất, hãy đặt cài đặt này khi bắt đầu phiên."
+  },
+  {
+    "en": "Channels are not currently available",
+    "zh": "Các kênh hiện không có sẵn"
+  },
+  {
+    "en": "Channels require claude.ai authentication · run /login, then restart",
+    "zh": "Các kênh yêu cầu xác thực claude.ai · chạy /đăng nhập, sau đó khởi động lại"
+  },
+  {
+    "en": "Chat about this",
+    "zh": "Trò chuyện về điều này"
+  },
+  {
+    "en": "Check for new plugins later or add more marketplaces.",
+    "zh": "Kiểm tra các plugin mới sau hoặc thêm nhiều thị trường hơn."
+  },
+  {
+    "en": "Check your internet connection",
+    "zh": "Kiểm tra kết nối internet của bạn"
+  },
+  {
+    "en": "Check your network connection.",
+    "zh": "Kiểm tra kết nối mạng của bạn."
+  },
+  {
+    "en": "Checking connectivity...",
+    "zh": "Đang kiểm tra kết nối..."
+  },
+  {
+    "en": "Checking for updates",
+    "zh": "Kiểm tra cập nhật"
+  },
+  {
+    "en": "Checking installation status...",
+    "zh": "Đang kiểm tra trạng thái cài đặt..."
+  },
+  {
+    "en": "Checking installation status…",
+    "zh": "Đang kiểm tra trạng thái cài đặt…"
+  },
+  {
+    "en": "Checking out branch",
+    "zh": "Kiểm tra chi nhánh"
+  },
+  {
+    "en": "Choose an option:",
+    "zh": "Chọn một tùy chọn:"
+  },
+  {
+    "en": "Choose different models…",
+    "zh": "Chọn các mô hình khác nhau…"
+  },
+  {
+    "en": "Choose the text style that looks best with your terminal",
+    "zh": "Chọn kiểu văn bản phù hợp nhất với thiết bị đầu cuối của bạn"
+  },
+  {
+    "en": "Chrome extension not detected · https://claude.ai/chrome to install",
+    "zh": "Không phát hiện thấy tiện ích mở rộng của Chrome · https://claude.ai/chrome để cài đặt"
+  },
+  {
+    "en": "Claude Code",
+    "zh": "Claude Code"
+  },
+  {
+    "en": "Claude Code Browser Extension Native Host",
+    "zh": "Máy chủ gốc mở rộng trình duyệt mã Claude"
+  },
+  {
+    "en": "Claude Code Review - Automated code review on new PRs",
+    "zh": "Claude Code Review - Đánh giá mã tự động trên các PR mới"
+  },
+  {
+    "en": "Claude Code installation completed successfully",
+    "zh": "Quá trình cài đặt Claude Code đã hoàn tất thành công"
+  },
+  {
+    "en": "Claude Code is an agentic coding CLI based on the Anthropic API.",
+    "zh": "Claude Code là một CLI mã hóa tác nhân dựa trên API Anthropic."
+  },
+  {
+    "en": "Claude Code reads this from AWS_REGION, not ~/.aws/config — set it explicitly even if your profile has a region.",
+    "zh": "Claude Code đọc nội dung này từ AWS_REGION chứ không phải ~/.aws/config — đặt mã này một cách rõ ràng ngay cả khi hồ sơ của bạn có một khu vực."
+  },
+  {
+    "en": "Claude Code successfully installed!",
+    "zh": "Mã Claude đã được cài đặt thành công!"
+  },
+  {
+    "en": "Claude Code uses the standard AWS credential chain. Pick the method you already use with the AWS CLI.",
+    "zh": "Claude Code sử dụng chuỗi thông tin xác thực AWS tiêu chuẩn. Chọn phương pháp bạn đã sử dụng với AWS CLI."
+  },
+  {
+    "en": "Claude Code will be able to read files in this directory and make edits when auto-accept edits is on.",
+    "zh": "Claude Code sẽ có thể đọc các tập tin trong thư mục này và thực hiện các chỉnh sửa khi tính năng tự động chấp nhận các chỉnh sửa được bật."
+  },
+  {
+    "en": "Claude Code will no longer have access to files in this directory.",
+    "zh": "Claude Code sẽ không còn quyền truy cập vào các tập tin trong thư mục này nữa."
+  },
+  {
+    "en": "Claude Code will restart to apply.",
+    "zh": "Mã Claude sẽ khởi động lại để áp dụng."
+  },
+  {
+    "en": "Claude can make mistakes",
+    "zh": "Claude có thể phạm sai lầm"
+  },
+  {
+    "en": "Claude checkpoints your files before every edit. Press",
+    "zh": "Claude kiểm tra các tập tin của bạn trước mỗi lần chỉnh sửa. Nhấn"
+  },
+  {
+    "en": "Claude explains its implementation choices and codebase patterns",
+    "zh": "Claude giải thích các lựa chọn triển khai và mẫu cơ sở mã của nó"
+  },
+  {
+    "en": "Claude found these results:",
+    "zh": "Claude tìm thấy những kết quả này:"
+  },
+  {
+    "en": "Claude in Chrome enabled by default",
+    "zh": "Claude trong Chrome được bật theo mặc định"
+  },
+  {
+    "en": "Claude in Chrome is not supported in WSL at this time.",
+    "zh": "Claude trong Chrome không được hỗ trợ trong WSL tại thời điểm này."
+  },
+  {
+    "en": "Claude in Chrome requires a claude.ai subscription",
+    "zh": "Claude trong Chrome yêu cầu đăng ký Claude.ai"
+  },
+  {
+    "en": "Claude in Chrome requires a claude.ai subscription.",
+    "zh": "Claude trong Chrome yêu cầu đăng ký Claude.ai."
+  },
+  {
+    "en": "Claude is now exploring and designing an implementation approach.",
+    "zh": "Claude hiện đang khám phá và thiết kế một phương pháp triển khai."
+  },
+  {
+    "en": "Claude is waiting for your input",
+    "zh": "Claude đang đợi ý kiến ​​của bạn"
+  },
+  {
+    "en": "Claude pauses and asks you to write small pieces of code for hands-on practice",
+    "zh": "Claude dừng lại và yêu cầu bạn viết những đoạn mã nhỏ để thực hành"
+  },
+  {
+    "en": "Claude will respond without extended thinking",
+    "zh": "Claude sẽ trả lời mà không cần suy nghĩ nhiều"
+  },
+  {
+    "en": "Claude will think before responding",
+    "zh": "Claude sẽ suy nghĩ trước khi trả lời"
+  },
+  {
+    "en": "Cleaning up old npm installations...",
+    "zh": "Dọn dẹp cài đặt npm cũ..."
+  },
+  {
+    "en": "Clear authentication",
+    "zh": "Xóa xác thực"
+  },
+  {
+    "en": "Clear conversation and start with only the plan",
+    "zh": "Xóa cuộc trò chuyện và chỉ bắt đầu với kế hoạch"
+  },
+  {
+    "en": "Clear conversation history and free up context",
+    "zh": "Xóa lịch sử hội thoại và giải phóng bối cảnh"
+  },
+  {
+    "en": "Cloud Authentication",
+    "zh": "Xác thực đám mây"
+  },
+  {
+    "en": "Command: ",
+    "zh": "Yêu cầu: "
+  },
+  {
+    "en": "Commands cannot run outside the sandbox under any circumstances.",
+    "zh": "Các lệnh không thể chạy bên ngoài hộp cát trong mọi trường hợp."
+  },
+  {
+    "en": "Commands recently denied by the auto mode classifier.",
+    "zh": "Các lệnh gần đây bị từ chối bởi bộ phân loại chế độ tự động."
+  },
+  {
+    "en": "Compact buffer",
+    "zh": "Bộ đệm nhỏ gọn"
+  },
+  {
+    "en": "Compact summary",
+    "zh": "Tóm tắt nhỏ gọn"
+  },
+  {
+    "en": "Compacted ",
+    "zh": "nén "
+  },
+  {
+    "en": "Compacting conversation",
+    "zh": "Thu gọn cuộc trò chuyện"
+  },
+  {
+    "en": "Compacting conversation…",
+    "zh": "Đang thu gọn cuộc trò chuyện…"
+  },
+  {
+    "en": "Compaction canceled.",
+    "zh": "Quá trình nén đã bị hủy."
+  },
+  {
+    "en": "Compaction interrupted · This may be due to network issues — please try again.",
+    "zh": "Quá trình nén bị gián đoạn · Điều này có thể do sự cố mạng - vui lòng thử lại."
+  },
+  {
+    "en": "Complete a security review of the pending changes on the current branch",
+    "zh": "Hoàn thành đánh giá bảo mật về các thay đổi đang chờ xử lý trên nhánh hiện tại"
+  },
+  {
+    "en": "Computer Use",
+    "zh": "Sử dụng máy tính"
+  },
+  {
+    "en": "Computer Use needs macOS permissions",
+    "zh": "Sử dụng máy tính cần có quyền macOS"
+  },
+  {
+    "en": "Computer Use wants to control these apps",
+    "zh": "Sử dụng máy tính muốn kiểm soát các ứng dụng này"
+  },
+  {
+    "en": "Config change rejected",
+    "zh": "Thay đổi cấu hình bị từ chối"
+  },
+  {
+    "en": "Config location: ",
+    "zh": "Vị trí cấu hình: "
+  },
+  {
+    "en": "Configure Mode:",
+    "zh": "Chế độ cấu hình:"
+  },
+  {
+    "en": "Configure Overrides:",
+    "zh": "Định cấu hình ghi đè:"
+  },
+  {
+    "en": "Configure extra usage to keep working when limits are hit",
+    "zh": "Định cấu hình mức sử dụng bổ sung để tiếp tục hoạt động khi đạt đến giới hạn"
+  },
+  {
+    "en": "Configure options",
+    "zh": "Định cấu hình tùy chọn"
+  },
+  {
+    "en": "Configure the auto-compact window size",
+    "zh": "Định cấu hình kích thước cửa sổ tự động thu gọn"
+  },
+  {
+    "en": "Configure the default remote environment for teleport sessions",
+    "zh": "Định cấu hình môi trường từ xa mặc định cho các phiên dịch chuyển"
+  },
+  {
+    "en": "Connect Claude on the web to GitHub?",
+    "zh": "Kết nối Claude trên web với GitHub?"
+  },
+  {
+    "en": "Connect this terminal for remote-control sessions",
+    "zh": "Kết nối thiết bị đầu cuối này cho các phiên điều khiển từ xa"
+  },
+  {
+    "en": "Connect to an IDE for integrated development features.",
+    "zh": "Kết nối với IDE để có các tính năng phát triển tích hợp."
+  },
+  {
+    "en": "Connection error.",
+    "zh": "Lỗi kết nối."
+  },
+  {
+    "en": "Connection refused - server may be down",
+    "zh": "Kết nối bị từ chối - máy chủ có thể ngừng hoạt động"
+  },
+  {
+    "en": "Connection was closed before it was established.",
+    "zh": "Kết nối đã bị đóng trước khi nó được thiết lập."
+  },
+  {
+    "en": "Contact your administrator.",
+    "zh": "Liên hệ với quản trị viên của bạn."
+  },
+  {
+    "en": "Contact your system administrator for more information.",
+    "zh": "Hãy liên hệ với quản trị viên hệ thống của bạn để biết thêm thông tin."
+  },
+  {
+    "en": "Context Usage",
+    "zh": "Sử dụng bối cảnh"
+  },
+  {
+    "en": "Context Usage Warnings",
+    "zh": "Cảnh báo sử dụng ngữ cảnh"
+  },
+  {
+    "en": "Context limit reached · /compact or /clear to continue",
+    "zh": "Đã đạt đến giới hạn ngữ cảnh · /compact hoặc /clear để tiếp tục"
+  },
+  {
+    "en": "Continue the current session in Claude Desktop",
+    "zh": "Tiếp tục phiên hiện tại trong Claude Desktop"
+  },
+  {
+    "en": "Continue the most recent conversation in the current directory",
+    "zh": "Tiếp tục cuộc trò chuyện gần đây nhất trong thư mục hiện tại"
+  },
+  {
+    "en": "Continue this conversation",
+    "zh": "Tiếp tục cuộc trò chuyện này"
+  },
+  {
+    "en": "Continue to run and watch for changes",
+    "zh": "Tiếp tục chạy và theo dõi những thay đổi"
+  },
+  {
+    "en": "Continue without these settings",
+    "zh": "Tiếp tục mà không có các cài đặt này"
+  },
+  {
+    "en": "Continue without using this MCP server",
+    "zh": "Tiếp tục mà không sử dụng máy chủ MCP này"
+  },
+  {
+    "en": "Conversation compacted",
+    "zh": "Cuộc trò chuyện được nén"
+  },
+  {
+    "en": "Conversation copied to clipboard",
+    "zh": "Đã sao chép cuộc trò chuyện vào bảng nhớ tạm"
+  },
+  {
+    "en": "Copy on select",
+    "zh": "Sao chép khi chọn"
+  },
+  {
+    "en": "Copy the conversation to your system clipboard",
+    "zh": "Sao chép cuộc trò chuyện vào khay nhớ tạm hệ thống của bạn"
+  },
+  {
+    "en": "Copy to clipboard",
+    "zh": "Sao chép vào khay nhớ tạm"
+  },
+  {
+    "en": "Create Authentication Token",
+    "zh": "Tạo mã thông báo xác thực"
+  },
+  {
+    "en": "Create GitHub Actions workflow",
+    "zh": "Tạo quy trình làm việc của Hành động GitHub"
+  },
+  {
+    "en": "Create a branch of the current conversation at this point",
+    "zh": "Tạo một nhánh của cuộc trò chuyện hiện tại tại thời điểm này"
+  },
+  {
+    "en": "Create a git commit",
+    "zh": "Tạo một cam kết git"
+  },
+  {
+    "en": "Create a long-lived token with your Claude subscription",
+    "zh": "Tạo mã thông báo tồn tại lâu dài với đăng ký Claude của bạn"
+  },
+  {
+    "en": "Create a new animation from scratch",
+    "zh": "Tạo hoạt ảnh mới từ đầu"
+  },
+  {
+    "en": "Create a remote session with the given description",
+    "zh": "Tạo một phiên từ xa với mô tả đã cho"
+  },
+  {
+    "en": "Create new agent",
+    "zh": "Tạo đại lý mới"
+  },
+  {
+    "en": "Create or list command aliases",
+    "zh": "Tạo hoặc liệt kê bí danh lệnh"
+  },
+  {
+    "en": "Create skills in .claude/skills/ or ~/.claude/skills/",
+    "zh": "Tạo các kỹ năng trong .claude/skills/ hoặc ~/.claude/skills/"
+  },
+  {
+    "en": "Create verifier skill(s) for automated verification of code changes",
+    "zh": "Tạo (các) kỹ năng xác minh để xác minh tự động các thay đổi mã"
+  },
+  {
+    "en": "Creating a long-lived token for GitHub Actions",
+    "zh": "Tạo mã thông báo tồn tại lâu dài cho Hành động GitHub"
+  },
+  {
+    "en": "Credit balance too low · Add funds: https://platform.claude.com/settings/billing",
+    "zh": "Số dư tín dụng quá thấp · Thêm tiền: https://platform.claude.com/settings/billing"
+  },
+  {
+    "en": "Ctrl+d to show debug info",
+    "zh": "Ctrl+d để hiển thị thông tin gỡ lỗi"
+  },
+  {
+    "en": "Ctrl-D to hide debug info",
+    "zh": "Ctrl-D để ẩn thông tin gỡ lỗi"
+  },
+  {
+    "en": "Current Plan",
+    "zh": "Gói hiện tại"
+  },
+  {
+    "en": "Custom agents",
+    "zh": "Đại lý tùy chỉnh"
+  },
+  {
+    "en": "Custom model",
+    "zh": "mô hình tùy chỉnh"
+  },
+  {
+    "en": "Custom tip",
+    "zh": "Mẹo tùy chỉnh"
+  },
+  {
+    "en": "Dark mode",
+    "zh": "Chế độ tối"
+  },
+  {
+    "en": "Dark mode (ANSI colors only)",
+    "zh": "Chế độ tối (chỉ màu ANSI)"
+  },
+  {
+    "en": "Dark mode (colorblind-friendly)",
+    "zh": "Chế độ tối (thân thiện với người mù màu)"
+  },
+  {
+    "en": "Data Privacy",
+    "zh": "Quyền riêng tư dữ liệu"
+  },
+  {
+    "en": "Debug mode",
+    "zh": "Chế độ gỡ lỗi"
+  },
+  {
+    "en": "Debug mode enabled",
+    "zh": "Đã bật chế độ gỡ lỗi"
+  },
+  {
+    "en": "Default (recommended)",
+    "zh": "Mặc định (được khuyến nghị)"
+  },
+  {
+    "en": "Default permission mode",
+    "zh": "Chế độ cấp phép mặc định"
+  },
+  {
+    "en": "Default region",
+    "zh": "Vùng mặc định"
+  },
+  {
+    "en": "Default teammate model",
+    "zh": "Mô hình đồng đội mặc định"
+  },
+  {
+    "en": "Default view",
+    "zh": "Chế độ xem mặc định"
+  },
+  {
+    "en": "Delete agent",
+    "zh": "Xóa đại lý"
+  },
+  {
+    "en": "Delete it along with the plugin?",
+    "zh": "Xóa nó cùng với plugin?"
+  },
+  {
+    "en": "Describe the issue below:",
+    "zh": "Mô tả vấn đề dưới đây:"
+  },
+  {
+    "en": "Description (tell Claude when to use this agent)",
+    "zh": "Mô tả (cho Claude biết khi nào nên sử dụng tác nhân này)"
+  },
+  {
+    "en": "Diagnose and verify your Claude Code installation and settings",
+    "zh": "Chẩn đoán và xác minh cài đặt và cài đặt Mã Claude của bạn"
+  },
+  {
+    "en": "Diff tool",
+    "zh": "Công cụ khác biệt"
+  },
+  {
+    "en": "Disable Claude in Chrome integration",
+    "zh": "Vô hiệu hóa Claude trong tích hợp Chrome"
+  },
+  {
+    "en": "Disable plugin",
+    "zh": "Tắt plugin"
+  },
+  {
+    "en": "Discover Claude Code features through quick interactive lessons",
+    "zh": "Khám phá các tính năng của Claude Code thông qua các bài học tương tác nhanh"
+  },
+  {
+    "en": "Discover plugins",
+    "zh": "Khám phá plugin"
+  },
+  {
+    "en": "Do you want to make this edit to",
+    "zh": "Bạn có muốn thực hiện chỉnh sửa này thành"
+  },
+  {
+    "en": "Do you want to proceed?",
+    "zh": "Bạn có muốn tiếp tục không?"
+  },
+  {
+    "en": "Do you want to use this API key?",
+    "zh": "Bạn có muốn sử dụng khóa API này không?"
+  },
+  {
+    "en": "Do you wish to disable auto-connect to IDE?",
+    "zh": "Bạn có muốn tắt tính năng tự động kết nối với IDE không?"
+  },
+  {
+    "en": "Do you wish to enable auto-connect to IDE?",
+    "zh": "Bạn có muốn bật tính năng tự động kết nối với IDE không?"
+  },
+  {
+    "en": "Does Claude...",
+    "zh": "Liệu Claude..."
+  },
+  {
+    "en": "Don't ask again",
+    "zh": "Đừng hỏi lại"
+  },
+  {
+    "en": "Don't ask me again",
+    "zh": "Đừng hỏi tôi nữa"
+  },
+  {
+    "en": "Due to prompt injection risks, only use it with code you trust",
+    "zh": "Do rủi ro bị tiêm nhiễm ngay lập tức, chỉ sử dụng nó với mã mà bạn tin tưởng"
+  },
+  {
+    "en": "Each candidate is tested with a one-token request:",
+    "zh": "Mỗi ứng viên được kiểm tra bằng một yêu cầu một mã thông báo:"
+  },
+  {
+    "en": "Each subagent has its own context window, custom system prompt, and specific tools.",
+    "zh": "Mỗi tác nhân phụ có cửa sổ ngữ cảnh riêng, lời nhắc hệ thống tùy chỉnh và các công cụ cụ thể."
+  },
+  {
+    "en": "Edit Failed",
+    "zh": "Chỉnh sửa không thành công"
+  },
+  {
+    "en": "Edit agent",
+    "zh": "Chỉnh sửa đại lý"
+  },
+  {
+    "en": "Edit and press Enter to retry, or Esc to cancel",
+    "zh": "Chỉnh sửa và nhấn Enter để thử lại hoặc Esc để hủy"
+  },
+  {
+    "en": "Edit color",
+    "zh": "Chỉnh sửa màu"
+  },
+  {
+    "en": "Edit content",
+    "zh": "Chỉnh sửa nội dung"
+  },
+  {
+    "en": "Edit model",
+    "zh": "Chỉnh sửa mô hình"
+  },
+  {
+    "en": "Edit tools",
+    "zh": "Công cụ chỉnh sửa"
+  },
+  {
+    "en": "Editor mode",
+    "zh": "Chế độ soạn thảo"
+  },
+  {
+    "en": "Enable Claude in Chrome integration",
+    "zh": "Kích hoạt Claude trong tích hợp Chrome"
+  },
+  {
+    "en": "Enable Remote Control for all sessions",
+    "zh": "Bật Điều khiển từ xa cho tất cả các phiên"
+  },
+  {
+    "en": "Enable Remote Control for this session",
+    "zh": "Bật Điều khiển từ xa cho phiên này"
+  },
+  {
+    "en": "Enable auth status messages in SDK mode",
+    "zh": "Bật thông báo trạng thái xác thực ở chế độ SDK"
+  },
+  {
+    "en": "Enable debug logging for this session and help diagnose issues",
+    "zh": "Bật tính năng ghi nhật ký gỡ lỗi cho phiên này và giúp chẩn đoán sự cố"
+  },
+  {
+    "en": "Enable extended thinking (false to disable)",
+    "zh": "Kích hoạt tư duy mở rộng (sai để tắt)"
+  },
+  {
+    "en": "Enable file checkpointing for code rewind",
+    "zh": "Bật tính năng kiểm tra tệp để tua lại mã"
+  },
+  {
+    "en": "Enable or disable thinking for this session.",
+    "zh": "Bật hoặc tắt tư duy cho phiên này."
+  },
+  {
+    "en": "Enable plugin",
+    "zh": "Kích hoạt plugin"
+  },
+  {
+    "en": "Enable todo/task tracking",
+    "zh": "Bật theo dõi việc cần làm/công việc"
+  },
+  {
+    "en": "Enable voice dictation (hold-to-talk)",
+    "zh": "Bật đọc chính tả bằng giọng nói (giữ để nói)"
+  },
+  {
+    "en": "Enable with latest channel",
+    "zh": "Kích hoạt với kênh mới nhất"
+  },
+  {
+    "en": "Enable with stable channel",
+    "zh": "Kích hoạt với kênh ổn định"
+  },
+  {
+    "en": "Enter ",
+    "zh": "Đi vào "
+  },
+  {
+    "en": "Enter a unique identifier for your agent:",
+    "zh": "Nhập mã định danh duy nhất cho đại lý của bạn:"
+  },
+  {
+    "en": "Enter new secret name (alphanumeric with underscores):",
+    "zh": "Nhập tên bí mật mới (chữ và số có dấu gạch dưới):"
+  },
+  {
+    "en": "Enter plan mode?",
+    "zh": "Vào chế độ kế hoạch?"
+  },
+  {
+    "en": "Enter the path to the directory:",
+    "zh": "Nhập đường dẫn tới thư mục:"
+  },
+  {
+    "en": "Enter the system prompt for your agent:",
+    "zh": "Nhập lời nhắc hệ thống cho đại lý của bạn:"
+  },
+  {
+    "en": "Enter to apply",
+    "zh": "Nhập để áp dụng"
+  },
+  {
+    "en": "Enter to auth",
+    "zh": "Nhập để xác thực"
+  },
+  {
+    "en": "Enter to confirm · Esc to cancel",
+    "zh": "Nhập để xác nhận · Esc để hủy"
+  },
+  {
+    "en": "Enter to confirm · Esc to skip",
+    "zh": "Enter để xác nhận · Esc để bỏ qua"
+  },
+  {
+    "en": "Enter to select · Esc to continue",
+    "zh": "Enter để chọn · Esc để tiếp tục"
+  },
+  {
+    "en": "Enter to view",
+    "zh": "Nhập để xem"
+  },
+  {
+    "en": "Enter view",
+    "zh": "Nhập chế độ xem"
+  },
+  {
+    "en": "Enter your preferred response and voice language:",
+    "zh": "Nhập phản hồi và ngôn ngữ giọng nói ưa thích của bạn:"
+  },
+  {
+    "en": "Enter: Save configuration",
+    "zh": "Enter: Lưu cấu hình"
+  },
+  {
+    "en": "Enterprise MCPs",
+    "zh": "MCP doanh nghiệp"
+  },
+  {
+    "en": "Environment Variables",
+    "zh": "Biến môi trường"
+  },
+  {
+    "en": "Error editing file",
+    "zh": "Lỗi chỉnh sửa tập tin"
+  },
+  {
+    "en": "Error editing notebook",
+    "zh": "Lỗi chỉnh sửa sổ tay"
+  },
+  {
+    "en": "Error loading Claude Code sessions",
+    "zh": "Lỗi tải phiên Mã Claude"
+  },
+  {
+    "en": "Error reading file",
+    "zh": "Lỗi đọc tập tin"
+  },
+  {
+    "en": "Error searching files",
+    "zh": "Lỗi tìm kiếm tập tin"
+  },
+  {
+    "en": "Error writing file",
+    "zh": "Lỗi ghi tập tin"
+  },
+  {
+    "en": "Esc to cancel",
+    "zh": "Esc để hủy"
+  },
+  {
+    "en": "Esc to close",
+    "zh": "Esc để đóng"
+  },
+  {
+    "en": "Esc to exit",
+    "zh": "Esc để thoát"
+  },
+  {
+    "en": "Esc to go back",
+    "zh": "Esc để quay lại"
+  },
+  {
+    "en": "Estimated usage by category",
+    "zh": "Mức sử dụng ước tính theo danh mục"
+  },
+  {
+    "en": "Evening (18-24)",
+    "zh": "Buổi tối (18-24)"
+  },
+  {
+    "en": "Evidence of sandbox-caused failures includes:",
+    "zh": "Bằng chứng về các lỗi do sandbox gây ra bao gồm:"
+  },
+  {
+    "en": "Excluded Commands:",
+    "zh": "Các lệnh bị loại trừ:"
+  },
+  {
+    "en": "Existing Workflow Found",
+    "zh": "Đã tìm thấy quy trình làm việc hiện tại"
+  },
+  {
+    "en": "Exit and fix manually",
+    "zh": "Thoát và sửa thủ công"
+  },
+  {
+    "en": "Exit plan mode?",
+    "zh": "Thoát khỏi chế độ kế hoạch?"
+  },
+  {
+    "en": "Explanation unavailable",
+    "zh": "Không có giải thích"
+  },
+  {
+    "en": "Export Conversation",
+    "zh": "Xuất cuộc trò chuyện"
+  },
+  {
+    "en": "Export the current conversation to a file or clipboard",
+    "zh": "Xuất cuộc trò chuyện hiện tại sang một tập tin hoặc clipboard"
+  },
+  {
+    "en": "External CLAUDE.md includes",
+    "zh": "CLAUDE.md bên ngoài bao gồm"
+  },
+  {
+    "en": "External imports:",
+    "zh": "Nhập khẩu từ bên ngoài:"
+  },
+  {
+    "en": "Extra usage",
+    "zh": "Sử dụng thêm"
+  },
+  {
+    "en": "Extra usage not enabled · /extra-usage to enable",
+    "zh": "Chưa bật mức sử dụng bổ sung · /để bật mức sử dụng bổ sung"
+  },
+  {
+    "en": "Failed to install ",
+    "zh": "Không cài đặt được "
+  },
+  {
+    "en": "Failed to load marketplace data.",
+    "zh": "Không tải được dữ liệu thị trường."
+  },
+  {
+    "en": "Failed to resume agent: ",
+    "zh": "Không thể tiếp tục đại lý: "
+  },
+  {
+    "en": "Failed to resume session",
+    "zh": "Không thể tiếp tục phiên"
+  },
+  {
+    "en": "Failed to save marketplace retry info · Check ~/.claude.json permissions",
+    "zh": "Không lưu được thông tin thử lại thị trường · Kiểm tra quyền ~/.claude.json"
+  },
+  {
+    "en": "Failed to spawn process - check command and permissions",
+    "zh": "Quá trình sinh sản không thành công - kiểm tra lệnh và quyền"
+  },
+  {
+    "en": "Failed: ",
+    "zh": "Thất bại: "
+  },
+  {
+    "en": "Fast and efficient for simple tasks",
+    "zh": "Nhanh chóng và hiệu quả cho các tác vụ đơn giản"
+  },
+  {
+    "en": "Fast mode",
+    "zh": "Chế độ nhanh"
+  },
+  {
+    "en": "Fast mode OFF",
+    "zh": "Chế độ nhanh TẮT"
+  },
+  {
+    "en": "Feedback: ",
+    "zh": "Nhận xét: "
+  },
+  {
+    "en": "Fetching session logs",
+    "zh": "Đang tìm nạp nhật ký phiên"
+  },
+  {
+    "en": "Fetching…",
+    "zh": "Đang tìm nạp…"
+  },
+  {
+    "en": "File Changed",
+    "zh": "Tập tin đã thay đổi"
+  },
+  {
+    "en": "File must be read first",
+    "zh": "Tệp phải được đọc trước"
+  },
+  {
+    "en": "File not found",
+    "zh": "Không tìm thấy tập tin"
+  },
+  {
+    "en": "Files with errors are skipped entirely, not just the invalid settings.",
+    "zh": "Các tệp có lỗi sẽ bị bỏ qua hoàn toàn, không chỉ các cài đặt không hợp lệ."
+  },
+  {
+    "en": "Filesystem Read Restrictions:",
+    "zh": "Hạn chế đọc hệ thống tập tin:"
+  },
+  {
+    "en": "Filesystem Write Restrictions:",
+    "zh": "Hạn chế ghi hệ thống tập tin:"
+  },
+  {
+    "en": "Fix errors",
+    "zh": "Sửa lỗi"
+  },
+  {
+    "en": "Follow the prompts to authenticate with GitHub",
+    "zh": "Làm theo lời nhắc để xác thực bằng GitHub"
+  },
+  {
+    "en": "For manual setup instructions, see:",
+    "zh": "Để biết hướng dẫn thiết lập thủ công, hãy xem:"
+  },
+  {
+    "en": "For more information on Claude Code on the web:",
+    "zh": "Để biết thêm thông tin về Claude Code trên web:"
+  },
+  {
+    "en": "For the optimal coding experience, enable the recommended settings",
+    "zh": "Để có trải nghiệm mã hóa tối ưu, hãy bật cài đặt được đề xuất"
+  },
+  {
+    "en": "Full name: ",
+    "zh": "Tên đầy đủ: "
+  },
+  {
+    "en": "Full response",
+    "zh": "Phản hồi đầy đủ"
+  },
+  {
+    "en": "GCP project",
+    "zh": "dự án GCP"
+  },
+  {
+    "en": "Generate a report analyzing your Claude Code sessions",
+    "zh": "Tạo báo cáo phân tích các phiên Mã Claude của bạn"
+  },
+  {
+    "en": "Generate with Claude (recommended)",
+    "zh": "Tạo với Claude (được khuyến nghị)"
+  },
+  {
+    "en": "Generate your personalized animation",
+    "zh": "Tạo hoạt ảnh được cá nhân hóa của bạn"
+  },
+  {
+    "en": "Generating QR code…",
+    "zh": "Đang tạo mã QR…"
+  },
+  {
+    "en": "Get the current weather for a location",
+    "zh": "Nhận thời tiết hiện tại cho một địa điểm"
+  },
+  {
+    "en": "Getting branch info",
+    "zh": "Lấy thông tin chi nhánh"
+  },
+  {
+    "en": "Git is required to install marketplaces.",
+    "zh": "Cần có Git để cài đặt thị trường."
+  },
+  {
+    "en": "Go back",
+    "zh": "Quay lại"
+  },
+  {
+    "en": "Go back and fix",
+    "zh": "Quay lại và sửa"
+  },
+  {
+    "en": "Got it, thanks!",
+    "zh": "Hiểu rồi, cảm ơn!"
+  },
+  {
+    "en": "Guest passes are not currently available.",
+    "zh": "Thẻ khách hiện không có sẵn."
+  },
+  {
+    "en": "Have an administrator set channelsEnabled: true in managed settings to enable",
+    "zh": "Yêu cầu quản trị viên đặt kênhEnabled: true trong cài đặt được quản lý để bật"
+  },
+  {
+    "en": "Having trouble? See manual setup instructions at:",
+    "zh": "Gặp rắc rối? Xem hướng dẫn thiết lập thủ công tại:"
+  },
+  {
+    "en": "Help improve Claude",
+    "zh": "Giúp cải thiện Claude"
+  },
+  {
+    "en": "Help teammates ramp on Claude Code with a guide from your usage",
+    "zh": "Giúp đồng đội sử dụng Mã Claude với hướng dẫn cách sử dụng của bạn"
+  },
+  {
+    "en": "Here is Claude's plan:",
+    "zh": "Đây là kế hoạch của Claude:"
+  },
+  {
+    "en": "Hook Structure",
+    "zh": "Cấu trúc móc"
+  },
+  {
+    "en": "Hook details",
+    "zh": "Chi tiết móc"
+  },
+  {
+    "en": "Hooks only",
+    "zh": "Chỉ có móc"
+  },
+  {
+    "en": "Host unreachable - network connectivity issue",
+    "zh": "Không thể truy cập máy chủ - sự cố kết nối mạng"
+  },
+  {
+    "en": "How do I...",
+    "zh": "Làm sao tôi..."
+  },
+  {
+    "en": "How should the plan be implemented?",
+    "zh": "Kế hoạch nên được thực hiện như thế nào?"
+  },
+  {
+    "en": "How thinking content appears in the response",
+    "zh": "Nội dung suy nghĩ xuất hiện như thế nào trong phản hồi"
+  },
+  {
+    "en": "How this affects data retention",
+    "zh": "Điều này ảnh hưởng như thế nào đến việc lưu giữ dữ liệu"
+  },
+  {
+    "en": "How to fix:",
+    "zh": "Cách khắc phục:"
+  },
+  {
+    "en": "How would you like to handle this?",
+    "zh": "Bạn muốn xử lý việc này như thế nào?"
+  },
+  {
+    "en": "I am using this for local development",
+    "zh": "Tôi đang sử dụng điều này để phát triển địa phương"
+  },
+  {
+    "en": "If the redirect page shows a connection error, paste the URL from your browser's address bar:",
+    "zh": "Nếu trang chuyển hướng hiển thị lỗi kết nối, hãy dán URL từ thanh địa chỉ trình duyệt của bạn:"
+  },
+  {
+    "en": "If this is an SSO profile, run `aws sso login --profile NAME` first.",
+    "zh": "Nếu đây là cấu hình SSO, trước tiên hãy chạy `aws sso login --profile NAME`."
+  },
+  {
+    "en": "If your browser doesn't open automatically, copy this URL manually:",
+    "zh": "Nếu trình duyệt của bạn không tự động mở, hãy sao chép URL này theo cách thủ công:"
+  },
+  {
+    "en": "Implement here",
+    "zh": "Thực hiện tại đây"
+  },
+  {
+    "en": "Import MCP Servers from Claude Desktop",
+    "zh": "Nhập máy chủ MCP từ Claude Desktop"
+  },
+  {
+    "en": "Important: Make sure to grant access to this specific repository",
+    "zh": "Quan trọng: Đảm bảo cấp quyền truy cập vào kho lưu trữ cụ thể này"
+  },
+  {
+    "en": "In plan mode, Claude will:",
+    "zh": "Trong chế độ kế hoạch, Claude sẽ:"
+  },
+  {
+    "en": "In progress… · ",
+    "zh": "Đang tiến hành… · "
+  },
+  {
+    "en": "Inbound messages will be silently dropped",
+    "zh": "Tin nhắn gửi đến sẽ được âm thầm bỏ đi"
+  },
+  {
+    "en": "Individual Tools:",
+    "zh": "Công cụ riêng lẻ:"
+  },
+  {
+    "en": "Inherit from parent",
+    "zh": "Kế thừa từ cha mẹ"
+  },
+  {
+    "en": "Inject bridge failure states for manual recovery testing",
+    "zh": "Đưa các trạng thái lỗi cầu vào thử nghiệm phục hồi thủ công"
+  },
+  {
+    "en": "Inject plan into the current conversation",
+    "zh": "Đưa kế hoạch vào cuộc trò chuyện hiện tại"
+  },
+  {
+    "en": "Install Chrome extension",
+    "zh": "Cài đặt tiện ích mở rộng của Chrome"
+  },
+  {
+    "en": "Install GitHub App",
+    "zh": "Cài đặt ứng dụng GitHub"
+  },
+  {
+    "en": "Install Plugins",
+    "zh": "Cài đặt plugin"
+  },
+  {
+    "en": "Install for all collaborators on this repository (project scope)",
+    "zh": "Cài đặt cho tất cả cộng tác viên trên kho lưu trữ này (phạm vi dự án)"
+  },
+  {
+    "en": "Install for you (user scope)",
+    "zh": "Cài đặt cho bạn (phạm vi người dùng)"
+  },
+  {
+    "en": "Install for you, in this repo only (local scope)",
+    "zh": "Cài đặt cho bạn, chỉ trong repo này (phạm vi cục bộ)"
+  },
+  {
+    "en": "Install it2 now",
+    "zh": "Cài đặt it2 ngay bây giờ"
+  },
+  {
+    "en": "Install plugins",
+    "zh": "Cài đặt plugin"
+  },
+  {
+    "en": "Install the Claude GitHub App",
+    "zh": "Cài đặt ứng dụng Claude GitHub"
+  },
+  {
+    "en": "Installation failed",
+    "zh": "Cài đặt không thành công"
+  },
+  {
+    "en": "Installed components:",
+    "zh": "Các thành phần được cài đặt:"
+  },
+  {
+    "en": "Interrupted ",
+    "zh": "Bị gián đoạn "
+  },
+  {
+    "en": "Invalid Key.",
+    "zh": "Khóa không hợp lệ."
+  },
+  {
+    "en": "Invalid Settings",
+    "zh": "Cài đặt không hợp lệ"
+  },
+  {
+    "en": "Keep worktree",
+    "zh": "Giữ cây làm việc"
+  },
+  {
+    "en": "Keep worktree and tmux session",
+    "zh": "Giữ phiên làm việc và tmux"
+  },
+  {
+    "en": "Keep worktree, kill tmux session",
+    "zh": "Giữ lại cây làm việc, tắt phiên tmux"
+  },
+  {
+    "en": "Keeping worktree…",
+    "zh": "Giữ cây làm việc…"
+  },
+  {
+    "en": "Key binding mode",
+    "zh": "Chế độ liên kết phím"
+  },
+  {
+    "en": "Key pressed.",
+    "zh": "Đã nhấn phím."
+  },
+  {
+    "en": "Keybinding Configuration Issues",
+    "zh": "Sự cố về cấu hình liên kết phím"
+  },
+  {
+    "en": "Kick off a long task, close your laptop, check progress from your phone.",
+    "zh": "Bắt đầu một nhiệm vụ dài, đóng máy tính xách tay của bạn lại, kiểm tra tiến độ từ điện thoại của bạn."
+  },
+  {
+    "en": "LSP operation failed",
+    "zh": "Hoạt động LSP không thành công"
+  },
+  {
+    "en": "LSP provides code intelligence like go-to-definition and error checking",
+    "zh": "LSP cung cấp thông tin mã như định nghĩa và kiểm tra lỗi"
+  },
+  {
+    "en": "Large file - diff exceeds 1 MB limit",
+    "zh": "Tệp lớn - khác biệt vượt quá giới hạn 1 MB"
+  },
+  {
+    "en": "Large file modified",
+    "zh": "Đã sửa đổi tệp lớn"
+  },
+  {
+    "en": "Learn more",
+    "zh": "Tìm hiểu thêm"
+  },
+  {
+    "en": "Leave empty for default (English)",
+    "zh": "Để trống theo mặc định (tiếng Anh)"
+  },
+  {
+    "en": "Let me try...",
+    "zh": "Hãy để tôi thử..."
+  },
+  {
+    "en": "Let's go!",
+    "zh": "Đi thôi!"
+  },
+  {
+    "en": "Light mode",
+    "zh": "Chế độ ánh sáng"
+  },
+  {
+    "en": "Light mode (ANSI colors only)",
+    "zh": "Chế độ ánh sáng (chỉ màu ANSI)"
+  },
+  {
+    "en": "Light mode (colorblind-friendly)",
+    "zh": "Chế độ ánh sáng (thân thiện với người mù màu)"
+  },
+  {
+    "en": "List all files currently in context",
+    "zh": "Liệt kê tất cả các tệp hiện có trong ngữ cảnh"
+  },
+  {
+    "en": "Load failed",
+    "zh": "Tải không thành công"
+  },
+  {
+    "en": "Loading Claude Code sessions…",
+    "zh": "Đang tải phiên Mã Claude…"
+  },
+  {
+    "en": "Loading conversations…",
+    "zh": "Đang tải cuộc trò chuyện…"
+  },
+  {
+    "en": "Loading guest pass information…",
+    "zh": "Đang tải thông tin thẻ khách…"
+  },
+  {
+    "en": "Loading output styles…",
+    "zh": "Đang tải kiểu đầu ra…"
+  },
+  {
+    "en": "Loading output…",
+    "zh": "Đang tải đầu ra…"
+  },
+  {
+    "en": "Loading usage data…",
+    "zh": "Đang tải dữ liệu sử dụng…"
+  },
+  {
+    "en": "Local MCPs",
+    "zh": "MCP địa phương"
+  },
+  {
+    "en": "Local agents",
+    "zh": "Đại lý địa phương"
+  },
+  {
+    "en": "Location: ",
+    "zh": "Vị trí: "
+  },
+  {
+    "en": "Log in to Claude",
+    "zh": "Đăng nhập vào Claude"
+  },
+  {
+    "en": "Logged in as",
+    "zh": "Đăng nhập như"
+  },
+  {
+    "en": "Logging to: ",
+    "zh": "Đăng nhập vào: "
+  },
+  {
+    "en": "Login method",
+    "zh": "Phương thức đăng nhập"
+  },
+  {
+    "en": "Login successful. Press ",
+    "zh": "Đăng nhập thành công. Nhấn "
+  },
+  {
+    "en": "Login with Claude account",
+    "zh": "Đăng nhập bằng tài khoản Claude"
+  },
+  {
+    "en": "Long context that holds up",
+    "zh": "Bối cảnh dài giữ vững"
+  },
+  {
+    "en": "Looking at...",
+    "zh": "Nhìn vào..."
+  },
+  {
+    "en": "Looks good",
+    "zh": "Có vẻ tốt"
+  },
+  {
+    "en": "MCP Config Diagnostics",
+    "zh": "Chẩn đoán cấu hình MCP"
+  },
+  {
+    "en": "MCP Servers:",
+    "zh": "Máy chủ MCP:"
+  },
+  {
+    "en": "MCP documentation",
+    "zh": "Tài liệu MCP"
+  },
+  {
+    "en": "MCP servers",
+    "zh": "máy chủ MCP"
+  },
+  {
+    "en": "MCP tools",
+    "zh": "Công cụ MCP"
+  },
+  {
+    "en": "Manage IDE integrations and show status",
+    "zh": "Quản lý tích hợp IDE và hiển thị trạng thái"
+  },
+  {
+    "en": "Manage allow & deny tool permission rules",
+    "zh": "Quản lý quy tắc cấp phép và từ chối công cụ"
+  },
+  {
+    "en": "Manage marketplaces",
+    "zh": "Quản lý thị trường"
+  },
+  {
+    "en": "Manage permissions",
+    "zh": "Quản lý quyền"
+  },
+  {
+    "en": "Manage plugins",
+    "zh": "Quản lý plugin"
+  },
+  {
+    "en": "Managed agents",
+    "zh": "Đại lý được quản lý"
+  },
+  {
+    "en": "Managed by your organization — contact your admin",
+    "zh": "Được quản lý bởi tổ chức của bạn — hãy liên hệ với quản trị viên của bạn"
+  },
+  {
+    "en": "Manual configuration",
+    "zh": "Cấu hình thủ công"
+  },
+  {
+    "en": "Memory files",
+    "zh": "Tập tin bộ nhớ"
+  },
+  {
+    "en": "Message ",
+    "zh": "Tin nhắn "
+  },
+  {
+    "en": "Microcompact",
+    "zh": "vi mô"
+  },
+  {
+    "en": "Microsoft Foundry base URL",
+    "zh": "URL cơ sở của Microsoft Foundry"
+  },
+  {
+    "en": "Microsoft Foundry resource",
+    "zh": "Tài nguyên Microsoft Foundry"
+  },
+  {
+    "en": "Model determines the agent's reasoning capabilities and speed.",
+    "zh": "Mô hình xác định khả năng suy luận và tốc độ của tác nhân."
+  },
+  {
+    "en": "More workflow examples (issue triage, CI fixes, etc.) at:",
+    "zh": "Các ví dụ khác về quy trình làm việc (phân loại vấn đề, sửa lỗi CI, v.v.) tại:"
+  },
+  {
+    "en": "Morning (6-12)",
+    "zh": "Buổi sáng (6-12)"
+  },
+  {
+    "en": "Most capable for complex reasoning tasks",
+    "zh": "Có khả năng nhất cho các nhiệm vụ lý luận phức tạp"
+  },
+  {
+    "en": "NetworkError when attempting to fetch resource",
+    "zh": "NetworkError khi cố gắng tìm nạp tài nguyên"
+  },
+  {
+    "en": "Never mind",
+    "zh": "Đừng bận tâm"
+  },
+  {
+    "en": "New file not yet staged.",
+    "zh": "Tập tin mới chưa được dàn dựng."
+  },
+  {
+    "en": "Next steps:",
+    "zh": "Các bước tiếp theo:"
+  },
+  {
+    "en": "Next: Run ",
+    "zh": "Tiếp theo: Chạy "
+  },
+  {
+    "en": "Night (0-6)",
+    "zh": "Đêm (0-6)"
+  },
+  {
+    "en": "No Sandbox",
+    "zh": "Không có hộp cát"
+  },
+  {
+    "en": "No advisor",
+    "zh": "Không có cố vấn"
+  },
+  {
+    "en": "No agents found. Create specialized subagents that Claude can delegate to.",
+    "zh": "Không tìm thấy đại lý nào. Tạo các đại lý phụ chuyên biệt mà Claude có thể ủy quyền."
+  },
+  {
+    "en": "No cells found in notebook",
+    "zh": "Không tìm thấy ô nào trong sổ tay"
+  },
+  {
+    "en": "No changed files",
+    "zh": "Không có tập tin thay đổi"
+  },
+  {
+    "en": "No changes detected",
+    "zh": "Không phát hiện thấy thay đổi nào"
+  },
+  {
+    "en": "No code changes",
+    "zh": "Không có thay đổi mã"
+  },
+  {
+    "en": "No conversations found to resume.",
+    "zh": "Không tìm thấy cuộc trò chuyện nào để tiếp tục."
+  },
+  {
+    "en": "No diff content",
+    "zh": "Không có nội dung khác biệt"
+  },
+  {
+    "en": "No hooks configured for this event.",
+    "zh": "Không có hook nào được định cấu hình cho sự kiện này."
+  },
+  {
+    "en": "No info yet",
+    "zh": "Chưa có thông tin"
+  },
+  {
+    "en": "No matching sessions found.",
+    "zh": "Không tìm thấy phiên phù hợp."
+  },
+  {
+    "en": "No messages to compact",
+    "zh": "Không có tin nhắn để thu gọn"
+  },
+  {
+    "en": "No model usage data available",
+    "zh": "Không có sẵn dữ liệu sử dụng mô hình"
+  },
+  {
+    "en": "No new plugins available to install.",
+    "zh": "Không có plugin mới nào để cài đặt."
+  },
+  {
+    "en": "No other browsers available to switch to. Open Chrome with the Claude extension in another browser to switch.",
+    "zh": "Không có trình duyệt nào khác có sẵn để chuyển sang. Mở Chrome bằng tiện ích mở rộng Claude trên trình duyệt khác để chuyển đổi."
+  },
+  {
+    "en": "No output available",
+    "zh": "Không có đầu ra"
+  },
+  {
+    "en": "No plan found",
+    "zh": "Không tìm thấy kế hoạch nào"
+  },
+  {
+    "en": "No plugin errors",
+    "zh": "Không có lỗi plugin"
+  },
+  {
+    "en": "No plugins available.",
+    "zh": "Không có plugin nào có sẵn."
+  },
+  {
+    "en": "No recent denials. Commands denied by the auto mode classifier will appear here.",
+    "zh": "Không có sự từ chối gần đây. Các lệnh bị bộ phân loại chế độ tự động từ chối sẽ xuất hiện ở đây."
+  },
+  {
+    "en": "No response",
+    "zh": "Không có phản hồi"
+  },
+  {
+    "en": "No response.",
+    "zh": "Không có phản hồi."
+  },
+  {
+    "en": "No scheduled jobs",
+    "zh": "Không có công việc theo lịch trình"
+  },
+  {
+    "en": "No stats available yet. Start using Claude Code!",
+    "zh": "Chưa có số liệu thống kê nào. Bắt đầu sử dụng Mã Claude!"
+  },
+  {
+    "en": "No task output available",
+    "zh": "Không có đầu ra nhiệm vụ nào"
+  },
+  {
+    "en": "No tasks currently running",
+    "zh": "Hiện không có tác vụ nào đang chạy"
+  },
+  {
+    "en": "No teammates",
+    "zh": "Không có đồng đội"
+  },
+  {
+    "en": "No tools available",
+    "zh": "Không có công cụ nào"
+  },
+  {
+    "en": "No, and don't show plugin installation hints again",
+    "zh": "Không, và không hiển thị lại gợi ý cài đặt plugin"
+  },
+  {
+    "en": "No, cancel",
+    "zh": "Không, hủy"
+  },
+  {
+    "en": "No, disable external imports",
+    "zh": "Không, vô hiệu hóa nhập bên ngoài"
+  },
+  {
+    "en": "No, exit",
+    "zh": "Không, thoát"
+  },
+  {
+    "en": "No, keep planning",
+    "zh": "Không, tiếp tục lên kế hoạch"
+  },
+  {
+    "en": "No, not now",
+    "zh": "Không, không phải bây giờ"
+  },
+  {
+    "en": "No, refine with Ultraplan on Claude Code on the web",
+    "zh": "Không, tinh chỉnh bằng Ultraplan trên Claude Code trên web"
+  },
+  {
+    "en": "No, start implementing now",
+    "zh": "Không, bắt đầu triển khai ngay bây giờ"
+  },
+  {
+    "en": "Not connected",
+    "zh": "Không được kết nối"
+  },
+  {
+    "en": "Not detected",
+    "zh": "Không được phát hiện"
+  },
+  {
+    "en": "Not enough messages to compact.",
+    "zh": "Không đủ tin nhắn để thu gọn."
+  },
+  {
+    "en": "Not in remote mode. Start with `claude --remote` to use this command.",
+    "zh": "Không ở chế độ từ xa. Bắt đầu với `claude --remote` để sử dụng lệnh này."
+  },
+  {
+    "en": "Not now",
+    "zh": "Không phải bây giờ"
+  },
+  {
+    "en": "Not working",
+    "zh": "Không hoạt động"
+  },
+  {
+    "en": "Note: Only one Claude Code instance can be connected to VS Code at a time.",
+    "zh": "Lưu ý: Mỗi lần chỉ có thể kết nối một phiên bản Mã Claude với Mã VS."
+  },
+  {
+    "en": "Note: Some servers already exist with the same name. If selected, they will be imported with a numbered suffix.",
+    "zh": "Lưu ý: Một số máy chủ đã tồn tại cùng tên. Nếu được chọn, chúng sẽ được nhập với hậu tố được đánh số."
+  },
+  {
+    "en": "Notifications",
+    "zh": "Thông báo"
+  },
+  {
+    "en": "Now using extra usage",
+    "zh": "Hiện đang sử dụng thêm mức sử dụng"
+  },
+  {
+    "en": "OAuth token",
+    "zh": "Mã thông báo OAuth"
+  },
+  {
+    "en": "October 8, 2025",
+    "zh": "Ngày 8 tháng 10 năm 2025"
+  },
+  {
+    "en": "On a team?",
+    "zh": "Trong một đội?"
+  },
+  {
+    "en": "Only hooks from managed settings can run. User-defined hooks from ~/.claude/settings.json, .claude/settings.json, and .claude/settings.local.json are blocked.",
+    "zh": "Chỉ các hook từ cài đặt được quản lý mới có thể chạy. Các hook do người dùng xác định từ ~/.claude/settings.json, .claude/settings.json và .claude/settings.local.json đều bị chặn."
+  },
+  {
+    "en": "Only needed for temporary credentials from STS. Leave empty for long-lived keys.",
+    "zh": "Chỉ cần cho thông tin xác thực tạm thời từ STS. Để trống cho các phím có tuổi thọ cao."
+  },
+  {
+    "en": "Open System Settings → Accessibility",
+    "zh": "Mở Cài đặt hệ thống → Khả năng truy cập"
+  },
+  {
+    "en": "Open auto-memory folder",
+    "zh": "Mở thư mục bộ nhớ tự động"
+  },
+  {
+    "en": "Open homepage",
+    "zh": "Mở trang chủ"
+  },
+  {
+    "en": "Open in browser: ",
+    "zh": "Mở trong trình duyệt: "
+  },
+  {
+    "en": "Open in editor",
+    "zh": "Mở trong trình chỉnh sửa"
+  },
+  {
+    "en": "Open team memory folder",
+    "zh": "Mở thư mục bộ nhớ nhóm"
+  },
+  {
+    "en": "Opening browser to sign in…",
+    "zh": "Đang mở trình duyệt để đăng nhập…"
+  },
+  {
+    "en": "Option as Meta",
+    "zh": "Tùy chọn dưới dạng Meta"
+  },
+  {
+    "en": "Opus (1M context)",
+    "zh": "Opus (bối cảnh 1M)"
+  },
+  {
+    "en": "Opus Plan Mode",
+    "zh": "Chế độ kế hoạch Opus"
+  },
+  {
+    "en": "Output Style",
+    "zh": "Kiểu đầu ra"
+  },
+  {
+    "en": "Output style",
+    "zh": "Kiểu đầu ra"
+  },
+  {
+    "en": "Override settings are managed by a higher-priority configuration and cannot be changed locally.",
+    "zh": "Cài đặt ghi đè được quản lý bởi cấu hình có mức độ ưu tiên cao hơn và không thể thay đổi cục bộ."
+  },
+  {
+    "en": "Pasting text…",
+    "zh": "Đang dán văn bản…"
+  },
+  {
+    "en": "Pending changes:",
+    "zh": "Những thay đổi đang chờ xử lý:"
+  },
+  {
+    "en": "Permission mode",
+    "zh": "Chế độ cấp phép"
+  },
+  {
+    "en": "Permission request sent to team ",
+    "zh": "Yêu cầu cấp phép đã được gửi tới nhóm "
+  },
+  {
+    "en": "Personal (~/.claude/agents/)",
+    "zh": "Cá nhân (~/.claude/agent/)"
+  },
+  {
+    "en": "Pin the working models",
+    "zh": "Ghim các mô hình làm việc"
+  },
+  {
+    "en": "Plan Mode",
+    "zh": "Chế độ kế hoạch"
+  },
+  {
+    "en": "Plan file: ",
+    "zh": "Hồ sơ kế hoạch: "
+  },
+  {
+    "en": "Plan saved!",
+    "zh": "Đã lưu kế hoạch!"
+  },
+  {
+    "en": "Plan to implement",
+    "zh": "Kế hoạch thực hiện"
+  },
+  {
+    "en": "Plan updated",
+    "zh": "Đã cập nhật kế hoạch"
+  },
+  {
+    "en": "Planning: ",
+    "zh": "Lập kế hoạch: "
+  },
+  {
+    "en": "Play animation",
+    "zh": "Chơi hoạt hình"
+  },
+  {
+    "en": "Please check your internet connection and network settings.",
+    "zh": "Vui lòng kiểm tra kết nối internet và cài đặt mạng của bạn."
+  },
+  {
+    "en": "Please enter a repository name to continue",
+    "zh": "Vui lòng nhập tên kho lưu trữ để tiếp tục"
+  },
+  {
+    "en": "Please install git and restart Claude Code.",
+    "zh": "Vui lòng cài đặt git và khởi động lại Mã Claude."
+  },
+  {
+    "en": "Please restart your IDE and try again.",
+    "zh": "Vui lòng khởi động lại IDE của bạn và thử lại."
+  },
+  {
+    "en": "Please revise your plan based on the feedback and call ExitPlanMode again.",
+    "zh": "Vui lòng sửa lại kế hoạch của bạn dựa trên phản hồi và gọi lại ExitPlanMode."
+  },
+  {
+    "en": "Please select how you'd like to continue",
+    "zh": "Vui lòng chọn cách bạn muốn tiếp tục"
+  },
+  {
+    "en": "Please select the servers you want to import:",
+    "zh": "Vui lòng chọn máy chủ bạn muốn nhập:"
+  },
+  {
+    "en": "Plugin Command Usage:",
+    "zh": "Cách sử dụng lệnh plugin:"
+  },
+  {
+    "en": "Plugin Details",
+    "zh": "Chi tiết plugin"
+  },
+  {
+    "en": "Plugin Errors",
+    "zh": "Lỗi plugin"
+  },
+  {
+    "en": "Plugin Hooks",
+    "zh": "Móc cắm"
+  },
+  {
+    "en": "Plugin agents",
+    "zh": "Đại lý plugin"
+  },
+  {
+    "en": "Plugin details",
+    "zh": "Chi tiết plugin"
+  },
+  {
+    "en": "Plugin options",
+    "zh": "Tùy chọn plugin"
+  },
+  {
+    "en": "Plugin skill",
+    "zh": "Kỹ năng bổ trợ"
+  },
+  {
+    "en": "Pre-fill the prompt input with text without submitting it",
+    "zh": "Điền trước văn bản vào lời nhắc mà không cần gửi nó"
+  },
+  {
+    "en": "Pre-populate email address on the login page",
+    "zh": "Điền trước địa chỉ email trên trang đăng nhập"
+  },
+  {
+    "en": "Press Ctrl+C to exit and start a new conversation.",
+    "zh": "Nhấn Ctrl+C để thoát và bắt đầu cuộc trò chuyện mới."
+  },
+  {
+    "en": "Press Enter once you've installed the app",
+    "zh": "Nhấn Enter sau khi bạn đã cài đặt ứng dụng"
+  },
+  {
+    "en": "Press Enter or Esc to go back",
+    "zh": "Nhấn Enter hoặc Esc để quay lại"
+  },
+  {
+    "en": "Press Enter to continue",
+    "zh": "Nhấn Enter để tiếp tục"
+  },
+  {
+    "en": "Press Enter to continue anyway, or Ctrl+C to exit and fix issues",
+    "zh": "Nhấn Enter để tiếp tục hoặc Ctrl+C để thoát và khắc phục sự cố"
+  },
+  {
+    "en": "Press Enter to try again, or any other key to cancel",
+    "zh": "Nhấn Enter để thử lại hoặc bất kỳ phím nào khác để hủy"
+  },
+  {
+    "en": "Press Enter when ready to verify…",
+    "zh": "Nhấn Enter khi sẵn sàng xác minh…"
+  },
+  {
+    "en": "Press Option+Enter to send a multi-line message",
+    "zh": "Nhấn Option+Enter để gửi tin nhắn nhiều dòng"
+  },
+  {
+    "en": "Press Shift+Enter to send a multi-line message",
+    "zh": "Nhấn Shift+Enter để gửi tin nhắn nhiều dòng"
+  },
+  {
+    "en": "Press any key to continue…",
+    "zh": "Nhấn phím bất kỳ để tiếp tục…"
+  },
+  {
+    "en": "Press any key to exit",
+    "zh": "Nhấn phím bất kỳ để thoát"
+  },
+  {
+    "en": "Press any key to return to API key selection",
+    "zh": "Nhấn phím bất kỳ để quay lại lựa chọn khóa API"
+  },
+  {
+    "en": "Press up to edit queued messages",
+    "zh": "Nhấn lên để chỉnh sửa tin nhắn xếp hàng đợi"
+  },
+  {
+    "en": "Press ↑↓ to navigate · Enter to select · Esc to go back",
+    "zh": "Nhấn ↑↓ để điều hướng · Enter để chọn · Esc để quay lại"
+  },
+  {
+    "en": "Press ↑↓ to navigate, Enter to select, Esc to cancel",
+    "zh": "Nhấn ↑↓ để điều hướng, Enter để chọn, Esc để hủy"
+  },
+  {
+    "en": "Print detailed performance stats",
+    "zh": "In số liệu thống kê hiệu suất chi tiết"
+  },
+  {
+    "en": "Pro, Max, Team, or Enterprise",
+    "zh": "Pro, Max, Team hoặc Enterprise"
+  },
+  {
+    "en": "Proceed with Extra Usage billing",
+    "zh": "Tiến hành thanh toán mức sử dụng bổ sung"
+  },
+  {
+    "en": "Processing changes…",
+    "zh": "Đang xử lý các thay đổi…"
+  },
+  {
+    "en": "Project (.claude/agents/)",
+    "zh": "Dự án (.claude/agent/)"
+  },
+  {
+    "en": "Project MCPs",
+    "zh": "MCP dự án"
+  },
+  {
+    "en": "Project agents",
+    "zh": "Đại lý dự án"
+  },
+  {
+    "en": "Project settings",
+    "zh": "Cài đặt dự án"
+  },
+  {
+    "en": "Project settings (local)",
+    "zh": "Cài đặt dự án (cục bộ)"
+  },
+  {
+    "en": "Prompt suggestions",
+    "zh": "Gợi ý nhắc nhở"
+  },
+  {
+    "en": "Provide an explanation of a shell command",
+    "zh": "Cung cấp lời giải thích về lệnh shell"
+  },
+  {
+    "en": "Re-authenticate",
+    "zh": "Xác thực lại"
+  },
+  {
+    "en": "Read aborted",
+    "zh": "Đọc bị hủy bỏ"
+  },
+  {
+    "en": "Ready to code?",
+    "zh": "Sẵn sàng để viết mã?"
+  },
+  {
+    "en": "Ready to submit your answers?",
+    "zh": "Sẵn sàng để gửi câu trả lời của bạn?"
+  },
+  {
+    "en": "Reason ",
+    "zh": "Lý do "
+  },
+  {
+    "en": "Recent messages",
+    "zh": "Tin nhắn gần đây"
+  },
+  {
+    "en": "Reduce motion",
+    "zh": "Giảm chuyển động"
+  },
+  {
+    "en": "Regenerate",
+    "zh": "tái sinh"
+  },
+  {
+    "en": "Release notes",
+    "zh": "Ghi chú phát hành"
+  },
+  {
+    "en": "Relive your year of coding with Claude.",
+    "zh": "Hãy hồi tưởng lại một năm viết mã của bạn cùng Claude."
+  },
+  {
+    "en": "Remote Control active",
+    "zh": "Điều khiển từ xa đang hoạt động"
+  },
+  {
+    "en": "Remote Control connecting…",
+    "zh": "Đang kết nối Điều khiển từ xa…"
+  },
+  {
+    "en": "Remote Control failed",
+    "zh": "Điều khiển từ xa không thành công"
+  },
+  {
+    "en": "Remote Control reconnecting",
+    "zh": "Đang kết nối lại điều khiển từ xa"
+  },
+  {
+    "en": "Remote agents",
+    "zh": "Đại lý từ xa"
+  },
+  {
+    "en": "Remote session",
+    "zh": "Phiên từ xa"
+  },
+  {
+    "en": "Remote task",
+    "zh": "Nhiệm vụ từ xa"
+  },
+  {
+    "en": "Remove marketplace",
+    "zh": "Xóa thị trường"
+  },
+  {
+    "en": "Remove worktree",
+    "zh": "Xóa cây làm việc"
+  },
+  {
+    "en": "Remove worktree and tmux session",
+    "zh": "Xóa phiên làm việc và tmux"
+  },
+  {
+    "en": "Removing worktree…",
+    "zh": "Đang xóa cây công việc…"
+  },
+  {
+    "en": "Rename session:",
+    "zh": "Đổi tên phiên:"
+  },
+  {
+    "en": "Request timed out.",
+    "zh": "Yêu cầu đã hết thời gian chờ."
+  },
+  {
+    "en": "Request was aborted.",
+    "zh": "Yêu cầu đã bị hủy bỏ."
+  },
+  {
+    "en": "Requested permissions:",
+    "zh": "Quyền được yêu cầu:"
+  },
+  {
+    "en": "Require plan mode before implementation",
+    "zh": "Yêu cầu chế độ kế hoạch trước khi thực hiện"
+  },
+  {
+    "en": "Requires the Chrome extension. Get started at",
+    "zh": "Yêu cầu tiện ích mở rộng của Chrome. Bắt đầu tại"
+  },
+  {
+    "en": "Reset with default configuration",
+    "zh": "Đặt lại với cấu hình mặc định"
+  },
+  {
+    "en": "Respect .gitignore in file picker",
+    "zh": "Tôn trọng .gitignore trong bộ chọn tệp"
+  },
+  {
+    "en": "Restore code",
+    "zh": "Khôi phục mã"
+  },
+  {
+    "en": "Restore code and conversation",
+    "zh": "Khôi phục mã và cuộc trò chuyện"
+  },
+  {
+    "en": "Restore conversation",
+    "zh": "Khôi phục cuộc trò chuyện"
+  },
+  {
+    "en": "Resume a Claude Code session from claude.ai",
+    "zh": "Tiếp tục phiên Mã Claude từ claude.ai"
+  },
+  {
+    "en": "Resume a teleport session, optionally specify session ID",
+    "zh": "Tiếp tục phiên dịch chuyển, tùy chọn chỉ định ID phiên"
+  },
+  {
+    "en": "Resume from summary (recommended)",
+    "zh": "Tiếp tục từ bản tóm tắt (được khuyến nghị)"
+  },
+  {
+    "en": "Resume full session as-is",
+    "zh": "Tiếp tục phiên đầy đủ như cũ"
+  },
+  {
+    "en": "Resuming conversation…",
+    "zh": "Đang tiếp tục cuộc trò chuyện…"
+  },
+  {
+    "en": "Resuming session…",
+    "zh": "Đang tiếp tục phiên…"
+  },
+  {
+    "en": "Retrying in ",
+    "zh": "Đang thử lại "
+  },
+  {
+    "en": "Retrying…",
+    "zh": "Đang thử lại…"
+  },
+  {
+    "en": "Return here after authenticating in your browser.",
+    "zh": "Quay lại đây sau khi xác thực trong trình duyệt của bạn."
+  },
+  {
+    "en": "Return here after authenticating in your browser. Press Esc to go back.",
+    "zh": "Quay lại đây sau khi xác thực trong trình duyệt của bạn. Nhấn Esc để quay lại."
+  },
+  {
+    "en": "Review and manage your privacy settings at",
+    "zh": "Xem lại và quản lý cài đặt quyền riêng tư của bạn tại"
+  },
+  {
+    "en": "Rewind code (checkpoints)",
+    "zh": "Mã tua lại (điểm kiểm tra)"
+  },
+  {
+    "en": "Rule details",
+    "zh": "Chi tiết quy tắc"
+  },
+  {
+    "en": "Run /reload-plugins to apply changes",
+    "zh": "Chạy /reload-plugins để áp dụng các thay đổi"
+  },
+  {
+    "en": "Run Setup and SessionStart:startup hooks, then exit",
+    "zh": "Chạy Setup và SessionStart:startup hooks, sau đó thoát"
+  },
+  {
+    "en": "Run Setup hooks with init trigger, then continue",
+    "zh": "Chạy móc thiết lập bằng trình kích hoạt init, sau đó tiếp tục"
+  },
+  {
+    "en": "Run Setup hooks with maintenance trigger, then continue",
+    "zh": "Chạy móc thiết lập với trình kích hoạt bảo trì, sau đó tiếp tục"
+  },
+  {
+    "en": "Run a command on SLURM cluster nodes",
+    "zh": "Chạy lệnh trên các nút cụm SLURM"
+  },
+  {
+    "en": "Run ultraplan",
+    "zh": "Chạy siêu kế hoạch"
+  },
+  {
+    "en": "Running ",
+    "zh": "Đang chạy "
+  },
+  {
+    "en": "Running PostCompact hooks…",
+    "zh": "Đang chạy móc PostCompact…"
+  },
+  {
+    "en": "Running PreCompact hooks…",
+    "zh": "Đang chạy móc PreCompact…"
+  },
+  {
+    "en": "Running feedback capture...",
+    "zh": "Đang chạy tính năng thu thập phản hồi..."
+  },
+  {
+    "en": "Running…",
+    "zh": "Đang chạy…"
+  },
+  {
+    "en": "Runs in Claude Code on the web. When the plan is ready,",
+    "zh": "Chạy bằng Mã Claude trên web. Khi kế hoạch đã sẵn sàng,"
+  },
+  {
+    "en": "Sandbox",
+    "zh": "Hộp cát"
+  },
+  {
+    "en": "Sandbox is not enabled",
+    "zh": "Hộp cát chưa được bật"
+  },
+  {
+    "en": "Sandbox is not enabled. Enable sandbox to configure override settings.",
+    "zh": "Hộp cát không được kích hoạt. Bật hộp cát để định cấu hình cài đặt ghi đè."
+  },
+  {
+    "en": "Save and close editor to continue...",
+    "zh": "Lưu và đóng trình chỉnh sửa để tiếp tục..."
+  },
+  {
+    "en": "Save anyway (skip verification)",
+    "zh": "Vẫn lưu (bỏ qua xác minh)"
+  },
+  {
+    "en": "Save file to continue…",
+    "zh": "Lưu tập tin để tiếp tục…"
+  },
+  {
+    "en": "Save the conversation to a file in the current directory",
+    "zh": "Lưu cuộc trò chuyện vào một tập tin trong thư mục hiện tại"
+  },
+  {
+    "en": "Save to file",
+    "zh": "Lưu vào tập tin"
+  },
+  {
+    "en": "Saving a memory is a two-step process:",
+    "zh": "Lưu bộ nhớ là một quá trình gồm hai bước:"
+  },
+  {
+    "en": "Scope: ",
+    "zh": "phạm vi: "
+  },
+  {
+    "en": "Searched for",
+    "zh": "Đã tìm kiếm"
+  },
+  {
+    "en": "Searching for",
+    "zh": "Đang tìm kiếm"
+  },
+  {
+    "en": "Searching: ",
+    "zh": "Tìm kiếm: "
+  },
+  {
+    "en": "Security guide",
+    "zh": "Hướng dẫn bảo mật"
+  },
+  {
+    "en": "Security notes:",
+    "zh": "Ghi chú bảo mật:"
+  },
+  {
+    "en": "See https://code.claude.com/docs/en/network-config",
+    "zh": "Xem https://code.claude.com/docs/en/network-config"
+  },
+  {
+    "en": "Select GitHub repository",
+    "zh": "Chọn kho lưu trữ GitHub"
+  },
+  {
+    "en": "Select GitHub workflows to install",
+    "zh": "Chọn quy trình công việc GitHub để cài đặt"
+  },
+  {
+    "en": "Select IDE",
+    "zh": "Chọn IDE"
+  },
+  {
+    "en": "Select a version to view its notes.",
+    "zh": "Chọn một phiên bản để xem ghi chú của nó."
+  },
+  {
+    "en": "Select an IDE to open the project",
+    "zh": "Chọn một IDE để mở dự án"
+  },
+  {
+    "en": "Select auto-compact window: ",
+    "zh": "Chọn cửa sổ tự động thu gọn: "
+  },
+  {
+    "en": "Select content to copy:",
+    "zh": "Chọn nội dung cần sao chép:"
+  },
+  {
+    "en": "Select export method:",
+    "zh": "Chọn phương thức xuất:"
+  },
+  {
+    "en": "Select login method:",
+    "zh": "Chọn phương thức đăng nhập:"
+  },
+  {
+    "en": "Select marketplace",
+    "zh": "Chọn thị trường"
+  },
+  {
+    "en": "Select model",
+    "zh": "Chọn mô hình"
+  },
+  {
+    "en": "Send message as a new conversation",
+    "zh": "Gửi tin nhắn dưới dạng cuộc trò chuyện mới"
+  },
+  {
+    "en": "Server created",
+    "zh": "Đã tạo máy chủ"
+  },
+  {
+    "en": "Server disabled during reconnection, stopping retry",
+    "zh": "Máy chủ bị tắt trong khi kết nối lại, dừng thử lại"
+  },
+  {
+    "en": "Server is disabled, skipping automatic reconnection",
+    "zh": "Máy chủ bị tắt, bỏ qua kết nối lại tự động"
+  },
+  {
+    "en": "Session Hooks",
+    "zh": "Móc phiên"
+  },
+  {
+    "en": "Session ID",
+    "zh": "ID phiên"
+  },
+  {
+    "en": "Session URL",
+    "zh": "URL phiên"
+  },
+  {
+    "en": "Session name",
+    "zh": "Tên phiên"
+  },
+  {
+    "en": "Set Stop hook (this session only)",
+    "zh": "Đặt móc dừng (chỉ phiên này)"
+  },
+  {
+    "en": "Set the prompt bar color for this session",
+    "zh": "Đặt màu thanh nhắc cho phiên này"
+  },
+  {
+    "en": "Set up Claude Code's status line UI",
+    "zh": "Thiết lập giao diện dòng trạng thái của Claude Code"
+  },
+  {
+    "en": "Set up Claude GitHub Actions for a repository",
+    "zh": "Thiết lập hành động Claude GitHub cho kho lưu trữ"
+  },
+  {
+    "en": "Setting sources",
+    "zh": "Nguồn cài đặt"
+  },
+  {
+    "en": "Setting up launcher and shell integration...",
+    "zh": "Đang thiết lập tích hợp trình khởi chạy và trình bao..."
+  },
+  {
+    "en": "Settings Error",
+    "zh": "Lỗi cài đặt"
+  },
+  {
+    "en": "Settings requiring approval:",
+    "zh": "Cài đặt yêu cầu phê duyệt:"
+  },
+  {
+    "en": "Setup Claude Code on the web (requires connecting your GitHub account)",
+    "zh": "Thiết lập Claude Code trên web (yêu cầu kết nối tài khoản GitHub của bạn)"
+  },
+  {
+    "en": "Shell command failed",
+    "zh": "Lệnh Shell không thành công"
+  },
+  {
+    "en": "Show PR status footer",
+    "zh": "Hiển thị chân trang trạng thái PR"
+  },
+  {
+    "en": "Show QR code to download the Claude mobile app",
+    "zh": "Hiển thị mã QR để tải xuống ứng dụng di động Claude"
+  },
+  {
+    "en": "Show all",
+    "zh": "Hiển thị tất cả"
+  },
+  {
+    "en": "Show detailed debug output",
+    "zh": "Hiển thị đầu ra gỡ lỗi chi tiết"
+  },
+  {
+    "en": "Show help and available commands",
+    "zh": "Hiển thị trợ giúp và các lệnh có sẵn"
+  },
+  {
+    "en": "Show options when rate limit is reached",
+    "zh": "Hiển thị các tùy chọn khi đạt đến giới hạn tốc độ"
+  },
+  {
+    "en": "Show remote session URL and QR code",
+    "zh": "Hiển thị URL phiên từ xa và mã QR"
+  },
+  {
+    "en": "Show status in terminal tab",
+    "zh": "Hiển thị trạng thái trong tab thiết bị đầu cuối"
+  },
+  {
+    "en": "Show the total cost and duration of the current session",
+    "zh": "Hiển thị tổng chi phí và thời lượng của phiên hiện tại"
+  },
+  {
+    "en": "Show tips",
+    "zh": "Hiển thị mẹo"
+  },
+  {
+    "en": "Show turn duration",
+    "zh": "Hiển thị thời lượng lượt"
+  },
+  {
+    "en": "Show your Claude Code usage statistics and activity",
+    "zh": "Hiển thị số liệu thống kê và hoạt động sử dụng Mã Claude của bạn"
+  },
+  {
+    "en": "Showing last ",
+    "zh": "Hiển thị lần cuối "
+  },
+  {
+    "en": "Shutting down",
+    "zh": "Tắt máy"
+  },
+  {
+    "en": "Sign out from your Anthropic account",
+    "zh": "Đăng xuất khỏi tài khoản Anthropic của bạn"
+  },
+  {
+    "en": "Signal that this session was launched from a deep link",
+    "zh": "Tín hiệu cho biết phiên này đã được khởi chạy từ một liên kết sâu"
+  },
+  {
+    "en": "Skills only",
+    "zh": "Chỉ kỹ năng"
+  },
+  {
+    "en": "Skip interview and plan immediately",
+    "zh": "Bỏ qua cuộc phỏng vấn và lập kế hoạch ngay lập tức"
+  },
+  {
+    "en": "Skip — use Claude Code defaults (auto-updates)",
+    "zh": "Bỏ qua - sử dụng mặc định của Mã Claude (tự động cập nhật)"
+  },
+  {
+    "en": "Sonnet (1M context)",
+    "zh": "Sonnet (bối cảnh 1M)"
+  },
+  {
+    "en": "Sorry, Claude Code encountered an error",
+    "zh": "Rất tiếc, Claude Code đã gặp lỗi"
+  },
+  {
+    "en": "Sorry, Claude encountered an error",
+    "zh": "Rất tiếc, Claude đã gặp lỗi"
+  },
+  {
+    "en": "Spawn a remote Claude Code session that monitors and autofixes the current PR",
+    "zh": "Tạo phiên Mã Claude từ xa để theo dõi và tự động sửa PR hiện tại"
+  },
+  {
+    "en": "Start new session",
+    "zh": "Bắt đầu phiên mới"
+  },
+  {
+    "en": "Started a session on the web and want to move it here? Run",
+    "zh": "Đã bắt đầu một phiên trên web và muốn chuyển nó sang đây? Chạy"
+  },
+  {
+    "en": "Stash changes and continue",
+    "zh": "Bỏ các thay đổi và tiếp tục"
+  },
+  {
+    "en": "Stashing changes...",
+    "zh": "Đang lưu trữ các thay đổi..."
+  },
+  {
+    "en": "Status: ",
+    "zh": "Trạng thái: "
+  },
+  {
+    "en": "Stop and wait for limit to reset",
+    "zh": "Dừng lại và chờ thiết lập lại giới hạn"
+  },
+  {
+    "en": "Stop ultraplan",
+    "zh": "Dừng siêu kế hoạch"
+  },
+  {
+    "en": "Stop ultrareview",
+    "zh": "Dừng siêu đánh giá"
+  },
+  {
+    "en": "Store this token securely. You won't be able to see it again.",
+    "zh": "Lưu trữ mã thông báo này một cách an toàn. Bạn sẽ không thể nhìn thấy nó một lần nữa."
+  },
+  {
+    "en": "Strict sandbox mode:",
+    "zh": "Chế độ hộp cát nghiêm ngặt:"
+  },
+  {
+    "en": "Subagents and workflows also run as tasks — it is all one queue.",
+    "zh": "Các tác nhân phụ và quy trình công việc cũng chạy dưới dạng tác vụ — tất cả đều nằm trong một hàng đợi."
+  },
+  {
+    "en": "Submit Feedback / Bug Report",
+    "zh": "Gửi phản hồi / Báo cáo lỗi"
+  },
+  {
+    "en": "Submit answers",
+    "zh": "Gửi câu trả lời"
+  },
+  {
+    "en": "Submit feedback about Claude Code",
+    "zh": "Gửi phản hồi về Claude Code"
+  },
+  {
+    "en": "Successfully logged out from your Anthropic account.",
+    "zh": "Đã đăng xuất thành công khỏi tài khoản Anthropic của bạn."
+  },
+  {
+    "en": "Suggestion ",
+    "zh": "Gợi ý "
+  },
+  {
+    "en": "Suggestions ",
+    "zh": "Đề xuất "
+  },
+  {
+    "en": "Summarize from here",
+    "zh": "Tóm tắt từ đây"
+  },
+  {
+    "en": "Summarized conversation",
+    "zh": "Cuộc trò chuyện tóm tắt"
+  },
+  {
+    "en": "Switch to the Marketplaces tab to view allowed sources.",
+    "zh": "Chuyển sang tab Thị trường để xem các nguồn được phép."
+  },
+  {
+    "en": "Switched to worktree on branch ",
+    "zh": "Đã chuyển sang cây làm việc trên nhánh "
+  },
+  {
+    "en": "System Diagnostics",
+    "zh": "Chẩn đoán hệ thống"
+  },
+  {
+    "en": "System prompt",
+    "zh": "Lời nhắc hệ thống"
+  },
+  {
+    "en": "Tab created",
+    "zh": "Đã tạo tab"
+  },
+  {
+    "en": "Tab: Next field · Enter: Save and continue",
+    "zh": "Tab: Trường tiếp theo · Enter: Lưu và tiếp tục"
+  },
+  {
+    "en": "Task is still running…",
+    "zh": "Tác vụ vẫn đang chạy…"
+  },
+  {
+    "en": "Task not ready",
+    "zh": "Nhiệm vụ chưa sẵn sàng"
+  },
+  {
+    "en": "Teammate is continuing to work. You may request shutdown again later.",
+    "zh": "Đồng đội đang tiếp tục làm việc. Bạn có thể yêu cầu tắt máy lại sau."
+  },
+  {
+    "en": "Teammates will now appear as split panes.",
+    "zh": "Đồng đội bây giờ sẽ xuất hiện dưới dạng bảng phân chia."
+  },
+  {
+    "en": "Teleport requires a Claude account",
+    "zh": "Dịch chuyển yêu cầu tài khoản Claude"
+  },
+  {
+    "en": "Teleport requires a Claude.ai account.",
+    "zh": "Dịch chuyển tức thời yêu cầu tài khoản Claude.ai."
+  },
+  {
+    "en": "Teleport to Repo",
+    "zh": "Dịch chuyển đến Repo"
+  },
+  {
+    "en": "Teleporting to session…",
+    "zh": "Đang dịch chuyển tới phiên…"
+  },
+  {
+    "en": "Terminal progress bar",
+    "zh": "Thanh tiến trình thiết bị đầu cuối"
+  },
+  {
+    "en": "Thank you for your report!",
+    "zh": "Cảm ơn bạn đã báo cáo của bạn!"
+  },
+  {
+    "en": "Thanks for the feedback!",
+    "zh": "Cảm ơn bạn đã phản hồi!"
+  },
+  {
+    "en": "The code has not changed (nothing will be restored).",
+    "zh": "Mã không thay đổi (sẽ không có gì được khôi phục)."
+  },
+  {
+    "en": "The code will be unchanged.",
+    "zh": "Mã sẽ không thay đổi."
+  },
+  {
+    "en": "The following patterns will be ignored:",
+    "zh": "Các mẫu sau sẽ bị bỏ qua:"
+  },
+  {
+    "en": "The sandbox has the following restrictions:",
+    "zh": "Hộp cát có các hạn chế sau:"
+  },
+  {
+    "en": "Thinking mode",
+    "zh": "Chế độ suy nghĩ"
+  },
+  {
+    "en": "This archives the remote session and stops local tracking. The review will not complete and any findings so far are discarded.",
+    "zh": "Thao tác này sẽ lưu trữ phiên từ xa và ngừng theo dõi cục bộ. Quá trình xem xét sẽ không hoàn tất và mọi phát hiện cho đến nay đều bị loại bỏ."
+  },
+  {
+    "en": "This changes how Claude Code communicates with you",
+    "zh": "Điều này thay đổi cách Claude Code liên lạc với bạn"
+  },
+  {
+    "en": "This command requires approval",
+    "zh": "Lệnh này yêu cầu phê duyệt"
+  },
+  {
+    "en": "This conversation is from a different directory.",
+    "zh": "Cuộc trò chuyện này đến từ một thư mục khác."
+  },
+  {
+    "en": "This enables teammates to appear as split panes within your current window.",
+    "zh": "Điều này cho phép các đồng đội xuất hiện dưới dạng các ô phân chia trong cửa sổ hiện tại của bạn."
+  },
+  {
+    "en": "This has the same effect as uninstalling, without affecting other contributors.",
+    "zh": "Điều này có tác dụng tương tự như việc gỡ cài đặt mà không ảnh hưởng đến những người đóng góp khác."
+  },
+  {
+    "en": "This may take a few moments.",
+    "zh": "Điều này có thể mất một vài phút."
+  },
+  {
+    "en": "This may take a few seconds.",
+    "zh": "Việc này có thể mất vài giây."
+  },
+  {
+    "en": "This may take a moment.",
+    "zh": "Việc này có thể mất một chút thời gian."
+  },
+  {
+    "en": "This prompt will launch an ultraplan session in Claude Code on the web",
+    "zh": "Lời nhắc này sẽ khởi chạy một phiên siêu kế hoạch trong Mã Claude trên web"
+  },
+  {
+    "en": "This rule is configured by managed settings and cannot be modified.",
+    "zh": "Quy tắc này được định cấu hình bởi cài đặt được quản lý và không thể sửa đổi."
+  },
+  {
+    "en": "This server connects only when running the agent.",
+    "zh": "Máy chủ này chỉ kết nối khi chạy tác nhân."
+  },
+  {
+    "en": "This tool is consuming a significant portion of context.",
+    "zh": "Công cụ này đang sử dụng một phần đáng kể bối cảnh."
+  },
+  {
+    "en": "This will disable Remote Control for this session.",
+    "zh": "Điều này sẽ tắt Điều khiển từ xa cho phiên này."
+  },
+  {
+    "en": "This will terminate the Claude Code on the web session.",
+    "zh": "Điều này sẽ chấm dứt Mã Claude trên phiên web."
+  },
+  {
+    "en": "Tip: You can enable auto-connect to IDE in /config or with the --ide flag",
+    "zh": "Mẹo: Bạn có thể bật tính năng tự động kết nối với IDE trong /config hoặc bằng cờ --ide"
+  },
+  {
+    "en": "To add hooks, edit settings.json directly or ask Claude.",
+    "zh": "Để thêm hook, hãy chỉnh sửa trực tiếp settings.json hoặc hỏi Claude."
+  },
+  {
+    "en": "To modify or remove this hook, edit settings.json directly or ask Claude to help.",
+    "zh": "Để sửa đổi hoặc xóa hook này, hãy chỉnh sửa trực tiếp settings.json hoặc nhờ Claude trợ giúp."
+  },
+  {
+    "en": "Toggle thinking mode",
+    "zh": "Chuyển đổi chế độ suy nghĩ"
+  },
+  {
+    "en": "Tokens per Day",
+    "zh": "Token mỗi ngày"
+  },
+  {
+    "en": "Tool Failed",
+    "zh": "Công cụ không thành công"
+  },
+  {
+    "en": "Tool loaded.",
+    "zh": "Đã tải công cụ."
+  },
+  {
+    "en": "Tool name: ",
+    "zh": "Tên công cụ: "
+  },
+  {
+    "en": "Tool use is not allowed during compaction",
+    "zh": "Không được phép sử dụng công cụ trong quá trình nén"
+  },
+  {
+    "en": "Tool use rejected",
+    "zh": "Việc sử dụng công cụ bị từ chối"
+  },
+  {
+    "en": "Tool: ",
+    "zh": "Dụng cụ: "
+  },
+  {
+    "en": "Tools: ",
+    "zh": "Công cụ: "
+  },
+  {
+    "en": "Triggered by:",
+    "zh": "Kích hoạt bởi:"
+  },
+  {
+    "en": "Try again",
+    "zh": "Thử lại"
+  },
+  {
+    "en": "Try creating: Code Reviewer, Code Simplifier, Security Reviewer, Tech Lead, or UX Reviewer.",
+    "zh": "Hãy thử tạo: Người đánh giá mã, Người đơn giản hóa mã, Người đánh giá bảo mật, Trưởng nhóm công nghệ hoặc Người đánh giá UX."
+  },
+  {
+    "en": "Try running /plugin to manually install the think-back plugin.",
+    "zh": "Hãy thử chạy /plugin để cài đặt thủ công plugin think-back."
+  },
+  {
+    "en": "Try running with --force to override checks",
+    "zh": "Hãy thử chạy với --force để ghi đè kiểm tra"
+  },
+  {
+    "en": "Type a different name…",
+    "zh": "Nhập một tên khác…"
+  },
+  {
+    "en": "Type something…",
+    "zh": "Nhập nội dung nào đó…"
+  },
+  {
+    "en": "Type: ",
+    "zh": "Kiểu: "
+  },
+  {
+    "en": "URL: ",
+    "zh": "URL: "
+  },
+  {
+    "en": "Unable to connect to Anthropic services",
+    "zh": "Không thể kết nối với dịch vụ của Anthropic"
+  },
+  {
+    "en": "Unchanged since last read",
+    "zh": "Không thay đổi kể từ lần đọc cuối cùng"
+  },
+  {
+    "en": "Unknown Error",
+    "zh": "Lỗi không xác định"
+  },
+  {
+    "en": "Unknown error",
+    "zh": "Lỗi không xác định"
+  },
+  {
+    "en": "Unknown error occurred",
+    "zh": "Đã xảy ra lỗi không xác định"
+  },
+  {
+    "en": "Unreachable Permission Rules",
+    "zh": "Quy tắc cấp phép không thể truy cập"
+  },
+  {
+    "en": "Update available! Run:",
+    "zh": "Cập nhật có sẵn! Chạy:"
+  },
+  {
+    "en": "Update marketplace",
+    "zh": "Cập nhật thị trường"
+  },
+  {
+    "en": "Update now",
+    "zh": "Cập nhật ngay bây giờ"
+  },
+  {
+    "en": "Update workflow file with latest version",
+    "zh": "Cập nhật tệp quy trình làm việc với phiên bản mới nhất"
+  },
+  {
+    "en": "Updated plan",
+    "zh": "kế hoạch cập nhật"
+  },
+  {
+    "en": "Updates to Consumer Terms and Policies",
+    "zh": "Cập nhật các Điều khoản và Chính sách dành cho Người tiêu dùng"
+  },
+  {
+    "en": "Updates to data retention ",
+    "zh": "Cập nhật về lưu giữ dữ liệu "
+  },
+  {
+    "en": "Updating marketplace…",
+    "zh": "Đang cập nhật thị trường…"
+  },
+  {
+    "en": "Updating…",
+    "zh": "Đang cập nhật…"
+  },
+  {
+    "en": "Upgrade to Max for higher rate limits and more Opus",
+    "zh": "Nâng cấp lên Max để có giới hạn tỷ lệ cao hơn và nhiều Opus hơn"
+  },
+  {
+    "en": "Upgrade to Team plan",
+    "zh": "Nâng cấp lên gói Đội"
+  },
+  {
+    "en": "Upgrade your plan",
+    "zh": "Nâng cấp kế hoạch của bạn"
+  },
+  {
+    "en": "Usage: ",
+    "zh": "Cách sử dụng: "
+  },
+  {
+    "en": "Use /btw to ask a quick side question without interrupting Claude's current work",
+    "zh": "Sử dụng /btw để đặt câu hỏi phụ nhanh mà không làm gián đoạn công việc hiện tại của Claude"
+  },
+  {
+    "en": "Use /clear to start fresh when switching topics and free up context",
+    "zh": "Sử dụng /clear để bắt đầu mới khi chuyển chủ đề và giải phóng ngữ cảnh"
+  },
+  {
+    "en": "Use /issue to report model behavior issues.",
+    "zh": "Sử dụng /issue để báo cáo các vấn đề về hành vi của mô hình."
+  },
+  {
+    "en": "Use Claude Code's terminal setup?",
+    "zh": "Sử dụng thiết lập thiết bị đầu cuối của Claude Code?"
+  },
+  {
+    "en": "Use Claude subscription (default)",
+    "zh": "Sử dụng đăng ký Claude (mặc định)"
+  },
+  {
+    "en": "Use auto mode during plan",
+    "zh": "Sử dụng chế độ tự động trong kế hoạch"
+  },
+  {
+    "en": "Use credentials already in my environment",
+    "zh": "Sử dụng thông tin xác thực đã có trong môi trường của tôi"
+  },
+  {
+    "en": "Use the same model as the main conversation",
+    "zh": "Sử dụng mô hình tương tự như cuộc trò chuyện chính"
+  },
+  {
+    "en": "Use this MCP server",
+    "zh": "Sử dụng máy chủ MCP này"
+  },
+  {
+    "en": "Use this token by setting: export CLAUDE_CODE_OAUTH_TOKEN=<token>",
+    "zh": "Sử dụng mã thông báo này bằng cách cài đặt: xuất CLAUDE_CODE_OAUTH_TOKEN=<token>"
+  },
+  {
+    "en": "Use tmux instead",
+    "zh": "Thay vào đó hãy sử dụng tmux"
+  },
+  {
+    "en": "Used by: ",
+    "zh": "Được sử dụng bởi: "
+  },
+  {
+    "en": "User MCPs",
+    "zh": "MCP người dùng"
+  },
+  {
+    "en": "User aborted",
+    "zh": "Người dùng đã hủy bỏ"
+  },
+  {
+    "en": "User agents",
+    "zh": "Tác nhân người dùng"
+  },
+  {
+    "en": "User answered Claude's questions:",
+    "zh": "Người dùng trả lời câu hỏi của Claude:"
+  },
+  {
+    "en": "User canceled.",
+    "zh": "Người dùng đã hủy."
+  },
+  {
+    "en": "User declined to answer questions",
+    "zh": "Người dùng từ chối trả lời câu hỏi"
+  },
+  {
+    "en": "User rejected Claude's plan:",
+    "zh": "Người dùng từ chối kế hoạch của Claude:"
+  },
+  {
+    "en": "User settings",
+    "zh": "Cài đặt người dùng"
+  },
+  {
+    "en": "Using 3rd-party platforms",
+    "zh": "Sử dụng nền tảng của bên thứ 3"
+  },
+  {
+    "en": "Using token for GitHub Actions setup…",
+    "zh": "Sử dụng mã thông báo để thiết lập Tác vụ GitHub…"
+  },
+  {
+    "en": "Validating repository…",
+    "zh": "Đang xác thực kho lưu trữ…"
+  },
+  {
+    "en": "Validating session",
+    "zh": "Phiên xác thực"
+  },
+  {
+    "en": "Verbose output",
+    "zh": "đầu ra dài dòng"
+  },
+  {
+    "en": "Verification failed",
+    "zh": "Xác minh không thành công"
+  },
+  {
+    "en": "Version Locks",
+    "zh": "Khóa phiên bản"
+  },
+  {
+    "en": "Version: ",
+    "zh": "Phiên bản: "
+  },
+  {
+    "en": "Vertex base URL",
+    "zh": "URL cơ sở của Vertex"
+  },
+  {
+    "en": "View agent",
+    "zh": "Xem đại lý"
+  },
+  {
+    "en": "View and update your privacy settings",
+    "zh": "Xem và cập nhật cài đặt quyền riêng tư của bạn"
+  },
+  {
+    "en": "View hook configurations for tool events",
+    "zh": "Xem cấu hình hook cho các sự kiện công cụ"
+  },
+  {
+    "en": "View on GitHub",
+    "zh": "Xem trên GitHub"
+  },
+  {
+    "en": "View repository",
+    "zh": "Xem kho lưu trữ"
+  },
+  {
+    "en": "View the latest workflow template at:",
+    "zh": "Xem mẫu quy trình làm việc mới nhất tại:"
+  },
+  {
+    "en": "View tools",
+    "zh": "Xem công cụ"
+  },
+  {
+    "en": "View uncommitted changes and per-turn diffs",
+    "zh": "Xem các thay đổi không được cam kết và khác biệt mỗi lượt"
+  },
+  {
+    "en": "Visualize current context usage as a colored grid",
+    "zh": "Trực quan hóa việc sử dụng ngữ cảnh hiện tại dưới dạng lưới màu"
+  },
+  {
+    "en": "Voice: processing…",
+    "zh": "Giọng nói: đang xử lý…"
+  },
+  {
+    "en": "Waiting for permission…",
+    "zh": "Đang chờ sự cho phép…"
+  },
+  {
+    "en": "Waiting for team lead to review and approve...",
+    "zh": "Đang chờ trưởng nhóm xem xét và phê duyệt..."
+  },
+  {
+    "en": "Waiting for the server to confirm completion…",
+    "zh": "Đang chờ máy chủ xác nhận hoàn thành…"
+  },
+  {
+    "en": "Warning: Multiple installations found",
+    "zh": "Cảnh báo: Đã tìm thấy nhiều cài đặt"
+  },
+  {
+    "en": "We are experiencing high demand for Opus 4.",
+    "zh": "Chúng tôi đang có nhu cầu cao về Opus 4."
+  },
+  {
+    "en": "We found some potential issues, but you can continue anyway",
+    "zh": "Chúng tôi đã tìm thấy một số vấn đề tiềm ẩn nhưng bạn vẫn có thể tiếp tục"
+  },
+  {
+    "en": "We'll create a personalized ASCII animation celebrating your journey.",
+    "zh": "Chúng tôi sẽ tạo hoạt ảnh ASCII được cá nhân hóa để kỷ niệm hành trình của bạn."
+  },
+  {
+    "en": "We'll create a workflow file in your repository for each one you select.",
+    "zh": "Chúng tôi sẽ tạo tệp quy trình công việc trong kho lưu trữ của bạn cho từng tệp bạn chọn."
+  },
+  {
+    "en": "Web Search",
+    "zh": "Tìm kiếm trên web"
+  },
+  {
+    "en": "Web search",
+    "zh": "Tìm kiếm trên web"
+  },
+  {
+    "en": "Welcome to Claude Code",
+    "zh": "Chào mừng đến với Mã Claude"
+  },
+  {
+    "en": "What do you want to do?",
+    "zh": "Bạn muốn làm gì?"
+  },
+  {
+    "en": "What would you like to do?",
+    "zh": "Bạn muốn làm gì?"
+  },
+  {
+    "en": "What you see by default",
+    "zh": "Những gì bạn thấy theo mặc định"
+  },
+  {
+    "en": "What's new",
+    "zh": "Có gì mới"
+  },
+  {
+    "en": "When hooks are disabled:",
+    "zh": "Khi hook bị vô hiệu hóa:"
+  },
+  {
+    "en": "When should Claude use this agent?",
+    "zh": "Khi nào Claude nên sử dụng tác nhân này?"
+  },
+  {
+    "en": "When you see evidence of sandbox-caused failure:",
+    "zh": "Khi bạn thấy bằng chứng về lỗi do hộp cát gây ra:"
+  },
+  {
+    "en": "Will install:",
+    "zh": "Sẽ cài đặt:"
+  },
+  {
+    "en": "Works at three levels: repo, your home directory (all projects), and per-directory overrides.",
+    "zh": "Hoạt động ở ba cấp độ: repo, thư mục chính của bạn (tất cả các dự án) và ghi đè trên mỗi thư mục."
+  },
+  {
+    "en": "Workspace ID",
+    "zh": "ID không gian làm việc"
+  },
+  {
+    "en": "Would you like to install this LSP plugin?",
+    "zh": "Bạn có muốn cài đặt plugin LSP này không?"
+  },
+  {
+    "en": "Would you like to proceed?",
+    "zh": "Bạn có muốn tiếp tục không?"
+  },
+  {
+    "en": "Would you like to stash these changes and continue with teleport?",
+    "zh": "Bạn có muốn giấu những thay đổi này và tiếp tục dịch chuyển tức thời không?"
+  },
+  {
+    "en": "Yes, I accept",
+    "zh": "Vâng, tôi chấp nhận"
+  },
+  {
+    "en": "Yes, I trust these settings",
+    "zh": "Có, tôi tin tưởng những cài đặt này"
+  },
+  {
+    "en": "Yes, I trust this folder",
+    "zh": "Có, tôi tin tưởng thư mục này"
+  },
+  {
+    "en": "Yes, allow all edits during this session",
+    "zh": "Có, cho phép tất cả chỉnh sửa trong phiên này"
+  },
+  {
+    "en": "Yes, allow all edits in ",
+    "zh": "Có, cho phép tất cả chỉnh sửa trong "
+  },
+  {
+    "en": "Yes, allow external imports",
+    "zh": "Có, cho phép nhập khẩu bên ngoài"
+  },
+  {
+    "en": "Yes, and allow Claude to edit its own settings for this session",
+    "zh": "Có, và cho phép Claude chỉnh sửa cài đặt của riêng mình cho phiên này"
+  },
+  {
+    "en": "Yes, and always allow access to ",
+    "zh": "Có, và luôn cho phép truy cập vào "
+  },
+  {
+    "en": "Yes, and bypass permissions",
+    "zh": "Có, và bỏ qua quyền"
+  },
+  {
+    "en": "Yes, and don't ask again for",
+    "zh": "Có, và đừng hỏi lại"
+  },
+  {
+    "en": "Yes, and make it my default mode",
+    "zh": "Có, và đặt nó làm chế độ mặc định của tôi"
+  },
+  {
+    "en": "Yes, and remember this directory",
+    "zh": "Có, và hãy nhớ thư mục này"
+  },
+  {
+    "en": "Yes, and use auto mode",
+    "zh": "Có, và sử dụng chế độ tự động"
+  },
+  {
+    "en": "Yes, auto-accept edits",
+    "zh": "Có, tự động chấp nhận chỉnh sửa"
+  },
+  {
+    "en": "Yes, delete",
+    "zh": "Có, xóa"
+  },
+  {
+    "en": "Yes, enable auto mode",
+    "zh": "Có, bật chế độ tự động"
+  },
+  {
+    "en": "Yes, enter plan mode",
+    "zh": "Có, vào chế độ kế hoạch"
+  },
+  {
+    "en": "Yes, for this session",
+    "zh": "Có, cho phiên này"
+  },
+  {
+    "en": "Yes, install ",
+    "zh": "Có, cài đặt "
+  },
+  {
+    "en": "Yes, manually approve edits",
+    "zh": "Có, phê duyệt chỉnh sửa theo cách thủ công"
+  },
+  {
+    "en": "Yes, use recommended settings",
+    "zh": "Có, sử dụng cài đặt được đề xuất"
+  },
+  {
+    "en": "You can also configure this in /config or with the --ide flag",
+    "zh": "Bạn cũng có thể định cấu hình điều này trong/config hoặc bằng cờ --ide"
+  },
+  {
+    "en": "You can help improve Claude ",
+    "zh": "Bạn có thể giúp cải thiện Claude "
+  },
+  {
+    "en": "You can try installing manually:",
+    "zh": "Bạn có thể thử cài đặt thủ công:"
+  },
+  {
+    "en": "You have been invoked in the following environment: ",
+    "zh": "Bạn đã được gọi trong môi trường sau: "
+  },
+  {
+    "en": "You must select at least one workflow to continue",
+    "zh": "Bạn phải chọn ít nhất một quy trình làm việc để tiếp tục"
+  },
+  {
+    "en": "You should always review Claude's responses, especially when",
+    "zh": "Bạn nên luôn xem lại câu trả lời của Claude, đặc biệt khi"
+  },
+  {
+    "en": "Your Claude Pro/Max subscription will be used by Claude Code.",
+    "zh": "Đăng ký Claude Pro/Max của bạn sẽ được Claude Code sử dụng."
+  },
+  {
+    "en": "Your bash commands will be sandboxed. Disable with /sandbox.",
+    "zh": "Các lệnh bash của bạn sẽ được đóng hộp cát. Vô hiệu hóa bằng /sandbox."
+  },
+  {
+    "en": "Your choice takes effect immediately upon confirmation.",
+    "zh": "Sự lựa chọn của bạn có hiệu lực ngay sau khi xác nhận."
+  },
+  {
+    "en": "Your local credentials are used to authenticate with GitHub",
+    "zh": "Thông tin đăng nhập cục bộ của bạn được sử dụng để xác thực bằng GitHub"
+  },
+  {
+    "en": "Your organization policy does not allow any external marketplaces.",
+    "zh": "Chính sách tổ chức của bạn không cho phép bất kỳ thị trường bên ngoài nào."
+  },
+  {
+    "en": "Your organization restricts which marketplaces can be added.",
+    "zh": "Tổ chức của bạn hạn chế những thị trường nào có thể được thêm vào."
+  },
+  {
+    "en": "Your responses should be short and concise.",
+    "zh": "Câu trả lời của bạn nên ngắn gọn và súc tích."
+  },
+  {
+    "en": "[Image data detected and sent to Claude]",
+    "zh": "[Dữ liệu hình ảnh được phát hiện và gửi tới Claude]"
+  },
+  {
+    "en": "[Image]",
+    "zh": "[Hình ảnh]"
+  },
+  {
+    "en": "[View Tab]",
+    "zh": "[Xem tab]"
+  },
+  {
+    "en": "[Warning]",
+    "zh": "[Cảnh báo]"
+  },
+  {
+    "en": "[awaiting approval]",
+    "zh": "[đang chờ phê duyệt]"
+  },
+  {
+    "en": "[hidden] ",
+    "zh": "[ẩn giấu] "
+  },
+  {
+    "en": "[idle] ",
+    "zh": "[nhàn rỗi] "
+  },
+  {
+    "en": "[stopping]",
+    "zh": "[dừng lại]"
+  },
+  {
+    "en": "accept edits",
+    "zh": "chấp nhận chỉnh sửa"
+  },
+  {
+    "en": "accept edits on",
+    "zh": "chấp nhận chỉnh sửa trên"
+  },
+  {
+    "en": "and tell Claude what to do differently",
+    "zh": "và bảo Claude phải làm gì khác đi"
+  },
+  {
+    "en": "and tell Claude what to do next",
+    "zh": "và nói cho Claude biết phải làm gì tiếp theo"
+  },
+  {
+    "en": "auto mode on",
+    "zh": "bật chế độ tự động"
+  },
+  {
+    "en": "built-in (macOS)",
+    "zh": "tích hợp (macOS)"
+  },
+  {
+    "en": "claude --help",
+    "zh": "Claude --help"
+  },
+  {
+    "en": "claude doctor",
+    "zh": "bác sĩ Claude"
+  },
+  {
+    "en": "ctrl + z to suspend",
+    "zh": "ctrl + z để tạm dừng"
+  },
+  {
+    "en": "ctrl-g to edit in ",
+    "zh": "ctrl-g để chỉnh sửa "
+  },
+  {
+    "en": "d to disconnect · space for QR code · Enter/Esc to close",
+    "zh": "d để ngắt kết nối · khoảng trống cho mã QR · Enter/Esc để đóng"
+  },
+  {
+    "en": "double tap esc to clear input",
+    "zh": "nhấn đúp esc để xóa đầu vào"
+  },
+  {
+    "en": "false (for emails with your domain)",
+    "zh": "sai (đối với email có tên miền của bạn)"
+  },
+  {
+    "en": "hatching a coding buddy…",
+    "zh": "đang ấp ủ một người bạn viết mã…"
+  },
+  {
+    "en": "iTerm2 Split Pane Setup",
+    "zh": "Thiết lập ngăn chia iTerm2"
+  },
+  {
+    "en": "indexing… ",
+    "zh": "lập chỉ mục… "
+  },
+  {
+    "en": "interactive setup",
+    "zh": "thiết lập tương tác"
+  },
+  {
+    "en": "it'll watch you work and occasionally have opinions",
+    "zh": "nó sẽ quan sát bạn làm việc và thỉnh thoảng có ý kiến"
+  },
+  {
+    "en": "keep holding…",
+    "zh": "cứ giữ…"
+  },
+  {
+    "en": "last said",
+    "zh": "nói lần cuối"
+  },
+  {
+    "en": "mTLS client cert",
+    "zh": "Chứng chỉ khách hàng mTLS"
+  },
+  {
+    "en": "mTLS client key",
+    "zh": "Khóa máy khách mTLS"
+  },
+  {
+    "en": "new task? ",
+    "zh": "nhiệm vụ mới? "
+  },
+  {
+    "en": "new task? /clear to save ",
+    "zh": "nhiệm vụ mới? /xóa để lưu "
+  },
+  {
+    "en": "no matches ",
+    "zh": "không có kết quả phù hợp "
+  },
+  {
+    "en": "not found",
+    "zh": "không tìm thấy"
+  },
+  {
+    "en": "not installed",
+    "zh": "chưa được cài đặt"
+  },
+  {
+    "en": "not set",
+    "zh": "chưa được đặt"
+  },
+  {
+    "en": "opens docs",
+    "zh": "mở tài liệu"
+  },
+  {
+    "en": "plan mode on",
+    "zh": "bật chế độ kế hoạch"
+  },
+  {
+    "en": "press any key",
+    "zh": "nhấn phím bất kỳ"
+  },
+  {
+    "en": "sandbox disabled",
+    "zh": "hộp cát bị vô hiệu hóa"
+  },
+  {
+    "en": "say its name to get its take · /buddy pet · /buddy off",
+    "zh": "gọi tên nó để bắt nó · /bạn thú cưng · /bạn đi"
+  },
+  {
+    "en": "to see all)",
+    "zh": "để xem tất cả)"
+  },
+  {
+    "en": "your buddy won't count toward your usage",
+    "zh": "bạn của bạn sẽ không được tính vào mức sử dụng của bạn"
+  },
+  {
+    "en": "· Component summary not available for remote plugin",
+    "zh": "· Tóm tắt thành phần không có sẵn cho plugin từ xa"
+  },
+  {
+    "en": "· Components will be discovered at installation",
+    "zh": "· Các thành phần sẽ được phát hiện khi cài đặt"
+  },
+  {
+    "en": "· No hook commands will execute",
+    "zh": "· Không có lệnh hook nào được thực thi"
+  },
+  {
+    "en": "· Run in another terminal: security unlock-keychain",
+    "zh": "· Chạy trong thiết bị đầu cuối khác: móc khóa mở khóa bảo mật"
+  },
+  {
+    "en": "· StatusLine will not be displayed",
+    "zh": "· Dòng trạng thái sẽ không được hiển thị"
+  },
+  {
+    "en": "· Tool operations will proceed without hook validation",
+    "zh": "· Hoạt động của công cụ sẽ tiến hành mà không cần xác nhận móc"
+  },
+  {
+    "en": "· What should Claude do instead?",
+    "zh": "· Thay vào đó Claude nên làm gì?"
+  },
+  {
+    "en": "… diff truncated (exceeded 400 line limit)",
+    "zh": "… đã bị cắt bớt khác biệt (vượt quá giới hạn 400 dòng)"
+  },
+  {
+    "en": "← → to adjust",
+    "zh": "← → điều chỉnh"
+  },
+  {
+    "en": "↑/↓ to select · Enter to continue",
+    "zh": "↑/↓ để chọn · Enter để tiếp tục"
+  },
+  {
+    "en": "└ Failed to fetch versions",
+    "zh": "└ Không tìm nạp được phiên bản"
+  },
+  {
+    "en": "└ No active version locks",
+    "zh": "└ Không khóa phiên bản hoạt động"
+  },
+  {
+    "en": "└ Run /sandbox for install instructions",
+    "zh": "└ Chạy /sandbox để xem hướng dẫn cài đặt"
+  },
+  {
+    "en": "⚠ Warning: Glob patterns not fully supported on Linux",
+    "zh": "⚠ Cảnh báo: Mẫu toàn cầu không được hỗ trợ đầy đủ trên Linux"
+  },
+  {
+    "en": "✓ Anthropic marketplace installed · /plugin to see available plugins",
+    "zh": "✓ Đã cài đặt thị trường nhân loại · /plugin để xem các plugin có sẵn"
+  },
+  {
+    "en": "✓ Authentication token created successfully!",
+    "zh": "✓ Mã thông báo xác thực được tạo thành công!"
+  },
+  {
+    "en": "✓ GitHub Actions workflow created!",
+    "zh": "✓ Đã tạo quy trình làm việc của GitHub Actions!"
+  },
+  {
+    "en": "✓ Long-lived authentication token created successfully!",
+    "zh": "✓ Mã thông báo xác thực tồn tại lâu dài đã được tạo thành công!"
+  },
+  {
+    "en": "✓ Update installed · Restart to apply",
+    "zh": "✓ Cập nhật đã cài đặt · Khởi động lại để áp dụng"
+  },
+  {
+    "en": "✓ Update installed · Restart to update",
+    "zh": "✓ Cập nhật đã cài đặt · Khởi động lại để cập nhật"
+  },
+  {
+    "en": "✓ Using existing ANTHROPIC_API_KEY secret",
+    "zh": "✓ Sử dụng bí mật ANTHOPIC_API_KEY hiện có"
+  },
+  {
+    "en": "✓ iTerm2 split pane support is ready",
+    "zh": "✓ Hỗ trợ khung chia iTerm2 đã sẵn sàng"
+  },
+  {
+    "en": "✓ it2 installed successfully",
+    "zh": "✓ it2 đã cài đặt thành công"
+  },
+  {
+    "en": "✨ SHINY ✨",
+    "zh": "✨ SÁNG BÓNG ✨"
+  },
+  {
+    "en": "✻ Conversation compacted (",
+    "zh": "✻ Hội thoại được nén gọn ("
+  },
+  {
+    "en": "✻ Thinking…",
+    "zh": "✻ Đang suy nghĩ…"
+  },
+  {
+    "en": "⧉ open files",
+    "zh": "⧉ mở tập tin"
+  },
+  {
+    "en": "⧉ selected lines",
+    "zh": "⧉ dòng đã chọn"
+  },
+  {
+    "en": "Same Claude Code with visual diffs, live app preview, parallel sessions, and more.",
+    "zh": "Cùng một Mã Claude với sự khác biệt về hình ảnh, bản xem trước ứng dụng trực tiếp, phiên song song, v.v."
+  },
+  {
+    "en": "Claude wants to enter plan mode to explore and design an implementation approach.",
+    "zh": "Claude muốn chuyển sang chế độ lập kế hoạch để khám phá và thiết kế phương pháp triển khai."
+  },
+  {
+    "en": "Restore files to state at the specified user message and exit (requires --resume)",
+    "zh": "Khôi phục tệp về trạng thái theo thông báo người dùng đã chỉ định và thoát (yêu cầu --resume)"
+  },
+  {
+    "en": "Automatically connect to IDE on startup if exactly one valid IDE is available",
+    "zh": "Tự động kết nối với IDE khi khởi động nếu có sẵn chính xác một IDE hợp lệ"
+  },
+  {
+    "en": "Start an interactive session with Remote Control enabled (optionally named)",
+    "zh": "Bắt đầu phiên tương tác khi bật Điều khiển từ xa (được đặt tên tùy chọn)"
+  },
+  {
+    "en": "Print the version this session is running (not what autoupdate downloaded)",
+    "zh": "In phiên bản phiên này đang chạy (không phải phiên bản autoupdate đã tải xuống)"
+  },
+  {
+    "en": "Write debug logs to a specific file path (implicitly enables debug mode)",
+    "zh": "Ghi nhật ký gỡ lỗi vào một đường dẫn tệp cụ thể (ngầm kích hoạt chế độ gỡ lỗi)"
+  },
+  {
+    "en": "Server name can only contain letters, numbers, hyphens, and underscores",
+    "zh": "Tên máy chủ chỉ có thể chứa chữ cái, số, dấu gạch nối và dấu gạch dưới"
+  },
+  {
+    "en": "What is the name of the service I should give sensitive permissions to?",
+    "zh": "Tên của dịch vụ mà tôi nên cấp quyền nhạy cảm là gì?"
+  },
+  {
+    "en": "Comma-separated list of setting sources to load (user, project, local).",
+    "zh": "Danh sách các nguồn cài đặt được phân tách bằng dấu phẩy để tải (người dùng, dự án, cục bộ)."
+  },
+  {
+    "en": "Transport type (stdio, sse, http). Defaults to stdio if not specified.",
+    "zh": "Loại vận chuyển (stdio, sse, http). Mặc định là stdio nếu không được chỉ định."
+  },
+  {
+    "en": "Read system prompt from a file and append to the default system prompt",
+    "zh": "Đọc lời nhắc hệ thống từ một tệp và thêm vào lời nhắc hệ thống mặc định"
+  },
+  {
+    "en": "Create a new git worktree for this session (optionally specify a name)",
+    "zh": "Tạo một cây công việc git mới cho phiên này (tùy chọn chỉ định tên)"
+  },
+  {
+    "en": "Maximum dollar amount to spend on API calls (only works with --print)",
+    "zh": "Số tiền tối đa để chi tiêu cho lệnh gọi API (chỉ hoạt động với --print)"
+  },
+  {
+    "en": "Use a specific session ID for the conversation (must be a valid UUID)",
+    "zh": "Sử dụng ID phiên cụ thể cho cuộc trò chuyện (phải là UUID hợp lệ)"
+  },
+  {
+    "en": "Teleport will switch git branches. The following changes were found:",
+    "zh": "Dịch chuyển tức thời sẽ chuyển nhánh git. Những thay đổi sau đây đã được tìm thấy:"
+  },
+  {
+    "en": "Report the security classification result for the agent action",
+    "zh": "Báo cáo kết quả phân loại bảo mật cho hành động của đại lý"
+  },
+  {
+    "en": "Effort level for the current session (low, medium, high, max)",
+    "zh": "Mức độ nỗ lực cho phiên hiện tại (thấp, trung bình, cao, tối đa)"
+  },
+  {
+    "en": "Agent for the current session. Overrides the 'agent' setting.",
+    "zh": "Đại lý cho phiên hiện tại. Ghi đè cài đặt 'đại lý'."
+  },
+  {
+    "en": "Include available plugins from marketplaces (requires --json)",
+    "zh": "Bao gồm các plugin có sẵn từ thị trường (yêu cầu --json)"
+  },
+  {
+    "en": "Tab ID to identify which tab group this operation applies to",
+    "zh": "ID tab để xác định nhóm tab nào thao tác này áp dụng cho"
+  },
+  {
+    "en": "Verify a code change does what it should by running the app.",
+    "zh": "Xác minh thay đổi mã thực hiện đúng chức năng bằng cách chạy ứng dụng."
+  },
+  {
+    "en": "Server command must have at least one element (the command)",
+    "zh": "Lệnh máy chủ phải có ít nhất một thành phần (lệnh)"
+  },
+  {
+    "en": "Long builds and test suites do not have to block you. Add",
+    "zh": "Các bản dựng và bộ thử nghiệm dài không phải chặn bạn. Thêm vào"
+  },
+  {
+    "en": "Please use --channels to run a list of approved channels.",
+    "zh": "Vui lòng sử dụng --channels để chạy danh sách các kênh được phê duyệt."
+  },
+  {
+    "en": "You can also try the manual setup steps if needed:",
+    "zh": "Bạn cũng có thể thử các bước thiết lập thủ công nếu cần:"
+  },
+  {
+    "en": "Additional directories to allow tool access to",
+    "zh": "Các thư mục bổ sung để cho phép công cụ truy cập vào"
+  },
+  {
+    "en": "The Internet connection appears to be offline",
+    "zh": "Kết nối Internet dường như ngoại tuyến"
+  },
+  {
+    "en": "Opening browser to IdP authorization endpoint",
+    "zh": "Mở trình duyệt tới điểm cuối ủy quyền IdP"
+  },
+  {
+    "en": "Force installation even if already installed",
+    "zh": "Buộc cài đặt ngay cả khi đã cài đặt"
+  },
+  {
+    "en": "Directory that contains virtual environments",
+    "zh": "Thư mục chứa môi trường ảo"
+  },
+  {
+    "en": "This session is available via Remote Control",
+    "zh": "Phiên này có sẵn thông qua Điều khiển từ xa"
+  },
+  {
+    "en": "Parent session ID for analytics correlation",
+    "zh": "ID phiên chính cho mối tương quan phân tích"
+  },
+  {
+    "en": "Use the configuration file at this location",
+    "zh": "Sử dụng tệp cấu hình tại vị trí này"
+  },
+  {
+    "en": "For times without dates, use today's date.",
+    "zh": "Đối với những thời điểm không có ngày tháng, hãy sử dụng ngày hôm nay."
+  },
+  {
+    "en": "Show Claude logo watermark (default: true)",
+    "zh": "Hiển thị hình mờ logo Claude (mặc định: true)"
+  },
+  {
+    "en": "Opens teammates in a separate tmux session",
+    "zh": "Mở đồng đội trong một phiên tmux riêng"
+  },
+  {
+    "en": "Override verbose mode setting from config",
+    "zh": "Ghi đè cài đặt chế độ dài dòng từ cấu hình"
+  },
+  {
+    "en": "Ensure you have access to this repository",
+    "zh": "Đảm bảo bạn có quyền truy cập vào kho lưu trữ này"
+  },
+  {
+    "en": "Run claude --teleport from a checkout of ",
+    "zh": "Chạy claude --teleport từ thanh toán "
+  },
+  {
+    "en": "Opens a secure connection to claude.ai.",
+    "zh": "Mở kết nối an toàn tới claude.ai."
+  },
+  {
+    "en": "Where your Bedrock models are enabled.",
+    "zh": "Nơi mô hình Bedrock của bạn được kích hoạt."
+  },
+  {
+    "en": "Write unit tests for all new utilities",
+    "zh": "Viết bài kiểm tra đơn vị cho tất cả các tiện ích mới"
+  },
+  {
+    "en": "Error: Unable to create remote session",
+    "zh": "Lỗi: Không thể tạo phiên từ xa"
+  },
+  {
+    "en": "You are a helpful code reviewer who...",
+    "zh": "Bạn là một người đánh giá mã hữu ích và..."
+  },
+  {
+    "en": "Invalid npm package name format",
+    "zh": "Định dạng tên gói npm không hợp lệ"
+  },
+  {
+    "en": "Remove directory from workspace?",
+    "zh": "Xóa thư mục khỏi không gian làm việc?"
+  },
+  {
+    "en": "Claude in Chrome (Beta) settings",
+    "zh": "Claude trong cài đặt Chrome (Beta)"
+  },
+  {
+    "en": "Set effort level for model usage",
+    "zh": "Đặt mức nỗ lực cho việc sử dụng mô hình"
+  },
+  {
+    "en": "Default - trusted network access",
+    "zh": "Mặc định - truy cập mạng đáng tin cậy"
+  },
+  {
+    "en": "Effort set to high for this turn",
+    "zh": "Nỗ lực được đặt ở mức cao cho lượt này"
+  },
+  {
+    "en": "Install Claude Code native build",
+    "zh": "Cài đặt bản dựng gốc Claude Code"
+  },
+  {
+    "en": "Installing Claude Code native build ",
+    "zh": "Cài đặt bản dựng gốc Claude Code "
+  },
+  {
+    "en": "Team name for swarm coordination",
+    "zh": "Tên nhóm để phối hợp bầy đàn"
+  },
+  {
+    "en": "Amazon Bedrock (Mantle) base URL",
+    "zh": "URL cơ sở của Amazon Bedrock (Mantle)"
+  },
+  {
+    "en": "Reason, if the condition was not met",
+    "zh": "Lý do, nếu điều kiện không được đáp ứng"
+  },
+  {
+    "en": "Delay for a specified amount of time",
+    "zh": "Trì hoãn trong một khoảng thời gian nhất định"
+  },
+  {
+    "en": "Custom agent type for this teammate",
+    "zh": "Loại tác nhân tùy chỉnh cho đồng đội này"
+  },
+  {
+    "en": "Claude Code installation failed",
+    "zh": "Cài đặt mã Claude không thành công"
+  },
+  {
+    "en": "Number of pull requests created",
+    "zh": "Số lượng yêu cầu kéo được tạo"
+  },
+  {
+    "en": "Cost of the Claude Code session",
+    "zh": "Chi phí của phiên Mã Claude"
+  },
+  {
+    "en": "Number of tokens used",
+    "zh": "Số lượng token được sử dụng"
+  },
+  {
+    "en": "Request for process information",
+    "zh": "Yêu cầu thông tin quy trình"
+  },
+  {
+    "en": "Anthropic's agentic coding tool",
+    "zh": "Công cụ mã hóa tác nhân của Anthropic"
+  },
+  {
+    "en": "Count of CLI sessions started",
+    "zh": "Số phiên CLI đã bắt đầu"
+  },
+  {
+    "en": "Number of git commits created",
+    "zh": "Số lượng cam kết git được tạo"
+  },
+  {
+    "en": "Total active time in seconds",
+    "zh": "Tổng thời gian hoạt động tính bằng giây"
+  },
+  {
+    "en": "Fixed port for OAuth callback (for servers requiring pre-registered redirect URIs)",
+    "zh": "Đã sửa cổng cho lệnh gọi lại OAuth (dành cho máy chủ yêu cầu URI chuyển hướng được đăng ký trước)"
+  },
+  {
+    "en": "The stable channel may have an older version than what you're currently running (",
+    "zh": "Kênh ổn định có thể có phiên bản cũ hơn phiên bản bạn đang chạy ("
+  },
+  {
+    "en": "Prefix for auto-generated Remote Control session names (default: hostname)",
+    "zh": "Tiền tố cho tên phiên Điều khiển từ xa được tạo tự động (mặc định: tên máy chủ)"
+  },
+  {
+    "en": "Source contains multiple documents; please use YAML.parseAllDocuments()",
+    "zh": "Nguồn chứa nhiều tài liệu; vui lòng sử dụng YAML.parseAllDocuments()"
+  },
+  {
+    "en": "Show orange circles at click locations (default: true)",
+    "zh": "Hiển thị vòng tròn màu cam tại các vị trí nhấp chuột (mặc định: true)"
+  },
+  {
+    "en": "Show black labels describing actions (default: true)",
+    "zh": "Hiển thị nhãn màu đen mô tả hành động (mặc định: true)"
+  },
+  {
+    "en": "Show orange progress bar at bottom (default: true)",
+    "zh": "Hiển thị thanh tiến trình màu cam ở dưới cùng (mặc định: true)"
+  },
+  {
+    "en": "Show red arrows for drag actions (default: true)",
+    "zh": "Hiển thị mũi tên màu đỏ cho hành động kéo (mặc định: true)"
+  },
+  {
+    "en": "Set a session-only Stop hook with a quick prompt",
+    "zh": "Đặt móc dừng chỉ dành cho phiên bằng lời nhắc nhanh"
+  },
+  {
+    "en": "Network connection failures to non-whitelisted hosts",
+    "zh": "Lỗi kết nối mạng với máy chủ không có trong danh sách trắng"
+  },
+  {
+    "en": "Package name cannot contain path traversal patterns",
+    "zh": "Tên gói không thể chứa các mẫu truyền tải đường dẫn"
+  },
+  {
+    "en": "Redirection handling is disabled, skipping redirect",
+    "zh": "Xử lý chuyển hướng bị vô hiệu hóa, bỏ qua chuyển hướng"
+  },
+  {
+    "en": "Channel notifications re-registered after reconnect",
+    "zh": "Thông báo kênh được đăng ký lại sau khi kết nối lại"
+  },
+  {
+    "en": "Failed to send idle notification to team leader",
+    "zh": "Không gửi được thông báo nhàn rỗi cho trưởng nhóm"
+  },
+  {
+    "en": "Discarded in favor of other hedged attempt",
+    "zh": "Bị loại bỏ để ủng hộ nỗ lực phòng ngừa khác"
+  },
+  {
+    "en": "Token refresh already in progress, reusing existing promise",
+    "zh": "Đang làm mới mã thông báo, sử dụng lại lời hứa hiện có"
+  },
+  {
+    "en": "Pending response rejected since connection got disposed",
+    "zh": "Phản hồi đang chờ xử lý bị từ chối do kết nối bị hủy"
+  },
+  {
+    "en": "Server does not support token revocation",
+    "zh": "Máy chủ không hỗ trợ thu hồi token"
+  },
+  {
+    "en": "Reconnection failed after authentication",
+    "zh": "Kết nối lại không thành công sau khi xác thực"
+  },
+  {
+    "en": "Graceful shutdown requested by team lead",
+    "zh": "Trưởng nhóm yêu cầu tắt máy một cách duyên dáng"
+  },
+  {
+    "en": "Same key defined twice in one context",
+    "zh": "Cùng một khóa được xác định hai lần trong một ngữ cảnh"
+  },
+  {
+    "en": "Maximum number of redirects exceeded",
+    "zh": "Đã vượt quá số lượng chuyển hướng tối đa"
+  },
+  {
+    "en": "Skip workflow update (configure secrets only)",
+    "zh": "Bỏ qua cập nhật quy trình làm việc (chỉ cấu hình bí mật)"
+  },
+  {
+    "en": "Request body larger than maxBodyLength limit",
+    "zh": "Nội dung yêu cầu lớn hơn giới hạn maxBodyLength"
+  },
+  {
+    "en": "Completing auth flow with authorization code",
+    "zh": "Hoàn thành luồng xác thực bằng mã ủy quyền"
+  },
+  {
+    "en": "Config parsing failed with error",
+    "zh": "Phân tích cú pháp cấu hình không thành công do lỗi"
+  },
+  {
+    "en": "Channel notifications registered",
+    "zh": "Đã đăng ký thông báo kênh"
+  },
+  {
+    "en": "Redirecting to authorization URL",
+    "zh": "Chuyển hướng đến URL ủy quyền"
+  },
+  {
+    "en": "Channel closed before call started",
+    "zh": "Kênh đã đóng trước khi cuộc gọi bắt đầu"
+  },
+  {
+    "en": "Denied by auto mode classifier ",
+    "zh": "Bị từ chối bởi bộ phân loại chế độ tự động "
+  },
+  {
+    "en": "Screenshot via chrome extension",
+    "zh": "Ảnh chụp màn hình thông qua tiện ích mở rộng chrome"
+  },
+  {
+    "en": "When issuing multiple commands:",
+    "zh": "Khi đưa ra nhiều lệnh:"
+  },
+  {
+    "en": "What is the termination clause?",
+    "zh": "Điều khoản chấm dứt là gì?"
+  },
+  {
+    "en": "Floating point arithmetic error",
+    "zh": "Lỗi số học dấu phẩy động"
+  },
+  {
+    "en": "Network request outside of sandbox",
+    "zh": "Yêu cầu mạng bên ngoài hộp cát"
+  },
+  {
+    "en": "Map comment with trailing content",
+    "zh": "Bản đồ nhận xét có nội dung theo sau"
+  },
+  {
+    "en": "The ID of the shortcut to execute",
+    "zh": "ID của phím tắt để thực thi"
+  },
+  {
+    "en": "Failed to discover OAuth metadata",
+    "zh": "Không khám phá được siêu dữ liệu OAuth"
+  },
+  {
+    "en": "WARNING: Loading development channels",
+    "zh": "CẢNH BÁO: Đang tải các kênh phát triển"
+  },
+  {
+    "en": "The body has already been consumed.",
+    "zh": "Cơ thể đã được tiêu thụ."
+  },
+  {
+    "en": "Please install the app for repository: ",
+    "zh": "Vui lòng cài đặt ứng dụng cho kho lưu trữ: "
+  },
+  {
+    "en": "Windows: winget install --id GitHub.cli",
+    "zh": "Windows: cài đặt winget --id GitHub.cli"
+  },
+  {
+    "en": "Terrible customer service, never again.",
+    "zh": "Dịch vụ khách hàng khủng khiếp, không bao giờ nữa."
+  },
+  {
+    "en": "Create type stub file(s) for import",
+    "zh": "Tạo (các) tệp sơ khai loại để nhập"
+  },
+  {
+    "en": "A simple common HTTP client specifically for Google APIs and services.",
+    "zh": "Một ứng dụng khách HTTP phổ biến đơn giản dành riêng cho các dịch vụ và API của Google."
+  },
+  {
+    "en": "Received ListRoots request from server",
+    "zh": "Đã nhận được yêu cầu ListRoots từ máy chủ"
+  },
+  {
+    "en": "Received auth code via manual callback URL",
+    "zh": "Đã nhận được mã xác thực qua URL gọi lại thủ công"
+  },
+  {
+    "en": "Client cancelled task execution.",
+    "zh": "Khách hàng đã hủy thực thi tác vụ."
+  },
+  {
+    "en": "Cleanup timeout reached, stopping process monitoring",
+    "zh": "Đã hết thời gian dọn dẹp, dừng giám sát quá trình"
+  },
+  {
+    "en": "Connection is already listening",
+    "zh": "Kết nối đã được lắng nghe"
+  },
+  {
+    "en": "Tooltip body text. Explain what the user is looking at and why it matters. ",
+    "zh": "Văn bản nội dung của chú giải công cụ. Giải thích những gì người dùng đang xem và tại sao nó quan trọng. "
+  },
+  {
+    "en": "Using persisted auth server metadata for refresh",
+    "zh": "Sử dụng siêu dữ liệu máy chủ xác thực liên tục để làm mới"
+  },
+  {
+    "en": "Another process refreshed tokens, using those",
+    "zh": "Một quy trình khác đã làm mới các mã thông báo bằng cách sử dụng các mã thông báo đó"
+  },
+  {
+    "en": "Work item lease expired, fetching fresh token",
+    "zh": "Hợp đồng thuê hạng mục công việc đã hết hạn, đang tìm nạp mã thông báo mới"
+  },
+  {
+    "en": "Preserved step-up auth state across revocation",
+    "zh": "Trạng thái xác thực từng bước được bảo tồn trong quá trình thu hồi"
+  },
+  {
+    "en": "Command should be emulated but is not implemented",
+    "zh": "Lệnh nên được mô phỏng nhưng không được triển khai"
+  },
+  {
+    "en": "Opening handshake has timed out",
+    "zh": "Bắt tay mở đã hết thời gian"
+  },
+  {
+    "en": "Create a new secret with a different name",
+    "zh": "Tạo một bí mật mới với một tên khác"
+  },
+  {
+    "en": "Listening for channel messages from: ",
+    "zh": "Nghe tin nhắn kênh từ: "
+  },
+  {
+    "en": "Invalid response body, expected a web ReadableStream",
+    "zh": "Nội dung phản hồi không hợp lệ, dự kiến ​​có ReadableStream trên web"
+  },
+  {
+    "en": "Starting new login following /upgrade. Exit with Ctrl-C to use existing account.",
+    "zh": "Bắt đầu đăng nhập mới sau /nâng cấp. Thoát bằng Ctrl-C để sử dụng tài khoản hiện có."
+  },
+  {
+    "en": "You can disconnect remote access anytime by running /remote-control again.",
+    "zh": "Bạn có thể ngắt kết nối quyền truy cập từ xa bất cứ lúc nào bằng cách chạy lại /remote-control."
+  },
+  {
+    "en": "If this is a new task, clearing context will save usage and be faster.",
+    "zh": "Nếu đây là một tác vụ mới, việc xóa ngữ cảnh sẽ tiết kiệm mức sử dụng và nhanh hơn."
+  },
+  {
+    "en": "An update to our Consumer Terms and Privacy Policy will take effect on",
+    "zh": "Bản cập nhật cho Điều khoản dành cho người tiêu dùng và Chính sách quyền riêng tư của chúng tôi sẽ có hiệu lực vào"
+  },
+  {
+    "en": "We've updated our Consumer Terms and Privacy Policy.",
+    "zh": "Chúng tôi đã cập nhật Điều khoản dành cho người tiêu dùng và Chính sách quyền riêng tư của mình."
+  },
+  {
+    "en": " report the issue at https://github.com/anthropics/claude-code/issues",
+    "zh": " báo cáo vấn đề tại https://github.com/anthropics/claude-code/issues"
+  },
+  {
+    "en": "Advisor has reviewed the conversation and will apply the feedback",
+    "zh": "Cố vấn đã xem xét cuộc trò chuyện và sẽ áp dụng các phản hồi"
+  },
+  {
+    "en": "If your browser doesn't open automatically, copy this URL manually",
+    "zh": "Nếu trình duyệt của bạn không tự động mở, hãy sao chép URL này theo cách thủ công"
+  },
+  {
+    "en": "If your browser didn't open automatically, copy this URL manually",
+    "zh": "Nếu trình duyệt của bạn không tự động mở, hãy sao chép URL này theo cách thủ công"
+  },
+  {
+    "en": "To use native iTerm2 split panes for teammates, you need the",
+    "zh": "Để sử dụng các bảng phân chia iTerm2 gốc cho đồng đội, bạn cần có"
+  },
+  {
+    "en": "These will be written to ~/.claude/settings.json under env:",
+    "zh": "Chúng sẽ được ghi vào ~/.claude/settings.json trong env:"
+  },
+  {
+    "en": "Restore the code and/or conversation to the point before…",
+    "zh": "Khôi phục mã và/hoặc cuộc trò chuyện về thời điểm trước…"
+  },
+  {
+    "en": "Restore and fork the conversation to the point before…",
+    "zh": "Khôi phục và chuyển cuộc trò chuyện về điểm trước đó…"
+  },
+  {
+    "en": "Restore the code and/or conversation to a previous point",
+    "zh": "Khôi phục mã và/hoặc cuộc hội thoại về điểm trước đó"
+  },
+  {
+    "en": "Disable it just for you in .claude/settings.local.json?",
+    "zh": "Tắt nó chỉ dành cho bạn trong .claude/settings.local.json?"
+  },
+  {
+    "en": "Plan files for current session are allowed for reading",
+    "zh": "Tệp kế hoạch cho phiên hiện tại được phép đọc"
+  },
+  {
+    "en": "Plan files for current session are allowed for writing",
+    "zh": "Tệp kế hoạch cho phiên hiện tại được phép ghi"
+  },
+  {
+    "en": "You can always enable it later with /remote-control.",
+    "zh": "Bạn luôn có thể kích hoạt nó sau bằng /remote-control."
+  },
+  {
+    "en": "Opening browser to sign in with your Claude account…",
+    "zh": "Đang mở trình duyệt để đăng nhập bằng tài khoản Claude của bạn…"
+  },
+  {
+    "en": "Type to filter · Enter/↓ select · ↑ tabs · Esc clear",
+    "zh": "Nhập để lọc · Nhập/↓ chọn · ↑ tab · Xóa Esc"
+  },
+  {
+    "en": "Do you want to allow Claude to fetch this content?",
+    "zh": "Bạn có muốn cho phép Claude lấy nội dung này không?"
+  },
+  {
+    "en": "If your browser doesn't open automatically, visit:",
+    "zh": "Nếu trình duyệt của bạn không tự động mở, hãy truy cập:"
+  },
+  {
+    "en": "You've spent $5 on the Anthropic API this session.",
+    "zh": "Bạn đã chi $5 cho Anthropic API trong phiên này."
+  },
+  {
+    "en": "Opening browser to install the Claude GitHub App…",
+    "zh": "Mở trình duyệt để cài đặt Ứng dụng Claude GitHub…"
+  },
+  {
+    "en": "To continue immediately, use /model to switch to",
+    "zh": "Để tiếp tục ngay lập tức, hãy sử dụng /model để chuyển sang"
+  },
+  {
+    "en": "Auto-updates are disabled in development builds.",
+    "zh": "Tự động cập nhật bị vô hiệu hóa trong các bản dựng phát triển."
+  },
+  {
+    "en": " instead of Claude account subscription token. Either unset",
+    "zh": " thay vì mã thông báo đăng ký tài khoản Claude. Không đặt"
+  },
+  {
+    "en": "instead of Anthropic Console key. Either unset",
+    "zh": "thay vì phím Anthropic Console. Không đặt"
+  },
+  {
+    "en": "Opening Slack app installation page in browser…",
+    "zh": "Đang mở trang cài đặt ứng dụng Slack trong trình duyệt…"
+  },
+  {
+    "en": "· You may need to restart iTerm2 after enabling",
+    "zh": "· Bạn có thể cần phải khởi động lại iTerm2 sau khi kích hoạt"
+  },
+  {
+    "en": "A browser window will open for authentication",
+    "zh": "Một cửa sổ trình duyệt sẽ mở ra để xác thực"
+  },
+  {
+    "en": "Restarting Claude Code to apply the new model…",
+    "zh": "Đang khởi động lại Claude Code để áp dụng mô hình mới…"
+  },
+  {
+    "en": "A Claude workflow file already exists in this repository.",
+    "zh": "Tệp quy trình công việc Claude đã tồn tại trong kho lưu trữ này."
+  },
+  {
+    "en": "User has approved exiting plan mode. You can now proceed.",
+    "zh": "Người dùng đã chấp thuận thoát khỏi chế độ kế hoạch. Bây giờ bạn có thể tiếp tục."
+  },
+  {
+    "en": "Plan flow interrupted. Return to your terminal and retry.",
+    "zh": "Luồng kế hoạch bị gián đoạn. Quay trở lại thiết bị đầu cuối của bạn và thử lại."
+  },
+  {
+    "en": "Plan teleported. Return to your terminal to continue.",
+    "zh": "Kế hoạch đã được dịch chuyển. Quay trở lại thiết bị đầu cuối của bạn để tiếp tục."
+  },
+  {
+    "en": "User defined timeout for device code polling reached",
+    "zh": "Đã đạt đến thời gian chờ do người dùng xác định để kiểm tra mã thiết bị"
+  },
+  {
+    "en": "User answers collected by the permission component",
+    "zh": "Câu trả lời của người dùng được thu thập bởi thành phần quyền"
+  },
+  {
+    "en": "Checking GCP credentials validity for auth refresh",
+    "zh": "Kiểm tra tính hợp lệ của thông tin đăng nhập GCP để làm mới xác thực"
+  },
+  {
+    "en": "Fetching AWS caller identity for credential export command",
+    "zh": "Tìm nạp danh tính người gọi AWS cho lệnh xuất thông tin xác thực"
+  },
+  {
+    "en": "Fetching AWS caller identity for AWS auth refresh command",
+    "zh": "Tìm nạp danh tính người gọi AWS cho lệnh làm mới xác thực AWS"
+  },
+  {
+    "en": "Restarting caffeinate to maintain sleep prevention",
+    "zh": "Khởi động lại caffeine để duy trì việc ngăn ngừa giấc ngủ"
+  },
+  {
+    "en": "User interruption with CTRL-BREAK",
+    "zh": "Sự gián đoạn của người dùng với CTRL-BREAK"
+  },
+  {
+    "en": "User interruption with CTRL-C",
+    "zh": "Sự gián đoạn của người dùng với CTRL-C"
+  },
+  {
+    "en": "User force closed",
+    "zh": "Lực lượng người dùng đã đóng"
+  },
+  {
+    "en": "User cancelled the flow.",
+    "zh": "Người dùng đã hủy luồng."
+  },
+  {
+    "en": "User denied permission",
+    "zh": "Người dùng bị từ chối quyền"
+  },
+  {
+    "en": "User rejected tool use",
+    "zh": "Người dùng từ chối sử dụng công cụ"
+  },
+  {
+    "en": "User declined to enter plan mode",
+    "zh": "Người dùng đã từ chối vào chế độ gói"
+  },
+  {
+    "en": "User approved Claude's plan",
+    "zh": "Người dùng đã phê duyệt kế hoạch của Claude"
+  },
+  {
+    "en": "User Rejected Action",
+    "zh": "Hành động bị người dùng từ chối"
+  },
+  {
+    "en": "User Stopped Early",
+    "zh": "Người dùng đã dừng sớm"
+  },
+  {
+    "en": "User Rejected",
+    "zh": "Người dùng bị từ chối"
+  },
+  {
+    "en": "User Unclear",
+    "zh": "Người dùng không rõ ràng"
+  },
+  {
+    "en": "User Settings",
+    "zh": "Cài đặt người dùng"
+  },
+  {
+    "en": "User memory",
+    "zh": "Bộ nhớ người dùng"
+  },
+  {
+    "en": "User Data",
+    "zh": "Dữ liệu người dùng"
+  },
+  {
+    "en": "Do you want to allow this connection?",
+    "zh": "Bạn có muốn cho phép kết nối này?"
+  },
+  {
+    "en": "Establishing connection to MCP server",
+    "zh": "Thiết lập kết nối với máy chủ MCP"
+  },
+  {
+    "en": "Connecting GitHub to Claude…",
+    "zh": "Đang kết nối GitHub với Claude…"
+  },
+  {
+    "en": "Connecting to",
+    "zh": "Đang kết nối với"
+  },
+  {
+    "en": "Reconnecting to",
+    "zh": "Đang kết nối lại với"
+  },
+  {
+    "en": "Plan submitted for team lead approval",
+    "zh": "Kế hoạch được gửi để trưởng nhóm phê duyệt"
+  },
+  {
+    "en": "Waiting for team lead approval",
+    "zh": "Đang chờ phê duyệt của trưởng nhóm"
+  },
+  {
+    "en": "Plan Approval Request from",
+    "zh": "Yêu cầu phê duyệt kế hoạch từ"
+  },
+  {
+    "en": "Plan needs revision",
+    "zh": "Kế hoạch cần sửa đổi"
+  },
+  {
+    "en": "Ultraplan approved",
+    "zh": "Ultraplan đã được phê duyệt"
+  },
+  {
+    "en": "Submitting report…",
+    "zh": "Đang gửi báo cáo…"
+  },
+  {
+    "en": "Think Back on 2025 with Claude Code",
+    "zh": "Nghĩ lại năm 2025 với Claude Code"
+  },
+  {
+    "en": "is here · it'll chime in as you code",
+    "zh": "ở đây · nó sẽ kêu vang khi bạn viết mã"
+  },
+  {
+    "en": "sync cycle modes for all · Esc close",
+    "zh": "đồng bộ hóa các chế độ chu kỳ cho tất cả · Đóng esc"
+  },
+  {
+    "en": "Thanks for sharing your transcript!",
+    "zh": "Cảm ơn bạn đã chia sẻ bản ghi của mình!"
+  },
+  {
+    "en": "No, maybe later with /terminal-setup",
+    "zh": "Không, có thể sau với /terminal-setup"
+  },
+  {
+    "en": "Do you have feedback about the plan?",
+    "zh": "Bạn có phản hồi gì về kế hoạch không?"
+  },
+  {
+    "en": "You have not answered all questions",
+    "zh": "Bạn chưa trả lời tất cả các câu hỏi"
+  },
+  {
+    "en": "Fetching your Claude Code sessions…",
+    "zh": "Đang tìm nạp phiên Mã Claude của bạn…"
+  },
+  {
+    "en": "Sending a test request to Bedrock…",
+    "zh": "Đang gửi yêu cầu kiểm tra tới Bedrock…"
+  },
+  {
+    "en": "Checking GitHub CLI installation…",
+    "zh": "Đang kiểm tra cài đặt GitHub CLI…"
+  },
+  {
+    "en": "Checking thinkback installation…",
+    "zh": "Đang kiểm tra cài đặt thinkback…"
+  },
+  {
+    "en": "Checking candidate",
+    "zh": "Kiểm tra ứng viên"
+  },
+  {
+    "en": "Checking login status…",
+    "zh": "Đang kiểm tra trạng thái đăng nhập…"
+  },
+  {
+    "en": "Checking git status",
+    "zh": "Kiểm tra trạng thái git"
+  },
+  {
+    "en": "Checking for Claude Desktop…",
+    "zh": "Đang kiểm tra Claude Desktop…"
+  },
+  {
+    "en": "Claude account with subscription ·",
+    "zh": "Tài khoản Claude có đăng ký ·"
+  },
+  {
+    "en": "Claude wants to exit plan mode",
+    "zh": "Claude muốn thoát khỏi chế độ kế hoạch"
+  },
+  {
+    "en": "Claude Code will always reject requests to use denied tools.",
+    "zh": "Claude Code sẽ luôn từ chối yêu cầu sử dụng các công cụ bị từ chối."
+  },
+  {
+    "en": "To change this later, run /theme",
+    "zh": "Để thay đổi điều này sau, hãy chạy /theme"
+  },
+  {
+    "en": "Opening sticker page in browser…",
+    "zh": "Đang mở trang hình dán trong trình duyệt…"
+  },
+  {
+    "en": "Loading your Claude Code stats…",
+    "zh": "Đang tải số liệu thống kê Mã Claude của bạn…"
+  },
+  {
+    "en": "How do you authenticate to AWS?",
+    "zh": "Làm thế nào để bạn xác thực với AWS?"
+  },
+  {
+    "en": "Select any you wish to enable.",
+    "zh": "Chọn bất kỳ điều gì bạn muốn kích hoạt."
+  },
+  {
+    "en": "Select a session to resume",
+    "zh": "Chọn một phiên để tiếp tục"
+  },
+  {
+    "en": "Confirm you want to restore",
+    "zh": "Xác nhận bạn muốn khôi phục"
+  },
+  {
+    "en": "Would you like to install it?",
+    "zh": "Bạn có muốn cài đặt nó không?"
+  },
+  {
+    "en": "Would you like to:",
+    "zh": "Bạn có muốn:"
+  },
+  {
+    "en": "Working Directory Has Changes",
+    "zh": "Thư mục làm việc có thay đổi"
+  },
+  {
+    "en": "Hooks Restricted by Policy",
+    "zh": "Móc bị hạn chế bởi chính sách"
+  },
+  {
+    "en": "Hook Configuration - Disabled",
+    "zh": "Cấu hình hook - Đã tắt"
+  },
+  {
+    "en": "hook returned blocking error",
+    "zh": "lỗi chặn hook trả về"
+  },
+  {
+    "en": "hook stopped continuation:",
+    "zh": "hook đã dừng tiếp tục:"
+  },
+  {
+    "en": "hook warning",
+    "zh": "cảnh báo móc"
+  },
+  {
+    "en": "hook error",
+    "zh": "lỗi móc"
+  },
+  {
+    "en": "No Claude Code sessions found",
+    "zh": "Không tìm thấy phiên Mã Claude nào"
+  },
+  {
+    "en": "No remote environments available.",
+    "zh": "Không có môi trường từ xa có sẵn."
+  },
+  {
+    "en": "No marketplaces configured.",
+    "zh": "Không có thị trường nào được định cấu hình."
+  },
+  {
+    "en": "No custom commands found",
+    "zh": "Không tìm thấy lệnh tùy chỉnh"
+  },
+  {
+    "en": "No skills found",
+    "zh": "Không tìm thấy kỹ năng nào"
+  },
+  {
+    "en": "No agents found",
+    "zh": "Không tìm thấy đại lý nào"
+  },
+  {
+    "en": "No preview available",
+    "zh": "Không có bản xem trước nào"
+  },
+  {
+    "en": "No code restore",
+    "zh": "Không khôi phục mã"
+  },
+  {
+    "en": "Nothing to rewind to yet.",
+    "zh": "Chưa có gì để tua lại."
+  },
+  {
+    "en": "Removed from marketplace · reason:",
+    "zh": "Đã xóa khỏi thị trường · lý do:"
+  },
+  {
+    "en": "Removed from marketplace",
+    "zh": "Đã xóa khỏi thị trường"
+  },
+  {
+    "en": "Removed empty socket directory",
+    "zh": "Đã xóa thư mục ổ cắm trống"
+  },
+  {
+    "en": "Removed worktree",
+    "zh": "Đã xóa cây công việc"
+  },
+  {
+    "en": "Adding marketplace to configuration…",
+    "zh": "Đang thêm thị trường vào cấu hình…"
+  },
+  {
+    "en": "Adding marketplace...",
+    "zh": "Đang thêm thị trường..."
+  },
+  {
+    "en": "Loading marketplaces...",
+    "zh": "Đang tải thị trường..."
+  },
+  {
+    "en": "Loading marketplaces…",
+    "zh": "Đang tải thị trường…"
+  },
+  {
+    "en": "Loading installed plugins…",
+    "zh": "Đang tải các plugin đã cài đặt…"
+  },
+  {
+    "en": "Loading environments…",
+    "zh": "Đang tải môi trường…"
+  },
+  {
+    "en": "Loading session…",
+    "zh": "Đang tải phiên…"
+  },
+  {
+    "en": "Loading thinkback skill…",
+    "zh": "Đang tải kỹ năng suy nghĩ…"
+  },
+  {
+    "en": "Loading stats…",
+    "zh": "Đang tải số liệu thống kê…"
+  },
+  {
+    "en": "Processing authentication…",
+    "zh": "Đang xử lý xác thực…"
+  },
+  {
+    "en": "Starting authentication…",
+    "zh": "Đang bắt đầu xác thực…"
+  },
+  {
+    "en": "Authenticating with",
+    "zh": "Xác thực với"
+  },
+  {
+    "en": "Verifying credentials",
+    "zh": "Đang xác minh thông tin xác thực"
+  },
+  {
+    "en": "Verifying it2 can communicate with iTerm2…",
+    "zh": "Đang xác minh it2 có thể giao tiếp với iTerm2…"
+  },
+  {
+    "en": "Calling AWS STS and Bedrock…",
+    "zh": "Gọi AWS STS và Bedrock…"
+  },
+  {
+    "en": "Reading ~/.aws/config…",
+    "zh": "Đang đọc ~/.aws/config…"
+  },
+  {
+    "en": "Sending token request to endpoint:",
+    "zh": "Gửi yêu cầu mã thông báo đến điểm cuối:"
+  },
+  {
+    "en": "Sending ping with timeout",
+    "zh": "Gửi ping khi hết thời gian chờ"
+  },
+  {
+    "en": "Sending SIGINT to MCP server process",
+    "zh": "Gửi SIGINT tới quy trình máy chủ MCP"
+  },
+  {
+    "en": "Fetching web page",
+    "zh": "Đang tìm nạp trang web"
+  },
+  {
+    "en": "Teleporting session…",
+    "zh": "Phiên dịch chuyển…"
+  },
+  {
+    "en": "Teleport failed:",
+    "zh": "Dịch chuyển không thành công:"
+  },
+  {
+    "en": "Searching with Claude…",
+    "zh": "Đang tìm kiếm với Claude…"
+  },
+  {
+    "en": "Searching…",
+    "zh": "Đang tìm kiếm…"
+  },
+  {
+    "en": "Opening in Claude Desktop…",
+    "zh": "Đang mở trong Claude Desktop…"
+  },
+  {
+    "en": "Opening Claude Desktop…",
+    "zh": "Đang mở Claude Desktop…"
+  },
+  {
+    "en": "Opening pull request page",
+    "zh": "Đang mở trang yêu cầu kéo"
+  },
+  {
+    "en": "Opening your options…",
+    "zh": "Đang mở các tùy chọn của bạn…"
+  },
+  {
+    "en": "Let's get started.",
+    "zh": "Hãy bắt đầu."
+  },
+  {
+    "en": "All powered up",
+    "zh": "Tất cả đã được cấp nguồn"
+  },
+  {
+    "en": "Please wait…",
+    "zh": "Vui lòng chờ…"
+  },
+  {
+    "en": "to share detailed feedback anytime.",
+    "zh": "để chia sẻ phản hồi chi tiết bất cứ lúc nào."
+  },
+  {
+    "en": "Sharing transcript",
+    "zh": "Chia sẻ bản ghi"
+  },
+  {
+    "en": "Completed task",
+    "zh": "Nhiệm vụ đã hoàn thành"
+  },
+  {
+    "en": "Waiting for task",
+    "zh": "Đang chờ nhiệm vụ"
+  },
+  {
+    "en": "Remote agent launched",
+    "zh": "Đã khởi chạy đại lý từ xa"
+  },
+  {
+    "en": "Backgrounded agent",
+    "zh": "Tác nhân nền tảng"
+  },
+  {
+    "en": "Background tasks",
+    "zh": "Tác vụ nền"
+  },
+  {
+    "en": "view tasks",
+    "zh": "xem nhiệm vụ"
+  },
+  {
+    "en": "stop agents",
+    "zh": "dừng đại lý"
+  },
+  {
+    "en": "stop all agents",
+    "zh": "dừng tất cả các đại lý"
+  },
+  {
+    "en": "Active days:",
+    "zh": "Những ngày hoạt động:"
+  },
+  {
+    "en": "Most active day:",
+    "zh": "Ngày năng động nhất:"
+  },
+  {
+    "en": "Longest session:",
+    "zh": "Phiên dài nhất:"
+  },
+  {
+    "en": "Longest streak:",
+    "zh": "Chuỗi dài nhất:"
+  },
+  {
+    "en": "Current streak:",
+    "zh": "Chuỗi hiện tại:"
+  },
+  {
+    "en": "Shot distribution",
+    "zh": "Phân phối cú đánh"
+  },
+  {
+    "en": "Total tokens:",
+    "zh": "Tổng số token:"
+  },
+  {
+    "en": "Free space:",
+    "zh": "Không gian trống:"
+  },
+  {
+    "en": "Favorite model:",
+    "zh": "Mẫu yêu thích:"
+  },
+  {
+    "en": "Currently pinned:",
+    "zh": "Hiện đang được ghim:"
+  },
+  {
+    "en": "Currently using:",
+    "zh": "Hiện đang sử dụng:"
+  },
+  {
+    "en": "Currently using",
+    "zh": "Hiện đang sử dụng"
+  },
+  {
+    "en": "Latest available:",
+    "zh": "Mới nhất có sẵn:"
+  },
+  {
+    "en": "files changed",
+    "zh": "tập tin đã thay đổi"
+  },
+  {
+    "en": "e.g., Help me write unit tests for my code...",
+    "zh": "ví dụ: Giúp tôi viết bài kiểm tra đơn vị cho mã của tôi..."
+  },
+  {
+    "en": "e.g. Has Claude completed all requested tasks?",
+    "zh": "ví dụ. Claude đã hoàn thành mọi nhiệm vụ được yêu cầu chưa?"
+  },
+  {
+    "en": "e.g., use this agent after you're done writing code...",
+    "zh": "ví dụ: sử dụng tác nhân này sau khi bạn viết xong mã..."
+  },
+  {
+    "en": "e.g., test-runner, tech-lead, etc",
+    "zh": "ví dụ: người chạy thử, trưởng nhóm công nghệ, v.v."
+  },
+  {
+    "en": "Returned to",
+    "zh": "Đã quay lại"
+  },
+  {
+    "en": "Updated cell",
+    "zh": "Ô đã cập nhật"
+  },
+  {
+    "en": "Listed directory",
+    "zh": "Thư mục được liệt kê"
+  },
+  {
+    "en": "Referenced file",
+    "zh": "Tệp được tham chiếu"
+  },
+  {
+    "en": "Referenced PDF",
+    "zh": "PDF được tham chiếu"
+  },
+  {
+    "en": "Opened changes in",
+    "zh": "Đã mở các thay đổi trong"
+  },
+  {
+    "en": "Enter to continue ·",
+    "zh": "Nhập để tiếp tục ·"
+  },
+  {
+    "en": "Enter to select ·",
+    "zh": "Nhập để chọn ·"
+  },
+  {
+    "en": "Enter to continue",
+    "zh": "Nhập để tiếp tục"
+  },
+  {
+    "en": "Tab to switch focus",
+    "zh": "Tab để chuyển tiêu điểm"
+  },
+  {
+    "en": "toggle selection",
+    "zh": "chuyển đổi lựa chọn"
+  },
+  {
+    "en": "toggle branch",
+    "zh": "chuyển nhánh"
+  },
+  {
+    "en": "mark done",
+    "zh": "đánh dấu xong"
+  },
+  {
+    "en": "open in editor",
+    "zh": "mở trong trình soạn thảo"
+  },
+  {
+    "en": "expand history",
+    "zh": "mở rộng lịch sử"
+  },
+  {
+    "en": "Type to filter",
+    "zh": "Nhập để lọc"
+  },
+  {
+    "en": "Type to search",
+    "zh": "Nhập để tìm kiếm"
+  },
+  {
+    "en": "type to search",
+    "zh": "gõ để tìm kiếm"
+  },
+  {
+    "en": "Type to Search",
+    "zh": "Nhập để tìm kiếm"
+  },
+  {
+    "en": "Type to enter text",
+    "zh": "Type để nhập văn bản"
+  },
+  {
+    "en": "Search settings…",
+    "zh": "Cài đặt tìm kiếm…"
+  },
+  {
+    "en": "search history",
+    "zh": "lịch sử tìm kiếm"
+  },
+  {
+    "en": "apply changes",
+    "zh": "áp dụng thay đổi"
+  },
+  {
+    "en": "confirm and save",
+    "zh": "xác nhận và lưu"
+  },
+  {
+    "en": "Review your answers",
+    "zh": "Xem lại câu trả lời của bạn"
+  },
+  {
+    "en": "Enter filename:",
+    "zh": "Nhập tên tập tin:"
+  },
+  {
+    "en": "Enter marketplace source:",
+    "zh": "Nhập nguồn thị trường:"
+  },
+  {
+    "en": "Enter new session name",
+    "zh": "Nhập tên phiên mới"
+  },
+  {
+    "en": "Choose location",
+    "zh": "Chọn vị trí"
+  },
+  {
+    "en": "Select tools",
+    "zh": "Chọn công cụ"
+  },
+  {
+    "en": "Browse default commands:",
+    "zh": "Duyệt các lệnh mặc định:"
+  },
+  {
+    "en": "Browse custom commands:",
+    "zh": "Duyệt các lệnh tùy chỉnh:"
+  },
+  {
+    "en": "Creation method",
+    "zh": "Phương pháp tạo"
+  },
+  {
+    "en": "Preferred output style",
+    "zh": "Kiểu đầu ra ưa thích"
+  },
+  {
+    "en": "Status message:",
+    "zh": "Thông báo trạng thái:"
+  },
+  {
+    "en": "Current setting:",
+    "zh": "Cài đặt hiện tại:"
+  },
+  {
+    "en": "Default value used when the user provides nothing",
+    "zh": "Giá trị mặc định được sử dụng khi người dùng không cung cấp gì"
+  },
+  {
+    "en": "Configure agent memory",
+    "zh": "Định cấu hình bộ nhớ tác nhân"
+  },
+  {
+    "en": "Add directory to workspace",
+    "zh": "Thêm thư mục vào không gian làm việc"
+  },
+  {
+    "en": "Delete this hook",
+    "zh": "Xóa móc này"
+  },
+  {
+    "en": "Delete hook",
+    "zh": "Xóa móc"
+  },
+  {
+    "en": "add hook",
+    "zh": "thêm móc"
+  },
+  {
+    "en": "update hook",
+    "zh": "móc cập nhật"
+  },
+  {
+    "en": "plugin - Manage installed plugins",
+    "zh": "plugin - Quản lý các plugin đã cài đặt"
+  },
+  {
+    "en": "Plugin Recommendation",
+    "zh": "Đề xuất plugin"
+  },
+  {
+    "en": "LSP Plugin Recommendation",
+    "zh": "Khuyến nghị về plugin LSP"
+  },
+  {
+    "en": "Advisor disabled",
+    "zh": "Đã tắt cố vấn"
+  },
+  {
+    "en": "Advisor Tool",
+    "zh": "Công cụ cố vấn"
+  },
+  {
+    "en": "Advisor model for the server-side advisor tool.",
+    "zh": "Mô hình cố vấn cho công cụ cố vấn phía máy chủ."
+  },
+  {
+    "en": "Agent MCP",
+    "zh": "Đặc vụ MCP"
+  },
+  {
+    "en": "active agent",
+    "zh": "đại lý hoạt động"
+  },
+  {
+    "en": "active shell",
+    "zh": "vỏ hoạt động"
+  },
+  {
+    "en": "Remote Control",
+    "zh": "Điều khiển từ xa"
+  },
+  {
+    "en": "Disconnect this session",
+    "zh": "Ngắt kết nối phiên này"
+  },
+  {
+    "en": "Reconnect extension",
+    "zh": "Kết nối lại tiện ích mở rộng"
+  },
+  {
+    "en": "Ultrareview billing",
+    "zh": "Thanh toán siêu xem xét"
+  },
+  {
+    "en": "Autofix PR",
+    "zh": "Tự động sửa PR"
+  },
+  {
+    "en": "to switch model",
+    "zh": "chuyển đổi mô hình"
+  },
+  {
+    "en": "to toggle fast mode",
+    "zh": "để chuyển đổi chế độ nhanh"
+  },
+  {
+    "en": "to toggle thinking",
+    "zh": "chuyển đổi suy nghĩ"
+  },
+  {
+    "en": "to toggle tasks",
+    "zh": "để chuyển đổi nhiệm vụ"
+  },
+  {
+    "en": "to connect.",
+    "zh": "để kết nối."
+  },
+  {
+    "en": "to undo",
+    "zh": "hoàn tác"
+  },
+  {
+    "en": "to view",
+    "zh": "để xem"
+  },
+  {
+    "en": "to save,",
+    "zh": "để tiết kiệm,"
+  },
+  {
+    "en": "to speak",
+    "zh": "nói chuyện"
+  },
+  {
+    "en": "to toggle",
+    "zh": "chuyển đổi"
+  },
+  {
+    "en": "more below",
+    "zh": "thêm bên dưới"
+  },
+  {
+    "en": "more…",
+    "zh": "hơn…"
+  },
+  {
+    "en": "all projects",
+    "zh": "tất cả các dự án"
+  },
+  {
+    "en": "all worktrees",
+    "zh": "tất cả các cây làm việc"
+  },
+  {
+    "en": "reject all",
+    "zh": "từ chối tất cả"
+  },
+  {
+    "en": "Permissions:",
+    "zh": "Quyền:"
+  },
+  {
+    "en": "Network Restrictions",
+    "zh": "Hạn chế mạng"
+  },
+  {
+    "en": "Network Access",
+    "zh": "Truy cập mạng"
+  },
+  {
+    "en": "Strict sandbox mode",
+    "zh": "Chế độ hộp cát nghiêm ngặt"
+  },
+  {
+    "en": "Configuration Error",
+    "zh": "Lỗi cấu hình"
+  },
+  {
+    "en": "Setup Warnings",
+    "zh": "Cảnh báo cài đặt"
+  },
+  {
+    "en": "Contains warnings",
+    "zh": "Chứa cảnh báo"
+  },
+  {
+    "en": "Missing dependencies",
+    "zh": "Thiếu phần phụ thuộc"
+  },
+  {
+    "en": "Auto-compact window reset to model default",
+    "zh": "Tự động thu gọn cửa sổ đặt lại về mặc định của mô hình"
+  },
+  {
+    "en": "Auto-registered claude-cli:// deep link protocol handler",
+    "zh": "Trình xử lý giao thức liên kết sâu claude-cli:// được đăng ký tự động"
+  },
+  {
+    "en": "WARNING: Claude Code running in 跳过权限检查 mode",
+    "zh": "CẢNH BÁO: Mã Claude đang chạy ở chế độ 跳过权限检查"
+  },
+  {
+    "en": "WARNING: Failed to turn on autofix for this PR",
+    "zh": "CẢNH BÁO: Không thể bật tính năng tự động sửa lỗi cho PR này"
+  },
+  {
+    "en": "WARNING:",
+    "zh": "CẢNH BÁO:"
+  },
+  {
+    "en": "You've hit your fast limit",
+    "zh": "Bạn đã đạt đến giới hạn nhanh của mình"
+  },
+  {
+    "en": "You've used",
+    "zh": "Bạn đã sử dụng"
+  },
+  {
+    "en": "You can either:",
+    "zh": "Bạn có thể:"
+  },
+  {
+    "en": "Sent a message to",
+    "zh": "Đã gửi tin nhắn đến"
+  },
+  {
+    "en": "Flagged on",
+    "zh": "Được gắn cờ trên"
+  },
+  {
+    "en": "again to exit",
+    "zh": "một lần nữa để thoát"
+  },
+  {
+    "en": "New here? Run",
+    "zh": "Mới ở đây à? Chạy"
+  },
+  {
+    "en": "For more help:",
+    "zh": "Để được trợ giúp thêm:"
+  },
+  {
+    "en": "For more info, use",
+    "zh": "Để biết thêm thông tin, hãy sử dụng"
+  },
+  {
+    "en": "For more details see:",
+    "zh": "Để biết thêm chi tiết xem:"
+  },
+  {
+    "en": "run /terminal-setup",
+    "zh": "chạy /thiết lập thiết bị đầu cuối"
+  },
+  {
+    "en": "From your shell:",
+    "zh": "Từ vỏ của bạn:"
+  },
+  {
+    "en": "unrecognized:",
+    "zh": "không được công nhận:"
+  },
+  {
+    "en": "Unrecognized:",
+    "zh": "Không được công nhận:"
+  },
+  {
+    "en": "Screen Recording:",
+    "zh": "Ghi màn hình:"
+  },
+  {
+    "en": "Hover info",
+    "zh": "Thông tin di chuột"
+  },
+  {
+    "en": "OAuth error:",
+    "zh": "Lỗi OAuth:"
+  },
+  {
+    "en": "Task #",
+    "zh": "Nhiệm vụ #"
+  },
+  {
+    "en": "Enter to",
+    "zh": "Nhập vào"
+  },
+  {
+    "en": "Never for",
+    "zh": "Không bao giờ cho"
+  },
+  {
+    "en": "Session: ",
+    "zh": "Phiên họp: "
+  },
+  {
+    "en": "Hooks: ",
+    "zh": "Móc: "
+  },
+  {
+    "en": "Agents: ",
+    "zh": "Đại lý: "
+  },
+  {
+    "en": "Skills: ",
+    "zh": "Kỹ năng: "
+  },
+  {
+    "en": "Commands: ",
+    "zh": "Lệnh: "
+  },
+  {
+    "en": "Edit file",
+    "zh": "Chỉnh sửa tập tin"
+  },
+  {
+    "en": "Enter",
+    "zh": "Đi vào"
+  },
+  {
+    "en": "PR #",
+    "zh": "PR #"
+  },
+  {
+    "en": "URL",
+    "zh": "URL"
+  },
+  {
+    "en": "• Updated",
+    "zh": "• Đã cập nhật"
+  },
+  {
+    "en": "• Remove",
+    "zh": "• Di dời"
+  },
+  {
+    "en": "• Update",
+    "zh": "• Cập nhật"
+  },
+  {
+    "en": "• Agents:",
+    "zh": "• Đại lý:"
+  },
+  {
+    "en": "• Hooks:",
+    "zh": "• Móc:"
+  },
+  {
+    "en": "• Skills:",
+    "zh": "• Kỹ năng:"
+  },
+  {
+    "en": "• Commands:",
+    "zh": "• Lệnh:"
+  },
+  {
+    "en": "• Cmd+Esc",
+    "zh": "• Cmd+Esc"
+  },
+  {
+    "en": "∴ Thinking",
+    "zh": "∴ Suy nghĩ"
+  },
+  {
+    "en": "⧉ Selected",
+    "zh": "⧉ Đã chọn"
+  },
+  {
+    "en": "⧉ In",
+    "zh": "⧉ Trong"
+  },
+  {
+    "en": "←/→ source",
+    "zh": "←/→ nguồn"
+  },
+  {
+    "en": "↑/↓ select",
+    "zh": "↑/↓ chọn"
+  },
+  {
+    "en": "Plan → Edit → Execute",
+    "zh": "Lập kế hoạch → Chỉnh sửa → Thực hiện"
+  }
+]
