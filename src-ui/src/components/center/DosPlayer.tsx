@@ -528,8 +528,9 @@ export function DosPlayer({ sessionId }: { sessionId: string }) {
   }, [activeGame, state.activeTerminalId, state.terminals, dispatch, sessionId]);
 
   useEffect(() => {
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    // Capture phase: must fire before xterm.js stops propagation when terminal is focused
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
   }, [handleKeyDown]);
 
 
