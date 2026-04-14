@@ -184,12 +184,13 @@ Read-Host "  All set! Press Enter to open the menu" | Out-Null
 
 # ── Language Pack Helpers ─────────────────────────────────────────────────────
 
-$LANG_PACK_CF_URL     = "https://coffeecli.com/lang-packs"
-$LANG_PACK_GITHUB_URL = "https://raw.githubusercontent.com/edison7009/Coffee-CLI/main/language-packs"
+$LANG_PACK_CF_URL       = "https://coffeecli.com/lang-packs"
+$LANG_PACK_JSDELIVR_URL = "https://cdn.jsdelivr.net/gh/edison7009/Coffee-CLI@main/language-packs"
+$LANG_PACK_GITHUB_URL   = "https://raw.githubusercontent.com/edison7009/Coffee-CLI/main/language-packs"
 
 function Invoke-LangScript($relPath) {
     $errors = @()
-    foreach ($base in @($LANG_PACK_CF_URL, $LANG_PACK_GITHUB_URL)) {
+    foreach ($base in @($LANG_PACK_CF_URL, $LANG_PACK_JSDELIVR_URL, $LANG_PACK_GITHUB_URL)) {
         $url = "$base/$relPath"
         try {
             $resp = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 30 -ErrorAction Stop
