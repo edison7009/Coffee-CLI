@@ -21,17 +21,28 @@ import './TierTerminal.css';
 
 // Installer scripts are fetched at runtime from CF (hot-updatable, no release needed).
 // Falls back to GitHub raw if CF is unreachable.
-const INSTALLER_CF     = 'https://coffeecli.com/installer';
-const INSTALLER_GITHUB = 'https://raw.githubusercontent.com/edison7009/Coffee-CLI/main/scripts';
+// Installer scripts live in Web-Home/ and are served directly from coffeecli.com.
+// Falls back to GitHub raw if the website is unreachable.
+const INSTALLER_URLS: Record<string, string[]> = {
+  'agent-tools-installer.ps1': [
+    'https://coffeecli.com/agent-tools-installer.ps1',
+    'https://raw.githubusercontent.com/edison7009/Coffee-CLI/main/scripts/agent-tools-installer.ps1',
+  ],
+  'agent-tools-installer.sh': [
+    'https://coffeecli.com/agent-tools-installer.sh',
+    'https://raw.githubusercontent.com/edison7009/Coffee-CLI/main/scripts/agent-tools-installer.sh',
+  ],
+};
 
 async function fetchInstallerScript(filename: string): Promise<string> {
-  for (const base of [INSTALLER_CF, INSTALLER_GITHUB]) {
+  const urls = INSTALLER_URLS[filename] ?? [];
+  for (const url of urls) {
     try {
-      const res = await fetch(`${base}/${filename}`, { cache: 'no-store' });
+      const res = await fetch(url, { cache: 'no-store' });
       if (res.ok) return await res.text();
     } catch { /* try next */ }
   }
-  throw new Error(`Failed to fetch installer script from both Cloudflare and GitHub.`);
+  throw new Error(`Failed to fetch installer script: ${filename}`);
 }
 
 // Sessions being detached to a new window — skip kill on unmount
