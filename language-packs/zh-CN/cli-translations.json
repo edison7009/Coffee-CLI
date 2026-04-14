@@ -5850,5 +5850,41 @@
   {
     "en": "Plan → Edit → Execute",
     "zh": "计划 → 编辑 → 执行"
+  },
+  {
+    "en": "Welcome back!",
+    "zh": "欢迎回来！"
+  },
+  {
+    "en": "Tips for getting started",
+    "zh": "快速入门提示"
+  },
+  {
+    "en": "Recent activity",
+    "zh": "最近活动"
+  },
+  {
+    "en": "No recent activity",
+    "zh": "暂无最近活动"
+  },
+  {
+    "en": "Run /init to create a CLAUDE.md file with instructions for Claude",
+    "zh": "运行 /init 为 Claude 创建包含说明的 CLAUDE.md 文件"
+  },
+  {
+    "en": "Note: You have launched claude in your home directory. For the best experience, navigate to a project directory first.",
+    "zh": "提示：你在主目录启动了 claude。建议先切换到项目目录以获得最佳体验。"
+  },
+  {
+    "en": "Add a new working directory",
+    "zh": "添加新的工作目录"
+  },
+  {
+    "en": "Manage agent configurations",
+    "zh": "管理 Agent 配置"
+  },
+  {
+    "en": "Open a specific file in your editor",
+    "zh": "在编辑器中打开指定文件"
   }
 ]
