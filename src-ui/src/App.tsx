@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useAppState } from './store/app-state';
-import { retryInvoke, commands } from './tauri';
+import { retryInvoke } from './tauri';
 import { TitleBar } from './components/common/TitleBar';
 import { Explorer } from './components/left/Explorer';
 import { CenterPanel } from './components/center/CenterPanel';
@@ -10,7 +10,7 @@ import { RightPanel } from './components/right/Compiler';
 import './styles/global.css';
 
 export function App() {
-  const { state, dispatch } = useAppState();
+  const { state } = useAppState();
 
   // Apply theme + shape on mount and change — must sync with the inline script in index.html
   useEffect(() => {
@@ -28,13 +28,7 @@ export function App() {
     const timer = setTimeout(async () => {
       retryInvoke();
 
-      try {
-        const model = await commands.loadModel();
-        dispatch({ type: 'SET_MODEL', model });
-      } catch (e) {
-        console.warn('[CC] loadModel failed:', e);
-      }
-    }, 100);
+}, 100);
     return () => clearTimeout(timer);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
