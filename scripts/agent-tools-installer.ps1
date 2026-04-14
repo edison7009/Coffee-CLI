@@ -182,8 +182,6 @@ Read-Host "  All set! Press Enter to open the menu" | Out-Null
 
 # ── Menu Loop ─────────────────────────────────────────────────────────────────
 
-$registryArgs = if ($isChina) { @("--registry=https://registry.npmmirror.com") } else { @() }
-
 # ── Language Pack Helpers ─────────────────────────────────────────────────────
 
 $LANG_PACK_CF_URL     = "https://coffeecli.com/lang-packs"
@@ -392,17 +390,17 @@ try {
                 switch -Wildcard ($act) {
                     "i-claude" {
                         Write-Host "`n  Installing Claude Code...`n" -ForegroundColor Cyan
-                        $ok = Run-Install "Claude Code" { npm install -g @anthropic-ai/claude-code @registryArgs }
+                        $ok = Run-Install "Claude Code" { npm install -g @anthropic-ai/claude-code }
                         if ($ok) { Show-Success "Claude Code" "https://claude.ai/code" "claude --version" }
                     }
                     "i-codex" {
                         Write-Host "`n  Installing OpenAI Codex CLI...`n" -ForegroundColor Cyan
-                        $ok = Run-Install "OpenAI Codex" { npm install -g @openai/codex@latest @registryArgs }
+                        $ok = Run-Install "OpenAI Codex" { npm install -g @openai/codex@latest }
                         if ($ok) { Show-Success "OpenAI Codex CLI" "https://github.com/openai/codex" "codex --version" }
                     }
                     "i-opencode" {
                         Write-Host "`n  Installing OpenCode CLI...`n" -ForegroundColor Cyan
-                        $ok = Run-Install "OpenCode" { npm install -g opencode-ai@latest @registryArgs }
+                        $ok = Run-Install "OpenCode" { npm install -g opencode-ai@latest }
                         if ($ok) { Show-Success "OpenCode CLI" "https://opencode.ai" "opencode --version" }
                     }
                     "i-hermes" {
