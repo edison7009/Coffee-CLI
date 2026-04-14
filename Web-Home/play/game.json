@@ -4,7 +4,7 @@
   "comment": "Each catalog key is a BCP-47 language tag (or 'default' as fallback). Client picks catalogs[lang] -> catalogs[lang prefix] -> catalogs['default']. All 4 games appear in every language.",
   "game_configs": {
     "doom": {
-      "dosbox_conf": "[sdl]\nautolock=false\n\n[dosbox]\nmachine=vga\n\n[cpu]\ncore=auto\ncputype=auto\ncycles=fixed 50000\n\n[mixer]\nnosound=false\nrate=44100\nblocksize=1024\nprebuffer=20\n\n[sblaster]\nsbtype=sb16\nsbbase=220\nirq=7\ndma=1\nhdma=5\nsbmixer=true\noplmode=auto\noplemu=default\noplrate=44100\n\n[autoexec]\necho off\nSET BLASTER=A220 I7 D1 H5 T6\nmount c .\nc:\nDOOM.EXE"
+      "dosbox_conf": "[sdl]\nautolock=false\n\n[dosbox]\nmachine=vga\n\n[cpu]\ncore=auto\ncputype=auto\ncycles=fixed 50000\n\n[mixer]\nnosound=false\nrate=44100\nblocksize=1024\nprebuffer=20\n\n[sblaster]\nsbtype=sb16\nsbbase=220\nirq=5\ndma=1\nhdma=5\nsbmixer=true\noplmode=auto\noplemu=default\noplrate=44100\n\n[autoexec]\necho off\nSET BLASTER=A220 I5 D1 H5 T6\nmount c .\nc:\nDOOM.EXE"
     },
     "prince-of-persia": {
       "dosbox_conf": "[sdl]\nautolock=false\n\n[dosbox]\nmachine=svga_s3\nmemsize=16\n\n[cpu]\ncore=auto\ncputype=auto\ncycles=auto\n\n[mixer]\nnosound=false\nrate=44100\nblocksize=1024\nprebuffer=20\n\n[autoexec]\necho off\nmount c .\nc:\nprince"
