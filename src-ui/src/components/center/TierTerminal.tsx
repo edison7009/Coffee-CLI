@@ -85,7 +85,7 @@ function TierTerminalImpl({
 
   const toolLabel: Record<string, string> = {
     claude: 'Claude Code',
-    codex: 'Codex CLI', installer: 'Coffee Installer', hermes: 'Hermes', opencode: 'OpenCode',
+    codex: 'Codex CLI', qwen: 'Qwen Code', installer: 'Coffee Installer', hermes: 'Hermes', opencode: 'OpenCode',
     remote: t('tool.remote'), terminal: t('tool.terminal'),
   };
 
@@ -99,11 +99,21 @@ function TierTerminalImpl({
 
     const isDark = theme !== 'light';
     const isLinux = navigator.userAgent.toLowerCase().includes('linux');
+    const isMac = navigator.userAgent.toLowerCase().includes('mac');
+    // Platform-specific font stacks — each uses the OS's best native monospace first:
+    // Windows: Cascadia Mono (ships with Windows Terminal/Win11) → Consolas (built-in since Vista)
+    // macOS:   ui-monospace (CSS generic → SF Mono via WebView, most reliable) → Menlo → Monaco
+    // Linux:   monospace (OS resolves to Noto/DejaVu/Ubuntu Mono, preserves correct glyph metrics)
+    const fontFamily = isLinux
+      ? "'JetBrains Mono', 'Fira Code', 'Hack', monospace"
+      : isMac
+        ? "ui-monospace, Menlo, Monaco, 'Courier New', monospace"
+        : "'Cascadia Mono', 'Cascadia Code', Consolas, 'Courier New', monospace";
     const term = new Terminal({
-      fontFamily: "'Cascadia Mono', 'Cascadia Code', 'SF Mono', Menlo, Monaco, Consolas, 'Ubuntu Mono', 'Noto Mono', 'DejaVu Sans Mono', 'Liberation Mono', 'Courier New', monospace",
+      fontFamily,
       fontSize: 14,
       lineHeight: 1.3,
-      letterSpacing: isLinux ? -0.5 : 0,
+      letterSpacing: 0,
       fontWeight: '400',
       customGlyphs: true,
       cursorStyle: 'bar' as const,
