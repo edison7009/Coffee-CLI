@@ -1,7 +1,7 @@
 {
   "version": 2,
   "updated": "2026-04-14",
-  "comment": "Each catalog key is a BCP-47 language tag (or 'default' as fallback). Client picks catalogs[lang] -> catalogs[lang prefix] -> catalogs['default'].",
+  "comment": "Each catalog key is a BCP-47 language tag (or 'default' as fallback). Client picks catalogs[lang] -> catalogs[lang prefix] -> catalogs['default']. All 4 games appear in every language.",
   "catalogs": {
     "zh-CN": [
       {
@@ -77,6 +77,20 @@
         "title": "プリンス・オブ・ペルシャ",
         "icon": "https://coffeecli.com/play/icons/prince-of-persia.png",
         "download": "https://coffeecli.com/play/prince-of-persia.jsdos"
+      },
+      {
+        "id": "pal",
+        "file": "pal.jsdos",
+        "title": "Chinese Paladin",
+        "icon": "https://coffeecli.com/play/icons/pal.jpg",
+        "download": "https://coffeecli.com/play/pal.jsdos"
+      },
+      {
+        "id": "stardom",
+        "file": "stardom.jsdos",
+        "title": "Stardom",
+        "icon": "https://coffeecli.com/play/icons/stardom.webp",
+        "download": "https://coffeecli.com/play/stardom.jsdos"
       }
     ],
     "ko": [
@@ -93,6 +107,20 @@
         "title": "페르시아의 왕자",
         "icon": "https://coffeecli.com/play/icons/prince-of-persia.png",
         "download": "https://coffeecli.com/play/prince-of-persia.jsdos"
+      },
+      {
+        "id": "pal",
+        "file": "pal.jsdos",
+        "title": "Chinese Paladin",
+        "icon": "https://coffeecli.com/play/icons/pal.jpg",
+        "download": "https://coffeecli.com/play/pal.jsdos"
+      },
+      {
+        "id": "stardom",
+        "file": "stardom.jsdos",
+        "title": "Stardom",
+        "icon": "https://coffeecli.com/play/icons/stardom.webp",
+        "download": "https://coffeecli.com/play/stardom.jsdos"
       }
     ],
     "default": [
@@ -109,6 +137,20 @@
         "title": "Prince of Persia",
         "icon": "https://coffeecli.com/play/icons/prince-of-persia.png",
         "download": "https://coffeecli.com/play/prince-of-persia.jsdos"
+      },
+      {
+        "id": "pal",
+        "file": "pal.jsdos",
+        "title": "Chinese Paladin",
+        "icon": "https://coffeecli.com/play/icons/pal.jpg",
+        "download": "https://coffeecli.com/play/pal.jsdos"
+      },
+      {
+        "id": "stardom",
+        "file": "stardom.jsdos",
+        "title": "Stardom",
+        "icon": "https://coffeecli.com/play/icons/stardom.webp",
+        "download": "https://coffeecli.com/play/stardom.jsdos"
       }
     ]
   }
