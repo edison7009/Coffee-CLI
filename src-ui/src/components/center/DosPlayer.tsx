@@ -116,7 +116,7 @@ declare const emulators: any;
 export function DosPlayer({ sessionId }: { sessionId: string }) {
   const { state, dispatch } = useAppState();
   const [games, setGames] = useState<GameBundle[]>([]);
-  const [activeGame, setActiveGame] = useState<{name: string, url: string, dosbox_conf?: string} | null>(null);
+  const [activeGame, setActiveGame] = useState<{name: string, url: string, title?: string, dosbox_conf?: string} | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -124,7 +124,7 @@ export function DosPlayer({ sessionId }: { sessionId: string }) {
   const ciRef = useRef<any>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const cleanupRef = useRef<(() => void) | null>(null);
-  const activeGameRef = useRef<{name: string, url: string, dosbox_conf?: string} | null>(null);
+  const activeGameRef = useRef<{name: string, url: string, title?: string, dosbox_conf?: string} | null>(null);
   activeGameRef.current = activeGame;
 
   // ── Startup splash ──
@@ -534,7 +534,7 @@ export function DosPlayer({ sessionId }: { sessionId: string }) {
 
 
   const handleLaunch = (game: GameBundle) => {
-    setActiveGame({ name: game.name, url: game.path, dosbox_conf: game.dosbox_conf });
+    setActiveGame({ name: game.name, url: game.path, title: game.title, dosbox_conf: game.dosbox_conf });
     setError(null);
     firstFrameRef.current = false;
     splashStartRef.current = Date.now();
@@ -656,12 +656,7 @@ export function DosPlayer({ sessionId }: { sessionId: string }) {
             <span
               className="splash-label"
               style={state.currentLang.startsWith('zh') ? { fontStyle: 'normal', fontWeight: 600, letterSpacing: '0.08em' } : undefined}
-            >{(() => {
-              if (activeGame) {
-                return getGameInfo(activeGame.name).title;
-              }
-              return 'Loading...';
-            })()}</span>
+            >{activeGame?.title ?? getGameInfo(activeGame?.name ?? '').title}</span>
             <div className="splash-dots">
               <span className="splash-dot" />
               <span className="splash-dot" />
