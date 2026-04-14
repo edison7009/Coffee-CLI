@@ -636,14 +636,16 @@ export function CenterPanel() {
                   if (!showArcadeGames) {
                     setShowArcadeGames(true);
                     if (isTauri) {
-                      Promise.all([commands.listJsdosBundles(), fetchGameCatalog(state.currentLang)])
-                        .then(([localBundles, catalog]: [any[], RemoteGameEntry[]]) => {
+                      Promise.allSettled([commands.listJsdosBundles(), fetchGameCatalog(state.currentLang)])
+                        .then(([bundlesResult, catalogResult]) => {
+                          const localBundles: any[] = bundlesResult.status === 'fulfilled' ? bundlesResult.value : [];
+                          const catalog: RemoteGameEntry[] = catalogResult.status === 'fulfilled' ? catalogResult.value : [];
                           const games = catalog.map(entry => {
                             const cached = localBundles.find((b: any) => b.name.toLowerCase() === entry.file.toLowerCase());
                             return { name: entry.file, path: cached ? cached.path : entry.download, size: cached ? cached.size : 0, icon: entry.icon, title: entry.title };
                           });
                           setArcadeGames(games);
-                        }).catch(() => {});
+                        });
                     }
                   } else {
                     setShowArcadeGames(false);

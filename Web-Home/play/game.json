@@ -5,6 +5,20 @@
   "catalogs": {
     "zh-CN": [
       {
+        "id": "doom",
+        "file": "doom.jsdos",
+        "title": "毁灭战士",
+        "icon": "https://coffeecli.com/play/icons/doom.png",
+        "download": "https://coffeecli.com/play/doom.jsdos"
+      },
+      {
+        "id": "prince-of-persia",
+        "file": "prince-of-persia.jsdos",
+        "title": "波斯王子",
+        "icon": "https://coffeecli.com/play/icons/prince-of-persia.png",
+        "download": "https://coffeecli.com/play/prince-of-persia.jsdos"
+      },
+      {
         "id": "pal",
         "file": "pal.jsdos",
         "title": "仙剑奇侠传",
@@ -21,6 +35,20 @@
     ],
     "zh-TW": [
       {
+        "id": "doom",
+        "file": "doom.jsdos",
+        "title": "毀滅戰士",
+        "icon": "https://coffeecli.com/play/icons/doom.png",
+        "download": "https://coffeecli.com/play/doom.jsdos"
+      },
+      {
+        "id": "prince-of-persia",
+        "file": "prince-of-persia.jsdos",
+        "title": "波斯王子",
+        "icon": "https://coffeecli.com/play/icons/prince-of-persia.png",
+        "download": "https://coffeecli.com/play/prince-of-persia.jsdos"
+      },
+      {
         "id": "pal",
         "file": "pal.jsdos",
         "title": "仙劍奇俠傳",
@@ -35,7 +63,53 @@
         "download": "https://coffeecli.com/play/stardom.jsdos"
       }
     ],
-    "ja": [],
-    "default": []
+    "ja": [
+      {
+        "id": "doom",
+        "file": "doom.jsdos",
+        "title": "DOOM",
+        "icon": "https://coffeecli.com/play/icons/doom.png",
+        "download": "https://coffeecli.com/play/doom.jsdos"
+      },
+      {
+        "id": "prince-of-persia",
+        "file": "prince-of-persia.jsdos",
+        "title": "プリンス・オブ・ペルシャ",
+        "icon": "https://coffeecli.com/play/icons/prince-of-persia.png",
+        "download": "https://coffeecli.com/play/prince-of-persia.jsdos"
+      }
+    ],
+    "ko": [
+      {
+        "id": "doom",
+        "file": "doom.jsdos",
+        "title": "둠",
+        "icon": "https://coffeecli.com/play/icons/doom.png",
+        "download": "https://coffeecli.com/play/doom.jsdos"
+      },
+      {
+        "id": "prince-of-persia",
+        "file": "prince-of-persia.jsdos",
+        "title": "페르시아의 왕자",
+        "icon": "https://coffeecli.com/play/icons/prince-of-persia.png",
+        "download": "https://coffeecli.com/play/prince-of-persia.jsdos"
+      }
+    ],
+    "default": [
+      {
+        "id": "doom",
+        "file": "doom.jsdos",
+        "title": "DOOM",
+        "icon": "https://coffeecli.com/play/icons/doom.png",
+        "download": "https://coffeecli.com/play/doom.jsdos"
+      },
+      {
+        "id": "prince-of-persia",
+        "file": "prince-of-persia.jsdos",
+        "title": "Prince of Persia",
+        "icon": "https://coffeecli.com/play/icons/prince-of-persia.png",
+        "download": "https://coffeecli.com/play/prince-of-persia.jsdos"
+      }
+    ]
   }
 }
