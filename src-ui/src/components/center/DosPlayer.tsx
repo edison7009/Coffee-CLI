@@ -196,7 +196,7 @@ export function DosPlayer({ sessionId }: { sessionId: string }) {
         // Load bundle data: local path via IPC, remote URL via fetch
         let bundleData: Uint8Array;
         if (activeGame.url.startsWith('http')) {
-          const response = await fetch(activeGame.url);
+          const response = await fetch(activeGame.url, { cache: 'no-store' });
           if (!response.ok) throw new Error(`Failed to fetch ${activeGame.url}: ${response.status}`);
           bundleData = new Uint8Array(await response.arrayBuffer());
           
