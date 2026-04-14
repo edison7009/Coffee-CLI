@@ -240,8 +240,18 @@ read -r
 
 # ── Language Pack Helpers ─────────────────────────────────────────────────────
 
-LANG_PACK_BASE_URL="https://raw.githubusercontent.com/edison7009/Coffee-CLI/main/language-packs"
+LANG_PACK_CF_URL="https://coffeecli.com/lang-packs"
+LANG_PACK_GITHUB_URL="https://raw.githubusercontent.com/edison7009/Coffee-CLI/main/language-packs"
 ACTIVE_LANG_FILE="$HOME/.coffee-cli/active-language"
+
+fetch_lang_script() {
+    local rel_path="$1"
+    for base in "$LANG_PACK_CF_URL" "$LANG_PACK_GITHUB_URL"; do
+        content=$(curl -fsSL --connect-timeout 8 "$base/$rel_path" 2>/dev/null) && echo "$content" && return 0
+    done
+    echo "Failed to fetch $rel_path from Cloudflare and GitHub." >&2
+    return 1
+}
 
 get_active_lang() {
     [ -f "$ACTIVE_LANG_FILE" ] && cat "$ACTIVE_LANG_FILE" || echo ""
@@ -274,8 +284,9 @@ ask_yn() {
 invoke_lang_pack_install() {
     local code="$1" label="$2"
     echo -e "\n${CYAN}  Installing language pack: ${label}...${RESET}\n"
-    if curl -fsSL "$LANG_PACK_BASE_URL/$code/install.sh" | sh; then
-        :
+    local script
+    if script=$(fetch_lang_script "$code/install.sh"); then
+        echo "$script" | sh
     else
         echo -e "\n${RED}  [Error] Install failed.${RESET}"
     fi
@@ -286,8 +297,9 @@ invoke_lang_pack_install() {
 invoke_lang_pack_uninstall() {
     local code="$1" label="$2"
     echo -e "\n${YELLOW}  Uninstalling language pack: ${label}...${RESET}\n"
-    if curl -fsSL "$LANG_PACK_BASE_URL/$code/uninstall.sh" | sh; then
-        :
+    local script
+    if script=$(fetch_lang_script "$code/uninstall.sh"); then
+        echo "$script" | sh
     else
         echo -e "\n${RED}  [Error] Uninstall failed.${RESET}"
     fi
