@@ -12,8 +12,9 @@ import './DosPlayer.css';
 const SAVE_FILE_PATTERNS = [
   /^\d+\.RPG$/i,     // Paladin (Sword and Fairy)
   /^SETUP\.DAT$/i,   // Paladin Config
-  /\.SAV$/i,         // Common DOS saves
-  /\.SSS$/i          // Stardom saves
+  /\.SAV$/i,         // Common DOS saves (Prince of Persia: prince.sav)
+  /\.SSS$/i,         // Stardom saves
+  /\.DSG$/i,         // DOOM saves (DOOMSAV0.DSG ~ DOOMSAV5.DSG)
 ];
 
 const initDB = () => new Promise<IDBDatabase>((resolve, reject) => {
