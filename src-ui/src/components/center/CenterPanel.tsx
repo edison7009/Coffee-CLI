@@ -272,6 +272,21 @@ export function CenterPanel() {
     fetchGameCatalog(state.currentLang).then(setGameCatalog).catch(() => {});
   }, [state.currentLang]);
 
+  // Re-fetch arcade game list when language changes while the game page is open
+  useEffect(() => {
+    if (!showArcadeGames || !isTauri) return;
+    Promise.allSettled([commands.listJsdosBundles(), fetchGameCatalog(state.currentLang)])
+      .then(([bundlesResult, catalogResult]) => {
+        const localBundles: any[] = bundlesResult.status === 'fulfilled' ? bundlesResult.value : [];
+        const catalog: RemoteGameEntry[] = catalogResult.status === 'fulfilled' ? catalogResult.value : [];
+        const games = catalog.map(entry => {
+          const cached = localBundles.find((b: any) => b.name.toLowerCase() === entry.file.toLowerCase());
+          return { name: entry.file, path: cached ? cached.path : entry.download, size: cached ? cached.size : 0, icon: entry.icon, title: entry.title };
+        });
+        setArcadeGames(games);
+      });
+  }, [state.currentLang, showArcadeGames]);
+
   // Helper to render the correct icon and title based on tool type
   const renderTabContent = (session: typeof terminals[0], isActive: boolean) => {
     switch (session.tool) {
