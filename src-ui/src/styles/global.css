@@ -1719,6 +1719,16 @@ body {
     box-shadow: inset 0 2px 0 0 var(--accent); /* VSCode-style top accent bar */
 }
 
+/* Hide chrome flare pseudo-elements for zero-radius shapes */
+[data-shape="sharp"] .chrome-tab.active::before,
+[data-shape="sharp"] .chrome-tab.active::after,
+[data-shape="blade"] .chrome-tab.active::before,
+[data-shape="blade"] .chrome-tab.active::after,
+[data-shape="panel"] .chrome-tab.active::before,
+[data-shape="panel"] .chrome-tab.active::after {
+    display: none;
+}
+
 /* ─── Blade: left accent stripe on active tab + cards ──── */
 [data-shape="blade"] .chrome-tab.active {
     box-shadow: inset var(--shape-accent-stripe-width) 0 0 0 var(--accent);
