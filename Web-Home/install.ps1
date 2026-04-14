@@ -1,4 +1,4 @@
-# Coffee CLI — Windows Installer / Updater
+# Coffee CLI - Windows Installer / Updater
 # Usage: irm https://raw.githubusercontent.com/edison7009/Coffee-CLI/main/install/install.ps1 | iex
 
 $ErrorActionPreference = "Stop"
@@ -40,9 +40,9 @@ if ($installedVer) {
         Write-Host ""
         exit 0
     }
-    Write-Host "  Upgrading v$installedVer  →  v$latestVer ..." -ForegroundColor Yellow
+    Write-Host "  Upgrading v$installedVer -> v$latestVer ..." -ForegroundColor Yellow
 } else {
-    Write-Host "  Not installed — performing fresh install..." -ForegroundColor Gray
+    Write-Host "  Not installed - performing fresh install..." -ForegroundColor Gray
 }
 
 # Find Windows installer asset
