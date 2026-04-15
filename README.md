@@ -9,10 +9,6 @@
 </p>
 
 <p align="center">
-  <img src="screenshot/ja.png" width="100%" alt="Coffee CLI — Claude Code translated to Japanese in real time" />
-</p>
-
-<p align="center">
   <a href="#english">English</a> ·
   <a href="#简体中文">简体中文</a> ·
   <a href="#繁體中文">繁體中文</a> ·
