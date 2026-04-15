@@ -7,7 +7,8 @@
 // unrelated global state changes (agent status, other tabs' folder changes,
 // etc.) don't cascade into this component.
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebglAddon } from '@xterm/addon-webgl';
@@ -48,6 +49,68 @@ async function fetchInstallerScript(filename: string): Promise<string> {
 // Sessions being detached to a new window — skip kill on unmount
 export const detachedSessions = new Set<string>();
 
+// ─── Terminal Context Menu ────────────────────────────────────────────────────
+
+interface CtxMenu { x: number; y: number; hasSelection: boolean; }
+
+function TermContextMenu({ menu, onClose, onCopy, onPaste, onSelectAll }: {
+  menu: CtxMenu;
+  onClose: () => void;
+  onCopy: () => void;
+  onPaste: () => void;
+  onSelectAll: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const isMac = navigator.platform.toUpperCase().includes('MAC');
+  const mod = isMac ? '⌘' : 'Ctrl';
+
+  useEffect(() => {
+    const close = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    };
+    const closeKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    // Delay so the triggering mousedown doesn't immediately close the menu
+    const t = setTimeout(() => {
+      document.addEventListener('mousedown', close);
+      document.addEventListener('keydown', closeKey);
+    }, 0);
+    return () => {
+      clearTimeout(t);
+      document.removeEventListener('mousedown', close);
+      document.removeEventListener('keydown', closeKey);
+    };
+  }, [onClose]);
+
+  // Clamp to viewport so menu never overflows off-screen
+  const left = Math.min(menu.x, window.innerWidth  - 164);
+  const top  = Math.min(menu.y, window.innerHeight - 116);
+
+  return createPortal(
+    <div ref={ref} className="term-ctx-menu" style={{ left, top }}>
+      <button
+        className={`term-ctx-item${menu.hasSelection ? '' : ' disabled'}`}
+        onMouseDown={(e) => { e.preventDefault(); if (menu.hasSelection) onCopy(); }}
+      >
+        <span>Copy</span><kbd>{mod}+C</kbd>
+      </button>
+      <button
+        className="term-ctx-item"
+        onMouseDown={(e) => { e.preventDefault(); onPaste(); }}
+      >
+        <span>Paste</span><kbd>{mod}+V</kbd>
+      </button>
+      <div className="term-ctx-sep" />
+      <button
+        className="term-ctx-item"
+        onMouseDown={(e) => { e.preventDefault(); onSelectAll(); }}
+      >
+        <span>Select All</span><kbd>{mod}+A</kbd>
+      </button>
+    </div>,
+    document.body,
+  );
+}
+
 interface TierTerminalProps {
   sessionId: string;
   tool: ToolType;
@@ -80,6 +143,10 @@ function TierTerminalImpl({
   const hasOutputRef = useRef(false); // Set to true when PTY emits visible output
   const [processExited, setProcessExited] = useState(false);
   const [startFailed, setStartFailed] = useState(false);
+
+  // ── Terminal context menu ────────────────────────────────────────────────
+  const [ctxMenu, setCtxMenu] = useState<CtxMenu | null>(null);
+  const closeCtxMenu = useCallback(() => setCtxMenu(null), []);
 
   const t = useT();
 
@@ -207,15 +274,33 @@ function TierTerminalImpl({
         const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
         const cmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
 
-        // Copy: Ctrl+C / Cmd+C
+        // Copy: Ctrl+C / Cmd+C — only when text is selected (otherwise send SIGINT)
         if (cmdOrCtrl && e.code === 'KeyC') {
           if (term.hasSelection()) {
             navigator.clipboard.writeText(term.getSelection());
-            return false; // Stop xterm from handling it (prevents SIGINT)
+            return false;
           }
         }
 
+        // Paste: Ctrl+V / Cmd+V
+        if (cmdOrCtrl && e.code === 'KeyV') {
+          navigator.clipboard.readText().then(text => {
+            if (text) term.paste(text);
+          }).catch(() => {});
+          return false;
+        }
 
+        // Linux convention: Ctrl+Shift+C always copies, Ctrl+Shift+V always pastes
+        if (e.ctrlKey && e.shiftKey && e.code === 'KeyC') {
+          if (term.hasSelection()) navigator.clipboard.writeText(term.getSelection());
+          return false;
+        }
+        if (e.ctrlKey && e.shiftKey && e.code === 'KeyV') {
+          navigator.clipboard.readText().then(text => {
+            if (text) term.paste(text);
+          }).catch(() => {});
+          return false;
+        }
       }
       return true; // Let xterm handle all other keys natively
     });
@@ -483,9 +568,39 @@ function TierTerminalImpl({
   return (
     <div className="tier-terminal" style={{ background: terminalBg, position: 'relative' }}>
       {/* xterm.js: handles all rendering, input, and scrolling. */}
-      <div className="tier-xterm-wrap">
+      <div
+        className="tier-xterm-wrap"
+        onContextMenu={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setCtxMenu({ x: e.clientX, y: e.clientY, hasSelection: !!xtermRef.current?.hasSelection() });
+        }}
+      >
         <div ref={termRef} className="tier-xterm" />
       </div>
+
+      {/* Terminal right-click context menu */}
+      {ctxMenu && (
+        <TermContextMenu
+          menu={ctxMenu}
+          onClose={closeCtxMenu}
+          onCopy={() => {
+            const text = xtermRef.current?.getSelection();
+            if (text) navigator.clipboard.writeText(text).catch(() => {});
+            closeCtxMenu();
+          }}
+          onPaste={() => {
+            navigator.clipboard.readText().then(text => {
+              if (text && xtermRef.current) xtermRef.current.paste(text);
+            }).catch(() => {});
+            closeCtxMenu();
+          }}
+          onSelectAll={() => {
+            xtermRef.current?.selectAll();
+            closeCtxMenu();
+          }}
+        />
+      )}
 
       {/* Fallback UI when tool fails to launch or exits before producing output */}
       {showFallback && (

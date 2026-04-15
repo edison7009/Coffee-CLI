@@ -35,8 +35,9 @@ export function App() {
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      // Allow custom context menu inside the Explorer panel
+      // Allow custom context menu inside the Explorer panel and terminal
       if (target.closest('.panel-left')) return;
+      if (target.closest('.tier-xterm-wrap')) return;
       e.preventDefault();
     };
     document.addEventListener('contextmenu', handler);
