@@ -564,9 +564,13 @@ function refreshDemoLang() {
 function initDemoTabs() {
   const tabs = document.querySelectorAll(".demo-tab");
   const gif = document.getElementById("demo-gif");
+  const loading = document.getElementById("demo-loading");
   const title = document.getElementById("demo-title");
   const desc = document.getElementById("demo-desc");
   if (!tabs.length || !gif) return;
+
+  // Tracks the most recent requested src — stale callbacks are silently dropped
+  let pendingSrc = null;
 
   tabs.forEach((tab, i) => {
     tab.addEventListener("click", () => {
@@ -575,20 +579,38 @@ function initDemoTabs() {
       tabs.forEach(t => t.classList.remove("active"));
       tab.classList.add("active");
 
+      const newSrc = tab.dataset.gif;
+      pendingSrc = newSrc;
+
+      // Fade out current GIF, show coffee cup loading overlay
       gif.classList.add("fading");
       title.classList.add("fading");
       desc.classList.add("fading");
+      if (loading) loading.classList.add("visible");
 
-      setTimeout(() => {
+      // Preload in a hidden Image — only commit to DOM when fully downloaded
+      const loader = new Image();
+      loader.onload = () => {
+        if (pendingSrc !== newSrc) return; // a newer click took over, discard
         const data = DEMO_DATA[currentLang] || DEMO_DATA.en;
-        gif.src = tab.dataset.gif;
+        gif.src = newSrc;
         title.textContent = data[i] ? data[i].title : tab.dataset.title;
         desc.textContent = data[i] ? data[i].desc : tab.dataset.desc;
-
         gif.classList.remove("fading");
         title.classList.remove("fading");
         desc.classList.remove("fading");
-      }, 200);
+        if (loading) loading.classList.remove("visible");
+      };
+      loader.onerror = () => {
+        if (pendingSrc !== newSrc) return;
+        // GIF failed to load — still update and clear loading state gracefully
+        gif.src = newSrc;
+        gif.classList.remove("fading");
+        title.classList.remove("fading");
+        desc.classList.remove("fading");
+        if (loading) loading.classList.remove("visible");
+      };
+      loader.src = newSrc;
     });
   });
 }

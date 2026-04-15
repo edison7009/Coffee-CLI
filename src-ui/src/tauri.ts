@@ -170,4 +170,6 @@ export const commands = {
     invoke<string | null>('load_password', { host, username }),
   deletePassword: (host: string, username: string) =>
     invoke<void>('delete_password', { host, username }),
+  openUrl: (url: string) =>
+    invoke<void>('open_url', { url }),
 };

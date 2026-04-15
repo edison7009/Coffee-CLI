@@ -204,7 +204,7 @@
 }
 
 .launchpad-inner {
-  max-width: 540px;
+  max-width: 628px;
   width: 100%;
   padding: 32px;
 }
@@ -216,11 +216,27 @@
   width: 100%;
 }
 
-.launchpad-card {
-  background: var(--bg-card);
-  border: 1px solid transparent; /* Hide border, use shadow for separation */
-  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+/* Card + folder button share a group wrapper */
+.launchpad-card-group {
+  display: flex;
+  flex-direction: row;
   border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+  transition: transform 0.25s, box-shadow 0.25s;
+}
+
+.launchpad-card-group:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+}
+
+.launchpad-card {
+  flex: 1;
+  background: var(--bg-card);
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
   padding: 16px 24px;
   display: flex;
   flex-direction: row;
@@ -229,13 +245,46 @@
   gap: 20px;
   height: 80px;
   cursor: pointer;
-  transition: box-shadow 0.25s, transform 0.25s, background-color 0.2s;
+  position: relative;
+  transition: background-color 0.2s;
+  min-width: 0;
 }
 
-.launchpad-card:hover {
-  transform: translateY(-2px);
-  background-color: var(--bg-card);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+/* Right-side folder button — sibling of card, adds NEW width */
+.launchpad-folder-btn {
+  width: 44px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(rgba(255,255,255,0.06), rgba(255,255,255,0.06)), var(--bg-card);
+  border: none;
+  border-left: 1px solid rgba(255,255,255,0.07);
+  border-radius: 0;
+  cursor: pointer;
+  color: var(--text-3);
+  opacity: 0.5;
+  transition: opacity 0.2s, background 0.2s;
+}
+
+.launchpad-folder-btn:hover {
+  opacity: 1;
+  background: linear-gradient(rgba(255,255,255,0.12), rgba(255,255,255,0.12)), var(--bg-card);
+}
+
+.launchpad-folder-btn svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.launchpad-card-disabled .launchpad-folder-btn {
+  pointer-events: none;
+}
+
+/* Remove — no longer used */
+.launchpad-card-main {
+  display: contents;
 }
 
 /* Disabled state — tool not installed */
@@ -243,13 +292,11 @@
   opacity: 0.35;
   cursor: not-allowed;
   pointer-events: auto;
-  position: relative;
 }
 
 .launchpad-card-disabled:hover {
-  border-color: var(--border);
-  background-color: var(--bg-card);
-  box-shadow: none;
+  transform: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
 }
 
 
@@ -262,11 +309,81 @@
   flex-shrink: 0;
 }
 
+.launchpad-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
 .launchpad-card span {
   font-size: 18px; /* Increased text size */
   font-weight: 500;
   color: var(--text-1);
   white-space: nowrap;
+}
+
+.launchpad-card-cwd {
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  color: var(--text-3) !important;
+  opacity: 0.6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+  letter-spacing: 0.3px;
+}
+
+/* ─── Launchpad folder button — per-shape overrides ─── */
+
+/* Soft: warmer gradient, softer separator */
+[data-shape="soft"] .launchpad-folder-btn {
+  border-left: 1px solid rgba(255,255,255,0.09);
+  background: linear-gradient(rgba(255,255,255,0.08), rgba(255,255,255,0.08)), var(--bg-card);
+}
+[data-shape="soft"] .launchpad-folder-btn:hover {
+  background: linear-gradient(rgba(255,255,255,0.15), rgba(255,255,255,0.15)), var(--bg-card);
+}
+
+/* Slab: directional-light edge on separator + inset slab shadow */
+[data-shape="slab"] .launchpad-folder-btn {
+  border-left: 1px solid var(--shape-edge-light-bottom);
+  background: linear-gradient(rgba(255,255,255,0.04), rgba(255,255,255,0.04)), var(--bg-card);
+  box-shadow:
+    inset 1px 0 0 0 var(--shape-edge-light-top),
+    inset 0 -1px 0 0 var(--shape-edge-light-bottom);
+}
+[data-shape="slab"] .launchpad-folder-btn:hover {
+  background: linear-gradient(rgba(255,255,255,0.09), rgba(255,255,255,0.09)), var(--bg-card);
+}
+
+/* Sharp: flat, no gradient, stronger hairline divider */
+[data-shape="sharp"] .launchpad-folder-btn {
+  border-left: 1px solid rgba(255,255,255,0.15);
+  background: var(--bg-card);
+}
+[data-shape="sharp"] .launchpad-folder-btn:hover {
+  background: var(--bg-hover);
+}
+
+/* Blade: flat bg, clean border matching blade panel dividers */
+[data-shape="blade"] .launchpad-folder-btn {
+  border-left: 1px solid var(--border);
+  background: var(--bg-card);
+}
+[data-shape="blade"] .launchpad-folder-btn:hover {
+  background: var(--bg-hover);
+  border-left-color: var(--accent);
+}
+
+/* Panel: hard tmux-style divider */
+[data-shape="panel"] .launchpad-folder-btn {
+  border-left: 1px solid rgba(255,255,255,0.15);
+  background: var(--bg-card);
+}
+[data-shape="panel"] .launchpad-folder-btn:hover {
+  background: var(--bg-hover);
 }
 
 /* ─── Premium Toast Notification ─── */
@@ -490,10 +607,6 @@
 .remote-link-hint:hover {
   color: var(--accent);
   opacity: 1;
-}
-
-.launchpad-card {
-  position: relative;
 }
 
 /* ─── Remote Terminal Connection Form ─── */

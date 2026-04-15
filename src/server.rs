@@ -1502,6 +1502,32 @@ async fn check_network_port(host: String, port: u16) -> Result<bool, String> {
     Ok(reachable)
 }
 
+#[tauri::command]
+fn open_url(url: String) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("cmd")
+            .args(["/C", "start", "", &url])
+            .spawn()
+            .map_err(|e| format!("Failed to open URL: {e}"))?;
+    }
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(&url)
+            .spawn()
+            .map_err(|e| format!("Failed to open URL: {e}"))?;
+    }
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(&url)
+            .spawn()
+            .map_err(|e| format!("Failed to open URL: {e}"))?;
+    }
+    Ok(())
+}
+
 pub fn start_ui(project_dir: PathBuf) -> anyhow::Result<()> {
     // Create shared session BEFORE the builder so we can clone it for the exit handler
     let terminal_session = terminal::SharedSession::default();
@@ -1547,6 +1573,7 @@ pub fn start_ui(project_dir: PathBuf) -> anyhow::Result<()> {
             save_password,
             load_password,
             delete_password,
+            open_url,
         ])
         .setup(|_app| {
             Ok(())

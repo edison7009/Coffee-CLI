@@ -840,6 +840,31 @@ export function Explorer() {
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
   const langBtnRef = useRef<HTMLButtonElement>(null);
 
+  // Update check
+  const [hasUpdate, setHasUpdate] = useState(false);
+  useEffect(() => {
+    const checkUpdate = async () => {
+      try {
+        const { getVersion } = await import('@tauri-apps/api/app');
+        const [local, remote] = await Promise.all([
+          getVersion(),
+          fetch('https://coffeecli.com/version.json').then(r => r.json()),
+        ]);
+        const isNewer = (r: string, l: string) => {
+          const rv = r.split('.').map(Number);
+          const lv = l.split('.').map(Number);
+          for (let i = 0; i < 3; i++) {
+            if ((rv[i] ?? 0) > (lv[i] ?? 0)) return true;
+            if ((rv[i] ?? 0) < (lv[i] ?? 0)) return false;
+          }
+          return false;
+        };
+        if (remote?.version && isNewer(remote.version, local)) setHasUpdate(true);
+      } catch { /* offline or fetch failed — silent */ }
+    };
+    checkUpdate();
+  }, []);
+
   const [activeTab, setActiveTab] = useState<'workspace' | 'computer'>('workspace');
   const [drives, setDrives] = useState<DriveInfo[]>([]);
 
@@ -933,6 +958,17 @@ export function Explorer() {
             <path fill="currentColor" d="M0 0h24v24H0z" mask="url(#brandIconMask)"/>
           </svg>
           <span>{t('app.title')}</span>
+          <button
+            className={`icon-btn xs update-check-btn${hasUpdate ? ' update-available' : ''}`}
+            onClick={() => commands.openUrl('https://coffeecli.com')}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            {hasUpdate && <span className="update-dot" />}
+          </button>
         </div>
         
         <div className="window-controls">

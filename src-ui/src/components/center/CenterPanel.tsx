@@ -135,6 +135,7 @@ export function CenterPanel() {
     });
   };
   const [connStatus, setConnStatus] = useState<'idle' | 'connecting' | 'failed'>('idle');
+  const [lastCwdByTool, setLastCwdByTool] = useState<Record<string, string>>({});
 
   // ── Global focus enforcer ────────────────────────────────────────────────
   // One pair of window listeners for the whole app (previously each
@@ -193,6 +194,10 @@ export function CenterPanel() {
     commands.checkToolsInstalled()
       .then(result => setToolsInstalled(result))
       .catch(() => {});
+    try {
+      const raw = localStorage.getItem('coffee:last-cwd-by-tool');
+      if (raw) setLastCwdByTool(JSON.parse(raw));
+    } catch {}
   }, [isLaunchpadMode]);
 
   // Auto-hide toast
@@ -220,9 +225,48 @@ export function CenterPanel() {
     dispatch({ type: 'REMOVE_TERMINAL', id });
   };
 
-  const selectTool = (tool: ToolType, toolData?: string) => {
+  const formatCwd = (cwd: string): string => {
+    if (!cwd) return '';
+    // Detect Windows path (e.g. C:\... or c:/...)
+    const isWin = /^[a-zA-Z]:/.test(cwd);
+    if (isWin) {
+      // Uppercase drive letter, normalize to backslashes
+      const formatted = cwd[0].toUpperCase() + ':' + cwd.slice(2).replace(/\//g, '\\');
+      return formatted.length > 30 ? '\u2026' + formatted.slice(-28) : formatted;
+    }
+    // Unix path — show last 2 segments
+    const parts = cwd.split('/').filter(Boolean);
+    if (parts.length === 0) return cwd;
+    const label = parts.length >= 2
+      ? `${parts[parts.length - 2]}/${parts[parts.length - 1]}`
+      : parts[parts.length - 1];
+    return label.length > 30 ? '\u2026' + label.slice(-28) : label;
+  };
+
+  const selectTool = (tool: ToolType, toolData?: string, cwd?: string) => {
     if (activeTerminalId) {
+      if (cwd) {
+        dispatch({ type: 'SET_FOLDER', path: cwd });
+        setLastCwdByTool(prev => {
+          const next = { ...prev, [tool as string]: cwd };
+          try { localStorage.setItem('coffee:last-cwd-by-tool', JSON.stringify(next)); } catch {}
+          return next;
+        });
+      }
       dispatch({ type: 'SET_TERMINAL_TOOL', id: activeTerminalId, tool, toolData });
+    }
+  };
+
+  const handlePickFolder = async (toolKey: ToolType) => {
+    if (!toolKey) return;
+    try {
+      const { open } = await import('@tauri-apps/plugin-dialog');
+      const selected = await open({ directory: true });
+      if (selected && typeof selected === 'string') {
+        selectTool(toolKey, undefined, selected);
+      }
+    } catch (err) {
+      console.error('[CenterPanel] Folder picker failed:', err);
     }
   };
 
@@ -440,33 +484,59 @@ export function CenterPanel() {
                       ].map(tool => {
                         const installed = toolsInstalled[tool?.key ?? ''] !== false;
                         return (
-                          <div
-                            key={tool.key}
-                            className={`launchpad-card ${!installed ? 'launchpad-card-disabled' : ''}`}
-                            onClick={() => installed && selectTool(tool.key)}
-                          >
-                            <div className="launchpad-icon">{tool.icon}</div>
-                            <span>{tool.label}</span>
+                          <div key={tool.key} className={`launchpad-card-group ${!installed ? 'launchpad-card-disabled' : ''}`}>
+                            <div
+                              className="launchpad-card"
+                              onClick={() => installed && selectTool(tool.key, undefined, lastCwdByTool[tool.key!])}
+                            >
+                              <div className="launchpad-icon">{tool.icon}</div>
+                              <div className="launchpad-card-info">
+                                <span>{tool.label}</span>
+                                {lastCwdByTool[tool.key!] && (
+                                  <span className="launchpad-card-cwd">
+                                    {formatCwd(lastCwdByTool[tool.key!])}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="launchpad-folder-btn" onClick={() => installed && handlePickFolder(tool.key)}>
+                              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                              </svg>
+                            </div>
                           </div>
                         );
                       })}
 
                       {/* Terminal card with subtle Remote link */}
-                      <div
-                        className="launchpad-card"
-                        onClick={() => selectTool('terminal')}
-                      >
-                        <div className="launchpad-icon"><TerminalIcon /></div>
-                        <span>{t('tool.terminal')}</span>
-                        
-                        <div 
-                          className="remote-link-hint"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setShowRemoteForm(true);
-                          }}
+                      <div className="launchpad-card-group">
+                        <div
+                          className="launchpad-card"
+                          onClick={() => selectTool('terminal', undefined, lastCwdByTool['terminal'])}
                         >
-                          {t('tool.remote.short' as any)}
+                          <div className="launchpad-icon"><TerminalIcon /></div>
+                          <div className="launchpad-card-info">
+                            <span>{t('tool.terminal')}</span>
+                            {lastCwdByTool['terminal'] && (
+                              <span className="launchpad-card-cwd">
+                                {formatCwd(lastCwdByTool['terminal'])}
+                              </span>
+                            )}
+                          </div>
+                          <div
+                            className="remote-link-hint"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowRemoteForm(true);
+                            }}
+                          >
+                            {t('tool.remote.short' as any)}
+                          </div>
+                        </div>
+                        <div className="launchpad-folder-btn" onClick={() => handlePickFolder('terminal')}>
+                          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                          </svg>
                         </div>
                       </div>
                     </div>
