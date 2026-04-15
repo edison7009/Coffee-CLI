@@ -942,7 +942,20 @@ fn read_native_session(file_path: String) -> Result<String, String> {
     }
 
     // Canonicalize to resolve any `..` or symlink traversal
-    let canonical = path.canonicalize().map_err(|e| format!("Invalid path: {e}"))?;
+    let canonical_raw = path.canonicalize().map_err(|e| format!("Invalid path: {e}"))?;
+    // On Windows, canonicalize() prepends \\?\ (UNC extended-length prefix).
+    // Strip it so that starts_with() comparisons against plain home-dir paths work.
+    #[cfg(windows)]
+    let canonical = {
+        let s = canonical_raw.to_string_lossy();
+        if s.starts_with(r"\\?\") {
+            std::path::PathBuf::from(s[4..].to_string())
+        } else {
+            canonical_raw
+        }
+    };
+    #[cfg(not(windows))]
+    let canonical = canonical_raw;
 
     // Must reside under a known agent data directory
     let home = dirs::home_dir().ok_or("Cannot determine home directory")?;
