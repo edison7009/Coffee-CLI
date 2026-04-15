@@ -113,19 +113,6 @@ Coffee CLI translates the entire agent interface into your native language in re
 
 ---
 
-### Screenshots
-
-<table>
-  <tr>
-    <td align="center"><b>English</b><br/><img src="screenshot/en.png" width="400"/></td>
-    <td align="center"><b>简体中文</b><br/><img src="screenshot/zh-CN.png" width="400"/></td>
-  </tr>
-  <tr>
-    <td align="center"><b>日本語</b><br/><img src="screenshot/ja.png" width="400"/></td>
-    <td align="center"><b>한국어</b><br/><img src="screenshot/ko.png" width="400"/></td>
-  </tr>
-</table>
-
 ### Install
 
 **Windows**
