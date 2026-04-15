@@ -462,16 +462,13 @@ html[data-theme='dark'] .demo-screen {
 
 .demo-screen-inner {
   width: 100%;
-  aspect-ratio: 16 / 8.6;
   overflow: hidden;
   position: relative;
 }
 
 .demo-screen-inner img {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: top left;
+  height: auto;
   display: block;
   transition: opacity 0.2s ease;
 }
