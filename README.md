@@ -5,7 +5,7 @@
 <h1 align="center">Coffee CLI</h1>
 
 <p align="center">
-  <strong>The world's first native GUI companion for AI CLI Agents — in your language.</strong>
+  <strong>The missing desktop app for Claude Code and AI coding agents.</strong>
 </p>
 
 <p align="center">
