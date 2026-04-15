@@ -103,9 +103,9 @@ function TierTerminalImpl({
     // Platform-specific font stacks — each uses the OS's best native monospace first:
     // Windows: Cascadia Mono (ships with Windows Terminal/Win11) → Consolas (built-in since Vista)
     // macOS:   ui-monospace (CSS generic → SF Mono via WebView, most reliable) → Menlo → Monaco
-    // Linux:   monospace (OS resolves to Noto/DejaVu/Ubuntu Mono, preserves correct glyph metrics)
+    // Linux:   Ubuntu Mono (most common), Noto Sans Mono, DejaVu Sans Mono, Liberation Mono, then generic monospace
     const fontFamily = isLinux
-      ? "'JetBrains Mono', 'Fira Code', 'Hack', monospace"
+      ? "'Ubuntu Mono', 'Noto Sans Mono', 'DejaVu Sans Mono', 'Liberation Mono', monospace"
       : isMac
         ? "ui-monospace, Menlo, Monaco, 'Courier New', monospace"
         : "'Cascadia Mono', 'Cascadia Code', Consolas, 'Courier New', monospace";
@@ -115,7 +115,7 @@ function TierTerminalImpl({
       lineHeight: 1.3,
       letterSpacing: 0,
       fontWeight: '400',
-      customGlyphs: true,
+      customGlyphs: !isLinux, // Linux: off (font metrics unreliable); Win/Mac: on for box-drawing chars
       cursorStyle: 'bar' as const,
       // Claude Code manages its own cursor via ANSI sequences; hide xterm's native
       // cursor so it doesn't appear at Claude's internal cursor position.
@@ -159,27 +159,29 @@ function TierTerminalImpl({
     term.loadAddon(fit);
     term.open(termRef.current);
 
-    // GPU-accelerated rendering: only enable WebGL if a dedicated GPU is detected OR if on Linux.
-    // On Windows/Mac integrated GPUs, WebGL can cause heat, but on Linux DOM renderer has severe font spacing bugs.
+    // GPU-accelerated rendering: enable WebGL only when a dedicated GPU is detected.
+    // On Windows/Mac integrated GPUs, WebGL can cause heat/throttling.
+    // On Linux, DOM renderer is used by default (fixes font spacing issues from forced WebGL).
+    // Linux users with dedicated GPUs can manually enable WebGL if needed.
     let useWebgl = false;
     try {
-      if (isLinux) {
-        useWebgl = true;
-      } else {
-        const testCanvas = document.createElement('canvas');
-        const gl = testCanvas.getContext('webgl') || testCanvas.getContext('experimental-webgl');
-        if (gl) {
-          const debugExt = (gl as WebGLRenderingContext).getExtension('WEBGL_debug_renderer_info');
-          if (debugExt) {
-            const renderer = (gl as WebGLRenderingContext).getParameter(debugExt.UNMASKED_RENDERER_WEBGL) as string;
-            // Dedicated GPU keywords: NVIDIA, AMD, Radeon, GeForce, Arc, etc.
-            useWebgl = /nvidia|geforce|radeon|amd|rx\s?\d|arc\s?a/i.test(renderer);
-            console.log(`[TierTerminal] GPU: ${renderer} → ${useWebgl ? 'WebGL' : 'DOM'}`);
-          }
+      const testCanvas = document.createElement('canvas');
+      const gl = testCanvas.getContext('webgl') || testCanvas.getContext('experimental-webgl');
+      if (gl) {
+        const debugExt = (gl as WebGLRenderingContext).getExtension('WEBGL_debug_renderer_info');
+        if (debugExt) {
+          const renderer = (gl as WebGLRenderingContext).getParameter(debugExt.UNMASKED_RENDERER_WEBGL) as string;
+          // Dedicated GPU keywords: NVIDIA, AMD, Radeon, GeForce, Arc, Intel (some), etc.
+          useWebgl = /nvidia|geforce|radeon|amd|rx\s?\d|arc\s?a/i.test(renderer);
+          console.log(`[TierTerminal] GPU: ${renderer} → ${useWebgl ? 'WebGL' : 'DOM (integrated/no GPU)'}`);
+        } else {
+          console.log('[TierTerminal] GPU info unavailable → DOM renderer (no dedicated GPU or privacy block)');
         }
+      } else {
+        console.log('[TierTerminal] WebGL unavailable → DOM renderer');
       }
     } catch {
-      console.warn('[TierTerminal] WebGL probe failed');
+      console.warn('[TierTerminal] WebGL probe failed → DOM renderer');
     }
 
     if (useWebgl) {
