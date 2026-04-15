@@ -33,35 +33,11 @@
   border-radius: var(--shape-radius-tab);
   cursor: pointer;
   user-select: none;
-  flex: 1;
-  min-width: 140px;
+  flex: 0 1 auto;
   max-width: 220px;
   transition: background 0.15s, color 0.15s;
 }
 
-/* 5–6 tabs: compress, show truncated title */
-.chrome-tabs-header[data-count="5"] .chrome-tab,
-.chrome-tabs-header[data-count="6"] .chrome-tab {
-  min-width: 90px;
-  max-width: 160px;
-  padding: 0 10px;
-}
-
-/* 7–8 tabs: icon only, title hidden */
-.chrome-tabs-header[data-count="7"] .chrome-tab,
-.chrome-tabs-header[data-count="8"] .chrome-tab {
-  min-width: 44px;
-  max-width: 72px;
-  padding: 0 10px;
-  gap: 0;
-}
-
-.chrome-tabs-header[data-count="7"] .tab-title,
-.chrome-tabs-header[data-count="8"] .tab-title,
-.chrome-tabs-header[data-count="7"] .tab-actions,
-.chrome-tabs-header[data-count="8"] .tab-actions {
-  display: none;
-}
 
 .chrome-tab:hover:not(.active) {
   background: var(--bg-hover);
@@ -117,18 +93,20 @@
   color: var(--text-1);
 }
 
-/* ─── Tab Actions (Health Dot + Close Button) ─── */
+/* ─── Tab Actions (Status Dots ↔ Close Button Overlay) ─── */
 .tab-actions {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 18px;
   height: 18px;
-  margin-left: auto;
   position: relative;
+  flex-shrink: 0;
 }
 
 .tab-close-btn {
+  position: absolute;
+  inset: 0;
   width: 18px;
   height: 18px;
   border-radius: var(--radius-xs);
@@ -140,14 +118,12 @@
   justify-content: center;
   cursor: pointer;
   opacity: 0;
-  transform: scale(0.6);
   pointer-events: none;
-  transition: opacity 0.2s ease, transform 0.2s ease, background-color 0.15s, color 0.15s;
+  transition: opacity 0.15s ease, background-color 0.15s, color 0.15s;
 }
 
 .chrome-tab:hover .tab-close-btn {
   opacity: 1;
-  transform: scale(1);
   pointer-events: auto;
 }
 
@@ -155,6 +131,72 @@
   background-color: rgba(239, 68, 68, 0.15);
   color: #ef4444;
 }
+
+/* ─── Tab Status Indicator (3×3 dot grid) ─── */
+
+@keyframes tab-status-wave {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+.tab-status-grid {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 3px);
+  grid-template-rows: repeat(3, 3px);
+  gap: 1.5px;
+  place-content: center;
+  flex-shrink: 0;
+  transition: opacity 0.15s ease;
+}
+
+.chrome-tab:hover .tab-status-grid {
+  opacity: 0;
+}
+
+.tab-status-dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  animation: tab-status-wave 1.2s ease-in-out infinite;
+}
+
+/* idle — Wave-Double — green */
+.status-idle .tab-status-dot { background-color: #34d399; box-shadow: 0 0 3px #34d39988; }
+.status-idle .tab-status-dot:nth-child(1) { animation-delay: 0s; }
+.status-idle .tab-status-dot:nth-child(2) { animation-delay: 0.15s; }
+.status-idle .tab-status-dot:nth-child(3) { animation-delay: 0.3s; }
+.status-idle .tab-status-dot:nth-child(4) { animation-delay: 0.1s; }
+.status-idle .tab-status-dot:nth-child(5) { animation-delay: 0.25s; }
+.status-idle .tab-status-dot:nth-child(6) { animation-delay: 0.4s; }
+.status-idle .tab-status-dot:nth-child(7) { animation-delay: 0s; }
+.status-idle .tab-status-dot:nth-child(8) { animation-delay: 0.15s; }
+.status-idle .tab-status-dot:nth-child(9) { animation-delay: 0.3s; }
+
+/* executing — Snake-CCW — green */
+.status-executing .tab-status-dot { background-color: #34d399; box-shadow: 0 0 3px #34d39988; }
+.status-executing .tab-status-dot:nth-child(1) { animation-delay: 0s; }
+.status-executing .tab-status-dot:nth-child(2) { animation-delay: 1.05s; }
+.status-executing .tab-status-dot:nth-child(3) { animation-delay: 0.9s; }
+.status-executing .tab-status-dot:nth-child(4) { animation-delay: 0.15s; }
+.status-executing .tab-status-dot:nth-child(5) { animation-delay: 0.6s; }
+.status-executing .tab-status-dot:nth-child(6) { animation-delay: 0.75s; }
+.status-executing .tab-status-dot:nth-child(7) { animation-delay: 0.3s; }
+.status-executing .tab-status-dot:nth-child(8) { animation-delay: 0.45s; }
+.status-executing .tab-status-dot:nth-child(9) { animation-delay: 0.6s; }
+
+/* wait_input — Ripple — blue */
+.status-waiting .tab-status-dot { background-color: #60a5fa; box-shadow: 0 0 3px #60a5fa88; }
+.status-waiting .tab-status-dot:nth-child(1) { animation-delay: 0.3s; }
+.status-waiting .tab-status-dot:nth-child(2) { animation-delay: 0.15s; }
+.status-waiting .tab-status-dot:nth-child(3) { animation-delay: 0.3s; }
+.status-waiting .tab-status-dot:nth-child(4) { animation-delay: 0.15s; }
+.status-waiting .tab-status-dot:nth-child(5) { animation-delay: 0s; }
+.status-waiting .tab-status-dot:nth-child(6) { animation-delay: 0.15s; }
+.status-waiting .tab-status-dot:nth-child(7) { animation-delay: 0.3s; }
+.status-waiting .tab-status-dot:nth-child(8) { animation-delay: 0.15s; }
+.status-waiting .tab-status-dot:nth-child(9) { animation-delay: 0.3s; }
 
 /* ─── Terminal Wrapper ─── */
 

@@ -210,7 +210,7 @@ export function CenterPanel() {
 
 
   const handleAddTab = () => {
-    if (terminals.length >= 8) {
+    if (terminals.length >= 5) {
       setToastMsg(t('session.max'));
       return;
     }
@@ -403,10 +403,15 @@ export function CenterPanel() {
               onClick={() => dispatch({ type: 'SET_ACTIVE_TERMINAL', id: session.id })}
             >
               {icon}
-              <span className="tab-title" style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{title}</span>
+              <span className="tab-title" style={{ flex: '0 1 auto', minWidth: 0, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{title}</span>
               <div className="tab-actions">
-                <button 
-                   className="tab-close-btn" 
+                {(['claude', 'qwen', 'hermes', 'opencode'] as const).includes(session.tool as 'claude' | 'qwen' | 'hermes' | 'opencode') && (
+                  <div className={`tab-status-grid status-${session.agentStatus === 'wait_input' ? 'waiting' : session.agentStatus ?? 'idle'}`}>
+                    {Array.from({ length: 9 }, (_, i) => <div key={i} className="tab-status-dot" />)}
+                  </div>
+                )}
+                <button
+                   className="tab-close-btn"
                    onClick={(e) => handleCloseTab(e, session.id)}
                 >
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

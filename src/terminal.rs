@@ -232,6 +232,25 @@ pub fn spawn(
         cmd.env("COFFEE_CODE_LOCALE", loc);
     }
 
+    // ── Hook status injection (Claude Code / Qwen Code) ────────────────────
+    // The Coffee CLI hook script (installed into ~/.claude/settings.json and
+    // ~/.qwen/settings.json at startup) reads these env vars to identify which
+    // tab a hook fired from and where to forward the event.
+    if let Some(tname) = tool_name.as_deref() {
+        if tname == "claude" || tname == "qwen" {
+            use tauri::Manager;
+            let port = app
+                .state::<crate::server::AppState>()
+                .hook_port
+                .load(std::sync::atomic::Ordering::SeqCst);
+            if port != 0 {
+                cmd.env("COFFEE_CLI_TAB_ID", &session_id);
+                cmd.env("COFFEE_CLI_HOOK_PORT", port.to_string());
+                cmd.env("COFFEE_CLI_TOOL", tname);
+            }
+        }
+    }
+
     // ── Linux/macOS: Enable OSC 7 CWD reporting ────────────────────────────
     // Unlike Windows PowerShell which natively emits OSC 7, bash/zsh on Linux
     // do NOT send CWD change notifications by default. Without this, the left

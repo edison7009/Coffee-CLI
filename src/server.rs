@@ -11,6 +11,9 @@ use tauri_plugin_dialog::DialogExt;
 pub struct AppState {
     pub project_dir: Mutex<PathBuf>,
     pub terminal_session: terminal::SharedSession,
+    /// Loopback port of the hook TCP server (set once during setup).
+    /// 0 means the hook server failed to start; env var injection is skipped in that case.
+    pub hook_port: std::sync::atomic::AtomicU16,
 }
 
 #[derive(Serialize)]
@@ -1538,6 +1541,7 @@ pub fn start_ui(project_dir: PathBuf) -> anyhow::Result<()> {
         .manage(AppState {
             project_dir: Mutex::new(project_dir),
             terminal_session,
+            hook_port: std::sync::atomic::AtomicU16::new(0),
         })
         .invoke_handler(tauri::generate_handler![
             scan_project,
@@ -1575,7 +1579,23 @@ pub fn start_ui(project_dir: PathBuf) -> anyhow::Result<()> {
             delete_password,
             open_url,
         ])
-        .setup(|_app| {
+        .setup(|app| {
+            // Install Claude/Qwen hook scripts + settings patches.
+            // Runs once per launch; safe to call on a machine without either agent.
+            crate::hook_installer::install_all();
+
+            // Start loopback TCP listener that receives events from the hook
+            // script and forwards them to the frontend as `agent-status` events.
+            match crate::hook_server::start(app.handle().clone()) {
+                Ok(port) => {
+                    app.state::<AppState>()
+                        .hook_port
+                        .store(port, std::sync::atomic::Ordering::SeqCst);
+                }
+                Err(e) => {
+                    eprintln!("[hook-server] start failed: {}", e);
+                }
+            }
             Ok(())
         })
         .run(tauri::generate_context!())

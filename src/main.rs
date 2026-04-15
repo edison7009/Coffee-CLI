@@ -4,6 +4,8 @@ mod config;
 mod scanner;
 mod terminal;
 mod server;
+mod hook_server;
+mod hook_installer;
 
 use anyhow::Result;
 use std::path::PathBuf;

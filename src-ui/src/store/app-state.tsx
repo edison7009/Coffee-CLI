@@ -8,6 +8,8 @@ import type { ScanResult } from '../tauri';
 
 export type ToolType = 'claude' | 'qwen' | 'installer' | 'hermes' | 'opencode' | 'arcade' | 'terminal' | 'remote' | 'history' | null;
 
+export type AgentStatus = 'idle' | 'executing' | 'wait_input';
+
 // Theme: color palette (orthogonal to shape)
 export type ThemeColor = 'dark' | 'light' | 'cappuccino' | 'sakura' | 'lavender' | 'mint';
 // Theme: shape form (orthogonal to color)
@@ -24,6 +26,7 @@ export interface TerminalSession {
   scanData: ScanResult | null;
   restartKey?: number;
   isHidden?: boolean;
+  agentStatus?: AgentStatus;
 }
 
 // ─── State Shape ─────────────────────────────────────────────────────────────
@@ -56,7 +59,8 @@ type Action =
   | { type: 'SET_TERMINAL_TOOL'; id: string; tool: ToolType; toolData?: string }
   | { type: 'SET_TERMINAL_HIDDEN'; id: string; isHidden: boolean }
   | { type: 'RESTART_TERMINAL'; id: string; newId: string }
-  | { type: 'OPEN_HISTORY_TAB'; sessionData: string; folderPath: string };
+  | { type: 'OPEN_HISTORY_TAB'; sessionData: string; folderPath: string }
+  | { type: 'SET_AGENT_STATUS'; id: string; status: AgentStatus };
 
 // ─── Reducer ─────────────────────────────────────────────────────────────────
 
@@ -150,6 +154,11 @@ function reducer(state: AppState, action: Action): AppState {
         };
       }
     }
+    case 'SET_AGENT_STATUS':
+      return {
+        ...state,
+        terminals: state.terminals.map(t => t.id === action.id ? { ...t, agentStatus: action.status } : t)
+      };
     default:
       return state;
   }

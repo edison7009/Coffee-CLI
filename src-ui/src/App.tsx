@@ -1,8 +1,9 @@
 // App.tsx — 3-panel IDE layout (frameless window)
 
 import { useEffect } from 'react';
-import { useAppState } from './store/app-state';
+import { useAppState, useAppDispatch } from './store/app-state';
 import { retryInvoke } from './tauri';
+import { subscribeAgentStatus } from './lib/agent-status-bus';
 import { TitleBar } from './components/common/TitleBar';
 import { Explorer } from './components/left/Explorer';
 import { CenterPanel } from './components/center/CenterPanel';
@@ -11,6 +12,15 @@ import './styles/global.css';
 
 export function App() {
   const { state } = useAppState();
+  const dispatch = useAppDispatch();
+
+  // Subscribe to hook-driven agent status events from Claude Code / Qwen Code.
+  // The Rust hook server emits these as they arrive from the Python forwarder.
+  useEffect(() => {
+    return subscribeAgentStatus((payload) => {
+      dispatch({ type: 'SET_AGENT_STATUS', id: payload.tab_id, status: payload.status });
+    });
+  }, [dispatch]);
 
   // Apply theme + shape on mount and change — must sync with the inline script in index.html
   useEffect(() => {

@@ -351,14 +351,19 @@ function TierTerminalImpl({
             }
           }
 
-          // Detect alternate screen buffer entry — the universal TUI "ready" signal
+          // Track alt-screen flag for other TUI heuristics (splash, focus).
+          // Agent status is now driven by hooks via agent-status-bus, not PTY scraping.
           if (data.includes('\x1b[?1049h') || data.includes('\x1b[?47h')) {
             altScreenRef.current = true;
+          }
+          if (data.includes('\x1b[?1049l') || data.includes('\x1b[?47l')) {
+            altScreenRef.current = false;
           }
         },
         onStatus: (running, exitCode) => {
           if (!mounted || running) return;
           setProcessExited(true);
+          dispatch({ type: 'SET_AGENT_STATUS', id: sessionId, status: 'idle' });
           const msg = exitCode === 0
             ? '\r\n\x1b[32m[Process exited normally]\x1b[0m\r\n'
             : `\r\n\x1b[31m[Process exited with code ${exitCode}]\x1b[0m\r\n`;
