@@ -464,61 +464,71 @@ const DEMO_DATA = {
     { label: "Themes",     title: "Theme Switching",    desc: "Switch between built-in themes instantly. The entire interface — including your active terminal session — updates live. No restart, no flicker." },
     { label: "Task Board", title: "Task Board",          desc: "Keep track of everything your agent is doing. Organize work into To-Do, In Progress, and Done — right in the sidebar, while the agent runs." },
     { label: "History",    title: "Session History",     desc: "Every agent session is automatically saved. Scroll back, search, and resume any past conversation exactly where you left off." },
-    { label: "Multi-Tab",  title: "Multi-Tab Sessions",  desc: "Run multiple agents and terminals in parallel, each fully isolated. Vibe-code in one tab, run a game in another — zero interference." }
+    { label: "Multi-Tab",  title: "Multi-Tab Sessions",  desc: "Run multiple agents and terminals in parallel, each fully isolated. Vibe-code in one tab, run a game in another — zero interference." },
+    { label: "Languages",  title: "10 Languages",        desc: "Coffee CLI speaks your language — literally. Switch the entire interface to English, 简体中文, 繁體中文, 日本語, 한국어, Español, Français, Deutsch, Português, or Русский. No English required." }
   ],
   zh: [
     { label: "主题",     title: "主题切换",       desc: "一键切换内置主题，整个界面——包括活跃的终端会话——实时更新，无需重启，不会闪烁。" },
     { label: "任务看板", title: "任务看板",       desc: "追踪 Agent 正在做的一切。在侧边栏将任务整理为待办、进行中、已完成——Agent 工作时一目了然。" },
     { label: "历史记录", title: "会话历史",       desc: "每次 Agent 会话都自动保存。滚动回溯、搜索关键词，随时从上次中断的地方继续。" },
-    { label: "多 Tab",   title: "多 Tab 会话",   desc: "同时运行多个 Agent 和终端，每个完全独立。一个 Tab 做 Vibe Coding，另一个跑游戏——互不干扰。" }
+    { label: "多 Tab",   title: "多 Tab 会话",   desc: "同时运行多个 Agent 和终端，每个完全独立。一个 Tab 做 Vibe Coding，另一个跑游戏——互不干扰。" },
+    { label: "多语言",   title: "10 种语言",     desc: "Coffee CLI 真正说你的语言。一键将整个界面切换为英语、简体中文、繁體中文、日本語、한국어、Español、Français、Deutsch、Português 或 Русский。不需要懂英语。" }
   ],
   "zh-TW": [
     { label: "主題",       title: "主題切換",         desc: "一鍵切換內建主題，整個介面——包括活躍的終端工作階段——即時更新，無需重啟，不會閃爍。" },
     { label: "任務看板",   title: "任務看板",         desc: "追蹤 Agent 正在做的一切。在側邊欄將任務整理為待辦、進行中、已完成——Agent 工作時一目了然。" },
     { label: "歷史記錄",   title: "工作階段歷史",     desc: "每次 Agent 工作階段都自動儲存。捲動回顧、搜尋關鍵字，隨時從上次中斷的地方繼續。" },
-    { label: "多 Tab",     title: "多 Tab 工作階段", desc: "同時執行多個 Agent 和終端機，每個完全獨立。一個 Tab 做 Vibe Coding，另一個跑遊戲——互不干擾。" }
+    { label: "多 Tab",     title: "多 Tab 工作階段", desc: "同時執行多個 Agent 和終端機，每個完全獨立。一個 Tab 做 Vibe Coding，另一個跑遊戲——互不干擾。" },
+    { label: "多語言",     title: "10 種語言",       desc: "Coffee CLI 真正說你的語言。一鍵將整個介面切換為英語、简体中文、繁體中文、日本語、한국어、Español、Français、Deutsch、Português 或 Русский。不需要懂英語。" }
   ],
   ja: [
     { label: "テーマ",       title: "テーマ切替",           desc: "内蔵テーマをワンクリックで切り替え。アクティブなターミナルセッションを含むインターフェース全体がリアルタイムで更新されます。" },
     { label: "タスクボード", title: "タスクボード",         desc: "エージェントの作業をすべて把握。サイドバーでタスクをTODO・進行中・完了に整理できます。エージェントが動いている間も常に見通せます。" },
     { label: "履歴",         title: "セッション履歴",       desc: "すべてのエージェントセッションが自動保存されます。スクロールして過去を振り返り、検索し、中断した場所から再開できます。" },
-    { label: "マルチタブ",   title: "マルチタブセッション", desc: "複数のエージェントとターミナルを並列で実行。各タブは完全独立。一方でバイブコーディング、もう一方でゲーム実行——相互干渉ゼロ。" }
+    { label: "マルチタブ",   title: "マルチタブセッション", desc: "複数のエージェントとターミナルを並列で実行。各タブは完全独立。一方でバイブコーディング、もう一方でゲーム実行——相互干渉ゼロ。" },
+    { label: "多言語",       title: "10言語対応",           desc: "Coffee CLI はあなたの言語を話します。インターフェース全体を英語、简体中文、繁體中文、日本語、한국어、Español、Français、Deutsch、Português、Русскийに切り替え可能。英語不要。" }
   ],
   ko: [
     { label: "테마",     title: "테마 전환",       desc: "내장 테마를 즉시 전환하세요. 활성 터미널 세션을 포함한 전체 인터페이스가 실시간으로 업데이트됩니다. 재시작 없이, 깜박임도 없이." },
     { label: "작업 보드", title: "작업 보드",       desc: "에이전트가 하는 모든 작업을 추적하세요. 에이전트가 실행되는 동안 사이드바에서 할 일, 진행 중, 완료로 작업을 정리할 수 있습니다." },
     { label: "기록",     title: "세션 기록",       desc: "모든 에이전트 세션이 자동으로 저장됩니다. 스크롤하여 과거를 돌아보고, 검색하고, 중단한 곳에서 정확히 다시 시작하세요." },
-    { label: "멀티탭",   title: "멀티탭 세션",     desc: "여러 에이전트와 터미널을 병렬로 실행하세요. 각 탭은 완전히 독립적입니다. 한 탭에서 바이브 코딩, 다른 탭에서 게임 — 완전한 격리." }
+    { label: "멀티탭",   title: "멀티탭 세션",     desc: "여러 에이전트와 터미널을 병렬로 실행하세요. 각 탭은 완전히 독립적입니다. 한 탭에서 바이브 코딩, 다른 탭에서 게임 — 완전한 격리." },
+    { label: "다국어",   title: "10개 언어",       desc: "Coffee CLI는 당신의 언어를 말합니다. 전체 인터페이스를 영어, 简体中文, 繁體中文, 日本語, 한국어, Español, Français, Deutsch, Português, Русский로 전환하세요. 영어 불필요." }
   ],
   es: [
     { label: "Temas",       title: "Cambio de Tema",        desc: "Cambia entre temas integrados al instante. Toda la interfaz — incluida tu sesión de terminal activa — se actualiza en tiempo real. Sin reinicios ni parpadeos." },
     { label: "Tareas",      title: "Tablero de Tareas",     desc: "Controla todo lo que hace tu agente. Organiza las tareas en Pendiente, En Progreso y Completado — en la barra lateral mientras el agente trabaja." },
     { label: "Historial",   title: "Historial de Sesiones", desc: "Cada sesión del agente se guarda automáticamente. Desplázate, busca y retoma cualquier conversación pasada exactamente donde la dejaste." },
-    { label: "Multi-Tab",   title: "Sesiones Multi-Pestaña", desc: "Ejecuta múltiples agentes y terminales en paralelo, cada uno completamente aislado. Vibe-coding en una pestaña, un juego en otra — sin interferencias." }
+    { label: "Multi-Tab",   title: "Sesiones Multi-Pestaña", desc: "Ejecuta múltiples agentes y terminales en paralelo, cada uno completamente aislado. Vibe-coding en una pestaña, un juego en otra — sin interferencias." },
+    { label: "Idiomas",     title: "10 Idiomas",             desc: "Coffee CLI habla tu idioma — literalmente. Cambia toda la interfaz a inglés, 简体中文, 繁體中文, 日本語, 한국어, Español, Français, Deutsch, Português o Русский. Sin inglés necesario." }
   ],
   fr: [
     { label: "Thèmes",      title: "Changement de Thème",    desc: "Changez de thème instantanément. Toute l'interface — y compris votre session de terminal active — se met à jour en temps réel. Sans redémarrage ni scintillement." },
     { label: "Tâches",      title: "Tableau de Tâches",      desc: "Suivez tout ce que fait votre agent. Organisez les tâches en À faire, En cours et Terminé — dans la barre latérale pendant que l'agent travaille." },
     { label: "Historique",  title: "Historique des Sessions", desc: "Chaque session d'agent est automatiquement sauvegardée. Faites défiler, recherchez et reprenez n'importe quelle conversation passée là où vous l'aviez laissée." },
-    { label: "Multi-Onglet", title: "Sessions Multi-Onglets", desc: "Exécutez plusieurs agents et terminaux en parallèle, chacun complètement isolé. Vibe-coding dans un onglet, un jeu dans un autre — zéro interférence." }
+    { label: "Multi-Onglet", title: "Sessions Multi-Onglets", desc: "Exécutez plusieurs agents et terminaux en parallèle, chacun complètement isolé. Vibe-coding dans un onglet, un jeu dans un autre — zéro interférence." },
+    { label: "Langues",      title: "10 Langues",             desc: "Coffee CLI parle votre langue — littéralement. Basculez toute l'interface en anglais, 简体中文, 繁體中文, 日本語, 한국어, Español, Français, Deutsch, Português ou Русский. Sans anglais requis." }
   ],
   de: [
     { label: "Themen",      title: "Thema wechseln",        desc: "Wechseln Sie sofort zwischen integrierten Themen. Die gesamte Oberfläche — einschließlich Ihrer aktiven Terminal-Sitzung — aktualisiert sich in Echtzeit. Kein Neustart, kein Flackern." },
     { label: "Aufgaben",    title: "Aufgaben-Board",        desc: "Behalten Sie alles im Blick, was Ihr Agent tut. Organisieren Sie Aufgaben in Offen, In Bearbeitung und Erledigt — in der Seitenleiste, während der Agent läuft." },
     { label: "Verlauf",     title: "Sitzungsverlauf",       desc: "Jede Agenten-Sitzung wird automatisch gespeichert. Scrollen, suchen und jedes vergangene Gespräch genau dort fortsetzen, wo Sie aufgehört haben." },
-    { label: "Multi-Tab",   title: "Multi-Tab-Sitzungen",   desc: "Mehrere Agenten und Terminals parallel ausführen, jedes vollständig isoliert. Vibe-Coding in einem Tab, ein Spiel in einem anderen — keine gegenseitige Beeinflussung." }
+    { label: "Multi-Tab",   title: "Multi-Tab-Sitzungen",   desc: "Mehrere Agenten und Terminals parallel ausführen, jedes vollständig isoliert. Vibe-Coding in einem Tab, ein Spiel in einem anderen — keine gegenseitige Beeinflussung." },
+    { label: "Sprachen",    title: "10 Sprachen",           desc: "Coffee CLI spricht Ihre Sprache — buchstäblich. Wechseln Sie die gesamte Oberfläche zu Englisch, 简体中文, 繁體中文, 日本語, 한국어, Español, Français, Deutsch, Português oder Русский. Kein Englisch erforderlich." }
   ],
   pt: [
     { label: "Temas",       title: "Troca de Tema",          desc: "Alterne entre temas integrados instantaneamente. Toda a interface — incluindo sua sessão de terminal ativa — é atualizada em tempo real. Sem reinicialização, sem cintilação." },
     { label: "Tarefas",     title: "Quadro de Tarefas",      desc: "Acompanhe tudo o que seu agente está fazendo. Organize tarefas em A Fazer, Em Andamento e Concluído — na barra lateral enquanto o agente trabalha." },
     { label: "Histórico",   title: "Histórico de Sessões",   desc: "Cada sessão do agente é salva automaticamente. Role, pesquise e retome qualquer conversa passada exatamente de onde parou." },
-    { label: "Multi-Aba",   title: "Sessões Multi-Aba",      desc: "Execute múltiplos agentes e terminais em paralelo, cada um completamente isolado. Vibe-coding em uma aba, um jogo em outra — zero interferência." }
+    { label: "Multi-Aba",   title: "Sessões Multi-Aba",      desc: "Execute múltiplos agentes e terminais em paralelo, cada um completamente isolado. Vibe-coding em uma aba, um jogo em outra — zero interferência." },
+    { label: "Idiomas",     title: "10 Idiomas",             desc: "Coffee CLI fala o seu idioma — literalmente. Mude toda a interface para inglês, 简体中文, 繁體中文, 日本語, 한국어, Español, Français, Deutsch, Português ou Русский. Sem inglês necessário." }
   ],
   ru: [
     { label: "Темы",        title: "Смена темы",               desc: "Переключайтесь между встроенными темами мгновенно. Весь интерфейс — включая активную сессию терминала — обновляется в реальном времени. Без перезапуска и мерцания." },
     { label: "Задачи",      title: "Доска задач",              desc: "Отслеживайте всё, что делает ваш агент. Организуйте задачи в «К выполнению», «В работе» и «Готово» — прямо на боковой панели, пока агент работает." },
     { label: "История",     title: "История сессий",           desc: "Каждая сессия агента сохраняется автоматически. Прокручивайте, ищите и возобновляйте любой прошлый разговор точно с того места, где остановились." },
-    { label: "Мультитаб",   title: "Мультивкладочные сессии",  desc: "Запускайте несколько агентов и терминалов параллельно, каждый полностью изолирован. Vibe-кодинг в одной вкладке, игра в другой — никаких помех." }
+    { label: "Мультитаб",   title: "Мультивкладочные сессии",  desc: "Запускайте несколько агентов и терминалов параллельно, каждый полностью изолирован. Vibe-кодинг в одной вкладке, игра в другой — никаких помех." },
+    { label: "Языки",       title: "10 языков",                desc: "Coffee CLI говорит на вашем языке — буквально. Переключите весь интерфейс на английский, 简体中文, 繁體中文, 日本語, 한국어, Español, Français, Deutsch, Português или Русский. Английский не нужен." }
   ]
 };
 

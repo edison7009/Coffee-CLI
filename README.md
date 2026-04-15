@@ -89,6 +89,14 @@ Run multiple agents and terminals in parallel, each in its own tab with its own 
 
 ---
 
+#### 10 Languages, One Interface
+
+Coffee CLI translates the entire agent interface into your native language in real time — not just the UI chrome, but the actual terminal output as it streams. No English required to use the world's most powerful AI coding agents.
+
+![10 Languages](screenshot/multilingual.gif)
+
+---
+
 ### Key Features
 
 | Feature | Description |
