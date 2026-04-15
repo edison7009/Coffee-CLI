@@ -229,6 +229,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initInstallationTabs();
   initI18N();
   initLangDropdown();
+  initDemoTabs();
 });
 
 const T_TYPING_SPEED = 100;
@@ -453,4 +454,37 @@ function renderI18N() {
 
 function initI18N() {
   renderI18N();
+}
+
+function initDemoTabs() {
+  const tabs = document.querySelectorAll(".demo-tab");
+  const gif = document.getElementById("demo-gif");
+  const title = document.getElementById("demo-title");
+  const desc = document.getElementById("demo-desc");
+  if (!tabs.length || !gif) return;
+
+  tabs.forEach(tab => {
+    tab.addEventListener("click", () => {
+      if (tab.classList.contains("active")) return;
+
+      tabs.forEach(t => t.classList.remove("active"));
+      tab.classList.add("active");
+
+      // Fade out
+      gif.classList.add("fading");
+      title.classList.add("fading");
+      desc.classList.add("fading");
+
+      setTimeout(() => {
+        gif.src = tab.dataset.gif;
+        title.textContent = tab.dataset.title;
+        desc.textContent = tab.dataset.desc;
+
+        // Fade in
+        gif.classList.remove("fading");
+        title.classList.remove("fading");
+        desc.classList.remove("fading");
+      }, 200);
+    });
+  });
 }

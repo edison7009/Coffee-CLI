@@ -113,6 +113,55 @@
     </div>
   </main>
 
+  <!-- Demo Showcase Section -->
+  <section class="demo-section">
+    <div class="demo-wrapper">
+
+      <div class="demo-screen">
+        <div class="demo-screen-inner">
+          <img id="demo-gif" src="demo/theme-switching.gif" alt="Coffee CLI demo" />
+        </div>
+      </div>
+
+      <div class="demo-meta">
+        <p class="demo-title" id="demo-title">Theme Switching</p>
+        <p class="demo-desc" id="demo-desc">Switch between built-in themes instantly. The entire interface — including your active terminal session — updates live. No restart, no flicker.</p>
+      </div>
+
+      <div class="demo-tabs">
+        <button class="demo-tab active" data-index="0"
+          data-gif="demo/theme-switching.gif"
+          data-title="Theme Switching"
+          data-desc="Switch between built-in themes instantly. The entire interface — including your active terminal session — updates live. No restart, no flicker.">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+          <span>Themes</span>
+        </button>
+        <button class="demo-tab" data-index="1"
+          data-gif="demo/task-board.gif"
+          data-title="Task Board"
+          data-desc="Keep track of everything your agent is doing. Organize work into To-Do, In Progress, and Done — right in the sidebar, while the agent runs.">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          <span>Task Board</span>
+        </button>
+        <button class="demo-tab" data-index="2"
+          data-gif="demo/session-history.gif"
+          data-title="Session History"
+          data-desc="Every agent session is automatically saved. Scroll back, search, and resume any past conversation exactly where you left off.">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
+          <span>History</span>
+        </button>
+        <button class="demo-tab" data-index="3"
+          data-gif="demo/multi-tab.gif"
+          data-title="Multi-Tab Sessions"
+          data-desc="Run multiple agents and terminals in parallel, each fully isolated. Vibe-code in one tab, run a game in another — zero interference.">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+          <span>Multi-Tab</span>
+        </button>
+      </div>
+
+    </div>
+  </section>
+
   <script src="./js/main.js"></script>
 </body>
 </html>
