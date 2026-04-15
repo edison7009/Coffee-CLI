@@ -11,6 +11,7 @@ export const ko = {
   'menu.cut': '잘라내기',
   'menu.copy': '복사',
   'menu.paste': '붙여넣기',
+  'menu.select_all': '모두 선택',
   'menu.rename': '이름 바꾸기',
   'menu.delete': '삭제',
   'menu.show_in_folder': '파일 탐색기에서 열기',

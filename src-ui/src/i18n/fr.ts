@@ -11,6 +11,7 @@ export const fr = {
   'menu.cut': 'Couper',
   'menu.copy': 'Copier',
   'menu.paste': 'Coller',
+  'menu.select_all': 'Tout sélectionner',
   'menu.rename': 'Renommer',
   'menu.delete': 'Supprimer',
   'menu.show_in_folder': 'Afficher dans l\u2019explorateur',

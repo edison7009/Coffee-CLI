@@ -12,6 +12,7 @@ export const vi = {
   'menu.cut': 'Cắt',
   'menu.copy': 'Sao chép',
   'menu.paste': 'Dán',
+  'menu.select_all': 'Chọn tất cả',
   'menu.rename': 'Đổi tên',
   'menu.delete': 'Xóa',
   'menu.show_in_folder': 'Hiển thị trong File Explorer',

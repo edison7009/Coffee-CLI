@@ -11,6 +11,7 @@ export const pt = {
   'menu.cut': 'Recortar',
   'menu.copy': 'Copiar',
   'menu.paste': 'Colar',
+  'menu.select_all': 'Selecionar tudo',
   'menu.rename': 'Renomear',
   'menu.delete': 'Excluir',
   'menu.show_in_folder': 'Mostrar no explorador',

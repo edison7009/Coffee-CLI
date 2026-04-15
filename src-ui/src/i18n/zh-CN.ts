@@ -11,6 +11,7 @@ export const zhCN = {
   'menu.cut': '剪切',
   'menu.copy': '复制',
   'menu.paste': '粘贴',
+  'menu.select_all': '全选',
   'menu.rename': '重命名',
   'menu.delete': '删除',
   'menu.show_in_folder': '在文件管理器中显示',

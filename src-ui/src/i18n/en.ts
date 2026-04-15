@@ -12,6 +12,7 @@ export const en = {
   'menu.cut': 'Cut',
   'menu.copy': 'Copy',
   'menu.paste': 'Paste',
+  'menu.select_all': 'Select All',
   'menu.rename': 'Rename',
   'menu.delete': 'Delete',
   'menu.show_in_folder': 'Reveal in File Explorer',

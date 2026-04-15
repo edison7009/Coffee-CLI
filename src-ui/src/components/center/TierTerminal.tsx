@@ -62,6 +62,7 @@ function TermContextMenu({ menu, onClose, onCopy, onPaste, onSelectAll }: {
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const isMac = navigator.platform.toUpperCase().includes('MAC');
+  const t = useT();
   const mod = isMac ? '⌘' : 'Ctrl';
 
   useEffect(() => {
@@ -91,20 +92,20 @@ function TermContextMenu({ menu, onClose, onCopy, onPaste, onSelectAll }: {
         className={`term-ctx-item${menu.hasSelection ? '' : ' disabled'}`}
         onMouseDown={(e) => { e.preventDefault(); if (menu.hasSelection) onCopy(); }}
       >
-        <span>Copy</span><kbd>{mod}+C</kbd>
+        <span>{t('menu.copy')}</span><kbd>{mod}+C</kbd>
       </button>
       <button
         className="term-ctx-item"
         onMouseDown={(e) => { e.preventDefault(); onPaste(); }}
       >
-        <span>Paste</span><kbd>{mod}+V</kbd>
+        <span>{t('menu.paste')}</span><kbd>{mod}+V</kbd>
       </button>
       <div className="term-ctx-sep" />
       <button
         className="term-ctx-item"
         onMouseDown={(e) => { e.preventDefault(); onSelectAll(); }}
       >
-        <span>Select All</span><kbd>{mod}+A</kbd>
+        <span>{t('menu.select_all')}</span><kbd>{mod}+A</kbd>
       </button>
     </div>,
     document.body,

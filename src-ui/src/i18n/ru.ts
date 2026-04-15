@@ -11,6 +11,7 @@ export const ru = {
   'menu.cut': 'Вырезать',
   'menu.copy': 'Копировать',
   'menu.paste': 'Вставить',
+  'menu.select_all': 'Выбрать всё',
   'menu.rename': 'Переименовать',
   'menu.delete': 'Удалить',
   'menu.show_in_folder': 'Показать в проводнике',

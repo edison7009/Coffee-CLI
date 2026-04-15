@@ -11,6 +11,7 @@ export const zhTW = {
   'menu.cut': '剪下',
   'menu.copy': '複製',
   'menu.paste': '貼上',
+  'menu.select_all': '全選',
   'menu.rename': '重新命名',
   'menu.delete': '刪除',
   'menu.show_in_folder': '在檔案總管中顯示',

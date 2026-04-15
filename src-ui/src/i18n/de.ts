@@ -11,6 +11,7 @@ export const de = {
   'menu.cut': 'Ausschneiden',
   'menu.copy': 'Kopieren',
   'menu.paste': 'Einfügen',
+  'menu.select_all': 'Alles auswählen',
   'menu.rename': 'Umbenennen',
   'menu.delete': 'Löschen',
   'menu.show_in_folder': 'Im Explorer anzeigen',

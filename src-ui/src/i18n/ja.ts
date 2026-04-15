@@ -11,6 +11,7 @@ export const ja = {
   'menu.cut': '切り取り',
   'menu.copy': 'コピー',
   'menu.paste': '貼り付け',
+  'menu.select_all': 'すべて選択',
   'menu.rename': '名前を変更',
   'menu.delete': '削除',
   'menu.show_in_folder': 'エクスプローラーで表示',
