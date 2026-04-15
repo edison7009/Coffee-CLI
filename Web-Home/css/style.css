@@ -112,6 +112,25 @@ body {
   color: var(--text-highlight);
 }
 
+.feedback-btn {
+  background: transparent;
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+  font-family: var(--font-primary);
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 4px;
+  text-decoration: none;
+  transition: all 0.25s ease;
+  white-space: nowrap;
+}
+
+.feedback-btn:hover {
+  background: var(--glass-hover);
+  color: var(--text-highlight);
+}
+
 /* Hero Section */
 
 .lang-switch {

@@ -51,7 +51,8 @@ const I18N_DICT = {
     "hero-title-1": "Enjoy life while you work.",
     "hero-title-2": "Coffee CLI for",
     "hero-subtitle": "Tailor-made for you, no coding or English required.",
-    "opc-link": "Coffee OPC University"
+    "opc-link": "Coffee OPC University",
+    "feedback": "Feedback"
   },
   zh: {
     "page-title": "咖啡办公 - 你的原生桌面 AI 伴侣",
@@ -59,7 +60,8 @@ const I18N_DICT = {
     "hero-title-1": "一边享受生活 一边工作",
     "hero-title-2": "咖啡办公适合",
     "hero-subtitle": "为不懂代码、英文不好的你量身打造",
-    "opc-link": "咖啡一人公司大学"
+    "opc-link": "咖啡一人公司大学",
+    "feedback": "问题反馈"
   },
   "zh-TW": {
     "page-title": "咖啡辦公 - 原生 AI 伴侶",
@@ -67,7 +69,8 @@ const I18N_DICT = {
     "hero-title-1": "一邊享受生活 一邊工作",
     "hero-title-2": "咖啡辦公適用於",
     "hero-subtitle": "為不懂程式設計英文不好的您量身打造",
-    "opc-link": "Coffee OPC 大學"
+    "opc-link": "Coffee OPC 大學",
+    "feedback": "問題回饋"
   },
   ja: {
     "page-title": "コーヒーオフィス - ネイティブ AI コンパニオン",
@@ -75,7 +78,8 @@ const I18N_DICT = {
     "hero-title-1": "生活を楽しみながら働く",
     "hero-title-2": "コーヒーオフィスは以下の方に",
     "hero-subtitle": "コーディングも英語も不要。为您量身打造。",
-    "opc-link": "Coffee OPC 大学"
+    "opc-link": "Coffee OPC 大学",
+    "feedback": "フィードバック"
   },
   ko: {
     "page-title": "커피 오피스 - 네이티브 AI 동반자",
@@ -83,7 +87,8 @@ const I18N_DICT = {
     "hero-title-1": "삶을 즐기며 일하다",
     "hero-title-2": "커피 오피스는 이런 분께",
     "hero-subtitle": "코딩이나 영어 없이 나만을 위해 맞춤화되었습니다.",
-    "opc-link": "Coffee OPC 대학"
+    "opc-link": "Coffee OPC 대학",
+    "feedback": "피드백"
   },
   es: {
     "page-title": "Coffee Office - El compañero nativo de IA",
@@ -91,7 +96,8 @@ const I18N_DICT = {
     "hero-title-1": "Disfruta la vida mientras trabajas",
     "hero-title-2": "Coffee Office para",
     "hero-subtitle": "Hecho a tu medida, sin código ni inglés necesarios.",
-    "opc-link": "Universidad Coffee OPC"
+    "opc-link": "Universidad Coffee OPC",
+    "feedback": "Comentarios"
   },
   fr: {
     "page-title": "Coffee Office - Le compagnon IA natif",
@@ -99,7 +105,8 @@ const I18N_DICT = {
     "hero-title-1": "Profitez de la vie tout en travaillant",
     "hero-title-2": "Coffee Office pour",
     "hero-subtitle": "Conçu pour vous, sans code ni anglais requis.",
-    "opc-link": "Université Coffee OPC"
+    "opc-link": "Université Coffee OPC",
+    "feedback": "Retour"
   },
   de: {
     "page-title": "Coffee Office - Der native KI-Begleiter",
@@ -107,7 +114,8 @@ const I18N_DICT = {
     "hero-title-1": "Genieße das Leben, während du arbeitest",
     "hero-title-2": "Coffee Office für",
     "hero-subtitle": "Für Sie gemacht, kein Code oder Englisch erforderlich.",
-    "opc-link": "Coffee OPC Universität"
+    "opc-link": "Coffee OPC Universität",
+    "feedback": "Feedback"
   },
   pt: {
     "page-title": "Coffee Office - O companheiro nativo de IA",
@@ -115,7 +123,8 @@ const I18N_DICT = {
     "hero-title-1": "Aproveite a vida enquanto trabalha",
     "hero-title-2": "Coffee Office para",
     "hero-subtitle": "Feito sob medida para você, sem código ou inglês necessários.",
-    "opc-link": "Universidade Coffee OPC"
+    "opc-link": "Universidade Coffee OPC",
+    "feedback": "Feedback"
   },
   ru: {
     "page-title": "Coffee Office - Нативный ИИ-компаньон",
@@ -123,7 +132,8 @@ const I18N_DICT = {
     "hero-title-1": "Наслаждайтесь жизнью, работая",
     "hero-title-2": "Coffee Office для",
     "hero-subtitle": "Создано для вас, без программирования и английского.",
-    "opc-link": "Университет Coffee OPC"
+    "opc-link": "Университет Coffee OPC",
+    "feedback": "Обратная связь"
   }
 };
 
