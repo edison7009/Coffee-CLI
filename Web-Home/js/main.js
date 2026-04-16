@@ -60,7 +60,7 @@ const I18N_DICT = {
     "hero-title-1": "一边享受生活 一边工作",
     "hero-title-2": "Coffee CLI 适合",
     "hero-subtitle": "给 CLI 一个漂亮的家",
-    "opc-link": "咖啡一人公司大学",
+    "opc-link": "Coffee OPC 大学",
     "feedback": "问题反馈"
   },
   "zh-TW": {
@@ -82,55 +82,55 @@ const I18N_DICT = {
     "feedback": "フィードバック"
   },
   ko: {
-    "page-title": "커피 오피스 - 네이티브 AI 동반자",
-    "logo-text": "커피 오피스",
+    "page-title": "Coffee CLI - 네이티브 AI 동반자",
+    "logo-text": "Coffee CLI",
     "hero-title-1": "삶을 즐기며 일하다",
-    "hero-title-2": "커피 오피스는 이런 분께",
+    "hero-title-2": "Coffee CLI는 이런 분께",
     "hero-subtitle": "CLI에 아름다운 보금자리를",
     "opc-link": "Coffee OPC 대학",
     "feedback": "피드백"
   },
   es: {
-    "page-title": "Coffee Office - El compañero nativo de IA",
-    "logo-text": "Coffee Office",
+    "page-title": "Coffee CLI - El compañero nativo de IA",
+    "logo-text": "Coffee CLI",
     "hero-title-1": "Disfruta la vida mientras trabajas",
-    "hero-title-2": "Coffee Office para",
+    "hero-title-2": "Coffee CLI para",
     "hero-subtitle": "Un hogar bonito para tu CLI.",
     "opc-link": "Universidad Coffee OPC",
     "feedback": "Comentarios"
   },
   fr: {
-    "page-title": "Coffee Office - Le compagnon IA natif",
-    "logo-text": "Coffee Office",
+    "page-title": "Coffee CLI - Le compagnon IA natif",
+    "logo-text": "Coffee CLI",
     "hero-title-1": "Profitez de la vie tout en travaillant",
-    "hero-title-2": "Coffee Office pour",
+    "hero-title-2": "Coffee CLI pour",
     "hero-subtitle": "Un bel écrin pour votre CLI.",
     "opc-link": "Université Coffee OPC",
     "feedback": "Retour"
   },
   de: {
-    "page-title": "Coffee Office - Der native KI-Begleiter",
-    "logo-text": "Coffee Office",
+    "page-title": "Coffee CLI - Der native KI-Begleiter",
+    "logo-text": "Coffee CLI",
     "hero-title-1": "Genieße das Leben, während du arbeitest",
-    "hero-title-2": "Coffee Office für",
+    "hero-title-2": "Coffee CLI für",
     "hero-subtitle": "Ein schönes Zuhause für deine CLI.",
     "opc-link": "Coffee OPC Universität",
     "feedback": "Feedback"
   },
   pt: {
-    "page-title": "Coffee Office - O companheiro nativo de IA",
-    "logo-text": "Coffee Office",
+    "page-title": "Coffee CLI - O companheiro nativo de IA",
+    "logo-text": "Coffee CLI",
     "hero-title-1": "Aproveite a vida enquanto trabalha",
-    "hero-title-2": "Coffee Office para",
+    "hero-title-2": "Coffee CLI para",
     "hero-subtitle": "Um lar bonito para o seu CLI.",
     "opc-link": "Universidade Coffee OPC",
     "feedback": "Feedback"
   },
   ru: {
-    "page-title": "Coffee Office - Нативный ИИ-компаньон",
-    "logo-text": "Coffee Office",
+    "page-title": "Coffee CLI - Нативный ИИ-компаньон",
+    "logo-text": "Coffee CLI",
     "hero-title-1": "Наслаждайтесь жизнью, работая",
-    "hero-title-2": "Coffee Office для",
+    "hero-title-2": "Coffee CLI для",
     "hero-subtitle": "Красивый дом для вашего CLI.",
     "opc-link": "Университет Coffee OPC",
     "feedback": "Обратная связь"
