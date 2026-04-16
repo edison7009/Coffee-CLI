@@ -55,19 +55,19 @@ const I18N_DICT = {
     "feedback": "Feedback"
   },
   zh: {
-    "page-title": "咖啡办公 - 你的原生桌面 AI 伴侣",
-    "logo-text": "咖啡办公",
+    "page-title": "Coffee CLI - 你的原生桌面 AI 伴侣",
+    "logo-text": "Coffee CLI",
     "hero-title-1": "一边享受生活 一边工作",
-    "hero-title-2": "咖啡办公适合",
+    "hero-title-2": "Coffee CLI 适合",
     "hero-subtitle": "给 CLI 一个漂亮的家",
     "opc-link": "咖啡一人公司大学",
     "feedback": "问题反馈"
   },
   "zh-TW": {
-    "page-title": "咖啡辦公 - 原生 AI 伴侶",
-    "logo-text": "咖啡辦公",
+    "page-title": "Coffee CLI - 原生 AI 伴侶",
+    "logo-text": "Coffee CLI",
     "hero-title-1": "一邊享受生活 一邊工作",
-    "hero-title-2": "咖啡辦公適用於",
+    "hero-title-2": "Coffee CLI 適用於",
     "hero-subtitle": "給 CLI 一個漂亮的家",
     "opc-link": "Coffee OPC 大學",
     "feedback": "問題回饋"

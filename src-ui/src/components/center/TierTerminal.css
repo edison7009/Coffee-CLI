@@ -9,6 +9,23 @@
     overflow: hidden;
 }
 
+/* ─── Custom Background Layer ──────────────────────────────── */
+.tier-terminal-bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.tier-terminal-bg img,
+.tier-terminal-bg video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+
 /* ─── xterm.js container ────────────────────────────────────── */
 .tier-xterm-wrap {
     flex: 1;
@@ -16,6 +33,8 @@
     min-height: 0;
     overflow: hidden;
     background: transparent;
+    position: relative;
+    z-index: 1;  /* above .tier-terminal-bg */
     /* Padding lives HERE so FitAddon reads the correct content-box dimensions.
        FitAddon reads parentElement.clientWidth — putting padding on the inner
        .xterm element (which FitAddon never sees) caused a ~3-col mismatch that
@@ -31,12 +50,22 @@
 /* xterm.js overrides — match our design */
 .tier-xterm .xterm {
     padding: 0; /* Padding is on .tier-xterm-wrap; do not add padding here */
-    overflow: hidden; /* Block browser scroll-to-focus on the IME helper textarea */
+    overflow: hidden; /* Prevent scroll bars on the terminal container */
 }
 
-/* Contain the far-offscreen helper textarea so IME focus doesn't scroll the terminal */
-.tier-xterm .xterm-helpers {
-    overflow: hidden;
+/* IME fix: override xterm's default left:-9999em so the browser never
+   tries to scroll-to-focus the far-offscreen textarea.  At left:0 it is
+   invisible (opacity:0) but in-view.  xterm's _syncTextArea() then sets
+   inline style.left to the cursor column — inline styles beat this rule,
+   so the OS IME candidate window tracks the real cursor position.
+   DO NOT use !important — it blocks the inline-style updates and breaks
+   multi-monitor IME positioning.
+   DO NOT add overflow:hidden to .xterm-helpers — it is a 0×0 abs-pos
+   container; clipping it prevents the OS from reading textarea coords. */
+.tier-xterm .xterm .xterm-helper-textarea {
+    left: 0;
+    min-width: 1px;  /* some CJK IMEs (QQ Pinyin, Rime) fail on a 0-width textarea */
+    min-height: 1px;
 }
 
 .tier-xterm .xterm-viewport {

@@ -1,5 +1,5 @@
 export const zhCN = {
-  'app.title': '咖啡办公',
+  'app.title': 'Coffee CLI',
   'explorer.tab.computer': '我的电脑',
   'explorer.tab.workspace': '工作区',
   'explorer.workspace.select-dir': '点击选择工作目录',

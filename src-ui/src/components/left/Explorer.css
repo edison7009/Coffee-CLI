@@ -444,6 +444,13 @@
   padding: 2px;
 }
 
+.theme-preset-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  padding: 2px;
+}
+
 .theme-preset-item {
   display: flex;
   align-items: center;
@@ -504,6 +511,75 @@
   pointer-events: none;
 }
 
+
+/* ─── Theme Menu: Wallpaper + Font Color Row ──────────────────────────────── */
+
+.theme-bg-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 2px;
+}
+
+.theme-bg-btn {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 8px;
+  border-radius: var(--shape-radius-btn, 5px);
+  border: 1px solid var(--border);
+  background: var(--bg-hover);
+  color: var(--text-2);
+  font-size: 11.5px;
+  font-weight: 500;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  white-space: nowrap;
+}
+.theme-bg-btn:hover {
+  background: var(--bg-active);
+  color: var(--text-1);
+}
+.theme-bg-btn.has-bg {
+  background: var(--accent-bg);
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.term-fg-chip {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 4px;
+  border-radius: var(--shape-radius-btn, 5px);
+  border: 1px solid var(--border);
+  background: var(--bg-hover);
+  font-size: 12.5px;
+  font-weight: 800;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.term-fg-chip:hover {
+  background: var(--bg-active);
+}
+.term-fg-chip.active {
+  background: var(--accent-bg);
+  border-color: var(--accent);
+}
+.term-fg-chip.reset {
+  color: var(--text-3);
+}
+.term-fg-chip.reset.active {
+  color: var(--text-1);
+  background: var(--accent-bg);
+  border-color: var(--accent);
+}
 
 /* ─── Inline Rename Input ─────────────────────────────────────────────────── */
 

@@ -302,6 +302,8 @@ const THEME_PRESETS: { labelKey: string; theme: ThemeColor; shape: ThemeShape }[
   { labelKey: 'theme.preset.light_soft',      theme: 'light',      shape: 'soft'  },
 ];
 
+import { TERM_COLOR_SCHEMES } from '../center/TierTerminal';
+
 const ICON_ART_THEMES: { id: IconTheme; folderSrc: string }[] = [
   { id: 'default',  folderSrc: '/icons/folder-closed.svg'                    },
   { id: 'flat',     folderSrc: '/icons/themes/flat/folder-closed.svg'        },
@@ -313,15 +315,20 @@ const ICON_ART_THEMES: { id: IconTheme; folderSrc: string }[] = [
   { id: 'pastel',   folderSrc: '/icons/themes/pastel/folder-closed.svg'      },
 ];
 
-function ThemeMenu({ anchorRef, currentTheme, currentShape, currentIconTheme, onSelectTheme, onSelectShape, onSelectPreset, onSelectIconTheme, onClose, t }: {
+function ThemeMenu({ anchorRef, currentTheme, currentShape, currentIconTheme, hasBg, termColorScheme, onSelectTheme, onSelectShape, onSelectPreset, onSelectIconTheme, onPickBg, onClearBg, onSelectScheme, onClose, t }: {
   anchorRef: React.RefObject<HTMLButtonElement | null>;
   currentTheme: ThemeColor;
   currentShape: ThemeShape;
   currentIconTheme: IconTheme;
+  hasBg: boolean;
+  termColorScheme: string;
   onSelectTheme: (t: ThemeColor) => void;
   onSelectShape: (s: ThemeShape) => void;
   onSelectPreset: (t: ThemeColor, s: ThemeShape) => void;
   onSelectIconTheme: (t: IconTheme) => void;
+  onPickBg: () => void;
+  onClearBg: () => void;
+  onSelectScheme: (id: string) => void;
   onClose: () => void;
   t: (key: any) => string;
 }) {
@@ -380,7 +387,7 @@ function ThemeMenu({ anchorRef, currentTheme, currentShape, currentIconTheme, on
 
       <div className="ctx-menu-divider" />
       <div className="theme-menu-section-label">{t('theme.section.presets')}</div>
-      <div className="theme-preset-list">
+      <div className="theme-preset-grid">
         {THEME_PRESETS.map(p => (
           <button
             key={p.labelKey}
@@ -389,6 +396,34 @@ function ThemeMenu({ anchorRef, currentTheme, currentShape, currentIconTheme, on
           >
             {t(p.labelKey as any)}
           </button>
+        ))}
+      </div>
+
+      <div className="ctx-menu-divider" />
+
+      {/* Wallpaper + terminal color scheme row */}
+      <div className="theme-bg-row">
+        <button
+          className={`theme-bg-btn ${hasBg ? 'has-bg' : ''}`}
+          onClick={hasBg ? onClearBg : onPickBg}
+        >
+          {hasBg ? (
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          ) : (
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+          )}
+        </button>
+        <button
+          className={`term-fg-chip reset ${termColorScheme === '' ? 'active' : ''}`}
+          onClick={() => onSelectScheme('')}
+        >Aa</button>
+        {TERM_COLOR_SCHEMES.map(s => (
+          <button
+            key={s.id}
+            className={`term-fg-chip ${termColorScheme === s.id ? 'active' : ''}`}
+            style={{ color: s.fg }}
+            onClick={() => onSelectScheme(termColorScheme === s.id ? '' : s.id)}
+          >Aa</button>
         ))}
       </div>
 
@@ -983,11 +1018,10 @@ export function Explorer() {
             onClick={() => setThemeMenuOpen(v => !v)}
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="13.5" cy="6.5" r="2.5" />
-              <circle cx="6" cy="12" r="3" />
-              <circle cx="17" cy="15.5" r="2" />
-              <circle cx="9" cy="18.5" r="1.5" />
-              <path d="M21 12a9 9 0 1 1-9-9c0 5 4 9 9 9Z" />
+              <rect x="3" y="3" width="7" height="7" rx="1.5" />
+              <rect x="14" y="3" width="7" height="7" rx="1.5" />
+              <rect x="3" y="14" width="7" height="7" rx="1.5" />
+              <rect x="14" y="14" width="7" height="7" rx="1.5" />
             </svg>
           </button>
           <button
@@ -1115,13 +1149,15 @@ export function Explorer() {
         />
       )}
 
-      {/* Theme menu (color × shape × icon style) */}
+      {/* Theme menu (color × shape × icon style × wallpaper × term fg) */}
       {themeMenuOpen && (
         <ThemeMenu
           anchorRef={themeBtnRef}
           currentTheme={state.currentTheme}
           currentShape={state.currentShape}
           currentIconTheme={state.iconTheme}
+          hasBg={state.bgType !== 'none' && state.bgPath !== ''}
+          termColorScheme={state.termColorScheme}
           onSelectTheme={(t) => dispatch({ type: 'SET_THEME', theme: t })}
           onSelectShape={(s) => dispatch({ type: 'SET_SHAPE', shape: s })}
           onSelectPreset={(t, s) => {
@@ -1131,6 +1167,28 @@ export function Explorer() {
           onSelectIconTheme={(t) => {
             dispatch({ type: 'SET_ICON_THEME', theme: t });
             try { localStorage.setItem('cc-icon-theme', t); } catch {}
+          }}
+          onPickBg={async () => {
+            try {
+              const { open } = await import('@tauri-apps/plugin-dialog');
+              const selected = await open({
+                filters: [{ name: 'Background', extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'mp4', 'webm'] }],
+              });
+              if (selected && typeof selected === 'string') {
+                const ext = selected.split('.').pop()?.toLowerCase() || '';
+                const bgType = ['mp4', 'webm'].includes(ext) ? 'video' : 'image';
+                try { localStorage.setItem('cc-bg-path', selected); localStorage.setItem('cc-bg-type', bgType); } catch {}
+                dispatch({ type: 'SET_BG', path: selected, bgType });
+              }
+            } catch (err) { console.error('[ThemeMenu] Background picker failed:', err); }
+          }}
+          onClearBg={() => {
+            try { localStorage.removeItem('cc-bg-path'); localStorage.removeItem('cc-bg-type'); } catch {}
+            dispatch({ type: 'CLEAR_BG' });
+          }}
+          onSelectScheme={(id) => {
+            try { id ? localStorage.setItem('cc-term-scheme', id) : localStorage.removeItem('cc-term-scheme'); } catch {}
+            dispatch({ type: 'SET_TERM_SCHEME', scheme: id });
           }}
           onClose={() => setThemeMenuOpen(false)}
           t={t}

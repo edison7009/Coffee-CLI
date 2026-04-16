@@ -38,6 +38,13 @@ export interface AppState {
   currentLang: string;
   iconTheme: IconTheme;
 
+  // Background wallpaper
+  bgPath: string;
+  bgType: 'image' | 'video' | 'none';
+
+  // Terminal foreground color override ('' = use theme default)
+  termColorScheme: string;
+
   // Terminals
   terminals: TerminalSession[];
   activeTerminalId: string | null;
@@ -60,7 +67,10 @@ type Action =
   | { type: 'SET_TERMINAL_HIDDEN'; id: string; isHidden: boolean }
   | { type: 'RESTART_TERMINAL'; id: string; newId: string }
   | { type: 'OPEN_HISTORY_TAB'; sessionData: string; folderPath: string }
-  | { type: 'SET_AGENT_STATUS'; id: string; status: AgentStatus };
+  | { type: 'SET_AGENT_STATUS'; id: string; status: AgentStatus }
+  | { type: 'SET_BG'; path: string; bgType: 'image' | 'video' }
+  | { type: 'CLEAR_BG' }
+  | { type: 'SET_TERM_SCHEME'; scheme: string };
 
 // ─── Reducer ─────────────────────────────────────────────────────────────────
 
@@ -159,6 +169,12 @@ function reducer(state: AppState, action: Action): AppState {
         ...state,
         terminals: state.terminals.map(t => t.id === action.id ? { ...t, agentStatus: action.status } : t)
       };
+    case 'SET_BG':
+      return { ...state, bgPath: action.path, bgType: action.bgType };
+    case 'CLEAR_BG':
+      return { ...state, bgPath: '', bgType: 'none' };
+    case 'SET_TERM_SCHEME':
+      return { ...state, termColorScheme: action.scheme };
     default:
       return state;
   }
@@ -199,6 +215,15 @@ function getInitialState(): AppState {
     if (savedLang) lang = savedLang;
   } catch {}
 
+  let bgPath = '';
+  let bgType: 'image' | 'video' | 'none' = 'none';
+  let termColorScheme = '';
+  try {
+    bgPath = localStorage.getItem('cc-bg-path') || '';
+    bgType = (localStorage.getItem('cc-bg-type') as 'image' | 'video' | 'none') || 'none';
+    termColorScheme = localStorage.getItem('cc-term-scheme') || '';
+  } catch {}
+
   const defaultTerminalId = crypto.randomUUID();
 
   return {
@@ -206,6 +231,9 @@ function getInitialState(): AppState {
     currentShape: shape,
     iconTheme,
     currentLang: lang,
+    bgPath,
+    bgType,
+    termColorScheme,
     terminals: [{ id: defaultTerminalId, tool: null, folderPath, scanData: null }],
     activeTerminalId: defaultTerminalId,
   };

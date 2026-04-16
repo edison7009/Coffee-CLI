@@ -28,7 +28,7 @@ regex = "1"
 clap = { version = "4", features = ["derive"] }
 
 # Tauri
-tauri = { version = "2", features = ["devtools"] }
+tauri = { version = "2", features = ["devtools", "protocol-asset"] }
 tauri-plugin-log = "2"
 tauri-plugin-dialog = "2"
 

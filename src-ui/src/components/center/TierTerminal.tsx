@@ -22,6 +22,110 @@ import './TierTerminal.css';
 
 // Installer scripts are fetched at runtime from CF (hot-updatable, no release needed).
 // Falls back to GitHub raw if CF is unreachable.
+// ─── Terminal Color Schemes ──────────────────────────────────────────────────
+// Full ANSI palettes for readability on different wallpapers.
+// "default" = use built-in warm theme, no override.
+
+export interface TermColorScheme {
+  id: string;
+  fg: string;       // foreground / preview swatch color
+  black: string;    red: string;    green: string;   yellow: string;
+  blue: string;     magenta: string; cyan: string;   white: string;
+  brightBlack: string; brightRed: string; brightGreen: string; brightYellow: string;
+  brightBlue: string; brightMagenta: string; brightCyan: string; brightWhite: string;
+  selectionBg: string;
+}
+
+export const TERM_COLOR_SCHEMES: TermColorScheme[] = [
+  { // Dracula — vivid on dark, iconic purple accent
+    id: 'dracula',   fg: '#f8f8f2',
+    black: '#21222c', red: '#ff5555', green: '#50fa7b', yellow: '#f1fa8c',
+    blue: '#bd93f9',  magenta: '#ff79c6', cyan: '#8be9fd', white: '#f8f8f2',
+    brightBlack: '#6272a4', brightRed: '#ff6e6e', brightGreen: '#69ff94', brightYellow: '#ffffa5',
+    brightBlue: '#d6acff', brightMagenta: '#ff92df', brightCyan: '#a4ffff', brightWhite: '#ffffff',
+    selectionBg: 'rgba(68,71,90,0.5)',
+  },
+  { // Nord — calm arctic blue palette
+    id: 'nord',      fg: '#d8dee9',
+    black: '#3b4252', red: '#bf616a', green: '#a3be8c', yellow: '#ebcb8b',
+    blue: '#81a1c1',  magenta: '#b48ead', cyan: '#88c0d0', white: '#e5e9f0',
+    brightBlack: '#4c566a', brightRed: '#bf616a', brightGreen: '#a3be8c', brightYellow: '#ebcb8b',
+    brightBlue: '#81a1c1', brightMagenta: '#b48ead', brightCyan: '#8fbcbb', brightWhite: '#eceff4',
+    selectionBg: 'rgba(136,192,208,0.2)',
+  },
+  { // Tokyo Night — modern purple-blue neon
+    id: 'tokyo',     fg: '#a9b1d6',
+    black: '#32344a', red: '#f7768e', green: '#9ece6a', yellow: '#e0af68',
+    blue: '#7aa2f7',  magenta: '#ad8ee6', cyan: '#449dab', white: '#787c99',
+    brightBlack: '#444b6a', brightRed: '#ff7a93', brightGreen: '#b9f27c', brightYellow: '#ff9e64',
+    brightBlue: '#7da6ff', brightMagenta: '#bb9af7', brightCyan: '#0db9d7', brightWhite: '#acb0d0',
+    selectionBg: 'rgba(122,162,247,0.2)',
+  },
+  { // One Dark — Atom's signature warm muted palette
+    id: 'onedark',   fg: '#abb2bf',
+    black: '#5c6370', red: '#e06c75', green: '#98c379', yellow: '#e5c07b',
+    blue: '#61afef',  magenta: '#c678dd', cyan: '#56b6c2', white: '#abb2bf',
+    brightBlack: '#4b5263', brightRed: '#be5046', brightGreen: '#98c379', brightYellow: '#d19a66',
+    brightBlue: '#61afef', brightMagenta: '#c678dd', brightCyan: '#56b6c2', brightWhite: '#c8ccd4',
+    selectionBg: 'rgba(171,178,191,0.15)',
+  },
+  { // Solarized — Ethan Schoonover's balanced readability palette
+    id: 'solarized', fg: '#839496',
+    black: '#073642', red: '#dc322f', green: '#859900', yellow: '#b58900',
+    blue: '#268bd2',  magenta: '#d33682', cyan: '#2aa198', white: '#eee8d5',
+    brightBlack: '#586e75', brightRed: '#cb4b16', brightGreen: '#859900', brightYellow: '#b58900',
+    brightBlue: '#268bd2', brightMagenta: '#6c71c4', brightCyan: '#2aa198', brightWhite: '#fdf6e3',
+    selectionBg: 'rgba(131,148,150,0.2)',
+  },
+  { // Dark Ink — dark foreground for bright/light wallpapers
+    id: 'darkink',   fg: '#1a1a2e',
+    black: '#000000', red: '#c23621', green: '#25802a', yellow: '#a57706',
+    blue: '#2558a8',  magenta: '#803080', cyan: '#1a7a7a', white: '#4a4a4a',
+    brightBlack: '#555555', brightRed: '#e8503a', brightGreen: '#31a035', brightYellow: '#c49000',
+    brightBlue: '#3070cc', brightMagenta: '#9940a0', brightCyan: '#249494', brightWhite: '#666666',
+    selectionBg: 'rgba(0,0,0,0.15)',
+  },
+];
+
+function buildXtermTheme(isDark: boolean, hasBg: boolean | undefined, hideCursor: boolean, schemeId?: string) {
+  const scheme = schemeId ? TERM_COLOR_SCHEMES.find(s => s.id === schemeId) : undefined;
+  const bg  = hasBg ? 'rgba(0,0,0,0)' : (isDark ? '#0c0c0c' : '#f4f3ee');
+  const bgOpaque = isDark ? '#0c0c0c' : '#f4f3ee';
+
+  if (scheme) {
+    return {
+      background: bg,
+      foreground: scheme.fg,
+      cursor: hideCursor ? bgOpaque : scheme.fg,
+      cursorAccent: bgOpaque,
+      selectionBackground: scheme.selectionBg,
+      black: scheme.black, red: scheme.red, green: scheme.green, yellow: scheme.yellow,
+      blue: scheme.blue, magenta: scheme.magenta, cyan: scheme.cyan, white: scheme.white,
+      brightBlack: scheme.brightBlack, brightRed: scheme.brightRed,
+      brightGreen: scheme.brightGreen, brightYellow: scheme.brightYellow,
+      brightBlue: scheme.brightBlue, brightMagenta: scheme.brightMagenta,
+      brightCyan: scheme.brightCyan, brightWhite: scheme.brightWhite,
+    };
+  }
+
+  // Default warm theme
+  return isDark ? {
+    background: bg, foreground: '#e8e4de',
+    cursor: hideCursor ? bgOpaque : '#e8e4de', cursorAccent: bgOpaque,
+    selectionBackground: 'rgba(196,149,106,0.3)',
+    black: '#0c0c0c', red: '#e07070', green: '#7ec77e', yellow: '#d4a846',
+    blue: '#78a8d4', magenta: '#b07cc6', cyan: '#5fc4c0', white: '#e8e4de',
+    brightBlack: '#6b6762',
+  } : {
+    background: bg, foreground: '#2d2c2a',
+    cursor: hideCursor ? bgOpaque : '#2d2c2a', cursorAccent: bgOpaque,
+    selectionBackground: 'rgba(196,149,106,0.25)',
+    black: '#2d2c2a', red: '#cc3333', green: '#2d7a2d', yellow: '#8a6000',
+    blue: '#2952a3', magenta: '#7a3d8a', cyan: '#1a6b6b', white: '#f4f3ee',
+    brightBlack: '#9e9c98',
+  };
+}
+
 // Installer scripts live in Web-Home/ and are served directly from coffeecli.com.
 // Falls back to GitHub raw if the website is unreachable.
 const INSTALLER_URLS: Record<string, string[]> = {
@@ -120,12 +224,16 @@ interface TierTerminalProps {
   isActive: boolean;
   toolData?: string;
   folderPath?: string | null;
+  hasBg?: boolean;
+  bgUrl?: string;
+  bgType?: 'image' | 'video' | 'none';
+  termColorScheme?: string;
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
 function TierTerminalImpl({
-  sessionId, tool, theme, lang, isActive, toolData, folderPath,
+  sessionId, tool, theme, lang, isActive, toolData, folderPath, hasBg, bgUrl, bgType, termColorScheme,
 }: TierTerminalProps) {
   // Dispatch-only subscription. Never re-renders this component.
   const dispatch = useAppDispatch();
@@ -183,6 +291,7 @@ function TierTerminalImpl({
       lineHeight: 1.3,
       letterSpacing: 0,
       fontWeight: '400',
+      allowTransparency: true, // Required for rgba background (custom wallpaper behind terminal)
       customGlyphs: !isLinux, // Linux: off (font metrics unreliable); Win/Mac: on for box-drawing chars
       cursorStyle: 'bar' as const,
       // Claude Code manages its own cursor via ANSI sequences; hide xterm's native
@@ -190,37 +299,7 @@ function TierTerminalImpl({
       // Other tools (codex) use xterm's cursor at the normal prompt.
       cursorBlink: tool !== 'claude',
       scrollback: 5000,
-      theme: isDark ? {
-        background:  '#0c0c0c',
-        foreground:  '#e8e4de',
-        cursor:      tool === 'claude' ? '#0c0c0c' : '#e8e4de',
-        cursorAccent: '#0c0c0c',
-        selectionBackground: 'rgba(196,149,106,0.3)',
-        black:       '#0c0c0c',
-        red:         '#e07070',
-        green:       '#7ec77e',
-        yellow:      '#d4a846',
-        blue:        '#78a8d4',
-        magenta:     '#b07cc6',
-        cyan:        '#5fc4c0',
-        white:       '#e8e4de',
-        brightBlack: '#6b6762',
-      } : {
-        background:  '#f4f3ee',
-        foreground:  '#2d2c2a',
-        cursor:      tool === 'claude' ? '#f4f3ee' : '#2d2c2a',
-        cursorAccent: '#f4f3ee',
-        selectionBackground: 'rgba(196,149,106,0.25)',
-        black:       '#2d2c2a',
-        red:         '#cc3333',
-        green:       '#2d7a2d',
-        yellow:      '#8a6000',
-        blue:        '#2952a3',
-        magenta:     '#7a3d8a',
-        cyan:        '#1a6b6b',
-        white:       '#f4f3ee',
-        brightBlack: '#9e9c98',
-      },
+      theme: buildXtermTheme(isDark, hasBg, tool === 'claude', termColorScheme),
     });
 
     const fit = new FitAddon();
@@ -252,7 +331,9 @@ function TierTerminalImpl({
       console.warn('[TierTerminal] WebGL probe failed → DOM renderer');
     }
 
-    if (useWebgl) {
+    // WebGL does not support transparent backgrounds (confirmed by Hyper's source).
+    // When a custom wallpaper is active, skip WebGL and use the Canvas renderer.
+    if (useWebgl && !hasBg) {
       try {
         const webgl = new WebglAddon();
         webgl.onContextLoss(() => { webgl.dispose(); });
@@ -485,17 +566,8 @@ function TierTerminalImpl({
   useEffect(() => {
     const term = xtermRef.current;
     if (!term) return;
-    const isDark = theme !== 'light';
-    // Claude Code manages its own cursor — keep xterm cursor invisible
-    const hideCursor = tool === 'claude';
-    term.options.theme = isDark ? {
-      background: '#0c0c0c', foreground: '#e8e4de',
-      cursor: hideCursor ? '#0c0c0c' : '#e8e4de', cursorAccent: '#0c0c0c'
-    } : {
-      background: '#f4f3ee', foreground: '#2d2c2a',
-      cursor: hideCursor ? '#f4f3ee' : '#2d2c2a', cursorAccent: '#f4f3ee'
-    };
-  }, [theme, tool]);
+    term.options.theme = buildXtermTheme(theme !== 'light', hasBg, tool === 'claude', termColorScheme);
+  }, [theme, tool, termColorScheme, hasBg]);
 
   // ── Active tab focus restoration ─────────────────────────────────────────
   // Cache last-sent size so we skip redundant PTY resize calls when tab
@@ -566,13 +638,24 @@ function TierTerminalImpl({
 
   // ── Render ───────────────────────────────────────────────────────────────
 
-  const terminalBg = theme === 'light' ? '#f4f3ee' : '#0c0c0c';
+  const solidBg = theme === 'light' ? '#f4f3ee' : '#0c0c0c';
+  const terminalBg = hasBg ? 'transparent' : solidBg;
 
   // Show fallback UI when splash is gone but terminal has no content
   const showFallback = !showSplash && !hasOutputRef.current && (processExited || startFailed);
 
   return (
     <div className="tier-terminal" style={{ background: terminalBg, position: 'relative' }}>
+      {/* Custom background (image/video) behind terminal text */}
+      {hasBg && bgUrl && (
+        <div className="tier-terminal-bg">
+          {bgType === 'video' ? (
+            <video src={bgUrl} autoPlay loop muted playsInline />
+          ) : (
+            <img src={bgUrl} alt="" draggable={false} />
+          )}
+        </div>
+      )}
       {/* xterm.js: handles all rendering, input, and scrolling. */}
       <div
         className="tier-xterm-wrap"
@@ -610,7 +693,7 @@ function TierTerminalImpl({
 
       {/* Fallback UI when tool fails to launch or exits before producing output */}
       {showFallback && (
-        <div className="tier-launch-failed" style={{ background: terminalBg }}>
+        <div className="tier-launch-failed" style={{ background: solidBg }}>
           <div className="launch-failed-group">
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--accent, #C4956A)', opacity: 0.7 }}>
               <circle cx="12" cy="12" r="10" />
@@ -636,7 +719,7 @@ function TierTerminalImpl({
       {showSplash && (
         <div
           className={`tier-loading-splash ${splashFading ? 'fade-out' : ''}`}
-          style={{ background: terminalBg }}
+          style={{ background: solidBg }}
         >
           {/* Animated coffee cup + label + dots — grouped as one visual unit */}
           <div className="splash-group">

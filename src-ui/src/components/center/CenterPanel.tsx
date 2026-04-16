@@ -387,6 +387,24 @@ export function CenterPanel() {
     }
   };
 
+  // ── Custom background (image/video) ──────────────────────────────────────
+  // Background state lives in global AppState (set via theme menu in Explorer)
+  const bgPath = state.bgPath;
+  const bgType = state.bgType;
+  const hasBg = bgType !== 'none' && bgPath !== '';
+
+  // Convert local file path to a displayable URL.
+  // Use Tauri's convertFileSrc (asset protocol) for zero-copy streaming.
+  const [bgUrl, setBgUrl] = useState('');
+  useEffect(() => {
+    if (!hasBg) { setBgUrl(''); return; }
+    import('@tauri-apps/api/core').then(({ convertFileSrc }) => {
+      setBgUrl(convertFileSrc(bgPath));
+    }).catch(() => {
+      setBgUrl('file:///' + bgPath.replace(/\\/g, '/'));
+    });
+  }, [hasBg, bgPath]);
+
   return (
     <>
       <div className="chrome-tabs-header" data-count={terminals.filter(s => !s.isHidden || s.id === activeTerminalId).length}>
@@ -464,6 +482,10 @@ export function CenterPanel() {
                   isActive={t.id === activeTerminalId}
                   toolData={t.toolData}
                   folderPath={t.folderPath}
+                  hasBg={hasBg}
+                  bgUrl={bgUrl}
+                  bgType={bgType}
+                  termColorScheme={state.termColorScheme}
                 />
               </ErrorBoundary>
             )}
@@ -471,7 +493,14 @@ export function CenterPanel() {
         ) : null)}
 
         {isLaunchpadMode && activeTerminalId && (
-          <div className="launchpad-container" style={{ position: 'relative' }}>
+          <div className={`launchpad-container${hasBg && bgUrl ? ' launchpad-has-bg' : ''}`} style={{ position: 'relative' }}>
+            {hasBg && bgUrl && (
+              <div className="launchpad-bg">
+                {bgType === 'video'
+                  ? <video src={bgUrl} autoPlay loop muted playsInline />
+                  : <img src={bgUrl} alt="" />}
+              </div>
+            )}
             {/* Close button removed: handles via Tab bar */}
             <div className="launchpad-slider-viewport">
               <div className={`launchpad-slider-track ${showArcadeGames ? 'slide-to-games' : ''}`}>
@@ -779,6 +808,7 @@ export function CenterPanel() {
                 </div>
               </button>
             </div>
+
           </div>
                 )}
       </div>

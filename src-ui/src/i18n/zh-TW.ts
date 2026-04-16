@@ -1,5 +1,5 @@
 export const zhTW = {
-  'app.title': '咖啡辦公',
+  'app.title': 'Coffee CLI',
   'explorer.tab.computer': '我的電腦',
   'explorer.tab.workspace': '工作區',
   'explorer.workspace.select-dir': '點擊選擇工作目錄',
