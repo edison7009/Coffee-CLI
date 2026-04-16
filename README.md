@@ -29,7 +29,7 @@
 </p>
 
 <p align="center">
-  <img src="screenshot/wallpaper.png" alt="Coffee CLI with custom wallpaper" width="860" />
+  <img src="screenshot/wallpaper.gif" alt="Coffee CLI with custom wallpaper" width="860" />
 </p>
 
 ---
