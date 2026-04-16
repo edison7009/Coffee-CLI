@@ -50,7 +50,7 @@ const I18N_DICT = {
     "logo-text": "Coffee CLI",
     "hero-title-1": "Enjoy life while you work.",
     "hero-title-2": "Coffee CLI for",
-    "hero-subtitle": "Tasks, history, multi-session, themes — everything Claude Code was missing.",
+    "hero-subtitle": "A beautiful home for your CLI.",
     "opc-link": "Coffee OPC University",
     "feedback": "Feedback"
   },
@@ -59,7 +59,7 @@ const I18N_DICT = {
     "logo-text": "咖啡办公",
     "hero-title-1": "一边享受生活 一边工作",
     "hero-title-2": "咖啡办公适合",
-    "hero-subtitle": "任务看板、历史记录、多 Tab、主题切换——Claude Code 缺失的一切",
+    "hero-subtitle": "给 CLI 一个漂亮的家",
     "opc-link": "咖啡一人公司大学",
     "feedback": "问题反馈"
   },
@@ -68,7 +68,7 @@ const I18N_DICT = {
     "logo-text": "咖啡辦公",
     "hero-title-1": "一邊享受生活 一邊工作",
     "hero-title-2": "咖啡辦公適用於",
-    "hero-subtitle": "任務看板、歷史記錄、多 Tab、主題切換——Claude Code 缺失的一切",
+    "hero-subtitle": "給 CLI 一個漂亮的家",
     "opc-link": "Coffee OPC 大學",
     "feedback": "問題回饋"
   },
@@ -77,7 +77,7 @@ const I18N_DICT = {
     "logo-text": "コーヒーオフィス",
     "hero-title-1": "生活を楽しみながら働く",
     "hero-title-2": "コーヒーオフィスは以下の方に",
-    "hero-subtitle": "タスク・履歴・マルチタブ・テーマ — Claude Codeに足りなかったすべて",
+    "hero-subtitle": "CLI に美しいホームを",
     "opc-link": "Coffee OPC 大学",
     "feedback": "フィードバック"
   },
@@ -86,7 +86,7 @@ const I18N_DICT = {
     "logo-text": "커피 오피스",
     "hero-title-1": "삶을 즐기며 일하다",
     "hero-title-2": "커피 오피스는 이런 분께",
-    "hero-subtitle": "작업 보드, 기록, 멀티탭, 테마 — Claude Code에 없던 모든 것",
+    "hero-subtitle": "CLI에 아름다운 보금자리를",
     "opc-link": "Coffee OPC 대학",
     "feedback": "피드백"
   },
@@ -95,7 +95,7 @@ const I18N_DICT = {
     "logo-text": "Coffee Office",
     "hero-title-1": "Disfruta la vida mientras trabajas",
     "hero-title-2": "Coffee Office para",
-    "hero-subtitle": "Tareas, historial, multipestaña, temas — todo lo que faltaba en Claude Code.",
+    "hero-subtitle": "Un hogar bonito para tu CLI.",
     "opc-link": "Universidad Coffee OPC",
     "feedback": "Comentarios"
   },
@@ -104,7 +104,7 @@ const I18N_DICT = {
     "logo-text": "Coffee Office",
     "hero-title-1": "Profitez de la vie tout en travaillant",
     "hero-title-2": "Coffee Office pour",
-    "hero-subtitle": "Tâches, historique, multi-onglets, thèmes — tout ce qui manquait à Claude Code.",
+    "hero-subtitle": "Un bel écrin pour votre CLI.",
     "opc-link": "Université Coffee OPC",
     "feedback": "Retour"
   },
@@ -113,7 +113,7 @@ const I18N_DICT = {
     "logo-text": "Coffee Office",
     "hero-title-1": "Genieße das Leben, während du arbeitest",
     "hero-title-2": "Coffee Office für",
-    "hero-subtitle": "Aufgaben, Verlauf, Multi-Tab, Themes — alles, was Claude Code fehlte.",
+    "hero-subtitle": "Ein schönes Zuhause für deine CLI.",
     "opc-link": "Coffee OPC Universität",
     "feedback": "Feedback"
   },
@@ -122,7 +122,7 @@ const I18N_DICT = {
     "logo-text": "Coffee Office",
     "hero-title-1": "Aproveite a vida enquanto trabalha",
     "hero-title-2": "Coffee Office para",
-    "hero-subtitle": "Tarefas, histórico, multi-aba, temas — tudo que faltava no Claude Code.",
+    "hero-subtitle": "Um lar bonito para o seu CLI.",
     "opc-link": "Universidade Coffee OPC",
     "feedback": "Feedback"
   },
@@ -131,7 +131,7 @@ const I18N_DICT = {
     "logo-text": "Coffee Office",
     "hero-title-1": "Наслаждайтесь жизнью, работая",
     "hero-title-2": "Coffee Office для",
-    "hero-subtitle": "Задачи, история, мультивкладки, темы — всё, чего не хватало Claude Code.",
+    "hero-subtitle": "Красивый дом для вашего CLI.",
     "opc-link": "Университет Coffee OPC",
     "feedback": "Обратная связь"
   }
