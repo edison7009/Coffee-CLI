@@ -31,6 +31,12 @@
 /* xterm.js overrides — match our design */
 .tier-xterm .xterm {
     padding: 0; /* Padding is on .tier-xterm-wrap; do not add padding here */
+    overflow: hidden; /* Block browser scroll-to-focus on the IME helper textarea */
+}
+
+/* Contain the far-offscreen helper textarea so IME focus doesn't scroll the terminal */
+.tier-xterm .xterm-helpers {
+    overflow: hidden;
 }
 
 .tier-xterm .xterm-viewport {

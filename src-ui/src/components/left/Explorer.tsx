@@ -736,7 +736,10 @@ function BrowserDirNode({ name, dirPath, icon, onCtxMenu }: { name: string; dirP
             <div style={{ padding: '6px 8px', color: 'var(--text-3)', fontSize: 12 }}>Loading...</div>
           ) : children && children.length === 0 ? (
             <div style={{ padding: '6px 8px', color: 'var(--text-3)', fontSize: 12, opacity: 0.5 }}>(empty)</div>
-          ) : children?.map(entry => (
+          ) : children?.slice().sort((a, b) => {
+            if (a.is_dir !== b.is_dir) return a.is_dir ? -1 : 1;
+            return a.name.localeCompare(b.name);
+          }).map(entry => (
             entry.is_dir ? (
               <BrowserDirNode key={entry.path} name={entry.name} dirPath={entry.path} onCtxMenu={onCtxMenu} />
             ) : (
@@ -958,17 +961,19 @@ export function Explorer() {
             <path fill="currentColor" d="M0 0h24v24H0z" mask="url(#brandIconMask)"/>
           </svg>
           <span>{t('app.title')}</span>
-          <button
-            className={`icon-btn xs update-check-btn${hasUpdate ? ' update-available' : ''}`}
-            onClick={() => commands.openUrl('https://coffeecli.com')}
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="7 10 12 15 17 10"/>
-              <line x1="12" y1="3" x2="12" y2="15"/>
-            </svg>
-            {hasUpdate && <span className="update-dot" />}
-          </button>
+          {hasUpdate && (
+            <button
+              className="icon-btn xs update-check-btn update-available"
+              onClick={() => commands.openUrl('https://coffeecli.com')}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+              <span className="update-dot" />
+            </button>
+          )}
         </div>
         
         <div className="window-controls">
@@ -1071,7 +1076,14 @@ export function Explorer() {
         ) : (
           <ScrollPanel>
             <div className="file-tree-container">
-              {Object.entries(treeRoot.children).map(([name, node]) => (
+              {Object.entries(treeRoot.children)
+                .sort(([aK, aV], [bK, bV]) => {
+                  const aIsDir = aV.type === 'dir';
+                  const bIsDir = bV.type === 'dir';
+                  if (aIsDir !== bIsDir) return aIsDir ? -1 : 1;
+                  return aK.localeCompare(bK);
+                })
+                .map(([name, node]) => (
                 node.type === 'dir'
                   ? <DirNode key={name} name={name} node={node as TreeNode} folderPath={folderPath!} onCtxMenu={handleCtxMenu} />
                   : <FileNode key={name} name={name} file={(node as { data: FileEntry }).data} folderPath={folderPath!} onCtxMenu={handleCtxMenu} />

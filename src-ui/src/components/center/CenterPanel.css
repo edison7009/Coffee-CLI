@@ -279,12 +279,12 @@
   border: none;
   border-radius: 0;
   box-shadow: none;
-  padding: 16px 24px;
+  padding: 16px 16px 16px 24px;
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: flex-start;
-  gap: 20px;
+  gap: 12px;
   height: 80px;
   cursor: pointer;
   position: relative;
@@ -292,31 +292,29 @@
   min-width: 0;
 }
 
-/* Right-side folder button — sibling of card, adds NEW width */
+/* Folder button — pinned to right side of card */
 .launchpad-folder-btn {
-  width: 44px;
+  margin-left: auto;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(rgba(255,255,255,0.06), rgba(255,255,255,0.06)), var(--bg-card);
+  background: transparent;
   border: none;
-  border-left: 1px solid rgba(255,255,255,0.07);
-  border-radius: 0;
+  padding: 4px;
   cursor: pointer;
   color: var(--text-3);
-  opacity: 0.5;
-  transition: opacity 0.2s, background 0.2s;
+  opacity: 0.18;
+  transition: opacity 0.15s;
 }
 
 .launchpad-folder-btn:hover {
-  opacity: 1;
-  background: linear-gradient(rgba(255,255,255,0.12), rgba(255,255,255,0.12)), var(--bg-card);
+  opacity: 0.7;
 }
 
 .launchpad-folder-btn svg {
-  width: 18px;
-  height: 18px;
+  width: 28px;
+  height: 28px;
   flex-shrink: 0;
 }
 
@@ -377,56 +375,7 @@
   letter-spacing: 0.3px;
 }
 
-/* ─── Launchpad folder button — per-shape overrides ─── */
-
-/* Soft: warmer gradient, softer separator */
-[data-shape="soft"] .launchpad-folder-btn {
-  border-left: 1px solid rgba(255,255,255,0.09);
-  background: linear-gradient(rgba(255,255,255,0.08), rgba(255,255,255,0.08)), var(--bg-card);
-}
-[data-shape="soft"] .launchpad-folder-btn:hover {
-  background: linear-gradient(rgba(255,255,255,0.15), rgba(255,255,255,0.15)), var(--bg-card);
-}
-
-/* Slab: directional-light edge on separator + inset slab shadow */
-[data-shape="slab"] .launchpad-folder-btn {
-  border-left: 1px solid var(--shape-edge-light-bottom);
-  background: linear-gradient(rgba(255,255,255,0.04), rgba(255,255,255,0.04)), var(--bg-card);
-  box-shadow:
-    inset 1px 0 0 0 var(--shape-edge-light-top),
-    inset 0 -1px 0 0 var(--shape-edge-light-bottom);
-}
-[data-shape="slab"] .launchpad-folder-btn:hover {
-  background: linear-gradient(rgba(255,255,255,0.09), rgba(255,255,255,0.09)), var(--bg-card);
-}
-
-/* Sharp: flat, no gradient, stronger hairline divider */
-[data-shape="sharp"] .launchpad-folder-btn {
-  border-left: 1px solid rgba(255,255,255,0.15);
-  background: var(--bg-card);
-}
-[data-shape="sharp"] .launchpad-folder-btn:hover {
-  background: var(--bg-hover);
-}
-
-/* Blade: flat bg, clean border matching blade panel dividers */
-[data-shape="blade"] .launchpad-folder-btn {
-  border-left: 1px solid var(--border);
-  background: var(--bg-card);
-}
-[data-shape="blade"] .launchpad-folder-btn:hover {
-  background: var(--bg-hover);
-  border-left-color: var(--accent);
-}
-
-/* Panel: hard tmux-style divider */
-[data-shape="panel"] .launchpad-folder-btn {
-  border-left: 1px solid rgba(255,255,255,0.15);
-  background: var(--bg-card);
-}
-[data-shape="panel"] .launchpad-folder-btn:hover {
-  background: var(--bg-hover);
-}
+/* (folder button is now a transparent overlay — no per-shape overrides needed) */
 
 /* ─── Premium Toast Notification ─── */
 
@@ -635,20 +584,21 @@
 /* ─── Terminal Card Subtle Remote Hint ─── */
 
 .remote-link-hint {
-  position: absolute;
-  top: 8px;
-  right: 10px;
-  font-size: 11px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
   color: var(--text-3);
-  font-weight: 500;
-  transition: color 0.2s;
-  letter-spacing: 0.3px;
-  opacity: 0.6;
+  opacity: 0.18;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  transition: opacity 0.15s;
 }
 
 .remote-link-hint:hover {
-  color: var(--accent);
-  opacity: 1;
+  opacity: 0.7;
 }
 
 /* ─── Remote Terminal Connection Form ─── */

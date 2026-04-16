@@ -544,17 +544,12 @@
 /* ── Update check button ── */
 .update-check-btn {
   position: relative;
-  opacity: 0.45;
-  transition: opacity 0.2s;
-}
-
-.update-check-btn:hover {
-  opacity: 1;
+  display: none;
 }
 
 .update-check-btn.update-available {
-  opacity: 1;
-  color: var(--brand-color, #c4956a);
+  display: inline-flex;
+  color: #e85454;
 }
 
 .update-dot {
@@ -564,7 +559,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--brand-color, #c4956a);
+  background: #e85454;
   animation: update-pulse 2s ease-in-out infinite;
 }
 

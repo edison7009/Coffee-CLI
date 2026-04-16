@@ -503,17 +503,17 @@ export function CenterPanel() {
                                   </span>
                                 )}
                               </div>
-                            </div>
-                            <div className="launchpad-folder-btn" onClick={() => installed && handlePickFolder(tool.key)}>
-                              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-                              </svg>
+                              <div className="launchpad-folder-btn" onClick={(e) => { e.stopPropagation(); installed && handlePickFolder(tool.key); }}>
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                                </svg>
+                              </div>
                             </div>
                           </div>
                         );
                       })}
 
-                      {/* Terminal card with subtle Remote link */}
+                      {/* Terminal card with subtle Remote icon */}
                       <div className="launchpad-card-group">
                         <div
                           className="launchpad-card"
@@ -521,27 +521,33 @@ export function CenterPanel() {
                         >
                           <div className="launchpad-icon"><TerminalIcon /></div>
                           <div className="launchpad-card-info">
-                            <span>{t('tool.terminal')}</span>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                              {t('tool.terminal')}
+                              <span
+                                className="remote-link-hint"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setShowRemoteForm(true);
+                                }}
+                              >
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                                  <circle cx="12" cy="12" r="10"/>
+                                  <path d="M2 12h20"/>
+                                  <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                                </svg>
+                              </span>
+                            </span>
                             {lastCwdByTool['terminal'] && (
                               <span className="launchpad-card-cwd">
                                 {formatCwd(lastCwdByTool['terminal'])}
                               </span>
                             )}
                           </div>
-                          <div
-                            className="remote-link-hint"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setShowRemoteForm(true);
-                            }}
-                          >
-                            {t('tool.remote.short' as any)}
+                          <div className="launchpad-folder-btn" onClick={(e) => { e.stopPropagation(); handlePickFolder('terminal'); }}>
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                            </svg>
                           </div>
-                        </div>
-                        <div className="launchpad-folder-btn" onClick={() => handlePickFolder('terminal')}>
-                          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-                          </svg>
                         </div>
                       </div>
                     </div>

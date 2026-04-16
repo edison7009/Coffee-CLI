@@ -52,7 +52,12 @@ def main() -> None:
     elif event == "PermissionRequest":
         status = "wait_input"
     elif event == "Notification":
-        ntype = data.get("notification_type")
+        # Claude Code may expose the notification subtype under different keys
+        ntype = (
+            data.get("notification_type")
+            or data.get("type")
+            or (data.get("notification") or {}).get("type")
+        )
         if ntype == "permission_prompt":
             status = "wait_input"
         elif ntype == "idle_prompt":
