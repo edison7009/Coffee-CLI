@@ -12,7 +12,6 @@ import { createPortal } from 'react-dom';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebglAddon } from '@xterm/addon-webgl';
-import { CanvasAddon } from '@xterm/addon-canvas';
 import { subscribeTerminalEvents } from '../../lib/pty-event-bus';
 import { registerTerminalFocus } from '../../lib/focus-registry';
 import { commands } from '../../tauri';
@@ -354,27 +353,16 @@ function TierTerminalImpl({
       console.warn('[TierTerminal] WebGL probe failed → DOM renderer');
     }
 
-    // WebGL does not support transparent backgrounds (confirmed by Hyper's source).
-    // When a custom wallpaper is active, skip WebGL and use Canvas instead.
-    // IMPORTANT: Always use Canvas addon as fallback — DOM renderer does NOT
-    // support customGlyphs or rescaleOverlappingGlyphs, causing ASCII art
-    // (Claude mascot, box borders) to misalign unpredictably.
-    let rendererLoaded = false;
-    if (useWebgl && !hasBg) {
+    // Always use WebGL renderer when possible — DOM renderer does NOT support
+    // customGlyphs or rescaleOverlappingGlyphs, causing ASCII art (Claude mascot,
+    // box borders) to misalign. WebGL supports allowTransparency for wallpapers.
+    if (useWebgl) {
       try {
         const webgl = new WebglAddon();
-        webgl.onContextLoss(() => { webgl.dispose(); term.loadAddon(new CanvasAddon()); });
+        webgl.onContextLoss(() => { webgl.dispose(); });
         term.loadAddon(webgl);
-        rendererLoaded = true;
       } catch (err) {
-        console.error('[TierTerminal] WebGL instantiation failed, falling back to Canvas', err);
-      }
-    }
-    if (!rendererLoaded) {
-      try {
-        term.loadAddon(new CanvasAddon());
-      } catch (err) {
-        console.warn('[TierTerminal] Canvas addon failed, using DOM renderer', err);
+        console.error('[TierTerminal] WebGL instantiation failed, falling back to DOM renderer', err);
       }
     }
 
