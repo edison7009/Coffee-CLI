@@ -560,6 +560,7 @@ function refreshDemoLang() {
 
   const data = DEMO_DATA[currentLang] || DEMO_DATA.en;
 
+  let hasActive = false;
   tabs.forEach((tab, i) => {
     if (!data[i]) return;
     const span = tab.querySelector("span");
@@ -567,8 +568,16 @@ function refreshDemoLang() {
     if (tab.classList.contains("active") && title && desc) {
       title.textContent = data[i].title;
       desc.textContent = data[i].desc;
+      hasActive = true;
     }
   });
+
+  // Welcome state (no tab active) → fall back to wallpaper copy
+  const fallback = data[5];
+  if (!hasActive && title && desc && fallback) {
+    title.textContent = fallback.title;
+    desc.textContent = fallback.desc;
+  }
 }
 
 function initDemoTabs() {
