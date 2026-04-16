@@ -5,7 +5,7 @@
 <h1 align="center">Coffee CLI</h1>
 
 <p align="center">
-  <strong>The missing desktop app for Claude Code and AI coding agents.</strong>
+  <strong>A beautiful home for your CLI.</strong>
 </p>
 
 <p align="center">
