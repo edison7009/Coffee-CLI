@@ -73,10 +73,10 @@ const I18N_DICT = {
     "feedback": "問題回饋"
   },
   ja: {
-    "page-title": "コーヒーオフィス - ネイティブ AI コンパニオン",
-    "logo-text": "コーヒーオフィス",
+    "page-title": "Coffee CLI - ネイティブ AI コンパニオン",
+    "logo-text": "Coffee CLI",
     "hero-title-1": "生活を楽しみながら働く",
-    "hero-title-2": "コーヒーオフィスは以下の方に",
+    "hero-title-2": "Coffee CLIは以下の方に",
     "hero-subtitle": "CLI に美しいホームを",
     "opc-link": "Coffee OPC 大学",
     "feedback": "フィードバック"
