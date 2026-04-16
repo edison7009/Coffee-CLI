@@ -276,23 +276,23 @@ function TierTerminalImpl({
     const isDark = theme !== 'light';
     const isLinux = navigator.userAgent.toLowerCase().includes('linux');
     const isMac = navigator.userAgent.toLowerCase().includes('mac');
-    // Platform-specific font stacks — each uses the OS's best native monospace first:
-    // Windows: Cascadia Mono (ships with Windows Terminal/Win11) → Consolas (built-in since Vista)
-    // macOS:   ui-monospace (CSS generic → SF Mono via WebView, most reliable) → Menlo → Monaco
-    // Linux:   Ubuntu Mono (most common), Noto Sans Mono, DejaVu Sans Mono, Liberation Mono, then generic monospace
+    // Embedded CascadiaMono (woff2) guarantees consistent box-drawing glyphs on
+    // every platform — no more border misalignment from font-fallback jitter.
+    // Platform-native fonts remain as fallbacks if the embedded font fails to load.
     const fontFamily = isLinux
-      ? "'Ubuntu Mono', 'Noto Sans Mono', 'DejaVu Sans Mono', 'Liberation Mono', monospace"
+      ? "CascadiaMono, 'Ubuntu Mono', 'Noto Sans Mono', 'DejaVu Sans Mono', 'Liberation Mono', monospace"
       : isMac
-        ? "ui-monospace, Menlo, Monaco, 'Courier New', monospace"
-        : "'Cascadia Mono', 'Cascadia Code', Consolas, 'Courier New', monospace";
+        ? "CascadiaMono, ui-monospace, Menlo, Monaco, 'Courier New', monospace"
+        : "CascadiaMono, 'Cascadia Mono', Consolas, 'Courier New', monospace";
     const term = new Terminal({
       fontFamily,
       fontSize: 14,
       lineHeight: 1.3,
       letterSpacing: 0,
       fontWeight: '400',
+      fontWeightBold: '400', // Prevent bold glyphs from using wider metrics
       allowTransparency: true, // Required for rgba background (custom wallpaper behind terminal)
-      customGlyphs: !isLinux, // Linux: off (font metrics unreliable); Win/Mac: on for box-drawing chars
+      customGlyphs: true, // Pixel-perfect box-drawing on all platforms (canvas-drawn, font-independent)
       cursorStyle: 'bar' as const,
       // Claude Code manages its own cursor via ANSI sequences; hide xterm's native
       // cursor so it doesn't appear at Claude's internal cursor position.
@@ -304,7 +304,28 @@ function TierTerminalImpl({
 
     const fit = new FitAddon();
     term.loadAddon(fit);
-    term.open(termRef.current);
+
+    // Register focus function in the singleton focus registry.
+    // CenterPanel handles the global focusin/mouseup listener and routes
+    // focus to the active terminal — each tab no longer needs its own pair
+    // of window listeners.
+    const unregisterFocus = registerTerminalFocus(sessionId, () => {
+      xtermRef.current?.focus();
+    });
+
+    // Wait for CascadiaMono to load before opening the terminal so xterm
+    // measures cell metrics with the correct font (avoids box-drawing misalignment).
+    const fontReady = document.fonts.load('14px CascadiaMono').catch(() => {});
+    const initTerminal = async () => {
+      await fontReady;
+      if (!mounted || !termRef.current) return;
+
+      term.open(termRef.current);
+
+      // Disable font ligatures on the DOM renderer rows to prevent
+      // box-drawing characters from being merged into ligature glyphs.
+      const xtermRows = termRef.current.querySelector('.xterm-rows') as HTMLElement | null;
+      if (xtermRows) xtermRows.style.fontVariantLigatures = 'none';
 
     // GPU-accelerated rendering: enable WebGL only when a dedicated GPU is detected.
     // On Windows/Mac integrated GPUs, WebGL can cause heat/throttling.
@@ -392,14 +413,6 @@ function TierTerminalImpl({
 
     // Auto-focus so keyboard input works immediately
     term.focus();
-
-    // Register focus function in the singleton focus registry.
-    // CenterPanel handles the global focusin/mouseup listener and routes
-    // focus to the active terminal — each tab no longer needs its own pair
-    // of window listeners.
-    const unregisterFocus = registerTerminalFocus(sessionId, () => {
-      xtermRef.current?.focus();
-    });
 
     // ── Register event listeners BEFORE starting PTY ──────────────────────
     // This prevents the race condition where PTY output arrives before
@@ -521,8 +534,9 @@ function TierTerminalImpl({
     };
 
     startPty();
+    }; // end initTerminal
 
-
+    initTerminal();
 
     // Resize observer — CRITICAL: Never call fit() when the container is hidden
     // (display:none gives zero dimensions, causing xterm to collapse to 1 column)

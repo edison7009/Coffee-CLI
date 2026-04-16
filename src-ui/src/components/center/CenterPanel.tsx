@@ -497,8 +497,8 @@ export function CenterPanel() {
             {hasBg && bgUrl && (
               <div className="launchpad-bg">
                 {bgType === 'video'
-                  ? <video src={bgUrl} autoPlay loop muted playsInline />
-                  : <img src={bgUrl} alt="" />}
+                  ? <video src={bgUrl} autoPlay loop muted playsInline onError={() => { setBgUrl(''); }} />
+                  : <img src={bgUrl} alt="" onError={() => { setBgUrl(''); }} />}
               </div>
             )}
             {/* Close button removed: handles via Tab bar */}
