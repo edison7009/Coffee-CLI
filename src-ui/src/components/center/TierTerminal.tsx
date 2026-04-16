@@ -12,6 +12,7 @@ import { createPortal } from 'react-dom';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebglAddon } from '@xterm/addon-webgl';
+import { CanvasAddon } from '@xterm/addon-canvas';
 import { subscribeTerminalEvents } from '../../lib/pty-event-bus';
 import { registerTerminalFocus } from '../../lib/focus-registry';
 import { commands } from '../../tauri';
@@ -293,6 +294,7 @@ function TierTerminalImpl({
       fontWeightBold: '400', // Prevent bold glyphs from using wider metrics
       allowTransparency: true, // Required for rgba background (custom wallpaper behind terminal)
       customGlyphs: true, // Pixel-perfect box-drawing on all platforms (canvas-drawn, font-independent)
+      rescaleOverlappingGlyphs: true, // Force ambiguous-width chars (block chars ▀▄█) to single cell width
       cursorStyle: 'bar' as const,
       // Claude Code manages its own cursor via ANSI sequences; hide xterm's native
       // cursor so it doesn't appear at Claude's internal cursor position.
@@ -353,14 +355,26 @@ function TierTerminalImpl({
     }
 
     // WebGL does not support transparent backgrounds (confirmed by Hyper's source).
-    // When a custom wallpaper is active, skip WebGL and use the Canvas renderer.
+    // When a custom wallpaper is active, skip WebGL and use Canvas instead.
+    // IMPORTANT: Always use Canvas addon as fallback — DOM renderer does NOT
+    // support customGlyphs or rescaleOverlappingGlyphs, causing ASCII art
+    // (Claude mascot, box borders) to misalign unpredictably.
+    let rendererLoaded = false;
     if (useWebgl && !hasBg) {
       try {
         const webgl = new WebglAddon();
-        webgl.onContextLoss(() => { webgl.dispose(); });
+        webgl.onContextLoss(() => { webgl.dispose(); term.loadAddon(new CanvasAddon()); });
         term.loadAddon(webgl);
+        rendererLoaded = true;
       } catch (err) {
-        console.error('[TierTerminal] WebGL instantiation failed, falling back to DOM renderer', err);
+        console.error('[TierTerminal] WebGL instantiation failed, falling back to Canvas', err);
+      }
+    }
+    if (!rendererLoaded) {
+      try {
+        term.loadAddon(new CanvasAddon());
+      } catch (err) {
+        console.warn('[TierTerminal] Canvas addon failed, using DOM renderer', err);
       }
     }
 
