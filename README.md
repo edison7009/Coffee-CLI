@@ -42,6 +42,10 @@ Coffee CLI is a **native desktop companion** for AI CLI agents — Claude Code, 
 
 This is not a web app. Not an Electron wrapper. A **true native desktop app** built with Tauri (Rust core), engineered for performance and low resource usage.
 
+<p align="center">
+  <img src="screenshot/wallpaper.png" alt="Coffee CLI workspace with custom wallpaper" width="860" />
+</p>
+
 ### Who is it for?
 
 AI coding agents are transforming how work gets done — but they speak English, output dense terminal text, and assume you're comfortable with a command line. That leaves out a massive group of capable, intelligent professionals:
