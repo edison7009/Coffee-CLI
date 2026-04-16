@@ -28,6 +28,10 @@
   <img src="https://img.shields.io/github/license/edison7009/Coffee-CLI" />
 </p>
 
+<p align="center">
+  <img src="screenshot/wallpaper.png" alt="Coffee CLI with custom wallpaper" width="860" />
+</p>
+
 ---
 
 ## English
