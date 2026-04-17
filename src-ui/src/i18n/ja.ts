@@ -95,6 +95,6 @@ export const ja = {
 
   // Gambit · 一手
   'gambit.title': '一手',
-  'gambit.placeholder': '静かに一手を思案... (Enterで送信、Shift+Enterで改行、画像貼付可)',
+  'gambit.placeholder': '静かに一手を思案... (Ctrl+Enterで送信、Enterで改行、画像貼付可)',
 
 } as const;

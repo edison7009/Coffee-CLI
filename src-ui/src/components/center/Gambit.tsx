@@ -138,7 +138,10 @@ export function Gambit({
     // IME composition in progress — let the IME keep Enter for confirming
     // candidates. nativeEvent.isComposing is the canonical flag.
     if (e.nativeEvent.isComposing) return;
-    if (e.key === 'Enter' && !e.shiftKey) {
+    // Ctrl+Enter (or Cmd+Enter on macOS) sends. Plain Enter inserts a newline
+    // — matches office/editor expectation. Shift+Enter also inserts a newline
+    // (native textarea behavior).
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       handleSend();
     }

@@ -95,6 +95,6 @@ export const ko = {
 
   // Gambit · 한 수
   'gambit.title': '한 수',
-  'gambit.placeholder': '한 수를 고르는 중... (Enter 전송, Shift+Enter 줄바꿈, 이미지 붙여넣기)',
+  'gambit.placeholder': '한 수를 고르는 중... (Ctrl+Enter 전송, Enter 줄바꿈, 이미지 붙여넣기)',
 
 } as const;

@@ -95,6 +95,6 @@ export const zhTW = {
 
   // Gambit · 妙手
   'gambit.title': '妙手',
-  'gambit.placeholder': '靜心琢磨，再落子... (Enter 發送, Shift+Enter 換行, 可貼上圖片)',
+  'gambit.placeholder': '靜心琢磨，再落子... (Ctrl+Enter 發送, Enter 換行, 可貼上圖片)',
 
 } as const;

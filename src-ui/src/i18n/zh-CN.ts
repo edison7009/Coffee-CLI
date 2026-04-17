@@ -95,6 +95,6 @@ export const zhCN = {
 
   // Gambit · 妙手
   'gambit.title': '妙手',
-  'gambit.placeholder': '静心琢磨，再落子... (Enter 发送, Shift+Enter 换行, 可粘贴图片)',
+  'gambit.placeholder': '静心琢磨，再落子... (Ctrl+Enter 发送, Enter 换行, 可粘贴图片)',
 
 } as const;
