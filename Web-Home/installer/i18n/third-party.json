@@ -1,26 +1,80 @@
 {
   "title": {
     "en": "Third-party Tools",
-    "zh-CN": "第三方工具"
+    "zh-CN": "第三方工具",
+    "zh-TW": "第三方工具",
+    "ja": "サードパーティツール",
+    "ko": "타사 도구",
+    "es": "Herramientas externas",
+    "fr": "Outils tiers",
+    "de": "Drittanbieter-Tools",
+    "pt": "Ferramentas de terceiros",
+    "ru": "Сторонние инструменты",
+    "vi": "Công cụ bên thứ ba"
   },
   "msg.coming_soon": {
     "en": "Coming soon.",
-    "zh-CN": "敬请期待。"
+    "zh-CN": "敬请期待。",
+    "zh-TW": "敬請期待。",
+    "ja": "近日公開。",
+    "ko": "곧 제공됩니다.",
+    "es": "Próximamente.",
+    "fr": "Bientôt disponible.",
+    "de": "Demnächst verfügbar.",
+    "pt": "Em breve.",
+    "ru": "Скоро.",
+    "vi": "Sắp ra mắt."
   },
   "msg.detail_1": {
     "en": "This section will host integrations with third-party developer",
-    "zh-CN": "此处将集成第三方开发者工具（Cursor、Cline、"
+    "zh-CN": "此处将集成第三方开发者工具（Cursor、Cline、",
+    "zh-TW": "此處將整合第三方開發者工具（Cursor、Cline、",
+    "ja": "ここにはサードパーティ開発者ツールの統合が",
+    "ko": "여기에 타사 개발자 도구 (Cursor, Cline,",
+    "es": "Esta sección albergará integraciones con herramientas de",
+    "fr": "Cette section accueillera les intégrations d'outils",
+    "de": "Dieser Bereich bietet Integrationen mit Drittanbieter-",
+    "pt": "Esta seção hospedará integrações com ferramentas",
+    "ru": "Здесь будут интеграции со сторонними инструментами",
+    "vi": "Khu vực này sẽ chứa tích hợp với các công cụ"
   },
   "msg.detail_2": {
     "en": "tools (Cursor, Cline, continue.dev, etc.). Updates ship via the",
-    "zh-CN": "continue.dev 等）。更新通过 CDN 下发，"
+    "zh-CN": "continue.dev 等）。更新通过 CDN 下发，",
+    "zh-TW": "continue.dev 等）。更新透過 CDN 下發，",
+    "ja": "追加されます（Cursor、Cline、continue.dev など）。",
+    "ko": "continue.dev 등) 를 통합합니다. 업데이트는 CDN 으로",
+    "es": "desarrolladores (Cursor, Cline, continue.dev, etc.). Las",
+    "fr": "tiers (Cursor, Cline, continue.dev, etc.). Les mises à",
+    "de": "Entwicklertools (Cursor, Cline, continue.dev usw.). Updates",
+    "pt": "de desenvolvedores (Cursor, Cline, continue.dev, etc.). As",
+    "ru": "разработчика (Cursor, Cline, continue.dev и др.). Обновления",
+    "vi": "dành cho nhà phát triển (Cursor, Cline, continue.dev, v.v.)."
   },
   "msg.detail_3": {
     "en": "CDN without requiring users to re-run anything.",
-    "zh-CN": "无需用户重新执行任何命令。"
+    "zh-CN": "无需用户重新执行任何命令。",
+    "zh-TW": "無需使用者重新執行任何命令。",
+    "ja": "更新は CDN 経由で配信され、再実行は不要です。",
+    "ko": "배포되며, 재실행이 필요하지 않습니다.",
+    "es": "actualizaciones llegan por CDN sin requerir reejecución.",
+    "fr": "jour arrivent par CDN sans réexécution nécessaire.",
+    "de": "werden per CDN ausgeliefert, ohne Neuausführung.",
+    "pt": "atualizações chegam via CDN sem reexecução.",
+    "ru": "приходят через CDN без перезапуска.",
+    "vi": "Cập nhật qua CDN, không cần chạy lại."
   },
   "prompt.press_enter": {
     "en": "Press Enter to go back",
-    "zh-CN": "按 Enter 返回"
+    "zh-CN": "按 Enter 返回",
+    "zh-TW": "按 Enter 返回",
+    "ja": "Enter を押して戻る",
+    "ko": "Enter 를 눌러 돌아가기",
+    "es": "Pulse Enter para volver",
+    "fr": "Appuyez sur Entrée pour revenir",
+    "de": "Enter drücken zum Zurückkehren",
+    "pt": "Pressione Enter para voltar",
+    "ru": "Нажмите Enter для возврата",
+    "vi": "Nhấn Enter để quay lại"
   }
 }

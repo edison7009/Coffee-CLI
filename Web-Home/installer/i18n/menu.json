@@ -1,50 +1,158 @@
 {
   "title": {
     "en": "Coffee CLI Agent Installer",
-    "zh-CN": "Coffee CLI 安装助手"
+    "zh-CN": "Coffee CLI 安装助手",
+    "zh-TW": "Coffee CLI 安裝助手",
+    "ja": "Coffee CLI インストーラー",
+    "ko": "Coffee CLI 설치 도우미",
+    "es": "Instalador de Agentes Coffee CLI",
+    "fr": "Installateur d'agents Coffee CLI",
+    "de": "Coffee CLI Agenten-Installer",
+    "pt": "Instalador de Agentes Coffee CLI",
+    "ru": "Установщик агентов Coffee CLI",
+    "vi": "Trình cài đặt Agent Coffee CLI"
   },
   "nav.root_hint": {
     "en": "Up/Down to move, Enter to select, Esc to quit",
-    "zh-CN": "↑↓ 移动，Enter 选择，Esc 退出"
+    "zh-CN": "↑↓ 移动，Enter 选择，Esc 退出",
+    "zh-TW": "↑↓ 移動，Enter 選擇，Esc 退出",
+    "ja": "↑↓ 移動、Enter 選択、Esc 終了",
+    "ko": "↑↓ 이동, Enter 선택, Esc 종료",
+    "es": "↑↓ Mover, Enter Seleccionar, Esc Salir",
+    "fr": "↑↓ Déplacer, Entrée Sélectionner, Échap Quitter",
+    "de": "↑↓ Bewegen, Enter Auswählen, Esc Beenden",
+    "pt": "↑↓ Mover, Enter Selecionar, Esc Sair",
+    "ru": "↑↓ Перемещение, Enter Выбрать, Esc Выход",
+    "vi": "↑↓ Di chuyển, Enter Chọn, Esc Thoát"
   },
   "nav.sub_hint": {
     "en": "Up/Down to move, Enter to select, Esc to go back",
-    "zh-CN": "↑↓ 移动，Enter 选择，Esc 返回上一级"
+    "zh-CN": "↑↓ 移动，Enter 选择，Esc 返回上一级",
+    "zh-TW": "↑↓ 移動，Enter 選擇，Esc 返回上一層",
+    "ja": "↑↓ 移動、Enter 選択、Esc 戻る",
+    "ko": "↑↓ 이동, Enter 선택, Esc 뒤로",
+    "es": "↑↓ Mover, Enter Seleccionar, Esc Volver",
+    "fr": "↑↓ Déplacer, Entrée Sélectionner, Échap Retour",
+    "de": "↑↓ Bewegen, Enter Auswählen, Esc Zurück",
+    "pt": "↑↓ Mover, Enter Selecionar, Esc Voltar",
+    "ru": "↑↓ Перемещение, Enter Выбрать, Esc Назад",
+    "vi": "↑↓ Di chuyển, Enter Chọn, Esc Quay lại"
   },
   "root.install_agents": {
     "en": "Install Agents",
-    "zh-CN": "安装 AI Agent"
+    "zh-CN": "安装 AI Agent",
+    "zh-TW": "安裝 AI Agent",
+    "ja": "AI Agent をインストール",
+    "ko": "AI Agent 설치",
+    "es": "Instalar agentes",
+    "fr": "Installer des agents",
+    "de": "Agenten installieren",
+    "pt": "Instalar agentes",
+    "ru": "Установить агентов",
+    "vi": "Cài đặt Agent"
   },
   "root.third_party": {
     "en": "Third-party Tools",
-    "zh-CN": "第三方工具"
+    "zh-CN": "第三方工具",
+    "zh-TW": "第三方工具",
+    "ja": "サードパーティツール",
+    "ko": "타사 도구",
+    "es": "Herramientas externas",
+    "fr": "Outils tiers",
+    "de": "Drittanbieter-Tools",
+    "pt": "Ferramentas de terceiros",
+    "ru": "Сторонние инструменты",
+    "vi": "Công cụ bên thứ ba"
   },
   "root.language_picker": {
     "en": "Menu Language / 菜单语言",
-    "zh-CN": "菜单语言 / Menu Language"
+    "zh-CN": "菜单语言 / Menu Language",
+    "zh-TW": "選單語言 / Menu Language",
+    "ja": "メニュー言語 / Menu Language",
+    "ko": "메뉴 언어 / Menu Language",
+    "es": "Idioma del menú / Menu Language",
+    "fr": "Langue du menu / Menu Language",
+    "de": "Menüsprache / Menu Language",
+    "pt": "Idioma do menu / Menu Language",
+    "ru": "Язык меню / Menu Language",
+    "vi": "Ngôn ngữ menu / Menu Language"
   },
   "root.exit": {
     "en": "Exit",
-    "zh-CN": "退出"
+    "zh-CN": "退出",
+    "zh-TW": "退出",
+    "ja": "終了",
+    "ko": "종료",
+    "es": "Salir",
+    "fr": "Quitter",
+    "de": "Beenden",
+    "pt": "Sair",
+    "ru": "Выход",
+    "vi": "Thoát"
   },
   "common.goodbye": {
     "en": "Goodbye!",
-    "zh-CN": "再见！"
+    "zh-CN": "再见！",
+    "zh-TW": "再見！",
+    "ja": "さようなら！",
+    "ko": "안녕히 가세요!",
+    "es": "¡Adiós!",
+    "fr": "Au revoir !",
+    "de": "Auf Wiedersehen!",
+    "pt": "Até logo!",
+    "ru": "До свидания!",
+    "vi": "Tạm biệt!"
   },
   "common.error_load_submenu": {
     "en": "[Error] Failed to load {name}",
-    "zh-CN": "[错误] 加载 {name} 失败"
+    "zh-CN": "[错误] 加载 {name} 失败",
+    "zh-TW": "[錯誤] 載入 {name} 失敗",
+    "ja": "[エラー] {name} の読み込みに失敗",
+    "ko": "[오류] {name} 로드 실패",
+    "es": "[Error] No se pudo cargar {name}",
+    "fr": "[Erreur] Échec du chargement de {name}",
+    "de": "[Fehler] Laden von {name} fehlgeschlagen",
+    "pt": "[Erro] Falha ao carregar {name}",
+    "ru": "[Ошибка] Не удалось загрузить {name}",
+    "vi": "[Lỗi] Không thể tải {name}"
   },
   "common.press_enter_continue": {
     "en": "Press Enter to continue",
-    "zh-CN": "按 Enter 继续"
+    "zh-CN": "按 Enter 继续",
+    "zh-TW": "按 Enter 繼續",
+    "ja": "Enter を押して続行",
+    "ko": "계속하려면 Enter 키를 누르세요",
+    "es": "Pulse Enter para continuar",
+    "fr": "Appuyez sur Entrée pour continuer",
+    "de": "Enter drücken zum Fortfahren",
+    "pt": "Pressione Enter para continuar",
+    "ru": "Нажмите Enter для продолжения",
+    "vi": "Nhấn Enter để tiếp tục"
   },
   "lang_picker.title": {
     "en": "Choose menu language",
-    "zh-CN": "选择菜单语言"
+    "zh-CN": "选择菜单语言",
+    "zh-TW": "選擇選單語言",
+    "ja": "メニュー言語を選択",
+    "ko": "메뉴 언어 선택",
+    "es": "Elegir idioma del menú",
+    "fr": "Choisir la langue du menu",
+    "de": "Menüsprache wählen",
+    "pt": "Escolher idioma do menu",
+    "ru": "Выберите язык меню",
+    "vi": "Chọn ngôn ngữ menu"
   },
   "lang_picker.saved": {
     "en": "Language preference saved.",
-    "zh-CN": "菜单语言已保存。"
+    "zh-CN": "菜单语言已保存。",
+    "zh-TW": "選單語言已儲存。",
+    "ja": "言語設定を保存しました。",
+    "ko": "언어 설정이 저장되었습니다.",
+    "es": "Preferencia de idioma guardada.",
+    "fr": "Préférence de langue enregistrée.",
+    "de": "Spracheinstellung gespeichert.",
+    "pt": "Preferência de idioma salva.",
+    "ru": "Языковые настройки сохранены.",
+    "vi": "Đã lưu ngôn ngữ."
   }
 }

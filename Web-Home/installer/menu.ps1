@@ -13,8 +13,17 @@ Depends on: Get-InstallerScript (defined in agent-tools-installer.ps1).
 #>
 
 $SUPPORTED_LANGS = @(
-    @{ Code = "en";    Label = "English"   },
-    @{ Code = "zh-CN"; Label = "简体中文"   }
+    @{ Code = "en";    Label = "English"    },
+    @{ Code = "zh-CN"; Label = "简体中文"   },
+    @{ Code = "zh-TW"; Label = "繁體中文"   },
+    @{ Code = "ja";    Label = "日本語"      },
+    @{ Code = "ko";    Label = "한국어"      },
+    @{ Code = "es";    Label = "Español"     },
+    @{ Code = "fr";    Label = "Français"    },
+    @{ Code = "de";    Label = "Deutsch"     },
+    @{ Code = "pt";    Label = "Português"   },
+    @{ Code = "ru";    Label = "Русский"     },
+    @{ Code = "vi";    Label = "Tiếng Việt"  }
 )
 
 function Global:Get-InstallerLang {
@@ -30,12 +39,19 @@ function Global:Get-InstallerLang {
         $v = (Get-Content $active -Raw -ErrorAction SilentlyContinue).Trim()
         if ($v) { return $v }
     }
-    # 3. OS locale mapped to our supported set
+    # 3. OS locale mapped to our supported set (codes match src-ui/src/i18n/)
     try {
         $sys = (Get-Culture).Name
-        if ($sys -match "^zh") { return "zh-CN" }
-        if ($sys -match "^ja") { return "ja-JP" }
-        if ($sys -match "^ko") { return "ko-KR" }
+        if ($sys -match "^zh-(TW|HK|MO)") { return "zh-TW" }
+        if ($sys -match "^zh")            { return "zh-CN" }
+        if ($sys -match "^ja")            { return "ja"    }
+        if ($sys -match "^ko")            { return "ko"    }
+        if ($sys -match "^es")            { return "es"    }
+        if ($sys -match "^fr")            { return "fr"    }
+        if ($sys -match "^de")            { return "de"    }
+        if ($sys -match "^pt")            { return "pt"    }
+        if ($sys -match "^ru")            { return "ru"    }
+        if ($sys -match "^vi")            { return "vi"    }
     } catch { }
     return "en"
 }
