@@ -135,6 +135,12 @@ export const commands = {
   // Tool availability detection
   checkToolsInstalled: () => invoke<Record<string, boolean>>('check_tools_installed'),
 
+  /** Gambit — save a clipboard-pasted image to a temp file and return its path.
+   *  The returned absolute path is inserted into the textarea so the AI CLI agent
+   *  (Claude Code, etc.) can read the image via the local filesystem. */
+  saveClipboardImage: (dataBase64: string, extension: string) =>
+    invoke<string>('save_clipboard_image', { dataBase64, extension }),
+
   // File system browsing (My Computer tab)
   listDrives: () => invoke<DriveInfo[]>('list_drives'),
   listDirectory: (path: string) => invoke<DirEntryInfo[]>('list_directory', { path }),

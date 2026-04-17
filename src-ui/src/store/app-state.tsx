@@ -27,6 +27,8 @@ export interface TerminalSession {
   restartKey?: number;
   isHidden?: boolean;
   agentStatus?: AgentStatus;
+  gambitOpen?: boolean;    // Gambit (floating compose window) visible for this tab
+  gambitDraft?: string;    // Unsent textarea content, preserved across tab switches
 }
 
 // ─── State Shape ─────────────────────────────────────────────────────────────
@@ -70,7 +72,9 @@ type Action =
   | { type: 'SET_AGENT_STATUS'; id: string; status: AgentStatus }
   | { type: 'SET_BG'; path: string; bgType: 'image' | 'video' }
   | { type: 'CLEAR_BG' }
-  | { type: 'SET_TERM_SCHEME'; scheme: string };
+  | { type: 'SET_TERM_SCHEME'; scheme: string }
+  | { type: 'TOGGLE_GAMBIT'; id: string }
+  | { type: 'SET_GAMBIT_DRAFT'; id: string; draft: string };
 
 // ─── Reducer ─────────────────────────────────────────────────────────────────
 
@@ -175,6 +179,16 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, bgPath: '', bgType: 'none' };
     case 'SET_TERM_SCHEME':
       return { ...state, termColorScheme: action.scheme };
+    case 'TOGGLE_GAMBIT':
+      return {
+        ...state,
+        terminals: state.terminals.map(t => t.id === action.id ? { ...t, gambitOpen: !t.gambitOpen } : t)
+      };
+    case 'SET_GAMBIT_DRAFT':
+      return {
+        ...state,
+        terminals: state.terminals.map(t => t.id === action.id ? { ...t, gambitDraft: action.draft } : t)
+      };
     default:
       return state;
   }

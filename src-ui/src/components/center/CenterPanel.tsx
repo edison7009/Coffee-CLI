@@ -486,6 +486,8 @@ export function CenterPanel() {
                   bgUrl={bgUrl}
                   bgType={bgType}
                   termColorScheme={state.termColorScheme}
+                  gambitOpen={t.gambitOpen}
+                  gambitDraft={t.gambitDraft}
                 />
               </ErrorBoundary>
             )}

@@ -93,4 +93,8 @@ export const zhCN = {
   'theme.preset.lavender_panel': '薰衣草 · Panel',
   'theme.preset.light_soft': '明亮 · Soft',
 
+  // Gambit · 妙手
+  'gambit.title': '妙手',
+  'gambit.placeholder': '静心琢磨，再落子... (Enter 发送, Shift+Enter 换行, 可粘贴图片)',
+
 } as const;

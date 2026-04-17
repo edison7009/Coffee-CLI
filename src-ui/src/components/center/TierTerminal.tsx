@@ -7,7 +7,7 @@
 // unrelated global state changes (agent status, other tabs' folder changes,
 // etc.) don't cascade into this component.
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
@@ -17,6 +17,7 @@ import { registerTerminalFocus } from '../../lib/focus-registry';
 import { commands } from '../../tauri';
 import { useAppDispatch, type ToolType, type ThemeColor } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
+import { Gambit } from './Gambit';
 import '@xterm/xterm/css/xterm.css';
 import './TierTerminal.css';
 
@@ -228,12 +229,15 @@ interface TierTerminalProps {
   bgUrl?: string;
   bgType?: 'image' | 'video' | 'none';
   termColorScheme?: string;
+  gambitOpen?: boolean;
+  gambitDraft?: string;
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
 function TierTerminalImpl({
   sessionId, tool, theme, lang, isActive, toolData, folderPath, hasBg, bgUrl, bgType, termColorScheme,
+  gambitOpen, gambitDraft,
 }: TierTerminalProps) {
   // Dispatch-only subscription. Never re-renders this component.
   const dispatch = useAppDispatch();
@@ -606,6 +610,49 @@ function TierTerminalImpl({
     return () => root.removeEventListener('scroll', onScroll, { capture: true });
   }, []);
 
+  // ── Gambit: derived initial position + callbacks ────────────────────────
+  // Position is computed fresh each time gambitOpen transitions true. When
+  // gambitOpen stays true and the user drags, Gambit owns its position
+  // internally (controlled by its own useState seeded with initialX/Y), so
+  // this memo is not re-read on drag.
+  const gambitInitialPos = useMemo(() => {
+    if (!gambitOpen) return { x: 0, y: 0 };
+    const wrap = wrapRef.current;
+    const term = xtermRef.current;
+    if (!wrap || !term) return { x: 120, y: 120 };
+    const wrapRect = wrap.getBoundingClientRect();
+    const screenEl = termRef.current?.querySelector('.xterm-screen') as HTMLElement | null;
+    const cellW = screenEl && term.cols > 0 ? screenEl.clientWidth / term.cols : 8;
+    const cellH = screenEl && term.rows > 0 ? screenEl.clientHeight / term.rows : 17;
+    // .tier-xterm-wrap has padding: 20px 0 20px 24px
+    const cursorPxX = wrapRect.left + 24 + term.buffer.active.cursorX * cellW;
+    const cursorPxY = wrapRect.top + 20 + term.buffer.active.cursorY * cellH + cellH + 4;
+    const gambitW = 520;
+    const gambitH = 180;
+    return {
+      x: Math.max(8, Math.min(cursorPxX, window.innerWidth - gambitW - 8)),
+      y: Math.max(40, Math.min(cursorPxY, window.innerHeight - gambitH - 8)),
+    };
+  }, [gambitOpen]);
+
+  const handleGambitClose = useCallback(() => {
+    dispatch({ type: 'TOGGLE_GAMBIT', id: sessionId });
+  }, [dispatch, sessionId]);
+
+  const handleGambitDraftChange = useCallback((draft: string) => {
+    dispatch({ type: 'SET_GAMBIT_DRAFT', id: sessionId, draft });
+  }, [dispatch, sessionId]);
+
+  const handleGambitSend = useCallback((text: string) => {
+    const term = xtermRef.current;
+    if (!term) return;
+    // term.paste() fires through onData → Coffee CLI forwards to PTY with
+    // bracketed-paste framing when the TUI has enabled it. Handles newlines
+    // and IME correctly. After paste, send CR to submit.
+    term.paste(text);
+    commands.tierTerminalInput(sessionId, '\r').catch(() => {});
+  }, [sessionId]);
+
   // ── Active tab focus restoration ─────────────────────────────────────────
   // Cache last-sent size so we skip redundant PTY resize calls when tab
   // switches back to the same dimensions (no window resize in between).
@@ -726,6 +773,19 @@ function TierTerminalImpl({
             xtermRef.current?.selectAll();
             closeCtxMenu();
           }}
+        />
+      )}
+
+      {/* Gambit — draggable floating textarea with native editing shortcuts */}
+      {gambitOpen && (
+        <Gambit
+          sessionId={sessionId}
+          draft={gambitDraft || ''}
+          initialX={gambitInitialPos.x}
+          initialY={gambitInitialPos.y}
+          onDraftChange={handleGambitDraftChange}
+          onClose={handleGambitClose}
+          onSend={handleGambitSend}
         />
       )}
 

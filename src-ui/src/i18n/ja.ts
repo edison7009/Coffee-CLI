@@ -93,4 +93,8 @@ export const ja = {
   'theme.preset.lavender_panel': 'ラベンダー · Panel',
   'theme.preset.light_soft': 'ライト · Soft',
 
+  // Gambit · 一手
+  'gambit.title': '一手',
+  'gambit.placeholder': '静かに一手を思案... (Enterで送信、Shift+Enterで改行、画像貼付可)',
+
 } as const;

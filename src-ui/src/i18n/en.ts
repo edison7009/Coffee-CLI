@@ -95,6 +95,10 @@ export const en = {
   'theme.preset.lavender_panel': 'Lavender \u00b7 Panel',
   'theme.preset.light_soft': 'Light \u00b7 Soft',
 
+  // Gambit — floating compose window. Chess term for a calculated opening move.
+  'gambit.title': 'GAMBIT',
+  'gambit.placeholder': 'Compose your move... (Enter to send, Shift+Enter for newline, paste images)',
+
 } as const;
 
 export type I18nKey = keyof typeof en;

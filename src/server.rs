@@ -430,6 +430,42 @@ fn write_temp_script(content: String, extension: String) -> Result<String, Strin
     Ok(path.to_string_lossy().to_string())
 }
 
+/// Save a base64-encoded clipboard image to a temp file.
+/// Used by the Compose Bar so pasted screenshots can be referenced by path
+/// when forwarded to AI CLI agents (Claude Code, etc.).
+#[tauri::command]
+fn save_clipboard_image(data_base64: String, extension: String) -> Result<String, String> {
+    use base64::{Engine as _, engine::general_purpose};
+    use std::io::Write;
+
+    // Only allow common web image formats. Block anything that could
+    // execute or exploit a path-traversal quirk in the extension.
+    let ext = match extension.as_str() {
+        "png" | "jpg" | "jpeg" | "gif" | "webp" | "bmp" => extension,
+        _ => return Err(format!("Unsupported image extension: {}", extension)),
+    };
+
+    let bytes = general_purpose::STANDARD
+        .decode(&data_base64)
+        .map_err(|e| format!("base64 decode: {}", e))?;
+
+    let tmp_dir = std::env::temp_dir().join("coffee-cli-compose");
+    std::fs::create_dir_all(&tmp_dir).map_err(|e| format!("mkdir: {}", e))?;
+
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis())
+        .unwrap_or(0);
+    let path = tmp_dir.join(format!("clip-{}.{}", stamp, ext));
+
+    let mut file = std::fs::File::create(&path)
+        .map_err(|e| format!("create image file: {}", e))?;
+    file.write_all(&bytes)
+        .map_err(|e| format!("write image bytes: {}", e))?;
+
+    Ok(path.to_string_lossy().to_string())
+}
+
 // ─── File System Operations ───────────────────────────────────────────────────
 
 /// Open the native file explorer and highlight / reveal the given path.
@@ -1562,6 +1598,7 @@ pub fn start_ui(project_dir: PathBuf) -> anyhow::Result<()> {
             check_network_port,
             write_temp_script,
             check_tools_installed,
+            save_clipboard_image,
             list_drives,
             list_directory,
             show_in_folder,

@@ -95,4 +95,8 @@ export const vi = {
   'theme.preset.mint_sharp': 'Bạc hà · Sharp',
   'theme.preset.lavender_panel': 'Oải hương · Panel',
   'theme.preset.light_soft': 'Sáng · Soft',
+
+  // Gambit · Nước cờ
+  'gambit.title': 'Nước cờ',
+  'gambit.placeholder': 'Cân nhắc nước cờ... (Enter để gửi, Shift+Enter xuống dòng, dán ảnh được)',
 };
