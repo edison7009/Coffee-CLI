@@ -12,7 +12,7 @@
 // (e.g. Claude Code) can read them. If the agent does not support image paths
 // it simply sees the raw path string — not our concern, per design.
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { commands } from '../../tauri';
 import { useT } from '../../i18n/useT';
@@ -40,7 +40,16 @@ const MIN_HEIGHT = 120;
 const DEFAULT_WIDTH = 520;
 const DEFAULT_HEIGHT = 180;
 
-export function Gambit({
+// Anchor geometry used to keep the collapse dot (top-right of the expanded
+// card) and the collapsed ball at the same screen coordinate during the
+// transition — so the user's eye doesn't jump when they click collapse or
+// click-to-expand. These mirror the CSS: header padding-right 8px + collapse
+// button 24×24, header height 28px.
+const BALL_SIZE = 48;
+const DOT_CENTER_FROM_RIGHT = 20;
+const DOT_CENTER_FROM_TOP = 14;
+
+function GambitImpl({
   draft,
   initialX,
   initialY,
@@ -56,8 +65,18 @@ export function Gambit({
   const [size, setSize] = useState({ w: DEFAULT_WIDTH, h: DEFAULT_HEIGHT });
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
-  const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
-  const resizeRef = useRef<{ startX: number; startY: number; origW: number; origH: number } | null>(null);
+  // Collapsed state: full window shrinks into a small draggable ball,
+  // reminiscent of Messenger chat heads. True close lives only in the
+  // Explorer toggle button (open origin = close origin).
+  const [collapsed, setCollapsed] = useState(false);
+  // lastX/Y/W/H cache the latest values written to the DOM during drag/resize,
+  // so onUp can commit them back to React state once without any intermediate
+  // renders thrashing the effect that registers these very listeners.
+  const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number; lastX?: number; lastY?: number } | null>(null);
+  const resizeRef = useRef<{ startX: number; startY: number; origW: number; origH: number; lastW?: number; lastH?: number } | null>(null);
+  // Tracks whether the last mousedown -> mouseup sequence actually moved,
+  // so a click on the collapsed ball can be distinguished from a drag.
+  const movedRef = useRef(false);
 
   useEffect(() => {
     textareaRef.current?.focus();
@@ -82,6 +101,10 @@ export function Gambit({
       origX: pos.x,
       origY: pos.y,
     };
+    movedRef.current = false;
+    // Toggle a class directly — bypasses React re-render so backdrop-filter
+    // is suppressed starting from the very first mousemove.
+    rootRef.current?.classList.add('gambit--dragging');
     e.preventDefault();
   };
 
@@ -96,36 +119,57 @@ export function Gambit({
     e.preventDefault();
   };
 
+  // Drag + resize use direct DOM mutation instead of setState on every
+  // mousemove event. Rationale: the React render pass (re-run effect →
+  // rebind listeners → commit transform) costs 10-20ms per event, making
+  // the dragged element visibly lag behind the cursor at 144Hz. Writing
+  // straight to rootRef.current.style keeps the node GPU-composited and
+  // sub-frame responsive; we only sync back to React state on mouseup.
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
+      const el = rootRef.current;
+      if (!el) return;
       if (dragRef.current) {
         const d = dragRef.current;
-        const nextX = d.origX + (e.clientX - d.startX);
-        const nextY = d.origY + (e.clientY - d.startY);
-        const maxX = window.innerWidth - size.w;
-        const maxY = window.innerHeight - size.h;
-        setPos({
-          x: Math.min(Math.max(0, nextX), Math.max(0, maxX)),
-          y: Math.min(Math.max(30, nextY), Math.max(30, maxY)),
-        });
+        const dx = e.clientX - d.startX;
+        const dy = e.clientY - d.startY;
+        if (!movedRef.current && Math.abs(dx) + Math.abs(dy) > 3) {
+          movedRef.current = true;
+        }
+        // When collapsed the window is a 48px ball, not 520x180 — clamp to
+        // the appropriate extent so the ball can't be dragged off-screen.
+        const w = collapsed ? 48 : size.w;
+        const h = collapsed ? 48 : size.h;
+        const nextX = Math.min(Math.max(0, d.origX + dx), Math.max(0, window.innerWidth - w));
+        const nextY = Math.min(Math.max(30, d.origY + dy), Math.max(30, window.innerHeight - h));
+        el.style.transform = `translate3d(${nextX}px, ${nextY}px, 0)`;
+        d.lastX = nextX;
+        d.lastY = nextY;
       }
       if (resizeRef.current) {
         const r = resizeRef.current;
         const desiredW = r.origW + (e.clientX - r.startX);
         const desiredH = r.origH + (e.clientY - r.startY);
-        // Clamp to BOTH minimum and viewport-remaining. The previous code
-        // applied Math.min(nextW, remaining) after Math.max(MIN_WIDTH, ...),
-        // so when the window sat close to the viewport edge the final width
-        // could fall below MIN_WIDTH.
-        setSize({
-          w: Math.max(MIN_WIDTH, Math.min(desiredW, window.innerWidth - pos.x)),
-          h: Math.max(MIN_HEIGHT, Math.min(desiredH, window.innerHeight - pos.y)),
-        });
+        const nextW = Math.max(MIN_WIDTH, Math.min(desiredW, window.innerWidth - pos.x));
+        const nextH = Math.max(MIN_HEIGHT, Math.min(desiredH, window.innerHeight - pos.y));
+        el.style.width = `${nextW}px`;
+        el.style.height = `${nextH}px`;
+        r.lastW = nextW;
+        r.lastH = nextH;
       }
     };
     const onUp = () => {
+      // Commit any pending drag/resize values back to React state so the
+      // next render and any consumers (e.g. collapseAtDot math) see them.
+      if (dragRef.current && dragRef.current.lastX !== undefined) {
+        setPos({ x: dragRef.current.lastX!, y: dragRef.current.lastY! });
+      }
+      if (resizeRef.current && resizeRef.current.lastW !== undefined) {
+        setSize({ w: resizeRef.current.lastW!, h: resizeRef.current.lastH! });
+      }
       dragRef.current = null;
       resizeRef.current = null;
+      rootRef.current?.classList.remove('gambit--dragging');
     };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
@@ -133,7 +177,7 @@ export function Gambit({
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
     };
-  }, [pos.x, pos.y, size.w, size.h]);
+  }, [pos.x, pos.y, size.w, size.h, collapsed]);
 
   const handleSend = useCallback(() => {
     const text = draft.trim();
@@ -203,6 +247,61 @@ export function Gambit({
     });
   }, []);
 
+  // Anchor the collapse dot and the ball at the same screen coordinate:
+  // when collapsing, move the ball's top-left so its center lands on the
+  // dot's current screen position; when expanding, do the inverse so the
+  // dot reappears exactly where the ball was. Keeps the visual center stable.
+  const collapseAtDot = () => {
+    setPos({
+      x: pos.x + size.w - DOT_CENTER_FROM_RIGHT - BALL_SIZE / 2,
+      y: pos.y + DOT_CENTER_FROM_TOP - BALL_SIZE / 2,
+    });
+    setCollapsed(true);
+  };
+
+  const expandAtBall = () => {
+    const targetX = pos.x + BALL_SIZE / 2 - (size.w - DOT_CENTER_FROM_RIGHT);
+    const targetY = pos.y + BALL_SIZE / 2 - DOT_CENTER_FROM_TOP;
+    // Clamp so the expanded window doesn't spill off-screen if the ball sat
+    // near an edge.
+    setPos({
+      x: Math.max(8, Math.min(targetX, window.innerWidth - size.w - 8)),
+      y: Math.max(30, Math.min(targetY, window.innerHeight - size.h - 8)),
+    });
+    setCollapsed(false);
+    // Return focus to the textarea once it's mounted again.
+    requestAnimationFrame(() => textareaRef.current?.focus());
+  };
+
+  // Suppress onClose usage warning — true close is driven by parent (Explorer
+  // toggle). The component still accepts onClose in props for API symmetry
+  // and future use but doesn't expose it in the UI.
+  void onClose;
+
+  if (collapsed) {
+    return (
+      <div
+        ref={rootRef}
+        className="gambit gambit--ball"
+        style={{ transform: `translate3d(${pos.x}px, ${pos.y}px, 0)` }}
+        onMouseDown={(e) => {
+          e.stopPropagation();
+          onDragStart(e);
+        }}
+        onClick={() => {
+          // Distinguish click from drag: only expand if the mouse didn't
+          // move meaningfully between mousedown and mouseup.
+          if (!movedRef.current) expandAtBall();
+        }}
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+        </svg>
+      </div>
+    );
+  }
+
   return (
     <div
       ref={rootRef}
@@ -219,12 +318,12 @@ export function Gambit({
       <div className="gambit-header" onMouseDown={onDragStart}>
         <span className="gambit-title">{t('gambit.title')}</span>
         <button
-          className="gambit-close"
-          onClick={onClose}
-          onMouseDown={(e) => e.stopPropagation() /* don't start drag when closing */}
+          className="gambit-collapse"
+          onClick={collapseAtDot}
+          onMouseDown={(e) => e.stopPropagation() /* don't start drag when collapsing */}
         >
-          <svg width="12" height="12" viewBox="0 0 12 12">
-            <path d="M2 2 L10 10 M2 10 L10 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none"/>
+          <svg width="14" height="14" viewBox="0 0 14 14">
+            <circle cx="7" cy="7" r="4.5" fill="currentColor" />
           </svg>
         </button>
       </div>
@@ -297,6 +396,14 @@ export function Gambit({
     </div>
   );
 }
+
+// React.memo is CRITICAL here — TierTerminal (our parent) is intentionally
+// not memoized (an earlier regression), so it re-renders on every app-wide
+// state change: agent-status events, terminal focus shifts, etc. Without
+// this memo wrapper, every parent re-render during drag would reset the
+// inline `transform` style from React, clobbering the direct DOM writes we
+// use for smooth dragging and making the element visibly snap back.
+export const Gambit = memo(GambitImpl);
 
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {

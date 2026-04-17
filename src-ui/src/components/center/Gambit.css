@@ -1,5 +1,72 @@
 /* Gambit.css — floating draggable compose window */
 
+/* ─── Drag performance class ────────────────────────────────────
+   While dragging, the browser has to recompute backdrop-filter on every
+   frame by re-sampling the pixels behind the moving element — the single
+   most expensive visual effect we have. Suppress it during drag so the
+   element tracks the cursor 1:1, then restore it on mouseup. We also
+   lighten the drop shadow for the same reason (fewer blur passes). */
+.gambit.gambit--dragging {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow:
+        0 6px 16px rgba(0, 0, 0, 0.18),
+        0 1px 3px rgba(0, 0, 0, 0.10) !important;
+}
+
+/* ─── Collapsed ball (Messenger-chat-head style) ────────────────
+   When collapsed, the entire card shrinks into a 48×48 draggable
+   circle. Click to expand, drag to reposition. True close still
+   lives in the Explorer toggle button. */
+.gambit--ball {
+    width: 48px !important;
+    height: 48px !important;
+    border-radius: 50% !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Inherit the theme palette — treat the ball as a "mini Gambit window":
+       same background as the full card, accent color for the icon inside.
+       Keeps the collapsed form visually consistent with every other themed
+       element in Gambit (title, placeholder, send arrow). */
+    background: var(--bg-panel);
+    color: var(--accent, #C4956A);
+    cursor: grab;
+    /* Intentionally NO `transition: transform` — React reuses the same DOM
+       node between the expanded window and the collapsed ball, so a transform
+       transition would visibly slide the node between the two positions
+       (window top-left → dot-anchored ball position), making the shrink look
+       like it ran diagonally across the screen. Snap instantly instead;
+       keep the filter tween only for the hover brightness effect. */
+    transition: filter 0.12s ease;
+    box-shadow:
+        0 6px 18px rgba(0, 0, 0, 0.28),
+        0 2px 4px rgba(0, 0, 0, 0.14);
+}
+
+[data-theme="light"] .gambit--ball {
+    box-shadow:
+        0 4px 14px rgba(0, 0, 0, 0.14),
+        0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.gambit--ball:hover {
+    filter: brightness(1.12);
+}
+
+.gambit--ball:active {
+    cursor: grabbing;
+}
+
+/* The ball overrides all shape-specific shadow decorations — stays round and
+   clean regardless of current data-shape theme. */
+[data-shape] .gambit--ball {
+    box-shadow:
+        0 6px 18px rgba(0, 0, 0, 0.28),
+        0 2px 4px rgba(0, 0, 0, 0.14);
+}
+
+
 .gambit {
     position: fixed;
     /* Anchor at origin; JS applies transform: translate3d(x, y, 0) for position. */
@@ -99,29 +166,24 @@
     opacity: 0.8;
 }
 
-.gambit-close {
+.gambit-collapse {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 20px;
-    height: 20px;
+    width: 24px;
+    height: 24px;
     padding: 0;
     background: transparent;
     border: none;
-    /* Shape-aware: soft=8px, slab=3px, sharp/blade/panel=0 */
-    border-radius: var(--shape-radius-btn, 4px);
     color: var(--text-2, #9e9c98);
     cursor: pointer;
-    transition: background 0.12s, color 0.12s;
+    /* Hover simply tints the dot to accent — no background pill, keeps the
+       borderless paper aesthetic. */
+    transition: color 0.12s;
 }
 
-.gambit-close:hover {
-    background: rgba(255, 255, 255, 0.08);
-    color: var(--text-1, #e8e4de);
-}
-
-[data-theme="light"] .gambit-close:hover {
-    background: rgba(0, 0, 0, 0.06);
+.gambit-collapse:hover {
+    color: var(--accent, #C4956A);
 }
 
 /* ─── Textarea ─────────────────────────────────────────────── */

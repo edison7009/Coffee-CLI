@@ -7,6 +7,7 @@ import { subscribeAgentStatus } from './lib/agent-status-bus';
 import { TitleBar } from './components/common/TitleBar';
 import { Explorer } from './components/left/Explorer';
 import { CenterPanel } from './components/center/CenterPanel';
+import { ActiveGambit } from './components/center/ActiveGambit';
 import { RightPanel } from './components/right/Compiler';
 import './styles/global.css';
 
@@ -39,13 +40,18 @@ export function App() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Suppress the default browser right-click menu. Desktop apps should not
-  // expose "Back / Reload / Save As / Print / Inspect" to end users.
-  // File/dir and terminal custom menus use stopPropagation, so their events
-  // never reach this document-level handler — no exemption needed for them.
-  // The xterm wrap is still whitelisted as a defensive fallback in case a
-  // future code path forgets to stopPropagation.
+  // Suppress the default browser right-click menu in production. Desktop
+  // apps should not expose "Back / Reload / Save As / Print / Inspect" to
+  // end users. File/dir and terminal custom menus use stopPropagation, so
+  // their events never reach this document-level handler — no exemption
+  // needed for them. The xterm wrap is still whitelisted as a defensive
+  // fallback in case a future code path forgets to stopPropagation.
+  //
+  // In `npm run dev` / `cargo tauri dev` we deliberately skip this handler
+  // so the native WebView2 context menu is available — that's the only way
+  // to reach "Inspect Element" since Tauri 2 doesn't bind F12 by default.
   useEffect(() => {
+    if (import.meta.env.DEV) return;
     const handler = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       if (target.closest('.tier-xterm-wrap')) return;
@@ -77,6 +83,12 @@ export function App() {
           <RightPanel />
         </aside>
       </div>
+
+      {/* App-level overlay — the floating compose window. Rendered here so
+          it's isolated from TierTerminal re-renders (xterm output, agent
+          status events, etc.) and can be dragged freely across the whole
+          app window. Internally reads the active tab's gambit state. */}
+      <ActiveGambit />
     </>
   );
 }
