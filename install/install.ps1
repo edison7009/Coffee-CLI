@@ -1,19 +1,20 @@
 # Coffee CLI - Windows Installer / Updater
-# Usage: irm https://raw.githubusercontent.com/edison7009/Coffee-CLI/main/install/install.ps1 | iex
+# Usage: irm https://coffeecli.com/install.ps1 | iex
 
 $ErrorActionPreference = "Stop"
-$repo = "edison7009/Coffee-CLI"
 
 Write-Host ""
 Write-Host "  Coffee CLI Installer" -ForegroundColor Cyan
 Write-Host "  --------------------" -ForegroundColor DarkGray
 
-# Get latest release
-Write-Host "  Fetching latest release..." -ForegroundColor Gray
-$release = Invoke-RestMethod "https://api.github.com/repos/$repo/releases/latest"
-$latestTag = $release.tag_name                      # e.g. "v0.2.4"
-$latestVer = $latestTag -replace '^v', ''           # e.g. "0.2.4"
-Write-Host "  Latest : $latestTag" -ForegroundColor Green
+# Resolve version and binary via coffeecli.com (CF-hosted, China-accessible).
+# /version.json is served from Web-Home; /download/windows is a CF Worker
+# route that proxies the matching GitHub Release asset. This keeps the
+# install path off api.github.com so the script doesn't stall on a blocked
+# or slow GitHub API from mainland networks.
+Write-Host "  Fetching latest version..." -ForegroundColor Gray
+$latestVer = (Invoke-RestMethod "https://coffeecli.com/version.json").version
+Write-Host "  Latest : v$latestVer" -ForegroundColor Green
 
 # Detect currently installed version from Windows registry
 $installedVer = $null
@@ -45,26 +46,16 @@ if ($installedVer) {
     Write-Host "  Not installed - performing fresh install..." -ForegroundColor Gray
 }
 
-# Find Windows installer asset
-$asset = $release.assets | Where-Object { $_.name -like "*x64-setup.exe" } | Select-Object -First 1
-if (-not $asset) {
-    $asset = $release.assets | Where-Object { $_.name -like "*.msi" } | Select-Object -First 1
-}
-if (-not $asset) {
-    Write-Host "  ERROR: No Windows installer found in release assets." -ForegroundColor Red
-    exit 1
-}
-
-$url = $asset.browser_download_url
+$url = "https://coffeecli.com/download/windows"
 $out = "$env:TEMP\coffee-cli-setup.exe"
 
-Write-Host "  Downloading $($asset.name)..." -ForegroundColor Gray
+Write-Host "  Downloading..." -ForegroundColor Gray
 Invoke-WebRequest $url -OutFile $out -UseBasicParsing
 
 Write-Host "  Installing..." -ForegroundColor Gray
 Start-Process $out -Wait
 
 Write-Host ""
-Write-Host "  Done! Coffee CLI $latestTag installed." -ForegroundColor Green
+Write-Host "  Done! Coffee CLI v$latestVer installed." -ForegroundColor Green
 Write-Host "  Launch it from the Start Menu." -ForegroundColor Gray
 Write-Host ""

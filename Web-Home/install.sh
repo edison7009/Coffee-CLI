@@ -4,8 +4,13 @@
 
 set -e
 
-REPO="edison7009/Coffee-CLI"
-API="https://api.github.com/repos/$REPO/releases/latest"
+# Resolve version and binary via coffeecli.com (CF-hosted, China-accessible).
+# /version.json is served from Web-Home; /download/<platform> is a CF Worker
+# route that proxies the matching GitHub Release asset. Keeps the install
+# path off api.github.com so the script doesn't stall on a blocked or slow
+# GitHub API from mainland networks.
+VERSION_URL="https://coffeecli.com/version.json"
+DOWNLOAD_BASE="https://coffeecli.com/download"
 
 CYAN='\033[0;36m'
 GREEN='\033[0;32m'
@@ -18,17 +23,15 @@ echo ""
 echo "  ${CYAN}Coffee CLI Installer${RESET}"
 echo "  ${GRAY}────────────────────${RESET}"
 
-# Fetch latest release JSON
-echo "  ${GRAY}Fetching latest release...${RESET}"
-RELEASE=$(curl -fsSL "$API")
-# Parse tag_name — prefer jq when available, fall back to grep+sed
-if command -v jq >/dev/null 2>&1; then
-  LATEST_TAG=$(echo "$RELEASE" | jq -r '.tag_name')
-else
-  LATEST_TAG=$(echo "$RELEASE" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/' | head -1)
+# Parse version from version.json — minimal JSON, no jq required
+echo "  ${GRAY}Fetching latest version...${RESET}"
+VERSION_JSON=$(curl -fsSL "$VERSION_URL")
+LATEST_VER=$(echo "$VERSION_JSON" | sed -E 's/.*"version"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/')
+if [ -z "$LATEST_VER" ] || [ "$LATEST_VER" = "$VERSION_JSON" ]; then
+  echo "  ${RED}ERROR: Failed to parse version from $VERSION_URL${RESET}"
+  exit 1
 fi
-LATEST_VER=$(echo "$LATEST_TAG" | sed 's/^v//')
-echo "  ${GREEN}Latest : $LATEST_TAG${RESET}"
+echo "  ${GREEN}Latest : v$LATEST_VER${RESET}"
 
 OS=$(uname -s)
 ARCH=$(uname -m)
@@ -56,23 +59,14 @@ if [ "$OS" = "Darwin" ]; then
     echo "  ${GRAY}Not installed — performing fresh install...${RESET}"
   fi
 
-  # Apple Silicon only (no Intel build in CI)
-  if [ "$ARCH" = "arm64" ]; then
-    PATTERN="aarch64.dmg"
-  else
+  if [ "$ARCH" != "arm64" ]; then
     echo "  ${YELLOW}Note: No native Intel build available. Running via Rosetta 2.${RESET}"
-    PATTERN="aarch64.dmg"
   fi
 
-  URL=$(echo "$RELEASE" | grep '"browser_download_url"' | grep "$PATTERN" | sed -E 's/.*"([^"]+)".*/\1/' | head -1)
-  if [ -z "$URL" ]; then
-    echo "  ${RED}ERROR: No macOS DMG found in release assets.${RESET}"
-    exit 1
-  fi
-
+  URL="$DOWNLOAD_BASE/macos-arm"
   TMP="/tmp/coffee-cli.dmg"
-  FILENAME=$(basename "$URL")
-  echo "  ${GRAY}Downloading $FILENAME...${RESET}"
+
+  echo "  ${GRAY}Downloading...${RESET}"
   curl -fsSL "$URL" -o "$TMP"
 
   echo "  ${GRAY}Mounting DMG...${RESET}"
@@ -85,13 +79,13 @@ if [ "$OS" = "Darwin" ]; then
   rm "$TMP"
 
   echo ""
-  echo "  ${GREEN}Done! Coffee CLI $LATEST_TAG installed.${RESET}"
+  echo "  ${GREEN}Done! Coffee CLI v$LATEST_VER installed.${RESET}"
   echo "  ${GRAY}Launch it from /Applications or Spotlight.${RESET}"
 
 # ── Linux ──────────────────────────────────────────────────────────────────────
 elif [ "$OS" = "Linux" ]; then
 
-  # Detect installed version — prefer package manager to avoid launching the GUI binary
+  # Detect installed version — prefer package manager
   INSTALLED_VER=""
   if command -v dpkg > /dev/null 2>&1; then
     INSTALLED_VER=$(dpkg -s coffee-cli 2>/dev/null | grep '^Version:' | sed 's/Version: //' || true)
@@ -115,37 +109,26 @@ elif [ "$OS" = "Linux" ]; then
 
   # Prefer .deb if dpkg is available, fall back to AppImage
   if command -v dpkg > /dev/null 2>&1; then
-    URL=$(echo "$RELEASE" | grep '"browser_download_url"' | grep "amd64.deb" | sed -E 's/.*"([^"]+)".*/\1/' | head -1)
-    if [ -n "$URL" ]; then
-      TMP="/tmp/coffee-cli.deb"
-      FILENAME=$(basename "$URL")
-      echo "  ${GRAY}Downloading $FILENAME...${RESET}"
-      curl -fsSL "$URL" -o "$TMP"
-      echo "  ${GRAY}Installing (requires sudo)...${RESET}"
-      sudo dpkg -i "$TMP"
-      rm "$TMP"
-      echo ""
-      echo "  ${GREEN}Done! Coffee CLI $LATEST_TAG installed.${RESET}"
-      exit 0
-    fi
+    TMP="/tmp/coffee-cli.deb"
+    echo "  ${GRAY}Downloading .deb package...${RESET}"
+    curl -fsSL "$DOWNLOAD_BASE/linux-deb" -o "$TMP"
+    echo "  ${GRAY}Installing (requires sudo)...${RESET}"
+    sudo dpkg -i "$TMP"
+    rm "$TMP"
+    echo ""
+    echo "  ${GREEN}Done! Coffee CLI v$LATEST_VER installed.${RESET}"
+    exit 0
   fi
 
   # AppImage fallback
-  URL=$(echo "$RELEASE" | grep '"browser_download_url"' | grep "amd64.AppImage" | sed -E 's/.*"([^"]+)".*/\1/' | head -1)
-  if [ -z "$URL" ]; then
-    echo "  ${RED}ERROR: No Linux package found in release assets.${RESET}"
-    exit 1
-  fi
-
   DEST="$HOME/.local/bin/coffee-cli"
   mkdir -p "$HOME/.local/bin"
-  FILENAME=$(basename "$URL")
-  echo "  ${GRAY}Downloading $FILENAME...${RESET}"
-  curl -fsSL "$URL" -o "$DEST"
+  echo "  ${GRAY}Downloading AppImage...${RESET}"
+  curl -fsSL "$DOWNLOAD_BASE/linux-appimage" -o "$DEST"
   chmod +x "$DEST"
 
   echo ""
-  echo "  ${GREEN}Done! Coffee CLI $LATEST_TAG installed to $DEST${RESET}"
+  echo "  ${GREEN}Done! Coffee CLI v$LATEST_VER installed to $DEST${RESET}"
   echo "  ${GRAY}Make sure ~/.local/bin is in your PATH.${RESET}"
 
 else
