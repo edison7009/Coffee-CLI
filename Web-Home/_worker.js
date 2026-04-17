@@ -110,6 +110,26 @@ export default {
       })
     }
 
+    // ── /lang-packs/<path> → 410 Gone ────────────────────────────────────────
+    // Language pack infrastructure was retired. Intercept at the Worker so
+    // edge-cached 200 responses from the pre-deletion era are replaced. The
+    // 410 status tells HTTP clients the resource is permanently gone.
+    if (pathname.startsWith("/lang-packs/")) {
+      return new Response(
+        "Coffee CLI language packs have been retired.\n" +
+        "Install the official Claude Code native build via the Agent Installer:\n" +
+        "  irm https://coffeecli.com/agent-tools-installer.ps1 | iex\n" +
+        "  curl -fsSL https://coffeecli.com/agent-tools-installer.sh | bash\n",
+        {
+          status: 410,
+          headers: {
+            "Content-Type": "text/plain; charset=utf-8",
+            "Cache-Control": "no-store",
+          }
+        }
+      )
+    }
+
     // ── /installer/<path> ────────────────────────────────────────────────────
     // Serve directly from CF Pages static assets. Ships PowerShell and shell
     // scripts that need text/plain Content-Type (default MIME guess returns
