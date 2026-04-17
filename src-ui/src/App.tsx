@@ -41,12 +41,13 @@ export function App() {
 
   // Suppress the default browser right-click menu. Desktop apps should not
   // expose "Back / Reload / Save As / Print / Inspect" to end users.
-  // The left Explorer panel is exempt — it has its own custom file context menu.
+  // File/dir and terminal custom menus use stopPropagation, so their events
+  // never reach this document-level handler — no exemption needed for them.
+  // The xterm wrap is still whitelisted as a defensive fallback in case a
+  // future code path forgets to stopPropagation.
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      // Allow custom context menu inside the Explorer panel and terminal
-      if (target.closest('.panel-left')) return;
       if (target.closest('.tier-xterm-wrap')) return;
       e.preventDefault();
     };
