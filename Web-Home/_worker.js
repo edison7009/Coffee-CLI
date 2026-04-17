@@ -6,6 +6,7 @@
 //   /download/<platform>   → proxy GitHub Release assets
 //   /play/<file>           → proxy GitHub game-assets Release
 //   /lang-packs/<path>     → serve from CF Pages static files (Web-Home/lang-packs/)
+//   /installer/<path>      → serve from CF Pages static files (Web-Home/installer/)
 //   /*                     → CF Pages static files (env.ASSETS)
 
 const REPO = "edison7009/Coffee-CLI"
@@ -111,10 +112,11 @@ export default {
       })
     }
 
-    // ── /lang-packs/<path> ───────────────────────────────────────────────────
-    // Serve directly from CF Pages static assets (Web-Home/lang-packs/).
-    // No GitHub raw proxy — files are bundled in the Pages deployment.
-    if (pathname.startsWith("/lang-packs/")) {
+    // ── /lang-packs/<path> and /installer/<path> ─────────────────────────────
+    // Serve directly from CF Pages static assets. Both paths ship PowerShell
+    // and shell scripts that need text/plain Content-Type (default MIME guess
+    // returns application/octet-stream) and a short cache so updates are fast.
+    if (pathname.startsWith("/lang-packs/") || pathname.startsWith("/installer/")) {
       const assetRes = await env.ASSETS.fetch(request)
       if (assetRes.status === 200) {
         // Force correct Content-Type for .ps1 and .sh so PowerShell/bash
