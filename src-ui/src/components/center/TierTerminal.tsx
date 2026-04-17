@@ -239,6 +239,7 @@ function TierTerminalImpl({
   const dispatch = useAppDispatch();
 
   const termRef  = useRef<HTMLDivElement>(null);
+  const wrapRef  = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<Terminal | null>(null);
   const fitRef   = useRef<FitAddon | null>(null);
 
@@ -585,6 +586,26 @@ function TierTerminalImpl({
     term.options.theme = buildXtermTheme(theme !== 'light', hasBg, tool === 'claude', termColorScheme);
   }, [theme, tool, termColorScheme, hasBg]);
 
+  // ── IME focus-scroll guard ───────────────────────────────────────────────
+  // Defense-in-depth for the `overflow: clip` fix in TierTerminal.css.
+  // Scroll events DO NOT bubble, so a listener on `wrapRef` alone misses
+  // scrolls happening on descendants like `.xterm` (xterm.js creates that
+  // element, so it's not directly reffable). We use capture-phase listening
+  // to catch scroll events from any descendant element and snap them back.
+  // This guards against WebView2 builds without `overflow: clip` support
+  // and any future descendant that silently becomes scrollable.
+  useEffect(() => {
+    const root = wrapRef.current;
+    if (!root) return;
+    const onScroll = (e: Event) => {
+      const target = e.target as HTMLElement | null;
+      if (!target || !root.contains(target)) return;
+      if (target.scrollLeft !== 0) target.scrollLeft = 0;
+    };
+    root.addEventListener('scroll', onScroll, { capture: true, passive: true });
+    return () => root.removeEventListener('scroll', onScroll, { capture: true });
+  }, []);
+
   // ── Active tab focus restoration ─────────────────────────────────────────
   // Cache last-sent size so we skip redundant PTY resize calls when tab
   // switches back to the same dimensions (no window resize in between).
@@ -674,6 +695,7 @@ function TierTerminalImpl({
       )}
       {/* xterm.js: handles all rendering, input, and scrolling. */}
       <div
+        ref={wrapRef}
         className="tier-xterm-wrap"
         onContextMenu={(e) => {
           e.preventDefault();

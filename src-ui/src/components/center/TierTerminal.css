@@ -31,7 +31,15 @@
     flex: 1;
     min-width: 0;
     min-height: 0;
-    overflow: hidden;
+    /* `overflow: clip` (not `hidden`) blocks focus-induced ancestor scrolling.
+       When IME activates, xterm moves .xterm-helper-textarea inline `left` to
+       track the cursor column. If that position exceeds the visible width,
+       the browser's focus-scroll pass tries to scroll this container to bring
+       the textarea into view — pushing the xterm canvas to the left. `hidden`
+       still creates a scroll container (scrollLeft is settable), so browser
+       targets it. `clip` creates no scroll container; browser skips past it. */
+    overflow: clip;
+    overflow-clip-margin: 0;
     background: transparent;
     position: relative;
     z-index: 1;  /* above .tier-terminal-bg */
@@ -50,7 +58,13 @@
 /* xterm.js overrides — match our design */
 .tier-xterm .xterm {
     padding: 0; /* Padding is on .tier-xterm-wrap; do not add padding here */
-    overflow: hidden; /* Prevent scroll bars on the terminal container */
+    /* `overflow: clip` (not `hidden`) — see .tier-xterm-wrap for why.
+       Browser focus-scroll walks up ancestors looking for the nearest scroll
+       container. `.xterm` is closer to .xterm-helper-textarea than .tier-xterm-wrap,
+       so the browser targets THIS element first. It must also be `clip` or the
+       focus-scroll escapes the wrap-level fix. */
+    overflow: clip;
+    overflow-clip-margin: 0;
 }
 
 /* IME fix: override xterm's default left:-9999em so the browser never
