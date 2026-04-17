@@ -222,6 +222,109 @@ pub fn spawn(
     cmd.env("TERM", "xterm-256color");
     cmd.env("COLORTERM", "truecolor");
 
+    // ── AI CLI environment hints ───────────────────────────────────────────
+    // These fixes target pain points Claude / Qwen / OpenCode / Hermes hit
+    // when running as subprocesses: color stripped, Node heap too small, git
+    // waiting for credential input, Unicode corruption, Homebrew tools not
+    // in PATH, etc. Every env var is a no-op for tools that don't recognize
+    // it — maximum benefit, zero risk for those that do.
+    let is_ai_cli = matches!(
+        tool_name.as_deref(),
+        Some("claude") | Some("qwen") | Some("opencode") | Some("hermes")
+    );
+
+    if is_ai_cli {
+        // Cross-platform: most CLIs auto-disable ANSI color when they detect
+        // a subprocess / non-TTY context. Force color so Claude's status
+        // highlights, diff colors, error markers stay visible.
+        cmd.env("FORCE_COLOR", "1");
+
+        // Node-based agents (Claude Code, OpenCode CLI) default to ~1.7GB
+        // heap. Large monorepos trip this during big refactors / tree scans;
+        // 8GB is safe on any dev machine and ignored by non-Node tools.
+        cmd.env("NODE_OPTIONS", "--max-old-space-size=8192");
+
+        // Without this, `git push` / `git pull` / `git fetch` block waiting
+        // for interactive credential input if no credential helper is
+        // configured — PTY readers just see a silent hang. Fail loudly
+        // instead and let the user see the real error.
+        cmd.env("GIT_TERMINAL_PROMPT", "0");
+
+        // ── Windows-specific fixes ────────────────────────────────────────
+        #[cfg(target_os = "windows")]
+        {
+            // Git BASH SHELL hint — unlocks grep / sed / awk / find / ssh /
+            // POSIX pipes when Claude etc. shell out. Only set if the user
+            // hasn't defined SHELL themselves (respect explicit choice).
+            if std::env::var_os("SHELL").is_none() {
+                let candidates: [&str; 2] = [
+                    r"C:\Program Files\Git\bin\bash.exe",
+                    r"C:\Program Files (x86)\Git\bin\bash.exe",
+                ];
+                let found = candidates
+                    .iter()
+                    .find(|p| std::path::Path::new(p).exists())
+                    .map(|p| p.to_string())
+                    .or_else(|| {
+                        std::env::var("LOCALAPPDATA").ok().and_then(|la| {
+                            let p = format!(r"{}\Programs\Git\bin\bash.exe", la);
+                            std::path::Path::new(&p).exists().then_some(p)
+                        })
+                    });
+                if let Some(bash) = found {
+                    eprintln!("[Tier Terminal] SHELL={} (Git BASH for {})", bash, program);
+                    cmd.env("SHELL", &bash);
+                }
+            }
+
+            // Windows Python on CJK locales defaults I/O to cp936 / GBK,
+            // which corrupts UTF-8 files when Claude reads or writes them.
+            // Force utf-8 regardless of system locale.
+            cmd.env("PYTHONIOENCODING", "utf-8");
+
+            // Set POSIX locale vars if the user hasn't — keeps shell tools
+            // emitting UTF-8 output and avoids locale-specific sort orders.
+            if std::env::var_os("LANG").is_none() {
+                cmd.env("LANG", "en_US.UTF-8");
+            }
+            if std::env::var_os("LC_ALL").is_none() {
+                cmd.env("LC_ALL", "en_US.UTF-8");
+            }
+        }
+
+        // ── macOS-specific fixes ──────────────────────────────────────────
+        // Tauri launches subprocesses from a GUI context that doesn't source
+        // the user's interactive shell profile. If Claude / node / npm were
+        // installed via Homebrew and Homebrew's bin dir is only exported in
+        // ~/.zshrc, we won't find them. Prepend the common Homebrew bin
+        // paths that exist so the spawned shell can resolve these tools.
+        #[cfg(target_os = "macos")]
+        {
+            let brew_candidates = ["/opt/homebrew/bin", "/usr/local/bin"];
+            let mut prepend = Vec::new();
+            for p in brew_candidates {
+                if std::path::Path::new(p).is_dir() {
+                    prepend.push(p.to_string());
+                }
+            }
+            if !prepend.is_empty() {
+                let current = std::env::var("PATH").unwrap_or_default();
+                // Only add paths that aren't already present.
+                let existing: Vec<&str> = current.split(':').collect();
+                let needs_prepend: Vec<&String> = prepend
+                    .iter()
+                    .filter(|p| !existing.contains(&p.as_str()))
+                    .collect();
+                if !needs_prepend.is_empty() {
+                    let joined: Vec<String> = needs_prepend.iter().map(|s| (*s).clone()).collect();
+                    let new_path = format!("{}:{}", joined.join(":"), current);
+                    eprintln!("[Tier Terminal] PATH prepended with Homebrew dirs for {}", program);
+                    cmd.env("PATH", new_path);
+                }
+            }
+        }
+    }
+
     // Pass theme mode to Coffee Code so it knows dark vs light at startup
     if let Some(ref mode) = theme_mode {
         cmd.env("COFFEE_CODE_THEME_MODE", mode);
