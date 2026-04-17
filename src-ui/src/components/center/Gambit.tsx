@@ -63,6 +63,18 @@ export function Gambit({
     textareaRef.current?.focus();
   }, []);
 
+  // Blob URL cleanup on unmount. handleSend and removeAttachment revoke
+  // eagerly; this catches the path where Gambit is closed with attachments
+  // still staged (onClose → parent sets gambitOpen=false → component unmounts).
+  // A ref holds the latest array so the empty-deps effect sees live data.
+  const attachmentsRef = useRef(attachments);
+  attachmentsRef.current = attachments;
+  useEffect(() => {
+    return () => {
+      attachmentsRef.current.forEach(a => URL.revokeObjectURL(a.previewUrl));
+    };
+  }, []);
+
   const onDragStart = (e: React.MouseEvent) => {
     dragRef.current = {
       startX: e.clientX,
@@ -99,11 +111,15 @@ export function Gambit({
       }
       if (resizeRef.current) {
         const r = resizeRef.current;
-        const nextW = Math.max(MIN_WIDTH, r.origW + (e.clientX - r.startX));
-        const nextH = Math.max(MIN_HEIGHT, r.origH + (e.clientY - r.startY));
+        const desiredW = r.origW + (e.clientX - r.startX);
+        const desiredH = r.origH + (e.clientY - r.startY);
+        // Clamp to BOTH minimum and viewport-remaining. The previous code
+        // applied Math.min(nextW, remaining) after Math.max(MIN_WIDTH, ...),
+        // so when the window sat close to the viewport edge the final width
+        // could fall below MIN_WIDTH.
         setSize({
-          w: Math.min(nextW, window.innerWidth - pos.x),
-          h: Math.min(nextH, window.innerHeight - pos.y),
+          w: Math.max(MIN_WIDTH, Math.min(desiredW, window.innerWidth - pos.x)),
+          h: Math.max(MIN_HEIGHT, Math.min(desiredH, window.innerHeight - pos.y)),
         });
       }
     };

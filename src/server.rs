@@ -431,12 +431,21 @@ fn write_temp_script(content: String, extension: String) -> Result<String, Strin
 }
 
 /// Save a base64-encoded clipboard image to a temp file.
-/// Used by the Compose Bar so pasted screenshots can be referenced by path
-/// when forwarded to AI CLI agents (Claude Code, etc.).
+/// Used by the Gambit compose window so pasted screenshots can be referenced
+/// by path when forwarded to AI CLI agents (Claude Code, etc.).
+///
+/// Guards:
+/// - Extension whitelisted to common raster formats
+/// - Hard 25 MB size cap to prevent runaway base64 payloads filling the disk
+/// - Filename uses pid + atomic counter so two concurrent paste calls (same
+///   millisecond) can never collide and truncate each other's file
 #[tauri::command]
 fn save_clipboard_image(data_base64: String, extension: String) -> Result<String, String> {
     use base64::{Engine as _, engine::general_purpose};
     use std::io::Write;
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    const MAX_BYTES: usize = 25 * 1024 * 1024; // 25 MB
 
     // Only allow common web image formats. Block anything that could
     // execute or exploit a path-traversal quirk in the extension.
@@ -449,14 +458,25 @@ fn save_clipboard_image(data_base64: String, extension: String) -> Result<String
         .decode(&data_base64)
         .map_err(|e| format!("base64 decode: {}", e))?;
 
+    if bytes.len() > MAX_BYTES {
+        return Err(format!(
+            "Image too large: {} bytes (max {})",
+            bytes.len(),
+            MAX_BYTES
+        ));
+    }
+
     let tmp_dir = std::env::temp_dir().join("coffee-cli-compose");
     std::fs::create_dir_all(&tmp_dir).map_err(|e| format!("mkdir: {}", e))?;
 
+    static SEQ: AtomicU64 = AtomicU64::new(0);
     let stamp = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_millis())
         .unwrap_or(0);
-    let path = tmp_dir.join(format!("clip-{}.{}", stamp, ext));
+    let pid = std::process::id();
+    let seq = SEQ.fetch_add(1, Ordering::Relaxed);
+    let path = tmp_dir.join(format!("clip-{}-{}-{}.{}", stamp, pid, seq, ext));
 
     let mut file = std::fs::File::create(&path)
         .map_err(|e| format!("create image file: {}", e))?;
