@@ -1,6 +1,7 @@
-// TierTerminal.tsx — xterm.js terminal renderer with PTY backend
-// Pure terminal: no translation, no overlay. Translation lives in language packs
-// installed separately via the one-click installer.
+// TierTerminal.tsx — xterm.js terminal renderer with PTY backend.
+//
+// Pure terminal — no text interception, no overlay. Output from the child
+// process is piped byte-for-byte to xterm.
 //
 // Perf note: this component is wrapped in React.memo at the bottom of this
 // file. All state that affects rendering is passed in via props so that
@@ -501,14 +502,14 @@ function TierTerminalImpl({
           }
         }
 
-        // Trust prompt is now shown to the user (with translation overlay).
-        // Previously auto-skipped, but user wants to see the translated trust screen.
+        // Trust prompt is shown to the user directly. Previously auto-skipped,
+        // but we want the user to see the real agent screen and decide.
 
         // For installer, write the script to a temp file via a Rust command
         // and execute it by path. We used to base64-encode the script inline
-        // via `powershell -EncodedCommand`, but the installer.ps1 grew past
-        // Windows CMD's 8191-char command line limit once Language Packs
-        // menus were added — the command would be echoed instead of run.
+        // via `powershell -EncodedCommand`, but that runs into Windows CMD's
+        // 8191-char command line limit for any non-trivial script — the
+        // command gets echoed instead of run.
         if (tool === 'installer') {
           setTimeout(async () => {
             try {

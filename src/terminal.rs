@@ -182,9 +182,8 @@ pub fn spawn(
 ) -> anyhow::Result<()> {
     use portable_pty::{CommandBuilder, PtySize, native_pty_system};
 
-    // Use larger default cols (120) to accommodate translated text which can be
-    // 2-3x longer than English. This ensures dictionary patterns (up to 150 chars)
-    // are stored in full in the PTY buffer.
+    // Default to at least 120 cols so wide terminal output (help screens,
+    // table output, etc.) doesn't wrap aggressively in small windows.
     let cols = initial_cols.max(120);
     let rows = initial_rows.max(24);
     eprintln!("[Tier Terminal] Spawning '{}' args={:?}", program, args);
