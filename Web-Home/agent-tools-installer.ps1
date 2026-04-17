@@ -20,6 +20,7 @@ $Global:CoffeeInstallerBases = @(
     "https://raw.githubusercontent.com/edison7009/Coffee-CLI/main/Web-Home/installer"
 )
 $Global:CoffeeInstallerCache = @{}
+$Global:CoffeeI18nCache = @{}
 
 function Global:Get-InstallerScript([string]$name) {
     if ($Global:CoffeeInstallerCache.ContainsKey($name)) {

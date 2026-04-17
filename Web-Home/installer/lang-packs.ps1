@@ -4,8 +4,10 @@ Detects the user's Claude Code engine (npm vs bun-compiled native) and
 dispatches accordingly. Engine-aware so users get a clear message when
 they hit the still-WIP native support path.
 
-Depends on: Show-Menu (menu.ps1).
+Depends on: Show-Menu, Get-MenuI18n, T (menu.ps1).
 #>
+
+$T = Get-MenuI18n "lang-packs"
 
 $LANG_PACK_BASES = @(
     "https://coffeecli.com/lang-packs",
@@ -38,7 +40,6 @@ function Get-LangEnglish([string]$code) {
 }
 
 function Get-ClaudeEngine {
-    # Native Bun-compiled install (preferred by Anthropic going forward).
     $nativeExe = Join-Path $env:USERPROFILE ".local\bin\claude.exe"
     if (Test-Path $nativeExe) {
         $ver = "unknown"
@@ -51,7 +52,6 @@ function Get-ClaudeEngine {
         return @{ Type = "bun"; Path = $nativeExe; Version = $ver }
     }
 
-    # Legacy npm install - what existing lang-packs target.
     $npmRoot = $null
     try { $npmRoot = (& npm root -g 2>$null).Trim() } catch { }
     if ($npmRoot) {
@@ -95,27 +95,32 @@ function Get-LangPackScript([string]$relPath) {
 function Invoke-LangInstall([string]$code) {
     $english = Get-LangEnglish $code
     Write-Host ""
-    Write-Host "  Installing language pack: $english..." -ForegroundColor Cyan
+    Write-Host ("  " + (T $T "msg.installing_pack" @{ name = $english })) -ForegroundColor Cyan
     try {
         $script = Get-LangPackScript "$code/install.ps1"
         Invoke-Expression $script
     } catch {
         Write-Host ""
-        Write-Host "  [Error] Install failed: $_" -ForegroundColor Red
+        Write-Host ("  " + (T $T "msg.install_err" @{ err = $_ })) -ForegroundColor Red
     }
 }
 
 function Invoke-LangUninstall([string]$code) {
     $english = Get-LangEnglish $code
     Write-Host ""
-    Write-Host "  Uninstalling language pack: $english..." -ForegroundColor Yellow
+    Write-Host ("  " + (T $T "msg.uninstalling_pack" @{ name = $english })) -ForegroundColor Yellow
     try {
         $script = Get-LangPackScript "$code/uninstall.ps1"
         Invoke-Expression $script
     } catch {
         Write-Host ""
-        Write-Host "  [Error] Uninstall failed: $_" -ForegroundColor Red
+        Write-Host ("  " + (T $T "msg.uninstall_err" @{ err = $_ })) -ForegroundColor Red
     }
+}
+
+function Wait-PressEnter {
+    $menuDict = Get-MenuI18n "menu"
+    Read-Host ("`n  " + (T $menuDict "common.press_enter_continue")) | Out-Null
 }
 
 function Invoke-LanguageAction([string]$targetCode) {
@@ -123,26 +128,26 @@ function Invoke-LanguageAction([string]$targetCode) {
     if (-not $engine) {
         Clear-Host
         Write-Host ""
-        Write-Host "  Claude Code not detected." -ForegroundColor Red
-        Write-Host "  Install it first from the Install Agents menu." -ForegroundColor DarkGray
+        Write-Host ("  " + (T $T "err.no_claude")) -ForegroundColor Red
+        Write-Host ("  " + (T $T "err.no_claude_detail")) -ForegroundColor DarkGray
         Write-Host ""
-        Read-Host "  Press Enter to continue" | Out-Null
+        Wait-PressEnter
         return
     }
 
     if ($engine.Type -eq "bun") {
         Clear-Host
         Write-Host ""
-        Write-Host "  Native (Bun-compiled) Claude Code v$($engine.Version) detected" -ForegroundColor Yellow
-        Write-Host "  at: $($engine.Path)" -ForegroundColor DarkGray
+        Write-Host ("  " + (T $T "msg.native_detected" @{ ver = $engine.Version })) -ForegroundColor Yellow
+        Write-Host ("  " + (T $T "msg.native_path"     @{ path = $engine.Path })) -ForegroundColor DarkGray
         Write-Host ""
-        Write-Host "  Language pack support for the native installer is under development." -ForegroundColor Yellow
-        Write-Host "  Workaround: switch to the npm-installed Claude Code, which the" -ForegroundColor DarkGray
-        Write-Host "  current language packs target:" -ForegroundColor DarkGray
-        Write-Host "    1) Remove the native install (delete $($engine.Path))" -ForegroundColor DarkGray
-        Write-Host "    2) Run: npm install -g @anthropic-ai/claude-code" -ForegroundColor DarkGray
+        Write-Host ("  " + (T $T "msg.native_unsupported")) -ForegroundColor Yellow
+        Write-Host ("  " + (T $T "msg.workaround_intro")) -ForegroundColor DarkGray
+        Write-Host ("  " + (T $T "msg.workaround_target")) -ForegroundColor DarkGray
+        Write-Host ("    " + (T $T "msg.workaround_step_1" @{ path = $engine.Path })) -ForegroundColor DarkGray
+        Write-Host ("    " + (T $T "msg.workaround_step_2")) -ForegroundColor DarkGray
         Write-Host ""
-        Read-Host "  Press Enter to continue" | Out-Null
+        Wait-PressEnter
         return
     }
 
@@ -154,58 +159,58 @@ function Invoke-LanguageAction([string]$targetCode) {
     if ($targetCode -eq "en") {
         if (-not $activeCode) {
             Write-Host ""
-            Write-Host "  Claude Code is already in English. Nothing to do." -ForegroundColor Cyan
+            Write-Host ("  " + (T $T "msg.already_english")) -ForegroundColor Cyan
             Write-Host ""
-            Read-Host "  Press Enter to continue" | Out-Null
+            Wait-PressEnter
             return
         }
         Write-Host ""
-        Write-Host "  Currently active: $activeEnglish" -ForegroundColor Yellow
-        Write-Host "  This will restore Claude Code to the original English." -ForegroundColor DarkGray
-        $ans = Read-Host "  Continue? [Y/n]"
+        Write-Host ("  " + (T $T "msg.currently_active" @{ active = $activeEnglish })) -ForegroundColor Yellow
+        Write-Host ("  " + (T $T "msg.restore_english_intro")) -ForegroundColor DarkGray
+        $ans = Read-Host ("  " + (T $T "prompt.continue"))
         if ($ans -ne "" -and $ans -notmatch "^[Yy]$") { return }
         Invoke-LangUninstall $activeCode
-        Read-Host "`n  Press Enter to continue" | Out-Null
+        Wait-PressEnter
         return
     }
 
     if ($activeCode -eq $targetCode) {
-        $sub = Show-Menu -Title "$targetEnglish is already active" -Items @(
-            @{ Label = "Re-apply patch (fix after Claude upgrade)"; Act = "reapply"   },
-            @{ Label = "Uninstall (restore English)";               Act = "uninstall" },
-            @{ Label = "Back";                                      Action = "__back__" }
+        $sub = Show-Menu -Title (T $T "title.already_active" @{ name = $targetEnglish }) -Items @(
+            @{ Label = (T $T "action.reapply");          Act = "reapply"   },
+            @{ Label = (T $T "action.uninstall_english"); Act = "uninstall" },
+            @{ Label = (T $T "label.back");              Action = "__back__" }
         )
         if ($sub.Action -eq "__back__") { return }
         if ($sub.Act -eq "reapply")   { Invoke-LangInstall   $targetCode }
         if ($sub.Act -eq "uninstall") { Invoke-LangUninstall $targetCode }
-        Read-Host "`n  Press Enter to continue" | Out-Null
+        Wait-PressEnter
         return
     }
 
     if ($activeCode -and $activeCode -ne $targetCode) {
         Clear-Host
         Write-Host ""
-        Write-Host "  Currently active: $activeEnglish" -ForegroundColor Yellow
-        Write-Host "  Switching to $targetEnglish will:" -ForegroundColor DarkGray
-        Write-Host "    1. Uninstall $activeEnglish" -ForegroundColor DarkGray
-        Write-Host "    2. Restore English from backup" -ForegroundColor DarkGray
-        Write-Host "    3. Apply $targetEnglish patch" -ForegroundColor DarkGray
+        Write-Host ("  " + (T $T "msg.currently_active" @{ active = $activeEnglish })) -ForegroundColor Yellow
+        Write-Host ("  " + (T $T "msg.switch_intro"     @{ target = $targetEnglish })) -ForegroundColor DarkGray
+        Write-Host ("    " + (T $T "msg.switch_step_1"  @{ current = $activeEnglish })) -ForegroundColor DarkGray
+        Write-Host ("    " + (T $T "msg.switch_step_2")) -ForegroundColor DarkGray
+        Write-Host ("    " + (T $T "msg.switch_step_3"  @{ target = $targetEnglish })) -ForegroundColor DarkGray
         Write-Host ""
-        $ans = Read-Host "  Continue? [Y/n]"
+        $ans = Read-Host ("  " + (T $T "prompt.continue"))
         if ($ans -ne "" -and $ans -notmatch "^[Yy]$") { return }
         Invoke-LangUninstall $activeCode
         Invoke-LangInstall   $targetCode
-        Read-Host "`n  Press Enter to continue" | Out-Null
+        Wait-PressEnter
         return
     }
 
     Clear-Host
     Write-Host ""
-    Write-Host "  Will install $targetEnglish language pack." -ForegroundColor Cyan
-    $ans = Read-Host "  Continue? [Y/n]"
+    Write-Host ("  " + (T $T "msg.clean_install_intro" @{ target = $targetEnglish })) -ForegroundColor Cyan
+    $ans = Read-Host ("  " + (T $T "prompt.continue"))
     if ($ans -ne "" -and $ans -notmatch "^[Yy]$") { return }
     Invoke-LangInstall $targetCode
-    Read-Host "`n  Press Enter to continue" | Out-Null
+    Wait-PressEnter
 }
 
 # --- Menu loop -----------------------------------------------------------
@@ -213,17 +218,17 @@ function Invoke-LanguageAction([string]$targetCode) {
 while ($true) {
     $engine = Get-ClaudeEngine
     $activeCode = Get-ActiveLanguage
-    $engineTag = if ($engine -eq $null) {
-        "  [Claude Code not found]"
+    $engineTag = if ($null -eq $engine) {
+        T $T "engine.tag.none"
     } elseif ($engine.Type -eq "npm") {
-        "  [npm v$($engine.Version)]"
+        T $T "engine.tag.npm" @{ ver = $engine.Version }
     } elseif ($engine.Type -eq "bun") {
-        "  [native v$($engine.Version) - unsupported]"
+        T $T "engine.tag.bun" @{ ver = $engine.Version }
     } else { "" }
 
-    $title = "Language Packs$engineTag"
+    $title = (T $T "title.base") + $engineTag
     if ($activeCode) {
-        $title += " - active: $(Get-LangEnglish $activeCode)"
+        $title += T $T "title.active_suffix" @{ lang = (Get-LangEnglish $activeCode) }
     }
 
     $items = @()
@@ -234,8 +239,8 @@ while ($true) {
             Code  = $lp.Code
         }
     }
-    $items += @{ Label = "English (restore default)"; Code = "en" }
-    $items += @{ Label = "Back"; Action = "__back__" }
+    $items += @{ Label = (T $T "label.english_restore"); Code = "en" }
+    $items += @{ Label = (T $T "label.back");            Action = "__back__" }
 
     $choice = Show-Menu -Title $title -Items $items
     if ($choice.Action -eq "__back__") { return }

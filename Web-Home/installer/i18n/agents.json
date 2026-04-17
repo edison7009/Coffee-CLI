@@ -1,0 +1,114 @@
+{
+  "title": {
+    "en": "Install Agents",
+    "zh-CN": "安装 AI Agent"
+  },
+  "label.claude": {
+    "en": "Claude Code",
+    "zh-CN": "Claude Code"
+  },
+  "label.qwen": {
+    "en": "Qwen Code",
+    "zh-CN": "Qwen Code（通义千问）"
+  },
+  "label.opencode": {
+    "en": "OpenCode CLI",
+    "zh-CN": "OpenCode CLI"
+  },
+  "label.hermes": {
+    "en": "Hermes (Nous Research)",
+    "zh-CN": "Hermes（Nous Research）"
+  },
+  "status.installed_suffix": {
+    "en": "  [installed]",
+    "zh-CN": "  [已安装]"
+  },
+  "status.installed": {
+    "en": "Status: already installed",
+    "zh-CN": "状态：已安装"
+  },
+  "status.not_installed": {
+    "en": "Status: not installed",
+    "zh-CN": "状态：未安装"
+  },
+  "action.title": {
+    "en": "{name} - choose action",
+    "zh-CN": "{name} - 选择操作"
+  },
+  "action.reinstall": {
+    "en": "Reinstall / Upgrade",
+    "zh-CN": "重新安装 / 升级"
+  },
+  "action.uninstall": {
+    "en": "Uninstall",
+    "zh-CN": "卸载"
+  },
+  "action.back": {
+    "en": "Back",
+    "zh-CN": "返回"
+  },
+  "prompt.install_confirm": {
+    "en": "Install {name} now? [Y/n]",
+    "zh-CN": "现在安装 {name}？[Y/n]"
+  },
+  "msg.installing": {
+    "en": "Installing {name}...",
+    "zh-CN": "正在安装 {name}..."
+  },
+  "msg.uninstalling": {
+    "en": "Uninstalling {name}...",
+    "zh-CN": "正在卸载 {name}..."
+  },
+  "msg.install_ok": {
+    "en": "[OK] {name} installed",
+    "zh-CN": "[完成] 已安装 {name}"
+  },
+  "msg.uninstall_ok": {
+    "en": "[OK] {name} uninstalled",
+    "zh-CN": "[完成] 已卸载 {name}"
+  },
+  "msg.install_err": {
+    "en": "[Error] Install failed: {err}",
+    "zh-CN": "[错误] 安装失败：{err}"
+  },
+  "msg.uninstall_err": {
+    "en": "[Error] Uninstall failed: {err}",
+    "zh-CN": "[错误] 卸载失败：{err}"
+  },
+  "msg.homepage": {
+    "en": "Homepage : {url}",
+    "zh-CN": "官方主页：{url}"
+  },
+  "msg.verify": {
+    "en": "Verify   : {cmd}",
+    "zh-CN": "验证命令：{cmd}"
+  },
+  "msg.skipped_needs_node": {
+    "en": "Skipped - Node.js is required.",
+    "zh-CN": "已跳过 - 需要先安装 Node.js。"
+  },
+  "node.required": {
+    "en": "npm not found. Node.js is required for this agent.",
+    "zh-CN": "未检测到 npm。此 Agent 需要 Node.js。"
+  },
+  "node.install_prompt": {
+    "en": "Install Node.js now? [Y/n]",
+    "zh-CN": "现在安装 Node.js？[Y/n]"
+  },
+  "node.downloading": {
+    "en": "Downloading Node.js...",
+    "zh-CN": "正在下载 Node.js..."
+  },
+  "node.download_err": {
+    "en": "[Error] Node.js install failed: {err}",
+    "zh-CN": "[错误] Node.js 安装失败：{err}"
+  },
+  "node.install_ok": {
+    "en": "[OK] Node.js installed.",
+    "zh-CN": "[完成] 已安装 Node.js。"
+  },
+  "node.npm_not_found": {
+    "en": "[Error] npm still not found after install. Restart shell and retry.",
+    "zh-CN": "[错误] 安装后仍找不到 npm。请重启终端后重试。"
+  }
+}

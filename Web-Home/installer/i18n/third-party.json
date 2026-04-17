@@ -1,0 +1,26 @@
+{
+  "title": {
+    "en": "Third-party Tools",
+    "zh-CN": "第三方工具"
+  },
+  "msg.coming_soon": {
+    "en": "Coming soon.",
+    "zh-CN": "敬请期待。"
+  },
+  "msg.detail_1": {
+    "en": "This section will host integrations with third-party developer",
+    "zh-CN": "此处将集成第三方开发者工具（Cursor、Cline、"
+  },
+  "msg.detail_2": {
+    "en": "tools (Cursor, Cline, continue.dev, etc.). Updates ship via the",
+    "zh-CN": "continue.dev 等）。更新通过 CDN 下发，"
+  },
+  "msg.detail_3": {
+    "en": "CDN without requiring users to re-run anything.",
+    "zh-CN": "无需用户重新执行任何命令。"
+  },
+  "prompt.press_enter": {
+    "en": "Press Enter to go back",
+    "zh-CN": "按 Enter 返回"
+  }
+}

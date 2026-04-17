@@ -1,0 +1,54 @@
+{
+  "title": {
+    "en": "Coffee CLI Agent Installer",
+    "zh-CN": "Coffee CLI 安装助手"
+  },
+  "nav.root_hint": {
+    "en": "Up/Down to move, Enter to select, Esc to quit",
+    "zh-CN": "↑↓ 移动，Enter 选择，Esc 退出"
+  },
+  "nav.sub_hint": {
+    "en": "Up/Down to move, Enter to select, Esc to go back",
+    "zh-CN": "↑↓ 移动，Enter 选择，Esc 返回上一级"
+  },
+  "root.install_agents": {
+    "en": "Install Agents",
+    "zh-CN": "安装 AI Agent"
+  },
+  "root.language_packs": {
+    "en": "Language Packs",
+    "zh-CN": "语言包"
+  },
+  "root.third_party": {
+    "en": "Third-party Tools",
+    "zh-CN": "第三方工具"
+  },
+  "root.language_picker": {
+    "en": "Menu Language / 菜单语言",
+    "zh-CN": "菜单语言 / Menu Language"
+  },
+  "root.exit": {
+    "en": "Exit",
+    "zh-CN": "退出"
+  },
+  "common.goodbye": {
+    "en": "Goodbye!",
+    "zh-CN": "再见！"
+  },
+  "common.error_load_submenu": {
+    "en": "[Error] Failed to load {name}",
+    "zh-CN": "[错误] 加载 {name} 失败"
+  },
+  "common.press_enter_continue": {
+    "en": "Press Enter to continue",
+    "zh-CN": "按 Enter 继续"
+  },
+  "lang_picker.title": {
+    "en": "Choose menu language",
+    "zh-CN": "选择菜单语言"
+  },
+  "lang_picker.saved": {
+    "en": "Language preference saved.",
+    "zh-CN": "菜单语言已保存。"
+  }
+}
