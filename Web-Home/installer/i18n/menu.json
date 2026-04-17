@@ -15,10 +15,6 @@
     "en": "Install Agents",
     "zh-CN": "安装 AI Agent"
   },
-  "root.language_packs": {
-    "en": "Language Packs",
-    "zh-CN": "语言包"
-  },
   "root.third_party": {
     "en": "Third-party Tools",
     "zh-CN": "第三方工具"

@@ -179,7 +179,6 @@ while ($true) {
     $menuDict = Get-MenuI18n "menu"
     $rootItems = @(
         @{ Label = (T $menuDict "root.install_agents");   Target = "agents.ps1" },
-        @{ Label = (T $menuDict "root.language_packs");   Target = "lang-packs.ps1" },
         @{ Label = (T $menuDict "root.third_party");      Target = "third-party.ps1" },
         @{ Label = (T $menuDict "root.language_picker");  Action = "__lang__" },
         @{ Label = (T $menuDict "root.exit");             Action = "__exit__" }

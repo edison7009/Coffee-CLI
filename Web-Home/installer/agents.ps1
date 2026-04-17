@@ -134,9 +134,19 @@ $agentCatalog = @(
         Detect    = "claude"
         Homepage  = "https://claude.ai/code"
         Verify    = "claude --version"
-        Npm       = $true
-        Install   = { npm install -g "@anthropic-ai/claude-code" }
-        Uninstall = { npm uninstall -g "@anthropic-ai/claude-code" }
+        Npm       = $false
+        Install   = {
+            # Anthropic official native installer (Bun-compiled standalone).
+            Invoke-Expression ((Invoke-WebRequest -Uri "https://claude.ai/install.ps1" -UseBasicParsing).Content)
+        }
+        Uninstall = {
+            # Native installer places the binary at ~/.local/bin and versioned
+            # copies under ~/.local/share/claude/versions/. Remove both.
+            $bin = Join-Path $env:USERPROFILE ".local\bin\claude.exe"
+            $share = Join-Path $env:USERPROFILE ".local\share\claude"
+            if (Test-Path $bin)   { Remove-Item -Force $bin }
+            if (Test-Path $share) { Remove-Item -Recurse -Force $share }
+        }
     },
     @{
         Key       = "label.qwen"
