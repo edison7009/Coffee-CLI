@@ -1006,7 +1006,6 @@ export function Explorer() {
                 <polyline points="7 10 12 15 17 10"/>
                 <line x1="12" y1="3" x2="12" y2="15"/>
               </svg>
-              <span className="update-dot" />
             </button>
           )}
         </div>
