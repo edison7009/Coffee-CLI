@@ -25,9 +25,9 @@ import { ActivateDialog } from './ActivateDialog';
 import type {
   TeamState,
   CliAvailability,
-  CliKind,
   RuntimeKind,
   AgentNodeData,
+  AgentLaunchConfig,
 } from './types';
 
 interface Props {
@@ -93,13 +93,23 @@ function CanvasInner({
   }, [onToast]);
 
   const handleConfirmActivate = useCallback(
-    (cli: CliKind, runtime: RuntimeKind) => {
+    (config: AgentLaunchConfig) => {
       if (!activatingNodeId) return;
       const id = activatingNodeId;
       setActivatingNodeId(null);
 
-      updateNode(id, { status: 'activating', cli, runtime });
-      onToast(`即将激活 ${cli} · ${runtime} ...（Phase 3 实现真容器）`);
+      updateNode(id, {
+        status: 'activating',
+        name: config.name,
+        avatar: config.avatar,
+        description: config.description,
+        cli: config.cli,
+        runtime: config.runtime,
+        heartbeatEnabled: config.heartbeat != null,
+        heartbeatInterval: config.heartbeat?.interval,
+        heartbeatPrompt: config.heartbeat?.prompt,
+      });
+      onToast(`即将启动 ${config.name} · ${config.cli} · ${config.runtime} ...（Phase 3c 实现真容器）`);
 
       setTimeout(() => {
         updateNode(id, { status: 'active' });
@@ -151,6 +161,12 @@ function CanvasInner({
       {activatingNode && (
         <ActivateDialog
           roleName={activatingNode.name}
+          roleDefaults={{
+            avatar: activatingNode.avatar,
+            description: activatingNode.description ?? activatingNode.hint,
+          }}
+          agentId={activatingNode.id}
+          teamId={team.id}
           availability={availability}
           availableRuntimes={availableRuntimes}
           onConfirm={handleConfirmActivate}

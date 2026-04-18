@@ -494,6 +494,179 @@
     overflow: hidden;
 }
 
+.activate-dialog--wide {
+    width: 660px;
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.activate-dialog-body {
+    display: flex;
+    gap: 0;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.activate-dialog-col {
+    padding: 4px 0;
+    flex: 1;
+    min-width: 0;
+}
+
+.activate-dialog-col--left {
+    border-right: 1px solid var(--border);
+    flex: 0 0 240px;
+}
+
+.activate-dialog-col--right {
+    flex: 1;
+}
+
+/* ─── Avatar picker ─────────────────────────── */
+
+.avatar-picker {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 4px;
+}
+
+.avatar-picker-option {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    line-height: 1;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm, 4px);
+    cursor: pointer;
+    transition: all 0.12s;
+}
+
+.avatar-picker-option:hover {
+    background: var(--bg-card);
+}
+
+.avatar-picker-option.active {
+    background: var(--bg-card);
+    border-color: var(--accent);
+}
+
+/* ─── Form inputs ───────────────────────────── */
+
+.activate-dialog-input,
+.activate-dialog-textarea,
+.activate-dialog-select {
+    width: 100%;
+    padding: 6px 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm, 4px);
+    color: var(--text-1);
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.12s;
+}
+
+.activate-dialog-input:focus,
+.activate-dialog-textarea:focus,
+.activate-dialog-select:focus {
+    border-color: var(--accent);
+}
+
+.activate-dialog-textarea {
+    resize: vertical;
+    line-height: 1.5;
+    min-height: 60px;
+}
+
+/* ─── Heartbeat section ─────────────────────── */
+
+.activate-dialog-section-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    color: var(--text-2);
+    text-transform: uppercase;
+    cursor: pointer;
+    margin-bottom: 8px;
+}
+
+.activate-dialog-section-toggle input[type="checkbox"] {
+    accent-color: var(--accent);
+    cursor: pointer;
+}
+
+.activate-dialog-heartbeat {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px;
+    background: var(--bg-card);
+    border-radius: var(--radius-sm, 4px);
+}
+
+.activate-dialog-heartbeat-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.activate-dialog-subsection-label {
+    font-size: 11.5px;
+    color: var(--text-2);
+    font-weight: 500;
+    flex-shrink: 0;
+}
+
+/* ─── Paths info ────────────────────────────── */
+
+.activate-dialog-paths {
+    background: var(--bg-card);
+    border-radius: var(--radius-sm, 4px);
+    padding: 10px 12px;
+    margin: 4px 16px;
+}
+
+.activate-dialog-path-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11.5px;
+    color: var(--text-2);
+    margin-top: 4px;
+    overflow: hidden;
+}
+
+.activate-dialog-path-icon {
+    font-size: 13px;
+    flex-shrink: 0;
+}
+
+.activate-dialog-path-kind {
+    flex-shrink: 0;
+    min-width: 56px;
+    color: var(--text-2);
+}
+
+.activate-dialog-path {
+    font-family: var(--font-mono, monospace);
+    font-size: 11px;
+    color: var(--text-1);
+    background: transparent;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .activate-dialog-header {
     display: flex;
     align-items: center;

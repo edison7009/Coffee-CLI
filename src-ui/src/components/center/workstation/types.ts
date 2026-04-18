@@ -27,15 +27,39 @@ export type InitMode = 'copy-local' | 'fresh';
  */
 export interface AgentNodeData {
   id: string;
-  name: string;            // "主程序", "概念设计师"
-  hint?: string;           // optional one-line description shown as tooltip
+  name: string;            // display name — pre-filled from blueprint, editable on launch
+  avatar?: string;         // emoji or URL; defaults to '👤' in the dialog
+  description?: string;    // longer purpose description (what this role does)
+  hint?: string;           // legacy one-line tooltip from blueprint (kept for compat)
   position: { x: number; y: number };
 
-  // Runtime state (not in blueprint; lives in canvas state)
+  // Runtime state (not in blueprint; set when the agent is launched)
   status: NodeStatus;
-  cli?: CliKind;           // chosen at activation time
-  runtime?: RuntimeKind;   // chosen at activation time (per-card, not per-team)
-  initMode?: InitMode;
+  cli?: CliKind;
+  runtime?: RuntimeKind;
+  initMode?: InitMode;     // deprecated
+
+  // Heartbeat — optional scheduled cron inside the container. User-authored,
+  // never auto-filled. Empty/disabled by default to keep costs at zero.
+  heartbeatEnabled?: boolean;
+  heartbeatInterval?: string;    // human form: "10m" / "1h" / "daily-9am"
+  heartbeatPrompt?: string;      // what to run on each beat
+}
+
+/**
+ * Payload delivered by ActivateDialog's onConfirm. Keeps call sites tidy
+ * and lets us grow the fields without re-threading signatures everywhere.
+ */
+export interface AgentLaunchConfig {
+  avatar: string;
+  name: string;
+  description: string;
+  cli: CliKind;
+  runtime: RuntimeKind;
+  heartbeat?: {
+    interval: string;
+    prompt: string;
+  };
 }
 
 export interface AgentEdge {
@@ -56,7 +80,9 @@ export interface Blueprint {
   nodes: Array<{
     id: string;
     name: string;
-    hint?: string;
+    avatar?: string;       // optional default avatar for this role
+    description?: string;  // optional longer description
+    hint?: string;         // optional tooltip (legacy)
     position: { x: number; y: number };
   }>;
   edges: AgentEdge[];
