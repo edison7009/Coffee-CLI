@@ -1,0 +1,25 @@
+# Blueprint: 写作小组
+
+id: writing-team
+name: 写作小组
+icon: ✍️
+description: 内容创作三件套：主编定方向，记者出素材，编辑把关成稿
+author: '@coffee-cli'
+
+nodes:
+  - id: chief
+    name: 主编
+    hint: 选题、整体风格、终审
+    position: { x: 240, y: 0 }
+  - id: reporter
+    name: 记者
+    hint: 采访、素材收集、初稿
+    position: { x: 80, y: 160 }
+  - id: editor
+    name: 编辑
+    hint: 润色、结构、事实核查
+    position: { x: 400, y: 160 }
+
+edges:
+  - { source: chief, target: reporter }
+  - { source: chief, target: editor }

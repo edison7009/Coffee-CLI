@@ -1,69 +1,50 @@
-// Seed blueprints for Phase 1 — hardcoded, demo-quality only.
-// Phase 2 replaces these with YAML loaded from disk / URL / GitHub.
+// Seed blueprints for Phase 2 — YAML files bundled via Vite `?raw`.
 //
 // Per product philosophy: a blueprint ships ONLY names + structure.
 // No models, no skills, no prompts. The user configures all of that
 // inside each activated container.
+//
+// Moving the templates out of TS into YAML means:
+//   - Non-coders can submit blueprints via PR
+//   - The format is what Phase 5's marketplace will import at runtime
+//   - Our TS code never grows as the template catalog grows
 
+import { parse as parseYaml } from 'yaml';
 import type { Blueprint } from './types';
 
+import gameStudioYaml from './defaults/game-studio.yml?raw';
+import startupTeamYaml from './defaults/startup-team.yml?raw';
+import writingTeamYaml from './defaults/writing-team.yml?raw';
+
+/**
+ * Minimal runtime check that a parsed YAML conforms to the Blueprint
+ * shape. Throws with a readable message when a required field is missing
+ * so the error surfaces at build time / first load — not at render time
+ * with a cryptic TypeError deep in react-flow.
+ */
+function parseBlueprint(raw: string, sourceHint: string): Blueprint {
+  const parsed = parseYaml(raw) as unknown;
+  if (!parsed || typeof parsed !== 'object') {
+    throw new Error(`blueprint "${sourceHint}" did not parse to an object`);
+  }
+  const bp = parsed as Partial<Blueprint>;
+  const missing = (['id', 'name', 'icon', 'description', 'author', 'nodes', 'edges'] as const)
+    .filter(k => bp[k] === undefined);
+  if (missing.length) {
+    throw new Error(
+      `blueprint "${sourceHint}" is missing required field(s): ${missing.join(', ')}`,
+    );
+  }
+  if (!Array.isArray(bp.nodes) || !Array.isArray(bp.edges)) {
+    throw new Error(`blueprint "${sourceHint}" must have nodes[] and edges[]`);
+  }
+  return bp as Blueprint;
+}
+
 export const BLUEPRINTS: Blueprint[] = [
-  {
-    id: 'game-studio',
-    name: '游戏工作室',
-    icon: '🎮',
-    description: '典型独立游戏团队：项目经理协调下的程序、美术、剧情、QA 分工',
-    author: '@coffee-cli',
-    nodes: [
-      { id: 'pm',        name: '项目经理',  hint: '协调进度、决策、与用户对接', position: { x: 240,  y: 0   } },
-      { id: 'programmer', name: '主程序',   hint: '引擎、核心系统、性能',        position: { x: -40,  y: 160 } },
-      { id: 'artist',    name: '主美术',    hint: '视觉风格、关键资产',          position: { x: 180,  y: 160 } },
-      { id: 'writer',    name: '剧情编剧',  hint: '叙事、分支对话、世界观',      position: { x: 400,  y: 160 } },
-      { id: 'qa',        name: 'QA 测试',   hint: '复现 bug、回归验证',          position: { x: 620,  y: 160 } },
-    ],
-    edges: [
-      { source: 'pm', target: 'programmer' },
-      { source: 'pm', target: 'artist' },
-      { source: 'pm', target: 'writer' },
-      { source: 'pm', target: 'qa' },
-    ],
-  },
-  {
-    id: 'startup-team',
-    name: '创业团队',
-    icon: '🚀',
-    description: '早期创业：CEO 领导下 CTO 与 CMO 并行，CTO 统筹工程',
-    author: '@coffee-cli',
-    nodes: [
-      { id: 'ceo',       name: 'CEO',        hint: '战略、融资、团队方向',           position: { x: 240,  y: 0   } },
-      { id: 'cto',       name: 'CTO',        hint: '技术路线、工程决策',             position: { x: 80,   y: 160 } },
-      { id: 'cmo',       name: 'CMO',        hint: '营销、增长、品牌',               position: { x: 400,  y: 160 } },
-      { id: 'eng-claude', name: '工程师 · Claude', hint: '通用代码、架构',           position: { x: -40,  y: 320 } },
-      { id: 'eng-codex',  name: '工程师 · Codex',  hint: '复杂任务、long-context',  position: { x: 200,  y: 320 } },
-    ],
-    edges: [
-      { source: 'ceo', target: 'cto' },
-      { source: 'ceo', target: 'cmo' },
-      { source: 'cto', target: 'eng-claude' },
-      { source: 'cto', target: 'eng-codex' },
-    ],
-  },
-  {
-    id: 'writing-team',
-    name: '写作小组',
-    icon: '✍️',
-    description: '内容创作三件套：主编定方向，记者出素材，编辑把关成稿',
-    author: '@coffee-cli',
-    nodes: [
-      { id: 'chief',     name: '主编',       hint: '选题、整体风格、终审',           position: { x: 240,  y: 0   } },
-      { id: 'reporter',  name: '记者',       hint: '采访、素材收集、初稿',           position: { x: 80,   y: 160 } },
-      { id: 'editor',    name: '编辑',       hint: '润色、结构、事实核查',           position: { x: 400,  y: 160 } },
-    ],
-    edges: [
-      { source: 'chief', target: 'reporter' },
-      { source: 'chief', target: 'editor' },
-    ],
-  },
+  parseBlueprint(gameStudioYaml, 'game-studio'),
+  parseBlueprint(startupTeamYaml, 'startup-team'),
+  parseBlueprint(writingTeamYaml, 'writing-team'),
 ];
 
 /**

@@ -1,0 +1,35 @@
+# Blueprint: 创业团队
+
+id: startup-team
+name: 创业团队
+icon: 🚀
+description: 早期创业：CEO 领导下 CTO 与 CMO 并行，CTO 统筹工程
+author: '@coffee-cli'
+
+nodes:
+  - id: ceo
+    name: CEO
+    hint: 战略、融资、团队方向
+    position: { x: 240, y: 0 }
+  - id: cto
+    name: CTO
+    hint: 技术路线、工程决策
+    position: { x: 80, y: 160 }
+  - id: cmo
+    name: CMO
+    hint: 营销、增长、品牌
+    position: { x: 400, y: 160 }
+  - id: eng-claude
+    name: '工程师 · Claude'
+    hint: 通用代码、架构
+    position: { x: -40, y: 320 }
+  - id: eng-codex
+    name: '工程师 · Codex'
+    hint: 复杂任务、long-context
+    position: { x: 200, y: 320 }
+
+edges:
+  - { source: ceo, target: cto }
+  - { source: ceo, target: cmo }
+  - { source: cto, target: eng-claude }
+  - { source: cto, target: eng-codex }
