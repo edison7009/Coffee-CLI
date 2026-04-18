@@ -118,7 +118,16 @@ export function WorkstationPanel({ onExit: _onExit, onActiveTeamChange }: Props)
     setTeams(prev => [...prev, team]);
     setActiveTeamId(team.id);
     setShowLibrary(false);
-  }, []);
+
+    // Phase 3b: materialize the team directory tree on disk so the
+    // paths shown in the activate dialog are real. Fire-and-forget —
+    // failure surfaces as a toast but doesn't block the canvas.
+    if (isTauri) {
+      commands.createTeamFs(team.id, bp).catch(err => {
+        showToast(`团队目录创建失败：${err}`);
+      });
+    }
+  }, [showToast]);
 
   const handleTeamChange = useCallback((updated: TeamState) => {
     setTeams(prev => prev.map(t => t.id === updated.id ? updated : t));

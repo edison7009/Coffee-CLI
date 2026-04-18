@@ -192,4 +192,10 @@ export const commands = {
       estMaxAgents: number;
       runtimesAvailable: string[];
     }>('get_system_capacity'),
+
+  // Workstation (Phase 3b) — materialize the team directory tree on disk.
+  // Accepts the full blueprint payload so the Rust side can walk edges
+  // and create the recursive layout. Returns the host path as string.
+  createTeamFs: (teamId: string, blueprint: unknown) =>
+    invoke<string>('create_team_fs', { teamId, blueprint }),
 };

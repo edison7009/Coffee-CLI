@@ -1639,6 +1639,8 @@ pub fn start_ui(project_dir: PathBuf) -> anyhow::Result<()> {
             crate::workstation::detect_clis,
             crate::workstation::detect_runtimes,
             crate::workstation::get_system_capacity,
+            // Workstation (Phase 3b)
+            crate::workstation::create_team_fs,
         ])
         .setup(|app| {
             // Install Claude/Qwen hook scripts + settings patches.
