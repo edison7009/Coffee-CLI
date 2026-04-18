@@ -608,7 +608,13 @@
 }
 
 .mode-dock {
-  display: inline-flex;
+  /* Grid with symmetric 1fr columns keeps the center icon locked at
+     the geometric center even when the two side labels are different
+     widths (返回 2-char vs 工作站 3-char, etc.). Switching from
+     inline-flex — which re-centered on every width change and caused
+     a one-frame jitter as the drawer expanded. */
+  display: inline-grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
   height: 36px;
   background: var(--bg-card);
@@ -617,6 +623,17 @@
   padding: 0 5px;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Each side button hugs the center icon (end-align for left,
+   start-align for right) so expansion grows outward, never pushes
+   the center. */
+.mode-dock-side--left {
+  justify-self: end;
+}
+
+.mode-dock-side--right {
+  justify-self: start;
 }
 
 .mode-dock-center {
