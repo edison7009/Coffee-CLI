@@ -339,14 +339,27 @@ export function CenterPanel() {
       });
   }, [state.currentLang, showArcadeGames]);
 
-  // Helper to render the correct icon and title based on tool type
+  // Last path segment, Windows ("\") and POSIX ("/") safe. null when path unknown.
+  const cwdBasename = (p: string | null | undefined): string | null => {
+    if (!p) return null;
+    const trimmed = p.replace(/[\\/]+$/, '');
+    if (!trimmed) return '/';
+    if (/^[A-Za-z]:$/.test(trimmed)) return trimmed + '\\';
+    const parts = trimmed.split(/[\\/]/);
+    return parts[parts.length - 1] || trimmed;
+  };
+
+  // Local shell-bearing tabs show cwd basename (Explorer-style): icon = tool identity,
+  // text = location. Remote/non-shell tabs keep their existing labels.
   const renderTabContent = (session: typeof terminals[0], isActive: boolean) => {
+    const cwd = cwdBasename(session.folderPath);
+    const pathTip = session.folderPath ?? undefined;
     switch (session.tool) {
-      case 'claude': return { icon: <SvgClaude />, title: 'Claude Code' };
-      case 'qwen': return { icon: <SvgQwen />, title: 'Qwen Code' };
-      case 'hermes': return { icon: <SvgHermes />, title: 'Hermes' };
-      case 'opencode': return { icon: <SvgOpenCode />, title: 'OpenCode' };
-      case 'installer': return { icon: <SvgInstaller />, title: t('tool.installer' as any) };
+      case 'claude': return { icon: <SvgClaude />, title: cwd ?? 'Claude Code', tooltip: pathTip };
+      case 'qwen': return { icon: <SvgQwen />, title: cwd ?? 'Qwen Code', tooltip: pathTip };
+      case 'hermes': return { icon: <SvgHermes />, title: cwd ?? 'Hermes', tooltip: pathTip };
+      case 'opencode': return { icon: <SvgOpenCode />, title: cwd ?? 'OpenCode', tooltip: pathTip };
+      case 'installer': return { icon: <SvgInstaller />, title: t('tool.installer' as any), tooltip: undefined };
       case 'remote': {
         let title = t('tool.remote') as string;
         if (session.toolData) {
@@ -359,16 +372,16 @@ export function CenterPanel() {
             }
           } catch (e) {}
         }
-        return { icon: <TerminalIcon />, title };
+        return { icon: <TerminalIcon />, title, tooltip: undefined };
       }
-      case 'terminal': return { icon: <TerminalIcon />, title: t('tool.terminal') };
+      case 'terminal': return { icon: <TerminalIcon />, title: cwd ?? t('tool.terminal'), tooltip: pathTip };
       case 'arcade': {
         const gameName = session.toolData || '';
         const meta = gameCatalog.find(m => m.file.toLowerCase() === gameName.toLowerCase());
         if (meta) {
-          return { icon: <img src={meta.icon} alt="" style={{ width: '1em', height: '1em', borderRadius: 'var(--radius-xs)', objectFit: 'cover' }} />, title: meta.title };
+          return { icon: <img src={meta.icon} alt="" style={{ width: '1em', height: '1em', borderRadius: 'var(--radius-xs)', objectFit: 'cover' }} />, title: meta.title, tooltip: undefined };
         }
-        return { icon: <span style={{ fontSize: '1em' }}>🎮</span>, title: 'Coffee Play' };
+        return { icon: <span style={{ fontSize: '1em' }}>🎮</span>, title: 'Coffee Play', tooltip: undefined };
       }
       case 'history': {
         let titleParam = '回看历史';
@@ -378,12 +391,13 @@ export function CenterPanel() {
             if (parsed.name) titleParam = parsed.name; // Use the session name instead for the tab
           } catch (e) {}
         }
-        return { 
-          icon: <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M12 8v4l3 3"></path><circle cx="12" cy="12" r="10"></circle></svg>, 
-          title: titleParam 
+        return {
+          icon: <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M12 8v4l3 3"></path><circle cx="12" cy="12" r="10"></circle></svg>,
+          title: titleParam,
+          tooltip: undefined
         };
       }
-      default: return { icon: <SvgPlus active={isActive} />, title: t('tab.new') };
+      default: return { icon: <SvgPlus active={isActive} />, title: t('tab.new'), tooltip: undefined };
     }
   };
 
@@ -412,7 +426,7 @@ export function CenterPanel() {
           if (session.isHidden && session.id !== activeTerminalId) return null;
 
           const isActive = session.id === activeTerminalId;
-          const { icon, title } = renderTabContent(session, isActive);
+          const { icon, title, tooltip } = renderTabContent(session, isActive);
 
           return (
             <div
@@ -421,7 +435,7 @@ export function CenterPanel() {
               onClick={() => dispatch({ type: 'SET_ACTIVE_TERMINAL', id: session.id })}
             >
               {icon}
-              <span className="tab-title" style={{ flex: '0 1 auto', minWidth: 0, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{title}</span>
+              <span className="tab-title" title={tooltip} style={{ flex: '0 1 auto', minWidth: 0, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{title}</span>
               <div className="tab-actions">
                 {(['claude', 'qwen', 'hermes', 'opencode'] as const).includes(session.tool as 'claude' | 'qwen' | 'hermes' | 'opencode') && (
                   <div className={`tab-status-grid status-${session.agentStatus === 'wait_input' ? 'waiting' : session.agentStatus ?? 'idle'}`}>
