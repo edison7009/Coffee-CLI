@@ -30,7 +30,7 @@ const CLI_OPTIONS: Array<{ id: CliKind; label: string }> = [
 // Install status badges mirror the CLI section. 'none' is always available
 // so it has no badge — it's the "just run it on my machine" escape hatch.
 const RUNTIME_OPTIONS: Array<{ id: RuntimeKind; label: string; alwaysOn?: true }> = [
-  { id: 'none',   label: '不使用容器', alwaysOn: true },
+  { id: 'none',   label: '不使用容器（共享本机）', alwaysOn: true },
   { id: 'podman', label: 'Podman' },
   { id: 'docker', label: 'Docker' },
 ];
@@ -90,9 +90,6 @@ export function ActivateDialog({
 
         <div className="activate-dialog-section">
           <div className="activate-dialog-section-label">部署容器</div>
-          <div className="activate-dialog-section-hint">
-            若使用容器，分身数据独立，不会和本机或其他分身互相污染
-          </div>
           {RUNTIME_OPTIONS.map(opt => {
             const installed = runtimeInstalled(opt.id);
             return (
