@@ -90,6 +90,9 @@ export function ActivateDialog({
 
         <div className="activate-dialog-section">
           <div className="activate-dialog-section-label">部署容器</div>
+          <div className="activate-dialog-section-hint">
+            若使用容器，分身数据独立，不会和本机或其他分身互相污染
+          </div>
           {RUNTIME_OPTIONS.map(opt => {
             const installed = runtimeInstalled(opt.id);
             return (

@@ -537,6 +537,14 @@
     text-transform: uppercase;
 }
 
+.activate-dialog-section-hint {
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--text-2);
+    opacity: 0.72;
+    margin: -4px 0 8px;
+}
+
 .activate-dialog-option {
     display: flex;
     align-items: center;
