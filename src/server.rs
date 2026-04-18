@@ -1635,6 +1635,10 @@ pub fn start_ui(project_dir: PathBuf) -> anyhow::Result<()> {
             load_password,
             delete_password,
             open_url,
+            // Workstation (Phase 3a)
+            crate::workstation::detect_clis,
+            crate::workstation::detect_runtimes,
+            crate::workstation::get_system_capacity,
         ])
         .setup(|app| {
             // Install Claude/Qwen hook scripts + settings patches.

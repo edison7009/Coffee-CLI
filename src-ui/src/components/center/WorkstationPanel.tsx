@@ -15,6 +15,7 @@ import { TemplateLibrary } from './workstation/TemplateLibrary';
 import { WorkstationCanvas } from './workstation/WorkstationCanvas';
 import { TeamBar } from './workstation/TeamBar';
 import { findBlueprint } from './workstation/blueprints';
+import { isTauri, commands } from '../../tauri';
 import type {
   Blueprint,
   TeamState,
@@ -33,16 +34,21 @@ interface Props {
   onActiveTeamChange?: (info: WorkstationActiveTeamInfo | null) => void;
 }
 
-// Phase 1 placeholder. Phase 3 replaces with Tauri `detect_clis()` command.
-const PLACEHOLDER_AVAILABILITY: CliAvailability = {
-  claude: true,
-  codex: true,
+// Fallback values for the split second between mount and the first Tauri
+// `detect_*` response, plus for non-Tauri environments (Vite dev preview).
+const FALLBACK_AVAILABILITY: CliAvailability = {
+  claude: false,
+  codex: false,
   gemini: false,
   qwen: false,
 };
 
-// Phase 1 placeholder. Phase 3 replaces with real runtime probing.
-const PLACEHOLDER_RUNTIMES: RuntimeKind[] = ['podman', 'docker'];
+const FALLBACK_RUNTIMES: RuntimeKind[] = [];
+
+// Coerce a string coming back from Rust into our RuntimeKind union.
+function asRuntime(s: string): RuntimeKind | null {
+  return s === 'docker' || s === 'podman' || s === 'none' ? s : null;
+}
 
 function makeTeamFromBlueprint(bp: Blueprint): TeamState {
   return {
@@ -65,6 +71,22 @@ export function WorkstationPanel({ onExit: _onExit, onActiveTeamChange }: Props)
   const [activeTeamId, setActiveTeamId] = useState<string | null>(null);
   const [showLibrary, setShowLibrary] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
+
+  // Phase 3a: real host detection via Tauri. Falls back to placeholders
+  // in non-Tauri environments (dev preview / tests). Detection runs once
+  // on mount; Phase 3c may add manual "rescan" when user installs a CLI
+  // without closing the app.
+  const [availability, setAvailability] = useState<CliAvailability>(FALLBACK_AVAILABILITY);
+  const [availableRuntimes, setAvailableRuntimes] = useState<RuntimeKind[]>(FALLBACK_RUNTIMES);
+
+  useEffect(() => {
+    if (!isTauri) return;
+    commands.detectClis().then(a => setAvailability(a)).catch(() => {});
+    commands.detectRuntimes().then(rs => {
+      const kinds = rs.map(asRuntime).filter((x): x is RuntimeKind => x !== null);
+      setAvailableRuntimes(kinds);
+    }).catch(() => {});
+  }, []);
 
   const activeTeam = useMemo(
     () => teams.find(t => t.id === activeTeamId) ?? null,
@@ -123,7 +145,7 @@ export function WorkstationPanel({ onExit: _onExit, onActiveTeamChange }: Props)
       <TeamBar
         teams={teams}
         activeTeamId={showLibrary ? null : activeTeamId}
-        availableRuntimes={PLACEHOLDER_RUNTIMES}
+        availableRuntimes={availableRuntimes}
         activeLocalAgents={activeLocalAgents}
         onPickTeam={handlePickTeam}
         onNewTeam={handleNewTeam}
@@ -135,8 +157,8 @@ export function WorkstationPanel({ onExit: _onExit, onActiveTeamChange }: Props)
         ) : (
           <WorkstationCanvas
             team={activeTeam}
-            availability={PLACEHOLDER_AVAILABILITY}
-            availableRuntimes={PLACEHOLDER_RUNTIMES}
+            availability={availability}
+            availableRuntimes={availableRuntimes}
             onTeamChange={handleTeamChange}
             onToast={showToast}
           />

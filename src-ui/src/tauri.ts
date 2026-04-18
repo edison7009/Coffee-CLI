@@ -178,4 +178,18 @@ export const commands = {
     invoke<void>('delete_password', { host, username }),
   openUrl: (url: string) =>
     invoke<void>('open_url', { url }),
+
+  // Workstation (Phase 3a) — detection commands
+  detectClis: () =>
+    invoke<{ claude: boolean; codex: boolean; gemini: boolean; qwen: boolean }>('detect_clis'),
+  detectRuntimes: () =>
+    invoke<string[]>('detect_runtimes'),
+  getSystemCapacity: () =>
+    invoke<{
+      ramGb: number;
+      cpuCores: number;
+      platform: string;
+      estMaxAgents: number;
+      runtimesAvailable: string[];
+    }>('get_system_capacity'),
 };

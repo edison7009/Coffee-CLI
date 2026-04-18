@@ -6,6 +6,7 @@ mod terminal;
 mod server;
 mod hook_server;
 mod hook_installer;
+mod workstation;
 
 use anyhow::Result;
 use std::path::PathBuf;

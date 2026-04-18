@@ -50,6 +50,10 @@ notify = "6.1.1"
 rusqlite = { version = "0.32", features = ["bundled"] }
 keyring = "3"
 
+# Workstation detection (Phase 3a)
+sysinfo = "0.32"
+which = "6"
+
 [profile.release]
 opt-level = "z"
 lto = true
