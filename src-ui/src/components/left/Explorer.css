@@ -499,12 +499,12 @@
   transition: border-color 0.15s, background 0.15s;
 }
 .icon-theme-chip:hover {
-  background: var(--bg-hover, rgba(255,255,255,0.08));
-  border-color: var(--border-soft, rgba(255,255,255,0.2));
+  background: var(--bg-hover);
+  border-color: var(--border);
 }
 .icon-theme-chip.active {
-  border-color: var(--accent, #4fc3f7);
-  background: var(--bg-selected, rgba(79,195,247,0.12));
+  border-color: var(--accent);
+  background: var(--accent-bg);
 }
 .icon-theme-chip img {
   display: block;
@@ -518,7 +518,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 2px 4px;
+  padding: 2px;
 }
 .theme-wallpaper-row .theme-bg-btn {
   flex: 0 0 auto;
