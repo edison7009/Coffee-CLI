@@ -1,0 +1,146 @@
+/* WorkstationPanel.css — entry scaffold for the multi-agent mode. */
+
+.workstation-panel {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow-y: auto;
+    padding: 48px 32px 120px;
+}
+
+.workstation-hero {
+    max-width: 900px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.workstation-badge {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    color: var(--accent, #C4956A);
+    padding: 4px 10px;
+    border: 1px solid var(--accent, #C4956A);
+    border-radius: var(--radius-sm, 4px);
+    opacity: 0.85;
+    margin-bottom: 18px;
+}
+
+.workstation-title {
+    font-size: 34px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin: 0 0 14px;
+    color: var(--text-1);
+}
+
+.workstation-subtitle {
+    font-size: 15px;
+    line-height: 1.6;
+    max-width: 620px;
+    color: var(--text-2);
+    margin: 0 0 42px;
+}
+
+.workstation-pillars {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    width: 100%;
+    margin-bottom: 48px;
+}
+
+.workstation-pillar {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md, 8px);
+    padding: 20px 18px;
+    text-align: left;
+    transition: border-color 0.2s, transform 0.2s;
+}
+
+.workstation-pillar:hover {
+    border-color: var(--accent, #C4956A);
+    transform: translateY(-1px);
+}
+
+.workstation-pillar-num {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    color: var(--accent, #C4956A);
+    margin-bottom: 8px;
+    opacity: 0.8;
+}
+
+.workstation-pillar-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-1);
+    margin-bottom: 6px;
+}
+
+.workstation-pillar-desc {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text-2);
+}
+
+.workstation-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-md, 8px);
+    width: 100%;
+    max-width: 560px;
+    color: var(--text-2);
+}
+
+.workstation-empty-icon {
+    color: var(--text-2);
+    opacity: 0.45;
+    margin-bottom: 12px;
+}
+
+.workstation-empty-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-1);
+    margin-bottom: 4px;
+}
+
+.workstation-empty-hint {
+    font-size: 12.5px;
+    color: var(--text-2);
+}
+
+.workstation-exit {
+    position: absolute;
+    bottom: 18px;
+    left: 18px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md, 8px);
+    color: var(--text-2);
+    font-size: 12.5px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+}
+
+.workstation-exit:hover {
+    color: var(--text-1);
+    border-color: var(--accent, #C4956A);
+}

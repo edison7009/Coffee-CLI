@@ -3,6 +3,7 @@ import { focusTerminal } from '../../lib/focus-registry';
 import { TierTerminal } from './TierTerminal';
 import { DosPlayer } from './DosPlayer';
 import { ChatReader } from './ChatReader';
+import { WorkstationPanel } from './WorkstationPanel';
 import { ErrorBoundary } from '../common/ErrorBoundary';
 import { useAppState, type ToolType } from '../../store/app-state';
 
@@ -101,6 +102,7 @@ export function CenterPanel() {
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [toolsInstalled, setToolsInstalled] = useState<Record<string, boolean>>({});
   const [showArcadeGames, setShowArcadeGames] = useState(false);
+  const [showWorkstation, setShowWorkstation] = useState(false);
   const [arcadeGames, setArcadeGames] = useState<{name:string;path:string;size:number;icon?:string;title?:string}[]>([]);
   const [gameCatalog, setGameCatalog] = useState<RemoteGameEntry[]>([]);
   const [disableDrawer, setDisableDrawer] = useState(false);
@@ -516,7 +518,10 @@ export function CenterPanel() {
               </div>
             )}
             {/* Close button removed: handles via Tab bar */}
-            <div className="launchpad-slider-viewport">
+            {showWorkstation && (
+              <WorkstationPanel onExit={() => setShowWorkstation(false)} />
+            )}
+            <div className="launchpad-slider-viewport" style={{ display: showWorkstation ? 'none' : undefined }}>
               <div className={`launchpad-slider-track ${showArcadeGames ? 'slide-to-games' : ''}`}>
                 
                 {/* ─── Page 1: Tools ─── */}
@@ -783,15 +788,23 @@ export function CenterPanel() {
               </div>
             </div>
 
-            {/* Global Mode switch button */}
-            <div style={{ position: 'absolute', bottom: 18, right: 18 }}>
-              <button
-                className={`mode-switch-btn ${disableDrawer ? 'instant-click' : ''}`}
-                onClick={() => {
-                  setDisableDrawer(true);
-                  setTimeout(() => setDisableDrawer(false), 500);
-                  
-                  if (!showArcadeGames) {
+            {/* Bottom center mode dock — hover reveals Games on the left and
+                Workstation on the right. When already in games mode, the left
+                side flips to "back to tools"; workstation mode mirrors it on
+                the right. One dock, three destinations. */}
+            <div className="mode-dock-wrap">
+              <div className={`mode-dock ${disableDrawer ? 'instant-click' : ''}`}>
+                {/* Left side — Games */}
+                <button
+                  className="mode-dock-side mode-dock-side--left"
+                  onClick={() => {
+                    setDisableDrawer(true);
+                    setTimeout(() => setDisableDrawer(false), 500);
+                    if (showArcadeGames) {
+                      setShowArcadeGames(false);
+                      return;
+                    }
+                    setShowWorkstation(false);
                     setShowArcadeGames(true);
                     if (isTauri) {
                       Promise.allSettled([commands.listJsdosBundles(), fetchGameCatalog(state.currentLang)])
@@ -805,22 +818,54 @@ export function CenterPanel() {
                           setArcadeGames(games);
                         });
                     }
-                  } else {
-                    setShowArcadeGames(false);
-                  }
-                }}
-              >
-                <div className="mode-switch-drawer">
-                  {!showArcadeGames 
-                    ? (state.currentLang.startsWith('zh') ? '\u653e\u677e\u4e00\u4e0b' : 'Take a break')
-                    : (state.currentLang.startsWith('zh') ? '\u56de\u5230\u5de5\u4f5c' : 'Back to work')}
-                </div>
-                <div className="mode-switch-icon">
+                  }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="6" y1="11" x2="10" y2="11"/><line x1="8" y1="9" x2="8" y2="13"/>
+                    <line x1="15" y1="12" x2="15.01" y2="12"/><line x1="18" y1="10" x2="18.01" y2="10"/>
+                    <path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258A4 4 0 0 0 17.32 5z"/>
+                  </svg>
+                  <span>
+                    {showArcadeGames
+                      ? (state.currentLang.startsWith('zh') ? '\u56de\u5230\u5de5\u5177' : 'Back')
+                      : (state.currentLang.startsWith('zh') ? '\u6e38\u620f' : 'Games')}
+                  </span>
+                </button>
+
+                {/* Center icon — decorative pivot */}
+                <div className="mode-dock-center">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="M16 21l4-4-4-4"/><path d="M20 17H4"/>
                   </svg>
                 </div>
-              </button>
+
+                {/* Right side — Workstation */}
+                <button
+                  className="mode-dock-side mode-dock-side--right"
+                  onClick={() => {
+                    setDisableDrawer(true);
+                    setTimeout(() => setDisableDrawer(false), 500);
+                    if (showWorkstation) {
+                      setShowWorkstation(false);
+                      return;
+                    }
+                    setShowArcadeGames(false);
+                    setShowWorkstation(true);
+                  }}
+                >
+                  <span>
+                    {showWorkstation
+                      ? (state.currentLang.startsWith('zh') ? '\u56de\u5230\u5de5\u5177' : 'Back')
+                      : (state.currentLang.startsWith('zh') ? '\u5de5\u4f5c\u7ad9' : 'Workstation')}
+                  </span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="7" height="7" rx="1"/>
+                    <rect x="14" y="3" width="7" height="7" rx="1"/>
+                    <rect x="3" y="14" width="7" height="7" rx="1"/>
+                    <rect x="14" y="14" width="7" height="7" rx="1"/>
+                  </svg>
+                </button>
+              </div>
             </div>
 
           </div>

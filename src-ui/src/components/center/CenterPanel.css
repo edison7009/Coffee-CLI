@@ -594,6 +594,91 @@
   margin-right: 0 !important;
 }
 
+/* ─── Mode Dock (centered, two-sided drawer) ─────────────────────
+   Replaces the single corner button. Center pivot is always visible;
+   on hover each side slides out — Games on the left, Workstation on
+   the right. Active modes flip their label to "Back" so one dock
+   covers all three destinations (Tools / Games / Workstation).       */
+.mode-dock-wrap {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+}
+
+.mode-dock {
+  display: inline-flex;
+  align-items: center;
+  height: 36px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 0 5px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mode-dock-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: var(--accent);
+  transition: transform 0.4s ease;
+}
+
+.mode-dock:hover .mode-dock-center {
+  transform: rotate(180deg);
+}
+
+.mode-dock-side {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  max-width: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: none;
+  color: var(--text-2);
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  cursor: pointer;
+  opacity: 0;
+  transition: max-width 0.2s ease, opacity 0.2s ease, padding 0.2s ease, margin 0.2s ease;
+}
+
+/* Delayed expand on sustained hover — matches original mode-switch feel */
+.mode-dock:hover .mode-dock-side {
+  max-width: 140px;
+  opacity: 1;
+  padding: 0 10px;
+  transition: max-width 0.35s cubic-bezier(0.4, 0, 0.2, 1) 0.3s,
+              opacity 0.25s ease 0.3s,
+              padding 0.25s ease 0.3s,
+              margin 0.25s ease 0.3s;
+}
+
+.mode-dock-side:hover {
+  color: var(--text-1);
+}
+
+/* After click, suppress the expand so the drawer doesn't re-open while the
+   user's pointer is still over the (now-active) dock. */
+.mode-dock.instant-click .mode-dock-side {
+  transition: none !important;
+  max-width: 0 !important;
+  opacity: 0 !important;
+  padding: 0 !important;
+}
+
 /* ─── Tab Drag Ghost (drag-to-detach feedback) ─── */
 
 .tab-drag-ghost {
