@@ -360,7 +360,25 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-3);
-  padding: 6px 6px 4px;
+  padding: 14px 6px 4px;
+}
+/* First label sits flush with the menu's own top padding. */
+.theme-menu .theme-menu-section-label:first-child {
+  padding-top: 6px;
+}
+/* Dividers are redundant with section labels in this menu — spacing alone
+   signals grouping for a calmer, more premium look. Other ctx-menus
+   (file/folder right-click) keep their dividers. */
+.theme-menu .ctx-menu-divider {
+  display: none;
+}
+/* Wallpaper row and font row have no labels above them, so give them a
+   visual breath of their own. */
+.theme-menu .theme-wallpaper-row {
+  margin-top: 10px;
+}
+.theme-menu .theme-bg-row {
+  margin-top: 2px;
 }
 
 .theme-swatch-grid {
