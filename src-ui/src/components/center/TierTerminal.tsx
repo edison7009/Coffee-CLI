@@ -28,65 +28,24 @@ import './TierTerminal.css';
 // Full ANSI palettes for readability on different wallpapers.
 // "default" = use built-in warm theme, no override.
 
+// Each scheme overrides ONLY the terminal foreground (and matching cursor)
+// color. The 16 ANSI palette stays whatever the active theme provides, so
+// switching schemes only re-tints the text — no full theme swap, no style
+// shift. The chip's own swatch in the picker reuses the same fg value.
 export interface TermColorScheme {
   id: string;
-  fg: string;       // foreground / preview swatch color
-  black: string;    red: string;    green: string;   yellow: string;
-  blue: string;     magenta: string; cyan: string;   white: string;
-  brightBlack: string; brightRed: string; brightGreen: string; brightYellow: string;
-  brightBlue: string; brightMagenta: string; brightCyan: string; brightWhite: string;
-  selectionBg: string;
+  fg: string;
 }
 
 export const TERM_COLOR_SCHEMES: TermColorScheme[] = [
-  { // Dracula — vivid on dark, iconic purple accent
-    id: 'dracula',   fg: '#f8f8f2',
-    black: '#21222c', red: '#ff5555', green: '#50fa7b', yellow: '#f1fa8c',
-    blue: '#bd93f9',  magenta: '#ff79c6', cyan: '#8be9fd', white: '#f8f8f2',
-    brightBlack: '#6272a4', brightRed: '#ff6e6e', brightGreen: '#69ff94', brightYellow: '#ffffa5',
-    brightBlue: '#d6acff', brightMagenta: '#ff92df', brightCyan: '#a4ffff', brightWhite: '#ffffff',
-    selectionBg: 'rgba(68,71,90,0.5)',
-  },
-  { // Nord — calm arctic blue palette
-    id: 'nord',      fg: '#d8dee9',
-    black: '#3b4252', red: '#bf616a', green: '#a3be8c', yellow: '#ebcb8b',
-    blue: '#81a1c1',  magenta: '#b48ead', cyan: '#88c0d0', white: '#e5e9f0',
-    brightBlack: '#4c566a', brightRed: '#bf616a', brightGreen: '#a3be8c', brightYellow: '#ebcb8b',
-    brightBlue: '#81a1c1', brightMagenta: '#b48ead', brightCyan: '#8fbcbb', brightWhite: '#eceff4',
-    selectionBg: 'rgba(136,192,208,0.2)',
-  },
-  { // Tokyo Night — modern purple-blue neon
-    id: 'tokyo',     fg: '#a9b1d6',
-    black: '#32344a', red: '#f7768e', green: '#9ece6a', yellow: '#e0af68',
-    blue: '#7aa2f7',  magenta: '#ad8ee6', cyan: '#449dab', white: '#787c99',
-    brightBlack: '#444b6a', brightRed: '#ff7a93', brightGreen: '#b9f27c', brightYellow: '#ff9e64',
-    brightBlue: '#7da6ff', brightMagenta: '#bb9af7', brightCyan: '#0db9d7', brightWhite: '#acb0d0',
-    selectionBg: 'rgba(122,162,247,0.2)',
-  },
-  { // One Dark — Atom's signature warm muted palette
-    id: 'onedark',   fg: '#abb2bf',
-    black: '#5c6370', red: '#e06c75', green: '#98c379', yellow: '#e5c07b',
-    blue: '#61afef',  magenta: '#c678dd', cyan: '#56b6c2', white: '#abb2bf',
-    brightBlack: '#4b5263', brightRed: '#be5046', brightGreen: '#98c379', brightYellow: '#d19a66',
-    brightBlue: '#61afef', brightMagenta: '#c678dd', brightCyan: '#56b6c2', brightWhite: '#c8ccd4',
-    selectionBg: 'rgba(171,178,191,0.15)',
-  },
-  { // Solarized — Ethan Schoonover's balanced readability palette
-    id: 'solarized', fg: '#839496',
-    black: '#073642', red: '#dc322f', green: '#859900', yellow: '#b58900',
-    blue: '#268bd2',  magenta: '#d33682', cyan: '#2aa198', white: '#eee8d5',
-    brightBlack: '#586e75', brightRed: '#cb4b16', brightGreen: '#859900', brightYellow: '#b58900',
-    brightBlue: '#268bd2', brightMagenta: '#6c71c4', brightCyan: '#2aa198', brightWhite: '#fdf6e3',
-    selectionBg: 'rgba(131,148,150,0.2)',
-  },
-  { // Dark Ink — dark foreground for bright/light wallpapers
-    id: 'darkink',   fg: '#1a1a2e',
-    black: '#000000', red: '#c23621', green: '#25802a', yellow: '#a57706',
-    blue: '#2558a8',  magenta: '#803080', cyan: '#1a7a7a', white: '#4a4a4a',
-    brightBlack: '#555555', brightRed: '#e8503a', brightGreen: '#31a035', brightYellow: '#c49000',
-    brightBlue: '#3070cc', brightMagenta: '#9940a0', brightCyan: '#249494', brightWhite: '#666666',
-    selectionBg: 'rgba(0,0,0,0.15)',
-  },
+  { id: 'red',    fg: '#ff5252' },
+  { id: 'orange', fg: '#ff8a00' },
+  { id: 'yellow', fg: '#ffd740' },
+  { id: 'green',  fg: '#69f0ae' },
+  { id: 'cyan',   fg: '#18ffff' },
+  { id: 'blue',   fg: '#448aff' },
+  { id: 'pink',   fg: '#ff4081' },
+  { id: 'purple', fg: '#b388ff' },
 ];
 
 function buildXtermTheme(isDark: boolean, hasBg: boolean | undefined, hideCursor: boolean, schemeId?: string) {
@@ -94,37 +53,29 @@ function buildXtermTheme(isDark: boolean, hasBg: boolean | undefined, hideCursor
   const bg  = hasBg ? 'rgba(0,0,0,0)' : (isDark ? '#0c0c0c' : '#f4f3ee');
   const bgOpaque = isDark ? '#0c0c0c' : '#f4f3ee';
 
-  if (scheme) {
-    return {
-      background: bg,
-      foreground: scheme.fg,
-      cursor: hideCursor ? bgOpaque : scheme.fg,
-      cursorAccent: bgOpaque,
-      selectionBackground: scheme.selectionBg,
-      black: scheme.black, red: scheme.red, green: scheme.green, yellow: scheme.yellow,
-      blue: scheme.blue, magenta: scheme.magenta, cyan: scheme.cyan, white: scheme.white,
-      brightBlack: scheme.brightBlack, brightRed: scheme.brightRed,
-      brightGreen: scheme.brightGreen, brightYellow: scheme.brightYellow,
-      brightBlue: scheme.brightBlue, brightMagenta: scheme.brightMagenta,
-      brightCyan: scheme.brightCyan, brightWhite: scheme.brightWhite,
-    };
-  }
+  // Build the default warm palette first (full 16 ANSI colors), then let
+  // the scheme — if any — re-tint only the foreground and cursor.
+  const defaultFg = isDark ? '#e8e4de' : '#2d2c2a';
+  const fg = scheme?.fg ?? defaultFg;
 
-  // Default warm theme
-  return isDark ? {
-    background: bg, foreground: '#e8e4de',
-    cursor: hideCursor ? bgOpaque : '#e8e4de', cursorAccent: bgOpaque,
+  const base = isDark ? {
     selectionBackground: 'rgba(196,149,106,0.3)',
     black: '#0c0c0c', red: '#e07070', green: '#7ec77e', yellow: '#d4a846',
     blue: '#78a8d4', magenta: '#b07cc6', cyan: '#5fc4c0', white: '#e8e4de',
     brightBlack: '#6b6762',
   } : {
-    background: bg, foreground: '#2d2c2a',
-    cursor: hideCursor ? bgOpaque : '#2d2c2a', cursorAccent: bgOpaque,
     selectionBackground: 'rgba(196,149,106,0.25)',
     black: '#2d2c2a', red: '#cc3333', green: '#2d7a2d', yellow: '#8a6000',
     blue: '#2952a3', magenta: '#7a3d8a', cyan: '#1a6b6b', white: '#f4f3ee',
     brightBlack: '#9e9c98',
+  };
+
+  return {
+    ...base,
+    background: bg,
+    foreground: fg,
+    cursor: hideCursor ? bgOpaque : fg,
+    cursorAccent: bgOpaque,
   };
 }
 
