@@ -855,7 +855,7 @@ export function CenterPanel() {
                 >
                   <span>
                     {showArcadeGames
-                      ? (state.currentLang.startsWith('zh') ? '\u56de\u5230\u5de5\u5177' : 'Back')
+                      ? (state.currentLang.startsWith('zh') ? '\u8fd4\u56de' : 'Back')
                       : (state.currentLang.startsWith('zh') ? '\u6e38\u620f\u5385' : 'Arcade')}
                   </span>
                 </button>
@@ -883,7 +883,7 @@ export function CenterPanel() {
                 >
                   <span>
                     {showWorkstation
-                      ? (state.currentLang.startsWith('zh') ? '\u56de\u5230\u5de5\u5177' : 'Back')
+                      ? (state.currentLang.startsWith('zh') ? '\u8fd4\u56de' : 'Back')
                       : (state.currentLang.startsWith('zh') ? '\u5de5\u4f5c\u7ad9' : 'Workstation')}
                   </span>
                 </button>
