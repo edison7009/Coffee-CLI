@@ -542,20 +542,24 @@
   height: 14px;
   border-radius: 50%;
   background: var(--accent);
-  border: 2px solid var(--bg-1, #1a1a1a);
+  border: none;
   cursor: pointer;
-  transition: transform 0.1s;
+  transition: transform 0.1s, box-shadow 0.1s;
 }
 .theme-dim-slider::-webkit-slider-thumb:hover {
   transform: scale(1.15);
+  box-shadow: 0 0 0 4px var(--accent-bg);
 }
 .theme-dim-slider::-moz-range-thumb {
   width: 14px;
   height: 14px;
   border-radius: 50%;
   background: var(--accent);
-  border: 2px solid var(--bg-1, #1a1a1a);
+  border: none;
   cursor: pointer;
+}
+.theme-dim-slider::-moz-range-thumb:hover {
+  box-shadow: 0 0 0 4px var(--accent-bg);
 }
 
 .theme-dim-value {
