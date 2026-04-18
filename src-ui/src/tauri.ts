@@ -198,4 +198,21 @@ export const commands = {
   // and create the recursive layout. Returns the host path as string.
   createTeamFs: (teamId: string, blueprint: unknown) =>
     invoke<string>('create_team_fs', { teamId, blueprint }),
+
+  // Workstation (Phase 3c) — spawn a container for one agent.
+  // Returns the container id, or the sentinel `host:<agentId>` when
+  // runtime = 'none' (Lite mode, no container).
+  launchAgent: (config: {
+    teamId: string;
+    agentId: string;
+    cli: string;
+    runtime: string;
+    avatar: string;
+    name: string;
+    description: string;
+    heartbeat?: { interval: string; prompt: string };
+  }) => invoke<string>('launch_agent', { config }),
+
+  destroyAgent: (runtime: string, containerId: string) =>
+    invoke<void>('destroy_agent', { runtime, containerId }),
 };

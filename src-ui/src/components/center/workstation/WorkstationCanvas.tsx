@@ -22,6 +22,7 @@ import '@xyflow/react/dist/style.css';
 import { AgentNode } from './AgentNode';
 import type { AgentFlowNode } from './AgentNode';
 import { ActivateDialog } from './ActivateDialog';
+import { isTauri, commands } from '../../../tauri';
 import type {
   TeamState,
   CliAvailability,
@@ -109,13 +110,39 @@ function CanvasInner({
         heartbeatInterval: config.heartbeat?.interval,
         heartbeatPrompt: config.heartbeat?.prompt,
       });
-      onToast(`即将启动 ${config.name} · ${config.cli} · ${config.runtime} ...（Phase 3c 实现真容器）`);
 
-      setTimeout(() => {
-        updateNode(id, { status: 'active' });
-      }, 1500);
+      // Dev preview (non-Tauri): fake the activation so the UI still demos.
+      if (!isTauri) {
+        onToast(`即将启动 ${config.name} · ${config.cli} · ${config.runtime} ...（dev preview，无容器）`);
+        setTimeout(() => {
+          updateNode(id, { status: 'active' });
+        }, 1500);
+        return;
+      }
+
+      // Phase 3c: actually spin up the container.
+      onToast(`启动 ${config.name} · ${config.cli} · ${config.runtime} ...`);
+      commands
+        .launchAgent({
+          teamId: team.id,
+          agentId: id,
+          cli: config.cli,
+          runtime: config.runtime,
+          avatar: config.avatar,
+          name: config.name,
+          description: config.description,
+          heartbeat: config.heartbeat,
+        })
+        .then(containerId => {
+          updateNode(id, { status: 'active' });
+          onToast(`${config.name} 已上岗 · 容器 ${containerId.slice(0, 12)}`);
+        })
+        .catch(err => {
+          updateNode(id, { status: 'failed' });
+          onToast(`启动失败：${err}`);
+        });
     },
-    [activatingNodeId, updateNode, onToast],
+    [activatingNodeId, team.id, updateNode, onToast],
   );
 
   const onConnect = useCallback(

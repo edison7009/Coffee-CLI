@@ -18,6 +18,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 use sysinfo::System;
 
 /// Matches `CliAvailability` in src-ui/.../workstation/types.ts.
@@ -226,4 +227,155 @@ pub fn create_team_fs(team_id: String, blueprint: BlueprintPayload) -> Result<St
     build_tree(&base, root, &blueprint.nodes, &blueprint.edges)?;
 
     Ok(base.to_string_lossy().to_string())
+}
+
+// ─── Phase 3c: container launch ─────────────────────────────
+
+#[derive(Deserialize)]
+pub struct HeartbeatConfig {
+    pub interval: String,
+    pub prompt: String,
+}
+
+#[derive(Deserialize)]
+pub struct LaunchConfig {
+    pub team_id: String,
+    pub agent_id: String,     // leaf node id; we BFS to find its folder
+    pub cli: String,          // 'claude' | 'codex' | 'gemini' | 'qwen'
+    pub runtime: String,      // 'docker' | 'podman' | 'none'
+    pub avatar: String,
+    pub name: String,
+    pub description: String,
+    pub heartbeat: Option<HeartbeatConfig>,
+}
+
+/// BFS the team tree to locate the directory whose basename matches
+/// `agent_id`. The blueprint guarantees node ids are unique, so first
+/// match wins.
+fn find_agent_dir(team_root: &Path, agent_id: &str) -> Result<PathBuf, String> {
+    let mut stack = vec![team_root.to_path_buf()];
+    while let Some(dir) = stack.pop() {
+        let entries = fs::read_dir(&dir)
+            .map_err(|e| format!("read_dir {}: {}", dir.display(), e))?;
+        for entry in entries {
+            let entry = entry.map_err(|e| format!("dir entry: {}", e))?;
+            let ty = entry.file_type().map_err(|e| format!("file_type: {}", e))?;
+            if !ty.is_dir() {
+                continue;
+            }
+            let name = entry.file_name();
+            if name == agent_id {
+                return Ok(entry.path());
+            }
+            stack.push(entry.path());
+        }
+    }
+    Err(format!(
+        "agent {} not found under {}",
+        agent_id,
+        team_root.display()
+    ))
+}
+
+/// Make a container name safe for docker/podman: lowercase alphanumeric
+/// + hyphen/underscore. Our team_id already matches this; agent_id might
+/// contain dashes from blueprints. Keep it simple.
+fn container_name(team_id: &str, agent_id: &str) -> String {
+    let slug = agent_id.replace('/', "-").replace('_', "-");
+    format!("coffee-{}-{}", team_id, slug)
+}
+
+/// Phase 3c MVP: spin up a minimal alpine container with the agent's
+/// team subtree mounted as /team/ and AGENT_ID exposed. The container
+/// runs `tail -f /dev/null` to stay alive so Phase 3d can `exec` into
+/// it and spawn the real CLI.
+///
+/// We intentionally DON'T install a CLI in the image — that's content
+/// we refuse to own. Phase 3d's exec layer will mount or copy the
+/// user's host CLI config on attach.
+#[tauri::command]
+pub fn launch_agent(config: LaunchConfig) -> Result<String, String> {
+    // 'none' = Lite mode — no container, return a sentinel string the
+    // frontend treats as "active on host".
+    if config.runtime == "none" {
+        return Ok(format!("host:{}", config.agent_id));
+    }
+
+    let runtime_bin = match config.runtime.as_str() {
+        "podman" => "podman",
+        "docker" => "docker",
+        other => return Err(format!("unsupported runtime: {}", other)),
+    };
+
+    let team_root_path = team_root(&config.team_id)?;
+    if !team_root_path.exists() {
+        return Err(format!(
+            "team dir missing: {} (did Phase 3b create_team_fs run?)",
+            team_root_path.display()
+        ));
+    }
+
+    let agent_dir = find_agent_dir(&team_root_path, &config.agent_id)?;
+    let agent_dir_str = agent_dir
+        .to_str()
+        .ok_or("agent dir path is not valid UTF-8")?;
+
+    let name = container_name(&config.team_id, &config.agent_id);
+
+    // If a container with this name already exists, remove it first so
+    // re-launch is idempotent. Ignore errors — the rm may simply fail
+    // because nothing was there.
+    let _ = Command::new(runtime_bin)
+        .args(["rm", "-f", &name])
+        .output();
+
+    let output = Command::new(runtime_bin)
+        .args([
+            "run",
+            "-d",
+            "--rm",
+            "--name",
+            &name,
+            "-v",
+            &format!("{}:/team", agent_dir_str),
+            "-e",
+            &format!("AGENT_ID={}", config.agent_id),
+            "-e",
+            &format!("AGENT_CLI={}", config.cli),
+            "alpine:latest",
+            "sh",
+            "-c",
+            "tail -f /dev/null",
+        ])
+        .output()
+        .map_err(|e| format!("spawn {} run: {}", runtime_bin, e))?;
+
+    if !output.status.success() {
+        return Err(format!(
+            "{} run failed: {}",
+            runtime_bin,
+            String::from_utf8_lossy(&output.stderr).trim()
+        ));
+    }
+
+    let container_id = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    Ok(container_id)
+}
+
+#[tauri::command]
+pub fn destroy_agent(runtime: String, container_id: String) -> Result<(), String> {
+    // Sentinel = Lite mode agent, nothing to destroy.
+    if container_id.starts_with("host:") {
+        return Ok(());
+    }
+    let runtime_bin = match runtime.as_str() {
+        "podman" => "podman",
+        "docker" => "docker",
+        other => return Err(format!("unsupported runtime: {}", other)),
+    };
+    Command::new(runtime_bin)
+        .args(["rm", "-f", &container_id])
+        .output()
+        .map_err(|e| format!("destroy: {}", e))?;
+    Ok(())
 }
