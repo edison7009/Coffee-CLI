@@ -74,12 +74,13 @@ export interface CliAvailability {
 }
 
 /**
- * Which OCI-compatible runtime a specific team uses. Chosen per-team, not
- * per-host: the user might pick Docker for Game Team but Podman for Media
- * Team on the same machine. Platform stays out of the runtime business;
- * we just call whatever binary the user picked.
+ * Deployment choice per card:
+ * - 'docker' / 'podman': container-isolated (Full tier)
+ * - 'none': run directly on the host, no container (Lite tier — the
+ *   escape hatch for users without Docker/Podman, or who just want
+ *   a quick attach without paying the isolation cost)
  */
-export type RuntimeKind = 'docker' | 'podman';
+export type RuntimeKind = 'docker' | 'podman' | 'none';
 
 /**
  * Host capacity read from the system. Phase 1 uses a rough estimate

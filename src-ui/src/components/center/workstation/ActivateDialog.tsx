@@ -25,6 +25,15 @@ const CLI_OPTIONS: Array<{ id: CliKind; label: string }> = [
   { id: 'qwen',   label: 'Qwen Code' },
 ];
 
+// All deployment options are always shown (matches the CLI row's pattern).
+// Install status badges mirror the CLI section. 'none' is always available
+// so it has no badge — it's the "just run it on my machine" escape hatch.
+const RUNTIME_OPTIONS: Array<{ id: RuntimeKind; label: string; alwaysOn?: true }> = [
+  { id: 'none',   label: '不使用容器', alwaysOn: true },
+  { id: 'podman', label: 'Podman' },
+  { id: 'docker', label: 'Docker' },
+];
+
 export function ActivateDialog({
   roleName,
   availability,
@@ -35,10 +44,15 @@ export function ActivateDialog({
   const firstInstalled = CLI_OPTIONS.find(o => availability[o.id])?.id ?? 'claude';
   const [cli, setCli] = useState<CliKind>(firstInstalled);
   const [initMode, setInitMode] = useState<InitMode>('copy-local');
-  const [runtime, setRuntime] = useState<RuntimeKind>(availableRuntimes[0] ?? 'podman');
+  // Prefer an installed container runtime; fall back to 'none' (always on).
+  const installedRuntime = availableRuntimes.find(r => r !== 'none');
+  const [runtime, setRuntime] = useState<RuntimeKind>(installedRuntime ?? 'none');
 
   const selectedInstalled = availability[cli];
-  const canConfirm = selectedInstalled && availableRuntimes.length > 0;
+  // 'none' is always a valid choice, so confirm is only blocked on missing CLI.
+  const canConfirm = selectedInstalled;
+  const runtimeInstalled = (id: RuntimeKind): boolean =>
+    id === 'none' ? true : availableRuntimes.includes(id);
   // Reference the CLI by name in the init-mode labels — much clearer than
   // "copy my local config" which leaves the user guessing which tool.
   const cliLabel = CLI_OPTIONS.find(o => o.id === cli)?.label ?? cli;
@@ -107,26 +121,30 @@ export function ActivateDialog({
 
         <div className="activate-dialog-section">
           <div className="activate-dialog-section-label">部署容器</div>
-          {availableRuntimes.length === 0 ? (
-            <div className="activate-dialog-runtime-empty">
-              未检测到容器 runtime。请先安装 Podman 或 Docker。
-            </div>
-          ) : (
-            availableRuntimes.map(r => (
-              <label key={r} className="activate-dialog-option">
+          {RUNTIME_OPTIONS.map(opt => {
+            const installed = runtimeInstalled(opt.id);
+            return (
+              <label
+                key={opt.id}
+                className={`activate-dialog-option ${!installed ? 'activate-dialog-option--disabled' : ''}`}
+              >
                 <input
                   type="radio"
                   name="runtime"
-                  value={r}
-                  checked={runtime === r}
-                  onChange={() => setRuntime(r)}
+                  value={opt.id}
+                  checked={runtime === opt.id}
+                  onChange={() => installed && setRuntime(opt.id)}
+                  disabled={!installed}
                 />
-                <span className="activate-dialog-option-label">
-                  {r === 'docker' ? 'Docker' : 'Podman'}
-                </span>
+                <span className="activate-dialog-option-label">{opt.label}</span>
+                {!opt.alwaysOn && (
+                  <span className={`activate-dialog-option-badge ${installed ? 'ok' : 'missing'}`}>
+                    {installed ? '已安装' : '未找到'}
+                  </span>
+                )}
               </label>
-            ))
-          )}
+            );
+          })}
         </div>
 
         <div className="activate-dialog-footer">
