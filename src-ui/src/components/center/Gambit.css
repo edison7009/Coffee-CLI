@@ -145,13 +145,16 @@
 
 /* ─── Header (drag handle) ─────────────────────────────────── */
 /* Paper-style: no background tint, no divider — the title floats on the
-   card. Drag cursor is the only hint that this strip is grabbable. */
+   card. Drag cursor is the only hint that this strip is grabbable.
+   Symmetric padding on all four sides so the title (left) and collapse
+   dot (right) sit with visually equal gaps to every edge — height is
+   implicit from padding + content instead of a fixed value that would
+   fight the vertical breathing room. */
 .gambit-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    height: 28px;
-    padding: 0 8px 0 12px;
+    padding: 10px 12px;
     background: transparent;
     cursor: move;
     flex-shrink: 0;
@@ -170,8 +173,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 24px;
-    height: 24px;
+    /* Hug the inner SVG (14×14) so the visible dot's right gap matches the
+       symmetric header padding — a wider button would push the dot far from
+       the edge and break the visual balance the title enjoys on the left. */
+    width: 14px;
+    height: 14px;
     padding: 0;
     background: transparent;
     border: none;
