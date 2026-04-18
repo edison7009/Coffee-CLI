@@ -34,6 +34,7 @@ export interface AgentNodeData {
   // Runtime state (not in blueprint; lives in canvas state)
   status: NodeStatus;
   cli?: CliKind;           // chosen at activation time
+  runtime?: RuntimeKind;   // chosen at activation time (per-card, not per-team)
   initMode?: InitMode;
 }
 
@@ -96,14 +97,14 @@ export interface SystemCapacity {
 
 /**
  * A live team on the canvas — the runtime incarnation of a Blueprint.
- * Users can instantiate the same blueprint twice with different runtimes
- * (e.g., a production Game Team on Docker and a scratch one on Podman).
+ * Runtime choice lives per-card (AgentNodeData.runtime), not per-team:
+ * a single team may mix Docker and Podman freely. This doc is here to
+ * remind readers that TeamState intentionally stays content-free.
  */
 export interface TeamState {
   id: string;              // uuid, local-only
   blueprintId: string;     // source template; 'custom' if hand-built
   name: string;            // user-editable, defaults to blueprint.name
-  runtime: RuntimeKind | null;  // null = user hasn't picked yet
   nodes: AgentNodeData[];
   edges: AgentEdge[];
 }

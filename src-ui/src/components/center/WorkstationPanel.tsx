@@ -44,12 +44,11 @@ const PLACEHOLDER_AVAILABILITY: CliAvailability = {
 // Phase 1 placeholder. Phase 3 replaces with real runtime probing.
 const PLACEHOLDER_RUNTIMES: RuntimeKind[] = ['podman', 'docker'];
 
-function makeTeamFromBlueprint(bp: Blueprint, defaultRuntime: RuntimeKind | null): TeamState {
+function makeTeamFromBlueprint(bp: Blueprint): TeamState {
   return {
     id: `team-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     blueprintId: bp.id,
     name: bp.name,
-    runtime: defaultRuntime,
     nodes: bp.nodes.map(n => ({
       id: n.id,
       name: n.name,
@@ -93,8 +92,7 @@ export function WorkstationPanel({ onExit: _onExit, onActiveTeamChange }: Props)
   }, []);
 
   const handlePickTemplate = useCallback((bp: Blueprint) => {
-    const defaultRuntime = PLACEHOLDER_RUNTIMES[0] ?? null;
-    const team = makeTeamFromBlueprint(bp, defaultRuntime);
+    const team = makeTeamFromBlueprint(bp);
     setTeams(prev => [...prev, team]);
     setActiveTeamId(team.id);
     setShowLibrary(false);
@@ -140,7 +138,6 @@ export function WorkstationPanel({ onExit: _onExit, onActiveTeamChange }: Props)
             availability={PLACEHOLDER_AVAILABILITY}
             availableRuntimes={PLACEHOLDER_RUNTIMES}
             onTeamChange={handleTeamChange}
-            onBackToLibrary={handleNewTeam}
             onToast={showToast}
           />
         )}

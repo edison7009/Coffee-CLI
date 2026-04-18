@@ -8,12 +8,13 @@
 // lives inside the container — the user's business, not ours.
 
 import { useState } from 'react';
-import type { CliKind, InitMode, CliAvailability } from './types';
+import type { CliKind, InitMode, CliAvailability, RuntimeKind } from './types';
 
 interface Props {
   roleName: string;
   availability: CliAvailability;
-  onConfirm: (cli: CliKind, initMode: InitMode) => void;
+  availableRuntimes: RuntimeKind[];
+  onConfirm: (cli: CliKind, initMode: InitMode, runtime: RuntimeKind) => void;
   onCancel: () => void;
 }
 
@@ -24,12 +25,20 @@ const CLI_OPTIONS: Array<{ id: CliKind; label: string }> = [
   { id: 'qwen',   label: 'Qwen Code' },
 ];
 
-export function ActivateDialog({ roleName, availability, onConfirm, onCancel }: Props) {
+export function ActivateDialog({
+  roleName,
+  availability,
+  availableRuntimes,
+  onConfirm,
+  onCancel,
+}: Props) {
   const firstInstalled = CLI_OPTIONS.find(o => availability[o.id])?.id ?? 'claude';
   const [cli, setCli] = useState<CliKind>(firstInstalled);
   const [initMode, setInitMode] = useState<InitMode>('copy-local');
+  const [runtime, setRuntime] = useState<RuntimeKind>(availableRuntimes[0] ?? 'podman');
 
   const selectedInstalled = availability[cli];
+  const canConfirm = selectedInstalled && availableRuntimes.length > 0;
 
   return (
     <div className="activate-dialog-backdrop" onClick={onCancel}>
@@ -89,12 +98,36 @@ export function ActivateDialog({ roleName, availability, onConfirm, onCancel }: 
           </label>
         </div>
 
+        <div className="activate-dialog-section">
+          <div className="activate-dialog-section-label">部署 Runtime</div>
+          {availableRuntimes.length === 0 ? (
+            <div className="activate-dialog-runtime-empty">
+              未检测到容器 runtime。请先安装 Podman 或 Docker。
+            </div>
+          ) : (
+            availableRuntimes.map(r => (
+              <label key={r} className="activate-dialog-option">
+                <input
+                  type="radio"
+                  name="runtime"
+                  value={r}
+                  checked={runtime === r}
+                  onChange={() => setRuntime(r)}
+                />
+                <span className="activate-dialog-option-label">
+                  {r === 'docker' ? 'Docker' : 'Podman'}
+                </span>
+              </label>
+            ))
+          )}
+        </div>
+
         <div className="activate-dialog-footer">
           <button className="activate-dialog-btn" onClick={onCancel}>取消</button>
           <button
             className="activate-dialog-btn activate-dialog-btn--primary"
-            disabled={!selectedInstalled}
-            onClick={() => onConfirm(cli, initMode)}
+            disabled={!canConfirm}
+            onClick={() => onConfirm(cli, initMode, runtime)}
           >
             激活
           </button>

@@ -36,7 +36,6 @@ interface Props {
   availability: CliAvailability;
   availableRuntimes: RuntimeKind[];
   onTeamChange: (team: TeamState) => void;
-  onBackToLibrary: () => void;
   onToast: (msg: string) => void;
 }
 
@@ -46,8 +45,7 @@ function CanvasInner({
   team,
   availability,
   availableRuntimes,
-  onTeamChange,
-  onBackToLibrary,
+  onTeamChange: _onTeamChange,
   onToast,
 }: Props) {
   const [activatingNodeId, setActivatingNodeId] = useState<string | null>(null);
@@ -96,24 +94,19 @@ function CanvasInner({
   }, [onToast]);
 
   const handleConfirmActivate = useCallback(
-    (cli: CliKind, initMode: InitMode) => {
+    (cli: CliKind, initMode: InitMode, runtime: RuntimeKind) => {
       if (!activatingNodeId) return;
       const id = activatingNodeId;
       setActivatingNodeId(null);
 
-      if (!team.runtime) {
-        onToast('请先在右上角选择容器 runtime');
-        return;
-      }
-
-      updateNode(id, { status: 'activating', cli, initMode });
-      onToast(`即将激活 (${cli}, ${initMode}, runtime=${team.runtime}) ...（Phase 3 实现真容器）`);
+      updateNode(id, { status: 'activating', cli, initMode, runtime });
+      onToast(`即将激活 ${cli} · ${runtime} · ${initMode} ...（Phase 3 实现真容器）`);
 
       setTimeout(() => {
         updateNode(id, { status: 'active' });
       }, 1500);
     },
-    [activatingNodeId, team.runtime, updateNode, onToast],
+    [activatingNodeId, updateNode, onToast],
   );
 
   const onConnect = useCallback(
@@ -137,37 +130,8 @@ function CanvasInner({
     ? (nodes.find(n => n.id === activatingNodeId)?.data as AgentNodeData | undefined)
     : undefined;
 
-  const handleRuntimeChange = (r: RuntimeKind) => {
-    onTeamChange({ ...team, runtime: r });
-  };
-
   return (
     <div className="workstation-canvas">
-      <div className="workstation-canvas-topbar">
-        <button className="workstation-back-btn" onClick={onBackToLibrary}>
-          ← 返回模板库
-        </button>
-        <div className="workstation-team-name">{team.name}</div>
-        <div className="workstation-runtime-picker">
-          {availableRuntimes.length === 0 ? (
-            <span className="workstation-runtime-warn">未检测到容器 runtime</span>
-          ) : (
-            <>
-              <span className="workstation-runtime-label">部署：</span>
-              {availableRuntimes.map(r => (
-                <button
-                  key={r}
-                  className={`workstation-runtime-option ${team.runtime === r ? 'active' : ''}`}
-                  onClick={() => handleRuntimeChange(r)}
-                >
-                  {r === 'docker' ? 'Docker' : 'Podman'}
-                </button>
-              ))}
-            </>
-          )}
-        </div>
-      </div>
-
       <div className="workstation-canvas-flow">
         <ReactFlow
           nodes={nodesWithHandlers}
@@ -189,6 +153,7 @@ function CanvasInner({
         <ActivateDialog
           roleName={activatingNode.name}
           availability={availability}
+          availableRuntimes={availableRuntimes}
           onConfirm={handleConfirmActivate}
           onCancel={() => setActivatingNodeId(null)}
         />

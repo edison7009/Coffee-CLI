@@ -585,6 +585,16 @@
     color: #ef4444;
 }
 
+.activate-dialog-runtime-empty {
+    padding: 10px 12px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.08);
+    border: 1px dashed rgba(239, 68, 68, 0.4);
+    border-radius: var(--radius-sm, 4px);
+}
+
 .activate-dialog-footer {
     display: flex;
     justify-content: flex-end;
