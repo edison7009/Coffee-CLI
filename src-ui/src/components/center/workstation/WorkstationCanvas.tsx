@@ -1,0 +1,206 @@
+// WorkstationCanvas — the "team blueprint on a canvas" view.
+//
+// Renders nodes from the current TeamState via react-flow. Each node is
+// an AgentNode (card). Clicking an inactive card opens ActivateDialog.
+// Top-right shows the team's chosen runtime (Docker / Podman). We build
+// the canvas; the user picks the runtime, picks the CLI, picks the
+// config — all of that is content we don't touch.
+
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import {
+  ReactFlow,
+  Background,
+  Controls,
+  useNodesState,
+  useEdgesState,
+  addEdge,
+  ReactFlowProvider,
+} from '@xyflow/react';
+import type { Connection, Edge } from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
+
+import { AgentNode } from './AgentNode';
+import type { AgentFlowNode } from './AgentNode';
+import { ActivateDialog } from './ActivateDialog';
+import type {
+  TeamState,
+  CliAvailability,
+  CliKind,
+  InitMode,
+  RuntimeKind,
+  AgentNodeData,
+} from './types';
+
+interface Props {
+  team: TeamState;
+  availability: CliAvailability;
+  availableRuntimes: RuntimeKind[];
+  onTeamChange: (team: TeamState) => void;
+  onBackToLibrary: () => void;
+  onToast: (msg: string) => void;
+}
+
+const nodeTypes = { agent: AgentNode };
+
+function CanvasInner({
+  team,
+  availability,
+  availableRuntimes,
+  onTeamChange,
+  onBackToLibrary,
+  onToast,
+}: Props) {
+  const [activatingNodeId, setActivatingNodeId] = useState<string | null>(null);
+
+  const initialNodes: AgentFlowNode[] = useMemo(
+    () => team.nodes.map(n => ({
+      id: n.id,
+      type: 'agent' as const,
+      position: n.position,
+      data: { ...n } as AgentNodeData & { [key: string]: unknown },
+    })),
+    [team.id], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+  const initialEdges: Edge[] = useMemo(
+    () => team.edges.map((e, i) => ({
+      id: `e-${i}`,
+      source: e.source,
+      target: e.target,
+    })),
+    [team.id], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+
+  useEffect(() => {
+    setNodes(initialNodes);
+    setEdges(initialEdges);
+  }, [team.id, initialNodes, initialEdges, setNodes, setEdges]);
+
+  const updateNode = useCallback(
+    (id: string, patch: Partial<AgentNodeData>) => {
+      setNodes(ns => ns.map(n =>
+        n.id === id ? { ...n, data: { ...n.data, ...patch } } : n,
+      ));
+    },
+    [setNodes],
+  );
+
+  const handleActivate = useCallback((id: string) => {
+    setActivatingNodeId(id);
+  }, []);
+
+  const handleAttach = useCallback((id: string) => {
+    onToast(`即将 attach 到卡片 ${id} ...（Phase 4 实现）`);
+  }, [onToast]);
+
+  const handleConfirmActivate = useCallback(
+    (cli: CliKind, initMode: InitMode) => {
+      if (!activatingNodeId) return;
+      const id = activatingNodeId;
+      setActivatingNodeId(null);
+
+      if (!team.runtime) {
+        onToast('请先在右上角选择容器 runtime');
+        return;
+      }
+
+      updateNode(id, { status: 'activating', cli, initMode });
+      onToast(`即将激活 (${cli}, ${initMode}, runtime=${team.runtime}) ...（Phase 3 实现真容器）`);
+
+      setTimeout(() => {
+        updateNode(id, { status: 'active' });
+      }, 1500);
+    },
+    [activatingNodeId, team.runtime, updateNode, onToast],
+  );
+
+  const onConnect = useCallback(
+    (params: Connection) => setEdges(eds => addEdge(params, eds)),
+    [setEdges],
+  );
+
+  const nodesWithHandlers = useMemo(
+    () => nodes.map(n => ({
+      ...n,
+      data: {
+        ...n.data,
+        onActivate: handleActivate,
+        onAttach: handleAttach,
+      },
+    })),
+    [nodes, handleActivate, handleAttach],
+  );
+
+  const activatingNode = activatingNodeId
+    ? (nodes.find(n => n.id === activatingNodeId)?.data as AgentNodeData | undefined)
+    : undefined;
+
+  const handleRuntimeChange = (r: RuntimeKind) => {
+    onTeamChange({ ...team, runtime: r });
+  };
+
+  return (
+    <div className="workstation-canvas">
+      <div className="workstation-canvas-topbar">
+        <button className="workstation-back-btn" onClick={onBackToLibrary}>
+          ← 返回模板库
+        </button>
+        <div className="workstation-team-name">{team.name}</div>
+        <div className="workstation-runtime-picker">
+          {availableRuntimes.length === 0 ? (
+            <span className="workstation-runtime-warn">未检测到容器 runtime</span>
+          ) : (
+            <>
+              <span className="workstation-runtime-label">部署：</span>
+              {availableRuntimes.map(r => (
+                <button
+                  key={r}
+                  className={`workstation-runtime-option ${team.runtime === r ? 'active' : ''}`}
+                  onClick={() => handleRuntimeChange(r)}
+                >
+                  {r === 'docker' ? 'Docker' : 'Podman'}
+                </button>
+              ))}
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="workstation-canvas-flow">
+        <ReactFlow
+          nodes={nodesWithHandlers}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
+          nodeTypes={nodeTypes}
+          fitView
+          fitViewOptions={{ padding: 0.2 }}
+          proOptions={{ hideAttribution: true }}
+        >
+          <Background gap={20} size={1} color="rgba(128,128,128,0.15)" />
+          <Controls showInteractive={false} />
+        </ReactFlow>
+      </div>
+
+      {activatingNode && (
+        <ActivateDialog
+          roleName={activatingNode.name}
+          availability={availability}
+          onConfirm={handleConfirmActivate}
+          onCancel={() => setActivatingNodeId(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+export function WorkstationCanvas(props: Props) {
+  return (
+    <ReactFlowProvider>
+      <CanvasInner {...props} />
+    </ReactFlowProvider>
+  );
+}

@@ -1,76 +1,149 @@
-// WorkstationPanel — Multi-agent CLI orchestration workspace.
-// Placeholder scaffold. The full vision is a Docker-CLI agent farm where
-// each agent runs in an isolated container and users can "attach" to any
-// running agent to see its live pty — the killer differentiator vs. the
-// GUI-wrapper multi-agent frameworks that only show dashboards.
+// WorkstationPanel — Phase 1 shell.
+//
+// Orchestrates three views:
+//   - TemplateLibrary: grid of blueprints
+//   - WorkstationCanvas: react-flow view for an active team
+//   - SystemStats: persistent footer showing host capacity
+//
+// All state lives in this component for Phase 1. Phase 3 will lift the
+// team list into Coffee CLI's global AppState so it survives reloads
+// and plugs into Docker lifecycle.
 
-import './WorkstationPanel.css';
+import { useState, useMemo, useCallback } from 'react';
+import { TemplateLibrary } from './workstation/TemplateLibrary';
+import { WorkstationCanvas } from './workstation/WorkstationCanvas';
+import { SystemStats } from './workstation/SystemStats';
+import type {
+  Blueprint,
+  TeamState,
+  CliAvailability,
+  RuntimeKind,
+} from './workstation/types';
+import './workstation/workstation.css';
 
 interface Props {
   onExit: () => void;
 }
 
-export function WorkstationPanel({ onExit }: Props) {
+// Phase 1 placeholder. Phase 3 replaces with Tauri `detect_clis()` command.
+const PLACEHOLDER_AVAILABILITY: CliAvailability = {
+  claude: true,
+  codex: true,
+  gemini: false,
+  qwen: false,
+};
+
+// Phase 1 placeholder. Phase 3 replaces with real runtime probing.
+const PLACEHOLDER_RUNTIMES: RuntimeKind[] = ['podman', 'docker'];
+
+type ViewTab = 'teams' | 'library';
+
+function makeTeamFromBlueprint(bp: Blueprint, defaultRuntime: RuntimeKind | null): TeamState {
+  return {
+    id: `team-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    blueprintId: bp.id,
+    name: bp.name,
+    runtime: defaultRuntime,
+    nodes: bp.nodes.map(n => ({
+      id: n.id,
+      name: n.name,
+      hint: n.hint,
+      position: n.position,
+      status: 'inactive' as const,
+    })),
+    edges: bp.edges.map(e => ({ source: e.source, target: e.target })),
+  };
+}
+
+export function WorkstationPanel({ onExit: _onExit }: Props) {
+  const [teams, setTeams] = useState<TeamState[]>([]);
+  const [activeTeamId, setActiveTeamId] = useState<string | null>(null);
+  const [tab, setTab] = useState<ViewTab>('library');
+  const [toast, setToast] = useState<string | null>(null);
+
+  const activeTeam = useMemo(
+    () => teams.find(t => t.id === activeTeamId) ?? null,
+    [teams, activeTeamId],
+  );
+
+  const showToast = useCallback((msg: string) => {
+    setToast(msg);
+    window.setTimeout(() => setToast(null), 2400);
+  }, []);
+
+  const handlePickTemplate = useCallback((bp: Blueprint) => {
+    const defaultRuntime = PLACEHOLDER_RUNTIMES[0] ?? null;
+    const team = makeTeamFromBlueprint(bp, defaultRuntime);
+    setTeams(prev => [...prev, team]);
+    setActiveTeamId(team.id);
+    setTab('teams');
+  }, []);
+
+  const handleTeamChange = useCallback((updated: TeamState) => {
+    setTeams(prev => prev.map(t => t.id === updated.id ? updated : t));
+  }, []);
+
+  const handleBackToLibrary = useCallback(() => {
+    setTab('library');
+  }, []);
+
+  const activeLocalAgents = useMemo(
+    () => teams.reduce((acc, t) =>
+      acc + t.nodes.filter(n => n.status === 'active' || n.status === 'activating').length
+    , 0),
+    [teams],
+  );
+
   return (
-    <div className="workstation-panel">
-      <div className="workstation-hero">
-        <div className="workstation-badge">WORKSTATION · PREVIEW</div>
-        <h1 className="workstation-title">CLI Agent Orchestration</h1>
-        <p className="workstation-subtitle">
-          Spawn isolated CLI agents, chain them into teams, attach to any
-          running agent to watch its real terminal.
-        </p>
-
-        <div className="workstation-pillars">
-          <div className="workstation-pillar">
-            <div className="workstation-pillar-num">01</div>
-            <div className="workstation-pillar-title">Isolated Agents</div>
-            <div className="workstation-pillar-desc">
-              Each agent runs in its own CLI-only Docker container — independent
-              skills, model, API keys, and MCP config.
-            </div>
-          </div>
-          <div className="workstation-pillar">
-            <div className="workstation-pillar-num">02</div>
-            <div className="workstation-pillar-title">Multi-CLI Native</div>
-            <div className="workstation-pillar-desc">
-              Mix Claude Code, Codex, Gemini, and others in one team. Pick the
-              right CLI per role.
-            </div>
-          </div>
-          <div className="workstation-pillar">
-            <div className="workstation-pillar-num">03</div>
-            <div className="workstation-pillar-title">Live Attach</div>
-            <div className="workstation-pillar-desc">
-              Click any working agent to see its live pty. The terminal is the
-              truth — no translation layer, no lossy summary.
-            </div>
-          </div>
-        </div>
-
-        <div className="workstation-empty">
-          <div className="workstation-empty-icon">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="3" width="7" height="7" rx="1" />
-              <rect x="14" y="3" width="7" height="7" rx="1" />
-              <rect x="3" y="14" width="7" height="7" rx="1" />
-              <rect x="14" y="14" width="7" height="7" rx="1" />
-            </svg>
-          </div>
-          <div className="workstation-empty-title">No agent teams yet</div>
-          <div className="workstation-empty-hint">
-            Team blueprints, agent spawning, and the attach UX land here as we build.
-          </div>
-        </div>
+    <div className="workstation-root">
+      <div className="workstation-tabs">
+        <button
+          className={`workstation-tab ${tab === 'teams' ? 'active' : ''}`}
+          onClick={() => setTab('teams')}
+          disabled={teams.length === 0}
+        >
+          团队
+          {teams.length > 0 && (
+            <span className="workstation-tab-count">{teams.length}</span>
+          )}
+        </button>
+        <button
+          className={`workstation-tab ${tab === 'library' ? 'active' : ''}`}
+          onClick={() => setTab('library')}
+        >
+          模板库
+        </button>
       </div>
 
-      <button className="workstation-exit" onClick={onExit} title="Back to tools">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M19 12H5" />
-          <path d="M12 19l-7-7 7-7" />
-        </svg>
-        <span>Back</span>
-      </button>
+      <div className="workstation-body">
+        {tab === 'library' && (
+          <TemplateLibrary onPick={handlePickTemplate} />
+        )}
+        {tab === 'teams' && activeTeam && (
+          <WorkstationCanvas
+            team={activeTeam}
+            availability={PLACEHOLDER_AVAILABILITY}
+            availableRuntimes={PLACEHOLDER_RUNTIMES}
+            onTeamChange={handleTeamChange}
+            onBackToLibrary={handleBackToLibrary}
+            onToast={showToast}
+          />
+        )}
+        {tab === 'teams' && !activeTeam && (
+          <TemplateLibrary onPick={handlePickTemplate} />
+        )}
+      </div>
+
+      <SystemStats
+        activeLocalAgents={activeLocalAgents}
+        availableRuntimes={PLACEHOLDER_RUNTIMES}
+      />
+
+      {toast && (
+        <div className="toast-notification" style={{ bottom: 52, top: 'auto' }}>
+          {toast}
+        </div>
+      )}
     </div>
   );
 }
