@@ -45,6 +45,13 @@ export const pt = {
   'remote.connect_failed': 'Falha na conexão',
 
   'tab.new': 'Selecionar ferramenta',
+  'tab.selectGame': 'Selecionar jogo',
+  'tab.multiAgentOrchestration': 'Orquestração Multi-Agente',
+
+  // Mode Dock
+  'dock.arcade': 'Arcade',
+  'dock.workstation': 'Estação',
+  'dock.back': 'Voltar',
 
 
 

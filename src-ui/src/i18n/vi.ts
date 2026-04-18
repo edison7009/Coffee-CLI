@@ -47,6 +47,13 @@ export const vi = {
 
   // Tab
   'tab.new': 'Chọn công cụ',
+  'tab.selectGame': 'Chọn trò chơi',
+  'tab.multiAgentOrchestration': 'Điều phối đa Agent',
+
+  // Mode Dock
+  'dock.arcade': 'Arcade',
+  'dock.workstation': 'Trạm làm việc',
+  'dock.back': 'Quay lại',
 
 
 

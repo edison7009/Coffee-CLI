@@ -373,14 +373,14 @@ export function CenterPanel() {
         }
         return {
           icon: <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>,
-          title: state.currentLang.startsWith('zh') ? '\u9009\u62e9\u56e2\u961f' : 'Select Team',
+          title: t('tab.multiAgentOrchestration'),
           tooltip: undefined,
         };
       }
       if (showArcadeGames) {
         return {
           icon: <span style={{ fontSize: '1em', lineHeight: 1 }}>🎮</span>,
-          title: state.currentLang.startsWith('zh') ? '\u9009\u62e9\u6e38\u620f' : 'Select Game',
+          title: t('tab.selectGame'),
           tooltip: undefined,
         };
       }
@@ -853,11 +853,7 @@ export function CenterPanel() {
                     }
                   }}
                 >
-                  <span>
-                    {showArcadeGames
-                      ? (state.currentLang.startsWith('zh') ? '\u8fd4\u56de' : 'Back')
-                      : (state.currentLang.startsWith('zh') ? '\u6e38\u620f\u5385' : 'Arcade')}
-                  </span>
+                  <span>{showArcadeGames ? t('dock.back') : t('dock.arcade')}</span>
                 </button>
 
                 {/* Center icon — decorative pivot */}
@@ -881,11 +877,7 @@ export function CenterPanel() {
                     setShowWorkstation(true);
                   }}
                 >
-                  <span>
-                    {showWorkstation
-                      ? (state.currentLang.startsWith('zh') ? '\u8fd4\u56de' : 'Back')
-                      : (state.currentLang.startsWith('zh') ? '\u5de5\u4f5c\u7ad9' : 'Workstation')}
-                  </span>
+                  <span>{showWorkstation ? t('dock.back') : t('dock.workstation')}</span>
                 </button>
               </div>
             </div>

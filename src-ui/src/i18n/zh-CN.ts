@@ -45,6 +45,13 @@ export const zhCN = {
   'remote.connect_failed': '连接失败',
 
   'tab.new': '选择工具',
+  'tab.selectGame': '选择游戏',
+  'tab.multiAgentOrchestration': '多智能体编排',
+
+  // Mode Dock
+  'dock.arcade': '游戏厅',
+  'dock.workstation': '工作站',
+  'dock.back': '返回',
 
 
   // Task Board

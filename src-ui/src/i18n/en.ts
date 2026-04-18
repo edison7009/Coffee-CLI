@@ -47,6 +47,13 @@ export const en = {
 
   // Tab
   'tab.new': 'Select Tool',
+  'tab.selectGame': 'Select Game',
+  'tab.multiAgentOrchestration': 'Multi-Agent Orchestration',
+
+  // Mode Dock (bottom-center pill)
+  'dock.arcade': 'Arcade',
+  'dock.workstation': 'Workstation',
+  'dock.back': 'Back',
 
 
   // Task Board

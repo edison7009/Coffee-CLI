@@ -45,6 +45,13 @@ export const zhTW = {
   'remote.connect_failed': '連線失敗',
 
   'tab.new': '選擇工具',
+  'tab.selectGame': '選擇遊戲',
+  'tab.multiAgentOrchestration': '多智能體編排',
+
+  // Mode Dock
+  'dock.arcade': '遊戲廳',
+  'dock.workstation': '工作站',
+  'dock.back': '返回',
 
 
   // Task Board

@@ -45,6 +45,13 @@ export const es = {
   'remote.connect_failed': 'Error de conexión',
 
   'tab.new': 'Seleccionar herramienta',
+  'tab.selectGame': 'Seleccionar juego',
+  'tab.multiAgentOrchestration': 'Orquestación Multi-Agente',
+
+  // Mode Dock
+  'dock.arcade': 'Arcade',
+  'dock.workstation': 'Estación',
+  'dock.back': 'Volver',
 
 
   // Task Board

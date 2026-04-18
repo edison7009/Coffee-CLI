@@ -45,6 +45,13 @@ export const ko = {
   'remote.connect_failed': '연결 실패',
 
   'tab.new': '도구 선택',
+  'tab.selectGame': '게임 선택',
+  'tab.multiAgentOrchestration': '다중 에이전트 오케스트레이션',
+
+  // Mode Dock
+  'dock.arcade': '아케이드',
+  'dock.workstation': '워크스테이션',
+  'dock.back': '뒤로',
 
 
   // Task Board

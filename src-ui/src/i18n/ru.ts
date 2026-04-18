@@ -45,6 +45,13 @@ export const ru = {
   'remote.connect_failed': 'Ошибка подключения',
 
   'tab.new': 'Выбрать инструмент',
+  'tab.selectGame': 'Выбрать игру',
+  'tab.multiAgentOrchestration': 'Оркестрация мульти-агентов',
+
+  // Mode Dock
+  'dock.arcade': 'Аркада',
+  'dock.workstation': 'Рабочая станция',
+  'dock.back': 'Назад',
 
 
 

@@ -45,6 +45,13 @@ export const ja = {
   'remote.connect_failed': '接続に失敗しました',
 
   'tab.new': 'ツールを選択',
+  'tab.selectGame': 'ゲームを選ぶ',
+  'tab.multiAgentOrchestration': 'マルチエージェント管制',
+
+  // Mode Dock
+  'dock.arcade': 'アーケード',
+  'dock.workstation': 'ワークステーション',
+  'dock.back': '戻る',
 
 
   // Task Board
