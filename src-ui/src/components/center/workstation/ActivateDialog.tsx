@@ -106,7 +106,7 @@ export function ActivateDialog({
         </div>
 
         <div className="activate-dialog-section">
-          <div className="activate-dialog-section-label">部署 Runtime</div>
+          <div className="activate-dialog-section-label">部署容器</div>
           {availableRuntimes.length === 0 ? (
             <div className="activate-dialog-runtime-empty">
               未检测到容器 runtime。请先安装 Podman 或 Docker。
