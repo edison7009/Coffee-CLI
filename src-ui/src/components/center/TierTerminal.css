@@ -24,6 +24,14 @@
     height: 100%;
     object-fit: cover;
 }
+/* User-controlled dim overlay. Same --wallpaper-dim variable as launchpad. */
+.tier-terminal-bg::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, var(--wallpaper-dim, 0.3));
+    pointer-events: none;
+}
 
 
 /* ─── xterm.js container ────────────────────────────────────── */

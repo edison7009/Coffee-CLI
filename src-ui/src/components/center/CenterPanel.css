@@ -229,6 +229,14 @@
   height: 100%;
   object-fit: cover;
 }
+/* User-controlled dim overlay (--wallpaper-dim is set on :root from app-state). */
+.launchpad-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, var(--wallpaper-dim, 0.3));
+  pointer-events: none;
+}
 
 .launchpad-slider-viewport {
   width: 100%;

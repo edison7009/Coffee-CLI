@@ -512,7 +512,63 @@
 }
 
 
-/* ─── Theme Menu: Wallpaper + Font Color Row ──────────────────────────────── */
+/* ─── Theme Menu: Wallpaper Row + Dim Slider ──────────────────────────────── */
+
+.theme-wallpaper-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 4px;
+}
+.theme-wallpaper-row .theme-bg-btn {
+  flex: 0 0 auto;
+  padding: 6px 9px;
+}
+
+.theme-dim-slider {
+  flex: 1 1 auto;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  background: var(--bg-active);
+  border-radius: 999px;
+  outline: none;
+  cursor: pointer;
+}
+.theme-dim-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--bg-1, #1a1a1a);
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+.theme-dim-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+.theme-dim-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--bg-1, #1a1a1a);
+  cursor: pointer;
+}
+
+.theme-dim-value {
+  flex: 0 0 auto;
+  min-width: 32px;
+  text-align: right;
+  font-size: 11px;
+  font-family: var(--font);
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Theme Menu: Font Color Row ───────────────────────────────────────────── */
 
 .theme-bg-row {
   display: flex;

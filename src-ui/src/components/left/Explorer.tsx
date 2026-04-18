@@ -315,13 +315,14 @@ const ICON_ART_THEMES: { id: IconTheme; folderSrc: string }[] = [
   { id: 'pastel',   folderSrc: '/icons/themes/pastel/folder-closed.svg'      },
 ];
 
-function ThemeMenu({ anchorRef, currentTheme, currentShape, currentIconTheme, hasBg, termColorScheme, onSelectTheme, onSelectShape, onSelectPreset, onSelectIconTheme, onPickBg, onClearBg, onSelectScheme, onClose, t }: {
+function ThemeMenu({ anchorRef, currentTheme, currentShape, currentIconTheme, hasBg, termColorScheme, wallpaperDim, onSelectTheme, onSelectShape, onSelectPreset, onSelectIconTheme, onPickBg, onClearBg, onSelectScheme, onSetWallpaperDim, onClose, t }: {
   anchorRef: React.RefObject<HTMLButtonElement | null>;
   currentTheme: ThemeColor;
   currentShape: ThemeShape;
   currentIconTheme: IconTheme;
   hasBg: boolean;
   termColorScheme: string;
+  wallpaperDim: number;
   onSelectTheme: (t: ThemeColor) => void;
   onSelectShape: (s: ThemeShape) => void;
   onSelectPreset: (t: ThemeColor, s: ThemeShape) => void;
@@ -329,6 +330,7 @@ function ThemeMenu({ anchorRef, currentTheme, currentShape, currentIconTheme, ha
   onPickBg: () => void;
   onClearBg: () => void;
   onSelectScheme: (id: string) => void;
+  onSetWallpaperDim: (n: number) => void;
   onClose: () => void;
   t: (key: any) => string;
 }) {
@@ -401,11 +403,12 @@ function ThemeMenu({ anchorRef, currentTheme, currentShape, currentIconTheme, ha
 
       <div className="ctx-menu-divider" />
 
-      {/* Wallpaper + terminal color scheme row */}
-      <div className="theme-bg-row">
+      {/* Wallpaper picker + dim slider on its own row */}
+      <div className="theme-wallpaper-row">
         <button
           className={`theme-bg-btn ${hasBg ? 'has-bg' : ''}`}
           onClick={hasBg ? onClearBg : onPickBg}
+          title={hasBg ? 'Clear wallpaper' : 'Pick wallpaper'}
         >
           {hasBg ? (
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
@@ -413,6 +416,22 @@ function ThemeMenu({ anchorRef, currentTheme, currentShape, currentIconTheme, ha
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
           )}
         </button>
+        <input
+          type="range"
+          min={0}
+          max={80}
+          step={5}
+          value={wallpaperDim}
+          onChange={(e) => onSetWallpaperDim(parseInt(e.target.value, 10))}
+          className="theme-dim-slider"
+          aria-label="Wallpaper dim"
+          title={`Wallpaper dim: ${wallpaperDim}%`}
+        />
+        <span className="theme-dim-value">{wallpaperDim}%</span>
+      </div>
+
+      {/* Terminal foreground color scheme row */}
+      <div className="theme-bg-row">
         <button
           className={`term-fg-chip reset ${termColorScheme === '' ? 'active' : ''}`}
           onClick={() => onSelectScheme('')}
@@ -1176,6 +1195,7 @@ export function Explorer() {
           currentIconTheme={state.iconTheme}
           hasBg={state.bgType !== 'none' && state.bgPath !== ''}
           termColorScheme={state.termColorScheme}
+          wallpaperDim={state.wallpaperDim}
           onSelectTheme={(t) => dispatch({ type: 'SET_THEME', theme: t })}
           onSelectShape={(s) => dispatch({ type: 'SET_SHAPE', shape: s })}
           onSelectPreset={(t, s) => {
@@ -1208,6 +1228,7 @@ export function Explorer() {
             try { id ? localStorage.setItem('cc-term-scheme', id) : localStorage.removeItem('cc-term-scheme'); } catch {}
             dispatch({ type: 'SET_TERM_SCHEME', scheme: id });
           }}
+          onSetWallpaperDim={(n) => dispatch({ type: 'SET_WALLPAPER_DIM', dim: n })}
           onClose={() => setThemeMenuOpen(false)}
           t={t}
         />

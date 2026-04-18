@@ -43,6 +43,8 @@ export interface AppState {
   // Background wallpaper
   bgPath: string;
   bgType: 'image' | 'video' | 'none';
+  // Wallpaper dim overlay opacity, 0-80 (percent). 30 by default for legibility.
+  wallpaperDim: number;
 
   // Terminal foreground color override ('' = use theme default)
   termColorScheme: string;
@@ -72,6 +74,8 @@ type Action =
   | { type: 'SET_AGENT_STATUS'; id: string; status: AgentStatus }
   | { type: 'SET_BG'; path: string; bgType: 'image' | 'video' }
   | { type: 'CLEAR_BG' }
+  | { type: 'SET_WALLPAPER_DIM'; dim: number }
+  | { type: 'SET_WALLPAPER_DIM'; dim: number }
   | { type: 'SET_TERM_SCHEME'; scheme: string }
   | { type: 'TOGGLE_GAMBIT'; id: string }
   | { type: 'SET_GAMBIT_DRAFT'; id: string; draft: string };
@@ -177,6 +181,8 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, bgPath: action.path, bgType: action.bgType };
     case 'CLEAR_BG':
       return { ...state, bgPath: '', bgType: 'none' };
+    case 'SET_WALLPAPER_DIM':
+      return { ...state, wallpaperDim: Math.max(0, Math.min(80, action.dim)) };
     case 'SET_TERM_SCHEME':
       return { ...state, termColorScheme: action.scheme };
     case 'TOGGLE_GAMBIT':
@@ -232,10 +238,16 @@ function getInitialState(): AppState {
   let bgPath = '';
   let bgType: 'image' | 'video' | 'none' = 'none';
   let termColorScheme = '';
+  let wallpaperDim = 30;
   try {
     bgPath = localStorage.getItem('cc-bg-path') || '';
     bgType = (localStorage.getItem('cc-bg-type') as 'image' | 'video' | 'none') || 'none';
     termColorScheme = localStorage.getItem('cc-term-scheme') || '';
+    const savedDim = localStorage.getItem('cc-wallpaper-dim');
+    if (savedDim !== null) {
+      const n = parseInt(savedDim, 10);
+      if (!Number.isNaN(n) && n >= 0 && n <= 80) wallpaperDim = n;
+    }
   } catch {}
 
   const defaultTerminalId = crypto.randomUUID();
@@ -247,6 +259,7 @@ function getInitialState(): AppState {
     currentLang: lang,
     bgPath,
     bgType,
+    wallpaperDim,
     termColorScheme,
     terminals: [{ id: defaultTerminalId, tool: null, folderPath, scanData: null }],
     activeTerminalId: defaultTerminalId,
