@@ -39,6 +39,9 @@ export function ActivateDialog({
 
   const selectedInstalled = availability[cli];
   const canConfirm = selectedInstalled && availableRuntimes.length > 0;
+  // Reference the CLI by name in the init-mode labels — much clearer than
+  // "copy my local config" which leaves the user guessing which tool.
+  const cliLabel = CLI_OPTIONS.find(o => o.id === cli)?.label ?? cli;
 
   return (
     <div className="activate-dialog-backdrop" onClick={onCancel}>
@@ -84,7 +87,9 @@ export function ActivateDialog({
               checked={initMode === 'copy-local'}
               onChange={() => setInitMode('copy-local')}
             />
-            <span className="activate-dialog-option-label">复制我本机配置（推荐）</span>
+            <span className="activate-dialog-option-label">
+              复制本机的 {cliLabel}（推荐）
+            </span>
           </label>
           <label className="activate-dialog-option">
             <input
@@ -94,7 +99,9 @@ export function ActivateDialog({
               checked={initMode === 'fresh'}
               onChange={() => setInitMode('fresh')}
             />
-            <span className="activate-dialog-option-label">全新空白</span>
+            <span className="activate-dialog-option-label">
+              全新的 {cliLabel}
+            </span>
           </label>
         </div>
 
