@@ -26,7 +26,6 @@ import type {
   TeamState,
   CliAvailability,
   CliKind,
-  InitMode,
   RuntimeKind,
   AgentNodeData,
 } from './types';
@@ -94,13 +93,13 @@ function CanvasInner({
   }, [onToast]);
 
   const handleConfirmActivate = useCallback(
-    (cli: CliKind, initMode: InitMode, runtime: RuntimeKind) => {
+    (cli: CliKind, runtime: RuntimeKind) => {
       if (!activatingNodeId) return;
       const id = activatingNodeId;
       setActivatingNodeId(null);
 
-      updateNode(id, { status: 'activating', cli, initMode, runtime });
-      onToast(`即将激活 ${cli} · ${runtime} · ${initMode} ...（Phase 3 实现真容器）`);
+      updateNode(id, { status: 'activating', cli, runtime });
+      onToast(`即将激活 ${cli} · ${runtime} ...（Phase 3 实现真容器）`);
 
       setTimeout(() => {
         updateNode(id, { status: 'active' });

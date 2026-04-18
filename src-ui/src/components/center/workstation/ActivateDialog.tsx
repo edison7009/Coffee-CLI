@@ -1,20 +1,21 @@
 // ActivateDialog — shown when the user clicks an inactive card.
 //
-// Two questions only, per product philosophy:
-//   1) Which CLI do you want inside this container?
-//   2) Copy your local config or start fresh?
+// Two questions only:
+//   1) Which CLI do you want?
+//   2) Where do you want it deployed (host / Podman / Docker)?
 //
-// We do NOT ask for models, skills, system prompts, API keys. All of that
-// lives inside the container — the user's business, not ours.
+// On activation, we always copy the host's CLI-specific config directory
+// into the container. Users tweak, clear, or rebuild anything inside —
+// that's content, not ours to manage.
 
 import { useState } from 'react';
-import type { CliKind, InitMode, CliAvailability, RuntimeKind } from './types';
+import type { CliKind, CliAvailability, RuntimeKind } from './types';
 
 interface Props {
   roleName: string;
   availability: CliAvailability;
   availableRuntimes: RuntimeKind[];
-  onConfirm: (cli: CliKind, initMode: InitMode, runtime: RuntimeKind) => void;
+  onConfirm: (cli: CliKind, runtime: RuntimeKind) => void;
   onCancel: () => void;
 }
 
@@ -43,7 +44,6 @@ export function ActivateDialog({
 }: Props) {
   const firstInstalled = CLI_OPTIONS.find(o => availability[o.id])?.id ?? 'claude';
   const [cli, setCli] = useState<CliKind>(firstInstalled);
-  const [initMode, setInitMode] = useState<InitMode>('copy-local');
   // Prefer an installed container runtime; fall back to 'none' (always on).
   const installedRuntime = availableRuntimes.find(r => r !== 'none');
   const [runtime, setRuntime] = useState<RuntimeKind>(installedRuntime ?? 'none');
@@ -53,9 +53,6 @@ export function ActivateDialog({
   const canConfirm = selectedInstalled;
   const runtimeInstalled = (id: RuntimeKind): boolean =>
     id === 'none' ? true : availableRuntimes.includes(id);
-  // Reference the CLI by name in the init-mode labels — much clearer than
-  // "copy my local config" which leaves the user guessing which tool.
-  const cliLabel = CLI_OPTIONS.find(o => o.id === cli)?.label ?? cli;
 
   return (
     <div className="activate-dialog-backdrop" onClick={onCancel}>
@@ -92,34 +89,6 @@ export function ActivateDialog({
         </div>
 
         <div className="activate-dialog-section">
-          <div className="activate-dialog-section-label">初始配置</div>
-          <label className="activate-dialog-option">
-            <input
-              type="radio"
-              name="initMode"
-              value="copy-local"
-              checked={initMode === 'copy-local'}
-              onChange={() => setInitMode('copy-local')}
-            />
-            <span className="activate-dialog-option-label">
-              复制本机的 {cliLabel}（推荐）
-            </span>
-          </label>
-          <label className="activate-dialog-option">
-            <input
-              type="radio"
-              name="initMode"
-              value="fresh"
-              checked={initMode === 'fresh'}
-              onChange={() => setInitMode('fresh')}
-            />
-            <span className="activate-dialog-option-label">
-              全新的 {cliLabel}
-            </span>
-          </label>
-        </div>
-
-        <div className="activate-dialog-section">
           <div className="activate-dialog-section-label">部署容器</div>
           {RUNTIME_OPTIONS.map(opt => {
             const installed = runtimeInstalled(opt.id);
@@ -152,7 +121,7 @@ export function ActivateDialog({
           <button
             className="activate-dialog-btn activate-dialog-btn--primary"
             disabled={!canConfirm}
-            onClick={() => onConfirm(cli, initMode, runtime)}
+            onClick={() => onConfirm(cli, runtime)}
           >
             激活
           </button>
