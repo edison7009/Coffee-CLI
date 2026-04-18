@@ -407,6 +407,23 @@ export function CenterPanel() {
         return { icon: <TerminalIcon />, title, tooltip: undefined };
       }
       case 'terminal': return { icon: <TerminalIcon />, title: cwd ?? t('tool.terminal'), tooltip: pathTip };
+      case 'agent-attach': {
+        // Live Attach tab — Phase 3d. Show the分身's avatar and chosen name.
+        let title = t('dock.workstation');
+        let avatar = '🤖';
+        if (session.toolData) {
+          try {
+            const data = JSON.parse(session.toolData);
+            if (data.name) title = data.name;
+            if (data.avatar) avatar = data.avatar;
+          } catch (e) {}
+        }
+        return {
+          icon: <span style={{ fontSize: '1em', lineHeight: 1 }}>{avatar}</span>,
+          title,
+          tooltip: undefined,
+        };
+      }
       case 'arcade': {
         const gameName = session.toolData || '';
         const meta = gameCatalog.find(m => m.file.toLowerCase() === gameName.toLowerCase());

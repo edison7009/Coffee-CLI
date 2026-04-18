@@ -691,6 +691,34 @@ fn tier_terminal_start(
             }
         },
 
+        Some("agent-attach") => {
+            // Phase 3d — Live Attach. toolData carries the container info
+            // from the Workstation. We spawn `<runtime> exec -it <id> <cli>`
+            // under portable-pty so xterm.js streams the real CLI bytes
+            // verbatim. No middleman, no translation.
+            let data = tool_data.as_deref().unwrap_or("{}");
+            let conn: serde_json::Value = serde_json::from_str(data)
+                .map_err(|e| format!("Invalid agent-attach data: {}", e))?;
+
+            let runtime = conn["runtime"].as_str().unwrap_or("podman");
+            let container_id = conn["containerId"].as_str().unwrap_or("");
+            let cli = conn["cli"].as_str().unwrap_or("sh");
+
+            if container_id.is_empty() {
+                return Err("agent-attach: missing containerId".to_string());
+            }
+
+            (
+                runtime.to_string(),
+                vec![
+                    "exec".to_string(),
+                    "-it".to_string(),
+                    container_id.to_string(),
+                    cli.to_string(),
+                ],
+            )
+        },
+
         _ => if cfg!(target_os = "windows") {
             ("powershell.exe".to_string(), vec!["-NoExit".to_string()])
         } else {

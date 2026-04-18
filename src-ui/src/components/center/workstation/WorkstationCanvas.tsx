@@ -23,6 +23,7 @@ import { AgentNode } from './AgentNode';
 import type { AgentFlowNode } from './AgentNode';
 import { ActivateDialog } from './ActivateDialog';
 import { isTauri, commands } from '../../../tauri';
+import { useAppState } from '../../../store/app-state';
 import type {
   TeamState,
   CliAvailability,
@@ -48,7 +49,11 @@ function CanvasInner({
   onTeamChange: _onTeamChange,
   onToast,
 }: Props) {
+  const { dispatch } = useAppState();
   const [activatingNodeId, setActivatingNodeId] = useState<string | null>(null);
+  // Map of agent node id → container id returned by launch_agent. Kept in
+  // a ref so the attach handler can read it without re-rendering nodes.
+  const containerIds = useMemo(() => new Map<string, string>(), [team.id]);
 
   const initialNodes: AgentFlowNode[] = useMemo(
     () => team.nodes.map(n => ({
@@ -90,8 +95,44 @@ function CanvasInner({
   }, []);
 
   const handleAttach = useCallback((id: string) => {
-    onToast(`即将 attach 到卡片 ${id} ...（Phase 4 实现）`);
-  }, [onToast]);
+    const node = nodes.find(n => n.id === id)?.data as AgentNodeData | undefined;
+    if (!node) return;
+    const containerId = containerIds.get(id);
+    const runtime = node.runtime;
+    const cli = node.cli;
+
+    if (!isTauri) {
+      onToast('dev preview 无法 attach — 请在 Tauri 环境运行');
+      return;
+    }
+    if (!containerId || !runtime || runtime === 'none' || !cli) {
+      onToast('分身暂不支持 attach（未隔离或信息缺失）');
+      return;
+    }
+
+    // Open a new Coffee CLI tab at the outer level, tooled as 'agent-attach'.
+    // Rust's tier_terminal_start parses toolData and spawns
+    // `<runtime> exec -it <containerId> <cli>` under portable-pty.
+    const sid = crypto.randomUUID();
+    const toolData = JSON.stringify({
+      runtime,
+      containerId,
+      cli,
+      avatar: node.avatar ?? '👤',
+      name: node.name,
+    });
+    dispatch({
+      type: 'ADD_TERMINAL',
+      session: {
+        id: sid,
+        tool: 'agent-attach',
+        toolData,
+        folderPath: null,
+        scanData: null,
+      },
+    });
+    dispatch({ type: 'SET_ACTIVE_TERMINAL', id: sid });
+  }, [nodes, containerIds, dispatch, onToast]);
 
   const handleConfirmActivate = useCallback(
     (config: AgentLaunchConfig) => {
@@ -134,6 +175,8 @@ function CanvasInner({
           heartbeat: config.heartbeat,
         })
         .then(containerId => {
+          // Remember the container id so handleAttach can exec into it.
+          containerIds.set(id, containerId);
           updateNode(id, { status: 'active' });
           onToast(`${config.name} 已上岗 · 容器 ${containerId.slice(0, 12)}`);
         })
