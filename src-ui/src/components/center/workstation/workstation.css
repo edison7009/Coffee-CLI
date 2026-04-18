@@ -58,6 +58,125 @@
     overflow: hidden;
 }
 
+/* ─── TeamBar (top strip: host info + team chips) ──────────── */
+
+.team-bar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    height: 40px;
+    padding: 0 14px;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    font-size: 11.5px;
+    color: var(--text-2);
+}
+
+.team-bar-host {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.team-bar-spec { opacity: 0.8; }
+.team-bar-divider { opacity: 0.4; }
+
+.team-bar-capacity {
+    font-weight: 500;
+    color: var(--text-1);
+}
+
+.team-bar-gauge {
+    width: 72px;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.team-bar-gauge-fill {
+    height: 100%;
+    background: var(--accent);
+    transition: width 0.35s ease, background 0.25s ease;
+}
+
+.team-bar-gauge--warn .team-bar-gauge-fill { background: #f59e0b; }
+.team-bar-gauge--full .team-bar-gauge-fill { background: #ef4444; }
+
+.team-bar-runtime-warn {
+    color: #ef4444;
+    opacity: 0.9;
+}
+
+.team-bar-teams {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+    flex-shrink: 1;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.team-bar-teams::-webkit-scrollbar { display: none; }
+
+.team-bar-teams-list {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.team-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 26px;
+    padding: 0 10px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    color: var(--text-2);
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.team-chip:hover {
+    color: var(--text-1);
+    border-color: var(--accent);
+}
+
+.team-chip.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+}
+
+.team-chip-icon {
+    font-size: 13px;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.team-chip-name {
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.team-chip--new {
+    border-style: dashed;
+}
+
+.team-chip--new:hover {
+    border-style: solid;
+}
+
 /* ─── Template Library ─────────────────────────────────────── */
 
 .template-library {

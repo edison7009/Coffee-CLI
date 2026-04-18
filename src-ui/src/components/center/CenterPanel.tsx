@@ -3,7 +3,7 @@ import { focusTerminal } from '../../lib/focus-registry';
 import { TierTerminal } from './TierTerminal';
 import { DosPlayer } from './DosPlayer';
 import { ChatReader } from './ChatReader';
-import { WorkstationPanel } from './WorkstationPanel';
+import { WorkstationPanel, type WorkstationActiveTeamInfo } from './WorkstationPanel';
 import { ErrorBoundary } from '../common/ErrorBoundary';
 import { useAppState, type ToolType } from '../../store/app-state';
 
@@ -103,6 +103,7 @@ export function CenterPanel() {
   const [toolsInstalled, setToolsInstalled] = useState<Record<string, boolean>>({});
   const [showArcadeGames, setShowArcadeGames] = useState(false);
   const [showWorkstation, setShowWorkstation] = useState(false);
+  const [workstationActiveTeam, setWorkstationActiveTeam] = useState<WorkstationActiveTeamInfo | null>(null);
   const [arcadeGames, setArcadeGames] = useState<{name:string;path:string;size:number;icon?:string;title?:string}[]>([]);
   const [gameCatalog, setGameCatalog] = useState<RemoteGameEntry[]>([]);
   const [disableDrawer, setDisableDrawer] = useState(false);
@@ -356,6 +357,35 @@ export function CenterPanel() {
   const renderTabContent = (session: typeof terminals[0], isActive: boolean) => {
     const cwd = cwdBasename(session.folderPath);
     const pathTip = session.folderPath ?? undefined;
+
+    // Mode overrides: when the active tab is showing Workstation or Arcade
+    // mode (both triggered on tabs with tool=null via the bottom mode dock),
+    // surface a mode-appropriate title so the outer tab reads as "选择团队"
+    // or follows the active team/game — not the generic "Select Tool".
+    if (isActive && session.tool === null) {
+      if (showWorkstation) {
+        if (workstationActiveTeam) {
+          return {
+            icon: <span style={{ fontSize: '1em', lineHeight: 1 }}>{workstationActiveTeam.icon}</span>,
+            title: workstationActiveTeam.name,
+            tooltip: undefined,
+          };
+        }
+        return {
+          icon: <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>,
+          title: state.currentLang.startsWith('zh') ? '\u9009\u62e9\u56e2\u961f' : 'Select Team',
+          tooltip: undefined,
+        };
+      }
+      if (showArcadeGames) {
+        return {
+          icon: <span style={{ fontSize: '1em', lineHeight: 1 }}>🎮</span>,
+          title: state.currentLang.startsWith('zh') ? '\u9009\u62e9\u6e38\u620f' : 'Select Game',
+          tooltip: undefined,
+        };
+      }
+    }
+
     switch (session.tool) {
       case 'claude': return { icon: <SvgClaude />, title: cwd ?? 'Claude Code', tooltip: pathTip };
       case 'qwen': return { icon: <SvgQwen />, title: cwd ?? 'Qwen Code', tooltip: pathTip };
@@ -519,7 +549,10 @@ export function CenterPanel() {
             )}
             {/* Close button removed: handles via Tab bar */}
             {showWorkstation && (
-              <WorkstationPanel onExit={() => setShowWorkstation(false)} />
+              <WorkstationPanel
+                onExit={() => setShowWorkstation(false)}
+                onActiveTeamChange={setWorkstationActiveTeam}
+              />
             )}
             <div className="launchpad-slider-viewport" style={{ display: showWorkstation ? 'none' : undefined }}>
               <div className={`launchpad-slider-track ${showArcadeGames ? 'slide-to-games' : ''}`}>
