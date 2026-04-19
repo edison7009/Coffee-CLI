@@ -655,6 +655,7 @@
 .mode-dock-side {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   height: 28px;
   max-width: 0;
@@ -672,9 +673,13 @@
   transition: max-width 0.2s ease, opacity 0.2s ease, padding 0.2s ease, margin 0.2s ease;
 }
 
-/* Delayed expand on sustained hover — matches original mode-switch feel */
+/* Delayed expand on sustained hover — matches original mode-switch feel.
+   min-width keeps both sides near-equal across languages so the label
+   actually has room to center inside its drawer (e.g. English "Arcade"
+   vs "Workstation" would otherwise produce wildly asymmetric widths). */
 .mode-dock:hover .mode-dock-side {
   max-width: 140px;
+  min-width: 110px;
   opacity: 1;
   padding: 0 10px;
   transition: max-width 0.35s cubic-bezier(0.4, 0, 0.2, 1) 0.3s,
