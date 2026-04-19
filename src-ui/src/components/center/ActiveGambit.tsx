@@ -14,8 +14,10 @@
 // - Hands a stable set of props to the memoized Gambit component so parent
 //   re-renders don't ripple into the draggable element.
 //
-// Per-tab semantics are preserved: each tab owns its own gambitOpen and
-// gambitDraft; switching tabs switches which state Gambit reflects.
+// Visibility is global (state.gambitOpen) so the panel doesn't flicker
+// in/out when the user switches tabs. Draft content remains per-tab —
+// switching tabs swaps what's shown inside the (still-open) panel so
+// text can't be misdirected to the wrong terminal.
 
 import { useCallback, useMemo } from 'react';
 import { useAppState } from '../../store/app-state';
@@ -32,7 +34,7 @@ export function ActiveGambit() {
     ? state.terminals.find(t => t.id === activeId)
     : undefined;
 
-  const gambitOpen = activeSession?.gambitOpen ?? false;
+  const gambitOpen = state.gambitOpen;
   const gambitDraft = activeSession?.gambitDraft ?? '';
 
   // Anchored to primitives only — a new `activeSession` object reference on
@@ -54,9 +56,8 @@ export function ActiveGambit() {
   }, [dispatch, activeId]);
 
   const handleClose = useCallback(() => {
-    if (!activeId) return;
-    dispatch({ type: 'TOGGLE_GAMBIT', id: activeId });
-  }, [dispatch, activeId]);
+    dispatch({ type: 'TOGGLE_GAMBIT' });
+  }, [dispatch]);
 
   const handleSend = useCallback((text: string) => {
     if (!activeId) return;

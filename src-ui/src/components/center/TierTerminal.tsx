@@ -282,10 +282,17 @@ function TierTerminalImpl({
       const xtermRows = termRef.current.querySelector('.xterm-rows') as HTMLElement | null;
       if (xtermRows) xtermRows.style.fontVariantLigatures = 'none';
 
-    // GPU-accelerated rendering: enable WebGL only when a dedicated GPU is detected.
-    // On Windows/Mac integrated GPUs, WebGL can cause heat/throttling.
-    // On Linux, DOM renderer is used by default (fixes font spacing issues from forced WebGL).
-    // Linux users with dedicated GPUs can manually enable WebGL if needed.
+    // GPU-accelerated rendering: WebGL is required for customGlyphs +
+    // rescaleOverlappingGlyphs (correct ASCII art / Claude mascot / box
+    // border alignment). DOM renderer silently drops those options.
+    //
+    // The trap: on headless or VM Linux the WebGL context falls back to
+    // a software rasterizer (llvmpipe, swrast, SwiftShader) that burns
+    // CPU. Detect software renderers explicitly and force DOM there —
+    // misaligned mascot is a lesser evil than a hot fan.
+    //
+    // Win/Mac keep the dedicated-GPU gate for compatibility with prior
+    // heat/throttling reports on integrated GPUs on those platforms.
     let useWebgl = false;
     try {
       const testCanvas = document.createElement('canvas');
@@ -294,11 +301,12 @@ function TierTerminalImpl({
         const debugExt = (gl as WebGLRenderingContext).getExtension('WEBGL_debug_renderer_info');
         if (debugExt) {
           const renderer = (gl as WebGLRenderingContext).getParameter(debugExt.UNMASKED_RENDERER_WEBGL) as string;
-          // Dedicated GPU keywords: NVIDIA, AMD, Radeon, GeForce, Arc, Intel (some), etc.
-          useWebgl = /nvidia|geforce|radeon|amd|rx\s?\d|arc\s?a/i.test(renderer);
-          console.log(`[TierTerminal] GPU: ${renderer} → ${useWebgl ? 'WebGL' : 'DOM (integrated/no GPU)'}`);
+          const isSoftware = /llvmpipe|softpipe|swrast|swiftshader|software|microsoft basic render|mesa offscreen/i.test(renderer);
+          const isDedicated = /nvidia|geforce|radeon|amd|rx\s?\d|arc\s?a/i.test(renderer);
+          useWebgl = !isSoftware && (isLinux || isDedicated);
+          console.log(`[TierTerminal] GPU: ${renderer} → ${useWebgl ? 'WebGL' : 'DOM'} (software=${isSoftware}, dedicated=${isDedicated})`);
         } else {
-          console.log('[TierTerminal] GPU info unavailable → DOM renderer (no dedicated GPU or privacy block)');
+          console.log('[TierTerminal] GPU info unavailable → DOM renderer (cannot verify hardware acceleration)');
         }
       } else {
         console.log('[TierTerminal] WebGL unavailable → DOM renderer');
