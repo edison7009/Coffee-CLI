@@ -408,7 +408,6 @@ function ThemeMenu({ anchorRef, currentTheme, currentShape, currentIconTheme, ha
         <button
           className={`theme-bg-btn ${hasBg ? 'has-bg' : ''}`}
           onClick={hasBg ? onClearBg : onPickBg}
-          title={hasBg ? 'Clear wallpaper' : 'Pick wallpaper'}
         >
           {hasBg ? (
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
@@ -425,7 +424,6 @@ function ThemeMenu({ anchorRef, currentTheme, currentShape, currentIconTheme, ha
           onChange={(e) => onSetWallpaperDim(parseInt(e.target.value, 10))}
           className="theme-dim-slider"
           aria-label="Wallpaper dim"
-          title={`Wallpaper dim: ${wallpaperDim}%`}
         />
         <span className="theme-dim-value">{wallpaperDim}%</span>
       </div>
