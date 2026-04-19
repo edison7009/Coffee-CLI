@@ -322,8 +322,8 @@ function GambitImpl({
           onClick={collapseAtDot}
           onMouseDown={(e) => e.stopPropagation() /* don't start drag when collapsing */}
         >
-          <svg width="14" height="14" viewBox="0 0 14 14">
-            <circle cx="7" cy="7" r="4.5" fill="currentColor" />
+          <svg width="20" height="20" viewBox="0 0 20 20">
+            <circle cx="10" cy="10" r="7" fill="currentColor" />
           </svg>
         </button>
       </div>

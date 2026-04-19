@@ -173,11 +173,13 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    /* Hug the inner SVG (14×14) so the visible dot's right gap matches the
-       symmetric header padding — a wider button would push the dot far from
-       the edge and break the visual balance the title enjoys on the left. */
-    width: 14px;
-    height: 14px;
+    /* Hug the inner SVG (20×20) so the visible dot's right gap matches the
+       symmetric header padding. Dot was previously 14×14 with a 9px-diameter
+       circle — too small to find and hit. Click hitbox is further enlarged
+       via ::before below. */
+    position: relative;
+    width: 20px;
+    height: 20px;
     padding: 0;
     background: transparent;
     border: none;
@@ -186,6 +188,16 @@
     /* Hover simply tints the dot to accent — no background pill, keeps the
        borderless paper aesthetic. */
     transition: color 0.12s;
+}
+
+/* Invisible hitbox expansion: 14×14 visual, ~30×30 clickable. The dot was
+   too small to reliably click at default window scale. Anchor math in
+   Gambit.tsx (DOT_CENTER_FROM_RIGHT / DOT_CENTER_FROM_TOP) measures the
+   visual center, so widening the hitbox doesn't shift the collapse anchor. */
+.gambit-collapse::before {
+    content: '';
+    position: absolute;
+    inset: -8px;
 }
 
 .gambit-collapse:hover {
