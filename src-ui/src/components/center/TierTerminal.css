@@ -280,6 +280,46 @@ html[lang^="zh"] .splash-label {
     background: rgba(255, 255, 255, 0.07);
 }
 
+/* ─── Mid-session Process Exit Banner ──────────────────────── */
+/* Shows when the child process dies AFTER the terminal had produced output.
+   Non-covering top bar so the user keeps visibility into the scrollback and
+   understands why the terminal stopped responding, instead of assuming the
+   whole app is frozen. */
+.tier-process-exited-banner {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 85;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: rgba(196, 93, 93, 0.15);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(196, 93, 93, 0.35);
+    color: rgba(228, 178, 178, 0.95);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    animation: procExitedFadeIn 0.3s ease;
+    pointer-events: none; /* lets user still click through to xterm */
+}
+
+[data-theme="light"] .tier-process-exited-banner {
+    background: rgba(196, 93, 93, 0.12);
+    border-color: rgba(196, 93, 93, 0.3);
+    color: rgb(146, 50, 50);
+}
+
+@keyframes procExitedFadeIn {
+    from { opacity: 0; transform: translate(-50%, -4px); }
+    to { opacity: 1; transform: translate(-50%, 0); }
+}
+
 /* ─── Launch Failure Fallback Overlay ──────────────────────── */
 .tier-launch-failed {
     position: absolute;

@@ -23,20 +23,28 @@ import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 interface OutputEventPayload { id: string; data: string; }
 interface StatusEventPayload { id: string; running: boolean; exit_code: number | null; }
 interface CwdEventPayload { id: string; cwd: string; }
+interface ExitEventPayload { id: string; exit_code: number; }
 
 export type OutputHandler = (data: string) => void;
 export type StatusHandler = (running: boolean, exitCode: number | null) => void;
 export type CwdHandler = (cwd: string) => void;
+export type ExitHandler = (exitCode: number) => void;
 
 export interface TerminalEventHandlers {
   onOutput?: OutputHandler;
   onStatus?: StatusHandler;
   onCwd?: CwdHandler;
+  /** Fires when the Rust child-watcher thread detects the spawned process has
+   *  actually died (via child.wait()). Distinct from onStatus which fires
+   *  after the reader thread sees EOF — onExit may arrive earlier, and with
+   *  the real exit code instead of the hardcoded 0 in the status event. */
+  onExit?: ExitHandler;
 }
 
 const outputHandlers = new Map<string, OutputHandler>();
 const statusHandlers = new Map<string, StatusHandler>();
 const cwdHandlers = new Map<string, CwdHandler>();
+const exitHandlers = new Map<string, ExitHandler>();
 
 let globalUnlisteners: UnlistenFn[] | null = null;
 let initPromise: Promise<void> | null = null;
@@ -58,7 +66,11 @@ async function ensureInit(): Promise<void> {
       const handler = cwdHandlers.get(event.payload.id);
       if (handler) handler(event.payload.cwd);
     });
-    globalUnlisteners = [unOutput, unStatus, unCwd];
+    const unExit = await listen<ExitEventPayload>('tier-terminal-exit', (event) => {
+      const handler = exitHandlers.get(event.payload.id);
+      if (handler) handler(event.payload.exit_code);
+    });
+    globalUnlisteners = [unOutput, unStatus, unCwd, unExit];
   })();
 
   return initPromise;
@@ -83,10 +95,12 @@ export async function subscribeTerminalEvents(
   const myOutput = handlers.onOutput;
   const myStatus = handlers.onStatus;
   const myCwd = handlers.onCwd;
+  const myExit = handlers.onExit;
 
   if (myOutput) outputHandlers.set(sessionId, myOutput);
   if (myStatus) statusHandlers.set(sessionId, myStatus);
   if (myCwd) cwdHandlers.set(sessionId, myCwd);
+  if (myExit) exitHandlers.set(sessionId, myExit);
 
   return () => {
     // Only delete if the registered handler is still ours.
@@ -96,5 +110,6 @@ export async function subscribeTerminalEvents(
     if (myOutput && outputHandlers.get(sessionId) === myOutput) outputHandlers.delete(sessionId);
     if (myStatus && statusHandlers.get(sessionId) === myStatus) statusHandlers.delete(sessionId);
     if (myCwd && cwdHandlers.get(sessionId) === myCwd) cwdHandlers.delete(sessionId);
+    if (myExit && exitHandlers.get(sessionId) === myExit) exitHandlers.delete(sessionId);
   };
 }

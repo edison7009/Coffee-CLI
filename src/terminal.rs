@@ -57,6 +57,18 @@ pub struct TerminalStatus {
     pub exit_code: Option<i32>,
 }
 
+/// Fired when the spawned child process terminates (detected via child.wait()
+/// in a dedicated watcher thread). This is the explicit "process is dead"
+/// signal the frontend needs to render a recovery overlay, instead of the
+/// terminal looking frozen because the reader is still blocked waiting for
+/// bytes that will never come (Windows ConPTY / intermediate cmd.exe keeps
+/// the PTY slave open past the child's actual death).
+#[derive(Serialize, Clone)]
+pub struct TerminalExitEvent {
+    pub id: String,
+    pub exit_code: i32,
+}
+
 /// Agent working status emitted to the frontend every second
 #[derive(Serialize, Clone, Debug, PartialEq)]
 pub struct AgentStatusEvent {
@@ -392,8 +404,14 @@ pub fn spawn(
         pixel_height: 0,
     })?;
 
-    // Spawn command into the PTY slave
-    let _child = pair.slave.spawn_command(cmd)?;
+    // Spawn command into the PTY slave.
+    // `child` is owned by a dedicated watcher thread (see below) which blocks
+    // on child.wait() to detect process death — Coffee CLI's long-standing
+    // "terminal looks frozen after a while" bug was caused by not monitoring
+    // the child at all; if the child crashed but the PTY slave stayed open
+    // (via an intermediate cmd.exe on Windows, or grandchild process on any
+    // OS), reader.read() would block forever and the UI had no way to know.
+    let child = pair.slave.spawn_command(cmd)?;
     eprintln!("[Tier Terminal] PTY process spawned OK (portable-pty)");
 
     // Get reader/writer from the PTY master
@@ -420,6 +438,56 @@ pub fn spawn(
         let _ = kill_rx.recv(); // block until kill_tx.send(()) or sender dropped
         if let Ok(mut guard) = master_for_kill.lock() {
             *guard = None; // drop PTY master → pipe closes
+        }
+    });
+
+    // ── Child exit watcher ─────────────────────────────────────────────────
+    // Coffee CLI's primary "terminal locks up after a while" failure mode:
+    // the child process (claude / node.js / etc.) dies, but an intermediate
+    // cmd.exe parent or grandchild process keeps the PTY slave open, so the
+    // reader thread never sees EOF — it blocks on read() forever and the
+    // frontend sees a frozen terminal with no explanation.
+    //
+    // Fix: own the Child handle in a dedicated thread that blocks on
+    // child.wait(). When wait() returns, we KNOW the process is dead.
+    // Actions on exit:
+    //   1. Emit "tier-terminal-exit" with the real exit code — the frontend
+    //      shows a "process exited — click to restart" overlay instead of a
+    //      frozen-looking terminal.
+    //   2. Force-drop the PTY master → reader thread gets EOF → normal
+    //      cleanup path runs (ticker stops, session removed from map,
+    //      tier-terminal-status fires).
+    //
+    // This is the SOLE new lifecycle signal; the existing reader-EOF cleanup
+    // path remains the one place that removes the session from the map.
+    let master_for_watcher = master_arc.clone();
+    let app_for_watcher = app.clone();
+    let sid_for_watcher = session_id.clone();
+    std::thread::spawn(move || {
+        let mut child = child;
+        let exit_code = match child.wait() {
+            Ok(status) => {
+                let code = status.exit_code() as i32;
+                eprintln!("[Tier Terminal] Child exited with code {}", code);
+                code
+            }
+            Err(e) => {
+                eprintln!("[Tier Terminal] child.wait() failed: {}", e);
+                -1
+            }
+        };
+        let _ = app_for_watcher.emit(
+            "tier-terminal-exit",
+            TerminalExitEvent {
+                id: sid_for_watcher.clone(),
+                exit_code,
+            },
+        );
+        // Force PTY master drop → reader thread gets EOF → cleanup path runs.
+        // Safe even if already dropped by the kill thread (guard just goes
+        // from None to None).
+        if let Ok(mut guard) = master_for_watcher.lock() {
+            *guard = None;
         }
     });
 
