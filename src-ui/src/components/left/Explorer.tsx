@@ -6,6 +6,7 @@ import { useAppState } from '../../store/app-state';
 import type { ThemeColor, ThemeShape, IconTheme } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
 import { ScrollPanel } from '../common/ScrollPanel';
+import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 import { commands } from '../../tauri';
 import type { FileEntry, DriveInfo, DirEntryInfo } from '../../tauri';
 import './Explorer.css';
@@ -47,7 +48,9 @@ function ContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: () => voi
   }, [onClose]);
 
   const copyPath = (text: string) => {
-    navigator.clipboard.writeText(text).catch(() => {});
+    // Uses Tauri clipboard-manager plugin to avoid WebView2's native
+    // permission prompt that appears on every navigator.clipboard call.
+    writeText(text).catch(() => {});
     onClose();
   };
 
@@ -587,7 +590,9 @@ function DirNode({ name, node, folderPath, onCtxMenu }: {
         onClick={() => !renaming && setOpen(!open)}
         onContextMenu={handleCtxMenu}
       >
-        <span className={`tree-arrow ${open ? '' : 'closed'}`}>▾</span>
+        <span className={`tree-arrow ${open ? '' : 'closed'}`}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+        </span>
         <span className="tree-icon">
           <img src={getIconPath(iconTheme, open ? 'folder-open.svg' : 'folder-closed.svg')} alt="dir" className="icon-svg" />
         </span>
@@ -763,7 +768,9 @@ function BrowserDirNode({ name, dirPath, icon, onCtxMenu }: { name: string; dirP
   return (
     <div className="tree-dir">
       <div className={`tree-dir-header ${renaming ? 'renaming' : ''}`} onClick={() => !renaming && toggle()} onContextMenu={handleDirCtxMenu}>
-        <span className={`tree-arrow ${open ? '' : 'closed'}`}>▾</span>
+        <span className={`tree-arrow ${open ? '' : 'closed'}`}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+        </span>
         <span className="tree-icon">
           <img src={icon || getIconPath(iconTheme, open ? 'folder-open.svg' : 'folder-closed.svg')} alt="dir" className="icon-svg" />
         </span>

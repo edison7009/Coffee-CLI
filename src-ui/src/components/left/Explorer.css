@@ -133,12 +133,14 @@
 }
 
 .tree-arrow {
-    display: inline-block;
-    transition: transform 0.2s ease;
-    font-size: 12px;
-    width: 12px;
-    text-align: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.15s ease;
+    width: 16px;
+    height: 16px;
     color: var(--text-3);
+    flex-shrink: 0;
 }
 
 .tree-arrow.closed {

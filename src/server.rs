@@ -1652,6 +1652,7 @@ pub fn start_ui(project_dir: PathBuf) -> anyhow::Result<()> {
     tauri::Builder::default()
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_clipboard_manager::init())
         .manage(AppState {
             project_dir: Mutex::new(project_dir),
             terminal_session,

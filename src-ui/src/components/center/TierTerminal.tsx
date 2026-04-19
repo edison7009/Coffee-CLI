@@ -13,6 +13,7 @@ import { createPortal } from 'react-dom';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebglAddon } from '@xterm/addon-webgl';
+import { readText, writeText } from '@tauri-apps/plugin-clipboard-manager';
 import { subscribeTerminalEvents } from '../../lib/pty-event-bus';
 import { registerTerminalFocus } from '../../lib/focus-registry';
 import { registerTabActions } from '../../lib/tab-actions';
@@ -356,17 +357,20 @@ function TierTerminalImpl({
         const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
         const cmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
 
-        // Copy: Ctrl+C / Cmd+C — only when text is selected (otherwise send SIGINT)
+        // Copy: Ctrl+C / Cmd+C — only when text is selected (otherwise send SIGINT).
+        // Clipboard goes through Tauri's clipboard-manager plugin (not
+        // navigator.clipboard) to bypass WebView2's native permission prompt
+        // that otherwise popped up on every right-click paste on Windows.
         if (cmdOrCtrl && e.code === 'KeyC') {
           if (term.hasSelection()) {
-            navigator.clipboard.writeText(term.getSelection());
+            writeText(term.getSelection()).catch(() => {});
             return false;
           }
         }
 
         // Paste: Ctrl+V / Cmd+V
         if (cmdOrCtrl && e.code === 'KeyV') {
-          navigator.clipboard.readText().then(text => {
+          readText().then(text => {
             if (text) term.paste(text);
           }).catch(() => {});
           return false;
@@ -374,11 +378,11 @@ function TierTerminalImpl({
 
         // Linux convention: Ctrl+Shift+C always copies, Ctrl+Shift+V always pastes
         if (e.ctrlKey && e.shiftKey && e.code === 'KeyC') {
-          if (term.hasSelection()) navigator.clipboard.writeText(term.getSelection());
+          if (term.hasSelection()) writeText(term.getSelection()).catch(() => {});
           return false;
         }
         if (e.ctrlKey && e.shiftKey && e.code === 'KeyV') {
-          navigator.clipboard.readText().then(text => {
+          readText().then(text => {
             if (text) term.paste(text);
           }).catch(() => {});
           return false;
@@ -763,11 +767,11 @@ function TierTerminalImpl({
           onClose={closeCtxMenu}
           onCopy={() => {
             const text = xtermRef.current?.getSelection();
-            if (text) navigator.clipboard.writeText(text).catch(() => {});
+            if (text) writeText(text).catch(() => {});
             closeCtxMenu();
           }}
           onPaste={() => {
-            navigator.clipboard.readText().then(text => {
+            readText().then(text => {
               if (text && xtermRef.current) xtermRef.current.paste(text);
             }).catch(() => {});
             closeCtxMenu();

@@ -31,6 +31,7 @@ clap = { version = "4", features = ["derive"] }
 tauri = { version = "2", features = ["devtools", "protocol-asset"] }
 tauri-plugin-log = "2"
 tauri-plugin-dialog = "2"
+tauri-plugin-clipboard-manager = "2"
 
 # Directory scanning (.gitignore aware, same engine as ripgrep)
 ignore = "0.4"
