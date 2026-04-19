@@ -93,4 +93,7 @@ export const fr = {
   'theme.preset.lavender_panel': 'Lavande · Panel',
   'theme.preset.light_soft': 'Clair · Soft',
 
+  'mode.take_a_break': 'Faire une pause',
+  'mode.back_to_work': 'Retour au travail',
+
 } as const;

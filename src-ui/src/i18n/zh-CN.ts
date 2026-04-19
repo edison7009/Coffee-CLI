@@ -97,4 +97,7 @@ export const zhCN = {
   'gambit.title': '妙手',
   'gambit.placeholder': '静心琢磨，再落子... (Ctrl+Enter 发送, Enter 换行, 可粘贴图片)',
 
+  'mode.take_a_break': '放松一下',
+  'mode.back_to_work': '回到工作',
+
 } as const;

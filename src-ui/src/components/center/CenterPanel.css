@@ -174,8 +174,8 @@
 .status-idle .tab-status-dot:nth-child(8) { animation-delay: 0.15s; }
 .status-idle .tab-status-dot:nth-child(9) { animation-delay: 0.3s; }
 
-/* executing — Snake-CCW — green */
-.status-executing .tab-status-dot { background-color: #34d399; box-shadow: 0 0 3px #34d39988; }
+/* executing — Snake-CCW — Claude orange (matches the "Thinking..." color in Claude Code CLI output) */
+.status-executing .tab-status-dot { background-color: #D97757; box-shadow: 0 0 3px #D9775788; }
 .status-executing .tab-status-dot:nth-child(1) { animation-delay: 0s; }
 .status-executing .tab-status-dot:nth-child(2) { animation-delay: 1.05s; }
 .status-executing .tab-status-dot:nth-child(3) { animation-delay: 0.9s; }
@@ -197,6 +197,53 @@
 .status-waiting .tab-status-dot:nth-child(7) { animation-delay: 0.3s; }
 .status-waiting .tab-status-dot:nth-child(8) { animation-delay: 0.15s; }
 .status-waiting .tab-status-dot:nth-child(9) { animation-delay: 0.3s; }
+
+/* thinking — Wave-Pulse — Claude orange. All dots breathe in sync: LLM
+   is generating text, no tool side-effect yet. Distinct from executing
+   via rhythm (Snake-CCW has direction; Pulse doesn't). */
+.status-thinking .tab-status-dot { background-color: #D97757; box-shadow: 0 0 3px #D9775788; }
+.status-thinking .tab-status-dot:nth-child(1) { animation-delay: 0s; }
+.status-thinking .tab-status-dot:nth-child(2) { animation-delay: 0s; }
+.status-thinking .tab-status-dot:nth-child(3) { animation-delay: 0s; }
+.status-thinking .tab-status-dot:nth-child(4) { animation-delay: 0s; }
+.status-thinking .tab-status-dot:nth-child(5) { animation-delay: 0s; }
+.status-thinking .tab-status-dot:nth-child(6) { animation-delay: 0s; }
+.status-thinking .tab-status-dot:nth-child(7) { animation-delay: 0s; }
+.status-thinking .tab-status-dot:nth-child(8) { animation-delay: 0s; }
+.status-thinking .tab-status-dot:nth-child(9) { animation-delay: 0s; }
+
+/* compacting — Wave-Spiral — purple. Delays spiral outward so the glyph
+   looks like it's "rolling up" the context. PreCompact can take 5-15 s;
+   the spiral gives the user a clear sign that something unusual (but
+   healthy) is happening. */
+.status-compacting .tab-status-dot { background-color: #a78bfa; box-shadow: 0 0 3px #a78bfa88; }
+.status-compacting .tab-status-dot:nth-child(1) { animation-delay: 0s; }
+.status-compacting .tab-status-dot:nth-child(2) { animation-delay: 0.08s; }
+.status-compacting .tab-status-dot:nth-child(3) { animation-delay: 0.16s; }
+.status-compacting .tab-status-dot:nth-child(4) { animation-delay: 0.24s; }
+.status-compacting .tab-status-dot:nth-child(5) { animation-delay: 0.32s; }
+.status-compacting .tab-status-dot:nth-child(6) { animation-delay: 0.4s; }
+.status-compacting .tab-status-dot:nth-child(7) { animation-delay: 0.48s; }
+.status-compacting .tab-status-dot:nth-child(8) { animation-delay: 0.56s; }
+.status-compacting .tab-status-dot:nth-child(9) { animation-delay: 0.64s; }
+
+/* error — Wave-Pulse — red, fast (0.5 s period). Same sync-pulse shape
+   as thinking but twice as fast and red — reads as "warning blink"
+   without adding a new animation keyframe. */
+.status-error .tab-status-dot {
+    background-color: #ef4444;
+    box-shadow: 0 0 3px #ef444488;
+    animation-duration: 0.5s;
+}
+.status-error .tab-status-dot:nth-child(1) { animation-delay: 0s; }
+.status-error .tab-status-dot:nth-child(2) { animation-delay: 0s; }
+.status-error .tab-status-dot:nth-child(3) { animation-delay: 0s; }
+.status-error .tab-status-dot:nth-child(4) { animation-delay: 0s; }
+.status-error .tab-status-dot:nth-child(5) { animation-delay: 0s; }
+.status-error .tab-status-dot:nth-child(6) { animation-delay: 0s; }
+.status-error .tab-status-dot:nth-child(7) { animation-delay: 0s; }
+.status-error .tab-status-dot:nth-child(8) { animation-delay: 0s; }
+.status-error .tab-status-dot:nth-child(9) { animation-delay: 0s; }
 
 /* ─── Terminal Wrapper ─── */
 

@@ -16,6 +16,7 @@ import { WebglAddon } from '@xterm/addon-webgl';
 import { subscribeTerminalEvents } from '../../lib/pty-event-bus';
 import { registerTerminalFocus } from '../../lib/focus-registry';
 import { registerTabActions } from '../../lib/tab-actions';
+import { notifyUserInputSubmitted } from '../../lib/agent-status-bus';
 import { commands } from '../../tauri';
 import { useAppDispatch, type ToolType, type ThemeColor } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
@@ -333,6 +334,14 @@ function TierTerminalImpl({
     // Forward keyboard input to Rust PTY backend
     term.onData((data) => {
       commands.tierTerminalInput(sessionId, data).catch(() => {});
+      // Optimistic status update — Dynamic Island style. A newline means
+      // the user just submitted; turn the dot to "executing" immediately
+      // so the UI reacts before any hook event arrives. Scoped to Claude
+      // only — the other CLIs have a steady "executing" pulse and don't
+      // consume agentStatus, so emitting for them is wasted dispatch.
+      if ((data.includes('\r') || data.includes('\n')) && tool === 'claude') {
+        notifyUserInputSubmitted(sessionId, tool);
+      }
     });
 
     // Handle native Copy/Paste shortcuts

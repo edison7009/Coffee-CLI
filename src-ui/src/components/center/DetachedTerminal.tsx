@@ -8,6 +8,7 @@ import { FitAddon } from '@xterm/addon-fit';
 import { WebglAddon } from '@xterm/addon-webgl';
 import { listen } from '@tauri-apps/api/event';
 import { commands } from '../../tauri';
+import { notifyUserInputSubmitted } from '../../lib/agent-status-bus';
 import { useAppState, type ToolType } from '../../store/app-state';
 import '@xterm/xterm/css/xterm.css';
 import './TierTerminal.css';
@@ -86,6 +87,12 @@ export function DetachedTerminal({ sessionId, tool }: { sessionId: string; tool:
     // Keyboard input → PTY
     term.onData((data) => {
       commands.tierTerminalInput(sessionId, data).catch(() => {});
+      // Optimistic status update — mirrors TierTerminal. Scoped to Claude:
+      // only Claude has a hook-driven agentStatus that this can usefully
+      // nudge; the other tools render a steady pulse regardless.
+      if ((data.includes('\r') || data.includes('\n')) && tool === 'claude') {
+        notifyUserInputSubmitted(sessionId, tool);
+      }
     });
 
     const doFit = () => {

@@ -8,7 +8,25 @@ import type { ScanResult } from '../tauri';
 
 export type ToolType = 'claude' | 'qwen' | 'installer' | 'hermes' | 'opencode' | 'arcade' | 'terminal' | 'remote' | 'history' | null;
 
-export type AgentStatus = 'idle' | 'executing' | 'wait_input';
+/**
+ * Tab status shown as an animated 9-dot glyph. Maps to CSS classes
+ * `status-idle / -thinking / -executing / -waiting / -compacting / -error`
+ * (note the CSS class name for `wait_input` is `waiting` — translated at render).
+ *
+ *   idle        — ready for input (green Wave-Double)
+ *   thinking    — LLM generating text, no tool call yet (orange Wave-Pulse)
+ *   executing   — tool call in flight (orange Snake-CCW)
+ *   wait_input  — permission prompt or ask-tool blocking (blue Ripple)
+ *   compacting  — PreCompact hook, context being summarized (purple Wave-Spiral)
+ *   error       — PostToolUse error / session error (red fast Wave-Pulse)
+ */
+export type AgentStatus =
+  | 'idle'
+  | 'thinking'
+  | 'executing'
+  | 'wait_input'
+  | 'compacting'
+  | 'error';
 
 // Theme: color palette (orthogonal to shape)
 export type ThemeColor = 'dark' | 'light' | 'cappuccino' | 'sakura' | 'lavender' | 'mint';

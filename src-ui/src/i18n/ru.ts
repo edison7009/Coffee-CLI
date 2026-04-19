@@ -94,4 +94,7 @@ export const ru = {
   'theme.preset.lavender_panel': 'Лаванда · Panel',
   'theme.preset.light_soft': 'Светлая · Soft',
 
+  'mode.take_a_break': 'Сделать перерыв',
+  'mode.back_to_work': 'Вернуться к работе',
+
 } as const;

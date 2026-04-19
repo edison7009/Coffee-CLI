@@ -426,7 +426,7 @@ export function CenterPanel() {
           if (session.isHidden && session.id !== activeTerminalId) return null;
 
           const isActive = session.id === activeTerminalId;
-          const { icon, title, tooltip } = renderTabContent(session, isActive);
+          const { icon, title } = renderTabContent(session, isActive);
 
           return (
             <div
@@ -435,10 +435,20 @@ export function CenterPanel() {
               onClick={() => dispatch({ type: 'SET_ACTIVE_TERMINAL', id: session.id })}
             >
               {icon}
-              <span className="tab-title" title={tooltip} style={{ flex: '0 1 auto', minWidth: 0, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{title}</span>
+              <span className="tab-title" style={{ flex: '0 1 auto', minWidth: 0, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{title}</span>
               <div className="tab-actions">
                 {(['claude', 'qwen', 'hermes', 'opencode'] as const).includes(session.tool as 'claude' | 'qwen' | 'hermes' | 'opencode') && (
-                  <div className={`tab-status-grid status-${session.agentStatus === 'wait_input' ? 'waiting' : session.agentStatus ?? 'idle'}`}>
+                  // Only Claude Code has a real hook-driven status machine.
+                  // The other tools render the steady-green idle pulse —
+                  // we explicitly chose not to guess their state from PTY
+                  // output, which tends to produce misleading flicker.
+                  // Claude's executing state uses the Claude-brand orange
+                  // (#D97757) to match the "Thinking..." color in the CLI.
+                  <div className={`tab-status-grid status-${
+                    session.tool === 'claude'
+                      ? (session.agentStatus === 'wait_input' ? 'waiting' : session.agentStatus ?? 'idle')
+                      : 'idle'
+                  }`}>
                     {Array.from({ length: 9 }, (_, i) => <div key={i} className="tab-status-dot" />)}
                   </div>
                 )}
@@ -811,9 +821,7 @@ export function CenterPanel() {
                 }}
               >
                 <div className="mode-switch-drawer">
-                  {!showArcadeGames 
-                    ? (state.currentLang.startsWith('zh') ? '\u653e\u677e\u4e00\u4e0b' : 'Take a break')
-                    : (state.currentLang.startsWith('zh') ? '\u56de\u5230\u5de5\u4f5c' : 'Back to work')}
+                  {!showArcadeGames ? t('mode.take_a_break') : t('mode.back_to_work')}
                 </div>
                 <div className="mode-switch-icon">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

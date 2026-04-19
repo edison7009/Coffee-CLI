@@ -99,6 +99,10 @@ export const en = {
   'gambit.title': 'GAMBIT',
   'gambit.placeholder': 'Compose your move... (Ctrl+Enter to send, Enter for newline, paste images)',
 
+  // Mode switch button (bottom-right): enter Arcade games / return to tools.
+  'mode.take_a_break': 'Take a break',
+  'mode.back_to_work': 'Back to work',
+
 } as const;
 
 export type I18nKey = keyof typeof en;

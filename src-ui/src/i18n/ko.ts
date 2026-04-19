@@ -97,4 +97,7 @@ export const ko = {
   'gambit.title': '한 수',
   'gambit.placeholder': '한 수를 고르는 중... (Ctrl+Enter 전송, Enter 줄바꿈, 이미지 붙여넣기)',
 
+  'mode.take_a_break': '잠깐 쉬기',
+  'mode.back_to_work': '업무로 복귀',
+
 } as const;
