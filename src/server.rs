@@ -14,6 +14,10 @@ pub struct AppState {
     /// Loopback port of the hook TCP server (set once during setup).
     /// 0 means the hook server failed to start; env var injection is skipped in that case.
     pub hook_port: std::sync::atomic::AtomicU16,
+    /// Active OS fs watcher (one per app instance). Some(...) while a
+    /// workspace folder is open; None otherwise. Swapping this Mutex'd
+    /// Option replaces the watcher atomically on folder switch.
+    pub fs_watcher: Mutex<Option<crate::fs_watcher::FsWatcher>>,
 }
 
 #[derive(Serialize)]
@@ -198,6 +202,34 @@ fn check_tools_installed() -> std::collections::HashMap<String, bool> {
     // Terminal is always available — it's the system shell
     result.insert("terminal".to_string(), true);
     result
+}
+
+// ─── File System Live Watcher ────────────────────────────────────────────────
+//
+// Start/stop a recursive fs watcher on the workspace folder so changes
+// made by external tools (terminal CLIs, editors, git, etc.) propagate
+// into the Explorer tree immediately. See fs_watcher.rs for mechanics.
+
+#[tauri::command]
+fn start_fs_watcher(
+    path: String,
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    let root = PathBuf::from(&path);
+    let watcher = crate::fs_watcher::FsWatcher::start(app, root)?;
+    // Replace atomically; dropping the old FsWatcher stops its OS handle.
+    let mut guard = state.fs_watcher.lock().map_err(|e| format!("lock: {}", e))?;
+    *guard = Some(watcher);
+    Ok(())
+}
+
+#[tauri::command]
+fn stop_fs_watcher(state: State<'_, AppState>) -> Result<(), String> {
+    let mut guard = state.fs_watcher.lock().map_err(|e| format!("lock: {}", e))?;
+    // Drop releases the OS watcher handle.
+    *guard = None;
+    Ok(())
 }
 
 // ─── File System Browsing API ────────────────────────────────────────────────
@@ -872,6 +904,25 @@ fn sessions_file_path() -> PathBuf {
     dir.join("sessions.json")
 }
 
+/// XML-style tags Claude Code injects into the user message stream when
+/// integrated with an IDE or shell. These are not things the user typed —
+/// filtering them out of the history title extractor keeps the sidebar
+/// readable (no more "<ide_opened_file>The user opened the..." cards).
+const SYSTEM_INJECTION_TAGS: &[&str] = &[
+    "<environment_context>",
+    "<ide_opened_file>",
+    "<ide_closed_file>",
+    "<ide_selection>",
+    "<system-reminder>",
+    "<command-message>",
+    "<command-name>",
+];
+
+fn is_system_injected(text: &str) -> bool {
+    let t = text.trim();
+    SYSTEM_INJECTION_TAGS.iter().any(|tag| t.starts_with(tag))
+}
+
 fn parse_agent_jsonl(file_path: &std::path::Path, tool_name: &str) -> Option<SavedSession> {
     use std::io::BufRead;
     let file = std::fs::File::open(file_path).ok()?;
@@ -909,18 +960,22 @@ fn parse_agent_jsonl(file_path: &std::path::Path, tool_name: &str) -> Option<Sav
                     }
                     if role == "user" && title.is_empty() {
                         if let Some(content_str) = msg_obj.get("content").and_then(|v| v.as_str()) {
-                            let content_safe = content_str.replace('\n', " ");
-                            let mut chars = content_safe.chars();
-                            let t: String = chars.by_ref().take(40).collect();
-                            title = if chars.next().is_some() { format!("{}...", t) } else { t };
+                            // Skip whole-message IDE/system injections so the
+                            // next real user line becomes the title.
+                            if !is_system_injected(content_str) {
+                                let content_safe = content_str.replace('\n', " ");
+                                let mut chars = content_safe.chars();
+                                let t: String = chars.by_ref().take(40).collect();
+                                title = if chars.next().is_some() { format!("{}...", t) } else { t };
+                            }
                         } else if let Some(content_arr) = msg_obj.get("content").and_then(|v| v.as_array()) {
                             // Extract text from object array
                             for block in content_arr {
                                 if let Some(t) = block.get("type").and_then(|v| v.as_str()) {
                                     if t == "text" || t == "input_text" {
                                         if let Some(text) = block.get("text").and_then(|v| v.as_str()) {
-                                            if text.trim().starts_with("<environment_context>") {
-                                                continue; // skip automated environment context prompts
+                                            if is_system_injected(text) {
+                                                continue; // skip IDE / system-injected prompts
                                             }
                                             let safe_text = text.replace('\n', " ");
                                             let mut chars = safe_text.chars();
@@ -1601,6 +1656,7 @@ pub fn start_ui(project_dir: PathBuf) -> anyhow::Result<()> {
             project_dir: Mutex::new(project_dir),
             terminal_session,
             hook_port: std::sync::atomic::AtomicU16::new(0),
+            fs_watcher: Mutex::new(None),
         })
         .invoke_handler(tauri::generate_handler![
             scan_project,
@@ -1621,6 +1677,8 @@ pub fn start_ui(project_dir: PathBuf) -> anyhow::Result<()> {
             check_network_port,
             write_temp_script,
             check_tools_installed,
+            start_fs_watcher,
+            stop_fs_watcher,
             save_clipboard_image,
             list_drives,
             list_directory,

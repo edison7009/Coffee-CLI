@@ -968,21 +968,73 @@ export function Explorer() {
 
   // When any fs operation touches a path inside the workspace folder, re-scan so the
   // Workspace tab tree stays in sync (BrowserDirNode handles the Computer tab itself).
+  //
+  // Trailing-edge debounce at 300 ms: bursty emitters (a CLI running
+  // `npm install`, `git checkout`, `opencode` self-update) can dispatch
+  // hundreds of fs-refresh events per second. Without debounce, each
+  // one would re-scan the entire workspace synchronously and freeze the
+  // UI thread. Rust-side notify already debounces at 200 ms; this is the
+  // second stage, collapsing distinct dirs into one scan.
+  const scanTimerRef = useRef<number | null>(null);
   useEffect(() => {
     if (!folderPath) return;
     const normFolder = folderPath.replace(/\\/g, '/').replace(/\/+$/, '');
     const handler = (e: Event) => {
       const ev = e as CustomEvent<{ dirPath: string }>;
       const normDir = ev.detail.dirPath.replace(/\\/g, '/').replace(/\/+$/, '');
-      if (normDir === normFolder || normDir.startsWith(normFolder + '/')) {
+      if (normDir !== normFolder && !normDir.startsWith(normFolder + '/')) return;
+      if (scanTimerRef.current != null) window.clearTimeout(scanTimerRef.current);
+      scanTimerRef.current = window.setTimeout(() => {
+        scanTimerRef.current = null;
         commands.scanFolder(folderPath).then(data => {
           dispatch({ type: 'SET_SCAN', data });
         }).catch(() => {});
-      }
+      }, 300);
     };
     window.addEventListener('fs-refresh', handler);
-    return () => window.removeEventListener('fs-refresh', handler);
+    return () => {
+      window.removeEventListener('fs-refresh', handler);
+      if (scanTimerRef.current != null) {
+        window.clearTimeout(scanTimerRef.current);
+        scanTimerRef.current = null;
+      }
+    };
   }, [folderPath, dispatch]);
+
+  // OS-level fs watcher — picks up changes from the terminal CLI, editors,
+  // git, or any process writing under folderPath. The backend emits the
+  // same `fs-refresh` event shape that right-click menu actions dispatch
+  // synthetically, so the listener above handles both paths uniformly.
+  useEffect(() => {
+    if (!folderPath) return;
+    let unlisten: (() => void) | null = null;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        await commands.startFsWatcher(folderPath);
+        const { listen } = await import('@tauri-apps/api/event');
+        if (cancelled) return;
+        const handle = await listen<{ dirPath: string }>('fs-refresh', (event) => {
+          // Re-dispatch onto `window` so Explorer's existing listeners
+          // (workspace re-scan + BrowserDirNode child refresh) both fire.
+          window.dispatchEvent(new CustomEvent('fs-refresh', {
+            detail: { dirPath: event.payload.dirPath },
+          }));
+        });
+        if (cancelled) { handle(); return; }
+        unlisten = handle;
+      } catch (err) {
+        console.warn('[Explorer] fs watcher setup failed:', err);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      if (unlisten) unlisten();
+      commands.stopFsWatcher().catch(() => {});
+    };
+  }, [folderPath]);
 
 
   const treeRoot = useMemo(() => buildTree(files), [files]);

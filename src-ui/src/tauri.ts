@@ -178,4 +178,12 @@ export const commands = {
     invoke<void>('delete_password', { host, username }),
   openUrl: (url: string) =>
     invoke<void>('open_url', { url }),
+
+  // Live fs watcher — subscribes to OS-native events under `path` and
+  // emits `fs-refresh` Tauri events that Explorer already listens for.
+  // Calling start with a new path implicitly replaces the previous watcher.
+  startFsWatcher: (path: string) =>
+    invoke<void>('start_fs_watcher', { path }),
+  stopFsWatcher: () =>
+    invoke<void>('stop_fs_watcher'),
 };

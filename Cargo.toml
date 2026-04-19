@@ -47,6 +47,9 @@ image = "0.25.10"
 base64 = "0.22.1"
 git2 = "0.19"
 notify = "6.1.1"
+# Coalesces bursts of fs events (e.g. CLI writing 50 files in a row) into a
+# single handler callback so the frontend doesn't re-scan 50 times.
+notify-debouncer-full = "0.3"
 rusqlite = { version = "0.32", features = ["bundled"] }
 keyring = "3"
 

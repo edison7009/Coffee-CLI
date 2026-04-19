@@ -7,6 +7,28 @@ use ignore::WalkBuilder;
 use serde::Serialize;
 use std::path::{Path, PathBuf};
 
+/// Directory *basenames* that should never be descended into, regardless
+/// of .gitignore. These are either build artifacts (node_modules, target)
+/// or OS/user caches that contain tens of thousands of files with no
+/// user-browsable value. Hard-coded because:
+///   - projects often forget to gitignore them
+///   - for workspaces outside any git repo (e.g. a user's home dir) there
+///     is no .gitignore to respect, and scanning these trees freezes the UI
+const EXCLUDED_DIRS: &[&str] = &[
+    // Build outputs / package caches
+    "node_modules", "target", ".next", ".nuxt", ".svelte-kit",
+    ".parcel-cache", ".turbo", ".terraform", ".serverless",
+    // VCS
+    ".git",
+    // Language caches
+    "__pycache__", ".venv", "venv", ".pytest_cache", ".mypy_cache",
+    ".ruff_cache", ".tox",
+    // Package manager caches
+    ".npm", "npm-cache", ".pnpm-store", ".yarn",
+    // OS / user profile caches
+    "AppData", "Library", ".cache",
+];
+
 /// Metadata about a single scanned file
 #[derive(Debug, Clone, Serialize)]
 pub struct FileEntry {
@@ -48,6 +70,13 @@ pub fn scan_directory(root: &Path) -> Result<ScanResult> {
         .git_ignore(true) // respect .gitignore
         .git_global(true)
         .git_exclude(true)
+        // Cut whole subtrees before descending — the key difference vs
+        // filtering inside the loop. Saves O(subtree_size) syscalls for
+        // caches like AppData / node_modules / .cache.
+        .filter_entry(|entry| {
+            let name = entry.file_name().to_string_lossy();
+            !EXCLUDED_DIRS.iter().any(|&d| name == d)
+        })
         .build();
 
     for entry in walker {
@@ -58,20 +87,6 @@ pub fn scan_directory(root: &Path) -> Result<ScanResult> {
 
         // Skip directories themselves (they're created implicitly from file paths)
         if entry.file_type().map_or(true, |ft| !ft.is_file()) {
-            continue;
-        }
-
-        // Exclude internal build/cache directories that are never useful to browse
-        let rel = entry.path().strip_prefix(&root).unwrap_or(entry.path());
-        let segments: Vec<&str> = rel.iter()
-            .filter_map(|s| s.to_str())
-            .collect();
-        let in_excluded_dir = segments.iter().any(|seg| matches!(*seg,
-            "node_modules" | ".git" | "target" | "__pycache__" |
-            ".next" | ".nuxt" | ".svelte-kit" | ".parcel-cache" |
-            ".turbo" | ".terraform" | ".serverless"
-        ));
-        if in_excluded_dir {
             continue;
         }
 
