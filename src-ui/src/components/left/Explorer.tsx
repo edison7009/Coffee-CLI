@@ -1031,14 +1031,10 @@ export function Explorer() {
         
         <div className="window-controls">
           <button
-            className={`icon-btn xs ${activeSession?.gambitOpen ? 'active' : ''}`}
-            onClick={() => {
-              if (state.activeTerminalId) {
-                dispatch({ type: 'TOGGLE_GAMBIT', id: state.activeTerminalId });
-              }
-            }}
+            className={`icon-btn xs ${state.gambitOpen ? 'active' : ''}`}
+            onClick={() => dispatch({ type: 'TOGGLE_GAMBIT' })}
           >
-            {activeSession?.gambitOpen ? (
+            {state.gambitOpen ? (
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M6 6 L18 18 M6 18 L18 6" />
               </svg>

@@ -27,7 +27,6 @@ export interface TerminalSession {
   restartKey?: number;
   isHidden?: boolean;
   agentStatus?: AgentStatus;
-  gambitOpen?: boolean;    // Gambit (floating compose window) visible for this tab
   gambitDraft?: string;    // Unsent textarea content, preserved across tab switches
 }
 
@@ -52,6 +51,11 @@ export interface AppState {
   // Terminals
   terminals: TerminalSession[];
   activeTerminalId: string | null;
+
+  // Gambit (global floating compose window). Visibility is app-wide so the
+  // panel doesn't appear/disappear when switching tabs; only the draft is
+  // per-tab (stored on TerminalSession.gambitDraft).
+  gambitOpen: boolean;
 }
 
 // ─── Actions ─────────────────────────────────────────────────────────────────
@@ -77,7 +81,7 @@ type Action =
   | { type: 'SET_WALLPAPER_DIM'; dim: number }
   | { type: 'SET_WALLPAPER_DIM'; dim: number }
   | { type: 'SET_TERM_SCHEME'; scheme: string }
-  | { type: 'TOGGLE_GAMBIT'; id: string }
+  | { type: 'TOGGLE_GAMBIT' }
   | { type: 'SET_GAMBIT_DRAFT'; id: string; draft: string };
 
 // ─── Reducer ─────────────────────────────────────────────────────────────────
@@ -186,10 +190,7 @@ function reducer(state: AppState, action: Action): AppState {
     case 'SET_TERM_SCHEME':
       return { ...state, termColorScheme: action.scheme };
     case 'TOGGLE_GAMBIT':
-      return {
-        ...state,
-        terminals: state.terminals.map(t => t.id === action.id ? { ...t, gambitOpen: !t.gambitOpen } : t)
-      };
+      return { ...state, gambitOpen: !state.gambitOpen };
     case 'SET_GAMBIT_DRAFT':
       return {
         ...state,
@@ -263,6 +264,7 @@ function getInitialState(): AppState {
     termColorScheme,
     terminals: [{ id: defaultTerminalId, tool: null, folderPath, scanData: null }],
     activeTerminalId: defaultTerminalId,
+    gambitOpen: false,
   };
 }
 
