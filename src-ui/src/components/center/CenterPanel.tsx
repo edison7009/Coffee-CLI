@@ -16,6 +16,7 @@ export interface RemoteHistoryItem {
 import { isTauri, commands } from '../../tauri';
 import { useT } from '../../i18n/useT';
 import { fetchGameCatalog, type RemoteGameEntry } from '../../utils/game-catalog';
+import { fetchAgentsCatalog, getCachedAgentsCatalog, type RemoteAgentEntry } from '../../utils/agents-catalog';
 import './CenterPanel.css';
 
 // SVG Definitions for reusability
@@ -55,6 +56,34 @@ const SvgOpenCode = () => (
 
 const SvgHermes = () => (
   <img src="/icons/hermes.png" alt="Hermes" style={{ width: '1em', height: '1em', flexShrink: 0, borderRadius: 'var(--radius-xs)', objectFit: 'cover' }} />
+);
+
+const SvgCodex = () => (
+  <svg height="1em" width="1em" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
+    <path d="M19.503 0H4.496A4.496 4.496 0 000 4.496v15.007A4.496 4.496 0 004.496 24h15.007A4.496 4.496 0 0024 19.503V4.496A4.496 4.496 0 0019.503 0z" fill="#fff"/>
+    <path d="M9.064 3.344a4.578 4.578 0 012.285-.312c1 .115 1.891.54 2.673 1.275.01.01.024.017.037.021a.09.09 0 00.043 0 4.55 4.55 0 013.046.275l.047.022.116.057a4.581 4.581 0 012.188 2.399c.209.51.313 1.041.315 1.595a4.24 4.24 0 01-.134 1.223.123.123 0 00.03.115c.594.607.988 1.33 1.183 2.17.289 1.425-.007 2.71-.887 3.854l-.136.166a4.548 4.548 0 01-2.201 1.388.123.123 0 00-.081.076c-.191.551-.383 1.023-.74 1.494-.9 1.187-2.222 1.846-3.711 1.838-1.187-.006-2.239-.44-3.157-1.302a.107.107 0 00-.105-.024c-.388.125-.78.143-1.204.138a4.441 4.441 0 01-1.945-.466 4.544 4.544 0 01-1.61-1.335c-.152-.202-.303-.392-.414-.617a5.81 5.81 0 01-.37-.961 4.582 4.582 0 01-.014-2.298.124.124 0 00.006-.056.085.085 0 00-.027-.048 4.467 4.467 0 01-1.034-1.651 3.896 3.896 0 01-.251-1.192 5.189 5.189 0 01.141-1.6c.337-1.112.982-1.985 1.933-2.618.212-.141.413-.251.601-.33.215-.089.43-.164.646-.227a.098.098 0 00.065-.066 4.51 4.51 0 01.829-1.615 4.535 4.535 0 011.837-1.388zm3.482 10.565a.637.637 0 000 1.272h3.636a.637.637 0 100-1.272h-3.636zM8.462 9.23a.637.637 0 00-1.106.631l1.272 2.224-1.266 2.136a.636.636 0 101.095.649l1.454-2.455a.636.636 0 00.005-.64L8.462 9.23z" fill="url(#lobe-icons-codex-fill)"/>
+    <defs>
+      <linearGradient gradientUnits="userSpaceOnUse" id="lobe-icons-codex-fill" x1="12" x2="12" y1="3" y2="21">
+        <stop stopColor="#B1A7FF"/>
+        <stop offset=".5" stopColor="#7A9DFF"/>
+        <stop offset="1" stopColor="#3941FF"/>
+      </linearGradient>
+    </defs>
+  </svg>
+);
+
+const SvgGemini = () => (
+  <svg height="1em" width="1em" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
+    <path d="M0 4.391A4.391 4.391 0 014.391 0h15.217A4.391 4.391 0 0124 4.391v15.217A4.391 4.391 0 0119.608 24H4.391A4.391 4.391 0 010 19.608V4.391z" fill="url(#lobe-icons-gemini-cli-fill)"/>
+    <path clipRule="evenodd" d="M19.74 1.444a2.816 2.816 0 012.816 2.816v15.48a2.816 2.816 0 01-2.816 2.816H4.26a2.816 2.816 0 01-2.816-2.816V4.26A2.816 2.816 0 014.26 1.444h15.48zM7.236 8.564l7.752 3.728-7.752 3.727v2.802l9.557-4.596v-3.866L7.236 5.763v2.801z" fill="#1E1E2E" fillRule="evenodd"/>
+    <defs>
+      <linearGradient gradientUnits="userSpaceOnUse" id="lobe-icons-gemini-cli-fill" x1="24" x2="0" y1="6.587" y2="16.494">
+        <stop stopColor="#EE4D5D"/>
+        <stop offset=".328" stopColor="#B381DD"/>
+        <stop offset=".476" stopColor="#207CFE"/>
+      </linearGradient>
+    </defs>
+  </svg>
 );
 
 // ── Platform-aware Terminal Icon & Label ─────────────────────────────────────
@@ -101,6 +130,126 @@ export function CenterPanel() {
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [toolsInstalled, setToolsInstalled] = useState<Record<string, boolean>>({});
   const [showArcadeGames, setShowArcadeGames] = useState(false);
+  const [libraryTab, setLibraryTab] = useState<'agents' | 'games'>('agents');
+  const [pinnedItems, setPinnedItems] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem('coffee_pinned_items');
+      if (stored !== null) return JSON.parse(stored);
+      // First launch: pre-pin useful defaults so desktop isn't empty
+      const defaults = ['agent:claude', 'agent:installer', 'agent:terminal'];
+      localStorage.setItem('coffee_pinned_items', JSON.stringify(defaults));
+      return defaults;
+    } catch { return []; }
+  });
+
+  const MAX_PINS = 6;
+
+  // Remote agents catalog — initialised from localStorage cache (if any) to avoid
+  // a fallback → remote content flicker on mount.
+  const [remoteAgents, setRemoteAgents] = useState<RemoteAgentEntry[]>(() => getCachedAgentsCatalog());
+  // `agentsLoading` / `gamesLoading` drive the skeleton overlay in the Library view.
+  // Initialised based on whether we already have cached data (skeleton only when truly empty).
+  const [agentsLoading, setAgentsLoading] = useState<boolean>(() => getCachedAgentsCatalog().length === 0);
+  const [gamesLoading, setGamesLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    fetchAgentsCatalog()
+      .then(setRemoteAgents)
+      .catch(() => {})
+      .finally(() => setAgentsLoading(false));
+  }, []);
+
+  // Force a fresh catalog fetch every time the Library opens so newly-deployed
+  // agents show up without an app restart (dodges module + CDN caches).
+  useEffect(() => {
+    if (!showArcadeGames) return;
+    // Only show skeleton if we genuinely have nothing to display.
+    if (remoteAgents.length === 0) setAgentsLoading(true);
+    fetchAgentsCatalog({ fresh: true })
+      .then(setRemoteAgents)
+      .catch(() => {})
+      .finally(() => setAgentsLoading(false));
+  }, [showArcadeGames]);
+
+  // Built-in inline SVG icons keyed by agent id. Used when catalog entry id matches;
+  // otherwise falls back to entry.icon URL.
+  const BUILTIN_ICONS: Record<string, React.ReactNode> = {
+    claude: <SvgClaude />,
+    opencode: <SvgOpenCode />,
+    codex: <SvgCodex />,
+    gemini: <SvgGemini />,
+    qwen: <SvgQwen />,
+    hermes: <SvgHermes />,
+  };
+
+  // Hardcoded 6 AI CLI fallback — used only when remote fetch fails AND no cache exists.
+  const BUILTIN_AI_CLI_FALLBACK: { key: ToolType; label: string }[] = [
+    { key: 'claude', label: 'Claude Code' },
+    { key: 'opencode', label: 'OpenCode' },
+    { key: 'codex', label: 'Codex CLI' },
+    { key: 'gemini', label: 'Gemini CLI' },
+    { key: 'qwen', label: 'Qwen Code' },
+    { key: 'hermes', label: 'Hermes Agent' },
+  ];
+
+  // Unified agent catalog — computed from remote (preferred) or fallback to hardcoded.
+  // AI CLIs come from catalog; installer/terminal are built-in utilities (Q3 decision).
+  // - `type`: semantic category ('ai-cli' | 'utility'). Lets future code group/filter items.
+  // - `requiresCwd`: behavior flag — drives folder-button + cwd display on Desktop cards.
+  const AGENT_CATALOG: { key: ToolType; label: string; icon: React.ReactNode; type: 'ai-cli' | 'utility'; requiresCwd: boolean }[] = (() => {
+    const aiCliEntries = remoteAgents.length > 0
+      ? remoteAgents.map(agent => ({
+          key: agent.id as ToolType,
+          label: agent.name,
+          icon: BUILTIN_ICONS[agent.id]
+            ?? <img src={agent.icon} alt={agent.name} style={{ width: '1.4em', height: '1.4em', borderRadius: 'var(--radius-xs)', objectFit: 'cover' }} />,
+          type: 'ai-cli' as const,
+          requiresCwd: true,
+        }))
+      : BUILTIN_AI_CLI_FALLBACK.map(item => ({
+          key: item.key,
+          label: item.label,
+          icon: BUILTIN_ICONS[item.key as string] ?? null,
+          type: 'ai-cli' as const,
+          requiresCwd: true,
+        }));
+
+    const utilities = [
+      { key: 'installer' as ToolType, label: t('tool.installer' as any), icon: <SvgInstaller />, type: 'utility' as const, requiresCwd: false },
+      // Terminal is an AI-CLI-like tool (needs cwd) rather than a 'utility'.
+      { key: 'terminal' as ToolType, label: t('tool.terminal'), icon: <TerminalIcon />, type: 'ai-cli' as const, requiresCwd: true },
+    ];
+
+    return [...aiCliEntries, ...utilities];
+  })();
+
+  const togglePin = (id: string) => {
+    setPinnedItems(prev => {
+      const isPinned = prev.includes(id);
+      let next: string[];
+      if (isPinned) {
+        next = prev.filter(x => x !== id);
+      } else {
+        if (prev.length >= MAX_PINS) return prev;
+        next = [...prev, id];
+      }
+      try { localStorage.setItem('coffee_pinned_items', JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
+
+  const renderPinIcon = (isPinned: boolean) => (
+    isPinned ? (
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <circle cx="9" cy="9" r="8" fill="currentColor" />
+        <path d="M5.5 9.5L7.5 11.5L12.5 6.5" stroke="#1a1917" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ) : (
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <circle cx="9" cy="9" r="8" stroke="currentColor" strokeWidth="1.5" />
+      </svg>
+    )
+  );
   const [arcadeGames, setArcadeGames] = useState<{name:string;path:string;size:number;icon?:string;title?:string}[]>([]);
   const [gameCatalog, setGameCatalog] = useState<RemoteGameEntry[]>([]);
   const [disableDrawer, setDisableDrawer] = useState(false);
@@ -324,9 +473,14 @@ export function CenterPanel() {
     fetchGameCatalog(state.currentLang).then(setGameCatalog).catch(() => {});
   }, [state.currentLang]);
 
-  // Re-fetch arcade game list when language changes while the game page is open
+  // Fetch arcade catalog on mount (and on lang change) so pinned games can render on Desktop
+  // without waiting for the user to open the Library.
   useEffect(() => {
-    if (!showArcadeGames || !isTauri) return;
+    if (!isTauri) {
+      setGamesLoading(false);
+      return;
+    }
+    setGamesLoading(true);
     Promise.allSettled([commands.listJsdosBundles(), fetchGameCatalog(state.currentLang)])
       .then(([bundlesResult, catalogResult]) => {
         const localBundles: any[] = bundlesResult.status === 'fulfilled' ? bundlesResult.value : [];
@@ -336,8 +490,9 @@ export function CenterPanel() {
           return { name: entry.file, path: cached ? cached.path : entry.download, size: cached ? cached.size : 0, icon: entry.icon, title: entry.title };
         });
         setArcadeGames(games);
-      });
-  }, [state.currentLang, showArcadeGames]);
+      })
+      .finally(() => setGamesLoading(false));
+  }, [state.currentLang]);
 
   // Last path segment, Windows ("\") and POSIX ("/") safe. null when path unknown.
   const cwdBasename = (p: string | null | undefined): string | null => {
@@ -357,8 +512,10 @@ export function CenterPanel() {
     switch (session.tool) {
       case 'claude': return { icon: <SvgClaude />, title: cwd ?? 'Claude Code', tooltip: pathTip };
       case 'qwen': return { icon: <SvgQwen />, title: cwd ?? 'Qwen Code', tooltip: pathTip };
-      case 'hermes': return { icon: <SvgHermes />, title: cwd ?? 'Hermes', tooltip: pathTip };
+      case 'hermes': return { icon: <SvgHermes />, title: cwd ?? 'Hermes Agent', tooltip: pathTip };
       case 'opencode': return { icon: <SvgOpenCode />, title: cwd ?? 'OpenCode', tooltip: pathTip };
+      case 'codex': return { icon: <SvgCodex />, title: cwd ?? 'Codex CLI', tooltip: pathTip };
+      case 'gemini': return { icon: <SvgGemini />, title: cwd ?? 'Gemini CLI', tooltip: pathTip };
       case 'installer': return { icon: <SvgInstaller />, title: t('tool.installer' as any), tooltip: undefined };
       case 'remote': {
         let title = t('tool.remote') as string;
@@ -437,7 +594,7 @@ export function CenterPanel() {
               {icon}
               <span className="tab-title" style={{ flex: '0 1 auto', minWidth: 0, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{title}</span>
               <div className="tab-actions">
-                {(['claude', 'qwen', 'hermes', 'opencode'] as const).includes(session.tool as 'claude' | 'qwen' | 'hermes' | 'opencode') && (
+                {(['claude', 'qwen', 'hermes', 'opencode', 'codex', 'gemini', 'installer', 'terminal', 'remote'] as const).includes(session.tool as 'claude' | 'qwen' | 'hermes' | 'opencode' | 'codex' | 'gemini' | 'installer' | 'terminal' | 'remote') && (
                   // Only Claude Code has a real hook-driven status machine.
                   // The other tools render the steady-green idle pulse —
                   // we explicitly chose not to guess their state from PTY
@@ -529,81 +686,108 @@ export function CenterPanel() {
             <div className="launchpad-slider-viewport">
               <div className={`launchpad-slider-track ${showArcadeGames ? 'slide-to-games' : ''}`}>
                 
-                {/* ─── Page 1: Tools ─── */}
+                {/* ─── Page 1: Desktop (pinned items) ─── */}
                 <div className="launchpad-page">
                   <div className="launchpad-inner">
-                    <div className="launchpad-grid">
-                      {[
-                        { key: 'claude' as ToolType, label: 'Claude Code', icon: <SvgClaude /> },
-                        { key: 'qwen' as ToolType, label: 'Qwen Code', icon: <SvgQwen /> },
-                        { key: 'hermes' as ToolType, label: 'Hermes', icon: <SvgHermes /> },
-                        { key: 'opencode' as ToolType, label: 'OpenCode', icon: <SvgOpenCode /> },
-                        { key: 'installer' as ToolType, label: t('tool.installer' as any), icon: <SvgInstaller /> },
-                      ].map(tool => {
-                        const installed = toolsInstalled[tool?.key ?? ''] !== false;
+                    {(() => {
+                      const pinnedAgents = AGENT_CATALOG.filter(a => pinnedItems.includes(`agent:${a.key}`));
+                      const pinnedGames = arcadeGames.filter(g => pinnedItems.includes(`game:${g.name}`));
+
+                      if (pinnedAgents.length === 0 && pinnedGames.length === 0) {
                         return (
-                          <div key={tool.key} className={`launchpad-card-group ${!installed ? 'launchpad-card-disabled' : ''}`}>
-                            <div
-                              className="launchpad-card"
-                              onClick={() => installed && selectTool(tool.key, undefined, lastCwdByTool[tool.key!])}
-                            >
-                              <div className="launchpad-icon">{tool.icon}</div>
-                              <div className="launchpad-card-info">
-                                <span>{tool.label}</span>
-                                {lastCwdByTool[tool.key!] && (
-                                  <span className="launchpad-card-cwd">
-                                    {formatCwd(lastCwdByTool[tool.key!])}
-                                  </span>
-                                )}
-                              </div>
-                              <div className="launchpad-folder-btn" onClick={(e) => { e.stopPropagation(); installed && handlePickFolder(tool.key); }}>
-                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-                                </svg>
-                              </div>
+                          <div className="launchpad-empty-state">
+                            <div className="empty-icon">
+                              <svg width="56" height="56" viewBox="0 0 24 24" fill="currentColor">
+                                <circle cx="5" cy="5" r="1.6"/>
+                                <circle cx="12" cy="5" r="1.6"/>
+                                <circle cx="19" cy="5" r="1.6"/>
+                                <circle cx="5" cy="12" r="1.6"/>
+                                <circle cx="12" cy="12" r="1.6"/>
+                                <circle cx="19" cy="12" r="1.6"/>
+                                <circle cx="5" cy="19" r="1.6"/>
+                                <circle cx="12" cy="19" r="1.6"/>
+                                <circle cx="19" cy="19" r="1.6"/>
+                              </svg>
                             </div>
+                            <div className="empty-title">桌面还是空的</div>
+                            <div className="empty-hint">点右下角九宫格按钮，去 Store 选常用工具</div>
                           </div>
                         );
-                      })}
+                      }
 
-                      {/* Terminal card with subtle Remote icon */}
-                      <div className="launchpad-card-group">
-                        <div
-                          className="launchpad-card"
-                          onClick={() => selectTool('terminal', undefined, lastCwdByTool['terminal'])}
-                        >
-                          <div className="launchpad-icon"><TerminalIcon /></div>
-                          <div className="launchpad-card-info">
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                              {t('tool.terminal')}
-                              <span
-                                className="remote-link-hint"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setShowRemoteForm(true);
-                                }}
-                              >
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                                  <circle cx="12" cy="12" r="10"/>
-                                  <path d="M2 12h20"/>
-                                  <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-                                </svg>
-                              </span>
-                            </span>
-                            {lastCwdByTool['terminal'] && (
-                              <span className="launchpad-card-cwd">
-                                {formatCwd(lastCwdByTool['terminal'])}
-                              </span>
-                            )}
-                          </div>
-                          <div className="launchpad-folder-btn" onClick={(e) => { e.stopPropagation(); handlePickFolder('terminal'); }}>
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-                            </svg>
-                          </div>
+                      return (
+                        <div className="launchpad-grid">
+                          {pinnedAgents.map(tool => {
+                            const isTerminal = tool.key === 'terminal';
+                            const installed = isTerminal || toolsInstalled[tool.key ?? ''] !== false;
+                            return (
+                              <div key={`agent-${tool.key}`} className={`launchpad-card-group ${!installed ? 'launchpad-card-disabled' : ''}`}>
+                                <div
+                                  className="launchpad-card"
+                                  onClick={() => installed && selectTool(tool.key, undefined, lastCwdByTool[tool.key!])}
+                                >
+                                  <div className="launchpad-icon">{tool.icon}</div>
+                                  <div className="launchpad-card-info">
+                                    <span style={isTerminal ? { display: 'inline-flex', alignItems: 'center', gap: '6px' } : undefined}>
+                                      {tool.label}
+                                      {isTerminal && (
+                                        <span
+                                          className="remote-link-hint"
+                                          onClick={(e) => { e.stopPropagation(); setShowRemoteForm(true); }}
+                                        >
+                                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                                            <circle cx="12" cy="12" r="10"/>
+                                            <path d="M2 12h20"/>
+                                            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                                          </svg>
+                                        </span>
+                                      )}
+                                    </span>
+                                    {tool.requiresCwd && lastCwdByTool[tool.key!] && (
+                                      <span className="launchpad-card-cwd">
+                                        {formatCwd(lastCwdByTool[tool.key!])}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {tool.requiresCwd && (
+                                    <div className="launchpad-folder-btn" onClick={(e) => { e.stopPropagation(); if (installed) handlePickFolder(tool.key!); }}>
+                                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                                      </svg>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+
+                          {pinnedGames.map(game => {
+                            const title = game.title || game.name.replace(/\.jsdos$/i, '').replace(/[_-]/g, ' ');
+                            return (
+                              <div key={`game-${game.name}`} className="launchpad-card-group">
+                                <div
+                                  className="launchpad-card"
+                                  onClick={() => {
+                                    selectTool('arcade');
+                                    const sid = state.activeTerminalId;
+                                    if (sid) dispatch({ type: 'SET_TERMINAL_TOOL', id: sid, tool: 'arcade', toolData: game.name });
+                                  }}
+                                >
+                                  <div className="launchpad-icon">
+                                    {game.icon
+                                      ? <img src={game.icon} alt={title} style={{ width: '1.4em', height: '1.4em', borderRadius: 'var(--radius-xs)', objectFit: 'cover' }} />
+                                      : '🎮'}
+                                  </div>
+                                  <div className="launchpad-card-info">
+                                    <span>{title}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
-                      </div>
-                    </div>
+                      );
+                    })()}
 
                     {/* ─── Remote Terminal Connection Form ─── */}
                     {showRemoteForm && (
@@ -760,33 +944,88 @@ export function CenterPanel() {
                   </div>
                 </div>
 
-                {/* ─── Page 2: Arcade (Games) ─── */}
-                <div className="launchpad-page">
+                {/* ─── Page 2: Library (Agents / Games) ─── */}
+                <div className="launchpad-page library-page">
                   <div className="launchpad-inner">
-                    <div className="launchpad-grid">
-                      {arcadeGames.map(game => {
-                        const title = game.title || game.name.replace(/\.jsdos$/i, '').replace(/[_-]/g, ' ');
-                        return (
-                          <div
-                            key={game.name}
-                            className="launchpad-card"
-                            onClick={() => {
-                              setShowArcadeGames(false);
-                              selectTool('arcade');
-                              const sid = state.activeTerminalId;
-                              if (sid) dispatch({ type: 'SET_TERMINAL_TOOL', id: sid, tool: 'arcade', toolData: game.name });
-                            }}
-                          >
-                            <div className="launchpad-icon">
-                              {game.icon
-                                ? <img src={game.icon} alt={title} style={{ width: '1.4em', height: '1.4em', borderRadius: 'var(--radius-xs)', objectFit: 'cover' }} />
-                                : '🎮'}
-                            </div>
-                            <span>{title}</span>
+                    <div className="library-grid">
+                      {libraryTab === 'agents' && agentsLoading && remoteAgents.length === 0 ? (
+                        Array.from({ length: 6 }, (_, i) => (
+                          <div key={`skel-agent-${i}`} className="library-item library-item-skeleton">
+                            <div className="library-item-icon library-skeleton-block" />
+                            <span className="library-skeleton-line" />
+                            <div className="library-pin-btn library-skeleton-pin" />
                           </div>
-                        );
-                      })}
+                        ))
+                      ) : libraryTab === 'games' && gamesLoading && arcadeGames.length === 0 ? (
+                        Array.from({ length: 6 }, (_, i) => (
+                          <div key={`skel-game-${i}`} className="library-item library-item-skeleton">
+                            <div className="library-item-icon library-skeleton-block" />
+                            <span className="library-skeleton-line" />
+                            <div className="library-pin-btn library-skeleton-pin" />
+                          </div>
+                        ))
+                      ) : libraryTab === 'agents' ? (
+                        AGENT_CATALOG.map(item => {
+                          const pinId = `agent:${item.key}`;
+                          const isPinned = pinnedItems.includes(pinId);
+                          return (
+                            <div
+                              key={item.key}
+                              className="library-item"
+                              onClick={() => togglePin(pinId)}
+                            >
+                              <div className="library-item-icon">{item.icon}</div>
+                              <span className="library-item-name">{item.label}</span>
+                              <div className={`library-pin-btn ${isPinned ? 'pinned' : ''}`}>
+                                {renderPinIcon(isPinned)}
+                              </div>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        arcadeGames.map(game => {
+                          const title = game.title || game.name.replace(/\.jsdos$/i, '').replace(/[_-]/g, ' ');
+                          const pinId = `game:${game.name}`;
+                          const isPinned = pinnedItems.includes(pinId);
+                          return (
+                            <div
+                              key={game.name}
+                              className="library-item"
+                              onClick={() => togglePin(pinId)}
+                            >
+                              <div className="library-item-icon">
+                                {game.icon
+                                  ? <img src={game.icon} alt={title} style={{ width: '1.4em', height: '1.4em', borderRadius: 'var(--radius-xs)', objectFit: 'cover' }} />
+                                  : '🎮'}
+                              </div>
+                              <span className="library-item-name">{title}</span>
+                              <div className={`library-pin-btn ${isPinned ? 'pinned' : ''}`}>
+                                {renderPinIcon(isPinned)}
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
                     </div>
+                  </div>
+
+                  {/* Pin counter above tabs */}
+                  <div className="library-counter">{pinnedItems.length}/{MAX_PINS}</div>
+
+                  {/* Bottom tab switcher: Agents / Games */}
+                  <div className="library-tabs">
+                    <button
+                      className={`library-tab ${libraryTab === 'agents' ? 'active' : ''}`}
+                      onClick={() => setLibraryTab('agents')}
+                    >
+                      Agents
+                    </button>
+                    <button
+                      className={`library-tab ${libraryTab === 'games' ? 'active' : ''}`}
+                      onClick={() => setLibraryTab('games')}
+                    >
+                      Games
+                    </button>
                   </div>
                 </div>
                 
@@ -820,13 +1059,25 @@ export function CenterPanel() {
                   }
                 }}
               >
-                <div className="mode-switch-drawer">
-                  {!showArcadeGames ? t('mode.take_a_break') : t('mode.back_to_work')}
-                </div>
                 <div className="mode-switch-icon">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="M16 21l4-4-4-4"/><path d="M20 17H4"/>
-                  </svg>
+                  {!showArcadeGames ? (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                      <circle cx="5" cy="5" r="1.6"/>
+                      <circle cx="12" cy="5" r="1.6"/>
+                      <circle cx="19" cy="5" r="1.6"/>
+                      <circle cx="5" cy="12" r="1.6"/>
+                      <circle cx="12" cy="12" r="1.6"/>
+                      <circle cx="19" cy="12" r="1.6"/>
+                      <circle cx="5" cy="19" r="1.6"/>
+                      <circle cx="12" cy="19" r="1.6"/>
+                      <circle cx="19" cy="19" r="1.6"/>
+                    </svg>
+                  ) : (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M19 12H5"/>
+                      <path d="M12 19l-7-7 7-7"/>
+                    </svg>
+                  )}
                 </div>
               </button>
             </div>

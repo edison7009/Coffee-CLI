@@ -62,7 +62,7 @@ const getToolName = (tool: string, _lang: string) => {
     case 'claude': return 'Claude Code';
     case 'qwen': return 'Qwen Code';
     case 'installer': return 'Coffee Installer';
-    case 'hermes': return 'Hermes';
+    case 'hermes': return 'Hermes Agent';
     case 'opencode': return 'OpenCode';
     default: return tool.replace(/^\w/, c => c.toUpperCase());
   }

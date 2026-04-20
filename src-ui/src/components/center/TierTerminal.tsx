@@ -223,7 +223,8 @@ function TierTerminalImpl({
 
   const toolLabel: Record<string, string> = {
     claude: 'Claude Code',
-    qwen: 'Qwen Code', installer: 'Coffee Installer', hermes: 'Hermes', opencode: 'OpenCode',
+    qwen: 'Qwen Code', installer: 'Coffee Installer', hermes: 'Hermes Agent', opencode: 'OpenCode',
+    codex: 'Codex CLI', gemini: 'Gemini CLI',
     remote: t('tool.remote'), terminal: t('tool.terminal'),
   };
 

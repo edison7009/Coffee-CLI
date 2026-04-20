@@ -607,38 +607,210 @@
   transition: transform 0.4s ease;
 }
 
-.mode-switch-btn:hover .mode-switch-icon {
-  transform: rotate(180deg);
+/* ─── Desktop Empty State ──────────────────────────────────────────────── */
+
+.launchpad-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 80px 24px;
+  text-align: center;
 }
 
-.mode-switch-drawer {
-  max-width: 0;
-  opacity: 0;
-  white-space: nowrap;
-  font-size: 12.5px;
+.empty-icon {
+  color: var(--text-3);
+  opacity: 0.6;
+}
+
+.empty-title {
+  font-size: 16px;
   font-weight: 500;
-  margin-right: 0;
-  /* Un-hover transitions (immediate snap back) */
-  transition: max-width 0.2s ease, opacity 0.2s ease, margin 0.2s ease;
+  color: var(--text-1);
 }
 
-/* Delay expansion so it only triggers on sustained hover (0.3s delay) */
-.mode-switch-btn:hover .mode-switch-drawer {
-  max-width: 120px;
-  opacity: 1;
-  margin-left: 12px; /* Needs strong padding to clear the 18px rounded pill edge */
-  margin-right: 4px; /* Reduced gap since the icon itself has some internal whitespace */
-  transition: max-width 0.35s cubic-bezier(0.4, 0, 0.2, 1) 0.3s, 
-              opacity 0.25s ease 0.3s, 
-              margin 0.25s ease 0.3s;
+.empty-hint {
+  font-size: 13px;
+  color: var(--text-2);
 }
 
-.mode-switch-btn.instant-click .mode-switch-drawer {
-  transition: none !important;
-  max-width: 0 !important;
-  opacity: 0 !important;
-  margin-left: 0 !important;
-  margin-right: 0 !important;
+/* ─── Library (Agents / Games) ─────────────────────────────────────────── */
+
+.library-page {
+  position: relative;
+  align-items: flex-start;
+}
+
+.library-page .launchpad-inner {
+  max-width: 1200px;
+  padding-top: 32px;
+  padding-bottom: 100px;
+}
+
+.library-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  width: 100%;
+  align-content: start;
+}
+
+.library-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.library-item:hover {
+  border-color: var(--accent);
+}
+
+.library-item-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  font-size: 22px;
+  color: var(--text-1);
+}
+
+.library-item-icon img {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+}
+
+.library-item-icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.library-item-name {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.library-pin-btn {
+  background: transparent;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: var(--text-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: color 0.2s;
+}
+
+.library-pin-btn:hover {
+  color: var(--text-1);
+}
+
+.library-pin-btn.pinned {
+  color: var(--accent);
+}
+
+.library-counter {
+  position: absolute;
+  bottom: 72px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
+  z-index: 2;
+  letter-spacing: 0.5px;
+}
+
+.library-tabs {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  z-index: 2;
+}
+
+.library-tab {
+  padding: 8px 28px;
+  border: none;
+  background: transparent;
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.library-tab:hover {
+  color: var(--text-1);
+}
+
+.library-tab.active {
+  background: var(--accent);
+  color: #1a1917;
+}
+
+/* ─── Library Skeleton Loading ─────────────────────────────────────────── */
+
+@keyframes library-skeleton-pulse {
+  0%, 100% { opacity: 0.35; }
+  50%      { opacity: 0.65; }
+}
+
+.library-item-skeleton {
+  pointer-events: none;
+  border-color: transparent;
+  cursor: default;
+}
+
+.library-item-skeleton:hover {
+  border-color: transparent;
+}
+
+.library-skeleton-block,
+.library-skeleton-line,
+.library-skeleton-pin {
+  background: var(--bg-hover);
+  animation: library-skeleton-pulse 1.5s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+}
+
+.library-skeleton-line {
+  flex: 1;
+  height: 14px;
+  max-width: 55%;
+  animation-delay: 0.15s;
+}
+
+.library-skeleton-pin {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  animation-delay: 0.3s;
 }
 
 /* ─── Tab Drag Ghost (drag-to-detach feedback) ─── */

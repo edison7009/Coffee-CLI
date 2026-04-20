@@ -187,6 +187,8 @@ fn check_tools_installed() -> std::collections::HashMap<String, bool> {
         ("qwen", "qwen"),
         ("hermes", "hermes"),
         ("opencode", "opencode"),
+        ("codex", "codex"),
+        ("gemini", "gemini"),
         // remote is always available — it's just SSH (built into the OS)
     ];
     let mut result = std::collections::HashMap::new();
@@ -664,6 +666,8 @@ fn tier_terminal_start(
         Some("qwen")     => ("qwen".to_string(),   vec![]),
         Some("hermes")   => ("hermes".to_string(), vec![]),
         Some("opencode") => ("opencode".to_string(), vec![]),
+        Some("codex")    => ("codex".to_string(),  vec![]),
+        Some("gemini")   => ("gemini".to_string(), vec![]),
         Some("remote") => {
             // Parse connection info from toolData JSON
             let data = tool_data.as_deref().unwrap_or("{}");

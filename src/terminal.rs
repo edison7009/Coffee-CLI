@@ -241,7 +241,7 @@ pub fn spawn(
     // it — maximum benefit, zero risk for those that do.
     let is_ai_cli = matches!(
         tool_name.as_deref(),
-        Some("claude") | Some("qwen") | Some("opencode") | Some("hermes")
+        Some("claude") | Some("qwen") | Some("opencode") | Some("hermes") | Some("codex") | Some("gemini")
     );
 
     if is_ai_cli {
