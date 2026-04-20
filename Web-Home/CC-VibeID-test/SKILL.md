@@ -27,15 +27,28 @@ Follow in order. Do not skip. Do not fabricate numbers.
 
 ### Step 0 — Detect the user's dominant language
 
-**Do this FIRST, before any user-visible output.** The `/vibeid` slash command itself is English, so you cannot judge the user's language from the invocation. You must detect it from their actual usage history.
+**Do this FIRST, before any user-visible output.** The `/vibeid` slash command itself is English, so you cannot judge the user's language from the invocation.
 
-Detection priority:
+**IMPORTANT: do NOT use `report.html` for language detection.** The `/insights` feature generates that report's narrative in English regardless of the user's actual language, so the CJK ratio there is always low.
 
-1. **If `~/.claude/usage-data/report.html` already exists**: Read it and scan the "How You Use Claude Code" narrative section plus project-area descriptions. Count Chinese characters (CJK Unified Ideographs) vs Latin letters in those natural-language blocks. If Chinese characters are ≥ 15% of non-whitespace characters, set `target_language = "zh"`. Otherwise `target_language = "en"`.
+**Correct source**: the user's own chat messages in Claude Code's raw session logs at `~/.claude/projects/*/*.jsonl`. These contain the user's real natural-language input.
 
-2. **If the report doesn't exist yet** (Step 1 will generate it): Peek at the user's current Claude Code working directory path and recent project file names for CJK characters — if present, tentatively set `target_language = "zh"`. Otherwise `target_language = "en"`. After Step 1 generates the report, re-run the detection in #1 above and update `target_language` if needed.
+Detection procedure:
 
-3. **Fallback**: If everything is ambiguous, default to `target_language = "en"`.
+1. Use Bash to list recent session files, most-recent first:
+   ```bash
+   ls -t ~/.claude/projects/*/*.jsonl 2>/dev/null | head -5
+   ```
+
+2. For each of the top 3-5 files, use Read (limited to the last ~200 lines to stay cheap) and extract lines containing `"role":"user"` — those are the user's own messages (not the assistant's replies).
+
+3. Count CJK characters (Unicode blocks U+4E00–U+9FFF for Chinese, U+3040–U+30FF for Japanese kana, U+AC00–U+D7AF for Korean) vs Latin letters `[A-Za-z]` across those user messages.
+
+4. Set:
+   - `target_language = "zh"` if CJK characters ≥ 20% of alphanumeric chars
+   - `target_language = "en"` otherwise
+
+5. **Fallback** if session logs are empty/unreadable: peek at `~/.claude/projects/` directory names — if any contain CJK, lean `"zh"`, else `"en"`.
 
 **All subsequent user-visible output in Steps 1, 5, 7 uses `target_language` consistently** — including the "generating your report" progress note, the 500-800 word persona analysis, and the final summary. Do NOT switch languages mid-flow.
 
