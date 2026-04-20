@@ -466,7 +466,7 @@ code::-webkit-scrollbar-thumb {
 /* The screen / TV bezel */
 .demo-screen {
   width: 100%;
-  background: #0d1117;
+  background: #0E0E0F;
   border-radius: 14px 14px 0 0;
   border: 1px solid var(--glass-border);
   border-bottom: none;
@@ -500,7 +500,7 @@ html[data-theme='dark'] .demo-screen {
 .demo-loading {
   position: absolute;
   inset: 0;
-  background: #0d1117;
+  background: #0E0E0F;
   display: flex;
   align-items: center;
   justify-content: center;
