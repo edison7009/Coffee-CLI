@@ -27,22 +27,36 @@ Follow in order. Do not skip. Do not fabricate numbers.
 
 ### Step 0 — Detect the user's dominant language (any language, worldwide)
 
-**Do this FIRST, before any user-visible output.** The `/vibeid` slash command itself is English, so the invocation tells you nothing about the user. VibeID is a **global** product — Chinese / English / Japanese / Korean / French / German / Spanish / Portuguese / Russian / Vietnamese / Arabic / … are all equally first-class. Do not hard-code two-language assumptions.
+**Do this FIRST, before any user-visible output.** The `/vibeid` slash command itself is English, so the invocation tells you nothing. VibeID is a **global** product — any language must render correctly.
 
-**IMPORTANT: do NOT use `report.html` for language detection.** The `/insights` feature generates that report's narrative in English regardless of the user's actual language.
+Detection priority (use the FIRST source that works):
 
-**Correct source**: the user's own chat messages in Claude Code's raw session logs at `~/.claude/projects/*/*.jsonl`.
+#### Priority 1 (preferred): `.user_lang` hint from Coffee CLI
 
-Detection procedure:
+When the user clicks "Personality Test" in Coffee CLI, the app writes the UI locale to `~/.claude/skills/vibeid/.user_lang`. This is the **most reliable** signal — the user explicitly picked their UI language.
 
-1. List recent session files (most-recent first):
+Use the **Read tool** (Claude Code built-in, NOT `node -e fs.readFileSync` which double-converts `/c/...` into `C:\c\...` on Windows Git Bash):
+
+```
+Read ~/.claude/skills/vibeid/.user_lang
+```
+
+The file contains one of: `zh-CN`, `zh-TW`, `en`, `ja`, `ko`, `fr`, `de`, `es`, `pt`, `ru`, `vi`.
+
+Normalize to an ISO 639-1 code: `zh-CN` and `zh-TW` → `zh`; others stay as-is. Set `target_language` and skip to Step 1.
+
+#### Priority 2 (fallback): scan session jsonl
+
+If `.user_lang` doesn't exist (user ran /vibeid from a raw CC shell, not Coffee CLI), scan the user's chat history:
+
+1. List recent session files with the Bash tool:
    ```bash
    ls -t ~/.claude/projects/*/*.jsonl 2>/dev/null | head -5
    ```
 
-2. Read the top 3-5 files (last ~200 lines each to stay cheap) and extract lines containing `"role":"user"` — those are the user's own typed messages.
+2. For each of the top 3-5 files, use the **Read tool** (NOT `node -e`) to read the last ~200 lines. Extract lines containing `"role":"user"` — those are the user's own typed messages.
 
-3. Look at those messages and infer the dominant natural language. Use your native language-identification ability (this is exactly the kind of task LLMs do well). Output an **ISO 639-1 code**:
+3. Infer the dominant natural language and set `target_language` to the ISO 639-1 code:
    - `zh` — Chinese (simplified or traditional)
    - `en` — English
    - `ja` — Japanese
@@ -53,16 +67,13 @@ Detection procedure:
    - `pt` — Portuguese
    - `ru` — Russian
    - `vi` — Vietnamese
-   - `ar` — Arabic
-   - `tr` — Turkish
-   - `it` — Italian
-   - … or any other ISO 639-1 code matching the evidence
+   - `ar` — Arabic, `tr` — Turkish, `it` — Italian, or any other ISO 639-1 code matching the evidence
 
-4. If the messages are predominantly code / filenames with no natural-language signal, fall back to project directory names under `~/.claude/projects/` for hints. If still no signal, default to `en`.
+#### Priority 3 (last resort): default to `en`
 
-5. Set `target_language` to the code. If dominant mix is e.g. 60% Chinese + 40% English, pick the **majority** (`zh` in that case) — do not switch languages mid-response.
+If neither source gives a signal (empty jsonl, unreadable files), default to `en`.
 
-**All subsequent user-visible output in Steps 1, 5, 7 uses `target_language` consistently.** The persona analysis, the "generating report" note, and the final summary are all written in the same language — the user's own language.
+**All subsequent user-visible output in Steps 1, 5, 7 uses `target_language` consistently.** The persona analysis, the "generating report" note, and the final summary are all written in the same language. **Never switch mid-response.**
 
 ### Step 1 — Ensure the insights report exists
 

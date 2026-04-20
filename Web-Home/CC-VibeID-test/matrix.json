@@ -23,8 +23,9 @@
     "Kinetic": { "name_cn": "快手族", "color_bg": "#F5D5C7", "color_costume": "#C94A3D", "color_accent": "#FFE66D", "combo": "ET" }
   },
 
-  "image_base_url": "../skills/vibeid/images",
+  "image_base_url": "https://coffeecli.com/CC-VibeID-test/personas/images",
   "image_base_url_remote": "https://coffeecli.com/CC-VibeID-test/personas/images",
+  "_image_base_url_note": "Both fields are the same CDN URL by design. A relative path would be resolved to file:///C:/Users/<username>/... by some Claude runtimes, leaking the username and breaking shared screenshots.",
 
   "personas": {
     "RDVL": { "code": "RDVL", "image_file": "TSVL.png", "name": "Deep Sage",         "name_cn": "深潜贤者",     "family": "Logos",   "profession": "Meditative Hermit",   "profession_cn": "冥想哲人",     "tagline": "Contemplates the essence of code in lotus position; wisdom alone.",                       "tagline_cn": "盘坐冥想代码本质，独守智慧。" },
