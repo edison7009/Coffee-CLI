@@ -75,33 +75,22 @@ If neither source gives a signal (empty jsonl, unreadable files), default to `en
 
 **All subsequent user-visible output in Steps 1, 5, 7 uses `target_language` consistently.** The persona analysis, the "generating report" note, and the final summary are all written in the same language. **Never switch mid-response.**
 
-### Step 1 — Ensure the insights report exists
+### Step 1 — Verify the insights report exists
 
 Check whether `~/.claude/usage-data/report.html` exists (expand `~` to the user's home directory).
 
-- **Present**: Continue to Step 2.
-- **Missing**: The user hasn't run `/insights` yet. **Auto-generate it** by running the following Bash command (this is a nested, non-interactive `claude` invocation — `-p` means print-mode, fires `/insights` and exits):
+- **Present**: Continue directly to Step 2. Do NOT print any "generating report" message — Coffee CLI's Personality Test launcher already ran `/insights` in a dedicated pre-run tab before spawning this vibeid tab, so the report is already fresh. You can proceed silently to the analysis.
 
-  ```bash
-  claude -p "/insights"
-  ```
+- **Missing**: Do NOT attempt to run `claude -p "/insights"` yourself. Nested `claude` invocations with slash commands are unreliable across platforms (Windows Git Bash mangles `/insights` into `C:/Program Files/Git/insights`, and `-p` print-mode strips some slash commands). Instead, emit a short helpful message in `target_language` asking the user to launch via Coffee CLI, then STOP.
 
-  This may take 60–180 seconds on a large usage history. After the command completes, re-check that `~/.claude/usage-data/report.html` exists and continue to Step 2.
+  Message template (translate naturally into `target_language`):
 
-  If the file is still missing after the command, stop and report the underlying error honestly — do not fall back to synthetic data.
+  - `zh`: 还没有生成使用报告。请关闭这个 Tab，从 Coffee CLI 的"人格测试"卡片重新启动（它会自动先跑 /insights）。或者先在 Claude Code 里手动执行 `/insights`，完成后再重试 `/vibeid`。
+  - `en`: No usage report yet. Please close this tab and launch from Coffee CLI's "Personality Test" card (it auto-runs `/insights` first). Or run `/insights` in a Claude Code tab first, then retry `/vibeid`.
+  - `ja`: 使用状況レポートがまだ生成されていません。このタブを閉じて、Coffee CLI の「性格診断」カードから起動してください（自動的に `/insights` が先に実行されます）。または、Claude Code タブで先に `/insights` を実行してから `/vibeid` を再試行してください。
+  - other ISO-639-1 codes: translate appropriately into that language
 
-Tell the user briefly what you're doing, translated naturally into `target_language` from Step 0. Examples for the same meaning ("Generating your usage report first, this takes ~1-2 minutes..."):
-
-- `zh`: 正在为你生成使用报告（约 1-2 分钟）...
-- `en`: Generating your usage report first, this takes ~1-2 minutes...
-- `ja`: 使用状況レポートを生成中です（約1〜2分かかります）...
-- `ko`: 사용 기록 리포트를 생성 중입니다 (약 1~2분 소요)...
-- `fr`: Génération de ton rapport d'utilisation (environ 1-2 minutes)...
-- `de`: Erstelle deinen Nutzungsbericht (ca. 1-2 Minuten)...
-- `es`: Generando tu informe de uso (alrededor de 1-2 minutos)...
-- other ISO-639-1 codes: translate appropriately into that language
-
-Do NOT hard-code English here. Use whatever `target_language` was detected.
+  After emitting the message, stop execution — do not fabricate data, do not continue to Step 2.
 
 ### Step 2 — Load the persona matrix
 
