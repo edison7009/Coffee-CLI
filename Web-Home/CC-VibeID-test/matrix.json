@@ -1,50 +1,50 @@
 {
-  "version": 2,
+  "version": 3,
   "updated": "2026-04-21",
-  "comment": "VibeID persona matrix. Loaded by the vibeid skill via local Read (preferred) or remote WebFetch (fallback). `image_base_url` is relative to the report.html location (~/.claude/usage-data/), so PNGs are resolved from the skill's images/ directory without CDN dependency. Each persona carries both English and Chinese (zh) localized fields; the skill picks based on the user's dominant language.",
+  "comment": "VibeID persona matrix v3 — redesigned axes for better in-developer discrimination. Previous Pace/Craft axes clustered 70%+ users in two families; new Mind (Rational/Expressive) and Craft (Design/Technical) axes target 50/50 splits based on intent-type mix and tool-role mix respectively. 16 persona codes remigrated; image_file points to the original PNG assets (no regeneration needed).",
 
   "axes": {
-    "pace":  { "P": "Pulse",    "T": "Tide"      },
-    "craft": { "F": "Forger",   "S": "Seer"      },
-    "arc":   { "V": "Voyager",  "A": "Architect" },
-    "flow":  { "L": "Lone",     "H": "Hive"      }
+    "mind":  { "R": "Rational",  "E": "Expressive" },
+    "craft": { "D": "Design",    "T": "Technical"  },
+    "arc":   { "V": "Voyager",   "A": "Architect"  },
+    "flow":  { "L": "Lone",      "H": "Hive"       }
   },
 
   "thresholds": {
-    "pace_median_seconds": 50,
-    "craft_ratio": 1.0,
-    "flow_multiclaud_pct": 10
+    "mind_rational_share_min": 0.5,
+    "craft_design_share_min": 0.40,
+    "flow_multiclaud_pct": 15
   },
 
   "families": {
-    "Ember":   { "name_cn": "焰锻族", "color_bg": "#F5D5C7", "color_costume": "#C94A3D", "color_accent": "#FFE66D", "combo": "PF" },
-    "Sunward": { "name_cn": "晴航族", "color_bg": "#FAEBB8", "color_costume": "#E8A33D", "color_accent": "#8B5A2B", "combo": "PS" },
-    "Tidal":   { "name_cn": "潮汐族", "color_bg": "#C6D8E0", "color_costume": "#2E7D87", "color_accent": "#C0C8D0", "combo": "TF" },
-    "Starlit": { "name_cn": "星观族", "color_bg": "#D4CDE4", "color_costume": "#4A3B8F", "color_accent": "#FFD700", "combo": "TS" }
+    "Logos":   { "name_cn": "智库族", "color_bg": "#D4CDE4", "color_costume": "#4A3B8F", "color_accent": "#FFD700", "combo": "RD" },
+    "Forge":   { "name_cn": "铁匠族", "color_bg": "#C6D8E0", "color_costume": "#2E7D87", "color_accent": "#C0C8D0", "combo": "RT" },
+    "Muse":    { "name_cn": "灵感族", "color_bg": "#FAEBB8", "color_costume": "#E8A33D", "color_accent": "#8B5A2B", "combo": "ED" },
+    "Kinetic": { "name_cn": "快手族", "color_bg": "#F5D5C7", "color_costume": "#C94A3D", "color_accent": "#FFE66D", "combo": "ET" }
   },
 
   "image_base_url": "../skills/vibeid/images",
   "image_base_url_remote": "https://coffeecli.com/CC-VibeID-test/personas/images",
 
   "personas": {
-    "PFVL": { "code": "PFVL", "name": "Sparkblade",        "name_cn": "闪刃独侠",     "family": "Ember",   "profession": "Lone Swordsman",      "profession_cn": "孤胆剑客",     "tagline": "Strikes down bugs in a single flash of steel, roaming as a bounty hunter.",              "tagline_cn": "电光石火一刀劈碎 bug，独来独往的赏金猎人。" },
-    "PFVH": { "code": "PFVH", "name": "Spark Armada",      "name_cn": "闪电舰队",     "family": "Ember",   "profession": "Lightning Commander", "profession_cn": "雷电指挥官",   "tagline": "Leads parallel strikes; ships releases like thunderstorms sweeping the grid.",           "tagline_cn": "多线并行突袭，发版像雷暴扫过电网。" },
-    "PFAL": { "code": "PFAL", "name": "Solo Forger",       "name_cn": "独锻匠",       "family": "Ember",   "profession": "Lone Blacksmith",     "profession_cn": "独行铁匠",     "tagline": "One hammer, one anvil, one hand-crafted feature at a time.",                              "tagline_cn": "一锤一凿，一次一件地打磨新功能。" },
-    "PFAH": { "code": "PFAH", "name": "Forge Commune",     "name_cn": "锻造工坊",     "family": "Ember",   "profession": "Guildmaster Smith",   "profession_cn": "匠作工头",     "tagline": "Leads a tight workshop; new parts roll off the line in fast bursts.",                     "tagline_cn": "带着匠人小队，新件像流水线一样飞速出炉。" },
+    "RDVL": { "code": "RDVL", "image_file": "TSVL.png", "name": "Deep Sage",         "name_cn": "深潜贤者",     "family": "Logos",   "profession": "Meditative Hermit",   "profession_cn": "冥想哲人",     "tagline": "Contemplates the essence of code in lotus position; wisdom alone.",                       "tagline_cn": "盘坐冥想代码本质，独守智慧。" },
+    "RDVH": { "code": "RDVH", "image_file": "TSVH.png", "name": "Starborne Scholar", "name_cn": "星海学者团",   "family": "Logos",   "profession": "Elder Scholar",       "profession_cn": "学者长老",     "tagline": "Teaches a circle of apprentices; collective wisdom under the stars.",                     "tagline_cn": "带一众学徒在星空下共修学问。" },
+    "RDAL": { "code": "RDAL", "image_file": "TSAL.png", "name": "Lone Architect",    "name_cn": "孤岛建筑师",   "family": "Logos",   "profession": "Master Architect",    "profession_cn": "建筑大师",     "tagline": "Alone on the cliff-studio, draws blueprints for monumental systems.",                     "tagline_cn": "悬崖工作室独自绘制宏大系统蓝图。" },
+    "RDAH": { "code": "RDAH", "image_file": "TSAH.png", "name": "Star Architect",    "name_cn": "群星建筑师",   "family": "Logos",   "profession": "Chief Architect",     "profession_cn": "总建筑师",     "tagline": "Leads design councils on holographic blueprints spanning cosmic scale.",                  "tagline_cn": "主持宇宙级全息蓝图的设计评审。" },
 
-    "PSVL": { "code": "PSVL", "name": "Lone Scout",        "name_cn": "独行侦探",     "family": "Sunward", "profession": "Solitary Detective",  "profession_cn": "孤行侦探",     "tagline": "Magnifier in hand, investigates the codebase alone and finds the truth.",                "tagline_cn": "放大镜加地图，独自摸清代码库底细。" },
-    "PSVH": { "code": "PSVH", "name": "Swarm Scout",       "name_cn": "蜂群斥候",     "family": "Sunward", "profession": "Recon Captain",       "profession_cn": "斥候队长",     "tagline": "Fans out multiple scouts; sweeps many fronts at once.",                                    "tagline_cn": "分身撒出斥候，同时扫描多条战线。" },
-    "PSAL": { "code": "PSAL", "name": "Lone Cartograph",   "name_cn": "孤岛制图师",   "family": "Sunward", "profession": "Island Cartographer", "profession_cn": "岛屿制图师",   "tagline": "Draws the map of the codebase in solitude, on weathered parchment.",                      "tagline_cn": "独自在孤岛绘制代码地图。" },
-    "PSAH": { "code": "PSAH", "name": "Star Atlas",        "name_cn": "星图学会",     "family": "Sunward", "profession": "Atlas Society",       "profession_cn": "学会主持",     "tagline": "Collaborative sky-mapper; teaches apprentices to chart the constellations.",              "tagline_cn": "带学徒协作绘制宏大星图。" },
+    "RTVL": { "code": "RTVL", "image_file": "TFVL.png", "name": "Deep Captain",      "name_cn": "深海舰长",     "family": "Forge",   "profession": "Veteran Sea Captain", "profession_cn": "老船长",       "tagline": "Takes the helm alone on long night voyages; one ship, one release at a time.",            "tagline_cn": "夜航独驾，一船压上一次 release。" },
+    "RTVH": { "code": "RTVH", "image_file": "TFVH.png", "name": "Star Admiral",      "name_cn": "星海统帅",     "family": "Forge",   "profession": "Fleet Admiral",       "profession_cn": "星域元帅",     "tagline": "Commands multiple deep-space fleets on coordinated release campaigns.",                   "tagline_cn": "指挥多支深空舰队同步出击。" },
+    "RTAL": { "code": "RTAL", "image_file": "TFAL.png", "name": "Nightsmith",        "name_cn": "夜锻工",       "family": "Forge",   "profession": "Midnight Blacksmith", "profession_cn": "深夜铁匠",     "tagline": "Forges in silence under the moon; deep work, solo craft.",                                 "tagline_cn": "月下炉火旁默默锻造，沉浸式独作。" },
+    "RTAH": { "code": "RTAH", "image_file": "TFAH.png", "name": "Titan Builder",     "name_cn": "基建巨匠",     "family": "Forge",   "profession": "Chief Engineer",      "profession_cn": "总工程师",     "tagline": "Leads an engineering crew to raise massive, durable structures.",                         "tagline_cn": "带工程队修筑巨型建筑，稳健耐久。" },
 
-    "TFVL": { "code": "TFVL", "name": "Deep Captain",      "name_cn": "深海舰长",     "family": "Tidal",   "profession": "Veteran Sea Captain", "profession_cn": "老船长",       "tagline": "Takes the helm alone on long night voyages; one ship, one release at a time.",            "tagline_cn": "夜航独驾，一船压上一次 release。" },
-    "TFVH": { "code": "TFVH", "name": "Star Admiral",      "name_cn": "星海统帅",     "family": "Tidal",   "profession": "Fleet Admiral",       "profession_cn": "星域元帅",     "tagline": "Commands multiple deep-space fleets on coordinated release campaigns.",                   "tagline_cn": "指挥多支深空舰队同步出击。" },
-    "TFAL": { "code": "TFAL", "name": "Nightsmith",        "name_cn": "夜锻工",       "family": "Tidal",   "profession": "Midnight Blacksmith", "profession_cn": "深夜铁匠",     "tagline": "Forges in silence under the moon; deep work, solo craft.",                                 "tagline_cn": "月下炉火旁默默锻造，沉浸式独作。" },
-    "TFAH": { "code": "TFAH", "name": "Titan Builder",     "name_cn": "基建巨匠",     "family": "Tidal",   "profession": "Chief Engineer",      "profession_cn": "总工程师",     "tagline": "Leads an engineering crew to raise massive, durable structures.",                         "tagline_cn": "带工程队修筑巨型建筑，稳健耐久。" },
+    "EDVL": { "code": "EDVL", "image_file": "PSVL.png", "name": "Lone Scout",        "name_cn": "独行侦探",     "family": "Muse",    "profession": "Solitary Detective",  "profession_cn": "孤行侦探",     "tagline": "Magnifier in hand, investigates the codebase alone and finds the truth.",                "tagline_cn": "放大镜加地图，独自摸清代码库底细。" },
+    "EDVH": { "code": "EDVH", "image_file": "PSVH.png", "name": "Swarm Scout",       "name_cn": "蜂群斥候",     "family": "Muse",    "profession": "Recon Captain",       "profession_cn": "斥候队长",     "tagline": "Fans out multiple scouts; sweeps many fronts at once.",                                    "tagline_cn": "分身撒出斥候，同时扫描多条战线。" },
+    "EDAL": { "code": "EDAL", "image_file": "PSAL.png", "name": "Lone Cartograph",   "name_cn": "孤岛制图师",   "family": "Muse",    "profession": "Island Cartographer", "profession_cn": "岛屿制图师",   "tagline": "Draws the map of the codebase in solitude, on weathered parchment.",                      "tagline_cn": "独自在孤岛绘制代码地图。" },
+    "EDAH": { "code": "EDAH", "image_file": "PSAH.png", "name": "Star Atlas",        "name_cn": "星图学会",     "family": "Muse",    "profession": "Atlas Society",       "profession_cn": "学会主持",     "tagline": "Collaborative sky-mapper; teaches apprentices to chart the constellations.",              "tagline_cn": "带学徒协作绘制宏大星图。" },
 
-    "TSVL": { "code": "TSVL", "name": "Deep Sage",         "name_cn": "深潜贤者",     "family": "Starlit", "profession": "Meditative Hermit",   "profession_cn": "冥想哲人",     "tagline": "Contemplates the essence of code in lotus position; wisdom alone.",                       "tagline_cn": "盘坐冥想代码本质，独守智慧。" },
-    "TSVH": { "code": "TSVH", "name": "Starborne Scholar", "name_cn": "星海学者团",   "family": "Starlit", "profession": "Elder Scholar",       "profession_cn": "学者长老",     "tagline": "Teaches a circle of apprentices; collective wisdom under the stars.",                     "tagline_cn": "带一众学徒在星空下共修学问。" },
-    "TSAL": { "code": "TSAL", "name": "Lone Architect",    "name_cn": "孤岛建筑师",   "family": "Starlit", "profession": "Master Architect",    "profession_cn": "建筑大师",     "tagline": "Alone on the cliff-studio, draws blueprints for monumental systems.",                     "tagline_cn": "悬崖工作室独自绘制宏大系统蓝图。" },
-    "TSAH": { "code": "TSAH", "name": "Star Architect",    "name_cn": "群星建筑师",   "family": "Starlit", "profession": "Chief Architect",     "profession_cn": "总建筑师",     "tagline": "Leads design councils on holographic blueprints spanning cosmic scale.",                  "tagline_cn": "主持宇宙级全息蓝图的设计评审。" }
+    "ETVL": { "code": "ETVL", "image_file": "PFVL.png", "name": "Sparkblade",        "name_cn": "闪刃独侠",     "family": "Kinetic", "profession": "Lone Swordsman",      "profession_cn": "孤胆剑客",     "tagline": "Strikes down bugs in a single flash of steel, roaming as a bounty hunter.",              "tagline_cn": "电光石火一刀劈碎 bug，独来独往的赏金猎人。" },
+    "ETVH": { "code": "ETVH", "image_file": "PFVH.png", "name": "Spark Armada",      "name_cn": "闪电舰队",     "family": "Kinetic", "profession": "Lightning Commander", "profession_cn": "雷电指挥官",   "tagline": "Leads parallel strikes; ships releases like thunderstorms sweeping the grid.",           "tagline_cn": "多线并行突袭，发版像雷暴扫过电网。" },
+    "ETAL": { "code": "ETAL", "image_file": "PFAL.png", "name": "Solo Forger",       "name_cn": "独锻匠",       "family": "Kinetic", "profession": "Lone Blacksmith",     "profession_cn": "独行铁匠",     "tagline": "One hammer, one anvil, one hand-crafted feature at a time.",                              "tagline_cn": "一锤一凿，一次一件地打磨新功能。" },
+    "ETAH": { "code": "ETAH", "image_file": "PFAH.png", "name": "Forge Commune",     "name_cn": "锻造工坊",     "family": "Kinetic", "profession": "Guildmaster Smith",   "profession_cn": "匠作工头",     "tagline": "Leads a tight workshop; new parts roll off the line in fast bursts.",                     "tagline_cn": "带着匠人小队，新件像流水线一样飞速出炉。" }
   }
 }

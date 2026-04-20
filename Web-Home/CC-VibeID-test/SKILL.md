@@ -137,12 +137,12 @@ Parse stdout as JSON. If the script exits non-zero, report the error and stop.
 
 Using thresholds from `matrix.json` and signals from Step 3:
 
-- **Pace**: `P` if `median_response_seconds < thresholds.pace_median_seconds`, else `T`
-- **Craft**: `F` if `craft_ratio > thresholds.craft_ratio`, else `S`
-- **Arc**: `V` if `ship_intent_share > build_intent_share`, else `A`
-- **Flow**: `L` if `multi_clauding_pct < thresholds.flow_multiclaud_pct`, else `H`
+- **Mind**: `R` (Rational) if `rational_share >= thresholds.mind_rational_share_min`, else `E` (Expressive). Rational dominates when analytical / corrective / shipping intents (bug fix, refactor, release) outweigh generative / aesthetic intents (feature, UI, visual).
+- **Craft**: `D` (Design) if `design_share >= thresholds.craft_design_share_min`, else `T` (Technical). Design leans on Read + Grep + Write (investigate + create new); Technical leans on Bash + Edit (execute + modify).
+- **Arc**: `V` (Voyager) if `ship_intent_share > build_intent_share`, else `A` (Architect).
+- **Flow**: `H` (Hive) if `multi_clauding_pct >= thresholds.flow_multiclaud_pct`, else `L` (Lone).
 
-Concatenate to form the VibeID code (e.g. `TFVH`). Look it up in `personas` to get the record.
+Concatenate to form the VibeID code (e.g. `RTAH`). Look it up in `personas` to get the record.
 
 ### Step 5 — Generate a rich, multi-section personality analysis
 
@@ -215,7 +215,7 @@ VEOF
 }
 ```
 
-**Image URL construction**: use `matrix.image_base_url + '/' + code + '.png'`. The default `image_base_url` is relative (`../skills/vibeid/images`) which resolves correctly from `report.html`'s location in `~/.claude/usage-data/`. If that path doesn't exist, fall back to `matrix.image_base_url_remote`.
+**Image URL construction**: use `matrix.image_base_url + '/' + persona.image_file`. Each persona entry has an explicit `image_file` field (e.g. `"TFAH.png"`) pointing to the on-disk asset. The default `image_base_url` is relative (`../skills/vibeid/images`) which resolves correctly from `report.html`'s location in `~/.claude/usage-data/`. If that path doesn't exist, fall back to `matrix.image_base_url_remote`. **Note**: the matrix v3 remigrated codes (e.g. `RTAH`) but keeps the original PNG filenames (e.g. `TFAH.png`) to avoid a regenerate — always use `image_file`, never rebuild the filename from the code.
 
 The injector rewrites `report.html` in place, inserting a VibeID card just after the `<h1>Claude Code Insights</h1>` header. If the report already has a VibeID card (idempotency marker `<!-- vibeid:v1 -->`), the injector replaces it with the new one. A backup is written to `report.html.bak` before modification.
 

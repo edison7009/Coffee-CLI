@@ -83,6 +83,15 @@ const craftDen = toolCount('Read') + toolCount('Grep');
 const craft_ratio =
   craftDen > 0 ? craftNum / craftDen : craftNum > 0 ? 999 : 1;
 
+// New Craft axis (Design vs Technical): Design-side tools include Read,
+// Grep, AND Write (Write is "create new" which is research/design-leaning);
+// Technical-side tools are Bash + Edit (command + modify).
+// design_share is the fraction of Design tools out of Design+Technical.
+const design_tools = toolCount('Read') + toolCount('Grep') + toolCount('Write');
+const tech_tools = toolCount('Bash') + toolCount('Edit');
+const dt_denom = design_tools + tech_tools;
+const design_share = dt_denom > 0 ? design_tools / dt_denom : 0.5;
+
 // ---- Ship vs Build intent share ----
 const intents = parseBarChart('What You Wanted');
 const totalIntent = intents.reduce((s, i) => s + i.value, 0) || 1;
@@ -91,14 +100,29 @@ const SHIP_RE = /release|deploy|ship|version|publish|rollout|\bci\b/i;
 const BUILD_RE =
   /feature|build|implement|new\s+component|\bui\b|refactor|refinement|\badd\b/i;
 
+// Rational vs Expressive (new Mind axis): rational = analytical/corrective/
+// shipping work (bug fix, refactor, release, optimization, cleanup);
+// expressive = generative/aesthetic work (feature, UI, visual, animation,
+// video/gif, experience).
+const RATIONAL_RE =
+  /bug\s*fix|refactor|release|deploy|version|optimi[sz]e|\bfix\b|cleanup|\bci\b|rollout|publish/i;
+const EXPRESSIVE_RE =
+  /feature|\bui\b|experience|refinement|visual|style|animation|video|gif|design|ux|cosmetic/i;
+
 let shipSum = 0;
 let buildSum = 0;
+let rationalSum = 0;
+let expressiveSum = 0;
 for (const i of intents) {
   if (SHIP_RE.test(i.label)) shipSum += i.value;
   if (BUILD_RE.test(i.label)) buildSum += i.value;
+  if (RATIONAL_RE.test(i.label)) rationalSum += i.value;
+  if (EXPRESSIVE_RE.test(i.label)) expressiveSum += i.value;
 }
 const ship_intent_share = shipSum / totalIntent;
 const build_intent_share = buildSum / totalIntent;
+const re_denom = rationalSum + expressiveSum;
+const rational_share = re_denom > 0 ? rationalSum / re_denom : 0.5;
 
 // ---- Multi-clauding percentage ----
 let multi_clauding_pct = 0;
@@ -113,6 +137,8 @@ const result = {
     median_response_seconds,
     top_tool,
     craft_ratio: Math.round(craft_ratio * 100) / 100,
+    design_share: Math.round(design_share * 1000) / 1000,
+    rational_share: Math.round(rational_share * 1000) / 1000,
     ship_intent_share: Math.round(ship_intent_share * 1000) / 1000,
     build_intent_share: Math.round(build_intent_share * 1000) / 1000,
     multi_clauding_pct,
