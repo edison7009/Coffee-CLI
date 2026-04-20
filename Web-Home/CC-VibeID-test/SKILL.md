@@ -228,11 +228,11 @@ VEOF
 
 **Image URL construction** — CRITICAL:
 
-Always use `matrix.image_base_url_remote + '/' + persona.image_file` → resolves to an HTTPS CDN URL like `https://coffeecli.com/CC-VibeID-test/personas/images/TFAH.png`.
+`image_url = matrix.image_base_url_remote + '/' + persona.code + '.png'`
 
-**Do NOT** use `matrix.image_base_url` (the relative `../skills/vibeid/images` path) — some Claude runtimes helpfully resolve relative paths to absolute `file:///C:/Users/<username>/...` URLs, which (a) leaks the local username, (b) breaks when the user shares a screenshot of report.html, and (c) breaks when report.html is copied to another machine. The CDN URL works everywhere, including in shared screenshots and on mobile.
+Example: for code `RTAH` → `https://coffeecli.com/CC-VibeID-test/personas/images/RTAH.png`. Each PNG filename equals the 4-letter code + `.png` (matrix v3+).
 
-**Do NOT** rebuild the filename from the 4-letter code. The matrix v3 remigrated codes (e.g. `RTAH`) but keeps the original PNG filenames (e.g. `TFAH.png`) — always read the `image_file` field explicitly.
+**Do NOT** construct a `file:///...` URL, ever. Use the CDN URL from matrix — it works in shared screenshots, on mobile, and when report.html is copied to another machine. Both `image_base_url` and `image_base_url_remote` in matrix v3 hold the same CDN URL for belt-and-suspenders protection; use either.
 
 The injector rewrites `report.html` in place, inserting a VibeID card just after the `<h1>Claude Code Insights</h1>` header. If the report already has a VibeID card (idempotency marker `<!-- vibeid:v1 -->`), the injector replaces it with the new one. A backup is written to `report.html.bak` before modification.
 
