@@ -181,7 +181,7 @@ fn check_tool_unix(bin: &str) -> bool {
 }
 
 #[tauri::command]
-fn check_tools_installed() -> std::collections::HashMap<String, bool> {
+fn check_tools_installed(extras: Option<Vec<String>>) -> std::collections::HashMap<String, bool> {
     let tools = vec![
         ("claude", "claude"),
         ("qwen", "qwen"),
@@ -203,6 +203,22 @@ fn check_tools_installed() -> std::collections::HashMap<String, bool> {
     }
     // Terminal is always available — it's the system shell
     result.insert("terminal".to_string(), true);
+
+    // Extras are binary names from the remote agents catalog (e.g. "openclaw").
+    // Frontend passes the binaries of pinned remote agents for PATH detection.
+    // Non-empty names only; bad input is silently ignored.
+    if let Some(list) = extras {
+        for bin in list {
+            if bin.is_empty() || bin.contains('\0') { continue; }
+            if result.contains_key(&bin) { continue; }
+            #[cfg(target_os = "windows")]
+            let found = check_tool_windows(&bin);
+            #[cfg(not(target_os = "windows"))]
+            let found = check_tool_unix(&bin);
+            result.insert(bin, found);
+        }
+    }
+
     result
 }
 
@@ -668,6 +684,26 @@ fn tier_terminal_start(
         Some("opencode") => ("opencode".to_string(), vec![]),
         Some("codex")    => ("codex".to_string(),  vec![]),
         Some("gemini")   => ("gemini".to_string(), vec![]),
+        Some("agent") => {
+            // Generic remote-catalog agent: binary + args are passed by the
+            // frontend via tool_data JSON (same pattern as "remote" uses for
+            // SSH connection info). Only null-byte rejection is enforced —
+            // the catalog itself is trusted (same origin as install.sh).
+            let data = tool_data.as_deref().unwrap_or("{}");
+            let spec: serde_json::Value = serde_json::from_str(data)
+                .map_err(|e| format!("Invalid agent spec: {}", e))?;
+            let binary = spec["binary"].as_str().unwrap_or("").to_string();
+            let args: Vec<String> = spec["args"].as_array()
+                .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+                .unwrap_or_default();
+            if binary.is_empty() || binary.contains('\0') {
+                return Err("Invalid agent binary".to_string());
+            }
+            if args.iter().any(|a| a.contains('\0')) {
+                return Err("Invalid agent arg".to_string());
+            }
+            (binary, args)
+        },
         Some("remote") => {
             // Parse connection info from toolData JSON
             let data = tool_data.as_deref().unwrap_or("{}");

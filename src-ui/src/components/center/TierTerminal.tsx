@@ -174,6 +174,10 @@ function TermContextMenu({ menu, onClose, onCopy, onPaste, onSelectAll }: {
 interface TierTerminalProps {
   sessionId: string;
   tool: ToolType;
+  /** Display name of the tool (from catalog). Used by splash + launch-failed
+   * panels so remotely-added agents (e.g. OpenClaw) show their real name
+   * instead of falling back to the hardcoded label map. */
+  toolName?: string;
   theme: ThemeColor;
   lang: string;
   isActive: boolean;
@@ -188,7 +192,7 @@ interface TierTerminalProps {
 // ─── Component ───────────────────────────────────────────────────────────────
 
 function TierTerminalImpl({
-  sessionId, tool, theme, lang, isActive, toolData, folderPath, hasBg, bgUrl, bgType, termColorScheme,
+  sessionId, tool, toolName, theme, lang, isActive, toolData, folderPath, hasBg, bgUrl, bgType, termColorScheme,
 }: TierTerminalProps) {
   // Dispatch-only subscription. Never re-renders this component.
   const dispatch = useAppDispatch();
@@ -799,7 +803,7 @@ function TierTerminalImpl({
               <line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
             <span className="launch-failed-title">
-              {(tool && toolLabel[tool]) || 'Tool'}
+              {toolName || (tool && toolLabel[tool]) || 'Tool'}
             </span>
             <span className="launch-failed-hint">
               {startFailed
@@ -849,7 +853,7 @@ function TierTerminalImpl({
                 <path fill="currentColor" d="M0 0h24v24H0z" mask={`url(#splashMask-${sessionId})`}/>
               </svg>
             </div>
-            <span className="splash-label">{(tool && toolLabel[tool]) || 'Loading'}</span>
+            <span className="splash-label">{toolName || (tool && toolLabel[tool]) || 'Loading'}</span>
             <div className="splash-dots">
               <span className="splash-dot" />
               <span className="splash-dot" />

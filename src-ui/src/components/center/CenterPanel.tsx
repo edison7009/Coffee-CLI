@@ -192,11 +192,19 @@ export function CenterPanel() {
     { key: 'hermes', label: 'Hermes Agent' },
   ];
 
+  // Set of keys that have dedicated hardcoded backend match arms in tier_terminal_start.
+  // Remote catalog entries matching these keys route through the built-in spawn path;
+  // non-matching keys (e.g. "openclaw") route through the generic `'agent'` path
+  // which sends binary+args to the backend via toolData JSON.
+  const BUILTIN_SPAWN_KEYS = new Set(['claude', 'opencode', 'codex', 'gemini', 'qwen', 'hermes', 'installer', 'terminal']);
+
   // Unified agent catalog — computed from remote (preferred) or fallback to hardcoded.
   // AI CLIs come from catalog; installer/terminal are built-in utilities (Q3 decision).
   // - `type`: semantic category ('ai-cli' | 'utility'). Lets future code group/filter items.
   // - `requiresCwd`: behavior flag — drives folder-button + cwd display on Desktop cards.
-  const AGENT_CATALOG: { key: ToolType; label: string; icon: React.ReactNode; type: 'ai-cli' | 'utility'; requiresCwd: boolean }[] = (() => {
+  // - `remote`: present only for catalog entries whose id is NOT in BUILTIN_SPAWN_KEYS.
+  //   Carries the binary + args needed by the backend's `'agent'` match arm.
+  const AGENT_CATALOG: { key: ToolType; label: string; icon: React.ReactNode; type: 'ai-cli' | 'utility'; requiresCwd: boolean; remote?: { binary: string; args: string[] } }[] = (() => {
     const aiCliEntries = remoteAgents.length > 0
       ? remoteAgents.map(agent => ({
           key: agent.id as ToolType,
@@ -205,6 +213,9 @@ export function CenterPanel() {
             ?? <img src={agent.icon} alt={agent.name} style={{ width: '1.4em', height: '1.4em', borderRadius: 'var(--radius-xs)', objectFit: 'cover' }} />,
           type: 'ai-cli' as const,
           requiresCwd: true,
+          remote: BUILTIN_SPAWN_KEYS.has(agent.id)
+            ? undefined
+            : { binary: agent.binary, args: agent.args },
         }))
       : BUILTIN_AI_CLI_FALLBACK.map(item => ({
           key: item.key,
@@ -212,12 +223,13 @@ export function CenterPanel() {
           icon: BUILTIN_ICONS[item.key as string] ?? null,
           type: 'ai-cli' as const,
           requiresCwd: true,
+          remote: undefined,
         }));
 
     const utilities = [
-      { key: 'installer' as ToolType, label: t('tool.installer' as any), icon: <SvgInstaller />, type: 'utility' as const, requiresCwd: false },
+      { key: 'installer' as ToolType, label: t('tool.installer' as any), icon: <SvgInstaller />, type: 'utility' as const, requiresCwd: false, remote: undefined },
       // Terminal is an AI-CLI-like tool (needs cwd) rather than a 'utility'.
-      { key: 'terminal' as ToolType, label: t('tool.terminal'), icon: <TerminalIcon />, type: 'ai-cli' as const, requiresCwd: true },
+      { key: 'terminal' as ToolType, label: t('tool.terminal'), icon: <TerminalIcon />, type: 'ai-cli' as const, requiresCwd: true, remote: undefined },
     ];
 
     return [...aiCliEntries, ...utilities];
@@ -337,17 +349,25 @@ export function CenterPanel() {
 
 
 
-  // Detect tool availability each time Launchpad is shown
+  // Detect tool availability each time Launchpad is shown.
+  // Also checks pinned remote-catalog agents (those with `remote` field) so
+  // their install state reflects in the Desktop (not-installed = half opacity).
+  // Library does NOT scan — it's a browsing surface, not a launch surface.
   useEffect(() => {
     if (!isTauri || !isLaunchpadMode) return;
-    commands.checkToolsInstalled()
+    const pinnedRemoteBinaries = AGENT_CATALOG
+      .filter(a => a.remote && pinnedItems.includes(`agent:${a.key}`))
+      .map(a => a.remote!.binary);
+    commands.checkToolsInstalled(pinnedRemoteBinaries.length > 0 ? pinnedRemoteBinaries : undefined)
       .then(result => setToolsInstalled(result))
       .catch(() => {});
     try {
       const raw = localStorage.getItem('coffee:last-cwd-by-tool');
       if (raw) setLastCwdByTool(JSON.parse(raw));
     } catch {}
-  }, [isLaunchpadMode]);
+    // Re-check when pinned set or remote catalog changes (new agent pinned, catalog refreshed)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLaunchpadMode, pinnedItems, remoteAgents]);
 
   // Auto-hide toast
   useEffect(() => {
@@ -658,6 +678,7 @@ export function CenterPanel() {
                   key={`tier-${t.id}-${t.restartKey || 0}`}
                   sessionId={t.id}
                   tool={t.tool}
+                  toolName={AGENT_CATALOG.find(a => a.key === t.tool)?.label}
                   theme={state.currentTheme}
                   lang={state.currentLang}
                   isActive={t.id === activeTerminalId}
@@ -694,25 +715,7 @@ export function CenterPanel() {
                       const pinnedGames = arcadeGames.filter(g => pinnedItems.includes(`game:${g.name}`));
 
                       if (pinnedAgents.length === 0 && pinnedGames.length === 0) {
-                        return (
-                          <div className="launchpad-empty-state">
-                            <div className="empty-icon">
-                              <svg width="56" height="56" viewBox="0 0 24 24" fill="currentColor">
-                                <circle cx="5" cy="5" r="1.6"/>
-                                <circle cx="12" cy="5" r="1.6"/>
-                                <circle cx="19" cy="5" r="1.6"/>
-                                <circle cx="5" cy="12" r="1.6"/>
-                                <circle cx="12" cy="12" r="1.6"/>
-                                <circle cx="19" cy="12" r="1.6"/>
-                                <circle cx="5" cy="19" r="1.6"/>
-                                <circle cx="12" cy="19" r="1.6"/>
-                                <circle cx="19" cy="19" r="1.6"/>
-                              </svg>
-                            </div>
-                            <div className="empty-title">桌面还是空的</div>
-                            <div className="empty-hint">点右下角九宫格按钮，去 Store 选常用工具</div>
-                          </div>
-                        );
+                        return null;
                       }
 
                       return (
@@ -724,7 +727,14 @@ export function CenterPanel() {
                               <div key={`agent-${tool.key}`} className={`launchpad-card-group ${!installed ? 'launchpad-card-disabled' : ''}`}>
                                 <div
                                   className="launchpad-card"
-                                  onClick={() => installed && selectTool(tool.key, undefined, lastCwdByTool[tool.key!])}
+                                  onClick={() => {
+                                    if (!installed) return;
+                                    if (tool.remote) {
+                                      selectTool('agent', JSON.stringify(tool.remote), lastCwdByTool[tool.key!]);
+                                    } else {
+                                      selectTool(tool.key, undefined, lastCwdByTool[tool.key!]);
+                                    }
+                                  }}
                                 >
                                   <div className="launchpad-icon">{tool.icon}</div>
                                   <div className="launchpad-card-info">
