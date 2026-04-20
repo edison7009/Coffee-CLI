@@ -25,6 +25,20 @@ The skill keeps deterministic logic (HTML parsing, axis thresholds, HTML injecti
 
 Follow in order. Do not skip. Do not fabricate numbers.
 
+### Step 0 — Detect the user's dominant language
+
+**Do this FIRST, before any user-visible output.** The `/vibeid` slash command itself is English, so you cannot judge the user's language from the invocation. You must detect it from their actual usage history.
+
+Detection priority:
+
+1. **If `~/.claude/usage-data/report.html` already exists**: Read it and scan the "How You Use Claude Code" narrative section plus project-area descriptions. Count Chinese characters (CJK Unified Ideographs) vs Latin letters in those natural-language blocks. If Chinese characters are ≥ 15% of non-whitespace characters, set `target_language = "zh"`. Otherwise `target_language = "en"`.
+
+2. **If the report doesn't exist yet** (Step 1 will generate it): Peek at the user's current Claude Code working directory path and recent project file names for CJK characters — if present, tentatively set `target_language = "zh"`. Otherwise `target_language = "en"`. After Step 1 generates the report, re-run the detection in #1 above and update `target_language` if needed.
+
+3. **Fallback**: If everything is ambiguous, default to `target_language = "en"`.
+
+**All subsequent user-visible output in Steps 1, 5, 7 uses `target_language` consistently** — including the "generating your report" progress note, the 500-800 word persona analysis, and the final summary. Do NOT switch languages mid-flow.
+
 ### Step 1 — Ensure the insights report exists
 
 Check whether `~/.claude/usage-data/report.html` exists (expand `~` to the user's home directory).
@@ -40,7 +54,12 @@ Check whether `~/.claude/usage-data/report.html` exists (expand `~` to the user'
 
   If the file is still missing after the command, stop and report the underlying error honestly — do not fall back to synthetic data.
 
-Tell the user briefly what you're doing ("Generating your usage report first, this takes ~1–2 minutes..."). Respond in the user's input language (Chinese if they spoke Chinese, English otherwise).
+Tell the user briefly what you're doing, using `target_language` from Step 0:
+
+- If `target_language = "zh"`: "正在为你生成使用报告（约 1-2 分钟）..."
+- If `target_language = "en"`: "Generating your usage report first, this takes ~1-2 minutes..."
+
+After the report is generated, re-run the detection from Step 0 #1 to confirm `target_language` (the narrative may now provide stronger signal than the initial guess).
 
 ### Step 2 — Load the persona matrix
 
@@ -98,7 +117,7 @@ Concatenate to form the VibeID code (e.g. `TFVH`). Look it up in `personas` to g
 
 Write **500–800 words** of personalized analysis across **5 distinct sections**, separated by **blank lines (`\n\n`)**. Users read this like an MBTI 16Personalities profile — they want depth, specificity, and a little flattery grounded in real numbers.
 
-**Language detection**: Look at the user's recent Claude Code session history (narrative text in the report, any prompts they used with this session). If dominant language is Chinese, write in Simplified Chinese and use `name_cn` / `profession_cn` / `tagline_cn` / family `name_cn` from the matrix. Otherwise write in English and use the English fields. Do NOT hardcode — detect.
+**Language**: Use `target_language` set in Step 0. If `target_language = "zh"`, write in Simplified Chinese and use `name_cn` / `profession_cn` / `tagline_cn` / family `name_cn` from the matrix. If `"en"`, write in English and use the English fields.
 
 **Required sections** (each a separate paragraph, roughly 100–160 words):
 
