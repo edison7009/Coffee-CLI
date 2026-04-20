@@ -135,8 +135,17 @@ export function CenterPanel() {
     try {
       const stored = localStorage.getItem('coffee_pinned_items');
       if (stored !== null) return JSON.parse(stored);
-      // First launch: pre-pin useful defaults so desktop isn't empty
-      const defaults = ['agent:claude', 'agent:installer', 'agent:terminal'];
+      // First launch: pre-pin 6 useful defaults so desktop shows a full MAX_PINS
+      // grid out of the box (4 AI CLIs covering major providers + 2 utilities).
+      // Returning users' pin choices are respected (stored !== null path above).
+      const defaults = [
+        'agent:claude',
+        'agent:opencode',
+        'agent:codex',
+        'agent:gemini',
+        'agent:installer',
+        'agent:terminal',
+      ];
       localStorage.setItem('coffee_pinned_items', JSON.stringify(defaults));
       return defaults;
     } catch { return []; }
@@ -536,6 +545,19 @@ export function CenterPanel() {
       case 'opencode': return { icon: <SvgOpenCode />, title: cwd ?? 'OpenCode', tooltip: pathTip };
       case 'codex': return { icon: <SvgCodex />, title: cwd ?? 'Codex CLI', tooltip: pathTip };
       case 'gemini': return { icon: <SvgGemini />, title: cwd ?? 'Gemini CLI', tooltip: pathTip };
+      case 'agent': {
+        // Remote-catalog agent: look up display info by id embedded in toolData
+        let entry: typeof AGENT_CATALOG[number] | undefined;
+        try {
+          const spec = JSON.parse(session.toolData ?? '{}');
+          if (spec?.id) entry = AGENT_CATALOG.find(a => a.key === spec.id);
+        } catch {}
+        return {
+          icon: entry?.icon ?? <span>🤖</span>,
+          title: cwd ?? entry?.label ?? 'Agent',
+          tooltip: pathTip,
+        };
+      }
       case 'installer': return { icon: <SvgInstaller />, title: t('tool.installer' as any), tooltip: undefined };
       case 'remote': {
         let title = t('tool.remote') as string;
@@ -614,7 +636,7 @@ export function CenterPanel() {
               {icon}
               <span className="tab-title" style={{ flex: '0 1 auto', minWidth: 0, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{title}</span>
               <div className="tab-actions">
-                {(['claude', 'qwen', 'hermes', 'opencode', 'codex', 'gemini', 'installer', 'terminal', 'remote'] as const).includes(session.tool as 'claude' | 'qwen' | 'hermes' | 'opencode' | 'codex' | 'gemini' | 'installer' | 'terminal' | 'remote') && (
+                {(['claude', 'qwen', 'hermes', 'opencode', 'codex', 'gemini', 'agent', 'installer', 'terminal', 'remote'] as const).includes(session.tool as 'claude' | 'qwen' | 'hermes' | 'opencode' | 'codex' | 'gemini' | 'agent' | 'installer' | 'terminal' | 'remote') && (
                   // Only Claude Code has a real hook-driven status machine.
                   // The other tools render the steady-green idle pulse —
                   // we explicitly chose not to guess their state from PTY
@@ -678,7 +700,16 @@ export function CenterPanel() {
                   key={`tier-${t.id}-${t.restartKey || 0}`}
                   sessionId={t.id}
                   tool={t.tool}
-                  toolName={AGENT_CATALOG.find(a => a.key === t.tool)?.label}
+                  toolName={(() => {
+                    if (t.tool === 'agent' && t.toolData) {
+                      try {
+                        const spec = JSON.parse(t.toolData);
+                        if (spec?.id) return AGENT_CATALOG.find(a => a.key === spec.id)?.label;
+                      } catch {}
+                      return undefined;
+                    }
+                    return AGENT_CATALOG.find(a => a.key === t.tool)?.label;
+                  })()}
                   theme={state.currentTheme}
                   lang={state.currentLang}
                   isActive={t.id === activeTerminalId}
@@ -730,7 +761,13 @@ export function CenterPanel() {
                                   onClick={() => {
                                     if (!installed) return;
                                     if (tool.remote) {
-                                      selectTool('agent', JSON.stringify(tool.remote), lastCwdByTool[tool.key!]);
+                                      // Include id alongside binary+args so tab/splash can
+                                      // look up name + icon from the catalog. Backend ignores id.
+                                      selectTool(
+                                        'agent',
+                                        JSON.stringify({ id: tool.key, ...tool.remote }),
+                                        lastCwdByTool[tool.key!]
+                                      );
                                     } else {
                                       selectTool(tool.key, undefined, lastCwdByTool[tool.key!]);
                                     }
