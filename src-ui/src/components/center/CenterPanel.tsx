@@ -176,15 +176,14 @@ export function CenterPanel() {
       .finally(() => setAgentsLoading(false));
   }, []);
 
-  // Auto-install the VibeID skill on first launch. Previously (v0.8.0) users
-  // who downloaded the app saw `Unknown skill: vibeid` when clicking the
-  // Personality Test card because ~/.claude/skills/vibeid/ was never
-  // populated. This hydrates it from the remote Web-Home URL in the
-  // background — silent on success, invisible to the user.
+  // Auto-sync the VibeID skill on every launch. Small files (SKILL.md,
+  // matrix.json, scripts) are re-fetched every time (~10 KB total, <1s on
+  // normal networks) so existing users automatically pick up skill logic
+  // upgrades without manually deleting ~/.claude/skills/vibeid/. Persona
+  // images (~2 MB) are downloaded only on first install.
   useEffect(() => {
     if (!isTauri) return;
-    commands.checkSkillInstalled('vibeid').then(async installed => {
-      if (installed) return;
+    (async () => {
       const BASE = 'https://coffeecli.com/CC-VibeID-test';
       const CODES = [
         'PFVL','PFVH','PFAL','PFAH','PSVL','PSVH','PSAL','PSAH',
@@ -196,10 +195,6 @@ export function CenterPanel() {
         { remote: 'scripts/analyze.js', local: 'scripts/analyze.js' },
         { remote: 'scripts/inject.js', local: 'scripts/inject.js' },
       ];
-      const imageFiles = CODES.map(c => ({
-        remote: `personas/images/${c}.png`,
-        local: `images/${c}.png`,
-      }));
       const pullText = async (f: { remote: string; local: string }) => {
         const res = await fetch(`${BASE}/${f.remote}`);
         if (!res.ok) throw new Error(`${f.remote}: ${res.status}`);
@@ -213,15 +208,25 @@ export function CenterPanel() {
         await commands.writeSkillFile(f.local, Array.from(buf));
       };
       try {
-        await Promise.all([
-          ...textFiles.map(pullText),
-          ...imageFiles.map(pullBinary),
-        ]);
-        console.log('[vibeid] skill installed to ~/.claude/skills/vibeid/');
+        // Always keep SKILL.md / matrix / scripts fresh.
+        await Promise.all(textFiles.map(pullText));
+
+        // Fetch persona images only if this is a fresh install.
+        const installed = await commands.checkSkillInstalled('vibeid').catch(() => true);
+        if (!installed) {
+          const imageFiles = CODES.map(c => ({
+            remote: `personas/images/${c}.png`,
+            local: `images/${c}.png`,
+          }));
+          await Promise.all(imageFiles.map(pullBinary));
+          console.log('[vibeid] first-time install complete (images + logic)');
+        } else {
+          console.log('[vibeid] skill logic synced (images already present)');
+        }
       } catch (err) {
-        console.warn('[vibeid] skill install failed:', err);
+        console.warn('[vibeid] skill sync failed:', err);
       }
-    }).catch(() => {});
+    })();
   }, []);
 
   // Force a fresh catalog fetch every time the Library opens so newly-deployed
