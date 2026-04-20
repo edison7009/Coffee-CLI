@@ -358,25 +358,28 @@ export function CenterPanel() {
 
 
 
-  // Detect tool availability each time Launchpad is shown.
-  // Also checks pinned remote-catalog agents (those with `remote` field) so
-  // their install state reflects in the Desktop (not-installed = half opacity).
-  // Library does NOT scan — it's a browsing surface, not a launch surface.
+  // Detect tool availability only when the Desktop (not Library) is actually visible.
+  // Library is pure UI: pin/unpin never trigger IPC, scan is silent during browsing.
+  // Scan runs on:
+  //   - Launchpad first shown
+  //   - Remote catalog refreshed
+  //   - User returns from Library to Desktop (back arrow) — picks up new pins' install state
+  // Never on pinnedItems changes → pin click stays instant.
   useEffect(() => {
     if (!isTauri || !isLaunchpadMode) return;
-    const pinnedRemoteBinaries = AGENT_CATALOG
-      .filter(a => a.remote && pinnedItems.includes(`agent:${a.key}`))
+    if (showArcadeGames) return; // Library open: stay silent
+    const remoteBinaries = AGENT_CATALOG
+      .filter(a => a.remote)
       .map(a => a.remote!.binary);
-    commands.checkToolsInstalled(pinnedRemoteBinaries.length > 0 ? pinnedRemoteBinaries : undefined)
+    commands.checkToolsInstalled(remoteBinaries.length > 0 ? remoteBinaries : undefined)
       .then(result => setToolsInstalled(result))
       .catch(() => {});
     try {
       const raw = localStorage.getItem('coffee:last-cwd-by-tool');
       if (raw) setLastCwdByTool(JSON.parse(raw));
     } catch {}
-    // Re-check when pinned set or remote catalog changes (new agent pinned, catalog refreshed)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLaunchpadMode, pinnedItems, remoteAgents]);
+  }, [isLaunchpadMode, remoteAgents, showArcadeGames]);
 
   // Auto-hide toast
   useEffect(() => {
