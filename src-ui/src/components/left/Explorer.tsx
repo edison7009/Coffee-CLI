@@ -1087,6 +1087,29 @@ export function Explorer() {
         </div>
         
         <div className="window-controls">
+          {/* Language first — one-time setup, lives at the far-left of the
+              controls cluster so frequent actions sit closer to the edge. */}
+          <button
+            ref={langBtnRef}
+            className="icon-btn xs lang-btn lang-glyph"
+            onClick={() => setLangDropdownOpen(!langDropdownOpen)}
+          >
+            {getLangGlyph(state.currentLang)}
+          </button>
+          <button
+            ref={themeBtnRef}
+            className="icon-btn xs"
+            onClick={() => setThemeMenuOpen(v => !v)}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="7" height="7" rx="1.5" />
+              <rect x="14" y="3" width="7" height="7" rx="1.5" />
+              <rect x="3" y="14" width="7" height="7" rx="1.5" />
+              <rect x="14" y="14" width="7" height="7" rx="1.5" />
+            </svg>
+          </button>
+          {/* Gambit last — frequently used, rightmost position for muscle
+              memory and thumb reach at the panel edge. */}
           <button
             className={`icon-btn xs ${state.gambitOpen ? 'active' : ''}`}
             onClick={() => dispatch({ type: 'TOGGLE_GAMBIT' })}
@@ -1101,25 +1124,6 @@ export function Explorer() {
                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
               </svg>
             )}
-          </button>
-          <button
-            ref={themeBtnRef}
-            className="icon-btn xs"
-            onClick={() => setThemeMenuOpen(v => !v)}
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="3" width="7" height="7" rx="1.5" />
-              <rect x="14" y="3" width="7" height="7" rx="1.5" />
-              <rect x="3" y="14" width="7" height="7" rx="1.5" />
-              <rect x="14" y="14" width="7" height="7" rx="1.5" />
-            </svg>
-          </button>
-          <button
-            ref={langBtnRef}
-            className="icon-btn xs lang-btn lang-glyph"
-            onClick={() => setLangDropdownOpen(!langDropdownOpen)}
-          >
-            {getLangGlyph(state.currentLang)}
           </button>
         </div>
       </div>
