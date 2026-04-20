@@ -191,18 +191,6 @@
   50% { opacity: 0.4; }
 }
 
-.task-section-count {
-  margin-left: auto;
-  font-size: 10px;
-  font-weight: 500;
-  color: var(--text-3, rgba(255, 255, 255, 0.25));
-  background: rgba(255, 255, 255, 0.05);
-  padding: 1px 6px;
-  border-radius: var(--radius-pill);
-  min-width: 16px;
-  text-align: center;
-}
-
 /* ─── Droppable Area ────────────────────────────────────────────────────────── */
 
 .task-droppable-area {
@@ -288,10 +276,15 @@
   position: fixed;
   z-index: 99999;
   pointer-events: none;
-  opacity: 0.92;
+  opacity: 0.95;
   border-radius: var(--radius-sm);
+  /* Theme-aware panel background so the floating ghost matches the active
+     palette (coffee brown / pastel / dark / etc.) instead of always looking
+     like a generic dark-gray tile. 1px accent border reinforces the
+     "picked up" state — it reads as part of the theme. */
+  background: var(--bg-panel, rgba(40, 40, 42, 0.98));
+  border: 1px solid var(--accent, #c4956a);
   box-shadow: 0 20px 30px -8px rgba(0, 0, 0, 0.5), 0 8px 12px -4px rgba(0, 0, 0, 0.3);
-  background: rgba(40, 40, 42, 0.98);
   transform: scale(1.03);
   will-change: left, top;
   /* Inherit text styles */
@@ -425,24 +418,116 @@
   outline: none;
 }
 
-/* ─── Confirm Edit Button (checkmark) ───────────────────────────────────────── */
+/* ─── Inline edit pencil (flows after the title text) ──────────────────────── */
+/* The pencil is inline-positioned so it appears immediately after the last
+   character of the title — on a long wrapped title it ends up at the end of
+   the last line, which matches the natural reading flow. Kept subtle (55%
+   opacity) so it doesn't compete visually with the title text. */
+.task-title-text {
+  /* plain inline text — no extra rules needed */
+}
 
-.task-confirm-btn {
+.task-edit-inline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  margin-left: 4px;
+  background: transparent;
+  border: none;
+  color: var(--text-3, rgba(255, 255, 255, 0.3));
+  cursor: pointer;
+  border-radius: var(--radius-xs);
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s, background 0.15s;
+  vertical-align: -2px; /* optical alignment with text baseline */
+}
+
+/* Fade in only when the whole card is hovered — keeps resting state clean */
+.task-card:hover .task-edit-inline {
+  opacity: 0.55;
+}
+
+.task-card:hover .task-edit-inline:hover {
+  opacity: 1;
+  color: var(--text-1, #e8e4de);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* ─── Right-side fixed action slot ─────────────────────────────────────────── */
+/* One button, one position — identity swaps based on card mode:
+     .task-slot-send    (normal)        → paper-plane, send to active agent
+     .task-slot-confirm (editing title) → checkmark, commit edit
+     .task-slot-delete  (section delete mode) → trash, remove the task
+   Single slot avoids layout jitter as modes change. */
+.task-slot {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
   border-radius: var(--radius-xs);
-  background: rgba(74, 222, 128, 0.12);
+  background: transparent;
   border: none;
-  color: #4ade80;
-  transition: all 0.2s;
+  cursor: pointer;
   flex-shrink: 0;
+  transition: all 0.2s;
 }
 
-.task-confirm-btn:hover {
+.task-slot-send {
+  color: var(--accent, #c4956a);
+  background: rgba(196, 149, 106, 0.12);
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s, background 0.15s;
+}
+
+/* Reveal the play triangle only on card hover — resting card stays clean */
+.task-card:hover .task-slot-send {
+  opacity: 1;
+}
+
+.task-slot-send:hover:not(:disabled) {
+  background: rgba(196, 149, 106, 0.25);
+}
+
+.task-slot-send:disabled {
+  opacity: 0;
+  cursor: not-allowed;
+}
+
+.task-card:hover .task-slot-send:disabled {
+  opacity: 0.25;
+}
+
+.task-slot-confirm {
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.12);
+}
+
+.task-slot-confirm:hover {
   background: rgba(74, 222, 128, 0.25);
+}
+
+.task-slot-delete {
+  color: var(--accent, #c4956a);
+  background: rgba(196, 149, 106, 0.12);
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s, background 0.15s;
+}
+
+/* Pair with .task-slot-send: both fade in together on card hover so the
+   action cluster reads as a single unit. Destructive intent is carried by
+   the trash glyph itself, not by colour — the chip follows the active theme
+   accent so the UI stays visually of-a-piece as themes switch. */
+.task-card:hover .task-slot-delete {
+  opacity: 1;
+}
+
+.task-slot-delete:hover {
+  background: rgba(196, 149, 106, 0.25);
 }
 
 /* ─── Description Area ──────────────────────────────────────────────────────── */
@@ -491,58 +576,6 @@
 
 .task-desc-input::placeholder {
   color: var(--text-3, rgba(255, 255, 255, 0.3));
-}
-
-/* ─── Edit Button ───────────────────────────────────────────────────────────── */
-
-.task-edit-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  border-radius: var(--radius-xs);
-  background: transparent;
-  border: none;
-  color: var(--text-3, rgba(255, 255, 255, 0.15));
-  transition: all 0.2s;
-  flex-shrink: 0;
-  opacity: 0;
-}
-
-.task-card:hover .task-edit-btn {
-  opacity: 1;
-}
-
-.task-edit-btn:hover {
-  color: var(--text-1, #e8e4de);
-  background: rgba(255, 255, 255, 0.08);
-}
-
-/* ─── Delete Button ─────────────────────────────────────────────────────────── */
-
-.task-delete-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  border-radius: var(--radius-xs);
-  background: transparent;
-  border: none;
-  color: var(--text-3, rgba(255, 255, 255, 0.15));
-  transition: all 0.2s;
-  flex-shrink: 0;
-  opacity: 0;
-}
-
-.task-card:hover .task-delete-btn {
-  opacity: 1;
-}
-
-.task-delete-btn:hover {
-  background: rgba(239, 68, 68, 0.15);
-  color: #ef4444;
 }
 
 /* ─── Empty State ───────────────────────────────────────────────────────────── */

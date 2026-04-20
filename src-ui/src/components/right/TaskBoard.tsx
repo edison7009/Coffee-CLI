@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { useT } from '../../i18n/useT';
 import { useAppState } from '../../store/app-state';
 import { isTauri, commands } from '../../tauri';
+import { getTabActions } from '../../lib/tab-actions';
 import './TaskBoard.css';
 import { HistoryBoard } from './HistoryBoard';
 
@@ -100,6 +101,7 @@ export function TaskBoard() {
   const [editingTitle, setEditingTitle] = useState('');
   const editInputRef = useRef<HTMLInputElement>(null);
 
+
   // Drag state — ALL refs to avoid stale closures
   const [dragId, setDragId] = useState<string | null>(null);
   const ghostRef = useRef<HTMLDivElement | null>(null);
@@ -187,6 +189,25 @@ export function TaskBoard() {
       setEditingTitle(title);
     }, 50);
   }, [t]);
+
+  // Send a task to the active tab's agent. Composes `title + description`
+  // (description appended on its own line block only when non-empty), pastes
+  // it into the active xterm via tab-actions, and auto-promotes the task to
+  // "working" so the board reflects "I just started this". If there is no
+  // active tab, silently no-op — the user's click was harmless.
+  const sendToAgent = useCallback((task: TaskItem) => {
+    const activeId = state.activeTerminalId;
+    if (!activeId) return;
+    const actions = getTabActions(activeId);
+    if (!actions) return;
+    const body = task.description && task.description.trim()
+      ? `${task.title}\n\n${task.description.trim()}`
+      : task.title;
+    actions.paste(body);
+    if (task.status !== 'working') {
+      setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: 'working' } : t));
+    }
+  }, [state.activeTerminalId]);
 
   const handleToggle = useCallback((id: string) => {
     setTasks(prev => prev.map(t => t.id === id ? { ...t, status: NEXT_STATUS[t.status] } : t));
@@ -521,7 +542,6 @@ export function TaskBoard() {
               <div className="task-section-header">
                 <span className={`task-section-dot ${status}`} />
                 <span>{t(SECTION_LABEL_KEYS[status])}</span>
-                <span className="task-section-count">{sectionTasks.length}</span>
               </div>
 
               <div className="task-droppable-area">
@@ -565,6 +585,11 @@ export function TaskBoard() {
                           {renderCheckbox(task.status)}
                         </button>
 
+                        {/* Title + inline pencil.
+                            Pencil follows the text so it always appears right
+                            after the last character — in a flex row the title
+                            ellipsis-truncates before the pencil so the pencil
+                            is never pushed off-screen. */}
                         {isEditingThis ? (
                           <input
                             ref={editInputRef}
@@ -583,14 +608,27 @@ export function TaskBoard() {
                             task.status === 'done' && 'completed',
                             hasDesc && 'has-note',
                           ].filter(Boolean).join(' ')}>
-                            {task.title}
+                            <span className="task-title-text">{task.title}</span>
+                            <button
+                              className="task-edit-inline"
+                              onClick={e => { e.stopPropagation(); startEditing(task.id, task.title); }}
+                              tabIndex={-1}
+                            >
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
+                              </svg>
+                            </button>
                           </span>
                         )}
 
+                        {/* Right-side action cluster.
+                            Editing mode: single ✓ confirm button.
+                            Normal mode: [delete] [send] — both opacity-faded
+                            at rest, revealed on card hover. Widths stay
+                            reserved so the title never shifts as icons fade. */}
                         {isEditingThis ? (
-                          /* Confirm edit button (checkmark) */
                           <button
-                            className="task-confirm-btn"
+                            className="task-slot task-slot-confirm"
                             onClick={e => { e.stopPropagation(); commitEdit(); }}
                           >
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -599,22 +637,27 @@ export function TaskBoard() {
                           </button>
                         ) : (
                           <>
-                            {/* Edit title button */}
                             <button
-                              className="task-edit-btn"
-                              onClick={e => { e.stopPropagation(); startEditing(task.id, task.title); }}
-                            >
-                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
-                              </svg>
-                            </button>
-                            {/* Delete button */}
-                            <button
-                              className="task-delete-btn"
+                              className="task-slot task-slot-delete"
                               onClick={e => { e.stopPropagation(); handleRemove(task.id); }}
                             >
-                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="3 6 5 6 21 6"/>
+                                <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/>
+                                <path d="M10 11v6"/><path d="M14 11v6"/>
+                                <path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/>
+                              </svg>
+                            </button>
+                            <button
+                              className="task-slot task-slot-send"
+                              onClick={e => { e.stopPropagation(); sendToAgent(task); }}
+                              disabled={!state.activeTerminalId}
+                            >
+                              {/* Play triangle — reads as "start running this
+                                  task"; polygon spans the full viewBox to
+                                  match the sibling icon weight. */}
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                                <polygon points="5 3 21 12 5 21"/>
                               </svg>
                             </button>
                           </>
