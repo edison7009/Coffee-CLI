@@ -25,32 +25,44 @@ The skill keeps deterministic logic (HTML parsing, axis thresholds, HTML injecti
 
 Follow in order. Do not skip. Do not fabricate numbers.
 
-### Step 0 — Detect the user's dominant language
+### Step 0 — Detect the user's dominant language (any language, worldwide)
 
-**Do this FIRST, before any user-visible output.** The `/vibeid` slash command itself is English, so you cannot judge the user's language from the invocation.
+**Do this FIRST, before any user-visible output.** The `/vibeid` slash command itself is English, so the invocation tells you nothing about the user. VibeID is a **global** product — Chinese / English / Japanese / Korean / French / German / Spanish / Portuguese / Russian / Vietnamese / Arabic / … are all equally first-class. Do not hard-code two-language assumptions.
 
-**IMPORTANT: do NOT use `report.html` for language detection.** The `/insights` feature generates that report's narrative in English regardless of the user's actual language, so the CJK ratio there is always low.
+**IMPORTANT: do NOT use `report.html` for language detection.** The `/insights` feature generates that report's narrative in English regardless of the user's actual language.
 
-**Correct source**: the user's own chat messages in Claude Code's raw session logs at `~/.claude/projects/*/*.jsonl`. These contain the user's real natural-language input.
+**Correct source**: the user's own chat messages in Claude Code's raw session logs at `~/.claude/projects/*/*.jsonl`.
 
 Detection procedure:
 
-1. Use Bash to list recent session files, most-recent first:
+1. List recent session files (most-recent first):
    ```bash
    ls -t ~/.claude/projects/*/*.jsonl 2>/dev/null | head -5
    ```
 
-2. For each of the top 3-5 files, use Read (limited to the last ~200 lines to stay cheap) and extract lines containing `"role":"user"` — those are the user's own messages (not the assistant's replies).
+2. Read the top 3-5 files (last ~200 lines each to stay cheap) and extract lines containing `"role":"user"` — those are the user's own typed messages.
 
-3. Count CJK characters (Unicode blocks U+4E00–U+9FFF for Chinese, U+3040–U+30FF for Japanese kana, U+AC00–U+D7AF for Korean) vs Latin letters `[A-Za-z]` across those user messages.
+3. Look at those messages and infer the dominant natural language. Use your native language-identification ability (this is exactly the kind of task LLMs do well). Output an **ISO 639-1 code**:
+   - `zh` — Chinese (simplified or traditional)
+   - `en` — English
+   - `ja` — Japanese
+   - `ko` — Korean
+   - `fr` — French
+   - `de` — German
+   - `es` — Spanish
+   - `pt` — Portuguese
+   - `ru` — Russian
+   - `vi` — Vietnamese
+   - `ar` — Arabic
+   - `tr` — Turkish
+   - `it` — Italian
+   - … or any other ISO 639-1 code matching the evidence
 
-4. Set:
-   - `target_language = "zh"` if CJK characters ≥ 20% of alphanumeric chars
-   - `target_language = "en"` otherwise
+4. If the messages are predominantly code / filenames with no natural-language signal, fall back to project directory names under `~/.claude/projects/` for hints. If still no signal, default to `en`.
 
-5. **Fallback** if session logs are empty/unreadable: peek at `~/.claude/projects/` directory names — if any contain CJK, lean `"zh"`, else `"en"`.
+5. Set `target_language` to the code. If dominant mix is e.g. 60% Chinese + 40% English, pick the **majority** (`zh` in that case) — do not switch languages mid-response.
 
-**All subsequent user-visible output in Steps 1, 5, 7 uses `target_language` consistently** — including the "generating your report" progress note, the 500-800 word persona analysis, and the final summary. Do NOT switch languages mid-flow.
+**All subsequent user-visible output in Steps 1, 5, 7 uses `target_language` consistently.** The persona analysis, the "generating report" note, and the final summary are all written in the same language — the user's own language.
 
 ### Step 1 — Ensure the insights report exists
 
@@ -67,12 +79,18 @@ Check whether `~/.claude/usage-data/report.html` exists (expand `~` to the user'
 
   If the file is still missing after the command, stop and report the underlying error honestly — do not fall back to synthetic data.
 
-Tell the user briefly what you're doing, using `target_language` from Step 0:
+Tell the user briefly what you're doing, translated naturally into `target_language` from Step 0. Examples for the same meaning ("Generating your usage report first, this takes ~1-2 minutes..."):
 
-- If `target_language = "zh"`: "正在为你生成使用报告（约 1-2 分钟）..."
-- If `target_language = "en"`: "Generating your usage report first, this takes ~1-2 minutes..."
+- `zh`: 正在为你生成使用报告（约 1-2 分钟）...
+- `en`: Generating your usage report first, this takes ~1-2 minutes...
+- `ja`: 使用状況レポートを生成中です（約1〜2分かかります）...
+- `ko`: 사용 기록 리포트를 생성 중입니다 (약 1~2분 소요)...
+- `fr`: Génération de ton rapport d'utilisation (environ 1-2 minutes)...
+- `de`: Erstelle deinen Nutzungsbericht (ca. 1-2 Minuten)...
+- `es`: Generando tu informe de uso (alrededor de 1-2 minutos)...
+- other ISO-639-1 codes: translate appropriately into that language
 
-After the report is generated, re-run the detection from Step 0 #1 to confirm `target_language` (the narrative may now provide stronger signal than the initial guess).
+Do NOT hard-code English here. Use whatever `target_language` was detected.
 
 ### Step 2 — Load the persona matrix
 
@@ -130,7 +148,13 @@ Concatenate to form the VibeID code (e.g. `TFVH`). Look it up in `personas` to g
 
 Write **500–800 words** of personalized analysis across **5 distinct sections**, separated by **blank lines (`\n\n`)**. Users read this like an MBTI 16Personalities profile — they want depth, specificity, and a little flattery grounded in real numbers.
 
-**Language**: Use `target_language` set in Step 0. If `target_language = "zh"`, write in Simplified Chinese and use `name_cn` / `profession_cn` / `tagline_cn` / family `name_cn` from the matrix. If `"en"`, write in English and use the English fields.
+**Language**: Write the entire 500-800 word analysis in `target_language` detected in Step 0. This supports **any language**, not just Chinese/English:
+
+- If `target_language == "zh"`: write in Simplified Chinese and use `name_cn` / `profession_cn` / `tagline_cn` / family `name_cn` from the matrix (pre-translated by us)
+- If `target_language == "en"`: write in English and use the English fields (`name` / `profession` / `tagline` / `family`)
+- **For any other language** (ja / ko / fr / de / es / pt / ru / vi / ar / etc.): write the analysis in that language, and **translate `name` / `profession` / `tagline` from the matrix's English fields on the fly** into the same language. Keep the 4-letter code (e.g. `TFAH`) unchanged — it's a brand identifier like `INFJ`, pronounced locally but spelled the same globally.
+
+Tone is consistent across all languages: confident, specific, lightly flattering, grounded in real numbers.
 
 **Required sections** (each a separate paragraph, roughly 100–160 words):
 
