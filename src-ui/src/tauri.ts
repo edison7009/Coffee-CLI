@@ -180,6 +180,15 @@ export const commands = {
   openUrl: (url: string) =>
     invoke<void>('open_url', { url }),
 
+  // Skill auto-install: check whether ~/.claude/skills/<name>/SKILL.md exists,
+  // and write individual files into ~/.claude/skills/vibeid/<relPath>.
+  // Used by the VibeID launcher to hydrate the skill on first launch by
+  // fetching the remote skill package and piping each file through.
+  checkSkillInstalled: (name: string) =>
+    invoke<boolean>('check_skill_installed', { name }),
+  writeSkillFile: (relPath: string, bytes: number[]) =>
+    invoke<void>('write_skill_file', { relPath, bytes }),
+
   // Live fs watcher — subscribes to OS-native events under `path` and
   // emits `fs-refresh` Tauri events that Explorer already listens for.
   // Calling start with a new path implicitly replaces the previous watcher.

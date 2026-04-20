@@ -176,6 +176,54 @@ export function CenterPanel() {
       .finally(() => setAgentsLoading(false));
   }, []);
 
+  // Auto-install the VibeID skill on first launch. Previously (v0.8.0) users
+  // who downloaded the app saw `Unknown skill: vibeid` when clicking the
+  // Personality Test card because ~/.claude/skills/vibeid/ was never
+  // populated. This hydrates it from the remote Web-Home URL in the
+  // background — silent on success, invisible to the user.
+  useEffect(() => {
+    if (!isTauri) return;
+    commands.checkSkillInstalled('vibeid').then(async installed => {
+      if (installed) return;
+      const BASE = 'https://coffeecli.com/CC-VibeID-test';
+      const CODES = [
+        'PFVL','PFVH','PFAL','PFAH','PSVL','PSVH','PSAL','PSAH',
+        'TFVL','TFVH','TFAL','TFAH','TSVL','TSVH','TSAL','TSAH',
+      ];
+      const textFiles = [
+        { remote: 'SKILL.md', local: 'SKILL.md' },
+        { remote: 'matrix.json', local: 'matrix.json' },
+        { remote: 'scripts/analyze.js', local: 'scripts/analyze.js' },
+        { remote: 'scripts/inject.js', local: 'scripts/inject.js' },
+      ];
+      const imageFiles = CODES.map(c => ({
+        remote: `personas/images/${c}.png`,
+        local: `images/${c}.png`,
+      }));
+      const pullText = async (f: { remote: string; local: string }) => {
+        const res = await fetch(`${BASE}/${f.remote}`);
+        if (!res.ok) throw new Error(`${f.remote}: ${res.status}`);
+        const bytes = new TextEncoder().encode(await res.text());
+        await commands.writeSkillFile(f.local, Array.from(bytes));
+      };
+      const pullBinary = async (f: { remote: string; local: string }) => {
+        const res = await fetch(`${BASE}/${f.remote}`);
+        if (!res.ok) throw new Error(`${f.remote}: ${res.status}`);
+        const buf = new Uint8Array(await res.arrayBuffer());
+        await commands.writeSkillFile(f.local, Array.from(buf));
+      };
+      try {
+        await Promise.all([
+          ...textFiles.map(pullText),
+          ...imageFiles.map(pullBinary),
+        ]);
+        console.log('[vibeid] skill installed to ~/.claude/skills/vibeid/');
+      } catch (err) {
+        console.warn('[vibeid] skill install failed:', err);
+      }
+    }).catch(() => {});
+  }, []);
+
   // Force a fresh catalog fetch every time the Library opens so newly-deployed
   // agents show up without an app restart (dodges module + CDN caches).
   useEffect(() => {

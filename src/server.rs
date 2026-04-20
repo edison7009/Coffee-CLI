@@ -480,6 +480,38 @@ fn write_temp_script(content: String, extension: String) -> Result<String, Strin
     Ok(path.to_string_lossy().to_string())
 }
 
+/// Check whether a Claude Code skill is installed locally.
+/// Returns true if `~/.claude/skills/<name>/SKILL.md` exists.
+#[tauri::command]
+fn check_skill_installed(name: String) -> bool {
+    let Some(home) = dirs::home_dir() else { return false };
+    home.join(".claude").join("skills").join(&name).join("SKILL.md").exists()
+}
+
+/// Write a file into `~/.claude/skills/vibeid/<rel_path>`.
+/// Creates parent directories as needed. `rel_path` must be a relative path
+/// with no `..` segments. Used by the frontend to hydrate the VibeID skill
+/// package on first launch by fetching from the remote skill URL.
+#[tauri::command]
+fn write_skill_file(rel_path: String, bytes: Vec<u8>) -> Result<(), String> {
+    // Reject absolute paths and parent-dir escapes. Skill tree is always
+    // under ~/.claude/skills/vibeid/ and rel_path is a forward-slash path.
+    if rel_path.contains("..") || rel_path.starts_with('/') || rel_path.starts_with('\\')
+        || rel_path.contains(':')
+    {
+        return Err(format!("Invalid relative path: {}", rel_path));
+    }
+    let home = dirs::home_dir().ok_or_else(|| "No home directory".to_string())?;
+    let target = home.join(".claude").join("skills").join("vibeid").join(&rel_path);
+    if let Some(parent) = target.parent() {
+        std::fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create skill dir: {}", e))?;
+    }
+    std::fs::write(&target, &bytes)
+        .map_err(|e| format!("Failed to write skill file: {}", e))?;
+    Ok(())
+}
+
 /// Save a base64-encoded clipboard image to a temp file.
 /// Used by the Gambit compose window so pasted screenshots can be referenced
 /// by path when forwarded to AI CLI agents (Claude Code, etc.).
@@ -1742,6 +1774,8 @@ pub fn start_ui(project_dir: PathBuf) -> anyhow::Result<()> {
             load_password,
             delete_password,
             open_url,
+            check_skill_installed,
+            write_skill_file,
         ])
         .setup(|app| {
             // Install Claude/Qwen hook scripts + settings patches.
