@@ -488,6 +488,16 @@ fn check_skill_installed(name: String) -> bool {
     home.join(".claude").join("skills").join(&name).join("SKILL.md").exists()
 }
 
+/// Check whether the Claude Code `/insights` usage report exists.
+/// Returns true if `~/.claude/usage-data/report.html` is present.
+/// Used by the VibeID launcher to decide whether to first auto-run
+/// `/insights` in a pre-run tab, or go straight to `/vibeid`.
+#[tauri::command]
+fn check_vibeid_report_exists() -> bool {
+    let Some(home) = dirs::home_dir() else { return false };
+    home.join(".claude").join("usage-data").join("report.html").exists()
+}
+
 /// Write a file into `~/.claude/skills/vibeid/<rel_path>`.
 /// Creates parent directories as needed. `rel_path` must be a relative path
 /// with no `..` segments. Used by the frontend to hydrate the VibeID skill
@@ -716,6 +726,13 @@ fn tier_terminal_start(
         // leading slash commands as skill invocations, so the `vibeid` skill
         // fires immediately on startup with no PTY-write hacks required.
         Some("vibeid")   => ("claude".to_string(), vec!["/vibeid".to_string()]),
+        // Insights pre-run: same trick as VibeID but with /insights. Used by
+        // the VibeID launcher to auto-generate the usage report on first use
+        // before the real VibeID tab spawns. Because this goes through the
+        // Rust Command API (not a shell), Git Bash's MSYS path-conversion
+        // that mangles "/insights" into "C:/Program Files/Git/insights" is
+        // bypassed entirely.
+        Some("insights_prerun") => ("claude".to_string(), vec!["/insights".to_string()]),
         Some("qwen")     => ("qwen".to_string(),   vec![]),
         Some("hermes")   => ("hermes".to_string(), vec![]),
         Some("opencode") => ("opencode".to_string(), vec![]),
@@ -1776,6 +1793,7 @@ pub fn start_ui(project_dir: PathBuf) -> anyhow::Result<()> {
             open_url,
             check_skill_installed,
             write_skill_file,
+            check_vibeid_report_exists,
         ])
         .setup(|app| {
             // Install Claude/Qwen hook scripts + settings patches.

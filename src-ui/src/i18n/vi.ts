@@ -35,6 +35,9 @@ export const vi = {
   'tool.remote.short': 'Từ xa',
   'tool.installer': 'Trình cài đặt',
   'tool.vibeid': 'Trắc nghiệm tính cách',
+  'tool.insights_prerun': 'Đang tạo báo cáo sử dụng...',
+  'vibeid.need_insights_confirm': 'Trắc nghiệm tính cách cần báo cáo sử dụng Claude Code của bạn trước.\n\n/insights sẽ tự động chạy (khoảng 1-2 phút), sau đó trắc nghiệm sẽ tự bắt đầu.\n\nTiếp tục?',
+  'vibeid.insights_timeout': 'Tạo báo cáo quá lâu. Vui lòng thử lại sau hoặc chạy /insights thủ công trong tab Claude Code.',
 
   // Remote Terminal
   'remote.title': 'Terminal từ xa',

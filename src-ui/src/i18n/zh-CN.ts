@@ -34,6 +34,9 @@ export const zhCN = {
   'tool.remote.short': '远程',
   'tool.installer': '一键安装',
   'tool.vibeid': '人格测试',
+  'tool.insights_prerun': '正在生成使用报告...',
+  'vibeid.need_insights_confirm': '人格测试需要先生成你的 Claude Code 使用报告。\n\n将自动运行 /insights（约 1-2 分钟），完成后自动跑人格测试。\n\n继续？',
+  'vibeid.insights_timeout': '报告生成超时了。请稍后重试，或在 Claude Code tab 里手动跑 /insights。',
 
   // Remote Terminal
   'remote.title': '远程终端',

@@ -34,6 +34,9 @@ export const pt = {
   'tool.remote.short': 'Remoto',
   'tool.installer': 'Instalador',
   'tool.vibeid': 'Teste de personalidade',
+  'tool.insights_prerun': 'Gerando relatório de uso...',
+  'vibeid.need_insights_confirm': 'O Teste de personalidade precisa primeiro do seu relatório de uso Claude Code.\n\n/insights será executado automaticamente (cerca de 1-2 minutos) e depois o teste começará sozinho.\n\nContinuar?',
+  'vibeid.insights_timeout': 'A geração do relatório demorou muito. Tente novamente mais tarde ou execute /insights manualmente em uma aba Claude Code.',
 
   // Remote Terminal
   'remote.title': 'Terminal remoto',

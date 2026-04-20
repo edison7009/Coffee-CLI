@@ -490,6 +490,14 @@ export function CenterPanel() {
   };
 
   const selectTool = (tool: ToolType, toolData?: string, cwd?: string) => {
+    // VibeID launcher: before spawning /vibeid, make sure the /insights usage
+    // report exists. If not, auto-run /insights in a pre-run tab and poll for
+    // the report file. When it lands, kill the pre-run PTY and remount the
+    // tab with tool='vibeid'. End-to-end one click.
+    if (tool === 'vibeid' && isTauri) {
+      handleVibeidSelect(cwd);
+      return;
+    }
     if (activeTerminalId) {
       if (cwd) {
         dispatch({ type: 'SET_FOLDER', path: cwd });
@@ -501,6 +509,50 @@ export function CenterPanel() {
       }
       dispatch({ type: 'SET_TERMINAL_TOOL', id: activeTerminalId, tool, toolData });
     }
+  };
+
+  const handleVibeidSelect = async (cwd?: string) => {
+    if (!activeTerminalId) return;
+    const currentId = activeTerminalId;
+    if (cwd) {
+      dispatch({ type: 'SET_FOLDER', path: cwd });
+    }
+
+    const hasReport = await commands.checkVibeidReportExists().catch(() => false);
+    if (hasReport) {
+      dispatch({ type: 'SET_TERMINAL_TOOL', id: currentId, tool: 'vibeid' });
+      return;
+    }
+
+    // No report yet — ask the user if they want to auto-generate it first.
+    const ok = window.confirm(t('vibeid.need_insights_confirm') as string);
+    if (!ok) return;
+
+    // Step 1: spawn a pre-run tab that runs `claude /insights`.
+    dispatch({ type: 'SET_TERMINAL_TOOL', id: currentId, tool: 'insights_prerun' });
+
+    // Step 2: poll for report.html. When it lands, kill the /insights PTY
+    // and remount the tab with tool='vibeid' so it spawns `claude /vibeid`.
+    const startTs = Date.now();
+    const TIMEOUT_MS = 5 * 60 * 1000;
+    const POLL_MS = 3000;
+    const poll = window.setInterval(async () => {
+      if (Date.now() - startTs > TIMEOUT_MS) {
+        window.clearInterval(poll);
+        setToastMsg(t('vibeid.insights_timeout') as string);
+        return;
+      }
+      const ready = await commands.checkVibeidReportExists().catch(() => false);
+      if (!ready) return;
+      window.clearInterval(poll);
+      // Kill the /insights PTY, then remount via RESTART_TERMINAL.
+      try { await commands.tierTerminalKill(currentId); } catch {}
+      const newId = (crypto && 'randomUUID' in crypto)
+        ? crypto.randomUUID()
+        : `vibeid-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      dispatch({ type: 'SET_TERMINAL_TOOL', id: currentId, tool: 'vibeid' });
+      dispatch({ type: 'RESTART_TERMINAL', id: currentId, newId });
+    }, POLL_MS);
   };
 
   const handlePickFolder = async (toolKey: ToolType) => {
@@ -628,6 +680,7 @@ export function CenterPanel() {
       }
       case 'installer': return { icon: <SvgInstaller />, title: t('tool.installer' as any), tooltip: undefined };
       case 'vibeid': return { icon: <SvgVibeID />, title: t('tool.vibeid' as any), tooltip: undefined };
+      case 'insights_prerun': return { icon: <SvgVibeID />, title: t('tool.insights_prerun' as any), tooltip: undefined };
       case 'remote': {
         let title = t('tool.remote') as string;
         if (session.toolData) {
@@ -705,7 +758,7 @@ export function CenterPanel() {
               {icon}
               <span className="tab-title" style={{ flex: '0 1 auto', minWidth: 0, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{title}</span>
               <div className="tab-actions">
-                {(['claude', 'qwen', 'hermes', 'opencode', 'codex', 'gemini', 'agent', 'installer', 'terminal', 'remote', 'vibeid'] as const).includes(session.tool as 'claude' | 'qwen' | 'hermes' | 'opencode' | 'codex' | 'gemini' | 'agent' | 'installer' | 'terminal' | 'remote' | 'vibeid') && (
+                {(['claude', 'qwen', 'hermes', 'opencode', 'codex', 'gemini', 'agent', 'installer', 'terminal', 'remote', 'vibeid', 'insights_prerun'] as const).includes(session.tool as 'claude' | 'qwen' | 'hermes' | 'opencode' | 'codex' | 'gemini' | 'agent' | 'installer' | 'terminal' | 'remote' | 'vibeid' | 'insights_prerun') && (
                   // Only Claude Code has a real hook-driven status machine.
                   // The other tools render the steady-green idle pulse —
                   // we explicitly chose not to guess their state from PTY

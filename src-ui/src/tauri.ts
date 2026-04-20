@@ -189,6 +189,12 @@ export const commands = {
   writeSkillFile: (relPath: string, bytes: number[]) =>
     invoke<void>('write_skill_file', { relPath, bytes }),
 
+  // Check whether `~/.claude/usage-data/report.html` exists. Used by the
+  // VibeID launcher to gate between running /insights first or going
+  // straight to /vibeid.
+  checkVibeidReportExists: () =>
+    invoke<boolean>('check_vibeid_report_exists'),
+
   // Live fs watcher — subscribes to OS-native events under `path` and
   // emits `fs-refresh` Tauri events that Explorer already listens for.
   // Calling start with a new path implicitly replaces the previous watcher.

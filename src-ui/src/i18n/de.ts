@@ -34,6 +34,9 @@ export const de = {
   'tool.remote.short': 'Remote',
   'tool.installer': 'Installer',
   'tool.vibeid': 'Persönlichkeitstest',
+  'tool.insights_prerun': 'Nutzungsbericht wird generiert...',
+  'vibeid.need_insights_confirm': 'Der Persönlichkeitstest benötigt zuerst deinen Claude Code Nutzungsbericht.\n\n/insights wird jetzt automatisch ausgeführt (ca. 1-2 Minuten), dann startet der Test automatisch.\n\nFortfahren?',
+  'vibeid.insights_timeout': 'Die Berichterstellung hat zu lange gedauert. Bitte später erneut versuchen oder /insights manuell in einem Claude Code Tab ausführen.',
 
   // Remote Terminal
   'remote.title': 'Remote-Terminal',
