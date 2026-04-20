@@ -33,6 +33,7 @@ export const ru = {
   'tool.remote': 'Удалённый терминал',
   'tool.remote.short': 'Удалённый',
   'tool.installer': 'Установщик',
+  'tool.vibeid': 'Тест личности',
 
   // Remote Terminal
   'remote.title': 'Удалённый терминал',

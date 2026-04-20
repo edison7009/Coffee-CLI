@@ -679,6 +679,11 @@ fn tier_terminal_start(
     // Map the requested tool to an actual CLI command.
     let (cmd, args): (String, Vec<String>) = match tool.as_deref() {
         Some("claude")   => ("claude".to_string(), vec![]),
+        // VibeID is a skill-launcher: spawn plain `claude` binary with `/vibeid`
+        // as the initial positional prompt argument. Claude Code's REPL parses
+        // leading slash commands as skill invocations, so the `vibeid` skill
+        // fires immediately on startup with no PTY-write hacks required.
+        Some("vibeid")   => ("claude".to_string(), vec!["/vibeid".to_string()]),
         Some("qwen")     => ("qwen".to_string(),   vec![]),
         Some("hermes")   => ("hermes".to_string(), vec![]),
         Some("opencode") => ("opencode".to_string(), vec![]),

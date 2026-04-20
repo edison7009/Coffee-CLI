@@ -33,6 +33,7 @@ export const zhTW = {
   'tool.remote': '遠端終端機',
   'tool.remote.short': '遠端',
   'tool.installer': '一鍵安裝',
+  'tool.vibeid': '人格測試',
 
   // Remote Terminal
   'remote.title': '遠端終端機',

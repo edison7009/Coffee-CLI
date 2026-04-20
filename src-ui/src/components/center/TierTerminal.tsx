@@ -374,7 +374,12 @@ function TierTerminalImpl({
         }
 
         // Paste: Ctrl+V / Cmd+V
+        // IMPORTANT: e.preventDefault() stops the browser's native paste
+        // event from firing after keydown — without it, xterm's built-in
+        // paste handler ALSO fires on the same keystroke, inserting the
+        // clipboard text twice.
         if (cmdOrCtrl && e.code === 'KeyV') {
+          e.preventDefault();
           readText().then(text => {
             if (text) term.paste(text);
           }).catch(() => {});
@@ -387,6 +392,7 @@ function TierTerminalImpl({
           return false;
         }
         if (e.ctrlKey && e.shiftKey && e.code === 'KeyV') {
+          e.preventDefault();
           readText().then(text => {
             if (text) term.paste(text);
           }).catch(() => {});
@@ -394,6 +400,40 @@ function TierTerminalImpl({
         }
       }
       return true; // Let xterm handle all other keys natively
+    });
+
+    // Clickable links: URLs (http/https/file) + absolute file paths.
+    // Underlines matched tokens on hover; click opens via Tauri's open_url
+    // command (delegates to the OS shell — system browser for URLs, default
+    // handler for local files like report.html).
+    const LINK_RE = /(https?:\/\/[^\s<>()"']+|file:\/\/\/[^\s<>()"']+|[A-Za-z]:[/\\][^\s<>()"']+)/g;
+    term.registerLinkProvider({
+      provideLinks(bufferLineNumber, callback) {
+        const line = term.buffer.active.getLine(bufferLineNumber - 1);
+        const text = line ? line.translateToString(true) : '';
+        const links: any[] = [];
+        let m;
+        LINK_RE.lastIndex = 0;
+        while ((m = LINK_RE.exec(text)) !== null) {
+          const raw = m[0].replace(/[),.]+$/, '');
+          const startCol = m.index + 1;
+          const endCol = m.index + raw.length;
+          links.push({
+            range: {
+              start: { x: startCol, y: bufferLineNumber },
+              end: { x: endCol, y: bufferLineNumber },
+            },
+            text: raw,
+            activate: () => {
+              const url = /^[A-Za-z]:[/\\]/.test(raw)
+                ? 'file:///' + raw.replace(/\\/g, '/')
+                : raw;
+              commands.openUrl(url).catch(() => {});
+            },
+          });
+        }
+        callback(links);
+      },
     });
 
     xtermRef.current = term;
@@ -487,6 +527,10 @@ function TierTerminalImpl({
       const initialCols = term.cols || 80;
       const initialRows = term.rows || 24;
 
+        // VibeID routes through the backend's own `'vibeid'` match arm, which
+        // spawns `claude` with `/vibeid` as the initial positional prompt.
+        // No frontend remap + no PTY-write hack: Claude Code's REPL parses the
+        // slash command natively on first input.
         await commands.tierTerminalStart(sessionId, tool, initialCols, initialRows, theme, lang, toolData, folderPath ?? undefined);
 
         // After PTY is running, wait two frames for layout to settle then
@@ -531,6 +575,10 @@ function TierTerminalImpl({
             }
           }, 1000);
         }
+
+        // (VibeID no longer needs a frontend auto-prompt timer — the backend
+        // spawns `claude /vibeid` directly, so the REPL fires the skill on its
+        // very first parse pass.)
       } catch (err) {
         console.warn('[TierTerminal] startPty failed:', err);
         term.writeln(`\x1b[31mFailed to start terminal: ${err}\x1b[0m`);

@@ -34,6 +34,7 @@ export const en = {
   'tool.remote': 'Remote Terminal',
   'tool.remote.short': 'Remote',
   'tool.installer': 'Installer',
+  'tool.vibeid': 'Personality Test',
 
   // Remote Terminal
   'remote.title': 'Remote Terminal',

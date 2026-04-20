@@ -33,6 +33,7 @@ export const ja = {
   'tool.remote': 'リモートターミナル',
   'tool.remote.short': 'リモート',
   'tool.installer': 'インストーラー',
+  'tool.vibeid': '性格診断',
 
   // Remote Terminal
   'remote.title': 'リモートターミナル',

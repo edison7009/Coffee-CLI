@@ -34,6 +34,7 @@ export const vi = {
   'tool.remote': 'Terminal từ xa',
   'tool.remote.short': 'Từ xa',
   'tool.installer': 'Trình cài đặt',
+  'tool.vibeid': 'Trắc nghiệm tính cách',
 
   // Remote Terminal
   'remote.title': 'Terminal từ xa',

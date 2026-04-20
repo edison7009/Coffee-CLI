@@ -33,6 +33,7 @@ export const ko = {
   'tool.remote': '원격 터미널',
   'tool.remote.short': '원격',
   'tool.installer': '설치 도구',
+  'tool.vibeid': '성격 테스트',
 
   // Remote Terminal
   'remote.title': '원격 터미널',

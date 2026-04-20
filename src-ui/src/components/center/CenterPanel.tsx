@@ -45,6 +45,14 @@ const SvgInstaller = () => (
   </svg>
 );
 
+const SvgVibeID = () => (
+  <img
+    src="/icons/vibeid.png"
+    alt=""
+    style={{ width: '1.4em', height: '1.4em', flexShrink: 0, objectFit: 'contain' }}
+  />
+);
+
 const SvgOpenCode = () => (
   <svg width="1em" height="1em" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
     <rect width="96" height="96" fill="#131010"/>
@@ -140,11 +148,11 @@ export function CenterPanel() {
       // Returning users' pin choices are respected (stored !== null path above).
       const defaults = [
         'agent:claude',
-        'agent:opencode',
         'agent:codex',
+        'agent:opencode',
         'agent:gemini',
         'agent:installer',
-        'agent:terminal',
+        'agent:vibeid',
       ];
       localStorage.setItem('coffee_pinned_items', JSON.stringify(defaults));
       return defaults;
@@ -205,7 +213,7 @@ export function CenterPanel() {
   // Remote catalog entries matching these keys route through the built-in spawn path;
   // non-matching keys (e.g. "openclaw") route through the generic `'agent'` path
   // which sends binary+args to the backend via toolData JSON.
-  const BUILTIN_SPAWN_KEYS = new Set(['claude', 'opencode', 'codex', 'gemini', 'qwen', 'hermes', 'installer', 'terminal']);
+  const BUILTIN_SPAWN_KEYS = new Set(['claude', 'opencode', 'codex', 'gemini', 'qwen', 'hermes', 'installer', 'terminal', 'vibeid']);
 
   // Unified agent catalog — computed from remote (preferred) or fallback to hardcoded.
   // AI CLIs come from catalog; installer/terminal are built-in utilities (Q3 decision).
@@ -239,6 +247,10 @@ export function CenterPanel() {
       { key: 'installer' as ToolType, label: t('tool.installer' as any), icon: <SvgInstaller />, type: 'utility' as const, requiresCwd: false, remote: undefined },
       // Terminal is an AI-CLI-like tool (needs cwd) rather than a 'utility'.
       { key: 'terminal' as ToolType, label: t('tool.terminal'), icon: <TerminalIcon />, type: 'ai-cli' as const, requiresCwd: true, remote: undefined },
+      // VibeID is a built-in skill-launcher utility: click → spawn `claude` binary
+      // in a tab, then auto-write `/vibeid\r` to trigger the remote vibeid skill.
+      // No cwd required (runs against ~/.claude/usage-data/report.html globally).
+      { key: 'vibeid' as ToolType, label: t('tool.vibeid' as any), icon: <SvgVibeID />, type: 'utility' as const, requiresCwd: false, remote: undefined },
     ];
 
     return [...aiCliEntries, ...utilities];
@@ -562,6 +574,7 @@ export function CenterPanel() {
         };
       }
       case 'installer': return { icon: <SvgInstaller />, title: t('tool.installer' as any), tooltip: undefined };
+      case 'vibeid': return { icon: <SvgVibeID />, title: t('tool.vibeid' as any), tooltip: undefined };
       case 'remote': {
         let title = t('tool.remote') as string;
         if (session.toolData) {
@@ -639,7 +652,7 @@ export function CenterPanel() {
               {icon}
               <span className="tab-title" style={{ flex: '0 1 auto', minWidth: 0, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{title}</span>
               <div className="tab-actions">
-                {(['claude', 'qwen', 'hermes', 'opencode', 'codex', 'gemini', 'agent', 'installer', 'terminal', 'remote'] as const).includes(session.tool as 'claude' | 'qwen' | 'hermes' | 'opencode' | 'codex' | 'gemini' | 'agent' | 'installer' | 'terminal' | 'remote') && (
+                {(['claude', 'qwen', 'hermes', 'opencode', 'codex', 'gemini', 'agent', 'installer', 'terminal', 'remote', 'vibeid'] as const).includes(session.tool as 'claude' | 'qwen' | 'hermes' | 'opencode' | 'codex' | 'gemini' | 'agent' | 'installer' | 'terminal' | 'remote' | 'vibeid') && (
                   // Only Claude Code has a real hook-driven status machine.
                   // The other tools render the steady-green idle pulse —
                   // we explicitly chose not to guess their state from PTY

@@ -33,6 +33,7 @@ export const zhCN = {
   'tool.remote': '远程终端',
   'tool.remote.short': '远程',
   'tool.installer': '一键安装',
+  'tool.vibeid': '人格测试',
 
   // Remote Terminal
   'remote.title': '远程终端',
