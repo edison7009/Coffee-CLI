@@ -498,6 +498,26 @@ fn check_vibeid_report_exists() -> bool {
     home.join(".claude").join("usage-data").join("report.html").exists()
 }
 
+/// Return the Unix epoch seconds of the last modification time of the
+/// `~/.claude/usage-data/report.html` file. Returns 0 if the file does
+/// not exist or if metadata cannot be read.
+///
+/// Used by the VibeID launcher to detect when a pre-run `/insights`
+/// invocation has finished writing a fresh report (mtime strictly
+/// greater than the click timestamp means the report was regenerated).
+#[tauri::command]
+fn check_vibeid_report_mtime() -> u64 {
+    let Some(home) = dirs::home_dir() else { return 0 };
+    let path = home.join(".claude").join("usage-data").join("report.html");
+    match std::fs::metadata(&path).and_then(|m| m.modified()) {
+        Ok(mtime) => mtime
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0),
+        Err(_) => 0,
+    }
+}
+
 /// Write a file into `~/.claude/skills/vibeid/<rel_path>`.
 /// Creates parent directories as needed. `rel_path` must be a relative path
 /// with no `..` segments. Used by the frontend to hydrate the VibeID skill
@@ -1794,6 +1814,7 @@ pub fn start_ui(project_dir: PathBuf) -> anyhow::Result<()> {
             check_skill_installed,
             write_skill_file,
             check_vibeid_report_exists,
+            check_vibeid_report_mtime,
         ])
         .setup(|app| {
             // Install Claude/Qwen hook scripts + settings patches.

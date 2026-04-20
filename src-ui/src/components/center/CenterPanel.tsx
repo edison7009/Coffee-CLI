@@ -518,34 +518,41 @@ export function CenterPanel() {
       dispatch({ type: 'SET_FOLDER', path: cwd });
     }
 
-    const hasReport = await commands.checkVibeidReportExists().catch(() => false);
-    if (hasReport) {
-      dispatch({ type: 'SET_TERMINAL_TOOL', id: currentId, tool: 'vibeid' });
-      return;
+    // Step A: Pass the user's Coffee CLI UI locale to the skill via a
+    // hint file at ~/.claude/skills/vibeid/.user_lang. The skill Step 0
+    // reads this file first — 100% reliable. Scanning session jsonl
+    // can mis-detect because the auto-run /insights tab is all English.
+    try {
+      const lang = state.currentLang || 'en';
+      const bytes = Array.from(new TextEncoder().encode(lang));
+      await commands.writeSkillFile('.user_lang', bytes);
+    } catch {
+      // Non-fatal — skill falls back to jsonl scanning.
     }
 
-    // No report yet — ask the user if they want to auto-generate it first.
-    const ok = window.confirm(t('vibeid.need_insights_confirm') as string);
-    if (!ok) return;
+    // Step B: ALWAYS regenerate /insights on every click. The user
+    // clicked because they want an up-to-date analysis *right now*;
+    // reusing a stale report would give outdated personality results.
+    const clickTs = Math.floor(Date.now() / 1000);
 
-    // Step 1: spawn a pre-run tab that runs `claude /insights`.
     dispatch({ type: 'SET_TERMINAL_TOOL', id: currentId, tool: 'insights_prerun' });
 
-    // Step 2: poll for report.html. When it lands, kill the /insights PTY
-    // and remount the tab with tool='vibeid' so it spawns `claude /vibeid`.
-    const startTs = Date.now();
+    // Step C: Poll report.html's mtime. mtime > clickTs (minus a small
+    // clock-skew tolerance) means the report was freshly regenerated.
+    // Then kill the /insights PTY and remount the tab as vibeid.
+    const TOLERANCE_S = 5;
     const TIMEOUT_MS = 5 * 60 * 1000;
     const POLL_MS = 3000;
+    const startMs = Date.now();
     const poll = window.setInterval(async () => {
-      if (Date.now() - startTs > TIMEOUT_MS) {
+      if (Date.now() - startMs > TIMEOUT_MS) {
         window.clearInterval(poll);
         setToastMsg(t('vibeid.insights_timeout') as string);
         return;
       }
-      const ready = await commands.checkVibeidReportExists().catch(() => false);
-      if (!ready) return;
+      const mtime = await commands.checkVibeidReportMtime().catch(() => 0);
+      if (mtime <= clickTs - TOLERANCE_S) return;
       window.clearInterval(poll);
-      // Kill the /insights PTY, then remount via RESTART_TERMINAL.
       try { await commands.tierTerminalKill(currentId); } catch {}
       const newId = (crypto && 'randomUUID' in crypto)
         ? crypto.randomUUID()

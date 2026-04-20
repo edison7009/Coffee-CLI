@@ -195,6 +195,13 @@ export const commands = {
   checkVibeidReportExists: () =>
     invoke<boolean>('check_vibeid_report_exists'),
 
+  // Return the Unix-epoch-seconds mtime of the /insights report file.
+  // 0 if the file doesn't exist. The VibeID launcher records the click
+  // timestamp, starts a pre-run tab that runs /insights, and polls this
+  // until mtime > clickTs (meaning the report was freshly regenerated).
+  checkVibeidReportMtime: () =>
+    invoke<number>('check_vibeid_report_mtime'),
+
   // Live fs watcher — subscribes to OS-native events under `path` and
   // emits `fs-refresh` Tauri events that Explorer already listens for.
   // Calling start with a new path implicitly replaces the previous watcher.
