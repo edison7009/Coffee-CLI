@@ -25,12 +25,22 @@ The skill keeps deterministic logic (HTML parsing, axis thresholds, HTML injecti
 
 Follow in order. Do not skip. Do not fabricate numbers.
 
-### Step 1 — Locate the insights report
+### Step 1 — Ensure the insights report exists
 
 Check whether `~/.claude/usage-data/report.html` exists (expand `~` to the user's home directory).
 
-- **Missing**: Tell the user to run `/insights` first, then stop. Do not proceed.
-- **Present**: Continue.
+- **Present**: Continue to Step 2.
+- **Missing**: The user hasn't run `/insights` yet. **Auto-generate it** by running the following Bash command (this is a nested, non-interactive `claude` invocation — `-p` means print-mode, fires `/insights` and exits):
+
+  ```bash
+  claude -p "/insights"
+  ```
+
+  This may take 60–180 seconds on a large usage history. After the command completes, re-check that `~/.claude/usage-data/report.html` exists and continue to Step 2.
+
+  If the file is still missing after the command, stop and report the underlying error honestly — do not fall back to synthetic data.
+
+Tell the user briefly what you're doing ("Generating your usage report first, this takes ~1–2 minutes..."). Respond in the user's input language (Chinese if they spoke Chinese, English otherwise).
 
 ### Step 2 — Load the persona matrix
 

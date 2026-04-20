@@ -137,7 +137,24 @@ $agentCatalog = @(
         Npm       = $false
         Install   = {
             # Anthropic official native installer (Bun-compiled standalone).
-            Invoke-Expression ((Invoke-WebRequest -Uri "https://claude.ai/install.ps1" -UseBasicParsing).Content)
+            # Guard against GFW/CDN interception returning the marketing HTML page
+            # instead of the actual PowerShell script (seen in CN networks where
+            # claude.ai/install.ps1 resolves to a Webflow landing page and the
+            # embedded JS gets fed to iex, producing parser errors).
+            $url = "https://claude.ai/install.ps1"
+            $resp = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 15 -ErrorAction Stop
+            $script = if ($resp.Content -is [byte[]]) {
+                [System.Text.Encoding]::UTF8.GetString($resp.Content)
+            } else {
+                [string]$resp.Content
+            }
+            if ($script -match '(?i)<!DOCTYPE|<html|<script\s|webflow') {
+                throw "claude.ai/install.ps1 returned HTML instead of a script (likely network interception or CDN edge error). Try a different network, or install manually: https://docs.anthropic.com/claude-code/install"
+            }
+            if ($script.Length -lt 200) {
+                throw "claude.ai/install.ps1 returned a suspiciously short response ($($script.Length) bytes)"
+            }
+            Invoke-Expression $script
         }
         Uninstall = {
             # Native installer places the binary at ~/.local/bin and versioned
