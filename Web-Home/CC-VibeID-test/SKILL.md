@@ -172,6 +172,20 @@ Tone is consistent across all languages: confident, specific, lightly flattering
 
 **Formatting**: Plain text with `\n\n` between paragraphs. No headers / bullets / markdown bold (the injector renders each paragraph as a `<p>` tag; bold comes from surrounding a phrase with `**...**` which the injector will convert).
 
+**CRITICAL — quoting rule (must follow or Step 6 JSON will break)**:
+
+Never use straight ASCII double quotes (`"`) inside the analysis text. When this string becomes a value in the persona JSON of Step 6, every `"` must be escaped as `\"`, and missing even one escape kills the whole injection (seen in production: `invalid persona JSON: Expected ',' or '}' ...`).
+
+Safe alternatives for emphasis / quoting:
+
+- Chinese quotes `“……”` or `「……」` (Chinese / Japanese output)
+- French guillemets `« … »` (French output)
+- German `„ … "` (German output)
+- For English: use single quotes `'…'` or **markdown bold** (`**phrase**`) instead of `"…"`.
+- To strongly emphasize a persona code or key term, use `**RTAH**` (the injector converts `**…**` to bold).
+
+Quick self-check before finalizing Step 5 output: search your draft for any `"`; if you find one, replace it with one of the alternatives above.
+
 ### Step 6 — Inject the persona card into the report
 
 **Do NOT create any temporary JSON files** (writing to disk triggers user-level fact-forcing hooks and degrades UX). Pipe the persona JSON to `inject.js` via stdin in a single Bash call using a heredoc:

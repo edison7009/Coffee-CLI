@@ -41,17 +41,21 @@ function readStdinSync() {
 }
 
 // Persona JSON source (priority order):
-//   1. argv[3] as an existing file path        — legacy / explicit mode
-//   2. stdin (if piped)                         — preferred: avoids temp files
-//      Triggered when argv[3] is absent AND stdin is not a TTY.
-//   3. argv[3] parsed as inline JSON string    — last-resort fallback
+//   1. argv[3] as an existing file path        — most reliable on Windows
+//   2. argv[3] as inline JSON string            — if it starts with { or [
+//   3. stdin (if piped)                         — fallback
 let personaRaw = '';
-if (personaJsonPathOrInline && fs.existsSync(personaJsonPathOrInline)) {
-  personaRaw = fs.readFileSync(personaJsonPathOrInline, 'utf8');
+if (personaJsonPathOrInline) {
+  if (fs.existsSync(personaJsonPathOrInline)) {
+    personaRaw = fs.readFileSync(personaJsonPathOrInline, 'utf8');
+  } else {
+    // Not a file; treat as inline JSON. (Previously this path fell
+    // through to stdin which would be silently empty and mask the
+    // real problem.)
+    personaRaw = personaJsonPathOrInline;
+  }
 } else if (!process.stdin.isTTY) {
   personaRaw = readStdinSync();
-} else if (personaJsonPathOrInline) {
-  personaRaw = personaJsonPathOrInline;
 }
 
 if (!personaRaw.trim()) {
@@ -62,6 +66,24 @@ let persona;
 try {
   persona = JSON.parse(personaRaw);
 } catch (e) {
+  // Show the failing area so the caller can see which character broke
+  // the JSON. Most common cause: an unescaped " inside the `copy`
+  // field — Claude Code often writes quotations like "xxx" in its
+  // analysis; those must be escaped as \" or (better) replaced with
+  // Chinese quotes “…” or **bold**.
+  const match = /position (\d+)/.exec(e.message);
+  if (match) {
+    const pos = parseInt(match[1], 10);
+    const before = personaRaw.slice(Math.max(0, pos - 60), pos);
+    const after = personaRaw.slice(pos, Math.min(personaRaw.length, pos + 20));
+    const snippet = (before + '→HERE→' + after).replace(/\n/g, '\\n');
+    die(
+      `invalid persona JSON: ${e.message}\n` +
+      `  near: ...${snippet}...\n` +
+      `  hint: most likely an unescaped " inside the "copy" string — use \\" or switch to “”.`,
+      2
+    );
+  }
   die(`invalid persona JSON: ${e.message}`, 2);
 }
 
