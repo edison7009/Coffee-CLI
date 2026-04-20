@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "updated": "2026-04-20",
+  "comment": "AI CLI agents catalog. Does NOT include built-in utilities (installer, terminal) - those are bundled with Coffee CLI and rendered client-side. Client renders entries here on Desktop/Library. Icon resolution: client first tries its inline SVG by id; if not found, loads `icon` URL as <img>. `binary` + `args` are passed to PTY spawn (backend validates binary against a strict whitelist).",
+  "agents": [
+    {
+      "id": "claude",
+      "name": "Claude Code",
+      "binary": "claude",
+      "args": [],
+      "icon": "https://coffeecli.com/agents/icons/claude.svg"
+    },
+    {
+      "id": "opencode",
+      "name": "OpenCode",
+      "binary": "opencode",
+      "args": [],
+      "icon": "https://coffeecli.com/agents/icons/opencode.svg"
+    },
+    {
+      "id": "codex",
+      "name": "Codex CLI",
+      "binary": "codex",
+      "args": [],
+      "icon": "https://coffeecli.com/agents/icons/codex.svg"
+    },
+    {
+      "id": "gemini",
+      "name": "Gemini CLI",
+      "binary": "gemini",
+      "args": [],
+      "icon": "https://coffeecli.com/agents/icons/gemini.svg"
+    },
+    {
+      "id": "qwen",
+      "name": "Qwen Code",
+      "binary": "qwen",
+      "args": [],
+      "icon": "https://coffeecli.com/agents/icons/qwen.svg"
+    },
+    {
+      "id": "hermes",
+      "name": "Hermes Agent",
+      "binary": "hermes",
+      "args": [],
+      "icon": "https://coffeecli.com/agents/icons/hermes.png"
+    },
+    {
+      "id": "openclaw",
+      "name": "OpenClaw",
+      "binary": "openclaw",
+      "args": ["tui"],
+      "icon": "https://coffeecli.com/agents/icons/openclaw.svg"
+    }
+  ]
+}
