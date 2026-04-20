@@ -136,67 +136,13 @@ $agentCatalog = @(
         Verify    = "claude --version"
         Npm       = $false
         Install   = {
-            # Primary: Anthropic native installer (Bun-compiled standalone).
-            # Fallback: WinGet — the other official channel listed in
-            # https://docs.anthropic.com/claude-code/install. WinGet works in
-            # networks where claude.ai/install.ps1 is intercepted and returns
-            # the Webflow marketing page (common on CN ISPs).
-            $tryNative = {
-                $url = "https://claude.ai/install.ps1"
-                $resp = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 15 -ErrorAction Stop
-                $script = if ($resp.Content -is [byte[]]) {
-                    [System.Text.Encoding]::UTF8.GetString($resp.Content)
-                } else {
-                    [string]$resp.Content
-                }
-                # Build HTML-doc prefixes via char-code concatenation so this
-                # file does not literally contain HTML-marker substrings —
-                # otherwise the bootstrap's own sanity grep would reject
-                # agents.ps1 when loading us. Self-reference trap dodged.
-                $pfxDoctype = '{0}{1}DOCTYPE' -f [char]0x3C, [char]0x21
-                $pfxHtml    = '{0}html'       -f [char]0x3C
-                $pfxComment = '{0}{1}--'      -f [char]0x3C, [char]0x21
-                $pfxXml     = '{0}{1}xml'     -f [char]0x3C, [char]0x3F
-                $head = $script.TrimStart([char]0xFEFF, ' ', "`t", "`r", "`n")
-                $isHtml = $head.StartsWith($pfxDoctype, [StringComparison]::OrdinalIgnoreCase) `
-                      -or $head.StartsWith($pfxHtml,    [StringComparison]::OrdinalIgnoreCase) `
-                      -or $head.StartsWith($pfxComment) `
-                      -or $head.StartsWith($pfxXml)
-                if ($isHtml) {
-                    throw "claude.ai/install.ps1 returned a webpage (likely CDN edge / network interception)"
-                }
-                if ($script.Length -lt 200) {
-                    throw "claude.ai/install.ps1 returned a suspiciously short response ($($script.Length) bytes)"
-                }
-                Invoke-Expression $script
-            }
-            $tryWinget = {
-                if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
-                    throw "WinGet not found (install App Installer from Microsoft Store, or run the installer on a network where claude.ai is reachable)"
-                }
-                & winget install --id Anthropic.ClaudeCode -e `
-                    --silent --accept-source-agreements --accept-package-agreements
-                if ($LASTEXITCODE -ne 0) {
-                    throw "winget install exit code $LASTEXITCODE"
-                }
-            }
-            try {
-                & $tryNative
-            } catch {
-                $nativeErr = $_.Exception.Message
-                Write-Host "  [Info] Native installer unavailable: $nativeErr" -ForegroundColor Yellow
-                Write-Host "  [Info] Falling back to WinGet (Anthropic.ClaudeCode)..." -ForegroundColor Yellow
-                & $tryWinget
-            }
+            # Official Anthropic installer, verbatim from
+            # https://docs.anthropic.com/claude-code/install.
+            Invoke-Expression (Invoke-RestMethod -Uri "https://claude.ai/install.ps1")
         }
         Uninstall = {
             # Native installer places the binary at ~/.local/bin and versioned
-            # copies under ~/.local/share/claude/versions/. WinGet-installed
-            # copies are managed by WinGet. Try WinGet first (idempotent if
-            # not installed that way), then clean up native paths.
-            if (Get-Command winget -ErrorAction SilentlyContinue) {
-                & winget uninstall --id Anthropic.ClaudeCode -e --silent 2>$null | Out-Null
-            }
+            # copies under ~/.local/share/claude/versions/. Remove both.
             $bin = Join-Path $env:USERPROFILE ".local\bin\claude.exe"
             $share = Join-Path $env:USERPROFILE ".local\share\claude"
             if (Test-Path $bin)   { Remove-Item -Force $bin }
