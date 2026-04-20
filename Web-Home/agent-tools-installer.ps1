@@ -36,7 +36,16 @@ function Global:Get-InstallerScript([string]$name) {
             } else {
                 [string]$resp.Content
             }
-            if ($content -match '(?i)<!DOCTYPE|<html') {
+            # Only probe the file's leading bytes — scripts may legitimately
+            # contain "<html" or "<!DOCTYPE" as string literals (e.g. in their
+            # own HTML guards). A real HTML document always *starts* with one
+            # of these tokens (allowing BOM/whitespace).
+            $head = $content.TrimStart([char]0xFEFF, ' ', "`t", "`r", "`n")
+            $isHtml = $head.StartsWith("<!DOCTYPE", [StringComparison]::OrdinalIgnoreCase) `
+                  -or $head.StartsWith("<html",     [StringComparison]::OrdinalIgnoreCase) `
+                  -or $head.StartsWith("<!--") `
+                  -or $head.StartsWith("<?xml")
+            if ($isHtml) {
                 $errors += "$url -> HTML (not a script)"
                 continue
             }

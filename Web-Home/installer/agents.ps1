@@ -139,8 +139,8 @@ $agentCatalog = @(
             # Anthropic official native installer (Bun-compiled standalone).
             # Guard against GFW/CDN interception returning the marketing HTML page
             # instead of the actual PowerShell script (seen in CN networks where
-            # claude.ai/install.ps1 resolves to a Webflow landing page and the
-            # embedded JS gets fed to iex, producing parser errors).
+            # the URL resolves to a Webflow landing page and the embedded JS
+            # gets fed to iex, producing parser errors).
             $url = "https://claude.ai/install.ps1"
             $resp = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 15 -ErrorAction Stop
             $script = if ($resp.Content -is [byte[]]) {
@@ -148,8 +148,21 @@ $agentCatalog = @(
             } else {
                 [string]$resp.Content
             }
-            if ($script -match '(?i)<!DOCTYPE|<html|<script\s|webflow') {
-                throw "claude.ai/install.ps1 returned HTML instead of a script (likely network interception or CDN edge error). Try a different network, or install manually: https://docs.anthropic.com/claude-code/install"
+            # Build HTML-doc prefixes by concatenation so this file does not
+            # literally contain "<!DOCTYPE" / "<html" substrings, which would
+            # make the bootstrap's own HTML-sanity grep reject agents.ps1 when
+            # it loads us. Self-reference trap dodged.
+            $pfxDoctype = '{0}{1}DOCTYPE' -f [char]0x3C, [char]0x21
+            $pfxHtml    = '{0}html'       -f [char]0x3C
+            $pfxComment = '{0}{1}--'      -f [char]0x3C, [char]0x21
+            $pfxXml     = '{0}{1}xml'     -f [char]0x3C, [char]0x3F
+            $head = $script.TrimStart([char]0xFEFF, ' ', "`t", "`r", "`n")
+            $isHtml = $head.StartsWith($pfxDoctype, [StringComparison]::OrdinalIgnoreCase) `
+                  -or $head.StartsWith($pfxHtml,    [StringComparison]::OrdinalIgnoreCase) `
+                  -or $head.StartsWith($pfxComment) `
+                  -or $head.StartsWith($pfxXml)
+            if ($isHtml) {
+                throw "claude.ai/install.ps1 returned a webpage instead of a script (likely network interception or CDN edge error). Try a different network, or install manually: https://docs.anthropic.com/claude-code/install"
             }
             if ($script.Length -lt 200) {
                 throw "claude.ai/install.ps1 returned a suspiciously short response ($($script.Length) bytes)"
