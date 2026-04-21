@@ -286,6 +286,30 @@ body {
   transition: color 0.25s ease;
 }
 
+/* Supported AI CLIs - icon row under the subtitle */
+.supported-tools {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1.5rem;
+  margin-top: 1.75rem;
+  flex-wrap: wrap;
+}
+
+.supported-tools img {
+  width: 28px;
+  height: 28px;
+  opacity: 0.55;
+  filter: grayscale(100%);
+  transition: opacity 0.25s ease, filter 0.25s ease;
+  border-radius: 6px;
+}
+
+.supported-tools img:hover {
+  opacity: 1;
+  filter: grayscale(0%);
+}
+
 /* Quick Start Container */
 .quick-start-container {
   width: 100%;
