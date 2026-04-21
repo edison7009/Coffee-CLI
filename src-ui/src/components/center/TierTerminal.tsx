@@ -50,10 +50,27 @@ export const TERM_COLOR_SCHEMES: TermColorScheme[] = [
   { id: 'purple', fg: '#b388ff' },
 ];
 
-function buildXtermTheme(isDark: boolean, hasBg: boolean | undefined, hideCursor: boolean, schemeId?: string) {
+// Mirror of `--bg-terminal` from global.css. Kept in JS so the terminal can
+// pick the right background synchronously on theme prop change — reading the
+// CSS variable lags by one switch (child effects fire before App.tsx writes
+// `data-theme`). Must stay in sync with each [data-theme] block in global.css.
+const THEME_TERMINAL_BG: Record<string, string> = {
+  dark:       '#0c0c0c',
+  light:      '#FAFAF7',
+  cappuccino: '#141414',
+  sakura:     '#0a0810',
+  lavender:   '#0a0814',
+  mint:       '#050c0a',
+  obsidian:   '#050505',
+  cobalt:     '#050a16',
+  moss:       '#081210',
+};
+
+function buildXtermTheme(themeName: string, hasBg: boolean | undefined, hideCursor: boolean, schemeId?: string) {
+  const isDark = themeName !== 'light';
   const scheme = schemeId ? TERM_COLOR_SCHEMES.find(s => s.id === schemeId) : undefined;
-  const bg  = hasBg ? 'rgba(0,0,0,0)' : (isDark ? '#0c0c0c' : '#f4f3ee');
-  const bgOpaque = isDark ? '#0c0c0c' : '#f4f3ee';
+  const bgOpaque = THEME_TERMINAL_BG[themeName] || (isDark ? '#0c0c0c' : '#f4f3ee');
+  const bg = hasBg ? 'rgba(0,0,0,0)' : bgOpaque;
 
   // Build the default warm palette first (full 16 ANSI colors), then let
   // the scheme — if any — re-tint only the foreground and cursor.
@@ -240,7 +257,6 @@ function TierTerminalImpl({
     let mounted = true;
     const unlisteners: (() => void)[] = [];
 
-    const isDark = theme !== 'light';
     const isLinux = navigator.userAgent.toLowerCase().includes('linux');
     const isMac = navigator.userAgent.toLowerCase().includes('mac');
     // Embedded CascadiaMono (woff2) guarantees consistent box-drawing glyphs on
@@ -267,7 +283,7 @@ function TierTerminalImpl({
       // Other tools (codex) use xterm's cursor at the normal prompt.
       cursorBlink: tool !== 'claude',
       scrollback: 5000,
-      theme: buildXtermTheme(isDark, hasBg, tool === 'claude', termColorScheme),
+      theme: buildXtermTheme(theme, hasBg, tool === 'claude', termColorScheme),
     });
 
     const fit = new FitAddon();
@@ -633,7 +649,7 @@ function TierTerminalImpl({
   useEffect(() => {
     const term = xtermRef.current;
     if (!term) return;
-    term.options.theme = buildXtermTheme(theme !== 'light', hasBg, tool === 'claude', termColorScheme);
+    term.options.theme = buildXtermTheme(theme, hasBg, tool === 'claude', termColorScheme);
   }, [theme, tool, termColorScheme, hasBg]);
 
   // ── IME focus-scroll guard ───────────────────────────────────────────────
@@ -768,7 +784,7 @@ function TierTerminalImpl({
 
   // ── Render ───────────────────────────────────────────────────────────────
 
-  const solidBg = theme === 'light' ? '#f4f3ee' : '#0c0c0c';
+  const solidBg = THEME_TERMINAL_BG[theme] || (theme === 'light' ? '#f4f3ee' : '#0c0c0c');
   const terminalBg = hasBg ? 'transparent' : solidBg;
 
   // Show fallback UI when splash is gone but terminal has no content

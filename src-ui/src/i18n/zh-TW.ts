@@ -83,7 +83,6 @@ export const zhTW = {
   // Theme Menu
   'theme.section.color': '配色',
   'theme.section.shape': '形態',
-  'theme.section.presets': '推薦組合',
   'theme.section.icons': '圖示風格',
   'theme.color.light': '明亮',
   'theme.color.dark': '暗黑',
@@ -91,11 +90,9 @@ export const zhTW = {
   'theme.color.sakura': '夜櫻',
   'theme.color.lavender': '薰衣草霧',
   'theme.color.mint': '薄荷深海',
-  'theme.preset.cappuccino_slab': '代碼夜 · Slab',
-  'theme.preset.sakura_blade': '夜櫻 · Blade',
-  'theme.preset.mint_sharp': '薄荷 · Sharp',
-  'theme.preset.lavender_panel': '薰衣草 · Panel',
-  'theme.preset.light_soft': '明亮 · Soft',
+  'theme.color.obsidian': '黑曜石',
+  'theme.color.cobalt': '鈷藍',
+  'theme.color.moss': '苔蘚',
 
   // Gambit · 妙手
   'gambit.title': '妙手',

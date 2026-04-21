@@ -83,7 +83,6 @@ export const ja = {
   // Theme Menu
   'theme.section.color': 'カラー',
   'theme.section.shape': 'シェイプ',
-  'theme.section.presets': 'プリセット',
   'theme.section.icons': 'アイコン',
   'theme.color.light': 'ライト',
   'theme.color.dark': 'ダーク',
@@ -91,11 +90,9 @@ export const ja = {
   'theme.color.sakura': '夜桜',
   'theme.color.lavender': 'ラベンダー',
   'theme.color.mint': 'ミント',
-  'theme.preset.cappuccino_slab': 'コードダーク · Slab',
-  'theme.preset.sakura_blade': '夜桜 · Blade',
-  'theme.preset.mint_sharp': 'ミント · Sharp',
-  'theme.preset.lavender_panel': 'ラベンダー · Panel',
-  'theme.preset.light_soft': 'ライト · Soft',
+  'theme.color.obsidian': 'オブシディアン',
+  'theme.color.cobalt': 'コバルト',
+  'theme.color.moss': 'モス',
 
   // Gambit · 一手
   'gambit.title': '一手',

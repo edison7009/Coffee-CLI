@@ -1833,6 +1833,35 @@ pub fn start_ui(project_dir: PathBuf) -> anyhow::Result<()> {
                     eprintln!("[hook-server] start failed: {}", e);
                 }
             }
+
+            // Force square corners + no shadow on the borderless window.
+            // Windows 11's DWM rounds borderless windows by default and adds
+            // a subtle drop-shadow; both create the visible "edge ring" we
+            // want gone for the flat look.
+            #[cfg(target_os = "windows")]
+            {
+                use tauri::Manager;
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.set_shadow(false);
+                    if let Ok(hwnd) = window.hwnd() {
+                        unsafe {
+                            use windows::Win32::Foundation::HWND;
+                            use windows::Win32::Graphics::Dwm::{
+                                DwmSetWindowAttribute, DWMWA_WINDOW_CORNER_PREFERENCE,
+                                DWMWCP_DONOTROUND,
+                            };
+                            let pref: i32 = DWMWCP_DONOTROUND.0;
+                            let _ = DwmSetWindowAttribute(
+                                HWND(hwnd.0 as *mut _),
+                                DWMWA_WINDOW_CORNER_PREFERENCE,
+                                &pref as *const _ as *const _,
+                                std::mem::size_of_val(&pref) as u32,
+                            );
+                        }
+                    }
+                }
+            }
+
             Ok(())
         })
         .run(tauri::generate_context!())

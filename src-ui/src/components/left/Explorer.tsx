@@ -287,6 +287,12 @@ const THEME_COLORS: { code: ThemeColor; labelKey: string; swatch: string; ring: 
   { code: 'sakura',     labelKey: 'theme.color.sakura',     swatch: '#221b28', ring: '#f8b4c8' },
   { code: 'lavender',   labelKey: 'theme.color.lavender',   swatch: '#221f2e', ring: '#c8b6ff' },
   { code: 'mint',       labelKey: 'theme.color.mint',       swatch: '#142623', ring: '#7ae8c8' },
+  // Natural-material palette — independent of shape and terminal font color.
+  // All three intentionally land darker than the existing "dark"/"cappuccino"
+  // themes so they read as "near-black with a faint hue", not "colored theme".
+  { code: 'obsidian',   labelKey: 'theme.color.obsidian',   swatch: '#0a0a0a', ring: '#5a5a5a' },
+  { code: 'cobalt',     labelKey: 'theme.color.cobalt',     swatch: '#0a1020', ring: '#5a85b8' },
+  { code: 'moss',       labelKey: 'theme.color.moss',       swatch: '#0b1612', ring: '#6a9878' },
 ];
 
 const THEME_SHAPES: { code: ThemeShape; label: string }[] = [
@@ -295,14 +301,6 @@ const THEME_SHAPES: { code: ThemeShape; label: string }[] = [
   { code: 'sharp', label: 'Sharp' },
   { code: 'blade', label: 'Blade' },
   { code: 'panel', label: 'Panel' },
-];
-
-const THEME_PRESETS: { labelKey: string; theme: ThemeColor; shape: ThemeShape }[] = [
-  { labelKey: 'theme.preset.cappuccino_slab', theme: 'cappuccino', shape: 'slab'  },
-  { labelKey: 'theme.preset.sakura_blade',    theme: 'sakura',     shape: 'blade' },
-  { labelKey: 'theme.preset.mint_sharp',      theme: 'mint',       shape: 'sharp' },
-  { labelKey: 'theme.preset.lavender_panel',  theme: 'lavender',   shape: 'panel' },
-  { labelKey: 'theme.preset.light_soft',      theme: 'light',      shape: 'soft'  },
 ];
 
 import { TERM_COLOR_SCHEMES } from '../center/TierTerminal';
@@ -318,7 +316,7 @@ const ICON_ART_THEMES: { id: IconTheme; folderSrc: string }[] = [
   { id: 'pastel',   folderSrc: '/icons/themes/pastel/folder-closed.svg'      },
 ];
 
-function ThemeMenu({ anchorRef, currentTheme, currentShape, currentIconTheme, hasBg, termColorScheme, wallpaperDim, onSelectTheme, onSelectShape, onSelectPreset, onSelectIconTheme, onPickBg, onClearBg, onSelectScheme, onSetWallpaperDim, onClose, t }: {
+function ThemeMenu({ anchorRef, currentTheme, currentShape, currentIconTheme, hasBg, termColorScheme, wallpaperDim, onSelectTheme, onSelectShape, onSelectIconTheme, onPickBg, onClearBg, onSelectScheme, onSetWallpaperDim, onClose, t }: {
   anchorRef: React.RefObject<HTMLButtonElement | null>;
   currentTheme: ThemeColor;
   currentShape: ThemeShape;
@@ -328,7 +326,6 @@ function ThemeMenu({ anchorRef, currentTheme, currentShape, currentIconTheme, ha
   wallpaperDim: number;
   onSelectTheme: (t: ThemeColor) => void;
   onSelectShape: (s: ThemeShape) => void;
-  onSelectPreset: (t: ThemeColor, s: ThemeShape) => void;
   onSelectIconTheme: (t: IconTheme) => void;
   onPickBg: () => void;
   onClearBg: () => void;
@@ -386,20 +383,6 @@ function ThemeMenu({ anchorRef, currentTheme, currentShape, currentIconTheme, ha
             onClick={() => onSelectShape(s.code)}
           >
             {s.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="ctx-menu-divider" />
-      <div className="theme-menu-section-label">{t('theme.section.presets')}</div>
-      <div className="theme-preset-grid">
-        {THEME_PRESETS.map(p => (
-          <button
-            key={p.labelKey}
-            className={`theme-preset-item ${p.theme === currentTheme && p.shape === currentShape ? 'active' : ''}`}
-            onClick={() => onSelectPreset(p.theme, p.shape)}
-          >
-            {t(p.labelKey as any)}
           </button>
         ))}
       </div>
@@ -1255,10 +1238,6 @@ export function Explorer() {
           wallpaperDim={state.wallpaperDim}
           onSelectTheme={(t) => dispatch({ type: 'SET_THEME', theme: t })}
           onSelectShape={(s) => dispatch({ type: 'SET_SHAPE', shape: s })}
-          onSelectPreset={(t, s) => {
-            dispatch({ type: 'SET_THEME', theme: t });
-            dispatch({ type: 'SET_SHAPE', shape: s });
-          }}
           onSelectIconTheme={(t) => {
             dispatch({ type: 'SET_ICON_THEME', theme: t });
             try { localStorage.setItem('cc-icon-theme', t); } catch {}

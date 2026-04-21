@@ -83,7 +83,6 @@ export const es = {
   // Theme Menu
   'theme.section.color': 'Colores',
   'theme.section.shape': 'Forma',
-  'theme.section.presets': 'Combinaciones',
   'theme.section.icons': 'Iconos',
   'theme.color.light': 'Claro',
   'theme.color.dark': 'Oscuro',
@@ -91,11 +90,9 @@ export const es = {
   'theme.color.sakura': 'Sakura',
   'theme.color.lavender': 'Lavanda',
   'theme.color.mint': 'Menta',
-  'theme.preset.cappuccino_slab': 'Code Dark · Slab',
-  'theme.preset.sakura_blade': 'Sakura · Blade',
-  'theme.preset.mint_sharp': 'Menta · Sharp',
-  'theme.preset.lavender_panel': 'Lavanda · Panel',
-  'theme.preset.light_soft': 'Claro · Soft',
+  'theme.color.obsidian': 'Obsidiana',
+  'theme.color.cobalt': 'Cobalto',
+  'theme.color.moss': 'Musgo',
 
   'mode.take_a_break': 'Tomar un descanso',
   'mode.back_to_work': 'Volver al trabajo',

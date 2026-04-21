@@ -414,6 +414,117 @@
     --bg-terminal: #050c0a;
 }
 
+/* ─── Obsidian (黑曜石) — near-black with neutral-gray accent ──────
+   Deeper than every other dark theme (dark #1a1917, cappuccino #1a1a1a).
+   No hue — just pure carbon black with graphite-gray chrome. Accent is
+   intentionally a mid-gray, not orange; nothing competes with the black. */
+[data-theme="obsidian"] {
+    --bg-app: #0a0a0a;
+    --bg-panel: #111111;
+    --bg-card: rgba(255, 255, 255, 0.02);
+    --bg-input: #181818;
+    --bg-input-focus: #1e1e1e;
+    --bg-hover: rgba(255, 255, 255, 0.035);
+    --bg-active: rgba(255, 255, 255, 0.06);
+
+    --border: rgba(255, 255, 255, 0.045);
+    --border-input: rgba(255, 255, 255, 0.065);
+    --border-focus: rgba(255, 255, 255, 0.2);
+
+    --text-1: #d0d0d0;
+    --text-2: #8a8a8a;
+    --text-3: #5a5a5a;
+
+    --accent: #5a5a5a;
+    --accent-hover: #6e6e6e;
+    --accent-active: #4a4a4a;
+    --accent-bg: rgba(255, 255, 255, 0.06);
+
+    --green: #7fb07f;
+    --red: #d07070;
+    --blue: #6ea0cc;
+
+    --shadow-panel: 0 16px 48px rgba(0, 0, 0, 0.75), 0 4px 16px rgba(0, 0, 0, 0.55);
+    --glass-blur: blur(24px);
+
+    --bg-titlebar: rgba(0, 0, 0, 0.4);
+    --bg-terminal: #050505;
+}
+
+/* ─── Cobalt (钴蓝) — near-black with a faint blue wash ──────────
+   The hue is felt, not seen. Base #0a1020 is only a few points of red/green
+   below pure black but adds a measurable blue tilt. Accent is a muted
+   steel-blue, nowhere near cyan. */
+[data-theme="cobalt"] {
+    --bg-app: #0a1020;
+    --bg-panel: #0f1628;
+    --bg-card: rgba(160, 190, 230, 0.025);
+    --bg-input: #141c32;
+    --bg-input-focus: #1a233c;
+    --bg-hover: rgba(160, 190, 230, 0.045);
+    --bg-active: rgba(160, 190, 230, 0.075);
+
+    --border: rgba(160, 190, 230, 0.06);
+    --border-input: rgba(160, 190, 230, 0.09);
+    --border-focus: rgba(90, 133, 184, 0.5);
+
+    --text-1: #d0d6e2;
+    --text-2: #8e99b0;
+    --text-3: #5a6478;
+
+    --accent: #5a85b8;
+    --accent-hover: #6e97c8;
+    --accent-active: #4a73a3;
+    --accent-bg: rgba(90, 133, 184, 0.14);
+
+    --green: #7fa8b8;
+    --red: #c88888;
+    --blue: #7ea4cc;
+
+    --shadow-panel: 0 16px 48px rgba(0, 2, 10, 0.65), 0 4px 16px rgba(0, 1, 6, 0.4);
+    --glass-blur: blur(24px);
+
+    --bg-titlebar: rgba(0, 0, 0, 0.28);
+    --bg-terminal: #050a16;
+}
+
+/* ─── Moss (苔藓) — near-black with a faint green wash ─────────
+   Same philosophy as cobalt: the base is nearly black, hue carried by a
+   small green offset. Accent is a sedate forest-green, not the bright
+   teal of "mint". Intended for long reading sessions. */
+[data-theme="moss"] {
+    --bg-app: #0b1612;
+    --bg-panel: #101c18;
+    --bg-card: rgba(160, 200, 180, 0.025);
+    --bg-input: #152320;
+    --bg-input-focus: #1a2a26;
+    --bg-hover: rgba(160, 200, 180, 0.045);
+    --bg-active: rgba(160, 200, 180, 0.075);
+
+    --border: rgba(160, 200, 180, 0.06);
+    --border-input: rgba(160, 200, 180, 0.09);
+    --border-focus: rgba(106, 152, 120, 0.5);
+
+    --text-1: #d0d6d2;
+    --text-2: #8ea094;
+    --text-3: #5a6860;
+
+    --accent: #6a9878;
+    --accent-hover: #7ea98a;
+    --accent-active: #568366;
+    --accent-bg: rgba(106, 152, 120, 0.13);
+
+    --green: #6a9878;
+    --red: #c88878;
+    --blue: #7ea4a4;
+
+    --shadow-panel: 0 16px 48px rgba(2, 10, 7, 0.6), 0 4px 16px rgba(1, 5, 4, 0.35);
+    --glass-blur: blur(24px);
+
+    --bg-titlebar: rgba(0, 0, 0, 0.24);
+    --bg-terminal: #081210;
+}
+
 /* ─── App Shell ──────────────────────────────────────── */
 /* CRITICAL for Tauri WebView2: explicit height chain from root down.
    Without height:100% on every flex ancestor, child flex:1 resolves to 0
@@ -537,7 +648,7 @@ body {
     width: var(--w-left);
     min-width: var(--w-left);
     flex-shrink: 0;
-    border-right: 1px solid var(--border); /* Edge-to-edge hairline divider */
+    /* No divider — three-region layout reads as one continuous surface */
     backdrop-filter: var(--glass-blur);
     -webkit-backdrop-filter: var(--glass-blur);
 }
@@ -1049,7 +1160,7 @@ body {
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
     box-shadow: none;
-    border-left: 1px solid var(--border); /* Edge-to-edge hairline divider */
+    /* No divider — three-region layout reads as one continuous surface */
     border-radius: 0;
     overflow: visible;
 }

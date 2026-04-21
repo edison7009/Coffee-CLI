@@ -457,49 +457,6 @@
   font-weight: 600;
 }
 
-.theme-preset-list {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 2px;
-}
-
-.theme-preset-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2px;
-  padding: 2px;
-}
-
-.theme-preset-item {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  padding: 6px 10px;
-  background: transparent;
-  border: none;
-  border-radius: var(--shape-radius-btn, 5px);
-  color: var(--text-2);
-  font-family: var(--font);
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  text-align: left;
-  transition: background 0.1s, color 0.1s;
-}
-
-.theme-preset-item:hover {
-  background: var(--bg-hover);
-  color: var(--text-1);
-}
-
-.theme-preset-item.active {
-  background: var(--accent-bg);
-  color: var(--accent);
-  font-weight: 600;
-}
-
-
 /* Icon theme picker chips (folder thumbnail style) */
 .icon-theme-row {
   gap: 5px;

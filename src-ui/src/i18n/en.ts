@@ -85,7 +85,6 @@ export const en = {
   // Theme Menu
   'theme.section.color': 'Colors',
   'theme.section.shape': 'Shape',
-  'theme.section.presets': 'Presets',
   'theme.section.icons': 'Icon Style',
   'theme.color.light': 'Light',
   'theme.color.dark': 'Dark',
@@ -93,11 +92,9 @@ export const en = {
   'theme.color.sakura': 'Sakura',
   'theme.color.lavender': 'Lavender',
   'theme.color.mint': 'Mint',
-  'theme.preset.cappuccino_slab': 'Code Dark \u00b7 Slab',
-  'theme.preset.sakura_blade': 'Sakura \u00b7 Blade',
-  'theme.preset.mint_sharp': 'Mint \u00b7 Sharp',
-  'theme.preset.lavender_panel': 'Lavender \u00b7 Panel',
-  'theme.preset.light_soft': 'Light \u00b7 Soft',
+  'theme.color.obsidian': 'Obsidian',
+  'theme.color.cobalt': 'Cobalt',
+  'theme.color.moss': 'Moss',
 
   // Gambit — floating compose window. Chess term for a calculated opening move.
   'gambit.title': 'GAMBIT',

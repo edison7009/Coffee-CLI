@@ -29,7 +29,9 @@ export type AgentStatus =
   | 'error';
 
 // Theme: color palette (orthogonal to shape)
-export type ThemeColor = 'dark' | 'light' | 'cappuccino' | 'sakura' | 'lavender' | 'mint';
+export type ThemeColor =
+  | 'dark' | 'light' | 'cappuccino' | 'sakura' | 'lavender' | 'mint'
+  | 'obsidian' | 'cobalt' | 'moss';
 // Theme: shape form (orthogonal to color)
 export type ThemeShape = 'soft' | 'slab' | 'sharp' | 'blade' | 'panel';
 // Icon theme: visual style for file/folder icons in the explorer
@@ -221,7 +223,10 @@ function reducer(state: AppState, action: Action): AppState {
 
 // ─── Initial State ────────────────────────────────────────────────────────────
 
-const VALID_THEMES: ThemeColor[] = ['dark', 'light', 'cappuccino', 'sakura', 'lavender', 'mint'];
+const VALID_THEMES: ThemeColor[] = [
+  'dark', 'light', 'cappuccino', 'sakura', 'lavender', 'mint',
+  'obsidian', 'cobalt', 'moss',
+];
 const VALID_SHAPES: ThemeShape[] = ['soft', 'slab', 'sharp', 'blade', 'panel'];
 const VALID_ICON_THEMES: IconTheme[] = ['default', 'flat', 'outline', 'pixel', 'gradient', 'round', 'glow', 'pastel'];
 

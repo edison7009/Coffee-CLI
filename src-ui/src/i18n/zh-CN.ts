@@ -83,7 +83,6 @@ export const zhCN = {
   // Theme Menu
   'theme.section.color': '配色',
   'theme.section.shape': '形态',
-  'theme.section.presets': '推荐组合',
   'theme.section.icons': '图标风格',
   'theme.color.light': '明亮',
   'theme.color.dark': '暗黑',
@@ -91,11 +90,9 @@ export const zhCN = {
   'theme.color.sakura': '夜樱',
   'theme.color.lavender': '薰衣草雾',
   'theme.color.mint': '薄荷深海',
-  'theme.preset.cappuccino_slab': '代码夜 · Slab',
-  'theme.preset.sakura_blade': '夜樱 · Blade',
-  'theme.preset.mint_sharp': '薄荷 · Sharp',
-  'theme.preset.lavender_panel': '薰衣草 · Panel',
-  'theme.preset.light_soft': '明亮 · Soft',
+  'theme.color.obsidian': '黑曜石',
+  'theme.color.cobalt': '钴蓝',
+  'theme.color.moss': '苔藓',
 
   // Gambit · 妙手
   'gambit.title': '妙手',

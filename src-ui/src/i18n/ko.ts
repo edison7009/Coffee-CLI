@@ -83,7 +83,6 @@ export const ko = {
   // Theme Menu
   'theme.section.color': '색상',
   'theme.section.shape': '형태',
-  'theme.section.presets': '추천 조합',
   'theme.section.icons': '아이콘 스타일',
   'theme.color.light': '라이트',
   'theme.color.dark': '다크',
@@ -91,11 +90,9 @@ export const ko = {
   'theme.color.sakura': '사쿠라',
   'theme.color.lavender': '라벤더',
   'theme.color.mint': '민트',
-  'theme.preset.cappuccino_slab': '코드 다크 · Slab',
-  'theme.preset.sakura_blade': '사쿠라 · Blade',
-  'theme.preset.mint_sharp': '민트 · Sharp',
-  'theme.preset.lavender_panel': '라벤더 · Panel',
-  'theme.preset.light_soft': '라이트 · Soft',
+  'theme.color.obsidian': '옵시디언',
+  'theme.color.cobalt': '코발트',
+  'theme.color.moss': '이끼',
 
   // Gambit · 한 수
   'gambit.title': '한 수',

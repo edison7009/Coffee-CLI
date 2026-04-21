@@ -178,7 +178,7 @@
 
 .task-section-dot.working {
   background: var(--accent, #c4956a);
-  box-shadow: 0 0 6px rgba(196, 149, 106, 0.5);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--accent) 50%, transparent);
   animation: dot-pulse 2s ease-in-out infinite;
 }
 
@@ -239,8 +239,8 @@
 }
 
 .task-card.working {
-  background: rgba(196, 149, 106, 0.06);
-  border-left: 2px solid rgba(196, 149, 106, 0.4);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+  border-left: 2px solid color-mix(in srgb, var(--accent) 40%, transparent);
 }
 
 .task-card.working .task-card-row {
@@ -479,7 +479,7 @@
 
 .task-slot-send {
   color: var(--accent, #c4956a);
-  background: rgba(196, 149, 106, 0.12);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
   opacity: 0;
   transition: opacity 0.15s, color 0.15s, background 0.15s;
 }
@@ -490,7 +490,7 @@
 }
 
 .task-slot-send:hover:not(:disabled) {
-  background: rgba(196, 149, 106, 0.25);
+  background: color-mix(in srgb, var(--accent) 25%, transparent);
 }
 
 .task-slot-send:disabled {
@@ -513,7 +513,7 @@
 
 .task-slot-delete {
   color: var(--accent, #c4956a);
-  background: rgba(196, 149, 106, 0.12);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
   opacity: 0;
   transition: opacity 0.15s, color 0.15s, background 0.15s;
 }
@@ -527,7 +527,7 @@
 }
 
 .task-slot-delete:hover {
-  background: rgba(196, 149, 106, 0.25);
+  background: color-mix(in srgb, var(--accent) 25%, transparent);
 }
 
 /* ─── Description Area ──────────────────────────────────────────────────────── */

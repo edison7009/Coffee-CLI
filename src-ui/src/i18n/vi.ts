@@ -86,7 +86,6 @@ export const vi = {
   // Theme Menu
   'theme.section.color': 'Màu sắc',
   'theme.section.shape': 'Hình dạng',
-  'theme.section.presets': 'Gợi ý',
   'theme.section.icons': 'Biểu tượng',
   'theme.color.light': 'Sáng',
   'theme.color.dark': 'Tối',
@@ -94,11 +93,9 @@ export const vi = {
   'theme.color.sakura': 'Sakura',
   'theme.color.lavender': 'Oải hương',
   'theme.color.mint': 'Bạc hà',
-  'theme.preset.cappuccino_slab': 'Code Dark · Slab',
-  'theme.preset.sakura_blade': 'Sakura · Blade',
-  'theme.preset.mint_sharp': 'Bạc hà · Sharp',
-  'theme.preset.lavender_panel': 'Oải hương · Panel',
-  'theme.preset.light_soft': 'Sáng · Soft',
+  'theme.color.obsidian': 'Obsidian',
+  'theme.color.cobalt': 'Cobalt',
+  'theme.color.moss': 'Rêu',
 
   // Gambit · Nước cờ
   'gambit.title': 'Nước cờ',

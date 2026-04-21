@@ -84,7 +84,6 @@ export const ru = {
   // Theme Menu
   'theme.section.color': 'Цвета',
   'theme.section.shape': 'Форма',
-  'theme.section.presets': 'Шаблоны',
   'theme.section.icons': 'Иконки',
   'theme.color.light': 'Светлая',
   'theme.color.dark': 'Тёмная',
@@ -92,11 +91,9 @@ export const ru = {
   'theme.color.sakura': 'Сакура',
   'theme.color.lavender': 'Лаванда',
   'theme.color.mint': 'Мята',
-  'theme.preset.cappuccino_slab': 'Code Dark · Slab',
-  'theme.preset.sakura_blade': 'Сакура · Blade',
-  'theme.preset.mint_sharp': 'Мята · Sharp',
-  'theme.preset.lavender_panel': 'Лаванда · Panel',
-  'theme.preset.light_soft': 'Светлая · Soft',
+  'theme.color.obsidian': 'Обсидиан',
+  'theme.color.cobalt': 'Кобальт',
+  'theme.color.moss': 'Мох',
 
   'mode.take_a_break': 'Сделать перерыв',
   'mode.back_to_work': 'Вернуться к работе',
