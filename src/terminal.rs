@@ -6,6 +6,7 @@
 
 use serde::Serialize;
 use std::io::{Read, Write};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 use tauri::{AppHandle, Emitter};
@@ -158,11 +159,14 @@ pub struct TerminalSession {
 pub type SharedSession = Arc<Mutex<std::collections::HashMap<String, TerminalSession>>>;
 
 /// Per-session I/O tracking for status detection.
-/// Shared between the reader thread, ticker thread, and the input handler
+/// Shared between the emitter thread, ticker thread, and the input handler
 /// so that user-submitted-Enter can immediately signal "working".
+///
+/// Liveness (`alive`) has been moved to a separate `Arc<AtomicBool>` so that
+/// the ticker hot-path checks it without acquiring this mutex — the previous
+/// design forced the 500 ms ticker to serialize with the per-read emitter
+/// lock, inflating status-change latency.
 pub struct SessionActivity {
-    /// Set to false by the reader thread after EOF cleanup; ticker exits on next check.
-    pub alive: bool,
     pub last_output_at: Instant,
     pub burst_start: Option<Instant>,
     pub last_status: String,
@@ -495,13 +499,17 @@ pub fn spawn(
     // Initialize last_output_at in the past so the first ticker check doesn't
     // falsely report "working" (silence_ms starts > 800ms).
     let activity = Arc::new(Mutex::new(SessionActivity {
-        alive: true,
         last_output_at: Instant::now() - std::time::Duration::from_secs(2),
         burst_start: None,
         last_status: "wait_input".to_string(),
         recent_text: String::new(),
         user_submitted_at: None,
     }));
+
+    // Liveness flag — lives outside the activity mutex so the ticker can check
+    // it on every 500 ms tick without contending with the high-frequency
+    // emitter lock. Set to false exactly once, from the emitter cleanup path.
+    let alive_flag: Arc<AtomicBool> = Arc::new(AtomicBool::new(true));
 
     // Store session (with shared writer reference + master kept alive + activity)
     let output_buffer: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
@@ -534,21 +542,21 @@ pub fn spawn(
         .map(|p| p.prompt_markers.iter().map(|s| s.to_string()).collect())
         .unwrap_or_default();
 
-    // ── PTY output reader thread ─────────────────────────────────────────────
-    // This is the SOLE lifecycle manager. When the reader gets EOF (process tree
-    // fully exited), it cleans up the session and notifies the frontend.
-    let app_out = app.clone();
-    let session_id_out = session_id.clone();
+    // ── Handles shared with the emitter thread (below) ───────────────────────
+    // The emitter is the sole lifecycle manager now; these clones are consumed
+    // by its `move` closure.
     let session_for_token = session.clone();
     let session_for_cleanup = session.clone();
     let sid_cleanup = session_id.clone();
-    
+
+
     // ── Agent Status Ticker Thread ───────────────────────────────────────────
     // Dual-signal detection: combines PTY output timing with user-input tracking.
     // When user presses Enter (detected by tier_terminal_input), we immediately
     // know the agent is "working" — no need to wait for PTY output to start.
     // This eliminates the "thinking gap" where silence was misclassified as idle.
     let activity_for_ticker = activity.clone();
+    let alive_for_ticker = alive_flag.clone();
     let app_for_ticker = app.clone();
     let sid_for_ticker = session_id.clone();
     let markers_for_ticker = prompt_markers.clone();
@@ -557,11 +565,12 @@ pub fn spawn(
     std::thread::spawn(move || {
         loop {
             std::thread::sleep(std::time::Duration::from_millis(500));
+            // Cheap atomic check — no mutex contention with the emitter.
+            if !alive_for_ticker.load(Ordering::Relaxed) { break; }
             let mut act = match activity_for_ticker.lock() {
                 Ok(a) => a,
                 Err(_) => break,
             };
-            if !act.alive { break; } // session cleaned up, stop ticker
 
             let now = Instant::now();
             let silence_ms = now.duration_since(act.last_output_at).as_millis() as u64;
@@ -634,129 +643,248 @@ pub fn spawn(
         }
     });
 
-    let output_buffer_for_reader = output_buffer.clone();
+    // ── PTY reader + emitter (zellij-inspired split) ─────────────────────────
+    //
+    // Why split what used to be a single thread:
+    //
+    // The former design read 4 KB at a time, then on the same thread did ANSI
+    // strip + activity mutex + ring-buffer push + synchronous `app.emit()`
+    // before looping back to `reader.read()`. When the frontend stalled (slow
+    // xterm.js write, WebView IPC backlog), emit latency reflected directly
+    // into the PTY read cadence — the child process's write-end of the PTY
+    // would fill, blocking it in its own `write()` syscall. That is the
+    // structural cause of "root cause #2" (emit/channel backpressure) logged
+    // in CLAUDE memory.
+    //
+    // Zellij's `terminal_bytes.rs` decouples read from render via an async
+    // channel and explicitly comments on coalescing render under back-pressure.
+    // We mirror the idea with two std threads and a coalescing window:
+    //
+    //   Reader   : reads up to 64 KB (matches zellij) → mpsc::send(Vec<u8>).
+    //              Zero mutexes on the hot loop. EOF/error drops tx, which
+    //              signals the emitter to drain + clean up.
+    //
+    //   Emitter  : pulls from the channel, accumulates up to an ~8 ms window
+    //              (imperceptible to users, collapses AI-CLI token bursts),
+    //              then runs ANSI strip + activity update + OSC 7 detect +
+    //              session-token capture + IPC emit + ring-buffer push
+    //              ONCE per window. Single lock per batch, single IPC per
+    //              batch.
+    //
+    // Cleanup (ticker stop + status emit + session map removal) is the
+    // emitter's responsibility, so the order is deterministic: final flush
+    // → alive flag off → idle status → map remove → final status event.
+
+    let (bytes_tx, bytes_rx) = std::sync::mpsc::channel::<Vec<u8>>();
+
+    // ── Reader thread ───────────────────────────────────────────────────────
+    let reader_log_id = session_id.clone();
     std::thread::spawn(move || {
-        let mut buf = [0u8; 4096];
-
-        let ansi_re = regex::Regex::new(r"\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\].*?(?:\x07|\x1b\\)|\x1b.").unwrap();
-        let mut token_captured = false;
-
+        let mut buf = [0u8; 65536]; // 64 KB — matches zellij; 16× the former 4 KB.
         loop {
             match reader.read(&mut buf) {
                 Ok(0) => {
-                    eprintln!("[Tier Terminal] PTY reader: EOF");
+                    eprintln!("[Tier Terminal] PTY reader: EOF ({})", reader_log_id);
                     break;
                 }
                 Ok(n) => {
-                    // Pure passthrough: raw PTY bytes go straight to xterm.js.
-                    let chunk = &buf[..n];
-                    let cwd_change = extract_osc7_cwd(chunk);
-                    let data = String::from_utf8_lossy(chunk).to_string();
-                    let stripped = ansi_re.replace_all(&data, "").to_string();
-
-
-                    // Update shared activity state & recent text buffer ONLY if actual characters were printed
-                    // This prevents invisible background PTY chatter (like cursor polling) from resetting the silence timer
-                    if !stripped.is_empty() {
-                        let now = Instant::now();
-                        if let Ok(mut act) = activity.lock() {
-                            let silence = now.duration_since(act.last_output_at).as_millis() as u64;
-                            if silence > 2000 {
-                                act.burst_start = Some(now);
-                            }
-                            act.last_output_at = now;
-                            
-                            act.recent_text.push_str(&stripped);
-                            let char_count = act.recent_text.chars().count();
-                            if char_count > 200 {
-                                if let Some((start_idx, _)) = act.recent_text.char_indices().nth(char_count - 200) {
-                                    act.recent_text = act.recent_text[start_idx..].to_string();
-                                }
-                            }
-                        }
-                    }
-
-                    // Session ID capture (for resume)
-                    if !token_captured {
-                        if let Some(ref re) = session_id_regex {
-                            if let Some(caps) = re.captures(&stripped) {
-                                if let Some(token) = caps.get(1) {
-                                    let token_str = token.as_str().to_string();
-                                    eprintln!("[Tier Terminal] Captured session token: {}...", &token_str[..token_str.len().min(12)]);
-                                    if let Ok(map) = session_for_token.lock() {
-                                        if let Some(sess) = map.get(&session_id_out) {
-                                            if let Ok(mut t) = sess.session_token.lock() {
-                                                *t = Some(token_str);
-                                            }
-                                        }
-                                    }
-                                    token_captured = true;
-                                }
-                            }
-                        }
-                    }
-
-                    // Send raw ANSI stream to xterm.js
-                    let data_clone = data.clone();
-                    let _ = app_out.emit(
-                        "tier-terminal-output",
-                        TerminalOutput { id: session_id_out.clone(), data },
-                    );
-
-                    // Append to ring buffer for detached window history replay
-                    if let Ok(mut buf) = output_buffer_for_reader.lock() {
-                        buf.push(data_clone);
-                        // Cap at 2000 chunks (~8MB) to bound memory
-                        if buf.len() > 2000 {
-                            let drain = buf.len() - 2000;
-                            buf.drain(..drain);
-                        }
-                    }
-
-                    // CWD change notification (OSC 7)
-                    if let Some(new_cwd) = cwd_change {
-                        eprintln!("[Tier Terminal] CWD changed: {}", new_cwd);
-                        #[derive(Serialize, Clone)]
-                        struct CwdPayload { id: String, cwd: String }
-                        let _ = app_out.emit("tier-terminal-cwd", CwdPayload { id: session_id_out.clone(), cwd: new_cwd });
+                    // Forward raw bytes only — all processing lives in the emitter.
+                    if bytes_tx.send(buf[..n].to_vec()).is_err() {
+                        // Emitter has already exited; nothing left to do.
+                        break;
                     }
                 }
                 Err(e) => {
                     let msg = format!("{}", e);
-                    if !msg.contains("BrokenPipe") && !msg.contains("broken pipe") && !msg.contains("管道") {
+                    if !msg.contains("BrokenPipe")
+                        && !msg.contains("broken pipe")
+                        && !msg.contains("管道")
+                    {
                         eprintln!("[Tier Terminal] PTY reader error: {}", e);
                     }
                     break;
                 }
             }
         }
+        // Dropping bytes_tx here signals the emitter's recv loop to drain and
+        // then transition to cleanup.
+    });
 
-        // ── Reader EOF = process tree fully exited → cleanup ──────────────
-        eprintln!("[Tier Terminal] Reader thread exiting, cleaning up session");
+    // ── Emitter thread ──────────────────────────────────────────────────────
+    let alive_for_emitter = alive_flag.clone();
+    let app_out = app.clone();
+    let session_id_out = session_id.clone();
+    let activity_for_emitter = activity.clone();
+    let output_buffer_for_emitter = output_buffer.clone();
 
-        // Signal ticker thread to stop on its next iteration
-        if let Ok(mut act) = activity.lock() {
-            act.alive = false;
+    std::thread::spawn(move || {
+        use std::sync::mpsc::RecvTimeoutError;
+        use std::time::Duration as StdDuration;
+
+        // 8 ms is below human-perceptible latency (~16 ms frame) but large
+        // enough to collapse a typical AI-CLI token-stream burst (hundreds of
+        // small writes) into a single emit.
+        const FLUSH_INTERVAL: StdDuration = StdDuration::from_millis(8);
+        // Hard ceiling on the accumulation buffer so that a wedged frontend
+        // cannot drive unbounded memory growth in this thread.
+        const MAX_PENDING: usize = 1024 * 1024; // 1 MB
+
+        #[derive(Serialize, Clone)]
+        struct CwdPayload {
+            id: String,
+            cwd: String,
         }
 
-        // Emit final idle status
-        let _ = app_out.emit("agent-status", AgentStatusEvent {
-            id: session_id_out.clone(),
-            status: "idle".to_string(),
-            silence_ms: 0,
-            tool: None,
-        });
+        let ansi_re = regex::Regex::new(
+            r"\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\].*?(?:\x07|\x1b\\)|\x1b.",
+        )
+        .unwrap();
 
-        // Remove session from map (this drops the master Arc ref)
+        let mut pending: Vec<u8> = Vec::with_capacity(131072);
+        let mut token_captured = false;
+        let mut last_flush = Instant::now();
+
+        loop {
+            let wait = FLUSH_INTERVAL
+                .checked_sub(last_flush.elapsed())
+                .unwrap_or(StdDuration::ZERO);
+
+            let recv_result = bytes_rx.recv_timeout(wait);
+            let disconnected = matches!(recv_result, Err(RecvTimeoutError::Disconnected));
+
+            if let Ok(chunk) = recv_result {
+                pending.extend_from_slice(&chunk);
+            }
+
+            let should_flush = !pending.is_empty()
+                && (disconnected
+                    || pending.len() >= MAX_PENDING
+                    || last_flush.elapsed() >= FLUSH_INTERVAL);
+
+            if should_flush {
+                // OSC 7 runs on raw bytes before UTF-8 lossy conversion.
+                let cwd_change = extract_osc7_cwd(&pending);
+
+                let data = String::from_utf8_lossy(&pending).to_string();
+                let stripped = ansi_re.replace_all(&data, "").to_string();
+
+                // One activity-mutex acquisition per batch (not per read).
+                if !stripped.is_empty() {
+                    let now = Instant::now();
+                    if let Ok(mut act) = activity_for_emitter.lock() {
+                        let silence =
+                            now.duration_since(act.last_output_at).as_millis() as u64;
+                        if silence > 2000 {
+                            act.burst_start = Some(now);
+                        }
+                        act.last_output_at = now;
+
+                        act.recent_text.push_str(&stripped);
+                        let char_count = act.recent_text.chars().count();
+                        if char_count > 200 {
+                            if let Some((start_idx, _)) =
+                                act.recent_text.char_indices().nth(char_count - 200)
+                            {
+                                act.recent_text = act.recent_text[start_idx..].to_string();
+                            }
+                        }
+                    }
+                }
+
+                // Session token capture (once per session, for `--resume`).
+                if !token_captured {
+                    if let Some(ref re) = session_id_regex {
+                        if let Some(caps) = re.captures(&stripped) {
+                            if let Some(token) = caps.get(1) {
+                                let token_str = token.as_str().to_string();
+                                eprintln!(
+                                    "[Tier Terminal] Captured session token: {}...",
+                                    &token_str[..token_str.len().min(12)]
+                                );
+                                if let Ok(map) = session_for_token.lock() {
+                                    if let Some(sess) = map.get(&session_id_out) {
+                                        if let Ok(mut t) = sess.session_token.lock() {
+                                            *t = Some(token_str);
+                                        }
+                                    }
+                                }
+                                token_captured = true;
+                            }
+                        }
+                    }
+                }
+
+                // Single coalesced IPC emit — replaces what used to be
+                // N × small emits per burst.
+                let _ = app_out.emit(
+                    "tier-terminal-output",
+                    TerminalOutput {
+                        id: session_id_out.clone(),
+                        data: data.clone(),
+                    },
+                );
+
+                // One entry per batch in the detached-window history ring.
+                if let Ok(mut ring) = output_buffer_for_emitter.lock() {
+                    ring.push(data);
+                    if ring.len() > 2000 {
+                        let drain = ring.len() - 2000;
+                        ring.drain(..drain);
+                    }
+                }
+
+                if let Some(new_cwd) = cwd_change {
+                    eprintln!("[Tier Terminal] CWD changed: {}", new_cwd);
+                    let _ = app_out.emit(
+                        "tier-terminal-cwd",
+                        CwdPayload {
+                            id: session_id_out.clone(),
+                            cwd: new_cwd,
+                        },
+                    );
+                }
+
+                pending.clear();
+                last_flush = Instant::now();
+            }
+
+            if disconnected {
+                break;
+            }
+        }
+
+        // ── Cleanup (single authoritative path) ─────────────────────────────
+        eprintln!(
+            "[Tier Terminal] Emitter: cleaning up session {}",
+            session_id_out
+        );
+
+        // Signal ticker to exit on its next iteration.
+        alive_for_emitter.store(false, Ordering::Relaxed);
+
+        let _ = app_out.emit(
+            "agent-status",
+            AgentStatusEvent {
+                id: session_id_out.clone(),
+                status: "idle".to_string(),
+                silence_ms: 0,
+                tool: None,
+            },
+        );
+
+        // Drop the master Arc ref by removing the session from the map.
         {
             let mut map = session_for_cleanup.lock().unwrap();
             map.remove(&sid_cleanup);
         }
 
-        // Notify frontend
         let _ = app_out.emit(
             "tier-terminal-status",
-            TerminalStatus { id: session_id_out, running: false, exit_code: Some(0) },
+            TerminalStatus {
+                id: session_id_out,
+                running: false,
+                exit_code: Some(0),
+            },
         );
     });
 
