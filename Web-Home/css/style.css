@@ -302,15 +302,7 @@ body {
 .supported-tools img {
   width: 28px;
   height: 28px;
-  opacity: 0.55;
-  filter: grayscale(100%);
-  transition: opacity 0.25s ease, filter 0.25s ease;
   border-radius: 6px;
-}
-
-.supported-tools img:hover {
-  opacity: 1;
-  filter: grayscale(0%);
 }
 
 /* Quick Start Container */
