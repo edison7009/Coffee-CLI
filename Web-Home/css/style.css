@@ -255,6 +255,9 @@ body {
   margin-bottom: 1.25rem;
   color: var(--text-primary);
   transition: color 0.25s ease;
+  /* Reserve space for up to 3 lines so typewriter word-length changes
+     don't reflow the subtitle + supported-tools row below. */
+  min-height: calc(3 * 1.15em);
 }
 
 .static-text {
