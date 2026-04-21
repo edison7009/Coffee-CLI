@@ -255,9 +255,6 @@ body {
   margin-bottom: 1.25rem;
   color: var(--text-primary);
   transition: color 0.25s ease;
-  /* Reserve space for up to 3 lines so typewriter word-length changes
-     don't reflow the subtitle + supported-tools row below. */
-  min-height: calc(3 * 1.15em);
 }
 
 .static-text {
@@ -289,14 +286,16 @@ body {
   transition: color 0.25s ease;
 }
 
-/* Supported AI CLIs - icon row under the subtitle */
+/* Supported AI CLIs - icon row rendered as a direct child of .hero-section
+   (not inside .hero-content), so its width is its own content width and it
+   never reflows when the typewriter word-length changes the headline. */
 .supported-tools {
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 1.5rem;
-  margin-top: 1.75rem;
-  flex-wrap: wrap;
+  margin: 0 0 2rem;
+  flex-wrap: nowrap;
 }
 
 .supported-tools img {
