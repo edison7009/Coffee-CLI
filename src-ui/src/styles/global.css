@@ -1812,6 +1812,14 @@ body {
         inset -1px 0 0 0 var(--shape-edge-light-bottom);
 }
 
+/* Slab tabs use 3px micro-radius; the 12px chrome flare bridge doesn't
+   align with it and leaves a visible gap at the outer bottom corners.
+   Hide the flare and flatten the outer bottom so the tab sits flush. */
+[data-shape="slab"] .chrome-tab.active::before,
+[data-shape="slab"] .chrome-tab.active::after {
+    display: none;
+}
+
 [data-shape="slab"] .task-card,
 [data-shape="slab"] .launchpad-card,
 [data-shape="slab"] .guide-card,
