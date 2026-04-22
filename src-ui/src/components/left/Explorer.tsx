@@ -439,7 +439,15 @@ function ThemeMenu({ anchorRef, currentTheme, currentShape, currentIconTheme, ha
             className={`icon-theme-chip ${currentIconTheme === id ? 'active' : ''}`}
             onClick={() => onSelectIconTheme(id)}
           >
-            <img src={folderSrc} alt={id} width="22" height="22" />
+            {isMaskTintTheme(id) ? (
+              <span
+                className="icon-theme-chip-preview-mask"
+                style={{ WebkitMaskImage: `url("${folderSrc}")`, maskImage: `url("${folderSrc}")` }}
+                aria-label={id}
+              />
+            ) : (
+              <img src={folderSrc} alt={id} width="22" height="22" />
+            )}
           </button>
         ))}
       </div>
@@ -464,6 +472,44 @@ function getIconPath(theme: IconTheme, name: string): string {
 
 function getFileIconSrc(ext: string, theme: IconTheme): string {
   return `/icons/themes/${theme}/${getFileIcon(ext)}`;
+}
+
+// Themes whose SVGs use fill="currentColor" and should be tinted by the
+// current color theme's --accent. Rendered as <span> with mask-image so the
+// stroke color tracks the theme instead of being hardcoded in the SVG.
+const MASK_TINT_THEMES: IconTheme[] = ['devicon'];
+
+function isMaskTintTheme(theme: IconTheme): boolean {
+  return MASK_TINT_THEMES.includes(theme);
+}
+
+/** Renders a theme icon. For mask-tint themes, uses a <span> with mask-image
+ *  so `background-color: var(--accent)` paints the silhouette. For color
+ *  themes, falls back to a plain <img>. */
+function ThemedIcon({ src, alt, onFallback }: {
+  src: string;
+  alt: string;
+  onFallback?: string;
+}) {
+  const { state: { iconTheme } } = useAppState();
+  if (isMaskTintTheme(iconTheme)) {
+    return (
+      <span
+        className="icon-svg icon-svg-mask"
+        role="img"
+        aria-label={alt}
+        style={{ WebkitMaskImage: `url("${src}")`, maskImage: `url("${src}")` }}
+      />
+    );
+  }
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className="icon-svg"
+      onError={onFallback ? (e) => (e.currentTarget.src = onFallback) : undefined}
+    />
+  );
 }
 
 
@@ -571,7 +617,7 @@ function DirNode({ name, node, folderPath, onCtxMenu }: {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
         </span>
         <span className="tree-icon">
-          <img src={getIconPath(iconTheme, open ? 'folder-open.svg' : 'folder-closed.svg')} alt="dir" className="icon-svg" />
+          <ThemedIcon src={getIconPath(iconTheme, open ? 'folder-open.svg' : 'folder-closed.svg')} alt="dir" />
         </span>
         <span className="tree-name" style={{ display: renaming ? 'none' : undefined }}>{name}</span>
         <input
@@ -642,7 +688,7 @@ function FileNode({ name, file, folderPath, onCtxMenu }: {
   return (
     <div className={`tree-file ${renaming ? 'renaming' : ''}`} onContextMenu={handleCtxMenu}>
       <span className="tree-icon">
-        <img src={getFileIconSrc(file.extension, iconTheme)} alt="err" className="icon-svg" onError={(e) => (e.currentTarget.src = getIconPath(iconTheme, 'file.svg'))} />
+        <ThemedIcon src={getFileIconSrc(file.extension, iconTheme)} alt="err" onFallback={getIconPath(iconTheme, 'file.svg')} />
       </span>
       <span className="tree-fname" style={{ display: renaming ? 'none' : undefined }}>{name}</span>
       <input
@@ -749,7 +795,7 @@ function BrowserDirNode({ name, dirPath, icon, onCtxMenu }: { name: string; dirP
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
         </span>
         <span className="tree-icon">
-          <img src={icon || getIconPath(iconTheme, open ? 'folder-open.svg' : 'folder-closed.svg')} alt="dir" className="icon-svg" />
+          <ThemedIcon src={icon || getIconPath(iconTheme, open ? 'folder-open.svg' : 'folder-closed.svg')} alt="dir" />
         </span>
         <span className="tree-name" style={{ display: renaming ? 'none' : undefined }}>{name}</span>
         <input
@@ -828,11 +874,10 @@ function BrowserFileNode({ entry, parentDirPath, onCtxMenu }: {
   return (
     <div className={`tree-file ${renaming ? 'renaming' : ''}`} onContextMenu={handleCtxMenu}>
       <span className="tree-icon">
-        <img
+        <ThemedIcon
           src={getFileIconSrc(entry.name.split('.').pop() || '', iconTheme)}
           alt="file"
-          className="icon-svg"
-          onError={(e) => (e.currentTarget.src = getIconPath(iconTheme, 'file.svg'))}
+          onFallback={getIconPath(iconTheme, 'file.svg')}
         />
       </span>
       <span className="tree-fname" style={{ display: renaming ? 'none' : undefined }}>{entry.name}</span>

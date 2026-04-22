@@ -187,6 +187,37 @@
     object-fit: contain;
 }
 
+/* Mask-tint rendering: for monochrome themes whose SVGs use
+   fill="currentColor" (e.g. Phosphor Light). The silhouette is painted
+   with the active theme's --accent color so the file tree reflects the
+   current color scheme instead of staying a fixed stroke color. */
+.icon-svg-mask {
+    display: inline-block;
+    background-color: var(--accent);
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+}
+
+/* Theme picker chip preview for mask-tint themes — paint the folder
+   silhouette in the active --accent color so the chip reflects what
+   the user will actually see in the file tree. */
+.icon-theme-chip-preview-mask {
+    display: inline-block;
+    width: 22px;
+    height: 22px;
+    background-color: var(--accent);
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+}
+
 .tree-fname {
     flex: 1;
     overflow: hidden;

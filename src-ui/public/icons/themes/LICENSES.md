@@ -10,13 +10,17 @@ from upstream VS Code icon projects; two are self-authored Coffee CLI art.
 | `material`     | material-extensions/vscode-material-icon-theme                               |
 | `vscode-icons` | vscode-icons/vscode-icons                                                    |
 | `catppuccin-mocha` | catppuccin/vscode-icons (Mocha palette) — line-stroke 16×16 icons       |
-| `devicon`      | devicons/devicon (language glyphs) + jesseweed/seti-ui (folder, re-tinted)   |
+| `devicon`      | phosphor-icons/core — Phosphor `light` variant (pure line, `currentColor`)   |
 | `fluent`       | microsoft/fluentui-system-icons (folder) + Material (language glyph pairing) |
 | `symbols`      | miguelsolorio/vscode-symbols                                                 |
 
-Two post-process tints apply:
-- `devicon` folder: borrowed from Seti-UI (`#ABABAB` → Material blue-grey `#546E7A` for dark-UI contrast)
-- `fluent` folder: Fluent's `#212121` → Fluent blue `#0078D4` for dark-UI contrast
+Notes:
+- `devicon` slot retains the theme id for localStorage compatibility but now
+  ships Phosphor Icons light variants. All SVGs use `fill="currentColor"` and
+  are rendered via CSS `mask-image`, so the silhouette tracks the active
+  color theme's `--accent` variable. See `MASK_TINT_THEMES` in `Explorer.tsx`.
+- `fluent` folder post-process: Fluent's `#212121` → Fluent blue `#0078D4` for
+  dark-UI contrast.
 
 See `scripts/fetch-icon-themes.mjs` for the complete URL map.
 

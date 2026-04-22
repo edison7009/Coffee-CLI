@@ -2,15 +2,16 @@
 // them into src-ui/public/icons/themes/<theme>/.
 //
 // Each theme's folder shape + file icons come from the SAME upstream — no
-// cross-theme shape borrowing, no palette-swap tricks. The two exceptions
-// (devicon has no folders upstream → borrows Seti shape tinted dark; fluent
-// has no language icons → borrows Material language glyphs) are documented
-// inline so it's obvious where visual overlap might occur.
+// cross-theme shape borrowing, no palette-swap tricks. One exception remains
+// (fluent has no language icons → borrows Material language glyphs).
 //
 // Covered themes: material, vscode-icons, catppuccin-mocha, devicon, fluent, symbols.
 // outline + coffee live in generate-icon-themes.mjs (self-authored art).
-// SETI_BASE is kept as an upstream URL constant because devicon borrows the
-// Seti folder shape — seti is not a standalone theme here.
+//
+// `devicon` theme id is retained for localStorage compatibility but now
+// ships Phosphor Icons `light` variants (pure line, fill="currentColor").
+// These are tinted by the active color theme's --accent via CSS mask-image;
+// see MASK_TINT_THEMES in Explorer.tsx.
 
 import { writeFileSync, mkdirSync, rmSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
@@ -26,11 +27,10 @@ const OUT_ROOT = join(__dirname, '..', 'src-ui', 'public', 'icons', 'themes');
 
 const MATERIAL_BASE = 'https://raw.githubusercontent.com/material-extensions/vscode-material-icon-theme/main/icons/';
 const VSCODE_ICONS_BASE = 'https://raw.githubusercontent.com/vscode-icons/vscode-icons/master/icons/';
-const SETI_BASE = 'https://raw.githubusercontent.com/jesseweed/seti-ui/master/icons/';
-const DEVICON_BASE = 'https://raw.githubusercontent.com/devicons/devicon/master/icons/';
 const FLUENT_BASE = 'https://raw.githubusercontent.com/microsoft/fluentui-system-icons/main/assets/';
 const SYMBOLS_BASE = 'https://raw.githubusercontent.com/miguelsolorio/vscode-symbols/main/src/icons/';
 const CATPPUCCIN_MOCHA_BASE = 'https://raw.githubusercontent.com/catppuccin/vscode-icons/main/icons/mocha/';
+const PHOSPHOR_LIGHT_BASE = 'https://raw.githubusercontent.com/phosphor-icons/core/main/raw/light/';
 
 const replaceFill = (from, to) => (svg) => svg.replaceAll(from, to);
 
@@ -115,34 +115,32 @@ const SOURCES = {
     base: CATPPUCCIN_MOCHA_BASE,
   },
 
-  // 4. Devicon — no folder upstream; borrow Seti's notched shape tinted dark
-  // blue-grey to stand apart from Seti's pale grey. Files = real brand logos.
+  // 4. Devicon slot — now ships Phosphor Icons `light` variants (pure line).
+  // Every SVG uses fill="currentColor" so the silhouette inherits the active
+  // color theme's --accent via CSS mask-image (see MASK_TINT_THEMES in
+  // Explorer.tsx). Non-exact Phosphor matches fall back to `file-code` /
+  // `file-ini` / `terminal` / `brackets-curly` as the closest semantic pick.
   devicon: {
     entries: {
-      'folder-closed.svg': SETI_BASE + 'folder.svg',
-      'folder-open.svg':   SETI_BASE + 'folder.svg',
-      'file.svg':          MATERIAL_BASE + 'document.svg',
-      'js.svg':   DEVICON_BASE + 'javascript/javascript-original.svg',
-      'ts.svg':   DEVICON_BASE + 'typescript/typescript-original.svg',
-      'jsx.svg':  DEVICON_BASE + 'react/react-original.svg',
-      'tsx.svg':  DEVICON_BASE + 'react/react-original.svg',
-      'py.svg':   DEVICON_BASE + 'python/python-original.svg',
-      'rs.svg':   DEVICON_BASE + 'rust/rust-original.svg',
-      'go.svg':   DEVICON_BASE + 'go/go-original.svg',
-      'java.svg': DEVICON_BASE + 'java/java-original.svg',
-      'c.svg':    DEVICON_BASE + 'c/c-original.svg',
-      'cpp.svg':  DEVICON_BASE + 'cplusplus/cplusplus-original.svg',
-      'html.svg': DEVICON_BASE + 'html5/html5-original.svg',
-      'css.svg':  DEVICON_BASE + 'css3/css3-original.svg',
-      'json.svg': DEVICON_BASE + 'json/json-original.svg',
-      'md.svg':   DEVICON_BASE + 'markdown/markdown-original.svg',
-      'sh.svg':   DEVICON_BASE + 'bash/bash-original.svg',
-      'toml.svg': MATERIAL_BASE + 'toml.svg',
-    },
-    postProcess: {
-      // Re-tint Seti's pale #ABABAB to Material-style blue-grey for dark UI.
-      'folder-closed.svg': replaceFill('#ABABAB', '#546E7A'),
-      'folder-open.svg':   replaceFill('#ABABAB', '#546E7A'),
+      'folder-closed.svg': PHOSPHOR_LIGHT_BASE + 'folder-light.svg',
+      'folder-open.svg':   PHOSPHOR_LIGHT_BASE + 'folder-open-light.svg',
+      'file.svg':          PHOSPHOR_LIGHT_BASE + 'file-light.svg',
+      'js.svg':   PHOSPHOR_LIGHT_BASE + 'file-js-light.svg',
+      'ts.svg':   PHOSPHOR_LIGHT_BASE + 'file-ts-light.svg',
+      'jsx.svg':  PHOSPHOR_LIGHT_BASE + 'file-jsx-light.svg',
+      'tsx.svg':  PHOSPHOR_LIGHT_BASE + 'file-tsx-light.svg',
+      'py.svg':   PHOSPHOR_LIGHT_BASE + 'file-py-light.svg',
+      'rs.svg':   PHOSPHOR_LIGHT_BASE + 'file-rs-light.svg',
+      'go.svg':   PHOSPHOR_LIGHT_BASE + 'file-code-light.svg',
+      'java.svg': PHOSPHOR_LIGHT_BASE + 'file-code-light.svg',
+      'c.svg':    PHOSPHOR_LIGHT_BASE + 'file-c-light.svg',
+      'cpp.svg':  PHOSPHOR_LIGHT_BASE + 'file-cpp-light.svg',
+      'html.svg': PHOSPHOR_LIGHT_BASE + 'file-html-light.svg',
+      'css.svg':  PHOSPHOR_LIGHT_BASE + 'file-css-light.svg',
+      'json.svg': PHOSPHOR_LIGHT_BASE + 'brackets-curly-light.svg',
+      'md.svg':   PHOSPHOR_LIGHT_BASE + 'file-md-light.svg',
+      'sh.svg':   PHOSPHOR_LIGHT_BASE + 'terminal-light.svg',
+      'toml.svg': PHOSPHOR_LIGHT_BASE + 'file-ini-light.svg',
     },
   },
 
