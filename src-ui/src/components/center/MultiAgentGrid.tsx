@@ -1,18 +1,23 @@
-// MultiAgentGrid.tsx — 2×2 (scrollable to N) pane grid for multi-agent Tabs.
+// MultiAgentGrid.tsx — renders worker panes 1..N as siblings of the
+// primary pane's TierTerminal.
 //
-// Each pane gets its own PTY session (sessionId = `${tabId}::pane-${idx}`)
-// so the Rust MCP server sees N independent terminals and the primary
-// LLM can send_to_pane / read_pane without any cross-talk.
+// IMPORTANT: Pane 0 is NOT rendered here. The Tab's original TierTerminal
+// stays mounted in CenterPanel; the `.terminal-wrapper.is-multi-agent`
+// CSS grid places it in cell (1,1) automatically. MultiAgentGrid only
+// renders the other 3 panes as direct children of the same wrapper, so
+// CSS grid arranges them into (2,1)(1,2)(2,2). This keeps the primary
+// CLI's PTY alive across the single↔multi-agent toggle.
+//
+// Each non-primary pane gets its own PTY session
+// (sessionId = `${tabId}::pane-${idx}`), so the Rust MCP server sees N
+// independent terminals and the primary LLM can send_to_pane / read_pane
+// without any cross-talk.
 //
 // v1.0 day 5 scope:
-//   - 2×2 visible grid (future: add rows via "+" button → state can
-//     already hold more than 4 entries in multiAgent.panes).
-//   - Primary-pane ring glow to show the user which pane is in charge.
+//   - 2×2 visible grid; panes > 3 scroll via the wrapper.
 //   - Empty-pane placeholder with a simple CLI picker (Claude / Codex /
-//     Gemini / OpenCode / shell). Full dropdown with model/profile
+//     Gemini / OpenCode). Full dropdown with model/profile
 //     selection is deferred to v1.0.1.
-//   - Click any pane to mark it primary (re-wires which CLI owns the
-//     coffee-cli MCP channel; user confirms before we re-inject).
 //
 // Out of scope for day 5:
 //   - Idle-status badge (day 6 will drive it from agent-status events).
@@ -57,16 +62,16 @@ export function MultiAgentGrid({ tab, hasBg, bgUrl, bgType }: Props) {
     dispatch({ type: 'SET_PRIMARY_PANE', tabId: tab.id, paneIdx });
   };
 
+  // Render only panes 1..N. Pane 0 is the Tab's existing TierTerminal
+  // kept mounted in CenterPanel; see MultiAgentGrid.tsx doc comment above.
+  const workerPanes = multi.panes.filter((p) => p.paneIdx !== 0);
+
   return (
-    <div className="multi-agent-grid">
-      {multi.panes.map((pane) => {
-        // IMPORTANT: pane 0 reuses the Tab's original session id so the
-        // already-running CLI (Claude Code etc.) is NOT restarted when
-        // the user toggles into four-pane mode — the existing terminal
-        // just visually shrinks into the top-left cell. Panes 1..N get
-        // fresh PTY sessions with suffixed ids.
-        const paneSessionId =
-          pane.paneIdx === 0 ? tab.id : `${tab.id}::pane-${pane.paneIdx}`;
+    <>
+      {workerPanes.map((pane) => {
+        // Worker panes get fresh PTY sessions with suffixed ids so the
+        // Rust MCP server sees them as independent targets.
+        const paneSessionId = `${tab.id}::pane-${pane.paneIdx}`;
         const isPrimary = pane.paneIdx === multi.primaryPaneIdx;
         const isEmpty = pane.tool === null;
 
@@ -75,6 +80,7 @@ export function MultiAgentGrid({ tab, hasBg, bgUrl, bgType }: Props) {
             key={pane.paneIdx}
             className={[
               'multi-agent-pane',
+              `pane-slot-${pane.paneIdx}`,
               isPrimary ? 'is-primary' : '',
               isEmpty ? 'is-empty' : '',
             ]
@@ -118,7 +124,7 @@ export function MultiAgentGrid({ tab, hasBg, bgUrl, bgType }: Props) {
           </div>
         );
       })}
-    </div>
+    </>
   );
 }
 

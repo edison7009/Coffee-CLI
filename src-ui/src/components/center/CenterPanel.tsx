@@ -752,10 +752,14 @@ export function CenterPanel() {
         {terminals.map(t => t.tool !== null ? (
           <div
             key={t.id}
-            className="terminal-wrapper"
+            className={`terminal-wrapper${t.multiAgent ? ' is-multi-agent' : ''}`}
             data-session-id={t.id}
             style={{
-              display: t.id === activeTerminalId ? 'flex' : 'none',
+              // display handled by CSS when in multi-agent (grid); keep
+              // flex for the legacy single-terminal case.
+              display: t.id === activeTerminalId
+                ? (t.multiAgent ? 'grid' : 'flex')
+                : 'none',
               width: '100%',
               height: '100%',
               position: 'relative'
@@ -768,14 +772,14 @@ export function CenterPanel() {
               <ChatReader sessionId={t.id} />
             ) : t.tool === 'arcade' ? (
               <DosPlayer sessionId={t.id} />
-            ) : t.multiAgent ? (
-              <MultiAgentGrid
-                tab={t}
-                hasBg={hasBg}
-                bgUrl={bgUrl}
-                bgType={bgType}
-              />
             ) : (
+              // TierTerminal is ALWAYS mounted for tool-running tabs.
+              // In multi-agent mode the surrounding wrapper becomes a
+              // 2×2 CSS grid — the TierTerminal below stays in cell (1,1)
+              // and MultiAgentGrid renders the other 3 panes as siblings.
+              // Critical: do NOT conditionally switch between TierTerminal
+              // and MultiAgentGrid — that unmounts TierTerminal and the
+              // PTY gets killed ("Killing existing session ... for restart").
               <ErrorBoundary key={`err-${t.id}-${t.restartKey || 0}`} fallbackLabel="Tier Terminal Error">
                 <TierTerminal
                   key={`tier-${t.id}-${t.restartKey || 0}`}
@@ -802,6 +806,14 @@ export function CenterPanel() {
                   termColorScheme={state.termColorScheme}
                 />
               </ErrorBoundary>
+            )}
+            {t.tool !== 'history' && t.tool !== 'arcade' && t.multiAgent && (
+              <MultiAgentGrid
+                tab={t}
+                hasBg={hasBg}
+                bgUrl={bgUrl}
+                bgType={bgType}
+              />
             )}
           </div>
         ) : null)}
