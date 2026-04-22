@@ -511,6 +511,8 @@ Coffee-CLI 现在的 Tab 系统：每个 Tab = 一个独立终端实例。
 | 2026-04-22 | **否决 Qwen Code（实测决策）** | 用户亲测：账号体系封闭，不接受外部账号登录；2026-04-15 Qwen OAuth 终止后配置流程繁琐。中文开发者可用 OpenCode + OpenAI-compatible endpoint（DeepSeek / 智谱 GLM / 月之暗面 / 阿里云百炼 API）替代，Coffee-CLI 不需为 Qwen Code 做专门适配 |
 | 2026-04-22 | **职责边界：同家编排归各家 SDK，Coffee-CLI 只做跨家** | Claude Agent Teams / Codex app-server / Gemini agent / OpenCode TaskTool 四家都有成熟的内部 subagent SDK。Coffee-CLI 不和它们竞争，只做它们都做不到的"跨 CLI 进程桥梁"。CLAUDE.md 模板明确告诉主控 LLM"同家 subagent 用原生 SDK，跨家才用 send_to_pane" |
 | 2026-04-22 | **CLAUDE.md 模板补充 Parallel fan-out 使用说明** | 主控 LLM 默认可能串行调用 tool（pane-1 等完再 pane-2），速度降为 1/N。模板明确教"一条消息多个 send_to_pane" + 给出正确/错误示例，覆盖"同时派给多个 pane"这个 Coffee-CLI 的核心场景 |
+| 2026-04-22 | **5 个疑似竞品全扫，独占位验证通过** | 扫描 metaswarm / myclaude / CCB / Claude Co-Commands / Zed ACP，详见附录 E。前 4 个要么 CLI-only 要么 Windows 死路，和 Coffee-CLI 定位正交。ACP 是 LSP 级大事件但不抢位（协议 1:1 无 agent-to-agent），三条护城河（桌面 GUI / Windows 原生 / 跨家协同）完整无损 |
+| 2026-04-22 | **ACP 进入 v1.1 技术雷达（不进 v1.0）** | ACP 是 Zed 推进的"editor↔agent"协议，Claude/Codex/Copilot/Gemini/OpenCode 五家 agent 端都已实现。v1.0 不引入（不阻塞 MVP），v1.1 考虑在 PTY 适配层旁加 ACP adapter 分支——拿结构化 diff/permission 比裸 PTY 解析强。Coffee-CLI 可定位为"多 agent 协调型 ACP client"（Zed/JetBrains 都是 1:1，我们是 N:N）|
 | 2026-04-22 | Aider 仅支持被控不支持主控 | Aider 本身不是 MCP client（`aider-mcp-server` 是反向包装），但其 git-first 特性独特，作为被控能力保留价值 |
 | 2026-04-22 | **MCP 传输选 HTTP 不选 stdio** | Coffee-CLI 是常驻 Tauri 进程，不能被 CLI spawn 成子进程；HTTP 还天然支持多 CLI 并发主控 + 断连恢复。详见 [5.5 节](#55-mcp-server-进程架构与传输模式) |
 | 2026-04-22 | **术语"1 号位"→"主控格（primary pane）"** | 用户可以把主控 CLI 放在任意格子，物理位置不等同于角色；术语不严谨会误导架构讨论 |
@@ -729,3 +731,65 @@ MCP server 本身是独立 actor，通过 per-pane mpsc 和 pane actor 通信。
 | 6 | 关闭多 Agent 模式 | 所有 mcp 配置还原、`.md` 文件清理干净 |
 | 7 | Windows 原生 build + 中文 prompt 测试 | 无编码错误、idle 检测准确 |
 | 8 | Coffee-CLI 崩溃重启 | 端口重新分配、CLI 需重启、状态清白 |
+
+---
+
+## 附录 E：竞品扫描与独占位验证（2026-04-22 扫描）
+
+5 个疑似对标方案已逐一扒过源码和协议，结论：**Coffee-CLI 独占位仍成立**。
+
+| 方案 | 能否跨 CLI 进程 | Windows 原生 | 可视化 GUI | 用户全程可见 | 活跃度 | 对 Coffee-CLI 影响 |
+|---|---|---|---|---|---|---|
+| [metaswarm](https://github.com/dsifry/metaswarm) | 半真（bash adapter 一次性 subprocess） | ❌ bash / POSIX-first | ❌ CLI-only | ❌ 只返回 JSON 摘要 | 216★ 单人 | 零威胁，SDLC 方法论插件，和我们正交 |
+| [myclaude](https://github.com/stellarlinkco/myclaude) | 真（Go wrapper 包 codex/gemini/opencode 四后端） | ⚠️ install.bat 有但 POSIX-first | ❌ CLI-only | ❌ 结构化摘要非实时 | 2.6k★ 活跃 | 零威胁，但 Go wrapper 的后端抽象值得借鉴到 profile 层 |
+| [claude_code_bridge (CCB)](https://github.com/bfly123/claude_code_bridge) | 真（askd daemon + tmux） | ❌ AF_UNIX 硬 raise + 236 处 tmux | ❌ tmux-only | ✅ tmux pane 可见 | 2.3k★ 活跃 | 零威胁（Windows 死路已验证） |
+| [Claude Co-Commands](https://github.com/SnakeO/claude-co-commands) | ❌ 只是 Claude 插件叫 Codex 做咨询 | — | ❌ | ❌ | 低 | 零威胁，定位完全不重合 |
+| [Zed ACP](https://agentclientprotocol.com) | ❌ 协议严格 1:1（editor ↔ 1 agent），无 agent-to-agent | ✅ 纯协议，无 OS 依赖 | Zed/JetBrains 内 | 通过协议可拿结构化事件 | 官方力推 + 注册表 | **机会窗（非威胁）**，详见下文 |
+
+### 关键洞察
+
+**三条护城河完整无损**：
+1. **桌面 GUI + 可见多 PTY** —— 4 家竞品都是 CLI-only 或 tmux-only，**没人做 GUI**
+2. **Windows 原生 Tauri** —— 4 家要么 POSIX-first，要么 tmux，要么 AF_UNIX
+3. **跨 CLI 进程协同** —— 各家 CLI 的自家 subagent SDK 只管自家，Coffee-CLI 补这个空白
+
+### ACP（Zed Agent Client Protocol）的战略意义
+
+**这是 2026 年的 LSP 级事件**，必须进技术雷达。已知事实：
+
+- 协议类比 LSP，JSON-RPC over stdio/HTTP/WebSocket
+- **Claude Code / Codex CLI / Copilot CLI / Gemini CLI / OpenCode 五家官方 agent 端都已实现 ACP**
+- Client 端：Zed / JetBrains，注册表已上线
+- 方法集：`initialize` / `session/new|load|list|prompt|cancel` / `session/update` / `session/request_permission` / `terminal/*` / `fs/*`
+- **没有 agent-to-agent 消息类型**——它只管"宿主 ↔ 单个 agent"
+
+**对 Coffee-CLI 的影响分档**：
+
+| 时间 | 是否受影响 | 动作 |
+|---|---|---|
+| **v1.0 MVP** | ❌ 不受影响 | 保持 3 工具 + HTTP MCP + PTY 方案，**不引入 ACP** |
+| **v1.1+** | ⚠️ 机会窗 | 在 PTY 适配层旁加一条 **ACP adapter 分支**，对支持 ACP 的 CLI 走结构化通道（拿 diff / permission / terminal 结构化数据），不支持的仍走 PTY |
+| **长期风险** | ⚠️ 不应忽视 | 如果未来新 agent 只提供 ACP 接口不给 TTY 交互，裸 PTY 方案会渐进失效 |
+
+### v1.1 ACP adapter 的可能形状（不承诺，仅留口）
+
+```
+Coffee-CLI Pane
+    ├─ 模式 A: PTY 注入（v1.0 默认）
+    │    ├─ 优点：支持任何 CLI（shell / aider / 不识别的 CLI）
+    │    └─ 局限：解析 ANSI 字节流，拿不到结构化 diff/permission
+    │
+    └─ 模式 B: ACP client（v1.1 可选）
+         ├─ 优点：结构化 session/update 事件、diff、permission、terminal 分离
+         ├─ 局限：仅对支持 ACP 的 CLI 可用
+         └─ 实现：rust crate [zed-industries/agent-client-protocol](https://github.com/zed-industries/agent-client-protocol)
+```
+
+**Coffee-CLI 在 ACP 生态的独特定位**：Zed / JetBrains 是"1 宿主 ↔ 1 agent"的 ACP client，Coffee-CLI 可以做**"多 agent 协调型 ACP client"**——把 ACP 不覆盖的 agent-to-agent 协调层补上，这正是我们的 3 工具做的事。
+
+### 竞品扫描的决策后果
+
+- v1.0 方案**一行不改**
+- 附录 C/D 的开工前验证和开发中决策**不变**
+- **v1.1 路线图增加**：`[ ] ACP adapter 作为 PTY 的并行通道，优先给 5 家支持 ACP 的 CLI 走结构化`
+- 需要**观察的风险**：Anthropic / OpenAI 是否官方站台 ACP（目前是 Zed 第三方实现各家 agent 端），如果官方正式采纳，ACP adapter 优先级应前移；如果官方冷淡，ACP 可能成为"好想法没跟上"的孤儿协议
