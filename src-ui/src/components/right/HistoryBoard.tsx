@@ -1,8 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useSyncExternalStore } from 'react';
 import { useT } from '../../i18n/useT';
 import { useAppState } from '../../store/app-state';
-import { isTauri, commands } from '../../tauri';
+import { isTauri } from '../../tauri';
 import type { SavedSession } from '../../tauri';
+import {
+  prefetchHistory,
+  subscribeHistory,
+  getHistorySnapshot,
+} from '../../lib/history-cache';
 import './HistoryBoard.css';
 
 // Tool icons live under /icons/tools/ — see CenterPanel.tsx for the canonical
@@ -37,36 +42,21 @@ const getToolName = (tool: string, _lang: string) => {
 export function HistoryBoard() {
   const t = useT();
   const { state, dispatch } = useAppState();
-  
-  const [resumableSessions, setResumableSessions] = useState<SavedSession[]>([]);
+
+  // History is prefetched at app startup (see App.tsx). We just subscribe
+  // to the shared cache so the panel renders instantly when data is ready.
+  // The prefetch call here is idempotent — it only fires if no load ran yet.
+  const { sessions: cachedSessions, status } = useSyncExternalStore(
+    subscribeHistory,
+    getHistorySnapshot,
+    getHistorySnapshot,
+  );
+  useEffect(() => { prefetchHistory(); }, []);
+  const isLoading = isTauri && (status === 'idle' || status === 'loading') && cachedSessions.length === 0;
+
   const [sessionSearchQuery, setSessionSearchQuery] = useState('');
 
-  useEffect(() => {
-    if (isTauri) {
-      commands.getNativeHistory()
-      .then((nativeSessions) => {
-        const merged = [...(nativeSessions || [])];
-        merged.sort((a, b) => {
-          // Handle unit conversion for raw linux/macos timestamps in seconds
-          let ams = Date.parse(a.saved_at);
-          if (isNaN(ams)) { 
-            const n = Number(a.saved_at); 
-            if (!isNaN(n)) ams = n < 1e11 ? n * 1000 : n; 
-          }
-          let bms = Date.parse(b.saved_at);
-          if (isNaN(bms)) { 
-            const n = Number(b.saved_at); 
-            if (!isNaN(n)) bms = n < 1e11 ? n * 1000 : n; 
-          }
-          return (bms || 0) - (ams || 0);
-        });
-        setResumableSessions(merged);
-      })
-      .catch(console.error);
-    }
-  }, []);
-
-  const baseSessions: SavedSession[] = isTauri ? resumableSessions : resumableSessions.length > 0 ? resumableSessions : [
+  const baseSessions: SavedSession[] = isTauri ? cachedSessions : cachedSessions.length > 0 ? cachedSessions : [
     { id: 'mock-1', name: 'build a flash card website', tool: 'claude', cwd: '~/projects/flashcards', session_token: 'tk1', saved_at: new Date().toISOString() },
     { id: 'mock-2', name: 'build a snake game', tool: 'claude', cwd: '~/projects/snake', session_token: 'tk2', saved_at: new Date(Date.now() - 3600000).toISOString() },
     { id: 'mock-3', name: 'refactor components', tool: 'qwen', cwd: '~/projects/coffee', session_token: 'tk3', saved_at: new Date(Date.now() - 86400000 * 2).toISOString() },
@@ -75,7 +65,7 @@ export function HistoryBoard() {
   const filteredSessions = baseSessions.filter(s => {
     if (!sessionSearchQuery) return true;
     return s.name.toLowerCase().includes(sessionSearchQuery.toLowerCase());
-  }).slice(0, 100);
+  }).slice(0, 30);
 
   const handleViewHistory = (saved: SavedSession) => {
     dispatch({ 
@@ -101,7 +91,17 @@ export function HistoryBoard() {
         />
       </div>
       <div className="task-list" style={{ marginTop: '0', paddingBottom: '20px' }}>
-      {filteredSessions.map(session => {
+      {isLoading && Array.from({ length: 6 }).map((_, i) => (
+        <div key={`skel-${i}`} className="history-card history-card-skeleton" aria-hidden="true">
+          <div className="history-card-content">
+            <span className="skeleton-bar skeleton-bar-title" />
+            <div className="history-card-meta">
+              <span className="skeleton-bar skeleton-bar-meta" />
+            </div>
+          </div>
+        </div>
+      ))}
+      {!isLoading && filteredSessions.map(session => {
         // Parse saved_at carefully to handle unix ms strings or invalid SystemTime strings
         let savedMs = Date.parse(session.saved_at);
         if (isNaN(savedMs)) {
@@ -150,7 +150,7 @@ export function HistoryBoard() {
         );
       })}
       
-      {filteredSessions.length === 0 && (
+      {!isLoading && filteredSessions.length === 0 && (
         <div className="task-empty">
           <div className="task-empty-text">{t('menu.no_recent' as any) || 'No recent sessions'}</div>
         </div>

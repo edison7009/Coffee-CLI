@@ -722,7 +722,7 @@ fn copy_dir_all(src: &std::path::Path, dest: &std::path::Path) -> std::io::Resul
 // ─── Tier Terminal API ────────────────────────────────────────────────────────
 
 #[tauri::command]
-fn tier_terminal_start(
+async fn tier_terminal_start(
     session_id: String,
     tool: Option<String>,
     tool_data: Option<String>,
@@ -733,6 +733,35 @@ fn tier_terminal_start(
     cwd: Option<String>,
     app: tauri::AppHandle,
     state: State<'_, AppState>,
+) -> Result<(), String> {
+    // Offload the whole spawn sequence to a blocking thread so the Tauri
+    // command dispatcher returns immediately. Without this, Windows was
+    // paying ~cmd.exe boot + Defender AV scan + Node startup on the command
+    // thread, stalling every other IPC call (resize, theme, terminal I/O)
+    // until the spawn returned. Running in the terminal directly avoids
+    // this because no IPC layer is involved — the shell forks directly.
+    let terminal_session = state.terminal_session.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        tier_terminal_start_blocking(
+            session_id, tool, tool_data, cols, rows,
+            theme_mode, locale, cwd, app, terminal_session,
+        )
+    })
+    .await
+    .map_err(|e| format!("Spawn task join failed: {e}"))?
+}
+
+fn tier_terminal_start_blocking(
+    session_id: String,
+    tool: Option<String>,
+    tool_data: Option<String>,
+    cols: u16,
+    rows: u16,
+    theme_mode: Option<String>,
+    locale: Option<String>,
+    cwd: Option<String>,
+    app: tauri::AppHandle,
+    terminal_session: terminal::SharedSession,
 ) -> Result<(), String> {
     // Use per-tab CWD from frontend, NOT the global project_dir.
     // Each tab is independent: new tabs get home dir, existing tabs keep their own.
@@ -847,7 +876,7 @@ fn tier_terminal_start(
     // If a session with the same ID already exists (e.g. restart-in-place),
     // forcefully kill and remove it before spawning a fresh one.
     {
-        let mut lock = state.terminal_session.lock().unwrap();
+        let mut lock = terminal_session.lock().unwrap();
         if let Some(old_session) = lock.remove(&session_id) {
             eprintln!("[Tier Terminal] Killing existing session {} for restart", session_id);
             let _ = old_session.kill_tx.send(());
@@ -874,7 +903,7 @@ fn tier_terminal_start(
     terminal::spawn(
         app.clone(),
         session_id.clone(),
-        state.terminal_session.clone(),
+        terminal_session.clone(),
         cmd,
         args,
         spawn_cwd,
@@ -1199,7 +1228,12 @@ fn read_native_session(file_path: String) -> Result<String, String> {
     std::fs::read_to_string(&canonical).map_err(|e| e.to_string())
 }
 
-fn find_jsonl_sessions_recursively(dir: std::path::PathBuf, depth: u8, tool: &str, result: &mut Vec<SavedSession>) {
+fn collect_jsonl_paths_with_mtime(
+    dir: std::path::PathBuf,
+    depth: u8,
+    tool: &'static str,
+    out: &mut Vec<(std::time::SystemTime, std::path::PathBuf, &'static str)>,
+) {
     if depth == 0 || !dir.is_dir() {
         return;
     }
@@ -1208,12 +1242,13 @@ fn find_jsonl_sessions_recursively(dir: std::path::PathBuf, depth: u8, tool: &st
             let path = entry.path();
             if path.is_file() {
                 if path.extension().and_then(|e| e.to_str()) == Some("jsonl") {
-                    if let Some(session) = parse_agent_jsonl(&path, tool) {
-                        result.push(session);
-                    }
+                    let mtime = entry.metadata().ok()
+                        .and_then(|m| m.modified().ok())
+                        .unwrap_or(std::time::SystemTime::UNIX_EPOCH);
+                    out.push((mtime, path, tool));
                 }
             } else if path.is_dir() {
-                find_jsonl_sessions_recursively(path, depth - 1, tool, result);
+                collect_jsonl_paths_with_mtime(path, depth - 1, tool, out);
             }
         }
     }
@@ -1369,7 +1404,7 @@ fn find_opencode_sessions_sqlite(db_path: &std::path::Path, result: &mut Vec<Sav
                  WHERE s.time_archived IS NULL \
                  GROUP BY s.id \
                  ORDER BY s.time_updated DESC \
-                 LIMIT 200";
+                 LIMIT 30";
 
     let mut stmt = match conn.prepare(query) {
         Ok(s) => s,
@@ -1408,7 +1443,10 @@ fn find_opencode_sessions_sqlite(db_path: &std::path::Path, result: &mut Vec<Sav
     }
 }
 
-fn find_hermes_sessions(dir: std::path::PathBuf, result: &mut Vec<SavedSession>) {
+fn collect_hermes_paths_with_mtime(
+    dir: std::path::PathBuf,
+    out: &mut Vec<(std::time::SystemTime, std::path::PathBuf, &'static str)>,
+) {
     if !dir.is_dir() {
         return;
     }
@@ -1419,33 +1457,65 @@ fn find_hermes_sessions(dir: std::path::PathBuf, result: &mut Vec<SavedSession>)
             let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
             // Only session_*.json files — skip request_dump_* and state.db
             if name.starts_with("session_") && name.ends_with(".json") {
-                if let Some(session) = parse_hermes_json(&path) {
-                    result.push(session);
-                }
+                let mtime = entry.metadata().ok()
+                    .and_then(|m| m.modified().ok())
+                    .unwrap_or(std::time::SystemTime::UNIX_EPOCH);
+                out.push((mtime, path, "hermes"));
             }
         }
     }
 }
 
 #[tauri::command]
-fn get_native_history(_state: State<'_, AppState>) -> Result<Vec<SavedSession>, String> {
+async fn get_native_history() -> Result<Vec<SavedSession>, String> {
+    // Async command + spawn_blocking so the file I/O runs on a dedicated
+    // blocking thread pool and never blocks the Tauri command dispatcher.
+    // Other IPC calls (resize, theme switches, etc.) stay responsive while
+    // history is being scanned on app startup.
+    tauri::async_runtime::spawn_blocking(load_native_history_blocking)
+        .await
+        .map_err(|e| format!("History task join failed: {e}"))?
+}
+
+fn load_native_history_blocking() -> Result<Vec<SavedSession>, String> {
+    // Cap history to the N most recent entries. Keeps UI responsive when users
+    // have hundreds of sessions — parsing a full jsonl/json file is expensive,
+    // so we pre-select candidates by file mtime and only parse the top N.
+    const HISTORY_LIMIT: usize = 30;
+
+    let mut file_candidates: Vec<(std::time::SystemTime, std::path::PathBuf, &'static str)> = Vec::new();
     let mut result: Vec<SavedSession> = Vec::new();
 
     if let Some(home) = dirs::home_dir() {
         // 1. Claude Code (Max depth 2: projects/<hash>/<hash>.jsonl)
-        let claude_dir = home.join(".claude").join("projects");
-        find_jsonl_sessions_recursively(claude_dir, 2, "claude", &mut result);
+        collect_jsonl_paths_with_mtime(home.join(".claude").join("projects"), 2, "claude", &mut file_candidates);
 
         // 2. Hermes (sessions/session_*.json — flat directory, JSON format)
-        let hermes_dir = home.join(".hermes").join("sessions");
-        find_hermes_sessions(hermes_dir, &mut result);
+        collect_hermes_paths_with_mtime(home.join(".hermes").join("sessions"), &mut file_candidates);
+    }
 
-        // 4. OpenCode (storage/session/<project-id>/ses_*.json)
+    // Sort candidates by mtime desc and parse only the newest HISTORY_LIMIT.
+    file_candidates.sort_by(|a, b| b.0.cmp(&a.0));
+    file_candidates.truncate(HISTORY_LIMIT);
+
+    for (_, path, tool) in &file_candidates {
+        let parsed = match *tool {
+            "hermes" => parse_hermes_json(path),
+            other    => parse_agent_jsonl(path, other),
+        };
+        if let Some(session) = parsed {
+            result.push(session);
+        }
+    }
+
+    // 3. OpenCode (SQLite is cheap, query already caps rows)
+    if let Some(home) = dirs::home_dir() {
         let opencode_dir = home.join(".local").join("share").join("opencode");
         find_opencode_sessions(opencode_dir, &mut result);
     }
 
     result.sort_by(|a, b| b.saved_at.cmp(&a.saved_at));
+    result.truncate(HISTORY_LIMIT);
     Ok(result)
 }
 

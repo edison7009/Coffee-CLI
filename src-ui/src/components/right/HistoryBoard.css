@@ -57,6 +57,41 @@
   font-weight: 500;
 }
 
+/* ── Loading Skeleton ── */
+.history-card-skeleton {
+  cursor: default !important;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.skeleton-bar {
+  display: block;
+  border-radius: var(--radius-xs, 4px);
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.09) 50%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  background-size: 200% 100%;
+  animation: history-skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+.skeleton-bar-title {
+  width: 70%;
+  height: 13px;
+}
+
+.skeleton-bar-meta {
+  width: 40%;
+  height: 10px;
+}
+
+@keyframes history-skeleton-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 .agent-session-search-wrap {
   position: relative;
   margin-bottom: 12px;

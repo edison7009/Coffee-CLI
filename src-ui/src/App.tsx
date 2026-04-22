@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useAppState, useAppDispatch } from './store/app-state';
 import { retryInvoke } from './tauri';
 import { subscribeAgentStatus } from './lib/agent-status-bus';
+import { prefetchHistory } from './lib/history-cache';
 import { TitleBar } from './components/common/TitleBar';
 import { Explorer } from './components/left/Explorer';
 import { CenterPanel } from './components/center/CenterPanel';
@@ -44,6 +45,14 @@ export function App() {
   // Startup: resolve IPC
   useEffect(() => {
     const timer = setTimeout(retryInvoke, 100);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Startup: prefetch session history in the background so the History tab
+  // has data ready on first open. The Rust command runs on a blocking thread
+  // pool (spawn_blocking), so this doesn't stall other IPC calls.
+  useEffect(() => {
+    const timer = setTimeout(prefetchHistory, 300);
     return () => clearTimeout(timer);
   }, []);
 
