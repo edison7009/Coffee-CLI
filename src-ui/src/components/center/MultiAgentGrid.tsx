@@ -60,7 +60,13 @@ export function MultiAgentGrid({ tab, hasBg, bgUrl, bgType }: Props) {
   return (
     <div className="multi-agent-grid">
       {multi.panes.map((pane) => {
-        const paneSessionId = `${tab.id}::pane-${pane.paneIdx}`;
+        // IMPORTANT: pane 0 reuses the Tab's original session id so the
+        // already-running CLI (Claude Code etc.) is NOT restarted when
+        // the user toggles into four-pane mode — the existing terminal
+        // just visually shrinks into the top-left cell. Panes 1..N get
+        // fresh PTY sessions with suffixed ids.
+        const paneSessionId =
+          pane.paneIdx === 0 ? tab.id : `${tab.id}::pane-${pane.paneIdx}`;
         const isPrimary = pane.paneIdx === multi.primaryPaneIdx;
         const isEmpty = pane.tool === null;
 

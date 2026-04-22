@@ -389,6 +389,48 @@ pub struct McpEndpoint {
     pub started_at: u64,
 }
 
+/// Axum middleware that (a) logs every incoming request for debugging
+/// and (b) works around rmcp 0.8.5's strict Accept-header check.
+///
+/// rmcp 0.8.5 StreamableHttpService returns **HTTP 406 Not Acceptable**
+/// unless the request's `Accept` header contains BOTH `application/json`
+/// AND `text/event-stream`. Some MCP clients (observed with Claude Code
+/// v2.1.114) only send one of the two and get rejected before they can
+/// call any tool.
+///
+/// We rewrite the Accept header to the canonical combination so rmcp
+/// always proceeds. rmcp then decides response shape (JSON vs SSE) based
+/// on the request; both shapes are MCP-spec compliant.
+async fn mcp_request_middleware(
+    mut req: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> axum::response::Response {
+    use axum::http::{header, HeaderValue};
+    let method = req.method().clone();
+    let path = req.uri().path().to_string();
+    let accept_in = req
+        .headers()
+        .get(header::ACCEPT)
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.to_string())
+        .unwrap_or_default();
+
+    // Always present both media types to rmcp; that's the only combo it accepts.
+    req.headers_mut().insert(
+        header::ACCEPT,
+        HeaderValue::from_static("application/json, text/event-stream"),
+    );
+
+    log::info!(
+        "[mcp] {} {} accept-in=\"{}\" → \"application/json, text/event-stream\"",
+        method,
+        path,
+        accept_in
+    );
+
+    next.run(req).await
+}
+
 /// Spawn the MCP server bound to `127.0.0.1:0` (OS-assigned port).
 /// Returns the full endpoint info once bound. Server runs in a detached
 /// tokio task; caller can drop the returned value (server keeps running
@@ -403,7 +445,9 @@ pub async fn spawn(panes: Arc<PaneStore>) -> anyhow::Result<McpEndpoint> {
         StreamableHttpServerConfig::default(),
     );
 
-    let router = axum::Router::new().nest_service("/mcp", service);
+    let router = axum::Router::new()
+        .nest_service("/mcp", service)
+        .layer(axum::middleware::from_fn(mcp_request_middleware));
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await?;
     let addr = listener.local_addr()?;
 
