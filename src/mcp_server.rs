@@ -381,7 +381,7 @@ See CLAUDE.md / AGENTS.md / GEMINI.md in the workspace root for full protocol."
 
 /// Information written to ~/.coffee-cli/mcp-endpoint.json so the CLI
 /// injection scripts can find the running Coffee-CLI MCP server.
-#[derive(Debug, Serialize)]
+#[derive(Clone, Debug, Serialize)]
 pub struct McpEndpoint {
     pub url: String,
     pub port: u16,

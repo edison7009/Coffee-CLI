@@ -8,6 +8,8 @@ mod hook_server;
 mod hook_installer;
 mod fs_watcher;
 mod mcp_server;
+mod mcp_injector;
+mod multi_agent_protocol;
 
 use anyhow::Result;
 use std::path::PathBuf;

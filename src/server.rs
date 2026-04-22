@@ -18,6 +18,9 @@ pub struct AppState {
     /// workspace folder is open; None otherwise. Swapping this Mutex'd
     /// Option replaces the watcher atomically on folder switch.
     pub fs_watcher: Mutex<Option<crate::fs_watcher::FsWatcher>>,
+    /// Multi-agent MCP server endpoint (set once the server is bound).
+    /// None means setup is still in flight or the MCP server failed to start.
+    pub mcp_endpoint: Mutex<Option<crate::mcp_server::McpEndpoint>>,
 }
 
 #[derive(Serialize)]
@@ -1829,6 +1832,115 @@ fn open_url(url: String) -> Result<(), String> {
     Ok(())
 }
 
+#[derive(Serialize)]
+pub struct MultiAgentModeReport {
+    pub ok: bool,
+    pub mcp_url: Option<String>,
+    pub touched_config_files: Vec<String>,
+    pub touched_md_files: Vec<String>,
+    pub warnings: Vec<String>,
+}
+
+/// Enable multi-agent mode for the given workspace:
+/// - Writes CLAUDE.md / AGENTS.md / GEMINI.md protocol blocks to workspace root.
+/// - Injects the Coffee-CLI MCP endpoint into every detected primary CLI config.
+#[tauri::command]
+fn enable_multi_agent_mode(
+    workspace: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<MultiAgentModeReport, String> {
+    let ws = PathBuf::from(&workspace);
+    if !ws.is_dir() {
+        return Err(format!("workspace is not a directory: {}", workspace));
+    }
+
+    let mut warnings = Vec::new();
+    let endpoint = state
+        .mcp_endpoint
+        .lock()
+        .map_err(|_| "mcp_endpoint mutex poisoned")?
+        .clone();
+
+    let endpoint = match endpoint {
+        Some(ep) => ep,
+        None => {
+            return Err("MCP server not ready yet — try again in a second".into());
+        }
+    };
+
+    let touched_md_files = match crate::multi_agent_protocol::install(&ws) {
+        Ok(paths) => paths
+            .into_iter()
+            .map(|p| p.display().to_string())
+            .collect::<Vec<_>>(),
+        Err(e) => {
+            warnings.push(format!("protocol .md install: {}", e));
+            Vec::new()
+        }
+    };
+
+    let touched_config_files =
+        match crate::mcp_injector::install_all(&endpoint, Some(&ws)) {
+            Ok(paths) => paths
+                .into_iter()
+                .map(|p| p.display().to_string())
+                .collect::<Vec<_>>(),
+            Err(e) => {
+                warnings.push(format!("mcp injector: {}", e));
+                Vec::new()
+            }
+        };
+
+    Ok(MultiAgentModeReport {
+        ok: warnings.is_empty(),
+        mcp_url: Some(endpoint.url),
+        touched_config_files,
+        touched_md_files,
+        warnings,
+    })
+}
+
+/// Disable multi-agent mode: remove our MCP entry from every detected
+/// primary CLI config and strip our protocol block from the three .md
+/// files. Leaves the user's own config / content intact.
+#[tauri::command]
+fn disable_multi_agent_mode(
+    workspace: String,
+) -> Result<MultiAgentModeReport, String> {
+    let ws = PathBuf::from(&workspace);
+    let ws_opt = if ws.is_dir() { Some(ws.as_path()) } else { None };
+
+    let mut warnings = Vec::new();
+
+    let touched_config_files = match crate::mcp_injector::uninstall_all(ws_opt) {
+        Ok(paths) => paths.into_iter().map(|p| p.display().to_string()).collect(),
+        Err(e) => {
+            warnings.push(format!("mcp uninstall: {}", e));
+            Vec::new()
+        }
+    };
+
+    let touched_md_files = if let Some(w) = ws_opt {
+        match crate::multi_agent_protocol::uninstall(w) {
+            Ok(paths) => paths.into_iter().map(|p| p.display().to_string()).collect(),
+            Err(e) => {
+                warnings.push(format!("protocol uninstall: {}", e));
+                Vec::new()
+            }
+        }
+    } else {
+        Vec::new()
+    };
+
+    Ok(MultiAgentModeReport {
+        ok: warnings.is_empty(),
+        mcp_url: None,
+        touched_config_files,
+        touched_md_files,
+        warnings,
+    })
+}
+
 pub fn start_ui(project_dir: PathBuf) -> anyhow::Result<()> {
     // Create shared session BEFORE the builder so we can clone it for the exit handler
     let terminal_session = terminal::SharedSession::default();
@@ -1842,6 +1954,7 @@ pub fn start_ui(project_dir: PathBuf) -> anyhow::Result<()> {
             terminal_session,
             hook_port: std::sync::atomic::AtomicU16::new(0),
             fs_watcher: Mutex::new(None),
+            mcp_endpoint: Mutex::new(None),
         })
         .invoke_handler(tauri::generate_handler![
             scan_project,
@@ -1885,6 +1998,8 @@ pub fn start_ui(project_dir: PathBuf) -> anyhow::Result<()> {
             write_skill_file,
             check_vibeid_report_exists,
             check_vibeid_report_mtime,
+            enable_multi_agent_mode,
+            disable_multi_agent_mode,
         ])
         .setup(|app| {
             // Install Claude/Qwen hook scripts + settings patches.
@@ -1910,12 +2025,22 @@ pub fn start_ui(project_dir: PathBuf) -> anyhow::Result<()> {
             // operate on the same portable-pty sessions the UI sees.
             // See docs/MULTI-AGENT-ARCHITECTURE.md for the full blueprint.
             let shared_session = app.state::<AppState>().terminal_session.clone();
+            let app_handle_for_mcp = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 let panes = std::sync::Arc::new(
                     crate::mcp_server::PaneStore::new(shared_session),
                 );
                 match crate::mcp_server::spawn(panes).await {
-                    Ok(ep) => log::info!("[mcp] multi-agent server up at {}", ep.url),
+                    Ok(ep) => {
+                        log::info!("[mcp] multi-agent server up at {}", ep.url);
+                        // Stash endpoint in AppState so enable_multi_agent_mode
+                        // can inject it into primary CLI configs.
+                        if let Ok(mut slot) =
+                            app_handle_for_mcp.state::<AppState>().mcp_endpoint.lock()
+                        {
+                            *slot = Some(ep);
+                        }
+                    }
                     Err(e) => log::error!("[mcp] multi-agent server failed: {}", e),
                 }
             });
