@@ -780,9 +780,9 @@ export function CenterPanel() {
               // Critical: do NOT conditionally switch between TierTerminal
               // and MultiAgentGrid — that unmounts TierTerminal and the
               // PTY gets killed ("Killing existing session ... for restart").
-              <ErrorBoundary key={`err-${t.id}-${t.restartKey || 0}`} fallbackLabel="Tier Terminal Error">
+              <ErrorBoundary key={`err-${t.id}-${t.restartKey || 0}-${t.multiAgent ? 'multi' : 'single'}`} fallbackLabel="Tier Terminal Error">
                 <TierTerminal
-                  key={`tier-${t.id}-${t.restartKey || 0}`}
+                  key={`tier-${t.id}-${t.restartKey || 0}-${t.multiAgent ? 'multi' : 'single'}`}
                   sessionId={t.id}
                   tool={t.tool}
                   toolName={(() => {
