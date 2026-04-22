@@ -1,22 +1,25 @@
-//! Coffee-CLI multi-agent MCP server (v1.0 skeleton).
+//! Coffee-CLI multi-agent MCP server (v1.0 day 3-4).
 //!
 //! Exposes 3 tools over HTTP Streamable MCP transport:
 //! - `list_panes()` — enumerate panes in the current multi-agent Tab
 //! - `send_to_pane(id, text, timeout_sec, wait)` — inject keys into another pane
 //! - `read_pane(id, last_n_lines)` — read another pane's recent output
 //!
-//! v1.0 day 1-2 uses an in-memory `MockPaneStore`. Day 3-4 replaces it with
-//! a real `PaneManager` backed by portable-pty (see src/terminal.rs).
+//! Day 3-4 replaces the Day 1-2 MockPaneStore with a live `PaneStore`
+//! backed by the existing `terminal::SharedSession` (a HashMap of
+//! `portable-pty` sessions keyed by session_id).
 //!
 //! HTTP transport (not stdio) because Coffee-CLI is a resident Tauri process
 //! and can't be spawned as a subprocess by each CLI. See
 //! docs/MULTI-AGENT-ARCHITECTURE.md §5.5 for the full rationale.
 
 use std::{
-    collections::HashMap,
+    io::Write,
     sync::Arc,
-    time::{SystemTime, UNIX_EPOCH},
+    time::{Instant, SystemTime, UNIX_EPOCH},
 };
+
+use crate::terminal::SharedSession;
 
 use rmcp::{
     ErrorData as McpError, ServerHandler,
@@ -33,7 +36,6 @@ use rmcp::{
     },
 };
 use serde::{Deserialize, Serialize};
-use tokio::sync::RwLock;
 
 // ---------- Pane abstraction (in-memory mock for v1.0 day 1-2) ----------
 
@@ -67,104 +69,173 @@ pub struct PaneInfo {
     pub last_activity_at: u64,
 }
 
-/// In-memory pane store for v1.0 smoke testing.
-/// Replaced by `PaneManager` in day 3-4.
-#[derive(Default)]
-pub struct MockPaneStore {
-    panes: RwLock<HashMap<String, MockPane>>,
+/// Live pane store bridging the MCP layer to `terminal::SharedSession`.
+///
+/// Each Coffee-CLI terminal session (one per Tab pane) is visible here as
+/// a "pane". The primary pane's CLI (Claude Code / Codex / Gemini / OpenCode)
+/// calls MCP tools; we translate those calls into direct operations on
+/// the other panes' PTYs.
+pub struct PaneStore {
+    session: SharedSession,
+    /// ANSI escape sequence matcher, reused across reads.
+    /// Same pattern as terminal.rs emitter thread (line ~738).
+    ansi_re: regex::Regex,
 }
 
-struct MockPane {
-    info: PaneInfo,
-    /// Rolling output buffer (ANSI already stripped). Newest lines at the end.
-    output: Vec<String>,
-}
-
-impl MockPaneStore {
-    pub async fn seed_demo(&self) {
-        let mut panes = self.panes.write().await;
-        let now = now_epoch();
-        for (idx, (cli, state)) in [
-            ("claude", PaneState::Idle),
-            ("codex", PaneState::Idle),
-            ("gemini", PaneState::Empty),
-            ("opencode", PaneState::Empty),
-        ]
-        .iter()
-        .enumerate()
-        {
-            let id = format!("tab-0-pane-{}", idx);
-            panes.insert(
-                id.clone(),
-                MockPane {
-                    info: PaneInfo {
-                        id: id.clone(),
-                        title: format!("{} pane", cli),
-                        cli: cli.to_string(),
-                        state: state.clone(),
-                        last_activity_at: now,
-                    },
-                    output: vec![
-                        format!("[mock] {} ready", cli),
-                        format!("[mock] {} last_activity={}", cli, now),
-                    ],
-                },
-            );
+impl PaneStore {
+    pub fn new(session: SharedSession) -> Self {
+        Self {
+            session,
+            ansi_re: regex::Regex::new(
+                r"\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\].*?(?:\x07|\x1b\\)|\x1b.",
+            )
+            .expect("ANSI regex compiles"),
         }
     }
 
+    /// Snapshot every session in the shared map as a PaneInfo row.
+    ///
+    /// v1.0 returns every session in the process; Tab-scoped filtering
+    /// (as defined in docs §5.7) is enforced by the UI pane selector and
+    /// by the primary CLI following CLAUDE.md / AGENTS.md / GEMINI.md
+    /// conventions. Day 5 UI work can add a `?tab=<id>` endpoint filter.
     async fn list(&self) -> Vec<PaneInfo> {
-        let panes = self.panes.read().await;
-        let mut list: Vec<PaneInfo> = panes.values().map(|p| p.info.clone()).collect();
+        // Extract everything we need under a brief lock, then drop it.
+        let raw = tokio::task::spawn_blocking({
+            let session = self.session.clone();
+            move || {
+                let guard = session.lock().ok()?;
+                let rows: Vec<(String, Option<String>, String, Instant)> = guard
+                    .iter()
+                    .map(|(id, sess)| {
+                        let (status, last_at) = match sess.activity.lock() {
+                            Ok(act) => (act.last_status.clone(), act.last_output_at),
+                            Err(_) => ("unknown".to_string(), Instant::now()),
+                        };
+                        (id.clone(), sess.tool_name.clone(), status, last_at)
+                    })
+                    .collect();
+                Some(rows)
+            }
+        })
+        .await
+        .unwrap_or(None)
+        .unwrap_or_default();
+
+        let now_instant = Instant::now();
+        let now_epoch = epoch_seconds();
+
+        let mut list: Vec<PaneInfo> = raw
+            .into_iter()
+            .map(|(id, tool_name, status, last_at)| {
+                let elapsed = now_instant.saturating_duration_since(last_at).as_secs();
+                let last_activity_at = now_epoch.saturating_sub(elapsed);
+                PaneInfo {
+                    title: id.clone(),
+                    cli: tool_name.unwrap_or_else(|| "shell".to_string()),
+                    state: status_to_pane_state(&status),
+                    last_activity_at,
+                    id,
+                }
+            })
+            .collect();
         list.sort_by(|a, b| a.id.cmp(&b.id));
         list
     }
 
+    /// Inject raw bytes into the target pane's PTY stdin.
+    ///
+    /// The target sees these bytes exactly as if the user had typed them;
+    /// the CLI inside decides how to interpret them. No trailing newline
+    /// is appended — callers should include `\r` themselves if they want
+    /// the CLI to submit (matching conductor-mcp's `submit` convention).
     async fn send(&self, id: &str, text: &str) -> Result<String, String> {
-        let mut panes = self.panes.write().await;
-        let pane = panes
-            .get_mut(id)
-            .ok_or_else(|| format!("pane not found: {}", id))?;
+        let id = id.to_string();
+        let text = text.to_string();
+        let session = self.session.clone();
 
-        match pane.info.state {
-            PaneState::Empty => {
-                return Err("pane is empty, ask user to start a CLI first".into());
-            }
-            PaneState::Terminated => {
-                return Err("target pane terminated".into());
-            }
-            _ => {}
-        }
+        tokio::task::spawn_blocking(move || -> Result<String, String> {
+            let writer_lock = {
+                let guard = session
+                    .lock()
+                    .map_err(|_| "session map poisoned".to_string())?;
+                let sess = guard
+                    .get(&id)
+                    .ok_or_else(|| format!("pane not found: {}", id))?;
+                sess.writer_lock.clone()
+            };
 
-        // MOCK: just echo the text into the output buffer.
-        // Day 3-4 will replace this with `pty.write(text.as_bytes())`.
-        let stamp = now_epoch();
-        pane.output.push(format!("[mock-in] {}", text));
-        pane.output
-            .push(format!("[mock-out] {} replied at {}", pane.info.cli, stamp));
-        pane.info.last_activity_at = stamp;
-
-        Ok(format!(
-            "[mock] {} received {} bytes",
-            pane.info.cli,
-            text.len()
-        ))
+            let mut writer = writer_lock
+                .lock()
+                .map_err(|_| "pane writer poisoned".to_string())?;
+            writer
+                .write_all(text.as_bytes())
+                .map_err(|e| format!("pty write failed: {}", e))?;
+            writer
+                .flush()
+                .map_err(|e| format!("pty flush failed: {}", e))?;
+            Ok(format!("wrote {} bytes", text.len()))
+        })
+        .await
+        .map_err(|e| format!("blocking task join failed: {}", e))?
     }
 
+    /// Return the last `last_n` lines of the pane's ANSI-stripped output,
+    /// plus an `is_idle` flag derived from `last_status`.
     async fn read(&self, id: &str, last_n: usize) -> Result<(String, bool), String> {
-        let panes = self.panes.read().await;
-        let pane = panes
-            .get(id)
-            .ok_or_else(|| format!("pane not found: {}", id))?;
+        let id = id.to_string();
+        let session = self.session.clone();
+        let ansi_re = self.ansi_re.clone();
 
-        let start = pane.output.len().saturating_sub(last_n);
-        let text = pane.output[start..].join("\n");
-        let is_idle = matches!(pane.info.state, PaneState::Idle | PaneState::Empty);
-        Ok((text, is_idle))
+        tokio::task::spawn_blocking(move || -> Result<(String, bool), String> {
+            let guard = session
+                .lock()
+                .map_err(|_| "session map poisoned".to_string())?;
+            let sess = guard
+                .get(&id)
+                .ok_or_else(|| format!("pane not found: {}", id))?;
+
+            // Pull the raw output ring under its own lock, dropped immediately.
+            let raw_chunks: Vec<String> = {
+                let ring = sess
+                    .output_buffer
+                    .lock()
+                    .map_err(|_| "output buffer poisoned".to_string())?;
+                ring.clone()
+            };
+
+            let is_idle = sess
+                .activity
+                .lock()
+                .map(|a| a.last_status == "wait_input")
+                .unwrap_or(false);
+
+            drop(guard);
+
+            // Join chunks, strip ANSI, keep last N lines.
+            let joined = raw_chunks.join("");
+            let stripped = ansi_re.replace_all(&joined, "").to_string();
+            let mut lines: Vec<&str> = stripped.lines().collect();
+            if lines.len() > last_n {
+                lines = lines.split_off(lines.len() - last_n);
+            }
+            Ok((lines.join("\n"), is_idle))
+        })
+        .await
+        .map_err(|e| format!("blocking task join failed: {}", e))?
     }
 }
 
-fn now_epoch() -> u64 {
+fn status_to_pane_state(status: &str) -> PaneState {
+    match status {
+        "wait_input" => PaneState::Idle,
+        "working" => PaneState::Busy,
+        "" | "unknown" => PaneState::Empty,
+        _ => PaneState::Idle,
+    }
+}
+
+fn epoch_seconds() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_secs())
@@ -203,12 +274,12 @@ pub struct ReadPaneArgs {
 #[derive(Clone)]
 pub struct CoffeeMcp {
     tool_router: ToolRouter<CoffeeMcp>,
-    panes: Arc<MockPaneStore>,
+    panes: Arc<PaneStore>,
 }
 
 #[tool_router]
 impl CoffeeMcp {
-    pub fn new(panes: Arc<MockPaneStore>) -> Self {
+    pub fn new(panes: Arc<PaneStore>) -> Self {
         Self {
             tool_router: Self::tool_router(),
             panes,
@@ -322,7 +393,7 @@ pub struct McpEndpoint {
 /// Returns the full endpoint info once bound. Server runs in a detached
 /// tokio task; caller can drop the returned value (server keeps running
 /// for the lifetime of the tokio runtime).
-pub async fn spawn(panes: Arc<MockPaneStore>) -> anyhow::Result<McpEndpoint> {
+pub async fn spawn(panes: Arc<PaneStore>) -> anyhow::Result<McpEndpoint> {
     let service = StreamableHttpService::new(
         {
             let panes = panes.clone();
@@ -340,7 +411,7 @@ pub async fn spawn(panes: Arc<MockPaneStore>) -> anyhow::Result<McpEndpoint> {
         url: format!("http://{}/mcp", addr),
         port: addr.port(),
         pid: std::process::id(),
-        started_at: now_epoch(),
+        started_at: epoch_seconds(),
     };
 
     log::info!("coffee-cli mcp server listening at {}", endpoint.url);

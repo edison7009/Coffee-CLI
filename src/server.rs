@@ -1905,13 +1905,15 @@ pub fn start_ui(project_dir: PathBuf) -> anyhow::Result<()> {
             }
 
             // Start multi-agent MCP server on a dynamic localhost port.
-            // v1.0 day 1-2: exposes 3 tools (list_panes / send_to_pane / read_pane)
-            // backed by an in-memory MockPaneStore. Day 3-4 swaps the mock for
-            // a real PaneManager tied to portable-pty.
+            // v1.0 day 3-4: PaneStore is a live bridge to terminal::SharedSession,
+            // so the three MCP tools (list_panes / send_to_pane / read_pane)
+            // operate on the same portable-pty sessions the UI sees.
             // See docs/MULTI-AGENT-ARCHITECTURE.md for the full blueprint.
+            let shared_session = app.state::<AppState>().terminal_session.clone();
             tauri::async_runtime::spawn(async move {
-                let panes = std::sync::Arc::new(crate::mcp_server::MockPaneStore::default());
-                panes.seed_demo().await;
+                let panes = std::sync::Arc::new(
+                    crate::mcp_server::PaneStore::new(shared_session),
+                );
                 match crate::mcp_server::spawn(panes).await {
                     Ok(ep) => log::info!("[mcp] multi-agent server up at {}", ep.url),
                     Err(e) => log::error!("[mcp] multi-agent server failed: {}", e),
