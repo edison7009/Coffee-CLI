@@ -99,7 +99,7 @@
 │  └────────────────────────────────────────────────────┘             │
 │                        ↕                                            │
 │  ┌─ 主控格（primary pane，用户指定）────────────────┐               │
-│  │  Claude Code / Codex / Gemini / Qwen / OpenCode    │               │
+│  │  Claude Code / Codex / Gemini CLI / OpenCode       │               │
 │  │  通过各自 mcp.json 配置接入 Coffee MCP             │               │
 │  └────────────────────────────────────────────────────┘             │
 │                                                                    │
@@ -183,7 +183,6 @@
 claude-code:  idle_regex = "^\s*[›>❯]\s*$"          silence_ms = 3000
 codex:        idle_regex = "^\s*codex[>›]\s*$"      silence_ms = 3000
 gemini:       idle_regex = "^\s*$"                  silence_ms = 5000
-qwen-code:    idle_regex = "^\s*$"                  silence_ms = 5000   # Gemini CLI fork
 opencode:     idle_regex = "^\s*[›>]\s*$"           silence_ms = 3000
 shell (bash/pwsh): idle_regex = "^\s*[$#>]\s*$"     silence_ms = 1000
 aider:        idle_regex = "^\s*>\s*$"              silence_ms = 3000   # 仅被控
@@ -278,7 +277,7 @@ Always include enough context for the target to act independently.
 | **多 CLI 并发主控**（v1.x 可选） | ⚠️ 每家 CLI 都 spawn 一个 shim 实例，N 个 stub 再抢共享状态 | ✅ 多个 CLI 连同一个 HTTP server，天然多连接 |
 | **断连恢复** | CLI 重启 = shim 重启 | CLI 重启 = 重新 HTTP 连接，Coffee-CLI 状态不丢 |
 | **调试** | 要抓 shim 进程日志 | curl 就能测 |
-| **跨 CLI 兼容** | Claude Code/Codex/Gemini/Qwen/OpenCode 全都支持 | 同上 |
+| **跨 CLI 兼容** | Claude Code / Codex / Gemini / OpenCode 全都支持 | 同上 |
 
 **端口分配**：Coffee-CLI 启动时 bind `127.0.0.1:0` 让 OS 自动分配，写入 `~/.coffee-cli/mcp-endpoint.json`，Coffee-CLI 注入 mcp 配置时读这个 endpoint。
 
@@ -296,7 +295,7 @@ Always include enough context for the target to act independently.
 | **Pane** | 四宫格里的一格，对应一个 portable-pty 子进程 |
 | **Primary pane（主控格）** | 用户**显式指定**的主控格，**只有**这个 pane 里的 CLI 被注入 MCP 配置。不等于"物理 1 号位"——用户可以把 Codex 放在右下角当主控 |
 | **Worker pane（被控格）** | 非主控格，CLI 不装 MCP，只是被动接收 PTY 输入（来自 send_to_pane 或用户键盘） |
-| **主控 CLI** | Primary pane 里跑的那个 CLI（五家之一：Claude Code / Codex / Gemini / Qwen Code / OpenCode） |
+| **主控 CLI** | Primary pane 里跑的那个 CLI（四家之一：Claude Code / Codex / Gemini CLI / OpenCode） |
 | **被控 CLI** | Worker pane 里跑的任意 CLI（含 Aider、shell 等非 MCP client） |
 | **多 Agent 模式** | Coffee-CLI 的一个布尔开关：开启 = 四宫格 + MCP 注入 + `.md` 注入；关闭 = 单终端常规模式 |
 
@@ -357,12 +356,11 @@ Coffee-CLI 现在的 Tab 系统：每个 Tab = 一个独立终端实例。
 - [ ] 每格独立 portable-pty 子进程
 - [ ] Rust MCP Server（3 个工具，stdio 传输）
 - [ ] Idle 检测引擎（预置 6 个 profile：5 主控 + shell 被控 + aider 被控）
-- [ ] 三文件注入（CLAUDE.md / AGENTS.md / GEMINI.md；Qwen Code 的 `.md` 待验证）
-- [ ] **5 家主控 CLI** 的 mcp 配置一键接入脚本：
+- [ ] 三文件注入（CLAUDE.md / AGENTS.md / GEMINI.md）
+- [ ] **4 家主控 CLI** 的 mcp 配置一键接入脚本：
   - Claude Code → `~/.claude.json` 的 `mcpServers.coffee-cli`
   - Codex CLI → `~/.codex/config.toml` 的 `[mcp_servers.coffee-cli]`
   - Gemini CLI → `~/.gemini/settings.json` 的 `mcpServers.coffee-cli`
-  - Qwen Code → `~/.qwen/settings.json` 的 `mcpServers.coffee-cli`（Gemini CLI fork）
   - OpenCode → `opencode.json` 的 `mcp.coffee-cli`
 - [ ] UI 光晕/徽标表示"正在被主控指挥"的格子
 
@@ -418,7 +416,7 @@ Coffee-CLI 现在的 Tab 系统：每个 Tab = 一个独立终端实例。
 - [ ] "标记完成"手动按钮（idle 兜底）
 
 ### 第 6 天：Idle 检测引擎
-- [ ] 5 个主控 CLI profile + aider + shell = 7 个 profile（参考 [5.3 节](#53-idle-检测策略)）
+- [ ] 4 个主控 CLI profile + aider + shell = 6 个 profile（参考 [5.3 节](#53-idle-检测策略)）
 - [ ] silence + prompt regex 组合判定
 - [ ] 轮询策略（500ms）
 - [ ] 每 pane 右上角"标记完成"兜底按钮
@@ -446,10 +444,10 @@ Coffee-CLI 现在的 Tab 系统：每个 Tab = 一个独立终端实例。
 | 2026-04-22 | 抄 CCB 的三文件注入法（AGENTS.md / CLAUDE.md / GEMINI.md） | 这是让非-Claude agent 理解协议的最通用手段（不依赖各家 skill 机制） |
 | 2026-04-22 | 抄 Superset 的 500ms 轮询 + 参数化 timeout | `send_to_pane(wait=true)` 内部实现直接对齐 |
 | 2026-04-22 | 否决 tmux 依赖 | Windows 用户是主阵地，tmux 路线全部死路 |
-| 2026-04-22 | **主控 CLI 锁定 5 家**：Claude Code / Codex / Gemini / Qwen Code / OpenCode | 基于 [OpenRouter coding apps 排名](https://openrouter.ai/apps/category/coding) 真实流量数据 + 各家官方直连规模综合判定 |
+| 2026-04-22 | **主控 CLI 锁定 4 家**：Claude Code / Codex / Gemini CLI / OpenCode | 基于 [OpenRouter coding apps 排名](https://openrouter.ai/apps/category/coding) 真实流量数据 + 各家官方直连规模综合判定 |
 | 2026-04-22 | 踢掉 Amp | Sourcegraph 2025 砍个人 Free/Pro 自服务，现仅企业 contact-sales，个人开发者无法触达 |
 | 2026-04-22 | 否决 Kilo Code | OpenRouter 排名第 1（182B tokens）但本质是 VS Code 插件，其 CLI 套壳 OpenCode——支持 OpenCode 即间接覆盖其 CLI 用户 |
-| 2026-04-22 | 加入 Qwen Code | OpenRouter #12 + 23.6k★ 开源 + 阿里云生态 + 中文开发者主力，是 Coffee-CLI 目标用户群的刚需 |
+| 2026-04-22 | **否决 Qwen Code（实测决策）** | 用户亲测：账号体系封闭，不接受外部账号登录；2026-04-15 Qwen OAuth 终止后配置流程繁琐。中文开发者可用 OpenCode + OpenAI-compatible endpoint（DeepSeek / 智谱 GLM / 月之暗面 / 阿里云百炼 API）替代，Coffee-CLI 不需为 Qwen Code 做专门适配 |
 | 2026-04-22 | Aider 仅支持被控不支持主控 | Aider 本身不是 MCP client（`aider-mcp-server` 是反向包装），但其 git-first 特性独特，作为被控能力保留价值 |
 | 2026-04-22 | **MCP 传输选 HTTP 不选 stdio** | Coffee-CLI 是常驻 Tauri 进程，不能被 CLI spawn 成子进程；HTTP 还天然支持多 CLI 并发主控 + 断连恢复。详见 [5.5 节](#55-mcp-server-进程架构与传输模式) |
 | 2026-04-22 | **术语"1 号位"→"主控格（primary pane）"** | 用户可以把主控 CLI 放在任意格子，物理位置不等同于角色；术语不严谨会误导架构讨论 |
@@ -467,19 +465,18 @@ Coffee-CLI 现在的 Tab 系统：每个 Tab = 一个独立终端实例。
 
 ---
 
-## 附录 B：5 家主控 CLI 的 MCP 接入清单
+## 附录 B：4 家主控 CLI 的 MCP 接入清单
 
-**每家的配置位置 / 格式 / 协议入口**。实施"一键接入"脚本时按此表查。所有条目**待实测验证**（Qwen Code 尤其——Gemini CLI fork 的具体 `.md` 文件名需要确认）。
+**每家的配置位置 / 格式 / 协议入口**。实施"一键接入"脚本时按此表查。
 
 | CLI | mcp 配置文件 | 配置 key | 协议提示文件（项目根） | 备注 |
 |---|---|---|---|---|
 | **Claude Code** | `~/.claude.json` | `mcpServers.coffee-cli` | `CLAUDE.md` | 或走 Skill（`~/.claude/skills/coffee-multi-agent/SKILL.md`），token 效率更高 |
 | **Codex CLI** | `~/.codex/config.toml` | `[mcp_servers.coffee-cli]` | `AGENTS.md` | OpenAI 官方格式 |
 | **Gemini CLI** | `~/.gemini/settings.json` | `mcpServers.coffee-cli` | `GEMINI.md` | Google 官方 |
-| **Qwen Code** | `~/.qwen/settings.json` | `mcpServers.coffee-cli` | `QWEN.md` ❓ 或 `GEMINI.md` ❓ | **待验证**：Gemini CLI fork，具体沿用 `GEMINI.md` 还是新增 `QWEN.md` 需要实测 |
 | **OpenCode** | `opencode.json` | `mcp.coffee-cli` | `AGENTS.md` | sst/opencode，支持 local(stdio)/remote(HTTP) |
 
-**三 `.md` 文件实际只写三份**（CLAUDE.md / AGENTS.md / GEMINI.md 内容一致），Qwen Code 的 `.md` 归属在 v1.0 实施前 1 天内验证。如果 Qwen Code 读 `GEMINI.md` 则零新增文件；如果读 `QWEN.md` 则复制一份。
+**三 `.md` 文件只写三份**（CLAUDE.md / AGENTS.md / GEMINI.md 内容一致），分别被 Claude Code / Codex 和 OpenCode 共用 / Gemini CLI 读取。
 
 **传输方式**：全部用 **HTTP（Streamable HTTP）**。Coffee-CLI 主进程监听 `127.0.0.1:${动态端口}`，所有主控 CLI 的 `mcpServers.coffee-cli` 配置统一为：
 
@@ -500,39 +497,33 @@ Coffee-CLI 现在的 Tab 系统：每个 Tab = 一个独立终端实例。
 
 这些是**实施 MVP 前必须有真实答案**的事实问题。每个对应一段可执行的验证动作。
 
-### C.1 五家主控 CLI 的 HTTP MCP 支持情况
+### C.1 四家主控 CLI 的 HTTP MCP 支持情况
 
 | CLI | 验证动作 | 通过标准 |
 |---|---|---|
 | Claude Code | 手写 `mcp-test` HTTP server，注入 `~/.claude.json`，在 Claude Code 里试调用 | tool call 正常返回 |
 | Codex CLI | 同上，注入 `~/.codex/config.toml` 的 `[mcp_servers.test]` | tool call 正常返回 |
 | Gemini CLI | 同上，注入 `~/.gemini/settings.json` 的 `mcpServers.test` | tool call 正常返回 |
-| Qwen Code | 同上，注入 `~/.qwen/settings.json` 的 `mcpServers.test` | tool call 正常返回 |
 | OpenCode | 同上，注入 `opencode.json` 的 `mcp.test` | tool call 正常返回 |
 
 **降级预案**：如果某家 CLI 不支持 HTTP（仅支持 stdio），v1.0 先砍掉这家，v1.1 做 stdio shim 补上。**不把 v1.0 卡在蹩脚的 shim 实现上**。
 
-### C.2 Qwen Code 读哪个 `.md` 文件
-
-- 动作：clone [QwenLM/qwen-code](https://github.com/QwenLM/qwen-code)，grep `GEMINI.md` / `QWEN.md` / `AGENTS.md`
-- 通过标准：确定注入文件名，文档附录 B 相应更新
-
-### C.3 现有 PTY backpressure 在 4 路并发下稳定性
+### C.2 现有 PTY backpressure 在 4 路并发下稳定性
 
 - 动作：在当前 `main` 分支写一个 4 pane 并发 stress test（4 格同时 `find / -type f 2>/dev/null` 或 `cat /dev/urandom | head -c 100M`），观察是否锁死
 - 通过标准：10 次连续跑完不锁死；如果锁死，锁定[根因 #2](../../../../Users/eben/.claude/projects/d--Coffee-CLI/memory/project_known_issues.md)，v1.0 前修掉
 
-### C.4 五家 CLI 的 prompt regex 实测
+### C.3 四家 CLI 的 prompt regex 实测
 
 - 动作：每家 CLI 启动后录制 60 秒的 PTY 输出（typing + 等待 + 提交 + 等待），肉眼定位 idle 时光标所在行的字节序列
-- 通过标准：5 个 idle_regex 全部有测到真实值，不是猜的；写进 5.3 节表
+- 通过标准：4 个 idle_regex 全部有测到真实值，不是猜的；写进 5.3 节表
 
-### C.5 Aider 作为被控的可行性
+### C.4 Aider 作为被控的可行性
 
 - 动作：手动起 Aider，手动发 `send_to_pane` 模拟：输入 `/ask what files are in this repo`，观察输出结构
 - 通过标准：确定 Aider 的 prompt 形状 + 确定用户发指令的正确语法前缀（如 `/ask`、`/code`、`/add`）
 
-### C.6 rmcp crate 可用性
+### C.5 rmcp crate 可用性
 
 - 动作：`cargo add rmcp`，按官方 example 起一个 HTTP MCP server，Claude Code 能连上
 - 通过标准：hello-world tool 能被调用并返回；如果 rmcp 不可用或 API 差太远，备选方案是手写 JSON-RPC over HTTP（不复杂，axum + tokio 半天够）
@@ -577,7 +568,7 @@ job_id 的用途：
 主控 LLM 调 `send_to_pane(shell_pane, "rm -rf /")` 是真实风险。
 
 分级策略：
-- **被控是 agent CLI**（Claude/Codex/Gemini/Qwen/OpenCode/Aider）→ 直接发送，agent 自己有安全机制
+- **被控是 agent CLI**（Claude/Codex/Gemini/OpenCode/Aider）→ 直接发送，agent 自己有安全机制
 - **被控是 shell**（bash/zsh/pwsh/cmd）→ **弹确认框**，用户点"允许一次" / "允许总是（此会话）" / "拒绝"
 - profile 字段 `requires_confirmation: bool`，shell profile 默认 true，agent profile 默认 false
 - 用户可在设置里对 shell 关闭确认（"我知道我在做什么"）
@@ -626,7 +617,6 @@ MCP server 本身是独立 actor，通过 per-pane mpsc 和 pane actor 通信。
 │        │ Claude Code │         │
 │        │ Codex       │         │
 │        │ Gemini CLI  │         │
-│        │ Qwen Code   │         │
 │        │ OpenCode    │         │
 │        │ shell       │         │
 │        │ 自定义命令   │         │
@@ -659,8 +649,8 @@ MCP server 本身是独立 actor，通过 per-pane mpsc 和 pane actor 通信。
 
 #### 可选增强（v1.1，不阻塞 MVP）
 
-- **"恢复上次组合"按钮**：用户之前启动过 `[Claude / Codex / Gemini / Qwen]`，下次 Tab 右上角出现"恢复上次"按钮，一键四格同时启（仍是用户触发）
-- **快捷模板**：预置"代码审查三人组"（Claude + Codex + Gemini）、"双模对比"（Claude + Qwen）等常见组合
+- **"恢复上次组合"按钮**：用户之前启动过 `[Claude / Codex / Gemini / OpenCode]`，下次 Tab 右上角出现"恢复上次"按钮，一键四格同时启（仍是用户触发）
+- **快捷模板**：预置"代码审查三人组"（Claude + Codex + Gemini）、"双模对比"（Claude + OpenCode）等常见组合
 
 ### D.8 测试矩阵（第 8 天）
 
@@ -669,7 +659,7 @@ MCP server 本身是独立 actor，通过 per-pane mpsc 和 pane actor 通信。
 | # | 场景 | 通过标准 |
 |---|---|---|
 | 1 | Claude Code 主控 Codex（设计 UI） | `send_to_pane(wait=true)` 返回 Codex 完整输出 |
-| 2 | Claude Code 主控 Gemini + Qwen（并行研究） | 两个 pane 同时被指挥，主控 LLM 合并结果 |
+| 2 | Claude Code 主控 Gemini + OpenCode（并行研究） | 两个 pane 同时被指挥，主控 LLM 合并结果 |
 | 3 | Codex 主控 3 个 Claude Code（并行写代码） | 3 个 Claude Code pane 收到不同指令，独立进行 |
 | 4 | 长任务 wait=false + 用户隔会儿问 | read_pane 能拿到阶段性输出 |
 | 5 | 切换主控格（Claude → Codex） | MCP 工具在新主控格可用，旧主控格不再主动指挥 |
