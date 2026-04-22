@@ -7,6 +7,7 @@ mod server;
 mod hook_server;
 mod hook_installer;
 mod fs_watcher;
+mod mcp_server;
 
 use anyhow::Result;
 use std::path::PathBuf;
