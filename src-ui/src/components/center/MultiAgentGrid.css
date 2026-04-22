@@ -1,0 +1,122 @@
+/* MultiAgentGrid.css — 2×2+ pane layout for multi-agent Tabs.
+   Follows the project's no-hover-transform / no-native-tooltip rules
+   from CLAUDE.md §4. */
+
+.multi-agent-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-auto-rows: minmax(280px, 1fr);
+  gap: 6px;
+  width: 100%;
+  height: 100%;
+  padding: 6px;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.multi-agent-pane {
+  display: flex;
+  flex-direction: column;
+  min-height: 280px;
+  border: 1px solid var(--border-color, #2a2a2a);
+  border-radius: 6px;
+  background: var(--bg-secondary, #151515);
+  overflow: hidden;
+  cursor: default;
+}
+
+.multi-agent-pane.is-primary {
+  border-color: var(--accent, #6cc275);
+  box-shadow: 0 0 0 1px var(--accent, #6cc275);
+}
+
+.multi-agent-pane.is-empty {
+  background: var(--bg-tertiary, #0e0e0e);
+}
+
+.multi-agent-pane-header {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-family: var(--font-mono, monospace);
+  color: var(--text-muted, #888);
+  background: var(--bg-tertiary, #0e0e0e);
+  border-bottom: 1px solid var(--border-color, #2a2a2a);
+  user-select: none;
+}
+
+.multi-agent-pane.is-primary .multi-agent-pane-header {
+  color: var(--accent, #6cc275);
+}
+
+.pane-label {
+  letter-spacing: 0.02em;
+}
+
+.multi-agent-pane-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Empty-pane picker ------------------------------------------------ */
+
+.empty-pane-picker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 20px;
+  gap: 14px;
+  color: var(--text-secondary, #aaa);
+}
+
+.empty-pane-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary, #ddd);
+}
+
+.empty-pane-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+.empty-pane-option {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--text-primary, #ddd);
+  background: var(--bg-quaternary, #222);
+  border: 1px solid var(--border-color, #2a2a2a);
+  border-radius: 4px;
+  cursor: pointer;
+  /* Color transitions only — no position/scale per CLAUDE.md §4. */
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.empty-pane-option:hover {
+  background: var(--bg-hover, #2d2d2d);
+  border-color: var(--accent, #6cc275);
+}
+
+.empty-pane-option:active {
+  background: var(--bg-active, #3a3a3a);
+}
+
+.empty-pane-hint {
+  font-size: 11px;
+  color: var(--text-muted, #666);
+  font-family: var(--font-mono, monospace);
+}
+
+.empty-pane-hint code {
+  padding: 1px 4px;
+  background: var(--bg-quaternary, #222);
+  border-radius: 3px;
+  font-size: 10px;
+}

@@ -1136,3 +1136,34 @@
   color: #fff;
   box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
 }
+
+/* Multi-agent mode toggle — floating icon button in pane's top-right. */
+.multi-agent-toggle {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  z-index: 10;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  font-size: 14px;
+  line-height: 22px;
+  color: var(--text-muted, #888);
+  background: var(--bg-tertiary, rgba(15, 15, 15, 0.6));
+  border: 1px solid var(--border-color, #2a2a2a);
+  border-radius: 4px;
+  cursor: pointer;
+  /* Color transitions only per CLAUDE.md §4 (no translate/scale on hover). */
+  transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.multi-agent-toggle:hover {
+  color: var(--text-primary, #ddd);
+  background: var(--bg-hover, rgba(45, 45, 45, 0.8));
+  border-color: var(--accent, #6cc275);
+}
+
+.multi-agent-toggle.is-on {
+  color: var(--accent, #6cc275);
+  border-color: var(--accent, #6cc275);
+}

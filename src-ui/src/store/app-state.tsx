@@ -42,6 +42,23 @@ export type IconTheme =
   | 'outline' | 'material' | 'vscode-icons' | 'catppuccin-mocha'
   | 'devicon' | 'fluent' | 'symbols' | 'coffee';
 
+/// One pane inside a multi-agent Tab. Each pane maps to one portable-pty
+/// session via sessionId = `${tabId}::pane-${paneIdx}`; the Rust MCP
+/// server's list_panes returns the same ids.
+export interface MultiAgentPane {
+  paneIdx: number;
+  tool: ToolType;
+  toolData?: string;
+  agentStatus?: AgentStatus;
+}
+
+export interface MultiAgentState {
+  /// Index (0..panes.length-1) of the pane designated as primary — only
+  /// this pane's CLI receives the coffee-cli MCP injection.
+  primaryPaneIdx: number;
+  panes: MultiAgentPane[];
+}
+
 export interface TerminalSession {
   id: string;
   tool: ToolType;
@@ -52,6 +69,9 @@ export interface TerminalSession {
   isHidden?: boolean;
   agentStatus?: AgentStatus;
   gambitDraft?: string;    // Unsent textarea content, preserved across tab switches
+  /// When present, this Tab renders as a 2×2+ pane grid instead of a
+  /// single terminal. See docs/MULTI-AGENT-ARCHITECTURE.md §5.7 and §7.
+  multiAgent?: MultiAgentState;
 }
 
 // ─── State Shape ─────────────────────────────────────────────────────────────
@@ -106,7 +126,11 @@ type Action =
   | { type: 'SET_WALLPAPER_DIM'; dim: number }
   | { type: 'SET_TERM_SCHEME'; scheme: string }
   | { type: 'TOGGLE_GAMBIT' }
-  | { type: 'SET_GAMBIT_DRAFT'; id: string; draft: string };
+  | { type: 'SET_GAMBIT_DRAFT'; id: string; draft: string }
+  | { type: 'ENABLE_MULTI_AGENT'; tabId: string }
+  | { type: 'DISABLE_MULTI_AGENT'; tabId: string }
+  | { type: 'SET_PANE_TOOL'; tabId: string; paneIdx: number; tool: ToolType; toolData?: string }
+  | { type: 'SET_PRIMARY_PANE'; tabId: string; paneIdx: number };
 
 // ─── Reducer ─────────────────────────────────────────────────────────────────
 
@@ -219,6 +243,56 @@ function reducer(state: AppState, action: Action): AppState {
       return {
         ...state,
         terminals: state.terminals.map(t => t.id === action.id ? { ...t, gambitDraft: action.draft } : t)
+      };
+    case 'ENABLE_MULTI_AGENT':
+      return {
+        ...state,
+        terminals: state.terminals.map(t => {
+          if (t.id !== action.tabId) return t;
+          if (t.multiAgent) return t;  // already on
+          // Inherit the current tab's tool as pane 0 (primary), so the
+          // user's already-running CLI becomes the primary pane. Panes
+          // 1-3 start empty; user picks a CLI per pane.
+          const initialPanes: MultiAgentPane[] = [
+            { paneIdx: 0, tool: t.tool, toolData: t.toolData },
+            { paneIdx: 1, tool: null },
+            { paneIdx: 2, tool: null },
+            { paneIdx: 3, tool: null },
+          ];
+          return {
+            ...t,
+            multiAgent: { primaryPaneIdx: 0, panes: initialPanes },
+          };
+        }),
+      };
+    case 'DISABLE_MULTI_AGENT':
+      return {
+        ...state,
+        terminals: state.terminals.map(t =>
+          t.id === action.tabId ? { ...t, multiAgent: undefined } : t
+        ),
+      };
+    case 'SET_PANE_TOOL':
+      return {
+        ...state,
+        terminals: state.terminals.map(t => {
+          if (t.id !== action.tabId || !t.multiAgent) return t;
+          const panes = t.multiAgent.panes.map(p =>
+            p.paneIdx === action.paneIdx
+              ? { ...p, tool: action.tool, toolData: action.toolData }
+              : p
+          );
+          return { ...t, multiAgent: { ...t.multiAgent, panes } };
+        }),
+      };
+    case 'SET_PRIMARY_PANE':
+      return {
+        ...state,
+        terminals: state.terminals.map(t =>
+          t.id === action.tabId && t.multiAgent
+            ? { ...t, multiAgent: { ...t.multiAgent, primaryPaneIdx: action.paneIdx } }
+            : t
+        ),
       };
     default:
       return state;

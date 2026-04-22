@@ -3,6 +3,7 @@ import { focusTerminal } from '../../lib/focus-registry';
 import { TierTerminal } from './TierTerminal';
 import { DosPlayer } from './DosPlayer';
 import { ChatReader } from './ChatReader';
+import { MultiAgentGrid } from './MultiAgentGrid';
 import { ErrorBoundary } from '../common/ErrorBoundary';
 import { useAppState, type ToolType } from '../../store/app-state';
 
@@ -749,21 +750,31 @@ export function CenterPanel() {
         )}
 
         {terminals.map(t => t.tool !== null ? (
-          <div 
-            key={t.id} 
+          <div
+            key={t.id}
             className="terminal-wrapper"
             data-session-id={t.id}
-            style={{ 
+            style={{
               display: t.id === activeTerminalId ? 'flex' : 'none',
               width: '100%',
               height: '100%',
               position: 'relative'
             }}
           >
+            {t.tool !== 'history' && t.tool !== 'arcade' && (
+              <MultiAgentToggleButton tab={t} folderPath={t.folderPath} />
+            )}
             {t.tool === 'history' ? (
               <ChatReader sessionId={t.id} />
             ) : t.tool === 'arcade' ? (
               <DosPlayer sessionId={t.id} />
+            ) : t.multiAgent ? (
+              <MultiAgentGrid
+                tab={t}
+                hasBg={hasBg}
+                bgUrl={bgUrl}
+                bgType={bgType}
+              />
             ) : (
               <ErrorBoundary key={`err-${t.id}-${t.restartKey || 0}`} fallbackLabel="Tier Terminal Error">
                 <TierTerminal
@@ -1203,5 +1214,65 @@ export function CenterPanel() {
                 )}
       </div>
     </>
+  );
+}
+
+/**
+ * Floating toggle in the pane's top-right corner that flips between
+ * single-terminal and multi-agent modes.
+ *
+ * On enable: dispatches ENABLE_MULTI_AGENT, then asks the Rust backend
+ * to install the CLAUDE.md/AGENTS.md/GEMINI.md protocol files and inject
+ * the coffee-cli MCP endpoint into every detected primary CLI config.
+ *
+ * On disable: reverse.
+ *
+ * We NEVER use the browser-native `title` attribute (CLAUDE.md §4).
+ * Users get feedback via console logs today; a status-bar toast is a
+ * v1.0.1 polish item.
+ */
+function MultiAgentToggleButton({
+  tab,
+  folderPath,
+}: {
+  tab: import('../../store/app-state').TerminalSession;
+  folderPath: string | null;
+}) {
+  const { dispatch } = useAppState();
+  const enabled = Boolean(tab.multiAgent);
+
+  const onClick = async () => {
+    if (!folderPath) {
+      console.warn('[multi-agent] cannot toggle without workspace folder');
+      return;
+    }
+    if (enabled) {
+      dispatch({ type: 'DISABLE_MULTI_AGENT', tabId: tab.id });
+      try {
+        const r = await commands.disableMultiAgentMode(folderPath);
+        console.log('[multi-agent] disabled:', r);
+      } catch (e) {
+        console.warn('[multi-agent] disable_multi_agent_mode failed:', e);
+      }
+    } else {
+      dispatch({ type: 'ENABLE_MULTI_AGENT', tabId: tab.id });
+      try {
+        const r = await commands.enableMultiAgentMode(folderPath);
+        console.log('[multi-agent] enabled:', r);
+      } catch (e) {
+        console.warn('[multi-agent] enable_multi_agent_mode failed:', e);
+      }
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      className={`multi-agent-toggle${enabled ? ' is-on' : ''}`}
+      onClick={onClick}
+      aria-label={enabled ? 'Disable multi-agent mode' : 'Enable multi-agent mode'}
+    >
+      {enabled ? '⊟' : '⊞'}
+    </button>
   );
 }
