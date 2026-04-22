@@ -34,9 +34,13 @@ export type ThemeColor =
   | 'obsidian' | 'cobalt' | 'moss';
 // Theme: shape form (orthogonal to color)
 export type ThemeShape = 'soft' | 'slab' | 'sharp' | 'blade' | 'panel';
-// Icon theme: visual style for file/folder icons in the explorer
-// SVG art-style group (own icon sets): flat, outline, pixel, gradient, round, glow, pastel
-export type IconTheme = 'default' | 'flat' | 'outline' | 'pixel' | 'gradient' | 'round' | 'glow' | 'pastel';
+// Icon theme: visual style for file/folder icons in the explorer.
+// 8 themes, each with genuinely distinct folder silhouette + file icon style.
+// Fetched upstream (6): material, vscode-icons, catppuccin-mocha, devicon, fluent, symbols
+// Self-authored (2): outline (line-frame), coffee (Coffee CLI brand)
+export type IconTheme =
+  | 'outline' | 'material' | 'vscode-icons' | 'catppuccin-mocha'
+  | 'devicon' | 'fluent' | 'symbols' | 'coffee';
 
 export interface TerminalSession {
   id: string;
@@ -228,12 +232,15 @@ const VALID_THEMES: ThemeColor[] = [
   'obsidian', 'cobalt', 'moss',
 ];
 const VALID_SHAPES: ThemeShape[] = ['soft', 'slab', 'sharp', 'blade', 'panel'];
-const VALID_ICON_THEMES: IconTheme[] = ['default', 'flat', 'outline', 'pixel', 'gradient', 'round', 'glow', 'pastel'];
+const VALID_ICON_THEMES: IconTheme[] = [
+  'outline', 'material', 'vscode-icons', 'catppuccin-mocha',
+  'devicon', 'fluent', 'symbols', 'coffee',
+];
 
 function getInitialState(): AppState {
   let theme: ThemeColor = 'dark';
   let shape: ThemeShape = 'soft';
-  let iconTheme: IconTheme = 'default';
+  let iconTheme: IconTheme = 'outline';
   let lang = 'zh-CN';
   let folderPath: string | null = null;
 

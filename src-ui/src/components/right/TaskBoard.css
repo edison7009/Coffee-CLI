@@ -279,7 +279,7 @@
   opacity: 0.95;
   border-radius: var(--radius-sm);
   /* Theme-aware panel background so the floating ghost matches the active
-     palette (coffee brown / pastel / dark / etc.) instead of always looking
+     palette (cappuccino / sakura / dark / etc.) instead of always looking
      like a generic dark-gray tile. 1px accent border reinforces the
      "picked up" state — it reads as part of the theme. */
   background: var(--bg-panel, rgba(40, 40, 42, 0.98));

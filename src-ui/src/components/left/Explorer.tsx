@@ -306,14 +306,14 @@ const THEME_SHAPES: { code: ThemeShape; label: string }[] = [
 import { TERM_COLOR_SCHEMES } from '../center/TierTerminal';
 
 const ICON_ART_THEMES: { id: IconTheme; folderSrc: string }[] = [
-  { id: 'default',  folderSrc: '/icons/folder-closed.svg'                    },
-  { id: 'flat',     folderSrc: '/icons/themes/flat/folder-closed.svg'        },
-  { id: 'outline',  folderSrc: '/icons/themes/outline/folder-closed.svg'     },
-  { id: 'pixel',    folderSrc: '/icons/themes/pixel/folder-closed.svg'       },
-  { id: 'gradient', folderSrc: '/icons/themes/gradient/folder-closed.svg'    },
-  { id: 'round',    folderSrc: '/icons/themes/round/folder-closed.svg'       },
-  { id: 'glow',     folderSrc: '/icons/themes/glow/folder-closed.svg'        },
-  { id: 'pastel',   folderSrc: '/icons/themes/pastel/folder-closed.svg'      },
+  { id: 'outline',      folderSrc: '/icons/themes/outline/folder-closed.svg'      },
+  { id: 'material',     folderSrc: '/icons/themes/material/folder-closed.svg'     },
+  { id: 'vscode-icons', folderSrc: '/icons/themes/vscode-icons/folder-closed.svg' },
+  { id: 'catppuccin-mocha', folderSrc: '/icons/themes/catppuccin-mocha/folder-closed.svg' },
+  { id: 'devicon',      folderSrc: '/icons/themes/devicon/folder-closed.svg'      },
+  { id: 'fluent',       folderSrc: '/icons/themes/fluent/folder-closed.svg'       },
+  { id: 'symbols',      folderSrc: '/icons/themes/symbols/folder-closed.svg'      },
+  { id: 'coffee',       folderSrc: '/icons/themes/coffee/folder-closed.svg'       },
 ];
 
 function ThemeMenu({ anchorRef, currentTheme, currentShape, currentIconTheme, hasBg, termColorScheme, wallpaperDim, onSelectTheme, onSelectShape, onSelectIconTheme, onPickBg, onClearBg, onSelectScheme, onSetWallpaperDim, onClose, t }: {
@@ -453,23 +453,17 @@ function formatBytes(b: number) {
 }
 
 // ─── Icon Themes ──────────────────────────────────────────────────────────────
+// Every theme ships a complete 19-SVG set under /icons/themes/<id>/.
+// No root-level fallback: adding a theme = dropping a new folder + listing it
+// in ICON_ART_THEMES. Non-theme UI assets (CLI tool logos, terminal icons,
+// etc.) live under /icons/tools/ and are unrelated to this subsystem.
 
-// Art-style themes have real SVG assets in /icons/themes/<id>/.
-// Filter themes reuse the default icons and rely on CSS filters in Explorer.css.
-const ART_THEMES = new Set<IconTheme>(['flat', 'outline', 'pixel', 'gradient', 'round', 'glow', 'pastel']);
-
-/** Returns the correct icon path for folder/file icons based on active theme. */
 function getIconPath(theme: IconTheme, name: string): string {
-  if (ART_THEMES.has(theme)) return `/icons/themes/${theme}/${name}`;
-  return `/icons/${name}`; // default + filter themes use root icons
+  return `/icons/themes/${theme}/${name}`;
 }
 
-/** Returns the correct path for a language-specific file icon.
- *  Art themes have their own icon sets; filter/default themes use root /icons/. */
 function getFileIconSrc(ext: string, theme: IconTheme): string {
-  const name = getFileIcon(ext);
-  if (ART_THEMES.has(theme)) return `/icons/themes/${theme}/${name}`;
-  return `/icons/${name}`;
+  return `/icons/themes/${theme}/${getFileIcon(ext)}`;
 }
 
 

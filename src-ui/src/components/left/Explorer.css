@@ -457,10 +457,12 @@
   font-weight: 600;
 }
 
-/* Icon theme picker chips (folder thumbnail style) */
+/* Icon theme picker chips (folder thumbnail style) — 8 columns, wraps to next row */
 .icon-theme-row {
+  display: grid;
+  grid-template-columns: repeat(8, 34px);
   gap: 5px;
-  flex-wrap: wrap;
+  justify-content: start;
 }
 .icon-theme-chip {
   display: flex;

@@ -1,5 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect fill="#0d1117" width="32" height="32" rx="6"/>
-  <rect fill="none" stroke="#00599C" stroke-width="1.5" width="28" height="28" x="2" y="2" rx="5"/>
-  <text x="16" y="16" text-anchor="middle" dominant-baseline="central" font-family="system-ui,sans-serif" font-size="11" font-weight="800" fill="#42A5F5">C++</text>
-</svg>
