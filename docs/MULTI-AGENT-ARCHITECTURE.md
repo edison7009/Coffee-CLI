@@ -23,9 +23,9 @@
 
 ## 二、产品定位（北极星）
 
-> **Coffee-CLI 是"AI CLI 美化载体 + 透明的多 Agent 容器"**
+> **Coffee-CLI 是"跨 CLI 进程的桥梁"**
 >
-> 不做 Agent 编排器、不做任务 DAG、不做心跳调度、不做容器化沙箱。
+> 不做 Agent 编排器、不做任务 DAG、不做心跳调度、不做容器化沙箱，**也不做同家 CLI 内部的 subagent 编排**。
 
 核心卖点一句话：
 
@@ -38,6 +38,20 @@
 - Claude subagent：**过程对用户黑盒**，无法干预
 
 **Coffee-CLI 独占位**：Windows 原生 + 用户可见 + 用户可干预 + 异构 CLI 组合（Claude + Codex + Gemini 真并存）。
+
+### 职责边界：同家编排 vs 跨家编排
+
+4 家主控 CLI 都有**自家 subagent SDK**，这些**我们不介入**：
+
+| 场景 | 谁来处理 |
+|---|---|
+| Claude Code 内部开多个 subagent | Claude Code 自己（[Agent Teams](https://code.claude.com/docs/en/agent-teams)） |
+| Codex 内部 rescue / 子任务 | Codex 自己（app-server / [codex-plugin-cc](https://github.com/openai/codex-plugin-cc)） |
+| Gemini 内部 agent 分身 | Gemini 自己（Gemini agent framework） |
+| OpenCode 内部 subagent + 跨 provider | OpenCode 自己（[TaskTool + Oh My OpenAgent](https://opencode.ai/docs/agents/)） |
+| **跨进程协同**（Claude 进程指挥 Codex 进程） | ✅ **Coffee-CLI 专属** |
+
+**结论**：Coffee-CLI 只做跨 CLI 进程桥梁。同家并行交给各家原生 SDK（它们更懂自己）。这让我们的 3 工具职责更窄、定位更稳。
 
 ---
 
@@ -225,16 +239,63 @@ another pane, SUMMARIZE for the user and ASK before continuing to a third pane.
   user "I sent this to pane X, ask me when to check results", and use
   `read_pane(id)` later.
 
+## Parallel fan-out pattern
+
+When the user asks to involve MULTIPLE agents at once (e.g., "let Codex,
+Gemini and OpenCode each design this"), invoke all `send_to_pane` calls
+in a SINGLE assistant turn. Do NOT call them sequentially — that defeats
+the whole point of multiple agents.
+
+Correct (parallel, one turn):
+  - send_to_pane("pane-1", prompt, wait=true, timeout_sec=180)
+  - send_to_pane("pane-2", prompt, wait=true, timeout_sec=180)
+  - send_to_pane("pane-3", prompt, wait=true, timeout_sec=180)
+  → all three tool_results come back → summarize differences for user.
+
+Wrong (sequential):
+  Turn 1: send_to_pane("pane-1", ...) → wait result
+  Turn 2: send_to_pane("pane-2", ...) → wait result
+  Turn 3: send_to_pane("pane-3", ...) → wait result
+  This is 3× slower and loses the multi-agent point.
+
+Scaling (3+ targets OR tasks > 2 min):
+  Turn 1: three `send_to_pane(wait=false)` in parallel → tell user
+          "dispatched N tasks, ask me when to check"
+  Turn 2 (when user asks later): three `read_pane` in parallel →
+          if all `is_idle=true`, read outputs and summarize;
+          otherwise report which ones are still busy.
+
 ## Prompt completeness
 
 The target pane sees ONLY what you send, not your conversation history.
 Always include enough context for the target to act independently.
+
+## When NOT to use Coffee-CLI tools
+
+DO NOT use `send_to_pane` just to spawn an internal subagent. Each CLI
+has its own native subagent mechanism — use that for intra-CLI parallelism:
+
+- Claude Code → use Agent Teams (/agent spawn, Shift+Down cycle)
+- Codex → use Codex subagents / rescue
+- Gemini → use Gemini agent framework
+- OpenCode → use @subagent-name or TaskTool
+
+USE `send_to_pane` ONLY when the user wants a DIFFERENT CLI (running
+in another pane) to do the work. The whole point of Coffee-CLI is
+cross-CLI collaboration, not yet-another-way to spawn subagents.
+
+Rule of thumb: if the answer could come from "another version of me",
+use your native subagent. If the answer needs a DIFFERENT CLI's
+strengths (e.g., Gemini's vision, Codex's code gen), reach for
+`send_to_pane`.
 
 ## What NOT to do
 
 - Don't send commands to pane "${PANE_ID}" (yourself).
 - Don't assume panes share state, files you created, or prior context.
 - Don't build automatic multi-step pipelines; the user drives what happens next.
+- Don't use Coffee-CLI tools for intra-CLI parallelism — use your native
+  subagent SDK instead.
 ```
 
 注入时机和条件：
@@ -448,6 +509,8 @@ Coffee-CLI 现在的 Tab 系统：每个 Tab = 一个独立终端实例。
 | 2026-04-22 | 踢掉 Amp | Sourcegraph 2025 砍个人 Free/Pro 自服务，现仅企业 contact-sales，个人开发者无法触达 |
 | 2026-04-22 | 否决 Kilo Code | OpenRouter 排名第 1（182B tokens）但本质是 VS Code 插件，其 CLI 套壳 OpenCode——支持 OpenCode 即间接覆盖其 CLI 用户 |
 | 2026-04-22 | **否决 Qwen Code（实测决策）** | 用户亲测：账号体系封闭，不接受外部账号登录；2026-04-15 Qwen OAuth 终止后配置流程繁琐。中文开发者可用 OpenCode + OpenAI-compatible endpoint（DeepSeek / 智谱 GLM / 月之暗面 / 阿里云百炼 API）替代，Coffee-CLI 不需为 Qwen Code 做专门适配 |
+| 2026-04-22 | **职责边界：同家编排归各家 SDK，Coffee-CLI 只做跨家** | Claude Agent Teams / Codex app-server / Gemini agent / OpenCode TaskTool 四家都有成熟的内部 subagent SDK。Coffee-CLI 不和它们竞争，只做它们都做不到的"跨 CLI 进程桥梁"。CLAUDE.md 模板明确告诉主控 LLM"同家 subagent 用原生 SDK，跨家才用 send_to_pane" |
+| 2026-04-22 | **CLAUDE.md 模板补充 Parallel fan-out 使用说明** | 主控 LLM 默认可能串行调用 tool（pane-1 等完再 pane-2），速度降为 1/N。模板明确教"一条消息多个 send_to_pane" + 给出正确/错误示例，覆盖"同时派给多个 pane"这个 Coffee-CLI 的核心场景 |
 | 2026-04-22 | Aider 仅支持被控不支持主控 | Aider 本身不是 MCP client（`aider-mcp-server` 是反向包装），但其 git-first 特性独特，作为被控能力保留价值 |
 | 2026-04-22 | **MCP 传输选 HTTP 不选 stdio** | Coffee-CLI 是常驻 Tauri 进程，不能被 CLI spawn 成子进程；HTTP 还天然支持多 CLI 并发主控 + 断连恢复。详见 [5.5 节](#55-mcp-server-进程架构与传输模式) |
 | 2026-04-22 | **术语"1 号位"→"主控格（primary pane）"** | 用户可以把主控 CLI 放在任意格子，物理位置不等同于角色；术语不严谨会误导架构讨论 |
