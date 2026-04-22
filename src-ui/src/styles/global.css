@@ -192,7 +192,7 @@
     --shape-radius-panel: 0;
     --shape-radius-btn: 0;
     --shape-radius-pill: 0;
-    --shape-accent-stripe-width: 3px;
+    --shape-accent-stripe-width: 1px;
     --shape-border-strength: 1.25;
 }
 
@@ -1844,7 +1844,7 @@ body {
 
 [data-shape="sharp"] .chrome-tab.active,
 [data-shape="panel"] .chrome-tab.active {
-    box-shadow: inset 0 2px 0 0 var(--accent); /* VSCode-style top accent bar */
+    box-shadow: inset 0 1px 0 0 var(--accent); /* VSCode-style 1px top accent bar */
 }
 
 /* Hide chrome flare pseudo-elements for zero-radius shapes */
