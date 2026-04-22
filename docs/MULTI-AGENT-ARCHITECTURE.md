@@ -513,6 +513,7 @@ Coffee-CLI 现在的 Tab 系统：每个 Tab = 一个独立终端实例。
 | 2026-04-22 | **CLAUDE.md 模板补充 Parallel fan-out 使用说明** | 主控 LLM 默认可能串行调用 tool（pane-1 等完再 pane-2），速度降为 1/N。模板明确教"一条消息多个 send_to_pane" + 给出正确/错误示例，覆盖"同时派给多个 pane"这个 Coffee-CLI 的核心场景 |
 | 2026-04-22 | **5 个疑似竞品全扫，独占位验证通过** | 扫描 metaswarm / myclaude / CCB / Claude Co-Commands / Zed ACP，详见附录 E。前 4 个要么 CLI-only 要么 Windows 死路，和 Coffee-CLI 定位正交。ACP 是 LSP 级大事件但不抢位（协议 1:1 无 agent-to-agent），三条护城河（桌面 GUI / Windows 原生 / 跨家协同）完整无损 |
 | 2026-04-22 | **ACP 进入 v1.1 技术雷达（不进 v1.0）** | ACP 是 Zed 推进的"editor↔agent"协议，Claude/Codex/Copilot/Gemini/OpenCode 五家 agent 端都已实现。v1.0 不引入（不阻塞 MVP），v1.1 考虑在 PTY 适配层旁加 ACP adapter 分支——拿结构化 diff/permission 比裸 PTY 解析强。Coffee-CLI 可定位为"多 agent 协调型 ACP client"（Zed/JetBrains 都是 1:1，我们是 N:N）|
+| 2026-04-22 | **v1.1 ACP adapter 优先选嵌入 [openclaw/acpx](https://github.com/openclaw/acpx)**（B1 方案）| 用户发现 acpx 是 ACP 协议的 2.2k★ 现成 client 实现，已适配 16 家 agent（含 Qwen / Kilocode 等 v1.0 砍掉的）。嵌入 acpx 作为子进程后端是最快路径：v1.1 工作量从 2 周降到 3-4 天；被砍的 Qwen Code / Kilo Code 通过 acpx 自动复活，无需我们适配账号体系 |
 | 2026-04-22 | Aider 仅支持被控不支持主控 | Aider 本身不是 MCP client（`aider-mcp-server` 是反向包装），但其 git-first 特性独特，作为被控能力保留价值 |
 | 2026-04-22 | **MCP 传输选 HTTP 不选 stdio** | Coffee-CLI 是常驻 Tauri 进程，不能被 CLI spawn 成子进程；HTTP 还天然支持多 CLI 并发主控 + 断连恢复。详见 [5.5 节](#55-mcp-server-进程架构与传输模式) |
 | 2026-04-22 | **术语"1 号位"→"主控格（primary pane）"** | 用户可以把主控 CLI 放在任意格子，物理位置不等同于角色；术语不严谨会误导架构讨论 |
@@ -745,6 +746,7 @@ MCP server 本身是独立 actor，通过 per-pane mpsc 和 pane actor 通信。
 | [claude_code_bridge (CCB)](https://github.com/bfly123/claude_code_bridge) | 真（askd daemon + tmux） | ❌ AF_UNIX 硬 raise + 236 处 tmux | ❌ tmux-only | ✅ tmux pane 可见 | 2.3k★ 活跃 | 零威胁（Windows 死路已验证） |
 | [Claude Co-Commands](https://github.com/SnakeO/claude-co-commands) | ❌ 只是 Claude 插件叫 Codex 做咨询 | — | ❌ | ❌ | 低 | 零威胁，定位完全不重合 |
 | [Zed ACP](https://agentclientprotocol.com) | ❌ 协议严格 1:1（editor ↔ 1 agent），无 agent-to-agent | ✅ 纯协议，无 OS 依赖 | Zed/JetBrains 内 | 通过协议可拿结构化事件 | 官方力推 + 注册表 | **机会窗（非威胁）**，详见下文 |
+| [openclaw/acpx](https://github.com/openclaw/acpx) | ACP client 参考实现（headless CLI） | ✅ TypeScript 纯协议 | ❌ headless CLI（无 UI） | 通过 ACP 结构化事件 | 2.2k★ alpha（v0.5.3 / 2026-04-08）| **盟友非竞品**，16 家 agent 适配可直接嵌入/fork，v1.1 ACP adapter 工作量可降到 3-4 天 |
 
 ### 关键洞察
 
@@ -782,14 +784,28 @@ Coffee-CLI Pane
     └─ 模式 B: ACP client（v1.1 可选）
          ├─ 优点：结构化 session/update 事件、diff、permission、terminal 分离
          ├─ 局限：仅对支持 ACP 的 CLI 可用
-         └─ 实现：rust crate [zed-industries/agent-client-protocol](https://github.com/zed-industries/agent-client-protocol)
+         └─ 实现路径（按成本排序）：
+            ├─ B1. 嵌入 [openclaw/acpx](https://github.com/openclaw/acpx) 作为子进程（3-4 天，直接拿 16 家 agent 支持）
+            ├─ B2. Fork acpx 协议层代码（1 周，MIT 允许，跟上游自己维护）
+            └─ B3. 用 rust crate [zed-industries/agent-client-protocol](https://github.com/zed-industries/agent-client-protocol) 自写（2 周，Rust 原生性能）
 ```
 
-**Coffee-CLI 在 ACP 生态的独特定位**：Zed / JetBrains 是"1 宿主 ↔ 1 agent"的 ACP client，Coffee-CLI 可以做**"多 agent 协调型 ACP client"**——把 ACP 不覆盖的 agent-to-agent 协调层补上，这正是我们的 3 工具做的事。
+**v1.1 优先选 B1**：嵌入 acpx 作为后端，最快上线 + 最多 agent 覆盖。等 acpx 稳定后或我们有 Rust 原生需求再考虑 B2/B3。
+
+**acpx 支持的 16 家 agent**（远超 v1.0 计划的 4 家）：Claude / Codex / Gemini / Cursor / Copilot / OpenCode / Qwen / Kilocode / Kimi / Kiro / OpenClaw / Pi / Factory Droid / iFlow / Qoder / Trae。
+
+**连带解锁的副作用**：
+- Qwen Code（v1.0 因账号封闭砍掉）可能通过 acpx 复活——账号问题外包给 acpx
+- Kilocode（v1.0 因"CLI 套壳 OpenCode"否决）同理
+- 未来 Factory Droid / iFlow / Kimi / Trae 等新 agent 零工作量自动支持
+
+**Coffee-CLI 在 ACP 生态的独特定位**：Zed / JetBrains 是"1 宿主 ↔ 1 agent"的 ACP client，acpx 是"headless multi-agent CLI"无 UI，Coffee-CLI 做的是**"桌面 GUI + 多 agent 协调型 ACP client"**——三者正交。
 
 ### 竞品扫描的决策后果
 
 - v1.0 方案**一行不改**
 - 附录 C/D 的开工前验证和开发中决策**不变**
-- **v1.1 路线图增加**：`[ ] ACP adapter 作为 PTY 的并行通道，优先给 5 家支持 ACP 的 CLI 走结构化`
-- 需要**观察的风险**：Anthropic / OpenAI 是否官方站台 ACP（目前是 Zed 第三方实现各家 agent 端），如果官方正式采纳，ACP adapter 优先级应前移；如果官方冷淡，ACP 可能成为"好想法没跟上"的孤儿协议
+- **v1.1 路线图增加**：`[ ] ACP adapter via acpx 嵌入 —— 3-4 天，解锁 16 家 agent + 把 Qwen/Kilocode 等 v1.0 被砍的 CLI 通过协议层复活`
+- 需要**观察的风险**：
+  - acpx alpha 状态，API 可能变——需要锁定 acpx 版本或 fork
+  - Anthropic / OpenAI 是否官方站台 ACP（目前是 Zed 第三方 + openclaw 社区实现 agent 端），如果官方正式采纳，ACP adapter 优先级应前移；如果官方冷淡，ACP 可能成为孤儿协议
