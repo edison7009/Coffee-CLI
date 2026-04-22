@@ -80,4 +80,3 @@ binaries/
 .test-opencode
 # Game bundles and raw files (user-downloaded to ~/.coffee-cli/play/ at runtime, or local dev files)
 /play/
-/docs/
