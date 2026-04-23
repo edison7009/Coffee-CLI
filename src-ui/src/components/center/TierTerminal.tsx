@@ -66,6 +66,17 @@ const THEME_TERMINAL_BG: Record<string, string> = {
   moss:       '#081210',
 };
 
+// Collapse any mix of CRLF / bare CR into plain LF before handing text to
+// xterm.paste. Windows puts CRLF into the clipboard and most TUIs on the
+// other side of the PTY treat the CR as an "Enter" (submit) keystroke —
+// so a 5-line paste becomes 5 submissions plus 5 visible blank lines.
+// Normalizing here gives every paste path a single line-ending contract
+// regardless of where the clipboard text originally came from
+// (Notepad / browser / another terminal / macOS / Linux).
+function normalizePasteNewlines(text: string): string {
+  return text.replace(/\r\n?/g, '\n');
+}
+
 function buildXtermTheme(themeName: string, hasBg: boolean | undefined, hideCursor: boolean, schemeId?: string) {
   const isDark = themeName !== 'light';
   const scheme = schemeId ? TERM_COLOR_SCHEMES.find(s => s.id === schemeId) : undefined;
@@ -397,7 +408,7 @@ function TierTerminalImpl({
         if (cmdOrCtrl && e.code === 'KeyV') {
           e.preventDefault();
           readText().then(text => {
-            if (text) term.paste(text);
+            if (text) term.paste(normalizePasteNewlines(text));
           }).catch(() => {});
           return false;
         }
@@ -410,7 +421,7 @@ function TierTerminalImpl({
         if (e.ctrlKey && e.shiftKey && e.code === 'KeyV') {
           e.preventDefault();
           readText().then(text => {
-            if (text) term.paste(text);
+            if (text) term.paste(normalizePasteNewlines(text));
           }).catch(() => {});
           return false;
         }
@@ -695,7 +706,7 @@ function TierTerminalImpl({
         // into the still-closing bracketed paste buffer, leaving the text in
         // the prompt without submitting. Windows ConPTY coalesces differently
         // and this delay is harmless there.
-        term.paste(text);
+        term.paste(normalizePasteNewlines(text));
         setTimeout(() => {
           commands.tierTerminalInput(sessionId, '\r').catch(() => {});
         }, 30);
@@ -845,7 +856,7 @@ function TierTerminalImpl({
           }}
           onPaste={() => {
             readText().then(text => {
-              if (text && xtermRef.current) xtermRef.current.paste(text);
+              if (text && xtermRef.current) xtermRef.current.paste(normalizePasteNewlines(text));
             }).catch(() => {});
             closeCtxMenu();
           }}
