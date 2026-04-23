@@ -64,7 +64,14 @@
     gap: 7px;
     width: calc(100% - 32px);
     margin: 0 16px 6px 16px;
-    padding: 6px 10px;
+    /* Fixed height prevents jitter between languages — different scripts
+       (CJK / Latin / Cyrillic / Vietnamese) render the same font-size at
+       slightly different intrinsic heights, and when the folder path
+       toggles between "empty state label" and an actual path, the button
+       was visibly resizing. Replace vertical padding with fixed height +
+       line-height to lock it regardless of content. */
+    height: 28px;
+    padding: 0 10px;
     background: transparent;
     border: 1px solid var(--border-input);
     border-radius: var(--radius-sm);
@@ -72,10 +79,12 @@
     font-family: var(--font);
     font-size: 12px;
     font-weight: 500;
+    line-height: 1;
     cursor: pointer;
     transition: all 0.15s;
     text-align: left;
     overflow: hidden;
+    box-sizing: border-box;
 }
 
 .workspace-dir-btn:hover {
@@ -92,6 +101,10 @@
     text-align: left;
     flex: 1;
     min-width: 0;
+    /* Match the fixed button height so vertical centering is consistent
+       across languages (different scripts have different default
+       line-heights otherwise). */
+    line-height: 26px;
 }
 
 /* Custom styling removed for first child separator */

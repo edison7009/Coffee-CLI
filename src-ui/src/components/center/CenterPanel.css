@@ -145,7 +145,7 @@
   display: grid;
   grid-template-columns: repeat(3, 3px);
   grid-template-rows: repeat(3, 3px);
-  gap: 1.5px;
+  gap: 2px;
   place-content: center;
   flex-shrink: 0;
   transition: opacity 0.15s ease;
