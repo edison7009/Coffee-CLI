@@ -53,34 +53,35 @@
    display font (not monospace) at a light weight for a gentle but
    visible marker. Accent-tinted so it re-colors with the theme palette.
    Tabular numerals keep the digits the same width across panes. */
-/* Square badge: theme-tinted filled box with bold white number.
-   Big enough to read at a glance across the whole app — the whole
-   point of the badge is telling the user "this is pane N" when
-   Claude says "ask pane 2". Previously was a thin outlined glyph;
-   too subtle, users had to squint. Solid fill + white text reads
-   instantly at any terminal size. */
+/* Industrial-style pane-number tag. Sharp-cornered square filled
+   with a darkened tint of the theme accent, bold white number
+   centered inside. The darker fill is produced by mixing the
+   accent with 45% black — keeps the theme hue, but high enough
+   contrast against white text to read at a glance. Small and
+   blocky on purpose: feels like a physical label, not a UI chip. */
 .pane-number-badge {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 6px;
+  right: 6px;
   z-index: 10;
-  width: 32px;
-  height: 32px;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--accent, #6cc275);
-  border-radius: 6px;
-  font-size: 18px;
+  /* color-mix: 55% theme accent + 45% black. Well-supported since
+     Chrome 111 / Safari 16.4; Tauri's WebView2 is Edge-based and
+     supports it. Fallback uses the raw accent — acceptable. */
+  background: color-mix(in srgb, var(--accent, #6cc275) 55%, #000);
+  border-radius: 0;
+  font-size: 14px;
   font-family: var(--font-display, 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif);
   font-weight: 700;
   font-feature-settings: 'tnum' 1, 'lnum' 1;
   line-height: 1;
   color: #fff;
-  opacity: 0.92;
   user-select: none;
   pointer-events: none;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
 }
 
 /* ─── Empty-pane picker (simpler, no card) ──────────────────────── */
