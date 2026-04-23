@@ -123,6 +123,37 @@ history, not what the user told you, not files you opened. Include every
 piece of context the target needs to act independently. Short, concrete,
 self-contained prompts work best.
 
+## Cross-pane language: always English
+
+Every `send_to_pane` call's `text` field MUST be in English, regardless
+of the language the user speaks to you. Translate the user's intent to
+clear English before dispatching.
+
+Why: tool-use accuracy, instruction following, and latency are all
+measurably better when LLMs are driven in English. This is consistent
+across Claude / Codex / Gemini — their training data and reinforcement
+skew English-heavy. Cross-language hand-offs are where multi-agent
+systems most often misfire.
+
+Three rules:
+1. **User → you**: accept any language (Chinese, Japanese, etc.).
+2. **You → another pane** (via `send_to_pane`): always English, even
+   when it feels unnatural. If the user asked in Chinese, mentally
+   translate their request, then write the pane prompt in English.
+3. **Reporting back to the user**: translate the target pane's reply
+   back into the user's language before including it in your response.
+
+Exception: when the task's deliverable INTRINSICALLY requires another
+language — writing Chinese marketing copy, translating a document,
+editing a localized UI string — include the output-language requirement
+explicitly inside the English prompt. For example:
+
+  send_to_pane("...::pane-2", "Write a Chinese marketing tagline for
+   a coffee shop targeting young professionals. Output must be in
+   Simplified Chinese; do not include English.")
+
+The INSTRUCTION is English; only the requested OUTPUT is non-English.
+
 ## When NOT to use these tools
 
 DO NOT reach for `send_to_pane` just to spawn an internal subagent. Each
