@@ -179,14 +179,8 @@ interface EmptyPanePickerProps {
 // test with the field already set to true — so documenting it here
 // would just mislead users.
 const MANUAL_SETUP_HINTS: Array<{ cli: string; hint: string }> = [
-  {
-    cli: 'Codex',
-    hint: '首次启动后按 Enter 完成 OpenAI 账户登录（ChatGPT 或 API key）',
-  },
-  {
-    cli: 'Gemini',
-    hint: '首次启动后在 REPL 内执行 /auth 完成 Google 账户授权',
-  },
+  { cli: 'Codex', hint: '按 Enter 登录 OpenAI（ChatGPT 或 API key）' },
+  { cli: 'Gemini', hint: '输入 /auth 完成 Google 授权' },
 ];
 
 function EmptyPanePicker({ paneIdx: _paneIdx, onSelect }: EmptyPanePickerProps) {
