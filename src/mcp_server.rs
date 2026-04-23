@@ -273,10 +273,25 @@ impl PaneStore {
             });
         }
 
-        // Phase 2: poll for idle. A pane is "idle" when status flipped back
-        // to wait_input AND the last output is either after our send time
-        // (CLI responded then settled) or silence exceeds 2s (CLI ignored
-        // the input — still return so caller isn't stuck).
+        // Phase 2: poll for idle. Two independent paths — either one means
+        // the pane is done.
+        //
+        //   A) marker-based: ticker flipped status back to "wait_input"
+        //      (shell prompt marker seen) AND output either arrived since
+        //      send or has been quiet 2s+. Primary path when terminal.rs's
+        //      prompt_markers match the target CLI's actual prompt.
+        //
+        //   B) settle-based: we saw output come in after send time AND then
+        //      it has been quiet for 2.5s+. Independent of prompt markers.
+        //      Load-bearing when a CLI's prompt isn't in the marker list
+        //      (observed live: Gemini CLI's "* " input prompt doesn't
+        //      match its preset `✦`, so path A never fires and the
+        //      controller pane would hang forever waiting on a response
+        //      that already arrived).
+        //
+        // The settle_silence threshold is slightly longer than long_silence
+        // so we don't declare idle in the gap BETWEEN our write hitting
+        // the PTY and Gemini starting to render its answer.
         let send_time = Instant::now();
         let deadline = send_time + Duration::from_secs(timeout_sec);
 
@@ -307,9 +322,14 @@ impl PaneStore {
                     let at_prompt = act.last_status == "wait_input";
                     let now = Instant::now();
                     let produced_since_send = act.last_output_at >= send_time;
-                    let long_silence =
-                        now.duration_since(act.last_output_at) > Duration::from_millis(2000);
-                    Ok(at_prompt && (produced_since_send || long_silence))
+                    let silence = now.duration_since(act.last_output_at);
+                    let long_silence = silence > Duration::from_millis(2000);
+                    let settle_silence = silence > Duration::from_millis(2500);
+
+                    let marker_path = at_prompt && (produced_since_send || long_silence);
+                    let settle_path = produced_since_send && settle_silence;
+
+                    Ok(marker_path || settle_path)
                 })
                 .await
                 .map_err(|e| format!("blocking task join failed: {}", e))??
