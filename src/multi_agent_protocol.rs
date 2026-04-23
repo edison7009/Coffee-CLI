@@ -65,6 +65,18 @@ other peer panes.
    task (e.g. `/review`, `/compact`). If unsure, send `/help` first.
    Don't invent commands — if none fits, use natural English prose.
 
+4. **You may act as manager.** Any pane can be manager — the user
+   decides by choosing which pane they give orchestration work to,
+   regardless of which CLI is running there. If the user asks you to
+   orchestrate (not just relay): bake the acceptance criterion into
+   the first dispatch, evaluate the reply against it, and retry with
+   `Retry N/3. Previous failed because X. Fix: Y.` up to 3 total
+   attempts. After 3, stop and surface to the user — never silently
+   accept a failed output and never loop forever. Distinguish divergent
+   fan-out ("design 3 styles" — no retry, difference is the goal) from
+   convergent tasks ("build a teacup shop" — retry if it makes a
+   teatable shop). See PROTOCOL.md → "Supervising peer output".
+
 Full usage protocol (fan-out patterns, cross-CLI command catalog, what
 NOT to use these tools for): read `.multi-agent/PROTOCOL.md`.
 "#;
@@ -207,6 +219,100 @@ Rules:
    a short natural-language instruction. A made-up /command that the
    target doesn't recognize just wastes a round-trip.
 
+## Supervising peer output (manager mode)
+
+Any pane can be manager — Claude, Codex, or Gemini. There is no
+built-in "chief" role. The user picks who manages by choosing which
+pane they hand the orchestration task to. If the user is talking to
+you and describing work another pane must do, then for this task YOU
+are the manager, regardless of which CLI you happen to be.
+
+When the user gives you a task that another pane must execute, you are
+not a message relay — you are the manager. Evaluate the target's reply
+against explicit quality criteria, and dispatch a corrected retry if it
+fails. Without this, multi-agent is just a multicast relay; the user
+could type the same command into each pane themselves. Supervised retry
+is the whole reason a "manager" pane exists, and the whole reason the
+user put Coffee-CLI between themselves and the other CLIs.
+
+### Decide the dispatch type FIRST
+
+Before sending anything, classify the task into one of two types.
+Wrong classification is the #1 cause of multi-agent waste.
+
+**Divergent fan-out (NO retry — divergence IS the goal):**
+  The user wants multiple DIFFERENT outputs, one per pane. Examples:
+  - "Let Codex, Gemini, and Claude each design a different homepage
+     style for my coffee shop."
+  - "Have panes 2/3/4 each write a distinct implementation approach
+     so I can compare."
+  Each output is judged on its own; "different from the others" is a
+  positive, not a defect. Dispatch once per pane, collect, present all
+  to the user. Retrying because "pane 2's answer is different from
+  pane 3's" would destroy the entire point.
+
+**Convergent task (RETRY if off-target):**
+  The user wants ONE specific deliverable, and the target pane either
+  hits it or misses it. Examples:
+  - "Have Gemini build a landing page for a TEACUP shop" → if Gemini
+     delivers a tea-TABLE shop page, the semantic target is missed.
+     Retry with `Previous output was about 'tea tables' but the target
+     subject is 'teacups'. Rebuild for teacups.`
+  - "Have Codex write a function that sorts by Unicode codepoint" → if
+     Codex sorts lexicographically instead, retry.
+  - "Have Gemini translate this to French preserving all proper nouns"
+     → if proper nouns get translated, retry.
+
+If you genuinely can't tell which type the user wants, ASK them — don't
+guess. One clarifying question saves three wasted dispatches.
+
+### Hard rules for convergent-task retry
+
+These keep supervision from turning into silent token incineration:
+
+1. **Bake the acceptance criterion INTO the first dispatch.** Tell the
+   target upfront what "good" looks like, not just the task. The prompt
+   to Gemini should literally contain: "Acceptance: the subject is
+   teacups (not tea tables); the page has header, product grid, and
+   checkout CTA." Targets that know the bar hit it more often — this
+   alone prevents most retries.
+
+2. **Cap at 3 total attempts per task** (initial + 2 retries). After
+   that, stop and surface the best result. Unbounded loops are the
+   single biggest failure mode of autonomous multi-agent systems; a
+   hard cap is non-negotiable.
+
+3. **Evaluate the FULL output against the FULL criterion.** Don't
+   declare pass on the first line or a keyword skim. "Output mentions
+   'teacup' once" is not the same as "output delivers a teacup shop
+   page". Read the deliverable, match it against every clause of the
+   criterion you stated, then decide.
+
+4. **Mark retries visibly in the prompt.** Start retry messages with
+   `Retry N/3. Previous output failed because <X>. Fix: <Y>.` — the
+   user watches the target pane's scrollback; silent retries look like
+   a bug. The diagnosis `<X>` must be concrete (what was wrong), and
+   `<Y>` must be actionable (what to change), not "try harder".
+
+5. **Escalate after attempt 3, don't silently accept.** If the third
+   attempt still fails, surface to the user: one-sentence diagnosis,
+   then offer (a) more rounds, (b) switch CLI (Gemini keeps missing →
+   Codex might hit), or (c) accept best-of-three. Silently returning
+   a failed artifact as "done" is worse than returning a clear failure.
+
+6. **One-shot questions stay one-shot.** "Explain this function" or
+   "what does this regex match" is a relay with no pass/fail bar —
+   dispatch once, report. Retry applies only to tasks with a clear
+   deliverable and objective miss condition.
+
+### Cross-pane pipelines are different (still need user checkpoints)
+
+Supervised retry is for a SINGLE task against a SINGLE target. Multi-hop
+pipelines (pane A produces X → pane B consumes X → pane C consumes B's
+output) compound error at every step; auto-chaining them silently would
+turn one misunderstanding into four. For pipelines, summarize after each
+hop and let the user drive the next step.
+
 ## When NOT to use these tools
 
 DO NOT reach for `send_to_pane` just to spawn an internal subagent. Each
@@ -231,9 +337,10 @@ vision, Codex's code gen, etc.), reach for `send_to_pane`.
   yourself — call `list_panes()` first to find targets).
 - Do NOT assume panes share files you created, git state, or conversation
   history. They are separate processes in separate CLIs.
-- Do NOT build automatic multi-step pipelines (pane A → auto-trigger
-  pane B → auto-trigger pane C). Summarize for the user after each hop
-  and let them decide the next step.
+- Do NOT build UNBOUNDED auto-loops. Supervised retry with a hard cap
+  of 3 attempts per task (see "Supervising peer output") is allowed and
+  encouraged. Silent infinite retries, or multi-hop pipelines that
+  auto-trigger without user checkpoints, are not.
 - Do NOT call the Coffee-CLI MCP tools for work your own CLI can do
   alone — that is cost without benefit.
 "#;
