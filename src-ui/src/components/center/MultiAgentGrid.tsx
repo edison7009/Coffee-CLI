@@ -186,6 +186,12 @@ function EmptyPanePicker({ paneIdx: _paneIdx, onSelect }: EmptyPanePickerProps) 
           </button>
         ))}
       </div>
+      {/* Auto-approval notice: Coffee-CLI spawns panes with the CLI's
+          skip-permissions flag (claude --dangerously-skip-permissions,
+          codex --full-auto, gemini --yolo) so a controlling pane can
+          orchestrate the other three hands-free. See server.rs comment
+          at `in_multi_agent` for the full rationale. */}
+      <div className="empty-pane-auto-notice">⚡ Full auto-approval for multi-agent orchestration</div>
     </div>
   );
 }

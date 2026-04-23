@@ -770,9 +770,28 @@ fn tier_terminal_start_blocking(
     // Each tab is independent: new tabs get home dir, existing tabs keep their own.
     let dir = cwd.map(std::path::PathBuf::from).unwrap_or_default();
 
+    // ── Multi-agent auto-approval ────────────────────────────────────────
+    // Pane session ids look like `${tabId}::pane-N`. When a CLI spawns in
+    // a multi-agent pane it is being orchestrated by *another* CLI via
+    // send_to_pane; a human isn't going to be there to click "Yes" on
+    // every tool-use confirmation. We therefore boot each primary CLI
+    // with its "skip permissions" flag so the full multi-agent workflow
+    // runs hands-free.
+    //
+    // This is a deliberate trust tradeoff: entering multi-agent mode
+    // delegates authority to the controlling pane's LLM. Users who want
+    // per-tool supervision should stay in single-terminal mode.
+    let in_multi_agent = session_id.contains("::pane-");
+
     // Map the requested tool to an actual CLI command.
     let (cmd, args): (String, Vec<String>) = match tool.as_deref() {
-        Some("claude")   => ("claude".to_string(), vec![]),
+        Some("claude")   => {
+            let mut a = vec![];
+            if in_multi_agent {
+                a.push("--dangerously-skip-permissions".to_string());
+            }
+            ("claude".to_string(), a)
+        },
         // VibeID is a skill-launcher: spawn plain `claude` binary with `/vibeid`
         // as the initial positional prompt argument. Claude Code's REPL parses
         // leading slash commands as skill invocations, so the `vibeid` skill
@@ -788,8 +807,25 @@ fn tier_terminal_start_blocking(
         Some("qwen")     => ("qwen".to_string(),   vec![]),
         Some("hermes")   => ("hermes".to_string(), vec![]),
         Some("opencode") => ("opencode".to_string(), vec![]),
-        Some("codex")    => ("codex".to_string(),  vec![]),
-        Some("gemini")   => ("gemini".to_string(), vec![]),
+        Some("codex")    => {
+            let mut a = vec![];
+            if in_multi_agent {
+                // --full-auto: read/write workspace + run commands without prompting.
+                // Kept conservative vs. --dangerously-bypass-approvals-and-sandbox
+                // so destructive ops outside the workspace still get stopped.
+                a.push("--full-auto".to_string());
+            }
+            ("codex".to_string(), a)
+        },
+        Some("gemini")   => {
+            let mut a = vec![];
+            if in_multi_agent {
+                // --yolo: auto-accept all tool-use prompts (Gemini CLI's
+                // equivalent of Claude's --dangerously-skip-permissions).
+                a.push("--yolo".to_string());
+            }
+            ("gemini".to_string(), a)
+        },
         Some("agent") => {
             // Generic remote-catalog agent: binary + args are passed by the
             // frontend via tool_data JSON (same pattern as "remote" uses for

@@ -116,3 +116,16 @@
 .empty-pane-option:active {
   background: var(--bg-active, #3a3a3a);
 }
+
+/* Sets expectations: any CLI started here boots with its skip-permissions
+   flag so the controlling pane can drive tool-use without human clicks.
+   Small, quiet, accent-tinted — informative, not alarming. */
+.empty-pane-auto-notice {
+  margin-top: 8px;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: var(--accent, #6cc275);
+  opacity: 0.75;
+  text-align: center;
+}
