@@ -222,14 +222,23 @@ impl PaneStore {
             .map_err(|e| format!("blocking task join failed: {}", e))??
         };
 
-        // Phase 1b: brief pause so the target REPL processes the body
+        // Phase 1b: pause so the target REPL processes the body
         // characters into its input field, THEN send the Enter as a
-        // separate keystroke. 120ms is enough for Ink's reconciler to
-        // flush the text input, short enough to stay imperceptible.
-        // Also mirrors server::tier_terminal_write's user_submitted_at
-        // bookkeeping so our status ticker flips to "working".
+        // separate keystroke. Observed live on 2026-04-23: a flat
+        // 120ms was enough for short < 100-char prompts but failed for
+        // a 300-char multi-line Claude→Gemini dispatch — Gemini's Ink
+        // reconciler was still painting the last lines when `\r`
+        // arrived, so the CR got absorbed into the text instead of
+        // submitting. Body-size proportional delay fixes the whole
+        // range: 250ms base (covers the fixed render cost) + 1ms per
+        // body character (scales with paint work), clamped to 1.5s
+        // so we never sit on a huge paste for ages. Still fires
+        // mirror of server::tier_terminal_write's user_submitted_at
+        // so the status ticker flips to "working".
         if should_submit {
-            tokio::time::sleep(Duration::from_millis(120)).await;
+            let body_len = body.chars().count() as u64;
+            let delay_ms = (250 + body_len).clamp(250, 1500);
+            tokio::time::sleep(Duration::from_millis(delay_ms)).await;
             let id3 = id.to_string();
             let session = self.session.clone();
             tokio::task::spawn_blocking(move || -> Result<(), String> {
@@ -480,7 +489,7 @@ pub struct SendToPaneArgs {
     pub id: String,
     /// Text to inject into the target pane's stdin.
     pub text: String,
-    /// Seconds to wait for idle if wait=true. Default 60, max 3600.
+    /// Seconds to wait for idle if wait=true. Default 180, max 3600.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub timeout_sec: Option<u64>,
     /// If true, block until pane is idle or timeout (default). If false,
@@ -546,7 +555,15 @@ long-running tasks (> 2 min). Do NOT send to your own pane id."
     ) -> Result<CallToolResult, McpError> {
         let wait = args.wait.unwrap_or(true);
         let submit = args.submit.unwrap_or(true);
-        let timeout_sec = args.timeout_sec.unwrap_or(60).min(3600);
+        // Default 180s (3 min) — wide enough that a normal tool-chain
+        // task in the target pane finishes inside a single wait=true
+        // call, so Claude gets the full result in one round-trip and
+        // doesn't need the user to re-ping. Raised from the previous
+        // 60s default after observing tasks where the target CLI
+        // needed manual permission clicks: by the time the user got
+        // through the confirmations, the call had already timed out
+        // and Claude was "stuck waiting" with only partial output.
+        let timeout_sec = args.timeout_sec.unwrap_or(180).min(3600);
 
         match self
             .panes

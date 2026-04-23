@@ -820,9 +820,19 @@ fn tier_terminal_start_blocking(
         Some("gemini")   => {
             let mut a = vec![];
             if in_multi_agent {
-                // --yolo: auto-accept all tool-use prompts (Gemini CLI's
-                // equivalent of Claude's --dangerously-skip-permissions).
-                a.push("--yolo".to_string());
+                // Gemini CLI's equivalent of Claude's
+                // --dangerously-skip-permissions. Observed live on
+                // 2026-04-23 (Gemini CLI v0.39.0): the boolean `--yolo`
+                // flag did NOT reliably persist into the interactive
+                // REPL's tool-confirmation layer — the REPL still
+                // prompted "Allow execution of [...]?" for every tool
+                // call, which defeats hands-free multi-agent dispatch.
+                // `--approval-mode yolo` is the explicit, documented
+                // setting form (see `gemini --help`) and holds for the
+                // entire REPL session. Preferred over the shorter
+                // `--yolo` for exactly this reason.
+                a.push("--approval-mode".to_string());
+                a.push("yolo".to_string());
             }
             ("gemini".to_string(), a)
         },
