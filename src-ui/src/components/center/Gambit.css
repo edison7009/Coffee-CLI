@@ -366,6 +366,24 @@
     cursor: default;
 }
 
+/* Send-failure state: the draft is preserved and a one-line hint appears
+   next to the button. The button gets a subtle amber tint so the user's
+   eye moves to it without a modal or toast. Auto-clears after 2.5s. */
+.gambit-send--failed {
+    background: #d97757 !important;
+}
+
+.gambit-send-hint {
+    flex: 0 0 auto;
+    font-size: 11px;
+    color: var(--text-2, #bdb5a3);
+    opacity: 0.85;
+    margin-right: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 /* ─── Resize handle (bottom-right corner) ──────────────────── */
 .gambit-resize-handle {
     position: absolute;

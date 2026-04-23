@@ -98,6 +98,7 @@ export const ko = {
   // Gambit · 한 수
   'gambit.title': '한 수',
   'gambit.placeholder': '한 수를 고르는 중... (Ctrl+Enter 전송, Enter 줄바꿈, 이미지 붙여넣기)',
+  'gambit.send_failed_hint': 'pane 을 먼저 클릭한 뒤 전송',
 
   'mode.take_a_break': '잠깐 쉬기',
   'mode.back_to_work': '업무로 복귀',

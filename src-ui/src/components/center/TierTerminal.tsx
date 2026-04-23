@@ -679,9 +679,12 @@ function TierTerminalImpl({
   // the active tab's actions in the registry instead.
   useEffect(() => {
     const unregister = registerTabActions(sessionId, {
-      paste: (text: string) => {
+      paste: (text: string): boolean => {
         const term = xtermRef.current;
-        if (!term) return;
+        // If the xterm isn't mounted yet (tab still loading, PTY spawn in
+        // flight, etc.) report failure so the caller can preserve the
+        // source draft instead of silently losing it.
+        if (!term) return false;
         // term.paste() goes through onData, which our handler forwards to the
         // PTY with bracketed-paste framing when the TUI has enabled it.
         // Newlines and IME composition round-trip correctly. Follow with CR
@@ -696,6 +699,7 @@ function TierTerminalImpl({
         setTimeout(() => {
           commands.tierTerminalInput(sessionId, '\r').catch(() => {});
         }, 30);
+        return true;
       },
       cursorScreenPos: () => {
         const wrap = wrapRef.current;

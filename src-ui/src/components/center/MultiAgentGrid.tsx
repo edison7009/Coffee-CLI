@@ -29,6 +29,7 @@ import { useAppState, type TerminalSession, type ToolType } from '../../store/ap
 import { TierTerminal } from './TierTerminal';
 import { ErrorBoundary } from '../common/ErrorBoundary';
 import { commands } from '../../tauri';
+import { setFocusedPane } from '../../lib/pane-focus';
 import './MultiAgentGrid.css';
 
 interface Props {
@@ -125,8 +126,17 @@ export function MultiAgentGrid({ tab, hasBg, bgUrl, bgType }: Props) {
             // and pane edges). onFocusCapture alone only fires when the
             // click actually hits a focusable element, which misses all
             // the "dead" pixels users expect to be clickable.
-            onMouseDownCapture={() => setFocusedPaneIdx(pane.paneIdx)}
-            onFocusCapture={() => setFocusedPaneIdx(pane.paneIdx)}
+            onMouseDownCapture={() => {
+              setFocusedPaneIdx(pane.paneIdx);
+              // Mirror to a module-level registry so ActiveGambit (which
+              // lives at App-level, outside this component) can route its
+              // Send to the pane the user last clicked.
+              setFocusedPane(tab.id, pane.paneIdx);
+            }}
+            onFocusCapture={() => {
+              setFocusedPaneIdx(pane.paneIdx);
+              setFocusedPane(tab.id, pane.paneIdx);
+            }}
           >
             {/* Theme-tinted pane number badge. paneIdx is already 1-indexed
                 (matches the MCP session id suffix), so render it directly. */}

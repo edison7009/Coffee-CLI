@@ -101,6 +101,7 @@ export const vi = {
   // Gambit · Nước cờ
   'gambit.title': 'Nước cờ',
   'gambit.placeholder': 'Cân nhắc nước cờ... (Ctrl+Enter để gửi, Enter xuống dòng, dán ảnh được)',
+  'gambit.send_failed_hint': 'Bấm vào một pane trước rồi gửi',
 
   'mode.take_a_break': 'Nghỉ một chút',
   'mode.back_to_work': 'Quay lại làm việc',

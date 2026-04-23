@@ -10,8 +10,12 @@
 
 export interface TabActions {
   /** Paste text into the tab's xterm (handles bracketed paste framing) and
-   *  submit with CR, as if the user typed the whole message in-place. */
-  paste: (text: string) => void;
+   *  submit with CR, as if the user typed the whole message in-place.
+   *  Returns `true` if the text was successfully written to the xterm,
+   *  `false` if the target wasn't ready (xterm unmounted, PTY not spawned
+   *  yet, etc.). Callers use the return value to decide whether to clear
+   *  the source draft — silent failures must not lose user text. */
+  paste: (text: string) => boolean;
   /** Current xterm cursor position in screen coordinates, used by Gambit to
    *  place itself just below the prompt on open. Returns null if the tab's
    *  xterm isn't fully initialized yet. */

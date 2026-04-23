@@ -25,7 +25,12 @@ interface GambitProps {
   initialY: number;
   onDraftChange: (text: string) => void;
   onClose: () => void;
-  onSend: (text: string) => void;
+  /** Returns true when the text was accepted by the target xterm, false
+   *  when the send couldn't complete (no active session, pane not focused
+   *  in multi-agent mode, xterm not yet mounted, etc.). Gambit uses this
+   *  signal to decide whether to clear the draft — failed sends preserve
+   *  the text so the user never loses what they typed. */
+  onSend: (text: string) => boolean;
 }
 
 interface Attachment {
@@ -179,6 +184,18 @@ function GambitImpl({
     };
   }, [pos.x, pos.y, size.w, size.h, collapsed]);
 
+  // sendFailed briefly flashes a subtle hint next to the Send button so
+  // the user understands WHY nothing happened (most common cause in
+  // multi-agent mode: no pane has been focused yet — a single click on
+  // the intended pane fixes it). Auto-clears after 2.5s so it doesn't
+  // linger once the user acts.
+  const [sendFailed, setSendFailed] = useState(false);
+  useEffect(() => {
+    if (!sendFailed) return;
+    const t = setTimeout(() => setSendFailed(false), 2500);
+    return () => clearTimeout(t);
+  }, [sendFailed]);
+
   const handleSend = useCallback(() => {
     const text = draft.trim();
     const paths = attachments.map(a => a.path);
@@ -188,7 +205,14 @@ function GambitImpl({
     const combined = paths.length > 0
       ? (text ? `${text} ${paths.join(' ')}` : paths.join(' '))
       : text;
-    onSend(combined);
+    const ok = onSend(combined);
+    if (!ok) {
+      // Preserve draft + attachments so the user doesn't lose what they
+      // typed. They likely just need to click the target pane first, then
+      // hit Send again.
+      setSendFailed(true);
+      return;
+    }
     onDraftChange('');
     attachments.forEach(a => URL.revokeObjectURL(a.previewUrl));
     setAttachments([]);
@@ -363,8 +387,13 @@ function GambitImpl({
             </div>
           ))}
         </div>
+        {sendFailed && (
+          <span className="gambit-send-hint" role="status">
+            {t('gambit.send_failed_hint')}
+          </span>
+        )}
         <button
-          className="gambit-send"
+          className={`gambit-send${sendFailed ? ' gambit-send--failed' : ''}`}
           onClick={handleSend}
           disabled={!draft.trim() && attachments.length === 0}
         >

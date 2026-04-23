@@ -98,6 +98,7 @@ export const zhTW = {
   // Gambit · 妙手
   'gambit.title': '妙手',
   'gambit.placeholder': '靜心琢磨，再落子... (Ctrl+Enter 發送, Enter 換行, 可貼上圖片)',
+  'gambit.send_failed_hint': '先點擊一個 pane，再發送',
 
   'mode.take_a_break': '放鬆一下',
   'mode.back_to_work': '回到工作',

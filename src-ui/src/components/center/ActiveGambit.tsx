@@ -22,6 +22,7 @@
 import { useCallback, useMemo } from 'react';
 import { useAppState } from '../../store/app-state';
 import { getTabActions } from '../../lib/tab-actions';
+import { getFocusedPane } from '../../lib/pane-focus';
 import { Gambit } from './Gambit';
 
 const DEFAULT_WIDTH = 520;
@@ -59,10 +60,25 @@ export function ActiveGambit() {
     dispatch({ type: 'TOGGLE_GAMBIT' });
   }, [dispatch]);
 
-  const handleSend = useCallback((text: string) => {
-    if (!activeId) return;
-    getTabActions(activeId)?.paste(text);
-  }, [activeId]);
+  // Route Send to the correct xterm. For a plain single-terminal tab the
+  // sessionId is just activeId. For a multi-agent tab, no xterm registers
+  // under activeId itself — each of the 4 panes registers under
+  // `${activeId}::pane-${idx}`. Look up the last-focused pane (module-level
+  // registry written by MultiAgentGrid on click) and route there. If no
+  // pane has been focused yet, return false so Gambit preserves the draft
+  // rather than dropping text into the void.
+  const handleSend = useCallback((text: string): boolean => {
+    if (!activeId) return false;
+    let targetId = activeId;
+    if (activeSession?.tool === 'multi-agent') {
+      const paneIdx = getFocusedPane(activeId);
+      if (!paneIdx) return false;
+      targetId = `${activeId}::pane-${paneIdx}`;
+    }
+    const actions = getTabActions(targetId);
+    if (!actions) return false;
+    return actions.paste(text);
+  }, [activeId, activeSession?.tool]);
 
   if (!gambitOpen || !activeId) return null;
 
