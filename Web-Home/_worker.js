@@ -20,7 +20,10 @@ const PLATFORM_PATTERNS = {
 }
 
 async function getLatestAssets(env) {
-  const cacheKey = "latest-release"
+  // Cache key bumped to v2 after changing the `version` field shape
+  // (strip leading "v"). Old v1 entries would otherwise linger in KV
+  // for up to an hour after deploy.
+  const cacheKey = "latest-release-v2"
   if (env.KV) {
     const cached = await env.KV.get(cacheKey)
     if (cached) return JSON.parse(cached)
@@ -38,7 +41,13 @@ async function getLatestAssets(env) {
     if (asset) assets[platform] = {
       url: asset.browser_download_url,
       name: asset.name,
-      version: release.tag_name
+      // Strip the leading "v" from the git tag name so `version` is a
+      // clean semver. install.ps1 / install.sh prepend their own "v"
+      // when displaying, and compare against the Windows registry
+      // DisplayVersion field (which has no "v"). Returning "v1.0.7"
+      // here produced "vv1.0.7" in the UI and broke the up-to-date
+      // check (registry "1.0.7" != API "v1.0.7" → infinite "upgrade").
+      version: release.tag_name.replace(/^v/, '')
     }
   }
 
