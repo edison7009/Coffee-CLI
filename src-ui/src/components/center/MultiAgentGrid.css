@@ -92,6 +92,8 @@
      supports it. Fallback uses the raw accent — acceptable. */
   background: color-mix(in srgb, var(--accent, #6cc275) 55%, #000);
   border-radius: 0;
+  border: none;
+  padding: 0;
   font-size: 14px;
   font-family: var(--font-display, 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif);
   font-weight: 700;
@@ -101,6 +103,48 @@
   user-select: none;
   pointer-events: none;
 }
+
+/* Active-pane badge variant — interactive close button. The × is only
+   revealed on hover (see .pane-badge-num / .pane-badge-x below), so the
+   idle state reads identical to the empty-pane badge and the user only
+   sees "close" affordance when they're reaching for it. */
+.pane-number-badge--closable {
+  pointer-events: auto;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.pane-number-badge--closable:hover {
+  /* Claude-brand orange (#D97757). Same tone used for Claude's
+     executing-state dot in the tab strip — "about to do something
+     consequential" reads the same across the app. */
+  background: #d97757;
+}
+
+.pane-number-badge--closable:active {
+  filter: brightness(0.92);
+}
+
+.pane-badge-num,
+.pane-badge-x {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.pane-badge-x {
+  display: none;
+  font-size: 18px;
+  font-weight: 600;
+  /* × glyph sits optically low at this weight — lift a pixel so the
+     geometric center of the cross matches where the digit sat. */
+  transform: translateY(-1px);
+}
+
+.pane-number-badge--closable:hover .pane-badge-num { display: none; }
+.pane-number-badge--closable:hover .pane-badge-x   { display: flex; }
 
 /* ─── Empty-pane picker (simpler, no card) ──────────────────────── */
 

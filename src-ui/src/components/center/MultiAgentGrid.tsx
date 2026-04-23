@@ -138,9 +138,44 @@ export function MultiAgentGrid({ tab, hasBg, bgUrl, bgType }: Props) {
               setFocusedPane(tab.id, pane.paneIdx);
             }}
           >
-            {/* Theme-tinted pane number badge. paneIdx is already 1-indexed
-                (matches the MCP session id suffix), so render it directly. */}
-            <div className="pane-number-badge">{pane.paneIdx}</div>
+            {/* Theme-tinted pane number badge.
+                - Empty pane: plain numeric label (nothing to close here).
+                - Active pane: button that shows the number by default and
+                  swaps to × on hover. Clicking kills this pane's PTY and
+                  resets its tool to null — the pane re-renders as the
+                  3-button CLI picker without disturbing the other panes
+                  or closing the whole Tab. */}
+            {isEmpty ? (
+              <div className="pane-number-badge">{pane.paneIdx}</div>
+            ) : (
+              <button
+                type="button"
+                className="pane-number-badge pane-number-badge--closable"
+                aria-label={`Close pane ${pane.paneIdx}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // Best-effort kill. If the PTY is already gone the
+                  // backend logs a warning; surfacing it to the user
+                  // would be noise since the UI result is the same.
+                  commands.tierTerminalKill(paneSessionId).catch(() => {});
+                  // If the pane being closed had focus, clear it so
+                  // Gambit doesn't keep routing to a non-existent pane.
+                  if (focusedPaneIdx === pane.paneIdx) {
+                    setFocusedPaneIdx(null);
+                    setFocusedPane(tab.id, null);
+                  }
+                  dispatch({
+                    type: 'SET_PANE_TOOL',
+                    tabId: tab.id,
+                    paneIdx: pane.paneIdx,
+                    tool: null,
+                  });
+                }}
+              >
+                <span className="pane-badge-num">{pane.paneIdx}</span>
+                <span className="pane-badge-x" aria-hidden="true">×</span>
+              </button>
+            )}
 
             <div className="multi-agent-pane-body">
               {isEmpty ? (
