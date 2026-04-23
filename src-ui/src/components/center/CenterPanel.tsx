@@ -319,8 +319,23 @@ export function CenterPanel() {
   // TierTerminal added its own focusin + mouseup handlers, causing O(N)
   // dispatch per click with N tabs). When focus wanders to the body or a
   // non-input element, steal it back for the currently active terminal.
-  const activeIdRef = useRef(activeTerminalId);
-  useEffect(() => { activeIdRef.current = activeTerminalId; }, [activeTerminalId]);
+  //
+  // Multi-agent awareness: in a multi-agent Tab the "active terminal" is
+  // the PRIMARY pane's PTY session, NOT the Tab id. Pane 0 reuses the Tab
+  // id, panes 1..N use `${tabId}::pane-${idx}`. Without this split, the
+  // enforcer keeps yanking focus back to pane 0 and the user can never
+  // type into a worker pane.
+  const computeFocusTarget = (): string | null => {
+    if (!activeTerminalId) return null;
+    const activeTab = terminals.find(t => t.id === activeTerminalId);
+    if (!activeTab?.multiAgent) return activeTerminalId;
+    const pidx = activeTab.multiAgent.primaryPaneIdx;
+    return pidx === 0 ? activeTab.id : `${activeTab.id}::pane-${pidx}`;
+  };
+  const focusTargetRef = useRef<string | null>(computeFocusTarget());
+  useEffect(() => {
+    focusTargetRef.current = computeFocusTarget();
+  }, [activeTerminalId, terminals]);
   useEffect(() => {
     const enforce = () => {
       setTimeout(() => {
@@ -328,7 +343,7 @@ export function CenterPanel() {
         if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') && !el.classList.contains('xterm-helper-textarea')) {
           return; // user is typing in a real input, leave them alone
         }
-        const id = activeIdRef.current;
+        const id = focusTargetRef.current;
         if (id) focusTerminal(id);
       }, 10);
     };
