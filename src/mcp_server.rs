@@ -168,32 +168,31 @@ impl PaneStore {
         wait: bool,
         timeout_sec: u64,
     ) -> Result<DispatchResult, String> {
-        let full_text = if submit && !(text.ends_with('\r') || text.ends_with('\n')) {
-            format!("{}\r", text)
-        } else {
-            text.to_string()
-        };
-        let bytes_written = full_text.len();
+        // Strip any caller-provided trailing newline; we always append our
+        // own in a SECOND write so Ink/React-based REPLs (Gemini, Claude
+        // Code) treat the body and the Enter as two separate stdin events
+        // — not one pasted chunk where the final \r gets swallowed as
+        // part of the text. Observed live: a combined "body\r" write
+        // shows up in Gemini's input box but never submits; splitting
+        // body + short sleep + "\r" reliably submits.
+        let body = text.trim_end_matches(['\r', '\n']).to_string();
+        let should_submit = submit;
+        let bytes_written = body.len() + if should_submit { 1 } else { 0 };
 
-        // Phase 1: snapshot buffer + write + mark submission, all in one
-        // blocking closure to hold locks briefly.
+        // Phase 1a: snapshot buffer + write BODY (no Enter yet).
         let buf_before = {
             let id2 = id.to_string();
-            let text2 = full_text.clone();
+            let body2 = body.clone();
             let session = self.session.clone();
             tokio::task::spawn_blocking(move || -> Result<String, String> {
-                let (writer_arc, activity_arc, buffer_arc) = {
+                let (writer_arc, buffer_arc) = {
                     let guard = session
                         .lock()
                         .map_err(|_| "session map poisoned".to_string())?;
                     let sess = guard
                         .get(&id2)
                         .ok_or_else(|| format!("pane not found: {}", id2))?;
-                    (
-                        sess.writer_lock.clone(),
-                        sess.activity.clone(),
-                        sess.output_buffer.clone(),
-                    )
+                    (sess.writer_lock.clone(), sess.output_buffer.clone())
                 };
 
                 let before = {
@@ -207,21 +206,13 @@ impl PaneStore {
                     let mut writer = writer_arc
                         .lock()
                         .map_err(|_| "pane writer poisoned".to_string())?;
-                    writer
-                        .write_all(text2.as_bytes())
-                        .map_err(|e| format!("pty write failed: {}", e))?;
-                    writer
-                        .flush()
-                        .map_err(|e| format!("pty flush failed: {}", e))?;
-                }
-
-                // Mirror server::tier_terminal_write — only flip the ticker
-                // state-machine when we sent a CR/LF and the CLI was idle.
-                if text2.contains('\r') || text2.contains('\n') {
-                    if let Ok(mut act) = activity_arc.lock() {
-                        if act.last_status == "wait_input" {
-                            act.user_submitted_at = Some(Instant::now());
-                        }
+                    if !body2.is_empty() {
+                        writer
+                            .write_all(body2.as_bytes())
+                            .map_err(|e| format!("pty write failed: {}", e))?;
+                        writer
+                            .flush()
+                            .map_err(|e| format!("pty flush failed: {}", e))?;
                     }
                 }
 
@@ -230,6 +221,48 @@ impl PaneStore {
             .await
             .map_err(|e| format!("blocking task join failed: {}", e))??
         };
+
+        // Phase 1b: brief pause so the target REPL processes the body
+        // characters into its input field, THEN send the Enter as a
+        // separate keystroke. 120ms is enough for Ink's reconciler to
+        // flush the text input, short enough to stay imperceptible.
+        // Also mirrors server::tier_terminal_write's user_submitted_at
+        // bookkeeping so our status ticker flips to "working".
+        if should_submit {
+            tokio::time::sleep(Duration::from_millis(120)).await;
+            let id3 = id.to_string();
+            let session = self.session.clone();
+            tokio::task::spawn_blocking(move || -> Result<(), String> {
+                let (writer_arc, activity_arc) = {
+                    let guard = session
+                        .lock()
+                        .map_err(|_| "session map poisoned".to_string())?;
+                    let sess = guard
+                        .get(&id3)
+                        .ok_or_else(|| format!("pane not found: {}", id3))?;
+                    (sess.writer_lock.clone(), sess.activity.clone())
+                };
+                {
+                    let mut writer = writer_arc
+                        .lock()
+                        .map_err(|_| "pane writer poisoned".to_string())?;
+                    writer
+                        .write_all(b"\r")
+                        .map_err(|e| format!("pty write failed: {}", e))?;
+                    writer
+                        .flush()
+                        .map_err(|e| format!("pty flush failed: {}", e))?;
+                }
+                if let Ok(mut act) = activity_arc.lock() {
+                    if act.last_status == "wait_input" {
+                        act.user_submitted_at = Some(Instant::now());
+                    }
+                }
+                Ok(())
+            })
+            .await
+            .map_err(|e| format!("blocking task join failed: {}", e))??;
+        }
 
         if !wait {
             return Ok(DispatchResult {

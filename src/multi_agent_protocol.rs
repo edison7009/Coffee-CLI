@@ -49,9 +49,24 @@ are available via the `coffee-cli` MCP server — `list_panes`,
 `send_to_pane`, and `read_pane` — for observing and instructing the
 other peer panes.
 
-Full usage protocol (when to fan out, parallel vs sequential, what NOT
-to use these tools for): read `.multi-agent/PROTOCOL.md` in this
-workspace.
+## Must-follow rules (do NOT skip)
+
+1. **English only across panes.** The user may write to you in any
+   language, but every `send_to_pane` text MUST be in English. LLMs
+   follow instructions more reliably in English — this is why the
+   rule exists, not stylistic preference. Translate the target's
+   reply back to the user's language when reporting results.
+
+2. **Pane numbering is 1..4.** UI badges and MCP session ids match:
+   the pane labelled "2" has id ending `::pane-2`. Call `list_panes()`
+   to get exact ids before dispatching.
+
+3. **Prefer slash commands** when the target CLI supports one for the
+   task (e.g. `/review`, `/compact`). If unsure, send `/help` first.
+   Don't invent commands — if none fits, use natural English prose.
+
+Full usage protocol (fan-out patterns, cross-CLI command catalog, what
+NOT to use these tools for): read `.multi-agent/PROTOCOL.md`.
 "#;
 
 /// Long-form protocol written to `.multi-agent/PROTOCOL.md`. The primary
@@ -477,7 +492,11 @@ mod tests {
     #[test]
     fn thin_pointer_mentions_meta_dir() {
         assert!(THIN_POINTER_BODY.contains(".multi-agent/PROTOCOL.md"));
-        assert!(THIN_POINTER_BODY.lines().count() < 15);
+        // Grew from a 5-line pointer to ~30 lines once we inlined the
+        // three must-follow rules (English, 1..4 numbering, slash
+        // commands). Still bounded to stay a pointer and not a full
+        // manual — keep the bulk in PROTOCOL.md.
+        assert!(THIN_POINTER_BODY.lines().count() < 40);
     }
 
     #[test]
