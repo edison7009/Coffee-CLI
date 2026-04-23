@@ -5,7 +5,10 @@
 //!   - Claude Code    → ~/.claude.json            (JSON, key: `mcpServers.coffee-cli`)
 //!   - Codex CLI      → ~/.codex/config.toml      (TOML, key: `[mcp_servers.coffee-cli]`)
 //!   - Gemini CLI     → ~/.gemini/settings.json   (JSON, key: `mcpServers.coffee-cli`)
-//!   - OpenCode       → <workspace>/opencode.json (JSON, key: `mcp.coffee-cli`)
+//!
+//! OpenCode was evaluated and dropped for v1.0 — its workspace-local
+//! `opencode.json` and `mcp` (not `mcpServers`) shape are enough unlike
+//! the other three that it deserves its own pass. Tracked for v1.1.
 //!
 //! Safety:
 //!   - Before touching any config we back it up to
@@ -46,8 +49,11 @@ pub const MCP_KEY: &str = "coffee-cli";
 /// find on disk. Missing-config scenarios are logged and skipped (they
 /// just mean that CLI isn't installed); only hard failures return Err.
 ///
+/// The `_workspace` parameter is retained for forward compatibility with
+/// v1.1 when OpenCode (workspace-local config) may come back online.
+///
 /// Returns the list of paths we touched so the UI can surface them.
-pub fn install_all(endpoint: &McpEndpoint, workspace: Option<&Path>) -> anyhow::Result<Vec<PathBuf>> {
+pub fn install_all(endpoint: &McpEndpoint, _workspace: Option<&Path>) -> anyhow::Result<Vec<PathBuf>> {
     let mut touched = Vec::new();
 
     // Claude Code — ~/.claude.json
@@ -77,16 +83,6 @@ pub fn install_all(endpoint: &McpEndpoint, workspace: Option<&Path>) -> anyhow::
         }
     }
 
-    // OpenCode — <workspace>/opencode.json (workspace-scoped, not home).
-    if let Some(ws) = workspace {
-        let p = ws.join("opencode.json");
-        if let Err(e) = install_opencode(&p, endpoint) {
-            log::warn!("[mcp-inject] opencode skipped: {}", e);
-        } else {
-            touched.push(p);
-        }
-    }
-
     Ok(touched)
 }
 
@@ -94,7 +90,7 @@ pub fn install_all(endpoint: &McpEndpoint, workspace: Option<&Path>) -> anyhow::
 /// restore from backup — the point is to leave the user's OWN entries
 /// alone and just drop ours. Backups are for manual rollback when a
 /// merge goes wrong; in the normal disable path we use surgical removal.
-pub fn uninstall_all(workspace: Option<&Path>) -> anyhow::Result<Vec<PathBuf>> {
+pub fn uninstall_all(_workspace: Option<&Path>) -> anyhow::Result<Vec<PathBuf>> {
     let mut touched = Vec::new();
 
     if let Some(p) = claude_config_path() {
@@ -109,12 +105,6 @@ pub fn uninstall_all(workspace: Option<&Path>) -> anyhow::Result<Vec<PathBuf>> {
     }
     if let Some(p) = gemini_config_path() {
         if matches!(uninstall_json(&p, &["mcpServers", MCP_KEY]), Ok(true)) {
-            touched.push(p);
-        }
-    }
-    if let Some(ws) = workspace {
-        let p = ws.join("opencode.json");
-        if matches!(uninstall_json(&p, &["mcp", MCP_KEY]), Ok(true)) {
             touched.push(p);
         }
     }
@@ -150,10 +140,12 @@ fn install_gemini(path: &Path, endpoint: &McpEndpoint) -> anyhow::Result<()> {
     install_json(path, &["mcpServers"], mcp_entry_json(endpoint), "gemini")
 }
 
-fn install_opencode(path: &Path, endpoint: &McpEndpoint) -> anyhow::Result<()> {
-    // OpenCode uses lowercase `mcp`, not `mcpServers`.
-    install_json(path, &["mcp"], mcp_entry_json(endpoint), "opencode")
-}
+// OpenCode install path removed for v1.0 — see module header. The
+// `install_json` helper is generic; v1.1 can reintroduce:
+//   fn install_opencode(path: &Path, endpoint: &McpEndpoint) -> anyhow::Result<()> {
+//       install_json(path, &["mcp"], mcp_entry_json(endpoint), "opencode")
+//   }
+// without further plumbing changes.
 
 /// Shared JSON injection path. `parent_keys` describes where in the JSON
 /// tree our MCP_KEY entry should live, e.g. `["mcpServers"]` means we

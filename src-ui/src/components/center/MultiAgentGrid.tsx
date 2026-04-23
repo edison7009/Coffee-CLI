@@ -35,11 +35,17 @@ interface Props {
   bgType: 'image' | 'video' | 'none';
 }
 
+// v1.0 primary CLIs = Claude Code / Codex / Gemini only. OpenCode was
+// evaluated but dropped — its MCP config shape ('mcp' vs 'mcpServers')
+// and workspace-local `opencode.json` expectation diverge enough from
+// the other three that it deserves a v1.1 pass of its own rather than
+// a half-baked slot here. Users who want OpenCode in a quadrant can
+// still launch it manually via the single-terminal path and wire it
+// into the coffee-cli MCP endpoint by hand.
 const PANE_CLI_OPTIONS: Array<{ value: ToolType; label: string }> = [
   { value: 'claude', label: 'Claude Code' },
   { value: 'codex', label: 'Codex' },
   { value: 'gemini', label: 'Gemini' },
-  { value: 'opencode', label: 'OpenCode' },
 ];
 
 const PANE_COUNT = 4;

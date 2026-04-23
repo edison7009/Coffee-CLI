@@ -356,7 +356,7 @@ strengths (e.g., Gemini's vision, Codex's code gen), reach for
 | **Pane** | 四宫格里的一格，对应一个 portable-pty 子进程 |
 | **Primary pane（主控格）** | 用户**显式指定**的主控格，**只有**这个 pane 里的 CLI 被注入 MCP 配置。不等于"物理 1 号位"——用户可以把 Codex 放在右下角当主控 |
 | **Worker pane（被控格）** | 非主控格，CLI 不装 MCP，只是被动接收 PTY 输入（来自 send_to_pane 或用户键盘） |
-| **主控 CLI** | Primary pane 里跑的那个 CLI（四家之一：Claude Code / Codex / Gemini CLI / OpenCode） |
+| **主控 CLI** | Primary pane 里跑的那个 CLI（三家之一：Claude Code / Codex / Gemini CLI）。OpenCode 的 workspace-local `opencode.json` + `mcp`（非 `mcpServers`）形状和其他三家差异较大，v1.0 暂不支持，留给 v1.1 单独打磨 |
 | **被控 CLI** | Worker pane 里跑的任意 CLI（含 Aider、shell 等非 MCP client） |
 | **多 Agent 模式** | Coffee-CLI 的一个布尔开关：开启 = 四宫格 + MCP 注入 + `.md` 注入；关闭 = 单终端常规模式 |
 
@@ -518,6 +518,7 @@ Coffee-CLI 现在的 Tab 系统：每个 Tab = 一个独立终端实例。
 | 2026-04-22 | **MCP 传输选 HTTP 不选 stdio** | Coffee-CLI 是常驻 Tauri 进程，不能被 CLI spawn 成子进程；HTTP 还天然支持多 CLI 并发主控 + 断连恢复。详见 [5.5 节](#55-mcp-server-进程架构与传输模式) |
 | 2026-04-22 | **术语"1 号位"→"主控格（primary pane）"** | 用户可以把主控 CLI 放在任意格子，物理位置不等同于角色；术语不严谨会误导架构讨论 |
 | 2026-04-22 | **加附录 C（开工前验证清单）+ 附录 D（开发中细节决策）** | 文档初稿的 15 处细节未想透；开工前把可验证的验证掉，不可立即验证的标注到"写到那天再定" |
+| 2026-04-23 | **主控 CLI 再收窄到 3 家**：Claude Code / Codex / Gemini CLI | v1.0 Launchpad 的 quadrant UI 验证后，用户要求降低第一批集成的复杂度。OpenCode 的 `opencode.json` 是 workspace-local（另外三家都在 `~/`），key 用 `mcp`（另外三家都用 `mcpServers`），两点差异累加让 v1.0 的"一次注入三处"叙事变乱。v1.1 单独出一个 OpenCode pass，把这两点差异吸收后再加回来 |
 
 ---
 
@@ -531,7 +532,7 @@ Coffee-CLI 现在的 Tab 系统：每个 Tab = 一个独立终端实例。
 
 ---
 
-## 附录 B：4 家主控 CLI 的 MCP 接入清单
+## 附录 B：3 家主控 CLI 的 MCP 接入清单
 
 **每家的配置位置 / 格式 / 协议入口**。实施"一键接入"脚本时按此表查。
 
@@ -540,9 +541,10 @@ Coffee-CLI 现在的 Tab 系统：每个 Tab = 一个独立终端实例。
 | **Claude Code** | `~/.claude.json` | `mcpServers.coffee-cli` | `CLAUDE.md` | 或走 Skill（`~/.claude/skills/coffee-multi-agent/SKILL.md`），token 效率更高 |
 | **Codex CLI** | `~/.codex/config.toml` | `[mcp_servers.coffee-cli]` | `AGENTS.md` | OpenAI 官方格式 |
 | **Gemini CLI** | `~/.gemini/settings.json` | `mcpServers.coffee-cli` | `GEMINI.md` | Google 官方 |
-| **OpenCode** | `opencode.json` | `mcp.coffee-cli` | `AGENTS.md` | sst/opencode，支持 local(stdio)/remote(HTTP) |
 
-**三 `.md` 文件只写三份**（CLAUDE.md / AGENTS.md / GEMINI.md 内容一致），分别被 Claude Code / Codex 和 OpenCode 共用 / Gemini CLI 读取。
+**三 `.md` 文件只写三份**（CLAUDE.md / AGENTS.md / GEMINI.md 内容一致），分别被 Claude Code / Codex（`AGENTS.md`）/ Gemini CLI（`GEMINI.md`）读取。
+
+**已移除**：OpenCode（v1.0 不支持）。其配置在 `<workspace>/opencode.json` 且 key 是 `mcp`（非 `mcpServers`），和另外三家差异足够大，v1.1 单独做。
 
 **传输方式**：全部用 **HTTP（Streamable HTTP）**。Coffee-CLI 主进程监听 `127.0.0.1:${动态端口}`，所有主控 CLI 的 `mcpServers.coffee-cli` 配置统一为：
 
