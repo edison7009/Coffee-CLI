@@ -1,55 +1,42 @@
-/* MultiAgentGrid.css — 4-peer-pane layout for the independent
-   `tool='multi-agent'` Tab type. No inheritance from a single-terminal
-   wrapper, no grid-item placement tricks — the whole tab is a grid.
-   Follows CLAUDE.md §4 (no native tooltips, no transform on hover). */
+/* MultiAgentGrid.css — "4 paper slices" layout.
+   User-defined aesthetic (2026-04-23): each pane must feel identical to
+   a single-terminal tab. No border, no card background, no internal
+   padding, no header strip. Only the active pane is rendered at full
+   brightness; the other three dim down. A tiny 1/2/3/4 badge in the
+   top-right of each pane uses the active theme accent.
+   Follows CLAUDE.md §4 (no native tooltips, no transform hover). */
 
 .multi-agent-grid-standalone {
   display: grid;
   grid-template-columns: 1fr 1fr;
   grid-template-rows: 1fr 1fr;
-  gap: 6px;
-  padding: 6px;
   width: 100%;
   height: 100%;
-  box-sizing: border-box;
-  overflow: hidden;
+  /* No gap, no padding — four terminals sit edge-to-edge like paper slices. */
 }
 
 .multi-agent-pane {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-width: 0;
   min-height: 0;
-  border: 1px solid var(--border-color, #2a2a2a);
-  border-radius: 6px;
-  background: var(--bg-secondary, #151515);
   overflow: hidden;
-  cursor: default;
+  /* No border / background / radius — blend into the tab surface. */
+  /* Only allowed animation: opacity (no position/scale per §4). */
+  transition: opacity 160ms ease;
 }
 
-/* Explicit cell placement: all 4 panes are peers, no pane-0 special case. */
 .multi-agent-pane.pane-slot-0 { grid-column: 1; grid-row: 1; }
 .multi-agent-pane.pane-slot-1 { grid-column: 2; grid-row: 1; }
 .multi-agent-pane.pane-slot-2 { grid-column: 1; grid-row: 2; }
 .multi-agent-pane.pane-slot-3 { grid-column: 2; grid-row: 2; }
 
-.multi-agent-pane.is-empty {
-  background: var(--bg-tertiary, #0e0e0e);
-}
-
-.multi-agent-pane-header {
-  flex: 0 0 auto;
-  padding: 4px 8px;
-  font-size: 11px;
-  font-family: var(--font-mono, monospace);
-  color: var(--text-muted, #888);
-  background: var(--bg-tertiary, #0e0e0e);
-  border-bottom: 1px solid var(--border-color, #2a2a2a);
-  user-select: none;
-}
-
-.pane-label {
-  letter-spacing: 0.02em;
+/* Focus handling: when any pane's xterm has keyboard focus, the other
+   three fade so the user's eye follows the typing cursor. Default
+   (no focus) shows all panes at full brightness. */
+.multi-agent-pane.is-dimmed {
+  opacity: 0.35;
 }
 
 .multi-agent-pane-body {
@@ -59,7 +46,25 @@
   overflow: hidden;
 }
 
-/* Empty-pane picker ------------------------------------------------ */
+/* ─── Pane number badge ─────────────────────────────────────────────
+   Tiny 1/2/3/4 label tucked into the top-right of every pane. Uses the
+   active theme accent color so it re-tints with the user's chosen
+   theme palette. Absolutely positioned so it doesn't steal a grid row. */
+.pane-number-badge {
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  z-index: 10;
+  font-size: 10px;
+  font-family: var(--font-mono, monospace);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--accent, #6cc275);
+  user-select: none;
+  pointer-events: none;
+}
+
+/* ─── Empty-pane picker (simpler, no card) ──────────────────────── */
 
 .empty-pane-picker {
   display: flex;
@@ -94,7 +99,6 @@
   border: 1px solid var(--border-color, #2a2a2a);
   border-radius: 4px;
   cursor: pointer;
-  /* Color transitions only — no position/scale per CLAUDE.md §4. */
   transition: background-color 120ms ease, border-color 120ms ease;
 }
 
@@ -105,17 +109,4 @@
 
 .empty-pane-option:active {
   background: var(--bg-active, #3a3a3a);
-}
-
-.empty-pane-hint {
-  font-size: 11px;
-  color: var(--text-muted, #666);
-  font-family: var(--font-mono, monospace);
-}
-
-.empty-pane-hint code {
-  padding: 1px 4px;
-  background: var(--bg-quaternary, #222);
-  border-radius: 3px;
-  font-size: 10px;
 }

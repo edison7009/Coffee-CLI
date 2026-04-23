@@ -84,7 +84,18 @@ export function CenterPanel() {
   const [pinnedItems, setPinnedItems] = useState<string[]>(() => {
     try {
       const stored = localStorage.getItem('coffee_pinned_items');
-      if (stored !== null) return JSON.parse(stored);
+      if (stored !== null) {
+        const arr = JSON.parse(stored);
+        // One-shot migration: existing users who launched before the
+        // multi-agent quadrant shipped won't have it pinned. Inject it
+        // once so they discover the feature. They can unpin it via the
+        // library if they don't want it.
+        if (Array.isArray(arr) && !arr.includes('agent:multi-agent')) {
+          arr.push('agent:multi-agent');
+          try { localStorage.setItem('coffee_pinned_items', JSON.stringify(arr)); } catch {}
+        }
+        return Array.isArray(arr) ? arr : [];
+      }
       // First launch: pre-pin 6 useful defaults so desktop shows a full MAX_PINS
       // grid out of the box (4 AI CLIs covering major providers + 2 utilities).
       // Returning users' pin choices are respected (stored !== null path above).
@@ -93,8 +104,8 @@ export function CenterPanel() {
         'agent:codex',
         'agent:opencode',
         'agent:gemini',
-        'agent:installer',
         'agent:vibeid',
+        'agent:multi-agent',
       ];
       localStorage.setItem('coffee_pinned_items', JSON.stringify(defaults));
       return defaults;
