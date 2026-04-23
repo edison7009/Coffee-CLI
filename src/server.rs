@@ -1868,7 +1868,16 @@ fn enable_multi_agent_mode(
         }
     };
 
-    let touched_md_files = match crate::multi_agent_protocol::install(&ws) {
+    // Serialize the endpoint so users (and debug tooling) can read
+    // .multi-agent/endpoint.json and see where the current MCP server
+    // is listening. Regenerated on every enable, so port changes between
+    // launches don't leave stale info.
+    let endpoint_json = serde_json::to_string_pretty(&endpoint).ok();
+
+    let touched_md_files = match crate::multi_agent_protocol::install(
+        &ws,
+        endpoint_json.as_deref(),
+    ) {
         Ok(paths) => paths
             .into_iter()
             .map(|p| p.display().to_string())

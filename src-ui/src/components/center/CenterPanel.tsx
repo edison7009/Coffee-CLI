@@ -259,15 +259,18 @@ export function CenterPanel() {
       { key: 'vibeid' as ToolType, label: t('tool.vibeid' as any), icon: <SvgVibeID />, type: 'utility' as const, requiresCwd: false, remote: undefined },
       // Multi-agent quadrant: independent tab type that renders as 2×2
       // peer panes. Each pane hosts a separate CLI; any pane can call
-      // coffee-cli MCP to observe/drive the others. No cwd required at
-      // the tab level — each pane picks its own CLI and cwd when the
-      // user selects from the pane's EmptyPanePicker.
+      // coffee-cli MCP to observe/drive the others.
+      //
+      // `requiresCwd: true` — same folder-picker flow as every other
+      // CLI card. The selected workspace is where we create the
+      // `.multi-agent/` meta directory and write thin-pointer
+      // CLAUDE.md / AGENTS.md / GEMINI.md files on tab mount.
       {
         key: 'multi-agent' as ToolType,
         label: 'Multi-Agent',
         icon: <span style={{ fontSize: '1.4em', lineHeight: 1 }}>⊞</span>,
         type: 'utility' as const,
-        requiresCwd: false,
+        requiresCwd: true,
         remote: undefined,
       },
     ];

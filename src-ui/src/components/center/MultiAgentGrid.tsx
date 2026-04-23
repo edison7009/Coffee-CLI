@@ -22,10 +22,11 @@
 //     tab.folderPath may be null. TierTerminal handles that by falling
 //     back to the user's home directory inside terminal::spawn.
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAppState, type TerminalSession, type ToolType } from '../../store/app-state';
 import { TierTerminal } from './TierTerminal';
 import { ErrorBoundary } from '../common/ErrorBoundary';
+import { commands } from '../../tauri';
 import './MultiAgentGrid.css';
 
 interface Props {
@@ -53,6 +54,42 @@ const PANE_COUNT = 4;
 export function MultiAgentGrid({ tab, hasBg, bgUrl, bgType }: Props) {
   const { state, dispatch } = useAppState();
   const [focusedPaneIdx, setFocusedPaneIdx] = useState<number | null>(null);
+
+  // ─── Auto-enable multi-agent mode on first mount with a workspace ──
+  // When this tab opens with `tool='multi-agent'` AND a valid
+  // folderPath, tell the Rust backend to install the thin-pointer
+  // CLAUDE.md / AGENTS.md / GEMINI.md in the workspace root AND the
+  // `.multi-agent/` meta directory, and merge the coffee-cli MCP
+  // endpoint into each detected primary CLI's config.
+  //
+  // This is fail-soft: if the backend call errors (permissions, MCP
+  // server not ready, etc.) we log a warning but keep the UI usable so
+  // the user can still launch pure PTY CLIs in the panes.
+  //
+  // Ref is keyed by workspace path so switching the tab's folder
+  // re-triggers the install against the new workspace; same-path
+  // re-renders don't re-run (idempotent on the backend anyway, but
+  // saves the round-trip).
+  const enabledForWorkspaceRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!tab.folderPath) return;
+    if (enabledForWorkspaceRef.current === tab.folderPath) return;
+    enabledForWorkspaceRef.current = tab.folderPath;
+
+    commands
+      .enableMultiAgentMode(tab.folderPath)
+      .then((r) => {
+        if (r.warnings?.length) {
+          console.warn('[multi-agent] enable warnings:', r.warnings);
+        }
+        console.log('[multi-agent] ready at', r.mcp_url,
+          '— touched', (r.touched_config_files?.length ?? 0)
+            + (r.touched_md_files?.length ?? 0), 'files');
+      })
+      .catch((e) => {
+        console.warn('[multi-agent] enable_multi_agent_mode failed (UI still usable):', e);
+      });
+  }, [tab.folderPath]);
 
   const panes = tab.multiAgent?.panes
     ?? (Array.from({ length: PANE_COUNT }, (_, i) => ({
