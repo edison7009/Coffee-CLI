@@ -36,6 +36,30 @@ const SvgGemini    = () => toolIcon('/icons/tools/gemini.svg');
 const SvgVibeID    = () => toolIcon('/icons/tools/vibeid.png', '1.4em');
 const SvgHermes    = () => toolIcon('/icons/tools/hermes.png', '1em', { borderRadius: 'var(--radius-xs)', objectFit: 'cover' });
 
+// Multi-Agent glyph — same lucide layout-grid path used by the titlebar's
+// "2×2 grid" layout toggle. Inline so it tints with the theme (currentColor)
+// and stays in lockstep with the titlebar. Rendered at 1em so it picks up
+// the card/tab font-size (Launchpad card ≈ 22px, Tab ≈ 13px) without
+// per-callsite tweaks.
+const SvgMultiAgent = () => (
+  <svg
+    width="1.2em"
+    height="1.2em"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="square"
+    strokeLinejoin="miter"
+    style={{ flexShrink: 0 }}
+  >
+    <rect x="3"  y="3"  width="7" height="7" />
+    <rect x="14" y="3"  width="7" height="7" />
+    <rect x="14" y="14" width="7" height="7" />
+    <rect x="3"  y="14" width="7" height="7" />
+  </svg>
+);
+
 // ── Platform-aware Terminal Icon & Label ─────────────────────────────────────
 
 const detectOS = (): 'win' | 'mac' | 'linux' => {
@@ -104,8 +128,8 @@ export function CenterPanel() {
         'agent:codex',
         'agent:opencode',
         'agent:gemini',
-        'agent:vibeid',
         'agent:multi-agent',
+        'agent:terminal',
       ];
       localStorage.setItem('coffee_pinned_items', JSON.stringify(defaults));
       return defaults;
@@ -267,8 +291,8 @@ export function CenterPanel() {
       // CLAUDE.md / AGENTS.md / GEMINI.md files on tab mount.
       {
         key: 'multi-agent' as ToolType,
-        label: 'Multi-Agent',
-        icon: <span style={{ fontSize: '1.4em', lineHeight: 1 }}>⊞</span>,
+        label: t('tool.multi_agent' as any),
+        icon: <SvgMultiAgent />,
         type: 'utility' as const,
         requiresCwd: true,
         remote: undefined,
@@ -679,6 +703,7 @@ export function CenterPanel() {
         return { icon: <TerminalIcon />, title, tooltip: undefined };
       }
       case 'terminal': return { icon: <TerminalIcon />, title: cwd ?? t('tool.terminal'), tooltip: pathTip };
+      case 'multi-agent': return { icon: <SvgMultiAgent />, title: cwd ?? t('tool.multi_agent' as any), tooltip: pathTip };
       case 'arcade': {
         const gameName = session.toolData || '';
         const meta = gameCatalog.find(m => m.file.toLowerCase() === gameName.toLowerCase());
@@ -741,7 +766,7 @@ export function CenterPanel() {
               {icon}
               <span className="tab-title" style={{ flex: '0 1 auto', minWidth: 0, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{title}</span>
               <div className="tab-actions">
-                {(['claude', 'qwen', 'hermes', 'opencode', 'codex', 'gemini', 'agent', 'installer', 'terminal', 'remote', 'vibeid', 'insights_prerun'] as const).includes(session.tool as 'claude' | 'qwen' | 'hermes' | 'opencode' | 'codex' | 'gemini' | 'agent' | 'installer' | 'terminal' | 'remote' | 'vibeid' | 'insights_prerun') && (
+                {(['claude', 'qwen', 'hermes', 'opencode', 'codex', 'gemini', 'agent', 'installer', 'terminal', 'remote', 'vibeid', 'insights_prerun', 'multi-agent'] as const).includes(session.tool as 'claude' | 'qwen' | 'hermes' | 'opencode' | 'codex' | 'gemini' | 'agent' | 'installer' | 'terminal' | 'remote' | 'vibeid' | 'insights_prerun' | 'multi-agent') && (
                   // Only Claude Code has a real hook-driven status machine.
                   // The other tools render the steady-green idle pulse —
                   // we explicitly chose not to guess their state from PTY

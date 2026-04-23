@@ -586,15 +586,18 @@ body {
 
 .titlebar-btn--layout {
     width: 36px;    /* matches VS Code's 36px activity-bar-like slot */
-    height: 26px;
+    height: 100%;   /* fill titlebar so the active background reads as
+                       one continuous surface with the panel below */
     margin: 0;
     padding: 0;
     color: var(--text-2);
     opacity: 0.6;
+    border-radius: 0;  /* sharp corners — industrial, no chip look */
 }
 
-/* Keep SVG crisp at the small render size. VS Code uses 16px glyphs
-   in the titlebar; we match that. */
+/* 16px glyphs at a 24×24 viewBox. `display: block` kills the 4px
+   baseline gap under inline SVGs that would otherwise misalign the
+   icon inside its 36×fullHeight button. */
 .titlebar-btn--layout svg {
     width: 16px;
     height: 16px;
@@ -606,11 +609,13 @@ body {
     background: var(--bg-hover);
 }
 
+/* Active = persistent hover background. The icon color stays the
+   default text-2 grey — no accent tint — because the background
+   alone carries the "this is on" signal, visually bleeding into the
+   panel surface below the titlebar for a connected, unified feel. */
 .titlebar-btn--layout.is-active {
-    /* The chosen mode / visible panel stays lit so users can tell the
-       current state at a glance without hovering to re-read icons. */
     opacity: 1;
-    color: var(--accent, #6cc275);
+    background: var(--bg-hover);
 }
 
 .titlebar-sep {
