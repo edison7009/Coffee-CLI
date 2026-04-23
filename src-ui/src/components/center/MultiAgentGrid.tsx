@@ -168,13 +168,27 @@ interface EmptyPanePickerProps {
   onSelect: (tool: ToolType) => void;
 }
 
+// First-run manual-setup hints, one per CLI. These cover the single
+// step Coffee-CLI can't do on the user's behalf — typically an auth
+// flow or a config flag we discovered empirically during smoke tests.
+// Shown muted underneath the CLI buttons so users see them BEFORE
+// hitting the wall, not after. Keep each line short and actionable.
+const MANUAL_SETUP_HINTS: Array<{ cli: string; hint: string }> = [
+  {
+    cli: 'Claude Code',
+    hint: '首次需在 ~/.claude.json 添加 "bypassPermissionsModeAccepted": true',
+  },
+  {
+    cli: 'Codex',
+    hint: '首次启动后按 Enter 完成 OpenAI 账户登录（ChatGPT 或 API key）',
+  },
+  {
+    cli: 'Gemini',
+    hint: '首次启动后在 REPL 内执行 /auth 完成 Google 账户授权',
+  },
+];
+
 function EmptyPanePicker({ paneIdx: _paneIdx, onSelect }: EmptyPanePickerProps) {
-  // Title and auto-approval notice removed per user request: three
-  // labeled buttons are self-explanatory — they ARE the "user manually
-  // picks" affordance — and any extra copy just adds visual noise to
-  // the paper-slice aesthetic. The skip-permissions rationale still
-  // lives in server.rs `in_multi_agent` and PROTOCOL.md for anyone
-  // digging behind the scenes.
   return (
     <div className="empty-pane-picker">
       <div className="empty-pane-options">
@@ -191,6 +205,15 @@ function EmptyPanePicker({ paneIdx: _paneIdx, onSelect }: EmptyPanePickerProps) 
           </button>
         ))}
       </div>
+      <ul className="empty-pane-manual-hints">
+        {MANUAL_SETUP_HINTS.map((h) => (
+          <li key={h.cli}>
+            <span className="empty-pane-manual-hints-cli">{h.cli}</span>
+            <span className="empty-pane-manual-hints-sep">：</span>
+            <span className="empty-pane-manual-hints-body">{h.hint}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
