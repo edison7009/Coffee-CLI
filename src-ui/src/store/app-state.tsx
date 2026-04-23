@@ -42,9 +42,11 @@ export type IconTheme =
   | 'outline' | 'material' | 'vscode-icons' | 'catppuccin-mocha'
   | 'devicon' | 'fluent' | 'symbols' | 'coffee';
 
-/// One pane inside a multi-agent Tab. Each pane maps to one portable-pty
-/// session via sessionId = `${tabId}::pane-${paneIdx}`; the Rust MCP
-/// server's list_panes returns the same ids.
+/// One pane inside a multi-agent Tab. `paneIdx` is 1-indexed (1..4)
+/// matching the user-visible badge and the MCP session id suffix —
+/// sessionId = `${tabId}::pane-${paneIdx}`. The Rust MCP server's
+/// list_panes returns the same ids, so when the user says "pane 2"
+/// a CLI's MCP call can target it verbatim.
 export interface MultiAgentPane {
   paneIdx: number;
   tool: ToolType;
@@ -251,7 +253,7 @@ function reducer(state: AppState, action: Action): AppState {
         terminals: state.terminals.map(t => {
           if (t.id !== action.tabId) return t;
           const existing = t.multiAgent?.panes
-            ?? ([0, 1, 2, 3].map(i => ({ paneIdx: i, tool: null as ToolType })) as MultiAgentPane[]);
+            ?? ([1, 2, 3, 4].map(i => ({ paneIdx: i, tool: null as ToolType })) as MultiAgentPane[]);
           const panes = existing.map(p =>
             p.paneIdx === action.paneIdx
               ? { ...p, tool: action.tool, toolData: action.toolData }

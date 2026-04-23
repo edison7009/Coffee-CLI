@@ -10,8 +10,10 @@
 //         opacity so the user's eye follows the cursor.
 //
 //   All four panes are peers — no primary/worker distinction. Every
-//   pane has its own PTY session `${tabId}::pane-${idx}`; the backend
-//   PaneStore / MCP tools treat them uniformly.
+//   pane has its own PTY session `${tabId}::pane-${idx}` where idx is
+//   1..4 matching the UI badge; the backend PaneStore / MCP tools see
+//   the same id, so when the user says "pane 2" the CLI's MCP call
+//   targets the exact same slot.
 //
 // Implementation notes:
 //   - focused pane detection uses onFocus (capture, because the event
@@ -91,9 +93,11 @@ export function MultiAgentGrid({ tab, hasBg, bgUrl, bgType }: Props) {
       });
   }, [tab.folderPath]);
 
+  // paneIdx is 1-indexed to match the user-visible badge numbering and
+  // the MCP session id (`::pane-1` .. `::pane-4`). See the header comment.
   const panes = tab.multiAgent?.panes
     ?? (Array.from({ length: PANE_COUNT }, (_, i) => ({
-         paneIdx: i,
+         paneIdx: i + 1,
          tool: null as ToolType,
        })) as Array<{ paneIdx: number; tool: ToolType; toolData?: string }>);
 
@@ -122,8 +126,9 @@ export function MultiAgentGrid({ tab, hasBg, bgUrl, bgType }: Props) {
             onMouseDownCapture={() => setFocusedPaneIdx(pane.paneIdx)}
             onFocusCapture={() => setFocusedPaneIdx(pane.paneIdx)}
           >
-            {/* Theme-tinted pane number badge; 1-indexed per user request. */}
-            <div className="pane-number-badge">{pane.paneIdx + 1}</div>
+            {/* Theme-tinted pane number badge. paneIdx is already 1-indexed
+                (matches the MCP session id suffix), so render it directly. */}
+            <div className="pane-number-badge">{pane.paneIdx}</div>
 
             <div className="multi-agent-pane-body">
               {isEmpty ? (

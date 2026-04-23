@@ -64,6 +64,15 @@ You are running inside Coffee-CLI, a desktop container that lets multiple
 terminal-based coding agents (Claude Code, Codex, Gemini CLI) work
 side-by-side as visible peer panes.
 
+## Pane numbering
+
+The UI shows 4 panes with badges numbered **1, 2, 3, 4** in the top-right
+of each pane. The MCP session ids carry the same number — id ends in
+`::pane-1`, `::pane-2`, `::pane-3`, or `::pane-4`. When the user says
+"pane 2" or "2号窗口", call `send_to_pane` with the id whose suffix is
+`::pane-2`. `list_panes()` returns the full ids — never guess; always
+list first, then target by exact id.
+
 You have access to 3 MCP tools via the `coffee-cli` MCP server that let
 you observe and instruct the OTHER panes. **These tools do NOT replace
 your own internal subagent SDK** — prefer your native subagent when the

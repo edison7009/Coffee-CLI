@@ -132,7 +132,7 @@
 ```
 输入: 无
 输出: [{
-  id: string,           // "pane-1" / "pane-2" ...
+  id: string,           // "<tab_id>::pane-1" .. "::pane-4" (1-indexed, matches UI badge)
   title: string,        // 用户给的标签
   cli: string,          // "claude" / "codex" / "gemini" / ...
   state: string,        // "idle" | "busy" | "terminated"
@@ -392,7 +392,7 @@ Coffee-CLI 现在的 Tab 系统：每个 Tab = 一个独立终端实例。
 
 **实现层面**：
 - MCP server 暴露的 `list_panes()` 返回**当前 Tab 的 pane 列表**（用 tab_id 隔离）
-- send_to_pane 的 id 是 `tab-${tabId}-pane-${paneIdx}` 全局唯一
+- send_to_pane 的 id 是 `${tabId}::pane-${paneIdx}` 全局唯一，paneIdx 为 1..4（与 UI 角标数字一致）
 
 ---
 
@@ -671,8 +671,9 @@ MCP server 本身是独立 actor，通过 per-pane mpsc 和 pane actor 通信。
 
 #### 四宫格内每格的初始状态
 
-- **pane-0（当前 Tab 正在跑的那个 CLI）**：保留原样，自动标记为 `primary pane`
-- **pane-1 / pane-2 / pane-3**：**空 pane**，中央显示一个下拉 + 启动按钮
+- **pane-1 / pane-2 / pane-3 / pane-4**：全部初始为**空 pane**，中央显示"选择 CLI"下拉 + 启动按钮
+  - 编号 1..4 与 UI 角标和 MCP `::pane-N` id 一致（"底层公共认知从 1 开始"）
+  - v1.0 四个 pane 完全对等，无 primary/worker 区分；任何装了 MCP 注入的 CLI 都能互相调度
 
 #### 空 pane 的启动交互
 

@@ -422,7 +422,8 @@ fn epoch_seconds() -> u64 {
 #[derive(Debug, Deserialize, JsonSchema)]
 #[schemars(crate = "rmcp::schemars")]
 pub struct SendToPaneArgs {
-    /// Target pane id (e.g. "tab-0-pane-1"). Must not be the caller's own pane.
+    /// Target pane id (e.g. "<tab_id>::pane-2"; pane numbers are 1..4
+    /// matching the UI badge). Must not be the caller's own pane.
     pub id: String,
     /// Text to inject into the target pane's stdin.
     pub text: String,
