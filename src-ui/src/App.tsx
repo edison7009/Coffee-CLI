@@ -4,7 +4,6 @@ import { useEffect } from 'react';
 import { useAppState, useAppDispatch } from './store/app-state';
 import { retryInvoke } from './tauri';
 import { subscribeAgentStatus } from './lib/agent-status-bus';
-import { prefetchHistory } from './lib/history-cache';
 import { TitleBar } from './components/common/TitleBar';
 import { Explorer } from './components/left/Explorer';
 import { CenterPanel } from './components/center/CenterPanel';
@@ -48,13 +47,11 @@ export function App() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Startup: prefetch session history in the background so the History tab
-  // has data ready on first open. The Rust command runs on a blocking thread
-  // pool (spawn_blocking), so this doesn't stall other IPC calls.
-  useEffect(() => {
-    const timer = setTimeout(prefetchHistory, 300);
-    return () => clearTimeout(timer);
-  }, []);
+  // Previously prefetched session history at startup — but that caused a
+  // noticeable stutter on cold launch (JSON parse + state fan-out) even
+  // though the Rust call itself ran on a blocking thread pool. Removed.
+  // HistoryBoard's own useEffect now fetches lazily when the user first
+  // opens the History tab, which is the only place the data is consumed.
 
   // Suppress the default browser right-click menu in production. Desktop
   // apps should not expose "Back / Reload / Save As / Print / Inspect" to
@@ -82,24 +79,30 @@ export function App() {
       {/* Custom titlebar — drag region + minimize / maximize / close */}
       <TitleBar />
 
-      {/* 3-panel workspace. Modifier classes reflect the user's layout
-          toggles from the titlebar — CSS hides the flagged side via
-          display:none so the center reclaims full width. */}
+      {/* 3-panel workspace. The titlebar toggle buttons write to
+          leftPanelHidden / rightPanelHidden. We now conditionally UNMOUNT
+          the hidden panel instead of CSS-hiding it, so users who keep
+          a side collapsed pay ZERO cost for that side: no IPC, no scan,
+          no event subscriptions, no React reconciliation. When the user
+          shows the panel, it mounts fresh (Explorer re-scans from the
+          active tab's cwd, TaskBoard reloads tasks — both are cheap). */}
       <div className={`app-layout${state.leftPanelHidden ? ' app-layout--left-hidden' : ''}${state.rightPanelHidden ? ' app-layout--right-hidden' : ''}`}>
-        {/* Left: File Explorer (contains brand + controls in its header) */}
-        <aside className="panel panel-left">
-          <Explorer />
-        </aside>
+        {!state.leftPanelHidden && (
+          <aside className="panel panel-left">
+            <Explorer />
+          </aside>
+        )}
 
-        {/* Center: Tab content area */}
+        {/* Center: always mounted */}
         <main className="panel panel-center">
           <CenterPanel />
         </main>
 
-        {/* Right: Task Board + Tool Controls */}
-        <aside className="panel panel-right">
-          <RightPanel />
-        </aside>
+        {!state.rightPanelHidden && (
+          <aside className="panel panel-right">
+            <RightPanel />
+          </aside>
+        )}
       </div>
 
       {/* App-level overlay — the floating compose window. Rendered here so
