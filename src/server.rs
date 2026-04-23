@@ -964,40 +964,6 @@ fn tier_terminal_start_blocking(
         locale,
     ).map_err(|e| format!("Failed to spawn PTY: {}", e))?;
 
-    // Claude Code's `--dangerously-skip-permissions` still shows a
-    // per-session "Bypass Permissions mode" confirmation prompt
-    // ("1. No, exit / 2. Yes, I accept") that the user must answer with
-    // "2" before the REPL comes up. That's fatal to hands-free multi-
-    // agent orchestration — the controller pane's send_to_pane would
-    // just time out against a target stuck on a Y/N screen.
-    //
-    // Flipping the `bypassPermissionsModeAccepted` config field alone
-    // isn't enough (tested: field was already true, prompt still shown).
-    // So we auto-type "2" + CR into the pane's stdin one second after
-    // spawn — long enough for Claude to finish drawing its first frame
-    // and be ready to accept input. If the prompt happens to NOT appear
-    // (future Claude version, different config), "2<CR>" becomes a
-    // stray character at the REPL prompt, which Claude will happily
-    // ignore / echo. Harmless in the no-prompt case, load-bearing in
-    // the prompt case.
-    let in_multi_agent = session_id.contains("::pane-");
-    if in_multi_agent && tool_name.as_deref() == Some("claude") {
-        let writer_arc = {
-            let map = terminal_session.lock().unwrap();
-            map.get(&session_id).map(|s| s.writer_lock.clone())
-        };
-        if let Some(writer_arc) = writer_arc {
-            std::thread::spawn(move || {
-                std::thread::sleep(std::time::Duration::from_millis(1000));
-                if let Ok(mut w) = writer_arc.lock() {
-                    use std::io::Write;
-                    let _ = w.write_all(b"2\r");
-                    let _ = w.flush();
-                }
-            });
-        }
-    }
-
     // Emit the initial CWD to the frontend so the left panel can map immediately.
     // On Windows, cmd.exe does not emit OSC 7, and full-screen agents enter alt-screen
     // before any shell prompt appears. This one-time emit bridges the gap.
