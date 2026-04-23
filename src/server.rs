@@ -18,6 +18,9 @@ pub struct AppState {
     /// workspace folder is open; None otherwise. Swapping this Mutex'd
     /// Option replaces the watcher atomically on folder switch.
     pub fs_watcher: Mutex<Option<crate::fs_watcher::FsWatcher>>,
+    /// Multi-agent MCP server endpoint (set once the server is bound).
+    /// None means setup is still in flight or the MCP server failed to start.
+    pub mcp_endpoint: Mutex<Option<crate::mcp_server::McpEndpoint>>,
 }
 
 #[derive(Serialize)]
@@ -767,9 +770,28 @@ fn tier_terminal_start_blocking(
     // Each tab is independent: new tabs get home dir, existing tabs keep their own.
     let dir = cwd.map(std::path::PathBuf::from).unwrap_or_default();
 
+    // ── Multi-agent auto-approval ────────────────────────────────────────
+    // Pane session ids look like `${tabId}::pane-N`. When a CLI spawns in
+    // a multi-agent pane it is being orchestrated by *another* CLI via
+    // send_to_pane; a human isn't going to be there to click "Yes" on
+    // every tool-use confirmation. We therefore boot each primary CLI
+    // with its "skip permissions" flag so the full multi-agent workflow
+    // runs hands-free.
+    //
+    // This is a deliberate trust tradeoff: entering multi-agent mode
+    // delegates authority to the controlling pane's LLM. Users who want
+    // per-tool supervision should stay in single-terminal mode.
+    let in_multi_agent = session_id.contains("::pane-");
+
     // Map the requested tool to an actual CLI command.
     let (cmd, args): (String, Vec<String>) = match tool.as_deref() {
-        Some("claude")   => ("claude".to_string(), vec![]),
+        Some("claude")   => {
+            let mut a = vec![];
+            if in_multi_agent {
+                a.push("--dangerously-skip-permissions".to_string());
+            }
+            ("claude".to_string(), a)
+        },
         // VibeID is a skill-launcher: spawn plain `claude` binary with `/vibeid`
         // as the initial positional prompt argument. Claude Code's REPL parses
         // leading slash commands as skill invocations, so the `vibeid` skill
@@ -785,8 +807,25 @@ fn tier_terminal_start_blocking(
         Some("qwen")     => ("qwen".to_string(),   vec![]),
         Some("hermes")   => ("hermes".to_string(), vec![]),
         Some("opencode") => ("opencode".to_string(), vec![]),
-        Some("codex")    => ("codex".to_string(),  vec![]),
-        Some("gemini")   => ("gemini".to_string(), vec![]),
+        Some("codex")    => {
+            let mut a = vec![];
+            if in_multi_agent {
+                // --full-auto: read/write workspace + run commands without prompting.
+                // Kept conservative vs. --dangerously-bypass-approvals-and-sandbox
+                // so destructive ops outside the workspace still get stopped.
+                a.push("--full-auto".to_string());
+            }
+            ("codex".to_string(), a)
+        },
+        Some("gemini")   => {
+            let mut a = vec![];
+            if in_multi_agent {
+                // --yolo: auto-accept all tool-use prompts (Gemini CLI's
+                // equivalent of Claude's --dangerously-skip-permissions).
+                a.push("--yolo".to_string());
+            }
+            ("gemini".to_string(), a)
+        },
         Some("agent") => {
             // Generic remote-catalog agent: binary + args are passed by the
             // frontend via tool_data JSON (same pattern as "remote" uses for
@@ -910,10 +949,44 @@ fn tier_terminal_start_blocking(
         locale.clone().unwrap_or_else(|| "en".to_string()),
         cols,
         rows,
-        tool_name,
+        tool_name.clone(),
         theme_mode,
         locale,
     ).map_err(|e| format!("Failed to spawn PTY: {}", e))?;
+
+    // Claude Code's `--dangerously-skip-permissions` still shows a
+    // per-session "Bypass Permissions mode" confirmation prompt
+    // ("1. No, exit / 2. Yes, I accept") that the user must answer with
+    // "2" before the REPL comes up. That's fatal to hands-free multi-
+    // agent orchestration — the controller pane's send_to_pane would
+    // just time out against a target stuck on a Y/N screen.
+    //
+    // Flipping the `bypassPermissionsModeAccepted` config field alone
+    // isn't enough (tested: field was already true, prompt still shown).
+    // So we auto-type "2" + CR into the pane's stdin one second after
+    // spawn — long enough for Claude to finish drawing its first frame
+    // and be ready to accept input. If the prompt happens to NOT appear
+    // (future Claude version, different config), "2<CR>" becomes a
+    // stray character at the REPL prompt, which Claude will happily
+    // ignore / echo. Harmless in the no-prompt case, load-bearing in
+    // the prompt case.
+    let in_multi_agent = session_id.contains("::pane-");
+    if in_multi_agent && tool_name.as_deref() == Some("claude") {
+        let writer_arc = {
+            let map = terminal_session.lock().unwrap();
+            map.get(&session_id).map(|s| s.writer_lock.clone())
+        };
+        if let Some(writer_arc) = writer_arc {
+            std::thread::spawn(move || {
+                std::thread::sleep(std::time::Duration::from_millis(1000));
+                if let Ok(mut w) = writer_arc.lock() {
+                    use std::io::Write;
+                    let _ = w.write_all(b"2\r");
+                    let _ = w.flush();
+                }
+            });
+        }
+    }
 
     // Emit the initial CWD to the frontend so the left panel can map immediately.
     // On Windows, cmd.exe does not emit OSC 7, and full-screen agents enter alt-screen
@@ -1829,6 +1902,124 @@ fn open_url(url: String) -> Result<(), String> {
     Ok(())
 }
 
+#[derive(Serialize)]
+pub struct MultiAgentModeReport {
+    pub ok: bool,
+    pub mcp_url: Option<String>,
+    pub touched_config_files: Vec<String>,
+    pub touched_md_files: Vec<String>,
+    pub warnings: Vec<String>,
+}
+
+/// Enable multi-agent mode for the given workspace:
+/// - Writes CLAUDE.md / AGENTS.md / GEMINI.md protocol blocks to workspace root.
+/// - Injects the Coffee-CLI MCP endpoint into every detected primary CLI config.
+#[tauri::command]
+fn enable_multi_agent_mode(
+    workspace: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<MultiAgentModeReport, String> {
+    let ws = PathBuf::from(&workspace);
+    if !ws.is_dir() {
+        return Err(format!("workspace is not a directory: {}", workspace));
+    }
+
+    let mut warnings = Vec::new();
+    let endpoint = state
+        .mcp_endpoint
+        .lock()
+        .map_err(|_| "mcp_endpoint mutex poisoned")?
+        .clone();
+
+    let endpoint = match endpoint {
+        Some(ep) => ep,
+        None => {
+            return Err("MCP server not ready yet — try again in a second".into());
+        }
+    };
+
+    // Serialize the endpoint so users (and debug tooling) can read
+    // .multi-agent/endpoint.json and see where the current MCP server
+    // is listening. Regenerated on every enable, so port changes between
+    // launches don't leave stale info.
+    let endpoint_json = serde_json::to_string_pretty(&endpoint).ok();
+
+    let touched_md_files = match crate::multi_agent_protocol::install(
+        &ws,
+        endpoint_json.as_deref(),
+    ) {
+        Ok(paths) => paths
+            .into_iter()
+            .map(|p| p.display().to_string())
+            .collect::<Vec<_>>(),
+        Err(e) => {
+            warnings.push(format!("protocol .md install: {}", e));
+            Vec::new()
+        }
+    };
+
+    let touched_config_files =
+        match crate::mcp_injector::install_all(&endpoint, Some(&ws)) {
+            Ok(paths) => paths
+                .into_iter()
+                .map(|p| p.display().to_string())
+                .collect::<Vec<_>>(),
+            Err(e) => {
+                warnings.push(format!("mcp injector: {}", e));
+                Vec::new()
+            }
+        };
+
+    Ok(MultiAgentModeReport {
+        ok: warnings.is_empty(),
+        mcp_url: Some(endpoint.url),
+        touched_config_files,
+        touched_md_files,
+        warnings,
+    })
+}
+
+/// Disable multi-agent mode: remove our MCP entry from every detected
+/// primary CLI config and strip our protocol block from the three .md
+/// files. Leaves the user's own config / content intact.
+#[tauri::command]
+fn disable_multi_agent_mode(
+    workspace: String,
+) -> Result<MultiAgentModeReport, String> {
+    let ws = PathBuf::from(&workspace);
+    let ws_opt = if ws.is_dir() { Some(ws.as_path()) } else { None };
+
+    let mut warnings = Vec::new();
+
+    let touched_config_files = match crate::mcp_injector::uninstall_all(ws_opt) {
+        Ok(paths) => paths.into_iter().map(|p| p.display().to_string()).collect(),
+        Err(e) => {
+            warnings.push(format!("mcp uninstall: {}", e));
+            Vec::new()
+        }
+    };
+
+    let touched_md_files = if let Some(w) = ws_opt {
+        match crate::multi_agent_protocol::uninstall(w) {
+            Ok(paths) => paths.into_iter().map(|p| p.display().to_string()).collect(),
+            Err(e) => {
+                warnings.push(format!("protocol uninstall: {}", e));
+                Vec::new()
+            }
+        }
+    } else {
+        Vec::new()
+    };
+
+    Ok(MultiAgentModeReport {
+        ok: warnings.is_empty(),
+        mcp_url: None,
+        touched_config_files,
+        touched_md_files,
+        warnings,
+    })
+}
+
 pub fn start_ui(project_dir: PathBuf) -> anyhow::Result<()> {
     // Create shared session BEFORE the builder so we can clone it for the exit handler
     let terminal_session = terminal::SharedSession::default();
@@ -1842,6 +2033,7 @@ pub fn start_ui(project_dir: PathBuf) -> anyhow::Result<()> {
             terminal_session,
             hook_port: std::sync::atomic::AtomicU16::new(0),
             fs_watcher: Mutex::new(None),
+            mcp_endpoint: Mutex::new(None),
         })
         .invoke_handler(tauri::generate_handler![
             scan_project,
@@ -1885,6 +2077,8 @@ pub fn start_ui(project_dir: PathBuf) -> anyhow::Result<()> {
             write_skill_file,
             check_vibeid_report_exists,
             check_vibeid_report_mtime,
+            enable_multi_agent_mode,
+            disable_multi_agent_mode,
         ])
         .setup(|app| {
             // Install Claude/Qwen hook scripts + settings patches.
@@ -1903,6 +2097,32 @@ pub fn start_ui(project_dir: PathBuf) -> anyhow::Result<()> {
                     eprintln!("[hook-server] start failed: {}", e);
                 }
             }
+
+            // Start multi-agent MCP server on a dynamic localhost port.
+            // v1.0 day 3-4: PaneStore is a live bridge to terminal::SharedSession,
+            // so the three MCP tools (list_panes / send_to_pane / read_pane)
+            // operate on the same portable-pty sessions the UI sees.
+            // See docs/MULTI-AGENT-ARCHITECTURE.md for the full blueprint.
+            let shared_session = app.state::<AppState>().terminal_session.clone();
+            let app_handle_for_mcp = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                let panes = std::sync::Arc::new(
+                    crate::mcp_server::PaneStore::new(shared_session),
+                );
+                match crate::mcp_server::spawn(panes).await {
+                    Ok(ep) => {
+                        log::info!("[mcp] multi-agent server up at {}", ep.url);
+                        // Stash endpoint in AppState so enable_multi_agent_mode
+                        // can inject it into primary CLI configs.
+                        if let Ok(mut slot) =
+                            app_handle_for_mcp.state::<AppState>().mcp_endpoint.lock()
+                        {
+                            *slot = Some(ep);
+                        }
+                    }
+                    Err(e) => log::error!("[mcp] multi-agent server failed: {}", e),
+                }
+            });
 
             // Force square corners + no shadow on the borderless window.
             // Windows 11's DWM rounds borderless windows by default and adds

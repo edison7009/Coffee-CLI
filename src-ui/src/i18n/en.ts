@@ -36,6 +36,7 @@ export const en = {
   'tool.installer': 'Installer',
   'tool.vibeid': 'Personality Test',
   'tool.insights_prerun': 'Generating Usage Report...',
+  'tool.multi_agent': 'Multi-Agent',
   'vibeid.need_insights_confirm': 'Personality Test needs your Claude Code usage report first.\n\nThe app will auto-run /insights now (takes about 1-2 minutes), then run the VibeID test automatically.\n\nContinue?',
   'vibeid.insights_timeout': 'Report generation took too long. Please try again, or run /insights manually in a Claude Code tab.',
 

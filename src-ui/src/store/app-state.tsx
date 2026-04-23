@@ -6,7 +6,7 @@ import type { ScanResult } from '../tauri';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type ToolType = 'claude' | 'qwen' | 'installer' | 'hermes' | 'opencode' | 'codex' | 'gemini' | 'agent' | 'arcade' | 'terminal' | 'remote' | 'history' | 'vibeid' | 'insights_prerun' | null;
+export type ToolType = 'claude' | 'qwen' | 'installer' | 'hermes' | 'opencode' | 'codex' | 'gemini' | 'agent' | 'arcade' | 'terminal' | 'remote' | 'history' | 'vibeid' | 'insights_prerun' | 'multi-agent' | null;
 
 /**
  * Tab status shown as an animated 9-dot glyph. Maps to CSS classes
@@ -42,6 +42,26 @@ export type IconTheme =
   | 'outline' | 'material' | 'vscode-icons' | 'catppuccin-mocha'
   | 'devicon' | 'fluent' | 'symbols' | 'coffee';
 
+/// One pane inside a multi-agent Tab. `paneIdx` is 1-indexed (1..4)
+/// matching the user-visible badge and the MCP session id suffix —
+/// sessionId = `${tabId}::pane-${paneIdx}`. The Rust MCP server's
+/// list_panes returns the same ids, so when the user says "pane 2"
+/// a CLI's MCP call can target it verbatim.
+export interface MultiAgentPane {
+  paneIdx: number;
+  tool: ToolType;
+  toolData?: string;
+  agentStatus?: AgentStatus;
+}
+
+/// State attached to a Tab with `tool === 'multi-agent'`. All four panes
+/// are peers — there is no primary/worker distinction — so this type is
+/// deliberately minimal. Each pane's CLI and toolData live on
+/// `MultiAgentPane`; focus tracking happens inside `<MultiAgentGrid/>`.
+export interface MultiAgentState {
+  panes: MultiAgentPane[];
+}
+
 export interface TerminalSession {
   id: string;
   tool: ToolType;
@@ -52,6 +72,9 @@ export interface TerminalSession {
   isHidden?: boolean;
   agentStatus?: AgentStatus;
   gambitDraft?: string;    // Unsent textarea content, preserved across tab switches
+  /// When present, this Tab renders as a 2×2+ pane grid instead of a
+  /// single terminal. See docs/MULTI-AGENT-ARCHITECTURE.md §5.7 and §7.
+  multiAgent?: MultiAgentState;
 }
 
 // ─── State Shape ─────────────────────────────────────────────────────────────
@@ -80,6 +103,16 @@ export interface AppState {
   // panel doesn't appear/disappear when switching tabs; only the draft is
   // per-tab (stored on TerminalSession.gambitDraft).
   gambitOpen: boolean;
+
+  // IDE-style layout toggles driven from titlebar controls.
+  // Default both panels visible — matches first-time user expectation.
+  leftPanelHidden: boolean;
+  rightPanelHidden: boolean;
+
+  // Multi-agent pane arrangement. 'grid' = 2×2 quadrant (default),
+  // 'columns' = 1×4 vertical strip. Only takes effect inside a tab
+  // whose tool is 'multi-agent'; other tabs ignore it.
+  multiAgentLayout: 'grid' | 'columns';
 }
 
 // ─── Actions ─────────────────────────────────────────────────────────────────
@@ -106,7 +139,11 @@ type Action =
   | { type: 'SET_WALLPAPER_DIM'; dim: number }
   | { type: 'SET_TERM_SCHEME'; scheme: string }
   | { type: 'TOGGLE_GAMBIT' }
-  | { type: 'SET_GAMBIT_DRAFT'; id: string; draft: string };
+  | { type: 'SET_GAMBIT_DRAFT'; id: string; draft: string }
+  | { type: 'SET_PANE_TOOL'; tabId: string; paneIdx: number; tool: ToolType; toolData?: string }
+  | { type: 'TOGGLE_LEFT_PANEL' }
+  | { type: 'TOGGLE_RIGHT_PANEL' }
+  | { type: 'SET_MULTI_AGENT_LAYOUT'; layout: 'grid' | 'columns' };
 
 // ─── Reducer ─────────────────────────────────────────────────────────────────
 
@@ -220,6 +257,39 @@ function reducer(state: AppState, action: Action): AppState {
         ...state,
         terminals: state.terminals.map(t => t.id === action.id ? { ...t, gambitDraft: action.draft } : t)
       };
+    case 'SET_PANE_TOOL': {
+      // Seed a MultiAgentState lazily on the first pane selection so
+      // quadrant tabs don't need a separate enable-step — point of entry
+      // is the user clicking a CLI button in any empty pane slot.
+      return {
+        ...state,
+        terminals: state.terminals.map(t => {
+          if (t.id !== action.tabId) return t;
+          const existing = t.multiAgent?.panes
+            ?? ([1, 2, 3, 4].map(i => ({ paneIdx: i, tool: null as ToolType })) as MultiAgentPane[]);
+          const panes = existing.map(p =>
+            p.paneIdx === action.paneIdx
+              ? { ...p, tool: action.tool, toolData: action.toolData }
+              : p
+          );
+          return { ...t, multiAgent: { panes } };
+        }),
+      };
+    }
+    case 'TOGGLE_LEFT_PANEL': {
+      const next = !state.leftPanelHidden;
+      try { localStorage.setItem('cc-left-hidden', next ? '1' : '0'); } catch {}
+      return { ...state, leftPanelHidden: next };
+    }
+    case 'TOGGLE_RIGHT_PANEL': {
+      const next = !state.rightPanelHidden;
+      try { localStorage.setItem('cc-right-hidden', next ? '1' : '0'); } catch {}
+      return { ...state, rightPanelHidden: next };
+    }
+    case 'SET_MULTI_AGENT_LAYOUT': {
+      try { localStorage.setItem('cc-ma-layout', action.layout); } catch {}
+      return { ...state, multiAgentLayout: action.layout };
+    }
     default:
       return state;
   }
@@ -283,6 +353,16 @@ function getInitialState(): AppState {
 
   const defaultTerminalId = crypto.randomUUID();
 
+  let leftPanelHidden = false;
+  let rightPanelHidden = false;
+  let multiAgentLayout: 'grid' | 'columns' = 'grid';
+  try {
+    leftPanelHidden = localStorage.getItem('cc-left-hidden') === '1';
+    rightPanelHidden = localStorage.getItem('cc-right-hidden') === '1';
+    const savedLayout = localStorage.getItem('cc-ma-layout');
+    if (savedLayout === 'columns' || savedLayout === 'grid') multiAgentLayout = savedLayout;
+  } catch {}
+
   return {
     currentTheme: theme,
     currentShape: shape,
@@ -295,6 +375,9 @@ function getInitialState(): AppState {
     terminals: [{ id: defaultTerminalId, tool: null, folderPath, scanData: null }],
     activeTerminalId: defaultTerminalId,
     gambitOpen: false,
+    leftPanelHidden,
+    rightPanelHidden,
+    multiAgentLayout,
   };
 }
 

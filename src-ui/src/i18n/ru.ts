@@ -35,6 +35,7 @@ export const ru = {
   'tool.installer': 'Установщик',
   'tool.vibeid': 'Тест личности',
   'tool.insights_prerun': 'Генерация отчёта об использовании...',
+  'tool.multi_agent': 'Мульти-агент',
   'vibeid.need_insights_confirm': 'Тест личности сначала требует ваш отчёт об использовании Claude Code.\n\n/insights будет запущен автоматически (около 1-2 минут), затем тест начнётся сам.\n\nПродолжить?',
   'vibeid.insights_timeout': 'Генерация отчёта заняла слишком много времени. Попробуйте позже или запустите /insights вручную во вкладке Claude Code.',
 

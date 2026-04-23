@@ -3,6 +3,7 @@ import { focusTerminal } from '../../lib/focus-registry';
 import { TierTerminal } from './TierTerminal';
 import { DosPlayer } from './DosPlayer';
 import { ChatReader } from './ChatReader';
+import { MultiAgentGrid } from './MultiAgentGrid';
 import { ErrorBoundary } from '../common/ErrorBoundary';
 import { useAppState, type ToolType } from '../../store/app-state';
 
@@ -34,6 +35,30 @@ const SvgCodex     = () => toolIcon('/icons/tools/codex.svg');
 const SvgGemini    = () => toolIcon('/icons/tools/gemini.svg');
 const SvgVibeID    = () => toolIcon('/icons/tools/vibeid.png', '1.4em');
 const SvgHermes    = () => toolIcon('/icons/tools/hermes.png', '1em', { borderRadius: 'var(--radius-xs)', objectFit: 'cover' });
+
+// Multi-Agent glyph — same lucide layout-grid path used by the titlebar's
+// "2×2 grid" layout toggle. Inline so it tints with the theme (currentColor)
+// and stays in lockstep with the titlebar. Rendered at 1em so it picks up
+// the card/tab font-size (Launchpad card ≈ 22px, Tab ≈ 13px) without
+// per-callsite tweaks.
+const SvgMultiAgent = () => (
+  <svg
+    width="1.2em"
+    height="1.2em"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="square"
+    strokeLinejoin="miter"
+    style={{ flexShrink: 0 }}
+  >
+    <rect x="3"  y="3"  width="7" height="7" />
+    <rect x="14" y="3"  width="7" height="7" />
+    <rect x="14" y="14" width="7" height="7" />
+    <rect x="3"  y="14" width="7" height="7" />
+  </svg>
+);
 
 // ── Platform-aware Terminal Icon & Label ─────────────────────────────────────
 
@@ -83,7 +108,18 @@ export function CenterPanel() {
   const [pinnedItems, setPinnedItems] = useState<string[]>(() => {
     try {
       const stored = localStorage.getItem('coffee_pinned_items');
-      if (stored !== null) return JSON.parse(stored);
+      if (stored !== null) {
+        const arr = JSON.parse(stored);
+        // One-shot migration: existing users who launched before the
+        // multi-agent quadrant shipped won't have it pinned. Inject it
+        // once so they discover the feature. They can unpin it via the
+        // library if they don't want it.
+        if (Array.isArray(arr) && !arr.includes('agent:multi-agent')) {
+          arr.push('agent:multi-agent');
+          try { localStorage.setItem('coffee_pinned_items', JSON.stringify(arr)); } catch {}
+        }
+        return Array.isArray(arr) ? arr : [];
+      }
       // First launch: pre-pin 6 useful defaults so desktop shows a full MAX_PINS
       // grid out of the box (4 AI CLIs covering major providers + 2 utilities).
       // Returning users' pin choices are respected (stored !== null path above).
@@ -92,8 +128,8 @@ export function CenterPanel() {
         'agent:codex',
         'agent:opencode',
         'agent:gemini',
-        'agent:installer',
-        'agent:vibeid',
+        'agent:multi-agent',
+        'agent:terminal',
       ];
       localStorage.setItem('coffee_pinned_items', JSON.stringify(defaults));
       return defaults;
@@ -245,6 +281,22 @@ export function CenterPanel() {
       // in a tab, then auto-write `/vibeid\r` to trigger the remote vibeid skill.
       // No cwd required (runs against ~/.claude/usage-data/report.html globally).
       { key: 'vibeid' as ToolType, label: t('tool.vibeid' as any), icon: <SvgVibeID />, type: 'utility' as const, requiresCwd: false, remote: undefined },
+      // Multi-agent quadrant: independent tab type that renders as 2×2
+      // peer panes. Each pane hosts a separate CLI; any pane can call
+      // coffee-cli MCP to observe/drive the others.
+      //
+      // `requiresCwd: true` — same folder-picker flow as every other
+      // CLI card. The selected workspace is where we create the
+      // `.multi-agent/` meta directory and write thin-pointer
+      // CLAUDE.md / AGENTS.md / GEMINI.md files on tab mount.
+      {
+        key: 'multi-agent' as ToolType,
+        label: t('tool.multi_agent' as any),
+        icon: <SvgMultiAgent />,
+        type: 'utility' as const,
+        requiresCwd: true,
+        remote: undefined,
+      },
     ];
 
     return [...aiCliEntries, ...utilities];
@@ -324,8 +376,15 @@ export function CenterPanel() {
     const enforce = () => {
       setTimeout(() => {
         const el = document.activeElement;
-        if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') && !el.classList.contains('xterm-helper-textarea')) {
-          return; // user is typing in a real input, leave them alone
+        // Any focused INPUT/TEXTAREA is the real target, INCLUDING xterm's
+        // .xterm-helper-textarea. Earlier this branch excluded the xterm
+        // helper to "steal focus back to the active terminal", but that
+        // broke the multi-agent quadrant — every pane has its own xterm
+        // helper, and stealing the focus always landed on the wrong one.
+        // The enforcer now only pulls focus back when it wanders to
+        // genuinely non-input DOM (<div>, <body>, a clicked tab bar).
+        if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
+          return;
         }
         const id = activeIdRef.current;
         if (id) focusTerminal(id);
@@ -644,6 +703,7 @@ export function CenterPanel() {
         return { icon: <TerminalIcon />, title, tooltip: undefined };
       }
       case 'terminal': return { icon: <TerminalIcon />, title: cwd ?? t('tool.terminal'), tooltip: pathTip };
+      case 'multi-agent': return { icon: <SvgMultiAgent />, title: cwd ?? t('tool.multi_agent' as any), tooltip: pathTip };
       case 'arcade': {
         const gameName = session.toolData || '';
         const meta = gameCatalog.find(m => m.file.toLowerCase() === gameName.toLowerCase());
@@ -706,7 +766,7 @@ export function CenterPanel() {
               {icon}
               <span className="tab-title" style={{ flex: '0 1 auto', minWidth: 0, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{title}</span>
               <div className="tab-actions">
-                {(['claude', 'qwen', 'hermes', 'opencode', 'codex', 'gemini', 'agent', 'installer', 'terminal', 'remote', 'vibeid', 'insights_prerun'] as const).includes(session.tool as 'claude' | 'qwen' | 'hermes' | 'opencode' | 'codex' | 'gemini' | 'agent' | 'installer' | 'terminal' | 'remote' | 'vibeid' | 'insights_prerun') && (
+                {(['claude', 'qwen', 'hermes', 'opencode', 'codex', 'gemini', 'agent', 'installer', 'terminal', 'remote', 'vibeid', 'insights_prerun', 'multi-agent'] as const).includes(session.tool as 'claude' | 'qwen' | 'hermes' | 'opencode' | 'codex' | 'gemini' | 'agent' | 'installer' | 'terminal' | 'remote' | 'vibeid' | 'insights_prerun' | 'multi-agent') && (
                   // Only Claude Code has a real hook-driven status machine.
                   // The other tools render the steady-green idle pulse —
                   // we explicitly chose not to guess their state from PTY
@@ -749,11 +809,11 @@ export function CenterPanel() {
         )}
 
         {terminals.map(t => t.tool !== null ? (
-          <div 
-            key={t.id} 
+          <div
+            key={t.id}
             className="terminal-wrapper"
             data-session-id={t.id}
-            style={{ 
+            style={{
               display: t.id === activeTerminalId ? 'flex' : 'none',
               width: '100%',
               height: '100%',
@@ -764,6 +824,17 @@ export function CenterPanel() {
               <ChatReader sessionId={t.id} />
             ) : t.tool === 'arcade' ? (
               <DosPlayer sessionId={t.id} />
+            ) : t.tool === 'multi-agent' ? (
+              // Independent four-pane peer mode. Standalone Tab type —
+              // does not share layout with the single-terminal path
+              // below. Every pane is a peer; any CLI can drive the
+              // others via coffee-cli MCP tools.
+              <MultiAgentGrid
+                tab={t}
+                hasBg={hasBg}
+                bgUrl={bgUrl}
+                bgType={bgType}
+              />
             ) : (
               <ErrorBoundary key={`err-${t.id}-${t.restartKey || 0}`} fallbackLabel="Tier Terminal Error">
                 <TierTerminal
@@ -1205,3 +1276,4 @@ export function CenterPanel() {
     </>
   );
 }
+

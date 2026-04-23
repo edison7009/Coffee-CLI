@@ -1,0 +1,151 @@
+/* MultiAgentGrid.css — "4 paper slices" layout.
+   User-defined aesthetic (2026-04-23): each pane must feel identical to
+   a single-terminal tab. No border, no card background, no internal
+   padding, no header strip. Only the active pane is rendered at full
+   brightness; the other three dim down. A tiny 1/2/3/4 badge in the
+   top-right of each pane uses the active theme accent.
+   Follows CLAUDE.md §4 (no native tooltips, no transform hover). */
+
+.multi-agent-grid-standalone {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  /* No gap, no padding — four terminals sit edge-to-edge like paper slices. */
+}
+
+/* Default 2×2 quadrant. */
+.multi-agent-grid--grid {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+
+/* 1×4 vertical strip: four equal-height columns side by side. Useful
+   for screens wider than tall, or when the user wants each agent's
+   output visible as a continuous vertical stream. Slot numbering is
+   driven by CSS order of the four columns, not the 2x2 grid-areas,
+   so pane-slot-N → Nth column. */
+.multi-agent-grid--columns {
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: 1fr;
+}
+.multi-agent-grid--columns .multi-agent-pane.pane-slot-1 { grid-column: 1; grid-row: 1; }
+.multi-agent-grid--columns .multi-agent-pane.pane-slot-2 { grid-column: 2; grid-row: 1; }
+.multi-agent-grid--columns .multi-agent-pane.pane-slot-3 { grid-column: 3; grid-row: 1; }
+.multi-agent-grid--columns .multi-agent-pane.pane-slot-4 { grid-column: 4; grid-row: 1; }
+
+.multi-agent-pane {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  /* No border / background / radius — blend into the tab surface. */
+  /* Only allowed animation: opacity (no position/scale per §4). */
+  transition: opacity 160ms ease;
+}
+
+/* Slot numbering matches the visible badge (1 = top-left, 2 = top-right,
+   3 = bottom-left, 4 = bottom-right). Reading order Z. */
+.multi-agent-pane.pane-slot-1 { grid-column: 1; grid-row: 1; }
+.multi-agent-pane.pane-slot-2 { grid-column: 2; grid-row: 1; }
+.multi-agent-pane.pane-slot-3 { grid-column: 1; grid-row: 2; }
+.multi-agent-pane.pane-slot-4 { grid-column: 2; grid-row: 2; }
+
+/* Focus handling: when any pane's xterm has keyboard focus, the other
+   three fade so the user's eye follows the typing cursor. Default
+   (no focus) shows all panes at full brightness. */
+.multi-agent-pane.is-dimmed {
+  opacity: 0.35;
+}
+
+.multi-agent-pane-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ─── Pane number badge ─────────────────────────────────────────────
+   Large elegant 1/2/3/4 in the top-right of every pane. Uses the app's
+   display font (not monospace) at a light weight for a gentle but
+   visible marker. Accent-tinted so it re-colors with the theme palette.
+   Tabular numerals keep the digits the same width across panes. */
+/* Industrial-style pane-number tag. Sharp-cornered square filled
+   with a darkened tint of the theme accent, bold white number
+   centered inside. The darker fill is produced by mixing the
+   accent with 45% black — keeps the theme hue, but high enough
+   contrast against white text to read at a glance. Small and
+   blocky on purpose: feels like a physical label, not a UI chip. */
+.pane-number-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 10;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* color-mix: 55% theme accent + 45% black. Well-supported since
+     Chrome 111 / Safari 16.4; Tauri's WebView2 is Edge-based and
+     supports it. Fallback uses the raw accent — acceptable. */
+  background: color-mix(in srgb, var(--accent, #6cc275) 55%, #000);
+  border-radius: 0;
+  font-size: 14px;
+  font-family: var(--font-display, 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif);
+  font-weight: 700;
+  font-feature-settings: 'tnum' 1, 'lnum' 1;
+  line-height: 1;
+  color: #fff;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* ─── Empty-pane picker (simpler, no card) ──────────────────────── */
+
+.empty-pane-picker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 20px;
+  gap: 14px;
+  color: var(--text-secondary, #aaa);
+}
+
+.empty-pane-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary, #ddd);
+}
+
+.empty-pane-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+.empty-pane-option {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--text-primary, #ddd);
+  background: var(--bg-quaternary, #222);
+  border: 1px solid var(--border-color, #2a2a2a);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.empty-pane-option:hover {
+  background: var(--bg-hover, #2d2d2d);
+  border-color: var(--accent, #6cc275);
+}
+
+.empty-pane-option:active {
+  background: var(--bg-active, #3a3a3a);
+}
+

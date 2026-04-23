@@ -1,6 +1,6 @@
 [package]
 name = "coffee-cli"
-version = "0.10.1"
+version = "1.0.0"
 edition = "2021"
 description = "Lightweight Multi-layer AI CLI Terminal"
 license = "MIT"
@@ -53,6 +53,14 @@ notify = "6.1.1"
 notify-debouncer-full = "0.3"
 rusqlite = { version = "0.32", features = ["bundled"] }
 keyring = "3"
+
+# Multi-agent MCP server (v1.0: 3 tools, HTTP Streamable transport)
+# See docs/MULTI-AGENT-ARCHITECTURE.md §5.5 for why HTTP over stdio.
+# Note: schemars is NOT a direct dep — we use rmcp's re-exported schemars
+# to avoid version conflicts (rmcp 0.8 uses schemars 1.x internally).
+rmcp = { version = "0.8", features = ["server", "macros", "transport-streamable-http-server"] }
+axum = "0.7"
+uuid = { version = "1", features = ["v4"] }
 
 [profile.release]
 opt-level = "z"

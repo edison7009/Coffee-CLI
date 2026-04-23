@@ -209,4 +209,24 @@ export const commands = {
     invoke<void>('start_fs_watcher', { path }),
   stopFsWatcher: () =>
     invoke<void>('stop_fs_watcher'),
+
+  // Multi-agent mode — writes CLAUDE.md / AGENTS.md / GEMINI.md to the
+  // workspace root and merges the coffee-cli MCP endpoint into each
+  // detected primary CLI config. Idempotent; safe to call repeatedly.
+  enableMultiAgentMode: (workspace: string) =>
+    invoke<{
+      ok: boolean;
+      mcp_url: string | null;
+      touched_config_files: string[];
+      touched_md_files: string[];
+      warnings: string[];
+    }>('enable_multi_agent_mode', { workspace }),
+  disableMultiAgentMode: (workspace: string) =>
+    invoke<{
+      ok: boolean;
+      mcp_url: string | null;
+      touched_config_files: string[];
+      touched_md_files: string[];
+      warnings: string[];
+    }>('disable_multi_agent_mode', { workspace }),
 };

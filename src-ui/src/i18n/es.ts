@@ -35,6 +35,7 @@ export const es = {
   'tool.installer': 'Instalador',
   'tool.vibeid': 'Test de personalidad',
   'tool.insights_prerun': 'Generando informe de uso...',
+  'tool.multi_agent': 'Multi-Agente',
   'vibeid.need_insights_confirm': 'El Test de personalidad necesita primero tu informe de uso de Claude Code.\n\n/insights se ejecutará automáticamente (aproximadamente 1-2 minutos), luego el test comenzará solo.\n\n¿Continuar?',
   'vibeid.insights_timeout': 'La generación del informe tardó demasiado. Inténtalo más tarde o ejecuta /insights manualmente en una pestaña de Claude Code.',
 

@@ -82,8 +82,10 @@ export function App() {
       {/* Custom titlebar — drag region + minimize / maximize / close */}
       <TitleBar />
 
-      {/* 3-panel workspace */}
-      <div className="app-layout">
+      {/* 3-panel workspace. Modifier classes reflect the user's layout
+          toggles from the titlebar — CSS hides the flagged side via
+          display:none so the center reclaims full width. */}
+      <div className={`app-layout${state.leftPanelHidden ? ' app-layout--left-hidden' : ''}${state.rightPanelHidden ? ' app-layout--right-hidden' : ''}`}>
         {/* Left: File Explorer (contains brand + controls in its header) */}
         <aside className="panel panel-left">
           <Explorer />

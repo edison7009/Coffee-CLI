@@ -35,6 +35,7 @@ export const ja = {
   'tool.installer': 'インストーラー',
   'tool.vibeid': '性格診断',
   'tool.insights_prerun': '使用状況レポートを生成中...',
+  'tool.multi_agent': 'マルチエージェント',
   'vibeid.need_insights_confirm': '性格診断には Claude Code の使用状況レポートが必要です。\n\n/insights を自動実行します（約 1〜2 分）。完了後、性格診断が自動的に開始されます。\n\n続行しますか？',
   'vibeid.insights_timeout': 'レポートの生成がタイムアウトしました。後でもう一度試すか、Claude Code タブで /insights を手動で実行してください。',
 

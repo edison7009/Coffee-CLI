@@ -35,6 +35,7 @@ export const ko = {
   'tool.installer': '설치 도구',
   'tool.vibeid': '성격 테스트',
   'tool.insights_prerun': '사용 기록 리포트 생성 중...',
+  'tool.multi_agent': '멀티 에이전트',
   'vibeid.need_insights_confirm': '성격 테스트를 실행하려면 먼저 Claude Code 사용 기록 리포트가 필요합니다.\n\n/insights를 자동으로 실행합니다 (약 1-2분). 완료 후 성격 테스트가 자동으로 시작됩니다.\n\n계속할까요?',
   'vibeid.insights_timeout': '리포트 생성이 시간 초과되었습니다. 나중에 다시 시도하거나 Claude Code 탭에서 /insights를 수동으로 실행하세요.',
 
