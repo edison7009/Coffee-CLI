@@ -6,7 +6,7 @@
 
 ## 发版检查清单
 
-每次发 Coffee CLI 新版本严格按照这 6 步，一步都不能省：
+每次发 Coffee CLI 新版本严格按照这 5 步，一步都不能省：
 
 1. **三处版本号同步**到同一个 SemVer 值：
    - `Cargo.toml` → `[package].version`
@@ -22,12 +22,22 @@
    - `git push origin main && git push origin v<x.y.z>`
    - Tag push 是 CI Release workflow 的唯一触发条件，仅 push commit 不会触发
 5. **验证 CI 权限** — 确保 workflow 配置里有 `permissions: contents: write`（踩过 GITHUB_TOKEN 只读的坑）
-6. **Web-Home 同步**（另起一个 commit，**不打 tag**）：
-   - 改 `Web-Home/version.json` 为 `{"version": "x.y.z"}`
-   - 客户端 Explorer 的更新检查 fetch 这个 JSON
-   - **容易漏**：0.4.0、0.5.0 都差点漏过——发完 tag 立刻执行
 
 **禁止两位 patch**：`0.6.9` → `0.7.0`，不要 `0.6.10`（见全局规则 #5）
+
+### version.json 已不再手动维护（v1.0.2+）
+
+旧的"第 6 步——改 `Web-Home/version.json` 为新版本号"已经**废弃并删除**。
+
+历史问题：静态 version.json 在 tag push 的瞬间就指向新版，但 CI 构建各平台安装包要 15-20 分钟；用户在这窗口内跑 `install.ps1`，脚本能读到 "Latest: v1.x.y" 但 `/download/windows` 返回 404——糟糕体验。
+
+新架构（`Web-Home/_worker.js` 的 `/version.json` 路由）：
+- CF Worker 查 GitHub API latest release
+- 支持 `?platform=windows|macos-arm|linux-deb|linux-appimage`
+- **只有该平台的安装包实际上传到 GitHub Releases 后，才返回新版号**；否则返回空字符串，install 脚本识别为"无升级"优雅退出
+- 两份 install 脚本（`install.ps1` + `install.sh`）都升级了容错：空版本 / 下载失败时打印"CI 还在编译，15 分钟后再试"，不抛 PowerShell/bash 异常栈
+
+结果：发版时**零手动 version.json 维护**，用户侧**零时间差**。
 
 ---
 

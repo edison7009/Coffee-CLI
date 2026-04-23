@@ -2,6 +2,7 @@
 // Uses env.ASSETS to serve CF Pages static files directly.
 //
 // Routes:
+//   /version.json          → dynamic version report (honors ?platform=)
 //   /download/<platform>   → proxy GitHub Release assets
 //   /play/<file>           → proxy GitHub game-assets Release
 //   /installer/<path>      → serve from CF Pages static files (Web-Home/installer/)
@@ -49,7 +50,62 @@ async function getLatestAssets(env) {
 
 export default {
   async fetch(request, env) {
-    const { pathname } = new URL(request.url)
+    const url = new URL(request.url)
+    const { pathname } = url
+
+    // ── /version.json ────────────────────────────────────────────────────────
+    // Dynamic version report. Derived from the same GitHub latest-release
+    // call we already cache for /download, so there is zero extra round-trip
+    // when /version.json is hit immediately before /download/<platform>.
+    //
+    // Why this matters: the install scripts (install.ps1 / install.sh) read
+    // this URL to decide whether an upgrade is available. If it reports the
+    // new tag BEFORE that platform's installer is uploaded to GitHub
+    // Releases (a 15-20 min CI build window), the user sees "Upgrading..."
+    // immediately followed by a download 404. Gating the advertised version
+    // behind actual asset availability eliminates that race.
+    //
+    // Query:
+    //   ?platform=<windows|macos-arm|macos-intel|linux-deb|linux-appimage>
+    //     → returns the tag of the latest release where THAT platform's
+    //       asset is present. If the latest release hasn't published that
+    //       platform yet, falls back to reporting an empty version so the
+    //       client treats it as "no upgrade available yet".
+    //   (no query) → returns the latest release tag as-is (may point at an
+    //                in-flight release; kept for backward compat and
+    //                non-platform-specific consumers).
+    if (pathname === "/version.json") {
+      try {
+        const assets = await getLatestAssets(env)
+        const platform = url.searchParams.get("platform")
+        let version = ""
+        if (platform) {
+          // Only advertise the new version to a platform once its asset
+          // exists. Prevents install scripts from chasing a phantom release.
+          version = assets[platform]?.version ?? ""
+        } else {
+          // No platform filter: return any version seen in assets (all
+          // entries share release.tag_name, so pick the first available).
+          const first = Object.values(assets)[0]
+          version = first?.version ?? ""
+        }
+        return new Response(JSON.stringify({ version }), {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json; charset=utf-8",
+            // Short cache so a freshly-completed CI build shows up within a
+            // minute, without hammering the GitHub API from every install.
+            "Cache-Control": "public, max-age=60",
+            "Access-Control-Allow-Origin": "*",
+          }
+        })
+      } catch (e) {
+        return new Response(JSON.stringify({ version: "", error: e.message }), {
+          status: 502,
+          headers: { "Content-Type": "application/json; charset=utf-8" }
+        })
+      }
+    }
 
     // ── /download/<platform> ─────────────────────────────────────────────────
     const dlMatch = pathname.match(/^\/download\/([a-z0-9-]+)$/)
