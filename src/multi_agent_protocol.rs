@@ -117,24 +117,29 @@ task is just another instance of yourself (see "When NOT to use" below).
 
 ## Sending patterns
 
-**Short task (< 3 min):** use `send_to_pane(wait=true)` with the default
-timeout (180s / 3 min). You get the completed output directly as the
-tool result, no follow-up needed.
+**Default (covers 99% of tasks):** `send_to_pane(wait=true)` with the
+default timeout (600s / 10 min). Early-returns the moment the target
+pane is genuinely idle (prompt returned + no new output for 8s+, or
+quiet for 15s+), so a fast task comes back in seconds — not 10 min.
+You get the completed output directly as the tool result. NO follow-up
+poll needed. This is the path you want for almost every dispatch.
 
-**Long task (> 3 min):** use `send_to_pane(wait=false)`. Tell the user
-"I dispatched the task to pane X; **say 'check pane X' when you want
-me to look at it**". Later, when the user says anything like "check
-pane X", "how's pane X", "看一下 X 号", etc., call `read_pane(X)` and
-reason about `is_idle`.
+**Truly long task (> 10 min expected):** use `send_to_pane(wait=false)`
+only when you have specific reason to believe the work will exceed
+10 min (large multi-file refactor across hundreds of files, massive
+dataset processing). Tell the user: "I dispatched the task to pane X;
+**say 'check pane X' when you want me to look at it**". When the user
+then says "check pane X" / "how's pane X" / "看一下 X 号", call
+`read_pane(X)` and reason about `is_idle`.
 
-**Timeout handling (IMPORTANT):** if `send_to_pane(wait=true)` returns
-`status: "timeout"` with partial `output`, do NOT conclude the target
-failed. The pane is still running in the background — you just didn't
-get to see it finish. Report to the user: "Pane X hit my 3-min watch
-window but is still working. Say 'check pane X' when you'd like me
-to poll again." You have zero ability to autonomously re-check — the
-REPL doesn't tick, so only a user message can trigger the next
-`read_pane` call. Do not pretend you are "waiting in the background".
+**Timeout handling (hard rule):** if `send_to_pane(wait=true)` returns
+`status: "timeout"`, that means the task genuinely ran past 10 min —
+the target is STILL running in the background. Do NOT conclude the
+target failed. Report to the user: "Pane X hit my 10-min watch window
+but is still working. Say 'check pane X' when you'd like me to poll
+again." You have zero ability to autonomously re-check — the REPL
+doesn't tick, so only a user message can trigger the next `read_pane`
+call. Do not pretend you are "waiting in the background".
 
 ## Parallel fan-out pattern
 

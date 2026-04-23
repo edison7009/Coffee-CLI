@@ -332,8 +332,19 @@ impl PaneStore {
                     let now = Instant::now();
                     let produced_since_send = act.last_output_at >= send_time;
                     let silence = now.duration_since(act.last_output_at);
-                    let long_silence = silence > Duration::from_millis(2000);
-                    let settle_silence = silence > Duration::from_millis(2500);
+                    // Observed 2026-04-23: LLM-driven CLIs (Claude/Codex/
+                    // Gemini) pause 3-8s between planning phases while
+                    // the model thinks; the old 2s/2.5s thresholds
+                    // treated these as "task done" and returned Claude a
+                    // half-finished result. Bump to 8s/15s — Gemini's
+                    // longest observed mid-task think gap was ~10s, so
+                    // 15s for settle_silence is conservative without
+                    // stretching too long. Real idle after a genuinely
+                    // completed task (Gemini renders ✨ summary, prompt
+                    // returns) hits marker_path in <2s and early-returns
+                    // regardless, so this doesn't slow the happy path.
+                    let long_silence = silence > Duration::from_millis(8000);
+                    let settle_silence = silence > Duration::from_millis(15000);
 
                     let marker_path = at_prompt && (produced_since_send || long_silence);
                     let settle_path = produced_since_send && settle_silence;
@@ -489,7 +500,7 @@ pub struct SendToPaneArgs {
     pub id: String,
     /// Text to inject into the target pane's stdin.
     pub text: String,
-    /// Seconds to wait for idle if wait=true. Default 180, max 3600.
+    /// Seconds to wait for idle if wait=true. Default 600, max 3600.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub timeout_sec: Option<u64>,
     /// If true, block until pane is idle or timeout (default). If false,
@@ -555,15 +566,15 @@ long-running tasks (> 2 min). Do NOT send to your own pane id."
     ) -> Result<CallToolResult, McpError> {
         let wait = args.wait.unwrap_or(true);
         let submit = args.submit.unwrap_or(true);
-        // Default 180s (3 min) — wide enough that a normal tool-chain
-        // task in the target pane finishes inside a single wait=true
-        // call, so Claude gets the full result in one round-trip and
-        // doesn't need the user to re-ping. Raised from the previous
-        // 60s default after observing tasks where the target CLI
-        // needed manual permission clicks: by the time the user got
-        // through the confirmations, the call had already timed out
-        // and Claude was "stuck waiting" with only partial output.
-        let timeout_sec = args.timeout_sec.unwrap_or(180).min(3600);
+        // Default 600s (10 min) — a real orchestration task (refactor,
+        // multi-step code edit, doc generation) commonly runs 3-8 min
+        // in the target CLI. A 180s default still forced the user into
+        // the manual "check pane X" ping flow for anything non-trivial,
+        // defeating "hands-free orchestration". 10 min covers the 99th
+        // percentile while still having a firm ceiling so a crashed or
+        // stuck pane doesn't wedge the caller indefinitely. Early-exit
+        // on actual idle detection means short tasks still return fast.
+        let timeout_sec = args.timeout_sec.unwrap_or(600).min(3600);
 
         match self
             .panes
