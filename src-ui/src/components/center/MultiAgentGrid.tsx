@@ -169,9 +169,14 @@ interface EmptyPanePickerProps {
 }
 
 function EmptyPanePicker({ paneIdx: _paneIdx, onSelect }: EmptyPanePickerProps) {
+  // Title and auto-approval notice removed per user request: three
+  // labeled buttons are self-explanatory — they ARE the "user manually
+  // picks" affordance — and any extra copy just adds visual noise to
+  // the paper-slice aesthetic. The skip-permissions rationale still
+  // lives in server.rs `in_multi_agent` and PROTOCOL.md for anyone
+  // digging behind the scenes.
   return (
     <div className="empty-pane-picker">
-      <div className="empty-pane-title">Choose a CLI</div>
       <div className="empty-pane-options">
         {PANE_CLI_OPTIONS.map((opt) => (
           <button
@@ -186,12 +191,6 @@ function EmptyPanePicker({ paneIdx: _paneIdx, onSelect }: EmptyPanePickerProps) 
           </button>
         ))}
       </div>
-      {/* Auto-approval notice: Coffee-CLI spawns panes with the CLI's
-          skip-permissions flag (claude --dangerously-skip-permissions,
-          codex --full-auto, gemini --yolo) so a controlling pane can
-          orchestrate the other three hands-free. See server.rs comment
-          at `in_multi_agent` for the full rationale. */}
-      <div className="empty-pane-auto-notice">⚡ Full auto-approval for multi-agent orchestration</div>
     </div>
   );
 }
