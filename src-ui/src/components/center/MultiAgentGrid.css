@@ -11,6 +11,42 @@
   width: 100%;
   height: 100%;
   /* No gap, no padding — four terminals sit edge-to-edge like paper slices. */
+  /* position:relative anchors the absolute-positioned .multi-agent-bg
+     layer inside, so the user's wallpaper renders behind all four panes
+     (including empty ones showing the CLI picker). */
+  position: relative;
+}
+
+/* Grid-level wallpaper layer. Identical behavior to .launchpad-bg so
+   switching between Launchpad and a multi-agent Tab has zero visual
+   discontinuity in the background. */
+.multi-agent-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.multi-agent-bg img,
+.multi-agent-bg video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* User-controlled dim overlay (--wallpaper-dim is set on :root from
+   app-state, 0.0–0.8). Same formula as .launchpad-bg::after for
+   consistent brightness across surfaces. */
+.multi-agent-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, var(--wallpaper-dim, 0.3));
+  pointer-events: none;
+}
+
+/* Make sure panes sit above the bg layer regardless of DOM order. */
+.multi-agent-grid-standalone > .multi-agent-pane {
+  z-index: 1;
 }
 
 /* Default 2×2 quadrant. */

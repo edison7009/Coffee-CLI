@@ -109,7 +109,22 @@ export function MultiAgentGrid({ tab, hasBg, bgUrl, bgType }: Props) {
   const layoutMod = state.multiAgentLayout === 'columns' ? ' multi-agent-grid--columns' : ' multi-agent-grid--grid';
 
   return (
-    <div className={`multi-agent-grid-standalone${layoutMod}`}>
+    <div className={`multi-agent-grid-standalone${layoutMod}${hasBg && bgUrl ? ' multi-agent-has-bg' : ''}`}>
+      {/* Grid-level wallpaper. Sits behind all four panes so empty
+          panes (CLI picker state) and any gaps show the user's bg
+          just like single-terminal tabs do. Filled panes also get
+          their TierTerminal's own .tier-terminal-bg layer — harmless
+          redundancy, but guarantees xterm-transparent composition
+          stays correct regardless of grid-level state. Mirrors the
+          .launchpad-bg pattern in CenterPanel so the wallpaper-dim
+          overlay (--wallpaper-dim on :root) works the same way. */}
+      {hasBg && bgUrl && (
+        <div className="multi-agent-bg">
+          {bgType === 'video'
+            ? <video src={bgUrl} autoPlay loop muted playsInline />
+            : <img src={bgUrl} alt="" draggable={false} />}
+        </div>
+      )}
       {panes.map((pane) => {
         const paneSessionId = `${tab.id}::pane-${pane.paneIdx}`;
         const isEmpty = pane.tool === null;
