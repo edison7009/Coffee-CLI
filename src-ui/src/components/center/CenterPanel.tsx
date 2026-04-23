@@ -264,7 +264,7 @@ export function CenterPanel() {
       // user selects from the pane's EmptyPanePicker.
       {
         key: 'multi-agent' as ToolType,
-        label: 'Multi-Agent Quadrant',
+        label: 'Multi-Agent',
         icon: <span style={{ fontSize: '1.4em', lineHeight: 1 }}>⊞</span>,
         type: 'utility' as const,
         requiresCwd: false,

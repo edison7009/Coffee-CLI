@@ -70,6 +70,13 @@ export function MultiAgentGrid({ tab, hasBg, bgUrl, bgType }: Props) {
           <div
             key={pane.paneIdx}
             className={`multi-agent-pane pane-slot-${pane.paneIdx}${isDimmed ? ' is-dimmed' : ''}`}
+            // Capture-phase so we win the focus-intent announcement even
+            // when the click lands on inert background (empty pane body,
+            // padding around the CLI picker, gap between xterm canvas
+            // and pane edges). onFocusCapture alone only fires when the
+            // click actually hits a focusable element, which misses all
+            // the "dead" pixels users expect to be clickable.
+            onMouseDownCapture={() => setFocusedPaneIdx(pane.paneIdx)}
             onFocusCapture={() => setFocusedPaneIdx(pane.paneIdx)}
           >
             {/* Theme-tinted pane number badge; 1-indexed per user request. */}
