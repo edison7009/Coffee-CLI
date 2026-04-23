@@ -218,6 +218,7 @@
     font-size: 14px;
     line-height: 1.5;
     user-select: text;
+    cursor: text;
     scrollbar-width: thin;
     scrollbar-color: rgba(120, 120, 120, 0.35) transparent;
 }
@@ -351,17 +352,19 @@
     transition: background 0.12s, transform 0.08s, opacity 0.12s, filter 0.12s;
 }
 
-.gambit-send:hover:not(:disabled) {
+.gambit-send:hover:not(.gambit-send--empty) {
     filter: brightness(1.12);
     transform: translateY(-1px);
 }
 
-.gambit-send:active:not(:disabled) {
+.gambit-send:active:not(.gambit-send--empty) {
     transform: translateY(0);
     filter: brightness(0.95);
 }
 
-.gambit-send:disabled {
+/* Nothing to send yet: visually dim without using `disabled` so the click
+   still registers and shows the empty hint. */
+.gambit-send--empty {
     opacity: 0.35;
     cursor: default;
 }
@@ -413,4 +416,49 @@
                                 rgba(0, 0, 0, 0.25) 10px,
                                 rgba(0, 0, 0, 0.25) 11px,
                                 transparent 11px);
+}
+
+/* ─── Right-click context menu ─────────────────────────────── */
+.gambit-ctx-menu {
+    position: fixed;
+    z-index: 9999;
+    min-width: 140px;
+    padding: 4px 0;
+    background: var(--bg-panel, #1e1c1a);
+    border-radius: var(--shape-radius-btn, 6px);
+    box-shadow:
+        0 6px 20px rgba(0, 0, 0, 0.32),
+        0 2px 6px rgba(0, 0, 0, 0.18);
+    animation: gambitIn 0.1s ease-out;
+}
+
+[data-theme="light"] .gambit-ctx-menu {
+    box-shadow:
+        0 4px 14px rgba(0, 0, 0, 0.12),
+        0 1px 4px rgba(0, 0, 0, 0.07);
+}
+
+.gambit-ctx-item {
+    display: block;
+    width: 100%;
+    padding: 6px 14px;
+    background: transparent;
+    border: none;
+    text-align: left;
+    font-size: 13px;
+    font-family: var(--font, inherit);
+    color: var(--text-1, #e8e4de);
+    cursor: pointer;
+    transition: background 0.1s;
+    white-space: nowrap;
+}
+
+.gambit-ctx-item:hover {
+    background: var(--accent-muted, rgba(196, 149, 106, 0.15));
+}
+
+.gambit-ctx-divider {
+    height: 1px;
+    margin: 4px 10px;
+    background: var(--border, rgba(255, 255, 255, 0.08));
 }
