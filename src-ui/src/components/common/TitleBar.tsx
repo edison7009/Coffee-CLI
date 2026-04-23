@@ -34,7 +34,11 @@ export function TitleBar() {
   return (
     // data-tauri-drag-region tells WebView2 this div is draggable
     <div className="titlebar" data-tauri-drag-region>
-      {/* Left-side layout toggles — carved out of the drag area */}
+      {/* Icons come straight from Lucide (lucide.dev, ISC license). No
+          runtime dependency — just the d-paths copied inline so we
+          don't pay a 200KB+ import for four glyphs. Strokes match
+          Lucide's default: stroke-width 2, line-cap round, line-join
+          round, 24-unit viewBox. Rendering size set via CSS. */}
       <div className="titlebar-layout-toggles" data-tauri-drag-region="false">
         <button
           className={`titlebar-btn titlebar-btn--layout${state.leftPanelHidden ? '' : ' is-active'}`}
@@ -42,10 +46,10 @@ export function TitleBar() {
           aria-label="Toggle left panel"
           aria-pressed={!state.leftPanelHidden}
         >
-          {/* Rectangle with a filled left strip when panel is visible */}
-          <svg width="16" height="14" viewBox="0 0 16 14">
-            <rect x="1" y="2" width="14" height="10" fill="none" stroke="currentColor" strokeWidth="1.2"/>
-            <rect x="1" y="2" width="4.5" height="10" fill={state.leftPanelHidden ? 'none' : 'currentColor'} opacity={state.leftPanelHidden ? 0 : 0.8}/>
+          {/* lucide panel-left */}
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <line x1="9" y1="3" x2="9" y2="21" />
           </svg>
         </button>
         <button
@@ -54,9 +58,10 @@ export function TitleBar() {
           aria-label="Toggle right panel"
           aria-pressed={!state.rightPanelHidden}
         >
-          <svg width="16" height="14" viewBox="0 0 16 14">
-            <rect x="1" y="2" width="14" height="10" fill="none" stroke="currentColor" strokeWidth="1.2"/>
-            <rect x="10.5" y="2" width="4.5" height="10" fill={state.rightPanelHidden ? 'none' : 'currentColor'} opacity={state.rightPanelHidden ? 0 : 0.8}/>
+          {/* lucide panel-right */}
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <line x1="15" y1="3" x2="15" y2="21" />
           </svg>
         </button>
 
@@ -69,12 +74,12 @@ export function TitleBar() {
               aria-label="Multi-agent 2x2 grid"
               aria-pressed={state.multiAgentLayout === 'grid'}
             >
-              {/* 2x2 quadrant glyph */}
-              <svg width="14" height="14" viewBox="0 0 14 14">
-                <rect x="1"  y="1"  width="5" height="5" fill="currentColor" opacity="0.9"/>
-                <rect x="8"  y="1"  width="5" height="5" fill="currentColor" opacity="0.9"/>
-                <rect x="1"  y="8"  width="5" height="5" fill="currentColor" opacity="0.9"/>
-                <rect x="8"  y="8"  width="5" height="5" fill="currentColor" opacity="0.9"/>
+              {/* lucide layout-grid */}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3"  y="3"  width="7" height="7" rx="1" />
+                <rect x="14" y="3"  width="7" height="7" rx="1" />
+                <rect x="14" y="14" width="7" height="7" rx="1" />
+                <rect x="3"  y="14" width="7" height="7" rx="1" />
               </svg>
             </button>
             <button
@@ -83,12 +88,12 @@ export function TitleBar() {
               aria-label="Multi-agent 4 vertical columns"
               aria-pressed={state.multiAgentLayout === 'columns'}
             >
-              {/* 4 vertical strips glyph */}
-              <svg width="14" height="14" viewBox="0 0 14 14">
-                <rect x="1"    y="1" width="2.2" height="12" fill="currentColor" opacity="0.9"/>
-                <rect x="4.2"  y="1" width="2.2" height="12" fill="currentColor" opacity="0.9"/>
-                <rect x="7.4"  y="1" width="2.2" height="12" fill="currentColor" opacity="0.9"/>
-                <rect x="10.6" y="1" width="2.2" height="12" fill="currentColor" opacity="0.9"/>
+              {/* lucide columns-3 — three strokes communicate "vertical strips"
+                  clearly enough; adding a fourth makes the icon cramped at 14px */}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <line x1="9"  y1="3" x2="9"  y2="21" />
+                <line x1="15" y1="3" x2="15" y2="21" />
               </svg>
             </button>
           </>

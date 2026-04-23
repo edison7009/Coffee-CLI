@@ -573,21 +573,31 @@ body {
 }
 
 /* Layout toggles sit immediately left of the window controls as a
-   tiny no-drag zone. Kept visually quiet — icon-only, subtle hover —
-   so they read as tools, not action buttons. */
+   tiny no-drag zone. Tighter than the window controls on purpose —
+   these are "tools" (quick-access settings), not "actions" (which
+   need a bigger hit-target by convention). */
 .titlebar-layout-toggles {
     display: flex;
     align-items: center;
     height: 100%;
-    margin-right: 4px;
-    gap: 2px;
+    margin-right: 2px;
     -webkit-app-region: no-drag;
 }
 
 .titlebar-btn--layout {
-    width: 32px;   /* narrower than window controls to read as "tool", not "action" */
+    width: 26px;
+    height: 26px;
+    margin: 0;
+    padding: 0;
     color: var(--text-2);
-    opacity: 0.55;
+    opacity: 0.6;
+}
+
+/* Keep SVG crisp at the small render size. */
+.titlebar-btn--layout svg {
+    width: 14px;
+    height: 14px;
+    display: block;
 }
 
 .titlebar-btn--layout:hover {
@@ -604,10 +614,10 @@ body {
 
 .titlebar-sep {
     width: 1px;
-    height: 14px;
-    margin: 0 6px;
-    background: var(--border-color, rgba(255,255,255,0.12));
-    opacity: 0.6;
+    height: 12px;
+    margin: 0 3px;
+    background: var(--border-color, rgba(255,255,255,0.14));
+    opacity: 0.5;
 }
 
 .titlebar-controls {
