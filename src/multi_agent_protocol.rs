@@ -154,6 +154,44 @@ explicitly inside the English prompt. For example:
 
 The INSTRUCTION is English; only the requested OUTPUT is non-English.
 
+## Slash commands across panes
+
+Each primary CLI has its own set of built-in `/` commands. Well-targeted
+slash commands beat natural-language prompts when a matching one exists:
+less ambiguity, fewer tokens, and the CLI's own optimized code path.
+
+Known built-in commands in recent versions (surface changes between
+releases — treat this as a starting point, not gospel):
+
+**Claude Code (target has tool="claude")**:
+  /help /clear /compact /model /agents /doctor /config /init
+  /memory /review /mcp /cost /permissions /export /bug /vim
+  User commands: ~/.claude/commands/ and .claude/commands/
+  Skills:       ~/.claude/skills/ and .claude/skills/
+
+**Codex CLI (target has tool="codex")**:
+  /help /model /clear /compact /approvals /status /new
+  User commands: ~/.codex/commands/
+
+**Gemini CLI (target has tool="gemini")**:
+  /help /clear /memory /theme /auth /stats /tools /compress /mcp /chat
+  User commands: .gemini/commands/ (TOML format)
+
+Rules:
+1. Check the target's `cli` field in list_panes() BEFORE crafting your
+   send_to_pane text — a /agents command makes sense to Claude and
+   means nothing to Codex.
+2. Use a slash command when one exists for the task at hand. If you
+   aren't sure of the exact syntax, send `/help` first with wait=true
+   to let the target print its own command list, then dispatch.
+3. User-defined custom commands (project-specific workflows, skills)
+   can't be discovered cross-process. Either rely on natural-language
+   prompts, or ask the target "list your / commands" and parse the
+   reply before dispatching.
+4. Don't invent commands. If you're unsure a command exists, prefer
+   a short natural-language instruction. A made-up /command that the
+   target doesn't recognize just wastes a round-trip.
+
 ## When NOT to use these tools
 
 DO NOT reach for `send_to_pane` just to spawn an internal subagent. Each
