@@ -56,12 +56,13 @@ export function TitleBar() {
               aria-label="Multi-agent 2x2 grid"
               aria-pressed={state.multiAgentLayout === 'grid'}
             >
-              {/* lucide layout-grid */}
+              {/* lucide layout-grid. Active state fills each of the four
+                  squares so the icon mirrors the actual pane layout. */}
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3"  y="3"  width="7" height="7" rx="1" />
-                <rect x="14" y="3"  width="7" height="7" rx="1" />
-                <rect x="14" y="14" width="7" height="7" rx="1" />
-                <rect x="3"  y="14" width="7" height="7" rx="1" />
+                <rect x="3"  y="3"  width="7" height="7" rx="1" fill={state.multiAgentLayout === 'grid' ? 'currentColor' : 'none'} fillOpacity={state.multiAgentLayout === 'grid' ? 0.28 : 0} />
+                <rect x="14" y="3"  width="7" height="7" rx="1" fill={state.multiAgentLayout === 'grid' ? 'currentColor' : 'none'} fillOpacity={state.multiAgentLayout === 'grid' ? 0.28 : 0} />
+                <rect x="14" y="14" width="7" height="7" rx="1" fill={state.multiAgentLayout === 'grid' ? 'currentColor' : 'none'} fillOpacity={state.multiAgentLayout === 'grid' ? 0.28 : 0} />
+                <rect x="3"  y="14" width="7" height="7" rx="1" fill={state.multiAgentLayout === 'grid' ? 'currentColor' : 'none'} fillOpacity={state.multiAgentLayout === 'grid' ? 0.28 : 0} />
               </svg>
             </button>
             <button
@@ -70,9 +71,16 @@ export function TitleBar() {
               aria-label="Multi-agent 4 vertical columns"
               aria-pressed={state.multiAgentLayout === 'columns'}
             >
-              {/* lucide columns-3 */}
+              {/* lucide columns-3. Active state fills the three strips. */}
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="3" y="3" width="18" height="18" rx="2" />
+                {state.multiAgentLayout === 'columns' && (
+                  <>
+                    <rect x="4"  y="4" width="4" height="16" fill="currentColor" fillOpacity="0.28" stroke="none" />
+                    <rect x="10" y="4" width="4" height="16" fill="currentColor" fillOpacity="0.28" stroke="none" />
+                    <rect x="16" y="4" width="4" height="16" fill="currentColor" fillOpacity="0.28" stroke="none" />
+                  </>
+                )}
                 <line x1="9"  y1="3" x2="9"  y2="21" />
                 <line x1="15" y1="3" x2="15" y2="21" />
               </svg>
@@ -86,9 +94,14 @@ export function TitleBar() {
           aria-label="Toggle left panel"
           aria-pressed={!state.leftPanelHidden}
         >
-          {/* lucide panel-left */}
+          {/* lucide panel-left. When the left panel is visible we fill the
+              left region inside the icon to mirror the app layout — a
+              quick "which panel is shown" read without needing tooltip. */}
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="3" width="18" height="18" rx="2" />
+            {!state.leftPanelHidden && (
+              <rect x="4" y="4" width="4" height="16" fill="currentColor" fillOpacity="0.28" stroke="none" />
+            )}
             <line x1="9" y1="3" x2="9" y2="21" />
           </svg>
         </button>
@@ -98,9 +111,12 @@ export function TitleBar() {
           aria-label="Toggle right panel"
           aria-pressed={!state.rightPanelHidden}
         >
-          {/* lucide panel-right */}
+          {/* lucide panel-right, right region filled when visible. */}
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="3" width="18" height="18" rx="2" />
+            {!state.rightPanelHidden && (
+              <rect x="16" y="4" width="4" height="16" fill="currentColor" fillOpacity="0.28" stroke="none" />
+            )}
             <line x1="15" y1="3" x2="15" y2="21" />
           </svg>
         </button>
