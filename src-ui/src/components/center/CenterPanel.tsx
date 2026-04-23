@@ -343,38 +343,23 @@ export function CenterPanel() {
   // TierTerminal added its own focusin + mouseup handlers, causing O(N)
   // dispatch per click with N tabs). When focus wanders to the body or a
   // non-input element, steal it back for the currently active terminal.
-  //
-  // Multi-agent awareness: in a multi-agent Tab the "active terminal" is
-  // the PRIMARY pane's PTY session, NOT the Tab id. Pane 0 reuses the Tab
-  // id, panes 1..N use `${tabId}::pane-${idx}`. Without this split, the
-  // enforcer keeps yanking focus back to pane 0 and the user can never
-  // type into a worker pane.
-  const computeFocusTarget = (): string | null => {
-    if (!activeTerminalId) return null;
-    const activeTab = terminals.find(t => t.id === activeTerminalId);
-    if (!activeTab?.multiAgent) return activeTerminalId;
-    const pidx = activeTab.multiAgent.primaryPaneIdx;
-    return pidx === 0 ? activeTab.id : `${activeTab.id}::pane-${pidx}`;
-  };
-  const focusTargetRef = useRef<string | null>(computeFocusTarget());
-  useEffect(() => {
-    focusTargetRef.current = computeFocusTarget();
-  }, [activeTerminalId, terminals]);
+  const activeIdRef = useRef(activeTerminalId);
+  useEffect(() => { activeIdRef.current = activeTerminalId; }, [activeTerminalId]);
   useEffect(() => {
     const enforce = () => {
       setTimeout(() => {
         const el = document.activeElement;
-        // ANY focused input/textarea is "the real target" — including xterm's
-        // .xterm-helper-textarea. Previously we excluded it to force focus back
-        // onto the single-tab terminal, but that broke four-pane mode where
-        // every pane has its own xterm textarea and users click between them.
-        // Now: let the browser's natural click→focus routing decide which
-        // pane owns the keyboard; the enforcer only kicks in when focus
-        // wanders to non-input DOM (<div>, <body>) after, e.g., a tab-bar click.
+        // Any focused INPUT/TEXTAREA is the real target, INCLUDING xterm's
+        // .xterm-helper-textarea. Earlier this branch excluded the xterm
+        // helper to "steal focus back to the active terminal", but that
+        // broke the multi-agent quadrant — every pane has its own xterm
+        // helper, and stealing the focus always landed on the wrong one.
+        // The enforcer now only pulls focus back when it wanders to
+        // genuinely non-input DOM (<div>, <body>, a clicked tab bar).
         if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
           return;
         }
-        const id = focusTargetRef.current;
+        const id = activeIdRef.current;
         if (id) focusTerminal(id);
       }, 10);
     };
@@ -840,13 +825,7 @@ export function CenterPanel() {
                   })()}
                   theme={state.currentTheme}
                   lang={state.currentLang}
-                  // In multi-agent mode pane 0 is active only when it's
-                  // the primary pane — otherwise another pane has focus
-                  // and pane 0's xterm must release the keyboard.
-                  isActive={
-                    t.id === activeTerminalId &&
-                    (!t.multiAgent || t.multiAgent.primaryPaneIdx === 0)
-                  }
+                  isActive={t.id === activeTerminalId}
                   toolData={t.toolData}
                   folderPath={t.folderPath}
                   hasBg={hasBg}
@@ -855,14 +834,6 @@ export function CenterPanel() {
                   termColorScheme={state.termColorScheme}
                 />
               </ErrorBoundary>
-            )}
-            {t.tool !== 'history' && t.tool !== 'arcade' && t.multiAgent && (
-              <MultiAgentGrid
-                tab={t}
-                hasBg={hasBg}
-                bgUrl={bgUrl}
-                bgType={bgType}
-              />
             )}
           </div>
         ) : null)}

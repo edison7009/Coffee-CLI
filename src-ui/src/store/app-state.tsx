@@ -52,10 +52,11 @@ export interface MultiAgentPane {
   agentStatus?: AgentStatus;
 }
 
+/// State attached to a Tab with `tool === 'multi-agent'`. All four panes
+/// are peers — there is no primary/worker distinction — so this type is
+/// deliberately minimal. Each pane's CLI and toolData live on
+/// `MultiAgentPane`; focus tracking happens inside `<MultiAgentGrid/>`.
 export interface MultiAgentState {
-  /// Index (0..panes.length-1) of the pane designated as primary — only
-  /// this pane's CLI receives the coffee-cli MCP injection.
-  primaryPaneIdx: number;
   panes: MultiAgentPane[];
 }
 
@@ -127,10 +128,7 @@ type Action =
   | { type: 'SET_TERM_SCHEME'; scheme: string }
   | { type: 'TOGGLE_GAMBIT' }
   | { type: 'SET_GAMBIT_DRAFT'; id: string; draft: string }
-  | { type: 'ENABLE_MULTI_AGENT'; tabId: string }
-  | { type: 'DISABLE_MULTI_AGENT'; tabId: string }
-  | { type: 'SET_PANE_TOOL'; tabId: string; paneIdx: number; tool: ToolType; toolData?: string }
-  | { type: 'SET_PRIMARY_PANE'; tabId: string; paneIdx: number };
+  | { type: 'SET_PANE_TOOL'; tabId: string; paneIdx: number; tool: ToolType; toolData?: string };
 
 // ─── Reducer ─────────────────────────────────────────────────────────────────
 
@@ -244,56 +242,25 @@ function reducer(state: AppState, action: Action): AppState {
         ...state,
         terminals: state.terminals.map(t => t.id === action.id ? { ...t, gambitDraft: action.draft } : t)
       };
-    case 'ENABLE_MULTI_AGENT':
+    case 'SET_PANE_TOOL': {
+      // Seed a MultiAgentState lazily on the first pane selection so
+      // quadrant tabs don't need a separate enable-step — point of entry
+      // is the user clicking a CLI button in any empty pane slot.
       return {
         ...state,
         terminals: state.terminals.map(t => {
           if (t.id !== action.tabId) return t;
-          if (t.multiAgent) return t;  // already on
-          // Inherit the current tab's tool as pane 0 (primary), so the
-          // user's already-running CLI becomes the primary pane. Panes
-          // 1-3 start empty; user picks a CLI per pane.
-          const initialPanes: MultiAgentPane[] = [
-            { paneIdx: 0, tool: t.tool, toolData: t.toolData },
-            { paneIdx: 1, tool: null },
-            { paneIdx: 2, tool: null },
-            { paneIdx: 3, tool: null },
-          ];
-          return {
-            ...t,
-            multiAgent: { primaryPaneIdx: 0, panes: initialPanes },
-          };
-        }),
-      };
-    case 'DISABLE_MULTI_AGENT':
-      return {
-        ...state,
-        terminals: state.terminals.map(t =>
-          t.id === action.tabId ? { ...t, multiAgent: undefined } : t
-        ),
-      };
-    case 'SET_PANE_TOOL':
-      return {
-        ...state,
-        terminals: state.terminals.map(t => {
-          if (t.id !== action.tabId || !t.multiAgent) return t;
-          const panes = t.multiAgent.panes.map(p =>
+          const existing = t.multiAgent?.panes
+            ?? ([0, 1, 2, 3].map(i => ({ paneIdx: i, tool: null as ToolType })) as MultiAgentPane[]);
+          const panes = existing.map(p =>
             p.paneIdx === action.paneIdx
               ? { ...p, tool: action.tool, toolData: action.toolData }
               : p
           );
-          return { ...t, multiAgent: { ...t.multiAgent, panes } };
+          return { ...t, multiAgent: { panes } };
         }),
       };
-    case 'SET_PRIMARY_PANE':
-      return {
-        ...state,
-        terminals: state.terminals.map(t =>
-          t.id === action.tabId && t.multiAgent
-            ? { ...t, multiAgent: { ...t.multiAgent, primaryPaneIdx: action.paneIdx } }
-            : t
-        ),
-      };
+    }
     default:
       return state;
   }
