@@ -1,28 +1,26 @@
-// MultiAgentGrid.tsx — renders worker panes 1..N as siblings of the
-// primary pane's TierTerminal.
+// MultiAgentGrid.tsx — independent "four pane" tab content.
 //
-// IMPORTANT: Pane 0 is NOT rendered here. The Tab's original TierTerminal
-// stays mounted in CenterPanel; the `.terminal-wrapper.is-multi-agent`
-// CSS grid places it in cell (1,1) automatically. MultiAgentGrid only
-// renders the other 3 panes as direct children of the same wrapper, so
-// CSS grid arranges them into (2,1)(1,2)(2,2). This keeps the primary
-// CLI's PTY alive across the single↔multi-agent toggle.
+// This is an INDEPENDENT feature, not an upgrade path on a regular Tab.
+// A multi-agent tab lives side-by-side with single-terminal tabs, and all
+// four panes are peers: any pane's CLI can use the coffee-cli MCP tools
+// (list_panes / send_to_pane / read_pane) to observe and drive the other
+// three. There is NO primary / worker distinction.
 //
-// Each non-primary pane gets its own PTY session
-// (sessionId = `${tabId}::pane-${idx}`), so the Rust MCP server sees N
-// independent terminals and the primary LLM can send_to_pane / read_pane
-// without any cross-talk.
-//
-// v1.0 day 5 scope:
-//   - 2×2 visible grid; panes > 3 scroll via the wrapper.
-//   - Empty-pane placeholder with a simple CLI picker (Claude / Codex /
-//     Gemini / OpenCode). Full dropdown with model/profile
-//     selection is deferred to v1.0.1.
-//
-// Out of scope for day 5:
-//   - Idle-status badge (day 6 will drive it from agent-status events).
-//   - Drag-resize of the grid lines.
-//   - Per-pane CLI auth / model picker (goes with the dropdown in v1.0.1).
+// Design goals that drove this file (learned from the earlier
+// "single-tab → grid toggle" attempt that is now deprecated):
+//   1. No CSS magic splitting a wrapper between TierTerminal siblings.
+//      The whole tab surface IS the grid.
+//   2. No pane-0 reuse of the tab id. Every pane has a uniform sessionId
+//      `${tabId}::pane-${idx}`. The backend PaneStore doesn't care who
+//      owns which id; list_panes just shows whatever the SharedSession
+//      has.
+//   3. No "primary pane" state. Pane_X sends to pane_Y when the user
+//      asks — that's it. Focus is handled by the browser's natural
+//      click-to-focus, with the global focus enforcer relaxed in
+//      CenterPanel to respect any xterm textarea that has focus.
+//   4. Empty panes show a small CLI picker (Claude / Codex / Gemini /
+//      OpenCode). v1.0.1 will add per-pane profile selection (model,
+//      workdir, extra args).
 
 import { useAppState, type TerminalSession, type ToolType } from '../../store/app-state';
 import { TierTerminal } from './TierTerminal';
@@ -36,62 +34,49 @@ interface Props {
   bgType: 'image' | 'video' | 'none';
 }
 
-// MVP picker — matches docs/MULTI-AGENT-ARCHITECTURE.md §7.1 primary-CLI
-// list. Shell is an explicit fallback for worker-only uses (bash / pwsh).
-// Day 5 keeps the picker minimal; v1.0.1 will add per-entry config (model,
-// starting directory, extra args).
 const PANE_CLI_OPTIONS: Array<{ value: ToolType; label: string }> = [
   { value: 'claude', label: 'Claude Code' },
   { value: 'codex', label: 'Codex' },
   { value: 'gemini', label: 'Gemini' },
   { value: 'opencode', label: 'OpenCode' },
-  { value: null, label: '— empty —' },
 ];
+
+// Fixed 2×2 layout. Scrolling for panes > 4 is a v1.0.1 extension.
+const PANE_COUNT = 4;
 
 export function MultiAgentGrid({ tab, hasBg, bgUrl, bgType }: Props) {
   const { state, dispatch } = useAppState();
 
-  const multi = tab.multiAgent;
-  if (!multi) return null;
+  // Read panes from state; fall back to 4 empty if not seeded yet.
+  // `toolData` is optional per MultiAgentPane — the fallback omits it.
+  const panes = tab.multiAgent?.panes
+    ?? (Array.from({ length: PANE_COUNT }, (_, i) => ({
+         paneIdx: i,
+         tool: null as ToolType,
+       })) as Array<{ paneIdx: number; tool: ToolType; toolData?: string }>);
 
   const onSelectTool = (paneIdx: number, tool: ToolType) => {
     dispatch({ type: 'SET_PANE_TOOL', tabId: tab.id, paneIdx, tool });
   };
 
-  const onMakePrimary = (paneIdx: number) => {
-    dispatch({ type: 'SET_PRIMARY_PANE', tabId: tab.id, paneIdx });
-  };
-
-  // Render only panes 1..N. Pane 0 is the Tab's existing TierTerminal
-  // kept mounted in CenterPanel; see MultiAgentGrid.tsx doc comment above.
-  const workerPanes = multi.panes.filter((p) => p.paneIdx !== 0);
-
   return (
-    <>
-      {workerPanes.map((pane) => {
-        // Worker panes get fresh PTY sessions with suffixed ids so the
-        // Rust MCP server sees them as independent targets.
+    <div className="multi-agent-grid-standalone">
+      {panes.map((pane) => {
+        // Uniform sessionId — no pane-0 special case. The backend spawns
+        // a fresh PTY for each unique id; PaneStore's list_panes walks
+        // SharedSession and finds them all regardless of who created them.
         const paneSessionId = `${tab.id}::pane-${pane.paneIdx}`;
-        const isPrimary = pane.paneIdx === multi.primaryPaneIdx;
         const isEmpty = pane.tool === null;
 
         return (
           <div
             key={pane.paneIdx}
-            className={[
-              'multi-agent-pane',
-              `pane-slot-${pane.paneIdx}`,
-              isPrimary ? 'is-primary' : '',
-              isEmpty ? 'is-empty' : '',
-            ]
-              .filter(Boolean)
-              .join(' ')}
-            onClick={() => !isPrimary && !isEmpty && onMakePrimary(pane.paneIdx)}
+            className={`multi-agent-pane pane-slot-${pane.paneIdx}${isEmpty ? ' is-empty' : ''}`}
           >
             <header className="multi-agent-pane-header">
               <span className="pane-label">
-                {isPrimary && '◉ '}
-                Pane {pane.paneIdx} {pane.tool ? `— ${pane.tool}` : ''}
+                Pane {pane.paneIdx}
+                {pane.tool ? ` — ${pane.tool}` : ''}
               </span>
             </header>
 
@@ -110,7 +95,10 @@ export function MultiAgentGrid({ tab, hasBg, bgUrl, bgType }: Props) {
                     toolName={undefined}
                     theme={state.currentTheme}
                     lang={state.currentLang}
-                    isActive={isPrimary && state.activeTerminalId === tab.id}
+                    // Any pane in the active tab can receive keyboard —
+                    // the browser decides via click-to-focus, no primary
+                    // state needed.
+                    isActive={state.activeTerminalId === tab.id}
                     toolData={pane.toolData}
                     folderPath={tab.folderPath}
                     hasBg={hasBg}
@@ -124,7 +112,7 @@ export function MultiAgentGrid({ tab, hasBg, bgUrl, bgType }: Props) {
           </div>
         );
       })}
-    </>
+    </div>
   );
 }
 
@@ -138,7 +126,7 @@ function EmptyPanePicker({ paneIdx, onSelect }: EmptyPanePickerProps) {
     <div className="empty-pane-picker">
       <div className="empty-pane-title">Pane {paneIdx} — choose a CLI</div>
       <div className="empty-pane-options">
-        {PANE_CLI_OPTIONS.filter((o) => o.value !== null).map((opt) => (
+        {PANE_CLI_OPTIONS.map((opt) => (
           <button
             key={String(opt.value)}
             className="empty-pane-option"
@@ -152,7 +140,7 @@ function EmptyPanePicker({ paneIdx, onSelect }: EmptyPanePickerProps) {
         ))}
       </div>
       <div className="empty-pane-hint">
-        Primary pane can then call <code>send_to_pane("{`${paneIdx}`}")</code>
+        Any peer pane can call <code>send_to_pane("{`${paneIdx}`}")</code>
       </div>
     </div>
   );

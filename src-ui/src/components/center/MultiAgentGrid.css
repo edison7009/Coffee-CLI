@@ -1,46 +1,17 @@
-/* MultiAgentGrid.css — 2×2+ pane layout for multi-agent Tabs.
-   Follows the project's no-hover-transform / no-native-tooltip rules
-   from CLAUDE.md §4.
+/* MultiAgentGrid.css — 4-peer-pane layout for the independent
+   `tool='multi-agent'` Tab type. No inheritance from a single-terminal
+   wrapper, no grid-item placement tricks — the whole tab is a grid.
+   Follows CLAUDE.md §4 (no native tooltips, no transform on hover). */
 
-   Architecture note: the grid IS the .terminal-wrapper itself (applied
-   by `.terminal-wrapper.is-multi-agent` in CenterPanel.css), not a
-   separate container. This lets the Tab's original TierTerminal stay
-   mounted — it becomes the first grid child and auto-flows into cell
-   (1,1). MultiAgentGrid only renders worker panes 1..N as siblings. */
-
-/* Apply 2×2 grid rules to the wrapper when multi-agent is on. The
-   wrapper itself lives in CenterPanel.css; we extend it here so that
-   :first-child (TierTerminal's ErrorBoundary) ends up top-left and the
-   MultiAgentGrid-rendered panes flow into the remaining cells. */
-.terminal-wrapper.is-multi-agent {
+.multi-agent-grid-standalone {
+  display: grid;
   grid-template-columns: 1fr 1fr;
   grid-template-rows: 1fr 1fr;
   gap: 6px;
   padding: 6px;
+  width: 100%;
+  height: 100%;
   box-sizing: border-box;
-  overflow: hidden;
-}
-
-/* Pane 0 = the legacy TierTerminal, first direct child of wrapper.
-   The multi-agent toggle button itself is also a direct child; we
-   already position it absolutely so it doesn't claim a grid cell. */
-.terminal-wrapper.is-multi-agent > .multi-agent-toggle {
-  /* Float the toggle in pane 0's top-right without reserving a cell. */
-  grid-column: 1;
-  grid-row: 1;
-  align-self: start;
-  justify-self: end;
-  margin: 6px;
-  z-index: 11;
-}
-
-/* TierTerminal's ErrorBoundary wrapper. We identify it via the absence
-   of `.multi-agent-pane` / `.multi-agent-toggle` classes. */
-.terminal-wrapper.is-multi-agent > :not(.multi-agent-pane):not(.multi-agent-toggle) {
-  grid-column: 1;
-  grid-row: 1;
-  min-width: 0;
-  min-height: 0;
   overflow: hidden;
 }
 
@@ -56,15 +27,11 @@
   cursor: default;
 }
 
-/* Explicit cell placement for worker panes — pane 0 auto-occupies (1,1). */
+/* Explicit cell placement: all 4 panes are peers, no pane-0 special case. */
+.multi-agent-pane.pane-slot-0 { grid-column: 1; grid-row: 1; }
 .multi-agent-pane.pane-slot-1 { grid-column: 2; grid-row: 1; }
 .multi-agent-pane.pane-slot-2 { grid-column: 1; grid-row: 2; }
 .multi-agent-pane.pane-slot-3 { grid-column: 2; grid-row: 2; }
-
-.multi-agent-pane.is-primary {
-  border-color: var(--accent, #6cc275);
-  box-shadow: 0 0 0 1px var(--accent, #6cc275);
-}
 
 .multi-agent-pane.is-empty {
   background: var(--bg-tertiary, #0e0e0e);
@@ -79,10 +46,6 @@
   background: var(--bg-tertiary, #0e0e0e);
   border-bottom: 1px solid var(--border-color, #2a2a2a);
   user-select: none;
-}
-
-.multi-agent-pane.is-primary .multi-agent-pane-header {
-  color: var(--accent, #6cc275);
 }
 
 .pane-label {

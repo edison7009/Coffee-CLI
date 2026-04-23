@@ -246,6 +246,19 @@ export function CenterPanel() {
       // in a tab, then auto-write `/vibeid\r` to trigger the remote vibeid skill.
       // No cwd required (runs against ~/.claude/usage-data/report.html globally).
       { key: 'vibeid' as ToolType, label: t('tool.vibeid' as any), icon: <SvgVibeID />, type: 'utility' as const, requiresCwd: false, remote: undefined },
+      // Multi-agent quadrant: independent tab type that renders as 2×2
+      // peer panes. Each pane hosts a separate CLI; any pane can call
+      // coffee-cli MCP to observe/drive the others. No cwd required at
+      // the tab level — each pane picks its own CLI and cwd when the
+      // user selects from the pane's EmptyPanePicker.
+      {
+        key: 'multi-agent' as ToolType,
+        label: 'Multi-Agent Quadrant',
+        icon: <span style={{ fontSize: '1.4em', lineHeight: 1 }}>⊞</span>,
+        type: 'utility' as const,
+        requiresCwd: false,
+        remote: undefined,
+      },
     ];
 
     return [...aiCliEntries, ...utilities];
@@ -340,8 +353,15 @@ export function CenterPanel() {
     const enforce = () => {
       setTimeout(() => {
         const el = document.activeElement;
-        if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') && !el.classList.contains('xterm-helper-textarea')) {
-          return; // user is typing in a real input, leave them alone
+        // ANY focused input/textarea is "the real target" — including xterm's
+        // .xterm-helper-textarea. Previously we excluded it to force focus back
+        // onto the single-tab terminal, but that broke four-pane mode where
+        // every pane has its own xterm textarea and users click between them.
+        // Now: let the browser's natural click→focus routing decide which
+        // pane owns the keyboard; the enforcer only kicks in when focus
+        // wanders to non-input DOM (<div>, <body>) after, e.g., a tab-bar click.
+        if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
+          return;
         }
         const id = focusTargetRef.current;
         if (id) focusTerminal(id);
@@ -767,37 +787,34 @@ export function CenterPanel() {
         {terminals.map(t => t.tool !== null ? (
           <div
             key={t.id}
-            className={`terminal-wrapper${t.multiAgent ? ' is-multi-agent' : ''}`}
+            className="terminal-wrapper"
             data-session-id={t.id}
             style={{
-              // display handled by CSS when in multi-agent (grid); keep
-              // flex for the legacy single-terminal case.
-              display: t.id === activeTerminalId
-                ? (t.multiAgent ? 'grid' : 'flex')
-                : 'none',
+              display: t.id === activeTerminalId ? 'flex' : 'none',
               width: '100%',
               height: '100%',
               position: 'relative'
             }}
           >
-            {t.tool !== 'history' && t.tool !== 'arcade' && (
-              <MultiAgentToggleButton tab={t} folderPath={t.folderPath} />
-            )}
             {t.tool === 'history' ? (
               <ChatReader sessionId={t.id} />
             ) : t.tool === 'arcade' ? (
               <DosPlayer sessionId={t.id} />
+            ) : t.tool === 'multi-agent' ? (
+              // Independent four-pane peer mode. Standalone Tab type —
+              // does not share layout with the single-terminal path
+              // below. Every pane is a peer; any CLI can drive the
+              // others via coffee-cli MCP tools.
+              <MultiAgentGrid
+                tab={t}
+                hasBg={hasBg}
+                bgUrl={bgUrl}
+                bgType={bgType}
+              />
             ) : (
-              // TierTerminal is ALWAYS mounted for tool-running tabs.
-              // In multi-agent mode the surrounding wrapper becomes a
-              // 2×2 CSS grid — the TierTerminal below stays in cell (1,1)
-              // and MultiAgentGrid renders the other 3 panes as siblings.
-              // Critical: do NOT conditionally switch between TierTerminal
-              // and MultiAgentGrid — that unmounts TierTerminal and the
-              // PTY gets killed ("Killing existing session ... for restart").
-              <ErrorBoundary key={`err-${t.id}-${t.restartKey || 0}-${t.multiAgent ? 'multi' : 'single'}`} fallbackLabel="Tier Terminal Error">
+              <ErrorBoundary key={`err-${t.id}-${t.restartKey || 0}`} fallbackLabel="Tier Terminal Error">
                 <TierTerminal
-                  key={`tier-${t.id}-${t.restartKey || 0}-${t.multiAgent ? 'multi' : 'single'}`}
+                  key={`tier-${t.id}-${t.restartKey || 0}`}
                   sessionId={t.id}
                   tool={t.tool}
                   toolName={(() => {
@@ -1250,62 +1267,3 @@ export function CenterPanel() {
   );
 }
 
-/**
- * Floating toggle in the pane's top-right corner that flips between
- * single-terminal and multi-agent modes.
- *
- * On enable: dispatches ENABLE_MULTI_AGENT, then asks the Rust backend
- * to install the CLAUDE.md/AGENTS.md/GEMINI.md protocol files and inject
- * the coffee-cli MCP endpoint into every detected primary CLI config.
- *
- * On disable: reverse.
- *
- * We NEVER use the browser-native `title` attribute (CLAUDE.md §4).
- * Users get feedback via console logs today; a status-bar toast is a
- * v1.0.1 polish item.
- */
-function MultiAgentToggleButton({
-  tab,
-  folderPath,
-}: {
-  tab: import('../../store/app-state').TerminalSession;
-  folderPath: string | null;
-}) {
-  const { dispatch } = useAppState();
-  const enabled = Boolean(tab.multiAgent);
-
-  const onClick = async () => {
-    if (!folderPath) {
-      console.warn('[multi-agent] cannot toggle without workspace folder');
-      return;
-    }
-    if (enabled) {
-      dispatch({ type: 'DISABLE_MULTI_AGENT', tabId: tab.id });
-      try {
-        const r = await commands.disableMultiAgentMode(folderPath);
-        console.log('[multi-agent] disabled:', r);
-      } catch (e) {
-        console.warn('[multi-agent] disable_multi_agent_mode failed:', e);
-      }
-    } else {
-      dispatch({ type: 'ENABLE_MULTI_AGENT', tabId: tab.id });
-      try {
-        const r = await commands.enableMultiAgentMode(folderPath);
-        console.log('[multi-agent] enabled:', r);
-      } catch (e) {
-        console.warn('[multi-agent] enable_multi_agent_mode failed:', e);
-      }
-    }
-  };
-
-  return (
-    <button
-      type="button"
-      className={`multi-agent-toggle${enabled ? ' is-on' : ''}`}
-      onClick={onClick}
-      aria-label={enabled ? 'Disable multi-agent mode' : 'Enable multi-agent mode'}
-    >
-      {enabled ? '⊟' : '⊞'}
-    </button>
-  );
-}
