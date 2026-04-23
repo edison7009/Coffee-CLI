@@ -37,6 +37,9 @@ export const en = {
   'tool.vibeid': 'Personality Test',
   'tool.insights_prerun': 'Generating Usage Report...',
   'tool.multi_agent': 'Multi-Agent',
+  'tool.two_split': 'Independent Dual',
+  'tool.three_split': 'Independent Triple',
+  'tool.four_split': 'Independent Quad',
   'vibeid.need_insights_confirm': 'Personality Test needs your Claude Code usage report first.\n\nThe app will auto-run /insights now (takes about 1-2 minutes), then run the VibeID test automatically.\n\nContinue?',
   'vibeid.insights_timeout': 'Report generation took too long. Please try again, or run /insights manually in a Claude Code tab.',
 
@@ -101,6 +104,11 @@ export const en = {
   'gambit.title': 'GAMBIT',
   'gambit.placeholder': 'Compose your move... (Ctrl+Enter to send, Enter for newline, paste images)',
   'gambit.send_failed_hint': 'Click a pane first, then send',
+  'gambit.send_empty_hint': 'Type a message or paste an image first (Ctrl+V)',
+  'gambit.ctx_cut': 'Cut',
+  'gambit.ctx_copy': 'Copy',
+  'gambit.ctx_paste': 'Paste',
+  'gambit.ctx_select_all': 'Select All',
 
   // Mode switch button (bottom-right): enter Arcade games / return to tools.
   'mode.take_a_break': 'Take a break',

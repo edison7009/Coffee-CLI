@@ -36,6 +36,9 @@ export const ko = {
   'tool.vibeid': '성격 테스트',
   'tool.insights_prerun': '사용 기록 리포트 생성 중...',
   'tool.multi_agent': '멀티 에이전트',
+  'tool.two_split': '독립 2분할',
+  'tool.three_split': '독립 3분할',
+  'tool.four_split': '독립 4분할',
   'vibeid.need_insights_confirm': '성격 테스트를 실행하려면 먼저 Claude Code 사용 기록 리포트가 필요합니다.\n\n/insights를 자동으로 실행합니다 (약 1-2분). 완료 후 성격 테스트가 자동으로 시작됩니다.\n\n계속할까요?',
   'vibeid.insights_timeout': '리포트 생성이 시간 초과되었습니다. 나중에 다시 시도하거나 Claude Code 탭에서 /insights를 수동으로 실행하세요.',
 
@@ -99,6 +102,11 @@ export const ko = {
   'gambit.title': '한 수',
   'gambit.placeholder': '한 수를 고르는 중... (Ctrl+Enter 전송, Enter 줄바꿈, 이미지 붙여넣기)',
   'gambit.send_failed_hint': 'pane 을 먼저 클릭한 뒤 전송',
+  'gambit.send_empty_hint': '내용을 입력하거나 이미지를 붙여넣으세요 (Ctrl+V)',
+  'gambit.ctx_cut': '잘라내기',
+  'gambit.ctx_copy': '복사',
+  'gambit.ctx_paste': '붙여넣기',
+  'gambit.ctx_select_all': '전체 선택',
 
   'mode.take_a_break': '잠깐 쉬기',
   'mode.back_to_work': '업무로 복귀',

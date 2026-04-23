@@ -36,6 +36,9 @@ export const de = {
   'tool.vibeid': 'Persönlichkeitstest',
   'tool.insights_prerun': 'Nutzungsbericht wird generiert...',
   'tool.multi_agent': 'Multi-Agent',
+  'tool.two_split': 'Unabhängiger Dual',
+  'tool.three_split': 'Unabhängiger Triple',
+  'tool.four_split': 'Unabhängiger Quad',
   'vibeid.need_insights_confirm': 'Der Persönlichkeitstest benötigt zuerst deinen Claude Code Nutzungsbericht.\n\n/insights wird jetzt automatisch ausgeführt (ca. 1-2 Minuten), dann startet der Test automatisch.\n\nFortfahren?',
   'vibeid.insights_timeout': 'Die Berichterstellung hat zu lange gedauert. Bitte später erneut versuchen oder /insights manuell in einem Claude Code Tab ausführen.',
 

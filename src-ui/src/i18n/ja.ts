@@ -36,6 +36,9 @@ export const ja = {
   'tool.vibeid': '性格診断',
   'tool.insights_prerun': '使用状況レポートを生成中...',
   'tool.multi_agent': 'マルチエージェント',
+  'tool.two_split': '独立2画面',
+  'tool.three_split': '独立3画面',
+  'tool.four_split': '独立4画面',
   'vibeid.need_insights_confirm': '性格診断には Claude Code の使用状況レポートが必要です。\n\n/insights を自動実行します（約 1〜2 分）。完了後、性格診断が自動的に開始されます。\n\n続行しますか？',
   'vibeid.insights_timeout': 'レポートの生成がタイムアウトしました。後でもう一度試すか、Claude Code タブで /insights を手動で実行してください。',
 
@@ -99,6 +102,11 @@ export const ja = {
   'gambit.title': '一手',
   'gambit.placeholder': '静かに一手を思案... (Ctrl+Enterで送信、Enterで改行、画像貼付可)',
   'gambit.send_failed_hint': 'まず pane をクリックしてから送信',
+  'gambit.send_empty_hint': 'メッセージを入力するか画像を貼り付けてください (Ctrl+V)',
+  'gambit.ctx_cut': '切り取り',
+  'gambit.ctx_copy': 'コピー',
+  'gambit.ctx_paste': '貼り付け',
+  'gambit.ctx_select_all': 'すべて選択',
 
   'mode.take_a_break': 'ひと休み',
   'mode.back_to_work': '仕事に戻る',

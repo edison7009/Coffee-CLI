@@ -37,6 +37,9 @@ export const vi = {
   'tool.vibeid': 'Trắc nghiệm tính cách',
   'tool.insights_prerun': 'Đang tạo báo cáo sử dụng...',
   'tool.multi_agent': 'Đa tác nhân',
+  'tool.two_split': 'Hai Màn Độc Lập',
+  'tool.three_split': 'Ba Màn Độc Lập',
+  'tool.four_split': 'Bốn Màn Độc Lập',
   'vibeid.need_insights_confirm': 'Trắc nghiệm tính cách cần báo cáo sử dụng Claude Code của bạn trước.\n\n/insights sẽ tự động chạy (khoảng 1-2 phút), sau đó trắc nghiệm sẽ tự bắt đầu.\n\nTiếp tục?',
   'vibeid.insights_timeout': 'Tạo báo cáo quá lâu. Vui lòng thử lại sau hoặc chạy /insights thủ công trong tab Claude Code.',
 
@@ -102,6 +105,11 @@ export const vi = {
   'gambit.title': 'Nước cờ',
   'gambit.placeholder': 'Cân nhắc nước cờ... (Ctrl+Enter để gửi, Enter xuống dòng, dán ảnh được)',
   'gambit.send_failed_hint': 'Bấm vào một pane trước rồi gửi',
+  'gambit.send_empty_hint': 'Nhập nội dung hoặc dán ảnh trước (Ctrl+V)',
+  'gambit.ctx_cut': 'Cắt',
+  'gambit.ctx_copy': 'Sao chép',
+  'gambit.ctx_paste': 'Dán',
+  'gambit.ctx_select_all': 'Chọn tất cả',
 
   'mode.take_a_break': 'Nghỉ một chút',
   'mode.back_to_work': 'Quay lại làm việc',

@@ -36,6 +36,9 @@ export const zhTW = {
   'tool.vibeid': '人格測試',
   'tool.insights_prerun': '正在生成使用報告...',
   'tool.multi_agent': '多智能體',
+  'tool.two_split': '獨立二屏',
+  'tool.three_split': '獨立三屏',
+  'tool.four_split': '獨立四屏',
   'vibeid.need_insights_confirm': '人格測試需要先生成你的 Claude Code 使用報告。\n\n將自動執行 /insights（約 1-2 分鐘），完成後自動跑人格測試。\n\n繼續？',
   'vibeid.insights_timeout': '報告生成逾時。請稍後重試，或在 Claude Code tab 裡手動跑 /insights。',
 
@@ -99,6 +102,11 @@ export const zhTW = {
   'gambit.title': '妙手',
   'gambit.placeholder': '靜心琢磨，再落子... (Ctrl+Enter 發送, Enter 換行, 可貼上圖片)',
   'gambit.send_failed_hint': '先點擊一個 pane，再發送',
+  'gambit.send_empty_hint': '先輸入內容或貼上圖片 (Ctrl+V)',
+  'gambit.ctx_cut': '剪下',
+  'gambit.ctx_copy': '複製',
+  'gambit.ctx_paste': '貼上',
+  'gambit.ctx_select_all': '全選',
 
   'mode.take_a_break': '放鬆一下',
   'mode.back_to_work': '回到工作',

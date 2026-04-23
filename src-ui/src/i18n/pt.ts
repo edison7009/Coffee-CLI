@@ -36,6 +36,9 @@ export const pt = {
   'tool.vibeid': 'Teste de personalidade',
   'tool.insights_prerun': 'Gerando relatório de uso...',
   'tool.multi_agent': 'Multi-Agente',
+  'tool.two_split': 'Duplo Independente',
+  'tool.three_split': 'Triplo Independente',
+  'tool.four_split': 'Quádruplo Independente',
   'vibeid.need_insights_confirm': 'O Teste de personalidade precisa primeiro do seu relatório de uso Claude Code.\n\n/insights será executado automaticamente (cerca de 1-2 minutos) e depois o teste começará sozinho.\n\nContinuar?',
   'vibeid.insights_timeout': 'A geração do relatório demorou muito. Tente novamente mais tarde ou execute /insights manualmente em uma aba Claude Code.',
 

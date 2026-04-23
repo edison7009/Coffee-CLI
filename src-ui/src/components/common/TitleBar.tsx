@@ -26,10 +26,11 @@ export function TitleBar() {
   const setGrid    = () => dispatch({ type: 'SET_MULTI_AGENT_LAYOUT', layout: 'grid' });
   const setColumns = () => dispatch({ type: 'SET_MULTI_AGENT_LAYOUT', layout: 'columns' });
 
-  // Show multi-agent layout picker only when the active tab IS multi-agent —
-  // otherwise the control is noise.
+  // Show the 2×2 / 1×4 layout picker when the active tab is either the
+  // multi-agent quadrant or the independent four-split view — both use
+  // the same multiAgentLayout state and CSS modifier classes.
   const activeTab = state.terminals.find(t => t.id === state.activeTerminalId);
-  const showMaLayout = activeTab?.tool === 'multi-agent';
+  const showMaLayout = activeTab?.tool === 'multi-agent' || activeTab?.tool === 'four-split';
 
   return (
     // data-tauri-drag-region tells WebView2 this div is draggable

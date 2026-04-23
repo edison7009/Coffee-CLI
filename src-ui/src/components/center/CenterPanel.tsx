@@ -4,6 +4,7 @@ import { TierTerminal } from './TierTerminal';
 import { DosPlayer } from './DosPlayer';
 import { ChatReader } from './ChatReader';
 import { MultiAgentGrid } from './MultiAgentGrid';
+import { FourSplitGrid } from './FourSplitGrid';
 import { ErrorBoundary } from '../common/ErrorBoundary';
 import { useAppState, type ToolType } from '../../store/app-state';
 
@@ -29,18 +30,42 @@ const toolIcon = (src: string, size = '1em', extra: React.CSSProperties = {}) =>
 
 const SvgClaude    = () => toolIcon('/icons/tools/claude.svg');
 const SvgQwen      = () => toolIcon('/icons/tools/qwen.svg');
-const SvgInstaller = () => toolIcon('/icons/tools/installer.svg');
 const SvgOpenCode  = () => toolIcon('/icons/tools/opencode.svg');
 const SvgCodex     = () => toolIcon('/icons/tools/codex.svg');
 const SvgGemini    = () => toolIcon('/icons/tools/gemini.svg');
 const SvgVibeID    = () => toolIcon('/icons/tools/vibeid.png', '1.4em');
 const SvgHermes    = () => toolIcon('/icons/tools/hermes.png', '1em', { borderRadius: 'var(--radius-xs)', objectFit: 'cover' });
 
+// One-click installer glyph — clock face with hour hands. Inlined (instead
+// of loading /icons/tools/installer.svg as <img>) so the stroke can inherit
+// currentColor and follow the theme accent, matching our other in-house
+// glyphs (multi-agent, four-split). Third-party logos (Claude, Gemini,
+// Codex...) stay as <img> to preserve their brand colors.
+const SvgInstaller = () => (
+  <svg
+    width="1em"
+    height="1em"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    style={{ flexShrink: 0, color: 'var(--accent)' }}
+  >
+    <circle cx="12" cy="12" r="10" />
+    <path d="M12 7v6l4 4" />
+  </svg>
+);
+
 // Multi-Agent glyph — same lucide layout-grid path used by the titlebar's
 // "2×2 grid" layout toggle. Inline so it tints with the theme (currentColor)
 // and stays in lockstep with the titlebar. Rendered at 1em so it picks up
 // the card/tab font-size (Launchpad card ≈ 22px, Tab ≈ 13px) without
 // per-callsite tweaks.
+// Multi-Agent glyph — one whole frame divided into 4 quadrants by a cross.
+// Reads as "a single coordinated system split into 4 roles", matching the
+// MCP peer-coordination model (the 4 panes share one workspace and one MCP
+// endpoint, so conceptually they're one entity with 4 heads).
 const SvgMultiAgent = () => (
   <svg
     width="1.2em"
@@ -51,7 +76,69 @@ const SvgMultiAgent = () => (
     strokeWidth="1.8"
     strokeLinecap="square"
     strokeLinejoin="miter"
-    style={{ flexShrink: 0 }}
+    style={{ flexShrink: 0, color: 'var(--accent)' }}
+  >
+    <rect x="3" y="3" width="18" height="18" />
+    <line x1="12" y1="3" x2="12" y2="21" />
+    <line x1="3" y1="12" x2="21" y2="12" />
+  </svg>
+);
+
+// Two-Split glyph — 2 tall rectangles side-by-side with a gap. Conveys
+// "two independent full-height panes" — the most common split case
+// (diff review, A/B comparison, doc + terminal).
+const SvgTwoSplit = () => (
+  <svg
+    width="1.2em"
+    height="1.2em"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="square"
+    strokeLinejoin="miter"
+    style={{ flexShrink: 0, color: 'var(--accent)' }}
+  >
+    <rect x="3"  y="3" width="8" height="18" />
+    <rect x="13" y="3" width="8" height="18" />
+  </svg>
+);
+
+// Three-Split glyph — 3 tall rectangles side-by-side. Second-most common
+// split case (editor + terminal + preview, or 3-way merge).
+const SvgThreeSplit = () => (
+  <svg
+    width="1.2em"
+    height="1.2em"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="square"
+    strokeLinejoin="miter"
+    style={{ flexShrink: 0, color: 'var(--accent)' }}
+  >
+    <rect x="2"  y="3" width="6" height="18" />
+    <rect x="9"  y="3" width="6" height="18" />
+    <rect x="16" y="3" width="6" height="18" />
+  </svg>
+);
+
+// Four-Split glyph — 4 individually-framed rectangles with visible gaps
+// between them. Reads as "4 standalone windows on one screen" — which is
+// literally what 独立四屏 is: 4 independent PTYs, independent folders,
+// independent tools, zero coordination.
+const SvgFourSplit = () => (
+  <svg
+    width="1.2em"
+    height="1.2em"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="square"
+    strokeLinejoin="miter"
+    style={{ flexShrink: 0, color: 'var(--accent)' }}
   >
     <rect x="3"  y="3"  width="7" height="7" />
     <rect x="14" y="3"  width="7" height="7" />
@@ -106,19 +193,29 @@ export function CenterPanel() {
   const [showArcadeGames, setShowArcadeGames] = useState(false);
   const [libraryTab, setLibraryTab] = useState<'agents' | 'games'>('agents');
   const [pinnedItems, setPinnedItems] = useState<string[]>(() => {
+    // Hard cap must match MAX_PINS constant below. Inlined as a literal
+    // because MAX_PINS is declared after this initializer runs.
+    const CAP = 6;
     try {
       const stored = localStorage.getItem('coffee_pinned_items');
       if (stored !== null) {
-        const arr = JSON.parse(stored);
+        let arr = JSON.parse(stored);
+        if (!Array.isArray(arr)) return [];
         // One-shot migration: existing users who launched before the
         // multi-agent quadrant shipped won't have it pinned. Inject it
-        // once so they discover the feature. They can unpin it via the
-        // library if they don't want it.
-        if (Array.isArray(arr) && !arr.includes('agent:multi-agent')) {
+        // once so they discover the feature. If they're already at cap,
+        // evict the oldest pin to make room (they can unpin multi-agent
+        // via the library if they don't want it).
+        if (!arr.includes('agent:multi-agent')) {
+          if (arr.length >= CAP) arr.shift();
           arr.push('agent:multi-agent');
-          try { localStorage.setItem('coffee_pinned_items', JSON.stringify(arr)); } catch {}
         }
-        return Array.isArray(arr) ? arr : [];
+        // Defensive cap: historical bugs (e.g. earlier migrations that
+        // pushed past the limit) may have left > CAP items in storage.
+        // Trim and persist back so the state stays consistent.
+        if (arr.length > CAP) arr = arr.slice(0, CAP);
+        try { localStorage.setItem('coffee_pinned_items', JSON.stringify(arr)); } catch {}
+        return arr;
       }
       // First launch: pre-pin 6 useful defaults so desktop shows a full MAX_PINS
       // grid out of the box (4 AI CLIs covering major providers + 2 utilities).
@@ -295,6 +392,45 @@ export function CenterPanel() {
         icon: <SvgMultiAgent />,
         type: 'utility' as const,
         requiresCwd: true,
+        remote: undefined,
+      },
+      // Two-Split: 2 independent side-by-side panes. Most common split
+      // case (diff review, A/B compare, doc + terminal). Same no-MCP,
+      // per-pane-folder semantics as four-split.
+      {
+        key: 'two-split' as ToolType,
+        label: t('tool.two_split' as any),
+        icon: <SvgTwoSplit />,
+        type: 'utility' as const,
+        requiresCwd: false,
+        remote: undefined,
+      },
+      // Three-Split: 3 independent side-by-side panes (editor + terminal +
+      // preview, 3-way merge, etc).
+      {
+        key: 'three-split' as ToolType,
+        label: t('tool.three_split' as any),
+        icon: <SvgThreeSplit />,
+        type: 'utility' as const,
+        requiresCwd: false,
+        remote: undefined,
+      },
+      // Four-Split: same 2×2 pane grid as multi-agent, but with NO MCP
+      // coordination — pure "4 independent terminals on one screen".
+      // Workspace filesystem is never touched (no `.multi-agent/` dir,
+      // no thin-pointer CLAUDE.md/AGENTS.md/GEMINI.md writes). Same 3
+      // CLIs supported (Claude/Codex/Gemini) for visual parity.
+      //
+      // `requiresCwd: false` — each pane picks its OWN folder when the
+      // user chooses a CLI in the empty picker, so Desktop-level folder
+      // selection would be redundant. This is the core differentiator
+      // from multi-agent (which is single-workspace by design).
+      {
+        key: 'four-split' as ToolType,
+        label: t('tool.four_split' as any),
+        icon: <SvgFourSplit />,
+        type: 'utility' as const,
+        requiresCwd: false,
         remote: undefined,
       },
     ];
@@ -704,6 +840,9 @@ export function CenterPanel() {
       }
       case 'terminal': return { icon: <TerminalIcon />, title: cwd ?? t('tool.terminal'), tooltip: pathTip };
       case 'multi-agent': return { icon: <SvgMultiAgent />, title: cwd ?? t('tool.multi_agent' as any), tooltip: pathTip };
+      case 'two-split': return { icon: <SvgTwoSplit />, title: cwd ?? t('tool.two_split' as any), tooltip: pathTip };
+      case 'three-split': return { icon: <SvgThreeSplit />, title: cwd ?? t('tool.three_split' as any), tooltip: pathTip };
+      case 'four-split': return { icon: <SvgFourSplit />, title: cwd ?? t('tool.four_split' as any), tooltip: pathTip };
       case 'arcade': {
         const gameName = session.toolData || '';
         const meta = gameCatalog.find(m => m.file.toLowerCase() === gameName.toLowerCase());
@@ -766,7 +905,7 @@ export function CenterPanel() {
               {icon}
               <span className="tab-title" style={{ flex: '0 1 auto', minWidth: 0, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{title}</span>
               <div className="tab-actions">
-                {(['claude', 'qwen', 'hermes', 'opencode', 'codex', 'gemini', 'agent', 'installer', 'terminal', 'remote', 'vibeid', 'insights_prerun', 'multi-agent'] as const).includes(session.tool as 'claude' | 'qwen' | 'hermes' | 'opencode' | 'codex' | 'gemini' | 'agent' | 'installer' | 'terminal' | 'remote' | 'vibeid' | 'insights_prerun' | 'multi-agent') && (
+                {(['claude', 'qwen', 'hermes', 'opencode', 'codex', 'gemini', 'agent', 'installer', 'terminal', 'remote', 'vibeid', 'insights_prerun', 'multi-agent', 'two-split', 'three-split', 'four-split'] as const).includes(session.tool as 'claude' | 'qwen' | 'hermes' | 'opencode' | 'codex' | 'gemini' | 'agent' | 'installer' | 'terminal' | 'remote' | 'vibeid' | 'insights_prerun' | 'multi-agent' | 'two-split' | 'three-split' | 'four-split') && (
                   // Only Claude Code has a real hook-driven status machine.
                   // The other tools render the steady-green idle pulse —
                   // we explicitly chose not to guess their state from PTY
@@ -834,6 +973,33 @@ export function CenterPanel() {
                 hasBg={hasBg}
                 bgUrl={bgUrl}
                 bgType={bgType}
+              />
+            ) : t.tool === 'two-split' ? (
+              <FourSplitGrid
+                tab={t}
+                hasBg={hasBg}
+                bgUrl={bgUrl}
+                bgType={bgType}
+                paneCount={2}
+              />
+            ) : t.tool === 'three-split' ? (
+              <FourSplitGrid
+                tab={t}
+                hasBg={hasBg}
+                bgUrl={bgUrl}
+                bgType={bgType}
+                paneCount={3}
+              />
+            ) : t.tool === 'four-split' ? (
+              // Independent Quad (独立四屏): same 2×2 pane grid as
+              // multi-agent but with zero MCP coordination — panes
+              // cannot observe or drive each other.
+              <FourSplitGrid
+                tab={t}
+                hasBg={hasBg}
+                bgUrl={bgUrl}
+                bgType={bgType}
+                paneCount={4}
               />
             ) : (
               <ErrorBoundary key={`err-${t.id}-${t.restartKey || 0}`} fallbackLabel="Tier Terminal Error">

@@ -6,7 +6,7 @@ import type { ScanResult } from '../tauri';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type ToolType = 'claude' | 'qwen' | 'installer' | 'hermes' | 'opencode' | 'codex' | 'gemini' | 'agent' | 'arcade' | 'terminal' | 'remote' | 'history' | 'vibeid' | 'insights_prerun' | 'multi-agent' | null;
+export type ToolType = 'claude' | 'qwen' | 'installer' | 'hermes' | 'opencode' | 'codex' | 'gemini' | 'agent' | 'arcade' | 'terminal' | 'remote' | 'history' | 'vibeid' | 'insights_prerun' | 'multi-agent' | 'two-split' | 'three-split' | 'four-split' | null;
 
 /**
  * Tab status shown as an animated 9-dot glyph. Maps to CSS classes
@@ -52,6 +52,11 @@ export interface MultiAgentPane {
   tool: ToolType;
   toolData?: string;
   agentStatus?: AgentStatus;
+  // Per-pane working directory. Only used by the "独立四屏" (four-split) tab
+  // where each pane can run in its own project. Multi-agent panes ignore this
+  // and use the tab-level folderPath (all 4 panes share one workspace because
+  // they coordinate via MCP against that workspace's config).
+  folderPath?: string | null;
 }
 
 /// State attached to a Tab with `tool === 'multi-agent'`. All four panes
@@ -140,7 +145,7 @@ type Action =
   | { type: 'SET_TERM_SCHEME'; scheme: string }
   | { type: 'TOGGLE_GAMBIT' }
   | { type: 'SET_GAMBIT_DRAFT'; id: string; draft: string }
-  | { type: 'SET_PANE_TOOL'; tabId: string; paneIdx: number; tool: ToolType; toolData?: string }
+  | { type: 'SET_PANE_TOOL'; tabId: string; paneIdx: number; tool: ToolType; toolData?: string; folderPath?: string | null }
   | { type: 'TOGGLE_LEFT_PANEL' }
   | { type: 'TOGGLE_RIGHT_PANEL' }
   | { type: 'SET_MULTI_AGENT_LAYOUT'; layout: 'grid' | 'columns' };
@@ -269,7 +274,18 @@ function reducer(state: AppState, action: Action): AppState {
             ?? ([1, 2, 3, 4].map(i => ({ paneIdx: i, tool: null as ToolType })) as MultiAgentPane[]);
           const panes = existing.map(p =>
             p.paneIdx === action.paneIdx
-              ? { ...p, tool: action.tool, toolData: action.toolData }
+              ? {
+                  ...p,
+                  tool: action.tool,
+                  toolData: action.toolData,
+                  // Only overwrite folderPath when the action explicitly
+                  // carries one. Clearing a pane (tool=null without folderPath)
+                  // wipes the pane back to empty state, so we also null out
+                  // the stored folder to avoid ghost state.
+                  folderPath: action.folderPath !== undefined
+                    ? action.folderPath
+                    : (action.tool === null ? null : p.folderPath),
+                }
               : p
           );
           return { ...t, multiAgent: { panes } };
