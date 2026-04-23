@@ -1,17 +1,100 @@
 // TitleBar.tsx — Custom draggable titlebar (replaces native OS window chrome)
 // Tauri requires this for frameless windows with decorations: false
+//
+// Layout: [drag-area with layout toggles on the left] … [min / max / close on the right]
+//
+// Left-side controls mirror VS Code's Activity Bar / Ctrl+B affordance:
+//   1. Left panel toggle  (Explorer / 目录列表)
+//   2. Right panel toggle (TaskBoard / 历史对话)
+//   3. Multi-agent layout mode — only visible when the active tab is a
+//      multi-agent quadrant. Two modes: grid (2×2) and columns (1×4).
 
 import { commands, isTauri } from '../../tauri';
+import { useAppState, useAppDispatch } from '../../store/app-state';
 import './TitleBar.css';
 
 export function TitleBar() {
+  const { state } = useAppState();
+  const dispatch = useAppDispatch();
+
   const minimize = () => isTauri && commands.windowMinimize().catch(() => {});
   const maximize = () => isTauri && commands.windowMaximize().catch(() => {});
   const close    = () => isTauri && commands.windowClose().catch(() => {});
 
+  const toggleLeft = () => dispatch({ type: 'TOGGLE_LEFT_PANEL' });
+  const toggleRight = () => dispatch({ type: 'TOGGLE_RIGHT_PANEL' });
+  const setGrid    = () => dispatch({ type: 'SET_MULTI_AGENT_LAYOUT', layout: 'grid' });
+  const setColumns = () => dispatch({ type: 'SET_MULTI_AGENT_LAYOUT', layout: 'columns' });
+
+  // Show multi-agent layout picker only when the active tab IS multi-agent —
+  // otherwise the control is noise.
+  const activeTab = state.terminals.find(t => t.id === state.activeTerminalId);
+  const showMaLayout = activeTab?.tool === 'multi-agent';
+
   return (
     // data-tauri-drag-region tells WebView2 this div is draggable
     <div className="titlebar" data-tauri-drag-region>
+      {/* Left-side layout toggles — carved out of the drag area */}
+      <div className="titlebar-layout-toggles" data-tauri-drag-region="false">
+        <button
+          className={`titlebar-btn titlebar-btn--layout${state.leftPanelHidden ? '' : ' is-active'}`}
+          onClick={toggleLeft}
+          aria-label="Toggle left panel"
+          aria-pressed={!state.leftPanelHidden}
+        >
+          {/* Rectangle with a filled left strip when panel is visible */}
+          <svg width="16" height="14" viewBox="0 0 16 14">
+            <rect x="1" y="2" width="14" height="10" fill="none" stroke="currentColor" strokeWidth="1.2"/>
+            <rect x="1" y="2" width="4.5" height="10" fill={state.leftPanelHidden ? 'none' : 'currentColor'} opacity={state.leftPanelHidden ? 0 : 0.8}/>
+          </svg>
+        </button>
+        <button
+          className={`titlebar-btn titlebar-btn--layout${state.rightPanelHidden ? '' : ' is-active'}`}
+          onClick={toggleRight}
+          aria-label="Toggle right panel"
+          aria-pressed={!state.rightPanelHidden}
+        >
+          <svg width="16" height="14" viewBox="0 0 16 14">
+            <rect x="1" y="2" width="14" height="10" fill="none" stroke="currentColor" strokeWidth="1.2"/>
+            <rect x="10.5" y="2" width="4.5" height="10" fill={state.rightPanelHidden ? 'none' : 'currentColor'} opacity={state.rightPanelHidden ? 0 : 0.8}/>
+          </svg>
+        </button>
+
+        {showMaLayout && (
+          <>
+            <div className="titlebar-sep" />
+            <button
+              className={`titlebar-btn titlebar-btn--layout${state.multiAgentLayout === 'grid' ? ' is-active' : ''}`}
+              onClick={setGrid}
+              aria-label="Multi-agent 2x2 grid"
+              aria-pressed={state.multiAgentLayout === 'grid'}
+            >
+              {/* 2x2 quadrant glyph */}
+              <svg width="14" height="14" viewBox="0 0 14 14">
+                <rect x="1"  y="1"  width="5" height="5" fill="currentColor" opacity="0.9"/>
+                <rect x="8"  y="1"  width="5" height="5" fill="currentColor" opacity="0.9"/>
+                <rect x="1"  y="8"  width="5" height="5" fill="currentColor" opacity="0.9"/>
+                <rect x="8"  y="8"  width="5" height="5" fill="currentColor" opacity="0.9"/>
+              </svg>
+            </button>
+            <button
+              className={`titlebar-btn titlebar-btn--layout${state.multiAgentLayout === 'columns' ? ' is-active' : ''}`}
+              onClick={setColumns}
+              aria-label="Multi-agent 4 vertical columns"
+              aria-pressed={state.multiAgentLayout === 'columns'}
+            >
+              {/* 4 vertical strips glyph */}
+              <svg width="14" height="14" viewBox="0 0 14 14">
+                <rect x="1"    y="1" width="2.2" height="12" fill="currentColor" opacity="0.9"/>
+                <rect x="4.2"  y="1" width="2.2" height="12" fill="currentColor" opacity="0.9"/>
+                <rect x="7.4"  y="1" width="2.2" height="12" fill="currentColor" opacity="0.9"/>
+                <rect x="10.6" y="1" width="2.2" height="12" fill="currentColor" opacity="0.9"/>
+              </svg>
+            </button>
+          </>
+        )}
+      </div>
+
       <div className="titlebar-controls" data-tauri-drag-region="false">
         <button className="titlebar-btn" onClick={minimize} id="t-min">
           <svg width="10" height="10" viewBox="0 0 10 10">

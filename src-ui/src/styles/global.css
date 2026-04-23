@@ -562,11 +562,51 @@ body {
     height: 32px;
     background: var(--bg-titlebar);
     display: flex;
-    justify-content: flex-end;
+    /* Layout toggles on the left, window controls on the right;
+       middle stays draggable. */
+    justify-content: space-between;
     align-items: center;
     user-select: none;
     flex-shrink: 0;
     -webkit-app-region: drag;
+}
+
+/* Left-side layout toggles carve out a small no-drag zone inside the
+   titlebar. Kept visually quiet — icon-only, subtle hover — so they
+   don't fight the window controls on the right. */
+.titlebar-layout-toggles {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    padding-left: 6px;
+    gap: 2px;
+    -webkit-app-region: no-drag;
+}
+
+.titlebar-btn--layout {
+    width: 32px;   /* narrower than window controls to read as "tool", not "action" */
+    color: var(--text-2);
+    opacity: 0.55;
+}
+
+.titlebar-btn--layout:hover {
+    opacity: 0.95;
+    background: var(--bg-hover);
+}
+
+.titlebar-btn--layout.is-active {
+    /* The chosen mode / visible panel stays lit so users can tell the
+       current state at a glance without hovering to re-read icons. */
+    opacity: 1;
+    color: var(--accent, #6cc275);
+}
+
+.titlebar-sep {
+    width: 1px;
+    height: 14px;
+    margin: 0 6px;
+    background: var(--border-color, rgba(255,255,255,0.12));
+    opacity: 0.6;
 }
 
 .titlebar-controls {
@@ -599,6 +639,13 @@ body {
     background: #e81123;
     color: #ffffff;
 }
+
+/* When the user hides a side panel from the titlebar toggle, we drop
+   it from the flex layout entirely — display:none (not width:0) so
+   the center reclaims the full width without an empty gutter, and
+   the hidden panel's children stop firing resize/xterm-fit events. */
+.app-layout--left-hidden .panel-left { display: none; }
+.app-layout--right-hidden .panel-right { display: none; }
 
 .app-layout {
     display: flex;

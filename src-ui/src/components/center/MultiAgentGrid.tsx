@@ -105,8 +105,10 @@ export function MultiAgentGrid({ tab, hasBg, bgUrl, bgType }: Props) {
     dispatch({ type: 'SET_PANE_TOOL', tabId: tab.id, paneIdx, tool });
   };
 
+  const layoutMod = state.multiAgentLayout === 'columns' ? ' multi-agent-grid--columns' : ' multi-agent-grid--grid';
+
   return (
-    <div className="multi-agent-grid-standalone">
+    <div className={`multi-agent-grid-standalone${layoutMod}`}>
       {panes.map((pane) => {
         const paneSessionId = `${tab.id}::pane-${pane.paneIdx}`;
         const isEmpty = pane.tool === null;
