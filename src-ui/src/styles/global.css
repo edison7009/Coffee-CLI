@@ -585,7 +585,7 @@ body {
 }
 
 .titlebar-btn--layout {
-    width: 26px;
+    width: 36px;    /* matches VS Code's 36px activity-bar-like slot */
     height: 26px;
     margin: 0;
     padding: 0;
@@ -593,10 +593,11 @@ body {
     opacity: 0.6;
 }
 
-/* Keep SVG crisp at the small render size. */
+/* Keep SVG crisp at the small render size. VS Code uses 16px glyphs
+   in the titlebar; we match that. */
 .titlebar-btn--layout svg {
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
     display: block;
 }
 

@@ -36,10 +36,50 @@ export function TitleBar() {
     <div className="titlebar" data-tauri-drag-region>
       {/* Icons come straight from Lucide (lucide.dev, ISC license). No
           runtime dependency — just the d-paths copied inline so we
-          don't pay a 200KB+ import for four glyphs. Strokes match
-          Lucide's default: stroke-width 2, line-cap round, line-join
-          round, 24-unit viewBox. Rendering size set via CSS. */}
+          don't pay a 200KB+ import for four glyphs.
+
+          Order (per user design):
+            1. Multi-agent layout picker (only while a multi-agent tab is
+               active — ephemeral, slides in when useful, out when not)
+            2. Left / right panel toggles (always-on, fixed position on
+               the right so they're in the same spot every session)
+
+          No separator between groups — VS Code's titlebar uses pure
+          proximity to group, which stays clean whether 2 or 4 icons
+          are showing. */}
       <div className="titlebar-layout-toggles" data-tauri-drag-region="false">
+        {showMaLayout && (
+          <>
+            <button
+              className={`titlebar-btn titlebar-btn--layout${state.multiAgentLayout === 'grid' ? ' is-active' : ''}`}
+              onClick={setGrid}
+              aria-label="Multi-agent 2x2 grid"
+              aria-pressed={state.multiAgentLayout === 'grid'}
+            >
+              {/* lucide layout-grid */}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3"  y="3"  width="7" height="7" rx="1" />
+                <rect x="14" y="3"  width="7" height="7" rx="1" />
+                <rect x="14" y="14" width="7" height="7" rx="1" />
+                <rect x="3"  y="14" width="7" height="7" rx="1" />
+              </svg>
+            </button>
+            <button
+              className={`titlebar-btn titlebar-btn--layout${state.multiAgentLayout === 'columns' ? ' is-active' : ''}`}
+              onClick={setColumns}
+              aria-label="Multi-agent 4 vertical columns"
+              aria-pressed={state.multiAgentLayout === 'columns'}
+            >
+              {/* lucide columns-3 */}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <line x1="9"  y1="3" x2="9"  y2="21" />
+                <line x1="15" y1="3" x2="15" y2="21" />
+              </svg>
+            </button>
+          </>
+        )}
+
         <button
           className={`titlebar-btn titlebar-btn--layout${state.leftPanelHidden ? '' : ' is-active'}`}
           onClick={toggleLeft}
@@ -64,40 +104,6 @@ export function TitleBar() {
             <line x1="15" y1="3" x2="15" y2="21" />
           </svg>
         </button>
-
-        {showMaLayout && (
-          <>
-            <div className="titlebar-sep" />
-            <button
-              className={`titlebar-btn titlebar-btn--layout${state.multiAgentLayout === 'grid' ? ' is-active' : ''}`}
-              onClick={setGrid}
-              aria-label="Multi-agent 2x2 grid"
-              aria-pressed={state.multiAgentLayout === 'grid'}
-            >
-              {/* lucide layout-grid */}
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3"  y="3"  width="7" height="7" rx="1" />
-                <rect x="14" y="3"  width="7" height="7" rx="1" />
-                <rect x="14" y="14" width="7" height="7" rx="1" />
-                <rect x="3"  y="14" width="7" height="7" rx="1" />
-              </svg>
-            </button>
-            <button
-              className={`titlebar-btn titlebar-btn--layout${state.multiAgentLayout === 'columns' ? ' is-active' : ''}`}
-              onClick={setColumns}
-              aria-label="Multi-agent 4 vertical columns"
-              aria-pressed={state.multiAgentLayout === 'columns'}
-            >
-              {/* lucide columns-3 — three strokes communicate "vertical strips"
-                  clearly enough; adding a fourth makes the icon cramped at 14px */}
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="2" />
-                <line x1="9"  y1="3" x2="9"  y2="21" />
-                <line x1="15" y1="3" x2="15" y2="21" />
-              </svg>
-            </button>
-          </>
-        )}
       </div>
 
       <div className="titlebar-controls" data-tauri-drag-region="false">
