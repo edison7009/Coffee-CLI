@@ -170,14 +170,15 @@ interface EmptyPanePickerProps {
 
 // First-run manual-setup hints, one per CLI. These cover the single
 // step Coffee-CLI can't do on the user's behalf — typically an auth
-// flow or a config flag we discovered empirically during smoke tests.
-// Shown muted underneath the CLI buttons so users see them BEFORE
-// hitting the wall, not after. Keep each line short and actionable.
+// flow we can't automate because it requires browser OAuth.
+//
+// Claude Code is deliberately omitted: we handle its per-session
+// "Bypass Permissions mode" confirmation screen by auto-writing "2\r"
+// to the PTY (see server.rs `in_multi_agent`). The bypass config
+// field alone does NOT suppress that screen — verified during smoke
+// test with the field already set to true — so documenting it here
+// would just mislead users.
 const MANUAL_SETUP_HINTS: Array<{ cli: string; hint: string }> = [
-  {
-    cli: 'Claude Code',
-    hint: '首次需在 ~/.claude.json 添加 "bypassPermissionsModeAccepted": true',
-  },
   {
     cli: 'Codex',
     hint: '首次启动后按 Enter 完成 OpenAI 账户登录（ChatGPT 或 API key）',
