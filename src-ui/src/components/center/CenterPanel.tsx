@@ -797,7 +797,13 @@ export function CenterPanel() {
                   })()}
                   theme={state.currentTheme}
                   lang={state.currentLang}
-                  isActive={t.id === activeTerminalId}
+                  // In multi-agent mode pane 0 is active only when it's
+                  // the primary pane — otherwise another pane has focus
+                  // and pane 0's xterm must release the keyboard.
+                  isActive={
+                    t.id === activeTerminalId &&
+                    (!t.multiAgent || t.multiAgent.primaryPaneIdx === 0)
+                  }
                   toolData={t.toolData}
                   folderPath={t.folderPath}
                   hasBg={hasBg}
