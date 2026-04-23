@@ -168,21 +168,12 @@ interface EmptyPanePickerProps {
   onSelect: (tool: ToolType) => void;
 }
 
-// First-run manual-setup hints, one per CLI. These cover the single
-// step Coffee-CLI can't do on the user's behalf — typically an auth
-// flow we can't automate because it requires browser OAuth.
-//
-// Claude Code is deliberately omitted: we handle its per-session
-// "Bypass Permissions mode" confirmation screen by auto-writing "2\r"
-// to the PTY (see server.rs `in_multi_agent`). The bypass config
-// field alone does NOT suppress that screen — verified during smoke
-// test with the field already set to true — so documenting it here
-// would just mislead users.
-const MANUAL_SETUP_HINTS: Array<{ cli: string; hint: string }> = [
-  { cli: 'Codex', hint: '按 Enter 登录 OpenAI（ChatGPT 或 API key）' },
-  { cli: 'Gemini', hint: '输入 /auth 完成 Google 授权' },
-];
-
+// Per-CLI setup hints removed per user request: the paper-slice
+// aesthetic calls for a completely clean empty pane — just the three
+// CLI buttons, nothing else. Auth friction (Codex login, Gemini
+// /auth) surfaces naturally once the user clicks; no need to
+// pre-announce it. The skip-permissions auto-accept still lives in
+// server.rs for Claude, so users don't see a speed bump there.
 function EmptyPanePicker({ paneIdx: _paneIdx, onSelect }: EmptyPanePickerProps) {
   return (
     <div className="empty-pane-picker">
@@ -200,15 +191,6 @@ function EmptyPanePicker({ paneIdx: _paneIdx, onSelect }: EmptyPanePickerProps) 
           </button>
         ))}
       </div>
-      <ul className="empty-pane-manual-hints">
-        {MANUAL_SETUP_HINTS.map((h) => (
-          <li key={h.cli}>
-            <span className="empty-pane-manual-hints-cli">{h.cli}</span>
-            <span className="empty-pane-manual-hints-sep">：</span>
-            <span className="empty-pane-manual-hints-body">{h.hint}</span>
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }
