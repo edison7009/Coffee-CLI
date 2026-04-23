@@ -200,6 +200,12 @@ export function MultiAgentGrid({ tab, hasBg, bgUrl, bgType }: Props) {
                 />
               ) : (
                 <ErrorBoundary fallbackLabel="Tier Terminal Error">
+                  {/* Pass hasBg through so xterm stays transparent when
+                      the user has a wallpaper set — this lets the single
+                      grid-level .multi-agent-bg show through all panes.
+                      bgUrl is intentionally empty so TierTerminal never
+                      renders its own per-pane .tier-terminal-bg layer;
+                      the shared grid wallpaper handles that instead. */}
                   <TierTerminal
                     key={paneSessionId}
                     sessionId={paneSessionId}
@@ -211,8 +217,8 @@ export function MultiAgentGrid({ tab, hasBg, bgUrl, bgType }: Props) {
                     toolData={pane.toolData}
                     folderPath={tab.folderPath}
                     hasBg={hasBg}
-                    bgUrl={bgUrl}
-                    bgType={bgType}
+                    bgUrl=""
+                    bgType="none"
                     termColorScheme={state.termColorScheme}
                   />
                 </ErrorBoundary>

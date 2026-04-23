@@ -82,11 +82,16 @@
 }
 
 /* Slot numbering matches the visible badge (1 = top-left, 2 = top-right,
-   3 = bottom-left, 4 = bottom-right). Reading order Z. */
-.multi-agent-pane.pane-slot-1 { grid-column: 1; grid-row: 1; }
-.multi-agent-pane.pane-slot-2 { grid-column: 2; grid-row: 1; }
-.multi-agent-pane.pane-slot-3 { grid-column: 1; grid-row: 2; }
-.multi-agent-pane.pane-slot-4 { grid-column: 2; grid-row: 2; }
+   3 = bottom-left, 4 = bottom-right). Reading order Z.
+   SCOPED UNDER `--grid` so these 2×2 placements only apply to the 2×2
+   quadrant mode. Without this scope, the 2-pane and 3-pane splits
+   (which set grid-template-columns inline via FourSplitGrid paneCount)
+   would have pane-slot-3 pinned to row 2, breaking the side-by-side
+   layout. Columns mode has its own scoped pane-slot rules above. */
+.multi-agent-grid--grid .multi-agent-pane.pane-slot-1 { grid-column: 1; grid-row: 1; }
+.multi-agent-grid--grid .multi-agent-pane.pane-slot-2 { grid-column: 2; grid-row: 1; }
+.multi-agent-grid--grid .multi-agent-pane.pane-slot-3 { grid-column: 1; grid-row: 2; }
+.multi-agent-grid--grid .multi-agent-pane.pane-slot-4 { grid-column: 2; grid-row: 2; }
 
 /* Focus handling: when any pane's xterm has keyboard focus, the other
    three fade so the user's eye follows the typing cursor. Default
