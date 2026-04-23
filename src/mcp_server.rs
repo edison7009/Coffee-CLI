@@ -16,7 +16,7 @@
 use std::{
     io::Write,
     sync::Arc,
-    time::{Instant, SystemTime, UNIX_EPOCH},
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 
 use crate::terminal::SharedSession;
@@ -143,41 +143,199 @@ impl PaneStore {
         list
     }
 
-    /// Inject raw bytes into the target pane's PTY stdin.
+    /// Inject text into the target pane's PTY stdin and, when `wait=true`,
+    /// block until the pane's CLI returns to its prompt (or `timeout_sec`
+    /// elapses), then return the ANSI-stripped output that arrived since
+    /// the write.
     ///
-    /// The target sees these bytes exactly as if the user had typed them;
-    /// the CLI inside decides how to interpret them. No trailing newline
-    /// is appended — callers should include `\r` themselves if they want
-    /// the CLI to submit (matching conductor-mcp's `submit` convention).
-    async fn send(&self, id: &str, text: &str) -> Result<String, String> {
-        let id = id.to_string();
-        let text = text.to_string();
-        let session = self.session.clone();
+    /// `submit=true` (default) auto-appends `\r` if the text isn't already
+    /// newline-terminated, so the target CLI actually executes the command
+    /// instead of leaving it in the input box. The carriage return also
+    /// mirrors [`crate::server::tier_terminal_write`]'s bookkeeping: we
+    /// set `activity.user_submitted_at` so the status ticker flips to
+    /// `"working"` and we can later detect the transition back to
+    /// `"wait_input"` as the signal that the CLI finished.
+    ///
+    /// Output capture works by diffing `output_buffer` snapshots taken
+    /// before the write vs. after idle detection. The ring can drain
+    /// (capped at 2000 chunks in `terminal.rs`); in that rare case we
+    /// fall back to returning the current tail rather than failing.
+    async fn dispatch(
+        &self,
+        id: &str,
+        text: &str,
+        submit: bool,
+        wait: bool,
+        timeout_sec: u64,
+    ) -> Result<DispatchResult, String> {
+        let full_text = if submit && !(text.ends_with('\r') || text.ends_with('\n')) {
+            format!("{}\r", text)
+        } else {
+            text.to_string()
+        };
+        let bytes_written = full_text.len();
 
-        tokio::task::spawn_blocking(move || -> Result<String, String> {
-            let writer_lock = {
+        // Phase 1: snapshot buffer + write + mark submission, all in one
+        // blocking closure to hold locks briefly.
+        let buf_before = {
+            let id2 = id.to_string();
+            let text2 = full_text.clone();
+            let session = self.session.clone();
+            tokio::task::spawn_blocking(move || -> Result<String, String> {
+                let (writer_arc, activity_arc, buffer_arc) = {
+                    let guard = session
+                        .lock()
+                        .map_err(|_| "session map poisoned".to_string())?;
+                    let sess = guard
+                        .get(&id2)
+                        .ok_or_else(|| format!("pane not found: {}", id2))?;
+                    (
+                        sess.writer_lock.clone(),
+                        sess.activity.clone(),
+                        sess.output_buffer.clone(),
+                    )
+                };
+
+                let before = {
+                    let ring = buffer_arc
+                        .lock()
+                        .map_err(|_| "output buffer poisoned".to_string())?;
+                    ring.join("")
+                };
+
+                {
+                    let mut writer = writer_arc
+                        .lock()
+                        .map_err(|_| "pane writer poisoned".to_string())?;
+                    writer
+                        .write_all(text2.as_bytes())
+                        .map_err(|e| format!("pty write failed: {}", e))?;
+                    writer
+                        .flush()
+                        .map_err(|e| format!("pty flush failed: {}", e))?;
+                }
+
+                // Mirror server::tier_terminal_write — only flip the ticker
+                // state-machine when we sent a CR/LF and the CLI was idle.
+                if text2.contains('\r') || text2.contains('\n') {
+                    if let Ok(mut act) = activity_arc.lock() {
+                        if act.last_status == "wait_input" {
+                            act.user_submitted_at = Some(Instant::now());
+                        }
+                    }
+                }
+
+                Ok(before)
+            })
+            .await
+            .map_err(|e| format!("blocking task join failed: {}", e))??
+        };
+
+        if !wait {
+            return Ok(DispatchResult {
+                bytes_written,
+                waited: false,
+                timed_out: false,
+                captured_output: None,
+            });
+        }
+
+        // Phase 2: poll for idle. A pane is "idle" when status flipped back
+        // to wait_input AND the last output is either after our send time
+        // (CLI responded then settled) or silence exceeds 2s (CLI ignored
+        // the input — still return so caller isn't stuck).
+        let send_time = Instant::now();
+        let deadline = send_time + Duration::from_secs(timeout_sec);
+
+        // Initial grace so the ticker thread (1s cadence in terminal.rs)
+        // has a chance to observe output and flip status to "working".
+        tokio::time::sleep(Duration::from_millis(400)).await;
+
+        let mut timed_out = true;
+        loop {
+            if Instant::now() > deadline {
+                break;
+            }
+
+            let idle = {
+                let id2 = id.to_string();
+                let session = self.session.clone();
+                tokio::task::spawn_blocking(move || -> Result<bool, String> {
+                    let guard = session
+                        .lock()
+                        .map_err(|_| "session map poisoned".to_string())?;
+                    let sess = guard
+                        .get(&id2)
+                        .ok_or_else(|| format!("pane not found: {}", id2))?;
+                    let act = sess
+                        .activity
+                        .lock()
+                        .map_err(|_| "activity poisoned".to_string())?;
+                    let at_prompt = act.last_status == "wait_input";
+                    let now = Instant::now();
+                    let produced_since_send = act.last_output_at >= send_time;
+                    let long_silence =
+                        now.duration_since(act.last_output_at) > Duration::from_millis(2000);
+                    Ok(at_prompt && (produced_since_send || long_silence))
+                })
+                .await
+                .map_err(|e| format!("blocking task join failed: {}", e))??
+            };
+
+            if idle {
+                timed_out = false;
+                break;
+            }
+
+            tokio::time::sleep(Duration::from_millis(500)).await;
+        }
+
+        // Phase 3: snapshot buffer after idle and extract the new suffix.
+        let buf_after = {
+            let id2 = id.to_string();
+            let session = self.session.clone();
+            tokio::task::spawn_blocking(move || -> Result<String, String> {
                 let guard = session
                     .lock()
                     .map_err(|_| "session map poisoned".to_string())?;
                 let sess = guard
-                    .get(&id)
-                    .ok_or_else(|| format!("pane not found: {}", id))?;
-                sess.writer_lock.clone()
-            };
+                    .get(&id2)
+                    .ok_or_else(|| format!("pane not found: {}", id2))?;
+                let ring = sess
+                    .output_buffer
+                    .lock()
+                    .map_err(|_| "output buffer poisoned".to_string())?;
+                Ok(ring.join(""))
+            })
+            .await
+            .map_err(|e| format!("blocking task join failed: {}", e))??
+        };
 
-            let mut writer = writer_lock
-                .lock()
-                .map_err(|_| "pane writer poisoned".to_string())?;
-            writer
-                .write_all(text.as_bytes())
-                .map_err(|e| format!("pty write failed: {}", e))?;
-            writer
-                .flush()
-                .map_err(|e| format!("pty flush failed: {}", e))?;
-            Ok(format!("wrote {} bytes", text.len()))
+        let raw_diff = if buf_after.starts_with(&buf_before) {
+            buf_after[buf_before.len()..].to_string()
+        } else {
+            // Ring was drained between snapshots — best effort, return all.
+            buf_after
+        };
+
+        let stripped = self.ansi_re.replace_all(&raw_diff, "").to_string();
+
+        // Cap at last 200 lines; the MCP caller can re-read via read_pane
+        // if it needs more. Keeps tool-result payload bounded.
+        let trimmed = {
+            let mut lines: Vec<&str> = stripped.lines().collect();
+            if lines.len() > 200 {
+                lines = lines.split_off(lines.len() - 200);
+            }
+            lines.join("\n")
+        };
+
+        Ok(DispatchResult {
+            bytes_written,
+            waited: true,
+            timed_out,
+            captured_output: Some(trimmed),
         })
-        .await
-        .map_err(|e| format!("blocking task join failed: {}", e))?
     }
 
     /// Return the last `last_n` lines of the pane's ANSI-stripped output,
@@ -226,6 +384,23 @@ impl PaneStore {
     }
 }
 
+/// Outcome of `PaneStore::dispatch` — conveyed back to the MCP caller so
+/// it can distinguish "CLI finished and here's its reply" from "timeout,
+/// reply may still be coming, use read_pane to poll" from fire-and-forget.
+#[derive(Debug)]
+pub struct DispatchResult {
+    pub bytes_written: usize,
+    /// Whether the caller requested wait=true (vs fire-and-forget).
+    pub waited: bool,
+    /// True only when waited=true AND the deadline hit without the pane
+    /// flipping back to wait_input. `captured_output` still holds whatever
+    /// arrived in that window.
+    pub timed_out: bool,
+    /// ANSI-stripped output that arrived between the write and idle.
+    /// Some(..) iff waited=true; None iff fire-and-forget.
+    pub captured_output: Option<String>,
+}
+
 fn status_to_pane_state(status: &str) -> PaneState {
     match status {
         "wait_input" => PaneState::Idle,
@@ -258,6 +433,11 @@ pub struct SendToPaneArgs {
     /// return immediately with job_id; caller polls via read_pane later.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub wait: Option<bool>,
+    /// If true (default), auto-append `\r` unless `text` already ends with
+    /// a newline. Set false when you need to type without submitting (e.g.
+    /// inserting template text for the user to finish editing).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub submit: Option<bool>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -298,31 +478,48 @@ Use this to discover what other CLIs are running before calling send_to_pane."
     }
 
     #[tool(
-        description = "Send a text command to another pane. \
-If wait=true (default), blocks until the pane is idle or timeout (default 60s). \
-If wait=false, returns immediately with a job_id and the caller can poll read_pane later \
-for long-running tasks (> 2 min). \
-Do NOT send to your own pane id."
+        description = "Send a text command to another pane and (by default) \
+wait for that pane's CLI to respond. A carriage return is auto-appended so \
+the target CLI actually executes the command (set submit=false to disable). \
+If wait=true (default), blocks until the pane is idle or timeout (default 60s) \
+and returns the new output that arrived — this is how you see the other CLI's \
+reply. If wait=false, returns immediately; caller polls read_pane later for \
+long-running tasks (> 2 min). Do NOT send to your own pane id."
     )]
     async fn send_to_pane(
         &self,
         Parameters(args): Parameters<SendToPaneArgs>,
     ) -> Result<CallToolResult, McpError> {
         let wait = args.wait.unwrap_or(true);
-        let _timeout_sec = args.timeout_sec.unwrap_or(60).min(3600);
+        let submit = args.submit.unwrap_or(true);
+        let timeout_sec = args.timeout_sec.unwrap_or(60).min(3600);
 
-        match self.panes.send(&args.id, &args.text).await {
-            Ok(mock_ack) => {
-                // v1.0 day 1-2 mock: no real idle polling yet.
-                // Day 3-4 will plug in idle detection + 500ms polling (Superset pattern).
-                let result = serde_json::json!({
-                    "status": if wait { "completed" } else { "submitted" },
+        match self
+            .panes
+            .dispatch(&args.id, &args.text, submit, wait, timeout_sec)
+            .await
+        {
+            Ok(result) => {
+                let status = if !result.waited {
+                    "submitted"
+                } else if result.timed_out {
+                    "timeout"
+                } else {
+                    "completed"
+                };
+                let mut payload = serde_json::json!({
+                    "status": status,
                     "pane_id": args.id,
-                    "mock_ack": mock_ack,
-                    "job_id": uuid::Uuid::new_v4().to_string(),
+                    "bytes_written": result.bytes_written,
                 });
+                if !result.waited {
+                    payload["job_id"] = serde_json::json!(uuid::Uuid::new_v4().to_string());
+                }
+                if let Some(output) = result.captured_output {
+                    payload["output"] = serde_json::json!(output);
+                }
                 Ok(CallToolResult::success(vec![Content::text(
-                    serde_json::to_string_pretty(&result).unwrap_or_default(),
+                    serde_json::to_string_pretty(&payload).unwrap_or_default(),
                 )]))
             }
             Err(e) => Ok(CallToolResult::success(vec![Content::text(
