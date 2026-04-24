@@ -771,16 +771,26 @@ fn tier_terminal_start_blocking(
     let dir = cwd.map(std::path::PathBuf::from).unwrap_or_default();
 
     // ── Multi-agent auto-approval ────────────────────────────────────────
-    // Pane session ids look like `${tabId}::pane-N`. When a CLI spawns in
-    // a multi-agent pane it is being orchestrated by *another* CLI via
-    // send_to_pane; a human isn't going to be there to click "Yes" on
-    // every tool-use confirmation. We therefore boot each primary CLI
-    // with its "skip permissions" flag so the full multi-agent workflow
-    // runs hands-free.
+    // Multi-agent pane session ids look like `${tabId}::pane-N`. When a
+    // CLI spawns in such a pane it is being orchestrated by *another* CLI
+    // via send_to_pane; a human isn't going to be there to click "Yes" on
+    // every tool-use confirmation, so we boot each primary CLI with its
+    // "skip permissions" flag so the full multi-agent workflow runs
+    // hands-free. `enable_multi_agent_mode` also pre-sets Claude's
+    // `bypassPermissionsModeAccepted` bit so the flag doesn't trip the
+    // first-run Bypass Permissions warning screen.
+    //
+    // Independent-split pane ids use the `::split-N` prefix instead
+    // (FourSplitGrid). Those panes are NOT orchestrated — the user is
+    // watching each pane and approves tool calls themselves — and the
+    // MCP injector has NOT run, so passing `--dangerously-skip-permissions`
+    // to Claude there would hit the un-pre-accepted warning screen and
+    // kill the process. Keep the flag off for split panes.
     //
     // This is a deliberate trust tradeoff: entering multi-agent mode
     // delegates authority to the controlling pane's LLM. Users who want
-    // per-tool supervision should stay in single-terminal mode.
+    // per-tool supervision should use independent split or single-terminal
+    // mode.
     let in_multi_agent = session_id.contains("::pane-");
 
     // Map the requested tool to an actual CLI command.

@@ -16,8 +16,15 @@
 //   - PANE_CLI_OPTIONS restricted to Claude / Codex / Gemini (same 3 CLIs)
 //   - Focus dimming, pane number badge with hover-× close, CSS classes
 //     (reuses .multi-agent-grid-standalone styling — pure visual parity)
-//   - Session id format `${tabId}::pane-${paneIdx}` (tabId is globally
-//     unique so there's no collision with multi-agent panes)
+//   - Session id format `${tabId}::split-${paneIdx}` — distinct from the
+//     multi-agent `::pane-` prefix on purpose. The backend `tier_terminal`
+//     spawn path keys off `::pane-` to decide whether to inject hands-free
+//     flags (`--dangerously-skip-permissions` / `--full-auto` /
+//     `--approval-mode yolo`). Independent split is NOT orchestrated — the
+//     user watches each pane and approves tool calls manually — so we want
+//     those flags off. Keeping the prefix separate prevents accidental
+//     auto-approve leakage. It also keeps FourSplit panes out of any
+//     cross-pane sentinel / Gambit addressing that keys off `::pane-`.
 
 import { useState } from 'react';
 import { useAppState, type TerminalSession, type ToolType, type MultiAgentPane } from '../../store/app-state';
@@ -124,7 +131,7 @@ export function FourSplitGrid({ tab, hasBg, bgUrl, bgType, paneCount = 4 }: Prop
         </div>
       )}
       {visiblePanes.map((pane) => {
-        const paneSessionId = `${tab.id}::pane-${pane.paneIdx}`;
+        const paneSessionId = `${tab.id}::split-${pane.paneIdx}`;
         const isEmpty = pane.tool === null;
         const isFocused = focusedPaneIdx === pane.paneIdx;
         const isDimmed = focusedPaneIdx !== null && !isFocused;
