@@ -299,7 +299,7 @@ const INSTALL_DATA = {
     linux: { hint: "For any modern Linux distribution, run:", command: "curl -fsSL https://coffeecli.com/install.sh | bash" }
   },
   zh: {
-    windows: { hint: "右键单击 开始菜单 > 选择“终端(管理员)” > 粘贴执行:", command: "iwr -useb https://coffeecli.com/install.ps1 | iex" },
+    windows: { hint: "右键单击 开始菜单 > 选择“终端管理员” > 粘贴执行:", command: "iwr -useb https://coffeecli.com/install.ps1 | iex" },
     macos: { hint: "利用 Spotlight 或 Launchpad 启动终端，粘贴并在其中执行:", command: "curl -fsSL https://coffeecli.com/install.sh | bash" },
     linux: { hint: "打开您的日常终端引擎，执行此快速部署脚本:", command: "curl -fsSL https://coffeecli.com/install.sh | bash" }
   },
