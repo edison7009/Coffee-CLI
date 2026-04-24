@@ -133,8 +133,8 @@ export const commands = {
     invoke<string>('write_temp_script', { content, extension }),
 
   // Tool availability detection
-  checkToolsInstalled: (extras?: string[]) =>
-    invoke<Record<string, boolean>>('check_tools_installed', extras ? { extras } : {}),
+  checkToolsInstalled: () =>
+    invoke<Record<string, boolean>>('check_tools_installed'),
 
   /** Gambit — save a clipboard-pasted image to a temp file and return its path.
    *  The returned absolute path is inserted into the textarea so the AI CLI agent

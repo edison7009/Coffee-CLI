@@ -151,8 +151,11 @@ pub struct TerminalSession {
     pub(crate) _master: Arc<Mutex<Option<Box<dyn portable_pty::MasterPty + Send>>>>,
     /// Shared activity state for status detection.
     pub activity: Arc<Mutex<SessionActivity>>,
-    /// Ring buffer of recent base64-encoded output chunks for history replay
-    /// (detached windows call get_terminal_buffer to receive this)
+    /// Ring buffer of recent base64-encoded output chunks. Originally
+    /// populated for DetachedTerminal's history replay (retired 2026-04)
+    /// and the MCP `read_pane` tool (also archived). Currently referenced
+    /// only by the dormant `mcp_server` module; kept alive here so that
+    /// module still compiles and can be revived without re-plumbing.
     pub output_buffer: Arc<Mutex<Vec<String>>>,
 }
 

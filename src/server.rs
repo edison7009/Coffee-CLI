@@ -149,7 +149,7 @@ fn check_tool_unix(bin: &str) -> bool {
 }
 
 #[tauri::command]
-fn check_tools_installed(extras: Option<Vec<String>>) -> std::collections::HashMap<String, bool> {
+fn check_tools_installed() -> std::collections::HashMap<String, bool> {
     let tools = vec![
         ("claude", "claude"),
         ("qwen", "qwen"),
@@ -157,6 +157,7 @@ fn check_tools_installed(extras: Option<Vec<String>>) -> std::collections::HashM
         ("opencode", "opencode"),
         ("codex", "codex"),
         ("gemini", "gemini"),
+        ("openclaw", "openclaw"),
         // remote is always available — it's just SSH (built into the OS)
     ];
     let mut result = std::collections::HashMap::new();
@@ -171,15 +172,6 @@ fn check_tools_installed(extras: Option<Vec<String>>) -> std::collections::HashM
     }
     // Terminal is always available — it's the system shell
     result.insert("terminal".to_string(), true);
-
-    // The `extras` parameter was used by the now-deleted remote agents
-    // catalog (v1.0.x → v1.1.4) to probe ad-hoc binary names pinned from
-    // coffeecli.com/agents/catalog.json. In v1.1.5 that catalog was removed
-    // entirely — software is bundled locally now. The parameter is kept
-    // so the Tauri command signature doesn't force a simultaneous frontend
-    // update, but we simply ignore whatever the caller passes.
-    let _ = extras;
-
     result
 }
 
@@ -775,6 +767,13 @@ fn tier_terminal_start_blocking(
         Some("qwen")     => ("qwen".to_string(),   vec![]),
         Some("hermes")   => ("hermes".to_string(), vec![]),
         Some("opencode") => ("opencode".to_string(), vec![]),
+        // OpenClaw's official primary TUI command per docs.openclaw.ai/cli/tui.
+        // Note: `openclaw chat` / `openclaw terminal` are aliases for
+        // `openclaw tui --local` (embedded mode, no Gateway daemon needed),
+        // which are gentler on first-run users — but we follow OpenClaw's
+        // own "Primary command" label here. Users without the Gateway daemon
+        // should run `openclaw onboard --install-daemon` once to set it up.
+        Some("openclaw") => ("openclaw".to_string(), vec!["tui".to_string()]),
         Some("codex")    => {
             let mut a = vec![];
             if in_multi_agent {

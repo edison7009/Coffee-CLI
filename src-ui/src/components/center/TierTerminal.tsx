@@ -202,9 +202,9 @@ function TermContextMenu({ menu, onClose, onCopy, onPaste, onSelectAll }: {
 interface TierTerminalProps {
   sessionId: string;
   tool: ToolType;
-  /** Display name of the tool (from catalog). Used by splash + launch-failed
-   * panels so remotely-added agents (e.g. OpenClaw) show their real name
-   * instead of falling back to the hardcoded label map. */
+  /** Display name of the tool (from the local built-in catalog). Used by
+   * splash + launch-failed panels; lets the splash show a friendly name
+   * even for agents that aren't in the hardcoded `toolLabel` fallback. */
   toolName?: string;
   theme: ThemeColor;
   lang: string;
@@ -263,7 +263,7 @@ function TierTerminalImpl({
 
   const toolLabel: Record<string, string> = {
     claude: 'Claude Code',
-    qwen: 'Qwen Code', installer: 'Coffee Installer', hermes: 'Hermes Agent', opencode: 'OpenCode',
+    qwen: 'Qwen Code', installer: 'Coffee Installer', hermes: 'Hermes Agent', opencode: 'OpenCode', openclaw: 'OpenClaw',
     codex: 'Codex CLI', gemini: 'Gemini CLI',
     remote: t('tool.remote'), terminal: t('tool.terminal'),
   };

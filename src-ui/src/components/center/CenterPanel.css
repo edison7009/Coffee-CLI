@@ -427,11 +427,28 @@
 
 
 .launchpad-icon {
-  font-size: 36px; /* Increased icon size */
+  /* Fixed pixel box. Every icon inside is forced to fill this box so
+     visual sizes stay uniform regardless of the source asset's internal
+     viewBox utilization (brand SVGs had wildly different content-to-
+     viewBox ratios before). Tune here if the grid density changes. */
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+}
+
+/* Force every icon's outermost element (span wrapper, <img>, or inline
+   <svg>) to fill the fixed-size container. object-fit: contain preserves
+   the asset's aspect ratio. Inline `width="1em"` attrs on the source
+   components become no-ops under this override, which is the goal:
+   one source of truth for visible size lives in CSS. */
+.launchpad-icon > *,
+.launchpad-icon > * > svg {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain;
 }
 
 .launchpad-card-info {
