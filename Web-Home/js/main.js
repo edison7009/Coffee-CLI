@@ -152,7 +152,7 @@ const T_WORDS_LOCALE = {
   ],
   "zh-TW": [
     "企業高層", "產品經理", "UI/UX 設計師", "市場行銷", "資料分析師",
-    "���售��監", "自媒體創作者", "活動運營專員", "HR專員", "行政管理",
+    "銷售總監", "自媒體創作者", "活動運營專員", "HR專員", "行政管理",
     "客服代表", "自由撰稿人", "電商掌櫃", "社媒主理人", "法務顧問",
     "文案策劃", "原畫師", "採購專員", "會計師", "投資分析師"
   ],
@@ -193,7 +193,7 @@ const T_WORDS_LOCALE = {
     "Redatores", "Ilustradores", "Oficiais de Suprimentos", "Contadores", "Analistas de Investimento"
   ],
   ru: [
-    "Финансовые директора", "Проджект-менеджеры", "UI/UX дизайнеры", "Марке��ол��ги", "Аналитики данных",
+    "Финансовые директора", "Проджект-менеджеры", "UI/UX дизайнеры", "Маркетологи", "Аналитики данных",
     "Руководители продаж", "Контент-креаторы", "Специалисты по операциям", "HR профессионалы", "Административные ассистенты",
     "Поддержка клиентов", "Фриланс-писатели", "E-commerce менеджеры", "SMM менеджеры", "Юридические консультанты",
     "Копирайтеры", "Иллюстраторы", "Закупщики", "Бухгалтеры", "Инвестиционные аналитики"
@@ -316,7 +316,7 @@ const INSTALL_DATA = {
   ko: {
     windows: { hint: "시작 메뉴 우 클릭 > 터미널(관리자) > 붙여넣기:", command: "iwr -useb https://coffeecli.com/install.ps1 | iex" },
     macos: { hint: "Terminal.app을 열고 다음 명령어를 붙여넣기:", command: "curl -fsSL https://coffeecli.com/install.sh | bash" },
-    linux: { hint: "터미널을 열고 다�� 명령어 실행:", command: "curl -fsSL https://coffeecli.com/install.sh | bash" }
+    linux: { hint: "터미널을 열고 다음 명령어 실행:", command: "curl -fsSL https://coffeecli.com/install.sh | bash" }
   },
   es: {
     windows: { hint: "Clic derecho en Inicio > Terminal (Admin) > Pegar:", command: "iwr -useb https://coffeecli.com/install.ps1 | iex" },
