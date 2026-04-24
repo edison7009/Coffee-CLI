@@ -254,6 +254,14 @@ function TierTerminalImpl({
   // typically arrives first with the real exit code; reader-EOF onStatus
   // then arrives with a hardcoded 0 and correctly becomes a no-op.
   const exitMessageWrittenRef = useRef(false);
+  // Rolling buffer for agent-to-agent marker scanning. PTY chunks can split
+  // `[COFFEE-TELL:...]` / `[COFFEE-DONE:...]` across boundaries; the buffer
+  // reassembles chunks so markers match reliably. `markerScanOffsetRef`
+  // tracks how far we've already scanned to avoid re-firing the same
+  // dispatch when a later chunk arrives and re-triggers the scan. See the
+  // scanner in `onData` below for the consume/advance logic.
+  const markerScanBufRef = useRef<string>('');
+  const markerScanOffsetRef = useRef<number>(0);
 
   // ── Terminal context menu ────────────────────────────────────────────────
   const [ctxMenu, setCtxMenu] = useState<CtxMenu | null>(null);
@@ -538,25 +546,51 @@ function TierTerminalImpl({
           //
           // Both markers require the target pane to have a tool running and
           // target != emitter (can't ping self).
-          if (data.includes('[COFFEE-TELL:pane') || data.includes('[COFFEE-DONE:pane')) {
+          // Append to rolling scan buffer so markers split across chunk
+          // boundaries still match. PTY onData hands us streaming chunks
+          // (often 256B–4KB), and Claude Code's TUI can split a marker
+          // like `[COFFEE-TELL:pane1->pane3] <text>` across two or three
+          // chunks. Without buffering, `data.includes('[COFFEE-TELL:')`
+          // returns false on the late chunk (no header) and the marker is
+          // silently lost. The buffer is bounded to 8 KB and an offset
+          // pointer advances past processed marker matches so we never
+          // re-fire the same dispatch twice.
+          markerScanBufRef.current += data;
+          const MAX_BUF = 8192;
+          if (markerScanBufRef.current.length > MAX_BUF) {
+            const toTrim = markerScanBufRef.current.length - MAX_BUF;
+            markerScanBufRef.current = markerScanBufRef.current.slice(toTrim);
+            markerScanOffsetRef.current = Math.max(
+              0,
+              markerScanOffsetRef.current - toTrim
+            );
+          }
+
+          const unscanned = markerScanBufRef.current.slice(
+            markerScanOffsetRef.current
+          );
+          if (
+            unscanned.includes('[COFFEE-TELL:pane') ||
+            unscanned.includes('[COFFEE-DONE:pane')
+          ) {
             const paneIdMatch = sessionId.match(/^(.+)::pane-(\d+)$/);
             if (paneIdMatch) {
               const tabId = paneIdMatch[1];
               const tab = appStateRef.current.terminals.find(t => t.id === tabId);
               const panes = tab?.multiAgent?.panes ?? [];
+              let advancedTo = 0;
 
               // TELL: forward dispatch, always active (no sentinel gate).
-              // Text lives on the same line after the marker, ends at
-              // newline/CR. Multi-line prompts need to be summarised by the
-              // emitting agent before dispatch — keeps the parser simple
-              // and the user's scrollback readable.
-              const tellMatches = data.matchAll(
-                /\[COFFEE-TELL:pane(\d+)->pane(\d+)\]\s+([^\r\n]+)/g
-              );
-              for (const m of tellMatches) {
-                const emitter = parseInt(m[1], 10);
-                const target = parseInt(m[2], 10);
-                const text = m[3].trim();
+              // Regex requires a trailing newline so we never fire on an
+              // incomplete line — if the agent's output stops mid-text,
+              // the match waits for the next chunk carrying the newline.
+              const tellRegex =
+                /\[COFFEE-TELL:pane(\d+)->pane(\d+)\]\s+([^\r\n]+)[\r\n]/g;
+              let tellM: RegExpExecArray | null;
+              while ((tellM = tellRegex.exec(unscanned)) !== null) {
+                const emitter = parseInt(tellM[1], 10);
+                const target = parseInt(tellM[2], 10);
+                const text = tellM[3].trim();
                 const targetPane = panes.find(p => p.paneIdx === target);
                 if (
                   targetPane?.tool != null &&
@@ -574,16 +608,15 @@ function TierTerminalImpl({
                     commands.tierTerminalInput(targetId, '\r').catch(() => {});
                   }, 50);
                 }
+                advancedTo = Math.max(advancedTo, tellM.index + tellM[0].length);
               }
 
               // DONE: backward receipt, sentinel-gated on the emitter side.
-              // Without sentinel, agents can still dispatch commands via
-              // TELL but lose the "task complete" auto-notification — user
-              // has to read the target pane's output to know when it's done.
-              const doneMatch = data.match(/\[COFFEE-DONE:pane(\d+)->pane(\d+)\]/);
-              if (doneMatch) {
-                const emitter = parseInt(doneMatch[1], 10);
-                const target = parseInt(doneMatch[2], 10);
+              const doneRegex = /\[COFFEE-DONE:pane(\d+)->pane(\d+)\]/g;
+              let doneM: RegExpExecArray | null;
+              while ((doneM = doneRegex.exec(unscanned)) !== null) {
+                const emitter = parseInt(doneM[1], 10);
+                const target = parseInt(doneM[2], 10);
                 const emitterPane = panes.find(p => p.paneIdx === emitter);
                 if (emitterPane?.sentinelEnabled) {
                   dispatch({ type: 'SET_PANE_COMPLETION', tabId, paneIdx: emitter, ts: Date.now() });
@@ -597,6 +630,11 @@ function TierTerminalImpl({
                     }, 50);
                   }
                 }
+                advancedTo = Math.max(advancedTo, doneM.index + doneM[0].length);
+              }
+
+              if (advancedTo > 0) {
+                markerScanOffsetRef.current += advancedTo;
               }
             }
           }

@@ -743,12 +743,45 @@ fn tier_terminal_start_blocking(
     // mode.
     let in_multi_agent = session_id.contains("::pane-");
 
+    // Extract pane number for multi-agent panes so spawning agents know
+    // "who am I" without the user having to tell them. session_id format
+    // for multi-agent is `<tabId>::pane-N` (N in 1..4). This number is
+    // passed into the agent's system prompt via `--append-system-prompt`
+    // (for agents that support it, currently Claude Code) so the agent
+    // can emit `[COFFEE-TELL:paneN->paneM]` markers with the correct
+    // self-reference from its very first response, instead of guessing.
+    let multi_agent_pane_idx: Option<u32> = if in_multi_agent {
+        session_id.split("::pane-").nth(1).and_then(|s| s.parse().ok())
+    } else {
+        None
+    };
+
+    // Build the append-to-system-prompt text for any pane-aware agent.
+    // Tells the model its own pane number + the marker syntax so it can
+    // dispatch without first being briefed by the user. Single-line to
+    // keep command-line escaping predictable across OS shells.
+    let pane_system_prompt = multi_agent_pane_idx.map(|n| {
+        format!(
+            "You are running in Coffee-CLI multi-agent mode as pane {n}. \
+             Peer panes 1..4 each run a CLI you can dispatch work to by \
+             emitting `[COFFEE-TELL:pane{n}->paneM] <one-line task>` on \
+             its own output line. Report completion with \
+             `[COFFEE-DONE:pane{n}->paneM]`. Full protocol lives in the \
+             workspace's `.multi-agent/PROTOCOL.md`.",
+            n = n
+        )
+    });
+
     // Map the requested tool to an actual CLI command.
     let (cmd, args): (String, Vec<String>) = match tool.as_deref() {
         Some("claude")   => {
             let mut a = vec![];
             if in_multi_agent {
                 a.push("--dangerously-skip-permissions".to_string());
+                if let Some(prompt) = &pane_system_prompt {
+                    a.push("--append-system-prompt".to_string());
+                    a.push(prompt.clone());
+                }
             }
             ("claude".to_string(), a)
         },
