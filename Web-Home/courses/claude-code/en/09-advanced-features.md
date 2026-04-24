@@ -11,29 +11,32 @@ Comprehensive guide to Claude Code's advanced capabilities including planning mo
 
 1. [Overview](#overview)
 2. [Planning Mode](#planning-mode)
-3. [Extended Thinking](#extended-thinking)
-4. [Auto Mode](#auto-mode)
-5. [Background Tasks](#background-tasks)
-6. [Scheduled Tasks](#scheduled-tasks)
-7. [Permission Modes](#permission-modes)
-8. [Headless Mode](#headless-mode)
-9. [Session Management](#session-management)
-10. [Interactive Features](#interactive-features)
-11. [Voice Dictation](#voice-dictation)
-12. [Channels](#channels)
-13. [Chrome Integration](#chrome-integration)
-14. [Remote Control](#remote-control)
-15. [Web Sessions](#web-sessions)
-16. [Desktop App](#desktop-app)
-17. [Task List](#task-list)
-18. [Prompt Suggestions](#prompt-suggestions)
-19. [Git Worktrees](#git-worktrees)
-20. [Sandboxing](#sandboxing)
-21. [Managed Settings (Enterprise)](#managed-settings-enterprise)
-22. [Configuration and Settings](#configuration-and-settings)
-23. [Agent Teams](#agent-teams)
-24. [Best Practices](#best-practices)
-25. [Additional Resources](#additional-resources)
+3. [Ultraplan (Cloud Plan Drafting)](#ultraplan-cloud-plan-drafting)
+4. [Extended Thinking](#extended-thinking)
+5. [Auto Mode](#auto-mode)
+6. [Background Tasks](#background-tasks)
+7. [Monitor Tool (Event-Driven Streams)](#monitor-tool-event-driven-streams)
+8. [Scheduled Tasks](#scheduled-tasks)
+9. [Permission Modes](#permission-modes)
+10. [Headless Mode](#headless-mode)
+11. [Session Management](#session-management)
+12. [Interactive Features](#interactive-features)
+13. [TUI Mode (Fullscreen)](#tui-mode-fullscreen)
+14. [Voice Dictation](#voice-dictation)
+15. [Channels](#channels)
+16. [Chrome Integration](#chrome-integration)
+17. [Remote Control](#remote-control)
+18. [Web Sessions](#web-sessions)
+19. [Desktop App](#desktop-app)
+20. [Task List](#task-list)
+21. [Prompt Suggestions](#prompt-suggestions)
+22. [Git Worktrees](#git-worktrees)
+23. [Sandboxing](#sandboxing)
+24. [Managed Settings (Enterprise)](#managed-settings-enterprise)
+25. [Configuration and Settings](#configuration-and-settings)
+26. [Agent Teams](#agent-teams)
+27. [Best Practices](#best-practices)
+28. [Additional Resources](#additional-resources)
 
 ---
 
@@ -197,9 +200,61 @@ claude --model opusplan "design and implement the new API"
 
 **Edit plan externally**: Press `Ctrl+G` to open the current plan in your external editor for detailed modifications.
 
-### Ultraplan
+> **v2.1.112 update**: Plan files are now named after the prompt that produced them (instead of random words), making them easier to browse and reuse.
 
-Use `/ultraplan <prompt>` for an end-to-end planning workflow: Claude drafts a detailed plan, opens it in the browser for review, then executes the plan either remotely or sends it back to your terminal for local execution.
+---
+
+## Ultraplan (Cloud Plan Drafting)
+
+> **New in v2.1.101**: Ultraplan now auto-creates a Claude Code on the web cloud environment the first time you invoke it — no manual setup, no waiting for a container to warm up before the draft starts.
+
+> **Note**: Ultraplan is a research preview and requires Claude Code v2.1.91 or newer.
+
+`/ultraplan` hands a planning task from your local CLI to a Claude Code on the web session running in plan mode. Claude drafts the plan in the cloud while your terminal stays free for other work, then you review the draft in the browser and choose where to execute — in the same cloud session or teleported back to your terminal.
+
+### When to Use Ultraplan
+
+- You want a richer review surface than the terminal: inline comments, emoji reactions, an outline sidebar, and persistent history.
+- You want hands-off drafting while you keep coding locally — the cloud session researches the repo and writes the plan without blocking your CLI.
+- The plan needs stakeholder review before execution — a shareable web URL beats pasting terminal scrollback.
+
+### Requirements
+
+- A Claude Code on the web account.
+- A GitHub repository (the cloud session clones your repo to draft against real code).
+- **Not available** on Amazon Bedrock, Google Cloud Vertex AI, or Microsoft Foundry.
+
+### Three Ways to Launch
+
+- **Command**: `/ultraplan <prompt>` — explicit invocation.
+- **Keyword**: include the word `ultraplan` anywhere in a normal prompt and Claude routes the request to the cloud.
+- **From a local plan**: after Claude finishes a plan locally, pick "No, refine with Ultraplan on Claude Code on the web" in the approval dialog to hand the draft off for deeper research.
+
+### Usage Example
+
+```bash
+/ultraplan migrate the auth service from sessions to JWTs
+```
+
+Claude acknowledges, spins up the cloud environment (auto-created on first run in v2.1.101+), and returns a session link you can open in your browser.
+
+### Status Indicators
+
+| Status | Meaning |
+|---|---|
+| `◇ ultraplan` | Claude is researching your codebase and drafting the plan |
+| `◇ ultraplan needs your input` | Claude has a clarifying question; open the session link to respond |
+| `◆ ultraplan ready` | The plan is ready to review in your browser |
+
+### Execution Options
+
+Once the plan is ready, you have two execution paths. Approve the plan in the browser to execute in the same cloud session — Claude implements the changes remotely and opens a pull request from the web UI. Or choose "Approve plan and teleport back to terminal" to implement locally. The terminal teleport dialog offers three choices:
+
+- **Implement here** — run the approved plan in your current terminal session.
+- **Start new session** — open a fresh session in the same working directory and implement there.
+- **Cancel** — saves the plan to a file so you can pick it up later.
+
+> **Warning**: Remote Control disconnects when ultraplan starts. Both features share the claude.ai/code interface, so only one can be active at a time.
 
 ---
 
@@ -221,8 +276,9 @@ Extended thinking is a deliberate, step-by-step reasoning process where Claude:
 - `Option + T` (macOS) / `Alt + T` (Windows/Linux) - Toggle extended thinking
 
 **Automatic activation**:
-- Enabled by default for all models (Opus 4.6, Sonnet 4.6, Haiku 4.5)
-- Opus 4.6: Adaptive reasoning with effort levels: `low` (○), `medium` (◐), `high` (●), `max` (Opus 4.6 only)
+- Enabled by default for all models (Opus 4.7, Sonnet 4.6, Haiku 4.5)
+- Opus 4.7: Adaptive reasoning with effort levels: `low` (○), `medium` (◐), `high` (●), `xhigh` (default on Claude Code since Opus 4.7 launch, 2026-04-16), `max` (Opus 4.7 only). Opus 4.7 has a 1M-token native context window (1M context fix landed in v2.1.117 — before that, `/context` miscounted Opus 4.7 against a 200K window and triggered premature autocompact).
+- Pro/Max subscribers on Opus 4.6 / Sonnet 4.6: default effort was raised from `medium` to `high` in v2.1.117.
 - Other models: Fixed budget up to 31,999 tokens
 
 **Configuration methods**:
@@ -235,9 +291,9 @@ Extended thinking is a deliberate, step-by-step reasoning process where Claude:
 export MAX_THINKING_TOKENS=1024
 ```
 
-**Effort level** (Opus 4.6 only):
+**Effort level** (Opus 4.7 only):
 ```bash
-export CLAUDE_CODE_EFFORT_LEVEL=high   # low (○), medium (◐), high (●), or max (Opus 4.6 only)
+export CLAUDE_CODE_EFFORT_LEVEL=xhigh   # low (○), medium (◐), high (●), xhigh (default on Opus 4.7), or max (Opus 4.7 only)
 ```
 
 **CLI flag**:
@@ -250,7 +306,7 @@ claude --effort high "complex architectural review"
 /effort high
 ```
 
-> **Note:** The keyword "ultrathink" in prompts activates deep reasoning mode. Effort levels `low`, `medium`, `high`, and `max` (Opus 4.6 only) control how much reasoning Claude performs.
+> **Note:** The keyword "ultrathink" in prompts activates deep reasoning mode. Effort levels `low`, `medium`, `high`, `xhigh` (new, default on Opus 4.7), and `max` (Opus 4.7 only) control how much reasoning Claude performs.
 
 ### Benefits of Extended Thinking
 
@@ -338,8 +394,8 @@ Extended thinking is controlled via environment variables, keyboard shortcuts, a
 # Set thinking token budget
 export MAX_THINKING_TOKENS=16000
 
-# Set effort level (Opus 4.6 only): low (○), medium (◐), high (●), or max (Opus 4.6 only)
-export CLAUDE_CODE_EFFORT_LEVEL=high
+# Set effort level (Opus 4.7 only): low (○), medium (◐), high (●), xhigh (default on Opus 4.7), or max (Opus 4.7 only)
+export CLAUDE_CODE_EFFORT_LEVEL=xhigh
 ```
 
 Toggle during a session with `Alt+T` / `Option+T`, set effort with `/effort`, or configure via `/config`.
@@ -353,18 +409,20 @@ Auto Mode is a Research Preview permission mode (March 2026) that uses a backgro
 ### Requirements
 
 - **Plan**: Team, Enterprise, or API (not available on Pro or Max plans)
-- **Model**: Claude Sonnet 4.6 or Opus 4.6
+- **Model**: Claude Sonnet 4.6 or Opus 4.7
 - **Provider**: Anthropic API only (not supported on Bedrock, Vertex, or Foundry)
 - **Classifier**: Runs on Claude Sonnet 4.6 (adds extra token cost)
 
 ### Enabling Auto Mode
 
 ```bash
-# Unlock auto mode with CLI flag
+# Unlock auto mode with CLI flag (no longer required for Max subscribers on Opus 4.7 — access it directly)
 claude --enable-auto-mode
 
 # Then cycle to it with Shift+Tab in the REPL
 ```
+
+> **v2.1.112 update**: Auto mode no longer requires the `--enable-auto-mode` flag. Max subscribers access it directly on Opus 4.7.
 
 Or set it as the default permission mode:
 
@@ -420,6 +478,34 @@ claude auto-mode defaults
 ```
 
 **Configure trusted infrastructure** via the `autoMode.environment` managed setting for enterprise deployments. This allows administrators to define trusted CI/CD environments, deployment targets, and infrastructure patterns.
+
+#### Extending defaults with `"$defaults"` (v2.1.118)
+
+Since v2.1.118, `autoMode.allow`, `autoMode.soft_deny`, and `autoMode.environment` accept a `"$defaults"` token that **appends** your rules to the built-in list instead of replacing it. Before v2.1.118, any user-defined array silently clobbered the built-ins.
+
+**Before (replaces built-ins — pre-v2.1.118 behavior):**
+
+```json
+{
+  "autoMode": {
+    "allow": ["Bash(gh pr list:*)"]
+  }
+}
+```
+
+**After (extends built-ins — v2.1.118+):**
+
+```json
+{
+  "autoMode": {
+    "allow": ["$defaults", "Bash(gh pr list:*)"],
+    "soft_deny": ["$defaults", "Bash(kubectl delete:*)"],
+    "environment": ["$defaults", "trusted-ci.internal"]
+  }
+}
+```
+
+Use `"$defaults"` to keep the shipped baseline rules while layering organization- or project-specific additions on top.
 
 ### Fallback Behavior
 
@@ -588,6 +674,43 @@ Claude: [Shows linter output from bg-5002]
   }
 }
 ```
+
+---
+
+## Monitor Tool (Event-Driven Streams)
+
+> **New in v2.1.98**: The Monitor tool lets Claude watch a background command's stdout and react the moment a matching event appears — replacing polling loops and `sleep` for waiting on long-running processes.
+
+Monitor attaches to any shell command that writes to stdout. Each stdout line from the command becomes a notification that wakes the session. Claude specifies the command; the harness streams output and delivers events as they fire. See the related [Background Tasks](#background-tasks) section for launching the underlying processes.
+
+### Why It Matters
+
+Polling with `/loop` or `sleep` burns a full API round-trip every cycle, whether or not anything changed. Monitor stays silent until an event fires, consuming **zero tokens** while the command is quiet. When an event does occur, Claude reacts immediately — no delayed discovery waiting for the next poll tick. For anything that runs longer than a few minutes, this is both cheaper and faster than poll loops.
+
+### Two Common Patterns
+
+**Stream filters** watch continuous output from a long-running source. The command runs forever; every matching line is an event.
+
+```bash
+tail -f /var/log/app.log | grep --line-buffered "ERROR"
+```
+
+**Poll-and-emit filters** check a source periodically and only emit when something changes. Use this for APIs, databases, or anything without a native stream.
+
+```bash
+last=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+while true; do
+  gh api "repos/owner/repo/issues/123/comments?since=$last" || true
+  last=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  sleep 30
+done
+```
+
+### Concrete Example
+
+"Start my dev server and monitor it for errors." Claude launches the server as a background task, attaches a Monitor filter (`tail -F server.log | grep --line-buffered -E "ERROR|FATAL"`), and the session goes quiet. The moment an error line appears in the log, Claude wakes up, reads the error, and can react — restart the server, fix the bug, or surface it to you — without you having to check in.
+
+> **Warning**: When piping into `grep`, **always** use `grep --line-buffered`. Without it, grep buffers stdout in 4KB chunks, which can delay events by minutes on low-traffic streams. This is the #1 way Monitor breaks in practice — if your filter seems silent when it shouldn't be, check for the `--line-buffered` flag first.
 
 ---
 
@@ -941,6 +1064,23 @@ claude -r "auth-refactor"
 claude --resume auth-refactor --fork-session "alternative approach"
 ```
 
+### Session Recap (v2.1.108)
+
+When you return to a session after being away, Claude can show a brief recap of what was accomplished. This is enabled by default for users with telemetry disabled (Bedrock, Vertex, Foundry users).
+
+**Control recap behavior:**
+
+```bash
+/recap                                 # manually trigger a recap
+/config                                # toggle auto-recap on/off
+```
+
+Or via environment variable:
+```bash
+CLAUDE_CODE_ENABLE_AWAY_SUMMARY=0 claude   # disable recap
+CLAUDE_CODE_ENABLE_AWAY_SUMMARY=1 claude   # force enable recap
+```
+
 ---
 
 ## Interactive Features
@@ -1120,8 +1260,8 @@ User: Deploy to prodcution<Backspace><Backspace>uction
 Enable Vi/Vim keybindings for text editing:
 
 **Activation**:
-- Use `/vim` command or `/config` to enable
-- Mode switching with `Esc` for NORMAL, `i/a/o` for INSERT
+- Enable via `/config` (toggle "Editor / Vim mode") or in `~/.claude/settings.json` under `editorMode: "vim"`. The standalone `/vim` slash command was removed (see [issue #43370](https://github.com/anthropics/claude-code/issues/43370)); vim mode is now configuration-driven.
+- Mode switching with `Esc` for NORMAL, `i/a/o` for INSERT, `v` for VISUAL, `V` for VISUAL-LINE (v2.1.118+)
 
 **Navigation keys**:
 - `h` / `l` - Move left/right
@@ -1135,6 +1275,19 @@ Enable Vi/Vim keybindings for text editing:
 - `i"` / `a"` - Inner/around quoted string
 - `i(` / `a(` - Inner/around parentheses
 
+**Visual modes (v2.1.118+)**:
+
+| Key | Mode | Behavior |
+|-----|------|----------|
+| `v` | Visual | Character-wise selection with visual feedback; extend with motion keys |
+| `V` | Visual-line | Line-wise selection; always selects whole lines |
+| `y` | Yank | Copy the current visual selection |
+| `d` / `x` | Delete | Delete the current visual selection |
+| `c` | Change | Delete selection and enter INSERT mode |
+| `Esc` | Exit | Return to NORMAL mode |
+
+Visual selections are highlighted in the input field so you can see exactly what will be yanked, deleted, or changed before you commit the operator.
+
 ### Bash Mode
 
 Execute shell commands directly with `!` prefix:
@@ -1146,6 +1299,41 @@ Execute shell commands directly with `!` prefix:
 ```
 
 Use this for quick command execution without switching contexts.
+
+---
+
+## TUI Mode (Fullscreen)
+
+> **New in v2.1.110**
+
+TUI (Text User Interface) mode renders Claude Code in fullscreen with flicker-free output — ideal for terminal multiplexers like tmux or iTerm2 split panes.
+
+### Enabling TUI Mode
+
+Toggle TUI mode with the `/tui` command or launch with the `--tui` flag:
+
+```bash
+/tui          # toggle from within a session
+claude --tui  # start directly in TUI mode
+```
+
+### Configuration
+
+| Setting | Description | Default |
+|---------|-------------|---------|
+| `autoScrollEnabled` | Auto-scroll to latest message | `true` |
+
+Disable auto-scroll via `/config` or `settings.json`:
+
+```json
+{
+  "autoScrollEnabled": false
+}
+```
+
+### Focus View
+
+The `/focus` command toggles focus view — a distraction-free display showing only the most relevant output. `Ctrl+O` now toggles between normal and verbose transcript only (focus view is `/focus`).
 
 ---
 
@@ -1336,6 +1524,16 @@ Three ways to connect from another device:
 - Control Claude Code from a mobile device or tablet while away from your desk
 - Use the richer claude.ai UI while maintaining local tool execution
 - Quick code reviews on the go with your full local development environment
+
+### Push Notifications (v2.1.110)
+
+When Remote Control is active and "Push when Claude decides" is enabled in `/config`, Claude can send mobile push notifications to your phone — for example, when a long task completes or needs your input.
+
+To enable:
+1. Activate Remote Control: `/remote-control` or `claude --rc`
+2. Open `/config` and enable **Push when Claude decides**
+
+Push notifications require a Claude subscription and the Claude mobile app.
 
 ---
 
@@ -1580,7 +1778,24 @@ claude --no-sandbox    # Disable sandboxing
 | `sandbox.filesystem.allowWrite` | Paths allowed for write access |
 | `sandbox.filesystem.allowRead` | Paths allowed for read access |
 | `sandbox.filesystem.denyRead` | Paths denied for read access |
+| `sandbox.network.allowedDomains` | Domains Bash-launched processes are allowed to reach (supports `*.` wildcard) |
+| `sandbox.network.deniedDomains` | Domains to block even when `allowedDomains` wildcard would otherwise permit them (v2.1.113+) |
 | `sandbox.enableWeakerNetworkIsolation` | Enable weaker network isolation on macOS |
+
+Example of `deniedDomains` overriding a broad wildcard (v2.1.113+):
+
+```json
+{
+  "sandbox": {
+    "network": {
+      "allowedDomains": ["*.example.com"],
+      "deniedDomains": ["evil.example.com"]
+    }
+  }
+}
+```
+
+The wildcard lets everything on `example.com` through, but `deniedDomains` still blocks the specifically-named host.
 
 ### Example Configuration
 
@@ -1646,6 +1861,7 @@ Since v2.1.83, administrators can deploy multiple managed settings files into a 
 | `availableModels` | Restrict which models users can select |
 | `allowedChannelPlugins` | Control which channel plugins are permitted |
 | `autoMode.environment` | Configure trusted infrastructure for auto mode |
+| `wslInheritsWindowsSettings` | Windows/WSL only (v2.1.118+): when `true`, Claude Code running inside WSL inherits managed settings from the Windows host, so enterprise policies deployed via Registry/MDM apply uniformly across the Windows and WSL shells |
 | Custom policies | Organization-specific permission and tool policies |
 
 ### Example: macOS Plist
@@ -1739,8 +1955,8 @@ Override config with environment variables:
 
 ```bash
 # Model selection
-export ANTHROPIC_MODEL=claude-opus-4-6
-export ANTHROPIC_DEFAULT_OPUS_MODEL=claude-opus-4-6
+export ANTHROPIC_MODEL=claude-opus-4-7
+export ANTHROPIC_DEFAULT_OPUS_MODEL=claude-opus-4-7
 export ANTHROPIC_DEFAULT_SONNET_MODEL=claude-sonnet-4-6
 export ANTHROPIC_DEFAULT_HAIKU_MODEL=claude-haiku-4-5
 
@@ -1749,7 +1965,7 @@ export ANTHROPIC_API_KEY=sk-ant-...
 
 # Thinking configuration
 export MAX_THINKING_TOKENS=16000
-export CLAUDE_CODE_EFFORT_LEVEL=high
+export CLAUDE_CODE_EFFORT_LEVEL=xhigh   # low, medium, high, xhigh (default on Opus 4.7), or max (Opus 4.7 only)
 
 # Feature toggles
 export CLAUDE_CODE_DISABLE_AUTO_MEMORY=true
@@ -1766,6 +1982,9 @@ export CLAUDE_CODE_SIMPLE=true              # Set by --bare flag
 # MCP configuration
 export MAX_MCP_OUTPUT_TOKENS=50000
 export ENABLE_TOOL_SEARCH=true
+
+# Prompt caching
+export ENABLE_PROMPT_CACHING_1H=1      # Use 1-hour prompt cache TTL (default is 5 min)
 
 # Task management
 export CLAUDE_CODE_TASK_LIST_ID=my-project-tasks
@@ -1785,6 +2004,8 @@ export CLAUDE_STREAM_IDLE_TIMEOUT_MS=30000
 export ANTHROPIC_CUSTOM_MODEL_OPTION=my-custom-model
 export SLASH_COMMAND_TOOL_CHAR_BUDGET=50000
 ```
+
+> **v2.1.108**: `ENABLE_PROMPT_CACHING_1H=1` — use a 1-hour prompt cache TTL instead of the default 5-minute TTL. Reduces cache misses in long, stable sessions.
 
 ### Configuration Management Commands
 
@@ -1940,6 +2161,14 @@ For more information about Claude Code and related features:
 - [Official Agent Teams Documentation](https://code.claude.com/docs/en/agent-teams)
 
 ---
-**Last Updated**: April 9, 2026
-**Claude Code Version**: 2.1.97
-**Compatible Models**: Claude Sonnet 4.6, Claude Opus 4.6, Claude Haiku 4.5
+
+**Last Updated**: April 24, 2026
+**Claude Code Version**: 2.1.119
+**Sources**:
+- https://code.claude.com/docs/en/permission-modes
+- https://code.claude.com/docs/en/interactive-mode
+- https://code.claude.com/docs/en/settings
+- https://www.anthropic.com/news/claude-opus-4-7
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.117
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.118
+**Compatible Models**: Claude Sonnet 4.6, Claude Opus 4.7, Claude Haiku 4.5
