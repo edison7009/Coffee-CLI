@@ -581,7 +581,7 @@ fn save_clipboard_image(data_base64: String, extension: String) -> Result<String
         ));
     }
 
-    let tmp_dir = std::env::temp_dir().join("coffee-cli-compose");
+    let tmp_dir = std::env::temp_dir().join("coffee-cli").join("pasted-images");
     std::fs::create_dir_all(&tmp_dir).map_err(|e| format!("mkdir: {}", e))?;
 
     static SEQ: AtomicU64 = AtomicU64::new(0);

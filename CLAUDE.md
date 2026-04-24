@@ -41,6 +41,18 @@
 
 ---
 
+## 剪贴板 I/O：只走 `src-ui/src/lib/clipboard.ts`
+
+WebView2 对 `navigator.clipboard.*` 和 `document.execCommand('copy'|'paste')` 会弹原生权限框（"tauri.localhost 想要查看剪贴板…"），每次右键粘贴都弹一次，UX 极差。同一个坑已经在 Explorer、TierTerminal、Gambit 修过 3 次，第 4 次不能再发生。
+
+**硬规则**：
+- 需要读/写剪贴板一律 `import { clipboardRead, clipboardWrite } from '@/lib/clipboard'`（内部走 Tauri `plugin-clipboard-manager`，不弹框）
+- **禁止**在 `src-ui/src/` 下直接出现 `navigator.clipboard`、`document.execCommand('copy')`、`document.execCommand('paste')`、或 `from '@tauri-apps/plugin-clipboard-manager'`
+- 唯一例外：`lib/clipboard.ts` 自己的实现
+- Review / 自检时用 `grep -rn "navigator.clipboard\|plugin-clipboard-manager" src-ui/src` 确认只命中 `lib/clipboard.ts`
+
+---
+
 ## Tauri 前端要点
 
 - **用 `import()` 不用 `require()`**：Tauri API 如 `convertFileSrc`、`readTextFile` 等必须 dynamic import，否则 TS build 会报错

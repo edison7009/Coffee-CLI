@@ -13,7 +13,7 @@ import { createPortal } from 'react-dom';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebglAddon } from '@xterm/addon-webgl';
-import { readText, writeText } from '@tauri-apps/plugin-clipboard-manager';
+import { clipboardRead, clipboardWrite } from '../../lib/clipboard';
 import { subscribeTerminalEvents } from '../../lib/pty-event-bus';
 import { registerTerminalFocus } from '../../lib/focus-registry';
 import { registerTabActions, getTabActions } from '../../lib/tab-actions';
@@ -398,12 +398,9 @@ function TierTerminalImpl({
         const cmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
 
         // Copy: Ctrl+C / Cmd+C — only when text is selected (otherwise send SIGINT).
-        // Clipboard goes through Tauri's clipboard-manager plugin (not
-        // navigator.clipboard) to bypass WebView2's native permission prompt
-        // that otherwise popped up on every right-click paste on Windows.
         if (cmdOrCtrl && e.code === 'KeyC') {
           if (term.hasSelection()) {
-            writeText(term.getSelection()).catch(() => {});
+            clipboardWrite(term.getSelection());
             return false;
           }
         }
@@ -415,22 +412,22 @@ function TierTerminalImpl({
         // clipboard text twice.
         if (cmdOrCtrl && e.code === 'KeyV') {
           e.preventDefault();
-          readText().then(text => {
+          clipboardRead().then(text => {
             if (text) term.paste(normalizePasteNewlines(text));
-          }).catch(() => {});
+          });
           return false;
         }
 
         // Linux convention: Ctrl+Shift+C always copies, Ctrl+Shift+V always pastes
         if (e.ctrlKey && e.shiftKey && e.code === 'KeyC') {
-          if (term.hasSelection()) writeText(term.getSelection()).catch(() => {});
+          if (term.hasSelection()) clipboardWrite(term.getSelection());
           return false;
         }
         if (e.ctrlKey && e.shiftKey && e.code === 'KeyV') {
           e.preventDefault();
-          readText().then(text => {
+          clipboardRead().then(text => {
             if (text) term.paste(normalizePasteNewlines(text));
-          }).catch(() => {});
+          });
           return false;
         }
       }
@@ -906,13 +903,13 @@ function TierTerminalImpl({
           onClose={closeCtxMenu}
           onCopy={() => {
             const text = xtermRef.current?.getSelection();
-            if (text) writeText(text).catch(() => {});
+            if (text) clipboardWrite(text);
             closeCtxMenu();
           }}
           onPaste={() => {
-            readText().then(text => {
+            clipboardRead().then(text => {
               if (text && xtermRef.current) xtermRef.current.paste(normalizePasteNewlines(text));
-            }).catch(() => {});
+            });
             closeCtxMenu();
           }}
           onSelectAll={() => {

@@ -6,7 +6,7 @@ import { useAppState } from '../../store/app-state';
 import type { ThemeColor, ThemeShape, IconTheme } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
 import { ScrollPanel } from '../common/ScrollPanel';
-import { writeText } from '@tauri-apps/plugin-clipboard-manager';
+import { clipboardWrite } from '../../lib/clipboard';
 import { commands } from '../../tauri';
 import type { FileEntry, DriveInfo, DirEntryInfo } from '../../tauri';
 import './Explorer.css';
@@ -48,9 +48,7 @@ function ContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: () => voi
   }, [onClose]);
 
   const copyPath = (text: string) => {
-    // Uses Tauri clipboard-manager plugin to avoid WebView2's native
-    // permission prompt that appears on every navigator.clipboard call.
-    writeText(text).catch(() => {});
+    clipboardWrite(text);
     onClose();
   };
 

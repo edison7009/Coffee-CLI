@@ -2,18 +2,20 @@
 //
 // Named for the chess "gambit": a calculated opening move after careful thought.
 // Users compose long messages (and paste screenshots) in a real HTML textarea
-// where native Ctrl+A/X/Z/Y all work, then send via Enter. The full text is
-// forwarded to the tab's xterm as a single bracketed paste + Enter — no
+// where native Ctrl+A/X/Z/Y all work, then send via Ctrl+Enter. The full text
+// is forwarded to the tab's xterm as a single bracketed paste + Enter — no
 // keystroke-by-keystroke simulation, so IME, newlines, and unicode all round-
 // trip correctly.
 //
-// Pasted images are saved to a temp file via Rust, and the absolute path is
-// inserted into the textarea so AI CLI agents that support local image paths
-// (e.g. Claude Code) can read them. If the agent does not support image paths
-// it simply sees the raw path string — not our concern, per design.
+// Image paste behavior: pasted images are saved to a temp file via Rust, and
+// the absolute path is inserted directly into the textarea as plain text at
+// the cursor position. No attachment chips, no thumbnails — just a visible,
+// editable path string. AI CLI agents that support local image paths (e.g.
+// Claude Code) will read the file; agents that don't just see the raw path.
 
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { clipboardRead, clipboardWrite } from '../../lib/clipboard';
 import { commands } from '../../tauri';
 import { useT } from '../../i18n/useT';
 import './Gambit.css';
@@ -31,13 +33,6 @@ interface GambitProps {
    *  signal to decide whether to clear the draft — failed sends preserve
    *  the text so the user never loses what they typed. */
   onSend: (text: string) => boolean;
-}
-
-interface Attachment {
-  id: string;
-  path: string;        // Absolute OS path — sent to the AI CLI when submitting.
-  previewUrl: string;  // Blob URL from the paste-time File object; cheap thumbnail render.
-  name: string;        // Display name shown on hover.
 }
 
 const MIN_WIDTH = 320;
@@ -68,8 +63,6 @@ function GambitImpl({
 
   const [pos, setPos] = useState({ x: initialX, y: initialY });
   const [size, setSize] = useState({ w: DEFAULT_WIDTH, h: DEFAULT_HEIGHT });
-  const [attachments, setAttachments] = useState<Attachment[]>([]);
-  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   // Collapsed state: full window shrinks into a small draggable ball,
   // reminiscent of Messenger chat heads. True close lives only in the
   // Explorer toggle button (open origin = close origin).
@@ -85,18 +78,6 @@ function GambitImpl({
 
   useEffect(() => {
     textareaRef.current?.focus();
-  }, []);
-
-  // Blob URL cleanup on unmount. handleSend and removeAttachment revoke
-  // eagerly; this catches the path where Gambit is closed with attachments
-  // still staged (onClose → parent sets gambitOpen=false → component unmounts).
-  // A ref holds the latest array so the empty-deps effect sees live data.
-  const attachmentsRef = useRef(attachments);
-  attachmentsRef.current = attachments;
-  useEffect(() => {
-    return () => {
-      attachmentsRef.current.forEach(a => URL.revokeObjectURL(a.previewUrl));
-    };
   }, []);
 
   const onDragStart = (e: React.MouseEvent) => {
@@ -247,8 +228,12 @@ function GambitImpl({
   };
 
   const ctxCopy = () => {
-    textareaRef.current?.focus();
-    document.execCommand('copy');
+    const textarea = textareaRef.current;
+    if (!textarea) { setCtxMenu(null); return; }
+    const start = textarea.selectionStart ?? 0;
+    const end = textarea.selectionEnd ?? 0;
+    const selected = draft.slice(start, end);
+    if (selected) clipboardWrite(selected);
     setCtxMenu(null);
   };
 
@@ -259,7 +244,7 @@ function GambitImpl({
     const end = textarea.selectionEnd ?? 0;
     const selected = draft.slice(start, end);
     if (selected) {
-      navigator.clipboard.writeText(selected).catch(() => {});
+      clipboardWrite(selected);
       const newDraft = draft.slice(0, start) + draft.slice(end);
       onDraftChange(newDraft);
       requestAnimationFrame(() => {
@@ -274,7 +259,7 @@ function GambitImpl({
     const textarea = textareaRef.current;
     if (!textarea) { setCtxMenu(null); return; }
     setCtxMenu(null);
-    navigator.clipboard.readText().then((text) => {
+    clipboardRead().then((text) => {
       if (!text) return;
       const start = textarea.selectionStart ?? draft.length;
       const end = textarea.selectionEnd ?? draft.length;
@@ -285,7 +270,7 @@ function GambitImpl({
         textarea.selectionStart = start + text.length;
         textarea.selectionEnd = start + text.length;
       });
-    }).catch(() => {});
+    });
   };
 
   const ctxSelectAll = () => {
@@ -298,28 +283,20 @@ function GambitImpl({
 
   const handleSend = useCallback(() => {
     const text = draft.trim();
-    const paths = attachments.map(a => a.path);
-    if (!text && paths.length === 0) {
+    if (!text) {
       setSendEmpty(true);
       return;
     }
-    // Concatenate prose first, then space-separated file paths. Claude Code
-    // and similar CLIs auto-recognize file paths as attachment references.
-    const combined = paths.length > 0
-      ? (text ? `${text} ${paths.join(' ')}` : paths.join(' '))
-      : text;
-    const ok = onSend(combined);
+    const ok = onSend(text);
     if (!ok) {
-      // Preserve draft + attachments so the user doesn't lose what they
-      // typed. They likely just need to click the target pane first, then
-      // hit Send again.
+      // Preserve draft so the user doesn't lose what they typed. They
+      // likely just need to click the target pane first, then hit Send
+      // again.
       setSendFailed(true);
       return;
     }
     onDraftChange('');
-    attachments.forEach(a => URL.revokeObjectURL(a.previewUrl));
-    setAttachments([]);
-  }, [draft, attachments, onSend, onDraftChange]);
+  }, [draft, onSend, onDraftChange]);
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     // IME composition in progress — let the IME keep Enter for confirming
@@ -337,47 +314,56 @@ function GambitImpl({
   const onPaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const items = e.clipboardData?.items;
     if (!items) return;
+    // Collect all image files first (rare — clipboard normally has ≤1 image).
+    // Validate BEFORE preventing default: if getAsFile() returns null
+    // (some Windows clipboard sources do this), we must NOT block the
+    // native paste or the user loses their clipboard content.
+    const imageFiles: { file: File; ext: string }[] = [];
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
-      if (item.kind !== 'file') continue;
-      if (!item.type.startsWith('image/')) continue;
-
-      // Validate file BEFORE preventing default. If getAsFile() returns null
-      // (some Windows clipboard sources do this), we must NOT block the native
-      // paste — otherwise the user loses their clipboard content with no
-      // attachment to show for it.
+      if (item.kind !== 'file' || !item.type.startsWith('image/')) continue;
       const file = item.getAsFile();
       if (!file) continue;
+      imageFiles.push({ file, ext: (item.type.split('/')[1] || 'png').toLowerCase() });
+    }
+    if (imageFiles.length === 0) return;
 
-      e.preventDefault();
+    e.preventDefault();
 
-      const ext = (item.type.split('/')[1] || 'png').toLowerCase();
-      const base64 = await fileToBase64(file);
+    const textarea = textareaRef.current;
+    const selStart = textarea?.selectionStart ?? draft.length;
+    const selEnd = textarea?.selectionEnd ?? draft.length;
+
+    const paths: string[] = [];
+    for (const { file, ext } of imageFiles) {
       try {
-        const path = await commands.saveClipboardImage(base64, ext);
-        // Blob URL is generated in-memory from the paste-time File — renders
-        // instantly without re-reading the saved temp file.
-        const previewUrl = URL.createObjectURL(file);
-        setAttachments(prev => [...prev, {
-          id: crypto.randomUUID(),
-          path,
-          previewUrl,
-          name: `clip.${ext}`,
-        }]);
+        const base64 = await fileToBase64(file);
+        paths.push(await commands.saveClipboardImage(base64, ext));
       } catch (err) {
         console.error('[Gambit] save image failed', err);
       }
-      return;
     }
-  };
+    if (paths.length === 0) return;
 
-  const removeAttachment = useCallback((id: string) => {
-    setAttachments(prev => {
-      const att = prev.find(a => a.id === id);
-      if (att) URL.revokeObjectURL(att.previewUrl);
-      return prev.filter(a => a.id !== id);
+    // Insert paths at the cursor as plain text. If there's adjacent
+    // non-whitespace text on either side, pad with spaces so AI CLI
+    // path detection doesn't glue the path onto surrounding prose.
+    const before = draft.slice(0, selStart);
+    const after = draft.slice(selEnd);
+    const leftPad = before.length > 0 && !/\s$/.test(before) ? ' ' : '';
+    const rightPad = after.length > 0 && !/^\s/.test(after) ? ' ' : '';
+    const inserted = leftPad + paths.join(' ') + rightPad;
+    const newDraft = before + inserted + after;
+    onDraftChange(newDraft);
+    requestAnimationFrame(() => {
+      const ta = textareaRef.current;
+      if (!ta) return;
+      ta.focus();
+      const caret = selStart + inserted.length;
+      ta.selectionStart = caret;
+      ta.selectionEnd = caret;
     });
-  }, []);
+  };
 
   // Anchor the collapse dot and the ball at the same screen coordinate:
   // when collapsing, move the ball's top-left so its center lands on the
@@ -484,29 +470,6 @@ function GambitImpl({
       />
 
       <div className="gambit-footer">
-        <div className="gambit-attachments">
-          {attachments.map((att, idx) => (
-            <div
-              key={att.id}
-              className="gambit-attachment"
-              onClick={() => setPreviewIndex(idx)}
-            >
-              <img src={att.previewUrl} alt={att.name} draggable={false} />
-              <button
-                className="gambit-attachment-remove"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  removeAttachment(att.id);
-                }}
-                onMouseDown={(e) => e.stopPropagation()}
-              >
-                <svg width="10" height="10" viewBox="0 0 10 10">
-                  <path d="M2 2 L8 8 M2 8 L8 2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" fill="none"/>
-                </svg>
-              </button>
-            </div>
-          ))}
-        </div>
         {sendFailed && (
           <span className="gambit-send-hint" role="status">
             {t('gambit.send_failed_hint')}
@@ -518,7 +481,7 @@ function GambitImpl({
           </span>
         )}
         <button
-          className={`gambit-send${sendFailed ? ' gambit-send--failed' : ''}${!draft.trim() && attachments.length === 0 ? ' gambit-send--empty' : ''}`}
+          className={`gambit-send${sendFailed ? ' gambit-send--failed' : ''}${!draft.trim() ? ' gambit-send--empty' : ''}`}
           onClick={handleSend}
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -528,24 +491,6 @@ function GambitImpl({
       </div>
 
       <div className="gambit-resize-handle" onMouseDown={onResizeStart} />
-
-      {/* Preview portal renders into document.body to escape .gambit's
-          transform containing block — otherwise `position: fixed` would
-          anchor to .gambit (transformed ancestor) and clip to overflow:hidden. */}
-      {previewIndex !== null && attachments[previewIndex] && createPortal(
-        <div
-          className="gambit-preview-overlay"
-          onClick={() => setPreviewIndex(null)}
-          onMouseDown={(e) => e.stopPropagation()}
-        >
-          <img
-            src={attachments[previewIndex].previewUrl}
-            alt={attachments[previewIndex].name}
-            draggable={false}
-          />
-        </div>,
-        document.body,
-      )}
 
       {ctxMenu && createPortal(
         <div
