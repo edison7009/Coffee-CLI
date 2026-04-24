@@ -37,6 +37,7 @@ export const vi = {
   'tool.vibeid': 'Trắc nghiệm tính cách',
   'tool.insights_prerun': 'Đang tạo báo cáo sử dụng...',
   'tool.multi_agent': 'Đa tác nhân',
+  'sentinel.protocol': 'Giao thức lính gác',
   'tool.two_split': 'Hai Màn Độc Lập',
   'tool.three_split': 'Ba Màn Độc Lập',
   'tool.four_split': 'Bốn Màn Độc Lập',

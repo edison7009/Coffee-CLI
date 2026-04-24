@@ -16,10 +16,10 @@ import { WebglAddon } from '@xterm/addon-webgl';
 import { readText, writeText } from '@tauri-apps/plugin-clipboard-manager';
 import { subscribeTerminalEvents } from '../../lib/pty-event-bus';
 import { registerTerminalFocus } from '../../lib/focus-registry';
-import { registerTabActions } from '../../lib/tab-actions';
+import { registerTabActions, getTabActions } from '../../lib/tab-actions';
 import { notifyUserInputSubmitted } from '../../lib/agent-status-bus';
 import { commands } from '../../tauri';
-import { useAppDispatch, type ToolType, type ThemeColor } from '../../store/app-state';
+import { useAppDispatch, useAppState, type ToolType, type ThemeColor } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
 import '@xterm/xterm/css/xterm.css';
 import './TierTerminal.css';
@@ -224,6 +224,14 @@ function TierTerminalImpl({
 }: TierTerminalProps) {
   // Dispatch-only subscription. Never re-renders this component.
   const dispatch = useAppDispatch();
+  // Sentinel scanner needs access to the latest state to look up sibling
+  // panes (same parent tab, sentinelEnabled, etc.). Using the hook re-
+  // renders this component on every state change, which would thrash the
+  // xterm init effects. We keep the value in a ref and sync it with a
+  // cheap effect — the onOutput closure reads through the ref.
+  const { state: _appState } = useAppState();
+  const appStateRef = useRef(_appState);
+  useEffect(() => { appStateRef.current = _appState; }, [_appState]);
 
   const termRef  = useRef<HTMLDivElement>(null);
   const wrapRef  = useRef<HTMLDivElement>(null);
@@ -507,6 +515,53 @@ function TierTerminalImpl({
           }
           if (data.includes('\x1b[?1049l') || data.includes('\x1b[?47l')) {
             altScreenRef.current = false;
+          }
+
+          // ── Sentinel Protocol scanner ───────────────────────────
+          // Addressed marker format: [COFFEE-DONE:paneN->paneM]
+          //   N = emitter (this pane, reporting completion)
+          //   M = target  (the pane that asked for the task)
+          //
+          // Upgrade from unaddressed broadcast: now we route to the specific
+          // target pane rather than fanning out to every sentinel-enabled
+          // sibling. This matches the user's mental model of "the pane that
+          // dispatched the work gets the completion receipt".
+          //
+          // Both sides (emitter AND target) must have sentinelEnabled=true:
+          //   - emitter needs it so Coffee CLI is actively scanning this
+          //     pane's output for the marker at all
+          //   - target needs it to opt-in to having its PTY stream poked
+          //     with the injected notification line
+          if (data.includes('[COFFEE-DONE:pane')) {
+            const paneIdMatch = sessionId.match(/^(.+)::pane-(\d+)$/);
+            const markerMatch = data.match(/\[COFFEE-DONE:pane(\d+)->pane(\d+)\]/);
+            if (paneIdMatch && markerMatch) {
+              const tabId = paneIdMatch[1];
+              const emitter = parseInt(markerMatch[1], 10);
+              const target = parseInt(markerMatch[2], 10);
+              const tab = appStateRef.current.terminals.find(t => t.id === tabId);
+              const panes = tab?.multiAgent?.panes ?? [];
+              const emitterPane = panes.find(p => p.paneIdx === emitter);
+              // Only act if the EMITTING pane actually has sentinel on.
+              // Stray text in output that happens to match the pattern
+              // (e.g. a user pasted code sample) shouldn't trigger anything.
+              if (emitterPane?.sentinelEnabled) {
+                dispatch({ type: 'SET_PANE_COMPLETION', tabId, paneIdx: emitter, ts: Date.now() });
+                const targetPane = panes.find(p => p.paneIdx === target);
+                if (targetPane?.sentinelEnabled && targetPane.tool !== null && target !== emitter) {
+                  const targetId = `${tabId}::pane-${target}`;
+                  const notify = `[COFFEE-SENTINEL] Pane ${emitter} reports task complete (addressed to pane ${target}).`;
+                  getTabActions(targetId)?.paste(notify);
+                  // Auto-submit: send a raw CR outside the bracketed-paste
+                  // frame so the TUI treats it as "Enter" instead of a
+                  // literal newline inside the pasted buffer. Small delay
+                  // lets the paste close-marker flush first.
+                  setTimeout(() => {
+                    commands.tierTerminalInput(targetId, '\r').catch(() => {});
+                  }, 50);
+                }
+              }
+            }
           }
         },
         onStatus: (running, exitCode) => {

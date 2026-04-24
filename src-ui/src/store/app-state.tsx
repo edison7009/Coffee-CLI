@@ -57,6 +57,13 @@ export interface MultiAgentPane {
   // and use the tab-level folderPath (all 4 panes share one workspace because
   // they coordinate via MCP against that workspace's config).
   folderPath?: string | null;
+  // Sentinel Protocol (opt-in per pane). When true, TierTerminal scans the
+  // PTY output stream of this pane for the marker `[COFFEE-DONE:pane<N>]`
+  // that the user instructs their agent to emit on task completion. On a
+  // match, completionTs is set to Date.now() — the pane number badge
+  // renders a small green dot while the timestamp is fresh.
+  sentinelEnabled?: boolean;
+  completionTs?: number;
 }
 
 /// State attached to a Tab with `tool === 'multi-agent'`. All four panes
@@ -146,6 +153,8 @@ type Action =
   | { type: 'TOGGLE_GAMBIT' }
   | { type: 'SET_GAMBIT_DRAFT'; id: string; draft: string }
   | { type: 'SET_PANE_TOOL'; tabId: string; paneIdx: number; tool: ToolType; toolData?: string; folderPath?: string | null }
+  | { type: 'SET_PANE_SENTINEL'; tabId: string; paneIdx: number; enabled: boolean }
+  | { type: 'SET_PANE_COMPLETION'; tabId: string; paneIdx: number; ts: number }
   | { type: 'TOGGLE_LEFT_PANEL' }
   | { type: 'TOGGLE_RIGHT_PANEL' }
   | { type: 'SET_MULTI_AGENT_LAYOUT'; layout: 'grid' | 'columns' };
@@ -287,6 +296,33 @@ function reducer(state: AppState, action: Action): AppState {
                     : (action.tool === null ? null : p.folderPath),
                 }
               : p
+          );
+          return { ...t, multiAgent: { panes } };
+        }),
+      };
+    }
+    case 'SET_PANE_SENTINEL': {
+      return {
+        ...state,
+        terminals: state.terminals.map(t => {
+          if (t.id !== action.tabId) return t;
+          const existing = t.multiAgent?.panes
+            ?? ([1, 2, 3, 4].map(i => ({ paneIdx: i, tool: null as ToolType })) as MultiAgentPane[]);
+          const panes = existing.map(p =>
+            p.paneIdx === action.paneIdx ? { ...p, sentinelEnabled: action.enabled } : p
+          );
+          return { ...t, multiAgent: { panes } };
+        }),
+      };
+    }
+    case 'SET_PANE_COMPLETION': {
+      return {
+        ...state,
+        terminals: state.terminals.map(t => {
+          if (t.id !== action.tabId) return t;
+          if (!t.multiAgent) return t;
+          const panes = t.multiAgent.panes.map(p =>
+            p.paneIdx === action.paneIdx ? { ...p, completionTs: action.ts } : p
           );
           return { ...t, multiAgent: { panes } };
         }),

@@ -36,6 +36,7 @@ export const zhCN = {
   'tool.vibeid': '人格测试',
   'tool.insights_prerun': '正在生成使用报告...',
   'tool.multi_agent': '多智能体',
+  'sentinel.protocol': '哨兵协议',
   'tool.two_split': '独立二屏',
   'tool.three_split': '独立三屏',
   'tool.four_split': '独立四屏',

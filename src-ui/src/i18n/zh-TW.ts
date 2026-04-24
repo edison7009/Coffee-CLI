@@ -36,6 +36,7 @@ export const zhTW = {
   'tool.vibeid': '人格測試',
   'tool.insights_prerun': '正在生成使用報告...',
   'tool.multi_agent': '多智能體',
+  'sentinel.protocol': '哨兵協議',
   'tool.two_split': '獨立二屏',
   'tool.three_split': '獨立三屏',
   'tool.four_split': '獨立四屏',

@@ -60,6 +60,18 @@
 /* ─── Base Reset ─────────────────────────────────────── */
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; cursor: default !important; }
 
+/* Text-editable surfaces get the I-beam back — the blanket reset above
+   kills noisy hover cursors (pointers/forbids/grabs), but inputs still
+   need the insertion caret affordance so users can tell where clicking
+   will land the caret. Scope is intentional: only actual text entry. */
+input:not([type='checkbox']):not([type='radio']):not([type='button']):not([type='submit']):not([type='range']):not([type='color']):not([type='file']),
+textarea,
+[contenteditable='true'],
+[contenteditable='']
+{
+    cursor: text !important;
+}
+
 /* ─── Auto-hiding Scrollbars (Global) ────────────────── */
 * {
     scrollbar-width: thin; /* Firefox */

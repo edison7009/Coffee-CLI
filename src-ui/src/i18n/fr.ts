@@ -36,6 +36,7 @@ export const fr = {
   'tool.vibeid': 'Test de personnalité',
   'tool.insights_prerun': 'Génération du rapport d\'utilisation...',
   'tool.multi_agent': 'Multi-Agent',
+  'sentinel.protocol': 'Protocole Sentinelle',
   'tool.two_split': 'Double indépendant',
   'tool.three_split': 'Triple indépendant',
   'tool.four_split': 'Quadruple indépendant',

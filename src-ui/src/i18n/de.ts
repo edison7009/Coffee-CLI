@@ -36,6 +36,7 @@ export const de = {
   'tool.vibeid': 'Persönlichkeitstest',
   'tool.insights_prerun': 'Nutzungsbericht wird generiert...',
   'tool.multi_agent': 'Multi-Agent',
+  'sentinel.protocol': 'Sentinel-Protokoll',
   'tool.two_split': 'Unabhängiger Dual',
   'tool.three_split': 'Unabhängiger Triple',
   'tool.four_split': 'Unabhängiger Quad',

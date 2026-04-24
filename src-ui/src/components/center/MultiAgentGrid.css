@@ -122,7 +122,7 @@
   position: absolute;
   top: 6px;
   right: 6px;
-  z-index: 10;
+  z-index: 200;
   width: 24px;
   height: 24px;
   display: flex;
@@ -190,6 +190,7 @@
 /* ─── Empty-pane picker (simpler, no card) ──────────────────────── */
 
 .empty-pane-picker {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -214,23 +215,121 @@
 }
 
 .empty-pane-option {
-  padding: 6px 14px;
-  font-size: 12px;
+  padding: 9px 18px;
+  font-size: 13px;
+  font-weight: 500;
   font-family: inherit;
-  color: var(--text-primary, #ddd);
-  background: var(--bg-quaternary, #222);
-  border: 1px solid var(--border-color, #2a2a2a);
-  border-radius: 4px;
+  color: var(--text-1, #e9e9ea);
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--accent, #6cc275) 28%, transparent);
+  border-radius: var(--shape-radius-button, 6px);
   cursor: pointer;
-  transition: background-color 120ms ease, border-color 120ms ease;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
 }
 
 .empty-pane-option:hover {
-  background: var(--bg-hover, #2d2d2d);
+  background: color-mix(in srgb, var(--accent, #6cc275) 12%, transparent);
   border-color: var(--accent, #6cc275);
+  color: var(--accent, #6cc275);
 }
 
 .empty-pane-option:active {
-  background: var(--bg-active, #3a3a3a);
+  background: color-mix(in srgb, var(--accent, #6cc275) 20%, transparent);
+}
+
+/* ─── Sentinel Protocol toggle ────────────────────────────────────
+   macOS/iOS-style sliding pill switch. Visually separated from the
+   CLI button row above by a hairline divider + margin so it feels
+   like a distinct configuration area, not an afterthought tacked on
+   after the buttons. */
+
+.sentinel-toggle-row {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 22%;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.sentinel-toggle-row > * {
+  pointer-events: auto;
+}
+
+.sentinel-toggle-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 140ms ease;
+}
+
+.sentinel-toggle-head:hover {
+  background: color-mix(in srgb, var(--text-2, #aaa) 8%, transparent);
+}
+
+.sentinel-toggle-label {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--text-1, #e9e9ea);
+  font-family: var(--font-display, inherit);
+}
+
+/* iOS-style switch. Clicking the whole area flips the state via the
+   parent's onClick — transition kept off translation per CLAUDE.md §4
+   (pure background fade + knob slide). */
+.sentinel-switch {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--text-2, #aaa) 22%, transparent);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: background-color 200ms ease, box-shadow 200ms ease;
+  flex-shrink: 0;
+}
+
+.sentinel-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  transition: transform 200ms cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+.sentinel-switch.is-on {
+  background: var(--accent, #6cc275);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent, #6cc275) 22%, transparent);
+}
+
+.sentinel-switch.is-on::after {
+  transform: translateX(18px);
+}
+
+/* Small green dot at the bottom-right of an active pane's number badge
+   — appears when Sentinel Protocol has detected a [COFFEE-DONE:paneN]
+   marker recently (within 30 minutes). */
+.pane-completion-dot {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e; /* bright green, distinct from accent color */
+  box-shadow: 0 0 4px rgba(34, 197, 94, 0.6);
+  pointer-events: none;
 }
 

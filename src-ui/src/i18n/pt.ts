@@ -36,6 +36,7 @@ export const pt = {
   'tool.vibeid': 'Teste de personalidade',
   'tool.insights_prerun': 'Gerando relatório de uso...',
   'tool.multi_agent': 'Multi-Agente',
+  'sentinel.protocol': 'Protocolo Sentinela',
   'tool.two_split': 'Duplo Independente',
   'tool.three_split': 'Triplo Independente',
   'tool.four_split': 'Quádruplo Independente',

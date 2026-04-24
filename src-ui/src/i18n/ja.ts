@@ -36,6 +36,7 @@ export const ja = {
   'tool.vibeid': '性格診断',
   'tool.insights_prerun': '使用状況レポートを生成中...',
   'tool.multi_agent': 'マルチエージェント',
+  'sentinel.protocol': 'センチネルプロトコル',
   'tool.two_split': '独立2画面',
   'tool.three_split': '独立3画面',
   'tool.four_split': '独立4画面',

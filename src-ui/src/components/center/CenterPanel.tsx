@@ -68,19 +68,19 @@ const SvgInstaller = () => (
 // endpoint, so conceptually they're one entity with 4 heads).
 const SvgMultiAgent = () => (
   <svg
-    width="1.2em"
-    height="1.2em"
+    width="1em"
+    height="1em"
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
     strokeWidth="1.8"
     strokeLinecap="square"
     strokeLinejoin="miter"
-    style={{ flexShrink: 0, color: 'var(--accent)' }}
+    style={{ flexShrink: 0, color: 'var(--accent)', verticalAlign: '-0.125em' }}
   >
-    <rect x="3" y="3" width="18" height="18" />
-    <line x1="12" y1="3" x2="12" y2="21" />
-    <line x1="3" y1="12" x2="21" y2="12" />
+    <rect x="5" y="5" width="14" height="14" />
+    <line x1="12" y1="5" x2="12" y2="19" />
+    <line x1="5" y1="12" x2="19" y2="12" />
   </svg>
 );
 
@@ -89,18 +89,18 @@ const SvgMultiAgent = () => (
 // (diff review, A/B comparison, doc + terminal).
 const SvgTwoSplit = () => (
   <svg
-    width="1.2em"
-    height="1.2em"
+    width="1em"
+    height="1em"
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
     strokeWidth="1.8"
     strokeLinecap="square"
     strokeLinejoin="miter"
-    style={{ flexShrink: 0, color: 'var(--accent)' }}
+    style={{ flexShrink: 0, color: 'var(--accent)', verticalAlign: '-0.125em' }}
   >
-    <rect x="3"  y="3" width="8" height="18" />
-    <rect x="13" y="3" width="8" height="18" />
+    <rect x="5"  y="5" width="6" height="14" />
+    <rect x="13" y="5" width="6" height="14" />
   </svg>
 );
 
@@ -108,19 +108,19 @@ const SvgTwoSplit = () => (
 // split case (editor + terminal + preview, or 3-way merge).
 const SvgThreeSplit = () => (
   <svg
-    width="1.2em"
-    height="1.2em"
+    width="1em"
+    height="1em"
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
     strokeWidth="1.8"
     strokeLinecap="square"
     strokeLinejoin="miter"
-    style={{ flexShrink: 0, color: 'var(--accent)' }}
+    style={{ flexShrink: 0, color: 'var(--accent)', verticalAlign: '-0.125em' }}
   >
-    <rect x="2"  y="3" width="6" height="18" />
-    <rect x="9"  y="3" width="6" height="18" />
-    <rect x="16" y="3" width="6" height="18" />
+    <rect x="4"  y="5" width="4" height="14" />
+    <rect x="10" y="5" width="4" height="14" />
+    <rect x="16" y="5" width="4" height="14" />
   </svg>
 );
 
@@ -130,20 +130,20 @@ const SvgThreeSplit = () => (
 // independent tools, zero coordination.
 const SvgFourSplit = () => (
   <svg
-    width="1.2em"
-    height="1.2em"
+    width="1em"
+    height="1em"
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
     strokeWidth="1.8"
     strokeLinecap="square"
     strokeLinejoin="miter"
-    style={{ flexShrink: 0, color: 'var(--accent)' }}
+    style={{ flexShrink: 0, color: 'var(--accent)', verticalAlign: '-0.125em' }}
   >
-    <rect x="3"  y="3"  width="7" height="7" />
-    <rect x="14" y="3"  width="7" height="7" />
-    <rect x="14" y="14" width="7" height="7" />
-    <rect x="3"  y="14" width="7" height="7" />
+    <rect x="5"  y="5"  width="6" height="6" />
+    <rect x="13" y="5"  width="6" height="6" />
+    <rect x="13" y="13" width="6" height="6" />
+    <rect x="5"  y="13" width="6" height="6" />
   </svg>
 );
 

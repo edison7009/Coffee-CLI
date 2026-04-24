@@ -36,6 +36,7 @@ export const ru = {
   'tool.vibeid': 'Тест личности',
   'tool.insights_prerun': 'Генерация отчёта об использовании...',
   'tool.multi_agent': 'Мульти-агент',
+  'sentinel.protocol': 'Протокол Страж',
   'tool.two_split': 'Независимый дуо',
   'tool.three_split': 'Независимый трио',
   'tool.four_split': 'Независимый квадро',

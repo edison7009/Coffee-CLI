@@ -1997,6 +1997,31 @@ fn disable_multi_agent_mode(
 }
 
 pub fn start_ui(project_dir: PathBuf) -> anyhow::Result<()> {
+    // Self-heal global CLI configs: any `coffee-cli` MCP entry in
+    // ~/.claude.json / ~/.codex/config.toml / ~/.gemini/settings.json is
+    // pointing at a stale ephemeral localhost port from a previous Coffee
+    // CLI session (the MCP server only spins up when a multi-agent tab is
+    // active, and always on a fresh OS-picked port). If we don't scrub
+    // these at launch, users who open Claude/Codex/Gemini alone in any
+    // unrelated directory hit an MCP startup error:
+    //     "MCP client for `coffee-cli` failed to start ... error sending
+    //      request for url (http://127.0.0.1:58503/mcp)"
+    // enable_multi_agent_mode re-injects fresh entries when the user opens
+    // a multi-agent tab, so this cleanup is strictly subtractive — it
+    // never loses the user's own MCP entries.
+    match crate::mcp_injector::uninstall_all(None) {
+        Ok(paths) if !paths.is_empty() => {
+            eprintln!("[coffee-cli] Cleaned stale MCP entries from {} global CLI config file(s)", paths.len());
+            for p in &paths {
+                eprintln!("  - {}", p.display());
+            }
+        }
+        Ok(_) => {} // no stale entries — either first launch or already clean
+        Err(e) => {
+            eprintln!("[coffee-cli] WARN: Failed to clean stale MCP entries: {}", e);
+        }
+    }
+
     // Create shared session BEFORE the builder so we can clone it for the exit handler
     let terminal_session = terminal::SharedSession::default();
 
@@ -2132,6 +2157,15 @@ pub fn start_ui(project_dir: PathBuf) -> anyhow::Result<()> {
         })
         .run(tauri::generate_context!())
         .map_err(|e| anyhow::anyhow!("Error while running tauri application: {}", e))?;
+
+    // App has fully exited (main window closed, all tabs disposed). Strip
+    // our `coffee-cli` entry from the global CLI configs so users who
+    // launch Claude/Codex/Gemini standalone between Coffee CLI sessions
+    // don't hit "MCP handshake failed" errors against our ephemeral port.
+    // Symmetric with the launch-time cleanup above — belt-and-suspenders.
+    if let Err(e) = crate::mcp_injector::uninstall_all(None) {
+        eprintln!("[coffee-cli] WARN: Shutdown MCP cleanup failed: {}", e);
+    }
 
     Ok(())
 }

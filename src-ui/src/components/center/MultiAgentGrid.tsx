@@ -25,11 +25,12 @@
 //     back to the user's home directory inside terminal::spawn.
 
 import { useEffect, useRef, useState } from 'react';
-import { useAppState, type TerminalSession, type ToolType } from '../../store/app-state';
+import { useAppState, type TerminalSession, type ToolType, type MultiAgentPane } from '../../store/app-state';
 import { TierTerminal } from './TierTerminal';
 import { ErrorBoundary } from '../common/ErrorBoundary';
 import { commands } from '../../tauri';
 import { setFocusedPane } from '../../lib/pane-focus';
+import { useT } from '../../i18n/useT';
 import './MultiAgentGrid.css';
 
 interface Props {
@@ -96,11 +97,11 @@ export function MultiAgentGrid({ tab, hasBg, bgUrl, bgType }: Props) {
 
   // paneIdx is 1-indexed to match the user-visible badge numbering and
   // the MCP session id (`::pane-1` .. `::pane-4`). See the header comment.
-  const panes = tab.multiAgent?.panes
-    ?? (Array.from({ length: PANE_COUNT }, (_, i) => ({
+  const panes: MultiAgentPane[] = tab.multiAgent?.panes
+    ?? Array.from({ length: PANE_COUNT }, (_, i) => ({
          paneIdx: i + 1,
          tool: null as ToolType,
-       })) as Array<{ paneIdx: number; tool: ToolType; toolData?: string }>);
+       }));
 
   const onSelectTool = (paneIdx: number, tool: ToolType) => {
     dispatch({ type: 'SET_PANE_TOOL', tabId: tab.id, paneIdx, tool });
@@ -160,43 +161,56 @@ export function MultiAgentGrid({ tab, hasBg, bgUrl, bgType }: Props) {
                   resets its tool to null — the pane re-renders as the
                   3-button CLI picker without disturbing the other panes
                   or closing the whole Tab. */}
-            {isEmpty ? (
-              <div className="pane-number-badge">{pane.paneIdx}</div>
-            ) : (
-              <button
-                type="button"
-                className="pane-number-badge pane-number-badge--closable"
-                aria-label={`Close pane ${pane.paneIdx}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  // Best-effort kill. If the PTY is already gone the
-                  // backend logs a warning; surfacing it to the user
-                  // would be noise since the UI result is the same.
-                  commands.tierTerminalKill(paneSessionId).catch(() => {});
-                  // If the pane being closed had focus, clear it so
-                  // Gambit doesn't keep routing to a non-existent pane.
-                  if (focusedPaneIdx === pane.paneIdx) {
-                    setFocusedPaneIdx(null);
-                    setFocusedPane(tab.id, null);
-                  }
-                  dispatch({
-                    type: 'SET_PANE_TOOL',
-                    tabId: tab.id,
-                    paneIdx: pane.paneIdx,
-                    tool: null,
-                  });
-                }}
-              >
-                <span className="pane-badge-num">{pane.paneIdx}</span>
-                <span className="pane-badge-x" aria-hidden="true">×</span>
-              </button>
-            )}
+            {(() => {
+              // Green dot if sentinel detected a [COFFEE-DONE:paneN] marker
+              // within the last 30 minutes. Past that we assume the pane has
+              // started a new turn and the "done" signal is stale.
+              const showDot = pane.sentinelEnabled && pane.completionTs
+                && Date.now() - pane.completionTs < 30 * 60 * 1000;
+              return isEmpty ? (
+                <div className="pane-number-badge">
+                  {pane.paneIdx}
+                  {showDot && <span className="pane-completion-dot" aria-hidden="true" />}
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className="pane-number-badge pane-number-badge--closable"
+                  aria-label={`Close pane ${pane.paneIdx}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    commands.tierTerminalKill(paneSessionId).catch(() => {});
+                    if (focusedPaneIdx === pane.paneIdx) {
+                      setFocusedPaneIdx(null);
+                      setFocusedPane(tab.id, null);
+                    }
+                    dispatch({
+                      type: 'SET_PANE_TOOL',
+                      tabId: tab.id,
+                      paneIdx: pane.paneIdx,
+                      tool: null,
+                    });
+                  }}
+                >
+                  <span className="pane-badge-num">{pane.paneIdx}</span>
+                  <span className="pane-badge-x" aria-hidden="true">×</span>
+                  {showDot && <span className="pane-completion-dot" aria-hidden="true" />}
+                </button>
+              );
+            })()}
 
             <div className="multi-agent-pane-body">
               {isEmpty ? (
                 <EmptyPanePicker
                   paneIdx={pane.paneIdx}
                   onSelect={(tool) => onSelectTool(pane.paneIdx, tool)}
+                  sentinelEnabled={!!pane.sentinelEnabled}
+                  onToggleSentinel={() => dispatch({
+                    type: 'SET_PANE_SENTINEL',
+                    tabId: tab.id,
+                    paneIdx: pane.paneIdx,
+                    enabled: !pane.sentinelEnabled,
+                  })}
                 />
               ) : (
                 <ErrorBoundary fallbackLabel="Tier Terminal Error">
@@ -234,6 +248,8 @@ export function MultiAgentGrid({ tab, hasBg, bgUrl, bgType }: Props) {
 interface EmptyPanePickerProps {
   paneIdx: number;
   onSelect: (tool: ToolType) => void;
+  sentinelEnabled: boolean;
+  onToggleSentinel: () => void;
 }
 
 // Per-CLI setup hints removed per user request: the paper-slice
@@ -242,7 +258,8 @@ interface EmptyPanePickerProps {
 // /auth) surfaces naturally once the user clicks; no need to
 // pre-announce it. The skip-permissions auto-accept still lives in
 // server.rs for Claude, so users don't see a speed bump there.
-function EmptyPanePicker({ paneIdx: _paneIdx, onSelect }: EmptyPanePickerProps) {
+function EmptyPanePicker({ paneIdx: _paneIdx, onSelect, sentinelEnabled, onToggleSentinel }: EmptyPanePickerProps) {
+  const t = useT();
   return (
     <div className="empty-pane-picker">
       <div className="empty-pane-options">
@@ -258,6 +275,28 @@ function EmptyPanePicker({ paneIdx: _paneIdx, onSelect }: EmptyPanePickerProps) 
             {opt.label}
           </button>
         ))}
+      </div>
+      <div className="sentinel-toggle-row">
+        <div
+          className="sentinel-toggle-head"
+          role="button"
+          tabIndex={0}
+          aria-pressed={sentinelEnabled}
+          aria-label="Toggle sentinel protocol"
+          onClick={(e) => { e.stopPropagation(); onToggleSentinel(); }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              onToggleSentinel();
+            }
+          }}
+        >
+          <span className="sentinel-toggle-label">{t('sentinel.protocol' as any)}</span>
+          <span
+            className={`sentinel-switch${sentinelEnabled ? ' is-on' : ''}`}
+            aria-hidden="true"
+          />
+        </div>
       </div>
     </div>
   );

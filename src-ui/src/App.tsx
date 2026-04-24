@@ -47,6 +47,37 @@ export function App() {
     return () => clearTimeout(timer);
   }, []);
 
+  // Preload the Launchpad tool icons into the WebView's image cache on
+  // mount. Without this, when the user closes a tool tab and snaps back
+  // to the Launchpad, the six <img> tags (claude/codex/gemini/opencode/
+  // qwen/hermes) fetch from disk on that render pass — producing a
+  // visible "pop in" that reads as a webpage refresh rather than a
+  // native desktop transition. By firing off-screen Image() requests
+  // right after app mount, the cache is warm before the first tab
+  // close, so subsequent Launchpad renders paint icons instantly.
+  useEffect(() => {
+    const ICONS = [
+      '/icons/tools/claude.svg',
+      '/icons/tools/qwen.svg',
+      '/icons/tools/opencode.svg',
+      '/icons/tools/codex.svg',
+      '/icons/tools/gemini.svg',
+      '/icons/tools/hermes.png',
+      '/icons/tools/vibeid.png',
+      '/icons/tools/installer.svg',
+      '/icons/tools/terminal-powershell.svg',
+      '/icons/tools/terminal-macos.png',
+      '/icons/tools/terminal-linux.png',
+    ];
+    ICONS.forEach((src) => {
+      const img = new Image();
+      img.src = src;
+      // No onload/onerror listeners — we only care that the HTTP
+      // request fires so the asset is cached. Dropping the reference
+      // is fine, the browser keeps the cache independent of JS GC.
+    });
+  }, []);
+
   // Previously prefetched session history at startup — but that caused a
   // noticeable stutter on cold launch (JSON parse + state fan-out) even
   // though the Rust call itself ran on a blocking thread pool. Removed.
