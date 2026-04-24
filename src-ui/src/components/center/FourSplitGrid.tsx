@@ -1,4 +1,4 @@
-// FourSplitGrid.tsx — "独立 N 屏" / Independent Split (N = 2 / 3 / 4).
+// FourSplitGrid.tsx — Independent Split (N = 2 / 3 / 4).
 //
 // Same pane grid shape as MultiAgentGrid but with ZERO coordination:
 //   - No MCP server injection into the user's CLI configs
@@ -44,6 +44,7 @@ const PANE_CLI_OPTIONS: Array<{ value: ToolType; label: string }> = [
   { value: 'claude', label: 'Claude Code' },
   { value: 'codex', label: 'Codex' },
   { value: 'gemini', label: 'Gemini' },
+  { value: 'opencode', label: 'OpenCode' },
 ];
 
 export function FourSplitGrid({ tab, hasBg, bgUrl, bgType, paneCount = 4 }: Props) {
@@ -73,7 +74,7 @@ export function FourSplitGrid({ tab, hasBg, bgUrl, bgType, paneCount = 4 }: Prop
   };
 
   // Folder-picker → SET_PANE_TOOL flow. Each pane picks its own directory
-  // before the PTY spawns; that's the whole point of 独立四屏.
+  // before the PTY spawns; that's the whole point of the independent split.
   // - If the user cancels the picker, we do nothing (pane stays empty).
   // - Picker failure is logged but silent in UI — user can just re-click.
   const onSelectTool = async (paneIdx: number, tool: ToolType) => {
@@ -190,7 +191,7 @@ export function FourSplitGrid({ tab, hasBg, bgUrl, bgType, paneCount = 4 }: Prop
                     lang={state.currentLang}
                     isActive={isFocused}
                     toolData={pane.toolData}
-                    // Per-pane folder is the core of 独立四屏. Fall back to
+                    // Per-pane folder is the core of the independent split. Fall back to
                     // tab.folderPath only if somehow a pane got filled
                     // without going through onSelectTool (defensive).
                     folderPath={pane.folderPath ?? tab.folderPath}

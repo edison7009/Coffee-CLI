@@ -70,7 +70,9 @@ export function ActiveGambit() {
   const handleSend = useCallback((text: string): boolean => {
     if (!activeId) return false;
     let targetId = activeId;
-    if (activeSession?.tool === 'multi-agent') {
+    if (activeSession?.tool === 'multi-agent'
+        || activeSession?.tool === 'two-agent'
+        || activeSession?.tool === 'three-agent') {
       const paneIdx = getFocusedPane(activeId);
       if (!paneIdx) return false;
       targetId = `${activeId}::pane-${paneIdx}`;

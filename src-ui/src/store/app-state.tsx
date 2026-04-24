@@ -6,7 +6,7 @@ import type { ScanResult } from '../tauri';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type ToolType = 'claude' | 'qwen' | 'installer' | 'hermes' | 'opencode' | 'codex' | 'gemini' | 'agent' | 'arcade' | 'terminal' | 'remote' | 'history' | 'vibeid' | 'insights_prerun' | 'multi-agent' | 'two-split' | 'three-split' | 'four-split' | null;
+export type ToolType = 'claude' | 'qwen' | 'installer' | 'hermes' | 'opencode' | 'codex' | 'gemini' | 'agent' | 'arcade' | 'terminal' | 'remote' | 'history' | 'vibeid' | 'insights_prerun' | 'multi-agent' | 'two-agent' | 'three-agent' | 'two-split' | 'three-split' | 'four-split' | null;
 
 /**
  * Tab status shown as an animated 9-dot glyph. Maps to CSS classes
@@ -52,7 +52,7 @@ export interface MultiAgentPane {
   tool: ToolType;
   toolData?: string;
   agentStatus?: AgentStatus;
-  // Per-pane working directory. Only used by the "独立四屏" (four-split) tab
+  // Per-pane working directory. Only used by the four-split (independent quad) tab
   // where each pane can run in its own project. Multi-agent panes ignore this
   // and use the tab-level folderPath (all 4 panes share one workspace because
   // they coordinate via MCP against that workspace's config).

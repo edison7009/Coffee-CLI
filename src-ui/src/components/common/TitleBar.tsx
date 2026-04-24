@@ -4,8 +4,8 @@
 // Layout: [drag-area with layout toggles on the left] … [min / max / close on the right]
 //
 // Left-side controls mirror VS Code's Activity Bar / Ctrl+B affordance:
-//   1. Left panel toggle  (Explorer / 目录列表)
-//   2. Right panel toggle (TaskBoard / 历史对话)
+//   1. Left panel toggle  (Explorer / directory listing)
+//   2. Right panel toggle (TaskBoard / chat history)
 //   3. Multi-agent layout mode — only visible when the active tab is a
 //      multi-agent quadrant. Two modes: grid (2×2) and columns (1×4).
 
@@ -52,7 +52,7 @@ export function TitleBar() {
           at the same optical weight as Phosphor/Lucide at 16px render.
           Internal dividers are inset (y=4 → y=20) so they STOP before
           the outer border instead of crossing through it — avoids the
-          "十字交叉" look the user flagged. Active signal still travels
+          "crossed-lines" look the user flagged. Active signal still travels
           via .is-active background only. */}
       <div className="titlebar-layout-toggles" data-tauri-drag-region="false">
         {showMaLayout && (

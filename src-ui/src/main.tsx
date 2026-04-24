@@ -23,7 +23,7 @@ requestAnimationFrame(() => {
   });
 });
 
-// Suppress the WebView's built-in context menu (返回/刷新/另存为/打印/检查…).
+// Suppress the WebView's built-in context menu (Back / Reload / Save As / Print / Inspect…).
 // Our own React components handle onContextMenu directly and render
 // custom menus via app state — preventing the browser default at the
 // window level is layered on top, so those custom menus still appear.

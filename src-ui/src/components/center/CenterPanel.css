@@ -656,6 +656,27 @@
   align-content: start;
 }
 
+/* Agent Tools sub-grid: same 4-col layout as the AI CLIs grid above,
+   so every row holds 4 cards:
+     Row 1: multi-agent | three-agent | two-agent | installer
+     Row 2: four-split  | three-split | two-split | vibeid
+   协作 counts and 独立 counts line up column-by-column (4↔4, 3↔3, 2↔2). */
+.library-grid.library-grid--tools {
+  margin-top: 8px;
+}
+
+/* Section heading between the AI CLIs grid and the Agent Tools grid. */
+.library-section-title {
+  margin-top: 28px;
+  margin-bottom: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-2, #aaa);
+  user-select: none;
+}
+
 .library-item {
   display: flex;
   align-items: center;

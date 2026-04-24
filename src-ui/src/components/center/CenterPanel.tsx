@@ -66,6 +66,11 @@ const SvgInstaller = () => (
 // Reads as "a single coordinated system split into 4 roles", matching the
 // MCP peer-coordination model (the 4 panes share one workspace and one MCP
 // endpoint, so conceptually they're one entity with 4 heads).
+// Multi-Agent (4-pane coordination) — hollow outer frame with internal cross.
+// One workspace shared by all panes → shared outer border, no gaps.
+// Internal dividers use butt caps + inset endpoints so they stop at the
+// inner edge of the outer frame instead of poking through it as small
+// "ticks" at the corners.
 const SvgMultiAgent = () => (
   <svg
     width="1em"
@@ -78,57 +83,66 @@ const SvgMultiAgent = () => (
     strokeLinejoin="miter"
     style={{ flexShrink: 0, color: 'var(--accent)', verticalAlign: '-0.125em' }}
   >
-    <rect x="5" y="5" width="14" height="14" />
-    <line x1="12" y1="5" x2="12" y2="19" />
-    <line x1="5" y1="12" x2="19" y2="12" />
+    <rect x="4" y="4" width="16" height="16" />
+    <line x1="12" y1="5" x2="12" y2="19" strokeLinecap="butt" />
+    <line x1="5" y1="12" x2="19" y2="12" strokeLinecap="butt" />
   </svg>
 );
 
-// Two-Split glyph — 2 tall rectangles side-by-side with a gap. Conveys
-// "two independent full-height panes" — the most common split case
-// (diff review, A/B comparison, doc + terminal).
+// Two-Split (independent) — 2 filled solid rectangles with a visible gap between.
+// Reads as "two standalone windows" → solid = individual, gap = separation.
 const SvgTwoSplit = () => (
   <svg
     width="1em"
     height="1em"
     viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.8"
-    strokeLinecap="square"
-    strokeLinejoin="miter"
+    fill="currentColor"
+    stroke="none"
     style={{ flexShrink: 0, color: 'var(--accent)', verticalAlign: '-0.125em' }}
   >
-    <rect x="5"  y="5" width="6" height="14" />
-    <rect x="13" y="5" width="6" height="14" />
+    <rect x="4"  y="4" width="7.5" height="16" />
+    <rect x="12.5" y="4" width="7.5" height="16" />
   </svg>
 );
 
-// Three-Split glyph — 3 tall rectangles side-by-side. Second-most common
-// split case (editor + terminal + preview, or 3-way merge).
+// Three-Split (independent) — 3 filled tall rectangles with gaps between.
 const SvgThreeSplit = () => (
   <svg
     width="1em"
     height="1em"
     viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.8"
-    strokeLinecap="square"
-    strokeLinejoin="miter"
+    fill="currentColor"
+    stroke="none"
     style={{ flexShrink: 0, color: 'var(--accent)', verticalAlign: '-0.125em' }}
   >
-    <rect x="4"  y="5" width="4" height="14" />
-    <rect x="10" y="5" width="4" height="14" />
-    <rect x="16" y="5" width="4" height="14" />
+    <rect x="3.5"  y="4" width="5" height="16" />
+    <rect x="9.5"  y="4" width="5" height="16" />
+    <rect x="15.5" y="4" width="5" height="16" />
   </svg>
 );
 
-// Four-Split glyph — 4 individually-framed rectangles with visible gaps
-// between them. Reads as "4 standalone windows on one screen" — which is
-// literally what 独立四屏 is: 4 independent PTYs, independent folders,
-// independent tools, zero coordination.
+// Four-Split (independent) — 4 filled squares in a 2×2 grid with visible gaps
+// between them. Solid blocks + gaps convey "4 independent PTYs, zero
+// coordination" — the inverse of multi-agent's shared outer frame.
 const SvgFourSplit = () => (
+  <svg
+    width="1em"
+    height="1em"
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    stroke="none"
+    style={{ flexShrink: 0, color: 'var(--accent)', verticalAlign: '-0.125em' }}
+  >
+    <rect x="4"    y="4"    width="7.5" height="7.5" />
+    <rect x="12.5" y="4"    width="7.5" height="7.5" />
+    <rect x="4"    y="12.5" width="7.5" height="7.5" />
+    <rect x="12.5" y="12.5" width="7.5" height="7.5" />
+  </svg>
+);
+
+// Two-Agent (coordination) — hollow outer frame with one internal divider.
+// Shared outer border = same workspace; internal line = two cooperating panes.
+const SvgTwoAgent = () => (
   <svg
     width="1em"
     height="1em"
@@ -140,10 +154,27 @@ const SvgFourSplit = () => (
     strokeLinejoin="miter"
     style={{ flexShrink: 0, color: 'var(--accent)', verticalAlign: '-0.125em' }}
   >
-    <rect x="5"  y="5"  width="6" height="6" />
-    <rect x="13" y="5"  width="6" height="6" />
-    <rect x="13" y="13" width="6" height="6" />
-    <rect x="5"  y="13" width="6" height="6" />
+    <rect x="4" y="4" width="16" height="16" />
+    <line x1="12" y1="5" x2="12" y2="19" strokeLinecap="butt" />
+  </svg>
+);
+
+// Three-Agent (coordination) — hollow outer frame with two internal dividers.
+const SvgThreeAgent = () => (
+  <svg
+    width="1em"
+    height="1em"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="square"
+    strokeLinejoin="miter"
+    style={{ flexShrink: 0, color: 'var(--accent)', verticalAlign: '-0.125em' }}
+  >
+    <rect x="4" y="4" width="16" height="16" />
+    <line x1="9.33"  y1="5" x2="9.33"  y2="19" strokeLinecap="butt" />
+    <line x1="14.67" y1="5" x2="14.67" y2="19" strokeLinecap="butt" />
   </svg>
 );
 
@@ -370,22 +401,17 @@ export function CenterPanel() {
           remote: undefined,
         }));
 
+    // Utility order is deliberate for 4-column alignment in the
+    // "Agent Tools" grid on the Library page:
+    //   Row 1: multi-agent | three-agent | two-agent | installer
+    //   Row 2: four-split  | three-split | two-split | vibeid
+    // Coordinated row on top, independent row below, each descending
+    // 4→3→2 so the pane counts align column-by-column (4↔4, 3↔3, 2↔2)
+    // and the two rightmost slots hold standalone utilities.
     const utilities = [
-      { key: 'installer' as ToolType, label: t('tool.installer' as any), icon: <SvgInstaller />, type: 'utility' as const, requiresCwd: false, remote: undefined },
       // Terminal is an AI-CLI-like tool (needs cwd) rather than a 'utility'.
       { key: 'terminal' as ToolType, label: t('tool.terminal'), icon: <TerminalIcon />, type: 'ai-cli' as const, requiresCwd: true, remote: undefined },
-      // VibeID is a built-in skill-launcher utility: click → spawn `claude` binary
-      // in a tab, then auto-write `/vibeid\r` to trigger the remote vibeid skill.
-      // No cwd required (runs against ~/.claude/usage-data/report.html globally).
-      { key: 'vibeid' as ToolType, label: t('tool.vibeid' as any), icon: <SvgVibeID />, type: 'utility' as const, requiresCwd: false, remote: undefined },
-      // Multi-agent quadrant: independent tab type that renders as 2×2
-      // peer panes. Each pane hosts a separate CLI; any pane can call
-      // coffee-cli MCP to observe/drive the others.
-      //
-      // `requiresCwd: true` — same folder-picker flow as every other
-      // CLI card. The selected workspace is where we create the
-      // `.multi-agent/` meta directory and write thin-pointer
-      // CLAUDE.md / AGENTS.md / GEMINI.md files on tab mount.
+      // ─── Row 1: coordinated (descending 4→3→2) + installer ─────────
       {
         key: 'multi-agent' as ToolType,
         label: t('tool.multi_agent' as any),
@@ -394,37 +420,24 @@ export function CenterPanel() {
         requiresCwd: true,
         remote: undefined,
       },
-      // Two-Split: 2 independent side-by-side panes. Most common split
-      // case (diff review, A/B compare, doc + terminal). Same no-MCP,
-      // per-pane-folder semantics as four-split.
       {
-        key: 'two-split' as ToolType,
-        label: t('tool.two_split' as any),
-        icon: <SvgTwoSplit />,
+        key: 'three-agent' as ToolType,
+        label: t('tool.three_agent' as any),
+        icon: <SvgThreeAgent />,
         type: 'utility' as const,
-        requiresCwd: false,
+        requiresCwd: true,
         remote: undefined,
       },
-      // Three-Split: 3 independent side-by-side panes (editor + terminal +
-      // preview, 3-way merge, etc).
       {
-        key: 'three-split' as ToolType,
-        label: t('tool.three_split' as any),
-        icon: <SvgThreeSplit />,
+        key: 'two-agent' as ToolType,
+        label: t('tool.two_agent' as any),
+        icon: <SvgTwoAgent />,
         type: 'utility' as const,
-        requiresCwd: false,
+        requiresCwd: true,
         remote: undefined,
       },
-      // Four-Split: same 2×2 pane grid as multi-agent, but with NO MCP
-      // coordination — pure "4 independent terminals on one screen".
-      // Workspace filesystem is never touched (no `.multi-agent/` dir,
-      // no thin-pointer CLAUDE.md/AGENTS.md/GEMINI.md writes). Same 3
-      // CLIs supported (Claude/Codex/Gemini) for visual parity.
-      //
-      // `requiresCwd: false` — each pane picks its OWN folder when the
-      // user chooses a CLI in the empty picker, so Desktop-level folder
-      // selection would be redundant. This is the core differentiator
-      // from multi-agent (which is single-workspace by design).
+      { key: 'installer' as ToolType, label: t('tool.installer' as any), icon: <SvgInstaller />, type: 'utility' as const, requiresCwd: false, remote: undefined },
+      // ─── Row 2: independent (descending 4→3→2) + vibeid ────────────
       {
         key: 'four-split' as ToolType,
         label: t('tool.four_split' as any),
@@ -433,6 +446,25 @@ export function CenterPanel() {
         requiresCwd: false,
         remote: undefined,
       },
+      {
+        key: 'three-split' as ToolType,
+        label: t('tool.three_split' as any),
+        icon: <SvgThreeSplit />,
+        type: 'utility' as const,
+        requiresCwd: false,
+        remote: undefined,
+      },
+      {
+        key: 'two-split' as ToolType,
+        label: t('tool.two_split' as any),
+        icon: <SvgTwoSplit />,
+        type: 'utility' as const,
+        requiresCwd: false,
+        remote: undefined,
+      },
+      // VibeID is a built-in skill-launcher utility: click → spawn `claude` binary
+      // in a tab, then auto-write `/vibeid\r` to trigger the remote vibeid skill.
+      { key: 'vibeid' as ToolType, label: t('tool.vibeid' as any), icon: <SvgVibeID />, type: 'utility' as const, requiresCwd: false, remote: undefined },
     ];
 
     return [...aiCliEntries, ...utilities];
@@ -840,6 +872,8 @@ export function CenterPanel() {
       }
       case 'terminal': return { icon: <TerminalIcon />, title: cwd ?? t('tool.terminal'), tooltip: pathTip };
       case 'multi-agent': return { icon: <SvgMultiAgent />, title: cwd ?? t('tool.multi_agent' as any), tooltip: pathTip };
+      case 'two-agent': return { icon: <SvgTwoAgent />, title: cwd ?? t('tool.two_agent' as any), tooltip: pathTip };
+      case 'three-agent': return { icon: <SvgThreeAgent />, title: cwd ?? t('tool.three_agent' as any), tooltip: pathTip };
       case 'two-split': return { icon: <SvgTwoSplit />, title: cwd ?? t('tool.two_split' as any), tooltip: pathTip };
       case 'three-split': return { icon: <SvgThreeSplit />, title: cwd ?? t('tool.three_split' as any), tooltip: pathTip };
       case 'four-split': return { icon: <SvgFourSplit />, title: cwd ?? t('tool.four_split' as any), tooltip: pathTip };
@@ -852,7 +886,7 @@ export function CenterPanel() {
         return { icon: <span style={{ fontSize: '1em' }}>🎮</span>, title: 'Coffee Play', tooltip: undefined };
       }
       case 'history': {
-        let titleParam = '回看历史';
+        let titleParam = 'History';
         if (session.toolData) {
           try {
             const parsed = JSON.parse(session.toolData);
@@ -905,7 +939,7 @@ export function CenterPanel() {
               {icon}
               <span className="tab-title" style={{ flex: '0 1 auto', minWidth: 0, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{title}</span>
               <div className="tab-actions">
-                {(['claude', 'qwen', 'hermes', 'opencode', 'codex', 'gemini', 'agent', 'installer', 'terminal', 'remote', 'vibeid', 'insights_prerun', 'multi-agent', 'two-split', 'three-split', 'four-split'] as const).includes(session.tool as 'claude' | 'qwen' | 'hermes' | 'opencode' | 'codex' | 'gemini' | 'agent' | 'installer' | 'terminal' | 'remote' | 'vibeid' | 'insights_prerun' | 'multi-agent' | 'two-split' | 'three-split' | 'four-split') && (
+                {(['claude', 'qwen', 'hermes', 'opencode', 'codex', 'gemini', 'agent', 'installer', 'terminal', 'remote', 'vibeid', 'insights_prerun', 'multi-agent', 'two-agent', 'three-agent', 'two-split', 'three-split', 'four-split'] as const).includes(session.tool as 'claude' | 'qwen' | 'hermes' | 'opencode' | 'codex' | 'gemini' | 'agent' | 'installer' | 'terminal' | 'remote' | 'vibeid' | 'insights_prerun' | 'multi-agent' | 'two-agent' | 'three-agent' | 'two-split' | 'three-split' | 'four-split') && (
                   // Only Claude Code has a real hook-driven status machine.
                   // The other tools render the steady-green idle pulse —
                   // we explicitly chose not to guess their state from PTY
@@ -974,6 +1008,22 @@ export function CenterPanel() {
                 bgUrl={bgUrl}
                 bgType={bgType}
               />
+            ) : t.tool === 'two-agent' ? (
+              <MultiAgentGrid
+                tab={t}
+                hasBg={hasBg}
+                bgUrl={bgUrl}
+                bgType={bgType}
+                paneCount={2}
+              />
+            ) : t.tool === 'three-agent' ? (
+              <MultiAgentGrid
+                tab={t}
+                hasBg={hasBg}
+                bgUrl={bgUrl}
+                bgType={bgType}
+                paneCount={3}
+              />
             ) : t.tool === 'two-split' ? (
               <FourSplitGrid
                 tab={t}
@@ -991,9 +1041,9 @@ export function CenterPanel() {
                 paneCount={3}
               />
             ) : t.tool === 'four-split' ? (
-              // Independent Quad (独立四屏): same 2×2 pane grid as
-              // multi-agent but with zero MCP coordination — panes
-              // cannot observe or drive each other.
+              // Independent Quad: same 2×2 pane grid as multi-agent but
+              // with zero MCP coordination — panes cannot observe or
+              // drive each other.
               <FourSplitGrid
                 tab={t}
                 hasBg={hasBg}
@@ -1301,43 +1351,77 @@ export function CenterPanel() {
                 {/* ─── Page 2: Library (Agents / Games) ─── */}
                 <div className="launchpad-page library-page">
                   <div className="launchpad-inner">
-                    <div className="library-grid">
-                      {libraryTab === 'agents' && agentsLoading && remoteAgents.length === 0 ? (
-                        Array.from({ length: 6 }, (_, i) => (
+                    {libraryTab === 'agents' && agentsLoading && remoteAgents.length === 0 ? (
+                      <div className="library-grid">
+                        {Array.from({ length: 6 }, (_, i) => (
                           <div key={`skel-agent-${i}`} className="library-item library-item-skeleton">
                             <div className="library-item-icon library-skeleton-block" />
                             <span className="library-skeleton-line" />
                             <div className="library-pin-btn library-skeleton-pin" />
                           </div>
-                        ))
-                      ) : libraryTab === 'games' && gamesLoading && arcadeGames.length === 0 ? (
-                        Array.from({ length: 6 }, (_, i) => (
+                        ))}
+                      </div>
+                    ) : libraryTab === 'games' && gamesLoading && arcadeGames.length === 0 ? (
+                      <div className="library-grid">
+                        {Array.from({ length: 6 }, (_, i) => (
                           <div key={`skel-game-${i}`} className="library-item library-item-skeleton">
                             <div className="library-item-icon library-skeleton-block" />
                             <span className="library-skeleton-line" />
                             <div className="library-pin-btn library-skeleton-pin" />
                           </div>
-                        ))
-                      ) : libraryTab === 'agents' ? (
-                        AGENT_CATALOG.map(item => {
-                          const pinId = `agent:${item.key}`;
-                          const isPinned = pinnedItems.includes(pinId);
-                          return (
-                            <div
-                              key={item.key}
-                              className="library-item"
-                              onClick={() => togglePin(pinId)}
-                            >
-                              <div className="library-item-icon">{item.icon}</div>
-                              <span className="library-item-name">{item.label}</span>
-                              <div className={`library-pin-btn ${isPinned ? 'pinned' : ''}`}>
-                                {renderPinIcon(isPinned)}
+                        ))}
+                      </div>
+                    ) : libraryTab === 'agents' ? (
+                      <>
+                        {/* Section 1: AI CLI agents — 4-col grid (default) */}
+                        <div className="library-grid">
+                          {AGENT_CATALOG.filter(item => item.type === 'ai-cli').map(item => {
+                            const pinId = `agent:${item.key}`;
+                            const isPinned = pinnedItems.includes(pinId);
+                            return (
+                              <div
+                                key={item.key}
+                                className="library-item"
+                                onClick={() => togglePin(pinId)}
+                              >
+                                <div className="library-item-icon">{item.icon}</div>
+                                <span className="library-item-name">{item.label}</span>
+                                <div className={`library-pin-btn ${isPinned ? 'pinned' : ''}`}>
+                                  {renderPinIcon(isPinned)}
+                                </div>
                               </div>
-                            </div>
-                          );
-                        })
-                      ) : (
-                        arcadeGames.map(game => {
+                            );
+                          })}
+                        </div>
+                        {/* Section 2: Agent Tools — 4-col grid so the
+                            coordinated 4/3/2 agent cards line up directly
+                            above the independent 4/3/2 split cards:
+                              Row 1: multi-agent / three-agent / two-agent / installer
+                              Row 2: four-split  / three-split / two-split / vibeid */}
+                        <div className="library-section-title">{t('library.agent_tools' as any)}</div>
+                        <div className="library-grid library-grid--tools">
+                          {AGENT_CATALOG.filter(item => item.type === 'utility').map(item => {
+                            const pinId = `agent:${item.key}`;
+                            const isPinned = pinnedItems.includes(pinId);
+                            return (
+                              <div
+                                key={item.key}
+                                className="library-item"
+                                onClick={() => togglePin(pinId)}
+                              >
+                                <div className="library-item-icon">{item.icon}</div>
+                                <span className="library-item-name">{item.label}</span>
+                                <div className={`library-pin-btn ${isPinned ? 'pinned' : ''}`}>
+                                  {renderPinIcon(isPinned)}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="library-grid">
+                        {arcadeGames.map(game => {
                           const title = game.title || game.name.replace(/\.jsdos$/i, '').replace(/[_-]/g, ' ');
                           const pinId = `game:${game.name}`;
                           const isPinned = pinnedItems.includes(pinId);
@@ -1358,9 +1442,9 @@ export function CenterPanel() {
                               </div>
                             </div>
                           );
-                        })
-                      )}
-                    </div>
+                        })}
+                      </div>
+                    )}
                   </div>
 
                   {/* Pin counter above tabs */}

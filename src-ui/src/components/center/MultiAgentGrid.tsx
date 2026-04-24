@@ -38,6 +38,7 @@ interface Props {
   hasBg: boolean;
   bgUrl: string;
   bgType: 'image' | 'video' | 'none';
+  paneCount?: 2 | 3 | 4;
 }
 
 // v1.0 primary CLIs = Claude Code / Codex / Gemini only. OpenCode was
@@ -53,9 +54,7 @@ const PANE_CLI_OPTIONS: Array<{ value: ToolType; label: string }> = [
   { value: 'gemini', label: 'Gemini' },
 ];
 
-const PANE_COUNT = 4;
-
-export function MultiAgentGrid({ tab, hasBg, bgUrl, bgType }: Props) {
+export function MultiAgentGrid({ tab, hasBg, bgUrl, bgType, paneCount = 4 }: Props) {
   const { state, dispatch } = useAppState();
   const [focusedPaneIdx, setFocusedPaneIdx] = useState<number | null>(null);
 
@@ -97,17 +96,23 @@ export function MultiAgentGrid({ tab, hasBg, bgUrl, bgType }: Props) {
 
   // paneIdx is 1-indexed to match the user-visible badge numbering and
   // the MCP session id (`::pane-1` .. `::pane-4`). See the header comment.
-  const panes: MultiAgentPane[] = tab.multiAgent?.panes
-    ?? Array.from({ length: PANE_COUNT }, (_, i) => ({
+  const panes: MultiAgentPane[] = (tab.multiAgent?.panes
+    ?? Array.from({ length: paneCount }, (_, i) => ({
          paneIdx: i + 1,
          tool: null as ToolType,
-       }));
+       }))).slice(0, paneCount);
 
   const onSelectTool = (paneIdx: number, tool: ToolType) => {
     dispatch({ type: 'SET_PANE_TOOL', tabId: tab.id, paneIdx, tool });
   };
 
-  const layoutMod = state.multiAgentLayout === 'columns' ? ' multi-agent-grid--columns' : ' multi-agent-grid--grid';
+  // 2-pane and 3-pane coordination always render as side-by-side columns — the 2×2
+  // grid mode is only meaningful for 4 panes. The user's columns/grid
+  // toggle in multi-agent settings therefore only applies when paneCount === 4.
+  const isColumns = paneCount !== 4 || state.multiAgentLayout === 'columns';
+  const layoutMod = isColumns
+    ? ` multi-agent-grid--columns multi-agent-grid--columns-${paneCount}`
+    : ' multi-agent-grid--grid';
 
   return (
     <div className={`multi-agent-grid-standalone${layoutMod}${hasBg && bgUrl ? ' multi-agent-has-bg' : ''}`}>

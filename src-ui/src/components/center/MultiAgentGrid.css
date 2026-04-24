@@ -55,15 +55,21 @@
   grid-template-rows: 1fr 1fr;
 }
 
-/* 1×4 vertical strip: four equal-height columns side by side. Useful
+/* 1×N vertical strip: N equal-height columns side by side. Useful
    for screens wider than tall, or when the user wants each agent's
    output visible as a continuous vertical stream. Slot numbering is
-   driven by CSS order of the four columns, not the 2x2 grid-areas,
-   so pane-slot-N → Nth column. */
+   driven by CSS order of the N columns, not the 2x2 grid-areas,
+   so pane-slot-N → Nth column.
+
+   The `--columns-{2,3,4}` variant determines how many columns the grid
+   gets. Without a variant class, defaults to 4 for backward compat. */
 .multi-agent-grid--columns {
   grid-template-columns: repeat(4, 1fr);
   grid-template-rows: 1fr;
 }
+.multi-agent-grid--columns-2 { grid-template-columns: repeat(2, 1fr); }
+.multi-agent-grid--columns-3 { grid-template-columns: repeat(3, 1fr); }
+.multi-agent-grid--columns-4 { grid-template-columns: repeat(4, 1fr); }
 .multi-agent-grid--columns .multi-agent-pane.pane-slot-1 { grid-column: 1; grid-row: 1; }
 .multi-agent-grid--columns .multi-agent-pane.pane-slot-2 { grid-column: 2; grid-row: 1; }
 .multi-agent-grid--columns .multi-agent-pane.pane-slot-3 { grid-column: 3; grid-row: 1; }
