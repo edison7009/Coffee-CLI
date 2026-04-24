@@ -90,7 +90,9 @@
   gap: 1.5rem;
   border-right: 1px solid var(--glass-border);
   padding-right: 1.5rem;
-  min-height: calc(100vh - 4rem);
+  max-height: calc(100vh - 4rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .toc-title {
@@ -301,7 +303,8 @@
   .doc-sidebar {
     position: relative;
     top: 0;
-    min-height: auto;
+    max-height: none;
+    overflow-y: visible;
     border-right: none;
     border-bottom: 1px solid var(--glass-border);
     padding-bottom: 1.5rem;
