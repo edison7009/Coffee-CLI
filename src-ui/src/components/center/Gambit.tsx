@@ -534,7 +534,10 @@ function GambitImpl({
         spellCheck={false}
       />
 
-      {pastedImagePaths.length > 0 && (
+      <div className="gambit-footer">
+        {/* Thumbnail strip lives in the footer, left-aligned, so it shares
+            the same row as the send button. Empty when no image paths are
+            present — keeps the footer visually stable either way. */}
         <div className="gambit-thumb-strip">
           {pastedImagePaths.map((path) => (
             <div
@@ -558,9 +561,6 @@ function GambitImpl({
             </div>
           ))}
         </div>
-      )}
-
-      <div className="gambit-footer">
         {sendFailed && (
           <span className="gambit-send-hint" role="status">
             {t('gambit.send_failed_hint')}
