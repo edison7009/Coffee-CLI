@@ -304,7 +304,7 @@ const INSTALL_DATA = {
     linux: { hint: "打开您的日常终端引擎，执行此快速部署脚本:", command: "curl -fsSL https://coffeecli.com/install.sh | bash" }
   },
   "zh-TW": {
-    windows: { hint: "右鍵單擊 開始菜單 > 選擇「終端機(管理員)」 > 貼上執行:", command: "iwr -useb https://coffeecli.com/install.ps1 | iex" },
+    windows: { hint: "右鍵單擊 開始菜單 > 選擇「終端機管理員」 > 貼上執行:", command: "iwr -useb https://coffeecli.com/install.ps1 | iex" },
     macos: { hint: "利用 Spotlight 或 Launchpad 啟動終端機，貼上並執行:", command: "curl -fsSL https://coffeecli.com/install.sh | bash" },
     linux: { hint: "打開您的日常終端引擎，執行此快速部署腳本:", command: "curl -fsSL https://coffeecli.com/install.sh | bash" }
   },
