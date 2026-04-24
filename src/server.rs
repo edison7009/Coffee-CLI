@@ -18,9 +18,6 @@ pub struct AppState {
     /// workspace folder is open; None otherwise. Swapping this Mutex'd
     /// Option replaces the watcher atomically on folder switch.
     pub fs_watcher: Mutex<Option<crate::fs_watcher::FsWatcher>>,
-    /// Multi-agent MCP server endpoint (set once the server is bound).
-    /// None means setup is still in flight or the MCP server failed to start.
-    pub mcp_endpoint: Mutex<Option<crate::mcp_server::McpEndpoint>>,
 }
 
 #[derive(Serialize)]
@@ -1872,11 +1869,17 @@ pub struct MultiAgentModeReport {
 
 /// Enable multi-agent mode for the given workspace:
 /// - Writes CLAUDE.md / AGENTS.md / GEMINI.md protocol blocks to workspace root.
-/// - Injects the Coffee-CLI MCP endpoint into every detected primary CLI config.
+/// - MCP endpoint injection is DISABLED: multi-agent coordination now relies
+///   on the Sentinel Protocol (frontend scans PTY for `[COFFEE-DONE:paneN]`
+///   markers), so agents don't need structured IPC. Skipping injection also
+///   avoids polluting `~/.claude.json` / `~/.codex/config.toml` /
+///   `~/.gemini/settings.json` with entries pointing at an ephemeral
+///   localhost port that dies with the Coffee-CLI process. The uninstall
+///   path (self-heal at launch/shutdown) is retained.
 #[tauri::command]
 fn enable_multi_agent_mode(
     workspace: String,
-    state: tauri::State<'_, AppState>,
+    _state: tauri::State<'_, AppState>,
 ) -> Result<MultiAgentModeReport, String> {
     let ws = PathBuf::from(&workspace);
     if !ws.is_dir() {
@@ -1884,29 +1887,11 @@ fn enable_multi_agent_mode(
     }
 
     let mut warnings = Vec::new();
-    let endpoint = state
-        .mcp_endpoint
-        .lock()
-        .map_err(|_| "mcp_endpoint mutex poisoned")?
-        .clone();
 
-    let endpoint = match endpoint {
-        Some(ep) => ep,
-        None => {
-            return Err("MCP server not ready yet — try again in a second".into());
-        }
-    };
-
-    // Serialize the endpoint so users (and debug tooling) can read
-    // .multi-agent/endpoint.json and see where the current MCP server
-    // is listening. Regenerated on every enable, so port changes between
-    // launches don't leave stale info.
-    let endpoint_json = serde_json::to_string_pretty(&endpoint).ok();
-
-    let touched_md_files = match crate::multi_agent_protocol::install(
-        &ws,
-        endpoint_json.as_deref(),
-    ) {
+    // Sentinel-only mode: no MCP endpoint is served, so no endpoint.json
+    // gets written into `.multi-agent/`. The protocol .md tells agents
+    // exactly that ("no cross-pane tools exist in this build").
+    let touched_md_files = match crate::multi_agent_protocol::install(&ws, None) {
         Ok(paths) => paths
             .into_iter()
             .map(|p| p.display().to_string())
@@ -1917,21 +1902,12 @@ fn enable_multi_agent_mode(
         }
     };
 
-    let touched_config_files =
-        match crate::mcp_injector::install_all(&endpoint, Some(&ws)) {
-            Ok(paths) => paths
-                .into_iter()
-                .map(|p| p.display().to_string())
-                .collect::<Vec<_>>(),
-            Err(e) => {
-                warnings.push(format!("mcp injector: {}", e));
-                Vec::new()
-            }
-        };
+    // MCP injection intentionally skipped — see fn doc comment.
+    let touched_config_files: Vec<String> = Vec::new();
 
     Ok(MultiAgentModeReport {
         ok: warnings.is_empty(),
-        mcp_url: Some(endpoint.url),
+        mcp_url: None,
         touched_config_files,
         touched_md_files,
         warnings,
@@ -2017,7 +1993,6 @@ pub fn start_ui(project_dir: PathBuf) -> anyhow::Result<()> {
             terminal_session,
             hook_port: std::sync::atomic::AtomicU16::new(0),
             fs_watcher: Mutex::new(None),
-            mcp_endpoint: Mutex::new(None),
         })
         .invoke_handler(tauri::generate_handler![
             scan_project,
@@ -2082,31 +2057,13 @@ pub fn start_ui(project_dir: PathBuf) -> anyhow::Result<()> {
                 }
             }
 
-            // Start multi-agent MCP server on a dynamic localhost port.
-            // v1.0 day 3-4: PaneStore is a live bridge to terminal::SharedSession,
-            // so the three MCP tools (list_panes / send_to_pane / read_pane)
-            // operate on the same portable-pty sessions the UI sees.
-            // See docs/MULTI-AGENT-ARCHITECTURE.md for the full blueprint.
-            let shared_session = app.state::<AppState>().terminal_session.clone();
-            let app_handle_for_mcp = app.handle().clone();
-            tauri::async_runtime::spawn(async move {
-                let panes = std::sync::Arc::new(
-                    crate::mcp_server::PaneStore::new(shared_session),
-                );
-                match crate::mcp_server::spawn(panes).await {
-                    Ok(ep) => {
-                        log::info!("[mcp] multi-agent server up at {}", ep.url);
-                        // Stash endpoint in AppState so enable_multi_agent_mode
-                        // can inject it into primary CLI configs.
-                        if let Ok(mut slot) =
-                            app_handle_for_mcp.state::<AppState>().mcp_endpoint.lock()
-                        {
-                            *slot = Some(ep);
-                        }
-                    }
-                    Err(e) => log::error!("[mcp] multi-agent server failed: {}", e),
-                }
-            });
+            // MCP server spawn intentionally removed (2026-04). Multi-agent
+            // coordination now uses the Sentinel Protocol (frontend scans
+            // PTY for [COFFEE-DONE:paneN->paneM] markers); agents have no
+            // cross-pane tools, so there is nothing for an MCP server to
+            // serve. The `mcp_server` module and `AppState.mcp_endpoint`
+            // slot remain in the codebase as archived scaffolding for a
+            // possible future opt-in "agent-to-agent" mode.
 
             // Force square corners + no shadow on the borderless window.
             // Windows 11's DWM rounds borderless windows by default and adds

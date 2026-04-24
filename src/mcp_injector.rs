@@ -1,6 +1,17 @@
 //! Inject the Coffee-CLI MCP server endpoint into each supported primary
 //! CLI's config file, and back it out cleanly on disable.
 //!
+//! STATUS (2026-04): MCP injection is disabled in the live multi-agent
+//! flow — `enable_multi_agent_mode` no longer calls `install_all`. Agents
+//! coordinate via the Sentinel Protocol (PTY-text markers scanned in the
+//! frontend) rather than structured IPC, so this module's install paths
+//! are dormant. The `uninstall_all` paths remain wired up at launch and
+//! shutdown as a self-heal to clean any stale entries older builds of
+//! Coffee-CLI wrote. Install-side functions are kept here (rather than
+//! deleted) so a future opt-in "MCP mode" can reuse them without
+//! rewriting the config-merge logic.
+#![allow(dead_code)]
+//!
 //! Supported CLIs (v1.0):
 //!   - Claude Code    → ~/.claude.json            (JSON, key: `mcpServers.coffee-cli`)
 //!   - Codex CLI      → ~/.codex/config.toml      (TOML, key: `[mcp_servers.coffee-cli]`)

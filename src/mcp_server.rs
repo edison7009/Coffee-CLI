@@ -1,17 +1,20 @@
-//! Coffee-CLI multi-agent MCP server (v1.0 day 3-4).
+//! Coffee-CLI multi-agent MCP server — ARCHIVED (2026-04).
 //!
-//! Exposes 3 tools over HTTP Streamable MCP transport:
-//! - `list_panes()` — enumerate panes in the current multi-agent Tab
-//! - `send_to_pane(id, text, timeout_sec, wait)` — inject keys into another pane
-//! - `read_pane(id, last_n_lines)` — read another pane's recent output
+//! Originally exposed 3 tools over HTTP Streamable MCP transport
+//! (`list_panes`, `send_to_pane`, `read_pane`) so an agent in one pane
+//! could programmatically observe and drive peer panes. That direction
+//! was retired in favor of the Sentinel Protocol — multi-agent is now
+//! "four panes + one human orchestrator", and agents have no cross-pane
+//! tools. `server.rs` no longer calls `spawn()` at startup, and
+//! `enable_multi_agent_mode` no longer injects the endpoint into primary
+//! CLI configs. This module is retained as scaffolding for a possible
+//! future opt-in "agent-to-agent" mode; deleting it outright now would
+//! throw away a working rmcp integration + PaneStore bridge.
 //!
-//! Day 3-4 replaces the Day 1-2 MockPaneStore with a live `PaneStore`
-//! backed by the existing `terminal::SharedSession` (a HashMap of
-//! `portable-pty` sessions keyed by session_id).
-//!
-//! HTTP transport (not stdio) because Coffee-CLI is a resident Tauri process
-//! and can't be spawned as a subprocess by each CLI. See
-//! docs/MULTI-AGENT-ARCHITECTURE.md §5.5 for the full rationale.
+//! HTTP transport (not stdio) was chosen because Coffee-CLI is a resident
+//! Tauri process and can't be spawned as a subprocess by each CLI. See
+//! docs/MULTI-AGENT-ARCHITECTURE.md §5.5 for the original rationale.
+#![allow(dead_code)]
 
 use std::{
     io::Write,

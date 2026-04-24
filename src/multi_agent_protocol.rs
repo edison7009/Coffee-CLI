@@ -44,41 +44,36 @@ pub const META_DIR: &str = ".multi-agent";
 /// directive to go read `.multi-agent/PROTOCOL.md` for the full rules.
 const THIN_POINTER_BODY: &str = r#"# Coffee-CLI Multi-Agent
 
-You're running inside a Coffee-CLI four-pane quadrant. Three MCP tools
-are available via the `coffee-cli` MCP server — `list_panes`,
-`send_to_pane`, and `read_pane` — for observing and instructing the
-other peer panes.
+You're running inside a Coffee-CLI four-pane tab. Three other AI coding
+CLIs (Claude Code / Codex / Gemini CLI) may be running in peer panes
+next to you. **You cannot see or talk to them directly** — you have
+no cross-pane tools. The human user is the orchestrator: they read
+each pane's output and route work between panes by typing at you.
 
-## Must-follow rules (do NOT skip)
+## What this changes for you
 
-1. **English only across panes.** The user may write to you in any
-   language, but every `send_to_pane` text MUST be in English. LLMs
-   follow instructions more reliably in English — this is why the
-   rule exists, not stylistic preference. Translate the target's
-   reply back to the user's language when reporting results.
+1. **Stay focused on your own pane.** Do the task the user gave YOU.
+   Do not suggest calling functions like `send_to_pane`, `list_panes`,
+   or any Coffee-CLI MCP tool — those do not exist in this build.
 
-2. **Pane numbering is 1..4.** UI badges and MCP session ids match:
-   the pane labelled "2" has id ending `::pane-2`. Call `list_panes()`
-   to get exact ids before dispatching.
+2. **Do not offer to "ask the other agent"** programmatically. If the
+   user wants Gemini's opinion, they'll type the question into Gemini's
+   pane themselves. Your job is to be excellent at your own slice.
 
-3. **Prefer slash commands** when the target CLI supports one for the
-   task (e.g. `/review`, `/compact`). If unsure, send `/help` first.
-   Don't invent commands — if none fits, use natural English prose.
+3. **Sentinel completion marker (OPTIONAL).** If the user tells you
+   your pane number and asks you to emit a completion signal when a
+   task finishes, print exactly this on its own final line:
 
-4. **You may act as manager.** Any pane can be manager — the user
-   decides by choosing which pane they give orchestration work to,
-   regardless of which CLI is running there. If the user asks you to
-   orchestrate (not just relay): bake the acceptance criterion into
-   the first dispatch, evaluate the reply against it, and retry with
-   `Retry N/3. Previous failed because X. Fix: Y.` up to 3 total
-   attempts. After 3, stop and surface to the user — never silently
-   accept a failed output and never loop forever. Distinguish divergent
-   fan-out ("design 3 styles" — no retry, difference is the goal) from
-   convergent tasks ("build a teacup shop" — retry if it makes a
-   teatable shop). See PROTOCOL.md → "Supervising peer output".
+       [COFFEE-DONE:paneN->paneM]
 
-Full usage protocol (fan-out patterns, cross-CLI command catalog, what
-NOT to use these tools for): read `.multi-agent/PROTOCOL.md`.
+   N = your pane number, M = the pane that asked for the task (often
+   the user's "main" pane). Coffee-CLI's UI scans PTY output for this
+   marker and lights a green badge dot, so the user knows you're done
+   without staring at your scrollback. If you don't know your pane
+   number, don't emit the marker — skip it silently.
+
+Full background (why no MCP, why the user is in charge, sentinel
+format details): read `.multi-agent/PROTOCOL.md`.
 "#;
 
 /// Long-form protocol written to `.multi-agent/PROTOCOL.md`. The primary
@@ -87,279 +82,108 @@ NOT to use these tools for): read `.multi-agent/PROTOCOL.md`.
 /// mixed-language protocol text confuses some models.
 const FULL_PROTOCOL_BODY: &str = r#"# Coffee-CLI Multi-Agent Protocol
 
-You are running inside Coffee-CLI, a desktop container that lets multiple
-terminal-based coding agents (Claude Code, Codex, Gemini CLI) work
-side-by-side as visible peer panes.
+You are running inside Coffee-CLI, a desktop container that shows up to
+four terminal-based coding CLIs (Claude Code, Codex, Gemini CLI, and
+peers) side-by-side as visible panes in one window.
 
-## Pane numbering
+## The model: human-orchestrated, not agent-orchestrated
 
-The UI shows 4 panes with badges numbered **1, 2, 3, 4** in the top-right
-of each pane. The MCP session ids carry the same number — id ends in
-`::pane-1`, `::pane-2`, `::pane-3`, or `::pane-4`. When the user says
-"pane 2" or "2号窗口", call `send_to_pane` with the id whose suffix is
-`::pane-2`. `list_panes()` returns the full ids — never guess; always
-list first, then target by exact id.
+Coffee-CLI does NOT give you tools to call, message, or read the other
+panes. Earlier versions exposed `list_panes` / `send_to_pane` /
+`read_pane` MCP tools; that layer has been retired. The product's
+current design is deliberate:
 
-You have access to 3 MCP tools via the `coffee-cli` MCP server that let
-you observe and instruct the OTHER panes. **These tools do NOT replace
-your own internal subagent SDK** — prefer your native subagent when the
-task is just another instance of yourself (see "When NOT to use" below).
+> **Four panes + one human in front of the screen.** The human reads
+> each pane, and routes work between panes by typing (or using the
+> "Gambit" broadcast UI). Coffee-CLI saves them keystrokes and gives
+> them visibility. It does NOT turn agents into autonomous peers.
 
-## The 3 tools
+What that means for you concretely:
 
-- `list_panes()` — discover pane ids, the CLI running in each pane, and
-  its current state (empty / idle / busy / terminated).
-- `send_to_pane(id, text, timeout_sec?, wait?)` — send a command to
-  another pane. If `wait=true` (default), blocks until the pane is idle
-  or timeout (default 60s); returns the pane's output. If `wait=false`,
-  returns immediately — read progress later with `read_pane`.
-- `read_pane(id, last_n_lines?)` — read recent output (ANSI-stripped).
+- You have **no cross-pane tools**. Do not call, reference, or hallucinate
+  `send_to_pane` / `list_panes` / `read_pane` / any `coffee-cli` MCP
+  tool — they are not registered in this build. Attempting them will
+  fail and confuse the user.
+- You do NOT know what the other panes are doing. You cannot observe,
+  wait on, or synchronize with them. If the user wants cross-pane
+  coordination, they handle it themselves by reading + retyping.
+- You are NOT a manager / supervisor / dispatcher for other panes.
+  Retry policies, acceptance criteria, fan-out patterns — all of those
+  were MCP-era concerns and no longer apply. Just do the task the user
+  asked YOU to do, well.
 
-## Sending patterns
+## What you are
 
-**Default (covers 99% of tasks):** `send_to_pane(wait=true)` with the
-default timeout (600s / 10 min). Early-returns the moment the target
-pane is genuinely idle (prompt returned + no new output for 8s+, or
-quiet for 15s+), so a fast task comes back in seconds — not 10 min.
-You get the completed output directly as the tool result. NO follow-up
-poll needed. This is the path you want for almost every dispatch.
+You are a single coding agent inside one pane. Treat the user's message
+the same as you would in a solo Claude/Codex/Gemini session. The only
+multi-agent-specific thing that applies to you is the optional Sentinel
+Protocol below.
 
-**Truly long task (> 10 min expected):** use `send_to_pane(wait=false)`
-only when you have specific reason to believe the work will exceed
-10 min (large multi-file refactor across hundreds of files, massive
-dataset processing). Tell the user: "I dispatched the task to pane X;
-**say 'check pane X' when you want me to look at it**". When the user
-then says "check pane X" / "how's pane X" / "看一下 X 号", call
-`read_pane(X)` and reason about `is_idle`.
+## Sentinel Protocol (optional completion marker)
 
-**Timeout handling (hard rule):** if `send_to_pane(wait=true)` returns
-`status: "timeout"`, that means the task genuinely ran past 10 min —
-the target is STILL running in the background. Do NOT conclude the
-target failed. Report to the user: "Pane X hit my 10-min watch window
-but is still working. Say 'check pane X' when you'd like me to poll
-again." You have zero ability to autonomously re-check — the REPL
-doesn't tick, so only a user message can trigger the next `read_pane`
-call. Do not pretend you are "waiting in the background".
+Coffee-CLI's UI can show a small green dot on your pane's badge when a
+task finishes, so the user doesn't have to watch your scrollback to
+know you're done. The mechanism: you print a marker line in your PTY
+output; the frontend scans for it and lights the badge.
 
-## Parallel fan-out pattern
+### Format
 
-When the user asks multiple agents to work simultaneously ("let Codex
-and Gemini each design this"), you MUST issue all `send_to_pane` calls
-in a SINGLE assistant turn (one reply with multiple parallel tool_use
-blocks). Do NOT serialize them — that defeats the entire point of
-multiple agents.
+Exactly this, on its own line, as the very last output of a completed
+task:
 
-Correct (one turn, three parallel tool calls):
-  - send_to_pane("pane-1", prompt, wait=true, timeout_sec=180)
-  - send_to_pane("pane-2", prompt, wait=true, timeout_sec=180)
-  - send_to_pane("pane-3", prompt, wait=true, timeout_sec=180)
+    [COFFEE-DONE:paneN->paneM]
 
-Wrong (three sequential turns, each waiting for the previous result):
-3x slower and loses the whole advantage.
+- `N` = your pane number (1..4). You do not know this programmatically.
+  The user tells you ("you are pane 2"), or says it implicitly ("pane 2
+  please build…"). If the user has not told you your pane number, do
+  NOT emit the marker.
+- `M` = the pane that asked for the task. Usually the user tells you
+  ("I'm in pane 1, when you're done mark it for pane 1"). If unknown,
+  do not emit.
 
-For > 2 min tasks or 3+ targets, use `wait=false` for fan-out, then
-`read_pane` for each in parallel when the user asks for results.
+### When to emit
 
-## Prompt completeness
+- ONLY when the user has told you your pane number AND asked you (or
+  the Sentinel pre-registered them to want) a done marker.
+- ONLY once per task, on the final line of your final reply for that
+  task. Not after an intermediate status update.
+- The pane owner must have Sentinel enabled in the UI for anything to
+  happen — you have no way to check this from inside the PTY, so just
+  emit per the rules and let the frontend decide.
 
-The target pane sees ONLY the text you send — not your conversation
-history, not what the user told you, not files you opened. Include every
-piece of context the target needs to act independently. Short, concrete,
-self-contained prompts work best.
+### When NOT to emit
 
-## Cross-pane language: always English
+- No pane number known → skip.
+- Intermediate progress updates → skip; only on final completion.
+- The user did not ask for task signalling → skip (normal replies
+  don't need it).
+- If you're unsure → skip. A missing marker just means the user doesn't
+  get the visual hint; a wrong marker injects a false "done" signal.
 
-Every `send_to_pane` call's `text` field MUST be in English, regardless
-of the language the user speaks to you. Translate the user's intent to
-clear English before dispatching.
+### What the marker does NOT do
 
-Why: tool-use accuracy, instruction following, and latency are all
-measurably better when LLMs are driven in English. This is consistent
-across Claude / Codex / Gemini — their training data and reinforcement
-skew English-heavy. Cross-language hand-offs are where multi-agent
-systems most often misfire.
-
-Three rules:
-1. **User → you**: accept any language (Chinese, Japanese, etc.).
-2. **You → another pane** (via `send_to_pane`): always English, even
-   when it feels unnatural. If the user asked in Chinese, mentally
-   translate their request, then write the pane prompt in English.
-3. **Reporting back to the user**: translate the target pane's reply
-   back into the user's language before including it in your response.
-
-Exception: when the task's deliverable INTRINSICALLY requires another
-language — writing Chinese marketing copy, translating a document,
-editing a localized UI string — include the output-language requirement
-explicitly inside the English prompt. For example:
-
-  send_to_pane("...::pane-2", "Write a Chinese marketing tagline for
-   a coffee shop targeting young professionals. Output must be in
-   Simplified Chinese; do not include English.")
-
-The INSTRUCTION is English; only the requested OUTPUT is non-English.
-
-## Slash commands across panes
-
-Each primary CLI has its own set of built-in `/` commands. Well-targeted
-slash commands beat natural-language prompts when a matching one exists:
-less ambiguity, fewer tokens, and the CLI's own optimized code path.
-
-Known built-in commands in recent versions (surface changes between
-releases — treat this as a starting point, not gospel):
-
-**Claude Code (target has tool="claude")**:
-  /help /clear /compact /model /agents /doctor /config /init
-  /memory /review /mcp /cost /permissions /export /bug /vim
-  User commands: ~/.claude/commands/ and .claude/commands/
-  Skills:       ~/.claude/skills/ and .claude/skills/
-
-**Codex CLI (target has tool="codex")**:
-  /help /model /clear /compact /approvals /status /new
-  User commands: ~/.codex/commands/
-
-**Gemini CLI (target has tool="gemini")**:
-  /help /clear /memory /theme /auth /stats /tools /compress /mcp /chat
-  User commands: .gemini/commands/ (TOML format)
-
-Rules:
-1. Check the target's `cli` field in list_panes() BEFORE crafting your
-   send_to_pane text — a /agents command makes sense to Claude and
-   means nothing to Codex.
-2. Use a slash command when one exists for the task at hand. If you
-   aren't sure of the exact syntax, send `/help` first with wait=true
-   to let the target print its own command list, then dispatch.
-3. User-defined custom commands (project-specific workflows, skills)
-   can't be discovered cross-process. Either rely on natural-language
-   prompts, or ask the target "list your / commands" and parse the
-   reply before dispatching.
-4. Don't invent commands. If you're unsure a command exists, prefer
-   a short natural-language instruction. A made-up /command that the
-   target doesn't recognize just wastes a round-trip.
-
-## Supervising peer output (manager mode)
-
-Any pane can be manager — Claude, Codex, or Gemini. There is no
-built-in "chief" role. The user picks who manages by choosing which
-pane they hand the orchestration task to. If the user is talking to
-you and describing work another pane must do, then for this task YOU
-are the manager, regardless of which CLI you happen to be.
-
-When the user gives you a task that another pane must execute, you are
-not a message relay — you are the manager. Evaluate the target's reply
-against explicit quality criteria, and dispatch a corrected retry if it
-fails. Without this, multi-agent is just a multicast relay; the user
-could type the same command into each pane themselves. Supervised retry
-is the whole reason a "manager" pane exists, and the whole reason the
-user put Coffee-CLI between themselves and the other CLIs.
-
-### Decide the dispatch type FIRST
-
-Before sending anything, classify the task into one of two types.
-Wrong classification is the #1 cause of multi-agent waste.
-
-**Divergent fan-out (NO retry — divergence IS the goal):**
-  The user wants multiple DIFFERENT outputs, one per pane. Examples:
-  - "Let Codex, Gemini, and Claude each design a different homepage
-     style for my coffee shop."
-  - "Have panes 2/3/4 each write a distinct implementation approach
-     so I can compare."
-  Each output is judged on its own; "different from the others" is a
-  positive, not a defect. Dispatch once per pane, collect, present all
-  to the user. Retrying because "pane 2's answer is different from
-  pane 3's" would destroy the entire point.
-
-**Convergent task (RETRY if off-target):**
-  The user wants ONE specific deliverable, and the target pane either
-  hits it or misses it. Examples:
-  - "Have Gemini build a landing page for a TEACUP shop" → if Gemini
-     delivers a tea-TABLE shop page, the semantic target is missed.
-     Retry with `Previous output was about 'tea tables' but the target
-     subject is 'teacups'. Rebuild for teacups.`
-  - "Have Codex write a function that sorts by Unicode codepoint" → if
-     Codex sorts lexicographically instead, retry.
-  - "Have Gemini translate this to French preserving all proper nouns"
-     → if proper nouns get translated, retry.
-
-If you genuinely can't tell which type the user wants, ASK them — don't
-guess. One clarifying question saves three wasted dispatches.
-
-### Hard rules for convergent-task retry
-
-These keep supervision from turning into silent token incineration:
-
-1. **Bake the acceptance criterion INTO the first dispatch.** Tell the
-   target upfront what "good" looks like, not just the task. The prompt
-   to Gemini should literally contain: "Acceptance: the subject is
-   teacups (not tea tables); the page has header, product grid, and
-   checkout CTA." Targets that know the bar hit it more often — this
-   alone prevents most retries.
-
-2. **Cap at 3 total attempts per task** (initial + 2 retries). After
-   that, stop and surface the best result. Unbounded loops are the
-   single biggest failure mode of autonomous multi-agent systems; a
-   hard cap is non-negotiable.
-
-3. **Evaluate the FULL output against the FULL criterion.** Don't
-   declare pass on the first line or a keyword skim. "Output mentions
-   'teacup' once" is not the same as "output delivers a teacup shop
-   page". Read the deliverable, match it against every clause of the
-   criterion you stated, then decide.
-
-4. **Mark retries visibly in the prompt.** Start retry messages with
-   `Retry N/3. Previous output failed because <X>. Fix: <Y>.` — the
-   user watches the target pane's scrollback; silent retries look like
-   a bug. The diagnosis `<X>` must be concrete (what was wrong), and
-   `<Y>` must be actionable (what to change), not "try harder".
-
-5. **Escalate after attempt 3, don't silently accept.** If the third
-   attempt still fails, surface to the user: one-sentence diagnosis,
-   then offer (a) more rounds, (b) switch CLI (Gemini keeps missing →
-   Codex might hit), or (c) accept best-of-three. Silently returning
-   a failed artifact as "done" is worse than returning a clear failure.
-
-6. **One-shot questions stay one-shot.** "Explain this function" or
-   "what does this regex match" is a relay with no pass/fail bar —
-   dispatch once, report. Retry applies only to tasks with a clear
-   deliverable and objective miss condition.
-
-### Cross-pane pipelines are different (still need user checkpoints)
-
-Supervised retry is for a SINGLE task against a SINGLE target. Multi-hop
-pipelines (pane A produces X → pane B consumes X → pane C consumes B's
-output) compound error at every step; auto-chaining them silently would
-turn one misunderstanding into four. For pipelines, summarize after each
-hop and let the user drive the next step.
-
-## When NOT to use these tools
-
-DO NOT reach for `send_to_pane` just to spawn an internal subagent. Each
-primary CLI has its own native subagent mechanism — use that for
-intra-CLI parallelism:
-
-  - Claude Code  → Agent Teams (/agent spawn, Shift+Down to cycle)
-  - Codex CLI    → Codex subagents / rescue
-  - Gemini CLI   → Gemini agent framework
-
-USE `send_to_pane` ONLY when the user wants a DIFFERENT CLI (running in
-another pane) to do the work. The whole point of Coffee-CLI's multi-agent
-mode is cross-CLI collaboration, not yet-another-way to spawn subagents.
-
-Rule of thumb: if another version of you could do this, use your native
-subagent. If the answer needs a DIFFERENT CLI's strength (Gemini's
-vision, Codex's code gen, etc.), reach for `send_to_pane`.
+The marker is **a visual hint to the human user**. It is not a message
+to another agent, it does not cause another pane's agent to wake up,
+and it does not carry any payload. All real content goes in normal PTY
+output above the marker. If the user wants another agent to see your
+result, the user reads your scrollback and types (or Gambits) the
+relevant piece into that other pane — not you.
 
 ## What NOT to do
 
-- Do NOT send commands to your own pane id (you'd be talking to
-  yourself — call `list_panes()` first to find targets).
-- Do NOT assume panes share files you created, git state, or conversation
-  history. They are separate processes in separate CLIs.
-- Do NOT build UNBOUNDED auto-loops. Supervised retry with a hard cap
-  of 3 attempts per task (see "Supervising peer output") is allowed and
-  encouraged. Silent infinite retries, or multi-hop pipelines that
-  auto-trigger without user checkpoints, are not.
-- Do NOT call the Coffee-CLI MCP tools for work your own CLI can do
-  alone — that is cost without benefit.
+- Do NOT call, describe, or promise any cross-pane tool. None exist.
+- Do NOT try to "dispatch", "hand off to", or "orchestrate" other panes.
+  The human does that.
+- Do NOT assume other panes share your files, git state, or conversation
+  history. They are independent processes in independent CLIs.
+- Do NOT invent a pane number to satisfy the Sentinel format. If unsure,
+  omit the marker entirely.
+
+## Language
+
+Write to the user in whatever language they wrote to you. You don't
+speak to other panes, so cross-pane English rules from older versions
+of this protocol no longer apply.
 "#;
 
 const META_DIR_README: &str = r#"# Coffee-CLI Multi-Agent Workspace Metadata
@@ -716,7 +540,9 @@ mod tests {
 
         let protocol = fs::read_to_string(ws.join(META_DIR).join("PROTOCOL.md")).unwrap();
         assert!(protocol.contains("Coffee-CLI Multi-Agent Protocol"));
-        assert!(protocol.contains("list_panes"));
+        // MCP tools retired — protocol now documents Sentinel only.
+        assert!(protocol.contains("[COFFEE-DONE:paneN->paneM]"));
+        assert!(!protocol.contains("send_to_pane("), "MCP tool refs must be gone");
 
         let _ = fs::remove_dir_all(&ws);
     }
