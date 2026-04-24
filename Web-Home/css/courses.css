@@ -31,6 +31,29 @@
   background: hsla(24, 80%, 50%, 0.08);
 }
 
+/* Exit link back to the product homepage. Sits as the leftmost item in
+   the course-tabs row but is visually distinct — subtle, no active
+   state, and separated from the course tabs by a hairline divider so
+   readers perceive it as "leave course context" rather than another
+   course. */
+.course-tab-exit {
+  padding: 0.5rem 0.9rem 0.5rem 0.75rem;
+  margin-right: 0.35rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--text-secondary);
+  text-decoration: none;
+  border-right: 1px solid var(--glass-border);
+  opacity: 0.75;
+  transition: opacity 0.2s ease, color 0.2s ease;
+}
+
+.course-tab-exit:hover {
+  opacity: 1;
+  color: var(--text-primary);
+}
+
 /* Placeholder (Coming Soon) Pages */
 .course-placeholder {
   display: flex;
