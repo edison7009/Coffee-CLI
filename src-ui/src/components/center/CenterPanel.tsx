@@ -427,12 +427,16 @@ export function CenterPanel() {
   // - `type`: semantic category ('ai-cli' | 'utility'). Lets future code group/filter items.
   // - `requiresCwd`: behavior flag — drives folder-button + cwd display on Desktop cards.
   const AGENT_CATALOG: { key: ToolType; label: string; icon: React.ReactNode; type: 'ai-cli' | 'utility'; requiresCwd: boolean }[] = (() => {
+    // OpenClaw (persona forge) and Hermes Agent are directory-agnostic —
+    // they operate on global state, not a project folder. Skip the
+    // folder-picker + cwd display so they launch in one click, like utilities.
+    const CWD_AGNOSTIC_AI_CLI = new Set<ToolType>(['openclaw', 'hermes']);
     const aiCliEntries = BUILTIN_AI_CLI_FALLBACK.map(item => ({
       key: item.key,
       label: item.label,
       icon: BUILTIN_ICONS[item.key as string] ?? null,
       type: 'ai-cli' as const,
-      requiresCwd: true,
+      requiresCwd: !CWD_AGNOSTIC_AI_CLI.has(item.key),
     }));
 
     // Utility order is deliberate for 4-column alignment in the
@@ -951,7 +955,7 @@ export function CenterPanel() {
               {icon}
               <span className="tab-title" style={{ flex: '0 1 auto', minWidth: 0, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{title}</span>
               <div className="tab-actions">
-                {(['claude', 'qwen', 'hermes', 'opencode', 'codex', 'gemini', 'agent', 'installer', 'terminal', 'remote', 'vibeid', 'insights_prerun', 'multi-agent', 'two-agent', 'three-agent', 'two-split', 'three-split', 'four-split'] as const).includes(session.tool as 'claude' | 'qwen' | 'hermes' | 'opencode' | 'codex' | 'gemini' | 'agent' | 'installer' | 'terminal' | 'remote' | 'vibeid' | 'insights_prerun' | 'multi-agent' | 'two-agent' | 'three-agent' | 'two-split' | 'three-split' | 'four-split') && (
+                {(['claude', 'qwen', 'hermes', 'opencode', 'openclaw', 'codex', 'gemini', 'agent', 'installer', 'terminal', 'remote', 'vibeid', 'insights_prerun', 'multi-agent', 'two-agent', 'three-agent', 'two-split', 'three-split', 'four-split'] as const).includes(session.tool as 'claude' | 'qwen' | 'hermes' | 'opencode' | 'openclaw' | 'codex' | 'gemini' | 'agent' | 'installer' | 'terminal' | 'remote' | 'vibeid' | 'insights_prerun' | 'multi-agent' | 'two-agent' | 'three-agent' | 'two-split' | 'three-split' | 'four-split') && (
                   // Only Claude Code has a real hook-driven status machine.
                   // The other tools render the steady-green idle pulse —
                   // we explicitly chose not to guess their state from PTY
