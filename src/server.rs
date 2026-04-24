@@ -109,38 +109,6 @@ fn show_main_window(app: tauri::AppHandle) {
     }
 }
 
-/// Spawn a new independent Coffee CLI window.
-/// Each window is a fully standalone instance with its own tabs.
-#[tauri::command]
-fn create_detached_window(
-    app: tauri::AppHandle,
-    _session_id: String,
-    _tool: String,
-    _tool_data: Option<String>,
-) -> Result<(), String> {
-    let ts = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_millis())
-        .unwrap_or_default();
-    let label = format!("detached-{}", ts);
-
-    let _window = tauri::WebviewWindowBuilder::new(
-        &app,
-        &label,
-        tauri::WebviewUrl::App("index.html".into()),
-    )
-    .title("Coffee CLI")
-    .inner_size(1200.0, 800.0)
-    .min_inner_size(900.0, 600.0)
-    .decorations(false)
-    .shadow(false)
-    .center()
-    .build()
-    .map_err(|e| format!("Failed to create window: {}", e))?;
-
-    Ok(())
-}
-
 #[tauri::command]
 async fn pick_folder(app: tauri::AppHandle) -> Result<String, String> {
     let folder = app
@@ -1714,19 +1682,6 @@ fn save_jsdos_bundle(name: String, data: Vec<u8>) -> Result<(), String> {
     std::fs::write(file_path, data).map_err(|e| e.to_string())
 }
 
-// ─── Terminal Buffer Replay (for detached windows) ───────────────────────────
-
-#[tauri::command]
-fn get_terminal_buffer(session_id: String, state: State<'_, AppState>) -> Result<Vec<String>, String> {
-    let map = state.terminal_session.lock().map_err(|e| e.to_string())?;
-    if let Some(session) = map.get(&session_id) {
-        let buf = session.output_buffer.lock().map_err(|e| e.to_string())?;
-        Ok(buf.clone())
-    } else {
-        Ok(vec![])
-    }
-}
-
 // ─── Task Board Persistence ──────────────────────────────────────────────────
 
 fn tasks_file_path() -> PathBuf {
@@ -2001,7 +1956,6 @@ pub fn start_ui(project_dir: PathBuf) -> anyhow::Result<()> {
             window_maximize,
             window_close,
             show_main_window,
-            create_detached_window,
             tier_terminal_start,
             tier_terminal_input,
             tier_terminal_raw_write,
@@ -2025,7 +1979,6 @@ pub fn start_ui(project_dir: PathBuf) -> anyhow::Result<()> {
             list_jsdos_bundles,
             read_jsdos_bundle,
             save_jsdos_bundle,
-            get_terminal_buffer,
             load_tasks,
             save_tasks,
             save_password,

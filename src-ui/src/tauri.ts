@@ -162,14 +162,6 @@ export const commands = {
   loadTasks: () => invoke<string>('load_tasks'),
   saveTasks: (data: string) => invoke<void>('save_tasks', { data }),
 
-  // Multi-window: detach tab into new window
-  createDetachedWindow: (sessionId: string, tool: string, toolData?: string) =>
-    invoke<void>('create_detached_window', { sessionId, tool, toolData }),
-
-  // Multi-window: replay terminal history for detached window
-  getTerminalBuffer: (sessionId: string) =>
-    invoke<string[]>('get_terminal_buffer', { sessionId }),
-
   // Credential store — passwords live in OS keychain, never in localStorage
   savePassword: (host: string, username: string, password: string) =>
     invoke<void>('save_password', { host, username, password }),
