@@ -26,7 +26,7 @@
 //     auto-approve leakage. It also keeps FourSplit panes out of any
 //     cross-pane sentinel / Gambit addressing that keys off `::pane-`.
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAppState, type TerminalSession, type ToolType, type MultiAgentPane } from '../../store/app-state';
 import { TierTerminal } from './TierTerminal';
 import { ErrorBoundary } from '../common/ErrorBoundary';
@@ -52,11 +52,30 @@ const PANE_CLI_OPTIONS: Array<{ value: ToolType; label: string }> = [
   { value: 'codex', label: 'Codex' },
   { value: 'gemini', label: 'Gemini' },
   { value: 'opencode', label: 'OpenCode' },
+  { value: 'openclaw', label: 'OpenClaw' },
+  { value: 'hermes', label: 'Hermes Agent' },
 ];
+
+// OpenClaw (persona forge) and Hermes Agent are directory-agnostic — they
+// operate on global state, not a project folder. Skip the folder picker
+// when a pane picks one of these, matching the Desktop launchpad behavior.
+const CWD_AGNOSTIC_TOOLS: ReadonlySet<ToolType> = new Set<ToolType>(['openclaw', 'hermes']);
 
 export function FourSplitGrid({ tab, hasBg, bgUrl, bgType, paneCount = 4 }: Props) {
   const { state, dispatch } = useAppState();
   const [focusedPaneIdx, setFocusedPaneIdx] = useState<number | null>(null);
+
+  // Detect which of the 6 pane-eligible CLIs are actually installed so the
+  // picker can grey out the ones the user doesn't have (same visual
+  // language as the Desktop launchpad — see .launchpad-card-disabled).
+  // Runs once on mount; missing keys default to `true` to avoid a
+  // false-negative flash before the IPC resolves.
+  const [toolsInstalled, setToolsInstalled] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    commands.checkToolsInstalled()
+      .then(result => setToolsInstalled(result))
+      .catch(() => {});
+  }, []);
 
   const panes: MultiAgentPane[] = tab.multiAgent?.panes
     ?? Array.from({ length: paneCount }, (_, i) => ({
@@ -85,6 +104,18 @@ export function FourSplitGrid({ tab, hasBg, bgUrl, bgType, paneCount = 4 }: Prop
   // - If the user cancels the picker, we do nothing (pane stays empty).
   // - Picker failure is logged but silent in UI — user can just re-click.
   const onSelectTool = async (paneIdx: number, tool: ToolType) => {
+    // cwd-agnostic tools (OpenClaw / Hermes Agent) skip the folder picker
+    // entirely — they don't bind to a project directory. TierTerminal will
+    // fall back to tab.folderPath (or the process cwd) when spawning.
+    if (CWD_AGNOSTIC_TOOLS.has(tool)) {
+      dispatch({
+        type: 'SET_PANE_TOOL',
+        tabId: tab.id,
+        paneIdx,
+        tool,
+      });
+      return;
+    }
     try {
       const { open } = await import('@tauri-apps/plugin-dialog');
       const selected = await open({ directory: true });
@@ -186,6 +217,7 @@ export function FourSplitGrid({ tab, hasBg, bgUrl, bgType, paneCount = 4 }: Prop
                 <EmptyPanePicker
                   paneIdx={pane.paneIdx}
                   onSelect={(tool) => onSelectTool(pane.paneIdx, tool)}
+                  toolsInstalled={toolsInstalled}
                 />
               ) : (
                 <ErrorBoundary fallbackLabel="Tier Terminal Error">
@@ -220,24 +252,32 @@ export function FourSplitGrid({ tab, hasBg, bgUrl, bgType, paneCount = 4 }: Prop
 interface EmptyPanePickerProps {
   paneIdx: number;
   onSelect: (tool: ToolType) => void;
+  toolsInstalled: Record<string, boolean>;
 }
 
-function EmptyPanePicker({ paneIdx: _paneIdx, onSelect }: EmptyPanePickerProps) {
+function EmptyPanePicker({ paneIdx: _paneIdx, onSelect, toolsInstalled }: EmptyPanePickerProps) {
   return (
     <div className="empty-pane-picker">
       <div className="empty-pane-options">
-        {PANE_CLI_OPTIONS.map((opt) => (
-          <button
-            key={String(opt.value)}
-            className="empty-pane-option"
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelect(opt.value);
-            }}
-          >
-            {opt.label}
-          </button>
-        ))}
+        {PANE_CLI_OPTIONS.map((opt) => {
+          // Default to installed when the detection result hasn't landed
+          // yet (keys missing) to avoid a false-negative flash on mount.
+          const installed = toolsInstalled[String(opt.value)] !== false;
+          return (
+            <button
+              key={String(opt.value)}
+              className="empty-pane-option"
+              disabled={!installed}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!installed) return;
+                onSelect(opt.value);
+              }}
+            >
+              {opt.label}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

@@ -243,6 +243,17 @@
   background: color-mix(in srgb, var(--accent, #6cc275) 20%, transparent);
 }
 
+/* Disabled state — the CLI binary is not installed on this machine.
+   Visual parity with .launchpad-card-disabled (opacity 0.35 + not-allowed)
+   so users recognize the same "greyed = not installed" language from the
+   Desktop launchpad. The button is fully inert — no hover tint, no click. */
+.empty-pane-option:disabled,
+.empty-pane-option.is-disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 /* ─── Sentinel Protocol toggle ────────────────────────────────────
    macOS/iOS-style sliding pill switch. Visually separated from the
    CLI button row above by a hairline divider + margin so it feels

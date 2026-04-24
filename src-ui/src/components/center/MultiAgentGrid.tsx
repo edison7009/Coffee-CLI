@@ -58,6 +58,18 @@ export function MultiAgentGrid({ tab, hasBg, bgUrl, bgType, paneCount = 4 }: Pro
   const { state, dispatch } = useAppState();
   const [focusedPaneIdx, setFocusedPaneIdx] = useState<number | null>(null);
 
+  // Detect which of the 3 coordination-eligible CLIs are actually installed
+  // so the picker greys out the ones the user doesn't have (same visual
+  // language as the Desktop launchpad — see .launchpad-card-disabled).
+  // Runs once on mount; missing keys default to `true` so we don't flash
+  // a false "disabled" state before the IPC resolves.
+  const [toolsInstalled, setToolsInstalled] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    commands.checkToolsInstalled()
+      .then(result => setToolsInstalled(result))
+      .catch(() => {});
+  }, []);
+
   // ─── Auto-enable multi-agent mode on first mount with a workspace ──
   // When this tab opens with `tool='multi-agent'` AND a valid
   // folderPath, tell the Rust backend to install the thin-pointer
@@ -216,6 +228,7 @@ export function MultiAgentGrid({ tab, hasBg, bgUrl, bgType, paneCount = 4 }: Pro
                     paneIdx: pane.paneIdx,
                     enabled: !pane.sentinelEnabled,
                   })}
+                  toolsInstalled={toolsInstalled}
                 />
               ) : (
                 <ErrorBoundary fallbackLabel="Tier Terminal Error">
@@ -255,6 +268,7 @@ interface EmptyPanePickerProps {
   onSelect: (tool: ToolType) => void;
   sentinelEnabled: boolean;
   onToggleSentinel: () => void;
+  toolsInstalled: Record<string, boolean>;
 }
 
 // Per-CLI setup hints removed per user request: the paper-slice
@@ -263,23 +277,30 @@ interface EmptyPanePickerProps {
 // /auth) surfaces naturally once the user clicks; no need to
 // pre-announce it. The skip-permissions auto-accept still lives in
 // server.rs for Claude, so users don't see a speed bump there.
-function EmptyPanePicker({ paneIdx: _paneIdx, onSelect, sentinelEnabled, onToggleSentinel }: EmptyPanePickerProps) {
+function EmptyPanePicker({ paneIdx: _paneIdx, onSelect, sentinelEnabled, onToggleSentinel, toolsInstalled }: EmptyPanePickerProps) {
   const t = useT();
   return (
     <div className="empty-pane-picker">
       <div className="empty-pane-options">
-        {PANE_CLI_OPTIONS.map((opt) => (
-          <button
-            key={String(opt.value)}
-            className="empty-pane-option"
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelect(opt.value);
-            }}
-          >
-            {opt.label}
-          </button>
-        ))}
+        {PANE_CLI_OPTIONS.map((opt) => {
+          // Default to installed when the detection result hasn't landed
+          // yet (keys missing) to avoid a false-negative flash on mount.
+          const installed = toolsInstalled[String(opt.value)] !== false;
+          return (
+            <button
+              key={String(opt.value)}
+              className="empty-pane-option"
+              disabled={!installed}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!installed) return;
+                onSelect(opt.value);
+              }}
+            >
+              {opt.label}
+            </button>
+          );
+        })}
       </div>
       <div className="sentinel-toggle-row">
         <div
