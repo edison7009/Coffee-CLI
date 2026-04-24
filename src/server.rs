@@ -18,6 +18,11 @@ pub struct AppState {
     /// workspace folder is open; None otherwise. Swapping this Mutex'd
     /// Option replaces the watcher atomically on folder switch.
     pub fs_watcher: Mutex<Option<crate::fs_watcher::FsWatcher>>,
+    /// Multi-agent MCP server endpoint (set once the server is bound at
+    /// startup). `None` while the setup task is still in flight or if
+    /// the MCP server failed to bind — `enable_multi_agent_mode` returns
+    /// an error in that case so the user can retry.
+    pub mcp_endpoint: Mutex<Option<crate::mcp_server::McpEndpoint>>,
 }
 
 #[derive(Serialize)]
@@ -743,45 +748,17 @@ fn tier_terminal_start_blocking(
     // mode.
     let in_multi_agent = session_id.contains("::pane-");
 
-    // Extract pane number for multi-agent panes so spawning agents know
-    // "who am I" without the user having to tell them. session_id format
-    // for multi-agent is `<tabId>::pane-N` (N in 1..4). This number is
-    // passed into the agent's system prompt via `--append-system-prompt`
-    // (for agents that support it, currently Claude Code) so the agent
-    // can emit `[COFFEE-TELL:paneN->paneM]` markers with the correct
-    // self-reference from its very first response, instead of guessing.
-    let multi_agent_pane_idx: Option<u32> = if in_multi_agent {
-        session_id.split("::pane-").nth(1).and_then(|s| s.parse().ok())
-    } else {
-        None
-    };
-
-    // Build the append-to-system-prompt text for any pane-aware agent.
-    // Tells the model its own pane number + the marker syntax so it can
-    // dispatch without first being briefed by the user. Single-line to
-    // keep command-line escaping predictable across OS shells.
-    let pane_system_prompt = multi_agent_pane_idx.map(|n| {
-        format!(
-            "You are running in Coffee-CLI multi-agent mode as pane {n}. \
-             Peer panes 1..4 each run a CLI you can dispatch work to by \
-             emitting `[COFFEE-TELL:pane{n}->paneM] <one-line task>` on \
-             its own output line. Report completion with \
-             `[COFFEE-DONE:pane{n}->paneM]`. Full protocol lives in the \
-             workspace's `.multi-agent/PROTOCOL.md`.",
-            n = n
-        )
-    });
-
     // Map the requested tool to an actual CLI command.
     let (cmd, args): (String, Vec<String>) = match tool.as_deref() {
         Some("claude")   => {
             let mut a = vec![];
             if in_multi_agent {
+                // Let the agent use tools without human approval. MCP's
+                // `list_panes()` / `send_to_pane()` / `read_pane()` are
+                // what give it pane discovery + dispatch; injecting a
+                // `--append-system-prompt` with pane number here would
+                // duplicate what the MCP tool already provides.
                 a.push("--dangerously-skip-permissions".to_string());
-                if let Some(prompt) = &pane_system_prompt {
-                    a.push("--append-system-prompt".to_string());
-                    a.push(prompt.clone());
-                }
             }
             ("claude".to_string(), a)
         },
@@ -1856,17 +1833,20 @@ pub struct MultiAgentModeReport {
 
 /// Enable multi-agent mode for the given workspace:
 /// - Writes CLAUDE.md / AGENTS.md / GEMINI.md protocol blocks to workspace root.
-/// - MCP endpoint injection is DISABLED: multi-agent coordination now relies
-///   on the Sentinel Protocol (frontend scans PTY for `[COFFEE-DONE:paneN]`
-///   markers), so agents don't need structured IPC. Skipping injection also
-///   avoids polluting `~/.claude.json` / `~/.codex/config.toml` /
-///   `~/.gemini/settings.json` with entries pointing at an ephemeral
-///   localhost port that dies with the Coffee-CLI process. The uninstall
-///   path (self-heal at launch/shutdown) is retained.
+/// - Injects the Coffee-CLI MCP endpoint into every detected primary CLI config
+///   so an agent in any pane can dispatch work to peers via `send_to_pane`.
+/// - Writes `.multi-agent/endpoint.json` with the current MCP URL so users /
+///   debugging tooling can inspect the live endpoint.
+///
+/// Forward dispatch runs through MCP (structured, has `list_panes()` for
+/// discovery and failure responses for dead targets). Backward completion
+/// receipts run through the Sentinel marker `[COFFEE-DONE:paneN->paneM]`
+/// which the frontend scanner injects as plain text into the dispatcher's
+/// PTY input — see TierTerminal.tsx.
 #[tauri::command]
 fn enable_multi_agent_mode(
     workspace: String,
-    _state: tauri::State<'_, AppState>,
+    state: tauri::State<'_, AppState>,
 ) -> Result<MultiAgentModeReport, String> {
     let ws = PathBuf::from(&workspace);
     if !ws.is_dir() {
@@ -1875,10 +1855,29 @@ fn enable_multi_agent_mode(
 
     let mut warnings = Vec::new();
 
-    // Sentinel-only mode: no MCP endpoint is served, so no endpoint.json
-    // gets written into `.multi-agent/`. The protocol .md tells agents
-    // exactly that ("no cross-pane tools exist in this build").
-    let touched_md_files = match crate::multi_agent_protocol::install(&ws, None) {
+    let endpoint = state
+        .mcp_endpoint
+        .lock()
+        .map_err(|_| "mcp_endpoint mutex poisoned")?
+        .clone();
+
+    let endpoint = match endpoint {
+        Some(ep) => ep,
+        None => {
+            return Err("MCP server not ready yet — try again in a second".into());
+        }
+    };
+
+    // Serialize the endpoint so users (and debug tooling) can read
+    // .multi-agent/endpoint.json and see where the current MCP server
+    // is listening. Regenerated on every enable, so port changes between
+    // launches don't leave stale info.
+    let endpoint_json = serde_json::to_string_pretty(&endpoint).ok();
+
+    let touched_md_files = match crate::multi_agent_protocol::install(
+        &ws,
+        endpoint_json.as_deref(),
+    ) {
         Ok(paths) => paths
             .into_iter()
             .map(|p| p.display().to_string())
@@ -1889,12 +1888,21 @@ fn enable_multi_agent_mode(
         }
     };
 
-    // MCP injection intentionally skipped — see fn doc comment.
-    let touched_config_files: Vec<String> = Vec::new();
+    let touched_config_files =
+        match crate::mcp_injector::install_all(&endpoint, Some(&ws)) {
+            Ok(paths) => paths
+                .into_iter()
+                .map(|p| p.display().to_string())
+                .collect::<Vec<_>>(),
+            Err(e) => {
+                warnings.push(format!("mcp injector: {}", e));
+                Vec::new()
+            }
+        };
 
     Ok(MultiAgentModeReport {
         ok: warnings.is_empty(),
-        mcp_url: None,
+        mcp_url: Some(endpoint.url),
         touched_config_files,
         touched_md_files,
         warnings,
@@ -1980,6 +1988,7 @@ pub fn start_ui(project_dir: PathBuf) -> anyhow::Result<()> {
             terminal_session,
             hook_port: std::sync::atomic::AtomicU16::new(0),
             fs_watcher: Mutex::new(None),
+            mcp_endpoint: Mutex::new(None),
         })
         .invoke_handler(tauri::generate_handler![
             scan_project,
@@ -2042,13 +2051,34 @@ pub fn start_ui(project_dir: PathBuf) -> anyhow::Result<()> {
                 }
             }
 
-            // MCP server spawn intentionally removed (2026-04). Multi-agent
-            // coordination now uses the Sentinel Protocol (frontend scans
-            // PTY for [COFFEE-DONE:paneN->paneM] markers); agents have no
-            // cross-pane tools, so there is nothing for an MCP server to
-            // serve. The `mcp_server` module and `AppState.mcp_endpoint`
-            // slot remain in the codebase as archived scaffolding for a
-            // possible future opt-in "agent-to-agent" mode.
+            // Start multi-agent MCP server on a dynamic localhost port.
+            // PaneStore is a live bridge to terminal::SharedSession, so the
+            // 3 MCP tools (list_panes / send_to_pane / read_pane) operate
+            // on the same portable-pty sessions the UI sees. Sentinel
+            // Protocol (frontend-scanned `[COFFEE-DONE:paneN->paneM]` markers)
+            // sits on TOP of this — MCP handles forward dispatch, sentinel
+            // handles backward completion receipts. See
+            // docs/MULTI-AGENT-ARCHITECTURE.md for the full architecture.
+            let shared_session = app.state::<AppState>().terminal_session.clone();
+            let app_handle_for_mcp = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                let panes = std::sync::Arc::new(
+                    crate::mcp_server::PaneStore::new(shared_session),
+                );
+                match crate::mcp_server::spawn(panes).await {
+                    Ok(ep) => {
+                        log::info!("[mcp] multi-agent server up at {}", ep.url);
+                        // Stash endpoint in AppState so enable_multi_agent_mode
+                        // can inject it into primary CLI configs.
+                        if let Ok(mut slot) =
+                            app_handle_for_mcp.state::<AppState>().mcp_endpoint.lock()
+                        {
+                            *slot = Some(ep);
+                        }
+                    }
+                    Err(e) => log::error!("[mcp] multi-agent server failed: {}", e),
+                }
+            });
 
             // Force square corners + no shadow on the borderless window.
             // Windows 11's DWM rounds borderless windows by default and adds

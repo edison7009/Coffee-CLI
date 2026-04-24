@@ -1,20 +1,33 @@
-//! Coffee-CLI multi-agent MCP server — ARCHIVED (2026-04).
+//! Coffee-CLI multi-agent MCP server.
 //!
-//! Originally exposed 3 tools over HTTP Streamable MCP transport
-//! (`list_panes`, `send_to_pane`, `read_pane`) so an agent in one pane
-//! could programmatically observe and drive peer panes. That direction
-//! was retired in favor of the Sentinel Protocol — multi-agent is now
-//! "four panes + one human orchestrator", and agents have no cross-pane
-//! tools. `server.rs` no longer calls `spawn()` at startup, and
-//! `enable_multi_agent_mode` no longer injects the endpoint into primary
-//! CLI configs. This module is retained as scaffolding for a possible
-//! future opt-in "agent-to-agent" mode; deleting it outright now would
-//! throw away a working rmcp integration + PaneStore bridge.
+//! Exposes 3 tools over HTTP Streamable MCP transport:
+//! - `list_panes()` — enumerate panes in the current multi-agent Tab with
+//!   their CLI type, state (empty / idle / busy / terminated), and titles.
+//! - `send_to_pane(id, text, timeout_sec, wait)` — inject keys into another
+//!   pane's PTY; synchronously waits for that pane to return to idle if
+//!   `wait=true`, otherwise fires-and-forgets.
+//! - `read_pane(id, last_n_lines)` — read recent output from another pane
+//!   (ANSI-stripped), useful for checking on a fire-and-forget dispatch.
 //!
-//! HTTP transport (not stdio) was chosen because Coffee-CLI is a resident
-//! Tauri process and can't be spawned as a subprocess by each CLI. See
-//! docs/MULTI-AGENT-ARCHITECTURE.md §5.5 for the original rationale.
-#![allow(dead_code)]
+//! HTTP transport (not stdio) because Coffee-CLI is a resident Tauri
+//! process and can't be spawned as a subprocess by each CLI. The Rust
+//! backend binds `127.0.0.1:<random>` at startup, and each primary CLI's
+//! config file (see `mcp_injector.rs`) is patched with a `mcpServers.coffee-cli`
+//! entry pointing at that ephemeral URL — which means a shutdown hook
+//! MUST clean those entries out on Coffee-CLI exit, otherwise opening a
+//! standalone Claude window later hits a dead-port connection error.
+//!
+//! This is the FORWARD-DISPATCH layer (agent A → agent B). The Sentinel
+//! Protocol sitting on top of MCP adds a BACKWARD receipt: when the
+//! dispatched agent finishes, it emits `[COFFEE-DONE:paneN->paneM]` into
+//! its own PTY output, and the frontend injects a "task complete"
+//! notification into the dispatcher's PTY input so the dispatcher's
+//! turn-loop can wake up without polling. See TierTerminal.tsx.
+//!
+//! History: MCP was retired in 2026-04-24 in a misread of the user's
+//! product intent ("sentinel is on-top-of MCP, not replacement-for") and
+//! restored 2026-04-25. See docs/MULTI-AGENT-ARCHITECTURE.md §九 decision
+//! log for the embarrassing details.
 
 use std::{
     io::Write,

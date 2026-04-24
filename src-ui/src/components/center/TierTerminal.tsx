@@ -522,40 +522,48 @@ function TierTerminalImpl({
             altScreenRef.current = false;
           }
 
-          // ── Agent-to-agent PTY-marker protocol ──────────────────
-          // Bidirectional agent messaging via text markers in PTY output.
-          // No MCP, no HTTP. The user sees every dispatched command in the
-          // emitter's scrollback and every injection in the target's
-          // scrollback, so the whole orchestration is visible in real time.
-          //
-          // Two markers with asymmetric gating:
-          //
-          //   [COFFEE-TELL:paneN->paneM] <text>
-          //     Forward dispatch. ALWAYS active — this is the core product
-          //     mechanism for "agents commanding each other". When an agent
-          //     emits this line, the frontend pastes <text> (prefixed with
-          //     "[From pane N]") into pane M's PTY and presses Enter.
+          // ── Sentinel Protocol scanner ───────────────────────────
+          // Sentinel sits on TOP of MCP. Forward dispatch (pane A → pane B)
+          // is handled by the MCP `send_to_pane` tool (see mcp_server.rs)
+          // which gives the dispatching agent structured discovery +
+          // failure responses. What this scanner handles is the BACKWARD
+          // completion receipt:
           //
           //   [COFFEE-DONE:paneN->paneM]
-          //     Backward completion receipt. ONLY fires when sentinel mode
-          //     is enabled on the emitter pane. Lights a green dot on
-          //     pane N's badge and, if target pane M also has sentinel on,
-          //     injects a "[From pane N] Task complete." notification into
-          //     pane M's PTY. With sentinel off, pane M never learns pane N
-          //     finished — user has to eyeball progress instead.
+          //     pane N has finished a task and wants to notify pane M.
+          //     Gated by sentinelEnabled on BOTH panes (opt-in): with
+          //     sentinel on, the frontend lights a green dot on pane N's
+          //     badge AND injects "[From pane N] Task complete." + Enter
+          //     into pane M's PTY input, which wakes pane M's LLM turn
+          //     loop without polling. With sentinel off, the marker sits
+          //     inert in pane N's scrollback and the user has to eyeball
+          //     completion instead.
           //
-          // Both markers require the target pane to have a tool running and
-          // target != emitter (can't ping self).
-          // Append to rolling scan buffer so markers split across chunk
-          // boundaries still match. PTY onData hands us streaming chunks
-          // (often 256B–4KB), and Claude Code's TUI can split a marker
-          // like `[COFFEE-TELL:pane1->pane3] <text>` across two or three
-          // chunks. Without buffering, `data.includes('[COFFEE-TELL:')`
-          // returns false on the late chunk (no header) and the marker is
-          // silently lost. The buffer is bounded to 8 KB and an offset
-          // pointer advances past processed marker matches so we never
-          // re-fire the same dispatch twice.
-          markerScanBufRef.current += data;
+          // We STRIP ANSI escape sequences before scanning. Claude Code's
+          // TUI wraps response text in CSI sequences (color, bold, cursor
+          // positioning, erase-line). Those bytes sit between marker
+          // literals and around the text, breaking any regex that treats
+          // the raw stream as plain text. Stripping CSI/OSC/single-char
+          // escapes normalises the buffer so the regex sees what the
+          // user sees.
+          //
+          // Buffer + offset:
+          //   - PTY onData is chunky (256B–4KB); markers can split across
+          //     chunks, so we accumulate into a buffer before scanning.
+          //   - 8 KB bound keeps the buffer from growing unbounded.
+          //   - `markerScanOffsetRef` advances past processed matches so
+          //     the same DONE never fires twice when a later chunk
+          //     re-triggers the scan.
+
+          // Strip CSI/OSC/single-char ANSI escapes from the chunk before
+          // appending. xterm still gets the raw `data` with escapes
+          // intact for rendering; only the scan buffer is normalised.
+          const cleanData = data
+            .replace(/\x1b\[[0-9;?]*[@-~]/g, '')      // CSI (most common)
+            .replace(/\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)/g, '') // OSC (title, hyperlink)
+            .replace(/\x1b[@-Z\\-_]/g, '');            // single-char escape
+          markerScanBufRef.current += cleanData;
+
           const MAX_BUF = 8192;
           if (markerScanBufRef.current.length > MAX_BUF) {
             const toTrim = markerScanBufRef.current.length - MAX_BUF;
@@ -569,47 +577,13 @@ function TierTerminalImpl({
           const unscanned = markerScanBufRef.current.slice(
             markerScanOffsetRef.current
           );
-          if (
-            unscanned.includes('[COFFEE-TELL:pane') ||
-            unscanned.includes('[COFFEE-DONE:pane')
-          ) {
+          if (unscanned.includes('[COFFEE-DONE:pane')) {
             const paneIdMatch = sessionId.match(/^(.+)::pane-(\d+)$/);
             if (paneIdMatch) {
               const tabId = paneIdMatch[1];
               const tab = appStateRef.current.terminals.find(t => t.id === tabId);
               const panes = tab?.multiAgent?.panes ?? [];
               let advancedTo = 0;
-
-              // TELL: forward dispatch, always active (no sentinel gate).
-              // Regex requires a trailing newline so we never fire on an
-              // incomplete line — if the agent's output stops mid-text,
-              // the match waits for the next chunk carrying the newline.
-              const tellRegex =
-                /\[COFFEE-TELL:pane(\d+)->pane(\d+)\]\s+([^\r\n]+)[\r\n]/g;
-              let tellM: RegExpExecArray | null;
-              while ((tellM = tellRegex.exec(unscanned)) !== null) {
-                const emitter = parseInt(tellM[1], 10);
-                const target = parseInt(tellM[2], 10);
-                const text = tellM[3].trim();
-                const targetPane = panes.find(p => p.paneIdx === target);
-                if (
-                  targetPane?.tool != null &&
-                  target !== emitter &&
-                  text.length > 0
-                ) {
-                  const targetId = `${tabId}::pane-${target}`;
-                  const notify = `[From pane ${emitter}] ${text}`;
-                  getTabActions(targetId)?.paste(notify);
-                  // Auto-submit: send a raw CR outside the bracketed-paste
-                  // frame so the TUI treats it as "Enter" instead of a
-                  // literal newline inside the pasted buffer. Small delay
-                  // lets the paste close-marker flush first.
-                  setTimeout(() => {
-                    commands.tierTerminalInput(targetId, '\r').catch(() => {});
-                  }, 50);
-                }
-                advancedTo = Math.max(advancedTo, tellM.index + tellM[0].length);
-              }
 
               // DONE: backward receipt, sentinel-gated on the emitter side.
               const doneRegex = /\[COFFEE-DONE:pane(\d+)->pane(\d+)\]/g;
@@ -624,10 +598,11 @@ function TierTerminalImpl({
                   if (targetPane?.sentinelEnabled && targetPane.tool !== null && target !== emitter) {
                     const targetId = `${tabId}::pane-${target}`;
                     const notify = `[From pane ${emitter}] Task complete.`;
+                    // `paste()` (see registerTabActions below) handles the
+                    // trailing CR — it schedules `\r` 30ms after the paste
+                    // so the TUI treats it as Enter rather than part of
+                    // the bracketed-paste buffer. Don't re-send the CR.
                     getTabActions(targetId)?.paste(notify);
-                    setTimeout(() => {
-                      commands.tierTerminalInput(targetId, '\r').catch(() => {});
-                    }, 50);
                   }
                 }
                 advancedTo = Math.max(advancedTo, doneM.index + doneM[0].length);

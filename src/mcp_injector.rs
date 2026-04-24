@@ -1,16 +1,18 @@
 //! Inject the Coffee-CLI MCP server endpoint into each supported primary
-//! CLI's config file, and back it out cleanly on disable.
+//! CLI's config file, and back it out cleanly on disable / shutdown.
 //!
-//! STATUS (2026-04): MCP injection is disabled in the live multi-agent
-//! flow — `enable_multi_agent_mode` no longer calls `install_all`. Agents
-//! coordinate via the Sentinel Protocol (PTY-text markers scanned in the
-//! frontend) rather than structured IPC, so this module's install paths
-//! are dormant. The `uninstall_all` paths remain wired up at launch and
-//! shutdown as a self-heal to clean any stale entries older builds of
-//! Coffee-CLI wrote. Install-side functions are kept here (rather than
-//! deleted) so a future opt-in "MCP mode" can reuse them without
-//! rewriting the config-merge logic.
-#![allow(dead_code)]
+//! Lifecycle (critical — getting this wrong causes "1 MCP server failed"
+//! errors in standalone Claude windows opened after Coffee-CLI exits):
+//!   - `enable_multi_agent_mode` calls `install_all` when the user opens
+//!     a multi-agent tab, writing the current ephemeral MCP endpoint URL
+//!     into each CLI's global config.
+//!   - `disable_multi_agent_mode` calls `uninstall_all` to strip our
+//!     entries when the tab closes or mode is turned off.
+//!   - `start_ui` self-heal calls `uninstall_all` at every launch to
+//!     scrub any entries left by a previous Coffee-CLI run that crashed.
+//!   - Tauri shutdown hook calls `uninstall_all` so a clean exit also
+//!     removes the entries — this is what protects a later standalone
+//!     Claude window from seeing a dead-port error.
 //!
 //! Supported CLIs (v1.0):
 //!   - Claude Code    → ~/.claude.json            (JSON, key: `mcpServers.coffee-cli`)
