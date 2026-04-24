@@ -61,21 +61,35 @@ export function ActiveGambit() {
   }, [dispatch]);
 
   // Route Send to the correct xterm. For a plain single-terminal tab the
-  // sessionId is just activeId. For a multi-agent tab, no xterm registers
-  // under activeId itself — each of the 4 panes registers under
-  // `${activeId}::pane-${idx}`. Look up the last-focused pane (module-level
-  // registry written by MultiAgentGrid on click) and route there. If no
-  // pane has been focused yet, return false so Gambit preserves the draft
-  // rather than dropping text into the void.
+  // sessionId is just activeId. For a multi-pane tab, no xterm registers
+  // under activeId itself — each pane registers under a suffixed id and
+  // Gambit has to pick one. Two families of multi-pane tabs exist:
+  //
+  //   - Orchestrated multi-agent (`multi-agent` / `two-agent` /
+  //     `three-agent`, rendered by MultiAgentGrid) uses the `::pane-N`
+  //     suffix; backend treats that prefix as "hands-free mode" and
+  //     injects auto-approve flags.
+  //
+  //   - Independent split (`two-split` / `three-split` / `four-split`,
+  //     rendered by FourSplitGrid) uses the `::split-N` suffix; each
+  //     pane is a plain user-interactive PTY with no auto-approve.
+  //
+  // Both write to the same `pane-focus` registry on click (tab-scoped
+  // 1..N), so routing only has to pick the right prefix.
+  //
+  // If no pane has been focused yet, return false so Gambit preserves
+  // the draft rather than dropping text into the void.
   const handleSend = useCallback((text: string): boolean => {
     if (!activeId) return false;
+    const tool = activeSession?.tool;
+    const isMultiAgent = tool === 'multi-agent' || tool === 'two-agent' || tool === 'three-agent';
+    const isSplit = tool === 'two-split' || tool === 'three-split' || tool === 'four-split';
     let targetId = activeId;
-    if (activeSession?.tool === 'multi-agent'
-        || activeSession?.tool === 'two-agent'
-        || activeSession?.tool === 'three-agent') {
+    if (isMultiAgent || isSplit) {
       const paneIdx = getFocusedPane(activeId);
       if (!paneIdx) return false;
-      targetId = `${activeId}::pane-${paneIdx}`;
+      const suffix = isSplit ? 'split' : 'pane';
+      targetId = `${activeId}::${suffix}-${paneIdx}`;
     }
     const actions = getTabActions(targetId);
     if (!actions) return false;
