@@ -47,21 +47,24 @@ export function App() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Preload the Launchpad tool icons into the WebView's image cache on
-  // mount. Without this, when the user closes a tool tab and snaps back
-  // to the Launchpad, the six <img> tags (claude/codex/gemini/opencode/
-  // qwen/hermes) fetch from disk on that render pass — producing a
-  // visible "pop in" that reads as a webpage refresh rather than a
-  // native desktop transition. By firing off-screen Image() requests
-  // right after app mount, the cache is warm before the first tab
-  // close, so subsequent Launchpad renders paint icons instantly.
+  // Preload + pre-decode Launchpad tool icons so re-opening the
+  // software list never shows an image refresh flash. v1.1.4 version
+  // only called `img.src = ...` which primes the HTTP cache but
+  // leaves decode-to-pixels async — every subsequent DOM <img>
+  // re-mount still ran the decode pipeline, producing a 1-frame
+  // "pop in" the user reads as a page refresh.
+  //
+  // v1.1.5 additionally awaits `img.decode()` which populates the
+  // decoded-image cache. Combined with `decoding="sync"` on the
+  // actual <img> render sites (see CenterPanel.tsx `toolIcon`),
+  // icons paint on the very first frame of every remount.
+  //
+  // The SVG logos (claude/codex/gemini/opencode/qwen) were moved
+  // inline into CenterPanel.tsx in v1.1.5 and no longer need
+  // preloading — they ship as strings inside the JS bundle. Only
+  // remaining entries are the PNG rasters + the terminal SVGs.
   useEffect(() => {
     const ICONS = [
-      '/icons/tools/claude.svg',
-      '/icons/tools/qwen.svg',
-      '/icons/tools/opencode.svg',
-      '/icons/tools/codex.svg',
-      '/icons/tools/gemini.svg',
       '/icons/tools/hermes.png',
       '/icons/tools/vibeid.png',
       '/icons/tools/installer.svg',
@@ -72,9 +75,11 @@ export function App() {
     ICONS.forEach((src) => {
       const img = new Image();
       img.src = src;
-      // No onload/onerror listeners — we only care that the HTTP
-      // request fires so the asset is cached. Dropping the reference
-      // is fine, the browser keeps the cache independent of JS GC.
+      // `decode()` returns once the image is fully parsed AND
+      // rasterised. Catches the NotSupported / network errors that
+      // would otherwise reject — we don't care about surfacing
+      // those since the real <img> render site handles errors.
+      img.decode().catch(() => {});
     });
   }, []);
 
