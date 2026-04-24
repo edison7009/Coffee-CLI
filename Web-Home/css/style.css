@@ -286,6 +286,15 @@ body {
   transition: color 0.25s ease;
 }
 
+/* Highlight the differentiating word ("Orchestration") in the hero
+   subtitle so readers immediately see the product is about coordinating
+   agents, not just hosting multiple panes. Brand color + bumped weight
+   keeps it eye-catching without clashing with the coffee palette. */
+.subtitle .accent {
+  color: var(--brand-color);
+  font-weight: 600;
+}
+
 /* Supported AI CLIs - icon row rendered as a direct child of .hero-section
    (not inside .hero-content), so its width is its own content width and it
    never reflows when the typewriter word-length changes the headline. */

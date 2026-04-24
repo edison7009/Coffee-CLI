@@ -46,92 +46,72 @@ if (savedLang && LANG_LIST[savedLang]) {
 
 const I18N_DICT = {
   en: {
-    "page-title": "Coffee CLI — Visual Multi-Agent Terminal",
     "logo-text": "Coffee CLI",
     "hero-title-1": "Enjoy life while you work.",
     "hero-title-2": "Coffee CLI for",
-    "hero-subtitle": "Visual Multi-Agent Terminal.",
     "opc-link": "Coffee 101",
     "feedback": "Feedback"
   },
   zh: {
-    "page-title": "Coffee CLI — Visual Multi-Agent Terminal",
     "logo-text": "Coffee CLI",
     "hero-title-1": "一边享受生活 一边工作",
     "hero-title-2": "Coffee CLI 适合",
-    "hero-subtitle": "Visual Multi-Agent Terminal.",
     "opc-link": "Coffee 101",
     "feedback": "问题反馈"
   },
   "zh-TW": {
-    "page-title": "Coffee CLI — Visual Multi-Agent Terminal",
     "logo-text": "Coffee CLI",
     "hero-title-1": "一邊享受生活 一邊工作",
     "hero-title-2": "Coffee CLI 適用於",
-    "hero-subtitle": "Visual Multi-Agent Terminal.",
     "opc-link": "Coffee 101",
     "feedback": "問題回饋"
   },
   ja: {
-    "page-title": "Coffee CLI — Visual Multi-Agent Terminal",
     "logo-text": "Coffee CLI",
     "hero-title-1": "生活を楽しみながら働く",
     "hero-title-2": "Coffee CLIは以下の方に",
-    "hero-subtitle": "Visual Multi-Agent Terminal.",
     "opc-link": "Coffee 101",
     "feedback": "フィードバック"
   },
   ko: {
-    "page-title": "Coffee CLI — Visual Multi-Agent Terminal",
     "logo-text": "Coffee CLI",
     "hero-title-1": "삶을 즐기며 일하다",
     "hero-title-2": "Coffee CLI는 이런 분께",
-    "hero-subtitle": "Visual Multi-Agent Terminal.",
     "opc-link": "Coffee 101",
     "feedback": "피드백"
   },
   es: {
-    "page-title": "Coffee CLI — Visual Multi-Agent Terminal",
     "logo-text": "Coffee CLI",
     "hero-title-1": "Disfruta la vida mientras trabajas",
     "hero-title-2": "Coffee CLI para",
-    "hero-subtitle": "Visual Multi-Agent Terminal.",
     "opc-link": "Coffee 101",
     "feedback": "Comentarios"
   },
   fr: {
-    "page-title": "Coffee CLI — Visual Multi-Agent Terminal",
     "logo-text": "Coffee CLI",
     "hero-title-1": "Profitez de la vie tout en travaillant",
     "hero-title-2": "Coffee CLI pour",
-    "hero-subtitle": "Visual Multi-Agent Terminal.",
     "opc-link": "Coffee 101",
     "feedback": "Retour"
   },
   de: {
-    "page-title": "Coffee CLI — Visual Multi-Agent Terminal",
     "logo-text": "Coffee CLI",
     "hero-title-1": "Genieße das Leben, während du arbeitest",
     "hero-title-2": "Coffee CLI für",
-    "hero-subtitle": "Visual Multi-Agent Terminal.",
     "opc-link": "Coffee 101",
     "feedback": "Feedback"
   },
   pt: {
-    "page-title": "Coffee CLI — Visual Multi-Agent Terminal",
     "logo-text": "Coffee CLI",
     "hero-title-1": "Aproveite a vida enquanto trabalha",
     "hero-title-2": "Coffee CLI para",
-    "hero-subtitle": "Visual Multi-Agent Terminal.",
     "opc-link": "Coffee 101",
     "feedback": "Feedback"
   },
   ru: {
-    "page-title": "Coffee CLI — Visual Multi-Agent Terminal",
     "logo-text": "Coffee CLI",
     "hero-title-1": "Наслаждайтесь жизнью, работая",
     "hero-title-2": "Coffee CLI для",
-    "hero-subtitle": "Visual Multi-Agent Terminal.",
     "opc-link": "Coffee 101",
     "feedback": "Обратная связь"
   }
