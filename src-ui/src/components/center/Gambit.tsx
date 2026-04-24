@@ -119,18 +119,25 @@ function GambitImpl({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pastedImagePathsKey]);
 
-  // Click a thumbnail → select the matching path text in the textarea,
-  // so the user sees exactly what chunk will vanish if they press
-  // Backspace. No other action — thumbnails are visual confirmation,
-  // not controls.
-  const selectPathInDraft = (path: string) => {
+  // Click a thumbnail → open a full-size preview overlay AND select the
+  // matching path text in the textarea (so once the overlay closes, the
+  // caret is conveniently placed at the path for easy Backspace-delete).
+  const [previewPath, setPreviewPath] = useState<string | null>(null);
+  const openThumbPreview = (path: string) => {
+    setPreviewPath(path);
     const textarea = textareaRef.current;
     if (!textarea) return;
     const idx = draft.indexOf(path);
     if (idx < 0) return;
-    textarea.focus();
     textarea.setSelectionRange(idx, idx + path.length);
   };
+  // ESC or click-outside dismisses the overlay.
+  useEffect(() => {
+    if (!previewPath) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setPreviewPath(null); };
+    document.addEventListener('keydown', onKey, true);
+    return () => document.removeEventListener('keydown', onKey, true);
+  }, [previewPath]);
 
   const onDragStart = (e: React.MouseEvent) => {
     dragRef.current = {
@@ -334,6 +341,12 @@ function GambitImpl({
   };
 
   const handleSend = useCallback(() => {
+    // CRITICAL: the draft text is the ONLY thing that gets sent.
+    // Thumbnails rendered from pastedImagePaths are a pure derived view
+    // with zero data-side responsibility. DO NOT re-append paths or
+    // attach image bytes here — the path already sits inside `draft` and
+    // would be sent twice, making the AI see the same image reference
+    // duplicated in its prompt.
     const text = draft.trim();
     if (!text) {
       setSendEmpty(true);
@@ -527,7 +540,7 @@ function GambitImpl({
             <div
               key={path}
               className="gambit-thumb"
-              onClick={() => selectPathInDraft(path)}
+              onClick={() => openThumbPreview(path)}
               onMouseDown={(e) => e.stopPropagation()}
             >
               {thumbUrls[path] && (
@@ -569,6 +582,25 @@ function GambitImpl({
       </div>
 
       <div className="gambit-resize-handle" onMouseDown={onResizeStart} />
+
+      {/* Full-size preview overlay. Renders into document.body to escape
+          .gambit's transform containing block (otherwise position:fixed
+          anchors to the transformed ancestor and clips to overflow:hidden). */}
+      {previewPath && thumbUrls[previewPath] && createPortal(
+        <div
+          className="gambit-preview-overlay"
+          onClick={() => setPreviewPath(null)}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <img
+            src={thumbUrls[previewPath]}
+            alt=""
+            draggable={false}
+            onClick={(e) => e.stopPropagation() /* clicking the image itself should NOT close — only blank space does */}
+          />
+        </div>,
+        document.body,
+      )}
 
       {ctxMenu && createPortal(
         <div

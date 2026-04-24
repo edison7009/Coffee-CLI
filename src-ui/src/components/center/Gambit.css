@@ -279,12 +279,40 @@
     display: none;
 }
 
+/* ─── Preview overlay (fullscreen zoom-in) ───────────────────── */
+/* Click anywhere in the dimmed background closes; clicking the
+   image itself does not (so the user can right-click-save or just
+   admire without accidentally dismissing). ESC also closes. */
+.gambit-preview-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 300;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.78);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    cursor: zoom-out;
+    animation: gambitIn 0.14s ease-out;
+}
+.gambit-preview-overlay img {
+    max-width: 92vw;
+    max-height: 92vh;
+    object-fit: contain;
+    border-radius: var(--shape-radius-btn, 4px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+    user-select: none;
+    -webkit-user-drag: none;
+    cursor: default;
+}
+
 /* ─── Footer (send button) ───────────────────────────────────── */
 .gambit-footer {
     display: flex;
     align-items: center;
-    /* Attachments expand left, send button pinned right. */
-    justify-content: space-between;
+    /* Hint texts grow in the middle; send button pinned right. */
+    justify-content: flex-end;
     padding: 6px 10px 8px;
     gap: 8px;
     flex-shrink: 0;
