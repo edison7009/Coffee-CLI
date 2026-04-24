@@ -44,36 +44,57 @@ pub const META_DIR: &str = ".multi-agent";
 /// directive to go read `.multi-agent/PROTOCOL.md` for the full rules.
 const THIN_POINTER_BODY: &str = r#"# Coffee-CLI Multi-Agent
 
-You're running inside a Coffee-CLI four-pane tab. Three other AI coding
-CLIs (Claude Code / Codex / Gemini CLI) may be running in peer panes
-next to you. **You cannot see or talk to them directly** — you have
-no cross-pane tools. The human user is the orchestrator: they read
-each pane's output and route work between panes by typing at you.
+You're running inside a Coffee-CLI multi-pane workspace. Up to four AI
+coding CLIs (Claude Code / Codex / Gemini / OpenCode / OpenClaw /
+Qwen / Hermes) run side-by-side in the same window. **Every pane is
+an orchestrator** — you can dispatch work to other panes and receive
+completion signals from them, all via plain PTY text markers.
 
-## What this changes for you
+## You can command other panes — TELL marker
 
-1. **Stay focused on your own pane.** Do the task the user gave YOU.
-   Do not suggest calling functions like `send_to_pane`, `list_panes`,
-   or any Coffee-CLI MCP tool — those do not exist in this build.
+To make another pane do something, output this line (it MUST start at
+the beginning of its own line, in your normal output):
 
-2. **Do not offer to "ask the other agent"** programmatically. If the
-   user wants Gemini's opinion, they'll type the question into Gemini's
-   pane themselves. Your job is to be excellent at your own slice.
+    [COFFEE-TELL:paneN->paneM] <single-line task description>
 
-3. **Sentinel completion marker (OPTIONAL).** If the user tells you
-   your pane number and asks you to emit a completion signal when a
-   task finishes, print exactly this on its own final line:
+- `N` = your pane number (1..4)
+- `M` = target pane number (must differ from N)
+- text after the marker is the task — ONE LINE, no newlines
 
-       [COFFEE-DONE:paneN->paneM]
+Coffee-CLI's frontend scans your output, strips the marker, and pastes
+`[From pane N] <text>` into pane M's input with auto-Enter. pane M's
+agent sees it as if the user typed it there. Always active, no gating.
 
-   N = your pane number, M = the pane that asked for the task (often
-   the user's "main" pane). Coffee-CLI's UI scans PTY output for this
-   marker and lights a green badge dot, so the user knows you're done
-   without staring at your scrollback. If you don't know your pane
-   number, don't emit the marker — skip it silently.
+Your pane number is told to you by the human (or implied in the first
+message: "You are pane 3"). If you don't know your number yet, ask.
 
-Full background (why no MCP, why the user is in charge, sentinel
-format details): read `.multi-agent/PROTOCOL.md`.
+## You can report completion — DONE marker (optional)
+
+When a task finishes, emit on its own line:
+
+    [COFFEE-DONE:paneN->paneM]
+
+If the user toggled Sentinel mode ON, this:
+ - lights a green badge on your pane (visible to the user)
+ - auto-notifies pane M with "[From pane N] Task complete." + Enter
+
+If Sentinel is OFF, the DONE marker stays inert — still safe to emit,
+just nothing happens. Prefer emitting it anyway so the user can opt in
+later without you changing behavior.
+
+## Rules
+
+- **Single-line TELL text**: pack multi-step instructions into one line
+  or send multiple separate TELL markers.
+- **Don't hallucinate cross-pane tools**. No MCP / ACP functions, no
+  programmatic "send to pane" / "list panes" helpers — only the TELL
+  and DONE markers above.
+- **Don't self-tell**: `paneN->paneN` is a no-op (ignored by the frontend).
+- **User can always override**: they see every marker in your scrollback
+  and every injection in the target's scrollback. They can interrupt.
+
+Full protocol (TELL text format, orchestration patterns, when NOT to
+dispatch): read `.multi-agent/PROTOCOL.md`.
 "#;
 
 /// Long-form protocol written to `.multi-agent/PROTOCOL.md`. The primary
@@ -82,108 +103,139 @@ format details): read `.multi-agent/PROTOCOL.md`.
 /// mixed-language protocol text confuses some models.
 const FULL_PROTOCOL_BODY: &str = r#"# Coffee-CLI Multi-Agent Protocol
 
-You are running inside Coffee-CLI, a desktop container that shows up to
-four terminal-based coding CLIs (Claude Code, Codex, Gemini CLI, and
-peers) side-by-side as visible panes in one window.
+You are running inside Coffee-CLI, a desktop container showing up to
+four terminal-based coding CLIs side-by-side. Every pane is an
+independent, orchestrating peer — you can dispatch work to another pane
+and receive completion signals back, all through plain text markers
+in PTY output that the user can read in real time.
 
-## The model: human-orchestrated, not agent-orchestrated
+## Core idea
 
-Coffee-CLI does NOT give you tools to call, message, or read the other
-panes. Earlier versions exposed `list_panes` / `send_to_pane` /
-`read_pane` MCP tools; that layer has been retired. The product's
-current design is deliberate:
+Coffee-CLI's frontend scans every pane's PTY output each frame for
+two markers:
 
-> **Four panes + one human in front of the screen.** The human reads
-> each pane, and routes work between panes by typing (or using the
-> "Gambit" broadcast UI). Coffee-CLI saves them keystrokes and gives
-> them visibility. It does NOT turn agents into autonomous peers.
+    [COFFEE-TELL:paneN->paneM] <text>   — dispatch work
+    [COFFEE-DONE:paneN->paneM]          — report completion
 
-What that means for you concretely:
+When found, the frontend pastes a prefixed notification into the
+target pane's input stream with auto-Enter. Nothing leaves the Coffee-
+CLI process; there is no MCP server, no HTTP, no injection into your
+home-dir CLI config. The user sees every marker in your scrollback and
+every injection in the target's scrollback.
 
-- You have **no cross-pane tools**. Do not call, reference, or hallucinate
-  `send_to_pane` / `list_panes` / `read_pane` / any `coffee-cli` MCP
-  tool — they are not registered in this build. Attempting them will
-  fail and confuse the user.
-- You do NOT know what the other panes are doing. You cannot observe,
-  wait on, or synchronize with them. If the user wants cross-pane
-  coordination, they handle it themselves by reading + retyping.
-- You are NOT a manager / supervisor / dispatcher for other panes.
-  Retry policies, acceptance criteria, fan-out patterns — all of those
-  were MCP-era concerns and no longer apply. Just do the task the user
-  asked YOU to do, well.
+This means you are NOT siloed. You can make other panes work for you
+as naturally as writing a sentence.
 
-## What you are
+## Knowing your pane number
 
-You are a single coding agent inside one pane. Treat the user's message
-the same as you would in a solo Claude/Codex/Gemini session. The only
-multi-agent-specific thing that applies to you is the optional Sentinel
-Protocol below.
+Coffee-CLI can't inject environment info into your subprocess, so you
+don't programmatically know if you are pane 1, 2, 3, or 4. The user
+tells you, usually in their first message ("You are pane 2") or
+implicitly ("pane 2 please build X"). If your first message doesn't
+mention it, ASK before dispatching: "Which pane am I, and which pane
+should I target?"
 
-## Sentinel Protocol (optional completion marker)
-
-Coffee-CLI's UI can show a small green dot on your pane's badge when a
-task finishes, so the user doesn't have to watch your scrollback to
-know you're done. The mechanism: you print a marker line in your PTY
-output; the frontend scans for it and lights the badge.
+## TELL marker — dispatching work
 
 ### Format
 
-Exactly this, on its own line, as the very last output of a completed
-task:
+On its own line, within your normal output:
+
+    [COFFEE-TELL:paneN->paneM] <one-line task description>
+
+- `N` = your pane number (1..4)
+- `M` = target pane number (1..4, M ≠ N)
+- `<text>` = single line, ends at newline/carriage-return
+
+The frontend will paste `[From pane N] <text>` into pane M's input
+and press Enter for you.
+
+### Activation
+
+ALWAYS ACTIVE. No sentinel toggle, no opt-in. This is the core product
+mechanism. As long as the marker is well-formed and the target pane
+has a CLI running, the dispatch happens.
+
+### Patterns
+
+**Simple dispatch** — you need Gemini's reasoning on a doc:
+    I'll ask pane 2 (Gemini) to summarize this RFC.
+    [COFFEE-TELL:pane1->pane2] Read the RFC at docs/rfc-042.md and reply with the 3 most important decisions in bullet points.
+
+**Fan-out** — get three opinions in parallel:
+    [COFFEE-TELL:pane1->pane2] Review auth.rs for security issues; reply with a numbered list.
+    [COFFEE-TELL:pane1->pane3] Review auth.rs for style / idiom issues; reply with a numbered list.
+    [COFFEE-TELL:pane1->pane4] Review auth.rs for test coverage gaps; reply with a numbered list.
+
+**Pipeline** — pane 2 produces, pane 3 consumes. You can dispatch the
+second step when you see pane 2's DONE arrive in your own input:
+    [COFFEE-TELL:pane1->pane2] Draft a commit message for the current git diff in one sentence.
+    (later, after pane 2 emits DONE and the notification lands in your input)
+    [COFFEE-TELL:pane1->pane3] Here is the drafted commit message: "<paste>". Apply it via git commit.
+
+### Rules
+
+- **Single-line text only.** Newlines in `<text>` break parsing. Summarize.
+- **Do NOT self-tell.** pane N → pane N is ignored.
+- **Target must have a CLI running.** Empty panes ignore the marker.
+- **Dispatched agents are peers, not slaves.** They can TELL you back,
+  or TELL a third pane. Respect their orchestration too.
+
+## DONE marker — reporting completion
+
+### Format
+
+On its own line at the end of a completed task:
 
     [COFFEE-DONE:paneN->paneM]
 
-- `N` = your pane number (1..4). You do not know this programmatically.
-  The user tells you ("you are pane 2"), or says it implicitly ("pane 2
-  please build…"). If the user has not told you your pane number, do
-  NOT emit the marker.
-- `M` = the pane that asked for the task. Usually the user tells you
-  ("I'm in pane 1, when you're done mark it for pane 1"). If unknown,
-  do not emit.
+- `N` = your pane (the one reporting done)
+- `M` = the pane that dispatched the task (usually the one whose TELL
+  you received — extract it from the `[From pane M]` prefix)
+
+### Activation (sentinel-gated)
+
+The DONE marker only does something if SENTINEL mode is toggled ON for
+your pane. With sentinel on:
+ - your pane's badge lights green for 30 minutes
+ - if target pane M also has sentinel on, it receives
+   "[From pane M] Task complete." + auto-Enter
+
+With sentinel off, DONE is inert — it still sits in your scrollback but
+triggers no frontend behavior.
+
+**Emit DONE anyway** on task completion. You can't tell from inside
+your subprocess whether sentinel is on; emitting is cheap, and the
+user can flip sentinel on later to activate the receipts.
 
 ### When to emit
 
-- ONLY when the user has told you your pane number AND asked you (or
-  the Sentinel pre-registered them to want) a done marker.
-- ONLY once per task, on the final line of your final reply for that
-  task. Not after an intermediate status update.
-- The pane owner must have Sentinel enabled in the UI for anything to
-  happen — you have no way to check this from inside the PTY, so just
-  emit per the rules and let the frontend decide.
+- After finishing work that a TELL asked for.
+- After finishing a task the user assigned you, if they mentioned a
+  "main" pane to notify.
+- NOT on intermediate status — only on final completion.
 
-### When NOT to emit
+## Multi-language
 
-- No pane number known → skip.
-- Intermediate progress updates → skip; only on final completion.
-- The user did not ask for task signalling → skip (normal replies
-  don't need it).
-- If you're unsure → skip. A missing marker just means the user doesn't
-  get the visual hint; a wrong marker injects a false "done" signal.
-
-### What the marker does NOT do
-
-The marker is **a visual hint to the human user**. It is not a message
-to another agent, it does not cause another pane's agent to wake up,
-and it does not carry any payload. All real content goes in normal PTY
-output above the marker. If the user wants another agent to see your
-result, the user reads your scrollback and types (or Gambits) the
-relevant piece into that other pane — not you.
+Address your messages in the language the user / dispatcher uses. When
+sending TELL to another agent, match the downstream agent's expected
+language (usually English for technical prompts, but follow the
+convention already visible in the user's messages).
 
 ## What NOT to do
 
-- Do NOT call, describe, or promise any cross-pane tool. None exist.
-- Do NOT try to "dispatch", "hand off to", or "orchestrate" other panes.
-  The human does that.
-- Do NOT assume other panes share your files, git state, or conversation
-  history. They are independent processes in independent CLIs.
-- Do NOT invent a pane number to satisfy the Sentinel format. If unsure,
-  omit the marker entirely.
-
-## Language
-
-Write to the user in whatever language they wrote to you. You don't
-speak to other panes, so cross-pane English rules from older versions
-of this protocol no longer apply.
+- Don't hallucinate tools. There are no MCP / ACP functions here, no
+  "send to pane" / "list panes" / "read pane" helpers — only TELL and
+  DONE markers described above.
+- Don't dispatch without reason: a TELL costs another agent's context
+  budget. Use it for genuine cross-CLI value (different CLI's strength,
+  parallel work), not for things you can do yourself.
+- Don't dispatch into empty panes: the marker silently drops.
+- Don't assume other panes share your files / git state. They may be
+  in different working directories; include file paths explicitly.
+- Don't auto-chain long pipelines without user awareness. Summarize
+  results from dispatched panes and let the user decide whether to
+  continue chaining.
 "#;
 
 const META_DIR_README: &str = r#"# Coffee-CLI Multi-Agent Workspace Metadata
@@ -198,9 +250,8 @@ Files here:
 - `PROTOCOL.md` — the full usage protocol that each pane's CLI reads
   (indirectly, via the thin pointer in the workspace's `CLAUDE.md` /
   `AGENTS.md` / `GEMINI.md`).
-- `endpoint.json` — the localhost URL and session key of the running
-  `coffee-cli` MCP server. Useful for debugging; regenerated on every
-  app launch.
+- `endpoint.json` — legacy leftover from the retired MCP era. Not
+  currently written by Coffee-CLI; cleaned up if found from old runs.
 
 Safe to delete: if you close Coffee-CLI and delete this folder, the
 next launch will recreate it. The root `CLAUDE.md` / `AGENTS.md` /
@@ -440,11 +491,11 @@ mod tests {
     #[test]
     fn thin_pointer_mentions_meta_dir() {
         assert!(THIN_POINTER_BODY.contains(".multi-agent/PROTOCOL.md"));
-        // Grew from a 5-line pointer to ~30 lines once we inlined the
-        // three must-follow rules (English, 1..4 numbering, slash
-        // commands). Still bounded to stay a pointer and not a full
-        // manual — keep the bulk in PROTOCOL.md.
-        assert!(THIN_POINTER_BODY.lines().count() < 40);
+        // Thin pointer now teaches both TELL (dispatch) and DONE (receipt)
+        // markers — richer than the 2026-04-24 Sentinel-only version but
+        // still bounded so the bulk lives in PROTOCOL.md. Raise the ceiling
+        // only if adding a third marker; otherwise trim before growing.
+        assert!(THIN_POINTER_BODY.lines().count() < 70);
     }
 
     #[test]
@@ -540,9 +591,13 @@ mod tests {
 
         let protocol = fs::read_to_string(ws.join(META_DIR).join("PROTOCOL.md")).unwrap();
         assert!(protocol.contains("Coffee-CLI Multi-Agent Protocol"));
-        // MCP tools retired — protocol now documents Sentinel only.
+        // Bidirectional PTY-marker protocol (v1.1.9): TELL forward dispatch,
+        // DONE backward receipt. MCP tools stay retired — make sure the
+        // agent-facing doc neither presents them as available nor uses the
+        // legacy function-call syntax.
+        assert!(protocol.contains("[COFFEE-TELL:paneN->paneM]"));
         assert!(protocol.contains("[COFFEE-DONE:paneN->paneM]"));
-        assert!(!protocol.contains("send_to_pane("), "MCP tool refs must be gone");
+        assert!(!protocol.contains("send_to_pane("), "legacy MCP function-call syntax must not appear");
 
         let _ = fs::remove_dir_all(&ws);
     }

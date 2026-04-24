@@ -514,40 +514,57 @@ function TierTerminalImpl({
             altScreenRef.current = false;
           }
 
-          // ── Sentinel Protocol scanner ───────────────────────────
-          // Addressed marker format: [COFFEE-DONE:paneN->paneM]
-          //   N = emitter (this pane, reporting completion)
-          //   M = target  (the pane that asked for the task)
+          // ── Agent-to-agent PTY-marker protocol ──────────────────
+          // Bidirectional agent messaging via text markers in PTY output.
+          // No MCP, no HTTP. The user sees every dispatched command in the
+          // emitter's scrollback and every injection in the target's
+          // scrollback, so the whole orchestration is visible in real time.
           //
-          // Upgrade from unaddressed broadcast: now we route to the specific
-          // target pane rather than fanning out to every sentinel-enabled
-          // sibling. This matches the user's mental model of "the pane that
-          // dispatched the work gets the completion receipt".
+          // Two markers with asymmetric gating:
           //
-          // Both sides (emitter AND target) must have sentinelEnabled=true:
-          //   - emitter needs it so Coffee CLI is actively scanning this
-          //     pane's output for the marker at all
-          //   - target needs it to opt-in to having its PTY stream poked
-          //     with the injected notification line
-          if (data.includes('[COFFEE-DONE:pane')) {
+          //   [COFFEE-TELL:paneN->paneM] <text>
+          //     Forward dispatch. ALWAYS active — this is the core product
+          //     mechanism for "agents commanding each other". When an agent
+          //     emits this line, the frontend pastes <text> (prefixed with
+          //     "[From pane N]") into pane M's PTY and presses Enter.
+          //
+          //   [COFFEE-DONE:paneN->paneM]
+          //     Backward completion receipt. ONLY fires when sentinel mode
+          //     is enabled on the emitter pane. Lights a green dot on
+          //     pane N's badge and, if target pane M also has sentinel on,
+          //     injects a "[From pane N] Task complete." notification into
+          //     pane M's PTY. With sentinel off, pane M never learns pane N
+          //     finished — user has to eyeball progress instead.
+          //
+          // Both markers require the target pane to have a tool running and
+          // target != emitter (can't ping self).
+          if (data.includes('[COFFEE-TELL:pane') || data.includes('[COFFEE-DONE:pane')) {
             const paneIdMatch = sessionId.match(/^(.+)::pane-(\d+)$/);
-            const markerMatch = data.match(/\[COFFEE-DONE:pane(\d+)->pane(\d+)\]/);
-            if (paneIdMatch && markerMatch) {
+            if (paneIdMatch) {
               const tabId = paneIdMatch[1];
-              const emitter = parseInt(markerMatch[1], 10);
-              const target = parseInt(markerMatch[2], 10);
               const tab = appStateRef.current.terminals.find(t => t.id === tabId);
               const panes = tab?.multiAgent?.panes ?? [];
-              const emitterPane = panes.find(p => p.paneIdx === emitter);
-              // Only act if the EMITTING pane actually has sentinel on.
-              // Stray text in output that happens to match the pattern
-              // (e.g. a user pasted code sample) shouldn't trigger anything.
-              if (emitterPane?.sentinelEnabled) {
-                dispatch({ type: 'SET_PANE_COMPLETION', tabId, paneIdx: emitter, ts: Date.now() });
+
+              // TELL: forward dispatch, always active (no sentinel gate).
+              // Text lives on the same line after the marker, ends at
+              // newline/CR. Multi-line prompts need to be summarised by the
+              // emitting agent before dispatch — keeps the parser simple
+              // and the user's scrollback readable.
+              const tellMatches = data.matchAll(
+                /\[COFFEE-TELL:pane(\d+)->pane(\d+)\]\s+([^\r\n]+)/g
+              );
+              for (const m of tellMatches) {
+                const emitter = parseInt(m[1], 10);
+                const target = parseInt(m[2], 10);
+                const text = m[3].trim();
                 const targetPane = panes.find(p => p.paneIdx === target);
-                if (targetPane?.sentinelEnabled && targetPane.tool !== null && target !== emitter) {
+                if (
+                  targetPane?.tool != null &&
+                  target !== emitter &&
+                  text.length > 0
+                ) {
                   const targetId = `${tabId}::pane-${target}`;
-                  const notify = `[COFFEE-SENTINEL] Pane ${emitter} reports task complete (addressed to pane ${target}).`;
+                  const notify = `[From pane ${emitter}] ${text}`;
                   getTabActions(targetId)?.paste(notify);
                   // Auto-submit: send a raw CR outside the bracketed-paste
                   // frame so the TUI treats it as "Enter" instead of a
@@ -556,6 +573,29 @@ function TierTerminalImpl({
                   setTimeout(() => {
                     commands.tierTerminalInput(targetId, '\r').catch(() => {});
                   }, 50);
+                }
+              }
+
+              // DONE: backward receipt, sentinel-gated on the emitter side.
+              // Without sentinel, agents can still dispatch commands via
+              // TELL but lose the "task complete" auto-notification — user
+              // has to read the target pane's output to know when it's done.
+              const doneMatch = data.match(/\[COFFEE-DONE:pane(\d+)->pane(\d+)\]/);
+              if (doneMatch) {
+                const emitter = parseInt(doneMatch[1], 10);
+                const target = parseInt(doneMatch[2], 10);
+                const emitterPane = panes.find(p => p.paneIdx === emitter);
+                if (emitterPane?.sentinelEnabled) {
+                  dispatch({ type: 'SET_PANE_COMPLETION', tabId, paneIdx: emitter, ts: Date.now() });
+                  const targetPane = panes.find(p => p.paneIdx === target);
+                  if (targetPane?.sentinelEnabled && targetPane.tool !== null && target !== emitter) {
+                    const targetId = `${tabId}::pane-${target}`;
+                    const notify = `[From pane ${emitter}] Task complete.`;
+                    getTabActions(targetId)?.paste(notify);
+                    setTimeout(() => {
+                      commands.tierTerminalInput(targetId, '\r').catch(() => {});
+                    }, 50);
+                  }
                 }
               }
             }
