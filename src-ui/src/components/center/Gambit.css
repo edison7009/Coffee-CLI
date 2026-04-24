@@ -241,7 +241,45 @@
     background: rgba(120, 120, 120, 0.55);
 }
 
-/* ─── Footer (attachments + send button) ─────────────────────── */
+/* ─── Thumbnail strip (derived view of image paths in draft) ─ */
+/* Pure visual — no state of its own. Regex scans draft text for
+   absolute image paths; each unique match gets a thumb. Clicking a
+   thumb selects the matching path in the textarea, so Backspace
+   deletes the path (and hence the thumb) in one stroke. */
+.gambit-thumb-strip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+    flex-shrink: 0;
+}
+.gambit-thumb-strip::-webkit-scrollbar { display: none; }
+
+.gambit-thumb {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--shape-radius-btn, 6px);
+    overflow: hidden;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.gambit-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+.gambit-thumb--broken {
+    display: none;
+}
+
+/* ─── Footer (send button) ───────────────────────────────────── */
 .gambit-footer {
     display: flex;
     align-items: center;

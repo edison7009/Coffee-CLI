@@ -13,7 +13,7 @@
 // editable path string. AI CLI agents that support local image paths (e.g.
 // Claude Code) will read the file; agents that don't just see the raw path.
 
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { clipboardRead, clipboardWrite } from '../../lib/clipboard';
 import { commands } from '../../tauri';
@@ -34,6 +34,17 @@ interface GambitProps {
    *  the text so the user never loses what they typed. */
   onSend: (text: string) => boolean;
 }
+
+// Matches any absolute image path inside the compose draft — both our
+// own temp-dir clip images AND user-typed paths like
+//   说看看图片"C:\Users\eben\Desktop\hermes.png"
+//   cat /home/me/screenshot.jpg
+// Requires a drive letter (Win) or leading slash (POSIX) so we don't
+// false-positive on bare filenames mentioned in prose like ".png 格式".
+// Excludes quotes and whitespace from the match body so surrounding
+// `"..."` wrappers self-strip; if a path has spaces in a directory
+// name, it won't match — edge case we accept.
+const IMAGE_PATH_RE = /(?:[A-Za-z]:[\\/]|\/)[^\s<>"'`]+?\.(?:png|jpe?g|gif|webp|bmp)/gi;
 
 const MIN_WIDTH = 320;
 const MIN_HEIGHT = 120;
@@ -79,6 +90,47 @@ function GambitImpl({
   useEffect(() => {
     textareaRef.current?.focus();
   }, []);
+
+  // Thumbnails are a pure derived view of the draft text — no separate
+  // attachment state. User edits/deletes the path string → thumbnails
+  // update automatically. Paths remain the only source of truth; they
+  // travel with the text through copy/paste/send.
+  const pastedImagePaths = useMemo(() => {
+    const matches = draft.match(IMAGE_PATH_RE);
+    return matches ? Array.from(new Set(matches)) : [];
+  }, [draft]);
+  const [thumbUrls, setThumbUrls] = useState<Record<string, string>>({});
+  // Use a stable key so the effect only re-fires when the set of paths
+  // actually changes, not on every keystroke that leaves paths intact.
+  const pastedImagePathsKey = pastedImagePaths.join('\n');
+  useEffect(() => {
+    if (pastedImagePaths.length === 0) {
+      setThumbUrls({});
+      return;
+    }
+    let cancelled = false;
+    import('@tauri-apps/api/core').then(({ convertFileSrc }) => {
+      if (cancelled) return;
+      const next: Record<string, string> = {};
+      for (const p of pastedImagePaths) next[p] = convertFileSrc(p);
+      setThumbUrls(next);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pastedImagePathsKey]);
+
+  // Click a thumbnail → select the matching path text in the textarea,
+  // so the user sees exactly what chunk will vanish if they press
+  // Backspace. No other action — thumbnails are visual confirmation,
+  // not controls.
+  const selectPathInDraft = (path: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    const idx = draft.indexOf(path);
+    if (idx < 0) return;
+    textarea.focus();
+    textarea.setSelectionRange(idx, idx + path.length);
+  };
 
   const onDragStart = (e: React.MouseEvent) => {
     dragRef.current = {
@@ -468,6 +520,32 @@ function GambitImpl({
         onContextMenu={onContextMenu}
         spellCheck={false}
       />
+
+      {pastedImagePaths.length > 0 && (
+        <div className="gambit-thumb-strip">
+          {pastedImagePaths.map((path) => (
+            <div
+              key={path}
+              className="gambit-thumb"
+              onClick={() => selectPathInDraft(path)}
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              {thumbUrls[path] && (
+                <img
+                  src={thumbUrls[path]}
+                  alt=""
+                  draggable={false}
+                  onError={(e) => {
+                    // File doesn't exist or can't be loaded — hide silently.
+                    // The path text stays; the AI can still try to read it.
+                    (e.currentTarget.parentElement as HTMLElement).classList.add('gambit-thumb--broken');
+                  }}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="gambit-footer">
         {sendFailed && (
