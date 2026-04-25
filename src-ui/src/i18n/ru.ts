@@ -32,7 +32,6 @@ export const ru = {
   'tool.terminal': 'Терминал',
   'tool.remote': 'Удалённый терминал',
   'tool.remote.short': 'Удалённый',
-  'tool.installer': 'Установщик',
   'tool.vibeid': 'Тест личности',
   'tool.insights_prerun': 'Генерация отчёта об использовании...',
   'tool.multi_agent': 'Мульти-агент',

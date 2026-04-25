@@ -33,7 +33,6 @@ export const vi = {
   'tool.terminal': 'Terminal',
   'tool.remote': 'Terminal từ xa',
   'tool.remote.short': 'Từ xa',
-  'tool.installer': 'Trình cài đặt',
   'tool.vibeid': 'Trắc nghiệm tính cách',
   'tool.insights_prerun': 'Đang tạo báo cáo sử dụng...',
   'tool.multi_agent': 'Đa tác nhân',

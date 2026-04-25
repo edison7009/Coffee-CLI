@@ -32,7 +32,6 @@ export const ja = {
   'tool.terminal': 'ターミナル',
   'tool.remote': 'リモートターミナル',
   'tool.remote.short': 'リモート',
-  'tool.installer': 'インストーラー',
   'tool.vibeid': '性格診断',
   'tool.insights_prerun': '使用状況レポートを生成中...',
   'tool.multi_agent': 'マルチエージェント',

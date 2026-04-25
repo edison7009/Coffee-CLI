@@ -32,7 +32,6 @@ export const de = {
   'tool.terminal': 'Terminal',
   'tool.remote': 'Remote-Terminal',
   'tool.remote.short': 'Remote',
-  'tool.installer': 'Installer',
   'tool.vibeid': 'Persönlichkeitstest',
   'tool.insights_prerun': 'Nutzungsbericht wird generiert...',
   'tool.multi_agent': 'Multi-Agent',

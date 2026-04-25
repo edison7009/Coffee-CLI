@@ -32,7 +32,6 @@ export const ko = {
   'tool.terminal': '터미널',
   'tool.remote': '원격 터미널',
   'tool.remote.short': '원격',
-  'tool.installer': '설치 도구',
   'tool.vibeid': '성격 테스트',
   'tool.insights_prerun': '사용 기록 리포트 생성 중...',
   'tool.multi_agent': '멀티 에이전트',

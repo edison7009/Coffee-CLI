@@ -399,45 +399,6 @@ fn list_directory(path: String) -> Result<Vec<DirEntry>, String> {
     Ok(entries)
 }
 
-// ─── Installer script temp-file helper ───────────────────────────────────────
-
-/// Write a script (PowerShell or shell) to a temp file and return its path.
-///
-/// Needed because the Windows CMD command-line length limit is ~8191 chars.
-/// The agent-tools-installer.ps1 script (with Language Packs menus) base64
-/// encodes to ~40KB UTF-16LE, far over the limit. Instead of trying to pipe
-/// it through `powershell -EncodedCommand <b64>`, the frontend writes the
-/// script text here, gets back a path, and invokes `powershell -File <path>`.
-#[tauri::command]
-fn write_temp_script(content: String, extension: String) -> Result<String, String> {
-    use std::io::Write;
-    // Sanitize extension — only allow a small allowlist to prevent path tricks.
-    let ext = match extension.as_str() {
-        "ps1" | "sh" | "bat" | "cmd" => extension,
-        _ => return Err(format!("Unsupported script extension: {}", extension)),
-    };
-    let tmp_dir = std::env::temp_dir();
-    let filename = format!("coffee-installer-{}.{}", std::process::id(), ext);
-    let path = tmp_dir.join(&filename);
-    let mut file = std::fs::File::create(&path)
-        .map_err(|e| format!("Failed to create temp script: {}", e))?;
-    // Windows PowerShell 5.x reads .ps1 files using the system codepage (e.g. GBK)
-    // unless the file starts with a UTF-8 BOM. Without BOM, CJK characters are garbled.
-    if ext == "ps1" {
-        file.write_all(b"\xEF\xBB\xBF")
-            .map_err(|e| format!("Failed to write BOM: {}", e))?;
-    }
-    file.write_all(content.as_bytes())
-        .map_err(|e| format!("Failed to write temp script: {}", e))?;
-    // Make executable on Unix
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let _ = std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755));
-    }
-    Ok(path.to_string_lossy().to_string())
-}
-
 /// Check whether a Claude Code skill is installed locally.
 /// Returns true if `~/.claude/skills/<name>/SKILL.md` exists.
 #[tauri::command]
@@ -2006,7 +1967,6 @@ pub fn start_ui(project_dir: PathBuf) -> anyhow::Result<()> {
             get_native_history,
             read_native_session,
             check_network_port,
-            write_temp_script,
             check_tools_installed,
             start_fs_watcher,
             stop_fs_watcher,

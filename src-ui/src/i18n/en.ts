@@ -33,7 +33,6 @@ export const en = {
   'tool.terminal': 'Terminal',
   'tool.remote': 'Remote Terminal',
   'tool.remote.short': 'Remote',
-  'tool.installer': 'Installer',
   'tool.vibeid': 'Personality Test',
   'tool.insights_prerun': 'Generating Usage Report...',
   'tool.multi_agent': 'Multi-Agent',

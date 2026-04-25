@@ -116,19 +116,67 @@ const SvgHermes    = () => toolIcon('/icons/tools/hermes.png', '1em', { borderRa
 // currentColor and follow the theme accent, matching our other in-house
 // glyphs (multi-agent, four-split). Third-party logos (Claude, Gemini,
 // Codex...) stay as <img> to preserve their brand colors.
+//
+// Coffee 101 card uses the same animated coffee mark as the left-panel
+// brand header (see Explorer.tsx panel-header). Steam wave loops 3s,
+// cup body draws on first paint then fills. Sized at 1em so it scales
+// with the launchpad card font-size like other utility cards.
 const SvgInstaller = () => (
   <svg
+    xmlns="http://www.w3.org/2000/svg"
     width="1em"
     height="1em"
     viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
     style={{ flexShrink: 0, color: 'var(--accent)' }}
   >
-    <circle cx="12" cy="12" r="10" />
-    <path d="M12 7v6l4 4" />
+    <defs>
+      <mask id="coffee101IconMask">
+        <path
+          fill="none"
+          stroke="#fff"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="2"
+          d="M8 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M12 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M16 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4"
+        >
+          <animate
+            attributeName="d"
+            dur="3s"
+            repeatCount="indefinite"
+            values="M8 0c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M12 0c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M16 0c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4;M8 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M12 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M16 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4"
+          />
+        </path>
+        <path d="M4 7h16v0h-16v12h16v-32h-16Z">
+          <animate
+            fill="freeze"
+            attributeName="d"
+            begin="1s"
+            dur="0.6s"
+            to="M4 2h16v5h-16v12h16v-24h-16Z"
+          />
+        </path>
+      </mask>
+    </defs>
+    <g stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2">
+      <path
+        fill="currentColor"
+        fillOpacity="0"
+        strokeDasharray="48"
+        d="M17 9v9c0 1.66 -1.34 3 -3 3h-6c-1.66 0 -3 -1.34 -3 -3v-9Z"
+      >
+        <animate fill="freeze" attributeName="stroke-dashoffset" dur="0.6s" values="48;0" />
+        <animate fill="freeze" attributeName="fill-opacity" begin="1.6s" dur="0.4s" to="1" />
+      </path>
+      <path
+        fill="none"
+        strokeDasharray="16"
+        strokeDashoffset="16"
+        d="M17 9h3c0.55 0 1 0.45 1 1v3c0 0.55 -0.45 1 -1 1h-3"
+      >
+        <animate fill="freeze" attributeName="stroke-dashoffset" begin="0.6s" dur="0.3s" to="0" />
+      </path>
+    </g>
+    <path fill="currentColor" d="M0 0h24v24H0z" mask="url(#coffee101IconMask)" />
   </svg>
 );
 
@@ -478,7 +526,7 @@ export function CenterPanel() {
         type: 'utility' as const,
         requiresCwd: true,
       },
-      { key: 'installer' as ToolType, label: t('tool.installer' as any), icon: <SvgInstaller />, type: 'utility' as const, requiresCwd: false },
+      { key: 'installer' as ToolType, label: 'Coffee 101', icon: <SvgInstaller />, type: 'utility' as const, requiresCwd: false },
       // ─── Row 2: independent (descending 4→3→2) + vibeid ────────────
       {
         key: 'four-split' as ToolType,
@@ -890,7 +938,7 @@ export function CenterPanel() {
       case 'openclaw': return { icon: <SvgOpenClaw />, title: 'OpenClaw', tooltip: undefined };
       case 'codex': return { icon: <SvgCodex />, title: cwd ?? 'Codex CLI', tooltip: pathTip };
       case 'gemini': return { icon: <SvgGemini />, title: cwd ?? 'Gemini CLI', tooltip: pathTip };
-      case 'installer': return { icon: <SvgInstaller />, title: t('tool.installer' as any), tooltip: undefined };
+      case 'installer': return { icon: <SvgInstaller />, title: 'Coffee 101', tooltip: undefined };
       case 'vibeid': return { icon: <SvgVibeID />, title: t('tool.vibeid' as any), tooltip: undefined };
       case 'insights_prerun': return { icon: <SvgVibeID />, title: t('tool.insights_prerun' as any), tooltip: undefined };
       case 'remote': {
@@ -1156,6 +1204,22 @@ export function CenterPanel() {
                                   className="launchpad-card"
                                   onClick={() => {
                                     if (disabled) return;
+                                    // The "Coffee 101" card (key kept as
+                                    // 'installer' for backward compat with
+                                    // pinned-state in localStorage) is no
+                                    // longer a one-click installer — that
+                                    // approach was abandoned because reliable
+                                    // cross-platform install of git/node/
+                                    // python + each AI CLI is intractable
+                                    // and failure modes leave users worse off
+                                    // than self-serve. The card now opens the
+                                    // Claude Code course on coffeecli.com,
+                                    // which is the upstream of all our
+                                    // install/usage knowledge.
+                                    if (tool.key === 'installer') {
+                                      commands.openUrl('https://coffeecli.com/courses/claude-code').catch(() => {});
+                                      return;
+                                    }
                                     selectTool(tool.key, undefined, lastCwdByTool[tool.key!]);
                                   }}
                                 >

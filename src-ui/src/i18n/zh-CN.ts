@@ -32,7 +32,6 @@ export const zhCN = {
   'tool.terminal': '终端',
   'tool.remote': '远程终端',
   'tool.remote.short': '远程',
-  'tool.installer': '一键安装',
   'tool.vibeid': '人格测试',
   'tool.insights_prerun': '正在生成使用报告...',
   'tool.multi_agent': '多智能体',

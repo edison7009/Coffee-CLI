@@ -109,29 +109,6 @@ function buildXtermTheme(themeName: string, hasBg: boolean | undefined, hideCurs
   };
 }
 
-// Installer scripts live in Web-Home/ and are served directly from coffeecli.com.
-// Falls back to GitHub raw if the website is unreachable.
-const INSTALLER_URLS: Record<string, string[]> = {
-  'agent-tools-installer.ps1': [
-    'https://coffeecli.com/agent-tools-installer.ps1',
-    'https://raw.githubusercontent.com/edison7009/Coffee-CLI/main/scripts/agent-tools-installer.ps1',
-  ],
-  'agent-tools-installer.sh': [
-    'https://coffeecli.com/agent-tools-installer.sh',
-    'https://raw.githubusercontent.com/edison7009/Coffee-CLI/main/scripts/agent-tools-installer.sh',
-  ],
-};
-
-async function fetchInstallerScript(filename: string): Promise<string> {
-  const urls = INSTALLER_URLS[filename] ?? [];
-  for (const url of urls) {
-    try {
-      const res = await fetch(url, { cache: 'no-store' });
-      if (res.ok) return await res.text();
-    } catch { /* try next */ }
-  }
-  throw new Error(`Failed to fetch installer script: ${filename}`);
-}
 
 // Sessions being detached to a new window — skip kill on unmount
 export const detachedSessions = new Set<string>();
@@ -681,34 +658,7 @@ function TierTerminalImpl({
         // Trust prompt is shown to the user directly. Previously auto-skipped,
         // but we want the user to see the real agent screen and decide.
 
-        // For installer, write the script to a temp file via a Rust command
-        // and execute it by path. We used to base64-encode the script inline
-        // via `powershell -EncodedCommand`, but that runs into Windows CMD's
-        // 8191-char command line limit for any non-trivial script — the
-        // command gets echoed instead of run.
-        if (tool === 'installer') {
-          setTimeout(async () => {
-            try {
-              const isWin = window.navigator.userAgent.toLowerCase().includes('windows');
-              if (isWin) {
-                const script = await fetchInstallerScript('agent-tools-installer.ps1');
-                const tempPath = await commands.writeTempScript(script, 'ps1');
-                const cmd = `powershell -NoProfile -ExecutionPolicy Bypass -File "${tempPath}"\r`;
-                commands.tierTerminalRawWrite(sessionId, cmd).catch(() => {});
-              } else {
-                const script = await fetchInstallerScript('agent-tools-installer.sh');
-                const tempPath = await commands.writeTempScript(script, 'sh');
-                const cmd = `bash "${tempPath}"\r`;
-                commands.tierTerminalRawWrite(sessionId, cmd).catch(() => {});
-              }
-            } catch (err) {
-              console.error("Failed to launch standalone installer script", err);
-              commands.tierTerminalRawWrite(sessionId, `Write-Host "Failed to launch installer script: ${err}" -ForegroundColor Red\r`).catch(() => {});
-            }
-          }, 1000);
-        }
-
-        // (VibeID no longer needs a frontend auto-prompt timer — the backend
+// (VibeID no longer needs a frontend auto-prompt timer — the backend
         // spawns `claude /vibeid` directly, so the REPL fires the skill on its
         // very first parse pass.)
       } catch (err) {
@@ -891,9 +841,9 @@ function TierTerminalImpl({
         clearInterval(poll);
         return;
       }
-      // Fallback timeout: shell + installer are fast (3s), AI CLI tools may
+      // Fallback timeout: shell tabs are fast (3s), AI CLI tools may
       // take longer (15s) before the first meaningful frame.
-      const maxWait = (tool === 'terminal' || tool === 'installer') ? 3000 : 15000;
+      const maxWait = tool === 'terminal' ? 3000 : 15000;
       if (elapsed > maxWait) {
         dismiss();
         clearInterval(poll);
