@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useAppState } from '../../store/app-state';
-import type { ThemeColor, ThemeShape, IconTheme } from '../../store/app-state';
+import type { ThemeColor, ThemeShape, IconTheme, ToolType } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
 import { ScrollPanel } from '../common/ScrollPanel';
 import { clipboardWrite } from '../../lib/clipboard';
@@ -24,6 +24,12 @@ interface CtxMenuState {
 
 // Module-level clipboard: survives menu close/open cycles
 let fsClipboard: { action: 'copy' | 'cut'; path: string } | null = null;
+
+// OpenClaw (persona forge) and Hermes Agent are directory-agnostic — they
+// don't bind to a project folder, so the workspace dir-picker and file
+// tree are hidden for these tabs (clicking the picker would otherwise
+// restart the PTY in a new cwd, which makes no sense for these tools).
+const CWD_AGNOSTIC_TOOLS: ReadonlySet<ToolType> = new Set<ToolType>(['openclaw', 'hermes']);
 
 // Dispatch a custom event to refresh any BrowserDirNode that owns that directory
 function dispatchFsRefresh(dirPath: string) {
@@ -1163,7 +1169,7 @@ export function Explorer() {
         </button>
       </div>
 
-      {(activeTab === 'workspace' && activeSession?.tool) && (
+      {(activeTab === 'workspace' && activeSession?.tool && !CWD_AGNOSTIC_TOOLS.has(activeSession.tool)) && (
         <button
           className="workspace-dir-btn"
           onClick={handleOpenFolder}
@@ -1179,7 +1185,16 @@ export function Explorer() {
 
       {/* File list Content */}
       <div className="panel-content explorer-content">
-        {activeTab === 'computer' ? (
+        {activeTab === 'workspace' && activeSession?.tool && CWD_AGNOSTIC_TOOLS.has(activeSession.tool) ? (
+          // OpenClaw / Hermes Agent are directory-agnostic — fall through
+          // to the same blank state shown before any tool is selected
+          // (just a faint folder glyph). No file tree, no dir picker.
+          <div className="empty-state" style={{ justifyContent: 'center', gap: '10px' }}>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.3" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+            </svg>
+          </div>
+        ) : activeTab === 'computer' ? (
           <ScrollPanel>
             <div className="file-tree-container">
               {drives.length === 0 ? (

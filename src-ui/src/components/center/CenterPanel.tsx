@@ -864,9 +864,11 @@ export function CenterPanel() {
     switch (session.tool) {
       case 'claude': return { icon: <SvgClaude />, title: cwd ?? 'Claude Code', tooltip: pathTip };
       case 'qwen': return { icon: <SvgQwen />, title: cwd ?? 'Qwen Code', tooltip: pathTip };
-      case 'hermes': return { icon: <SvgHermes />, title: cwd ?? 'Hermes Agent', tooltip: pathTip };
+      // OpenClaw / Hermes are directory-agnostic tools — their tab title
+      // stays as the tool name regardless of any inherited folderPath.
+      case 'hermes': return { icon: <SvgHermes />, title: 'Hermes Agent', tooltip: undefined };
       case 'opencode': return { icon: <SvgOpenCode />, title: cwd ?? 'OpenCode', tooltip: pathTip };
-      case 'openclaw': return { icon: <SvgOpenClaw />, title: cwd ?? 'OpenClaw', tooltip: pathTip };
+      case 'openclaw': return { icon: <SvgOpenClaw />, title: 'OpenClaw', tooltip: undefined };
       case 'codex': return { icon: <SvgCodex />, title: cwd ?? 'Codex CLI', tooltip: pathTip };
       case 'gemini': return { icon: <SvgGemini />, title: cwd ?? 'Gemini CLI', tooltip: pathTip };
       case 'installer': return { icon: <SvgInstaller />, title: t('tool.installer' as any), tooltip: undefined };
