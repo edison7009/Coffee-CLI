@@ -287,6 +287,77 @@ impl PaneStore {
             })
             .await
             .map_err(|e| format!("blocking task join failed: {}", e))??;
+
+            // Phase 1d: verify the CR actually submitted. This is the
+            // single most critical correctness gate of the dispatch flow:
+            // if the body delivered but the CR was absorbed (Ink/React
+            // reconciler still painting when \r arrived, bracketed-paste
+            // mode swallowing the trailing newline, etc.), the target
+            // pane sits silently with the message stuck in its input
+            // box and the entire orchestration hangs — exact symptom
+            // user reported as "成语接龙 pane 2 不动".
+            //
+            // Detection: after a 1.5s grace, if no PTY output has
+            // arrived since we wrote the CR AND the activity ticker
+            // still thinks the pane is at its input prompt, the CR
+            // almost certainly never reached the REPL's reducer.
+            // (Real LLM CLIs paint *something* — Thinking…/spinner/
+            // input-box clear — within 1.5s of a successful submit.)
+            //
+            // Recovery: send a single retry CR. Cost of a false positive
+            // (CR did land but the LLM was unusually slow) is one empty
+            // Enter at the prompt, which all three target CLIs (Claude
+            // Code / Codex / Gemini) treat as a no-op. We deliberately
+            // do not retry more than once: two retries means the agent
+            // is genuinely stuck (network, OOM, model crash) and adding
+            // more CRs won't help — let the wait loop time out and
+            // surface that to the caller.
+            let cr_send_time = Instant::now();
+            tokio::time::sleep(Duration::from_millis(1500)).await;
+
+            let cr_lost = {
+                let id_check = id.to_string();
+                let session_check = self.session.clone();
+                tokio::task::spawn_blocking(move || -> bool {
+                    let Ok(guard) = session_check.lock() else { return false; };
+                    let Some(sess) = guard.get(&id_check) else { return false; };
+                    let Ok(act) = sess.activity.lock() else { return false; };
+                    act.last_output_at < cr_send_time && act.last_status == "wait_input"
+                })
+                .await
+                .unwrap_or(false)
+            };
+
+            if cr_lost {
+                log::warn!(
+                    "coffee-cli mcp dispatch: CR appears absorbed by {}, retrying once",
+                    id
+                );
+                let id_retry = id.to_string();
+                let session_retry = self.session.clone();
+                let _ = tokio::task::spawn_blocking(move || -> Result<(), String> {
+                    let writer_arc = {
+                        let guard = session_retry
+                            .lock()
+                            .map_err(|_| "session map poisoned".to_string())?;
+                        let sess = guard
+                            .get(&id_retry)
+                            .ok_or_else(|| format!("pane not found: {}", id_retry))?;
+                        sess.writer_lock.clone()
+                    };
+                    let mut writer = writer_arc
+                        .lock()
+                        .map_err(|_| "pane writer poisoned".to_string())?;
+                    writer
+                        .write_all(b"\r")
+                        .map_err(|e| format!("pty write failed: {}", e))?;
+                    writer
+                        .flush()
+                        .map_err(|e| format!("pty flush failed: {}", e))?;
+                    Ok(())
+                })
+                .await;
+            }
         }
 
         if !wait {

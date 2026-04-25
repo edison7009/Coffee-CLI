@@ -8,6 +8,13 @@ import { FourSplitGrid } from './FourSplitGrid';
 import { ErrorBoundary } from '../common/ErrorBoundary';
 import { useAppState, type ToolType } from '../../store/app-state';
 
+// Coordinated multi-agent Tab tools. At most one such Tab may be active
+// in the whole app at any time — the MCP injection and protocol .md
+// files live in a single workspace and a second one would overwrite or
+// race the first. Enforced by greying out the launchpad cards while one
+// is running; see the Desktop pinned grid below.
+const MULTI_AGENT_TOOLS: ReadonlyArray<ToolType> = ['multi-agent', 'two-agent', 'three-agent'];
+
 export interface RemoteHistoryItem {
   id: string;
   protocol: 'ssh' | 'ws';
@@ -686,6 +693,18 @@ export function CenterPanel() {
   };
 
   const selectTool = (tool: ToolType, toolData?: string, cwd?: string) => {
+    // Single-instance lock for coordinated multi-agent Tabs. The MCP
+    // server is process-global and the protocol .md files are written
+    // into the workspace cwd, so a second concurrent Tab would either
+    // share state with the first (cross-Tab pane visibility) or fight
+    // over the same files. Block the launch silently — the launchpad
+    // card is already greyed in this state.
+    if (
+      MULTI_AGENT_TOOLS.includes(tool) &&
+      state.terminals.some(t => t.id !== activeTerminalId && MULTI_AGENT_TOOLS.includes(t.tool))
+    ) {
+      return;
+    }
     // VibeID launcher: before spawning /vibeid, make sure the /insights usage
     // report exists. If not, auto-run /insights in a pre-run tab and poll for
     // the report file. When it lands, kill the pre-run PTY and remount the
@@ -1115,17 +1134,28 @@ export function CenterPanel() {
                         return null;
                       }
 
+                      // Coordinated multi-agent is single-instance. If any
+                      // Tab in the app is already a multi/two/three-agent
+                      // session, lock the matching launchpad cards so the
+                      // user can't spawn a second concurrent one. Cleared
+                      // automatically when the existing Tab is closed or
+                      // its tool is changed away from a multi-agent value.
+                      const multiAgentLocked = state.terminals.some(
+                        t => MULTI_AGENT_TOOLS.includes(t.tool)
+                      );
                       return (
                         <div className="launchpad-grid">
                           {pinnedAgents.map(tool => {
                             const isTerminal = tool.key === 'terminal';
                             const installed = isTerminal || toolsInstalled[tool.key ?? ''] !== false;
+                            const lockedByMa = multiAgentLocked && MULTI_AGENT_TOOLS.includes(tool.key);
+                            const disabled = !installed || lockedByMa;
                             return (
-                              <div key={`agent-${tool.key}`} className={`launchpad-card-group ${!installed ? 'launchpad-card-disabled' : ''}`}>
+                              <div key={`agent-${tool.key}`} className={`launchpad-card-group ${disabled ? 'launchpad-card-disabled' : ''}`}>
                                 <div
                                   className="launchpad-card"
                                   onClick={() => {
-                                    if (!installed) return;
+                                    if (disabled) return;
                                     selectTool(tool.key, undefined, lastCwdByTool[tool.key!]);
                                   }}
                                 >
@@ -1153,7 +1183,7 @@ export function CenterPanel() {
                                     )}
                                   </div>
                                   {tool.requiresCwd && (
-                                    <div className="launchpad-folder-btn" onClick={(e) => { e.stopPropagation(); if (installed) handlePickFolder(tool.key!); }}>
+                                    <div className="launchpad-folder-btn" onClick={(e) => { e.stopPropagation(); if (!disabled) handlePickFolder(tool.key!); }}>
                                       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                                         <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
                                       </svg>
