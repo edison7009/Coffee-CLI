@@ -5,7 +5,6 @@
 //   /version.json          → dynamic version report (honors ?platform=)
 //   /download/<platform>   → proxy GitHub Release assets
 //   /play/<file>           → proxy GitHub game-assets Release
-//   /installer/<path>      → serve from CF Pages static files (Web-Home/installer/)
 //   /*                     → CF Pages static files (env.ASSETS)
 
 const REPO = "edison7009/Coffee-CLI"
@@ -182,9 +181,8 @@ export default {
     if (pathname.startsWith("/lang-packs/")) {
       return new Response(
         "Coffee CLI language packs have been retired.\n" +
-        "Install the official Claude Code native build via the Agent Installer:\n" +
-        "  irm https://coffeecli.com/agent-tools-installer.ps1 | iex\n" +
-        "  curl -fsSL https://coffeecli.com/agent-tools-installer.sh | bash\n",
+        "See Coffee 101 for installation and usage guides:\n" +
+        "  https://coffeecli.com/courses/claude-code\n",
         {
           status: 410,
           headers: {
@@ -193,30 +191,6 @@ export default {
           }
         }
       )
-    }
-
-    // ── /installer/<path> ────────────────────────────────────────────────────
-    // Serve directly from CF Pages static assets. Ships PowerShell and shell
-    // scripts that need text/plain Content-Type (default MIME guess returns
-    // application/octet-stream) and a short cache so updates are fast.
-    if (pathname.startsWith("/installer/")) {
-      const assetRes = await env.ASSETS.fetch(request)
-      if (assetRes.status === 200) {
-        // Force correct Content-Type for .ps1 and .sh so PowerShell/bash
-        // receives text, not application/octet-stream.
-        const ext = pathname.split(".").pop()
-        const ct = ext === "ps1" || ext === "sh" ? "text/plain; charset=utf-8"
-                 : ext === "json"                 ? "application/json; charset=utf-8"
-                 : assetRes.headers.get("Content-Type") || "text/plain"
-        return new Response(assetRes.body, {
-          status: 200,
-          headers: {
-            "Content-Type": ct,
-            "Cache-Control": "public, max-age=300",
-          }
-        })
-      }
-      return new Response(`Not found: ${pathname}`, { status: 404 })
     }
 
     // ── everything else → CF Pages static files ──────────────────────────────

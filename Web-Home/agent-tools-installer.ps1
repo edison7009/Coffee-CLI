@@ -1,11 +1,11 @@
 <#
 .SYNOPSIS
-Coffee CLI Agent Installer - thin bootstrap.
-Fetches the modular menu system from coffeecli.com (with jsDelivr/GitHub
-fallback) and dispatches. Keeps user-visible startup near zero; all heavy
-logic lives in remote sub-scripts so updates ship without a version bump.
+Coffee CLI in-app installer is retired. This stub redirects to Coffee 101
+(the Claude Code course on coffeecli.com) which is the new home for all
+install + usage guides. Kept here so old `irm | iex` invocations and
+v1.4.2-and-earlier app clients land on a friendly page instead of 404.
 
-Usage: irm https://coffeecli.com/agent-tools-installer.ps1 | iex
+Usage (deprecated): irm https://coffeecli.com/agent-tools-installer.ps1 | iex
 #>
 
 $ErrorActionPreference = "SilentlyContinue"
@@ -13,56 +13,13 @@ chcp 65001 | Out-Null
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
 
-# CDN bases tried in order. CF first (fast + China), jsDelivr + GitHub as tombstone.
-$Global:CoffeeInstallerBases = @(
-    "https://coffeecli.com/installer",
-    "https://cdn.jsdelivr.net/gh/edison7009/Coffee-CLI@main/Web-Home/installer",
-    "https://raw.githubusercontent.com/edison7009/Coffee-CLI/main/Web-Home/installer"
-)
-$Global:CoffeeInstallerCache = @{}
-$Global:CoffeeI18nCache = @{}
+$Url = "https://coffeecli.com/courses/claude-code"
 
-function Global:Get-InstallerScript([string]$name) {
-    if ($Global:CoffeeInstallerCache.ContainsKey($name)) {
-        return $Global:CoffeeInstallerCache[$name]
-    }
-    $errors = @()
-    foreach ($base in $Global:CoffeeInstallerBases) {
-        $url = "$base/$name"
-        try {
-            $resp = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 8 -ErrorAction Stop
-            $content = if ($resp.Content -is [byte[]]) {
-                [System.Text.Encoding]::UTF8.GetString($resp.Content)
-            } else {
-                [string]$resp.Content
-            }
-            # Only probe the file's leading bytes — scripts may legitimately
-            # contain "<html" or "<!DOCTYPE" as string literals (e.g. in their
-            # own HTML guards). A real HTML document always *starts* with one
-            # of these tokens (allowing BOM/whitespace).
-            $head = $content.TrimStart([char]0xFEFF, ' ', "`t", "`r", "`n")
-            $isHtml = $head.StartsWith("<!DOCTYPE", [StringComparison]::OrdinalIgnoreCase) `
-                  -or $head.StartsWith("<html",     [StringComparison]::OrdinalIgnoreCase) `
-                  -or $head.StartsWith("<!--") `
-                  -or $head.StartsWith("<?xml")
-            if ($isHtml) {
-                $errors += "$url -> HTML (not a script)"
-                continue
-            }
-            $Global:CoffeeInstallerCache[$name] = $content
-            return $content
-        } catch {
-            $errors += "$url -> $($_.Exception.Message)"
-        }
-    }
-    throw "Failed to fetch $name`n$($errors -join "`n")"
-}
+Write-Host ""
+Write-Host "  Coffee CLI's one-click installer has been retired." -ForegroundColor Yellow
+Write-Host ""
+Write-Host "  Visit Coffee 101 for installation and usage guides:" -ForegroundColor Cyan
+Write-Host "  $Url" -ForegroundColor Cyan
+Write-Host ""
 
-try {
-    $menu = Get-InstallerScript "menu.ps1"
-    Invoke-Expression $menu
-} catch {
-    Write-Host ""
-    Write-Host "  [Error] $($_.Exception.Message)" -ForegroundColor Red
-    Write-Host ""
-}
+try { Start-Process $Url } catch { }
