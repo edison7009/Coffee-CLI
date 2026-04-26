@@ -98,20 +98,21 @@
     border: none; /* All shapes are fully borderless — shape identity comes from radius, shadow, and inset-light alone. */
     /* Shape-aware radius: soft=16px, slab=4px, sharp/blade/panel=0px. */
     border-radius: var(--shape-radius-panel, 10px);
-    /* 4-layer natural drop shadow — 1/2/3/4 px stepped falloff with
-       fading alpha 80 → 60 → 40 → 20%. Each layer adds another 1px of
-       soft edge so the falloff reads organically instead of the
-       single-blur "halo" pattern that vanished into deep backgrounds.
-       Pulled into a local CSS var so [data-shape] overrides below can
-       reuse the same falloff while still prepending their inset-edge
-       accents. The colour comes from --shadow-rgb on the active theme
-       (espresso, sakura, mint, …) so the elevation reads against any
-       palette. */
+    /* 4-layer all-around soft glow — no x/y offset so the light
+       radiates evenly off all four edges instead of pooling under
+       the card like a hard drop-shadow. Blur steps 1 → 4 px with
+       alpha 80 → 60 → 40 → 20% give an organic falloff: the
+       innermost layer almost-traces the edge, the outermost feathers
+       into the surrounding canvas. Colour comes from --shadow-rgb on
+       the active theme (espresso, sakura, mint, …) so the glow
+       carries the palette. Pulled into a local CSS var so the
+       [data-shape] overrides below can prepend their inset-edge
+       accents and reuse the same falloff. */
     --gambit-shadow:
-        0 1px 1px rgba(var(--shadow-rgb), 0.80),
-        0 2px 2px rgba(var(--shadow-rgb), 0.60),
-        0 3px 3px rgba(var(--shadow-rgb), 0.40),
-        0 4px 4px rgba(var(--shadow-rgb), 0.20);
+        0 0 1px rgba(var(--shadow-rgb), 0.80),
+        0 0 2px rgba(var(--shadow-rgb), 0.60),
+        0 0 3px rgba(var(--shadow-rgb), 0.40),
+        0 0 4px rgba(var(--shadow-rgb), 0.20);
     box-shadow: var(--gambit-shadow);
     color: var(--text-1, #e8e4de);
     font-family: inherit;
