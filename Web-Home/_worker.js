@@ -4,7 +4,8 @@
 // Routes:
 //   /version.json          → dynamic version report (honors ?platform=)
 //   /download/<platform>   → proxy GitHub Release assets
-//   /play/<file>           → proxy GitHub game-assets Release
+//   /play/<file>           → CF Pages static (edge-cached); fall back
+//                            to GitHub game-assets Release if missing
 //   /*                     → CF Pages static files (env.ASSETS)
 
 const REPO = "edison7009/Coffee-CLI"
@@ -154,9 +155,37 @@ export default {
     }
 
     // ── /play/<file> ─────────────────────────────────────────────────────────
+    // Two-tier delivery:
+    //   1. Try CF Pages static asset (Web-Home/play/<file>.jsdos). When it
+    //      hits, the user gets a CDN-edge response with no GitHub round-trip.
+    //   2. If 404 (i.e. that game wasn't shipped to Pages this build, or a
+    //      newer game we haven't pulled into the repo yet), fall through to
+    //      proxying the GitHub `game-assets` release. That keeps the catalog
+    //      forward-compatible — adding a new entry to game.json + uploading
+    //      the .jsdos to GitHub starts working immediately, even before the
+    //      next Pages deploy moves the file into the static tree.
     const playMatch = pathname.match(/^\/play\/([^/]+\.jsdos)$/)
     if (playMatch) {
       const filename = playMatch[1]
+
+      // Step 1: Pages static.
+      const staticRes = await env.ASSETS.fetch(request)
+      if (staticRes.ok) {
+        // Re-wrap so we control content-disposition + CORS. The body is a
+        // ReadableStream so this is zero-copy.
+        return new Response(staticRes.body, {
+          status: 200,
+          headers: {
+            "Content-Type": "application/octet-stream",
+            "Content-Disposition": `attachment; filename="${filename}"`,
+            "Content-Length": staticRes.headers.get("Content-Length") || "",
+            "Cache-Control": "public, max-age=86400",
+            "Access-Control-Allow-Origin": "*",
+          }
+        })
+      }
+
+      // Step 2: GitHub fallback for assets not yet in the static tree.
       const upstream = `${GAME_ASSETS_BASE}/${filename}`
       const fileRes = await fetch(upstream, {
         headers: { "User-Agent": "CoffeeCLI-Worker" }
