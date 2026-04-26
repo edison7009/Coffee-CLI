@@ -1907,17 +1907,6 @@ body {
         0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
-/* ─── Sharp / Panel: strengthen hairline dividers ───────── */
-[data-shape="sharp"] .panel-left,
-[data-shape="panel"] .panel-left {
-    border-right-color: rgba(255, 255, 255, 0.15);
-}
-
-[data-shape="sharp"] .panel-right,
-[data-shape="panel"] .panel-right {
-    border-left-color: rgba(255, 255, 255, 0.15);
-}
-
 [data-shape="sharp"] .chrome-tab.active,
 [data-shape="panel"] .chrome-tab.active {
     box-shadow: inset 0 1px 0 0 var(--accent); /* VSCode-style 1px top accent bar */
@@ -1979,15 +1968,14 @@ body {
 }
 
 /* Glass blur on left panel would tint it differently from center/right.
-   Kill it so all three regions share one flat color. */
+   Kill it so all three regions share one flat color.
+   No border-right/left here — the side dividers are owned by
+   .main-content's own borders. Doubling them up rendered as a chunky 2px
+   line. main-content's borders also become the app's outer edge cleanly
+   when a side panel is toggled hidden. */
 [data-shape="panel"] .panel-left {
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
-    border-right: 1px solid var(--border);
-}
-
-[data-shape="panel"] .panel-right {
-    border-left: 1px solid var(--border);
 }
 
 /* Titlebar reads as the top edge of the unified surface; a hairline
