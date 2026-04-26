@@ -66,20 +66,22 @@
         0 2px 4px rgba(var(--shadow-rgb), 0.14);
 }
 
-/* Panel shape: the default 18px / 28px blur shadows read as a fuzzy
-   halo — way too soft against the flat line-only terminal aesthetic.
-   Tighten the falloff (small blur, deeper opacity) so the shadow sits
-   close to the edge instead of bleeding into a cloud. Higher-specificity
-   selector (.gambit.gambit--ball = 2 classes + attr) beats the
-   [data-shape] .gambit--ball rule above. */
+/* Panel shape: line-only terminal-multiplexer aesthetic. The default
+   .gambit 4-layer soft glow looks fuzzy against Panel's hard-edge
+   tmux/iTerm2 vibe — Panel is supposed to read as drawn-on-terminal
+   chrome, not as a floating glassy card. So we override both the
+   ball and the main window to a single sharp 1px ring (spread=1,
+   blur=0), coloured with `var(--border)` so it sits in exactly the
+   same visual register as the side-panel dividers and the
+   main-content outline that already structure the Panel layout.
+   Higher-specificity selector (.gambit.gambit--ball = 2 classes +
+   attr) beats the [data-shape] .gambit--ball rule above. */
 [data-shape="panel"] .gambit.gambit--ball {
-    box-shadow: 0 3px 8px rgba(var(--shadow-rgb), 0.5);
+    box-shadow: 0 0 0 1px var(--border);
 }
 
 [data-shape="panel"] .gambit:not(.gambit--ball) {
-    box-shadow:
-        0 4px 12px rgba(var(--shadow-rgb), 0.5),
-        0 1px 3px rgba(var(--shadow-rgb), 0.3);
+    box-shadow: 0 0 0 1px var(--border);
 }
 
 
@@ -98,17 +100,22 @@
     border: none; /* All shapes are fully borderless — shape identity comes from radius, shadow, and inset-light alone. */
     /* Shape-aware radius: soft=16px, slab=4px, sharp/blade/panel=0px. */
     border-radius: var(--shape-radius-panel, 10px);
-    /* 4-layer all-around soft glow — no x/y offset so the light
-       radiates evenly off all four edges instead of pooling under
-       the card like a hard drop-shadow. Blur steps 1 → 4 px with
-       alpha 80 → 60 → 40 → 20% give an organic falloff: the
-       innermost layer almost-traces the edge, the outermost feathers
-       into the surrounding canvas. Colour comes from --shadow-rgb on
-       the active theme (espresso, sakura, mint, …) so the glow
-       carries the palette. Pulled into a local CSS var so the
-       [data-shape] overrides below can prepend their inset-edge
-       accents and reuse the same falloff. */
+    /* 5-layer all-around soft glow — the first layer is a
+       sharp 1px ring (spread=1, blur=0) so all four edges get a
+       guaranteed baseline outline regardless of how blur antialiasing
+       falls off on the host GPU or how busy the surrounding wallpaper
+       is on top vs. side. Without the ring, blur-only layers were
+       reading much weaker on the top/bottom edges than on the left/
+       right because the wallpaper above and below the card was
+       darker/busier and ate the soft halo.
+       Layers 2-5 are pure blur (1 → 4 px) with alpha 80→60→40→20%,
+       giving the organic feathered falloff the card actually wants.
+       Colour comes from --shadow-rgb on the active theme so the
+       glow carries the palette. Pulled into a local CSS var so the
+       [data-shape] overrides below can prepend their inset accents
+       and reuse the same falloff. */
     --gambit-shadow:
+        0 0 0 1px rgba(var(--shadow-rgb), 0.18),
         0 0 1px rgba(var(--shadow-rgb), 0.80),
         0 0 2px rgba(var(--shadow-rgb), 0.60),
         0 0 3px rgba(var(--shadow-rgb), 0.40),
