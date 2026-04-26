@@ -10,8 +10,8 @@
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
     box-shadow:
-        0 6px 16px rgba(0, 0, 0, 0.18),
-        0 1px 3px rgba(0, 0, 0, 0.10) !important;
+        0 6px 16px rgba(var(--shadow-rgb), 0.18),
+        0 1px 3px rgba(var(--shadow-rgb), 0.10) !important;
 }
 
 /* ─── Collapsed ball (Messenger-chat-head style) ────────────────
@@ -40,14 +40,14 @@
        keep the filter tween only for the hover brightness effect. */
     transition: filter 0.12s ease;
     box-shadow:
-        0 6px 18px rgba(0, 0, 0, 0.28),
-        0 2px 4px rgba(0, 0, 0, 0.14);
+        0 6px 18px rgba(var(--shadow-rgb), 0.28),
+        0 2px 4px rgba(var(--shadow-rgb), 0.14);
 }
 
 [data-theme="light"] .gambit--ball {
     box-shadow:
-        0 4px 14px rgba(0, 0, 0, 0.14),
-        0 1px 3px rgba(0, 0, 0, 0.08);
+        0 4px 14px rgba(var(--shadow-rgb), 0.14),
+        0 1px 3px rgba(var(--shadow-rgb), 0.08);
 }
 
 .gambit--ball:hover {
@@ -62,8 +62,8 @@
    clean regardless of current data-shape theme. */
 [data-shape] .gambit--ball {
     box-shadow:
-        0 6px 18px rgba(0, 0, 0, 0.28),
-        0 2px 4px rgba(0, 0, 0, 0.14);
+        0 6px 18px rgba(var(--shadow-rgb), 0.28),
+        0 2px 4px rgba(var(--shadow-rgb), 0.14);
 }
 
 /* Panel shape: the default 18px / 28px blur shadows read as a fuzzy
@@ -73,13 +73,13 @@
    selector (.gambit.gambit--ball = 2 classes + attr) beats the
    [data-shape] .gambit--ball rule above. */
 [data-shape="panel"] .gambit.gambit--ball {
-    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 3px 8px rgba(var(--shadow-rgb), 0.5);
 }
 
 [data-shape="panel"] .gambit:not(.gambit--ball) {
     box-shadow:
-        0 4px 12px rgba(0, 0, 0, 0.5),
-        0 1px 3px rgba(0, 0, 0, 0.3);
+        0 4px 12px rgba(var(--shadow-rgb), 0.5),
+        0 1px 3px rgba(var(--shadow-rgb), 0.3);
 }
 
 
@@ -99,8 +99,8 @@
     /* Shape-aware radius: soft=16px, slab=4px, sharp/blade/panel=0px. */
     border-radius: var(--shape-radius-panel, 10px);
     box-shadow:
-        0 10px 28px rgba(0, 0, 0, 0.22),
-        0 2px 6px rgba(0, 0, 0, 0.10);
+        0 10px 28px rgba(var(--shadow-rgb), 0.22),
+        0 2px 6px rgba(var(--shadow-rgb), 0.10);
     color: var(--text-1, #e8e4de);
     font-family: inherit;
     overflow: hidden;
@@ -120,8 +120,8 @@
     /* Light theme: softer natural shadow without any border line. */
     color: var(--text-1, #2a2823);
     box-shadow:
-        0 8px 22px rgba(0, 0, 0, 0.08),
-        0 2px 5px rgba(0, 0, 0, 0.04);
+        0 8px 22px rgba(var(--shadow-rgb), 0.08),
+        0 2px 5px rgba(var(--shadow-rgb), 0.04);
 }
 
 /* ─── Shape overlays (mirror .task-card / .panel-* styling) ─── */
@@ -131,32 +131,32 @@
     box-shadow:
         inset 1px 1px 0 0 var(--shape-edge-light-top),
         inset -1px -1px 0 0 var(--shape-edge-light-bottom),
-        0 8px 24px rgba(0, 0, 0, 0.22),
-        0 2px 5px rgba(0, 0, 0, 0.10);
+        0 8px 24px rgba(var(--shadow-rgb), 0.22),
+        0 2px 5px rgba(var(--shadow-rgb), 0.10);
 }
 
 /* Sharp: identity is 0-radius corners. No border, just a slightly crisper shadow. */
 [data-shape="sharp"] .gambit {
     box-shadow:
-        0 10px 26px rgba(0, 0, 0, 0.26),
-        0 2px 6px rgba(0, 0, 0, 0.14);
+        0 10px 26px rgba(var(--shadow-rgb), 0.26),
+        0 2px 6px rgba(var(--shadow-rgb), 0.14);
 }
 
 /* Blade: accent stripe on the left edge */
 [data-shape="blade"] .gambit {
     box-shadow:
         inset var(--shape-accent-stripe-width) 0 0 0 var(--accent),
-        0 10px 28px rgba(0, 0, 0, 0.22),
-        0 2px 6px rgba(0, 0, 0, 0.10);
+        0 10px 28px rgba(var(--shadow-rgb), 0.22),
+        0 2px 6px rgba(var(--shadow-rgb), 0.10);
 }
 
 /* Panel: identity is "heaviest plate". No border — a layered shadow
    gives presence without heaviness. */
 [data-shape="panel"] .gambit {
     box-shadow:
-        0 14px 32px rgba(0, 0, 0, 0.28),
-        0 4px 10px rgba(0, 0, 0, 0.16),
-        0 1px 3px rgba(0, 0, 0, 0.10);
+        0 14px 32px rgba(var(--shadow-rgb), 0.28),
+        0 4px 10px rgba(var(--shadow-rgb), 0.16),
+        0 1px 3px rgba(var(--shadow-rgb), 0.10);
 }
 
 /* ─── Header (drag handle) ─────────────────────────────────── */
@@ -324,7 +324,7 @@
     max-height: 92vh;
     object-fit: contain;
     border-radius: var(--shape-radius-btn, 4px);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 12px 40px rgba(var(--shadow-rgb), 0.5);
     user-select: none;
     -webkit-user-drag: none;
     cursor: default;
@@ -433,15 +433,15 @@
     background: var(--bg-panel, #1e1c1a);
     border-radius: var(--shape-radius-btn, 6px);
     box-shadow:
-        0 6px 20px rgba(0, 0, 0, 0.32),
-        0 2px 6px rgba(0, 0, 0, 0.18);
+        0 6px 20px rgba(var(--shadow-rgb), 0.32),
+        0 2px 6px rgba(var(--shadow-rgb), 0.18);
     animation: gambitIn 0.1s ease-out;
 }
 
 [data-theme="light"] .gambit-ctx-menu {
     box-shadow:
-        0 4px 14px rgba(0, 0, 0, 0.12),
-        0 1px 4px rgba(0, 0, 0, 0.07);
+        0 4px 14px rgba(var(--shadow-rgb), 0.12),
+        0 1px 4px rgba(var(--shadow-rgb), 0.07);
 }
 
 .gambit-ctx-item {

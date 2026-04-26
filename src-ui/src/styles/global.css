@@ -251,6 +251,11 @@ textarea,
 
     --shadow-panel: 0 16px 48px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.15);
     --glass-blur: blur(24px);
+    /* RGB triplet of the colour used for floating drop-shadows on
+       theme-aware surfaces (currently Gambit). Pure-black drop shadows
+       vanish into the deep-espresso background; the accent-derived
+       triplet keeps the shadow readable while still feeling on-palette. */
+    --shadow-rgb: 196, 149, 106;
 
     --bg-titlebar: rgba(0, 0, 0, 0.1);
     --bg-terminal: #1a1917; /* Match bg-app — unified surface rule across themes */
@@ -285,6 +290,10 @@ textarea,
 
     --shadow-panel: 0 16px 48px rgba(0, 0, 0, 0.06), 0 4px 16px rgba(0, 0, 0, 0.03); /* Claude-like soft diffuse shadow */
     --glass-blur: blur(28px);
+    /* Light theme keeps the classic black drop-shadow — the ivory
+       background reads it cleanly, no need for the accent-derived
+       coloured shadow that the dark themes use. */
+    --shadow-rgb: 0, 0, 0;
 
     --bg-titlebar: rgba(0, 0, 0, 0.03);
     --bg-terminal: #FAFAF7; /* Seamless */
@@ -318,6 +327,7 @@ textarea,
     --blue: #569cd6;
 
     --shadow-panel: 0 16px 48px rgba(0, 0, 0, 0.6), 0 4px 16px rgba(0, 0, 0, 0.4);
+    --shadow-rgb: 160, 160, 160;
     --glass-blur: blur(24px);
 
     --bg-titlebar: rgba(0, 0, 0, 0.35);
@@ -352,6 +362,7 @@ textarea,
     --blue: #b4a8e0;
 
     --shadow-panel: 0 16px 48px rgba(40, 10, 30, 0.45), 0 4px 16px rgba(20, 5, 15, 0.2);
+    --shadow-rgb: 248, 180, 200;
     --glass-blur: blur(24px);
 
     --bg-titlebar: rgba(0, 0, 0, 0.15);
@@ -386,6 +397,7 @@ textarea,
     --blue: #a0b8e4;
 
     --shadow-panel: 0 16px 48px rgba(20, 15, 40, 0.45), 0 4px 16px rgba(10, 8, 20, 0.2);
+    --shadow-rgb: 200, 182, 255;
     --glass-blur: blur(24px);
 
     --bg-titlebar: rgba(0, 0, 0, 0.15);
@@ -420,6 +432,7 @@ textarea,
     --blue: #78c8d4;
 
     --shadow-panel: 0 16px 48px rgba(0, 15, 12, 0.45), 0 4px 16px rgba(0, 8, 6, 0.2);
+    --shadow-rgb: 122, 232, 200;
     --glass-blur: blur(24px);
 
     --bg-titlebar: rgba(0, 0, 0, 0.15);
@@ -457,6 +470,7 @@ textarea,
     --blue: #6ea0cc;
 
     --shadow-panel: 0 16px 48px rgba(0, 0, 0, 0.75), 0 4px 16px rgba(0, 0, 0, 0.55);
+    --shadow-rgb: 160, 160, 160;
     --glass-blur: blur(24px);
 
     --bg-titlebar: rgba(0, 0, 0, 0.4);
@@ -494,6 +508,7 @@ textarea,
     --blue: #7ea4cc;
 
     --shadow-panel: 0 16px 48px rgba(0, 2, 10, 0.65), 0 4px 16px rgba(0, 1, 6, 0.4);
+    --shadow-rgb: 90, 133, 184;
     --glass-blur: blur(24px);
 
     --bg-titlebar: rgba(0, 0, 0, 0.28);
@@ -531,6 +546,7 @@ textarea,
     --blue: #7ea4a4;
 
     --shadow-panel: 0 16px 48px rgba(2, 10, 7, 0.6), 0 4px 16px rgba(1, 5, 4, 0.35);
+    --shadow-rgb: 106, 152, 120;
     --glass-blur: blur(24px);
 
     --bg-titlebar: rgba(0, 0, 0, 0.24);
