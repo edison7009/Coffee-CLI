@@ -752,15 +752,20 @@ function TierTerminalImpl({
         // Newlines and IME composition round-trip correctly. Follow with CR
         // to submit.
         //
-        // Defer the CR so it arrives as a separate PTY read on Unix. On Linux
-        // and macOS, Claude Code's Ink input handler otherwise absorbs the CR
-        // into the still-closing bracketed paste buffer, leaving the text in
-        // the prompt without submitting. Windows ConPTY coalesces differently
-        // and this delay is harmless there.
+        // Defer the CR so it arrives as a separate PTY read. Claude Code's
+        // Ink input handler enters a paste-end digestion state for ~100ms
+        // after the bracketed-paste close (`\x1b[201~`) — any CR that lands
+        // inside that window is absorbed as part of the paste buffer, so the
+        // text stays in the prompt without submitting. The original 30ms
+        // worked on older Claude versions; modern builds need ≥120ms (live
+        // measurement on 2026-04-26 was 152–164ms across two pane types).
+        // 150ms with the natural ~10ms timer slack puts us comfortably past
+        // the window. Windows ConPTY coalesces PTY writes differently but
+        // the delay is harmless there.
         term.paste(normalizePasteNewlines(text));
         setTimeout(() => {
           commands.tierTerminalInput(sessionId, '\r').catch(() => {});
-        }, 30);
+        }, 150);
         return true;
       },
       cursorScreenPos: () => {
