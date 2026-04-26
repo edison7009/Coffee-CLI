@@ -104,8 +104,20 @@ pub fn prepare_pane_config_dir(
         }
         "codex" => {
             // Per-pane protocol text. Referenced by `-c
-            // experimental_instructions_file=<path>` so Codex bakes it
-            // into the model's session context. No workspace touch.
+            // model_instructions_file=<path>` so Codex bakes it into
+            // the model's session context. No workspace touch.
+            //
+            // Note on the key name: Codex 0.x exposed this as
+            // `experimental_instructions_file`, but starting with the
+            // 2026-04 release the `experimental_` prefix is deprecated
+            // and silently ignored — Codex prints
+            //   `experimental_instructions_file is deprecated and ignored.
+            //    Use model_instructions_file instead.`
+            // and our protocol injection becomes a no-op (the multi-agent
+            // CLI then has no idea how to call send_to_pane). Use the
+            // new key. Older Codex versions just don't recognise it and
+            // emit a soft warning, which is the strictly better failure
+            // mode (warning + still-runnable shell vs silent no-op).
             let inst = dir.join("instructions.md");
             fs::write(&inst, protocol_text)?;
             // Codex `-c key=value` parses `value` as a TOML scalar. Use
@@ -118,7 +130,7 @@ pub fn prepare_pane_config_dir(
                 format!("mcp_servers.{key}.url='{url}'", key = MCP_KEY, url = endpoint.url),
                 "-c".to_string(),
                 format!(
-                    "experimental_instructions_file='{path}'",
+                    "model_instructions_file='{path}'",
                     path = inst.display()
                 ),
             ];
@@ -281,7 +293,7 @@ mod tests {
         assert!(out.codex_extra_args[1].contains("mcp_servers.coffee-cli.url"));
         assert!(out.codex_extra_args[1].contains("http://127.0.0.1:50000/mcp"));
         assert_eq!(out.codex_extra_args[2], "-c");
-        assert!(out.codex_extra_args[3].contains("experimental_instructions_file"));
+        assert!(out.codex_extra_args[3].contains("model_instructions_file"));
         // Protocol text actually got written.
         let inst_path = panes_root()
             .join(sanitize_pane_id(&pid))

@@ -74,10 +74,21 @@ pub enum PaneState {
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
 #[schemars(crate = "rmcp::schemars")]
 pub struct PaneInfo {
-    /// Globally unique id, format `tab-{tab}-pane-{idx}`.
+    /// Short pane label like `pane-1`. Pass straight to `send_to_pane`
+    /// / `read_pane`. (`list_panes` is already scoped to the caller's
+    /// own tab, so a short tab-relative label is unambiguous; the
+    /// long `tab-<uuid>::pane-N` form is also accepted on input but
+    /// no longer returned here — it just blew up tool-call rendering
+    /// inside narrow grid panes for no benefit.)
     pub id: String,
-    /// User-assigned label.
+    /// Same as `id`. Kept for callers that read `title` to label rows.
     pub title: String,
+    /// Raw full pane id (`tab-<uuid>::pane-N`). Used internally for
+    /// tab-scope filtering and self-detection — `#[serde(skip)]` so
+    /// it's never sent to the LLM (the whole point of this rewrite
+    /// was to keep long UUIDs out of the model's context).
+    #[serde(skip, default)]
+    pub full_id: String,
     /// CLI running in this pane (claude / codex / gemini / opencode / shell / ...).
     pub cli: String,
     pub state: PaneState,
@@ -154,12 +165,14 @@ impl PaneStore {
             .map(|(id, tool_name, status, last_at)| {
                 let elapsed = now_instant.saturating_duration_since(last_at).as_secs();
                 let last_activity_at = now_epoch.saturating_sub(elapsed);
+                let pane_label = pane_short(&id);
                 PaneInfo {
-                    title: id.clone(),
+                    title: pane_label.clone(),
                     cli: tool_name.unwrap_or_else(|| "shell".to_string()),
                     state: status_to_pane_state(&status),
                     last_activity_at,
-                    id,
+                    id: pane_label,
+                    full_id: id,
                     is_self: None, // filled in by CoffeeMcp::list_panes if known
                 }
             })
@@ -591,8 +604,12 @@ fn epoch_seconds() -> u64 {
 #[derive(Debug, Deserialize, JsonSchema)]
 #[schemars(crate = "rmcp::schemars")]
 pub struct SendToPaneArgs {
-    /// Target pane id (e.g. "<tab_id>::pane-2"; pane numbers are 1..4
-    /// matching the UI badge). Must not be the caller's own pane.
+    /// Target pane. **Use the short form** (`pane-1`, `pane-2`, …) —
+    /// it's what the `pane` field of `list_panes()` returns and keeps
+    /// the rendered tool call short enough to display cleanly inside
+    /// a 25%-width grid pane. The full id (`<tab_id>::pane-2`) and a
+    /// bare digit (`2`) are also accepted for back-compat. Must not
+    /// resolve to the caller's own pane.
     pub id: String,
     /// Text to inject into the target pane's stdin.
     pub text: String,
@@ -613,6 +630,8 @@ pub struct SendToPaneArgs {
 #[derive(Debug, Deserialize, JsonSchema)]
 #[schemars(crate = "rmcp::schemars")]
 pub struct ReadPaneArgs {
+    /// Target pane. Same conventions as `send_to_pane`: short form
+    /// (`pane-1`) preferred, full id and bare digit also accepted.
     pub id: String,
     /// Max recent lines to return. Default 200, max 2000.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -629,6 +648,50 @@ fn tab_prefix(pane_id: &str) -> &str {
         Some(idx) => &pane_id[..idx],
         None => pane_id,
     }
+}
+
+/// Extract the short pane label (e.g. `pane-1`) from a full pane id
+/// like `tab-fb3f2173-...::pane-1`. Returned as a String the LLM can
+/// quote inline in tool calls without dragging the 44-char tab UUID
+/// along — keeps `send_to_pane(...)` arg lists short enough to render
+/// cleanly inside a 25%-width grid pane. Falls back to the whole id
+/// if no `::pane-` separator is found (legacy / split-pane sessions).
+fn pane_short(pane_id: &str) -> String {
+    match pane_id.find("::pane-") {
+        Some(idx) => pane_id[idx + "::".len()..].to_string(),
+        None => pane_id.to_string(),
+    }
+}
+
+/// Resolve the `id` argument of `send_to_pane` / `read_pane` against
+/// the caller's tab context. Accepts:
+///   - full id: `tab-X::pane-N`             → returned unchanged
+///   - short label: `pane-N`                → expanded with `self_tab`
+///   - bare digit / number: `1` / `2` / …   → expanded as `<self_tab>::pane-N`
+///
+/// Short forms are the recommended way for an LLM to call these tools
+/// in a 4-pane grid because the Claude/Codex/Gemini TUIs render long
+/// tool-call arg lists badly when wrapped in narrow panes (the long
+/// UUID + a multi-byte text payload trips emoji-width-aware folding).
+/// Full ids stay accepted forever — pre-v1.5.1 callers (and the LLMs
+/// they teach) keep working.
+fn resolve_pane_id(arg_id: &str, self_pane_id: Option<&str>) -> String {
+    if arg_id.contains("::pane-") {
+        return arg_id.to_string();
+    }
+    let Some(self_id) = self_pane_id else {
+        return arg_id.to_string();
+    };
+    let tab = tab_prefix(self_id);
+    if let Some(stripped) = arg_id.strip_prefix("pane-") {
+        if stripped.chars().all(|c| c.is_ascii_digit()) {
+            return format!("{tab}::pane-{stripped}");
+        }
+    }
+    if arg_id.chars().all(|c| c.is_ascii_digit()) && !arg_id.is_empty() {
+        return format!("{tab}::pane-{arg_id}");
+    }
+    arg_id.to_string()
 }
 
 #[cfg(test)]
@@ -702,7 +765,10 @@ list_panes()."
     async fn whoami(&self) -> Result<CallToolResult, McpError> {
         match &self.self_pane_id {
             Some(id) => {
-                let payload = serde_json::json!({ "pane_id": id });
+                // Return the short label (e.g. `pane-1`) so the LLM
+                // sees a value short enough to drop straight into
+                // tool calls without bloating the rendered arg list.
+                let payload = serde_json::json!({ "pane_id": pane_short(id) });
                 Ok(CallToolResult::success(vec![Content::text(
                     serde_json::to_string_pretty(&payload).unwrap_or_default(),
                 )]))
@@ -728,16 +794,17 @@ discover what peers are running before calling send_to_pane."
     async fn list_panes(&self) -> Result<CallToolResult, McpError> {
         let mut panes = self.panes.list().await;
         if let Some(self_id) = &self.self_pane_id {
-            // Tab-scope filter: a pane id is `${tab_id}::pane-${idx}`.
-            // Only show panes whose tab prefix matches the caller's.
-            // This is what makes simultaneous multi-agent tabs safe —
-            // pane in Tab A can't accidentally dispatch to a pane in
-            // Tab B because it never sees Tab B's panes in the first
-            // place.
+            // Tab-scope filter: only show panes whose tab matches the
+            // caller's. This is what makes simultaneous multi-agent
+            // tabs safe — a pane in Tab A can't accidentally dispatch
+            // to a pane in Tab B because it never sees Tab B's panes
+            // in the first place. We filter on the internal `full_id`
+            // (the long `tab-<uuid>::pane-N` form), since the public
+            // `id` field is now a short tab-relative `pane-N`.
             let self_tab = tab_prefix(self_id);
-            panes.retain(|p| tab_prefix(&p.id) == self_tab);
+            panes.retain(|p| tab_prefix(&p.full_id) == self_tab);
             for p in &mut panes {
-                if &p.id == self_id {
+                if &p.full_id == self_id {
                     p.is_self = Some(true);
                 }
             }
@@ -759,10 +826,15 @@ long-running tasks (> 2 min). Do NOT send to your own pane id."
         &self,
         Parameters(args): Parameters<SendToPaneArgs>,
     ) -> Result<CallToolResult, McpError> {
+        // Resolve the `id` arg: accept short forms (`pane-2`, `2`) and
+        // expand them against the caller's tab. Keeps tool calls short
+        // enough to render cleanly inside narrow grid panes.
+        let target_id = resolve_pane_id(&args.id, self.self_pane_id.as_deref());
+
         // Reject self-dispatch up front — this MCP instance knows
         // exactly which pane it represents.
         if let Some(self_id) = &self.self_pane_id {
-            if self_id == &args.id {
+            if self_id == &target_id {
                 return Ok(CallToolResult::success(vec![Content::text(
                     serde_json::json!({
                         "status": "failed",
@@ -779,7 +851,7 @@ long-running tasks (> 2 min). Do NOT send to your own pane id."
             // SharedSession map. Mirrors the filtering done in
             // `list_panes`.
             let self_tab = tab_prefix(self_id);
-            let target_tab = tab_prefix(&args.id);
+            let target_tab = tab_prefix(&target_id);
             if self_tab != target_tab {
                 return Ok(CallToolResult::success(vec![Content::text(
                     serde_json::json!({
@@ -804,17 +876,20 @@ long-running tasks (> 2 min). Do NOT send to your own pane id."
         // on actual idle detection means short tasks still return fast.
         let timeout_sec = args.timeout_sec.unwrap_or(600).min(3600);
 
-        // Prefix the dispatched text with `[From <self_pane_id>]` so the
-        // receiving CLI's LLM sees who sent the work — without this the
-        // target gets a bare command and has to guess the source.
+        // Prefix the dispatched text with `[From <self_pane>]` so the
+        // receiving CLI's LLM sees who sent the work — without this
+        // the target gets a bare command and has to guess the source.
+        // Use the short `pane-N` form (not the long full id) so the
+        // resulting prefix doesn't blow up the receiver's terminal
+        // width either.
         let dispatch_text = match &self.self_pane_id {
-            Some(self_id) => format!("[From {}] {}", self_id, args.text),
+            Some(self_id) => format!("[From {}] {}", pane_short(self_id), args.text),
             None => args.text.clone(),
         };
 
         match self
             .panes
-            .dispatch(&args.id, &dispatch_text, submit, wait, timeout_sec)
+            .dispatch(&target_id, &dispatch_text, submit, wait, timeout_sec)
             .await
         {
             Ok(result) => {
@@ -827,7 +902,7 @@ long-running tasks (> 2 min). Do NOT send to your own pane id."
                 };
                 let mut payload = serde_json::json!({
                     "status": status,
-                    "pane_id": args.id,
+                    "pane_id": pane_short(&target_id),
                     "bytes_written": result.bytes_written,
                 });
                 if !result.waited {
@@ -855,8 +930,11 @@ Returns plain text (ANSI stripped) and an is_idle flag."
         &self,
         Parameters(args): Parameters<ReadPaneArgs>,
     ) -> Result<CallToolResult, McpError> {
+        // Accept short forms (`pane-2`, `2`) — same convenience as
+        // send_to_pane.
+        let target_id = resolve_pane_id(&args.id, self.self_pane_id.as_deref());
         let last_n = args.last_n_lines.unwrap_or(200).min(2000);
-        match self.panes.read(&args.id, last_n).await {
+        match self.panes.read(&target_id, last_n).await {
             Ok((output, is_idle)) => {
                 let payload = serde_json::json!({
                     "output": output,
