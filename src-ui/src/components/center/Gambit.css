@@ -98,9 +98,21 @@
     border: none; /* All shapes are fully borderless — shape identity comes from radius, shadow, and inset-light alone. */
     /* Shape-aware radius: soft=16px, slab=4px, sharp/blade/panel=0px. */
     border-radius: var(--shape-radius-panel, 10px);
-    box-shadow:
-        0 10px 28px rgba(var(--shadow-rgb), 0.22),
-        0 2px 6px rgba(var(--shadow-rgb), 0.10);
+    /* 4-layer natural drop shadow — 1/2/3/4 px stepped falloff with
+       fading alpha 80 → 60 → 40 → 20%. Each layer adds another 1px of
+       soft edge so the falloff reads organically instead of the
+       single-blur "halo" pattern that vanished into deep backgrounds.
+       Pulled into a local CSS var so [data-shape] overrides below can
+       reuse the same falloff while still prepending their inset-edge
+       accents. The colour comes from --shadow-rgb on the active theme
+       (espresso, sakura, mint, …) so the elevation reads against any
+       palette. */
+    --gambit-shadow:
+        0 1px 1px rgba(var(--shadow-rgb), 0.80),
+        0 2px 2px rgba(var(--shadow-rgb), 0.60),
+        0 3px 3px rgba(var(--shadow-rgb), 0.40),
+        0 4px 4px rgba(var(--shadow-rgb), 0.20);
+    box-shadow: var(--gambit-shadow);
     color: var(--text-1, #e8e4de);
     font-family: inherit;
     overflow: hidden;
@@ -117,11 +129,10 @@
 }
 
 [data-theme="light"] .gambit {
-    /* Light theme: softer natural shadow without any border line. */
+    /* Inherits the same 4-layer 80/60/40/20 falloff defined on
+       .gambit. With --shadow-rgb=0,0,0 (light theme black) the
+       shadow reads naturally against the ivory background. */
     color: var(--text-1, #2a2823);
-    box-shadow:
-        0 8px 22px rgba(var(--shadow-rgb), 0.08),
-        0 2px 5px rgba(var(--shadow-rgb), 0.04);
 }
 
 /* ─── Shape overlays (mirror .task-card / .panel-* styling) ─── */
@@ -131,33 +142,24 @@
     box-shadow:
         inset 1px 1px 0 0 var(--shape-edge-light-top),
         inset -1px -1px 0 0 var(--shape-edge-light-bottom),
-        0 8px 24px rgba(var(--shadow-rgb), 0.22),
-        0 2px 5px rgba(var(--shadow-rgb), 0.10);
+        var(--gambit-shadow);
 }
 
-/* Sharp: identity is 0-radius corners. No border, just a slightly crisper shadow. */
-[data-shape="sharp"] .gambit {
-    box-shadow:
-        0 10px 26px rgba(var(--shadow-rgb), 0.26),
-        0 2px 6px rgba(var(--shadow-rgb), 0.14);
-}
+/* Sharp: identity is 0-radius corners. No extra trim — the natural
+   4-layer falloff defined on .gambit already reads correctly here. */
 
 /* Blade: accent stripe on the left edge */
 [data-shape="blade"] .gambit {
     box-shadow:
         inset var(--shape-accent-stripe-width) 0 0 0 var(--accent),
-        0 10px 28px rgba(var(--shadow-rgb), 0.22),
-        0 2px 6px rgba(var(--shadow-rgb), 0.10);
+        var(--gambit-shadow);
 }
 
-/* Panel: identity is "heaviest plate". No border — a layered shadow
-   gives presence without heaviness. */
-[data-shape="panel"] .gambit {
-    box-shadow:
-        0 14px 32px rgba(var(--shadow-rgb), 0.28),
-        0 4px 10px rgba(var(--shadow-rgb), 0.16),
-        0 1px 3px rgba(var(--shadow-rgb), 0.10);
-}
+/* Panel: same 4-layer falloff as every other shape. The original
+   v1.4 panel override used a heavier shadow to project a "thick
+   plate" feel, but the new natural 4-layer formula reads heavy
+   enough at 80% on the closest layer that the special-case override
+   stopped pulling its weight visually. */
 
 /* ─── Header (drag handle) ─────────────────────────────────── */
 /* Paper-style: no background tint, no divider — the title floats on the
