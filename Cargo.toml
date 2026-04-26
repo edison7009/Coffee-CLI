@@ -33,10 +33,6 @@ tauri-plugin-log = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-clipboard-manager = "2"
 
-# Directory scanning (.gitignore aware, same engine as ripgrep)
-ignore = "0.4"
-
-# Utility libraries
 # Utilities
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -70,7 +66,21 @@ strip = true
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-global-shortcut = "2"
 
-# Win32 DWM bindings — used to force square window corners on Windows 11
-# (DWM otherwise rounds borderless windows by default).
+# Win32 bindings:
+#   - DWM: force square window corners on Windows 11 (otherwise rounds
+#     borderless windows by default).
+#   - System_Console: AttachConsole for the `mcp-status` CLI subcommand
+#     so its stdout reaches the parent terminal in release builds
+#     (which link with windows_subsystem = "windows").
+#   - System_Threading: process-liveness probe for the manifest reader.
 [target.'cfg(windows)'.dependencies]
-windows = { version = "0.58", features = ["Win32_Foundation", "Win32_Graphics_Dwm"] }
+windows = { version = "0.58", features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Dwm",
+    "Win32_System_Console",
+    "Win32_System_Threading",
+] }
+
+# `libc::kill(pid, 0)` for process-liveness probe in cli::mcp_status.
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"

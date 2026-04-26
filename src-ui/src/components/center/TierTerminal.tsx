@@ -617,15 +617,9 @@ function TierTerminalImpl({
             : `\r\n\x1b[31m[Process exited with code ${exitCode}]\x1b[0m\r\n`;
           xtermRef.current?.write(msg);
         },
-        onCwd: async (cwd) => {
+        onCwd: (cwd) => {
           if (!mounted) return;
           dispatch({ type: 'SET_FOLDER', path: cwd });
-          try {
-            const data = await commands.scanFolder(cwd);
-            if (mounted) dispatch({ type: 'SET_SCAN', data });
-          } catch (e) {
-            console.warn('[Terminal] CWD scan failed:', e);
-          }
         },
       });
       if (mounted) unlisteners.push(unsubEvents); else { unsubEvents(); return; }

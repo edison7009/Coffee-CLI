@@ -371,9 +371,9 @@ export function DosPlayer({ sessionId }: { sessionId: string }) {
         if (otherTabs.length > 0) {
           dispatch({ type: 'SET_ACTIVE_TERMINAL', id: otherTabs[0].id });
         } else {
-          dispatch({ 
-            type: 'ADD_TERMINAL', 
-            session: { id: crypto.randomUUID(), tool: null, folderPath: null, scanData: null }
+          dispatch({
+            type: 'ADD_TERMINAL',
+            session: { id: crypto.randomUUID(), tool: null, folderPath: null }
           });
         }
       } else {

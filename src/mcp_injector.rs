@@ -56,43 +56,99 @@ use crate::mcp_server::McpEndpoint;
 /// Changing this after ship breaks uninstallation on existing users.
 pub const MCP_KEY: &str = "coffee-cli";
 
+/// Write a per-pane MCP config JSON file for Claude Code's
+/// `--mcp-config <file>` flag. Each multi-agent pane gets its OWN
+/// file pointing at its OWN per-pane MCP endpoint, so the running
+/// Claude in that pane connects to a server with `self_pane_id`
+/// already baked in — no runtime guessing of pane identity.
+///
+/// Path: `<temp>/coffee-cli/mcp/<safe-pane-id>.json`. Recreated
+/// on every spawn, so changes propagate cleanly across restarts.
+///
+/// File shape matches `claude --mcp-config`:
+/// ```json
+/// { "mcpServers": { "coffee-cli": { "type": "http", "url": "..." } } }
+/// ```
+pub fn write_per_pane_claude_config(
+    pane_id: &str,
+    endpoint: &McpEndpoint,
+) -> std::io::Result<PathBuf> {
+    let dir = std::env::temp_dir().join("coffee-cli").join("mcp");
+    fs::create_dir_all(&dir)?;
+    let path = dir.join(format!("{}.json", sanitize_pane_id(pane_id)));
+    let body = serde_json::json!({
+        "mcpServers": {
+            MCP_KEY: {
+                "type": "http",
+                "url": endpoint.url,
+            }
+        }
+    });
+    fs::write(
+        &path,
+        serde_json::to_string_pretty(&body).unwrap_or_default(),
+    )?;
+    Ok(path)
+}
+
+/// Pane ids contain `::` and `/` which are unfriendly for filenames
+/// on Windows. Replace with safe characters.
+fn sanitize_pane_id(pane_id: &str) -> String {
+    pane_id
+        .chars()
+        .map(|c| match c {
+            'a'..='z' | 'A'..='Z' | '0'..='9' | '-' | '_' => c,
+            _ => '_',
+        })
+        .collect()
+}
+
 // ---------- Public entry points ----------
 
-/// Inject the endpoint into every supported primary CLI's config we can
-/// find on disk. Missing-config scenarios are logged and skipped (they
-/// just mean that CLI isn't installed); only hard failures return Err.
+/// Inject the endpoint into the requested subset of supported primary
+/// CLI configs. `kinds` is a slice of any of: "claude", "codex", "gemini".
+/// Unknown or empty kinds are silently ignored. Missing-config scenarios
+/// are logged and skipped (just means that CLI isn't installed); only
+/// hard failures return Err.
 ///
 /// The `_workspace` parameter is retained for forward compatibility with
 /// v1.1 when OpenCode (workspace-local config) may come back online.
 ///
 /// Returns the list of paths we touched so the UI can surface them.
-pub fn install_all(endpoint: &McpEndpoint, _workspace: Option<&Path>) -> anyhow::Result<Vec<PathBuf>> {
+pub fn install_all(
+    endpoint: &McpEndpoint,
+    kinds: &[&str],
+    _workspace: Option<&Path>,
+) -> anyhow::Result<Vec<PathBuf>> {
     let mut touched = Vec::new();
 
-    // Claude Code — ~/.claude.json
-    if let Some(p) = claude_config_path() {
-        if let Err(e) = install_claude(&p, endpoint) {
-            log::warn!("[mcp-inject] claude skipped: {}", e);
-        } else {
-            touched.push(p);
+    if kinds.contains(&"claude") {
+        if let Some(p) = claude_config_path() {
+            if let Err(e) = install_claude(&p, endpoint) {
+                log::warn!("[mcp-inject] claude skipped: {}", e);
+            } else {
+                touched.push(p);
+            }
         }
     }
 
-    // Codex CLI — ~/.codex/config.toml
-    if let Some(p) = codex_config_path() {
-        if let Err(e) = install_codex(&p, endpoint) {
-            log::warn!("[mcp-inject] codex skipped: {}", e);
-        } else {
-            touched.push(p);
+    if kinds.contains(&"codex") {
+        if let Some(p) = codex_config_path() {
+            if let Err(e) = install_codex(&p, endpoint) {
+                log::warn!("[mcp-inject] codex skipped: {}", e);
+            } else {
+                touched.push(p);
+            }
         }
     }
 
-    // Gemini CLI — ~/.gemini/settings.json
-    if let Some(p) = gemini_config_path() {
-        if let Err(e) = install_gemini(&p, endpoint) {
-            log::warn!("[mcp-inject] gemini skipped: {}", e);
-        } else {
-            touched.push(p);
+    if kinds.contains(&"gemini") {
+        if let Some(p) = gemini_config_path() {
+            if let Err(e) = install_gemini(&p, endpoint) {
+                log::warn!("[mcp-inject] gemini skipped: {}", e);
+            } else {
+                touched.push(p);
+            }
         }
     }
 

@@ -87,16 +87,10 @@ export function FourSplitGrid({ tab, hasBg, bgUrl, bgType, paneCount = 4 }: Prop
   // overflow. This is defensive.
   const visiblePanes = panes.slice(0, paneCount);
 
-  // Sync the left Explorer to a pane's folder: update the tab's folderPath
-  // so the path text changes, AND trigger a scanFolder → SET_SCAN so the
-  // actual file tree contents refresh. Without the scan, Explorer would
-  // show the previous pane's files under the new path (the bug the user
-  // reported — "path swaps but list doesn't").
+  // Sync the left Explorer to a pane's folder. Explorer's lazy tree
+  // (BrowserDirNode + listDirectory) re-reads automatically on folderPath change.
   const syncExplorerToFolder = (path: string) => {
     dispatch({ type: 'SET_FOLDER', path });
-    commands.scanFolder(path)
-      .then(data => dispatch({ type: 'SET_SCAN', data }))
-      .catch(err => console.warn('[FourSplitGrid] scanFolder failed:', err));
   };
 
   // Folder-picker → SET_PANE_TOOL flow. Each pane picks its own directory

@@ -28,6 +28,77 @@
 
 use std::{fs, path::Path};
 
+/// Build the per-pane system-prompt text passed to Claude Code via
+/// `--append-system-prompt <text>` at PTY launch.
+///
+/// This is the "no MD file needed" path — Claude Code's
+/// `--append-system-prompt` flag splices the text directly into the
+/// model's system prompt for that session, which:
+///
+///   1. Survives `/clear` (only conversation history clears, system
+///      prompt persists).
+///   2. Survives `/compact` (compaction preserves system prompt).
+///   3. Bakes the pane id into the running session — no LLM inference
+///      needed, no workspace files written, no `/clear`-forget risk.
+///
+/// Each pane's text is unique because `pane_id` is interpolated. The
+/// receiving Claude treats this as ground truth for "who am I and what
+/// world am I in", and our MCP server (started with the same pane_id
+/// baked in) makes `whoami()` confirm the same answer deterministically.
+pub fn build_pane_system_prompt(pane_id: &str) -> String {
+    format!(
+        r#"# Coffee-CLI multi-agent context
+
+You are running inside Coffee-CLI's multi-agent mode. Your pane id
+is `{pane_id}`. Coffee-CLI has wired your MCP connection so this id
+is baked in server-side — every `whoami()` call returns it
+deterministically, and `list_panes()` marks your own row with
+`is_self: true`.
+
+## MCP tools (4) from the `coffee-cli` server
+
+- **whoami()** → returns `{{"pane_id": "{pane_id}"}}`. Authoritative
+  source for your own identity. Call once if you ever doubt; otherwise
+  use the value above.
+- **list_panes()** → array of all panes in this Tab. Your row has
+  `is_self: true`. Use this to discover which peers are running and
+  whether they're idle/busy/empty/terminated.
+- **send_to_pane(id, text, wait?, timeout_sec?)** → dispatch work to a
+  peer pane. The server auto-prefixes `text` with `[From {pane_id}]`
+  so the receiver knows who you are — you don't need to bake your id
+  into `text` manually. `wait=true` (default) blocks until the target
+  idles and returns their reply; `wait=false` returns immediately and
+  you poll via `read_pane()` later. `timeout_sec` default 600.
+- **read_pane(id, last_n_lines?)** → read a peer's recent output
+  (ANSI stripped). Useful after `wait=false` or to check progress.
+
+## Sentinel DONE marker (completion receipt)
+
+When you finish a task that a peer dispatched to you, emit on its own
+line as your final output:
+
+    [COFFEE-DONE:{pane_id}->paneM]
+
+`paneM` is the source pane id — read it off the `[From ...]` prefix
+that Coffee-CLI added to the incoming message. The marker wakes the
+dispatcher's turn loop without polling.
+
+## Rules
+
+- Don't self-dispatch — `send_to_pane({pane_id}, ...)` is rejected by
+  the server.
+- Prefer MCP tools for dispatch (structured, give error responses).
+  The DONE marker is ONLY a completion signal, not a way to send work.
+- All MCP calls and DONE markers are visible to the human user in real
+  time. They can interrupt or take over any time.
+- Cross-pane prompts: write `text` arguments in English even if the
+  user spoke Chinese — LLMs follow tool-use instructions more reliably
+  in English. Translate replies back to the user's language.
+"#,
+        pane_id = pane_id
+    )
+}
+
 /// Markers delimit the Coffee-CLI-managed section so we can splice it
 /// into an existing file without clobbering user content, and remove it
 /// cleanly on disable. Do NOT change these strings once shipped — they
@@ -51,26 +122,28 @@ an orchestrator** — any pane can dispatch work to any peer pane via the
 `coffee-cli` MCP tools, and optionally receive completion receipts
 via the Sentinel Protocol.
 
-## Forward dispatch — MCP tools (3 of them)
+## Forward dispatch — MCP tools (4 of them)
 
 The `coffee-cli` MCP server exposes:
 
-- **`list_panes()`** — returns the current tab's panes with their pane
-  number, CLI type ("claude" / "gemini" / …), and state ("idle" /
-  "busy" / "empty" / "terminated"). Call this first to discover
-  neighbors and their availability.
+- **`whoami()`** — returns YOUR pane id (e.g. `tab-X::pane-2`).
+  Coffee-CLI bakes this into the MCP server instance at spawn time,
+  so the answer is deterministic — never guess your own pane number
+  from `list_panes()` output alone, especially when multiple panes
+  run the same CLI type.
+- **`list_panes()`** — returns the current tab's panes with their
+  pane id, CLI type, and state. The row representing YOU is marked
+  `is_self: true` so you always know which entry is yourself.
+  Dispatches to empty panes return a clear error, never silently drop.
 - **`send_to_pane(pane_id, text, wait?, timeout_sec?)`** — send text
-  (with Enter) to another pane's input. With `wait=true` (default)
-  blocks until the target returns to idle or times out, giving you
-  its response as the tool result. With `wait=false` fires
-  asynchronously — follow up later with `read_pane()`.
+  to another pane's input. The text you send is automatically
+  prefixed with `[From <your_pane_id>]` server-side, so the receiver
+  knows who dispatched. With `wait=true` (default) blocks until the
+  target returns to idle and gives you its reply; with `wait=false`
+  fires asynchronously — follow up later with `read_pane()`.
 - **`read_pane(pane_id, last_n_lines?)`** — read the target pane's
   recent output (ANSI-stripped). Useful after a fire-and-forget
   dispatch, or to check on a long-running task.
-
-These tools already know pane numbers and state, so you never have to
-guess. Dispatches to empty panes return a clear error, never silently
-drop.
 
 ## Backward receipt — Sentinel DONE marker (optional)
 
@@ -79,11 +152,12 @@ its own line as your final output:
 
     [COFFEE-DONE:paneN->paneM]
 
-- `N` = your pane number (1..4). You can get this from `list_panes()`
-  before emitting.
-- `M` = the pane that asked for the task (you can usually infer it
-  from who sent the `send_to_pane` call, visible to you as the
-  dispatcher pane's id in the incoming message).
+- `N` = your pane number (1..4). Get the *exact* value via `whoami()`
+  — that's the only authoritative source. Don't infer from
+  `list_panes()` if multiple panes share your CLI type.
+- `M` = the pane that asked for the task. Coffee-CLI prefixes the
+  incoming send_to_pane text with `[From tab-X::pane-M]` — read M
+  off that prefix.
 
 If the human has Sentinel mode toggled ON for both panes, Coffee-CLI
 will light a green dot on your badge AND inject "[From pane N] Task
@@ -119,10 +193,19 @@ signals back via a lightweight Sentinel marker in PTY output.
 
 ## Two-layer architecture
 
-**Layer 1 — MCP (forward dispatch)**
-  Three tools exposed by the `coffee-cli` MCP server. This is how you
-  SEND work to another pane, discover neighbors, and read their output.
-  Structured JSON-RPC, error responses on failure.
+**Layer 1 — MCP (forward dispatch + identity)**
+  Four tools exposed by the `coffee-cli` MCP server. This is how you
+  SEND work to another pane, discover neighbors, read their output,
+  and learn your own pane id. Structured JSON-RPC, error responses
+  on failure.
+
+  Crucially, each pane connects to its OWN dedicated MCP server
+  instance with `self_pane_id` baked in at spawn time. This means
+  `whoami()` returns deterministic answers, `list_panes()` marks
+  your row with `is_self: true`, and `send_to_pane()` automatically
+  prefixes dispatched text with `[From <your_pane_id>]` server-side
+  — even when 4 panes run the same CLI type, identification is
+  unambiguous and zero-guess.
 
 **Layer 2 — Sentinel (backward receipt)**
   A text marker `[COFFEE-DONE:paneN->paneM]` that you emit in your
@@ -137,27 +220,41 @@ acknowledges it BACKWARD. Both are fully visible to the human user —
 MCP calls surface in the UI, Sentinel markers and injections show up
 in both panes' scrollbacks.
 
-## The 3 MCP tools
+## The 4 MCP tools
+
+### `whoami()`
+
+Returns your own pane id (e.g. `{"pane_id": "tab-abc::pane-2"}`).
+Call this once at session start so you have a verified self-identity
+to use in `send_to_pane` arguments and `[COFFEE-DONE]` markers. The
+answer is baked in at spawn time and never changes — no LLM
+inference required.
 
 ### `list_panes()`
 
-Returns an array of the current Tab's panes:
+Returns an array of the current Tab's panes; the row representing
+YOU has `is_self: true`:
 
 ```
 [
-  { "id": "tab-abc::pane-1", "pane_idx": 1, "cli": "claude",   "state": "idle", "title": "E:\\test" },
-  { "id": "tab-abc::pane-2", "pane_idx": 2, "cli": "gemini",   "state": "busy", "title": "E:\\test" },
-  { "id": "tab-abc::pane-3", "pane_idx": 3, "cli": null,       "state": "empty" },
-  { "id": "tab-abc::pane-4", "pane_idx": 4, "cli": "codex",    "state": "idle", "title": "E:\\test" }
+  { "id": "tab-abc::pane-1", "cli": "claude", "state": "idle", "is_self": true,  "title": "E:\\test" },
+  { "id": "tab-abc::pane-2", "cli": "claude", "state": "idle",                   "title": "E:\\test" },
+  { "id": "tab-abc::pane-3", "cli": null,     "state": "empty"                                       },
+  { "id": "tab-abc::pane-4", "cli": "claude", "state": "idle",                   "title": "E:\\test" }
 ]
 ```
 
-Call this first. You'll know which panes have CLIs running, which are
-busy, and what their ids are. Never guess.
+Call this to discover which other panes have CLIs running and which
+are busy. Even when multiple panes share your CLI type (e.g. four
+Claude instances), `is_self: true` tells you exactly which row is
+yourself.
 
 ### `send_to_pane(id, text, wait?, timeout_sec?)`
 
-Send `text` (with Enter) into the target pane's input.
+Send `text` (with Enter) into the target pane's input. The text is
+automatically prefixed with `[From <your_pane_id>]` server-side, so
+the receiving CLI knows who dispatched without you having to bake
+your id into `text` manually.
 
 - `id` — full pane id from `list_panes()` (e.g. `"tab-abc::pane-2"`)
 - `text` — what to send. Multi-line is fine; the pane's CLI handles it
@@ -170,8 +267,9 @@ Send `text` (with Enter) into the target pane's input.
   "I hit the watch window" not "failed".
 
 Errors (structured JSON, not silent):
+- Target == your own pane: `{error: "cannot send_to_pane to self"}`
+  (server detects this from your baked-in self_pane_id, no inference)
 - Target pane is empty: `{error: "pane is empty; ask user to start a CLI there"}`
-- Target == your own pane: `{error: "cannot send to self"}`
 - Target terminated: `{error: "target pane process has exited"}`
 
 ### `read_pane(id, last_n_lines?)`
@@ -188,10 +286,10 @@ its own line at the end of your response:
 
     [COFFEE-DONE:paneN->paneM]
 
-- `N` = YOUR pane number (you got it from `list_panes()`)
-- `M` = the pane that dispatched the task (visible in the input prefix
-  when Coffee-CLI injected their message, or you can look it up via
-  `list_panes()` if they told you)
+- `N` = YOUR pane number — get it from `whoami()` (deterministic).
+- `M` = the pane that dispatched the task — read it off the
+  `[From tab-X::pane-M]` prefix that Coffee-CLI auto-prepended to
+  the incoming message. You don't need to guess.
 
 **Activation**: the human must toggle "Sentinel mode" ON for both your
 pane AND pane M (independent opt-in, per pane). With sentinel on:
@@ -475,22 +573,31 @@ fn write_if_changed(path: &Path, body: &str) -> std::io::Result<bool> {
 
 // ---------- Public entry points ----------
 
-/// Write CLAUDE.md, AGENTS.md, GEMINI.md thin pointers at the workspace
-/// root AND install `<workspace>/.multi-agent/` with the full protocol.
+/// Write the requested root-level thin pointers (subset of CLAUDE.md /
+/// AGENTS.md / GEMINI.md) AND install `<workspace>/.multi-agent/` with
+/// the full protocol — *only if at least one MD is requested*. Empty
+/// `md_names` means "user didn't pick any CLI we support" → no-op.
+///
 /// `endpoint_json` (optional) becomes `.multi-agent/endpoint.json`.
 pub fn install(
     workspace_root: &Path,
+    md_names: &[&str],
     endpoint_json: Option<&str>,
 ) -> std::io::Result<Vec<std::path::PathBuf>> {
     let mut touched = Vec::new();
+
+    if md_names.is_empty() {
+        return Ok(touched);
+    }
 
     // 1. Meta directory first, because the thin pointer refers to
     //    `.multi-agent/PROTOCOL.md` — having it live before the CLI
     //    reads the root .md avoids a "file not found" confusion.
     touched.extend(install_meta_dir(workspace_root, endpoint_json)?);
 
-    // 2. Root-level thin pointers.
-    for name in ["CLAUDE.md", "AGENTS.md", "GEMINI.md"] {
+    // 2. Root-level thin pointers — only for the CLIs the user actually
+    //    has running in panes.
+    for name in md_names {
         let p = workspace_root.join(name);
         if upsert_protocol_block(&p)? {
             touched.push(p);
@@ -638,15 +745,20 @@ mod tests {
 
         let protocol = fs::read_to_string(ws.join(META_DIR).join("PROTOCOL.md")).unwrap();
         assert!(protocol.contains("Coffee-CLI Multi-Agent Protocol"));
-        // Correct hybrid architecture (v1.3 restoration):
-        //   - MCP tools handle forward dispatch — `list_panes()` +
-        //     `send_to_pane(...)` + `read_pane(...)` must all be taught.
+        // Correct hybrid architecture (v1.4 per-pane MCP):
+        //   - 4 MCP tools handle forward dispatch + identity:
+        //     `whoami()`, `list_panes()`, `send_to_pane(...)`, `read_pane(...)`.
         //   - Sentinel DONE marker handles backward receipt — must appear
         //     in the protocol text exactly as agents are expected to emit it.
+        assert!(protocol.contains("whoami()"));
         assert!(protocol.contains("list_panes()"));
         assert!(protocol.contains("send_to_pane"));
         assert!(protocol.contains("read_pane"));
         assert!(protocol.contains("[COFFEE-DONE:paneN->paneM]"));
+        // is_self marker is the load-bearing piece of the per-pane
+        // architecture — without it, multiple same-CLI panes can't
+        // disambiguate themselves in list_panes output.
+        assert!(protocol.contains("is_self"));
 
         let _ = fs::remove_dir_all(&ws);
     }
@@ -702,7 +814,8 @@ mod tests {
     #[test]
     fn public_install_creates_root_pointers_and_meta_dir() {
         let ws = tmp_workspace("public-install");
-        let touched = install(&ws, Some(r#"{"port":1}"#)).unwrap();
+        let mds = ["CLAUDE.md", "AGENTS.md", "GEMINI.md"];
+        let touched = install(&ws, &mds, Some(r#"{"port":1}"#)).unwrap();
         assert!(ws.join("CLAUDE.md").exists());
         assert!(ws.join("AGENTS.md").exists());
         assert!(ws.join("GEMINI.md").exists());
@@ -718,5 +831,61 @@ mod tests {
 
         assert!(touched.len() >= 5);
         let _ = fs::remove_dir_all(&ws);
+    }
+
+    #[test]
+    fn public_install_only_writes_requested_mds() {
+        let ws = tmp_workspace("subset-install");
+        // User picked only Claude in panes → only CLAUDE.md should appear.
+        install(&ws, &["CLAUDE.md"], None).unwrap();
+        assert!(ws.join("CLAUDE.md").exists());
+        assert!(!ws.join("AGENTS.md").exists(),
+            "AGENTS.md must not be written when no Codex/OpenCode pane is open");
+        assert!(!ws.join("GEMINI.md").exists(),
+            "GEMINI.md must not be written when no Gemini pane is open");
+        let _ = fs::remove_dir_all(&ws);
+    }
+
+    #[test]
+    fn public_install_empty_set_is_noop() {
+        let ws = tmp_workspace("empty-install");
+        let touched = install(&ws, &[], None).unwrap();
+        assert!(touched.is_empty());
+        assert!(!ws.join(META_DIR).exists(),
+            "meta dir must not be created if no CLI MD is requested");
+        let _ = fs::remove_dir_all(&ws);
+    }
+
+    #[test]
+    fn pane_system_prompt_contains_pane_id_and_tools() {
+        let prompt = build_pane_system_prompt("tab-abc::pane-2");
+        // The pane id must appear so the model can echo it back in
+        // [COFFEE-DONE] markers and reject self-dispatch by inspection.
+        assert!(prompt.contains("tab-abc::pane-2"),
+            "system prompt must inline the actual pane id");
+        // All four MCP tools must be enumerated, otherwise the model
+        // won't know they exist after /clear (when conversation history
+        // is wiped but system prompt persists).
+        assert!(prompt.contains("whoami()"));
+        assert!(prompt.contains("list_panes()"));
+        assert!(prompt.contains("send_to_pane"));
+        assert!(prompt.contains("read_pane"));
+        // The Sentinel DONE marker is a Coffee-CLI-specific protocol
+        // — model has no way to learn it without explicit teaching.
+        assert!(prompt.contains("[COFFEE-DONE:tab-abc::pane-2->paneM]"));
+        // is_self is the load-bearing piece for same-CLI multi-pane
+        // identity disambiguation; teaching that it exists is critical.
+        assert!(prompt.contains("is_self"));
+    }
+
+    #[test]
+    fn pane_system_prompts_differ_per_pane() {
+        let p1 = build_pane_system_prompt("tab-X::pane-1");
+        let p2 = build_pane_system_prompt("tab-X::pane-2");
+        assert_ne!(p1, p2, "each pane must get a unique prompt");
+        assert!(p1.contains("pane-1") && !p1.contains("pane-2->")
+            || !p1.contains("pane-2"));
+        assert!(p2.contains("pane-2") && !p2.contains("pane-1->")
+            || !p2.contains("pane-1"));
     }
 }

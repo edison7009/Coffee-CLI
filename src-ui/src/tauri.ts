@@ -45,21 +45,6 @@ export async function invoke<T>(cmd: string, args?: Record<string, unknown>): Pr
 
 // ─── Type Definitions ────────────────────────────────────────────────────────
 
-export interface FileEntry {
-  relative_path: string;
-  size: number;
-  extension: string;
-  symbols: { name: string; kind: string; line: number }[];
-  line_count: number;
-}
-
-export interface ScanResult {
-  root: string;
-  files: FileEntry[];
-  total_scanned: number;
-  skipped: string[];
-}
-
 export interface GitStatusResponse {
   files_changed: number;
   insertions: number;
@@ -94,9 +79,6 @@ export interface DirEntryInfo {
 
 export const commands = {
   pickFolder: () => invoke<string>('pick_folder'),
-
-  scanFolder: (path: string | null) =>
-    invoke<ScanResult>('scan_project', { path }),
 
   // Window decorators
   windowMinimize: () => invoke<void>('window_minimize'),
@@ -198,17 +180,19 @@ export const commands = {
   stopFsWatcher: () =>
     invoke<void>('stop_fs_watcher'),
 
-  // Multi-agent mode — writes CLAUDE.md / AGENTS.md / GEMINI.md to the
-  // workspace root and merges the coffee-cli MCP endpoint into each
-  // detected primary CLI config. Idempotent; safe to call repeatedly.
-  enableMultiAgentMode: (workspace: string) =>
+  // Multi-agent mode — writes only the root MD files needed by the
+  // tools the user actually has running in panes (CLAUDE.md for
+  // "claude", AGENTS.md for "codex"/"opencode", GEMINI.md for
+  // "gemini"). Empty `tools` is a no-op cleanly. Idempotent.
+  // First call also lazy-spawns the MCP server.
+  enableMultiAgentMode: (workspace: string, tools: string[]) =>
     invoke<{
       ok: boolean;
       mcp_url: string | null;
       touched_config_files: string[];
       touched_md_files: string[];
       warnings: string[];
-    }>('enable_multi_agent_mode', { workspace }),
+    }>('enable_multi_agent_mode', { workspace, tools }),
   disableMultiAgentMode: (workspace: string) =>
     invoke<{
       ok: boolean;

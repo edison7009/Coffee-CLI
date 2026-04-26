@@ -8,13 +8,6 @@ import { FourSplitGrid } from './FourSplitGrid';
 import { ErrorBoundary } from '../common/ErrorBoundary';
 import { useAppState, type ToolType } from '../../store/app-state';
 
-// Coordinated multi-agent Tab tools. At most one such Tab may be active
-// in the whole app at any time — the MCP injection and protocol .md
-// files live in a single workspace and a second one would overwrite or
-// race the first. Enforced by greying out the launchpad cards while one
-// is running; see the Desktop pinned grid below.
-const MULTI_AGENT_TOOLS: ReadonlyArray<ToolType> = ['multi-agent', 'two-agent', 'three-agent'];
-
 export interface RemoteHistoryItem {
   id: string;
   protocol: 'ssh' | 'ws';
@@ -713,7 +706,7 @@ export function CenterPanel() {
     }
     dispatch({
       type: 'ADD_TERMINAL',
-      session: { id: crypto.randomUUID(), tool: null, folderPath: null, scanData: null }
+      session: { id: crypto.randomUUID(), tool: null, folderPath: null }
     });
   };
 
@@ -741,18 +734,12 @@ export function CenterPanel() {
   };
 
   const selectTool = (tool: ToolType, toolData?: string, cwd?: string) => {
-    // Single-instance lock for coordinated multi-agent Tabs. The MCP
-    // server is process-global and the protocol .md files are written
-    // into the workspace cwd, so a second concurrent Tab would either
-    // share state with the first (cross-Tab pane visibility) or fight
-    // over the same files. Block the launch silently — the launchpad
-    // card is already greyed in this state.
-    if (
-      MULTI_AGENT_TOOLS.includes(tool) &&
-      state.terminals.some(t => t.id !== activeTerminalId && MULTI_AGENT_TOOLS.includes(t.tool))
-    ) {
-      return;
-    }
+    // Concurrent multi-agent Tabs are now supported as of the per-pane
+    // MCP / per-pane system-prompt rework: each pane has its own MCP
+    // listener (different port), Claude panes write zero workspace
+    // files, and `list_panes` / `send_to_pane` filter by the caller's
+    // own Tab id so two open multi-agent Tabs never see each other.
+    // The old single-instance lock that lived here has been removed.
     // VibeID launcher: before spawning /vibeid, make sure the /insights usage
     // report exists. If not, auto-run /insights in a pre-run tab and poll for
     // the report file. When it lands, kill the pre-run PTY and remount the
@@ -1183,21 +1170,19 @@ export function CenterPanel() {
                       }
 
                       // Coordinated multi-agent is single-instance. If any
-                      // Tab in the app is already a multi/two/three-agent
-                      // session, lock the matching launchpad cards so the
-                      // user can't spawn a second concurrent one. Cleared
-                      // automatically when the existing Tab is closed or
-                      // its tool is changed away from a multi-agent value.
-                      const multiAgentLocked = state.terminals.some(
-                        t => MULTI_AGENT_TOOLS.includes(t.tool)
-                      );
+                      // Concurrent multi-agent Tabs are now supported —
+                      // each Tab gets its own per-pane MCP servers on
+                      // distinct ports, Claude panes write zero workspace
+                      // files, and the MCP `list_panes` / `send_to_pane`
+                      // tools filter by Tab id. So we no longer grey out
+                      // the multi-agent cards just because one Tab is
+                      // already open.
                       return (
                         <div className="launchpad-grid">
                           {pinnedAgents.map(tool => {
                             const isTerminal = tool.key === 'terminal';
                             const installed = isTerminal || toolsInstalled[tool.key ?? ''] !== false;
-                            const lockedByMa = multiAgentLocked && MULTI_AGENT_TOOLS.includes(tool.key);
-                            const disabled = !installed || lockedByMa;
+                            const disabled = !installed;
                             return (
                               <div key={`agent-${tool.key}`} className={`launchpad-card-group ${disabled ? 'launchpad-card-disabled' : ''}`}>
                                 <div

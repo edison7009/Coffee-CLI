@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useReducer } from 'react';
 import type { ReactNode } from 'react';
-import type { ScanResult } from '../tauri';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -79,7 +78,6 @@ export interface TerminalSession {
   tool: ToolType;
   toolData?: string;  // Extra context for the tool (e.g. game filename for arcade)
   folderPath: string | null;
-  scanData: ScanResult | null;
   restartKey?: number;
   isHidden?: boolean;
   agentStatus?: AgentStatus;
@@ -132,7 +130,6 @@ export interface AppState {
 type Action =
   | { type: 'SET_FOLDER'; path: string }
   | { type: 'CLEAR_FOLDER' }
-  | { type: 'SET_SCAN'; data: ScanResult }
   | { type: 'SET_THEME'; theme: ThemeColor }
   | { type: 'SET_SHAPE'; shape: ThemeShape }
   | { type: 'SET_ICON_THEME'; theme: IconTheme }
@@ -171,12 +168,7 @@ function reducer(state: AppState, action: Action): AppState {
     case 'CLEAR_FOLDER':
       return {
         ...state,
-        terminals: state.terminals.map(t => t.id === state.activeTerminalId ? { ...t, folderPath: null, scanData: null } : t)
-      };
-    case 'SET_SCAN':
-      return {
-        ...state,
-        terminals: state.terminals.map(t => t.id === state.activeTerminalId ? { ...t, scanData: action.data } : t)
+        terminals: state.terminals.map(t => t.id === state.activeTerminalId ? { ...t, folderPath: null } : t)
       };
     case 'SET_THEME':
       return { ...state, currentTheme: action.theme };
@@ -199,7 +191,7 @@ function reducer(state: AppState, action: Action): AppState {
       if (newTerminals.length === 0) {
         const defaultId = crypto.randomUUID();
         const folderPath = state.terminals.length > 0 ? state.terminals[0].folderPath : null;
-        newTerminals = [{ id: defaultId, tool: null, folderPath, scanData: null }];
+        newTerminals = [{ id: defaultId, tool: null, folderPath }];
         newActiveId = defaultId;
       } else if (state.activeTerminalId === action.id) {
          newActiveId = newTerminals[newTerminals.length - 1].id;
@@ -245,7 +237,6 @@ function reducer(state: AppState, action: Action): AppState {
             tool: 'history',
             toolData: action.sessionData,
             folderPath: action.folderPath,
-            scanData: null,
           }],
           activeTerminalId: newId
         };
@@ -424,7 +415,7 @@ function getInitialState(): AppState {
     bgType,
     wallpaperDim,
     termColorScheme,
-    terminals: [{ id: defaultTerminalId, tool: null, folderPath, scanData: null }],
+    terminals: [{ id: defaultTerminalId, tool: null, folderPath }],
     activeTerminalId: defaultTerminalId,
     gambitOpen: false,
     leftPanelHidden,

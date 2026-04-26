@@ -1,6 +1,6 @@
 // Explorer.tsx — Left panel: file tree synced from terminal CWD
 
-import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useAppState } from '../../store/app-state';
 import type { ThemeColor, ThemeShape, IconTheme, ToolType } from '../../store/app-state';
@@ -8,7 +8,7 @@ import { useT } from '../../i18n/useT';
 import { ScrollPanel } from '../common/ScrollPanel';
 import { clipboardWrite } from '../../lib/clipboard';
 import { commands } from '../../tauri';
-import type { FileEntry, DriveInfo, DirEntryInfo } from '../../tauri';
+import type { DriveInfo, DirEntryInfo } from '../../tauri';
 import './Explorer.css';
 
 // ─── Context Menu ────────────────────────────────────────────────────────────
@@ -527,191 +527,6 @@ function getFileIcon(ext: string): string {
   return m[ext.toLowerCase()] || 'file.svg';
 }
 
-// ─── Recursive File Tree ───────────────────────────────────────────────────────
-
-type TreeLeaf = { type: 'file'; data: FileEntry };
-type TreeNode = { type: 'dir'; name: string; children: Record<string, TreeNode | TreeLeaf> };
-
-function buildTree(files: FileEntry[]) {
-  const root: TreeNode = { type: 'dir', name: '', children: {} };
-  
-  files.forEach(f => {
-    const parts = f.relative_path.split('/');
-    let current = root;
-    for (let i = 0; i < parts.length - 1; i++) {
-      const p = parts[i];
-      if (!current.children[p]) {
-        current.children[p] = { type: 'dir', name: p, children: {} };
-      }
-      current = current.children[p] as TreeNode;
-    }
-    const fileName = parts[parts.length - 1];
-    current.children[fileName] = { type: 'file', data: f };
-  });
-
-  return root;
-}
-
-function DirNode({ name, node, folderPath, onCtxMenu }: {
-  name: string;
-  node: TreeNode;
-  folderPath: string;
-  onCtxMenu: (menu: CtxMenuState) => void;
-}) {
-  const { state: { iconTheme } } = useAppState();
-  const [open, setOpen] = useState(false);
-
-  const children = Object.entries(node.children).sort(([aK, aV], [bK, bV]) => {
-    const aIsDir = aV.type === 'dir';
-    const bIsDir = bV.type === 'dir';
-    if (aIsDir !== bIsDir) return aIsDir ? -1 : 1;
-    return aK.localeCompare(bK);
-  });
-
-  // Derive the relative path by collecting child file entries
-  // For dirs we reconstruct: first file's relative path minus its tail
-  const getRelative = () => {
-    const firstFile = Object.values(node.children).find(c => c.type === 'file') as { data: FileEntry } | undefined;
-    if (!firstFile) return name;
-    const parts = firstFile.data.relative_path.split('/');
-    return parts.slice(0, -1).join('/');
-  };
-
-  const handleCtxMenu = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const rel = getRelative();
-    const absPath = folderPath.replace(/\\/g, '/') + '/' + rel;
-    onCtxMenu({
-      x: e.clientX,
-      y: e.clientY,
-      absolutePath: absPath,
-      relativePath: rel,
-      isDir: true,
-      onRename: () => setRenaming(true),
-    });
-  };
-
-  const [renaming, setRenaming] = useState(false);
-  const [renameVal, setRenameVal] = useState(name);
-  const renameInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => { if (renaming) renameInputRef.current?.select(); }, [renaming]);
-
-  const commitRename = async () => {
-    if (renameVal.trim() && renameVal !== name) {
-      const rel = getRelative();
-      const absPath = folderPath.replace(/\\/g, '/') + '/' + rel;
-      try {
-        await commands.fsRename(absPath, renameVal.trim());
-        dispatchFsRefresh(folderPath);
-      } catch (e) { console.error('[Explorer] rename failed:', e); }
-    }
-    setRenaming(false);
-  };
-
-  return (
-    <div className="tree-dir">
-      <div
-        className={`tree-dir-header ${open ? '' : 'collapsed'} ${renaming ? 'renaming' : ''}`}
-        onClick={() => !renaming && setOpen(!open)}
-        onContextMenu={handleCtxMenu}
-      >
-        <span className={`tree-arrow ${open ? '' : 'closed'}`}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-        </span>
-        <span className="tree-icon">
-          <ThemedIcon src={getIconPath(iconTheme, open ? 'folder-open.svg' : 'folder-closed.svg')} alt="dir" />
-        </span>
-        <span className="tree-name" style={{ display: renaming ? 'none' : undefined }}>{name}</span>
-        <input
-          ref={renameInputRef}
-          className="tree-rename-input"
-          style={{ display: renaming ? undefined : 'none' }}
-          value={renameVal}
-          onChange={e => setRenameVal(e.target.value)}
-          onBlur={commitRename}
-          onKeyDown={e => {
-            if (e.key === 'Enter') commitRename();
-            if (e.key === 'Escape') setRenaming(false);
-          }}
-          onClick={e => e.stopPropagation()}
-        />
-      </div>
-      {open && (
-        <div className="tree-children">
-          {children.map(([childName, childNode]) => (
-            childNode.type === 'dir'
-              ? <DirNode key={childName} name={childName} node={childNode as TreeNode} folderPath={folderPath} onCtxMenu={onCtxMenu} />
-              : <FileNode key={childName} name={childName} file={(childNode as { data: FileEntry }).data} folderPath={folderPath} onCtxMenu={onCtxMenu} />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function FileNode({ name, file, folderPath, onCtxMenu }: {
-  name: string;
-  file: FileEntry;
-  folderPath: string;
-  onCtxMenu: (menu: CtxMenuState) => void;
-}) {
-  const { state: { iconTheme } } = useAppState();
-  const badge = file.symbols.length > 0 ? `${file.symbols.length} sym` : formatBytes(file.size);
-  const [renaming, setRenaming] = useState(false);
-  const [renameVal, setRenameVal] = useState(name);
-  const renameInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => { if (renaming) renameInputRef.current?.select(); }, [renaming]);
-
-  const commitRename = async () => {
-    if (renameVal.trim() && renameVal !== name) {
-      const absPath = folderPath.replace(/\\/g, '/') + '/' + file.relative_path;
-      try {
-        await commands.fsRename(absPath, renameVal.trim());
-        dispatchFsRefresh(folderPath);
-      } catch (e) { console.error('[Explorer] rename failed:', e); }
-    }
-    setRenaming(false);
-  };
-
-  const handleCtxMenu = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    onCtxMenu({
-      x: e.clientX,
-      y: e.clientY,
-      absolutePath: folderPath.replace(/\\/g, '/') + '/' + file.relative_path,
-      relativePath: file.relative_path,
-      isDir: false,
-      onRename: () => setRenaming(true),
-    });
-  };
-
-  return (
-    <div className={`tree-file ${renaming ? 'renaming' : ''}`} onContextMenu={handleCtxMenu}>
-      <span className="tree-icon">
-        <ThemedIcon src={getFileIconSrc(file.extension, iconTheme)} alt="err" onFallback={getIconPath(iconTheme, 'file.svg')} />
-      </span>
-      <span className="tree-fname" style={{ display: renaming ? 'none' : undefined }}>{name}</span>
-      <input
-        ref={renameInputRef}
-        className="tree-rename-input"
-        style={{ display: renaming ? undefined : 'none' }}
-        value={renameVal}
-        onChange={e => setRenameVal(e.target.value)}
-        onBlur={commitRename}
-        onKeyDown={e => {
-          if (e.key === 'Enter') commitRename();
-          if (e.key === 'Escape') setRenaming(false);
-        }}
-        onClick={e => e.stopPropagation()}
-      />
-      <span className="tree-badge">{badge}</span>
-    </div>
-  );
-}
 
 // ─── Drive Kind → SVG Icon Path ──────────────────────────────────────────────
 
@@ -911,14 +726,40 @@ export function Explorer() {
 
   const activeSession = state.terminals.find(t => t.id === state.activeTerminalId);
   const folderPath = activeSession?.folderPath || null;
-  const scanData = activeSession?.scanData || null;
 
   // Context menu state
   const [ctxMenu, setCtxMenu] = useState<CtxMenuState | null>(null);
   const handleCtxMenu = useCallback((menu: CtxMenuState) => setCtxMenu(menu), []);
   const closeCtxMenu = useCallback(() => setCtxMenu(null), []);
 
-  const files = scanData?.files || [];
+  // Workspace tree: read one directory level at a time from the OS — same
+  // semantics as Windows Explorer / Finder / GNOME Files. No filtering,
+  // no recursion, no MAX_FILES cap. Subdirs lazy-load via BrowserDirNode.
+  const [rootEntries, setRootEntries] = useState<DirEntryInfo[] | null>(null);
+  useEffect(() => {
+    if (!folderPath) { setRootEntries(null); return; }
+    let cancelled = false;
+    commands.listDirectory(folderPath)
+      .then(entries => { if (!cancelled) setRootEntries(entries); })
+      .catch(() => { if (!cancelled) setRootEntries([]); });
+    return () => { cancelled = true; };
+  }, [folderPath]);
+
+  // Reload root level when fs-refresh targets the workspace root itself.
+  // (Subdirectory refreshes are handled inside each BrowserDirNode.)
+  useEffect(() => {
+    if (!folderPath) return;
+    const norm = (p: string) => p.replace(/\\/g, '/').replace(/\/+$/, '');
+    const target = norm(folderPath);
+    const handler = (e: Event) => {
+      const ev = e as CustomEvent<{ dirPath: string }>;
+      if (norm(ev.detail.dirPath) === target) {
+        commands.listDirectory(folderPath).then(setRootEntries).catch(() => setRootEntries([]));
+      }
+    };
+    window.addEventListener('fs-refresh', handler);
+    return () => window.removeEventListener('fs-refresh', handler);
+  }, [folderPath]);
 
   // Theme menu state
   const [themeMenuOpen, setThemeMenuOpen] = useState(false);
@@ -976,10 +817,7 @@ export function Explorer() {
           // 1. Update this tab's folderPath so the restarted terminal knows its CWD
           dispatch({ type: 'SET_FOLDER', path: selected });
 
-          // 2. Also tell the backend (for watcher + scan data)
-          await commands.scanFolder(selected);
-
-          // 3. Force unmount-remount of the TierTerminal to restart the Agent in the new dir
+          // 2. Force unmount-remount of the TierTerminal to restart the Agent in the new dir
           dispatch({ type: 'RESTART_TERMINAL', id: activeTerminalId, newId: crypto.randomUUID() });
         }
       }
@@ -996,41 +834,6 @@ export function Explorer() {
   }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
 
-
-  // When any fs operation touches a path inside the workspace folder, re-scan so the
-  // Workspace tab tree stays in sync (BrowserDirNode handles the Computer tab itself).
-  //
-  // Trailing-edge debounce at 300 ms: bursty emitters (a CLI running
-  // `npm install`, `git checkout`, `opencode` self-update) can dispatch
-  // hundreds of fs-refresh events per second. Without debounce, each
-  // one would re-scan the entire workspace synchronously and freeze the
-  // UI thread. Rust-side notify already debounces at 200 ms; this is the
-  // second stage, collapsing distinct dirs into one scan.
-  const scanTimerRef = useRef<number | null>(null);
-  useEffect(() => {
-    if (!folderPath) return;
-    const normFolder = folderPath.replace(/\\/g, '/').replace(/\/+$/, '');
-    const handler = (e: Event) => {
-      const ev = e as CustomEvent<{ dirPath: string }>;
-      const normDir = ev.detail.dirPath.replace(/\\/g, '/').replace(/\/+$/, '');
-      if (normDir !== normFolder && !normDir.startsWith(normFolder + '/')) return;
-      if (scanTimerRef.current != null) window.clearTimeout(scanTimerRef.current);
-      scanTimerRef.current = window.setTimeout(() => {
-        scanTimerRef.current = null;
-        commands.scanFolder(folderPath).then(data => {
-          dispatch({ type: 'SET_SCAN', data });
-        }).catch(() => {});
-      }, 300);
-    };
-    window.addEventListener('fs-refresh', handler);
-    return () => {
-      window.removeEventListener('fs-refresh', handler);
-      if (scanTimerRef.current != null) {
-        window.clearTimeout(scanTimerRef.current);
-        scanTimerRef.current = null;
-      }
-    };
-  }, [folderPath, dispatch]);
 
   // OS-level fs watcher — picks up changes from the terminal CLI, editors,
   // git, or any process writing under folderPath. The backend emits the
@@ -1067,8 +870,6 @@ export function Explorer() {
     };
   }, [folderPath]);
 
-
-  const treeRoot = useMemo(() => buildTree(files), [files]);
 
   return (
     <div className="panel panel-left explorer-panel" data-icon-theme={state.iconTheme}>
@@ -1225,7 +1026,7 @@ export function Explorer() {
               <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
             </svg>
           </div>
-        ) : !scanData ? (
+        ) : rootEntries === null ? (
           <ScrollPanel>
             <div className="file-tree-container" style={{ pointerEvents: 'none' }}>
               {Array.from({ length: 12 }).map((_, i) => (
@@ -1239,17 +1040,15 @@ export function Explorer() {
         ) : (
           <ScrollPanel>
             <div className="file-tree-container">
-              {Object.entries(treeRoot.children)
-                .sort(([aK, aV], [bK, bV]) => {
-                  const aIsDir = aV.type === 'dir';
-                  const bIsDir = bV.type === 'dir';
-                  if (aIsDir !== bIsDir) return aIsDir ? -1 : 1;
-                  return aK.localeCompare(bK);
-                })
-                .map(([name, node]) => (
-                node.type === 'dir'
-                  ? <DirNode key={name} name={name} node={node as TreeNode} folderPath={folderPath!} onCtxMenu={handleCtxMenu} />
-                  : <FileNode key={name} name={name} file={(node as { data: FileEntry }).data} folderPath={folderPath!} onCtxMenu={handleCtxMenu} />
+              {rootEntries.slice().sort((a, b) => {
+                if (a.is_dir !== b.is_dir) return a.is_dir ? -1 : 1;
+                return a.name.localeCompare(b.name);
+              }).map(entry => (
+                entry.is_dir ? (
+                  <BrowserDirNode key={entry.path} name={entry.name} dirPath={entry.path} onCtxMenu={handleCtxMenu} />
+                ) : (
+                  <BrowserFileNode key={entry.path} entry={entry} parentDirPath={folderPath!} onCtxMenu={handleCtxMenu} />
+                )
               ))}
             </div>
           </ScrollPanel>

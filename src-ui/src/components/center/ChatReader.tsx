@@ -143,9 +143,9 @@ export function ChatReader({ sessionId }: { sessionId: string }) {
     
     if (currentTerminal?.tool !== null) {
       targetId = crypto.randomUUID();
-      dispatch({ 
-        type: 'ADD_TERMINAL', 
-        session: { id: targetId, tool: currentSession.tool as any, folderPath: currentSession.cwd, scanData: null }
+      dispatch({
+        type: 'ADD_TERMINAL',
+        session: { id: targetId, tool: currentSession.tool as any, folderPath: currentSession.cwd }
       });
     } else if (targetId) {
       dispatch({ type: 'SET_TERMINAL_TOOL', id: targetId, tool: currentSession.tool as any });
@@ -156,9 +156,6 @@ export function ChatReader({ sessionId }: { sessionId: string }) {
 
     // Quit reader mode
     handleClose();
-
-    // Sync the global workspace Explorer tree to the new project directory
-    commands.scanFolder(currentSession.cwd).catch(console.error);
 
     commands.tierTerminalResume(
       currentSession.id, targetId, currentSession.tool, currentSession.session_token, 80, 24, currentSession.cwd

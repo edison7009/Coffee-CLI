@@ -70,42 +70,6 @@ export function MultiAgentGrid({ tab, hasBg, bgUrl, bgType, paneCount = 4 }: Pro
       .catch(() => {});
   }, []);
 
-  // ─── Auto-enable multi-agent mode on first mount with a workspace ──
-  // When this tab opens with `tool='multi-agent'` AND a valid
-  // folderPath, tell the Rust backend to install the thin-pointer
-  // CLAUDE.md / AGENTS.md / GEMINI.md in the workspace root AND the
-  // `.multi-agent/` meta directory, and merge the coffee-cli MCP
-  // endpoint into each detected primary CLI's config.
-  //
-  // This is fail-soft: if the backend call errors (permissions, MCP
-  // server not ready, etc.) we log a warning but keep the UI usable so
-  // the user can still launch pure PTY CLIs in the panes.
-  //
-  // Ref is keyed by workspace path so switching the tab's folder
-  // re-triggers the install against the new workspace; same-path
-  // re-renders don't re-run (idempotent on the backend anyway, but
-  // saves the round-trip).
-  const enabledForWorkspaceRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (!tab.folderPath) return;
-    if (enabledForWorkspaceRef.current === tab.folderPath) return;
-    enabledForWorkspaceRef.current = tab.folderPath;
-
-    commands
-      .enableMultiAgentMode(tab.folderPath)
-      .then((r) => {
-        if (r.warnings?.length) {
-          console.warn('[multi-agent] enable warnings:', r.warnings);
-        }
-        console.log('[multi-agent] ready at', r.mcp_url,
-          '— touched', (r.touched_config_files?.length ?? 0)
-            + (r.touched_md_files?.length ?? 0), 'files');
-      })
-      .catch((e) => {
-        console.warn('[multi-agent] enable_multi_agent_mode failed (UI still usable):', e);
-      });
-  }, [tab.folderPath]);
-
   // paneIdx is 1-indexed to match the user-visible badge numbering and
   // the MCP session id (`::pane-1` .. `::pane-4`). See the header comment.
   const panes: MultiAgentPane[] = (tab.multiAgent?.panes
@@ -113,6 +77,83 @@ export function MultiAgentGrid({ tab, hasBg, bgUrl, bgType, paneCount = 4 }: Pro
          paneIdx: i + 1,
          tool: null as ToolType,
        }))).slice(0, paneCount);
+
+  // ─── Lazy multi-agent mode install ──────────────────────────────────
+  //
+  // Old behaviour: as soon as a multi-agent tab mounted, we eagerly
+  // wrote CLAUDE.md + AGENTS.md + GEMINI.md AND injected our MCP
+  // endpoint into all three global CLI configs — even if the user
+  // never actually picked any of those CLIs in a pane. Result: every
+  // workspace the user briefly opened a multi-agent tab in got 3
+  // residual MD files left behind.
+  //
+  // New behaviour: we only ask the backend to install the MD/config
+  // for tools the user has *actually selected* in panes, and we
+  // de-install on tab unmount so workspaces stay clean.
+  //
+  // First call to enable_multi_agent_mode also lazy-spawns the MCP
+  // server backend-side, so users who never use multi-agent never
+  // pay for the listener.
+  const installedSigRef = useRef<string>('');
+  const activeTools: string[] = Array.from(
+    new Set(panes.map(p => p.tool).filter((t): t is NonNullable<ToolType> => !!t))
+  ).map(String).sort();
+  const sig = `${tab.folderPath ?? ''}|${activeTools.join(',')}`;
+  useEffect(() => {
+    if (!tab.folderPath) return;
+    if (activeTools.length === 0) return;
+    if (installedSigRef.current === sig) return;
+    installedSigRef.current = sig;
+
+    commands
+      .enableMultiAgentMode(tab.folderPath, activeTools)
+      .then((r) => {
+        if (r.warnings?.length) {
+          console.warn('[multi-agent] enable warnings:', r.warnings);
+        }
+        console.log('[multi-agent] ready at', r.mcp_url,
+          '— for tools', activeTools,
+          '— touched', (r.touched_config_files?.length ?? 0)
+            + (r.touched_md_files?.length ?? 0), 'files');
+      })
+      .catch((e) => {
+        console.warn('[multi-agent] enable_multi_agent_mode failed (UI still usable):', e);
+      });
+  }, [sig]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Cleanup on unmount: strip our MD blocks + MCP entries we wrote
+  // during this session. Captures folderPath and "are other
+  // multi-agent tabs still using this workspace" at unmount time via
+  // refs so we don't yank shared files out from under a still-active
+  // peer Tab.
+  const cleanupPathRef = useRef<string | null>(null);
+  const hasPeerInSameWorkspaceRef = useRef<boolean>(false);
+  cleanupPathRef.current = tab.folderPath ?? null;
+  hasPeerInSameWorkspaceRef.current = state.terminals.some(t =>
+    t.id !== tab.id
+    && (t.tool === 'multi-agent' || t.tool === 'two-agent' || t.tool === 'three-agent')
+    && t.folderPath === tab.folderPath
+  );
+  useEffect(() => {
+    return () => {
+      const ws = cleanupPathRef.current;
+      if (!ws) return;
+      // Skip cleanup if we never actually installed anything (user
+      // opened a multi-agent tab but never picked a CLI).
+      if (!installedSigRef.current) return;
+      // Skip cleanup if another multi-agent tab in the SAME workspace
+      // is still active — disable_multi_agent_mode strips ALL coffee
+      // marker blocks from AGENTS.md / GEMINI.md, so calling it now
+      // would yank files the peer tab still depends on. The remaining
+      // tab(s) own the workspace files until they all close.
+      if (hasPeerInSameWorkspaceRef.current) {
+        return;
+      }
+      commands
+        .disableMultiAgentMode(ws)
+        .catch((e) => console.warn('[multi-agent] disable on unmount failed:', e));
+    };
+  }, []);
 
   const onSelectTool = (paneIdx: number, tool: ToolType) => {
     dispatch({ type: 'SET_PANE_TOOL', tabId: tab.id, paneIdx, tool });

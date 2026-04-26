@@ -83,6 +83,14 @@ pub struct PaneInfo {
     pub state: PaneState,
     /// Epoch seconds of last output from this pane.
     pub last_activity_at: u64,
+    /// `true` only for the row representing the caller's own pane.
+    /// Set by the MCP server based on its baked-in `self_pane_id`,
+    /// so a CLI receiving this list knows unambiguously which entry
+    /// is itself — even when 4 panes run the same CLI type.
+    /// Omitted (None / not serialized) if the server doesn't know
+    /// the caller's identity.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub is_self: Option<bool>,
 }
 
 /// Live pane store bridging the MCP layer to `terminal::SharedSession`.
@@ -152,6 +160,7 @@ impl PaneStore {
                     state: status_to_pane_state(&status),
                     last_activity_at,
                     id,
+                    is_self: None, // filled in by CoffeeMcp::list_panes if known
                 }
             })
             .collect();
@@ -610,30 +619,129 @@ pub struct ReadPaneArgs {
     pub last_n_lines: Option<usize>,
 }
 
+/// Extract the tab id portion of a pane id (`${tab_id}::pane-${idx}`).
+/// Used to scope `list_panes` and `send_to_pane` to the caller's own
+/// multi-agent Tab so simultaneous tabs don't see / dispatch to each
+/// other. If the input doesn't match the expected format, returns the
+/// whole string — that's a safe fallback (single-tab in legacy mode).
+fn tab_prefix(pane_id: &str) -> &str {
+    match pane_id.find("::pane-") {
+        Some(idx) => &pane_id[..idx],
+        None => pane_id,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::tab_prefix;
+
+    #[test]
+    fn tab_prefix_extracts_tab_portion() {
+        assert_eq!(tab_prefix("tab-abc::pane-1"), "tab-abc");
+        assert_eq!(tab_prefix("tab-abc::pane-4"), "tab-abc");
+        assert_eq!(
+            tab_prefix("tab-uuid-with-dashes::pane-2"),
+            "tab-uuid-with-dashes"
+        );
+    }
+
+    #[test]
+    fn tab_prefix_falls_back_for_unmatched_format() {
+        // Legacy / split-pane / shell sessions don't use the
+        // ::pane- format. Returning the whole id is the safe
+        // default — these never collide cross-Tab anyway.
+        assert_eq!(tab_prefix("legacy-session-id"), "legacy-session-id");
+        assert_eq!(tab_prefix("tab-X::split-1"), "tab-X::split-1");
+    }
+
+    #[test]
+    fn tab_prefix_distinguishes_concurrent_tabs() {
+        // The whole point of tab_prefix: panes in tab-A and tab-B
+        // must produce DIFFERENT prefixes so list_panes can filter
+        // them apart even when both Tabs run 4 Claude panes.
+        let a1 = tab_prefix("tab-A::pane-1");
+        let b1 = tab_prefix("tab-B::pane-1");
+        assert_ne!(a1, b1, "concurrent multi-agent tabs must be isolatable");
+    }
+}
+
 // ---------- MCP server handler ----------
 
 #[derive(Clone)]
 pub struct CoffeeMcp {
     tool_router: ToolRouter<CoffeeMcp>,
     panes: Arc<PaneStore>,
+    /// The pane this MCP server instance is dedicated to — i.e. "the
+    /// caller's identity, baked in at spawn time". Each multi-agent
+    /// pane spawns its own MCP server bound to its own port, with
+    /// its own `self_pane_id` set. `None` means the server is
+    /// anonymous (legacy / non-multi-agent mode); in that case
+    /// `whoami` returns an error and `list_panes` doesn't mark
+    /// `is_self`.
+    self_pane_id: Option<String>,
 }
 
 #[tool_router]
 impl CoffeeMcp {
-    pub fn new(panes: Arc<PaneStore>) -> Self {
+    pub fn new(panes: Arc<PaneStore>, self_pane_id: Option<String>) -> Self {
         Self {
             tool_router: Self::tool_router(),
             panes,
+            self_pane_id,
         }
     }
 
     #[tool(
-        description = "List all panes in the current multi-agent Tab. \
-Returns each pane's id, title, cli name, and state (empty / idle / busy / terminated). \
-Use this to discover what other CLIs are running before calling send_to_pane."
+        description = "Return the caller's own pane id. Use this once at \
+session start to know which pane you're running in — Coffee-CLI bakes \
+the id into this MCP server instance at spawn time, so no inference is \
+needed. The returned id is what you should pass as the `from` field of \
+[COFFEE-DONE] markers and what you'll see as `is_self: true` in \
+list_panes()."
+    )]
+    async fn whoami(&self) -> Result<CallToolResult, McpError> {
+        match &self.self_pane_id {
+            Some(id) => {
+                let payload = serde_json::json!({ "pane_id": id });
+                Ok(CallToolResult::success(vec![Content::text(
+                    serde_json::to_string_pretty(&payload).unwrap_or_default(),
+                )]))
+            }
+            None => Ok(CallToolResult::success(vec![Content::text(
+                serde_json::json!({
+                    "error": "this MCP server is not bound to a specific pane",
+                })
+                .to_string(),
+            )])),
+        }
+    }
+
+    #[tool(
+        description = "List all panes in the caller's own multi-agent Tab. \
+Cross-Tab panes (from other multi-agent windows the user has open) are \
+filtered out — you only see your own peers. The caller's own row is \
+marked `is_self: true` so you always know which entry is yourself, even \
+when multiple panes run the same CLI type. Returns each pane's id, title, \
+cli name, and state (empty / idle / busy / terminated). Use this to \
+discover what peers are running before calling send_to_pane."
     )]
     async fn list_panes(&self) -> Result<CallToolResult, McpError> {
-        let panes = self.panes.list().await;
+        let mut panes = self.panes.list().await;
+        if let Some(self_id) = &self.self_pane_id {
+            // Tab-scope filter: a pane id is `${tab_id}::pane-${idx}`.
+            // Only show panes whose tab prefix matches the caller's.
+            // This is what makes simultaneous multi-agent tabs safe —
+            // pane in Tab A can't accidentally dispatch to a pane in
+            // Tab B because it never sees Tab B's panes in the first
+            // place.
+            let self_tab = tab_prefix(self_id);
+            panes.retain(|p| tab_prefix(&p.id) == self_tab);
+            for p in &mut panes {
+                if &p.id == self_id {
+                    p.is_self = Some(true);
+                }
+            }
+        }
         let payload = serde_json::to_string_pretty(&panes).unwrap_or_default();
         Ok(CallToolResult::success(vec![Content::text(payload)]))
     }
@@ -651,6 +759,39 @@ long-running tasks (> 2 min). Do NOT send to your own pane id."
         &self,
         Parameters(args): Parameters<SendToPaneArgs>,
     ) -> Result<CallToolResult, McpError> {
+        // Reject self-dispatch up front — this MCP instance knows
+        // exactly which pane it represents.
+        if let Some(self_id) = &self.self_pane_id {
+            if self_id == &args.id {
+                return Ok(CallToolResult::success(vec![Content::text(
+                    serde_json::json!({
+                        "status": "failed",
+                        "error": "cannot send_to_pane to self",
+                        "self_pane_id": self_id,
+                    })
+                    .to_string(),
+                )]));
+            }
+            // Cross-Tab guard: refuse to dispatch into a pane that
+            // belongs to a different multi-agent Tab. Without this,
+            // a 4-pane Tab A could accidentally pipe work into a
+            // 4-pane Tab B because both tabs share the same global
+            // SharedSession map. Mirrors the filtering done in
+            // `list_panes`.
+            let self_tab = tab_prefix(self_id);
+            let target_tab = tab_prefix(&args.id);
+            if self_tab != target_tab {
+                return Ok(CallToolResult::success(vec![Content::text(
+                    serde_json::json!({
+                        "status": "failed",
+                        "error": "target pane belongs to a different Tab; cross-Tab dispatch is not supported",
+                        "self_tab": self_tab,
+                        "target_tab": target_tab,
+                    })
+                    .to_string(),
+                )]));
+            }
+        }
         let wait = args.wait.unwrap_or(true);
         let submit = args.submit.unwrap_or(true);
         // Default 600s (10 min) — a real orchestration task (refactor,
@@ -663,9 +804,17 @@ long-running tasks (> 2 min). Do NOT send to your own pane id."
         // on actual idle detection means short tasks still return fast.
         let timeout_sec = args.timeout_sec.unwrap_or(600).min(3600);
 
+        // Prefix the dispatched text with `[From <self_pane_id>]` so the
+        // receiving CLI's LLM sees who sent the work — without this the
+        // target gets a bare command and has to guess the source.
+        let dispatch_text = match &self.self_pane_id {
+            Some(self_id) => format!("[From {}] {}", self_id, args.text),
+            None => args.text.clone(),
+        };
+
         match self
             .panes
-            .dispatch(&args.id, &args.text, submit, wait, timeout_sec)
+            .dispatch(&args.id, &dispatch_text, submit, wait, timeout_sec)
             .await
         {
             Ok(result) => {
@@ -801,11 +950,22 @@ async fn mcp_request_middleware(
 /// Returns the full endpoint info once bound. Server runs in a detached
 /// tokio task; caller can drop the returned value (server keeps running
 /// for the lifetime of the tokio runtime).
-pub async fn spawn(panes: Arc<PaneStore>) -> anyhow::Result<McpEndpoint> {
+///
+/// `self_pane_id` bakes a specific pane identity into THIS server
+/// instance: every tool call to it is treated as coming from that pane.
+/// Pass `None` for an "anonymous" server (legacy / non-multi-agent),
+/// or `Some(pane_id)` to make `whoami()`, `is_self` in `list_panes`,
+/// and `[From <id>]` prefixing in `send_to_pane` all work without the
+/// LLM needing to guess.
+pub async fn spawn(
+    panes: Arc<PaneStore>,
+    self_pane_id: Option<String>,
+) -> anyhow::Result<McpEndpoint> {
     let service = StreamableHttpService::new(
         {
             let panes = panes.clone();
-            move || Ok(CoffeeMcp::new(panes.clone()))
+            let pane_id = self_pane_id.clone();
+            move || Ok(CoffeeMcp::new(panes.clone(), pane_id.clone()))
         },
         LocalSessionManager::default().into(),
         StreamableHttpServerConfig::default(),
@@ -851,4 +1011,77 @@ fn write_endpoint_file(endpoint: &McpEndpoint) -> anyhow::Result<()> {
     std::fs::write(&path, json)?;
     log::debug!("wrote mcp endpoint to {}", path.display());
     Ok(())
+}
+
+/// Full snapshot of every running MCP server in this Coffee CLI
+/// process. Persisted to `~/.coffee-cli/mcp-state.json` on every
+/// spawn so the `coffee-cli mcp-status` subcommand can introspect
+/// the live state from outside the GUI process — invaluable for
+/// support tickets.
+#[derive(Clone, Debug, Serialize)]
+pub struct McpStateManifest {
+    pub pid: u32,
+    pub written_at: u64,
+    /// Anonymous (no `self_pane_id`) MCP server, only spawned when
+    /// non-Claude CLIs need global-config injection. May be absent
+    /// in a pure-Claude workspace.
+    pub anonymous: Option<McpEndpoint>,
+    /// Per-pane MCP servers, one entry per multi-agent Claude pane.
+    pub panes: Vec<PaneEndpointEntry>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct PaneEndpointEntry {
+    pub pane_id: String,
+    pub url: String,
+    pub port: u16,
+    pub started_at: u64,
+}
+
+/// Path of the manifest file. Returned even when the home dir lookup
+/// fails so callers can show a useful "tried path" diagnostic.
+pub fn state_manifest_path() -> std::path::PathBuf {
+    dirs::home_dir()
+        .unwrap_or_else(|| std::path::PathBuf::from("."))
+        .join(".coffee-cli")
+        .join("mcp-state.json")
+}
+
+/// Atomically write the current MCP topology to disk. Caller passes
+/// the anonymous endpoint (if any) and the per-pane endpoint map
+/// extracted from `AppState`. Best-effort — errors are logged but
+/// don't propagate, since a missing manifest just means the
+/// `mcp-status` subcommand won't see this run (not a runtime fault).
+pub fn write_state_manifest(
+    anonymous: Option<&McpEndpoint>,
+    panes: &std::collections::HashMap<String, McpEndpoint>,
+) {
+    let manifest = McpStateManifest {
+        pid: std::process::id(),
+        written_at: epoch_seconds(),
+        anonymous: anonymous.cloned(),
+        panes: panes
+            .iter()
+            .map(|(pane_id, ep)| PaneEndpointEntry {
+                pane_id: pane_id.clone(),
+                url: ep.url.clone(),
+                port: ep.port,
+                started_at: ep.started_at,
+            })
+            .collect(),
+    };
+    let path = state_manifest_path();
+    let body = match serde_json::to_string_pretty(&manifest) {
+        Ok(s) => s,
+        Err(e) => {
+            log::warn!("[mcp] manifest serialize failed: {}", e);
+            return;
+        }
+    };
+    if let Some(parent) = path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    if let Err(e) = std::fs::write(&path, body) {
+        log::warn!("[mcp] manifest write to {} failed: {}", path.display(), e);
+    }
 }
