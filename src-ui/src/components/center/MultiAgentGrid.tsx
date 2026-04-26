@@ -78,22 +78,19 @@ export function MultiAgentGrid({ tab, hasBg, bgUrl, bgType, paneCount = 4 }: Pro
          tool: null as ToolType,
        }))).slice(0, paneCount);
 
-  // ─── Lazy multi-agent mode install ──────────────────────────────────
+  // ─── Multi-agent mode handshake ─────────────────────────────────────
   //
-  // Old behaviour: as soon as a multi-agent tab mounted, we eagerly
-  // wrote CLAUDE.md + AGENTS.md + GEMINI.md AND injected our MCP
-  // endpoint into all three global CLI configs — even if the user
-  // never actually picked any of those CLIs in a pane. Result: every
-  // workspace the user briefly opened a multi-agent tab in got 3
-  // residual MD files left behind.
+  // Post-v1.5 the backend wires each pane's MCP server and CLI
+  // artifacts lazily inside `tier_terminal_start` (per-pane temp dir
+  // under `<temp>/coffee-cli/panes/`, plus a per-pane stub in
+  // `~/.gemini/extensions/` for the Gemini extension loader).
+  // Workspaces stay pristine — no CLAUDE.md / AGENTS.md / GEMINI.md /
+  // .multi-agent/ ever gets written, no global ~/.codex / ~/.gemini
+  // mcp_servers entries get touched.
   //
-  // New behaviour: we only ask the backend to install the MD/config
-  // for tools the user has *actually selected* in panes, and we
-  // de-install on tab unmount so workspaces stay clean.
-  //
-  // First call to enable_multi_agent_mode also lazy-spawns the MCP
-  // server backend-side, so users who never use multi-agent never
-  // pay for the listener.
+  // We still call enable/disable here so the backend has a structured
+  // place to surface preflight warnings, and so future cross-cutting
+  // logic (telemetry, license gating, …) has the obvious hook.
   const installedSigRef = useRef<string>('');
   const activeTools: string[] = Array.from(
     new Set(panes.map(p => p.tool).filter((t): t is NonNullable<ToolType> => !!t))
@@ -111,44 +108,23 @@ export function MultiAgentGrid({ tab, hasBg, bgUrl, bgType, paneCount = 4 }: Pro
         if (r.warnings?.length) {
           console.warn('[multi-agent] enable warnings:', r.warnings);
         }
-        console.log('[multi-agent] ready at', r.mcp_url,
-          '— for tools', activeTools,
-          '— touched', (r.touched_config_files?.length ?? 0)
-            + (r.touched_md_files?.length ?? 0), 'files');
       })
       .catch((e) => {
         console.warn('[multi-agent] enable_multi_agent_mode failed (UI still usable):', e);
       });
   }, [sig]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Cleanup on unmount: strip our MD blocks + MCP entries we wrote
-  // during this session. Captures folderPath and "are other
-  // multi-agent tabs still using this workspace" at unmount time via
-  // refs so we don't yank shared files out from under a still-active
-  // peer Tab.
+  // Cleanup on unmount: notify the backend so it can run any future
+  // cross-cutting teardown. Currently a no-op on the Rust side because
+  // per-pane MCP servers and temp artifacts are pruned only at next
+  // app launch via `mcp_injector::prune_pane_artifacts`.
   const cleanupPathRef = useRef<string | null>(null);
-  const hasPeerInSameWorkspaceRef = useRef<boolean>(false);
   cleanupPathRef.current = tab.folderPath ?? null;
-  hasPeerInSameWorkspaceRef.current = state.terminals.some(t =>
-    t.id !== tab.id
-    && (t.tool === 'multi-agent' || t.tool === 'two-agent' || t.tool === 'three-agent')
-    && t.folderPath === tab.folderPath
-  );
   useEffect(() => {
     return () => {
       const ws = cleanupPathRef.current;
       if (!ws) return;
-      // Skip cleanup if we never actually installed anything (user
-      // opened a multi-agent tab but never picked a CLI).
       if (!installedSigRef.current) return;
-      // Skip cleanup if another multi-agent tab in the SAME workspace
-      // is still active — disable_multi_agent_mode strips ALL coffee
-      // marker blocks from AGENTS.md / GEMINI.md, so calling it now
-      // would yank files the peer tab still depends on. The remaining
-      // tab(s) own the workspace files until they all close.
-      if (hasPeerInSameWorkspaceRef.current) {
-        return;
-      }
       commands
         .disableMultiAgentMode(ws)
         .catch((e) => console.warn('[multi-agent] disable on unmount failed:', e));

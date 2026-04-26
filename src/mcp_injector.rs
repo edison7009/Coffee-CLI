@@ -1,98 +1,210 @@
-//! Inject the Coffee-CLI MCP server endpoint into each supported primary
-//! CLI's config file, and back it out cleanly on disable / shutdown.
+//! Per-pane MCP wiring for multi-agent mode.
 //!
-//! Lifecycle (critical — getting this wrong causes "1 MCP server failed"
-//! errors in standalone Claude windows opened after Coffee-CLI exits):
-//!   - `enable_multi_agent_mode` calls `install_all` when the user opens
-//!     a multi-agent tab, writing the current ephemeral MCP endpoint URL
-//!     into each CLI's global config.
-//!   - `disable_multi_agent_mode` calls `uninstall_all` to strip our
-//!     entries when the tab closes or mode is turned off.
-//!   - `start_ui` self-heal calls `uninstall_all` at every launch to
-//!     scrub any entries left by a previous Coffee-CLI run that crashed.
-//!   - Tauri shutdown hook calls `uninstall_all` so a clean exit also
-//!     removes the entries — this is what protects a later standalone
-//!     Claude window from seeing a dead-port error.
+//! Each multi-agent pane gets:
+//!   - a private temp dir at `<temp>/coffee-cli/panes/<sanitized-pane-id>/`
+//!     holding the per-pane CLI artifacts (Claude mcp.json / Codex
+//!     instructions.md / Gemini extension manifest+GEMINI.md)
+//!   - a per-pane MCP HTTP server (with `self_pane_id` baked in at spawn
+//!     time), independently of CLI kind. So `whoami()`, `list_panes()`'s
+//!     `is_self`, and `[From <id>]` auto-prefixing in `send_to_pane()` are
+//!     deterministic across all CLIs — no LLM guessing of pane identity
+//!     even when 4 panes run the same CLI type.
 //!
-//! Supported CLIs (v1.0):
-//!   - Claude Code    → ~/.claude.json            (JSON, key: `mcpServers.coffee-cli`)
-//!   - Codex CLI      → ~/.codex/config.toml      (TOML, key: `[mcp_servers.coffee-cli]`)
-//!   - Gemini CLI     → ~/.gemini/settings.json   (JSON, key: `mcpServers.coffee-cli`)
+//! Per-CLI handoff (consumed by `server::tier_terminal_start_blocking`):
 //!
-//! OpenCode was evaluated and dropped for v1.0 — its workspace-local
-//! `opencode.json` and `mcp` (not `mcpServers`) shape are enough unlike
-//! the other three that it deserves its own pass. Tracked for v1.1.
+//! | CLI    | Coffee CLI passes via …                                    | Pane reads from …                                         |
+//! |--------|------------------------------------------------------------|-----------------------------------------------------------|
+//! | Claude | `--mcp-config <pane-temp>/claude-mcp.json`                 | that JSON file                                            |
+//! | Codex  | `-c mcp_servers.coffee-cli.url='<url>'`                    | command-line override (no file)                           |
+//! |        | `-c experimental_instructions_file='<pane-temp>/inst.md'`  | per-pane temp file (no workspace touch)                   |
+//! | Gemini | `--extensions coffee-pane-<sanitized>`                     | `~/.gemini/extensions/coffee-pane-<sanitized>/` stub      |
+//! |        |                                                            | which holds a link → `<pane-temp>/gemini-extension.json`  |
+//! |        |                                                            | + `<pane-temp>/GEMINI.md`                                 |
 //!
-//! Safety:
-//!   - Before touching any config we back it up to
-//!     ~/.coffee-cli/backup/<tool>-<timestamp>.bak so the user can roll
-//!     back by hand. The newest 10 backups per tool are retained.
-//!   - We MERGE our key into existing config rather than overwriting —
-//!     any user-managed MCP servers, env vars, or other settings are
-//!     preserved verbatim.
-//!   - On disable we remove ONLY the `coffee-cli` key, not the whole
-//!     `mcpServers` / `[mcp_servers]` / `mcp` section.
+//! Workspace pollution: zero. No `.md`, no `settings.json`, no
+//! `mcp_servers` block ever lands in the user's project directory.
 //!
-//! This module does NOT write the protocol `.md` files — that is
-//! `multi_agent_protocol`'s job. Typical flow:
+//! Global pollution: zero for Claude and Codex (purely command-line +
+//! OS temp). One narrow exception for Gemini — Gemini CLI's extension
+//! loader ONLY scans `~/.gemini/extensions/<name>/` (no absolute-path
+//! flag exists), so each active pane drops a tiny stub directory there
+//! containing only a `.gemini-extension-install.json` link metadata
+//! file pointing at the real manifest in OS temp. Stubs are pruned at
+//! `start_ui` boot, on app shutdown, and on every tab close, so they
+//! never accumulate even across crashes (boot-time prune is the
+//! belt-and-suspenders catch-all).
 //!
-//!   let endpoint = crate::mcp_server::spawn(store).await?;
-//!   crate::multi_agent_protocol::install(workspace)?;
-//!   crate::mcp_injector::install_all(&endpoint)?;
+//! Auth safety: we never set `CODEX_HOME` / `GEMINI_CLI_HOME`, so
+//! Codex's `~/.codex/auth.json` and Gemini's `~/.gemini/oauth_creds.json`
+//! always remain reachable. Codex `-c` overrides merge onto the user's
+//! `~/.codex/config.toml` rather than replacing it; Gemini extension
+//! `mcpServers` merge into the user's existing MCP set. User customisation
+//! and credentials are preserved.
 //!
-//! On disable, invoke both modules' `uninstall` in reverse order.
+//! Lifecycle: `prune_pane_artifacts()` is called once at app start so
+//! the previous run's leftover dirs go away, again at shutdown for
+//! belt-and-suspenders, and (for the per-tab subset) when a multi-agent
+//! tab unmounts. New artifacts are created lazily in
+//! `prepare_pane_config_dir()` on every PTY spawn — content is rewritten
+//! idempotently each time, safe to call repeatedly for the same pane id.
 
-use std::{
-    fs,
-    path::{Path, PathBuf},
-    time::{SystemTime, UNIX_EPOCH},
-};
-
-use serde_json::Value as JsonValue;
+use std::{fs, path::PathBuf};
 
 use crate::mcp_server::McpEndpoint;
 
-/// Key used for the Coffee-CLI entry in every primary CLI's MCP map.
-/// Changing this after ship breaks uninstallation on existing users.
+/// Key used for the Coffee CLI entry in every per-pane CLI config.
 pub const MCP_KEY: &str = "coffee-cli";
 
-/// Write a per-pane MCP config JSON file for Claude Code's
-/// `--mcp-config <file>` flag. Each multi-agent pane gets its OWN
-/// file pointing at its OWN per-pane MCP endpoint, so the running
-/// Claude in that pane connects to a server with `self_pane_id`
-/// already baked in — no runtime guessing of pane identity.
+/// Stub-dir prefix in `~/.gemini/extensions/`. Each active multi-agent
+/// pane running Gemini gets one stub dir under this prefix. The prefix
+/// lets `prune_pane_artifacts()` find and delete stale stubs from
+/// previous Coffee CLI runs without touching user-installed extensions.
+pub const GEMINI_STUB_PREFIX: &str = "coffee-pane-";
+
+/// Output of [`prepare_pane_config_dir`]. The caller picks the right
+/// field based on CLI kind. Default-empty when `cli_kind` doesn't
+/// match a multi-agent CLI.
+#[derive(Debug, Clone, Default)]
+pub struct PaneConfigPaths {
+    /// `cli_kind == "claude"` only. Pass via `--mcp-config <path>`.
+    pub claude_mcp_config_path: Option<PathBuf>,
+    /// `cli_kind == "codex"` only. Caller appends these straight onto
+    /// the codex argv (already in `-c key=value` pairs, ready to spawn).
+    pub codex_extra_args: Vec<String>,
+    /// `cli_kind == "gemini"` only. Pass via `--extensions <name>`. The
+    /// stub dir at `~/.gemini/extensions/<name>/` has been created with
+    /// link metadata pointing at the real manifest in OS temp.
+    pub gemini_extension_name: Option<String>,
+}
+
+/// Build per-pane CLI artifacts for `pane_id` running `cli_kind`,
+/// pointed at `endpoint`. `protocol_text` is written into the CLI's
+/// instructions file (Codex `instructions.md`, Gemini `GEMINI.md`).
+/// Claude takes its protocol text via `--append-system-prompt` and
+/// doesn't read a file here — caller passes the same `protocol_text`
+/// through that flag separately.
 ///
-/// Path: `<temp>/coffee-cli/mcp/<safe-pane-id>.json`. Recreated
-/// on every spawn, so changes propagate cleanly across restarts.
-///
-/// File shape matches `claude --mcp-config`:
-/// ```json
-/// { "mcpServers": { "coffee-cli": { "type": "http", "url": "..." } } }
-/// ```
-pub fn write_per_pane_claude_config(
+/// Idempotent: re-invoking with the same args overwrites in place.
+/// Unknown `cli_kind` returns the default empty `PaneConfigPaths`.
+pub fn prepare_pane_config_dir(
     pane_id: &str,
+    cli_kind: &str,
     endpoint: &McpEndpoint,
-) -> std::io::Result<PathBuf> {
-    let dir = std::env::temp_dir().join("coffee-cli").join("mcp");
+    protocol_text: &str,
+) -> std::io::Result<PaneConfigPaths> {
+    let dir = panes_root().join(sanitize_pane_id(pane_id));
     fs::create_dir_all(&dir)?;
-    let path = dir.join(format!("{}.json", sanitize_pane_id(pane_id)));
-    let body = serde_json::json!({
-        "mcpServers": {
-            MCP_KEY: {
-                "type": "http",
-                "url": endpoint.url,
+
+    let mut out = PaneConfigPaths::default();
+    match cli_kind {
+        "claude" => {
+            let p = dir.join("claude-mcp.json");
+            fs::write(&p, claude_mcp_json(endpoint))?;
+            out.claude_mcp_config_path = Some(p);
+        }
+        "codex" => {
+            // Per-pane protocol text. Referenced by `-c
+            // experimental_instructions_file=<path>` so Codex bakes it
+            // into the model's session context. No workspace touch.
+            let inst = dir.join("instructions.md");
+            fs::write(&inst, protocol_text)?;
+            // Codex `-c key=value` parses `value` as a TOML scalar. Use
+            // TOML literal-strings ('...') so Windows backslashes in
+            // the temp path don't accidentally trigger TOML escape
+            // sequences (e.g. `\U` would otherwise look like a unicode
+            // escape leadin in a basic-string).
+            out.codex_extra_args = vec![
+                "-c".to_string(),
+                format!("mcp_servers.{key}.url='{url}'", key = MCP_KEY, url = endpoint.url),
+                "-c".to_string(),
+                format!(
+                    "experimental_instructions_file='{path}'",
+                    path = inst.display()
+                ),
+            ];
+        }
+        "gemini" => {
+            let sanitized = sanitize_pane_id(pane_id);
+            let extension_name = format!("{}{}", GEMINI_STUB_PREFIX, sanitized);
+
+            // Real manifest + GEMINI.md in OS temp.
+            fs::write(
+                dir.join("gemini-extension.json"),
+                gemini_extension_json(endpoint, &extension_name),
+            )?;
+            fs::write(dir.join("GEMINI.md"), protocol_text)?;
+
+            // Stub in ~/.gemini/extensions/<name>/ — link metadata
+            // pointing at the real manifest in OS temp. This is the
+            // `effectiveExtensionPath` escape hatch in Gemini CLI's
+            // loader (chunk-RNWNACRD.js:61763): when the stub contains
+            // a `.gemini-extension-install.json` with `type=link`, the
+            // loader reads the manifest from `source` instead of the
+            // stub itself. Lets us keep the real config in OS temp
+            // while still satisfying Gemini's "extensions live in
+            // ~/.gemini/extensions/" hard-coded path.
+            if let Some(stub_dir) = gemini_extensions_dir().map(|d| d.join(&extension_name)) {
+                fs::create_dir_all(&stub_dir)?;
+                let link_meta = serde_json::json!({
+                    "type": "link",
+                    "source": dir.display().to_string(),
+                });
+                fs::write(
+                    stub_dir.join(".gemini-extension-install.json"),
+                    serde_json::to_string_pretty(&link_meta).unwrap_or_default(),
+                )?;
+            }
+            out.gemini_extension_name = Some(extension_name);
+        }
+        _ => {}
+    }
+    Ok(out)
+}
+
+/// Wipe per-pane artifacts from any previous Coffee CLI run:
+///   - `<temp>/coffee-cli/panes/`
+///   - `~/.gemini/extensions/coffee-pane-*` stub directories
+///
+/// Called once at app start (recover from crash residue), once at app
+/// shutdown (tidy exit). Best-effort — missing dirs and permission
+/// glitches are logged but never returned as errors. New artifacts get
+/// recreated lazily by `prepare_pane_config_dir()` as panes spawn.
+pub fn prune_pane_artifacts() {
+    let root = panes_root();
+    if root.exists() {
+        if let Err(e) = fs::remove_dir_all(&root) {
+            log::warn!(
+                "[mcp-inject] prune {} failed: {} (will recreate per-pane dirs lazily)",
+                root.display(),
+                e
+            );
+        }
+    }
+    if let Some(ext_dir) = gemini_extensions_dir() {
+        if let Ok(entries) = fs::read_dir(&ext_dir) {
+            for ent in entries.flatten() {
+                let name = ent.file_name();
+                if name.to_string_lossy().starts_with(GEMINI_STUB_PREFIX) {
+                    let p = ent.path();
+                    if let Err(e) = fs::remove_dir_all(&p) {
+                        log::warn!("[mcp-inject] prune stub {} failed: {}", p.display(), e);
+                    }
+                }
             }
         }
-    });
-    fs::write(
-        &path,
-        serde_json::to_string_pretty(&body).unwrap_or_default(),
-    )?;
-    Ok(path)
+    }
+}
+
+fn panes_root() -> PathBuf {
+    std::env::temp_dir().join("coffee-cli").join("panes")
+}
+
+fn gemini_extensions_dir() -> Option<PathBuf> {
+    dirs::home_dir().map(|h| h.join(".gemini").join("extensions"))
 }
 
 /// Pane ids contain `::` and `/` which are unfriendly for filenames
-/// on Windows. Replace with safe characters.
+/// on Windows. Replace anything outside `[A-Za-z0-9_-]` with `_`.
 fn sanitize_pane_id(pane_id: &str) -> String {
     pane_id
         .chars()
@@ -103,539 +215,124 @@ fn sanitize_pane_id(pane_id: &str) -> String {
         .collect()
 }
 
-// ---------- Public entry points ----------
-
-/// Inject the endpoint into the requested subset of supported primary
-/// CLI configs. `kinds` is a slice of any of: "claude", "codex", "gemini".
-/// Unknown or empty kinds are silently ignored. Missing-config scenarios
-/// are logged and skipped (just means that CLI isn't installed); only
-/// hard failures return Err.
-///
-/// The `_workspace` parameter is retained for forward compatibility with
-/// v1.1 when OpenCode (workspace-local config) may come back online.
-///
-/// Returns the list of paths we touched so the UI can surface them.
-pub fn install_all(
-    endpoint: &McpEndpoint,
-    kinds: &[&str],
-    _workspace: Option<&Path>,
-) -> anyhow::Result<Vec<PathBuf>> {
-    let mut touched = Vec::new();
-
-    if kinds.contains(&"claude") {
-        if let Some(p) = claude_config_path() {
-            if let Err(e) = install_claude(&p, endpoint) {
-                log::warn!("[mcp-inject] claude skipped: {}", e);
-            } else {
-                touched.push(p);
+fn claude_mcp_json(endpoint: &McpEndpoint) -> String {
+    let body = serde_json::json!({
+        "mcpServers": {
+            MCP_KEY: {
+                "type": "http",
+                "url": endpoint.url,
             }
         }
-    }
+    });
+    serde_json::to_string_pretty(&body).unwrap_or_default()
+}
 
-    if kinds.contains(&"codex") {
-        if let Some(p) = codex_config_path() {
-            if let Err(e) = install_codex(&p, endpoint) {
-                log::warn!("[mcp-inject] codex skipped: {}", e);
-            } else {
-                touched.push(p);
+fn gemini_extension_json(endpoint: &McpEndpoint, extension_name: &str) -> String {
+    let body = serde_json::json!({
+        "name": extension_name,
+        "version": "1.0.0",
+        "description": "Coffee CLI multi-agent pane bridge",
+        "contextFileName": "GEMINI.md",
+        "mcpServers": {
+            MCP_KEY: {
+                "httpUrl": endpoint.url,
             }
         }
-    }
-
-    if kinds.contains(&"gemini") {
-        if let Some(p) = gemini_config_path() {
-            if let Err(e) = install_gemini(&p, endpoint) {
-                log::warn!("[mcp-inject] gemini skipped: {}", e);
-            } else {
-                touched.push(p);
-            }
-        }
-    }
-
-    Ok(touched)
-}
-
-/// Remove the `coffee-cli` entry from every config we can find. Does NOT
-/// restore from backup — the point is to leave the user's OWN entries
-/// alone and just drop ours. Backups are for manual rollback when a
-/// merge goes wrong; in the normal disable path we use surgical removal.
-pub fn uninstall_all(_workspace: Option<&Path>) -> anyhow::Result<Vec<PathBuf>> {
-    let mut touched = Vec::new();
-
-    if let Some(p) = claude_config_path() {
-        if matches!(uninstall_json(&p, &["mcpServers", MCP_KEY]), Ok(true)) {
-            touched.push(p);
-        }
-    }
-    if let Some(p) = codex_config_path() {
-        if matches!(uninstall_codex(&p), Ok(true)) {
-            touched.push(p);
-        }
-    }
-    if let Some(p) = gemini_config_path() {
-        if matches!(uninstall_json(&p, &["mcpServers", MCP_KEY]), Ok(true)) {
-            touched.push(p);
-        }
-    }
-
-    Ok(touched)
-}
-
-// ---------- Path resolvers ----------
-
-fn home() -> Option<PathBuf> {
-    dirs::home_dir()
-}
-
-fn claude_config_path() -> Option<PathBuf> {
-    home().map(|h| h.join(".claude.json"))
-}
-
-fn codex_config_path() -> Option<PathBuf> {
-    home().map(|h| h.join(".codex").join("config.toml"))
-}
-
-fn gemini_config_path() -> Option<PathBuf> {
-    home().map(|h| h.join(".gemini").join("settings.json"))
-}
-
-// ---------- Per-CLI install (JSON) ----------
-
-fn install_claude(path: &Path, endpoint: &McpEndpoint) -> anyhow::Result<()> {
-    install_json(path, &["mcpServers"], mcp_entry_json(endpoint), "claude")?;
-    // Pre-accept the `--dangerously-skip-permissions` first-run warning
-    // dialog so multi-agent panes boot straight into a working REPL.
-    // Without this, the very first Claude pane shows a red "Bypass
-    // Permissions mode" screen waiting for the user to pick "Yes, I
-    // accept" — which defeats the entire hands-free orchestration the
-    // flag exists to enable. Field name discovered via strings-mining
-    // claude.exe; it is the exact bit Claude Code flips when the user
-    // clicks accept, so pre-setting it is semantically identical.
-    set_json_field_true(path, "bypassPermissionsModeAccepted", "claude")?;
-    Ok(())
-}
-
-fn install_gemini(path: &Path, endpoint: &McpEndpoint) -> anyhow::Result<()> {
-    install_json(path, &["mcpServers"], mcp_entry_json(endpoint), "gemini")
-}
-
-// OpenCode install path removed for v1.0 — see module header. The
-// `install_json` helper is generic; v1.1 can reintroduce:
-//   fn install_opencode(path: &Path, endpoint: &McpEndpoint) -> anyhow::Result<()> {
-//       install_json(path, &["mcp"], mcp_entry_json(endpoint), "opencode")
-//   }
-// without further plumbing changes.
-
-/// Shared JSON injection path. `parent_keys` describes where in the JSON
-/// tree our MCP_KEY entry should live, e.g. `["mcpServers"]` means we
-/// land at `root["mcpServers"]["coffee-cli"] = entry`.
-fn install_json(
-    path: &Path,
-    parent_keys: &[&str],
-    entry: JsonValue,
-    tool_label: &str,
-) -> anyhow::Result<()> {
-    let existing = read_json_or_empty_object(path)?;
-    backup_if_exists(path, tool_label)?;
-
-    let mut root = existing;
-    ensure_parent_chain(&mut root, parent_keys);
-
-    // Walk down to the parent (safe — we just ensured it exists and is an object).
-    let mut cursor = &mut root;
-    for k in parent_keys {
-        cursor = cursor
-            .as_object_mut()
-            .and_then(|m| m.get_mut(*k))
-            .expect("parent chain was ensured");
-    }
-    let parent_obj = cursor
-        .as_object_mut()
-        .ok_or_else(|| anyhow::anyhow!("{} is not an object in {}", parent_keys.last().copied().unwrap_or(""), path.display()))?;
-    parent_obj.insert(MCP_KEY.to_string(), entry);
-
-    write_json_pretty(path, &root)?;
-    log::info!("[mcp-inject] {} config updated: {}", tool_label, path.display());
-    Ok(())
-}
-
-// ---------- Codex (TOML) install/uninstall ----------
-
-fn install_codex(path: &Path, endpoint: &McpEndpoint) -> anyhow::Result<()> {
-    backup_if_exists(path, "codex")?;
-
-    // The rmcp HTTP transport plus API-key header is not the default shape
-    // Codex `[mcp_servers.*]` was originally designed for (those are stdio
-    // sub-process commands). Codex 0.x accepts a `url = "…"` field for
-    // remote MCPs; we keep the block minimal and documented.
-    let block = format!(
-        "\n# Added by Coffee-CLI on {stamp}. See docs/MULTI-AGENT-ARCHITECTURE.md.\n\
-         # Remove this section (and keep [mcp_servers] intact if it has other entries)\n\
-         # to disable Coffee-CLI multi-agent integration.\n\
-         [mcp_servers.{key}]\n\
-         url = \"{url}\"\n\
-         headers = {{ \"X-Coffee-CLI-Port\" = \"{port}\" }}\n",
-        stamp = endpoint.started_at,
-        key = MCP_KEY,
-        url = endpoint.url,
-        port = endpoint.port,
-    );
-
-    let existing = fs::read_to_string(path).unwrap_or_default();
-
-    // Surgical update: if our section already exists, replace it; else append.
-    let header = format!("[mcp_servers.{}]", MCP_KEY);
-    let new_content = if let Some(start) = existing.find(&header) {
-        // Find next `[` at column 0 (a fresh TOML section) OR end-of-file.
-        let after_header = start + header.len();
-        let tail = &existing[after_header..];
-        let next_section_rel = tail
-            .match_indices("\n[")
-            .find(|(_, _)| true)
-            .map(|(i, _)| after_header + i);
-
-        let mut s = String::with_capacity(existing.len() + block.len());
-        s.push_str(&existing[..start]);
-        // Drop any leading blank line we would otherwise duplicate.
-        s.push_str(block.trim_start_matches('\n'));
-        if let Some(next) = next_section_rel {
-            s.push_str(&existing[next..]);
-        }
-        s
-    } else if existing.is_empty() {
-        block.trim_start_matches('\n').to_string()
-    } else if existing.ends_with('\n') {
-        format!("{}{}", existing, block)
-    } else {
-        format!("{}\n{}", existing, block)
-    };
-
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)?;
-    }
-    fs::write(path, new_content)?;
-    log::info!("[mcp-inject] codex config updated: {}", path.display());
-    Ok(())
-}
-
-fn uninstall_codex(path: &Path) -> anyhow::Result<bool> {
-    let Ok(existing) = fs::read_to_string(path) else {
-        return Ok(false);
-    };
-    let header = format!("[mcp_servers.{}]", MCP_KEY);
-    let Some(start) = existing.find(&header) else {
-        return Ok(false);
-    };
-
-    // Strip any leading "# Added by Coffee-CLI" comment immediately above.
-    let mut block_start = start;
-    let head_slice = &existing[..start];
-    if let Some(comment_idx) = head_slice.rfind("# Added by Coffee-CLI") {
-        // Rewind further to the beginning of that line.
-        if let Some(line_start) = existing[..comment_idx].rfind('\n') {
-            block_start = line_start + 1;
-        } else {
-            block_start = 0;
-        }
-    }
-
-    let after_header = start + header.len();
-    let tail = &existing[after_header..];
-    let end_rel = tail
-        .match_indices("\n[")
-        .next()
-        .map(|(i, _)| after_header + i + 1) // keep leading \n off the next section
-        .unwrap_or(existing.len());
-
-    let mut s = String::with_capacity(existing.len());
-    s.push_str(existing[..block_start].trim_end_matches(|c: char| c == '\n' || c == '\r'));
-    if end_rel < existing.len() {
-        s.push('\n');
-        s.push_str(&existing[end_rel..]);
-    } else {
-        s.push('\n');
-    }
-
-    fs::write(path, s)?;
-    log::info!("[mcp-inject] codex config cleaned: {}", path.display());
-    Ok(true)
-}
-
-// ---------- JSON helpers ----------
-
-fn uninstall_json(path: &Path, key_path: &[&str]) -> anyhow::Result<bool> {
-    let Some(mut root) = read_json_if_exists(path)? else {
-        return Ok(false);
-    };
-
-    if key_path.len() < 2 {
-        return Ok(false);
-    }
-    let (leaf, parent_keys) = key_path.split_last().expect("len >= 2 checked");
-    let mut cursor = &mut root;
-    for k in parent_keys {
-        match cursor.as_object_mut().and_then(|m| m.get_mut(*k)) {
-            Some(next) => cursor = next,
-            None => return Ok(false),
-        }
-    }
-    let parent_obj = match cursor.as_object_mut() {
-        Some(obj) => obj,
-        None => return Ok(false),
-    };
-    if parent_obj.remove(*leaf).is_none() {
-        return Ok(false);
-    }
-
-    // If the parent object is now empty AND we added it, we COULD delete
-    // it to keep the file tidy — but that risks surprising the user if
-    // they intentionally kept an empty `"mcpServers": {}`. Leave it.
-
-    write_json_pretty(path, &root)?;
-    log::info!("[mcp-inject] cleaned {} from {}", leaf, path.display());
-    Ok(true)
-}
-
-fn read_json_or_empty_object(path: &Path) -> anyhow::Result<JsonValue> {
-    match read_json_if_exists(path)? {
-        Some(v) => Ok(v),
-        None => Ok(JsonValue::Object(Default::default())),
-    }
-}
-
-fn read_json_if_exists(path: &Path) -> anyhow::Result<Option<JsonValue>> {
-    match fs::read_to_string(path) {
-        Ok(s) if s.trim().is_empty() => Ok(Some(JsonValue::Object(Default::default()))),
-        Ok(s) => Ok(Some(serde_json::from_str(&s).map_err(|e| {
-            anyhow::anyhow!("parse {} failed: {}", path.display(), e)
-        })?)),
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
-        Err(e) => Err(e.into()),
-    }
-}
-
-/// Set a single top-level boolean field to `true` on a JSON config,
-/// preserving every other field. Used to pre-flip Claude Code's
-/// `bypassPermissionsModeAccepted` bit so `--dangerously-skip-permissions`
-/// boots silently in multi-agent panes. Idempotent.
-fn set_json_field_true(path: &Path, field: &str, tool_label: &str) -> anyhow::Result<()> {
-    let mut root = read_json_or_empty_object(path)?;
-    let obj = root
-        .as_object_mut()
-        .ok_or_else(|| anyhow::anyhow!("{} root is not a JSON object", path.display()))?;
-    let already = obj.get(field).and_then(|v| v.as_bool()).unwrap_or(false);
-    if already {
-        return Ok(());
-    }
-    obj.insert(field.to_string(), JsonValue::Bool(true));
-    write_json_pretty(path, &root)?;
-    log::info!("[mcp-inject] {} config: set {}=true", tool_label, field);
-    Ok(())
-}
-
-fn write_json_pretty(path: &Path, v: &JsonValue) -> anyhow::Result<()> {
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)?;
-    }
-    let s = serde_json::to_string_pretty(v)?;
-    fs::write(path, s)?;
-    Ok(())
-}
-
-fn ensure_parent_chain(root: &mut JsonValue, parent_keys: &[&str]) {
-    let mut cursor = root;
-    for k in parent_keys {
-        if !cursor.is_object() {
-            *cursor = JsonValue::Object(Default::default());
-        }
-        let obj = cursor.as_object_mut().expect("just ensured object");
-        if !obj.contains_key(*k) {
-            obj.insert((*k).to_string(), JsonValue::Object(Default::default()));
-        }
-        cursor = obj.get_mut(*k).expect("just inserted");
-    }
-}
-
-fn mcp_entry_json(endpoint: &McpEndpoint) -> JsonValue {
-    serde_json::json!({
-        "type": "http",
-        "url": endpoint.url,
-        "headers": {
-            "X-Coffee-CLI-Port": endpoint.port.to_string(),
-        },
-    })
-}
-
-// ---------- Backups ----------
-
-fn backup_dir() -> Option<PathBuf> {
-    home().map(|h| h.join(".coffee-cli").join("backup"))
-}
-
-/// If `path` exists, copy it to `~/.coffee-cli/backup/<tool>-<ts>.bak`.
-/// Best-effort: any error is logged but not propagated (missing backup
-/// isn't worth blocking the install).
-fn backup_if_exists(path: &Path, tool_label: &str) -> anyhow::Result<()> {
-    if !path.exists() {
-        return Ok(());
-    }
-    let Some(dir) = backup_dir() else {
-        return Ok(());
-    };
-    if let Err(e) = fs::create_dir_all(&dir) {
-        log::warn!("[mcp-inject] backup dir create failed: {}", e);
-        return Ok(());
-    }
-
-    let ts = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or(0);
-    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("bak");
-    let backup_name = format!("{}-{}.{}.bak", tool_label, ts, ext);
-    let dest = dir.join(&backup_name);
-
-    if let Err(e) = fs::copy(path, &dest) {
-        log::warn!("[mcp-inject] backup copy failed: {}", e);
-        return Ok(());
-    }
-    log::debug!("[mcp-inject] backed up {} → {}", path.display(), dest.display());
-
-    prune_backups(&dir, tool_label, 10);
-    Ok(())
-}
-
-/// Keep only the `keep` newest backups per tool; delete older ones.
-fn prune_backups(dir: &Path, tool_label: &str, keep: usize) {
-    let Ok(entries) = fs::read_dir(dir) else { return };
-    let prefix = format!("{}-", tool_label);
-    let mut backups: Vec<(PathBuf, SystemTime)> = entries
-        .flatten()
-        .filter_map(|e| {
-            let p = e.path();
-            let name = p.file_name()?.to_str()?.to_string();
-            if !name.starts_with(&prefix) {
-                return None;
-            }
-            let meta = e.metadata().ok()?;
-            let mtime = meta.modified().ok()?;
-            Some((p, mtime))
-        })
-        .collect();
-    if backups.len() <= keep {
-        return;
-    }
-    backups.sort_by(|a, b| b.1.cmp(&a.1)); // newest first
-    for (old, _) in backups.into_iter().skip(keep) {
-        let _ = fs::remove_file(old);
-    }
+    });
+    serde_json::to_string_pretty(&body).unwrap_or_default()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    fn tmp_json_path(name: &str) -> PathBuf {
-        let mut p = std::env::temp_dir();
-        p.push(format!(
-            "coffee-cli-inject-test-{}-{}.json",
-            std::process::id(),
-            name
-        ));
-        p
-    }
-
-    fn sample_endpoint() -> McpEndpoint {
+    fn ep() -> McpEndpoint {
         McpEndpoint {
-            url: "http://127.0.0.1:50000/mcp".to_string(),
+            url: "http://127.0.0.1:50000/mcp".into(),
             port: 50000,
             pid: std::process::id(),
-            started_at: 1700000000,
+            started_at: 1_700_000_000,
         }
     }
 
-    #[test]
-    fn json_install_preserves_unrelated_keys() {
-        let p = tmp_json_path("preserve");
-        let _ = fs::remove_file(&p);
-        fs::write(
-            &p,
-            r#"{
-  "theme": "dark",
-  "mcpServers": { "user-tool": { "command": "foo" } }
-}"#,
-        )
-        .unwrap();
-
-        install_json(&p, &["mcpServers"], mcp_entry_json(&sample_endpoint()), "test").unwrap();
-
-        let parsed: JsonValue = serde_json::from_str(&fs::read_to_string(&p).unwrap()).unwrap();
-        assert_eq!(parsed["theme"], JsonValue::String("dark".to_string()));
-        assert!(parsed["mcpServers"]["user-tool"].is_object(), "user tool kept");
-        assert_eq!(parsed["mcpServers"][MCP_KEY]["url"], "http://127.0.0.1:50000/mcp");
-
-        let _ = fs::remove_file(&p);
+    fn unique_pane(label: &str) -> String {
+        format!("test::pane-{}-{}", label, std::process::id())
     }
 
     #[test]
-    fn json_uninstall_removes_only_our_key() {
-        let p = tmp_json_path("uninstall");
-        let _ = fs::remove_file(&p);
-        fs::write(
-            &p,
-            format!(
-                r#"{{
-  "mcpServers": {{
-    "user-tool": {{ "command": "foo" }},
-    "{k}": {{ "url": "http://x/mcp" }}
-  }}
-}}"#,
-                k = MCP_KEY
-            ),
-        )
-        .unwrap();
-
-        assert!(uninstall_json(&p, &["mcpServers", MCP_KEY]).unwrap());
-        let parsed: JsonValue = serde_json::from_str(&fs::read_to_string(&p).unwrap()).unwrap();
-        assert!(parsed["mcpServers"]["user-tool"].is_object());
-        assert!(parsed["mcpServers"].get(MCP_KEY).is_none());
-
-        let _ = fs::remove_file(&p);
+    fn claude_writes_mcp_json_with_url() {
+        let pid = unique_pane("claude");
+        let out = prepare_pane_config_dir(&pid, "claude", &ep(), "PROMPT").unwrap();
+        let p = out.claude_mcp_config_path.expect("claude returns path");
+        let body = fs::read_to_string(&p).unwrap();
+        assert!(body.contains("coffee-cli"));
+        assert!(body.contains("http://127.0.0.1:50000/mcp"));
+        let _ = fs::remove_dir_all(panes_root().join(sanitize_pane_id(&pid)));
     }
 
     #[test]
-    fn json_install_creates_missing_file_with_empty_object() {
-        let p = tmp_json_path("creates");
-        let _ = fs::remove_file(&p);
-        install_json(&p, &["mcpServers"], mcp_entry_json(&sample_endpoint()), "test").unwrap();
-        assert!(p.exists());
-        let parsed: JsonValue = serde_json::from_str(&fs::read_to_string(&p).unwrap()).unwrap();
-        assert_eq!(parsed["mcpServers"][MCP_KEY]["port"], JsonValue::Null); // port isn't in entry, url is
-        assert_eq!(parsed["mcpServers"][MCP_KEY]["url"], "http://127.0.0.1:50000/mcp");
-        let _ = fs::remove_file(&p);
+    fn codex_returns_minus_c_args_only() {
+        let pid = unique_pane("codex");
+        let out = prepare_pane_config_dir(&pid, "codex", &ep(), "PROTOCOL BODY").unwrap();
+        assert!(out.claude_mcp_config_path.is_none());
+        assert!(out.gemini_extension_name.is_none());
+        assert_eq!(out.codex_extra_args.len(), 4);
+        assert_eq!(out.codex_extra_args[0], "-c");
+        assert!(out.codex_extra_args[1].contains("mcp_servers.coffee-cli.url"));
+        assert!(out.codex_extra_args[1].contains("http://127.0.0.1:50000/mcp"));
+        assert_eq!(out.codex_extra_args[2], "-c");
+        assert!(out.codex_extra_args[3].contains("experimental_instructions_file"));
+        // Protocol text actually got written.
+        let inst_path = panes_root()
+            .join(sanitize_pane_id(&pid))
+            .join("instructions.md");
+        let body = fs::read_to_string(&inst_path).unwrap();
+        assert_eq!(body, "PROTOCOL BODY");
+        let _ = fs::remove_dir_all(panes_root().join(sanitize_pane_id(&pid)));
     }
 
     #[test]
-    fn codex_install_then_uninstall_roundtrip() {
-        let p = tmp_json_path("codex.toml");
-        let _ = fs::remove_file(&p);
-        fs::write(
-            &p,
-            "[other_setting]\nvalue = 42\n\n[mcp_servers.user]\ncommand = \"foo\"\n",
-        )
-        .unwrap();
+    fn gemini_writes_real_manifest_and_stub() {
+        let pid = unique_pane("gemini");
+        let out = prepare_pane_config_dir(&pid, "gemini", &ep(), "GEMINI BODY").unwrap();
+        let name = out
+            .gemini_extension_name
+            .clone()
+            .expect("gemini returns name");
+        assert!(name.starts_with(GEMINI_STUB_PREFIX));
+        // Real manifest in OS temp.
+        let temp_dir = panes_root().join(sanitize_pane_id(&pid));
+        let manifest = fs::read_to_string(temp_dir.join("gemini-extension.json")).unwrap();
+        assert!(manifest.contains("coffee-cli"));
+        assert!(manifest.contains("httpUrl"));
+        assert!(manifest.contains("http://127.0.0.1:50000/mcp"));
+        let gemini_md = fs::read_to_string(temp_dir.join("GEMINI.md")).unwrap();
+        assert_eq!(gemini_md, "GEMINI BODY");
+        // Stub in ~/.gemini/extensions/.
+        if let Some(stub_dir) = gemini_extensions_dir().map(|d| d.join(&name)) {
+            let link = fs::read_to_string(stub_dir.join(".gemini-extension-install.json"))
+                .unwrap();
+            assert!(link.contains("\"type\""));
+            assert!(link.contains("\"link\""));
+            // serde_json escapes backslashes so the literal source path
+            // doesn't byte-match temp_dir.display(). Confirm the source
+            // field exists and contains the unique sanitized pane id —
+            // that's enough to prove this stub points at THIS pane's
+            // dir and not some shared one.
+            assert!(link.contains("\"source\""));
+            assert!(link.contains(&sanitize_pane_id(&pid)));
+            let _ = fs::remove_dir_all(&stub_dir);
+        }
+        let _ = fs::remove_dir_all(&temp_dir);
+    }
 
-        install_codex(&p, &sample_endpoint()).unwrap();
-        let with_us = fs::read_to_string(&p).unwrap();
-        assert!(with_us.contains("[mcp_servers.coffee-cli]"));
-        assert!(with_us.contains("[other_setting]"));
-        assert!(with_us.contains("[mcp_servers.user]"));
-
-        assert!(uninstall_codex(&p).unwrap());
-        let cleaned = fs::read_to_string(&p).unwrap();
-        assert!(!cleaned.contains("coffee-cli"), "our section removed");
-        assert!(cleaned.contains("[other_setting]"), "other settings kept");
-        assert!(cleaned.contains("[mcp_servers.user]"), "user mcp entries kept");
-        let _ = fs::remove_file(&p);
+    #[test]
+    fn unknown_cli_kind_is_a_noop() {
+        let pid = unique_pane("unknown");
+        let out = prepare_pane_config_dir(&pid, "qwen", &ep(), "ignored").unwrap();
+        assert!(out.claude_mcp_config_path.is_none());
+        assert!(out.codex_extra_args.is_empty());
+        assert!(out.gemini_extension_name.is_none());
+        let _ = fs::remove_dir_all(panes_root().join(sanitize_pane_id(&pid)));
     }
 }

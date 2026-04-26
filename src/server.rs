@@ -16,18 +16,14 @@ pub struct AppState {
     /// workspace folder is open; None otherwise. Swapping this Mutex'd
     /// Option replaces the watcher atomically on folder switch.
     pub fs_watcher: Mutex<Option<crate::fs_watcher::FsWatcher>>,
-    /// Anonymous (no `self_pane_id`) MCP server endpoint, used by
-    /// non-Claude CLIs in multi-agent mode that we haven't yet wired
-    /// to per-pane config injection (codex / gemini global injector
-    /// path). `None` until first multi-agent enable.
-    pub mcp_endpoint: Mutex<Option<crate::mcp_server::McpEndpoint>>,
-    /// Per-pane MCP server endpoints. Each pane that uses per-pane
-    /// MCP config (currently Claude Code in multi-agent mode) gets
-    /// its OWN HTTP listener on its own port, with its `self_pane_id`
-    /// baked in. Map is keyed by pane id (= terminal session id like
-    /// "tab-X::pane-2"). Endpoints persist for the app lifetime
-    /// because TCP listeners are cheap and bounded by max concurrent
-    /// panes.
+    /// Per-pane MCP server endpoints. Each multi-agent pane (Claude /
+    /// Codex / Gemini) gets its OWN HTTP listener on its own port with
+    /// `self_pane_id` baked in, so `whoami()` / `is_self` in
+    /// `list_panes` / `[From <id>]` prefixing in `send_to_pane` all
+    /// behave deterministically regardless of which CLI is calling.
+    /// Map is keyed by pane id (= terminal session id like
+    /// "tab-X::pane-2"). Endpoints persist for the app lifetime —
+    /// TCP listeners are cheap and bounded by max concurrent panes.
     pub pane_mcp_endpoints: tokio::sync::Mutex<
         std::collections::HashMap<String, crate::mcp_server::McpEndpoint>,
     >,
@@ -604,40 +600,48 @@ async fn tier_terminal_start(
     app: tauri::AppHandle,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
-    // ── Per-pane MCP wiring (multi-agent + Claude only, for now) ──────
-    // For a multi-agent Claude pane (session id like "tab-X::pane-N"
-    // and tool == "claude"), spawn an MCP server with this pane's
-    // identity baked in and write a per-pane MCP config file. The
-    // file path is then passed via Claude's `--mcp-config` flag so
-    // the running Claude knows exactly which pane it is — no LLM
-    // guessing of pane number, no shared global config, no stdio
-    // bridge.
+    // ── Per-pane MCP wiring for multi-agent panes ────────────────────
+    // For each multi-agent pane (session id like "tab-X::pane-N")
+    // running Claude, Codex, or Gemini, spawn an MCP server with that
+    // pane's identity baked in and prepare per-pane CLI artifacts:
+    //   - Claude: `--mcp-config <pane>/claude-mcp.json` + `--append-system-prompt`
+    //   - Codex:  `-c mcp_servers.coffee-cli.url='...'` + `-c experimental_instructions_file='<pane>/inst.md'`
+    //   - Gemini: `--extensions coffee-pane-<sanitized>` (stub in `~/.gemini/extensions/`
+    //             linking to the real manifest in OS temp)
+    // Across all three, `whoami()` returns the deterministic pane id,
+    // `list_panes()` marks `is_self: true` on the matching row, and
+    // dispatched text auto-prefixes with `[From <pane>]`. No global
+    // config injection, no workspace files written, no env var that
+    // would redirect the CLI's HOME and break auth.
     //
-    // For other tools (codex, gemini, qwen, …), this is a no-op for
-    // now; their multi-agent integration still uses the anonymous
-    // shared MCP endpoint (legacy global injection).
-    let mcp_config_path: Option<String> = {
+    // For other tools (qwen, hermes, openclaw, opencode, …) this stays
+    // a no-op — their multi-agent participation is just "be a regular
+    // PTY the user can read"; they don't get a per-pane MCP server.
+    let mut pane_paths: Option<crate::mcp_injector::PaneConfigPaths> = None;
+    {
         let in_multi_agent = session_id.contains("::pane-");
-        if in_multi_agent && tool.as_deref() == Some("claude") {
+        let pane_cli_kind = match tool.as_deref() {
+            Some(k @ ("claude" | "codex" | "gemini")) if in_multi_agent => Some(k),
+            _ => None,
+        };
+        if let Some(kind) = pane_cli_kind {
             let endpoint = ensure_pane_mcp_running(&state, &session_id).await?;
-            match crate::mcp_injector::write_per_pane_claude_config(
+            let protocol = crate::multi_agent_protocol::build_pane_system_prompt(&session_id);
+            match crate::mcp_injector::prepare_pane_config_dir(
                 &session_id,
+                kind,
                 &endpoint,
+                &protocol,
             ) {
-                Ok(p) => Some(p.display().to_string()),
-                Err(e) => {
-                    log::warn!(
-                        "[mcp] per-pane config write failed for {}: {} \
-                         — falling back to anonymous MCP",
-                        session_id, e
-                    );
-                    None
-                }
+                Ok(paths) => pane_paths = Some(paths),
+                Err(e) => log::warn!(
+                    "[mcp] per-pane config dir for {} ({}) failed: {} \
+                     — pane will run without coffee-cli MCP wiring",
+                    session_id, kind, e
+                ),
             }
-        } else {
-            None
         }
-    };
+    }
 
     // Offload the whole spawn sequence to a blocking thread so the Tauri
     // command dispatcher returns immediately. Without this, Windows was
@@ -650,7 +654,7 @@ async fn tier_terminal_start(
         tier_terminal_start_blocking(
             session_id, tool, tool_data, cols, rows,
             theme_mode, locale, cwd, app, terminal_session,
-            mcp_config_path,
+            pane_paths,
         )
     })
     .await
@@ -668,7 +672,7 @@ fn tier_terminal_start_blocking(
     cwd: Option<String>,
     app: tauri::AppHandle,
     terminal_session: terminal::SharedSession,
-    mcp_config_path: Option<String>,
+    pane_paths: Option<crate::mcp_injector::PaneConfigPaths>,
 ) -> Result<(), String> {
     // Use per-tab CWD from frontend, NOT the global project_dir.
     // Each tab is independent: new tabs get home dir, existing tabs keep their own.
@@ -707,24 +711,25 @@ fn tier_terminal_start_blocking(
                 // `whoami()` give it pane discovery, dispatch, and
                 // self-identification.
                 a.push("--dangerously-skip-permissions".to_string());
-                // Per-pane MCP config: each multi-agent Claude pane
-                // points at its OWN MCP server (with `self_pane_id`
-                // baked in) so `whoami()` returns deterministic answers
-                // and `list_panes()` marks `is_self: true` on the
-                // matching row. Set unconditionally when the path is
-                // provided — claude merges this on top of any global
-                // ~/.claude.json mcpServers entries.
-                if let Some(p) = &mcp_config_path {
+                // Per-pane MCP config: this Claude session points at
+                // its OWN MCP server (with `self_pane_id` baked in)
+                // so `whoami()` returns deterministic answers and
+                // `list_panes()` marks `is_self: true` on the matching
+                // row. Claude merges this on top of any user-managed
+                // `~/.claude.json` mcpServers entries.
+                if let Some(p) = pane_paths
+                    .as_ref()
+                    .and_then(|pp| pp.claude_mcp_config_path.as_ref())
+                {
                     a.push("--mcp-config".to_string());
-                    a.push(p.clone());
+                    a.push(p.display().to_string());
                 }
                 // Per-pane system prompt: bake the pane id and the
                 // protocol cheat sheet directly into THIS Claude
                 // session's system prompt. Survives /clear and
-                // /compact — Claude Code preserves the system prompt
-                // across both. This replaces writing CLAUDE.md to
-                // the workspace, so multi-agent Claude users see
-                // ZERO files appear in their project directory.
+                // /compact. Replaces writing CLAUDE.md to the
+                // workspace, so multi-agent Claude users see ZERO
+                // files appear in their project directory.
                 a.push("--append-system-prompt".to_string());
                 a.push(crate::multi_agent_protocol::build_pane_system_prompt(
                     &session_id,
@@ -761,6 +766,21 @@ fn tier_terminal_start_blocking(
                 // Kept conservative vs. --dangerously-bypass-approvals-and-sandbox
                 // so destructive ops outside the workspace still get stopped.
                 a.push("--full-auto".to_string());
+                // Per-pane MCP wiring via Codex's `-c key=value` config
+                // override (it merges onto `~/.codex/config.toml` rather
+                // than replacing it, so user MCP entries / API keys /
+                // auth all stay live). Two pairs:
+                //   `mcp_servers.coffee-cli.url='<per-pane-url>'`
+                //   `experimental_instructions_file='<pane-temp>/inst.md'`
+                // The instructions file holds the multi-agent protocol
+                // body (same text Claude gets via --append-system-prompt)
+                // and Codex bakes it into the model's session context.
+                // Both the URL and the instructions path are unique per
+                // pane, so 4× same-CLI panes still get distinct identity.
+                if let Some(extra) = pane_paths.as_ref().map(|pp| pp.codex_extra_args.clone())
+                {
+                    a.extend(extra);
+                }
             }
             ("codex".to_string(), a)
         },
@@ -780,6 +800,24 @@ fn tier_terminal_start_blocking(
                 // `--yolo` for exactly this reason.
                 a.push("--approval-mode".to_string());
                 a.push("yolo".to_string());
+                // Per-pane extension: Gemini reads
+                //   ~/.gemini/extensions/coffee-pane-<sanitized>/
+                // which our injector populated with link metadata
+                // pointing at the real manifest in OS temp. Loading
+                // this extension MERGES `mcpServers.coffee-cli` (with
+                // the per-pane HTTP URL) and the GEMINI.md context
+                // file into the running session — without touching
+                // the user's settings.json, OAuth creds, or workspace.
+                // The extension `--extensions <name>` flag takes the
+                // dir basename, NOT a path (Gemini CLI's loader is
+                // hard-coded to `~/.gemini/extensions/`).
+                if let Some(name) = pane_paths
+                    .as_ref()
+                    .and_then(|pp| pp.gemini_extension_name.clone())
+                {
+                    a.push("--extensions".to_string());
+                    a.push(name);
+                }
             }
             ("gemini".to_string(), a)
         },
@@ -1795,101 +1833,18 @@ fn open_url(url: String) -> Result<(), String> {
 #[derive(Serialize)]
 pub struct MultiAgentModeReport {
     pub ok: bool,
-    pub mcp_url: Option<String>,
-    pub touched_config_files: Vec<String>,
-    pub touched_md_files: Vec<String>,
     pub warnings: Vec<String>,
-}
-
-/// Map a Coffee-CLI tool id (as the frontend uses, e.g. "codex" /
-/// "gemini") to the root-level MD file that CLI reads on project
-/// entry. Returns None for tools that don't consume a project MD
-/// (qwen, hermes, openclaw, terminal, …) AND for "claude" — Claude
-/// is now self-contained via per-pane `--append-system-prompt`, so
-/// it doesn't need (or want) a workspace MD file.
-fn tool_to_md(tool: &str) -> Option<&'static str> {
-    match tool {
-        // "claude" intentionally returns None — see doc above.
-        // Codex and OpenCode both follow the AGENTS.md convention.
-        "codex" | "opencode" => Some("AGENTS.md"),
-        "gemini" => Some("GEMINI.md"),
-        _ => None,
-    }
-}
-
-/// Map a tool id to the global-config "kind" understood by
-/// `mcp_injector::install_all` ("codex" / "gemini"). "claude" is
-/// excluded: Claude in multi-agent mode now runs with a per-pane
-/// `--mcp-config` pointing at its own dedicated MCP server, so
-/// touching ~/.claude.json would be redundant noise.
-fn tool_to_config_kind(tool: &str) -> Option<&'static str> {
-    match tool {
-        // "claude" excluded — see doc above.
-        "codex" => Some("codex"),
-        "gemini" => Some("gemini"),
-        _ => None,
-    }
-}
-
-/// Lazy-spawn the anonymous (no self_pane_id) multi-agent MCP server
-/// on first call. Used by codex/gemini's global-config injection path
-/// where we haven't yet wired per-pane MCP config.
-async fn ensure_mcp_running(
-    state: &AppState,
-) -> Result<crate::mcp_server::McpEndpoint, String> {
-    // Fast path — already spawned.
-    {
-        let guard = state
-            .mcp_endpoint
-            .lock()
-            .map_err(|_| "mcp_endpoint mutex poisoned")?;
-        if let Some(ep) = guard.as_ref() {
-            return Ok(ep.clone());
-        }
-    }
-
-    // Slow path — take the spawn lock, double-check, then bind.
-    let _spawn_guard = state.mcp_spawn_lock.lock().await;
-    {
-        let guard = state
-            .mcp_endpoint
-            .lock()
-            .map_err(|_| "mcp_endpoint mutex poisoned")?;
-        if let Some(ep) = guard.as_ref() {
-            return Ok(ep.clone());
-        }
-    }
-
-    let panes = std::sync::Arc::new(
-        crate::mcp_server::PaneStore::new(state.terminal_session.clone()),
-    );
-    let endpoint = crate::mcp_server::spawn(panes, None)
-        .await
-        .map_err(|e| format!("mcp spawn: {}", e))?;
-    log::info!("[mcp] anonymous multi-agent server up at {}", endpoint.url);
-
-    *state
-        .mcp_endpoint
-        .lock()
-        .map_err(|_| "mcp_endpoint mutex poisoned")? = Some(endpoint.clone());
-    refresh_mcp_state_manifest(state).await;
-    Ok(endpoint)
 }
 
 /// Snapshot the current MCP topology to `~/.coffee-cli/mcp-state.json`
 /// so the `coffee-cli mcp-status` subcommand can read it from any
-/// terminal. Called after every successful spawn.
+/// terminal. Called after every successful per-pane MCP spawn. The
+/// `anonymous` slot in the manifest is always `None` post-v1.5: every
+/// multi-agent pane has its own `self_pane_id`-baked server now, no
+/// shared anonymous endpoint exists.
 async fn refresh_mcp_state_manifest(state: &AppState) {
-    let anonymous = state
-        .mcp_endpoint
-        .lock()
-        .ok()
-        .and_then(|g| g.clone());
     let panes_snapshot = state.pane_mcp_endpoints.lock().await.clone();
-    crate::mcp_server::write_state_manifest(
-        anonymous.as_ref(),
-        &panes_snapshot,
-    );
+    crate::mcp_server::write_state_manifest(None, &panes_snapshot);
 }
 
 /// Lazy-spawn a PER-PANE MCP server bound to a specific pane id, on
@@ -1943,182 +1898,69 @@ pub async fn ensure_pane_mcp_running(
     Ok(endpoint)
 }
 
-/// Enable multi-agent mode for the given workspace, scoped to the CLIs
-/// the user actually has running in panes:
-/// - Writes ONLY the root-level MD files needed by NON-claude CLIs in
-///   `tools` (AGENTS.md for codex/opencode, GEMINI.md for gemini).
-///   **Claude is intentionally absent** — claude panes get their
-///   protocol via per-pane `--append-system-prompt` at PTY launch
-///   instead, so a workspace with only Claude panes accumulates ZERO
-///   files in the project root. Other tools (qwen, hermes, …)
-///   contribute nothing.
-/// - Injects the Coffee-CLI MCP endpoint into ONLY the global CLI
-///   configs whose kind appears in `tools`, again excluding claude
-///   (per-pane `--mcp-config` replaces global injection for it).
-/// - Writes `.multi-agent/PROTOCOL.md` + `endpoint.json` if any MD is
-///   written, so the active CLIs' thin pointers resolve.
+/// Enable multi-agent mode for the given workspace.
 ///
-/// Lazily spawns the anonymous MCP server only if non-claude tools
-/// need it. Pure-claude usage skips MCP spawn here entirely (per-pane
-/// MCP servers are spawned later inside `tier_terminal_start`).
+/// Post-v1.5 this is a thin handshake — per-pane MCP servers and
+/// per-pane CLI artifacts (Claude `mcp.json` / Codex `instructions.md`
+/// / Gemini extension stub) are all created lazily inside
+/// `tier_terminal_start` when each pane spawns its CLI. No workspace
+/// files are written, no global `~/.codex` / `~/.gemini` `mcp_servers`
+/// blocks get injected, no env var redirects the CLI's HOME (so auth
+/// stays live).
+///
+/// The frontend still calls this on tab mount as a structured place
+/// for cross-cutting validation (workspace must exist, future license
+/// gating, etc.) — kept around for that hook, not because it does any
+/// heavy lifting today.
+///
+/// `_tools` and `_state` are kept in the signature for API
+/// compatibility with the existing TS `commands.enableMultiAgentMode`
+/// invocation; they're unused here.
 #[tauri::command]
 async fn enable_multi_agent_mode(
     workspace: String,
-    tools: Vec<String>,
-    state: tauri::State<'_, AppState>,
+    _tools: Vec<String>,
+    _state: tauri::State<'_, AppState>,
 ) -> Result<MultiAgentModeReport, String> {
     let ws = PathBuf::from(&workspace);
     if !ws.is_dir() {
         return Err(format!("workspace is not a directory: {}", workspace));
     }
-
-    let mut warnings = Vec::new();
-
-    // Resolve which MD files and which CLI configs the user's tool
-    // set actually needs. Deduped — picking 4× codex only writes
-    // AGENTS.md once.
-    let mut md_set: std::collections::BTreeSet<&str> = Default::default();
-    let mut cfg_set: std::collections::BTreeSet<&str> = Default::default();
-    for t in &tools {
-        if let Some(md) = tool_to_md(t) {
-            md_set.insert(md);
-        }
-        if let Some(cfg) = tool_to_config_kind(t) {
-            cfg_set.insert(cfg);
-        }
-    }
-    let md_names: Vec<&str> = md_set.iter().copied().collect();
-    let cfg_kinds: Vec<&str> = cfg_set.iter().copied().collect();
-
-    // Pure-claude case (or empty tool set): nothing to install
-    // workspace-side or globally. Bail out before even spawning the
-    // anonymous MCP server — that listener exists only to feed
-    // codex/gemini's global injection, and a Claude-only multi-agent
-    // session uses per-pane MCP exclusively (spawned later in
-    // tier_terminal_start). Result: opening a 4×Claude tab in a
-    // brand-new workspace touches zero files anywhere except the
-    // OS temp dir.
-    if md_names.is_empty() && cfg_kinds.is_empty() {
-        return Ok(MultiAgentModeReport {
-            ok: true,
-            mcp_url: None,
-            touched_config_files: Vec::new(),
-            touched_md_files: Vec::new(),
-            warnings,
-        });
-    }
-
-    // Lazy-spawn anonymous MCP. Only reached if at least one
-    // non-claude tool needs the global-config injection path.
-    let endpoint = ensure_mcp_running(&state).await?;
-
-    // Serialize the endpoint so users (and debug tooling) can read
-    // .multi-agent/endpoint.json. Only written when at least one MD
-    // file is being written (otherwise the meta dir isn't created).
-    let endpoint_json = serde_json::to_string_pretty(&endpoint).ok();
-
-    let touched_md_files = match crate::multi_agent_protocol::install(
-        &ws,
-        &md_names,
-        endpoint_json.as_deref(),
-    ) {
-        Ok(paths) => paths
-            .into_iter()
-            .map(|p| p.display().to_string())
-            .collect::<Vec<_>>(),
-        Err(e) => {
-            warnings.push(format!("protocol .md install: {}", e));
-            Vec::new()
-        }
-    };
-
-    let touched_config_files =
-        match crate::mcp_injector::install_all(&endpoint, &cfg_kinds, Some(&ws)) {
-            Ok(paths) => paths
-                .into_iter()
-                .map(|p| p.display().to_string())
-                .collect::<Vec<_>>(),
-            Err(e) => {
-                warnings.push(format!("mcp injector: {}", e));
-                Vec::new()
-            }
-        };
-
     Ok(MultiAgentModeReport {
-        ok: warnings.is_empty(),
-        mcp_url: Some(endpoint.url),
-        touched_config_files,
-        touched_md_files,
-        warnings,
+        ok: true,
+        warnings: Vec::new(),
     })
 }
 
-/// Disable multi-agent mode: remove our MCP entry from every detected
-/// primary CLI config and strip our protocol block from the three .md
-/// files. Leaves the user's own config / content intact.
+/// Disable multi-agent mode for the given workspace.
+///
+/// Post-v1.5 this is a no-op for the workspace itself — multi-agent
+/// mode no longer writes any workspace files or global config entries
+/// to clean up here. Per-pane MCP servers and their temp artifacts
+/// persist for the app's lifetime (they live under
+/// `<temp>/coffee-cli/panes/` + `~/.gemini/extensions/coffee-pane-*`
+/// and are pruned by `mcp_injector::prune_pane_artifacts()` at the
+/// next launch and at app shutdown).
+///
+/// `_workspace` is kept in the signature for API compat with the TS
+/// caller in `MultiAgentGrid.tsx`'s unmount cleanup.
 #[tauri::command]
 fn disable_multi_agent_mode(
-    workspace: String,
+    _workspace: String,
 ) -> Result<MultiAgentModeReport, String> {
-    let ws = PathBuf::from(&workspace);
-    let ws_opt = if ws.is_dir() { Some(ws.as_path()) } else { None };
-
-    let mut warnings = Vec::new();
-
-    let touched_config_files = match crate::mcp_injector::uninstall_all(ws_opt) {
-        Ok(paths) => paths.into_iter().map(|p| p.display().to_string()).collect(),
-        Err(e) => {
-            warnings.push(format!("mcp uninstall: {}", e));
-            Vec::new()
-        }
-    };
-
-    let touched_md_files = if let Some(w) = ws_opt {
-        match crate::multi_agent_protocol::uninstall(w) {
-            Ok(paths) => paths.into_iter().map(|p| p.display().to_string()).collect(),
-            Err(e) => {
-                warnings.push(format!("protocol uninstall: {}", e));
-                Vec::new()
-            }
-        }
-    } else {
-        Vec::new()
-    };
-
     Ok(MultiAgentModeReport {
-        ok: warnings.is_empty(),
-        mcp_url: None,
-        touched_config_files,
-        touched_md_files,
-        warnings,
+        ok: true,
+        warnings: Vec::new(),
     })
 }
 
 pub fn start_ui() -> anyhow::Result<()> {
-    // Self-heal global CLI configs: any `coffee-cli` MCP entry in
-    // ~/.claude.json / ~/.codex/config.toml / ~/.gemini/settings.json is
-    // pointing at a stale ephemeral localhost port from a previous Coffee
-    // CLI session (the MCP server only spins up when a multi-agent tab is
-    // active, and always on a fresh OS-picked port). If we don't scrub
-    // these at launch, users who open Claude/Codex/Gemini alone in any
-    // unrelated directory hit an MCP startup error:
-    //     "MCP client for `coffee-cli` failed to start ... error sending
-    //      request for url (http://127.0.0.1:58503/mcp)"
-    // enable_multi_agent_mode re-injects fresh entries when the user opens
-    // a multi-agent tab, so this cleanup is strictly subtractive — it
-    // never loses the user's own MCP entries.
-    match crate::mcp_injector::uninstall_all(None) {
-        Ok(paths) if !paths.is_empty() => {
-            eprintln!("[coffee-cli] Cleaned stale MCP entries from {} global CLI config file(s)", paths.len());
-            for p in &paths {
-                eprintln!("  - {}", p.display());
-            }
-        }
-        Ok(_) => {} // no stale entries — either first launch or already clean
-        Err(e) => {
-            eprintln!("[coffee-cli] WARN: Failed to clean stale MCP entries: {}", e);
-        }
-    }
+    // Drop the previous run's per-pane artifacts before we boot —
+    // `<temp>/coffee-cli/panes/*` and `~/.gemini/extensions/coffee-pane-*`
+    // stub dirs from a crashed or hard-killed prior session would
+    // otherwise accumulate. New artifacts are recreated lazily by
+    // `tier_terminal_start` as multi-agent panes spawn.
+    crate::mcp_injector::prune_pane_artifacts();
 
     // Create shared session BEFORE the builder so we can clone it for the exit handler
     let terminal_session = terminal::SharedSession::default();
@@ -2131,7 +1973,6 @@ pub fn start_ui() -> anyhow::Result<()> {
             terminal_session,
             hook_port: std::sync::atomic::AtomicU16::new(0),
             fs_watcher: Mutex::new(None),
-            mcp_endpoint: Mutex::new(None),
             pane_mcp_endpoints: tokio::sync::Mutex::new(
                 std::collections::HashMap::new(),
             ),
@@ -2196,9 +2037,10 @@ pub fn start_ui() -> anyhow::Result<()> {
                 }
             }
 
-            // The multi-agent MCP server is spawned lazily — see
-            // `enable_multi_agent_mode` / `ensure_mcp_running`. Users who
-            // never open a multi-agent tab pay zero MCP cost.
+            // Per-pane MCP servers are spawned lazily inside
+            // `tier_terminal_start` when each multi-agent pane boots
+            // its CLI. Users who never open a multi-agent tab pay
+            // zero MCP cost.
 
             // Force square corners + no shadow on the borderless window.
             // Windows 11's DWM rounds borderless windows by default and adds
@@ -2233,14 +2075,12 @@ pub fn start_ui() -> anyhow::Result<()> {
         .run(tauri::generate_context!())
         .map_err(|e| anyhow::anyhow!("Error while running tauri application: {}", e))?;
 
-    // App has fully exited (main window closed, all tabs disposed). Strip
-    // our `coffee-cli` entry from the global CLI configs so users who
-    // launch Claude/Codex/Gemini standalone between Coffee CLI sessions
-    // don't hit "MCP handshake failed" errors against our ephemeral port.
-    // Symmetric with the launch-time cleanup above — belt-and-suspenders.
-    if let Err(e) = crate::mcp_injector::uninstall_all(None) {
-        eprintln!("[coffee-cli] WARN: Shutdown MCP cleanup failed: {}", e);
-    }
+    // App has fully exited. Per-pane MCP servers and their temp
+    // artifacts get GC'd by the OS along with the process, but be
+    // explicit about pruning so a long-running dev workstation never
+    // accumulates stale dirs even if the next launch never happens.
+    // Symmetric with the launch-time prune — belt-and-suspenders.
+    crate::mcp_injector::prune_pane_artifacts();
 
     Ok(())
 }

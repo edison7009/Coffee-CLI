@@ -180,25 +180,23 @@ export const commands = {
   stopFsWatcher: () =>
     invoke<void>('stop_fs_watcher'),
 
-  // Multi-agent mode — writes only the root MD files needed by the
-  // tools the user actually has running in panes (CLAUDE.md for
-  // "claude", AGENTS.md for "codex"/"opencode", GEMINI.md for
-  // "gemini"). Empty `tools` is a no-op cleanly. Idempotent.
-  // First call also lazy-spawns the MCP server.
+  // Multi-agent mode — post-v1.5 this is a thin handshake. The backend
+  // creates per-pane MCP servers + per-pane CLI artifacts (Claude
+  // mcp.json / Codex instructions.md / Gemini extension stub) lazily
+  // when each pane spawns its CLI inside `tier_terminal_start`. No
+  // workspace files are written and no global ~/.codex / ~/.gemini
+  // entries are injected, so there's nothing to "install" or
+  // "uninstall" at this layer. The call is kept as the structured
+  // place for the backend to surface preflight warnings and for future
+  // cross-cutting validation.
   enableMultiAgentMode: (workspace: string, tools: string[]) =>
-    invoke<{
-      ok: boolean;
-      mcp_url: string | null;
-      touched_config_files: string[];
-      touched_md_files: string[];
-      warnings: string[];
-    }>('enable_multi_agent_mode', { workspace, tools }),
+    invoke<{ ok: boolean; warnings: string[] }>(
+      'enable_multi_agent_mode',
+      { workspace, tools },
+    ),
   disableMultiAgentMode: (workspace: string) =>
-    invoke<{
-      ok: boolean;
-      mcp_url: string | null;
-      touched_config_files: string[];
-      touched_md_files: string[];
-      warnings: string[];
-    }>('disable_multi_agent_mode', { workspace }),
+    invoke<{ ok: boolean; warnings: string[] }>(
+      'disable_multi_agent_mode',
+      { workspace },
+    ),
 };
