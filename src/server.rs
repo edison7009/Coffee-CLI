@@ -1061,10 +1061,12 @@ fn sessions_file_path() -> PathBuf {
     dir.join("sessions.json")
 }
 
-/// XML-style tags Claude Code injects into the user message stream when
-/// integrated with an IDE or shell. These are not things the user typed —
-/// filtering them out of the history title extractor keeps the sidebar
-/// readable (no more "<ide_opened_file>The user opened the..." cards).
+/// XML-style tags injected into the user message stream by Claude /
+/// Codex / Gemini when integrated with an IDE or shell. These are
+/// not things the user typed — filtering them out of the history
+/// title extractor keeps the sidebar readable (no more
+/// "<ide_opened_file>The user opened the..." or "# AGENTS.md
+/// instructions for ..." cards).
 const SYSTEM_INJECTION_TAGS: &[&str] = &[
     "<environment_context>",
     "<ide_opened_file>",
@@ -1073,6 +1075,12 @@ const SYSTEM_INJECTION_TAGS: &[&str] = &[
     "<system-reminder>",
     "<command-message>",
     "<command-name>",
+    // Codex injects the contents of `AGENTS.md` (project) and any
+    // pre-v1.5 Coffee-CLI workspace pointer as a synthetic user
+    // message at session start.
+    "# AGENTS.md",
+    // Gemini equivalent for `GEMINI.md`.
+    "# GEMINI.md",
 ];
 
 fn is_system_injected(text: &str) -> bool {
@@ -1202,6 +1210,234 @@ fn parse_agent_jsonl(file_path: &std::path::Path, tool_name: &str) -> Option<Sav
     })
 }
 
+/// Codex CLI sessions live at
+/// `~/.codex/sessions/<YYYY>/<MM>/<DD>/rollout-<ts>-<uuid>.jsonl`.
+/// Schema:
+///   - first row: `{type: "session_meta", payload: {id, cwd, originator: "codex-tui", ...}}`
+///   - subsequent rows: `{type: "response_item", payload: {type: "message", role, content: [{type: "input_text", text}]}}`
+///     (also `user_message`, `event_msg`, `turn_context`, etc. — we ignore the non-message ones)
+fn parse_codex_session_jsonl(file_path: &std::path::Path) -> Option<SavedSession> {
+    use std::io::BufRead;
+    let file = std::fs::File::open(file_path).ok()?;
+    let reader = std::io::BufReader::new(file);
+
+    let mut session_id = file_path.file_stem()?.to_string_lossy().to_string();
+    let mut cwd = String::new();
+    let mut updated_at = String::new();
+    let mut title = String::new();
+    let mut total_messages = 0;
+
+    for line in reader.lines().map_while(Result::ok) {
+        let Ok(value) = serde_json::from_str::<serde_json::Value>(&line) else {
+            continue;
+        };
+        let row_type = value.get("type").and_then(|v| v.as_str()).unwrap_or("");
+        let payload = match value.get("payload") {
+            Some(p) => p,
+            None => continue,
+        };
+
+        // Session meta: pull id + cwd off the first row.
+        if row_type == "session_meta" {
+            if let Some(id) = payload.get("id").and_then(|v| v.as_str()) {
+                if !id.is_empty() {
+                    session_id = id.to_string();
+                }
+            }
+            if let Some(c) = payload.get("cwd").and_then(|v| v.as_str()) {
+                if !c.is_empty() {
+                    cwd = c.to_string();
+                }
+            }
+            continue;
+        }
+
+        // Message rows: response_item with payload.type=message, or
+        // the dedicated user_message row type. Both wrap content as
+        // an array of `{type: "input_text", text}` blocks.
+        let payload_type = payload.get("type").and_then(|v| v.as_str()).unwrap_or("");
+        let is_msg = (row_type == "response_item" && payload_type == "message")
+            || row_type == "user_message";
+        if !is_msg {
+            continue;
+        }
+        let role = payload.get("role").and_then(|v| v.as_str()).unwrap_or("");
+        if role == "user" || role == "assistant" {
+            total_messages += 1;
+        }
+        if !title.is_empty() || role != "user" {
+            continue;
+        }
+        let Some(content_arr) = payload.get("content").and_then(|v| v.as_array()) else {
+            continue;
+        };
+        for block in content_arr {
+            let block_type = block.get("type").and_then(|v| v.as_str()).unwrap_or("");
+            if block_type != "input_text" && block_type != "text" {
+                continue;
+            }
+            let Some(text) = block.get("text").and_then(|v| v.as_str()) else {
+                continue;
+            };
+            if is_system_injected(text) {
+                continue; // skip AGENTS.md / environment_context wrappers
+            }
+            let safe = text.replace('\n', " ");
+            let mut chars = safe.chars();
+            let chunk: String = chars.by_ref().take(40).collect();
+            title = if chars.next().is_some() { format!("{}...", chunk) } else { chunk };
+            break;
+        }
+    }
+
+    if let Ok(meta) = std::fs::metadata(file_path) {
+        if let Ok(mod_time) = meta.modified() {
+            if let Ok(dur) = mod_time.duration_since(std::time::SystemTime::UNIX_EPOCH) {
+                updated_at = dur.as_millis().to_string();
+            }
+        }
+    }
+    if title.is_empty() {
+        title = "Codex Session".to_string();
+    }
+    let turn_count = if total_messages > 0 { std::cmp::max(1, (total_messages + 1) / 2) } else { 0 };
+
+    Some(SavedSession {
+        id: format!("codex_native_{}", session_id),
+        name: title,
+        tool: "codex".to_string(),
+        cwd,
+        session_token: Some(session_id),
+        saved_at: updated_at,
+        file_path: Some(file_path.to_string_lossy().into_owned()),
+        turn_count: Some(turn_count),
+    })
+}
+
+/// Gemini CLI sessions live at
+/// `~/.gemini/tmp/<project-folder>/chats/session-<ts>-<hash>.jsonl`.
+/// Schema:
+///   - first row: `{sessionId, projectHash, startTime, lastUpdated, kind: "main"}`
+///   - subsequent rows: `{id, timestamp, type: "user"|"gemini", content}`
+///     where user content is `[{text}]` and gemini content is a string.
+///   - interleaved `{$set: {lastUpdated}}` rows that we just skip.
+///
+/// `cwd` isn't recorded in the file. We resolve it from
+/// `~/.gemini/projects.json` which maps absolute cwd → short folder
+/// name, so we reverse-lookup short-name → cwd. Falls back to the
+/// short folder name itself if the projects.json mapping is missing.
+fn parse_gemini_session_jsonl(
+    file_path: &std::path::Path,
+    project_short_to_cwd: &std::collections::HashMap<String, String>,
+) -> Option<SavedSession> {
+    use std::io::BufRead;
+    let file = std::fs::File::open(file_path).ok()?;
+    let reader = std::io::BufReader::new(file);
+
+    let mut session_id = file_path.file_stem()?.to_string_lossy().to_string();
+    let mut cwd = String::new();
+    let mut updated_at = String::new();
+    let mut title = String::new();
+    let mut total_messages = 0;
+
+    // cwd resolution: file path is `.gemini/tmp/<short>/chats/<file>.jsonl`,
+    // so the short project name is the parent's parent dir name.
+    if let Some(short) = file_path
+        .parent()
+        .and_then(|p| p.parent())
+        .and_then(|p| p.file_name())
+        .and_then(|n| n.to_str())
+    {
+        if let Some(real) = project_short_to_cwd.get(short) {
+            cwd = real.clone();
+        } else {
+            cwd = short.to_string(); // last-resort: show the short folder
+        }
+    }
+
+    for line in reader.lines().map_while(Result::ok) {
+        let Ok(value) = serde_json::from_str::<serde_json::Value>(&line) else {
+            continue;
+        };
+        if let Some(s) = value.get("sessionId").and_then(|v| v.as_str()) {
+            if !s.is_empty() {
+                session_id = s.to_string();
+            }
+        }
+        let row_type = value.get("type").and_then(|v| v.as_str()).unwrap_or("");
+        if row_type == "user" || row_type == "gemini" {
+            total_messages += 1;
+        }
+        if !title.is_empty() || row_type != "user" {
+            continue;
+        }
+        let Some(content_arr) = value.get("content").and_then(|v| v.as_array()) else {
+            continue;
+        };
+        for block in content_arr {
+            let Some(text) = block.get("text").and_then(|v| v.as_str()) else {
+                continue;
+            };
+            if is_system_injected(text) {
+                continue;
+            }
+            let safe = text.replace('\n', " ");
+            let mut chars = safe.chars();
+            let chunk: String = chars.by_ref().take(40).collect();
+            title = if chars.next().is_some() { format!("{}...", chunk) } else { chunk };
+            break;
+        }
+    }
+
+    if let Ok(meta) = std::fs::metadata(file_path) {
+        if let Ok(mod_time) = meta.modified() {
+            if let Ok(dur) = mod_time.duration_since(std::time::SystemTime::UNIX_EPOCH) {
+                updated_at = dur.as_millis().to_string();
+            }
+        }
+    }
+    if title.is_empty() {
+        title = "Gemini Session".to_string();
+    }
+    let turn_count = if total_messages > 0 { std::cmp::max(1, (total_messages + 1) / 2) } else { 0 };
+
+    Some(SavedSession {
+        id: format!("gemini_native_{}", session_id),
+        name: title,
+        tool: "gemini".to_string(),
+        cwd,
+        session_token: Some(session_id),
+        saved_at: updated_at,
+        file_path: Some(file_path.to_string_lossy().into_owned()),
+        turn_count: Some(turn_count),
+    })
+}
+
+/// Read `~/.gemini/projects.json` and build a reverse map
+/// `short_folder_name → real_cwd`. Used by
+/// `parse_gemini_session_jsonl` because the per-session jsonl file
+/// doesn't include the cwd anywhere — it only encodes which project
+/// folder it belongs to via the parent dir name.
+///
+/// Returns an empty map on any error (missing file, invalid JSON,
+/// permission denied) — Gemini sessions just fall back to using
+/// the short folder name as the cwd display.
+fn load_gemini_project_map() -> std::collections::HashMap<String, String> {
+    use std::collections::HashMap;
+    let mut map = HashMap::new();
+    let Some(home) = dirs::home_dir() else { return map };
+    let path = home.join(".gemini").join("projects.json");
+    let Ok(text) = std::fs::read_to_string(path) else { return map };
+    let Ok(value) = serde_json::from_str::<serde_json::Value>(&text) else { return map };
+    let Some(projects) = value.get("projects").and_then(|v| v.as_object()) else { return map };
+    for (cwd, short) in projects {
+        if let Some(short_str) = short.as_str() {
+            map.insert(short_str.to_string(), cwd.clone());
+        }
+    }
+    map
+}
+
 #[tauri::command]
 fn read_native_session(file_path: String) -> Result<String, String> {
     let path = std::path::Path::new(&file_path);
@@ -1233,6 +1469,8 @@ fn read_native_session(file_path: String) -> Result<String, String> {
     let allowed: &[std::path::PathBuf] = &[
         home.join(".claude"),
         home.join(".hermes"),
+        home.join(".codex").join("sessions"),
+        home.join(".gemini").join("tmp"),
         home.join(".local").join("share").join("opencode"),
     ];
     if !allowed.iter().any(|prefix| canonical.starts_with(prefix)) {
@@ -1501,20 +1739,40 @@ fn load_native_history_blocking() -> Result<Vec<SavedSession>, String> {
     let mut result: Vec<SavedSession> = Vec::new();
 
     if let Some(home) = dirs::home_dir() {
-        // 1. Claude Code (Max depth 2: projects/<hash>/<hash>.jsonl)
+        // 1. Claude Code (depth 2: projects/<hash>/<hash>.jsonl)
         collect_jsonl_paths_with_mtime(home.join(".claude").join("projects"), 2, "claude", &mut file_candidates);
 
         // 2. Hermes (sessions/session_*.json — flat directory, JSON format)
         collect_hermes_paths_with_mtime(home.join(".hermes").join("sessions"), &mut file_candidates);
+
+        // 3. Codex (depth 4: sessions/<YYYY>/<MM>/<DD>/rollout-*.jsonl)
+        collect_jsonl_paths_with_mtime(home.join(".codex").join("sessions"), 4, "codex", &mut file_candidates);
+
+        // 4. Gemini (depth 3: tmp/<project-folder>/chats/session-*.jsonl).
+        // .json (legacy) files are skipped — collect_jsonl_paths_with_mtime
+        // already filters to .jsonl, which matches the modern session
+        // format. Old .json sessions don't have message rows in the
+        // shape we expect, so dropping them avoids garbage entries.
+        collect_jsonl_paths_with_mtime(home.join(".gemini").join("tmp"), 3, "gemini", &mut file_candidates);
     }
 
     // Sort candidates by mtime desc and parse only the newest HISTORY_LIMIT.
     file_candidates.sort_by(|a, b| b.0.cmp(&a.0));
     file_candidates.truncate(HISTORY_LIMIT);
 
+    // Lazy-load the Gemini project-hash → cwd map only if we actually
+    // have Gemini candidates (file I/O isn't free).
+    let gemini_project_map = if file_candidates.iter().any(|(_, _, t)| *t == "gemini") {
+        load_gemini_project_map()
+    } else {
+        std::collections::HashMap::new()
+    };
+
     for (_, path, tool) in &file_candidates {
         let parsed = match *tool {
             "hermes" => parse_hermes_json(path),
+            "codex"  => parse_codex_session_jsonl(path),
+            "gemini" => parse_gemini_session_jsonl(path, &gemini_project_map),
             other    => parse_agent_jsonl(path, other),
         };
         if let Some(session) = parsed {
@@ -1522,7 +1780,7 @@ fn load_native_history_blocking() -> Result<Vec<SavedSession>, String> {
         }
     }
 
-    // 3. OpenCode (SQLite is cheap, query already caps rows)
+    // 5. OpenCode (SQLite is cheap, query already caps rows)
     if let Some(home) = dirs::home_dir() {
         let opencode_dir = home.join(".local").join("share").join("opencode");
         find_opencode_sessions(opencode_dir, &mut result);

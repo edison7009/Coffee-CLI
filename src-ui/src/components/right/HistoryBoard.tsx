@@ -15,6 +15,8 @@ import './HistoryBoard.css';
 
 const TOOL_ICON_SRC: Record<string, string> = {
   claude:    '/icons/tools/claude.svg',
+  codex:     '/icons/tools/codex.svg',
+  gemini:    '/icons/tools/gemini.svg',
   qwen:      '/icons/tools/qwen.svg',
   installer: '/icons/tools/installer.svg',
   hermes:    '/icons/tools/hermes.png',
@@ -31,6 +33,8 @@ const getToolIcon = (tool: string) => {
 const getToolName = (tool: string, _lang: string) => {
   switch (tool) {
     case 'claude': return 'Claude Code';
+    case 'codex': return 'Codex CLI';
+    case 'gemini': return 'Gemini CLI';
     case 'qwen': return 'Qwen Code';
     case 'installer': return 'Coffee Installer';
     case 'hermes': return 'Hermes Agent';
