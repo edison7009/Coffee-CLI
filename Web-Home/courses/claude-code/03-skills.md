@@ -3,269 +3,239 @@
   <img alt="Claude How To" src="../resources/logos/claude-howto-logo.svg">
 </picture>
 
-# Agent Skills 指南
+# Skills 指南
 
-## 概览
+skills 是 Claude Code 里最值得认真掌握的能力之一。它们让 Claude 不再只是“每次重新听你描述要求”，而是能在合适场景下自动拿出一套固定工作流、模板和最佳实践。
 
-Skills 是可以复用、可自动触发的能力包。一个 skill 通常包含 `SKILL.md`、参考文件、脚本和模板。Claude 在合适的场景下会自动加载它。
+---
 
-### 主要好处
+## skills 是什么
 
-- 可复用
-- 可渐进加载
-- 可以把脚本、模板、说明放在一起
-- 适合标准化流程
+你可以把 skill 理解成：
 
-## Skills 的工作方式：渐进式披露
+- 一个带 frontmatter 的 `SKILL.md`
+- 可附带脚本、模板、参考资料
+- 会被 Claude 自动发现和按需加载
+- 更适合长期复用的工作流能力
 
-Skills 不会一次性把所有内容都塞进上下文，而是按需加载。
+和普通 prompt 相比，skills 更稳定、更易复用，也更适合团队共享。
 
-### 三层加载
+---
 
-1. **只看描述**：先判断这个 skill 是否相关
-2. **加载 `SKILL.md`**：读取核心说明
-3. **按需加载支持文件**：脚本、模板、参考资料
+## skills 为什么重要
 
-## Skill 加载流程
+当你开始频繁做这些事时，skills 的价值就非常明显：
 
-1. Claude 扫描技能目录
-2. 根据描述判断是否匹配当前任务
-3. 读取 `SKILL.md`
-4. 如有需要，再加载脚本和辅助文件
+- 代码审查
+- 文档生成
+- 代码重构
+- 品牌语气统一
+- 项目初始化或规范生成
 
-## Skill 类型与位置
+如果每次都靠你手打一大段提示词，既累，也不稳定。skill 的目标就是把这部分沉淀下来。
 
-Skills 可以放在：
+---
 
-- 项目目录下的 `.claude/skills/`
-- 用户目录下的 `~/.claude/skills/`
-
-### 自动发现
-
-只要目录结构正确，Claude 就会自动发现这些 Skills。
-
-## 创建自定义 Skills
-
-### 基本目录结构
+## 一个 skill 的基本结构
 
 ```text
-my-skill/
-└── SKILL.md
+skill-name/
+├── SKILL.md
+├── templates/
+├── scripts/
+└── references/
 ```
 
-### `SKILL.md` 格式
+### `SKILL.md` 负责什么
 
-```yaml
+- 定义 skill 名称
+- 说明 skill 在什么情况下应该触发
+- 告诉 Claude 该怎么做
+
+### 其他目录负责什么
+
+- `templates/`：输出模板
+- `scripts/`：辅助脚本
+- `references/`：参考规则或背景知识
+
 ---
-name: my-skill
-description: 这个 skill 的用途，以及什么时候触发
+
+## April 2026 这批 skills 更新，最值得知道什么
+
+- skill description 的预算更紧了：默认只占上下文窗口的 **1%**，fallback 约 **8,000 字符**
+- 即使装了很多 skills，**skill 名称会保留**，description 则会被裁短
+- 如果你希望某个 skill 只在某些路径下自动触发，可以在 frontmatter 里加 `paths`
+- 写 description 时要把“最关键的使用场景”放前面，否则容易在预算裁剪时丢失重点
+
 ---
 
-# Your Skill Name
+## progressive disclosure 是什么意思
 
-## Instructions
+skills 的一个核心优点是按需加载，而不是一上来把所有内容都塞进上下文里。
 
-## Examples
+简单理解：
+
+1. Claude 先只知道有哪些 skills，以及它们大概干什么
+2. 真正需要某个 skill 时，再读取 `SKILL.md`
+3. 只有在需要时，才进一步读模板、脚本或参考资料
+
+这意味着你可以装很多 skills，而不会一开始就把上下文塞爆。
+
+上游这次还顺手把技能加载流程图的分层写得更清楚了。现在更推荐这样理解：
+
+- 第 1 层：先看 skill 名称和 description
+- 第 2 层：真正命中时再读 `SKILL.md`
+- 第 3 层：只有确实需要时，才继续读 `templates/`、`scripts/`、`references/`
+
+这个分层对中文用户特别重要，因为它能解释一个常见疑问：
+
+- 为什么我装了很多 skills，但 Claude 不会一上来全读？
+
+答案就是：Claude 默认按层加载，而不是整包吞下。
+
+---
+
+## skills 放哪里
+
+| 类型 | 路径 | 适合什么 |
+|------|------|----------|
+| 个人级 | `~/.claude/skills/<skill-name>/SKILL.md` | 个人工作流 |
+| 项目级 | `.claude/skills/<skill-name>/SKILL.md` | 团队共享 |
+| plugin 自带 | `<plugin>/skills/...` | 和 plugin 一起分发 |
+
+---
+
+## 本目录里的示例 skills
+
+| skill | 位置 | 用途 |
+|-------|------|------|
+| `code-review` | `03-skills/code-review/` | 代码审查 |
+| `brand-voice` | `03-skills/brand-voice/` | 文案风格统一 |
+| `doc-generator` | `03-skills/doc-generator/` | 文档生成 |
+| `refactor` | `03-skills/refactor/` | 结构化重构 |
+| `claude-md` | `03-skills/claude-md/` | 生成或调整 `CLAUDE.md` |
+
+---
+
+## 如何安装
+
+### 安装到个人目录
+
+```bash
+mkdir -p ~/.claude/skills
+cp -r 03-skills/code-review ~/.claude/skills/
 ```
 
-### 必填字段
+### 安装到项目目录
+
+```bash
+mkdir -p .claude/skills
+cp -r 03-skills/code-review .claude/skills/
+```
+
+---
+
+## `SKILL.md` 里哪些不能翻
+
+这点是本地化时最容易翻坏的地方。下面这些字段要保留原样：
 
 - `name`
 - `description`
+- `effort`
+- `shell`
+- `paths`
 
-### 可选 frontmatter 字段
+同时，skill 名称本身也不要擅自中文化改名。
 
-- `argument-hint`
-- `allowed-tools`
-- `model`
-- `disable-model-invocation`
-- `user-invocable`
-- `context`
-- `agent`
-- `hooks`
+### `paths` 是什么
 
-## Skill 内容类型
+这是新版里很实用的一个 frontmatter 字段，用来限制 skill 只在某些目录或文件模式下触发，例如：
 
-### 参考内容
-
-适合放规则、标准、文档片段和示例。
-
-### 任务内容
-
-适合放具体步骤、执行流程和结果格式要求。
-
-## 控制 Skill 的调用
-
-你可以通过 `disable-model-invocation`、`user-invocable` 和工具白名单来控制 Claude 是否能自动调用这个 skill。
-
-## 字符串替换
-
-Skills 支持 `$ARGUMENTS`、`$0`、`$1` 等参数替换。
-
-### 动态上下文注入
-
-你可以在 prompt 里插入 shell 命令结果：
-
-```md
-- 当前 git 状态：!`git status`
-- 当前 diff：!`git diff HEAD`
-- 当前分支：!`git branch --show-current`
+```yaml
+paths: "src/api/**/*.ts"
 ```
 
-## 在 subagent 中运行 Skills
+如果你已经开始做团队级 skills，这个字段很值得用。
 
-某些 skill 适合在隔离上下文中运行，这样可以降低对主会话的影响。
+---
 
-## 实战示例
+## skills 和 slash commands 的区别
 
-### 示例 1：代码审查 Skill
+### 更适合用 skill 的情况
 
-一个典型的审查 skill 会包含：
+- 你希望 Claude 自动判断什么时候该触发
+- 你需要附带模板、脚本、参考资料
+- 这是一个长期工作流，而不是一次性快捷命令
 
-- 审查模板
-- 风险等级
-- 输出格式
-- 需要关注的维度
+### 更适合用 slash command 的情况
 
-### 示例 2：代码库可视化 Skill
+- 你希望自己手动明确触发
+- 它更像一个短促的操作入口
+- 你希望用户一眼知道“我要输入哪个命令”
 
-可以把代码库结构、依赖关系和模块边界总结给 Claude，便于快速理解。
+---
 
-### 示例 3：部署 Skill（只允许用户触发）
+## 如何写出更好用的 skill
 
-适合带副作用的操作，比如生产环境部署。通常会配合 `disable-model-invocation: true`。
+- `description` 要具体，不要空泛
+- 一个 skill 聚焦一类问题，别做成“大杂烩”
+- 如果依赖脚本或模板，放进 skill 目录，不要散落各处
+- 优先写“什么时候触发”和“输出长什么样”
 
-### 示例 4：品牌语气 Skill
+---
 
-用于检查输出是否符合品牌语气、语调和表达风格。
+## 常见坑
 
-### 示例 5：`CLAUDE.md` 生成 Skill
+### 1. description 写得太泛
 
-可以从项目文档中生成或补充 `CLAUDE.md`。
+Claude 就不知道什么时候该用它，或者会误触发。
 
-### 示例 6：带脚本的重构 Skill
+### 2. 把 skill 写成一大段散文
 
-常见组合是：
+推荐写成结构化说明，让 Claude 更容易执行。
 
-- `SKILL.md`
-- `scripts/`
-- `templates/`
-- `references/`
+### 3. 把 frontmatter key 翻译掉
 
-## 管理 Skills
+这会直接让 skill 无法正确解析。
 
-### 查看可用 Skills
+### 4. description 把重点写在后面
 
-```bash
-/skills
+现在 description 预算更紧，Claude 可能先看到的是前半句。最该写在前面的，是“什么时候调用它”。
+
+---
+
+## 中国用户特别注意
+
+- skill 里如果调用 shell 脚本，先确认本机 shell 环境。
+- 如果脚本依赖 `python`、`node`、`uv`、`npm`，建议在 skill 说明里提前写明。
+- Windows 用户优先考虑 PowerShell / Git Bash / WSL 差异。
+
+---
+
+## 新增的安全护栏：禁用 skill 里的 shell 替换
+
+skill 里支持 ``!`command` `` 这种写法：Claude 在真正读取 skill 前，会先执行 shell 命令，把输出拼进 prompt。
+
+这很强，但在更敏感的环境里也会带来风险。上游现在给了一个更明确的总开关：
+
+```json
+{
+  "disableSkillShellExecution": true
+}
 ```
 
-### 测试一个 Skill
+开启后：
 
-把它放到测试目录或者临时项目里，然后通过相应命令触发。
+- ``!`command` `` 不再执行
+- 会被当作普通文本保留
+- skill 还能继续用，但少了一层 shell 注入面
 
-### 更新 Skill
+如果你是在团队、CI 或更受控的环境里推广 skills，这个设置很值得知道。
 
-修改 `SKILL.md` 或支持文件后，重新打开会话或重新加载即可。
+---
 
-### 限制 Claude 对 Skill 的访问
+## 推荐下一步
 
-你可以通过权限配置，只允许 Claude 访问某些 skill。
-
-## 最佳实践
-
-### 1. 描述要具体
-
-让 `description` 明确说明这个 skill 在什么时候触发。
-
-### 2. 保持聚焦
-
-一个 skill 解决一个问题，不要什么都塞进去。
-
-### 3. 包含触发词
-
-在描述里加入相关关键词，帮助 Claude 更准确地选择它。
-
-### 4. `SKILL.md` 不要太长
-
-尽量控制在 500 行以内，超过就拆分支持文件。
-
-### 5. 引用支持文件
-
-把重复内容移到脚本或参考文件中，主文件只保留核心说明。
-
-## 故障排查
-
-### 快速参考
-
-- 检查目录结构是否正确
-- 检查 `SKILL.md` frontmatter 是否有效
-- 检查 skill 名称是否和调用名一致
-
-### Skill 没有触发
-
-- 检查描述是否足够具体
-- 检查目录是否在 Claude 可见范围内
-- 检查是否被更高优先级的 skill 覆盖
-
-### Skill 触发太频繁
-
-- 收紧描述
-- 增加约束条件
-- 用更具体的触发词
-
-### Claude 看不到全部 Skills
-
-- 检查路径
-- 检查权限
-- 重新加载会话
-
-## 安全注意事项
-
-- 不要在 skill 中硬编码密钥
-- 对副作用操作保持用户触发
-- 给自动触发的 skill 设置清晰边界
-
-## Skills vs 其他功能
-
-| 功能 | 触发方式 | 适合场景 |
-|------|----------|----------|
-| Skills | 自动/半自动 | 复用能力、流程标准化 |
-| Slash Commands | 手动 | 快捷命令 |
-| Subagents | 自动委派 | 隔离任务 |
-| Hooks | 事件触发 | 自动化和验证 |
-
-## 内置 Skills
-
-Claude Code 自带一些 Skills，例如批处理、调试、简化和 Claude API 相关内容。
-
-## 共享 Skills
-
-### 项目 Skills（团队共享）
-
-把 skill 放在项目目录里，团队成员都能用。
-
-### 个人 Skills
-
-```bash
-# 复制到个人目录
-mkdir -p ~/.claude/skills
-
-# 让脚本可执行
-chmod +x ~/.claude/skills/*/scripts/*
-```
-
-### Plugin 分发
-
-你也可以把 Skills 作为插件的一部分发布出去。
-
-## 继续深入
-
-如果你要管理一整套 Skills，可以再做一个 skill collection 或 skill manager，用来统一发现、更新和分发。
-
-## 更多资源
-
-- [根目录中文指南](../README.md)
-- [Slash Commands 中文参考](../01-slash-commands/README.md)
-- [Memory 中文指南](../02-memory/README.md)
-- [Subagents 中文参考](../04-subagents/README.md)
+- 想让任务分工更专业：看 [04-subagents](../04-subagents/)
+- 想在工具调用前后做自动动作：看 [06-hooks](../06-hooks/)
+- 想继续用中文规范扩写：看 [LOCALIZATION-STYLE.md](../LOCALIZATION-STYLE.md)

@@ -5,301 +5,269 @@
 
 # Memory 指南
 
-## 概览
+memory 是 Claude Code 中最容易被低估的一项能力。很多人觉得自己只是“加了个 `CLAUDE.md`”，实际上它影响的是 Claude 在每次进入项目时会自动带上的长期上下文。
 
-Memory 让 Claude Code 在不同会话之间保留上下文。你可以把团队规范、项目规则、个人偏好和目录级约束写进 `CLAUDE.md`，让 Claude 在合适的时候自动加载。
+---
 
-## Memory 命令速查
+## memory 是什么
 
-| 命令 | 作用 |
-|------|------|
-| `/init` | 初始化项目级 `CLAUDE.md` |
-| `/memory` | 打开并编辑记忆文件 |
-| `#` | 快速把当前规则写入 memory |
+Claude Code 的 memory 主要依赖文件系统中的 `CLAUDE.md` 体系。你可以把它理解成：
 
-## 快速上手：初始化 Memory
+- 项目规则入口
+- 团队约定入口
+- 个人偏好入口
+- 某个目录下的局部规则入口
 
-### 使用 `/init`
+它和“当前对话里的临时上下文”不同，memory 更像是长期生效的规则层。
 
-在项目目录中运行：
+---
+
+## 什么时候最该先配 memory
+
+以下情况非常值得先配 `CLAUDE.md`：
+
+- 你每次都要重复告诉 Claude 代码风格
+- 团队里有固定约定，例如测试要求、命名规范、Git 流程
+- 项目目录复杂，希望 Claude 一进来就知道哪些目录干什么
+- 你想把一部分项目知识长期保存下来，而不是每次重新解释
+
+---
+
+## 高价值命令
+
+| 命令 / 写法 | 用途 |
+|-------------|------|
+| `/init` | 初始化项目 memory |
+| `/memory` | 查看或编辑 memory |
+| 自然语言告诉 Claude“记住这条规则” | 让 Claude 帮你更新合适的 memory |
+| `@README.md` | 在 `CLAUDE.md` 中引用外部文档 |
+
+---
+
+## April 2026 这批 memory 更新，最值得知道什么
+
+- `/init` 的增强交互模式，推荐写法从 `CLAUDE_CODE_NEW_INIT=true` 逐步统一到了 `CLAUDE_CODE_NEW_INIT=1`
+- `CLAUDE.local.md` 现在已经是官方文档里明确支持的个人项目记忆，不再只是“可能还能用的旧特性”
+- auto memory 在会话开始时会加载 `MEMORY.md` 的前 200 行，**或者前 25KB**，以先到者为准
+- subagents 也可以拥有自己的 auto memory，适合长期复杂项目
+- 旧教程里常见的 `# ...` inline memory 快捷写法已经停用；现在请改用 `/memory` 或直接用自然语言让 Claude 记住
+
+如果你是中国用户，这几条很重要，因为网上很多旧教程还停留在更早的说法。
+
+---
+
+## 最快上手方式
+
+### 方法 1：直接复制项目模板
 
 ```bash
+cp 02-memory/project-CLAUDE.md ./CLAUDE.md
+```
+
+### 方法 2：让 Claude 帮你初始化
+
+```bash
+CLAUDE_CODE_NEW_INIT=1 claude
 /init
 ```
 
-Claude 会根据当前项目生成一个 `CLAUDE.md`，通常包含类似如下结构：
+这通常适合新项目起步时使用。
 
-```md
-# 项目配置
-## 项目概览
-## 开发规范
+### 方法 3：直接打开 `/memory` 编辑
+
+```bash
+/memory
 ```
 
-### 使用 `#` 快速更新记忆
+这会直接打开 memory 文件，让你手工改最稳。
 
-当你想把一句规则写入 memory 时，可以直接在输入前加 `#`：
+### 方法 4：直接用自然语言告诉 Claude 要记住什么
 
 ```text
-# 这个项目始终使用 TypeScript 严格模式
-# 优先使用 async/await，而不是 promise 链
-# 每次提交前都运行 npm test
-# 文件名统一使用 kebab-case
+记住：这个项目提交前总是先跑测试。
+请加到 memory：优先用 async/await，不要堆 promise chain。
 ```
 
-这会把规则加入当前会话能感知到的记忆中。
+Claude 会根据你的描述，把内容写进合适的 `CLAUDE.md`。
 
-### 使用 `/memory`
+> 旧资料里如果还在教你用 `# Always run tests before commit` 这种前缀写法，可以直接把它视为历史写法。现在请改用 `/memory` 或自然语言更新 memory。
 
-`/memory` 会打开记忆编辑器，让你在不同范围之间切换：
-
-1. 受管策略记忆
-2. 项目记忆（`./CLAUDE.md`）
-3. 用户记忆（`~/.claude/CLAUDE.md`）
-4. 本地项目记忆
-
-适合你把长期规则、项目规范和个人偏好分层管理。
-
-## Memory 架构
-
-Claude Code 的记忆系统通常有以下层级：
-
-| 层级 | 作用范围 | 典型内容 |
-|------|----------|----------|
-| 受管策略 | 组织级 | 合规、安全、统一流程 |
-| 项目记忆 | 单个项目 | 架构、编码标准、工作流 |
-| 目录记忆 | 子目录 | 模块约束、局部规范 |
-| 用户记忆 | 单个用户 | 个人偏好、默认设置 |
-
-## 记忆层级
-
-Claude 会按更接近当前上下文的规则优先使用更具体的 memory。一般来说：
-
-- 组织级规则优先于普通偏好
-- 项目规则优先于个人偏好
-- 目录级规则优先于项目级通用规则
-
-## 排除规则
-
-如果某些 `CLAUDE.md` 不应该被自动加载，可以通过 `claudeMdExcludes` 之类的设置排除。
-
-## 配置文件层级
-
-项目设置、用户设置和企业托管设置会共同影响 memory 的加载方式。你可以把它理解为：
-
-1. 组织策略
-2. 项目设置
-3. 本地设置
-4. 临时会话输入
-
-## 模块化规则系统
-
-Memory 不一定要写成一个巨大文件。你可以把规则拆成多个目录文件，再按路径组织。
-
-### 通过 YAML frontmatter 设置路径规则
-
-```md
----
-description: API development rules
 ---
 
-# API Development Rules
-```
+## 常见 memory 类型
 
-### 子目录与符号链接
+### 项目级 memory
 
-你可以用子目录和 symlink 把局部规则复用到多个项目区域。
+位置通常是：
 
-## Memory 位置表
+- `./CLAUDE.md`
+- 或 `.claude/CLAUDE.md`
 
-常见位置包括：
+适合放：
 
-- 项目根目录的 `CLAUDE.md`
-- 用户目录的 `~/.claude/CLAUDE.md`
-- 子目录的 `CLAUDE.md`
+- 项目背景
+- 目录结构
+- 技术栈
+- 代码规范
+- 测试规则
+- 提交和 PR 规范
 
-## Memory 更新生命周期
+### 个人级 memory
 
-一般流程是：
+位置通常是：
 
-1. 创建或编辑 `CLAUDE.md`
-2. Claude 重新加载
-3. 新规则在后续会话中生效
+- `~/.claude/CLAUDE.md`
 
-## Auto Memory
+适合放：
 
-Auto memory 让 Claude 根据当前目录自动寻找并加载合适的记忆文件。
+- 你的个人编码偏好
+- 你习惯的回答风格
+- 常用工具和命令约定
 
-### 工作方式
+如果你希望“这个偏好只对当前项目有效，但又不想提交进 Git”，也可以考虑 `./CLAUDE.local.md`。
 
-Claude 会根据当前工作目录、父目录和已配置路径，逐层查找相关 memory。
+### 目录级 memory
 
-### 目录结构
+适合大型项目或 monorepo，在局部目录下放更细粒度规则。
 
-```text
-project/
-├── CLAUDE.md
-├── src/
-│   ├── CLAUDE.md
-│   └── api/
-│       └── CLAUDE.md
-```
+---
 
-### 版本要求
+## 写什么最有价值
 
-某些 auto memory 行为依赖较新的 Claude Code 版本。
+新手最容易把 `CLAUDE.md` 写成“泛泛而谈的项目介绍”，这价值并不大。更推荐写这些：
 
-### 自定义 auto memory 目录
+- 哪些目录最重要
+- 哪些规则最容易被忽略
+- 提交前必须做什么
+- 哪些工具是本项目默认用法
+- 哪些文件不要乱动
+- 测试和验证的最低标准
 
-如果默认目录不适合你的项目，可以在设置中指定新的 memory 路径。
+---
 
-### worktree 和仓库共享
-
-在 worktree、monorepo 或多人协作场景中，auto memory 可以帮助保持规则一致。
-
-### Subagent 记忆
-
-Subagents 也可以拥有自己的记忆范围，用于在各自职责内保持一致性。
-
-### 控制 auto memory
-
-```bash
-# 当前会话禁用 auto memory
-
-# 显式开启 auto memory
-```
-
-## 通过 `--add-dir` 添加额外目录
-
-你可以用 `--add-dir` 把额外目录也加入 Claude 的可见范围，适合多目录协作。
-
-## 实战示例
-
-### 示例 1：项目记忆结构
+## 一个适合小白的最小模板
 
 ```md
-# 项目配置
+# 项目记忆
+
 ## 项目概览
-## 架构
-## 开发规范
-### 代码风格
-### 命名约定
-### Git 工作流
-### 测试要求
-### API 规范
-### 数据库
-### 部署
-## 常用命令
-## 团队联系人
-## 已知问题与解决办法
-## 相关项目
+- 这是一个 TypeScript Web 应用。
+
+## 开发规则
+- 提交前先运行测试。
+- 优先使用 async/await。
+- API 变更必须同步更新文档。
+
+## 重要路径
+- `src/` 主要应用代码
+- `tests/` 自动化测试
+- `docs/` 文档
 ```
 
-### 示例 2：目录级记忆
+---
 
-```md
-# API 模块规范
-## API 专属规范
-### 请求校验
-### 身份验证
-### 响应格式
-### 分页
-### 限流
-### 缓存
-```
+## 哪些内容不适合写进 memory
 
-### 示例 3：个人记忆
+- 过长、每次都不一定相关的大段背景知识
+- 会频繁变化的实时数据
+- 明显更适合做成 skill 或 hook 的工作流细节
+- 会影响运行的命令名或配置 key 的中文重命名
 
-```md
-# 我的开发偏好
-## 关于我
-## 代码偏好
-### 错误处理
-### 注释
-### 测试
-### 架构
-## 调试偏好
-## 沟通方式
-## 项目组织
-## 工具链
-```
+如果你发现某段内容更像“流程模板”，通常更适合去做 skill，而不是塞进 `CLAUDE.md`。
 
-### 示例 4：会话中更新记忆
+---
 
-两种常见方式：
+## 关于 auto memory，再多记两件事
 
-1. 直接提要求，让 Claude 把规则写进 memory
-2. 使用 `# new rule into memory` 这种模式追加规则
+### 1. 启动时不是整份都加载
 
-## 最佳实践
+Claude Code 不会把整个 auto memory 目录一次性全塞进上下文。最先进入上下文的是 `MEMORY.md` 的前 200 行或前 25KB，其余 topic files 按需加载。
 
-### 应该做的
+### 2. 它不是手工 `CLAUDE.md` 的替代品
 
-- 用项目记忆保存团队标准
-- 用目录记忆保存局部差异
-- 先写简洁规则，再逐步补充
-- 把可重复内容写进 `CLAUDE.md`
+- `CLAUDE.md` 更适合明确规则
+- auto memory 更适合 Claude 在长期使用中自己沉淀项目知识
 
-### 不应该做的
+二者搭配使用效果最好。
 
-- 不要把 README 整份复制进 `CLAUDE.md`
-- 不要把明显属于代码的实现细节硬塞进 memory
-- 不要让 memory 变成垃圾桶
+---
 
-### 记忆管理建议
+## 中国用户特别注意
 
-- 优先引用已有文档，而不是重复粘贴
-- 只保留真正影响 Claude 行为的信息
-- 定期整理过期或冲突的规则
+- 如果你在 Windows 上工作，路径规则和 shell 说明最好明确写清楚。
+- 如果项目依赖 `uv`、`npm`、`pnpm`、`bun` 等特定工具，也建议写入 memory。
+- 如果项目所在团队有 GitHub、内网、代理、镜像源要求，也值得写在 memory 里。
 
-## 安装说明
+---
 
-### 设置项目记忆
+## 这轮 settings 更新里，最值得知道什么
 
-#### 方法 1：使用 `/init`（推荐）
+### 1. `/config` 现在会真正落盘
 
-```bash
-/init
-```
+上游在 `v2.1.119` 明确了一个很关键的行为：
 
-#### 方法 2：手动创建
+- 你在 `/config` 里改的设置
+- 现在会写入 `~/.claude/settings.json`
+- 并参与正常的 project / local / policy / user 优先级链
 
-```bash
-cp project-CLAUDE.md CLAUDE.md
-```
+对中国用户来说，这意味着：
 
-#### 方法 3：快速更新
+- `/config` 不再只是“当前会话临时切一下”
+- 你改完之后，后续 session 很可能会继承这些设置
+- 如果团队里有统一 managed policy，要注意最终谁覆盖谁
 
-```text
-# Use semantic versioning for all releases
-# Always run tests before committing
-# Prefer composition over inheritance
-```
+### 2. `cleanupPeriodDays` 不只是管 checkpoints
 
-### 设置个人记忆
+以前很多人会把它理解成“checkpoint 保留几天”。<br>
+现在更准确的理解是：它统一控制 4 类本地缓存的保留周期：
 
-```bash
-cp personal-CLAUDE.md ~/.claude/CLAUDE.md
-```
+- checkpoints
+- `~/.claude/tasks/`
+- `~/.claude/shell-snapshots/`
+- `~/.claude/backups/`
 
-### 设置目录记忆
+也就是说，你调这个值时，影响的不只是 rewind 历史，还包括任务、shell 快照和备份清理。
 
-```bash
-cp directory-api-CLAUDE.md src/api/CLAUDE.md
-```
+### 3. 几个设置项换了更明确的写法
 
-### 验证安装
+上游现在更推荐这些新写法：
 
-- 重新打开 Claude Code 会话
-- 检查 `CLAUDE.md` 是否被自动加载
-- 用一条明显会受 memory 影响的提示词测试
+- `attribution.commit`
+- `attribution.pr`
+- `voice.enabled`
+- `prUrlTemplate`
 
-## 官方文档
+如果你还在旧资料里看到：
 
-如果你想看更详细的行为定义、兼容性和最新限制，建议参考 Claude Code 官方 memory 文档。
+- `includeCoAuthoredBy`
+- `voiceEnabled`
 
-## 相关概念
+把它们视为旧名字即可。新项目和新文档尽量按新版写。
 
-- [Slash Commands 中文参考](../01-slash-commands/README.md)
-- [Skills 中文指南](../03-skills/README.md)
-- [Subagents 中文参考](../04-subagents/README.md)
-- [Advanced Features 中文指南](../09-advanced-features/README.md)
+---
+
+## 常见坑
+
+### 1. 以为 memory 越长越好
+
+不是。memory 要优先放高价值、长期稳定、对 Claude 行为影响大的规则。
+
+### 2. 把项目规则和个人偏好全混在一起
+
+推荐区分项目级和个人级，这样更方便团队协作。
+
+### 3. 让 `CLAUDE.md` 和实际仓库脱节
+
+如果项目目录或规范已经变了，要及时更新 memory，否则 Claude 会学到过期规则。
+
+### 4. 还在把 `CLAUDE.local.md` 当“灰色特性”
+
+现在不需要了。它已经是正式支持的个人项目记忆文件；唯一要注意的是把它加进 `.gitignore`。
+
+---
+
+## 推荐下一步
+
+- 想做可复用工作流：看 [03-skills](../03-skills/)
+- 想安全试错：看 [08-checkpoints](../08-checkpoints/)
+- 想看完整学习顺序：看 [LEARNING-ROADMAP.md](../LEARNING-ROADMAP.md)
