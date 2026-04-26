@@ -66,6 +66,22 @@
         0 2px 4px rgba(0, 0, 0, 0.14);
 }
 
+/* Panel shape: the default 18px / 28px blur shadows read as a fuzzy
+   halo — way too soft against the flat line-only terminal aesthetic.
+   Tighten the falloff (small blur, deeper opacity) so the shadow sits
+   close to the edge instead of bleeding into a cloud. Higher-specificity
+   selector (.gambit.gambit--ball = 2 classes + attr) beats the
+   [data-shape] .gambit--ball rule above. */
+[data-shape="panel"] .gambit.gambit--ball {
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.5);
+}
+
+[data-shape="panel"] .gambit:not(.gambit--ball) {
+    box-shadow:
+        0 4px 12px rgba(0, 0, 0, 0.5),
+        0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
 
 .gambit {
     position: fixed;

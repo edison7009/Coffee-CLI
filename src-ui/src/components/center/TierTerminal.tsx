@@ -54,16 +54,18 @@ export const TERM_COLOR_SCHEMES: TermColorScheme[] = [
 // pick the right background synchronously on theme prop change — reading the
 // CSS variable lags by one switch (child effects fire before App.tsx writes
 // `data-theme`). Must stay in sync with each [data-theme] block in global.css.
+// Unified rule: terminal background == theme bg-app, so the center pane reads
+// as one continuous surface with the side panels.
 const THEME_TERMINAL_BG: Record<string, string> = {
-  dark:       '#0c0c0c',
+  dark:       '#1a1917',
   light:      '#FAFAF7',
-  cappuccino: '#141414',
-  sakura:     '#0a0810',
-  lavender:   '#0a0814',
-  mint:       '#050c0a',
-  obsidian:   '#050505',
-  cobalt:     '#050a16',
-  moss:       '#081210',
+  cappuccino: '#1a1a1a',
+  sakura:     '#1a1520',
+  lavender:   '#1a1826',
+  mint:       '#0f1e1c',
+  obsidian:   '#0a0a0a',
+  cobalt:     '#0a1020',
+  moss:       '#0b1612',
 };
 
 // Collapse any mix of CRLF / bare CR into plain LF before handing text to

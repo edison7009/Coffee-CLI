@@ -986,10 +986,12 @@ export function Explorer() {
 
       {/* File list Content */}
       <div className="panel-content explorer-content">
-        {activeTab === 'workspace' && activeSession?.tool && CWD_AGNOSTIC_TOOLS.has(activeSession.tool) ? (
-          // OpenClaw / Hermes Agent are directory-agnostic — fall through
-          // to the same blank state shown before any tool is selected
-          // (just a faint folder glyph). No file tree, no dir picker.
+        {activeTab === 'workspace' && (!activeSession?.tool || CWD_AGNOSTIC_TOOLS.has(activeSession.tool)) ? (
+          // Launchpad (no tool picked yet) or a CWD-agnostic tool
+          // (OpenClaw / Hermes Agent) — both render the same blank
+          // state: a faint folder glyph, no file tree, no dir picker.
+          // Without this gate the workspace would show the default
+          // cwd's tree even before the user has chosen a tool.
           <div className="empty-state" style={{ justifyContent: 'center', gap: '10px' }}>
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.3" strokeLinecap="round" strokeLinejoin="round">
               <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>

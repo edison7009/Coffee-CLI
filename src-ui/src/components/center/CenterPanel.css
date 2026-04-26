@@ -667,7 +667,11 @@
 
 .library-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  /* minmax(0, 1fr) — without it, long item names (e.g. "Independent
+     Triple", "Personality Test") force columns past 1/4 width and the
+     last column overflows the panel. Pairs with min-width:0 on
+     .library-item-name so the ellipsis can actually clip. */
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
   width: 100%;
   align-content: start;
@@ -736,6 +740,10 @@
 
 .library-item-name {
   flex: 1;
+  /* Required so this flex child can shrink below its intrinsic
+     content width — otherwise text-overflow:ellipsis is a no-op
+     and long names push the grid column past its 1fr share. */
+  min-width: 0;
   font-size: 14px;
   font-weight: 500;
   color: var(--text-1);

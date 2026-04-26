@@ -253,7 +253,7 @@ textarea,
     --glass-blur: blur(24px);
 
     --bg-titlebar: rgba(0, 0, 0, 0.1);
-    --bg-terminal: #0c0c0c; /* True terminal black, like Windows Terminal / iTerm2 */
+    --bg-terminal: #1a1917; /* Match bg-app — unified surface rule across themes */
 }
 
 /* ─── Light Theme (Latte / Warm Ivory Parchment) ──────── */
@@ -321,7 +321,7 @@ textarea,
     --glass-blur: blur(24px);
 
     --bg-titlebar: rgba(0, 0, 0, 0.35);
-    --bg-terminal: #141414;
+    --bg-terminal: #1a1a1a; /* Match bg-app */
 }
 
 /* ─── Sakura Noir (夜樱) — pink on deep plum ──────── */
@@ -355,7 +355,7 @@ textarea,
     --glass-blur: blur(24px);
 
     --bg-titlebar: rgba(0, 0, 0, 0.15);
-    --bg-terminal: #0a0810;
+    --bg-terminal: #1a1520; /* Match bg-app */
 }
 
 /* ─── Lavender Mist (薰衣草雾) — lilac on deep violet-grey ──────── */
@@ -389,7 +389,7 @@ textarea,
     --glass-blur: blur(24px);
 
     --bg-titlebar: rgba(0, 0, 0, 0.15);
-    --bg-terminal: #0a0814;
+    --bg-terminal: #1a1826; /* Match bg-app */
 }
 
 /* ─── Mint Abyss (薄荷深海) — mint on deep teal-black ──────── */
@@ -423,7 +423,7 @@ textarea,
     --glass-blur: blur(24px);
 
     --bg-titlebar: rgba(0, 0, 0, 0.15);
-    --bg-terminal: #050c0a;
+    --bg-terminal: #0f1e1c; /* Match bg-app */
 }
 
 /* ─── Obsidian (黑曜石) — near-black with neutral-gray accent ──────
@@ -460,7 +460,7 @@ textarea,
     --glass-blur: blur(24px);
 
     --bg-titlebar: rgba(0, 0, 0, 0.4);
-    --bg-terminal: #050505;
+    --bg-terminal: #0a0a0a; /* Match bg-app */
 }
 
 /* ─── Cobalt (钴蓝) — near-black with a faint blue wash ──────────
@@ -497,7 +497,7 @@ textarea,
     --glass-blur: blur(24px);
 
     --bg-titlebar: rgba(0, 0, 0, 0.28);
-    --bg-terminal: #050a16;
+    --bg-terminal: #0a1020; /* Match bg-app */
 }
 
 /* ─── Moss (苔藓) — near-black with a faint green wash ─────────
@@ -534,7 +534,7 @@ textarea,
     --glass-blur: blur(24px);
 
     --bg-titlebar: rgba(0, 0, 0, 0.24);
-    --bg-terminal: #081210;
+    --bg-terminal: #0b1612; /* Match bg-app */
 }
 
 /* ─── App Shell ──────────────────────────────────────── */
@@ -1950,12 +1950,131 @@ body {
     border-left: 1px solid var(--border);
 }
 
-/* ─── Panel: hard dividers between explorer-tabs ────────── */
-[data-shape="panel"] .explorer-tabs {
-    background: transparent;
+/* ═══════════════════════════════════════════════════════
+   PANEL SHAPE — UNIFIED SURFACE (terminal multiplexer mode)
+   All surfaces collapse to a single base color. Only borders
+   separate regions, like Warp / tmux / iTerm2 split panes —
+   "drawn-on-terminal" feel. Placed AFTER theme blocks so the
+   cascade overrides their --bg-* values. Equal specificity,
+   later rule wins.
+   ═══════════════════════════════════════════════════════ */
+[data-shape="panel"] {
+    --bg-panel: var(--bg-app);
+    --bg-card: var(--bg-app);
+    --bg-input: var(--bg-app);
+    --bg-input-focus: var(--bg-app);
+    --bg-titlebar: var(--bg-app);
+    --bg-terminal: var(--bg-app);
+    /* Brighter border so dividers actually read on a same-color field;
+       otherwise the default --border (~4% alpha) vanishes. */
+    --border: rgba(255, 255, 255, 0.14);
+    --border-input: rgba(255, 255, 255, 0.14);
+    --shadow-panel: none;
+}
+
+/* Light theme inverts the divider color (white-on-white wouldn't show) */
+[data-shape="panel"][data-theme="light"] {
+    --border: rgba(0, 0, 0, 0.14);
+    --border-input: rgba(0, 0, 0, 0.14);
+}
+
+/* Glass blur on left panel would tint it differently from center/right.
+   Kill it so all three regions share one flat color. */
+[data-shape="panel"] .panel-left {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-right: 1px solid var(--border);
+}
+
+[data-shape="panel"] .panel-right {
+    border-left: 1px solid var(--border);
+}
+
+/* Titlebar reads as the top edge of the unified surface; a hairline
+   anchors it as a labeled bar instead of floating chrome. */
+[data-shape="panel"] .titlebar {
     border-bottom: 1px solid var(--border);
+}
+
+/* ─── Side panel tab rows (左 explorer-tabs / 右 right-tabs) ─────
+   Default styling renders these as a soft pill with a sliding bg.
+   In panel mode we want a clean drawn rectangle, single vertical
+   divider, active = subtle bg highlight. */
+[data-shape="panel"] .explorer-tabs,
+[data-shape="panel"] .right-tabs {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 0;
     padding: 0;
 }
-[data-shape="panel"] .explorer-tab + .explorer-tab {
+
+[data-shape="panel"] .explorer-tab,
+[data-shape="panel"] .right-tab {
+    padding: 8px 0;
+    border-radius: 0;
+}
+
+[data-shape="panel"] .explorer-tab + .explorer-tab,
+[data-shape="panel"] .right-tab + .right-tab {
     border-left: 1px solid var(--border);
+}
+
+[data-shape="panel"] .explorer-tab.active,
+[data-shape="panel"] .right-tab.active {
+    background: var(--bg-hover);
+    color: var(--text-1);
+}
+
+/* ─── Center pane chrome-tabs + main-content as one drawn box ───
+   Active tab: 3-side outline (top, left, right) — bottom merges
+   into the content area below by overlapping the header divider.
+   Content area: left/right/bottom borders form the rest of the
+   enclosure; the chrome-tabs-header's border-bottom is the top. */
+[data-shape="panel"] .chrome-tabs-header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0;
+}
+
+[data-shape="panel"] .chrome-tab.active {
+    background: var(--bg-app);
+    box-shadow:
+        inset 0 1px 0 0 var(--border),     /* top */
+        inset 1px 0 0 0 var(--border),     /* left */
+        inset -1px 0 0 0 var(--border);    /* right */
+    /* Pull tab down 1px so its background covers the header's
+       border-bottom directly under it — creates the "tab merges
+       into content" terminal-tube look. */
+    margin-bottom: -1px;
+}
+
+[data-shape="panel"] .main-content {
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+}
+
+/* ─── Launchpad cards: match library-item visual treatment ─────
+   Default launchpad uses card-group with hover translateY + shadow
+   ("modern card" feel). In panel mode we want the same flat,
+   bordered rectangle look as the Library/Agents page so the two
+   tool-selection surfaces read as one design language. */
+[data-shape="panel"] .launchpad-card-group {
+    border-radius: 0;
+    box-shadow: none;
+    border: 1px solid var(--border);
+    transition: background-color 0.15s, border-color 0.15s;
+}
+
+[data-shape="panel"] .launchpad-card-group:hover {
+    transform: none;             /* kill the upward translate */
+    box-shadow: none;
+    border-color: var(--accent);
+}
+
+[data-shape="panel"] .launchpad-card {
+    background: transparent;     /* card-group carries the border now */
+}
+
+[data-shape="panel"] .launchpad-card:hover {
+    background: var(--bg-hover);
 }
