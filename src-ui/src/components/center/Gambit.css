@@ -1,17 +1,21 @@
 /* Gambit.css — floating draggable compose window */
 
 /* ─── Drag performance class ────────────────────────────────────
-   While dragging, the browser has to recompute backdrop-filter on every
-   frame by re-sampling the pixels behind the moving element — the single
-   most expensive visual effect we have. Suppress it during drag so the
-   element tracks the cursor 1:1, then restore it on mouseup. We also
-   lighten the drop shadow for the same reason (fewer blur passes). */
+   While dragging, the browser has to recompute backdrop-filter on
+   every frame by re-sampling the pixels behind the moving element —
+   the single most expensive visual effect we have. Suppress it
+   during drag so the element tracks the cursor 1:1, then restore it
+   on mouseup.
+   The box-shadow is intentionally NOT overridden here — earlier
+   versions swapped in a heavier drop shadow during drag, but the
+   visible "click → shadow changes shape" pop made the card feel like
+   it was lifting off, which clashes with the static-glow aesthetic
+   the rest of the app uses. Inheriting the static var(--gambit-shadow)
+   keeps drag visually identical to the resting state, the only
+   difference being position. */
 .gambit.gambit--dragging {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
-    box-shadow:
-        0 6px 16px rgba(var(--shadow-rgb), 0.18),
-        0 1px 3px rgba(var(--shadow-rgb), 0.10) !important;
 }
 
 /* ─── Collapsed ball (Messenger-chat-head style) ────────────────
