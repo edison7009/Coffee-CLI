@@ -179,37 +179,63 @@
 }
 
 /* Tool name label.
- * The italic serif "art font" treatment only reads well in English; in CJK
- * (zh / ja / ko) there is no real italic in the serif fallback so glyphs get
- * algorithmically slanted into mush, and in Cyrillic / Vietnamese-with-
- * diacritics the same italic serif looks awkward. The original design intent
- * was "English-only art font; every other locale uses a stable bold display."
  *
- * Default rule = the stable display (works for every non-English locale).
- * `:lang(en)` opt-in = the italic serif art font.
+ * Two visual treatments:
+ *   - Latin text  → italic serif "art font" (Lora-falling-back-to-Georgia),
+ *                   reads as elegant / cursive, the "premium greeting" feel.
+ *   - CJK text    → stable bold display, because no real italic exists in
+ *                   the serif fallback chain for Han / Kana / Hangul and
+ *                   browsers algorithmically slant CJK glyphs into mush.
  *
- * Adding a new UI language? No CSS change needed — it inherits the stable
- * default and looks consistent. Only ever add new language overrides if a
- * specific locale needs special tuning beyond what the default covers.
- *
- * Driven by `<html lang="...">` which App.tsx syncs from state.currentLang.
+ * The discriminator is the SPLASH TEXT's own language, not the UI language:
+ * a Chinese-UI user opening Claude Code still sees "Claude Code" (English)
+ * on the splash and should get the art font; the same user opening 人格测试
+ * sees Chinese and needs the stable display. Components compute this in JS
+ * (regex test for CJK codepoints) and set `lang="en"` or `lang="zh"` on the
+ * splash <span>, which then drives the :lang() selector below.
  */
 .splash-label {
     font-family: var(--font-serif, var(--font));
     font-size: 20px;
     color: var(--text-1);
-    /* Default = stable bold display, used by every non-English locale. */
-    font-style: normal;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-}
-
-/* English: italic serif art font (the "premium greeting" treatment). */
-:root:lang(en) .splash-label,
-html[lang^="en"] .splash-label {
+    /* Default = italic serif art font (covers lang="en" / Latin text). */
     font-style: italic;
     font-weight: 500;
     letter-spacing: 0.02em;
+    /* Premium feel: edge smoothing + theme-aware soft halo.
+     *
+     * Stacked text-shadow does two distinct jobs:
+     *   1. `0 0 1px currentColor` — a one-pixel same-color halo around every
+     *      glyph. On Windows Chromium / WebView2, -webkit-font-smoothing is
+     *      a no-op (it only works on macOS WebKit) and the OS falls back to
+     *      ClearType subpixel rendering, which produces visible RGB fringes
+     *      on italic-serif curves over dark backgrounds. The 1px same-color
+     *      halo "fattens" stroke edges by one subpixel so those fringes
+     *      blend back into the glyph and the edge reads as smooth.
+     *   2. `0 0 18px rgba(--shadow-rgb,...)` — a wide low-alpha glow in
+     *      the theme's accent tone, giving the label a luminous "lit-from-
+     *      behind" presence rather than just sitting flat.
+     *
+     * -webkit-font-smoothing / -moz-osx-font-smoothing — kept for macOS
+     * users where they actually do something (switch from subpixel-AA to
+     * grayscale-AA). No-op on Windows but harmless.
+     * text-rendering — enable kerning + ligatures for the serif art font.
+     */
+    text-shadow:
+        0 0 1px currentColor,
+        0 0 18px rgba(var(--shadow-rgb, 196, 149, 106), 0.45);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
+/* CJK override — kicks in when the splash <span> sets lang="zh" / "ja" / "ko". */
+.splash-label:lang(zh),
+.splash-label:lang(ja),
+.splash-label:lang(ko) {
+    font-style: normal;
+    font-weight: 600;
+    letter-spacing: 0.08em;
 }
 
 /* Three-dot loading indicator */

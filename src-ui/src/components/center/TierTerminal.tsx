@@ -997,11 +997,19 @@ function TierTerminalImpl({
                 <path fill="currentColor" d="M0 0h24v24H0z" mask={`url(#splashMask-${sessionId})`}/>
               </svg>
             </div>
-            <span className="splash-label">{
-              tool === 'insights_prerun' ? `${t('tool.vibeid' as any)} (1/2)` :
-              tool === 'vibeid'          ? `${t('tool.vibeid' as any)} (2/2)` :
-              (toolName || (tool && toolLabel[tool]) || 'Loading')
-            }</span>
+            {(() => {
+              const splashText =
+                tool === 'insights_prerun' ? `${t('tool.vibeid' as any)} (1/2)` :
+                tool === 'vibeid'          ? `${t('tool.vibeid' as any)} (2/2)` :
+                (toolName || (tool && toolLabel[tool]) || 'Loading');
+              // Pick splash font by CONTENT language, not UI language. The tab
+              // for Claude Code shows "Claude Code" in any UI locale, and the
+              // italic-serif art treatment only reads well for Latin glyphs.
+              // Conversely, CJK splash text (人格测试 / 終端 / etc.) breaks
+              // under italic serif and needs the stable bold display.
+              const hasCJK = /[一-鿿぀-ヿ가-힯]/.test(splashText);
+              return <span className="splash-label" lang={hasCJK ? 'zh' : 'en'}>{splashText}</span>;
+            })()}
             <div className="splash-dots">
               <span className="splash-dot" />
               <span className="splash-dot" />

@@ -215,7 +215,13 @@ export function ChatReader({ sessionId }: { sessionId: string }) {
                   <path fill="currentColor" d="M0 0h24v24H0z" mask={`url(#splashMask-${sessionId})`}/>
                 </svg>
               </div>
-              <span className="splash-label">{currentSession.name}</span>
+              {(() => {
+                const splashText = currentSession.name;
+                // Pick splash font by content language — italic serif art
+                // for Latin, stable bold for CJK glyphs.
+                const hasCJK = /[一-鿿぀-ヿ가-힯]/.test(splashText);
+                return <span className="splash-label" lang={hasCJK ? 'zh' : 'en'}>{splashText}</span>;
+              })()}
               <div className="splash-dots">
                 <span className="splash-dot" />
                 <span className="splash-dot" />

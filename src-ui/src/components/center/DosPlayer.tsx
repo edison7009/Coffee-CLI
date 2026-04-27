@@ -517,7 +517,13 @@ export function DosPlayer({ sessionId }: { sessionId: string }) {
                 <path fill="currentColor" d="M0 0h24v24H0z" mask={`url(#splashMask-dos-${sessionId})`}/>
               </svg>
             </div>
-            <span className="splash-label">{activeGame?.title ?? getGameInfo(activeGame?.name ?? '').title}</span>
+            {(() => {
+              const splashText = activeGame?.title ?? getGameInfo(activeGame?.name ?? '').title;
+              // Pick splash font by content language — italic serif art font
+              // for Latin titles, stable bold for CJK.
+              const hasCJK = /[一-鿿぀-ヿ가-힯]/.test(splashText);
+              return <span className="splash-label" lang={hasCJK ? 'zh' : 'en'}>{splashText}</span>;
+            })()}
             <div className="splash-dots">
               <span className="splash-dot" />
               <span className="splash-dot" />
