@@ -33,6 +33,14 @@ models.json
 # and competitor research stay private until a launch warrants disclosure.
 docs/
 
+# AI agent guardrails — kept locally so Claude Code reads them on every
+# session, but not published. CLAUDE.md is the team's candid "how to
+# work in this repo" memo (release pitfalls we've hit, tooling rules
+# we've broken N times, CF Worker routing internals); it's not the
+# contributor guide. A public-facing CONTRIBUTING.md, when needed,
+# should be authored separately.
+CLAUDE.md
+
 # Dev artifacts, scripts & logs
 *.log
 run-dev.bat
