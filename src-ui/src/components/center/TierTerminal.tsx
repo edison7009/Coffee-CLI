@@ -997,7 +997,11 @@ function TierTerminalImpl({
                 <path fill="currentColor" d="M0 0h24v24H0z" mask={`url(#splashMask-${sessionId})`}/>
               </svg>
             </div>
-            <span className="splash-label">{toolName || (tool && toolLabel[tool]) || 'Loading'}</span>
+            <span className="splash-label">{
+              tool === 'insights_prerun' ? `${t('tool.vibeid' as any)} (1/2)` :
+              tool === 'vibeid'          ? `${t('tool.vibeid' as any)} (2/2)` :
+              (toolName || (tool && toolLabel[tool]) || 'Loading')
+            }</span>
             <div className="splash-dots">
               <span className="splash-dot" />
               <span className="splash-dot" />
