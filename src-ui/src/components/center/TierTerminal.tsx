@@ -268,11 +268,20 @@ function TierTerminalImpl({
     // Embedded CascadiaMono (woff2) guarantees consistent box-drawing glyphs on
     // every platform — no more border misalignment from font-fallback jitter.
     // Platform-native fonts remain as fallbacks if the embedded font fails to load.
+    //
+    // Nerd Font names are inserted right after CascadiaMono so per-character
+    // font fallback covers the Unicode private-use-area glyphs (powerline
+    // separators, git/branch icons, etc.) that oh-my-posh / starship / p10k
+    // emit and that CascadiaMono lacks. Users who haven't installed a Nerd
+    // Font see no change (these names just don't resolve); users who have
+    // installed one — which oh-my-posh's setup explicitly tells them to do —
+    // automatically get the missing glyphs without us bundling a 5 MB font.
+    const NERD_FONTS = "'CaskaydiaCove Nerd Font', 'JetBrainsMono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font', 'Hack Nerd Font'";
     const fontFamily = isLinux
-      ? "CascadiaMono, 'Ubuntu Mono', 'Noto Sans Mono', 'DejaVu Sans Mono', 'Liberation Mono', monospace"
+      ? `CascadiaMono, ${NERD_FONTS}, 'Ubuntu Mono', 'Noto Sans Mono', 'DejaVu Sans Mono', 'Liberation Mono', monospace`
       : isMac
-        ? "CascadiaMono, ui-monospace, Menlo, Monaco, 'Courier New', monospace"
-        : "CascadiaMono, 'Cascadia Mono', Consolas, 'Courier New', monospace";
+        ? `CascadiaMono, ${NERD_FONTS}, ui-monospace, Menlo, Monaco, 'Courier New', monospace`
+        : `CascadiaMono, ${NERD_FONTS}, 'Cascadia Mono', Consolas, 'Courier New', monospace`;
     const term = new Terminal({
       fontFamily,
       fontSize: 14,
