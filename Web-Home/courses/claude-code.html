@@ -146,6 +146,14 @@
 
     // ===== Lightweight Markdown-to-HTML =====
     function renderMarkdown(md) {
+      // Normalize CRLF/CR line endings to LF. Source markdown files saved on
+      // Windows arrive here with \r\n; if we leave the \r in, every line ends
+      // with \r after split('\n'), and JS regex `.` does NOT match \r (it is
+      // a LineTerminator), so anchored patterns like `^(#{1,6})\s+(.+)$` fail
+      // entirely on those lines. The visible symptom is that headings, lists,
+      // and tables silently degrade to plain `<p>` paragraphs and the left
+      // "Page Sections" nav (which scans <h2> elements) ends up empty.
+      md = md.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
       // Remove picture/HTML header blocks (multi-line)
       md = md.replace(/<picture[\s\S]*?<\/picture>/gi, '');
       // Remove individual HTML tags that leak from source markdown

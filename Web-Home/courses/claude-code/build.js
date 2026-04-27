@@ -17,6 +17,12 @@ const modules = [
 
 // Clean HTML noise from source markdown before packaging
 function cleanMarkdown(md) {
+  // Normalize line endings to LF. Source files edited on Windows commonly
+  // arrive as CRLF, and the runtime markdown renderer's regexes use `.+`
+  // which does not match \r (it is a JS RegExp LineTerminator). Strip CR
+  // here so the packaged data is LF-only and the renderer cannot regress
+  // even if a future contributor forgets to normalize at runtime.
+  md = md.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
   // Remove <picture>...</picture> blocks (multi-line)
   md = md.replace(/<picture[\s\S]*?<\/picture>/gi, '');
   // Remove standalone HTML tag lines (<source>, <img>, <a id="...">, etc.)
