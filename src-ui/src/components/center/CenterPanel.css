@@ -331,6 +331,11 @@
 .launchpad-card-group {
   display: flex;
   flex-direction: row;
+  /* Transparent placeholder border so Panel-shape's border-color
+     transition has a known starting value. Without it, switching to
+     Panel made border-color animate from `currentColor` (≈ white text
+     in dark themes) → var(--border), causing a 150ms white flash. */
+  border: 1px solid transparent;
   border-radius: var(--radius-md);
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0,0,0,0.02);
