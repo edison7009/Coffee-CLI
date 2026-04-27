@@ -2039,16 +2039,27 @@ body {
     padding-bottom: 0;
 }
 
+/* All tabs (active + inactive) get the same -1px bottom margin in panel
+   mode. Two reasons:
+   1. The active tab's bg covers the chrome-tabs-header's border-bottom
+      directly under it — the "tab merges into content" terminal-tube look.
+   2. With ALL tabs (not just active) sharing the same margin-box height,
+      the chrome-tabs-header's intrinsic flex cross-size stays stable at
+      37px regardless of which tab is active or how many tabs exist.
+      Otherwise the container would grow 1px when going from 1-tab to
+      2-tabs (max child margin-box: 37 → 38), pushing main-content down
+      1px and visibly misaligning the active tab's top edge with the
+      Explorer panel header on the left. */
+[data-shape="panel"] .chrome-tab {
+    margin-bottom: -1px;
+}
+
 [data-shape="panel"] .chrome-tab.active {
     background: var(--bg-app);
     box-shadow:
         inset 0 1px 0 0 var(--border),     /* top */
         inset 1px 0 0 0 var(--border),     /* left */
         inset -1px 0 0 0 var(--border);    /* right */
-    /* Pull tab down 1px so its background covers the header's
-       border-bottom directly under it — creates the "tab merges
-       into content" terminal-tube look. */
-    margin-bottom: -1px;
 }
 
 [data-shape="panel"] .main-content {
