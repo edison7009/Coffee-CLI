@@ -33,7 +33,6 @@ export const ja = {
   'tool.remote': 'リモートターミナル',
   'tool.remote.short': 'リモート',
   'tool.vibeid': '性格診断',
-  'tool.insights_prerun': '使用状況レポートを生成中...',
   'tool.multi_agent': 'マルチエージェント',
   'tool.two_agent': 'デュアルエージェント',
   'tool.three_agent': 'トリプルエージェント',

@@ -924,8 +924,13 @@ export function CenterPanel() {
       case 'codex': return { icon: <SvgCodex />, title: cwd ?? 'Codex CLI', tooltip: pathTip };
       case 'gemini': return { icon: <SvgGemini />, title: cwd ?? 'Gemini CLI', tooltip: pathTip };
       case 'installer': return { icon: <SvgInstaller />, title: 'Coffee 101', tooltip: undefined };
-      case 'vibeid': return { icon: <SvgVibeID />, title: t('tool.vibeid' as any), tooltip: undefined };
-      case 'insights_prerun': return { icon: <SvgVibeID />, title: t('tool.insights_prerun' as any), tooltip: undefined };
+      // VibeID is a 2-phase flow under one logical operation: insights_prerun
+      // gathers usage data, then vibeid analyzes it. Reuse the existing
+      // `tool.vibeid` translation for both phases and suffix " (1/2)" /
+      // " (2/2)" so progress reads as a single VibeID run, no extra i18n
+      // keys needed.
+      case 'insights_prerun': return { icon: <SvgVibeID />, title: `${t('tool.vibeid' as any)} (1/2)`, tooltip: undefined };
+      case 'vibeid': return { icon: <SvgVibeID />, title: `${t('tool.vibeid' as any)} (2/2)`, tooltip: undefined };
       case 'remote': {
         let title = t('tool.remote') as string;
         if (session.toolData) {
@@ -1016,10 +1021,16 @@ export function CenterPanel() {
                   // output, which tends to produce misleading flicker.
                   // Claude's executing state uses the Claude-brand orange
                   // (#D97757) to match the "Thinking..." color in the CLI.
+                  // Exception: VibeID's two-phase flow (insights_prerun → vibeid)
+                  // is initiated by us and we know with certainty work is in
+                  // flight; force `executing` so the dot animation reflects
+                  // reality instead of looking idle for the full duration.
                   <div className={`tab-status-grid status-${
                     session.tool === 'claude'
                       ? (session.agentStatus === 'wait_input' ? 'waiting' : session.agentStatus ?? 'idle')
-                      : 'idle'
+                      : (session.tool === 'vibeid' || session.tool === 'insights_prerun')
+                        ? 'executing'
+                        : 'idle'
                   }`}>
                     {Array.from({ length: 9 }, (_, i) => <div key={i} className="tab-status-dot" />)}
                   </div>

@@ -34,7 +34,6 @@ export const en = {
   'tool.remote': 'Remote Terminal',
   'tool.remote.short': 'Remote',
   'tool.vibeid': 'Personality Test',
-  'tool.insights_prerun': 'Generating Usage Report...',
   'tool.multi_agent': 'Multi-Agent',
   'tool.two_agent': 'Two-Agent',
   'tool.three_agent': 'Three-Agent',

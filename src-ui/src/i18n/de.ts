@@ -33,7 +33,6 @@ export const de = {
   'tool.remote': 'Remote-Terminal',
   'tool.remote.short': 'Remote',
   'tool.vibeid': 'Persönlichkeitstest',
-  'tool.insights_prerun': 'Nutzungsbericht wird generiert...',
   'tool.multi_agent': 'Multi-Agent',
   'tool.two_agent': 'Dual-Agent',
   'tool.three_agent': 'Triple-Agent',

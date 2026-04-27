@@ -33,7 +33,6 @@ export const ko = {
   'tool.remote': '원격 터미널',
   'tool.remote.short': '원격',
   'tool.vibeid': '성격 테스트',
-  'tool.insights_prerun': '사용 기록 리포트 생성 중...',
   'tool.multi_agent': '멀티 에이전트',
   'tool.two_agent': '듀얼 에이전트',
   'tool.three_agent': '트리플 에이전트',
