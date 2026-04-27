@@ -31,8 +31,8 @@ These Marks are **not** licensed under the AGPL-3.0. Receiving a copy of
 the Coffee CLI source code does not grant you any right to use the Marks.
 
 **Not claimed.** The Coffee CLI app icon is the *coffee-filled-loop* glyph
-from the [line-md icon set](https://yesicon.app/line-md/coffee-filled-loop)
-by Vjacheslav Trushkin, used under the icon set's open-source license (see
+from the [line-md icon set](https://github.com/cyberalien/line-md) by
+Vjacheslav Trushkin, used under the icon set's open-source license (see
 [NOTICE](NOTICE)). We claim no trademark rights in the glyph itself —
 others are free to use the same icon. We may, in the future, claim rights
 in the *combination* of the wordmark *Coffee CLI* with this icon as a
@@ -128,8 +128,9 @@ label `trademark`.
 这些标识**不**包含在 AGPL-3.0 协议授权范围内。获得 Coffee CLI 源代码
 副本**不**等于获得使用上述标识的权利。
 
-**不主张的部分**。Coffee CLI 应用图标采用 [line-md 图标集](https://yesicon.app/line-md/coffee-filled-loop)
-中的 *coffee-filled-loop* 图形,作者 Vjacheslav Trushkin,按其开源协议
+**不主张的部分**。Coffee CLI 应用图标采用
+[line-md 图标集](https://github.com/cyberalien/line-md) 中的
+*coffee-filled-loop* 图形,作者 Vjacheslav Trushkin,按其开源协议
 使用(见 [NOTICE](NOTICE))。我们**不**对该图标本身主张商标权 ——
 他人同样可以自由使用同一图标。未来我们可能会就"*Coffee CLI* 文字 +
 该图标"的**组合**作为复合品牌元素主张权利,但单独的图标不归我们所有。
