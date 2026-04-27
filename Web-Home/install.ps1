@@ -1,5 +1,6 @@
 # Coffee CLI - Windows Installer / Updater
-# Usage: irm https://coffeecli.com/install.ps1 | iex
+# Usage:   irm https://coffeecli.com/install.ps1 | iex
+# License: AGPL-3.0-or-later (https://github.com/edison7009/Coffee-CLI/blob/main/LICENSE)
 
 $ErrorActionPreference = "Stop"
 
