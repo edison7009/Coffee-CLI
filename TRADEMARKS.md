@@ -2,12 +2,18 @@
 
 > **Plain-English summary / 一句话**: The code is open source under AGPL-3.0,
 > but the names and logos are not. You can fork the code; you cannot ship a
-> fork under the name *Coffee CLI*, *Gambit*, *VibeID*, or *Sentinel Protocol*,
-> nor can you use our logo to promote it.
+> fork under the name *Coffee CLI*, *Gambit*, *VibeID*, *Pitch*, or
+> *Sentinel Protocol*, and you cannot pass our logo off as your own.
+> Referencing Coffee CLI in articles, reviews, tutorials, or social posts
+> — favorable or critical — is welcome and does not need permission.
+> Imitating or reimplementing our original designs without crediting
+> Coffee CLI is what we object to.
 >
 > 代码采用 AGPL-3.0 开源,但**名称与图标不开源**。你可以 fork 代码,但不能用
-> "Coffee CLI"、"Gambit"、"VibeID"、"哨兵协议 / Sentinel Protocol" 等名称
-> 发布 fork,也不能用我们的 Logo 推广。
+> "Coffee CLI"、"Gambit"、"VibeID"、"Pitch"、"哨兵协议 / Sentinel Protocol"
+> 等名称发布 fork,也不能把我们的 Logo 冒充成自己的。在文章、评测、教程、
+> 社交媒体里事实性引用本项目 —— **无论好评还是吐槽** —— 都欢迎,不需要授权。
+> 我们真正反对的是:**借鉴或重实现我们的原创设计后不署名**。
 
 ---
 
@@ -200,7 +206,7 @@ https://github.com/edison7009/Coffee-CLI/issues 提交,标签 `trademark`。
 
 ---
 
-*Last updated / 最后更新: 2026-04-27*
+*Last updated / 最后更新: 2026-04-28*
 *This policy is non-binding promotional language; the AGPL-3.0 LICENSE file
 governs code use. This document governs brand and naming use, which is
 outside the scope of any open-source license.*
