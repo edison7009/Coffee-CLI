@@ -58,15 +58,23 @@ VERSION_JSON=$(curl -fsSL "$VERSION_BASE?platform=$PLATFORM")
 LATEST_VER=$(echo "$VERSION_JSON" | sed -E 's/.*"version"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/')
 
 # Empty `version` = the installer for this platform isn't out yet (CI
-# probably still running for a just-tagged release). Report gracefully
-# instead of trying to download something that 404s.
+# probably still running for a just-tagged release). Show an explicit
+# "come back later" message and pause so the window doesn't auto-close
+# on the user before they read it (some launch flows spawn a fresh
+# terminal that closes the moment the script returns).
 if [ -z "$LATEST_VER" ] || [ "$LATEST_VER" = "$VERSION_JSON" ]; then
-  echo "  ${YELLOW}Latest : ($PLATFORM installer not yet published)${RESET}"
   echo ""
-  echo "  ${YELLOW}The $PLATFORM build for the newest release is still being${RESET}"
-  echo "  ${YELLOW}compiled by CI (takes ~15-20 min after a new tag).${RESET}"
-  echo "  ${YELLOW}Please try again in about 15 minutes.${RESET}"
+  echo "  ${YELLOW}A new version of Coffee CLI was just released.${RESET}"
+  echo "  ${YELLOW}The server is currently redeploying.${RESET}"
+  echo "  ${YELLOW}Please try again in about 10 minutes.${RESET}"
   echo ""
+  # Read from /dev/tty since stdin is consumed by `curl | sh`. If no tty
+  # is attached (CI / redirected), skip the prompt and exit silently.
+  if [ -r /dev/tty ]; then
+    printf "  ${GRAY}Press Enter to close...${RESET}"
+    read _ < /dev/tty
+    echo ""
+  fi
   exit 0
 fi
 echo "  ${GREEN}Latest : v$LATEST_VER${RESET}"

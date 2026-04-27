@@ -38,23 +38,25 @@ foreach ($path in $regPaths) {
 }
 
 # Empty `version` = the Windows build isn't out yet (CI probably still
-# running for a just-tagged release). Report gracefully instead of trying
-# to download something that 404s.
+# running for a just-tagged release). Show an explicit "come back later"
+# message and pause so the window doesn't auto-close on the user before
+# they read it (some launch flows spawn a fresh PowerShell that closes
+# the moment the script returns).
 if (-not $latestVer) {
-    Write-Host "  Latest : (Windows installer not yet published)" -ForegroundColor DarkYellow
-    if ($installedVer) {
-        Write-Host "  Installed: v$installedVer" -ForegroundColor Gray
-        Write-Host ""
-        Write-Host "  The Windows build for the newest release is still being" -ForegroundColor DarkYellow
-        Write-Host "  compiled by CI (takes ~15-20 min after a new tag). Your" -ForegroundColor DarkYellow
-        Write-Host "  current v$installedVer stays installed. Try again soon." -ForegroundColor DarkYellow
-    } else {
-        Write-Host ""
-        Write-Host "  No Windows installer is available at the moment." -ForegroundColor DarkYellow
-        Write-Host "  CI may still be building a just-tagged release." -ForegroundColor DarkYellow
-        Write-Host "  Please try again in about 15 minutes." -ForegroundColor DarkYellow
-    }
     Write-Host ""
+    Write-Host "  A new version of Coffee CLI was just released." -ForegroundColor Yellow
+    Write-Host "  The server is currently redeploying." -ForegroundColor Yellow
+    Write-Host "  Please try again in about 10 minutes." -ForegroundColor Yellow
+    Write-Host ""
+    if ($installedVer) {
+        Write-Host "  Your current v$installedVer stays installed." -ForegroundColor Gray
+        Write-Host ""
+    }
+    Write-Host "  Press any key to close..." -ForegroundColor DarkGray
+    # ReadKey reads from the console keyboard buffer directly, so it works
+    # even when stdin is consumed by `irm | iex`. The try/catch swallows
+    # the case where there is no interactive console (CI / redirected).
+    try { [void][System.Console]::ReadKey($true) } catch {}
     exit 0
 }
 
