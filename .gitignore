@@ -28,9 +28,15 @@ desktop.ini
 .env.local
 models.json
 
+# Internal design / strategy docs — kept locally, never published.
+# Public-facing positioning lives on Web-Home; in-flight feature designs
+# and competitor research stay private until a launch warrants disclosure.
+docs/
+
 # Dev artifacts, scripts & logs
 *.log
 run-dev.bat
+run-dev-release.bat
 scripts/clean-dictionary.js
 scripts/merge-taekchef-dict.js
 scripts/taekchef-translations.json
