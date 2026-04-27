@@ -178,22 +178,38 @@
     color: var(--accent, #C4956A);
 }
 
-/* Tool name label */
+/* Tool name label.
+ * The italic serif "art font" treatment only reads well in English; in CJK
+ * (zh / ja / ko) there is no real italic in the serif fallback so glyphs get
+ * algorithmically slanted into mush, and in Cyrillic / Vietnamese-with-
+ * diacritics the same italic serif looks awkward. The original design intent
+ * was "English-only art font; every other locale uses a stable bold display."
+ *
+ * Default rule = the stable display (works for every non-English locale).
+ * `:lang(en)` opt-in = the italic serif art font.
+ *
+ * Adding a new UI language? No CSS change needed — it inherits the stable
+ * default and looks consistent. Only ever add new language overrides if a
+ * specific locale needs special tuning beyond what the default covers.
+ *
+ * Driven by `<html lang="...">` which App.tsx syncs from state.currentLang.
+ */
 .splash-label {
     font-family: var(--font-serif, var(--font));
-    font-size: 20px; /* Increased for premium greeting feel */
-    font-weight: 500;
-    color: var(--text-1); /* Brighter for contrast */
-    letter-spacing: 0.02em;
-    font-style: italic; /* Elegant touch */
-}
-
-/* CJK override: Chinese serif fonts lack true italic → use normal weight with wider spacing */
-:root:lang(zh) .splash-label,
-html[lang^="zh"] .splash-label {
+    font-size: 20px;
+    color: var(--text-1);
+    /* Default = stable bold display, used by every non-English locale. */
     font-style: normal;
     font-weight: 600;
     letter-spacing: 0.08em;
+}
+
+/* English: italic serif art font (the "premium greeting" treatment). */
+:root:lang(en) .splash-label,
+html[lang^="en"] .splash-label {
+    font-style: italic;
+    font-weight: 500;
+    letter-spacing: 0.02em;
 }
 
 /* Three-dot loading indicator */

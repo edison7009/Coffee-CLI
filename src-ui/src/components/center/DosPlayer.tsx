@@ -517,10 +517,7 @@ export function DosPlayer({ sessionId }: { sessionId: string }) {
                 <path fill="currentColor" d="M0 0h24v24H0z" mask={`url(#splashMask-dos-${sessionId})`}/>
               </svg>
             </div>
-            <span
-              className="splash-label"
-              style={state.currentLang.startsWith('zh') ? { fontStyle: 'normal', fontWeight: 600, letterSpacing: '0.08em' } : undefined}
-            >{activeGame?.title ?? getGameInfo(activeGame?.name ?? '').title}</span>
+            <span className="splash-label">{activeGame?.title ?? getGameInfo(activeGame?.name ?? '').title}</span>
             <div className="splash-dots">
               <span className="splash-dot" />
               <span className="splash-dot" />

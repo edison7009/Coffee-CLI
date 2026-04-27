@@ -34,6 +34,17 @@ export function App() {
     try { localStorage.setItem('cc-shape', state.currentShape); } catch {}
   }, [state.currentShape]);
 
+  // Sync the UI language to the <html> lang attribute so CSS :lang(zh)
+  // selectors can fire. This is what swaps the splash-label out of the
+  // English-italic-serif "art font" (which looks ugly with CJK glyphs)
+  // into a normal-weight bold display in Chinese — see TierTerminal.css
+  // .splash-label rules. Without this attribute on <html>, every component
+  // using .splash-label silently fell through to the italic serif and
+  // each component had to inline-style its own CJK workaround.
+  useEffect(() => {
+    document.documentElement.lang = state.currentLang;
+  }, [state.currentLang]);
+
   // Wallpaper dim: expose as CSS variable --wallpaper-dim (0.0–0.8) for the
   // .launchpad-bg::after / .tier-terminal-bg::after overlay layers.
   useEffect(() => {
