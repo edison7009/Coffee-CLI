@@ -21,11 +21,12 @@ in commerce by the Coffee CLI project and its primary maintainer
 
 | Mark                              | First public use | Class of goods/services           |
 | --------------------------------- | ---------------- | --------------------------------- |
-| **Coffee CLI** (word mark)        | 2024             | Computer software; SaaS           |
-| **Gambit**                        | 2024             | Software UI feature               |
-| **VibeID**                        | 2025             | Personality assessment software   |
-| **Sentinel Protocol** / 哨兵协议   | 2025             | Multi-agent coordination software |
-| **Vibetype** (and the 16 individual Vibetype names) | 2026 | Personality assessment content |
+| **Coffee CLI** (word mark)        | 2026-04          | Computer software; SaaS                          |
+| **Gambit**                        | 2026-04          | Software UI feature                              |
+| **VibeID**                        | 2026-04          | Personality assessment software                  |
+| **Coffee-CLI MCP**                | 2026-04          | Multi-agent inter-terminal coordination protocol |
+| **Sentinel Protocol** / 哨兵协议   | 2026-04          | Multi-agent supervision protocol                 |
+| **Vibetype** (and the 16 individual Vibetype names) | 2026-04 | Personality assessment content                   |
 
 These Marks are **not** licensed under the AGPL-3.0. Receiving a copy of
 the Coffee CLI source code does not grant you any right to use the Marks.
@@ -119,11 +120,12 @@ label `trademark`.
 
 | 标识                              | 首次公开使用 | 商品/服务类别        |
 | --------------------------------- | ------------ | -------------------- |
-| **Coffee CLI**(文字商标)        | 2024         | 计算机软件;SaaS    |
-| **Gambit**                        | 2024         | 软件 UI 功能         |
-| **VibeID**                        | 2025         | 人格测评软件         |
-| **哨兵协议** / **Sentinel Protocol** | 2025      | 多智能体协同软件     |
-| **Vibetype / Vibe 型**(及 16 个具体 Vibetype 名称) | 2026 | 人格测评内容 |
+| **Coffee CLI**(文字商标)        | 2026-04      | 计算机软件;SaaS              |
+| **Gambit**                        | 2026-04      | 软件 UI 功能                   |
+| **VibeID**                        | 2026-04      | 人格测评软件                   |
+| **Coffee-CLI MCP**                | 2026-04      | 多终端 Agent 互联协调协议      |
+| **哨兵协议** / **Sentinel Protocol** | 2026-04   | 多 Agent 监督协议             |
+| **Vibetype / Vibe 型**(及 16 个具体 Vibetype 名称) | 2026-04 | 人格测评内容          |
 
 这些标识**不**包含在 AGPL-3.0 协议授权范围内。获得 Coffee CLI 源代码
 副本**不**等于获得使用上述标识的权利。

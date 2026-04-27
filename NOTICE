@@ -23,9 +23,11 @@ downstream forks and reimplementations can credit prior art appropriately.
   2. Task-Board-to-Terminal Routing — Per-task input dispatch from a
      kanban-style task board directly into a target terminal session.
 
-  3. Multi-Agent Cross-Terminal Collaboration — A protocol by which AI
-     agents running in separate terminal windows coordinate, observe, and
-     mutually invoke each other.
+  3. Coffee-CLI MCP — A multi-agent coordination protocol that lets AI
+     agents running in separate terminal panes observe, signal, and
+     mutually invoke each other through a Model Context Protocol (MCP)
+     server hosted by the Coffee CLI desktop app. Implementation under
+     src/mcp_server.rs.
 
   4. Sentinel Protocol — A supervisory mechanism that monitors and arbitrates
      multi-agent activity across terminal sessions.
