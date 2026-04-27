@@ -1,11 +1,11 @@
 ---
 name: vibeid
-description: VibeID — VibeCoding personality test based on Claude Code usage behavior. Use when the user says /vibeid, /vibecoding, "run VibeID test", "personality test", or similar. Analyzes the user's Claude Code /insights report across 4 axes (pace, craft, arc, flow) and reveals their 16-character archetype from the Claw family, then injects a persona card into the report.
+description: VibeID — personality test for AI coding agent users based on Claude Code usage behavior. Use when the user says /vibeid, /vibecoding, "run VibeID test", "personality test", or similar. Analyzes the user's Claude Code /insights report across 4 axes (pace, craft, arc, flow) and reveals their Vibetype (one of 16 archetypes), then injects a persona card into the report.
 ---
 
 # VibeID — VibeCoding Personality Test
 
-Analyze the user's Claude Code `/insights` report and reveal their VibeID archetype: a 4-letter code (one of 16 combinations) mapped to a distinct "Claw family" persona with low-poly character art.
+Analyze the user's Claude Code `/insights` report and reveal their **Vibetype**: a 4-letter code (one of 16 combinations) mapped to a distinct persona with low-poly character art.
 
 The skill keeps deterministic logic (HTML parsing, axis thresholds, HTML injection) in Node.js scripts, and reserves Claude for the one thing it is uniquely good at: generating personalized copy from the user's actual behavioral data.
 

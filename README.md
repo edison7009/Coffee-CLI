@@ -323,6 +323,44 @@ Coffee CLI устраняет оба барьера одновременно: **
 
 ---
 
-## License
+## License & Trademarks
 
-MIT © [edison7009](https://github.com/edison7009)
+**Code** — Coffee CLI is licensed under the
+[GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later)](LICENSE).
+Any fork, modification, or hosted service derived from this code must also be
+released under AGPL-3.0 — including SaaS deployments. See [LICENSE](LICENSE)
+for the full text and [NOTICE](NOTICE) for attribution requirements.
+
+**Brand** — *Coffee CLI*, *Gambit*, *VibeID*, *Vibetype* (and the 16
+individual Vibetype names), *Sentinel Protocol*, and *哨兵协议* are
+common-law trademarks of edison7009 and are **not** covered by AGPL-3.0.
+The app icon is from the [line-md](https://yesicon.app/line-md/coffee-filled-loop)
+icon set (Apache-2.0, by Vjacheslav Trushkin) and is **not** claimed as a
+mark. See [TRADEMARKS.md](TRADEMARKS.md) for what you may and may not do
+with these names.
+
+**Contributing** — See [CONTRIBUTING.md](CONTRIBUTING.md). All contributions
+are accepted under the project's CLA so that future relicensing remains possible.
+
+---
+
+## 协议与商标
+
+**代码** — Coffee CLI 采用
+[GNU Affero 通用公共许可证 v3 或更高版本 (AGPL-3.0-or-later)](LICENSE) 发布。
+任何 fork、修改版本或基于本代码部署的托管服务,都必须同样以 AGPL-3.0 开源 ——
+**SaaS 部署也不例外**。完整文本见 [LICENSE](LICENSE),署名要求见 [NOTICE](NOTICE)。
+
+**品牌** — *Coffee CLI*、*Gambit*、*VibeID*、*Vibetype / Vibe 型*
+(及 16 个具体 Vibetype 名称)、*哨兵协议 / Sentinel Protocol* 为
+edison7009 的普通法商标,**不**包含在 AGPL-3.0 授权范围内。应用图标
+取自 [line-md 图标集](https://yesicon.app/line-md/coffee-filled-loop)
+(Apache-2.0,作者 Vjacheslav Trushkin),**不**主张为本项目商标。可做
+与不可做的边界详见 [TRADEMARKS.md](TRADEMARKS.md)。
+
+**贡献** — 见 [CONTRIBUTING.md](CONTRIBUTING.md)。所有贡献按项目 CLA 接收,
+以保持未来重新授权的灵活性。
+
+---
+
+Copyright © 2024-2026 [edison7009](https://github.com/edison7009) and Coffee CLI contributors.

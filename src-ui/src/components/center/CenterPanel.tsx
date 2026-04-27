@@ -398,9 +398,13 @@ export function CenterPanel() {
     if (!isTauri) return;
     (async () => {
       const BASE = 'https://coffeecli.com/CC-VibeID-test';
+      // 16 Vibetype codes: mind (R/E) × craft (D/T) × arc (V/A) × flow (L/H).
+      // Grouped by family: Logos (RD*), Forge (RT*), Muse (ED*), Kinetic (ET*).
+      // Must match matrix.json persona keys and the actual PNG filenames at
+      // ${BASE}/personas/images/<code>.png.
       const CODES = [
-        'PFVL','PFVH','PFAL','PFAH','PSVL','PSVH','PSAL','PSAH',
-        'TFVL','TFVH','TFAL','TFAH','TSVL','TSVH','TSAL','TSAH',
+        'RDVL','RDVH','RDAL','RDAH','RTVL','RTVH','RTAL','RTAH',
+        'EDVL','EDVH','EDAL','EDAH','ETVL','ETVH','ETAL','ETAH',
       ];
       const textFiles = [
         { remote: 'SKILL.md', local: 'SKILL.md' },

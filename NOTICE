@@ -1,0 +1,109 @@
+Coffee CLI
+Copyright (c) 2025 edison7009 and Coffee CLI contributors
+
+This product includes software developed by the Coffee CLI project
+(https://github.com/edison7009/Coffee-CLI).
+
+Licensed under the GNU Affero General Public License, Version 3.0 or later
+(AGPL-3.0-or-later). See the LICENSE file for the full license text, or
+visit https://www.gnu.org/licenses/agpl-3.0.html.
+
+================================================================================
+ORIGINAL DESIGNS AND CONCEPTS
+================================================================================
+
+The following designs, protocols, and interaction paradigms were originated
+by the Coffee CLI project. The source code that implements them is governed
+by the AGPL-3.0 license; the underlying ideas are documented here so that
+downstream forks and reimplementations can credit prior art appropriately.
+
+  1. Gambit — A floating-island input surface that routes a single keyboard
+     stream to multiple terminal sessions.
+
+  2. Task-Board-to-Terminal Routing — Per-task input dispatch from a
+     kanban-style task board directly into a target terminal session.
+
+  3. Multi-Agent Cross-Terminal Collaboration — A protocol by which AI
+     agents running in separate terminal windows coordinate, observe, and
+     mutually invoke each other.
+
+  4. Sentinel Protocol — A supervisory mechanism that monitors and arbitrates
+     multi-agent activity across terminal sessions.
+
+  5. VibeID — A 16-archetype personality framework derived from a user's
+     behavioral telemetry while operating AI coding agents. The framework,
+     the four-axis derivation method, the coined noun **Vibetype**
+     (a portmanteau of "vibe" + "archetype" used to label each test
+     result), and all 16 individual Vibetype names and write-ups, are
+     claimed as original works. The terms "VibeCoding" (popularized by
+     Andrej Karpathy) and "Claw" are NOT original to this project and
+     are not claimed.
+
+These innovations are protected as original expression under copyright law
+and, where applicable, as common-law trademarks. See TRADEMARKS.md for the
+brand and naming policy.
+
+================================================================================
+THIRD-PARTY ASSETS (ICONS / ARTWORK)
+================================================================================
+
+  - Coffee CLI app icon (icons/icon.png and animated brand variant)
+      Source:  line-md icon set, "coffee-filled-loop"
+               https://yesicon.app/line-md/coffee-filled-loop
+               https://github.com/cyberalien/line-md
+      Author:  Vjacheslav Trushkin (cyberalien)
+      License: Apache-2.0
+      Use:     The icon is used unmodified (or with minor color/size
+               adjustment) as the Coffee CLI application icon and brand
+               glyph. No trademark rights are claimed in the icon itself
+               — see TRADEMARKS.md for the scope of brand rights claimed.
+
+  - File-icon themes under src-ui/public/icons/themes/
+      Six upstream icon sets (material, vscode-icons, catppuccin-mocha,
+      devicon/Phosphor, fluent, symbols) are used under their MIT licenses.
+      Per-theme attribution is documented in:
+          src-ui/public/icons/themes/LICENSES.md
+
+================================================================================
+THIRD-PARTY TRADEMARKS (NOMINATIVE FAIR USE)
+================================================================================
+
+The following names and logos appear in Coffee CLI solely to identify the
+third-party CLI tools and runtimes that Coffee CLI supports. Coffee CLI is
+not affiliated with, endorsed by, or sponsored by any of these companies
+or projects. All marks remain the property of their respective owners and
+are used here under the doctrine of nominative fair use.
+
+  - Claude / Claude Code         — Anthropic, PBC
+  - OpenAI / Codex               — OpenAI, Inc.
+  - Gemini                       — Google LLC
+  - Qwen                         — Alibaba Group
+  - OpenCode                     — the OpenCode project
+  - Hermes                       — the Hermes project
+  - Windows / PowerShell         — Microsoft Corporation
+  - macOS                        — Apple Inc.
+  - Linux                        — Linus Torvalds
+  - Tauri                        — the Tauri Programme
+
+If you are a rights holder and believe your mark is used in a way that
+exceeds nominative fair use, please open an issue with the label
+`trademark` at https://github.com/edison7009/Coffee-CLI/issues and we
+will adjust promptly.
+
+================================================================================
+THIRD-PARTY COMPONENTS
+================================================================================
+
+Coffee CLI bundles or links against open-source components whose licenses
+and notices are preserved in their respective source trees. A non-exhaustive
+list of major upstream projects:
+
+  - Tauri (MIT / Apache-2.0)         https://tauri.app
+  - portable-pty (MIT)               https://github.com/wez/wezterm
+  - xterm.js (MIT)                   https://xtermjs.org
+  - rmcp (MIT)                       https://github.com/modelcontextprotocol/rust-sdk
+  - Rust crates listed in Cargo.toml — see each crate's own license
+
+Each component remains under its own license. The AGPL-3.0 license that
+governs Coffee CLI as a whole does not override the terms of these bundled
+or linked components.
