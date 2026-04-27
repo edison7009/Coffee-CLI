@@ -20,8 +20,11 @@ downstream forks and reimplementations can credit prior art appropriately.
   1. Gambit — A floating-island input surface that routes a single keyboard
      stream to multiple terminal sessions.
 
-  2. Task-Board-to-Terminal Routing — Per-task input dispatch from a
-     kanban-style task board directly into a target terminal session.
+  2. Pitch — Per-task input dispatch from a kanban-style TODO board
+     directly into a target terminal session: a single click composes
+     a task's title and description into the input stream of a chosen
+     AI agent's terminal pane. Implementation in src-ui/src/components/
+     right/TaskBoard.tsx (sendToAgent).
 
   3. Coffee-CLI MCP — A multi-agent coordination protocol that lets AI
      agents running in separate terminal panes observe, signal, and

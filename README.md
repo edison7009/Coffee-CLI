@@ -331,10 +331,10 @@ Any fork, modification, or hosted service derived from this code must also be
 released under AGPL-3.0 — including SaaS deployments. See [LICENSE](LICENSE)
 for the full text and [NOTICE](NOTICE) for attribution requirements.
 
-**Brand** — *Coffee CLI*, *Gambit*, *VibeID*, *Vibetype* (and the 16
-individual Vibetype names), *Coffee-CLI MCP*, and *Sentinel Protocol*
-are common-law trademarks of edison7009 and are **not** covered by
-AGPL-3.0.
+**Brand** — *Coffee CLI*, *Gambit*, *Pitch*, *VibeID*, *Vibetype* (and
+the 16 individual Vibetype names), *Coffee-CLI MCP*, and *Sentinel
+Protocol* are common-law trademarks of edison7009 and are **not**
+covered by AGPL-3.0.
 The app icon is from the [line-md](https://github.com/cyberalien/line-md)
 icon set (Apache-2.0, by Vjacheslav Trushkin) and is **not** claimed as a
 mark. See [TRADEMARKS.md](TRADEMARKS.md) for what you may and may not do
@@ -352,9 +352,10 @@ are accepted under the project's CLA so that future relicensing remains possible
 任何 fork、修改版本或基于本代码部署的托管服务,都必须同样以 AGPL-3.0 开源 ——
 **SaaS 部署也不例外**。完整文本见 [LICENSE](LICENSE),署名要求见 [NOTICE](NOTICE)。
 
-**品牌** — *Coffee CLI*、*Gambit*、*VibeID*、*Vibetype / Vibe 型*
-(及 16 个具体 Vibetype 名称)、*Coffee-CLI MCP*、*哨兵协议 / Sentinel
-Protocol* 为 edison7009 的普通法商标,**不**包含在 AGPL-3.0 授权范围内。应用图标
+**品牌** — *Coffee CLI*、*Gambit*、*Pitch / 投递*、*VibeID*、
+*Vibetype / Vibe 型*(及 16 个具体 Vibetype 名称)、*Coffee-CLI MCP*、
+*哨兵协议 / Sentinel Protocol* 为 edison7009 的普通法商标,**不**包含
+在 AGPL-3.0 授权范围内。应用图标
 取自 [line-md 图标集](https://github.com/cyberalien/line-md)
 (Apache-2.0,作者 Vjacheslav Trushkin),**不**主张为本项目商标。可做
 与不可做的边界详见 [TRADEMARKS.md](TRADEMARKS.md)。

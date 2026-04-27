@@ -23,6 +23,7 @@ in commerce by the Coffee CLI project and its primary maintainer
 | --------------------------------------------------- | ---------------- | ------------------------------------------------ |
 | **Coffee CLI** (word mark)                          | 2026-04-12       | Computer software; SaaS                          |
 | **Gambit**                                          | 2026-04-17       | Software UI feature                              |
+| **Pitch**                                           | 2026-04-20       | Per-task TODO-to-Agent dispatch UI               |
 | **VibeID**                                          | 2026-04-21       | Personality assessment software                  |
 | **Coffee-CLI MCP**                                  | 2026-04-22       | Multi-agent inter-terminal coordination protocol |
 | **Sentinel Protocol**                               | 2026-04-25       | Multi-agent supervision protocol                 |
@@ -122,6 +123,7 @@ label `trademark`.
 | --------------------------------------------------- | ------------ | ------------------------------ |
 | **Coffee CLI**(文字商标)                          | 2026-04-12   | 计算机软件;SaaS              |
 | **Gambit**                                          | 2026-04-17   | 软件 UI 功能                   |
+| **Pitch / 投递**                                    | 2026-04-20   | 单条任务从 TODO 看板投递到 Agent |
 | **VibeID**                                          | 2026-04-21   | 人格测评软件                   |
 | **Coffee-CLI MCP**                                  | 2026-04-22   | 多终端 Agent 互联协调协议      |
 | **哨兵协议** / **Sentinel Protocol**                | 2026-04-25   | 多 Agent 监督协议              |
