@@ -332,9 +332,9 @@ released under AGPL-3.0 — including SaaS deployments. See [LICENSE](LICENSE)
 for the full text and [NOTICE](NOTICE) for attribution requirements.
 
 **Brand** — *Coffee CLI*, *Gambit*, *VibeID*, *Vibetype* (and the 16
-individual Vibetype names), *Coffee-CLI MCP*, *Sentinel Protocol*, and
-*哨兵协议* are common-law trademarks of edison7009 and are **not**
-covered by AGPL-3.0.
+individual Vibetype names), *Coffee-CLI MCP*, and *Sentinel Protocol*
+are common-law trademarks of edison7009 and are **not** covered by
+AGPL-3.0.
 The app icon is from the [line-md](https://github.com/cyberalien/line-md)
 icon set (Apache-2.0, by Vjacheslav Trushkin) and is **not** claimed as a
 mark. See [TRADEMARKS.md](TRADEMARKS.md) for what you may and may not do
