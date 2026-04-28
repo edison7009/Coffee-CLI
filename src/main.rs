@@ -13,6 +13,39 @@ mod multi_agent_protocol;
 use anyhow::Result;
 
 fn main() -> Result<()> {
+    // ── Linux GUI fixups ────────────────────────────────────────────────
+    // Ubuntu 24.04 ships WebKit2GTK 2.42+ (later 2.50.x), which on
+    // Wayland sessions renders a blank window in Tauri 2 — the Rust
+    // process starts and the hook-server binds, but WebView never
+    // shows. Symptoms: user clicks the .desktop entry, nothing
+    // happens. Setting these env vars before the Tauri builder runs
+    // forces the WebView onto a code path that works:
+    //   - GDK_BACKEND=x11 routes GTK through XWayland (avoids the
+    //     Wayland-native WebKit rendering bug entirely).
+    //   - WEBKIT_DISABLE_COMPOSITING_MODE=1 disables the GPU
+    //     compositing path that fails silently on many Wayland +
+    //     mesa stacks.
+    //   - WEBKIT_DISABLE_DMABUF_RENDERER=1 disables the new dmabuf
+    //     renderer introduced in WebKit2GTK 2.42 that misbehaves with
+    //     several mesa/intel/nvidia driver combos.
+    // Setting these here (rather than in the .desktop file) means
+    // they apply equally when the user launches via menu, terminal,
+    // or another wrapper. set_var is `unsafe` in recent Rust because
+    // of cross-thread races, but we're in single-threaded main()
+    // before any thread spawn, so it's safe.
+    #[cfg(target_os = "linux")]
+    unsafe {
+        if std::env::var_os("GDK_BACKEND").is_none() {
+            std::env::set_var("GDK_BACKEND", "x11");
+        }
+        if std::env::var_os("WEBKIT_DISABLE_COMPOSITING_MODE").is_none() {
+            std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
+        }
+        if std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none() {
+            std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+        }
+    }
+
     // CLI subcommand dispatch — short-circuit GUI launch when invoked
     // with a known subcommand. This is opt-in; double-clicking the
     // executable still gets the GUI (no argv).
