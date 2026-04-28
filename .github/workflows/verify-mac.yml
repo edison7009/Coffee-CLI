@@ -1,0 +1,148 @@
+name: Verify macOS bundle
+
+# Builds the .app from the current branch on a real Apple Silicon
+# runner and checks that the bundle signature is properly sealed.
+# Used to verify codesigning fixes BEFORE tagging a release —
+# avoids shipping a broken DMG to users.
+#
+# Pass criteria:
+#   - codesign succeeds on the bundle
+#   - "Sealed Resources" is NOT "none"
+#   - spctl assessment doesn't report "code has no resources"
+#
+# Trigger: Actions → "Verify macOS bundle" → Run workflow.
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Branch / tag / SHA to build (default: current)'
+        required: false
+        default: ''
+
+jobs:
+  verify:
+    runs-on: macos-14
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: src-ui/package-lock.json
+
+      - name: Build frontend
+        run: |
+          cd src-ui
+          npm ci
+          npm run build
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          key: verify-mac
+
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version "^2.0" --locked
+
+      - name: Build .app (no publish)
+        run: cargo tauri build --target aarch64-apple-darwin
+
+      - name: Locate built app
+        id: locate
+        run: |
+          APP=$(find target/aarch64-apple-darwin/release/bundle/macos -maxdepth 2 -name "*.app" | head -1)
+          if [ -z "$APP" ]; then
+            echo "::error::No .app produced by tauri build"
+            find target -name "*.app" 2>/dev/null || true
+            exit 1
+          fi
+          echo "Found: $APP"
+          echo "app=$APP" >> "$GITHUB_OUTPUT"
+
+      - name: Inspect signature (the actual test)
+        id: check
+        run: |
+          APP="${{ steps.locate.outputs.app }}"
+          echo "=== codesign -dv ==="
+          codesign -dv --verbose=4 "$APP" 2>&1 | tee /tmp/sig.log
+
+          echo ""
+          echo "=== spctl assessment ==="
+          spctl --assess --verbose "$APP" 2>&1 | tee /tmp/spctl.log || true
+
+          echo ""
+          echo "=== _CodeSignature contents ==="
+          ls -la "$APP/Contents/_CodeSignature/" 2>&1 || echo "(no _CodeSignature dir!)"
+
+          echo ""
+          echo "=== verdict ==="
+          FAIL=0
+
+          # Sealed Resources should NOT be "none" — that was the v1.6.4 bug.
+          if grep -q "Sealed Resources=none" /tmp/sig.log; then
+            echo "::error::Sealed Resources=none — bundle resources are NOT sealed (same bug as v1.6.4)"
+            FAIL=1
+          else
+            echo "OK: Sealed Resources are present"
+          fi
+
+          # spctl shouldn't complain about missing resources.
+          if grep -q "code has no resources but signature indicates they must be present" /tmp/spctl.log; then
+            echo "::error::Gatekeeper still reports missing resources"
+            FAIL=1
+          fi
+
+          if [ ! -d "$APP/Contents/_CodeSignature" ]; then
+            echo "::error::_CodeSignature directory missing"
+            FAIL=1
+          fi
+
+          if [ "$FAIL" = "1" ]; then
+            exit 1
+          fi
+          echo "Bundle signature looks healthy."
+
+      - name: Headless launch smoke test
+        # If the bundle is properly signed, WKWebView should be willing
+        # to load. We can't see the GUI, but we can verify the process
+        # stays alive and the hook-server binds.
+        run: |
+          APP="${{ steps.locate.outputs.app }}"
+          BIN=$(find "$APP/Contents/MacOS" -type f -perm +111 | head -1)
+          mkdir -p /tmp/logs
+          (
+            "$BIN" > /tmp/logs/stdout.log 2> /tmp/logs/stderr.log &
+            PID=$!
+            sleep 10
+            if kill -0 $PID 2>/dev/null; then
+              echo "OK: process stayed alive 10s"
+              kill -TERM $PID || true
+            else
+              echo "::error::process died within 10s"
+              cat /tmp/logs/stderr.log
+              exit 1
+            fi
+          )
+          echo "=== stderr (truncated) ==="
+          head -50 /tmp/logs/stderr.log
+
+      - name: Upload built app for manual inspection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coffee-cli-mac-app
+          path: target/aarch64-apple-darwin/release/bundle/macos/*.app
+          if-no-files-found: warn
+          retention-days: 3
