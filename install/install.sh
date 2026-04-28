@@ -120,8 +120,22 @@ if [ "$OS" = "Darwin" ]; then
   fi
 
   echo "  ${GRAY}Mounting DMG...${RESET}"
-  MOUNT=$(hdiutil attach "$TMP" -nobrowse -quiet | tail -1 | awk '{print $NF}')
-  APP=$(find "$MOUNT" -name "*.app" -maxdepth 1 | head -1)
+  # Grab the /Volumes/... mountpoint directly. `awk '{print $NF}'` breaks
+  # when the volume name has spaces (e.g. "Coffee CLI 1.6.4"), since $NF
+  # only captures the last whitespace-delimited token.
+  MOUNT=$(hdiutil attach "$TMP" -nobrowse -quiet | grep -oE '/Volumes/[^	]+' | tail -1)
+  if [ -z "$MOUNT" ] || [ ! -d "$MOUNT" ]; then
+    echo "  ${RED}Failed to mount DMG.${RESET}"
+    rm -f "$TMP"
+    exit 1
+  fi
+  APP=$(find "$MOUNT" -maxdepth 1 -name "*.app" | head -1)
+  if [ -z "$APP" ]; then
+    echo "  ${RED}No .app bundle found inside DMG.${RESET}"
+    hdiutil detach "$MOUNT" -quiet || true
+    rm -f "$TMP"
+    exit 1
+  fi
 
   echo "  ${GRAY}Installing to /Applications...${RESET}"
   cp -R "$APP" /Applications/
