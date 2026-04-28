@@ -180,10 +180,15 @@ jobs:
       - name: Interactive SSH session (tmate)
         # Drops you into a shell on the runner. The action prints SSH and
         # web-shell URLs in the log — copy and connect within
-        # tmate_timeout_min minutes. Job ends when you `touch /tmp/keepalive`
-        # then `exit`, or when the timeout fires.
+        # tmate_timeout_min minutes. Job ends when you run `touch
+        # /tmp/keepalive; exit` inside the SSH session, or when the
+        # step-level timeout-minutes fires.
+        #
+        # Requires a public SSH key on the triggering user's GitHub
+        # profile (limit-access-to-actor uses GitHub-registered keys).
+        # Add one at: github.com/settings/keys
         if: ${{ inputs.tmate }}
+        timeout-minutes: ${{ fromJSON(inputs.tmate_timeout_min) }}
         uses: mxschmitt/action-tmate@v3
         with:
           limit-access-to-actor: true
-          timeout-minutes: ${{ fromJSON(inputs.tmate_timeout_min) }}
