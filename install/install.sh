@@ -157,7 +157,7 @@ if [ "$OS" = "Darwin" ]; then
   TMP="/tmp/coffee-cli.dmg"
 
   echo "  ${GRAY}Downloading...${RESET}"
-  if ! curl -fL --progress-bar "$URL" -o "$TMP"; then
+  if ! curl -fL --progress-bar --retry 5 --retry-all-errors --retry-delay 2 -C - "$URL" -o "$TMP"; then
     echo ""
     echo "  ${RED}Download failed.${RESET}"
     echo "  ${YELLOW}The macOS installer may still be uploading. Retry in ~5 min.${RESET}"
@@ -229,7 +229,7 @@ elif [ "$OS" = "Linux" ]; then
   if command -v dpkg > /dev/null 2>&1; then
     TMP="/tmp/coffee-cli.deb"
     echo "  ${GRAY}Downloading .deb package...${RESET}"
-    if ! curl -fL --progress-bar "${FALLBACK_DOWNLOAD_URL:-$DOWNLOAD_BASE/linux-deb}" -o "$TMP"; then
+    if ! curl -fL --progress-bar --retry 5 --retry-all-errors --retry-delay 2 -C - "${FALLBACK_DOWNLOAD_URL:-$DOWNLOAD_BASE/linux-deb}" -o "$TMP"; then
       echo ""
       echo "  ${RED}Download failed.${RESET}"
       echo "  ${YELLOW}The Linux .deb may still be uploading. Retry in ~5 min.${RESET}"
@@ -248,7 +248,7 @@ elif [ "$OS" = "Linux" ]; then
   DEST="$HOME/.local/bin/coffee-cli"
   mkdir -p "$HOME/.local/bin"
   echo "  ${GRAY}Downloading AppImage...${RESET}"
-  if ! curl -fL --progress-bar "${FALLBACK_DOWNLOAD_URL:-$DOWNLOAD_BASE/linux-appimage}" -o "$DEST"; then
+  if ! curl -fL --progress-bar --retry 5 --retry-all-errors --retry-delay 2 -C - "${FALLBACK_DOWNLOAD_URL:-$DOWNLOAD_BASE/linux-appimage}" -o "$DEST"; then
     echo ""
     echo "  ${RED}Download failed.${RESET}"
     echo "  ${YELLOW}The AppImage may still be uploading. Retry in ~5 min.${RESET}"
