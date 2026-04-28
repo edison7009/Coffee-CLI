@@ -271,6 +271,16 @@
     height: 2px;
     background: transparent;
     transition: background-color 0.12s;
+    /* Pseudo MUST be transparent to pointer events. Otherwise it
+       intercepts the top 2px and — having no cursor rule of its own —
+       falls back to the global `* { cursor: default !important }` reset,
+       so hovering on the visible line shows the wrong cursor while
+       hovering 1px below (parent's exposed hit area) shows ns-resize.
+       With pointer-events:none the parent stays the hit target
+       everywhere; :hover still fires on the parent (CSS evaluates :hover
+       by visual containment, not just hit-target), so the line still
+       lights up correctly. */
+    pointer-events: none;
 }
 .gambit-dock-resize:hover::after,
 .gambit-dock-resize:active::after {
