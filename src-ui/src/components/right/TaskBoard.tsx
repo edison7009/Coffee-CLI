@@ -719,7 +719,7 @@ export function TaskBoard() {
             <div className="task-empty">
               <div className="task-empty-icon">{icon}</div>
               <div className="task-empty-text"
-                style={isZh ? { fontFamily: 'var(--font, system-ui)', fontStyle: 'normal', fontWeight: 600, letterSpacing: '0.08em' } : undefined}
+                style={isZh ? { fontFamily: 'var(--font, system-ui)', fontStyle: 'normal', fontWeight: 400, letterSpacing: '0.08em' } : undefined}
               >{greeting}</div>
             </div>
           );

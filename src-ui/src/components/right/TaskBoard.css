@@ -600,7 +600,7 @@
 
 .task-empty-text {
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 400;
   font-family: var(--font-sans, var(--font, system-ui));
   letter-spacing: 0.02em;
   color: var(--text-1, #e8e4de);
