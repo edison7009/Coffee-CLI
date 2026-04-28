@@ -25,11 +25,12 @@ interface CtxMenuState {
 // Module-level clipboard: survives menu close/open cycles
 let fsClipboard: { action: 'copy' | 'cut'; path: string } | null = null;
 
-// OpenClaw (persona forge) and Hermes Agent are directory-agnostic — they
-// don't bind to a project folder, so the workspace dir-picker and file
-// tree are hidden for these tabs (clicking the picker would otherwise
-// restart the PTY in a new cwd, which makes no sense for these tools).
-const CWD_AGNOSTIC_TOOLS: ReadonlySet<ToolType> = new Set<ToolType>(['openclaw', 'hermes']);
+// OpenClaw (persona forge), Hermes Agent, and Remote Terminal are
+// directory-agnostic — they don't bind to a local project folder, so the
+// workspace dir-picker and file tree are hidden for these tabs (clicking
+// the picker would otherwise restart the PTY in a new cwd, which makes
+// no sense — Remote runs over SSH/WebSocket on a different host).
+const CWD_AGNOSTIC_TOOLS: ReadonlySet<ToolType> = new Set<ToolType>(['openclaw', 'hermes', 'remote']);
 
 // Dispatch a custom event to refresh any BrowserDirNode that owns that directory
 function dispatchFsRefresh(dirPath: string) {
