@@ -19,7 +19,30 @@ Write-Host "  --------------------" -ForegroundColor DarkGray
 # script doesn't stall on a blocked or slow GitHub API from mainland
 # networks.
 Write-Host "  Fetching latest version..." -ForegroundColor Gray
-$latestVer = (Invoke-RestMethod "https://coffeecli.com/version.json?platform=windows").version
+# Try coffeecli.com first (CF-cached, China-accessible). If the Worker
+# is down or rate-limited on its shared GitHub API quota, fall back to
+# api.github.com directly — the user's own IP has its own anonymous
+# quota and won't share that pool, so this is meaningfully more
+# reliable for the single-user case.
+$latestVer = $null
+$fallbackUrl = $null
+try {
+    $latestVer = (Invoke-RestMethod "https://coffeecli.com/version.json?platform=windows" -TimeoutSec 10).version
+} catch {
+    Write-Host "  Trying GitHub directly..." -ForegroundColor Gray
+}
+if (-not $latestVer) {
+    try {
+        $release = Invoke-RestMethod "https://api.github.com/repos/edison7009/Coffee-CLI/releases/latest" `
+            -Headers @{ "User-Agent" = "CoffeeCLI-Install" } -TimeoutSec 15
+        # Match the Windows asset matcher in Web-Home/_worker.js — keep in sync.
+        $winAsset = $release.assets | Where-Object { $_.name -like "*x64-setup.exe" } | Select-Object -First 1
+        if ($winAsset) {
+            $latestVer = $release.tag_name -replace '^v',''
+            $fallbackUrl = $winAsset.browser_download_url
+        }
+    } catch {}
+}
 
 # Detect currently installed version from Windows registry
 $installedVer = $null
@@ -76,7 +99,7 @@ if ($installedVer) {
     Write-Host "  Not installed - performing fresh install..." -ForegroundColor Gray
 }
 
-$url = "https://coffeecli.com/download/windows"
+$url = if ($fallbackUrl) { $fallbackUrl } else { "https://coffeecli.com/download/windows" }
 $out = "$env:TEMP\coffee-cli-setup.exe"
 
 Write-Host "  Downloading..." -ForegroundColor Gray

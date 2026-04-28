@@ -18,6 +18,12 @@ set -e
 # networks.
 VERSION_BASE="https://coffeecli.com/version.json"
 DOWNLOAD_BASE="https://coffeecli.com/download"
+# Direct GitHub Releases fallback used when coffeecli.com is unreachable
+# (CF Worker outage, GitHub API rate limit on the shared Worker IP pool,
+# DNS issues). The user's own IP has its own 60/h anonymous quota and
+# won't share that pool, so this is meaningfully more reliable for the
+# single-user case.
+GITHUB_API="https://api.github.com/repos/edison7009/Coffee-CLI/releases/latest"
 
 CYAN='\033[0;36m'
 GREEN='\033[0;32m'
@@ -53,10 +59,45 @@ else
   exit 1
 fi
 
+# Pattern that picks our platform's asset out of the GitHub release.
+# Mirrors the matchers in Web-Home/_worker.js — keep the two in sync.
+case "$PLATFORM" in
+  macos-arm)      ASSET_GREP='aarch64[^"]*\.dmg' ;;
+  macos-intel)    ASSET_GREP='x64[^"]*\.dmg' ;;
+  linux-deb)      ASSET_GREP='amd64\.deb' ;;
+  linux-appimage) ASSET_GREP='amd64\.AppImage' ;;
+esac
+
+FALLBACK_DOWNLOAD_URL=""
+
 # Parse version from version.json — minimal JSON, no jq required
 echo "  ${GRAY}Fetching latest version...${RESET}"
-VERSION_JSON=$(curl -fsSL "$VERSION_BASE?platform=$PLATFORM")
+VERSION_JSON=$(curl -fsSL "$VERSION_BASE?platform=$PLATFORM" 2>/dev/null || true)
 LATEST_VER=$(echo "$VERSION_JSON" | sed -E 's/.*"version"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/')
+
+# coffeecli.com unreachable (CF Worker 502 / network) → fall back to
+# api.github.com directly. This pulls the latest release JSON, extracts
+# tag_name for the version and the matching asset's browser_download_url
+# for the later download step (so we don't hit coffeecli.com a second
+# time and fail again).
+if [ -z "$LATEST_VER" ] || [ "$LATEST_VER" = "$VERSION_JSON" ]; then
+  echo "  ${GRAY}Trying GitHub directly...${RESET}"
+  GH_JSON=$(curl -fsSL -H "User-Agent: CoffeeCLI-Install" "$GITHUB_API" 2>/dev/null || true)
+  if [ -n "$GH_JSON" ]; then
+    GH_TAG=$(echo "$GH_JSON" | grep -oE '"tag_name"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed -E 's/.*"([^"]*)"$/\1/')
+    LATEST_VER=$(echo "$GH_TAG" | sed 's/^v//')
+    if [ -n "$ASSET_GREP" ]; then
+      FALLBACK_DOWNLOAD_URL=$(echo "$GH_JSON" | grep -oE "\"browser_download_url\"[[:space:]]*:[[:space:]]*\"[^\"]*${ASSET_GREP}\"" | head -1 | sed -E 's/.*"(https[^"]*)"$/\1/')
+      # GitHub returned a release tag, but our platform's asset hasn't
+      # been uploaded yet (mid-CI). Reset LATEST_VER so the "try again
+      # in 10 minutes" branch below fires, instead of advertising a
+      # version we can't actually deliver.
+      if [ -z "$FALLBACK_DOWNLOAD_URL" ]; then
+        LATEST_VER=""
+      fi
+    fi
+  fi
+fi
 
 # Empty `version` = the installer for this platform isn't out yet (CI
 # probably still running for a just-tagged release). Show an explicit
@@ -107,7 +148,7 @@ if [ "$OS" = "Darwin" ]; then
     echo "  ${YELLOW}Note: No native Intel build available. Running via Rosetta 2.${RESET}"
   fi
 
-  URL="$DOWNLOAD_BASE/macos-arm"
+  URL="${FALLBACK_DOWNLOAD_URL:-$DOWNLOAD_BASE/macos-arm}"
   TMP="/tmp/coffee-cli.dmg"
 
   echo "  ${GRAY}Downloading...${RESET}"
@@ -175,7 +216,7 @@ elif [ "$OS" = "Linux" ]; then
   if command -v dpkg > /dev/null 2>&1; then
     TMP="/tmp/coffee-cli.deb"
     echo "  ${GRAY}Downloading .deb package...${RESET}"
-    if ! curl -fsSL "$DOWNLOAD_BASE/linux-deb" -o "$TMP"; then
+    if ! curl -fsSL "${FALLBACK_DOWNLOAD_URL:-$DOWNLOAD_BASE/linux-deb}" -o "$TMP"; then
       echo ""
       echo "  ${RED}Download failed.${RESET}"
       echo "  ${YELLOW}The Linux .deb may still be uploading. Retry in ~5 min.${RESET}"
@@ -194,7 +235,7 @@ elif [ "$OS" = "Linux" ]; then
   DEST="$HOME/.local/bin/coffee-cli"
   mkdir -p "$HOME/.local/bin"
   echo "  ${GRAY}Downloading AppImage...${RESET}"
-  if ! curl -fsSL "$DOWNLOAD_BASE/linux-appimage" -o "$DEST"; then
+  if ! curl -fsSL "${FALLBACK_DOWNLOAD_URL:-$DOWNLOAD_BASE/linux-appimage}" -o "$DEST"; then
     echo ""
     echo "  ${RED}Download failed.${RESET}"
     echo "  ${YELLOW}The AppImage may still be uploading. Retry in ~5 min.${RESET}"
