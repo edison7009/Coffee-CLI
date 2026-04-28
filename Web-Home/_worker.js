@@ -23,15 +23,36 @@ async function getLatestAssets(env) {
   // (strip leading "v"). Old v1 entries would otherwise linger in KV
   // for up to an hour after deploy.
   const cacheKey = "latest-release-v2"
+  // Separate "last known good" key with no TTL. Used as a stale
+  // fallback when the GitHub API call fails (rate limit, outage).
+  // Without this, a single 60/hr unauthenticated rate-limit hit on
+  // the shared CF Worker IP pool turns every install attempt into a
+  // 502 until the next hour rolls over.
+  const stableKey = "latest-release-stable-v2"
   if (env.KV) {
     const cached = await env.KV.get(cacheKey)
     if (cached) return JSON.parse(cached)
   }
 
-  const res = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, {
-    headers: { "User-Agent": "CoffeeCLI-Worker" }
-  })
-  if (!res.ok) throw new Error(`GitHub API ${res.status}`)
+  let res
+  try {
+    res = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, {
+      headers: { "User-Agent": "CoffeeCLI-Worker" }
+    })
+  } catch (e) {
+    if (env.KV) {
+      const stale = await env.KV.get(stableKey)
+      if (stale) return JSON.parse(stale)
+    }
+    throw e
+  }
+  if (!res.ok) {
+    if (env.KV) {
+      const stale = await env.KV.get(stableKey)
+      if (stale) return JSON.parse(stale)
+    }
+    throw new Error(`GitHub API ${res.status}`)
+  }
 
   const release = await res.json()
   const assets = {}
@@ -51,7 +72,12 @@ async function getLatestAssets(env) {
   }
 
   if (env.KV) {
-    await env.KV.put(cacheKey, JSON.stringify(assets), { expirationTtl: 3600 })
+    const payload = JSON.stringify(assets)
+    await env.KV.put(cacheKey, payload, { expirationTtl: 3600 })
+    // Stable copy has no TTL — only ever overwritten by a successful
+    // fetch, never expires on its own. Worst case during a long
+    // outage: users see the previous release until GitHub recovers.
+    await env.KV.put(stableKey, payload)
   }
   return assets
 }
