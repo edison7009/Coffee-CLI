@@ -183,6 +183,14 @@ if [ "$OS" = "Darwin" ]; then
   hdiutil detach "$MOUNT" -quiet
   rm "$TMP"
 
+  # Strip the com.apple.quarantine xattr that curl-downloaded files
+  # inherit. On Apple Silicon macOS 14+, Gatekeeper silently refuses
+  # to launch adhoc-signed apps that still carry quarantine — clicking
+  # the dock icon does nothing, no error dialog. Removing the xattr
+  # tells LaunchServices the user has explicitly opted to trust this
+  # binary (equivalent to right-click → Open the first time).
+  xattr -dr com.apple.quarantine "/Applications/Coffee CLI.app" 2>/dev/null || true
+
   echo ""
   echo "  ${GREEN}Done! Coffee CLI v$LATEST_VER installed.${RESET}"
   echo "  ${GRAY}Launch it from /Applications or Spotlight.${RESET}"
