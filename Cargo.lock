@@ -746,7 +746,7 @@ dependencies = [
 
 [[package]]
 name = "coffee-cli"
-version = "1.6.5"
+version = "1.6.6"
 dependencies = [
  "anyhow",
  "axum",
