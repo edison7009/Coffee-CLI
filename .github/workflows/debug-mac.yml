@@ -74,13 +74,27 @@ jobs:
 
       - name: Mount DMG and install to /Applications
         run: |
-          MOUNT=$(hdiutil attach /tmp/coffee.dmg -nobrowse -quiet | grep -oE '/Volumes/[^	]+' | tail -1)
+          # Don't use -quiet: on some macOS versions it suppresses the
+          # mount-table output we need to parse. Tee to a log so we can
+          # both grep it and surface the raw output if parsing fails.
+          hdiutil attach /tmp/coffee.dmg -nobrowse -noautoopen 2>&1 | tee /tmp/attach.log
+          MOUNT=$(grep -oE '/Volumes/[^	]+' /tmp/attach.log | tail -1)
+          if [ -z "$MOUNT" ] || [ ! -d "$MOUNT" ]; then
+            echo "::warning::Could not parse mount point from hdiutil output, scanning /Volumes/"
+            # Fallback: pick the most recently mounted volume that looks like ours
+            MOUNT=$(ls -dt /Volumes/*Coffee* /Volumes/*coffee* 2>/dev/null | head -1)
+          fi
           echo "Mounted at: $MOUNT"
+          if [ -z "$MOUNT" ] || [ ! -d "$MOUNT" ]; then
+            echo "::error::Failed to determine DMG mount point"
+            ls -la /Volumes/ || true
+            exit 1
+          fi
           ls -la "$MOUNT"
           APP=$(find "$MOUNT" -maxdepth 1 -name "*.app" | head -1)
           echo "Found app: $APP"
           cp -R "$APP" /Applications/
-          hdiutil detach "$MOUNT" -quiet
+          hdiutil detach "$MOUNT" || hdiutil detach "$MOUNT" -force || true
           ls -la "/Applications/" | grep -i coffee || true
 
       - name: Inspect app bundle
