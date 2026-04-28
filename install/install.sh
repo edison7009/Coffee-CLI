@@ -25,12 +25,17 @@ DOWNLOAD_BASE="https://coffeecli.com/download"
 # single-user case.
 GITHUB_API="https://api.github.com/repos/edison7009/Coffee-CLI/releases/latest"
 
-CYAN='\033[0;36m'
-GREEN='\033[0;32m'
-GRAY='\033[0;90m'
-YELLOW='\033[0;33m'
-RED='\033[0;31m'
-RESET='\033[0m'
+# Resolve escape sequences via printf at assignment time so the
+# variables hold real ESC bytes. Plain '\033[...m' string literals
+# only render when the shell's `echo` interprets backslash escapes
+# (sh/dash do, bash does not unless -e). Users piping the script
+# through `| bash` would otherwise see literal "\033[0;36m" output.
+CYAN=$(printf '\033[0;36m')
+GREEN=$(printf '\033[0;32m')
+GRAY=$(printf '\033[0;90m')
+YELLOW=$(printf '\033[0;33m')
+RED=$(printf '\033[0;31m')
+RESET=$(printf '\033[0m')
 
 echo ""
 echo "  ${CYAN}Coffee CLI Installer${RESET}"
