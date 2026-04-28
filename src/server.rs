@@ -2300,6 +2300,44 @@ pub fn start_ui() -> anyhow::Result<()> {
             // its CLI. Users who never open a multi-agent tab pay
             // zero MCP cost.
 
+            // ── Bulletproof window-reveal fallback ──────────────────
+            // The window is created with `visible: false` so the user
+            // never sees the platform's chrome flash — main.tsx
+            // invokes `show_main_window` after the first paint via
+            // double-RAF and the window appears already-themed.
+            //
+            // BUT: if the WebView never paints (Gatekeeper rejection
+            // on adhoc-signed macOS bundles, WebKit2GTK Wayland blank
+            // window on Ubuntu 24.04, or any JS error before
+            // ReactDOM mount), the `invoke` never fires, the window
+            // stays hidden forever, and users see "process is running,
+            // hook-server is listening, but there is no window".
+            // Multiple users have hit this across both platforms.
+            //
+            // Force a reveal after 3s as a safety net. Healthy
+            // startups call show_main_window in ~50ms, well before
+            // this fires, so the no-flash UX is preserved. Broken
+            // startups at least get a (possibly blank) window the
+            // user can interact with — they can quit it, file a bug
+            // with devtools, or report what they see, instead of
+            // staring at nothing.
+            {
+                use tauri::Manager;
+                let handle = app.handle().clone();
+                std::thread::spawn(move || {
+                    std::thread::sleep(std::time::Duration::from_secs(3));
+                    if let Some(window) = handle.get_webview_window("main") {
+                        if !window.is_visible().unwrap_or(false) {
+                            eprintln!(
+                                "[main-window] frontend never called show_main_window after 3s — forcing reveal (likely WebView render failure)"
+                            );
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                    }
+                });
+            }
+
             // Force square corners + no shadow on the borderless window.
             // Windows 11's DWM rounds borderless windows by default and adds
             // a subtle drop-shadow; both create the visible "edge ring" we
