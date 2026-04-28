@@ -107,6 +107,8 @@ export function ActiveGambit() {
       onDraftChange={handleDraftChange}
       onClose={handleClose}
       onSend={handleSend}
+      leftPanelHidden={state.leftPanelHidden}
+      rightPanelHidden={state.rightPanelHidden}
     />
   );
 }

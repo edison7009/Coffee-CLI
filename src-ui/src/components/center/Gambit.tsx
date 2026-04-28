@@ -33,6 +33,11 @@ interface GambitProps {
    *  signal to decide whether to clear the draft — failed sends preserve
    *  the text so the user never loses what they typed. */
   onSend: (text: string) => boolean;
+  /** Whether the left/right side panels are currently hidden. When Gambit
+   *  is docked at the bottom it spans the center panel only, so we need
+   *  to know which sides are absent to compute the inset offsets. */
+  leftPanelHidden: boolean;
+  rightPanelHidden: boolean;
 }
 
 // Matches any absolute image path inside the compose draft — both our
@@ -60,6 +65,15 @@ const BALL_SIZE = 48;
 const DOT_CENTER_FROM_RIGHT = 20;
 const DOT_CENTER_FROM_TOP = 14;
 
+// Docked-mode height: Gambit lives flush at the bottom of the center panel
+// instead of floating. Height is user-resizable via the top edge and persists
+// across sessions, mirroring how VS Code's bottom panel works.
+const DOCK_DEFAULT_HEIGHT = 200;
+const DOCK_MIN_HEIGHT = 120;
+const DOCK_MAX_HEIGHT_RATIO = 0.7; // never let the dock eat more than 70% of viewport height
+const LS_DOCKED = 'cc-gambit-docked';
+const LS_DOCK_H = 'cc-gambit-dock-h';
+
 function GambitImpl({
   draft,
   initialX,
@@ -67,6 +81,8 @@ function GambitImpl({
   onDraftChange,
   onClose,
   onSend,
+  leftPanelHidden,
+  rightPanelHidden,
 }: GambitProps) {
   const t = useT();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -78,6 +94,21 @@ function GambitImpl({
   // reminiscent of Messenger chat heads. True close lives only in the
   // Explorer toggle button (open origin = close origin).
   const [collapsed, setCollapsed] = useState(false);
+  // Docked: pinned flush at the bottom of the center panel, shrinking the
+  // terminal area upward. Persists across sessions; default false to keep
+  // the floating-card experience for new users.
+  const [docked, setDocked] = useState<boolean>(() => {
+    try { return localStorage.getItem(LS_DOCKED) === '1'; } catch { return false; }
+  });
+  const [dockedH, setDockedH] = useState<number>(() => {
+    try {
+      const raw = localStorage.getItem(LS_DOCK_H);
+      const n = raw ? parseInt(raw, 10) : NaN;
+      if (Number.isFinite(n) && n >= DOCK_MIN_HEIGHT) return n;
+    } catch {}
+    return DOCK_DEFAULT_HEIGHT;
+  });
+  const dockResizeRef = useRef<{ startY: number; origH: number; lastH?: number } | null>(null);
   // lastX/Y/W/H cache the latest values written to the DOM during drag/resize,
   // so onUp can commit them back to React state once without any intermediate
   // renders thrashing the effect that registers these very listeners.
@@ -90,6 +121,76 @@ function GambitImpl({
   useEffect(() => {
     textareaRef.current?.focus();
   }, []);
+
+  // ─── Docked mode side effects ────────────────────────────────
+  // When docked (and not collapsed to ball), set a body class + CSS var
+  // so .panel-center can reserve padding-bottom equal to the dock height.
+  // The xterm container's ResizeObserver picks up the shrink and refits.
+  // Cleared on unmount / undock so floating mode behaves identically to
+  // the pre-dock build.
+  useEffect(() => {
+    const active = docked && !collapsed;
+    const root = document.documentElement;
+    const body = document.body;
+    if (active) {
+      body.classList.add('gambit-docked');
+      root.style.setProperty('--gambit-dock-h', `${dockedH}px`);
+    } else {
+      body.classList.remove('gambit-docked');
+      root.style.removeProperty('--gambit-dock-h');
+    }
+    return () => {
+      body.classList.remove('gambit-docked');
+      root.style.removeProperty('--gambit-dock-h');
+    };
+  }, [docked, collapsed, dockedH]);
+
+  // Persist dock preferences. Cheap to write — runs only on toggle / settle.
+  useEffect(() => {
+    try { localStorage.setItem(LS_DOCKED, docked ? '1' : '0'); } catch {}
+  }, [docked]);
+  useEffect(() => {
+    try { localStorage.setItem(LS_DOCK_H, String(dockedH)); } catch {}
+  }, [dockedH]);
+
+  // Top-edge vertical drag to resize dock height. Mirrors the floating
+  // mode's bottom-right corner handle but constrained to the Y axis.
+  const onDockResizeStart = (e: React.MouseEvent) => {
+    dockResizeRef.current = {
+      startY: e.clientY,
+      origH: dockedH,
+    };
+    e.preventDefault();
+    e.stopPropagation();
+  };
+  useEffect(() => {
+    if (!docked) return;
+    const onMove = (e: MouseEvent) => {
+      if (!dockResizeRef.current) return;
+      const r = dockResizeRef.current;
+      // Drag UP increases height (dock grows upward), drag DOWN shrinks.
+      const dy = r.startY - e.clientY;
+      const maxH = Math.floor(window.innerHeight * DOCK_MAX_HEIGHT_RATIO);
+      const next = Math.max(DOCK_MIN_HEIGHT, Math.min(r.origH + dy, maxH));
+      r.lastH = next;
+      const el = rootRef.current;
+      if (el) el.style.height = `${next}px`;
+      // Update CSS var live so xterm refits during drag, not just on release.
+      document.documentElement.style.setProperty('--gambit-dock-h', `${next}px`);
+    };
+    const onUp = () => {
+      if (dockResizeRef.current?.lastH !== undefined) {
+        setDockedH(dockResizeRef.current.lastH);
+      }
+      dockResizeRef.current = null;
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, [docked]);
 
   // Thumbnails are a pure derived view of the draft text — no separate
   // attachment state. User edits/deletes the path string → thumbnails
@@ -140,6 +241,8 @@ function GambitImpl({
   }, [previewPath]);
 
   const onDragStart = (e: React.MouseEvent) => {
+    // Docked mode is positionally fixed — header drag is a no-op.
+    if (docked) return;
     dragRef.current = {
       startX: e.clientX,
       startY: e.clientY,
@@ -461,7 +564,10 @@ function GambitImpl({
   // and future use but doesn't expose it in the UI.
   void onClose;
 
-  if (collapsed) {
+  // Docked mode overrides collapsed (the ball is a floating-positional
+  // concept and contradicts dock semantics). If both were somehow set
+  // simultaneously, dock wins.
+  if (collapsed && !docked) {
     return (
       <div
         ref={rootRef}
@@ -492,34 +598,74 @@ function GambitImpl({
     );
   }
 
-  return (
-    <div
-      ref={rootRef}
-      className="gambit"
-      style={{
-        /* translate3d + will-change (in CSS) keeps drag on the GPU compositor —
-           avoids layout thrash that left/top would cause on every mousemove. */
+  // Docked mode = floating card anchored near the bottom of the center
+  // panel with 8px breathing room on left/right/bottom — sits between but
+  // never under the Explorer / right pane. Native chrome (rounded corners,
+  // soft glow, backdrop-filter) is preserved so toggling between floating
+  // and docked feels like the same component, just anchored.
+  const dockStyle: React.CSSProperties = docked
+    ? {
+        transform: 'none',
+        left: leftPanelHidden ? 8 : 'calc(var(--w-left) + 8px)',
+        right: rightPanelHidden ? 8 : 'calc(var(--w-right) + 8px)',
+        bottom: 8,
+        top: 'auto',
+        width: 'auto',
+        height: dockedH,
+      }
+    : {
         transform: `translate3d(${pos.x}px, ${pos.y}px, 0)`,
         width: size.w,
         height: size.h,
-      }}
+      };
+
+  return (
+    <div
+      ref={rootRef}
+      className={`gambit${docked ? ' gambit--docked' : ''}`}
+      style={dockStyle}
       onMouseDown={(e) => e.stopPropagation() /* don't let global focus enforcer steal focus back to xterm */}
       // Block native WebView context menu across the whole Gambit panel.
       // The textarea's onContextMenu opens our custom cut/copy/paste menu;
       // other areas (header, resize handle, sides) just get no menu.
       onContextMenu={(e) => e.preventDefault()}
     >
+      {/* Top-edge handle for vertical resize in docked mode. Hidden in
+          floating mode (the bottom-right corner handle covers that case). */}
+      {docked && <div className="gambit-dock-resize" onMouseDown={onDockResizeStart} />}
       <div className="gambit-header" onMouseDown={onDragStart}>
-        <span className="gambit-title">{t('gambit.title')}</span>
+        {/* Dock toggle (left). Icon: rectangle with a thick bottom edge —
+            mirrors the VS Code "toggle bottom panel" affordance so users
+            recognize the metaphor immediately. Click toggles docked state;
+            switching INTO docked also un-collapses if currently collapsed. */}
         <button
-          className="gambit-collapse"
-          onClick={collapseAtDot}
-          onMouseDown={(e) => e.stopPropagation() /* don't start drag when collapsing */}
+          className={`gambit-dock-toggle${docked ? ' gambit-dock-toggle--active' : ''}`}
+          onClick={() => {
+            if (!docked && collapsed) setCollapsed(false);
+            setDocked(d => !d);
+          }}
+          onMouseDown={(e) => e.stopPropagation() /* don't start drag when toggling dock */}
+          aria-pressed={docked}
         >
-          <svg width="20" height="20" viewBox="0 0 20 20">
-            <circle cx="10" cy="10" r="7" fill="currentColor" />
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">
+            <rect x="2" y="3" width="12" height="10" rx="1.2" />
+            <rect x="2" y="10" width="12" height="3" rx="0.6" fill="currentColor" stroke="none" />
           </svg>
         </button>
+        <span className="gambit-title">{t('gambit.title')}</span>
+        {/* Collapse-to-ball is meaningless when docked (the ball is a
+            floating positional concept). Hide in dock mode. */}
+        {!docked && (
+          <button
+            className="gambit-collapse"
+            onClick={collapseAtDot}
+            onMouseDown={(e) => e.stopPropagation() /* don't start drag when collapsing */}
+          >
+            <svg width="20" height="20" viewBox="0 0 20 20">
+              <circle cx="10" cy="10" r="7" fill="currentColor" />
+            </svg>
+          </button>
+        )}
       </div>
 
       <textarea
@@ -581,7 +727,7 @@ function GambitImpl({
         </button>
       </div>
 
-      <div className="gambit-resize-handle" onMouseDown={onResizeStart} />
+      {!docked && <div className="gambit-resize-handle" onMouseDown={onResizeStart} />}
 
       {/* Full-size preview overlay. Renders into document.body to escape
           .gambit's transform containing block (otherwise position:fixed

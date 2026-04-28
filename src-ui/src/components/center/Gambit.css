@@ -173,6 +173,141 @@
    enough at 80% on the closest layer that the special-case override
    stopped pulling its weight visually. */
 
+/* ─── Docked mode (anchored near bottom of center panel) ──────
+   Mirrors the VS Code "bottom panel" UX in spirit but keeps Gambit's
+   floating-card identity: native rounded corners, soft glow ring, and
+   backdrop-filter all stay in dock mode. The card sits with 8px of
+   breathing room on left/right/bottom (set inline in Gambit.tsx) so
+   its shadow has room to fall off and read as the same component the
+   user dragged a moment ago — just anchored.
+
+   The only behavioral changes vs. floating are: header drag is a
+   no-op, the bottom-right corner resize handle hides, and a top-edge
+   strip lets the user resize height. Visual chrome — including which
+   shape (soft/slab/blade/sharp/panel) is active — passes through. */
+.gambit.gambit--docked {
+    animation: none;     /* fade-in is jarring when toggling dock mid-session */
+    will-change: auto;   /* not GPU-translated when docked */
+}
+
+.gambit.gambit--docked .gambit-header {
+    /* In dock mode the title strip would consume ~40px of precious vertical
+       real estate just to host one icon button. Float the header at the
+       top-right corner instead so the textarea climbs to the very top of
+       the dock surface. The title text is hidden (the dock IS Gambit — a
+       label is redundant when the form is permanent).
+
+       top: 6px (NOT 0) is deliberate: the dock-resize flex row occupies
+       the top 6px of the dock surface. If the header overlapped it,
+       hovering in their shared right-corner area would show the header's
+       (default) cursor instead of dock-resize's ns-resize one — producing
+       the "cursor sometimes changes, sometimes doesn't" UX bug. Pushing
+       the header down past the resize zone makes the strip uninterrupted.
+       Must stay in sync with .gambit-dock-resize { height } above. */
+    position: absolute;
+    top: 6px;
+    right: 0;
+    /* Compensate for icon's intrinsic whitespace (4px horizontal: 2px svg
+       glyph margin + 2px button-vs-svg centering) so the visible icon
+       right edge ≈ 14px from card edge — matching the textarea's
+       padding-left of 14. Vertical padding 3 keeps the icon's visible
+       top within the 14px side budget too: 6 (dock-resize) + 3 + 2
+       (button center) + 3 (icon margin) = 14 from card top. */
+    padding: 3px 10px;
+    background: transparent;
+    cursor: default;
+    z-index: 3;  /* above textarea + thumb strip */
+}
+
+.gambit.gambit--docked .gambit-title {
+    display: none;
+}
+
+.gambit.gambit--docked .gambit-textarea {
+    /* In dock mode the dock-resize flex row already eats 6px of top
+       space; if we let the base padding-top: 10 inherit, the visible
+       text top would land at 6+10+~4(font leading) = 20px — far larger
+       than the 14px side padding. Override to 4 so the total stays
+       SHORTER than the side breathing (~13.5 < 14), matching typical
+       chat/input UX. Right side gets 40 so typed text never runs under
+       the floating dock-toggle button at the top-right corner. */
+    padding-top: 4px;
+    padding-right: 40px;
+}
+
+/* Top-edge resize handle — implemented as a real flex row, NOT an
+   absolute overlay. An earlier version positioned this over the textarea
+   with z-index:2; that worked for clicks but in WebView2 the focused
+   textarea's I-beam cursor "bled through" the overlay so the ns-resize
+   cursor never appeared on hover. Making it a flex item gives it its
+   own physical row at the top of the dock — the textarea genuinely
+   starts below, no spatial overlap, cursor switches reliably.
+
+   Hit area (10px) is decoupled from the visible affordance (a 2px
+   hairline at the very top edge that only lights up on hover/active),
+   matching native window-pane splitter UX. */
+.gambit-dock-resize {
+    flex-shrink: 0;
+    /* 6px hit zone — kept compact so the dock's top breathing stays
+       SHORTER than the 14px side breathing (typical chat-input rhythm).
+       The cursor !important rule below + visible affordance via the
+       ::after hairline still let users find the grab area without it
+       eating noticeable vertical real estate. */
+    height: 6px;
+    /* !important is required: global.css line ~87 sets a universal
+       `* { cursor: default !important }` reset (so the app feels like
+       a desktop tool, not a browser page). The textarea overrides it
+       with its own !important rule; we follow the same pattern here. */
+    cursor: ns-resize !important;
+    position: relative;  /* pseudo positioning context */
+    background: transparent;
+}
+.gambit-dock-resize::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: transparent;
+    transition: background-color 0.12s;
+}
+.gambit-dock-resize:hover::after,
+.gambit-dock-resize:active::after {
+    background: var(--accent, #C4956A);
+}
+
+/* Dock toggle button (left side of header, mirrors gambit-collapse).
+   Icon is a rectangle with a thick bottom edge — same visual idiom as
+   VS Code's "toggle bottom panel" so the metaphor is instantly obvious. */
+.gambit-dock-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    color: var(--text-2, #9e9c98);
+    cursor: pointer;
+    transition: color 0.12s;
+}
+/* Match gambit-collapse's invisible hitbox expansion so a small icon
+   still has a comfortable click target. */
+.gambit-dock-toggle::before {
+    content: '';
+    position: absolute;
+    inset: -8px;
+}
+.gambit-dock-toggle:hover {
+    color: var(--accent, #C4956A);
+}
+.gambit-dock-toggle--active {
+    color: var(--accent, #C4956A);
+}
+
 /* ─── Header (drag handle) ─────────────────────────────────── */
 /* Paper-style: no background tint, no divider — the title floats on the
    card. Drag cursor is the only hint that this strip is grabbable.

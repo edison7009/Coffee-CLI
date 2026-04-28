@@ -880,6 +880,43 @@ body {
     -webkit-backdrop-filter: none;
 }
 
+/* Gambit docked mode: reserve space at the bottom of the center panel
+   so the docked compose strip never overlays the terminal. The flex:1
+   xterm container shrinks, ResizeObserver fires, fitAddon refits — no
+   imperative resize plumbing required. The CSS var is set live by
+   Gambit.tsx (initial value + during top-edge drag-resize). */
+/* Reserve room at the bottom for the docked Gambit card PLUS its 8px
+   top/bottom breathing gap (16px total). We apply this to .tier-terminal
+   AND .launchpad-container — NOT to .panel-center — so that each
+   container's own `position: absolute; inset: 0` background layer
+   (.tier-terminal-bg / .launchpad-bg) naturally extends through the
+   padding region. Result: the gap above the dock shows the terminal's
+   wallpaper / background, integrated visually with the terminal area
+   instead of exposing the raw panel chrome surface beneath. The flex:1
+   xterm / launchpad content inside still shrinks (padding reduces the
+   content box), ResizeObserver fires, fitAddon refits. */
+body.gambit-docked .tier-terminal,
+body.gambit-docked .launchpad-container,
+body.gambit-docked .multi-agent-grid-standalone {
+    padding-bottom: calc(var(--gambit-dock-h, 200px) + 16px);
+}
+
+/* Absolute-positioned overlays inside the launchpad (mode-switch grid icon
+   at bottom-right, library counter, library tabs) anchor with `bottom: N`
+   relative to .launchpad-container's padding box — which extends UNDER the
+   docked Gambit. Without compensation, they end up hidden behind the dock.
+   Expose a single offset variable so each overlay can opt in via
+   `bottom: calc(<original-bottom> + var(--dock-bottom-offset, 0px))`. */
+body.gambit-docked {
+    --dock-bottom-offset: calc(var(--gambit-dock-h, 200px) + 16px);
+}
+body.gambit-docked .library-counter {
+    bottom: calc(72px + var(--dock-bottom-offset, 0px));
+}
+body.gambit-docked .library-tabs {
+    bottom: calc(24px + var(--dock-bottom-offset, 0px));
+}
+
 
 .panel-tabs {
     display: flex;

@@ -1552,7 +1552,7 @@ export function CenterPanel() {
             </div>
 
             {/* Global Mode switch button */}
-            <div style={{ position: 'absolute', bottom: 18, right: 18 }}>
+            <div style={{ position: 'absolute', bottom: 'calc(18px + var(--dock-bottom-offset, 0px))', right: 18 }}>
               <button
                 className={`mode-switch-btn ${disableDrawer ? 'instant-click' : ''}`}
                 onClick={() => {
