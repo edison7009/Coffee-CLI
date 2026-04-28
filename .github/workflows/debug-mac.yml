@@ -1,0 +1,175 @@
+name: Debug macOS
+
+# Manual-only diagnostic job for Apple Silicon issues we can't reproduce
+# on the maintainer's Windows machine. Spins up a GitHub-hosted M1 runner,
+# downloads the latest release DMG, attempts to launch Coffee CLI, then
+# either prints captured logs OR drops you into an SSH session via tmate
+# so you can poke around interactively.
+#
+# Trigger from GitHub UI: Actions → "Debug macOS" → Run workflow.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release tag to test (e.g. v1.6.4). Leave empty for latest.'
+        required: false
+        default: ''
+      tmate:
+        description: 'Open interactive SSH session (tmate) after launch attempt'
+        type: boolean
+        required: false
+        default: true
+      tmate_timeout_min:
+        description: 'How many minutes to keep tmate session open'
+        required: false
+        default: '30'
+
+jobs:
+  debug:
+    runs-on: macos-14  # Apple Silicon (M1)
+    timeout-minutes: 60
+
+    steps:
+      - name: Show runner info
+        run: |
+          echo "=== Hardware ==="
+          sysctl -n machdep.cpu.brand_string
+          uname -a
+          sw_vers
+          echo "=== Disk ==="
+          df -h /
+
+      - name: Resolve release tag
+        id: tag
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            TAG="${{ inputs.version }}"
+          else
+            TAG=$(curl -fsSL -H "User-Agent: CoffeeCLI-Debug" \
+              https://api.github.com/repos/${{ github.repository }}/releases/latest \
+              | grep -oE '"tag_name"[[:space:]]*:[[:space:]]*"[^"]*"' \
+              | head -1 | sed -E 's/.*"([^"]*)"$/\1/')
+          fi
+          echo "Using tag: $TAG"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Download DMG
+        id: dl
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}"
+          # Find the aarch64 DMG asset URL via the API
+          API_URL="https://api.github.com/repos/${{ github.repository }}/releases/tags/$TAG"
+          DMG_URL=$(curl -fsSL -H "User-Agent: CoffeeCLI-Debug" "$API_URL" \
+            | grep -oE '"browser_download_url"[[:space:]]*:[[:space:]]*"[^"]*aarch64[^"]*\.dmg"' \
+            | head -1 | sed -E 's/.*"(https[^"]*)"$/\1/')
+          if [ -z "$DMG_URL" ]; then
+            echo "::error::No aarch64 DMG found in release $TAG"
+            curl -fsSL -H "User-Agent: CoffeeCLI-Debug" "$API_URL" | head -100
+            exit 1
+          fi
+          echo "Downloading: $DMG_URL"
+          curl -fsSL "$DMG_URL" -o /tmp/coffee.dmg
+          ls -lh /tmp/coffee.dmg
+          echo "dmg=/tmp/coffee.dmg" >> "$GITHUB_OUTPUT"
+
+      - name: Mount DMG and install to /Applications
+        run: |
+          MOUNT=$(hdiutil attach /tmp/coffee.dmg -nobrowse -quiet | grep -oE '/Volumes/[^	]+' | tail -1)
+          echo "Mounted at: $MOUNT"
+          ls -la "$MOUNT"
+          APP=$(find "$MOUNT" -maxdepth 1 -name "*.app" | head -1)
+          echo "Found app: $APP"
+          cp -R "$APP" /Applications/
+          hdiutil detach "$MOUNT" -quiet
+          ls -la "/Applications/" | grep -i coffee || true
+
+      - name: Inspect app bundle
+        run: |
+          APP_PATH="/Applications/Coffee CLI.app"
+          echo "=== Info.plist ==="
+          defaults read "$APP_PATH/Contents/Info" || true
+          echo ""
+          echo "=== Code signature ==="
+          codesign -dv --verbose=4 "$APP_PATH" 2>&1 || true
+          echo ""
+          echo "=== Gatekeeper assessment ==="
+          spctl --assess --verbose "$APP_PATH" 2>&1 || true
+          echo ""
+          echo "=== Quarantine attribute ==="
+          xattr -l "$APP_PATH" 2>&1 || true
+
+      - name: Strip quarantine and try to launch (headless)
+        # GitHub runners have no GUI session, so the app likely won't open
+        # a visible window — but we'll capture stderr/stdout from the
+        # binary directly to see if it crashes on startup, hits a Rust
+        # panic, or fails an asset load.
+        run: |
+          APP_PATH="/Applications/Coffee CLI.app"
+          BIN=$(find "$APP_PATH/Contents/MacOS" -type f -perm +111 | head -1)
+          echo "Binary: $BIN"
+          xattr -dr com.apple.quarantine "$APP_PATH" || true
+
+          # Run the binary directly with a 15s timeout. Capture all output.
+          # If it panics or asserts, we'll see it here.
+          mkdir -p /tmp/logs
+          (
+            "$BIN" > /tmp/logs/stdout.log 2> /tmp/logs/stderr.log &
+            PID=$!
+            echo "Launched PID=$PID"
+            sleep 15
+            if kill -0 $PID 2>/dev/null; then
+              echo "Still running after 15s — sending SIGTERM"
+              kill -TERM $PID || true
+              sleep 2
+              kill -KILL $PID 2>/dev/null || true
+              echo "STAYED_ALIVE=true" >> "$GITHUB_ENV"
+            else
+              echo "Process exited within 15s"
+              echo "STAYED_ALIVE=false" >> "$GITHUB_ENV"
+            fi
+          ) || true
+
+          echo ""
+          echo "=== stdout ==="
+          cat /tmp/logs/stdout.log || true
+          echo ""
+          echo "=== stderr ==="
+          cat /tmp/logs/stderr.log || true
+
+      - name: Collect crash reports
+        if: always()
+        run: |
+          echo "=== ~/Library/Logs/DiagnosticReports ==="
+          ls -la ~/Library/Logs/DiagnosticReports/ 2>/dev/null || echo "(none)"
+          for f in ~/Library/Logs/DiagnosticReports/*Coffee*.ips ~/Library/Logs/DiagnosticReports/*Coffee*.crash; do
+            [ -f "$f" ] || continue
+            echo ""
+            echo "=== $f ==="
+            cat "$f"
+          done
+
+          echo ""
+          echo "=== syslog (last 100 lines mentioning Coffee) ==="
+          log show --last 5m --predicate 'process == "Coffee CLI"' 2>/dev/null | tail -100 || true
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-mac-logs
+          path: |
+            /tmp/logs/
+            ~/Library/Logs/DiagnosticReports/*Coffee*
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Interactive SSH session (tmate)
+        # Drops you into a shell on the runner. The action prints SSH and
+        # web-shell URLs in the log — copy and connect within
+        # tmate_timeout_min minutes. Job ends when you `touch /tmp/keepalive`
+        # then `exit`, or when the timeout fires.
+        if: ${{ inputs.tmate }}
+        uses: mxschmitt/action-tmate@v3
+        with:
+          limit-access-to-actor: true
+          timeout-minutes: ${{ fromJSON(inputs.tmate_timeout_min) }}
