@@ -45,7 +45,7 @@ jobs:
           if [ -n "${{ inputs.version }}" ]; then
             TAG="${{ inputs.version }}"
           else
-            TAG=$(curl -fsSL -H "User-Agent: CoffeeCLI-Debug" \
+            TAG=$(curl -fsSL -H "User-Agent: CoffeeCLI-Debug" -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
               https://api.github.com/repos/${{ github.repository }}/releases/latest \
               | grep -oE '"tag_name"[[:space:]]*:[[:space:]]*"[^"]*"' \
               | head -1 | sed -E 's/.*"([^"]*)"$/\1/')
@@ -59,12 +59,12 @@ jobs:
           TAG="${{ steps.tag.outputs.tag }}"
           # Find the aarch64 DMG asset URL via the API
           API_URL="https://api.github.com/repos/${{ github.repository }}/releases/tags/$TAG"
-          DMG_URL=$(curl -fsSL -H "User-Agent: CoffeeCLI-Debug" "$API_URL" \
+          DMG_URL=$(curl -fsSL -H "User-Agent: CoffeeCLI-Debug" -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "$API_URL" \
             | grep -oE '"browser_download_url"[[:space:]]*:[[:space:]]*"[^"]*aarch64[^"]*\.dmg"' \
             | head -1 | sed -E 's/.*"(https[^"]*)"$/\1/')
           if [ -z "$DMG_URL" ]; then
             echo "::error::No aarch64 DMG found in release $TAG"
-            curl -fsSL -H "User-Agent: CoffeeCLI-Debug" "$API_URL" | head -100
+            curl -fsSL -H "User-Agent: CoffeeCLI-Debug" -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "$API_URL" | head -100
             exit 1
           fi
           echo "Downloading: $DMG_URL"
