@@ -10,12 +10,18 @@
 
 const REPO = "edison7009/Coffee-CLI"
 
+// Tauri's bundler emits arm64 Linux assets with two different arch
+// strings: .deb follows Debian conventions ("arm64"), AppImage follows
+// upstream AppImage conventions ("aarch64"). Don't try to unify them
+// here — match on the filename suffixes Tauri actually produces.
 const PLATFORM_PATTERNS = {
-  "windows":        (name) => name.endsWith("x64-setup.exe"),
-  "macos-arm":      (name) => name.includes("aarch64") && name.endsWith(".dmg"),
-  "macos-intel":    (name) => name.includes("x64") && name.endsWith(".dmg"),
-  "linux-deb":      (name) => name.endsWith("amd64.deb"),
-  "linux-appimage": (name) => name.endsWith("amd64.AppImage"),
+  "windows":              (name) => name.endsWith("x64-setup.exe"),
+  "macos-arm":            (name) => name.includes("aarch64") && name.endsWith(".dmg"),
+  "macos-intel":          (name) => name.includes("x64") && name.endsWith(".dmg"),
+  "linux-deb":            (name) => name.endsWith("amd64.deb"),
+  "linux-appimage":       (name) => name.endsWith("amd64.AppImage"),
+  "linux-arm64-deb":      (name) => name.endsWith("arm64.deb"),
+  "linux-arm64-appimage": (name) => name.endsWith("aarch64.AppImage"),
 }
 
 async function getLatestAssets(env) {

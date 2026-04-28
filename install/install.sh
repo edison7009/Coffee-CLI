@@ -54,23 +54,37 @@ if [ "$OS" = "Darwin" ]; then
   # macOS only publishes a native arm64 build; Intel Macs run it via Rosetta.
   PLATFORM="macos-arm"
 elif [ "$OS" = "Linux" ]; then
-  # We only ship amd64 Linux artifacts (.deb and .AppImage). Without this
-  # guard, an arm64/aarch64 box would happily request the amd64 asset,
-  # GitHub Releases returns 404, and curl's --retry-all-errors burns five
-  # attempts before giving up — confusing UX. Fail fast with a clear msg.
+  # We ship amd64 and arm64 Linux artifacts. Pick the slug based on
+  # `uname -m`. Anything outside the two known arch families (armv7,
+  # riscv64, ppc64le …) fails fast — without this guard those would
+  # request an amd64 asset, get 404, and curl's --retry-all-errors
+  # would burn five retry attempts on a request that can never succeed.
   case "$ARCH" in
-    x86_64|amd64) ;;
+    x86_64|amd64)
+      LINUX_ARCH="amd64"
+      ;;
+    aarch64|arm64)
+      LINUX_ARCH="arm64"
+      ;;
     *)
       echo "  ${RED}Unsupported Linux architecture: $ARCH${RESET}"
-      echo "  ${YELLOW}Coffee CLI currently ships amd64 Linux builds only.${RESET}"
-      echo "  ${YELLOW}Track arm64 support: https://github.com/edison7009/Coffee-CLI/issues${RESET}"
+      echo "  ${YELLOW}Coffee CLI currently ships amd64 and arm64 Linux builds only.${RESET}"
+      echo "  ${YELLOW}Open an issue: https://github.com/edison7009/Coffee-CLI/issues${RESET}"
       exit 1
       ;;
   esac
   if command -v dpkg > /dev/null 2>&1; then
-    PLATFORM="linux-deb"
+    if [ "$LINUX_ARCH" = "arm64" ]; then
+      PLATFORM="linux-arm64-deb"
+    else
+      PLATFORM="linux-deb"
+    fi
   else
-    PLATFORM="linux-appimage"
+    if [ "$LINUX_ARCH" = "arm64" ]; then
+      PLATFORM="linux-arm64-appimage"
+    else
+      PLATFORM="linux-appimage"
+    fi
   fi
 else
   echo "  ${RED}Unsupported OS: $OS${RESET}"
@@ -80,10 +94,12 @@ fi
 # Pattern that picks our platform's asset out of the GitHub release.
 # Mirrors the matchers in Web-Home/_worker.js — keep the two in sync.
 case "$PLATFORM" in
-  macos-arm)      ASSET_GREP='aarch64[^"]*\.dmg' ;;
-  macos-intel)    ASSET_GREP='x64[^"]*\.dmg' ;;
-  linux-deb)      ASSET_GREP='amd64\.deb' ;;
-  linux-appimage) ASSET_GREP='amd64\.AppImage' ;;
+  macos-arm)            ASSET_GREP='aarch64[^"]*\.dmg' ;;
+  macos-intel)          ASSET_GREP='x64[^"]*\.dmg' ;;
+  linux-deb)            ASSET_GREP='amd64\.deb' ;;
+  linux-appimage)       ASSET_GREP='amd64\.AppImage' ;;
+  linux-arm64-deb)      ASSET_GREP='arm64\.deb' ;;
+  linux-arm64-appimage) ASSET_GREP='aarch64\.AppImage' ;;
 esac
 
 FALLBACK_DOWNLOAD_URL=""

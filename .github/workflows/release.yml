@@ -24,6 +24,9 @@ jobs:
           - platform: ubuntu-22.04
             args: ''
             label: Linux x64
+          - platform: ubuntu-22.04-arm
+            args: ''
+            label: Linux arm64
 
     runs-on: ${{ matrix.platform }}
 
@@ -32,7 +35,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install system dependencies (Linux)
-        if: matrix.platform == 'ubuntu-22.04'
+        if: startsWith(matrix.platform, 'ubuntu-')
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
@@ -90,8 +93,10 @@ jobs:
             | Windows x64 | `Coffee.CLI_*_x64-setup.exe` |
             | macOS Apple Silicon | `Coffee.CLI_*_aarch64.dmg` |
             | macOS Intel | `Coffee.CLI_*_x64.dmg` |
-            | Linux (Debian/Ubuntu) | `coffee-cli_*_amd64.deb` |
-            | Linux (AppImage) | `Coffee.CLI_*_amd64.AppImage` |
+            | Linux x64 (Debian/Ubuntu) | `coffee-cli_*_amd64.deb` |
+            | Linux x64 (AppImage) | `Coffee.CLI_*_amd64.AppImage` |
+            | Linux arm64 (Debian/Ubuntu) | `coffee-cli_*_arm64.deb` |
+            | Linux arm64 (AppImage) | `Coffee.CLI_*_aarch64.AppImage` |
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
