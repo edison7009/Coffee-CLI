@@ -54,6 +54,19 @@ if [ "$OS" = "Darwin" ]; then
   # macOS only publishes a native arm64 build; Intel Macs run it via Rosetta.
   PLATFORM="macos-arm"
 elif [ "$OS" = "Linux" ]; then
+  # We only ship amd64 Linux artifacts (.deb and .AppImage). Without this
+  # guard, an arm64/aarch64 box would happily request the amd64 asset,
+  # GitHub Releases returns 404, and curl's --retry-all-errors burns five
+  # attempts before giving up — confusing UX. Fail fast with a clear msg.
+  case "$ARCH" in
+    x86_64|amd64) ;;
+    *)
+      echo "  ${RED}Unsupported Linux architecture: $ARCH${RESET}"
+      echo "  ${YELLOW}Coffee CLI currently ships amd64 Linux builds only.${RESET}"
+      echo "  ${YELLOW}Track arm64 support: https://github.com/edison7009/Coffee-CLI/issues${RESET}"
+      exit 1
+      ;;
+  esac
   if command -v dpkg > /dev/null 2>&1; then
     PLATFORM="linux-deb"
   else
