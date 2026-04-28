@@ -71,6 +71,25 @@ jobs:
           echo "Found: $APP"
           echo "app=$APP" >> "$GITHUB_OUTPUT"
 
+      - name: Re-sign bundle without hardened runtime
+        # v1.6.5 set tauri.conf.json bundle.macOS.signingIdentity = "-"
+        # which caused tauri-bundler to codesign with --options runtime,
+        # i.e. enable hardened runtime. Hardened runtime + adhoc + no
+        # Apple notarization = Gatekeeper rejects, app launches but the
+        # GUI is silently killed (user reports "click icon, no reaction").
+        #
+        # Instead we let Tauri produce its default linker-signed binary
+        # (no resource sealing, no runtime flag), then ourselves run
+        # codesign --force --deep --sign - to seal resources WITHOUT
+        # passing --options runtime. End state: flags=0x2(adhoc),
+        # Sealed Resources present, Gatekeeper accepts (well, "rejected"
+        # by spctl for adhoc, but LaunchServices honors user trust).
+        run: |
+          APP="${{ steps.locate.outputs.app }}"
+          codesign --force --deep --sign - "$APP"
+          echo "=== post-resign codesign -dv ==="
+          codesign -dv --verbose=4 "$APP" 2>&1
+
       - name: Inspect signature (the actual test)
         id: check
         run: |
@@ -96,6 +115,15 @@ jobs:
             FAIL=1
           else
             echo "OK: Sealed Resources are present"
+          fi
+
+          # Hardened runtime should NOT be on — that was the v1.6.5 bug.
+          # Look for "runtime" in the flags description.
+          if grep -qE "flags=.*runtime" /tmp/sig.log; then
+            echo "::error::flags include 'runtime' — hardened runtime requires Apple notarization to pass Gatekeeper. Same bug as v1.6.5."
+            FAIL=1
+          else
+            echo "OK: no hardened runtime flag"
           fi
 
           # spctl shouldn't complain about missing resources.

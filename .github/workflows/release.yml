@@ -61,7 +61,9 @@ jobs:
         with:
           key: ${{ matrix.label }}
 
-      - name: Build & publish
+      # ── Windows / Linux: tauri-action handles build + DMG/installer + upload ──
+      - name: Build & publish (Windows / Linux)
+        if: matrix.platform != 'macos-latest'
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -93,3 +95,80 @@ jobs:
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
+
+      # ── macOS: split into build → re-sign → DMG → upload ──
+      # Why not tauri-action: it does build + DMG in one shot, leaving
+      # no hook to re-sign the .app between the two. tauri-bundler's
+      # default codesign for adhoc identities adds --options runtime
+      # (hardened runtime), which without Apple notarization causes
+      # Gatekeeper to silently reject the GUI launch — users see "click
+      # icon, nothing happens". Splitting lets us seal resources via
+      # codesign --deep WITHOUT runtime flag, which Gatekeeper accepts.
+      - name: Install Tauri CLI (macOS)
+        if: matrix.platform == 'macos-latest'
+        run: cargo install tauri-cli --version "^2.0" --locked
+
+      - name: Build .app only (macOS)
+        if: matrix.platform == 'macos-latest'
+        run: cargo tauri build --bundles app ${{ matrix.args }}
+
+      - name: Re-sign without hardened runtime (macOS)
+        if: matrix.platform == 'macos-latest'
+        run: |
+          APP=$(find target/aarch64-apple-darwin/release/bundle/macos -maxdepth 2 -name "*.app" | head -1)
+          if [ -z "$APP" ]; then
+            echo "::error::No .app found"
+            find target -name "*.app" 2>/dev/null
+            exit 1
+          fi
+          echo "Re-signing: $APP"
+          codesign --force --deep --sign - "$APP"
+          codesign -dv --verbose=4 "$APP" 2>&1
+          # Sanity assertion: no 'runtime' flag, sealed resources present.
+          if codesign -dv --verbose=4 "$APP" 2>&1 | grep -qE "flags=.*runtime"; then
+            echo "::error::runtime flag still present after re-sign"
+            exit 1
+          fi
+          if codesign -dv --verbose=4 "$APP" 2>&1 | grep -q "Sealed Resources=none"; then
+            echo "::error::Sealed Resources=none after re-sign"
+            exit 1
+          fi
+
+      - name: Build DMG from re-signed .app (macOS)
+        if: matrix.platform == 'macos-latest'
+        run: cargo tauri bundle --bundles dmg ${{ matrix.args }}
+
+      - name: Upload DMG to release (macOS)
+        if: matrix.platform == 'macos-latest'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          # If triggered by workflow_dispatch (no tag), use latest tag.
+          if [ "$TAG" = "$GITHUB_REF" ]; then
+            TAG=$(git describe --tags --abbrev=0)
+          fi
+          DMG=$(find target/aarch64-apple-darwin/release/bundle/dmg -maxdepth 1 -name "*.dmg" | head -1)
+          if [ -z "$DMG" ]; then
+            echo "::error::No .dmg produced"
+            find target -name "*.dmg" 2>/dev/null
+            exit 1
+          fi
+          echo "Uploading $DMG to release $TAG"
+          # Wait for the release to exist (Windows/Linux jobs in matrix
+          # may still be creating it). --clobber replaces if asset exists.
+          for i in 1 2 3 4 5 6; do
+            if gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+              break
+            fi
+            echo "Release $TAG not yet available, waiting 10s... (attempt $i/6)"
+            sleep 10
+          done
+          if ! gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            # Release still doesn't exist — create it ourselves so we don't
+            # block on a parallel matrix job that may have failed.
+            gh release create "$TAG" --repo "${{ github.repository }}" \
+              --title "Coffee CLI $TAG" \
+              --notes "macOS-only release placeholder — see other assets if Windows/Linux jobs succeed."
+          fi
+          gh release upload "$TAG" "$DMG" --repo "${{ github.repository }}" --clobber
