@@ -275,53 +275,53 @@ function typeLoop() {
 const INSTALL_DATA = {
   en: {
     windows: { hint: "Right-click Start > Terminal (Admin) > Paste:", command: "iwr -useb https://coffeecli.com/install.ps1 | iex" },
-    macos: { hint: "Open Terminal.app and paste the following:", command: "curl -fsSL https://coffeecli.com/install.sh | bash" },
-    linux: { hint: "For any modern Linux distribution, run:", command: "curl -fsSL https://coffeecli.com/install.sh | bash" }
+    macos: { hint: "Open Terminal.app and paste the following:", command: "curl -fsSL https://coffeecli.com/install.sh | sh" },
+    linux: { hint: "For any modern Linux distribution, run:", command: "curl -fsSL https://coffeecli.com/install.sh | sh" }
   },
   zh: {
     windows: { hint: "右键单击 开始菜单 > 选择“终端管理员” > 粘贴执行:", command: "iwr -useb https://coffeecli.com/install.ps1 | iex" },
-    macos: { hint: "利用 Spotlight 或 Launchpad 启动终端，粘贴并在其中执行:", command: "curl -fsSL https://coffeecli.com/install.sh | bash" },
-    linux: { hint: "打开您的日常终端引擎，执行此快速部署脚本:", command: "curl -fsSL https://coffeecli.com/install.sh | bash" }
+    macos: { hint: "利用 Spotlight 或 Launchpad 启动终端，粘贴并在其中执行:", command: "curl -fsSL https://coffeecli.com/install.sh | sh" },
+    linux: { hint: "打开您的日常终端引擎，执行此快速部署脚本:", command: "curl -fsSL https://coffeecli.com/install.sh | sh" }
   },
   "zh-TW": {
     windows: { hint: "右鍵單擊 開始菜單 > 選擇「終端機管理員」 > 貼上執行:", command: "iwr -useb https://coffeecli.com/install.ps1 | iex" },
-    macos: { hint: "利用 Spotlight 或 Launchpad 啟動終端機，貼上並執行:", command: "curl -fsSL https://coffeecli.com/install.sh | bash" },
-    linux: { hint: "打開您的日常終端引擎，執行此快速部署腳本:", command: "curl -fsSL https://coffeecli.com/install.sh | bash" }
+    macos: { hint: "利用 Spotlight 或 Launchpad 啟動終端機，貼上並執行:", command: "curl -fsSL https://coffeecli.com/install.sh | sh" },
+    linux: { hint: "打開您的日常終端引擎，執行此快速部署腳本:", command: "curl -fsSL https://coffeecli.com/install.sh | sh" }
   },
   ja: {
     windows: { hint: "スタートメニューを右クリック > Terminal(Admin) > 貼り付け:", command: "iwr -useb https://coffeecli.com/install.ps1 | iex" },
-    macos: { hint: "Terminal.appを開いて以下のコマンドを貼り付け:", command: "curl -fsSL https://coffeecli.com/install.sh | bash" },
-    linux: { hint: "ターミナルを開いて以下のコマンドを実行:", command: "curl -fsSL https://coffeecli.com/install.sh | bash" }
+    macos: { hint: "Terminal.appを開いて以下のコマンドを貼り付け:", command: "curl -fsSL https://coffeecli.com/install.sh | sh" },
+    linux: { hint: "ターミナルを開いて以下のコマンドを実行:", command: "curl -fsSL https://coffeecli.com/install.sh | sh" }
   },
   ko: {
     windows: { hint: "시작 메뉴 우 클릭 > 터미널(관리자) > 붙여넣기:", command: "iwr -useb https://coffeecli.com/install.ps1 | iex" },
-    macos: { hint: "Terminal.app을 열고 다음 명령어를 붙여넣기:", command: "curl -fsSL https://coffeecli.com/install.sh | bash" },
-    linux: { hint: "터미널을 열고 다음 명령어 실행:", command: "curl -fsSL https://coffeecli.com/install.sh | bash" }
+    macos: { hint: "Terminal.app을 열고 다음 명령어를 붙여넣기:", command: "curl -fsSL https://coffeecli.com/install.sh | sh" },
+    linux: { hint: "터미널을 열고 다음 명령어 실행:", command: "curl -fsSL https://coffeecli.com/install.sh | sh" }
   },
   es: {
     windows: { hint: "Clic derecho en Inicio > Terminal (Admin) > Pegar:", command: "iwr -useb https://coffeecli.com/install.ps1 | iex" },
-    macos: { hint: "Abre Terminal.app y pega el siguiente comando:", command: "curl -fsSL https://coffeecli.com/install.sh | bash" },
-    linux: { hint: "Para cualquier distribución moderna de Linux, ejecuta:", command: "curl -fsSL https://coffeecli.com/install.sh | bash" }
+    macos: { hint: "Abre Terminal.app y pega el siguiente comando:", command: "curl -fsSL https://coffeecli.com/install.sh | sh" },
+    linux: { hint: "Para cualquier distribución moderna de Linux, ejecuta:", command: "curl -fsSL https://coffeecli.com/install.sh | sh" }
   },
   fr: {
     windows: { hint: "Clic droit sur Démarrer > Terminal (Admin) > Coller:", command: "iwr -useb https://coffeecli.com/install.ps1 | iex" },
-    macos: { hint: "Ouvrez Terminal.app et collez la commande suivante:", command: "curl -fsSL https://coffeecli.com/install.sh | bash" },
-    linux: { hint: "Pour toute distribution Linux moderne, exécutez:", command: "curl -fsSL https://coffeecli.com/install.sh | bash" }
+    macos: { hint: "Ouvrez Terminal.app et collez la commande suivante:", command: "curl -fsSL https://coffeecli.com/install.sh | sh" },
+    linux: { hint: "Pour toute distribution Linux moderne, exécutez:", command: "curl -fsSL https://coffeecli.com/install.sh | sh" }
   },
   de: {
     windows: { hint: "Rechtsklick auf Start > Terminal (Admin) > Einfügen:", command: "iwr -useb https://coffeecli.com/install.ps1 | iex" },
-    macos: { hint: "Öffnen Sie Terminal.app und fügen Sie folgenden Befehl ein:", command: "curl -fsSL https://coffeecli.com/install.sh | bash" },
-    linux: { hint: "Für jede moderne Linux-Distribution ausführen:", command: "curl -fsSL https://coffeecli.com/install.sh | bash" }
+    macos: { hint: "Öffnen Sie Terminal.app und fügen Sie folgenden Befehl ein:", command: "curl -fsSL https://coffeecli.com/install.sh | sh" },
+    linux: { hint: "Für jede moderne Linux-Distribution ausführen:", command: "curl -fsSL https://coffeecli.com/install.sh | sh" }
   },
   pt: {
     windows: { hint: "Clique direito no Iniciar > Terminal (Admin) > Colar:", command: "iwr -useb https://coffeecli.com/install.ps1 | iex" },
-    macos: { hint: "Abra o Terminal.app e cole o seguinte comando:", command: "curl -fsSL https://coffeecli.com/install.sh | bash" },
-    linux: { hint: "Para qualquer distribuição Linux moderna, execute:", command: "curl -fsSL https://coffeecli.com/install.sh | bash" }
+    macos: { hint: "Abra o Terminal.app e cole o seguinte comando:", command: "curl -fsSL https://coffeecli.com/install.sh | sh" },
+    linux: { hint: "Para qualquer distribuição Linux moderna, execute:", command: "curl -fsSL https://coffeecli.com/install.sh | sh" }
   },
   ru: {
     windows: { hint: "Щелкните правой кнопкой Пуск > Терминал (Администратор) > Вставить:", command: "iwr -useb https://coffeecli.com/install.ps1 | iex" },
-    macos: { hint: "Откройте Terminal.app и вставьте следующую команду:", command: "curl -fsSL https://coffeecli.com/install.sh | bash" },
-    linux: { hint: "Для любого современного дистрибутива Linux выполните:", command: "curl -fsSL https://coffeecli.com/install.sh | bash" }
+    macos: { hint: "Откройте Terminal.app и вставьте следующую команду:", command: "curl -fsSL https://coffeecli.com/install.sh | sh" },
+    linux: { hint: "Для любого современного дистрибутива Linux выполните:", command: "curl -fsSL https://coffeecli.com/install.sh | sh" }
   }
 };
 
