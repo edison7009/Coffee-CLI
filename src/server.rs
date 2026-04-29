@@ -31,6 +31,13 @@ pub struct AppState {
     /// a (one-time) spawn is in flight so concurrent first-callers
     /// don't race and bind two listeners for the same pane.
     pub mcp_spawn_lock: tokio::sync::Mutex<()>,
+    /// Hyper-Agent global anonymous MCP server — `self_pane_id=None`,
+    /// no tab-scope filter. External admin agents (OpenClaw, Hermes Agent
+    /// daemons running outside Coffee-CLI's tabs) connect here and see
+    /// every pane across every tab. Started lazily when the user opens
+    /// the Hyper-Agent tab; users who never open that tab pay zero cost.
+    pub hyper_agent_endpoint:
+        tokio::sync::Mutex<Option<crate::mcp_server::McpEndpoint>>,
 }
 
 
@@ -1540,7 +1547,7 @@ fn parse_hermes_json(file_path: &std::path::Path) -> Option<SavedSession> {
     }
 
     if title.is_empty() {
-        title = "Hermes Session".to_string();
+        title = "Hermes Agent Session".to_string();
     }
 
     let turn_count = if total_messages > 0 { std::cmp::max(1, (total_messages + 1) / 2) } else { 0 };
@@ -2088,6 +2095,108 @@ fn open_url(url: String) -> Result<(), String> {
     Ok(())
 }
 
+// ─── Hyper-Agent: global anonymous MCP server for external orchestrators ──
+//
+// Started lazily when the user opens the Hyper-Agent tab. `self_pane_id=None`,
+// so list_panes / send_to_pane bypass tab-scope filtering — exactly the
+// "super admin can see and dispatch to every pane" semantics the product
+// needs. Uses a port persisted across launches so OpenClaw / Hermes Agent
+// configs stay stable (no config-file thrash → no gateway restart loops).
+//
+// Tauri commands here are all the frontend needs to know about.
+
+fn hyper_agent_port_path() -> Option<std::path::PathBuf> {
+    Some(
+        dirs::home_dir()?
+            .join(".coffee-cli")
+            .join("hyper-agent-port"),
+    )
+}
+
+fn read_persisted_hyper_agent_port() -> Option<u16> {
+    let path = hyper_agent_port_path()?;
+    let s = std::fs::read_to_string(&path).ok()?;
+    s.trim().parse::<u16>().ok().filter(|p| *p != 0)
+}
+
+fn write_persisted_hyper_agent_port(port: u16) -> std::io::Result<()> {
+    let Some(path) = hyper_agent_port_path() else {
+        return Ok(());
+    };
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    std::fs::write(&path, port.to_string())
+}
+
+#[derive(Serialize, Clone)]
+pub struct HyperAgentStatus {
+    pub endpoint: crate::mcp_server::McpEndpoint,
+    /// Per-agent registration outcomes (OpenClaw + Hermes Agent).
+    pub registrations: Vec<crate::agent_mcp_config::RegistrationReport>,
+}
+
+#[tauri::command]
+pub async fn start_hyper_agent_server(
+    state: tauri::State<'_, AppState>,
+) -> Result<HyperAgentStatus, String> {
+    {
+        let guard = state.hyper_agent_endpoint.lock().await;
+        if let Some(ep) = guard.as_ref() {
+            // Server already up. Re-run registrations idempotently so
+            // any agent config that was hand-edited / blown away gets
+            // re-seeded; identical-content writes are skipped silently
+            // by the [unchanged] short-circuit inside agent_mcp_config.
+            let registrations =
+                crate::agent_mcp_config::register_all(&ep.url).await;
+            return Ok(HyperAgentStatus {
+                endpoint: ep.clone(),
+                registrations,
+            });
+        }
+    }
+    let _spawn_guard = state.mcp_spawn_lock.lock().await;
+    {
+        let guard = state.hyper_agent_endpoint.lock().await;
+        if let Some(ep) = guard.as_ref() {
+            let registrations =
+                crate::agent_mcp_config::register_all(&ep.url).await;
+            return Ok(HyperAgentStatus {
+                endpoint: ep.clone(),
+                registrations,
+            });
+        }
+    }
+
+    let panes = std::sync::Arc::new(
+        crate::mcp_server::PaneStore::new(state.terminal_session.clone()),
+    );
+    let preferred = read_persisted_hyper_agent_port().unwrap_or(0);
+    let endpoint = crate::mcp_server::spawn_with_port(panes, None, preferred)
+        .await
+        .map_err(|e| format!("hyper-agent mcp spawn: {}", e))?;
+    log::info!(
+        "[hyper-agent] anonymous server up at {} (preferred port {})",
+        endpoint.url, preferred
+    );
+    let _ = write_persisted_hyper_agent_port(endpoint.port);
+    *state.hyper_agent_endpoint.lock().await = Some(endpoint.clone());
+
+    let registrations =
+        crate::agent_mcp_config::register_all(&endpoint.url).await;
+    Ok(HyperAgentStatus {
+        endpoint,
+        registrations,
+    })
+}
+
+#[tauri::command]
+pub async fn get_hyper_agent_endpoint(
+    state: tauri::State<'_, AppState>,
+) -> Result<Option<crate::mcp_server::McpEndpoint>, String> {
+    Ok(state.hyper_agent_endpoint.lock().await.clone())
+}
+
 #[derive(Serialize)]
 pub struct MultiAgentModeReport {
     pub ok: bool,
@@ -2235,6 +2344,7 @@ pub fn start_ui() -> anyhow::Result<()> {
                 std::collections::HashMap::new(),
             ),
             mcp_spawn_lock: tokio::sync::Mutex::new(()),
+            hyper_agent_endpoint: tokio::sync::Mutex::new(None),
         })
         .invoke_handler(tauri::generate_handler![
             pick_folder,
@@ -2276,6 +2386,8 @@ pub fn start_ui() -> anyhow::Result<()> {
             check_vibeid_report_mtime,
             enable_multi_agent_mode,
             disable_multi_agent_mode,
+            start_hyper_agent_server,
+            get_hyper_agent_endpoint,
         ])
         .setup(|app| {
             // Install Claude/Qwen hook scripts + settings patches.

@@ -41,6 +41,10 @@ export const zhTW = {
   'tool.two_split': '獨立二屏',
   'tool.three_split': '獨立三屏',
   'tool.four_split': '獨立四屏',
+  'tool.hyper_agent': 'Hyper-Agent',
+  'hyper_agent.ready': 'Hyper-Agent 已啟動：本機 OpenClaw / Hermes Agent 已擁有查看和指揮 Coffee CLI 所有視窗的超管權限。這意味著，你可以透過社交軟體對話 OpenClaw / Hermes Agent，而 OpenClaw / Hermes Agent 則會成為你的 CEO，帶領所有的 Agent 持續工作。',
+  'hyper_agent.first_time_hint': '如果你是首次使用，把這段規則複製給你的 OpenClaw / Hermes Agent，讓它們知道怎麼跨 pane 操作：',
+  'hyper_agent.show_setup_again': '再次顯示設定說明',
   'vibeid.need_insights_confirm': '人格測試需要先生成你的 Claude Code 使用報告。\n\n將自動執行 /insights（約 1-2 分鐘），完成後自動跑人格測試。\n\n繼續？',
   'vibeid.insights_timeout': '報告生成逾時。請稍後重試，或在 Claude Code tab 裡手動跑 /insights。',
 

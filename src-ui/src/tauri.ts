@@ -199,4 +199,29 @@ export const commands = {
       'disable_multi_agent_mode',
       { workspace },
     ),
+
+  // ─── Hyper-Agent (cross-tab admin MCP for OpenClaw / Hermes Agent) ──
+  startHyperAgentServer: () =>
+    invoke<HyperAgentStatus>('start_hyper_agent_server'),
+  getHyperAgentEndpoint: () =>
+    invoke<McpEndpoint | null>('get_hyper_agent_endpoint'),
 };
+
+export interface McpEndpoint {
+  url: string;
+  port: number;
+  pid: number;
+  started_at: number;
+}
+
+export interface RegistrationReport {
+  agent: string;
+  ok: boolean;
+  path: string | null;
+  message: string;
+}
+
+export interface HyperAgentStatus {
+  endpoint: McpEndpoint;
+  registrations: RegistrationReport[];
+}

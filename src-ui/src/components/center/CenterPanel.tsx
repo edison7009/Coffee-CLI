@@ -5,6 +5,7 @@ import { DosPlayer } from './DosPlayer';
 import { ChatReader } from './ChatReader';
 import { MultiAgentGrid } from './MultiAgentGrid';
 import { FourSplitGrid } from './FourSplitGrid';
+import { HyperAgentPanel } from './HyperAgentPanel';
 import { ErrorBoundary } from '../common/ErrorBoundary';
 import { useAppState, type ToolType } from '../../store/app-state';
 
@@ -251,6 +252,37 @@ const SvgFourSplit = () => (
     <rect x="12.5" y="4"    width="7.5" height="7.5" />
     <rect x="4"    y="12.5" width="7.5" height="7.5" />
     <rect x="12.5" y="12.5" width="7.5" height="7.5" />
+  </svg>
+);
+
+// Hyper-Agent — central admin node with radiating connections to four
+// satellite agent nodes. Evokes "one orchestrator commanding a team
+// across all panes". Single accent color, mix of filled center + smaller
+// satellite dots so the hub-and-spokes structure reads at icon size.
+const SvgHyperAgent = () => (
+  <svg
+    width="1em"
+    height="1em"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.6"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    style={{ flexShrink: 0, color: 'var(--accent)', verticalAlign: '-0.125em' }}
+  >
+    {/* Connection lines from center to each satellite */}
+    <line x1="12" y1="12" x2="5"  y2="5"  />
+    <line x1="12" y1="12" x2="19" y2="5"  />
+    <line x1="12" y1="12" x2="5"  y2="19" />
+    <line x1="12" y1="12" x2="19" y2="19" />
+    {/* Central admin node — filled */}
+    <circle cx="12" cy="12" r="3" fill="currentColor" stroke="none" />
+    {/* Four satellite agent nodes — outlined */}
+    <circle cx="5"  cy="5"  r="2" />
+    <circle cx="19" cy="5"  r="2" />
+    <circle cx="5"  cy="19" r="2" />
+    <circle cx="19" cy="19" r="2" />
   </svg>
 );
 
@@ -547,6 +579,9 @@ export function CenterPanel() {
       // VibeID is a built-in skill-launcher utility: click → spawn `claude` binary
       // in a tab, then auto-write `/vibeid\r` to trigger the remote vibeid skill.
       { key: 'vibeid' as ToolType, label: t('tool.vibeid' as any), icon: <SvgVibeID />, type: 'utility' as const, requiresCwd: false },
+      // Hyper-Agent — cross-tab admin MCP for OpenClaw / Hermes Agent
+      // to remote-control the running agent team. No cwd needed.
+      { key: 'hyper-agent' as ToolType, label: t('tool.hyper_agent' as any), icon: <SvgHyperAgent />, type: 'utility' as const, requiresCwd: false },
     ];
 
     return [...aiCliEntries, ...utilities];
@@ -956,6 +991,7 @@ export function CenterPanel() {
       case 'two-split': return { icon: <SvgTwoSplit />, title: cwd ?? t('tool.two_split' as any), tooltip: pathTip };
       case 'three-split': return { icon: <SvgThreeSplit />, title: cwd ?? t('tool.three_split' as any), tooltip: pathTip };
       case 'four-split': return { icon: <SvgFourSplit />, title: cwd ?? t('tool.four_split' as any), tooltip: pathTip };
+      case 'hyper-agent': return { icon: <SvgHyperAgent />, title: t('tool.hyper_agent' as any), tooltip: undefined };
       case 'arcade': {
         const gameName = session.toolData || '';
         const meta = gameCatalog.find(m => m.file.toLowerCase() === gameName.toLowerCase());
@@ -1136,6 +1172,12 @@ export function CenterPanel() {
                 bgType={bgType}
                 paneCount={4}
               />
+            ) : t.tool === 'hyper-agent' ? (
+              <HyperAgentPanel
+                hasBg={hasBg}
+                bgUrl={bgUrl}
+                bgType={bgType}
+              />
             ) : (
               <ErrorBoundary key={`err-${t.id}-${t.restartKey || 0}`} fallbackLabel="Tier Terminal Error">
                 <TierTerminal
@@ -1216,6 +1258,14 @@ export function CenterPanel() {
                                     // install/usage knowledge.
                                     if (tool.key === 'installer') {
                                       commands.openUrl('https://coffeecli.com/courses/claude-code').catch(() => {});
+                                      return;
+                                    }
+                                    // Hyper-Agent opens as a singleton system tab (like
+                                    // history). It does not consume one of the 5 user
+                                    // workspace tabs — it's an MCP admin endpoint, not a
+                                    // workspace.
+                                    if (tool.key === 'hyper-agent') {
+                                      dispatch({ type: 'OPEN_HYPER_AGENT_TAB' });
                                       return;
                                     }
                                     selectTool(tool.key, undefined, lastCwdByTool[tool.key!]);

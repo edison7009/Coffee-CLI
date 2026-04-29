@@ -41,6 +41,10 @@ export const ko = {
   'tool.two_split': '독립 2분할',
   'tool.three_split': '독립 3분할',
   'tool.four_split': '독립 4분할',
+  'tool.hyper_agent': 'Hyper-Agent',
+  'hyper_agent.ready': 'Hyper-Agent 가 시작되었습니다: 로컬의 OpenClaw / Hermes Agent 는 Coffee CLI 의 모든 창을 조회하고 지휘하는 관리자 권한을 가집니다. 소셜 앱으로 OpenClaw / Hermes Agent 와 대화하면 그들이 당신의 CEO 가 되어 모든 Agent 를 이끌고 계속 작업합니다.',
+  'hyper_agent.first_time_hint': '처음 사용하시나요? 아래 규칙을 OpenClaw / Hermes Agent 에 붙여넣어 pane 간 조작 방법을 알려주세요:',
+  'hyper_agent.show_setup_again': '설정 안내 다시 표시',
   'vibeid.need_insights_confirm': '성격 테스트를 실행하려면 먼저 Claude Code 사용 기록 리포트가 필요합니다.\n\n/insights를 자동으로 실행합니다 (약 1-2분). 완료 후 성격 테스트가 자동으로 시작됩니다.\n\n계속할까요?',
   'vibeid.insights_timeout': '리포트 생성이 시간 초과되었습니다. 나중에 다시 시도하거나 Claude Code 탭에서 /insights를 수동으로 실행하세요.',
 

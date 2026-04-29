@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type ToolType = 'claude' | 'qwen' | 'installer' | 'hermes' | 'opencode' | 'openclaw' | 'codex' | 'gemini' | 'arcade' | 'terminal' | 'remote' | 'history' | 'vibeid' | 'insights_prerun' | 'multi-agent' | 'two-agent' | 'three-agent' | 'two-split' | 'three-split' | 'four-split' | null;
+export type ToolType = 'claude' | 'qwen' | 'installer' | 'hermes' | 'opencode' | 'openclaw' | 'codex' | 'gemini' | 'arcade' | 'terminal' | 'remote' | 'history' | 'vibeid' | 'insights_prerun' | 'multi-agent' | 'two-agent' | 'three-agent' | 'two-split' | 'three-split' | 'four-split' | 'hyper-agent' | null;
 
 /**
  * Tab status shown as an animated 9-dot glyph. Maps to CSS classes
@@ -141,6 +141,7 @@ type Action =
   | { type: 'SET_TERMINAL_HIDDEN'; id: string; isHidden: boolean }
   | { type: 'RESTART_TERMINAL'; id: string; newId: string }
   | { type: 'OPEN_HISTORY_TAB'; sessionData: string; folderPath: string }
+  | { type: 'OPEN_HYPER_AGENT_TAB' }
   | { type: 'SET_AGENT_STATUS'; id: string; status: AgentStatus }
   | { type: 'SET_BG'; path: string; bgType: 'image' | 'video' }
   | { type: 'CLEAR_BG' }
@@ -241,6 +242,22 @@ function reducer(state: AppState, action: Action): AppState {
           activeTerminalId: newId
         };
       }
+    }
+    case 'OPEN_HYPER_AGENT_TAB': {
+      // Singleton tab — like history. Bypasses the 5-tab cap because
+      // Hyper-Agent is a system panel (MCP admin endpoint), not a
+      // user workspace. Reuse the existing one if already open;
+      // otherwise append a new tab and focus it.
+      const existing = state.terminals.find(t => t.tool === 'hyper-agent');
+      if (existing) {
+        return { ...state, activeTerminalId: existing.id };
+      }
+      const newId = crypto.randomUUID();
+      return {
+        ...state,
+        terminals: [...state.terminals, { id: newId, tool: 'hyper-agent', folderPath: null }],
+        activeTerminalId: newId,
+      };
     }
     case 'SET_AGENT_STATUS':
       return {

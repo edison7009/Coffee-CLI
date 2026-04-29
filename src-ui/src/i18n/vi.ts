@@ -42,6 +42,10 @@ export const vi = {
   'tool.two_split': 'Hai Màn Độc Lập',
   'tool.three_split': 'Ba Màn Độc Lập',
   'tool.four_split': 'Bốn Màn Độc Lập',
+  'tool.hyper_agent': 'Hyper-Agent',
+  'hyper_agent.ready': 'Hyper-Agent đã khởi động: OpenClaw / Hermes Agent cục bộ giờ có quyền super-admin để xem và chỉ huy mọi cửa sổ Coffee CLI. Trò chuyện với OpenClaw / Hermes Agent qua ứng dụng xã hội — họ trở thành CEO của bạn, dẫn dắt đội agents tiếp tục làm việc.',
+  'hyper_agent.first_time_hint': 'Lần đầu sử dụng? Dán quy tắc sau vào OpenClaw / Hermes Agent để chúng biết cách thao tác giữa các pane:',
+  'hyper_agent.show_setup_again': 'Hiển thị lại hướng dẫn',
   'vibeid.need_insights_confirm': 'Trắc nghiệm tính cách cần báo cáo sử dụng Claude Code của bạn trước.\n\n/insights sẽ tự động chạy (khoảng 1-2 phút), sau đó trắc nghiệm sẽ tự bắt đầu.\n\nTiếp tục?',
   'vibeid.insights_timeout': 'Tạo báo cáo quá lâu. Vui lòng thử lại sau hoặc chạy /insights thủ công trong tab Claude Code.',
 

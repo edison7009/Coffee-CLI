@@ -638,6 +638,7 @@ pub struct ReadPaneArgs {
     pub last_n_lines: Option<usize>,
 }
 
+
 /// Extract the tab id portion of a pane id (`${tab_id}::pane-${idx}`).
 /// Used to scope `list_panes` and `send_to_pane` to the caller's own
 /// multi-agent Tab so simultaneous tabs don't see / dispatch to each
@@ -755,12 +756,13 @@ impl CoffeeMcp {
     }
 
     #[tool(
-        description = "Return the caller's own pane id. Use this once at \
-session start to know which pane you're running in — Coffee-CLI bakes \
-the id into this MCP server instance at spawn time, so no inference is \
-needed. The returned id is what you should pass as the `from` field of \
-[COFFEE-DONE] markers and what you'll see as `is_self: true` in \
-list_panes()."
+        description = "Return the caller's identity. Two modes: (1) when this \
+MCP server was spawned for a specific pane (intra-Coffee-CLI sentinel mode), \
+returns `{ pane_id: \"pane-N\" }` — that's the id you pass as `from` in \
+[COFFEE-DONE] markers. (2) when this MCP server is the global Hyper-Agent \
+admin endpoint (used by external orchestrators like OpenClaw / Hermes Agent), \
+returns `{ role: \"admin\", scope: \"all-panes\" }` — meaning you can see and \
+dispatch to every pane across every tab in this Coffee-CLI instance."
     )]
     async fn whoami(&self) -> Result<CallToolResult, McpError> {
         match &self.self_pane_id {
@@ -775,7 +777,9 @@ list_panes()."
             }
             None => Ok(CallToolResult::success(vec![Content::text(
                 serde_json::json!({
-                    "error": "this MCP server is not bound to a specific pane",
+                    "role": "admin",
+                    "scope": "all-panes",
+                    "note": "Hyper-Agent endpoint — list_panes returns every pane across every tab; send_to_pane accepts any pane id. From the target pane's POV, your input arrives as plain stdin, indistinguishable from human typing.",
                 })
                 .to_string(),
             )])),
@@ -783,13 +787,12 @@ list_panes()."
     }
 
     #[tool(
-        description = "List all panes in the caller's own multi-agent Tab. \
-Cross-Tab panes (from other multi-agent windows the user has open) are \
-filtered out — you only see your own peers. The caller's own row is \
-marked `is_self: true` so you always know which entry is yourself, even \
-when multiple panes run the same CLI type. Returns each pane's id, title, \
-cli name, and state (empty / idle / busy / terminated). Use this to \
-discover what peers are running before calling send_to_pane."
+        description = "List panes. Default scope is the caller's own multi-agent \
+Tab — cross-Tab panes are filtered out. EXCEPTION: when called via the global \
+Hyper-Agent admin endpoint (whoami → role=admin), this returns ALL panes across \
+ALL tabs in the Coffee-CLI instance — that's the 'super admin' scope used by \
+OpenClaw / Hermes Agent. Each row has id, title, cli, state (empty/idle/busy/\
+terminated). Use this to discover what peers exist before calling send_to_pane."
     )]
     async fn list_panes(&self) -> Result<CallToolResult, McpError> {
         let mut panes = self.panes.list().await;
@@ -814,13 +817,14 @@ discover what peers are running before calling send_to_pane."
     }
 
     #[tool(
-        description = "Send a text command to another pane and (by default) \
-wait for that pane's CLI to respond. A carriage return is auto-appended so \
-the target CLI actually executes the command (set submit=false to disable). \
-If wait=true (default), blocks until the pane is idle or timeout (default 60s) \
-and returns the new output that arrived — this is how you see the other CLI's \
-reply. If wait=false, returns immediately; caller polls read_pane later for \
-long-running tasks (> 2 min). Do NOT send to your own pane id."
+        description = "Send text to a pane's stdin and (by default) wait for \
+the CLI to idle. From the target pane's POV the input is indistinguishable \
+from human typing — no special framing, no source flag. A carriage return is \
+auto-appended (set submit=false to disable). wait=true (default) blocks until \
+idle or timeout (default 600s) and returns the new output. wait=false returns \
+immediately; poll read_pane later for long tasks. Self-dispatch is rejected. \
+Per-pane sentinel mode is restricted to the caller's own tab; the global \
+Hyper-Agent admin endpoint can dispatch to any pane in any tab."
     )]
     async fn send_to_pane(
         &self,
@@ -949,6 +953,7 @@ Returns plain text (ANSI stripped) and an is_idle flag."
             )])),
         }
     }
+
 }
 
 #[tool_handler]
@@ -1039,6 +1044,26 @@ pub async fn spawn(
     panes: Arc<PaneStore>,
     self_pane_id: Option<String>,
 ) -> anyhow::Result<McpEndpoint> {
+    spawn_with_port(panes, self_pane_id, 0).await
+}
+
+/// Like `spawn`, but lets the caller request a specific port. Used by
+/// the Hyper-Agent global server to keep its URL stable across Coffee-CLI
+/// restarts — a stable URL means OpenClaw / Hermes Agent's config-file
+/// watchers don't see a change every launch (which would trigger their
+/// own gateway restarts and on OpenClaw also fire its mDNS/Ciao
+/// "PROBING CANCELLED" unhandled-rejection bug).
+///
+/// `preferred_port = 0` falls back to OS-assigned (the per-pane sentinel
+/// servers want this — they're transient and ephemeral by design).
+///
+/// If the preferred port is busy we silently fall back to OS-assigned
+/// rather than fail; the caller persists whatever port we got.
+pub async fn spawn_with_port(
+    panes: Arc<PaneStore>,
+    self_pane_id: Option<String>,
+    preferred_port: u16,
+) -> anyhow::Result<McpEndpoint> {
     let service = StreamableHttpService::new(
         {
             let panes = panes.clone();
@@ -1052,7 +1077,18 @@ pub async fn spawn(
     let router = axum::Router::new()
         .nest_service("/mcp", service)
         .layer(axum::middleware::from_fn(mcp_request_middleware));
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await?;
+    let listener = match preferred_port {
+        0 => tokio::net::TcpListener::bind("127.0.0.1:0").await?,
+        p => match tokio::net::TcpListener::bind(("127.0.0.1", p)).await {
+            Ok(l) => l,
+            Err(e) => {
+                log::warn!(
+                    "[mcp] preferred port {p} unavailable ({e}); falling back to OS-assigned"
+                );
+                tokio::net::TcpListener::bind("127.0.0.1:0").await?
+            }
+        },
+    };
     let addr = listener.local_addr()?;
 
     let endpoint = McpEndpoint {
