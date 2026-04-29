@@ -46,6 +46,53 @@ fn main() -> Result<()> {
         }
     }
 
+    // ── PATH inheritance fix (macOS / Linux) ────────────────────────────
+    // GUI apps on macOS / Linux launched from Dock / Finder / .desktop
+    // entries get a minimal PATH (typically /usr/bin:/bin:/usr/sbin:/sbin)
+    // — they do NOT source the user's interactive shell rc files. So tools
+    // installed via Homebrew, nvm, volta, asdf, npm-global, cargo, bun,
+    // ~/.local/bin, etc. are invisible to every Command::new() in the
+    // process. Symptom: tool-detection cards stay greyed out even though
+    // `claude` / `codex` / `gemini` / `hermes` are clearly installed.
+    //
+    // Fix: ask the user's login shell for its real PATH ONCE at startup
+    // and replace the process PATH. Every downstream subprocess
+    // (tool-detection `which`, PTY spawns, etc.) inherits this and
+    // resolves binaries the same way the user's terminal would.
+    //
+    // We use `-ilc` (interactive + login) so both .zprofile/.bash_profile
+    // AND .zshrc/.bashrc are sourced — matches what the user sees when
+    // they open a fresh terminal window.
+    #[cfg(not(target_os = "windows"))]
+    unsafe {
+        let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string());
+        let basename = std::path::Path::new(&shell)
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("");
+        // fish prints $PATH space-separated, not colon-separated. Use its
+        // string-join builtin to emit the same format as POSIX shells.
+        let cmd_str = if basename == "fish" {
+            "string join : -- $PATH"
+        } else {
+            "printf '%s' \"$PATH\""
+        };
+        if let Ok(out) = std::process::Command::new(&shell)
+            .args(["-ilc", cmd_str])
+            .output()
+        {
+            if out.status.success() {
+                let path = String::from_utf8_lossy(&out.stdout).trim().to_string();
+                // Sanity guard: a real PATH always contains ':'. If the
+                // shell rc errored out and we got garbage / empty, keep
+                // whatever PATH the OS gave us rather than nuking it.
+                if !path.is_empty() && path.contains(':') {
+                    std::env::set_var("PATH", path);
+                }
+            }
+        }
+    }
+
     // CLI subcommand dispatch — short-circuit GUI launch when invoked
     // with a known subcommand. This is opt-in; double-clicking the
     // executable still gets the GUI (no argv).
