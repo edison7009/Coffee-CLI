@@ -183,7 +183,13 @@ if [ "$OS" = "Darwin" ]; then
   fi
 
   URL="${FALLBACK_DOWNLOAD_URL:-$DOWNLOAD_BASE/macos-arm}"
-  TMP="/tmp/coffee-cli.dmg"
+  # Pin the temp file to $LATEST_VER so curl's `-C -` resume below only
+  # ever continues a partial download of the same version. Without the
+  # version in the path, a leftover half-DMG from a prior release would
+  # be byte-spliced with the new release's tail bytes — hdiutil then
+  # fails to mount the Frankenstein file ("Failed to mount DMG"). Same
+  # rationale applies to the Linux deb / AppImage TMPs below.
+  TMP="/tmp/coffee-cli-v${LATEST_VER}.dmg"
 
   echo "  ${GRAY}Downloading...${RESET}"
   if ! curl -fL --progress-bar --retry 5 --retry-all-errors --retry-delay 2 -C - "$URL" -o "$TMP"; then
@@ -256,7 +262,7 @@ elif [ "$OS" = "Linux" ]; then
 
   # Prefer .deb if dpkg is available, fall back to AppImage
   if command -v dpkg > /dev/null 2>&1; then
-    TMP="/tmp/coffee-cli.deb"
+    TMP="/tmp/coffee-cli-v${LATEST_VER}.deb"
     echo "  ${GRAY}Downloading .deb package...${RESET}"
     if ! curl -fL --progress-bar --retry 5 --retry-all-errors --retry-delay 2 -C - "${FALLBACK_DOWNLOAD_URL:-$DOWNLOAD_BASE/linux-deb}" -o "$TMP"; then
       echo ""
@@ -276,14 +282,19 @@ elif [ "$OS" = "Linux" ]; then
   # AppImage fallback
   DEST="$HOME/.local/bin/coffee-cli"
   mkdir -p "$HOME/.local/bin"
+  # Download to a versioned temp first, then move into place. Resuming
+  # `-C -` directly into $DEST would splice the previously-installed
+  # AppImage's bytes with the new release, producing a corrupt binary.
+  TMP="/tmp/coffee-cli-v${LATEST_VER}.AppImage"
   echo "  ${GRAY}Downloading AppImage...${RESET}"
-  if ! curl -fL --progress-bar --retry 5 --retry-all-errors --retry-delay 2 -C - "${FALLBACK_DOWNLOAD_URL:-$DOWNLOAD_BASE/linux-appimage}" -o "$DEST"; then
+  if ! curl -fL --progress-bar --retry 5 --retry-all-errors --retry-delay 2 -C - "${FALLBACK_DOWNLOAD_URL:-$DOWNLOAD_BASE/linux-appimage}" -o "$TMP"; then
     echo ""
     echo "  ${RED}Download failed.${RESET}"
     echo "  ${YELLOW}The AppImage may still be uploading. Retry in ~5 min.${RESET}"
     echo ""
     exit 1
   fi
+  mv -f "$TMP" "$DEST"
   chmod +x "$DEST"
 
   echo ""
