@@ -183,16 +183,21 @@ if [ "$OS" = "Darwin" ]; then
   fi
 
   URL="${FALLBACK_DOWNLOAD_URL:-$DOWNLOAD_BASE/macos-arm}"
-  # Pin the temp file to $LATEST_VER so curl's `-C -` resume below only
-  # ever continues a partial download of the same version. Without the
-  # version in the path, a leftover half-DMG from a prior release would
-  # be byte-spliced with the new release's tail bytes — hdiutil then
-  # fails to mount the Frankenstein file ("Failed to mount DMG"). Same
-  # rationale applies to the Linux deb / AppImage TMPs below.
   TMP="/tmp/coffee-cli-v${LATEST_VER}.dmg"
+  # Always wipe any leftover bytes before downloading. Resume (`-C -`)
+  # was REMOVED on purpose: when curl receives a CF 502 / connection
+  # reset mid-response (error 56), it has already written the partial
+  # 5xx HTML body to $TMP. On the next `--retry-all-errors` attempt,
+  # `-C -` would send `Range: bytes=N-` and the server's 206 response
+  # would splice valid DMG bytes onto the 5xx-page prefix — the final
+  # file hits Content-Length (progress bar shows 100%) but hdiutil
+  # rejects it as a corrupt image. Re-downloading from scratch on each
+  # retry is the only correctness-preserving option. Same reasoning
+  # for the Linux deb / AppImage paths below.
+  rm -f "$TMP"
 
   echo "  ${GRAY}Downloading...${RESET}"
-  if ! curl -fL --progress-bar --retry 5 --retry-all-errors --retry-delay 2 -C - "$URL" -o "$TMP"; then
+  if ! curl -fL --progress-bar --retry 5 --retry-all-errors --retry-delay 2 "$URL" -o "$TMP"; then
     echo ""
     echo "  ${RED}Download failed.${RESET}"
     echo "  ${YELLOW}The macOS installer may still be uploading. Retry in ~5 min.${RESET}"
@@ -263,8 +268,9 @@ elif [ "$OS" = "Linux" ]; then
   # Prefer .deb if dpkg is available, fall back to AppImage
   if command -v dpkg > /dev/null 2>&1; then
     TMP="/tmp/coffee-cli-v${LATEST_VER}.deb"
+    rm -f "$TMP"
     echo "  ${GRAY}Downloading .deb package...${RESET}"
-    if ! curl -fL --progress-bar --retry 5 --retry-all-errors --retry-delay 2 -C - "${FALLBACK_DOWNLOAD_URL:-$DOWNLOAD_BASE/linux-deb}" -o "$TMP"; then
+    if ! curl -fL --progress-bar --retry 5 --retry-all-errors --retry-delay 2 "${FALLBACK_DOWNLOAD_URL:-$DOWNLOAD_BASE/linux-deb}" -o "$TMP"; then
       echo ""
       echo "  ${RED}Download failed.${RESET}"
       echo "  ${YELLOW}The Linux .deb may still be uploading. Retry in ~5 min.${RESET}"
@@ -282,12 +288,13 @@ elif [ "$OS" = "Linux" ]; then
   # AppImage fallback
   DEST="$HOME/.local/bin/coffee-cli"
   mkdir -p "$HOME/.local/bin"
-  # Download to a versioned temp first, then move into place. Resuming
-  # `-C -` directly into $DEST would splice the previously-installed
-  # AppImage's bytes with the new release, producing a corrupt binary.
+  # Download to a versioned temp first, then move into place. Writing
+  # straight to $DEST would clobber a working install if the download
+  # failed partway.
   TMP="/tmp/coffee-cli-v${LATEST_VER}.AppImage"
+  rm -f "$TMP"
   echo "  ${GRAY}Downloading AppImage...${RESET}"
-  if ! curl -fL --progress-bar --retry 5 --retry-all-errors --retry-delay 2 -C - "${FALLBACK_DOWNLOAD_URL:-$DOWNLOAD_BASE/linux-appimage}" -o "$TMP"; then
+  if ! curl -fL --progress-bar --retry 5 --retry-all-errors --retry-delay 2 "${FALLBACK_DOWNLOAD_URL:-$DOWNLOAD_BASE/linux-appimage}" -o "$TMP"; then
     echo ""
     echo "  ${RED}Download failed.${RESET}"
     echo "  ${YELLOW}The AppImage may still be uploading. Retry in ~5 min.${RESET}"
