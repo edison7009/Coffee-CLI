@@ -215,21 +215,31 @@ export function HyperAgentPanel({ hasBg, bgUrl, bgType }: Props) {
               <button
                 onClick={copySetup}
                 style={{
-                  padding: '5px 0',
-                  width: 96,
-                  textAlign: 'center',
-                  fontSize: '13px',
+                  width: 28,
+                  height: 28,
+                  padding: 0,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                   background: copied ? 'rgba(58, 168, 74, 0.2)' : 'rgba(255,255,255,0.08)',
                   color: copied ? '#3aa84a' : 'inherit',
                   border: '1px solid var(--border, rgba(255,255,255,0.15))',
                   borderRadius: 4,
                   cursor: 'pointer',
-                  whiteSpace: 'nowrap',
                   flexShrink: 0,
-                  fontFamily: 'inherit',
+                  lineHeight: 0,
                 }}
               >
-                {copied ? '✓ Copied' : 'Copy'}
+                {copied ? (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="5 12 10 17 19 7" />
+                  </svg>
+                ) : (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="9" y="9" width="11" height="11" rx="2" />
+                    <path d="M5 15V6a2 2 0 0 1 2-2h9" />
+                  </svg>
+                )}
               </button>
             </div>
             <pre
