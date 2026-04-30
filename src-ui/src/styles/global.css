@@ -288,6 +288,12 @@ textarea,
 }
 
 /* ─── Light Theme (Latte / Warm Ivory Parchment) ──────── */
+/* Contrast tightened to match Claude desktop's light theme: near-black
+   primary, dark-gray secondary, mid-gray tertiary. The previous palette
+   (text-2 #6b6965, text-3 #9e9c98) hit ~5:1 / ~3:1 against the ivory
+   background — readable on paper but visibly washed once the .cwd
+   subtitle layered an extra opacity: 0.6 on top of text-3, dropping
+   that line to ~2:1 (effectively invisible). */
 [data-theme="light"] {
     --bg-app: #FAFAF7; /* Clean ivory */
     --bg-panel: rgba(255, 255, 255, 0.7); /* Breathable transparency */
@@ -297,18 +303,18 @@ textarea,
     --bg-hover: rgba(0, 0, 0, 0.04);
     --bg-active: rgba(0, 0, 0, 0.08);
 
-    --border: rgba(0, 0, 0, 0.06); /* Softer borders */
-    --border-input: rgba(0, 0, 0, 0.1);
-    --border-focus: rgba(196, 149, 106, 0.3);
+    --border: rgba(0, 0, 0, 0.1); /* Was 0.06 — too faint to delineate cards */
+    --border-input: rgba(0, 0, 0, 0.14);
+    --border-focus: rgba(196, 149, 106, 0.45);
 
-    --text-1: #2B2825; /* Soft charcoal, less harsh than pure black */
-    --text-2: #6b6965;
-    --text-3: #9e9c98;
+    --text-1: #1a1816; /* Near-black, matches Claude's primary */
+    --text-2: #4a4844; /* Darker secondary — sidebar nav level */
+    --text-3: #737170; /* Mid-gray — survives the .cwd opacity 0.6 multiplier */
 
-    --accent: #c4956a;
-    --accent-hover: #b5865c;
-    --accent-active: #a1724d;
-    --accent-bg: rgba(196, 149, 106, 0.12);
+    --accent: #a87246; /* Darker tan — original #c4956a was 3:1 on white */
+    --accent-hover: #976237;
+    --accent-active: #855228;
+    --accent-bg: rgba(168, 114, 70, 0.1);
 
     --green: #34c759;
     --red: #ff3b30;
@@ -901,20 +907,17 @@ body.gambit-docked .multi-agent-grid-standalone {
     padding-bottom: calc(var(--gambit-dock-h, 200px) + 16px);
 }
 
-/* Absolute-positioned overlays inside the launchpad (mode-switch grid icon
-   at bottom-right, library counter, library tabs) anchor with `bottom: N`
-   relative to .launchpad-container's padding box — which extends UNDER the
-   docked Gambit. Without compensation, they end up hidden behind the dock.
-   Expose a single offset variable so each overlay can opt in via
-   `bottom: calc(<original-bottom> + var(--dock-bottom-offset, 0px))`. */
+/* Mode-switch button (bottom-right) anchors directly to .launchpad-container,
+   whose padding box extends UNDER the docked Gambit — without compensation
+   it ends up hidden. Expose --dock-bottom-offset so it can opt in via
+   `bottom: calc(<original-bottom> + var(--dock-bottom-offset, 0px))`.
+
+   Note: .library-counter and .library-tabs do NOT need this offset. They
+   anchor to .library-page (position: relative), whose height: 100% chain
+   already shrinks with the container's padding-bottom. Adding the offset
+   there double-lifts them and eats into the visible grid area. */
 body.gambit-docked {
     --dock-bottom-offset: calc(var(--gambit-dock-h, 200px) + 16px);
-}
-body.gambit-docked .library-counter {
-    bottom: calc(72px + var(--dock-bottom-offset, 0px));
-}
-body.gambit-docked .library-tabs {
-    bottom: calc(24px + var(--dock-bottom-offset, 0px));
 }
 
 
