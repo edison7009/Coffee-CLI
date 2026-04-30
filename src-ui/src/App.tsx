@@ -78,7 +78,6 @@ export function App() {
     const ICONS = [
       '/icons/tools/hermes.png',
       '/icons/tools/vibeid.png',
-      '/icons/tools/installer.svg',
       '/icons/tools/terminal-powershell.svg',
       '/icons/tools/terminal-macos.png',
       '/icons/tools/terminal-linux.png',

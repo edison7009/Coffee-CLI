@@ -103,16 +103,18 @@ const SvgGemini    = () => inlineSvgIcon(GEMINI_SVG);
 const SvgVibeID    = () => toolIcon('/icons/tools/vibeid.png');
 const SvgHermes    = () => toolIcon('/icons/tools/hermes.png', '1em', { borderRadius: 'var(--radius-xs)', objectFit: 'cover' });
 
-// One-click installer glyph — clock face with hour hands. Inlined (instead
-// of loading /icons/tools/installer.svg as <img>) so the stroke can inherit
-// currentColor and follow the theme accent, matching our other in-house
-// glyphs (multi-agent, four-split). Third-party logos (Claude, Gemini,
-// Codex...) stay as <img> to preserve their brand colors.
+// Coffee 101 card icon — animated coffee mark (same as the left-panel
+// brand header in Explorer.tsx panel-header): steam wave loops 3s, cup
+// body draws on first paint then fills. Inlined SVG so currentColor
+// follows the theme accent. Sized at 1em so it scales with the launchpad
+// card font-size like other utility cards.
 //
-// Coffee 101 card uses the same animated coffee mark as the left-panel
-// brand header (see Explorer.tsx panel-header). Steam wave loops 3s,
-// cup body draws on first paint then fills. Sized at 1em so it scales
-// with the launchpad card font-size like other utility cards.
+// Component is named SvgInstaller (not SvgCoffee101) because the launchpad
+// card key is `'installer'` — kept that way to preserve users' existing
+// localStorage pin state (`coffee_pinned_items` may contain "agent:installer").
+// The card itself is no longer a one-click installer (that approach was
+// abandoned, see the click handler comment); it now opens the Coffee 101
+// course on coffeecli.com.
 const SvgInstaller = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -523,7 +525,7 @@ export function CenterPanel() {
 
     // Utility order is deliberate for 4-column alignment in the
     // "Agent Tools" grid on the Library page:
-    //   Row 1: multi-agent | three-agent | two-agent | installer
+    //   Row 1: multi-agent | three-agent | two-agent | Coffee 101
     //   Row 2: four-split  | three-split | two-split | vibeid
     // Coordinated row on top, independent row below, each descending
     // 4→3→2 so the pane counts align column-by-column (4↔4, 3↔3, 2↔2)
@@ -531,7 +533,7 @@ export function CenterPanel() {
     const utilities = [
       // Terminal is an AI-CLI-like tool (needs cwd) rather than a 'utility'.
       { key: 'terminal' as ToolType, label: t('tool.terminal'), icon: <TerminalIcon />, type: 'ai-cli' as const, requiresCwd: true },
-      // ─── Row 1: coordinated (descending 4→3→2) + installer ─────────
+      // ─── Row 1: coordinated (descending 4→3→2) + Coffee 101 link ────
       {
         key: 'multi-agent' as ToolType,
         label: t('tool.multi_agent' as any),
@@ -962,7 +964,6 @@ export function CenterPanel() {
       case 'openclaw': return { icon: <SvgOpenClaw />, title: 'OpenClaw', tooltip: undefined };
       case 'codex': return { icon: <SvgCodex />, title: cwd ?? 'Codex CLI', tooltip: pathTip };
       case 'gemini': return { icon: <SvgGemini />, title: cwd ?? 'Gemini CLI', tooltip: pathTip };
-      case 'installer': return { icon: <SvgInstaller />, title: 'Coffee 101', tooltip: undefined };
       // VibeID is a 2-phase flow under one logical operation: insights_prerun
       // gathers usage data, then vibeid analyzes it. Reuse the existing
       // `tool.vibeid` translation for both phases and suffix " (1/2)" /
@@ -1054,7 +1055,7 @@ export function CenterPanel() {
               {icon}
               <span className="tab-title" style={{ flex: '0 1 auto', minWidth: 0, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{title}</span>
               <div className="tab-actions">
-                {(['claude', 'qwen', 'hermes', 'opencode', 'openclaw', 'codex', 'gemini', 'agent', 'installer', 'terminal', 'remote', 'vibeid', 'insights_prerun', 'multi-agent', 'two-agent', 'three-agent', 'two-split', 'three-split', 'four-split'] as const).includes(session.tool as 'claude' | 'qwen' | 'hermes' | 'opencode' | 'openclaw' | 'codex' | 'gemini' | 'agent' | 'installer' | 'terminal' | 'remote' | 'vibeid' | 'insights_prerun' | 'multi-agent' | 'two-agent' | 'three-agent' | 'two-split' | 'three-split' | 'four-split') && (
+                {(['claude', 'qwen', 'hermes', 'opencode', 'openclaw', 'codex', 'gemini', 'agent', 'terminal', 'remote', 'vibeid', 'insights_prerun', 'multi-agent', 'two-agent', 'three-agent', 'two-split', 'three-split', 'four-split'] as const).includes(session.tool as 'claude' | 'qwen' | 'hermes' | 'opencode' | 'openclaw' | 'codex' | 'gemini' | 'agent' | 'terminal' | 'remote' | 'vibeid' | 'insights_prerun' | 'multi-agent' | 'two-agent' | 'three-agent' | 'two-split' | 'three-split' | 'four-split') && (
                   // Only Claude Code has a real hook-driven status machine.
                   // The other tools render the steady-green idle pulse —
                   // we explicitly chose not to guess their state from PTY
@@ -1527,7 +1528,7 @@ export function CenterPanel() {
                         {/* Section 2: Agent Tools — 4-col grid so the
                             coordinated 4/3/2 agent cards line up directly
                             above the independent 4/3/2 split cards:
-                              Row 1: multi-agent / three-agent / two-agent / installer
+                              Row 1: multi-agent / three-agent / two-agent / Coffee 101
                               Row 2: four-split  / three-split / two-split / vibeid */}
                         <div className="library-section-title">{t('library.agent_tools' as any)}</div>
                         <div className="library-grid library-grid--tools">
