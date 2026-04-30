@@ -2,16 +2,16 @@
 
 > **Plain-English summary / 一句话**: The code is open source under AGPL-3.0,
 > but the names and logos are not. You can fork the code; you cannot ship a
-> fork under the name *Coffee CLI*, *Gambit*, *VibeID*, *Pitch*, or
-> *Sentinel Protocol*, and you cannot pass our logo off as your own.
+> fork under the name *Coffee CLI*, *Gambit*, *VibeID*, *Pitch*,
+> *Sentinel Protocol*, or *Hyper-Agent*, and you cannot pass our logo off as your own.
 > Referencing Coffee CLI in articles, reviews, tutorials, or social posts
 > — favorable or critical — is welcome and does not need permission.
 > Imitating or reimplementing our original designs without crediting
 > Coffee CLI is what we object to.
 >
 > 代码采用 AGPL-3.0 开源,但**名称与图标不开源**。你可以 fork 代码,但不能用
-> "Coffee CLI"、"Gambit"、"VibeID"、"Pitch"、"哨兵协议 / Sentinel Protocol"
-> 等名称发布 fork,也不能把我们的 Logo 冒充成自己的。在文章、评测、教程、
+> "Coffee CLI"、"Gambit"、"VibeID"、"Pitch"、"哨兵协议 / Sentinel Protocol"、
+> "Hyper-Agent" 等名称发布 fork,也不能把我们的 Logo 冒充成自己的。在文章、评测、教程、
 > 社交媒体里事实性引用本项目 —— **无论好评还是吐槽** —— 都欢迎,不需要授权。
 > 我们真正反对的是:**借鉴或重实现我们的原创设计后不署名**。
 
@@ -34,6 +34,7 @@ in commerce by the Coffee CLI project and its primary maintainer
 | **Coffee-CLI MCP**                                  | 2026-04-22       | Multi-agent inter-terminal coordination protocol |
 | **Sentinel Protocol**                               | 2026-04-25       | Multi-agent supervision protocol                 |
 | **Vibetype** (and the 16 individual Vibetype names) | 2026-04-27       | Personality assessment content                   |
+| **Hyper-Agent**                                     | 2026-04-30       | Cross-tab admin MCP server for IM-bridged orchestration of running agent team |
 
 These Marks are **not** licensed under the AGPL-3.0. Receiving a copy of
 the Coffee CLI source code does not grant you any right to use the Marks.
@@ -134,6 +135,7 @@ label `trademark`.
 | **Coffee-CLI MCP**                                  | 2026-04-22   | 多终端 Agent 互联协调协议      |
 | **哨兵协议** / **Sentinel Protocol**                | 2026-04-25   | 多 Agent 监督协议              |
 | **Vibetype / Vibe 型**(及 16 个具体 Vibetype 名称) | 2026-04-27   | 人格测评内容                   |
+| **Hyper-Agent**                                     | 2026-04-30   | 跨 Tab 超管 MCP 服务器,用于 IM 桥接调度运行中 agent 团队 |
 
 这些标识**不**包含在 AGPL-3.0 协议授权范围内。获得 Coffee CLI 源代码
 副本**不**等于获得使用上述标识的权利。
@@ -206,7 +208,7 @@ https://github.com/edison7009/Coffee-CLI/issues 提交,标签 `trademark`。
 
 ---
 
-*Last updated / 最后更新: 2026-04-28*
+*Last updated / 最后更新: 2026-04-30*
 *This policy is non-binding promotional language; the AGPL-3.0 LICENSE file
 governs code use. This document governs brand and naming use, which is
 outside the scope of any open-source license.*
