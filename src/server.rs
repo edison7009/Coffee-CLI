@@ -1554,8 +1554,9 @@ fn read_native_session(file_path: String) -> Result<String, String> {
         home.join(".codex").join("sessions"),
         home.join(".gemini").join("tmp"),
         home.join(".local").join("share").join("opencode"),
+        home.join(".openclaw").join("agents"),
     ];
-    for tool in ["claude", "hermes", "codex", "gemini", "opencode"] {
+    for tool in ["claude", "hermes", "codex", "gemini", "opencode", "openclaw"] {
         let cfg = crate::tool_config::get(tool).history_path;
         if !cfg.is_empty() {
             allowed.push(crate::tool_config::expand_path(&cfg));
@@ -1865,6 +1866,17 @@ fn load_native_history_blocking() -> Result<Vec<SavedSession>, String> {
             home.join(".gemini").join("tmp"),
         );
         collect_jsonl_paths_with_mtime(gemini_dir, 3, "gemini", &mut file_candidates);
+
+        // 5. OpenClaw (depth 3: agents/<agentId>/sessions/<sessionId>.jsonl).
+        // Format is JSONL same family as Claude/Codex/Gemini — sessions
+        // hold message events with role/content shape — so the generic
+        // parse_agent_jsonl picks them up. .jsonl.reset (archived /new
+        // sessions) are filtered out by the .jsonl extension check.
+        let openclaw_dir = crate::tool_config::history_path_for(
+            "openclaw",
+            home.join(".openclaw").join("agents"),
+        );
+        collect_jsonl_paths_with_mtime(openclaw_dir, 3, "openclaw", &mut file_candidates);
     }
 
     // Sort candidates by mtime desc and parse only the newest HISTORY_LIMIT.
