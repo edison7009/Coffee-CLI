@@ -808,7 +808,7 @@
 }
 .library-gear-btn:hover {
   opacity: 1 !important;
-  color: var(--text-1);
+  color: var(--accent);
 }
 .library-gear-btn svg {
   width: 18px;
