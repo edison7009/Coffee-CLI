@@ -1,6 +1,5 @@
-//! Auto-register Coffee-CLI's Hyper-Agent MCP server into the local
-//! CLI agents that act as "admin orchestrators" — OpenClaw and Hermes
-//! Agent.
+//! Auto-register Coffee-CLI's Hyper-Agent MCP server into OpenClaw's
+//! config file.
 //!
 //! Architecture context (Hyper-Agent, 2026-04-30 → ):
 //!
@@ -13,18 +12,25 @@
 //!                                   it's just stdin, zero target-side adaptation)
 //!
 //! For OpenClaw / Hermes Agent to discover Coffee-CLI's MCP server,
-//! their config files need a `coffee-cli` server entry. This module
-//! writes that entry — idempotently, atomically, preserving all other
-//! user-configured fields. Called when the user opens the Hyper-Agent
-//! tab; runs once on a fresh machine, no-op on subsequent launches as
-//! long as Coffee-CLI's port is stable.
+//! their config needs a `coffee-cli` server entry. We auto-write that
+//! entry for OpenClaw — its config is plain JSON and has no interactive
+//! gate, so we can patch it atomically while preserving user fields.
+//!
+//! Hermes Agent is **not** auto-registered: its only official add path
+//! is the interactive `hermes mcp add ...` command (3 stdin prompts —
+//! overwrite-confirm, auth-confirm, tool-selection), which deadlocks on
+//! a TTY-less subprocess. Per the project rule
+//! `feedback_defer_to_upstream_config.md`, we instead surface the exact
+//! one-liner inside the SETUP_INSTRUCTION block the user copy-pastes
+//! into Hermes Agent — the receiving LLM has shell tools and runs it
+//! itself. OpenClaw users see the same line as a no-op (their `coffee-cli`
+//! tools are already mounted, so they ignore the bootstrap hint).
 //!
 //! NB: this module deliberately does NOT touch Codex Desktop's
 //! `~/.codex/config.toml` or Claude Desktop's `claude_desktop_config.json`.
 //! Hyper-Agent doesn't drive Desktop GUI apps — that was the previous
 //! Hyper-Desktop experiment which was killed for not having a real
-//! product wedge (see reference_hyper_desktop_postmortem.md). Here we
-//! only configure the two CLI agents that act as IM bridges.
+//! product wedge (see reference_hyper_desktop_postmortem.md).
 
 use std::path::PathBuf;
 
@@ -34,7 +40,7 @@ const MCP_NAME: &str = "coffee-cli";
 
 #[derive(Debug, Clone, Serialize)]
 pub struct RegistrationReport {
-    pub agent: String,        // "openclaw" / "hermes"
+    pub agent: String,        // currently always "openclaw"
     pub ok: bool,
     pub path: Option<String>,
     /// Human-readable outcome / error. Messages prefixed with
@@ -47,10 +53,7 @@ pub struct RegistrationReport {
 pub const UNCHANGED_PREFIX: &str = "[unchanged] ";
 
 pub async fn register_all(url: &str) -> Vec<RegistrationReport> {
-    vec![
-        register_with_openclaw(url),
-        register_with_hermes(url).await,
-    ]
+    vec![register_with_openclaw(url)]
 }
 
 // ─── OpenClaw ───────────────────────────────────────────────────────
@@ -244,94 +247,14 @@ fn register_with_openclaw_at(path: &PathBuf, url: &str) -> RegistrationReport {
     }
 }
 
-// ─── Hermes Agent ───────────────────────────────────────────────────
-//
-// File: `~/.hermes/config.yaml`. Format: YAML.
-// Cleanest path: shell out to `hermes mcp add coffee-cli --url <URL>`
-// — Hermes' own command-line writer that handles the YAML edit AND
-// auto-discovers tools at registration time. No YAML parsing on our
-// side, no risk of clobbering user comments.
-
-pub async fn register_with_hermes(url: &str) -> RegistrationReport {
-    let result = tokio::task::spawn_blocking({
-        let url = url.to_string();
-        move || {
-            #[cfg(target_os = "windows")]
-            let mut cmd = {
-                use std::os::windows::process::CommandExt;
-                let mut c = std::process::Command::new("hermes");
-                c.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
-                c
-            };
-            #[cfg(not(target_os = "windows"))]
-            let mut cmd = std::process::Command::new("hermes");
-
-            cmd.args(["mcp", "add", MCP_NAME, "--url", &url]).output()
-        }
-    })
-    .await;
-
-    let path_hint = dirs::home_dir().map(|h| {
-        h.join(".hermes").join("config.yaml").display().to_string()
-    });
-
-    match result {
-        Ok(Ok(output)) => {
-            if output.status.success() {
-                RegistrationReport {
-                    agent: "hermes".into(),
-                    ok: true,
-                    path: path_hint,
-                    message: "registered via `hermes mcp add` (restart Hermes Agent to load)".into(),
-                }
-            } else {
-                let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-                let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
-                let combined = if !stderr.is_empty() { stderr } else { stdout };
-                // Detect the "already exists" common case and treat it
-                // as unchanged rather than an error — Hermes' CLI tends
-                // to refuse re-add of an existing server entry.
-                let combined_lc = combined.to_lowercase();
-                if combined_lc.contains("already") || combined_lc.contains("exists") {
-                    return RegistrationReport {
-                        agent: "hermes".into(),
-                        ok: true,
-                        path: path_hint,
-                        message: format!("{}Hermes already has coffee-cli", UNCHANGED_PREFIX),
-                    };
-                }
-                RegistrationReport {
-                    agent: "hermes".into(),
-                    ok: false,
-                    path: path_hint,
-                    message: format!(
-                        "`hermes mcp add` exited {}: {}",
-                        output.status,
-                        if combined.is_empty() { "(no output)".into() } else { combined },
-                    ),
-                }
-            }
-        }
-        Ok(Err(e)) if e.kind() == std::io::ErrorKind::NotFound => RegistrationReport {
-            agent: "hermes".into(),
-            ok: false,
-            path: path_hint,
-            message: "`hermes` binary not on PATH (Hermes Agent not installed?)".into(),
-        },
-        Ok(Err(e)) => RegistrationReport {
-            agent: "hermes".into(),
-            ok: false,
-            path: path_hint,
-            message: format!("spawn failed: {e}"),
-        },
-        Err(e) => RegistrationReport {
-            agent: "hermes".into(),
-            ok: false,
-            path: path_hint,
-            message: format!("blocking task join failed: {e}"),
-        },
-    }
-}
+// Hermes Agent registration is intentionally NOT performed here.
+// `hermes mcp add` is interactive (3 stdin prompts) and deadlocks when
+// spawned from a TTY-less subprocess; rather than maintain a brittle
+// expect-script or write YAML directly (and bypass Hermes' tool
+// discovery), the SETUP_INSTRUCTION block in the Hyper-Agent UI
+// embeds the exact `hermes mcp add coffee-cli --url <URL>` one-liner
+// — the user copies it into Hermes Agent's chat, and the receiving
+// LLM uses its shell tool to register Coffee-CLI itself.
 
 #[cfg(test)]
 mod tests {

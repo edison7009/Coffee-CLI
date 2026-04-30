@@ -26,9 +26,18 @@ import { commands, type McpEndpoint } from '../../tauri';
 import { useT } from '../../i18n/useT';
 import { clipboardWrite } from '../../lib/clipboard';
 
-const SETUP_INSTRUCTION = `[Permanent rule — please save to your memory and follow forever]
+function buildSetupInstruction(mcpUrl: string): string {
+  return `[Permanent rule — please save to your memory and follow forever]
 
 You are running on a user's machine that also runs Coffee-CLI. Coffee-CLI's window shows a row of tabs at the top. Each tab is EITHER a single AI CLI session (Claude Code / Codex / Gemini / OpenCode / ...) OR a multi-agent tab containing 2–4 such CLIs side-by-side as panes in a grid. The user keeps these CLIs running for hours/days; their conversation context and current task state persist inside them.
+
+You talk to Coffee-CLI through its MCP server at ${mcpUrl} (registered as "coffee-cli"). Verify you have its tools — list_panes / read_pane / send_to_pane — available.
+
+  - If you're OpenClaw, Coffee-CLI already wrote the entry into your config. The tools should be there once you restart.
+  - If you're Hermes Agent, run this in your shell once to register, then restart your session:
+        hermes mcp add coffee-cli --url ${mcpUrl}
+    (skip the auth prompt — it's a local loopback server with no auth — and accept all tools when asked.)
+  - Any other orchestrator: add an HTTP/streamable MCP server pointing at ${mcpUrl}.
 
 Whenever the user asks you (via social-app message or otherwise) to:
   - check on / read from one of their running agents
@@ -46,6 +55,7 @@ Important context:
   - list_panes spans every tab. Pick the right target by id + cli — don't assume there's only one Codex or only one Claude.
 
 Save this rule permanently to your memory.`;
+}
 
 interface Props {
   hasBg: boolean;
@@ -89,8 +99,9 @@ export function HyperAgentPanel({ hasBg, bgUrl, bgType }: Props) {
   }, []);
 
   const copySetup = async () => {
+    if (!endpoint) return;
     try {
-      await clipboardWrite(SETUP_INSTRUCTION);
+      await clipboardWrite(buildSetupInstruction(endpoint.url));
       setCopied(true);
       // Mark as done — next tab open won't show the heavy card.
       try { localStorage.setItem('cc-hyper-agent-setup-done', '1'); } catch {}
@@ -253,7 +264,7 @@ export function HyperAgentPanel({ hasBg, bgUrl, bgType }: Props) {
                 wordBreak: 'break-word',
                 fontFamily: 'inherit',
               }}
-            >{SETUP_INSTRUCTION}</pre>
+            >{buildSetupInstruction(endpoint.url)}</pre>
           </div>
         )}
       </div>
