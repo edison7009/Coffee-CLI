@@ -52,7 +52,7 @@ const I18N_DICT = {
     "opc-link": "Coffee 101",
     "feedback": "Feedback",
     "downloads-title": "Or download the desktop app",
-    "downloads-note": "<strong>Windows</strong> installs with one UAC click. <strong>macOS / Linux</strong> may need extra terminal steps after download (Gatekeeper unquarantine / <code>sudo dpkg -i</code> / <code>chmod +x</code>) — the install command above handles all of this automatically.",
+    "downloads-note": "<strong>macOS / Linux</strong> may need extra terminal steps after download (Gatekeeper unquarantine / <code>sudo dpkg -i</code> / <code>chmod +x</code>) — the install command above handles all of this automatically.",
     "downloads-other": "Other variants (Intel Mac · ARM Linux · AppImage) →"
   },
   zh: {
@@ -62,7 +62,7 @@ const I18N_DICT = {
     "opc-link": "Coffee 101",
     "feedback": "问题反馈",
     "downloads-title": "或者直接下载桌面应用",
-    "downloads-note": "<strong>Windows</strong> 一次 UAC 点击即可安装。<strong>macOS / Linux</strong> 下载后可能需要额外终端步骤（Gatekeeper 解除隔离 / <code>sudo dpkg -i</code> / <code>chmod +x</code>）—— 上方的一键安装命令已自动处理。",
+    "downloads-note": "<strong>macOS / Linux</strong> 下载后可能需要额外终端步骤（Gatekeeper 解除隔离 / <code>sudo dpkg -i</code> / <code>chmod +x</code>）—— 上方的一键安装命令会自动处理。",
     "downloads-other": "其他版本（Intel Mac · ARM Linux · AppImage）→"
   },
   "zh-TW": {
@@ -72,7 +72,7 @@ const I18N_DICT = {
     "opc-link": "Coffee 101",
     "feedback": "問題回饋",
     "downloads-title": "或者直接下載桌面應用",
-    "downloads-note": "<strong>Windows</strong> 一次 UAC 點擊即可安裝。<strong>macOS / Linux</strong> 下載後可能需要額外終端步驟（Gatekeeper 解除隔離 / <code>sudo dpkg -i</code> / <code>chmod +x</code>）—— 上方的一鍵安裝命令已自動處理。",
+    "downloads-note": "<strong>macOS / Linux</strong> 下載後可能需要額外終端步驟（Gatekeeper 解除隔離 / <code>sudo dpkg -i</code> / <code>chmod +x</code>）—— 上方的一鍵安裝命令會自動處理。",
     "downloads-other": "其他版本（Intel Mac · ARM Linux · AppImage）→"
   },
   ja: {
@@ -82,7 +82,7 @@ const I18N_DICT = {
     "opc-link": "Coffee 101",
     "feedback": "フィードバック",
     "downloads-title": "デスクトップアプリを直接ダウンロード",
-    "downloads-note": "<strong>Windows</strong> は UAC ワンクリックでインストール完了。<strong>macOS / Linux</strong> はダウンロード後にターミナル操作が必要な場合があります（Gatekeeper 検疫解除 / <code>sudo dpkg -i</code> / <code>chmod +x</code>）—— 上のインストールコマンドはこれを自動処理します。",
+    "downloads-note": "<strong>macOS / Linux</strong> はダウンロード後にターミナル操作が必要な場合があります（Gatekeeper 検疫解除 / <code>sudo dpkg -i</code> / <code>chmod +x</code>）—— 上のインストールコマンドが自動で処理します。",
     "downloads-other": "その他のバリアント（Intel Mac · ARM Linux · AppImage）→"
   },
   ko: {
@@ -92,7 +92,7 @@ const I18N_DICT = {
     "opc-link": "Coffee 101",
     "feedback": "피드백",
     "downloads-title": "데스크톱 앱 직접 다운로드",
-    "downloads-note": "<strong>Windows</strong> 는 UAC 한 번 클릭으로 설치됩니다. <strong>macOS / Linux</strong> 는 다운로드 후 추가 터미널 작업이 필요할 수 있습니다 (Gatekeeper 격리 해제 / <code>sudo dpkg -i</code> / <code>chmod +x</code>) —— 위 설치 명령은 이를 자동 처리합니다.",
+    "downloads-note": "<strong>macOS / Linux</strong> 는 다운로드 후 추가 터미널 작업이 필요할 수 있습니다 (Gatekeeper 격리 해제 / <code>sudo dpkg -i</code> / <code>chmod +x</code>) —— 위 설치 명령이 자동으로 처리합니다.",
     "downloads-other": "기타 버전 (Intel Mac · ARM Linux · AppImage) →"
   },
   es: {
@@ -102,7 +102,7 @@ const I18N_DICT = {
     "opc-link": "Coffee 101",
     "feedback": "Comentarios",
     "downloads-title": "O descarga la app de escritorio",
-    "downloads-note": "<strong>Windows</strong> se instala con un clic de UAC. <strong>macOS / Linux</strong> pueden requerir pasos extra en terminal tras descargar (Gatekeeper / <code>sudo dpkg -i</code> / <code>chmod +x</code>) — el comando de instalación de arriba lo automatiza todo.",
+    "downloads-note": "<strong>macOS / Linux</strong> pueden requerir pasos extra en terminal tras descargar (Gatekeeper / <code>sudo dpkg -i</code> / <code>chmod +x</code>) — el comando de instalación de arriba lo automatiza todo.",
     "downloads-other": "Otras variantes (Intel Mac · ARM Linux · AppImage) →"
   },
   fr: {
@@ -112,7 +112,7 @@ const I18N_DICT = {
     "opc-link": "Coffee 101",
     "feedback": "Retour",
     "downloads-title": "Ou téléchargez l'application bureau",
-    "downloads-note": "<strong>Windows</strong> s'installe d'un clic UAC. <strong>macOS / Linux</strong> peuvent nécessiter des étapes supplémentaires en terminal après téléchargement (Gatekeeper / <code>sudo dpkg -i</code> / <code>chmod +x</code>) — la commande d'installation ci-dessus s'en occupe automatiquement.",
+    "downloads-note": "<strong>macOS / Linux</strong> peuvent nécessiter des étapes supplémentaires en terminal après téléchargement (Gatekeeper / <code>sudo dpkg -i</code> / <code>chmod +x</code>) — la commande d'installation ci-dessus s'en occupe automatiquement.",
     "downloads-other": "Autres variantes (Intel Mac · ARM Linux · AppImage) →"
   },
   de: {
@@ -122,7 +122,7 @@ const I18N_DICT = {
     "opc-link": "Coffee 101",
     "feedback": "Feedback",
     "downloads-title": "Oder lade die Desktop-App herunter",
-    "downloads-note": "<strong>Windows</strong> installiert mit einem UAC-Klick. <strong>macOS / Linux</strong> brauchen nach dem Download eventuell zusätzliche Terminal-Schritte (Gatekeeper / <code>sudo dpkg -i</code> / <code>chmod +x</code>) — der Installationsbefehl oben erledigt das alles automatisch.",
+    "downloads-note": "<strong>macOS / Linux</strong> brauchen nach dem Download eventuell zusätzliche Terminal-Schritte (Gatekeeper / <code>sudo dpkg -i</code> / <code>chmod +x</code>) — der Installationsbefehl oben erledigt das alles automatisch.",
     "downloads-other": "Andere Varianten (Intel Mac · ARM Linux · AppImage) →"
   },
   pt: {
@@ -132,7 +132,7 @@ const I18N_DICT = {
     "opc-link": "Coffee 101",
     "feedback": "Feedback",
     "downloads-title": "Ou baixe o app desktop",
-    "downloads-note": "<strong>Windows</strong> instala com um clique UAC. <strong>macOS / Linux</strong> podem exigir etapas extras no terminal após o download (Gatekeeper / <code>sudo dpkg -i</code> / <code>chmod +x</code>) — o comando de instalação acima faz isso automaticamente.",
+    "downloads-note": "<strong>macOS / Linux</strong> podem exigir etapas extras no terminal após o download (Gatekeeper / <code>sudo dpkg -i</code> / <code>chmod +x</code>) — o comando de instalação acima faz isso automaticamente.",
     "downloads-other": "Outras variantes (Intel Mac · ARM Linux · AppImage) →"
   },
   ru: {
@@ -142,7 +142,7 @@ const I18N_DICT = {
     "opc-link": "Coffee 101",
     "feedback": "Обратная связь",
     "downloads-title": "Или скачайте десктоп-приложение",
-    "downloads-note": "<strong>Windows</strong> устанавливается одним кликом UAC. <strong>macOS / Linux</strong> после скачивания могут потребовать дополнительных шагов в терминале (Gatekeeper / <code>sudo dpkg -i</code> / <code>chmod +x</code>) — команда установки выше делает всё это автоматически.",
+    "downloads-note": "<strong>macOS / Linux</strong> после скачивания могут потребовать дополнительных шагов в терминале (Gatekeeper / <code>sudo dpkg -i</code> / <code>chmod +x</code>) — команда установки выше делает всё это автоматически.",
     "downloads-other": "Другие варианты (Intel Mac · ARM Linux · AppImage) →"
   }
 };
