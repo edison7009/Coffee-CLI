@@ -400,13 +400,37 @@ function getInitialState(): AppState {
     if (savedLang) lang = savedLang;
   } catch {}
 
+  // First-launch default: ship a curated AI-generated wallpaper bundled
+  // under /wallpapers/default.png so a brand-new user sees something with
+  // visual identity instead of a blank black panel — and so the "you can
+  // change the wallpaper" feature is discoverable by example. Only kicks
+  // in for users with no prior cc-bg-path value (we use a sentinel
+  // 'cc-bg-init' flag to distinguish "never touched" from "explicitly set
+  // to none/empty"). Once a user customizes or clears the wallpaper, we
+  // never re-populate the default on top of their choice.
   let bgPath = '';
   let bgType: 'image' | 'video' | 'none' = 'none';
   let termColorScheme = '';
   let wallpaperDim = 30;
   try {
-    bgPath = localStorage.getItem('cc-bg-path') || '';
-    bgType = (localStorage.getItem('cc-bg-type') as 'image' | 'video' | 'none') || 'none';
+    const initialized = localStorage.getItem('cc-bg-init') === '1';
+    const storedPath = localStorage.getItem('cc-bg-path');
+    const storedType = localStorage.getItem('cc-bg-type') as 'image' | 'video' | 'none' | null;
+
+    if (!initialized && storedPath === null && storedType === null) {
+      // First launch — seed the bundled default and remember we've done so.
+      bgPath = '/wallpapers/default.png';
+      bgType = 'image';
+      try {
+        localStorage.setItem('cc-bg-path', bgPath);
+        localStorage.setItem('cc-bg-type', bgType);
+        localStorage.setItem('cc-bg-init', '1');
+      } catch {}
+    } else {
+      bgPath = storedPath || '';
+      bgType = storedType || 'none';
+    }
+
     termColorScheme = localStorage.getItem('cc-term-scheme') || '';
     const savedDim = localStorage.getItem('cc-wallpaper-dim');
     if (savedDim !== null) {

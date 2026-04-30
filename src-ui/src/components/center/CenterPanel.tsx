@@ -1018,11 +1018,21 @@ export function CenterPanel() {
   const bgType = state.bgType;
   const hasBg = bgType !== 'none' && bgPath !== '';
 
-  // Convert local file path to a displayable URL.
-  // Use Tauri's convertFileSrc (asset protocol) for zero-copy streaming.
+  // Convert wallpaper path to a displayable URL. Two modes:
+  //   1. Bundled defaults (`/wallpapers/...`) — load as relative URLs.
+  //      The browser resolves against the app origin, which is what
+  //      Vite serves from public/ in dev and Tauri ships from the dist
+  //      bundle in prod.
+  //   2. User-picked local files — go through Tauri's convertFileSrc
+  //      (asset protocol) for zero-copy streaming, with a file://
+  //      fallback for non-Tauri (e.g. browser dev) contexts.
   const [bgUrl, setBgUrl] = useState('');
   useEffect(() => {
     if (!hasBg) { setBgUrl(''); return; }
+    if (bgPath.startsWith('/wallpapers/')) {
+      setBgUrl(bgPath);
+      return;
+    }
     import('@tauri-apps/api/core').then(({ convertFileSrc }) => {
       setBgUrl(convertFileSrc(bgPath));
     }).catch(() => {
