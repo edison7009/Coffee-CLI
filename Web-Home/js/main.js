@@ -250,36 +250,36 @@ document.addEventListener("DOMContentLoaded", () => {
   initI18N();
   initLangDropdown();
   initDemoTabs();
-  initSideParallax();
+  initSideRails();
 });
 
 /**
- * Side-orb scroll parallax. Each orb has data-parallax="<float>" — we
- * multiply window.scrollY by that factor and translate the orb on Y.
- * Faster orbs (larger multiplier) feel closer ("foreground"), slower
- * orbs feel farther ("background") — Z-axis depth illusion using
- * pure 2D translation. Single rAF per scroll event keeps it 60fps.
+ * Side rails — drive the cappuccino "fill" length on the two vertical
+ * rails from the user's scroll position. The fill grows from 0% at the
+ * top of the page to 100% at the bottom, giving a precise vertical
+ * reading-progress indicator on each side gutter. CSS handles the
+ * particles + line styling; JS only updates --rail-progress.
+ *
+ * Single rAF per scroll event = 60fps even on mid-tier laptops.
+ * Skipped entirely under prefers-reduced-motion.
  */
-function initSideParallax() {
-  if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  const orbs = document.querySelectorAll(".side-decor .orb");
-  if (!orbs.length) return;
-
-  // Cache the parallax factors to avoid re-parsing on every frame.
-  const items = Array.from(orbs).map(el => ({
-    el,
-    factor: parseFloat(el.dataset.parallax || "0.4"),
-  }));
+function initSideRails() {
+  const rails = document.querySelectorAll(".side-rails .rail");
+  if (!rails.length) return;
+  if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    // Static fill at 0 — leave the rail visible but inert.
+    return;
+  }
 
   let ticking = false;
   const update = () => {
-    const y = window.scrollY;
-    for (const { el, factor } of items) {
-      // Negative direction so orbs scroll UP as user scrolls down — they
-      // feel like they're staying in space while the viewport moves down.
-      // Slower factor = stays put longer = "background"; faster = moves
-      // more = "foreground".
-      el.style.transform = `translate3d(0, ${-y * factor}px, 0)`;
+    const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+    const progress = docHeight > 0
+      ? Math.max(0, Math.min(1, window.scrollY / docHeight))
+      : 0;
+    const pct = (progress * 100).toFixed(2) + "%";
+    for (const rail of rails) {
+      rail.style.setProperty("--rail-progress", pct);
     }
     ticking = false;
   };
@@ -290,8 +290,9 @@ function initSideParallax() {
     requestAnimationFrame(update);
   }, { passive: true });
 
-  // Initial paint.
+  // Initial paint after layout settles (some images may shift scrollHeight).
   update();
+  window.addEventListener("load", update);
 }
 
 const T_TYPING_SPEED = 100;

@@ -4,101 +4,105 @@
  */
 
 /* =========================================================================
-   Side decoration: scroll-driven parallax orbs (Phase 1 of v2 ambition).
-   Each orb has data-parallax (set in HTML) — JS multiplies scrollY by that
-   factor to translate the orb. Smaller multiplier = "in the back" (slow),
-   larger = "in front" (fast). Combined with offset depths (left/right
-   columns at different fixed top values), the page reads as having Z-axis
-   depth even though everything is 2D + Y-translate.
+   Side rails — precision line treatment filling the empty side gutters.
+   Replaces the earlier "blurred gradient orbs" experiment, which read as
+   AI-slop on Notion/Vercel/etc and dissolved completely on white
+   backgrounds. Crisp 1px lines work in both light and dark themes.
 
-   Hidden below 1100px because there is no side gutter to fill on narrow
-   viewports. Pointer-events: none so orbs never intercept clicks.
+   - .rail-line:    static ambient line (low-opacity neutral, theme-adaptive)
+   - .rail-fill:    cappuccino accent that tracks scroll progress (driven
+                    from JS via the --rail-progress CSS variable)
+   - .particle:     three small accent dots drift down each rail on a
+                    looped CSS animation, staggered start times — ambient
+                    motion without competing with content
    ========================================================================= */
-.side-decor {
+.side-rails {
   position: fixed;
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  overflow: hidden;
   display: none;
 }
-
 @media (min-width: 1100px) {
-  .side-decor { display: block; }
+  .side-rails { display: block; }
 }
 
-/* All orbs share base shape. Each is a heavily-blurred radial gradient
-   blob; pure CSS, no images. */
-.side-decor .orb {
+.side-rails .rail {
   position: absolute;
-  border-radius: 50%;
-  filter: blur(70px);
-  will-change: transform;
-  transition: opacity 0.4s ease;
+  top:    96px;
+  bottom: 64px;
+  width: 1px;
+}
+.side-rails .rail-left  { left:  32px; }
+.side-rails .rail-right { right: 32px; }
+
+@media (min-width: 1400px) {
+  .side-rails .rail-left  { left:  56px; }
+  .side-rails .rail-right { right: 56px; }
 }
 
-/* Use --orb-color tokens that adapt to theme (dawn/light vs dark). */
+/* Theme-adaptive line color tokens. */
 :root {
-  --orb-1: rgba(196, 149, 106, 0.28);   /* cappuccino */
-  --orb-2: rgba(143, 99, 64, 0.22);     /* deep coffee */
-  --orb-3: rgba(232, 209, 175, 0.20);   /* cream */
+  --rail-line:    rgba(0, 0, 0, 0.08);
+  --rail-accent:  #c4956a;
 }
-html[data-theme='light'] {
-  --orb-1: rgba(196, 149, 106, 0.18);
-  --orb-2: rgba(143, 99, 64, 0.13);
-  --orb-3: rgba(232, 209, 175, 0.16);
+html[data-theme='dark'] {
+  --rail-line:    rgba(255, 255, 255, 0.10);
+  --rail-accent:  #c4956a;
 }
 
-/* Left column (3 orbs at staggered heights) */
-.side-decor .orb-l1 {
-  top:  10vh;
-  left: -120px;
-  width:  340px;
-  height: 340px;
-  background: radial-gradient(circle, var(--orb-1) 0%, transparent 70%);
-}
-.side-decor .orb-l2 {
-  top:  78vh;
-  left: -60px;
-  width:  220px;
-  height: 220px;
-  background: radial-gradient(circle, var(--orb-2) 0%, transparent 70%);
-}
-.side-decor .orb-l3 {
-  top:  150vh;
-  left: -100px;
-  width:  280px;
-  height: 280px;
-  background: radial-gradient(circle, var(--orb-3) 0%, transparent 70%);
+.side-rails .rail-line {
+  position: absolute;
+  inset: 0;
+  background: var(--rail-line);
 }
 
-/* Right column (3 orbs, offset heights so the page never feels symmetric) */
-.side-decor .orb-r1 {
-  top:  32vh;
-  right: -100px;
-  width:  280px;
-  height: 280px;
-  background: radial-gradient(circle, var(--orb-3) 0%, transparent 70%);
-}
-.side-decor .orb-r2 {
-  top:  100vh;
-  right: -140px;
-  width:  360px;
-  height: 360px;
-  background: radial-gradient(circle, var(--orb-1) 0%, transparent 70%);
-}
-.side-decor .orb-r3 {
-  top:  175vh;
-  right: -60px;
-  width:  200px;
-  height: 200px;
-  background: radial-gradient(circle, var(--orb-2) 0%, transparent 70%);
+.side-rails .rail-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: var(--rail-progress, 0%);
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    var(--rail-accent) 12%,
+    var(--rail-accent) 100%
+  );
+  opacity: 0.85;
+  transition: height 0.05s linear;
 }
 
-/* Reduced motion: drop the parallax updates entirely (JS checks the
-   media query too, but this provides a CSS-side fallback). */
+/* Three particles drift down the rail. Staggered animation-delay so
+   one is always entering, one mid-rail, one exiting — continuous flow. */
+.side-rails .particle {
+  position: absolute;
+  left: -2px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--rail-accent);
+  box-shadow: 0 0 10px var(--rail-accent);
+  animation: rail-drift 9s linear infinite;
+  opacity: 0;
+}
+.side-rails .particle.p1 { animation-delay: 0s;   }
+.side-rails .particle.p2 { animation-delay: 3s;   }
+.side-rails .particle.p3 { animation-delay: 6s;   }
+.side-rails .rail-right .particle.p1 { animation-delay: 1.5s; }
+.side-rails .rail-right .particle.p2 { animation-delay: 4.5s; }
+.side-rails .rail-right .particle.p3 { animation-delay: 7.5s; }
+
+@keyframes rail-drift {
+  0%   { top: 0;    opacity: 0; }
+  8%   { opacity: 1; }
+  92%  { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .side-decor .orb { transition: none; }
+  .side-rails .particle    { animation: none; opacity: 0; }
+  .side-rails .rail-fill   { transition: none; }
 }
 
 
