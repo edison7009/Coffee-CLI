@@ -209,7 +209,13 @@ if [ "$OS" = "Darwin" ]; then
   # Grab the /Volumes/... mountpoint directly. `awk '{print $NF}'` breaks
   # when the volume name has spaces (e.g. "Coffee CLI 1.6.4"), since $NF
   # only captures the last whitespace-delimited token.
-  MOUNT=$(hdiutil attach "$TMP" -nobrowse -quiet | grep -oE '/Volumes/[^	]+' | tail -1)
+  #
+  # NOTE: do NOT pass -quiet here. -quiet suppresses the very stdout we
+  # need to grep for the mountpoint, leaving MOUNT empty and the install
+  # falsely reporting "Failed to mount DMG" even on a successful attach.
+  # Reported as #18 by @3217333857. The hdiutil verbose output is fine
+  # to surface — it's two short lines showing /dev/disk* → /Volumes/...
+  MOUNT=$(hdiutil attach "$TMP" -nobrowse | grep -oE '/Volumes/[^	]+' | tail -1)
   if [ -z "$MOUNT" ] || [ ! -d "$MOUNT" ]; then
     echo "  ${RED}Failed to mount DMG.${RESET}"
     rm -f "$TMP"
