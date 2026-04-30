@@ -254,30 +254,26 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 /**
- * Dot field — Anthropic Claude.ai-style mouse-reactive background.
+ * Glyph rain field — Anthropic Claude.ai-style background, full version.
  *
- * Renders a regular grid of small dots across a fixed full-viewport
- * canvas. Each dot has a base position (anchor) and a current position
- * that smoothly lerps toward a target. The target is the anchor unless
- * the mouse is within REPEL_RADIUS, in which case it's pushed outward
- * along the cursor → dot vector with strength proportional to proximity.
- *
- * Two ambient effects layer on top:
- *   1. Scroll wave: dots' anchors are offset by sin((y + scrollY) * k) —
- *      gives the field a slow horizontal sway that progresses as the
- *      page scrolls.
- *   2. Hot color: dots within REPEL_RADIUS interpolate from the base
- *      neutral color toward --dot-color-hot (cappuccino accent). The
- *      effect reads as "the mouse is glowing".
+ * Each particle has:
+ *   - a "shape" (circle / diamond / plus / line), assigned by weighted
+ *     random at spawn and re-rolled when the particle wraps from bottom
+ *     back to top. Over time the shape composition of the field evolves —
+ *     the page never settles into a static pattern.
+ *   - a vertical velocity (vy), so it rains downward at a varied rate
+ *     (slower particles feel "far", faster particles feel "near" — depth
+ *     illusion without 3D).
+ *   - a current displayed position that smooth-lerps toward (anchor +
+ *     mouse-repulsion vector). Within REPEL_RADIUS of the cursor, the
+ *     particle is pushed outward and tinted with the cappuccino accent.
  *
  * Performance:
- *   - Render loop runs at 60fps via rAF only while needed (mouse moved
- *     OR scroll changed within the last ~600ms). Otherwise we skip frames
- *     to save CPU on idle pages.
- *   - Dot count clamped to ~roughly 1 dot per 36²px → ~600 dots at
- *     1080p, fast even on integrated graphics.
- *   - Retina handling: backing canvas sized at devicePixelRatio, drawn
- *     at logical units — crisp dots on Mac/iPhone screens.
+ *   - ~700 particles at 1080p; canvas 2D drawing is fast at this count.
+ *   - Idle throttle: when mouse parked offscreen and no recent scroll,
+ *     drop to ~30fps (rain still needs to fall, but we don't need 60).
+ *   - Retina (devicePixelRatio backing) so glyphs stay crisp.
+ *   - prefers-reduced-motion: one static paint, no rain, no animation.
  */
 function initDotField() {
   const canvas = document.querySelector(".dot-field");
@@ -288,22 +284,48 @@ function initDotField() {
   const reduceMotion = window.matchMedia &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  const SPACING       = 32;     // px between dot anchors
-  const DOT_RADIUS    = 1.4;    // base dot radius (px)
-  const DOT_RADIUS_HOT = 2.6;   // size when right under cursor
-  const REPEL_RADIUS  = 130;    // mouse influence radius (px)
-  const REPEL_FORCE   = 28;     // max displacement away from cursor (px)
-  const LERP          = 0.16;   // smoothing factor (higher = snappier)
+  // Density: roughly 1 particle per 32²px of viewport.
+  const PARTICLE_DENSITY = 1 / (32 * 32);
+  const BASE_SIZE        = 1.7;   // base radius / half-extent (px)
+  const HOT_SIZE         = 3.2;   // size when directly under cursor
+  const REPEL_RADIUS     = 140;   // mouse influence radius (px)
+  const REPEL_FORCE      = 32;    // max displacement away from cursor (px)
+  const LERP             = 0.16;  // smoothing for displayed position
+  const MIN_VY           = 0.18;  // slowest rain speed (px / frame at 60fps)
+  const MAX_VY           = 0.85;  // fastest rain speed
 
-  let dots = [];
+  // Weighted shape distribution — repeated entries get higher chance.
+  const SHAPE_BAG = [
+    "circle", "circle", "circle", "circle",  // 50%
+    "diamond", "diamond",                     // 25%
+    "plus",                                   // 12.5%
+    "line",                                   // 12.5%
+  ];
+  const pickShape = () => SHAPE_BAG[(Math.random() * SHAPE_BAG.length) | 0];
+
+  let particles = [];
   let dpr = Math.max(1, window.devicePixelRatio || 1);
   let viewW = 0, viewH = 0;
 
-  // Mouse target offscreen by default so dots sit at rest until interaction.
   let mx = -9999, my = -9999;
   let lastMoveTs = 0;
-  let lastScrollY = 0;
   let lastScrollTs = 0;
+
+  function spawnParticle(initialFill) {
+    return {
+      ax: Math.random() * viewW,
+      // initialFill = true means we're seeding the first frame; spread
+      // particles across the viewport so the page has a populated field
+      // immediately rather than starting empty and filling top-down.
+      ay: initialFill ? Math.random() * viewH : -10 - Math.random() * 60,
+      x: 0, y: 0,
+      r: BASE_SIZE,
+      vy: MIN_VY + Math.random() * (MAX_VY - MIN_VY),
+      shape: pickShape(),
+      // Per-particle phase offset so all glyphs don't wobble in sync.
+      wp: Math.random() * Math.PI * 2,
+    };
+  }
 
   function resize() {
     viewW = window.innerWidth;
@@ -313,18 +335,23 @@ function initDotField() {
     canvas.height = Math.floor(viewH * dpr);
     canvas.style.width  = viewW + "px";
     canvas.style.height = viewH + "px";
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // draw in logical px
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    // Rebuild dot grid sized to viewport (with one row/col of overflow
-    // so wave drift doesn't reveal a hard edge).
-    dots = [];
-    for (let x = SPACING / 2; x < viewW + SPACING; x += SPACING) {
-      for (let y = SPACING / 2; y < viewH + SPACING; y += SPACING) {
-        dots.push({
-          ax: x, ay: y,    // anchor
-          x: x,  y: y,     // current (animated)
-          r: DOT_RADIUS,   // current radius
-        });
+    const target = Math.max(120, Math.floor(viewW * viewH * PARTICLE_DENSITY));
+    if (particles.length === 0) {
+      // First-time fill — particles distributed across the viewport.
+      for (let i = 0; i < target; i++) particles.push(spawnParticle(true));
+    } else if (particles.length < target) {
+      // Resize larger — top up.
+      while (particles.length < target) particles.push(spawnParticle(true));
+    } else if (particles.length > target) {
+      particles.length = target;
+    }
+    // Sync starting (x, y) for fresh particles.
+    for (const p of particles) {
+      if (p.x === 0 && p.y === 0) {
+        p.x = p.ax;
+        p.y = p.ay;
       }
     }
   }
@@ -342,76 +369,123 @@ function initDotField() {
   });
 
   document.addEventListener("scroll", () => {
-    lastScrollY = window.scrollY;
     lastScrollTs = performance.now();
   }, { passive: true });
 
-  // Read color tokens fresh on every frame so theme switches apply
-  // immediately. getComputedStyle is cheap when the element is not
-  // re-rendered between calls.
   const root = document.documentElement;
-  function token(name) {
-    return getComputedStyle(root).getPropertyValue(name).trim();
+  const token = (name) => getComputedStyle(root).getPropertyValue(name).trim();
+
+  function drawGlyph(x, y, r, shape, color) {
+    ctx.fillStyle   = color;
+    ctx.strokeStyle = color;
+    switch (shape) {
+      case "diamond": {
+        const e = r * 1.15; // diamonds need a touch more reach to read
+        ctx.beginPath();
+        ctx.moveTo(x, y - e);
+        ctx.lineTo(x + e, y);
+        ctx.lineTo(x, y + e);
+        ctx.lineTo(x - e, y);
+        ctx.closePath();
+        ctx.fill();
+        break;
+      }
+      case "plus": {
+        const e = r * 1.4;
+        ctx.lineWidth = 1.2;
+        ctx.lineCap   = "round";
+        ctx.beginPath();
+        ctx.moveTo(x - e, y);
+        ctx.lineTo(x + e, y);
+        ctx.moveTo(x, y - e);
+        ctx.lineTo(x, y + e);
+        ctx.stroke();
+        break;
+      }
+      case "line": {
+        const e = r * 1.6;
+        ctx.lineWidth = 1.1;
+        ctx.lineCap   = "round";
+        ctx.beginPath();
+        ctx.moveTo(x - e, y);
+        ctx.lineTo(x + e, y);
+        ctx.stroke();
+        break;
+      }
+      case "circle":
+      default: {
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+        break;
+      }
+    }
   }
+
+  let lastFrameTs = performance.now();
 
   function frame() {
     const now = performance.now();
-    const idle = (now - lastMoveTs) > 800 && (now - lastScrollTs) > 800 && mx < 0;
-
-    // Even when idle we still paint occasionally so the scroll wave keeps
-    // breathing — but at a much lower rate.
-    if (reduceMotion && dots.length) {
-      // One static paint, then never schedule again.
-      paintStatic();
-      return;
-    }
+    const dt  = Math.min(48, now - lastFrameTs); // cap to avoid huge jumps after tab-out
+    lastFrameTs = now;
+    const dtScale = dt / 16.667; // 1.0 at 60fps
 
     const colBase = token("--dot-color")     || "rgba(0,0,0,0.16)";
     const colHot  = token("--dot-color-hot") || "rgba(196,149,106,0.9)";
 
     ctx.clearRect(0, 0, viewW, viewH);
 
-    // Scroll-driven horizontal wave: phase advances slowly with scrollY.
-    const wavePhase = (lastScrollY * 0.012) + (now * 0.0006);
+    for (const p of particles) {
+      // Rain: anchor falls.
+      p.ay += p.vy * dtScale;
+      if (p.ay > viewH + 16) {
+        // Wrap to top with a freshly-rolled shape and a new horizontal
+        // position. The shape re-roll is what gives the field its
+        // "self-transforming" character over time.
+        p.ay = -16 - Math.random() * 40;
+        p.ax = Math.random() * viewW;
+        p.shape = pickShape();
+        p.vy = MIN_VY + Math.random() * (MAX_VY - MIN_VY);
+        p.x = p.ax;
+        p.y = p.ay;
+      }
 
-    for (const d of dots) {
-      // Wave-modulated anchor: vertical offset based on sin of y + phase.
-      const waveY = Math.sin((d.ax * 0.012) + wavePhase) * 2.2;
-      let tx = d.ax;
-      let ty = d.ay + waveY;
-      let tr = DOT_RADIUS;
+      // Tiny per-particle wobble so the rain isn't perfectly vertical.
+      const wob = Math.sin(now * 0.0008 + p.wp) * 1.4;
+
+      let tx = p.ax + wob;
+      let ty = p.ay;
+      let tr = BASE_SIZE;
       let hot = 0;
 
       // Mouse repulsion.
-      const dx = mx - d.ax;
-      const dy = my - (d.ay + waveY);
+      const dx = mx - p.ax;
+      const dy = my - p.ay;
       const dist2 = dx * dx + dy * dy;
       if (dist2 < REPEL_RADIUS * REPEL_RADIUS) {
         const dist = Math.sqrt(dist2) || 0.0001;
-        const factor = 1 - dist / REPEL_RADIUS;       // 0..1, 1 = on cursor
-        const eased  = factor * factor;                // ease-in for crispness
+        const factor = 1 - dist / REPEL_RADIUS;
+        const eased  = factor * factor;
         tx -= (dx / dist) * eased * REPEL_FORCE;
         ty -= (dy / dist) * eased * REPEL_FORCE;
-        tr = DOT_RADIUS + (DOT_RADIUS_HOT - DOT_RADIUS) * eased;
+        tr = BASE_SIZE + (HOT_SIZE - BASE_SIZE) * eased;
         hot = eased;
       }
 
       // Smooth lerp toward target.
-      d.x += (tx - d.x) * LERP;
-      d.y += (ty - d.y) * LERP;
-      d.r += (tr - d.r) * LERP;
+      p.x += (tx - p.x) * LERP;
+      p.y += (ty - p.y) * LERP;
+      p.r += (tr - p.r) * LERP;
 
-      ctx.fillStyle = hot > 0.02 ? mixColor(colBase, colHot, hot) : colBase;
-      ctx.beginPath();
-      ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
-      ctx.fill();
+      const color = hot > 0.02 ? mixColor(colBase, colHot, hot) : colBase;
+      drawGlyph(p.x, p.y, p.r, p.shape, color);
     }
 
-    // Schedule next frame. When idle and mouse parked offscreen, drop to
-    // a slower cadence to save CPU but never stop entirely (so the wave
-    // keeps moving when user scrolls).
+    // Idle throttle — rain still needs to advance, but ~30fps is enough
+    // when no one is interacting.
+    const idle = (now - lastMoveTs) > 1000 && (now - lastScrollTs) > 1000 && mx < 0;
     if (idle) {
-      setTimeout(() => requestAnimationFrame(frame), 50); // ~20fps idle
+      setTimeout(() => requestAnimationFrame(frame), 16); // ~30fps
     } else {
       requestAnimationFrame(frame);
     }
@@ -420,22 +494,17 @@ function initDotField() {
   function paintStatic() {
     const colBase = token("--dot-color") || "rgba(0,0,0,0.16)";
     ctx.clearRect(0, 0, viewW, viewH);
-    ctx.fillStyle = colBase;
-    for (const d of dots) {
-      ctx.beginPath();
-      ctx.arc(d.ax, d.ay, DOT_RADIUS, 0, Math.PI * 2);
-      ctx.fill();
+    for (const p of particles) {
+      drawGlyph(p.ax, p.ay, BASE_SIZE, p.shape, colBase);
     }
   }
 
-  // Linear interpolation between two rgba() color strings. We trust the
-  // input format because both come from CSS tokens we authored.
   function mixColor(a, b, t) {
     const ca = parseRGBA(a);
     const cb = parseRGBA(b);
     if (!ca || !cb) return a;
-    const r = Math.round(ca[0] + (cb[0] - ca[0]) * t);
-    const g = Math.round(ca[1] + (cb[1] - ca[1]) * t);
+    const r  = Math.round(ca[0] + (cb[0] - ca[0]) * t);
+    const g  = Math.round(ca[1] + (cb[1] - ca[1]) * t);
     const bl = Math.round(ca[2] + (cb[2] - ca[2]) * t);
     const al = (ca[3] + (cb[3] - ca[3]) * t).toFixed(3);
     return `rgba(${r},${g},${bl},${al})`;
