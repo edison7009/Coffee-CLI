@@ -254,26 +254,29 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 /**
- * Glyph rain field — Anthropic Claude.ai-style background, full version.
+ * Dot field — regular grid of small glyphs drifting downward as a single
+ * sheet. Replaces the earlier "individual rain at varied speeds" version
+ * which read as chaotic rather than premium. Now: tidy grid, uniform
+ * downward drift, fixed shape per cell. Mouse interaction layered on top.
  *
- * Each particle has:
- *   - a "shape" (circle / diamond / plus / line), assigned by weighted
- *     random at spawn and re-rolled when the particle wraps from bottom
- *     back to top. Over time the shape composition of the field evolves —
- *     the page never settles into a static pattern.
- *   - a vertical velocity (vy), so it rains downward at a varied rate
- *     (slower particles feel "far", faster particles feel "near" — depth
- *     illusion without 3D).
- *   - a current displayed position that smooth-lerps toward (anchor +
- *     mouse-repulsion vector). Within REPEL_RADIUS of the cursor, the
- *     particle is pushed outward and tinted with the cappuccino accent.
+ * Cells:
+ *   - laid out at SPACING px intervals across the viewport (with one
+ *     extra row above and below as wrap buffer)
+ *   - each has a FIXED shape (circle / diamond / plus / line) assigned
+ *     once at creation; weighted random distribution
+ *   - all cells advance their y position by DRIFT_SPEED * dtScale every
+ *     frame; when a cell's y exceeds (viewH + SPACING) it teleports back
+ *     to (-SPACING) — wrap happens just outside the viewport so the
+ *     teleport is invisible
  *
- * Performance:
- *   - ~700 particles at 1080p; canvas 2D drawing is fast at this count.
- *   - Idle throttle: when mouse parked offscreen and no recent scroll,
- *     drop to ~30fps (rain still needs to fall, but we don't need 60).
- *   - Retina (devicePixelRatio backing) so glyphs stay crisp.
- *   - prefers-reduced-motion: one static paint, no rain, no animation.
+ * Mouse repulsion (lerped displacement on top of the drifting base):
+ *   - within REPEL_RADIUS of the cursor a cell is pushed outward and
+ *     tinted with --dot-color-hot (cappuccino accent)
+ *   - displacement smoothly lerps to/from zero so dots ease back into
+ *     formation when the cursor leaves
+ *
+ * Theme-adaptive (--dot-color tokens read fresh each frame), retina-aware
+ * (DPR backing), prefers-reduced-motion friendly (static paint, no loop).
  */
 function initDotField() {
   const canvas = document.querySelector(".dot-field");
@@ -284,48 +287,30 @@ function initDotField() {
   const reduceMotion = window.matchMedia &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  // Density: roughly 1 particle per 32²px of viewport.
-  const PARTICLE_DENSITY = 1 / (32 * 32);
-  const BASE_SIZE        = 1.7;   // base radius / half-extent (px)
-  const HOT_SIZE         = 3.2;   // size when directly under cursor
-  const REPEL_RADIUS     = 140;   // mouse influence radius (px)
-  const REPEL_FORCE      = 32;    // max displacement away from cursor (px)
-  const LERP             = 0.16;  // smoothing for displayed position
-  const MIN_VY           = 0.18;  // slowest rain speed (px / frame at 60fps)
-  const MAX_VY           = 0.85;  // fastest rain speed
+  const SPACING      = 32;
+  const BASE_SIZE    = 1.5;
+  const HOT_SIZE     = 3.0;
+  const REPEL_RADIUS = 130;
+  const REPEL_FORCE  = 28;
+  const LERP         = 0.18;
+  const DRIFT_SPEED  = 0.22;   // px per frame at 60fps — uniform for the whole grid
 
-  // Weighted shape distribution — repeated entries get higher chance.
   const SHAPE_BAG = [
-    "circle", "circle", "circle", "circle",  // 50%
-    "diamond", "diamond",                     // 25%
-    "plus",                                   // 12.5%
-    "line",                                   // 12.5%
+    "circle", "circle", "circle", "circle", // 50%
+    "diamond", "diamond",                    // 25%
+    "plus",                                  // 12.5%
+    "line",                                  // 12.5%
   ];
   const pickShape = () => SHAPE_BAG[(Math.random() * SHAPE_BAG.length) | 0];
 
-  let particles = [];
+  let cells = [];
   let dpr = Math.max(1, window.devicePixelRatio || 1);
   let viewW = 0, viewH = 0;
 
+  // Mouse and scroll trackers.
   let mx = -9999, my = -9999;
   let lastMoveTs = 0;
   let lastScrollTs = 0;
-
-  function spawnParticle(initialFill) {
-    return {
-      ax: Math.random() * viewW,
-      // initialFill = true means we're seeding the first frame; spread
-      // particles across the viewport so the page has a populated field
-      // immediately rather than starting empty and filling top-down.
-      ay: initialFill ? Math.random() * viewH : -10 - Math.random() * 60,
-      x: 0, y: 0,
-      r: BASE_SIZE,
-      vy: MIN_VY + Math.random() * (MAX_VY - MIN_VY),
-      shape: pickShape(),
-      // Per-particle phase offset so all glyphs don't wobble in sync.
-      wp: Math.random() * Math.PI * 2,
-    };
-  }
 
   function resize() {
     viewW = window.innerWidth;
@@ -337,21 +322,17 @@ function initDotField() {
     canvas.style.height = viewH + "px";
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    const target = Math.max(120, Math.floor(viewW * viewH * PARTICLE_DENSITY));
-    if (particles.length === 0) {
-      // First-time fill — particles distributed across the viewport.
-      for (let i = 0; i < target; i++) particles.push(spawnParticle(true));
-    } else if (particles.length < target) {
-      // Resize larger — top up.
-      while (particles.length < target) particles.push(spawnParticle(true));
-    } else if (particles.length > target) {
-      particles.length = target;
-    }
-    // Sync starting (x, y) for fresh particles.
-    for (const p of particles) {
-      if (p.x === 0 && p.y === 0) {
-        p.x = p.ax;
-        p.y = p.ay;
+    cells = [];
+    for (let x = SPACING / 2; x < viewW; x += SPACING) {
+      for (let y = -SPACING; y < viewH + SPACING; y += SPACING) {
+        cells.push({
+          x: x,
+          y: y,
+          dispX: 0, // smoothed displacement (mouse repulsion)
+          dispY: 0,
+          dispR: 0, // size delta from base
+          shape: pickShape(),
+        });
       }
     }
   }
@@ -365,7 +346,8 @@ function initDotField() {
   }, { passive: true });
 
   document.addEventListener("mouseleave", () => {
-    mx = -9999; my = -9999;
+    mx = -9999;
+    my = -9999;
   });
 
   document.addEventListener("scroll", () => {
@@ -376,11 +358,11 @@ function initDotField() {
   const token = (name) => getComputedStyle(root).getPropertyValue(name).trim();
 
   function drawGlyph(x, y, r, shape, color) {
-    ctx.fillStyle   = color;
+    ctx.fillStyle = color;
     ctx.strokeStyle = color;
     switch (shape) {
       case "diamond": {
-        const e = r * 1.15; // diamonds need a touch more reach to read
+        const e = r * 1.15;
         ctx.beginPath();
         ctx.moveTo(x, y - e);
         ctx.lineTo(x + e, y);
@@ -393,7 +375,7 @@ function initDotField() {
       case "plus": {
         const e = r * 1.4;
         ctx.lineWidth = 1.2;
-        ctx.lineCap   = "round";
+        ctx.lineCap = "round";
         ctx.beginPath();
         ctx.moveTo(x - e, y);
         ctx.lineTo(x + e, y);
@@ -405,7 +387,7 @@ function initDotField() {
       case "line": {
         const e = r * 1.6;
         ctx.lineWidth = 1.1;
-        ctx.lineCap   = "round";
+        ctx.lineCap = "round";
         ctx.beginPath();
         ctx.moveTo(x - e, y);
         ctx.lineTo(x + e, y);
@@ -426,66 +408,57 @@ function initDotField() {
 
   function frame() {
     const now = performance.now();
-    const dt  = Math.min(48, now - lastFrameTs); // cap to avoid huge jumps after tab-out
+    const dt  = Math.min(48, now - lastFrameTs);
     lastFrameTs = now;
-    const dtScale = dt / 16.667; // 1.0 at 60fps
+    const dtScale = dt / 16.667;
 
     const colBase = token("--dot-color")     || "rgba(0,0,0,0.16)";
     const colHot  = token("--dot-color-hot") || "rgba(196,149,106,0.9)";
 
     ctx.clearRect(0, 0, viewW, viewH);
 
-    for (const p of particles) {
-      // Rain: anchor falls.
-      p.ay += p.vy * dtScale;
-      if (p.ay > viewH + 16) {
-        // Wrap to top with a freshly-rolled shape and a new horizontal
-        // position. The shape re-roll is what gives the field its
-        // "self-transforming" character over time.
-        p.ay = -16 - Math.random() * 40;
-        p.ax = Math.random() * viewW;
-        p.shape = pickShape();
-        p.vy = MIN_VY + Math.random() * (MAX_VY - MIN_VY);
-        p.x = p.ax;
-        p.y = p.ay;
+    for (const c of cells) {
+      // Uniform downward drift for the whole grid.
+      c.y += DRIFT_SPEED * dtScale;
+      if (c.y > viewH + SPACING) {
+        // Wrap up to just-above the top edge — invisible (off-screen).
+        c.y -= viewH + SPACING * 2;
       }
 
-      // Tiny per-particle wobble so the rain isn't perfectly vertical.
-      const wob = Math.sin(now * 0.0008 + p.wp) * 1.4;
-
-      let tx = p.ax + wob;
-      let ty = p.ay;
-      let tr = BASE_SIZE;
+      // Mouse repulsion against the cell's drifting base position.
+      let displaceX = 0, displaceY = 0, displaceR = 0;
       let hot = 0;
-
-      // Mouse repulsion.
-      const dx = mx - p.ax;
-      const dy = my - p.ay;
+      const dx = mx - c.x;
+      const dy = my - c.y;
       const dist2 = dx * dx + dy * dy;
       if (dist2 < REPEL_RADIUS * REPEL_RADIUS) {
         const dist = Math.sqrt(dist2) || 0.0001;
         const factor = 1 - dist / REPEL_RADIUS;
         const eased  = factor * factor;
-        tx -= (dx / dist) * eased * REPEL_FORCE;
-        ty -= (dy / dist) * eased * REPEL_FORCE;
-        tr = BASE_SIZE + (HOT_SIZE - BASE_SIZE) * eased;
+        displaceX = -(dx / dist) * eased * REPEL_FORCE;
+        displaceY = -(dy / dist) * eased * REPEL_FORCE;
+        displaceR = (HOT_SIZE - BASE_SIZE) * eased;
         hot = eased;
       }
 
-      // Smooth lerp toward target.
-      p.x += (tx - p.x) * LERP;
-      p.y += (ty - p.y) * LERP;
-      p.r += (tr - p.r) * LERP;
+      // Smooth lerp on the displacement only — base position moves
+      // predictably with drift, no need to lerp it.
+      c.dispX += (displaceX - c.dispX) * LERP;
+      c.dispY += (displaceY - c.dispY) * LERP;
+      c.dispR += (displaceR - c.dispR) * LERP;
+
+      const fx = c.x + c.dispX;
+      const fy = c.y + c.dispY;
+      const fr = BASE_SIZE + c.dispR;
 
       const color = hot > 0.02 ? mixColor(colBase, colHot, hot) : colBase;
-      drawGlyph(p.x, p.y, p.r, p.shape, color);
+      drawGlyph(fx, fy, fr, c.shape, color);
     }
 
-    // Idle throttle — rain still needs to advance, but ~30fps is enough
-    // when no one is interacting.
-    const idle = (now - lastMoveTs) > 1000 && (now - lastScrollTs) > 1000 && mx < 0;
+    // Idle throttle — drift still needs to advance, ~30fps is enough.
+    const idle = (now - lastMoveTs) > 1200 && (now - lastScrollTs) > 1200 && mx < 0;
     if (idle) {
-      setTimeout(() => requestAnimationFrame(frame), 16); // ~30fps
+      setTimeout(() => requestAnimationFrame(frame), 16);
     } else {
       requestAnimationFrame(frame);
     }
@@ -494,8 +467,8 @@ function initDotField() {
   function paintStatic() {
     const colBase = token("--dot-color") || "rgba(0,0,0,0.16)";
     ctx.clearRect(0, 0, viewW, viewH);
-    for (const p of particles) {
-      drawGlyph(p.ax, p.ay, BASE_SIZE, p.shape, colBase);
+    for (const c of cells) {
+      drawGlyph(c.x, c.y, BASE_SIZE, c.shape, colBase);
     }
   }
 

@@ -24,15 +24,13 @@
     <!-- Removed Cinematic Video Background to favor Minimalist Theme -->
   </div>
 
-  <!-- Glyph rain field: full-viewport canvas of small glyphs (circles,
-       diamonds, plus signs, short lines) raining downward at varied
-       speeds. Each glyph respawns at the top with a freshly-rolled
-       shape when it leaves the bottom edge — so the shape mix is
-       always evolving, the field never settles into a static pattern.
-       Mouse-reactive: glyphs within ~140px of the cursor are pushed
-       outward and tinted with the cappuccino accent. Theme-adaptive
-       color tokens, retina-crisp, prefers-reduced-motion friendly.
-       Pointer-events: none. -->
+  <!-- Dot field: regular grid of small glyphs (mostly circles, mixed
+       with diamonds / plus signs / short lines) drifting downward as
+       a single sheet at one uniform speed. When a row passes the
+       bottom edge it teleports back above the top — invisible wrap.
+       Mouse-reactive: glyphs within ~130px of the cursor are pushed
+       outward and tinted with the cappuccino accent. Pointer-events:
+       none, theme-adaptive, retina-crisp, reduced-motion friendly. -->
   <canvas class="dot-field" aria-hidden="true"></canvas>
 
   <!-- Navigation -->
@@ -263,6 +261,6 @@
     </div>
   </footer>
 
-  <script src="./js/main.js?v=0.8.0"></script>
+  <script src="./js/main.js?v=0.8.1"></script>
 </body>
 </html>
