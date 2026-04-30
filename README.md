@@ -333,16 +333,21 @@ for the full text and [NOTICE](NOTICE) for attribution requirements.
 
 **Brand** — *Coffee CLI*, *Gambit*, *Pitch*, *VibeID*, *Vibetype* (and
 the 16 individual Vibetype names), *Coffee-CLI MCP*, *Sentinel Protocol*,
-and *Hyper-Agent* are common-law trademarks of edison7009 and are **not**
-covered by AGPL-3.0.
-The app icon is from the [line-md](https://github.com/cyberalien/line-md)
-icon set (Apache-2.0, by Vjacheslav Trushkin) and is **not** claimed as a
-mark.
-Reviews, tutorials, and honest references — including critical ones — are
-welcome without permission. Reimplementing our original designs (Gambit,
-VibeID, Sentinel Protocol, Pitch, Coffee-CLI MCP, Hyper-Agent) is fine as
-long as you credit Coffee CLI as prior art. See [TRADEMARKS.md](TRADEMARKS.md)
-for the full policy.
+and *Hyper-Agent* are common-law trademarks of edison7009. **Forks are
+welcome — no need to scrub our name and logo.** If your fork honestly
+credits Coffee CLI as upstream (README, About screen, or product page),
+you may keep our identity visible (e.g. "Coffee CLI Community Edition
+by X"). If you prefer to rebrand entirely, that's also fine — just keep
+the NOTICE attribution. The hard line is **commercial SaaS / app-store
+products literally branded with our marks** without permission, or
+**presenting the code as your own from-scratch original work**.
+Genuinely original code you add on top of either path belongs to you,
+named however you like. The app icon is from the
+[line-md](https://github.com/cyberalien/line-md) icon set (Apache-2.0,
+by Vjacheslav Trushkin) and is **not** claimed as a mark. Reviews,
+tutorials, and honest references — including critical ones — are
+welcome without permission. See [TRADEMARKS.md](TRADEMARKS.md) for the
+full policy.
 
 **Contributing** — See [CONTRIBUTING.md](CONTRIBUTING.md). All contributions
 are accepted under the project's CLA so that future relicensing remains possible.
@@ -359,12 +364,15 @@ are accepted under the project's CLA so that future relicensing remains possible
 **品牌** — *Coffee CLI*、*Gambit*、*Pitch / 投递*、*VibeID*、
 *Vibetype / Vibe 型*(及 16 个具体 Vibetype 名称)、*Coffee-CLI MCP*、
 *哨兵协议 / Sentinel Protocol*、*Hyper-Agent* 为 edison7009 的普通法
-商标,**不**包含在 AGPL-3.0 授权范围内。应用图标
-取自 [line-md 图标集](https://github.com/cyberalien/line-md)
+商标。**Fork 欢迎 —— 无需抹掉我们的名字和 Logo**。如果你的 fork 在
+README / About 页面 / 产品页诚实标注 Coffee CLI 为上游,可以保留我们
+的身份可见(例:"Coffee CLI 社区版 by X");如果你坚持完全重新品牌化
+也可以,改名 + 替换 Logo,但 NOTICE 中保留致谢。硬底线只有两条:
+**未授权的商业 SaaS / 应用商店产品字面挂我们的商标**;以及**把代码
+当作你从零写的原创发布**。Fork 之上你新增的原创代码归你,你想怎么
+命名都行。应用图标取自 [line-md 图标集](https://github.com/cyberalien/line-md)
 (Apache-2.0,作者 Vjacheslav Trushkin),**不**主张为本项目商标。
-评测、教程、事实性引用 —— **包括批评** —— 都欢迎,无需授权。
-重实现我们的原创设计(Gambit、VibeID、Sentinel Protocol、Pitch、
-Coffee-CLI MCP、Hyper-Agent)请署名 Coffee CLI 作为先例。完整政策见
+评测、教程、事实性引用 —— **包括批评** —— 都欢迎,无需授权。完整政策见
 [TRADEMARKS.md](TRADEMARKS.md)。
 
 **贡献** — 见 [CONTRIBUTING.md](CONTRIBUTING.md)。所有贡献按项目 CLA 接收,
