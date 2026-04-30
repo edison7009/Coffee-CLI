@@ -24,13 +24,14 @@
     <!-- Removed Cinematic Video Background to favor Minimalist Theme -->
   </div>
 
-  <!-- Dot field: regular grid of small glyphs (mostly circles, mixed
-       with diamonds / plus signs / short lines) drifting downward as
-       a single sheet at one uniform speed. When a row passes the
-       bottom edge it teleports back above the top — invisible wrap.
-       Mouse-reactive: glyphs within ~130px of the cursor are pushed
-       outward and tinted with the cappuccino accent. Pointer-events:
-       none, theme-adaptive, retina-crisp, reduced-motion friendly. -->
+  <!-- Dot field: regular grid of small dots drifting downward as one
+       sheet at uniform speed. Each dot has a subtle breathing pulse
+       (size + alpha sine-wave with per-dot phase offset). Within
+       the cursor's hover region (~130px) the dots morph into a "0"
+       or "1" digit — fixed per cell at creation, so the same dot
+       always shows the same digit. Crossfade between dot and digit
+       is smooth, not popping. Pointer-events: none, theme-adaptive,
+       retina-crisp, reduced-motion friendly. -->
   <canvas class="dot-field" aria-hidden="true"></canvas>
 
   <!-- Navigation -->
@@ -261,6 +262,6 @@
     </div>
   </footer>
 
-  <script src="./js/main.js?v=0.8.1"></script>
+  <script src="./js/main.js?v=0.9.0"></script>
 </body>
 </html>
