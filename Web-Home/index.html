@@ -24,30 +24,18 @@
     <!-- Removed Cinematic Video Background to favor Minimalist Theme -->
   </div>
 
-  <!-- Side rails: precision line treatment filling the empty side
-       margins on >=1100px viewports. A thin vertical line on each
-       gutter, with a cappuccino-tinted fill that tracks scroll
-       progress (vertical reading-progress indicator), plus three
-       small accent particles drifting down each rail for ambient
-       motion. Crisp edges work in both light and dark themes (unlike
-       blurred gradient orbs which dissolve on white backgrounds).
-       Hidden below 1100px. Pointer-events: none. -->
-  <div class="side-rails" aria-hidden="true">
-    <div class="rail rail-left">
-      <div class="rail-line"></div>
-      <div class="rail-fill"></div>
-      <span class="particle p1"></span>
-      <span class="particle p2"></span>
-      <span class="particle p3"></span>
-    </div>
-    <div class="rail rail-right">
-      <div class="rail-line"></div>
-      <div class="rail-fill"></div>
-      <span class="particle p1"></span>
-      <span class="particle p2"></span>
-      <span class="particle p3"></span>
-    </div>
-  </div>
+  <!-- Dot field: full-viewport canvas of small dots arranged in a
+       regular grid. The dots are mouse-reactive — within ~120px of
+       the cursor they're pushed outward (away from the pointer) on a
+       smooth lerp, creating a "ripple following your cursor" feel.
+       A slow horizontal sine wave (driven by scroll) gives ambient
+       drift even when the mouse is idle. Theme-adaptive color.
+       Pointer-events: none — dots never intercept clicks.
+
+       This is the same primitive Anthropic Claude.ai uses on its
+       background. Works in both light and dark themes because dots
+       have crisp edges (unlike blurred gradients). -->
+  <canvas class="dot-field" aria-hidden="true"></canvas>
 
   <!-- Navigation -->
   <header class="navbar">
@@ -277,6 +265,6 @@
     </div>
   </footer>
 
-  <script src="./js/main.js?v=0.6.1"></script>
+  <script src="./js/main.js?v=0.7.0"></script>
 </body>
 </html>

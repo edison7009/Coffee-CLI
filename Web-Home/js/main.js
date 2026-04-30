@@ -250,49 +250,207 @@ document.addEventListener("DOMContentLoaded", () => {
   initI18N();
   initLangDropdown();
   initDemoTabs();
-  initSideRails();
+  initDotField();
 });
 
 /**
- * Side rails — drive the cappuccino "fill" length on the two vertical
- * rails from the user's scroll position. The fill grows from 0% at the
- * top of the page to 100% at the bottom, giving a precise vertical
- * reading-progress indicator on each side gutter. CSS handles the
- * particles + line styling; JS only updates --rail-progress.
+ * Dot field — Anthropic Claude.ai-style mouse-reactive background.
  *
- * Single rAF per scroll event = 60fps even on mid-tier laptops.
- * Skipped entirely under prefers-reduced-motion.
+ * Renders a regular grid of small dots across a fixed full-viewport
+ * canvas. Each dot has a base position (anchor) and a current position
+ * that smoothly lerps toward a target. The target is the anchor unless
+ * the mouse is within REPEL_RADIUS, in which case it's pushed outward
+ * along the cursor → dot vector with strength proportional to proximity.
+ *
+ * Two ambient effects layer on top:
+ *   1. Scroll wave: dots' anchors are offset by sin((y + scrollY) * k) —
+ *      gives the field a slow horizontal sway that progresses as the
+ *      page scrolls.
+ *   2. Hot color: dots within REPEL_RADIUS interpolate from the base
+ *      neutral color toward --dot-color-hot (cappuccino accent). The
+ *      effect reads as "the mouse is glowing".
+ *
+ * Performance:
+ *   - Render loop runs at 60fps via rAF only while needed (mouse moved
+ *     OR scroll changed within the last ~600ms). Otherwise we skip frames
+ *     to save CPU on idle pages.
+ *   - Dot count clamped to ~roughly 1 dot per 36²px → ~600 dots at
+ *     1080p, fast even on integrated graphics.
+ *   - Retina handling: backing canvas sized at devicePixelRatio, drawn
+ *     at logical units — crisp dots on Mac/iPhone screens.
  */
-function initSideRails() {
-  const rails = document.querySelectorAll(".side-rails .rail");
-  if (!rails.length) return;
-  if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-    // Static fill at 0 — leave the rail visible but inert.
-    return;
-  }
+function initDotField() {
+  const canvas = document.querySelector(".dot-field");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
 
-  let ticking = false;
-  const update = () => {
-    const docHeight = document.documentElement.scrollHeight - window.innerHeight;
-    const progress = docHeight > 0
-      ? Math.max(0, Math.min(1, window.scrollY / docHeight))
-      : 0;
-    const pct = (progress * 100).toFixed(2) + "%";
-    for (const rail of rails) {
-      rail.style.setProperty("--rail-progress", pct);
+  const reduceMotion = window.matchMedia &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const SPACING       = 32;     // px between dot anchors
+  const DOT_RADIUS    = 1.4;    // base dot radius (px)
+  const DOT_RADIUS_HOT = 2.6;   // size when right under cursor
+  const REPEL_RADIUS  = 130;    // mouse influence radius (px)
+  const REPEL_FORCE   = 28;     // max displacement away from cursor (px)
+  const LERP          = 0.16;   // smoothing factor (higher = snappier)
+
+  let dots = [];
+  let dpr = Math.max(1, window.devicePixelRatio || 1);
+  let viewW = 0, viewH = 0;
+
+  // Mouse target offscreen by default so dots sit at rest until interaction.
+  let mx = -9999, my = -9999;
+  let lastMoveTs = 0;
+  let lastScrollY = 0;
+  let lastScrollTs = 0;
+
+  function resize() {
+    viewW = window.innerWidth;
+    viewH = window.innerHeight;
+    dpr = Math.max(1, window.devicePixelRatio || 1);
+    canvas.width  = Math.floor(viewW * dpr);
+    canvas.height = Math.floor(viewH * dpr);
+    canvas.style.width  = viewW + "px";
+    canvas.style.height = viewH + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // draw in logical px
+
+    // Rebuild dot grid sized to viewport (with one row/col of overflow
+    // so wave drift doesn't reveal a hard edge).
+    dots = [];
+    for (let x = SPACING / 2; x < viewW + SPACING; x += SPACING) {
+      for (let y = SPACING / 2; y < viewH + SPACING; y += SPACING) {
+        dots.push({
+          ax: x, ay: y,    // anchor
+          x: x,  y: y,     // current (animated)
+          r: DOT_RADIUS,   // current radius
+        });
+      }
     }
-    ticking = false;
-  };
+  }
+  resize();
+  window.addEventListener("resize", resize);
 
-  document.addEventListener("scroll", () => {
-    if (ticking) return;
-    ticking = true;
-    requestAnimationFrame(update);
+  document.addEventListener("mousemove", (e) => {
+    mx = e.clientX;
+    my = e.clientY;
+    lastMoveTs = performance.now();
   }, { passive: true });
 
-  // Initial paint after layout settles (some images may shift scrollHeight).
-  update();
-  window.addEventListener("load", update);
+  document.addEventListener("mouseleave", () => {
+    mx = -9999; my = -9999;
+  });
+
+  document.addEventListener("scroll", () => {
+    lastScrollY = window.scrollY;
+    lastScrollTs = performance.now();
+  }, { passive: true });
+
+  // Read color tokens fresh on every frame so theme switches apply
+  // immediately. getComputedStyle is cheap when the element is not
+  // re-rendered between calls.
+  const root = document.documentElement;
+  function token(name) {
+    return getComputedStyle(root).getPropertyValue(name).trim();
+  }
+
+  function frame() {
+    const now = performance.now();
+    const idle = (now - lastMoveTs) > 800 && (now - lastScrollTs) > 800 && mx < 0;
+
+    // Even when idle we still paint occasionally so the scroll wave keeps
+    // breathing — but at a much lower rate.
+    if (reduceMotion && dots.length) {
+      // One static paint, then never schedule again.
+      paintStatic();
+      return;
+    }
+
+    const colBase = token("--dot-color")     || "rgba(0,0,0,0.16)";
+    const colHot  = token("--dot-color-hot") || "rgba(196,149,106,0.9)";
+
+    ctx.clearRect(0, 0, viewW, viewH);
+
+    // Scroll-driven horizontal wave: phase advances slowly with scrollY.
+    const wavePhase = (lastScrollY * 0.012) + (now * 0.0006);
+
+    for (const d of dots) {
+      // Wave-modulated anchor: vertical offset based on sin of y + phase.
+      const waveY = Math.sin((d.ax * 0.012) + wavePhase) * 2.2;
+      let tx = d.ax;
+      let ty = d.ay + waveY;
+      let tr = DOT_RADIUS;
+      let hot = 0;
+
+      // Mouse repulsion.
+      const dx = mx - d.ax;
+      const dy = my - (d.ay + waveY);
+      const dist2 = dx * dx + dy * dy;
+      if (dist2 < REPEL_RADIUS * REPEL_RADIUS) {
+        const dist = Math.sqrt(dist2) || 0.0001;
+        const factor = 1 - dist / REPEL_RADIUS;       // 0..1, 1 = on cursor
+        const eased  = factor * factor;                // ease-in for crispness
+        tx -= (dx / dist) * eased * REPEL_FORCE;
+        ty -= (dy / dist) * eased * REPEL_FORCE;
+        tr = DOT_RADIUS + (DOT_RADIUS_HOT - DOT_RADIUS) * eased;
+        hot = eased;
+      }
+
+      // Smooth lerp toward target.
+      d.x += (tx - d.x) * LERP;
+      d.y += (ty - d.y) * LERP;
+      d.r += (tr - d.r) * LERP;
+
+      ctx.fillStyle = hot > 0.02 ? mixColor(colBase, colHot, hot) : colBase;
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Schedule next frame. When idle and mouse parked offscreen, drop to
+    // a slower cadence to save CPU but never stop entirely (so the wave
+    // keeps moving when user scrolls).
+    if (idle) {
+      setTimeout(() => requestAnimationFrame(frame), 50); // ~20fps idle
+    } else {
+      requestAnimationFrame(frame);
+    }
+  }
+
+  function paintStatic() {
+    const colBase = token("--dot-color") || "rgba(0,0,0,0.16)";
+    ctx.clearRect(0, 0, viewW, viewH);
+    ctx.fillStyle = colBase;
+    for (const d of dots) {
+      ctx.beginPath();
+      ctx.arc(d.ax, d.ay, DOT_RADIUS, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // Linear interpolation between two rgba() color strings. We trust the
+  // input format because both come from CSS tokens we authored.
+  function mixColor(a, b, t) {
+    const ca = parseRGBA(a);
+    const cb = parseRGBA(b);
+    if (!ca || !cb) return a;
+    const r = Math.round(ca[0] + (cb[0] - ca[0]) * t);
+    const g = Math.round(ca[1] + (cb[1] - ca[1]) * t);
+    const bl = Math.round(ca[2] + (cb[2] - ca[2]) * t);
+    const al = (ca[3] + (cb[3] - ca[3]) * t).toFixed(3);
+    return `rgba(${r},${g},${bl},${al})`;
+  }
+  function parseRGBA(s) {
+    const m = s.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d.]+))?\s*\)/);
+    if (!m) return null;
+    return [parseInt(m[1]), parseInt(m[2]), parseInt(m[3]), m[4] ? parseFloat(m[4]) : 1];
+  }
+
+  if (reduceMotion) {
+    paintStatic();
+  } else {
+    requestAnimationFrame(frame);
+  }
 }
 
 const T_TYPING_SPEED = 100;

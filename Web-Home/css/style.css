@@ -4,105 +4,37 @@
  */
 
 /* =========================================================================
-   Side rails — precision line treatment filling the empty side gutters.
-   Replaces the earlier "blurred gradient orbs" experiment, which read as
-   AI-slop on Notion/Vercel/etc and dissolved completely on white
-   backgrounds. Crisp 1px lines work in both light and dark themes.
+   Dot field — Anthropic-style mouse-reactive dot grid filling the entire
+   viewport background. Dots near the cursor are pushed outward; the field
+   has a slow ambient drift when mouse is idle. All rendering happens in
+   <canvas>; this CSS only handles position, sizing, and the theme tokens.
 
-   - .rail-line:    static ambient line (low-opacity neutral, theme-adaptive)
-   - .rail-fill:    cappuccino accent that tracks scroll progress (driven
-                    from JS via the --rail-progress CSS variable)
-   - .particle:     three small accent dots drift down each rail on a
-                    looped CSS animation, staggered start times — ambient
-                    motion without competing with content
+   The actual particle math (lerping, mouse repulsion, scroll wave) lives
+   in initDotField() in main.js. Color comes from --dot-color so the same
+   canvas adapts cleanly between dawn/dark themes without re-creation.
    ========================================================================= */
-.side-rails {
+.dot-field {
   position: fixed;
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  display: none;
-}
-@media (min-width: 1100px) {
-  .side-rails { display: block; }
+  width: 100%;
+  height: 100%;
 }
 
-.side-rails .rail {
-  position: absolute;
-  top:    96px;
-  bottom: 64px;
-  width: 1px;
-}
-.side-rails .rail-left  { left:  32px; }
-.side-rails .rail-right { right: 32px; }
-
-@media (min-width: 1400px) {
-  .side-rails .rail-left  { left:  56px; }
-  .side-rails .rail-right { right: 56px; }
-}
-
-/* Theme-adaptive line color tokens. */
 :root {
-  --rail-line:    rgba(0, 0, 0, 0.08);
-  --rail-accent:  #c4956a;
+  --dot-color: rgba(0, 0, 0, 0.16);          /* light theme: dim near-black */
+  --dot-color-hot: rgba(196, 149, 106, 0.90); /* mouse-near: cappuccino */
 }
 html[data-theme='dark'] {
-  --rail-line:    rgba(255, 255, 255, 0.10);
-  --rail-accent:  #c4956a;
-}
-
-.side-rails .rail-line {
-  position: absolute;
-  inset: 0;
-  background: var(--rail-line);
-}
-
-.side-rails .rail-fill {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: var(--rail-progress, 0%);
-  background: linear-gradient(
-    180deg,
-    transparent 0%,
-    var(--rail-accent) 12%,
-    var(--rail-accent) 100%
-  );
-  opacity: 0.85;
-  transition: height 0.05s linear;
-}
-
-/* Three particles drift down the rail. Staggered animation-delay so
-   one is always entering, one mid-rail, one exiting — continuous flow. */
-.side-rails .particle {
-  position: absolute;
-  left: -2px;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--rail-accent);
-  box-shadow: 0 0 10px var(--rail-accent);
-  animation: rail-drift 9s linear infinite;
-  opacity: 0;
-}
-.side-rails .particle.p1 { animation-delay: 0s;   }
-.side-rails .particle.p2 { animation-delay: 3s;   }
-.side-rails .particle.p3 { animation-delay: 6s;   }
-.side-rails .rail-right .particle.p1 { animation-delay: 1.5s; }
-.side-rails .rail-right .particle.p2 { animation-delay: 4.5s; }
-.side-rails .rail-right .particle.p3 { animation-delay: 7.5s; }
-
-@keyframes rail-drift {
-  0%   { top: 0;    opacity: 0; }
-  8%   { opacity: 1; }
-  92%  { opacity: 1; }
-  100% { top: 100%; opacity: 0; }
+  --dot-color: rgba(255, 255, 255, 0.14);
+  --dot-color-hot: rgba(212, 165, 132, 0.95);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .side-rails .particle    { animation: none; opacity: 0; }
-  .side-rails .rail-fill   { transition: none; }
+  /* JS skips the animation loop in reduced-motion; the canvas paints
+     a single static frame so the page is not visually empty. */
+  .dot-field { opacity: 0.6; }
 }
 
 
