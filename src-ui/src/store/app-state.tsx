@@ -162,11 +162,15 @@ type Action =
 function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
     case 'SET_FOLDER':
+      // Persist as the "last folder" so a fresh launch lands here instead
+      // of the C-drive default. Read back in getInitialState().
+      try { localStorage.setItem('cc-folder', action.path); } catch {}
       return {
         ...state,
         terminals: state.terminals.map(t => t.id === state.activeTerminalId ? { ...t, folderPath: action.path } : t)
       };
     case 'CLEAR_FOLDER':
+      try { localStorage.removeItem('cc-folder'); } catch {}
       return {
         ...state,
         terminals: state.terminals.map(t => t.id === state.activeTerminalId ? { ...t, folderPath: null } : t)
