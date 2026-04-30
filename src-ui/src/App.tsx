@@ -76,6 +76,7 @@ export function App() {
   // remaining entries are the PNG rasters + the terminal SVGs.
   useEffect(() => {
     const ICONS = [
+      '/icons/tools/opencode.png',
       '/icons/tools/hermes.png',
       '/icons/tools/vibeid.png',
       '/icons/tools/terminal-powershell.svg',
