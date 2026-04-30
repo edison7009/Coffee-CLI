@@ -556,10 +556,18 @@ code::-webkit-scrollbar-thumb {
   opacity: 0.75;
 }
 
-/* Subtle highlight when JS detects this is the user's platform */
-.download-btn.is-current {
-  background: var(--accent-subtle, rgba(196, 149, 106, 0.12));
-  border-color: var(--accent, #c4956a);
+.downloads-note {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  opacity: 0.6;
+  max-width: 560px;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.downloads-note strong {
+  font-weight: 600;
+  opacity: 0.95;
 }
 
 .downloads-other {
