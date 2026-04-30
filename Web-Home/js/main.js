@@ -250,7 +250,49 @@ document.addEventListener("DOMContentLoaded", () => {
   initI18N();
   initLangDropdown();
   initDemoTabs();
+  initSideParallax();
 });
+
+/**
+ * Side-orb scroll parallax. Each orb has data-parallax="<float>" — we
+ * multiply window.scrollY by that factor and translate the orb on Y.
+ * Faster orbs (larger multiplier) feel closer ("foreground"), slower
+ * orbs feel farther ("background") — Z-axis depth illusion using
+ * pure 2D translation. Single rAF per scroll event keeps it 60fps.
+ */
+function initSideParallax() {
+  if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const orbs = document.querySelectorAll(".side-decor .orb");
+  if (!orbs.length) return;
+
+  // Cache the parallax factors to avoid re-parsing on every frame.
+  const items = Array.from(orbs).map(el => ({
+    el,
+    factor: parseFloat(el.dataset.parallax || "0.4"),
+  }));
+
+  let ticking = false;
+  const update = () => {
+    const y = window.scrollY;
+    for (const { el, factor } of items) {
+      // Negative direction so orbs scroll UP as user scrolls down — they
+      // feel like they're staying in space while the viewport moves down.
+      // Slower factor = stays put longer = "background"; faster = moves
+      // more = "foreground".
+      el.style.transform = `translate3d(0, ${-y * factor}px, 0)`;
+    }
+    ticking = false;
+  };
+
+  document.addEventListener("scroll", () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(update);
+  }, { passive: true });
+
+  // Initial paint.
+  update();
+}
 
 const T_TYPING_SPEED = 100;
 const T_ERASING_SPEED = 50;

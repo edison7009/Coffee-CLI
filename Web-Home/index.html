@@ -24,6 +24,21 @@
     <!-- Removed Cinematic Video Background to favor Minimalist Theme -->
   </div>
 
+  <!-- Side decoration: scroll-driven parallax orbs filling the empty
+       margins on wide screens. Each shape moves at its own rate as the
+       user scrolls (data-parallax = multiplier vs scroll distance), so
+       fast ones feel "in front" and slow ones feel "in the back" —
+       Z-axis depth illusion using only Y-translate + scale. Hidden on
+       narrow viewports where there is no side margin to fill. -->
+  <div class="side-decor" aria-hidden="true">
+    <div class="orb orb-l1" data-parallax="0.25"></div>
+    <div class="orb orb-l2" data-parallax="0.55"></div>
+    <div class="orb orb-l3" data-parallax="0.38"></div>
+    <div class="orb orb-r1" data-parallax="0.42"></div>
+    <div class="orb orb-r2" data-parallax="0.62"></div>
+    <div class="orb orb-r3" data-parallax="0.30"></div>
+  </div>
+
   <!-- Navigation -->
   <header class="navbar">
     <div class="logo">
@@ -252,6 +267,6 @@
     </div>
   </footer>
 
-  <script src="./js/main.js?v=0.5.3"></script>
+  <script src="./js/main.js?v=0.6.0"></script>
 </body>
 </html>

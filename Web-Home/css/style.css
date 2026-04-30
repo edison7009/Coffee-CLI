@@ -1,7 +1,106 @@
-/* 
+/*
  * CSS - Minimalist Hardcore Dual Theme (Light/Dark)
  * Following rules: No Chinese characters. Extremely clean geometry. Borderless structure.
  */
+
+/* =========================================================================
+   Side decoration: scroll-driven parallax orbs (Phase 1 of v2 ambition).
+   Each orb has data-parallax (set in HTML) — JS multiplies scrollY by that
+   factor to translate the orb. Smaller multiplier = "in the back" (slow),
+   larger = "in front" (fast). Combined with offset depths (left/right
+   columns at different fixed top values), the page reads as having Z-axis
+   depth even though everything is 2D + Y-translate.
+
+   Hidden below 1100px because there is no side gutter to fill on narrow
+   viewports. Pointer-events: none so orbs never intercept clicks.
+   ========================================================================= */
+.side-decor {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  display: none;
+}
+
+@media (min-width: 1100px) {
+  .side-decor { display: block; }
+}
+
+/* All orbs share base shape. Each is a heavily-blurred radial gradient
+   blob; pure CSS, no images. */
+.side-decor .orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(70px);
+  will-change: transform;
+  transition: opacity 0.4s ease;
+}
+
+/* Use --orb-color tokens that adapt to theme (dawn/light vs dark). */
+:root {
+  --orb-1: rgba(196, 149, 106, 0.28);   /* cappuccino */
+  --orb-2: rgba(143, 99, 64, 0.22);     /* deep coffee */
+  --orb-3: rgba(232, 209, 175, 0.20);   /* cream */
+}
+html[data-theme='light'] {
+  --orb-1: rgba(196, 149, 106, 0.18);
+  --orb-2: rgba(143, 99, 64, 0.13);
+  --orb-3: rgba(232, 209, 175, 0.16);
+}
+
+/* Left column (3 orbs at staggered heights) */
+.side-decor .orb-l1 {
+  top:  10vh;
+  left: -120px;
+  width:  340px;
+  height: 340px;
+  background: radial-gradient(circle, var(--orb-1) 0%, transparent 70%);
+}
+.side-decor .orb-l2 {
+  top:  78vh;
+  left: -60px;
+  width:  220px;
+  height: 220px;
+  background: radial-gradient(circle, var(--orb-2) 0%, transparent 70%);
+}
+.side-decor .orb-l3 {
+  top:  150vh;
+  left: -100px;
+  width:  280px;
+  height: 280px;
+  background: radial-gradient(circle, var(--orb-3) 0%, transparent 70%);
+}
+
+/* Right column (3 orbs, offset heights so the page never feels symmetric) */
+.side-decor .orb-r1 {
+  top:  32vh;
+  right: -100px;
+  width:  280px;
+  height: 280px;
+  background: radial-gradient(circle, var(--orb-3) 0%, transparent 70%);
+}
+.side-decor .orb-r2 {
+  top:  100vh;
+  right: -140px;
+  width:  360px;
+  height: 360px;
+  background: radial-gradient(circle, var(--orb-1) 0%, transparent 70%);
+}
+.side-decor .orb-r3 {
+  top:  175vh;
+  right: -60px;
+  width:  200px;
+  height: 200px;
+  background: radial-gradient(circle, var(--orb-2) 0%, transparent 70%);
+}
+
+/* Reduced motion: drop the parallax updates entirely (JS checks the
+   media query too, but this provides a CSS-side fallback). */
+@media (prefers-reduced-motion: reduce) {
+  .side-decor .orb { transition: none; }
+}
+
 
 :root {
   --font-primary: 'Outfit', -apple-system, sans-serif;
