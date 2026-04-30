@@ -214,14 +214,6 @@ export interface McpEndpoint {
   started_at: number;
 }
 
-export interface RegistrationReport {
-  agent: string;
-  ok: boolean;
-  path: string | null;
-  message: string;
-}
-
 export interface HyperAgentStatus {
   endpoint: McpEndpoint;
-  registrations: RegistrationReport[];
 }

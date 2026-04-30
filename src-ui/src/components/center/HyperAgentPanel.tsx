@@ -21,7 +21,7 @@
 // Setup is one-time per machine: register the URL in OpenClaw / Hermes
 // configs (we do this automatically) + paste the rule into them once.
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { commands, type McpEndpoint } from '../../tauri';
 import { useT } from '../../i18n/useT';
 import { clipboardWrite } from '../../lib/clipboard';
@@ -81,6 +81,11 @@ export function HyperAgentPanel({ hasBg, bgUrl, bgType }: Props) {
     }
   });
 
+  const setupText = useMemo(
+    () => (endpoint ? buildSetupInstruction(endpoint.url) : ''),
+    [endpoint],
+  );
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -99,9 +104,9 @@ export function HyperAgentPanel({ hasBg, bgUrl, bgType }: Props) {
   }, []);
 
   const copySetup = async () => {
-    if (!endpoint) return;
+    if (!setupText) return;
     try {
-      await clipboardWrite(buildSetupInstruction(endpoint.url));
+      await clipboardWrite(setupText);
       setCopied(true);
       // Mark as done — next tab open won't show the heavy card.
       try { localStorage.setItem('cc-hyper-agent-setup-done', '1'); } catch {}
@@ -264,7 +269,7 @@ export function HyperAgentPanel({ hasBg, bgUrl, bgType }: Props) {
                 wordBreak: 'break-word',
                 fontFamily: 'inherit',
               }}
-            >{buildSetupInstruction(endpoint.url)}</pre>
+            >{setupText}</pre>
           </div>
         )}
       </div>

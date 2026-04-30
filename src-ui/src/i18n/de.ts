@@ -43,7 +43,7 @@ export const de = {
   'tool.four_split': 'Unabhängiger Quad',
   'tool.hyper_agent': 'Hyper-Agent',
   'hyper_agent.ready': 'Hyper-Agent gestartet: Dein lokales OpenClaw / Hermes Agent haben jetzt Super-Admin-Rechte, jedes Coffee CLI Fenster einzusehen und zu steuern. Sprich mit OpenClaw / Hermes Agent über deine Social-App — sie werden zu deinem CEO und führen das Agent-Team weiter an die Arbeit.',
-  'hyper_agent.first_time_hint': 'Zum ersten Mal hier? Füge die folgende Regel in OpenClaw / Hermes Agent ein, damit sie wissen, wie man über Panes hinweg arbeitet:',
+  'hyper_agent.first_time_hint': 'Zum ersten Mal hier? Füge die folgende Regel in OpenClaw / Hermes Agent ein, damit sie wissen, wie sie alle laufenden Agents steuern können:',
   'hyper_agent.show_setup_again': 'Setup-Anweisung erneut anzeigen',
   'vibeid.need_insights_confirm': 'Der Persönlichkeitstest benötigt zuerst deinen Claude Code Nutzungsbericht.\n\n/insights wird jetzt automatisch ausgeführt (ca. 1-2 Minuten), dann startet der Test automatisch.\n\nFortfahren?',
   'vibeid.insights_timeout': 'Die Berichterstellung hat zu lange gedauert. Bitte später erneut versuchen oder /insights manuell in einem Claude Code Tab ausführen.',

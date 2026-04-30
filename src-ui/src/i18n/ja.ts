@@ -43,7 +43,7 @@ export const ja = {
   'tool.four_split': '独立4画面',
   'tool.hyper_agent': 'Hyper-Agent',
   'hyper_agent.ready': 'Hyper-Agent を起動しました：ローカルの OpenClaw / Hermes Agent は Coffee CLI の全ウィンドウを閲覧・指揮する管理者権限を持ちました。ソーシャルアプリで OpenClaw / Hermes Agent と対話すれば、彼らがあなたの CEO となり、全 Agent を率いて作業を継続します。',
-  'hyper_agent.first_time_hint': '初めて使う場合は、このルールを OpenClaw / Hermes Agent に貼り付けて、pane 横断操作の方法を覚えさせてください：',
+  'hyper_agent.first_time_hint': '初めて使う場合は、このルールを OpenClaw / Hermes Agent に貼り付けて、稼働中のすべての Agent を操作する方法を覚えさせてください：',
   'hyper_agent.show_setup_again': 'セットアップ説明を再表示',
   'vibeid.need_insights_confirm': '性格診断には Claude Code の使用状況レポートが必要です。\n\n/insights を自動実行します（約 1〜2 分）。完了後、性格診断が自動的に開始されます。\n\n続行しますか？',
   'vibeid.insights_timeout': 'レポートの生成がタイムアウトしました。後でもう一度試すか、Claude Code タブで /insights を手動で実行してください。',

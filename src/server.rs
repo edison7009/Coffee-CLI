@@ -2132,8 +2132,6 @@ fn write_persisted_hyper_agent_port(port: u16) -> std::io::Result<()> {
 #[derive(Serialize, Clone)]
 pub struct HyperAgentStatus {
     pub endpoint: crate::mcp_server::McpEndpoint,
-    /// Per-agent registration outcomes (OpenClaw + Hermes Agent).
-    pub registrations: Vec<crate::agent_mcp_config::RegistrationReport>,
 }
 
 #[tauri::command]
@@ -2143,35 +2141,27 @@ pub async fn start_hyper_agent_server(
     {
         let guard = state.hyper_agent_endpoint.lock().await;
         if let Some(ep) = guard.as_ref() {
-            // Server already up. Re-run registrations idempotently so
-            // any agent config that was hand-edited / blown away gets
-            // re-seeded; identical-content writes are skipped silently
-            // by the [unchanged] short-circuit inside agent_mcp_config.
-            let registrations =
-                crate::agent_mcp_config::register_all(&ep.url).await;
-            return Ok(HyperAgentStatus {
-                endpoint: ep.clone(),
-                registrations,
-            });
+            // Server already up — return cached endpoint. Registrations
+            // were performed on first spawn; re-running on every panel
+            // mount would just be a no-op file read after the [unchanged]
+            // short-circuit. If a user hand-deletes their OpenClaw config,
+            // restarting Coffee-CLI re-seeds it.
+            return Ok(HyperAgentStatus { endpoint: ep.clone() });
         }
     }
     let _spawn_guard = state.mcp_spawn_lock.lock().await;
     {
         let guard = state.hyper_agent_endpoint.lock().await;
         if let Some(ep) = guard.as_ref() {
-            let registrations =
-                crate::agent_mcp_config::register_all(&ep.url).await;
-            return Ok(HyperAgentStatus {
-                endpoint: ep.clone(),
-                registrations,
-            });
+            return Ok(HyperAgentStatus { endpoint: ep.clone() });
         }
     }
 
     let panes = std::sync::Arc::new(
         crate::mcp_server::PaneStore::new(state.terminal_session.clone()),
     );
-    let preferred = read_persisted_hyper_agent_port().unwrap_or(0);
+    let persisted = read_persisted_hyper_agent_port();
+    let preferred = persisted.unwrap_or(0);
     let endpoint = crate::mcp_server::spawn_with_port(panes, None, preferred)
         .await
         .map_err(|e| format!("hyper-agent mcp spawn: {}", e))?;
@@ -2179,15 +2169,22 @@ pub async fn start_hyper_agent_server(
         "[hyper-agent] anonymous server up at {} (preferred port {})",
         endpoint.url, preferred
     );
-    let _ = write_persisted_hyper_agent_port(endpoint.port);
+    // Only write the port file when we got the port we asked for, or when
+    // there was no file to begin with. If preferred was non-zero and we
+    // ended up on a different port, another Coffee-CLI instance owns that
+    // port — don't clobber its file (would force its OpenClaw config out
+    // of sync on the next config-watch tick).
+    let should_write = match persisted {
+        None => true,
+        Some(p) => p == endpoint.port,
+    };
+    if should_write {
+        let _ = write_persisted_hyper_agent_port(endpoint.port);
+    }
     *state.hyper_agent_endpoint.lock().await = Some(endpoint.clone());
 
-    let registrations =
-        crate::agent_mcp_config::register_all(&endpoint.url).await;
-    Ok(HyperAgentStatus {
-        endpoint,
-        registrations,
-    })
+    let _ = crate::agent_mcp_config::register_all(&endpoint.url).await;
+    Ok(HyperAgentStatus { endpoint })
 }
 
 #[tauri::command]

@@ -94,19 +94,24 @@ fn register_with_openclaw_at(path: &PathBuf, url: &str) -> RegistrationReport {
     // file watcher doesn't trigger a gateway restart on every launch.
     if let Ok(existing_str) = std::fs::read_to_string(path) {
         if let Ok(existing) = serde_json::from_str::<serde_json::Value>(&existing_str) {
-            let already_set = existing
+            let entry = existing
+                .get("mcp")
+                .and_then(|m| m.get("servers"))
+                .and_then(|s| s.get(MCP_NAME));
+            let url_matches = entry
+                .and_then(|e| e.get("url"))
+                .and_then(|u| u.as_str())
+                == Some(url);
+            let transport_matches = entry
+                .and_then(|e| e.get("transport"))
+                .and_then(|t| t.as_str())
+                == Some("streamable-http");
+            let gate_set = existing
                 .get("commands")
                 .and_then(|c| c.get("mcp"))
                 .and_then(|v| v.as_bool())
-                .unwrap_or(false)
-                && existing
-                    .get("mcp")
-                    .and_then(|m| m.get("servers"))
-                    .and_then(|s| s.get(MCP_NAME))
-                    .and_then(|e| e.get("url"))
-                    .and_then(|u| u.as_str())
-                    == Some(url);
-            if already_set {
+                .unwrap_or(false);
+            if gate_set && url_matches && transport_matches {
                 return RegistrationReport {
                     agent: "openclaw".into(),
                     ok: true,
