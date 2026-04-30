@@ -299,9 +299,12 @@ function initDotField() {
   // alpha and as 1-alpha for the circle (crossfade).
   const MORPH_THRESHOLD = 0.55;
 
-  const DIGIT_FONT = '600 12px "SF Mono", "Cascadia Mono", "JetBrains Mono", Consolas, monospace';
+  const GLYPH_FONT = '600 13px "SF Mono", "Cascadia Mono", "JetBrains Mono", Consolas, monospace';
 
   let cells = [];
+  let trackLength = 0;   // cyclic Y range — set in resize() to an exact
+                         // multiple of SPACING so wrap preserves uniform
+                         // row pitch (no "narrow seam" at the wrap point)
   let dpr = Math.max(1, window.devicePixelRatio || 1);
   let viewW = 0, viewH = 0;
 
@@ -319,15 +322,24 @@ function initDotField() {
     canvas.style.height = viewH + "px";
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
+    // We want cells spanning [-SPACING, viewH+SPACING] (one buffer row
+    // above and below the viewport). Round the row count UP to the nearest
+    // integer and use exactly that many rows; trackLength = nRows*SPACING.
+    // This guarantees that when the bottom-most cell wraps to the top,
+    // it lands exactly one SPACING above its neighbor — no narrow seam.
+    const nRows = Math.ceil((viewH + 2 * SPACING) / SPACING);
+    trackLength = nRows * SPACING;
+
     cells = [];
-    for (let x = SPACING / 2; x < viewW; x += SPACING) {
-      for (let y = -SPACING; y < viewH + SPACING; y += SPACING) {
+    for (let row = 0; row < nRows; row++) {
+      const y = -SPACING + row * SPACING;
+      for (let x = SPACING / 2; x < viewW; x += SPACING) {
         cells.push({
           x: x,
           y: y,
           dispX: 0,
           dispY: 0,
-          digit: Math.random() < 0.5 ? "0" : "1",
+          glyph: Math.random() < 0.5 ? "+" : "−",  // typographic minus (U+2212), not hyphen
           bp: Math.random() * Math.PI * 2,
         });
       }
@@ -366,15 +378,16 @@ function initDotField() {
     const colHotRGB  = parseRGBA(token("--dot-color-hot") || "rgba(196,149,106,0.9)");
 
     ctx.clearRect(0, 0, viewW, viewH);
-    ctx.font         = DIGIT_FONT;
+    ctx.font         = GLYPH_FONT;
     ctx.textAlign    = "center";
     ctx.textBaseline = "middle";
 
     for (const c of cells) {
-      // Uniform downward drift.
+      // Uniform downward drift; wrap by exactly trackLength so the seam
+      // preserves row pitch (see resize() comment).
       c.y += DRIFT_SPEED * dtScale;
-      if (c.y > viewH + SPACING) {
-        c.y -= viewH + SPACING * 2;
+      if (c.y > trackLength - SPACING) {
+        c.y -= trackLength;
       }
 
       // Mouse hot factor (0..1) and repulsion vector.
@@ -420,7 +433,7 @@ function initDotField() {
       // Draw digit, faded in as morph rises.
       if (morph > 0.05) {
         ctx.fillStyle = withAlpha(useColor, morph);
-        ctx.fillText(c.digit, fx, fy);
+        ctx.fillText(c.glyph, fx, fy);
       }
     }
 
