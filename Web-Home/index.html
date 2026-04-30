@@ -134,6 +134,42 @@
     </div>
   </main>
 
+  <!-- Direct Download Section ------------------------------------------------
+       For users who prefer click-and-install over running the install
+       command above. Each button hits the CF Worker's /download/<platform>
+       route (see Web-Home/_worker.js), which returns the latest GitHub
+       Release asset for that platform; if the asset isn't uploaded yet
+       (CI mid-build), the worker returns 404 and the user can retry. -->
+  <section class="downloads-section">
+    <p class="downloads-title" data-i18n="downloads-title">Or download the desktop app</p>
+    <div class="downloads-row">
+      <a class="download-btn" href="/download/windows" data-platform="windows">
+        <svg class="dl-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M3 5.5L10 4.45V11.4H3V5.5zM11 4.3L21 3V11.4H11V4.3zM3 12.6H10V19.55L3 18.5V12.6zM11 12.6H21V21L11 19.7V12.6z"/>
+        </svg>
+        <span class="dl-label">Windows</span>
+        <span class="dl-suffix">.exe</span>
+      </a>
+      <a class="download-btn" href="/download/macos-arm" data-platform="macos">
+        <svg class="dl-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M17.5 12.5c-.02-2.4 1.96-3.55 2.05-3.61-1.12-1.64-2.86-1.86-3.48-1.89-1.48-.15-2.89.87-3.64.87-.76 0-1.92-.85-3.16-.83-1.62.02-3.12.94-3.96 2.4-1.69 2.93-.43 7.27 1.21 9.65.8 1.16 1.75 2.46 3 2.42 1.21-.05 1.66-.78 3.13-.78 1.45 0 1.87.78 3.15.75 1.3-.02 2.13-1.18 2.92-2.35.93-1.35 1.31-2.66 1.33-2.73-.03-.01-2.55-.98-2.55-3.9zM15.07 5.32c.66-.81 1.11-1.92.99-3.04-.96.04-2.13.65-2.82 1.45-.61.71-1.16 1.85-1.01 2.93 1.07.08 2.18-.55 2.84-1.34z"/>
+        </svg>
+        <span class="dl-label">macOS</span>
+        <span class="dl-suffix">.dmg</span>
+      </a>
+      <a class="download-btn" href="/download/linux-deb" data-platform="linux">
+        <svg class="dl-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M12 2c-1.1 0-2 .9-2 2 0 .53.21 1.03.59 1.41C8.86 6.04 7.5 8.32 7.5 11c0 .9.16 1.74.43 2.5-.6.59-1.43 1.5-1.43 2.5 0 1.07 1.21 1.99 2 2.5L8 20.27c-.66.4-1 .81-1 1.23 0 .55.45 1 1 1h8c.55 0 1-.45 1-1 0-.42-.34-.83-1-1.23l-.5-1.77c.79-.51 2-1.43 2-2.5 0-1-.83-1.91-1.43-2.5.27-.76.43-1.6.43-2.5 0-2.68-1.36-4.96-3.09-5.59.38-.38.59-.88.59-1.41 0-1.1-.9-2-2-2zm-1 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1z"/>
+        </svg>
+        <span class="dl-label">Linux</span>
+        <span class="dl-suffix">.deb</span>
+      </a>
+    </div>
+    <a class="downloads-other" href="https://github.com/edison7009/Coffee-CLI/releases/latest" target="_blank" rel="noopener" data-i18n="downloads-other">
+      Other variants (Intel Mac · ARM Linux · AppImage) →
+    </a>
+  </section>
+
   <!-- Demo Showcase Section -->
   <section class="demo-section">
     <div class="demo-wrapper">
@@ -213,6 +249,6 @@
     </div>
   </footer>
 
-  <script src="./js/main.js?v=0.4.5"></script>
+  <script src="./js/main.js?v=0.5.0"></script>
 </body>
 </html>

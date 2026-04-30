@@ -50,70 +50,90 @@ const I18N_DICT = {
     "hero-title-1": "Enjoy life while you work.",
     "hero-title-2": "Coffee CLI for",
     "opc-link": "Coffee 101",
-    "feedback": "Feedback"
+    "feedback": "Feedback",
+    "downloads-title": "Or download the desktop app",
+    "downloads-other": "Other variants (Intel Mac · ARM Linux · AppImage) →"
   },
   zh: {
     "logo-text": "Coffee CLI",
     "hero-title-1": "一边享受生活 一边工作",
     "hero-title-2": "Coffee CLI 适合",
     "opc-link": "Coffee 101",
-    "feedback": "问题反馈"
+    "feedback": "问题反馈",
+    "downloads-title": "或者直接下载桌面应用",
+    "downloads-other": "其他版本（Intel Mac · ARM Linux · AppImage）→"
   },
   "zh-TW": {
     "logo-text": "Coffee CLI",
     "hero-title-1": "一邊享受生活 一邊工作",
     "hero-title-2": "Coffee CLI 適用於",
     "opc-link": "Coffee 101",
-    "feedback": "問題回饋"
+    "feedback": "問題回饋",
+    "downloads-title": "或者直接下載桌面應用",
+    "downloads-other": "其他版本（Intel Mac · ARM Linux · AppImage）→"
   },
   ja: {
     "logo-text": "Coffee CLI",
     "hero-title-1": "生活を楽しみながら働く",
     "hero-title-2": "Coffee CLIは以下の方に",
     "opc-link": "Coffee 101",
-    "feedback": "フィードバック"
+    "feedback": "フィードバック",
+    "downloads-title": "デスクトップアプリを直接ダウンロード",
+    "downloads-other": "その他のバリアント（Intel Mac · ARM Linux · AppImage）→"
   },
   ko: {
     "logo-text": "Coffee CLI",
     "hero-title-1": "삶을 즐기며 일하다",
     "hero-title-2": "Coffee CLI는 이런 분께",
     "opc-link": "Coffee 101",
-    "feedback": "피드백"
+    "feedback": "피드백",
+    "downloads-title": "데스크톱 앱 직접 다운로드",
+    "downloads-other": "기타 버전 (Intel Mac · ARM Linux · AppImage) →"
   },
   es: {
     "logo-text": "Coffee CLI",
     "hero-title-1": "Disfruta la vida mientras trabajas",
     "hero-title-2": "Coffee CLI para",
     "opc-link": "Coffee 101",
-    "feedback": "Comentarios"
+    "feedback": "Comentarios",
+    "downloads-title": "O descarga la app de escritorio",
+    "downloads-other": "Otras variantes (Intel Mac · ARM Linux · AppImage) →"
   },
   fr: {
     "logo-text": "Coffee CLI",
     "hero-title-1": "Profitez de la vie tout en travaillant",
     "hero-title-2": "Coffee CLI pour",
     "opc-link": "Coffee 101",
-    "feedback": "Retour"
+    "feedback": "Retour",
+    "downloads-title": "Ou téléchargez l'application bureau",
+    "downloads-other": "Autres variantes (Intel Mac · ARM Linux · AppImage) →"
   },
   de: {
     "logo-text": "Coffee CLI",
     "hero-title-1": "Genieße das Leben, während du arbeitest",
     "hero-title-2": "Coffee CLI für",
     "opc-link": "Coffee 101",
-    "feedback": "Feedback"
+    "feedback": "Feedback",
+    "downloads-title": "Oder lade die Desktop-App herunter",
+    "downloads-other": "Andere Varianten (Intel Mac · ARM Linux · AppImage) →"
   },
   pt: {
     "logo-text": "Coffee CLI",
     "hero-title-1": "Aproveite a vida enquanto trabalha",
     "hero-title-2": "Coffee CLI para",
     "opc-link": "Coffee 101",
-    "feedback": "Feedback"
+    "feedback": "Feedback",
+    "downloads-title": "Ou baixe o app desktop",
+    "downloads-other": "Outras variantes (Intel Mac · ARM Linux · AppImage) →"
   },
   ru: {
     "logo-text": "Coffee CLI",
     "hero-title-1": "Наслаждайтесь жизнью, работая",
     "hero-title-2": "Coffee CLI для",
     "opc-link": "Coffee 101",
-    "feedback": "Обратная связь"
+    "feedback": "Обратная связь",
+    "downloads-title": "Или скачайте десктоп-приложение",
+    "downloads-other": "Другие варианты (Intel Mac · ARM Linux · AppImage) →"
   }
 };
 
@@ -220,7 +240,22 @@ document.addEventListener("DOMContentLoaded", () => {
   initI18N();
   initLangDropdown();
   initDemoTabs();
+  initDownloadButtons();
 });
+
+// Highlight the download button matching the visitor's platform.
+// Pure UI hint — all buttons are still clickable; we just nudge.
+function initDownloadButtons() {
+  const ua = navigator.userAgent || "";
+  const platform = navigator.platform || "";
+  let current = null;
+  if (/Win/i.test(platform) || /Windows/i.test(ua)) current = "windows";
+  else if (/Mac/i.test(platform) || /Mac OS X/i.test(ua)) current = "macos";
+  else if (/Linux/i.test(platform) || /Linux/i.test(ua)) current = "linux";
+  if (!current) return;
+  const btn = document.querySelector(`.download-btn[data-platform="${current}"]`);
+  if (btn) btn.classList.add("is-current");
+}
 
 const T_TYPING_SPEED = 100;
 const T_ERASING_SPEED = 50;
