@@ -412,39 +412,9 @@
   pointer-events: none;
 }
 
-/* Gear button — sits inline next to the tool label, matching the
-   "small globe" hint on the Terminal card. Same subtle baseline opacity
-   (0.18) and hover boost (0.7) so the visual treatment is consistent.
-   Lets users open the per-tool launch override modal. Does NOT take
-   up space on the right side of the card, so the folder button position
-   stays exactly where it would be on a card without the gear. */
-.launchpad-gear-btn {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: none;
-  padding: 4px;
-  cursor: pointer;
-  color: var(--text-3);
-  opacity: 0.18;
-  transition: opacity 0.15s;
-}
-
-.launchpad-gear-btn:hover {
-  opacity: 0.7;
-}
-
-.launchpad-gear-btn svg {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-}
-
-.launchpad-card-disabled .launchpad-gear-btn {
-  pointer-events: none;
-}
+/* (Per-tool launch settings now live on the Library cards, not on
+   the main launchpad — gear is a one-time setup affordance, not a
+   recurring action like the folder picker. See .library-gear-btn.) */
 
 /* Remove — no longer used */
 .launchpad-card-main {
@@ -753,6 +723,18 @@
   border-color: var(--accent);
 }
 
+/* Selected state — pinned to launchpad. Same 1px border width as the
+   default state, only the COLOR changes, so toggling pinned never
+   shifts the card by even a pixel. (Avoids the "border becomes 2px on
+   active" trap which would re-flow the grid.) */
+.library-item.is-pinned {
+  border-color: var(--accent);
+  background: rgba(196, 149, 106, 0.05);
+}
+html[data-theme='light'] .library-item.is-pinned {
+  background: rgba(196, 149, 106, 0.08);
+}
+
 .library-item-icon {
   width: 40px;
   height: 40px;
@@ -810,6 +792,37 @@
 
 .library-pin-btn.pinned {
   color: var(--accent);
+}
+
+/* Per-tool launch settings gear, shown in the same right-edge slot
+   formerly occupied by the pin checkmark. Only rendered for the 7 CLI
+   tools that take a launch path. Click → opens the override modal;
+   stopPropagation so it doesn't also toggle pin/unpin. Visual treatment
+   matches the inline globe / launchpad gear pattern (0.18 baseline /
+   0.7 hover). */
+.library-gear-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  cursor: pointer;
+  color: var(--text-3);
+  background: transparent;
+  border: none;
+  opacity: 0.35;
+  transition: opacity 0.15s, color 0.15s;
+}
+.library-item:hover .library-gear-btn {
+  opacity: 0.6;
+}
+.library-gear-btn:hover {
+  opacity: 1 !important;
+  color: var(--text-1);
+}
+.library-gear-btn svg {
+  width: 18px;
+  height: 18px;
 }
 
 .library-counter {

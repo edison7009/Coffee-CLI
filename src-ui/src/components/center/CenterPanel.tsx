@@ -1277,11 +1277,7 @@ export function CenterPanel() {
                                 >
                                   <div className="launchpad-icon">{tool.icon}</div>
                                   <div className="launchpad-card-info">
-                                    {(() => {
-                                      const hasGear = (['claude', 'codex', 'gemini', 'qwen', 'opencode', 'openclaw', 'hermes'] as const).includes(tool.key as any);
-                                      const inlineLayout = isTerminal || hasGear;
-                                      return (
-                                    <span style={inlineLayout ? { display: 'inline-flex', alignItems: 'center', gap: '6px' } : undefined}>
+                                    <span style={isTerminal ? { display: 'inline-flex', alignItems: 'center', gap: '6px' } : undefined}>
                                       {tool.label}
                                       {isTerminal && (
                                         <span
@@ -1295,25 +1291,7 @@ export function CenterPanel() {
                                           </svg>
                                         </span>
                                       )}
-                                      {hasGear && (
-                                        <span
-                                          className="launchpad-gear-btn"
-                                          title="Configure launch path / args"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            if (disabled) return;
-                                            setConfigModalTool({ key: tool.key as string, label: tool.label });
-                                          }}
-                                        >
-                                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                            <circle cx="12" cy="12" r="3"/>
-                                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-                                          </svg>
-                                        </span>
-                                      )}
                                     </span>
-                                      );
-                                    })()}
                                     {tool.requiresCwd && lastCwdByTool[tool.key!] && (
                                       <span className="launchpad-card-cwd">
                                         {formatCwd(lastCwdByTool[tool.key!])}
@@ -1535,17 +1513,30 @@ export function CenterPanel() {
                           {AGENT_CATALOG.filter(item => item.type === 'ai-cli').map(item => {
                             const pinId = `agent:${item.key}`;
                             const isPinned = pinnedItems.includes(pinId);
+                            const hasGear = (['claude', 'codex', 'gemini', 'qwen', 'opencode', 'openclaw', 'hermes'] as const).includes(item.key as any);
                             return (
                               <div
                                 key={item.key}
-                                className="library-item"
+                                className={`library-item ${isPinned ? 'is-pinned' : ''}`}
                                 onClick={() => togglePin(pinId)}
                               >
                                 <div className="library-item-icon">{item.icon}</div>
                                 <span className="library-item-name">{item.label}</span>
-                                <div className={`library-pin-btn ${isPinned ? 'pinned' : ''}`}>
-                                  {renderPinIcon(isPinned)}
-                                </div>
+                                {hasGear && (
+                                  <span
+                                    className="library-gear-btn"
+                                    title="Configure launch path / args"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setConfigModalTool({ key: item.key as string, label: item.label });
+                                    }}
+                                  >
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                      <circle cx="12" cy="12" r="3"/>
+                                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                                    </svg>
+                                  </span>
+                                )}
                               </div>
                             );
                           })}
@@ -1560,17 +1551,17 @@ export function CenterPanel() {
                           {AGENT_CATALOG.filter(item => item.type === 'utility').map(item => {
                             const pinId = `agent:${item.key}`;
                             const isPinned = pinnedItems.includes(pinId);
+                            // Utility tools (multi-agent / Coffee 101 /
+                            // vibeid / hyper-agent / N-split) don't take a
+                            // launch path — no gear, just border-as-state.
                             return (
                               <div
                                 key={item.key}
-                                className="library-item"
+                                className={`library-item ${isPinned ? 'is-pinned' : ''}`}
                                 onClick={() => togglePin(pinId)}
                               >
                                 <div className="library-item-icon">{item.icon}</div>
                                 <span className="library-item-name">{item.label}</span>
-                                <div className={`library-pin-btn ${isPinned ? 'pinned' : ''}`}>
-                                  {renderPinIcon(isPinned)}
-                                </div>
                               </div>
                             );
                           })}
