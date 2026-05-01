@@ -1058,23 +1058,15 @@ export function CenterPanel() {
               {icon}
               <span className="tab-title" style={{ flex: '0 1 auto', minWidth: 0, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{title}</span>
               <div className="tab-actions">
-                {(['claude', 'qwen', 'hermes', 'opencode', 'openclaw', 'codex', 'gemini', 'agent', 'terminal', 'remote', 'vibeid', 'insights_prerun', 'multi-agent', 'two-agent', 'three-agent', 'two-split', 'three-split', 'four-split'] as const).includes(session.tool as 'claude' | 'qwen' | 'hermes' | 'opencode' | 'openclaw' | 'codex' | 'gemini' | 'agent' | 'terminal' | 'remote' | 'vibeid' | 'insights_prerun' | 'multi-agent' | 'two-agent' | 'three-agent' | 'two-split' | 'three-split' | 'four-split') && (
-                  // Only Claude Code has a real hook-driven status machine.
-                  // The other tools render the steady-green idle pulse —
-                  // we explicitly chose not to guess their state from PTY
-                  // output, which tends to produce misleading flicker.
-                  // Claude's executing state uses the Claude-brand orange
-                  // (#D97757) to match the "Thinking..." color in the CLI.
-                  // Exception: VibeID's two-phase flow (insights_prerun → vibeid)
-                  // is initiated by us and we know with certainty work is in
-                  // flight; force `executing` so the dot animation reflects
-                  // reality instead of looking idle for the full duration.
+                {/* Claude is the only CLI we drive a real status machine for —
+                    hook events from coffee-cli-hook.py flip the dot color.
+                    VibeID gets the same indicator on its 2-phase progress
+                    because we know with certainty work is in flight. */}
+                {(session.tool === 'claude' || session.tool === 'vibeid' || session.tool === 'insights_prerun') && (
                   <div className={`tab-status-grid status-${
                     session.tool === 'claude'
                       ? (session.agentStatus === 'wait_input' ? 'waiting' : session.agentStatus ?? 'idle')
-                      : (session.tool === 'vibeid' || session.tool === 'insights_prerun')
-                        ? 'executing'
-                        : 'idle'
+                      : 'working'
                   }`}>
                     {Array.from({ length: 9 }, (_, i) => <div key={i} className="tab-status-dot" />)}
                   </div>

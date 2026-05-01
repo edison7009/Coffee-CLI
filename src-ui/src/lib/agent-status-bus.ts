@@ -63,17 +63,15 @@ function armAutoIdle(tabId: string, tool: string) {
 
 /** Optimistic-update hook: call when the user presses Enter in a tab's
  *  terminal. The CLI hasn't acknowledged yet, but the user's intent is
- *  unambiguous: the LLM is about to start thinking. Emit 'thinking'
- *  (not 'executing') because no tool call has been initiated yet — that
- *  only happens when a real PreToolUse event arrives and the bus promotes
- *  the tab to 'executing'. */
+ *  unambiguous — flip the dot to orange immediately so the indicator
+ *  doesn't lag the visible Claude "Thinking..." line. */
 export function notifyUserInputSubmitted(tabId: string, tool: string) {
   if (!activeEmit) return;
   // Cancel any pending wait_input — user just interacted, so whatever
   // permission prompt was showing is presumably resolved.
   const pt = pendingTimers.get(tabId);
   if (pt) { clearTimeout(pt); pendingTimers.delete(tabId); }
-  activeEmit({ tab_id: tabId, tool, status: 'thinking', event: 'UserSubmitted' });
+  activeEmit({ tab_id: tabId, tool, status: 'working', event: 'UserSubmitted' });
   armAutoIdle(tabId, tool);
 }
 
@@ -110,7 +108,7 @@ export function subscribeAgentStatus(
     }
 
     if (p.event === 'PreToolUse') {
-      // Pass "executing" through immediately …
+      // Pass "working" through immediately …
       onPayload(p);
       // … but start a timer: if PostToolUse doesn't arrive soon, the agent
       // is probably blocked on a permission prompt → switch to wait_input.

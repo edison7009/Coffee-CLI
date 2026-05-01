@@ -3,9 +3,15 @@
 // At app launch, ensure:
 //   1. ~/.coffee-cli/hooks/coffee-cli-hook.py is up to date (written from
 //      the Python source embedded into the binary via include_str!).
-//   2. ~/.claude/settings.json and ~/.qwen/settings.json register our hook
-//      on the events we forward. Idempotent: stale entries from prior
-//      installs are stripped and replaced.
+//   2. ~/.claude/settings.local.json registers our hook on the events we
+//      forward. Idempotent: stale entries from prior installs are stripped
+//      and replaced; existing user keys (permissions, env, …) are preserved.
+//
+// We deliberately target settings.local.json rather than settings.json:
+// Claude Code's settings migration logic occasionally rewrites settings.json
+// and drops keys it doesn't own (the empirical bug that erased our hooks
+// silently between runs), but settings.local.json is documented as
+// per-machine user state and is never touched by Claude itself.
 //
 // Errors are logged, never fatal — a broken installer must not prevent
 // Coffee CLI from starting.
@@ -29,7 +35,7 @@ const EVENTS: &[&str] = &[
     "SessionEnd",
 ];
 
-/// Events where Claude/Qwen expect a `matcher` regex (tool name filter).
+/// Events where Claude expects a `matcher` regex (tool name filter).
 const EVENTS_WITH_MATCHER: &[&str] = &["PreToolUse", "PostToolUse", "PermissionRequest"];
 
 pub fn install_all() {
@@ -49,15 +55,13 @@ pub fn install_all() {
         }
     };
 
-    for settings_rel in &[".claude/settings.json", ".qwen/settings.json"] {
-        let path = home.join(settings_rel);
-        if let Err(e) = patch_settings(&path, &script_path) {
-            eprintln!(
-                "[hook-installer] failed to patch {}: {}",
-                path.display(),
-                e
-            );
-        }
+    let path = home.join(".claude").join("settings.local.json");
+    if let Err(e) = patch_settings(&path, &script_path) {
+        eprintln!(
+            "[hook-installer] failed to patch {}: {}",
+            path.display(),
+            e
+        );
     }
 }
 

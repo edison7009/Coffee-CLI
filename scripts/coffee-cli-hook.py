@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 # Coffee CLI Hook Forwarder
 #
-# Registered in ~/.claude/settings.json and ~/.qwen/settings.json by Coffee CLI
-# at launch. Receives hook events on stdin (Claude Code / Qwen Code format),
-# maps them to Coffee CLI's 3-state agent status, and forwards a compact JSON
-# payload to the Coffee CLI backend over local TCP.
+# Registered in ~/.claude/settings.local.json by Coffee CLI at launch.
+# Receives hook events on stdin (Claude Code format), maps them to
+# Coffee CLI's 3-state agent status, and forwards a compact JSON payload
+# to the Coffee CLI backend over local TCP.
 #
-# Env vars (injected by Coffee CLI when spawning Claude/Qwen in a tab):
+# Env vars (injected by Coffee CLI when spawning Claude in a tab):
 #   COFFEE_CLI_TAB_ID    — tab/session UUID the agent belongs to
 #   COFFEE_CLI_HOOK_PORT — loopback port of the Rust hook server
-#   COFFEE_CLI_TOOL      — "claude" | "qwen"
+#   COFFEE_CLI_TOOL      — always "claude" today (only Claude is supported)
 #
 # Exit 0 silently on any error. A flaky hook must never block the agent.
 
@@ -34,20 +34,7 @@ def main() -> None:
     event = data.get("hook_event_name", "")
     status = None
 
-    if event in (
-        "UserPromptSubmit",
-        "PreToolUse",
-        "PostToolUse",
-        "PostToolUseFailure",
-        "SubagentStart",
-        "SubagentStop",
-        "PreCompact",
-        "PostCompact",
-    ):
-        status = "executing"
-    elif event in ("Stop", "StopFailure", "SessionEnd"):
-        status = "idle"
-    elif event == "SessionStart":
+    if event in ("Stop", "StopFailure", "SessionEnd", "SessionStart"):
         status = "idle"
     elif event == "PermissionRequest":
         status = "wait_input"
@@ -62,6 +49,11 @@ def main() -> None:
             status = "wait_input"
         elif ntype == "idle_prompt":
             status = "idle"
+    else:
+        # UserPromptSubmit / PreToolUse / PostToolUse / SubagentStart /
+        # PreCompact / etc. — anything not explicitly idle or waiting means
+        # Claude is busy. One bucket, one color (orange).
+        status = "working"
 
     if status is None:
         sys.exit(0)

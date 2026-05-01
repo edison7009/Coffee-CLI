@@ -353,12 +353,12 @@ pub fn spawn(
         cmd.env("COFFEE_CODE_LOCALE", loc);
     }
 
-    // ── Hook status injection (Claude Code / Qwen Code) ────────────────────
-    // The Coffee CLI hook script (installed into ~/.claude/settings.json and
-    // ~/.qwen/settings.json at startup) reads these env vars to identify which
-    // tab a hook fired from and where to forward the event.
+    // ── Hook status injection (Claude Code) ────────────────────────────────
+    // The Coffee CLI hook script (installed into ~/.claude/settings.local.json
+    // at startup) reads these env vars to identify which tab a hook fired from
+    // and where to forward the event. Claude is the only CLI we integrate.
     if let Some(tname) = tool_name.as_deref() {
-        if tname == "claude" || tname == "qwen" {
+        if tname == "claude" {
             use tauri::Manager;
             let port = app
                 .state::<crate::server::AppState>()

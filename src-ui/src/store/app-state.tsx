@@ -8,24 +8,17 @@ import type { ReactNode } from 'react';
 export type ToolType = 'claude' | 'qwen' | 'installer' | 'hermes' | 'opencode' | 'openclaw' | 'codex' | 'gemini' | 'arcade' | 'terminal' | 'remote' | 'history' | 'vibeid' | 'insights_prerun' | 'multi-agent' | 'two-agent' | 'three-agent' | 'two-split' | 'three-split' | 'four-split' | 'hyper-agent' | null;
 
 /**
- * Tab status shown as an animated 9-dot glyph. Maps to CSS classes
- * `status-idle / -thinking / -executing / -waiting / -compacting / -error`
- * (note the CSS class name for `wait_input` is `waiting` — translated at render).
+ * Tab status shown as an animated 9-dot glyph. Three states only —
+ * Claude Code is the only CLI we drive a real status machine for.
  *
- *   idle        — ready for input (green Wave-Double)
- *   thinking    — LLM generating text, no tool call yet (orange Wave-Pulse)
- *   executing   — tool call in flight (orange Snake-CCW)
- *   wait_input  — permission prompt or ask-tool blocking (blue Ripple)
- *   compacting  — PreCompact hook, context being summarized (purple Wave-Spiral)
- *   error       — PostToolUse error / session error (red fast Wave-Pulse)
+ *   idle       — ready for input (green Wave-Double)
+ *   working    — LLM generating / tool call in flight (orange Snake-CCW)
+ *   wait_input — permission prompt blocking, user must confirm (blue Ripple)
+ *
+ * CSS classes are `status-idle / -working / -waiting`
+ * (the `wait_input → waiting` rename happens at render time).
  */
-export type AgentStatus =
-  | 'idle'
-  | 'thinking'
-  | 'executing'
-  | 'wait_input'
-  | 'compacting'
-  | 'error';
+export type AgentStatus = 'idle' | 'working' | 'wait_input';
 
 // Theme: color palette (orthogonal to shape)
 export type ThemeColor =
