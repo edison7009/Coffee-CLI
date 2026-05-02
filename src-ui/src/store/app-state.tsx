@@ -78,12 +78,6 @@ export interface TerminalSession {
   /// When present, this Tab renders as a 2×2+ pane grid instead of a
   /// single terminal. See docs/MULTI-AGENT-ARCHITECTURE.md §5.7 and §7.
   multiAgent?: MultiAgentState;
-  /// Set when the user opens this tab from another active tab — points back
-  /// to that prior tab's id so a "back to previous" affordance can return
-  /// without losing the user's place. Currently used by the History tab so
-  /// ChatReader can offer "回到本轮对话". Null/undefined when the tab was
-  /// opened cold (no prior context to return to).
-  cameFromId?: string;
 }
 
 // ─── State Shape ─────────────────────────────────────────────────────────────
@@ -223,28 +217,12 @@ function reducer(state: AppState, action: Action): AppState {
         activeTerminalId: state.activeTerminalId === action.id ? action.newId : state.activeTerminalId
       };
     case 'OPEN_HISTORY_TAB': {
-      // Capture the tab the user is leaving so ChatReader can offer
-      // "back to current". Only meaningful if there *is* an active tab
-      // and it isn't the History tab itself.
       const existingHistoryTab = state.terminals.find(t => t.tool === 'history');
-      const priorActive =
-        state.activeTerminalId && state.activeTerminalId !== existingHistoryTab?.id
-          ? state.activeTerminalId
-          : undefined;
-
       if (existingHistoryTab) {
         return {
           ...state,
           terminals: state.terminals.map(t =>
-            t.id === existingHistoryTab.id
-              ? {
-                  ...t,
-                  toolData: action.sessionData,
-                  folderPath: action.folderPath,
-                  // Refresh on every entry — last point of return wins.
-                  cameFromId: priorActive ?? t.cameFromId,
-                }
-              : t
+            t.id === existingHistoryTab.id ? { ...t, toolData: action.sessionData, folderPath: action.folderPath } : t
           ),
           activeTerminalId: existingHistoryTab.id
         };
@@ -257,7 +235,6 @@ function reducer(state: AppState, action: Action): AppState {
             tool: 'history',
             toolData: action.sessionData,
             folderPath: action.folderPath,
-            cameFromId: priorActive,
           }],
           activeTerminalId: newId
         };

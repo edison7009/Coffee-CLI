@@ -131,22 +131,8 @@ export function ChatReader({ sessionId }: { sessionId: string }) {
 
   if (!currentSession) return null;
 
-  // The tab the user came from before opening History (set by the
-  // OPEN_HISTORY_TAB reducer). Offer a "back to current" affordance only if
-  // that tab is still alive — gives users a one-click escape if they popped
-  // into history just to peek at a past chat.
-  const cameFromId = terminal?.cameFromId;
-  const cameFromTab = cameFromId
-    ? state.terminals.find(t => t.id === cameFromId)
-    : undefined;
-
   const handleClose = () => {
     dispatch({ type: 'REMOVE_TERMINAL', id: sessionId });
-  };
-
-  const handleBackToCurrent = () => {
-    if (!cameFromTab) return;
-    dispatch({ type: 'SET_ACTIVE_TERMINAL', id: cameFromTab.id });
   };
 
   const handleResume = () => {
@@ -168,9 +154,13 @@ export function ChatReader({ sessionId }: { sessionId: string }) {
 
     if (!targetId) return;
 
-    // Quit reader mode
-    handleClose();
-
+    // Keep the History tab alive after launching the resume terminal. If
+    // the resumed Claude process exits early (token expired, weekly limit,
+    // network blip), the new tab dead-ends on a "Process exited" banner;
+    // tearing down ChatReader at the same time strands the user with no
+    // way back. With the History tab still in the tab bar they can click
+    // it to return to the past chat and pick another session — or close it
+    // manually once the resume is confirmed running.
     commands.tierTerminalResume(
       currentSession.id, targetId, currentSession.tool, currentSession.session_token, 80, 24, currentSession.cwd
     ).catch(console.error);
@@ -178,18 +168,7 @@ export function ChatReader({ sessionId }: { sessionId: string }) {
 
   return (
     <div className="chat-reader-container">
-      <div className="chat-reader-header" style={{ justifyContent: 'space-between' }}>
-        <div className="chat-reader-actions">
-          {cameFromTab && (
-            <button className="chat-reader-btn btn-secondary" onClick={handleBackToCurrent}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="19" y1="12" x2="5" y2="12"></line>
-                <polyline points="12 19 5 12 12 5"></polyline>
-              </svg>
-              {t('action.back_to_current' as any) || 'Back to current session'}
-            </button>
-          )}
-        </div>
+      <div className="chat-reader-header" style={{ justifyContent: 'flex-end' }}>
         <div className="chat-reader-actions">
           <button className="chat-reader-btn btn-secondary" onClick={handleClose}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
