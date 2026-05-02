@@ -43,6 +43,76 @@ fn extract_osc7_cwd(data: &[u8]) -> Option<String> {
     String::from_utf8(decoded).ok()
 }
 
+// ─── Claude Code preflight ────────────────────────────────
+//
+// Why: Claude Code's `/theme auto` queries the host terminal via OSC 11 and
+// renders light- or dark-theme based on the response. xterm.js answers OSC 11
+// with whatever we set on `theme.background`, which Coffee CLI flips between
+// `#1a1917` (dark) and `#eeebe2` (light) when the user changes themes —
+// wiring is already in place. The only missing piece is that Claude Code
+// defaults to `theme: "dark"` when settings.json has no theme key, so users
+// don't get the auto-follow behavior unless they manually `/theme auto` once.
+//
+// We bridge that gap on every Claude Code launch: if `~/.claude/settings.json`
+// has no explicit `theme` key, we add `theme: "auto"`. Existing values are
+// always preserved — once a user runs `/theme dark` (or any other choice),
+// Claude Code writes that key and we never touch it again.
+fn ensure_claude_theme_auto() {
+    let Some(home) = dirs::home_dir() else {
+        return;
+    };
+    let dir = home.join(".claude");
+    let path = dir.join("settings.json");
+
+    // Don't auto-create the .claude/ directory — Claude Code itself creates
+    // it on first run with proper permissions / contents. We only edit if
+    // it's already there.
+    if !dir.is_dir() {
+        return;
+    }
+
+    let existing = std::fs::read_to_string(&path).unwrap_or_default();
+
+    // Empty / missing file: write a minimal one.
+    if existing.trim().is_empty() {
+        let body = "{\n  \"theme\": \"auto\"\n}\n";
+        if let Err(e) = std::fs::write(&path, body) {
+            eprintln!("[Coffee] could not seed claude theme=auto: {}", e);
+        } else {
+            eprintln!("[Coffee] seeded ~/.claude/settings.json with theme=auto");
+        }
+        return;
+    }
+
+    // Non-empty: parse, only insert `theme` if absent. Anything else (invalid
+    // JSON, non-object root) we leave alone — never corrupt user config.
+    let mut value: serde_json::Value = match serde_json::from_str(&existing) {
+        Ok(v) => v,
+        Err(_) => return,
+    };
+    let serde_json::Value::Object(ref mut map) = value else {
+        return;
+    };
+    if map.contains_key("theme") {
+        return;
+    }
+    map.insert(
+        "theme".to_string(),
+        serde_json::Value::String("auto".to_string()),
+    );
+
+    match serde_json::to_string_pretty(&value) {
+        Ok(s) => {
+            if let Err(e) = std::fs::write(&path, format!("{}\n", s)) {
+                eprintln!("[Coffee] could not write claude theme=auto: {}", e);
+            } else {
+                eprintln!("[Coffee] added theme=auto to ~/.claude/settings.json");
+            }
+        }
+        Err(_) => {}
+    }
+}
+
 // ─── Public Types ─────────────────────────────────────────
 
 #[derive(Serialize, Clone)]
@@ -252,6 +322,15 @@ pub fn spawn(
     );
 
     if is_ai_cli {
+        // Claude Code only: seed `theme: "auto"` in ~/.claude/settings.json
+        // if no theme is set yet. xterm.js answers OSC 11 with our terminal
+        // background, and Claude Code's `auto` preset uses that to follow
+        // Coffee CLI's light/dark switch automatically. A no-op once the user
+        // has any `theme` value (including "auto" or a custom theme).
+        if matches!(tool_name.as_deref(), Some("claude")) {
+            ensure_claude_theme_auto();
+        }
+
         // Cross-platform: most CLIs auto-disable ANSI color when they detect
         // a subprocess / non-TTY context. Force color so Claude's status
         // highlights, diff colors, error markers stay visible.
