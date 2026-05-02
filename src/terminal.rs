@@ -765,10 +765,34 @@ pub fn spawn(
                     || last_flush.elapsed() >= FLUSH_INTERVAL);
 
             if should_flush {
-                // OSC 7 runs on raw bytes before UTF-8 lossy conversion.
-                let cwd_change = extract_osc7_cwd(&pending);
+                // PTY reads don't respect UTF-8 char boundaries: a 3-byte
+                // CJK char ('中' E4 B8 AD), a 3-byte box-draw char ('─' E2 94 80),
+                // or a 4-byte emoji can be split across two read() calls. If
+                // the flush boundary lands inside a multi-byte sequence,
+                // from_utf8_lossy turns the trailing fragment into U+FFFD (�)
+                // and pending.clear() then drops the bytes the next chunk's
+                // continuation needs — both halves render as 乱码.
+                //
+                // Fix: emit only bytes through the last *complete* UTF-8 char;
+                // carry any incomplete trailing sequence forward to the next
+                // flush. Genuine mid-buffer invalid bytes (error_len = Some)
+                // still fall through to lossy conversion as before.
+                let valid_end = match std::str::from_utf8(&pending) {
+                    Ok(_) => pending.len(),
+                    Err(e) => match e.error_len() {
+                        // Incomplete trailing sequence — defer the tail.
+                        None => e.valid_up_to(),
+                        // Genuine garbage mid-stream — let lossy handle it.
+                        Some(_) => pending.len(),
+                    },
+                };
 
-                let data = String::from_utf8_lossy(&pending).to_string();
+                // OSC 7 runs on raw bytes before UTF-8 lossy conversion.
+                // Use the validated prefix only — OSC sequences are ASCII so
+                // they can never legitimately span past valid_end.
+                let cwd_change = extract_osc7_cwd(&pending[..valid_end]);
+
+                let data = String::from_utf8_lossy(&pending[..valid_end]).to_string();
                 let stripped = ansi_re.replace_all(&data, "").to_string();
 
                 // One activity-mutex acquisition per batch (not per read).
@@ -847,7 +871,10 @@ pub fn spawn(
                     );
                 }
 
-                pending.clear();
+                // Drain only what we emitted; preserve any deferred trailing
+                // bytes for the next flush so split multi-byte chars resolve
+                // correctly when the rest arrives.
+                pending.drain(..valid_end);
                 last_flush = Instant::now();
             }
 
