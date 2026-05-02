@@ -54,11 +54,15 @@ export const TERM_COLOR_SCHEMES: TermColorScheme[] = [
 // pick the right background synchronously on theme prop change — reading the
 // CSS variable lags by one switch (child effects fire before App.tsx writes
 // `data-theme`). Must stay in sync with each [data-theme] block in global.css.
-// Unified rule: terminal background == theme bg-app, so the center pane reads
-// as one continuous surface with the side panels.
+// Dark themes follow "terminal bg == bg-app" for a continuous surface.
+// Light theme deliberately uses a softer cream than --bg-app: pure ivory
+// #FAFAF7 is too bright for CLI mid-tone palettes (Claude Code's RGB tan
+// branding, ANSI bright-black), and going too gray makes those same colors
+// vanish. #eeebe2 keeps the daytime feel while giving dark + gray text
+// 5–12:1 contrast so primary/secondary copy stays legible.
 const THEME_TERMINAL_BG: Record<string, string> = {
   dark:       '#1a1917',
-  light:      '#FAFAF7',
+  light:      '#eeebe2',
   cappuccino: '#1a1a1a',
   sakura:     '#1a1520',
   lavender:   '#1a1826',
@@ -82,7 +86,7 @@ function normalizePasteNewlines(text: string): string {
 function buildXtermTheme(themeName: string, hasBg: boolean | undefined, hideCursor: boolean, schemeId?: string) {
   const isDark = themeName !== 'light';
   const scheme = schemeId ? TERM_COLOR_SCHEMES.find(s => s.id === schemeId) : undefined;
-  const bgOpaque = THEME_TERMINAL_BG[themeName] || (isDark ? '#0c0c0c' : '#f4f3ee');
+  const bgOpaque = THEME_TERMINAL_BG[themeName] || (isDark ? '#0c0c0c' : '#eeebe2');
   const bg = hasBg ? 'rgba(0,0,0,0)' : bgOpaque;
 
   // Build the default warm palette first (full 16 ANSI colors), then let
@@ -99,7 +103,7 @@ function buildXtermTheme(themeName: string, hasBg: boolean | undefined, hideCurs
     selectionBackground: 'rgba(196,149,106,0.25)',
     black: '#2d2c2a', red: '#cc3333', green: '#2d7a2d', yellow: '#8a6000',
     blue: '#2952a3', magenta: '#7a3d8a', cyan: '#1a6b6b', white: '#f4f3ee',
-    brightBlack: '#9e9c98',
+    brightBlack: '#5a5854',
   };
 
   return {
@@ -864,7 +868,7 @@ function TierTerminalImpl({
 
   // ── Render ───────────────────────────────────────────────────────────────
 
-  const solidBg = THEME_TERMINAL_BG[theme] || (theme === 'light' ? '#f4f3ee' : '#0c0c0c');
+  const solidBg = THEME_TERMINAL_BG[theme] || (theme === 'light' ? '#eeebe2' : '#0c0c0c');
   const terminalBg = hasBg ? 'transparent' : solidBg;
 
   // Show fallback UI when splash is gone but terminal has no content

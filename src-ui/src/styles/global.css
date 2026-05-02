@@ -328,7 +328,9 @@ textarea,
     --shadow-rgb: 0, 0, 0;
 
     --bg-titlebar: rgba(0, 0, 0, 0.03);
-    --bg-terminal: #FAFAF7; /* Seamless */
+    --bg-terminal: #eeebe2; /* Soft cream — lighter than ivory's pure-white
+                               glare, dimmer than #FAFAF7 so dark/gray text
+                               (~5–12:1 contrast) pops without harsh contrast. */
 }
 
 /* ─── Code Dark (代码夜) — Cursor IDE faithful palette ──────── */
