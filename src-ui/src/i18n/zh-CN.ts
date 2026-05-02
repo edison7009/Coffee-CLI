@@ -87,6 +87,7 @@ export const zhCN = {
   // Actions
   'action.close': '关闭',
   'action.resume_terminal': '继续本轮对话',
+  'action.back_to_current': '返回当前对话',
 
   // Time
   'time.just_now': '刚刚',

@@ -89,6 +89,7 @@ export const en = {
   // Actions
   'action.close': 'Close',
   'action.resume_terminal': 'Continue this session',
+  'action.back_to_current': 'Back to current session',
 
   // Time
   'time.just_now': 'Just now',

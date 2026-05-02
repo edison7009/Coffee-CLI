@@ -87,6 +87,7 @@ export const zhTW = {
   // Actions
   'action.close': '關閉',
   'action.resume_terminal': '繼續此次對話',
+  'action.back_to_current': '返回當前對話',
 
   // Time
   'time.just_now': '剛剛',
