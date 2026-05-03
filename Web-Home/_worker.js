@@ -10,18 +10,30 @@
 
 const REPO = "edison7009/Coffee-CLI"
 
-// Tauri's bundler emits arm64 Linux assets with two different arch
-// strings: .deb follows Debian conventions ("arm64"), AppImage follows
-// upstream AppImage conventions ("aarch64"). Don't try to unify them
-// here — match on the filename suffixes Tauri actually produces.
+// Asset filenames follow `Coffee.CLI_<version>_<OS>_<arch>.<ext>`
+// starting v1.9.2 (CI rename step). Pre-v1.9.2 filenames had no OS
+// label and used inconsistent arch slugs (amd64 / x86_64 / aarch64);
+// we keep the legacy patterns as a fallback so the worker still
+// resolves correctly if someone manually republishes an older tag.
 const PLATFORM_PATTERNS = {
-  "windows":              (name) => name.endsWith("x64-setup.exe"),
-  "macos-arm":            (name) => name.includes("aarch64") && name.endsWith(".dmg"),
-  "macos-intel":          (name) => name.includes("x64") && name.endsWith(".dmg"),
-  "linux-deb":            (name) => name.endsWith("amd64.deb"),
-  "linux-appimage":       (name) => name.endsWith("amd64.AppImage"),
-  "linux-arm64-deb":      (name) => name.endsWith("arm64.deb"),
-  "linux-arm64-appimage": (name) => name.endsWith("aarch64.AppImage"),
+  "windows": (name) =>
+    name.endsWith("Windows_x64-setup.exe") || name.endsWith("x64-setup.exe"),
+  "windows-msi": (name) =>
+    name.endsWith("Windows_x64.msi") || /_x64(_[^_]+)?\.msi$/.test(name),
+  "macos-arm": (name) =>
+    name.endsWith("macOS_arm64.dmg") || (name.includes("aarch64") && name.endsWith(".dmg")),
+  "linux-deb": (name) =>
+    name.endsWith("Linux_x64.deb") || name.endsWith("amd64.deb"),
+  "linux-rpm": (name) =>
+    name.endsWith("Linux_x64.rpm") || name.endsWith("x86_64.rpm"),
+  "linux-appimage": (name) =>
+    name.endsWith("Linux_x64.AppImage") || name.endsWith("amd64.AppImage"),
+  "linux-arm64-deb": (name) =>
+    name.endsWith("Linux_arm64.deb") || name.endsWith("arm64.deb"),
+  "linux-arm64-rpm": (name) =>
+    name.endsWith("Linux_arm64.rpm") || name.endsWith("aarch64.rpm"),
+  "linux-arm64-appimage": (name) =>
+    name.endsWith("Linux_arm64.AppImage") || name.endsWith("aarch64.AppImage"),
 }
 
 async function getLatestAssets(env) {

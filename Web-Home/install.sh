@@ -73,11 +73,21 @@ elif [ "$OS" = "Linux" ]; then
       exit 1
       ;;
   esac
+  # Prefer dpkg (.deb on Debian/Ubuntu) → rpm (.rpm on Fedora/RHEL/
+  # openSUSE/CentOS) → AppImage (everything else, including Arch /
+  # NixOS / minimal containers). Each branch picks the arch-matching
+  # platform slug we'll send to /version.json and /download.
   if command -v dpkg > /dev/null 2>&1; then
     if [ "$LINUX_ARCH" = "arm64" ]; then
       PLATFORM="linux-arm64-deb"
     else
       PLATFORM="linux-deb"
+    fi
+  elif command -v rpm > /dev/null 2>&1; then
+    if [ "$LINUX_ARCH" = "arm64" ]; then
+      PLATFORM="linux-arm64-rpm"
+    else
+      PLATFORM="linux-rpm"
     fi
   else
     if [ "$LINUX_ARCH" = "arm64" ]; then
@@ -93,13 +103,18 @@ fi
 
 # Pattern that picks our platform's asset out of the GitHub release.
 # Mirrors the matchers in Web-Home/_worker.js — keep the two in sync.
+# v1.9.2+ uses platform-labelled filenames (Linux_x64.deb / macOS_arm64.dmg
+# / Windows_x64-setup.exe); we OR with the pre-v1.9.2 patterns so the
+# direct-from-GitHub fallback still resolves older releases that someone
+# might manually re-publish.
 case "$PLATFORM" in
-  macos-arm)            ASSET_GREP='aarch64[^"]*\.dmg' ;;
-  macos-intel)          ASSET_GREP='x64[^"]*\.dmg' ;;
-  linux-deb)            ASSET_GREP='amd64\.deb' ;;
-  linux-appimage)       ASSET_GREP='amd64\.AppImage' ;;
-  linux-arm64-deb)      ASSET_GREP='arm64\.deb' ;;
-  linux-arm64-appimage) ASSET_GREP='aarch64\.AppImage' ;;
+  macos-arm)            ASSET_GREP='(macOS_arm64|aarch64[^\"]*)\.dmg' ;;
+  linux-deb)            ASSET_GREP='(Linux_x64|amd64)\.deb' ;;
+  linux-rpm)            ASSET_GREP='(Linux_x64\.rpm|x86_64\.rpm)' ;;
+  linux-appimage)       ASSET_GREP='(Linux_x64|amd64)\.AppImage' ;;
+  linux-arm64-deb)      ASSET_GREP='(Linux_arm64|arm64)\.deb' ;;
+  linux-arm64-rpm)      ASSET_GREP='(Linux_arm64\.rpm|aarch64\.rpm)' ;;
+  linux-arm64-appimage) ASSET_GREP='(Linux_arm64|aarch64)\.AppImage' ;;
 esac
 
 FALLBACK_DOWNLOAD_URL=""
@@ -271,12 +286,18 @@ elif [ "$OS" = "Linux" ]; then
     echo "  ${GRAY}Not installed — performing fresh install...${RESET}"
   fi
 
-  # Prefer .deb if dpkg is available, fall back to AppImage
+  # Prefer .deb (Debian/Ubuntu) → .rpm (Fedora/RHEL/openSUSE) → AppImage.
+  # The PLATFORM detection above already picked the slug; we just match
+  # the install path here. Distro-native packages register the binary
+  # in PATH and integrate with the package manager (uninstall via
+  # `apt remove` / `dnf remove`); AppImage is portable but the user
+  # has to ensure ~/.local/bin is in PATH themselves.
   if command -v dpkg > /dev/null 2>&1; then
     TMP="/tmp/coffee-cli-v${LATEST_VER}.deb"
     rm -f "$TMP"
     echo "  ${GRAY}Downloading .deb package...${RESET}"
-    if ! curl -fL --progress-bar --retry 5 --retry-all-errors --retry-delay 2 "${FALLBACK_DOWNLOAD_URL:-$DOWNLOAD_BASE/linux-deb}" -o "$TMP"; then
+    DL_URL="${FALLBACK_DOWNLOAD_URL:-$DOWNLOAD_BASE/$PLATFORM}"
+    if ! curl -fL --progress-bar --retry 5 --retry-all-errors --retry-delay 2 "$DL_URL" -o "$TMP"; then
       echo ""
       echo "  ${RED}Download failed.${RESET}"
       echo "  ${YELLOW}The Linux .deb may still be uploading. Retry in ~5 min.${RESET}"
@@ -285,6 +306,37 @@ elif [ "$OS" = "Linux" ]; then
     fi
     echo "  ${GRAY}Installing (requires sudo)...${RESET}"
     sudo dpkg -i "$TMP"
+    rm "$TMP"
+    echo ""
+    echo "  ${GREEN}Done! Coffee CLI v$LATEST_VER installed.${RESET}"
+    exit 0
+  fi
+
+  if command -v rpm > /dev/null 2>&1; then
+    TMP="/tmp/coffee-cli-v${LATEST_VER}.rpm"
+    rm -f "$TMP"
+    echo "  ${GRAY}Downloading .rpm package...${RESET}"
+    DL_URL="${FALLBACK_DOWNLOAD_URL:-$DOWNLOAD_BASE/$PLATFORM}"
+    if ! curl -fL --progress-bar --retry 5 --retry-all-errors --retry-delay 2 "$DL_URL" -o "$TMP"; then
+      echo ""
+      echo "  ${RED}Download failed.${RESET}"
+      echo "  ${YELLOW}The Linux .rpm may still be uploading. Retry in ~5 min.${RESET}"
+      echo ""
+      exit 1
+    fi
+    echo "  ${GRAY}Installing (requires sudo)...${RESET}"
+    # Prefer dnf/zypper (resolves dependencies) over raw `rpm -i`. Plain
+    # `rpm -i` fails with "Failed dependencies: ..." on newer Fedora /
+    # RHEL where webkit2gtk is split into many runtime sub-packages.
+    if command -v dnf > /dev/null 2>&1; then
+      sudo dnf install -y "$TMP"
+    elif command -v zypper > /dev/null 2>&1; then
+      sudo zypper --non-interactive install --allow-unsigned-rpm "$TMP"
+    elif command -v yum > /dev/null 2>&1; then
+      sudo yum install -y "$TMP"
+    else
+      sudo rpm -i --replacepkgs "$TMP"
+    fi
     rm "$TMP"
     echo ""
     echo "  ${GREEN}Done! Coffee CLI v$LATEST_VER installed.${RESET}"
@@ -300,7 +352,8 @@ elif [ "$OS" = "Linux" ]; then
   TMP="/tmp/coffee-cli-v${LATEST_VER}.AppImage"
   rm -f "$TMP"
   echo "  ${GRAY}Downloading AppImage...${RESET}"
-  if ! curl -fL --progress-bar --retry 5 --retry-all-errors --retry-delay 2 "${FALLBACK_DOWNLOAD_URL:-$DOWNLOAD_BASE/linux-appimage}" -o "$TMP"; then
+  DL_URL="${FALLBACK_DOWNLOAD_URL:-$DOWNLOAD_BASE/$PLATFORM}"
+  if ! curl -fL --progress-bar --retry 5 --retry-all-errors --retry-delay 2 "$DL_URL" -o "$TMP"; then
     echo ""
     echo "  ${RED}Download failed.${RESET}"
     echo "  ${YELLOW}The AppImage may still be uploading. Retry in ~5 min.${RESET}"

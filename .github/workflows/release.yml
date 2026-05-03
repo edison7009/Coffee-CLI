@@ -34,11 +34,27 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Resolve release tag
+        id: tag
+        shell: bash
+        run: |
+          # Tag-pushes give refs/tags/v1.2.3; workflow_dispatch falls back to
+          # the latest tag in the working tree. Bare version (no leading "v")
+          # is what tauri stamps into bundle filenames; both forms are
+          # exposed for downstream steps.
+          TAG="${GITHUB_REF#refs/tags/}"
+          if [ "$TAG" = "$GITHUB_REF" ]; then
+            TAG=$(git describe --tags --abbrev=0)
+          fi
+          VERSION="${TAG#v}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
       - name: Install system dependencies (Linux)
         if: startsWith(matrix.platform, 'ubuntu-')
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf rpm
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -58,61 +74,21 @@ jobs:
         with:
           targets: ${{ contains(matrix.args, 'aarch64-apple-darwin') && 'aarch64-apple-darwin' || '' }}
 
-
       - name: Rust cache
         uses: swatinem/rust-cache@v2
         with:
           key: ${{ matrix.label }}
 
-      # ── Windows / Linux: tauri-action handles build + DMG/installer + upload ──
-      - name: Build & publish (Windows / Linux)
-        if: matrix.platform != 'macos-latest'
-        uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tagName: v__VERSION__
-          releaseName: 'Coffee CLI v__VERSION__'
-          releaseBody: |
-            ## Install
-
-            **Windows**
-            ```powershell
-            irm https://raw.githubusercontent.com/edison7009/Coffee-CLI/main/install/install.ps1 | iex
-            ```
-
-            **macOS / Linux**
-            ```bash
-            curl -fsSL https://raw.githubusercontent.com/edison7009/Coffee-CLI/main/install/install.sh | sh
-            ```
-
-            Or download the installer for your platform from the assets below.
-
-            | Platform | File |
-            |---|---|
-            | Windows x64 | `Coffee.CLI_*_x64-setup.exe` |
-            | macOS Apple Silicon | `Coffee.CLI_*_aarch64.dmg` |
-            | macOS Intel | `Coffee.CLI_*_x64.dmg` |
-            | Linux x64 (Debian/Ubuntu) | `coffee-cli_*_amd64.deb` |
-            | Linux x64 (AppImage) | `Coffee.CLI_*_amd64.AppImage` |
-            | Linux arm64 (Debian/Ubuntu) | `coffee-cli_*_arm64.deb` |
-            | Linux arm64 (AppImage) | `Coffee.CLI_*_aarch64.AppImage` |
-          releaseDraft: false
-          prerelease: false
-          args: ${{ matrix.args }}
-
-      # ── macOS: split into build → re-sign → DMG → upload ──
-      # Why not tauri-action: it does build + DMG in one shot, leaving
-      # no hook to re-sign the .app between the two. tauri-bundler's
-      # default codesign for adhoc identities adds --options runtime
-      # (hardened runtime), which without Apple notarization causes
-      # Gatekeeper to silently reject the GUI launch — users see "click
-      # icon, nothing happens". Splitting lets us seal resources via
-      # codesign --deep WITHOUT runtime flag, which Gatekeeper accepts.
-      - name: Install Tauri CLI (macOS)
-        if: matrix.platform == 'macos-latest'
+      - name: Install Tauri CLI
         run: cargo install tauri-cli --version "^2.0" --locked
 
+      # ── macOS: build .app, re-sign without hardened runtime, then bundle DMG ──
+      # tauri-bundler's default codesign for adhoc identities adds
+      # --options runtime, which without Apple notarization causes Gatekeeper
+      # to silently reject the GUI launch (click icon, nothing happens). We
+      # build the .app first, codesign --deep WITHOUT runtime, then bundle
+      # the DMG from the re-signed .app. Gatekeeper accepts adhoc-signed
+      # apps that aren't claiming hardened runtime.
       - name: Build .app only (macOS)
         if: matrix.platform == 'macos-latest'
         run: cargo tauri build --bundles app ${{ matrix.args }}
@@ -143,37 +119,136 @@ jobs:
         if: matrix.platform == 'macos-latest'
         run: cargo tauri bundle --bundles dmg ${{ matrix.args }}
 
-      - name: Upload DMG to release (macOS)
-        if: matrix.platform == 'macos-latest'
+      # ── Windows / Linux: standard one-shot bundle build ──
+      - name: Build all bundles (Windows / Linux)
+        if: matrix.platform != 'macos-latest'
+        run: cargo tauri build ${{ matrix.args }}
+
+      # ── Stage + rename artifacts to platform-labelled format ──
+      # Tauri's bundler emits names like `Coffee CLI_1.9.2_amd64.deb` which
+      # don't tell the end user which OS they're for and use inconsistent
+      # arch slugs (amd64/x86_64/x64 across formats, plus rpm's `-1` release
+      # suffix). We rename to the EchoBird-style convention:
+      #   Coffee.CLI_<version>_<OS>_<arch>.<ext>
+      # so a glance at the GitHub Releases page makes the OS/arch obvious
+      # and the install scripts have a single uniform pattern to grep.
+      - name: Stage and rename artifacts
+        id: stage
+        shell: bash
+        env:
+          VERSION: ${{ steps.tag.outputs.version }}
+        run: |
+          set -e
+          STAGING="$RUNNER_TEMP/coffee-release"
+          mkdir -p "$STAGING"
+
+          rename_one() {
+            local src="$1"
+            [ -f "$src" ] || return 0
+            local base
+            base=$(basename "$src")
+            local out=""
+            case "$base" in
+              # Windows
+              *_x64-setup.exe)        out="Coffee.CLI_${VERSION}_Windows_x64-setup.exe" ;;
+              *_x64_*.msi|*_x64.msi)  out="Coffee.CLI_${VERSION}_Windows_x64.msi" ;;
+              # macOS (Coffee CLI ships arm64 only; Intel runs via Rosetta)
+              *_aarch64.dmg)          out="Coffee.CLI_${VERSION}_macOS_arm64.dmg" ;;
+              # Linux .deb (Tauri uses Debian "amd64"/"arm64")
+              *_amd64.deb)            out="Coffee.CLI_${VERSION}_Linux_x64.deb" ;;
+              *_arm64.deb)            out="Coffee.CLI_${VERSION}_Linux_arm64.deb" ;;
+              # Linux .AppImage (upstream AppImage uses "amd64"/"aarch64")
+              *_amd64.AppImage)       out="Coffee.CLI_${VERSION}_Linux_x64.AppImage" ;;
+              *_aarch64.AppImage)     out="Coffee.CLI_${VERSION}_Linux_arm64.AppImage" ;;
+              # Linux .rpm (uses dot-separated `<name>-<ver>-<release>.<arch>.rpm`)
+              *.x86_64.rpm)           out="Coffee.CLI_${VERSION}_Linux_x64.rpm" ;;
+              *.aarch64.rpm)          out="Coffee.CLI_${VERSION}_Linux_arm64.rpm" ;;
+              *) echo "  skip: $base"; return 0 ;;
+            esac
+            cp "$src" "$STAGING/$out"
+            echo "  staged: $base  →  $out"
+          }
+
+          echo "Bundle scan roots:"
+          for root in \
+            target/release/bundle \
+            target/aarch64-apple-darwin/release/bundle \
+          ; do
+            [ -d "$root" ] || continue
+            echo "  $root"
+            while IFS= read -r f; do
+              rename_one "$f"
+            done < <(find "$root" -type f \
+              \( -name "*.exe" -o -name "*.msi" \
+                 -o -name "*.dmg" \
+                 -o -name "*.deb" -o -name "*.rpm" -o -name "*.AppImage" \) )
+          done
+
+          echo ""
+          echo "Final staged assets:"
+          ls -la "$STAGING"
+          echo "staging=$STAGING" >> "$GITHUB_OUTPUT"
+
+      # ── Create release if missing, then upload all staged artifacts ──
+      # Each matrix job races to create the release; `gh release create`
+      # fails idempotently if another job already created it (caught and
+      # ignored), then `gh release upload --clobber` overwrites any
+      # earlier-job placeholder of the same filename.
+      - name: Upload to GitHub release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
         run: |
-          TAG="${GITHUB_REF#refs/tags/}"
-          # If triggered by workflow_dispatch (no tag), use latest tag.
-          if [ "$TAG" = "$GITHUB_REF" ]; then
-            TAG=$(git describe --tags --abbrev=0)
-          fi
-          DMG=$(find target/aarch64-apple-darwin/release/bundle/dmg -maxdepth 1 -name "*.dmg" | head -1)
-          if [ -z "$DMG" ]; then
-            echo "::error::No .dmg produced"
-            find target -name "*.dmg" 2>/dev/null
-            exit 1
-          fi
-          echo "Uploading $DMG to release $TAG"
-          # Wait for the release to exist (Windows/Linux jobs in matrix
-          # may still be creating it). --clobber replaces if asset exists.
+          set -e
+          TAG="${{ steps.tag.outputs.tag }}"
+          STAGING="${{ steps.stage.outputs.staging }}"
+
+          # Wait briefly in case another matrix job is mid-create.
           for i in 1 2 3 4 5 6; do
             if gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
               break
             fi
-            echo "Release $TAG not yet available, waiting 10s... (attempt $i/6)"
+            echo "Release $TAG not yet present (attempt $i/6); waiting 10s..."
             sleep 10
           done
+
           if ! gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
-            # Release still doesn't exist — create it ourselves so we don't
-            # block on a parallel matrix job that may have failed.
+            echo "Creating release $TAG"
             gh release create "$TAG" --repo "${{ github.repository }}" \
               --title "Coffee CLI $TAG" \
-              --notes "macOS-only release placeholder — see other assets if Windows/Linux jobs succeed."
+              --notes "$(cat <<'EOF'
+## Install
+
+**Windows**
+```powershell
+irm https://raw.githubusercontent.com/edison7009/Coffee-CLI/main/install/install.ps1 | iex
+```
+
+**macOS / Linux**
+```bash
+curl -fsSL https://raw.githubusercontent.com/edison7009/Coffee-CLI/main/install/install.sh | sh
+```
+
+Or download the matching asset for your platform below.
+
+| Platform | File |
+|---|---|
+| Windows x64 | `Coffee.CLI_*_Windows_x64-setup.exe` (or `.msi`) |
+| macOS Apple Silicon | `Coffee.CLI_*_macOS_arm64.dmg` |
+| Linux x64 (Debian/Ubuntu) | `Coffee.CLI_*_Linux_x64.deb` |
+| Linux x64 (Fedora/RHEL/openSUSE) | `Coffee.CLI_*_Linux_x64.rpm` |
+| Linux x64 (universal) | `Coffee.CLI_*_Linux_x64.AppImage` |
+| Linux arm64 (Debian/Ubuntu) | `Coffee.CLI_*_Linux_arm64.deb` |
+| Linux arm64 (Fedora/RHEL/openSUSE) | `Coffee.CLI_*_Linux_arm64.rpm` |
+| Linux arm64 (universal) | `Coffee.CLI_*_Linux_arm64.AppImage` |
+EOF
+)" || echo "Release already exists (created by sibling matrix job)"
           fi
-          gh release upload "$TAG" "$DMG" --repo "${{ github.repository }}" --clobber
+
+          # Upload everything in staging. --clobber overwrites if a previous
+          # job already pushed an asset with the same name.
+          shopt -s nullglob
+          for f in "$STAGING"/*; do
+            echo "uploading: $(basename "$f")"
+            gh release upload "$TAG" "$f" --repo "${{ github.repository }}" --clobber
+          done
