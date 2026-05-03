@@ -214,35 +214,23 @@ jobs:
 
           if ! gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
             echo "Creating release $TAG"
-            gh release create "$TAG" --repo "${{ github.repository }}" \
-              --title "Coffee CLI $TAG" \
-              --notes "$(cat <<'EOF'
-## Install
-
-**Windows**
-```powershell
-irm https://raw.githubusercontent.com/edison7009/Coffee-CLI/main/install/install.ps1 | iex
-```
-
-**macOS / Linux**
-```bash
-curl -fsSL https://raw.githubusercontent.com/edison7009/Coffee-CLI/main/install/install.sh | sh
-```
-
-Or download the matching asset for your platform below.
-
-| Platform | File |
-|---|---|
-| Windows x64 | `Coffee.CLI_*_Windows_x64-setup.exe` (or `.msi`) |
-| macOS Apple Silicon | `Coffee.CLI_*_macOS_arm64.dmg` |
-| Linux x64 (Debian/Ubuntu) | `Coffee.CLI_*_Linux_x64.deb` |
-| Linux x64 (Fedora/RHEL/openSUSE) | `Coffee.CLI_*_Linux_x64.rpm` |
-| Linux x64 (universal) | `Coffee.CLI_*_Linux_x64.AppImage` |
-| Linux arm64 (Debian/Ubuntu) | `Coffee.CLI_*_Linux_arm64.deb` |
-| Linux arm64 (Fedora/RHEL/openSUSE) | `Coffee.CLI_*_Linux_arm64.rpm` |
-| Linux arm64 (universal) | `Coffee.CLI_*_Linux_arm64.AppImage` |
-EOF
-)" || echo "Release already exists (created by sibling matrix job)"
+            # Notes body lives in install/release-notes-template.md so the
+            # YAML block doesn't have to fight bash heredoc indentation
+            # rules. `gh release create --notes-file` accepts a path; we
+            # don't need to interpolate the tag because the body is the
+            # generic install instructions, not version-specific changelog.
+            NOTES_FILE="$GITHUB_WORKSPACE/install/release-notes-template.md"
+            if [ -f "$NOTES_FILE" ]; then
+              gh release create "$TAG" --repo "${{ github.repository }}" \
+                --title "Coffee CLI $TAG" \
+                --notes-file "$NOTES_FILE" \
+                || echo "Release already exists (created by sibling matrix job)"
+            else
+              gh release create "$TAG" --repo "${{ github.repository }}" \
+                --title "Coffee CLI $TAG" \
+                --notes "Coffee CLI $TAG. See README for install instructions." \
+                || echo "Release already exists (created by sibling matrix job)"
+            fi
           fi
 
           # Upload everything in staging. --clobber overwrites if a previous
