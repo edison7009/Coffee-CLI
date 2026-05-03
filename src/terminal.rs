@@ -199,6 +199,25 @@ pub const AGENT_PRESETS: &[AgentPreset] = &[
         token_format: Some(r"^\d{8}_\d{6}_[0-9a-f]{6}$"),
         prompt_markers: &["❯"],
     },
+    // OpenCode 1.14+ resume: `opencode --session ses_<25-alnum>`. The TUI
+    // does not echo the session id to stdout (verified live on 1.14.32),
+    // so `session_id_pattern` is None — the resume token is sourced from
+    // the existing OpenCode history reader in server.rs (which parses
+    // `~/.local/share/opencode/storage/session/<projectID>/*.json`),
+    // not from PTY scraping. Prompt marker `┃` (U+2503 HEAVY VERTICAL)
+    // is the left border of OpenCode's input box, persistently rendered
+    // in idle state; combined with the >1.2s silence rule in the status
+    // ticker this reliably maps to "wait_input" only after the agent has
+    // finished streaming.
+    AgentPreset {
+        tool_name: "opencode",
+        resume_program: Some("opencode"),
+        resume_args_before: &["--session"],
+        resume_args_after: &[],
+        session_id_pattern: None,
+        token_format: Some(r"^ses_[A-Za-z0-9]{25}$"),
+        prompt_markers: &["┃"],
+    },
 ];
 
 pub fn find_preset(tool_name: &str) -> Option<&'static AgentPreset> {
@@ -255,6 +274,12 @@ pub struct SessionActivity {
 
 /// Spawns `program` with `args` inside a PTY via portable-pty.
 /// On Windows this uses ConPTY, on Unix it uses native PTYs.
+///
+/// `extra_env` is applied AFTER parent-env inheritance and the standard
+/// AI-CLI env hints (TERM/FORCE_COLOR/NODE_OPTIONS/…) so its entries win.
+/// Used for per-pane config injection where the env var must differ across
+/// concurrent panes (e.g. `OPENCODE_CONFIG` points at a per-pane JSON file).
+/// `std::env::set_var` would race across panes; this is the race-free path.
 pub fn spawn(
     app: AppHandle,
     session_id: String,
@@ -268,6 +293,7 @@ pub fn spawn(
     tool_name: Option<String>,
     theme_mode: Option<String>,
     locale: Option<String>,
+    extra_env: Vec<(String, String)>,
 ) -> anyhow::Result<()> {
     use portable_pty::{CommandBuilder, PtySize, native_pty_system};
 
@@ -479,6 +505,16 @@ pub fn spawn(
             cmd.cwd(dir);
             cmd.env("COFFEE_MODE_CWD", dir);
         }
+    }
+
+    // ── Per-spawn env overrides ────────────────────────────────────────────
+    // Applied last so they win over inherited parent env, the AI-CLI hint
+    // block, theme/locale, and OSC 7 PROMPT_COMMAND. The race-free path for
+    // per-pane config when multiple panes spawn concurrently — each gets its
+    // own env block (e.g. OPENCODE_CONFIG=<unique-pane-temp-path>) without
+    // mutating Coffee CLI's own process-wide env.
+    for (k, v) in &extra_env {
+        cmd.env(k, v);
     }
 
     // ── Open PTY pair ──────────────────────────────────────────────────────

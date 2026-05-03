@@ -198,12 +198,19 @@ interface TierTerminalProps {
   bgUrl?: string;
   bgType?: 'image' | 'video' | 'none';
   termColorScheme?: string;
+  /** Multi-agent only. When true, the backend wires this pane's
+   *  `coffee-cli` MCP server + injects the cross-pane protocol prompt
+   *  into the CLI's system instructions. When false (default), the
+   *  pane runs hands-free but with NO peer awareness — it shares only
+   *  the workspace folder with sibling panes. Ignored outside
+   *  multi-agent grids (single-terminal tabs always pass false). */
+  sentinelEnabled?: boolean;
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
 function TierTerminalImpl({
-  sessionId, tool, toolName, theme, lang, isActive, toolData, folderPath, hasBg, bgUrl, bgType, termColorScheme,
+  sessionId, tool, toolName, theme, lang, isActive, toolData, folderPath, hasBg, bgUrl, bgType, termColorScheme, sentinelEnabled,
 }: TierTerminalProps) {
   // Dispatch-only subscription. Never re-renders this component.
   const dispatch = useAppDispatch();
@@ -649,7 +656,7 @@ function TierTerminalImpl({
         // spawns `claude` with `/vibeid` as the initial positional prompt.
         // No frontend remap + no PTY-write hack: Claude Code's REPL parses the
         // slash command natively on first input.
-        await commands.tierTerminalStart(sessionId, tool, initialCols, initialRows, theme, lang, toolData, folderPath ?? undefined);
+        await commands.tierTerminalStart(sessionId, tool, initialCols, initialRows, theme, lang, toolData, folderPath ?? undefined, sentinelEnabled);
 
         // After PTY is running, wait two frames for layout to settle then
         // send the true terminal size. This fixes TUI adaptive-width tools

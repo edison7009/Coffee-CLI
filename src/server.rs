@@ -594,6 +594,12 @@ fn copy_dir_all(src: &std::path::Path, dest: &std::path::Path) -> std::io::Resul
 
 // ─── Tier Terminal API ────────────────────────────────────────────────────────
 
+/// `sentinel_enabled` (multi-agent only): when false, the pane runs its
+/// CLI in hands-free mode but with NO peer awareness — no `coffee-cli`
+/// MCP server, no cross-pane protocol prompt, no `send_to_pane` /
+/// `list_panes` / `whoami` tools. When true, those wirings come back
+/// (the historical pre-v1.10 behaviour). Ignored outside multi-agent
+/// panes. Defaults to false so non-sentinel panes don't auto-chat.
 #[tauri::command]
 async fn tier_terminal_start(
     session_id: String,
@@ -604,9 +610,11 @@ async fn tier_terminal_start(
     theme_mode: Option<String>,
     locale: Option<String>,
     cwd: Option<String>,
+    sentinel_enabled: Option<bool>,
     app: tauri::AppHandle,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
+    let sentinel_enabled = sentinel_enabled.unwrap_or(false);
     // ── Per-pane MCP wiring for multi-agent panes ────────────────────
     // For each multi-agent pane (session id like "tab-X::pane-N")
     // running Claude, Codex, or Gemini, spawn an MCP server with that
@@ -627,8 +635,15 @@ async fn tier_terminal_start(
     let mut pane_paths: Option<crate::mcp_injector::PaneConfigPaths> = None;
     {
         let in_multi_agent = session_id.contains("::pane-");
+        // Sentinel Protocol gates peer-awareness wiring — without it, panes
+        // share a workspace but stay otherwise unaware of each other (no
+        // MCP server, no protocol prompt, no `send_to_pane` tool). Hands-
+        // free flags like `--dangerously-skip-permissions` are NOT gated
+        // here; they belong to multi-agent mode unconditionally so all
+        // four panes still run without manual approval clicks.
         let pane_cli_kind = match tool.as_deref() {
-            Some(k @ ("claude" | "codex" | "gemini")) if in_multi_agent => Some(k),
+            Some(k @ ("claude" | "codex" | "gemini" | "opencode"))
+                if in_multi_agent && sentinel_enabled => Some(k),
             _ => None,
         };
         if let Some(kind) = pane_cli_kind {
@@ -750,17 +765,21 @@ fn tier_terminal_start_blocking(
                 {
                     a.push("--mcp-config".to_string());
                     a.push(p.display().to_string());
+                    // Per-pane system prompt: bake the pane id and the
+                    // protocol cheat sheet directly into THIS Claude
+                    // session's system prompt. Survives /clear and
+                    // /compact. Replaces writing CLAUDE.md to the
+                    // workspace, so multi-agent Claude users see ZERO
+                    // files appear in their project directory. Only
+                    // injected when sentinel is on (paired with the
+                    // MCP config above) — without it the prompt would
+                    // describe tools that aren't actually wired in,
+                    // confusing the model.
+                    a.push("--append-system-prompt".to_string());
+                    a.push(crate::multi_agent_protocol::build_pane_system_prompt(
+                        &session_id,
+                    ));
                 }
-                // Per-pane system prompt: bake the pane id and the
-                // protocol cheat sheet directly into THIS Claude
-                // session's system prompt. Survives /clear and
-                // /compact. Replaces writing CLAUDE.md to the
-                // workspace, so multi-agent Claude users see ZERO
-                // files appear in their project directory.
-                a.push("--append-system-prompt".to_string());
-                a.push(crate::multi_agent_protocol::build_pane_system_prompt(
-                    &session_id,
-                ));
             }
             ("claude".to_string(), a)
         },
@@ -789,10 +808,19 @@ fn tier_terminal_start_blocking(
         Some("codex")    => {
             let mut a = vec![];
             if in_multi_agent {
-                // --full-auto: read/write workspace + run commands without prompting.
-                // Kept conservative vs. --dangerously-bypass-approvals-and-sandbox
-                // so destructive ops outside the workspace still get stopped.
-                a.push("--full-auto".to_string());
+                // Hands-free multi-agent: no human is present to click
+                // through confirmation dialogs (the originating pane's
+                // LLM dispatched this work via send_to_pane). The earlier
+                // conservative `-s workspace-write -a never` combo still
+                // surfaced sandbox-violation prompts for cross-workspace
+                // ops, login/trust dialogs, and first-run consent screens
+                // that block the PTY. Codex's own "skip everything" door
+                // is `--dangerously-bypass-approvals-and-sandbox` — the
+                // doc explicitly reads "Skip all confirmation prompts and
+                // execute commands without sandboxing." That's the right
+                // tradeoff for multi-agent mode: entering it already
+                // delegates trust to the controlling pane's LLM.
+                a.push("--dangerously-bypass-approvals-and-sandbox".to_string());
                 // Per-pane MCP wiring via Codex's `-c key=value` config
                 // override (it merges onto `~/.codex/config.toml` rather
                 // than replacing it, so user MCP entries / API keys /
@@ -990,6 +1018,15 @@ fn tier_terminal_start_blocking(
 
     eprintln!("[Tier Terminal] Starting tool={:?}, cmd={}, args={:?}, cwd={:?}", tool, cmd, args, spawn_cwd);
 
+    // Per-pane env overrides. OpenCode reads its MCP config from
+    // `OPENCODE_CONFIG=<path>` (no equivalent CLI flag in 1.14), so the
+    // per-pane wiring lands here rather than in the argv match above.
+    // Other CLIs leave this empty.
+    let mut extra_env: Vec<(String, String)> = Vec::new();
+    if let Some(p) = pane_paths.as_ref().and_then(|pp| pp.opencode_config_path.as_ref()) {
+        extra_env.push(("OPENCODE_CONFIG".to_string(), p.display().to_string()));
+    }
+
     terminal::spawn(
         app.clone(),
         session_id.clone(),
@@ -1003,6 +1040,7 @@ fn tier_terminal_start_blocking(
         tool_name.clone(),
         theme_mode,
         locale,
+        extra_env,
     ).map_err(|e| format!("Failed to spawn PTY: {}", e))?;
 
     // Emit the initial CWD to the frontend so the left panel can map immediately.
@@ -1968,6 +2006,7 @@ fn tier_terminal_resume(
         Some(tool),
         None, // theme_mode: resume sessions use default detection
         None, // locale: resume sessions use env detection
+        Vec::new(), // extra_env: single-terminal resume — no per-pane MCP wiring
     ).map_err(|e| format!("Failed to resume: {}", e))?;
 
     // Emit CWD so the left panel maps the resumed session's directory

@@ -613,13 +613,6 @@ pub struct SendToPaneArgs {
     pub id: String,
     /// Text to inject into the target pane's stdin.
     pub text: String,
-    /// Seconds to wait for idle if wait=true. Default 600, max 3600.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub timeout_sec: Option<u64>,
-    /// If true, block until pane is idle or timeout (default). If false,
-    /// return immediately with job_id; caller polls via read_pane later.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub wait: Option<bool>,
     /// If true (default), auto-append `\r` unless `text` already ends with
     /// a newline. Set false when you need to type without submitting (e.g.
     /// inserting template text for the user to finish editing).
@@ -817,14 +810,18 @@ terminated). Use this to discover what peers exist before calling send_to_pane."
     }
 
     #[tool(
-        description = "Send text to a pane's stdin and (by default) wait for \
-the CLI to idle. From the target pane's POV the input is indistinguishable \
-from human typing — no special framing, no source flag. A carriage return is \
-auto-appended (set submit=false to disable). wait=true (default) blocks until \
-idle or timeout (default 600s) and returns the new output. wait=false returns \
-immediately; poll read_pane later for long tasks. Self-dispatch is rejected. \
-Per-pane sentinel mode is restricted to the caller's own tab; the global \
-Hyper-Agent admin endpoint can dispatch to any pane in any tab."
+        description = "Dispatch a task to a peer pane and end your own turn. \
+This is fire-and-forget — there is no waiting mode. The call returns \
+immediately, your turn ends, and you sit at idle until the target's \
+`[COFFEE-DONE:paneT->paneSelf]` marker reactivates your LLM with the result. \
+\
+From the target pane's POV the text is indistinguishable from human typing — \
+no special framing, no source flag — and Coffee-CLI auto-prefixes it with \
+`[From paneN]` so the receiver knows who dispatched it and where to send the \
+DONE marker. A carriage return is auto-appended (set submit=false to disable). \
+Self-dispatch is rejected. The intra-tab MCP server can only dispatch within \
+its own tab; the global Hyper-Agent admin endpoint can dispatch to any pane \
+in any tab."
     )]
     async fn send_to_pane(
         &self,
@@ -868,17 +865,17 @@ Hyper-Agent admin endpoint can dispatch to any pane in any tab."
                 )]));
             }
         }
-        let wait = args.wait.unwrap_or(true);
+        // Multi-agent dispatch is one-shot, period: send and end your
+        // turn. The completion path is the [COFFEE-DONE:paneT->paneSelf]
+        // marker that the target emits, which the frontend converts into
+        // a wake-up message in the caller's PTY. There is no "wait for
+        // idle" mode — keeping the caller's LLM blocked across a multi-
+        // minute peer task wastes context tokens and the user's time.
+        // `timeout_sec` is therefore unused but the underlying helper
+        // still takes it; pass 0 since wait=false ignores it.
+        let wait = false;
         let submit = args.submit.unwrap_or(true);
-        // Default 600s (10 min) — a real orchestration task (refactor,
-        // multi-step code edit, doc generation) commonly runs 3-8 min
-        // in the target CLI. A 180s default still forced the user into
-        // the manual "check pane X" ping flow for anything non-trivial,
-        // defeating "hands-free orchestration". 10 min covers the 99th
-        // percentile while still having a firm ceiling so a crashed or
-        // stuck pane doesn't wedge the caller indefinitely. Early-exit
-        // on actual idle detection means short tasks still return fast.
-        let timeout_sec = args.timeout_sec.unwrap_or(600).min(3600);
+        let timeout_sec = 0u64;
 
         // Prefix the dispatched text with `[From <self_pane>]` so the
         // receiving CLI's LLM sees who sent the work — without this

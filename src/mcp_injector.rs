@@ -12,14 +12,16 @@
 //!
 //! Per-CLI handoff (consumed by `server::tier_terminal_start_blocking`):
 //!
-//! | CLI    | Coffee CLI passes via …                                    | Pane reads from …                                         |
-//! |--------|------------------------------------------------------------|-----------------------------------------------------------|
-//! | Claude | `--mcp-config <pane-temp>/claude-mcp.json`                 | that JSON file                                            |
-//! | Codex  | `-c mcp_servers.coffee-cli.url='<url>'`                    | command-line override (no file)                           |
-//! |        | `-c experimental_instructions_file='<pane-temp>/inst.md'`  | per-pane temp file (no workspace touch)                   |
-//! | Gemini | `--extensions coffee-pane-<sanitized>`                     | `~/.gemini/extensions/coffee-pane-<sanitized>/` stub      |
-//! |        |                                                            | which holds a link → `<pane-temp>/gemini-extension.json`  |
-//! |        |                                                            | + `<pane-temp>/GEMINI.md`                                 |
+//! | CLI      | Coffee CLI passes via …                                    | Pane reads from …                                         |
+//! |----------|------------------------------------------------------------|-----------------------------------------------------------|
+//! | Claude   | `--mcp-config <pane-temp>/claude-mcp.json`                 | that JSON file                                            |
+//! | Codex    | `-c mcp_servers.coffee-cli.url='<url>'`                    | command-line override (no file)                           |
+//! |          | `-c experimental_instructions_file='<pane-temp>/inst.md'`  | per-pane temp file (no workspace touch)                   |
+//! | Gemini   | `--extensions coffee-pane-<sanitized>`                     | `~/.gemini/extensions/coffee-pane-<sanitized>/` stub      |
+//! |          |                                                            | which holds a link → `<pane-temp>/gemini-extension.json`  |
+//! |          |                                                            | + `<pane-temp>/GEMINI.md`                                 |
+//! | OpenCode | `OPENCODE_CONFIG=<pane-temp>/opencode.json` env var        | that JSON file (merged onto user's global config; carries |
+//! |          |                                                            | `permission: "allow"` since OpenCode TUI has no CLI flag) |
 //!
 //! Workspace pollution: zero. No `.md`, no `settings.json`, no
 //! `mcp_servers` block ever lands in the user's project directory.
@@ -75,6 +77,13 @@ pub struct PaneConfigPaths {
     /// stub dir at `~/.gemini/extensions/<name>/` has been created with
     /// link metadata pointing at the real manifest in OS temp.
     pub gemini_extension_name: Option<String>,
+    /// `cli_kind == "opencode"` only. Pass via `OPENCODE_CONFIG=<path>`
+    /// env var (NOT a CLI flag — OpenCode 1.14 reads only env var or
+    /// project-local `opencode.json`; we use the env var so the user's
+    /// workspace stays untouched). Merged on top of the user's global
+    /// `~/.config/opencode/opencode.json`, so user MCP servers / themes /
+    /// auth all stay live; only `mcp.coffee-cli` is added.
+    pub opencode_config_path: Option<PathBuf>,
 }
 
 /// Build per-pane CLI artifacts for `pane_id` running `cli_kind`,
@@ -168,6 +177,31 @@ pub fn prepare_pane_config_dir(
             }
             out.gemini_extension_name = Some(extension_name);
         }
+        "opencode" => {
+            // OpenCode 1.14 config-resolution chain (per opencode.ai/docs/config):
+            //   1. ~/.config/opencode/opencode.json   (global user config)
+            //   2. $OPENCODE_CONFIG                   ← we set this
+            //   3. <project>/opencode.json            (project-local)
+            //   4. $OPENCODE_CONFIG_CONTENT           (inline override)
+            // Settings MERGE (not replace), so injecting just `mcp.coffee-cli`
+            // here leaves the user's themes, auth, agents, model, and any
+            // other MCP servers untouched. Picked the env var path over
+            // OPENCODE_CONFIG_CONTENT because (a) Windows env-var JSON
+            // escaping is fragile across shell layers, (b) the file is
+            // visible on disk for debugging, and (c) `prune_pane_artifacts`
+            // already cleans it up via the per-pane temp dir.
+            //
+            // OpenCode does NOT read project-local config from CWD as long
+            // as OPENCODE_CONFIG points elsewhere — wait, actually it
+            // ALWAYS reads project-local if present, layered on top. That's
+            // fine: user's own `opencode.json` (if any) is their choice and
+            // takes precedence over our injected `mcp.coffee-cli` (unless
+            // they happen to also key something under that exact name,
+            // which would be a deliberate override).
+            let p = dir.join("opencode.json");
+            fs::write(&p, opencode_config_json(endpoint))?;
+            out.opencode_config_path = Some(p);
+        }
         _ => {}
     }
     Ok(out)
@@ -232,6 +266,36 @@ fn claude_mcp_json(endpoint: &McpEndpoint) -> String {
         "mcpServers": {
             MCP_KEY: {
                 "type": "http",
+                "url": endpoint.url,
+            }
+        }
+    });
+    serde_json::to_string_pretty(&body).unwrap_or_default()
+}
+
+fn opencode_config_json(endpoint: &McpEndpoint) -> String {
+    // Two things this per-pane config must do:
+    //
+    // 1. MCP server: `type: "remote"` for HTTP endpoints, `url` is the
+    //    base URL. Matches Claude's `type: "http"` semantically but uses
+    //    OpenCode's own naming (see opencode.ai/docs/mcp-servers).
+    //
+    // 2. `permission: "allow"`: OpenCode's TUI has no
+    //    `--dangerously-skip-permissions` CLI flag (only `opencode run`
+    //    does); the only hands-free path is the config field. The single-
+    //    string form blanket-approves every permission category — read,
+    //    edit, bash, webfetch, external_directory, etc. — which is the
+    //    correct level of trust for multi-agent mode where another
+    //    pane's LLM is dispatching work and there's no human at the
+    //    keyboard to click "Allow". Per-pane config means the user's
+    //    own standalone-OpenCode runs (in other terminals, with a
+    //    human watching) keep their normal interactive permissions.
+    let body = serde_json::json!({
+        "$schema": "https://opencode.ai/config.json",
+        "permission": "allow",
+        "mcp": {
+            MCP_KEY: {
+                "type": "remote",
                 "url": endpoint.url,
             }
         }
@@ -339,12 +403,33 @@ mod tests {
     }
 
     #[test]
+    fn opencode_writes_config_file_with_url_and_allow_permission() {
+        let pid = unique_pane("opencode");
+        let out = prepare_pane_config_dir(&pid, "opencode", &ep(), "IGNORED").unwrap();
+        let p = out.opencode_config_path.expect("opencode returns path");
+        assert!(out.claude_mcp_config_path.is_none());
+        assert!(out.codex_extra_args.is_empty());
+        assert!(out.gemini_extension_name.is_none());
+        let body = fs::read_to_string(&p).unwrap();
+        assert!(body.contains("coffee-cli"));
+        assert!(body.contains("\"type\": \"remote\""));
+        assert!(body.contains("http://127.0.0.1:50000/mcp"));
+        // permission: "allow" is the only hands-free path for OpenCode TUI
+        // (no --dangerously-skip-permissions equivalent). Without it,
+        // multi-agent dispatch into an OpenCode pane wedges on the first
+        // permission prompt with no human present to approve.
+        assert!(body.contains("\"permission\": \"allow\""));
+        let _ = fs::remove_dir_all(panes_root().join(sanitize_pane_id(&pid)));
+    }
+
+    #[test]
     fn unknown_cli_kind_is_a_noop() {
         let pid = unique_pane("unknown");
         let out = prepare_pane_config_dir(&pid, "qwen", &ep(), "ignored").unwrap();
         assert!(out.claude_mcp_config_path.is_none());
         assert!(out.codex_extra_args.is_empty());
         assert!(out.gemini_extension_name.is_none());
+        assert!(out.opencode_config_path.is_none());
         let _ = fs::remove_dir_all(panes_root().join(sanitize_pane_id(&pid)));
     }
 }
