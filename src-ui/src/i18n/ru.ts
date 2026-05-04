@@ -67,6 +67,7 @@ export const ru = {
   'remote.connect_failed': 'Ошибка подключения',
 
   'tab.new': 'Выбрать инструмент',
+  'chat.no_records': 'Читаемые записи разговоров не найдены.',
 
 
 

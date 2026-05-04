@@ -67,6 +67,7 @@ export const pt = {
   'remote.connect_failed': 'Falha na conexão',
 
   'tab.new': 'Selecionar ferramenta',
+  'chat.no_records': 'Nenhum registro de conversa legível encontrado.',
 
 
 

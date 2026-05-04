@@ -1527,6 +1527,93 @@ fn parse_gemini_session_jsonl(
     })
 }
 
+/// Parse a Qwen Code session jsonl. Layout:
+///   `~/.qwen/projects/<sanitized-cwd>/chats/<session>.jsonl`
+/// Each line: `{uuid, type: 'user'|'assistant'|'tool_result'|'system',
+///   sessionId, cwd, timestamp, message: {role, parts: [{text|functionCall|...}]}}`
+/// Differences vs. Gemini CLI's format (these two are cousins, not twins):
+///   • cwd is on every row (no separate projects.json reverse map needed)
+///   • text lives in `message.parts[].text`, not the top-level `content[]`
+///   • assistant rows use `type: 'assistant'`, not `'gemini'`
+fn parse_qwen_session_jsonl(file_path: &std::path::Path) -> Option<SavedSession> {
+    use std::io::BufRead;
+    let file = std::fs::File::open(file_path).ok()?;
+    let reader = std::io::BufReader::new(file);
+
+    let mut session_id = file_path.file_stem()?.to_string_lossy().to_string();
+    let mut cwd = String::new();
+    let mut updated_at = String::new();
+    let mut title = String::new();
+    let mut total_messages = 0;
+
+    for line in reader.lines().map_while(Result::ok) {
+        let Ok(value) = serde_json::from_str::<serde_json::Value>(&line) else {
+            continue;
+        };
+        if let Some(s) = value.get("sessionId").and_then(|v| v.as_str()) {
+            if !s.is_empty() {
+                session_id = s.to_string();
+            }
+        }
+        if cwd.is_empty() {
+            if let Some(c) = value.get("cwd").and_then(|v| v.as_str()) {
+                cwd = c.to_string();
+            }
+        }
+        let row_type = value.get("type").and_then(|v| v.as_str()).unwrap_or("");
+        if row_type == "user" || row_type == "assistant" {
+            total_messages += 1;
+        }
+        // Title: first user message, first 40 chars.
+        if !title.is_empty() || row_type != "user" {
+            continue;
+        }
+        let Some(parts) = value
+            .get("message")
+            .and_then(|m| m.get("parts"))
+            .and_then(|v| v.as_array())
+        else {
+            continue;
+        };
+        for block in parts {
+            let Some(text) = block.get("text").and_then(|v| v.as_str()) else {
+                continue;
+            };
+            if is_system_injected(text) {
+                continue;
+            }
+            let safe = text.replace('\n', " ");
+            let mut chars = safe.chars();
+            let chunk: String = chars.by_ref().take(40).collect();
+            title = if chars.next().is_some() { format!("{}...", chunk) } else { chunk };
+            break;
+        }
+    }
+
+    if let Ok(meta) = std::fs::metadata(file_path) {
+        if let Ok(mod_time) = meta.modified() {
+            if let Ok(dur) = mod_time.duration_since(std::time::SystemTime::UNIX_EPOCH) {
+                updated_at = dur.as_millis().to_string();
+            }
+        }
+    }
+    if title.is_empty() {
+        title = "Qwen Session".to_string();
+    }
+    let turn_count = if total_messages > 0 { std::cmp::max(1, (total_messages + 1) / 2) } else { 0 };
+
+    Some(SavedSession {
+        id: format!("qwen_native_{}", session_id),
+        name: title,
+        tool: "qwen".to_string(),
+        cwd,
+        session_token: Some(session_id),
+        saved_at: updated_at,
+        file_path: Some(file_path.to_string_lossy().into_owned()),
+        turn_count: Some(turn_count),
+    })
+}
+
 /// Read `~/.gemini/projects.json` and build a reverse map
 /// `short_folder_name → real_cwd`. Used by
 /// `parse_gemini_session_jsonl` because the per-session jsonl file
@@ -1591,10 +1678,11 @@ fn read_native_session(file_path: String) -> Result<String, String> {
         home.join(".hermes"),
         home.join(".codex").join("sessions"),
         home.join(".gemini").join("tmp"),
+        home.join(".qwen").join("projects"),
         home.join(".local").join("share").join("opencode"),
         home.join(".openclaw").join("agents"),
     ];
-    for tool in ["claude", "hermes", "codex", "gemini", "opencode", "openclaw"] {
+    for tool in ["claude", "hermes", "codex", "gemini", "qwen", "opencode", "openclaw"] {
         let cfg = crate::tool_config::get(tool).history_path;
         if !cfg.is_empty() {
             allowed.push(crate::tool_config::expand_path(&cfg));
@@ -1605,6 +1693,206 @@ fn read_native_session(file_path: String) -> Result<String, String> {
     }
 
     std::fs::read_to_string(&canonical).map_err(|e| e.to_string())
+}
+
+// ─── OpenCode Session Reader ─────────────────────────────────────────────────
+//
+// OpenCode stores chat history in two layouts depending on version:
+//   • SQLite (current):  `~/.local/share/opencode/opencode.db`
+//                         tables `message` (role + metadata) + `part`
+//                         (text/tool blocks), joined by message_id.
+//   • JSON  (legacy):    `~/.local/share/opencode/storage/message/<sid>/*.json`
+//                         one file per message, content blocks inline.
+//
+// Both are normalized to the same JSONL shape that ChatReader.tsx already
+// understands (Claude Code shape with `{message:{role, content[]}}`):
+//
+//   {"message": {"role": "user", "content": [{"type":"text","text":"..."}]}}
+//   {"message": {"role": "assistant", "content": [{"type":"text","text":"..."}]}}
+//
+// One line per message. Tool calls / patches / snapshots are dropped — the
+// preview only cares about the text the user/assistant said. If the session
+// has zero text turns, returns an empty string and the frontend renders the
+// "no readable conversation records" empty state.
+
+fn read_opencode_sqlite_session(
+    db_path: &std::path::Path,
+    session_id: &str,
+) -> Result<String, String> {
+    use rusqlite::Connection;
+    let conn = Connection::open_with_flags(
+        db_path,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX,
+    )
+    .map_err(|e| format!("open opencode.db: {e}"))?;
+
+    // 1. Pull all messages for the session (ordered by creation time).
+    let mut msg_stmt = conn
+        .prepare(
+            "SELECT id, data FROM message WHERE session_id = ?1 ORDER BY time_created ASC",
+        )
+        .map_err(|e| format!("prepare message query: {e}"))?;
+    let msg_rows = msg_stmt
+        .query_map([session_id], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })
+        .map_err(|e| format!("query messages: {e}"))?;
+
+    // (message_id, role)
+    let mut messages: Vec<(String, String)> = Vec::new();
+    for row in msg_rows.flatten() {
+        let (id, data) = row;
+        if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&data) {
+            if let Some(role) = parsed.get("role").and_then(|v| v.as_str()) {
+                messages.push((id, role.to_string()));
+            }
+        }
+    }
+    if messages.is_empty() {
+        return Ok(String::new());
+    }
+
+    // 2. Pull all parts for the session in one query, then bucket by message_id.
+    let mut part_stmt = conn
+        .prepare(
+            "SELECT message_id, data FROM part WHERE session_id = ?1 ORDER BY time_created ASC",
+        )
+        .map_err(|e| format!("prepare part query: {e}"))?;
+    let part_rows = part_stmt
+        .query_map([session_id], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })
+        .map_err(|e| format!("query parts: {e}"))?;
+
+    use std::collections::HashMap;
+    let mut parts_by_msg: HashMap<String, Vec<String>> = HashMap::new();
+    for row in part_rows.flatten() {
+        let (msg_id, data) = row;
+        if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&data) {
+            // Only TextPart contributes to the preview transcript.
+            if parsed.get("type").and_then(|v| v.as_str()) == Some("text") {
+                if let Some(text) = parsed.get("text").and_then(|v| v.as_str()) {
+                    if !text.is_empty() {
+                        parts_by_msg.entry(msg_id).or_default().push(text.to_string());
+                    }
+                }
+            }
+        }
+    }
+
+    // 3. Emit one JSONL row per message, joining its text parts.
+    let mut out = String::new();
+    for (msg_id, role) in messages {
+        let text_blocks: Vec<serde_json::Value> = parts_by_msg
+            .get(&msg_id)
+            .map(|v| {
+                v.iter()
+                    .map(|t| {
+                        serde_json::json!({ "type": "text", "text": t })
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+        if text_blocks.is_empty() {
+            continue;
+        }
+        let line = serde_json::json!({
+            "message": { "role": role, "content": text_blocks }
+        });
+        out.push_str(&line.to_string());
+        out.push('\n');
+    }
+    Ok(out)
+}
+
+fn read_opencode_json_dir(message_dir: &std::path::Path) -> Result<String, String> {
+    // Legacy layout: storage/message/<sid>/<msg-id>.json. Each file is the
+    // full message info JSON (including role + content blocks). Sort by file
+    // name so chronological order of message creation is preserved (OpenCode
+    // file names are time-prefixed IDs).
+    let mut files: Vec<std::path::PathBuf> = std::fs::read_dir(message_dir)
+        .map_err(|e| format!("read message dir: {e}"))?
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| p.is_file())
+        .collect();
+    files.sort();
+
+    let mut out = String::new();
+    for path in files {
+        let raw = match std::fs::read_to_string(&path) {
+            Ok(s) => s,
+            Err(_) => continue,
+        };
+        let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&raw) else {
+            continue;
+        };
+        let role = match parsed.get("role").and_then(|v| v.as_str()) {
+            Some(r) => r.to_string(),
+            None => continue,
+        };
+        let mut text_blocks: Vec<serde_json::Value> = Vec::new();
+        if let Some(arr) = parsed.get("content").and_then(|v| v.as_array()) {
+            for block in arr {
+                if block.get("type").and_then(|v| v.as_str()) == Some("text") {
+                    if let Some(text) = block.get("text").and_then(|v| v.as_str()) {
+                        if !text.is_empty() {
+                            text_blocks.push(serde_json::json!({ "type": "text", "text": text }));
+                        }
+                    }
+                }
+            }
+        }
+        if text_blocks.is_empty() {
+            continue;
+        }
+        let line = serde_json::json!({
+            "message": { "role": role, "content": text_blocks }
+        });
+        out.push_str(&line.to_string());
+        out.push('\n');
+    }
+    Ok(out)
+}
+
+#[tauri::command]
+fn read_opencode_session(session_id: String) -> Result<String, String> {
+    let home = dirs::home_dir().ok_or("Cannot determine home directory")?;
+
+    // Honor user-configured OpenCode history path from
+    // ~/.coffee-cli/tools.json (same source the listing pass uses
+    // at line ~2129). Falls through to the platform default
+    // ~/.local/share/opencode when the user hasn't customized it.
+    let opencode_root = crate::tool_config::history_path_for(
+        "opencode",
+        home.join(".local").join("share").join("opencode"),
+    );
+
+    // Prefer current SQLite layout.
+    let db_path = opencode_root.join("opencode.db");
+    if db_path.is_file() {
+        return read_opencode_sqlite_session(&db_path, &session_id);
+    }
+
+    // Fall back to legacy JSON layout. Message dir name == session_id.
+    // Canonicalize and assert containment so a crafted session_id like
+    // "../../../etc" can't escape the OpenCode storage root. SQLite
+    // branch above is safe because session_id is only bound as a SQL
+    // parameter, not joined into a path.
+    let message_root = opencode_root.join("storage").join("message");
+    let message_dir = message_root.join(&session_id);
+    if message_dir.is_dir() {
+        let canonical_dir = std::fs::canonicalize(&message_dir)
+            .map_err(|e| format!("canonicalize session dir: {e}"))?;
+        let canonical_root = std::fs::canonicalize(&message_root)
+            .unwrap_or(message_root.clone());
+        if !canonical_dir.starts_with(&canonical_root) {
+            return Err("Access denied: session_id escapes OpenCode storage root".to_string());
+        }
+        return read_opencode_json_dir(&canonical_dir);
+    }
+
+    Err("OpenCode session storage not found".to_string())
 }
 
 fn collect_jsonl_paths_with_mtime(
@@ -1915,6 +2203,16 @@ fn load_native_history_blocking() -> Result<Vec<SavedSession>, String> {
             home.join(".openclaw").join("agents"),
         );
         collect_jsonl_paths_with_mtime(openclaw_dir, 3, "openclaw", &mut file_candidates);
+
+        // 6. Qwen Code (depth 3: projects/<sanitized-cwd>/chats/<session>.jsonl).
+        // Gemini-fork format with role + parts on every row + cwd field on
+        // each row, so parse_qwen_session_jsonl can extract title/cwd
+        // without a separate projects.json reverse map.
+        let qwen_dir = crate::tool_config::history_path_for(
+            "qwen",
+            home.join(".qwen").join("projects"),
+        );
+        collect_jsonl_paths_with_mtime(qwen_dir, 3, "qwen", &mut file_candidates);
     }
 
     // Sort candidates by mtime desc and parse only the newest HISTORY_LIMIT.
@@ -1934,6 +2232,7 @@ fn load_native_history_blocking() -> Result<Vec<SavedSession>, String> {
             "hermes" => parse_hermes_json(path),
             "codex"  => parse_codex_session_jsonl(path),
             "gemini" => parse_gemini_session_jsonl(path, &gemini_project_map),
+            "qwen"   => parse_qwen_session_jsonl(path),
             other    => parse_agent_jsonl(path, other),
         };
         if let Some(session) = parsed {
@@ -2541,6 +2840,7 @@ pub fn start_ui() -> anyhow::Result<()> {
             tier_terminal_resume,
             get_native_history,
             read_native_session,
+            read_opencode_session,
             check_network_port,
             check_tools_installed,
             start_fs_watcher,

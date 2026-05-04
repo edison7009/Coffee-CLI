@@ -37,7 +37,19 @@ export function ChatReader({ sessionId }: { sessionId: string }) {
       try { session = JSON.parse(toolDataStr); } catch(e) {}
     }
     
-    if (!session || !session.file_path) {
+    if (!session) {
+      setLoading(false);
+      return;
+    }
+
+    // OpenCode stores chat history in SQLite (current) or a per-message
+    // JSON dir (legacy) — neither maps to a single readable jsonl file,
+    // so it has no `file_path`. Route those sessions through the
+    // dedicated reader, which normalizes both layouts to the same
+    // jsonl shape the parser below already handles. All other tools
+    // (Claude / Codex / Gemini / Hermes) keep their direct file path.
+    const isOpencode = session.tool === 'opencode' && !!session.session_token;
+    if (!isOpencode && !session.file_path) {
       setLoading(false);
       return;
     }
@@ -45,7 +57,9 @@ export function ChatReader({ sessionId }: { sessionId: string }) {
     let isMounted = true;
     setLoading(true);
 
-    const readPromise = commands.readNativeSession(session.file_path);
+    const readPromise = isOpencode
+      ? commands.readOpencodeSession(session.session_token!)
+      : commands.readNativeSession(session.file_path!);
 
     readPromise
       .then((raw) => {
@@ -61,7 +75,41 @@ export function ChatReader({ sessionId }: { sessionId: string }) {
             if (!msgObj && parsed.payload && parsed.payload.type === 'message') {
               msgObj = parsed.payload;
             }
-            
+
+            // Gemini / Qwen format adapter — both use `type: '...'` at the
+            // row root instead of `message.role`, but with two different
+            // sub-shapes:
+            //   • Gemini  : { type: 'user'|'gemini',     content: [{text}] }
+            //   • Qwen    : { type: 'user'|'assistant',  message: { role, parts: [{text}] } }
+            // Detect Qwen first (has `message.parts`), fall back to Gemini.
+            // Either path gets normalized to the Claude shape so the parser
+            // below ({type:'text', text} blocks) handles all three CLIs in
+            // one code path.
+            if (
+              !msgObj &&
+              (parsed.type === 'user' ||
+                parsed.type === 'assistant' ||
+                parsed.type === 'gemini')
+            ) {
+              let role: string | null = null;
+              let rawBlocks: any[] | null = null;
+              if (parsed.message && Array.isArray(parsed.message.parts)) {
+                // Qwen
+                role = parsed.message.role || (parsed.type === 'assistant' ? 'assistant' : 'user');
+                rawBlocks = parsed.message.parts;
+              } else if (Array.isArray(parsed.content)) {
+                // Gemini
+                role = parsed.type === 'gemini' ? 'assistant' : 'user';
+                rawBlocks = parsed.content;
+              }
+              if (role && rawBlocks) {
+                msgObj = {
+                  role,
+                  content: rawBlocks.map((b: any) => (b && !b.type ? { ...b, type: 'text' } : b)),
+                };
+              }
+            }
+
             // Only care about entries that possess a "role"
             if (msgObj && msgObj.role) {
               const role = msgObj.role;
@@ -261,7 +309,7 @@ export function ChatReader({ sessionId }: { sessionId: string }) {
         
         {!loading && messages.length === 0 && (
           <div className="chat-empty-state">
-            No readable conversation records found.
+            {t('chat.no_records')}
           </div>
         )}
       </div>

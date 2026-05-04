@@ -67,6 +67,7 @@ export const es = {
   'remote.connect_failed': 'Error de conexión',
 
   'tab.new': 'Seleccionar herramienta',
+  'chat.no_records': 'No se encontraron registros de conversación legibles.',
 
 
   // Task Board

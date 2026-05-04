@@ -67,6 +67,7 @@ export const de = {
   'remote.connect_failed': 'Verbindung fehlgeschlagen',
 
   'tab.new': 'Werkzeug wählen',
+  'chat.no_records': 'Keine lesbaren Gesprächsaufzeichnungen gefunden.',
 
 
 

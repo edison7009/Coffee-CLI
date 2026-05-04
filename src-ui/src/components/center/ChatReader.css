@@ -113,22 +113,7 @@
   gap: 24px;
 }
 
-/* Scrollbar — neutral grey driven by --text-3 so it shows on light AND
-   dark themes (white on white was invisible on the light theme). */
-.chat-reader-body::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-.chat-reader-body::-webkit-scrollbar-track {
-  background: transparent;
-}
-.chat-reader-body::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--text-3) 35%, transparent);
-  border-radius: var(--radius-xs);
-}
-.chat-reader-body::-webkit-scrollbar-thumb:hover {
-  background: color-mix(in srgb, var(--text-3) 60%, transparent);
-}
+/* Scrollbar hidden via global rule in styles/global.css. */
 
 .chat-message-row {
   display: flex;

@@ -69,6 +69,7 @@ export const en = {
 
   // Tab
   'tab.new': 'Select Tool',
+  'chat.no_records': 'No readable conversation records found.',
 
 
   // Task Board
