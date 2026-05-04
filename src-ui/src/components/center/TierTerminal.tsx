@@ -17,6 +17,7 @@ import { clipboardRead, clipboardWrite } from '../../lib/clipboard';
 import { subscribeTerminalEvents } from '../../lib/pty-event-bus';
 import { registerTerminalFocus } from '../../lib/focus-registry';
 import { registerTabActions, getTabActions } from '../../lib/tab-actions';
+import { registerFileDropTarget, formatPathsForInsert } from '../../lib/file-drop';
 import { notifyUserInputSubmitted } from '../../lib/agent-status-bus';
 import { commands } from '../../tauri';
 import { useAppDispatch, useAppState, type ToolType, type ThemeColor } from '../../store/app-state';
@@ -788,6 +789,15 @@ function TierTerminalImpl({
         }, 150);
         return true;
       },
+      insertText: (text: string): boolean => {
+        const term = xtermRef.current;
+        if (!term) return false;
+        // Same path as paste() but without the trailing CR — file-drop
+        // mirrors OS-native terminal behavior: path appears at the cursor
+        // as if typed, user edits/sends from there.
+        term.paste(normalizePasteNewlines(text));
+        return true;
+      },
       cursorScreenPos: () => {
         const wrap = wrapRef.current;
         const term = xtermRef.current;
@@ -804,6 +814,25 @@ function TierTerminalImpl({
       },
     });
     return unregister;
+  }, [sessionId]);
+
+  // ── File-drop target ────────────────────────────────────────────────────
+  // Match OS-native terminal behavior: dragging a file onto the terminal
+  // inserts its absolute path at the cursor as if typed. Only the active
+  // tab claims the rect — inactive tabs return null and are skipped.
+  const isActiveRef = useRef(isActive);
+  useEffect(() => { isActiveRef.current = isActive; }, [isActive]);
+  useEffect(() => {
+    return registerFileDropTarget({
+      priority: 100,
+      rect: () => {
+        if (!isActiveRef.current) return null;
+        return wrapRef.current?.getBoundingClientRect() ?? null;
+      },
+      insert: (paths) => {
+        getTabActions(sessionId)?.insertText(formatPathsForInsert(paths));
+      },
+    });
   }, [sessionId]);
 
   // ── Active tab focus restoration ─────────────────────────────────────────

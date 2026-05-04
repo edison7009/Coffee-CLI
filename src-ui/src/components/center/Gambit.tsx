@@ -18,6 +18,7 @@ import { createPortal } from 'react-dom';
 import { clipboardRead, clipboardWrite } from '../../lib/clipboard';
 import { commands } from '../../tauri';
 import { useT } from '../../i18n/useT';
+import { registerFileDropTarget, formatPathsForInsert } from '../../lib/file-drop';
 import './Gambit.css';
 
 interface GambitProps {
@@ -219,6 +220,38 @@ function GambitImpl({
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pastedImagePathsKey]);
+
+  // ── File-drop target ────────────────────────────────────────────────────
+  // OS file drops over the Gambit window insert the absolute path(s) at the
+  // textarea cursor — same model as image-paste (see header comment): paths
+  // are the only source of truth, thumbnails derive from IMAGE_PATH_RE.
+  // Priority outranks the terminal so a drop over a Gambit overlapping it
+  // routes here, not into the xterm behind.
+  const draftRef = useRef(draft);
+  const onDraftChangeRef = useRef(onDraftChange);
+  useEffect(() => { draftRef.current = draft; }, [draft]);
+  useEffect(() => { onDraftChangeRef.current = onDraftChange; }, [onDraftChange]);
+  useEffect(() => {
+    return registerFileDropTarget({
+      priority: 200,
+      rect: () => rootRef.current?.getBoundingClientRect() ?? null,
+      insert: (paths) => {
+        const formatted = formatPathsForInsert(paths);
+        const textarea = textareaRef.current;
+        const cur = draftRef.current;
+        const start = textarea?.selectionStart ?? cur.length;
+        const end = textarea?.selectionEnd ?? cur.length;
+        const next = cur.slice(0, start) + formatted + cur.slice(end);
+        onDraftChangeRef.current(next);
+        requestAnimationFrame(() => {
+          if (!textarea) return;
+          textarea.focus();
+          textarea.selectionStart = start + formatted.length;
+          textarea.selectionEnd = start + formatted.length;
+        });
+      },
+    });
+  }, []);
 
   // Click a thumbnail → open a full-size preview overlay AND select the
   // matching path text in the textarea (so once the overlay closes, the

@@ -16,6 +16,11 @@ export interface TabActions {
    *  yet, etc.). Callers use the return value to decide whether to clear
    *  the source draft — silent failures must not lose user text. */
   paste: (text: string) => boolean;
+  /** Insert text at the cursor without submitting. Used by file-drop:
+   *  dragging a file into the terminal should mirror OS-native terminal
+   *  behavior — the path appears at the cursor as if typed, and the user
+   *  edits/sends from there. */
+  insertText: (text: string) => boolean;
   /** Current xterm cursor position in screen coordinates, used by Gambit to
    *  place itself just below the prompt on open. Returns null if the tab's
    *  xterm isn't fully initialized yet. */
