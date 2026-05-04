@@ -1142,7 +1142,13 @@
   color: var(--text-1);
 }
 
-.remote-form-header span {
+/* Title span only — exclude the icon span that `inlineSvgIcon`
+   renders as <span aria-hidden>. Without `:not([aria-hidden])`
+   the icon span ALSO got `flex: 1`, which beats its own inline
+   `width: 1em` (flex-basis:0 wins over width on flex items),
+   stretching it to half the header and exposing the inner
+   PowerShell SVG's hardcoded 128×128 dimensions. */
+.remote-form-header > span:not([aria-hidden]) {
   flex: 1;
 }
 
