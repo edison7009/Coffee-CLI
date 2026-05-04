@@ -7,7 +7,7 @@ import type { ThemeColor, ThemeShape, IconTheme, ToolType } from '../../store/ap
 import { useT } from '../../i18n/useT';
 import { ScrollPanel } from '../common/ScrollPanel';
 import { clipboardWrite } from '../../lib/clipboard';
-import { FS_DRAG_MIME } from '../../lib/file-drop';
+import { beginExplorerDrag } from '../../lib/explorer-drag';
 import { commands } from '../../tauri';
 import type { DriveInfo, DirEntryInfo } from '../../tauri';
 import './Explorer.css';
@@ -609,13 +609,12 @@ function BrowserDirNode({ name, dirPath, icon, onCtxMenu }: { name: string; dirP
     });
   };
 
-  const onFsDragStart = (e: React.DragEvent) => {
-    if (renaming) { e.preventDefault(); return; }
-    // Drag the absolute path; targets (terminal/Gambit) read FS_DRAG_MIME,
-    // OS-external drops won't see this MIME — only the text/plain fallback.
-    e.dataTransfer.setData(FS_DRAG_MIME, dirPath);
-    e.dataTransfer.setData('text/plain', dirPath);
-    e.dataTransfer.effectAllowed = 'copy';
+  // Pointer-based drag (HTML5 drag is captured by Tauri's WebView2 drop
+  // handler on Windows — see explorer-drag.ts). Threshold-gated so a plain
+  // click toggles open/close without a phantom drop.
+  const onDirMouseDown = (e: React.MouseEvent) => {
+    if (renaming) return;
+    beginExplorerDrag(dirPath, e);
   };
 
   return (
@@ -624,8 +623,7 @@ function BrowserDirNode({ name, dirPath, icon, onCtxMenu }: { name: string; dirP
         className={`tree-dir-header ${renaming ? 'renaming' : ''}`}
         onClick={() => !renaming && toggle()}
         onContextMenu={handleDirCtxMenu}
-        draggable={!renaming}
-        onDragStart={onFsDragStart}
+        onMouseDown={onDirMouseDown}
       >
         <span className={`tree-arrow ${open ? '' : 'closed'}`}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
@@ -707,19 +705,16 @@ function BrowserFileNode({ entry, parentDirPath, onCtxMenu }: {
     });
   };
 
-  const onFsDragStart = (e: React.DragEvent) => {
-    if (renaming) { e.preventDefault(); return; }
-    e.dataTransfer.setData(FS_DRAG_MIME, entry.path);
-    e.dataTransfer.setData('text/plain', entry.path);
-    e.dataTransfer.effectAllowed = 'copy';
+  const onFileMouseDown = (e: React.MouseEvent) => {
+    if (renaming) return;
+    beginExplorerDrag(entry.path, e);
   };
 
   return (
     <div
       className={`tree-file ${renaming ? 'renaming' : ''}`}
       onContextMenu={handleCtxMenu}
-      draggable={!renaming}
-      onDragStart={onFsDragStart}
+      onMouseDown={onFileMouseDown}
     >
       <span className="tree-icon">
         <ThemedIcon

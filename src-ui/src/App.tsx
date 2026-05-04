@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useAppState, useAppDispatch } from './store/app-state';
 import { retryInvoke } from './tauri';
 import { subscribeAgentStatus } from './lib/agent-status-bus';
-import { routeFileDrop, FS_DRAG_MIME } from './lib/file-drop';
+import { routeFileDrop } from './lib/file-drop';
 import { TitleBar } from './components/common/TitleBar';
 import { Explorer } from './components/left/Explorer';
 import { CenterPanel } from './components/center/CenterPanel';
@@ -59,19 +59,12 @@ export function App() {
     return () => clearTimeout(timer);
   }, []);
 
-  // File-drop wiring — two sources, one router.
-  //
-  // (a) OS-external drops (Finder / File Explorer → our window): Tauri
-  //     captures these at the OS level and emits a single global event;
-  //     DOM `drop` does NOT fire for them. payload.position is in physical
-  //     pixels, so divide by devicePixelRatio for CSS-pixel hit-testing.
-  // (b) Intra-app drops (left Explorer → terminal/Gambit): pure HTML5
-  //     drag-drop. Explorer nodes set FS_DRAG_MIME on dragstart; we
-  //     listen at document-level so any registered surface receives them.
-  //
-  // Both paths converge on routeFileDrop(paths, position), which dispatches
-  // to whichever surface (Gambit textarea, active TierTerminal) covers the
-  // drop point.
+  // OS-external file drops (Finder / File Explorer → our window). Tauri
+  // captures these at the window level and emits a single global event —
+  // DOM `drop` does NOT fire. payload.position is in physical pixels, so
+  // divide by devicePixelRatio for CSS-pixel hit-testing. Intra-app drags
+  // (left Explorer → terminal/Gambit) bypass HTML5 drag entirely and use
+  // pointer events; see explorer-drag.ts.
   useEffect(() => {
     let unlistenTauri: (() => void) | null = null;
     let cancelled = false;
@@ -90,27 +83,7 @@ export function App() {
       if (cancelled) fn();
       else unlistenTauri = fn;
     })().catch(() => {});
-
-    const onDragOver = (e: DragEvent) => {
-      if (!e.dataTransfer?.types.includes(FS_DRAG_MIME)) return;
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'copy';
-    };
-    const onDrop = (e: DragEvent) => {
-      const path = e.dataTransfer?.getData(FS_DRAG_MIME);
-      if (!path) return;
-      e.preventDefault();
-      routeFileDrop([path], { x: e.clientX, y: e.clientY });
-    };
-    document.addEventListener('dragover', onDragOver);
-    document.addEventListener('drop', onDrop);
-
-    return () => {
-      cancelled = true;
-      unlistenTauri?.();
-      document.removeEventListener('dragover', onDragOver);
-      document.removeEventListener('drop', onDrop);
-    };
+    return () => { cancelled = true; unlistenTauri?.(); };
   }, []);
 
   // No tool-icon preload anymore. v1.1.4–v1.9.x tried to keep the

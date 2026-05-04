@@ -3,18 +3,16 @@
 //   (a) OS-external drops (Finder / File Explorer → our window). Tauri
 //       captures these at the window level and emits a single global
 //       event; DOM `drop` does NOT fire for OS files.
-//   (b) Intra-app drops (left Explorer → terminal/Gambit). Pure HTML5
-//       drag-drop using FS_DRAG_MIME on the dataTransfer.
+//   (b) Intra-app pointer drags (left Explorer → terminal/Gambit). See
+//       explorer-drag.ts — HTML5 drag is captured by Tauri's WebView2
+//       drop handler on Windows so we use mousedown/mousemove/mouseup
+//       and call routeFileDrop on release.
 //
 // Both code paths feed routeFileDrop(paths, position). Surfaces (Gambit
 // textarea, active TierTerminal) register a drop target with a rect-getter
 // and an insert callback. The dispatcher walks targets in priority order
 // and fires the first whose rect contains the drop position. No target
 // match → drop is ignored (side panels, decorative areas).
-
-/** dataTransfer MIME for intra-app drags from the Explorer tree. Carries
- *  the absolute path as the value. */
-export const FS_DRAG_MIME = 'application/x-coffee-fs-path';
 
 export interface FileDropTarget {
   /** Bounding rect in CSS pixels. Return null when the target is hidden /
