@@ -840,6 +840,12 @@ export function Explorer() {
   // git, or any process writing under folderPath. The backend emits the
   // same `fs-refresh` event shape that right-click menu actions dispatch
   // synthetically, so the listener above handles both paths uniformly.
+  //
+  // CRITICAL ordering: register the Tauri `listen('fs-refresh')` BEFORE
+  // calling `startFsWatcher`. The previous order (start → import → listen)
+  // dropped any event fired in the few-ms gap between the OS watcher
+  // arming and the JS subscription registering — exactly the window in
+  // which an editor's save burst or `npm install` first writes hit.
   useEffect(() => {
     if (!folderPath) return;
     let unlisten: (() => void) | null = null;
@@ -847,7 +853,6 @@ export function Explorer() {
 
     (async () => {
       try {
-        await commands.startFsWatcher(folderPath);
         const { listen } = await import('@tauri-apps/api/event');
         if (cancelled) return;
         const handle = await listen<{ dirPath: string }>('fs-refresh', (event) => {
@@ -859,6 +864,9 @@ export function Explorer() {
         });
         if (cancelled) { handle(); return; }
         unlisten = handle;
+
+        // Listener is live — now arm the OS watcher.
+        await commands.startFsWatcher(folderPath);
       } catch (err) {
         console.warn('[Explorer] fs watcher setup failed:', err);
       }
