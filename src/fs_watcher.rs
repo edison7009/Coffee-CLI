@@ -10,9 +10,12 @@
 //
 // Approach: subscribe to OS-native fs events via the `notify` crate,
 // coalesce bursts with `notify-debouncer-full` (200 ms window), then
-// emit a single `fs-refresh` Tauri event per affected directory. The
-// frontend already has a global listener that re-scans when this event
-// fires, so no UI plumbing changes are needed.
+// emit `fs-refresh` Tauri events. We always refresh the *parent* of a
+// changed path (that's where the entry is listed) and additionally the
+// path itself when it is a directory (so an expanded subtree re-lists).
+// Refreshing only the parent on file changes mirrors the synthetic
+// dispatchFsRefresh calls in Explorer.tsx for manual operations, so OS
+// events and right-click menu actions go through the same code path.
 
 use notify_debouncer_full::{
     new_debouncer,
@@ -106,19 +109,22 @@ impl FsWatcher {
                     let mut dirs: HashSet<String> = HashSet::new();
                     for event in events {
                         for path in &event.event.paths {
-                            // Directory entry itself? Use as-is.
-                            // File? Use its parent.
-                            let dir = if path.is_dir() {
-                                path.clone()
-                            } else if let Some(p) = path.parent() {
-                                p.to_path_buf()
-                            } else {
-                                continue;
-                            };
-                            // Forward-slash normalize — frontend dispatchFsRefresh
-                            // stores paths this way, so match semantics stay cheap.
-                            let norm = dir.to_string_lossy().replace('\\', "/");
-                            dirs.insert(norm);
+                            // Always refresh the parent — that's where the
+                            // entry is listed. Critical for directory create
+                            // events (e.g. `cargo new`, `mkdir`): without this
+                            // the new dir node never appears in its parent's
+                            // listing because nothing was mounted to receive
+                            // a self-targeted event yet.
+                            if let Some(parent) = path.parent() {
+                                dirs.insert(parent.to_string_lossy().replace('\\', "/"));
+                            }
+                            // If the path itself is a directory (still exists
+                            // post-debounce), also emit for self so any
+                            // already-expanded BrowserDirNode owning it
+                            // re-lists its children.
+                            if path.is_dir() {
+                                dirs.insert(path.to_string_lossy().replace('\\', "/"));
+                            }
                         }
                     }
                     for dir_path in dirs {
