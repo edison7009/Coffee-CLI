@@ -2077,9 +2077,9 @@ body.gambit-docked {
    Buttons / inputs / textareas / anchors aren't matched by the
    element list at all, so their own hover/focus bgs are
    untouched. */
-[data-shape="glass"] .panel-left :is(div, section, aside, nav, header, footer, main):not(.launchpad-card, .launchpad-card-group, .task-card, .guide-card, .remote-form-card, .chat-input-container, .library-item, .library-tabs, .ctx-menu, .gambit, .tool-config-modal, .tab-status-dot),
-[data-shape="glass"] .panel-right :is(div, section, aside, nav, header, footer, main):not(.launchpad-card, .launchpad-card-group, .task-card, .guide-card, .remote-form-card, .chat-input-container, .library-item, .library-tabs, .ctx-menu, .gambit, .tool-config-modal, .tab-status-dot),
-[data-shape="glass"] .panel-center :is(div, section, aside, nav, header, footer, main):not(.launchpad-card, .launchpad-card-group, .task-card, .guide-card, .remote-form-card, .chat-input-container, .library-item, .library-tabs, .ctx-menu, .gambit, .tool-config-modal, .tab-status-dot) {
+[data-shape="glass"] .panel-left :is(div, section, aside, nav, header, footer, main):not(.launchpad-card, .launchpad-card-group, .task-card, .guide-card, .remote-form-card, .remote-form-overlay, .remote-protocol-toggle, .remote-pill, .chat-input-container, .library-item, .library-tabs, .ctx-menu, .gambit, .tool-config-modal, .tab-status-dot),
+[data-shape="glass"] .panel-right :is(div, section, aside, nav, header, footer, main):not(.launchpad-card, .launchpad-card-group, .task-card, .guide-card, .remote-form-card, .remote-form-overlay, .remote-protocol-toggle, .remote-pill, .chat-input-container, .library-item, .library-tabs, .ctx-menu, .gambit, .tool-config-modal, .tab-status-dot),
+[data-shape="glass"] .panel-center :is(div, section, aside, nav, header, footer, main):not(.launchpad-card, .launchpad-card-group, .task-card, .guide-card, .remote-form-card, .remote-form-overlay, .remote-protocol-toggle, .remote-pill, .chat-input-container, .library-item, .library-tabs, .ctx-menu, .gambit, .tool-config-modal, .tab-status-dot) {
     background: transparent !important;
     border-color: transparent !important;
     box-shadow: none !important;
@@ -2214,6 +2214,21 @@ body.gambit-docked {
     border: 1px solid rgba(255, 255, 255, 0.10);
 }
 [data-shape="glass"] .tool-config-input:focus {
+    border-color: rgba(255, 255, 255, 0.22);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+/* Remote-terminal SSH/WS form inputs — same faint-glass slot
+   treatment as .tool-config-input so the form fields read as
+   inset glass, not opaque text boxes against the translucent
+   card. The wrapping .remote-form-card / .remote-form-overlay
+   / .remote-protocol-toggle / .remote-pill keep their original
+   styles via the allow-list above. */
+[data-shape="glass"] .remote-input {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+}
+[data-shape="glass"] .remote-input:focus {
     border-color: rgba(255, 255, 255, 0.22);
     background: rgba(255, 255, 255, 0.06);
 }
