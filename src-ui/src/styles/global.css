@@ -98,48 +98,21 @@ textarea,
     cursor: text !important;
 }
 
-/* ─── Auto-hiding Scrollbars (Global) ────────────────── */
-* {
-    scrollbar-width: thin; /* Firefox */
-    scrollbar-color: transparent transparent;
-}
+/* ─── Scrollbars: completely hidden, app-wide ──────────
+   We tried floating hairline bars 5+ times; WebView2 + xterm.js +
+   nested Tauri viewports kept letting native Windows 11 scrollbars
+   leak through in random spots. Modern macOS / mobile do this by
+   default — users scroll via wheel / trackpad / PageUp+PageDown,
+   no visual track. One global rule kills every scrollbar across
+   every component, every theme, every WebView edge case. */
 *::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-    background: transparent;
-    border: none;
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
 }
-*::-webkit-scrollbar-track {
-    background: transparent;
-    border: none;
-    box-shadow: none;
-}
-*::-webkit-scrollbar-corner {
-    background: transparent;
-}
-*::-webkit-scrollbar-thumb {
-    background: transparent; /* Invisible by default (floating auto-hide) */
-    border-radius: 3px;
-    border: none;
-    box-shadow: none;
-    transition: background 0.2s;
-}
-
-/* Reveal thumb globally on container hover if scrollable */
-*:hover::-webkit-scrollbar-thumb {
-    background: rgba(120, 120, 120, 0.3); 
-}
-*::-webkit-scrollbar-thumb:hover {
-    background: rgba(120, 120, 120, 0.55);
-}
-
-/* Fallback auto-hide for Firefox */
 * {
-    scrollbar-width: thin;
-    scrollbar-color: transparent transparent;
-}
-*:hover {
-    scrollbar-color: rgba(120, 120, 120, 0.4) transparent;
+    scrollbar-width: none !important; /* Firefox */
+    -ms-overflow-style: none !important; /* legacy Edge / IE11 */
 }
 
 :root {
@@ -219,19 +192,22 @@ textarea,
     --shape-border-strength: 1.5;
 }
 
-/* Blade — flat + left accent stripe (JetBrains/Cursor) */
-[data-shape="blade"] {
-    --radius-xs: 0px;
-    --radius-sm: 0px;
-    --radius-md: 0px;
-    --radius-lg: 0px;
-    --radius-pill: 0px;
-    --shape-radius-tab: 0;
-    --shape-radius-panel: 0;
-    --shape-radius-btn: 0;
-    --shape-radius-pill: 0;
-    --shape-accent-stripe-width: 1px;
-    --shape-border-strength: 1.25;
+/* Glass — same radii as Soft, but every chrome surface drops to
+   translucency so the OS desktop / wallpaper bleeds through. No
+   diagonal sheens, no radial glows, no edge highlights — just
+   Soft + see-through. The visual interest comes from whatever's
+   behind the window, not from extra ornamentation we draw. */
+[data-shape="glass"] {
+    --radius-xs: 4px;
+    --radius-sm: 8px;
+    --radius-md: 16px;
+    --radius-lg: 24px;
+    --radius-pill: 9999px;
+    --shape-radius-tab: 10px 10px 0 0;
+    --shape-radius-panel: 16px;
+    --shape-radius-btn: 8px;
+    --shape-radius-pill: 9999px;
+    --glass-blur: blur(24px) saturate(160%);
 }
 
 /* Panel — flat + hard dividers (tmux/老终端) */
@@ -602,7 +578,13 @@ body {
     margin: 0;
     font-family: var(--font);
     font-size: 14px;
-    background: var(--bg-app);
+    /* No bg here — moved to #root so the rounded clip on #root
+       fully owns where the app's surface paints. Body with both
+       a bg AND clip-path was leaking square corners in non-Glass
+       themes (WebView2 promoted body's bg to its own GPU layer,
+       sidestepping clip-path). Glass already painted on #root,
+       which is why only Glass appeared rounded. */
+    background: transparent;
     color: var(--text-1);
     overflow: hidden;
     -webkit-font-smoothing: antialiased;
@@ -610,9 +592,18 @@ body {
     flex-direction: column;
 }
 
-/* React root — must be in height chain for WebView2 */
+/* React root — must be in height chain for WebView2.
+   ALSO carries the app-wide surface bg + rounded window corners
+   for ALL themes. Bg is `--bg-app` by default; Glass overrides
+   it to `--glass-tint` (translucent) further down. clip-path
+   gives a hard 10px rounded clip that no descendant stacking
+   context can leak past — the 4 corner cut-outs show OS desktop
+   through Tauri's transparent window. */
 #root {
     height: 100%;
+    background: var(--bg-app);
+    border-radius: 10px;
+    clip-path: inset(0 round 10px);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -756,8 +747,13 @@ body {
     justify-content: space-between;
     align-items: center;
     padding: 12px 16px;
-    border-bottom: 1px solid var(--border); /* Slightly keep it for structure, but low opacity */
     flex-shrink: 0;
+    /* No divider line. The header was historically separated from
+       the content by `border-bottom: 1px solid var(--border)`, which
+       on translucent panels (glass) reads as a second visible layer
+       and even on opaque panels (soft/slab/etc.) makes the panel
+       look "stacked" in 3 zones (header / tabs / tree). Identity
+       comes from spacing alone — single layer for every theme. */
 }
 
 .panel-content {
@@ -1999,28 +1995,253 @@ body.gambit-docked {
 /* Hide chrome flare pseudo-elements for zero-radius shapes */
 [data-shape="sharp"] .chrome-tab.active::before,
 [data-shape="sharp"] .chrome-tab.active::after,
-[data-shape="blade"] .chrome-tab.active::before,
-[data-shape="blade"] .chrome-tab.active::after,
 [data-shape="panel"] .chrome-tab.active::before,
 [data-shape="panel"] .chrome-tab.active::after {
     display: none;
 }
 
-/* ─── Blade: left accent stripe on active tab + cards ──── */
-[data-shape="blade"] .chrome-tab.active {
-    box-shadow: inset var(--shape-accent-stripe-width) 0 0 0 var(--accent);
+/* ─── Glass: Soft + transparency ─────────────────────────
+   Inherits Soft's radius. Drops body background so Tauri
+   `transparent: true` actually shows the OS desktop. Every
+   chrome surface (including the terminal — see CenterPanel
+   `hasBg` override) drops to translucency with the per-color
+   --glass-blur so it stays readable. No extra ornaments. */
+
+/* Single-source tint + frosted backdrop. body stays fully
+   transparent; #root (its direct child) carries both the
+   --glass-tint and the backdrop-filter blur. Why not put both
+   on body: WebView2 + Tauri `transparent: true` doesn't always
+   treat the OS desktop as a valid backdrop layer for
+   backdrop-filter on the root <body>, so the blur silently
+   no-ops. Moving to #root forces the filter onto a non-root
+   stacking context — Chromium then samples whatever's behind
+   it (body, transparent → OS desktop) and the blur takes effect
+   reliably. The 55% bg-app mix gives mostly-opaque tint while
+   the blur diffuses wallpaper colors underneath. */
+[data-shape="glass"] body {
+    background: transparent;
 }
 
-[data-shape="blade"] .task-card:hover,
-[data-shape="blade"] .explorer-tab.active {
-    box-shadow: inset var(--shape-accent-stripe-width) 0 0 0 var(--accent);
+[data-shape="glass"] #root {
+    background: var(--glass-tint);
+    backdrop-filter: blur(24px) saturate(160%);
+    -webkit-backdrop-filter: blur(24px) saturate(160%);
 }
 
-[data-shape="blade"] .panel-left {
-    border-right: 1px solid var(--border);
+/* Glass hierarchy — ONE unified glass surface for the whole app.
+   Every directly-displayable chrome region carries the SAME
+   --glass-tint background; only the side panels add blur on top
+   (panel-center can't, WebView2 flicker bug). This way the app
+   reads as a single translucent plate of glass, not three
+   disconnected panes floating over the desktop.
+
+   Inner shells (.main-content, .panel-header, .explorer-content,
+   workspace-dir-btn, etc.) are stripped of their own bg/border
+   so they don't stack a second visible layer over the parent
+   region's tint — that was the source of the "层级混乱" feel. */
+
+[data-shape="glass"] {
+    /* Body's frosted layer — bumped from 32% → 55% so the tint
+       reads as "mostly there" against the wallpaper. Combined
+       with the backdrop blur(24px) on body, this lands solidly
+       in "frosted glass" territory: clearly tinted, wallpaper
+       colors still detectable but heavily diffused, text on top
+       reads cleanly. Push higher (65-75%) for near-opaque, drop
+       back toward 30-40% for "barely there" overlay. */
+    --glass-tint: color-mix(in oklab, var(--bg-app) 55%, transparent);
 }
-[data-shape="blade"] .panel-right {
-    border-left: 1px solid var(--border);
+
+/* Tier 1 deleted — body alone carries the tint. Titlebar / 3
+   panels / every nested container all stay fully transparent so
+   the body's single layer of --glass-tint paints uniformly across
+   the whole app. Sibling tinted rectangles + asymmetric blur
+   (panel-left+right blurred, titlebar+center unblurred) was the
+   architectural reason left/right kept reading as a "second
+   layer" no matter how aggressively we stripped descendants. */
+[data-shape="glass"] .titlebar,
+[data-shape="glass"] .panel-left,
+[data-shape="glass"] .panel-center,
+[data-shape="glass"] .panel-right {
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+/* Tier 2 — single-layer principle, recursive + nuclear option.
+   The panels each paint --glass-tint exactly once. To guarantee
+   no descendant ever stacks a second visible layer, kill bg /
+   border-color / box-shadow on every <div> / <section> / <aside>
+   / <nav> / <header> / <footer> / <main> inside the 3 panels.
+   `:not()` excludes the explicit glass elements that DO carry
+   their own layer (cards, active segments, segmented containers).
+   Buttons / inputs / textareas / anchors aren't matched by the
+   element list at all, so their own hover/focus bgs are
+   untouched. */
+[data-shape="glass"] .panel-left :is(div, section, aside, nav, header, footer, main):not(.launchpad-card, .launchpad-card-group, .task-card, .guide-card, .remote-form-card, .chat-input-container, .library-item, .library-tabs, .ctx-menu, .gambit, .tool-config-modal, .tab-status-dot),
+[data-shape="glass"] .panel-right :is(div, section, aside, nav, header, footer, main):not(.launchpad-card, .launchpad-card-group, .task-card, .guide-card, .remote-form-card, .chat-input-container, .library-item, .library-tabs, .ctx-menu, .gambit, .tool-config-modal, .tab-status-dot),
+[data-shape="glass"] .panel-center :is(div, section, aside, nav, header, footer, main):not(.launchpad-card, .launchpad-card-group, .task-card, .guide-card, .remote-form-card, .chat-input-container, .library-item, .library-tabs, .ctx-menu, .gambit, .tool-config-modal, .tab-status-dot) {
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+}
+
+/* Cards & inputs — same Liquid-Glass treatment as the active tab:
+   no heavy --bg-card mix (that stacked a 2nd layer over the
+   panel's --glass-tint), just a faint white wash so the card
+   reads as "elevated" above the panel, a 4-side white outline
+   tracing the rounded rect, and a brighter inset top edge as
+   the light-reflecting facet. backdrop-filter blur kept for the
+   refraction character.
+
+   .launchpad-card sits inside .launchpad-card-group which
+   already owns `border: 1px solid transparent + overflow:hidden +
+   border-radius`, so the outline goes on the wrapper (its
+   border becomes visible) and the wash/blur on the inner
+   .launchpad-card. Other card classes are standalone — they
+   carry their own outline. */
+/* Glass treatment goes on the rounded WRAPPER (.launchpad-card-
+   group), not the inner rectangular card. The wrapper already
+   carries border-radius + overflow:hidden; putting bg + blur on
+   the inner card creates a fresh stacking context whose backdrop-
+   filter paints into a GPU layer that leaks past the wrapper's
+   rounded clip — visible as 4 sharp corner residues. Move all
+   visual treatment up one level so everything paints inside the
+   rounded box. */
+[data-shape="glass"] .launchpad-card-group {
+    background: rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow:
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.22),
+        inset 0 -1px 0 0 rgba(0, 0, 0, 0.06);
+}
+[data-shape="glass"] .launchpad-card {
+    background: transparent;
+}
+
+[data-shape="glass"] .task-card,
+[data-shape="glass"] .guide-card,
+[data-shape="glass"] .remote-form-card,
+[data-shape="glass"] .chat-input-container,
+[data-shape="glass"] .library-item {
+    background: rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    box-shadow:
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.18);
+}
+
+/* Active tabs — switched from "3-edge outline" to "filled pill"
+   so they share visual language with the .library-tabs Agents/
+   Games segmented control. The right strip becomes a full
+   segmented-control container (bg + border + radius); the
+   center chrome strip stays transparent because it carries
+   variable tabs + a "+" button which doesn't fit the centered-
+   container metaphor — only its active tab becomes a pill. */
+
+/* Tab family — all THREE tab strips (chrome / Explorer /
+   TaskBoard) go fully transparent in glass. Active state is
+   indicated by text-1 color contrast alone (source default).
+   No container pill, no active fill, no outline. Matches the
+   "全部透明,只靠主背景半透层" architecture: every tab IS the
+   body's --glass-tint — adding any local bg would stack a
+   second visible layer.
+   Only .library-tabs (Agents/Games) keeps its segmented-control
+   pill style — it's a discrete control, not a tab strip. */
+[data-shape="glass"] .chrome-tab.active,
+[data-shape="glass"] .right-tab.active,
+[data-shape="glass"] .explorer-tab.active {
+    color: var(--text-1);
+}
+
+/* Card hover: kill the translateY lift so the cards stay still
+   when the cursor is over them. The lift was a Material-style
+   "elevation" cue that fights the Liquid-Glass aesthetic — glass
+   tiles don't bob, they just brighten subtly. Hover state is
+   still readable from the brightness/border change inherited
+   from the base card rule. */
+[data-shape="glass"] .launchpad-card-group:hover {
+    transform: none;
+}
+
+/* Library segmented toggle (Agents / Games at the bottom of the
+   tools full-list overlay). Container becomes a faint glass pill;
+   the active segment inside reads as "lit-up brighter glass"
+   instead of the original solid --accent fill, which clashed
+   visually with the rest of the glass language. */
+[data-shape="glass"] .library-tabs {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.10);
+    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+}
+
+[data-shape="glass"] .library-tab.active {
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--text-1);
+    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.24);
+    /* Concentric corners: the .library-tabs container uses
+       --radius-md with 4px padding, so its visible inner curve
+       is (md - 4px). The active segment must match that exactly,
+       otherwise its corners don't sit flush against the inner
+       wall of the container — that's the "圆角不一致" you saw. */
+    border-radius: calc(var(--radius-md) - 4px);
+}
+
+/* Floating popups + modals — ctx-menu (right-click + lang +
+   theme), tool-config-modal (per-agent launch settings).
+   Same faint-white-wash + 1px-white-outline + top-edge highlight
+   + outer drop shadow combo, so every floating overlay sits on
+   the same Liquid-Glass tier above the panels. */
+[data-shape="glass"] .ctx-menu,
+[data-shape="glass"] .tool-config-modal {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    box-shadow:
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.22),
+        0 12px 40px rgba(0, 0, 0, 0.40);
+}
+
+/* Inputs inside the modal — match the cards' faint glass wash
+   so fields read as inset glass slots, not opaque text boxes. */
+[data-shape="glass"] .tool-config-input {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+}
+[data-shape="glass"] .tool-config-input:focus {
+    border-color: rgba(255, 255, 255, 0.22);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+/* Gambit floating chat card — full Liquid-Glass treatment.
+   Inherits ONLY the radius from the base .gambit rule. The whole
+   `--gambit-shadow` stack is dropped: layer 1 was a Soft-tone
+   1px ring, layer 2 was a 1px-blur tight halo at 80% — together
+   with our white-glass border they read as two concentric rings,
+   the "double border" symptom. Replaced with the same
+   single-layer drop shadow used by ctx-menu / tool-config-modal
+   so Gambit lives in the same overlay tier as them. */
+[data-shape="glass"] .gambit {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow:
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.24),
+        0 12px 40px rgba(0, 0, 0, 0.40);
+}
+
+/* Chrome flare ::before/::after paint quarter-arc bridges in
+   opaque var(--bg-terminal) from the active tab into the terminal
+   bg below. In glass that bg is translucent --glass-tint, so the
+   opaque arcs read as stray dark dots at the tab's bottom corners.
+   Hide them. */
+[data-shape="glass"] .chrome-tab.active::before,
+[data-shape="glass"] .chrome-tab.active::after {
+    display: none;
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -2069,15 +2290,14 @@ body.gambit-docked {
 }
 
 /* ─── Side panel tab rows (左 explorer-tabs / 右 right-tabs) ─────
-   Default styling renders these as a soft pill with a sliding bg.
-   In panel mode we want a clean drawn rectangle, single vertical
-   divider, active = subtle bg highlight. */
+   Default in every other shape: no container at all (segmented strip
+   inherits panel bg, active tab = text color contrast only).
+   Panel shape is the lone exception — a "drawn-on-terminal" chrome
+   aesthetic that wants a visible bordered rectangle around the tabs,
+   like classic tmux / iTerm2 split panes. */
 [data-shape="panel"] .explorer-tabs,
 [data-shape="panel"] .right-tabs {
-    background: transparent;
     border: 1px solid var(--border);
-    border-radius: 0;
-    padding: 0;
 }
 
 [data-shape="panel"] .explorer-tab,

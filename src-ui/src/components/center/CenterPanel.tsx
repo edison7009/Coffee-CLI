@@ -1036,7 +1036,12 @@ export function CenterPanel() {
   // Background state lives in global AppState (set via theme menu in Explorer)
   const bgPath = state.bgPath;
   const bgType = state.bgType;
-  const hasBg = bgType !== 'none' && bgPath !== '';
+  // Glass shape forces terminal-as-transparent even without an in-app
+  // wallpaper, so the OS desktop bleeds through (body bg is dropped to
+  // transparent in the [data-shape="glass"] override). Without this,
+  // the xterm canvas renders its solid `bgOpaque` and breaks the glass
+  // illusion exactly where it matters most — the largest surface.
+  const hasBg = (bgType !== 'none' && bgPath !== '') || state.currentShape === 'glass';
 
   // Convert wallpaper path to a displayable URL. Two modes:
   //   1. Bundled defaults (`/wallpapers/...`) — load as relative URLs.
@@ -1048,7 +1053,16 @@ export function CenterPanel() {
   //      fallback for non-Tauri (e.g. browser dev) contexts.
   const [bgUrl, setBgUrl] = useState('');
   useEffect(() => {
-    if (!hasBg) { setBgUrl(''); return; }
+    // Two reasons to keep bgUrl empty:
+    //   1. hasBg is false — wallpaper layer is off entirely.
+    //   2. hasBg is true but bgPath is empty — happens when Glass shape
+    //      forces hasBg=true to pull the terminal canvas transparent,
+    //      but the user has no wallpaper picked. Without this second
+    //      guard, the fall-through below would call convertFileSrc('')
+    //      → Tauri returns a stub asset URL → <img> renders the
+    //      broken-image icon over a black backdrop. Users perceived this
+    //      as "切到 Glass 后左上角出现裂开图标 + 整个区域变黑".
+    if (!hasBg || !bgPath) { setBgUrl(''); return; }
     if (bgPath.startsWith('/wallpapers/')) {
       setBgUrl(bgPath);
       return;

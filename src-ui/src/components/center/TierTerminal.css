@@ -93,36 +93,16 @@
 .tier-xterm .xterm-viewport {
     border-radius: 0;
     background: transparent !important;
-    overflow-y: overlay !important; /* scrollbar floats on top, does not consume width */
-    scrollbar-width: thin;
-    scrollbar-color: transparent transparent;
 }
 
-.tier-xterm .xterm-viewport:hover {
-    scrollbar-color: rgba(120, 120, 120, 0.4) transparent;
-}
-
-.tier-xterm .xterm-viewport::-webkit-scrollbar {
-    width: 6px;
-    background: transparent;
-}
-
-.tier-xterm .xterm-viewport::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.tier-xterm .xterm-viewport::-webkit-scrollbar-thumb {
-    background: transparent;
-    border-radius: var(--radius-xs);
-    transition: background 0.2s;
-}
-
-.tier-xterm .xterm-viewport:hover::-webkit-scrollbar-thumb {
-    background: rgba(120, 120, 120, 0.3);
-}
-
-.tier-xterm .xterm-viewport::-webkit-scrollbar-thumb:hover {
-    background: rgba(120, 120, 120, 0.55);
+/* xterm.js ships a DOM-drawn scrollbar (ported from VSCode —
+   `.xterm-scrollable-element > .scrollbar`), which renders as a
+   real <div>, NOT a `::-webkit-scrollbar` pseudo-element. That's
+   why the global `display: none` for native scrollbars in
+   styles/global.css couldn't reach it — different rendering path
+   entirely. Kill it directly here. */
+.tier-xterm .xterm-scrollable-element > .scrollbar {
+    display: none !important;
 }
 
 /* Completely hide native xterm cursor */
@@ -132,17 +112,13 @@
     opacity: 0 !important;
 }
 
-/* When CoffeeCode is in light mode (invert filter), hide the native OS scrollbar.
-   The OS scrollbar is immune to CSS filter and renders as a black stripe in light mode.
-   Full-screen TUI tools manage their own scrolling, so xterm scrollbar is not needed. */
+/* In TUI mode the tool manages its own scrolling internally
+   (vim, htop, claude alt-screen) — disable browser-side scroll
+   on the xterm viewport so wheel events are forwarded raw to
+   the PTY instead of moving the host scrollback. Scrollbar
+   hiding is handled globally in styles/global.css. */
 .tier-xterm.tui-inverted .xterm-viewport {
-    scrollbar-width: none !important;
     overflow: hidden !important;
-}
-
-.tier-xterm.tui-inverted .xterm-viewport::-webkit-scrollbar {
-    display: none !important;
-    width: 0 !important;
 }
 
 /* ─── Startup Loading Splash ───────────────────────────────── */

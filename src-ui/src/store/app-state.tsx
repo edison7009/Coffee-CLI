@@ -25,7 +25,7 @@ export type ThemeColor =
   | 'dark' | 'light' | 'cappuccino' | 'sakura' | 'lavender' | 'mint'
   | 'obsidian' | 'cobalt' | 'moss';
 // Theme: shape form (orthogonal to color)
-export type ThemeShape = 'soft' | 'slab' | 'sharp' | 'blade' | 'panel';
+export type ThemeShape = 'soft' | 'slab' | 'sharp' | 'glass' | 'panel';
 // Icon theme: visual style for file/folder icons in the explorer.
 // 8 themes, each with genuinely distinct folder silhouette + file icon style.
 // Fetched upstream (6): material, vscode-icons, catppuccin-mocha, devicon, fluent, symbols
@@ -358,7 +358,7 @@ const VALID_THEMES: ThemeColor[] = [
   'dark', 'light', 'cappuccino', 'sakura', 'lavender', 'mint',
   'obsidian', 'cobalt', 'moss',
 ];
-const VALID_SHAPES: ThemeShape[] = ['soft', 'slab', 'sharp', 'blade', 'panel'];
+const VALID_SHAPES: ThemeShape[] = ['soft', 'slab', 'sharp', 'glass', 'panel'];
 const VALID_ICON_THEMES: IconTheme[] = [
   'outline', 'material', 'vscode-icons', 'catppuccin-mocha',
   'devicon', 'fluent', 'symbols', 'coffee',

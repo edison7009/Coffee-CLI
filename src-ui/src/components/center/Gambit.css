@@ -102,7 +102,7 @@
     backdrop-filter: blur(18px) saturate(140%);
     -webkit-backdrop-filter: blur(18px) saturate(140%);
     border: none; /* All shapes are fully borderless — shape identity comes from radius, shadow, and inset-light alone. */
-    /* Shape-aware radius: soft=16px, slab=4px, sharp/blade/panel=0px. */
+    /* Shape-aware radius: soft=16px, glass=18px, slab=4px, sharp/panel=0px. */
     border-radius: var(--shape-radius-panel, 10px);
     /* 5-layer all-around soft glow — the first layer is a
        sharp 1px ring (spread=1, blur=0) so all four edges get a
@@ -160,12 +160,8 @@
 /* Sharp: identity is 0-radius corners. No extra trim — the natural
    4-layer falloff defined on .gambit already reads correctly here. */
 
-/* Blade: accent stripe on the left edge */
-[data-shape="blade"] .gambit {
-    box-shadow:
-        inset var(--shape-accent-stripe-width) 0 0 0 var(--accent),
-        var(--gambit-shadow);
-}
+/* Glass: handled in global.css to keep the Liquid-Glass language
+   consolidated alongside the cards / segmented controls / popups. */
 
 /* Panel: same 4-layer falloff as every other shape. The original
    v1.4 panel override used a heavier shadow to project a "thick
@@ -184,7 +180,7 @@
    The only behavioral changes vs. floating are: header drag is a
    no-op, the bottom-right corner resize handle hides, and a top-edge
    strip lets the user resize height. Visual chrome — including which
-   shape (soft/slab/blade/sharp/panel) is active — passes through. */
+   shape (soft/slab/glass/sharp/panel) is active — passes through. */
 .gambit.gambit--docked {
     animation: none;     /* fade-in is jarring when toggling dock mid-session */
     will-change: auto;   /* not GPU-translated when docked */
@@ -394,26 +390,12 @@
     line-height: 1.5;
     user-select: text;
     cursor: text;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(120, 120, 120, 0.35) transparent;
+    /* Scrollbar hidden via global rule. */
 }
 
 .gambit-textarea::placeholder {
     color: var(--text-2, #9e9c98);
     opacity: 0.55;
-}
-
-.gambit-textarea::-webkit-scrollbar {
-    width: 6px;
-}
-
-.gambit-textarea::-webkit-scrollbar-thumb {
-    background: rgba(120, 120, 120, 0.35);
-    border-radius: 3px;
-}
-
-.gambit-textarea::-webkit-scrollbar-thumb:hover {
-    background: rgba(120, 120, 120, 0.55);
 }
 
 /* ─── Thumbnail strip (derived view of image paths in draft) ─ */
@@ -435,9 +417,8 @@
     flex: 1;
     min-width: 0;
     overflow-x: auto;
-    scrollbar-width: none;
+    /* Scrollbar hidden via global rule. */
 }
-.gambit-thumb-strip::-webkit-scrollbar { display: none; }
 
 .gambit-thumb {
     flex-shrink: 0;
@@ -509,7 +490,7 @@
     padding: 0;
     background: var(--accent, #C4956A);
     border: none;
-    /* Pill var is 9999px in soft (→ circle), 4px in slab, 0 in sharp/blade/panel.
+    /* Pill var is 9999px in soft/glass (→ circle), 4px in slab, 0 in sharp/panel.
        So the send button is round on soft and square on hard-edged themes. */
     border-radius: var(--shape-radius-pill, 50%);
     color: #fff;

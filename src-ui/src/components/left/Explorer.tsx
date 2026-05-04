@@ -305,7 +305,7 @@ const THEME_SHAPES: { code: ThemeShape; label: string }[] = [
   { code: 'soft',  label: 'Soft'  },
   { code: 'slab',  label: 'Slab'  },
   { code: 'sharp', label: 'Sharp' },
-  { code: 'blade', label: 'Blade' },
+  { code: 'glass', label: 'Glass' },
   { code: 'panel', label: 'Panel' },
 ];
 

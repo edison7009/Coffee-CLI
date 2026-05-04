@@ -873,7 +873,11 @@ function TierTerminalImpl({
       if (dismissed) return;
       dismissed = true;
       setSplashFading(true);
-      setTimeout(() => setShowSplash(false), 600);
+      // 300 ms fade-out (was 600). The splash is dismissed quickly
+      // now that we trigger on first real output, so the underlying
+      // tool content is usually already painted; a long crossfade
+      // makes the splash "linger" visibly on top of the live REPL.
+      setTimeout(() => setShowSplash(false), 300);
     };
     const poll = setInterval(() => {
       const elapsed = Date.now() - splashStartRef.current;
@@ -887,6 +891,19 @@ function TierTerminalImpl({
       // Primary signal: TUI has entered alternate screen buffer (\x1b[?1049h),
       // set by the PTY output handler. Covers Claude/Codex/OpenCode/Hermes.
       if (altScreenRef.current) {
+        dismiss();
+        clearInterval(poll);
+        return;
+      }
+      // Inline-mode signal: some tools (current Claude Code builds, simple
+      // CLIs) print their banner directly to the regular terminal instead
+      // of entering alt-screen. Threshold 1500 ms post-splash-start; once
+      // we've passed the 800 ms branding window AND output is flowing AND
+      // the process is alive, the tool is clearly running. Tighter than
+      // the prior 2500 ms because tools usually finish painting their
+      // banner well within 1 s — anything slower would make the splash
+      // feel "stuck" over a visibly working REPL.
+      if (hasOutputRef.current && elapsed > 1500) {
         dismiss();
         clearInterval(poll);
         return;

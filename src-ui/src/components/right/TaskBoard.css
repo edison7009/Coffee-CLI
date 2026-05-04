@@ -49,14 +49,13 @@
 }
 
 .right-tabs {
-  position: relative;
   display: flex;
-  background: var(--bg-card);
-  border: none;
-  border-radius: var(--radius-sm);
-  padding: 4px;
   margin: 12px 0 8px 0;
   flex-shrink: 0;
+  /* No bg / border / radius / padding — segmented strip has no
+     container layer; active tab is indicated by text color
+     contrast only. Panel shape adds its own border in the
+     data-shape override in global.css. */
 }
 
 .right-tab {
@@ -142,12 +141,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  scrollbar-width: none; /* Firefox: hide scrollbar */
-}
-
-/* Chrome/Safari/Edge: hide scrollbar but allow scrolling */
-.task-list::-webkit-scrollbar {
-  display: none;
+  /* Scrollbar hidden via global rule in styles/global.css. */
 }
 
 /* ─── Section Headers ───────────────────────────────────────────────────────── */
