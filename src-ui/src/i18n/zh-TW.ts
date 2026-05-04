@@ -33,6 +33,7 @@ export const zhTW = {
   'tool.remote': '遠端終端機',
   'tool.remote.short': '遠端',
   'tool.vibeid': '人格測試',
+  'tool.vibeid.requires_cc': '僅限 Claude Code',
   'tool.multi_agent': '多智能體',
   'tool.two_agent': '二智能體',
   'tool.three_agent': '三智能體',

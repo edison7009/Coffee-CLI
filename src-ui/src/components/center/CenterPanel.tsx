@@ -1309,6 +1309,11 @@ export function CenterPanel() {
                                         {formatCwd(lastCwdByTool[tool.key!])}
                                       </span>
                                     )}
+                                    {tool.key === 'vibeid' && (
+                                      <span className="launchpad-card-cwd">
+                                        {t('tool.vibeid.requires_cc' as any)}
+                                      </span>
+                                    )}
                                   </div>
                                   {tool.requiresCwd && (
                                     <div className="launchpad-folder-btn" onClick={(e) => { e.stopPropagation(); if (!disabled) handlePickFolder(tool.key!); }}>

@@ -33,6 +33,7 @@ export const de = {
   'tool.remote': 'Remote-Terminal',
   'tool.remote.short': 'Remote',
   'tool.vibeid': 'Persönlichkeitstest',
+  'tool.vibeid.requires_cc': 'Nur Claude Code',
   'tool.multi_agent': 'Multi-Agent',
   'tool.two_agent': 'Dual-Agent',
   'tool.three_agent': 'Triple-Agent',

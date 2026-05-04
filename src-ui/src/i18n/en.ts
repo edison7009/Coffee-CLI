@@ -34,6 +34,7 @@ export const en = {
   'tool.remote': 'Remote Terminal',
   'tool.remote.short': 'Remote',
   'tool.vibeid': 'Personality Test',
+  'tool.vibeid.requires_cc': 'Only Claude Code',
   'tool.multi_agent': 'Multi-Agent',
   'tool.two_agent': 'Two-Agent',
   'tool.three_agent': 'Three-Agent',

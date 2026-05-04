@@ -33,6 +33,7 @@ export const zhCN = {
   'tool.remote': '远程终端',
   'tool.remote.short': '远程',
   'tool.vibeid': '人格测试',
+  'tool.vibeid.requires_cc': '仅限 Claude Code',
   'tool.multi_agent': '多智能体',
   'tool.two_agent': '二智能体',
   'tool.three_agent': '三智能体',

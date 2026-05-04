@@ -33,6 +33,7 @@ export const ja = {
   'tool.remote': 'リモートターミナル',
   'tool.remote.short': 'リモート',
   'tool.vibeid': '性格診断',
+  'tool.vibeid.requires_cc': 'Claude Code のみ',
   'tool.multi_agent': 'マルチエージェント',
   'tool.two_agent': 'デュアルエージェント',
   'tool.three_agent': 'トリプルエージェント',

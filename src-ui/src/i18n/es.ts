@@ -33,6 +33,7 @@ export const es = {
   'tool.remote': 'Terminal remoto',
   'tool.remote.short': 'Remoto',
   'tool.vibeid': 'Test de personalidad',
+  'tool.vibeid.requires_cc': 'Solo Claude Code',
   'tool.multi_agent': 'Multi-Agente',
   'tool.two_agent': 'Dúo-Agente',
   'tool.three_agent': 'Trío-Agente',
