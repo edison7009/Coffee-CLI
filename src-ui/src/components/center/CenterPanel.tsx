@@ -22,22 +22,43 @@ import { useT } from '../../i18n/useT';
 import { fetchGameCatalog, type RemoteGameEntry } from '../../utils/game-catalog';
 import './CenterPanel.css';
 
-// Tool icons — all assets live under /icons/tools/.
-// Adding a new tool = drop an SVG/PNG in that folder + reference the URL here.
+// Tool icon assets bundled inline by Vite. PNGs use ?inline → base64 data URI;
+// SVGs use ?raw → string for dangerouslySetInnerHTML rendering. Both flows
+// avoid the <img> async-decode pipeline that flashed for one frame on every
+// Launchpad re-mount, even with `decoding="sync"` + App-mount img.decode()
+// priming. See the comment block above OPENCODE_SVG below for the full
+// rationale and the history of failed attempts.
+import HERMES_DATA_URL from '../../icons-inline/hermes.png?inline';
+import VIBEID_DATA_URL from '../../icons-inline/vibeid.png?inline';
+import TERMINAL_MAC_DATA_URL from '../../icons-inline/terminal-macos.png?inline';
+import TERMINAL_LINUX_DATA_URL from '../../icons-inline/terminal-linux.png?inline';
+import TERMINAL_PWSH_SVG from '../../icons-inline/terminal-powershell.svg?raw';
 
-// `decoding="sync"` tells WebView2 to block paint until the image is
-// fully decoded. Combined with the App-mount preload in App.tsx that
-// warms both the HTTP cache AND the decoded-pixel cache via img.decode(),
-// this guarantees icons appear on the very first render instead of
-// flashing in one frame later. Without sync decoding, even a cached PNG
-// still hits the async decode pipeline per-<img>-element-mount.
-const toolIcon = (src: string, size = '1em', extra: React.CSSProperties = {}) => (
-  <img
-    src={src}
-    alt=""
-    loading="eager"
-    decoding="sync"
-    style={{ width: size, height: size, flexShrink: 0, objectFit: 'contain', ...extra }}
+// Tool icons — adding a new tool = drop the asset under src/icons-inline/
+// and import it the same way (?inline for PNG, ?raw for SVG).
+
+// PNG icons render via CSS background-image, NOT <img>. The <img> element
+// has an async decode-on-mount pipeline that flashes for one frame even
+// with `decoding="sync"` (it's a hint Chromium can ignore) and even with
+// the App-mount img.decode() preload (WebView2 evicts the decoded-image
+// cache under sustained use). CSS backgrounds paint as part of the
+// element's own first frame — no separate decode lifecycle, no flash.
+// The data URI is a build-time `?inline` import, so bytes ship in the
+// JS bundle and there's no HTTP round-trip either.
+const bgIcon = (dataUrl: string, size = '1em', extra: React.CSSProperties = {}) => (
+  <span
+    aria-hidden
+    style={{
+      display: 'inline-block',
+      width: size,
+      height: size,
+      flexShrink: 0,
+      backgroundImage: `url(${dataUrl})`,
+      backgroundSize: 'contain',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat',
+      ...extra,
+    }}
   />
 );
 
@@ -58,6 +79,15 @@ const toolIcon = (src: string, size = '1em', extra: React.CSSProperties = {}) =>
 const CLAUDE_SVG    = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" width="100%" height="100%"><path clip-rule="evenodd" d="M20.998 10.949H24v3.102h-3v3.028h-1.487V20H18v-2.921h-1.487V20H15v-2.921H9V20H7.488v-2.921H6V20H4.487v-2.921H3V14.05H0V10.95h3V5h17.998v5.949zM6 10.949h1.488V8.102H6v2.847zm10.51 0H18V8.102h-1.49v2.847z" fill="#D97757" fill-rule="evenodd"/></svg>';
 const CODEX_SVG     = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="100%" height="100%"><defs><linearGradient gradientUnits="userSpaceOnUse" id="codex-fill" x1="12" x2="12" y1="3" y2="21"><stop stop-color="#B1A7FF"/><stop offset=".5" stop-color="#7A9DFF"/><stop offset="1" stop-color="#3941FF"/></linearGradient></defs><path d="M19.503 0H4.496A4.496 4.496 0 000 4.496v15.007A4.496 4.496 0 004.496 24h15.007A4.496 4.496 0 0024 19.503V4.496A4.496 4.496 0 0019.503 0z" fill="#fff"/><path d="M9.064 3.344a4.578 4.578 0 012.285-.312c1 .115 1.891.54 2.673 1.275.01.01.024.017.037.021a.09.09 0 00.043 0 4.55 4.55 0 013.046.275l.047.022.116.057a4.581 4.581 0 012.188 2.399c.209.51.313 1.041.315 1.595a4.24 4.24 0 01-.134 1.223.123.123 0 00.03.115c.594.607.988 1.33 1.183 2.17.289 1.425-.007 2.71-.887 3.854l-.136.166a4.548 4.548 0 01-2.201 1.388.123.123 0 00-.081.076c-.191.551-.383 1.023-.74 1.494-.9 1.187-2.222 1.846-3.711 1.838-1.187-.006-2.239-.44-3.157-1.302a.107.107 0 00-.105-.024c-.388.125-.78.143-1.204.138a4.441 4.441 0 01-1.945-.466 4.544 4.544 0 01-1.61-1.335c-.152-.202-.303-.392-.414-.617a5.81 5.81 0 01-.37-.961 4.582 4.582 0 01-.014-2.298.124.124 0 00.006-.056.085.085 0 00-.027-.048 4.467 4.467 0 01-1.034-1.651 3.896 3.896 0 01-.251-1.192 5.189 5.189 0 01.141-1.6c.337-1.112.982-1.985 1.933-2.618.212-.141.413-.251.601-.33.215-.089.43-.164.646-.227a.098.098 0 00.065-.066 4.51 4.51 0 01.829-1.615 4.535 4.535 0 011.837-1.388zm3.482 10.565a.637.637 0 000 1.272h3.636a.637.637 0 100-1.272h-3.636zM8.462 9.23a.637.637 0 00-1.106.631l1.272 2.224-1.266 2.136a.636.636 0 101.095.649l1.454-2.455a.636.636 0 00.005-.64L8.462 9.23z" fill="url(#codex-fill)"/></svg>';
 const GEMINI_SVG    = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="100%" height="100%"><defs><linearGradient gradientUnits="userSpaceOnUse" id="gemini-fill" x1="24" x2="0" y1="6.587" y2="16.494"><stop stop-color="#EE4D5D"/><stop offset=".328" stop-color="#B381DD"/><stop offset=".476" stop-color="#207CFE"/></linearGradient></defs><path d="M0 4.391A4.391 4.391 0 014.391 0h15.217A4.391 4.391 0 0124 4.391v15.217A4.391 4.391 0 0119.608 24H4.391A4.391 4.391 0 010 19.608V4.391z" fill="url(#gemini-fill)"/><path clip-rule="evenodd" d="M19.74 1.444a2.816 2.816 0 012.816 2.816v15.48a2.816 2.816 0 01-2.816 2.816H4.26a2.816 2.816 0 01-2.816-2.816V4.26A2.816 2.816 0 014.26 1.444h15.48zM7.236 8.564l7.752 3.728-7.752 3.727v2.802l9.557-4.596v-3.866L7.236 5.763v2.801z" fill="#1E1E2E" fill-rule="evenodd"/></svg>';
+// OpenCode brand mark — inline SVG, ported from the official apple-touch-icon.
+// Earlier we shipped a PNG to chase pixel parity, but PNG-via-<img> kept
+// flashing on tab switch even with `decoding="sync"` + App-mount img.decode()
+// preload — Chromium honors `decoding="sync"` only as a hint, and WebView2's
+// decoded-image cache evicts under sustained use, so every Launchpad re-mount
+// re-runs the async decode pipeline. Inline SVG renders synchronously as DOM,
+// so it never flashes. Outer rect rounded (rx=18) to match the iOS-style
+// rounded square of the official PNG asset; previous opencode.svg lacked this.
+const OPENCODE_SVG  = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="100%" height="100%"><rect width="96" height="96" rx="18" ry="18" fill="#131010"/><rect x="24" y="18" width="48" height="60" fill="#FFFFFF"/><rect x="36" y="30" width="24" height="36" fill="#5A5858"/><rect x="36" y="30" width="24" height="12" fill="#131010"/></svg>';
 const QWEN_SVG      = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="100%" height="100%"><defs><linearGradient id="qwen-fill" x1="0%" x2="100%" y1="0%" y2="0%"><stop offset="0%" stop-color="#6336E7" stop-opacity=".84"/><stop offset="100%" stop-color="#6F69F7" stop-opacity=".84"/></linearGradient></defs><path d="M12.604 1.34c.393.69.784 1.382 1.174 2.075a.18.18 0 00.157.091h5.552c.174 0 .322.11.446.327l1.454 2.57c.19.337.24.478.024.837-.26.43-.513.864-.76 1.3l-.367.658c-.106.196-.223.28-.04.512l2.652 4.637c.172.301.111.494-.043.77-.437.785-.882 1.564-1.335 2.34-.159.272-.352.375-.68.37-.777-.016-1.552-.01-2.327.016a.099.099 0 00-.081.05 575.097 575.097 0 01-2.705 4.74c-.169.293-.38.363-.725.364-.997.003-2.002.004-3.017.002a.537.537 0 01-.465-.271l-1.335-2.323a.09.09 0 00-.083-.049H4.982c-.285.03-.553-.001-.805-.092l-1.603-2.77a.543.543 0 01-.002-.54l1.207-2.12a.198.198 0 000-.197 550.951 550.951 0 01-1.875-3.272l-.79-1.395c-.16-.31-.173-.496.095-.965.465-.813.927-1.625 1.387-2.436.132-.234.304-.334.584-.335a338.3 338.3 0 012.589-.001.124.124 0 00.107-.063l2.806-4.895a.488.488 0 01.422-.246c.524-.001 1.053 0 1.583-.006L11.704 1c.341-.003.724.032.9.34zm-3.432.403a.06.06 0 00-.052.03L6.254 6.788a.157.157 0 01-.135.078H3.253c-.056 0-.07.025-.041.074l5.81 10.156c.025.042.013.062-.034.063l-2.795.015a.218.218 0 00-.2.116l-1.32 2.31c-.044.078-.021.118.068.118l5.716.008c.046 0 .08.02.104.061l1.403 2.454c.046.081.092.082.139 0l5.006-8.76.783-1.382a.055.055 0 01.096 0l1.424 2.53a.122.122 0 00.107.062l2.763-.02a.04.04 0 00.035-.02.041.041 0 000-.04l-2.9-5.086a.108.108 0 010-.113l.293-.507 1.12-1.977c.024-.041.012-.062-.035-.062H9.2c-.059 0-.073-.026-.043-.077l1.434-2.505a.107.107 0 000-.114L9.225 1.774a.06.06 0 00-.053-.031zm6.29 8.02c.046 0 .058.02.034.06l-.832 1.465-2.613 4.585a.056.056 0 01-.05.029.058.058 0 01-.05-.029L8.498 9.841c-.02-.034-.01-.052.028-.054l.216-.012 6.722-.012z" fill="url(#qwen-fill)" fill-rule="nonzero"/></svg>';
 // OpenClaw brand (lobster mascot) — ported from Web-Home/agents/icons/openclaw.svg.
 // Gradient IDs stay verbatim from the source asset; browsers scope them per-<svg>
@@ -88,21 +118,19 @@ const inlineSvgIcon = (markup: string, size = '1em', extra: React.CSSProperties 
 // dead padding.
 const SvgClaude    = () => inlineSvgIcon(CLAUDE_SVG);
 const SvgQwen      = () => inlineSvgIcon(QWEN_SVG);
-// OpenCode uses the official square apple-touch-icon-v3.png from
-// opencode.ai (180×180 RGBA, dark rounded square + white frame + grey
-// inner block). The previous hand-drawn SVG approximation got the
-// proportions wrong; using the brand asset directly guarantees parity
-// with the official app icon and matches Codex/Gemini's square fill.
-const SvgOpenCode  = () => toolIcon('/icons/tools/opencode.png', '1em', { borderRadius: 'var(--radius-xs)', objectFit: 'cover' });
+// OpenCode — inline SVG (see OPENCODE_SVG comment). The PNG variant lived
+// here briefly for pixel parity with the brand's apple-touch-icon, but the
+// trade-off (fixed flash-on-mount in WebView2) wasn't worth it; the inline
+// SVG with rounded outer rect matches the brand visually within a pixel or two.
+const SvgOpenCode  = () => inlineSvgIcon(OPENCODE_SVG);
 const SvgOpenClaw  = () => inlineSvgIcon(OPENCLAW_SVG);
 const SvgCodex     = () => inlineSvgIcon(CODEX_SVG);
 const SvgGemini    = () => inlineSvgIcon(GEMINI_SVG);
-// PNG-backed icons stay as <img> — tiny raster bitmaps don't benefit
-// from inlining (base64 would bloat the bundle more than the HTTP
-// round-trip they skip). They're small enough to load under a frame
-// on warm cache.
-const SvgVibeID    = () => toolIcon('/icons/tools/vibeid.png');
-const SvgHermes    = () => toolIcon('/icons/tools/hermes.png', '1em', { borderRadius: 'var(--radius-xs)', objectFit: 'cover' });
+// PNG-backed icons render via CSS background-image with data-URI sources
+// (see bgIcon). Hermes uses `cover` to fill the rounded square; VibeID
+// uses the default `contain` so its full glyph stays visible.
+const SvgVibeID    = () => bgIcon(VIBEID_DATA_URL);
+const SvgHermes    = () => bgIcon(HERMES_DATA_URL, '1em', { borderRadius: 'var(--radius-xs)', backgroundSize: 'cover' });
 
 // Coffee 101 card icon — animated coffee mark (same as the left-panel
 // brand header in Explorer.tsx panel-header): steam wave loops 3s, cup
@@ -336,23 +364,15 @@ const detectOS = (): 'win' | 'mac' | 'linux' => {
   return 'linux';
 };
 
-const TERMINAL_ICON: Record<string, string> = {
-  win: '/icons/tools/terminal-powershell.svg',
-  mac: '/icons/tools/terminal-macos.png',
-  linux: '/icons/tools/terminal-linux.png',
-};
-
+// Terminal icon — same flicker-avoidance strategy as the other tool icons:
+// PowerShell ships as raw SVG markup (rendered via dangerouslySetInnerHTML,
+// fully synchronous); macOS/Linux PNG rasters render as CSS background-image
+// with a base64 data URI source. No <img> in either branch.
 const TerminalIcon = () => {
   const os = detectOS();
-  return (
-    <img
-      src={TERMINAL_ICON[os]}
-      alt=""
-      loading="eager"
-      decoding="sync"
-      style={{ width: '1em', height: '1em', borderRadius: 'var(--radius-xs)', objectFit: 'contain', flexShrink: 0 }}
-    />
-  );
+  if (os === 'win') return inlineSvgIcon(TERMINAL_PWSH_SVG, '1em', { borderRadius: 'var(--radius-xs)' });
+  const dataUrl = os === 'mac' ? TERMINAL_MAC_DATA_URL : TERMINAL_LINUX_DATA_URL;
+  return bgIcon(dataUrl, '1em', { borderRadius: 'var(--radius-xs)' });
 };
 
 // (terminal label now from i18n: t('tool.terminal'))

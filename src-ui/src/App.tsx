@@ -58,41 +58,18 @@ export function App() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Preload + pre-decode Launchpad tool icons so re-opening the
-  // software list never shows an image refresh flash. v1.1.4 version
-  // only called `img.src = ...` which primes the HTTP cache but
-  // leaves decode-to-pixels async — every subsequent DOM <img>
-  // re-mount still ran the decode pipeline, producing a 1-frame
-  // "pop in" the user reads as a page refresh.
-  //
-  // v1.1.5 additionally awaits `img.decode()` which populates the
-  // decoded-image cache. Combined with `decoding="sync"` on the
-  // actual <img> render sites (see CenterPanel.tsx `toolIcon`),
-  // icons paint on the very first frame of every remount.
-  //
-  // The SVG logos (claude/codex/gemini/opencode/qwen) were moved
-  // inline into CenterPanel.tsx in v1.1.5 and no longer need
-  // preloading — they ship as strings inside the JS bundle. Only
-  // remaining entries are the PNG rasters + the terminal SVGs.
-  useEffect(() => {
-    const ICONS = [
-      '/icons/tools/opencode.png',
-      '/icons/tools/hermes.png',
-      '/icons/tools/vibeid.png',
-      '/icons/tools/terminal-powershell.svg',
-      '/icons/tools/terminal-macos.png',
-      '/icons/tools/terminal-linux.png',
-    ];
-    ICONS.forEach((src) => {
-      const img = new Image();
-      img.src = src;
-      // `decode()` returns once the image is fully parsed AND
-      // rasterised. Catches the NotSupported / network errors that
-      // would otherwise reject — we don't care about surfacing
-      // those since the real <img> render site handles errors.
-      img.decode().catch(() => {});
-    });
-  }, []);
+  // No tool-icon preload anymore. v1.1.4–v1.9.x tried to keep the
+  // <img>-based Launchpad icons flicker-free by warming the HTTP cache
+  // with `new Image()`, then warming the decoded-image cache with
+  // `img.decode()`, then adding `decoding="sync"` on the render site —
+  // each layer made the flash less common but never eliminated it,
+  // because Chromium treats `decoding="sync"` as a hint and WebView2's
+  // decoded-image cache evicts under sustained use. The fix that
+  // actually works is to never use <img> for these icons: SVG logos
+  // ship as inline strings, PNG rasters ship as `?inline` data URIs
+  // rendered via CSS background-image. Both flows render synchronously
+  // as part of the parent's first paint. See CenterPanel.tsx `bgIcon`
+  // and the OPENCODE_SVG comment for the full history.
 
   // Previously prefetched session history at startup — but that caused a
   // noticeable stutter on cold launch (JSON parse + state fan-out) even

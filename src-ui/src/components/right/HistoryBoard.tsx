@@ -8,18 +8,26 @@ import {
   subscribeHistory,
   getHistorySnapshot,
 } from '../../lib/history-cache';
+// hermes/opencode PNG assets live in src/icons-inline/ so the Launchpad
+// can `?inline`-import them as data URIs and bypass the <img> async-decode
+// flash. We pull the same data URIs here so HistoryBoard doesn't need a
+// separate file copy on disk.
+import HERMES_DATA_URL from '../../icons-inline/hermes.png?inline';
+import OPENCODE_DATA_URL from '../../icons-inline/opencode.png?inline';
 import './HistoryBoard.css';
 
-// Tool icons live under /icons/tools/ — see CenterPanel.tsx for the canonical
-// renderer. HistoryBoard only needs a subset, so we inline a minimal map here.
+// Tool icons — claude/codex/gemini/qwen still load via <img src=public/...>
+// because HistoryBoard mounts once at app start and never re-mounts on tab
+// switch, so the one-time decode flash is invisible. Hermes/OpenCode are
+// inlined to share the same bytes the Launchpad uses (no duplicate files).
 
 const TOOL_ICON_SRC: Record<string, string> = {
   claude:   '/icons/tools/claude.svg',
   codex:    '/icons/tools/codex.svg',
   gemini:   '/icons/tools/gemini.svg',
   qwen:     '/icons/tools/qwen.svg',
-  hermes:   '/icons/tools/hermes.png',
-  opencode: '/icons/tools/opencode.png',
+  hermes:   HERMES_DATA_URL,
+  opencode: OPENCODE_DATA_URL,
 };
 
 const getToolIcon = (tool: string) => {
