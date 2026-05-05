@@ -2254,6 +2254,128 @@ fn load_native_history_blocking() -> Result<Vec<SavedSession>, String> {
     Ok(result)
 }
 
+// Contribution-heatmap entry: one tuple per session file (mtime + message
+// count). The frontend buckets these into local-day boxes — doing the
+// bucketing here would require a TZ database (chrono/time) just to honour
+// the user's local midnight, which isn't worth the dependency.
+#[derive(serde::Serialize)]
+struct HeatmapEntry {
+    ts: i64,    // file mtime, seconds since UNIX_EPOCH
+    count: u32, // approximate message count for the session
+}
+
+#[tauri::command]
+async fn get_message_heatmap() -> Result<Vec<HeatmapEntry>, String> {
+    tauri::async_runtime::spawn_blocking(load_message_heatmap_blocking)
+        .await
+        .map_err(|e| format!("Heatmap task join failed: {e}"))?
+}
+
+fn load_message_heatmap_blocking() -> Result<Vec<HeatmapEntry>, String> {
+    // Frontend renders a 26-week (≈ 6-month) grid. ~210 days back so
+    // the leftmost column is always populated even mid-week.
+    const LOOKBACK_SECS: u64 = 210 * 86400;
+    let now = std::time::SystemTime::now();
+    let cutoff = now.checked_sub(std::time::Duration::from_secs(LOOKBACK_SECS))
+        .unwrap_or(std::time::UNIX_EPOCH);
+
+    let mut candidates: Vec<(std::time::SystemTime, std::path::PathBuf, &'static str)> = Vec::new();
+
+    if let Some(home) = dirs::home_dir() {
+        let claude_dir = crate::tool_config::history_path_for(
+            "claude", home.join(".claude").join("projects"));
+        collect_jsonl_paths_with_mtime(claude_dir, 2, "claude", &mut candidates);
+
+        let hermes_dir = crate::tool_config::history_path_for(
+            "hermes", home.join(".hermes").join("sessions"));
+        collect_hermes_paths_with_mtime(hermes_dir, &mut candidates);
+
+        let codex_dir = crate::tool_config::history_path_for(
+            "codex", home.join(".codex").join("sessions"));
+        collect_jsonl_paths_with_mtime(codex_dir, 4, "codex", &mut candidates);
+
+        let gemini_dir = crate::tool_config::history_path_for(
+            "gemini", home.join(".gemini").join("tmp"));
+        collect_jsonl_paths_with_mtime(gemini_dir, 3, "gemini", &mut candidates);
+
+        let openclaw_dir = crate::tool_config::history_path_for(
+            "openclaw", home.join(".openclaw").join("agents"));
+        collect_jsonl_paths_with_mtime(openclaw_dir, 3, "openclaw", &mut candidates);
+
+        let qwen_dir = crate::tool_config::history_path_for(
+            "qwen", home.join(".qwen").join("projects"));
+        collect_jsonl_paths_with_mtime(qwen_dir, 3, "qwen", &mut candidates);
+    }
+
+    let mut out: Vec<HeatmapEntry> = Vec::with_capacity(candidates.len());
+    for (mtime, path, tool) in &candidates {
+        if *mtime < cutoff { continue; }
+        let ts = mtime
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs() as i64)
+            .unwrap_or(0);
+        let count = if *tool == "hermes" {
+            count_hermes_messages(path)
+        } else {
+            count_jsonl_message_lines(path)
+        };
+        if count > 0 {
+            out.push(HeatmapEntry { ts, count });
+        }
+    }
+
+    Ok(out)
+}
+
+// Cheap line-count for JSONL session files. We treat every non-empty
+// line as one "turn" — including system / tool-result rows. The heatmap
+// is an activity proxy, not a strict user-message tally, so over-
+// counting tool spam is fine (more chatter = darker square).
+fn count_jsonl_message_lines(path: &std::path::Path) -> u32 {
+    use std::io::{BufRead, BufReader, Read};
+    let file = match std::fs::File::open(path) {
+        Ok(f) => f,
+        Err(_) => return 0,
+    };
+    // Cap reading at ~32 MiB to keep one runaway session from stalling
+    // the whole heatmap scan. 32 MiB of JSONL is ~50k+ lines — already
+    // off the chart visually, so capping doesn't affect the bucket.
+    const MAX_BYTES: u64 = 32 * 1024 * 1024;
+    let mut br = BufReader::new(file.take(MAX_BYTES));
+    let mut buf: Vec<u8> = Vec::with_capacity(512);
+    let mut count = 0u32;
+    while let Ok(n) = br.read_until(b'\n', &mut buf) {
+        if n == 0 { break; }
+        if buf.iter().any(|&b| !b.is_ascii_whitespace()) {
+            count = count.saturating_add(1);
+        }
+        buf.clear();
+    }
+    count
+}
+
+// Hermes stores one big JSON file per session, not JSONL — so line-
+// counting wouldn't work. Approximate message count by counting
+// "role" key occurrences. Cheaper than a full serde_json parse.
+fn count_hermes_messages(path: &std::path::Path) -> u32 {
+    let bytes = match std::fs::read(path) {
+        Ok(b) => b,
+        Err(_) => return 0,
+    };
+    let needle = b"\"role\"";
+    let mut count = 0u32;
+    let mut i = 0;
+    while i + needle.len() <= bytes.len() {
+        if &bytes[i..i + needle.len()] == needle {
+            count = count.saturating_add(1);
+            i += needle.len();
+        } else {
+            i += 1;
+        }
+    }
+    count
+}
+
 #[tauri::command]
 fn tier_terminal_resume(
     session_id: String,
@@ -2839,6 +2961,7 @@ pub fn start_ui() -> anyhow::Result<()> {
             tier_terminal_resize,
             tier_terminal_resume,
             get_native_history,
+            get_message_heatmap,
             read_native_session,
             read_opencode_session,
             check_network_port,

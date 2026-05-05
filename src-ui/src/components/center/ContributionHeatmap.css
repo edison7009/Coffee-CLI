@@ -1,0 +1,157 @@
+/* Half-year contribution heatmap above the Launchpad pinned cards.
+   Cells follow the active theme's --accent so the grid recolours
+   automatically across Dark / Light / Sakura / Lavender / etc.
+
+   No card chrome — heatmap blends into the launchpad surface so the
+   pinned cards below stay the visual anchor. */
+
+.heatmap-card {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 0 0;
+  margin-top: 24px;
+}
+
+.heatmap-loading {
+  opacity: 0.45;
+}
+
+/* Header: stats on the left, legend on the right, single row. Sits
+   below the grid as a footer caption. */
+.heatmap-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 10px;
+  min-height: 18px;
+}
+
+.heatmap-title {
+  font-size: 13px;
+  color: var(--text-2);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  text-align: left;
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Inline legend in the header. Compact swatches sized to match the
+   smallest grid cells so the visual rhythm is consistent. */
+.heatmap-legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-3);
+  flex: 0 0 auto;
+}
+
+.heatmap-legend-cell {
+  width: 11px;
+  height: 11px;
+  flex: 0 0 11px;
+  aspect-ratio: 1;
+}
+.heatmap-legend-cell:hover {
+  transform: none; /* legend swatches are static */
+}
+
+/* Grid spans the full width of the heatmap-card so its left/right
+   edges align with the header's text and legend. Cells flex to fill,
+   aspect-ratio keeps them square. */
+.heatmap-grid {
+  display: flex;
+  gap: 4px;
+  width: 100%;
+}
+
+.heatmap-week {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.heatmap-cell {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 3px;
+  background: var(--bg-hover);
+  transition: outline-color 0.12s ease, background 0.18s ease;
+  /* position:relative anchors the ::after / ::before tooltip pseudos. */
+  position: relative;
+  outline: 1px solid transparent;
+  outline-offset: 1px;
+}
+
+/* color-mix lets every theme reuse the same intensity ramp without
+   shipping per-theme heatmap palettes. Falls through to var(--accent)
+   at level 4 for the loudest stop. */
+.heatmap-cell[data-level="0"] { background: var(--bg-hover); }
+.heatmap-cell[data-level="1"] { background: color-mix(in srgb, var(--accent) 22%, var(--bg-hover)); }
+.heatmap-cell[data-level="2"] { background: color-mix(in srgb, var(--accent) 48%, var(--bg-hover)); }
+.heatmap-cell[data-level="3"] { background: color-mix(in srgb, var(--accent) 75%, var(--bg-hover)); }
+.heatmap-cell[data-level="4"] { background: var(--accent); }
+
+/* Future cells (this week's tail past today) stay transparent and inert
+   so the right column doesn't get visually truncated. */
+.heatmap-cell[data-level="-1"] {
+  background: transparent;
+  pointer-events: none;
+}
+
+.heatmap-cell:hover {
+  outline-color: var(--accent);
+  z-index: 3;
+}
+
+/* Custom tooltip — replaces the default native `title=` chrome
+   (white box, OS font) with a themed pill that matches the rest of
+   the app. data-tip is set on every non-future cell. */
+.heatmap-cell[data-tip]:hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 10px;
+  background: var(--bg-panel);
+  color: var(--text-1);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  line-height: 1.3;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: var(--shadow-panel);
+  z-index: 100;
+  /* Prevent the tooltip itself from triggering the parent's hover
+     state if the user lifts the cursor onto the pill (it already
+     sits above the cell, but pointer-events: none above is the
+     belt-and-braces guarantee). */
+}
+
+/* Tooltip arrow — a 4px triangle bridging the gap between cell and
+   pill so the tooltip reads as anchored, not floating. */
+.heatmap-cell[data-tip]:hover::before {
+  content: '';
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 4px solid var(--border);
+  pointer-events: none;
+  z-index: 100;
+}

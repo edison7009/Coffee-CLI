@@ -105,6 +105,11 @@ export const commands = {
 
   // Session Resume
   getNativeHistory: () => invoke<SavedSession[]>('get_native_history'),
+  /** Per-session activity for the contribution heatmap.
+   *  One entry per session file: { ts: epoch seconds, count: msg lines }.
+   *  Frontend buckets ts into local-day boxes for the grid. */
+  getMessageHeatmap: () =>
+    invoke<{ ts: number; count: number }[]>('get_message_heatmap'),
   readNativeSession: (filePath: string) => invoke<string>('read_native_session', { filePath }),
   readOpencodeSession: (sessionId: string) =>
     invoke<string>('read_opencode_session', { sessionId }),

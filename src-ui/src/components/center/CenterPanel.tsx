@@ -7,6 +7,7 @@ import { MultiAgentGrid } from './MultiAgentGrid';
 import { FourSplitGrid } from './FourSplitGrid';
 import { HyperAgentPanel } from './HyperAgentPanel';
 import { ToolConfigModal } from './ToolConfigModal';
+import { ContributionHeatmap } from './ContributionHeatmap';
 import { ErrorBoundary } from '../common/ErrorBoundary';
 import { useAppState, type ToolType } from '../../store/app-state';
 
@@ -1368,6 +1369,14 @@ export function CenterPanel() {
                         </div>
                       );
                     })()}
+
+                    {/* Activity heatmap — sits below the pinned cards so
+                        when Gambit's input panel grows from the bottom and
+                        squeezes available height, the heatmap (decorative)
+                        gets cropped first, not the pinned cards (functional).
+                        Renders independently of pinned state so a brand-
+                        new install still sees the grid. */}
+                    <ContributionHeatmap />
 
                     {/* ─── Remote Terminal Connection Form ─── */}
                     {showRemoteForm && (

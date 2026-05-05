@@ -126,4 +126,12 @@ export const zhTW = {
   'mode.take_a_break': '放鬆一下',
   'mode.back_to_work': '回到工作',
 
+  'heatmap.title': '{sessions} 次對話、{messages} 則訊息',
+  'heatmap.title_empty': '故事還沒開始 — 跟 AI 聊起來，點亮你的第一格',
+  'heatmap.legend_less': '少',
+  'heatmap.legend_more': '多',
+  'heatmap.tooltip_some': '{date} · {count} 則訊息',
+  'heatmap.tooltip_one': '{date} · 1 則訊息',
+  'heatmap.tooltip_none': '{date} · 沒有活動',
+
 } as const;

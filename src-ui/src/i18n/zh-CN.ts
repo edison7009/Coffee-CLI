@@ -126,4 +126,13 @@ export const zhCN = {
   'mode.take_a_break': '放松一下',
   'mode.back_to_work': '回到工作',
 
+  // 贡献热力图（桌面 Launchpad 上的 6 张卡片上方）
+  'heatmap.title': '{sessions} 次会话、{messages} 条消息',
+  'heatmap.title_empty': '故事还没开始 — 跟 AI 聊起来，点亮你的第一格',
+  'heatmap.legend_less': '少',
+  'heatmap.legend_more': '多',
+  'heatmap.tooltip_some': '{date} · {count} 条对话',
+  'heatmap.tooltip_one': '{date} · 1 条对话',
+  'heatmap.tooltip_none': '{date} · 没有活动',
+
 } as const;

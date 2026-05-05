@@ -126,4 +126,12 @@ export const ja = {
   'mode.take_a_break': 'ひと休み',
   'mode.back_to_work': '仕事に戻る',
 
+  'heatmap.title': 'セッション {sessions} 回・メッセージ {messages} 件',
+  'heatmap.title_empty': 'まだ何もありません — AI と話してマスを点灯させよう',
+  'heatmap.legend_less': '少',
+  'heatmap.legend_more': '多',
+  'heatmap.tooltip_some': '{date} · メッセージ {count} 件',
+  'heatmap.tooltip_one': '{date} · メッセージ 1 件',
+  'heatmap.tooltip_none': '{date} · アクティビティなし',
+
 } as const;
