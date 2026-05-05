@@ -134,8 +134,8 @@ export const zhCN = {
   'heatmap.title_empty': '故事还没开始 — 跟 AI 聊起来，点亮你的第一格',
   'heatmap.legend_less': '少',
   'heatmap.legend_more': '多',
-  'heatmap.tooltip_some': '{date} · {count} 条对话',
-  'heatmap.tooltip_one': '{date} · 1 条对话',
+  'heatmap.tooltip_some': '{date} · {count} 条消息',
+  'heatmap.tooltip_one': '{date} · 1 条消息',
   'heatmap.tooltip_none': '{date} · 没有活动',
 
 } as const;
