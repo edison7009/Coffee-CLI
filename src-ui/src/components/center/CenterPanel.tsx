@@ -1645,8 +1645,10 @@ export function CenterPanel() {
               </div>
             </div>
 
-            {/* Global Mode switch button */}
-            <div style={{ position: 'absolute', bottom: 'calc(18px + var(--dock-bottom-offset, 0px))', right: 18 }}>
+            {/* Global Mode switch button — bottom-right offsets mirror the
+                right-pane add-task FAB so the two corner buttons read as a
+                symmetric pair. */}
+            <div style={{ position: 'absolute', bottom: 'calc(24px + var(--dock-bottom-offset, 0px))', right: 24 }}>
               <button
                 className={`mode-switch-btn ${disableDrawer ? 'instant-click' : ''}`}
                 onClick={() => {
@@ -1674,19 +1676,19 @@ export function CenterPanel() {
               >
                 <div className="mode-switch-icon">
                   {!showArcadeGames ? (
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                      <circle cx="5" cy="5" r="1.6"/>
-                      <circle cx="12" cy="5" r="1.6"/>
-                      <circle cx="19" cy="5" r="1.6"/>
-                      <circle cx="5" cy="12" r="1.6"/>
-                      <circle cx="12" cy="12" r="1.6"/>
-                      <circle cx="19" cy="12" r="1.6"/>
-                      <circle cx="5" cy="19" r="1.6"/>
-                      <circle cx="12" cy="19" r="1.6"/>
-                      <circle cx="19" cy="19" r="1.6"/>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                      <circle cx="5" cy="5" r="2"/>
+                      <circle cx="12" cy="5" r="2"/>
+                      <circle cx="19" cy="5" r="2"/>
+                      <circle cx="5" cy="12" r="2"/>
+                      <circle cx="12" cy="12" r="2"/>
+                      <circle cx="19" cy="12" r="2"/>
+                      <circle cx="5" cy="19" r="2"/>
+                      <circle cx="12" cy="19" r="2"/>
+                      <circle cx="19" cy="19" r="2"/>
                     </svg>
                   ) : (
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M19 12H5"/>
                       <path d="M12 19l-7-7 7-7"/>
                     </svg>
