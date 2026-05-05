@@ -48,8 +48,14 @@ function levelFor(count: number, max: number): 0 | 1 | 2 | 3 | 4 {
 // localStorage failures (private mode, quota exceeded) are silently
 // ignored — the module-level cache still prevents intra-session refetch.
 type HeatmapEntry = { ts: number; count: number };
-type HeatmapCache = { date: string; entries: HeatmapEntry[] };
+type HeatmapCache = { date: string; entries: HeatmapEntry[]; fetchedAt: number };
 const HEATMAP_CACHE_KEY = 'cc-heatmap-cache';
+// Refetch coalescing window. Within this TTL, repeat mounts (user toggling
+// between launchpad ↔ tool tab) skip the IPC call entirely. Past it, we
+// rescan so heatmap reflects intra-day activity (new sessions, new messages
+// in long-running CLI tabs). Backend `count_cache` keeps the rescan cheap —
+// any jsonl whose mtime is unchanged skips the file read.
+const FRESH_TTL_MS = 60_000;
 let memoryCache: HeatmapCache | null = null;
 
 function readPersistedHeatmapCache(): HeatmapCache | null {
@@ -58,6 +64,10 @@ function readPersistedHeatmapCache(): HeatmapCache | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as HeatmapCache;
     if (typeof parsed?.date === 'string' && Array.isArray(parsed?.entries)) {
+      // Older cache versions didn't store fetchedAt — treat as stale so
+      // the next mount triggers a fresh scan rather than reusing yesterday's
+      // numbers indefinitely.
+      if (typeof parsed.fetchedAt !== 'number') parsed.fetchedAt = 0;
       return parsed;
     }
     return null;
@@ -124,10 +134,11 @@ export function ContributionHeatmap() {
       setLoaded(true);
       return;
     }
-    // Cache hit was already handled by the useState lazy init above; if we
-    // got here with a hit, skip the API call entirely and don't even spin
-    // up cancel state.
-    if (initialCache) return;
+    // Skip the fetch ONLY if the cache is genuinely fresh (within TTL).
+    // The previous "skip if same-day cache exists" check meant new sessions
+    // created later in the day never showed up — heatmap was effectively
+    // frozen from the morning's first scan until the day rolled over.
+    if (initialCache && Date.now() - initialCache.fetchedAt < FRESH_TTL_MS) return;
 
     let cancelled = false;
     const today = localDayKey(new Date());
@@ -135,7 +146,7 @@ export function ContributionHeatmap() {
     commands.getMessageHeatmap()
       .then(entries => {
         if (cancelled) return;
-        const cache: HeatmapCache = { date: today, entries };
+        const cache: HeatmapCache = { date: today, entries, fetchedAt: Date.now() };
         memoryCache = cache;
         writePersistedHeatmapCache(cache);
         const next = entriesToBuckets(entries);
