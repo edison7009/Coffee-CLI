@@ -850,11 +850,19 @@ export function Explorer() {
     }
   };
 
-  // Load drives when the "My Computer" tab is activated
+  // Load drives when the "My Computer" tab is activated. Debounced +
+  // cancellation-guarded so rapid tab toggles don't stack listDrives()
+  // IPCs (slow on Windows when a network drive is offline) and stale
+  // resolves can't overwrite drives state after the user navigates away.
   useEffect(() => {
-    if (activeTab === 'computer' && drives.length === 0) {
-      commands.listDrives().then(setDrives).catch(() => {});
-    }
+    if (activeTab !== 'computer' || drives.length > 0) return;
+    let cancelled = false;
+    const handle = setTimeout(() => {
+      commands.listDrives()
+        .then(d => { if (!cancelled) setDrives(d); })
+        .catch(() => {});
+    }, 300);
+    return () => { cancelled = true; clearTimeout(handle); };
   }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
 

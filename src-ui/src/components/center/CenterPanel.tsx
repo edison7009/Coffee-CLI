@@ -734,13 +734,21 @@ export function CenterPanel() {
   useEffect(() => {
     if (!isTauri || !isLaunchpadMode) return;
     if (showArcadeGames) return; // Library open: stay silent
-    commands.checkToolsInstalled()
-      .then(result => setToolsInstalled(result))
-      .catch(() => {});
-    try {
-      const raw = localStorage.getItem('coffee:last-cwd-by-tool');
-      if (raw) setLastCwdByTool(JSON.parse(raw));
-    } catch {}
+    // Debounce: rapid 9-dot ↔ back toggles would otherwise stack up
+    // checkToolsInstalled() IPCs (PATH scan for 7 CLIs, ~200ms-1s each
+    // on Windows). The serial IPC queue blocked React reconciliation
+    // and the next mode-switch click looked dead. Only fire after the
+    // user has actually settled on the launchpad for 300ms.
+    const handle = setTimeout(() => {
+      commands.checkToolsInstalled()
+        .then(result => setToolsInstalled(result))
+        .catch(() => {});
+      try {
+        const raw = localStorage.getItem('coffee:last-cwd-by-tool');
+        if (raw) setLastCwdByTool(JSON.parse(raw));
+      } catch {}
+    }, 300);
+    return () => clearTimeout(handle);
   }, [isLaunchpadMode, showArcadeGames]);
 
   // Auto-hide toast
@@ -927,30 +935,39 @@ export function CenterPanel() {
     setConnStatus('idle');
   };
 
-  // Game catalog loaded from coffeecli.com/play/game.json, re-resolved on lang change
+  // Single source of truth for the arcade catalog (loaded from
+  // coffeecli.com/play/game.json) and the resolved per-bundle install
+  // state. Used to be split across two useEffects on `[state.currentLang]`
+  // — both calling `fetchGameCatalog` — which double-hit the network on
+  // mount and let an older fetch's resolve clobber a newer one's state on
+  // rapid lang switches. Now a single debounced effect with a cancellation
+  // flag so any in-flight resolves from the previous lang are dropped.
   useEffect(() => {
-    fetchGameCatalog(state.currentLang).then(setGameCatalog).catch(() => {});
-  }, [state.currentLang]);
-
-  // Fetch arcade catalog on mount (and on lang change) so pinned games can render on Desktop
-  // without waiting for the user to open the Library.
-  useEffect(() => {
-    if (!isTauri) {
-      setGamesLoading(false);
-      return;
-    }
-    setGamesLoading(true);
-    Promise.allSettled([commands.listJsdosBundles(), fetchGameCatalog(state.currentLang)])
-      .then(([bundlesResult, catalogResult]) => {
-        const localBundles: any[] = bundlesResult.status === 'fulfilled' ? bundlesResult.value : [];
-        const catalog: RemoteGameEntry[] = catalogResult.status === 'fulfilled' ? catalogResult.value : [];
-        const games = catalog.map(entry => {
-          const cached = localBundles.find((b: any) => b.name.toLowerCase() === entry.file.toLowerCase());
-          return { name: entry.file, path: cached ? cached.path : entry.download, size: cached ? cached.size : 0, icon: entry.icon, title: entry.title };
-        });
-        setArcadeGames(games);
-      })
-      .finally(() => setGamesLoading(false));
+    let cancelled = false;
+    const handle = setTimeout(() => {
+      if (!isTauri) {
+        fetchGameCatalog(state.currentLang)
+          .then(catalog => { if (!cancelled) setGameCatalog(catalog); })
+          .catch(() => {})
+          .finally(() => { if (!cancelled) setGamesLoading(false); });
+        return;
+      }
+      setGamesLoading(true);
+      Promise.allSettled([commands.listJsdosBundles(), fetchGameCatalog(state.currentLang)])
+        .then(([bundlesResult, catalogResult]) => {
+          if (cancelled) return;
+          const localBundles: any[] = bundlesResult.status === 'fulfilled' ? bundlesResult.value : [];
+          const catalog: RemoteGameEntry[] = catalogResult.status === 'fulfilled' ? catalogResult.value : [];
+          setGameCatalog(catalog);
+          const games = catalog.map(entry => {
+            const cached = localBundles.find((b: any) => b.name.toLowerCase() === entry.file.toLowerCase());
+            return { name: entry.file, path: cached ? cached.path : entry.download, size: cached ? cached.size : 0, icon: entry.icon, title: entry.title };
+          });
+          setArcadeGames(games);
+        })
+        .finally(() => { if (!cancelled) setGamesLoading(false); });
+    }, 200);
+    return () => { cancelled = true; clearTimeout(handle); };
   }, [state.currentLang]);
 
   // Last path segment, Windows ("\") and POSIX ("/") safe. null when path unknown.
@@ -1654,24 +1671,13 @@ export function CenterPanel() {
                 onClick={() => {
                   setDisableDrawer(true);
                   setTimeout(() => setDisableDrawer(false), 500);
-                  
-                  if (!showArcadeGames) {
-                    setShowArcadeGames(true);
-                    if (isTauri) {
-                      Promise.allSettled([commands.listJsdosBundles(), fetchGameCatalog(state.currentLang)])
-                        .then(([bundlesResult, catalogResult]) => {
-                          const localBundles: any[] = bundlesResult.status === 'fulfilled' ? bundlesResult.value : [];
-                          const catalog: RemoteGameEntry[] = catalogResult.status === 'fulfilled' ? catalogResult.value : [];
-                          const games = catalog.map(entry => {
-                            const cached = localBundles.find((b: any) => b.name.toLowerCase() === entry.file.toLowerCase());
-                            return { name: entry.file, path: cached ? cached.path : entry.download, size: cached ? cached.size : 0, icon: entry.icon, title: entry.title };
-                          });
-                          setArcadeGames(games);
-                        });
-                    }
-                  } else {
-                    setShowArcadeGames(false);
-                  }
+                  // Pure toggle. The arcade catalog is already fetched on
+                  // mount (and on language change) by the useEffect above —
+                  // refetching on every click stacks up in-flight Tauri IPC
+                  // + remote-catalog requests, and their `setArcadeGames`
+                  // resolves landed mid-slide on rapid clicks, locking the
+                  // toggle for a couple of seconds. Keep this handler cheap.
+                  setShowArcadeGames(prev => !prev);
                 }}
               >
                 <div className="mode-switch-icon">
