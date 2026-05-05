@@ -308,7 +308,15 @@
   border-radius: var(--radius-sm);
   padding: 4px;
   box-shadow: var(--shadow-panel);
-  backdrop-filter: var(--glass-blur);
+  /* No backdrop-filter — the var(--bg-card) background is already
+     fully opaque so the blur is invisible, and on WebView2 a second
+     backdrop-filter layer animating with transform (the ctx-pop
+     scale) re-composites neighboring backdrop-filter elements
+     (launchpad cards under wallpaper) and corrupts their sampling —
+     visible as blue fringe + corner ghosting on the cards while the
+     menu is open. Glass shape, which actually wants the frosted
+     look, restores backdrop-filter via a [data-shape="glass"]
+     override in global.css. */
   animation: ctx-pop 0.12s cubic-bezier(0.2, 0, 0, 1.4);
 }
 

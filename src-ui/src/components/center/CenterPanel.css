@@ -301,20 +301,30 @@
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
 }
 
-/* Frosted glass cards when wallpaper is active */
-.launchpad-has-bg .launchpad-card {
-  background: rgba(18, 18, 24, 0.52) !important;
+/* Frosted glass cards when wallpaper is active.
+   bg + backdrop-filter MUST live on the rounded WRAPPER, not the
+   inner rectangular .launchpad-card. Putting them on the inner
+   card creates a fresh stacking context whose backdrop-filter is
+   promoted to its own GPU layer; that layer ignores the wrapper's
+   `overflow:hidden + border-radius` clip, leaking past the rounded
+   corners — visible as 4 sharp corner residues on Soft (16px) and
+   as a colored blur fringe on the inner card's exposed left edge
+   (the right edge is shielded by .launchpad-folder-btn). Same fix
+   pattern as [data-shape="glass"] in global.css. */
+.launchpad-has-bg .launchpad-card-group {
+  background: rgba(18, 18, 24, 0.52);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
-}
-.launchpad-has-bg .launchpad-card-group {
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+}
+.launchpad-has-bg .launchpad-card {
+  background: transparent !important;
 }
 .launchpad-has-bg .launchpad-card-group:hover {
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
 }
-[data-theme="light"] .launchpad-has-bg .launchpad-card {
-  background: rgba(255, 255, 255, 0.48) !important;
+[data-theme="light"] .launchpad-has-bg .launchpad-card-group {
+  background: rgba(255, 255, 255, 0.48);
 }
 
 .launchpad-card {
