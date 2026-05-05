@@ -88,6 +88,19 @@
     box-shadow: 0 0 0 1px var(--border);
 }
 
+/* Soft + Sharp: same theme-uniform 1px ring as Panel. The default
+   multi-layer drop shadow read as a halo against busy desktops in
+   these two minimalist shapes — Soft's rounded corners and Sharp's
+   hard corners both want a clean theme border, not a floating-card
+   glow. Slab keeps its 3D inset edges + glow (deliberate physical-
+   slab aesthetic), Glass has its own treatment in global.css. */
+[data-shape="soft"] .gambit.gambit--ball,
+[data-shape="sharp"] .gambit.gambit--ball,
+[data-shape="soft"] .gambit:not(.gambit--ball),
+[data-shape="sharp"] .gambit:not(.gambit--ball) {
+    box-shadow: 0 0 0 1px var(--border);
+}
+
 
 .gambit {
     position: fixed;
@@ -468,6 +481,15 @@
     user-select: none;
     -webkit-user-drag: none;
     cursor: default;
+}
+
+/* Soft + Sharp + Panel: theme-uniform 1px ring instead of the soft
+   drop shadow halo. Matches the Gambit window/ball treatment so
+   minimalist shapes stay consistent end-to-end. */
+[data-shape="soft"] .gambit-preview-overlay img,
+[data-shape="sharp"] .gambit-preview-overlay img,
+[data-shape="panel"] .gambit-preview-overlay img {
+    box-shadow: 0 0 0 1px var(--border);
 }
 
 /* ─── Footer (send button) ───────────────────────────────────── */
