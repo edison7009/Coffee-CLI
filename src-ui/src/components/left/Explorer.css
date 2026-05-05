@@ -461,7 +461,6 @@
 
 .theme-swatch.active {
   border-color: var(--swatch-ring);
-  box-shadow: 0 0 0 1px var(--swatch-ring), 0 0 12px -2px var(--swatch-ring);
 }
 
 .theme-swatch-label {
@@ -503,6 +502,11 @@
   color: var(--text-1);
 }
 
+/* All four pickers (color / shape / font / icon) share the same quiet
+   selected-state language: swap the border to accent + a light accent
+   fill. No outer glow / no extra ring — flat & calm. The color swatch
+   keeps its own per-theme ring color and skips the fill (its bg IS the
+   theme color). */
 .theme-shape-chip.active {
   background: var(--accent-bg);
   border-color: var(--accent);
@@ -525,7 +529,7 @@
   height: 34px;
   padding: 0;
   border-radius: 6px;
-  border: 2px solid transparent;
+  border: 1px solid transparent;
   background: transparent;
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
@@ -535,8 +539,8 @@
   border-color: var(--border);
 }
 .icon-theme-chip.active {
-  border-color: var(--accent);
   background: var(--accent-bg);
+  border-color: var(--accent);
 }
 .icon-theme-chip img {
   display: block;
