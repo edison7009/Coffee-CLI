@@ -48,14 +48,13 @@
     font-display: swap;
 }
 
-/* ─── Local CJK Fonts (fallback for non-Mac users) ── */
-@font-face {
-    font-family: 'Noto Sans SC';
-    src: url('/fonts/noto-sans-sc-500.otf') format('opentype');
-    font-weight: 400 500; /* Use this font for both normal and medium weights */
-    font-style: normal;
-    font-display: swap;
-}
+/* ─── CJK rendering (no embedded font) ──
+   Mac → PingFang SC (built-in since 10.11). Windows → Microsoft YaHei
+   (built-in since Vista). Linux → distro Noto CJK / WenQuanYi. Bundling
+   our own 16 MB Noto OTF was redundant: every target OS already ships
+   a perfectly readable Chinese face, and the bundled font was never
+   reached on Mac (PingFang resolved earlier in the cascade) and just
+   duplicated YaHei on Windows. */
 
 /* ─── Brand Serif (splash-label "art font") ──
    Lora italic 500, Latin + Latin-Ext only (~36 KB total). Splash text is
@@ -117,8 +116,19 @@ textarea,
 
 :root {
     /* Local Inter font for English, premium system fallbacks for CJK */
-    --font: 'Inter', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Noto Sans SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
-    --font-serif: 'Lora', ui-serif, Georgia, Cambria, "Times New Roman", 'PingFang SC', 'Noto Sans SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    /* Per-glyph cascade covering the 11 UI languages (de/en/es/fr/pt/vi/ru
+       handled by Inter; zh-CN/zh-TW/ja/ko by OS faces below). Mac faces
+       come before Windows faces because Mac users hit them first; Windows
+       installs don't have the Mac names so the cascade keeps walking. */
+    --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+        'PingFang SC', 'PingFang TC', 'Hiragino Sans', 'Hiragino Sans GB', 'Apple SD Gothic Neo',
+        'Microsoft YaHei', 'Microsoft JhengHei', 'Yu Gothic UI', 'Malgun Gothic',
+        Helvetica, Arial, sans-serif,
+        'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+    --font-serif: 'Lora', ui-serif, Georgia, Cambria, "Times New Roman",
+        'PingFang SC', 'PingFang TC', 'Hiragino Mincho ProN', 'Apple SD Gothic Neo',
+        'Microsoft YaHei', 'Microsoft JhengHei', 'Yu Mincho', 'Malgun Gothic',
+        sans-serif;
     --mono: 'Cascadia Code', 'Cascadia Mono', 'SF Mono', Menlo, Monaco, Consolas, 'Courier New', monospace;
     --radius-xs: 4px;
     --radius-sm: 8px;

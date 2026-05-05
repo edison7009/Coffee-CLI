@@ -19,7 +19,12 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 # Tier Terminal — PTY (portable-pty, WezTerm's cross-platform PTY library)
 portable-pty = "0.9"
-tokio = { version = "1", features = ["full"] }
+# tokio: only the features we actually touch (grep'd against src/). Trimmed
+# from "full" to drop unused subsystems (process, signal, tracing, parking_lot
+# pulled in by full but not used here). `rt-multi-thread` + `macros` for
+# #[tokio::main] / spawn; `net` for TcpListener; `time` for sleep; `io-util`
+# for AsyncBufReadExt/AsyncWriteExt; `sync` for Mutex.
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "time", "io-util", "sync"] }
 
 # Regex (used by terminal.rs for ANSI strip)
 regex = "1"
@@ -28,8 +33,11 @@ regex = "1"
 clap = { version = "4", features = ["derive"] }
 
 # Tauri
-tauri = { version = "2", features = ["devtools", "protocol-asset"] }
-tauri-plugin-log = "2"
+# `devtools` feature dropped: it only enables WebView devtools in *release*
+# builds, and our shipped UI explicitly blocks F12 / Ctrl+Shift+I and the
+# context menu (see src-ui/src/main.tsx + App.tsx). Dev builds get devtools
+# automatically without the feature flag, so dev workflow is unaffected.
+tauri = { version = "2", features = ["protocol-asset"] }
 tauri-plugin-dialog = "2"
 tauri-plugin-clipboard-manager = "2"
 
@@ -40,9 +48,7 @@ anyhow = "1"
 
 log = "0.4"
 dirs = "5"
-image = "0.25.10"
 base64 = "0.22.1"
-git2 = "0.19"
 notify = "6.1.1"
 # Coalesces bursts of fs events (e.g. CLI writing 50 files in a row) into a
 # single handler callback so the frontend doesn't re-scan 50 times.
@@ -62,6 +68,11 @@ uuid = { version = "1", features = ["v4"] }
 opt-level = "z"
 lto = true
 strip = true
+# Drop unwinding tables. Panics terminate the process directly — fine for
+# a desktop app where panics are bugs anyway, and Tauri's command boundary
+# catches plugin errors via Result<_, _> rather than catch_unwind.
+panic = "abort"
+codegen-units = 1
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-global-shortcut = "2"
