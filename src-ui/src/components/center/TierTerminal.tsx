@@ -340,15 +340,15 @@ function TierTerminalImpl({
 
     // GPU-accelerated rendering: WebGL is required for customGlyphs +
     // rescaleOverlappingGlyphs (correct ASCII art / Claude mascot / box
-    // border alignment). DOM renderer silently drops those options.
+    // border alignment). DOM renderer silently drops those options AND
+    // burns ~100% CPU per terminal under AI-CLI token streams.
     //
-    // The trap: on headless or VM Linux the WebGL context falls back to
-    // a software rasterizer (llvmpipe, swrast, SwiftShader) that burns
-    // CPU. Detect software renderers explicitly and force DOM there —
-    // misaligned mascot is a lesser evil than a hot fan.
-    //
-    // Win/Mac keep the dedicated-GPU gate for compatibility with prior
-    // heat/throttling reports on integrated GPUs on those platforms.
+    // The only veto is software rasterization (llvmpipe, swrast,
+    // SwiftShader, Mesa offscreen) — typically headless / VM Linux where
+    // WebGL silently falls back to CPU. Modern integrated GPUs (Apple
+    // M-series, Intel Iris Xe, AMD APU) handle xterm WebGL fine; the
+    // older "dedicated-GPU only" gate was misclassifying Apple Silicon
+    // and Intel UHD laptops as DOM-only and tanking their CPU.
     let useWebgl = false;
     try {
       const testCanvas = document.createElement('canvas');
@@ -358,11 +358,15 @@ function TierTerminalImpl({
         if (debugExt) {
           const renderer = (gl as WebGLRenderingContext).getParameter(debugExt.UNMASKED_RENDERER_WEBGL) as string;
           const isSoftware = /llvmpipe|softpipe|swrast|swiftshader|software|microsoft basic render|mesa offscreen/i.test(renderer);
-          const isDedicated = /nvidia|geforce|radeon|amd|rx\s?\d|arc\s?a/i.test(renderer);
-          useWebgl = !isSoftware && (isLinux || isDedicated);
-          console.log(`[TierTerminal] GPU: ${renderer} → ${useWebgl ? 'WebGL' : 'DOM'} (software=${isSoftware}, dedicated=${isDedicated})`);
+          useWebgl = !isSoftware;
+          console.log(`[TierTerminal] GPU: ${renderer} → ${useWebgl ? 'WebGL' : 'DOM'} (software=${isSoftware})`);
         } else {
-          console.log('[TierTerminal] GPU info unavailable → DOM renderer (cannot verify hardware acceleration)');
+          // No debug extension — assume the GPU is real. Modern browsers
+          // hide UNMASKED_RENDERER_WEBGL behind a privacy flag in some
+          // contexts; defaulting to DOM here was the old behavior and
+          // caused the same per-window CPU spike on locked-down builds.
+          useWebgl = true;
+          console.log('[TierTerminal] GPU info hidden → WebGL (assuming hardware acceleration)');
         }
       } else {
         console.log('[TierTerminal] WebGL unavailable → DOM renderer');
