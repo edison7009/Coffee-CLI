@@ -116,4 +116,12 @@ export const fr = {
   'mode.take_a_break': 'Faire une pause',
   'mode.back_to_work': 'Retour au travail',
 
+  'heatmap.title': '{sessions} sessions · {messages} messages',
+  'heatmap.title_empty': 'L\'histoire n\'a pas encore commencé — discutez avec une IA pour allumer votre première case',
+  'heatmap.legend_less': 'Moins',
+  'heatmap.legend_more': 'Plus',
+  'heatmap.tooltip_some': '{count} messages le {date}',
+  'heatmap.tooltip_one': '1 message le {date}',
+  'heatmap.tooltip_none': 'Aucune activité le {date}',
+
 } as const;

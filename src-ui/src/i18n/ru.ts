@@ -117,4 +117,12 @@ export const ru = {
   'mode.take_a_break': 'Сделать перерыв',
   'mode.back_to_work': 'Вернуться к работе',
 
+  'heatmap.title': 'Сессий: {sessions} · Сообщений: {messages}',
+  'heatmap.title_empty': 'История ещё не началась — поговори с ИИ, чтобы зажечь первую клетку',
+  'heatmap.legend_less': 'Меньше',
+  'heatmap.legend_more': 'Больше',
+  'heatmap.tooltip_some': '{date} · {count} сообщений',
+  'heatmap.tooltip_one': '{date} · 1 сообщение',
+  'heatmap.tooltip_none': '{date} · нет активности',
+
 } as const;

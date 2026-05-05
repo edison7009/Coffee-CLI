@@ -117,4 +117,12 @@ export const de = {
   'mode.take_a_break': 'Pause machen',
   'mode.back_to_work': 'Zurück zur Arbeit',
 
+  'heatmap.title': '{sessions} Sitzungen · {messages} Nachrichten',
+  'heatmap.title_empty': 'Noch nichts los — chatte mit einer KI, um dein erstes Feld zum Leuchten zu bringen',
+  'heatmap.legend_less': 'Weniger',
+  'heatmap.legend_more': 'Mehr',
+  'heatmap.tooltip_some': '{count} Nachrichten am {date}',
+  'heatmap.tooltip_one': '1 Nachricht am {date}',
+  'heatmap.tooltip_none': 'Keine Aktivität am {date}',
+
 } as const;

@@ -129,6 +129,15 @@ export const en = {
   'mode.take_a_break': 'Take a break',
   'mode.back_to_work': 'Back to work',
 
+  // Contribution heatmap (above pinned cards on Desktop launchpad).
+  'heatmap.title': '{sessions} sessions · {messages} messages',
+  'heatmap.title_empty': 'Story not started yet — chat with an AI to light up your first square',
+  'heatmap.legend_less': 'Less',
+  'heatmap.legend_more': 'More',
+  'heatmap.tooltip_some': '{count} messages on {date}',
+  'heatmap.tooltip_one': '1 message on {date}',
+  'heatmap.tooltip_none': 'No activity on {date}',
+
 } as const;
 
 export type I18nKey = keyof typeof en;

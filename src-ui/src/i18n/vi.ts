@@ -128,4 +128,12 @@ export const vi = {
 
   'mode.take_a_break': 'Nghỉ một chút',
   'mode.back_to_work': 'Quay lại làm việc',
+
+  'heatmap.title': '{sessions} phiên · {messages} tin nhắn',
+  'heatmap.title_empty': 'Câu chuyện chưa bắt đầu — trò chuyện với AI để thắp sáng ô đầu tiên',
+  'heatmap.legend_less': 'Ít',
+  'heatmap.legend_more': 'Nhiều',
+  'heatmap.tooltip_some': '{count} tin nhắn vào {date}',
+  'heatmap.tooltip_one': '1 tin nhắn vào {date}',
+  'heatmap.tooltip_none': 'Không có hoạt động vào {date}',
 };

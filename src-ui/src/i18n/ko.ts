@@ -126,4 +126,12 @@ export const ko = {
   'mode.take_a_break': '잠깐 쉬기',
   'mode.back_to_work': '업무로 복귀',
 
+  'heatmap.title': '세션 {sessions}회 · 메시지 {messages}개',
+  'heatmap.title_empty': '아직 시작되지 않았어요 — AI와 대화하여 첫 칸을 채워보세요',
+  'heatmap.legend_less': '적음',
+  'heatmap.legend_more': '많음',
+  'heatmap.tooltip_some': '{date} · 메시지 {count}개',
+  'heatmap.tooltip_one': '{date} · 메시지 1개',
+  'heatmap.tooltip_none': '{date} · 활동 없음',
+
 } as const;
