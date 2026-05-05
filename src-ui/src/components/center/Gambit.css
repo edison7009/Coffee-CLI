@@ -22,7 +22,11 @@
    When collapsed, the entire card shrinks into a 48×48 draggable
    circle. Click to expand, drag to reposition. True close still
    lives in the Explorer toggle button. */
-.gambit--ball {
+/* Double-class selector (.gambit.gambit--ball, specificity 0-2-0) beats
+   the .gambit base rule below at line 141 which sets color: var(--text-1).
+   Without this, ball icons rendered as muted text-1 instead of the accent
+   color the design called for. */
+.gambit.gambit--ball {
     width: 48px !important;
     height: 48px !important;
     border-radius: 50% !important;
