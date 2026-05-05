@@ -239,6 +239,10 @@ function TierTerminalImpl({
   const hasOutputRef = useRef(false); // Set to true when PTY emits visible output
   const [processExited, setProcessExited] = useState(false);
   const [startFailed, setStartFailed] = useState(false);
+  // True when the child died with a non-zero exit code. Drives the failure
+  // banner; on code 0 (user typed /exit or Ctrl+D) we render nothing because
+  // the user ended the session deliberately and doesn't need to be told.
+  const [exitFailed, setExitFailed] = useState(false);
   // First exit event to arrive (onExit from child-watcher, or onStatus from
   // reader EOF) wins the right to write the "[Process exited]" scrollback
   // line. Prevents duplication when both fire. The child-watcher's onExit
@@ -625,6 +629,7 @@ function TierTerminalImpl({
         onStatus: (running, exitCode) => {
           if (!mounted || running) return;
           setProcessExited(true);
+          if (exitCode !== null && exitCode !== 0) setExitFailed(true);
           dispatch({ type: 'SET_AGENT_STATUS', id: sessionId, status: 'idle' });
           if (exitMessageWrittenRef.current) return;
           exitMessageWrittenRef.current = true;
@@ -640,6 +645,7 @@ function TierTerminalImpl({
           // sees EOF — without this, the terminal looked frozen forever.
           if (!mounted) return;
           setProcessExited(true);
+          if (exitCode !== 0) setExitFailed(true);
           dispatch({ type: 'SET_AGENT_STATUS', id: sessionId, status: 'idle' });
           if (exitMessageWrittenRef.current) return;
           exitMessageWrittenRef.current = true;
@@ -950,14 +956,20 @@ function TierTerminalImpl({
       {/* Mid-session process-exited banner — only shows after the terminal
           had output and the process later died. For "never launched" case
           the full-cover `tier-launch-failed` fallback below handles it. */}
-      {processExited && hasOutputRef.current && (
+      {/* Failure banner — shown only on non-zero exit. Code 0 is a deliberate
+          /exit / Ctrl+D and needs no surface UI. The message is intentionally
+          unified across all 7 tools and all failure modes: the user wants
+          to be told whether they got back into the conversation or not, not
+          why specifically (errors are out of our control once the upstream
+          CLI is invoked). */}
+      {processExited && exitFailed && hasOutputRef.current && (
         <div className="tier-process-exited-banner">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="10"/>
             <line x1="12" y1="8" x2="12" y2="12"/>
             <line x1="12" y1="16" x2="12.01" y2="16"/>
           </svg>
-          <span>Process exited — close this tab and open a new one to continue</span>
+          <span>{t('terminal.exit_failed' as any) || 'Could not return to the conversation'}</span>
         </div>
       )}
 

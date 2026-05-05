@@ -185,10 +185,10 @@ export function ChatReader({ sessionId }: { sessionId: string }) {
 
   const handleResume = () => {
     if (!currentSession?.session_token) return;
-    
+
     let targetId = state.activeTerminalId;
     const currentTerminal = state.terminals.find(t => t.id === targetId);
-    
+
     if (currentTerminal?.tool !== null) {
       targetId = crypto.randomUUID();
       dispatch({
@@ -203,12 +203,12 @@ export function ChatReader({ sessionId }: { sessionId: string }) {
     if (!targetId) return;
 
     // Keep the History tab alive after launching the resume terminal. If
-    // the resumed Claude process exits early (token expired, weekly limit,
-    // network blip), the new tab dead-ends on a "Process exited" banner;
-    // tearing down ChatReader at the same time strands the user with no
-    // way back. With the History tab still in the tab bar they can click
-    // it to return to the past chat and pick another session — or close it
-    // manually once the resume is confirmed running.
+    // the resumed process exits early (token expired, weekly limit, network
+    // blip), the new tab dead-ends on a "Could not return" banner; tearing
+    // down ChatReader at the same time strands the user with no way back.
+    // With the History tab still in the tab bar they can click it to return
+    // to the past chat and pick another session — or close it manually
+    // once the resume is confirmed running.
     commands.tierTerminalResume(
       currentSession.id, targetId, currentSession.tool, currentSession.session_token, 80, 24, currentSession.cwd
     ).catch(console.error);

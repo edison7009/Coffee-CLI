@@ -2275,6 +2275,38 @@ struct HeatmapEntry {
     count: u32, // approximate message count for the session
 }
 
+/// Persisted line-count cache for the heatmap scanner. One JSON file at
+/// `~/.coffee-cli/cache/heatmap-counts.json`. Best-effort across the board:
+/// any I/O / parse error returns an empty map and the scanner just recounts
+/// from disk. The mtime stored is seconds-since-epoch (matches the i64 `ts`
+/// field on HeatmapEntry) so a single integer comparison decides cache hit.
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
+struct CachedCount {
+    mtime: i64,
+    count: u32,
+}
+
+fn count_cache_path() -> Option<std::path::PathBuf> {
+    let home = dirs::home_dir()?;
+    Some(home.join(".coffee-cli").join("cache").join("heatmap-counts.json"))
+}
+
+fn read_count_cache() -> std::collections::HashMap<String, CachedCount> {
+    let Some(path) = count_cache_path() else { return std::collections::HashMap::new(); };
+    let Ok(content) = std::fs::read_to_string(&path) else { return std::collections::HashMap::new(); };
+    serde_json::from_str(&content).unwrap_or_default()
+}
+
+fn write_count_cache(map: &std::collections::HashMap<String, CachedCount>) {
+    let Some(path) = count_cache_path() else { return; };
+    if let Some(parent) = path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    if let Ok(json) = serde_json::to_string(map) {
+        let _ = std::fs::write(&path, json);
+    }
+}
+
 #[tauri::command]
 async fn get_message_heatmap() -> Result<Vec<HeatmapEntry>, String> {
     tauri::async_runtime::spawn_blocking(load_message_heatmap_blocking)
@@ -2318,6 +2350,19 @@ fn load_message_heatmap_blocking() -> Result<Vec<HeatmapEntry>, String> {
         collect_jsonl_paths_with_mtime(qwen_dir, 3, "qwen", &mut candidates);
     }
 
+    // Per-file count cache. Heatmap re-scans every app launch and counts
+    // every jsonl line in every history file — for users with hundreds of
+    // past sessions that's the bulk of the cold-start I/O. Past sessions are
+    // immutable: once a session file's mtime is stable, its line count is
+    // stable forever. So we cache `path -> (mtime, count)` to disk, and on
+    // subsequent runs skip the open+read for any file whose mtime is
+    // unchanged from the cached entry. Cache corruption / partial writes
+    // are safe — `read_count_cache` returns empty on any error and we just
+    // recount once.
+    let mut count_cache = read_count_cache();
+    let mut cache_dirty = false;
+    let mut keep_paths: std::collections::HashSet<String> = std::collections::HashSet::new();
+
     let mut out: Vec<HeatmapEntry> = Vec::with_capacity(candidates.len());
     for (mtime, path, tool) in &candidates {
         if *mtime < cutoff { continue; }
@@ -2325,17 +2370,116 @@ fn load_message_heatmap_blocking() -> Result<Vec<HeatmapEntry>, String> {
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_secs() as i64)
             .unwrap_or(0);
-        let count = if *tool == "hermes" {
-            count_hermes_messages(path)
+        let path_key = path.to_string_lossy().into_owned();
+        keep_paths.insert(path_key.clone());
+
+        // Cache hit only when mtime exactly matches — any append to the jsonl
+        // bumps mtime and forces a recount.
+        let count = if let Some(entry) = count_cache.get(&path_key) {
+            if entry.mtime == ts {
+                entry.count
+            } else {
+                let c = if *tool == "hermes" {
+                    count_hermes_messages(path)
+                } else {
+                    count_jsonl_message_lines(path)
+                };
+                count_cache.insert(path_key.clone(), CachedCount { mtime: ts, count: c });
+                cache_dirty = true;
+                c
+            }
         } else {
-            count_jsonl_message_lines(path)
+            let c = if *tool == "hermes" {
+                count_hermes_messages(path)
+            } else {
+                count_jsonl_message_lines(path)
+            };
+            count_cache.insert(path_key.clone(), CachedCount { mtime: ts, count: c });
+            cache_dirty = true;
+            c
         };
         if count > 0 {
             out.push(HeatmapEntry { ts, count });
         }
     }
 
+    // Prune stale entries (files that disappeared from disk). Non-jsonl tools
+    // like opencode use a separate cache layer below, so don't get caught
+    // here; the heuristic is "if we didn't see the path this scan, drop it".
+    let before = count_cache.len();
+    count_cache.retain(|k, _| keep_paths.contains(k));
+    if count_cache.len() != before { cache_dirty = true; }
+    if cache_dirty { write_count_cache(&count_cache); }
+
+    // OpenCode lives in a SQLite DB instead of jsonl files, so it doesn't
+    // fit the candidates-by-mtime pipeline above. One GROUP BY query gets
+    // us the same (timestamp, message_count) tuples the heatmap consumes,
+    // pre-filtered by the same 210-day cutoff so we don't read rows the
+    // frontend would discard anyway.
+    if let Some(home) = dirs::home_dir() {
+        let opencode_root = crate::tool_config::history_path_for(
+            "opencode",
+            home.join(".local").join("share").join("opencode"),
+        );
+        let db_path = opencode_root.join("opencode.db");
+        if db_path.is_file() {
+            let cutoff_secs = cutoff
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_secs() as i64)
+                .unwrap_or(0);
+            collect_opencode_heatmap_entries(&db_path, cutoff_secs, &mut out);
+        }
+    }
+
     Ok(out)
+}
+
+/// One-shot SQLite scan of opencode's session table for heatmap entries.
+/// Mirrors `find_opencode_sessions_sqlite` (same WHERE/GROUP BY shape) so
+/// any schema drift in opencode.db hits both queries together. Best-effort:
+/// any error (locked DB, schema change, file missing) silently yields zero
+/// rows — opencode just doesn't appear in the heatmap that session.
+fn collect_opencode_heatmap_entries(
+    db_path: &std::path::Path,
+    cutoff_secs: i64,
+    out: &mut Vec<HeatmapEntry>,
+) {
+    let conn = match rusqlite::Connection::open_with_flags(
+        db_path,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX,
+    ) {
+        Ok(c) => c,
+        Err(_) => return,
+    };
+    // opencode.db stores time_updated in MILLISECONDS since epoch (verified
+    // via parse_opencode_session at L2006 which treats the JSON `time.updated`
+    // as `u64 ms`). Heatmap entries downstream are seconds (frontend does
+    // `new Date(ts * 1000)` in ContributionHeatmap.tsx). So compare and emit
+    // in millis at the SQL boundary, then divide by 1000 once.
+    let cutoff_ms: i64 = cutoff_secs.saturating_mul(1000);
+    let query = "SELECT s.time_updated, COUNT(m.id) AS msg_count \
+                 FROM session s \
+                 LEFT JOIN message m ON m.session_id = s.id \
+                 WHERE s.time_archived IS NULL AND s.time_updated >= ?1 \
+                 GROUP BY s.id";
+    let mut stmt = match conn.prepare(query) {
+        Ok(s) => s,
+        Err(_) => return,
+    };
+    let rows = match stmt.query_map([cutoff_ms], |row| {
+        let ts_ms: i64 = row.get(0)?;
+        let count: i64 = row.get(1)?;
+        Ok((ts_ms, count))
+    }) {
+        Ok(r) => r,
+        Err(_) => return,
+    };
+    for row in rows.flatten() {
+        let (ts_ms, count) = row;
+        if count > 0 {
+            out.push(HeatmapEntry { ts: ts_ms / 1000, count: count as u32 });
+        }
+    }
 }
 
 // Cheap line-count for JSONL session files. We treat every non-empty

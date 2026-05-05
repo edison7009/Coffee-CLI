@@ -36,30 +36,111 @@ function levelFor(count: number, max: number): 0 | 1 | 2 | 3 | 4 {
   return 1;
 }
 
+// Heatmap data only changes day-by-day. Re-fetching every time the user
+// switches launchpad ↔ tool tab (the component remounts on each visit)
+// runs the 6-tool jsonl scan + opencode SQLite scan all over again. Cache
+// the fetched entries keyed by today's localDayKey so:
+//   - within one session: module-level memory hit, no API call at all
+//   - across app restarts within same day: localStorage hit, skip the
+//     Rust scan entirely
+//   - new day: cache miss, fresh scan, both layers updated
+//
+// localStorage failures (private mode, quota exceeded) are silently
+// ignored — the module-level cache still prevents intra-session refetch.
+type HeatmapEntry = { ts: number; count: number };
+type HeatmapCache = { date: string; entries: HeatmapEntry[] };
+const HEATMAP_CACHE_KEY = 'cc-heatmap-cache';
+let memoryCache: HeatmapCache | null = null;
+
+function readPersistedHeatmapCache(): HeatmapCache | null {
+  try {
+    const raw = localStorage.getItem(HEATMAP_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as HeatmapCache;
+    if (typeof parsed?.date === 'string' && Array.isArray(parsed?.entries)) {
+      return parsed;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function writePersistedHeatmapCache(cache: HeatmapCache) {
+  try {
+    localStorage.setItem(HEATMAP_CACHE_KEY, JSON.stringify(cache));
+  } catch {}
+}
+
+// Convert raw heatmap entries into the (messages, sessions) per-day Maps
+// the component renders. Pulled out as a pure function so it can be called
+// from both `useState` lazy init (first paint already has cached data, no
+// empty-grid flash) and `useEffect` (post-fetch update).
+function entriesToBuckets(entries: HeatmapEntry[]): {
+  messages: Map<string, number>;
+  sessions: Map<string, number>;
+} {
+  const messages = new Map<string, number>();
+  const sessions = new Map<string, number>();
+  for (const e of entries) {
+    const key = localDayKey(new Date(e.ts * 1000));
+    messages.set(key, (messages.get(key) ?? 0) + e.count);
+    sessions.set(key, (sessions.get(key) ?? 0) + 1);
+  }
+  return { messages, sessions };
+}
+
+// Pick the freshest valid cache (memory beats localStorage; both must
+// match today's date) for first-render state seeding. Returns null on
+// any miss so callers can decide whether to fetch.
+function pickInitialCache(): HeatmapCache | null {
+  const today = localDayKey(new Date());
+  if (memoryCache && memoryCache.date === today) return memoryCache;
+  const persisted = readPersistedHeatmapCache();
+  if (persisted && persisted.date === today) {
+    memoryCache = persisted; // hydrate module cache so next mount skips localStorage too
+    return persisted;
+  }
+  return null;
+}
+
 export function ContributionHeatmap() {
   const t = useT();
-  const [buckets, setBuckets] = useState<Map<string, number>>(new Map());
-  const [sessionBuckets, setSessionBuckets] = useState<Map<string, number>>(new Map());
-  const [loaded, setLoaded] = useState(false);
+  // Lazy initializers seed state from cache BEFORE the first render — when
+  // the user switches launchpad ↔ tool tab there's no empty-grid flash
+  // because by paint time the buckets are already populated.
+  const initialCache = pickInitialCache();
+  const initialBuckets = initialCache ? entriesToBuckets(initialCache.entries) : null;
+  const [buckets, setBuckets] = useState<Map<string, number>>(
+    () => initialBuckets?.messages ?? new Map()
+  );
+  const [sessionBuckets, setSessionBuckets] = useState<Map<string, number>>(
+    () => initialBuckets?.sessions ?? new Map()
+  );
+  const [loaded, setLoaded] = useState(initialCache !== null);
 
   useEffect(() => {
     if (!isTauri) {
       setLoaded(true);
       return;
     }
+    // Cache hit was already handled by the useState lazy init above; if we
+    // got here with a hit, skip the API call entirely and don't even spin
+    // up cancel state.
+    if (initialCache) return;
+
     let cancelled = false;
+    const today = localDayKey(new Date());
+
     commands.getMessageHeatmap()
       .then(entries => {
         if (cancelled) return;
-        const messages = new Map<string, number>();
-        const sessions = new Map<string, number>();
-        for (const e of entries) {
-          const key = localDayKey(new Date(e.ts * 1000));
-          messages.set(key, (messages.get(key) ?? 0) + e.count);
-          sessions.set(key, (sessions.get(key) ?? 0) + 1);
-        }
-        setBuckets(messages);
-        setSessionBuckets(sessions);
+        const cache: HeatmapCache = { date: today, entries };
+        memoryCache = cache;
+        writePersistedHeatmapCache(cache);
+        const next = entriesToBuckets(entries);
+        setBuckets(next.messages);
+        setSessionBuckets(next.sessions);
         setLoaded(true);
       })
       .catch(() => setLoaded(true));

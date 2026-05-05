@@ -226,6 +226,43 @@ pub const AGENT_PRESETS: &[AgentPreset] = &[
         token_format: Some(r"^ses_[A-Za-z0-9]{25}$"),
         prompt_markers: &["┃"],
     },
+    // Codex CLI resume: `codex resume <id>` is a positional subcommand,
+    // not a `--resume` flag. Token is the rollout filename stem (UUID).
+    AgentPreset {
+        tool_name: "codex",
+        resume_program: Some("codex"),
+        resume_args_before: &["resume"],
+        resume_args_after: &[],
+        session_id_pattern: None,
+        token_format: Some(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"),
+        prompt_markers: &["▌"],
+    },
+    // Qwen Code is a Gemini-CLI fork — same `--resume <uuid>` flag and
+    // UUID token format inherited from upstream.
+    AgentPreset {
+        tool_name: "qwen",
+        resume_program: Some("qwen"),
+        resume_args_before: &["--resume"],
+        resume_args_after: &[],
+        session_id_pattern: None,
+        token_format: Some(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"),
+        prompt_markers: &["✦"],
+    },
+    // OpenClaw resume: `openclaw resume <agentId>:<sessionId>` —
+    // composite token because openclaw indexes sessions per agent.
+    // Token format below intentionally matches both bare UUID and
+    // `<agentId>:<uuid>` shapes; the history reader writes the
+    // composite form, but a bare UUID still validates so users
+    // round-tripping through tool-config can copy the simpler value.
+    AgentPreset {
+        tool_name: "openclaw",
+        resume_program: Some("openclaw"),
+        resume_args_before: &["resume"],
+        resume_args_after: &[],
+        session_id_pattern: None,
+        token_format: Some(r"^[A-Za-z0-9_\-]{1,64}(:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})?$"),
+        prompt_markers: &["❯"],
+    },
 ];
 
 pub fn find_preset(tool_name: &str) -> Option<&'static AgentPreset> {

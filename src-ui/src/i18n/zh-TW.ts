@@ -90,6 +90,9 @@ export const zhTW = {
   'action.close': '關閉',
   'action.resume_terminal': '繼續此次對話',
 
+  // Failure banner — single line, all 7 tools share it
+  'terminal.exit_failed': '無法回到本輪對話',
+
   // Time
   'time.just_now': '剛剛',
   'time.today': '今天',
