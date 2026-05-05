@@ -12,7 +12,14 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: var(--bg-panel);
+  /* Match the terminal/launchpad surface (--bg-terminal) instead of
+     --bg-panel. ChatReader lives in the center column under the same
+     chrome-tab strip; using the side-panel colour broke the visual
+     link with the tab above and made the history page read as a
+     popped-out modal floating over the workspace. With --bg-terminal
+     it inherits one continuous surface from the tab bar through the
+     content area, matching every other tab type in the center. */
+  background: var(--bg-terminal);
   position: relative;
   overflow: hidden;
   animation: fade-in 0.3s ease-out;

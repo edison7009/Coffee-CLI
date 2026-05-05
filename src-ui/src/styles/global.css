@@ -304,9 +304,9 @@ textarea,
     --shadow-rgb: 0, 0, 0;
 
     --bg-titlebar: rgba(0, 0, 0, 0.03);
-    --bg-terminal: #eeebe2; /* Soft cream — lighter than ivory's pure-white
-                               glare, dimmer than #FAFAF7 so dark/gray text
-                               (~5–12:1 contrast) pops without harsh contrast. */
+    --bg-terminal: #eeebe2; /* Soft cream — slightly darker than ivory body
+                               so terminal reads as a recessed workspace
+                               between the two brighter side panels. */
 }
 
 /* ─── Code Dark (代码夜) — Cursor IDE faithful palette ──────── */
@@ -770,7 +770,14 @@ body {
     width: var(--w-left);
     min-width: var(--w-left);
     flex-shrink: 0;
-    /* No divider — three-region layout reads as one continuous surface */
+    /* IDE-style framing: side panels share --bg-panel (slightly lighter
+       in every theme), center workspace stays at --bg-app / --bg-terminal
+       (slightly darker), so the terminal reads as the focal "recessed"
+       surface between two brighter rails. Light theme already had this
+       differentiation via --bg-terminal != --bg-app; this rule extends
+       the same pattern to all dark themes by giving the side panels a
+       distinct surface from the body. */
+    background: var(--bg-panel);
     backdrop-filter: var(--glass-blur);
     -webkit-backdrop-filter: var(--glass-blur);
 }
@@ -1312,11 +1319,12 @@ body.gambit-docked {
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
-    background: transparent;
+    /* Same --bg-panel as .panel-left (see comment there) — sandwich
+       the darker terminal/launchpad center between two brighter rails. */
+    background: var(--bg-panel);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
     box-shadow: none;
-    /* No divider — three-region layout reads as one continuous surface */
     border-radius: 0;
     overflow: visible;
 }
@@ -1952,11 +1960,16 @@ body.gambit-docked {
    ═══════════════════════════════════════════════════════ */
 
 /* ─── Slab: directional light edges (立体石板) ─────────────
-   Inset box-shadow on the 3 panels simulates light from the
-   top-left — brighter top/left, darker bottom/right. */
-[data-shape="slab"] .panel-left,
-[data-shape="slab"] .panel-center,
-[data-shape="slab"] .panel-right {
+   ONE coherent embossed frame on the outer window (#root),
+   light from top-left. Previously each of the 3 panels carried
+   its own inset, which after the IDE-style framing change
+   (panel-left/right use --bg-panel, panel-center inherits
+   --bg-app) made internal seams render as conflicting 2px
+   light+dark sandwiches at every panel boundary — visibly
+   inconsistent lines. The colour gap between --bg-panel and
+   --bg-app already provides the inter-panel separation, so the
+   inset just needs to sit on the window's outer perimeter. */
+[data-shape="slab"] #root {
     box-shadow:
         inset 1px 1px 0 0 var(--shape-edge-light-top),
         inset -1px -1px 0 0 var(--shape-edge-light-bottom);
