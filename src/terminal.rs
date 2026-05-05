@@ -896,6 +896,14 @@ pub fn spawn(
                 pending.extend_from_slice(&chunk);
             }
 
+            // Idle reset: with pending empty, last_flush never advances, so
+            // wait decays to 0 and recv_timeout(0) becomes a non-blocking
+            // try_recv — pinning a CPU core per tab. Reset the clock here so
+            // the next recv_timeout blocks for a full interval.
+            if pending.is_empty() {
+                last_flush = Instant::now();
+            }
+
             let should_flush = !pending.is_empty()
                 && (disconnected
                     || pending.len() >= MAX_PENDING
