@@ -152,7 +152,7 @@ export function HistoryBoard() {
               <div className="history-card-meta">
                 <span className="history-card-tool-wrap">
                   {getToolIcon(session.tool)}
-                  <span>{getToolName(session.tool, state.currentLang)} &middot; {dateStr} {session.turn_count ? ` \u00B7 ${(t('task.turns' as any) || '{count} turns').replace('{count}', session.turn_count.toString())}` : ''}</span>
+                  <span>{getToolName(session.tool, state.currentLang)} &middot; {dateStr} {session.turn_count ? ` \u00B7 ${(t('task.messages' as any) || '{count} messages').replace('{count}', session.turn_count.toString())}` : ''}</span>
                 </span>
               </div>
             </div>

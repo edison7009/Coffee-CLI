@@ -84,7 +84,7 @@ export const zhCN = {
   'task.default_title': '新任务',
   'task.search_sessions': '搜索历史对话...',
   'menu.no_recent': '没有任何近期会话',
-  'task.turns': '{count} 轮对话',
+  'task.messages': '{count} 条消息',
 
   // Actions
   'action.close': '关闭',

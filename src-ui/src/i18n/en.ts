@@ -86,7 +86,7 @@ export const en = {
   'task.default_title': 'New Task',
   'task.search_sessions': 'Search sessions...',
   'menu.no_recent': 'No recent sessions found',
-  'task.turns': '{count} turns',
+  'task.messages': '{count} messages',
 
   // Actions
   'action.close': 'Close',

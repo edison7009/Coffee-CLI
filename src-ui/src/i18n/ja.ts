@@ -84,7 +84,7 @@ export const ja = {
   'task.default_title': '新しいタスク',
   'task.search_sessions': 'セッションを検索...',
   'menu.no_recent': '最近のセッションはありません',
-  'task.turns': '{count} ターン',
+  'task.messages': 'メッセージ {count} 件',
 
   // Actions
   'action.close': '閉じる',

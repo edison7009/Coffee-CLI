@@ -85,7 +85,7 @@ export const de = {
   'task.default_title': 'Neue Aufgabe',
   'task.search_sessions': 'Sitzungen durchsuchen...',
   'menu.no_recent': 'Keine aktuellen Sitzungen',
-  'task.turns': '{count} Runden',
+  'task.messages': '{count} Nachrichten',
 
   // Actions
   'action.close': 'Schließen',

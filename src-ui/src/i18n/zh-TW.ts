@@ -84,7 +84,7 @@ export const zhTW = {
   'task.default_title': '新任務',
   'task.search_sessions': '搜尋歷史對話...',
   'menu.no_recent': '沒有任何近期對話',
-  'task.turns': '{count} 輪對話',
+  'task.messages': '{count} 則訊息',
 
   // Actions
   'action.close': '關閉',

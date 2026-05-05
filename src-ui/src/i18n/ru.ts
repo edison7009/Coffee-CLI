@@ -85,7 +85,7 @@ export const ru = {
   'task.default_title': 'Новая задача',
   'task.search_sessions': 'Поиск сессий...',
   'menu.no_recent': 'Нет недавних сессий',
-  'task.turns': '{count} ходов',
+  'task.messages': '{count} сообщений',
 
   // Actions
   'action.close': 'Закрыть',

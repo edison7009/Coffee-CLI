@@ -84,7 +84,7 @@ export const es = {
   'task.default_title': 'Nueva tarea',
   'task.search_sessions': 'Buscar sesiones...',
   'menu.no_recent': 'No hay sesiones recientes',
-  'task.turns': '{count} turnos',
+  'task.messages': '{count} mensajes',
 
   // Actions
   'action.close': 'Cerrar',

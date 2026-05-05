@@ -84,7 +84,7 @@ export const ko = {
   'task.default_title': '새 작업',
   'task.search_sessions': '세션 검색...',
   'menu.no_recent': '최근 세션이 없습니다',
-  'task.turns': '{count}번 대화',
+  'task.messages': '메시지 {count}개',
 
   // Actions
   'action.close': '닫기',

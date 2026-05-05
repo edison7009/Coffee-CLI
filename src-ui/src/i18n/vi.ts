@@ -87,7 +87,7 @@ export const vi = {
   'task.default_title': 'Nhiệm vụ mới',
   'task.search_sessions': 'Tìm phiên làm việc...',
   'menu.no_recent': 'Không tìm thấy phiên gần đây',
-  'task.turns': '{count} lượt',
+  'task.messages': '{count} tin nhắn',
 
   // Actions
   'action.close': 'Đóng',

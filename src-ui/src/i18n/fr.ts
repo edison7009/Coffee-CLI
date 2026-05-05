@@ -84,7 +84,7 @@ export const fr = {
   'task.default_title': 'Nouvelle tâche',
   'task.search_sessions': 'Rechercher des sessions...',
   'menu.no_recent': 'Aucune session récente',
-  'task.turns': '{count} tours',
+  'task.messages': '{count} messages',
 
   // Actions
   'action.close': 'Fermer',
