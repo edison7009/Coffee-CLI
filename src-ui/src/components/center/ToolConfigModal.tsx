@@ -137,7 +137,7 @@ export function ToolConfigModal({ toolKey, toolLabel, onClose }: Props) {
         </div>
 
         {!loading && (
-          <>
+          <div className="tool-config-body">
             <Field
               label={t('tool_config.command' as any)}
               value={entry.command}
@@ -162,7 +162,7 @@ export function ToolConfigModal({ toolKey, toolLabel, onClose }: Props) {
                 onChange={v => setEntry({ ...entry, history_path: v })}
               />
             )}
-          </>
+          </div>
         )}
 
         <div className="tool-config-buttons">

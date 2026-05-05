@@ -2122,7 +2122,6 @@ body.gambit-docked {
 
 [data-shape="glass"] .task-card,
 [data-shape="glass"] .guide-card,
-[data-shape="glass"] .remote-form-card,
 [data-shape="glass"] .chat-input-container,
 [data-shape="glass"] .library-item {
     background: rgba(255, 255, 255, 0.04);
@@ -2131,6 +2130,21 @@ body.gambit-docked {
     border: 1px solid rgba(255, 255, 255, 0.10);
     box-shadow:
         inset 0 1px 0 0 rgba(255, 255, 255, 0.18);
+}
+
+/* Remote SSH/WS form card — heavier wash than other glass cards
+   on purpose: it's a one-shot input form (host / user / password),
+   readability of typed values trumps Liquid-Glass purity. Uses a
+   dark tint so text + input slots stay legible against any
+   wallpaper. */
+[data-shape="glass"] .remote-form-card {
+    background: rgba(18, 20, 28, 0.78);
+    backdrop-filter: blur(24px) saturate(160%);
+    -webkit-backdrop-filter: blur(24px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow:
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.18),
+        0 24px 64px rgba(0, 0, 0, 0.5);
 }
 
 /* Active tabs — switched from "3-edge outline" to "filled pill"
@@ -2196,8 +2210,7 @@ body.gambit-docked {
    Same faint-white-wash + 1px-white-outline + top-edge highlight
    + outer drop shadow combo, so every floating overlay sits on
    the same Liquid-Glass tier above the panels. */
-[data-shape="glass"] .ctx-menu,
-[data-shape="glass"] .tool-config-modal {
+[data-shape="glass"] .ctx-menu {
     background: rgba(255, 255, 255, 0.06);
     border: 1px solid rgba(255, 255, 255, 0.14);
     backdrop-filter: var(--glass-blur);
@@ -2205,6 +2218,20 @@ body.gambit-docked {
     box-shadow:
         inset 0 1px 0 0 rgba(255, 255, 255, 0.22),
         0 12px 40px rgba(0, 0, 0, 0.40);
+}
+
+/* Per-tool config modal (gear icon on each card in the full
+   tools list) — same heavier wash as .remote-form-card: it's
+   an input form (launch args / env / cwd), readability of
+   typed values trumps Liquid-Glass purity. */
+[data-shape="glass"] .tool-config-modal {
+    background: rgba(18, 20, 28, 0.78);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(24px) saturate(160%);
+    -webkit-backdrop-filter: blur(24px) saturate(160%);
+    box-shadow:
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.18),
+        0 24px 64px rgba(0, 0, 0, 0.5);
 }
 
 /* Inputs inside the modal — match the cards' faint glass wash
@@ -2231,6 +2258,20 @@ body.gambit-docked {
 [data-shape="glass"] .remote-input:focus {
     border-color: rgba(255, 255, 255, 0.22);
     background: rgba(255, 255, 255, 0.06);
+}
+
+/* Modal scrim under the SSH/WS form + tool-config modal — kill it
+   entirely in Glass. The original 40-50%-black + blur was tuned
+   for opaque themes; stacked on a panel/app shell that already
+   carries the global glass blur, the overlay's own backdrop-filter
+   re-blurs the result and the user perceives "two layers of
+   transparency stacked". The floating cards alone (with their own
+   wash + drop-shadow) read as modal — no scrim needed. */
+[data-shape="glass"] .remote-form-overlay,
+[data-shape="glass"] .tool-config-backdrop {
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
 }
 
 /* Gambit floating chat card — full Liquid-Glass treatment.

@@ -867,90 +867,118 @@
   z-index: 1000;
 }
 
+/* Visual language unified with .remote-form-card (Remote Terminal
+   popup): same 380px width, dedicated header bar with bottom
+   border, padded body, larger inputs (14px / 10×14 padding) so
+   typed values are easy to read. Both modals are config-input
+   forms — keeping their styling identical is the contract. */
 .tool-config-modal {
-  width: min(480px, 92vw);
+  width: 380px;
+  max-width: 92vw;
   max-height: 88vh;
   overflow-y: auto;
   background: var(--bg-panel);
-  border: 1px solid var(--border-focus);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  padding: 18px 22px 16px;
   color: var(--text-1);
   font-family: var(--font-primary);
   font-size: 13px;
-  box-shadow: 0 24px 60px -16px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
 }
 
 .tool-config-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 14px;
+  gap: 10px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
   font-size: 15px;
   font-weight: 600;
   color: var(--text-1);
 }
 
 .tool-config-close {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
   background: transparent;
   border: 0;
-  color: var(--text-3);
+  color: var(--text-2);
   cursor: pointer;
   font-size: 20px;
   line-height: 1;
-  padding: 0 4px;
-  transition: color 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
 }
 .tool-config-close:hover {
-  color: var(--text-1);
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+}
+
+.tool-config-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .tool-config-field {
-  display: block;
-  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
 }
 
 .tool-config-field-label {
-  display: block;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-2);
-  margin-bottom: 5px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .tool-config-input {
   width: 100%;
-  padding: 7px 10px;
-  background: var(--bg-input);
-  border: 1px solid var(--border-input);
+  padding: 10px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--text-1);
-  font-family: var(--font-mono);
-  font-size: 12.5px;
+  font-family: 'Cascadia Mono', 'Cascadia Code', Consolas, monospace;
+  font-size: 14px;
   outline: none;
   resize: vertical;
-  transition: background-color 0.15s, border-color 0.15s;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .tool-config-input:focus {
-  background: var(--bg-input-focus);
-  border-color: var(--border-focus);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(196, 149, 106, 0.15);
+}
+
+.tool-config-input::placeholder {
+  color: var(--text-2);
+  opacity: 0.5;
 }
 
 .tool-config-buttons {
   display: flex;
   gap: 8px;
   justify-content: flex-end;
-  margin-top: 16px;
+  padding: 0 20px 20px;
 }
 
 .tool-config-btn {
-  padding: 6px 14px;
+  padding: 8px 16px;
   font-size: 13px;
   font-family: inherit;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  border: 1px solid var(--border-focus);
+  border: 1px solid var(--border);
   transition: background-color 0.15s, border-color 0.15s, color 0.15s;
 }
 
