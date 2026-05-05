@@ -564,15 +564,19 @@
 }
 
 /* ─── Mode Switch Button (Arcade vs Tools) ─────────────── */
+/* Sized to match the right-pane add-task FAB so the "switch to full tool
+   list" affordance is actually findable. Default card-bg + accent glyph is
+   already the inverse of the FAB's filled accent + white glyph. */
 .mode-switch-btn {
   display: flex;
   align-items: center;
-  height: 36px;
-  min-width: 36px;
-  padding: 0 5px; /* Ensures circular shape when drawer is closed (24px + 5px + 5px + 2px border = 36px) */
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-pill);
   color: var(--text-2);
   cursor: pointer;
   overflow: hidden;
@@ -588,10 +592,6 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  font-size: 13px;
   color: var(--accent);
   background: transparent;
   transition: transform 0.4s ease;
@@ -769,6 +769,13 @@
 }
 .library-item:hover .library-gear-btn {
   opacity: 0.6;
+}
+/* Selected (pinned) cards highlight the gear in accent — same color the
+   border switches to — so the launch-settings affordance is visible at a
+   glance on the tools the user actually cares about. */
+.library-item.is-pinned .library-gear-btn {
+  opacity: 1;
+  color: var(--accent);
 }
 .library-gear-btn:hover {
   opacity: 1 !important;
