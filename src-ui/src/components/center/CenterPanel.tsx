@@ -630,7 +630,18 @@ export function CenterPanel() {
 
   // (renderPinIcon removed — selection state is now indicated by the
   // .library-item.is-pinned border + opacity, not a right-side icon.)
-  const [arcadeGames, setArcadeGames] = useState<{name:string;path:string;size:number;icon?:string;title?:string}[]>([]);
+  // Lazy-init from localStorage so the launchpad's 6th (game) card paints
+  // in the first frame alongside the static agent cards. Without the cache,
+  // it pops in 300-2000 ms later — once IPC + HTTP catalog fetch finish —
+  // which reads as the grid visibly jumping. Background refresh below
+  // overwrites with fresh catalog data on the next render, imperceptibly.
+  const [arcadeGames, setArcadeGames] = useState<{name:string;path:string;size:number;icon?:string;title?:string}[]>(() => {
+    try {
+      const cached = localStorage.getItem('coffee.arcadeGames.cache');
+      if (cached) return JSON.parse(cached);
+    } catch {}
+    return [];
+  });
   const [gameCatalog, setGameCatalog] = useState<RemoteGameEntry[]>([]);
   const [disableDrawer, setDisableDrawer] = useState(false);
 
@@ -957,13 +968,19 @@ export function CenterPanel() {
         .then(([bundlesResult, catalogResult]) => {
           if (cancelled) return;
           const localBundles: any[] = bundlesResult.status === 'fulfilled' ? bundlesResult.value : [];
-          const catalog: RemoteGameEntry[] = catalogResult.status === 'fulfilled' ? catalogResult.value : [];
+          // If the remote catalog fetch failed (offline / CDN hiccup), keep
+          // whatever we already had from the localStorage cache rather than
+          // clobbering it with []. Otherwise users with bad networks would
+          // lose their pinned game cards every time they relaunched.
+          if (catalogResult.status !== 'fulfilled') return;
+          const catalog: RemoteGameEntry[] = catalogResult.value;
           setGameCatalog(catalog);
           const games = catalog.map(entry => {
             const cached = localBundles.find((b: any) => b.name.toLowerCase() === entry.file.toLowerCase());
             return { name: entry.file, path: cached ? cached.path : entry.download, size: cached ? cached.size : 0, icon: entry.icon, title: entry.title };
           });
           setArcadeGames(games);
+          try { localStorage.setItem('coffee.arcadeGames.cache', JSON.stringify(games)); } catch {}
         })
         .finally(() => { if (!cancelled) setGamesLoading(false); });
     }, 200);
