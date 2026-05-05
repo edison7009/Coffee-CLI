@@ -103,6 +103,15 @@ export const commands = {
   tierTerminalResize: (sessionId: string, cols: number, rows: number) =>
     invoke<void>('tier_terminal_resize', { sessionId, cols, rows }),
 
+  /** Notify the Rust backend that the window's visibility changed.
+   *  When hidden=true, every per-session worker thread (ticker, emitter)
+   *  widens its sleep / coalesce window so a backgrounded Coffee CLI
+   *  drops to near-zero CPU instead of running its full foreground
+   *  cadence. Apple Silicon laptops in particular need this to keep
+   *  the chassis cool when users leave the app open all day. */
+  setBackgroundMode: (hidden: boolean) =>
+    invoke<void>('set_background_mode', { hidden }),
+
   // Session Resume
   getNativeHistory: () => invoke<SavedSession[]>('get_native_history'),
   /** Per-session activity for the contribution heatmap.

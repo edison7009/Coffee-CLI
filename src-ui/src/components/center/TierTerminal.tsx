@@ -301,14 +301,18 @@ function TierTerminalImpl({
       letterSpacing: 0,
       fontWeight: '400',
       fontWeightBold: '400', // Prevent bold glyphs from using wider metrics
-      allowTransparency: true, // Required for rgba background (custom wallpaper behind terminal)
+      // allowTransparency forces the WebGL compositor through an extra blend
+      // pass on every frame. Only enable when there is actually a wallpaper
+      // behind the terminal — opaque background is the common case and pays
+      // measurably less GPU time on Apple Silicon / integrated GPUs.
+      allowTransparency: hasBg,
       customGlyphs: true, // Pixel-perfect box-drawing on all platforms (canvas-drawn, font-independent)
       rescaleOverlappingGlyphs: true, // Force ambiguous-width chars (block chars ▀▄█) to single cell width
       cursorStyle: 'bar' as const,
-      // Claude Code manages its own cursor via ANSI sequences; hide xterm's native
-      // cursor so it doesn't appear at Claude's internal cursor position.
-      // Other tools (codex) use xterm's cursor at the normal prompt.
-      cursorBlink: tool !== 'claude',
+      // Cursor blink fires a GPU repaint every ~530ms for the entire app
+      // lifetime. On laptops (especially Apple Silicon Air without a fan)
+      // that's a constant power draw users feel as warmth. Off by default.
+      cursorBlink: false,
       scrollback: 5000,
       theme: buildXtermTheme(theme, hasBg, tool === 'claude', termColorScheme),
     });

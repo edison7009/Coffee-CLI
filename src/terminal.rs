@@ -11,6 +11,14 @@ use std::sync::{Arc, Mutex};
 use std::time::Instant;
 use tauri::{AppHandle, Emitter};
 
+/// Set by the frontend on `document.visibilitychange`. When true, every
+/// per-session worker thread (ticker, emitter) widens its sleep / coalesce
+/// window so a Coffee CLI window left in the background drops to near-zero
+/// CPU instead of paying full 8ms / 500ms cadence forever. Apple Silicon
+/// laptops in particular treat this as the difference between fan-on and
+/// idle thermal envelope.
+pub static BACKGROUND_MODE: AtomicBool = AtomicBool::new(false);
+
 /// Extract the path from an OSC 7 cwd notification if present in the chunk.
 /// OSC 7 format: ESC ] 7 ; file://<host>/<path> (BEL or ESC \)
 /// Returns the percent-decoded `<path>` portion (with leading `/`), or None.
@@ -682,7 +690,10 @@ pub fn spawn(
 
     std::thread::spawn(move || {
         loop {
-            std::thread::sleep(std::time::Duration::from_millis(500));
+            // 500ms when foreground, 5s when window is hidden — agent status
+            // updates can lag a few seconds when the user isn't looking.
+            let interval_ms = if BACKGROUND_MODE.load(Ordering::Relaxed) { 5000 } else { 500 };
+            std::thread::sleep(std::time::Duration::from_millis(interval_ms));
             // Cheap atomic check — no mutex contention with the emitter.
             if !alive_for_ticker.load(Ordering::Relaxed) { break; }
             let mut act = match activity_for_ticker.lock() {
@@ -841,8 +852,18 @@ pub fn spawn(
 
         // 8 ms is below human-perceptible latency (~16 ms frame) but large
         // enough to collapse a typical AI-CLI token-stream burst (hundreds of
-        // small writes) into a single emit.
-        const FLUSH_INTERVAL: StdDuration = StdDuration::from_millis(8);
+        // small writes) into a single emit. When the window is hidden, widen
+        // to 200 ms so a backgrounded Coffee CLI window stops generating
+        // 125 IPC events / sec / session for output the user can't see.
+        const FLUSH_INTERVAL_FG: StdDuration = StdDuration::from_millis(8);
+        const FLUSH_INTERVAL_BG: StdDuration = StdDuration::from_millis(200);
+        let flush_interval = || {
+            if BACKGROUND_MODE.load(Ordering::Relaxed) {
+                FLUSH_INTERVAL_BG
+            } else {
+                FLUSH_INTERVAL_FG
+            }
+        };
         // Hard ceiling on the accumulation buffer so that a wedged frontend
         // cannot drive unbounded memory growth in this thread.
         const MAX_PENDING: usize = 1024 * 1024; // 1 MB
@@ -863,7 +884,8 @@ pub fn spawn(
         let mut last_flush = Instant::now();
 
         loop {
-            let wait = FLUSH_INTERVAL
+            let interval = flush_interval();
+            let wait = interval
                 .checked_sub(last_flush.elapsed())
                 .unwrap_or(StdDuration::ZERO);
 
@@ -877,7 +899,7 @@ pub fn spawn(
             let should_flush = !pending.is_empty()
                 && (disconnected
                     || pending.len() >= MAX_PENDING
-                    || last_flush.elapsed() >= FLUSH_INTERVAL);
+                    || last_flush.elapsed() >= interval);
 
             if should_flush {
                 // PTY reads don't respect UTF-8 char boundaries: a 3-byte

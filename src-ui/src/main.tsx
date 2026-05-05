@@ -4,7 +4,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { AppProvider } from './store/app-state';
 import { App } from './App';
-import { invoke } from './tauri';
+import { invoke, commands } from './tauri';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
@@ -39,6 +39,29 @@ requestAnimationFrame(() => {
   requestAnimationFrame(() => {
     invoke('show_main_window').catch(() => {});
   });
+});
+
+// ── Background-mode throttle ────────────────────────────────────────────
+// When the OS hides the Coffee CLI window (other Space, app switched
+// away, minimized) tell the Rust backend to widen every per-session
+// worker's sleep / coalesce window. Without this, a backgrounded app
+// keeps paying the full 8ms emitter cadence + 500ms ticker cadence per
+// session forever — measurable as a warm chassis on Apple Silicon
+// laptops left running all day. The cost of being wrong here is a few
+// hundred ms of stale agent-status updates when the user returns.
+const syncBackgroundMode = () => {
+  commands.setBackgroundMode(document.hidden).catch(() => {});
+};
+document.addEventListener('visibilitychange', syncBackgroundMode);
+// Also catch focus/blur — visibilitychange does not fire when the
+// window is merely covered by another app on the same Space (macOS) or
+// pushed behind on Windows. Combined with visibilitychange this covers
+// every "user isn't looking at us" path.
+window.addEventListener('blur', () => {
+  commands.setBackgroundMode(true).catch(() => {});
+});
+window.addEventListener('focus', () => {
+  commands.setBackgroundMode(false).catch(() => {});
 });
 
 // Suppress the WebView's built-in context menu (Back / Reload / Save As / Print / Inspect…).

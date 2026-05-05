@@ -1120,6 +1120,17 @@ fn tier_terminal_raw_write(
     Ok(())
 }
 
+/// Toggle the global background-throttle flag. Called by the frontend
+/// from a `document.visibilitychange` listener: when the OS hides the
+/// Coffee CLI window (other Space, app switched away, minimized) we
+/// widen every per-session worker's polling cadence so the app drops
+/// to near-zero CPU instead of running its full foreground loop.
+#[tauri::command]
+fn set_background_mode(hidden: bool) {
+    crate::terminal::BACKGROUND_MODE
+        .store(hidden, std::sync::atomic::Ordering::Relaxed);
+}
+
 #[tauri::command]
 fn tier_terminal_kill(session_id: String, state: State<'_, AppState>) -> Result<(), String> {
     let map = state.terminal_session.lock().unwrap();
@@ -2959,6 +2970,7 @@ pub fn start_ui() -> anyhow::Result<()> {
             tier_terminal_raw_write,
             tier_terminal_kill,
             tier_terminal_resize,
+            set_background_mode,
             tier_terminal_resume,
             get_native_history,
             get_message_heatmap,
