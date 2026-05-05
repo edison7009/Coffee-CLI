@@ -1044,14 +1044,10 @@ export function CenterPanel() {
   // illusion exactly where it matters most — the largest surface.
   const hasBg = (bgType !== 'none' && bgPath !== '') || state.currentShape === 'glass';
 
-  // Convert wallpaper path to a displayable URL. Two modes:
-  //   1. Bundled defaults (`/wallpapers/...`) — load as relative URLs.
-  //      The browser resolves against the app origin, which is what
-  //      Vite serves from public/ in dev and Tauri ships from the dist
-  //      bundle in prod.
-  //   2. User-picked local files — go through Tauri's convertFileSrc
-  //      (asset protocol) for zero-copy streaming, with a file://
-  //      fallback for non-Tauri (e.g. browser dev) contexts.
+  // Convert wallpaper path to a displayable URL. User-picked local
+  // files go through Tauri's convertFileSrc (asset protocol) for
+  // zero-copy streaming, with a file:// fallback for non-Tauri
+  // (e.g. browser dev) contexts.
   const [bgUrl, setBgUrl] = useState('');
   useEffect(() => {
     // Two reasons to keep bgUrl empty:
@@ -1064,10 +1060,6 @@ export function CenterPanel() {
     //      broken-image icon over a black backdrop. Users perceived this
     //      as "切到 Glass 后左上角出现裂开图标 + 整个区域变黑".
     if (!hasBg || !bgPath) { setBgUrl(''); return; }
-    if (bgPath.startsWith('/wallpapers/')) {
-      setBgUrl(bgPath);
-      return;
-    }
     import('@tauri-apps/api/core').then(({ convertFileSrc }) => {
       setBgUrl(convertFileSrc(bgPath));
     }).catch(() => {

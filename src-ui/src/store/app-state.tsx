@@ -393,31 +393,30 @@ function getInitialState(): AppState {
     if (savedLang) lang = savedLang;
   } catch {}
 
-  // First-launch default: ship a curated AI-generated wallpaper bundled
-  // under /wallpapers/default.png so a brand-new user sees something with
-  // visual identity instead of a blank black panel — and so the "you can
-  // change the wallpaper" feature is discoverable by example. Only kicks
-  // in for users with no prior cc-bg-path value (we use a sentinel
-  // 'cc-bg-init' flag to distinguish "never touched" from "explicitly set
-  // to none/empty"). Once a user customizes or clears the wallpaper, we
-  // never re-populate the default on top of their choice.
+  // No factory-default wallpaper — the bundled /wallpapers/default.png
+  // didn't load reliably across platforms (Linux WebKit asset URL
+  // resolution diverges from Windows/macOS WebView2/WKWebView), so a
+  // chunk of new users saw a black panel and assumed wallpaper was
+  // broken. Default is now an empty wallpaper; users who want one pick
+  // their own via the theme menu.
   let bgPath = '';
   let bgType: 'image' | 'video' | 'none' = 'none';
   let termColorScheme = '';
   let wallpaperDim = 30;
   try {
-    const initialized = localStorage.getItem('cc-bg-init') === '1';
     const storedPath = localStorage.getItem('cc-bg-path');
     const storedType = localStorage.getItem('cc-bg-type') as 'image' | 'video' | 'none' | null;
 
-    if (!initialized && storedPath === null && storedType === null) {
-      // First launch — seed the bundled default and remember we've done so.
-      bgPath = '/wallpapers/default.png';
-      bgType = 'image';
+    // Migration: clear legacy seeded /wallpapers/default.png from
+    // existing installs so they don't keep trying to load a file we
+    // no longer ship. Anything else (user-picked) is preserved.
+    if (storedPath && storedPath.startsWith('/wallpapers/')) {
+      bgPath = '';
+      bgType = 'none';
       try {
-        localStorage.setItem('cc-bg-path', bgPath);
-        localStorage.setItem('cc-bg-type', bgType);
-        localStorage.setItem('cc-bg-init', '1');
+        localStorage.removeItem('cc-bg-path');
+        localStorage.removeItem('cc-bg-type');
+        localStorage.removeItem('cc-bg-init');
       } catch {}
     } else {
       bgPath = storedPath || '';
