@@ -5,7 +5,7 @@
 <h1 align="center">Coffee CLI</h1>
 
 <p align="center">
-  <strong>A beautiful home for your CLI.</strong>
+  <strong>Do you like this kind of Claude Code?</strong>
 </p>
 
 <p align="center">
@@ -29,7 +29,7 @@
 </p>
 
 <p align="center">
-  <img src="screenshot/wallpaper.gif" alt="Coffee CLI with custom wallpaper" width="860" />
+  <img src="screenshot/hero.png" alt="Coffee CLI — Launchpad with underwater wallpaper" width="860" />
 </p>
 
 ---
