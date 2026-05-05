@@ -586,6 +586,19 @@ const INSTALL_DATA = {
   }
 };
 
+// Best-effort OS sniff so the install tab pre-selects the visitor's
+// platform. Order matters: iPad/iPhone share "Mac" in the UA on iOS 13+,
+// and Android UAs contain "Linux", so filter those before the generic
+// Mac/Linux checks. Falls back to windows when unknown (highest share).
+function detectPlatform() {
+  const ua = navigator.userAgent || "";
+  if (/iPhone|iPad|iPod|Android/i.test(ua)) return "windows";
+  if (/Mac/i.test(ua)) return "macos";
+  if (/Linux/i.test(ua)) return "linux";
+  if (/Win/i.test(ua)) return "windows";
+  return "windows";
+}
+
 function initInstallationTabs() {
   const tabs = document.querySelectorAll(".tab-btn");
   const hintDisplay = document.getElementById("install-hint");
@@ -606,6 +619,20 @@ function initInstallationTabs() {
       }, 150);
     }
   };
+
+  // Pre-select the visitor's OS tab. Update content synchronously (no
+  // 150ms fade) so first paint already shows the right command — feels
+  // like the page "knew" their platform.
+  const detected = detectPlatform();
+  tabs.forEach(t => {
+    t.classList.toggle("active", t.getAttribute("data-platform") === detected);
+  });
+  const langData = INSTALL_DATA[currentLang] || INSTALL_DATA.en;
+  const initialConfig = langData[detected];
+  if (initialConfig) {
+    hintDisplay.textContent = initialConfig.hint;
+    cmdDisplay.textContent = initialConfig.command;
+  }
 
   tabs.forEach(tab => {
     tab.addEventListener("click", (e) => {
