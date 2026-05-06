@@ -94,6 +94,19 @@ function shouldShowXtermCursor(tool: ToolType): boolean {
   return tool === 'terminal' || tool === 'remote';
 }
 
+// Derive a slightly-darker, alpha-blended selection background from the
+// scheme's fg (or the warm coffee fallback). Multiplying RGB by 0.8 first
+// gives the "比主题色深点" feel before xterm composites it over the bg.
+function deriveSelectionBg(hex: string, isDark: boolean): string {
+  const m = /^#([0-9a-f]{6})$/i.exec(hex);
+  if (!m) return isDark ? 'rgba(196,149,106,0.3)' : 'rgba(196,149,106,0.25)';
+  const n = parseInt(m[1], 16);
+  const r = Math.round(((n >> 16) & 0xff) * 0.8);
+  const g = Math.round(((n >> 8) & 0xff) * 0.8);
+  const b = Math.round((n & 0xff) * 0.8);
+  return `rgba(${r},${g},${b},${isDark ? 0.4 : 0.3})`;
+}
+
 function buildXtermTheme(themeName: string, hasBg: boolean | undefined, hideCursor: boolean, schemeId?: string) {
   const isDark = themeName !== 'light';
   const scheme = schemeId ? TERM_COLOR_SCHEMES.find(s => s.id === schemeId) : undefined;
@@ -104,14 +117,19 @@ function buildXtermTheme(themeName: string, hasBg: boolean | undefined, hideCurs
   // the scheme — if any — re-tint only the foreground and cursor.
   const defaultFg = isDark ? '#e8e4de' : '#2d2c2a';
   const fg = scheme?.fg ?? defaultFg;
+  // Selection follows the active scheme so the highlight feels cohesive
+  // with the user's chosen accent; falls back to coffee when no scheme set.
+  const selectionBackground = scheme
+    ? deriveSelectionBg(scheme.fg, isDark)
+    : (isDark ? 'rgba(196,149,106,0.3)' : 'rgba(196,149,106,0.25)');
 
   const base = isDark ? {
-    selectionBackground: 'rgba(196,149,106,0.3)',
+    selectionBackground,
     black: '#0c0c0c', red: '#e07070', green: '#7ec77e', yellow: '#d4a846',
     blue: '#78a8d4', magenta: '#b07cc6', cyan: '#5fc4c0', white: '#e8e4de',
     brightBlack: '#6b6762',
   } : {
-    selectionBackground: 'rgba(196,149,106,0.25)',
+    selectionBackground,
     black: '#2d2c2a', red: '#cc3333', green: '#2d7a2d', yellow: '#8a6000',
     blue: '#2952a3', magenta: '#7a3d8a', cyan: '#1a6b6b', white: '#f4f3ee',
     brightBlack: '#5a5854',
