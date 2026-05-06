@@ -1,6 +1,6 @@
 [package]
 name = "coffee-cli"
-version = "2.3.0"
+version = "2.3.1"
 edition = "2021"
 description = "Lightweight Multi-layer AI CLI Terminal"
 license = "AGPL-3.0-or-later"
@@ -83,13 +83,19 @@ tauri-plugin-global-shortcut = "2"
 #   - System_Console: AttachConsole for the `mcp-status` CLI subcommand
 #     so its stdout reaches the parent terminal in release builds
 #     (which link with windows_subsystem = "windows").
-#   - System_Threading: process-liveness probe for the manifest reader.
+#   - System_Threading: process-liveness probe for the manifest reader,
+#     plus OpenProcess for Job Object assignment.
+#   - System_JobObjects: bind every PTY child (claude/codex/etc.) to a
+#     kill-on-close job so orphan `claude.exe` / `node.exe` can't outlive
+#     a closed Coffee CLI and lock `~/.claude/` session files.
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.58", features = [
     "Win32_Foundation",
     "Win32_Graphics_Dwm",
+    "Win32_Security",
     "Win32_System_Console",
     "Win32_System_Threading",
+    "Win32_System_JobObjects",
 ] }
 
 # `libc::kill(pid, 0)` for process-liveness probe in cli::mcp_status.

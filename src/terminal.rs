@@ -19,6 +19,97 @@ use tauri::{AppHandle, Emitter};
 /// idle thermal envelope.
 pub static BACKGROUND_MODE: AtomicBool = AtomicBool::new(false);
 
+// ── Windows: kill-on-close Job Object for PTY children ─────────────────────
+// Every PTY child (cmd.exe → claude.exe → node.exe) gets assigned to a
+// process-lifetime Job Object with JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE.
+// When Coffee CLI's process dies — clean exit, crash, or task-manager kill —
+// the kernel closes the job handle and terminates every descendant in the
+// job. Without this, orphan `claude.exe` survived past Coffee CLI shutdown
+// and held the session lock under `~/.claude/`, so the next launch's Claude
+// Code tab failed to start (issue #28).
+#[cfg(target_os = "windows")]
+mod windows_job {
+    use std::sync::OnceLock;
+    use windows::Win32::Foundation::{CloseHandle, HANDLE};
+    use windows::Win32::System::JobObjects::{
+        AssignProcessToJobObject, CreateJobObjectW, SetInformationJobObject,
+        JobObjectExtendedLimitInformation, JOBOBJECT_EXTENDED_LIMIT_INFORMATION,
+        JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
+    };
+    use windows::Win32::System::Threading::{
+        OpenProcess, PROCESS_SET_QUOTA, PROCESS_TERMINATE,
+    };
+
+    // Win32 HANDLE is a raw pointer wrapper; not Send/Sync by default. The
+    // Job Object handle is a kernel handle, safe to use from any thread —
+    // the OS owns serialization. Wrap it so OnceLock can hold it.
+    struct JobHandle(HANDLE);
+    unsafe impl Send for JobHandle {}
+    unsafe impl Sync for JobHandle {}
+
+    static JOB: OnceLock<Option<JobHandle>> = OnceLock::new();
+
+    fn get_or_create_job() -> Option<HANDLE> {
+        JOB.get_or_init(|| unsafe {
+            let job = match CreateJobObjectW(None, None) {
+                Ok(h) => h,
+                Err(e) => {
+                    eprintln!("[Tier Terminal] CreateJobObjectW failed: {:?}", e);
+                    return None;
+                }
+            };
+            let mut info = JOBOBJECT_EXTENDED_LIMIT_INFORMATION::default();
+            info.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+            let info_ptr = &info as *const _ as *const _;
+            let info_size =
+                std::mem::size_of::<JOBOBJECT_EXTENDED_LIMIT_INFORMATION>() as u32;
+            if let Err(e) = SetInformationJobObject(
+                job,
+                JobObjectExtendedLimitInformation,
+                info_ptr,
+                info_size,
+            ) {
+                eprintln!("[Tier Terminal] SetInformationJobObject failed: {:?}", e);
+                let _ = CloseHandle(job);
+                return None;
+            }
+            Some(JobHandle(job))
+        })
+        .as_ref()
+        .map(|h| h.0)
+    }
+
+    pub fn assign_pid(pid: u32) {
+        let Some(job) = get_or_create_job() else { return };
+        unsafe {
+            let proc = match OpenProcess(
+                PROCESS_SET_QUOTA | PROCESS_TERMINATE,
+                false,
+                pid,
+            ) {
+                Ok(h) => h,
+                Err(e) => {
+                    eprintln!(
+                        "[Tier Terminal] OpenProcess(pid={}) failed: {:?}",
+                        pid, e
+                    );
+                    return;
+                }
+            };
+            if let Err(e) = AssignProcessToJobObject(job, proc) {
+                // Nested-job conflicts can fail here on older Windows; not
+                // fatal — graceful kill_tx path in the exit handler still
+                // covers normal shutdowns.
+                eprintln!(
+                    "[Tier Terminal] AssignProcessToJobObject(pid={}) failed: {:?}",
+                    pid, e
+                );
+            }
+            let _ = CloseHandle(proc);
+        }
+    }
+}
+
 /// Extract the path from an OSC 7 cwd notification if present in the chunk.
 /// OSC 7 format: ESC ] 7 ; file://<host>/<path> (BEL or ESC \)
 /// Returns the percent-decoded `<path>` portion (with leading `/`), or None.
@@ -590,6 +681,15 @@ pub fn spawn(
     // OS), reader.read() would block forever and the UI had no way to know.
     let child = pair.slave.spawn_command(cmd)?;
     eprintln!("[Tier Terminal] PTY process spawned OK (portable-pty)");
+
+    // Bind the new child to the kill-on-close Job Object so it can't outlive
+    // Coffee CLI's process. Belt-and-suspenders with the ExitRequested
+    // handler in server.rs: the handler does graceful kill_tx on clean
+    // shutdown; the Job Object catches crashes / force-quits / OOMs.
+    #[cfg(target_os = "windows")]
+    if let Some(pid) = child.process_id() {
+        windows_job::assign_pid(pid);
+    }
 
     // Get reader/writer from the PTY master
     let mut reader = pair.master.try_clone_reader()?;

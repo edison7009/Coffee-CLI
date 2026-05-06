@@ -3243,8 +3243,40 @@ pub fn start_ui() -> anyhow::Result<()> {
 
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .map_err(|e| anyhow::anyhow!("Error while running tauri application: {}", e))?;
+        .build(tauri::generate_context!())
+        .map_err(|e| anyhow::anyhow!("Error while building tauri application: {}", e))?
+        .run(|app_handle, event| {
+            // ── Graceful PTY-child cleanup on app exit ─────────────────
+            // Issue #28: closing Coffee CLI without first killing tabs
+            // left orphan `claude.exe` / `node.exe` alive on Windows
+            // (they don't share a job with the parent by default), which
+            // held `~/.claude/` session locks and broke the NEXT launch's
+            // Claude Code tab.
+            //
+            // Two-layer fix:
+            //   1. Here (graceful path): on ExitRequested, drain every
+            //      session and fire kill_tx → drops PTY master → SIGHUP
+            //      flows down the pipe → child exits cleanly.
+            //   2. Job Object (crash-proof path, see terminal.rs): every
+            //      child is bound to a kill-on-close job so even a hard
+            //      crash / force-quit takes them with us.
+            if matches!(event, tauri::RunEvent::ExitRequested { .. }) {
+                let state = app_handle.state::<AppState>();
+                let mut n = 0usize;
+                if let Ok(mut map) = state.terminal_session.lock() {
+                    n = map.len();
+                    for (_, session) in map.drain() {
+                        let _ = session.kill_tx.send(());
+                    }
+                }
+                if n > 0 {
+                    eprintln!(
+                        "[Tier Terminal] App exiting — sent kill_tx to {} session(s)",
+                        n
+                    );
+                }
+            }
+        });
 
     // App has fully exited. Per-pane MCP servers and their temp
     // artifacts get GC'd by the OS along with the process, but be
