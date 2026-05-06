@@ -503,12 +503,22 @@ pub fn spawn(
         cmd.env("COFFEE_CODE_LOCALE", loc);
     }
 
-    // ── Hook status injection (Claude Code) ────────────────────────────────
-    // The Coffee CLI hook script (installed into ~/.claude/settings.local.json
-    // at startup) reads these env vars to identify which tab a hook fired from
-    // and where to forward the event. Claude is the only CLI we integrate.
+    // ── Hook status injection (claude / codex / opencode) ────────────────
+    // Each integrated CLI has its own forwarder, but they all share the same
+    // env-var contract:
+    //   COFFEE_CLI_TAB_ID    — which tab status events should route to
+    //   COFFEE_CLI_HOOK_PORT — loopback port of the Rust hook server
+    //   COFFEE_CLI_TOOL      — "claude" | "codex" | "opencode"
+    // Forwarders:
+    //   claude    — coffee-cli-hook.py (Claude Code stdin hook protocol)
+    //   codex     — coffee-cli-codex-notify.py (Codex `notify` config, JSON
+    //               passed as final argv arg)
+    //   opencode  — coffee-cli-opencode-plugin.js (OpenCode Bun plugin auto-
+    //               loaded from ~/.config/opencode/plugins)
+    // Forwarders no-op if any of these env vars are missing — they're safe to
+    // leave installed even when Coffee CLI isn't the launcher.
     if let Some(tname) = tool_name.as_deref() {
-        if tname == "claude" {
+        if matches!(tname, "claude" | "codex" | "opencode") {
             use tauri::Manager;
             let port = app
                 .state::<crate::server::AppState>()

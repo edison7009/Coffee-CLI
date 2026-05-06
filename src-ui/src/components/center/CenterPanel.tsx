@@ -1119,15 +1119,20 @@ export function CenterPanel() {
               {icon}
               <span className="tab-title" style={{ flex: '0 1 auto', minWidth: 0, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{title}</span>
               <div className="tab-actions">
-                {/* Claude is the only CLI we drive a real status machine for —
-                    hook events from coffee-cli-hook.py flip the dot color.
-                    VibeID gets the same indicator on its 2-phase progress
-                    because we know with certainty work is in flight. */}
-                {(session.tool === 'claude' || session.tool === 'vibeid' || session.tool === 'insights_prerun') && (
+                {/* Indicator gate. Three groups:
+                    1. AI CLIs with hook integration — claude/codex/opencode each
+                       have a forwarder (Python script for claude+codex, Bun
+                       plugin for opencode) wired to the same agent-status bus.
+                       Color follows session.agentStatus.
+                    2. VibeID / insights_prerun — work is always in flight while
+                       these tabs exist; pin to working (orange).
+                    Anything else (terminal, history, multi-agent, etc.) gets
+                    no indicator. */}
+                {(session.tool === 'claude' || session.tool === 'codex' || session.tool === 'opencode' || session.tool === 'vibeid' || session.tool === 'insights_prerun') && (
                   <div className={`tab-status-grid status-${
-                    session.tool === 'claude'
-                      ? (session.agentStatus === 'wait_input' ? 'waiting' : session.agentStatus ?? 'idle')
-                      : 'working'
+                    session.tool === 'vibeid' || session.tool === 'insights_prerun'
+                      ? 'working'
+                      : (session.agentStatus === 'wait_input' ? 'waiting' : session.agentStatus ?? 'idle')
                   }`}>
                     {Array.from({ length: 9 }, (_, i) => <div key={i} className="tab-status-dot" />)}
                   </div>

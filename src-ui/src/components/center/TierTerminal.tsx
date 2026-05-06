@@ -402,11 +402,10 @@ function TierTerminalImpl({
     term.onData((data) => {
       commands.tierTerminalInput(sessionId, data).catch(() => {});
       // Optimistic status update — Dynamic Island style. A newline means
-      // the user just submitted; turn the dot to "executing" immediately
-      // so the UI reacts before any hook event arrives. Scoped to Claude
-      // only — the other CLIs have a steady "executing" pulse and don't
-      // consume agentStatus, so emitting for them is wasted dispatch.
-      if ((data.includes('\r') || data.includes('\n')) && tool === 'claude') {
+      // the user just submitted; flip the dot to "working" immediately so
+      // the UI reacts before any hook/notify event arrives. Scoped to the
+      // CLIs we drive a real status machine for (claude/codex/opencode).
+      if ((data.includes('\r') || data.includes('\n')) && (tool === 'claude' || tool === 'codex' || tool === 'opencode')) {
         notifyUserInputSubmitted(sessionId, tool);
       }
     });
