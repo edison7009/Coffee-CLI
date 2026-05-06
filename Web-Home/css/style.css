@@ -526,6 +526,15 @@ code::-webkit-scrollbar-thumb {
    Mainland China download mirrors (zh / zh-TW only — toggled by main.js)
    ===================== */
 
+/* Author-level rule that the JS-toggled hidden attribute can rely on.
+   Without it, our own `.cn-mirrors { display: flex }` (specificity 0,1,0)
+   overrides the user-agent stylesheet's `[hidden] { display: none }`
+   (also 0,1,0 but earlier in the cascade), and the row leaks into
+   every locale. The 0,2,0 selector here wins cleanly. */
+.cn-mirrors[hidden] {
+  display: none;
+}
+
 .cn-mirrors {
   display: flex;
   justify-content: center;
