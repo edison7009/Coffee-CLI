@@ -97,12 +97,29 @@
 
 /* xterm.js ships a DOM-drawn scrollbar (ported from VSCode —
    `.xterm-scrollable-element > .scrollbar`), which renders as a
-   real <div>, NOT a `::-webkit-scrollbar` pseudo-element. That's
-   why the global `display: none` for native scrollbars in
-   styles/global.css couldn't reach it — different rendering path
-   entirely. Kill it directly here. */
+   real <div>, NOT a `::-webkit-scrollbar` pseudo-element. We surface
+   it (instead of hiding via display:none like the rest of the app)
+   because long agent transcripts get unwieldy with wheel-only scroll —
+   users want a visible draggable indicator for jumping to the top.
+   Slider color binds to --accent so it follows the active theme.
+   Only `opacity` transitions (no background/transform on the slider's
+   layer) so the WebGL canvas next to it doesn't get retriggered into
+   re-paint by sibling layer churn. */
 .tier-xterm .xterm-scrollable-element > .scrollbar {
-    display: none !important;
+    width: 10px !important;
+    background: transparent !important;
+}
+.tier-xterm .xterm-scrollable-element > .scrollbar > .slider {
+    width: 6px !important;
+    margin-left: 2px;
+    background: var(--accent) !important;
+    opacity: 0.35;
+    border-radius: 3px;
+    transition: opacity var(--transition);
+}
+.tier-xterm .xterm-scrollable-element > .scrollbar > .slider:hover,
+.tier-xterm .xterm-scrollable-element > .scrollbar.active > .slider {
+    opacity: 0.7;
 }
 
 /* Completely hide native xterm cursor */
@@ -115,10 +132,14 @@
 /* In TUI mode the tool manages its own scrolling internally
    (vim, htop, claude alt-screen) — disable browser-side scroll
    on the xterm viewport so wheel events are forwarded raw to
-   the PTY instead of moving the host scrollback. Scrollbar
-   hiding is handled globally in styles/global.css. */
+   the PTY instead of moving the host scrollback. The DOM scrollbar
+   is also meaningless in this mode (no host-side scrollback), so
+   hide it explicitly. */
 .tier-xterm.tui-inverted .xterm-viewport {
     overflow: hidden !important;
+}
+.tier-xterm.tui-inverted .xterm-scrollable-element > .scrollbar {
+    display: none !important;
 }
 
 /* ─── Startup Loading Splash ───────────────────────────────── */
