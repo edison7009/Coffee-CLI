@@ -100,16 +100,6 @@ function normalizePasteNewlines(text: string): string {
   return text.replace(/\r\n?/g, '\n');
 }
 
-// xterm's bar cursor is a fallback for raw shells (`terminal`, `remote`) where
-// nothing else paints one. Every AI agent (claude / codex / gemini / opencode /
-// qwen / hermes / openclaw) renders its own TUI cursor inside the input box —
-// keeping xterm's bar on top would either double up visibly, or strand a lone
-// cursor at row 0 col 0 during the startup window where the splash has faded
-// but the tool hasn't entered alt-screen yet.
-function shouldShowXtermCursor(tool: ToolType): boolean {
-  return tool === 'terminal' || tool === 'remote';
-}
-
 // Derive a slightly-darker, alpha-blended selection background from the
 // scheme's fg (or the warm coffee fallback). Multiplying RGB by 0.8 first
 // gives the "比主题色深点" feel before xterm composites it over the bg.
@@ -123,7 +113,13 @@ function deriveSelectionBg(hex: string, isDark: boolean): string {
   return `rgba(${r},${g},${b},${isDark ? 0.4 : 0.3})`;
 }
 
-function buildXtermTheme(themeName: string, hasBg: boolean | undefined, hideCursor: boolean, schemeId?: string) {
+// xterm's caret was a leftover from raw-shell mode (terminal / remote) — every
+// other surface the user touches (each AI agent's input box, the Compose
+// textarea) paints its own caret, so xterm's was either redundant or a
+// stranded artifact. Always paint the cursor in the background color so the
+// WebGL renderer effectively erases it; the DOM renderer is also covered by
+// `.xterm-cursor { display: none }` in TierTerminal.css.
+function buildXtermTheme(themeName: string, hasBg: boolean | undefined, schemeId?: string) {
   const isDark = themeName !== 'light';
   const scheme = schemeId ? TERM_COLOR_SCHEMES.find(s => s.id === schemeId) : undefined;
   const bgOpaque = THEME_TERMINAL_BG[themeName] || (isDark ? '#0c0c0c' : '#eeebe2');
@@ -155,7 +151,7 @@ function buildXtermTheme(themeName: string, hasBg: boolean | undefined, hideCurs
     ...base,
     background: bg,
     foreground: fg,
-    cursor: hideCursor ? bgOpaque : fg,
+    cursor: bgOpaque,
     cursorAccent: bgOpaque,
   };
 }
@@ -356,13 +352,14 @@ function TierTerminalImpl({
       allowTransparency: hasBg,
       customGlyphs: true, // Pixel-perfect box-drawing on all platforms (canvas-drawn, font-independent)
       rescaleOverlappingGlyphs: true, // Force ambiguous-width chars (block chars ▀▄█) to single cell width
-      cursorStyle: 'bar' as const,
       // Cursor blink fires a GPU repaint every ~530ms for the entire app
       // lifetime. On laptops (especially Apple Silicon Air without a fan)
-      // that's a constant power draw users feel as warmth. Off by default.
+      // that's a constant power draw users feel as warmth. Off by default —
+      // also redundant since the cursor itself is invisible (theme.cursor =
+      // bg color), but kept for renderer paths that ignore the color trick.
       cursorBlink: false,
       scrollback: 5000,
-      theme: buildXtermTheme(theme, hasBg, !shouldShowXtermCursor(tool), termColorScheme),
+      theme: buildXtermTheme(theme, hasBg, termColorScheme),
     });
 
     const fit = new FitAddon();
@@ -836,8 +833,8 @@ function TierTerminalImpl({
   useEffect(() => {
     const term = xtermRef.current;
     if (!term) return;
-    term.options.theme = buildXtermTheme(theme, hasBg, !shouldShowXtermCursor(tool), termColorScheme);
-  }, [theme, tool, termColorScheme, hasBg]);
+    term.options.theme = buildXtermTheme(theme, hasBg, termColorScheme);
+  }, [theme, termColorScheme, hasBg]);
 
   // ── IME focus-scroll guard ───────────────────────────────────────────────
   // Defense-in-depth for the `overflow: clip` fix in TierTerminal.css.
