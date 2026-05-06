@@ -398,15 +398,43 @@ function TierTerminalImpl({
 
     fit.fit();
 
-    // Forward keyboard input to Rust PTY backend
+    // Forward keyboard input to Rust PTY backend.
+    //
+    // Status indicator wiring:
+    //   - Claude   → UserPromptSubmit / Stop hooks are authoritative (coffee-cli-hook.py)
+    //   - OpenCode → session.status events are authoritative (coffee-cli-opencode-plugin.js)
+    //   - Codex    → notify only emits agent-turn-complete (idle); there is NO upstream
+    //                "working" signal, so we keep an Enter-based optimistic update for
+    //                Codex only. Local slash commands (/init, /diff, /clear, /quit, ...)
+    //                are filtered via a tiny per-line buffer so they don't strand the
+    //                dot in "working" until the 30s auto-idle fallback.
+    let codexLine = '';
     term.onData((data) => {
       commands.tierTerminalInput(sessionId, data).catch(() => {});
-      // Optimistic status update — Dynamic Island style. A newline means
-      // the user just submitted; flip the dot to "working" immediately so
-      // the UI reacts before any hook/notify event arrives. Scoped to the
-      // CLIs we drive a real status machine for (claude/codex/opencode).
-      if ((data.includes('\r') || data.includes('\n')) && (tool === 'claude' || tool === 'codex' || tool === 'opencode')) {
-        notifyUserInputSubmitted(sessionId, tool);
+      if (tool !== 'codex') return;
+      for (let i = 0; i < data.length; i++) {
+        const ch = data[i];
+        if (ch === '\r' || ch === '\n') {
+          const submitted = codexLine.trimStart();
+          codexLine = '';
+          // Skip blank lines and Codex local slash commands.
+          if (submitted.length > 0 && !submitted.startsWith('/')) {
+            notifyUserInputSubmitted(sessionId, tool);
+          }
+        } else if (ch === '\x7f' || ch === '\b') {
+          codexLine = codexLine.slice(0, -1);
+        } else if (ch === '\x1b') {
+          // Skip ANSI escape sequence (CSI / SS3 / etc.) — arrow keys, function keys.
+          // Cheap consume: skip until we see a letter or '~', or end of chunk.
+          i++;
+          while (i < data.length) {
+            const c = data[i];
+            if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || c === '~') break;
+            i++;
+          }
+        } else if (ch >= ' ') {
+          codexLine += ch;
+        }
       }
     });
 

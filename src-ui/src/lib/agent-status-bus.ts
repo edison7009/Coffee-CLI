@@ -61,10 +61,12 @@ function armAutoIdle(tabId: string, tool: string) {
   idleTimers.set(tabId, timer);
 }
 
-/** Optimistic-update hook: call when the user presses Enter in a tab's
- *  terminal. The CLI hasn't acknowledged yet, but the user's intent is
- *  unambiguous — flip the dot to orange immediately so the indicator
- *  doesn't lag the visible Claude "Thinking..." line. */
+/** Optimistic-update hook for CLIs that don't expose a "turn started"
+ *  signal. Currently used only by Codex tabs (notify protocol only emits
+ *  agent-turn-complete = idle). Claude and OpenCode have authoritative
+ *  upstream signals (UserPromptSubmit hook / session.status busy) and
+ *  must NOT call this — doing so caused 30 s false-positive working
+ *  states on local slash commands like /help, /mcp, /clear. */
 export function notifyUserInputSubmitted(tabId: string, tool: string) {
   if (!activeEmit) return;
   // Cancel any pending wait_input — user just interacted, so whatever

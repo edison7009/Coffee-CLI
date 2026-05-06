@@ -10,8 +10,13 @@
 #   {"type": "agent-turn-complete", ...}
 # which we map to `idle` (turn finished, dot turns green).
 #
-# "working" state is NOT emitted by Codex — that's covered by the frontend
-# optimistic update when the user presses Enter (see TierTerminal.tsx).
+# "working" state is NOT emitted by Codex — Codex is unique among our three
+# integrated CLIs in only signalling turn completion, never turn start. The
+# frontend (TierTerminal.tsx) compensates with an Enter-based optimistic
+# update scoped to codex tabs, with a `/`-prefix filter so local slash
+# commands don't strand the dot in working. Claude (UserPromptSubmit hook)
+# and OpenCode (session.status) have real upstream signals and don't use
+# the keypress shortcut.
 #
 # Env vars (injected by Coffee CLI when spawning Codex in a tab):
 #   COFFEE_CLI_TAB_ID    — tab/session UUID
