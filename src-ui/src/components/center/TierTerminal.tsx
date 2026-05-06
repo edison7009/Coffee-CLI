@@ -84,6 +84,16 @@ function normalizePasteNewlines(text: string): string {
   return text.replace(/\r\n?/g, '\n');
 }
 
+// xterm's bar cursor is a fallback for raw shells (`terminal`, `remote`) where
+// nothing else paints one. Every AI agent (claude / codex / gemini / opencode /
+// qwen / hermes / openclaw) renders its own TUI cursor inside the input box —
+// keeping xterm's bar on top would either double up visibly, or strand a lone
+// cursor at row 0 col 0 during the startup window where the splash has faded
+// but the tool hasn't entered alt-screen yet.
+function shouldShowXtermCursor(tool: ToolType): boolean {
+  return tool === 'terminal' || tool === 'remote';
+}
+
 function buildXtermTheme(themeName: string, hasBg: boolean | undefined, hideCursor: boolean, schemeId?: string) {
   const isDark = themeName !== 'light';
   const scheme = schemeId ? TERM_COLOR_SCHEMES.find(s => s.id === schemeId) : undefined;
@@ -318,7 +328,7 @@ function TierTerminalImpl({
       // that's a constant power draw users feel as warmth. Off by default.
       cursorBlink: false,
       scrollback: 5000,
-      theme: buildXtermTheme(theme, hasBg, tool === 'claude', termColorScheme),
+      theme: buildXtermTheme(theme, hasBg, !shouldShowXtermCursor(tool), termColorScheme),
     });
 
     const fit = new FitAddon();
@@ -773,7 +783,7 @@ function TierTerminalImpl({
   useEffect(() => {
     const term = xtermRef.current;
     if (!term) return;
-    term.options.theme = buildXtermTheme(theme, hasBg, tool === 'claude', termColorScheme);
+    term.options.theme = buildXtermTheme(theme, hasBg, !shouldShowXtermCursor(tool), termColorScheme);
   }, [theme, tool, termColorScheme, hasBg]);
 
   // ── IME focus-scroll guard ───────────────────────────────────────────────
