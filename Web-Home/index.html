@@ -144,6 +144,20 @@
     </div>
   </main>
 
+  <!-- Mainland China download mirrors. Hidden by default; main.js renderI18N()
+       unhides this row when currentLang is "zh" or "zh-TW", since these mirrors
+       only matter for users where GitHub Releases is slow or unreachable. The
+       brand names live in the i18n dict so zh-TW gets traditional characters
+       (網盤 / 雲盤) without needing a second DOM node. -->
+  <section class="cn-mirrors" id="cn-mirrors" hidden>
+    <span class="cn-mirrors-title" data-i18n="cn-mirrors-title">其他下载渠道：</span>
+    <a href="https://pan.baidu.com/s/1mNUkPk1IQD8A-Ga_os_BHQ?pwd=cm74" target="_blank" rel="noopener" data-i18n="cn-mirrors-baidu">百度网盘</a>
+    <span class="cn-mirrors-sep">·</span>
+    <a href="https://pan.quark.cn/s/fe37fca17aed" target="_blank" rel="noopener" data-i18n="cn-mirrors-quark">夸克网盘</a>
+    <span class="cn-mirrors-sep">·</span>
+    <a href="https://1842244417.share.123865.com/123pan/rqi0Td-7QmxH" target="_blank" rel="noopener" data-i18n="cn-mirrors-123">123云盘</a>
+  </section>
+
   <!-- Direct Download Section ------------------------------------------------
        For users who prefer click-and-install over running the install
        command above. Each button hits the CF Worker's /download/<platform>

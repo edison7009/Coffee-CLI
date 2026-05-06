@@ -63,7 +63,11 @@ const I18N_DICT = {
     "feedback": "问题反馈",
     "downloads-title": "或者直接下载桌面应用",
     "downloads-note": "<strong>macOS / Linux</strong> 下载后可能需要额外终端步骤（请自行查询开源软件安装方法）。",
-    "downloads-other": "其他版本（Intel Mac · ARM Linux · AppImage）→"
+    "downloads-other": "其他版本（Intel Mac · ARM Linux · AppImage）→",
+    "cn-mirrors-title": "其他下载渠道：",
+    "cn-mirrors-baidu": "百度网盘",
+    "cn-mirrors-quark": "夸克网盘",
+    "cn-mirrors-123": "123云盘"
   },
   "zh-TW": {
     "logo-text": "Coffee CLI",
@@ -73,7 +77,11 @@ const I18N_DICT = {
     "feedback": "問題回饋",
     "downloads-title": "或者直接下載桌面應用",
     "downloads-note": "<strong>macOS / Linux</strong> 下載後可能需要額外終端步驟（請自行查詢開源軟體安裝方法）。",
-    "downloads-other": "其他版本（Intel Mac · ARM Linux · AppImage）→"
+    "downloads-other": "其他版本（Intel Mac · ARM Linux · AppImage）→",
+    "cn-mirrors-title": "其他下載渠道：",
+    "cn-mirrors-baidu": "百度網盤",
+    "cn-mirrors-quark": "夸克網盤",
+    "cn-mirrors-123": "123雲盤"
   },
   ja: {
     "logo-text": "Coffee CLI",
@@ -701,6 +709,14 @@ function renderI18N() {
       el.innerHTML = dict[key];
     }
   });
+
+  // Mainland China download mirrors are only useful where GitHub Releases is
+  // slow / unreachable. Show only for Simplified or Traditional Chinese
+  // visitors; every other locale keeps the row hidden.
+  const cnMirrors = document.getElementById("cn-mirrors");
+  if (cnMirrors) {
+    cnMirrors.hidden = !(currentLang === "zh" || currentLang === "zh-TW");
+  }
 
   const toggle = document.getElementById("lang-toggle");
   if (toggle) {

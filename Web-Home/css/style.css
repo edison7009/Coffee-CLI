@@ -523,6 +523,44 @@ code::-webkit-scrollbar-thumb {
 }
 
 /* =====================
+   Mainland China download mirrors (zh / zh-TW only — toggled by main.js)
+   ===================== */
+
+.cn-mirrors {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 900px;
+  margin: 1.25rem auto 0;
+  padding: 0 2rem;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  opacity: 0.85;
+}
+
+.cn-mirrors-title {
+  font-weight: 500;
+}
+
+.cn-mirrors a {
+  color: var(--accent, #c4956a);
+  text-decoration: none;
+  transition: opacity 0.15s ease;
+}
+
+.cn-mirrors a:hover {
+  opacity: 0.7;
+  text-decoration: underline;
+}
+
+.cn-mirrors-sep {
+  opacity: 0.4;
+}
+
+/* =====================
    Direct Download Section (sits between install command and demo TV)
    ===================== */
 
