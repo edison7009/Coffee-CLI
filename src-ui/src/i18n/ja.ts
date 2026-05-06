@@ -15,6 +15,7 @@ export const ja = {
   'menu.rename': '名前を変更',
   'menu.delete': '削除',
   'menu.show_in_folder': 'エクスプローラーで表示',
+  'menu.open': '開く',
 
   // Drive kinds (Quick Access)
   'drive.desktop': 'デスクトップ',

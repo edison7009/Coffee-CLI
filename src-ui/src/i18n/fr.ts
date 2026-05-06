@@ -15,6 +15,7 @@ export const fr = {
   'menu.rename': 'Renommer',
   'menu.delete': 'Supprimer',
   'menu.show_in_folder': 'Afficher dans l\u2019explorateur',
+  'menu.open': 'Ouvrir',
 
   // Drive kinds (Quick Access)
   'drive.desktop': 'Bureau',

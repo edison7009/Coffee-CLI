@@ -16,6 +16,7 @@ export const vi = {
   'menu.rename': 'Đổi tên',
   'menu.delete': 'Xóa',
   'menu.show_in_folder': 'Hiển thị trong File Explorer',
+  'menu.open': 'Mở',
 
   // Drive kinds (Quick Access)
   'drive.desktop': 'Màn hình nền',

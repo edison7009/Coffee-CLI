@@ -128,6 +128,19 @@ function ContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: () => voi
     }
   };
 
+  // Hand the path off to the OS default opener — Notepad / browser / image
+  // viewer / file manager, whichever the user already configured. We don't
+  // ship in-app previewers (memory: "no in-app file viewers"), so this is
+  // the user's only one-click path from Explorer to the file's content.
+  const handleOpen = async () => {
+    onClose();
+    try {
+      await commands.openUrl(menu.absolutePath);
+    } catch (e) {
+      console.error('[Explorer] open failed:', e);
+    }
+  };
+
   const canPaste = !!fsClipboard;
 
   // Smart menu positioning to prevent off-screen clipping
@@ -149,6 +162,16 @@ function ContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: () => voi
 
   return createPortal(
     <div className="ctx-menu" ref={menuRef} style={style}>
+      {/* Primary action: open in OS default — most-used, sits at the top */}
+      <button className="ctx-menu-item" onClick={handleOpen}>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M15 3h6v6"/>
+          <path d="M10 14 21 3"/>
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+        </svg>
+        {t('menu.open' as any)}
+      </button>
+      <div className="ctx-menu-divider" />
       {/* Path copy group */}
       <button className="ctx-menu-item" onClick={() => copyPath(menu.absolutePath)}>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

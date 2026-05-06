@@ -15,6 +15,7 @@ export const ru = {
   'menu.rename': 'Переименовать',
   'menu.delete': 'Удалить',
   'menu.show_in_folder': 'Показать в проводнике',
+  'menu.open': 'Открыть',
 
   // Drive kinds (Quick Access)
   'drive.desktop': 'Рабочий стол',

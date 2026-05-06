@@ -15,6 +15,7 @@ export const ko = {
   'menu.rename': '이름 바꾸기',
   'menu.delete': '삭제',
   'menu.show_in_folder': '파일 탐색기에서 열기',
+  'menu.open': '열기',
 
   // Drive kinds (Quick Access)
   'drive.desktop': '바탕화면',

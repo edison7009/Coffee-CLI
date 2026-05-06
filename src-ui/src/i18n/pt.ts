@@ -15,6 +15,7 @@ export const pt = {
   'menu.rename': 'Renomear',
   'menu.delete': 'Excluir',
   'menu.show_in_folder': 'Mostrar no explorador',
+  'menu.open': 'Abrir',
 
   // Drive kinds (Quick Access)
   'drive.desktop': 'Área de trabalho',

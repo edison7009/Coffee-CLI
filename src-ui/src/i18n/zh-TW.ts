@@ -15,6 +15,7 @@ export const zhTW = {
   'menu.rename': '重新命名',
   'menu.delete': '刪除',
   'menu.show_in_folder': '在檔案總管中顯示',
+  'menu.open': '開啟',
 
   // Drive kinds (Quick Access)
   'drive.desktop': '桌面',

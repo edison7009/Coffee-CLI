@@ -15,6 +15,7 @@ export const es = {
   'menu.rename': 'Renombrar',
   'menu.delete': 'Eliminar',
   'menu.show_in_folder': 'Mostrar en el explorador',
+  'menu.open': 'Abrir',
 
   // Drive kinds (Quick Access)
   'drive.desktop': 'Escritorio',

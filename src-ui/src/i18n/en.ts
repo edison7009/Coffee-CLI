@@ -16,6 +16,7 @@ export const en = {
   'menu.rename': 'Rename',
   'menu.delete': 'Delete',
   'menu.show_in_folder': 'Reveal in File Explorer',
+  'menu.open': 'Open',
 
   // Drive kinds (Quick Access)
   'drive.desktop': 'Desktop',

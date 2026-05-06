@@ -15,6 +15,7 @@ export const zhCN = {
   'menu.rename': '重命名',
   'menu.delete': '删除',
   'menu.show_in_folder': '在文件管理器中显示',
+  'menu.open': '打开',
 
   // Drive kinds (Quick Access)
   'drive.desktop': '桌面',
