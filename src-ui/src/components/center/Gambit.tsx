@@ -52,6 +52,28 @@ interface GambitProps {
 // name, it won't match — edge case we accept.
 const IMAGE_PATH_RE = /(?:[A-Za-z]:[\\/]|\/)[^\s<>"'`]+?\.(?:png|jpe?g|gif|webp|bmp)/gi;
 
+// Wrap every bare image path with `" ... "` (leading / trailing space
+// inside the quotes) on the way out to the PTY. Why: when a path sits at
+// the end of a paste, Claude/Codex async-attach the image from disk while
+// Gambit schedules the trailing CR 150 ms later — the attach frequently
+// takes longer than 150 ms, so by the time `\r` lands the visible path has
+// been replaced by a placeholder but the attachment isn't ready, and the
+// path silently drops out of the submission. Wrapping inserts buffer
+// characters after the path and a clean delimiter the upstream CLI can
+// use, defeating the race deterministically. We do NOT mutate the draft —
+// the wrap is applied only at send time so the textarea stays clean and
+// undo/edit feels natural. IMAGE_PATH_RE excludes quotes from its match
+// body, so even paths the user typed already inside quotes match (and we
+// skip them via the adjacency check below to avoid double-wrapping).
+function wrapImagePathsForSend(text: string): string {
+  return text.replace(IMAGE_PATH_RE, (match, offset: number, full: string) => {
+    const prev = offset > 0 ? full[offset - 1] : '';
+    const next = full[offset + match.length] || '';
+    if (prev === '"' || next === '"') return match;
+    return `" ${match} "`;
+  });
+}
+
 const MIN_WIDTH = 320;
 const MIN_HEIGHT = 120;
 const DEFAULT_WIDTH = 520;
@@ -492,7 +514,7 @@ function GambitImpl({
       setSendEmpty(true);
       return;
     }
-    const ok = onSend(text);
+    const ok = onSend(wrapImagePathsForSend(text));
     if (!ok) {
       // Preserve draft so the user doesn't lose what they typed. They
       // likely just need to click the target pane first, then hit Send
