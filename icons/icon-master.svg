@@ -7,8 +7,8 @@
   -->
   <g transform="translate(54, 54) scale(17)">
     <!-- Steam — bright highlight layer -->
-    <path fill="#d0d0d0" d="M5 2h2v3H5zM9 2h2v3H9zM13 2h2v3h-2z"/>
+    <path fill="#B68B63" d="M5 2h2v3H5zM9 2h2v3H9zM13 2h2v3h-2z"/>
     <!-- Cup body + handle — mid-tone layer -->
-    <path fill="#888888" d="M19 9h-2V8a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3h2c1.103 0 2-.897 2-2v-5c0-1.103-.897-2-2-2zm-2 7v-5h2l.002 5z"/>
+    <path fill="#B68B63" d="M19 9h-2V8a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3h2c1.103 0 2-.897 2-2v-5c0-1.103-.897-2-2-2zm-2 7v-5h2l.002 5z"/>
   </g>
 </svg>

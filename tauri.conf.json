@@ -49,6 +49,12 @@
       "icons/icon.icns",
       "icons/icon.ico",
       "icons/icon.png"
-    ]
+    ],
+    "windows": {
+      "nsis": {
+        "template": "installer.nsi",
+        "installerIcon": "icons/icon.ico"
+      }
+    }
   }
 }
