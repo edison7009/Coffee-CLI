@@ -73,6 +73,22 @@ const THEME_TERMINAL_BG: Record<string, string> = {
   moss:       '#0b1612',
 };
 
+// Per-theme selection accent. Picked so each theme's selection highlight
+// reads as a deeper variant of that theme's signature hue rather than the
+// brand coffee for every theme. deriveSelectionBg further darkens these
+// and applies alpha before they reach xterm.
+const THEME_SELECTION_ACCENT: Record<string, string> = {
+  dark:       '#c4956a',
+  light:      '#c4956a',
+  cappuccino: '#c4956a',
+  sakura:     '#e08aa8',
+  lavender:   '#a896d8',
+  mint:       '#7ec4a8',
+  obsidian:   '#9ca8b8',
+  cobalt:     '#5a8cd0',
+  moss:       '#88b87a',
+};
+
 // Collapse any mix of CRLF / bare CR into plain LF before handing text to
 // xterm.paste. Windows puts CRLF into the clipboard and most TUIs on the
 // other side of the PTY treat the CR as an "Enter" (submit) keystroke —
@@ -117,11 +133,11 @@ function buildXtermTheme(themeName: string, hasBg: boolean | undefined, hideCurs
   // the scheme — if any — re-tint only the foreground and cursor.
   const defaultFg = isDark ? '#e8e4de' : '#2d2c2a';
   const fg = scheme?.fg ?? defaultFg;
-  // Selection follows the active scheme so the highlight feels cohesive
-  // with the user's chosen accent; falls back to coffee when no scheme set.
-  const selectionBackground = scheme
-    ? deriveSelectionBg(scheme.fg, isDark)
-    : (isDark ? 'rgba(196,149,106,0.3)' : 'rgba(196,149,106,0.25)');
+  // Selection priority: terminal-color-scheme chip (if set) → app theme accent
+  // → coffee. So picking sakura/cobalt/mint etc. recolors the highlight even
+  // without choosing a per-terminal fg chip.
+  const selectionAccent = scheme?.fg ?? THEME_SELECTION_ACCENT[themeName] ?? '#c4956a';
+  const selectionBackground = deriveSelectionBg(selectionAccent, isDark);
 
   const base = isDark ? {
     selectionBackground,
