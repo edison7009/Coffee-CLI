@@ -76,6 +76,13 @@ codegen-units = 1
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-global-shortcut = "2"
+# Prevents two Coffee CLI processes from running side-by-side. Without this,
+# launching twice spawns two WebView2 instances that fight over the OS IME
+# context, parking the candidate popup at primary-monitor (0,0). The plugin
+# detects an existing instance, forwards the activation, and exits the
+# duplicate. Multi-window users still get there via the existing tab-detach
+# path (same process, no IME conflict).
+tauri-plugin-single-instance = "2"
 
 # Win32 bindings:
 #   - DWM: force square window corners on Windows 11 (otherwise rounds
