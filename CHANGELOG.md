@@ -7,7 +7,45 @@ For releases prior to v1.5.5, see the
 [GitHub Releases page](https://github.com/edison7009/Coffee-CLI/releases)
 and `git tag --list "v*"`.
 
-## [1.6.0] — 2026-04-27
+## [2.4.0] — 2026-05-07
+
+### Added
+- **Explorer file diff badges**: each text file in the workspace tree
+  now shows `+N -M` since the folder was opened, swapping in for the
+  size badge. Pure snapshot+rehash on the Rust side — no git, no
+  `.git/`, works in any folder regardless of whether the user has git
+  installed. Multiset line-hash diff so a 5-add 3-delete edit reads as
+  `+5 -3`, not the net `+2`. Self-clears when a change is undone.
+- **Terminal scrollbar restored** with theme-aware coloring (binds to
+  `--accent`). Wheel-only scrolling got tiring once agent transcripts
+  reached thousands of lines. Slider auto-shrinks as scrollback grows.
+- **Open** action in the Explorer right-click menu — hands the path
+  to the OS default opener (`start` / `open` / `xdg-open`) so files
+  launch in their configured app and folders launch in the OS file
+  manager. We don't track defaults; the system owns the flow.
+
+### Changed
+- Linux bundle targets drop AppImage; `.deb` and `.rpm` only.
+
+### Fixed
+- **Multi-process IME drift**: launching Coffee CLI a second time used
+  to spawn a duplicate WebView2 that fought the first for the OS IME
+  context, parking the candidate popup at primary-monitor `(0,0)`.
+  `tauri-plugin-single-instance` now forwards a duplicate launch to
+  the running process and exits, leaving exactly one WebView2.
+- **Selection background follows the active theme**: the highlight
+  used to always read coffee regardless of the user's chosen scheme
+  or app theme. Now derived from the per-theme accent (sakura → pink,
+  cobalt → blue, etc.) and the optional terminal-color-scheme chip.
+- **Link hover underline misalignment** when a URL was preceded by
+  CJK characters on the same line — `range.x` is in terminal columns
+  but we were passing JS string indices, so each wide char shifted
+  the underline one column to the left.
+- **Always hide xterm bar cursor** across every tool. The blinking
+  caret read as cheap and was redundant with each AI agent's TUI
+  caret and each shell's prompt + character echo.
+
+
 
 Coffee CLI's first formal open-source release. The app's runtime is
 unchanged from v1.5.5; this release adopts a full legal package and
