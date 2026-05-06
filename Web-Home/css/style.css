@@ -534,7 +534,11 @@ code::-webkit-scrollbar-thumb {
   gap: 0.5rem;
   width: 100%;
   max-width: 900px;
-  margin: 1.25rem auto 0;
+  /* Sits as a footer of the install command card above:
+     near-zero top gap visually pairs it with the terminal frame,
+     larger bottom gap pushes the next "or download desktop" section
+     into its own visual block. */
+  margin: 0 auto 1.75rem;
   padding: 0 2rem;
   font-size: 0.88rem;
   color: var(--text-secondary);
