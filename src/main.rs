@@ -15,30 +15,42 @@ mod tool_config;
 use anyhow::Result;
 
 fn main() -> Result<()> {
-    // ── Linux GUI fixups ────────────────────────────────────────────────
-    // Ubuntu 24.04 ships WebKit2GTK 2.42+ (later 2.50.x), which on
-    // Wayland sessions renders a blank window in Tauri 2 — the Rust
-    // process starts and the hook-server binds, but WebView never
-    // shows. GDK_BACKEND=x11 alone fixes this by routing GTK through
-    // XWayland (sidesteps the Wayland-native WebKit rendering bug
-    // entirely).
+    // ── Linux GUI backend selection ─────────────────────────────────────
+    // Older WebKit2GTK (≤ 2.44) had a Wayland blank-window bug on
+    // Ubuntu 24.04: WebView never paints, so the original workaround
+    // unconditionally forced GDK_BACKEND=x11 (XWayland path).
     //
-    // We previously also set WEBKIT_DISABLE_COMPOSITING_MODE=1 and
-    // WEBKIT_DISABLE_DMABUF_RENDERER=1, but the former kills GPU
-    // compositing — and CSS backdrop-filter requires GPU compositing
-    // to render. With it on, Glass shape silently lost its blur on
-    // Linux and looked identical to Panel. XWayland alone is enough
-    // to dodge the blank-window bug, so both are removed. If a rare
-    // GPU/driver combo regresses, users can re-enable the escape
-    // hatch via `export WEBKIT_DISABLE_COMPOSITING_MODE=1`.
+    // On WebKit ≥ 2.46 that workaround backfires badly. Measured on
+    // an AMD Lucienne iGPU + WebKit 2.50.4 (Ubuntu 24.04, Wayland
+    // session): X11 path makes WebKit's GPU detection silently fail,
+    // Skia falls back to CPU software rasterization, and four
+    // SkiaCPUWorker threads peg ~19% CPU at idle — fan spins up
+    // continuously even with no user input. WebKitWebProcess goes
+    // from 47% (X11) down to 8% (native Wayland) just by removing
+    // the workaround on this WebKit version, because Skia uses
+    // DMABUF + Mesa for GPU paint instead.
+    //
+    // Strategy: detect installed WebKit minor version from the .so
+    // file. ≥ 2.46 → leave GDK_BACKEND unset and let GTK pick the
+    // session-native backend (Wayland on Wayland sessions, X11 on
+    // X11 sessions). Older / undetectable → keep the safe X11
+    // fallback so 22.04 / Debian stable users don't regress.
+    //
+    // Escape hatch: COFFEE_FORCE_X11=1 forces X11 unconditionally,
+    // for users who hit a render bug on a specific driver/compositor
+    // combo on the modern path.
     //
     // set_var is `unsafe` in recent Rust because of cross-thread
-    // races, but we're in single-threaded main() before any thread
-    // spawn, so it's safe.
+    // races; we're in single-threaded main() before any thread
+    // spawns, so it's safe.
     #[cfg(target_os = "linux")]
     unsafe {
         if std::env::var_os("GDK_BACKEND").is_none() {
-            std::env::set_var("GDK_BACKEND", "x11");
+            let force_x11 = std::env::var_os("COFFEE_FORCE_X11").is_some();
+            let needs_x11 = force_x11 || webkit_minor_version().map_or(true, |m| m < 46);
+            if needs_x11 {
+                std::env::set_var("GDK_BACKEND", "x11");
+            }
         }
     }
 
@@ -131,3 +143,49 @@ fn attach_terminal_console() {
 
 #[cfg(not(all(target_os = "windows", not(debug_assertions))))]
 fn attach_terminal_console() {}
+
+/// Query the installed WebKit2GTK 4.1 minor version via dlopen +
+/// `webkit_get_minor_version()` — WebKit's public C API. Returns
+/// e.g. `Some(50)` for WebKit 2.50.x, `Some(46)` for 2.46.x, or
+/// `None` if WebKit isn't installed or the symbol can't be resolved.
+///
+/// We deliberately do NOT parse the `.so` filename: the soversion
+/// suffix uses libtool's `current.revision.age` triplet which has
+/// no fixed relationship to WebKit's `MAJOR.MINOR.PATCH` (e.g. on
+/// Ubuntu 24.04 WebKit 2.50.4 ships as `.so.0.19.7`).
+///
+/// `dlopen` / `dlsym` are exposed by libc on every glibc system
+/// (and merged into libc proper since glibc 2.34), so no extra
+/// link flags are required.
+#[cfg(target_os = "linux")]
+fn webkit_minor_version() -> Option<u32> {
+    use std::ffi::CString;
+    use std::os::raw::{c_char, c_int, c_uint, c_void};
+
+    extern "C" {
+        fn dlopen(filename: *const c_char, flag: c_int) -> *mut c_void;
+        fn dlsym(handle: *mut c_void, symbol: *const c_char) -> *mut c_void;
+        fn dlclose(handle: *mut c_void) -> c_int;
+    }
+    const RTLD_LAZY: c_int = 1;
+    const RTLD_LOCAL: c_int = 0;
+
+    let lib = CString::new("libwebkit2gtk-4.1.so.0").ok()?;
+    let sym = CString::new("webkit_get_minor_version").ok()?;
+
+    unsafe {
+        let handle = dlopen(lib.as_ptr(), RTLD_LAZY | RTLD_LOCAL);
+        if handle.is_null() {
+            return None;
+        }
+        let func_ptr = dlsym(handle, sym.as_ptr());
+        if func_ptr.is_null() {
+            dlclose(handle);
+            return None;
+        }
+        let func: extern "C" fn() -> c_uint = std::mem::transmute(func_ptr);
+        let minor = func();
+        dlclose(handle);
+        Some(minor)
+    }
+}
