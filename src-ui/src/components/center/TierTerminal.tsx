@@ -517,14 +517,33 @@ function TierTerminalImpl({
     term.registerLinkProvider({
       provideLinks(bufferLineNumber, callback) {
         const line = term.buffer.active.getLine(bufferLineNumber - 1);
-        const text = line ? line.translateToString(true) : '';
+        if (!line) { callback([]); return; }
+        // Build the line text alongside a JS-index → terminal-column map.
+        // xterm's range.x is in terminal columns, but a CJK / emoji char is
+        // one JS code-unit-ish but two columns wide. Using m.index directly
+        // makes the hover underline drift left by one column per wide char
+        // sitting before the URL on the same line. Cell iteration keeps the
+        // mapping accurate regardless of wide-char prefix.
+        let text = '';
+        const colByStrIdx: number[] = [];
+        const cellCount = line.length;
+        for (let col = 0; col < cellCount; col++) {
+          const cell = line.getCell(col);
+          if (!cell) continue;
+          const chars = cell.getChars();
+          if (!chars) continue; // empty cell or the right half of a wide char
+          for (let i = 0; i < chars.length; i++) colByStrIdx.push(col);
+          text += chars;
+        }
         const links: any[] = [];
         let m;
         LINK_RE.lastIndex = 0;
         while ((m = LINK_RE.exec(text)) !== null) {
           const raw = m[0].replace(/[),.]+$/, '');
-          const startCol = m.index + 1;
-          const endCol = m.index + raw.length;
+          const firstCol = colByStrIdx[m.index] ?? m.index;
+          // URL bodies are ASCII (width-1), so end column = first + length.
+          const startCol = firstCol + 1;
+          const endCol = firstCol + raw.length;
           links.push({
             range: {
               start: { x: startCol, y: bufferLineNumber },
