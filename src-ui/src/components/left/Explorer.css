@@ -243,6 +243,18 @@
     flex-shrink: 0;
 }
 
+/* File diff badge: replaces the size badge for files modified since the
+   folder was opened. +N/-M side by side, tabular digits so the column
+   stays aligned across rows of single vs triple digits. */
+.tree-badge-diff {
+    display: inline-flex;
+    gap: 6px;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum';
+}
+.tree-badge-diff .diff-add { color: #4ec76b; }
+.tree-badge-diff .diff-del { color: #e07070; }
+
 /* Status bar */
 .status-bar {
     padding: 10px 16px;

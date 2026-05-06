@@ -140,6 +140,13 @@ export const commands = {
   listDrives: () => invoke<DriveInfo[]>('list_drives'),
   listDirectory: (path: string) => invoke<DirEntryInfo[]>('list_directory', { path }),
 
+  // Workspace file diff (since-folder-open snapshot). No git, no .git/, works
+  // in any folder. startFolderSnapshot establishes the baseline; computeFolderStats
+  // returns absolute-path → {added, deleted} for files modified since.
+  startFolderSnapshot: (path: string) => invoke<void>('start_folder_snapshot', { path }),
+  computeFolderStats: (path: string) =>
+    invoke<Record<string, { added: number; deleted: number }>>('compute_folder_stats', { path }),
+
   // File system operations
   fsDelete: (path: string) => invoke<void>('fs_delete', { path }),
   fsRename: (path: string, newName: string) => invoke<void>('fs_rename', { path, newName }),

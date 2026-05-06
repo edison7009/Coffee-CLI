@@ -1,6 +1,6 @@
 // Explorer.tsx — Left panel: file tree synced from terminal CWD
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useContext, createContext } from 'react';
 import { createPortal } from 'react-dom';
 import { useAppState } from '../../store/app-state';
 import type { ThemeColor, ThemeShape, IconTheme, ToolType } from '../../store/app-state';
@@ -11,6 +11,16 @@ import { beginExplorerDrag } from '../../lib/explorer-drag';
 import { commands } from '../../tauri';
 import type { DriveInfo, DirEntryInfo } from '../../tauri';
 import './Explorer.css';
+
+// File diff stats keyed by absolute (forward-slash) path. Computed from a
+// since-folder-open snapshot, not git — works in any folder regardless of
+// whether the user has git installed or has run `git init`. Provided at the
+// workspace-tree top level so any nested BrowserFileNode (root or lazy-loaded
+// subdir child) can swap its size badge for a `+N -M` diff stat without
+// prop drilling through BrowserDirNode.
+type FileStats = { added: number; deleted: number };
+const FileStatsContext = createContext<Map<string, FileStats> | null>(null);
+const normPath = (p: string) => p.replace(/\\/g, '/');
 
 // ─── Context Menu ────────────────────────────────────────────────────────────
 
@@ -675,6 +685,8 @@ function BrowserFileNode({ entry, parentDirPath, onCtxMenu }: {
   onCtxMenu: (menu: CtxMenuState) => void;
 }) {
   const { state: { iconTheme } } = useAppState();
+  const fileStats = useContext(FileStatsContext);
+  const stats = fileStats?.get(normPath(entry.path));
   const [renaming, setRenaming] = useState(false);
   const [renameVal, setRenameVal] = useState(entry.name);
   const renameInputRef = useRef<HTMLInputElement>(null);
@@ -737,7 +749,14 @@ function BrowserFileNode({ entry, parentDirPath, onCtxMenu }: {
         }}
         onClick={e => e.stopPropagation()}
       />
-      <span className="tree-badge">{formatBytes(entry.size)}</span>
+      {stats ? (
+        <span className="tree-badge tree-badge-diff">
+          <span className="diff-add">+{stats.added}</span>
+          <span className="diff-del">-{stats.deleted}</span>
+        </span>
+      ) : (
+        <span className="tree-badge">{formatBytes(entry.size)}</span>
+      )}
     </div>
   );
 }
@@ -769,21 +788,59 @@ export function Explorer() {
     return () => { cancelled = true; };
   }, [folderPath]);
 
+  // File diff stats versus the open-time snapshot. On folder switch, snapshot
+  // the new folder and clear stats — fresh "since you opened this view"
+  // baseline. On fs-refresh, recompute deltas without re-baselining so
+  // accumulated AI edits stay visible.
+  const [fileStats, setFileStats] = useState<Map<string, FileStats>>(() => new Map());
+  const refreshFileStats = useCallback(async (folder: string) => {
+    try {
+      const raw = await commands.computeFolderStats(folder);
+      const m = new Map<string, FileStats>();
+      for (const [k, v] of Object.entries(raw)) m.set(normPath(k), v);
+      setFileStats(m);
+    } catch {
+      setFileStats(new Map());
+    }
+  }, []);
+  useEffect(() => {
+    if (!folderPath) { setFileStats(new Map()); return; }
+    let cancelled = false;
+    setFileStats(new Map());
+    commands.startFolderSnapshot(folderPath).catch(() => {});
+    // No initial compute — snapshot just got taken, diff is empty by definition.
+    void cancelled;
+  }, [folderPath]);
+
   // Reload root level when fs-refresh targets the workspace root itself.
   // (Subdirectory refreshes are handled inside each BrowserDirNode.)
+  // Also kicks off a debounced file-stats refresh so the +N/-M badges
+  // track edits made by the agent / external editors. Single shared
+  // 300ms timer prevents Ctrl+S bursts from re-walking the folder per save.
+  const statsRefreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (!folderPath) return;
     const norm = (p: string) => p.replace(/\\/g, '/').replace(/\/+$/, '');
     const target = norm(folderPath);
     const handler = (e: Event) => {
       const ev = e as CustomEvent<{ dirPath: string }>;
-      if (norm(ev.detail.dirPath) === target) {
+      const dir = norm(ev.detail.dirPath);
+      if (dir === target) {
         commands.listDirectory(folderPath).then(setRootEntries).catch(() => setRootEntries([]));
+      }
+      // Any change anywhere under the workspace can affect file stats —
+      // root-level rename, nested edit, AI write to src/foo.ts, etc.
+      if (dir === target || dir.startsWith(target + '/')) {
+        if (statsRefreshTimer.current) clearTimeout(statsRefreshTimer.current);
+        statsRefreshTimer.current = setTimeout(() => refreshFileStats(folderPath), 300);
       }
     };
     window.addEventListener('fs-refresh', handler);
-    return () => window.removeEventListener('fs-refresh', handler);
-  }, [folderPath]);
+    return () => {
+      window.removeEventListener('fs-refresh', handler);
+      if (statsRefreshTimer.current) clearTimeout(statsRefreshTimer.current);
+    };
+  }, [folderPath, refreshFileStats]);
 
   // Theme menu state
   const [themeMenuOpen, setThemeMenuOpen] = useState(false);
@@ -1082,18 +1139,20 @@ export function Explorer() {
           </ScrollPanel>
         ) : (
           <ScrollPanel>
-            <div className="file-tree-container">
-              {rootEntries.slice().sort((a, b) => {
-                if (a.is_dir !== b.is_dir) return a.is_dir ? -1 : 1;
-                return a.name.localeCompare(b.name);
-              }).map(entry => (
-                entry.is_dir ? (
-                  <BrowserDirNode key={entry.path} name={entry.name} dirPath={entry.path} onCtxMenu={handleCtxMenu} />
-                ) : (
-                  <BrowserFileNode key={entry.path} entry={entry} parentDirPath={folderPath!} onCtxMenu={handleCtxMenu} />
-                )
-              ))}
-            </div>
+            <FileStatsContext.Provider value={fileStats}>
+              <div className="file-tree-container">
+                {rootEntries.slice().sort((a, b) => {
+                  if (a.is_dir !== b.is_dir) return a.is_dir ? -1 : 1;
+                  return a.name.localeCompare(b.name);
+                }).map(entry => (
+                  entry.is_dir ? (
+                    <BrowserDirNode key={entry.path} name={entry.name} dirPath={entry.path} onCtxMenu={handleCtxMenu} />
+                  ) : (
+                    <BrowserFileNode key={entry.path} entry={entry} parentDirPath={folderPath!} onCtxMenu={handleCtxMenu} />
+                  )
+                ))}
+              </div>
+            </FileStatsContext.Provider>
           </ScrollPanel>
         )}
       </div>

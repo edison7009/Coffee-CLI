@@ -353,6 +353,234 @@ fn list_directory(path: String) -> Result<Vec<DirEntry>, String> {
     Ok(entries)
 }
 
+// ─── Workspace File Diff (since-folder-open snapshot) ───────────────────────
+//
+// Coffee CLI targets users who don't know git, and may open any folder —
+// tmp dirs, AI-generated test projects, downloads. So we don't depend on
+// `.git/`. Instead we snapshot the folder's text files when it opens, and
+// later compare each file's line count + mtime to compute `+N -M` since
+// the snapshot. AI-created files show as +line_count, edits show as
+// real deltas, all without git installed or a repo on disk.
+
+#[derive(Clone)]
+struct FileSnapshot {
+    mtime_nanos: u128,
+    /// Per-line hash. Storing hashes (not content) keeps memory bounded
+    /// (1000-line file = 8 KB) while letting us compute true `+N -M` deltas
+    /// via multiset comparison instead of just net line-count change.
+    line_hashes: Vec<u64>,
+}
+
+#[derive(Clone, Default)]
+struct FolderSnapshot {
+    /// Forward-slash absolute paths → snapshot at folder-open time.
+    files: std::collections::HashMap<String, FileSnapshot>,
+}
+
+fn snapshots() -> &'static std::sync::Mutex<std::collections::HashMap<String, FolderSnapshot>> {
+    static FOLDER_SNAPSHOTS: std::sync::OnceLock<
+        std::sync::Mutex<std::collections::HashMap<String, FolderSnapshot>>,
+    > = std::sync::OnceLock::new();
+    FOLDER_SNAPSHOTS.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()))
+}
+
+/// Per-file added/deleted line counts versus the folder's open-time snapshot.
+#[derive(Serialize, Clone, Debug)]
+struct FileStats {
+    added: u32,
+    deleted: u32,
+}
+
+/// Directory names skipped during snapshot/diff walks. These tend to dominate
+/// project folders (node_modules alone is 100k+ files) and are never user-
+/// edited content — dragging them in wrecks both perf and noise level.
+const STATS_SKIP_DIRS: &[&str] = &[
+    ".git", "node_modules", "target", "dist", "build", ".next", ".nuxt",
+    ".venv", "venv", "__pycache__", ".idea", ".vscode", ".vs", ".cache",
+    ".pytest_cache", ".mypy_cache", ".gradle", ".m2", "vendor",
+];
+
+const STATS_MAX_FILE_BYTES: u64 = 5_000_000;
+const STATS_MAX_FILES: usize = 5000;
+
+/// Hash a single line. DefaultHasher is fast (~500 MB/s) and deterministic
+/// within one process — process-restart resets snapshots anyway, so cross-run
+/// stability isn't required.
+fn stats_hash_line(line: &[u8]) -> u64 {
+    use std::hash::{Hash, Hasher};
+    let mut h = std::collections::hash_map::DefaultHasher::new();
+    line.hash(&mut h);
+    h.finish()
+}
+
+/// Split `bytes` on '\n' and hash each line. Trailing-newline-less files:
+/// the final fragment still counts as a line so the count matches what
+/// users see in their editor.
+fn stats_line_hashes(bytes: &[u8]) -> Vec<u64> {
+    let mut hashes = Vec::new();
+    let mut start = 0usize;
+    for (i, &b) in bytes.iter().enumerate() {
+        if b == b'\n' {
+            hashes.push(stats_hash_line(&bytes[start..i]));
+            start = i + 1;
+        }
+    }
+    if start < bytes.len() {
+        hashes.push(stats_hash_line(&bytes[start..]));
+    }
+    hashes
+}
+
+/// Multiset diff: for each line hash, +1 in new, -1 in old. Sum positives
+/// = additions, sum negatives = deletions. Doesn't care about line order
+/// (so reordering = 0/0), which is the right "summary" semantics for
+/// non-programmer users — "moved 10 lines around" shouldn't read as +10/-10.
+fn stats_line_diff(old: &[u64], new: &[u64]) -> (u32, u32) {
+    let mut counts: std::collections::HashMap<u64, i64> =
+        std::collections::HashMap::with_capacity(old.len() + new.len());
+    for h in old { *counts.entry(*h).or_insert(0) -= 1; }
+    for h in new { *counts.entry(*h).or_insert(0) += 1; }
+    let mut added: u64 = 0;
+    let mut deleted: u64 = 0;
+    for &delta in counts.values() {
+        if delta > 0 { added += delta as u64; }
+        else if delta < 0 { deleted += (-delta) as u64; }
+    }
+    (added.min(u32::MAX as u64) as u32, deleted.min(u32::MAX as u64) as u32)
+}
+
+fn stats_is_text(bytes: &[u8]) -> bool {
+    // Same heuristic git uses: any null byte in first 8 KB → treat as binary.
+    !bytes[..bytes.len().min(8192)].contains(&0u8)
+}
+
+fn stats_mtime_nanos(meta: &std::fs::Metadata) -> u128 {
+    meta.modified().ok()
+        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+        .map(|d| d.as_nanos())
+        .unwrap_or(0)
+}
+
+/// Recursive walk gathering FileSnapshot for every text file under `root`.
+/// Stops once `max_files` are collected to bound work on accidentally-huge
+/// trees (user opens home dir, etc.).
+///
+/// `baseline` lets the diff path skip disk reads entirely for files whose
+/// mtime hasn't changed — we just clone the prior snapshot's hashes. On the
+/// initial snapshot pass, pass `None` and every file gets read fresh.
+fn stats_walk(
+    root: &std::path::Path,
+    files: &mut std::collections::HashMap<String, FileSnapshot>,
+    baseline: Option<&FolderSnapshot>,
+    max_files: usize,
+) {
+    if files.len() >= max_files { return; }
+    let entries = match std::fs::read_dir(root) {
+        Ok(r) => r,
+        Err(_) => return,
+    };
+    for entry in entries.flatten() {
+        if files.len() >= max_files { return; }
+        let name = entry.file_name();
+        let name_str = name.to_string_lossy();
+        let path = entry.path();
+        let meta = match entry.metadata() {
+            Ok(m) => m,
+            Err(_) => continue,
+        };
+        if meta.is_dir() {
+            if STATS_SKIP_DIRS.contains(&name_str.as_ref()) { continue; }
+            stats_walk(&path, files, baseline, max_files);
+        } else if meta.is_file() {
+            if meta.len() > STATS_MAX_FILE_BYTES { continue; }
+            let key = path.to_string_lossy().replace('\\', "/");
+            let mtime = stats_mtime_nanos(&meta);
+            // Mtime-stable file with a baseline snapshot → reuse cached hashes.
+            // Saves the read+hash on every fs-refresh tick for files the user
+            // hasn't touched (i.e., 99% of the tree on most edits).
+            if let Some(b) = baseline {
+                if let Some(prev) = b.files.get(&key) {
+                    if prev.mtime_nanos == mtime {
+                        files.insert(key, prev.clone());
+                        continue;
+                    }
+                }
+            }
+            let bytes = match std::fs::read(&path) {
+                Ok(b) => b,
+                Err(_) => continue,
+            };
+            if !stats_is_text(&bytes) { continue; }
+            files.insert(key, FileSnapshot {
+                mtime_nanos: mtime,
+                line_hashes: stats_line_hashes(&bytes),
+            });
+        }
+    }
+}
+
+/// Snapshot every text file under `path` so future diffs have a baseline.
+/// Called by Explorer the moment a folder is opened. Replaces any prior
+/// snapshot for the same folder so reopening = fresh "since now" timeline.
+#[tauri::command]
+fn start_folder_snapshot(path: String) -> Result<(), String> {
+    let dir = std::path::Path::new(&path);
+    if !dir.is_dir() { return Err(format!("Not a directory: {}", path)); }
+    let mut files = std::collections::HashMap::new();
+    stats_walk(dir, &mut files, None, STATS_MAX_FILES);
+    let key = path.replace('\\', "/");
+    let mut map = snapshots().lock().map_err(|e| format!("lock: {}", e))?;
+    map.insert(key, FolderSnapshot { files });
+    Ok(())
+}
+
+/// Walk the folder again and return only the files whose line count or
+/// mtime drifted from their open-time snapshot. Empty map when no
+/// snapshot exists for this folder (Explorer falls back to size badge).
+#[tauri::command]
+fn compute_folder_stats(path: String) -> std::collections::HashMap<String, FileStats> {
+    let mut result = std::collections::HashMap::new();
+    let dir = std::path::Path::new(&path);
+    if !dir.is_dir() { return result; }
+    let key = path.replace('\\', "/");
+
+    let snapshot = {
+        let map = match snapshots().lock() {
+            Ok(m) => m,
+            Err(_) => return result,
+        };
+        match map.get(&key) {
+            Some(s) => s.clone(),
+            None => return result,
+        }
+    };
+
+    let mut current = std::collections::HashMap::new();
+    stats_walk(dir, &mut current, Some(&snapshot), STATS_MAX_FILES);
+
+    for (abs_path, cur) in &current {
+        match snapshot.files.get(abs_path) {
+            Some(base) => {
+                if base.mtime_nanos == cur.mtime_nanos { continue; }
+                let (added, deleted) = stats_line_diff(&base.line_hashes, &cur.line_hashes);
+                // 0/0 = file was touched (mtime changed) but content reverts to
+                // baseline (e.g., user edited and undid). Skip — no badge.
+                if added == 0 && deleted == 0 { continue; }
+                result.insert(abs_path.clone(), FileStats { added, deleted });
+            }
+            None => {
+                // New file (created since snapshot): every line is an addition.
+                result.insert(abs_path.clone(), FileStats {
+                    added: cur.line_hashes.len() as u32,
+                    deleted: 0,
+                });
+            }
+        }
+    }
+
+    result
+}
+
 /// Check whether a Claude Code skill is installed locally.
 /// Returns true if `~/.claude/skills/<name>/SKILL.md` exists.
 #[tauri::command]
@@ -3127,6 +3355,8 @@ pub fn start_ui() -> anyhow::Result<()> {
             save_clipboard_image,
             list_drives,
             list_directory,
+            start_folder_snapshot,
+            compute_folder_stats,
             show_in_folder,
             fs_delete,
             fs_rename,
