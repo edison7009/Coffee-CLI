@@ -199,6 +199,25 @@
 .status-waiting .tab-status-dot:nth-child(8) { animation-delay: 0.15s; }
 .status-waiting .tab-status-dot:nth-child(9) { animation-delay: 0.3s; }
 
+/* Linux variant — single static dot, no animation, no box-shadow blur.
+   The 9-dot wave/snake/ripple loops + box-shadow halos peg WebKit2GTK +
+   Cairo (no compositor-thread opacity for non-promoted layers; box-shadow
+   blur re-rasters on CPU each frame). Sized up to 5px so a lone dot reads
+   as deliberate. Color still conveys idle/working/waiting via the status-
+   class background-color rules above; we override box-shadow here to kill
+   the halo. Specificity (0,2,0) matches the status-* rules and source
+   order wins. */
+.tab-status-grid--static {
+  grid-template-columns: 5px;
+  grid-template-rows: 5px;
+}
+.tab-status-grid--static .tab-status-dot {
+  width: 5px;
+  height: 5px;
+  animation: none;
+  box-shadow: none;
+}
+
 /* ─── Terminal Wrapper ─── */
 
 .terminal-wrapper {

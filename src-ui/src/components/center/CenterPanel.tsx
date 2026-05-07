@@ -169,7 +169,7 @@ const SvgInstaller = () => (
               brand icon and together they pegged WebKit + coffee-cli at
               ~1.2 cores idle on Wayland (verified live via SSH /proc
               sampling). Static `d` on Linux = no steam drift, full glyph. */}
-          {!navigator.userAgent.toLowerCase().includes('linux') && (
+          {!__IS_LINUX__ && (
             <animate
               attributeName="d"
               dur="3s"
@@ -1141,8 +1141,17 @@ export function CenterPanel() {
                     session.tool === 'vibeid' || session.tool === 'insights_prerun'
                       ? 'working'
                       : (session.agentStatus === 'wait_input' ? 'waiting' : session.agentStatus ?? 'idle')
-                  }`}>
-                    {Array.from({ length: 9 }, (_, i) => <div key={i} className="tab-status-dot" />)}
+                  }${__IS_LINUX__ ? ' tab-status-grid--static' : ''}`}>
+                    {/* Linux gate — the 9 dot wave/snake/ripple animations are
+                        opacity-loop infinites with box-shadow halos. WebKit2GTK
+                        + Cairo doesn't promote these to compositor layers, so
+                        each frame re-rasters the box-shadow blur on CPU; with
+                        N tabs that's 9N indefinite repaints. Linux gets a
+                        single static colored dot instead — same idle/working/
+                        waiting color signal, zero animation cost. */}
+                    {__IS_LINUX__
+                      ? <div className="tab-status-dot tab-status-dot--solo" />
+                      : Array.from({ length: 9 }, (_, i) => <div key={i} className="tab-status-dot" />)}
                   </div>
                 )}
                 <button
