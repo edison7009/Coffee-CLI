@@ -3317,22 +3317,32 @@ pub fn start_ui() -> anyhow::Result<()> {
     // Create shared session BEFORE the builder so we can clone it for the exit handler
     let terminal_session = terminal::SharedSession::default();
 
-    tauri::Builder::default()
-        // Single-instance plugin MUST be the first plugin registered (per
-        // Tauri docs) so its argv-forwarding hook runs before any other
-        // plugin's init touches state. When a user double-launches Coffee CLI,
-        // the second process sends its argv+cwd to this callback in the first
-        // process and exits — the first process then refocuses the main window.
-        // Side effect we want: only ever one WebView2 instance, which kills
-        // the multi-process IME-jumps-to-(0,0) bug.
-        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-            use tauri::Manager;
-            if let Some(w) = app.get_webview_window("main") {
-                let _ = w.unminimize();
-                let _ = w.show();
-                let _ = w.set_focus();
-            }
-        }))
+    let builder = tauri::Builder::default();
+
+    // Single-instance plugin MUST be the first plugin registered (per
+    // Tauri docs) so its argv-forwarding hook runs before any other
+    // plugin's init touches state. When a user double-launches Coffee CLI,
+    // the second process sends its argv+cwd to this callback in the first
+    // process and exits — the first process then refocuses the main window.
+    // Side effect we want: only ever one WebView2 instance, which kills
+    // the multi-process IME-jumps-to-(0,0) bug.
+    //
+    // Release-only: in debug builds we skip the lock so a dev `cargo tauri
+    // dev` window can run side-by-side with an installed production build
+    // (devs working on Coffee CLI inside Coffee CLI). Both builds otherwise
+    // share the bundle identifier, and the lock would silently redirect the
+    // dev launch to the production process and exit.
+    #[cfg(not(debug_assertions))]
+    let builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+        use tauri::Manager;
+        if let Some(w) = app.get_webview_window("main") {
+            let _ = w.unminimize();
+            let _ = w.show();
+            let _ = w.set_focus();
+        }
+    }));
+
+    builder
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
