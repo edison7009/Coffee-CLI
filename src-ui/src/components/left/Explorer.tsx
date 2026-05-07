@@ -1088,8 +1088,24 @@ export function Explorer() {
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" className="brand-icon">
             <defs>
               <mask id="brandIconMask">
+                {/* Steam (3 wavy lines). The `<animate>` is gated to non-Linux
+                    because WebKit2GTK has no GPU path for SMIL `path d` morphing
+                    inside a `<mask>`: every frame re-evaluates the bezier
+                    geometry, re-rasters the mask, and re-composites the masked
+                    full-viewport path on line ~1108. With the mask applied
+                    over the entire 24×24 brand icon and the indefinite loop
+                    running idle, the kompositor → IPC ack chain pegs Linux
+                    WebKitWebProcess + coffee-cli at ~1.2 cores combined even
+                    when nothing else is on screen (verified live: SSH 5s
+                    increments dropped from 37%/89% to ~0% the moment WebKit
+                    was killed; same coffee-cli on Windows WebView2 / macOS
+                    WKWebView is silent because both have hardware-accelerated
+                    SMIL). Static `d` on Linux means the steam stops drifting
+                    upward but the cup glyph itself is fully intact. */}
                 <path fill="none" stroke="#fff" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M12 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M16 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4">
-                  <animate attributeName="d" dur="3s" repeatCount="indefinite" values="M8 0c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M12 0c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M16 0c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4;M8 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M12 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M16 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4"/>
+                  {!navigator.userAgent.toLowerCase().includes('linux') && (
+                    <animate attributeName="d" dur="3s" repeatCount="indefinite" values="M8 0c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M12 0c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M16 0c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4;M8 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M12 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M16 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4"/>
+                  )}
                 </path>
                 <path d="M4 7h16v0h-16v12h16v-32h-16Z">
                   <animate fill="freeze" attributeName="d" begin="1s" dur="0.6s" to="M4 2h16v5h-16v12h16v-24h-16Z"/>
