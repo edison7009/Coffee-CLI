@@ -144,6 +144,19 @@
     background: var(--bg-hover);
 }
 
+/* Dim accent tint on the folder NAME (icon stays untouched) when any
+   descendant file has uncommitted changes — forms a subtle theme-aware
+   breadcrumb trail to deeply-nested edits without expanding the tree.
+   color-mix blends accent ~70% with text-2 so it reads "dim accent"
+   across every palette (warm tan in dark, sakura, lavender, etc.) and
+   stays distinguishable from full-accent selected/active states.
+   Children > .tree-name targeting only — keeps icon colors owned by
+   the icon theme (Material/Seti coloured glyphs, Phosphor Light's
+   mask-tint, etc.) instead of double-tinting them. */
+.tree-dir-header.has-dirty .tree-name {
+    color: color-mix(in srgb, var(--accent) 70%, var(--text-2));
+}
+
 .tree-arrow {
     display: inline-flex;
     align-items: center;

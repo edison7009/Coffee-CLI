@@ -402,6 +402,12 @@ const STATS_SKIP_DIRS: &[&str] = &[
 
 const STATS_MAX_FILE_BYTES: u64 = 5_000_000;
 const STATS_MAX_FILES: usize = 5000;
+/// Skip a file's badge if reported `+lines + -lines` exceeds this. Catches
+/// CRLF/LF mismatches, path-canonicalization weirdness, and binary files
+/// that slipped past `stats_is_text` from producing nonsense badges like
+/// "+800,000 -750,000". Borrowed from Warp's diff-stats hardening
+/// (issue #10193 — millions-of-lines diff on WSL repos).
+const STATS_MAX_DIFF_LINES: u32 = 50_000;
 
 /// Hash a single line. DefaultHasher is fast (~500 MB/s) and deterministic
 /// within one process — process-restart resets snapshots anyway, so cross-run
@@ -484,6 +490,16 @@ fn stats_walk(
         let name = entry.file_name();
         let name_str = name.to_string_lossy();
         let path = entry.path();
+        // Reject symlinks before any further inspection: entry.metadata()
+        // follows symlinks, so a symlinked dir would recurse INTO the link
+        // target — escapes the workspace, hits filesystem cycles, or pulls
+        // in massive system dirs (e.g. ~/.cache → /tmp). file_type() reads
+        // the link's own type without following.
+        let ft = match entry.file_type() {
+            Ok(t) => t,
+            Err(_) => continue,
+        };
+        if ft.is_symlink() { continue; }
         let meta = match entry.metadata() {
             Ok(m) => m,
             Err(_) => continue,
@@ -520,36 +536,47 @@ fn stats_walk(
 }
 
 /// Snapshot every text file under `path` so future diffs have a baseline.
-/// Called by Explorer the moment a folder is opened. Replaces any prior
-/// snapshot for the same folder so reopening = fresh "since now" timeline.
+/// Keyed by `session_id` (terminal/tab id) so two tabs working in the same
+/// folder each track their own diff timeline — Codex-tab edits don't bleed
+/// into the OpenCode-tab diff and vice versa. Replaces any prior snapshot
+/// for the same session_id so reopening / tool restart = fresh baseline.
 #[tauri::command]
-fn start_folder_snapshot(path: String) -> Result<(), String> {
+fn start_folder_snapshot(session_id: String, path: String) -> Result<(), String> {
     let dir = std::path::Path::new(&path);
     if !dir.is_dir() { return Err(format!("Not a directory: {}", path)); }
     let mut files = std::collections::HashMap::new();
     stats_walk(dir, &mut files, None, STATS_MAX_FILES);
-    let key = path.replace('\\', "/");
     let mut map = snapshots().lock().map_err(|e| format!("lock: {}", e))?;
-    map.insert(key, FolderSnapshot { files });
+    map.insert(session_id, FolderSnapshot { files });
+    Ok(())
+}
+
+/// Free the snapshot for a closed tab. No-op if none exists. Called by the
+/// Explorer when a terminal is removed from the tabs list, so dead tabs
+/// don't keep their full text-file hash table around for the rest of the
+/// session.
+#[tauri::command]
+fn drop_session_snapshot(session_id: String) -> Result<(), String> {
+    let mut map = snapshots().lock().map_err(|e| format!("lock: {}", e))?;
+    map.remove(&session_id);
     Ok(())
 }
 
 /// Walk the folder again and return only the files whose line count or
-/// mtime drifted from their open-time snapshot. Empty map when no
-/// snapshot exists for this folder (Explorer falls back to size badge).
+/// mtime drifted from this session's snapshot. Empty map when no
+/// snapshot exists for this session_id (Explorer falls back to size badge).
 #[tauri::command]
-fn compute_folder_stats(path: String) -> std::collections::HashMap<String, FileStats> {
+fn compute_folder_stats(session_id: String, path: String) -> std::collections::HashMap<String, FileStats> {
     let mut result = std::collections::HashMap::new();
     let dir = std::path::Path::new(&path);
     if !dir.is_dir() { return result; }
-    let key = path.replace('\\', "/");
 
     let snapshot = {
         let map = match snapshots().lock() {
             Ok(m) => m,
             Err(_) => return result,
         };
-        match map.get(&key) {
+        match map.get(&session_id) {
             Some(s) => s.clone(),
             None => return result,
         }
@@ -566,14 +593,15 @@ fn compute_folder_stats(path: String) -> std::collections::HashMap<String, FileS
                 // 0/0 = file was touched (mtime changed) but content reverts to
                 // baseline (e.g., user edited and undid). Skip — no badge.
                 if added == 0 && deleted == 0 { continue; }
+                // Sanity cap — see STATS_MAX_DIFF_LINES doc.
+                if added.saturating_add(deleted) > STATS_MAX_DIFF_LINES { continue; }
                 result.insert(abs_path.clone(), FileStats { added, deleted });
             }
             None => {
                 // New file (created since snapshot): every line is an addition.
-                result.insert(abs_path.clone(), FileStats {
-                    added: cur.line_hashes.len() as u32,
-                    deleted: 0,
-                });
+                let added = cur.line_hashes.len() as u32;
+                if added > STATS_MAX_DIFF_LINES { continue; }
+                result.insert(abs_path.clone(), FileStats { added, deleted: 0 });
             }
         }
     }
@@ -3381,6 +3409,7 @@ pub fn start_ui() -> anyhow::Result<()> {
             list_drives,
             list_directory,
             start_folder_snapshot,
+            drop_session_snapshot,
             compute_folder_stats,
             show_in_folder,
             fs_delete,
