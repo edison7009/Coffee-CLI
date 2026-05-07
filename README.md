@@ -43,7 +43,7 @@ Coffee CLI is a **native desktop workspace** for AI CLI agents — Claude Code, 
 This is not a web app. Not an Electron wrapper. A **true native desktop app** built with Tauri (Rust core), engineered for performance and low resource usage.
 
 <p align="center">
-  <img src="screenshot/wallpaper.png" alt="Coffee CLI workspace with custom wallpaper" width="860" />
+  <img src="screenshot/wallpaper.jpg" alt="Coffee CLI workspace with custom wallpaper" width="860" />
 </p>
 
 ### Who is it for?
