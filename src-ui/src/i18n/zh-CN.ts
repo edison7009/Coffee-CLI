@@ -91,9 +91,6 @@ export const zhCN = {
   'action.close': '关闭',
   'action.resume_terminal': '继续本轮对话',
 
-  // Failure banner — single line, all 7 tools share it
-  'terminal.exit_failed': '无法回到本轮对话',
-
   // Time
   'time.just_now': '刚刚',
   'time.today': '今天',

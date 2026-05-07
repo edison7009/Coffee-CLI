@@ -16,7 +16,7 @@ interface ChatMessage {
 export function ChatReader({ sessionId }: { sessionId: string }) {
   const t = useT();
   const { state, dispatch } = useAppState();
-  
+
   const terminal = state.terminals.find(t => t.id === sessionId);
   let currentSession: SavedSession | null = null;
   if (terminal?.toolData) {
@@ -202,13 +202,6 @@ export function ChatReader({ sessionId }: { sessionId: string }) {
 
     if (!targetId) return;
 
-    // Keep the History tab alive after launching the resume terminal. If
-    // the resumed process exits early (token expired, weekly limit, network
-    // blip), the new tab dead-ends on a "Could not return" banner; tearing
-    // down ChatReader at the same time strands the user with no way back.
-    // With the History tab still in the tab bar they can click it to return
-    // to the past chat and pick another session — or close it manually
-    // once the resume is confirmed running.
     commands.tierTerminalResume(
       currentSession.id, targetId, currentSession.tool, currentSession.session_token, 80, 24, currentSession.cwd
     ).catch(console.error);

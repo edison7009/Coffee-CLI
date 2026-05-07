@@ -279,10 +279,6 @@ function TierTerminalImpl({
   const hasOutputRef = useRef(false); // Set to true when PTY emits visible output
   const [processExited, setProcessExited] = useState(false);
   const [startFailed, setStartFailed] = useState(false);
-  // True when the child died with a non-zero exit code. Drives the failure
-  // banner; on code 0 (user typed /exit or Ctrl+D) we render nothing because
-  // the user ended the session deliberately and doesn't need to be told.
-  const [exitFailed, setExitFailed] = useState(false);
   // First exit event to arrive (onExit from child-watcher, or onStatus from
   // reader EOF) wins the right to write the "[Process exited]" scrollback
   // line. Prevents duplication when both fire. The child-watcher's onExit
@@ -716,7 +712,6 @@ function TierTerminalImpl({
         onStatus: (running, exitCode) => {
           if (!mounted || running) return;
           setProcessExited(true);
-          if (exitCode !== null && exitCode !== 0) setExitFailed(true);
           dispatch({ type: 'SET_AGENT_STATUS', id: sessionId, status: 'idle' });
           if (exitMessageWrittenRef.current) return;
           exitMessageWrittenRef.current = true;
@@ -732,7 +727,6 @@ function TierTerminalImpl({
           // sees EOF — without this, the terminal looked frozen forever.
           if (!mounted) return;
           setProcessExited(true);
-          if (exitCode !== 0) setExitFailed(true);
           dispatch({ type: 'SET_AGENT_STATUS', id: sessionId, status: 'idle' });
           if (exitMessageWrittenRef.current) return;
           exitMessageWrittenRef.current = true;
@@ -1025,9 +1019,6 @@ function TierTerminalImpl({
   const solidBg = THEME_TERMINAL_BG[theme] || (theme === 'light' ? '#eeebe2' : '#0c0c0c');
   const terminalBg = hasBg ? 'transparent' : solidBg;
 
-  // Show fallback UI when splash is gone but terminal has no content
-  const showFallback = !showSplash && !hasOutputRef.current && (processExited || startFailed);
-
   return (
     <div className="tier-terminal" style={{ background: terminalBg, position: 'relative' }}>
       {/* Custom background (image/video) behind terminal text */}
@@ -1040,25 +1031,13 @@ function TierTerminalImpl({
           )}
         </div>
       )}
-      {/* Mid-session process-exited banner — only shows after the terminal
-          had output and the process later died. For "never launched" case
-          the full-cover `tier-launch-failed` fallback below handles it. */}
-      {/* Failure banner — shown only on non-zero exit. Code 0 is a deliberate
-          /exit / Ctrl+D and needs no surface UI. The message is intentionally
-          unified across all 7 tools and all failure modes: the user wants
-          to be told whether they got back into the conversation or not, not
-          why specifically (errors are out of our control once the upstream
-          CLI is invoked). */}
-      {processExited && exitFailed && hasOutputRef.current && (
-        <div className="tier-process-exited-banner">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="12" y1="8" x2="12" y2="12"/>
-            <line x1="12" y1="16" x2="12.01" y2="16"/>
-          </svg>
-          <span>{t('terminal.exit_failed' as any) || 'Could not return to the conversation'}</span>
-        </div>
-      )}
+      {/* No mid-session "could not return to conversation" banner. The
+          resume flow itself works fine; the banner was the bug — it
+          painted every non-zero exit (deliberate /exit, model swap,
+          transient teardown) as a fatal failure, making the feature
+          read as broken when the underlying spawn was healthy. The
+          upstream CLI's own stdout already explains anything actually
+          worth surfacing; we don't need to layer our own verdict. */}
 
       {/* xterm.js: handles all rendering, input, and scrolling. */}
       <div
@@ -1101,29 +1080,13 @@ function TierTerminalImpl({
           and uses the tab-actions registry to paste into whichever xterm is
           active, so TierTerminal no longer needs to host it. */}
 
-      {/* Fallback UI when tool fails to launch or exits before producing output */}
-      {showFallback && (
-        <div className="tier-launch-failed" style={{ background: solidBg }}>
-          <div className="launch-failed-group">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--accent, #C4956A)', opacity: 0.7 }}>
-              <circle cx="12" cy="12" r="10" />
-              <line x1="12" y1="8" x2="12" y2="12" />
-              <line x1="12" y1="16" x2="12.01" y2="16" />
-            </svg>
-            <span className="launch-failed-title">
-              {toolName || (tool && toolLabel[tool]) || 'Tool'}
-            </span>
-            <span className="launch-failed-hint">
-              {startFailed
-                ? t('launch.error.ipc_failed' as any) || 'Could not connect to backend'
-                : t('launch.error.tool_exited' as any) || 'Process exited unexpectedly'}
-            </span>
-            <span className="launch-failed-sub">
-              {t('launch.error.check_install' as any) || 'Make sure the tool is installed and available in your PATH'}
-            </span>
-          </div>
-        </div>
-      )}
+      {/* No "tool failed to launch" / "process exited unexpectedly"
+          fallback overlay. If the tool isn't on PATH the OS prints its
+          own command-not-found message into xterm; if it crashes mid-run
+          the CLI's own stderr is already in the scrollback. Layering our
+          generic Coffee CLI verdict on top either echoes that message
+          in vaguer wording or — worse — flags deliberate /exit and
+          model-swap restarts as failures. The tool speaks for itself. */}
 
       {/* Startup splash — covers ugly init output with branded loading screen */}
       {showSplash && (

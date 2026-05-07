@@ -93,9 +93,6 @@ export const en = {
   'action.close': 'Close',
   'action.resume_terminal': 'Continue this session',
 
-  // Failure banner — single line, all 7 tools share it
-  'terminal.exit_failed': 'Could not return to the conversation',
-
   // Time
   'time.just_now': 'Just now',
   'time.today': 'Today',
