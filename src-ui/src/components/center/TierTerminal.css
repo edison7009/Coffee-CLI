@@ -279,11 +279,21 @@
     z-index: 9999;
     min-width: 156px;
     padding: 4px;
-    background: var(--bg-card);
+    /* Same opacity fix as Explorer's .ctx-menu — --bg-card is 3% white in
+       dark themes, useless for a floating menu. Layer --bg-panel over
+       --bg-app so Light theme's translucent panel still reads opaque. */
+    background-color: var(--bg-app);
+    background-image: linear-gradient(var(--bg-panel), var(--bg-panel));
     border: 1px solid var(--border);
     border-radius: var(--radius-sm, 6px);
-    box-shadow: var(--shadow-panel);
-    backdrop-filter: var(--glass-blur);
+    /* Tight, soft shadow tuned for a 156px overlay — --shadow-panel's
+       16px/48px halo was the "阴影特别重" symptom: panel-tier blur radius
+       on a small popup smears 5-6px outside the box. */
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.20), 0 6px 20px rgba(0, 0, 0, 0.22);
+    /* No backdrop-filter — bg is already opaque so the blur is invisible
+       anyway, and on WebView2 a 2nd backdrop-filter layer animating with
+       transform corrupts neighboring backdrop-filter elements (launchpad
+       cards under wallpaper). Glass shape restores it via override. */
     animation: ctx-appear 0.1s cubic-bezier(0.2, 0, 0.2, 1);
     user-select: none;
 }

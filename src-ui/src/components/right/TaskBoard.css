@@ -624,20 +624,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--accent) 40%, transparent);
   transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   cursor: default !important;
 }
 
 .task-fab-simple:hover {
   transform: scale(1.08) translateY(-2px);
-  box-shadow: 0 8px 16px color-mix(in srgb, var(--accent) 55%, transparent);
   background: var(--accent-hover);
 }
 
 .task-fab-simple:active {
   transform: scale(0.95);
-  box-shadow: 0 2px 6px color-mix(in srgb, var(--accent) 60%, transparent);
 }
 
 .task-fab-icon {

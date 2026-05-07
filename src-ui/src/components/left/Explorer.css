@@ -315,20 +315,27 @@
 .ctx-menu {
   z-index: 9999;
   min-width: 200px;
-  background: var(--bg-card);
+  /* --bg-card is rgba(...,0.03) in every dark theme — fine for inline
+     cards on an opaque panel, but a floating menu rendered through
+     createPortal sits over the file list / wallpaper and reads as
+     transparent. Use --bg-panel (opaque dark) with --bg-app underneath
+     to cover Light theme where --bg-panel is rgba(255,255,255,0.7).
+     Glass shape restores its frosted look via a [data-shape="glass"]
+     override in global.css; Panel shape remaps --bg-* to --bg-app and
+     is unaffected. */
+  background-color: var(--bg-app);
+  background-image: linear-gradient(var(--bg-panel), var(--bg-panel));
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 4px;
-  box-shadow: var(--shadow-panel);
-  /* No backdrop-filter — the var(--bg-card) background is already
-     fully opaque so the blur is invisible, and on WebView2 a second
-     backdrop-filter layer animating with transform (the ctx-pop
-     scale) re-composites neighboring backdrop-filter elements
-     (launchpad cards under wallpaper) and corrupts their sampling —
-     visible as blue fringe + corner ghosting on the cards while the
-     menu is open. Glass shape, which actually wants the frosted
-     look, restores backdrop-filter via a [data-shape="glass"]
-     override in global.css. */
+  /* Tight, soft shadow tuned for a small overlay — --shadow-panel's
+     16px/48px halo was reading as a "heavy" outer ring on a 200px box. */
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.20), 0 6px 20px rgba(0, 0, 0, 0.22);
+  /* No backdrop-filter on the default rule — on WebView2 a second
+     backdrop-filter layer animating with transform (the ctx-pop scale)
+     re-composites neighboring backdrop-filter elements (launchpad cards
+     under wallpaper) and corrupts their sampling — visible as blue
+     fringe + corner ghosting on the cards while the menu is open. */
   animation: ctx-pop 0.12s cubic-bezier(0.2, 0, 0, 1.4);
 }
 

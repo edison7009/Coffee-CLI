@@ -481,7 +481,7 @@
     max-height: 92vh;
     object-fit: contain;
     border-radius: var(--shape-radius-btn, 4px);
-    box-shadow: 0 12px 40px rgba(var(--shadow-rgb), 0.5);
+    box-shadow: 0 4px 12px rgba(var(--shadow-rgb), 0.25), 0 12px 32px rgba(var(--shadow-rgb), 0.30);
     user-select: none;
     -webkit-user-drag: none;
     cursor: default;

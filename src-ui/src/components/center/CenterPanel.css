@@ -298,7 +298,6 @@
 
 .launchpad-card-group:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
 }
 
 /* Frosted glass cards when wallpaper is active.
@@ -471,7 +470,7 @@
   border: 1px solid var(--border);
   padding: 10px 20px;
   border-radius: var(--radius-md);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.20), 0 6px 20px rgba(0, 0, 0, 0.22);
   z-index: 1000;
   font-size: 14px;
   font-weight: 500;
@@ -521,7 +520,6 @@
 .resume-card:hover {
   transform: translateY(-2px);
   background-color: var(--bg-card);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.06);
 }
 
 .resume-card-icon {
@@ -900,7 +898,7 @@
   color: var(--text-1);
   font-family: var(--font-primary);
   font-size: 13px;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25), 0 12px 32px rgba(0, 0, 0, 0.30);
   overflow: hidden;
 }
 
@@ -1172,7 +1170,7 @@
   background: var(--bg-panel);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25), 0 12px 32px rgba(0, 0, 0, 0.30);
   overflow: hidden;
 }
 

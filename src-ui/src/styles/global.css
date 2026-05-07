@@ -1516,7 +1516,7 @@ body.gambit-docked {
     position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
     background: var(--text-1); color: var(--bg-app);
     padding: 10px 24px; border-radius: 20px; font-size: 13px; font-weight: 600;
-    box-shadow: var(--shadow-panel); z-index: 1000;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.20), 0 6px 20px rgba(0, 0, 0, 0.22); z-index: 1000;
     animation: toastIn 0.3s ease;
 }
 @keyframes toastIn {
