@@ -398,7 +398,14 @@ export function CenterPanel() {
   const terminals = state.terminals;
   const activeTerminalId = state.activeTerminalId;
 
-  const [toastMsg, setToastMsg] = useState<string | null>(null);
+  // Toast carries an id (timestamp) so React re-mounts the element on
+  // every showToast() call — the slideDownToast animation is `forwards`
+  // and only runs once per mount, so without a fresh key, rapid
+  // back-to-back toasts wouldn't visually re-trigger (user sees nothing
+  // after the first one even though state is updating). Keying by id
+  // forces a remount → fresh animation pass each time.
+  const [toast, setToast] = useState<{ msg: string; id: number } | null>(null);
+  const showToast = (msg: string) => setToast({ msg, id: Date.now() });
   const [toolsInstalled, setToolsInstalled] = useState<Record<string, boolean>>({});
   // Per-tool launch override modal (gear icon → opens settings for that tool).
   const [configModalTool, setConfigModalTool] = useState<{ key: string; label: string } | null>(null);
@@ -753,18 +760,20 @@ export function CenterPanel() {
     return () => clearTimeout(handle);
   }, [isLaunchpadMode, showLibrary]);
 
-  // Auto-hide toast
+  // Auto-hide toast — keyed on toast.id so rapid replacements (toggle
+  // spam) reset the timer cleanly: previous timer is cleared, new 3s
+  // window starts from the latest message.
   useEffect(() => {
-    if (toastMsg) {
-      const timer = setTimeout(() => setToastMsg(null), 3000);
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 3000);
       return () => clearTimeout(timer);
     }
-  }, [toastMsg]);
+  }, [toast?.id]);
 
 
   const handleAddTab = () => {
     if (terminals.length >= 5) {
-      setToastMsg(t('session.max'));
+      showToast(t('session.max'));
       return;
     }
     dispatch({
@@ -860,7 +869,7 @@ export function CenterPanel() {
     const poll = window.setInterval(async () => {
       if (Date.now() - startMs > TIMEOUT_MS) {
         window.clearInterval(poll);
-        setToastMsg(t('vibeid.insights_timeout') as string);
+        showToast(t('vibeid.insights_timeout') as string);
         return;
       }
       const mtime = await commands.checkVibeidReportMtime().catch(() => 0);
@@ -1108,10 +1117,10 @@ export function CenterPanel() {
       </div>
       <div className="main-content">
         {/* Premium Toast Notification */}
-        {toastMsg && (
-          <div className="toast-notification">
+        {toast && (
+          <div key={toast.id} className="toast-notification">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-            {toastMsg}
+            {toast.msg}
           </div>
         )}
 
@@ -1552,7 +1561,7 @@ export function CenterPanel() {
                         </div>
                       </>
                     ) : (
-                      <SkillsPanel showToast={setToastMsg} />
+                      <SkillsPanel showToast={showToast} />
                     )}
                   </div>
 

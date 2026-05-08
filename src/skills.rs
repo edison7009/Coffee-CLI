@@ -30,6 +30,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use base64::Engine;
 use serde::{Deserialize, Serialize};
 
 #[cfg(windows)]
@@ -72,6 +73,13 @@ pub struct SkillEntry {
     /// pull display name / description / category. Returns None when the
     /// skill folder exists but its SKILL.md is missing or unreadable.
     pub skill_md: Option<String>,
+    /// `data:image/...;base64,...` URL for the skill's icon, if any.
+    /// Probes `assets/<name>-small.svg` → `assets/<name>.svg` →
+    /// `assets/<name>.png` and embeds the first match. None if no
+    /// icon exists. Embedding (vs serving via asset:// protocol) keeps
+    /// the IPC self-contained — frontend can `<img src={iconDataUrl}>`
+    /// without a second round-trip.
+    pub icon_data_url: Option<String>,
 }
 
 fn home() -> Result<PathBuf, String> {
@@ -229,12 +237,46 @@ pub fn skills_list() -> Result<Vec<SkillEntry>, String> {
             seen.insert(name.clone());
 
             let skill_md = fs::read_to_string(path.join("SKILL.md")).ok();
-            out.push(SkillEntry { name, enabled, skill_md });
+            let icon_data_url = read_skill_icon(&path, &name);
+            out.push(SkillEntry { name, enabled, skill_md, icon_data_url });
         }
     }
 
     out.sort_by(|a, b| a.name.cmp(&b.name));
     Ok(out)
+}
+
+/// Probe the skill's `assets/` folder for a usable icon, in priority order:
+///   `<name>-small.svg`  ← preferred: vector, already sized for thumbnails
+///   `<name>.svg`        ← vector, full-size
+///   `<name>.png`        ← raster fallback
+///   `icon.svg` / `icon.png` ← generic fallback for skills that don't
+///                              follow the openai/skills naming convention
+///
+/// Returns a `data:image/...;base64,...` URL ready for `<img src=>`.
+fn read_skill_icon(skill_dir: &Path, name: &str) -> Option<String> {
+    let assets = skill_dir.join("assets");
+    let candidates = [
+        (format!("{}-small.svg", name), "image/svg+xml"),
+        (format!("{}.svg", name), "image/svg+xml"),
+        (format!("{}.png", name), "image/png"),
+        ("icon.svg".to_string(), "image/svg+xml"),
+        ("icon.png".to_string(), "image/png"),
+    ];
+    for (filename, mime) in candidates {
+        let path = assets.join(&filename);
+        if let Ok(bytes) = fs::read(&path) {
+            // Cap embedded icons at 256 KiB. Above that, the IPC payload
+            // bloat outweighs the convenience — frontend should fall back
+            // to a generic glyph rather than carry a 2 MB image inline.
+            if bytes.len() > 256 * 1024 {
+                continue;
+            }
+            let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
+            return Some(format!("data:{};base64,{}", mime, b64));
+        }
+    }
+    None
 }
 
 /// Toggle a skill between disabled (library) and enabled (skills/ + symlinks).
@@ -286,7 +328,20 @@ pub fn skills_toggle(name: String, enable: bool) -> Result<(), String> {
     fs::rename(&src, &dst).map_err(|e| format!("rename: {}", e))?;
 
     if enable {
-        link_into_cli_dirs(&name, &dst);
+        // Per feedback_refuse_silent_override: if link creation fails,
+        // surface a real error rather than logging-and-pretending. The
+        // user has just been told "✓ enabled" by an optimistic UI; the
+        // CLIs they care about can't actually see the skill yet.
+        if let Err(e) = link_into_cli_dirs(&name, &dst) {
+            // Roll the rename back so the on-disk state matches what
+            // the UI is about to show (skill back in library/ as
+            // disabled). Best-effort; if rollback also fails, the
+            // user has a real-but-unliked skill in skills/, which the
+            // next toggle will work around (precheck won't trip since
+            // we just rolled back).
+            let _ = fs::rename(&dst, &from_root.join(&name));
+            return Err(e);
+        }
     } else {
         unlink_from_cli_dirs(&name);
     }
@@ -330,38 +385,58 @@ pub fn skills_delete(name: String) -> Result<(), String> {
     Ok(())
 }
 
-/// Create per-CLI symlinks for an enabled skill. Best-effort — failures
-/// in one CLI don't abort the others; we log and continue. The skill is
-/// still in the canonical skills/ dir, so the user can manually link if
-/// the auto-link failed.
-fn link_into_cli_dirs(name: &str, source: &Path) {
-    let Ok(home) = home() else { return };
+/// Create per-CLI symlinks for an enabled skill. Returns Err on the
+/// first failure that prevents the skill from reaching its target CLI
+/// dir — caller is responsible for rolling back the rename. Pre-creating
+/// the parent dir (so future-installed CLIs already see the link) is
+/// soft: if THAT fails (e.g. permission denied on a read-only home),
+/// we skip that one target but still try the next.
+fn link_into_cli_dirs(name: &str, source: &Path) -> Result<(), String> {
+    let home = home()?;
+    let mut linked_any = false;
+    let mut last_err: Option<String> = None;
     for cli_dir in TARGET_CLI_SKILL_DIRS {
         let parent = home.join(cli_dir);
-        // CLI not yet installed → its skills dir doesn't exist. Pre-create
-        // anyway so the link is wired up in advance; costs nothing.
         if !parent.exists() {
             if let Err(e) = fs::create_dir_all(&parent) {
-                log::warn!("[skills] mkdir {}: {} — skipping", parent.display(), e);
+                log::warn!("[skills] mkdir {}: {} — skipping target", parent.display(), e);
                 continue;
             }
         }
         let link = parent.join(name);
         if link.exists() {
-            // External entry of the same name (user's own skill, or a
-            // broken link from an old run we didn't clean up). Don't
-            // clobber — log and skip.
-            log::warn!("[skills] {} already exists, leaving alone", link.display());
+            // Existing link from a previous session (precheck would have
+            // caught a real folder). Treat as already-wired so we don't
+            // try and fail "destination exists".
+            if is_dir_link(&link) {
+                linked_any = true;
+                continue;
+            }
+            // Race: a real folder appeared between precheck and now.
+            last_err = Some(format!(
+                "Conflict at {}: real folder appeared after precheck",
+                link.display()
+            ));
             continue;
         }
-        if let Err(e) = create_dir_link(source, &link) {
-            log::warn!(
-                "[skills] link {} → {} failed: {}",
-                link.display(),
-                source.display(),
-                e
-            );
+        match create_dir_link(source, &link) {
+            Ok(_) => linked_any = true,
+            Err(e) => {
+                let msg = format!(
+                    "link {} → {} failed: {}",
+                    link.display(),
+                    source.display(),
+                    e
+                );
+                log::warn!("[skills] {}", msg);
+                last_err = Some(msg);
+            }
         }
+    }
+    if linked_any {
+        Ok(())
+    } else {
+        Err(last_err.unwrap_or_else(|| "No CLI target dir was linkable".to_string()))
     }
 }
 
@@ -395,18 +470,41 @@ fn create_dir_link(source: &Path, link: &Path) -> std::io::Result<()> {
     // contrast to symbolic links which need SeCreateSymbolicLinkPrivilege.
     // Shell out to cmd's `mklink /J` rather than implementing the IOCTL
     // ourselves: simpler, no new windows-crate features, behaves identically.
-    // CREATE_NO_WINDOW (0x08000000) suppresses the brief cmd flash window.
-    let status = std::process::Command::new("cmd")
+    //
+    // Two production gotchas baked in here:
+    //   1. **Force backslash separators.** Rust's `PathBuf::join()` on
+    //      Windows happily preserves any `/` inside the joined string
+    //      ("/skills" remains as-is when joined with a backslashed
+    //      home dir). When that mixed-slash path reaches cmd.exe,
+    //      mklink's tokeniser sees `/skills` and treats it as a flag —
+    //      exits 1 with no useful message. Always normalise both
+    //      paths to backslash before handing off.
+    //   2. **Capture stderr.** mklink prints the actual reason
+    //      ("Cannot create a file when that file already exists",
+    //      "The system cannot find the path specified", etc.) to
+    //      stderr; the exit code alone says nothing useful. Surface
+    //      the message into our Err so users + future-us see the
+    //      real cause instead of "Some(1)".
+    let normalize = |p: &Path| -> std::ffi::OsString {
+        p.to_string_lossy().replace('/', "\\").into()
+    };
+    let output = std::process::Command::new("cmd")
         .args(["/C", "mklink", "/J"])
-        .arg(link)
-        .arg(source)
+        .arg(normalize(link))
+        .arg(normalize(source))
         .creation_flags(0x08000000)
-        .status()?;
-    if !status.success() {
-        return Err(std::io::Error::other(format!(
-            "mklink /J failed: {:?}",
-            status.code()
-        )));
+        .output()?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        let detail = if !stderr.is_empty() {
+            stderr
+        } else if !stdout.is_empty() {
+            stdout
+        } else {
+            format!("exit {:?}", output.status.code())
+        };
+        return Err(std::io::Error::other(format!("mklink /J: {}", detail)));
     }
     Ok(())
 }

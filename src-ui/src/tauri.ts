@@ -157,7 +157,7 @@ export const commands = {
   skillsEnsureDirs: () => invoke<void>('skills_ensure_dirs'),
   skillsWriteFile: (name: string, relPath: string, bytes: number[] | Uint8Array) =>
     invoke<void>('skills_write_file', { name, relPath, bytes: Array.from(bytes) }),
-  skillsList: () => invoke<{ name: string; enabled: boolean; skillMd: string | null }[]>('skills_list'),
+  skillsList: () => invoke<{ name: string; enabled: boolean; skillMd: string | null; iconDataUrl: string | null }[]>('skills_list'),
   skillsToggle: (name: string, enable: boolean) =>
     invoke<void>('skills_toggle', { name, enable }),
   skillsDelete: (name: string) => invoke<void>('skills_delete', { name }),

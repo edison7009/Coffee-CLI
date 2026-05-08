@@ -5,6 +5,7 @@ interface SkillEntry {
   name: string;
   enabled: boolean;
   skillMd: string | null;
+  iconDataUrl: string | null;
 }
 
 interface ParsedSkill extends SkillEntry {
@@ -123,6 +124,11 @@ export function SkillsPanel({ showToast }: Props) {
       {skills.map(skill => (
         <div key={skill.name} className={`skills-card ${skill.enabled ? 'is-enabled' : ''}`}>
           <div className="skills-card-head">
+            <div className="skills-card-icon">
+              {skill.iconDataUrl
+                ? <img src={skill.iconDataUrl} alt="" />
+                : <span className="skills-card-icon-fallback">{skill.displayName.slice(0, 1).toUpperCase()}</span>}
+            </div>
             <div className="skills-card-name">{skill.displayName}</div>
             <button
               className={`skills-toggle ${skill.enabled ? 'on' : 'off'}`}
