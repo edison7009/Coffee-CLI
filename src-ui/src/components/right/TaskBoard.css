@@ -235,8 +235,12 @@
 .task-card-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 8px 10px 10px;
+  /* 4px gap — keeps the title close to the checkbox on the left and
+   * lets the trash + send buttons cluster tightly on the right, so
+   * even multi-line titles have more horizontal room. Right padding
+   * matches the gap so trash↔send and send↔card-edge are both 4px. */
+  gap: 4px;
+  padding: 10px 4px 10px 10px;
 }
 
 .task-card:hover {
@@ -351,10 +355,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  /* Match .task-slot's 24×24 footprint — keeps the left/right action
+   * affordances on a single visual rhythm; any extra hit area beyond
+   * the dot itself is wasted on a desktop pointer. Vertical padding
+   * (with cancelling negative margin) gives a slightly taller click
+   * strip without growing the row height. */
+  width: 24px;
+  height: 24px;
+  padding: 8px 0;
+  margin: -8px 0;
   background: transparent;
   border: none;
-  padding: 14px 12px;
-  margin: -14px -2px -14px -12px;
   flex-shrink: 0;
   border-radius: var(--radius-sm);
   transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -429,7 +440,7 @@
    the last line, which matches the natural reading flow. Kept subtle (55%
    opacity) so it doesn't compete visually with the title text. */
 .task-title-text {
-  /* plain inline text — no extra rules needed */
+  /* plain inline text — pencil flows after it naturally */
 }
 
 .task-edit-inline {
