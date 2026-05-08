@@ -142,9 +142,128 @@
   font-family: var(--font, system-ui);
   color: var(--text-1);
   word-break: break-word;
-  white-space: pre-wrap;
   box-shadow: 0 2px 6px rgba(var(--shadow-rgb), 0.08);
   position: relative;
+}
+
+/* ── Markdown rendering ──────────────────────────────────────────
+ * AI / user content rendered through MarkdownContent → ReactMarkdown.
+ * Coloring / sizing follows the host bubble (.chat-bubble) so user
+ * and assistant variants both inherit the bubble's color/font. */
+
+/* Symmetric vertical margins everywhere — don't rely on browser margin
+ * collapsing. Adjacent siblings end up with `max(6, 6) = 6` if collapse
+ * happens, and `6 + 6 = 12` if not (e.g. inside flex/grid contexts or
+ * across block-formatting-context boundaries). Either way, no surprise
+ * "tight above / loose below" asymmetry. First/last-child overrides
+ * remove the outer edge so the bubble's own padding is the only top/
+ * bottom breathing. */
+.md-body > *:first-child { margin-top: 0; }
+.md-body > *:last-child { margin-bottom: 0; }
+
+.md-body p {
+  margin: 6px 0;
+}
+
+.md-body h1, .md-body h2, .md-body h3,
+.md-body h4, .md-body h5, .md-body h6 {
+  margin: 12px 0 6px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.md-body h1 { font-size: 1.4em; }
+.md-body h2 { font-size: 1.25em; }
+.md-body h3 { font-size: 1.1em; }
+.md-body h4, .md-body h5, .md-body h6 { font-size: 1em; }
+
+.md-body ul, .md-body ol {
+  margin: 6px 0;
+  padding-left: 22px;
+}
+.md-body li { margin: 2px 0; }
+.md-body li > ul, .md-body li > ol { margin: 2px 0 0; }
+.md-body li > p { margin: 2px 0; }
+.md-body li > p:first-child { margin-top: 0; }
+.md-body li > p:last-child { margin-bottom: 0; }
+.md-body li > pre.md-code { margin: 6px 0; }
+
+.md-body strong { font-weight: 600; }
+.md-body em { font-style: italic; }
+
+.md-body a {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px dashed color-mix(in srgb, var(--accent) 50%, transparent);
+}
+.md-body a:hover { border-bottom-style: solid; }
+
+.md-body blockquote {
+  margin: 6px 0;
+  padding: 4px 12px;
+  border-left: 3px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  color: var(--text-2);
+}
+
+.md-body hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 16px 0;
+}
+
+/* Inline code (`x`) — subtle background, monospace. */
+.md-body :not(pre) > code,
+.md-body .md-inline-code {
+  font-family: ui-monospace, "SF Mono", Consolas, "Liberation Mono", monospace;
+  font-size: 0.9em;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--text-1);
+}
+
+/* Fenced code block (```js …```) — Shiki-tokenized when CodeBlock
+ * resolves; falls back to plain text until then. */
+.md-body pre.md-code {
+  margin: 6px 0;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--text-1) 5%, transparent);
+  border: 1px solid var(--border);
+  overflow-x: auto;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.md-body pre.md-code code {
+  font-family: ui-monospace, "SF Mono", Consolas, "Liberation Mono", monospace;
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+}
+.md-body .md-code-line {
+  display: block;
+  white-space: pre;
+}
+
+/* GFM tables (via remark-gfm). */
+.md-body table {
+  margin: 6px 0;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.md-body th, .md-body td {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  text-align: left;
+}
+.md-body th { background: var(--bg-card); font-weight: 600; }
+
+/* GFM task list checkbox keeps its native style but loses the bullet. */
+.md-body ul:has(> li > input[type="checkbox"]) {
+  list-style: none;
+  padding-left: 0;
+}
+.md-body li > input[type="checkbox"] {
+  margin-right: 6px;
 }
 
 .chat-message-row.user .chat-bubble {

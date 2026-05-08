@@ -64,6 +64,26 @@ export async function tokenizeFile(
 ): Promise<LineTokens[] | null> {
   const lang = detectLanguage(filePath);
   if (!lang) return null;
+  return tokenizeAt(text, lang, theme);
+}
+
+/** Tokenize by explicit language id (Shiki name, e.g. `typescript`,
+ *  `python`). For Markdown fenced code blocks where the user wrote
+ *  ` ```js ` rather than a file path. Same null-fallback contract. */
+export async function tokenizeByLang(
+  text: string,
+  langHint: string,
+  theme: 'github-light-default' | 'github-dark-default',
+): Promise<LineTokens[] | null> {
+  const lang = LANG_MAP[langHint.toLowerCase()] ?? langHint.toLowerCase();
+  return tokenizeAt(text, lang, theme);
+}
+
+async function tokenizeAt(
+  text: string,
+  lang: string,
+  theme: 'github-light-default' | 'github-dark-default',
+): Promise<LineTokens[] | null> {
   const highlighter = await getHighlighter();
   if (!highlighter.getLoadedLanguages().includes(lang)) {
     try {
@@ -72,5 +92,9 @@ export async function tokenizeFile(
       return null;
     }
   }
-  return highlighter.codeToTokens(text, { lang: lang as any, theme }).tokens;
+  try {
+    return highlighter.codeToTokens(text, { lang: lang as any, theme }).tokens;
+  } catch {
+    return null;
+  }
 }

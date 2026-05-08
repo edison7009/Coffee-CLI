@@ -4,6 +4,7 @@ import type { SavedSession } from '../../tauri';
 import { useAppState } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
 import { registerTabActions } from '../../lib/tab-actions';
+import { MarkdownContent } from './MarkdownContent';
 import './ChatReader.css';
 
 interface ChatMessage {
@@ -272,7 +273,7 @@ export function ChatReader({ sessionId }: { sessionId: string }) {
               )}
               {msg.content && (
                 <div className="chat-text">
-                  {msg.content}
+                  <MarkdownContent content={msg.content} />
                 </div>
               )}
             </div>
