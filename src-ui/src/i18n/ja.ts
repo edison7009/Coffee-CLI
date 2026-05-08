@@ -1,7 +1,7 @@
 export const ja = {
   'app.title': 'Coffee CLI',
-  'explorer.tab.computer': 'マイコンピュータ',
   'explorer.tab.workspace': 'ワークスペース',
+  'explorer.tab.history': 'セッション履歴',
   'explorer.workspace.select-dir': '作業フォルダをクリックして選択',
 
   // Context Menu
@@ -82,7 +82,6 @@ export const ja = {
   'task.greeting.evening': 'こんばんは。何か始めますか？',
   'task.tab.tasks': 'タスク',
   'task.tab.changes': '変更',
-  'task.tab.sessions': '履歴',
   'changes.empty': 'まだ変更はありません。',
   'diff.loading': '読み込み中…',
   'diff.error': '差分を読み込めません',

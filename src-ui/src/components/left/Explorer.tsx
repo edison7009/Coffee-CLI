@@ -10,7 +10,8 @@ import { clipboardWrite } from '../../lib/clipboard';
 import { beginExplorerDrag } from '../../lib/explorer-drag';
 import { useFileStats } from '../../lib/file-stats';
 import { commands } from '../../tauri';
-import type { DriveInfo, DirEntryInfo } from '../../tauri';
+import type { DirEntryInfo } from '../../tauri';
+import { HistoryBoard } from '../right/HistoryBoard';
 import './Explorer.css';
 
 // Snapshot lifecycle and the `+N -M` map live in lib/file-stats.tsx so the
@@ -565,11 +566,6 @@ function getFileIcon(ext: string): string {
 }
 
 
-// ─── Drive Kind → SVG Icon Path ──────────────────────────────────────────────
-
-// Reverted to using standard folder icons for minimalist aesthetic
-const DRIVE_ICONS: Record<string, string> = {};
-
 // ─── Lazy Directory Browser Node ─────────────────────────────────────────────
 
 /** A single expandable directory node for the "My Computer" tab.
@@ -881,15 +877,17 @@ export function Explorer() {
     checkUpdate();
   }, []);
 
-  const [activeTab, setActiveTab] = useState<'workspace' | 'computer'>('workspace');
-  const [drives, setDrives] = useState<DriveInfo[]>([]);
-
-  // Automatically switch to "My Computer" tab when a remote terminal is focused
+  // Persist last-selected left tab, same pattern as TaskBoard's right tab.
+  const [activeTab, setActiveTab] = useState<'workspace' | 'history'>(() => {
+    try {
+      const saved = localStorage.getItem('cc-left-tab');
+      if (saved === 'workspace' || saved === 'history') return saved;
+    } catch {}
+    return 'workspace';
+  });
   useEffect(() => {
-    if (activeSession?.tool === 'remote') {
-      setActiveTab('computer');
-    }
-  }, [state.activeTerminalId, activeSession?.tool]);
+    try { localStorage.setItem('cc-left-tab', activeTab); } catch {}
+  }, [activeTab]);
 
   const handleOpenFolder = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -912,23 +910,6 @@ export function Explorer() {
       console.error('[Explorer] Failed to open folder:', err);
     }
   };
-
-  // Load drives when the "My Computer" tab is activated. Debounced +
-  // cancellation-guarded so rapid tab toggles don't stack listDrives()
-  // IPCs (slow on Windows when a network drive is offline) and stale
-  // resolves can't overwrite drives state after the user navigates away.
-  useEffect(() => {
-    if (activeTab !== 'computer' || drives.length > 0) return;
-    let cancelled = false;
-    const handle = setTimeout(() => {
-      commands.listDrives()
-        .then(d => { if (!cancelled) setDrives(d); })
-        .catch(() => {});
-    }, 300);
-    return () => { cancelled = true; clearTimeout(handle); };
-  }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
-
-
 
   // OS-level fs watcher — picks up changes from the terminal CLI, editors,
   // git, or any process writing under folderPath. The backend emits the
@@ -1075,16 +1056,16 @@ export function Explorer() {
 
       <div className="explorer-tabs">
         <button
-          className={`explorer-tab ${activeTab === 'computer' ? 'active' : ''}`}
-          onClick={() => setActiveTab('computer')}
-        >
-          {t('explorer.tab.computer' as any)}
-        </button>
-        <button
           className={`explorer-tab ${activeTab === 'workspace' ? 'active' : ''}`}
           onClick={() => setActiveTab('workspace')}
         >
           {t('explorer.tab.workspace' as any)}
+        </button>
+        <button
+          className={`explorer-tab ${activeTab === 'history' ? 'active' : ''}`}
+          onClick={() => setActiveTab('history')}
+        >
+          {t('explorer.tab.history' as any)}
         </button>
       </div>
 
@@ -1106,7 +1087,12 @@ export function Explorer() {
 
       {/* File list Content */}
       <div className="panel-content explorer-content">
-        {activeTab === 'workspace' && (!activeSession?.tool || CWD_AGNOSTIC_TOOLS.has(activeSession.tool)) ? (
+        {activeTab === 'history' ? (
+          // HistoryBoard returns a fragment and was originally hosted inside
+          // .task-board which provided the 16px gutter. In Explorer's flex
+          // shell that padding doesn't exist, so we wrap to restore it.
+          <div className="explorer-history-host"><HistoryBoard /></div>
+        ) : (!activeSession?.tool || CWD_AGNOSTIC_TOOLS.has(activeSession.tool)) ? (
           // Launchpad (no tool picked yet) or a CWD-agnostic tool
           // (OpenClaw / Hermes Agent) — both render the same blank
           // state: a faint folder glyph, no file tree, no dir picker.
@@ -1117,30 +1103,6 @@ export function Explorer() {
               <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
             </svg>
           </div>
-        ) : activeTab === 'computer' ? (
-          <ScrollPanel>
-            <div className="file-tree-container">
-              {drives.length === 0 ? (
-                <div style={{ padding: '16px', color: 'var(--text-3)', fontSize: 12, textAlign: 'center' }}>Loading drives...</div>
-              ) : (
-                drives.map(drive => {
-                  // i18n: translate the drive label via its kind
-                  const i18nKey = `drive.${drive.kind}` as any;
-                  const driveLabel = t(i18nKey, { label: drive.label });
-                  const driveIcon = DRIVE_ICONS[drive.kind] || undefined;
-                  return (
-                    <BrowserDirNode
-                      key={drive.path}
-                      name={driveLabel}
-                      dirPath={drive.path}
-                      icon={driveIcon}
-                      onCtxMenu={handleCtxMenu}
-                    />
-                  );
-                })
-              )}
-            </div>
-          </ScrollPanel>
         ) : !folderPath ? (
           // Waiting state — terminal will sync the directory automatically
           <div className="empty-state" style={{ justifyContent: 'center', gap: '10px' }}>

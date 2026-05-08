@@ -1,7 +1,7 @@
 export const ru = {
   'app.title': 'Coffee CLI',
-  'explorer.tab.computer': 'Мой компьютер',
   'explorer.tab.workspace': 'Рабочая область',
+  'explorer.tab.history': 'Сессии',
   'explorer.workspace.select-dir': 'Нажмите для выбора рабочей папки',
 
   // Context Menu
@@ -83,7 +83,6 @@ export const ru = {
   'task.greeting.evening': 'Добрый вечер. Что-нибудь масштабное?',
   'task.tab.tasks': 'Задачи',
   'task.tab.changes': 'Изменения',
-  'task.tab.sessions': 'История',
   'changes.empty': 'Изменений пока нет.',
   'diff.loading': 'Загрузка…',
   'diff.error': 'Не удалось загрузить diff',

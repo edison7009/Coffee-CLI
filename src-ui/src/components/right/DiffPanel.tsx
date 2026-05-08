@@ -10,6 +10,7 @@
 // the tokens without a remount.
 
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { diffLines } from 'diff';
 import { commands } from '../../tauri';
 import { useT } from '../../i18n/useT';
@@ -35,10 +36,34 @@ type DiffResult =
   | { state: 'error'; reason: string }
   | { state: 'ok'; lines: DiffLine[]; added: number; deleted: number };
 
-export function DiffPanel({ sessionId, path, onClose }: { sessionId: string; path: string; onClose: () => void }) {
+interface DiffPanelProps {
+  sessionId: string;
+  path: string;
+  onClose: () => void;
+  expanded: boolean;
+  onToggleExpanded: () => void;
+}
+
+export function DiffPanel({ sessionId, path, onClose, expanded, onToggleExpanded }: DiffPanelProps) {
   const t = useT();
   const dataTheme = useDataAttr('data-theme');
   const [result, setResult] = useState<DiffResult>({ state: 'loading' });
+
+  // Expanded modal owns keyboard until collapsed (Esc) and steals focus
+  // off whatever was active so keystrokes can't leak into a Gambit
+  // textarea sitting underneath the dim layer.
+  useEffect(() => {
+    if (!expanded) return;
+    (document.activeElement as HTMLElement | null)?.blur();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onToggleExpanded();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [expanded, onToggleExpanded]);
 
   useEffect(() => {
     let cancelled = false;
@@ -90,22 +115,41 @@ export function DiffPanel({ sessionId, path, onClose }: { sessionId: string; pat
 
   const basename = useMemo(() => path.replace(/\\/g, '/').split('/').pop() || path, [path]);
 
-  return (
-    <div className="diff-panel">
-      <div className="diff-header">
-        <span className="diff-header-name">{basename}</span>
+  const header = (
+    <div className="diff-header">
+      <span className="diff-header-name">{basename}</span>
+      <div className="diff-header-actions">
         <button
           type="button"
-          className="diff-header-close"
-          onClick={onClose}
-          aria-label="Close diff"
+          className="diff-header-btn"
+          onClick={onToggleExpanded}
+          aria-label={expanded ? 'Collapse diff' : 'Expand diff'}
         >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"/>
-            <line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
+          {expanded ? '⤓' : '⤢'}
         </button>
+        {/* In expanded mode the only safe operations are minimize (⤓) and
+         * Esc/backdrop-click — closing the diff entirely while in
+         * fullscreen is a cross-layer action that surprises users. */}
+        {!expanded && (
+          <button
+            type="button"
+            className="diff-header-btn"
+            onClick={onClose}
+            aria-label="Close diff"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        )}
       </div>
+    </div>
+  );
+
+  const panel = (
+    <div className={`diff-panel${expanded ? ' diff-panel--expanded' : ''}`}>
+      {header}
       <div className="diff-body">
         {result.state === 'loading' && (
           <div className="diff-empty">{t('diff.loading' as any) || 'Loading…'}</div>
@@ -137,6 +181,15 @@ export function DiffPanel({ sessionId, path, onClose }: { sessionId: string; pat
         )}
       </div>
     </div>
+  );
+
+  if (!expanded) return panel;
+  return createPortal(
+    <>
+      <div className="diff-backdrop" onMouseDown={onToggleExpanded} />
+      {panel}
+    </>,
+    document.body,
   );
 }
 

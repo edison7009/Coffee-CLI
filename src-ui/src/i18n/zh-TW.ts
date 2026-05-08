@@ -1,7 +1,7 @@
 export const zhTW = {
   'app.title': 'Coffee CLI',
-  'explorer.tab.computer': '我的電腦',
   'explorer.tab.workspace': '工作區',
+  'explorer.tab.history': '會話記錄',
   'explorer.workspace.select-dir': '點擊選擇工作目錄',
 
   // Context Menu
@@ -82,7 +82,6 @@ export const zhTW = {
   'task.greeting.evening': '晚安，想來點大事嗎？',
   'task.tab.tasks': '任務',
   'task.tab.changes': '修改',
-  'task.tab.sessions': '歷史',
   'changes.empty': '暫無修改。',
   'diff.loading': '載入中…',
   'diff.error': '無法載入差異',

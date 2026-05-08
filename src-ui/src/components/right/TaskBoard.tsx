@@ -5,7 +5,6 @@ import { useAppState } from '../../store/app-state';
 import { isTauri, commands } from '../../tauri';
 import { getTabActions } from '../../lib/tab-actions';
 import './TaskBoard.css';
-import { HistoryBoard } from './HistoryBoard';
 import { ChangesBoard } from './ChangesBoard';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -95,14 +94,13 @@ export function TaskBoard() {
   const [addingId, setAddingId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  // Persist last-selected tab so a returning user resumes where they left off
-  // (matches Superset's right-sidebar behavior). First-time users still land on
-  // Tasks for the greeting, but anyone who deliberately switched to Changes /
-  // History keeps that selection across app restarts.
-  const [activeTab, setActiveTab] = useState<'tasks' | 'changes' | 'sessions'>(() => {
+  // Persist last-selected tab so a returning user resumes where they left off.
+  // First-time users land on Tasks. Legacy 'sessions' value (history moved to
+  // the left Explorer panel) collapses to Tasks default.
+  const [activeTab, setActiveTab] = useState<'tasks' | 'changes'>(() => {
     try {
       const saved = localStorage.getItem('cc-right-tab');
-      if (saved === 'tasks' || saved === 'changes' || saved === 'sessions') return saved;
+      if (saved === 'tasks' || saved === 'changes') return saved;
     } catch {}
     return 'tasks';
   });
@@ -135,6 +133,20 @@ export function TaskBoard() {
       return next;
     });
   }, [state.terminals]);
+
+  // Diff full-screen overlay. Gambit is left untouched — modal covers it
+  // visually via z-index, backdrop blocks pointer events, and DiffPanel
+  // blurs the active element on entering expanded mode so keystrokes
+  // don't leak into a still-focused Gambit textarea behind the dim.
+  const [diffExpanded, setDiffExpanded] = useState(false);
+  const toggleDiffExpanded = useCallback(() => {
+    setDiffExpanded(prev => !prev);
+  }, []);
+  // Collapse on selection clear (close-diff path) so we never end up with
+  // an empty expanded modal.
+  useEffect(() => {
+    if (!selectedChangePath && diffExpanded) setDiffExpanded(false);
+  }, [selectedChangePath, diffExpanded]);
 
   // Inline title editing
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -567,9 +579,6 @@ export function TaskBoard() {
         <button className={`right-tab ${activeTab === 'changes' ? 'active' : ''}`} onClick={() => setActiveTab('changes')}>
           {t('task.tab.changes' as any) || 'Changes'}
         </button>
-        <button className={`right-tab ${activeTab === 'sessions' ? 'active' : ''}`} onClick={() => setActiveTab('sessions')}>
-          {t('task.tab.sessions' as any) || 'Recent Sessions'}
-        </button>
       </div>
 
       {activeTab === 'tasks' && (
@@ -788,11 +797,12 @@ export function TaskBoard() {
     )}
 
     {activeTab === 'changes' && (
-      <ChangesBoard selectedPath={selectedChangePath} setSelectedPath={setSelectedChangePath} />
-    )}
-
-    {activeTab === 'sessions' && (
-      <HistoryBoard />
+      <ChangesBoard
+        selectedPath={selectedChangePath}
+        setSelectedPath={setSelectedChangePath}
+        diffExpanded={diffExpanded}
+        onToggleDiffExpanded={toggleDiffExpanded}
+      />
     )}
 
     </div>

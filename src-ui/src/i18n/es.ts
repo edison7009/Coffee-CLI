@@ -1,7 +1,7 @@
 export const es = {
   'app.title': 'Coffee CLI',
-  'explorer.tab.computer': 'Mi PC',
   'explorer.tab.workspace': 'Espacio de trabajo',
+  'explorer.tab.history': 'Sesiones',
   'explorer.workspace.select-dir': 'Clic para seleccionar directorio de trabajo',
 
   // Context Menu
@@ -82,7 +82,6 @@ export const es = {
   'task.greeting.evening': 'Buenas noches, ¿algo ambicioso?',
   'task.tab.tasks': 'Tareas',
   'task.tab.changes': 'Cambios',
-  'task.tab.sessions': 'Historial',
   'changes.empty': 'Aún no hay cambios.',
   'diff.loading': 'Cargando…',
   'diff.error': 'Error al cargar el diff',

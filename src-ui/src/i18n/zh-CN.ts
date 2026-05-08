@@ -1,7 +1,7 @@
 export const zhCN = {
   'app.title': 'Coffee CLI',
-  'explorer.tab.computer': '我的电脑',
   'explorer.tab.workspace': '工作区',
+  'explorer.tab.history': '会话记录',
   'explorer.workspace.select-dir': '点击选择工作目录',
 
   // Context Menu
@@ -82,7 +82,6 @@ export const zhCN = {
   'task.greeting.evening': '晚上好，想干点什么大事？',
   'task.tab.tasks': '任务',
   'task.tab.changes': '修改',
-  'task.tab.sessions': '历史',
   'changes.empty': '暂无修改。',
   'diff.loading': '加载中…',
   'diff.error': '无法加载差异',

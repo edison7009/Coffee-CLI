@@ -1,8 +1,8 @@
 export const vi = {
   'app.title': 'Coffee CLI',
   // Explorer
-  'explorer.tab.computer': 'Máy của tôi',
   'explorer.tab.workspace': 'Không gian làm việc',
+  'explorer.tab.history': 'Phiên',
   'explorer.workspace.select-dir': 'Nhấp để chọn thư mục làm việc',
 
   // Context Menu
@@ -85,7 +85,6 @@ export const vi = {
   'task.greeting.evening': 'Chào buổi tối. Có kế hoạch gì lớn không?',
   'task.tab.tasks': 'Nhiệm vụ',
   'task.tab.changes': 'Thay đổi',
-  'task.tab.sessions': 'Lịch sử',
   'changes.empty': 'Chưa có thay đổi.',
   'diff.loading': 'Đang tải…',
   'diff.error': 'Không thể tải diff',

@@ -22,9 +22,11 @@ import './ChangesBoard.css';
 interface ChangesBoardProps {
   selectedPath: string | null;
   setSelectedPath: Dispatch<SetStateAction<string | null>>;
+  diffExpanded: boolean;
+  onToggleDiffExpanded: () => void;
 }
 
-export function ChangesBoard({ selectedPath, setSelectedPath }: ChangesBoardProps) {
+export function ChangesBoard({ selectedPath, setSelectedPath, diffExpanded, onToggleDiffExpanded }: ChangesBoardProps) {
   const t = useT();
   const { state } = useAppState();
   const fileStats = useFileStats();
@@ -100,7 +102,13 @@ export function ChangesBoard({ selectedPath, setSelectedPath }: ChangesBoardProp
       </div>
       {effectiveSelected && sessionId && (
         <div className="changes-split-bottom">
-          <DiffPanel sessionId={sessionId} path={effectiveSelected} onClose={() => setSelectedPath(null)} />
+          <DiffPanel
+            sessionId={sessionId}
+            path={effectiveSelected}
+            onClose={() => setSelectedPath(null)}
+            expanded={diffExpanded}
+            onToggleExpanded={onToggleDiffExpanded}
+          />
         </div>
       )}
       {ctxMenu && <ContextMenu menu={ctxMenu} onClose={() => setCtxMenu(null)} />}

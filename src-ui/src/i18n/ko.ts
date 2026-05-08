@@ -1,7 +1,7 @@
 export const ko = {
   'app.title': 'Coffee CLI',
-  'explorer.tab.computer': '내 컴퓨터',
   'explorer.tab.workspace': '작업 공간',
+  'explorer.tab.history': '세션 기록',
   'explorer.workspace.select-dir': '클릭하여 작업 디렉토리 선택',
 
   // Context Menu
@@ -82,7 +82,6 @@ export const ko = {
   'task.greeting.evening': '좋은 저녁, 뭔가 시작해볼까요?',
   'task.tab.tasks': '작업',
   'task.tab.changes': '변경',
-  'task.tab.sessions': '기록',
   'changes.empty': '아직 변경 사항이 없습니다.',
   'diff.loading': '로딩 중…',
   'diff.error': '차이 로드 실패',

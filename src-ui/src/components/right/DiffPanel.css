@@ -14,7 +14,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 6px 14px;
+  padding: 6px 6px 6px 14px;
   font-size: 11px;
   color: var(--text-2, #888);
   flex-shrink: 0;
@@ -28,8 +28,14 @@
   text-overflow: ellipsis;
 }
 
-.diff-header-close {
+.diff-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
   flex-shrink: 0;
+}
+
+.diff-header-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -41,11 +47,45 @@
   border-radius: 4px;
   color: var(--text-2, #888);
   cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
 }
 
-.diff-header-close:hover {
+.diff-header-btn:hover {
   background: var(--surface-hover, rgba(127, 127, 127, 0.12));
   color: var(--text-1);
+}
+
+/* Full-window overlay. Backdrop captures all pointer events behind it
+ * (so the user truly only has the two header buttons + Esc). z-index
+ * stays well above Gambit (200/300) and below context menus (9999). */
+.diff-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+  z-index: 1000;
+}
+
+.diff-panel--expanded {
+  position: fixed;
+  inset: 24px;
+  /* Override the base .diff-panel { height: 100% }. Inset already sizes
+   * us via top+bottom; keeping height: 100% would push the bottom 24px
+   * past the viewport and cut off the last lines. */
+  height: auto;
+  z-index: 1001;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+}
+
+.diff-panel--expanded .diff-header {
+  padding: 10px 10px 10px 18px;
+  font-size: 12px;
+  border-bottom: 1px solid var(--border);
 }
 
 .diff-body {
