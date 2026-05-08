@@ -79,22 +79,34 @@ If neither source gives a signal (empty jsonl, unreadable files), default to `en
 
 **All subsequent user-visible output in Steps 1, 5, 7 uses `target_language` consistently.** The persona analysis, the "generating report" note, and the final summary are all written in the same language. **Never switch mid-response.**
 
-### Step 1 — Verify the insights report exists
+### Step 1 — Collect behavioral signals from session logs
 
-Check whether `~/.claude/usage-data/report.html` exists (expand `~` to the user's home directory).
+Run the bundled signal collector via the Bash tool:
 
-- **Present**: Continue directly to Step 2. Do NOT print any "generating report" message — Coffee CLI's Personality Test launcher already ran `/insights` in a dedicated pre-run tab before spawning this vibeid tab, so the report is already fresh. You can proceed silently to the analysis.
+```
+node "<skill_dir>/scripts/collect.js"
+```
 
-- **Missing**: Do NOT attempt to run `claude -p "/insights"` yourself. Nested `claude` invocations with slash commands are unreliable across platforms (Windows Git Bash mangles `/insights` into `C:/Program Files/Git/insights`, and `-p` print-mode strips some slash commands). Instead, emit a short helpful message in `target_language` asking the user to launch via Coffee CLI, then STOP.
+It reads the user's local session jsonl tree at `~/.claude/projects/*/*.jsonl` directly — no `/insights` prerequisite, no `report.html`, no network. Prints a JSON object on stdout:
 
-  Message template (translate naturally into `target_language`):
+```
+{
+  "signals": {
+    "messages": 1975,
+    "sessions": 133,
+    "median_response_seconds": 69.1,
+    "top_tool": "Bash",
+    "craft_ratio": 1.72,
+    "design_share": 0.384,
+    "rational_share": 0.378,
+    "ship_intent_share": 0.029,
+    "build_intent_share": 0.028,
+    "multi_clauding_pct": 5
+  }
+}
+```
 
-  - `zh`: 还没有生成使用报告。请关闭这个 Tab，从 Coffee CLI 的"人格测试"卡片重新启动（它会自动先跑 /insights）。或者先在 Claude Code 里手动执行 `/insights`，完成后再重试 `/vibeid`。
-  - `en`: No usage report yet. Please close this tab and launch from Coffee CLI's "Personality Test" card (it auto-runs `/insights` first). Or run `/insights` in a Claude Code tab first, then retry `/vibeid`.
-  - `ja`: 使用状況レポートがまだ生成されていません。このタブを閉じて、Coffee CLI の「性格診断」カードから起動してください（自動的に `/insights` が先に実行されます）。または、Claude Code タブで先に `/insights` を実行してから `/vibeid` を再試行してください。
-  - other ISO-639-1 codes: translate appropriately into that language
-
-  After emitting the message, stop execution — do not fabricate data, do not continue to Step 2.
+Parse stdout as JSON. If the script exits non-zero, report stderr and stop. If `signals.messages == 0`, the user has no usable session history yet — emit a friendly message in `target_language` asking them to use Claude Code for a few sessions first, then retry, and stop.
 
 ### Step 2 — Load the persona matrix
 
@@ -110,36 +122,9 @@ The matrix contains:
 
 Hold this data in memory. If both local and remote reads fail, report the error honestly and stop — do not fall back to fabricated persona data.
 
-### Step 3 — Extract behavioral signals from the report
+### Step 3 — Derive the 4-letter VibeID code
 
-Run:
-
-```
-node <skill_dir>/scripts/analyze.js <path_to_report.html>
-```
-
-It prints a JSON object on stdout:
-
-```
-{
-  "signals": {
-    "messages": 2850,
-    "sessions": 262,
-    "median_response_seconds": 56.2,
-    "top_tool": "Bash",
-    "craft_ratio": 2.13,
-    "ship_intent_share": 0.38,
-    "build_intent_share": 0.22,
-    "multi_clauding_pct": 16
-  }
-}
-```
-
-Parse stdout as JSON. If the script exits non-zero, report the error and stop.
-
-### Step 4 — Derive the 4-letter VibeID code
-
-Using thresholds from `matrix.json` and signals from Step 3:
+Using thresholds from `matrix.json` and the signals already collected in Step 1:
 
 - **Mind**: `R` (Rational) if `rational_share >= thresholds.mind_rational_share_min`, else `E` (Expressive). Rational dominates when analytical / corrective / shipping intents (bug fix, refactor, release) outweigh generative / aesthetic intents (feature, UI, visual).
 - **Craft**: `D` (Design) if `design_share >= thresholds.craft_design_share_min`, else `T` (Technical). Design leans on Read + Grep + Write (investigate + create new); Technical leans on Bash + Edit (execute + modify).
@@ -148,7 +133,7 @@ Using thresholds from `matrix.json` and signals from Step 3:
 
 Concatenate to form the VibeID code (e.g. `RTAH`). Look it up in `personas` to get the record.
 
-### Step 5 — Generate a rich, multi-section personality analysis
+### Step 4 — Generate a rich, multi-section personality analysis
 
 Write **500–800 words** of personalized analysis across **5 distinct sections**, separated by **blank lines (`\n\n`)**. Users read this like an MBTI 16Personalities profile — they want depth, specificity, and a little flattery grounded in real numbers.
 
@@ -174,108 +159,63 @@ Tone is consistent across all languages: confident, specific, lightly flattering
 
 **Tone**: Confident, specific, lightly flattering but grounded in real numbers. **Never fabricate numbers** — only use what Step 3 extracted or the report explicitly states. Bold the persona name once and the 4-letter code once.
 
-**Formatting**: Plain text with `\n\n` between paragraphs. No headers / bullets / markdown bold (the injector renders each paragraph as a `<p>` tag; bold comes from surrounding a phrase with `**...**` which the injector will convert).
+**Formatting**: Markdown-friendly plain text with `\n\n` between paragraphs. Bold the persona name once via `**...**` and the 4-letter code once. The chat client renders markdown inline, so headers (`#`) and inline images render naturally — see Step 5.
 
-**CRITICAL — quoting rule (must follow or Step 6 JSON will break)**:
+### Step 5 — Render the persona card to chat
 
-Never use straight ASCII double quotes (`"`) inside the analysis text. When this string becomes a value in the persona JSON of Step 6, every `"` must be escaped as `\"`, and missing even one escape kills the whole injection (seen in production: `invalid persona JSON: Expected ',' or '}' ...`).
-
-Safe alternatives for emphasis / quoting:
-
-- Chinese quotes `“……”` or `「……」` (Chinese / Japanese output)
-- French guillemets `« … »` (French output)
-- German `„ … "` (German output)
-- For English: use single quotes `'…'` or **markdown bold** (`**phrase**`) instead of `"…"`.
-- To strongly emphasize a persona code or key term, use `**RTAH**` (the injector converts `**…**` to bold).
-
-Quick self-check before finalizing Step 5 output: search your draft for any `"`; if you find one, replace it with one of the alternatives above.
-
-### Step 6 — Inject the persona card into the report
-
-**Do NOT create any temporary JSON files** (writing to disk triggers user-level fact-forcing hooks and degrades UX). Pipe the persona JSON to `inject.js` via stdin in a single Bash call using a heredoc:
-
-```bash
-node "<skill_dir>/scripts/inject.js" "<path_to_report.html>" << 'VEOF'
-{
-  "code": "TFVH",
-  "name": "星海统帅",
-  "family": "潮汐族",
-  "profession": "星域元帅",
-  "tagline": "指挥多支深空舰队同步出击。",
-  "copy": "<the 500-800 word narrative from Step 5, with \\n\\n between sections>",
-  "image_url": "../skills/vibeid/images/TFVH.png",
-  "palette": { "bg": "#C6D8E0", "costume": "#2E7D87", "accent": "#C0C8D0" }
-}
-VEOF
-```
-
-**Populate `name` / `profession` / `tagline` / `family` with the localized values** matching the user's detected language (English → `name` etc; Chinese → `name_cn` / `profession_cn` / `tagline_cn` / family `name_cn`). The `copy` field is the multi-paragraph narrative from Step 5 with `\n\n` between sections.
-
-**Key rules**:
-- Use a single-quoted heredoc marker (`'VEOF'`) so shell doesn't expand `$` or backticks inside the JSON
-- `inject.js` accepts persona JSON via stdin (preferred), argv[3] file path (legacy), or argv[3] inline string (fallback)
-- One Bash call, zero file writes = minimum gateguard friction
+Compose the image URL:
 
 ```
-{
-  "code": "TFVH",
-  "name": "星海统帅",
-  "family": "潮汐族",
-  "profession": "星域元帅",
-  "tagline": "指挥多支深空舰队同步出击。",
-  "copy": "你是 **TFVH · 星海统帅** ...\n\n在节奏上...\n\n工艺姿态方面...\n\n成就弧线...\n\n建议与盲点...",
-  "image_url": "<image_base_url>/TFVH.png",
-  "palette": {
-    "bg": "#C6D8E0",
-    "costume": "#2E7D87",
-    "accent": "#C0C8D0"
-  }
-}
+image_url = matrix.image_base_url_remote + '/' + persona.code + '.png'
 ```
 
-**Image URL construction** — CRITICAL:
+Each PNG filename equals the 4-letter code + `.png` (matrix v3+). The skill does NOT bundle the persona art locally — it lives on a CDN, the chat client fetches it on render. If the CDN is unreachable, the rest of the card still renders correctly (just no avatar).
 
-`image_url = matrix.image_base_url_remote + '/' + persona.code + '.png'`
+Output the persona card as markdown directly in chat. Pick `name` / `profession` / `tagline` / `family` from the localised matrix fields per Step 4's language rule. Template:
 
-Each PNG filename equals the 4-letter code + `.png` (matrix v3+).
+```markdown
+# **{code}** · {name}
 
-**Do NOT** construct a `file:///...` URL, ever. Use the URL from matrix — it works in shared screenshots, on mobile, and when report.html is copied to another machine. Both `image_base_url` and `image_base_url_remote` in matrix v3 hold the same URL for belt-and-suspenders protection; use either.
+*{family}* · {profession}
 
-The injector rewrites `report.html` in place, inserting a VibeID card just after the `<h1>Claude Code Insights</h1>` header. If the report already has a VibeID card (idempotency marker `<!-- vibeid:v1 -->`), the injector replaces it with the new one. A backup is written to `report.html.bak` before modification.
+> {tagline}
 
-### Step 7 — Confirm to the user
+![{name}]({image_url})
 
-Print a concise summary:
+{500-800 word narrative from Step 4, paragraphs separated by blank lines}
+```
 
-- VibeID code (e.g. `TFVH`)
-- Persona name and profession
-- Family
-- One sentence of personalized insight
-- Path to the updated `report.html`
-- Suggest they open the report to see the full card
+No HTML, no file writes, no `inject.js`. The card lives in the chat where the user invoked `/vibeid`. They can scroll back / copy / share it like any other Claude response.
 
-Respond in the language the user is using.
+### Step 6 — Confirm to the user
+
+After the markdown card, append one short closing line in `target_language` summarising the result — e.g.:
+
+- `zh`: "你的 VibeID 码是 **TFVH**(星海统帅)。"
+- `en`: "Your VibeID code is **TFVH** (Tide Marshal)."
+
+Keep it terse — the card above already carries the full picture. Respond in the language the user is using.
 
 ## Validation Checkpoints
 
 The skill succeeded if:
 
-1. `matrix.json` fetched and parsed
-2. `analyze.js` exited 0 with valid signals JSON
+1. `collect.js` exited 0 with valid signals JSON (`messages > 0`)
+2. `matrix.json` parsed
 3. A valid 4-letter VibeID code was derived
-4. `inject.js` exited 0 and `report.html` now contains the `<!-- vibeid:v1 -->` marker
-5. The user sees a clear summary
+4. The persona card markdown was rendered to chat
+5. The closing summary line was emitted
 
 ## Error Handling
 
-- Missing `report.html` → stop, ask user to run `/insights`
+- `collect.js` exits non-zero → report stderr, stop
+- `signals.messages == 0` → user has no Claude Code session history yet; ask them to use Claude Code for a few sessions first
 - Missing Node.js → report clearly, suggest install
-- `matrix.json` fetch fails → stop, report network issue
-- Analyzer parse failure → stop, show script stderr
-- Injector failure → do not partially modify the report; restore from `report.html.bak`
+- `matrix.json` parse failure → report stop, do not fabricate persona data
+- Persona code not found in matrix.personas → use the closest neighbouring code, document the fallback in the output
 
 ## Notes
 
-- Persona images, family palettes, and taglines live in the remote `matrix.json` — edit that file to tune the experience without redeploying the skill
+- Persona images, family palettes, and taglines live in the bundled `matrix.json` — edit that file in the skill dir to tune the experience without redeploying the skill
 - 16 persona codes: PFVL, PFVH, PFAL, PFAH, PSVL, PSVH, PSAL, PSAH, TFVL, TFVH, TFAL, TFAH, TSVL, TSVH, TSAL, TSAH
 - Inspired by public-domain typologies (Jung 1921 Psychological Types, classical Four Temperaments, Big Five / HEXACO). No MBTI trademarks used.
