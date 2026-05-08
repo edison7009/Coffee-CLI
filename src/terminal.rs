@@ -443,9 +443,25 @@ pub fn spawn(
     // ── Build command ──────────────────────────────────────────────────────
     // On Windows: npm-installed tools are .cmd scripts, not real .exe files.
     // CreateProcessW cannot run .cmd → always go through cmd.exe /c.
+    //
+    // Resolve cmd.exe explicitly instead of relying on PATH lookup. When a
+    // user's PATH is missing System32 (corrupted profile, AV interference,
+    // managed devices), bare "cmd.exe" returns os error 2 and the whole app
+    // stops working — see issue #30. %COMSPEC% is set on every Windows install
+    // and matches what WezTerm / VS Code / Hyper do internally.
     #[cfg(target_os = "windows")]
     let mut cmd = {
-        let mut c = CommandBuilder::new("cmd.exe");
+        let comspec = std::env::var("COMSPEC")
+            .ok()
+            .filter(|p| std::path::Path::new(p).exists())
+            .or_else(|| {
+                let sysroot = std::env::var("SystemRoot")
+                    .unwrap_or_else(|_| r"C:\Windows".to_string());
+                let p = format!(r"{}\System32\cmd.exe", sysroot);
+                std::path::Path::new(&p).exists().then_some(p)
+            })
+            .unwrap_or_else(|| "cmd.exe".to_string());
+        let mut c = CommandBuilder::new(&comspec);
         c.arg("/c");
         c.arg(&program);
         for a in &args {
