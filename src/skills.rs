@@ -114,50 +114,84 @@ pub fn skills_ensure_dirs() -> Result<(), String> {
     Ok(())
 }
 
-/// Walk both bundles and copy any missing files into
-/// `~/.coffee-cli/skills-library/`. Files that already exist (whether
-/// because we copied them earlier or the user manually edited one) are
-/// left untouched — this preserves user customisations across app
-/// updates and avoids clobbering an enabled skill if its mirror is still
-/// present in library/ for some reason.
+/// Files that always overwrite on every app launch — the canonical
+/// "skill metadata" set. Other files (scripts/, assets/) only seed
+/// once on first install so user-side patches survive Coffee CLI
+/// upgrades. Updating these on every launch means a Coffee CLI
+/// version bump that ships new SKILL.md frontmatter (rename, reword
+/// description, add a locale) takes effect WITHOUT users having to
+/// manually delete their library/skills dir.
+const ALWAYS_REFRESH_FILENAMES: &[&str] = &["SKILL.md", "matrix.json"];
+
+/// Walk both bundles and seed/refresh skill files into
+/// `~/.coffee-cli/skills-library/` (and refresh metadata in
+/// `~/.coffee-cli/skills/` for already-enabled skills).
+///
+/// Three-tier write rule:
+///   1. New skills (not present in either dir) → full copy to library
+///   2. Existing skills, ALWAYS_REFRESH_FILENAMES (SKILL.md / matrix.json)
+///      → overwrite in whichever dir the skill lives (library or skills)
+///   3. Existing skills, other files → leave alone (preserves user
+///      patches to scripts/, assets/, etc.)
 fn seed_library_from_bundle() -> Result<(), String> {
     let lib = library_root()?;
     let enabled = skills_root()?;
-    seed_dir(&BUNDLED_OPENAI_SKILLS, &lib, &enabled)?;
-    seed_dir(&BUNDLED_COFFEE_SKILLS, &lib, &enabled)?;
+    seed_bundle(&BUNDLED_OPENAI_SKILLS, &lib, &enabled)?;
+    seed_bundle(&BUNDLED_COFFEE_SKILLS, &lib, &enabled)?;
     Ok(())
 }
 
-fn seed_dir(
-    dir: &include_dir::Dir<'_>,
+fn seed_bundle(
+    bundle: &include_dir::Dir<'_>,
     lib_root: &Path,
     enabled_root: &Path,
 ) -> Result<(), String> {
-    for entry in dir.entries() {
+    for entry in bundle.entries() {
+        let include_dir::DirEntry::Dir(skill_dir) = entry else { continue };
+
+        // Bundle's top-level entries are individual skill dirs (skill_dir
+        // path is single-segment, e.g. "vibeid"). Apply allowlist + figure
+        // out where the skill currently lives on disk.
+        let name = match skill_dir.path().file_name().and_then(|n| n.to_str()) {
+            Some(n) if !n.is_empty() && VISIBLE_SKILLS.contains(&n) => n,
+            _ => continue,
+        };
+
+        let in_enabled = enabled_root.join(name);
+        let in_lib = lib_root.join(name);
+        let enabled_exists = in_enabled.exists();
+        let lib_exists = in_lib.exists();
+
+        if !enabled_exists && !lib_exists {
+            // First-time seed → full copy into library/<name>/.
+            full_copy_into(skill_dir, lib_root)?;
+            continue;
+        }
+
+        // Skill exists somewhere — refresh just the metadata files in
+        // whichever dir it lives. Both can be true (defensive); refresh
+        // both so the two copies stay consistent if the user manually
+        // moved files around.
+        if enabled_exists {
+            refresh_metadata(skill_dir, &in_enabled)?;
+        }
+        if lib_exists {
+            refresh_metadata(skill_dir, &in_lib)?;
+        }
+    }
+    Ok(())
+}
+
+/// Recursively copy every file in `bundle` into `dest_root`, creating
+/// parent dirs as needed. Used for the first-time seed of a new skill.
+fn full_copy_into(bundle: &include_dir::Dir<'_>, dest_root: &Path) -> Result<(), String> {
+    for entry in bundle.entries() {
         match entry {
             include_dir::DirEntry::Dir(sub) => {
-                // Top-level entries under .curated/ are individual skill
-                // dirs. Two filters apply:
-                //   1. Phased-rollout allowlist (VISIBLE_SKILLS) — skip
-                //      anything not in the current ship batch
-                //   2. Already-enabled — skill is in skills/ not library/,
-                //      re-seeding library/<name>/ would dupe
-                if sub.path().parent().map(|p| p.as_os_str().is_empty()).unwrap_or(false) {
-                    let name = sub.path().file_name().and_then(|n| n.to_str()).unwrap_or("");
-                    if name.is_empty() || !VISIBLE_SKILLS.contains(&name) {
-                        continue;
-                    }
-                    if enabled_root.join(name).exists() {
-                        continue;
-                    }
-                }
-                seed_dir(sub, lib_root, enabled_root)?;
+                full_copy_into(sub, dest_root)?;
             }
             include_dir::DirEntry::File(file) => {
-                let dest = lib_root.join(file.path());
-                if dest.exists() {
-                    continue;
-                }
+                let dest = dest_root.join(file.path());
                 if let Some(parent) = dest.parent() {
                     fs::create_dir_all(parent)
                         .map_err(|e| format!("mkdir {}: {}", parent.display(), e))?;
@@ -166,6 +200,39 @@ fn seed_dir(
                     .map_err(|e| format!("seed write {}: {}", dest.display(), e))?;
             }
         }
+    }
+    Ok(())
+}
+
+/// Overwrite ALWAYS_REFRESH_FILENAMES in `target_skill_dir` from the
+/// matching bundle entries. Skips files that aren't in the bundle (skill
+/// might not have a matrix.json, etc.). Other bundle files are NOT
+/// touched — user patches to scripts/, assets/, etc. survive upgrade.
+///
+/// Walks immediate children of `bundle_skill_dir` rather than calling
+/// `get_file()` (whose path argument must be relative to the
+/// include_dir root, not to the nested Dir handed to us — easy to get
+/// wrong, easier to just enumerate).
+fn refresh_metadata(
+    bundle_skill_dir: &include_dir::Dir<'_>,
+    target_skill_dir: &Path,
+) -> Result<(), String> {
+    for entry in bundle_skill_dir.entries() {
+        let include_dir::DirEntry::File(file) = entry else { continue };
+        let fname = match file.path().file_name().and_then(|n| n.to_str()) {
+            Some(n) => n,
+            None => continue,
+        };
+        if !ALWAYS_REFRESH_FILENAMES.contains(&fname) {
+            continue;
+        }
+        let dest = target_skill_dir.join(fname);
+        if let Some(parent) = dest.parent() {
+            fs::create_dir_all(parent)
+                .map_err(|e| format!("mkdir {}: {}", parent.display(), e))?;
+        }
+        fs::write(&dest, file.contents())
+            .map_err(|e| format!("refresh write {}: {}", dest.display(), e))?;
     }
     Ok(())
 }
