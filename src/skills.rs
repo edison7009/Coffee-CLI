@@ -324,21 +324,27 @@ pub fn skills_list() -> Result<Vec<SkillEntry>, String> {
 }
 
 /// Probe the skill's `assets/` folder for a usable icon, in priority order:
-///   `<name>-small.svg`  ← preferred: vector, already sized for thumbnails
-///   `<name>.svg`        ← vector, full-size
-///   `<name>.png`        ← raster fallback
-///   `icon.svg` / `icon.png` ← generic fallback for skills that don't
-///                              follow the openai/skills naming convention
+///   `<name>.png`         ← preferred: matches Codex's pick. The unsuffixed
+///                            PNG is the skill's canonical hero icon —
+///                            colourful, detailed, designed to be the
+///                            "main" art. The `-small.svg` variant is
+///                            literally named for thumbnail use, so it's
+///                            visually thinner than what skill cards want.
+///   `<name>.svg`         ← vector full-size, fallback when no PNG
+///   `<name>-small.svg`   ← thumbnail SVG, last resort within the
+///                            `<name>.<ext>` namespace
+///   `icon.svg`/`icon.png` ← generic fallback for skills that don't
+///                            follow openai/skills' naming convention
 ///
 /// Returns a `data:image/...;base64,...` URL ready for `<img src=>`.
 fn read_skill_icon(skill_dir: &Path, name: &str) -> Option<String> {
     let assets = skill_dir.join("assets");
     let candidates = [
-        (format!("{}-small.svg", name), "image/svg+xml"),
-        (format!("{}.svg", name), "image/svg+xml"),
         (format!("{}.png", name), "image/png"),
-        ("icon.svg".to_string(), "image/svg+xml"),
+        (format!("{}.svg", name), "image/svg+xml"),
+        (format!("{}-small.svg", name), "image/svg+xml"),
         ("icon.png".to_string(), "image/png"),
+        ("icon.svg".to_string(), "image/svg+xml"),
     ];
     for (filename, mime) in candidates {
         let path = assets.join(&filename);
