@@ -97,15 +97,13 @@ export function SkillsPanel({ showToast }: Props) {
               ? <img src={skill.iconDataUrl} alt="" />
               : <span className="skills-card-icon-fallback">{skill.displayName.slice(0, 1).toUpperCase()}</span>}
           </div>
-          <div className="skills-card-text">
+          <div
+            className="skills-card-text"
+            data-tip={skill.description || undefined}
+          >
             <div className="skills-card-name">{skill.displayName}</div>
             {skill.description && (
-              <div
-                className="skills-card-desc"
-                data-tip={skill.description}
-              >
-                {skill.description}
-              </div>
+              <div className="skills-card-desc">{skill.description}</div>
             )}
           </div>
           <button

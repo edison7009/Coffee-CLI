@@ -813,13 +813,20 @@
    horizontal space between icon and toggle. min-width: 0 is the
    flex hack that lets the description's text-overflow: ellipsis
    actually fire — without it the flex item refuses to shrink
-   below its content's intrinsic width. */
+   below its content's intrinsic width.
+   position: relative anchors the hover tooltip below — it has to
+   live HERE rather than on .skills-card-desc because the desc
+   itself uses overflow: hidden for the ellipsis, which would clip
+   the absolutely-positioned pseudo-element tooltip. cursor: help
+   on this whole region (name + desc) hints "hover for more". */
 .skills-card-text {
+  position: relative;
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 2px;
+  cursor: help;
 }
 
 .skills-card-name {
@@ -832,24 +839,27 @@
 }
 
 .skills-card-desc {
-  position: relative;
   font-size: 12.5px;
   line-height: 1.4;
   color: var(--text-2);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  cursor: help;
 }
 
 /* Themed tooltip — same recipe as .heatmap-cell[data-tip] (see
-   ContributionHeatmap.css). Differences vs the heatmap version:
-   white-space: normal + max-width so a full multi-sentence skill
-   description wraps inside the pill instead of stretching off-
-   screen, and left: 0 / bottom alignment so the pill anchors to
-   the description's left edge (the truncated text starts there).
-   Theme-aware via var(--bg-panel) / var(--text-1) / var(--border). */
-.skills-card-desc[data-tip]:hover::after {
+   ContributionHeatmap.css). Anchored to .skills-card-text (NOT to
+   .skills-card-desc) because the desc uses overflow: hidden which
+   would clip the absolutely-positioned pseudo-element. Triggering
+   on the whole text region (name + desc) gives users a wider hit
+   zone — they can hover the name OR desc and see the full text.
+   Differences vs the heatmap pill:
+   - white-space: normal + max-width so multi-sentence descriptions
+     wrap inside the pill instead of stretching off-screen
+   - left: 0 / bottom alignment anchors to the text region's left
+     edge (visually under the icon's right side)
+   - Theme-aware via var(--bg-panel) / var(--text-1) / var(--border). */
+.skills-card-text[data-tip]:hover::after {
   content: attr(data-tip);
   position: absolute;
   bottom: calc(100% + 8px);
@@ -869,7 +879,7 @@
   z-index: 100;
 }
 
-.skills-card-desc[data-tip]:hover::before {
+.skills-card-text[data-tip]:hover::before {
   content: '';
   position: absolute;
   bottom: calc(100% + 4px);
