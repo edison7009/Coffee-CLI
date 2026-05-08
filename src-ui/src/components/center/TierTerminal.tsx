@@ -522,7 +522,11 @@ function TierTerminalImpl({
     // Underlines matched tokens on hover; click opens via Tauri's open_url
     // command (delegates to the OS shell — system browser for URLs, default
     // handler for local files like report.html).
-    const LINK_RE = /(https?:\/\/[^\s<>()"']+|file:\/\/\/[^\s<>()"']+|[A-Za-z]:[/\\][^\s<>()"']+)/g;
+    // URLs are ASCII per RFC 3986; the -￿ guard stops the match at
+    // any non-ASCII char so trailing CJK punctuation/text (e.g. "https://x，看到…")
+    // doesn't get swallowed into the link. File paths keep the looser set so
+    // Windows paths with Chinese folder names still match.
+    const LINK_RE = /(https?:\/\/[^\s<>()"'-￿]+|file:\/\/\/[^\s<>()"'-￿]+|[A-Za-z]:[/\\][^\s<>()"']+)/g;
     term.registerLinkProvider({
       provideLinks(bufferLineNumber, callback) {
         const line = term.buffer.active.getLine(bufferLineNumber - 1);
