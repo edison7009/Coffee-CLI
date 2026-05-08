@@ -374,11 +374,22 @@ fn precheck_link_conflicts(name: &str) -> Result<(), String> {
             return Err(format!(
                 "Conflict: {} already exists as a real folder (not managed by Coffee CLI). \
                  Remove it manually first if you want Coffee CLI to manage this skill.",
-                link.display()
+                display_path(&link)
             ));
         }
     }
     Ok(())
+}
+
+/// Display-safe path string: native separators converted to forward
+/// slashes. Windows backslash paths sometimes get mangled when copy-
+/// pasted from a toast (`\U`, `\e`, etc. land near letters and
+/// downstream rendering pipelines silently drop them). Forward slashes
+/// round-trip cleanly through every UI layer and Windows still resolves
+/// them as paths, so error messages destined for end-users always go
+/// through this helper.
+fn display_path(p: &Path) -> String {
+    p.to_string_lossy().replace('\\', "/")
 }
 
 /// Permanently remove a skill from both tiers + clean up any symlinks.

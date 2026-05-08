@@ -24,7 +24,6 @@ The skill keeps deterministic logic (HTML parsing, axis thresholds, HTML injecti
 
 1. Claude Code installed; user has run `/insights` at least once (produces `~/.claude/usage-data/report.html`)
 2. Node.js available on PATH (for `analyze.js` / `inject.js`)
-3. Network access to `https://coffeecli.com/CC-VibeID-test/matrix.json`
 
 ## Execution Steps
 
@@ -99,7 +98,7 @@ Check whether `~/.claude/usage-data/report.html` exists (expand `~` to the user'
 
 ### Step 2 — Load the persona matrix
 
-Prefer the **local** copy at `<skill_dir>/matrix.json` (use Read). If the local file is missing, fall back to WebFetch `https://coffeecli.com/CC-VibeID-test/matrix.json`.
+Read the local copy at `<skill_dir>/matrix.json` (use Read). The matrix ships bundled inside the skill — there is no remote fallback to fetch.
 
 The matrix contains:
 
@@ -238,9 +237,9 @@ VEOF
 
 `image_url = matrix.image_base_url_remote + '/' + persona.code + '.png'`
 
-Example: for code `RTAH` → `https://coffeecli.com/CC-VibeID-test/personas/images/RTAH.png`. Each PNG filename equals the 4-letter code + `.png` (matrix v3+).
+Each PNG filename equals the 4-letter code + `.png` (matrix v3+).
 
-**Do NOT** construct a `file:///...` URL, ever. Use the CDN URL from matrix — it works in shared screenshots, on mobile, and when report.html is copied to another machine. Both `image_base_url` and `image_base_url_remote` in matrix v3 hold the same CDN URL for belt-and-suspenders protection; use either.
+**Do NOT** construct a `file:///...` URL, ever. Use the URL from matrix — it works in shared screenshots, on mobile, and when report.html is copied to another machine. Both `image_base_url` and `image_base_url_remote` in matrix v3 hold the same URL for belt-and-suspenders protection; use either.
 
 The injector rewrites `report.html` in place, inserting a VibeID card just after the `<h1>Claude Code Insights</h1>` header. If the report already has a VibeID card (idempotency marker `<!-- vibeid:v1 -->`), the injector replaces it with the new one. A backup is written to `report.html.bak` before modification.
 
