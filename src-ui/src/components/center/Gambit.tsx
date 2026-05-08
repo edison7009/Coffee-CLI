@@ -800,65 +800,6 @@ function GambitImpl({
         )}
       </div>
 
-      {/* Skill bar — "+" picker (or chip when one is selected). Sits
-          above the textarea so it doesn't fight with the chip system
-          for keyboard focus. */}
-      <div className="gambit-skill-bar" ref={skillPopoverRef}>
-        {selectedSkill ? (
-          <div className="gambit-skill-chip">
-            <span
-              className="gambit-skill-chip-label"
-              onClick={() => setSkillPopoverOpen(o => !o)}
-            >
-              {selectedSkill.displayName}
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
-                <path d="M2 4 L5 7 L8 4 Z" />
-              </svg>
-            </span>
-            <button
-              className="gambit-skill-chip-x"
-              onClick={() => setSelectedSkill(null)}
-              aria-label="Clear skill"
-            >×</button>
-          </div>
-        ) : (
-          <button
-            className="gambit-skill-add"
-            onClick={() => setSkillPopoverOpen(o => !o)}
-            aria-label="Add skill"
-          >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
-              <line x1="7" y1="2" x2="7" y2="12" />
-              <line x1="2" y1="7" x2="12" y2="7" />
-            </svg>
-          </button>
-        )}
-        {skillPopoverOpen && (
-          <div className="gambit-skill-popover">
-            {enabledSkills.length === 0 ? (
-              <div className="gambit-skill-popover-empty">
-                没有已启用的技能。在 Library → Skills 里打开开关。
-              </div>
-            ) : (
-              enabledSkills.map(s => (
-                <button
-                  key={s.name}
-                  className={`gambit-skill-popover-item${selectedSkill?.name === s.name ? ' is-selected' : ''}`}
-                  onClick={() => { setSelectedSkill(s); setSkillPopoverOpen(false); }}
-                >
-                  <span>{s.displayName}</span>
-                  {selectedSkill?.name === s.name && (
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="2 7 6 11 12 3" />
-                    </svg>
-                  )}
-                </button>
-              ))
-            )}
-          </div>
-        )}
-      </div>
-
       <textarea
         ref={textareaRef}
         className="gambit-textarea"
@@ -872,6 +813,67 @@ function GambitImpl({
       />
 
       <div className="gambit-footer">
+        {/* Skill picker — sits flush left in the footer, immediately
+            before the thumbnail strip. Same 30×30 footprint as a
+            thumb so the footer's vertical rhythm stays constant.
+            Popover opens UPWARD (bottom-anchored) since the footer
+            itself is at the bottom of the Gambit window. */}
+        <div className="gambit-skill-bar" ref={skillPopoverRef}>
+          {selectedSkill ? (
+            <div className="gambit-skill-chip">
+              <span
+                className="gambit-skill-chip-label"
+                onClick={() => setSkillPopoverOpen(o => !o)}
+              >
+                {selectedSkill.displayName}
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
+                  <path d="M2 4 L5 7 L8 4 Z" />
+                </svg>
+              </span>
+              <button
+                className="gambit-skill-chip-x"
+                onClick={() => setSelectedSkill(null)}
+                aria-label="Clear skill"
+              >×</button>
+            </div>
+          ) : (
+            <button
+              className="gambit-skill-add"
+              onClick={() => setSkillPopoverOpen(o => !o)}
+              aria-label="Add skill"
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                <line x1="7" y1="2" x2="7" y2="12" />
+                <line x1="2" y1="7" x2="12" y2="7" />
+              </svg>
+            </button>
+          )}
+          {skillPopoverOpen && (
+            <div className="gambit-skill-popover">
+              {enabledSkills.length === 0 ? (
+                <div className="gambit-skill-popover-empty">
+                  没有已启用的技能。在 Library → Skills 里打开开关。
+                </div>
+              ) : (
+                enabledSkills.map(s => (
+                  <button
+                    key={s.name}
+                    className={`gambit-skill-popover-item${selectedSkill?.name === s.name ? ' is-selected' : ''}`}
+                    onClick={() => { setSelectedSkill(s); setSkillPopoverOpen(false); }}
+                  >
+                    <span>{s.displayName}</span>
+                    {selectedSkill?.name === s.name && (
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="2 7 6 11 12 3" />
+                      </svg>
+                    )}
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+
         {/* Thumbnail strip lives in the footer, left-aligned, so it shares
             the same row as the send button. Empty when no image paths are
             present — keeps the footer visually stable either way. */}

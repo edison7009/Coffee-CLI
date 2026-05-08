@@ -392,31 +392,37 @@
     color: var(--accent, #C4956A);
 }
 
-/* ─── Skill bar (above textarea) ───────────────────────────── */
+/* ─── Skill picker (footer left, before thumbnail strip) ──── */
+/* Same 30×30 footprint as .gambit-thumb so the footer's vertical
+   rhythm doesn't shift when an image gets pasted. position:relative
+   is the popover's anchor — popover opens UPWARD since the footer
+   is at the bottom of the Gambit window and downward would clip
+   into the OS taskbar / dock. */
 .gambit-skill-bar {
     position: relative;
+    flex-shrink: 0;
     display: flex;
     align-items: center;
-    padding: 6px 12px 0;
 }
 
 .gambit-skill-add {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 22px;
-    height: 22px;
+    width: 30px;
+    height: 30px;
     padding: 0;
-    background: transparent;
-    border: 1px solid var(--border, #38332c);
-    border-radius: var(--radius-sm, 6px);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--shape-radius-btn, 6px);
     color: var(--text-2, #9e9c98);
     cursor: pointer;
-    transition: color 0.15s, border-color 0.15s;
+    transition: color 0.15s, border-color 0.15s, background-color 0.15s;
 }
 .gambit-skill-add:hover {
     color: var(--accent, #C4956A);
     border-color: var(--accent, #C4956A);
+    background: rgba(196, 150, 106, 0.10);
 }
 
 .gambit-skill-chip {
@@ -462,8 +468,11 @@
 
 .gambit-skill-popover {
     position: absolute;
-    top: calc(100% + 4px);
-    left: 12px;
+    /* Bottom-anchored: popover opens UPWARD from the "+" button.
+       4px gap so the popover's bottom border doesn't touch the
+       footer's top edge. */
+    bottom: calc(100% + 4px);
+    left: 0;
     min-width: 200px;
     max-width: 320px;
     max-height: 280px;
@@ -472,7 +481,7 @@
     background: var(--bg-panel, #28241e);
     border: 1px solid var(--border, #38332c);
     border-radius: var(--radius-md, 8px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.35);
     z-index: 100;
 }
 
