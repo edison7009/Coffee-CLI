@@ -425,45 +425,15 @@
     background: rgba(196, 150, 106, 0.10);
 }
 
-.gambit-skill-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 2px 4px 2px 10px;
-    background: rgba(196, 150, 106, 0.12);
-    border: 1px solid var(--accent, #C4956A);
-    border-radius: var(--radius-pill, 999px);
-    font-size: 12px;
-    color: var(--accent, #C4956A);
-    max-width: 60%;
-}
-
-.gambit-skill-chip-label {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    cursor: pointer;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    user-select: none;
-}
-
-.gambit-skill-chip-x {
-    width: 18px;
-    height: 18px;
-    padding: 0;
-    background: transparent;
-    border: none;
-    color: inherit;
-    font-size: 14px;
-    line-height: 1;
-    cursor: pointer;
-    border-radius: 50%;
-    transition: background-color 0.15s;
-}
-.gambit-skill-chip-x:hover {
-    background: rgba(196, 150, 106, 0.25);
+@keyframes gambitSkillPopoverIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
 
 .gambit-skill-popover {
@@ -483,6 +453,12 @@
     border-radius: var(--radius-md, 8px);
     box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.35);
     z-index: 100;
+    /* Slide-up entrance: starts slightly below + 96% scale, lands at
+       full size with the same easeOutQuint curve the toast uses
+       (0.16, 1, 0.3, 1) — fast take-off, smooth landing. transform-
+       origin at bottom-left so the scale anchors to the "+" button. */
+    transform-origin: bottom left;
+    animation: gambitSkillPopoverIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .gambit-skill-popover-empty {
@@ -507,12 +483,20 @@
     cursor: pointer;
     border-radius: var(--radius-sm, 6px);
     transition: background-color 0.12s;
+    gap: 12px;
 }
 .gambit-skill-popover-item:hover {
     background: var(--bg-hover, #2f2a23);
 }
-.gambit-skill-popover-item.is-selected {
-    color: var(--accent, #C4956A);
+
+/* Right-aligned slug hint — `/screenshot` etc. so the user knows
+   what's about to appear in their textarea. Dimmer than the display
+   name so it reads as supporting metadata, not a primary label. */
+.gambit-skill-popover-slash {
+    font-family: var(--font-mono, monospace);
+    font-size: 11px;
+    color: var(--text-3, #6f6c66);
+    flex-shrink: 0;
 }
 
 /* ─── Textarea ─────────────────────────────────────────────── */
