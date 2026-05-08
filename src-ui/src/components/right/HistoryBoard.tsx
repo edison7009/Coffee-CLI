@@ -184,7 +184,27 @@ export function HistoryBoard() {
         );
       })}
 
-      {hasMore && <div ref={sentinelRef} style={{ height: 1 }} />}
+      {hasMore && (
+        <>
+          {/* Skeleton placeholders give immediate visual feedback that
+           * "more is coming" the moment scroll reaches the end —
+           * without them React's brief commit gap reads as "stuck".
+           * Sentinel sits at the bottom of the skeleton group so the
+           * observer fires while the user is still scrolling through
+           * them, by which point the next batch is already rendered. */}
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={`load-skel-${i}`} className="history-card history-card-skeleton" aria-hidden="true">
+              <div className="history-card-content">
+                <span className="skeleton-bar skeleton-bar-title" />
+                <div className="history-card-meta">
+                  <span className="skeleton-bar skeleton-bar-meta" />
+                </div>
+              </div>
+            </div>
+          ))}
+          <div ref={sentinelRef} style={{ height: 1 }} />
+        </>
+      )}
 
       {!isLoading && filteredSessions.length === 0 && (
         <div className="task-empty">

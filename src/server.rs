@@ -2464,7 +2464,9 @@ fn load_native_history_blocking() -> Result<Vec<SavedSession>, String> {
     // Cap history to the N most recent entries. Keeps UI responsive when users
     // have hundreds of sessions — parsing a full jsonl/json file is expensive,
     // so we pre-select candidates by file mtime and only parse the top N.
-    const HISTORY_LIMIT: usize = 30;
+    // 200 covers months of daily use; the frontend renders 30 at a time and
+    // pages in the rest progressively as the user scrolls (HistoryBoard).
+    const HISTORY_LIMIT: usize = 200;
 
     let mut file_candidates: Vec<(std::time::SystemTime, std::path::PathBuf, &'static str)> = Vec::new();
     let mut result: Vec<SavedSession> = Vec::new();
