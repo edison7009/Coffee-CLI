@@ -21,7 +21,6 @@ export const ko = {
   // Tools
   'tool.terminal': '터미널',
   'tool.remote': '원격 터미널',
-  'tool.remote.short': '원격',
   'tool.vibeid': '성격 테스트',
   'tool.vibeid.requires_cc': 'Claude Code 전용',
   'tool.multi_agent': '멀티 에이전트',
@@ -43,7 +42,6 @@ export const ko = {
   'tool_config.reset': '재설정',
   'tool_config.cancel': '취소',
   'tool_config.save': '저장',
-  'vibeid.need_insights_confirm': '성격 테스트를 실행하려면 먼저 Claude Code 사용 기록 리포트가 필요합니다.\n\n/insights를 자동으로 실행합니다 (약 1-2분). 완료 후 성격 테스트가 자동으로 시작됩니다.\n\n계속할까요?',
   'vibeid.insights_timeout': '리포트 생성이 시간 초과되었습니다. 나중에 다시 시도하거나 Claude Code 탭에서 /insights를 수동으로 실행하세요.',
 
   // Remote Terminal
@@ -61,7 +59,6 @@ export const ko = {
 
 
   // Task Board
-  'task.input_placeholder': '할 일 입력...',
   'task.notes_placeholder': '메모 추가...',
   'task.section.working': '진행 중',
   'task.section.todo': '할 일',
@@ -111,13 +108,7 @@ export const ko = {
   'gambit.placeholder': '한 수를 고르는 중... (Ctrl+Enter 전송, Enter 줄바꿈, 이미지 붙여넣기)',
   'gambit.send_failed_hint': '활성 세션을 먼저 여세요',
   'gambit.send_empty_hint': '내용을 입력하거나 이미지를 붙여넣으세요 (Ctrl+V)',
-  'gambit.ctx_cut': '잘라내기',
-  'gambit.ctx_copy': '복사',
-  'gambit.ctx_paste': '붙여넣기',
-  'gambit.ctx_select_all': '전체 선택',
 
-  'mode.take_a_break': '잠깐 쉬기',
-  'mode.back_to_work': '업무로 복귀',
 
   'heatmap.title': '세션 {sessions}회 · 메시지 {messages}개',
   'heatmap.title_empty': '아직 시작되지 않았어요 — AI와 대화하여 첫 칸을 채워보세요',

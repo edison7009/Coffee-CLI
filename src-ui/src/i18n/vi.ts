@@ -22,7 +22,6 @@ export const vi = {
   // Tools
   'tool.terminal': 'Terminal',
   'tool.remote': 'Terminal từ xa',
-  'tool.remote.short': 'Từ xa',
   'tool.vibeid': 'Trắc nghiệm tính cách',
   'tool.vibeid.requires_cc': 'Chỉ Claude Code',
   'tool.multi_agent': 'Đa tác nhân',
@@ -44,7 +43,6 @@ export const vi = {
   'tool_config.reset': 'Đặt lại',
   'tool_config.cancel': 'Hủy',
   'tool_config.save': 'Lưu',
-  'vibeid.need_insights_confirm': 'Trắc nghiệm tính cách cần báo cáo sử dụng Claude Code của bạn trước.\n\n/insights sẽ tự động chạy (khoảng 1-2 phút), sau đó trắc nghiệm sẽ tự bắt đầu.\n\nTiếp tục?',
   'vibeid.insights_timeout': 'Tạo báo cáo quá lâu. Vui lòng thử lại sau hoặc chạy /insights thủ công trong tab Claude Code.',
 
   // Remote Terminal
@@ -64,7 +62,6 @@ export const vi = {
 
 
   // Task Board
-  'task.input_placeholder': 'Viết một nhiệm vụ...',
   'task.notes_placeholder': 'Thêm ghi chú...',
   'task.section.working': 'Đang tiến hành',
   'task.section.todo': 'Cần làm',
@@ -114,13 +111,7 @@ export const vi = {
   'gambit.placeholder': 'Cân nhắc nước cờ... (Ctrl+Enter để gửi, Enter xuống dòng, dán ảnh được)',
   'gambit.send_failed_hint': 'Hãy mở một phiên hoạt động trước',
   'gambit.send_empty_hint': 'Nhập nội dung hoặc dán ảnh trước (Ctrl+V)',
-  'gambit.ctx_cut': 'Cắt',
-  'gambit.ctx_copy': 'Sao chép',
-  'gambit.ctx_paste': 'Dán',
-  'gambit.ctx_select_all': 'Chọn tất cả',
 
-  'mode.take_a_break': 'Nghỉ một chút',
-  'mode.back_to_work': 'Quay lại làm việc',
 
   'heatmap.title': '{sessions} phiên · {messages} tin nhắn',
   'heatmap.title_empty': 'Câu chuyện chưa bắt đầu — trò chuyện với AI để thắp sáng ô đầu tiên',

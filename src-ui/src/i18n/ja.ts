@@ -21,7 +21,6 @@ export const ja = {
   // Tools
   'tool.terminal': 'ターミナル',
   'tool.remote': 'リモートターミナル',
-  'tool.remote.short': 'リモート',
   'tool.vibeid': '性格診断',
   'tool.vibeid.requires_cc': 'Claude Code のみ',
   'tool.multi_agent': 'マルチエージェント',
@@ -43,7 +42,6 @@ export const ja = {
   'tool_config.reset': 'リセット',
   'tool_config.cancel': 'キャンセル',
   'tool_config.save': '保存',
-  'vibeid.need_insights_confirm': '性格診断には Claude Code の使用状況レポートが必要です。\n\n/insights を自動実行します（約 1〜2 分）。完了後、性格診断が自動的に開始されます。\n\n続行しますか？',
   'vibeid.insights_timeout': 'レポートの生成がタイムアウトしました。後でもう一度試すか、Claude Code タブで /insights を手動で実行してください。',
 
   // Remote Terminal
@@ -61,7 +59,6 @@ export const ja = {
 
 
   // Task Board
-  'task.input_placeholder': 'タスクを入力...',
   'task.notes_placeholder': 'メモを追加...',
   'task.section.working': '進行中',
   'task.section.todo': '未着手',
@@ -111,13 +108,7 @@ export const ja = {
   'gambit.placeholder': '静かに一手を思案... (Ctrl+Enterで送信、Enterで改行、画像貼付可)',
   'gambit.send_failed_hint': 'アクティブなセッションを先に開いてください',
   'gambit.send_empty_hint': 'メッセージを入力するか画像を貼り付けてください (Ctrl+V)',
-  'gambit.ctx_cut': '切り取り',
-  'gambit.ctx_copy': 'コピー',
-  'gambit.ctx_paste': '貼り付け',
-  'gambit.ctx_select_all': 'すべて選択',
 
-  'mode.take_a_break': 'ひと休み',
-  'mode.back_to_work': '仕事に戻る',
 
   'heatmap.title': 'セッション {sessions} 回・メッセージ {messages} 件',
   'heatmap.title_empty': 'まだ何もありません — AI と話してマスを点灯させよう',

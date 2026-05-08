@@ -21,7 +21,6 @@ export const ru = {
   // Tools
   'tool.terminal': 'Терминал',
   'tool.remote': 'Удалённый терминал',
-  'tool.remote.short': 'Удалённый',
   'tool.vibeid': 'Тест личности',
   'tool.vibeid.requires_cc': 'Только Claude Code',
   'tool.multi_agent': 'Мульти-агент',
@@ -43,7 +42,6 @@ export const ru = {
   'tool_config.reset': 'Сброс',
   'tool_config.cancel': 'Отмена',
   'tool_config.save': 'Сохранить',
-  'vibeid.need_insights_confirm': 'Тест личности сначала требует ваш отчёт об использовании Claude Code.\n\n/insights будет запущен автоматически (около 1-2 минут), затем тест начнётся сам.\n\nПродолжить?',
   'vibeid.insights_timeout': 'Генерация отчёта заняла слишком много времени. Попробуйте позже или запустите /insights вручную во вкладке Claude Code.',
 
   // Remote Terminal
@@ -62,7 +60,6 @@ export const ru = {
 
 
   // Task Board
-  'task.input_placeholder': 'Написать задачу...',
   'task.notes_placeholder': 'Добавить заметки...',
   'task.section.working': 'В работе',
   'task.section.todo': 'К выполнению',
@@ -107,8 +104,6 @@ export const ru = {
   'theme.color.cobalt': 'Кобальт',
   'theme.color.moss': 'Мох',
 
-  'mode.take_a_break': 'Сделать перерыв',
-  'mode.back_to_work': 'Вернуться к работе',
 
   'gambit.send_failed_hint': 'Сначала откройте активную сессию',
 

@@ -21,7 +21,6 @@ export const de = {
   // Tools
   'tool.terminal': 'Terminal',
   'tool.remote': 'Remote-Terminal',
-  'tool.remote.short': 'Remote',
   'tool.vibeid': 'Persönlichkeitstest',
   'tool.vibeid.requires_cc': 'Nur Claude Code',
   'tool.multi_agent': 'Multi-Agent',
@@ -43,7 +42,6 @@ export const de = {
   'tool_config.reset': 'Zurücksetzen',
   'tool_config.cancel': 'Abbrechen',
   'tool_config.save': 'Speichern',
-  'vibeid.need_insights_confirm': 'Der Persönlichkeitstest benötigt zuerst deinen Claude Code Nutzungsbericht.\n\n/insights wird jetzt automatisch ausgeführt (ca. 1-2 Minuten), dann startet der Test automatisch.\n\nFortfahren?',
   'vibeid.insights_timeout': 'Die Berichterstellung hat zu lange gedauert. Bitte später erneut versuchen oder /insights manuell in einem Claude Code Tab ausführen.',
 
   // Remote Terminal
@@ -62,7 +60,6 @@ export const de = {
 
 
   // Task Board
-  'task.input_placeholder': 'Aufgabe eingeben...',
   'task.notes_placeholder': 'Notizen hinzufügen...',
   'task.section.working': 'In Bearbeitung',
   'task.section.todo': 'Offen',
@@ -107,8 +104,6 @@ export const de = {
   'theme.color.cobalt': 'Kobalt',
   'theme.color.moss': 'Moos',
 
-  'mode.take_a_break': 'Pause machen',
-  'mode.back_to_work': 'Zurück zur Arbeit',
 
   'gambit.send_failed_hint': 'Öffne zuerst eine aktive Sitzung',
 

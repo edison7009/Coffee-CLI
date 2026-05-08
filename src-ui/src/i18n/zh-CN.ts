@@ -21,7 +21,6 @@ export const zhCN = {
   // Tools
   'tool.terminal': '终端',
   'tool.remote': '远程终端',
-  'tool.remote.short': '远程',
   'tool.vibeid': '人格测试',
   'tool.vibeid.requires_cc': '仅限 Claude Code',
   'tool.multi_agent': '多智能体',
@@ -43,7 +42,6 @@ export const zhCN = {
   'tool_config.reset': '重置',
   'tool_config.cancel': '取消',
   'tool_config.save': '保存',
-  'vibeid.need_insights_confirm': '人格测试需要先生成你的 Claude Code 使用报告。\n\n将自动运行 /insights（约 1-2 分钟），完成后自动跑人格测试。\n\n继续？',
   'vibeid.insights_timeout': '报告生成超时了。请稍后重试，或在 Claude Code tab 里手动跑 /insights。',
 
   // Remote Terminal
@@ -61,7 +59,6 @@ export const zhCN = {
 
 
   // Task Board
-  'task.input_placeholder': '写下一个任务...',
   'task.notes_placeholder': '添加备注...',
   'task.section.working': '进行中',
   'task.section.todo': '待办',
@@ -111,13 +108,7 @@ export const zhCN = {
   'gambit.placeholder': '静心琢磨，再落子... (Ctrl+Enter 发送, Enter 换行, 可粘贴图片)',
   'gambit.send_failed_hint': '请先打开活动会话',
   'gambit.send_empty_hint': '先输入内容或粘贴图片 (Ctrl+V)',
-  'gambit.ctx_cut': '剪切',
-  'gambit.ctx_copy': '复制',
-  'gambit.ctx_paste': '粘贴',
-  'gambit.ctx_select_all': '全选',
 
-  'mode.take_a_break': '放松一下',
-  'mode.back_to_work': '回到工作',
 
   // 贡献热力图（桌面 Launchpad 上的 6 张卡片上方）
   'heatmap.title': '{sessions} 次会话、{messages} 条消息',

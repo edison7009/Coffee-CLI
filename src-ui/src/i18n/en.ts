@@ -22,7 +22,6 @@ export const en = {
   // Tools
   'tool.terminal': 'Terminal',
   'tool.remote': 'Remote Terminal',
-  'tool.remote.short': 'Remote',
   'tool.vibeid': 'Personality Test',
   'tool.vibeid.requires_cc': 'Only Claude Code',
   'tool.multi_agent': 'Multi-Agent',
@@ -44,7 +43,6 @@ export const en = {
   'tool_config.reset': 'Reset',
   'tool_config.cancel': 'Cancel',
   'tool_config.save': 'Save',
-  'vibeid.need_insights_confirm': 'Personality Test needs your Claude Code usage report first.\n\nThe app will auto-run /insights now (takes about 1-2 minutes), then run the VibeID test automatically.\n\nContinue?',
   'vibeid.insights_timeout': 'Report generation took too long. Please try again, or run /insights manually in a Claude Code tab.',
 
   // Remote Terminal
@@ -63,7 +61,6 @@ export const en = {
 
 
   // Task Board
-  'task.input_placeholder': 'Write a task...',
   'task.notes_placeholder': 'Add notes...',
   'task.section.working': 'In Progress',
   'task.section.todo': 'To-do',
@@ -113,14 +110,8 @@ export const en = {
   'gambit.placeholder': 'Compose your move... (Ctrl+Enter to send, Enter for newline, paste images)',
   'gambit.send_failed_hint': 'Open an active session first',
   'gambit.send_empty_hint': 'Type a message or paste an image first (Ctrl+V)',
-  'gambit.ctx_cut': 'Cut',
-  'gambit.ctx_copy': 'Copy',
-  'gambit.ctx_paste': 'Paste',
-  'gambit.ctx_select_all': 'Select All',
 
   // Mode switch button (bottom-right): enter Arcade games / return to tools.
-  'mode.take_a_break': 'Take a break',
-  'mode.back_to_work': 'Back to work',
 
   // Contribution heatmap (above pinned cards on Desktop launchpad).
   'heatmap.title': '{sessions} sessions · {messages} messages',
