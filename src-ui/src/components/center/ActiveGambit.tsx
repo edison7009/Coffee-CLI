@@ -20,7 +20,7 @@
 // text can't be misdirected to the wrong terminal.
 
 import { useCallback, useMemo } from 'react';
-import { useAppState } from '../../store/app-state';
+import { useAppState, isSplitTool, isMultiAgentTool, paneSessionId } from '../../store/app-state';
 import { getTabActions } from '../../lib/tab-actions';
 import { getFocusedPane } from '../../lib/pane-focus';
 import { Gambit } from './Gambit';
@@ -81,15 +81,13 @@ export function ActiveGambit() {
   // the draft rather than dropping text into the void.
   const handleSend = useCallback((text: string): boolean => {
     if (!activeId) return false;
-    const tool = activeSession?.tool;
-    const isMultiAgent = tool === 'multi-agent' || tool === 'two-agent' || tool === 'three-agent';
-    const isSplit = tool === 'two-split' || tool === 'three-split' || tool === 'four-split';
+    const tool = activeSession?.tool ?? null;
+    const split = isSplitTool(tool);
     let targetId = activeId;
-    if (isMultiAgent || isSplit) {
+    if (split || isMultiAgentTool(tool)) {
       const paneIdx = getFocusedPane(activeId);
       if (!paneIdx) return false;
-      const suffix = isSplit ? 'split' : 'pane';
-      targetId = `${activeId}::${suffix}-${paneIdx}`;
+      targetId = paneSessionId(activeId, paneIdx, split ? 'split' : 'pane');
     }
     const actions = getTabActions(targetId);
     if (!actions) return false;

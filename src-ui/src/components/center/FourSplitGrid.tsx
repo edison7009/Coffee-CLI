@@ -27,7 +27,7 @@
 //     cross-pane sentinel / Gambit addressing that keys off `::pane-`.
 
 import { useEffect, useState } from 'react';
-import { useAppState, type TerminalSession, type ToolType, type MultiAgentPane } from '../../store/app-state';
+import { useAppState, paneSessionId, type TerminalSession, type ToolType, type MultiAgentPane } from '../../store/app-state';
 import { TierTerminal } from './TierTerminal';
 import { ErrorBoundary } from '../common/ErrorBoundary';
 import { commands } from '../../tauri';
@@ -63,7 +63,12 @@ const CWD_AGNOSTIC_TOOLS: ReadonlySet<ToolType> = new Set<ToolType>(['openclaw',
 
 export function FourSplitGrid({ tab, hasBg, bgUrl, bgType, paneCount = 4 }: Props) {
   const { state, dispatch } = useAppState();
-  const [focusedPaneIdx, setFocusedPaneIdx] = useState<number | null>(null);
+  // Lives in app-state so FileStatsProvider / ChangesBoard can read which
+  // pane to track diffs for. Reducer short-circuits same-value dispatches.
+  const focusedPaneIdx = tab.multiAgent?.focusedPaneIdx ?? null;
+  const setFocusedPaneIdx = (idx: number | null) => {
+    dispatch({ type: 'SET_FOCUSED_PANE', tabId: tab.id, paneIdx: idx });
+  };
 
   // Detect which of the 6 pane-eligible CLIs are actually installed so the
   // picker can grey out the ones the user doesn't have (same visual
@@ -156,28 +161,24 @@ export function FourSplitGrid({ tab, hasBg, bgUrl, bgType, paneCount = 4 }: Prop
         </div>
       )}
       {visiblePanes.map((pane) => {
-        const paneSessionId = `${tab.id}::split-${pane.paneIdx}`;
+        const paneSid = paneSessionId(tab.id, pane.paneIdx, 'split');
         const isEmpty = pane.tool === null;
         const isFocused = focusedPaneIdx === pane.paneIdx;
         const isDimmed = focusedPaneIdx !== null && !isFocused;
+        // mousedown fires for clicks; focus covers keyboard tab-nav.
+        // Empty panes leave Explorer on its current folder (no flash).
+        const focusThisPane = () => {
+          setFocusedPaneIdx(pane.paneIdx);
+          setFocusedPane(tab.id, pane.paneIdx);
+          if (pane.folderPath) syncExplorerToFolder(pane.folderPath);
+        };
 
         return (
           <div
             key={pane.paneIdx}
             className={`multi-agent-pane pane-slot-${pane.paneIdx}${isDimmed ? ' is-dimmed' : ''}`}
-            onMouseDownCapture={() => {
-              setFocusedPaneIdx(pane.paneIdx);
-              setFocusedPane(tab.id, pane.paneIdx);
-              // Switch left Explorer to this pane's folder (path + list).
-              // Empty panes have no folder yet — leave Explorer on whatever
-              // it was showing (better than flashing to nothing).
-              if (pane.folderPath) syncExplorerToFolder(pane.folderPath);
-            }}
-            onFocusCapture={() => {
-              setFocusedPaneIdx(pane.paneIdx);
-              setFocusedPane(tab.id, pane.paneIdx);
-              if (pane.folderPath) syncExplorerToFolder(pane.folderPath);
-            }}
+            onMouseDownCapture={focusThisPane}
+            onFocusCapture={focusThisPane}
           >
             {isEmpty ? (
               <div className="pane-number-badge">{pane.paneIdx}</div>
@@ -188,7 +189,7 @@ export function FourSplitGrid({ tab, hasBg, bgUrl, bgType, paneCount = 4 }: Prop
                 aria-label={`Close pane ${pane.paneIdx}`}
                 onClick={(e) => {
                   e.stopPropagation();
-                  commands.tierTerminalKill(paneSessionId).catch(() => {});
+                  commands.tierTerminalKill(paneSid).catch(() => {});
                   if (focusedPaneIdx === pane.paneIdx) {
                     setFocusedPaneIdx(null);
                     setFocusedPane(tab.id, null);
@@ -216,8 +217,8 @@ export function FourSplitGrid({ tab, hasBg, bgUrl, bgType, paneCount = 4 }: Prop
               ) : (
                 <ErrorBoundary fallbackLabel="Tier Terminal Error">
                   <TierTerminal
-                    key={paneSessionId}
-                    sessionId={paneSessionId}
+                    key={paneSid}
+                    sessionId={paneSid}
                     tool={pane.tool}
                     toolName={undefined}
                     theme={state.currentTheme}

@@ -64,6 +64,11 @@ export interface MultiAgentPane {
 /// `MultiAgentPane`; focus tracking happens inside `<MultiAgentGrid/>`.
 export interface MultiAgentState {
   panes: MultiAgentPane[];
+  // Independent split (`*-split`) only: which pane the user last focused.
+  // Drives left Explorer + right Changes target — without it the file panels
+  // can't tell which pane's project they should reflect. Multi-agent tabs
+  // (`*-agent`, shared folder) ignore this field.
+  focusedPaneIdx?: number | null;
 }
 
 export interface TerminalSession {
@@ -118,6 +123,45 @@ export interface AppState {
   multiAgentLayout: 'grid' | 'columns';
 }
 
+// ─── Tab tool predicates ────────────────────────────────────────────────────
+
+export const SPLIT_TOOLS: ReadonlySet<ToolType> = new Set<ToolType>(['two-split', 'three-split', 'four-split']);
+export const MULTI_AGENT_TOOLS: ReadonlySet<ToolType> = new Set<ToolType>(['multi-agent', 'two-agent', 'three-agent']);
+export const isSplitTool = (t: ToolType): boolean => SPLIT_TOOLS.has(t);
+export const isMultiAgentTool = (t: ToolType): boolean => MULTI_AGENT_TOOLS.has(t);
+
+// `kind` is a backend protocol contract: `::pane-N` triggers hands-free flag
+// injection (yolo / skip-permissions) for coordinated multi-agent; `::split-N`
+// leaves them off so each pane prompts as a normal interactive PTY.
+export const paneSessionId = (tabId: string, paneIdx: number, kind: 'split' | 'pane'): string =>
+  `${tabId}::${kind}-${paneIdx}`;
+
+// ─── Diff context resolver ──────────────────────────────────────────────────
+// Split tabs route file-stats to the focused pane's own session+folder.
+// Multi-agent and regular tabs use the tab itself. `null` = no diff target.
+export interface DiffContext {
+  sessionId: string;
+  folderPath: string;
+  tool: ToolType;
+}
+
+export function resolveDiffContext(session: TerminalSession | null | undefined): DiffContext | null {
+  if (!session) return null;
+  if (isSplitTool(session.tool)) {
+    const focusedIdx = session.multiAgent?.focusedPaneIdx ?? null;
+    if (focusedIdx == null) return null;
+    const pane = session.multiAgent?.panes.find(p => p.paneIdx === focusedIdx);
+    if (!pane?.tool || !pane.folderPath) return null;
+    return {
+      sessionId: paneSessionId(session.id, pane.paneIdx, 'split'),
+      folderPath: pane.folderPath,
+      tool: pane.tool,
+    };
+  }
+  if (!session.folderPath) return null;
+  return { sessionId: session.id, folderPath: session.folderPath, tool: session.tool };
+}
+
 // ─── Actions ─────────────────────────────────────────────────────────────────
 
 type Action =
@@ -146,6 +190,7 @@ type Action =
   | { type: 'SET_PANE_TOOL'; tabId: string; paneIdx: number; tool: ToolType; toolData?: string; folderPath?: string | null }
   | { type: 'SET_PANE_SENTINEL'; tabId: string; paneIdx: number; enabled: boolean }
   | { type: 'SET_PANE_COMPLETION'; tabId: string; paneIdx: number; ts: number }
+  | { type: 'SET_FOCUSED_PANE'; tabId: string; paneIdx: number | null }
   | { type: 'TOGGLE_LEFT_PANEL' }
   | { type: 'TOGGLE_RIGHT_PANEL' }
   | { type: 'SET_MULTI_AGENT_LAYOUT'; layout: 'grid' | 'columns' };
@@ -302,7 +347,7 @@ function reducer(state: AppState, action: Action): AppState {
                 }
               : p
           );
-          return { ...t, multiAgent: { panes } };
+          return { ...t, multiAgent: { ...t.multiAgent, panes } };
         }),
       };
     }
@@ -316,7 +361,7 @@ function reducer(state: AppState, action: Action): AppState {
           const panes = existing.map(p =>
             p.paneIdx === action.paneIdx ? { ...p, sentinelEnabled: action.enabled } : p
           );
-          return { ...t, multiAgent: { panes } };
+          return { ...t, multiAgent: { ...t.multiAgent, panes } };
         }),
       };
     }
@@ -329,7 +374,21 @@ function reducer(state: AppState, action: Action): AppState {
           const panes = t.multiAgent.panes.map(p =>
             p.paneIdx === action.paneIdx ? { ...p, completionTs: action.ts } : p
           );
-          return { ...t, multiAgent: { panes } };
+          return { ...t, multiAgent: { ...t.multiAgent, panes } };
+        }),
+      };
+    }
+    case 'SET_FOCUSED_PANE': {
+      const tab = state.terminals.find(t => t.id === action.tabId);
+      if (!tab) return state;
+      if ((tab.multiAgent?.focusedPaneIdx ?? null) === action.paneIdx) return state;
+      return {
+        ...state,
+        terminals: state.terminals.map(t => {
+          if (t.id !== action.tabId) return t;
+          const ma = t.multiAgent
+            ?? { panes: [1, 2, 3, 4].map(i => ({ paneIdx: i, tool: null as ToolType })) as MultiAgentPane[] };
+          return { ...t, multiAgent: { ...ma, focusedPaneIdx: action.paneIdx } };
         }),
       };
     }

@@ -5,7 +5,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { useAppState } from '../store/app-state';
+import { useAppState, resolveDiffContext } from '../store/app-state';
 import type { ToolType } from '../store/app-state';
 import { commands } from '../tauri';
 
@@ -28,9 +28,10 @@ const baselinedSessions = new Map<string, string>();
 export function FileStatsProvider({ children }: { children: ReactNode }) {
   const { state } = useAppState();
   const activeSession = state.terminals.find(t => t.id === state.activeTerminalId);
-  const folderPath = activeSession?.folderPath || null;
-  const sessionId = activeSession?.id ?? null;
-  const sessionTool = activeSession?.tool ?? null;
+  const diffCtx = resolveDiffContext(activeSession);
+  const folderPath = diffCtx?.folderPath ?? null;
+  const sessionId = diffCtx?.sessionId ?? null;
+  const sessionTool = diffCtx?.tool ?? null;
 
   const [fileStats, setFileStats] = useState<FileStatsMap>(() => new Map());
   const snapshotReady = useRef<Promise<unknown> | null>(null);

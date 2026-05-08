@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import type { ReactNode } from 'react';
+import type { ReactNode, Dispatch, SetStateAction } from 'react';
 import { useT } from '../../i18n/useT';
 import { useAppState } from '../../store/app-state';
 import { isTauri, commands } from '../../tauri';
@@ -109,6 +109,32 @@ export function TaskBoard() {
   useEffect(() => {
     try { localStorage.setItem('cc-right-tab', activeTab); } catch {}
   }, [activeTab]);
+
+  // Per-tab so switching center tabs doesn't bleed selection across them;
+  // also lifted out of ChangesBoard so a right-side detour to Tasks/History
+  // doesn't unmount-and-drop the entry. Keyed by activeTerminalId.
+  const [changeSelByTab, setChangeSelByTab] = useState<Record<string, string | null>>({});
+  const activeTerminalId = state.activeTerminalId;
+  const selectedChangePath = activeTerminalId ? (changeSelByTab[activeTerminalId] ?? null) : null;
+  const setSelectedChangePath: Dispatch<SetStateAction<string | null>> = useCallback((update) => {
+    if (!activeTerminalId) return;
+    setChangeSelByTab(prev => {
+      const current = prev[activeTerminalId] ?? null;
+      const next = typeof update === 'function' ? (update as (p: string | null) => string | null)(current) : update;
+      if (next === current) return prev;
+      return { ...prev, [activeTerminalId]: next };
+    });
+  }, [activeTerminalId]);
+  useEffect(() => {
+    const live = new Set(state.terminals.map(t => t.id));
+    setChangeSelByTab(prev => {
+      const dead = Object.keys(prev).filter(id => !live.has(id));
+      if (dead.length === 0) return prev;
+      const next = { ...prev };
+      for (const id of dead) delete next[id];
+      return next;
+    });
+  }, [state.terminals]);
 
   // Inline title editing
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -762,7 +788,7 @@ export function TaskBoard() {
     )}
 
     {activeTab === 'changes' && (
-      <ChangesBoard />
+      <ChangesBoard selectedPath={selectedChangePath} setSelectedPath={setSelectedChangePath} />
     )}
 
     {activeTab === 'sessions' && (

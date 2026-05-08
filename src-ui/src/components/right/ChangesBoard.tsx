@@ -8,7 +8,8 @@
 // Mirrors VS Code / GitHub Desktop / JetBrains: both interactions coexist.
 
 import { useMemo, useState } from 'react';
-import { useAppState } from '../../store/app-state';
+import type { Dispatch, SetStateAction } from 'react';
+import { useAppState, resolveDiffContext } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
 import { useFileStats } from '../../lib/file-stats';
 import { ScrollPanel } from '../common/ScrollPanel';
@@ -18,15 +19,20 @@ import { beginExplorerDrag } from '../../lib/explorer-drag';
 import { DiffPanel } from './DiffPanel';
 import './ChangesBoard.css';
 
-export function ChangesBoard() {
+interface ChangesBoardProps {
+  selectedPath: string | null;
+  setSelectedPath: Dispatch<SetStateAction<string | null>>;
+}
+
+export function ChangesBoard({ selectedPath, setSelectedPath }: ChangesBoardProps) {
   const t = useT();
   const { state } = useAppState();
   const fileStats = useFileStats();
   const activeSession = state.terminals.find(s => s.id === state.activeTerminalId);
-  const folderPath = activeSession?.folderPath || null;
-  const sessionId = activeSession?.id || null;
+  const diffCtx = resolveDiffContext(activeSession);
+  const folderPath = diffCtx?.folderPath ?? null;
+  const sessionId = diffCtx?.sessionId ?? null;
   const [ctxMenu, setCtxMenu] = useState<CtxMenuState | null>(null);
-  const [selectedPath, setSelectedPath] = useState<string | null>(null);
 
   const rows = useMemo(() => {
     if (!fileStats || fileStats.size === 0 || !folderPath) return [];
@@ -48,21 +54,11 @@ export function ChangesBoard() {
   const selectedStillExists = selectedPath && rows.some(r => r.path === selectedPath);
   const effectiveSelected = selectedStillExists ? selectedPath : null;
 
-  if (!folderPath) {
+  if (!folderPath || rows.length === 0) {
     return (
       <div className="task-empty">
         <div className="task-empty-text">
-          {t('changes.no.folder' as any) || 'Open a folder to see file changes.'}
-        </div>
-      </div>
-    );
-  }
-
-  if (rows.length === 0) {
-    return (
-      <div className="task-empty">
-        <div className="task-empty-text">
-          {t('changes.empty' as any) || 'No changes in this session.'}
+          {t('changes.empty' as any) || 'No changes yet.'}
         </div>
       </div>
     );
@@ -77,7 +73,7 @@ export function ChangesBoard() {
               <div
                 key={row.path}
                 className={`changes-row ${effectiveSelected === row.path ? 'selected' : ''}`}
-                onClick={() => setSelectedPath(row.path)}
+                onClick={() => setSelectedPath(prev => prev === row.path ? null : row.path)}
                 onMouseDown={(e) => beginExplorerDrag(row.path, e)}
                 onContextMenu={(e) => {
                   e.preventDefault();
