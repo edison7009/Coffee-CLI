@@ -369,6 +369,12 @@ struct FileSnapshot {
     /// (1000-line file = 8 KB) while letting us compute true `+N -M` deltas
     /// via multiset comparison instead of just net line-count change.
     line_hashes: Vec<u64>,
+    /// Original file bytes — captured only on the baseline pass, only for
+    /// text files under BASELINE_CONTENT_MAX_BYTES. Used by the right-side
+    /// Diff panel to render a unified diff (current vs. session-start).
+    /// `None` for files that exceeded the size cap or were inserted on a
+    /// non-baseline walk (compute_folder_stats's transient `current` map).
+    content: Option<Vec<u8>>,
 }
 
 #[derive(Clone, Default)]
@@ -402,6 +408,11 @@ const STATS_SKIP_DIRS: &[&str] = &[
 
 const STATS_MAX_FILE_BYTES: u64 = 5_000_000;
 const STATS_MAX_FILES: usize = 5000;
+/// Per-file cap for storing baseline content (separate from STATS_MAX_FILE_BYTES,
+/// which gates the hash-based stats path). Files between 1 MB and 5 MB still
+/// get +N/-M badges but no diff view — keeps total memory ~1-10 MB per session
+/// for typical workspaces while still covering 99% of source files.
+const BASELINE_CONTENT_MAX_BYTES: u64 = 1_000_000;
 /// Skip a file's badge if reported `+lines + -lines` exceeds this. Catches
 /// CRLF/LF mismatches, path-canonicalization weirdness, and binary files
 /// that slipped past `stats_is_text` from producing nonsense badges like
@@ -527,9 +538,19 @@ fn stats_walk(
                 Err(_) => continue,
             };
             if !stats_is_text(&bytes) { continue; }
+            // Store content only on the baseline pass (baseline.is_none()) and
+            // only when file is small enough to be diff-renderable. The
+            // current-state pass throws its FileSnapshot away after diffing,
+            // so storing content there would just waste a clone.
+            let content = if baseline.is_none() && meta.len() <= BASELINE_CONTENT_MAX_BYTES {
+                Some(bytes.clone())
+            } else {
+                None
+            };
             files.insert(key, FileSnapshot {
                 mtime_nanos: mtime,
                 line_hashes: stats_line_hashes(&bytes),
+                content,
             });
         }
     }
@@ -560,6 +581,34 @@ fn drop_session_snapshot(session_id: String) -> Result<(), String> {
     let mut map = snapshots().lock().map_err(|e| format!("lock: {}", e))?;
     map.remove(&session_id);
     Ok(())
+}
+
+/// Read a text file from disk as UTF-8 string. `None` when the file doesn't
+/// exist, can't be read, or fails the text-vs-binary heuristic. Pairs with
+/// `get_baseline_content` to feed the right-side Diff panel: baseline +
+/// current = both sides of the diff.
+#[tauri::command]
+fn read_text_file(path: String) -> Option<String> {
+    let bytes = std::fs::read(&path).ok()?;
+    if !stats_is_text(&bytes) { return None; }
+    Some(String::from_utf8_lossy(&bytes).into_owned())
+}
+
+/// Return the file's session-start content as UTF-8 string. `None` when:
+///   - the session has no snapshot (folder never opened)
+///   - the path isn't in the snapshot (file created after baseline)
+///   - the file exceeded BASELINE_CONTENT_MAX_BYTES (no content stored)
+///   - the file was binary (skipped during stats_walk)
+/// Lossy UTF-8: invalid bytes become U+FFFD so non-UTF8 source files
+/// (latin-1, GBK, etc.) still render in the diff panel.
+#[tauri::command]
+fn get_baseline_content(session_id: String, path: String) -> Option<String> {
+    let map = snapshots().lock().ok()?;
+    let snapshot = map.get(&session_id)?;
+    let normalized = path.replace('\\', "/");
+    let file = snapshot.files.get(&normalized)?;
+    let bytes = file.content.as_ref()?;
+    Some(String::from_utf8_lossy(bytes).into_owned())
 }
 
 /// Walk the folder again and return only the files whose line count or
@@ -3411,6 +3460,8 @@ pub fn start_ui() -> anyhow::Result<()> {
             start_folder_snapshot,
             drop_session_snapshot,
             compute_folder_stats,
+            get_baseline_content,
+            read_text_file,
             show_in_folder,
             fs_delete,
             fs_rename,

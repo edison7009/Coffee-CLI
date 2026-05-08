@@ -154,6 +154,14 @@ export const commands = {
       'compute_folder_stats',
       { sessionId, path },
     ),
+  // Diff panel inputs: baseline = the file's bytes when the snapshot was
+  // taken; current = the file's bytes now. Both lossy-UTF8 decoded so
+  // GBK / latin-1 source files still render. `null` = file missing /
+  // binary / outside snapshot.
+  getBaselineContent: (sessionId: string, path: string) =>
+    invoke<string | null>('get_baseline_content', { sessionId, path }),
+  readTextFile: (path: string) =>
+    invoke<string | null>('read_text_file', { path }),
 
   // File system operations
   fsDelete: (path: string) => invoke<void>('fs_delete', { path }),

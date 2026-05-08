@@ -1,0 +1,165 @@
+/* DiffPanel.css — Step 3: hardcoded values. Step 4 will theme via CSS vars. */
+
+.diff-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: transparent;
+  overflow: hidden;
+}
+
+.diff-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 14px;
+  font-size: 11px;
+  color: var(--text-2, #888);
+  flex-shrink: 0;
+}
+
+.diff-header-name {
+  font-weight: 600;
+  color: var(--text-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.diff-header-close {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  color: var(--text-2, #888);
+  cursor: pointer;
+}
+
+.diff-header-close:hover {
+  background: var(--surface-hover, rgba(127, 127, 127, 0.12));
+  color: var(--text-1);
+}
+
+.diff-body {
+  flex: 1;
+  min-height: 0;
+  /* auto on both axes: horizontal scrollbar appears at the bottom of the
+   * visible body when any line is wider than the viewport. */
+  overflow: auto;
+}
+
+/* Override the app-wide "hide all scrollbars" rule (global.css L107) for
+ * the diff body specifically. Class selector beats `*`, so even with
+ * !important on both sides our rules win. Slider tinted with --accent so
+ * it follows the active theme — same approach as xterm's DOM scrollbar
+ * in TierTerminal.css. Subtle by default, brighter on hover. */
+.diff-body::-webkit-scrollbar {
+  display: block !important;
+  width: 10px !important;
+  height: 10px !important;
+  background: transparent !important;
+}
+.diff-body::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 3px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.diff-body::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--accent) 70%, transparent);
+  background-clip: padding-box;
+}
+.diff-body::-webkit-scrollbar-corner {
+  background: transparent !important;
+}
+.diff-body {
+  scrollbar-width: thin !important;
+  scrollbar-color: color-mix(in srgb, var(--accent) 35%, transparent) transparent !important;
+}
+
+.diff-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-3, var(--text-2));
+  font-size: 12px;
+}
+
+/* inline-block + min-width:100% lets the pre grow as wide as its widest line
+ * (so horizontal scrollbar works) while still filling the panel for short
+ * content (so row backgrounds span full width, not just the text). */
+.diff-pre {
+  display: inline-block;
+  min-width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 6px 0;
+  font-family: ui-monospace, "SF Mono", Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.diff-line {
+  display: block;
+  /* No left/right padding — the changes-split-bottom escapes task-board's
+   * padding (margin: 0 -16px) so the row backgrounds stretch panel-edge
+   * to panel-edge, no left/right whitespace. */
+  white-space: pre;
+}
+
+/* Saturated single-color row backgrounds (Claude Code pattern). Dropped
+ * the two-zone gutter+row split because in this audit panel the line
+ * numbers already serve as the visual anchor, so the row only needs one
+ * clean tint. Solid colors (no alpha) keep the hue consistent across
+ * panel/glass/whatever's behind. */
+.diff-line-add {
+  background: #1a4d2a;
+}
+.diff-line-del {
+  background: #4d1a1a;
+}
+
+[data-theme="light"] .diff-line-add {
+  background: #c0e8c8;
+}
+[data-theme="light"] .diff-line-del {
+  background: #e8c0c0;
+}
+
+/* Line number column. Right-aligned so 1-digit and 4-digit line numbers
+ * line up against the marker. Dimmed via opacity so it doesn't compete
+ * with the code. */
+.diff-line-num {
+  display: inline-block;
+  width: 38px;
+  padding: 0 6px 0 4px;
+  text-align: right;
+  flex-shrink: 0;
+  color: var(--text-3, var(--text-2));
+  opacity: 0.65;
+  user-select: none;
+}
+
+.diff-marker {
+  display: inline-block;
+  width: 16px;
+  text-align: center;
+  flex-shrink: 0;
+  color: var(--text-2);
+  user-select: none;
+}
+
+.diff-line-add .diff-marker { color: #b8e8c4; }
+.diff-line-del .diff-marker { color: #e8b8b8; }
+
+[data-theme="light"] .diff-line-add .diff-marker { color: #1a4d2a; }
+[data-theme="light"] .diff-line-del .diff-marker { color: #4d1a1a; }

@@ -20,13 +20,17 @@ const normPath = (p: string) => p.replace(/\\/g, '/');
 
 // ─── Context Menu ────────────────────────────────────────────────────────────
 
-interface CtxMenuState {
+export interface CtxMenuState {
   x: number;
   y: number;
   absolutePath: string;
   relativePath: string;
   isDir?: boolean;
   onRename?: () => void;
+  // ChangesBoard reuses this menu read-only — the audit view shouldn't
+  // mutate the agent's just-edited files. Hides cut/copy/paste/rename/delete
+  // + the relative-path entry.
+  compact?: boolean;
 }
 
 // Module-level clipboard: survives menu close/open cycles
@@ -44,7 +48,7 @@ function dispatchFsRefresh(dirPath: string) {
   window.dispatchEvent(new CustomEvent('fs-refresh', { detail: { dirPath } }));
 }
 
-function ContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: () => void }) {
+export function ContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: () => void }) {
   const t = useT();
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -191,7 +195,8 @@ function ContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: () => voi
         {t('menu.copy_ref' as any)}
       </button>
 
-      {/* File operation group */}
+      {/* File operation group — hidden in compact mode (read-only audit view) */}
+      {!menu.compact && <>
       <div className="ctx-menu-divider" />
       <button className="ctx-menu-item" onClick={handleCut}>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -232,6 +237,7 @@ function ContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: () => voi
         </svg>
         {t('menu.delete' as any)}
       </button>
+      </>}
       <div className="ctx-menu-divider" />
       <button className="ctx-menu-item" onClick={handleShowInFolder}>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
