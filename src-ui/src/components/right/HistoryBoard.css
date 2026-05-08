@@ -55,13 +55,6 @@
   font-weight: 500;
   letter-spacing: 0.02em;
 }
-
-.history-card-time {
-  font-size: 10px;
-  color: var(--text-3);
-  font-weight: 500;
-}
-
 /* ── Loading Skeleton ──
    Shimmer driven by --text-3 so the skeleton bars are visible against
    light AND dark cards. Pure white-rgba was invisible on the light theme. */

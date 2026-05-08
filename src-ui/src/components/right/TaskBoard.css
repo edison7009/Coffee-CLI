@@ -31,23 +31,6 @@
 .task-board textarea {
   cursor: text !important;
 }
-
-/* ─── Input Area ────────────────────────────────────────────────────────────── */
-
-.task-input-area {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--bg-panel, rgba(28, 28, 30, 0.65));
-  backdrop-filter: var(--glass-blur, blur(12px));
-  -webkit-backdrop-filter: var(--glass-blur, blur(12px));
-  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
-  border-radius: var(--radius-sm);
-  padding: 8px 10px 8px 14px;
-  transition: border-color 0.2s, box-shadow 0.2s;
-  flex-shrink: 0;
-}
-
 .right-tabs {
   display: flex;
   /* Bottom -4 negates 4 of the 12px flex gap so total below-tabs space
@@ -87,54 +70,6 @@
   color: var(--text-1);
   background: transparent;
 }
-
-/* No focus glow — clean native feel */
-
-.task-input {
-  flex: 1;
-  background: transparent;
-  border: none;
-  outline: none;
-  color: var(--text-1, #e8e4de);
-  font-family: var(--font, system-ui);
-  font-size: 14px;
-  line-height: 1.4;
-  min-width: 0;
-}
-
-.task-input::placeholder {
-  color: var(--text-3, rgba(255, 255, 255, 0.3));
-}
-
-
-.task-add-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-sm);
-  border: none;
-  background: rgba(196, 149, 106, 0.1);
-  color: rgba(196, 149, 106, 0.35);
-  transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  flex-shrink: 0;
-}
-
-.task-add-btn.active {
-  background: #8b6142;
-  color: #fff;
-}
-
-.task-add-btn.active:hover {
-  transform: scale(1.05);
-  box-shadow: 0 2px 8px rgba(139, 97, 66, 0.5);
-}
-
-.task-add-btn:disabled {
-  opacity: 0.5;
-}
-
 /* ─── Task List ─────────────────────────────────────────────────────────────── */
 
 .task-list {
@@ -621,12 +556,6 @@
   letter-spacing: 0.02em;
   color: var(--text-1, #e8e4de);
 }
-
-.task-empty-sub {
-  font-size: 13px;
-  color: var(--text-2, rgba(255, 255, 255, 0.6));
-}
-
 /* ─── Floating Action Button ────────────────────────────────────────────────── */
 
 .task-fab-container {
@@ -716,10 +645,4 @@
   color: var(--text-2, rgba(255, 255, 255, 0.6));
   font-weight: 600;
   letter-spacing: 0.02em;
-}
-
-.history-card-time {
-  font-size: 10px;
-  color: var(--text-3, rgba(255, 255, 255, 0.3));
-  font-weight: 500;
 }

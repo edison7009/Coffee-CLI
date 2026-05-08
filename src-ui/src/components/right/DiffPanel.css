@@ -155,26 +155,6 @@
    * to panel-edge, no left/right whitespace. */
   white-space: pre;
 }
-
-/* Saturated single-color row backgrounds (Claude Code pattern). Dropped
- * the two-zone gutter+row split because in this audit panel the line
- * numbers already serve as the visual anchor, so the row only needs one
- * clean tint. Solid colors (no alpha) keep the hue consistent across
- * panel/glass/whatever's behind. */
-.diff-line-add {
-  background: #1a4d2a;
-}
-.diff-line-del {
-  background: #4d1a1a;
-}
-
-[data-theme="light"] .diff-line-add {
-  background: #c0e8c8;
-}
-[data-theme="light"] .diff-line-del {
-  background: #e8c0c0;
-}
-
 /* Line number column. Right-aligned so 1-digit and 4-digit line numbers
  * line up against the marker. Dimmed via opacity so it doesn't compete
  * with the code. */

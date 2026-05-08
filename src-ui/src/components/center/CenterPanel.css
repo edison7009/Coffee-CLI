@@ -499,87 +499,6 @@
   animation: slideDownToast 3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   pointer-events: none;
 }
-
-/* ─── Resumable Sessions ─── */
-
-.resume-section {
-  margin-top: 24px;
-  width: 100%;
-}
-
-.resume-section-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-2);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 12px;
-  padding-left: 4px;
-}
-
-.resume-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.resume-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  background: var(--bg-card);
-  border: 1px solid transparent;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: transform 0.2s, background-color 0.2s, box-shadow 0.2s;
-}
-
-.resume-card:hover {
-  transform: translateY(-2px);
-  background-color: var(--bg-card);
-}
-
-.resume-card-icon {
-  font-size: 20px;
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.resume-card-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.resume-card-title {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-1);
-}
-
-.resume-card-token {
-  font-size: 11px;
-  color: var(--text-3, var(--text-2));
-  font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
-  opacity: 0.7;
-}
-
-.resume-card-badge {
-  font-size: 11px;
-  font-weight: 600;
-  color: #34d399;
-  background: rgba(52, 211, 153, 0.12);
-  padding: 3px 10px;
-  border-radius: var(--radius-sm);
-  flex-shrink: 0;
-  letter-spacing: 0.3px;
-}
-
 /* ─── Mode Switch Button (Arcade vs Tools) ─────────────── */
 /* Sized to match the right-pane add-task FAB so the "switch to full tool
    list" affordance is actually findable. Default card-bg + accent glyph is
@@ -613,30 +532,10 @@
   background: transparent;
   transition: transform 0.4s ease;
 }
-
-/* ─── Desktop Empty State ──────────────────────────────────────────────── */
-
-.launchpad-empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  padding: 80px 24px;
-  text-align: center;
-}
-
 .empty-icon {
   color: var(--text-3);
   opacity: 0.6;
 }
-
-.empty-title {
-  font-size: 16px;
-  font-weight: 500;
-  color: var(--text-1);
-}
-
 .empty-hint {
   font-size: 13px;
   color: var(--text-2);
@@ -1038,27 +937,6 @@
 .tool-config-btn-primary:hover:not(:disabled) {
   background: var(--accent-hover);
 }
-
-/* ─── Tab Drag Ghost (drag-to-detach feedback) ─── */
-
-.tab-drag-ghost {
-  position: fixed;
-  padding: 8px 20px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-1);
-  background: var(--bg-panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(12px);
-  pointer-events: none;
-  z-index: 9999;
-  white-space: nowrap;
-  opacity: 0.92;
-  transition: border-color 0.15s, box-shadow 0.15s;
-}
-
 .tab-drag-ghost.ready {
   border-color: #34d399;
   box-shadow: 0 12px 40px rgba(52, 211, 153, 0.25), 0 0 0 1px rgba(52, 211, 153, 0.3);
@@ -1136,23 +1014,6 @@
 .remote-pill:hover {
   background: rgba(255, 255, 255, 0.08);
 }
-
-.remote-pill-ws {
-  color: #cca47b;
-  border-color: rgba(204, 164, 123, 0.2);
-}
-.remote-pill-ws:hover {
-  border-color: rgba(204, 164, 123, 0.4);
-}
-
-.remote-pill-ssh {
-  color: #8da2b3;
-  border-color: rgba(141, 162, 179, 0.2);
-}
-.remote-pill-ssh:hover {
-  border-color: rgba(141, 162, 179, 0.4);
-}
-
 .remote-pill-proto {
   font-size: 10px;
   font-weight: 700;
@@ -1368,33 +1229,6 @@
   color: #fff;
   box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
 }
-
-/* Multi-agent mode toggle — floating icon button in pane's top-right. */
-.multi-agent-toggle {
-  position: absolute;
-  top: 6px;
-  right: 8px;
-  z-index: 10;
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  font-size: 14px;
-  line-height: 22px;
-  color: var(--text-muted, #888);
-  background: var(--bg-tertiary, rgba(15, 15, 15, 0.6));
-  border: 1px solid var(--border-color, #2a2a2a);
-  border-radius: 4px;
-  cursor: pointer;
-  /* Color transitions only per CLAUDE.md §4 (no translate/scale on hover). */
-  transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
-}
-
-.multi-agent-toggle:hover {
-  color: var(--text-primary, #ddd);
-  background: var(--bg-hover, rgba(45, 45, 45, 0.8));
-  border-color: var(--accent, #6cc275);
-}
-
 .multi-agent-toggle.is-on {
   color: var(--accent, #6cc275);
   border-color: var(--accent, #6cc275);

@@ -285,32 +285,6 @@
 }
 .tree-badge-diff .diff-add { color: #4ec76b; }
 .tree-badge-diff .diff-del { color: #e07070; }
-
-/* Status bar */
-.status-bar {
-    padding: 10px 16px;
-    font-size: 11px;
-    color: var(--text-3);
-    text-align: center;
-    margin-top: auto;
-    font-weight: 500;
-    /* No `border-top` divider — same single-layer principle as
-       .panel-header. Text color contrast alone separates the
-       status row from the content above it. */
-}
-
-/* Panel label in section-title */
-.panel-label {
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--text-3);
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-}
-
 /* Empty State */
 .empty-state {
     display: flex;
@@ -319,28 +293,6 @@
     justify-content: center;
     height: 100%;
 }
-
-.open-folder-btn {
-    padding: 8px 16px;
-    background: transparent;
-    border: 1px solid var(--border-input);
-    color: var(--text-2);
-    font-family: var(--font);
-    font-size: 13px;
-    font-weight: 500;
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    transition: all var(--transition);
-}
-
-.open-folder-btn:hover {
-    background: var(--bg-hover);
-    color: var(--text-1);
-    border-color: var(--text-3);
-}
-
-.recent-folder-item:hover { background: var(--bg-3) !important; }
-
 /* ─── Context Menu ──────────────────────────────────────────────────────────── */
 
 .ctx-menu {
@@ -431,18 +383,6 @@
   font-weight: 700;
   line-height: 1;
 }
-
-.lang-dropdown-trigger {
-  padding: 2px 1px !important;
-  margin-left: -2px;
-  opacity: 0.5;
-  transition: opacity 0.15s;
-}
-
-.lang-dropdown-trigger:hover {
-  opacity: 1;
-}
-
 .lang-dropdown {
   min-width: 160px !important;
 }
@@ -726,18 +666,6 @@
   background: var(--accent-bg);
   border-color: var(--accent);
 }
-
-/* ─── Inline Rename Input ─────────────────────────────────────────────────── */
-
-/* The rename wrapper sits in exact same flow position as the name span */
-.tree-rename-wrap {
-  position: relative;
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-}
-
 .tree-rename-input {
   /* Mimic span exact sizing by taking up flexible remaining space */
   flex: 1;
