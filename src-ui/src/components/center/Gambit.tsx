@@ -400,6 +400,73 @@ function GambitImpl({
     return () => clearTimeout(t);
   }, [sendEmpty]);
 
+  // ─── Skill chip ──────────────────────────────────────────────────
+  // The chip prepends `/<skill-slug> ` to the user's text before send.
+  // Each underlying CLI's slash dispatcher catches it and loads
+  // SKILL.md before processing the rest. Sticky across messages
+  // (matches Codex's UX), cleared only by the explicit × on the chip.
+  const [selectedSkill, setSelectedSkill] = useState<{ name: string; displayName: string } | null>(null);
+  const [skillPopoverOpen, setSkillPopoverOpen] = useState(false);
+  const [enabledSkills, setEnabledSkills] = useState<{ name: string; displayName: string }[]>([]);
+  const skillPopoverRef = useRef<HTMLDivElement | null>(null);
+
+  // Refresh enabled skill list on mount AND every time the popover
+  // opens — covers the case where the user toggles a skill on/off in
+  // the Library page while Gambit is also open. Cheap (one IPC,
+  // returns from in-memory list).
+  useEffect(() => {
+    if (!skillPopoverOpen) return;
+    let cancelled = false;
+    commands.skillsList()
+      .then(list => {
+        if (cancelled) return;
+        const enabled = list.filter(s => s.enabled).map(s => {
+          // Tiny inline frontmatter parse — same shape as SkillsPanel's
+          // implementation. Pulling in a YAML lib for two fields would
+          // be over-engineered.
+          let displayName = s.name;
+          if (s.skillMd) {
+            const m = s.skillMd.match(/^---\s*\n([\s\S]*?)\n---/);
+            if (m) {
+              const nameLine = m[1].split('\n').find(l => l.trim().startsWith('name:'));
+              if (nameLine) {
+                let v = nameLine.slice(nameLine.indexOf(':') + 1).trim();
+                if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
+                  v = v.slice(1, -1);
+                }
+                if (v) displayName = v;
+              }
+            }
+          }
+          return { name: s.name, displayName };
+        });
+        setEnabledSkills(enabled);
+        // If the currently-selected skill was disabled out from under
+        // us, drop the chip so the user doesn't send `/<gone> ...`.
+        if (selectedSkill && !enabled.find(e => e.name === selectedSkill.name)) {
+          setSelectedSkill(null);
+        }
+      })
+      .catch(() => { if (!cancelled) setEnabledSkills([]); });
+    return () => { cancelled = true; };
+  }, [skillPopoverOpen, selectedSkill]);
+
+  // Outside-click dismiss for the skill popover. Same pattern as ctxMenu.
+  useEffect(() => {
+    if (!skillPopoverOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (skillPopoverRef.current && skillPopoverRef.current.contains(e.target as Node)) return;
+      setSkillPopoverOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setSkillPopoverOpen(false); };
+    document.addEventListener('mousedown', onDown, true);
+    document.addEventListener('keydown', onKey, true);
+    return () => {
+      document.removeEventListener('mousedown', onDown, true);
+      document.removeEventListener('keydown', onKey, true);
+    };
+  }, [skillPopoverOpen]);
+
   // ─── Context menu ─────────────────────────────────────────────
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; hasSelection: boolean } | null>(null);
   const ctxMenuRef = useRef<HTMLDivElement | null>(null);
@@ -514,7 +581,13 @@ function GambitImpl({
       setSendEmpty(true);
       return;
     }
-    const ok = onSend(wrapImagePathsForSend(text));
+    // Skill chip: prepend `/<slug> ` so the underlying CLI's slash
+    // dispatcher loads SKILL.md before processing the user's content.
+    // Skill names are server-validated to ASCII-identifier shape, so
+    // no further escaping needed.
+    const wrapped = wrapImagePathsForSend(text);
+    const finalText = selectedSkill ? `/${selectedSkill.name} ${wrapped}` : wrapped;
+    const ok = onSend(finalText);
     if (!ok) {
       // Preserve draft so the user doesn't lose what they typed. They
       // likely just need to click the target pane first, then hit Send
@@ -523,7 +596,7 @@ function GambitImpl({
       return;
     }
     onDraftChange('');
-  }, [draft, onSend, onDraftChange]);
+  }, [draft, onSend, onDraftChange, selectedSkill]);
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     // IME composition in progress — let the IME keep Enter for confirming
@@ -724,6 +797,65 @@ function GambitImpl({
               <circle cx="10" cy="10" r="7" fill="currentColor" />
             </svg>
           </button>
+        )}
+      </div>
+
+      {/* Skill bar — "+" picker (or chip when one is selected). Sits
+          above the textarea so it doesn't fight with the chip system
+          for keyboard focus. */}
+      <div className="gambit-skill-bar" ref={skillPopoverRef}>
+        {selectedSkill ? (
+          <div className="gambit-skill-chip">
+            <span
+              className="gambit-skill-chip-label"
+              onClick={() => setSkillPopoverOpen(o => !o)}
+            >
+              {selectedSkill.displayName}
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
+                <path d="M2 4 L5 7 L8 4 Z" />
+              </svg>
+            </span>
+            <button
+              className="gambit-skill-chip-x"
+              onClick={() => setSelectedSkill(null)}
+              aria-label="Clear skill"
+            >×</button>
+          </div>
+        ) : (
+          <button
+            className="gambit-skill-add"
+            onClick={() => setSkillPopoverOpen(o => !o)}
+            aria-label="Add skill"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+              <line x1="7" y1="2" x2="7" y2="12" />
+              <line x1="2" y1="7" x2="12" y2="7" />
+            </svg>
+          </button>
+        )}
+        {skillPopoverOpen && (
+          <div className="gambit-skill-popover">
+            {enabledSkills.length === 0 ? (
+              <div className="gambit-skill-popover-empty">
+                没有已启用的技能。在 Library → Skills 里打开开关。
+              </div>
+            ) : (
+              enabledSkills.map(s => (
+                <button
+                  key={s.name}
+                  className={`gambit-skill-popover-item${selectedSkill?.name === s.name ? ' is-selected' : ''}`}
+                  onClick={() => { setSelectedSkill(s); setSkillPopoverOpen(false); }}
+                >
+                  <span>{s.displayName}</span>
+                  {selectedSkill?.name === s.name && (
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="2 7 6 11 12 3" />
+                    </svg>
+                  )}
+                </button>
+              ))
+            )}
+          </div>
         )}
       </div>
 
