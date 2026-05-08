@@ -205,10 +205,7 @@ export function ChatReader({ sessionId }: { sessionId: string }) {
 
   return (
     <div className="chat-reader-container">
-      {/* Floating Resume button — closing the session is what the tab × is
-       * for; a parallel Close button in a heavy backdrop bar duplicated
-       * affordances and ate vertical space. */}
-      <button className="chat-reader-resume btn-primary" onClick={handleResume}>
+      <button className="chat-reader-resume" onClick={handleResume}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="5 12 12 5 19 12"></polyline>
           <line x1="12" y1="19" x2="12" y2="5"></line>

@@ -37,7 +37,9 @@
   display: flex;
   flex-direction: column;
   gap: 1px;
-  padding: 6px 0 12px 0;
+  /* 0 top padding — the 8px below .right-tabs is the only spacing
+   * between tabs and the first changed-file row, matching Sessions. */
+  padding: 0 0 12px 0;
 }
 
 .changes-row {

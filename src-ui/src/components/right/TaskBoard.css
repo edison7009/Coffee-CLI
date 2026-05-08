@@ -50,7 +50,10 @@
 
 .right-tabs {
   display: flex;
-  margin: 12px 0 8px 0;
+  /* Bottom -4 negates 4 of the 12px flex gap so total below-tabs space
+     is 8px — same rhythm as the left Explorer's tab strip. Without it
+     gap + margin stack to 20px and the content reads as detached. */
+  margin: 12px 0 -4px 0;
   flex-shrink: 0;
   /* No bg / border / radius / padding — segmented strip has no
      container layer; active tab is indicated by text color
@@ -157,6 +160,14 @@
   letter-spacing: 0.06em;
   color: var(--text-3, rgba(255, 255, 255, 0.35));
   user-select: none;
+}
+
+/* Only the first section's header collapses its top padding so tab→label
+ * is 8px (matching Sessions). Inner sections (working / done) keep their
+ * 10px so the inter-section breathing stays at ~22px and the three
+ * status groups read as distinct. */
+.task-list > .task-section-wrapper:first-child .task-section-header {
+  padding-top: 0;
 }
 
 .task-section-dot {

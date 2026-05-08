@@ -49,27 +49,26 @@
   transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
   border: none;
   font-family: var(--font, system-ui);
-}
-
-.btn-primary {
   background: var(--accent);
   color: #fff;
 }
 
-.btn-primary:hover {
+.chat-reader-resume:hover {
   background: color-mix(in srgb, var(--accent) 85%, #fff);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px var(--accent-bg);
 }
 
-.btn-primary:active {
+.chat-reader-resume:active {
   transform: translateY(0) scale(0.98);
 }
 
 .chat-reader-body {
   flex: 1;
   overflow-y: auto;
-  padding: 24px;
+  /* 60px top clears the floating Resume button (top: 12 + height ~34 +
+   * 14 breathing room) so the first message can't tuck under it. */
+  padding: 60px 24px 24px;
   scroll-behavior: smooth;
   display: flex;
   flex-direction: column;

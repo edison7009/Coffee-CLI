@@ -62,7 +62,7 @@
     align-items: center;
     gap: 7px;
     width: calc(100% - 32px);
-    margin: 0 16px 6px 16px;
+    margin: 0 16px 4px 16px;
     /* Fixed height prevents jitter between languages — different scripts
        (CJK / Latin / Cyrillic / Vietnamese) render the same font-size at
        slightly different intrinsic heights, and when the folder path
