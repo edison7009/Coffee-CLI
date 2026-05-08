@@ -767,7 +767,15 @@
 
 /* Single-row card layout: [icon] [name+desc] [toggle].
    Description truncates to one line with ellipsis; full text is
-   exposed on hover via the heatmap-style data-tip tooltip below. */
+   exposed on hover via the mouse-tracked tooltip rendered into
+   document.body via portal (see .skills-tooltip below).
+   min-width: 0 here is the *grid item* equivalent of the flex-child
+   trick: without it, the card refuses to shrink below its intrinsic
+   min-content, and a long English description forces the card wider
+   than its grid column — the description then visually overflows
+   the panel without ever triggering text-overflow: ellipsis on the
+   inner desc element (because the desc element thinks it has
+   unlimited width). */
 .skills-card {
   display: flex;
   align-items: center;
@@ -777,6 +785,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   transition: border-color 0.15s;
+  min-width: 0;
 }
 
 .skills-card.is-enabled {
@@ -847,24 +856,17 @@
   text-overflow: ellipsis;
 }
 
-/* Themed tooltip — same recipe as .heatmap-cell[data-tip] (see
-   ContributionHeatmap.css). Anchored to .skills-card-text (NOT to
-   .skills-card-desc) because the desc uses overflow: hidden which
-   would clip the absolutely-positioned pseudo-element. Triggering
-   on the whole text region (name + desc) gives users a wider hit
-   zone — they can hover the name OR desc and see the full text.
-   Differences vs the heatmap pill:
-   - white-space: normal + max-width so multi-sentence descriptions
-     wrap inside the pill instead of stretching off-screen
-   - left: 0 / bottom alignment anchors to the text region's left
-     edge (visually under the icon's right side)
-   - Theme-aware via var(--bg-panel) / var(--text-1) / var(--border). */
-.skills-card-text[data-tip]:hover::after {
-  content: attr(data-tip);
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 0;
-  max-width: min(480px, 90vw);
+/* Mouse-tracked tooltip — rendered into document.body via portal
+   (see SkillsPanel.tsx). Pure-CSS pseudo-element approach failed
+   because (a) .skills-card-desc's overflow:hidden clipped the tip
+   when anchored on the desc itself, and (b) anchoring on a parent
+   then meant the tip couldn't avoid viewport edges (top of small
+   windows / left rail). Portal + position:fixed + JS clamp dodges
+   both. Style mirrors the heatmap tooltip (var(--bg-panel) /
+   var(--text-1) / var(--border)) so theme changes cascade. */
+.skills-tooltip {
+  position: fixed;
+  max-width: min(420px, calc(100vw - 24px));
   width: max-content;
   padding: 8px 12px;
   background: var(--bg-panel);
@@ -876,21 +878,7 @@
   white-space: normal;
   pointer-events: none;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.20), 0 6px 20px rgba(0, 0, 0, 0.22);
-  z-index: 100;
-}
-
-.skills-card-text[data-tip]:hover::before {
-  content: '';
-  position: absolute;
-  bottom: calc(100% + 4px);
-  left: 16px;
-  width: 0;
-  height: 0;
-  border-left: 4px solid transparent;
-  border-right: 4px solid transparent;
-  border-top: 4px solid var(--border);
-  pointer-events: none;
-  z-index: 100;
+  z-index: 10000;
 }
 
 /* iOS-style toggle switch — 36×20 track, 16×16 thumb. */

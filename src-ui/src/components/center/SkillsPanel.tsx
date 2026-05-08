@@ -1,4 +1,5 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useLayoutEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { commands } from '../../tauri';
 import { useAppState } from '../../store/app-state';
 import { parseFrontmatter, localizedField } from '../../utils/skill-meta';
@@ -27,6 +28,42 @@ export function SkillsPanel({ showToast }: Props) {
   const [skills, setSkills] = useState<ParsedSkill[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyName, setBusyName] = useState<string | null>(null);
+
+  // Mouse-tracked tooltip. Pure-CSS [data-tip]:hover::after worked in
+  // theory but the description's overflow:hidden (needed for ellipsis)
+  // clipped the pseudo-element, AND a fixed-position pill couldn't
+  // dodge viewport edges (top/right of small windows clipped the tip).
+  // React state + createPortal to document.body floats the tooltip
+  // above all overflow contexts; a useLayoutEffect clamps the final
+  // x/y so the pill never escapes the viewport.
+  const [tip, setTip] = useState<{ x: number; y: number; text: string } | null>(null);
+  const tipRef = useRef<HTMLDivElement | null>(null);
+
+  useLayoutEffect(() => {
+    if (!tip || !tipRef.current) return;
+    const el = tipRef.current;
+    const rect = el.getBoundingClientRect();
+    const margin = 8;
+    let left = tip.x + 12;
+    let top = tip.y + 16;
+    // Right-edge clamp: if the tooltip would extend past the viewport,
+    // flip to the LEFT of the cursor instead.
+    if (left + rect.width > window.innerWidth - margin) {
+      left = Math.max(margin, tip.x - rect.width - 12);
+    }
+    // Bottom-edge clamp: same idea, flip ABOVE the cursor.
+    if (top + rect.height > window.innerHeight - margin) {
+      top = Math.max(margin, tip.y - rect.height - 16);
+    }
+    el.style.left = `${left}px`;
+    el.style.top = `${top}px`;
+  }, [tip]);
+
+  const handleTipMove = (e: React.MouseEvent, text: string) => {
+    if (!text) return;
+    setTip({ x: e.clientX, y: e.clientY, text });
+  };
+  const handleTipLeave = () => setTip(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -89,35 +126,49 @@ export function SkillsPanel({ showToast }: Props) {
   }
 
   return (
-    <div className="skills-grid">
-      {skills.map(skill => (
-        <div key={skill.name} className={`skills-card ${skill.enabled ? 'is-enabled' : ''}`}>
-          <div className="skills-card-icon">
-            {skill.iconDataUrl
-              ? <img src={skill.iconDataUrl} alt="" />
-              : <span className="skills-card-icon-fallback">{skill.displayName.slice(0, 1).toUpperCase()}</span>}
+    <>
+      <div className="skills-grid">
+        {skills.map(skill => (
+          <div key={skill.name} className={`skills-card ${skill.enabled ? 'is-enabled' : ''}`}>
+            <div className="skills-card-icon">
+              {skill.iconDataUrl
+                ? <img src={skill.iconDataUrl} alt="" />
+                : <span className="skills-card-icon-fallback">{skill.displayName.slice(0, 1).toUpperCase()}</span>}
+            </div>
+            <div
+              className="skills-card-text"
+              onMouseEnter={(e) => handleTipMove(e, skill.description || '')}
+              onMouseMove={(e) => handleTipMove(e, skill.description || '')}
+              onMouseLeave={handleTipLeave}
+            >
+              <div className="skills-card-name">{skill.displayName}</div>
+              {skill.description && (
+                <div className="skills-card-desc">{skill.description}</div>
+              )}
+            </div>
+            <button
+              className={`skills-toggle ${skill.enabled ? 'on' : 'off'}`}
+              onClick={() => toggle(skill)}
+              disabled={busyName === skill.name}
+              aria-label={skill.enabled ? 'Disable skill' : 'Enable skill'}
+            >
+              <span className="skills-toggle-track">
+                <span className="skills-toggle-thumb" />
+              </span>
+            </button>
           </div>
-          <div
-            className="skills-card-text"
-            data-tip={skill.description || undefined}
-          >
-            <div className="skills-card-name">{skill.displayName}</div>
-            {skill.description && (
-              <div className="skills-card-desc">{skill.description}</div>
-            )}
-          </div>
-          <button
-            className={`skills-toggle ${skill.enabled ? 'on' : 'off'}`}
-            onClick={() => toggle(skill)}
-            disabled={busyName === skill.name}
-            aria-label={skill.enabled ? 'Disable skill' : 'Enable skill'}
-          >
-            <span className="skills-toggle-track">
-              <span className="skills-toggle-thumb" />
-            </span>
-          </button>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+      {tip && createPortal(
+        <div
+          ref={tipRef}
+          className="skills-tooltip"
+          style={{ left: tip.x + 12, top: tip.y + 16 }}
+        >
+          {tip.text}
+        </div>,
+        document.body
+      )}
+    </>
   );
 }
