@@ -45,12 +45,6 @@ export async function invoke<T>(cmd: string, args?: Record<string, unknown>): Pr
 
 // ─── Type Definitions ────────────────────────────────────────────────────────
 
-export interface GitStatusResponse {
-  files_changed: number;
-  insertions: number;
-  deletions: number;
-}
-
 export interface SavedSession {
   id: string;
   name: string;
@@ -78,10 +72,6 @@ export const commands = {
   windowMinimize: () => invoke<void>('window_minimize'),
   windowMaximize: () => invoke<void>('window_maximize'),
   windowClose: () => invoke<void>('window_close'),
-
-  // Git Status
-  getGitStatus: () =>
-    invoke<GitStatusResponse | null>('get_git_status'),
 
   // Tier Terminal API
   tierTerminalStart: (sessionId: string, tool: string | null, cols: number, rows: number, themeMode: string, locale?: string, toolData?: string, cwd?: string, sentinelEnabled?: boolean) =>
