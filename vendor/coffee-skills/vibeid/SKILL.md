@@ -3,9 +3,25 @@ name: vibeid
 name_en: Personality Test
 name_zh-CN: 人格测试
 name_zh-TW: 人格測試
-description: "A personality test based on long-term Claude Code usage. Standardized analysis of real Vibe Coding data evaluates four dimensions: pace, craft, arc, and flow."
-description_zh-CN: "一个基于长期使用 Claude Code 后的人格测试。通过一系列标准化和真实 Vibe Coding 数据,来评估个人的节奏、工艺、弧度、流速 4 个维度。"
-description_zh-TW: "一個基於長期使用 Claude Code 後的人格測試。通過一系列標準化和真實 Vibe Coding 數據,來評估個人的節奏、工藝、弧度、流速 4 個維度。"
+name_ja: 性格診断
+name_ko: 성격 테스트
+name_vi: Trắc nghiệm tính cách
+name_ru: Тест личности
+name_pt: Teste de personalidade
+name_es: Test de personalidad
+name_fr: Test de personnalité
+name_de: Persönlichkeitstest
+description: "A personality test that evaluates you through a standardized analysis of real Vibe Coding data, based on your long-term use of tools like Claude Code, Codex, etc."
+description_zh-CN: "一个基于长期使用 Claude Code、Codex 等工具后,通过一系列标准化和真实 Vibe Coding 数据来评估的人格测试。"
+description_zh-TW: "基於長期使用 Claude Code、Codex 等工具,通過一系列標準化和真實 Vibe Coding 數據評估的人格測試。"
+description_ja: "Claude Code、Codex などのツールを長期間使用した後、一連の標準化された実際の Vibe Coding データに基づいて評価される性格診断。"
+description_ko: "Claude Code, Codex 등 도구를 장기간 사용한 후 표준화된 실제 Vibe Coding 데이터를 통해 평가되는 성격 테스트입니다."
+description_vi: "Trắc nghiệm tính cách dựa trên phân tích chuẩn hóa của dữ liệu Vibe Coding thực tế, sau quá trình sử dụng lâu dài các công cụ như Claude Code, Codex, v.v."
+description_ru: "Тест личности, оценивающий вас на основе стандартизированного анализа реальных данных Vibe Coding после длительного использования инструментов вроде Claude Code, Codex и других."
+description_pt: "Um teste de personalidade que avalia você por meio de uma análise padronizada de dados reais de Vibe Coding, com base no uso prolongado de ferramentas como Claude Code, Codex, etc."
+description_es: "Un test de personalidad que te evalúa mediante un análisis estandarizado de datos reales de Vibe Coding, basado en el uso prolongado de herramientas como Claude Code, Codex, etc."
+description_fr: "Un test de personnalité qui vous évalue via une analyse standardisée de données réelles de Vibe Coding, basé sur votre utilisation à long terme d'outils comme Claude Code, Codex, etc."
+description_de: "Ein Persönlichkeitstest, der dich durch eine standardisierte Auswertung echter Vibe-Coding-Daten beurteilt — auf Basis deiner langfristigen Nutzung von Tools wie Claude Code, Codex usw."
 ---
 
 # VibeID — VibeCoding Personality Test
