@@ -120,7 +120,7 @@ export const ja = {
   // Gambit · 一手
   'gambit.title': '一手',
   'gambit.placeholder': '静かに一手を思案... (Ctrl+Enterで送信、Enterで改行、画像貼付可)',
-  'gambit.send_failed_hint': 'まず pane をクリックしてから送信',
+  'gambit.send_failed_hint': 'アクティブなセッションを先に開いてください',
   'gambit.send_empty_hint': 'メッセージを入力するか画像を貼り付けてください (Ctrl+V)',
   'gambit.ctx_cut': '切り取り',
   'gambit.ctx_copy': 'コピー',

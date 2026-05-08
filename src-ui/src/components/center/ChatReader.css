@@ -12,6 +12,11 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  /* min-height: 0 lets this flex child shrink below its content's
+   * intrinsic size — same trick .tier-terminal uses. Without it the
+   * container ignores parent padding-bottom (the gambit-docked rule)
+   * because flex items default to min-height: auto. */
+  min-height: 0;
   /* Match the terminal/launchpad surface (--bg-terminal) instead of
      --bg-panel. ChatReader lives in the center column under the same
      chrome-tab strip; using the side-panel colour broke the visual
@@ -65,14 +70,25 @@
 
 .chat-reader-body {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   /* 60px top clears the floating Resume button (top: 12 + height ~34 +
    * 14 breathing room) so the first message can't tuck under it. */
   padding: 60px 24px 24px;
-  scroll-behavior: smooth;
   display: flex;
   flex-direction: column;
   gap: 24px;
+}
+
+/* Chat-style bottom anchor: when the conversation is shorter than the
+ * viewport, push messages to the bottom edge (empty space at top) so the
+ * "newest at bottom" layout is consistent regardless of length — same
+ * pattern iMessage / WhatsApp / Slack use. When content overflows,
+ * margin-top: auto resolves to 0 (no free space to absorb) and items
+ * stack normally; useLayoutEffect then pins scrollTop to scrollHeight
+ * so the user lands on the latest message. */
+.chat-reader-body > .chat-message-row:first-child {
+  margin-top: auto;
 }
 
 /* Scrollbar hidden via global rule in styles/global.css. */
@@ -113,10 +129,23 @@
   border-bottom-right-radius: 4px;
 }
 
+/* Assistant messages render as plain text without a bubble — matches
+ * Cursor / Claude.ai / ChatGPT, where AI output flows like an article
+ * and only the user's message is "bubbled". User input is the input
+ * channel; AI output is the canvas. */
 .chat-message-row.assistant .chat-bubble {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-bottom-left-radius: 4px;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+  border-radius: 0;
+}
+
+/* The full row also takes the panel width when assistant — no need to
+ * cap it like a chat bubble, the centered max-width on .chat-message-row
+ * already constrains the line length for readability. */
+.chat-message-row.assistant {
+  width: 100%;
 }
 
 /* Thinking block styling */

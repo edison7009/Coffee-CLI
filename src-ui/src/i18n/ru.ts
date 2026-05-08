@@ -121,6 +121,8 @@ export const ru = {
   'mode.take_a_break': 'Сделать перерыв',
   'mode.back_to_work': 'Вернуться к работе',
 
+  'gambit.send_failed_hint': 'Сначала откройте активную сессию',
+
   'heatmap.title': 'Сессий: {sessions} · Сообщений: {messages}',
   'heatmap.title_empty': 'История ещё не началась — поговори с ИИ, чтобы зажечь первую клетку',
   'heatmap.legend_less': 'Меньше',

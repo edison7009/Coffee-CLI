@@ -120,6 +120,8 @@ export const es = {
   'mode.take_a_break': 'Tomar un descanso',
   'mode.back_to_work': 'Volver al trabajo',
 
+  'gambit.send_failed_hint': 'Abre primero una sesión activa',
+
   'heatmap.title': '{sessions} sesiones · {messages} mensajes',
   'heatmap.title_empty': 'La historia aún no empieza — chatea con una IA para iluminar tu primera casilla',
   'heatmap.legend_less': 'Menos',

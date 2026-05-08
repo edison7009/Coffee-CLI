@@ -122,7 +122,7 @@ export const en = {
   // Gambit — floating compose window. Chess term for a calculated opening move.
   'gambit.title': 'GAMBIT',
   'gambit.placeholder': 'Compose your move... (Ctrl+Enter to send, Enter for newline, paste images)',
-  'gambit.send_failed_hint': 'Click a pane first, then send',
+  'gambit.send_failed_hint': 'Open an active session first',
   'gambit.send_empty_hint': 'Type a message or paste an image first (Ctrl+V)',
   'gambit.ctx_cut': 'Cut',
   'gambit.ctx_copy': 'Copy',

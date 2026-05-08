@@ -918,7 +918,8 @@ body {
    content box), ResizeObserver fires, fitAddon refits. */
 body.gambit-docked .tier-terminal,
 body.gambit-docked .launchpad-container,
-body.gambit-docked .multi-agent-grid-standalone {
+body.gambit-docked .multi-agent-grid-standalone,
+body.gambit-docked .chat-reader-container {
     padding-bottom: calc(var(--gambit-dock-h, 200px) + 16px);
 }
 

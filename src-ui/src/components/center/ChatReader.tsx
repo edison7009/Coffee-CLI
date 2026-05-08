@@ -1,8 +1,9 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useLayoutEffect, useState, useRef } from 'react';
 import { commands } from '../../tauri';
 import type { SavedSession } from '../../tauri';
 import { useAppState } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
+import { registerTabActions } from '../../lib/tab-actions';
 import './ChatReader.css';
 
 interface ChatMessage {
@@ -160,14 +161,10 @@ export function ChatReader({ sessionId }: { sessionId: string }) {
         }
         
         setMessages(thread);
-        setLoading(false);
-        
-        // Auto scroll to bottom
-        setTimeout(() => {
-          if (scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-          }
-        }, 100);
+        // Splash stays up; useLayoutEffect below pins scroll to bottom
+        // synchronously after React commits the messages, then hides
+        // the splash. rAF was unreliable — could fire before commit and
+        // read a stale (loading-state) scrollHeight, leaving us at top.
       })
       .catch(err => {
         console.error("Failed to read history jsonl", err);
@@ -176,6 +173,43 @@ export function ChatReader({ sessionId }: { sessionId: string }) {
 
     return () => { isMounted = false; };
   }, [toolDataStr]);
+
+  // After messages commit to the DOM (synchronous, before browser paint),
+  // pin scroll to the very bottom and only then hide the loading splash.
+  // The splash covers the body during this commit, so the user never sees
+  // a top→bottom snap — the reveal happens already at the bottom.
+  // Re-pin after a short delay to catch async layout shifts from image
+  // loads / font swaps that grow content after initial measurement.
+  useLayoutEffect(() => {
+    if (messages.length === 0) return;
+    const pin = () => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }
+    };
+    pin();
+    setLoading(false);
+    const t = setTimeout(pin, 200);
+    return () => clearTimeout(t);
+  }, [messages]);
+
+  // Register tab-actions so Gambit anchors near the bottom of the chat
+  // body (matching its terminal-tab behavior) instead of falling back to
+  // the top-left default. Send / drop are no-ops here — a history session
+  // has no live PTY to receive text; the user must click ⤴ Continue to
+  // resume into a real terminal first.
+  useEffect(() => {
+    return registerTabActions(sessionId, {
+      paste: () => false,
+      insertText: () => false,
+      cursorScreenPos: () => {
+        const el = scrollRef.current;
+        if (!el) return null;
+        const rect = el.getBoundingClientRect();
+        return { x: rect.left + rect.width / 2, y: rect.bottom };
+      },
+    });
+  }, [sessionId]);
 
   if (!currentSession) return null;
 
@@ -214,7 +248,12 @@ export function ChatReader({ sessionId }: { sessionId: string }) {
       </button>
 
       <div className="chat-reader-body" ref={scrollRef}>
-        {loading ? (
+        {/* Splash overlays the body while loading. Messages render
+         * underneath even during loading so that, when data arrives,
+         * scrollHeight already reflects the full content; useLayoutEffect
+         * can then pin scrollTop to the bottom in a single commit, with
+         * the splash still covering the body — zero visible jump. */}
+        {loading && (
           <div className="tier-loading-splash" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 10 }}>
             <div className="splash-group">
               <div className="splash-icon">
@@ -262,32 +301,32 @@ export function ChatReader({ sessionId }: { sessionId: string }) {
               </div>
             </div>
           </div>
-        ) : (
-          messages.map(msg => (
-            <div key={msg.id} className={`chat-message-row ${msg.role}`}>
-              <div className="chat-bubble">
-                {msg.thinking && (
-                  <div className="chat-thinking">
-                    <div className="chat-thinking-header">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <polyline points="12 6 12 12 16 14"></polyline>
-                      </svg>
-                      Thinking Process
-                    </div>
-                    {msg.thinking}
-                  </div>
-                )}
-                {msg.content && (
-                  <div className="chat-text">
-                    {msg.content}
-                  </div>
-                )}
-              </div>
-            </div>
-          ))
         )}
-        
+
+        {messages.map(msg => (
+          <div key={msg.id} className={`chat-message-row ${msg.role}`}>
+            <div className="chat-bubble">
+              {msg.thinking && (
+                <div className="chat-thinking">
+                  <div className="chat-thinking-header">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    Thinking Process
+                  </div>
+                  {msg.thinking}
+                </div>
+              )}
+              {msg.content && (
+                <div className="chat-text">
+                  {msg.content}
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+
         {!loading && messages.length === 0 && (
           <div className="chat-empty-state">
             {t('chat.no_records')}

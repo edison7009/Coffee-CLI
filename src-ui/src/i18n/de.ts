@@ -121,6 +121,8 @@ export const de = {
   'mode.take_a_break': 'Pause machen',
   'mode.back_to_work': 'Zurück zur Arbeit',
 
+  'gambit.send_failed_hint': 'Öffne zuerst eine aktive Sitzung',
+
   'heatmap.title': '{sessions} Sitzungen · {messages} Nachrichten',
   'heatmap.title_empty': 'Noch nichts los — chatte mit einer KI, um dein erstes Feld zum Leuchten zu bringen',
   'heatmap.legend_less': 'Weniger',

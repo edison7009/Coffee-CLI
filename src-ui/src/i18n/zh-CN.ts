@@ -120,7 +120,7 @@ export const zhCN = {
   // Gambit · 妙手
   'gambit.title': '妙手',
   'gambit.placeholder': '静心琢磨，再落子... (Ctrl+Enter 发送, Enter 换行, 可粘贴图片)',
-  'gambit.send_failed_hint': '先点击一个 pane，再发送',
+  'gambit.send_failed_hint': '请先打开活动会话',
   'gambit.send_empty_hint': '先输入内容或粘贴图片 (Ctrl+V)',
   'gambit.ctx_cut': '剪切',
   'gambit.ctx_copy': '复制',
