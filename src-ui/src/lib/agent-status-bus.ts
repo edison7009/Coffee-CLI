@@ -12,7 +12,7 @@
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import type { AgentStatus } from '../store/app-state';
 
-export interface AgentStatusPayload {
+interface AgentStatusPayload {
   tab_id: string;
   tool: string;
   status: AgentStatus;
@@ -40,13 +40,6 @@ const idleTimers = new Map<string, number>();
  *  notifyUserInputSubmitted() route into the same pipeline as real
  *  hook events. Null before subscribe / after unsubscribe. */
 let activeEmit: ((p: AgentStatusPayload) => void) | null = null;
-
-function clearTabTimers(tabId: string) {
-  const pt = pendingTimers.get(tabId);
-  if (pt) { clearTimeout(pt); pendingTimers.delete(tabId); }
-  const it = idleTimers.get(tabId);
-  if (it) { clearTimeout(it); idleTimers.delete(tabId); }
-}
 
 /** Start / reset the auto-idle fallback for a given tab. */
 function armAutoIdle(tabId: string, tool: string) {
@@ -143,4 +136,3 @@ export function subscribeAgentStatus(
 }
 
 // Re-exposed so unit tests / future callers can pre-clear state.
-export { clearTabTimers };

@@ -11,7 +11,7 @@ import { ContributionHeatmap } from './ContributionHeatmap';
 import { ErrorBoundary } from '../common/ErrorBoundary';
 import { useAppState, type ToolType } from '../../store/app-state';
 
-export interface RemoteHistoryItem {
+interface RemoteHistoryItem {
   id: string;
   protocol: 'ssh' | 'ws';
   host: string;

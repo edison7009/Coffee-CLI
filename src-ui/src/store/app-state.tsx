@@ -62,7 +62,7 @@ export interface MultiAgentPane {
 /// are peers — there is no primary/worker distinction — so this type is
 /// deliberately minimal. Each pane's CLI and toolData live on
 /// `MultiAgentPane`; focus tracking happens inside `<MultiAgentGrid/>`.
-export interface MultiAgentState {
+interface MultiAgentState {
   panes: MultiAgentPane[];
   // Independent split (`*-split`) only: which pane the user last focused.
   // Drives left Explorer + right Changes target — without it the file panels
@@ -125,8 +125,8 @@ export interface AppState {
 
 // ─── Tab tool predicates ────────────────────────────────────────────────────
 
-export const SPLIT_TOOLS: ReadonlySet<ToolType> = new Set<ToolType>(['two-split', 'three-split', 'four-split']);
-export const MULTI_AGENT_TOOLS: ReadonlySet<ToolType> = new Set<ToolType>(['multi-agent', 'two-agent', 'three-agent']);
+const SPLIT_TOOLS: ReadonlySet<ToolType> = new Set<ToolType>(['two-split', 'three-split', 'four-split']);
+const MULTI_AGENT_TOOLS: ReadonlySet<ToolType> = new Set<ToolType>(['multi-agent', 'two-agent', 'three-agent']);
 export const isSplitTool = (t: ToolType): boolean => SPLIT_TOOLS.has(t);
 export const isMultiAgentTool = (t: ToolType): boolean => MULTI_AGENT_TOOLS.has(t);
 
@@ -139,7 +139,7 @@ export const paneSessionId = (tabId: string, paneIdx: number, kind: 'split' | 'p
 // ─── Diff context resolver ──────────────────────────────────────────────────
 // Split tabs route file-stats to the focused pane's own session+folder.
 // Multi-agent and regular tabs use the tab itself. `null` = no diff target.
-export interface DiffContext {
+interface DiffContext {
   sessionId: string;
   folderPath: string;
   tool: ToolType;

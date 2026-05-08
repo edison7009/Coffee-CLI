@@ -25,12 +25,12 @@ interface StatusEventPayload { id: string; running: boolean; exit_code: number |
 interface CwdEventPayload { id: string; cwd: string; }
 interface ExitEventPayload { id: string; exit_code: number; }
 
-export type OutputHandler = (data: string) => void;
-export type StatusHandler = (running: boolean, exitCode: number | null) => void;
-export type CwdHandler = (cwd: string) => void;
-export type ExitHandler = (exitCode: number) => void;
+type OutputHandler = (data: string) => void;
+type StatusHandler = (running: boolean, exitCode: number | null) => void;
+type CwdHandler = (cwd: string) => void;
+type ExitHandler = (exitCode: number) => void;
 
-export interface TerminalEventHandlers {
+interface TerminalEventHandlers {
   onOutput?: OutputHandler;
   onStatus?: StatusHandler;
   onCwd?: CwdHandler;

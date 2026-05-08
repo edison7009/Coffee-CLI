@@ -243,7 +243,7 @@ export interface McpEndpoint {
   started_at: number;
 }
 
-export interface HyperAgentStatus {
+interface HyperAgentStatus {
   endpoint: McpEndpoint;
 }
 

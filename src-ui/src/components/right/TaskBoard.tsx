@@ -9,9 +9,9 @@ import { ChangesBoard } from './ChangesBoard';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type TaskStatus = 'todo' | 'working' | 'done';
+type TaskStatus = 'todo' | 'working' | 'done';
 
-export interface TaskItem {
+interface TaskItem {
   id: string;
   title: string;
   description?: string;

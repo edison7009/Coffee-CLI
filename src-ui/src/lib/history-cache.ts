@@ -12,7 +12,7 @@
 import { commands, isTauri } from '../tauri';
 import type { SavedSession } from '../tauri';
 
-export type HistoryStatus = 'idle' | 'loading' | 'ready' | 'error';
+type HistoryStatus = 'idle' | 'loading' | 'ready' | 'error';
 
 interface HistoryState {
   sessions: SavedSession[];
@@ -69,12 +69,6 @@ export function prefetchHistory(): void {
   if (!isTauri) return;
   if (state.status === 'loading' || state.status === 'ready') return;
   doFetch(false);
-}
-
-/** Force re-read from disk. Keeps the existing list visible during reload. */
-export function refreshHistory(): void {
-  if (!isTauri) return;
-  doFetch(true);
 }
 
 export function subscribeHistory(listener: () => void): () => void {

@@ -10,7 +10,7 @@ import type { ToolType } from '../store/app-state';
 import { commands } from '../tauri';
 
 export type FileStats = { added: number; deleted: number };
-export type FileStatsMap = Map<string, FileStats>;
+type FileStatsMap = Map<string, FileStats>;
 
 const FileStatsContext = createContext<FileStatsMap | null>(null);
 export const useFileStats = () => useContext(FileStatsContext);
