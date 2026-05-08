@@ -1,6 +1,6 @@
 // Explorer.tsx — Left panel: file tree synced from terminal CWD
 
-import { useState, useEffect, useRef, useCallback, useContext, createContext, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useAppState } from '../../store/app-state';
 import type { ThemeColor, ThemeShape, IconTheme, ToolType } from '../../store/app-state';
@@ -8,28 +8,15 @@ import { useT } from '../../i18n/useT';
 import { ScrollPanel } from '../common/ScrollPanel';
 import { clipboardWrite } from '../../lib/clipboard';
 import { beginExplorerDrag } from '../../lib/explorer-drag';
+import { useFileStats } from '../../lib/file-stats';
 import { commands } from '../../tauri';
 import type { DriveInfo, DirEntryInfo } from '../../tauri';
 import './Explorer.css';
 
-// File diff stats keyed by absolute (forward-slash) path. Computed from a
-// since-folder-open snapshot, not git — works in any folder regardless of
-// whether the user has git installed or has run `git init`. Provided at the
-// workspace-tree top level so any nested BrowserFileNode (root or lazy-loaded
-// subdir child) can swap its size badge for a `+N -M` diff stat without
-// prop drilling through BrowserDirNode.
-type FileStats = { added: number; deleted: number };
-const FileStatsContext = createContext<Map<string, FileStats> | null>(null);
+// Snapshot lifecycle and the `+N -M` map live in lib/file-stats.tsx so the
+// right-side ChangesBoard can read the same data when the left panel is
+// collapsed. Explorer is now a pure consumer.
 const normPath = (p: string) => p.replace(/\\/g, '/');
-
-// Module-level: which sessionId currently has a backend snapshot, and for
-// what (tool, folder) combo. Lives outside the Explorer component so
-// collapsing the left panel (which UNMOUNTS Explorer per App.tsx) doesn't
-// nuke our "this session has a fresh baseline" memory and re-snapshot every
-// active tab on remount, wiping accumulated diffs. App-process scoped —
-// reset only on full app restart, which matches the backend snapshot map's
-// own lifetime (in-memory, no disk persistence).
-const baselinedSessions = new Map<string, string>();
 
 // ─── Context Menu ────────────────────────────────────────────────────────────
 
@@ -592,7 +579,7 @@ function BrowserDirNode({ name, dirPath, icon, onCtxMenu }: { name: string; dirP
   // signal that something inside is modified, so users don't have to expand
   // the whole tree to find the +/- badge. Icon stays untouched (icon themes
   // own their own coloring; tinting the icon would fight Material/Seti).
-  const fileStats = useContext(FileStatsContext);
+  const fileStats = useFileStats();
   const hasDirtyDescendant = useMemo(() => {
     if (!fileStats || fileStats.size === 0) return false;
     const prefix = normPath(dirPath) + '/';
@@ -732,7 +719,7 @@ function BrowserFileNode({ entry, parentDirPath, onCtxMenu }: {
   onCtxMenu: (menu: CtxMenuState) => void;
 }) {
   const { state: { iconTheme } } = useAppState();
-  const fileStats = useContext(FileStatsContext);
+  const fileStats = useFileStats();
   const stats = fileStats?.get(normPath(entry.path));
   const [renaming, setRenaming] = useState(false);
   const [renameVal, setRenameVal] = useState(entry.name);
@@ -835,103 +822,13 @@ export function Explorer() {
     return () => { cancelled = true; };
   }, [folderPath]);
 
-  // File diff stats versus a per-tab snapshot. Each tab (sessionId) gets its
-  // own baseline keyed in the backend, so two tabs in the same folder track
-  // independent diffs — Codex-tab edits never bleed into OpenCode-tab.
-  // Within one tab, the baseline resets on folder change or tool change
-  // (start/restart of agent = "fresh session" semantics).
-  const [fileStats, setFileStats] = useState<Map<string, FileStats>>(() => new Map());
-
-  // The snapshot IPC is async. compute_folder_stats called before it commits
-  // sees an empty / partial snapshot and reports every existing file as
-  // "new" (+N -0). Track the in-flight snapshot promise here and await it
-  // inside refreshFileStats so compute never runs against a half-built
-  // baseline. Re-armed each time we (re)snapshot for the active session.
-  const snapshotReady = useRef<Promise<unknown> | null>(null);
-
-  // sessionId / tool sources for the snapshot effect below. The actual
-  // "what's baselined" state lives in module-level `baselinedSessions` so
-  // it survives Explorer unmount when the user collapses the left panel.
-  const sessionId = activeSession?.id ?? null;
-  const sessionTool = activeSession?.tool ?? null;
-
-  const refreshFileStats = useCallback(async (sid: string, folder: string) => {
-    try {
-      if (snapshotReady.current) await snapshotReady.current;
-      const raw = await commands.computeFolderStats(sid, folder);
-      const m = new Map<string, FileStats>();
-      for (const [k, v] of Object.entries(raw)) m.set(normPath(k), v);
-      setFileStats(m);
-    } catch {
-      setFileStats(new Map());
-    }
-  }, []);
-
+  // Snapshot lifecycle and the +N/-M map are owned by FileStatsProvider at
+  // App level (lib/file-stats.tsx) so the right-side ChangesBoard can read
+  // the same data when Explorer is unmounted. Reload root level when
+  // fs-refresh targets the workspace root itself; subdirectory refreshes
+  // are handled inside each BrowserDirNode.
   useEffect(() => {
-    if (!folderPath || !sessionId) {
-      setFileStats(new Map());
-      snapshotReady.current = null;
-      return;
-    }
-    // CWD-agnostic tools (OpenClaw / Hermes / remote) don't render the file
-    // tree, so they have no notion of "this session's diff". Treat their
-    // active period as a no-op — don't touch baselinedSessions, don't take
-    // a snapshot. Otherwise switching from Codex → OpenClaw → Codex on the
-    // same tab would overwrite Codex's baseline twice and wipe its diff.
-    if (sessionTool && CWD_AGNOSTIC_TOOLS.has(sessionTool)) {
-      setFileStats(new Map());
-      return;
-    }
-    const combo = `${sessionTool ?? ''}::${folderPath}`;
-    const prior = baselinedSessions.get(sessionId);
-    if (prior !== combo) {
-      // Either first sight of this sessionId, OR same sessionId but tool /
-      // folder changed (tool restart, folder switch). Either way, any old
-      // backend snapshot for sessionId is now stale — overwrite it with a
-      // fresh one and clear the visible diff.
-      baselinedSessions.set(sessionId, combo);
-      setFileStats(new Map());
-      snapshotReady.current = commands.startFolderSnapshot(sessionId, folderPath).catch(() => {});
-    } else {
-      // Tab switch back to a session whose (tool, folder) hasn't changed.
-      // The backend snapshot was committed earlier (otherwise we wouldn't
-      // be in this branch) so there's no race to gate against — clear the
-      // ref so refreshFileStats below doesn't await an unrelated tab's
-      // in-flight snapshot promise.
-      snapshotReady.current = null;
-      void refreshFileStats(sessionId, folderPath);
-    }
-  }, [folderPath, sessionId, sessionTool, refreshFileStats]);
-
-  // Drop snapshots for closed tabs. Memory hygiene only — backend would
-  // survive without this for the app lifetime, but a long session that
-  // cycles through hundreds of tabs would otherwise hold all their
-  // text-file hash tables. If Explorer is unmounted (left panel collapsed)
-  // when a tab is closed, cleanup is deferred until next mount, but
-  // baselinedSessions outlives the component so the next mount catches up.
-  const liveSessionIds = useMemo(
-    () => new Set(state.terminals.map(t => t.id)),
-    [state.terminals],
-  );
-  useEffect(() => {
-    const dead: string[] = [];
-    for (const sid of baselinedSessions.keys()) {
-      if (!liveSessionIds.has(sid)) dead.push(sid);
-    }
-    for (const sid of dead) {
-      baselinedSessions.delete(sid);
-      commands.dropSessionSnapshot(sid).catch(() => {});
-    }
-  }, [liveSessionIds]);
-
-  // Reload root level when fs-refresh targets the workspace root itself.
-  // (Subdirectory refreshes are handled inside each BrowserDirNode.)
-  // Also kicks off a debounced file-stats refresh so the +N/-M badges
-  // track edits made by the agent / external editors. Single shared
-  // 300ms timer prevents Ctrl+S bursts from re-walking the folder per save.
-  const statsRefreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => {
-    if (!folderPath || !sessionId) return;
+    if (!folderPath) return;
     const norm = (p: string) => p.replace(/\\/g, '/').replace(/\/+$/, '');
     const target = norm(folderPath);
     const handler = (e: Event) => {
@@ -940,19 +837,10 @@ export function Explorer() {
       if (dir === target) {
         commands.listDirectory(folderPath).then(setRootEntries).catch(() => setRootEntries([]));
       }
-      // Any change anywhere under the workspace can affect file stats —
-      // root-level rename, nested edit, AI write to src/foo.ts, etc.
-      if (dir === target || dir.startsWith(target + '/')) {
-        if (statsRefreshTimer.current) clearTimeout(statsRefreshTimer.current);
-        statsRefreshTimer.current = setTimeout(() => refreshFileStats(sessionId, folderPath), 300);
-      }
     };
     window.addEventListener('fs-refresh', handler);
-    return () => {
-      window.removeEventListener('fs-refresh', handler);
-      if (statsRefreshTimer.current) clearTimeout(statsRefreshTimer.current);
-    };
-  }, [folderPath, sessionId, refreshFileStats]);
+    return () => window.removeEventListener('fs-refresh', handler);
+  }, [folderPath]);
 
   // Theme menu state
   const [themeMenuOpen, setThemeMenuOpen] = useState(false);
@@ -1267,20 +1155,18 @@ export function Explorer() {
           </ScrollPanel>
         ) : (
           <ScrollPanel>
-            <FileStatsContext.Provider value={fileStats}>
-              <div className="file-tree-container">
-                {rootEntries.slice().sort((a, b) => {
-                  if (a.is_dir !== b.is_dir) return a.is_dir ? -1 : 1;
-                  return a.name.localeCompare(b.name);
-                }).map(entry => (
-                  entry.is_dir ? (
-                    <BrowserDirNode key={entry.path} name={entry.name} dirPath={entry.path} onCtxMenu={handleCtxMenu} />
-                  ) : (
-                    <BrowserFileNode key={entry.path} entry={entry} parentDirPath={folderPath!} onCtxMenu={handleCtxMenu} />
-                  )
-                ))}
-              </div>
-            </FileStatsContext.Provider>
+            <div className="file-tree-container">
+              {rootEntries.slice().sort((a, b) => {
+                if (a.is_dir !== b.is_dir) return a.is_dir ? -1 : 1;
+                return a.name.localeCompare(b.name);
+              }).map(entry => (
+                entry.is_dir ? (
+                  <BrowserDirNode key={entry.path} name={entry.name} dirPath={entry.path} onCtxMenu={handleCtxMenu} />
+                ) : (
+                  <BrowserFileNode key={entry.path} entry={entry} parentDirPath={folderPath!} onCtxMenu={handleCtxMenu} />
+                )
+              ))}
+            </div>
           </ScrollPanel>
         )}
       </div>

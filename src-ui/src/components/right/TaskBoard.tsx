@@ -6,6 +6,7 @@ import { isTauri, commands } from '../../tauri';
 import { getTabActions } from '../../lib/tab-actions';
 import './TaskBoard.css';
 import { HistoryBoard } from './HistoryBoard';
+import { ChangesBoard } from './ChangesBoard';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -94,7 +95,20 @@ export function TaskBoard() {
   const [addingId, setAddingId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const [activeTab, setActiveTab] = useState<'tasks' | 'sessions'>('tasks');
+  // Persist last-selected tab so a returning user resumes where they left off
+  // (matches Superset's right-sidebar behavior). First-time users still land on
+  // Tasks for the greeting, but anyone who deliberately switched to Changes /
+  // History keeps that selection across app restarts.
+  const [activeTab, setActiveTab] = useState<'tasks' | 'changes' | 'sessions'>(() => {
+    try {
+      const saved = localStorage.getItem('cc-right-tab');
+      if (saved === 'tasks' || saved === 'changes' || saved === 'sessions') return saved;
+    } catch {}
+    return 'tasks';
+  });
+  useEffect(() => {
+    try { localStorage.setItem('cc-right-tab', activeTab); } catch {}
+  }, [activeTab]);
 
   // Inline title editing
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -524,6 +538,9 @@ export function TaskBoard() {
         <button className={`right-tab ${activeTab === 'tasks' ? 'active' : ''}`} onClick={() => setActiveTab('tasks')}>
           {t('task.tab.tasks' as any) || 'Tasks'}
         </button>
+        <button className={`right-tab ${activeTab === 'changes' ? 'active' : ''}`} onClick={() => setActiveTab('changes')}>
+          {t('task.tab.changes' as any) || 'Changes'}
+        </button>
         <button className={`right-tab ${activeTab === 'sessions' ? 'active' : ''}`} onClick={() => setActiveTab('sessions')}>
           {t('task.tab.sessions' as any) || 'Recent Sessions'}
         </button>
@@ -742,6 +759,10 @@ export function TaskBoard() {
       </div>
 
       </>
+    )}
+
+    {activeTab === 'changes' && (
+      <ChangesBoard />
     )}
 
     {activeTab === 'sessions' && (

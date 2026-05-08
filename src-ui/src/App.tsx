@@ -10,6 +10,7 @@ import { Explorer } from './components/left/Explorer';
 import { CenterPanel } from './components/center/CenterPanel';
 import { ActiveGambit } from './components/center/ActiveGambit';
 import { RightPanel } from './components/right/Compiler';
+import { FileStatsProvider } from './lib/file-stats';
 import './styles/global.css';
 
 export function App() {
@@ -138,24 +139,26 @@ export function App() {
           no event subscriptions, no React reconciliation. When the user
           shows the panel, it mounts fresh (Explorer re-scans from the
           active tab's cwd, TaskBoard reloads tasks — both are cheap). */}
-      <div className={`app-layout${state.leftPanelHidden ? ' app-layout--left-hidden' : ''}${state.rightPanelHidden ? ' app-layout--right-hidden' : ''}`}>
-        {!state.leftPanelHidden && (
-          <aside className="panel panel-left">
-            <Explorer />
-          </aside>
-        )}
+      <FileStatsProvider>
+        <div className={`app-layout${state.leftPanelHidden ? ' app-layout--left-hidden' : ''}${state.rightPanelHidden ? ' app-layout--right-hidden' : ''}`}>
+          {!state.leftPanelHidden && (
+            <aside className="panel panel-left">
+              <Explorer />
+            </aside>
+          )}
 
-        {/* Center: always mounted */}
-        <main className="panel panel-center">
-          <CenterPanel />
-        </main>
+          {/* Center: always mounted */}
+          <main className="panel panel-center">
+            <CenterPanel />
+          </main>
 
-        {!state.rightPanelHidden && (
-          <aside className="panel panel-right">
-            <RightPanel />
-          </aside>
-        )}
-      </div>
+          {!state.rightPanelHidden && (
+            <aside className="panel panel-right">
+              <RightPanel />
+            </aside>
+          )}
+        </div>
+      </FileStatsProvider>
 
       {/* App-level overlay — the floating compose window. Rendered here so
           it's isolated from TierTerminal re-renders (xterm output, agent

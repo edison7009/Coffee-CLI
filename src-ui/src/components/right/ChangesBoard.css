@@ -1,0 +1,56 @@
+.changes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 6px 0 80px 0;
+}
+
+.changes-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: transparent;
+  border: 0;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  color: var(--text-1);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.changes-row:hover {
+  background: var(--surface-hover, rgba(127, 127, 127, 0.08));
+}
+
+.changes-name {
+  font-weight: 600;
+  color: var(--text-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+  max-width: 50%;
+}
+
+.changes-path {
+  color: var(--text-3, var(--text-2));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+  font-size: 11px;
+}
+
+.changes-stats {
+  display: inline-flex;
+  gap: 6px;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+}
+
+.changes-stats .diff-add { color: #4ec76b; }
+.changes-stats .diff-del { color: #e07070; }
