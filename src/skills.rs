@@ -42,8 +42,15 @@ use std::os::windows::process::CommandExt;
 /// `~/.coffee-cli/skills-library/` on first launch (idempotent — file
 /// already present is left alone, so user toggles aren't disturbed by
 /// app upgrades).
-static BUNDLED_SKILLS: include_dir::Dir<'_> =
+static BUNDLED_OPENAI_SKILLS: include_dir::Dir<'_> =
     include_dir::include_dir!("$CARGO_MANIFEST_DIR/vendor/openai-skills/.curated");
+
+/// Coffee CLI's own skills (vibeid, etc.). Same seeding pipeline as the
+/// openai bundle; lives in a separate vendor dir so each set retains
+/// its own license/lineage and openai's snapshot can be re-synced from
+/// upstream without disturbing our skills (and vice versa).
+static BUNDLED_COFFEE_SKILLS: include_dir::Dir<'_> =
+    include_dir::include_dir!("$CARGO_MANIFEST_DIR/vendor/coffee-skills");
 
 /// CLI directories where Coffee CLI mirrors enabled skills via symlink.
 /// Both Claude Code and Codex use the same `<HOME>/.<cli>/skills/<name>/SKILL.md`
@@ -51,18 +58,20 @@ static BUNDLED_SKILLS: include_dir::Dir<'_> =
 /// both. Add more here when other CLIs adopt the convention.
 const TARGET_CLI_SKILL_DIRS: &[&str] = &[".claude/skills", ".codex/skills"];
 
-/// Phased rollout allowlist. The bundle (vendor/openai-skills/.curated/)
-/// always ships ALL 38 curated skills, but only the names listed here
-/// are surfaced to the user via seeding + UI. Enables "test 5, ship 5,
-/// test next batch, ship next batch" without re-cutting a release just
-/// to add more skill catalog entries.
+/// Phased rollout allowlist. The combined bundle (openai/skills .curated
+/// + Coffee CLI's own skills) always ships every skill, but only the
+/// names listed here are surfaced via seeding + UI. Enables "test 5,
+/// ship 5, test next batch, ship next batch" without re-cutting a
+/// release just to add more skill catalog entries.
 ///
-/// v1 (smoke-test 1 skill): `screenshot` — small SKILL.md, no API keys
-/// or external services required, slash command appears in Claude Code's
-/// menu the moment the junction is wired correctly. The single-skill
-/// allowlist keeps the surface tiny while we validate the toggle →
-/// junction → /screenshot pipeline end-to-end.
-const VISIBLE_SKILLS: &[&str] = &["screenshot"];
+/// v1 batch (2 skills validating the architecture):
+///   - `screenshot` — openai/skills curated; pure SKILL.md, no API keys.
+///     Validates the openai-skills bundle → junction → /screenshot path.
+///   - `vibeid` — Coffee CLI's own skill; ships scripts/ + matrix.json,
+///     references CDN-hosted persona images, requires Claude Code's
+///     /insights data. Validates the coffee-skills bundle path AND the
+///     more complex script-bundled skill shape.
+const VISIBLE_SKILLS: &[&str] = &["screenshot", "vibeid"];
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -105,7 +114,7 @@ pub fn skills_ensure_dirs() -> Result<(), String> {
     Ok(())
 }
 
-/// Walk `BUNDLED_SKILLS` and copy any missing files into
+/// Walk both bundles and copy any missing files into
 /// `~/.coffee-cli/skills-library/`. Files that already exist (whether
 /// because we copied them earlier or the user manually edited one) are
 /// left untouched — this preserves user customisations across app
@@ -114,7 +123,8 @@ pub fn skills_ensure_dirs() -> Result<(), String> {
 fn seed_library_from_bundle() -> Result<(), String> {
     let lib = library_root()?;
     let enabled = skills_root()?;
-    seed_dir(&BUNDLED_SKILLS, &lib, &enabled)?;
+    seed_dir(&BUNDLED_OPENAI_SKILLS, &lib, &enabled)?;
+    seed_dir(&BUNDLED_COFFEE_SKILLS, &lib, &enabled)?;
     Ok(())
 }
 

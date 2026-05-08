@@ -1,5 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { commands } from '../../tauri';
+import { useAppState } from '../../store/app-state';
+import { parseFrontmatter, localizedField } from '../../utils/skill-meta';
 
 interface SkillEntry {
   name: string;
@@ -13,41 +15,6 @@ interface ParsedSkill extends SkillEntry {
   description: string;
 }
 
-/**
- * Parse YAML-frontmatter style metadata at the top of SKILL.md. The
- * curated openai/skills set uses a fixed shape:
- *
- *     ---
- *     name: "screenshot"
- *     description: "Use when the user explicitly asks for…"
- *     ---
- *
- * Returns the raw values for `name` and `description`. We do not pull in
- * a YAML parser for two fields — a tiny line-level scan is enough.
- */
-function parseFrontmatter(md: string | null): { name?: string; description?: string } {
-  if (!md) return {};
-  const m = md.match(/^---\s*\n([\s\S]*?)\n---/);
-  if (!m) return {};
-  const out: Record<string, string> = {};
-  for (const line of m[1].split('\n')) {
-    const eq = line.indexOf(':');
-    if (eq < 0) continue;
-    const key = line.slice(0, eq).trim();
-    let val = line.slice(eq + 1).trim();
-    // Strip optional surrounding quotes — frontmatter values may be
-    // quoted ("name") or bare (name); both are valid YAML scalars.
-    if (
-      (val.startsWith('"') && val.endsWith('"')) ||
-      (val.startsWith("'") && val.endsWith("'"))
-    ) {
-      val = val.slice(1, -1);
-    }
-    out[key] = val;
-  }
-  return out;
-}
-
 interface Props {
   /** Top-of-screen iOS-style toast — owned by CenterPanel, wired through
    *  here so toggle confirmations slot into the existing animation pipe. */
@@ -55,6 +22,8 @@ interface Props {
 }
 
 export function SkillsPanel({ showToast }: Props) {
+  const { state } = useAppState();
+  const lang = state.currentLang;
   const [skills, setSkills] = useState<ParsedSkill[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyName, setBusyName] = useState<string | null>(null);
@@ -70,11 +39,11 @@ export function SkillsPanel({ showToast }: Props) {
       const raw = await commands.skillsList();
       setSkills(
         raw.map(s => {
-          const meta = parseFrontmatter(s.skillMd);
+          const fm = parseFrontmatter(s.skillMd);
           return {
             ...s,
-            displayName: meta.name || s.name,
-            description: meta.description || '',
+            displayName: localizedField(fm, 'name', lang) || s.name,
+            description: localizedField(fm, 'description', lang),
           };
         })
       );
@@ -83,7 +52,7 @@ export function SkillsPanel({ showToast }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [showToast]);
+  }, [showToast, lang]);
 
   useEffect(() => {
     refresh();

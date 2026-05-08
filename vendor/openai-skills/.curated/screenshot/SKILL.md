@@ -1,6 +1,10 @@
 ---
 name: "screenshot"
+name_zh-CN: 屏幕截图
+name_zh-TW: 螢幕截圖
 description: "Use when the user explicitly asks for a desktop or system screenshot (full screen, specific app or window, or a pixel region), or when tool-specific capture capabilities are unavailable and an OS-level capture is needed."
+description_zh-CN: "用户明确要求截屏(整屏、指定应用/窗口、或某块像素区域)时使用。当当前工具自带的捕获能力缺失、需要 OS 级别截图时也调用本技能。"
+description_zh-TW: "使用者明確要求截圖(整螢幕、指定應用程式/視窗、或某塊像素區域)時使用。當前工具內建的截圖能力缺失、需要 OS 級截圖時也呼叫本技能。"
 ---
 
 

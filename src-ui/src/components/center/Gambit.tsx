@@ -18,7 +18,9 @@ import { createPortal } from 'react-dom';
 import { clipboardRead, clipboardWrite } from '../../lib/clipboard';
 import { commands } from '../../tauri';
 import { useT } from '../../i18n/useT';
+import { useAppState } from '../../store/app-state';
 import { registerFileDropTarget, formatPathsForInsert } from '../../lib/file-drop';
+import { parseFrontmatter, localizedField } from '../../utils/skill-meta';
 import './Gambit.css';
 
 interface GambitProps {
@@ -405,43 +407,32 @@ function GambitImpl({
   // draft — no chip, no hidden state. What the user sees in the
   // textarea is exactly what gets sent. They can edit / delete /
   // swap the slash command with normal keyboard shortcuts.
+  const { state: appState } = useAppState();
+  const lang = appState.currentLang;
   const [skillPopoverOpen, setSkillPopoverOpen] = useState(false);
   const [enabledSkills, setEnabledSkills] = useState<{ name: string; displayName: string }[]>([]);
   const skillPopoverRef = useRef<HTMLDivElement | null>(null);
 
-  // Refresh on every popover open — covers the case where the user
-  // toggles a skill on/off in the Library page while Gambit is open.
+  // Refresh on mount AND every popover open. Mount fetch drives the
+  // visibility of the "+" button itself: when the user has no skills
+  // enabled, we hide the button entirely rather than show an empty
+  // popover with a "go enable some" hint — less visual noise. Popover-
+  // open re-fetch covers the case where the user toggles in the
+  // Library page while Gambit is also open.
   useEffect(() => {
-    if (!skillPopoverOpen) return;
     let cancelled = false;
     commands.skillsList()
       .then(list => {
         if (cancelled) return;
         const enabled = list.filter(s => s.enabled).map(s => {
-          // Tiny inline frontmatter parse — same shape as SkillsPanel's
-          // implementation. Pulling in a YAML lib for two fields would
-          // be over-engineered.
-          let displayName = s.name;
-          if (s.skillMd) {
-            const m = s.skillMd.match(/^---\s*\n([\s\S]*?)\n---/);
-            if (m) {
-              const nameLine = m[1].split('\n').find(l => l.trim().startsWith('name:'));
-              if (nameLine) {
-                let v = nameLine.slice(nameLine.indexOf(':') + 1).trim();
-                if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
-                  v = v.slice(1, -1);
-                }
-                if (v) displayName = v;
-              }
-            }
-          }
-          return { name: s.name, displayName };
+          const fm = parseFrontmatter(s.skillMd);
+          return { name: s.name, displayName: localizedField(fm, 'name', lang) || s.name };
         });
         setEnabledSkills(enabled);
       })
       .catch(() => { if (!cancelled) setEnabledSkills([]); });
     return () => { cancelled = true; };
-  }, [skillPopoverOpen]);
+  }, [skillPopoverOpen, lang]);
 
   // Outside-click dismiss for the skill popover. Same pattern as ctxMenu.
   useEffect(() => {
@@ -824,29 +815,28 @@ function GambitImpl({
       />
 
       <div className="gambit-footer">
-        {/* Skill picker — always a "+" button (no chip). Picking a
-            skill writes `/<slug> ` into the draft directly; the
-            textarea is the source of truth. Same 30×30 footprint as
-            a thumbnail so the footer height stays constant. */}
-        <div className="gambit-skill-bar" ref={skillPopoverRef}>
-          <button
-            className="gambit-skill-add"
-            onClick={() => setSkillPopoverOpen(o => !o)}
-            aria-label="Insert skill slash command"
-          >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-              <line x1="7" y1="2" x2="7" y2="12" />
-              <line x1="2" y1="7" x2="12" y2="7" />
-            </svg>
-          </button>
-          {skillPopoverOpen && (
-            <div className="gambit-skill-popover">
-              {enabledSkills.length === 0 ? (
-                <div className="gambit-skill-popover-empty">
-                  没有已启用的技能。在 Library → Skills 里打开开关。
-                </div>
-              ) : (
-                enabledSkills.map(s => (
+        {/* Skill picker — only renders when at least one skill is
+            enabled. No skills = no button, no empty popover, no
+            visual noise. User enables skills in the Library →
+            Skills page and the button reappears on next mount /
+            on next popover-open list refresh. Same 30×30 footprint
+            as a thumbnail so the footer height stays constant when
+            the button is present. */}
+        {enabledSkills.length > 0 && (
+          <div className="gambit-skill-bar" ref={skillPopoverRef}>
+            <button
+              className="gambit-skill-add"
+              onClick={() => setSkillPopoverOpen(o => !o)}
+              aria-label="Insert skill slash command"
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                <line x1="7" y1="2" x2="7" y2="12" />
+                <line x1="2" y1="7" x2="12" y2="7" />
+              </svg>
+            </button>
+            {skillPopoverOpen && (
+              <div className="gambit-skill-popover">
+                {enabledSkills.map(s => (
                   <button
                     key={s.name}
                     className="gambit-skill-popover-item"
@@ -855,11 +845,11 @@ function GambitImpl({
                     <span>{s.displayName}</span>
                     <span className="gambit-skill-popover-slash">/{s.name}</span>
                   </button>
-                ))
-              )}
-            </div>
-          )}
-        </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Thumbnail strip lives in the footer, left-aligned, so it shares
             the same row as the send button. Empty when no image paths are
