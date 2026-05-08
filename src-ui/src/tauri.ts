@@ -152,6 +152,16 @@ export const commands = {
     invoke<void>('fs_paste', { action, srcPath, targetDir }),
   showInFolder: (path: string) => invoke<void>('show_in_folder', { path }),
 
+  // ── Skills (Coffee CLI skill store, junctioned into ~/.claude/skills + ~/.codex/skills) ──
+  // Frontend does HTTP fetch (no Rust HTTP dep), pipes bytes here.
+  skillsEnsureDirs: () => invoke<void>('skills_ensure_dirs'),
+  skillsWriteFile: (name: string, relPath: string, bytes: number[] | Uint8Array) =>
+    invoke<void>('skills_write_file', { name, relPath, bytes: Array.from(bytes) }),
+  skillsList: () => invoke<{ name: string; enabled: boolean; skillMd: string | null }[]>('skills_list'),
+  skillsToggle: (name: string, enable: boolean) =>
+    invoke<void>('skills_toggle', { name, enable }),
+  skillsDelete: (name: string) => invoke<void>('skills_delete', { name }),
+
   // Task Board persistence (~/.coffee-cli/tasks.json)
   loadTasks: () => invoke<string>('load_tasks'),
   saveTasks: (data: string) => invoke<void>('save_tasks', { data }),

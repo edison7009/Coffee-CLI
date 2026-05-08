@@ -714,6 +714,137 @@
   letter-spacing: 0.5px;
 }
 
+/* ─── Library tab switcher (Agents / Skills) ──────────────────────────── */
+
+.library-tabs {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  z-index: 2;
+}
+
+.library-tab {
+  padding: 8px 28px;
+  border: none;
+  background: transparent;
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.library-tab:hover { color: var(--text-1); }
+
+.library-tab.active {
+  background: var(--accent);
+  color: #1a1917;
+}
+
+/* ─── Skills panel (toggle list inside Library tab) ────────────────────── */
+
+.skills-empty {
+  padding: 60px 24px;
+  text-align: center;
+  color: var(--text-3);
+  font-size: 14px;
+}
+
+.skills-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  padding: 8px 4px 80px;
+}
+
+.skills-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  transition: border-color 0.15s;
+}
+
+.skills-card.is-enabled {
+  border-color: var(--accent);
+}
+
+.skills-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.skills-card-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+.skills-card-desc {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+
+/* iOS-style toggle switch — 36×20 track, 16×16 thumb. */
+.skills-toggle {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.skills-toggle:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+.skills-toggle-track {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+  background: var(--border);
+  border-radius: 10px;
+  transition: background-color 0.2s;
+}
+
+.skills-toggle.on .skills-toggle-track {
+  background: var(--accent);
+}
+
+.skills-toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+.skills-toggle.on .skills-toggle-thumb {
+  transform: translateX(16px);
+}
+
 /* ─── Tool launch-override modal ─────────────────────────────────── */
 /* Theme-driven: reads --bg-panel / --text-1 / --accent / --border-*  */
 /* etc. so dawn (light) and dark themes both work without re-coloring */

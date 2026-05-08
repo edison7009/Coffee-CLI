@@ -49,6 +49,11 @@ anyhow = "1"
 log = "0.4"
 dirs = "5"
 base64 = "0.22.1"
+# Compile-time embed of openai/skills .curated tree (~6 MB / 38 skills / 742
+# files) into the binary's rodata. Seeded into ~/.coffee-cli/skills-library/
+# on first launch — avoids GitHub API at runtime (rate limit, GFW, errors)
+# at the cost of ~2-3 MB in the shipped installer post-compression.
+include_dir = "0.7"
 notify = "6.1.1"
 # Coalesces bursts of fs events (e.g. CLI writing 50 files in a row) into a
 # single handler callback so the frontend doesn't re-scan 50 times.

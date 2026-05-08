@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { focusTerminal } from '../../lib/focus-registry';
 import { TierTerminal } from './TierTerminal';
 import { ChatReader } from './ChatReader';
+import { SkillsPanel } from './SkillsPanel';
 import { MultiAgentGrid } from './MultiAgentGrid';
 import { FourSplitGrid } from './FourSplitGrid';
 import { HyperAgentPanel } from './HyperAgentPanel';
@@ -402,6 +403,7 @@ export function CenterPanel() {
   // Per-tool launch override modal (gear icon → opens settings for that tool).
   const [configModalTool, setConfigModalTool] = useState<{ key: string; label: string } | null>(null);
   const [showLibrary, setShowLibrary] = useState(false);
+  const [libraryTab, setLibraryTab] = useState<'agents' | 'skills'>('agents');
   const [pinnedItems, setPinnedItems] = useState<string[]>(() => {
     // Hard cap must match MAX_PINS constant below. Inlined as a literal
     // because MAX_PINS is declared after this initializer runs.
@@ -1486,10 +1488,11 @@ export function CenterPanel() {
                   </div>
                 </div>
 
-                {/* ─── Page 2: Library (Agents) ─── */}
+                {/* ─── Page 2: Library (Agents | Skills) ─── */}
                 <div className="launchpad-page library-page">
                   <div className="launchpad-inner">
-                    <>
+                    {libraryTab === 'agents' ? (
+                      <>
                         {/* Section 1: AI CLI agents — 4-col grid (default) */}
                         <div className="library-grid">
                           {AGENT_CATALOG.filter(item => item.type === 'ai-cli').map(item => {
@@ -1547,11 +1550,32 @@ export function CenterPanel() {
                             );
                           })}
                         </div>
-                    </>
+                      </>
+                    ) : (
+                      <SkillsPanel showToast={setToastMsg} />
+                    )}
                   </div>
 
-                  {/* Pin counter */}
-                  <div className="library-counter">{pinnedItems.length}/{MAX_PINS}</div>
+                  {/* Pin counter only meaningful on Agents tab */}
+                  {libraryTab === 'agents' && (
+                    <div className="library-counter">{pinnedItems.length}/{MAX_PINS}</div>
+                  )}
+
+                  {/* Bottom tab switcher: Agents / Skills */}
+                  <div className="library-tabs">
+                    <button
+                      className={`library-tab ${libraryTab === 'agents' ? 'active' : ''}`}
+                      onClick={() => setLibraryTab('agents')}
+                    >
+                      Agents
+                    </button>
+                    <button
+                      className={`library-tab ${libraryTab === 'skills' ? 'active' : ''}`}
+                      onClick={() => setLibraryTab('skills')}
+                    >
+                      Skills
+                    </button>
+                  </div>
                 </div>
                 
               </div>
