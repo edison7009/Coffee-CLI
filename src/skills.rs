@@ -23,9 +23,9 @@
 //! no developer mode toggle. (Symbolic links would have required either,
 //! which is a non-starter for a desktop app.)
 //!
-//! Download model: the frontend does HTTP fetches via `fetch()` (the
-//! existing pattern used by VibeID auto-sync) and pipes bytes into
-//! `skills_write_file` for filesystem write. No HTTP client in Rust deps.
+//! Download model (deferred for future custom-skill upload flow): the
+//! frontend would do HTTP fetches via `fetch()` and pipe bytes into
+//! `skills_write_file`. No HTTP client in Rust deps.
 
 use std::fs;
 use std::path::{Path, PathBuf};

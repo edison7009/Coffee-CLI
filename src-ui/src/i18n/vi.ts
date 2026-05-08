@@ -22,8 +22,6 @@ export const vi = {
   // Tools
   'tool.terminal': 'Terminal',
   'tool.remote': 'Terminal từ xa',
-  'tool.vibeid': 'Trắc nghiệm tính cách',
-  'tool.vibeid.requires_cc': 'Chỉ Claude Code',
   'tool.multi_agent': 'Đa tác nhân',
   'tool.two_agent': 'Hai tác nhân',
   'tool.three_agent': 'Ba tác nhân',
@@ -43,7 +41,6 @@ export const vi = {
   'tool_config.reset': 'Đặt lại',
   'tool_config.cancel': 'Hủy',
   'tool_config.save': 'Lưu',
-  'vibeid.insights_timeout': 'Tạo báo cáo quá lâu. Vui lòng thử lại sau hoặc chạy /insights thủ công trong tab Claude Code.',
 
   // Remote Terminal
   'remote.title': 'Terminal từ xa',

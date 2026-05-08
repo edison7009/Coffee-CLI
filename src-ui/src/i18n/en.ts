@@ -22,8 +22,6 @@ export const en = {
   // Tools
   'tool.terminal': 'Terminal',
   'tool.remote': 'Remote Terminal',
-  'tool.vibeid': 'Personality Test',
-  'tool.vibeid.requires_cc': 'Only Claude Code',
   'tool.multi_agent': 'Multi-Agent',
   'tool.two_agent': 'Two-Agent',
   'tool.three_agent': 'Three-Agent',
@@ -43,7 +41,6 @@ export const en = {
   'tool_config.reset': 'Reset',
   'tool_config.cancel': 'Cancel',
   'tool_config.save': 'Save',
-  'vibeid.insights_timeout': 'Report generation took too long. Please try again, or run /insights manually in a Claude Code tab.',
 
   // Remote Terminal
   'remote.title': 'Remote Terminal',

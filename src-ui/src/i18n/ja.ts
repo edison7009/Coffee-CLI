@@ -21,8 +21,6 @@ export const ja = {
   // Tools
   'tool.terminal': 'ターミナル',
   'tool.remote': 'リモートターミナル',
-  'tool.vibeid': '性格診断',
-  'tool.vibeid.requires_cc': 'Claude Code のみ',
   'tool.multi_agent': 'マルチエージェント',
   'tool.two_agent': 'デュアルエージェント',
   'tool.three_agent': 'トリプルエージェント',
@@ -42,7 +40,6 @@ export const ja = {
   'tool_config.reset': 'リセット',
   'tool_config.cancel': 'キャンセル',
   'tool_config.save': '保存',
-  'vibeid.insights_timeout': 'レポートの生成がタイムアウトしました。後でもう一度試すか、Claude Code タブで /insights を手動で実行してください。',
 
   // Remote Terminal
   'remote.title': 'リモートターミナル',

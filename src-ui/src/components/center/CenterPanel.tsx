@@ -29,7 +29,6 @@ import './CenterPanel.css';
 // priming. See the comment block above OPENCODE_SVG below for the full
 // rationale and the history of failed attempts.
 import HERMES_DATA_URL from '../../icons-inline/hermes.png?inline';
-import VIBEID_DATA_URL from '../../icons-inline/vibeid.png?inline';
 import TERMINAL_MAC_DATA_URL from '../../icons-inline/terminal-macos.png?inline';
 import TERMINAL_LINUX_DATA_URL from '../../icons-inline/terminal-linux.png?inline';
 import TERMINAL_PWSH_SVG from '../../icons-inline/terminal-powershell.svg?raw';
@@ -127,9 +126,7 @@ const SvgOpenClaw  = () => inlineSvgIcon(OPENCLAW_SVG);
 const SvgCodex     = () => inlineSvgIcon(CODEX_SVG);
 const SvgGemini    = () => inlineSvgIcon(GEMINI_SVG);
 // PNG-backed icons render via CSS background-image with data-URI sources
-// (see bgIcon). Hermes uses `cover` to fill the rounded square; VibeID
-// uses the default `contain` so its full glyph stays visible.
-const SvgVibeID    = () => bgIcon(VIBEID_DATA_URL);
+// (see bgIcon). Hermes uses `cover` to fill the rounded square.
 const SvgHermes    = () => bgIcon(HERMES_DATA_URL, '1em', { borderRadius: 'var(--radius-xs)', backgroundSize: 'cover' });
 
 // Coffee 101 card icon — animated coffee mark (same as the left-panel
@@ -459,63 +456,6 @@ export function CenterPanel() {
   // coffeecli.com/agents/catalog.json was deleted in v1.1.5 to eliminate
   // first-paint icon flashes and reduce startup network dependency.
 
-  // Auto-sync the VibeID skill on every launch. Small files (SKILL.md,
-  // matrix.json, scripts) are re-fetched every time (~10 KB total, <1s on
-  // normal networks) so existing users automatically pick up skill logic
-  // upgrades without manually deleting ~/.claude/skills/vibeid/. Persona
-  // images (~2 MB) are downloaded only on first install.
-  useEffect(() => {
-    if (!isTauri) return;
-    (async () => {
-      const BASE = 'https://coffeecli.com/CC-VibeID-test';
-      // 16 Vibetype codes: mind (R/E) × craft (D/T) × arc (V/A) × flow (L/H).
-      // Grouped by family: Logos (RD*), Forge (RT*), Muse (ED*), Kinetic (ET*).
-      // Must match matrix.json persona keys and the actual PNG filenames at
-      // ${BASE}/personas/images/<code>.png.
-      const CODES = [
-        'RDVL','RDVH','RDAL','RDAH','RTVL','RTVH','RTAL','RTAH',
-        'EDVL','EDVH','EDAL','EDAH','ETVL','ETVH','ETAL','ETAH',
-      ];
-      const textFiles = [
-        { remote: 'SKILL.md', local: 'SKILL.md' },
-        { remote: 'matrix.json', local: 'matrix.json' },
-        { remote: 'scripts/analyze.js', local: 'scripts/analyze.js' },
-        { remote: 'scripts/inject.js', local: 'scripts/inject.js' },
-      ];
-      const pullText = async (f: { remote: string; local: string }) => {
-        const res = await fetch(`${BASE}/${f.remote}`);
-        if (!res.ok) throw new Error(`${f.remote}: ${res.status}`);
-        const bytes = new TextEncoder().encode(await res.text());
-        await commands.writeSkillFile(f.local, Array.from(bytes));
-      };
-      const pullBinary = async (f: { remote: string; local: string }) => {
-        const res = await fetch(`${BASE}/${f.remote}`);
-        if (!res.ok) throw new Error(`${f.remote}: ${res.status}`);
-        const buf = new Uint8Array(await res.arrayBuffer());
-        await commands.writeSkillFile(f.local, Array.from(buf));
-      };
-      try {
-        // Always keep SKILL.md / matrix / scripts fresh.
-        await Promise.all(textFiles.map(pullText));
-
-        // Fetch persona images only if this is a fresh install.
-        const installed = await commands.checkSkillInstalled('vibeid').catch(() => true);
-        if (!installed) {
-          const imageFiles = CODES.map(c => ({
-            remote: `personas/images/${c}.png`,
-            local: `images/${c}.png`,
-          }));
-          await Promise.all(imageFiles.map(pullBinary));
-          console.log('[vibeid] first-time install complete (images + logic)');
-        } else {
-          console.log('[vibeid] skill logic synced (images already present)');
-        }
-      } catch (err) {
-        console.warn('[vibeid] skill sync failed:', err);
-      }
-    })();
-  }, []);
-
   // Built-in inline SVG icons keyed by agent id. Used when catalog entry id matches;
   // otherwise falls back to entry.icon URL.
   const BUILTIN_ICONS: Record<string, React.ReactNode> = {
@@ -561,7 +501,7 @@ export function CenterPanel() {
     // Utility order is deliberate for 4-column alignment in the
     // "Agent Tools" grid on the Library page:
     //   Row 1: multi-agent | three-agent | two-agent | Coffee 101
-    //   Row 2: four-split  | three-split | two-split | vibeid
+    //   Row 2: four-split  | three-split | two-split | hyper-agent
     // Coordinated row on top, independent row below, each descending
     // 4→3→2 so the pane counts align column-by-column (4↔4, 3↔3, 2↔2)
     // and the two rightmost slots hold standalone utilities.
@@ -591,7 +531,7 @@ export function CenterPanel() {
         requiresCwd: true,
       },
       { key: 'installer' as ToolType, label: 'Coffee 101', icon: <SvgInstaller />, type: 'utility' as const, requiresCwd: false },
-      // ─── Row 2: independent (descending 4→3→2) + vibeid ────────────
+      // ─── Row 2: independent (descending 4→3→2) + hyper-agent ──────
       {
         key: 'four-split' as ToolType,
         label: t('tool.four_split' as any),
@@ -613,9 +553,6 @@ export function CenterPanel() {
         type: 'utility' as const,
         requiresCwd: false,
       },
-      // VibeID is a built-in skill-launcher utility: click → spawn `claude` binary
-      // in a tab, then auto-write `/vibeid\r` to trigger the remote vibeid skill.
-      { key: 'vibeid' as ToolType, label: t('tool.vibeid' as any), icon: <SvgVibeID />, type: 'utility' as const, requiresCwd: false },
       // Hyper-Agent — cross-tab admin MCP for OpenClaw / Hermes Agent
       // to remote-control the running agent team. No cwd needed.
       { key: 'hyper-agent' as ToolType, label: t('tool.hyper_agent' as any), icon: <SvgHyperAgent />, type: 'utility' as const, requiresCwd: false },
@@ -812,14 +749,6 @@ export function CenterPanel() {
     // files, and `list_panes` / `send_to_pane` filter by the caller's
     // own Tab id so two open multi-agent Tabs never see each other.
     // The old single-instance lock that lived here has been removed.
-    // VibeID launcher: before spawning /vibeid, make sure the /insights usage
-    // report exists. If not, auto-run /insights in a pre-run tab and poll for
-    // the report file. When it lands, kill the pre-run PTY and remount the
-    // tab with tool='vibeid'. End-to-end one click.
-    if (tool === 'vibeid' && isTauri) {
-      handleVibeidSelect(cwd);
-      return;
-    }
     if (activeTerminalId) {
       if (cwd) {
         dispatch({ type: 'SET_FOLDER', path: cwd });
@@ -831,57 +760,6 @@ export function CenterPanel() {
       }
       dispatch({ type: 'SET_TERMINAL_TOOL', id: activeTerminalId, tool, toolData });
     }
-  };
-
-  const handleVibeidSelect = async (cwd?: string) => {
-    if (!activeTerminalId) return;
-    const currentId = activeTerminalId;
-    if (cwd) {
-      dispatch({ type: 'SET_FOLDER', path: cwd });
-    }
-
-    // Step A: Pass the user's Coffee CLI UI locale to the skill via a
-    // hint file at ~/.claude/skills/vibeid/.user_lang. The skill Step 0
-    // reads this file first — 100% reliable. Scanning session jsonl
-    // can mis-detect because the auto-run /insights tab is all English.
-    try {
-      const lang = state.currentLang || 'en';
-      const bytes = Array.from(new TextEncoder().encode(lang));
-      await commands.writeSkillFile('.user_lang', bytes);
-    } catch {
-      // Non-fatal — skill falls back to jsonl scanning.
-    }
-
-    // Step B: ALWAYS regenerate /insights on every click. The user
-    // clicked because they want an up-to-date analysis *right now*;
-    // reusing a stale report would give outdated personality results.
-    const clickTs = Math.floor(Date.now() / 1000);
-
-    dispatch({ type: 'SET_TERMINAL_TOOL', id: currentId, tool: 'insights_prerun' });
-
-    // Step C: Poll report.html's mtime. mtime > clickTs (minus a small
-    // clock-skew tolerance) means the report was freshly regenerated.
-    // Then kill the /insights PTY and remount the tab as vibeid.
-    const TOLERANCE_S = 5;
-    const TIMEOUT_MS = 5 * 60 * 1000;
-    const POLL_MS = 3000;
-    const startMs = Date.now();
-    const poll = window.setInterval(async () => {
-      if (Date.now() - startMs > TIMEOUT_MS) {
-        window.clearInterval(poll);
-        showToast(t('vibeid.insights_timeout') as string);
-        return;
-      }
-      const mtime = await commands.checkVibeidReportMtime().catch(() => 0);
-      if (mtime <= clickTs - TOLERANCE_S) return;
-      window.clearInterval(poll);
-      try { await commands.tierTerminalKill(currentId); } catch {}
-      const newId = (crypto && 'randomUUID' in crypto)
-        ? crypto.randomUUID()
-        : `vibeid-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      dispatch({ type: 'SET_TERMINAL_TOOL', id: currentId, tool: 'vibeid' });
-      dispatch({ type: 'RESTART_TERMINAL', id: currentId, newId });
-    }, POLL_MS);
   };
 
   const handlePickFolder = async (toolKey: ToolType) => {
@@ -971,13 +849,6 @@ export function CenterPanel() {
       case 'openclaw': return { icon: <SvgOpenClaw />, title: 'OpenClaw', tooltip: undefined };
       case 'codex': return { icon: <SvgCodex />, title: cwd ?? 'Codex CLI', tooltip: pathTip };
       case 'gemini': return { icon: <SvgGemini />, title: cwd ?? 'Gemini CLI', tooltip: pathTip };
-      // VibeID is a 2-phase flow under one logical operation: insights_prerun
-      // gathers usage data, then vibeid analyzes it. Reuse the existing
-      // `tool.vibeid` translation for both phases and suffix " (1/2)" /
-      // " (2/2)" so progress reads as a single VibeID run, no extra i18n
-      // keys needed.
-      case 'insights_prerun': return { icon: <SvgVibeID />, title: `${t('tool.vibeid' as any)} (1/2)`, tooltip: undefined };
-      case 'vibeid': return { icon: <SvgVibeID />, title: `${t('tool.vibeid' as any)} (2/2)`, tooltip: undefined };
       case 'remote': {
         let title = t('tool.remote') as string;
         if (session.toolData) {
@@ -1070,20 +941,15 @@ export function CenterPanel() {
               {icon}
               <span className="tab-title" style={{ flex: '0 1 auto', minWidth: 0, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{title}</span>
               <div className="tab-actions">
-                {/* Indicator gate. Three groups:
-                    1. AI CLIs with hook integration — claude/codex/opencode each
-                       have a forwarder (Python script for claude+codex, Bun
-                       plugin for opencode) wired to the same agent-status bus.
-                       Color follows session.agentStatus.
-                    2. VibeID / insights_prerun — work is always in flight while
-                       these tabs exist; pin to working (orange).
-                    Anything else (terminal, history, multi-agent, etc.) gets
-                    no indicator. */}
-                {(session.tool === 'claude' || session.tool === 'codex' || session.tool === 'opencode' || session.tool === 'vibeid' || session.tool === 'insights_prerun') && (
+                {/* Indicator gate. AI CLIs with hook integration —
+                    claude/codex/opencode each have a forwarder (Python
+                    script for claude+codex, Bun plugin for opencode)
+                    wired to the same agent-status bus. Color follows
+                    session.agentStatus. Anything else (terminal,
+                    history, multi-agent, etc.) gets no indicator. */}
+                {(session.tool === 'claude' || session.tool === 'codex' || session.tool === 'opencode') && (
                   <div className={`tab-status-grid status-${
-                    session.tool === 'vibeid' || session.tool === 'insights_prerun'
-                      ? 'working'
-                      : (session.agentStatus === 'wait_input' ? 'waiting' : session.agentStatus ?? 'idle')
+                    session.agentStatus === 'wait_input' ? 'waiting' : session.agentStatus ?? 'idle'
                   }${__IS_LINUX__ ? ' tab-status-grid--static' : ''}`}>
                     {/* Linux gate — the 9 dot wave/snake/ripple animations are
                         opacity-loop infinites with box-shadow halos. WebKit2GTK
@@ -1312,11 +1178,6 @@ export function CenterPanel() {
                                         {formatCwd(lastCwdByTool[tool.key!])}
                                       </span>
                                     )}
-                                    {tool.key === 'vibeid' && (
-                                      <span className="launchpad-card-cwd">
-                                        {t('tool.vibeid.requires_cc' as any)}
-                                      </span>
-                                    )}
                                   </div>
                                   {tool.requiresCwd && (
                                     <div className="launchpad-folder-btn" onClick={(e) => { e.stopPropagation(); if (!disabled) handlePickFolder(tool.key!); }}>
@@ -1538,15 +1399,15 @@ export function CenterPanel() {
                             coordinated 4/3/2 agent cards line up directly
                             above the independent 4/3/2 split cards:
                               Row 1: multi-agent / three-agent / two-agent / Coffee 101
-                              Row 2: four-split  / three-split / two-split / vibeid */}
+                              Row 2: four-split  / three-split / two-split / hyper-agent */}
                         <div className="library-section-title">{t('library.agent_tools' as any)}</div>
                         <div className="library-grid library-grid--tools">
                           {AGENT_CATALOG.filter(item => item.type === 'utility').map(item => {
                             const pinId = `agent:${item.key}`;
                             const isPinned = pinnedItems.includes(pinId);
                             // Utility tools (multi-agent / Coffee 101 /
-                            // vibeid / hyper-agent / N-split) don't take a
-                            // launch path — no gear, just border-as-state.
+                            // hyper-agent / N-split) don't take a launch
+                            // path — no gear, just border-as-state.
                             return (
                               <div
                                 key={item.key}

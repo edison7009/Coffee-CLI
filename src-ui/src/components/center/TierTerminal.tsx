@@ -752,10 +752,6 @@ function TierTerminalImpl({
       const initialCols = term.cols || 80;
       const initialRows = term.rows || 24;
 
-        // VibeID routes through the backend's own `'vibeid'` match arm, which
-        // spawns `claude` with `/vibeid` as the initial positional prompt.
-        // No frontend remap + no PTY-write hack: Claude Code's REPL parses the
-        // slash command natively on first input.
         await commands.tierTerminalStart(sessionId, tool, initialCols, initialRows, theme, lang, toolData, folderPath ?? undefined, sentinelEnabled);
 
         // After PTY is running, wait two frames for layout to settle then
@@ -773,10 +769,6 @@ function TierTerminalImpl({
 
         // Trust prompt is shown to the user directly. Previously auto-skipped,
         // but we want the user to see the real agent screen and decide.
-
-// (VibeID no longer needs a frontend auto-prompt timer — the backend
-        // spawns `claude /vibeid` directly, so the REPL fires the skill on its
-        // very first parse pass.)
       } catch (err) {
         console.warn('[TierTerminal] startPty failed:', err);
         term.writeln(`\x1b[31mFailed to start terminal: ${err}\x1b[0m`);
@@ -1132,10 +1124,7 @@ function TierTerminalImpl({
               </svg>
             </div>
             {(() => {
-              const splashText =
-                tool === 'insights_prerun' ? `${t('tool.vibeid' as any)} (1/2)` :
-                tool === 'vibeid'          ? `${t('tool.vibeid' as any)} (2/2)` :
-                (toolName || (tool && toolLabel[tool]) || 'Loading');
+              const splashText = toolName || (tool && toolLabel[tool]) || 'Loading';
               // Pick splash font by CONTENT language, not UI language. The tab
               // for Claude Code shows "Claude Code" in any UI locale, and the
               // italic-serif art treatment only reads well for Latin glyphs.

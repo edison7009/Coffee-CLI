@@ -176,28 +176,6 @@ export const commands = {
   openUrl: (url: string) =>
     invoke<void>('open_url', { url }),
 
-  // Skill auto-install: check whether ~/.claude/skills/<name>/SKILL.md exists,
-  // and write individual files into ~/.claude/skills/vibeid/<relPath>.
-  // Used by the VibeID launcher to hydrate the skill on first launch by
-  // fetching the remote skill package and piping each file through.
-  checkSkillInstalled: (name: string) =>
-    invoke<boolean>('check_skill_installed', { name }),
-  writeSkillFile: (relPath: string, bytes: number[]) =>
-    invoke<void>('write_skill_file', { relPath, bytes }),
-
-  // Check whether `~/.claude/usage-data/report.html` exists. Used by the
-  // VibeID launcher to gate between running /insights first or going
-  // straight to /vibeid.
-  checkVibeidReportExists: () =>
-    invoke<boolean>('check_vibeid_report_exists'),
-
-  // Return the Unix-epoch-seconds mtime of the /insights report file.
-  // 0 if the file doesn't exist. The VibeID launcher records the click
-  // timestamp, starts a pre-run tab that runs /insights, and polls this
-  // until mtime > clickTs (meaning the report was freshly regenerated).
-  checkVibeidReportMtime: () =>
-    invoke<number>('check_vibeid_report_mtime'),
-
   // Live fs watcher — subscribes to OS-native events under `path` and
   // emits `fs-refresh` Tauri events that Explorer already listens for.
   // Calling start with a new path implicitly replaces the previous watcher.

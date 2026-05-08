@@ -21,8 +21,6 @@ export const zhCN = {
   // Tools
   'tool.terminal': '终端',
   'tool.remote': '远程终端',
-  'tool.vibeid': '人格测试',
-  'tool.vibeid.requires_cc': '仅限 Claude Code',
   'tool.multi_agent': '多智能体',
   'tool.two_agent': '二智能体',
   'tool.three_agent': '三智能体',
@@ -42,7 +40,6 @@ export const zhCN = {
   'tool_config.reset': '重置',
   'tool_config.cancel': '取消',
   'tool_config.save': '保存',
-  'vibeid.insights_timeout': '报告生成超时了。请稍后重试，或在 Claude Code tab 里手动跑 /insights。',
 
   // Remote Terminal
   'remote.title': '远程终端',

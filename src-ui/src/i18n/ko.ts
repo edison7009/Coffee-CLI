@@ -21,8 +21,6 @@ export const ko = {
   // Tools
   'tool.terminal': '터미널',
   'tool.remote': '원격 터미널',
-  'tool.vibeid': '성격 테스트',
-  'tool.vibeid.requires_cc': 'Claude Code 전용',
   'tool.multi_agent': '멀티 에이전트',
   'tool.two_agent': '듀얼 에이전트',
   'tool.three_agent': '트리플 에이전트',
@@ -42,7 +40,6 @@ export const ko = {
   'tool_config.reset': '재설정',
   'tool_config.cancel': '취소',
   'tool_config.save': '저장',
-  'vibeid.insights_timeout': '리포트 생성이 시간 초과되었습니다. 나중에 다시 시도하거나 Claude Code 탭에서 /insights를 수동으로 실행하세요.',
 
   // Remote Terminal
   'remote.title': '원격 터미널',

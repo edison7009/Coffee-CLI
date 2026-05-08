@@ -527,68 +527,6 @@ fn compute_folder_stats(session_id: String, path: String) -> std::collections::H
     result
 }
 
-/// Check whether a Claude Code skill is installed locally.
-/// Returns true if `~/.claude/skills/<name>/SKILL.md` exists.
-#[tauri::command]
-fn check_skill_installed(name: String) -> bool {
-    let Some(home) = dirs::home_dir() else { return false };
-    home.join(".claude").join("skills").join(&name).join("SKILL.md").exists()
-}
-
-/// Check whether the Claude Code `/insights` usage report exists.
-/// Returns true if `~/.claude/usage-data/report.html` is present.
-/// Used by the VibeID launcher to decide whether to first auto-run
-/// `/insights` in a pre-run tab, or go straight to `/vibeid`.
-#[tauri::command]
-fn check_vibeid_report_exists() -> bool {
-    let Some(home) = dirs::home_dir() else { return false };
-    home.join(".claude").join("usage-data").join("report.html").exists()
-}
-
-/// Return the Unix epoch seconds of the last modification time of the
-/// `~/.claude/usage-data/report.html` file. Returns 0 if the file does
-/// not exist or if metadata cannot be read.
-///
-/// Used by the VibeID launcher to detect when a pre-run `/insights`
-/// invocation has finished writing a fresh report (mtime strictly
-/// greater than the click timestamp means the report was regenerated).
-#[tauri::command]
-fn check_vibeid_report_mtime() -> u64 {
-    let Some(home) = dirs::home_dir() else { return 0 };
-    let path = home.join(".claude").join("usage-data").join("report.html");
-    match std::fs::metadata(&path).and_then(|m| m.modified()) {
-        Ok(mtime) => mtime
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_secs())
-            .unwrap_or(0),
-        Err(_) => 0,
-    }
-}
-
-/// Write a file into `~/.claude/skills/vibeid/<rel_path>`.
-/// Creates parent directories as needed. `rel_path` must be a relative path
-/// with no `..` segments. Used by the frontend to hydrate the VibeID skill
-/// package on first launch by fetching from the remote skill URL.
-#[tauri::command]
-fn write_skill_file(rel_path: String, bytes: Vec<u8>) -> Result<(), String> {
-    // Reject absolute paths and parent-dir escapes. Skill tree is always
-    // under ~/.claude/skills/vibeid/ and rel_path is a forward-slash path.
-    if rel_path.contains("..") || rel_path.starts_with('/') || rel_path.starts_with('\\')
-        || rel_path.contains(':')
-    {
-        return Err(format!("Invalid relative path: {}", rel_path));
-    }
-    let home = dirs::home_dir().ok_or_else(|| "No home directory".to_string())?;
-    let target = home.join(".claude").join("skills").join("vibeid").join(&rel_path);
-    if let Some(parent) = target.parent() {
-        std::fs::create_dir_all(parent)
-            .map_err(|e| format!("Failed to create skill dir: {}", e))?;
-    }
-    std::fs::write(&target, &bytes)
-        .map_err(|e| format!("Failed to write skill file: {}", e))?;
-    Ok(())
-}
-
 /// Save a base64-encoded clipboard image to a temp file.
 /// Used by the Gambit compose window so pasted screenshots can be referenced
 /// by path when forwarded to AI CLI agents (Claude Code, etc.).
@@ -957,18 +895,6 @@ fn tier_terminal_start_blocking(
             }
             ("claude".to_string(), a)
         },
-        // VibeID is a skill-launcher: spawn plain `claude` binary with `/vibeid`
-        // as the initial positional prompt argument. Claude Code's REPL parses
-        // leading slash commands as skill invocations, so the `vibeid` skill
-        // fires immediately on startup with no PTY-write hacks required.
-        Some("vibeid")   => ("claude".to_string(), vec!["/vibeid".to_string()]),
-        // Insights pre-run: same trick as VibeID but with /insights. Used by
-        // the VibeID launcher to auto-generate the usage report on first use
-        // before the real VibeID tab spawns. Because this goes through the
-        // Rust Command API (not a shell), Git Bash's MSYS path-conversion
-        // that mangles "/insights" into "C:/Program Files/Git/insights" is
-        // bypassed entirely.
-        Some("insights_prerun") => ("claude".to_string(), vec!["/insights".to_string()]),
         Some("qwen")     => ("qwen".to_string(),   vec![]),
         Some("hermes")   => ("hermes".to_string(), vec![]),
         Some("opencode") => ("opencode".to_string(), vec![]),
@@ -1122,8 +1048,8 @@ fn tier_terminal_start_blocking(
     // --dangerously-skip-permissions". Empty fields fall through to the
     // built-in defaults computed above. Skipped entirely for synthetic
     // session ids that don't correspond to a user-facing tool key
-    // (vibeid uses the claude binary internally, etc — they have their
-    // own opinionated args we don't want overridden).
+    // (multi-agent panes have their own opinionated args we don't
+    // want overridden).
     let (cmd, args) = match tool.as_deref() {
         Some(name)
             if matches!(
@@ -1160,8 +1086,8 @@ fn tier_terminal_start_blocking(
             args.extend(entry.extra_args.iter().cloned());
             (cmd, args)
         }
-        // Synthetic / pane-internal tools (vibeid / insights_prerun /
-        // remote / multi-agent) intentionally bypass user override.
+        // Synthetic / pane-internal tools (remote / multi-agent)
+        // intentionally bypass user override.
         _ => (cmd, args),
     };
 
@@ -3255,10 +3181,6 @@ pub fn start_ui() -> anyhow::Result<()> {
             load_password,
             delete_password,
             open_url,
-            check_skill_installed,
-            write_skill_file,
-            check_vibeid_report_exists,
-            check_vibeid_report_mtime,
             enable_multi_agent_mode,
             disable_multi_agent_mode,
             start_hyper_agent_server,

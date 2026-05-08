@@ -21,8 +21,6 @@ export const ru = {
   // Tools
   'tool.terminal': 'Терминал',
   'tool.remote': 'Удалённый терминал',
-  'tool.vibeid': 'Тест личности',
-  'tool.vibeid.requires_cc': 'Только Claude Code',
   'tool.multi_agent': 'Мульти-агент',
   'tool.two_agent': 'Дуо-агент',
   'tool.three_agent': 'Трио-агент',
@@ -42,7 +40,6 @@ export const ru = {
   'tool_config.reset': 'Сброс',
   'tool_config.cancel': 'Отмена',
   'tool_config.save': 'Сохранить',
-  'vibeid.insights_timeout': 'Генерация отчёта заняла слишком много времени. Попробуйте позже или запустите /insights вручную во вкладке Claude Code.',
 
   // Remote Terminal
   'remote.title': 'Удалённый терминал',

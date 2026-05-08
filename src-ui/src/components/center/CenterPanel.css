@@ -569,7 +569,7 @@
 /* Agent Tools sub-grid: same 4-col layout as the AI CLIs grid above,
    so every row holds 4 cards:
      Row 1: multi-agent | three-agent | two-agent | installer
-     Row 2: four-split  | three-split | two-split | vibeid
+     Row 2: four-split  | three-split | two-split | hyper-agent
    协作 counts and 独立 counts line up column-by-column (4↔4, 3↔3, 2↔2). */
 .library-grid.library-grid--tools {
   margin-top: 8px;
