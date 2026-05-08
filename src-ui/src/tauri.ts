@@ -62,12 +62,6 @@ export interface SavedSession {
   turn_count?: number;
 }
 
-export interface DriveInfo {
-  path: string;
-  label: string;
-  kind: string;
-}
-
 export interface DirEntryInfo {
   name: string;
   path: string;
@@ -136,8 +130,6 @@ export const commands = {
   saveClipboardImage: (dataBase64: string, extension: string) =>
     invoke<string>('save_clipboard_image', { dataBase64, extension }),
 
-  // File system browsing (My Computer tab)
-  listDrives: () => invoke<DriveInfo[]>('list_drives'),
   listDirectory: (path: string) => invoke<DirEntryInfo[]>('list_directory', { path }),
 
   // Workspace file diff (since-tab-open snapshot). Per-session — each tab/

@@ -17,17 +17,6 @@ export const pt = {
   'menu.show_in_folder': 'Mostrar no explorador',
   'menu.open': 'Abrir',
 
-  // Drive kinds (Quick Access)
-  'drive.desktop': 'Área de trabalho',
-  'drive.downloads': 'Downloads',
-  'drive.documents': 'Documentos',
-  'drive.pictures': 'Imagens',
-  'drive.music': 'Música',
-  'drive.videos': 'Vídeos',
-  'drive.home': 'Início',
-  'drive.drive': 'Unidade {label}',
-  'drive.root': 'Raiz (/)',
-  'drive.volume': '{label}',
 
   // Tools
   'tool.terminal': 'Terminal',

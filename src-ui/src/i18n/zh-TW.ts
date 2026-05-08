@@ -17,17 +17,6 @@ export const zhTW = {
   'menu.show_in_folder': '在檔案總管中顯示',
   'menu.open': '開啟',
 
-  // Drive kinds (Quick Access)
-  'drive.desktop': '桌面',
-  'drive.downloads': '下載',
-  'drive.documents': '文件',
-  'drive.pictures': '圖片',
-  'drive.music': '音樂',
-  'drive.videos': '影片',
-  'drive.home': '主目錄',
-  'drive.drive': '{label} 磁碟',
-  'drive.root': '根目錄 (/)',
-  'drive.volume': '{label}',
 
   // Tools
   'tool.terminal': '終端機',

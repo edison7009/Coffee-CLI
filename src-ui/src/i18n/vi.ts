@@ -18,17 +18,6 @@ export const vi = {
   'menu.show_in_folder': 'Hiển thị trong File Explorer',
   'menu.open': 'Mở',
 
-  // Drive kinds (Quick Access)
-  'drive.desktop': 'Màn hình nền',
-  'drive.downloads': 'Tải xuống',
-  'drive.documents': 'Tài liệu',
-  'drive.pictures': 'Hình ảnh',
-  'drive.music': 'Âm nhạc',
-  'drive.videos': 'Video',
-  'drive.home': 'Trang chủ',
-  'drive.drive': 'Ổ đĩa {label}:',
-  'drive.root': 'Thư mục gốc (/)',
-  'drive.volume': '{label}',
 
   // Tools
   'tool.terminal': 'Terminal',

@@ -17,17 +17,6 @@ export const zhCN = {
   'menu.show_in_folder': '在文件管理器中显示',
   'menu.open': '打开',
 
-  // Drive kinds (Quick Access)
-  'drive.desktop': '桌面',
-  'drive.downloads': '下载',
-  'drive.documents': '文档',
-  'drive.pictures': '图片',
-  'drive.music': '音乐',
-  'drive.videos': '视频',
-  'drive.home': '主目录',
-  'drive.drive': '{label}盘',
-  'drive.root': '根目录 (/)',
-  'drive.volume': '{label}',
 
   // Tools
   'tool.terminal': '终端',

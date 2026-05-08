@@ -18,17 +18,6 @@ export const en = {
   'menu.show_in_folder': 'Reveal in File Explorer',
   'menu.open': 'Open',
 
-  // Drive kinds (Quick Access)
-  'drive.desktop': 'Desktop',
-  'drive.downloads': 'Downloads',
-  'drive.documents': 'Documents',
-  'drive.pictures': 'Pictures',
-  'drive.music': 'Music',
-  'drive.videos': 'Videos',
-  'drive.home': 'Home',
-  'drive.drive': '{label}: Drive',
-  'drive.root': 'Root (/)',
-  'drive.volume': '{label}',
 
   // Tools
   'tool.terminal': 'Terminal',

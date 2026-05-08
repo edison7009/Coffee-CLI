@@ -17,17 +17,6 @@ export const ru = {
   'menu.show_in_folder': 'Показать в проводнике',
   'menu.open': 'Открыть',
 
-  // Drive kinds (Quick Access)
-  'drive.desktop': 'Рабочий стол',
-  'drive.downloads': 'Загрузки',
-  'drive.documents': 'Документы',
-  'drive.pictures': 'Изображения',
-  'drive.music': 'Музыка',
-  'drive.videos': 'Видео',
-  'drive.home': 'Домой',
-  'drive.drive': 'Диск {label}',
-  'drive.root': 'Корень (/)',
-  'drive.volume': '{label}',
 
   // Tools
   'tool.terminal': 'Терминал',

@@ -17,17 +17,6 @@ export const fr = {
   'menu.show_in_folder': 'Afficher dans l\u2019explorateur',
   'menu.open': 'Ouvrir',
 
-  // Drive kinds (Quick Access)
-  'drive.desktop': 'Bureau',
-  'drive.downloads': 'Téléchargements',
-  'drive.documents': 'Documents',
-  'drive.pictures': 'Images',
-  'drive.music': 'Musique',
-  'drive.videos': 'Vidéos',
-  'drive.home': 'Accueil',
-  'drive.drive': 'Lecteur {label}',
-  'drive.root': 'Racine (/)',
-  'drive.volume': '{label}',
 
   // Tools
   'tool.terminal': 'Terminal',

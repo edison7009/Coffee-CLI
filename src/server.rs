@@ -169,16 +169,6 @@ fn stop_fs_watcher(state: State<'_, AppState>) -> Result<(), String> {
 
 // ─── File System Browsing API ────────────────────────────────────────────────
 
-/// Information about a single drive / mount point
-#[derive(Serialize)]
-struct DriveInfo {
-    path: String,
-    label: String,
-    /// Semantic kind used by frontend for icon selection and i18n.
-    /// Values: "desktop", "downloads", "documents", "pictures", "music", "videos", "home", "drive", "root", "volume"
-    kind: String,
-}
-
 /// Information about a single directory entry (file or folder)
 #[derive(Serialize)]
 struct DirEntry {
@@ -186,127 +176,6 @@ struct DirEntry {
     path: String,
     is_dir: bool,
     size: u64,
-}
-
-/// List all available drives (Windows) or common mount points (Unix)
-#[tauri::command]
-fn list_drives() -> Vec<DriveInfo> {
-    let mut drives: Vec<DriveInfo> = Vec::new();
-
-    // ── Quick Access locations (order matches Windows Explorer) ──
-
-    if let Some(desktop) = dirs::desktop_dir() {
-        if desktop.exists() {
-            drives.push(DriveInfo {
-                path: desktop.to_string_lossy().to_string(),
-                label: "Desktop".to_string(),
-                kind: "desktop".to_string(),
-            });
-        }
-    }
-
-    if let Some(dl) = dirs::download_dir() {
-        if dl.exists() {
-            drives.push(DriveInfo {
-                path: dl.to_string_lossy().to_string(),
-                label: "Downloads".to_string(),
-                kind: "downloads".to_string(),
-            });
-        }
-    }
-
-    if let Some(docs) = dirs::document_dir() {
-        if docs.exists() {
-            drives.push(DriveInfo {
-                path: docs.to_string_lossy().to_string(),
-                label: "Documents".to_string(),
-                kind: "documents".to_string(),
-            });
-        }
-    }
-
-    if let Some(pics) = dirs::picture_dir() {
-        if pics.exists() {
-            drives.push(DriveInfo {
-                path: pics.to_string_lossy().to_string(),
-                label: "Pictures".to_string(),
-                kind: "pictures".to_string(),
-            });
-        }
-    }
-
-    if let Some(music) = dirs::audio_dir() {
-        if music.exists() {
-            drives.push(DriveInfo {
-                path: music.to_string_lossy().to_string(),
-                label: "Music".to_string(),
-                kind: "music".to_string(),
-            });
-        }
-    }
-
-    if let Some(videos) = dirs::video_dir() {
-        if videos.exists() {
-            drives.push(DriveInfo {
-                path: videos.to_string_lossy().to_string(),
-                label: "Videos".to_string(),
-                kind: "videos".to_string(),
-            });
-        }
-    }
-
-    // Home directory
-    if let Some(home) = dirs::home_dir() {
-        drives.push(DriveInfo {
-            path: home.to_string_lossy().to_string(),
-            label: "Home".to_string(),
-            kind: "home".to_string(),
-        });
-    }
-
-    // ── Disk Drives ──
-
-    #[cfg(target_os = "windows")]
-    {
-        for letter in b'A'..=b'Z' {
-            let drive_path = format!("{}:\\", letter as char);
-            let p = std::path::Path::new(&drive_path);
-            if p.exists() {
-                drives.push(DriveInfo {
-                    path: drive_path.clone(),
-                    label: format!("{}", letter as char),
-                    kind: "drive".to_string(),
-                });
-            }
-        }
-    }
-
-    #[cfg(not(target_os = "windows"))]
-    {
-        let root = std::path::Path::new("/");
-        if root.exists() {
-            drives.push(DriveInfo {
-                path: "/".to_string(),
-                label: "Root (/)".to_string(),
-                kind: "root".to_string(),
-            });
-        }
-        if cfg!(target_os = "macos") {
-            if let Ok(entries) = std::fs::read_dir("/Volumes") {
-                for entry in entries.flatten() {
-                    if entry.path().is_dir() {
-                        drives.push(DriveInfo {
-                            path: entry.path().to_string_lossy().to_string(),
-                            label: entry.file_name().to_string_lossy().to_string(),
-                            kind: "volume".to_string(),
-                        });
-                    }
-                }
-            }
-        }
-    }
-
-    drives
 }
 
 /// List the immediate children of a directory.
@@ -3457,7 +3326,6 @@ pub fn start_ui() -> anyhow::Result<()> {
             start_fs_watcher,
             stop_fs_watcher,
             save_clipboard_image,
-            list_drives,
             list_directory,
             start_folder_snapshot,
             drop_session_snapshot,

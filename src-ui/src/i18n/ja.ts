@@ -17,17 +17,6 @@ export const ja = {
   'menu.show_in_folder': 'エクスプローラーで表示',
   'menu.open': '開く',
 
-  // Drive kinds (Quick Access)
-  'drive.desktop': 'デスクトップ',
-  'drive.downloads': 'ダウンロード',
-  'drive.documents': 'ドキュメント',
-  'drive.pictures': 'ピクチャ',
-  'drive.music': 'ミュージック',
-  'drive.videos': 'ビデオ',
-  'drive.home': 'ホーム',
-  'drive.drive': '{label} ドライブ',
-  'drive.root': 'ルート (/)',
-  'drive.volume': '{label}',
 
   // Tools
   'tool.terminal': 'ターミナル',

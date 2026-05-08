@@ -17,17 +17,6 @@ export const ko = {
   'menu.show_in_folder': '파일 탐색기에서 열기',
   'menu.open': '열기',
 
-  // Drive kinds (Quick Access)
-  'drive.desktop': '바탕화면',
-  'drive.downloads': '다운로드',
-  'drive.documents': '문서',
-  'drive.pictures': '사진',
-  'drive.music': '음악',
-  'drive.videos': '동영상',
-  'drive.home': '홈',
-  'drive.drive': '{label} 드라이브',
-  'drive.root': '루트 (/)',
-  'drive.volume': '{label}',
 
   // Tools
   'tool.terminal': '터미널',
