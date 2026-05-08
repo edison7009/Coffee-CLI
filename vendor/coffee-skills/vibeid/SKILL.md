@@ -1,10 +1,11 @@
 ---
 name: vibeid
-name_zh-CN: VibeID 人格测试
-name_zh-TW: VibeID 人格測試
-description: "[Claude Code only] VibeID — personality test for AI coding agent users based on Claude Code usage behavior. Use when the user says /vibeid, /vibecoding, \"run VibeID test\", \"personality test\". Analyzes Claude Code's /insights report across 4 axes (pace, craft, arc, flow) and reveals one of 16 Vibetype archetypes."
-description_zh-CN: "[仅 Claude Code 可用] VibeID — 基于 Claude Code 使用行为的 AI 编码 Agent 用户人格测试。用户说 /vibeid、/vibecoding、\"运行 VibeID\"、\"人格测试\"时触发。分析 Claude Code 的 /insights 报告(节奏、工艺、弧度、流速 4 个维度),揭示 16 种 Vibetype 原型之一。"
-description_zh-TW: "[僅 Claude Code 可用] VibeID — 基於 Claude Code 使用行為的 AI 編碼 Agent 用戶人格測試。用戶說 /vibeid、/vibecoding、\"執行 VibeID\"、\"人格測試\"時觸發。分析 Claude Code 的 /insights 報告(節奏、工藝、弧度、流速 4 個維度),揭示 16 種 Vibetype 原型之一。"
+name_en: Personality Test
+name_zh-CN: 人格测试
+name_zh-TW: 人格測試
+description: "A personality test based on long-term Claude Code usage. Standardized analysis of real Vibe Coding data evaluates four dimensions: pace, craft, arc, and flow."
+description_zh-CN: "一个基于长期使用 Claude Code 后的人格测试。通过一系列标准化和真实 Vibe Coding 数据,来评估个人的节奏、工艺、弧度、流速 4 个维度。"
+description_zh-TW: "一個基於長期使用 Claude Code 後的人格測試。通過一系列標準化和真實 Vibe Coding 數據,來評估個人的節奏、工藝、弧度、流速 4 個維度。"
 ---
 
 # VibeID — VibeCoding Personality Test
