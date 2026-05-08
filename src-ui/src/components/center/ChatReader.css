@@ -80,6 +80,30 @@
   gap: 24px;
 }
 
+/* Override the app-wide "hide all scrollbars" rule (global.css) — long
+ * histories need a visible draggable indicator. Slider tinted with
+ * --accent so it follows the active theme; same scheme as DiffPanel
+ * and xterm's DOM scrollbar. */
+.chat-reader-body::-webkit-scrollbar {
+  display: block !important;
+  width: 10px !important;
+  background: transparent !important;
+}
+.chat-reader-body::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 3px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.chat-reader-body::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--accent) 70%, transparent);
+  background-clip: padding-box;
+}
+.chat-reader-body {
+  scrollbar-width: thin !important;
+  scrollbar-color: color-mix(in srgb, var(--accent) 35%, transparent) transparent !important;
+}
+
 /* Chat-style bottom anchor: when the conversation is shorter than the
  * viewport, push messages to the bottom edge (empty space at top) so the
  * "newest at bottom" layout is consistent regardless of length — same
@@ -170,6 +194,13 @@
 
 .chat-text {
   /* Simple content layout */
+}
+
+.chat-reader-loading {
+  margin: auto;
+  color: var(--text-3);
+  font-size: 13px;
+  letter-spacing: 0.02em;
 }
 
 .chat-empty-state {

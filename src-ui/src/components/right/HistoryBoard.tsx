@@ -1,4 +1,4 @@
-import { useState, useEffect, useSyncExternalStore } from 'react';
+import { useState, useEffect, useRef, useSyncExternalStore } from 'react';
 import { useT } from '../../i18n/useT';
 import { useAppState } from '../../store/app-state';
 import { isTauri } from '../../tauri';
@@ -72,10 +72,34 @@ export function HistoryBoard() {
     { id: 'mock-3', name: 'refactor components', tool: 'qwen', cwd: '~/projects/coffee', session_token: 'tk3', saved_at: new Date(Date.now() - 86400000 * 2).toISOString() },
   ];
 
-  const filteredSessions = baseSessions.filter(s => {
+  const matchedSessions = baseSessions.filter(s => {
     if (!sessionSearchQuery) return true;
     return s.name.toLowerCase().includes(sessionSearchQuery.toLowerCase());
-  }).slice(0, 30);
+  });
+
+  // Progressive render: data is already fully in memory (history-cache reads
+  // every jsonl on startup), so "load more" is just rendering more rows.
+  // IntersectionObserver on a bottom sentinel bumps visibleCount when it
+  // scrolls into view. Reset to PAGE on search-query change so the results
+  // don't carry a stale window from before.
+  const PAGE = 30;
+  const [visibleCount, setVisibleCount] = useState(PAGE);
+  useEffect(() => { setVisibleCount(PAGE); }, [sessionSearchQuery]);
+  const filteredSessions = matchedSessions.slice(0, visibleCount);
+  const hasMore = matchedSessions.length > visibleCount;
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!hasMore) return;
+    const el = sentinelRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(entries => {
+      if (entries.some(e => e.isIntersecting)) {
+        setVisibleCount(c => c + PAGE);
+      }
+    }, { rootMargin: '200px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [hasMore]);
 
   const handleViewHistory = (saved: SavedSession) => {
     dispatch({ 
@@ -159,7 +183,9 @@ export function HistoryBoard() {
           </div>
         );
       })}
-      
+
+      {hasMore && <div ref={sentinelRef} style={{ height: 1 }} />}
+
       {!isLoading && filteredSessions.length === 0 && (
         <div className="task-empty">
           <div className="task-empty-text">{t('menu.no_recent' as any) || 'No recent sessions'}</div>

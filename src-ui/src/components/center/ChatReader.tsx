@@ -161,10 +161,11 @@ export function ChatReader({ sessionId }: { sessionId: string }) {
         }
         
         setMessages(thread);
-        // Splash stays up; useLayoutEffect below pins scroll to bottom
-        // synchronously after React commits the messages, then hides
-        // the splash. rAF was unreliable — could fire before commit and
-        // read a stale (loading-state) scrollHeight, leaving us at top.
+        // useLayoutEffect below pins scroll to bottom synchronously after
+        // React commits the messages, then clears `loading`. The "Loading…"
+        // line and the messages share a single render: when messages
+        // arrive, `loading && messages.length === 0` flips false in the
+        // same commit so the two never overlap visually.
       })
       .catch(err => {
         console.error("Failed to read history jsonl", err);
@@ -175,11 +176,9 @@ export function ChatReader({ sessionId }: { sessionId: string }) {
   }, [toolDataStr]);
 
   // After messages commit to the DOM (synchronous, before browser paint),
-  // pin scroll to the very bottom and only then hide the loading splash.
-  // The splash covers the body during this commit, so the user never sees
-  // a top→bottom snap — the reveal happens already at the bottom.
-  // Re-pin after a short delay to catch async layout shifts from image
-  // loads / font swaps that grow content after initial measurement.
+  // pin scroll to the very bottom; user lands on the latest message.
+  // Re-pin at 200ms catches async layout shifts from image / font loads
+  // that grow content height after our initial measurement.
   useLayoutEffect(() => {
     if (messages.length === 0) return;
     const pin = () => {
@@ -248,59 +247,12 @@ export function ChatReader({ sessionId }: { sessionId: string }) {
       </button>
 
       <div className="chat-reader-body" ref={scrollRef}>
-        {/* Splash overlays the body while loading. Messages render
-         * underneath even during loading so that, when data arrives,
-         * scrollHeight already reflects the full content; useLayoutEffect
-         * can then pin scrollTop to the bottom in a single commit, with
-         * the splash still covering the body — zero visible jump. */}
-        {loading && (
-          <div className="tier-loading-splash" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 10 }}>
-            <div className="splash-group">
-              <div className="splash-icon">
-                <svg width="48" height="48" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <defs>
-                    <mask id={`splashMask-${sessionId}`}>
-                      <path fill="none" stroke="#fff" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
-                        d="M8 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M12 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M16 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4">
-                        {/* Linux gate — see Explorer.tsx brand-icon for full rationale. */}
-                        {!__IS_LINUX__ && (
-                          <animate attributeName="d" dur="3s" repeatCount="indefinite"
-                            values="M8 0c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M12 0c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M16 0c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4;M8 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M12 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M16 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4"/>
-                        )}
-                      </path>
-                      <path d="M4 7h16v0h-16v12h16v-32h-16Z">
-                        <animate fill="freeze" attributeName="d" begin="1s" dur="0.6s" to="M4 2h16v5h-16v12h16v-24h-16Z"/>
-                      </path>
-                    </mask>
-                  </defs>
-                  <g stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2">
-                    <path fill="currentColor" fillOpacity="0" strokeDasharray="48"
-                      d="M17 9v9c0 1.66 -1.34 3 -3 3h-6c-1.66 0 -3 -1.34 -3 -3v-9Z">
-                      <animate fill="freeze" attributeName="stroke-dashoffset" dur="0.6s" values="48;0"/>
-                      <animate fill="freeze" attributeName="fill-opacity" begin="1.6s" dur="0.4s" to="1"/>
-                    </path>
-                    <path fill="none" strokeDasharray="16" strokeDashoffset="16"
-                      d="M17 9h3c0.55 0 1 0.45 1 1v3c0 0.55 -0.45 1 -1 1h-3">
-                      <animate fill="freeze" attributeName="stroke-dashoffset" begin="0.6s" dur="0.3s" to="0"/>
-                    </path>
-                  </g>
-                  <path fill="currentColor" d="M0 0h24v24H0z" mask={`url(#splashMask-${sessionId})`}/>
-                </svg>
-              </div>
-              {(() => {
-                const splashText = currentSession.name;
-                // Pick splash font by content language — italic serif art
-                // for Latin, stable bold for CJK glyphs.
-                const hasCJK = /[一-鿿぀-ヿ가-힯]/.test(splashText);
-                return <span className="splash-label" lang={hasCJK ? 'zh' : 'en'}>{splashText}</span>;
-              })()}
-              <div className="splash-dots">
-                <span className="splash-dot" />
-                <span className="splash-dot" />
-                <span className="splash-dot" />
-              </div>
-            </div>
-          </div>
+        {/* Minimal "Loading…" text, shown only while data hasn't arrived
+         * yet. The moment setMessages fires, messages.length > 0, this
+         * disappears in the same render commit as messages appear, so
+         * the two never visually overlap. VS Code chat history pattern. */}
+        {loading && messages.length === 0 && (
+          <div className="chat-reader-loading">{t('diff.loading' as any) || 'Loading…'}</div>
         )}
 
         {messages.map(msg => (
