@@ -1,7 +1,9 @@
-// RightPanel.tsx — Right panel: TaskBoard only
+// RightPanel.tsx — Right panel: TaskBoard only.
+// .compiler-top wrapper styling lives in global.css (same selector,
+// kept around because changing the wrapper class would touch every
+// theme rule that scopes to it).
 
 import { TaskBoard } from './TaskBoard';
-import './Compiler.css';
 
 export function RightPanel() {
   return (
