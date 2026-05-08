@@ -4,8 +4,7 @@
 // Routes:
 //   /version.json          → dynamic version report (honors ?platform=)
 //   /download/<platform>   → proxy GitHub Release assets
-//   /play/<file>           → CF Pages static (.jsdos shipped under
-//                            Web-Home/play/, edge-cached)
+//   /play/<path>           → 410 Gone (retired, see route below)
 //   /*                     → CF Pages static files (env.ASSETS)
 
 const REPO = "edison7009/Coffee-CLI"
@@ -197,35 +196,22 @@ export default {
       })
     }
 
-    // ── /play/<file> ─────────────────────────────────────────────────────────
-    // Game .jsdos files ship under Web-Home/play/ and are served by CF Pages
-    // edge cache. We re-wrap the static response so we own the
-    // Content-Disposition + CORS headers (the raw env.ASSETS response would
-    // serve as inline application/octet-stream without download semantics).
-    //
-    // Adding a new game = drop the .jsdos in Web-Home/play/, add an entry to
-    // game.json, commit + push. Available after the next Pages deploy
-    // (typically a few minutes). The previous GitHub-Release fallback path
-    // (game-assets release / branch) was retired once Web-Home/play/ became
-    // the single source of truth; see commit history for the cleanup.
-    const playMatch = pathname.match(/^\/play\/([^/]+\.jsdos)$/)
-    if (playMatch) {
-      const filename = playMatch[1]
-      const staticRes = await env.ASSETS.fetch(request)
-      if (!staticRes.ok) {
-        return new Response(`Game not found: ${filename}`, { status: 404 })
-      }
-      // Body is a ReadableStream so this is zero-copy.
-      return new Response(staticRes.body, {
-        status: 200,
-        headers: {
-          "Content-Type": "application/octet-stream",
-          "Content-Disposition": `attachment; filename="${filename}"`,
-          "Content-Length": staticRes.headers.get("Content-Length") || "",
-          "Cache-Control": "public, max-age=86400",
-          "Access-Control-Allow-Origin": "*",
+    // ── /play/<path> → 410 Gone ──────────────────────────────────────────────
+    // Coffee Play (DOS arcade) was retired alongside the Skills feature
+    // launch. Intercept at the Worker so edge-cached 200 responses from
+    // the pre-deletion era are replaced. Old install scripts that polled
+    // /play/game.json now get a clean signal to stop.
+    if (pathname.startsWith("/play/")) {
+      return new Response(
+        "Coffee Play has been retired. Skills are the new direction.\n",
+        {
+          status: 410,
+          headers: {
+            "Content-Type": "text/plain; charset=utf-8",
+            "Cache-Control": "no-store",
+          }
         }
-      })
+      )
     }
 
     // ── /lang-packs/<path> → 410 Gone ────────────────────────────────────────

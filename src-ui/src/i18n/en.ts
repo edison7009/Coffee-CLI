@@ -111,8 +111,6 @@ export const en = {
   'gambit.send_failed_hint': 'Open an active session first',
   'gambit.send_empty_hint': 'Type a message or paste an image first (Ctrl+V)',
 
-  // Mode switch button (bottom-right): enter Arcade games / return to tools.
-
   // Contribution heatmap (above pinned cards on Desktop launchpad).
   'heatmap.title': '{sessions} sessions · {messages} messages',
   'heatmap.title_empty': 'Story not started yet — chat with an AI to light up your first square',

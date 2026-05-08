@@ -901,10 +901,10 @@ body.gambit-docked .chat-reader-container {
    it ends up hidden. Expose --dock-bottom-offset so it can opt in via
    `bottom: calc(<original-bottom> + var(--dock-bottom-offset, 0px))`.
 
-   Note: .library-counter and .library-tabs do NOT need this offset. They
-   anchor to .library-page (position: relative), whose height: 100% chain
-   already shrinks with the container's padding-bottom. Adding the offset
-   there double-lifts them and eats into the visible grid area. */
+   Note: .library-counter does NOT need this offset. It anchors to
+   .library-page (position: relative), whose height: 100% chain already
+   shrinks with the container's padding-bottom. Adding the offset there
+   double-lifts it and eats into the visible grid area. */
 body.gambit-docked {
     --dock-bottom-offset: calc(var(--gambit-dock-h, 200px) + 16px);
 }
@@ -1215,9 +1215,9 @@ body.gambit-docked {
    Buttons / inputs / textareas / anchors aren't matched by the
    element list at all, so their own hover/focus bgs are
    untouched. */
-[data-shape="glass"] .panel-left :is(div, section, aside, nav, header, footer, main):not(.launchpad-card, .launchpad-card-group, .task-card, .task-droppable-area, .guide-card, .remote-form-card, .remote-form-overlay, .remote-protocol-toggle, .remote-pill, .chat-input-container, .library-item, .library-tabs, .ctx-menu, .gambit, .tool-config-modal, .tab-status-dot, .heatmap-cell, .diff-line),
-[data-shape="glass"] .panel-right :is(div, section, aside, nav, header, footer, main):not(.launchpad-card, .launchpad-card-group, .task-card, .task-droppable-area, .guide-card, .remote-form-card, .remote-form-overlay, .remote-protocol-toggle, .remote-pill, .chat-input-container, .library-item, .library-tabs, .ctx-menu, .gambit, .tool-config-modal, .tab-status-dot, .heatmap-cell, .diff-line),
-[data-shape="glass"] .panel-center :is(div, section, aside, nav, header, footer, main):not(.launchpad-card, .launchpad-card-group, .task-card, .task-droppable-area, .guide-card, .remote-form-card, .remote-form-overlay, .remote-protocol-toggle, .remote-pill, .chat-input-container, .library-item, .library-tabs, .ctx-menu, .gambit, .tool-config-modal, .tab-status-dot, .heatmap-cell, .diff-line) {
+[data-shape="glass"] .panel-left :is(div, section, aside, nav, header, footer, main):not(.launchpad-card, .launchpad-card-group, .task-card, .task-droppable-area, .guide-card, .remote-form-card, .remote-form-overlay, .remote-protocol-toggle, .remote-pill, .chat-input-container, .library-item, .ctx-menu, .gambit, .tool-config-modal, .tab-status-dot, .heatmap-cell, .diff-line),
+[data-shape="glass"] .panel-right :is(div, section, aside, nav, header, footer, main):not(.launchpad-card, .launchpad-card-group, .task-card, .task-droppable-area, .guide-card, .remote-form-card, .remote-form-overlay, .remote-protocol-toggle, .remote-pill, .chat-input-container, .library-item, .ctx-menu, .gambit, .tool-config-modal, .tab-status-dot, .heatmap-cell, .diff-line),
+[data-shape="glass"] .panel-center :is(div, section, aside, nav, header, footer, main):not(.launchpad-card, .launchpad-card-group, .task-card, .task-droppable-area, .guide-card, .remote-form-card, .remote-form-overlay, .remote-protocol-toggle, .remote-pill, .chat-input-container, .library-item, .ctx-menu, .gambit, .tool-config-modal, .tab-status-dot, .heatmap-cell, .diff-line) {
     background: transparent !important;
     border-color: transparent !important;
     box-shadow: none !important;
@@ -1285,23 +1285,12 @@ body.gambit-docked {
         0 24px 64px rgba(0, 0, 0, 0.5);
 }
 
-/* Active tabs — switched from "3-edge outline" to "filled pill"
-   so they share visual language with the .library-tabs Agents/
-   Games segmented control. The right strip becomes a full
-   segmented-control container (bg + border + radius); the
-   center chrome strip stays transparent because it carries
-   variable tabs + a "+" button which doesn't fit the centered-
-   container metaphor — only its active tab becomes a pill. */
-
-/* Tab family — all THREE tab strips (chrome / Explorer /
-   TaskBoard) go fully transparent in glass. Active state is
-   indicated by text-1 color contrast alone (source default).
-   No container pill, no active fill, no outline. Matches the
-   "全部透明,只靠主背景半透层" architecture: every tab IS the
-   body's --glass-tint — adding any local bg would stack a
-   second visible layer.
-   Only .library-tabs (Agents/Games) keeps its segmented-control
-   pill style — it's a discrete control, not a tab strip. */
+/* Tab family — all three tab strips (chrome / Explorer / TaskBoard)
+   go fully transparent in glass. Active state is indicated by
+   text-1 color contrast alone (source default). No container pill,
+   no active fill, no outline. Matches the "全部透明,只靠主背景半透层"
+   architecture: every tab IS the body's --glass-tint — adding any
+   local bg would stack a second visible layer. */
 [data-shape="glass"] .chrome-tab.active,
 [data-shape="glass"] .right-tab.active,
 [data-shape="glass"] .explorer-tab.active {
@@ -1316,31 +1305,6 @@ body.gambit-docked {
    from the base card rule. */
 [data-shape="glass"] .launchpad-card-group:hover {
     transform: none;
-}
-
-/* Library segmented toggle (Agents / Games at the bottom of the
-   tools full-list overlay). Container becomes a faint glass pill;
-   the active segment inside reads as "lit-up brighter glass"
-   instead of the original solid --accent fill, which clashed
-   visually with the rest of the glass language. */
-[data-shape="glass"] .library-tabs {
-    background: rgba(255, 255, 255, 0.04);
-    border-color: rgba(255, 255, 255, 0.10);
-    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
-    backdrop-filter: blur(20px) saturate(160%);
-    -webkit-backdrop-filter: blur(20px) saturate(160%);
-}
-
-[data-shape="glass"] .library-tab.active {
-    background: rgba(255, 255, 255, 0.12);
-    color: var(--text-1);
-    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.24);
-    /* Concentric corners: the .library-tabs container uses
-       --radius-md with 4px padding, so its visible inner curve
-       is (md - 4px). The active segment must match that exactly,
-       otherwise its corners don't sit flush against the inner
-       wall of the container — that's the "圆角不一致" you saw. */
-    border-radius: calc(var(--radius-md) - 4px);
 }
 
 /* Floating popups + modals — ctx-menu (right-click + lang +

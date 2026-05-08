@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type ToolType = 'claude' | 'qwen' | 'installer' | 'hermes' | 'opencode' | 'openclaw' | 'codex' | 'gemini' | 'arcade' | 'terminal' | 'remote' | 'history' | 'vibeid' | 'insights_prerun' | 'multi-agent' | 'two-agent' | 'three-agent' | 'two-split' | 'three-split' | 'four-split' | 'hyper-agent' | null;
+export type ToolType = 'claude' | 'qwen' | 'installer' | 'hermes' | 'opencode' | 'openclaw' | 'codex' | 'gemini' | 'terminal' | 'remote' | 'history' | 'vibeid' | 'insights_prerun' | 'multi-agent' | 'two-agent' | 'three-agent' | 'two-split' | 'three-split' | 'four-split' | 'hyper-agent' | null;
 
 /**
  * Tab status shown as an animated 9-dot glyph. Three states only —
@@ -74,7 +74,7 @@ interface MultiAgentState {
 export interface TerminalSession {
   id: string;
   tool: ToolType;
-  toolData?: string;  // Extra context for the tool (e.g. game filename for arcade)
+  toolData?: string;  // Extra context for the tool (e.g. SSH connection JSON for remote)
   folderPath: string | null;
   restartKey?: number;
   isHidden?: boolean;

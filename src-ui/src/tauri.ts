@@ -152,11 +152,6 @@ export const commands = {
     invoke<void>('fs_paste', { action, srcPath, targetDir }),
   showInFolder: (path: string) => invoke<void>('show_in_folder', { path }),
 
-  // Arcade (Coffee Play)
-  listJsdosBundles: () => invoke<{ name: string; path: string; size: number }[]>('list_jsdos_bundles'),
-  readJsdosBundle: (path: string) => invoke<number[]>('read_jsdos_bundle', { path }),
-  saveJsdosBundle: (name: string, data: number[] | Uint8Array) => invoke<void>('save_jsdos_bundle', { name, data: Array.from(data) }),
-
   // Task Board persistence (~/.coffee-cli/tasks.json)
   loadTasks: () => invoke<string>('load_tasks'),
   saveTasks: (data: string) => invoke<void>('save_tasks', { data }),

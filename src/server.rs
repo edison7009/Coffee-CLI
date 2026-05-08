@@ -2787,93 +2787,6 @@ fn tier_terminal_resume(
 
 
 
-// ─── Coffee Play (Arcade) ────────────────────────────────────────────────────
-
-#[derive(Serialize)]
-struct JsdosBundle {
-    name: String,
-    path: String,
-    size: u64,
-}
-
-/// List all .jsdos game bundles in the `play` directory next to the executable
-/// (or in the project root during development).
-#[tauri::command]
-fn list_jsdos_bundles() -> Vec<JsdosBundle> {
-    let mut bundles = Vec::new();
-
-    // Try several candidate directories:
-    // 1. User data directory ~/.coffee-cli/play/ (production + development)
-    // 2. Next to the executable (production)
-    // 3. Current working directory / play (development)
-    // 4. Source tree (development)
-    let mut candidates: Vec<PathBuf> = Vec::new();
-
-    // Primary: user data directory (works on all platforms, all build modes)
-    if let Some(home) = dirs::home_dir() {
-        candidates.push(home.join(".coffee-cli").join("play"));
-    }
-
-    if let Ok(exe) = std::env::current_exe() {
-        if let Some(parent) = exe.parent() {
-            candidates.push(parent.join("play"));
-        }
-    }
-    candidates.push(PathBuf::from("play"));
-    candidates.push(PathBuf::from("src-ui/public/play"));
-
-    for play_dir in &candidates {
-        if !play_dir.is_dir() { continue; }
-        if let Ok(entries) = std::fs::read_dir(play_dir) {
-            for entry in entries.flatten() {
-                let path = entry.path();
-                if path.extension().map(|e| e.to_ascii_lowercase()) == Some(std::ffi::OsString::from("jsdos")) {
-                    if let Ok(meta) = entry.metadata() {
-                        bundles.push(JsdosBundle {
-                            name: entry.file_name().to_string_lossy().to_string(),
-                            path: path.to_string_lossy().to_string(),
-                            size: meta.len(),
-                        });
-                    }
-                }
-            }
-        }
-        if !bundles.is_empty() { break; } // Use first directory that has games
-    }
-
-    bundles
-}
-
-/// Read a .jsdos bundle file and return its raw bytes.
-/// This allows the frontend to load local bundles without asset protocol.
-#[tauri::command]
-fn read_jsdos_bundle(path: String) -> Result<Vec<u8>, String> {
-    let p = std::path::Path::new(&path);
-    if !p.exists() {
-        return Err(format!("Bundle not found: {}", path));
-    }
-    if p.extension().map(|e| e.to_ascii_lowercase()) != Some(std::ffi::OsString::from("jsdos")) {
-        return Err("Not a .jsdos file".to_string());
-    }
-    std::fs::read(p).map_err(|e| format!("Failed to read: {}", e))
-}
-
-/// Save a downloaded .jsdos bundle to the local play directory
-#[tauri::command]
-fn save_jsdos_bundle(name: String, data: Vec<u8>) -> Result<(), String> {
-    let play_dir = dirs::home_dir()
-        .ok_or_else(|| "Could not find home directory".to_string())?
-        .join(".coffee-cli")
-        .join("play");
-    
-    if !play_dir.exists() {
-        std::fs::create_dir_all(&play_dir).map_err(|e| e.to_string())?;
-    }
-    
-    let file_path = play_dir.join(name);
-    std::fs::write(file_path, data).map_err(|e| e.to_string())
-}
-
 // ─── Task Board Persistence ──────────────────────────────────────────────────
 
 fn tasks_file_path() -> PathBuf {
@@ -3336,9 +3249,6 @@ pub fn start_ui() -> anyhow::Result<()> {
             fs_delete,
             fs_rename,
             fs_paste,
-            list_jsdos_bundles,
-            read_jsdos_bundle,
-            save_jsdos_bundle,
             load_tasks,
             save_tasks,
             save_password,

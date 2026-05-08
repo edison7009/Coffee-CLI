@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { focusTerminal } from '../../lib/focus-registry';
 import { TierTerminal } from './TierTerminal';
-import { DosPlayer } from './DosPlayer';
 import { ChatReader } from './ChatReader';
 import { MultiAgentGrid } from './MultiAgentGrid';
 import { FourSplitGrid } from './FourSplitGrid';
@@ -20,7 +19,6 @@ interface RemoteHistoryItem {
 }
 import { isTauri, commands } from '../../tauri';
 import { useT } from '../../i18n/useT';
-import { fetchGameCatalog, type RemoteGameEntry } from '../../utils/game-catalog';
 import './CenterPanel.css';
 
 // Tool icon assets bundled inline by Vite. PNGs use ?inline → base64 data URI;
@@ -403,8 +401,7 @@ export function CenterPanel() {
   const [toolsInstalled, setToolsInstalled] = useState<Record<string, boolean>>({});
   // Per-tool launch override modal (gear icon → opens settings for that tool).
   const [configModalTool, setConfigModalTool] = useState<{ key: string; label: string } | null>(null);
-  const [showArcadeGames, setShowArcadeGames] = useState(false);
-  const [libraryTab, setLibraryTab] = useState<'agents' | 'games'>('agents');
+  const [showLibrary, setShowLibrary] = useState(false);
   const [pinnedItems, setPinnedItems] = useState<string[]>(() => {
     // Hard cap must match MAX_PINS constant below. Inlined as a literal
     // because MAX_PINS is declared after this initializer runs.
@@ -448,12 +445,10 @@ export function CenterPanel() {
 
   const MAX_PINS = 6;
 
-  // Agent list is now fully local (baked into BUILTIN_AI_CLI_FALLBACK below)
-  // so there is no loading / cache state here — the previous remote catalog
-  // fetch at https://coffeecli.com/agents/catalog.json was deleted in v1.1.5
-  // to eliminate first-paint icon flashes and reduce the app's startup
-  // network dependency surface. Games still load remotely — see gamesLoading.
-  const [gamesLoading, setGamesLoading] = useState<boolean>(true);
+  // Agent list is fully local (baked into BUILTIN_AI_CLI_FALLBACK below) — no
+  // loading / cache state here. The remote catalog fetch at
+  // coffeecli.com/agents/catalog.json was deleted in v1.1.5 to eliminate
+  // first-paint icon flashes and reduce startup network dependency.
 
   // Auto-sync the VibeID skill on every launch. Small files (SKILL.md,
   // matrix.json, scripts) are re-fetched every time (~10 KB total, <1s on
@@ -537,9 +532,8 @@ export function CenterPanel() {
 
   // Unified agent catalog — fully local. The remote catalog fetch
   // (coffeecli.com/agents/catalog.json) was deleted in v1.1.5; product
-  // decision is that software is bundled with the app (delete-logic-not-add)
-  // while games stay remote (see fetchGameCatalog). AI CLIs and utilities
-  // are both hardcoded below.
+  // decision is that software is bundled with the app (delete-logic-not-add).
+  // AI CLIs and utilities are both hardcoded below.
   // - `type`: semantic category ('ai-cli' | 'utility'). Lets future code group/filter items.
   // - `requiresCwd`: behavior flag — drives folder-button + cwd display on Desktop cards.
   const AGENT_CATALOG: { key: ToolType; label: string; icon: React.ReactNode; type: 'ai-cli' | 'utility'; requiresCwd: boolean }[] = (() => {
@@ -638,19 +632,6 @@ export function CenterPanel() {
 
   // (renderPinIcon removed — selection state is now indicated by the
   // .library-item.is-pinned border + opacity, not a right-side icon.)
-  // Lazy-init from localStorage so the launchpad's 6th (game) card paints
-  // in the first frame alongside the static agent cards. Without the cache,
-  // it pops in 300-2000 ms later — once IPC + HTTP catalog fetch finish —
-  // which reads as the grid visibly jumping. Background refresh below
-  // overwrites with fresh catalog data on the next render, imperceptibly.
-  const [arcadeGames, setArcadeGames] = useState<{name:string;path:string;size:number;icon?:string;title?:string}[]>(() => {
-    try {
-      const cached = localStorage.getItem('coffee.arcadeGames.cache');
-      if (cached) return JSON.parse(cached);
-    } catch {}
-    return [];
-  });
-  const [gameCatalog, setGameCatalog] = useState<RemoteGameEntry[]>([]);
   const [disableDrawer, setDisableDrawer] = useState(false);
 
   // ── Remote Terminal SSH form state ─────────────────────────────────────────
@@ -752,7 +733,7 @@ export function CenterPanel() {
   // Never on pinnedItems changes → pin click stays instant.
   useEffect(() => {
     if (!isTauri || !isLaunchpadMode) return;
-    if (showArcadeGames) return; // Library open: stay silent
+    if (showLibrary) return; // Library open: stay silent
     // Debounce: rapid 9-dot ↔ back toggles would otherwise stack up
     // checkToolsInstalled() IPCs (PATH scan for 7 CLIs, ~200ms-1s each
     // on Windows). The serial IPC queue blocked React reconciliation
@@ -768,7 +749,7 @@ export function CenterPanel() {
       } catch {}
     }, 300);
     return () => clearTimeout(handle);
-  }, [isLaunchpadMode, showArcadeGames]);
+  }, [isLaunchpadMode, showLibrary]);
 
   // Auto-hide toast
   useEffect(() => {
@@ -954,47 +935,6 @@ export function CenterPanel() {
     setConnStatus('idle');
   };
 
-  // Single source of truth for the arcade catalog (loaded from
-  // coffeecli.com/play/game.json) and the resolved per-bundle install
-  // state. Used to be split across two useEffects on `[state.currentLang]`
-  // — both calling `fetchGameCatalog` — which double-hit the network on
-  // mount and let an older fetch's resolve clobber a newer one's state on
-  // rapid lang switches. Now a single debounced effect with a cancellation
-  // flag so any in-flight resolves from the previous lang are dropped.
-  useEffect(() => {
-    let cancelled = false;
-    const handle = setTimeout(() => {
-      if (!isTauri) {
-        fetchGameCatalog(state.currentLang)
-          .then(catalog => { if (!cancelled) setGameCatalog(catalog); })
-          .catch(() => {})
-          .finally(() => { if (!cancelled) setGamesLoading(false); });
-        return;
-      }
-      setGamesLoading(true);
-      Promise.allSettled([commands.listJsdosBundles(), fetchGameCatalog(state.currentLang)])
-        .then(([bundlesResult, catalogResult]) => {
-          if (cancelled) return;
-          const localBundles: any[] = bundlesResult.status === 'fulfilled' ? bundlesResult.value : [];
-          // If the remote catalog fetch failed (offline / CDN hiccup), keep
-          // whatever we already had from the localStorage cache rather than
-          // clobbering it with []. Otherwise users with bad networks would
-          // lose their pinned game cards every time they relaunched.
-          if (catalogResult.status !== 'fulfilled') return;
-          const catalog: RemoteGameEntry[] = catalogResult.value;
-          setGameCatalog(catalog);
-          const games = catalog.map(entry => {
-            const cached = localBundles.find((b: any) => b.name.toLowerCase() === entry.file.toLowerCase());
-            return { name: entry.file, path: cached ? cached.path : entry.download, size: cached ? cached.size : 0, icon: entry.icon, title: entry.title };
-          });
-          setArcadeGames(games);
-          try { localStorage.setItem('coffee.arcadeGames.cache', JSON.stringify(games)); } catch {}
-        })
-        .finally(() => { if (!cancelled) setGamesLoading(false); });
-    }, 200);
-    return () => { cancelled = true; clearTimeout(handle); };
-  }, [state.currentLang]);
-
   // Last path segment, Windows ("\") and POSIX ("/") safe. null when path unknown.
   const cwdBasename = (p: string | null | undefined): string | null => {
     if (!p) return null;
@@ -1049,14 +989,6 @@ export function CenterPanel() {
       case 'three-split': return { icon: <SvgThreeSplit />, title: cwd ?? t('tool.three_split' as any), tooltip: pathTip };
       case 'four-split': return { icon: <SvgFourSplit />, title: cwd ?? t('tool.four_split' as any), tooltip: pathTip };
       case 'hyper-agent': return { icon: <SvgHyperAgent />, title: t('tool.hyper_agent' as any), tooltip: undefined };
-      case 'arcade': {
-        const gameName = session.toolData || '';
-        const meta = gameCatalog.find(m => m.file.toLowerCase() === gameName.toLowerCase());
-        if (meta) {
-          return { icon: <img src={meta.icon} alt="" style={{ width: '1em', height: '1em', borderRadius: 'var(--radius-xs)', objectFit: 'cover' }} />, title: meta.title, tooltip: undefined };
-        }
-        return { icon: <span style={{ fontSize: '1em' }}>🎮</span>, title: 'Coffee Play', tooltip: undefined };
-      }
       case 'history': {
         let titleParam = 'History';
         if (session.toolData) {
@@ -1195,8 +1127,6 @@ export function CenterPanel() {
           >
             {t.tool === 'history' ? (
               <ChatReader sessionId={t.id} />
-            ) : t.tool === 'arcade' ? (
-              <DosPlayer sessionId={t.id} />
             ) : t.tool === 'multi-agent' ? (
               // Independent four-pane peer mode. Standalone Tab type —
               // does not share layout with the single-terminal path
@@ -1290,16 +1220,15 @@ export function CenterPanel() {
             )}
             {/* Close button removed: handles via Tab bar */}
             <div className="launchpad-slider-viewport">
-              <div className={`launchpad-slider-track ${showArcadeGames ? 'slide-to-games' : ''}`}>
-                
+              <div className={`launchpad-slider-track ${showLibrary ? 'slide-to-library' : ''}`}>
+
                 {/* ─── Page 1: Desktop (pinned items) ─── */}
                 <div className="launchpad-page">
                   <div className="launchpad-inner">
                     {(() => {
                       const pinnedAgents = AGENT_CATALOG.filter(a => pinnedItems.includes(`agent:${a.key}`));
-                      const pinnedGames = arcadeGames.filter(g => pinnedItems.includes(`game:${g.name}`));
 
-                      if (pinnedAgents.length === 0 && pinnedGames.length === 0) {
+                      if (pinnedAgents.length === 0) {
                         return null;
                       }
 
@@ -1390,30 +1319,6 @@ export function CenterPanel() {
                             );
                           })}
 
-                          {pinnedGames.map(game => {
-                            const title = game.title || game.name.replace(/\.jsdos$/i, '').replace(/[_-]/g, ' ');
-                            return (
-                              <div key={`game-${game.name}`} className="launchpad-card-group">
-                                <div
-                                  className="launchpad-card"
-                                  onClick={() => {
-                                    selectTool('arcade');
-                                    const sid = state.activeTerminalId;
-                                    if (sid) dispatch({ type: 'SET_TERMINAL_TOOL', id: sid, tool: 'arcade', toolData: game.name });
-                                  }}
-                                >
-                                  <div className="launchpad-icon">
-                                    {game.icon
-                                      ? <img src={game.icon} alt={title} style={{ width: '1.4em', height: '1.4em', borderRadius: 'var(--radius-xs)', objectFit: 'cover' }} />
-                                      : '🎮'}
-                                  </div>
-                                  <div className="launchpad-card-info">
-                                    <span>{title}</span>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
                         </div>
                       );
                     })()}
@@ -1581,20 +1486,10 @@ export function CenterPanel() {
                   </div>
                 </div>
 
-                {/* ─── Page 2: Library (Agents / Games) ─── */}
+                {/* ─── Page 2: Library (Agents) ─── */}
                 <div className="launchpad-page library-page">
                   <div className="launchpad-inner">
-                    {libraryTab === 'games' && gamesLoading && arcadeGames.length === 0 ? (
-                      <div className="library-grid">
-                        {Array.from({ length: 6 }, (_, i) => (
-                          <div key={`skel-game-${i}`} className="library-item library-item-skeleton">
-                            <div className="library-item-icon library-skeleton-block" />
-                            <span className="library-skeleton-line" />
-                          </div>
-                        ))}
-                      </div>
-                    ) : libraryTab === 'agents' ? (
-                      <>
+                    <>
                         {/* Section 1: AI CLI agents — 4-col grid (default) */}
                         <div className="library-grid">
                           {AGENT_CATALOG.filter(item => item.type === 'ai-cli').map(item => {
@@ -1652,50 +1547,11 @@ export function CenterPanel() {
                             );
                           })}
                         </div>
-                      </>
-                    ) : (
-                      <div className="library-grid">
-                        {arcadeGames.map(game => {
-                          const title = game.title || game.name.replace(/\.jsdos$/i, '').replace(/[_-]/g, ' ');
-                          const pinId = `game:${game.name}`;
-                          const isPinned = pinnedItems.includes(pinId);
-                          return (
-                            <div
-                              key={game.name}
-                              className={`library-item ${isPinned ? 'is-pinned' : ''}`}
-                              onClick={() => togglePin(pinId)}
-                            >
-                              <div className="library-item-icon">
-                                {game.icon
-                                  ? <img src={game.icon} alt={title} style={{ width: '1.4em', height: '1.4em', borderRadius: 'var(--radius-xs)', objectFit: 'cover' }} />
-                                  : '🎮'}
-                              </div>
-                              <span className="library-item-name">{title}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
+                    </>
                   </div>
 
-                  {/* Pin counter above tabs */}
+                  {/* Pin counter */}
                   <div className="library-counter">{pinnedItems.length}/{MAX_PINS}</div>
-
-                  {/* Bottom tab switcher: Agents / Games */}
-                  <div className="library-tabs">
-                    <button
-                      className={`library-tab ${libraryTab === 'agents' ? 'active' : ''}`}
-                      onClick={() => setLibraryTab('agents')}
-                    >
-                      Agents
-                    </button>
-                    <button
-                      className={`library-tab ${libraryTab === 'games' ? 'active' : ''}`}
-                      onClick={() => setLibraryTab('games')}
-                    >
-                      Games
-                    </button>
-                  </div>
                 </div>
                 
               </div>
@@ -1710,17 +1566,11 @@ export function CenterPanel() {
                 onClick={() => {
                   setDisableDrawer(true);
                   setTimeout(() => setDisableDrawer(false), 500);
-                  // Pure toggle. The arcade catalog is already fetched on
-                  // mount (and on language change) by the useEffect above —
-                  // refetching on every click stacks up in-flight Tauri IPC
-                  // + remote-catalog requests, and their `setArcadeGames`
-                  // resolves landed mid-slide on rapid clicks, locking the
-                  // toggle for a couple of seconds. Keep this handler cheap.
-                  setShowArcadeGames(prev => !prev);
+                  setShowLibrary(prev => !prev);
                 }}
               >
                 <div className="mode-switch-icon">
-                  {!showArcadeGames ? (
+                  {!showLibrary ? (
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                       <circle cx="5" cy="5" r="2"/>
                       <circle cx="12" cy="5" r="2"/>
