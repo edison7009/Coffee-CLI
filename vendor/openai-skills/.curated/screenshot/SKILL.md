@@ -1,10 +1,27 @@
 ---
 name: "screenshot"
+name_en: Screenshot
 name_zh-CN: 屏幕截图
 name_zh-TW: 螢幕截圖
+name_ja: スクリーンショット
+name_ko: 스크린샷
+name_vi: Chụp màn hình
+name_ru: Скриншот
+name_pt: Captura de tela
+name_es: Captura de pantalla
+name_fr: Capture d'écran
+name_de: Bildschirmfoto
 description: "Use when the user explicitly asks for a desktop or system screenshot (full screen, specific app or window, or a pixel region), or when tool-specific capture capabilities are unavailable and an OS-level capture is needed."
 description_zh-CN: "用户明确要求截屏(整屏、指定应用/窗口、或某块像素区域)时使用。当当前工具自带的捕获能力缺失、需要 OS 级别截图时也调用本技能。"
 description_zh-TW: "使用者明確要求截圖(整螢幕、指定應用程式/視窗、或某塊像素區域)時使用。當前工具內建的截圖能力缺失、需要 OS 級截圖時也呼叫本技能。"
+description_ja: "ユーザーがデスクトップやシステムのスクリーンショット(全画面、特定のアプリやウィンドウ、ピクセル領域)を明示的に求めるとき、または現在のツール固有のキャプチャ機能が使えず OS レベルのキャプチャが必要なときに使用します。"
+description_ko: "사용자가 데스크톱이나 시스템 스크린샷(전체 화면, 특정 앱이나 창, 또는 픽셀 영역)을 명시적으로 요청하거나, 현재 도구의 캡처 기능을 사용할 수 없어 OS 수준의 캡처가 필요할 때 사용합니다."
+description_vi: "Sử dụng khi người dùng yêu cầu rõ ràng chụp màn hình desktop hoặc hệ thống (toàn màn hình, một ứng dụng/cửa sổ cụ thể, hoặc một vùng pixel), hoặc khi khả năng chụp riêng của công cụ không khả dụng và cần chụp ở mức OS."
+description_ru: "Использовать, когда пользователь явно просит снимок экрана рабочего стола или системы (весь экран, конкретное приложение или окно, либо область в пикселях), либо когда специфические возможности захвата текущего инструмента недоступны и требуется захват на уровне ОС."
+description_pt: "Use quando o usuário pedir explicitamente uma captura de tela do desktop ou do sistema (tela cheia, um aplicativo ou janela específica, ou uma região em pixels), ou quando os recursos de captura específicos da ferramenta não estiverem disponíveis e for necessária uma captura em nível de SO."
+description_es: "Úsalo cuando el usuario pida explícitamente una captura del escritorio o del sistema (pantalla completa, una app o ventana concreta, o una región en píxeles), o cuando las capacidades de captura propias de la herramienta no estén disponibles y se necesite una captura a nivel del SO."
+description_fr: "À utiliser quand l'utilisateur demande explicitement une capture d'écran du bureau ou du système (plein écran, une application/fenêtre spécifique, ou une zone en pixels), ou quand les capacités de capture propres à l'outil ne sont pas disponibles et qu'une capture au niveau de l'OS est nécessaire."
+description_de: "Verwenden, wenn der Nutzer explizit einen Screenshot des Desktops oder Systems anfragt (Vollbild, eine bestimmte App oder ein Fenster, oder einen Pixelbereich) oder wenn die toolspezifischen Aufnahmefunktionen fehlen und eine Aufnahme auf OS-Ebene benötigt wird."
 ---
 
 
