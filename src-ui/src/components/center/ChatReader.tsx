@@ -179,10 +179,6 @@ export function ChatReader({ sessionId }: { sessionId: string }) {
 
   if (!currentSession) return null;
 
-  const handleClose = () => {
-    dispatch({ type: 'REMOVE_TERMINAL', id: sessionId });
-  };
-
   const handleResume = () => {
     if (!currentSession?.session_token) return;
 
@@ -209,24 +205,16 @@ export function ChatReader({ sessionId }: { sessionId: string }) {
 
   return (
     <div className="chat-reader-container">
-      <div className="chat-reader-header" style={{ justifyContent: 'flex-end' }}>
-        <div className="chat-reader-actions">
-          <button className="chat-reader-btn btn-secondary" onClick={handleClose}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-            {t('action.close' as any) || 'Close'}
-          </button>
-          <button className="chat-reader-btn btn-primary" onClick={handleResume}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="5 12 12 5 19 12"></polyline>
-              <line x1="12" y1="19" x2="12" y2="5"></line>
-            </svg>
-            {t('action.resume_terminal' as any) || 'Continue this session'}
-          </button>
-        </div>
-      </div>
+      {/* Floating Resume button — closing the session is what the tab × is
+       * for; a parallel Close button in a heavy backdrop bar duplicated
+       * affordances and ate vertical space. */}
+      <button className="chat-reader-resume btn-primary" onClick={handleResume}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="5 12 12 5 19 12"></polyline>
+          <line x1="12" y1="19" x2="12" y2="5"></line>
+        </svg>
+        {t('action.resume_terminal' as any) || 'Continue this session'}
+      </button>
 
       <div className="chat-reader-body" ref={scrollRef}>
         {loading ? (

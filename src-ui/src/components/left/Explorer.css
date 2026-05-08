@@ -68,15 +68,17 @@
        slightly different intrinsic heights, and when the folder path
        toggles between "empty state label" and an actual path, the button
        was visibly resizing. Replace vertical padding with fixed height +
-       line-height to lock it regardless of content. */
-    height: 28px;
+       line-height to lock it regardless of content. 34px = the rendered
+       height of the Sessions tab's <input> at font 13 / padding 8 with
+       browser default line-height (~1.2). */
+    height: 34px;
     padding: 0 10px;
-    background: transparent;
-    border: 1px solid var(--border-input);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     color: var(--text-3);
     font-family: var(--font);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 500;
     line-height: 1;
     cursor: pointer;
@@ -103,7 +105,7 @@
     /* Match the fixed button height so vertical centering is consistent
        across languages (different scripts have different default
        line-heights otherwise). */
-    line-height: 26px;
+    line-height: 32px;
 }
 
 /* Custom styling removed for first child separator */
@@ -122,14 +124,16 @@
     padding: 8px 4px 8px 8px; /* Top, Right, Bottom, Left. Keep right small so scrollbar has room */
 }
 
-/* HistoryBoard host: matches the gutter HistoryBoard had inside .task-board
- * (16px) and gives its inner .task-list room to flex-grow. */
+/* HistoryBoard host: 16px horizontal gutter aligns the search box and
+ * cards with the workspace tab's path button + tab strip; vertical
+ * spacing is left to .explorer-tabs's 8px margin-bottom so the rhythm
+ * matches Workspace. */
 .explorer-history-host {
     flex: 1;
     display: flex;
     flex-direction: column;
     min-height: 0;
-    padding: 12px 14px;
+    padding: 0 16px;
 }
 
 .tree-dir, .tree-file {

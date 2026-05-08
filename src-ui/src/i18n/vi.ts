@@ -83,8 +83,8 @@ export const vi = {
   'task.greeting.morning': 'Chào buổi sáng, kế hoạch hôm nay là gì?',
   'task.greeting.afternoon': 'Chào buổi chiều, còn việc gì cần làm không?',
   'task.greeting.evening': 'Chào buổi tối. Có kế hoạch gì lớn không?',
-  'task.tab.tasks': 'Nhiệm vụ',
-  'task.tab.changes': 'Thay đổi',
+  'task.tab.tasks': 'Danh sách',
+  'task.tab.changes': 'Lịch sử',
   'changes.empty': 'Chưa có thay đổi.',
   'diff.loading': 'Đang tải…',
   'diff.error': 'Không thể tải diff',
@@ -95,7 +95,6 @@ export const vi = {
   'task.messages': '{count} tin nhắn',
 
   // Actions
-  'action.close': 'Đóng',
   'action.resume_terminal': 'Tiếp tục phiên này',
 
   // Time

@@ -80,8 +80,8 @@ export const zhTW = {
   'task.greeting.morning': '早安，今天想做些什麼？',
   'task.greeting.afternoon': '午安，還有什麼要做的？',
   'task.greeting.evening': '晚安，想來點大事嗎？',
-  'task.tab.tasks': '任務',
-  'task.tab.changes': '修改',
+  'task.tab.tasks': '任務列表',
+  'task.tab.changes': '修改記錄',
   'changes.empty': '暫無修改。',
   'diff.loading': '載入中…',
   'diff.error': '無法載入差異',
@@ -92,7 +92,6 @@ export const zhTW = {
   'task.messages': '{count} 則訊息',
 
   // Actions
-  'action.close': '關閉',
   'action.resume_terminal': '繼續此次對話',
 
   // Time

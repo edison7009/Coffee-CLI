@@ -80,8 +80,8 @@ export const ja = {
   'task.greeting.morning': 'おはようございます。今日の予定は？',
   'task.greeting.afternoon': 'こんにちは。残りのタスクは？',
   'task.greeting.evening': 'こんばんは。何か始めますか？',
-  'task.tab.tasks': 'タスク',
-  'task.tab.changes': '変更',
+  'task.tab.tasks': 'タスク一覧',
+  'task.tab.changes': '変更履歴',
   'changes.empty': 'まだ変更はありません。',
   'diff.loading': '読み込み中…',
   'diff.error': '差分を読み込めません',
@@ -92,7 +92,6 @@ export const ja = {
   'task.messages': 'メッセージ {count} 件',
 
   // Actions
-  'action.close': '閉じる',
   'action.resume_terminal': 'このセッションを続ける',
 
   // Time

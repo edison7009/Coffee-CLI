@@ -81,8 +81,8 @@ export const de = {
   'task.greeting.morning': 'Guten Morgen, was steht an?',
   'task.greeting.afternoon': 'Guten Tag, noch etwas zu tun?',
   'task.greeting.evening': 'Guten Abend. Etwas Großes geplant?',
-  'task.tab.tasks': 'Aufgaben',
-  'task.tab.changes': 'Änderungen',
+  'task.tab.tasks': 'Aufgabenliste',
+  'task.tab.changes': 'Änderungsverlauf',
   'changes.empty': 'Noch keine Änderungen.',
   'diff.loading': 'Wird geladen…',
   'diff.error': 'Diff konnte nicht geladen werden',
@@ -93,7 +93,6 @@ export const de = {
   'task.messages': '{count} Nachrichten',
 
   // Actions
-  'action.close': 'Schließen',
   'action.resume_terminal': 'Diese Sitzung fortsetzen',
 
   // Time

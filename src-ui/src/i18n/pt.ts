@@ -81,8 +81,8 @@ export const pt = {
   'task.greeting.morning': 'Bom dia, qual é o plano?',
   'task.greeting.afternoon': 'Boa tarde, algo pendente?',
   'task.greeting.evening': 'Boa noite. Algo ambicioso?',
-  'task.tab.tasks': 'Tarefas',
-  'task.tab.changes': 'Alterações',
+  'task.tab.tasks': 'Lista de tarefas',
+  'task.tab.changes': 'Histórico',
   'changes.empty': 'Ainda sem alterações.',
   'diff.loading': 'Carregando…',
   'diff.error': 'Falha ao carregar diff',
@@ -93,7 +93,6 @@ export const pt = {
   'task.messages': '{count} mensagens',
 
   // Actions
-  'action.close': 'Fechar',
   'action.resume_terminal': 'Continuar esta sessão',
 
   // Time

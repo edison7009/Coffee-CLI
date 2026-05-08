@@ -80,8 +80,8 @@ export const zhCN = {
   'task.greeting.morning': '早，今天想做点什么',
   'task.greeting.afternoon': '下午好，还有什么要做的？',
   'task.greeting.evening': '晚上好，想干点什么大事？',
-  'task.tab.tasks': '任务',
-  'task.tab.changes': '修改',
+  'task.tab.tasks': '任务列表',
+  'task.tab.changes': '修改记录',
   'changes.empty': '暂无修改。',
   'diff.loading': '加载中…',
   'diff.error': '无法加载差异',
@@ -92,7 +92,6 @@ export const zhCN = {
   'task.messages': '{count} 条消息',
 
   // Actions
-  'action.close': '关闭',
   'action.resume_terminal': '继续本轮对话',
 
   // Time

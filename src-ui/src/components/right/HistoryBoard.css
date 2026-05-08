@@ -6,8 +6,8 @@
    contrast. */
 
 .history-card {
-  padding: 12px 14px;
-  margin-bottom: 6px;
+  padding: 14px 14px;
+  margin-bottom: 8px;
   cursor: default !important;
   background: var(--bg-card);
   border-radius: var(--radius-sm);

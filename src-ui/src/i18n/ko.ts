@@ -80,8 +80,8 @@ export const ko = {
   'task.greeting.morning': '좋은 아침, 오늘 계획은?',
   'task.greeting.afternoon': '안녕하세요, 남은 할 일이 있나요?',
   'task.greeting.evening': '좋은 저녁, 뭔가 시작해볼까요?',
-  'task.tab.tasks': '작업',
-  'task.tab.changes': '변경',
+  'task.tab.tasks': '작업 목록',
+  'task.tab.changes': '변경 기록',
   'changes.empty': '아직 변경 사항이 없습니다.',
   'diff.loading': '로딩 중…',
   'diff.error': '차이 로드 실패',
@@ -92,7 +92,6 @@ export const ko = {
   'task.messages': '메시지 {count}개',
 
   // Actions
-  'action.close': '닫기',
   'action.resume_terminal': '이 세션 계속하기',
 
   // Time

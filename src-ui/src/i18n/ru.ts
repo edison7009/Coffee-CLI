@@ -81,8 +81,8 @@ export const ru = {
   'task.greeting.morning': 'Доброе утро, какой план?',
   'task.greeting.afternoon': 'Добрый день, что-то осталось?',
   'task.greeting.evening': 'Добрый вечер. Что-нибудь масштабное?',
-  'task.tab.tasks': 'Задачи',
-  'task.tab.changes': 'Изменения',
+  'task.tab.tasks': 'Список задач',
+  'task.tab.changes': 'История изменений',
   'changes.empty': 'Изменений пока нет.',
   'diff.loading': 'Загрузка…',
   'diff.error': 'Не удалось загрузить diff',
@@ -93,7 +93,6 @@ export const ru = {
   'task.messages': '{count} сообщений',
 
   // Actions
-  'action.close': 'Закрыть',
   'action.resume_terminal': 'Продолжить сессию',
 
   // Time

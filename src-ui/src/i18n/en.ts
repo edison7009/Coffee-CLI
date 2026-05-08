@@ -94,7 +94,6 @@ export const en = {
   'task.messages': '{count} messages',
 
   // Actions
-  'action.close': 'Close',
   'action.resume_terminal': 'Continue this session',
 
   // Time
