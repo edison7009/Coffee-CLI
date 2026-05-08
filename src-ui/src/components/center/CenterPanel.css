@@ -765,11 +765,14 @@
   padding: 8px 4px 80px;
 }
 
+/* Single-row card layout: [icon] [name+desc] [toggle].
+   Description truncates to one line with ellipsis; full text is
+   exposed on hover via the heatmap-style data-tip tooltip below. */
 .skills-card {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 14px 16px;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -778,12 +781,6 @@
 
 .skills-card.is-enabled {
   border-color: var(--accent);
-}
-
-.skills-card-head {
-  display: flex;
-  align-items: center;
-  gap: 12px;
 }
 
 /* Big bare icon — no background plate, no rounded clip, no border.
@@ -812,21 +809,78 @@
   color: var(--text-2);
 }
 
-.skills-card-name {
+/* Vertical stack of name + truncated description, takes up all
+   horizontal space between icon and toggle. min-width: 0 is the
+   flex hack that lets the description's text-overflow: ellipsis
+   actually fire — without it the flex item refuses to shrink
+   below its content's intrinsic width. */
+.skills-card-text {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.skills-card-name {
   font-size: 14px;
   font-weight: 600;
   color: var(--text-1);
-  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .skills-card-desc {
+  position: relative;
   font-size: 12.5px;
-  line-height: 1.5;
+  line-height: 1.4;
   color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: help;
+}
+
+/* Themed tooltip — same recipe as .heatmap-cell[data-tip] (see
+   ContributionHeatmap.css). Differences vs the heatmap version:
+   white-space: normal + max-width so a full multi-sentence skill
+   description wraps inside the pill instead of stretching off-
+   screen, and left: 0 / bottom alignment so the pill anchors to
+   the description's left edge (the truncated text starts there).
+   Theme-aware via var(--bg-panel) / var(--text-1) / var(--border). */
+.skills-card-desc[data-tip]:hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  max-width: min(480px, 90vw);
+  width: max-content;
+  padding: 8px 12px;
+  background: var(--bg-panel);
+  color: var(--text-1);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: normal;
+  pointer-events: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.20), 0 6px 20px rgba(0, 0, 0, 0.22);
+  z-index: 100;
+}
+
+.skills-card-desc[data-tip]:hover::before {
+  content: '';
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 16px;
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 4px solid var(--border);
+  pointer-events: none;
+  z-index: 100;
 }
 
 /* iOS-style toggle switch — 36×20 track, 16×16 thumb. */
