@@ -978,12 +978,18 @@ export function CenterPanel() {
                 {/* Indicator gate. AI CLIs with hook integration —
                     claude/codex/opencode each have a forwarder (Python
                     script for claude+codex, Bun plugin for opencode)
-                    wired to the same agent-status bus. Color follows
-                    session.agentStatus. Anything else (terminal,
-                    history, multi-agent, etc.) gets no indicator. */}
-                {(session.tool === 'claude' || session.tool === 'codex' || session.tool === 'opencode') && (
+                    wired to the same agent-status bus; color follows
+                    session.agentStatus. Hyper-Agent is the MCP admin
+                    tab — its job is "stay open so OpenClaw / Hermes
+                    Agent can drive the team", so the tab being open
+                    *is* the alive signal: always green idle, no agent
+                    state to read. Anything else (terminal, history,
+                    multi-agent, etc.) gets no indicator. */}
+                {(session.tool === 'claude' || session.tool === 'codex' || session.tool === 'opencode' || session.tool === 'hyper-agent') && (
                   <div className={`tab-status-grid status-${
-                    session.agentStatus === 'wait_input' ? 'waiting' : session.agentStatus ?? 'idle'
+                    session.tool === 'hyper-agent'
+                      ? 'idle'
+                      : session.agentStatus === 'wait_input' ? 'waiting' : session.agentStatus ?? 'idle'
                   }${__IS_LINUX__ ? ' tab-status-grid--static' : ''}`}>
                     {/* Linux gate — the 9 dot wave/snake/ripple animations are
                         opacity-loop infinites with box-shadow halos. WebKit2GTK
