@@ -1203,9 +1203,9 @@ body.gambit-docked .chat-reader-container {
    Buttons / inputs / textareas / anchors aren't matched by the
    element list at all, so their own hover/focus bgs are
    untouched. */
-[data-shape="glass"] .panel-left :is(div, section, aside, nav, header, footer, main):not(.launchpad-card, .launchpad-card-group, .task-card, .task-droppable-area, .guide-card, .remote-form-card, .remote-form-overlay, .remote-protocol-toggle, .remote-pill, .chat-input-container, .library-item, .ctx-menu, .gambit, .tool-config-modal, .tab-status-dot, .heatmap-cell, .diff-line),
-[data-shape="glass"] .panel-right :is(div, section, aside, nav, header, footer, main):not(.launchpad-card, .launchpad-card-group, .task-card, .task-droppable-area, .guide-card, .remote-form-card, .remote-form-overlay, .remote-protocol-toggle, .remote-pill, .chat-input-container, .library-item, .ctx-menu, .gambit, .tool-config-modal, .tab-status-dot, .heatmap-cell, .diff-line),
-[data-shape="glass"] .panel-center :is(div, section, aside, nav, header, footer, main):not(.launchpad-card, .launchpad-card-group, .task-card, .task-droppable-area, .guide-card, .remote-form-card, .remote-form-overlay, .remote-protocol-toggle, .remote-pill, .chat-input-container, .library-item, .ctx-menu, .gambit, .tool-config-modal, .tab-status-dot, .heatmap-cell, .diff-line) {
+[data-shape="glass"] .panel-left :is(div, section, aside, nav, header, footer, main):not(.launchpad-card, .launchpad-card-group, .task-card, .task-droppable-area, .guide-card, .remote-form-card, .remote-form-overlay, .remote-protocol-toggle, .remote-pill, .chat-input-container, .library-item, .library-tabs, .ctx-menu, .gambit, .tool-config-modal, .tab-status-dot, .heatmap-cell, .diff-line),
+[data-shape="glass"] .panel-right :is(div, section, aside, nav, header, footer, main):not(.launchpad-card, .launchpad-card-group, .task-card, .task-droppable-area, .guide-card, .remote-form-card, .remote-form-overlay, .remote-protocol-toggle, .remote-pill, .chat-input-container, .library-item, .library-tabs, .ctx-menu, .gambit, .tool-config-modal, .tab-status-dot, .heatmap-cell, .diff-line),
+[data-shape="glass"] .panel-center :is(div, section, aside, nav, header, footer, main):not(.launchpad-card, .launchpad-card-group, .task-card, .task-droppable-area, .guide-card, .remote-form-card, .remote-form-overlay, .remote-protocol-toggle, .remote-pill, .chat-input-container, .library-item, .library-tabs, .ctx-menu, .gambit, .tool-config-modal, .tab-status-dot, .heatmap-cell, .diff-line) {
     background: transparent !important;
     border-color: transparent !important;
     box-shadow: none !important;
@@ -1273,36 +1273,45 @@ body.gambit-docked .chat-reader-container {
         0 24px 64px rgba(0, 0, 0, 0.5);
 }
 
-/* Tab family — all four tab strips (chrome / Explorer / TaskBoard /
-   Library Agents↔Skills) go fully transparent in glass. Active state
-   is indicated by text-1 color contrast alone (source default). No
-   container pill, no active fill, no outline. Matches the
-   "全部透明,只靠主背景半透层" architecture: every tab IS the body's
-   --glass-tint — adding any local bg would stack a second visible
-   layer. The library-tab .active source default is `background:
-   var(--accent)` so we have to actively clear it here. */
+/* Tab family — chrome / Explorer / TaskBoard tab strips go fully
+   transparent in glass. Active state indicated by text-1 color
+   contrast alone (source default). No container pill, no active
+   fill, no outline. Matches the "全部透明,只靠主背景半透层"
+   architecture: every tab IS the body's --glass-tint — adding any
+   local bg would stack a second visible layer.
+   Library Agents↔Skills is NOT in this group — it's a discrete
+   segmented control, not a tab strip; treated below with its own
+   pill container + lit-up active segment. */
 [data-shape="glass"] .chrome-tab.active,
 [data-shape="glass"] .right-tab.active,
-[data-shape="glass"] .explorer-tab.active,
-[data-shape="glass"] .library-tab.active {
-    background: transparent;
+[data-shape="glass"] .explorer-tab.active {
     color: var(--text-1);
 }
 
-/* Library tab container — keep the pill OUTLINE in glass too so
-   the Agents/Skills switcher stays a recognizable widget, but
-   frost the surface (same family as ctx-menu / gambit popover /
-   tool-config-modal) instead of the source-default solid bg-panel
-   slab. The pill is a small floating chrome element above the
-   launchpad — same Liquid-Glass tier as the other floating overlays. */
+/* Library segmented toggle (Agents / Skills above the launchpad
+   grid). Container becomes a faint glass pill; the active segment
+   inside reads as "lit-up brighter glass" instead of the source-
+   default solid var(--accent) fill, which clashed visually with
+   the rest of the glass language. .library-tabs is excluded from
+   the panel-* :not() nuclear rule above so these settings actually
+   take effect. */
 [data-shape="glass"] .library-tabs {
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
-    box-shadow:
-        inset 0 1px 0 0 rgba(255, 255, 255, 0.18),
-        0 8px 24px rgba(0, 0, 0, 0.30);
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.10);
+    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+}
+
+[data-shape="glass"] .library-tab.active {
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--text-1);
+    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.24);
+    /* Concentric corners: .library-tabs uses --radius-md with 4px
+       padding, so its visible inner curve is (md - 4px). The active
+       segment must match exactly or its corners don't sit flush
+       against the inner wall. */
+    border-radius: calc(var(--radius-md) - 4px);
 }
 
 /* "6/6" pin-count badge inside the Agents tab — source default
