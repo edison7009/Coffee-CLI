@@ -177,6 +177,10 @@
    * every horizontal pixel for titles. */
   gap: 4px;
   padding: 10px 4px 10px 8px;
+  /* Non-edit mode has an inline-flex pencil that bumps the line-box
+     ~3px above the strut; the <input> in edit mode has no such child
+     and would shrink the row. Pin to keep height stable across modes. */
+  min-height: 42px;
 }
 
 .task-card:hover {
