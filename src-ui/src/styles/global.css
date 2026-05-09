@@ -1305,18 +1305,18 @@ body.gambit-docked .chat-reader-container {
         0 8px 24px rgba(0, 0, 0, 0.30);
 }
 
-/* "6/6" pin-count badge inside the Agents tab — source default uses
-   a double layer (bg-app base + bg-panel overlay) so the badge color
-   matches the Skills inactive tab in every solid theme. In glass that
-   prints a flat dark slab against the frosted surface. Reduce to a
-   single faint wash with no outline — it's a count hint inline with
-   the tab label, not a separate framed widget. */
+/* "6/6" pin-count badge inside the Agents tab — source default
+   layers bg-app + bg-panel for cross-theme color matching, but in
+   glass even a faint white wash still reads as a separate framed
+   capsule next to the tab label. Strip the surface entirely; the
+   badge becomes inline text on the tab, set apart only by a dimmer
+   color (text-3) and the smaller font-size already in the source. */
 [data-shape="glass"] .library-tab-badge {
+    background: none;
     background-color: transparent;
     background-image: none;
-    background: rgba(255, 255, 255, 0.08);
     border: none;
-    color: var(--text-2);
+    color: var(--text-3);
 }
 
 /* Card hover: kill the translateY lift so the cards stay still
