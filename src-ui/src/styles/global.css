@@ -1304,23 +1304,31 @@ body.gambit-docked .chat-reader-container {
 }
 
 /* Library chrome buttons in glass — back chevron + per-card gear.
-   Source defaults (text-3 with 0.7 / 0.35 opacity) were tuned
-   against solid bg-panel. Against the glass-frosted launchpad
-   surface — which inherits wallpaper luminance — text-3 dissolves
-   into bright wallpaper regions and the buttons become invisible.
-   Lift the default tier to text-2 with stronger opacity so they
-   stay discoverable; hover state (accent at full opacity) is the
-   source-default reward and stays unchanged. */
+   Source defaults (text-3 + low opacity) were tuned against the
+   solid bg-panel surface; against glass-frosted backdrops with
+   variable wallpaper luminance, text-3 disappears entirely.
+   In glass we promote the default state to the same brightness
+   the source uses for HOVER, so the buttons are always legible
+   without needing the user to find them first. */
+
+/* Back chevron is the only one of its kind in this view — safe to
+   paint accent + full opacity (the source-default hover reward)
+   as the new baseline. No additional hover lift needed; reads as
+   "always primary action" against the frosted chrome. */
 [data-shape="glass"] .mode-switch-btn {
-    color: var(--text-2);
-    opacity: 0.9;
+    color: var(--accent);
+    opacity: 1;
 }
+
+/* Per-card gear renders 4–8× simultaneously, so painting all of
+   them accent would compete with the .is-pinned accent treatment
+   and cluster the eye. Promote to text-1 + full opacity instead
+   (bright, unmistakable, but neutral grey). Hover on the gear
+   itself still rewards with accent — that promotion is the
+   per-button cue, not the always-on baseline. */
 [data-shape="glass"] .library-gear-btn {
-    color: var(--text-2);
-    opacity: 0.55;
-}
-[data-shape="glass"] .library-item:hover .library-gear-btn {
-    opacity: 0.85;
+    color: var(--text-1);
+    opacity: 1;
 }
 
 [data-shape="glass"] .library-tab.active {
