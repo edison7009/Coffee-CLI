@@ -27,8 +27,10 @@
 //! frontend would do HTTP fetches via `fetch()` and pipe bytes into
 //! `skills_write_file`. No HTTP client in Rust deps.
 
+use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::{Mutex, OnceLock};
 
 use base64::Engine;
 use serde::{Deserialize, Serialize};
@@ -102,11 +104,12 @@ static BUNDLED_COFFEE_SKILLS: include_dir::Dir<'_> =
 /// truth across launchpad, heatmap, and skills mirror.
 ///
 /// Trade-off vs a cheaper directory-existence check: we shell out
-/// to `where`/`which` per target on each toggle (6 spawns). Toggle
-/// is a rare user action so the cost is negligible, and being
-/// authoritative about "is the tool installed?" beats inferring
-/// from filesystem residue (a stale `~/.qwen/` left by an
-/// uninstall would otherwise fool a dir-marker check).
+/// to `where`/`which` per target. The first toggle in a session pays
+/// up to 6 spawns (one per target binary); after that they're cached
+/// in `TOOL_INSTALLED_CACHE` and every subsequent toggle is free.
+/// Being authoritative about "is the tool installed?" beats inferring
+/// from filesystem residue (a stale `~/.qwen/` left by an uninstall
+/// would otherwise fool a dir-marker check).
 const TARGET_CLI_SKILL_DIRS: &[(&str, &str)] = &[
     ("claude",   ".claude/skills"),
     ("codex",    ".codex/skills"),
@@ -116,13 +119,39 @@ const TARGET_CLI_SKILL_DIRS: &[(&str, &str)] = &[
     ("openclaw", ".openclaw/workspace/skills"),
 ];
 
+/// Process-level cache of `is_tool_installed` results. A single toggle
+/// fans out to `precheck_link_conflicts` (6 probes) and then
+/// `link_into_cli_dirs` (another 6) — that's 12 `where`/`which` spawns
+/// per click, and on Windows each spawn is hundreds of milliseconds,
+/// which the user feels as a stall on the toggle. Tool install state
+/// almost never changes during one Coffee CLI session, so we probe
+/// once per binary and reuse the result for the rest of the process
+/// lifetime. If the user installs/uninstalls a target CLI mid-session
+/// they need to relaunch Coffee CLI to pick up the change — that's a
+/// rare and explicit user action, worth the trade-off vs paying the
+/// PATH-probe cost on every toggle.
+static TOOL_INSTALLED_CACHE: OnceLock<Mutex<HashMap<String, bool>>> = OnceLock::new();
+
 /// Wraps the platform-specific PATH check from `server.rs` so
-/// `link_into_cli_dirs` can stay platform-clean.
+/// `link_into_cli_dirs` can stay platform-clean. Cached — see
+/// `TOOL_INSTALLED_CACHE`.
 fn is_tool_installed(bin: &str) -> bool {
-    #[cfg(target_os = "windows")]
-    { crate::server::check_tool_windows(bin) }
-    #[cfg(not(target_os = "windows"))]
-    { crate::server::check_tool_unix(bin) }
+    let cache = TOOL_INSTALLED_CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+    if let Ok(guard) = cache.lock() {
+        if let Some(&v) = guard.get(bin) {
+            return v;
+        }
+    }
+    let probed = {
+        #[cfg(target_os = "windows")]
+        { crate::server::check_tool_windows(bin) }
+        #[cfg(not(target_os = "windows"))]
+        { crate::server::check_tool_unix(bin) }
+    };
+    if let Ok(mut guard) = cache.lock() {
+        guard.insert(bin.to_string(), probed);
+    }
+    probed
 }
 
 /// Phased rollout allowlist. The combined bundle (openai/skills .curated

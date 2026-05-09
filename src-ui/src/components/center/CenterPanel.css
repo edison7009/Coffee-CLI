@@ -319,9 +319,8 @@
 }
 
 /* Library chrome: back button at top-left. Tab pill (.library-tabs--top)
-   self-positions via its own rule. Pin counter is now an inline badge
-   inside the Agents tab (.library-tab-badge) — no separate floating
-   element. */
+   self-positions via its own rule. Pin counter is plain inline text
+   inside the Agents tab — no separate styled element. */
 .launchpad-chrome--library > .launchpad-chrome-back {
   position: absolute;
   top: 16px;
@@ -513,6 +512,14 @@
 
 /* ─── Premium Toast Notification ─── */
 
+/* iOS-style top banner — Portaled to document.body, so positioned
+   against the real viewport rather than any inner container.
+   `position: fixed` + viewport-relative top means the slide-down
+   animation truly reads as "drops in from the top edge of the
+   window" (system-banner idiom), not "slides out from inside
+   the terminal area." top:48 sits a comfortable margin under
+   the custom titlebar (~40px on Windows / Linux Tauri) without
+   landing on the chrome-tabs-header. */
 @keyframes slideDownToast {
   0% { transform: translate(-50%, -200%); opacity: 0; }
   15% { transform: translate(-50%, 0); opacity: 1; }
@@ -521,22 +528,27 @@
 }
 
 .toast-notification {
-  position: absolute;
-  top: 64px;
+  position: fixed;
+  top: 48px;
   left: 50%;
   transform: translateX(-50%);
   background: var(--bg-panel);
   color: var(--text-1);
   border: 1px solid var(--border);
-  padding: 10px 20px;
-  border-radius: var(--radius-md);
+  padding: 14px 28px;
+  /* Capsule (iOS-style banner shape) — fully rounded ends instead of
+     the project's standard --radius-md rectangles. Keeps the toast
+     visually distinct from cards / panels / modals (which all use
+     --radius-md), so it reads instantly as "transient notification"
+     rather than another piece of permanent chrome. */
+  border-radius: 999px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.20), 0 6px 20px rgba(0, 0, 0, 0.22);
   z-index: 1000;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 500;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   animation: slideDownToast 3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   pointer-events: none;
 }
@@ -760,36 +772,6 @@
   height: 18px;
 }
 
-/* Pin counter as inline badge — always renders with the same muted
-   chip look (panel bg + dim text), regardless of whether the
-   Agents tab is active. This naturally borrows the inactive-tab
-   palette so the badge stays "calm metadata" rather than competing
-   with the active tab's accent. */
-.library-tab-badge {
-  margin-left: 8px;
-  padding: 1px 6px;
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.3px;
-  color: var(--text-2);
-  /* Composite bg-panel over bg-app so the badge's effective color
-     matches the inactive Skills tab's effective color in EVERY theme.
-     Skills tab is `background: transparent` → it shows the pill's
-     bg-panel painted over the container's bg-app. Some themes
-     (e.g. Soft) define bg-panel as rgba(...) — translucent — so a
-     bare `background: var(--bg-panel)` on the badge would composite
-     against whatever's BEHIND the badge (the active Agents tab's
-     accent green), producing a totally different color than Skills.
-     The double-layer below mimics Skills's layering exactly:
-       - bg-app as the solid base (always opaque)
-       - bg-panel as the (possibly translucent) overlay
-     Result: badge bg = Skills tab bg, theme-agnostic. */
-  background-color: var(--bg-app);
-  background-image: linear-gradient(var(--bg-panel), var(--bg-panel));
-  border-radius: var(--radius-sm);
-  vertical-align: middle;
-}
-
 /* ─── Library tab switcher (Agents / Skills) ──────────────────────────── */
 
 /* Top-center pill, anchored to launchpad-container (lives outside the
@@ -817,6 +799,20 @@
   top: 24px;
   left: 50%;
   transform: translateX(-50%);
+  /* Now a sibling of launchpad-chrome--library (not a child), so it
+     owns its own show/hide transition. Self-fading opacity is fine
+     here — only an ANCESTOR's opacity<1 isolates a stacking context
+     that breaks backdrop-filter; the element's own opacity scales
+     the post-filter result, which renders as the expected gradual
+     glass reveal in sync with the back-chevron's fade. */
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.library-tabs--top.is-visible {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .library-tab {
@@ -995,7 +991,32 @@
 
 .skills-toggle:disabled {
   cursor: progress;
-  opacity: 0.6;
+}
+
+/* Busy state — backend toggle in flight (junction creation +
+   per-CLI mirroring). The thumb's solid white fill is swapped for a
+   rotating ring so the click has a clear "I'm working" affordance,
+   the same idiom Codex desktop uses for in-flight switches. The
+   thumb keeps its current position (we don't optimistically move
+   it; the refresh after the backend returns is what shifts the
+   thumb to the new state). */
+.skills-toggle.is-busy .skills-toggle-thumb {
+  background: transparent;
+  box-shadow: none;
+}
+
+.skills-toggle.is-busy .skills-toggle-thumb::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: skills-toggle-spin 0.7s linear infinite;
+}
+
+@keyframes skills-toggle-spin {
+  to { transform: rotate(360deg); }
 }
 
 .skills-toggle-track {

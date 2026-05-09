@@ -147,7 +147,7 @@ export function SkillsPanel({ showToast }: Props) {
               )}
             </div>
             <button
-              className={`skills-toggle ${skill.enabled ? 'on' : 'off'}`}
+              className={`skills-toggle ${skill.enabled ? 'on' : 'off'} ${busyName === skill.name ? 'is-busy' : ''}`}
               onClick={() => toggle(skill)}
               disabled={busyName === skill.name}
               aria-label={skill.enabled ? 'Disable skill' : 'Enable skill'}

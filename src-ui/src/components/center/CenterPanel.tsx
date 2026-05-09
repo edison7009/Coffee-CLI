@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { focusTerminal } from '../../lib/focus-registry';
 import { TierTerminal } from './TierTerminal';
 import { ChatReader } from './ChatReader';
@@ -942,6 +943,22 @@ export function CenterPanel() {
 
   return (
     <>
+      {/* Premium Toast Notification — Portaled to document.body so it
+          escapes any ancestor's overflow:hidden and renders against
+          the real viewport, not the launchpad-container interior.
+          With position:fixed + viewport-relative top, the slide-down
+          animation now reads as "drop in from the top of the
+          window" (the iOS system-banner idiom) instead of "slide
+          out from inside the terminal area." Also makes the toast
+          visible in every mode (terminal mode, launchpad mode,
+          library mode), not just when the launchpad is mounted. */}
+      {toast && createPortal(
+        <div key={toast.id} className="toast-notification">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+          {toast.msg}
+        </div>,
+        document.body
+      )}
       <div className="chrome-tabs-header" data-count={terminals.filter(s => !s.isHidden || s.id === activeTerminalId).length}>
         {terminals.map(session => {
           if (session.isHidden && session.id !== activeTerminalId) return null;
@@ -999,13 +1016,6 @@ export function CenterPanel() {
         </button>
       </div>
       <div className="main-content">
-        {/* Premium Toast Notification */}
-        {toast && (
-          <div key={toast.id} className="toast-notification">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-            {toast.msg}
-          </div>
-        )}
 
         {terminals.map(t => t.tool !== null ? (
           <div
@@ -1499,21 +1509,37 @@ export function CenterPanel() {
                   </svg>
                 </div>
               </button>
-              <div className="library-tabs library-tabs--top">
-                <button
-                  className={`library-tab ${libraryTab === 'agents' ? 'active' : ''}`}
-                  onClick={() => setLibraryTab('agents')}
-                >
-                  Agents
-                  <span className="library-tab-badge">{pinnedItems.length}/{MAX_PINS}</span>
-                </button>
-                <button
-                  className={`library-tab ${libraryTab === 'skills' ? 'active' : ''}`}
-                  onClick={() => setLibraryTab('skills')}
-                >
-                  Skills
-                </button>
-              </div>
+            </div>
+
+            {/* Tab pill — hoisted OUT of launchpad-chrome--library so
+                backdrop-filter can render correctly. With it nested
+                under the chrome, the parent's opacity 0→1 fade
+                isolated a stacking context for the duration of the
+                transition; backdrop-filter inside that isolate has
+                no wallpaper to sample, so the pill rendered as a
+                flat near-transparent rect during the fade and the
+                glass blur "snapped in" the moment opacity hit 1 —
+                that was the visible flash. As a sibling here the
+                pill owns its own opacity fade, which scales the
+                post-backdrop-filter result (only ANCESTOR opacity
+                isolates) — so the frosted glass reveals smoothly
+                in sync with the back-chevron's cross-fade. */}
+            <div
+              className={`library-tabs library-tabs--top ${showLibrary ? 'is-visible' : ''}`}
+              aria-hidden={!showLibrary}
+            >
+              <button
+                className={`library-tab ${libraryTab === 'agents' ? 'active' : ''}`}
+                onClick={() => setLibraryTab('agents')}
+              >
+                Agents {pinnedItems.length}/{MAX_PINS}
+              </button>
+              <button
+                className={`library-tab ${libraryTab === 'skills' ? 'active' : ''}`}
+                onClick={() => setLibraryTab('skills')}
+              >
+                Skills
+              </button>
             </div>
 
           </div>

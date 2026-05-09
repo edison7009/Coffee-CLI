@@ -1342,21 +1342,6 @@ body.gambit-docked .chat-reader-container {
     border-radius: calc(var(--radius-md) - 4px);
 }
 
-/* "6/6" pin-count badge inside the Agents tab — source default
-   layers bg-app + bg-panel for cross-theme color matching, but in
-   glass even a faint white wash reads as a separate framed capsule
-   next to the tab label. Strip the surface entirely; the badge
-   becomes inline text on the tab, color-matched to the inactive
-   Skills label (text-2) so it reads as calm metadata sitting
-   one tier under the active "Agents" text-1 label. */
-[data-shape="glass"] .library-tab-badge {
-    background: none;
-    background-color: transparent;
-    background-image: none;
-    border: none;
-    color: var(--text-2);
-}
-
 /* Card hover: kill the translateY lift so the cards stay still
    when the cursor is over them. The lift was a Material-style
    "elevation" cue that fights the Liquid-Glass aesthetic — glass
@@ -1390,6 +1375,27 @@ body.gambit-docked .chat-reader-container {
    the rest of the glass family hovers with. */
 [data-shape="glass"] .gambit-skill-popover-item:hover {
     background: rgba(255, 255, 255, 0.08);
+}
+
+/* Toast capsule — opt-out of the panel-center :not() nuclear
+   rule above (toast lives inside launchpad-container → matches
+   the `.panel-center :is(div…)` selector and would otherwise
+   get its bg/border/shadow stripped to transparent, leaving
+   white text floating in the void). !important here is doing
+   the same job as the entries in the :not() allow-list — both
+   work; this approach keeps the rule self-contained next to
+   the toast's other glass-mode treatment.
+   Visually: heavier dark wash so the message is readable on
+   any wallpaper, plus a strong blur/saturate for the iOS
+   Dynamic-Island-style frosted capsule. */
+[data-shape="glass"] .toast-notification {
+    background: rgba(18, 20, 28, 0.72) !important;
+    border: 1px solid rgba(255, 255, 255, 0.14) !important;
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    box-shadow:
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.20),
+        0 8px 24px rgba(0, 0, 0, 0.40) !important;
 }
 
 /* Per-tool config modal (gear icon on each card in the full
