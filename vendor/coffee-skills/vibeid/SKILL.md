@@ -230,57 +230,33 @@ Tone is consistent across all languages: confident, specific, lightly flattering
 
 **Formatting**: Markdown-friendly plain text with `\n\n` between paragraphs. Bold the persona name once via `**...**` and the 4-letter code once. The chat client renders markdown inline, so headers (`#`) and inline images render naturally — see Step 5.
 
-### Step 5 — Generate a self-contained HTML report file
+### Step 5 — Write a self-contained HTML report
 
-Markdown rendering across CLIs is inconsistent — some render `![](url)` inline, some dump the raw text. To guarantee every user sees the same visual report regardless of which CLI they invoked `/vibeid` from, write a self-contained `.html` file and point the user at it. **Do not** rely on inline markdown image rendering.
+Two non-negotiable rules. Everything else is your call.
 
-**5.1 Compose the image URL — fixed, do not improvise**
+**Rule 1 — Output is an HTML file, not chat text.** Write a single self-contained `.html` (inline `<style>`, no external CSS, no JS) to the OS temp dir as `coffee-vibeid-<CODE>-<unix-millis>.html`. Use whichever write mechanism is natural in your runtime. Capture the absolute path. Do not dump the analysis into chat as a substitute — markdown rendering across CLIs is inconsistent and that's exactly the failure mode this rule exists to avoid.
 
+**Rule 2 — The persona image src is fixed to our CDN.**
 ```
-image_url = "https://coffeecli.com/vibeid/" + persona.code + ".png"
+<img src="https://coffeecli.com/vibeid/<CODE>.png">
 ```
+No base64 embedding, no other host, no relative path. The 16 PNGs are served by `coffeecli.com/vibeid/` (Cloudflare Pages) and are not bundled with the skill. If the CDN is unreachable the page still renders, just with a broken-image icon — fine.
 
-This URL is the **only** acceptable image source. Do not try to base64-embed the image, do not invent a different host, do not use a relative path. The 16 PNGs live on `coffeecli.com/vibeid/` (Cloudflare Pages); they are not bundled with the skill. If the CDN is unreachable, the rest of the page still renders — it just shows a broken-image icon.
+**Page must contain** (layout is yours to design): the 4-letter code, persona name + profession + tagline (in `target_language`), the avatar `<img>` per Rule 2, the full 500-800 word narrative from Step 4, a small block showing the numeric signals, and `<title>` set to `"{code} · {name}"`.
 
-**5.2 Build the HTML page (style is yours to design)**
-
-Generate one self-contained HTML file with inline CSS. **The visual design is up to you** — express the persona's vibe through layout, typography, and color. Use the family palette from `matrix.families[persona.family]` (`color_bg`, `color_costume`, `color_accent`) as a starting point, then add whatever you want: gradients, decorative SVG, animated highlights, sectioned cards, a stats panel, anything. Logos personas should feel calm and scholarly; Forge industrial; Muse playful; Kinetic energetic.
-
-**Required content** (must be present somewhere on the page — the layout is yours):
-
-1. The 4-letter VibeID code shown prominently
-2. Persona name + profession + tagline (in `target_language`, per Step 4's rules)
-3. The persona avatar `<img>` whose `src` is exactly the URL from 5.1
-4. The full 500-800 word narrative from Step 4 (5 sections, in `target_language`)
-5. A small stats block listing the numeric `signals` from Step 1 so the user can see the data the verdict was built on
-6. `<title>` set to `"{code} · {name}"`
-
-Keep CSS inline in `<style>` — no external stylesheets, no JS. The file must work offline (except for the CDN image fetch).
-
-**5.3 Write the file**
-
-Save to a path the user can find. Use the OS temp dir for portability — on Windows that's `%TEMP%`, on Unix `/tmp` or `$TMPDIR`. Filename: `coffee-vibeid-<CODE>-<unix-millis>.html`.
-
-Use whichever write mechanism is natural for your runtime — your CLI's native Write tool, `Out-File`/`Set-Content` on PowerShell, a here-doc to `cat >`, a quick `node -e` or `python -c`. Capture the absolute path so you can hand it to the user in Step 6.
+**Style direction** (suggestion, not requirement): use `matrix.families[persona.family]` palette as a starting point and lean into the family's vibe — Logos calm/scholarly, Forge industrial, Muse playful, Kinetic energetic. Express personality through layout, typography, gradients, decorative SVG — whatever feels right.
 
 ### Step 6 — Confirm to the user
 
-After the HTML file is written, output exactly two short lines in `target_language` to the chat — nothing more. The webpage already carries the full picture; the chat reply is a pointer.
+Output exactly two short lines in `target_language`. Nothing else — no analysis dump, no embedded image.
 
-Template (substitute language and values):
+```
+zh:  你的 VibeID 码是 **TFVH**(星海统帅)。
+     人格报告已生成: <abs path>
 
-- `zh`:
-  ```
-  你的 VibeID 码是 **TFVH**(星海统帅)。
-  人格报告已生成: <abs path>
-  ```
-- `en`:
-  ```
-  Your VibeID code is **TFVH** (Tide Marshal).
-  Personality report saved to: <abs path>
-  ```
-
-Do **not** also dump the 500-800 word analysis into the chat — it lives in the HTML now. Do not embed the persona image in the chat reply (markdown image rendering is the failure mode this whole step exists to avoid). Just the two-line pointer.
+en:  Your VibeID code is **TFVH** (Tide Marshal).
+     Personality report saved to: <abs path>
+```
 
 ## Validation Checkpoints
 
