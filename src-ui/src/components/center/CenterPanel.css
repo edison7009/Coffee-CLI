@@ -287,6 +287,46 @@
   overflow-y: auto;
 }
 
+/* ─── Top-anchored chrome (mode label) ───────────────────────────────
+   Lives at the launchpad-container level so it does NOT translate
+   with the slider track. Always mounted; cross-fades between Desktop
+   chrome (gear) and Library chrome (chevron back + tab pill with
+   inline pin-count badge) via opacity. Mixing motion types — content
+   slides, chrome fades — reads more polished than forcing both onto
+   the same animation. pointer-events:none in the hidden state so
+   users can't click an invisible button during the fade.
+*/
+.launchpad-chrome {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 3;
+}
+.launchpad-chrome.is-visible {
+  opacity: 1;
+}
+.launchpad-chrome.is-visible > * {
+  pointer-events: auto;
+}
+
+/* Desktop chrome: only the 9-dot launcher at top-right. */
+.launchpad-chrome--desktop > .mode-switch-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+}
+
+/* Library chrome: back button at top-left. Tab pill (.library-tabs--top)
+   and counter (.library-counter) already self-position via their own
+   rules; they live as siblings inside this wrapper. */
+.launchpad-chrome--library > .launchpad-chrome-back {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+}
+
 .launchpad-inner {
   max-width: 628px;
   width: 100%;
@@ -500,27 +540,37 @@
   pointer-events: none;
 }
 /* ─── Mode Switch Button (Library vs Desktop) ─────────────── */
-/* Sized to match the right-pane add-task FAB so the "switch to full tool
-   list" affordance is actually findable. Default card-bg + accent glyph is
-   already the inverse of the FAB's filled accent + white glyph. */
+/* Naked glyph — no bg, no border, no plate. Chrome is the enemy of
+   high-end feel; a 48px filled pill around a 24px icon makes the
+   chrome carry more visual weight than the symbol it frames.
+   Color stays neutral (NOT accent) — having stripped border/bg to
+   reduce visual weight, then painting it in brand-accent would just
+   re-add weight via color. VS Code / Linear / Notion all keep
+   secondary chrome in dim grey for the same reason. */
 .mode-switch-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   padding: 0;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
-  color: var(--text-2);
+  background: transparent;
+  border: none;
+  /* Default: dim text-3 + opacity 0.7 → near-invisible-but-present
+     restraint. Hover: jump to full text-1 → noticeable affordance
+     lift without ever pulling attention when not interacting. */
+  color: var(--text-3);
+  opacity: 0.7;
   cursor: pointer;
-  overflow: hidden;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: color 0.2s ease, opacity 0.2s ease;
 }
 
 .mode-switch-btn:hover {
-  color: var(--text-1);
+  /* Hover lifts to brand accent — color as INTERACTION REWARD,
+     not default decoration. Same pattern as Linear/Arc: app feels
+     alive on intent, recedes when idle. */
+  color: var(--accent);
+  opacity: 1;
 }
 
 .mode-switch-icon {
@@ -528,7 +578,10 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  color: var(--accent);
+  /* Inherit color from .mode-switch-btn (text-2 → text-1 on hover)
+     instead of hardcoding accent. Naked glyph in subdued text-2 reads
+     as restrained chrome; hover lifts to text-1 for affordance. */
+  color: inherit;
   background: transparent;
   transition: transform 0.4s ease;
 }
@@ -550,8 +603,12 @@
 
 .library-page .launchpad-inner {
   max-width: 1200px;
-  padding-top: 32px;
-  padding-bottom: 100px;
+  /* 84px top: tab pill bottom edge at 60 (top:24 + h:~36) + 24px
+     breathing room — matches the 24px above the pill for visual
+     symmetry. Back button (top:16 + h:48 → bottom:64) also clears
+     within this band. Bottom 32px standard; Gambit owns the bottom. */
+  padding-top: 84px;
+  padding-bottom: 32px;
 }
 
 .library-grid {
@@ -702,32 +759,63 @@
   height: 18px;
 }
 
-.library-counter {
-  position: absolute;
-  bottom: 72px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 12px;
+/* Pin counter as inline badge — always renders with the same muted
+   chip look (panel bg + dim text), regardless of whether the
+   Agents tab is active. This naturally borrows the inactive-tab
+   palette so the badge stays "calm metadata" rather than competing
+   with the active tab's accent. */
+.library-tab-badge {
+  margin-left: 8px;
+  padding: 1px 6px;
+  font-size: 11px;
   font-weight: 500;
+  letter-spacing: 0.3px;
   color: var(--text-2);
-  z-index: 2;
-  letter-spacing: 0.5px;
+  /* Composite bg-panel over bg-app so the badge's effective color
+     matches the inactive Skills tab's effective color in EVERY theme.
+     Skills tab is `background: transparent` → it shows the pill's
+     bg-panel painted over the container's bg-app. Some themes
+     (e.g. Soft) define bg-panel as rgba(...) — translucent — so a
+     bare `background: var(--bg-panel)` on the badge would composite
+     against whatever's BEHIND the badge (the active Agents tab's
+     accent green), producing a totally different color than Skills.
+     The double-layer below mimics Skills's layering exactly:
+       - bg-app as the solid base (always opaque)
+       - bg-panel as the (possibly translucent) overlay
+     Result: badge bg = Skills tab bg, theme-agnostic. */
+  background-color: var(--bg-app);
+  background-image: linear-gradient(var(--bg-panel), var(--bg-panel));
+  border-radius: var(--radius-sm);
+  vertical-align: middle;
 }
 
 /* ─── Library tab switcher (Agents / Skills) ──────────────────────────── */
 
+/* Top-center pill, anchored to launchpad-container (lives outside the
+   sliding track so it doesn't animate with the page content). Bottom
+   stays clear for Gambit's compose panel. The legacy bottom-positioned
+   .library-tabs (without the --top modifier) would still work if any
+   caller wants it back, but we removed all bottom callers. */
 .library-tabs {
-  position: absolute;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%);
   display: flex;
   gap: 4px;
   padding: 4px;
   background: var(--bg-panel);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  z-index: 2;
+  z-index: 3;
+}
+
+.library-tabs--top {
+  position: absolute;
+  /* top:24 — vertically centered against the back button (top:16,
+     h:48 → center y:40; tab pill h:~36 → center y at 24+18 = 42).
+     Equal 24px gap above the pill (to container top) AND below the
+     pill (to cards padding-top:84) — symmetric header band, no more
+     "tab feels squeezed against cards" asymmetry. */
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .library-tab {
@@ -737,7 +825,12 @@
   color: var(--text-2);
   font-size: 13px;
   font-weight: 500;
-  border-radius: var(--radius-sm);
+  /* Concentric corners — inner radius = outer radius − padding (4px).
+     Hardcoding var(--radius-sm) broke in the soft theme where
+     --radius-md is 4 but --radius-sm is 3, making the inner
+     active-tab corner round PAST the outer pill. max(0,…) clamps
+     for the square-corner theme. */
+  border-radius: max(0px, calc(var(--radius-md) - 4px));
   cursor: pointer;
   transition: background-color 0.2s, color 0.2s;
 }

@@ -578,7 +578,12 @@ export function CenterPanel() {
 
   // (renderPinIcon removed — selection state is now indicated by the
   // .library-item.is-pinned border + opacity, not a right-side icon.)
-  const [disableDrawer, setDisableDrawer] = useState(false);
+  // Tracks last successful checkToolsInstalled() scan (epoch ms). Used
+  // to skip the back-to-desktop re-scan if it would just repeat work
+  // we already did seconds ago — the laggy "click 9-dot, wait, library
+  // opens" feel was 7 CLIs × up to 1s of serial PATH scan blocking the
+  // IPC queue between back-click and the next 9-dot click.
+  const lastToolsScanAt = useRef<number>(0);
 
   // ── Remote Terminal SSH form state ─────────────────────────────────────────
   const [showRemoteForm, setShowRemoteForm] = useState(false);
@@ -685,9 +690,21 @@ export function CenterPanel() {
     // on Windows). The serial IPC queue blocked React reconciliation
     // and the next mode-switch click looked dead. Only fire after the
     // user has actually settled on the launchpad for 300ms.
+    //
+    // Cache gate (30s TTL): tool install state doesn't change just
+    // because the user toggled in/out of Library — binaries are on
+    // PATH or not regardless of pin actions. Skipping the rescan when
+    // we just did one seconds ago kills the "click back, wait, click
+    // 9-dot, lag" feel without losing the legitimate refresh-after-
+    // a-real-install case (TTL expires after idle).
+    const SCAN_TTL_MS = 30_000;
     const handle = setTimeout(() => {
+      if (Date.now() - lastToolsScanAt.current < SCAN_TTL_MS) return;
       commands.checkToolsInstalled()
-        .then(result => setToolsInstalled(result))
+        .then(result => {
+          setToolsInstalled(result);
+          lastToolsScanAt.current = Date.now();
+        })
         .catch(() => {});
       try {
         const raw = localStorage.getItem('coffee:last-cwd-by-tool');
@@ -1426,64 +1443,77 @@ export function CenterPanel() {
                     )}
                   </div>
 
-                  {/* Pin counter only meaningful on Agents tab */}
-                  {libraryTab === 'agents' && (
-                    <div className="library-counter">{pinnedItems.length}/{MAX_PINS}</div>
-                  )}
-
-                  {/* Bottom tab switcher: Agents / Skills */}
-                  <div className="library-tabs">
-                    <button
-                      className={`library-tab ${libraryTab === 'agents' ? 'active' : ''}`}
-                      onClick={() => setLibraryTab('agents')}
-                    >
-                      Agents
-                    </button>
-                    <button
-                      className={`library-tab ${libraryTab === 'skills' ? 'active' : ''}`}
-                      onClick={() => setLibraryTab('skills')}
-                    >
-                      Skills
-                    </button>
-                  </div>
                 </div>
-                
+
               </div>
             </div>
 
-            {/* Global Mode switch button — bottom-right offsets mirror the
-                right-pane add-task FAB so the two corner buttons read as a
-                symmetric pair. */}
-            <div style={{ position: 'absolute', bottom: 'calc(24px + var(--dock-bottom-offset, 0px))', right: 24 }}>
+            {/* ── Top-anchored chrome (always mounted, opacity-toggled) ──
+                Placed OUTSIDE the slider track so it doesn't slide
+                horizontally with the page transition. Instead each
+                chrome group cross-fades against the other based on
+                showLibrary. Slide is for content (nav between modes);
+                fade is for chrome (the mode label). Mixing the two
+                kinds of motion reads more polished than forcing one
+                animation type onto both. */}
+            <div
+              className={`launchpad-chrome launchpad-chrome--desktop ${showLibrary ? '' : 'is-visible'}`}
+              aria-hidden={showLibrary}
+            >
               <button
-                className={`mode-switch-btn ${disableDrawer ? 'instant-click' : ''}`}
-                onClick={() => {
-                  setDisableDrawer(true);
-                  setTimeout(() => setDisableDrawer(false), 500);
-                  setShowLibrary(prev => !prev);
-                }}
+                className="mode-switch-btn"
+                onClick={() => setShowLibrary(true)}
+                aria-label="Open library"
               >
                 <div className="mode-switch-icon">
-                  {!showLibrary ? (
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                      <circle cx="5" cy="5" r="2"/>
-                      <circle cx="12" cy="5" r="2"/>
-                      <circle cx="19" cy="5" r="2"/>
-                      <circle cx="5" cy="12" r="2"/>
-                      <circle cx="12" cy="12" r="2"/>
-                      <circle cx="19" cy="12" r="2"/>
-                      <circle cx="5" cy="19" r="2"/>
-                      <circle cx="12" cy="19" r="2"/>
-                      <circle cx="19" cy="19" r="2"/>
-                    </svg>
-                  ) : (
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M19 12H5"/>
-                      <path d="M12 19l-7-7 7-7"/>
-                    </svg>
-                  )}
+                  {/* Gear at entry = "manage your tools" (broad scope).
+                      Per-tool gears inside = "configure this tool"
+                      (narrow scope). Same symbol, nested semantics —
+                      same pattern as magnifying glass for global vs
+                      in-page search. Globally trained "齿轮 = 设置"
+                      mental model beats the abstract 9-dot grid for
+                      mass-market users. */}
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                  </svg>
                 </div>
               </button>
+            </div>
+
+            <div
+              className={`launchpad-chrome launchpad-chrome--library ${showLibrary ? 'is-visible' : ''}`}
+              aria-hidden={!showLibrary}
+            >
+              <button
+                className="mode-switch-btn launchpad-chrome-back"
+                onClick={() => setShowLibrary(false)}
+                aria-label="Back to desktop"
+              >
+                <div className="mode-switch-icon">
+                  {/* Pure chevron < — no extension line, fewer strokes,
+                      visually paired with the gear (both naked glyphs,
+                      same stroke width, same hit area). */}
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="15 18 9 12 15 6"/>
+                  </svg>
+                </div>
+              </button>
+              <div className="library-tabs library-tabs--top">
+                <button
+                  className={`library-tab ${libraryTab === 'agents' ? 'active' : ''}`}
+                  onClick={() => setLibraryTab('agents')}
+                >
+                  Agents
+                  <span className="library-tab-badge">{pinnedItems.length}/{MAX_PINS}</span>
+                </button>
+                <button
+                  className={`library-tab ${libraryTab === 'skills' ? 'active' : ''}`}
+                  onClick={() => setLibraryTab('skills')}
+                >
+                  Skills
+                </button>
+              </div>
             </div>
 
           </div>
