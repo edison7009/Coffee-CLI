@@ -1310,11 +1310,13 @@ body.gambit-docked .chat-reader-container {
 }
 
 /* Floating popups + modals — ctx-menu (right-click + lang +
-   theme), tool-config-modal (per-agent launch settings).
+   theme), tool-config-modal (per-agent launch settings),
+   gambit-skill-popover (the "+" picker in the compose footer).
    Same faint-white-wash + 1px-white-outline + top-edge highlight
    + outer drop shadow combo, so every floating overlay sits on
    the same Liquid-Glass tier above the panels. */
-[data-shape="glass"] .ctx-menu {
+[data-shape="glass"] .ctx-menu,
+[data-shape="glass"] .gambit-skill-popover {
     background: rgba(255, 255, 255, 0.06);
     border: 1px solid rgba(255, 255, 255, 0.14);
     backdrop-filter: var(--glass-blur);
@@ -1322,6 +1324,14 @@ body.gambit-docked .chat-reader-container {
     box-shadow:
         inset 0 1px 0 0 rgba(255, 255, 255, 0.22),
         0 12px 40px rgba(0, 0, 0, 0.40);
+}
+
+/* Skill popover row hover — source default is the solid
+   var(--bg-hover) panel color; in glass that prints a dark slab
+   over the frosted surface. Use the same translucent white wash
+   the rest of the glass family hovers with. */
+[data-shape="glass"] .gambit-skill-popover-item:hover {
+    background: rgba(255, 255, 255, 0.08);
 }
 
 /* Per-tool config modal (gear icon on each card in the full
