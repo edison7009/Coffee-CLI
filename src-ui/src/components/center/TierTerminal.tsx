@@ -277,6 +277,14 @@ function TierTerminalImpl({
 
   // ── Launch failure detection ─────────────────────────────────────────────
   const hasOutputRef = useRef(false); // Set to true when PTY emits visible output
+  // Refined readiness signals for inline-mode CLIs (Claude Code etc. that
+  // don't enter alt-screen). hasOutputRef alone trips on the first byte —
+  // a "Connecting..." preamble was enough to dismiss the splash even when
+  // the actual REPL was 8 s away. Tracking total bytes + last-output time
+  // lets the splash wait for "substantial output, then a brief silence"
+  // (CLI finished its first frame and is awaiting input).
+  const outputBytesRef = useRef(0);
+  const lastOutputAtRef = useRef(0);
   const [processExited, setProcessExited] = useState(false);
   const [startFailed, setStartFailed] = useState(false);
   // First exit event to arrive (onExit from child-watcher, or onStatus from
@@ -600,6 +608,8 @@ function TierTerminalImpl({
         onOutput: (data) => {
           if (!mounted) return;
           hasOutputRef.current = true;
+          outputBytesRef.current += data.length;
+          lastOutputAtRef.current = Date.now();
           xtermRef.current?.write(data);
 
           // Handle SSH Auto-login via Password injection
@@ -988,13 +998,25 @@ function TierTerminalImpl({
       }
       // Inline-mode signal: some tools (current Claude Code builds, simple
       // CLIs) print their banner directly to the regular terminal instead
-      // of entering alt-screen. Threshold 1500 ms post-splash-start; once
-      // we've passed the 800 ms branding window AND output is flowing AND
-      // the process is alive, the tool is clearly running. Tighter than
-      // the prior 2500 ms because tools usually finish painting their
-      // banner well within 1 s — anything slower would make the splash
-      // feel "stuck" over a visibly working REPL.
-      if (hasOutputRef.current && elapsed > 1500) {
+      // of entering alt-screen. We need a "first frame painted" proxy
+      // that's stronger than "any output", because CLIs commonly print a
+      // tiny preamble ("Connecting...", auth-check spinners, ~20 bytes)
+      // and then go silent for several seconds before the real REPL
+      // appears — dismissing on the preamble leaves the user staring at
+      // an empty terminal. Combined gate:
+      //   • outputBytes ≥ 512 — filters trivial preambles; a real banner
+      //     (logo + version + prompt) easily clears this.
+      //   • silence ≥ 500 ms — output stream has paused, meaning the CLI
+      //     finished writing its first frame and is awaiting input.
+      //   • elapsed > 1500 ms — branding window respected.
+      // If a CLI prints continuously without pause, we never trip silence
+      // and fall through to the maxWait fallback below.
+      const sinceLastOutput = Date.now() - lastOutputAtRef.current;
+      if (
+        outputBytesRef.current >= 512 &&
+        sinceLastOutput >= 500 &&
+        elapsed > 1500
+      ) {
         dismiss();
         clearInterval(poll);
         return;
