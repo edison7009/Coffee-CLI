@@ -1299,6 +1299,21 @@ body.gambit-docked .chat-reader-container {
     box-shadow: none;
 }
 
+/* "6/6" pin-count badge inside the Agents tab — source default uses
+   a double layer (bg-app base + bg-panel overlay) so the badge color
+   matches the Skills inactive tab in every solid theme. In glass that
+   prints a flat dark slab against the frosted surface. Replace with a
+   light translucent white wash + thin white outline — same Liquid-
+   Glass family as the popovers, just a smaller / lighter tier since
+   the badge is calm metadata, not a primary surface. */
+[data-shape="glass"] .library-tab-badge {
+    background-color: transparent;
+    background-image: none;
+    background: rgba(255, 255, 255, 0.10);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    color: var(--text-2);
+}
+
 /* Card hover: kill the translateY lift so the cards stay still
    when the cursor is over them. The lift was a Material-style
    "elevation" cue that fights the Liquid-Glass aesthetic — glass
