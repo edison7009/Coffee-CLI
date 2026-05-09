@@ -421,11 +421,20 @@ export function CenterPanel() {
         // One-shot migration: existing users who launched before the
         // multi-agent quadrant shipped won't have it pinned. Inject it
         // once so they discover the feature. If they're already at cap,
-        // evict the oldest pin to make room (they can unpin multi-agent
-        // via the library if they don't want it).
-        if (!arr.includes('agent:multi-agent')) {
-          if (arr.length >= CAP) arr.shift();
-          arr.push('agent:multi-agent');
+        // evict the oldest pin to make room. Gated by a localStorage
+        // flag so it runs ONCE per user — without the flag, an explicit
+        // unpin of multi-agent gets silently undone on every restart,
+        // and at-cap users see a different agent evicted on each
+        // launch ("有的消失,有的出现"). The flag is set unconditionally
+        // after this branch so existing users on this version stop
+        // re-migrating regardless of whether the inject actually fired.
+        const MIGRATION_FLAG = 'coffee_pinned_multi_agent_migrated';
+        if (!localStorage.getItem(MIGRATION_FLAG)) {
+          if (!arr.includes('agent:multi-agent')) {
+            if (arr.length >= CAP) arr.shift();
+            arr.push('agent:multi-agent');
+          }
+          try { localStorage.setItem(MIGRATION_FLAG, '1'); } catch {}
         }
         // Defensive cap: historical bugs (e.g. earlier migrations that
         // pushed past the limit) may have left > CAP items in storage.
@@ -714,6 +723,37 @@ export function CenterPanel() {
     }, 300);
     return () => clearTimeout(handle);
   }, [isLaunchpadMode, showLibrary]);
+
+  // Window-focus rescan — picks up CLIs the user just installed in an
+  // external terminal without forcing them to restart Coffee CLI. The
+  // launchpad-mode useEffect above only re-fires when isLaunchpadMode
+  // / showLibrary actually change; sitting on the launchpad while
+  // alt-tabbing out to install a CLI doesn't toggle either, so the
+  // scan-cache stays warm and the gray card never flips. Focus event
+  // is the natural "user just came back, may have done something
+  // external" signal. Bypasses the SCAN_TTL_MS cache for the same
+  // reason. Debounced (500ms) so rapid alt-tab spam doesn't stack
+  // up serial PATH scans on the IPC queue.
+  useEffect(() => {
+    if (!isTauri) return;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const onFocus = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        commands.checkToolsInstalled()
+          .then(result => {
+            setToolsInstalled(result);
+            lastToolsScanAt.current = Date.now();
+          })
+          .catch(() => {});
+      }, 500);
+    };
+    window.addEventListener('focus', onFocus);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      if (timer) clearTimeout(timer);
+    };
+  }, []);
 
   // Auto-hide toast — keyed on toast.id so rapid replacements (toggle
   // spam) reset the timer cleanly: previous timer is cleared, new 3s
