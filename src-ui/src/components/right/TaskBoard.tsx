@@ -558,7 +558,7 @@ export function TaskBoard() {
   );
 
   return (
-    <div className="task-board">
+    <div className={`task-board${__IS_LINUX__ ? ' task-board--static' : ''}`}>
       {/* ── User Profile Header (Hidden for now, planned for next version) ── */}
       <div className="panel-header" style={{ visibility: 'hidden', height: 0, minHeight: 0, padding: 0, overflow: 'hidden' }}>
         <div className="brand">

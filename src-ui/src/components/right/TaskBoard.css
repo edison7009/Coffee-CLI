@@ -131,6 +131,15 @@
   50% { opacity: 0.4; }
 }
 
+/* Linux gate — opacity-loop infinite + box-shadow halo is the same
+   WebKit2GTK + Cairo CPU bomb pattern as the tab-status grid. Each
+   frame re-rasters the box-shadow blur on CPU. Static dot keeps the
+   color signal, zero animation cost. */
+.task-board--static .task-section-dot.working {
+  animation: none;
+  box-shadow: none;
+}
+
 /* ─── Droppable Area ────────────────────────────────────────────────────────── */
 
 .task-droppable-area {
@@ -337,6 +346,13 @@
 
 .pulse-dot {
   animation: checkbox-pulse 2s ease-in-out infinite;
+}
+
+/* Linux gate — see .task-board--static above for rationale. SVG opacity
+   loop on the working checkbox dot is cheap on WebView2/WKWebView but
+   another infinite repaint on WebKit2GTK. */
+.task-board--static .pulse-dot {
+  animation: none;
 }
 
 @keyframes checkbox-pulse {
