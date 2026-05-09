@@ -390,6 +390,20 @@ const SvgPlus = ({ active }: { active: boolean }) => (
   </svg>
 );
 
+// Pin sanitizer: must mirror AGENT_CATALOG keys below. Used at init to
+// drop obsolete IDs from `coffee_pinned_items` (e.g. `agent:vibeid`
+// from back when /vibeid was a launcher tool, before it became a
+// regular skill). Without this, retired pins inflate the
+// "Agents N/MAX_PINS" counter on the library tab — the stale cards
+// render nothing because no AGENT_CATALOG entry matches, but they
+// still count. Update this set when adding or removing AGENT_CATALOG
+// entries below.
+const VALID_PIN_KEYS = new Set<string>([
+  'claude', 'opencode', 'openclaw', 'codex', 'gemini', 'qwen', 'hermes', 'terminal',
+  'multi-agent', 'three-agent', 'two-agent', 'installer',
+  'four-split', 'three-split', 'two-split', 'hyper-agent',
+]);
+
 export function CenterPanel() {
   const { state, dispatch } = useAppState();
   const t = useT();
@@ -418,6 +432,12 @@ export function CenterPanel() {
       if (stored !== null) {
         let arr = JSON.parse(stored);
         if (!Array.isArray(arr)) return [];
+        // Drop stale pin IDs from retired AGENT_CATALOG entries (e.g.
+        // `agent:vibeid` after /vibeid moved from launcher tool to skill).
+        // These ghosts render nothing but inflate the "Agents N/6" counter.
+        arr = arr.filter((id: unknown) =>
+          typeof id === 'string' && id.startsWith('agent:') && VALID_PIN_KEYS.has(id.slice('agent:'.length))
+        );
         // One-shot migration: existing users who launched before the
         // multi-agent quadrant shipped won't have it pinned. Inject it
         // once so they discover the feature. If they're already at cap,
@@ -594,6 +614,27 @@ export function CenterPanel() {
   // opens" feel was 7 CLIs × up to 1s of serial PATH scan blocking the
   // IPC queue between back-click and the next 9-dot click.
   const lastToolsScanAt = useRef<number>(0);
+  // Previous toolsInstalled snapshot — diffed against each new scan so
+  // we can fire installHookForTool exactly when a CLI flips from
+  // not-installed → installed during a Coffee CLI session. `null`
+  // sentinel = "we haven't scanned yet"; the very first scan does not
+  // trigger any install IPCs because startup's install_all() already
+  // covered whatever was on PATH at launch — diffing against `null`
+  // would re-fire those redundantly.
+  const prevToolsInstalledRef = useRef<Record<string, boolean> | null>(null);
+  const applyToolsInstalled = (result: Record<string, boolean>) => {
+    const prev = prevToolsInstalledRef.current;
+    if (prev !== null) {
+      for (const tool of Object.keys(result)) {
+        if (result[tool] === true && prev[tool] === false) {
+          commands.installHookForTool(tool).catch(() => {});
+        }
+      }
+    }
+    prevToolsInstalledRef.current = result;
+    setToolsInstalled(result);
+    lastToolsScanAt.current = Date.now();
+  };
 
   // ── Remote Terminal SSH form state ─────────────────────────────────────────
   const [showRemoteForm, setShowRemoteForm] = useState(false);
@@ -711,10 +752,7 @@ export function CenterPanel() {
     const handle = setTimeout(() => {
       if (Date.now() - lastToolsScanAt.current < SCAN_TTL_MS) return;
       commands.checkToolsInstalled()
-        .then(result => {
-          setToolsInstalled(result);
-          lastToolsScanAt.current = Date.now();
-        })
+        .then(applyToolsInstalled)
         .catch(() => {});
       try {
         const raw = localStorage.getItem('coffee:last-cwd-by-tool');
@@ -741,10 +779,7 @@ export function CenterPanel() {
       if (timer) clearTimeout(timer);
       timer = setTimeout(() => {
         commands.checkToolsInstalled()
-          .then(result => {
-            setToolsInstalled(result);
-            lastToolsScanAt.current = Date.now();
-          })
+          .then(applyToolsInstalled)
           .catch(() => {});
       }, 500);
     };

@@ -75,6 +75,20 @@ fn openclaw_config_path() -> Option<PathBuf> {
 }
 
 pub fn register_with_openclaw(url: &str) -> RegistrationReport {
+    // Don't materialize ~/.openclaw/ on machines without OpenClaw — the
+    // MCP entry would be useless and the stray dir surprises the user.
+    // OPENCLAW_CONFIG_PATH override bypasses the gate so tests / advanced
+    // users with a non-default install layout can still register.
+    if std::env::var("OPENCLAW_CONFIG_PATH").is_err()
+        && !crate::server::binary_on_path("openclaw")
+    {
+        return RegistrationReport {
+            agent: "openclaw".into(),
+            ok: true,
+            path: None,
+            message: format!("{}openclaw not on PATH; skipping registration", UNCHANGED_PREFIX),
+        };
+    }
     let path = match openclaw_config_path() {
         Some(p) => p,
         None => {

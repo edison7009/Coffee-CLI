@@ -114,6 +114,13 @@ export const commands = {
   checkToolsInstalled: () =>
     invoke<Record<string, boolean>>('check_tools_installed'),
 
+  /** Install hook scripts + upstream config patches for one tool.
+   *  Call when the focus-rescan detects a CLI flipped to installed —
+   *  picks up tab status indicators without forcing a Coffee CLI
+   *  restart. No-op for tools the hook installer doesn't manage. */
+  installHookForTool: (tool: string) =>
+    invoke<void>('install_hook_for_tool', { tool }),
+
   /** Gambit — save a clipboard-pasted image to a temp file and return its path.
    *  The returned absolute path is inserted into the textarea so the AI CLI agent
    *  (Claude Code, etc.) can read the image via the local filesystem. */

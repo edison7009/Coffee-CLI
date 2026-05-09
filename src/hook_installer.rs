@@ -72,6 +72,27 @@ pub fn install_all() {
     ensure_opencode_tui_theme_default(&home);
 }
 
+/// Install hook(s) for a single tool. Called from the launchpad's
+/// window-focus rescan when a CLI flips from not-installed → installed,
+/// so users who install a CLI while Coffee CLI is running don't have
+/// to restart to get tab status indicators. Idempotent (each
+/// install_<tool> reads existing config and patches it).
+pub fn install_for_tool(tool: &str) {
+    let home = match dirs::home_dir() {
+        Some(h) => h,
+        None => return,
+    };
+    match tool {
+        "claude" => install_claude(&home),
+        "codex" => install_codex(&home),
+        "opencode" => {
+            install_opencode(&home);
+            ensure_opencode_tui_theme_default(&home);
+        }
+        _ => {}
+    }
+}
+
 /// OpenCode TUI theme we default users into. `lucent-orng` sets all four
 /// background slots (background / backgroundPanel / backgroundElement /
 /// backgroundMenu) to `"transparent"`, which is what makes Coffee CLI's
@@ -88,6 +109,13 @@ const OPENCODE_DEFAULT_THEME: &str = "lucent-orng";
 const OPENCODE_LEGACY_THEME: &str = "system";
 
 fn install_claude(home: &Path) {
+    // Skip if claude isn't on PATH — no point materializing `~/.claude/`
+    // on a machine where the user hasn't installed Claude Code. The
+    // launchpad's window-focus rescan fires `install_hook_for_tool` once
+    // detection flips to installed, so a later install is also covered.
+    if !crate::server::binary_on_path("claude") {
+        return;
+    }
     let script_path = match write_script(home) {
         Ok(p) => p,
         Err(e) => {
@@ -128,6 +156,9 @@ fn install_claude(home: &Path) {
 /// user doesn't already have one. We never overwrite an existing notify
 /// command — too high a risk of stomping on the user's setup.
 fn install_codex(home: &Path) {
+    if !crate::server::binary_on_path("codex") {
+        return;
+    }
     let script_path = match write_aux_script(
         home,
         CODEX_NOTIFY_FILENAME,
@@ -155,6 +186,9 @@ fn install_codex(home: &Path) {
 /// We also keep a copy at ~/.coffee-cli/hooks/ so the source is co-located
 /// with the other forwarders and easy to find when debugging.
 fn install_opencode(home: &Path) {
+    if !crate::server::binary_on_path("opencode") {
+        return;
+    }
     if let Err(e) = write_aux_script(home, OPENCODE_PLUGIN_FILENAME, OPENCODE_PLUGIN_SCRIPT) {
         eprintln!("[hook-installer] failed to write opencode plugin: {}", e);
         return;
@@ -197,6 +231,9 @@ fn install_opencode(home: &Path) {
 ///
 /// All failures are logged, never fatal.
 fn ensure_opencode_tui_theme_default(home: &Path) {
+    if !crate::server::binary_on_path("opencode") {
+        return;
+    }
     let config_dir = home.join(".config").join("opencode");
     let tui_path = config_dir.join("tui.json");
 

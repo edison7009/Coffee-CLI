@@ -88,6 +88,21 @@ async fn pick_folder(app: tauri::AppHandle) -> Result<String, String> {
 
 // ─── Tool Availability Detection ─────────────────────────────────────────────
 
+/// PATH lookup wrapper. Used by hook_installer + agent_mcp_config to
+/// gate config-file writes so we don't materialize stray `~/.codex/`,
+/// `~/.config/opencode/`, etc. on machines where the user hasn't
+/// installed the upstream CLI yet.
+pub(crate) fn binary_on_path(bin: &str) -> bool {
+    #[cfg(target_os = "windows")]
+    {
+        check_tool_windows(bin)
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        check_tool_unix(bin)
+    }
+}
+
 #[cfg(target_os = "windows")]
 pub(crate) fn check_tool_windows(bin: &str) -> bool {
     use std::os::windows::process::CommandExt;
@@ -110,6 +125,17 @@ pub(crate) fn check_tool_unix(bin: &str) -> bool {
         .status()
         .map(|s| s.success())
         .unwrap_or(false)
+}
+
+/// Install hook scripts + upstream config patches for a single tool.
+/// Called from the launchpad's focus-rescan when `check_tools_installed`
+/// flips a CLI from not-installed → installed, so users who install a
+/// CLI while Coffee CLI is running pick up tab status indicators
+/// without restarting. No-op for tools the hook installer doesn't
+/// manage. Idempotent.
+#[tauri::command]
+fn install_hook_for_tool(tool: String) {
+    crate::hook_installer::install_for_tool(&tool);
 }
 
 #[tauri::command]
@@ -3173,6 +3199,7 @@ pub fn start_ui() -> anyhow::Result<()> {
             read_opencode_session,
             check_network_port,
             check_tools_installed,
+            install_hook_for_tool,
             start_fs_watcher,
             stop_fs_watcher,
             save_clipboard_image,
