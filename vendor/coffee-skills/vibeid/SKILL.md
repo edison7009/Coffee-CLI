@@ -26,20 +26,33 @@ description_de: "Ein Persönlichkeitstest, der dich durch eine standardisierte A
 
 # VibeID — VibeCoding Personality Test
 
-Analyze the user's Claude Code `/insights` report and reveal their **Vibetype**: a 4-letter code (one of 16 combinations) mapped to a distinct persona with low-poly character art.
+Analyze the user's local AI-CLI session history and reveal their **Vibetype**: a 4-letter code (one of 16 combinations) mapped to a distinct persona with low-poly character art.
 
-The skill keeps deterministic logic (HTML parsing, axis thresholds, HTML injection) in Node.js scripts, and reserves Claude for the one thing it is uniquely good at: generating personalized copy from the user's actual behavioral data.
+This skill is a **specification**, not an SDK. It tells you *where* the data lives, *what* shape it has, and *which* numbers to compute — you decide how to do the extraction with whatever tools you have (Bash, jq, Read, Glob, your own scratch script). The deterministic part (the persona matrix and CDN images) is bundled; the analysis prose and the report layout are yours to generate.
 
 ## When to Activate
 
 - User types `/vibeid`, `/vibecoding`, `/vibe`
 - User asks for "VibeID", "VibeCoding test", "personality test", or equivalent phrasing
-- Coffee CLI launches Claude Code with an initial prompt matching any of the above
+- Coffee CLI launches any supported CLI with an initial prompt matching any of the above
 
 ## Prerequisites
 
-1. Claude Code installed; user has run `/insights` at least once (produces `~/.claude/usage-data/report.html`)
-2. Node.js available on PATH (for `analyze.js` / `inject.js`)
+At least one supported AI CLI has been used locally enough to generate session history. No CLI is privileged — read from whichever of these the user actually has:
+
+| CLI | Default session storage | Format | Scan depth |
+|---|---|---|---|
+| Claude Code | `~/.claude/projects/<hash>/*.jsonl` | jsonl | 2 |
+| Codex | `~/.codex/sessions/<Y>/<M>/<D>/*.jsonl` | jsonl | 4 |
+| Gemini CLI | `~/.gemini/tmp/<short>/chats/*.jsonl` | jsonl | 3 |
+| Qwen Code | `~/.qwen/projects/<short>/chats/*.jsonl` | jsonl | 3 |
+| OpenClaw | `~/.openclaw/agents/<id>/sessions/*.jsonl` | jsonl | 3 |
+| Hermes Agent | `~/.hermes/sessions/session_*.json` | json (flat) | 1 |
+| OpenCode | `~/.local/share/opencode/opencode.db` | SQLite | — |
+
+**Hermes filter**: only `session_*.json` files are real sessions. `request_dump_*.json` is telemetry — ignore it.
+
+**Power-user override**: each tool's history dir can be redirected via `~/.coffee-cli/tools.json` (`<tool>.history_path`). If that file exists and the entry is non-empty, scan the override path instead of the default. Coffee CLI's own history list and heatmap honour this — your scan should too.
 
 ## Execution Steps
 
@@ -97,32 +110,72 @@ If neither source gives a signal (empty jsonl, unreadable files), default to `en
 
 ### Step 1 — Collect behavioral signals from session logs
 
-Run the bundled signal collector via the Bash tool:
+You are computing 10 numbers across whichever CLIs the user has. **You decide how** — Bash + jq oneliners, a small Node/Python script you write inline, or repeated Read calls (last resort, expensive). What matters is the output shape, not the method. Don't ask the user — just look.
+
+#### 1.1 Per-CLI message shape (what counts as a "user message" and a "tool call")
+
+| CLI | User message rows | Tool call rows |
+|---|---|---|
+| claude | `{"type":"user", "message":{"content": <string-or-[{type:"text",text}]>}, "timestamp"}` — content of `tool_result`-only blocks doesn't count | `{"type":"assistant", "message":{"content":[{"type":"tool_use","name":"Bash"|"Edit"|"Read"|"Grep"|"Write"|...}]}}` |
+| codex | `{"type":"response_item", "payload":{"type":"message","role":"user","content":[{"type":"input_text","text"}]}}` or `{"type":"user_message", "payload":{"role":"user","content":[...]}}` | `{"type":"response_item","payload":{"type":"function_call","name"}}` or `{"type":"response_item","payload":{"type":"local_shell_call"}}` |
+| gemini | `{"type":"user", "content":[{"text"}], "timestamp"}` | `{"type":"gemini","content":[{"functionCall":{"name"}}]}` |
+| qwen | `{"type":"user", "message":{"parts":[{"text"}]}, "timestamp"}` | `{"type":"assistant","message":{"parts":[{"functionCall":{"name"}}]}}` |
+| openclaw | Same as claude (role/content jsonl) | Same as claude |
+| hermes | Top-level `messages: [{"role":"user","content":<string>}]` in a single JSON file | `messages[].tool_calls[].name` (or `.function.name`) on assistant rows |
+| opencode | SQLite: `SELECT data FROM message WHERE session_id=?` → `data.role=="user"`, then join `part` table where `data.type=="text"` | `part.data.type` other than `"text"` (tool invocations) |
+
+For all jsonl rows: `timestamp` is ISO8601 — parse to ms-epoch.
+
+For all CLIs: skip system-injected user content like `<command-message>`, `<system-reminder>`, `[Note:...`, `[CONTEXT...`. These are framework injections, not the user's words.
+
+Tool-name normalization (so craft/design ratios work across CLIs) — bucket each tool name into one of these 5 families. Anything not on the list doesn't count:
+
+- **Bash**: `Bash`, `shell`, `local_shell_call`, `run_shell_command`, `ExecuteCommand`, `execute_bash`, `execute_command`
+- **Edit**: `Edit`, `MultiEdit`, `str_replace_based_edit_tool`, `replace`, `edit_file`, `apply_patch`, `apply_diff`
+- **Read**: `Read`, `read_file`, `read_many_files`, `view`
+- **Grep**: `Grep`, `Glob`, `glob`, `grep_files`, `search_file_content`, `ripgrep`
+- **Write**: `Write`, `write_file`, `save_file`, `create_file`
+
+#### 1.2 Signals to compute (across ALL CLIs, aggregated)
 
 ```
-node "<skill_dir>/scripts/collect.js"
+messages                  total user messages (after system-injection filter)
+sessions                  total session files with ≥1 user message
+median_response_seconds   median of (user_ts − previous_assistant_ts) in seconds,
+                          per session, only counting gaps where 2 < gap < 3600
+top_tool                  bucket name (Bash/Edit/Read/Grep/Write) with the highest count
+craft_ratio               (Bash + Edit) / (Read + Grep)        # if denom 0 and num>0: 999; if both 0: 1
+design_share              (Read + Grep + Write) / (Read + Grep + Write + Bash + Edit)   # 0.5 if denom 0
+rational_share            rationalHits / (rationalHits + expressiveHits)   # 0.5 if denom 0
+ship_intent_share         shipHits / messages
+build_intent_share        buildHits / messages
+multi_clauding_pct        % of user messages that have, within ±60s, a user message
+                          from a DIFFERENT session id (cross-CLI counts as different)
+tools_used                array of CLI names sorted by per-CLI message count desc
+                          e.g. ["claude","codex","gemini"]
 ```
 
-It reads the user's local session jsonl tree at `~/.claude/projects/*/*.jsonl` directly — no `/insights` prerequisite, no `report.html`, no network. Prints a JSON object on stdout:
+Intent-classification regexes (apply to each user message text — a single message can match multiple categories, count each independently):
 
 ```
-{
-  "signals": {
-    "messages": 1975,
-    "sessions": 133,
-    "median_response_seconds": 69.1,
-    "top_tool": "Bash",
-    "craft_ratio": 1.72,
-    "design_share": 0.384,
-    "rational_share": 0.378,
-    "ship_intent_share": 0.029,
-    "build_intent_share": 0.028,
-    "multi_clauding_pct": 5
-  }
-}
+SHIP        /release|deploy|ship|version|publish|rollout|\bci\b/i
+BUILD       /feature|build|implement|new\s+component|\bui\b|refactor|refinement|\badd\b/i
+RATIONAL    /bug\s*fix|refactor|release|deploy|version|optimi[sz]e|\bfix\b|cleanup|\bci\b|rollout|publish/i
+EXPRESSIVE  /feature|\bui\b|experience|refinement|visual|style|animation|video|gif|design|ux|cosmetic/i
 ```
 
-Parse stdout as JSON. If the script exits non-zero, report stderr and stop. If `signals.messages == 0`, the user has no usable session history yet — emit a friendly message in `target_language` asking them to use Claude Code for a few sessions first, then retry, and stop.
+#### 1.3 Implementation hints (optional — pick what fits your toolbox)
+
+- **Bash + jq** is usually the fastest path on jsonl. e.g. `jq -r 'select(.type=="user") | .message.content' file.jsonl | wc -l` to count claude user messages in one file.
+- **Glob** for file discovery: `~/.claude/projects/**/*.jsonl`, `~/.codex/sessions/**/*.jsonl`, etc.
+- **A short inline script** (Node `node -e "..."` or Python `python -c "..."`) is cleaner than chaining 10 shell pipes when you need ts-gap math or regex aggregation.
+- **OpenCode SQLite**: query via `sqlite3 ~/.local/share/opencode/opencode.db 'SELECT ...'` if `sqlite3` is on PATH; else skip OpenCode for this user.
+- **Don't read every file**. If the user has hundreds of sessions, sample the most recent ~50 by mtime — the personality trends are stable enough.
+
+#### 1.4 Failure modes
+
+- All scan dirs missing or all empty → user has no usable session history; emit a friendly message in `target_language` asking them to use a supported CLI for a few sessions first, then stop. Don't fabricate.
+- Some CLIs scan-able, others not → that's fine. Aggregate what you have. `tools_used` reflects what you found.
 
 ### Step 2 — Load the persona matrix
 
@@ -177,58 +230,75 @@ Tone is consistent across all languages: confident, specific, lightly flattering
 
 **Formatting**: Markdown-friendly plain text with `\n\n` between paragraphs. Bold the persona name once via `**...**` and the 4-letter code once. The chat client renders markdown inline, so headers (`#`) and inline images render naturally — see Step 5.
 
-### Step 5 — Render the persona card to chat
+### Step 5 — Generate a self-contained HTML report file
 
-Compose the image URL:
+Markdown rendering across CLIs is inconsistent — some render `![](url)` inline, some dump the raw text. To guarantee every user sees the same visual report regardless of which CLI they invoked `/vibeid` from, write a self-contained `.html` file and point the user at it. **Do not** rely on inline markdown image rendering.
+
+**5.1 Compose the image URL — fixed, do not improvise**
 
 ```
-image_url = matrix.image_base_url_remote + '/' + persona.code + '.png'
+image_url = "https://coffeecli.com/vibeid/" + persona.code + ".png"
 ```
 
-Each PNG filename equals the 4-letter code + `.png` (matrix v3+). The skill does NOT bundle the persona art locally — it lives on a CDN, the chat client fetches it on render. If the CDN is unreachable, the rest of the card still renders correctly (just no avatar).
+This URL is the **only** acceptable image source. Do not try to base64-embed the image, do not invent a different host, do not use a relative path. The 16 PNGs live on `coffeecli.com/vibeid/` (Cloudflare Pages); they are not bundled with the skill. If the CDN is unreachable, the rest of the page still renders — it just shows a broken-image icon.
 
-Output the persona card as markdown directly in chat. Pick `name` / `profession` / `tagline` / `family` from the localised matrix fields per Step 4's language rule. Template:
+**5.2 Build the HTML page (style is yours to design)**
 
-```markdown
-# **{code}** · {name}
+Generate one self-contained HTML file with inline CSS. **The visual design is up to you** — express the persona's vibe through layout, typography, and color. Use the family palette from `matrix.families[persona.family]` (`color_bg`, `color_costume`, `color_accent`) as a starting point, then add whatever you want: gradients, decorative SVG, animated highlights, sectioned cards, a stats panel, anything. Logos personas should feel calm and scholarly; Forge industrial; Muse playful; Kinetic energetic.
 
-*{family}* · {profession}
+**Required content** (must be present somewhere on the page — the layout is yours):
 
-> {tagline}
+1. The 4-letter VibeID code shown prominently
+2. Persona name + profession + tagline (in `target_language`, per Step 4's rules)
+3. The persona avatar `<img>` whose `src` is exactly the URL from 5.1
+4. The full 500-800 word narrative from Step 4 (5 sections, in `target_language`)
+5. A small stats block listing the numeric `signals` from Step 1 so the user can see the data the verdict was built on
+6. `<title>` set to `"{code} · {name}"`
 
-![{name}]({image_url})
+Keep CSS inline in `<style>` — no external stylesheets, no JS. The file must work offline (except for the CDN image fetch).
 
-{500-800 word narrative from Step 4, paragraphs separated by blank lines}
-```
+**5.3 Write the file**
 
-No HTML, no file writes, no `inject.js`. The card lives in the chat where the user invoked `/vibeid`. They can scroll back / copy / share it like any other Claude response.
+Save to a path the user can find. Use the OS temp dir for portability — on Windows that's `%TEMP%`, on Unix `/tmp` or `$TMPDIR`. Filename: `coffee-vibeid-<CODE>-<unix-millis>.html`.
+
+Use whichever write mechanism is natural for your runtime — your CLI's native Write tool, `Out-File`/`Set-Content` on PowerShell, a here-doc to `cat >`, a quick `node -e` or `python -c`. Capture the absolute path so you can hand it to the user in Step 6.
 
 ### Step 6 — Confirm to the user
 
-After the markdown card, append one short closing line in `target_language` summarising the result — e.g.:
+After the HTML file is written, output exactly two short lines in `target_language` to the chat — nothing more. The webpage already carries the full picture; the chat reply is a pointer.
 
-- `zh`: "你的 VibeID 码是 **TFVH**(星海统帅)。"
-- `en`: "Your VibeID code is **TFVH** (Tide Marshal)."
+Template (substitute language and values):
 
-Keep it terse — the card above already carries the full picture. Respond in the language the user is using.
+- `zh`:
+  ```
+  你的 VibeID 码是 **TFVH**(星海统帅)。
+  人格报告已生成: <abs path>
+  ```
+- `en`:
+  ```
+  Your VibeID code is **TFVH** (Tide Marshal).
+  Personality report saved to: <abs path>
+  ```
+
+Do **not** also dump the 500-800 word analysis into the chat — it lives in the HTML now. Do not embed the persona image in the chat reply (markdown image rendering is the failure mode this whole step exists to avoid). Just the two-line pointer.
 
 ## Validation Checkpoints
 
 The skill succeeded if:
 
-1. `collect.js` exited 0 with valid signals JSON (`messages > 0`)
+1. Signal extraction produced `messages > 0` from at least one CLI
 2. `matrix.json` parsed
 3. A valid 4-letter VibeID code was derived
-4. The persona card markdown was rendered to chat
-5. The closing summary line was emitted
+4. A self-contained HTML report file was written to disk and the absolute path captured
+5. The two-line confirmation (code + report path) was emitted in `target_language`
 
 ## Error Handling
 
-- `collect.js` exits non-zero → report stderr, stop
-- `signals.messages == 0` → user has no Claude Code session history yet; ask them to use Claude Code for a few sessions first
-- Missing Node.js → report clearly, suggest install
-- `matrix.json` parse failure → report stop, do not fabricate persona data
-- Persona code not found in matrix.personas → use the closest neighbouring code, document the fallback in the output
+- Signal extraction returned `messages == 0` across every CLI you scanned → user has no usable session history yet; ask them in `target_language` to use one of the supported CLIs for a few sessions first, then stop
+- A specific CLI's session dir is missing or unreadable → silently skip that CLI; aggregate what's left. Only fail if ALL of them came up empty.
+- `matrix.json` parse failure → report and stop; do not fabricate persona data
+- Persona code not found in `matrix.personas` → use the closest neighbouring code, document the fallback in the output
+- HTML write failure (permission denied / disk full) → report the write error and the attempted path; do not fall back to dumping the analysis to chat
 
 ## Notes
 
