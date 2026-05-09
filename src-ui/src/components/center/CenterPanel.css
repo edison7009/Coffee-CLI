@@ -799,12 +799,7 @@
   top: 24px;
   left: 50%;
   transform: translateX(-50%);
-  /* Now a sibling of launchpad-chrome--library (not a child), so it
-     owns its own show/hide transition. Self-fading opacity is fine
-     here — only an ANCESTOR's opacity<1 isolates a stacking context
-     that breaks backdrop-filter; the element's own opacity scales
-     the post-filter result, which renders as the expected gradual
-     glass reveal in sync with the back-chevron's fade. */
+  /* Self-fading opacity (see hoist rationale in CenterPanel.tsx). */
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.3s ease;
@@ -1012,11 +1007,7 @@
   border: 2px solid rgba(255, 255, 255, 0.35);
   border-top-color: #fff;
   border-radius: 50%;
-  animation: skills-toggle-spin 0.7s linear infinite;
-}
-
-@keyframes skills-toggle-spin {
-  to { transform: rotate(360deg); }
+  animation: spin 0.7s linear infinite;
 }
 
 .skills-toggle-track {
