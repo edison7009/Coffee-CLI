@@ -1316,16 +1316,17 @@ body.gambit-docked .chat-reader-container {
 
 /* "6/6" pin-count badge inside the Agents tab — source default
    layers bg-app + bg-panel for cross-theme color matching, but in
-   glass even a faint white wash still reads as a separate framed
-   capsule next to the tab label. Strip the surface entirely; the
-   badge becomes inline text on the tab, set apart only by a dimmer
-   color (text-3) and the smaller font-size already in the source. */
+   glass even a faint white wash reads as a separate framed capsule
+   next to the tab label. Strip the surface entirely; the badge
+   becomes inline text on the tab, color-matched to the inactive
+   Skills label (text-2) so it reads as calm metadata sitting
+   one tier under the active "Agents" text-1 label. */
 [data-shape="glass"] .library-tab-badge {
     background: none;
     background-color: transparent;
     background-image: none;
     border: none;
-    color: var(--text-3);
+    color: var(--text-2);
 }
 
 /* Card hover: kill the translateY lift so the cards stay still
