@@ -129,7 +129,7 @@ export function SkillsPanel({ showToast }: Props) {
     <>
       <div className="skills-grid">
         {skills.map(skill => (
-          <div key={skill.name} className={`skills-card ${skill.enabled ? 'is-enabled' : ''}`}>
+          <div key={skill.name} className="skills-card">
             <div className="skills-card-icon">
               {skill.iconDataUrl
                 ? <img src={skill.iconDataUrl} alt="" />

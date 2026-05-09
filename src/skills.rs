@@ -53,10 +53,77 @@ static BUNDLED_COFFEE_SKILLS: include_dir::Dir<'_> =
     include_dir::include_dir!("$CARGO_MANIFEST_DIR/vendor/coffee-skills");
 
 /// CLI directories where Coffee CLI mirrors enabled skills via symlink.
-/// Both Claude Code and Codex use the same `<HOME>/.<cli>/skills/<name>/SKILL.md`
-/// shape (the agentskills.io open standard), so one set of links covers
-/// both. Add more here when other CLIs adopt the convention.
-const TARGET_CLI_SKILL_DIRS: &[&str] = &[".claude/skills", ".codex/skills"];
+/// All six paths below resolve to the same agentskills.io shape
+/// (`<dir>/<name>/SKILL.md`), so one symlink per target dir is all
+/// it takes.
+///
+/// Three layout families to mind:
+///   - **Dotdir family** (claude / codex / gemini / qwen): everything
+///     under `~/.<tool>/`, so skills live at `~/.<tool>/skills/`.
+///   - **XDG family** (opencode): config in `~/.config/<tool>/`, data
+///     in `~/.local/share/<tool>/`. Skills are user-installed
+///     extensions → live in **config**, not data. So opencode's
+///     skills dir is `~/.config/opencode/skills/`, NOT under the
+///     `~/.local/share/opencode/` history root the heatmap scanner
+///     uses. Don't blindly apply the "history dir's parent" heuristic
+///     to XDG-family tools.
+///   - **Workspace-nested family** (openclaw): skills live inside
+///     OpenClaw's "workspace" dir at `~/.openclaw/workspace/skills/`.
+///     **Known limitation**: workspace root is configurable via
+///     `agents.defaults.workspace` in `~/.openclaw/openclaw.json`. Our
+///     constant uses the default; users who override that key won't
+///     get the junction at the right place. Future: read openclaw.json
+///     and resolve workspace dynamically — `agent_mcp_config.rs`
+///     already has the read-this-file pattern (see memory
+///     `reference_openclaw_mcp_gate`).
+///
+/// Membership criterion: documented or empirically observed that the
+/// binary scans the path on launch.
+///
+/// **Deliberately excluded** (no upstream skills support; adding
+/// would just create stray empty dirs in their home):
+///   - `.hermes/skills` — Hermes Agent has no skills concept yet
+///     (and no Windows support at all). Per upstream confirmation
+///     2026-05-09: WHEN Hermes adds skills, the path WILL be
+///     `~/.hermes/skills/<name>/SKILL.md` (dotdir family). Add the
+///     entry then; don't pre-create now or we leave empty
+///     `~/.hermes/skills/` dirs in homes that don't even have Hermes.
+/// Per-target tuple: `(binary_name, skill_dir)`.
+///
+/// `binary_name` is what `where`/`which` looks up. We **only link
+/// skills if the binary is on PATH** — otherwise we'd be creating
+/// tool dirs (`~/.qwen/`, `~/.codex/`, etc.) for tools the user
+/// never installed, which (a) clutters their home and (b) misleads
+/// file-explorer tooling into thinking the tool is present.
+///
+/// This reuses the same detection the launchpad uses for greying
+/// out tool cards (`server::check_tool_windows` / `_unix`), so
+/// "Coffee CLI thinks tool X is installed" is a single source of
+/// truth across launchpad, heatmap, and skills mirror.
+///
+/// Trade-off vs a cheaper directory-existence check: we shell out
+/// to `where`/`which` per target on each toggle (6 spawns). Toggle
+/// is a rare user action so the cost is negligible, and being
+/// authoritative about "is the tool installed?" beats inferring
+/// from filesystem residue (a stale `~/.qwen/` left by an
+/// uninstall would otherwise fool a dir-marker check).
+const TARGET_CLI_SKILL_DIRS: &[(&str, &str)] = &[
+    ("claude",   ".claude/skills"),
+    ("codex",    ".codex/skills"),
+    ("gemini",   ".gemini/skills"),
+    ("qwen",     ".qwen/skills"),
+    ("opencode", ".config/opencode/skills"),
+    ("openclaw", ".openclaw/workspace/skills"),
+];
+
+/// Wraps the platform-specific PATH check from `server.rs` so
+/// `link_into_cli_dirs` can stay platform-clean.
+fn is_tool_installed(bin: &str) -> bool {
+    #[cfg(target_os = "windows")]
+    { crate::server::check_tool_windows(bin) }
+    #[cfg(not(target_os = "windows"))]
+    { crate::server::check_tool_unix(bin) }
+}
 
 /// Phased rollout allowlist. The combined bundle (openai/skills .curated
 /// + Coffee CLI's own skills) always ships every skill, but only the
@@ -438,8 +505,13 @@ pub fn skills_toggle(name: String, enable: bool) -> Result<(), String> {
 /// link step that follows.
 fn precheck_link_conflicts(name: &str) -> Result<(), String> {
     let home = home()?;
-    for cli_dir in TARGET_CLI_SKILL_DIRS {
-        let link = home.join(cli_dir).join(name);
+    for (binary, skill_dir) in TARGET_CLI_SKILL_DIRS {
+        // Skip tools the user doesn't have — no link would be
+        // created, so nothing to conflict with.
+        if !is_tool_installed(binary) {
+            continue;
+        }
+        let link = home.join(skill_dir).join(name);
         if !link.exists() {
             continue;
         }
@@ -480,18 +552,34 @@ pub fn skills_delete(name: String) -> Result<(), String> {
 }
 
 /// Create per-CLI symlinks for an enabled skill. Returns Err on the
-/// first failure that prevents the skill from reaching its target CLI
-/// dir — caller is responsible for rolling back the rename. Pre-creating
-/// the parent dir (so future-installed CLIs already see the link) is
-/// soft: if THAT fails (e.g. permission denied on a read-only home),
-/// we skip that one target but still try the next.
+/// first failure that prevents the skill from reaching ANY target CLI
+/// dir — but a skill enabled when zero supported CLIs are installed
+/// is still a success (no-op linking, the skill stays in our library
+/// for the user to later install a CLI and have it picked up).
+///
+/// Per-target gating: only mirror to a CLI's skills dir if its
+/// binary is on PATH (same source of truth as the launchpad's
+/// tool-availability check). We **never** create a CLI's home dir
+/// from scratch when the binary isn't installed.
 fn link_into_cli_dirs(name: &str, source: &Path) -> Result<(), String> {
     let home = home()?;
+    let mut installed_any = false;
     let mut linked_any = false;
     let mut last_err: Option<String> = None;
-    for cli_dir in TARGET_CLI_SKILL_DIRS {
-        let parent = home.join(cli_dir);
+    for (binary, skill_dir) in TARGET_CLI_SKILL_DIRS {
+        // Binary gate: tool not on PATH → skip silently. Don't
+        // mkdir its home; that would mislead the user / file
+        // explorer into thinking the tool is there.
+        if !is_tool_installed(binary) {
+            continue;
+        }
+        installed_any = true;
+        let parent = home.join(skill_dir);
         if !parent.exists() {
+            // Tool IS installed but doesn't yet have a `skills/` subdir
+            // (or hasn't been launched at all yet). Safe to create the
+            // standard subdir on its behalf — the binary IS on PATH,
+            // so the user clearly intends to use it.
             if let Err(e) = fs::create_dir_all(&parent) {
                 log::warn!("[skills] mkdir {}: {} — skipping target", parent.display(), e);
                 continue;
@@ -529,6 +617,17 @@ fn link_into_cli_dirs(name: &str, source: &Path) -> Result<(), String> {
     }
     if linked_any {
         Ok(())
+    } else if !installed_any {
+        // No supported CLI installed at all → user enabled a skill
+        // before installing any of the agent CLIs. That's fine: the
+        // skill is in our library, future install + re-toggle will
+        // wire it. Don't surface an error toast for the expected
+        // first-run state.
+        log::info!(
+            "[skills] enabled '{}' but no supported CLI present yet; skill is staged in library",
+            name
+        );
+        Ok(())
     } else {
         Err(last_err.unwrap_or_else(|| "No CLI target dir was linkable".to_string()))
     }
@@ -536,10 +635,13 @@ fn link_into_cli_dirs(name: &str, source: &Path) -> Result<(), String> {
 
 /// Remove per-CLI symlinks. Only removes links we own (symlink/junction);
 /// real folders the user happens to have at the same path are left alone.
+/// No binary gating here — a link might exist from a previous session
+/// when the tool WAS installed and has since been uninstalled; we still
+/// want to clean it up.
 fn unlink_from_cli_dirs(name: &str) {
     let Ok(home) = home() else { return };
-    for cli_dir in TARGET_CLI_SKILL_DIRS {
-        let link = home.join(cli_dir).join(name);
+    for (_binary, skill_dir) in TARGET_CLI_SKILL_DIRS {
+        let link = home.join(skill_dir).join(name);
         if !link.exists() {
             continue;
         }

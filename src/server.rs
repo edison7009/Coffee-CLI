@@ -89,7 +89,7 @@ async fn pick_folder(app: tauri::AppHandle) -> Result<String, String> {
 // ─── Tool Availability Detection ─────────────────────────────────────────────
 
 #[cfg(target_os = "windows")]
-fn check_tool_windows(bin: &str) -> bool {
+pub(crate) fn check_tool_windows(bin: &str) -> bool {
     use std::os::windows::process::CommandExt;
     std::process::Command::new("where")
         .arg(bin)
@@ -102,7 +102,7 @@ fn check_tool_windows(bin: &str) -> bool {
 }
 
 #[cfg(not(target_os = "windows"))]
-fn check_tool_unix(bin: &str) -> bool {
+pub(crate) fn check_tool_unix(bin: &str) -> bool {
     std::process::Command::new("which")
         .arg(bin)
         .stdout(std::process::Stdio::null())

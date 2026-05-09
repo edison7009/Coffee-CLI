@@ -784,13 +784,14 @@
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  transition: border-color 0.15s;
   min-width: 0;
 }
 
-.skills-card.is-enabled {
-  border-color: var(--accent);
-}
+/* No accent border for enabled state — the right-side toggle is the
+   canonical state indicator. An accent border on the card visually
+   reads as "selected/focused", which we don't have here (skills are
+   on/off, not selectable). Keep border neutral; the toggle alone
+   communicates state. */
 
 /* Big bare icon — no background plate, no rounded clip, no border.
    The icon's own art carries the visual weight. object-fit: contain
@@ -810,6 +811,12 @@
   width: 100%;
   height: 100%;
   object-fit: contain;
+  /* Theme-aware corner radius — matches the card's --radius-md so
+     icon corners visually rhyme with the card they sit in. Effect
+     is real for opaque filled-canvas icons (screenshot-style); a
+     no-op for transparent-glyph icons (vibeid-style) since the
+     corners are already empty pixels. Either way, harmless. */
+  border-radius: var(--radius-md);
 }
 
 .skills-card-icon-fallback {
