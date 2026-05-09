@@ -132,7 +132,7 @@ export const commands = {
   dropSessionSnapshot: (sessionId: string) =>
     invoke<void>('drop_session_snapshot', { sessionId }),
   computeFolderStats: (sessionId: string, path: string) =>
-    invoke<Record<string, { added: number; deleted: number }>>(
+    invoke<Record<string, { added: number; deleted: number; mtimeMs: number }>>(
       'compute_folder_stats',
       { sessionId, path },
     ),

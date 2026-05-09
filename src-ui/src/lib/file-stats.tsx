@@ -9,7 +9,7 @@ import { useAppState, resolveDiffContext } from '../store/app-state';
 import type { ToolType } from '../store/app-state';
 import { commands } from '../tauri';
 
-export type FileStats = { added: number; deleted: number };
+export type FileStats = { added: number; deleted: number; mtimeMs: number };
 type FileStatsMap = Map<string, FileStats>;
 
 const FileStatsContext = createContext<FileStatsMap | null>(null);

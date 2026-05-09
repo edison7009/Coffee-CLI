@@ -319,8 +319,9 @@
 }
 
 /* Library chrome: back button at top-left. Tab pill (.library-tabs--top)
-   and counter (.library-counter) already self-position via their own
-   rules; they live as siblings inside this wrapper. */
+   self-positions via its own rule. Pin counter is now an inline badge
+   inside the Agents tab (.library-tab-badge) — no separate floating
+   element. */
 .launchpad-chrome--library > .launchpad-chrome-back {
   position: absolute;
   top: 16px;

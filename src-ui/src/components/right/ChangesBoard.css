@@ -1,36 +1,14 @@
-.changes-split {
+/* Full-height container. List sits naturally in the flow (full panel
+ * height); when a file is selected, DiffPanel mounts as a bottom-anchored
+ * overlay (~55% of this container's height) — so the upper half of the
+ * list stays visible while the diff is open. position:relative anchors
+ * the absolutely-positioned diff overlay to this box. */
+.changes-fullview {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
   min-height: 0;
-}
-
-.changes-split-top {
-  flex: 0 0 40%;
-  min-height: 80px;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-
-.changes-split-bottom {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  /* Escape .task-board's 16px outer padding so the diff body (and its
-   * row backgrounds) reaches panel-edge to panel-edge, no left/right
-   * gaps. Combined with the panel-theme border-top below, this also
-   * makes the divider above the filename a clean full-width hairline. */
-  margin-left: -16px;
-  margin-right: -16px;
-}
-
-/* Panel shape: single full-width separator between the file list and the
- * diff body. Other shapes (soft / slab / sharp / glass) leave it flush so
- * the audit view feels continuous, not cardified. */
-[data-shape="panel"] .changes-split-bottom {
-  border-top: 1px solid var(--border, rgba(127, 127, 127, 0.18));
 }
 
 .changes-list {
@@ -56,10 +34,7 @@
   font-size: 12px;
   line-height: 1.4;
   /* Match Explorer's tree row chrome (Explorer.css L182-198): rounded
-   * corners + theme-driven hover/active backgrounds. The previous
-   * --surface-hover / --surface-active variables don't exist in
-   * global.css so they fell through to hardcoded grey, breaking
-   * theme parity. */
+   * corners + theme-driven hover/active backgrounds. */
   border-radius: var(--radius-sm);
 }
 
@@ -69,6 +44,69 @@
 
 .changes-row.selected {
   background: var(--bg-active);
+}
+
+/* Top-edge resize handle for the half-paper diff overlay. 8px tall hit
+ * area centered on the diff's top edge (bottom: diffHeight% via inline
+ * style). Visual band is just 2px tall, accent-tinted on hover so the
+ * affordance is discoverable but not visually busy when not interacted
+ * with. ns-resize cursor over the whole 8px hit area means users don't
+ * need pixel-perfect aim. z-index above the diff panel so the grab
+ * registers even if a diff line is right under the cursor.
+ *
+ * !important on cursor is REQUIRED — global.css:86 sets a universal
+ * `* { cursor: default !important }` reset (so the app feels like a
+ * desktop tool, not a browser page). Without !important the handle
+ * shows the default arrow on hover instead of ns-resize, and users
+ * never discover the grab affordance. Same pattern Gambit's dock
+ * resize handle uses (Gambit.css ~line 274). */
+.diff-resize-handle {
+  position: absolute;
+  /* Match .diff-panel's edge-to-edge negative margins so the grab
+   * area extends all the way across the panel, not just the inner
+   * 16px-padded content area. */
+  left: -16px;
+  right: -16px;
+  height: 8px;
+  /* Center the 8px hit area on the diff's top border line: shift up
+   * by half the height. */
+  margin-bottom: -4px;
+  cursor: ns-resize !important;
+  z-index: 6;
+  background: transparent;
+  transition: background-color 0.15s ease;
+}
+
+.diff-resize-handle:hover,
+.diff-resize-handle:active {
+  background: linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 3px,
+    var(--accent) 3px,
+    var(--accent) 5px,
+    transparent 5px,
+    transparent 8px
+  );
+}
+
+/* Glass shape opt-out — same global :not() rule (global.css:1218)
+ * that nukes panel children's backgrounds also nukes our hover
+ * gradient. !important alone isn't enough: the global rule's
+ * specificity is (0,3,1) due to :is()/:not() taking their argument
+ * specificity. Adding `.panel-right` as an ancestor brings my
+ * override to (0,4,0), which beats global cleanly. */
+[data-shape="glass"] .panel-right .diff-resize-handle:hover,
+[data-shape="glass"] .panel-right .diff-resize-handle:active {
+  background: linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 3px,
+    var(--accent) 3px,
+    var(--accent) 5px,
+    transparent 5px,
+    transparent 8px
+  ) !important;
 }
 
 .changes-name {

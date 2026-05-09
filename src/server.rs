@@ -260,10 +260,17 @@ fn snapshots() -> &'static std::sync::Mutex<std::collections::HashMap<String, Fo
 }
 
 /// Per-file added/deleted line counts versus the folder's open-time snapshot.
+/// `mtime_ms` is the file's current modification time as Unix milliseconds —
+/// frontend uses it to sort the changes list "most recently touched first"
+/// so users see "what the agent just did" at the top, instead of the
+/// largest-by-line-count file (which was usually package-lock or a build
+/// artifact that buried the meaningful semantic edits).
 #[derive(Serialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
 struct FileStats {
     added: u32,
     deleted: u32,
+    mtime_ms: i64,
 }
 
 /// Directory names skipped during snapshot/diff walks. These tend to dominate
@@ -504,6 +511,10 @@ fn compute_folder_stats(session_id: String, path: String) -> std::collections::H
     stats_walk(dir, &mut current, Some(&snapshot), STATS_MAX_FILES);
 
     for (abs_path, cur) in &current {
+        // u128 nanoseconds → i64 milliseconds. Lossy at ns scale but
+        // ms is plenty for "sort by recency" in a UI list. Saturating
+        // cast guards against the (impossible-in-practice) overflow.
+        let mtime_ms: i64 = (cur.mtime_nanos / 1_000_000).try_into().unwrap_or(i64::MAX);
         match snapshot.files.get(abs_path) {
             Some(base) => {
                 if base.mtime_nanos == cur.mtime_nanos { continue; }
@@ -513,13 +524,13 @@ fn compute_folder_stats(session_id: String, path: String) -> std::collections::H
                 if added == 0 && deleted == 0 { continue; }
                 // Sanity cap — see STATS_MAX_DIFF_LINES doc.
                 if added.saturating_add(deleted) > STATS_MAX_DIFF_LINES { continue; }
-                result.insert(abs_path.clone(), FileStats { added, deleted });
+                result.insert(abs_path.clone(), FileStats { added, deleted, mtime_ms });
             }
             None => {
                 // New file (created since snapshot): every line is an addition.
                 let added = cur.line_hashes.len() as u32;
                 if added > STATS_MAX_DIFF_LINES { continue; }
-                result.insert(abs_path.clone(), FileStats { added, deleted: 0 });
+                result.insert(abs_path.clone(), FileStats { added, deleted: 0, mtime_ms });
             }
         }
     }

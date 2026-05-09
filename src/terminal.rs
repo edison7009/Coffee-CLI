@@ -1333,7 +1333,11 @@ mod tests {
 
     #[test]
     fn find_preset_unknown_returns_none() {
-        assert!(find_preset("codex").is_none());
+        // Use truly unknown names — "codex" was added to AGENT_PRESETS
+        // when codex CLI gained first-class support, so it can't be a
+        // negative test case anymore. Pick names guaranteed to never
+        // become real tools.
+        assert!(find_preset("definitely_not_a_tool").is_none());
         assert!(find_preset("").is_none());
         assert!(find_preset("gpt").is_none());
     }

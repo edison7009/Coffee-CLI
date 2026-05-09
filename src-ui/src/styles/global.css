@@ -896,18 +896,6 @@ body.gambit-docked .chat-reader-container {
     padding-bottom: calc(var(--gambit-dock-h, 200px) + 16px);
 }
 
-/* Mode-switch button (bottom-right) anchors directly to .launchpad-container,
-   whose padding box extends UNDER the docked Gambit — without compensation
-   it ends up hidden. Expose --dock-bottom-offset so it can opt in via
-   `bottom: calc(<original-bottom> + var(--dock-bottom-offset, 0px))`.
-
-   Note: .library-counter does NOT need this offset. It anchors to
-   .library-page (position: relative), whose height: 100% chain already
-   shrinks with the container's padding-bottom. Adding the offset there
-   double-lifts it and eats into the visible grid area. */
-body.gambit-docked {
-    --dock-bottom-offset: calc(var(--gambit-dock-h, 200px) + 16px);
-}
 .tab-btn.active {
     background: var(--bg-active);
     color: var(--text-1);

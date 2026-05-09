@@ -10,6 +10,7 @@
 // the tokens without a remount.
 
 import { useEffect, useMemo, useState } from 'react';
+import type { CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { diffLines } from 'diff';
 import { commands } from '../../tauri';
@@ -42,28 +43,38 @@ interface DiffPanelProps {
   onClose: () => void;
   expanded: boolean;
   onToggleExpanded: () => void;
+  /** Height percent (0-100) for the half-paper bottom overlay.
+   *  Ignored in expanded mode (which uses fixed-inset modal sizing).
+   *  When omitted, the CSS default (55%) applies. */
+  heightPercent?: number;
 }
 
-export function DiffPanel({ sessionId, path, onClose, expanded, onToggleExpanded }: DiffPanelProps) {
+export function DiffPanel({ sessionId, path, onClose, expanded, onToggleExpanded, heightPercent }: DiffPanelProps) {
   const t = useT();
   const dataTheme = useDataAttr('data-theme');
   const [result, setResult] = useState<DiffResult>({ state: 'loading' });
 
-  // Expanded modal owns keyboard until collapsed (Esc) and steals focus
-  // off whatever was active so keystrokes can't leak into a Gambit
-  // textarea sitting underneath the dim layer.
+  // Keyboard handling — same DiffPanel element across two visual sizes:
+  //   half (default): bottom-anchored overlay covering ~55% of the panel
+  //   expanded: full-window portal (modal). Esc collapses expanded → half,
+  //   then half → closes the diff entirely. So: Esc has a single, learnable
+  //   meaning ("step back one zoom level"), unlike a UA toggle button.
+  // In expanded mode we also blur the active element so keystrokes can't
+  // leak into a focused Gambit textarea behind the dim layer.
   useEffect(() => {
-    if (!expanded) return;
-    (document.activeElement as HTMLElement | null)?.blur();
+    if (expanded) {
+      (document.activeElement as HTMLElement | null)?.blur();
+    }
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
-        onToggleExpanded();
+        if (expanded) onToggleExpanded();
+        else onClose();
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [expanded, onToggleExpanded]);
+  }, [expanded, onToggleExpanded, onClose]);
 
   useEffect(() => {
     let cancelled = false;
@@ -127,28 +138,34 @@ export function DiffPanel({ sessionId, path, onClose, expanded, onToggleExpanded
         >
           {expanded ? '⤓' : '⤢'}
         </button>
-        {/* In expanded mode the only safe operations are minimize (⤓) and
-         * Esc/backdrop-click — closing the diff entirely while in
-         * fullscreen is a cross-layer action that surprises users. */}
-        {!expanded && (
-          <button
-            type="button"
-            className="diff-header-btn"
-            onClick={onClose}
-            aria-label="Close diff"
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </button>
-        )}
+        <button
+          type="button"
+          className="diff-header-btn"
+          onClick={onClose}
+          aria-label="Close diff"
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
       </div>
     </div>
   );
 
+  // Same DiffPanel element rendered at two different sizes:
+  //   default: in-flow / parent-anchored overlay (bottom half of changes panel)
+  //   expanded: portal to body, fixed-inset modal (full window)
+  // Backdrop only appears in expanded mode (modal needs a dim+blocker).
+  const panelStyle: CSSProperties | undefined =
+    !expanded && typeof heightPercent === 'number'
+      ? { height: `${heightPercent}%` }
+      : undefined;
   const panel = (
-    <div className={`diff-panel${expanded ? ' diff-panel--expanded' : ''}`}>
+    <div
+      className={`diff-panel${expanded ? ' diff-panel--expanded' : ''}`}
+      style={panelStyle}
+    >
       {header}
       <div className="diff-body">
         {result.state === 'loading' && (

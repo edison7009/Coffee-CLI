@@ -1,12 +1,99 @@
 /* DiffPanel.css — Step 3: hardcoded values. Step 4 will theme via CSS vars. */
 
+/* Default: bottom-anchored "half-paper" overlay inside the changes
+ * panel. Covers the lower ~55% of .changes-fullview, list above stays
+ * visible. Same DiffPanel element promotes to .diff-panel--expanded
+ * (full-window portal modal) when the user clicks ⤢. Border-top +
+ * panel bg gives the overlay a clear "tape on top of list" edge. */
 .diff-panel {
+  position: absolute;
+  /* Negative left/right escape the .task-board's 16px padding so the
+   * diff slab spans panel edge-to-edge — no awkward gutters around
+   * what's already a narrow column. Same edge-to-edge feel as
+   * Gambit's docked input. */
+  left: -16px;
+  right: -16px;
+  bottom: 0;
+  height: 55%;
   display: flex;
   flex-direction: column;
-  height: 100%;
   min-height: 0;
-  background: transparent;
+  background: var(--bg-panel);
+  border-top: 1px solid var(--border, rgba(127, 127, 127, 0.18));
   overflow: hidden;
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.18);
+  z-index: 5;
+}
+
+/* Full-window overlay (from clicking ⤢ on the half-paper). Backdrop
+ * captures pointer events behind it so user can only act on diff or
+ * dismiss. z-index well above Gambit, below context menus. */
+.diff-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+  z-index: 1000;
+}
+
+.diff-panel--expanded {
+  position: fixed;
+  inset: 24px;
+  /* Override default height:55% — fixed inset top+bottom sizes us. */
+  height: auto;
+  z-index: 1001;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-top: 1px solid var(--border);
+  /* Theme-driven radius (16/4/0 across themes) instead of hardcoded
+     8px. In the panel theme (--radius-md = 0) this naturally goes
+     square, matching the rest of the panel-shape vocabulary. */
+  border-radius: var(--radius-md);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+}
+
+/* Panel theme = sharp lines, no shadows. Strip the soft box-shadows
+ * on both the half overlay AND the expanded modal so the diff reads
+ * as a hard-edged "panel-on-panel" composition consistent with the
+ * rest of panel-shape UI (which uses hairline borders to delineate,
+ * never shadows). Other shapes (soft / slab / sharp / glass) keep
+ * the shadow as their natural elevation cue.
+ *
+ * Header/body INNER divider deliberately omitted — matches Gambit's
+ * docked input which is also a single uninterrupted slab (no hairline
+ * between its toolbar and textarea). The outer top border + bg-panel
+ * surface already give the diff its boundary; an inner divider would
+ * over-cardify what should read as one continuous tool. */
+[data-shape="panel"] .diff-panel,
+[data-shape="panel"] .diff-panel--expanded {
+  box-shadow: none;
+}
+
+/* Glass shape opt-out — global.css:1218-1224 nukes background +
+ * border-color on every .panel-right descendant div via a giant
+ * :not() exception list. Diff content NEEDS opacity to stay readable
+ * (syntax-highlighted code through 24px backdrop blur is unreadable),
+ * so reassert the panel's solid surface here. !important required
+ * because the global rule uses !important. Same intent as the other
+ * exception entries (gambit, tool-config-modal, etc.) — content
+ * viewers need their own surface, only chrome carriers go transparent.
+ *
+ * Specificity note: the global rule selector
+ *   `[data-shape="glass"] .panel-right :is(div,...):not(.list,...)`
+ * has specificity (0,3,1). To win, my override needs at least (0,3,2)
+ * or (0,4,0). Adding `.panel-right` as an ancestor brings me to
+ * (0,4,0), enough to beat global cleanly. Half-mode .diff-panel lives
+ * inside .panel-right so this works; the expanded modal portal'd to
+ * body has NO .panel-right ancestor, so the global rule doesn't match
+ * it either — the simple `.diff-panel--expanded` override suffices. */
+[data-shape="glass"] .panel-right .diff-panel {
+  background: var(--bg-panel) !important;
+  border-color: var(--border) !important;
+}
+[data-shape="glass"] .diff-panel--expanded {
+  background: var(--bg-panel) !important;
+  border-color: var(--border) !important;
 }
 
 .diff-header {
@@ -54,38 +141,6 @@
 .diff-header-btn:hover {
   background: var(--surface-hover, rgba(127, 127, 127, 0.12));
   color: var(--text-1);
-}
-
-/* Full-window overlay. Backdrop captures all pointer events behind it
- * (so the user truly only has the two header buttons + Esc). z-index
- * stays well above Gambit (200/300) and below context menus (9999). */
-.diff-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(2px);
-  z-index: 1000;
-}
-
-.diff-panel--expanded {
-  position: fixed;
-  inset: 24px;
-  /* Override the base .diff-panel { height: 100% }. Inset already sizes
-   * us via top+bottom; keeping height: 100% would push the bottom 24px
-   * past the viewport and cut off the last lines. */
-  height: auto;
-  z-index: 1001;
-  background: var(--bg-panel);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.4);
-  overflow: hidden;
-}
-
-.diff-panel--expanded .diff-header {
-  padding: 10px 10px 10px 18px;
-  font-size: 12px;
-  border-bottom: 1px solid var(--border);
 }
 
 .diff-body {
@@ -150,9 +205,10 @@
 
 .diff-line {
   display: block;
-  /* No left/right padding — the changes-split-bottom escapes task-board's
-   * padding (margin: 0 -16px) so the row backgrounds stretch panel-edge
-   * to panel-edge, no left/right whitespace. */
+  /* No left/right padding — the parent .diff-panel uses left:-16px /
+   * right:-16px to escape .task-board's 16px padding, so the row
+   * backgrounds (red/green tints on add/del lines) stretch panel-edge
+   * to panel-edge, no left/right whitespace gaps. */
   white-space: pre;
 }
 /* Line number column. Right-aligned so 1-digit and 4-digit line numbers
@@ -183,3 +239,24 @@
 
 [data-theme="light"] .diff-line-add .diff-marker { color: #1a4d2a; }
 [data-theme="light"] .diff-line-del .diff-marker { color: #4d1a1a; }
+
+/* Row-level background tint — the "whole line is +/- at a glance"
+ * scanning signal. Distinct concern from Shiki token coloring
+ * (which colors keywords/strings INSIDE a line). A 2026-04 cleanup
+ * mistakenly deleted these as "superseded by tokenization"; restored
+ * here. Solid hex (not rgba) keeps the hue consistent over panel /
+ * glass / any backdrop — and .diff-line IS in the glass whitelist
+ * (global.css:1218-1220) so the bg survives glass nuclear-transparent. */
+.diff-line-add {
+  background: #1a4d2a;
+}
+.diff-line-del {
+  background: #4d1a1a;
+}
+
+[data-theme="light"] .diff-line-add {
+  background: #c0e8c8;
+}
+[data-theme="light"] .diff-line-del {
+  background: #e8c0c0;
+}

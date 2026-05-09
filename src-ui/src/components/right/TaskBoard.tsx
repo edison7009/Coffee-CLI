@@ -134,16 +134,16 @@ export function TaskBoard() {
     });
   }, [state.terminals]);
 
-  // Diff full-screen overlay. Gambit is left untouched — modal covers it
-  // visually via z-index, backdrop blocks pointer events, and DiffPanel
-  // blurs the active element on entering expanded mode so keystrokes
-  // don't leak into a still-focused Gambit textarea behind the dim.
+  // Diff has 3 states (closed / half-overlay / full-screen modal). Half
+  // is the default when a file is selected from ChangesBoard; expanded
+  // promotes the SAME panel to a portal-rendered modal. State lives here
+  // (not in ChangesBoard) so leaving Changes tab + returning to it
+  // preserves the user's expanded preference for the open file.
   const [diffExpanded, setDiffExpanded] = useState(false);
   const toggleDiffExpanded = useCallback(() => {
     setDiffExpanded(prev => !prev);
   }, []);
-  // Collapse on selection clear (close-diff path) so we never end up with
-  // an empty expanded modal.
+  // Auto-collapse on diff close so reopening starts at the gentler half size.
   useEffect(() => {
     if (!selectedChangePath && diffExpanded) setDiffExpanded(false);
   }, [selectedChangePath, diffExpanded]);
