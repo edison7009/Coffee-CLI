@@ -1273,16 +1273,30 @@ body.gambit-docked .chat-reader-container {
         0 24px 64px rgba(0, 0, 0, 0.5);
 }
 
-/* Tab family — all three tab strips (chrome / Explorer / TaskBoard)
-   go fully transparent in glass. Active state is indicated by
-   text-1 color contrast alone (source default). No container pill,
-   no active fill, no outline. Matches the "全部透明,只靠主背景半透层"
-   architecture: every tab IS the body's --glass-tint — adding any
-   local bg would stack a second visible layer. */
+/* Tab family — all four tab strips (chrome / Explorer / TaskBoard /
+   Library Agents↔Skills) go fully transparent in glass. Active state
+   is indicated by text-1 color contrast alone (source default). No
+   container pill, no active fill, no outline. Matches the
+   "全部透明,只靠主背景半透层" architecture: every tab IS the body's
+   --glass-tint — adding any local bg would stack a second visible
+   layer. The library-tab .active source default is `background:
+   var(--accent)` so we have to actively clear it here. */
 [data-shape="glass"] .chrome-tab.active,
 [data-shape="glass"] .right-tab.active,
-[data-shape="glass"] .explorer-tab.active {
+[data-shape="glass"] .explorer-tab.active,
+[data-shape="glass"] .library-tab.active {
+    background: transparent;
     color: var(--text-1);
+}
+
+/* Library tab container — the .library-tabs pill has source-default
+   `background: var(--bg-panel) + border + radius` to draw a visible
+   pill in solid themes. In glass the pill must dissolve too, otherwise
+   we get a second floating panel above the chrome. */
+[data-shape="glass"] .library-tabs {
+    background: transparent;
+    border: none;
+    box-shadow: none;
 }
 
 /* Card hover: kill the translateY lift so the cards stay still
