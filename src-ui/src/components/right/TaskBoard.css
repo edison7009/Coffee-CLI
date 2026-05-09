@@ -170,12 +170,13 @@
 .task-card-row {
   display: flex;
   align-items: center;
-  /* 4px gap — keeps the title close to the checkbox on the left and
-   * lets the trash + send buttons cluster tightly on the right, so
-   * even multi-line titles have more horizontal room. Right padding
-   * matches the gap so trash↔send and send↔card-edge are both 4px. */
+  /* Asymmetric 8 L / 4 R — left needs more breathing because the
+   * checkbox is the visual entry-point of the card; right is a
+   * compact action cluster that can sit close to the edge. Tight
+   * 4px gap throughout. The narrow right column (~280px) needs
+   * every horizontal pixel for titles. */
   gap: 4px;
-  padding: 10px 4px 10px 10px;
+  padding: 10px 4px 10px 8px;
 }
 
 .task-card:hover {
@@ -188,7 +189,10 @@
 }
 
 .task-card.working .task-card-row {
-  padding-left: 8px;
+  /* Compensate for the 2px accent border-left so the checkbox sits
+     in the same column as on non-working cards. Base padding-left
+     is 8px (see .task-card-row), so working subtracts the border width. */
+  padding-left: 6px;
 }
 
 .task-card.expanded {
@@ -290,13 +294,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Match .task-slot's 24×24 footprint — keeps the left/right action
-   * affordances on a single visual rhythm; any extra hit area beyond
-   * the dot itself is wasted on a desktop pointer. Vertical padding
-   * (with cancelling negative margin) gives a slightly taller click
-   * strip without growing the row height. */
-  width: 24px;
-  height: 24px;
+  /* Match .task-slot's 18×18 footprint — keeps the left/right action
+   * affordances on a single visual rhythm. Vertical padding (with
+   * cancelling negative margin) gives a slightly taller click strip
+   * without growing the row height. */
+  width: 18px;
+  height: 18px;
   padding: 8px 0;
   margin: -8px 0;
   background: transparent;
@@ -417,8 +420,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 18px;
+  height: 18px;
   padding: 0;
   border-radius: var(--radius-xs);
   background: transparent;
@@ -428,20 +431,26 @@
   transition: all 0.2s;
 }
 
+/* Naked accent-colored glyph — no chip background, ever (rest OR hover).
+   Earlier passes painted an `accent 12-22%` square behind every icon,
+   which made the action cluster read as two color blocks competing
+   for attention with the title. Now the icons sit unframed; rest
+   state hides them via opacity, card-hover reveals them at 0.85
+   opacity (calm), and direct button-hover bumps to full opacity +
+   brightness for click affordance. */
 .task-slot-send {
   color: var(--accent, #c4956a);
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
   opacity: 0;
-  transition: opacity 0.15s, color 0.15s, background 0.15s;
+  transition: opacity 0.15s, filter 0.15s;
 }
 
-/* Reveal the play triangle only on card hover — resting card stays clean */
 .task-card:hover .task-slot-send {
-  opacity: 1;
+  opacity: 0.85;
 }
 
 .task-slot-send:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--accent) 25%, transparent);
+  opacity: 1;
+  filter: brightness(1.25);
 }
 
 .task-slot-send:disabled {
@@ -464,21 +473,21 @@
 
 .task-slot-delete {
   color: var(--accent, #c4956a);
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
   opacity: 0;
-  transition: opacity 0.15s, color 0.15s, background 0.15s;
+  transition: opacity 0.15s, filter 0.15s;
 }
 
-/* Pair with .task-slot-send: both fade in together on card hover so the
-   action cluster reads as a single unit. Destructive intent is carried by
-   the trash glyph itself, not by colour — the chip follows the active theme
-   accent so the UI stays visually of-a-piece as themes switch. */
+/* Pair with .task-slot-send — same reveal/affordance story:
+   card-hover reveals at calm 0.85, direct hover bumps to full
+   opacity + brightness. Destructive intent is carried by the
+   trash glyph itself, not by chip colour. */
 .task-card:hover .task-slot-delete {
-  opacity: 1;
+  opacity: 0.85;
 }
 
 .task-slot-delete:hover {
-  background: color-mix(in srgb, var(--accent) 25%, transparent);
+  opacity: 1;
+  filter: brightness(1.25);
 }
 
 /* ─── Description Area ──────────────────────────────────────────────────────── */

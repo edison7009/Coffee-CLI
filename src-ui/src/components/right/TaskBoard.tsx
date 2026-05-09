@@ -538,18 +538,18 @@ export function TaskBoard() {
   const renderCheckbox = (status: TaskStatus) => (
     <div className={`task-checkbox ${status}`}>
       {status === 'todo' && (
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <svg width="14" height="14" viewBox="0 0 18 18" fill="none">
           <circle cx="9" cy="9" r="8" stroke="currentColor" strokeWidth="1.5" />
         </svg>
       )}
       {status === 'working' && (
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <svg width="14" height="14" viewBox="0 0 18 18" fill="none">
           <circle cx="9" cy="9" r="8" stroke="currentColor" strokeWidth="1.5" />
           <circle cx="9" cy="9" r="4" fill="currentColor" className="pulse-dot" />
         </svg>
       )}
       {status === 'done' && (
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <svg width="14" height="14" viewBox="0 0 18 18" fill="none">
           <circle cx="9" cy="9" r="8" fill="currentColor" />
           <path d="M5.5 9.5L7.5 11.5L12.5 6.5" stroke="#1c1c1e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
