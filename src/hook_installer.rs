@@ -69,7 +69,23 @@ pub fn install_all() {
     install_claude(&home);
     install_codex(&home);
     install_opencode(&home);
+    ensure_opencode_tui_theme_default(&home);
 }
+
+/// OpenCode TUI theme we default users into. `lucent-orng` sets all four
+/// background slots (background / backgroundPanel / backgroundElement /
+/// backgroundMenu) to `"transparent"`, which is what makes Coffee CLI's
+/// terminal bg — and the Glass theme's wallpaper blur — actually visible
+/// behind the OpenCode TUI. Confirmed working 2026-05-09.
+const OPENCODE_DEFAULT_THEME: &str = "lucent-orng";
+
+/// Theme value Coffee CLI used to write into tui.json before we discovered
+/// `lucent-orng` actually delivers transparency. `system` *generates* a
+/// transparent bg in source, but the panel slots still resolve to opaque
+/// shades of palette[0], so OpenCode renders an almost-black canvas. We
+/// migrate any tui.json we previously stamped with `system` to the new
+/// default; user-set themes (anything other than `system`) are left alone.
+const OPENCODE_LEGACY_THEME: &str = "system";
 
 fn install_claude(home: &Path) {
     let script_path = match write_script(home) {
@@ -158,6 +174,106 @@ fn install_opencode(home: &Path) {
         eprintln!(
             "[hook-installer] failed to write {}: {}",
             plugin_path.display(),
+            e
+        );
+    }
+}
+
+/// Ensure ~/.config/opencode/tui.json has `"theme": "lucent-orng"` so the
+/// OpenCode TUI's four bg slots resolve to "transparent" — which is what
+/// actually lets Coffee CLI's terminal bg (and the Glass theme's wallpaper
+/// blur) show through. Without this, OpenCode picks its bundled `opencode`
+/// theme that paints an opaque #000 canvas no terminal setting can override.
+///
+/// Policy:
+///   - File missing                              → create with default theme.
+///   - File exists, no `theme`                   → add default theme.
+///   - File exists, `theme = "system"`           → migrate (we wrote that
+///                                                 ourselves before realising
+///                                                 it doesn't actually deliver
+///                                                 transparency in practice).
+///   - File exists, `theme = anything else`      → leave alone.
+///   - File unparseable                          → leave alone.
+///
+/// All failures are logged, never fatal.
+fn ensure_opencode_tui_theme_default(home: &Path) {
+    let config_dir = home.join(".config").join("opencode");
+    let tui_path = config_dir.join("tui.json");
+
+    if let Err(e) = fs::create_dir_all(&config_dir) {
+        eprintln!(
+            "[hook-installer] failed to create {}: {}",
+            config_dir.display(),
+            e
+        );
+        return;
+    }
+
+    if !tui_path.exists() {
+        let initial = json!({
+            "$schema": "https://opencode.ai/tui.json",
+            "theme": OPENCODE_DEFAULT_THEME,
+        });
+        let body = match serde_json::to_string_pretty(&initial) {
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!("[hook-installer] tui.json serialize failed: {}", e);
+                return;
+            }
+        };
+        if let Err(e) = fs::write(&tui_path, body) {
+            eprintln!(
+                "[hook-installer] failed to write {}: {}",
+                tui_path.display(),
+                e
+            );
+        }
+        return;
+    }
+
+    let text = match fs::read_to_string(&tui_path) {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("[hook-installer] read {} failed: {}", tui_path.display(), e);
+            return;
+        }
+    };
+
+    let mut root: Value = match serde_json::from_str(&text) {
+        Ok(v) => v,
+        Err(_) => return, // malformed user file — don't touch
+    };
+    let Some(obj) = root.as_object_mut() else { return };
+    let needs_write = match obj.get("theme") {
+        None => true,
+        Some(Value::String(s)) if s == OPENCODE_LEGACY_THEME => true,
+        _ => false, // user (or our new default) has a non-legacy theme set — respect it
+    };
+    if !needs_write {
+        return;
+    }
+    obj.insert(
+        "theme".to_string(),
+        Value::String(OPENCODE_DEFAULT_THEME.to_string()),
+    );
+    if !obj.contains_key("$schema") {
+        obj.insert(
+            "$schema".to_string(),
+            Value::String("https://opencode.ai/tui.json".to_string()),
+        );
+    }
+
+    let body = match serde_json::to_string_pretty(&root) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("[hook-installer] tui.json reserialize failed: {}", e);
+            return;
+        }
+    };
+    if let Err(e) = fs::write(&tui_path, body) {
+        eprintln!(
+            "[hook-installer] failed to update {}: {}",
+            tui_path.display(),
             e
         );
     }
