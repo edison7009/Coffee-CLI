@@ -1303,6 +1303,26 @@ body.gambit-docked .chat-reader-container {
     -webkit-backdrop-filter: blur(20px) saturate(160%);
 }
 
+/* Library chrome buttons in glass — back chevron + per-card gear.
+   Source defaults (text-3 with 0.7 / 0.35 opacity) were tuned
+   against solid bg-panel. Against the glass-frosted launchpad
+   surface — which inherits wallpaper luminance — text-3 dissolves
+   into bright wallpaper regions and the buttons become invisible.
+   Lift the default tier to text-2 with stronger opacity so they
+   stay discoverable; hover state (accent at full opacity) is the
+   source-default reward and stays unchanged. */
+[data-shape="glass"] .mode-switch-btn {
+    color: var(--text-2);
+    opacity: 0.9;
+}
+[data-shape="glass"] .library-gear-btn {
+    color: var(--text-2);
+    opacity: 0.55;
+}
+[data-shape="glass"] .library-item:hover .library-gear-btn {
+    opacity: 0.85;
+}
+
 [data-shape="glass"] .library-tab.active {
     background: rgba(255, 255, 255, 0.12);
     color: var(--text-1);
