@@ -57,17 +57,22 @@
 }
 
 /* Active drag state — pointer-down a tab and slide it horizontally.
- * Disables the bg/color transition so the tab tracks the cursor 1:1
- * (translateX is applied inline via React state). z-index lifts it
- * above siblings and the active-tab "flare" pseudo-elements; subtle
- * elevation + cursor cue communicate the grab. The reorder commits
- * on pointerup; until then this is purely visual. */
+ * INTENTIONALLY zero visual effect (no opacity, no shadow, no cursor
+ * change): the dragged tab's bottom edge meets the terminal area's
+ * top edge, and any elevation / dimming there breaks the chrome-tab
+ * → terminal seam continuity. The tab just moves; its appearance
+ * stays identical to its non-drag self.
+ *
+ * Two rules below are mechanical, not stylistic:
+ *   z-index — ensures the dragged tab renders above siblings during
+ *             their slide-aside translateX, so it isn't visually
+ *             clipped by them.
+ *   transition: none — the tab tracks the cursor 1:1 (translateX is
+ *             applied inline via React state); a transition here
+ *             would lag behind the cursor. */
 .chrome-tab.dragging {
   z-index: 5;
-  cursor: grabbing;
-  opacity: 0.92;
   transition: none;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
 }
 
 /* Chrome 'flare' pseudo-elements bridging the tab to the terminal background */
