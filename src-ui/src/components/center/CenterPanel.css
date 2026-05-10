@@ -35,7 +35,12 @@
   user-select: none;
   flex: 0 1 auto;
   max-width: 220px;
-  transition: background 0.15s, color 0.15s;
+  /* `transform` is part of the transition so siblings ease into their
+   * shifted positions when another tab is being dragged past them
+   * (browser-style slide-aside). The dragged tab itself overrides
+   * this with `transition: none` via `.dragging` so it tracks the
+   * cursor 1:1. */
+  transition: background 0.15s, color 0.15s, transform 0.18s ease;
 }
 
 

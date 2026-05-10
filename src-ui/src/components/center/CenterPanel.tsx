@@ -823,10 +823,19 @@ export function CenterPanel() {
   // Tauri v2 + WebView2 swallows intra-app dragstart on Windows when its
   // own file-drop capture is enabled (memory: reference_webview2_html5_drag).
   const tabsHeaderRef = useRef<HTMLDivElement | null>(null);
-  // `dragging` set during an active drag → applies translateX to the
-  // dragged tab and `.dragging` class for elevation/opacity styling.
-  // `null` when no drag in progress.
-  const [tabDrag, setTabDrag] = useState<{ sessionId: string; deltaX: number } | null>(null);
+  // Active drag state. `fromIdx` / `targetIdx` are positions in the
+  // **visible tab strip** (filtered, in DOM order) — not the underlying
+  // `state.terminals` array — because the slide-aside math operates on
+  // what the user actually sees. `slotWidth` is the dragged tab's
+  // visual footprint (own width + the flex `gap`); siblings translateX
+  // by ±slotWidth to make room.
+  const [tabDrag, setTabDrag] = useState<{
+    sessionId: string;
+    deltaX: number;
+    fromIdx: number;
+    targetIdx: number;
+    slotWidth: number;
+  } | null>(null);
   // Suppress the click that would otherwise fire on pointerup at end of
   // a drag (the click handler activates the tab — we don't want a drop
   // to count as an activation if the tab moved).
@@ -840,28 +849,68 @@ export function CenterPanel() {
     const headerEl = tabsHeaderRef.current;
     if (!headerEl) return;
 
-    // Snapshot every visible tab's center X at drag start. Used by drop
-    // to compute target position from cursor X without re-measuring
-    // (DOM is shifting during drag → measurements would be unstable).
+    // Snapshot every visible tab's center X at drag start. Used by
+    // drop AND by the shift math during drag — DOM is animating
+    // during drag, so re-measuring would feed back into itself.
     const tabEls = Array.from(
       headerEl.querySelectorAll<HTMLElement>('.chrome-tab[data-session-id]'),
     );
     const positions = tabEls.map(el => {
       const rect = el.getBoundingClientRect();
-      return { sessionId: el.dataset.sessionId!, center: rect.left + rect.width / 2 };
+      return {
+        sessionId: el.dataset.sessionId!,
+        center: rect.left + rect.width / 2,
+        width: rect.width,
+      };
     });
-    const ownPos = positions.find(p => p.sessionId === sessionId);
-    if (!ownPos) return;
+    const fromIdx = positions.findIndex(p => p.sessionId === sessionId);
+    if (fromIdx < 0) return;
+    const ownPos = positions[fromIdx];
+
+    // Dragged tab's "occupied slot width" = distance from its center to
+    // its nearest neighbor's center. This includes the flex `gap`
+    // between tabs, so siblings shifting by slotWidth visually fill
+    // the vacated slot exactly.
+    let slotWidth: number;
+    if (fromIdx + 1 < positions.length) {
+      slotWidth = positions[fromIdx + 1].center - ownPos.center;
+    } else if (fromIdx > 0) {
+      slotWidth = ownPos.center - positions[fromIdx - 1].center;
+    } else {
+      slotWidth = ownPos.width; // only one tab — no siblings to shift anyway
+    }
 
     const startX = e.clientX;
     let started = false;
     const THRESHOLD = 5;
 
+    // For a given cursor X, what's the without-dragged-array index that
+    // the dragged tab would land on? Derived from the dragged tab's
+    // visual center vs every OTHER tab's recorded center. Returns a
+    // value in [0, positions.length - 1] — same domain as the
+    // `insertIdx` the reducer uses.
+    const computeTargetIdx = (clientX: number): number => {
+      const draggedCenter = ownPos.center + (clientX - startX);
+      let count = 0;
+      for (let i = 0; i < positions.length; i++) {
+        if (i === fromIdx) continue;
+        if (positions[i].center > draggedCenter) return count;
+        count++;
+      }
+      return count;
+    };
+
     const onMove = (ev: PointerEvent) => {
       const dx = ev.clientX - startX;
       if (!started && Math.abs(dx) < THRESHOLD) return;
       started = true;
-      setTabDrag({ sessionId, deltaX: dx });
+      setTabDrag({
+        sessionId,
+        deltaX: dx,
+        fromIdx,
+        targetIdx: computeTargetIdx(ev.clientX),
+        slotWidth,
+      });
     };
 
     const onUp = (ev: PointerEvent) => {
@@ -871,15 +920,11 @@ export function CenterPanel() {
         // Suppress the upcoming click (tab activation) — the user dragged,
         // they didn't click. Cleared on the next click that fires.
         tabDragSuppressClickRef.current = true;
-        // Visual center of dragged tab at drop = original center + dx
-        const draggedCenter = ownPos.center + (ev.clientX - startX);
-        // beforeId = first OTHER tab whose center is past the dragged
-        // center; null = drop at end (cursor is past every other tab).
-        const others = positions.filter(p => p.sessionId !== sessionId);
-        let beforeId: string | null = null;
-        for (const o of others) {
-          if (o.center > draggedCenter) { beforeId = o.sessionId; break; }
-        }
+        const targetIdx = computeTargetIdx(ev.clientX);
+        // beforeId = the tab at `targetIdx` in the without-dragged strip;
+        // `null` when dropping past every other tab (insert at end).
+        const others = positions.filter((_, i) => i !== fromIdx);
+        const beforeId = targetIdx < others.length ? others[targetIdx].sessionId : null;
         dispatch({ type: 'REORDER_TERMINAL', sessionId, beforeId });
       }
       setTabDrag(null);
@@ -1115,15 +1160,53 @@ export function CenterPanel() {
         document.body
       )}
       <div ref={tabsHeaderRef} className="chrome-tabs-header" data-count={terminals.filter(s => !s.isHidden || s.id === activeTerminalId).length}>
-        {terminals.map(session => {
+        {(() => {
+          // Pre-compute visible-strip index for each session so the inner
+          // map can do O(1) shift lookups without re-filtering.
+          const visibleIdxBySid = new Map<string, number>();
+          let v = 0;
+          for (const s of terminals) {
+            if (s.isHidden && s.id !== activeTerminalId) continue;
+            visibleIdxBySid.set(s.id, v++);
+          }
+          return terminals.map(session => {
           if (session.isHidden && session.id !== activeTerminalId) return null;
 
           const isActive = session.id === activeTerminalId;
           const { icon, title } = renderTabContent(session, isActive);
           const isDragging = tabDrag?.sessionId === session.id;
+
+          // Sibling shift: while a different tab is being dragged, this
+          // tab translateX-es by ±slotWidth to make room for / fill in
+          // the dragged tab's vacated slot. Browser-tab "slide aside".
+          //
+          // Math: in the visible-strip's without-dragged array, the
+          // dragged tab will land at position `targetIdx`. Each sibling
+          // at original visible-index `j` (j !== fromIdx) maps to a
+          // without-dragged index of either `j` (if j < fromIdx) or
+          // `j - 1` (if j > fromIdx). Compare that to targetIdx:
+          //   - if j < fromIdx and its without-idx < targetIdx → no shift
+          //   - if j < fromIdx and its without-idx >= targetIdx → shift right (+slotWidth)
+          //   - if j > fromIdx and its without-idx < targetIdx → shift left (-slotWidth)
+          //   - if j > fromIdx and its without-idx >= targetIdx → no shift
+          let siblingShift = 0;
+          if (tabDrag && !isDragging) {
+            const j = visibleIdxBySid.get(session.id);
+            if (j !== undefined) {
+              const withoutIdx = j < tabDrag.fromIdx ? j : j - 1;
+              if (j < tabDrag.fromIdx && withoutIdx >= tabDrag.targetIdx) {
+                siblingShift = tabDrag.slotWidth;
+              } else if (j > tabDrag.fromIdx && withoutIdx < tabDrag.targetIdx) {
+                siblingShift = -tabDrag.slotWidth;
+              }
+            }
+          }
+
           const dragStyle: React.CSSProperties | undefined = isDragging
             ? { transform: `translateX(${tabDrag!.deltaX}px)` }
-            : undefined;
+            : siblingShift !== 0
+              ? { transform: `translateX(${siblingShift}px)` }
+              : undefined;
 
           return (
             <div
@@ -1177,7 +1260,8 @@ export function CenterPanel() {
               </div>
             </div>
           );
-        })}
+        });
+        })()}
 
         <button className="chrome-tab-new" onClick={handleAddTab}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
