@@ -6,6 +6,7 @@ import { retryInvoke } from './tauri';
 import { subscribeAgentStatus } from './lib/agent-status-bus';
 import { routeFileDrop } from './lib/file-drop';
 import { TitleBar } from './components/common/TitleBar';
+import { ResizeEdges } from './components/common/ResizeEdges';
 import { Explorer } from './components/left/Explorer';
 import { CenterPanel } from './components/center/CenterPanel';
 import { ActiveGambit } from './components/center/ActiveGambit';
@@ -213,6 +214,12 @@ export function App() {
           status events, etc.) and can be dragged freely across the whole
           app window. Internally reads the active tab's gambit state. */}
       <ActiveGambit />
+
+      {/* 8 transparent resize-edge strips (window chrome). Three-platform
+          unified — Windows + macOS already get edge cursors via OS shims,
+          but the strips fill in Linux's missing cursor + drag behaviour
+          for our `decorations: false` borderless window. */}
+      <ResizeEdges />
     </>
   );
 }

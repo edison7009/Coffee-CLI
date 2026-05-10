@@ -1,0 +1,38 @@
+/* ResizeEdges — 8 transparent edge/corner strips that drive
+   window resize-drag. Sits inside a fixed-position container that
+   has pointer-events: none, so only the strips themselves capture
+   clicks; the rest of the window stays clickable.
+
+   z-index 100: above panels (max ~10) and tab strips, below modals
+   (1000+) and explorer drag overlay (9999+). Resize must lose to
+   anything floating over it. */
+
+.resize-edges {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
+}
+
+.resize-edge {
+  position: absolute;
+  pointer-events: auto;
+  /* Background must stay transparent — these strips overlay real
+     content (titlebar drag area, panel chrome, terminal). Any tint
+     would be visible on every theme. */
+  background: transparent;
+}
+
+/* Edges: 4px thin strips between corners. The 12px gap on each end
+   is the corner footprint — corners need to be larger than edges so
+   diagonal resize is reachable without pixel-hunting. */
+.resize-edge--n  { top: 0;    left: 12px; right: 12px; height: 4px; cursor: n-resize; }
+.resize-edge--s  { bottom: 0; left: 12px; right: 12px; height: 4px; cursor: s-resize; }
+.resize-edge--w  { top: 12px; bottom: 12px; left: 0;  width: 4px; cursor: w-resize; }
+.resize-edge--e  { top: 12px; bottom: 12px; right: 0; width: 4px; cursor: e-resize; }
+
+/* Corners: 12×12 squares. */
+.resize-edge--nw { top: 0;    left: 0;    width: 12px; height: 12px; cursor: nw-resize; }
+.resize-edge--ne { top: 0;    right: 0;   width: 12px; height: 12px; cursor: ne-resize; }
+.resize-edge--sw { bottom: 0; left: 0;    width: 12px; height: 12px; cursor: sw-resize; }
+.resize-edge--se { bottom: 0; right: 0;   width: 12px; height: 12px; cursor: se-resize; }
