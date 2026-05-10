@@ -117,6 +117,10 @@ export const en = {
   'heatmap.tooltip_one': '1 message on {date}',
   'heatmap.tooltip_none': 'No activity on {date}',
 
+  // Skills panel toggle toasts
+  'skills.toast.enabled': 'Restart the tool to take effect.',
+  'skills.toast.disabled': 'Disabled — restart the tool to apply.',
+
 } as const;
 
 export type I18nKey = keyof typeof en;

@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useLayoutEffect, useRef } from 'react
 import { createPortal } from 'react-dom';
 import { commands } from '../../tauri';
 import { useAppState } from '../../store/app-state';
+import { useT } from '../../i18n/useT';
 import { parseFrontmatter, localizedField } from '../../utils/skill-meta';
 
 interface SkillEntry {
@@ -25,6 +26,7 @@ interface Props {
 export function SkillsPanel({ showToast }: Props) {
   const { state } = useAppState();
   const lang = state.currentLang;
+  const t = useT();
   const [skills, setSkills] = useState<ParsedSkill[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyName, setBusyName] = useState<string | null>(null);
@@ -109,7 +111,7 @@ export function SkillsPanel({ showToast }: Props) {
       // Per the design contract: never kill the user's running CLI
       // sessions — passive toast only. The user owns the consequence
       // of ignoring it. See feedback_no_kill_running_sessions memory.
-      showToast(turningOn ? '需重启工具才能生效' : '已关闭需重启工具');
+      showToast(turningOn ? t('skills.toast.enabled') : t('skills.toast.disabled'));
       // Surface skip-warnings as separate toasts so they aren't lost
       // alongside the primary success message. Each line is a per-tool
       // explanation including the conflicting path.

@@ -112,4 +112,8 @@ export const pt = {
   'heatmap.tooltip_one': '1 mensagem em {date}',
   'heatmap.tooltip_none': 'Sem atividade em {date}',
 
+  // Avisos do painel Skills
+  'skills.toast.enabled': 'Reinicie a ferramenta para aplicar a alteração.',
+  'skills.toast.disabled': 'Desativada — reinicie a ferramenta para aplicar.',
+
 } as const;

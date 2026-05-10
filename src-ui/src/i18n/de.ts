@@ -112,4 +112,8 @@ export const de = {
   'heatmap.tooltip_one': '1 Nachricht am {date}',
   'heatmap.tooltip_none': 'Keine Aktivität am {date}',
 
+  // Skills-Panel Toggle-Toasts
+  'skills.toast.enabled': 'Tool neu starten, damit die Änderung wirksam wird.',
+  'skills.toast.disabled': 'Deaktiviert — Tool neu starten, um zu übernehmen.',
+
 } as const;

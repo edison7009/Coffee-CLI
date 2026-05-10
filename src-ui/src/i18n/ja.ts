@@ -115,4 +115,8 @@ export const ja = {
   'heatmap.tooltip_one': '{date} · メッセージ 1 件',
   'heatmap.tooltip_none': '{date} · アクティビティなし',
 
+  // Skills パネル切替トースト
+  'skills.toast.enabled': 'ツールを再起動すると反映されます',
+  'skills.toast.disabled': '無効化しました。ツールを再起動すると反映されます',
+
 } as const;

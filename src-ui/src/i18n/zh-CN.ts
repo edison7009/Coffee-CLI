@@ -116,4 +116,8 @@ export const zhCN = {
   'heatmap.tooltip_one': '{date} · 1 条消息',
   'heatmap.tooltip_none': '{date} · 没有活动',
 
+  // Skills 面板开关提示
+  'skills.toast.enabled': '需重启工具才能生效',
+  'skills.toast.disabled': '已关闭，需重启工具',
+
 } as const;

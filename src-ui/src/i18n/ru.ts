@@ -112,4 +112,8 @@ export const ru = {
   'heatmap.tooltip_one': '{date} · 1 сообщение',
   'heatmap.tooltip_none': '{date} · нет активности',
 
+  // Уведомления панели Skills
+  'skills.toast.enabled': 'Перезапустите инструмент, чтобы изменения вступили в силу.',
+  'skills.toast.disabled': 'Отключено — перезапустите инструмент, чтобы применить.',
+
 } as const;

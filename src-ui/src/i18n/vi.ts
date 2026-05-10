@@ -117,4 +117,8 @@ export const vi = {
   'heatmap.tooltip_some': '{count} tin nhắn vào {date}',
   'heatmap.tooltip_one': '1 tin nhắn vào {date}',
   'heatmap.tooltip_none': 'Không có hoạt động vào {date}',
+
+  // Toast bật/tắt Skills
+  'skills.toast.enabled': 'Khởi động lại công cụ để áp dụng thay đổi.',
+  'skills.toast.disabled': 'Đã tắt — khởi động lại công cụ để áp dụng.',
 };
