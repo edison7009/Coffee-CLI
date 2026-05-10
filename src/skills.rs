@@ -229,15 +229,22 @@ fn seed_bundle(
             continue;
         }
 
-        // Skill exists somewhere — refresh just the metadata files in
-        // whichever dir it lives. Both can be true (defensive); refresh
-        // both so the two copies stay consistent if the user manually
-        // moved files around.
+        // Skill exists somewhere — refresh metadata + add any files
+        // the bundle introduced after first-seed (e.g. an icon added in
+        // a later Coffee CLI release). Refresh both library and enabled
+        // copies if both exist so they stay consistent.
+        //
+        // copy_missing_into never overwrites existing files — user
+        // patches to scripts/, assets/, etc. survive upgrade.
+        // Orphan files on disk that the bundle no longer ships are
+        // intentionally left alone for the same reason.
         if enabled_exists {
             refresh_metadata(skill_dir, &in_enabled)?;
+            copy_missing_into(skill_dir, enabled_root)?;
         }
         if lib_exists {
             refresh_metadata(skill_dir, &in_lib)?;
+            copy_missing_into(skill_dir, lib_root)?;
         }
     }
     Ok(())
@@ -246,13 +253,32 @@ fn seed_bundle(
 /// Recursively copy every file in `bundle` into `dest_root`, creating
 /// parent dirs as needed. Used for the first-time seed of a new skill.
 fn full_copy_into(bundle: &include_dir::Dir<'_>, dest_root: &Path) -> Result<(), String> {
+    write_bundle(bundle, dest_root, /* skip_existing */ false)
+}
+
+/// Recursively copy files from `bundle` into `dest_root`, but skip any
+/// file that already exists on disk. Used to add new files to an
+/// already-seeded skill on Coffee CLI upgrade — picks up new icons,
+/// new reference docs, new scripts without clobbering user edits.
+fn copy_missing_into(bundle: &include_dir::Dir<'_>, dest_root: &Path) -> Result<(), String> {
+    write_bundle(bundle, dest_root, /* skip_existing */ true)
+}
+
+fn write_bundle(
+    bundle: &include_dir::Dir<'_>,
+    dest_root: &Path,
+    skip_existing: bool,
+) -> Result<(), String> {
     for entry in bundle.entries() {
         match entry {
             include_dir::DirEntry::Dir(sub) => {
-                full_copy_into(sub, dest_root)?;
+                write_bundle(sub, dest_root, skip_existing)?;
             }
             include_dir::DirEntry::File(file) => {
                 let dest = dest_root.join(file.path());
+                if skip_existing && dest.exists() {
+                    continue;
+                }
                 if let Some(parent) = dest.parent() {
                     fs::create_dir_all(parent)
                         .map_err(|e| format!("mkdir {}: {}", parent.display(), e))?;
