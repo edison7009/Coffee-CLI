@@ -34,8 +34,31 @@
 // outside Coffee CLI — must no-op silently when env vars are missing.
 
 import net from "node:net";
+import fs from "node:fs";
+import path from "node:path";
+import os from "node:os";
 
 const COFFEE_DEBUG = process.env.COFFEE_CLI_DEBUG === "1";
+
+// Diagnostic file log: ALWAYS-ON. OpenCode's stderr is hidden inside the
+// Coffee CLI PTY so debug() output is invisible during normal use; the
+// file log gives us a way to verify plugin load + see actual tool names
+// + payload shapes from OpenCode 1.14.x without rebuilding. Bounded —
+// truncated to 200 KB on every plugin load so it doesn't grow forever.
+const DIAG_PATH = path.join(os.homedir(), "coffee-cli-opencode.log");
+const DIAG_MAX_BYTES = 200 * 1024;
+function diag(...args) {
+  try {
+    const ts = new Date().toISOString();
+    fs.appendFileSync(DIAG_PATH, `[${ts}] ${args.join(" ")}\n`);
+  } catch (_) {}
+}
+function diagTruncate() {
+  try {
+    const st = fs.statSync(DIAG_PATH);
+    if (st.size > DIAG_MAX_BYTES) fs.truncateSync(DIAG_PATH, 0);
+  } catch (_) {}
+}
 
 function debug(...args) {
   if (COFFEE_DEBUG) {
@@ -104,18 +127,24 @@ function mapEvent(evt) {
 
 // File-touching tool names → Coffee CLI audit action label. OpenCode's
 // tool.execute.after named hook fires after the tool runs, with the
-// resolved input (including the file path argument).
+// resolved input (including the file path argument). Names verified
+// against OpenCode 1.14.x — write/edit/patch are the canonical trio,
+// str_replace_editor / multi_edit catch Anthropic-style aliases that
+// some model providers emit through OpenCode's tool registry.
 const FILE_TOOL_ACTION = {
   edit: "edit",
   write: "create",
   patch: "edit",
+  multi_edit: "edit",
+  str_replace: "edit",
+  str_replace_editor: "edit",
 };
 
 function extractFilePath(input) {
   if (!input || typeof input !== "object") return null;
-  // OpenCode tools settled on `filePath` (camelCase) for new tools and
-  // `path` for older ones; accept either.
-  return input.filePath || input.path || null;
+  // OpenCode tools settled on `filePath` (camelCase) for new tools,
+  // `path` for older ones, `file_path` for Anthropic-style tools.
+  return input.filePath || input.path || input.file_path || null;
 }
 
 // OpenCode loader (packages/opencode/src/plugin/index.ts) iterates Object.values
@@ -123,6 +152,10 @@ function extractFilePath(input) {
 // We export a single named Plugin function; default-export is the same
 // reference and is deduped by the loader's identity Set.
 export const CoffeeCliIslandPlugin = async () => {
+  diagTruncate();
+  diag("PLUGIN LOADED tab=", process.env.COFFEE_CLI_TAB_ID || "<unset>",
+       "port=", process.env.COFFEE_CLI_HOOK_PORT || "<unset>",
+       "tool=", process.env.COFFEE_CLI_TOOL || "<unset>");
   debug("plugin loaded; tab=", process.env.COFFEE_CLI_TAB_ID || "<unset>",
         "port=", process.env.COFFEE_CLI_HOOK_PORT || "<unset>");
   return {
@@ -134,16 +167,41 @@ export const CoffeeCliIslandPlugin = async () => {
         send(mapped);
       }
     },
-    // Named hook: feeds the file-edit audit log. Coffee CLI's Rust
-    // side will compute the diff stats against the global baseline
-    // and emit `tool-file-edit` to the frontend.
-    "tool.execute.after": async ({ tool, input }) => {
+    // Named hook: feeds the file-edit audit log. OpenCode 1.14.x
+    // signature (verified against sst/opencode dev branch
+    // packages/plugin/src/index.ts):
+    //
+    //   "tool.execute.after": (input, output) => Promise<void>
+    //   input  = { tool, sessionID, callID, args }
+    //   output = { title, output, metadata }
+    //
+    // Earlier versions used `({ tool, input })` — same field names,
+    // different nesting — which is why a too-clever destructure of
+    // `({ tool, input })` happened to log the right tool name (it
+    // pulled `tool` off the first arg correctly) but always saw
+    // `input === undefined`, silently dropping every file edit.
+    // Read tool args from `input.args`, not from a re-named `input`.
+    "tool.execute.after": async (callInput, callOutput) => {
+      const tool = callInput && callInput.tool;
+      const args = callInput && callInput.args;
+      const argKeys = (args && typeof args === "object")
+        ? Object.keys(args).join(",") : "<not-object>";
+      const probedPath = extractFilePath(args);
+      diag("tool.execute.after tool=", String(tool),
+           "argKeys=", argKeys,
+           "probedPath=", probedPath || "<null>");
       const action = FILE_TOOL_ACTION[tool];
-      if (!action) return;
-      const filePath = extractFilePath(input);
-      if (!filePath) return;
-      debug("file edit:", tool, action, filePath);
-      send({ path: filePath, action });
+      if (!action) {
+        diag("  -> SKIPPED (tool not in FILE_TOOL_ACTION)");
+        return;
+      }
+      if (!probedPath) {
+        diag("  -> SKIPPED (no path extracted)");
+        return;
+      }
+      diag("  -> SEND { path:", probedPath, ", action:", action, "}");
+      debug("file edit:", tool, action, probedPath);
+      send({ path: probedPath, action });
     },
   };
 };
