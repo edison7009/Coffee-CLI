@@ -362,6 +362,15 @@ function TierTerminalImpl({
       // also redundant since the cursor itself is invisible (theme.cursor =
       // bg color), but kept for renderer paths that ignore the color trick.
       cursorBlink: false,
+      // Default `cursorInactiveStyle: 'outline'` makes xterm flip the
+      // cursor presentation on blur, which dirties the WebGL buffer and
+      // re-composites the whole canvas — visible as a one-frame flicker
+      // of the upstream CLI's own caret character (Claude Code, Codex)
+      // every time the user clicks anywhere outside the terminal.
+      // 'none' suppresses the inactive cursor entirely so blur is a
+      // no-op for the renderer. Cursor is already hidden via theme +
+      // CSS, so this is double-belt; the win is that the redraw stops.
+      cursorInactiveStyle: 'none',
       scrollback: 5000,
       theme: buildXtermTheme(theme, hasBg, termColorScheme),
     });
