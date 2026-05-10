@@ -38,21 +38,22 @@ use serde::{Deserialize, Serialize};
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
 
-/// 38 curated skills from `openai/skills` baked into the binary at compile
-/// time. ~6 MB of mostly markdown + small scripts; rodata-cheap, network-
-/// expensive at runtime so we ship them embedded. Seeded into the user's
-/// `~/.coffee-cli/skills-library/` on first launch (idempotent — file
-/// already present is left alone, so user toggles aren't disturbed by
-/// app upgrades).
-static BUNDLED_OPENAI_SKILLS: include_dir::Dir<'_> =
-    include_dir::include_dir!("$CARGO_MANIFEST_DIR/vendor/openai-skills/.curated");
-
-/// Coffee CLI's own skills (vibeid, etc.). Same seeding pipeline as the
-/// openai bundle; lives in a separate vendor dir so each set retains
-/// its own license/lineage and openai's snapshot can be re-synced from
-/// upstream without disturbing our skills (and vice versa).
-static BUNDLED_COFFEE_SKILLS: include_dir::Dir<'_> =
-    include_dir::include_dir!("$CARGO_MANIFEST_DIR/vendor/coffee-skills");
+/// Coffee CLI's bundled skills, baked into the binary at compile time.
+/// Currently 2 entries (`screenshot`, `vibeid`); both live under
+/// `skills/` at the repo root and ship as part of Coffee CLI's
+/// product (not as upstream-vendored content). Mostly markdown + small
+/// scripts → rodata-cheap. Seeded into the user's
+/// `~/.coffee-cli/skills-library/` on first launch (idempotent — files
+/// already present are left alone, so user toggles aren't disturbed
+/// by app upgrades).
+///
+/// The `screenshot` skill originated from `openai/skills` (MIT-licensed,
+/// LICENSE.txt preserved in `skills/screenshot/`). Once vendored here
+/// it's owned by Coffee CLI; upstream changes are not auto-tracked.
+/// The full openai/skills repo and any other reference material live
+/// under `reference/` (gitignored) — see `reference/README.md`.
+static BUNDLED_SKILLS: include_dir::Dir<'_> =
+    include_dir::include_dir!("$CARGO_MANIFEST_DIR/skills");
 
 /// CLI directories where Coffee CLI mirrors enabled skills via symlink.
 /// All six paths below resolve to the same agentskills.io shape
@@ -232,8 +233,7 @@ const ALWAYS_REFRESH_FILENAMES: &[&str] = &["SKILL.md", "matrix.json"];
 fn seed_library_from_bundle() -> Result<(), String> {
     let lib = library_root()?;
     let enabled = skills_root()?;
-    seed_bundle(&BUNDLED_OPENAI_SKILLS, &lib, &enabled)?;
-    seed_bundle(&BUNDLED_COFFEE_SKILLS, &lib, &enabled)?;
+    seed_bundle(&BUNDLED_SKILLS, &lib, &enabled)?;
     Ok(())
 }
 

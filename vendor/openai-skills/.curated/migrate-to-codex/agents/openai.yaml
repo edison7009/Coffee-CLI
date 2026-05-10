@@ -1,3 +1,0 @@
-interface:
-  display_name: "Migrate to Codex"
-  short_description: "Migrate supported instruction files, skills, agents, and config into Codex"

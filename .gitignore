@@ -66,7 +66,10 @@ cargo_check_output.txt
 
 # Legacy / temp
 /ui
-/reference
+# Reference clones (openai/skills, warpdotdev/warp, etc.) — see reference/README.md.
+# Read-only browsing material, not bundled into the binary, not part of the repo.
+/reference/*
+!/reference/README.md
 ico.png
 dev.bat
 /2
