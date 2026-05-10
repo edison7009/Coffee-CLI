@@ -168,6 +168,11 @@ export const commands = {
   skillsToggle: (name: string, enable: boolean) =>
     invoke<void>('skills_toggle', { name, enable }),
   skillsDelete: (name: string) => invoke<void>('skills_delete', { name }),
+  /** When a CLI flips from not-installed → installed mid-session, fan
+   *  out every currently-enabled skill into that tool's skills dir.
+   *  Paired with installHookForTool in the launchpad's focus rescan. */
+  skillsRelinkForTool: (tool: string) =>
+    invoke<void>('skills_relink_for_tool', { tool }),
 
   // Task Board persistence (~/.coffee-cli/tasks.json)
   loadTasks: () => invoke<string>('load_tasks'),

@@ -487,6 +487,71 @@ pub fn skills_toggle(name: String, enable: bool) -> Result<(), String> {
     Ok(())
 }
 
+/// Fan-out the inverse of `link_into_cli_dirs`: for ONE specific tool
+/// that just became available, link every currently-enabled skill into
+/// that tool's CLI skills dir. Driven by the launchpad's focus rescan
+/// when it detects a CLI flipping to installed (paired with
+/// `install_hook_for_tool`). Without this, a user who enables a skill
+/// before installing a CLI sees the skill stuck in `~/.coffee-cli/skills/`
+/// with no junction in the newly-installed CLI's dir until they
+/// toggle off and back on.
+///
+/// Idempotent: existing junctions are skipped (no clobber). Real
+/// folders the user manually placed at the same path are also skipped
+/// with a warning — same conflict policy as `link_into_cli_dirs`.
+/// No-op for tools the registry doesn't know about, or whose
+/// descriptor declares no skill_dir.
+#[tauri::command]
+pub fn skills_relink_for_tool(tool: String) -> Result<(), String> {
+    let Some(descriptor) = crate::tools::find(&tool) else { return Ok(()); };
+    let Some(skill_dir_rel) = descriptor.skill_dir_relative else { return Ok(()); };
+    if !is_tool_installed(descriptor.binary_name) {
+        return Ok(());
+    }
+
+    let home = home()?;
+    let skills_dir = skills_root()?;
+    if !skills_dir.is_dir() {
+        return Ok(());
+    }
+
+    let parent = home.join(skill_dir_rel.replace('/', std::path::MAIN_SEPARATOR_STR));
+    if !parent.exists() {
+        if let Err(e) = fs::create_dir_all(&parent) {
+            return Err(format!("mkdir {}: {}", parent.display(), e));
+        }
+    }
+
+    let entries = fs::read_dir(&skills_dir)
+        .map_err(|e| format!("read {}: {}", skills_dir.display(), e))?;
+    for entry in entries.flatten() {
+        let source = entry.path();
+        if !source.is_dir() {
+            continue;
+        }
+        let name = entry.file_name();
+        let link = parent.join(&name);
+        if link.exists() {
+            if !is_dir_link(&link) {
+                log::warn!(
+                    "[skills] {} exists as real folder, leaving alone",
+                    link.display()
+                );
+            }
+            continue;
+        }
+        if let Err(e) = create_dir_link(&source, &link) {
+            log::warn!(
+                "[skills] relink {} → {} failed: {}",
+                link.display(),
+                source.display(),
+                e
+            );
+        }
+    }
+    Ok(())
+}
+
 /// Verify no target CLI dir has a non-link entry under `<name>`. Returns
 /// a human-readable error pointing at the first conflicting path.
 /// Existing entries that ARE links (left over from a prior session our

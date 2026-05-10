@@ -3179,11 +3179,22 @@ pub fn start_ui() -> anyhow::Result<()> {
             crate::skills::skills_list,
             crate::skills::skills_toggle,
             crate::skills::skills_delete,
+            crate::skills::skills_relink_for_tool,
         ])
         .setup(|app| {
             // Install Claude/Qwen hook scripts + settings patches.
             // Runs once per launch; safe to call on a machine without either agent.
             crate::hook_installer::install_all();
+
+            // Seed the bundled skills (screenshot, vibeid) into
+            // ~/.coffee-cli/skills-library/ so first-time users see them
+            // in the Skills panel without having to open it once to
+            // trigger seeding. Idempotent — only writes new files; user
+            // edits and toggle state survive. Logs and proceeds on
+            // failure so a degraded state doesn't block app launch.
+            if let Err(e) = crate::skills::skills_ensure_dirs() {
+                eprintln!("[skills] seed at boot failed: {}", e);
+            }
 
             // Start loopback TCP listener that receives events from the hook
             // script and forwards them to the frontend as `agent-status` events.
