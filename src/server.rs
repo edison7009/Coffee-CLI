@@ -3172,6 +3172,7 @@ pub fn start_ui() -> anyhow::Result<()> {
             read_opencode_session,
             check_network_port,
             check_tools_installed,
+            crate::tools::list_tools,
             install_hook_for_tool,
             start_fs_watcher,
             stop_fs_watcher,

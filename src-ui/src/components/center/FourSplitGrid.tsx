@@ -32,6 +32,7 @@ import { TierTerminal } from './TierTerminal';
 import { ErrorBoundary } from '../common/ErrorBoundary';
 import { commands } from '../../tauri';
 import { setFocusedPane } from '../../lib/pane-focus';
+import { getToolDisplayName } from '../../lib/tool-info';
 import './MultiAgentGrid.css';
 
 interface Props {
@@ -47,14 +48,9 @@ interface Props {
   paneCount?: 2 | 3 | 4;
 }
 
-const PANE_CLI_OPTIONS: Array<{ value: ToolType; label: string }> = [
-  { value: 'claude', label: 'Claude Code' },
-  { value: 'codex', label: 'Codex' },
-  { value: 'gemini', label: 'Gemini' },
-  { value: 'opencode', label: 'OpenCode' },
-  { value: 'openclaw', label: 'OpenClaw' },
-  { value: 'hermes', label: 'Hermes Agent' },
-];
+const PANE_CLI_OPTIONS: Array<{ value: ToolType; label: string }> = (
+  ['claude', 'codex', 'gemini', 'opencode', 'openclaw', 'hermes'] as const
+).map((value) => ({ value, label: getToolDisplayName(value) }));
 
 // OpenClaw (persona forge) and Hermes Agent are directory-agnostic — they
 // operate on global state, not a project folder. Skip the folder picker

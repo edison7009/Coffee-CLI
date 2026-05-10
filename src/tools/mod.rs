@@ -226,3 +226,24 @@ pub static TOOLS: &[&ToolDescriptor] = &[
 pub fn find(id: &str) -> Option<&'static ToolDescriptor> {
     TOOLS.iter().find(|t| t.id == id).copied()
 }
+
+/// Frontend-facing summary of a registered tool. Returned by the
+/// `list_tools` IPC so the UI can pull display names off the registry
+/// instead of hardcoding label tables in every component.
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ToolInfo {
+    pub id: &'static str,
+    pub display_name: &'static str,
+}
+
+#[tauri::command]
+pub fn list_tools() -> Vec<ToolInfo> {
+    TOOLS
+        .iter()
+        .map(|t| ToolInfo {
+            id: t.id,
+            display_name: t.display_name,
+        })
+        .collect()
+}

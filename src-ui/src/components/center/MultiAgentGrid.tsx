@@ -31,6 +31,7 @@ import { ErrorBoundary } from '../common/ErrorBoundary';
 import { commands } from '../../tauri';
 import { setFocusedPane } from '../../lib/pane-focus';
 import { useT } from '../../i18n/useT';
+import { getToolDisplayName } from '../../lib/tool-info';
 import './MultiAgentGrid.css';
 
 interface Props {
@@ -47,12 +48,9 @@ interface Props {
 // documented in `mcp_injector.rs`. OpenCode joins via the
 // `OPENCODE_CONFIG=<pane-temp>/opencode.json` env var so its workspace
 // stays untouched (same zero-pollution invariant as the other three).
-const PANE_CLI_OPTIONS: Array<{ value: ToolType; label: string }> = [
-  { value: 'claude', label: 'Claude Code' },
-  { value: 'codex', label: 'Codex' },
-  { value: 'gemini', label: 'Gemini' },
-  { value: 'opencode', label: 'OpenCode' },
-];
+const PANE_CLI_OPTIONS: Array<{ value: ToolType; label: string }> = (
+  ['claude', 'codex', 'gemini', 'opencode'] as const
+).map((value) => ({ value, label: getToolDisplayName(value) }));
 
 export function MultiAgentGrid({ tab, hasBg, bgUrl, bgType, paneCount = 4 }: Props) {
   const { state, dispatch } = useAppState();

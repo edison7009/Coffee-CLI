@@ -22,6 +22,7 @@ import { notifyUserInputSubmitted } from '../../lib/agent-status-bus';
 import { commands } from '../../tauri';
 import { useAppDispatch, useAppState, type ToolType, type ThemeColor } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
+import { getToolDisplayName } from '../../lib/tool-info';
 import '@xterm/xterm/css/xterm.css';
 import './TierTerminal.css';
 
@@ -226,9 +227,8 @@ function TermContextMenu({ menu, onClose, onCopy, onPaste, onSelectAll }: {
 interface TierTerminalProps {
   sessionId: string;
   tool: ToolType;
-  /** Display name of the tool (from the local built-in catalog). Used by
-   * splash + launch-failed panels; lets the splash show a friendly name
-   * even for agents that aren't in the hardcoded `toolLabel` fallback. */
+  /** Display name override for the splash. When omitted, the splash
+   *  resolves the tool id through the registry (lib/tool-info.ts). */
   toolName?: string;
   theme: ThemeColor;
   lang: string;
@@ -308,11 +308,12 @@ function TierTerminalImpl({
 
   const t = useT();
 
+  // Splash labels for registered AI CLIs come straight from the Rust
+  // tool registry (lib/tool-info.ts). The pseudo-tools `remote` /
+  // `terminal` are not in the registry — keep their localized labels.
   const toolLabel: Record<string, string> = {
-    claude: 'Claude Code',
-    qwen: 'Qwen Code', hermes: 'Hermes Agent', opencode: 'OpenCode', openclaw: 'OpenClaw',
-    codex: 'Codex CLI', gemini: 'Gemini CLI',
-    remote: t('tool.remote'), terminal: t('tool.terminal'),
+    remote: t('tool.remote'),
+    terminal: t('tool.terminal'),
   };
 
   // ── xterm.js init ────────────────────────────────────────────────────────
@@ -1155,7 +1156,10 @@ function TierTerminalImpl({
               </svg>
             </div>
             {(() => {
-              const splashText = toolName || (tool && toolLabel[tool]) || 'Loading';
+              const splashText =
+                toolName ||
+                (tool && (toolLabel[tool] ?? getToolDisplayName(tool))) ||
+                'Loading';
               // Pick splash font by CONTENT language, not UI language. The tab
               // for Claude Code shows "Claude Code" in any UI locale, and the
               // italic-serif art treatment only reads well for Latin glyphs.

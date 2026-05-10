@@ -20,6 +20,7 @@ interface RemoteHistoryItem {
   user: string;
 }
 import { isTauri, commands } from '../../tauri';
+import { getToolDisplayName } from '../../lib/tool-info';
 import { useT } from '../../i18n/useT';
 import './CenterPanel.css';
 
@@ -498,16 +499,12 @@ export function CenterPanel() {
     hermes: <SvgHermes />,
   };
 
-  // Built-in AI CLI catalog. Fully local — no remote fetch.
+  // Built-in AI CLI catalog. Fully local — no remote fetch. Display
+  // names are sourced from the Rust registry (see lib/tool-info.ts);
+  // the order here is the launchpad's preferred presentation order.
   const BUILTIN_AI_CLI_FALLBACK: { key: ToolType; label: string }[] = [
-    { key: 'claude', label: 'Claude Code' },
-    { key: 'opencode', label: 'OpenCode' },
-    { key: 'openclaw', label: 'OpenClaw' },
-    { key: 'codex', label: 'Codex CLI' },
-    { key: 'gemini', label: 'Gemini CLI' },
-    { key: 'qwen', label: 'Qwen Code' },
-    { key: 'hermes', label: 'Hermes Agent' },
-  ];
+    'claude', 'opencode', 'openclaw', 'codex', 'gemini', 'qwen', 'hermes',
+  ].map((key) => ({ key: key as ToolType, label: getToolDisplayName(key) }));
 
   // Unified agent catalog — fully local. The remote catalog fetch
   // (coffeecli.com/agents/catalog.json) was deleted in v1.1.5; product
@@ -1058,15 +1055,15 @@ export function CenterPanel() {
     const cwd = cwdBasename(session.folderPath);
     const pathTip = session.folderPath ?? undefined;
     switch (session.tool) {
-      case 'claude': return { icon: <SvgClaude />, title: cwd ?? 'Claude Code', tooltip: pathTip };
-      case 'qwen': return { icon: <SvgQwen />, title: cwd ?? 'Qwen Code', tooltip: pathTip };
+      case 'claude': return { icon: <SvgClaude />, title: cwd ?? getToolDisplayName('claude'), tooltip: pathTip };
+      case 'qwen': return { icon: <SvgQwen />, title: cwd ?? getToolDisplayName('qwen'), tooltip: pathTip };
       // OpenClaw / Hermes are directory-agnostic tools — their tab title
       // stays as the tool name regardless of any inherited folderPath.
-      case 'hermes': return { icon: <SvgHermes />, title: 'Hermes Agent', tooltip: undefined };
-      case 'opencode': return { icon: <SvgOpenCode />, title: cwd ?? 'OpenCode', tooltip: pathTip };
-      case 'openclaw': return { icon: <SvgOpenClaw />, title: 'OpenClaw', tooltip: undefined };
-      case 'codex': return { icon: <SvgCodex />, title: cwd ?? 'Codex CLI', tooltip: pathTip };
-      case 'gemini': return { icon: <SvgGemini />, title: cwd ?? 'Gemini CLI', tooltip: pathTip };
+      case 'hermes': return { icon: <SvgHermes />, title: getToolDisplayName('hermes'), tooltip: undefined };
+      case 'opencode': return { icon: <SvgOpenCode />, title: cwd ?? getToolDisplayName('opencode'), tooltip: pathTip };
+      case 'openclaw': return { icon: <SvgOpenClaw />, title: getToolDisplayName('openclaw'), tooltip: undefined };
+      case 'codex': return { icon: <SvgCodex />, title: cwd ?? getToolDisplayName('codex'), tooltip: pathTip };
+      case 'gemini': return { icon: <SvgGemini />, title: cwd ?? getToolDisplayName('gemini'), tooltip: pathTip };
       case 'remote': {
         let title = t('tool.remote') as string;
         if (session.toolData) {

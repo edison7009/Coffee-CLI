@@ -3,6 +3,7 @@ import { useT } from '../../i18n/useT';
 import { useAppState } from '../../store/app-state';
 import { isTauri } from '../../tauri';
 import type { SavedSession } from '../../tauri';
+import { getToolDisplayName } from '../../lib/tool-info';
 import {
   prefetchHistory,
   subscribeHistory,
@@ -37,17 +38,7 @@ const getToolIcon = (tool: string) => {
   return <img src={src} alt="" style={{ width: '1em', height: '1em', flexShrink: 0, objectFit: 'contain', ...extra }}/>;
 };
 
-const getToolName = (tool: string, _lang: string) => {
-  switch (tool) {
-    case 'claude': return 'Claude Code';
-    case 'codex': return 'Codex CLI';
-    case 'gemini': return 'Gemini CLI';
-    case 'qwen': return 'Qwen Code';
-    case 'hermes': return 'Hermes Agent';
-    case 'opencode': return 'OpenCode';
-    default: return tool.replace(/^\w/, c => c.toUpperCase());
-  }
-};
+const getToolName = (tool: string, _lang: string) => getToolDisplayName(tool);
 
 export function HistoryBoard() {
   const t = useT();

@@ -114,6 +114,11 @@ export const commands = {
   checkToolsInstalled: () =>
     invoke<Record<string, boolean>>('check_tools_installed'),
 
+  /** Static list of tools registered in the Rust src/tools/ registry —
+   *  one entry per supported AI CLI with the canonical display name.
+   *  Loaded once at app boot and cached; see `lib/tool-info.ts`. */
+  listTools: () => invoke<{ id: string; displayName: string }[]>('list_tools'),
+
   /** Install hook scripts + upstream config patches for one tool.
    *  Call when the focus-rescan detects a CLI flipped to installed —
    *  picks up tab status indicators without forcing a Coffee CLI

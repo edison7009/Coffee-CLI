@@ -5,14 +5,21 @@ import ReactDOM from 'react-dom/client';
 import { AppProvider } from './store/app-state';
 import { App } from './App';
 import { invoke, commands } from './tauri';
+import { loadToolInfo } from './lib/tool-info';
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <AppProvider>
-      <App />
-    </AppProvider>
-  </React.StrictMode>
-);
+// Block React mount on the registry IPC so every component reads
+// canonical display names on first render (no 'claude' → 'Claude
+// Code' label flash). The window is `visible: false` until
+// show_main_window fires below, so the ~10ms wait is invisible.
+void loadToolInfo().finally(() => {
+  ReactDOM.createRoot(document.getElementById('root')!).render(
+    <React.StrictMode>
+      <AppProvider>
+        <App />
+      </AppProvider>
+    </React.StrictMode>
+  );
+});
 
 // Warm document.fonts so Inter is fully decoded BEFORE any UI element first
 // needs glyphs that the body had not yet rendered. <link rel="preload"> in
