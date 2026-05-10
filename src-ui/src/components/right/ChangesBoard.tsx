@@ -136,31 +136,15 @@ export function ChangesBoard({ selectedPath, setSelectedPath, diffExpanded, onTo
     return list;
   }, [globalChangeLog]);
 
-  // Time-window filter: clip rows to a recency cutoff. "all" disables.
-  // 5m / 1h / today are absolute thresholds re-evaluated on each render
-  // (so the filter stays accurate as time passes — a row from 2 minutes
-  // ago auto-disappears from "5m" once it's 6 minutes old). Stored only
-  // in component state — not worth persisting across panel toggles
-  // since the user is typically in active flow when they care.
-  type TimeFilter = 'all' | '5m' | '1h' | 'today';
-  const [timeFilter, setTimeFilter] = useState<TimeFilter>('all');
-  const filteredRows = useMemo(() => {
-    if (timeFilter === 'all') return rows;
-    const now = Date.now();
-    const cutoff =
-      timeFilter === '5m' ? now - 5 * 60 * 1000 :
-      timeFilter === '1h' ? now - 60 * 60 * 1000 :
-      new Date().setHours(0, 0, 0, 0);
-    return rows.filter(r => r.mtimeMs >= cutoff);
-  }, [rows, timeFilter]);
-
   // Virtualization via progressive load: render only the first N rows,
   // bump N when the bottom sentinel scrolls into view. Cheap, no extra
-  // dep, smooth UX. Reset N when the underlying list changes (filter
-  // toggle, fresh project opened, etc.).
+  // dep, smooth UX past thousands of entries. Reset N to PAGE_SIZE when
+  // the list shrinks (no rows to load anyway).
   const PAGE_SIZE = 50;
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [timeFilter, filteredRows.length === 0]);
+  useEffect(() => {
+    if (rows.length === 0) setVisibleCount(PAGE_SIZE);
+  }, [rows.length]);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     const el = sentinelRef.current;
@@ -168,21 +152,19 @@ export function ChangesBoard({ selectedPath, setSelectedPath, diffExpanded, onTo
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          setVisibleCount(c => Math.min(filteredRows.length, c + PAGE_SIZE));
+          setVisibleCount(c => Math.min(rows.length, c + PAGE_SIZE));
         }
       },
       { rootMargin: '300px' },
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [filteredRows.length]);
-  const visibleRows = useMemo(() => filteredRows.slice(0, visibleCount), [filteredRows, visibleCount]);
+  }, [rows.length]);
+  const visibleRows = useMemo(() => rows.slice(0, visibleCount), [rows, visibleCount]);
 
   // If the selected file disappears from the list (reverted, deleted),
   // drop the diff panel rather than showing stale content. We no longer
   // collapse on tab switch — the global log keeps the entry alive.
-  // Lookup against full unfiltered rows so the diff panel survives a
-  // time-window filter change (selected file might be outside window).
   const selectedRow = selectedPath ? rows.find(r => r.path === selectedPath) : undefined;
   const effectiveSelected = selectedRow ? selectedPath : null;
 
@@ -204,33 +186,8 @@ export function ChangesBoard({ selectedPath, setSelectedPath, diffExpanded, onTo
     ? { display: 'none' as const }
     : { bottom: `${diffHeight}%` };
 
-  // Time-filter chip labels — kept inline (not i18n) for now, matching
-  // the rest of the panel's UI conventions; promote to t(...) keys once
-  // the panel gains a wider label refactor.
-  const filterChips: { id: TimeFilter; label: string }[] = [
-    { id: 'all',   label: '全部' },
-    { id: '5m',    label: '5分钟' },
-    { id: '1h',    label: '1小时' },
-    { id: 'today', label: '今天' },
-  ];
-
   return (
     <div className="changes-fullview" ref={containerRef}>
-      <div className="changes-filter-row">
-        {filterChips.map(chip => (
-          <button
-            key={chip.id}
-            type="button"
-            className={`changes-filter-chip ${timeFilter === chip.id ? 'active' : ''}`}
-            onClick={() => setTimeFilter(chip.id)}
-          >
-            {chip.label}
-          </button>
-        ))}
-        <span className="changes-filter-count">
-          {filteredRows.length}/{rows.length}
-        </span>
-      </div>
       <ScrollPanel>
         <div className="changes-list">
           {visibleRows.map(row => (
@@ -265,7 +222,7 @@ export function ChangesBoard({ selectedPath, setSelectedPath, diffExpanded, onTo
               </span>
             </div>
           ))}
-          {visibleCount < filteredRows.length && (
+          {visibleCount < rows.length && (
             <div ref={sentinelRef} className="changes-sentinel" aria-hidden="true" />
           )}
         </div>
