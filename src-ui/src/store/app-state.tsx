@@ -71,6 +71,32 @@ interface MultiAgentState {
   focusedPaneIdx?: number | null;
 }
 
+/// One file's row in the global change log. Multiple tabs touching the
+/// same file collapse into a single entry — `sessionIds` tracks all
+/// originating tabs so DiffPanel can pick any of them for baseline
+/// fetching, and provenance UI can show "via Claude (project A) +
+/// Codex (project B)" style attribution.
+export interface GlobalChangeEntry {
+  /// Absolute file path (forward slashes).
+  path: string;
+  /// Project root (folderPath) of the most recent reporting tab; used
+  /// for grouping and for showing relative paths in the UI. If multiple
+  /// tabs report the same file from different roots (rare — file lives
+  /// inside both tabs' folders), latest report wins.
+  projectRoot: string;
+  /// Cumulative line counts since the earliest baseline that touched
+  /// this file. Updated on every `computeFolderStats` refresh from any
+  /// tab; latest non-zero report wins.
+  added: number;
+  deleted: number;
+  /// Last-known mtime (ms) — drives the timeline sort order.
+  mtimeMs: number;
+  /// Sessions that have reported this file. Includes entries for tabs
+  /// that have since closed; their Rust-side baselines stay alive for
+  /// the app's lifetime so DiffPanel can still resolve `getBaselineContent`.
+  sessionIds: string[];
+}
+
 export interface TerminalSession {
   id: string;
   tool: ToolType;
@@ -106,6 +132,16 @@ export interface AppState {
 
   // Terminal foreground color override ('' = use theme default)
   termColorScheme: string;
+
+  // Global change log — app-lifecycle audit list of file modifications
+  // observed across all tabs. Survives tab close so a closed conversation's
+  // edits remain auditable until Coffee CLI restarts. Keyed by absolute
+  // file path; the `sessionId` field points to the source tab (kept alive
+  // in Rust baselines for diff fetching even after the tab UI closes —
+  // see file-stats.tsx for the deliberate-no-drop behavior). Different
+  // tabs editing the same file collapse into a single entry; the
+  // `sessionIds` array tracks all originating tabs for provenance.
+  globalChangeLog: Map<string, GlobalChangeEntry>;
 
   // Terminals
   terminals: TerminalSession[];
@@ -187,6 +223,8 @@ type Action =
   | { type: 'SET_BG'; path: string; bgType: 'image' | 'video' }
   | { type: 'CLEAR_BG' }
   | { type: 'SET_WALLPAPER_OPACITY'; opacity: number }
+  | { type: 'MERGE_GLOBAL_CHANGES'; sessionId: string; projectRoot: string; entries: { path: string; added: number; deleted: number; mtimeMs: number }[] }
+  | { type: 'CLEAR_GLOBAL_CHANGES' }
   | { type: 'SET_TERM_SCHEME'; scheme: string }
   | { type: 'TOGGLE_GAMBIT' }
   | { type: 'SET_GAMBIT_DRAFT'; id: string; draft: string }
@@ -315,6 +353,47 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, bgPath: '', bgType: 'none' };
     case 'SET_WALLPAPER_OPACITY':
       return { ...state, wallpaperOpacity: Math.max(0, Math.min(100, action.opacity)) };
+    case 'MERGE_GLOBAL_CHANGES': {
+      // Merge a session's freshly-computed file stats into the global log.
+      // Keyed by absolute path. Existing entry from any session: update
+      // counts + mtime, append sessionId to provenance list (de-duped).
+      // New path: insert. Empty entries (added=0 deleted=0) are dropped
+      // — they mean the file reverted to baseline; no audit value.
+      // Map identity is preserved when nothing changes, so React.memo /
+      // referential-equality consumers don't re-render on no-op merges.
+      const next = new Map(state.globalChangeLog);
+      let mutated = false;
+      for (const e of action.entries) {
+        if (e.added === 0 && e.deleted === 0) {
+          if (next.has(e.path)) { next.delete(e.path); mutated = true; }
+          continue;
+        }
+        const prev = next.get(e.path);
+        const sessionIds = prev?.sessionIds.includes(action.sessionId)
+          ? prev.sessionIds
+          : [...(prev?.sessionIds ?? []), action.sessionId];
+        if (
+          prev &&
+          prev.added === e.added &&
+          prev.deleted === e.deleted &&
+          prev.mtimeMs === e.mtimeMs &&
+          prev.projectRoot === action.projectRoot &&
+          sessionIds === prev.sessionIds
+        ) continue;
+        next.set(e.path, {
+          path: e.path,
+          projectRoot: action.projectRoot,
+          added: e.added,
+          deleted: e.deleted,
+          mtimeMs: e.mtimeMs,
+          sessionIds,
+        });
+        mutated = true;
+      }
+      return mutated ? { ...state, globalChangeLog: next } : state;
+    }
+    case 'CLEAR_GLOBAL_CHANGES':
+      return { ...state, globalChangeLog: new Map() };
     case 'SET_TERM_SCHEME':
       return { ...state, termColorScheme: action.scheme };
     case 'TOGGLE_GAMBIT':
@@ -527,6 +606,7 @@ function getInitialState(): AppState {
     bgPath,
     bgType,
     wallpaperOpacity,
+    globalChangeLog: new Map(),
     termColorScheme,
     terminals: [{ id: defaultTerminalId, tool: null, folderPath }],
     activeTerminalId: defaultTerminalId,

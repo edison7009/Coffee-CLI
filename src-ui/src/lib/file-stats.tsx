@@ -3,9 +3,9 @@
 // snapshot so the right-side tab keeps showing modified files even when the
 // left panel is collapsed.
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { useAppState, resolveDiffContext } from '../store/app-state';
+import { useAppDispatch, useAppState, resolveDiffContext } from '../store/app-state';
 import type { ToolType } from '../store/app-state';
 import { commands } from '../tauri';
 
@@ -27,6 +27,7 @@ const baselinedSessions = new Map<string, string>();
 
 export function FileStatsProvider({ children }: { children: ReactNode }) {
   const { state } = useAppState();
+  const dispatch = useAppDispatch();
   const activeSession = state.terminals.find(t => t.id === state.activeTerminalId);
   const diffCtx = resolveDiffContext(activeSession);
   const folderPath = diffCtx?.folderPath ?? null;
@@ -41,12 +42,23 @@ export function FileStatsProvider({ children }: { children: ReactNode }) {
       if (snapshotReady.current) await snapshotReady.current;
       const raw = await commands.computeFolderStats(sid, folder);
       const m = new Map<string, FileStats>();
-      for (const [k, v] of Object.entries(raw)) m.set(normPath(k), v);
+      const entries: { path: string; added: number; deleted: number; mtimeMs: number }[] = [];
+      for (const [k, v] of Object.entries(raw)) {
+        const p = normPath(k);
+        m.set(p, v);
+        entries.push({ path: p, added: v.added, deleted: v.deleted, mtimeMs: v.mtimeMs });
+      }
       setFileStats(m);
+      // Feed the global change log: every refresh of any tab's stats
+      // pushes a snapshot into the app-lifecycle audit list. Closed-tab
+      // entries persist in globalChangeLog (we deliberately skip the
+      // dropSessionSnapshot call below so DiffPanel can still resolve
+      // baselines for them via getBaselineContent).
+      dispatch({ type: 'MERGE_GLOBAL_CHANGES', sessionId: sid, projectRoot: folder, entries });
     } catch {
       setFileStats(new Map());
     }
-  }, []);
+  }, [dispatch]);
 
   useEffect(() => {
     if (!folderPath || !sessionId) {
@@ -70,21 +82,23 @@ export function FileStatsProvider({ children }: { children: ReactNode }) {
     }
   }, [folderPath, sessionId, sessionTool, refreshFileStats]);
 
-  // Drop snapshots for closed tabs.
-  const liveSessionIds = useMemo(
-    () => new Set(state.terminals.map(t => t.id)),
-    [state.terminals],
-  );
+  // Tabs closing no longer drop their backend baselines: globalChangeLog
+  // entries from a closed tab still need `getBaselineContent(sessionId, ...)`
+  // to work for DiffPanel, so the Rust-side baseline is kept alive until
+  // the app exits. Per-file content is capped (server.rs:313) so the
+  // memory cost is bounded; full reset happens on Coffee CLI restart,
+  // which matches the global change log's app-lifecycle scope.
+  //
+  // We still prune `baselinedSessions` (frontend-only book-keeping) so
+  // re-opening a tab with the same folder gets fresh decision logic.
   useEffect(() => {
+    const live = new Set(state.terminals.map(t => t.id));
     const dead: string[] = [];
     for (const sid of baselinedSessions.keys()) {
-      if (!liveSessionIds.has(sid)) dead.push(sid);
+      if (!live.has(sid)) dead.push(sid);
     }
-    for (const sid of dead) {
-      baselinedSessions.delete(sid);
-      commands.dropSessionSnapshot(sid).catch(() => {});
-    }
-  }, [liveSessionIds]);
+    for (const sid of dead) baselinedSessions.delete(sid);
+  }, [state.terminals]);
 
   // Refresh on fs-refresh events emitted by Explorer mutations / external
   // editors / the agent. Single 300ms debounce shared across the workspace.
