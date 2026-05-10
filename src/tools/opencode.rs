@@ -3,7 +3,7 @@
 //! XDG layout: skills live under `~/.config/opencode/skills/`,
 //! NOT in a top-level `~/.opencode/` dotdir.
 
-use super::{FileEditAttribution, ToolDescriptor};
+use super::{FileEditAttribution, HistoryShape, ToolDescriptor};
 
 pub static DESCRIPTOR: ToolDescriptor = ToolDescriptor {
     id: "opencode",
@@ -15,4 +15,9 @@ pub static DESCRIPTOR: ToolDescriptor = ToolDescriptor {
     // reads file paths from write/edit/patch tools and forwards a
     // `file_edit` payload.
     file_edit_attribution: FileEditAttribution::Hook,
+    // ~/.local/share/opencode/storage/db.sqlite (+ legacy jsonl
+    // fallback) — see `find_opencode_sessions` for layout details.
+    history_shape: Some(HistoryShape::OpenCodeMixed {
+        root_under_home: ".local/share/opencode",
+    }),
 };

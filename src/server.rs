@@ -2324,65 +2324,43 @@ fn load_native_history_blocking() -> Result<Vec<SavedSession>, String> {
     let mut result: Vec<SavedSession> = Vec::new();
 
     if let Some(home) = dirs::home_dir() {
-        // Each scanner can be redirected at a custom directory via
-        // ~/.coffee-cli/tools.json (`tool_config.history_path`). Lets
-        // WSL users point Coffee CLI at their `\\wsl.localhost\<distro>
-        // \home\<user>\.<tool>\sessions\` paths, conda users point at
-        // their env-specific session dirs, etc. Falls back to the
-        // built-in default when no override is set.
-
-        // 1. Claude Code (depth 2: projects/<hash>/<hash>.jsonl)
-        let claude_dir = crate::tool_config::history_path_for(
-            "claude",
-            home.join(".claude").join("projects"),
-        );
-        collect_jsonl_paths_with_mtime(claude_dir, 2, "claude", &mut file_candidates);
-
-        // 2. Hermes (sessions/session_*.json — flat directory, JSON format)
-        let hermes_dir = crate::tool_config::history_path_for(
-            "hermes",
-            home.join(".hermes").join("sessions"),
-        );
-        collect_hermes_paths_with_mtime(hermes_dir, &mut file_candidates);
-
-        // 3. Codex (depth 4: sessions/<YYYY>/<MM>/<DD>/rollout-*.jsonl)
-        let codex_dir = crate::tool_config::history_path_for(
-            "codex",
-            home.join(".codex").join("sessions"),
-        );
-        collect_jsonl_paths_with_mtime(codex_dir, 4, "codex", &mut file_candidates);
-
-        // 4. Gemini (depth 3: tmp/<project-folder>/chats/session-*.jsonl).
-        // .json (legacy) files are skipped — collect_jsonl_paths_with_mtime
-        // already filters to .jsonl, which matches the modern session
-        // format. Old .json sessions don't have message rows in the
-        // shape we expect, so dropping them avoids garbage entries.
-        let gemini_dir = crate::tool_config::history_path_for(
-            "gemini",
-            home.join(".gemini").join("tmp"),
-        );
-        collect_jsonl_paths_with_mtime(gemini_dir, 3, "gemini", &mut file_candidates);
-
-        // 5. OpenClaw (depth 3: agents/<agentId>/sessions/<sessionId>.jsonl).
-        // Format is JSONL same family as Claude/Codex/Gemini — sessions
-        // hold message events with role/content shape — so the generic
-        // parse_agent_jsonl picks them up. .jsonl.reset (archived /new
-        // sessions) are filtered out by the .jsonl extension check.
-        let openclaw_dir = crate::tool_config::history_path_for(
-            "openclaw",
-            home.join(".openclaw").join("agents"),
-        );
-        collect_jsonl_paths_with_mtime(openclaw_dir, 3, "openclaw", &mut file_candidates);
-
-        // 6. Qwen Code (depth 3: projects/<sanitized-cwd>/chats/<session>.jsonl).
-        // Gemini-fork format with role + parts on every row + cwd field on
-        // each row, so parse_qwen_session_jsonl can extract title/cwd
-        // without a separate projects.json reverse map.
-        let qwen_dir = crate::tool_config::history_path_for(
-            "qwen",
-            home.join(".qwen").join("projects"),
-        );
-        collect_jsonl_paths_with_mtime(qwen_dir, 3, "qwen", &mut file_candidates);
+        // Drive history collection from the central registry
+        // (`src/tools/`). Each tool's `history_shape` encodes its
+        // disk layout family; we dispatch on the variant to invoke
+        // the right collector / parser. Per-tool scan path is still
+        // overridable via `~/.coffee-cli/tools.json`
+        // (`tool_config.history_path`) — descriptors hold defaults,
+        // user config wins. OpenCode's mixed SQLite / JSONL shape
+        // is handled in a second pass below (its scanner pushes
+        // SavedSession directly, bypassing the mtime pipeline).
+        for tool in crate::tools::TOOLS {
+            let Some(shape) = tool.history_shape.as_ref() else { continue };
+            let default_root = home.join(
+                shape.root_under_home().replace('/', std::path::MAIN_SEPARATOR_STR),
+            );
+            let scan_dir = crate::tool_config::history_path_for(tool.id, default_root);
+            match shape {
+                crate::tools::HistoryShape::GenericJsonl { depth, .. } => {
+                    collect_jsonl_paths_with_mtime(scan_dir, *depth, tool.id, &mut file_candidates);
+                }
+                crate::tools::HistoryShape::CodexRollout { .. } => {
+                    collect_jsonl_paths_with_mtime(scan_dir, 4, tool.id, &mut file_candidates);
+                }
+                crate::tools::HistoryShape::GeminiTmp { .. } => {
+                    collect_jsonl_paths_with_mtime(scan_dir, 3, tool.id, &mut file_candidates);
+                }
+                crate::tools::HistoryShape::QwenProjects { .. } => {
+                    collect_jsonl_paths_with_mtime(scan_dir, 3, tool.id, &mut file_candidates);
+                }
+                crate::tools::HistoryShape::HermesFlatJson { .. } => {
+                    collect_hermes_paths_with_mtime(scan_dir, &mut file_candidates);
+                }
+                crate::tools::HistoryShape::OpenCodeMixed { .. } => {
+                    // Handled below — its scanner walks SQLite and
+                    // pushes finished SavedSession objects directly.
+                }
+            }
+        }
     }
 
     // Sort candidates by mtime desc and parse only the newest HISTORY_LIMIT.
@@ -2410,13 +2388,18 @@ fn load_native_history_blocking() -> Result<Vec<SavedSession>, String> {
         }
     }
 
-    // 5. OpenCode (SQLite is cheap, query already caps rows)
+    // OpenCode second pass — SQLite is cheap (query already caps rows).
+    // Sourced from the same registry shape as the JSONL scanners above.
     if let Some(home) = dirs::home_dir() {
-        let opencode_dir = crate::tool_config::history_path_for(
-            "opencode",
-            home.join(".local").join("share").join("opencode"),
-        );
-        find_opencode_sessions(opencode_dir, &mut result);
+        if let Some(tool) = crate::tools::find("opencode") {
+            if let Some(shape) = tool.history_shape.as_ref() {
+                let default_root = home.join(
+                    shape.root_under_home().replace('/', std::path::MAIN_SEPARATOR_STR),
+                );
+                let opencode_dir = crate::tool_config::history_path_for(tool.id, default_root);
+                find_opencode_sessions(opencode_dir, &mut result);
+            }
+        }
     }
 
     result.sort_by(|a, b| b.saved_at.cmp(&a.saved_at));

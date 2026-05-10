@@ -1,6 +1,6 @@
 //! Gemini CLI (Google) — `gemini` binary.
 
-use super::{FileEditAttribution, ToolDescriptor};
+use super::{FileEditAttribution, HistoryShape, ToolDescriptor};
 
 pub static DESCRIPTOR: ToolDescriptor = ToolDescriptor {
     id: "gemini",
@@ -12,4 +12,8 @@ pub static DESCRIPTOR: ToolDescriptor = ToolDescriptor {
     // not a TODO. If Google adds a hook protocol later we'll
     // upgrade to `Hook` or `TurnSnapshot`.
     file_edit_attribution: FileEditAttribution::None,
+    // ~/.gemini/tmp/<project-folder>/chats/session-<ts>-<hash>.jsonl
+    history_shape: Some(HistoryShape::GeminiTmp {
+        root_under_home: ".gemini/tmp",
+    }),
 };

@@ -7,7 +7,7 @@
 //! `skill_dir_relative` as `None` so we don't pre-create empty
 //! `~/.hermes/skills/` folders in homes that don't have Hermes.
 
-use super::{FileEditAttribution, ToolDescriptor};
+use super::{FileEditAttribution, HistoryShape, ToolDescriptor};
 
 pub static DESCRIPTOR: ToolDescriptor = ToolDescriptor {
     id: "hermes",
@@ -16,4 +16,9 @@ pub static DESCRIPTOR: ToolDescriptor = ToolDescriptor {
     skill_dir_relative: None,
     // Hermes Agent — no hook surface today. Same policy as Gemini.
     file_edit_attribution: FileEditAttribution::None,
+    // ~/.hermes/sessions/session_*.json — flat directory of full
+    // JSON files (not JSONL); custom parser parse_hermes_json.
+    history_shape: Some(HistoryShape::HermesFlatJson {
+        root_under_home: ".hermes/sessions",
+    }),
 };

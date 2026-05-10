@@ -1,6 +1,6 @@
 //! Claude Code (Anthropic) — `claude` binary.
 
-use super::{FileEditAttribution, ToolDescriptor};
+use super::{FileEditAttribution, HistoryShape, ToolDescriptor};
 
 pub static DESCRIPTOR: ToolDescriptor = ToolDescriptor {
     id: "claude",
@@ -11,4 +11,9 @@ pub static DESCRIPTOR: ToolDescriptor = ToolDescriptor {
     // Edit/Write/MultiEdit — `coffee-cli-hook.py` reads
     // `tool_input.file_path` and forwards a `file_edit` payload.
     file_edit_attribution: FileEditAttribution::Hook,
+    // ~/.claude/projects/<hash>/<hash>.jsonl
+    history_shape: Some(HistoryShape::GenericJsonl {
+        root_under_home: ".claude/projects",
+        depth: 2,
+    }),
 };

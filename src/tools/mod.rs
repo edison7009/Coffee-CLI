@@ -35,6 +35,65 @@
 
 use std::path::PathBuf;
 
+/// Where this tool stores its session history on disk and what
+/// shape it lives in. Coffee CLI's history scanner (`server.rs`)
+/// and message heatmap both consume this. Defaults are relative
+/// to `$HOME` (`$USERPROFILE` on Windows); users override per-tool
+/// via `~/.coffee-cli/tools.json` (`tool_config.history_path`).
+///
+/// Each variant maps to a different scanner / parser combination
+/// in `server.rs`. New tool families (e.g. another SQLite-backed
+/// CLI) get a new variant; CLIs whose layout matches an existing
+/// family reuse the variant.
+#[derive(Debug, Clone, Copy)]
+pub enum HistoryShape {
+    /// JSONL files at fixed scan depth, parsed by the generic
+    /// `parse_agent_jsonl`. Used by Claude Code (depth 2 from
+    /// `projects/`) and OpenClaw (depth 3 from `agents/`).
+    GenericJsonl {
+        root_under_home: &'static str,
+        depth: u8,
+    },
+
+    /// Hermes Agent — flat directory of `session_*.json` files
+    /// (JSON, not JSONL). Custom parser `parse_hermes_json`.
+    HermesFlatJson { root_under_home: &'static str },
+
+    /// Codex dated-rollout layout: `<YYYY>/<MM>/<DD>/rollout-*.jsonl`
+    /// at depth 4. Custom parser `parse_codex_session_jsonl`.
+    CodexRollout { root_under_home: &'static str },
+
+    /// Gemini CLI: `tmp/<project-folder>/chats/session-*.jsonl` at
+    /// depth 3. Custom parser plus a project-hash → cwd map
+    /// loaded once per scan. `parse_gemini_session_jsonl`.
+    GeminiTmp { root_under_home: &'static str },
+
+    /// Qwen Code: `projects/<sanitized-cwd>/chats/<session>.jsonl`
+    /// at depth 3. Custom parser `parse_qwen_session_jsonl`.
+    QwenProjects { root_under_home: &'static str },
+
+    /// OpenCode: SQLite DB (`storage/db.sqlite`) plus legacy
+    /// JSONL files. Walked by `find_opencode_sessions`, cannot be
+    /// processed by the generic mtime-then-parse pipeline.
+    OpenCodeMixed { root_under_home: &'static str },
+}
+
+impl HistoryShape {
+    /// Default disk root for this tool's session history, relative
+    /// to `$HOME`. Variant-agnostic accessor for callers that only
+    /// need the path (e.g. `tool_config::history_path_for` lookup).
+    pub fn root_under_home(&self) -> &'static str {
+        match self {
+            HistoryShape::GenericJsonl { root_under_home, .. }
+            | HistoryShape::HermesFlatJson { root_under_home }
+            | HistoryShape::CodexRollout { root_under_home }
+            | HistoryShape::GeminiTmp { root_under_home }
+            | HistoryShape::QwenProjects { root_under_home }
+            | HistoryShape::OpenCodeMixed { root_under_home } => root_under_home,
+        }
+    }
+}
+
 /// How Coffee CLI infers "this tool just edited file X" for the
 /// audit log. The choice depends on what kind of hook surface the
 /// upstream CLI exposes.
@@ -101,6 +160,13 @@ pub struct ToolDescriptor {
     /// philosophy is "Coffee CLI's PTY-spawned tools only", so
     /// this is by design, not a TODO.
     pub file_edit_attribution: FileEditAttribution,
+
+    /// Shape of this tool's on-disk session history. `None` =
+    /// tool doesn't expose a scannable history (no entries on
+    /// the History board, no contributions in the heatmap).
+    /// Currently every registered CLI has a history; field is
+    /// optional for future tools that may not.
+    pub history_shape: Option<HistoryShape>,
 }
 
 impl ToolDescriptor {
