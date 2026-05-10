@@ -111,7 +111,7 @@ export function ChangesBoard({ selectedPath, setSelectedPath, diffExpanded, onTo
   // deterministic ordering when the same operation touches many files.
   const rows = useMemo(() => {
     if (globalChangeLog.size === 0) return [];
-    const list: Array<{ path: string; rel: string; basename: string; projectRoot: string; projectName: string; added: number; deleted: number; mtimeMs: number; sessionId: string }> = [];
+    const list: Array<{ path: string; rel: string; basename: string; projectRoot: string; projectName: string; added: number; deleted: number; mtimeMs: number }> = [];
     for (const [absPath, entry] of globalChangeLog) {
       const root = entry.projectRoot.replace(/\\/g, '/').replace(/\/+$/, '');
       const rel = absPath.startsWith(root + '/') ? absPath.slice(root.length + 1) : absPath;
@@ -126,10 +126,6 @@ export function ChangesBoard({ selectedPath, setSelectedPath, diffExpanded, onTo
         added: entry.added,
         deleted: entry.deleted,
         mtimeMs: entry.mtimeMs,
-        // Pick the most recent session that touched this file — DiffPanel
-        // uses it to fetch the baseline content. All sessions in the
-        // list have live Rust baselines (we don't drop them on tab close).
-        sessionId: entry.sessionIds[entry.sessionIds.length - 1],
       });
     }
     list.sort((a, b) => {
@@ -144,7 +140,6 @@ export function ChangesBoard({ selectedPath, setSelectedPath, diffExpanded, onTo
   // collapse on tab switch — the global log keeps the entry alive.
   const selectedRow = selectedPath ? rows.find(r => r.path === selectedPath) : undefined;
   const effectiveSelected = selectedRow ? selectedPath : null;
-  const effectiveSessionId = selectedRow?.sessionId ?? null;
 
   if (rows.length === 0) {
     return (
@@ -199,7 +194,7 @@ export function ChangesBoard({ selectedPath, setSelectedPath, diffExpanded, onTo
           ))}
         </div>
       </ScrollPanel>
-      {effectiveSelected && effectiveSessionId && (
+      {effectiveSelected && (
         <>
           <div
             className="diff-resize-handle"
@@ -208,7 +203,6 @@ export function ChangesBoard({ selectedPath, setSelectedPath, diffExpanded, onTo
             aria-label="Resize diff"
           />
           <DiffPanel
-            sessionId={effectiveSessionId}
             path={effectiveSelected}
             onClose={() => setSelectedPath(null)}
             expanded={diffExpanded}

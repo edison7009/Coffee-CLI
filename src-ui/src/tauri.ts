@@ -129,26 +129,26 @@ export const commands = {
 
   listDirectory: (path: string) => invoke<DirEntryInfo[]>('list_directory', { path }),
 
-  // Workspace file diff (since-tab-open snapshot). Per-session — each tab/
-  // terminal id keeps its own baseline so two tabs working in the same
-  // folder track independent diffs (Codex-tab edits don't leak into the
-  // OpenCode-tab badges). dropSessionSnapshot frees the baseline when the
-  // tab closes. No git, no .git/, works in any folder.
-  startFolderSnapshot: (sessionId: string, path: string) =>
-    invoke<void>('start_folder_snapshot', { sessionId, path }),
-  dropSessionSnapshot: (sessionId: string) =>
-    invoke<void>('drop_session_snapshot', { sessionId }),
-  computeFolderStats: (sessionId: string, path: string) =>
+  // Workspace file diff — global per-file baseline keyed by absolute
+  // path, shared across every tab and project the user opens during
+  // this Coffee CLI process. First-seen wins: re-running
+  // startFolderSnapshot for an already-baselined file is a no-op so
+  // the original audit-log baseline is preserved across tab close /
+  // reopen. Process exit clears everything. No git, no .git/, works
+  // in any folder.
+  startFolderSnapshot: (path: string) =>
+    invoke<void>('start_folder_snapshot', { path }),
+  computeFolderStats: (path: string) =>
     invoke<Record<string, { added: number; deleted: number; mtimeMs: number }>>(
       'compute_folder_stats',
-      { sessionId, path },
+      { path },
     ),
-  // Diff panel inputs: baseline = the file's bytes when the snapshot was
-  // taken; current = the file's bytes now. Both lossy-UTF8 decoded so
-  // GBK / latin-1 source files still render. `null` = file missing /
-  // binary / outside snapshot.
-  getBaselineContent: (sessionId: string, path: string) =>
-    invoke<string | null>('get_baseline_content', { sessionId, path }),
+  // Diff panel inputs: baseline = the file's bytes when Coffee CLI
+  // first observed it during this process lifetime; current = the
+  // file's bytes now. Both lossy-UTF8 decoded so GBK / latin-1 source
+  // files still render. `null` = file missing / binary / never seen.
+  getBaselineContent: (path: string) =>
+    invoke<string | null>('get_baseline_content', { path }),
   readTextFile: (path: string) =>
     invoke<string | null>('read_text_file', { path }),
 

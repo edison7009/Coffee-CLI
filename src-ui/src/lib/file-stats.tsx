@@ -1,15 +1,15 @@
 // file-stats.tsx — Multi-session diff stats provider.
 //
-// Tracks every live tab's per-session baseline + most-recent stats so:
+// Tracks every live tab's session-folder pair so:
 //   • The right-side ChangesBoard's global change log gets fed by ALL
 //     tabs in real time — Claude editing files in tab1 while the user
 //     is on tab2 immediately appears in the global list.
 //   • The left-side Explorer's tree badges (consumed via useFileStats)
 //     reflect the currently active tab's stats only.
-//   • Closed tabs leave their Rust-side baseline alive (we deliberately
-//     don't call dropSessionSnapshot) so DiffPanel can still resolve
-//     `getBaselineContent(sessionId, ...)` for entries from closed
-//     conversations. Full reset on Coffee CLI restart.
+//
+// Baselines are stored in Rust as a single global path-keyed map
+// (server.rs::snapshots) so reopening / closing tabs doesn't disturb
+// the audit trail. Full reset on Coffee CLI restart only.
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
@@ -64,7 +64,7 @@ export function FileStatsProvider({ children }: { children: ReactNode }) {
     if (!s) return;
     try {
       await s.baselineReady;
-      const raw = await commands.computeFolderStats(sid, s.folderPath);
+      const raw = await commands.computeFolderStats(s.folderPath);
       const m = new Map<string, FileStats>();
       const entries: { path: string; added: number; deleted: number; mtimeMs: number }[] = [];
       for (const [k, v] of Object.entries(raw)) {
@@ -83,10 +83,10 @@ export function FileStatsProvider({ children }: { children: ReactNode }) {
 
   // Sync sessionStates with live terminals: ensure baseline is started
   // for every eligible (folder + non-CWD-agnostic tool) live session.
-  // Combo change (same sid, different folder/tool) → restart baseline.
-  // Closed tabs: prune from sessionStates (frontend bookkeeping only —
-  // the Rust-side baseline is kept alive for DiffPanel access via
-  // `getBaselineContent`, since we never call dropSessionSnapshot).
+  // Combo change (same sid, different folder/tool) → restart baseline
+  // (a no-op on Rust side since first-seen wins, but the frontend bookkeeping
+  // tracks the new combo). Closed tabs: prune from sessionStates so the
+  // fs-refresh handler stops pinging dead sessions.
   useEffect(() => {
     const live = new Set<string>();
     for (const term of state.terminals) {
@@ -99,7 +99,7 @@ export function FileStatsProvider({ children }: { children: ReactNode }) {
       const sameCombo =
         existing?.folderPath === ctx.folderPath && existing?.tool === (ctx.tool ?? null);
       if (!existing || !sameCombo) {
-        const baselineReady = commands.startFolderSnapshot(ctx.sessionId, ctx.folderPath).catch(() => {});
+        const baselineReady = commands.startFolderSnapshot(ctx.folderPath).catch(() => {});
         sessionStates.set(ctx.sessionId, {
           folderPath: ctx.folderPath,
           tool: ctx.tool ?? null,
