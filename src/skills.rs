@@ -133,7 +133,14 @@ fn is_tool_installed(bin: &str) -> bool {
 ///     other 13 sibling skills (hyperframes-cli, gsap, etc.) are not
 ///     bundled — the main `hyperframes` skill is self-sufficient for
 ///     authoring compositions.
-const VISIBLE_SKILLS: &[&str] = &["screenshot", "vibeid", "hyperframes"];
+///   - `playwright` — Coffee CLI's own. Browser automation skill that
+///     drives `@playwright/cli` (microsoft/playwright, MIT) via an
+///     `npx`-based wrapper at `scripts/run.sh`, no global install
+///     required. SKILL.md is creator-task oriented (scrape reviews,
+///     batch screenshot, page → PDF, login-gated extraction) using the
+///     snapshot-then-ref interaction model. Icon borrowed from upstream
+///     playwright.dev for tool identification.
+const VISIBLE_SKILLS: &[&str] = &["screenshot", "vibeid", "hyperframes", "playwright"];
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
