@@ -15,4 +15,5 @@ pub static DESCRIPTOR: ToolDescriptor = ToolDescriptor {
     history_shape: Some(HistoryShape::QwenProjects {
         root_under_home: ".qwen/projects",
     }),
+    default_args: &[],
 };

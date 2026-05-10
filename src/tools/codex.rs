@@ -17,4 +17,5 @@ pub static DESCRIPTOR: ToolDescriptor = ToolDescriptor {
     history_shape: Some(HistoryShape::CodexRollout {
         root_under_home: ".codex/sessions",
     }),
+    default_args: &[],
 };

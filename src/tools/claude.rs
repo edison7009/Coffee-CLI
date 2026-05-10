@@ -16,4 +16,5 @@ pub static DESCRIPTOR: ToolDescriptor = ToolDescriptor {
         root_under_home: ".claude/projects",
         depth: 2,
     }),
+    default_args: &[],
 };

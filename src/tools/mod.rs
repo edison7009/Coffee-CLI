@@ -167,6 +167,13 @@ pub struct ToolDescriptor {
     /// Currently every registered CLI has a history; field is
     /// optional for future tools that may not.
     pub history_shape: Option<HistoryShape>,
+
+    /// Argv prepended to every spawn of this tool *before* any
+    /// multi-agent flags or user-configured `extra_args`. Used
+    /// for CLIs whose primary REPL is a subcommand of the binary
+    /// — e.g. OpenClaw's TUI is `openclaw tui`, not bare
+    /// `openclaw`. Most tools have an empty list.
+    pub default_args: &'static [&'static str],
 }
 
 impl ToolDescriptor {

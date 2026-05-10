@@ -21,4 +21,5 @@ pub static DESCRIPTOR: ToolDescriptor = ToolDescriptor {
     history_shape: Some(HistoryShape::HermesFlatJson {
         root_under_home: ".hermes/sessions",
     }),
+    default_args: &[],
 };

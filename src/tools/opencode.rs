@@ -20,4 +20,5 @@ pub static DESCRIPTOR: ToolDescriptor = ToolDescriptor {
     history_shape: Some(HistoryShape::OpenCodeMixed {
         root_under_home: ".local/share/opencode",
     }),
+    default_args: &[],
 };

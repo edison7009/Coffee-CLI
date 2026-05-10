@@ -16,4 +16,5 @@ pub static DESCRIPTOR: ToolDescriptor = ToolDescriptor {
     history_shape: Some(HistoryShape::GeminiTmp {
         root_under_home: ".gemini/tmp",
     }),
+    default_args: &[],
 };

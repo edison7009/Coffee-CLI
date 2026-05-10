@@ -912,127 +912,143 @@ fn tier_terminal_start_blocking(
     // mode.
     let in_multi_agent = session_id.contains("::pane-");
 
-    // Map the requested tool to an actual CLI command.
+    // Map the requested tool to an actual CLI command. Most CLIs
+    // get their binary + base argv straight from the registry; only
+    // the multi-agent flag set is tool-specific (claude / codex /
+    // gemini have hands-free flags + per-pane MCP wiring; the rest
+    // run with their default args even inside a multi-agent pane).
+    // `remote` and the fallback shell stay as inline branches —
+    // they're not in the registry (no upstream CLI binary) and
+    // `remote` carries protocol-parsing logic.
     let (cmd, args): (String, Vec<String>) = match tool.as_deref() {
-        Some("claude")   => {
-            let mut a = vec![];
+        Some(id) if crate::tools::find(id).is_some() => {
+            let descriptor = crate::tools::find(id).expect("checked above");
+            let mut a: Vec<String> = descriptor
+                .default_args
+                .iter()
+                .map(|s| s.to_string())
+                .collect();
             if in_multi_agent {
-                // Let the agent use tools without human approval. MCP's
-                // `list_panes()` / `send_to_pane()` / `read_pane()` /
-                // `whoami()` give it pane discovery, dispatch, and
-                // self-identification.
-                a.push("--dangerously-skip-permissions".to_string());
-                // Per-pane MCP config: this Claude session points at
-                // its OWN MCP server (with `self_pane_id` baked in)
-                // so `whoami()` returns deterministic answers and
-                // `list_panes()` marks `is_self: true` on the matching
-                // row. Claude merges this on top of any user-managed
-                // `~/.claude.json` mcpServers entries.
-                if let Some(p) = pane_paths
-                    .as_ref()
-                    .and_then(|pp| pp.claude_mcp_config_path.as_ref())
-                {
-                    a.push("--mcp-config".to_string());
-                    a.push(p.display().to_string());
-                    // Per-pane system prompt: bake the pane id and the
-                    // protocol cheat sheet directly into THIS Claude
-                    // session's system prompt. Survives /clear and
-                    // /compact. Replaces writing CLAUDE.md to the
-                    // workspace, so multi-agent Claude users see ZERO
-                    // files appear in their project directory. Only
-                    // injected when sentinel is on (paired with the
-                    // MCP config above) — without it the prompt would
-                    // describe tools that aren't actually wired in,
-                    // confusing the model.
-                    a.push("--append-system-prompt".to_string());
-                    a.push(crate::multi_agent_protocol::build_pane_system_prompt(
-                        &session_id,
-                    ));
+                match id {
+                    "claude" => {
+                        // Let the agent use tools without human approval.
+                        // MCP's list_panes / send_to_pane / read_pane /
+                        // whoami give it pane discovery, dispatch, and
+                        // self-identification.
+                        a.push("--dangerously-skip-permissions".to_string());
+                        // Per-pane MCP config: this Claude session points
+                        // at its OWN MCP server (with `self_pane_id`
+                        // baked in) so `whoami()` returns deterministic
+                        // answers and `list_panes()` marks `is_self:
+                        // true` on the matching row. Claude merges this
+                        // on top of any user-managed `~/.claude.json`
+                        // mcpServers entries.
+                        if let Some(p) = pane_paths
+                            .as_ref()
+                            .and_then(|pp| pp.claude_mcp_config_path.as_ref())
+                        {
+                            a.push("--mcp-config".to_string());
+                            a.push(p.display().to_string());
+                            // Per-pane system prompt: bake the pane id
+                            // and protocol cheat sheet into THIS Claude
+                            // session's system prompt. Survives /clear
+                            // and /compact. Replaces writing CLAUDE.md
+                            // to the workspace, so multi-agent Claude
+                            // users see ZERO files appear in their
+                            // project directory. Only injected when
+                            // sentinel is on (paired with the MCP
+                            // config above) — without it the prompt
+                            // would describe tools that aren't wired
+                            // in, confusing the model.
+                            a.push("--append-system-prompt".to_string());
+                            a.push(crate::multi_agent_protocol::build_pane_system_prompt(
+                                &session_id,
+                            ));
+                        }
+                    }
+                    "codex" => {
+                        // Hands-free multi-agent: no human is present to
+                        // click through confirmation dialogs (the
+                        // originating pane's LLM dispatched this work
+                        // via send_to_pane). The earlier conservative
+                        // `-s workspace-write -a never` combo still
+                        // surfaced sandbox-violation prompts for
+                        // cross-workspace ops, login/trust dialogs, and
+                        // first-run consent screens that block the
+                        // PTY. Codex's own "skip everything" door is
+                        // `--dangerously-bypass-approvals-and-sandbox` —
+                        // the doc explicitly reads "Skip all
+                        // confirmation prompts and execute commands
+                        // without sandboxing." That's the right
+                        // tradeoff for multi-agent mode: entering it
+                        // already delegates trust to the controlling
+                        // pane's LLM.
+                        a.push("--dangerously-bypass-approvals-and-sandbox".to_string());
+                        // Per-pane MCP wiring via Codex's `-c
+                        // key=value` config override (it merges onto
+                        // `~/.codex/config.toml` rather than replacing
+                        // it, so user MCP entries / API keys / auth all
+                        // stay live). Two pairs:
+                        //   `mcp_servers.coffee-cli.url='<per-pane-url>'`
+                        //   `experimental_instructions_file='<pane-temp>/inst.md'`
+                        // The instructions file holds the multi-agent
+                        // protocol body (same text Claude gets via
+                        // --append-system-prompt) and Codex bakes it
+                        // into the model's session context. Both the
+                        // URL and instructions path are unique per
+                        // pane, so 4× same-CLI panes still get
+                        // distinct identity.
+                        if let Some(extra) =
+                            pane_paths.as_ref().map(|pp| pp.codex_extra_args.clone())
+                        {
+                            a.extend(extra);
+                        }
+                    }
+                    "gemini" => {
+                        // Gemini CLI's equivalent of Claude's
+                        // --dangerously-skip-permissions. Observed live
+                        // on 2026-04-23 (Gemini CLI v0.39.0): the
+                        // boolean `--yolo` flag did NOT reliably persist
+                        // into the interactive REPL's tool-confirmation
+                        // layer — the REPL still prompted "Allow
+                        // execution of [...]?" for every tool call,
+                        // which defeats hands-free multi-agent
+                        // dispatch. `--approval-mode yolo` is the
+                        // explicit, documented setting form (see
+                        // `gemini --help`) and holds for the entire
+                        // REPL session. Preferred over the shorter
+                        // `--yolo` for exactly this reason.
+                        a.push("--approval-mode".to_string());
+                        a.push("yolo".to_string());
+                        // Per-pane extension: Gemini reads
+                        //   ~/.gemini/extensions/coffee-pane-<sanitized>/
+                        // which our injector populated with link
+                        // metadata pointing at the real manifest in OS
+                        // temp. Loading this extension MERGES
+                        // `mcpServers.coffee-cli` (with the per-pane
+                        // HTTP URL) and the GEMINI.md context file into
+                        // the running session — without touching the
+                        // user's settings.json, OAuth creds, or
+                        // workspace. The `--extensions <name>` flag
+                        // takes the dir basename, NOT a path (Gemini
+                        // CLI's loader is hard-coded to
+                        // `~/.gemini/extensions/`).
+                        if let Some(name) = pane_paths
+                            .as_ref()
+                            .and_then(|pp| pp.gemini_extension_name.clone())
+                        {
+                            a.push("--extensions".to_string());
+                            a.push(name);
+                        }
+                    }
+                    // Other registered tools have no multi-agent flag
+                    // set today — they spawn with default_args inside
+                    // a multi-agent pane just like outside one.
+                    _ => {}
                 }
             }
-            ("claude".to_string(), a)
-        },
-        Some("qwen")     => ("qwen".to_string(),   vec![]),
-        Some("hermes")   => ("hermes".to_string(), vec![]),
-        Some("opencode") => ("opencode".to_string(), vec![]),
-        // OpenClaw's official primary TUI command per docs.openclaw.ai/cli/tui.
-        // Note: `openclaw chat` / `openclaw terminal` are aliases for
-        // `openclaw tui --local` (embedded mode, no Gateway daemon needed),
-        // which are gentler on first-run users — but we follow OpenClaw's
-        // own "Primary command" label here. Users without the Gateway daemon
-        // should run `openclaw onboard --install-daemon` once to set it up.
-        Some("openclaw") => ("openclaw".to_string(), vec!["tui".to_string()]),
-        Some("codex")    => {
-            let mut a = vec![];
-            if in_multi_agent {
-                // Hands-free multi-agent: no human is present to click
-                // through confirmation dialogs (the originating pane's
-                // LLM dispatched this work via send_to_pane). The earlier
-                // conservative `-s workspace-write -a never` combo still
-                // surfaced sandbox-violation prompts for cross-workspace
-                // ops, login/trust dialogs, and first-run consent screens
-                // that block the PTY. Codex's own "skip everything" door
-                // is `--dangerously-bypass-approvals-and-sandbox` — the
-                // doc explicitly reads "Skip all confirmation prompts and
-                // execute commands without sandboxing." That's the right
-                // tradeoff for multi-agent mode: entering it already
-                // delegates trust to the controlling pane's LLM.
-                a.push("--dangerously-bypass-approvals-and-sandbox".to_string());
-                // Per-pane MCP wiring via Codex's `-c key=value` config
-                // override (it merges onto `~/.codex/config.toml` rather
-                // than replacing it, so user MCP entries / API keys /
-                // auth all stay live). Two pairs:
-                //   `mcp_servers.coffee-cli.url='<per-pane-url>'`
-                //   `experimental_instructions_file='<pane-temp>/inst.md'`
-                // The instructions file holds the multi-agent protocol
-                // body (same text Claude gets via --append-system-prompt)
-                // and Codex bakes it into the model's session context.
-                // Both the URL and the instructions path are unique per
-                // pane, so 4× same-CLI panes still get distinct identity.
-                if let Some(extra) = pane_paths.as_ref().map(|pp| pp.codex_extra_args.clone())
-                {
-                    a.extend(extra);
-                }
-            }
-            ("codex".to_string(), a)
-        },
-        Some("gemini")   => {
-            let mut a = vec![];
-            if in_multi_agent {
-                // Gemini CLI's equivalent of Claude's
-                // --dangerously-skip-permissions. Observed live on
-                // 2026-04-23 (Gemini CLI v0.39.0): the boolean `--yolo`
-                // flag did NOT reliably persist into the interactive
-                // REPL's tool-confirmation layer — the REPL still
-                // prompted "Allow execution of [...]?" for every tool
-                // call, which defeats hands-free multi-agent dispatch.
-                // `--approval-mode yolo` is the explicit, documented
-                // setting form (see `gemini --help`) and holds for the
-                // entire REPL session. Preferred over the shorter
-                // `--yolo` for exactly this reason.
-                a.push("--approval-mode".to_string());
-                a.push("yolo".to_string());
-                // Per-pane extension: Gemini reads
-                //   ~/.gemini/extensions/coffee-pane-<sanitized>/
-                // which our injector populated with link metadata
-                // pointing at the real manifest in OS temp. Loading
-                // this extension MERGES `mcpServers.coffee-cli` (with
-                // the per-pane HTTP URL) and the GEMINI.md context
-                // file into the running session — without touching
-                // the user's settings.json, OAuth creds, or workspace.
-                // The extension `--extensions <name>` flag takes the
-                // dir basename, NOT a path (Gemini CLI's loader is
-                // hard-coded to `~/.gemini/extensions/`).
-                if let Some(name) = pane_paths
-                    .as_ref()
-                    .and_then(|pp| pp.gemini_extension_name.clone())
-                {
-                    a.push("--extensions".to_string());
-                    a.push(name);
-                }
-            }
-            ("gemini".to_string(), a)
-        },
+            (descriptor.binary_name.to_string(), a)
+        }
         Some("remote") => {
             // Parse connection info from toolData JSON
             let data = tool_data.as_deref().unwrap_or("{}");
@@ -1107,20 +1123,17 @@ fn tier_terminal_start_blocking(
     // session ids that don't correspond to a user-facing tool key
     // (multi-agent panes have their own opinionated args we don't
     // want overridden).
+    //
+    // Eligibility: anything in the registry, plus the special
+    // "terminal" pseudo-tool (not in the registry — it's the system
+    // shell — but tool_config still wants to honor user overrides
+    // for it). `remote` is intentionally excluded: its argv is
+    // protocol-derived from runtime tool_data, not configurable.
+    let is_overridable = |name: &str| {
+        name == "terminal" || crate::tools::find(name).is_some()
+    };
     let (cmd, args) = match tool.as_deref() {
-        Some(name)
-            if matches!(
-                name,
-                "claude"
-                    | "qwen"
-                    | "hermes"
-                    | "opencode"
-                    | "openclaw"
-                    | "codex"
-                    | "gemini"
-                    | "terminal"
-            ) =>
-        {
+        Some(name) if is_overridable(name) => {
             let entry = crate::tool_config::get(name);
             let (cmd, mut args) = (cmd, args);
             let (cmd, args) = if let (Some(bin), prefix_args) =

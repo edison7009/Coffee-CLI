@@ -25,4 +25,11 @@ pub static DESCRIPTOR: ToolDescriptor = ToolDescriptor {
         root_under_home: ".openclaw/agents",
         depth: 3,
     }),
+    // OpenClaw's official primary TUI command per docs.openclaw.ai/cli/tui.
+    // `openclaw chat` / `openclaw terminal` are aliases for `openclaw
+    // tui --local` (embedded mode, no Gateway daemon needed) and are
+    // gentler for first-run users — but we follow OpenClaw's own
+    // "Primary command" label here. Users without the Gateway daemon
+    // should run `openclaw onboard --install-daemon` once to set it up.
+    default_args: &["tui"],
 };
