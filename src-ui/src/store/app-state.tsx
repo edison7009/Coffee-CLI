@@ -223,6 +223,7 @@ type Action =
   | { type: 'SET_LANG'; lang: string }
   | { type: 'ADD_TERMINAL'; session: TerminalSession }
   | { type: 'REMOVE_TERMINAL'; id: string }
+  | { type: 'REORDER_TERMINAL'; sessionId: string; beforeId: string | null }
   | { type: 'SET_ACTIVE_TERMINAL'; id: string | null }
   | { type: 'SET_TERMINAL_TOOL'; id: string; tool: ToolType; toolData?: string }
   | { type: 'SET_TERMINAL_HIDDEN'; id: string; isHidden: boolean }
@@ -291,6 +292,28 @@ function reducer(state: AppState, action: Action): AppState {
          newActiveId = newTerminals[newTerminals.length - 1].id;
       }
       return { ...state, terminals: newTerminals, activeTerminalId: newActiveId };
+    }
+    case 'REORDER_TERMINAL': {
+      // Move `sessionId`'s tab so that it sits immediately before
+      // `beforeId` in the array. `beforeId === null` means "drop at end".
+      // Used by browser-style tab reordering: pointer-down a tab, drag
+      // horizontally, drop wherever you want it. CenterPanel does the
+      // pixel-math; the reducer just handles the array surgery.
+      const t = state.terminals;
+      const fromIdx = t.findIndex(x => x.id === action.sessionId);
+      if (fromIdx < 0) return state;
+      const without = t.filter(x => x.id !== action.sessionId);
+      const insertIdx = action.beforeId
+        ? without.findIndex(x => x.id === action.beforeId)
+        : without.length;
+      if (insertIdx < 0) return state;
+      const moved = t[fromIdx];
+      const next = [...without.slice(0, insertIdx), moved, ...without.slice(insertIdx)];
+      // No-op detection: skip dispatch round-trip when the order didn't
+      // actually change (e.g., user dragged 1px and dropped, or dropped
+      // back into the same gap).
+      if (next.every((x, i) => x.id === t[i].id)) return state;
+      return { ...state, terminals: next };
     }
     case 'SET_ACTIVE_TERMINAL':
       return { ...state, activeTerminalId: action.id };

@@ -51,6 +51,20 @@
   transition: color 0.15s;
 }
 
+/* Active drag state — pointer-down a tab and slide it horizontally.
+ * Disables the bg/color transition so the tab tracks the cursor 1:1
+ * (translateX is applied inline via React state). z-index lifts it
+ * above siblings and the active-tab "flare" pseudo-elements; subtle
+ * elevation + cursor cue communicate the grab. The reorder commits
+ * on pointerup; until then this is purely visual. */
+.chrome-tab.dragging {
+  z-index: 5;
+  cursor: grabbing;
+  opacity: 0.92;
+  transition: none;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
+}
+
 /* Chrome 'flare' pseudo-elements bridging the tab to the terminal background */
 .chrome-tab.active::before,
 .chrome-tab.active::after {

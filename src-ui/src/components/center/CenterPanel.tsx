@@ -817,6 +817,86 @@ export function CenterPanel() {
     dispatch({ type: 'REMOVE_TERMINAL', id });
   };
 
+  // ── Tab drag-to-reorder ─────────────────────────────────────────────────
+  // Browser-style: pointer-down a tab, drag horizontally past 5px, drop
+  // wherever you want it. Pointer events (not HTML5 drag-and-drop) because
+  // Tauri v2 + WebView2 swallows intra-app dragstart on Windows when its
+  // own file-drop capture is enabled (memory: reference_webview2_html5_drag).
+  const tabsHeaderRef = useRef<HTMLDivElement | null>(null);
+  // `dragging` set during an active drag → applies translateX to the
+  // dragged tab and `.dragging` class for elevation/opacity styling.
+  // `null` when no drag in progress.
+  const [tabDrag, setTabDrag] = useState<{ sessionId: string; deltaX: number } | null>(null);
+  // Suppress the click that would otherwise fire on pointerup at end of
+  // a drag (the click handler activates the tab — we don't want a drop
+  // to count as an activation if the tab moved).
+  const tabDragSuppressClickRef = useRef(false);
+
+  const onTabPointerDown = (e: React.PointerEvent<HTMLDivElement>, sessionId: string) => {
+    // Ignore non-primary buttons + clicks on close button / status indicator
+    if (e.button !== 0) return;
+    if ((e.target as HTMLElement).closest('.tab-close-btn')) return;
+
+    const headerEl = tabsHeaderRef.current;
+    if (!headerEl) return;
+
+    // Snapshot every visible tab's center X at drag start. Used by drop
+    // to compute target position from cursor X without re-measuring
+    // (DOM is shifting during drag → measurements would be unstable).
+    const tabEls = Array.from(
+      headerEl.querySelectorAll<HTMLElement>('.chrome-tab[data-session-id]'),
+    );
+    const positions = tabEls.map(el => {
+      const rect = el.getBoundingClientRect();
+      return { sessionId: el.dataset.sessionId!, center: rect.left + rect.width / 2 };
+    });
+    const ownPos = positions.find(p => p.sessionId === sessionId);
+    if (!ownPos) return;
+
+    const startX = e.clientX;
+    let started = false;
+    const THRESHOLD = 5;
+
+    const onMove = (ev: PointerEvent) => {
+      const dx = ev.clientX - startX;
+      if (!started && Math.abs(dx) < THRESHOLD) return;
+      started = true;
+      setTabDrag({ sessionId, deltaX: dx });
+    };
+
+    const onUp = (ev: PointerEvent) => {
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      if (started) {
+        // Suppress the upcoming click (tab activation) — the user dragged,
+        // they didn't click. Cleared on the next click that fires.
+        tabDragSuppressClickRef.current = true;
+        // Visual center of dragged tab at drop = original center + dx
+        const draggedCenter = ownPos.center + (ev.clientX - startX);
+        // beforeId = first OTHER tab whose center is past the dragged
+        // center; null = drop at end (cursor is past every other tab).
+        const others = positions.filter(p => p.sessionId !== sessionId);
+        let beforeId: string | null = null;
+        for (const o of others) {
+          if (o.center > draggedCenter) { beforeId = o.sessionId; break; }
+        }
+        dispatch({ type: 'REORDER_TERMINAL', sessionId, beforeId });
+      }
+      setTabDrag(null);
+    };
+
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+  };
+
+  const onTabClickGuarded = (sessionId: string) => {
+    if (tabDragSuppressClickRef.current) {
+      tabDragSuppressClickRef.current = false;
+      return;
+    }
+    dispatch({ type: 'SET_ACTIVE_TERMINAL', id: sessionId });
+  };
+
   const formatCwd = (cwd: string): string => {
     if (!cwd) return '';
     // Detect Windows path (e.g. C:\... or c:/...)
@@ -1034,18 +1114,25 @@ export function CenterPanel() {
         </div>,
         document.body
       )}
-      <div className="chrome-tabs-header" data-count={terminals.filter(s => !s.isHidden || s.id === activeTerminalId).length}>
+      <div ref={tabsHeaderRef} className="chrome-tabs-header" data-count={terminals.filter(s => !s.isHidden || s.id === activeTerminalId).length}>
         {terminals.map(session => {
           if (session.isHidden && session.id !== activeTerminalId) return null;
 
           const isActive = session.id === activeTerminalId;
           const { icon, title } = renderTabContent(session, isActive);
+          const isDragging = tabDrag?.sessionId === session.id;
+          const dragStyle: React.CSSProperties | undefined = isDragging
+            ? { transform: `translateX(${tabDrag!.deltaX}px)` }
+            : undefined;
 
           return (
             <div
               key={session.id}
-              className={`chrome-tab ${isActive ? 'active' : ''}`}
-              onClick={() => dispatch({ type: 'SET_ACTIVE_TERMINAL', id: session.id })}
+              data-session-id={session.id}
+              className={`chrome-tab ${isActive ? 'active' : ''} ${isDragging ? 'dragging' : ''}`}
+              style={dragStyle}
+              onClick={() => onTabClickGuarded(session.id)}
+              onPointerDown={(e) => onTabPointerDown(e, session.id)}
             >
               {icon}
               <span className="tab-title" style={{ flex: '0 1 auto', minWidth: 0, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{title}</span>
