@@ -513,10 +513,14 @@ export function CenterPanel() {
   // - `type`: semantic category ('ai-cli' | 'utility'). Lets future code group/filter items.
   // - `requiresCwd`: behavior flag — drives folder-button + cwd display on Desktop cards.
   const AGENT_CATALOG: { key: ToolType; label: string; icon: React.ReactNode; type: 'ai-cli' | 'utility'; requiresCwd: boolean }[] = (() => {
-    // OpenClaw (persona forge) and Hermes Agent are directory-agnostic —
-    // they operate on global state, not a project folder. Skip the
-    // folder-picker + cwd display so they launch in one click, like utilities.
-    const CWD_AGNOSTIC_AI_CLI = new Set<ToolType>(['openclaw', 'hermes']);
+    // OpenClaw (persona forge) is directory-agnostic — its primary
+    // workflow is global persona/skill management, not a project folder.
+    // Skip the folder-picker + cwd display so it launches in one click,
+    // like utilities. Hermes Agent IS folder-aware (its splash screen
+    // displays the launch cwd, and its tools can scope to a project),
+    // so it gets the folder-picker on its launchpad card just like
+    // Claude Code / Codex.
+    const CWD_AGNOSTIC_AI_CLI = new Set<ToolType>(['openclaw']);
     const aiCliEntries = BUILTIN_AI_CLI_FALLBACK.map(item => ({
       key: item.key,
       label: item.label,

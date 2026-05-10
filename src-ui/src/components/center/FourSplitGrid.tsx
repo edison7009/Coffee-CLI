@@ -52,10 +52,12 @@ const PANE_CLI_OPTIONS: Array<{ value: ToolType; label: string }> = (
   ['claude', 'codex', 'gemini', 'opencode', 'openclaw', 'hermes'] as const
 ).map((value) => ({ value, label: getToolDisplayName(value) }));
 
-// OpenClaw (persona forge) and Hermes Agent are directory-agnostic — they
-// operate on global state, not a project folder. Skip the folder picker
-// when a pane picks one of these, matching the Desktop launchpad behavior.
-const CWD_AGNOSTIC_TOOLS: ReadonlySet<ToolType> = new Set<ToolType>(['openclaw', 'hermes']);
+// OpenClaw (persona forge) is directory-agnostic — its primary workflow
+// is global persona/skill management, not a project folder. Skip the
+// folder picker when a pane picks OpenClaw, matching the Desktop
+// launchpad behavior. Hermes Agent IS folder-aware (its splash displays
+// the launch cwd) so it gets the picker like the other CLIs.
+const CWD_AGNOSTIC_TOOLS: ReadonlySet<ToolType> = new Set<ToolType>(['openclaw']);
 
 export function FourSplitGrid({ tab, hasBg, bgUrl, bgType, paneCount = 4 }: Props) {
   const { state, dispatch } = useAppState();
