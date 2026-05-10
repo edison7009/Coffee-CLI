@@ -1,7 +1,16 @@
 ---
-name: HyperFrames by HeyGen
+name: HyperFrames
 description: Build videos from HTML with HyperFrames. Author compositions with HTML + CSS + GSAP, use the CLI for init/preview/render/transcribe/tts, install reusable registry blocks and components, follow the GSAP animation reference, and turn any website into a video with the 7-step capture-to-video pipeline.
 description_zh-CN: "一键生成短视频 —— 用 HTML + CSS + GSAP 创作视频合成,Agent 自动产出动画、字幕、配音、音频反应特效和场景转场。涵盖合成创作、时序控制、媒体处理和完整的视频制作流程。"
+description_zh-TW: "一鍵生成短影片 —— 用 HTML + CSS + GSAP 創作影片合成,Agent 自動產出動畫、字幕、配音、音訊反應特效和場景轉場。涵蓋合成創作、時序控制、媒體處理和完整的影片製作流程。"
+description_ja: "ワンクリックで短編動画を生成 —— HTML + CSS + GSAP でコンポジションを作成し、エージェントがアニメーション、字幕、ナレーション、オーディオリアクティブエフェクト、シーン転換を自動生成。コンポジション作成、タイミング制御、メディア処理、動画制作ワークフロー全体をカバー。"
+description_ko: "원클릭 숏폼 비디오 생성 —— HTML + CSS + GSAP 로 컴포지션을 작성하면 에이전트가 애니메이션, 자막, 내레이션, 오디오 반응 효과, 장면 전환을 자동 생성합니다. 컴포지션 제작, 타이밍 제어, 미디어 처리, 전체 비디오 제작 워크플로를 포괄합니다."
+description_vi: "Tạo video ngắn một lần bấm —— Soạn thảo composition bằng HTML + CSS + GSAP, agent tự động tạo hoạt ảnh, phụ đề, lồng tiếng, hiệu ứng phản hồi âm thanh và chuyển cảnh. Bao gồm tạo composition, kiểm soát thời gian, xử lý media và toàn bộ quy trình sản xuất video."
+description_ru: "Короткое видео в один клик —— Создавайте композиции на HTML + CSS + GSAP, агент автоматически генерирует анимации, субтитры, озвучку, аудио-реактивные эффекты и переходы между сценами. Охватывает создание композиций, контроль тайминга, обработку медиа и полный цикл производства видео."
+description_pt: "Vídeos curtos com um clique —— Crie composições com HTML + CSS + GSAP; o agent gera automaticamente animações, legendas, narração, efeitos áudio-reativos e transições de cena. Cobre criação de composições, controle de tempo, processamento de mídia e o fluxo completo de produção de vídeo."
+description_es: "Videos cortos en un clic —— Crea composiciones con HTML + CSS + GSAP; el agent genera automáticamente animaciones, subtítulos, narración, efectos audio-reactivos y transiciones entre escenas. Abarca creación de composiciones, control de tiempos, procesamiento multimedia y el flujo completo de producción de video."
+description_fr: "Vidéos courtes en un clic —— Composez avec HTML + CSS + GSAP ; l'agent génère automatiquement animations, sous-titres, voix off, effets audio-réactifs et transitions de scène. Couvre la création de compositions, le contrôle du timing, le traitement des médias et le flux complet de production vidéo."
+description_de: "Kurze Videos mit einem Klick —— Compositions mit HTML + CSS + GSAP erstellen; der Agent generiert automatisch Animationen, Untertitel, Voiceover, audio-reaktive Effekte und Szenenübergänge. Deckt Composition-Erstellung, Timing-Kontrolle, Medienverarbeitung und den vollständigen Videoproduktions-Workflow ab."
 ---
 
 # HyperFrames
