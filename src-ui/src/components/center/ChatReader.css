@@ -121,9 +121,12 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  max-width: 900px;
-  margin: 0 auto;
+  /* Fills the center column like the live xterm tab does — user
+     prefers the terminal's fill-the-window feel over the
+     Claude.ai-style hard-capped reading column. The body's 24px
+     side padding still keeps content off the panel edges. */
   width: 100%;
+  margin: 0 auto;
 }
 
 .chat-message-row.user {
