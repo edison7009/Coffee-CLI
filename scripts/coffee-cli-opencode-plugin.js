@@ -102,6 +102,22 @@ function mapEvent(evt) {
   }
 }
 
+// File-touching tool names → Coffee CLI audit action label. OpenCode's
+// tool.execute.after named hook fires after the tool runs, with the
+// resolved input (including the file path argument).
+const FILE_TOOL_ACTION = {
+  edit: "edit",
+  write: "create",
+  patch: "edit",
+};
+
+function extractFilePath(input) {
+  if (!input || typeof input !== "object") return null;
+  // OpenCode tools settled on `filePath` (camelCase) for new tools and
+  // `path` for older ones; accept either.
+  return input.filePath || input.path || null;
+}
+
 // OpenCode loader (packages/opencode/src/plugin/index.ts) iterates Object.values
 // of the loaded module and treats every function as a Plugin in legacy mode.
 // We export a single named Plugin function; default-export is the same
@@ -110,12 +126,24 @@ export const CoffeeCliIslandPlugin = async () => {
   debug("plugin loaded; tab=", process.env.COFFEE_CLI_TAB_ID || "<unset>",
         "port=", process.env.COFFEE_CLI_HOOK_PORT || "<unset>");
   return {
+    // Bus events → 3-state status indicator
     event: async ({ event }) => {
       const mapped = mapEvent(event);
       if (mapped) {
         debug("→", event && event.type, "=>", mapped.status);
         send(mapped);
       }
+    },
+    // Named hook: feeds the file-edit audit log. Coffee CLI's Rust
+    // side will compute the diff stats against the global baseline
+    // and emit `tool-file-edit` to the frontend.
+    "tool.execute.after": async ({ tool, input }) => {
+      const action = FILE_TOOL_ACTION[tool];
+      if (!action) return;
+      const filePath = extractFilePath(input);
+      if (!filePath) return;
+      debug("file edit:", tool, action, filePath);
+      send({ path: filePath, action });
     },
   };
 };

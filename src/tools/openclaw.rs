@@ -1,0 +1,22 @@
+//! OpenClaw — `openclaw` binary.
+//!
+//! Skills live under the workspace root at
+//! `~/.openclaw/workspace/skills/` by default. The workspace path
+//! is technically configurable via `agents.defaults.workspace` in
+//! `~/.openclaw/openclaw.json`; users overriding that won't get
+//! the junction at the right place. See `agent_mcp_config.rs`
+//! for the read-openclaw.json pattern when we lift this dynamic.
+
+use super::{FileEditAttribution, ToolDescriptor};
+
+pub static DESCRIPTOR: ToolDescriptor = ToolDescriptor {
+    id: "openclaw",
+    display_name: "OpenClaw",
+    binary_name: "openclaw",
+    skill_dir_relative: Some(".openclaw/workspace/skills"),
+    // OpenClaw is workspace-nested but its hook surface (the `commands.mcp`
+    // gate, see memory `reference_openclaw_mcp_gate`) is for MCP server
+    // injection, not file-edit attribution. No upstream hook event
+    // covers "wrote file X"; same policy as Gemini.
+    file_edit_attribution: FileEditAttribution::None,
+};

@@ -25,6 +25,53 @@ export function App() {
     });
   }, [dispatch]);
 
+  // Subscribe to hook-driven file-edit events. The Rust hook server emits
+  // one `tool-file-edit` event per file an in-Coffee-CLI tool just edited
+  // (Claude PostToolUse / OpenCode tool.execute / Codex turn-snapshot
+  // diff). Diff stats are pre-computed in Rust against the global baseline
+  // — frontend just looks up the tab's projectRoot and updates
+  // globalChangeLog. Tools without hook integration (Gemini / Qwen /
+  // OpenClaw / Hermes) never emit these, so their files don't appear in
+  // the audit log — by design, see src/tools/<id>.rs FileEditAttribution.
+  useEffect(() => {
+    let unlisten: (() => void) | null = null;
+    let cancelled = false;
+    (async () => {
+      const { listen } = await import('@tauri-apps/api/event');
+      const fn = await listen<{
+        tab_id: string;
+        tool: string;
+        path: string;
+        action: 'edit' | 'create' | 'delete';
+        added: number;
+        deleted: number;
+        mtime_ms: number;
+      }>('tool-file-edit', (event) => {
+        // Resolve projectRoot from the tab's folderPath. Drop the event
+        // if the tab no longer exists (e.g., closed mid-flight) — the
+        // hook is fire-and-forget and may straggle.
+        const tab = state.terminals.find(t => t.id === event.payload.tab_id);
+        if (!tab?.folderPath) return;
+        dispatch({
+          type: 'RECORD_TOOL_FILE_EDIT',
+          tool: event.payload.tool,
+          path: event.payload.path,
+          action: event.payload.action,
+          added: event.payload.added,
+          deleted: event.payload.deleted,
+          mtimeMs: event.payload.mtime_ms,
+          projectRoot: tab.folderPath,
+        });
+      });
+      if (cancelled) fn();
+      else unlisten = fn;
+    })().catch(() => {});
+    return () => { cancelled = true; unlisten?.(); };
+    // state.terminals is referenced inside the listener closure; we
+    // refresh the listener whenever it changes so closed-tab events
+    // get filtered out. The unlisten/relisten cycle is cheap.
+  }, [dispatch, state.terminals]);
+
   // Apply theme + shape on mount and change — must sync with the inline script in index.html
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', state.currentTheme);

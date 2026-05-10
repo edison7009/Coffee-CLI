@@ -493,6 +493,82 @@ fn read_text_file(path: String) -> Option<String> {
     Some(String::from_utf8_lossy(&bytes).into_owned())
 }
 
+/// Compute `(added, deleted, mtime_ms)` for a single file vs the global
+/// baseline. Used by the hook server when an AI tool reports a
+/// per-tool-call file edit (Claude PostToolUse / OpenCode tool.execute);
+/// the resulting numbers feed the audit log without polling.
+///
+/// Returns `None` for files that:
+///   - don't exist on disk (deleted)
+///   - exceed the size cap
+///   - aren't text (binary)
+/// In those cases callers fall back to a delete event with no diff.
+pub(crate) fn compute_single_file_stats(path: &str) -> Option<(u32, u32, i64)> {
+    let normalized = path.replace('\\', "/");
+    let bytes = std::fs::read(&path).ok()?;
+    if bytes.len() as u64 > STATS_MAX_FILE_BYTES { return None; }
+    if !stats_is_text(&bytes) { return None; }
+    let cur_hashes = stats_line_hashes(&bytes);
+    let mtime_ms: i64 = std::fs::metadata(path)
+        .ok()
+        .map(|m| stats_mtime_nanos(&m))
+        .map(|n| (n / 1_000_000).try_into().unwrap_or(i64::MAX))
+        .unwrap_or(0);
+    let map = snapshots().lock().ok()?;
+    let (added, deleted) = match map.get(&normalized) {
+        Some(base) => stats_line_diff(&base.line_hashes, &cur_hashes),
+        // No baseline = file new since Coffee CLI started → every line
+        // is an addition.
+        None => (cur_hashes.len() as u32, 0u32),
+    };
+    if added.saturating_add(deleted) > STATS_MAX_DIFF_LINES { return None; }
+    Some((added, deleted, mtime_ms))
+}
+
+/// Walk `folder` and emit `(absolute_path, added, deleted, mtime_ms)`
+/// for every file that drifts from its global baseline. Used by the
+/// hook server when a turn-snapshot-attribution tool (Codex) signals
+/// turn-complete: we approximate "files this turn modified" as
+/// "files in folder that differ from baseline RIGHT NOW".
+///
+/// Imperfection accepted: if an external editor saved a file in this
+/// folder during the same turn, the change gets attributed to the AI
+/// tool. Acceptable trade-off — the user is generally not editing
+/// concurrently with an active AI turn, and the alternative
+/// (per-tool-call hook) doesn't exist for Codex.
+pub(crate) fn diff_folder_against_baseline(folder: &str) -> Vec<(String, u32, u32, i64)> {
+    let mut result = Vec::new();
+    let dir = std::path::Path::new(folder);
+    if !dir.is_dir() { return result; }
+
+    let baseline = match snapshots().lock() {
+        Ok(m) => m.clone(),
+        Err(_) => return result,
+    };
+
+    let mut current = std::collections::HashMap::new();
+    stats_walk(dir, &mut current, Some(&baseline), STATS_MAX_FILES);
+
+    for (abs_path, cur) in &current {
+        let mtime_ms: i64 = (cur.mtime_nanos / 1_000_000).try_into().unwrap_or(i64::MAX);
+        match baseline.get(abs_path) {
+            Some(base) => {
+                if base.mtime_nanos == cur.mtime_nanos { continue; }
+                let (added, deleted) = stats_line_diff(&base.line_hashes, &cur.line_hashes);
+                if added == 0 && deleted == 0 { continue; }
+                if added.saturating_add(deleted) > STATS_MAX_DIFF_LINES { continue; }
+                result.push((abs_path.clone(), added, deleted, mtime_ms));
+            }
+            None => {
+                let added = cur.line_hashes.len() as u32;
+                if added > STATS_MAX_DIFF_LINES { continue; }
+                result.push((abs_path.clone(), added, 0, mtime_ms));
+            }
+        }
+    }
+    result
+}
+
 /// Return the file's first-seen content as UTF-8 string. `None` when:
 ///   - the file is not in the global baseline (Coffee CLI has never
 ///     observed this path during its lifetime)
@@ -510,58 +586,14 @@ fn get_baseline_content(path: String) -> Option<String> {
     Some(String::from_utf8_lossy(bytes).into_owned())
 }
 
-/// Walk `path` and return any file under it whose current content drifts
-/// from its global baseline. Files not in the baseline (created since
-/// Coffee CLI started, or under a folder that's never been
-/// `start_folder_snapshot`-ed) are reported as "every line is new".
-/// Empty map when `path` isn't a directory.
-#[tauri::command]
-fn compute_folder_stats(path: String) -> std::collections::HashMap<String, FileStats> {
-    let mut result = std::collections::HashMap::new();
-    let dir = std::path::Path::new(&path);
-    if !dir.is_dir() { return result; }
-
-    // Snapshot the global baseline at this instant so the walk diffs
-    // against a consistent view (other tabs adding new baselines
-    // mid-walk don't change the result of THIS computation).
-    let baseline = {
-        let map = match snapshots().lock() {
-            Ok(m) => m,
-            Err(_) => return result,
-        };
-        map.clone()
-    };
-
-    let mut current = std::collections::HashMap::new();
-    stats_walk(dir, &mut current, Some(&baseline), STATS_MAX_FILES);
-
-    for (abs_path, cur) in &current {
-        // u128 nanoseconds → i64 milliseconds. Lossy at ns scale but
-        // ms is plenty for "sort by recency" in a UI list. Saturating
-        // cast guards against the (impossible-in-practice) overflow.
-        let mtime_ms: i64 = (cur.mtime_nanos / 1_000_000).try_into().unwrap_or(i64::MAX);
-        match baseline.get(abs_path) {
-            Some(base) => {
-                if base.mtime_nanos == cur.mtime_nanos { continue; }
-                let (added, deleted) = stats_line_diff(&base.line_hashes, &cur.line_hashes);
-                // 0/0 = file was touched (mtime changed) but content reverts to
-                // baseline (e.g., user edited and undid). Skip — no badge.
-                if added == 0 && deleted == 0 { continue; }
-                // Sanity cap — see STATS_MAX_DIFF_LINES doc.
-                if added.saturating_add(deleted) > STATS_MAX_DIFF_LINES { continue; }
-                result.insert(abs_path.clone(), FileStats { added, deleted, mtime_ms });
-            }
-            None => {
-                // New file (created since snapshot): every line is an addition.
-                let added = cur.line_hashes.len() as u32;
-                if added > STATS_MAX_DIFF_LINES { continue; }
-                result.insert(abs_path.clone(), FileStats { added, deleted: 0, mtime_ms });
-            }
-        }
-    }
-
-    result
-}
+/// (Removed in v2.7.0) `compute_folder_stats` was the per-tab fs-walking
+/// poll that fed the audit list before the hook architecture took over.
+/// Audit data now flows from the per-tool forwarder scripts into
+/// `hook_server.rs`; the Rust-internal equivalent for Codex turn-snapshot
+/// is `diff_folder_against_baseline` above (pub(crate), not a Tauri
+/// command). `start_folder_snapshot` and `get_baseline_content` are kept
+/// because DiffPanel still resolves baseline content from them.
+// (no compute_folder_stats here — superseded by hook events)
 
 /// Save a base64-encoded clipboard image to a temp file.
 /// Used by the Gambit compose window so pasted screenshots can be referenced
@@ -3204,7 +3236,6 @@ pub fn start_ui() -> anyhow::Result<()> {
             save_clipboard_image,
             list_directory,
             start_folder_snapshot,
-            compute_folder_stats,
             get_baseline_content,
             read_text_file,
             show_in_folder,

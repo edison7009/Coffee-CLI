@@ -234,7 +234,7 @@ type Action =
   | { type: 'SET_BG'; path: string; bgType: 'image' | 'video' }
   | { type: 'CLEAR_BG' }
   | { type: 'SET_WALLPAPER_OPACITY'; opacity: number }
-  | { type: 'MERGE_GLOBAL_CHANGES'; tool: string | null; projectRoot: string; entries: { path: string; added: number; deleted: number; mtimeMs: number }[] }
+  | { type: 'RECORD_TOOL_FILE_EDIT'; tool: string; path: string; action: 'edit' | 'create' | 'delete'; added: number; deleted: number; mtimeMs: number; projectRoot: string }
   | { type: 'CLEAR_GLOBAL_CHANGES' }
   | { type: 'SET_TERM_SCHEME'; scheme: string }
   | { type: 'TOGGLE_GAMBIT' }
@@ -386,56 +386,57 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, bgPath: '', bgType: 'none' };
     case 'SET_WALLPAPER_OPACITY':
       return { ...state, wallpaperOpacity: Math.max(0, Math.min(100, action.opacity)) };
-    case 'MERGE_GLOBAL_CHANGES': {
-      // Merge a session's freshly-computed file stats into the global log.
-      // Keyed by absolute path. Existing entry from any session: update
-      // counts + mtime, append `tool` to provenance list (de-duped).
-      // New path: insert. Empty entries (added=0 deleted=0) are dropped
-      // — they mean the file reverted to baseline; no audit value.
-      // Map identity is preserved when nothing changes, so React.memo /
-      // referential-equality consumers don't re-render on no-op merges.
+    case 'RECORD_TOOL_FILE_EDIT': {
+      // One file edit reported by a tool's hook (Claude PostToolUse,
+      // OpenCode tool.execute.after, or Codex turn-snapshot diff).
+      // The Rust side has already computed `added` / `deleted` against
+      // the global baseline before emitting `tool-file-edit`, so the
+      // reducer just maintains the Map.
       //
-      // FIFO cap: keep the log bounded to GLOBAL_CHANGE_LOG_MAX entries
-      // per Coffee CLI process. When the merge takes us over the cap,
-      // evict the oldest-mtime entries down to GLOBAL_CHANGE_LOG_TARGET
-      // (with a margin so we don't churn through eviction every tick).
+      // delete: drop the entry entirely — no audit value in showing
+      //   "this file was deleted" once it's gone (also matches the
+      //   semantics of compute_folder_stats reporting 0/0 for reverted
+      //   files in the prior fs_watcher path).
+      // edit / create: upsert. `tools` accumulates de-duped provenance
+      //   so a file touched by Claude AND Codex ends up with both ids.
+      //
+      // FIFO cap: same as before — keep the log bounded to
+      // GLOBAL_CHANGE_LOG_MAX entries per process; on overflow evict
+      // oldest-mtime down to GLOBAL_CHANGE_LOG_TARGET.
       const next = new Map(state.globalChangeLog);
-      let mutated = false;
-      for (const e of action.entries) {
-        if (e.added === 0 && e.deleted === 0) {
-          if (next.has(e.path)) { next.delete(e.path); mutated = true; }
-          continue;
-        }
-        const prev = next.get(e.path);
-        const toolId = action.tool ?? '?';
-        const tools = prev?.tools.includes(toolId)
-          ? prev.tools
-          : [...(prev?.tools ?? []), toolId];
-        if (
-          prev &&
-          prev.added === e.added &&
-          prev.deleted === e.deleted &&
-          prev.mtimeMs === e.mtimeMs &&
-          prev.projectRoot === action.projectRoot &&
-          tools === prev.tools
-        ) continue;
-        next.set(e.path, {
-          path: e.path,
-          projectRoot: action.projectRoot,
-          added: e.added,
-          deleted: e.deleted,
-          mtimeMs: e.mtimeMs,
-          tools,
-        });
-        mutated = true;
+      if (action.action === 'delete') {
+        if (!next.has(action.path)) return state;
+        next.delete(action.path);
+        return { ...state, globalChangeLog: next };
       }
+      const prev = next.get(action.path);
+      const tools = prev?.tools.includes(action.tool)
+        ? prev.tools
+        : [...(prev?.tools ?? []), action.tool];
+      if (
+        prev &&
+        prev.added === action.added &&
+        prev.deleted === action.deleted &&
+        prev.mtimeMs === action.mtimeMs &&
+        prev.projectRoot === action.projectRoot &&
+        tools === prev.tools
+      ) {
+        return state;
+      }
+      next.set(action.path, {
+        path: action.path,
+        projectRoot: action.projectRoot,
+        added: action.added,
+        deleted: action.deleted,
+        mtimeMs: action.mtimeMs,
+        tools,
+      });
       if (next.size > GLOBAL_CHANGE_LOG_MAX) {
         const sorted = Array.from(next.entries()).sort((a, b) => a[1].mtimeMs - b[1].mtimeMs);
         const toEvict = next.size - GLOBAL_CHANGE_LOG_TARGET;
         for (let i = 0; i < toEvict; i++) next.delete(sorted[i][0]);
-        mutated = true;
       }
-      return mutated ? { ...state, globalChangeLog: next } : state;
+      return { ...state, globalChangeLog: next };
     }
     case 'CLEAR_GLOBAL_CHANGES':
       return { ...state, globalChangeLog: new Map() };

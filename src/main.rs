@@ -11,6 +11,7 @@ mod mcp_injector;
 mod multi_agent_protocol;
 mod agent_mcp_config;
 mod tool_config;
+mod tools;
 mod skills;
 
 use anyhow::Result;

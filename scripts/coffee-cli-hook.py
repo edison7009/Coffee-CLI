@@ -6,6 +6,16 @@
 # Coffee CLI's 3-state agent status, and forwards a compact JSON payload
 # to the Coffee CLI backend over local TCP.
 #
+# Two payload kinds emitted (one connection per kind, each one-shot):
+#   - status     {tab_id, tool, status, event}
+#                Drives the tab dot. Every relevant hook fires this.
+#   - file_edit  {tab_id, tool, path, action}
+#                Fired ONLY when PostToolUse runs Edit/Write/MultiEdit.
+#                Coffee CLI's Rust side computes the diff stats against
+#                the global baseline and emits `tool-file-edit` to the
+#                frontend audit log. This is what makes "show me only
+#                what tools INSIDE Coffee CLI changed" work.
+#
 # Env vars (injected by Coffee CLI when spawning Claude in a tab):
 #   COFFEE_CLI_TAB_ID    — tab/session UUID the agent belongs to
 #   COFFEE_CLI_HOOK_PORT — loopback port of the Rust hook server
@@ -19,6 +29,27 @@ import socket
 import sys
 
 
+# Claude Code tool names that touch the filesystem in a way the audit
+# log cares about. PostToolUse with one of these → emit file_edit.
+FILE_TOOLS_EDIT = {"Edit", "MultiEdit"}
+FILE_TOOLS_CREATE = {"Write"}
+
+
+def post(port: int, payload: dict) -> None:
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(1.0)
+        s.connect(("127.0.0.1", port))
+        s.sendall((json.dumps(payload) + "\n").encode("utf-8"))
+        try:
+            s.recv(256)
+        except Exception:
+            pass
+        s.close()
+    except Exception:
+        pass
+
+
 def main() -> None:
     try:
         data = json.load(sys.stdin)
@@ -29,6 +60,10 @@ def main() -> None:
     port = os.environ.get("COFFEE_CLI_HOOK_PORT")
     tool = os.environ.get("COFFEE_CLI_TOOL", "")
     if not tab_id or not port:
+        sys.exit(0)
+    try:
+        port_n = int(port)
+    except Exception:
         sys.exit(0)
 
     event = data.get("hook_event_name", "")
@@ -53,28 +88,32 @@ def main() -> None:
         # Claude is busy. One bucket, one color (orange).
         status = "working"
 
-    if status is None:
-        sys.exit(0)
+    if status is not None:
+        post(port_n, {"tab_id": tab_id, "tool": tool, "status": status, "event": event})
 
-    payload = {
-        "tab_id": tab_id,
-        "tool": tool,
-        "status": status,
-        "event": event,
-    }
-
-    try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.settimeout(1.0)
-        s.connect(("127.0.0.1", int(port)))
-        s.sendall((json.dumps(payload) + "\n").encode("utf-8"))
-        try:
-            s.recv(256)
-        except Exception:
-            pass
-        s.close()
-    except Exception:
-        pass
+    # File-edit emission. PostToolUse carries `tool_name` + `tool_input`;
+    # for Edit / MultiEdit the input has `file_path`, for Write it's
+    # `file_path` too. (MultiEdit additionally has an `edits` array but
+    # all entries target the same `file_path`.) See Claude's hook docs
+    # at code.claude.com/docs.
+    if event == "PostToolUse":
+        tool_name = data.get("tool_name") or ""
+        tool_input = data.get("tool_input") or {}
+        file_path = tool_input.get("file_path") if isinstance(tool_input, dict) else None
+        if file_path:
+            if tool_name in FILE_TOOLS_EDIT:
+                action = "edit"
+            elif tool_name in FILE_TOOLS_CREATE:
+                action = "create"
+            else:
+                action = None
+            if action:
+                post(port_n, {
+                    "tab_id": tab_id,
+                    "tool": tool,
+                    "path": file_path,
+                    "action": action,
+                })
 
     sys.exit(0)
 

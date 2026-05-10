@@ -138,11 +138,6 @@ export const commands = {
   // in any folder.
   startFolderSnapshot: (path: string) =>
     invoke<void>('start_folder_snapshot', { path }),
-  computeFolderStats: (path: string) =>
-    invoke<Record<string, { added: number; deleted: number; mtimeMs: number }>>(
-      'compute_folder_stats',
-      { path },
-    ),
   // Diff panel inputs: baseline = the file's bytes when Coffee CLI
   // first observed it during this process lifetime; current = the
   // file's bytes now. Both lossy-UTF8 decoded so GBK / latin-1 source

@@ -55,11 +55,21 @@ def main() -> None:
         # Future-proof: unknown event types are ignored, not guessed.
         sys.exit(0)
 
+    # cwd: included so the hook server can run a turn-snapshot diff
+    # against the global baseline on agent-turn-complete and emit one
+    # `tool-file-edit` event per drifted file. Codex has no per-tool-call
+    # hook so this is the closest we get to "Codex just edited file X".
+    try:
+        cwd = os.getcwd()
+    except Exception:
+        cwd = ""
+
     payload = {
         "tab_id": tab_id,
         "tool": tool,
         "status": status,
         "event": event,
+        "cwd": cwd,
     }
 
     try:

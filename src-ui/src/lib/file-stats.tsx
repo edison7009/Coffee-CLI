@@ -1,19 +1,34 @@
-// file-stats.tsx — Multi-session diff stats provider.
+// file-stats.tsx — Baseline lifecycle + Explorer-badge derive layer.
 //
-// Tracks every live tab's session-folder pair so:
-//   • The right-side ChangesBoard's global change log gets fed by ALL
-//     tabs in real time — Claude editing files in tab1 while the user
-//     is on tab2 immediately appears in the global list.
-//   • The left-side Explorer's tree badges (consumed via useFileStats)
-//     reflect the currently active tab's stats only.
+// Two responsibilities, one slim provider:
 //
-// Baselines are stored in Rust as a single global path-keyed map
-// (server.rs::snapshots) so reopening / closing tabs doesn't disturb
-// the audit trail. Full reset on Coffee CLI restart only.
+//   1. Baseline lifecycle (Rust side). Each live, eligible terminal
+//      session triggers `start_folder_snapshot` once when its
+//      (tool, folder) combo first appears. Rust's global per-file
+//      baseline is "first-seen wins" so re-triggering is cheap, but
+//      we still skip the no-op call to avoid the Tauri IPC round-trip.
+//      Baselines persist for the app's lifetime; DiffPanel's
+//      `getBaselineContent(path)` resolves against this map.
+//
+//   2. Explorer tree badges. The left-side file tree shows "+N −M"
+//      next to files the active session's tool has edited. The
+//      Context value is now DERIVED from `state.globalChangeLog`
+//      filtered to the active session's projectRoot — same source as
+//      the right-side ChangesBoard, so both panels stay in sync and
+//      reflect the audit-log philosophy ("only what tools running
+//      INSIDE Coffee CLI changed").
+//
+// What was removed (post v2.7.0 hook architecture):
+//   - `compute_folder_stats` polling on fs-refresh events
+//   - `MERGE_GLOBAL_CHANGES` dispatches from this file
+//   - Per-session `latestStats` shadow maps
+// All that data now flows from the Rust hook server's
+// `tool-file-edit` event → `RECORD_TOOL_FILE_EDIT` reducer
+// (subscribed in App.tsx).
 
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo } from 'react';
 import type { ReactNode } from 'react';
-import { useAppDispatch, useAppState, resolveDiffContext } from '../store/app-state';
+import { useAppState, resolveDiffContext } from '../store/app-state';
 import type { ToolType } from '../store/app-state';
 import { commands } from '../tauri';
 
@@ -23,70 +38,28 @@ type FileStatsMap = Map<string, FileStats>;
 const FileStatsContext = createContext<FileStatsMap | null>(null);
 export const useFileStats = () => useContext(FileStatsContext);
 
-const normPath = (p: string) => p.replace(/\\/g, '/');
 const normRoot = (p: string) => p.replace(/\\/g, '/').replace(/\/+$/, '');
 
 // CWD-agnostic tools don't bind to a local folder; their snapshots are no-ops.
 // Mirrors the same set in Explorer.tsx.
 const CWD_AGNOSTIC_TOOLS: ReadonlySet<ToolType> = new Set<ToolType>(['openclaw', 'hermes', 'remote']);
 
-// Per-session state. Module-scoped so it survives Provider re-renders /
-// panel toggles. Closed tabs leave entries in this map until either the
-// app exits or another tab opens with the same sessionId — neither
-// realistic, so in practice it's "sticky" for the app's lifetime,
-// matching the global change log's app-lifecycle scope.
-type SessionState = {
-  folderPath: string;
-  tool: ToolType | null;
-  /** Resolves once `startFolderSnapshot` returns — refresh requests
-   *  for this session await this before calling computeFolderStats so
-   *  the baseline is guaranteed to exist. */
-  baselineReady: Promise<unknown>;
-};
-const sessionStates = new Map<string, SessionState>();
+// Module-scoped: which (sessionId → folder) combos we've already
+// asked Rust to baseline. Survives Provider re-renders. Pruned when
+// a tab closes; entries persist for the app's lifetime otherwise so
+// DiffPanel can resolve baselines for closed-tab audit entries.
+const baselinedFolders = new Map<string, string>();
 
 export function FileStatsProvider({ children }: { children: ReactNode }) {
   const { state } = useAppState();
-  const dispatch = useAppDispatch();
   const activeSession = state.terminals.find(t => t.id === state.activeTerminalId);
   const diffCtx = resolveDiffContext(activeSession);
-  const activeSessionId = diffCtx?.sessionId ?? null;
+  const activeFolderPath = diffCtx?.folderPath ?? null;
 
-  const [activeStats, setActiveStats] = useState<FileStatsMap | null>(null);
-  const activeSessionIdRef = useRef<string | null>(activeSessionId);
-  useEffect(() => { activeSessionIdRef.current = activeSessionId; }, [activeSessionId]);
-
-  // Refresh one session against its baseline → push entries to the
-  // global change log → if it's the currently-active session, also
-  // bump the Context value so left-side badges update.
-  const refreshSession = useCallback(async (sid: string) => {
-    const s = sessionStates.get(sid);
-    if (!s) return;
-    try {
-      await s.baselineReady;
-      const raw = await commands.computeFolderStats(s.folderPath);
-      const m = new Map<string, FileStats>();
-      const entries: { path: string; added: number; deleted: number; mtimeMs: number }[] = [];
-      for (const [k, v] of Object.entries(raw)) {
-        const p = normPath(k);
-        m.set(p, v);
-        entries.push({ path: p, added: v.added, deleted: v.deleted, mtimeMs: v.mtimeMs });
-      }
-      dispatch({ type: 'MERGE_GLOBAL_CHANGES', tool: s.tool, projectRoot: s.folderPath, entries });
-      if (sid === activeSessionIdRef.current) {
-        setActiveStats(m);
-      }
-    } catch {
-      // Swallow — keep last-known stats; a future event will retry.
-    }
-  }, [dispatch]);
-
-  // Sync sessionStates with live terminals: ensure baseline is started
-  // for every eligible (folder + non-CWD-agnostic tool) live session.
-  // Combo change (same sid, different folder/tool) → restart baseline
-  // (a no-op on Rust side since first-seen wins, but the frontend bookkeeping
-  // tracks the new combo). Closed tabs: prune from sessionStates so the
-  // fs-refresh handler stops pinging dead sessions.
+  // Ensure a Rust-side baseline exists for every live, eligible
+  // session. Combo change (same sid, different folder/tool) issues
+  // a fresh `start_folder_snapshot` — Rust's first-seen-wins rule
+  // means re-baselining the same folder is harmless to the map.
   useEffect(() => {
     const live = new Set<string>();
     for (const term of state.terminals) {
@@ -95,64 +68,37 @@ export function FileStatsProvider({ children }: { children: ReactNode }) {
       if (ctx.tool && CWD_AGNOSTIC_TOOLS.has(ctx.tool)) continue;
       live.add(ctx.sessionId);
 
-      const existing = sessionStates.get(ctx.sessionId);
-      const sameCombo =
-        existing?.folderPath === ctx.folderPath && existing?.tool === (ctx.tool ?? null);
-      if (!existing || !sameCombo) {
-        const baselineReady = commands.startFolderSnapshot(ctx.folderPath).catch(() => {});
-        sessionStates.set(ctx.sessionId, {
-          folderPath: ctx.folderPath,
-          tool: ctx.tool ?? null,
-          baselineReady,
-        });
-        void baselineReady.then(() => refreshSession(ctx.sessionId));
+      const combo = `${ctx.tool ?? ''}::${ctx.folderPath}`;
+      if (baselinedFolders.get(ctx.sessionId) !== combo) {
+        baselinedFolders.set(ctx.sessionId, combo);
+        commands.startFolderSnapshot(ctx.folderPath).catch(() => {});
       }
     }
-    // Prune dead session entries (frontend-only bookkeeping)
-    for (const sid of Array.from(sessionStates.keys())) {
-      if (!live.has(sid)) sessionStates.delete(sid);
+    // Prune dead session bookkeeping. Rust-side baselines aren't
+    // dropped (closed tabs may still have audit entries that need
+    // baseline content for diff display).
+    for (const sid of Array.from(baselinedFolders.keys())) {
+      if (!live.has(sid)) baselinedFolders.delete(sid);
     }
-  }, [state.terminals, refreshSession]);
+  }, [state.terminals]);
 
-  // When the user switches active tab, immediately blank Explorer's
-  // badges and kick a refresh so they reflect the new tab's project
-  // without waiting for the next fs-refresh event.
-  useEffect(() => {
-    if (!activeSessionId || !sessionStates.has(activeSessionId)) {
-      setActiveStats(null);
-      return;
+  // Derive the active session's FileStats from globalChangeLog. Only
+  // entries whose projectRoot matches the active session's folder
+  // count — Explorer's tree badges are scoped to "this tab's project".
+  const activeStats = useMemo<FileStatsMap | null>(() => {
+    if (!activeFolderPath) return null;
+    const targetRoot = normRoot(activeFolderPath);
+    const m = new Map<string, FileStats>();
+    for (const [absPath, entry] of state.globalChangeLog) {
+      if (normRoot(entry.projectRoot) !== targetRoot) continue;
+      m.set(absPath, {
+        added: entry.added,
+        deleted: entry.deleted,
+        mtimeMs: entry.mtimeMs,
+      });
     }
-    setActiveStats(new Map());
-    void refreshSession(activeSessionId);
-  }, [activeSessionId, refreshSession]);
-
-  // fs-refresh: file system mutation observed somewhere → fan out to
-  // every live session whose folder contains the changed dir. Per-
-  // session debounce prevents a burst of events from queuing N
-  // refreshes for the same session.
-  useEffect(() => {
-    const debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
-    const handler = (e: Event) => {
-      const ev = e as CustomEvent<{ dirPath: string }>;
-      const dir = normRoot(ev.detail.dirPath);
-      for (const [sid, s] of sessionStates) {
-        const target = normRoot(s.folderPath);
-        if (dir === target || dir.startsWith(target + '/')) {
-          const existing = debounceTimers.get(sid);
-          if (existing) clearTimeout(existing);
-          debounceTimers.set(sid, setTimeout(() => {
-            debounceTimers.delete(sid);
-            void refreshSession(sid);
-          }, 300));
-        }
-      }
-    };
-    window.addEventListener('fs-refresh', handler as EventListener);
-    return () => {
-      window.removeEventListener('fs-refresh', handler as EventListener);
-      for (const t of debounceTimers.values()) clearTimeout(t);
-    };
-  }, [refreshSession]);
+    return m;
+  }, [state.globalChangeLog, activeFolderPath]);
 
   return (
     <FileStatsContext.Provider value={activeStats}>
