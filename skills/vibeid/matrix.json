@@ -1,7 +1,7 @@
 {
-  "version": 3,
-  "updated": "2026-04-21",
-  "comment": "VibeID persona matrix v3. 4 axes (Mind/Craft/Arc/Flow) produce 16 codes like RTAH. Each persona PNG filename equals the 4-letter code + '.png' (e.g. RTAH.png). Image URL = image_base_url + '/' + code + '.png'. Both image_base_url fields are the same CDN URL by design — a relative path would be resolved to file:///C:/Users/<username>/... by some Claude runtimes, leaking the username and breaking shared screenshots.",
+  "version": 4,
+  "updated": "2026-05-10",
+  "comment": "VibeID persona matrix v4. 4 axes (Mind/Craft/Arc/Flow) produce 16 codes like RTAH. v4 changes the Craft axis to derive from user message text (DESIGN vs TECHNICAL keyword shares) instead of agent tool calls (Bash+Edit vs Read+Grep ratio); the previous v3 formulation measured the agent's behaviour, not the user's. Taglines were rewritten in the same release to describe personality rather than gamified action verbs. Each persona PNG filename equals the 4-letter code + '.png' (e.g. RTAH.png). Image URL = image_base_url + '/' + code + '.png'. Both image_base_url fields are the same CDN URL by design — a relative path would be resolved to file:///C:/Users/<username>/... by some agent runtimes, leaking the username and breaking shared screenshots.",
 
   "axes": {
     "mind":  { "R": "Rational",  "E": "Expressive" },
@@ -12,7 +12,7 @@
 
   "thresholds": {
     "mind_rational_share_min": 0.5,
-    "craft_design_share_min": 0.40,
+    "craft_design_surface_min": 0.40,
     "flow_multiclaud_pct": 15
   },
 
@@ -27,24 +27,24 @@
   "image_base_url_remote": "https://coffeecli.com/vibeid",
 
   "personas": {
-    "RDVL": { "code": "RDVL", "name": "Deep Sage",         "name_cn": "深潜贤者",     "family": "Logos",   "profession": "Meditative Hermit",   "profession_cn": "冥想哲人",     "tagline": "Contemplates the essence of code in lotus position; wisdom alone.",                       "tagline_cn": "盘坐冥想代码本质，独守智慧。" },
-    "RDVH": { "code": "RDVH", "name": "Starborne Scholar", "name_cn": "星海学者团",   "family": "Logos",   "profession": "Elder Scholar",       "profession_cn": "学者长老",     "tagline": "Teaches a circle of apprentices; collective wisdom under the stars.",                     "tagline_cn": "带一众学徒在星空下共修学问。" },
-    "RDAL": { "code": "RDAL", "name": "Lone Architect",    "name_cn": "孤岛建筑师",   "family": "Logos",   "profession": "Master Architect",    "profession_cn": "建筑大师",     "tagline": "Alone on the cliff-studio, draws blueprints for monumental systems.",                     "tagline_cn": "悬崖工作室独自绘制宏大系统蓝图。" },
-    "RDAH": { "code": "RDAH", "name": "Star Architect",    "name_cn": "群星建筑师",   "family": "Logos",   "profession": "Chief Architect",     "profession_cn": "总建筑师",     "tagline": "Leads design councils on holographic blueprints spanning cosmic scale.",                  "tagline_cn": "主持宇宙级全息蓝图的设计评审。" },
+    "RDVL": { "code": "RDVL", "name": "Deep Sage",         "name_cn": "深潜贤者",     "family": "Logos",   "profession": "Meditative Hermit",   "profession_cn": "冥想哲人",     "tagline": "Patient surface-thinker; ships polish solo, one careful release at a time.", "tagline_cn": "稳重的界面思考者,独自把每次发版打磨干净。" },
+    "RDVH": { "code": "RDVH", "name": "Starborne Scholar", "name_cn": "星海学者团",   "family": "Logos",   "profession": "Elder Scholar",       "profession_cn": "学者长老",     "tagline": "Methodical surface designer who threads several conversations at once and lands them as releases.", "tagline_cn": "有节奏地打磨界面,同时驱动多条对话,稳定推动发版。" },
+    "RDAL": { "code": "RDAL", "name": "Lone Architect",    "name_cn": "孤岛建筑师",   "family": "Logos",   "profession": "Master Architect",    "profession_cn": "建筑大师",     "tagline": "Long-arc surface designer; builds quietly, one disciplined system at a time.", "tagline_cn": "长线界面规划者,独自沉静构建,一次一个完整系统。" },
+    "RDAH": { "code": "RDAH", "name": "Star Architect",    "name_cn": "群星建筑师",   "family": "Logos",   "profession": "Chief Architect",     "profession_cn": "总建筑师",     "tagline": "Methodical surface architect coordinating multiple long-running design streams in parallel.", "tagline_cn": "有条理的界面规划者,同时推动多条长线设计赛道。" },
 
-    "RTVL": { "code": "RTVL", "name": "Deep Captain",      "name_cn": "深海舰长",     "family": "Forge",   "profession": "Veteran Sea Captain", "profession_cn": "老船长",       "tagline": "Takes the helm alone on long night voyages; one ship, one release at a time.",            "tagline_cn": "夜航独驾，一船压上一次 release。" },
-    "RTVH": { "code": "RTVH", "name": "Star Admiral",      "name_cn": "星海统帅",     "family": "Forge",   "profession": "Fleet Admiral",       "profession_cn": "星域元帅",     "tagline": "Commands multiple deep-space fleets on coordinated release campaigns.",                   "tagline_cn": "指挥多支深空舰队同步出击。" },
-    "RTAL": { "code": "RTAL", "name": "Nightsmith",        "name_cn": "夜锻工",       "family": "Forge",   "profession": "Midnight Blacksmith", "profession_cn": "深夜铁匠",     "tagline": "Forges in silence under the moon; deep work, solo craft.",                                 "tagline_cn": "月下炉火旁默默锻造，沉浸式独作。" },
-    "RTAH": { "code": "RTAH", "name": "Titan Builder",     "name_cn": "基建巨匠",     "family": "Forge",   "profession": "Chief Engineer",      "profession_cn": "总工程师",     "tagline": "Leads an engineering crew to raise massive, durable structures.",                         "tagline_cn": "带工程队修筑巨型建筑，稳健耐久。" },
+    "RTVL": { "code": "RTVL", "name": "Deep Captain",      "name_cn": "深海舰长",     "family": "Forge",   "profession": "Veteran Sea Captain", "profession_cn": "老船长",       "tagline": "Steady systems shipper; takes one technical release end-to-end, alone.", "tagline_cn": "稳健的系统发版者,独自把一次技术发布从头跑到底。" },
+    "RTVH": { "code": "RTVH", "name": "Star Admiral",      "name_cn": "星海统帅",     "family": "Forge",   "profession": "Fleet Admiral",       "profession_cn": "星域元帅",     "tagline": "Coordinates several technical release lanes at once with measured discipline.", "tagline_cn": "用稳定节奏同时调度多条技术发版赛道。" },
+    "RTAL": { "code": "RTAL", "name": "Nightsmith",        "name_cn": "夜锻工",       "family": "Forge",   "profession": "Midnight Blacksmith", "profession_cn": "深夜铁匠",     "tagline": "Deep solo work on system internals; precise, unhurried, durable output.", "tagline_cn": "在系统内部沉静独作,精准、不慌不忙、产出耐久。" },
+    "RTAH": { "code": "RTAH", "name": "Titan Builder",     "name_cn": "基建巨匠",     "family": "Forge",   "profession": "Chief Engineer",      "profession_cn": "总工程师",     "tagline": "Coordinated internals builder; long-running technical projects across multiple parallel streams.", "tagline_cn": "节奏稳健的内部建造者,同时推进多条长线技术工程。" },
 
-    "EDVL": { "code": "EDVL", "name": "Lone Scout",        "name_cn": "独行侦探",     "family": "Muse",    "profession": "Solitary Detective",  "profession_cn": "孤行侦探",     "tagline": "Magnifier in hand, investigates the codebase alone and finds the truth.",                "tagline_cn": "放大镜加地图，独自摸清代码库底细。" },
-    "EDVH": { "code": "EDVH", "name": "Swarm Scout",       "name_cn": "蜂群斥候",     "family": "Muse",    "profession": "Recon Captain",       "profession_cn": "斥候队长",     "tagline": "Fans out multiple scouts; sweeps many fronts at once.",                                    "tagline_cn": "分身撒出斥候，同时扫描多条战线。" },
-    "EDAL": { "code": "EDAL", "name": "Lone Cartograph",   "name_cn": "孤岛制图师",   "family": "Muse",    "profession": "Island Cartographer", "profession_cn": "岛屿制图师",   "tagline": "Draws the map of the codebase in solitude, on weathered parchment.",                      "tagline_cn": "独自在孤岛绘制代码地图。" },
-    "EDAH": { "code": "EDAH", "name": "Star Atlas",        "name_cn": "星图学会",     "family": "Muse",    "profession": "Atlas Society",       "profession_cn": "学会主持",     "tagline": "Collaborative sky-mapper; teaches apprentices to chart the constellations.",              "tagline_cn": "带学徒协作绘制宏大星图。" },
+    "EDVL": { "code": "EDVL", "name": "Lone Scout",        "name_cn": "独行侦探",     "family": "Muse",    "profession": "Solitary Detective",  "profession_cn": "孤行侦探",     "tagline": "Curious surface investigator; explores alone, then ships what they find.", "tagline_cn": "独自探索界面细节的好奇者,把发现的东西打包发版。" },
+    "EDVH": { "code": "EDVH", "name": "Swarm Scout",       "name_cn": "蜂群斥候",     "family": "Muse",    "profession": "Recon Captain",       "profession_cn": "斥候队长",     "tagline": "Curious about every surface; runs several explorations in parallel and ships them.", "tagline_cn": "对每个界面都好奇,同时跑多条探索线,边探边发版。" },
+    "EDAL": { "code": "EDAL", "name": "Lone Cartograph",   "name_cn": "孤岛制图师",   "family": "Muse",    "profession": "Island Cartographer", "profession_cn": "岛屿制图师",   "tagline": "Maps the surface alone; sketches new layouts and grows them slowly.", "tagline_cn": "独自摸清界面地形,慢慢搭出新版图。" },
+    "EDAH": { "code": "EDAH", "name": "Star Atlas",        "name_cn": "星图学会",     "family": "Muse",    "profession": "Atlas Society",       "profession_cn": "学会主持",     "tagline": "Curious surface mapper; coordinates several parallel UI explorations with collaborators.", "tagline_cn": "好奇心驱动的界面探索者,与多方协作同时铺开多条线。" },
 
-    "ETVL": { "code": "ETVL", "name": "Sparkblade",        "name_cn": "闪刃独侠",     "family": "Kinetic", "profession": "Lone Swordsman",      "profession_cn": "孤胆剑客",     "tagline": "Strikes down bugs in a single flash of steel, roaming as a bounty hunter.",              "tagline_cn": "电光石火一刀劈碎 bug，独来独往的赏金猎人。" },
-    "ETVH": { "code": "ETVH", "name": "Spark Armada",      "name_cn": "闪电舰队",     "family": "Kinetic", "profession": "Lightning Commander", "profession_cn": "雷电指挥官",   "tagline": "Leads parallel strikes; ships releases like thunderstorms sweeping the grid.",           "tagline_cn": "多线并行突袭，发版像雷暴扫过电网。" },
-    "ETAL": { "code": "ETAL", "name": "Solo Forger",       "name_cn": "独锻匠",       "family": "Kinetic", "profession": "Lone Blacksmith",     "profession_cn": "独行铁匠",     "tagline": "One hammer, one anvil, one hand-crafted feature at a time.",                              "tagline_cn": "一锤一凿，一次一件地打磨新功能。" },
-    "ETAH": { "code": "ETAH", "name": "Forge Commune",     "name_cn": "锻造工坊",     "family": "Kinetic", "profession": "Guildmaster Smith",   "profession_cn": "匠作工头",     "tagline": "Leads a tight workshop; new parts roll off the line in fast bursts.",                     "tagline_cn": "带着匠人小队，新件像流水线一样飞速出炉。" }
+    "ETVL": { "code": "ETVL", "name": "Sparkblade",        "name_cn": "闪刃独侠",     "family": "Kinetic", "profession": "Lone Swordsman",      "profession_cn": "孤胆剑客",     "tagline": "Decisive technical operator; compresses thought into one terse move and ships solo.", "tagline_cn": "果断的技术执行者,一句话压住问题,独行节奏发版。" },
+    "ETVH": { "code": "ETVH", "name": "Spark Armada",      "name_cn": "闪电舰队",     "family": "Kinetic", "profession": "Lightning Commander", "profession_cn": "雷电指挥官",   "tagline": "Fast technical iteration across many parallel streams; releases come in bursts.", "tagline_cn": "在多条并行赛道上快速迭代技术,发版成串落地。" },
+    "ETAL": { "code": "ETAL", "name": "Solo Forger",       "name_cn": "独锻匠",       "family": "Kinetic", "profession": "Lone Blacksmith",     "profession_cn": "独行铁匠",     "tagline": "Energetic solo builder; iterates fast on system internals, one feature at a time.", "tagline_cn": "充满干劲的独行建造者,在系统内部快速迭代,一次一件。" },
+    "ETAH": { "code": "ETAH", "name": "Forge Commune",     "name_cn": "锻造工坊",     "family": "Kinetic", "profession": "Guildmaster Smith",   "profession_cn": "匠作工头",     "tagline": "Fast iterative internals builder; juggles several technical experiments at once.", "tagline_cn": "同时驾驭多个技术实验的快速迭代者,内部建造从不停手。" }
   }
 }

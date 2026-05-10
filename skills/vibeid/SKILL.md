@@ -138,21 +138,31 @@ Tool-name normalization (so craft/design ratios work across CLIs) — bucket eac
 
 #### 1.2 Signals to compute (across ALL CLIs, aggregated)
 
+**Methodology principle**: every signal that drives the 4 personality axes must come from **what the user typed**, not from what the agent did. Tool calls (Bash/Edit/Read/Grep/Write) are the agent's choice in response to the prompt — they reflect the model's training and the CLI's defaults far more than the user's personality. They are extracted only as session context for narrative color, never as scoring inputs.
+
 ```
-messages                  total user messages (after system-injection filter)
-sessions                  total session files with ≥1 user message
-median_response_seconds   median of (user_ts − previous_assistant_ts) in seconds,
-                          per session, only counting gaps where 2 < gap < 3600
-top_tool                  bucket name (Bash/Edit/Read/Grep/Write) with the highest count
-craft_ratio               (Bash + Edit) / (Read + Grep)        # if denom 0 and num>0: 999; if both 0: 1
-design_share              (Read + Grep + Write) / (Read + Grep + Write + Bash + Edit)   # 0.5 if denom 0
-rational_share            rationalHits / (rationalHits + expressiveHits)   # 0.5 if denom 0
-ship_intent_share         shipHits / messages
-build_intent_share        buildHits / messages
-multi_clauding_pct        % of user messages that have, within ±60s, a user message
-                          from a DIFFERENT session id (cross-CLI counts as different)
-tools_used                array of CLI names sorted by per-CLI message count desc
-                          e.g. ["claude","codex","gemini"]
+messages                       total user messages (after system-injection filter)
+sessions                       total session files with ≥1 user message
+median_response_seconds        median of (user_ts − previous_assistant_ts) in seconds,
+                               per session, only counting gaps where 2 < gap < 3600
+avg_message_chars              mean character length of user messages (after system-injection filter)
+question_share                 fraction of user messages that are questions (end with `?` or
+                               start with what/how/why/can/should/which, case-insensitive)
+specificity_share              fraction of user messages that contain at least one of:
+                               file extension (.ts/.tsx/.js/.py/.rs/.go/.md/.html/.css),
+                               fenced code block (```), absolute or relative file path
+                               (./, ../, src/, components/, etc.), or a CamelCase identifier
+rational_share                 rationalHits / (rationalHits + expressiveHits)   # 0.5 if denom 0
+design_surface_share           designHits / (designHits + technicalHits)        # 0.5 if denom 0
+ship_intent_share              shipHits / messages
+build_intent_share             buildHits / messages
+multi_clauding_pct             % of user messages that have, within ±60s, a user message
+                               from a DIFFERENT session id (cross-CLI counts as different)
+tools_used                     array of CLI names sorted by per-CLI message count desc
+                               e.g. ["claude","codex","gemini"]
+top_tool                       bucket name (Bash/Edit/Read/Grep/Write) with the highest count
+                               — CONTEXT ONLY, never feeds an axis. Use sparingly in narrative
+                               and never as evidence about the user's personality
 ```
 
 Intent-classification regexes (apply to each user message text — a single message can match multiple categories, count each independently):
@@ -162,6 +172,8 @@ SHIP        /release|deploy|ship|version|publish|rollout|\bci\b/i
 BUILD       /feature|build|implement|new\s+component|\bui\b|refactor|refinement|\badd\b/i
 RATIONAL    /bug\s*fix|refactor|release|deploy|version|optimi[sz]e|\bfix\b|cleanup|\bci\b|rollout|publish/i
 EXPRESSIVE  /feature|\bui\b|experience|refinement|visual|style|animation|video|gif|design|ux|cosmetic/i
+DESIGN      /\bui\b|interface|component|layout|page|screen|view|dialog|modal|menu|nav|theme|color|palette|font|typography|spacing|animation|transition|motion|gradient|shadow|icon|illustration|svg|chart|graph|copy|wording|label|tooltip|placeholder|a11y|accessibility|brand|visual|aesthetic/i
+TECHNICAL   /backend|server|api|endpoint|route|database|\bsql\b|query|migration|schema|orm|cache|redis|queue|kafka|broker|infrastructure|deploy|docker|kubernetes|\bk8s\b|cluster|cdn|protocol|grpc|websocket|\btcp\b|performance|throughput|latency|\bcpu\b|profiling|benchmark|optimi[sz]ation|algorithm|data\s*structure/i
 ```
 
 #### 1.3 Implementation hints (optional — pick what fits your toolbox)
@@ -185,7 +197,7 @@ The matrix contains:
 
 - `axes` — meaning of each axis letter (P/T, F/S, V/A, L/H)
 - `thresholds` — numeric cutoffs to classify each axis
-- `families` — the 4 family color palettes (Ember / Sunward / Tidal / Starlit)
+- `families` — the 4 family color palettes (Logos / Forge / Muse / Kinetic)
 - `personas` — 16 entries keyed by 4-letter code
 - `image_base_url` — CDN root for persona PNGs
 
@@ -195,10 +207,10 @@ Hold this data in memory. If both local and remote reads fail, report the error 
 
 Using thresholds from `matrix.json` and the signals already collected in Step 1:
 
-- **Mind**: `R` (Rational) if `rational_share >= thresholds.mind_rational_share_min`, else `E` (Expressive). Rational dominates when analytical / corrective / shipping intents (bug fix, refactor, release) outweigh generative / aesthetic intents (feature, UI, visual).
-- **Craft**: `D` (Design) if `design_share >= thresholds.craft_design_share_min`, else `T` (Technical). Design leans on Read + Grep + Write (investigate + create new); Technical leans on Bash + Edit (execute + modify).
-- **Arc**: `V` (Voyager) if `ship_intent_share > build_intent_share`, else `A` (Architect).
-- **Flow**: `H` (Hive) if `multi_clauding_pct >= thresholds.flow_multiclaud_pct`, else `L` (Lone).
+- **Mind**: `R` (Rational) if `rational_share >= thresholds.mind_rational_share_min`, else `E` (Expressive). Rational dominates when the user's prompts skew toward analytical / corrective / shipping intents (bug fix, refactor, release); Expressive dominates when prompts skew generative / aesthetic (feature, UI, visual).
+- **Craft**: `D` (Design) if `design_surface_share >= thresholds.craft_design_surface_min`, else `T` (Technical). Design dominates when the user types about surface-facing concerns (UI, components, layout, animation, color, copy); Technical dominates when prompts target system internals (backend, API, database, performance, infrastructure). Both are inferred from user message text — never from which tools the agent invoked.
+- **Arc**: `V` (Voyager) if `ship_intent_share > build_intent_share`, else `A` (Architect). Both shares come from user prompt text.
+- **Flow**: `H` (Hive) if `multi_clauding_pct >= thresholds.flow_multiclaud_pct`, else `L` (Lone). Reflects how many parallel sessions the user actually drives.
 
 Concatenate to form the VibeID code (e.g. `RTAH`). Look it up in `personas` to get the record.
 
@@ -210,21 +222,23 @@ Write **500–800 words** of personalized analysis across **5 distinct sections*
 
 - If `target_language == "zh"`: write in Simplified Chinese and use `name_cn` / `profession_cn` / `tagline_cn` / family `name_cn` from the matrix (pre-translated by us)
 - If `target_language == "en"`: write in English and use the English fields (`name` / `profession` / `tagline` / `family`)
-- **For any other language** (ja / ko / fr / de / es / pt / ru / vi / ar / etc.): write the analysis in that language, and **translate `name` / `profession` / `tagline` from the matrix's English fields on the fly** into the same language. Keep the 4-letter code (e.g. `TFAH`) unchanged — it's a brand identifier like `INFJ`, pronounced locally but spelled the same globally.
+- **For any other language** (ja / ko / fr / de / es / pt / ru / vi / ar / etc.): write the analysis in that language, and **translate `name` / `profession` / `tagline` from the matrix's English fields on the fly** into the same language. Keep the 4-letter code (e.g. `RDAH`) unchanged — it's a brand identifier like `INFJ`, pronounced locally but spelled the same globally.
 
 Tone is consistent across all languages: confident, specific, lightly flattering, grounded in real numbers.
 
 **Required sections** (each a separate paragraph, roughly 100–160 words):
 
-1. **核心画像 / Core Archetype** — Open with their 4-letter code and persona name in bold. Explain why this archetype fits them, connecting to their family's vibe (Ember fast+hands-on / Sunward fast+curious / Tidal deep+hands-on / Starlit deep+reflective).
+**Critical rule across every section**: the personality being described is the **user's**, not the agent's. Never tell the user "you use the Bash tool a lot" or "you read before you edit" — those describe what Claude/Codex/Qwen chose to do in response to a prompt, not what the user typed. Frame every observation around the user's behaviour: messages they sent, words they used, questions they asked, the cadence between their replies, the parallel sessions they ran.
 
-2. **节奏与专注 / Tempo & Focus** — Analyze their median response time, total messages, and multi-clauding %. What does this say about how they think — sprint mode, deep marathons, or parallel-wielding? Tie to Eysenck / Jungian cognitive style where natural.
+1. **Core Archetype** — Open with their 4-letter code and persona name in bold. Explain why this archetype fits the way they prompt and pace, connecting to their family's vibe (Logos calm/scholarly, Forge industrial/durable, Muse playful/exploratory, Kinetic energetic/iterative).
 
-3. **工艺与姿态 / Craft & Stance** — Compare their tool mix (Bash/Edit vs Read/Grep ratio). Hands-on forger or careful observer? What does the top tool reveal about their instinct? Reference specific numbers.
+2. **Tempo & Focus** — Analyze their median response time between an agent reply and the user's next message, their total message count, and their multi-clauding %. Does the user think in sprints, deep marathons, or parallel streams? Tie to general personality vocabulary (introversion/extraversion, deliberate/impulsive) where natural — never to Jung-style cognitive functions claimed about the agent.
 
-4. **成就弧线 / Achievement Arc** — Ship-intent vs Build-intent balance. Are they a shipper (release cadence dominant) or a builder (feature expansion dominant)? Mention commits / files / lines changed if present in signals.
+3. **Craft & Stance** — Use `design_surface_share` (the share of the user's own messages that talk about UI, components, layout, animation, copy, brand) versus its complement (the share that talks about backend, database, performance, infrastructure). Reference `avg_message_chars` and `specificity_share` to characterise prompt style: are they terse directors, detailed planners, or curious questioners? Cite specific numbers from the user's signals. Do not describe tool calls; the user did not pick those.
 
-5. **建议与盲点 / Advice & Blind Spot** — 1–2 concrete suggestions leveraging their strengths, and 1 honest blind spot the data suggests (e.g. "潮汐族深度优秀，但 Tide 节奏可能让快速迭代的同伴难以同步"). Constructive, not harsh.
+4. **Achievement Arc** — Ship-intent vs Build-intent balance, both inferred from the user's typed messages. Does the user steer sessions toward releasing (deploy, version, publish) or expanding (feature, implement, add)? Cite the two shares directly.
+
+5. **Advice & Blind Spot** — 1–2 concrete suggestions leveraging their prompt-style strengths, and 1 honest blind spot the user-attributable signals suggest (e.g. "deep specificity is great for one-shot results but the long gaps between your prompts may stall fast-moving collaborators"). Constructive, not harsh. Never frame the blind spot as something about the agent.
 
 **Tone**: Confident, specific, lightly flattering but grounded in real numbers. **Never fabricate numbers** — only use what Step 3 extracted or the report explicitly states. Bold the persona name once and the 4-letter code once.
 
@@ -248,14 +262,11 @@ No base64 embedding, no other host, no relative path. The 16 PNGs are served by 
 
 ### Step 6 — Confirm to the user
 
-Output exactly two short lines in `target_language`. Nothing else — no analysis dump, no embedded image.
+Output exactly two short lines in `target_language`. Nothing else — no analysis dump, no embedded image. Both lines render in `target_language` — the English example below is just the shape, translate field labels (`Your VibeID code is`, `Personality report saved to:`) into the same language as the analysis.
 
 ```
-zh:  你的 VibeID 码是 **TFVH**(星海统帅)。
-     人格报告已生成: <abs path>
-
-en:  Your VibeID code is **TFVH** (Tide Marshal).
-     Personality report saved to: <abs path>
+Your VibeID code is **RTVH** (Star Admiral).
+Personality report saved to: <abs path>
 ```
 
 ## Validation Checkpoints
@@ -279,5 +290,5 @@ The skill succeeded if:
 ## Notes
 
 - Persona images, family palettes, and taglines live in the bundled `matrix.json` — edit that file in the skill dir to tune the experience without redeploying the skill
-- 16 persona codes: PFVL, PFVH, PFAL, PFAH, PSVL, PSVH, PSAL, PSAH, TFVL, TFVH, TFAL, TFAH, TSVL, TSVH, TSAL, TSAH
+- 16 persona codes: RDVL, RDVH, RDAL, RDAH, RTVL, RTVH, RTAL, RTAH, EDVL, EDVH, EDAL, EDAH, ETVL, ETVH, ETAL, ETAH (Mind R/E × Craft D/T × Arc V/A × Flow L/H)
 - Inspired by public-domain typologies (Jung 1921 Psychological Types, classical Four Temperaments, Big Five / HEXACO). No MBTI trademarks used.
