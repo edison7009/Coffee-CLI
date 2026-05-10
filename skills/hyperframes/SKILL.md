@@ -1,7 +1,7 @@
 ---
-name: hyperframes
-description: Create video compositions, animations, title cards, overlays, captions, voiceovers, audio-reactive visuals, and scene transitions in HyperFrames HTML. Use when asked to build any HTML-based video content, add captions or subtitles synced to audio, generate text-to-speech narration, create audio-reactive animation (beat sync, glow, pulse driven by music), add animated text highlighting (marker sweeps, hand-drawn circles, burst lines, scribble, sketchout), or add transitions between scenes (crossfades, wipes, reveals, shader transitions). Covers composition authoring, timing, media, and the full video production workflow.
-description_zh-CN: "一键生成短视频 —— 用 HTML 描述视频内容,Agent 自动产出动画、标题卡、字幕、配音、音频反应特效(节拍/发光/律动)、动画文字高亮和场景转场。涵盖合成创作、时序控制、媒体处理以及完整的视频制作流程。"
+name: HyperFrames by HeyGen
+description: Build videos from HTML with HyperFrames. Author compositions with HTML + CSS + GSAP, use the CLI for init/preview/render/transcribe/tts, install reusable registry blocks and components, follow the GSAP animation reference, and turn any website into a video with the 7-step capture-to-video pipeline.
+description_zh-CN: "一键生成短视频 —— 用 HTML + CSS + GSAP 创作视频合成,Agent 自动产出动画、字幕、配音、音频反应特效和场景转场。涵盖合成创作、时序控制、媒体处理和完整的视频制作流程。"
 ---
 
 # HyperFrames
