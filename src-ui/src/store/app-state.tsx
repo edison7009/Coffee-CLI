@@ -105,6 +105,12 @@ export interface GlobalChangeEntry {
   /// Order = first-seen order. Used by ChangesBoard to render a
   /// "via Claude · Codex" provenance chip per row.
   tools: string[];
+  /// Distinct session/tab ids that have reported this file. Used by
+  /// the left-side Explorer tree badges to scope "what THIS tab
+  /// edited" — distinct from ChangesBoard, which is intentionally
+  /// app-lifecycle scope. A new Claude tab opened on the same folder
+  /// where OpenCode just edited won't see those edits as its own.
+  sessionIds: string[];
 }
 
 export interface TerminalSession {
@@ -234,7 +240,7 @@ type Action =
   | { type: 'SET_BG'; path: string; bgType: 'image' | 'video' }
   | { type: 'CLEAR_BG' }
   | { type: 'SET_WALLPAPER_OPACITY'; opacity: number }
-  | { type: 'RECORD_TOOL_FILE_EDIT'; tool: string; path: string; action: 'edit' | 'create' | 'delete'; added: number; deleted: number; mtimeMs: number; projectRoot: string }
+  | { type: 'RECORD_TOOL_FILE_EDIT'; tool: string; sessionId: string; path: string; action: 'edit' | 'create' | 'delete'; added: number; deleted: number; mtimeMs: number; projectRoot: string }
   | { type: 'CLEAR_GLOBAL_CHANGES' }
   | { type: 'SET_TERM_SCHEME'; scheme: string }
   | { type: 'TOGGLE_GAMBIT' }
@@ -413,13 +419,17 @@ function reducer(state: AppState, action: Action): AppState {
       const tools = prev?.tools.includes(action.tool)
         ? prev.tools
         : [...(prev?.tools ?? []), action.tool];
+      const sessionIds = prev?.sessionIds.includes(action.sessionId)
+        ? prev.sessionIds
+        : [...(prev?.sessionIds ?? []), action.sessionId];
       if (
         prev &&
         prev.added === action.added &&
         prev.deleted === action.deleted &&
         prev.mtimeMs === action.mtimeMs &&
         prev.projectRoot === action.projectRoot &&
-        tools === prev.tools
+        tools === prev.tools &&
+        sessionIds === prev.sessionIds
       ) {
         return state;
       }
@@ -430,6 +440,7 @@ function reducer(state: AppState, action: Action): AppState {
         deleted: action.deleted,
         mtimeMs: action.mtimeMs,
         tools,
+        sessionIds,
       });
       if (next.size > GLOBAL_CHANGE_LOG_MAX) {
         const sorted = Array.from(next.entries()).sort((a, b) => a[1].mtimeMs - b[1].mtimeMs);

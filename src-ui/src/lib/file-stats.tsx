@@ -82,15 +82,22 @@ export function FileStatsProvider({ children }: { children: ReactNode }) {
     }
   }, [state.terminals]);
 
-  // Derive the active session's FileStats from globalChangeLog. Only
-  // entries whose projectRoot matches the active session's folder
-  // count — Explorer's tree badges are scoped to "this tab's project".
+  // Derive the active session's FileStats from globalChangeLog. Two
+  // filters: (1) projectRoot matches the active session's folder, and
+  // (2) the entry was reported by the active session itself (sessionIds
+  // contains diffCtx.sessionId). Explorer's tree badges are scoped to
+  // "files THIS tab edited" — opening a fresh Claude tab on a folder
+  // where OpenCode previously edited shouldn't show OpenCode's edits
+  // in the new tab's tree. ChangesBoard stays app-lifecycle scope and
+  // continues to show every reporter, see ChangesBoard.tsx.
+  const activeSessionId = diffCtx?.sessionId ?? null;
   const activeStats = useMemo<FileStatsMap | null>(() => {
-    if (!activeFolderPath) return null;
+    if (!activeFolderPath || !activeSessionId) return null;
     const targetRoot = normRoot(activeFolderPath);
     const m = new Map<string, FileStats>();
     for (const [absPath, entry] of state.globalChangeLog) {
       if (normRoot(entry.projectRoot) !== targetRoot) continue;
+      if (!entry.sessionIds.includes(activeSessionId)) continue;
       m.set(absPath, {
         added: entry.added,
         deleted: entry.deleted,
@@ -98,7 +105,7 @@ export function FileStatsProvider({ children }: { children: ReactNode }) {
       });
     }
     return m;
-  }, [state.globalChangeLog, activeFolderPath]);
+  }, [state.globalChangeLog, activeFolderPath, activeSessionId]);
 
   return (
     <FileStatsContext.Provider value={activeStats}>

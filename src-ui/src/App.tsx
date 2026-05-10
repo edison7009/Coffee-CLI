@@ -56,6 +56,7 @@ export function App() {
         dispatch({
           type: 'RECORD_TOOL_FILE_EDIT',
           tool: event.payload.tool,
+          sessionId: event.payload.tab_id,
           path: event.payload.path,
           action: event.payload.action,
           added: event.payload.added,
