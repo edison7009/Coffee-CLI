@@ -14,6 +14,7 @@ pub static DESCRIPTOR: ToolDescriptor = ToolDescriptor {
     // ~/.qwen/projects/<sanitized-cwd>/chats/<session>.jsonl
     history_shape: Some(HistoryShape::QwenProjects {
         root_under_home: ".qwen/projects",
+        depth: 3,
     }),
     default_args: &[],
 };

@@ -55,37 +55,25 @@ use std::os::windows::process::CommandExt;
 static BUNDLED_SKILLS: include_dir::Dir<'_> =
     include_dir::include_dir!("$CARGO_MANIFEST_DIR/skills");
 
-/// Iterator over `(binary_name, skill_dir_relative)` for every tool in
-/// the central registry that has a skills directory. Replaces the old
-/// `TARGET_CLI_SKILL_DIRS` tuple list — same data, but sourced from
-/// `src/tools/<id>.rs` so adding a new tool's skill dir doesn't need
-/// a duplicate edit here.
+/// `(binary_name, skill_dir_relative)` for every registered tool
+/// that has a skills directory. Three layout families are encoded
+/// across descriptors:
 ///
-/// Three layout families are encoded across descriptors:
-///   - **Dotdir family** (claude / codex / gemini / qwen): `~/.<tool>/skills`.
-///   - **XDG family** (opencode): `~/.config/opencode/skills`. Note
-///     this is **config**, not data — skills are user-installed
-///     extensions. Don't apply the "history dir's parent" heuristic
-///     to XDG-family tools.
-///   - **Workspace-nested family** (openclaw): `~/.openclaw/workspace/skills`.
-///     **Known limitation**: workspace root is configurable via
-///     `agents.defaults.workspace` in `~/.openclaw/openclaw.json`. The
-///     descriptor uses the default; users who override that key
-///     won't get the junction at the right place. Future: read
-///     openclaw.json and resolve workspace dynamically.
+///   - **Dotdir** (claude / codex / gemini / qwen): `~/.<tool>/skills`.
+///   - **XDG** (opencode): `~/.config/opencode/skills`. Skills are
+///     config, not data — don't apply the "history dir's parent"
+///     heuristic to XDG-family tools.
+///   - **Workspace-nested** (openclaw): `~/.openclaw/workspace/skills`.
+///     Workspace root is configurable via `agents.defaults.workspace`
+///     in `~/.openclaw/openclaw.json`; users who override that key
+///     won't get the junction at the right place.
 ///
-/// **Hermes Agent** intentionally has no `skill_dir_relative` (None
-/// in `tools/hermes.rs`) — Hermes has no skills concept yet. Per
-/// upstream confirmation 2026-05-09: WHEN Hermes adds skills, the
-/// path WILL be `~/.hermes/skills`. Set it then; pre-creating now
-/// would leave empty `~/.hermes/skills/` dirs in homes without Hermes.
+/// Hermes has `skill_dir_relative: None` — no skills concept yet
+/// (per upstream 2026-05-09). Pre-creating `~/.hermes/skills/` would
+/// litter empty dirs in homes without Hermes installed.
 ///
-/// Per-target gating (same source of truth as the launchpad's
-/// tool-availability check) is applied at call sites by combining
-/// this with `is_tool_installed` — we only link skills if the
-/// binary is on PATH; otherwise we'd materialize tool dirs
-/// (`~/.qwen/`, `~/.codex/`, etc.) for tools the user never
-/// installed, misleading file-explorer tooling.
+/// Per-target gating (only link if the binary is on PATH) is applied
+/// at call sites by combining this with `is_tool_installed`.
 fn target_cli_skill_dirs() -> impl Iterator<Item = (&'static str, &'static str)> {
     crate::tools::TOOLS
         .iter()

@@ -15,6 +15,7 @@ pub static DESCRIPTOR: ToolDescriptor = ToolDescriptor {
     // ~/.gemini/tmp/<project-folder>/chats/session-<ts>-<hash>.jsonl
     history_shape: Some(HistoryShape::GeminiTmp {
         root_under_home: ".gemini/tmp",
+        depth: 3,
     }),
     default_args: &[],
 };

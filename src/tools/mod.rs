@@ -1,39 +1,13 @@
-//! Per-tool integration registry — single source of truth for every
-//! point where Coffee CLI has to know "this is how X tool works".
+//! Per-tool integration registry — single source of truth for the
+//! per-CLI facts Coffee CLI needs (binary name, skills dir, history
+//! shape, hook surface, launch argv). Iterate `TOOLS` instead of
+//! hardcoding lists in callers.
 //!
-//! Background: Coffee CLI integrates with multiple AI CLIs (Claude
-//! Code, Codex, OpenCode, Gemini, Qwen, OpenClaw, Hermes Agent).
-//! Historically each per-tool fact lived wherever it was first
-//! needed:
-//!
-//!   - Binary detection — `server::check_tool_*` + a probe cache
-//!     in `skills::TOOL_INSTALLED_CACHE`
-//!   - Skills directory mapping — `skills::TARGET_CLI_SKILL_DIRS`
-//!     tuple list
-//!   - Hook installation — `hook_installer.rs` per-tool branches
-//!   - Hook protocol payload mapping — three separate `scripts/`
-//!     forwarders + `hook_server.rs` dispatcher
-//!   - Session history readers — per-format functions in `server.rs`
-//!     (`read_native_session`, `read_opencode_session`, …)
-//!   - Heatmap data — `server::get_message_heatmap` per-tool dir
-//!     scanning
-//!   - Multi-agent / MCP coordination — split across
-//!     `mcp_server.rs`, `multi_agent_protocol.rs`, and the marker
-//!     scanner inside `terminal.rs`
-//!   - Launch cwd / argv — inlined inside
-//!     `tier_terminal_start_blocking`
-//!
-//! Adding a new tool meant touching ~9 different files, each in a
-//! slightly different convention. This module centralises the
-//! per-tool DATA into one descriptor type so callers can iterate
-//! one registry instead of hunting through scattered constants.
-//!
-//! Migration is staged (Path C — "incremental unification"): the
-//! descriptor lives here from day one, but consumers move over to
-//! it one at a time. Existing scattered constants stay valid until
-//! their callers are migrated. Each commit shifts one surface.
+//! Adding a new tool: create `src/tools/<id>.rs` with a `ToolDescriptor`
+//! constant, register it in `TOOLS` below, and (if it has a hook
+//! surface) add an arm to `hook_installer::dispatch_install`.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// Where this tool stores its session history on disk and what
 /// shape it lives in. Coffee CLI's history scanner (`server.rs`)
@@ -59,18 +33,27 @@ pub enum HistoryShape {
     /// (JSON, not JSONL). Custom parser `parse_hermes_json`.
     HermesFlatJson { root_under_home: &'static str },
 
-    /// Codex dated-rollout layout: `<YYYY>/<MM>/<DD>/rollout-*.jsonl`
-    /// at depth 4. Custom parser `parse_codex_session_jsonl`.
-    CodexRollout { root_under_home: &'static str },
+    /// Codex dated-rollout layout: `<YYYY>/<MM>/<DD>/rollout-*.jsonl`.
+    /// Custom parser `parse_codex_session_jsonl`.
+    CodexRollout {
+        root_under_home: &'static str,
+        depth: u8,
+    },
 
-    /// Gemini CLI: `tmp/<project-folder>/chats/session-*.jsonl` at
-    /// depth 3. Custom parser plus a project-hash → cwd map
-    /// loaded once per scan. `parse_gemini_session_jsonl`.
-    GeminiTmp { root_under_home: &'static str },
+    /// Gemini CLI: `tmp/<project-folder>/chats/session-*.jsonl`.
+    /// Custom parser plus a project-hash → cwd map loaded once
+    /// per scan. `parse_gemini_session_jsonl`.
+    GeminiTmp {
+        root_under_home: &'static str,
+        depth: u8,
+    },
 
-    /// Qwen Code: `projects/<sanitized-cwd>/chats/<session>.jsonl`
-    /// at depth 3. Custom parser `parse_qwen_session_jsonl`.
-    QwenProjects { root_under_home: &'static str },
+    /// Qwen Code: `projects/<sanitized-cwd>/chats/<session>.jsonl`.
+    /// Custom parser `parse_qwen_session_jsonl`.
+    QwenProjects {
+        root_under_home: &'static str,
+        depth: u8,
+    },
 
     /// OpenCode: SQLite DB (`storage/db.sqlite`) plus legacy
     /// JSONL files. Walked by `find_opencode_sessions`, cannot be
@@ -80,17 +63,48 @@ pub enum HistoryShape {
 
 impl HistoryShape {
     /// Default disk root for this tool's session history, relative
-    /// to `$HOME`. Variant-agnostic accessor for callers that only
-    /// need the path (e.g. `tool_config::history_path_for` lookup).
+    /// to `$HOME`. Used by `tool_config::history_path_for` lookup.
     pub fn root_under_home(&self) -> &'static str {
         match self {
             HistoryShape::GenericJsonl { root_under_home, .. }
             | HistoryShape::HermesFlatJson { root_under_home }
-            | HistoryShape::CodexRollout { root_under_home }
-            | HistoryShape::GeminiTmp { root_under_home }
-            | HistoryShape::QwenProjects { root_under_home }
+            | HistoryShape::CodexRollout { root_under_home, .. }
+            | HistoryShape::GeminiTmp { root_under_home, .. }
+            | HistoryShape::QwenProjects { root_under_home, .. }
             | HistoryShape::OpenCodeMixed { root_under_home } => root_under_home,
         }
+    }
+
+    /// Resolve `root_under_home` against a caller-provided home dir.
+    /// Forward slashes in the relative path are converted to the
+    /// platform separator. Pass the same `home` you used elsewhere
+    /// in the call so per-call path resolution stays consistent.
+    pub fn join_under(&self, home: &Path) -> PathBuf {
+        join_relative(home, self.root_under_home())
+    }
+
+    /// JSONL scan depth, when the shape uses the mtime-then-parse
+    /// pipeline. `None` for shapes that bypass it (HermesFlatJson
+    /// uses a flat-dir collector; OpenCodeMixed uses SQLite).
+    pub fn jsonl_depth(&self) -> Option<u8> {
+        match self {
+            HistoryShape::GenericJsonl { depth, .. }
+            | HistoryShape::CodexRollout { depth, .. }
+            | HistoryShape::GeminiTmp { depth, .. }
+            | HistoryShape::QwenProjects { depth, .. } => Some(*depth),
+            HistoryShape::HermesFlatJson { .. } | HistoryShape::OpenCodeMixed { .. } => None,
+        }
+    }
+}
+
+/// Join a forward-slash-relative path under `home`, converting to the
+/// platform separator. Centralises a Windows quirk that used to be
+/// inlined as `replace('/', MAIN_SEPARATOR_STR)` at every call site.
+fn join_relative(home: &Path, rel: &str) -> PathBuf {
+    if std::path::MAIN_SEPARATOR == '/' {
+        home.join(rel)
+    } else {
+        home.join(rel.replace('/', std::path::MAIN_SEPARATOR_STR))
     }
 }
 
@@ -142,9 +156,7 @@ pub struct ToolDescriptor {
     pub display_name: &'static str,
 
     /// Binary name to look up via `where` (Windows) / `which`
-    /// (Unix). Single source of truth for "is this tool on PATH";
-    /// replaces the per-call hardcoded strings in `server::is_tool_installed`
-    /// and `skills::TARGET_CLI_SKILL_DIRS` first column.
+    /// (Unix). Single source of truth for "is this tool on PATH".
     pub binary_name: &'static str,
 
     /// Where this tool's enabled skills should be junctioned, as a
@@ -182,9 +194,8 @@ impl ToolDescriptor {
     /// skills concept yet, OR when home dir resolution fails
     /// (which itself is exceedingly rare on a desktop OS).
     pub fn skill_dir_absolute(&self) -> Option<PathBuf> {
-        let rel = self.skill_dir_relative?;
         let home = dirs::home_dir()?;
-        Some(home.join(rel.replace('/', std::path::MAIN_SEPARATOR_STR)))
+        Some(join_relative(&home, self.skill_dir_relative?))
     }
 }
 

@@ -140,16 +140,12 @@ fn install_hook_for_tool(tool: String) {
 
 #[tauri::command]
 fn check_tools_installed() -> std::collections::HashMap<String, bool> {
-    // Iterate the central registry (`src/tools/`) instead of a local
-    // hardcoded list. id == launchpad key, binary_name == PATH probe
-    // target — both already encoded per-tool in the descriptor.
     let mut result = std::collections::HashMap::new();
     for tool in crate::tools::TOOLS {
         result.insert(tool.id.to_string(), binary_on_path(tool.binary_name));
     }
-    // Always-available pseudo-tools (not in the registry — they don't
-    // have a binary to probe). `terminal` is the system shell;
-    // `remote` is just SSH, built into the OS.
+    // `terminal` (system shell) and `remote` (SSH) have no binary to
+    // probe — always available, not registered.
     result.insert("terminal".to_string(), true);
     result
 }
@@ -912,17 +908,14 @@ fn tier_terminal_start_blocking(
     // mode.
     let in_multi_agent = session_id.contains("::pane-");
 
-    // Map the requested tool to an actual CLI command. Most CLIs
-    // get their binary + base argv straight from the registry; only
-    // the multi-agent flag set is tool-specific (claude / codex /
-    // gemini have hands-free flags + per-pane MCP wiring; the rest
-    // run with their default args even inside a multi-agent pane).
-    // `remote` and the fallback shell stay as inline branches —
-    // they're not in the registry (no upstream CLI binary) and
-    // `remote` carries protocol-parsing logic.
-    let (cmd, args): (String, Vec<String>) = match tool.as_deref() {
-        Some(id) if crate::tools::find(id).is_some() => {
-            let descriptor = crate::tools::find(id).expect("checked above");
+    // Multi-agent flag sets (claude / codex / gemini) carry per-pane
+    // MCP wiring that depends on `pane_paths` and `session_id`, so
+    // they live inline. `remote` and the fallback shell are not in
+    // the registry — `remote` parses tool_data at runtime, the shell
+    // is platform-derived.
+    let registry_descriptor = tool.as_deref().and_then(crate::tools::find);
+    let (cmd, args): (String, Vec<String>) = match (tool.as_deref(), registry_descriptor) {
+        (Some(id), Some(descriptor)) => {
             let mut a: Vec<String> = descriptor
                 .default_args
                 .iter()
@@ -1049,7 +1042,7 @@ fn tier_terminal_start_blocking(
             }
             (descriptor.binary_name.to_string(), a)
         }
-        Some("remote") => {
+        (Some("remote"), _) => {
             // Parse connection info from toolData JSON
             let data = tool_data.as_deref().unwrap_or("{}");
             let conn: serde_json::Value = serde_json::from_str(data)
@@ -1118,22 +1111,11 @@ fn tier_terminal_start_blocking(
     // ── User-configurable launch overrides ─────────────────────────────────
     // ~/.coffee-cli/tools.json lets users say e.g. "my hermes is at
     // `wsl ~/.local/bin/hermes`" or "always launch claude with
-    // --dangerously-skip-permissions". Empty fields fall through to the
-    // built-in defaults computed above. Skipped entirely for synthetic
-    // session ids that don't correspond to a user-facing tool key
-    // (multi-agent panes have their own opinionated args we don't
-    // want overridden).
-    //
-    // Eligibility: anything in the registry, plus the special
-    // "terminal" pseudo-tool (not in the registry — it's the system
-    // shell — but tool_config still wants to honor user overrides
-    // for it). `remote` is intentionally excluded: its argv is
-    // protocol-derived from runtime tool_data, not configurable.
-    let is_overridable = |name: &str| {
-        name == "terminal" || crate::tools::find(name).is_some()
-    };
+    // --dangerously-skip-permissions". `remote` is excluded by design:
+    // its argv is protocol-derived from runtime tool_data, not
+    // configurable.
     let (cmd, args) = match tool.as_deref() {
-        Some(name) if is_overridable(name) => {
+        Some(name) if name == "terminal" || crate::tools::find(name).is_some() => {
             let entry = crate::tool_config::get(name);
             let (cmd, mut args) = (cmd, args);
             let (cmd, args) = if let (Some(bin), prefix_args) =
@@ -2336,44 +2318,9 @@ fn load_native_history_blocking() -> Result<Vec<SavedSession>, String> {
     let mut file_candidates: Vec<(std::time::SystemTime, std::path::PathBuf, &'static str)> = Vec::new();
     let mut result: Vec<SavedSession> = Vec::new();
 
-    if let Some(home) = dirs::home_dir() {
-        // Drive history collection from the central registry
-        // (`src/tools/`). Each tool's `history_shape` encodes its
-        // disk layout family; we dispatch on the variant to invoke
-        // the right collector / parser. Per-tool scan path is still
-        // overridable via `~/.coffee-cli/tools.json`
-        // (`tool_config.history_path`) — descriptors hold defaults,
-        // user config wins. OpenCode's mixed SQLite / JSONL shape
-        // is handled in a second pass below (its scanner pushes
-        // SavedSession directly, bypassing the mtime pipeline).
-        for tool in crate::tools::TOOLS {
-            let Some(shape) = tool.history_shape.as_ref() else { continue };
-            let default_root = home.join(
-                shape.root_under_home().replace('/', std::path::MAIN_SEPARATOR_STR),
-            );
-            let scan_dir = crate::tool_config::history_path_for(tool.id, default_root);
-            match shape {
-                crate::tools::HistoryShape::GenericJsonl { depth, .. } => {
-                    collect_jsonl_paths_with_mtime(scan_dir, *depth, tool.id, &mut file_candidates);
-                }
-                crate::tools::HistoryShape::CodexRollout { .. } => {
-                    collect_jsonl_paths_with_mtime(scan_dir, 4, tool.id, &mut file_candidates);
-                }
-                crate::tools::HistoryShape::GeminiTmp { .. } => {
-                    collect_jsonl_paths_with_mtime(scan_dir, 3, tool.id, &mut file_candidates);
-                }
-                crate::tools::HistoryShape::QwenProjects { .. } => {
-                    collect_jsonl_paths_with_mtime(scan_dir, 3, tool.id, &mut file_candidates);
-                }
-                crate::tools::HistoryShape::HermesFlatJson { .. } => {
-                    collect_hermes_paths_with_mtime(scan_dir, &mut file_candidates);
-                }
-                crate::tools::HistoryShape::OpenCodeMixed { .. } => {
-                    // Handled below — its scanner walks SQLite and
-                    // pushes finished SavedSession objects directly.
-                }
-            }
-        }
+    let home = dirs::home_dir();
+    if let Some(home) = home.as_ref() {
+        collect_registry_history_candidates(home, &mut file_candidates);
     }
 
     // Sort candidates by mtime desc and parse only the newest HISTORY_LIMIT.
@@ -2402,22 +2349,57 @@ fn load_native_history_blocking() -> Result<Vec<SavedSession>, String> {
     }
 
     // OpenCode second pass — SQLite is cheap (query already caps rows).
-    // Sourced from the same registry shape as the JSONL scanners above.
-    if let Some(home) = dirs::home_dir() {
-        if let Some(tool) = crate::tools::find("opencode") {
-            if let Some(shape) = tool.history_shape.as_ref() {
-                let default_root = home.join(
-                    shape.root_under_home().replace('/', std::path::MAIN_SEPARATOR_STR),
-                );
-                let opencode_dir = crate::tool_config::history_path_for(tool.id, default_root);
-                find_opencode_sessions(opencode_dir, &mut result);
-            }
+    // Bypasses the mtime pipeline: find_opencode_sessions pushes finished
+    // SavedSession objects directly.
+    if let Some(home) = home.as_ref() {
+        if let Some(opencode_dir) = opencode_root(home) {
+            find_opencode_sessions(opencode_dir, &mut result);
         }
     }
 
     result.sort_by(|a, b| b.saved_at.cmp(&a.saved_at));
     result.truncate(HISTORY_LIMIT);
     Ok(result)
+}
+
+/// Walk every registry tool with a JSONL/Hermes history shape and
+/// push (mtime, path, tool_id) tuples into `out`. OpenCodeMixed is
+/// skipped — its SQLite scanner runs as a second pass and emits
+/// finished SavedSession objects, not file candidates.
+///
+/// Shared between `load_native_history_blocking` (History board)
+/// and `load_message_heatmap_blocking` (contribution heatmap) so
+/// the two surfaces can't drift.
+fn collect_registry_history_candidates(
+    home: &std::path::Path,
+    out: &mut Vec<(std::time::SystemTime, std::path::PathBuf, &'static str)>,
+) {
+    for tool in crate::tools::TOOLS {
+        let Some(shape) = tool.history_shape.as_ref() else { continue };
+        let scan_dir =
+            crate::tool_config::history_path_for(tool.id, shape.join_under(home));
+        match shape {
+            crate::tools::HistoryShape::HermesFlatJson { .. } => {
+                collect_hermes_paths_with_mtime(scan_dir, out);
+            }
+            crate::tools::HistoryShape::OpenCodeMixed { .. } => {}
+            _ => {
+                if let Some(depth) = shape.jsonl_depth() {
+                    collect_jsonl_paths_with_mtime(scan_dir, depth, tool.id, out);
+                }
+            }
+        }
+    }
+}
+
+/// Resolve OpenCode's session-store root (under the user's home,
+/// or wherever `~/.coffee-cli/tools.json` redirects). `None` if
+/// OpenCode isn't in the registry — should never happen in
+/// practice, but keeps the call sites total.
+fn opencode_root(home: &std::path::Path) -> Option<std::path::PathBuf> {
+    let tool = crate::tools::find("opencode")?;
+    let shape = tool.history_shape.as_ref()?;
+    Some(crate::tool_config::history_path_for(tool.id, shape.join_under(home)))
 }
 
 // Contribution-heatmap entry: one tuple per session file (mtime + message
@@ -2479,35 +2461,9 @@ fn load_message_heatmap_blocking() -> Result<Vec<HeatmapEntry>, String> {
 
     let mut candidates: Vec<(std::time::SystemTime, std::path::PathBuf, &'static str)> = Vec::new();
 
-    if let Some(home) = dirs::home_dir() {
-        // Same registry-driven dispatch as load_native_history_blocking.
-        // The heatmap excludes the OpenCode SQLite case from the
-        // mtime-then-count pipeline; that's a second-pass scan below.
-        for tool in crate::tools::TOOLS {
-            let Some(shape) = tool.history_shape.as_ref() else { continue };
-            let default_root = home.join(
-                shape.root_under_home().replace('/', std::path::MAIN_SEPARATOR_STR),
-            );
-            let scan_dir = crate::tool_config::history_path_for(tool.id, default_root);
-            match shape {
-                crate::tools::HistoryShape::GenericJsonl { depth, .. } => {
-                    collect_jsonl_paths_with_mtime(scan_dir, *depth, tool.id, &mut candidates);
-                }
-                crate::tools::HistoryShape::CodexRollout { .. } => {
-                    collect_jsonl_paths_with_mtime(scan_dir, 4, tool.id, &mut candidates);
-                }
-                crate::tools::HistoryShape::GeminiTmp { .. }
-                | crate::tools::HistoryShape::QwenProjects { .. } => {
-                    collect_jsonl_paths_with_mtime(scan_dir, 3, tool.id, &mut candidates);
-                }
-                crate::tools::HistoryShape::HermesFlatJson { .. } => {
-                    collect_hermes_paths_with_mtime(scan_dir, &mut candidates);
-                }
-                crate::tools::HistoryShape::OpenCodeMixed { .. } => {
-                    // Handled below — SQLite query, not jsonl mtime walk.
-                }
-            }
-        }
+    let home = dirs::home_dir();
+    if let Some(home) = home.as_ref() {
+        collect_registry_history_candidates(home, &mut candidates);
     }
 
     // Per-file count cache. Heatmap re-scans every app launch and counts
@@ -2571,27 +2527,18 @@ fn load_message_heatmap_blocking() -> Result<Vec<HeatmapEntry>, String> {
     if count_cache.len() != before { cache_dirty = true; }
     if cache_dirty { write_count_cache(&count_cache); }
 
-    // OpenCode lives in a SQLite DB instead of jsonl files, so it doesn't
-    // fit the candidates-by-mtime pipeline above. One GROUP BY query gets
-    // us the same (timestamp, message_count) tuples the heatmap consumes,
-    // pre-filtered by the same 210-day cutoff so we don't read rows the
-    // frontend would discard anyway. Default root sourced from the
-    // registry to stay in sync with load_native_history_blocking.
-    if let Some(home) = dirs::home_dir() {
-        if let Some(tool) = crate::tools::find("opencode") {
-            if let Some(shape) = tool.history_shape.as_ref() {
-                let default_root = home.join(
-                    shape.root_under_home().replace('/', std::path::MAIN_SEPARATOR_STR),
-                );
-                let opencode_root = crate::tool_config::history_path_for(tool.id, default_root);
-                let db_path = opencode_root.join("opencode.db");
-                if db_path.is_file() {
-                    let cutoff_secs = cutoff
-                        .duration_since(std::time::UNIX_EPOCH)
-                        .map(|d| d.as_secs() as i64)
-                        .unwrap_or(0);
-                    collect_opencode_heatmap_entries(&db_path, cutoff_secs, &mut out);
-                }
+    // OpenCode SQLite second pass — one GROUP BY query gets the same
+    // (timestamp, message_count) tuples the heatmap consumes, pre-
+    // filtered by the same 210-day cutoff so we don't read rows the
+    // frontend would discard anyway.
+    if let Some(home) = home.as_ref() {
+        if let Some(db_path) = opencode_root(home).map(|r| r.join("opencode.db")) {
+            if db_path.is_file() {
+                let cutoff_secs = cutoff
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_secs() as i64)
+                    .unwrap_or(0);
+                collect_opencode_heatmap_entries(&db_path, cutoff_secs, &mut out);
             }
         }
     }

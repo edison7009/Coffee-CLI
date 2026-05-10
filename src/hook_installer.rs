@@ -66,16 +66,9 @@ pub fn install_all() {
         }
     };
 
-    // Iterate the registry and install for every tool that has a
-    // hook surface (file_edit_attribution != None). Adding a new
-    // hook-capable CLI is now: set its descriptor's
-    // file_edit_attribution + add an `install_<id>` arm to
-    // `dispatch_install_for_id` below. The hardcoded list that
-    // used to live here was a frequent drift point with the
-    // registry's intended meaning.
     for tool in crate::tools::TOOLS {
         if !matches!(tool.file_edit_attribution, crate::tools::FileEditAttribution::None) {
-            dispatch_install_for_id(tool.id, &home);
+            dispatch_install(tool, &home);
         }
     }
 }
@@ -83,10 +76,7 @@ pub fn install_all() {
 /// Install hook(s) for a single tool. Called from the launchpad's
 /// window-focus rescan when a CLI flips from not-installed → installed,
 /// so users who install a CLI while Coffee CLI is running don't have
-/// to restart to get tab status indicators. Idempotent (each
-/// install_<tool> reads existing config and patches it). No-op for
-/// tools the registry doesn't know about, or whose descriptor's
-/// `file_edit_attribution` is `None` (no hook surface to wire up).
+/// to restart to get tab status indicators. Idempotent.
 pub fn install_for_tool(tool: &str) {
     let home = match dirs::home_dir() {
         Some(h) => h,
@@ -96,18 +86,20 @@ pub fn install_for_tool(tool: &str) {
     if matches!(descriptor.file_edit_attribution, crate::tools::FileEditAttribution::None) {
         return;
     }
-    dispatch_install_for_id(tool, &home);
+    dispatch_install(descriptor, &home);
 }
 
-/// Per-tool installer dispatch. Each arm wires up the tool's
-/// specific config-patching shape (Claude → settings.json hooks,
-/// Codex → config.toml notify, OpenCode → plugin file + tui.json).
-/// The unknown-id arm is reachable only when a registry entry
-/// declares a hook surface but no installer arm exists yet —
-/// that's a build-time omission worth a log line, not a silent
-/// no-op.
-fn dispatch_install_for_id(id: &str, home: &Path) {
-    match id {
+/// Per-tool installer dispatch. Gates on `binary_on_path` (we don't
+/// materialize `~/.<tool>/` for tools the user hasn't installed) then
+/// runs the tool's bespoke config-patching shape. The unknown-id arm
+/// is reachable only when a registry entry declares a hook surface
+/// but no installer arm exists yet — that's a build-time omission
+/// worth a log line.
+fn dispatch_install(tool: &crate::tools::ToolDescriptor, home: &Path) {
+    if !crate::server::binary_on_path(tool.binary_name) {
+        return;
+    }
+    match tool.id {
         "claude" => install_claude(home),
         "codex" => install_codex(home),
         "opencode" => {
@@ -117,7 +109,7 @@ fn dispatch_install_for_id(id: &str, home: &Path) {
         other => {
             eprintln!(
                 "[hook-installer] tool '{}' declares a hook surface but has no installer — \
-                 add an arm to dispatch_install_for_id",
+                 add an arm to dispatch_install",
                 other
             );
         }
@@ -140,13 +132,6 @@ const OPENCODE_DEFAULT_THEME: &str = "lucent-orng";
 const OPENCODE_LEGACY_THEME: &str = "system";
 
 fn install_claude(home: &Path) {
-    // Skip if claude isn't on PATH — no point materializing `~/.claude/`
-    // on a machine where the user hasn't installed Claude Code. The
-    // launchpad's window-focus rescan fires `install_hook_for_tool` once
-    // detection flips to installed, so a later install is also covered.
-    if !crate::server::binary_on_path("claude") {
-        return;
-    }
     let script_path = match write_script(home) {
         Ok(p) => p,
         Err(e) => {
@@ -187,9 +172,6 @@ fn install_claude(home: &Path) {
 /// user doesn't already have one. We never overwrite an existing notify
 /// command — too high a risk of stomping on the user's setup.
 fn install_codex(home: &Path) {
-    if !crate::server::binary_on_path("codex") {
-        return;
-    }
     let script_path = match write_aux_script(
         home,
         CODEX_NOTIFY_FILENAME,
@@ -217,9 +199,6 @@ fn install_codex(home: &Path) {
 /// We also keep a copy at ~/.coffee-cli/hooks/ so the source is co-located
 /// with the other forwarders and easy to find when debugging.
 fn install_opencode(home: &Path) {
-    if !crate::server::binary_on_path("opencode") {
-        return;
-    }
     if let Err(e) = write_aux_script(home, OPENCODE_PLUGIN_FILENAME, OPENCODE_PLUGIN_SCRIPT) {
         eprintln!("[hook-installer] failed to write opencode plugin: {}", e);
         return;
@@ -262,9 +241,6 @@ fn install_opencode(home: &Path) {
 ///
 /// All failures are logged, never fatal.
 fn ensure_opencode_tui_theme_default(home: &Path) {
-    if !crate::server::binary_on_path("opencode") {
-        return;
-    }
     let config_dir = home.join(".config").join("opencode");
     let tui_path = config_dir.join("tui.json");
 
