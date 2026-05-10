@@ -103,7 +103,7 @@ export function ChangesBoard({ selectedPath, setSelectedPath, diffExpanded, onTo
   }, [diffHeight]);
 
   // Build flat row list from the app-lifecycle global change log. Each
-  // entry already carries its own projectRoot + sessionId(s); we derive
+  // entry already carries its own projectRoot + tools list; we derive
   // a relative path against the entry's own root (not the active tab's)
   // so files from a different project still display readably. Sort by
   // mtime descending so the most recent edit floats to top regardless
@@ -111,7 +111,7 @@ export function ChangesBoard({ selectedPath, setSelectedPath, diffExpanded, onTo
   // deterministic ordering when the same operation touches many files.
   const rows = useMemo(() => {
     if (globalChangeLog.size === 0) return [];
-    const list: Array<{ path: string; rel: string; basename: string; projectRoot: string; projectName: string; added: number; deleted: number; mtimeMs: number }> = [];
+    const list: Array<{ path: string; rel: string; basename: string; projectRoot: string; projectName: string; added: number; deleted: number; mtimeMs: number; tools: string[] }> = [];
     for (const [absPath, entry] of globalChangeLog) {
       const root = entry.projectRoot.replace(/\\/g, '/').replace(/\/+$/, '');
       const rel = absPath.startsWith(root + '/') ? absPath.slice(root.length + 1) : absPath;
@@ -126,6 +126,7 @@ export function ChangesBoard({ selectedPath, setSelectedPath, diffExpanded, onTo
         added: entry.added,
         deleted: entry.deleted,
         mtimeMs: entry.mtimeMs,
+        tools: entry.tools,
       });
     }
     list.sort((a, b) => {
@@ -135,9 +136,53 @@ export function ChangesBoard({ selectedPath, setSelectedPath, diffExpanded, onTo
     return list;
   }, [globalChangeLog]);
 
+  // Time-window filter: clip rows to a recency cutoff. "all" disables.
+  // 5m / 1h / today are absolute thresholds re-evaluated on each render
+  // (so the filter stays accurate as time passes — a row from 2 minutes
+  // ago auto-disappears from "5m" once it's 6 minutes old). Stored only
+  // in component state — not worth persisting across panel toggles
+  // since the user is typically in active flow when they care.
+  type TimeFilter = 'all' | '5m' | '1h' | 'today';
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>('all');
+  const filteredRows = useMemo(() => {
+    if (timeFilter === 'all') return rows;
+    const now = Date.now();
+    const cutoff =
+      timeFilter === '5m' ? now - 5 * 60 * 1000 :
+      timeFilter === '1h' ? now - 60 * 60 * 1000 :
+      new Date().setHours(0, 0, 0, 0);
+    return rows.filter(r => r.mtimeMs >= cutoff);
+  }, [rows, timeFilter]);
+
+  // Virtualization via progressive load: render only the first N rows,
+  // bump N when the bottom sentinel scrolls into view. Cheap, no extra
+  // dep, smooth UX. Reset N when the underlying list changes (filter
+  // toggle, fresh project opened, etc.).
+  const PAGE_SIZE = 50;
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [timeFilter, filteredRows.length === 0]);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisibleCount(c => Math.min(filteredRows.length, c + PAGE_SIZE));
+        }
+      },
+      { rootMargin: '300px' },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [filteredRows.length]);
+  const visibleRows = useMemo(() => filteredRows.slice(0, visibleCount), [filteredRows, visibleCount]);
+
   // If the selected file disappears from the list (reverted, deleted),
   // drop the diff panel rather than showing stale content. We no longer
   // collapse on tab switch — the global log keeps the entry alive.
+  // Lookup against full unfiltered rows so the diff panel survives a
+  // time-window filter change (selected file might be outside window).
   const selectedRow = selectedPath ? rows.find(r => r.path === selectedPath) : undefined;
   const effectiveSelected = selectedRow ? selectedPath : null;
 
@@ -159,11 +204,36 @@ export function ChangesBoard({ selectedPath, setSelectedPath, diffExpanded, onTo
     ? { display: 'none' as const }
     : { bottom: `${diffHeight}%` };
 
+  // Time-filter chip labels — kept inline (not i18n) for now, matching
+  // the rest of the panel's UI conventions; promote to t(...) keys once
+  // the panel gains a wider label refactor.
+  const filterChips: { id: TimeFilter; label: string }[] = [
+    { id: 'all',   label: '全部' },
+    { id: '5m',    label: '5分钟' },
+    { id: '1h',    label: '1小时' },
+    { id: 'today', label: '今天' },
+  ];
+
   return (
     <div className="changes-fullview" ref={containerRef}>
+      <div className="changes-filter-row">
+        {filterChips.map(chip => (
+          <button
+            key={chip.id}
+            type="button"
+            className={`changes-filter-chip ${timeFilter === chip.id ? 'active' : ''}`}
+            onClick={() => setTimeFilter(chip.id)}
+          >
+            {chip.label}
+          </button>
+        ))}
+        <span className="changes-filter-count">
+          {filteredRows.length}/{rows.length}
+        </span>
+      </div>
       <ScrollPanel>
         <div className="changes-list">
-          {rows.map(row => (
+          {visibleRows.map(row => (
             <div
               key={row.path}
               className={`changes-row ${effectiveSelected === row.path ? 'selected' : ''}`}
@@ -184,6 +254,9 @@ export function ChangesBoard({ selectedPath, setSelectedPath, diffExpanded, onTo
               <span className="changes-name">{row.basename}</span>
               <span className="changes-path">
                 <span className="changes-project">{row.projectName}</span>
+                {row.tools.length > 0 && (
+                  <span className="changes-tools"> · via {row.tools.join(' + ')}</span>
+                )}
                 {row.rel === row.basename ? '' : ' · ' + row.rel.slice(0, -row.basename.length - 1)}
               </span>
               <span className="changes-stats">
@@ -192,6 +265,9 @@ export function ChangesBoard({ selectedPath, setSelectedPath, diffExpanded, onTo
               </span>
             </div>
           ))}
+          {visibleCount < filteredRows.length && (
+            <div ref={sentinelRef} className="changes-sentinel" aria-hidden="true" />
+          )}
         </div>
       </ScrollPanel>
       {effectiveSelected && (

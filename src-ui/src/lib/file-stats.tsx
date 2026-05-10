@@ -72,7 +72,7 @@ export function FileStatsProvider({ children }: { children: ReactNode }) {
         m.set(p, v);
         entries.push({ path: p, added: v.added, deleted: v.deleted, mtimeMs: v.mtimeMs });
       }
-      dispatch({ type: 'MERGE_GLOBAL_CHANGES', sessionId: sid, projectRoot: s.folderPath, entries });
+      dispatch({ type: 'MERGE_GLOBAL_CHANGES', tool: s.tool, projectRoot: s.folderPath, entries });
       if (sid === activeSessionIdRef.current) {
         setActiveStats(m);
       }

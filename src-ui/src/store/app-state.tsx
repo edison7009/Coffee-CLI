@@ -3,6 +3,14 @@
 import { createContext, useContext, useReducer } from 'react';
 import type { ReactNode } from 'react';
 
+// Hard cap for the global change log. Eviction (oldest-mtime first)
+// kicks in when a merge takes us over MAX, shrinking the log down to
+// TARGET so we don't churn through eviction every tick. Order of
+// magnitude: 5000 changes = days of intense AI editing on a typical
+// workspace; users hitting this should restart Coffee CLI anyway.
+const GLOBAL_CHANGE_LOG_MAX = 5000;
+const GLOBAL_CHANGE_LOG_TARGET = 4500;
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export type ToolType = 'claude' | 'qwen' | 'installer' | 'hermes' | 'opencode' | 'openclaw' | 'codex' | 'gemini' | 'terminal' | 'remote' | 'history' | 'multi-agent' | 'two-agent' | 'three-agent' | 'two-split' | 'three-split' | 'four-split' | 'hyper-agent' | null;
@@ -72,10 +80,9 @@ interface MultiAgentState {
 }
 
 /// One file's row in the global change log. Multiple tabs touching the
-/// same file collapse into a single entry — `sessionIds` tracks all
-/// originating tabs so DiffPanel can pick any of them for baseline
-/// fetching, and provenance UI can show "via Claude (project A) +
-/// Codex (project B)" style attribution.
+/// same file collapse into a single entry; `tools` accumulates the
+/// distinct upstream CLIs that have reported the file (Claude, Codex,
+/// OpenCode, etc.) for provenance display in the UI.
 export interface GlobalChangeEntry {
   /// Absolute file path (forward slashes).
   path: string;
@@ -84,17 +91,20 @@ export interface GlobalChangeEntry {
   /// tabs report the same file from different roots (rare — file lives
   /// inside both tabs' folders), latest report wins.
   projectRoot: string;
-  /// Cumulative line counts since the earliest baseline that touched
-  /// this file. Updated on every `computeFolderStats` refresh from any
-  /// tab; latest non-zero report wins.
+  /// Cumulative line counts since this file's first-seen baseline (the
+  /// global Rust snapshot, see server.rs). Updated on every
+  /// `computeFolderStats` refresh from any tab; latest non-zero report
+  /// wins (a refresh that resolves to 0/0 means the file was reverted
+  /// to baseline and the entry is dropped from the log).
   added: number;
   deleted: number;
-  /// Last-known mtime (ms) — drives the timeline sort order.
+  /// Last-known mtime (ms) — drives the timeline sort order and the
+  /// time-window filter chips ("last 5 min" / "last hour" / etc).
   mtimeMs: number;
-  /// Sessions that have reported this file. Includes entries for tabs
-  /// that have since closed; their Rust-side baselines stay alive for
-  /// the app's lifetime so DiffPanel can still resolve `getBaselineContent`.
-  sessionIds: string[];
+  /// Distinct tool ids that have reported this file in this session.
+  /// Order = first-seen order. Used by ChangesBoard to render a
+  /// "via Claude · Codex" provenance chip per row.
+  tools: string[];
 }
 
 export interface TerminalSession {
@@ -223,7 +233,7 @@ type Action =
   | { type: 'SET_BG'; path: string; bgType: 'image' | 'video' }
   | { type: 'CLEAR_BG' }
   | { type: 'SET_WALLPAPER_OPACITY'; opacity: number }
-  | { type: 'MERGE_GLOBAL_CHANGES'; sessionId: string; projectRoot: string; entries: { path: string; added: number; deleted: number; mtimeMs: number }[] }
+  | { type: 'MERGE_GLOBAL_CHANGES'; tool: string | null; projectRoot: string; entries: { path: string; added: number; deleted: number; mtimeMs: number }[] }
   | { type: 'CLEAR_GLOBAL_CHANGES' }
   | { type: 'SET_TERM_SCHEME'; scheme: string }
   | { type: 'TOGGLE_GAMBIT' }
@@ -356,11 +366,16 @@ function reducer(state: AppState, action: Action): AppState {
     case 'MERGE_GLOBAL_CHANGES': {
       // Merge a session's freshly-computed file stats into the global log.
       // Keyed by absolute path. Existing entry from any session: update
-      // counts + mtime, append sessionId to provenance list (de-duped).
+      // counts + mtime, append `tool` to provenance list (de-duped).
       // New path: insert. Empty entries (added=0 deleted=0) are dropped
       // — they mean the file reverted to baseline; no audit value.
       // Map identity is preserved when nothing changes, so React.memo /
       // referential-equality consumers don't re-render on no-op merges.
+      //
+      // FIFO cap: keep the log bounded to GLOBAL_CHANGE_LOG_MAX entries
+      // per Coffee CLI process. When the merge takes us over the cap,
+      // evict the oldest-mtime entries down to GLOBAL_CHANGE_LOG_TARGET
+      // (with a margin so we don't churn through eviction every tick).
       const next = new Map(state.globalChangeLog);
       let mutated = false;
       for (const e of action.entries) {
@@ -369,16 +384,17 @@ function reducer(state: AppState, action: Action): AppState {
           continue;
         }
         const prev = next.get(e.path);
-        const sessionIds = prev?.sessionIds.includes(action.sessionId)
-          ? prev.sessionIds
-          : [...(prev?.sessionIds ?? []), action.sessionId];
+        const toolId = action.tool ?? '?';
+        const tools = prev?.tools.includes(toolId)
+          ? prev.tools
+          : [...(prev?.tools ?? []), toolId];
         if (
           prev &&
           prev.added === e.added &&
           prev.deleted === e.deleted &&
           prev.mtimeMs === e.mtimeMs &&
           prev.projectRoot === action.projectRoot &&
-          sessionIds === prev.sessionIds
+          tools === prev.tools
         ) continue;
         next.set(e.path, {
           path: e.path,
@@ -386,8 +402,14 @@ function reducer(state: AppState, action: Action): AppState {
           added: e.added,
           deleted: e.deleted,
           mtimeMs: e.mtimeMs,
-          sessionIds,
+          tools,
         });
+        mutated = true;
+      }
+      if (next.size > GLOBAL_CHANGE_LOG_MAX) {
+        const sorted = Array.from(next.entries()).sort((a, b) => a[1].mtimeMs - b[1].mtimeMs);
+        const toEvict = next.size - GLOBAL_CHANGE_LOG_TARGET;
+        for (let i = 0; i < toEvict; i++) next.delete(sorted[i][0]);
         mutated = true;
       }
       return mutated ? { ...state, globalChangeLog: next } : state;

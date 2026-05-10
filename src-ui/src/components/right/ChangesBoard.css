@@ -20,6 +20,63 @@
   padding: 0 0 12px 0;
 }
 
+/* Time-window filter chip row at the top of ChangesBoard. Sits in-flow
+ * above the list; ScrollPanel takes the remaining height. */
+.changes-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px 8px 14px;
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--text-2);
+}
+
+.changes-filter-chip {
+  background: transparent;
+  border: 1px solid var(--border-1);
+  color: var(--text-2);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.changes-filter-chip:hover {
+  color: var(--text-1);
+  border-color: var(--border-2);
+}
+
+.changes-filter-chip.active {
+  color: var(--text-1);
+  border-color: var(--accent-coffee);
+  background: color-mix(in srgb, var(--accent-coffee) 15%, transparent);
+}
+
+.changes-filter-count {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-3);
+  font-size: 11px;
+}
+
+/* Provenance chip — "via Claude · Codex" — sits inside the path span
+ * but kept faded so the file name remains the primary read. */
+.changes-tools {
+  color: var(--text-3);
+  font-size: 11px;
+}
+
+/* Sentinel for IntersectionObserver-based progressive load. Zero-
+ * height marker at the bottom of the rendered window; once it scrolls
+ * into view the list grows by another PAGE_SIZE rows. */
+.changes-sentinel {
+  height: 1px;
+  width: 100%;
+  pointer-events: none;
+}
+
 .changes-row {
   display: flex;
   align-items: center;
