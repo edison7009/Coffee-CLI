@@ -3186,14 +3186,12 @@ pub fn start_ui() -> anyhow::Result<()> {
             // Runs once per launch; safe to call on a machine without either agent.
             crate::hook_installer::install_all();
 
-            // Seed the bundled skills (screenshot, vibeid) into
-            // ~/.coffee-cli/skills-library/ so first-time users see them
-            // in the Skills panel without having to open it once to
-            // trigger seeding. Idempotent — only writes new files; user
-            // edits and toggle state survive. Logs and proceeds on
-            // failure so a degraded state doesn't block app launch.
+            // Seed bundled skills (screenshot, vibeid) into
+            // ~/.coffee-cli/skills-library/ so first-time users find
+            // them in the Skills panel without having to open it
+            // once to trigger seeding. Idempotent.
             if let Err(e) = crate::skills::skills_ensure_dirs() {
-                eprintln!("[skills] seed at boot failed: {}", e);
+                log::warn!("[skills] seed at boot failed: {}", e);
             }
 
             // Start loopback TCP listener that receives events from the hook

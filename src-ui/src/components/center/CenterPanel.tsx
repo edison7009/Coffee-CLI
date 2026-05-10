@@ -625,10 +625,6 @@ export function CenterPanel() {
       for (const tool of Object.keys(result)) {
         if (result[tool] === true && prev[tool] === false) {
           commands.installHookForTool(tool).catch(() => {});
-          // Fan out already-enabled skills into the freshly-installed
-          // tool's skills dir. Without this, a user who toggled skills
-          // on before installing the CLI sees them stuck in
-          // ~/.coffee-cli/skills/ until they re-toggle.
           commands.skillsRelinkForTool(tool).catch(() => {});
         }
       }

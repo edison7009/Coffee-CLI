@@ -487,20 +487,15 @@ pub fn skills_toggle(name: String, enable: bool) -> Result<(), String> {
     Ok(())
 }
 
-/// Fan-out the inverse of `link_into_cli_dirs`: for ONE specific tool
-/// that just became available, link every currently-enabled skill into
-/// that tool's CLI skills dir. Driven by the launchpad's focus rescan
-/// when it detects a CLI flipping to installed (paired with
-/// `install_hook_for_tool`). Without this, a user who enables a skill
-/// before installing a CLI sees the skill stuck in `~/.coffee-cli/skills/`
-/// with no junction in the newly-installed CLI's dir until they
-/// toggle off and back on.
+/// For ONE specific tool that just became available, link every
+/// currently-enabled skill into that tool's CLI skills dir. Driven by
+/// the launchpad's focus rescan (paired with `install_hook_for_tool`).
 ///
-/// Idempotent: existing junctions are skipped (no clobber). Real
-/// folders the user manually placed at the same path are also skipped
-/// with a warning — same conflict policy as `link_into_cli_dirs`.
-/// No-op for tools the registry doesn't know about, or whose
-/// descriptor declares no skill_dir.
+/// Idempotent. Real folders the user manually placed at the same path
+/// are skipped with a warning — same policy as `link_into_cli_dirs`.
+/// Per-skill failures are logged but don't fail the call: this is
+/// background fan-out triggered by a tool-installed event, not a user
+/// action awaiting a result.
 #[tauri::command]
 pub fn skills_relink_for_tool(tool: String) -> Result<(), String> {
     let Some(descriptor) = crate::tools::find(&tool) else { return Ok(()); };
@@ -515,12 +510,8 @@ pub fn skills_relink_for_tool(tool: String) -> Result<(), String> {
         return Ok(());
     }
 
-    let parent = home.join(skill_dir_rel.replace('/', std::path::MAIN_SEPARATOR_STR));
-    if !parent.exists() {
-        if let Err(e) = fs::create_dir_all(&parent) {
-            return Err(format!("mkdir {}: {}", parent.display(), e));
-        }
-    }
+    let parent = crate::tools::join_relative(&home, skill_dir_rel);
+    fs::create_dir_all(&parent).map_err(|e| format!("mkdir {}: {}", parent.display(), e))?;
 
     let entries = fs::read_dir(&skills_dir)
         .map_err(|e| format!("read {}: {}", skills_dir.display(), e))?;
@@ -529,27 +520,36 @@ pub fn skills_relink_for_tool(tool: String) -> Result<(), String> {
         if !source.is_dir() {
             continue;
         }
-        let name = entry.file_name();
-        let link = parent.join(&name);
-        if link.exists() {
-            if !is_dir_link(&link) {
-                log::warn!(
-                    "[skills] {} exists as real folder, leaving alone",
-                    link.display()
-                );
-            }
-            continue;
-        }
-        if let Err(e) = create_dir_link(&source, &link) {
-            log::warn!(
-                "[skills] relink {} → {} failed: {}",
-                link.display(),
-                source.display(),
-                e
-            );
+        let link = parent.join(entry.file_name());
+        if let Err(e) = try_create_skill_link(&source, &link) {
+            log::warn!("[skills] {}", e);
         }
     }
     Ok(())
+}
+
+/// Attempt to junction `source` → `link`. Returns:
+///   - `Ok(true)`  — newly created
+///   - `Ok(false)` — link already exists and points where we'd point it
+///   - `Err`       — real-folder collision, or a filesystem error
+///
+/// Shared by `link_into_cli_dirs` (fan-out across tools for one skill)
+/// and `skills_relink_for_tool` (fan-out across skills for one tool).
+/// Each caller picks its own policy on the Err — toggle-time bubbles
+/// up so the user gets a toast; relink-on-install logs and continues.
+fn try_create_skill_link(source: &Path, link: &Path) -> Result<bool, String> {
+    if link.exists() {
+        if is_dir_link(link) {
+            return Ok(false);
+        }
+        return Err(format!(
+            "{} exists as real folder, leaving alone",
+            link.display()
+        ));
+    }
+    create_dir_link(source, link)
+        .map_err(|e| format!("link {} → {} failed: {}", link.display(), source.display(), e))?;
+    Ok(true)
 }
 
 /// Verify no target CLI dir has a non-link entry under `<name>`. Returns
@@ -565,7 +565,7 @@ fn precheck_link_conflicts(name: &str) -> Result<(), String> {
         if !is_tool_installed(binary) {
             continue;
         }
-        let link = home.join(skill_dir).join(name);
+        let link = crate::tools::join_relative(&home, skill_dir).join(name);
         if !link.exists() {
             continue;
         }
@@ -628,44 +628,22 @@ fn link_into_cli_dirs(name: &str, source: &Path) -> Result<(), String> {
             continue;
         }
         installed_any = true;
-        let parent = home.join(skill_dir);
-        if !parent.exists() {
-            // Tool IS installed but doesn't yet have a `skills/` subdir
-            // (or hasn't been launched at all yet). Safe to create the
-            // standard subdir on its behalf — the binary IS on PATH,
-            // so the user clearly intends to use it.
-            if let Err(e) = fs::create_dir_all(&parent) {
-                log::warn!("[skills] mkdir {}: {} — skipping target", parent.display(), e);
-                continue;
-            }
-        }
-        let link = parent.join(name);
-        if link.exists() {
-            // Existing link from a previous session (precheck would have
-            // caught a real folder). Treat as already-wired so we don't
-            // try and fail "destination exists".
-            if is_dir_link(&link) {
-                linked_any = true;
-                continue;
-            }
-            // Race: a real folder appeared between precheck and now.
-            last_err = Some(format!(
-                "Conflict at {}: real folder appeared after precheck",
-                link.display()
-            ));
+        let parent = crate::tools::join_relative(&home, skill_dir);
+        // Tool IS installed but may not yet have a `skills/` subdir.
+        // Safe to create on its behalf — the binary IS on PATH, so
+        // the user clearly intends to use it. mkdir failure is
+        // logged-and-skipped rather than fatal so a single broken
+        // CLI dir doesn't block fan-out to the rest.
+        if let Err(e) = fs::create_dir_all(&parent) {
+            log::warn!("[skills] mkdir {}: {} — skipping target", parent.display(), e);
             continue;
         }
-        match create_dir_link(source, &link) {
+        let link = parent.join(name);
+        match try_create_skill_link(source, &link) {
             Ok(_) => linked_any = true,
             Err(e) => {
-                let msg = format!(
-                    "link {} → {} failed: {}",
-                    link.display(),
-                    source.display(),
-                    e
-                );
-                log::warn!("[skills] {}", msg);
-                last_err = Some(msg);
+                log::warn!("[skills] {}", e);
+                last_err = Some(e);
             }
         }
     }
@@ -695,7 +673,7 @@ fn link_into_cli_dirs(name: &str, source: &Path) -> Result<(), String> {
 fn unlink_from_cli_dirs(name: &str) {
     let Ok(home) = home() else { return };
     for (_binary, skill_dir) in target_cli_skill_dirs() {
-        let link = home.join(skill_dir).join(name);
+        let link = crate::tools::join_relative(&home, skill_dir).join(name);
         if !link.exists() {
             continue;
         }

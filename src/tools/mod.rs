@@ -98,9 +98,11 @@ impl HistoryShape {
 }
 
 /// Join a forward-slash-relative path under `home`, converting to the
-/// platform separator. Centralises a Windows quirk that used to be
-/// inlined as `replace('/', MAIN_SEPARATOR_STR)` at every call site.
-fn join_relative(home: &Path, rel: &str) -> PathBuf {
+/// platform separator. Use for any registry-derived path — Windows APIs
+/// mostly tolerate mixed separators, but normalising at construction
+/// time avoids surprises in display strings, glob comparisons, and
+/// downstream string-matching.
+pub(crate) fn join_relative(home: &Path, rel: &str) -> PathBuf {
     if std::path::MAIN_SEPARATOR == '/' {
         home.join(rel)
     } else {
