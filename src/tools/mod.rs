@@ -149,10 +149,11 @@ pub struct ToolDescriptor {
     /// name (claude → "claude", openclaw → "openclaw").
     pub id: &'static str,
 
-    /// Display name shown in launchpad cards / tool pickers.
-    /// Wrapper-fronted CLIs may differ from `id` — e.g. "hermes"
-    /// for "Hermes Agent". When equal to `id` capitalised, leave
-    /// blank and the UI will title-case automatically.
+    /// Display name shown in launchpad cards / tool pickers /
+    /// history rows. Frontend pulls these via the `list_tools`
+    /// IPC; see `src-ui/src/lib/tool-info.ts`. Always required —
+    /// pseudo-tools without a brand name (terminal / remote) are
+    /// not registered here and use locale-specific labels in i18n.
     pub display_name: &'static str,
 
     /// Binary name to look up via `where` (Windows) / `which`
@@ -186,17 +187,6 @@ pub struct ToolDescriptor {
     /// — e.g. OpenClaw's TUI is `openclaw tui`, not bare
     /// `openclaw`. Most tools have an empty list.
     pub default_args: &'static [&'static str],
-}
-
-impl ToolDescriptor {
-    /// Resolve the absolute skill directory under `$HOME` (or
-    /// `$USERPROFILE` on Windows). `None` when the tool has no
-    /// skills concept yet, OR when home dir resolution fails
-    /// (which itself is exceedingly rare on a desktop OS).
-    pub fn skill_dir_absolute(&self) -> Option<PathBuf> {
-        let home = dirs::home_dir()?;
-        Some(join_relative(&home, self.skill_dir_relative?))
-    }
 }
 
 mod claude;

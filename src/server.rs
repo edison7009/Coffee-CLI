@@ -252,8 +252,7 @@ struct FileSnapshot {
     /// Original file bytes — captured only on the baseline pass, only for
     /// text files under BASELINE_CONTENT_MAX_BYTES. Used by the right-side
     /// Diff panel to render a unified diff (current vs. session-start).
-    /// `None` for files that exceeded the size cap or were inserted on a
-    /// non-baseline walk (compute_folder_stats's transient `current` map).
+    /// `None` for files that exceeded the size cap.
     content: Option<Vec<u8>>,
 }
 
@@ -270,20 +269,6 @@ fn snapshots() -> &'static std::sync::Mutex<std::collections::HashMap<String, Fi
         std::sync::Mutex<std::collections::HashMap<String, FileSnapshot>>,
     > = std::sync::OnceLock::new();
     FILE_SNAPSHOTS.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()))
-}
-
-/// Per-file added/deleted line counts versus the folder's open-time snapshot.
-/// `mtime_ms` is the file's current modification time as Unix milliseconds —
-/// frontend uses it to sort the changes list "most recently touched first"
-/// so users see "what the agent just did" at the top, instead of the
-/// largest-by-line-count file (which was usually package-lock or a build
-/// artifact that buried the meaningful semantic edits).
-#[derive(Serialize, Clone, Debug)]
-#[serde(rename_all = "camelCase")]
-struct FileStats {
-    added: u32,
-    deleted: u32,
-    mtime_ms: i64,
 }
 
 /// Directory names skipped during snapshot/diff walks. These tend to dominate
@@ -570,15 +555,6 @@ fn get_baseline_content(path: String) -> Option<String> {
     let bytes = file.content.as_ref()?;
     Some(String::from_utf8_lossy(bytes).into_owned())
 }
-
-/// (Removed in v2.7.0) `compute_folder_stats` was the per-tab fs-walking
-/// poll that fed the audit list before the hook architecture took over.
-/// Audit data now flows from the per-tool forwarder scripts into
-/// `hook_server.rs`; the Rust-internal equivalent for Codex turn-snapshot
-/// is `diff_folder_against_baseline` above (pub(crate), not a Tauri
-/// command). `start_folder_snapshot` and `get_baseline_content` are kept
-/// because DiffPanel still resolves baseline content from them.
-// (no compute_folder_stats here — superseded by hook events)
 
 /// Save a base64-encoded clipboard image to a temp file.
 /// Used by the Gambit compose window so pasted screenshots can be referenced
