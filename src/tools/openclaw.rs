@@ -14,6 +14,7 @@ pub static DESCRIPTOR: ToolDescriptor = ToolDescriptor {
     display_name: "OpenClaw",
     binary_name: "openclaw",
     skill_dir_relative: Some(".openclaw/workspace/skills"),
+    has_hook_surface: false,
     // OpenClaw is workspace-nested but its hook surface (the `commands.mcp`
     // gate, see memory `reference_openclaw_mcp_gate`) is for MCP server
     // injection, not file-edit attribution. No upstream hook event

@@ -7,6 +7,7 @@ pub static DESCRIPTOR: ToolDescriptor = ToolDescriptor {
     display_name: "Gemini CLI",
     binary_name: "gemini",
     skill_dir_relative: Some(".gemini/skills"),
+    has_hook_surface: false,
     // Gemini CLI exposes no hook protocol Coffee CLI can use today.
     // Files it modifies don't appear in the audit log — by design,
     // not a TODO. If Google adds a hook protocol later we'll

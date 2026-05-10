@@ -165,29 +165,42 @@ fn dispatch(app: &AppHandle, payload: HookPayload) {
         let _ = app.emit("agent-status", &evt);
     }
 
+    // Gate per-call file-edit and turn-snapshot processing on the
+    // tool's declared file_edit_attribution. `None` (Hermes today,
+    // Gemini / Qwen / OpenClaw always) skips any file-edit emission —
+    // defends against a forwarder that wires the wrong hook surface,
+    // and keeps the audit log honest to its declared scope.
+    let reports_edits = crate::tools::find(&tool_id)
+        .map(|t| t.file_edit_attribution != crate::tools::FileEditAttribution::None)
+        .unwrap_or(false);
+
     // 2. Per-call file edit (Claude / OpenCode forwarders).
-    if let Some(path) = payload.path.as_deref() {
-        let action = payload.action.clone().unwrap_or_else(|| "edit".to_string());
-        emit_file_edit(app, &payload.tab_id, &tool_id, path, action);
+    if reports_edits {
+        if let Some(path) = payload.path.as_deref() {
+            let action = payload.action.clone().unwrap_or_else(|| "edit".to_string());
+            emit_file_edit(app, &payload.tab_id, &tool_id, path, action);
+        }
     }
 
     // 3. Turn-snapshot (Codex `agent-turn-complete` with cwd). One
     //    forwarder payload fans out to N file-edit events.
-    if let (Some(cwd), Some(event)) = (payload.cwd.as_deref(), payload.event.as_deref()) {
-        if tool_id == "codex" && event == "agent-turn-complete" {
-            for (path, added, deleted, mtime_ms) in
-                crate::server::diff_folder_against_baseline(cwd)
-            {
-                let evt = ToolFileEditEvent {
-                    tab_id: payload.tab_id.clone(),
-                    tool: tool_id.clone(),
-                    path,
-                    action: "edit".to_string(),
-                    added,
-                    deleted,
-                    mtime_ms,
-                };
-                let _ = app.emit("tool-file-edit", &evt);
+    if reports_edits {
+        if let (Some(cwd), Some(event)) = (payload.cwd.as_deref(), payload.event.as_deref()) {
+            if tool_id == "codex" && event == "agent-turn-complete" {
+                for (path, added, deleted, mtime_ms) in
+                    crate::server::diff_folder_against_baseline(cwd)
+                {
+                    let evt = ToolFileEditEvent {
+                        tab_id: payload.tab_id.clone(),
+                        tool: tool_id.clone(),
+                        path,
+                        action: "edit".to_string(),
+                        added,
+                        deleted,
+                        mtime_ms,
+                    };
+                    let _ = app.emit("tool-file-edit", &evt);
+                }
             }
         }
     }
@@ -203,7 +216,7 @@ fn emit_file_edit(
     path: &str,
     action: String,
 ) {
-    let normalized = path.replace('\\', "/");
+    let normalized = crate::server::normalize_path_key(path);
     // Delete events: the file is gone, no diff to compute. Emit a
     // bare event so the frontend can show "deleted" in the row;
     // mtime/added/deleted set to 0.

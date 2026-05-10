@@ -10,6 +10,7 @@ pub static DESCRIPTOR: ToolDescriptor = ToolDescriptor {
     display_name: "OpenCode",
     binary_name: "opencode",
     skill_dir_relative: Some(".config/opencode/skills"),
+    has_hook_surface: true,
     // OpenCode plugin API exposes `tool.execute.after` as a named
     // hook with the full tool input; `coffee-cli-opencode-plugin.js`
     // reads file paths from write/edit/patch tools and forwards a

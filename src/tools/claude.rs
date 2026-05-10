@@ -7,6 +7,7 @@ pub static DESCRIPTOR: ToolDescriptor = ToolDescriptor {
     display_name: "Claude Code",
     binary_name: "claude",
     skill_dir_relative: Some(".claude/skills"),
+    has_hook_surface: true,
     // Claude Code emits PostToolUse with full tool_input for
     // Edit/Write/MultiEdit — `coffee-cli-hook.py` reads
     // `tool_input.file_path` and forwards a `file_edit` payload.

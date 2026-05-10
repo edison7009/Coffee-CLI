@@ -81,7 +81,7 @@ pub fn install_all() {
     };
 
     for tool in crate::tools::TOOLS {
-        if !matches!(tool.file_edit_attribution, crate::tools::FileEditAttribution::None) {
+        if tool.has_hook_surface {
             dispatch_install(tool, &home);
         }
     }
@@ -97,7 +97,7 @@ pub fn install_for_tool(tool: &str) {
         None => return,
     };
     let Some(descriptor) = crate::tools::find(tool) else { return };
-    if matches!(descriptor.file_edit_attribution, crate::tools::FileEditAttribution::None) {
+    if !descriptor.has_hook_surface {
         return;
     }
     dispatch_install(descriptor, &home);

@@ -7,6 +7,7 @@ pub static DESCRIPTOR: ToolDescriptor = ToolDescriptor {
     display_name: "Qwen Code",
     binary_name: "qwen",
     skill_dir_relative: Some(".qwen/skills"),
+    has_hook_surface: false,
     // Qwen Code is Claude-Code-compatible at the SKILL.md / prompt
     // level but does not expose Claude's hook protocol. No file-edit
     // attribution available; same policy as Gemini.

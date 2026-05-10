@@ -14,15 +14,14 @@ pub static DESCRIPTOR: ToolDescriptor = ToolDescriptor {
     display_name: "Hermes Agent",
     binary_name: "hermes",
     skill_dir_relative: None,
-    // Hermes Agent has plugin hooks (pre_llm_call / pre_tool_call /
+    // Hermes Agent exposes plugin hooks (pre_llm_call / pre_tool_call /
     // pre_approval_request / on_session_start / on_session_end / etc.)
-    // exposed via `~/.hermes/plugins/<name>/` Python plugins.
-    // Coffee CLI installs the `coffee-cli-status` plugin to drive the
-    // tab dot indicator. File-edit attribution is still None — we only
-    // forward status events, not per-file write events. (Hermes' Python
-    // hooks DO get tool args including paths, but wiring per-tool path
-    // attribution is a follow-up; status indicator is the v2.7.0 scope.)
-    file_edit_attribution: FileEditAttribution::Hook,
+    // via `~/.hermes/plugins/<name>/` Python plugins. Coffee CLI today
+    // installs `coffee-cli-status` for the tab indicator; we have NOT
+    // written a file-edit forwarder yet, so Hermes edits don't appear
+    // in the 修改记录 panel. Two independent flags reflect this:
+    has_hook_surface: true,
+    file_edit_attribution: FileEditAttribution::None,
     // ~/.hermes/sessions/session_*.json — flat directory of full
     // JSON files (not JSONL); custom parser parse_hermes_json.
     history_shape: Some(HistoryShape::HermesFlatJson {

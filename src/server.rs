@@ -352,6 +352,30 @@ fn stats_mtime_nanos(meta: &std::fs::Metadata) -> u128 {
         .unwrap_or(0)
 }
 
+/// Canonical form of a path used as a snapshot map key. Forward-slashes
+/// always; on Windows the drive letter is forced to uppercase. Reason:
+/// `start_folder_snapshot` walks the dir the user picked (typically
+/// uppercase `D:\…`) and writes keys like `D:/Coffee-CLI/…`, but
+/// Claude Code's PostToolUse hook reports `tool_input.file_path` with
+/// whatever casing the model chose — often lowercase `d:\…`. HashMap
+/// is case-sensitive, so without this normalization every per-call
+/// hook event misses the baseline and the audit list fills up with
+/// bogus "+N -0" rows from the no-baseline fall-through branch.
+pub(crate) fn normalize_path_key(path: &str) -> String {
+    let s = path.replace('\\', "/");
+    #[cfg(windows)]
+    {
+        let bytes = s.as_bytes();
+        if bytes.len() >= 2 && bytes[1] == b':' && bytes[0].is_ascii_alphabetic() {
+            let mut out = String::with_capacity(s.len());
+            out.push((bytes[0] as char).to_ascii_uppercase());
+            out.push_str(&s[1..]);
+            return out;
+        }
+    }
+    s
+}
+
 /// Recursive walk gathering FileSnapshot for every text file under `root`.
 /// Stops once `max_files` are collected to bound work on accidentally-huge
 /// trees (user opens home dir, etc.).
@@ -394,7 +418,7 @@ fn stats_walk(
             stats_walk(&path, files, baseline, max_files);
         } else if meta.is_file() {
             if meta.len() > STATS_MAX_FILE_BYTES { continue; }
-            let key = path.to_string_lossy().replace('\\', "/");
+            let key = normalize_path_key(&path.to_string_lossy());
             let mtime = stats_mtime_nanos(&meta);
             // Mtime-stable file with a baseline snapshot → reuse cached hashes.
             // Saves the read+hash on every fs-refresh tick for files the user
@@ -474,7 +498,7 @@ fn read_text_file(path: String) -> Option<String> {
 ///   - aren't text (binary)
 /// In those cases callers fall back to a delete event with no diff.
 pub(crate) fn compute_single_file_stats(path: &str) -> Option<(u32, u32, i64)> {
-    let normalized = path.replace('\\', "/");
+    let normalized = normalize_path_key(path);
     let bytes = std::fs::read(&path).ok()?;
     if bytes.len() as u64 > STATS_MAX_FILE_BYTES { return None; }
     if !stats_is_text(&bytes) { return None; }
@@ -487,9 +511,16 @@ pub(crate) fn compute_single_file_stats(path: &str) -> Option<(u32, u32, i64)> {
     let map = snapshots().lock().ok()?;
     let (added, deleted) = match map.get(&normalized) {
         Some(base) => stats_line_diff(&base.line_hashes, &cur_hashes),
-        // No baseline = file new since Coffee CLI started → every line
-        // is an addition.
-        None => (cur_hashes.len() as u32, 0u32),
+        // No baseline = either a brand-new file (every line is an
+        // addition, correct +N -0) OR a baseline-miss bug (path key
+        // mismatch / start_folder_snapshot hadn't completed). The log
+        // line surfaces the latter during dogfooding — uppercase-drive
+        // normalization (above) is supposed to cover the casing case
+        // but a leading miss here is the canary if a new mismatch sneaks in.
+        None => {
+            eprintln!("[stats] no baseline for {} — treating as new", normalized);
+            (cur_hashes.len() as u32, 0u32)
+        }
     };
     if added.saturating_add(deleted) > STATS_MAX_DIFF_LINES { return None; }
     Some((added, deleted, mtime_ms))
@@ -550,7 +581,7 @@ pub(crate) fn diff_folder_against_baseline(folder: &str) -> Vec<(String, u32, u3
 #[tauri::command]
 fn get_baseline_content(path: String) -> Option<String> {
     let map = snapshots().lock().ok()?;
-    let normalized = path.replace('\\', "/");
+    let normalized = normalize_path_key(&path);
     let file = map.get(&normalized)?;
     let bytes = file.content.as_ref()?;
     Some(String::from_utf8_lossy(bytes).into_owned())
