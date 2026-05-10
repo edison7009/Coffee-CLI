@@ -11,14 +11,19 @@
 
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve, join } from "node:path";
+import { hyperframesPackageSpec, importPackagesOrBootstrap } from "./package-loader.mjs";
 
-import {
+const {
   createFileServer,
   createCaptureSession,
   initializeSession,
   closeCaptureSession,
   getCompositionDuration,
-} from "@hyperframes/producer";
+} = (
+  await importPackagesOrBootstrap(["@hyperframes/producer"], {
+    npmPackages: [hyperframesPackageSpec("@hyperframes/producer")],
+  })
+)["@hyperframes/producer"];
 
 // ─── CLI ─────────────────────────────────────────────────────────────────────
 
