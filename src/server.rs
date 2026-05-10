@@ -140,27 +140,16 @@ fn install_hook_for_tool(tool: String) {
 
 #[tauri::command]
 fn check_tools_installed() -> std::collections::HashMap<String, bool> {
-    let tools = vec![
-        ("claude", "claude"),
-        ("qwen", "qwen"),
-        ("hermes", "hermes"),
-        ("opencode", "opencode"),
-        ("codex", "codex"),
-        ("gemini", "gemini"),
-        ("openclaw", "openclaw"),
-        // remote is always available — it's just SSH (built into the OS)
-    ];
+    // Iterate the central registry (`src/tools/`) instead of a local
+    // hardcoded list. id == launchpad key, binary_name == PATH probe
+    // target — both already encoded per-tool in the descriptor.
     let mut result = std::collections::HashMap::new();
-    for (key, bin) in tools {
-        #[cfg(target_os = "windows")]
-        let found = check_tool_windows(bin);
-
-        #[cfg(not(target_os = "windows"))]
-        let found = check_tool_unix(bin);
-
-        result.insert(key.to_string(), found);
+    for tool in crate::tools::TOOLS {
+        result.insert(tool.id.to_string(), binary_on_path(tool.binary_name));
     }
-    // Terminal is always available — it's the system shell
+    // Always-available pseudo-tools (not in the registry — they don't
+    // have a binary to probe). `terminal` is the system shell;
+    // `remote` is just SSH, built into the OS.
     result.insert("terminal".to_string(), true);
     result
 }
