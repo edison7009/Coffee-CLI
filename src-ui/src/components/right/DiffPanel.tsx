@@ -38,7 +38,6 @@ type DiffResult =
   | { state: 'ok'; lines: DiffLine[]; added: number; deleted: number };
 
 interface DiffPanelProps {
-  sessionId: string;
   path: string;
   onClose: () => void;
   expanded: boolean;
@@ -49,7 +48,7 @@ interface DiffPanelProps {
   heightPercent?: number;
 }
 
-export function DiffPanel({ sessionId, path, onClose, expanded, onToggleExpanded, heightPercent }: DiffPanelProps) {
+export function DiffPanel({ path, onClose, expanded, onToggleExpanded, heightPercent }: DiffPanelProps) {
   const t = useT();
   const dataTheme = useDataAttr('data-theme');
   const [result, setResult] = useState<DiffResult>({ state: 'loading' });
@@ -83,7 +82,7 @@ export function DiffPanel({ sessionId, path, onClose, expanded, onToggleExpanded
     (async () => {
       try {
         const [baseline, current] = await Promise.all([
-          commands.getBaselineContent(sessionId, path),
+          commands.getBaselineContent(path),
           commands.readTextFile(path),
         ]);
         if (cancelled) return;
@@ -122,7 +121,7 @@ export function DiffPanel({ sessionId, path, onClose, expanded, onToggleExpanded
     })();
 
     return () => { cancelled = true; };
-  }, [sessionId, path, dataTheme]);
+  }, [path, dataTheme]);
 
   const basename = useMemo(() => path.replace(/\\/g, '/').split('/').pop() || path, [path]);
 

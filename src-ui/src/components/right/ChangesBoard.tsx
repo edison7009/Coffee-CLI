@@ -14,9 +14,8 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
-import { useAppState, resolveDiffContext } from '../../store/app-state';
+import { useAppState } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
-import { useFileStats } from '../../lib/file-stats';
 import { ScrollPanel } from '../common/ScrollPanel';
 import { ContextMenu } from '../left/Explorer';
 import type { CtxMenuState } from '../left/Explorer';
@@ -55,11 +54,7 @@ function loadStoredDiffHeight(): number {
 export function ChangesBoard({ selectedPath, setSelectedPath, diffExpanded, onToggleDiffExpanded }: ChangesBoardProps) {
   const t = useT();
   const { state } = useAppState();
-  const fileStats = useFileStats();
-  const activeSession = state.terminals.find(s => s.id === state.activeTerminalId);
-  const diffCtx = resolveDiffContext(activeSession);
-  const folderPath = diffCtx?.folderPath ?? null;
-  const sessionId = diffCtx?.sessionId ?? null;
+  const globalChangeLog = state.globalChangeLog;
   const [ctxMenu, setCtxMenu] = useState<CtxMenuState | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [diffHeight, setDiffHeight] = useState<number>(loadStoredDiffHeight);
@@ -107,35 +102,73 @@ export function ChangesBoard({ selectedPath, setSelectedPath, diffExpanded, onTo
     try { localStorage.setItem(DIFF_HEIGHT_KEY, String(diffHeight)); } catch {}
   }, [diffHeight]);
 
+  // Build flat row list from the app-lifecycle global change log. Each
+  // entry already carries its own projectRoot + tools list; we derive
+  // a relative path against the entry's own root (not the active tab's)
+  // so files from a different project still display readably. Sort by
+  // mtime descending so the most recent edit floats to top regardless
+  // of which tab made it. Tie-break by full absolute path for
+  // deterministic ordering when the same operation touches many files.
   const rows = useMemo(() => {
-    if (!fileStats || fileStats.size === 0 || !folderPath) return [];
-    const root = folderPath.replace(/\\/g, '/').replace(/\/+$/, '');
-    const list: Array<{ path: string; rel: string; basename: string; added: number; deleted: number; mtimeMs: number }> = [];
-    for (const [absPath, stats] of fileStats) {
+    if (globalChangeLog.size === 0) return [];
+    const list: Array<{ path: string; rel: string; basename: string; projectRoot: string; projectName: string; added: number; deleted: number; mtimeMs: number; tools: string[] }> = [];
+    for (const [absPath, entry] of globalChangeLog) {
+      const root = entry.projectRoot.replace(/\\/g, '/').replace(/\/+$/, '');
       const rel = absPath.startsWith(root + '/') ? absPath.slice(root.length + 1) : absPath;
       const basename = rel.split('/').pop() || rel;
-      list.push({ path: absPath, rel, basename, added: stats.added, deleted: stats.deleted, mtimeMs: stats.mtimeMs });
+      const projectName = root.split('/').filter(Boolean).pop() || root;
+      list.push({
+        path: absPath,
+        rel,
+        basename,
+        projectRoot: root,
+        projectName,
+        added: entry.added,
+        deleted: entry.deleted,
+        mtimeMs: entry.mtimeMs,
+        tools: entry.tools,
+      });
     }
-    // Sort by mtime descending — most recently touched at top. Matches
-    // the AI workflow's actual question ("what did the agent just do?")
-    // far better than either "largest changes first" (auto-generated
-    // noise like package-lock.json dominates) or alphabetical (every
-    // file weighted equally, agent's last edit could be anywhere).
-    // Tie-break by relative path so files written in the same operation
-    // (same mtime ms bucket) cluster predictably.
     list.sort((a, b) => {
       if (b.mtimeMs !== a.mtimeMs) return b.mtimeMs - a.mtimeMs;
-      return a.rel.toLowerCase().localeCompare(b.rel.toLowerCase());
+      return a.path.toLowerCase().localeCompare(b.path.toLowerCase());
     });
     return list;
-  }, [fileStats, folderPath]);
+  }, [globalChangeLog]);
 
-  // If the selected file disappears from the list (reverted, deleted, or tab
-  // switch), drop the diff panel rather than showing stale content.
-  const selectedStillExists = selectedPath && rows.some(r => r.path === selectedPath);
-  const effectiveSelected = selectedStillExists ? selectedPath : null;
+  // Virtualization via progressive load: render only the first N rows,
+  // bump N when the bottom sentinel scrolls into view. Cheap, no extra
+  // dep, smooth UX past thousands of entries. Reset N to PAGE_SIZE when
+  // the list shrinks (no rows to load anyway).
+  const PAGE_SIZE = 50;
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  useEffect(() => {
+    if (rows.length === 0) setVisibleCount(PAGE_SIZE);
+  }, [rows.length]);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisibleCount(c => Math.min(rows.length, c + PAGE_SIZE));
+        }
+      },
+      { rootMargin: '300px' },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [rows.length]);
+  const visibleRows = useMemo(() => rows.slice(0, visibleCount), [rows, visibleCount]);
 
-  if (!folderPath || rows.length === 0) {
+  // If the selected file disappears from the list (reverted, deleted),
+  // drop the diff panel rather than showing stale content. We no longer
+  // collapse on tab switch — the global log keeps the entry alive.
+  const selectedRow = selectedPath ? rows.find(r => r.path === selectedPath) : undefined;
+  const effectiveSelected = selectedRow ? selectedPath : null;
+
+  if (rows.length === 0) {
     return (
       <div className="task-empty">
         <div className="task-empty-text">
@@ -157,7 +190,7 @@ export function ChangesBoard({ selectedPath, setSelectedPath, diffExpanded, onTo
     <div className="changes-fullview" ref={containerRef}>
       <ScrollPanel>
         <div className="changes-list">
-          {rows.map(row => (
+          {visibleRows.map(row => (
             <div
               key={row.path}
               className={`changes-row ${effectiveSelected === row.path ? 'selected' : ''}`}
@@ -176,16 +209,25 @@ export function ChangesBoard({ selectedPath, setSelectedPath, diffExpanded, onTo
               }}
             >
               <span className="changes-name">{row.basename}</span>
-              <span className="changes-path">{row.rel === row.basename ? '' : row.rel.slice(0, -row.basename.length - 1)}</span>
+              <span className="changes-path">
+                <span className="changes-project">{row.projectName}</span>
+                {row.tools.length > 0 && (
+                  <span className="changes-tools"> · via {row.tools.join(' + ')}</span>
+                )}
+                {row.rel === row.basename ? '' : ' · ' + row.rel.slice(0, -row.basename.length - 1)}
+              </span>
               <span className="changes-stats">
                 <span className="diff-add">+{row.added}</span>
                 <span className="diff-del">-{row.deleted}</span>
               </span>
             </div>
           ))}
+          {visibleCount < rows.length && (
+            <div ref={sentinelRef} className="changes-sentinel" aria-hidden="true" />
+          )}
         </div>
       </ScrollPanel>
-      {effectiveSelected && sessionId && (
+      {effectiveSelected && (
         <>
           <div
             className="diff-resize-handle"
@@ -194,7 +236,6 @@ export function ChangesBoard({ selectedPath, setSelectedPath, diffExpanded, onTo
             aria-label="Resize diff"
           />
           <DiffPanel
-            sessionId={sessionId}
             path={effectiveSelected}
             onClose={() => setSelectedPath(null)}
             expanded={diffExpanded}

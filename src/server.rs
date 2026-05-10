@@ -272,17 +272,19 @@ struct FileSnapshot {
     content: Option<Vec<u8>>,
 }
 
-#[derive(Clone, Default)]
-struct FolderSnapshot {
-    /// Forward-slash absolute paths → snapshot at folder-open time.
-    files: std::collections::HashMap<String, FileSnapshot>,
-}
-
-fn snapshots() -> &'static std::sync::Mutex<std::collections::HashMap<String, FolderSnapshot>> {
-    static FOLDER_SNAPSHOTS: std::sync::OnceLock<
-        std::sync::Mutex<std::collections::HashMap<String, FolderSnapshot>>,
+/// Global per-file baseline — keyed by absolute (forward-slash) path,
+/// shared across every tab and every project the user opens during this
+/// Coffee CLI process. First-seen wins: if a file is already in the
+/// map, a later `start_folder_snapshot` walk does NOT overwrite it.
+/// This is the foundation of the app-lifecycle audit semantics — once
+/// Coffee CLI has seen a file, it remembers the original content for
+/// the rest of the process so reopening the project later doesn't
+/// erase the audit trail. Process exit = full reset.
+fn snapshots() -> &'static std::sync::Mutex<std::collections::HashMap<String, FileSnapshot>> {
+    static FILE_SNAPSHOTS: std::sync::OnceLock<
+        std::sync::Mutex<std::collections::HashMap<String, FileSnapshot>>,
     > = std::sync::OnceLock::new();
-    FOLDER_SNAPSHOTS.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()))
+    FILE_SNAPSHOTS.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()))
 }
 
 /// Per-file added/deleted line counts versus the folder's open-time snapshot.
@@ -390,7 +392,7 @@ fn stats_mtime_nanos(meta: &std::fs::Metadata) -> u128 {
 fn stats_walk(
     root: &std::path::Path,
     files: &mut std::collections::HashMap<String, FileSnapshot>,
-    baseline: Option<&FolderSnapshot>,
+    baseline: Option<&std::collections::HashMap<String, FileSnapshot>>,
     max_files: usize,
 ) {
     if files.len() >= max_files { return; }
@@ -428,7 +430,7 @@ fn stats_walk(
             // Saves the read+hash on every fs-refresh tick for files the user
             // hasn't touched (i.e., 99% of the tree on most edits).
             if let Some(b) = baseline {
-                if let Some(prev) = b.files.get(&key) {
+                if let Some(prev) = b.get(&key) {
                     if prev.mtime_nanos == mtime {
                         files.insert(key, prev.clone());
                         continue;
@@ -458,30 +460,25 @@ fn stats_walk(
     }
 }
 
-/// Snapshot every text file under `path` so future diffs have a baseline.
-/// Keyed by `session_id` (terminal/tab id) so two tabs working in the same
-/// folder each track their own diff timeline — Codex-tab edits don't bleed
-/// into the OpenCode-tab diff and vice versa. Replaces any prior snapshot
-/// for the same session_id so reopening / tool restart = fresh baseline.
+/// Walk every text file under `path` and add files we've never seen
+/// before to the global baseline. Files already in the baseline are
+/// kept as-is — first-seen wins. This is the foundation of Coffee
+/// CLI's app-lifecycle audit log: once a file's original content is
+/// recorded, reopening the same project later (with a new tab, a
+/// different tool, or after the original tab closed) preserves the
+/// baseline so the audit trail isn't erased. Process exit clears
+/// everything (the OnceLock map is dropped with the process).
 #[tauri::command]
-fn start_folder_snapshot(session_id: String, path: String) -> Result<(), String> {
+fn start_folder_snapshot(path: String) -> Result<(), String> {
     let dir = std::path::Path::new(&path);
     if !dir.is_dir() { return Err(format!("Not a directory: {}", path)); }
-    let mut files = std::collections::HashMap::new();
-    stats_walk(dir, &mut files, None, STATS_MAX_FILES);
+    let mut new_files = std::collections::HashMap::new();
+    stats_walk(dir, &mut new_files, None, STATS_MAX_FILES);
     let mut map = snapshots().lock().map_err(|e| format!("lock: {}", e))?;
-    map.insert(session_id, FolderSnapshot { files });
-    Ok(())
-}
-
-/// Free the snapshot for a closed tab. No-op if none exists. Called by the
-/// Explorer when a terminal is removed from the tabs list, so dead tabs
-/// don't keep their full text-file hash table around for the rest of the
-/// session.
-#[tauri::command]
-fn drop_session_snapshot(session_id: String) -> Result<(), String> {
-    let mut map = snapshots().lock().map_err(|e| format!("lock: {}", e))?;
-    map.remove(&session_id);
+    for (key, snap) in new_files {
+        // first-seen wins — only insert if not already present
+        map.entry(key).or_insert(snap);
+    }
     Ok(())
 }
 
@@ -496,52 +493,54 @@ fn read_text_file(path: String) -> Option<String> {
     Some(String::from_utf8_lossy(&bytes).into_owned())
 }
 
-/// Return the file's session-start content as UTF-8 string. `None` when:
-///   - the session has no snapshot (folder never opened)
-///   - the path isn't in the snapshot (file created after baseline)
-///   - the file exceeded BASELINE_CONTENT_MAX_BYTES (no content stored)
+/// Return the file's first-seen content as UTF-8 string. `None` when:
+///   - the file is not in the global baseline (Coffee CLI has never
+///     observed this path during its lifetime)
+///   - the file exceeded BASELINE_CONTENT_MAX_BYTES (no content stored,
+///     just hashes for `+N -M` badges)
 ///   - the file was binary (skipped during stats_walk)
 /// Lossy UTF-8: invalid bytes become U+FFFD so non-UTF8 source files
 /// (latin-1, GBK, etc.) still render in the diff panel.
 #[tauri::command]
-fn get_baseline_content(session_id: String, path: String) -> Option<String> {
+fn get_baseline_content(path: String) -> Option<String> {
     let map = snapshots().lock().ok()?;
-    let snapshot = map.get(&session_id)?;
     let normalized = path.replace('\\', "/");
-    let file = snapshot.files.get(&normalized)?;
+    let file = map.get(&normalized)?;
     let bytes = file.content.as_ref()?;
     Some(String::from_utf8_lossy(bytes).into_owned())
 }
 
-/// Walk the folder again and return only the files whose line count or
-/// mtime drifted from this session's snapshot. Empty map when no
-/// snapshot exists for this session_id (Explorer falls back to size badge).
+/// Walk `path` and return any file under it whose current content drifts
+/// from its global baseline. Files not in the baseline (created since
+/// Coffee CLI started, or under a folder that's never been
+/// `start_folder_snapshot`-ed) are reported as "every line is new".
+/// Empty map when `path` isn't a directory.
 #[tauri::command]
-fn compute_folder_stats(session_id: String, path: String) -> std::collections::HashMap<String, FileStats> {
+fn compute_folder_stats(path: String) -> std::collections::HashMap<String, FileStats> {
     let mut result = std::collections::HashMap::new();
     let dir = std::path::Path::new(&path);
     if !dir.is_dir() { return result; }
 
-    let snapshot = {
+    // Snapshot the global baseline at this instant so the walk diffs
+    // against a consistent view (other tabs adding new baselines
+    // mid-walk don't change the result of THIS computation).
+    let baseline = {
         let map = match snapshots().lock() {
             Ok(m) => m,
             Err(_) => return result,
         };
-        match map.get(&session_id) {
-            Some(s) => s.clone(),
-            None => return result,
-        }
+        map.clone()
     };
 
     let mut current = std::collections::HashMap::new();
-    stats_walk(dir, &mut current, Some(&snapshot), STATS_MAX_FILES);
+    stats_walk(dir, &mut current, Some(&baseline), STATS_MAX_FILES);
 
     for (abs_path, cur) in &current {
         // u128 nanoseconds → i64 milliseconds. Lossy at ns scale but
         // ms is plenty for "sort by recency" in a UI list. Saturating
         // cast guards against the (impossible-in-practice) overflow.
         let mtime_ms: i64 = (cur.mtime_nanos / 1_000_000).try_into().unwrap_or(i64::MAX);
-        match snapshot.files.get(abs_path) {
+        match baseline.get(abs_path) {
             Some(base) => {
                 if base.mtime_nanos == cur.mtime_nanos { continue; }
                 let (added, deleted) = stats_line_diff(&base.line_hashes, &cur.line_hashes);
@@ -3205,7 +3204,6 @@ pub fn start_ui() -> anyhow::Result<()> {
             save_clipboard_image,
             list_directory,
             start_folder_snapshot,
-            drop_session_snapshot,
             compute_folder_stats,
             get_baseline_content,
             read_text_file,

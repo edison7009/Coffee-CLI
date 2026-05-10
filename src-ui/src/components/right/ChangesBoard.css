@@ -20,6 +20,22 @@
   padding: 0 0 12px 0;
 }
 
+/* Provenance chip — "via Claude · Codex" — sits inside the path span
+ * but kept faded so the file name remains the primary read. */
+.changes-tools {
+  color: var(--text-3);
+  font-size: 11px;
+}
+
+/* Sentinel for IntersectionObserver-based progressive load. Zero-
+ * height marker at the bottom of the rendered window; once it scrolls
+ * into view the list grows by another PAGE_SIZE rows. */
+.changes-sentinel {
+  height: 1px;
+  width: 100%;
+  pointer-events: none;
+}
+
 .changes-row {
   display: flex;
   align-items: center;
