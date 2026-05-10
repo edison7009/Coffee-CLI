@@ -4,7 +4,6 @@
 // Routes:
 //   /version.json          → dynamic version report (honors ?platform=)
 //   /download/<platform>   → proxy GitHub Release assets
-//   /play/<path>           → 410 Gone (retired, see route below)
 //   /*                     → CF Pages static files (env.ASSETS)
 
 const REPO = "edison7009/Coffee-CLI"
@@ -194,24 +193,6 @@ export default {
           "Cache-Control": "no-store",
         }
       })
-    }
-
-    // ── /play/<path> → 410 Gone ──────────────────────────────────────────────
-    // Coffee Play (DOS arcade) was retired alongside the Skills feature
-    // launch. Intercept at the Worker so edge-cached 200 responses from
-    // the pre-deletion era are replaced. Old install scripts that polled
-    // /play/game.json now get a clean signal to stop.
-    if (pathname.startsWith("/play/")) {
-      return new Response(
-        "Coffee Play has been retired. Skills are the new direction.\n",
-        {
-          status: 410,
-          headers: {
-            "Content-Type": "text/plain; charset=utf-8",
-            "Cache-Control": "no-store",
-          }
-        }
-      )
     }
 
     // ── /lang-packs/<path> → 410 Gone ────────────────────────────────────────
