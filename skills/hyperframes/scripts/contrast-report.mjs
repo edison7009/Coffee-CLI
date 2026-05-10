@@ -18,22 +18,19 @@
 
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { hyperframesPackageSpec, importPackagesOrBootstrap } from "./package-loader.mjs";
+
+import sharp from "sharp";
 
 // Use the producer's file server — it auto-injects the HyperFrames runtime
 // and render-seek bridge, so raw authoring HTML works without a build step.
-const packages = await importPackagesOrBootstrap(["@hyperframes/producer", "sharp"], {
-  npmPackages: [hyperframesPackageSpec("@hyperframes/producer"), "sharp@0.34.5"],
-});
-const sharp = packages.sharp.default;
-const {
+import {
   createFileServer,
   createCaptureSession,
   initializeSession,
   closeCaptureSession,
   captureFrameToBuffer,
   getCompositionDuration,
-} = packages["@hyperframes/producer"];
+} from "@hyperframes/producer";
 
 // ─── CLI ─────────────────────────────────────────────────────────────────────
 
@@ -156,9 +153,7 @@ async function annotateFrame(pngBuf, elements) {
 
   const measured = [];
   for (const el of elements) {
-    if (isBBoxOutsideFrame(el.bbox, width, height)) continue;
     const bg = sampleRingMedian(raw, width, height, channels, el.bbox);
-    if (!bg) continue;
     const fg = compositeOver(el.fg, bg); // flatten any alpha against measured bg
     const ratio = wcagRatio(fg, bg);
     const large = isLargeText(el.fontSize, el.fontWeight);
@@ -169,8 +164,6 @@ async function annotateFrame(pngBuf, elements) {
     el.wcagAAA = large ? ratio >= 4.5 : ratio >= 7;
     measured.push(el);
   }
-  elements.length = 0;
-  elements.push(...measured);
 
   // Draw boxes + ratio labels as an SVG overlay (sharp composite).
   const svg = buildOverlaySVG(measured, width, height);
@@ -190,7 +183,6 @@ function sampleRingMedian(raw, width, height, channels, bbox) {
   const y0 = Math.max(0, Math.floor(bbox.y) - 4);
   const y1 = Math.min(height - 1, Math.ceil(bbox.y + bbox.h) + 4);
   const pushPixel = (x, y) => {
-    if (x < 0 || x >= width || y < 0 || y >= height) return;
     const i = (y * width + x) * channels;
     r.push(raw[i]);
     g.push(raw[i + 1]);
@@ -204,12 +196,7 @@ function sampleRingMedian(raw, width, height, channels, bbox) {
     pushPixel(x0, y);
     pushPixel(x1, y);
   }
-  if (r.length === 0) return null;
   return [median(r), median(g), median(b), 1];
-}
-
-function isBBoxOutsideFrame(bbox, width, height) {
-  return bbox.x + bbox.w <= 0 || bbox.y + bbox.h <= 0 || bbox.x >= width || bbox.y >= height;
 }
 
 function median(arr) {

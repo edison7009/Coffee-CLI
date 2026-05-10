@@ -1,19 +1,7 @@
 ---
 name: hyperframes
-name_en: HyperFrames
-name_zh-CN: HyperFrames
-name_zh-TW: HyperFrames
-name_ja: HyperFrames
-name_ko: HyperFrames
-name_vi: HyperFrames
-name_ru: HyperFrames
-name_pt: HyperFrames
-name_es: HyperFrames
-name_fr: HyperFrames
-name_de: HyperFrames
 description: Create video compositions, animations, title cards, overlays, captions, voiceovers, audio-reactive visuals, and scene transitions in HyperFrames HTML. Use when asked to build any HTML-based video content, add captions or subtitles synced to audio, generate text-to-speech narration, create audio-reactive animation (beat sync, glow, pulse driven by music), add animated text highlighting (marker sweeps, hand-drawn circles, burst lines, scribble, sketchout), or add transitions between scenes (crossfades, wipes, reveals, shader transitions). Covers composition authoring, timing, media, and the full video production workflow.
-description_en: "Let your AI agent generate short videos in one click — HTML-defined compositions rendered to video."
-description_zh-CN: "目前超级火,就是让 Agent 一键生成短视频。"
+description_zh-CN: "一键生成短视频 —— 用 HTML 描述视频内容,Agent 自动产出动画、标题卡、字幕、配音、音频反应特效(节拍/发光/律动)、动画文字高亮和场景转场。涵盖合成创作、时序控制、媒体处理以及完整的视频制作流程。"
 ---
 
 # HyperFrames
@@ -22,57 +10,36 @@ HTML is the source of truth for video. A composition is an HTML file with `data-
 
 ## Approach
 
-### Discovery (exploratory requests only)
-
-For open-ended requests ("make me a product launch video", "create something for our brand") where the user hasn't committed to a direction, understand intent before picking colors:
-
-- **Audience** — who watches this? Developers? Executives? General consumers?
-- **Platform** — where does it play? Social (15s), website hero, product demo, internal?
-- **Priority** — what matters most? Motion quality? Content accuracy? Brand fidelity? Speed?
-- **Variations** — does the user want options, or a single best shot?
-
-For specific requests ("add a title card", "fix the timing on scene 3"), skip discovery.
-
-For exploratory requests, consider offering 2-3 variations that differ meaningfully — not just color swaps, but different pacing, energy levels, or structural approaches. One safe/expected, one ambitious. Don't mandate this — it's a tool available when appropriate.
-
-### Step 1: Design system
-
-If `design.md` or `DESIGN.md` exists in the project, read it first (check both casings — they're different files on Linux). It's the source of truth for brand colors, fonts, and constraints. Use its exact values — don't invent colors or substitute fonts. Any format works (YAML frontmatter, prose, tables — just extract the values).
-
-If it names fonts you can't find locally (no `fonts/` directory with `.woff2` files, not a built-in font), warn the user before writing HTML: "design.md specifies [font name] but no font files found. Please add .woff2 files to `fonts/` or I'll fall back to [closest built-in alternative]."
-
-If no `design.md` exists, offer the user a choice:
-
-1. **User named a style or mood?** → Read [visual-styles.md](./visual-styles.md) for the 8 named presets. Pick the closest match.
-2. **Want to browse options visually?** → Run the design picker: read [references/design-picker.md](references/design-picker.md) for the full workflow. This serves a visual picker page. The user configures mood, palette, typography, and motion in the browser, then copies the generated design.md and pastes it back into the conversation.
-3. **Want to skip and go fast?** → Ask: mood, light or dark, any brand colors/fonts? Then pick a palette from [house-style.md](./house-style.md).
-
-**design.md defines the brand. It does not define video composition rules.** Those come from [references/video-composition.md](references/video-composition.md) and [house-style.md](./house-style.md). Use brand colors at video-appropriate scale — not at web-UI opacity.
-
-### Step 2: Prompt expansion
-
-Always run on every composition (except single-scene pieces and trivial edits). This step grounds the user's intent against `design.md` and `house-style.md` and produces a consistent intermediate that every downstream agent reads the same way.
-
-Read [references/prompt-expansion.md](references/prompt-expansion.md) for the full process and output format.
-
-### Step 3: Plan
-
 Before writing HTML, think at a high level:
 
 1. **What** — what should the viewer experience? Identify the narrative arc, key moments, and emotional beats.
 2. **Structure** — how many compositions, which are sub-compositions vs inline, what tracks carry what (video, audio, overlays, captions).
-3. **Rhythm** — declare your scene rhythm before implementing. Which scenes are quick hits, which are holds, where do shaders land, where does energy peak. Name the pattern: fast-fast-SLOW-fast-SHADER-hold. Read [references/beat-direction.md](references/beat-direction.md) for rhythm templates.
-4. **Timing** — which clips drive the duration, where do transitions land, what's the pacing.
-5. **Layout** — build the end-state first. See "Layout Before Animation" below.
-6. **Animate** — then add motion using the rules below.
-
-**Build what was asked.** A request for "a title card" is not a request for "a title card + 3 supporting scenes + ambient music + captions." Every scene, every element, every tween should earn its place. If additional scenes or elements would genuinely improve the piece, propose them — don't add them.
+3. **Timing** — which clips drive the duration, where do transitions land, what's the pacing.
+4. **Layout** — build the end-state first. See "Layout Before Animation" below.
+5. **Animate** — then add motion using the rules below.
 
 For small edits (fix a color, adjust timing, add one element), skip straight to the rules.
 
+### Visual Identity Gate
+
 <HARD-GATE>
-Before writing ANY composition HTML — verify you have a visual identity from Step 1. If you're reaching for `#333`, `#3b82f6`, or `Roboto`, you skipped it.
+Before writing ANY composition HTML, you MUST have a visual identity defined. Do NOT write compositions with default or generic colors.
+
+Check in this order:
+
+1. **DESIGN.md exists in the project?** → Read it. Use its exact colors, fonts, motion rules, and "What NOT to Do" constraints.
+2. **visual-style.md exists?** → Read it. Apply its `style_prompt_full` and structured fields. (Note: `visual-style.md` is a project-specific file. `visual-styles.md` is the style library with 8 named presets — different files.)
+3. **User named a style** (e.g., "Swiss Pulse", "dark and techy", "luxury brand")? → Read [visual-styles.md](./visual-styles.md) for the 8 named presets. Generate a minimal DESIGN.md with: `## Style Prompt` (one paragraph), `## Colors` (3-5 hex values with roles), `## Typography` (1-2 font families), `## What NOT to Do` (3-5 anti-patterns).
+4. **None of the above?** → Ask 3 questions before writing any HTML:
+   - What's the mood? (explosive / cinematic / fluid / technical / chaotic / warm)
+   - Light or dark canvas?
+   - Any specific brand colors, fonts, or visual references?
+     Then generate a minimal DESIGN.md from the answers.
+
+Every composition must trace its palette and typography back to a DESIGN.md, visual-style.md, or explicit user direction. If you're reaching for `#333`, `#3b82f6`, or `Roboto` — you skipped this step.
 </HARD-GATE>
+
+For motion defaults, sizing, entrance patterns, and easing — follow [house-style.md](./house-style.md). The house style handles HOW things move. The DESIGN.md handles WHAT things look like.
 
 ## Layout Before Animation
 
@@ -84,7 +51,7 @@ Position every element where it should be at its **most visible moment** — the
 
 1. **Identify the hero frame** for each scene — the moment when the most elements are simultaneously visible. This is the layout you build.
 2. **Write static CSS** for that frame. The `.scene-content` container MUST fill the full scene using `width: 100%; height: 100%; padding: Npx;` with `display: flex; flex-direction: column; gap: Npx; box-sizing: border-box`. Use padding to push content inward — NEVER `position: absolute; top: Npx` on a content container. Absolute-positioned content containers overflow when content is taller than the remaining space. Reserve `position: absolute` for decoratives only.
-3. **Add entrances with `gsap.from()`** — animate FROM offscreen/invisible TO the CSS position. The CSS position is the ground truth; the tween describes the journey to get there. (In sub-compositions loaded via `data-composition-src`, prefer `gsap.fromTo()` — see load-bearing GSAP rules in [references/motion-principles.md](references/motion-principles.md).)
+3. **Add entrances with `gsap.from()`** — animate FROM offscreen/invisible TO the CSS position. The CSS position is the ground truth; the tween describes the journey to get there.
 4. **Add exits with `gsap.to()`** — animate TO offscreen/invisible FROM the CSS position.
 
 ### Example
@@ -161,20 +128,13 @@ Layered effects (glow behind text, shadow elements, background patterns) and z-s
 
 ### Composition Clips
 
-| Attribute                    | Required | Values                                                            |
-| ---------------------------- | -------- | ----------------------------------------------------------------- |
-| `data-composition-id`        | Yes      | Unique composition ID                                             |
-| `data-start`                 | Yes      | Start time (root composition: use `"0"`)                          |
-| `data-duration`              | Yes      | Takes precedence over GSAP timeline duration                      |
-| `data-width` / `data-height` | Yes      | Pixel dimensions (1920x1080 or 1080x1920)                         |
-| `data-composition-src`       | No       | Path to external HTML file                                        |
-| `data-variable-values`       | No       | JSON object of per-instance variable overrides on a sub-comp host |
-
-On the root `<html>` element:
-
-| Attribute                    | Required | Values                                                                                                                         |
-| ---------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `data-composition-variables` | No       | JSON array of declared variables (id/type/label/default) — drives Studio editing UI and provides defaults for `getVariables()` |
+| Attribute                    | Required | Values                                       |
+| ---------------------------- | -------- | -------------------------------------------- |
+| `data-composition-id`        | Yes      | Unique composition ID                        |
+| `data-start`                 | Yes      | Start time (root composition: use `"0"`)     |
+| `data-duration`              | Yes      | Takes precedence over GSAP timeline duration |
+| `data-width` / `data-height` | Yes      | Pixel dimensions (1920x1080 or 1080x1920)    |
+| `data-composition-src`       | No       | Path to external HTML file                   |
 
 ## Composition Structure
 
@@ -203,75 +163,6 @@ Sub-composition structure:
 ```
 
 Load in root: `<div id="el-1" data-composition-id="my-comp" data-composition-src="compositions/my-comp.html" data-start="0" data-duration="10" data-track-index="1"></div>`
-
-## Variables (Parametrized Compositions)
-
-Render the same composition with different content — title, theme color, prices, captions — without editing the source HTML.
-
-**Three-step pattern:**
-
-1. **Declare** variables on the composition's `<html>` root with `data-composition-variables`. Each entry needs `id`, `type` (one of `string`, `number`, `color`, `boolean`, `enum`), `label`, and `default`. Enum entries also need `options: [{value, label}, ...]`.
-2. **Read** the resolved values inside the composition's script with `window.__hyperframes.getVariables()`. Returns the merged result of declared defaults + per-instance overrides + CLI overrides.
-3. **Override** at render time with `npx hyperframes render --variables '{...}'` (top-level) or with `data-variable-values='{...}'` on the host element (per-instance for sub-comps).
-
-```html
-<!doctype html>
-<html
-  data-composition-variables='[
-  {"id":"title","type":"string","label":"Title","default":"Hello"},
-  {"id":"theme","type":"enum","label":"Theme","default":"light","options":[
-    {"value":"light","label":"Light"},
-    {"value":"dark","label":"Dark"}
-  ]}
-]'
->
-  <body>
-    <div data-composition-id="root" data-width="1920" data-height="1080">
-      <h1 id="hero" class="clip" data-start="0" data-duration="3"></h1>
-      <script>
-        const { title, theme } = window.__hyperframes.getVariables();
-        document.getElementById("hero").textContent = title;
-        document.body.dataset.theme = theme;
-      </script>
-    </div>
-  </body>
-</html>
-```
-
-```bash
-# Dev preview uses declared defaults
-npx hyperframes preview
-
-# Render with overrides
-npx hyperframes render --variables '{"title":"Q4 Report","theme":"dark"}' --output q4.mp4
-
-# Or from a JSON file
-npx hyperframes render --variables-file ./vars.json
-```
-
-**Sub-composition per-instance values:** the same `getVariables()` works inside sub-comps loaded via `data-composition-src`. Each host element passes its own values:
-
-```html
-<div
-  data-composition-id="card-pro"
-  data-composition-src="compositions/card.html"
-  data-variable-values='{"title":"Pro","price":"$29"}'
-></div>
-<div
-  data-composition-id="card-enterprise"
-  data-composition-src="compositions/card.html"
-  data-variable-values='{"title":"Enterprise","price":"Custom"}'
-></div>
-```
-
-The runtime layers each host's `data-variable-values` over the sub-comp's declared defaults on a per-instance basis, so the same source can be embedded multiple times with different content.
-
-**Rules of thumb:**
-
-- Always provide a sensible `default` for every declared variable. Dev preview uses defaults — without them, the composition won't render correctly until `--variables` is provided.
-- Read variables once at the top of the script (`const { title } = ...`), not inside frame loops or event handlers — `getVariables()` allocates a fresh object per call.
-- Use `--strict-variables` in CI to fail fast on undeclared keys or type mismatches.
-- Variable types are validated at render time. `string`, `number`, `boolean`, and `color` (hex string) check `typeof`; `enum` checks the value is in the declared `options`.
 
 ## Video and Audio
 
@@ -369,34 +260,27 @@ tl.from("#s2-heading", { x: -40, opacity: 0, duration: 0.6, ease: "expo.out" }, 
 - 60px+ headlines, 20px+ body, 16px+ data labels for rendered video
 - `font-variant-numeric: tabular-nums` on number columns
 
-If no `design.md` exists, follow [house-style.md](./house-style.md) for aesthetic defaults.
+When no `visual-style.md` or animation direction is provided, follow [house-style.md](./house-style.md) for aesthetic defaults.
 
 ## Typography and Assets
 
-- **Built-in fonts:** Write the `font-family` you want in CSS — the compiler embeds supported fonts automatically.
-- **Custom fonts:** If design.md names a font that isn't built-in, the user must provide `.woff2` files in a `fonts/` directory. If missing, warn before writing HTML. When files exist, add `@font-face` declarations pointing to the local files.
+- **Fonts:** Just write the `font-family` you want in CSS — the compiler embeds supported fonts automatically. If a font isn't supported, the compiler warns.
 - Add `crossorigin="anonymous"` to external media
 - For dynamic text overflow, use `window.__hyperframes.fitTextFontSize(text, { maxWidth, fontFamily, fontWeight })`
 - All files live at the project root alongside `index.html`; sub-compositions use `../`
 
 ## Editing Existing Compositions
 
-- **Read actual files, don't guess.** When editing, extending, or creating companion compositions, read the existing source. Don't reconstruct hex codes from memory. Don't guess GSAP easing patterns. The composition IS the spec — extract exact values from it.
-- Match existing fonts, colors, animation patterns from what you read
+- Read the full composition first — match existing fonts, colors, animation patterns
 - Only change what was requested
 - Preserve timing of unrelated clips
 
 ## Output Checklist
 
-**Fast (run immediately, block on results):**
-
 - [ ] `npx hyperframes lint` and `npx hyperframes validate` both pass
-- [ ] Design adherence verified if design.md exists
-
-**Slow (run in parallel while presenting the preview to the user):**
-
 - [ ] `npx hyperframes inspect` passes, or every reported overflow is intentionally marked
 - [ ] Contrast warnings addressed (see Quality Checks below)
+- [ ] Layout issues addressed (see Quality Checks below)
 - [ ] Animation choreography verified (see Quality Checks below)
 
 ## Quality Checks
@@ -434,24 +318,6 @@ If warnings appear:
 
 Use `--no-contrast` to skip if iterating rapidly and you'll check later.
 
-### Design Adherence
-
-If a `design.md` exists, verify the composition follows it after authoring. Read the HTML and check:
-
-1. **Colors** — every hex value in the composition appears in design.md's palette section (however the user labeled it: Colors, Palette, Theme, etc.). Flag any invented colors.
-2. **Typography** — font families and weights match design.md's type spec. No substitutions.
-3. **Corners** — border-radius values match the declared corner style, if specified.
-4. **Spacing** — padding and gap values fall within the declared density range, if specified.
-5. **Depth** — shadow usage matches the declared depth level, if specified (flat = none, subtle = light, layered = glows).
-6. **Avoidance rules** — if design.md has a section listing things to avoid (commonly "What NOT to Do", "Don'ts", "Anti-patterns", or "Do's and Don'ts"), verify none are present.
-
-Report violations as a checklist. Fix each one before serving.
-
-If no `design.md` exists (house-style-only path), verify:
-
-1. **Palette consistency** — the same bg, fg, and accent colors are used across all scenes. No per-scene color invention.
-2. **No lazy defaults** — check the composition against house-style.md's "Lazy Defaults to Question" list. If any appear, they must be a deliberate choice for the content, not a default.
-
 ### Animation Map
 
 After authoring animations, run the animation map to verify choreography:
@@ -480,20 +346,16 @@ Skip on small edits (fixing a color, adjusting one duration). Run on new composi
 ## References (loaded on demand)
 
 - **[references/captions.md](references/captions.md)** — Captions, subtitles, lyrics, karaoke synced to audio. Tone-adaptive style detection, per-word styling, text overflow prevention, caption exit guarantees, word grouping. Read when adding any text synced to audio timing.
+- **[references/tts.md](references/tts.md)** — Text-to-speech with Kokoro-82M. Voice selection, speed tuning, TTS+captions workflow. Read when generating narration or voiceover.
 - **[references/audio-reactive.md](references/audio-reactive.md)** — Audio-reactive animation: map frequency bands and amplitude to GSAP properties. Read when visuals should respond to music, voice, or sound.
 - **[references/css-patterns.md](references/css-patterns.md)** — CSS+GSAP marker highlighting: highlight, circle, burst, scribble, sketchout. Deterministic, fully seekable. Read when adding visual emphasis to text.
-- **[references/video-composition.md](references/video-composition.md)** — Video-medium rules: density, color presence, scale, frame composition, design.md as brand not layout. **Always read** — these override web instincts.
-- **[references/beat-direction.md](references/beat-direction.md)** — Beat planning: concept, mood, choreography verbs, rhythm templates, transition decisions, depth layers. **Always read for multi-scene compositions.**
 - **[references/typography.md](references/typography.md)** — Typography: font pairing, OpenType features, dark-background adjustments, font discovery script. **Always read** — every composition has text.
-- **[references/motion-principles.md](references/motion-principles.md)** — Motion design principles, image motion treatment, load-bearing GSAP rules. **Always read** — every composition has motion.
-- **[references/techniques.md](references/techniques.md)** — 11 visual techniques with code patterns: SVG drawing, Canvas 2D, CSS 3D, kinetic type, Lottie, video compositing, typing effect, variable fonts, MotionPath, velocity transitions, audio-reactive. Read when planning techniques per beat.
-- **[references/narration.md](references/narration.md)** — Pacing, tone, script structure, number pronunciation, opening line patterns. Read when the composition includes voiceover or TTS.
-- **[references/design-picker.md](references/design-picker.md)** — Create a design.md via visual picker. Read when no design.md exists and the user wants to create one.
-- **[visual-styles.md](visual-styles.md)** — 8 named visual styles with hex palettes, GSAP easing signatures, and shader pairings. Read when user names a style or when generating design.md.
-- **[house-style.md](house-style.md)** — Default motion, sizing, and color palettes when no design.md is specified.
+- **[references/motion-principles.md](references/motion-principles.md)** — Motion design principles: easing as emotion, timing as weight, choreography as hierarchy, scene pacing, ambient motion, anti-patterns. Read when choreographing GSAP animations.
+- **[visual-styles.md](visual-styles.md)** — 8 named visual styles (Swiss Pulse, Velvet Standard, Deconstructed, Maximalist Type, Data Drift, Soft Signal, Folk Frequency, Shadow Cut) with hex palettes, GSAP easing signatures, and shader pairings. Read when user names a style or when generating DESIGN.md.
+- **[house-style.md](house-style.md)** — Default motion, sizing, and color palettes when no style is specified.
 - **[patterns.md](patterns.md)** — PiP, title cards, slide show patterns.
 - **[data-in-motion.md](data-in-motion.md)** — Data, stats, and infographic patterns.
-- **[references/transcript-guide.md](references/transcript-guide.md)** — Caption-side transcript handling: input formats, mandatory quality check, cleaning JS, OpenAI/Groq API fallback, "if no transcript exists" flow. (For the `transcribe` CLI invocation, model selection rules, and the `.en` gotcha, see the `hyperframes-media` skill.)
+- **[references/transcript-guide.md](references/transcript-guide.md)** — Transcription commands, whisper models, external APIs, troubleshooting.
 - **[references/dynamic-techniques.md](references/dynamic-techniques.md)** — Dynamic caption animation techniques (karaoke, clip-path, slam, scatter, elastic, 3D).
 
 - **[references/transitions.md](references/transitions.md)** — Scene transitions: crossfades, wipes, reveals, shader transitions. Energy/mood selection, CSS vs WebGL guidance. **Always read for multi-scene compositions** — scenes without transitions feel like jump cuts.
