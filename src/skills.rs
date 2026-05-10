@@ -121,14 +121,19 @@ fn is_tool_installed(bin: &str) -> bool {
 /// ship 5, test next batch, ship next batch" without re-cutting a
 /// release just to add more skill catalog entries.
 ///
-/// v1 batch (2 skills validating the architecture):
-///   - `screenshot` — openai/skills curated; pure SKILL.md, no API keys.
-///     Validates the openai-skills bundle → junction → /screenshot path.
-///   - `vibeid` — Coffee CLI's own skill; ships scripts/ + matrix.json,
-///     references CDN-hosted persona images, requires Claude Code's
-///     /insights data. Validates the coffee-skills bundle path AND the
-///     more complex script-bundled skill shape.
-const VISIBLE_SKILLS: &[&str] = &["screenshot", "vibeid"];
+/// Phased rollout — only names listed here are seeded + surfaced.
+///
+///   - `screenshot` — openai/skills (MIT, LICENSE.txt preserved).
+///   - `vibeid` — Coffee CLI's own; ships scripts/ + matrix.json,
+///     references CDN-hosted persona images, parses Claude Code's
+///     session jsonl directly.
+///   - `hyperframes` — heygen-com/hyperframes (Apache-2.0, LICENSE.txt
+///     preserved). HTML → short-video framework. Vendored from
+///     `skills/hyperframes/` of the upstream multi-skill repo; the
+///     other 13 sibling skills (hyperframes-cli, gsap, etc.) are not
+///     bundled — the main `hyperframes` skill is self-sufficient for
+///     authoring compositions.
+const VISIBLE_SKILLS: &[&str] = &["screenshot", "vibeid", "hyperframes"];
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
