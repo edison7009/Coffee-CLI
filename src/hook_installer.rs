@@ -19,6 +19,16 @@
 //     1. ~/.config/opencode/plugins/coffee-cli-island.js — auto-loaded by
 //        OpenCode/Bun on every session. Same env-var no-op gate as Codex.
 //
+//   Hermes Agent
+//     1. ~/.hermes/plugins/coffee-cli-status/__init__.py — Python plugin
+//        registering hooks for pre_llm_call / pre_tool_call /
+//        pre_approval_request / on_session_start / etc.
+//     2. ~/.hermes/plugins/coffee-cli-status/plugin.yaml — manifest
+//     3. `hermes plugins enable coffee-cli-status` — Hermes' opt-in CLI
+//        gate (third-party plugins don't load until allow-listed in
+//        ~/.hermes/config.yaml). We let Hermes' own command do the YAML
+//        edit so we don't have to YAML-round-trip user config.
+//
 // IMPORTANT — Claude event list discipline:
 // Claude Code rejects the *entire* hooks block if it contains an unknown
 // event name (cf. vibe-notch source comment, anthropics/claude-code#6305).
@@ -42,6 +52,10 @@ const CODEX_NOTIFY_FILENAME: &str = "coffee-cli-codex-notify.py";
 
 const OPENCODE_PLUGIN_SCRIPT: &str = include_str!("../scripts/coffee-cli-opencode-plugin.js");
 const OPENCODE_PLUGIN_FILENAME: &str = "coffee-cli-island.js";
+
+const HERMES_PLUGIN_SCRIPT: &str = include_str!("../scripts/coffee-cli-hermes-plugin.py");
+const HERMES_PLUGIN_NAME: &str = "coffee-cli-status";
+const HERMES_PLUGIN_YAML: &str = "name: coffee-cli-status\nversion: \"1.0\"\ndescription: Forwards Hermes session lifecycle events to Coffee CLI's tab status bus over local TCP. No-ops outside Coffee CLI.\n";
 
 /// Events Coffee CLI listens for. Mirrors vibe-notch (ClaudeIsland)'s
 /// proven-working set; do not add unknown event names — Claude Code drops
@@ -106,6 +120,7 @@ fn dispatch_install(tool: &crate::tools::ToolDescriptor, home: &Path) {
             install_opencode(home);
             ensure_opencode_tui_theme_default(home);
         }
+        "hermes" => install_hermes(home),
         other => {
             eprintln!(
                 "[hook-installer] tool '{}' declares a hook surface but has no installer — \
@@ -220,6 +235,87 @@ fn install_opencode(home: &Path) {
             plugin_path.display(),
             e
         );
+    }
+}
+
+/// Hermes Agent plugin — drop a 2-file Python plugin into
+/// ~/.hermes/plugins/coffee-cli-status/, then ask Hermes itself to
+/// enable it via `hermes plugins enable coffee-cli-status`. Hermes
+/// general plugins are opt-in by default (third-party code doesn't
+/// run until allow-listed in ~/.hermes/config.yaml), and shelling out
+/// to Hermes' own CLI is safer than us round-tripping the user's
+/// config.yaml — comments and key ordering survive intact.
+///
+/// Idempotent: if the plugin is already enabled, `hermes plugins
+/// enable` is a no-op. Errors are logged, never fatal.
+fn install_hermes(home: &Path) {
+    let plugin_dir = home
+        .join(".hermes")
+        .join("plugins")
+        .join(HERMES_PLUGIN_NAME);
+    if let Err(e) = fs::create_dir_all(&plugin_dir) {
+        eprintln!(
+            "[hook-installer] failed to create {}: {}",
+            plugin_dir.display(),
+            e
+        );
+        return;
+    }
+
+    let init_path = plugin_dir.join("__init__.py");
+    if let Err(e) = fs::write(&init_path, HERMES_PLUGIN_SCRIPT) {
+        eprintln!(
+            "[hook-installer] failed to write {}: {}",
+            init_path.display(),
+            e
+        );
+        return;
+    }
+
+    let manifest_path = plugin_dir.join("plugin.yaml");
+    if let Err(e) = fs::write(&manifest_path, HERMES_PLUGIN_YAML) {
+        eprintln!(
+            "[hook-installer] failed to write {}: {}",
+            manifest_path.display(),
+            e
+        );
+        return;
+    }
+
+    // Also keep a debug copy under ~/.coffee-cli/hooks/ so the source is
+    // co-located with the other forwarders for grep-friendly debugging.
+    let _ = write_aux_script(
+        home,
+        "coffee-cli-hermes-plugin.py",
+        HERMES_PLUGIN_SCRIPT,
+    );
+
+    // Hermes' allow-list gate. We invoke `hermes plugins enable
+    // coffee-cli-status` rather than editing config.yaml ourselves —
+    // Hermes' own command knows the canonical YAML shape and won't clobber
+    // the user's comments / quoted strings / anchor references. The call
+    // is idempotent: running it twice does not duplicate the entry.
+    use std::process::Command;
+    match Command::new("hermes")
+        .args(["plugins", "enable", HERMES_PLUGIN_NAME])
+        .output()
+    {
+        Ok(out) if out.status.success() => {}
+        Ok(out) => {
+            eprintln!(
+                "[hook-installer] `hermes plugins enable {}` exited {} — \
+                 user may need to enable it manually via `hermes plugins`",
+                HERMES_PLUGIN_NAME,
+                out.status,
+            );
+        }
+        Err(e) => {
+            eprintln!(
+                "[hook-installer] failed to run `hermes plugins enable`: {} \
+                 — user may need to enable it manually via `hermes plugins`",
+                e,
+            );
+        }
     }
 }
 

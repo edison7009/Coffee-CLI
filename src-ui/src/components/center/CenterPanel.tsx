@@ -1232,7 +1232,7 @@ export function CenterPanel() {
                     *is* the alive signal: always green idle, no agent
                     state to read. Anything else (terminal, history,
                     multi-agent, etc.) gets no indicator. */}
-                {(session.tool === 'claude' || session.tool === 'codex' || session.tool === 'opencode' || session.tool === 'hyper-agent') && (
+                {(session.tool === 'claude' || session.tool === 'codex' || session.tool === 'opencode' || session.tool === 'hermes' || session.tool === 'hyper-agent') && (
                   <div className={`tab-status-grid status-${
                     session.tool === 'hyper-agent'
                       ? 'idle'
