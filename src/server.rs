@@ -2467,29 +2467,34 @@ fn load_message_heatmap_blocking() -> Result<Vec<HeatmapEntry>, String> {
     let mut candidates: Vec<(std::time::SystemTime, std::path::PathBuf, &'static str)> = Vec::new();
 
     if let Some(home) = dirs::home_dir() {
-        let claude_dir = crate::tool_config::history_path_for(
-            "claude", home.join(".claude").join("projects"));
-        collect_jsonl_paths_with_mtime(claude_dir, 2, "claude", &mut candidates);
-
-        let hermes_dir = crate::tool_config::history_path_for(
-            "hermes", home.join(".hermes").join("sessions"));
-        collect_hermes_paths_with_mtime(hermes_dir, &mut candidates);
-
-        let codex_dir = crate::tool_config::history_path_for(
-            "codex", home.join(".codex").join("sessions"));
-        collect_jsonl_paths_with_mtime(codex_dir, 4, "codex", &mut candidates);
-
-        let gemini_dir = crate::tool_config::history_path_for(
-            "gemini", home.join(".gemini").join("tmp"));
-        collect_jsonl_paths_with_mtime(gemini_dir, 3, "gemini", &mut candidates);
-
-        let openclaw_dir = crate::tool_config::history_path_for(
-            "openclaw", home.join(".openclaw").join("agents"));
-        collect_jsonl_paths_with_mtime(openclaw_dir, 3, "openclaw", &mut candidates);
-
-        let qwen_dir = crate::tool_config::history_path_for(
-            "qwen", home.join(".qwen").join("projects"));
-        collect_jsonl_paths_with_mtime(qwen_dir, 3, "qwen", &mut candidates);
+        // Same registry-driven dispatch as load_native_history_blocking.
+        // The heatmap excludes the OpenCode SQLite case from the
+        // mtime-then-count pipeline; that's a second-pass scan below.
+        for tool in crate::tools::TOOLS {
+            let Some(shape) = tool.history_shape.as_ref() else { continue };
+            let default_root = home.join(
+                shape.root_under_home().replace('/', std::path::MAIN_SEPARATOR_STR),
+            );
+            let scan_dir = crate::tool_config::history_path_for(tool.id, default_root);
+            match shape {
+                crate::tools::HistoryShape::GenericJsonl { depth, .. } => {
+                    collect_jsonl_paths_with_mtime(scan_dir, *depth, tool.id, &mut candidates);
+                }
+                crate::tools::HistoryShape::CodexRollout { .. } => {
+                    collect_jsonl_paths_with_mtime(scan_dir, 4, tool.id, &mut candidates);
+                }
+                crate::tools::HistoryShape::GeminiTmp { .. }
+                | crate::tools::HistoryShape::QwenProjects { .. } => {
+                    collect_jsonl_paths_with_mtime(scan_dir, 3, tool.id, &mut candidates);
+                }
+                crate::tools::HistoryShape::HermesFlatJson { .. } => {
+                    collect_hermes_paths_with_mtime(scan_dir, &mut candidates);
+                }
+                crate::tools::HistoryShape::OpenCodeMixed { .. } => {
+                    // Handled below — SQLite query, not jsonl mtime walk.
+                }
+            }
+        }
     }
 
     // Per-file count cache. Heatmap re-scans every app launch and counts
@@ -2557,19 +2562,24 @@ fn load_message_heatmap_blocking() -> Result<Vec<HeatmapEntry>, String> {
     // fit the candidates-by-mtime pipeline above. One GROUP BY query gets
     // us the same (timestamp, message_count) tuples the heatmap consumes,
     // pre-filtered by the same 210-day cutoff so we don't read rows the
-    // frontend would discard anyway.
+    // frontend would discard anyway. Default root sourced from the
+    // registry to stay in sync with load_native_history_blocking.
     if let Some(home) = dirs::home_dir() {
-        let opencode_root = crate::tool_config::history_path_for(
-            "opencode",
-            home.join(".local").join("share").join("opencode"),
-        );
-        let db_path = opencode_root.join("opencode.db");
-        if db_path.is_file() {
-            let cutoff_secs = cutoff
-                .duration_since(std::time::UNIX_EPOCH)
-                .map(|d| d.as_secs() as i64)
-                .unwrap_or(0);
-            collect_opencode_heatmap_entries(&db_path, cutoff_secs, &mut out);
+        if let Some(tool) = crate::tools::find("opencode") {
+            if let Some(shape) = tool.history_shape.as_ref() {
+                let default_root = home.join(
+                    shape.root_under_home().replace('/', std::path::MAIN_SEPARATOR_STR),
+                );
+                let opencode_root = crate::tool_config::history_path_for(tool.id, default_root);
+                let db_path = opencode_root.join("opencode.db");
+                if db_path.is_file() {
+                    let cutoff_secs = cutoff
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .map(|d| d.as_secs() as i64)
+                        .unwrap_or(0);
+                    collect_opencode_heatmap_entries(&db_path, cutoff_secs, &mut out);
+                }
+            }
         }
     }
 
