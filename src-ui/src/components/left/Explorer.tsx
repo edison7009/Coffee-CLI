@@ -358,21 +358,21 @@ const ICON_ART_THEMES: { id: IconTheme; folderSrc: string }[] = [
   { id: 'coffee',       folderSrc: '/icons/themes/coffee/folder-closed.svg'       },
 ];
 
-function ThemeMenu({ anchorRef, currentTheme, currentShape, currentIconTheme, hasBg, termColorScheme, wallpaperDim, onSelectTheme, onSelectShape, onSelectIconTheme, onPickBg, onClearBg, onSelectScheme, onSetWallpaperDim, onClose, t }: {
+function ThemeMenu({ anchorRef, currentTheme, currentShape, currentIconTheme, hasBg, termColorScheme, wallpaperOpacity, onSelectTheme, onSelectShape, onSelectIconTheme, onPickBg, onClearBg, onSelectScheme, onSetWallpaperOpacity, onClose, t }: {
   anchorRef: React.RefObject<HTMLButtonElement | null>;
   currentTheme: ThemeColor;
   currentShape: ThemeShape;
   currentIconTheme: IconTheme;
   hasBg: boolean;
   termColorScheme: string;
-  wallpaperDim: number;
+  wallpaperOpacity: number;
   onSelectTheme: (t: ThemeColor) => void;
   onSelectShape: (s: ThemeShape) => void;
   onSelectIconTheme: (t: IconTheme) => void;
   onPickBg: () => void;
   onClearBg: () => void;
   onSelectScheme: (id: string) => void;
-  onSetWallpaperDim: (n: number) => void;
+  onSetWallpaperOpacity: (n: number) => void;
   onClose: () => void;
   t: (key: any) => string;
 }) {
@@ -446,14 +446,14 @@ function ThemeMenu({ anchorRef, currentTheme, currentShape, currentIconTheme, ha
         <input
           type="range"
           min={0}
-          max={80}
+          max={100}
           step={5}
-          value={wallpaperDim}
-          onChange={(e) => onSetWallpaperDim(parseInt(e.target.value, 10))}
+          value={wallpaperOpacity}
+          onChange={(e) => onSetWallpaperOpacity(parseInt(e.target.value, 10))}
           className="theme-dim-slider"
-          aria-label="Wallpaper dim"
+          aria-label="Wallpaper opacity"
         />
-        <span className="theme-dim-value">{wallpaperDim}%</span>
+        <span className="theme-dim-value">{wallpaperOpacity}%</span>
       </div>
 
       {/* Terminal foreground color scheme row */}
@@ -1170,7 +1170,7 @@ export function Explorer() {
           currentIconTheme={state.iconTheme}
           hasBg={state.bgType !== 'none' && state.bgPath !== ''}
           termColorScheme={state.termColorScheme}
-          wallpaperDim={state.wallpaperDim}
+          wallpaperOpacity={state.wallpaperOpacity}
           onSelectTheme={(t) => dispatch({ type: 'SET_THEME', theme: t })}
           onSelectShape={(s) => dispatch({ type: 'SET_SHAPE', shape: s })}
           onSelectIconTheme={(t) => {
@@ -1199,7 +1199,7 @@ export function Explorer() {
             try { id ? localStorage.setItem('cc-term-scheme', id) : localStorage.removeItem('cc-term-scheme'); } catch {}
             dispatch({ type: 'SET_TERM_SCHEME', scheme: id });
           }}
-          onSetWallpaperDim={(n) => dispatch({ type: 'SET_WALLPAPER_DIM', dim: n })}
+          onSetWallpaperOpacity={(n) => dispatch({ type: 'SET_WALLPAPER_OPACITY', opacity: n })}
           onClose={() => setThemeMenuOpen(false)}
           t={t}
         />

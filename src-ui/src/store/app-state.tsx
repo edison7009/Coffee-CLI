@@ -97,8 +97,12 @@ export interface AppState {
   // Background wallpaper
   bgPath: string;
   bgType: 'image' | 'video' | 'none';
-  // Wallpaper dim overlay opacity, 0-80 (percent). 30 by default for legibility.
-  wallpaperDim: number;
+  // Wallpaper image opacity, 0-100 (percent). 100 = fully visible, 0 =
+  // fully transparent (image not visible). Default 70 — leaves the
+  // theme's base color partially visible underneath so foreground text
+  // stays legible on busy wallpapers without a black overlay (the
+  // overlay was the previous design and clashed with themed colors).
+  wallpaperOpacity: number;
 
   // Terminal foreground color override ('' = use theme default)
   termColorScheme: string;
@@ -182,8 +186,7 @@ type Action =
   | { type: 'SET_AGENT_STATUS'; id: string; status: AgentStatus }
   | { type: 'SET_BG'; path: string; bgType: 'image' | 'video' }
   | { type: 'CLEAR_BG' }
-  | { type: 'SET_WALLPAPER_DIM'; dim: number }
-  | { type: 'SET_WALLPAPER_DIM'; dim: number }
+  | { type: 'SET_WALLPAPER_OPACITY'; opacity: number }
   | { type: 'SET_TERM_SCHEME'; scheme: string }
   | { type: 'TOGGLE_GAMBIT' }
   | { type: 'SET_GAMBIT_DRAFT'; id: string; draft: string }
@@ -310,8 +313,8 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, bgPath: action.path, bgType: action.bgType };
     case 'CLEAR_BG':
       return { ...state, bgPath: '', bgType: 'none' };
-    case 'SET_WALLPAPER_DIM':
-      return { ...state, wallpaperDim: Math.max(0, Math.min(80, action.dim)) };
+    case 'SET_WALLPAPER_OPACITY':
+      return { ...state, wallpaperOpacity: Math.max(0, Math.min(100, action.opacity)) };
     case 'SET_TERM_SCHEME':
       return { ...state, termColorScheme: action.scheme };
     case 'TOGGLE_GAMBIT':
@@ -461,7 +464,7 @@ function getInitialState(): AppState {
   let bgPath = '';
   let bgType: 'image' | 'video' | 'none' = 'none';
   let termColorScheme = '';
-  let wallpaperDim = 30;
+  let wallpaperOpacity = 70;
   try {
     const storedPath = localStorage.getItem('cc-bg-path');
     const storedType = localStorage.getItem('cc-bg-type') as 'image' | 'video' | 'none' | null;
@@ -483,10 +486,24 @@ function getInitialState(): AppState {
     }
 
     termColorScheme = localStorage.getItem('cc-term-scheme') || '';
-    const savedDim = localStorage.getItem('cc-wallpaper-dim');
-    if (savedDim !== null) {
-      const n = parseInt(savedDim, 10);
-      if (!Number.isNaN(n) && n >= 0 && n <= 80) wallpaperDim = n;
+    // New key (post-refactor): wallpaper opacity, 0-100, larger = more
+    // visible. Old key was `cc-wallpaper-dim` (0-80, larger = darker
+    // overlay). On first load after upgrade, fall back to the legacy
+    // key with `opacity ≈ 100 - dim` so the user's perceived brightness
+    // stays close to what they had set, then write the new key.
+    const savedOpacity = localStorage.getItem('cc-wallpaper-opacity');
+    if (savedOpacity !== null) {
+      const n = parseInt(savedOpacity, 10);
+      if (!Number.isNaN(n) && n >= 0 && n <= 100) wallpaperOpacity = n;
+    } else {
+      const savedDim = localStorage.getItem('cc-wallpaper-dim');
+      if (savedDim !== null) {
+        const n = parseInt(savedDim, 10);
+        if (!Number.isNaN(n) && n >= 0 && n <= 80) {
+          wallpaperOpacity = Math.max(0, Math.min(100, 100 - n));
+        }
+        try { localStorage.removeItem('cc-wallpaper-dim'); } catch {}
+      }
     }
   } catch {}
 
@@ -509,7 +526,7 @@ function getInitialState(): AppState {
     currentLang: lang,
     bgPath,
     bgType,
-    wallpaperDim,
+    wallpaperOpacity,
     termColorScheme,
     terminals: [{ id: defaultTerminalId, tool: null, folderPath }],
     activeTerminalId: defaultTerminalId,

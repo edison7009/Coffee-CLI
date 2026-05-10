@@ -32,16 +32,9 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-}
-/* User-controlled dim overlay (--wallpaper-dim is set on :root from
-   app-state, 0.0–0.8). Same formula as .launchpad-bg::after for
-   consistent brightness across surfaces. */
-.multi-agent-bg::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, var(--wallpaper-dim, 0.3));
-  pointer-events: none;
+  /* User-controlled image opacity. Same --wallpaper-opacity variable
+     as launchpad and tier-terminal — see CenterPanel.css for rationale. */
+  opacity: var(--wallpaper-opacity, 0.7);
 }
 
 /* Make sure panes sit above the bg layer regardless of DOM order. */

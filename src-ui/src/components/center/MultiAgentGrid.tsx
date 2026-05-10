@@ -151,8 +151,9 @@ export function MultiAgentGrid({ tab, hasBg, bgUrl, bgType, paneCount = 4 }: Pro
           their TierTerminal's own .tier-terminal-bg layer — harmless
           redundancy, but guarantees xterm-transparent composition
           stays correct regardless of grid-level state. Mirrors the
-          .launchpad-bg pattern in CenterPanel so the wallpaper-dim
-          overlay (--wallpaper-dim on :root) works the same way. */}
+          .launchpad-bg pattern in CenterPanel so the user-controlled
+          image opacity (--wallpaper-opacity on :root) applies the
+          same way. */}
       {hasBg && bgUrl && (
         <div className="multi-agent-bg">
           {bgType === 'video'

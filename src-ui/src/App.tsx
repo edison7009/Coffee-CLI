@@ -47,12 +47,13 @@ export function App() {
     document.documentElement.lang = state.currentLang;
   }, [state.currentLang]);
 
-  // Wallpaper dim: expose as CSS variable --wallpaper-dim (0.0–0.8) for the
-  // .launchpad-bg::after / .tier-terminal-bg::after overlay layers.
+  // Wallpaper image opacity: expose as CSS variable --wallpaper-opacity
+  // (0.0–1.0) for the .launchpad-bg / .tier-terminal-bg / .multi-agent-bg
+  // img+video elements. Larger value = more visible image.
   useEffect(() => {
-    document.documentElement.style.setProperty('--wallpaper-dim', String(state.wallpaperDim / 100));
-    try { localStorage.setItem('cc-wallpaper-dim', String(state.wallpaperDim)); } catch {}
-  }, [state.wallpaperDim]);
+    document.documentElement.style.setProperty('--wallpaper-opacity', String(state.wallpaperOpacity / 100));
+    try { localStorage.setItem('cc-wallpaper-opacity', String(state.wallpaperOpacity)); } catch {}
+  }, [state.wallpaperOpacity]);
 
   // Startup: resolve IPC
   useEffect(() => {
