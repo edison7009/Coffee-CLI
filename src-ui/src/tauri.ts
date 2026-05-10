@@ -165,8 +165,14 @@ export const commands = {
   skillsWriteFile: (name: string, relPath: string, bytes: number[] | Uint8Array) =>
     invoke<void>('skills_write_file', { name, relPath, bytes: Array.from(bytes) }),
   skillsList: () => invoke<{ name: string; enabled: boolean; skillMd: string | null; iconDataUrl: string | null }[]>('skills_list'),
+  /** Toggle a skill on or off. On success, returns a list of per-tool
+   *  warnings — usually empty. Non-empty entries describe tools whose
+   *  skills dir already contained a real folder for this skill (manual
+   *  install); Coffee CLI doesn't clobber those, so the user keeps
+   *  their version on those tools. UI should surface these as a
+   *  per-line toast alongside the success indicator. */
   skillsToggle: (name: string, enable: boolean) =>
-    invoke<void>('skills_toggle', { name, enable }),
+    invoke<string[]>('skills_toggle', { name, enable }),
   skillsDelete: (name: string) => invoke<void>('skills_delete', { name }),
   /** When a CLI flips from not-installed → installed mid-session, fan
    *  out every currently-enabled skill into that tool's skills dir.

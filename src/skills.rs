@@ -81,16 +81,15 @@ fn target_cli_skill_dirs() -> impl Iterator<Item = (&'static str, &'static str)>
 }
 
 /// Process-level cache of `is_tool_installed` results. A single toggle
-/// fans out to `precheck_link_conflicts` (6 probes) and then
-/// `link_into_cli_dirs` (another 6) — that's 12 `where`/`which` spawns
-/// per click, and on Windows each spawn is hundreds of milliseconds,
-/// which the user feels as a stall on the toggle. Tool install state
-/// almost never changes during one Coffee CLI session, so we probe
-/// once per binary and reuse the result for the rest of the process
-/// lifetime. If the user installs/uninstalls a target CLI mid-session
-/// they need to relaunch Coffee CLI to pick up the change — that's a
-/// rare and explicit user action, worth the trade-off vs paying the
-/// PATH-probe cost on every toggle.
+/// fans out to `link_into_cli_dirs` (6 PATH probes), and on Windows each
+/// `where` spawn is hundreds of milliseconds, which the user feels as a
+/// stall on the toggle. Tool install state almost never changes during
+/// one Coffee CLI session, so we probe once per binary and reuse the
+/// result for the rest of the process lifetime. If the user
+/// installs/uninstalls a target CLI mid-session they need to relaunch
+/// Coffee CLI to pick up the change — that's a rare and explicit user
+/// action, worth the trade-off vs paying the PATH-probe cost on every
+/// toggle.
 static TOOL_INSTALLED_CACHE: OnceLock<Mutex<HashMap<String, bool>>> = OnceLock::new();
 
 /// Wraps the platform-specific PATH check from `server.rs` so
@@ -467,7 +466,7 @@ fn read_skill_icon(skill_dir: &Path, name: &str) -> Option<String> {
 /// CLI sessions. The frontend is responsible for showing the
 /// "需重启工具才能生效" toast.
 #[tauri::command]
-pub fn skills_toggle(name: String, enable: bool) -> Result<(), String> {
+pub fn skills_toggle(name: String, enable: bool) -> Result<Vec<String>, String> {
     validate_skill_name(&name)?;
     let (from_root, to_root) = if enable {
         (library_root()?, skills_root()?)
@@ -491,38 +490,35 @@ pub fn skills_toggle(name: String, enable: bool) -> Result<(), String> {
         fs::create_dir_all(parent).map_err(|e| format!("mkdir {}: {}", parent.display(), e))?;
     }
 
-    // Precheck before the (irreversible) rename: if a target CLI dir
-    // already has a real folder (not our own link) with this name, the
-    // junction step will silently no-op and the user will see "enabled"
-    // without the skill actually being wired. Refuse early with a clear
-    // error so the UI can surface a toast and the user decides how to
-    // resolve (rm their manual install, or accept that ours stays
-    // disabled).
-    if enable {
-        precheck_link_conflicts(&name)?;
-    }
-
     fs::rename(&src, &dst).map_err(|e| format!("rename: {}", e))?;
 
     if enable {
-        // Per feedback_refuse_silent_override: if link creation fails,
-        // surface a real error rather than logging-and-pretending. The
-        // user has just been told "✓ enabled" by an optimistic UI; the
-        // CLIs they care about can't actually see the skill yet.
-        if let Err(e) = link_into_cli_dirs(&name, &dst) {
-            // Roll the rename back so the on-disk state matches what
-            // the UI is about to show (skill back in library/ as
-            // disabled). Best-effort; if rollback also fails, the
-            // user has a real-but-unliked skill in skills/, which the
-            // next toggle will work around (precheck won't trip since
-            // we just rolled back).
-            let _ = fs::rename(&dst, &from_root.join(&name));
-            return Err(e);
+        // link_into_cli_dirs is per-tool fault tolerant: a single tool's
+        // real-folder conflict (user has a manual install at
+        // ~/.<tool>/skills/<name>) skips that one tool with a warning
+        // surfaced to the UI, but other tools still get the junction.
+        // Skill stays enabled as long as ≥1 tool linked successfully.
+        // Hard Err only when every installed tool failed (rare — would
+        // mean every tool already has a manual install, or there's a
+        // global filesystem problem).
+        match link_into_cli_dirs(&name, &dst) {
+            Ok(warnings) => Ok(warnings),
+            Err(e) => {
+                // Roll the rename back so the on-disk state matches
+                // what the UI is about to show (skill back in library/
+                // as disabled). Best-effort; rollback failure leaves a
+                // real-but-unlinked skill in skills/ — next toggle will
+                // notice the destination already exists and refuse with
+                // the "Destination already exists" error above, which
+                // points the user at the path to clean up manually.
+                let _ = fs::rename(&dst, &from_root.join(&name));
+                Err(e)
+            }
         }
     } else {
         unlink_from_cli_dirs(&name);
+        Ok(Vec::new())
     }
-    Ok(())
 }
 
 /// For ONE specific tool that just became available, link every
@@ -559,63 +555,65 @@ pub fn skills_relink_for_tool(tool: String) -> Result<(), String> {
             continue;
         }
         let link = parent.join(entry.file_name());
-        if let Err(e) = try_create_skill_link(&source, &link) {
-            log::warn!("[skills] {}", e);
+        match try_create_skill_link(&source, &link) {
+            LinkOutcome::Created | LinkOutcome::AlreadyLinked => {}
+            LinkOutcome::RealFolderConflict => {
+                log::info!(
+                    "[skills] {} exists as user's own folder — leaving alone",
+                    link.display()
+                );
+            }
+            LinkOutcome::Failed(e) => log::warn!("[skills] {}", e),
         }
     }
     Ok(())
 }
 
-/// Attempt to junction `source` → `link`. Returns:
-///   - `Ok(true)`  — newly created
-///   - `Ok(false)` — link already exists and points where we'd point it
-///   - `Err`       — real-folder collision, or a filesystem error
+/// Per-target outcome of a junction attempt. Callers that fan out across
+/// multiple tools use this to keep going on a single conflict instead of
+/// aborting the whole operation. See `link_into_cli_dirs` for the
+/// aggregation logic.
+enum LinkOutcome {
+    /// New junction created.
+    Created,
+    /// Existing junction already points at our source — nothing to do,
+    /// not a problem.
+    AlreadyLinked,
+    /// User has a real folder at this path (not a junction). Per
+    /// `feedback_refuse_silent_override`, we never clobber — we leave
+    /// it alone and let the user resolve manually if they want our
+    /// version. The caller surfaces this as a per-tool warning so the
+    /// user sees which tool is using its own copy.
+    RealFolderConflict,
+    /// Other filesystem failure — out of disk, permission denied,
+    /// mklink/symlink syscall failed, etc. Treated as a hard error.
+    Failed(String),
+}
+
+/// Attempt to junction `source` → `link`. Outcome conveys whether a
+/// link was made, the path already had our junction, the user has
+/// their own real folder there (skip with warning), or some other
+/// filesystem operation failed.
 ///
 /// Shared by `link_into_cli_dirs` (fan-out across tools for one skill)
 /// and `skills_relink_for_tool` (fan-out across skills for one tool).
-/// Each caller picks its own policy on the Err — toggle-time bubbles
-/// up so the user gets a toast; relink-on-install logs and continues.
-fn try_create_skill_link(source: &Path, link: &Path) -> Result<bool, String> {
+/// Each caller picks its own policy on the variants.
+fn try_create_skill_link(source: &Path, link: &Path) -> LinkOutcome {
     if link.exists() {
         if is_dir_link(link) {
-            return Ok(false);
+            return LinkOutcome::AlreadyLinked;
         }
-        return Err(format!(
-            "{} exists as real folder, leaving alone",
-            link.display()
-        ));
+        return LinkOutcome::RealFolderConflict;
     }
-    create_dir_link(source, link)
-        .map_err(|e| format!("link {} → {} failed: {}", link.display(), source.display(), e))?;
-    Ok(true)
-}
-
-/// Verify no target CLI dir has a non-link entry under `<name>`. Returns
-/// a human-readable error pointing at the first conflicting path.
-/// Existing entries that ARE links (left over from a prior session our
-/// app created) are fine — they'll be transparently replaced by the
-/// link step that follows.
-fn precheck_link_conflicts(name: &str) -> Result<(), String> {
-    let home = home()?;
-    for (binary, skill_dir) in target_cli_skill_dirs() {
-        // Skip tools the user doesn't have — no link would be
-        // created, so nothing to conflict with.
-        if !is_tool_installed(binary) {
-            continue;
-        }
-        let link = crate::tools::join_relative(&home, skill_dir).join(name);
-        if !link.exists() {
-            continue;
-        }
-        if !is_dir_link(&link) {
-            return Err(format!(
-                "Conflict: {} already exists as a real folder (not managed by Coffee CLI). \
-                 Remove it manually first if you want Coffee CLI to manage this skill.",
-                display_path(&link)
-            ));
-        }
+    match create_dir_link(source, link) {
+        Ok(()) => LinkOutcome::Created,
+        Err(e) => LinkOutcome::Failed(format!(
+            "link {} → {} failed: {}",
+            link.display(),
+            source.display(),
+            e
+        )),
     }
-    Ok(())
 }
 
 /// Display-safe path string: native separators converted to forward
@@ -653,11 +651,16 @@ pub fn skills_delete(name: String) -> Result<(), String> {
 /// binary is on PATH (same source of truth as the launchpad's
 /// tool-availability check). We **never** create a CLI's home dir
 /// from scratch when the binary isn't installed.
-fn link_into_cli_dirs(name: &str, source: &Path) -> Result<(), String> {
+fn link_into_cli_dirs(name: &str, source: &Path) -> Result<Vec<String>, String> {
     let home = home()?;
     let mut installed_any = false;
     let mut linked_any = false;
     let mut last_err: Option<String> = None;
+    // Per-tool conflict warnings surfaced to the UI so the user sees
+    // exactly which tool is using its own version vs Coffee CLI's.
+    // Empty vec on the success path means "all installed tools got our
+    // link cleanly".
+    let mut conflict_warnings: Vec<String> = Vec::new();
     for (binary, skill_dir) in target_cli_skill_dirs() {
         // Binary gate: tool not on PATH → skip silently. Don't
         // mkdir its home; that would mislead the user / file
@@ -678,15 +681,30 @@ fn link_into_cli_dirs(name: &str, source: &Path) -> Result<(), String> {
         }
         let link = parent.join(name);
         match try_create_skill_link(source, &link) {
-            Ok(_) => linked_any = true,
-            Err(e) => {
+            LinkOutcome::Created | LinkOutcome::AlreadyLinked => linked_any = true,
+            LinkOutcome::RealFolderConflict => {
+                // User has their own folder here. Skip this tool — other
+                // tools still get the skill — but record a warning so the
+                // UI can surface it. Per feedback_refuse_silent_override:
+                // never silently lie about which copy is in effect.
+                let warning = format!(
+                    "{}: skill not mirrored — {} already exists as a real \
+                     folder (not managed by Coffee CLI). Remove it manually \
+                     if you want Coffee CLI's version here.",
+                    binary,
+                    display_path(&link)
+                );
+                log::info!("[skills] {}", warning);
+                conflict_warnings.push(warning);
+            }
+            LinkOutcome::Failed(e) => {
                 log::warn!("[skills] {}", e);
                 last_err = Some(e);
             }
         }
     }
     if linked_any {
-        Ok(())
+        Ok(conflict_warnings)
     } else if !installed_any {
         // No supported CLI installed at all → user enabled a skill
         // before installing any of the agent CLIs. That's fine: the
@@ -697,9 +715,24 @@ fn link_into_cli_dirs(name: &str, source: &Path) -> Result<(), String> {
             "[skills] enabled '{}' but no supported CLI present yet; skill is staged in library",
             name
         );
-        Ok(())
+        Ok(Vec::new())
     } else {
-        Err(last_err.unwrap_or_else(|| "No CLI target dir was linkable".to_string()))
+        // Every installed tool failed. Combine real-folder conflicts
+        // and other filesystem errors into a single multi-line message
+        // so the user sees the full picture (e.g. "all 3 installed
+        // tools already have manual installs — remove them first").
+        let mut lines: Vec<String> = Vec::new();
+        if let Some(e) = last_err {
+            lines.push(e);
+        }
+        lines.extend(conflict_warnings);
+        if lines.is_empty() {
+            return Err("No CLI target dir was linkable".to_string());
+        }
+        Err(format!(
+            "Skill could not be linked into any installed CLI:\n  - {}",
+            lines.join("\n  - ")
+        ))
     }
 }
 

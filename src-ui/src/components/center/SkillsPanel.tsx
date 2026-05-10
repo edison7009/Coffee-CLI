@@ -100,11 +100,22 @@ export function SkillsPanel({ showToast }: Props) {
     setBusyName(skill.name);
     try {
       const turningOn = !skill.enabled;
-      await commands.skillsToggle(skill.name, turningOn);
+      // Per-tool conflict warnings: when a tool's skills dir already
+      // contains a real folder with this skill name (user's manual
+      // install), Coffee CLI doesn't clobber it. The toggle still
+      // succeeds for every other tool — we just surface the skipped
+      // tool(s) so the user knows their own version is in effect there.
+      const warnings = await commands.skillsToggle(skill.name, turningOn);
       // Per the design contract: never kill the user's running CLI
       // sessions — passive toast only. The user owns the consequence
       // of ignoring it. See feedback_no_kill_running_sessions memory.
       showToast(turningOn ? '需重启工具才能生效' : '已关闭需重启工具');
+      // Surface skip-warnings as separate toasts so they aren't lost
+      // alongside the primary success message. Each line is a per-tool
+      // explanation including the conflicting path.
+      for (const w of warnings) {
+        showToast(w);
+      }
       await refresh();
     } catch (e) {
       showToast(`Toggle failed: ${e}`);
