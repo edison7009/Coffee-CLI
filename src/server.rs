@@ -271,6 +271,20 @@ fn snapshots() -> &'static std::sync::Mutex<std::collections::HashMap<String, Fi
     FILE_SNAPSHOTS.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()))
 }
 
+/// Set of folders that have completed a baseline walk. Populated at
+/// the end of `start_folder_snapshot`. `compute_folder_stats` checks
+/// this before diffing — if a folder isn't in the set, returns empty
+/// instead of falling through to "+totalLines -0" for every file the
+/// walker hasn't reached yet. Without this, the race between a tab's
+/// folder-change and the next polling tick produces a brief flood of
+/// nonsense diff numbers; with it, ChangesBoard stays empty until the
+/// baseline is genuinely ready.
+fn baselined_folders() -> &'static std::sync::Mutex<std::collections::HashSet<String>> {
+    static SET: std::sync::OnceLock<std::sync::Mutex<std::collections::HashSet<String>>> =
+        std::sync::OnceLock::new();
+    SET.get_or_init(|| std::sync::Mutex::new(std::collections::HashSet::new()))
+}
+
 /// Directory names skipped during snapshot/diff walks. These tend to dominate
 /// project folders (node_modules alone is 100k+ files) and are never user-
 /// edited content — dragging them in wrecks both perf and noise level.
@@ -504,11 +518,20 @@ fn start_folder_snapshot(path: String) -> Result<(), String> {
     let extra_skip = gitignore_skip_dirs(dir);
     let mut new_files = std::collections::HashMap::new();
     stats_walk(dir, &mut new_files, None, STATS_MAX_FILES, &extra_skip);
-    let mut map = snapshots().lock().map_err(|e| format!("lock: {}", e))?;
-    for (key, snap) in new_files {
-        // first-seen wins — only insert if not already present
-        map.entry(key).or_insert(snap);
+    {
+        let mut map = snapshots().lock().map_err(|e| format!("lock: {}", e))?;
+        for (key, snap) in new_files {
+            // first-seen wins — only insert if not already present
+            map.entry(key).or_insert(snap);
+        }
     }
+    // Mark this folder as walked AFTER the snapshot insert completes,
+    // so `compute_folder_stats` only sees the "ready" flag once the
+    // baseline it'll diff against is actually populated.
+    baselined_folders()
+        .lock()
+        .map_err(|e| format!("lock: {}", e))?
+        .insert(normalize_path_key(&path));
     Ok(())
 }
 
@@ -554,6 +577,20 @@ pub(crate) fn compute_folder_stats(folder: String) -> Vec<FileStats> {
     let mut result = Vec::new();
     let dir = std::path::Path::new(&folder);
     if !dir.is_dir() { return result; }
+
+    // Gate on baseline-completion. If `start_folder_snapshot` hasn't
+    // finished walking this folder yet (race window right after a tab
+    // change folder / new tab), the per-file map is half-populated —
+    // returning [] is the honest answer rather than emitting bogus
+    // "+totalLines -0" rows for files that simply haven't been walked.
+    let normalized = normalize_path_key(&folder);
+    if !baselined_folders()
+        .lock()
+        .map(|s| s.contains(&normalized))
+        .unwrap_or(false)
+    {
+        return result;
+    }
 
     let baseline = match snapshots().lock() {
         Ok(m) => m.clone(),

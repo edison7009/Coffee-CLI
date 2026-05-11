@@ -57,8 +57,16 @@ export function FileStatsProvider({ children }: { children: ReactNode }) {
   const { state } = useAppState();
   const activeSession = state.terminals.find(t => t.id === state.activeTerminalId);
   const diffCtx = resolveDiffContext(activeSession);
+  // `activeTool` gate is what stops a launchpad tab (the one the user
+  // is currently choosing a tool on) from showing audit data. The
+  // REMOVE_TERMINAL reducer inherits the closed tab's `folderPath`
+  // onto its replacement launchpad tab, so without this gate the
+  // freshly-opened picker would inherit the prior tab's diff view —
+  // confusing because the user has not yet started any AI work in
+  // the new tab. No tool = no work in progress = no audit.
   const activeFolderPath = diffCtx?.folderPath ?? null;
   const activeSessionId = diffCtx?.sessionId ?? null;
+  const activeTool = diffCtx?.tool ?? null;
 
   // Stats keyed by sessionId. Survives session-switch so flipping
   // back to a previous tab shows its last-known stats instantly
@@ -87,13 +95,31 @@ export function FileStatsProvider({ children }: { children: ReactNode }) {
     for (const sid of Array.from(baselinedFolders.keys())) {
       if (!live.has(sid)) baselinedFolders.delete(sid);
     }
+    // Drop tabStats entries for sessions no longer alive. Without
+    // this, a closed tab's stats linger in the Map and re-surface if
+    // the user happens to switch to a launchpad tab that inherited
+    // the closed tab's sessionId (which can't happen today because
+    // ids are crypto.randomUUID, but the cleanup keeps the Map from
+    // growing unboundedly across long sessions either way).
+    setTabStats(prev => {
+      let changed = false;
+      const next = new Map(prev);
+      for (const sid of Array.from(next.keys())) {
+        if (!live.has(sid)) {
+          next.delete(sid);
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
   }, [state.terminals]);
 
   // 2. Snapshot-diff polling. Re-fetch active session's stats on
-  //    every trigger, debounced.
+  //    every trigger, debounced. Gated on `activeTool` — a launchpad
+  //    tab (tool=null) is not a workspace, so we don't poll it.
   const debounceRef = useRef<number | null>(null);
   useEffect(() => {
-    if (!activeFolderPath || !activeSessionId) return;
+    if (!activeFolderPath || !activeSessionId || !activeTool) return;
     const folder = activeFolderPath;
     const sid = activeSessionId;
 
@@ -151,7 +177,7 @@ export function FileStatsProvider({ children }: { children: ReactNode }) {
         debounceRef.current = null;
       }
     };
-  }, [activeFolderPath, activeSessionId]);
+  }, [activeFolderPath, activeSessionId, activeTool]);
 
   const activeStats: FileStatsMap | null = activeSessionId
     ? tabStats.get(activeSessionId) ?? null
