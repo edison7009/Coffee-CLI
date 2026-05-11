@@ -639,49 +639,33 @@ body {
     flex-shrink: 0;
 }
 
-/* Layout toggles sit immediately left of the window controls as a
-   tiny no-drag zone. Tighter than the window controls on purpose —
-   these are "tools" (quick-access settings), not "actions" (which
-   need a bigger hit-target by convention). */
+/* Layout toggles sit flush against the window controls — same visual
+   treatment as min/max/close (full-opacity icon, transparent base,
+   bg-hover on hover) so the whole right cluster reads as one chrome
+   band. The only structural difference is width: 36px tools-slot vs
+   46px window-control slot, matching VS Code's tool/action convention. */
 .titlebar-layout-toggles {
     display: flex;
     align-items: center;
     height: 100%;
-    margin-right: 2px;
 }
 
 .titlebar-btn--layout {
-    width: 36px;    /* matches VS Code's 36px activity-bar-like slot */
-    height: 100%;   /* fill titlebar so the active background reads as
-                       one continuous surface with the panel below */
-    margin: 0;
-    padding: 0;
-    color: var(--text-2);
-    opacity: 0.6;
-    border-radius: 0;  /* sharp corners — industrial, no chip look */
+    width: 36px;
+    height: 100%;
 }
 
-/* 16px glyphs at a 24×24 viewBox. `display: block` kills the 4px
-   baseline gap under inline SVGs that would otherwise misalign the
-   icon inside its 36×fullHeight button. */
 .titlebar-btn--layout svg {
     width: 16px;
     height: 16px;
     display: block;
 }
 
-.titlebar-btn--layout:hover {
-    opacity: 0.95;
-    background: var(--bg-hover);
-}
-
-/* Active = persistent hover background. The icon color stays the
-   default text-2 grey — no accent tint — because the background
-   alone carries the "this is on" signal, visually bleeding into the
-   panel surface below the titlebar for a connected, unified feel. */
+/* Toggle "on" state — persistent bg-hover background so the icon
+   reads as engaged without an accent tint. */
 .titlebar-btn--layout.is-active {
-    opacity: 1;
     background: var(--bg-hover);
+    color: var(--text-1);
 }
 .titlebar-controls {
     display: flex;
@@ -712,12 +696,14 @@ body {
     color: #ffffff;
 }
 
-/* When the user hides a side panel from the titlebar toggle, we drop
-   it from the flex layout entirely — display:none (not width:0) so
-   the center reclaims the full width without an empty gutter, and
-   the hidden panel's children stop firing resize/xterm-fit events. */
-.app-layout--left-hidden .panel-left { display: none; }
-.app-layout--right-hidden .panel-right { display: none; }
+/* Hidden panels are unmounted in App.tsx (no DOM node, so no flex
+   slot to compensate for). The titlebar toggle ALSO calls Tauri
+   setSize/setPosition to shrink the OS window by the panel's width
+   on the same axis — so the right edge (for right-panel hide) or
+   left edge (for left-panel hide) of the window physically moves
+   inward, "chopping off" that side. Net effect: center column stays
+   the same pixel width, min/max/close ride the new edge inward,
+   no empty gutter, no xterm refit. See TitleBar.tsx. */
 
 .app-layout {
     display: flex;

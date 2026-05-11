@@ -140,14 +140,17 @@ export function App() {
       <TitleBar />
 
       {/* 3-panel workspace. The titlebar toggle buttons write to
-          leftPanelHidden / rightPanelHidden. We now conditionally UNMOUNT
-          the hidden panel instead of CSS-hiding it, so users who keep
-          a side collapsed pay ZERO cost for that side: no IPC, no scan,
-          no event subscriptions, no React reconciliation. When the user
-          shows the panel, it mounts fresh (Explorer re-scans from the
-          active tab's cwd, TaskBoard reloads tasks — both are cheap). */}
+          leftPanelHidden / rightPanelHidden AND physically shrink the
+          OS window by var(--w-left/right) on the same axis — so hiding a
+          panel "chops off" that side of the app (min/max/close move
+          inward with the new edge) instead of leaving an empty gutter
+          OR letting the center column re-flow to fill the void. The
+          panel itself is conditionally UNMOUNTED (Explorer / RightPanel
+          stop firing IPC, scans, event subs, reconciliation); showing
+          re-mounts it fresh and grows the window back. See TitleBar.tsx
+          `adjustWindowForPanel` for the resize logic. */}
       <FileStatsProvider>
-        <div className={`app-layout${state.leftPanelHidden ? ' app-layout--left-hidden' : ''}${state.rightPanelHidden ? ' app-layout--right-hidden' : ''}`}>
+        <div className="app-layout">
           {!state.leftPanelHidden && (
             <aside className="panel panel-left">
               <Explorer />

@@ -13,6 +13,40 @@ import { commands, isTauri } from '../../tauri';
 import { useAppState, useAppDispatch } from '../../store/app-state';
 import './TitleBar.css';
 
+// Match --w-left / --w-right in global.css. Side panels are not
+// user-resizable, so this is a true constant — no need to read it
+// back through getComputedStyle on every toggle.
+const PANEL_WIDTH = 320;
+
+// Physically shrink/grow the OS window by PANEL_WIDTH on the axis
+// the panel sits on, so hiding a panel "chops off" that side of the
+// app (window edge moves inward; min/max/close ride the new edge).
+// Right-panel hide moves the right edge inward (origin x unchanged);
+// left-panel hide moves the left edge inward (origin x shifts right
+// so the right edge stays put). Reversed on show. If the window is
+// maximized, we skip the resize — Tauri would unmaximize it, which
+// is more jarring than just leaving the layout alone for that frame.
+async function adjustWindowForPanel(side: 'left' | 'right', willHide: boolean) {
+  if (!isTauri) return;
+  try {
+    const { getCurrentWindow, PhysicalSize, PhysicalPosition } = await import('@tauri-apps/api/window');
+    const w = getCurrentWindow();
+    if (await w.isMaximized()) return;
+    const scale = await w.scaleFactor();
+    const deltaPx = Math.round(PANEL_WIDTH * scale);
+    const size = await w.innerSize();
+    const pos = await w.outerPosition();
+    const widthDelta = willHide ? -deltaPx : deltaPx;
+    await w.setSize(new PhysicalSize(size.width + widthDelta, size.height));
+    if (side === 'left') {
+      // Hiding left: left edge moves right by deltaPx (origin x += delta).
+      // Showing left: left edge moves left (origin x -= delta).
+      const xDelta = willHide ? deltaPx : -deltaPx;
+      await w.setPosition(new PhysicalPosition(pos.x + xDelta, pos.y));
+    }
+  } catch {}
+}
+
 export function TitleBar() {
   const { state } = useAppState();
   const dispatch = useAppDispatch();
@@ -21,8 +55,16 @@ export function TitleBar() {
   const maximize = () => isTauri && commands.windowMaximize().catch(() => {});
   const close    = () => isTauri && commands.windowClose().catch(() => {});
 
-  const toggleLeft = () => dispatch({ type: 'TOGGLE_LEFT_PANEL' });
-  const toggleRight = () => dispatch({ type: 'TOGGLE_RIGHT_PANEL' });
+  const toggleLeft = () => {
+    const willHide = !state.leftPanelHidden;
+    dispatch({ type: 'TOGGLE_LEFT_PANEL' });
+    adjustWindowForPanel('left', willHide);
+  };
+  const toggleRight = () => {
+    const willHide = !state.rightPanelHidden;
+    dispatch({ type: 'TOGGLE_RIGHT_PANEL' });
+    adjustWindowForPanel('right', willHide);
+  };
   const setGrid    = () => dispatch({ type: 'SET_MULTI_AGENT_LAYOUT', layout: 'grid' });
   const setColumns = () => dispatch({ type: 'SET_MULTI_AGENT_LAYOUT', layout: 'columns' });
 
