@@ -35,37 +35,68 @@
   to { opacity: 1; transform: scale(1); }
 }
 
-/* Floating Resume button. Anchors to top-right of .chat-reader-container
- * (which is position: relative), so the chat body fills the whole tab
- * without a heavy header bar pushing it down. */
-.chat-reader-resume {
+/* Floating action cluster (resume + copy-path), anchored top-right of
+ * .chat-reader-container (which is position: relative). Two buttons live
+ * here side by side; cluster owns the absolute positioning so each button
+ * can be a plain flex child. Chat body still fills the whole tab —
+ * cluster overlays the scroll area without a header bar pushing content
+ * down. */
+.chat-reader-actions {
   position: absolute;
   top: 12px;
   right: 16px;
   z-index: 5;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
+  gap: 6px;
+}
+
+/* "Ghost" style — accent-tinted bg + accent text/icon, no transform,
+ * no shadow. Previously the resume button used solid --accent + white
+ * text + hover lift + glow shadow, which read as a flashing CTA in a
+ * chat-reading surface where the eye needs to rest on message content,
+ * not chase a glowing button. Both buttons share the same treatment
+ * so the cluster reads as one calm unit. */
+.chat-reader-resume,
+.chat-reader-copy-path {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: var(--radius-sm);
-  font-size: 13px;
-  font-weight: 600;
   cursor: default !important;
-  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: background 0.15s ease, color 0.15s ease;
   border: none;
   font-family: var(--font, system-ui);
-  background: var(--accent);
-  color: #fff;
+  background: var(--accent-bg);
+  color: var(--accent);
 }
 
-.chat-reader-resume:hover {
-  background: color-mix(in srgb, var(--accent) 85%, #fff);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px var(--accent-bg);
+.chat-reader-resume {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
 }
 
-.chat-reader-resume:active {
-  transform: translateY(0) scale(0.98);
+/* Fixed 32×32 so the copy ↔ check icon swap doesn't change button
+ * width and ripple into the parent flex row. Both SVGs are 14×14 in
+ * a 24-viewBox; the box only contains the SVG, no text. */
+.chat-reader-copy-path {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+}
+
+.chat-reader-resume:hover,
+.chat-reader-copy-path:hover {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+/* Brief "copied" affirmation — icon already swapped to the check
+ * glyph by React; this just nudges the background slightly stronger
+ * so the morph reads as a state change, not just an icon switcheroo.
+ * Reverts after 2s when React clears data-copied. */
+.chat-reader-copy-path[data-copied] {
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
 }
 
 .chat-reader-body {

@@ -4,6 +4,7 @@ import type { SavedSession } from '../../tauri';
 import { useAppState } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
 import { registerTabActions } from '../../lib/tab-actions';
+import { clipboardWrite } from '../../lib/clipboard';
 import { MarkdownContent } from './MarkdownContent';
 import './ChatReader.css';
 
@@ -29,9 +30,21 @@ export function ChatReader({ sessionId }: { sessionId: string }) {
   
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  
+  const copyTimerRef = useRef<number | null>(null);
+
   const toolDataStr = terminal?.toolData;
+
+  // Clean up the copy-feedback timer if the tab closes mid-fade. setState
+  // on an unmounted component is a no-op and noisy in dev mode.
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current !== null) {
+        window.clearTimeout(copyTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     let session: SavedSession | null = null;
@@ -213,6 +226,28 @@ export function ChatReader({ sessionId }: { sessionId: string }) {
 
   if (!currentSession) return null;
 
+  // On-disk path that physically holds this conversation. Five tools
+  // (Claude / Codex / Gemini / Qwen / Hermes) write one jsonl per
+  // session and set this directly. OpenCode is the odd one out — it
+  // stores every session in ONE shared `opencode.db` SQLite file, and
+  // the Rust side surfaces that .db path here so the copy button still
+  // shows up (granularity mismatch is OpenCode's own design choice;
+  // see server.rs::find_opencode_sessions_sqlite). NOT the same as
+  // `cwd`, which is the working directory the session was launched in.
+  const sessionFilePath = (currentSession.file_path || '').trim();
+
+  const handleCopyPath = async () => {
+    if (!sessionFilePath) return;
+    try {
+      await clipboardWrite(sessionFilePath);
+      setCopied(true);
+      if (copyTimerRef.current !== null) window.clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = window.setTimeout(() => setCopied(false), 2000);
+    } catch (e) {
+      console.error('Failed to copy session path', e);
+    }
+  };
+
   const handleResume = () => {
     if (!currentSession?.session_token) return;
 
@@ -239,13 +274,35 @@ export function ChatReader({ sessionId }: { sessionId: string }) {
 
   return (
     <div className="chat-reader-container">
-      <button className="chat-reader-resume" onClick={handleResume}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <polyline points="5 12 12 5 19 12"></polyline>
-          <line x1="12" y1="19" x2="12" y2="5"></line>
-        </svg>
-        {t('action.resume_terminal' as any) || 'Continue this session'}
-      </button>
+      {/* Floating action cluster, top-right. Resume = primary action
+       * (text only, no leading icon — the 6-char Chinese label is
+       * already self-explanatory). Copy-path = secondary, icon-only,
+       * fixed 32×32 so the copy→check icon swap doesn't shift width.
+       * Hides only when sessionFilePath is empty (defensive: in
+       * practice every tool's history listing now provides one). */}
+      <div className="chat-reader-actions">
+        <button className="chat-reader-resume" onClick={handleResume}>
+          {t('action.resume_terminal' as any) || 'Continue this session'}
+        </button>
+        {sessionFilePath && (
+          <button
+            className="chat-reader-copy-path"
+            onClick={handleCopyPath}
+            data-copied={copied || undefined}
+          >
+            {copied ? (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            ) : (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+            )}
+          </button>
+        )}
+      </div>
 
       <div className="chat-reader-body" ref={scrollRef}>
         {/* Minimal "Loading…" text, shown only while data hasn't arrived

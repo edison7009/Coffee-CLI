@@ -2319,7 +2319,17 @@ fn find_opencode_sessions_sqlite(db_path: &std::path::Path, result: &mut Vec<Sav
             cwd: directory,
             session_token: Some(id),
             saved_at: time_updated.to_string(),
-            file_path: None,
+            // Surface the shared SQLite DB path so the ChatReader copy-path
+            // button has a target for OpenCode sessions too. Granularity
+            // mismatch is OpenCode's own design choice — they bundle every
+            // session into ONE opencode.db (vs Claude/Codex/Gemini/Qwen/Hermes
+            // jsonl-per-session) — so we expose the path that exists rather
+            // than hide the button. Users who paste it into a file manager
+            // land on the actual artifact that holds this conversation,
+            // even if it also holds the others. Doesn't affect the read
+            // path (ChatReader gates on tool==opencode + session_token,
+            // not on file_path, so readOpencodeSession still owns parsing).
+            file_path: Some(db_path.to_string_lossy().into_owned()),
             turn_count: Some(turn_count),
         })
     });
