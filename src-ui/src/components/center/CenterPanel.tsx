@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { focusTerminal } from '../../lib/focus-registry';
+import { onWindowForeground } from '../../lib/window-focus-filter';
 import { TierTerminal } from './TierTerminal';
 import { ChatReader } from './ChatReader';
 import { SkillsPanel } from './SkillsPanel';
@@ -774,20 +775,24 @@ export function CenterPanel() {
   // external" signal. Bypasses the SCAN_TTL_MS cache for the same
   // reason. Debounced (500ms) so rapid alt-tab spam doesn't stack
   // up serial PATH scans on the IPC queue.
+  //
+  // Routed through window-focus-filter so the spurious blur+focus pair
+  // emitted by `start_dragging()` on Windows doesn't fire a 770ms PATH
+  // scan every time the user grabs the titlebar (root cause of the
+  // first-drag stall on Windows; Linux is unaffected).
   useEffect(() => {
     if (!isTauri) return;
     let timer: ReturnType<typeof setTimeout> | null = null;
-    const onFocus = () => {
+    const unsubscribe = onWindowForeground(() => {
       if (timer) clearTimeout(timer);
       timer = setTimeout(() => {
         commands.checkToolsInstalled()
           .then(applyToolsInstalled)
           .catch(() => {});
       }, 500);
-    };
-    window.addEventListener('focus', onFocus);
+    });
     return () => {
-      window.removeEventListener('focus', onFocus);
+      unsubscribe();
       if (timer) clearTimeout(timer);
     };
   }, []);

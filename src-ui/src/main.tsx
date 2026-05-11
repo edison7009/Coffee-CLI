@@ -6,6 +6,7 @@ import { AppProvider } from './store/app-state';
 import { App } from './App';
 import { invoke, commands } from './tauri';
 import { loadToolInfo } from './lib/tool-info';
+import { onWindowBackground, onWindowForeground } from './lib/window-focus-filter';
 
 // Block React mount on the registry IPC so every component reads
 // canonical display names on first render (no 'claude' → 'Claude
@@ -64,10 +65,16 @@ document.addEventListener('visibilitychange', syncBackgroundMode);
 // window is merely covered by another app on the same Space (macOS) or
 // pushed behind on Windows. Combined with visibilitychange this covers
 // every "user isn't looking at us" path.
-window.addEventListener('blur', () => {
+//
+// Routed through window-focus-filter so spurious blur+focus pairs from
+// Tauri's `start_dragging()` on Windows (modal sizing/moving loop briefly
+// unfocuses WebView2, refocuses ~5ms later) don't toggle background mode
+// every time the user grabs the titlebar. The filter waits SETTLE_MS
+// (100ms) before honoring a blur; a focus within that window cancels.
+onWindowBackground(() => {
   commands.setBackgroundMode(true).catch(() => {});
 });
-window.addEventListener('focus', () => {
+onWindowForeground(() => {
   commands.setBackgroundMode(false).catch(() => {});
 });
 
