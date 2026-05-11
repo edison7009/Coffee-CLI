@@ -18,61 +18,18 @@ export function App() {
   const { state } = useAppState();
   const dispatch = useAppDispatch();
 
-  // Subscribe to hook-driven agent status events from Claude Code / Qwen Code.
-  // The Rust hook server emits these as they arrive from the Python forwarder.
+  // Subscribe to hook-driven agent status events from each AI CLI.
+  // The Rust hook server emits these as they arrive from the per-tool
+  // forwarder script (Python for Claude / Codex, JS for OpenCode).
+  // File-edit attribution per tool was removed in v2.7.x — ChangesBoard
+  // now reads `compute_folder_stats` (tool-agnostic snapshot diff)
+  // inside FileStatsProvider, so this subscription is purely for tab
+  // status indicators.
   useEffect(() => {
     return subscribeAgentStatus((payload) => {
       dispatch({ type: 'SET_AGENT_STATUS', id: payload.tab_id, status: payload.status });
     });
   }, [dispatch]);
-
-  // Subscribe to hook-driven file-edit events. The Rust hook server emits
-  // one `tool-file-edit` event per file an in-Coffee-CLI tool just edited
-  // (Claude PostToolUse / OpenCode tool.execute / Codex turn-snapshot
-  // diff). Diff stats are pre-computed in Rust against the global baseline
-  // — frontend just looks up the tab's projectRoot and updates
-  // globalChangeLog. Tools without hook integration (Gemini / Qwen /
-  // OpenClaw / Hermes) never emit these, so their files don't appear in
-  // the audit log — by design, see src/tools/<id>.rs FileEditAttribution.
-  useEffect(() => {
-    let unlisten: (() => void) | null = null;
-    let cancelled = false;
-    (async () => {
-      const { listen } = await import('@tauri-apps/api/event');
-      const fn = await listen<{
-        tab_id: string;
-        tool: string;
-        path: string;
-        action: 'edit' | 'create' | 'delete';
-        added: number;
-        deleted: number;
-        mtime_ms: number;
-      }>('tool-file-edit', (event) => {
-        // Resolve projectRoot from the tab's folderPath. Drop the event
-        // if the tab no longer exists (e.g., closed mid-flight) — the
-        // hook is fire-and-forget and may straggle.
-        const tab = state.terminals.find(t => t.id === event.payload.tab_id);
-        if (!tab?.folderPath) return;
-        dispatch({
-          type: 'RECORD_TOOL_FILE_EDIT',
-          tool: event.payload.tool,
-          sessionId: event.payload.tab_id,
-          path: event.payload.path,
-          action: event.payload.action,
-          added: event.payload.added,
-          deleted: event.payload.deleted,
-          mtimeMs: event.payload.mtime_ms,
-          projectRoot: tab.folderPath,
-        });
-      });
-      if (cancelled) fn();
-      else unlisten = fn;
-    })().catch(() => {});
-    return () => { cancelled = true; unlisten?.(); };
-    // state.terminals is referenced inside the listener closure; we
-    // refresh the listener whenever it changes so closed-tab events
-    // get filtered out. The unlisten/relisten cycle is cheap.
-  }, [dispatch, state.terminals]);
 
   // Apply theme + shape on mount and change — must sync with the inline script in index.html
   useEffect(() => {

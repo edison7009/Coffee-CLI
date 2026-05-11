@@ -7,7 +7,7 @@
 //! the junction at the right place. See `agent_mcp_config.rs`
 //! for the read-openclaw.json pattern when we lift this dynamic.
 
-use super::{FileEditAttribution, HistoryShape, ToolDescriptor};
+use super::{HistoryShape, ToolDescriptor};
 
 pub static DESCRIPTOR: ToolDescriptor = ToolDescriptor {
     id: "openclaw",
@@ -15,11 +15,6 @@ pub static DESCRIPTOR: ToolDescriptor = ToolDescriptor {
     binary_name: "openclaw",
     skill_dir_relative: Some(".openclaw/workspace/skills"),
     has_hook_surface: false,
-    // OpenClaw is workspace-nested but its hook surface (the `commands.mcp`
-    // gate, see memory `reference_openclaw_mcp_gate`) is for MCP server
-    // injection, not file-edit attribution. No upstream hook event
-    // covers "wrote file X"; same policy as Gemini.
-    file_edit_attribution: FileEditAttribution::None,
     // ~/.openclaw/agents/<agentId>/sessions/<sessionId>.jsonl —
     // generic JSONL family (parse_agent_jsonl handles it).
     history_shape: Some(HistoryShape::GenericJsonl {

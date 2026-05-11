@@ -3,14 +3,6 @@
 import { createContext, useContext, useReducer } from 'react';
 import type { ReactNode } from 'react';
 
-// Hard cap for the global change log. Eviction (oldest-mtime first)
-// kicks in when a merge takes us over MAX, shrinking the log down to
-// TARGET so we don't churn through eviction every tick. Order of
-// magnitude: 5000 changes = days of intense AI editing on a typical
-// workspace; users hitting this should restart Coffee CLI anyway.
-const GLOBAL_CHANGE_LOG_MAX = 5000;
-const GLOBAL_CHANGE_LOG_TARGET = 4500;
-
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export type ToolType = 'claude' | 'qwen' | 'installer' | 'hermes' | 'opencode' | 'openclaw' | 'codex' | 'gemini' | 'terminal' | 'remote' | 'history' | 'multi-agent' | 'two-agent' | 'three-agent' | 'two-split' | 'three-split' | 'four-split' | 'hyper-agent' | null;
@@ -79,40 +71,6 @@ interface MultiAgentState {
   focusedPaneIdx?: number | null;
 }
 
-/// One file's row in the global change log. Multiple tabs touching the
-/// same file collapse into a single entry; `tools` accumulates the
-/// distinct upstream CLIs that have reported the file (Claude, Codex,
-/// OpenCode, etc.) for provenance display in the UI.
-export interface GlobalChangeEntry {
-  /// Absolute file path (forward slashes).
-  path: string;
-  /// Project root (folderPath) of the most recent reporting tab; used
-  /// for grouping and for showing relative paths in the UI. If multiple
-  /// tabs report the same file from different roots (rare — file lives
-  /// inside both tabs' folders), latest report wins.
-  projectRoot: string;
-  /// Cumulative line counts since this file's first-seen baseline (the
-  /// global Rust snapshot, see server.rs). Updated on every
-  /// `computeFolderStats` refresh from any tab; latest non-zero report
-  /// wins (a refresh that resolves to 0/0 means the file was reverted
-  /// to baseline and the entry is dropped from the log).
-  added: number;
-  deleted: number;
-  /// Last-known mtime (ms) — drives the timeline sort order and the
-  /// time-window filter chips ("last 5 min" / "last hour" / etc).
-  mtimeMs: number;
-  /// Distinct tool ids that have reported this file in this session.
-  /// Order = first-seen order. Used by ChangesBoard to render a
-  /// "via Claude · Codex" provenance chip per row.
-  tools: string[];
-  /// Distinct session/tab ids that have reported this file. Used by
-  /// the left-side Explorer tree badges to scope "what THIS tab
-  /// edited" — distinct from ChangesBoard, which is intentionally
-  /// app-lifecycle scope. A new Claude tab opened on the same folder
-  /// where OpenCode just edited won't see those edits as its own.
-  sessionIds: string[];
-}
-
 export interface TerminalSession {
   id: string;
   tool: ToolType;
@@ -148,16 +106,6 @@ export interface AppState {
 
   // Terminal foreground color override ('' = use theme default)
   termColorScheme: string;
-
-  // Global change log — app-lifecycle audit list of file modifications
-  // observed across all tabs. Survives tab close so a closed conversation's
-  // edits remain auditable until Coffee CLI restarts. Keyed by absolute
-  // file path; the `sessionId` field points to the source tab (kept alive
-  // in Rust baselines for diff fetching even after the tab UI closes —
-  // see file-stats.tsx for the deliberate-no-drop behavior). Different
-  // tabs editing the same file collapse into a single entry; the
-  // `sessionIds` array tracks all originating tabs for provenance.
-  globalChangeLog: Map<string, GlobalChangeEntry>;
 
   // Terminals
   terminals: TerminalSession[];
@@ -240,8 +188,6 @@ type Action =
   | { type: 'SET_BG'; path: string; bgType: 'image' | 'video' }
   | { type: 'CLEAR_BG' }
   | { type: 'SET_WALLPAPER_OPACITY'; opacity: number }
-  | { type: 'RECORD_TOOL_FILE_EDIT'; tool: string; sessionId: string; path: string; action: 'edit' | 'create' | 'delete'; added: number; deleted: number; mtimeMs: number; projectRoot: string }
-  | { type: 'CLEAR_GLOBAL_CHANGES' }
   | { type: 'SET_TERM_SCHEME'; scheme: string }
   | { type: 'TOGGLE_GAMBIT' }
   | { type: 'SET_GAMBIT_DRAFT'; id: string; draft: string }
@@ -392,65 +338,6 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, bgPath: '', bgType: 'none' };
     case 'SET_WALLPAPER_OPACITY':
       return { ...state, wallpaperOpacity: Math.max(0, Math.min(100, action.opacity)) };
-    case 'RECORD_TOOL_FILE_EDIT': {
-      // One file edit reported by a tool's hook (Claude PostToolUse,
-      // OpenCode tool.execute.after, or Codex turn-snapshot diff).
-      // The Rust side has already computed `added` / `deleted` against
-      // the global baseline before emitting `tool-file-edit`, so the
-      // reducer just maintains the Map.
-      //
-      // delete: drop the entry entirely — no audit value in showing
-      //   "this file was deleted" once it's gone (also matches the
-      //   semantics of compute_folder_stats reporting 0/0 for reverted
-      //   files in the prior fs_watcher path).
-      // edit / create: upsert. `tools` accumulates de-duped provenance
-      //   so a file touched by Claude AND Codex ends up with both ids.
-      //
-      // FIFO cap: same as before — keep the log bounded to
-      // GLOBAL_CHANGE_LOG_MAX entries per process; on overflow evict
-      // oldest-mtime down to GLOBAL_CHANGE_LOG_TARGET.
-      const next = new Map(state.globalChangeLog);
-      if (action.action === 'delete') {
-        if (!next.has(action.path)) return state;
-        next.delete(action.path);
-        return { ...state, globalChangeLog: next };
-      }
-      const prev = next.get(action.path);
-      const tools = prev?.tools.includes(action.tool)
-        ? prev.tools
-        : [...(prev?.tools ?? []), action.tool];
-      const sessionIds = prev?.sessionIds.includes(action.sessionId)
-        ? prev.sessionIds
-        : [...(prev?.sessionIds ?? []), action.sessionId];
-      if (
-        prev &&
-        prev.added === action.added &&
-        prev.deleted === action.deleted &&
-        prev.mtimeMs === action.mtimeMs &&
-        prev.projectRoot === action.projectRoot &&
-        tools === prev.tools &&
-        sessionIds === prev.sessionIds
-      ) {
-        return state;
-      }
-      next.set(action.path, {
-        path: action.path,
-        projectRoot: action.projectRoot,
-        added: action.added,
-        deleted: action.deleted,
-        mtimeMs: action.mtimeMs,
-        tools,
-        sessionIds,
-      });
-      if (next.size > GLOBAL_CHANGE_LOG_MAX) {
-        const sorted = Array.from(next.entries()).sort((a, b) => a[1].mtimeMs - b[1].mtimeMs);
-        const toEvict = next.size - GLOBAL_CHANGE_LOG_TARGET;
-        for (let i = 0; i < toEvict; i++) next.delete(sorted[i][0]);
-      }
-      return { ...state, globalChangeLog: next };
-    }
-    case 'CLEAR_GLOBAL_CHANGES':
-      return { ...state, globalChangeLog: new Map() };
     case 'SET_TERM_SCHEME':
       return { ...state, termColorScheme: action.scheme };
     case 'TOGGLE_GAMBIT':
@@ -663,7 +550,6 @@ function getInitialState(): AppState {
     bgPath,
     bgType,
     wallpaperOpacity,
-    globalChangeLog: new Map(),
     termColorScheme,
     terminals: [{ id: defaultTerminalId, tool: null, folderPath }],
     activeTerminalId: defaultTerminalId,

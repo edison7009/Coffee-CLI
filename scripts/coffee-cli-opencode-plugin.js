@@ -125,32 +125,16 @@ function mapEvent(evt) {
   }
 }
 
-// File-touching tool names → Coffee CLI audit action label. OpenCode's
-// tool.execute.after named hook fires after the tool runs, with the
-// resolved input (including the file path argument). Names verified
-// against OpenCode 1.14.x — write/edit/patch are the canonical trio,
-// str_replace_editor / multi_edit catch Anthropic-style aliases that
-// some model providers emit through OpenCode's tool registry.
-const FILE_TOOL_ACTION = {
-  edit: "edit",
-  write: "create",
-  patch: "edit",
-  multi_edit: "edit",
-  str_replace: "edit",
-  str_replace_editor: "edit",
-};
-
-function extractFilePath(input) {
-  if (!input || typeof input !== "object") return null;
-  // OpenCode tools settled on `filePath` (camelCase) for new tools,
-  // `path` for older ones, `file_path` for Anthropic-style tools.
-  return input.filePath || input.path || input.file_path || null;
-}
-
 // OpenCode loader (packages/opencode/src/plugin/index.ts) iterates Object.values
 // of the loaded module and treats every function as a Plugin in legacy mode.
 // We export a single named Plugin function; default-export is the same
 // reference and is deduped by the loader's identity Set.
+//
+// File-edit attribution was removed in v2.7.x — ChangesBoard sources
+// from a folder snapshot diff that is tool-agnostic by construction,
+// so the `tool.execute.after` named hook no longer contributes
+// anything. The plugin retains only the Bus event → status indicator
+// path.
 export const CoffeeCliIslandPlugin = async () => {
   diagTruncate();
   diag("PLUGIN LOADED tab=", process.env.COFFEE_CLI_TAB_ID || "<unset>",
@@ -166,42 +150,6 @@ export const CoffeeCliIslandPlugin = async () => {
         debug("→", event && event.type, "=>", mapped.status);
         send(mapped);
       }
-    },
-    // Named hook: feeds the file-edit audit log. OpenCode 1.14.x
-    // signature (verified against sst/opencode dev branch
-    // packages/plugin/src/index.ts):
-    //
-    //   "tool.execute.after": (input, output) => Promise<void>
-    //   input  = { tool, sessionID, callID, args }
-    //   output = { title, output, metadata }
-    //
-    // Earlier versions used `({ tool, input })` — same field names,
-    // different nesting — which is why a too-clever destructure of
-    // `({ tool, input })` happened to log the right tool name (it
-    // pulled `tool` off the first arg correctly) but always saw
-    // `input === undefined`, silently dropping every file edit.
-    // Read tool args from `input.args`, not from a re-named `input`.
-    "tool.execute.after": async (callInput, callOutput) => {
-      const tool = callInput && callInput.tool;
-      const args = callInput && callInput.args;
-      const argKeys = (args && typeof args === "object")
-        ? Object.keys(args).join(",") : "<not-object>";
-      const probedPath = extractFilePath(args);
-      diag("tool.execute.after tool=", String(tool),
-           "argKeys=", argKeys,
-           "probedPath=", probedPath || "<null>");
-      const action = FILE_TOOL_ACTION[tool];
-      if (!action) {
-        diag("  -> SKIPPED (tool not in FILE_TOOL_ACTION)");
-        return;
-      }
-      if (!probedPath) {
-        diag("  -> SKIPPED (no path extracted)");
-        return;
-      }
-      diag("  -> SEND { path:", probedPath, ", action:", action, "}");
-      debug("file edit:", tool, action, probedPath);
-      send({ path: probedPath, action });
     },
   };
 };

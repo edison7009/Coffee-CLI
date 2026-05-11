@@ -1,44 +1,41 @@
-// file-stats.tsx — Baseline lifecycle + Explorer-badge derive layer.
+// file-stats.tsx — Per-tab folder-diff stats provider.
 //
-// Two responsibilities, one slim provider:
+// Two responsibilities, one provider:
 //
-//   1. Baseline lifecycle (Rust side). Each live, eligible terminal
-//      session triggers `start_folder_snapshot` once when its
-//      (tool, folder) combo first appears. Rust's global per-file
-//      baseline is "first-seen wins" so re-triggering is cheap, but
-//      we still skip the no-op call to avoid the Tauri IPC round-trip.
-//      Baselines persist for the app's lifetime; DiffPanel's
-//      `getBaselineContent(path)` resolves against this map.
+//   1. Rust baseline lifecycle. Each live, eligible terminal session
+//      triggers `start_folder_snapshot` once when its (tool, folder)
+//      combo first appears. Rust's global per-file baseline is
+//      "first-seen wins" so re-triggering is cheap, but we skip the
+//      no-op call to avoid the Tauri IPC round-trip. Baselines persist
+//      for the app's lifetime; DiffPanel's `getBaselineContent(path)`
+//      resolves against this map.
 //
-//   2. Explorer tree badges. The left-side file tree shows "+N −M"
-//      next to files the active session's tool has edited. The
-//      Context value is now DERIVED from `state.globalChangeLog`
-//      filtered to the active session's projectRoot — same source as
-//      the right-side ChangesBoard, so both panels stay in sync and
-//      reflect the audit-log philosophy ("only what tools running
-//      INSIDE Coffee CLI changed").
+//   2. Snapshot-diff polling for the active session. We re-run
+//      `compute_folder_stats(activeFolderPath)` whenever:
+//        - the active session/folder changes
+//        - any `agent-status` event arrives (an AI just did something)
+//        - any `fs-refresh` event arrives (the Rust fs-watcher or a
+//          local context-menu op signaled the tree changed)
+//      All three converge into one debounced (300 ms) re-fetch so a
+//      burst of file events doesn't fan out into N re-walks.
 //
-// What was removed (post v2.7.0 hook architecture):
-//   - `compute_folder_stats` polling on fs-refresh events
-//   - `MERGE_GLOBAL_CHANGES` dispatches from this file
-//   - Per-session `latestStats` shadow maps
-// All that data now flows from the Rust hook server's
-// `tool-file-edit` event → `RECORD_TOOL_FILE_EDIT` reducer
-// (subscribed in App.tsx).
+// Tool-agnostic by design: the stats are folder-state-vs-baseline, so
+// any modification (Claude, Codex, OpenCode, an external editor,
+// `git pull`, `npm install`) appears in the same audit list.
+// Per-tool hook attribution was removed in v2.7.x.
 
-import { createContext, useContext, useEffect, useMemo } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useAppState, resolveDiffContext } from '../store/app-state';
 import type { ToolType } from '../store/app-state';
 import { commands } from '../tauri';
+import { subscribeAgentStatus } from './agent-status-bus';
 
 export type FileStats = { added: number; deleted: number; mtimeMs: number };
 type FileStatsMap = Map<string, FileStats>;
 
 const FileStatsContext = createContext<FileStatsMap | null>(null);
 export const useFileStats = () => useContext(FileStatsContext);
-
-const normRoot = (p: string) => p.replace(/\\/g, '/').replace(/\/+$/, '');
 
 // CWD-agnostic tools don't bind to a local folder; their snapshots are no-ops.
 // Mirrors the same set in Explorer.tsx.
@@ -50,16 +47,29 @@ const CWD_AGNOSTIC_TOOLS: ReadonlySet<ToolType> = new Set<ToolType>(['openclaw',
 // DiffPanel can resolve baselines for closed-tab audit entries.
 const baselinedFolders = new Map<string, string>();
 
+// Debounce window for re-fetching stats. 300 ms swallows the typical
+// editor-save event burst (notify-debouncer-full upstream already
+// coalesces at 200 ms; this is an extra cushion on top so a chain of
+// agent-status + fs-refresh + tab-activation lands as one walk).
+const REFRESH_DEBOUNCE_MS = 300;
+
 export function FileStatsProvider({ children }: { children: ReactNode }) {
   const { state } = useAppState();
   const activeSession = state.terminals.find(t => t.id === state.activeTerminalId);
   const diffCtx = resolveDiffContext(activeSession);
   const activeFolderPath = diffCtx?.folderPath ?? null;
+  const activeSessionId = diffCtx?.sessionId ?? null;
 
-  // Ensure a Rust-side baseline exists for every live, eligible
-  // session. Combo change (same sid, different folder/tool) issues
-  // a fresh `start_folder_snapshot` — Rust's first-seen-wins rule
-  // means re-baselining the same folder is harmless to the map.
+  // Stats keyed by sessionId. Survives session-switch so flipping
+  // back to a previous tab shows its last-known stats instantly
+  // (next refresh tick reconciles). Cleared per-tab on REMOVE_TERMINAL
+  // would be ideal but the cost of stale entries is negligible (just
+  // GC pressure) and clearing complicates the lifecycle.
+  const [tabStats, setTabStats] = useState<Map<string, FileStatsMap>>(new Map());
+
+  // 1. Rust baseline lifecycle. One start_folder_snapshot per
+  //    (sessionId, combo) — Rust's first-seen-wins makes repeats
+  //    harmless, but we still avoid the IPC.
   useEffect(() => {
     const live = new Set<string>();
     for (const term of state.terminals) {
@@ -74,38 +84,78 @@ export function FileStatsProvider({ children }: { children: ReactNode }) {
         commands.startFolderSnapshot(ctx.folderPath).catch(() => {});
       }
     }
-    // Prune dead session bookkeeping. Rust-side baselines aren't
-    // dropped (closed tabs may still have audit entries that need
-    // baseline content for diff display).
     for (const sid of Array.from(baselinedFolders.keys())) {
       if (!live.has(sid)) baselinedFolders.delete(sid);
     }
   }, [state.terminals]);
 
-  // Derive the active session's FileStats from globalChangeLog. Two
-  // filters: (1) projectRoot matches the active session's folder, and
-  // (2) the entry was reported by the active session itself (sessionIds
-  // contains diffCtx.sessionId). Explorer's tree badges are scoped to
-  // "files THIS tab edited" — opening a fresh Claude tab on a folder
-  // where OpenCode previously edited shouldn't show OpenCode's edits
-  // in the new tab's tree. ChangesBoard stays app-lifecycle scope and
-  // continues to show every reporter, see ChangesBoard.tsx.
-  const activeSessionId = diffCtx?.sessionId ?? null;
-  const activeStats = useMemo<FileStatsMap | null>(() => {
-    if (!activeFolderPath || !activeSessionId) return null;
-    const targetRoot = normRoot(activeFolderPath);
-    const m = new Map<string, FileStats>();
-    for (const [absPath, entry] of state.globalChangeLog) {
-      if (normRoot(entry.projectRoot) !== targetRoot) continue;
-      if (!entry.sessionIds.includes(activeSessionId)) continue;
-      m.set(absPath, {
-        added: entry.added,
-        deleted: entry.deleted,
-        mtimeMs: entry.mtimeMs,
-      });
-    }
-    return m;
-  }, [state.globalChangeLog, activeFolderPath, activeSessionId]);
+  // 2. Snapshot-diff polling. Re-fetch active session's stats on
+  //    every trigger, debounced.
+  const debounceRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!activeFolderPath || !activeSessionId) return;
+    const folder = activeFolderPath;
+    const sid = activeSessionId;
+
+    const fetchStats = () => {
+      commands.computeFolderStats(folder).then(rows => {
+        const m: FileStatsMap = new Map();
+        for (const r of rows) {
+          m.set(r.path, { added: r.added, deleted: r.deleted, mtimeMs: r.mtime_ms });
+        }
+        setTabStats(prev => {
+          const next = new Map(prev);
+          next.set(sid, m);
+          return next;
+        });
+      }).catch(() => {});
+    };
+
+    const schedule = () => {
+      if (debounceRef.current != null) window.clearTimeout(debounceRef.current);
+      debounceRef.current = window.setTimeout(fetchStats, REFRESH_DEBOUNCE_MS);
+    };
+
+    // Initial fetch on (folder, session) change.
+    schedule();
+
+    // Tauri fs-refresh — Rust fs-watcher signals OS-level changes.
+    let unlistenTauri: (() => void) | null = null;
+    let cancelled = false;
+    (async () => {
+      const { listen } = await import('@tauri-apps/api/event');
+      const fn = await listen('fs-refresh', schedule);
+      if (cancelled) fn();
+      else unlistenTauri = fn;
+    })().catch(() => {});
+
+    // DOM fs-refresh — Explorer's local context-menu ops dispatch this
+    // on the window for synthetic refreshes that bypass the watcher
+    // (rename within Coffee CLI, paste, etc.).
+    const onWindowRefresh = () => schedule();
+    window.addEventListener('fs-refresh', onWindowRefresh);
+
+    // agent-status — any AI tool state change is a strong hint
+    // something changed on disk. Catches edits the fs-watcher might
+    // miss (e.g., atomic-rename writes on Windows) and ensures a
+    // refresh fires within seconds of an agent turn completing.
+    const unsubStatus = subscribeAgentStatus(schedule);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener('fs-refresh', onWindowRefresh);
+      unlistenTauri?.();
+      unsubStatus();
+      if (debounceRef.current != null) {
+        window.clearTimeout(debounceRef.current);
+        debounceRef.current = null;
+      }
+    };
+  }, [activeFolderPath, activeSessionId]);
+
+  const activeStats: FileStatsMap | null = activeSessionId
+    ? tabStats.get(activeSessionId) ?? null
+    : null;
 
   return (
     <FileStatsContext.Provider value={activeStats}>

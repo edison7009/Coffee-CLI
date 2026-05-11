@@ -383,11 +383,45 @@ pub(crate) fn normalize_path_key(path: &str) -> String {
 /// `baseline` lets the diff path skip disk reads entirely for files whose
 /// mtime hasn't changed — we just clone the prior snapshot's hashes. On the
 /// initial snapshot pass, pass `None` and every file gets read fresh.
+/// Parse the project root's `.gitignore` once and extract bare directory
+/// names to use as an additional skip list during `stats_walk`. Without
+/// this, a project containing a large gitignored subdir (e.g. `reference/`
+/// with 5985 files in Coffee CLI itself) drains STATS_MAX_FILES before the
+/// walker reaches the actual source tree, leaving every file in `src-ui/`
+/// without a baseline and showing nonsense "+totalLines -0" badges.
+///
+/// Deliberately NOT a real .gitignore implementation:
+///   - reads only the root file, not nested .gitignores
+///   - only bare names extracted; sub-path patterns (`src-tauri/target/`) skipped
+///   - globs (`*.log`, `backup-*/`) skipped — would need glob matching
+///   - negations (`!keep`) skipped
+///   - over-skip is acceptable: a bare name like "ui" causes ANY dir named
+///     "ui" anywhere in the tree to be skipped, but bare names in real
+///     .gitignores are almost always unique project-root dirs.
+fn gitignore_skip_dirs(root: &std::path::Path) -> std::collections::HashSet<String> {
+    let mut out = std::collections::HashSet::new();
+    let bytes = match std::fs::read(root.join(".gitignore")) {
+        Ok(b) => b,
+        Err(_) => return out,
+    };
+    let text = String::from_utf8_lossy(&bytes);
+    for raw in text.lines() {
+        let line = raw.trim();
+        if line.is_empty() || line.starts_with('#') || line.starts_with('!') { continue; }
+        let stripped = line.trim_start_matches('/').trim_end_matches('/');
+        if stripped.is_empty() || stripped.contains('/') { continue; }
+        if stripped.contains(|c: char| c == '*' || c == '?' || c == '[') { continue; }
+        out.insert(stripped.to_string());
+    }
+    out
+}
+
 fn stats_walk(
     root: &std::path::Path,
     files: &mut std::collections::HashMap<String, FileSnapshot>,
     baseline: Option<&std::collections::HashMap<String, FileSnapshot>>,
     max_files: usize,
+    extra_skip: &std::collections::HashSet<String>,
 ) {
     if files.len() >= max_files { return; }
     let entries = match std::fs::read_dir(root) {
@@ -415,7 +449,8 @@ fn stats_walk(
         };
         if meta.is_dir() {
             if STATS_SKIP_DIRS.contains(&name_str.as_ref()) { continue; }
-            stats_walk(&path, files, baseline, max_files);
+            if extra_skip.contains(name_str.as_ref()) { continue; }
+            stats_walk(&path, files, baseline, max_files, extra_skip);
         } else if meta.is_file() {
             if meta.len() > STATS_MAX_FILE_BYTES { continue; }
             let key = normalize_path_key(&path.to_string_lossy());
@@ -466,8 +501,9 @@ fn stats_walk(
 fn start_folder_snapshot(path: String) -> Result<(), String> {
     let dir = std::path::Path::new(&path);
     if !dir.is_dir() { return Err(format!("Not a directory: {}", path)); }
+    let extra_skip = gitignore_skip_dirs(dir);
     let mut new_files = std::collections::HashMap::new();
-    stats_walk(dir, &mut new_files, None, STATS_MAX_FILES);
+    stats_walk(dir, &mut new_files, None, STATS_MAX_FILES, &extra_skip);
     let mut map = snapshots().lock().map_err(|e| format!("lock: {}", e))?;
     for (key, snap) in new_files {
         // first-seen wins — only insert if not already present
@@ -487,59 +523,36 @@ fn read_text_file(path: String) -> Option<String> {
     Some(String::from_utf8_lossy(&bytes).into_owned())
 }
 
-/// Compute `(added, deleted, mtime_ms)` for a single file vs the global
-/// baseline. Used by the hook server when an AI tool reports a
-/// per-tool-call file edit (Claude PostToolUse / OpenCode tool.execute);
-/// the resulting numbers feed the audit log without polling.
+/// Per-file diff entry returned by `compute_folder_stats`.
 ///
-/// Returns `None` for files that:
-///   - don't exist on disk (deleted)
-///   - exceed the size cap
-///   - aren't text (binary)
-/// In those cases callers fall back to a delete event with no diff.
-pub(crate) fn compute_single_file_stats(path: &str) -> Option<(u32, u32, i64)> {
-    let normalized = normalize_path_key(path);
-    let bytes = std::fs::read(&path).ok()?;
-    if bytes.len() as u64 > STATS_MAX_FILE_BYTES { return None; }
-    if !stats_is_text(&bytes) { return None; }
-    let cur_hashes = stats_line_hashes(&bytes);
-    let mtime_ms: i64 = std::fs::metadata(path)
-        .ok()
-        .map(|m| stats_mtime_nanos(&m))
-        .map(|n| (n / 1_000_000).try_into().unwrap_or(i64::MAX))
-        .unwrap_or(0);
-    let map = snapshots().lock().ok()?;
-    let (added, deleted) = match map.get(&normalized) {
-        Some(base) => stats_line_diff(&base.line_hashes, &cur_hashes),
-        // No baseline = either a brand-new file (every line is an
-        // addition, correct +N -0) OR a baseline-miss bug (path key
-        // mismatch / start_folder_snapshot hadn't completed). The log
-        // line surfaces the latter during dogfooding — uppercase-drive
-        // normalization (above) is supposed to cover the casing case
-        // but a leading miss here is the canary if a new mismatch sneaks in.
-        None => {
-            eprintln!("[stats] no baseline for {} — treating as new", normalized);
-            (cur_hashes.len() as u32, 0u32)
-        }
-    };
-    if added.saturating_add(deleted) > STATS_MAX_DIFF_LINES { return None; }
-    Some((added, deleted, mtime_ms))
+/// `path` is the absolute, normalized key (forward slashes, uppercase
+/// drive on Windows) — i.e. the same shape baseline keys use, so the
+/// frontend can correlate without re-normalizing.
+#[derive(serde::Serialize, Clone, Debug)]
+pub struct FileStats {
+    pub path: String,
+    pub added: u32,
+    pub deleted: u32,
+    pub mtime_ms: i64,
 }
 
-/// Walk `folder` and emit `(absolute_path, added, deleted, mtime_ms)`
-/// for every file that drifts from its global baseline. Used by the
-/// hook server when a turn-snapshot-attribution tool (Codex) signals
-/// turn-complete: we approximate "files this turn modified" as
-/// "files in folder that differ from baseline RIGHT NOW".
+/// Walk `folder` and return one `FileStats` per file that drifts from
+/// the global baseline. This is the sole data source for ChangesBoard
+/// and Explorer +/- badges since v2.7.x — the per-tool hook-driven
+/// audit path was removed in favor of this folder-level snapshot diff.
 ///
-/// Imperfection accepted: if an external editor saved a file in this
-/// folder during the same turn, the change gets attributed to the AI
-/// tool. Acceptable trade-off — the user is generally not editing
-/// concurrently with an active AI turn, and the alternative
-/// (per-tool-call hook) doesn't exist for Codex.
-pub(crate) fn diff_folder_against_baseline(folder: &str) -> Vec<(String, u32, u32, i64)> {
+/// Tool-agnostic by construction: the diff is computed from the file
+/// system state vs. baseline, so any modification (Claude, Codex,
+/// OpenCode, an external editor, `git pull`, `npm install`) shows up
+/// uniformly. No per-tool hook surface required.
+///
+/// Refresh strategy is decided by the frontend (typically on
+/// `fs-refresh` and `agent-status=idle` events plus tab activation);
+/// this function does no polling itself.
+#[tauri::command]
+pub(crate) fn compute_folder_stats(folder: String) -> Vec<FileStats> {
     let mut result = Vec::new();
-    let dir = std::path::Path::new(folder);
+    let dir = std::path::Path::new(&folder);
     if !dir.is_dir() { return result; }
 
     let baseline = match snapshots().lock() {
@@ -547,8 +560,9 @@ pub(crate) fn diff_folder_against_baseline(folder: &str) -> Vec<(String, u32, u3
         Err(_) => return result,
     };
 
+    let extra_skip = gitignore_skip_dirs(dir);
     let mut current = std::collections::HashMap::new();
-    stats_walk(dir, &mut current, Some(&baseline), STATS_MAX_FILES);
+    stats_walk(dir, &mut current, Some(&baseline), STATS_MAX_FILES, &extra_skip);
 
     for (abs_path, cur) in &current {
         let mtime_ms: i64 = (cur.mtime_nanos / 1_000_000).try_into().unwrap_or(i64::MAX);
@@ -558,12 +572,12 @@ pub(crate) fn diff_folder_against_baseline(folder: &str) -> Vec<(String, u32, u3
                 let (added, deleted) = stats_line_diff(&base.line_hashes, &cur.line_hashes);
                 if added == 0 && deleted == 0 { continue; }
                 if added.saturating_add(deleted) > STATS_MAX_DIFF_LINES { continue; }
-                result.push((abs_path.clone(), added, deleted, mtime_ms));
+                result.push(FileStats { path: abs_path.clone(), added, deleted, mtime_ms });
             }
             None => {
                 let added = cur.line_hashes.len() as u32;
                 if added > STATS_MAX_DIFF_LINES { continue; }
-                result.push((abs_path.clone(), added, 0, mtime_ms));
+                result.push(FileStats { path: abs_path.clone(), added, deleted: 0, mtime_ms });
             }
         }
     }
@@ -3186,6 +3200,7 @@ pub fn start_ui() -> anyhow::Result<()> {
             save_clipboard_image,
             list_directory,
             start_folder_snapshot,
+            compute_folder_stats,
             get_baseline_content,
             read_text_file,
             show_in_folder,

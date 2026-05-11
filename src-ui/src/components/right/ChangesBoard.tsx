@@ -1,6 +1,9 @@
-// ChangesBoard.tsx — flat list of files modified since the active tab's
-// session began. Reads the same FileStats map Explorer's tree badges read,
-// so the user can see "what's been touched" without expanding directories.
+// ChangesBoard.tsx — flat list of files in the active tab's folder
+// that drift from baseline. Sourced from `useFileStats()` (which polls
+// `compute_folder_stats` on agent-status + fs-refresh events), so any
+// modification in the folder — from any AI tool, an external editor,
+// `git pull`, anything — shows up uniformly. Scope is per-tab: switch
+// tabs and the list re-targets the new tab's folder.
 //
 // Layout: full-height file list, ALWAYS rendered. Click a row → DiffPanel
 // mounts as a bottom overlay (~55% panel height) covering the lower half
@@ -8,13 +11,12 @@
 // portal-rendered full-window modal. Click ⤓ to come back to half. Click
 // × or Esc to close. Three states (closed / half-overlay / full-screen)
 // reuse one DiffPanel — no swap-mode logic, no view-replacement state.
-// Click another row in the visible-above-overlay list = switch the diff
-// to that file (no need to close first).
 // Right-click on row = file actions menu (read-only).
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
-import { useAppState } from '../../store/app-state';
+import { useAppState, resolveDiffContext } from '../../store/app-state';
+import { useFileStats } from '../../lib/file-stats';
 import { useT } from '../../i18n/useT';
 import { ScrollPanel } from '../common/ScrollPanel';
 import { ContextMenu } from '../left/Explorer';
@@ -54,7 +56,10 @@ function loadStoredDiffHeight(): number {
 export function ChangesBoard({ selectedPath, setSelectedPath, diffExpanded, onToggleDiffExpanded }: ChangesBoardProps) {
   const t = useT();
   const { state } = useAppState();
-  const globalChangeLog = state.globalChangeLog;
+  const activeSession = state.terminals.find(s => s.id === state.activeTerminalId);
+  const diffCtx = resolveDiffContext(activeSession);
+  const activeFolderPath = diffCtx?.folderPath ?? null;
+  const fileStats = useFileStats();
   const [ctxMenu, setCtxMenu] = useState<CtxMenuState | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [diffHeight, setDiffHeight] = useState<number>(loadStoredDiffHeight);
@@ -102,31 +107,39 @@ export function ChangesBoard({ selectedPath, setSelectedPath, diffExpanded, onTo
     try { localStorage.setItem(DIFF_HEIGHT_KEY, String(diffHeight)); } catch {}
   }, [diffHeight]);
 
-  // Build flat row list from the app-lifecycle global change log. Each
-  // entry already carries its own projectRoot + tools list; we derive
-  // a relative path against the entry's own root (not the active tab's)
-  // so files from a different project still display readably. Sort by
-  // mtime descending so the most recent edit floats to top regardless
-  // of which tab made it. Tie-break by full absolute path for
-  // deterministic ordering when the same operation touches many files.
+  // Build flat row list from the active tab's folder-stats map.
+  // Relative path is computed against the active session's folder so
+  // the row shows "src-ui/components/App.tsx" rather than the full
+  // absolute path. Sort by mtime descending — most recent edit floats
+  // to top. Tie-break by absolute path for deterministic ordering when
+  // many files share a timestamp (e.g., a bulk format operation).
   const rows = useMemo(() => {
-    if (globalChangeLog.size === 0) return [];
-    const list: Array<{ path: string; rel: string; basename: string; projectRoot: string; projectName: string; added: number; deleted: number; mtimeMs: number; tools: string[] }> = [];
-    for (const [absPath, entry] of globalChangeLog) {
-      const root = entry.projectRoot.replace(/\\/g, '/').replace(/\/+$/, '');
-      const rel = absPath.startsWith(root + '/') ? absPath.slice(root.length + 1) : absPath;
+    if (!fileStats || fileStats.size === 0) return [];
+    const root = activeFolderPath
+      ? activeFolderPath.replace(/\\/g, '/').replace(/\/+$/, '')
+      : '';
+    const rootUpper = root.replace(/^([a-z]):/i, (_m, d) => `${d.toUpperCase()}:`);
+    const list: Array<{ path: string; rel: string; basename: string; added: number; deleted: number; mtimeMs: number }> = [];
+    for (const [absPath, stats] of fileStats) {
+      // Rust normalizes path keys with uppercase drive on Windows; the
+      // active folderPath may have come from a user-picked dialog
+      // which preserves the OS casing. Match against either form so
+      // the `relPath` strip works regardless of how the folder was
+      // entered into AppState.
+      const rel =
+        rootUpper && absPath.startsWith(rootUpper + '/')
+          ? absPath.slice(rootUpper.length + 1)
+          : root && absPath.startsWith(root + '/')
+            ? absPath.slice(root.length + 1)
+            : absPath;
       const basename = rel.split('/').pop() || rel;
-      const projectName = root.split('/').filter(Boolean).pop() || root;
       list.push({
         path: absPath,
         rel,
         basename,
-        projectRoot: root,
-        projectName,
-        added: entry.added,
-        deleted: entry.deleted,
-        mtimeMs: entry.mtimeMs,
-        tools: entry.tools,
+        added: stats.added,
+        deleted: stats.deleted,
+        mtimeMs: stats.mtimeMs,
       });
     }
     list.sort((a, b) => {
@@ -134,7 +147,7 @@ export function ChangesBoard({ selectedPath, setSelectedPath, diffExpanded, onTo
       return a.path.toLowerCase().localeCompare(b.path.toLowerCase());
     });
     return list;
-  }, [globalChangeLog]);
+  }, [fileStats, activeFolderPath]);
 
   // Virtualization via progressive load: render only the first N rows,
   // bump N when the bottom sentinel scrolls into view. Cheap, no extra
@@ -162,9 +175,9 @@ export function ChangesBoard({ selectedPath, setSelectedPath, diffExpanded, onTo
   }, [rows.length]);
   const visibleRows = useMemo(() => rows.slice(0, visibleCount), [rows, visibleCount]);
 
-  // If the selected file disappears from the list (reverted, deleted),
-  // drop the diff panel rather than showing stale content. We no longer
-  // collapse on tab switch — the global log keeps the entry alive.
+  // If the selected file disappears from the list (reverted, deleted,
+  // user switched tab to a different folder), drop the diff panel
+  // rather than showing stale content.
   const selectedRow = selectedPath ? rows.find(r => r.path === selectedPath) : undefined;
   const effectiveSelected = selectedRow ? selectedPath : null;
 
@@ -210,11 +223,7 @@ export function ChangesBoard({ selectedPath, setSelectedPath, diffExpanded, onTo
             >
               <span className="changes-name">{row.basename}</span>
               <span className="changes-path">
-                <span className="changes-project">{row.projectName}</span>
-                {row.tools.length > 0 && (
-                  <span className="changes-tools"> · via {row.tools.join(' + ')}</span>
-                )}
-                {row.rel === row.basename ? '' : ' · ' + row.rel.slice(0, -row.basename.length - 1)}
+                {row.rel === row.basename ? '' : row.rel.slice(0, -row.basename.length - 1)}
               </span>
               <span className="changes-stats">
                 <span className="diff-add">+{row.added}</span>

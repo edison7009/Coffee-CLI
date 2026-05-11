@@ -6,15 +6,14 @@
 # Coffee CLI's 3-state agent status, and forwards a compact JSON payload
 # to the Coffee CLI backend over local TCP.
 #
-# Two payload kinds emitted (one connection per kind, each one-shot):
-#   - status     {tab_id, tool, status, event}
-#                Drives the tab dot. Every relevant hook fires this.
-#   - file_edit  {tab_id, tool, path, action}
-#                Fired ONLY when PostToolUse runs Edit/Write/MultiEdit.
-#                Coffee CLI's Rust side computes the diff stats against
-#                the global baseline and emits `tool-file-edit` to the
-#                frontend audit log. This is what makes "show me only
-#                what tools INSIDE Coffee CLI changed" work.
+# Single payload kind emitted (one TCP connection per event):
+#   status   {tab_id, tool, status, event}
+#            Drives the tab status dot. Every relevant hook fires this.
+#
+# Per-tool file-edit attribution was removed in v2.7.x — ChangesBoard
+# now sources from a folder snapshot diff (`compute_folder_stats`),
+# which is tool-agnostic by construction. So nothing in this script
+# emits `path` / `action` anymore.
 #
 # Env vars (injected by Coffee CLI when spawning Claude in a tab):
 #   COFFEE_CLI_TAB_ID    — tab/session UUID the agent belongs to
@@ -27,12 +26,6 @@ import json
 import os
 import socket
 import sys
-
-
-# Claude Code tool names that touch the filesystem in a way the audit
-# log cares about. PostToolUse with one of these → emit file_edit.
-FILE_TOOLS_EDIT = {"Edit", "MultiEdit"}
-FILE_TOOLS_CREATE = {"Write"}
 
 
 def post(port: int, payload: dict) -> None:
@@ -90,30 +83,6 @@ def main() -> None:
 
     if status is not None:
         post(port_n, {"tab_id": tab_id, "tool": tool, "status": status, "event": event})
-
-    # File-edit emission. PostToolUse carries `tool_name` + `tool_input`;
-    # for Edit / MultiEdit the input has `file_path`, for Write it's
-    # `file_path` too. (MultiEdit additionally has an `edits` array but
-    # all entries target the same `file_path`.) See Claude's hook docs
-    # at code.claude.com/docs.
-    if event == "PostToolUse":
-        tool_name = data.get("tool_name") or ""
-        tool_input = data.get("tool_input") or {}
-        file_path = tool_input.get("file_path") if isinstance(tool_input, dict) else None
-        if file_path:
-            if tool_name in FILE_TOOLS_EDIT:
-                action = "edit"
-            elif tool_name in FILE_TOOLS_CREATE:
-                action = "create"
-            else:
-                action = None
-            if action:
-                post(port_n, {
-                    "tab_id": tab_id,
-                    "tool": tool,
-                    "path": file_path,
-                    "action": action,
-                })
 
     sys.exit(0)
 

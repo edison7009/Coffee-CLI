@@ -143,6 +143,16 @@ export const commands = {
   // in any folder.
   startFolderSnapshot: (path: string) =>
     invoke<void>('start_folder_snapshot', { path }),
+  // Walk `folder` and return one entry per file that drifts from the
+  // global baseline. Tool-agnostic — diff is purely fs-state vs.
+  // snapshot, so Claude / Codex / OpenCode / external-editor /
+  // git-pull all show up uniformly. Cheap enough to call on
+  // fs-refresh + agent-status idle without polling.
+  computeFolderStats: (folder: string) =>
+    invoke<{ path: string; added: number; deleted: number; mtime_ms: number }[]>(
+      'compute_folder_stats',
+      { folder },
+    ),
   // Diff panel inputs: baseline = the file's bytes when Coffee CLI
   // first observed it during this process lifetime; current = the
   // file's bytes now. Both lossy-UTF8 decoded so GBK / latin-1 source

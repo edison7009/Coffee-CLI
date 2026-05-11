@@ -55,21 +55,14 @@ def main() -> None:
         # Future-proof: unknown event types are ignored, not guessed.
         sys.exit(0)
 
-    # cwd: included so the hook server can run a turn-snapshot diff
-    # against the global baseline on agent-turn-complete and emit one
-    # `tool-file-edit` event per drifted file. Codex has no per-tool-call
-    # hook so this is the closest we get to "Codex just edited file X".
-    try:
-        cwd = os.getcwd()
-    except Exception:
-        cwd = ""
-
+    # File-edit attribution per tool was removed in v2.7.x. Codex no
+    # longer needs to ship cwd in the payload — ChangesBoard's
+    # `compute_folder_stats` polls based on the active tab's folder.
     payload = {
         "tab_id": tab_id,
         "tool": tool,
         "status": status,
         "event": event,
-        "cwd": cwd,
     }
 
     try:

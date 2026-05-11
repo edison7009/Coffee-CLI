@@ -110,37 +110,6 @@ pub(crate) fn join_relative(home: &Path, rel: &str) -> PathBuf {
     }
 }
 
-/// How Coffee CLI infers "this tool just edited file X" for the
-/// audit log (the right-side "修改记录" / Changes panel). Independent
-/// from whether a status hook gets installed for the Tab indicator —
-/// see `ToolDescriptor::has_hook_surface` for that. Hermes Agent today
-/// has `has_hook_surface=true` but `file_edit_attribution=None`
-/// because we install a status-only plugin and haven't written a
-/// file-edit forwarder yet.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum FileEditAttribution {
-    /// Per-tool-call hook with a file path field. The forwarder
-    /// script (Python / JS) extracts `file_path` from the tool
-    /// input and POSTs a `file_edit` payload to the hook server.
-    /// Examples: Claude Code (`PostToolUse` with Edit/Write/MultiEdit
-    /// tool input), OpenCode (`tool.execute.after` plugin hook).
-    Hook,
-
-    /// Only turn-level signals available. On turn-complete the
-    /// forwarder includes its cwd in the payload; the hook server
-    /// walks that folder and diffs against the global baseline,
-    /// attributing each changed file to this tool. Imperfect
-    /// (concurrent external edits during a turn get attributed
-    /// here) but the only path Codex exposes today.
-    TurnSnapshot,
-
-    /// No file-edit reporting for this tool — its edits don't appear
-    /// in the audit panel. May still install a status hook; see
-    /// `ToolDescriptor::has_hook_surface`. Hermes Agent (status only),
-    /// Gemini / Qwen / OpenClaw (no hook surface at all) all live here.
-    None,
-}
-
 /// One static fact-bundle per supported AI CLI. Pure data; behaviours
 /// (hook installation, history parsing, …) live in dedicated modules
 /// below — each tool gets its own file under `src/tools/<id>.rs`.
@@ -172,19 +141,12 @@ pub struct ToolDescriptor {
     /// skills concept yet (e.g. Hermes pre-2026-05-09).
     pub skill_dir_relative: Option<&'static str>,
 
-    /// `true` if Coffee CLI installs ANY hook for this tool — status
-    /// indicator, file-edit reporter, or anything else. Drives
-    /// `hook_installer::dispatch_install`. Orthogonal to file-edit:
-    /// Hermes is `true` here (status hook gets installed) but
-    /// `file_edit_attribution = None` (we don't report its edits).
+    /// `true` if Coffee CLI installs a status-indicator hook for
+    /// this tool. Drives `hook_installer::dispatch_install`. Tools
+    /// without a hook surface (Gemini / Qwen / OpenClaw today) still
+    /// participate in ChangesBoard because the snapshot diff is
+    /// tool-agnostic — only the live tab status dot is unavailable.
     pub has_hook_surface: bool,
-
-    /// How "this tool just edited X" gets reported for the audit
-    /// panel (right-side 修改记录 list). `None` = don't report;
-    /// the tool's edits won't appear there. Independent from
-    /// `has_hook_surface` — see Hermes for the case where we install
-    /// a hook but don't report edits through it.
-    pub file_edit_attribution: FileEditAttribution,
 
     /// Shape of this tool's on-disk session history. `None` =
     /// tool doesn't expose a scannable history (no entries on

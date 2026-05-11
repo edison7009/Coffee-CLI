@@ -7,21 +7,17 @@
 //! `skill_dir_relative` as `None` so we don't pre-create empty
 //! `~/.hermes/skills/` folders in homes that don't have Hermes.
 
-use super::{FileEditAttribution, HistoryShape, ToolDescriptor};
+use super::{HistoryShape, ToolDescriptor};
 
 pub static DESCRIPTOR: ToolDescriptor = ToolDescriptor {
     id: "hermes",
     display_name: "Hermes Agent",
     binary_name: "hermes",
     skill_dir_relative: None,
-    // Hermes Agent exposes plugin hooks (pre_llm_call / pre_tool_call /
-    // pre_approval_request / on_session_start / on_session_end / etc.)
-    // via `~/.hermes/plugins/<name>/` Python plugins. Coffee CLI today
-    // installs `coffee-cli-status` for the tab indicator; we have NOT
-    // written a file-edit forwarder yet, so Hermes edits don't appear
-    // in the 修改记录 panel. Two independent flags reflect this:
+    // Hermes Agent exposes plugin hooks via `~/.hermes/plugins/<name>/`
+    // Python plugins. Coffee CLI installs `coffee-cli-status` for the
+    // tab indicator only.
     has_hook_surface: true,
-    file_edit_attribution: FileEditAttribution::None,
     // ~/.hermes/sessions/session_*.json — flat directory of full
     // JSON files (not JSONL); custom parser parse_hermes_json.
     history_shape: Some(HistoryShape::HermesFlatJson {
