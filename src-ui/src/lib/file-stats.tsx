@@ -37,9 +37,14 @@ type FileStatsMap = Map<string, FileStats>;
 const FileStatsContext = createContext<FileStatsMap | null>(null);
 export const useFileStats = () => useContext(FileStatsContext);
 
-// CWD-agnostic tools don't bind to a local folder; their snapshots are no-ops.
-// Mirrors the same set in Explorer.tsx.
-const CWD_AGNOSTIC_TOOLS: ReadonlySet<ToolType> = new Set<ToolType>(['openclaw', 'hermes', 'remote']);
+// CWD-agnostic tabs don't bind to a local workspace folder, so any
+// folder-diff work for them is wasted. `openclaw` / `hermes` / `remote`
+// genuinely have no local CWD; `history` and `installer` happen to
+// carry a folderPath but the user is just browsing sessions / running
+// an installer — not editing files we should audit.
+const CWD_AGNOSTIC_TOOLS: ReadonlySet<ToolType> = new Set<ToolType>([
+  'openclaw', 'hermes', 'remote', 'history', 'installer',
+]);
 
 // Module-scoped: which (sessionId → folder) combos we've already
 // asked Rust to baseline. Survives Provider re-renders. Pruned when
