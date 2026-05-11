@@ -32,9 +32,29 @@ export function TitleBar() {
   const activeTab = state.terminals.find(t => t.id === state.activeTerminalId);
   const showMaLayout = activeTab?.tool === 'multi-agent' || activeTab?.tool === 'four-split';
 
+  // Drag is wired as a single JS path: mousedown anywhere on the bar (except
+  // on a child <button>) calls `startDragging()`, double-click toggles
+  // maximize. We previously set both `data-tauri-drag-region` and
+  // `-webkit-app-region: drag` — two drag mechanisms on the same element —
+  // and dropped them both for this single JS path; EchoBird uses the same
+  // approach on the same Tauri version and is structurally cleaner.
+  const onDragMouseDown = async (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return;
+    if ((e.target as HTMLElement).closest('button')) return;
+    e.preventDefault();
+    if (!isTauri) return;
+    try {
+      const { getCurrentWindow } = await import('@tauri-apps/api/window');
+      await getCurrentWindow().startDragging();
+    } catch {}
+  };
+  const onDragDoubleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if ((e.target as HTMLElement).closest('button')) return;
+    maximize();
+  };
+
   return (
-    // data-tauri-drag-region tells WebView2 this div is draggable
-    <div className="titlebar" data-tauri-drag-region>
+    <div className="titlebar" onMouseDown={onDragMouseDown} onDoubleClick={onDragDoubleClick}>
       {/* Icons come straight from Lucide (lucide.dev, ISC license). No
           runtime dependency — just the d-paths copied inline so we
           don't pay a 200KB+ import for four glyphs.
@@ -54,7 +74,7 @@ export function TitleBar() {
           the outer border instead of crossing through it — avoids the
           "crossed-lines" look the user flagged. Active signal still travels
           via .is-active background only. */}
-      <div className="titlebar-layout-toggles" data-tauri-drag-region="false">
+      <div className="titlebar-layout-toggles">
         {showMaLayout && (
           <>
             <button
@@ -108,7 +128,7 @@ export function TitleBar() {
         </button>
       </div>
 
-      <div className="titlebar-controls" data-tauri-drag-region="false">
+      <div className="titlebar-controls">
         <button className="titlebar-btn" onClick={minimize} id="t-min">
           <svg width="10" height="10" viewBox="0 0 10 10">
             <rect x="1" y="4.5" width="8" height="1" fill="currentColor"/>

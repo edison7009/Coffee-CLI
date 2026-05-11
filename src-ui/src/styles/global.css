@@ -627,12 +627,16 @@ body {
     display: flex;
     /* Layout toggles + window controls group to the right; the whole
        left side stays draggable. Matches VS Code / JetBrains: chrome
-       clusters on one side, the rest is grab-handle. */
+       clusters on one side, the rest is grab-handle.
+
+       Drag mechanism: see TitleBar.tsx — single JS `onMouseDown` ->
+       `startDragging()` path. Do NOT add `-webkit-app-region: drag`
+       here; it races Tauri's drag and stalls paint on direction
+       reversal. */
     justify-content: flex-end;
     align-items: center;
     user-select: none;
     flex-shrink: 0;
-    -webkit-app-region: drag;
 }
 
 /* Layout toggles sit immediately left of the window controls as a
@@ -644,7 +648,6 @@ body {
     align-items: center;
     height: 100%;
     margin-right: 2px;
-    -webkit-app-region: no-drag;
 }
 
 .titlebar-btn--layout {
@@ -683,7 +686,6 @@ body {
 .titlebar-controls {
     display: flex;
     height: 100%;
-    -webkit-app-region: no-drag;
 }
 
 .titlebar-btn {
@@ -698,7 +700,6 @@ body {
     cursor: default;
     transition: background 0.1s, color 0.1s;
     outline: none;
-    -webkit-app-region: no-drag;
 }
 
 .titlebar-btn:hover {
