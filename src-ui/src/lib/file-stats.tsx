@@ -52,6 +52,11 @@ const CWD_AGNOSTIC_TOOLS: ReadonlySet<ToolType> = new Set<ToolType>([
 // DiffPanel can resolve baselines for closed-tab audit entries.
 const baselinedFolders = new Map<string, string>();
 
+// Module-scoped: reference count for each folder path. Tracks how many
+// tabs are currently using each folder. When the count drops to zero,
+// we call clear_folder_snapshot to free memory.
+const folderRefCount = new Map<string, number>();
+
 // Debounce window for re-fetching stats. 300 ms swallows the typical
 // editor-save event burst (notify-debouncer-full upstream already
 // coalesces at 200 ms; this is an extra cushion on top so a chain of
@@ -81,15 +86,22 @@ export function FileStatsProvider({ children }: { children: ReactNode }) {
   const [tabStats, setTabStats] = useState<Map<string, FileStatsMap>>(new Map());
 
   // 1. Rust baseline lifecycle. One start_folder_snapshot per
-  //    (sessionId, combo) — Rust's first-seen-wins makes repeats
-  //    harmless, but we still avoid the IPC.
+  //    (sessionId, combo) — Rust's last-seen-wins (方案 A) overwrites
+  //    on re-open. We track reference counts per folder and call
+  //    clear_folder_snapshot when the last tab using a folder closes.
   useEffect(() => {
     const live = new Set<string>();
+    const liveFolders = new Map<string, number>(); // folder → count
+
     for (const term of state.terminals) {
       const ctx = resolveDiffContext(term);
       if (!ctx?.sessionId || !ctx?.folderPath) continue;
       if (ctx.tool && CWD_AGNOSTIC_TOOLS.has(ctx.tool)) continue;
       live.add(ctx.sessionId);
+
+      // Track folder reference count
+      const count = liveFolders.get(ctx.folderPath) || 0;
+      liveFolders.set(ctx.folderPath, count + 1);
 
       const combo = `${ctx.tool ?? ''}::${ctx.folderPath}`;
       if (baselinedFolders.get(ctx.sessionId) !== combo) {
@@ -97,9 +109,37 @@ export function FileStatsProvider({ children }: { children: ReactNode }) {
         commands.startFolderSnapshot(ctx.folderPath).catch(() => {});
       }
     }
+
+    // Clean up closed sessions and their folders
     for (const sid of Array.from(baselinedFolders.keys())) {
-      if (!live.has(sid)) baselinedFolders.delete(sid);
+      if (!live.has(sid)) {
+        const oldCombo = baselinedFolders.get(sid);
+        baselinedFolders.delete(sid);
+
+        // Extract folder path from combo "tool::folder"
+        if (oldCombo) {
+          const folderPath = oldCombo.split('::')[1];
+          if (folderPath) {
+            const oldCount = folderRefCount.get(folderPath) || 0;
+            const newCount = liveFolders.get(folderPath) || 0;
+
+            // If this folder is no longer used by any tab, clear its snapshot
+            if (oldCount > 0 && newCount === 0) {
+              commands.clearFolderSnapshot(folderPath).catch(() => {});
+              folderRefCount.delete(folderPath);
+            } else {
+              folderRefCount.set(folderPath, newCount);
+            }
+          }
+        }
+      }
     }
+
+    // Update reference counts for all live folders
+    for (const [folder, count] of liveFolders.entries()) {
+      folderRefCount.set(folder, count);
+    }
+
     // Drop tabStats entries for sessions no longer alive. Without
     // this, a closed tab's stats linger in the Map and re-surface if
     // the user happens to switch to a launchpad tab that inherited

@@ -521,8 +521,8 @@ fn start_folder_snapshot(path: String) -> Result<(), String> {
     {
         let mut map = snapshots().lock().map_err(|e| format!("lock: {}", e))?;
         for (key, snap) in new_files {
-            // first-seen wins — only insert if not already present
-            map.entry(key).or_insert(snap);
+            // last-seen wins — always overwrite to reset baseline on tab reopen
+            map.insert(key, snap);
         }
     }
     // Mark this folder as walked AFTER the snapshot insert completes,
@@ -532,6 +532,36 @@ fn start_folder_snapshot(path: String) -> Result<(), String> {
         .lock()
         .map_err(|e| format!("lock: {}", e))?
         .insert(normalize_path_key(&path));
+    Ok(())
+}
+
+/// Clear the baseline snapshot for a folder. Called when a tab is closed
+/// and no other tabs are using the same folder. Removes all file snapshots
+/// under the given path to prevent memory leaks from accumulating snapshots
+/// across multiple projects.
+#[tauri::command]
+fn clear_folder_snapshot(path: String) -> Result<(), String> {
+    let mut normalized = normalize_path_key(&path);
+    // Ensure trailing slash so "D:/project" doesn't match "D:/project2"
+    if !normalized.ends_with('/') {
+        normalized.push('/');
+    }
+
+    // Clear snapshots for all files under this folder
+    {
+        let mut map = snapshots().lock().map_err(|e| format!("lock: {}", e))?;
+        map.retain(|k, _| !k.starts_with(&normalized));
+    }
+
+    // Clear the baselined marker (no trailing slash needed for exact match)
+    {
+        let normalized_folder = normalized.trim_end_matches('/');
+        let mut set = baselined_folders()
+            .lock()
+            .map_err(|e| format!("lock: {}", e))?;
+        set.remove(normalized_folder);
+    }
+
     Ok(())
 }
 
@@ -3248,6 +3278,7 @@ pub fn start_ui() -> anyhow::Result<()> {
             list_directory,
             start_folder_snapshot,
             compute_folder_stats,
+            clear_folder_snapshot,
             get_baseline_content,
             read_text_file,
             show_in_folder,

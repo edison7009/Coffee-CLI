@@ -136,13 +136,18 @@ export const commands = {
 
   // Workspace file diff — global per-file baseline keyed by absolute
   // path, shared across every tab and project the user opens during
-  // this Coffee CLI process. First-seen wins: re-running
-  // startFolderSnapshot for an already-baselined file is a no-op so
-  // the original audit-log baseline is preserved across tab close /
-  // reopen. Process exit clears everything. No git, no .git/, works
-  // in any folder.
+  // this Coffee CLI process. Last-seen wins (方案 A): re-running
+  // startFolderSnapshot for an already-baselined file overwrites the
+  // baseline, so closing and reopening a tab resets the diff. Use
+  // clearFolderSnapshot when a tab closes to free memory.
   startFolderSnapshot: (path: string) =>
     invoke<void>('start_folder_snapshot', { path }),
+  // Clear the baseline snapshot for a folder. Called when the last tab
+  // using a folder closes. Removes all file snapshots under the given
+  // path to prevent memory leaks from accumulating snapshots across
+  // multiple projects.
+  clearFolderSnapshot: (path: string) =>
+    invoke<void>('clear_folder_snapshot', { path }),
   // Walk `folder` and return one entry per file that drifts from the
   // global baseline. Tool-agnostic — diff is purely fs-state vs.
   // snapshot, so Claude / Codex / OpenCode / external-editor /
