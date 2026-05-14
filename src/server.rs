@@ -1923,18 +1923,26 @@ fn read_native_session(file_path: String) -> Result<String, String> {
     // sessions but reading them back would 403). Path canonicalization
     // already resolved symlinks, so this is a pure prefix check.
     let home = dirs::home_dir().ok_or("Cannot determine home directory")?;
+    // Hermes Agent's data root is platform-dependent (`%LOCALAPPDATA%\hermes`
+    // on Windows, `~/.hermes` elsewhere, or `$HERMES_HOME` if set). See
+    // tools/hermes.rs::hermes_home. We also push the legacy `~/.hermes` when
+    // it's distinct from the resolved root so a user who exports HERMES_HOME
+    // mid-life can still read previously-collected sessions still sitting at
+    // the dotdir path.
+    let hermes_root = crate::tools::hermes::hermes_home();
+    let hermes_legacy = home.join(".hermes");
     let mut allowed: Vec<std::path::PathBuf> = vec![
         home.join(".claude"),
-        // Hermes Agent's data root is platform-dependent
-        // (`%LOCALAPPDATA%\hermes` on Windows, `~/.hermes` elsewhere, or
-        // `$HERMES_HOME` if set). See tools/hermes.rs::hermes_home.
-        crate::tools::hermes::hermes_home(),
+        hermes_root.clone(),
         home.join(".codex").join("sessions"),
         home.join(".gemini").join("tmp"),
         home.join(".qwen").join("projects"),
         home.join(".local").join("share").join("opencode"),
         home.join(".openclaw").join("agents"),
     ];
+    if hermes_legacy != hermes_root {
+        allowed.push(hermes_legacy);
+    }
     for tool in ["claude", "hermes", "codex", "gemini", "qwen", "opencode", "openclaw"] {
         let cfg = crate::tool_config::get(tool).history_path;
         if !cfg.is_empty() {

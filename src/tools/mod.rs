@@ -200,6 +200,10 @@ impl ToolDescriptor {
     pub fn skill_dir(&self, home: &Path) -> Option<PathBuf> {
         let rel = self.skill_dir_relative?;
         if self.id == hermes::DESCRIPTOR.id {
+            // `rel` is the source of truth even on Hermes — we just swap
+            // the root from `home` to `hermes_home()`. If the upstream
+            // layout ever moves the skills dir, updating
+            // `skill_dir_relative` in hermes.rs is enough.
             Some(hermes::hermes_home().join(rel))
         } else {
             Some(join_relative(home, rel))

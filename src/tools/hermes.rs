@@ -58,7 +58,19 @@ pub fn hermes_home() -> PathBuf {
     if let Ok(v) = std::env::var("HERMES_HOME") {
         let trimmed = v.trim();
         if !trimmed.is_empty() {
-            return PathBuf::from(trimmed);
+            let candidate = PathBuf::from(trimmed);
+            if candidate.is_absolute() {
+                return candidate;
+            }
+            // Relative HERMES_HOME would resolve against the current
+            // process CWD — and Coffee CLI changes CWD per tab via the
+            // launchpad's directory picker, so different surfaces (history
+            // scan, allowlist, plugin install, skills mirror) would silently
+            // resolve to different dirs. Reject + fall through to defaults.
+            log::warn!(
+                "[hermes] ignoring relative HERMES_HOME='{}' — must be absolute",
+                trimmed
+            );
         }
     }
     #[cfg(windows)]
