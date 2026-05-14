@@ -67,7 +67,8 @@ const I18N_DICT = {
     "cn-mirrors-title": "其他下载渠道：",
     "cn-mirrors-baidu": "百度网盘",
     "cn-mirrors-quark": "夸克网盘",
-    "cn-mirrors-123": "123云盘"
+    "cn-mirrors-123": "123云盘",
+    "cn-mirrors-feedback": "国内用户问题反馈"
   },
   "zh-TW": {
     "logo-text": "Coffee CLI",
@@ -81,7 +82,8 @@ const I18N_DICT = {
     "cn-mirrors-title": "其他下載渠道：",
     "cn-mirrors-baidu": "百度網盤",
     "cn-mirrors-quark": "夸克網盤",
-    "cn-mirrors-123": "123雲盤"
+    "cn-mirrors-123": "123雲盤",
+    "cn-mirrors-feedback": "國內用戶問題回饋"
   },
   ja: {
     "logo-text": "Coffee CLI",
