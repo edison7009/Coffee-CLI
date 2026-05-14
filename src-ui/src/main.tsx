@@ -43,42 +43,9 @@ if (typeof document !== 'undefined' && document.fonts) {
 // Window starts with `visible: false` (see tauri.conf.json) to hide the
 // Windows-default chrome flash. Reveal it only after the first paint so
 // the first frame the user sees is the final themed UI.
-//
-// Before reveal, sync window width to the persisted panel-hidden state
-// (cc-left-hidden / cc-right-hidden). The titlebar's panel-toggle path
-// physically shrinks the window by 320px per panel, but Tauri does NOT
-// persist window size across restarts (no tauri-plugin-window-state).
-// Without this sync, a user who closed with panels hidden would reopen
-// at the full 1600px default with a stretched-empty center column, and
-// toggling a panel back on would grow the window past 1600px because
-// adjustWindowForPanel works in deltas from the current size. Keep
-// PANEL_WIDTH in sync with TitleBar.tsx and the --w-left/right CSS vars.
-async function syncWindowToPanelStateAndShow() {
-  try {
-    const leftHidden = localStorage.getItem('cc-left-hidden') === '1';
-    const rightHidden = localStorage.getItem('cc-right-hidden') === '1';
-    const hiddenCount = (leftHidden ? 1 : 0) + (rightHidden ? 1 : 0);
-    if (hiddenCount > 0) {
-      const { getCurrentWindow, PhysicalSize } = await import('@tauri-apps/api/window');
-      const w = getCurrentWindow();
-      if (!(await w.isMaximized())) {
-        const scale = await w.scaleFactor();
-        const shrinkPx = Math.round(320 * hiddenCount * scale);
-        const minWidthPx = Math.round(900 * scale); // matches tauri.conf.json minWidth
-        const size = await w.innerSize();
-        const targetW = Math.max(minWidthPx, size.width - shrinkPx);
-        if (targetW !== size.width) {
-          await w.setSize(new PhysicalSize(targetW, size.height));
-        }
-      }
-    }
-  } catch {}
-  invoke('show_main_window').catch(() => {});
-}
-
 requestAnimationFrame(() => {
   requestAnimationFrame(() => {
-    void syncWindowToPanelStateAndShow();
+    invoke('show_main_window').catch(() => {});
   });
 });
 

@@ -139,16 +139,15 @@ export function App() {
       {/* Custom titlebar — drag region + minimize / maximize / close */}
       <TitleBar />
 
-      {/* 3-panel workspace. The titlebar toggle buttons write to
-          leftPanelHidden / rightPanelHidden AND physically shrink the
-          OS window by var(--w-left/right) on the same axis — so hiding a
-          panel "chops off" that side of the app (min/max/close move
-          inward with the new edge) instead of leaving an empty gutter
-          OR letting the center column re-flow to fill the void. The
-          panel itself is conditionally UNMOUNTED (Explorer / RightPanel
-          stop firing IPC, scans, event subs, reconciliation); showing
-          re-mounts it fresh and grows the window back. See TitleBar.tsx
-          `adjustWindowForPanel` for the resize logic. */}
+      {/* 3-panel workspace. Titlebar toggles flip leftPanelHidden /
+          rightPanelHidden; the hidden panel is conditionally UNMOUNTED
+          (Explorer / RightPanel stop firing IPC, scans, event subs,
+          reconciliation) and the center column's `flex: 1` reclaims
+          the freed space. The OS window itself doesn't resize — same
+          model as VS Code / Cursor / Warp — which keeps the toggle
+          flicker-free (a previous version moved the window edge via
+          Tauri setSize, but the IPC landed a few frames after the
+          React commit and made the center column visibly bounce). */}
       <FileStatsProvider>
         <div className="app-layout">
           {!state.leftPanelHidden && (
