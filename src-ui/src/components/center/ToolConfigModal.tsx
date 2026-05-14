@@ -164,6 +164,7 @@ export function ToolConfigModal({ toolKey, toolLabel, onClose }: Props) {
                 label={t('tool_config.history_path' as any)}
                 value={entry.history_path}
                 onChange={v => setEntry({ ...entry, history_path: v })}
+                placeholder={toolKey === 'hermes' ? '<HERMES_HOME>/sessions' : undefined}
               />
             )}
           </div>
@@ -186,13 +187,14 @@ export function ToolConfigModal({ toolKey, toolLabel, onClose }: Props) {
 }
 
 function Field({
-  label, value, onChange, multiline, rows,
+  label, value, onChange, multiline, rows, placeholder,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   multiline?: boolean;
   rows?: number;
+  placeholder?: string;
 }) {
   return (
     <label className="tool-config-field">
@@ -203,6 +205,7 @@ function Field({
           onChange={e => onChange(e.target.value)}
           rows={rows ?? 3}
           spellCheck={false}
+          placeholder={placeholder}
           className="tool-config-input"
         />
       ) : (
@@ -211,6 +214,7 @@ function Field({
           value={value}
           onChange={e => onChange(e.target.value)}
           spellCheck={false}
+          placeholder={placeholder}
           className="tool-config-input"
         />
       )}
