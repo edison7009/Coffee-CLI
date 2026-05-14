@@ -696,14 +696,12 @@ body {
     color: #ffffff;
 }
 
-/* Hidden panels are unmounted in App.tsx (no DOM node, so no flex
-   slot to compensate for). The titlebar toggle ALSO calls Tauri
-   setSize/setPosition to shrink the OS window by the panel's width
-   on the same axis — so the right edge (for right-panel hide) or
-   left edge (for left-panel hide) of the window physically moves
-   inward, "chopping off" that side. Net effect: center column stays
-   the same pixel width, min/max/close ride the new edge inward,
-   no empty gutter, no xterm refit. See TitleBar.tsx. */
+/* Side panels (.panel-left / .panel-right) slide in/out via a CSS
+   width transition driven by the `.is-collapsed` class in App.tsx.
+   useSlidingPanel keeps the panel mounted during the 250ms collapse
+   animation, then unmounts it so Explorer / RightPanel stop firing
+   IPC + event subs while invisible. The Tauri OS window itself never
+   resizes on toggle — same model as VS Code / Cursor / Warp. */
 
 .app-layout {
     display: flex;
@@ -758,6 +756,14 @@ body {
     width: var(--w-left);
     min-width: var(--w-left);
     flex-shrink: 0;
+    /* `width` + `min-width` are both animated on toggle; transition
+       duration must match PANEL_SLIDE_MS in App.tsx — bump them
+       together so React doesn't unmount mid-animation. `overflow:
+       hidden` keeps Explorer's content from spilling visibly while
+       the panel slides shut. */
+    overflow: hidden;
+    transition: width 250ms cubic-bezier(0.4, 0, 0.2, 1),
+                min-width 250ms cubic-bezier(0.4, 0, 0.2, 1);
     /* IDE-style framing: side panels share --bg-panel (slightly lighter
        in every theme), center workspace stays at --bg-app / --bg-terminal
        (slightly darker), so the terminal reads as the focal "recessed"
@@ -768,6 +774,10 @@ body {
     background: var(--bg-panel);
     backdrop-filter: var(--glass-blur);
     -webkit-backdrop-filter: var(--glass-blur);
+}
+.panel-left.is-collapsed {
+    width: 0;
+    min-width: 0;
 }
 
 /* Explorer panel-content: overflow hidden so welcome state flex-center works */
@@ -963,6 +973,10 @@ body.gambit-docked .chat-reader-container {
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
+    /* Slide-animation match for .panel-left — see comment there. */
+    overflow: hidden;
+    transition: width 250ms cubic-bezier(0.4, 0, 0.2, 1),
+                min-width 250ms cubic-bezier(0.4, 0, 0.2, 1);
     /* Same --bg-panel as .panel-left (see comment there) — sandwich
        the darker terminal/launchpad center between two brighter rails. */
     background: var(--bg-panel);
@@ -970,7 +984,10 @@ body.gambit-docked .chat-reader-container {
     -webkit-backdrop-filter: none;
     box-shadow: none;
     border-radius: 0;
-    overflow: visible;
+}
+.panel-right.is-collapsed {
+    width: 0;
+    min-width: 0;
 }
 
 .compiler-top {

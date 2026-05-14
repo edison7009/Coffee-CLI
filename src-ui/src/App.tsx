@@ -1,6 +1,6 @@
 // App.tsx — 3-panel IDE layout (frameless window)
 
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAppState, useAppDispatch } from './store/app-state';
 import { retryInvoke } from './tauri';
 import { subscribeAgentStatus } from './lib/agent-status-bus';
@@ -14,9 +14,86 @@ import { RightPanel } from './components/right/Compiler';
 import { FileStatsProvider } from './lib/file-stats';
 import './styles/global.css';
 
+// CSS transition duration on .panel-left / .panel-right in global.css.
+// Bumping this here = bump the matching --panel-slide-ms variable too,
+// otherwise React unmounts mid-animation and the panel snaps.
+const PANEL_SLIDE_MS = 250;
+
+/**
+ * Drive the slide-open / slide-closed animation for a single side panel.
+ *
+ *   hidden=true  → if currently mounted, apply `is-collapsed` (CSS animates
+ *                  width 320→0) then unmount after PANEL_SLIDE_MS so the
+ *                  child stops firing IPC + event subs while invisible.
+ *   hidden=false → mount immediately at width 0 (`is-collapsed`), then
+ *                  drop the class on the next paint so CSS animates
+ *                  0→320. Two rAFs are needed: one to commit React's
+ *                  initial collapsed render, a second to let the browser
+ *                  paint at width 0 before the class flip — otherwise the
+ *                  transition has no "from" frame and the panel just snaps.
+ *
+ * Initial render skips the animation: a panel hidden from launch starts
+ * unmounted with no flicker; a visible-by-default panel renders at full
+ * width with no fake collapse-then-expand.
+ */
+function useSlidingPanel(hidden: boolean): { mounted: boolean; collapsed: boolean } {
+  const [mounted, setMounted] = useState(!hidden);
+  const [collapsed, setCollapsed] = useState(false);
+  const isFirstRun = useRef(true);
+  const timeoutRef = useRef<number | null>(null);
+  const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (isFirstRun.current) {
+      isFirstRun.current = false;
+      return;
+    }
+    if (timeoutRef.current !== null) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+    if (hidden) {
+      setCollapsed(true);
+      timeoutRef.current = window.setTimeout(() => {
+        setMounted(false);
+        setCollapsed(false);
+        timeoutRef.current = null;
+      }, PANEL_SLIDE_MS);
+    } else {
+      setMounted(true);
+      setCollapsed(true);
+      rafRef.current = requestAnimationFrame(() => {
+        rafRef.current = requestAnimationFrame(() => {
+          setCollapsed(false);
+          rafRef.current = null;
+        });
+      });
+    }
+    return () => {
+      if (timeoutRef.current !== null) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+    };
+  }, [hidden]);
+
+  return { mounted, collapsed };
+}
+
 export function App() {
   const { state } = useAppState();
   const dispatch = useAppDispatch();
+
+  const leftPanel = useSlidingPanel(state.leftPanelHidden);
+  const rightPanel = useSlidingPanel(state.rightPanelHidden);
 
   // Subscribe to hook-driven agent status events from each AI CLI.
   // The Rust hook server emits these as they arrive from the per-tool
@@ -140,18 +217,20 @@ export function App() {
       <TitleBar />
 
       {/* 3-panel workspace. Titlebar toggles flip leftPanelHidden /
-          rightPanelHidden; the hidden panel is conditionally UNMOUNTED
-          (Explorer / RightPanel stop firing IPC, scans, event subs,
-          reconciliation) and the center column's `flex: 1` reclaims
-          the freed space. The OS window itself doesn't resize — same
-          model as VS Code / Cursor / Warp — which keeps the toggle
-          flicker-free (a previous version moved the window edge via
-          Tauri setSize, but the IPC landed a few frames after the
-          React commit and made the center column visibly bounce). */}
+          rightPanelHidden. The OS window itself doesn't resize (same
+          model as VS Code / Cursor / Warp) — toggling just collapses
+          the panel's width to 0 over a 250ms CSS transition while the
+          center column's `flex: 1` smoothly reclaims the freed space.
+          Once the slide-out animation completes the panel fully
+          UNMOUNTS so Explorer / RightPanel stop firing IPC + event
+          subs while hidden; on show, we mount in the collapsed state
+          and let CSS animate it back open. */}
       <FileStatsProvider>
         <div className="app-layout">
-          {!state.leftPanelHidden && (
-            <aside className="panel panel-left">
+          {leftPanel.mounted && (
+            <aside
+              className={`panel panel-left${leftPanel.collapsed ? ' is-collapsed' : ''}`}
+            >
               <Explorer />
             </aside>
           )}
@@ -161,8 +240,10 @@ export function App() {
             <CenterPanel />
           </main>
 
-          {!state.rightPanelHidden && (
-            <aside className="panel panel-right">
+          {rightPanel.mounted && (
+            <aside
+              className={`panel panel-right${rightPanel.collapsed ? ' is-collapsed' : ''}`}
+            >
               <RightPanel />
             </aside>
           )}
