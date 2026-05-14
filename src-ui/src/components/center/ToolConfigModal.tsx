@@ -43,7 +43,11 @@ const TOOL_DEFAULTS: Record<string, ToolConfigEntry> = {
   qwen:     { command: 'qwen',     extra_args: [], default_cwd: '', history_path: '' },
   opencode: { command: 'opencode', extra_args: [], default_cwd: '', history_path: '~/.local/share/opencode' },
   openclaw: { command: 'openclaw', extra_args: [], default_cwd: '', history_path: '~/.openclaw/agents' },
-  hermes:   { command: 'hermes',   extra_args: [], default_cwd: '', history_path: '~/.hermes/sessions' },
+  // Hermes data root is platform-dependent (`%LOCALAPPDATA%\hermes` on
+  // Windows, `~/.hermes` elsewhere; `$HERMES_HOME` overrides both); leave
+  // history_path empty so the backend resolves via tools::hermes::hermes_home
+  // rather than the UI mis-displaying `~/.hermes/sessions` on Windows.
+  hermes:   { command: 'hermes',   extra_args: [], default_cwd: '', history_path: '' },
 };
 
 // Tools whose session history Coffee CLI's history scanner actually reads

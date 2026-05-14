@@ -623,8 +623,10 @@ pub fn spawn(
     //   opencode  — coffee-cli-opencode-plugin.js (OpenCode Bun plugin auto-
     //               loaded from ~/.config/opencode/plugins)
     //   hermes    — coffee-cli-hermes-plugin.py (Hermes Python plugin at
-    //               ~/.hermes/plugins/coffee-cli-status, opt-in via
-    //               `hermes plugins enable coffee-cli-status`)
+    //               <HERMES_HOME>/plugins/coffee-cli-status, opt-in via
+    //               `hermes plugins enable coffee-cli-status`. HERMES_HOME
+    //               is `%LOCALAPPDATA%\hermes` on Windows, `~/.hermes`
+    //               elsewhere — see tools/hermes.rs::hermes_home.)
     // Forwarders no-op if any of these env vars are missing — they're safe to
     // leave installed even when Coffee CLI isn't the launcher.
     if let Some(tname) = tool_name.as_deref() {

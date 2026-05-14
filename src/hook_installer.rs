@@ -19,15 +19,16 @@
 //     1. ~/.config/opencode/plugins/coffee-cli-island.js — auto-loaded by
 //        OpenCode/Bun on every session. Same env-var no-op gate as Codex.
 //
-//   Hermes Agent
-//     1. ~/.hermes/plugins/coffee-cli-status/__init__.py — Python plugin
-//        registering hooks for pre_llm_call / pre_tool_call /
+//   Hermes Agent (paths are HERMES_HOME-relative — `%LOCALAPPDATA%\hermes`
+//   on Windows, `~/.hermes` elsewhere; see tools/hermes.rs::hermes_home)
+//     1. <HERMES_HOME>/plugins/coffee-cli-status/__init__.py — Python
+//        plugin registering hooks for pre_llm_call / pre_tool_call /
 //        pre_approval_request / on_session_start / etc.
-//     2. ~/.hermes/plugins/coffee-cli-status/plugin.yaml — manifest
+//     2. <HERMES_HOME>/plugins/coffee-cli-status/plugin.yaml — manifest
 //     3. `hermes plugins enable coffee-cli-status` — Hermes' opt-in CLI
 //        gate (third-party plugins don't load until allow-listed in
-//        ~/.hermes/config.yaml). We let Hermes' own command do the YAML
-//        edit so we don't have to YAML-round-trip user config.
+//        <HERMES_HOME>/config.yaml). We let Hermes' own command do the
+//        YAML edit so we don't have to YAML-round-trip user config.
 //
 // IMPORTANT — Claude event list discipline:
 // Claude Code rejects the *entire* hooks block if it contains an unknown
@@ -239,18 +240,21 @@ fn install_opencode(home: &Path) {
 }
 
 /// Hermes Agent plugin — drop a 2-file Python plugin into
-/// ~/.hermes/plugins/coffee-cli-status/, then ask Hermes itself to
+/// <HERMES_HOME>/plugins/coffee-cli-status/, then ask Hermes itself to
 /// enable it via `hermes plugins enable coffee-cli-status`. Hermes
 /// general plugins are opt-in by default (third-party code doesn't
-/// run until allow-listed in ~/.hermes/config.yaml), and shelling out
-/// to Hermes' own CLI is safer than us round-tripping the user's
+/// run until allow-listed in <HERMES_HOME>/config.yaml), and shelling
+/// out to Hermes' own CLI is safer than us round-tripping the user's
 /// config.yaml — comments and key ordering survive intact.
+///
+/// `home` here is only used for the debug-copy under `~/.coffee-cli/`;
+/// Hermes's plugin dir lives under `hermes_home()` because Windows
+/// puts it at `%LOCALAPPDATA%\hermes\plugins\` (not `~/.hermes\plugins\`).
 ///
 /// Idempotent: if the plugin is already enabled, `hermes plugins
 /// enable` is a no-op. Errors are logged, never fatal.
 fn install_hermes(home: &Path) {
-    let plugin_dir = home
-        .join(".hermes")
+    let plugin_dir = crate::tools::hermes::hermes_home()
         .join("plugins")
         .join(HERMES_PLUGIN_NAME);
     if let Err(e) = fs::create_dir_all(&plugin_dir) {

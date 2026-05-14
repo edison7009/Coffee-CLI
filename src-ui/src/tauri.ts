@@ -266,10 +266,10 @@ interface HyperAgentStatus {
 /**
  * One entry in `~/.coffee-cli/tools.json`. All fields are optional —
  * empty strings / empty arrays fall through to Coffee CLI's built-in
- * defaults for that tool. Lets users say things like "my hermes is at
- * `wsl ~/.local/bin/hermes`" or "always launch claude with
- * --dangerously-skip-permissions" without us having to auto-detect
- * every conceivable install path.
+ * defaults for that tool. Lets users say things like "always launch claude
+ * with --dangerously-skip-permissions" or "run codex through
+ * `docker exec mybox`" without us having to auto-detect every
+ * conceivable install path.
  */
 export interface ToolConfigEntry {
   /** Full launch command. Whitespace-split — first token is the binary,

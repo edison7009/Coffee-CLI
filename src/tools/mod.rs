@@ -30,8 +30,13 @@ pub enum HistoryShape {
     },
 
     /// Hermes Agent — flat directory of `session_*.json` files
-    /// (JSON, not JSONL). Custom parser `parse_hermes_json`.
-    HermesFlatJson { root_under_home: &'static str },
+    /// (JSON, not JSONL). Custom parser `parse_hermes_json`. No
+    /// `root_under_home` because Hermes's data root is platform-
+    /// dependent and runtime-overridable (`%LOCALAPPDATA%\hermes` on
+    /// Windows, `~/.hermes` elsewhere, `$HERMES_HOME` if set) — see
+    /// `crate::tools::hermes::hermes_home()`. `join_under` ignores
+    /// its `home` argument for this variant.
+    HermesFlatJson,
 
     /// Codex dated-rollout layout: `<YYYY>/<MM>/<DD>/rollout-*.jsonl`.
     /// Custom parser `parse_codex_session_jsonl`.
@@ -64,23 +69,35 @@ pub enum HistoryShape {
 impl HistoryShape {
     /// Default disk root for this tool's session history, relative
     /// to `$HOME`. Used by `tool_config::history_path_for` lookup.
-    pub fn root_under_home(&self) -> &'static str {
+    /// `None` for shapes whose root is not a `$HOME`-relative
+    /// suffix (currently only `HermesFlatJson` — see `join_under`).
+    pub fn root_under_home(&self) -> Option<&'static str> {
         match self {
             HistoryShape::GenericJsonl { root_under_home, .. }
-            | HistoryShape::HermesFlatJson { root_under_home }
             | HistoryShape::CodexRollout { root_under_home, .. }
             | HistoryShape::GeminiTmp { root_under_home, .. }
             | HistoryShape::QwenProjects { root_under_home, .. }
-            | HistoryShape::OpenCodeMixed { root_under_home } => root_under_home,
+            | HistoryShape::OpenCodeMixed { root_under_home } => Some(root_under_home),
+            HistoryShape::HermesFlatJson => None,
         }
     }
 
-    /// Resolve `root_under_home` against a caller-provided home dir.
-    /// Forward slashes in the relative path are converted to the
-    /// platform separator. Pass the same `home` you used elsewhere
-    /// in the call so per-call path resolution stays consistent.
+    /// Resolve the shape's data root against a caller-provided home
+    /// dir. Forward slashes in `root_under_home` are converted to
+    /// the platform separator. For `HermesFlatJson` the `home`
+    /// argument is ignored and `hermes::hermes_home().join("sessions")`
+    /// is returned instead, since Hermes's root is platform-dependent
+    /// (Windows uses `%LOCALAPPDATA%\hermes`, not `%USERPROFILE%\.hermes`).
     pub fn join_under(&self, home: &Path) -> PathBuf {
-        join_relative(home, self.root_under_home())
+        match self {
+            HistoryShape::HermesFlatJson => {
+                crate::tools::hermes::hermes_home().join("sessions")
+            }
+            _ => {
+                // Safe to unwrap: every other variant carries a literal.
+                join_relative(home, self.root_under_home().unwrap_or(""))
+            }
+        }
     }
 
     /// JSONL scan depth, when the shape uses the mtime-then-parse
@@ -92,7 +109,7 @@ impl HistoryShape {
             | HistoryShape::CodexRollout { depth, .. }
             | HistoryShape::GeminiTmp { depth, .. }
             | HistoryShape::QwenProjects { depth, .. } => Some(*depth),
-            HistoryShape::HermesFlatJson { .. } | HistoryShape::OpenCodeMixed { .. } => None,
+            HistoryShape::HermesFlatJson | HistoryShape::OpenCodeMixed { .. } => None,
         }
     }
 }
@@ -138,7 +155,10 @@ pub struct ToolDescriptor {
     /// path relative to the user's home directory (forward-slash).
     /// Three layout families exist (dotdir / XDG / workspace-nested);
     /// each tool encodes its own. `None` = tool doesn't have a
-    /// skills concept yet (e.g. Hermes pre-2026-05-09).
+    /// skills concept yet. Always resolve via [`Self::skill_dir`]
+    /// instead of `home.join(skill_dir_relative)` so platform-
+    /// specific home overrides (Hermes Agent on Windows uses
+    /// `%LOCALAPPDATA%\hermes` instead of `~/.hermes`) are honored.
     pub skill_dir_relative: Option<&'static str>,
 
     /// `true` if Coffee CLI installs a status-indicator hook for
@@ -163,10 +183,34 @@ pub struct ToolDescriptor {
     pub default_args: &'static [&'static str],
 }
 
+impl ToolDescriptor {
+    /// Absolute path to this tool's skills directory, or `None` if
+    /// the tool has no skills concept.
+    ///
+    /// For most tools this is simply `<home>/<skill_dir_relative>`.
+    /// Hermes Agent diverges: its home is `%LOCALAPPDATA%\hermes`
+    /// on Windows (set by `install.ps1`) and `~/.hermes` elsewhere,
+    /// so we route through `tools::hermes::hermes_home()` and ignore
+    /// the caller-supplied `home`. `$HERMES_HOME` overrides both
+    /// when set.
+    ///
+    /// Always prefer this over `home.join(t.skill_dir_relative?)`
+    /// at call sites — that pattern silently breaks on Windows for
+    /// Hermes.
+    pub fn skill_dir(&self, home: &Path) -> Option<PathBuf> {
+        let rel = self.skill_dir_relative?;
+        if self.id == hermes::DESCRIPTOR.id {
+            Some(hermes::hermes_home().join(rel))
+        } else {
+            Some(join_relative(home, rel))
+        }
+    }
+}
+
 mod claude;
 mod codex;
 mod gemini;
-mod hermes;
+pub mod hermes;
 mod openclaw;
 mod opencode;
 mod qwen;

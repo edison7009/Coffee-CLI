@@ -1197,11 +1197,10 @@ fn tier_terminal_start_blocking(
     };
 
     // ── User-configurable launch overrides ─────────────────────────────────
-    // ~/.coffee-cli/tools.json lets users say e.g. "my hermes is at
-    // `wsl ~/.local/bin/hermes`" or "always launch claude with
-    // --dangerously-skip-permissions". `remote` is excluded by design:
-    // its argv is protocol-derived from runtime tool_data, not
-    // configurable.
+    // ~/.coffee-cli/tools.json lets users say e.g. "always launch claude with
+    // --dangerously-skip-permissions" or "run codex through `docker exec mybox`".
+    // `remote` is excluded by design: its argv is protocol-derived from
+    // runtime tool_data, not configurable.
     let (cmd, args) = match tool.as_deref() {
         Some(name) if name == "terminal" || crate::tools::find(name).is_some() => {
             let entry = crate::tool_config::get(name);
@@ -1926,7 +1925,10 @@ fn read_native_session(file_path: String) -> Result<String, String> {
     let home = dirs::home_dir().ok_or("Cannot determine home directory")?;
     let mut allowed: Vec<std::path::PathBuf> = vec![
         home.join(".claude"),
-        home.join(".hermes"),
+        // Hermes Agent's data root is platform-dependent
+        // (`%LOCALAPPDATA%\hermes` on Windows, `~/.hermes` elsewhere, or
+        // `$HERMES_HOME` if set). See tools/hermes.rs::hermes_home.
+        crate::tools::hermes::hermes_home(),
         home.join(".codex").join("sessions"),
         home.join(".gemini").join("tmp"),
         home.join(".qwen").join("projects"),
@@ -2477,7 +2479,7 @@ fn collect_registry_history_candidates(
         let scan_dir =
             crate::tool_config::history_path_for(tool.id, shape.join_under(home));
         match shape {
-            crate::tools::HistoryShape::HermesFlatJson { .. } => {
+            crate::tools::HistoryShape::HermesFlatJson => {
                 collect_hermes_paths_with_mtime(scan_dir, out);
             }
             crate::tools::HistoryShape::OpenCodeMixed { .. } => {}
@@ -3053,8 +3055,8 @@ pub async fn get_hyper_agent_endpoint(
 
 // ─── Per-tool launch overrides (~/.coffee-cli/tools.json) ────────────────
 //
-// Lets users tell Coffee CLI things like "my hermes is at `wsl
-// ~/.local/bin/hermes`, not on PATH" or "always launch claude with
+// Lets users tell Coffee CLI things like "my claude is at
+// `/opt/coffee/bin/claude`, not on PATH" or "always launch claude with
 // --dangerously-skip-permissions". Replaces what the abandoned in-app
 // installer was supposed to handle by auto-detection — defer to the
 // user, who knows their machine better than we do.

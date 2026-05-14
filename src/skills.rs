@@ -55,30 +55,27 @@ use std::os::windows::process::CommandExt;
 static BUNDLED_SKILLS: include_dir::Dir<'_> =
     include_dir::include_dir!("$CARGO_MANIFEST_DIR/skills");
 
-/// `(binary_name, skill_dir_relative)` for every registered tool
-/// that has a skills directory. Three layout families are encoded
-/// across descriptors:
-///
-///   - **Dotdir** (claude / codex / gemini / qwen): `~/.<tool>/skills`.
-///   - **XDG** (opencode): `~/.config/opencode/skills`. Skills are
-///     config, not data — don't apply the "history dir's parent"
-///     heuristic to XDG-family tools.
-///   - **Workspace-nested** (openclaw): `~/.openclaw/workspace/skills`.
-///     Workspace root is configurable via `agents.defaults.workspace`
-///     in `~/.openclaw/openclaw.json`; users who override that key
-///     won't get the junction at the right place.
-///
-/// Hermes has `skill_dir_relative: None` — no skills concept yet
-/// (per upstream 2026-05-09). Pre-creating `~/.hermes/skills/` would
-/// litter empty dirs in homes without Hermes installed.
-///
-/// Per-target gating (only link if the binary is on PATH) is applied
-/// at call sites by combining this with `is_tool_installed`.
-fn target_cli_skill_dirs() -> impl Iterator<Item = (&'static str, &'static str)> {
-    crate::tools::TOOLS
-        .iter()
-        .filter_map(|t| t.skill_dir_relative.map(|d| (t.binary_name, d)))
-}
+// Skill-dir layout families across all registered tools — encoded by
+// each `ToolDescriptor::skill_dir_relative` + resolved through
+// `ToolDescriptor::skill_dir(home)`:
+//
+//   - **Dotdir** (claude / codex / gemini / qwen): `~/.<tool>/skills`.
+//   - **XDG** (opencode): `~/.config/opencode/skills`. Skills are
+//     config, not data — don't apply the "history dir's parent"
+//     heuristic to XDG-family tools.
+//   - **Workspace-nested** (openclaw): `~/.openclaw/workspace/skills`.
+//     Workspace root is configurable via `agents.defaults.workspace`
+//     in `~/.openclaw/openclaw.json`; users who override that key
+//     won't get the junction at the right place.
+//   - **HERMES_HOME-rooted** (hermes): `<HERMES_HOME>/skills`. On
+//     Windows the installer sets HERMES_HOME to `%LOCALAPPDATA%\hermes`
+//     instead of `%USERPROFILE%\.hermes`, so the join lives in
+//     `ToolDescriptor::skill_dir` and ignores the caller-supplied
+//     `home` for this one descriptor — see tools/hermes.rs.
+//
+// Per-target gating (only link if the binary is on PATH) is applied
+// at call sites by combining `tool.skill_dir(&home)` with
+// `is_tool_installed(tool.binary_name)`.
 
 /// Process-level cache of `is_tool_installed` results. A single toggle
 /// fans out to `link_into_cli_dirs` (6 PATH probes), and on Windows each
@@ -533,7 +530,6 @@ pub fn skills_toggle(name: String, enable: bool) -> Result<Vec<String>, String> 
 #[tauri::command]
 pub fn skills_relink_for_tool(tool: String) -> Result<(), String> {
     let Some(descriptor) = crate::tools::find(&tool) else { return Ok(()); };
-    let Some(skill_dir_rel) = descriptor.skill_dir_relative else { return Ok(()); };
     if !is_tool_installed(descriptor.binary_name) {
         return Ok(());
     }
@@ -544,7 +540,7 @@ pub fn skills_relink_for_tool(tool: String) -> Result<(), String> {
         return Ok(());
     }
 
-    let parent = crate::tools::join_relative(&home, skill_dir_rel);
+    let Some(parent) = descriptor.skill_dir(&home) else { return Ok(()); };
     fs::create_dir_all(&parent).map_err(|e| format!("mkdir {}: {}", parent.display(), e))?;
 
     let entries = fs::read_dir(&skills_dir)
@@ -661,15 +657,15 @@ fn link_into_cli_dirs(name: &str, source: &Path) -> Result<Vec<String>, String> 
     // Empty vec on the success path means "all installed tools got our
     // link cleanly".
     let mut conflict_warnings: Vec<String> = Vec::new();
-    for (binary, skill_dir) in target_cli_skill_dirs() {
+    for tool in crate::tools::TOOLS {
+        let Some(parent) = tool.skill_dir(&home) else { continue };
         // Binary gate: tool not on PATH → skip silently. Don't
         // mkdir its home; that would mislead the user / file
         // explorer into thinking the tool is there.
-        if !is_tool_installed(binary) {
+        if !is_tool_installed(tool.binary_name) {
             continue;
         }
         installed_any = true;
-        let parent = crate::tools::join_relative(&home, skill_dir);
         // Tool IS installed but may not yet have a `skills/` subdir.
         // Safe to create on its behalf — the binary IS on PATH, so
         // the user clearly intends to use it. mkdir failure is
@@ -691,7 +687,7 @@ fn link_into_cli_dirs(name: &str, source: &Path) -> Result<Vec<String>, String> 
                     "{}: skill not mirrored — {} already exists as a real \
                      folder (not managed by Coffee CLI). Remove it manually \
                      if you want Coffee CLI's version here.",
-                    binary,
+                    tool.binary_name,
                     display_path(&link)
                 );
                 log::info!("[skills] {}", warning);
@@ -743,8 +739,9 @@ fn link_into_cli_dirs(name: &str, source: &Path) -> Result<Vec<String>, String> 
 /// want to clean it up.
 fn unlink_from_cli_dirs(name: &str) {
     let Ok(home) = home() else { return };
-    for (_binary, skill_dir) in target_cli_skill_dirs() {
-        let link = crate::tools::join_relative(&home, skill_dir).join(name);
+    for tool in crate::tools::TOOLS {
+        let Some(parent) = tool.skill_dir(&home) else { continue };
+        let link = parent.join(name);
         if !link.exists() {
             continue;
         }

@@ -8,24 +8,24 @@
 //! Schema:
 //! ```json
 //! {
-//!   "hermes": {
-//!     "command": "wsl",
-//!     "extra_args": ["~/.local/bin/hermes"],
-//!     "default_cwd": "",
-//!     "history_path": "\\\\wsl.localhost\\Ubuntu\\home\\user\\.hermes\\sessions"
-//!   },
 //!   "claude": {
 //!     "command": "",
 //!     "extra_args": ["--dangerously-skip-permissions"],
 //!     "default_cwd": "/home/user/work",
 //!     "history_path": ""
+//!   },
+//!   "codex": {
+//!     "command": "docker exec mybox codex",
+//!     "extra_args": [],
+//!     "default_cwd": "",
+//!     "history_path": "/var/log/codex-sessions"
 //!   }
 //! }
 //! ```
 //!
 //! - `command`: full launch executable. Whitespace-split at spawn time —
 //!   first token is the binary, the rest are PREPENDED to args. So
-//!   `"wsl ~/.local/bin/hermes"` becomes argv `["wsl", "~/.local/bin/hermes"]`.
+//!   `"docker exec mybox codex"` becomes argv `["docker", "exec", "mybox", "codex"]`.
 //!   If empty, the built-in default (e.g. `"claude"` for the claude tool)
 //!   is used. NOT shell-parsed — paths with spaces are not supported in
 //!   v1; document the limitation.
@@ -39,7 +39,7 @@
 //!
 //! All four fields are independent — set just `extra_args` to add a flag
 //! without overriding the binary, set just `command` for a wrapper like
-//! `wsl`, etc.
+//! `docker exec`, etc.
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -169,8 +169,8 @@ mod tests {
         assert_eq!(parse_command(""), (None, vec![]));
         assert_eq!(parse_command("claude"), (Some("claude".into()), vec![]));
         assert_eq!(
-            parse_command("wsl ~/.local/bin/hermes"),
-            (Some("wsl".into()), vec!["~/.local/bin/hermes".into()])
+            parse_command("/opt/coffee/bin/claude"),
+            (Some("/opt/coffee/bin/claude".into()), vec![])
         );
         assert_eq!(
             parse_command("  docker exec mybox claude  "),
@@ -191,8 +191,8 @@ mod tests {
         assert_eq!(expand_path("~\\.hermes\\sessions"), home.join(".hermes\\sessions"));
         // Non-tilde paths pass through verbatim — UNC, absolute Unix, drive letters
         assert_eq!(
-            expand_path("\\\\wsl.localhost\\Ubuntu\\home\\user\\.hermes"),
-            std::path::PathBuf::from("\\\\wsl.localhost\\Ubuntu\\home\\user\\.hermes"),
+            expand_path("\\\\nas01\\share\\sessions"),
+            std::path::PathBuf::from("\\\\nas01\\share\\sessions"),
         );
         assert_eq!(expand_path("/abs/unix/path"), std::path::PathBuf::from("/abs/unix/path"));
         assert_eq!(expand_path("C:\\Users\\someone"), std::path::PathBuf::from("C:\\Users\\someone"));
