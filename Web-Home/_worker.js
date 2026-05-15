@@ -20,6 +20,11 @@ const PLATFORM_PATTERNS = {
     name.endsWith("Windows_x64.msi") || /_x64(_[^_]+)?\.msi$/.test(name),
   "macos-arm": (name) =>
     name.endsWith("macOS_arm64.dmg") || (name.includes("aarch64") && name.endsWith(".dmg")),
+  "macos-intel": (name) =>
+    // Tauri-bundler v2 maps x86_64-apple-darwin to `_x64.dmg`; CI then
+    // renames to `Coffee.CLI_<ver>_macOS_x64.dmg`. Match both so a
+    // manually-published Tauri output still resolves.
+    name.endsWith("macOS_x64.dmg") || name.endsWith("_x64.dmg"),
   "linux-deb": (name) =>
     name.endsWith("Linux_x64.deb") || name.endsWith("amd64.deb"),
   "linux-rpm": (name) =>

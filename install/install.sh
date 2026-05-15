@@ -51,8 +51,24 @@ ARCH=$(uname -m)
 # download time.
 PLATFORM=""
 if [ "$OS" = "Darwin" ]; then
-  # macOS only publishes a native arm64 build; Intel Macs run it via Rosetta.
-  PLATFORM="macos-arm"
+  # macOS ships native builds for both Apple Silicon and Intel since v2.7.6
+  # (GitHub Actions exposed a `macos-15-intel` runner in May 2026). Earlier
+  # versions only shipped arm64, so Intel users needed Rosetta — that path
+  # is gone now.
+  case "$ARCH" in
+    arm64|aarch64)
+      PLATFORM="macos-arm"
+      ;;
+    x86_64|amd64)
+      PLATFORM="macos-intel"
+      ;;
+    *)
+      echo "  ${RED}Unsupported macOS architecture: $ARCH${RESET}"
+      echo "  ${YELLOW}Coffee CLI ships arm64 and Intel x64 macOS builds.${RESET}"
+      echo "  ${YELLOW}Open an issue: https://github.com/edison7009/Coffee-CLI/issues${RESET}"
+      exit 1
+      ;;
+  esac
 elif [ "$OS" = "Linux" ]; then
   # We ship amd64 and arm64 Linux artifacts. Pick the slug based on
   # `uname -m`. Anything outside the two known arch families (armv7,
@@ -109,6 +125,7 @@ fi
 # might manually re-publish.
 case "$PLATFORM" in
   macos-arm)            ASSET_GREP='(macOS_arm64|aarch64[^\"]*)\.dmg' ;;
+  macos-intel)          ASSET_GREP='(macOS_x64|_x64)\.dmg' ;;
   linux-deb)            ASSET_GREP='(Linux_x64|amd64)\.deb' ;;
   linux-rpm)            ASSET_GREP='(Linux_x64\.rpm|x86_64\.rpm)' ;;
   linux-appimage)       ASSET_GREP='(Linux_x64|amd64)\.AppImage' ;;
@@ -193,11 +210,7 @@ if [ "$OS" = "Darwin" ]; then
     echo "  ${GRAY}Not installed — performing fresh install...${RESET}"
   fi
 
-  if [ "$ARCH" != "arm64" ]; then
-    echo "  ${YELLOW}Note: No native Intel build available. Running via Rosetta 2.${RESET}"
-  fi
-
-  URL="${FALLBACK_DOWNLOAD_URL:-$DOWNLOAD_BASE/macos-arm}"
+  URL="${FALLBACK_DOWNLOAD_URL:-$DOWNLOAD_BASE/$PLATFORM}"
   TMP="/tmp/coffee-cli-v${LATEST_VER}.dmg"
   # Always wipe any leftover bytes before downloading. Resume (`-C -`)
   # was REMOVED on purpose: when curl receives a CF 502 / connection
