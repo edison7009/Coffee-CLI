@@ -28,38 +28,82 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 use tauri::{AppHandle, Emitter};
 
-/// Refuse to operate on paths that are so broad they'd flood whoever
-/// walks them — drive roots, the user's home directory, or `/`. Returns
-/// Some(reason) to reject, None to allow.
+/// Refuse to operate on paths that aren't real "project" folders.
+///
+/// Coffee CLI's diff/snapshot is intended for source workspaces — the
+/// places where a user actively edits files and wants to see what changed.
+/// Pointing it at system roots, OS-managed config/cache dirs, or the
+/// filesystem/drive root is never useful and ranges from "noisy badges"
+/// (a system dir that finishes the walk fast but produces meaningless
+/// diffs) to "frozen UI" (home dir / drive root chew tens of seconds).
+/// Both pages of failure get the same friendly error so the caller can
+/// surface a single "Pick a project folder" hint.
 ///
 /// Shared between the fs-watcher (recursive OS event subscription) and
-/// `start_folder_snapshot` (recursive baseline walk). Both have the
-/// same failure mode: pointed at home or a drive root, they hang the
-/// IPC handler for tens of seconds chewing through AppData / Program
-/// Files and surface as Coffee CLI "未响应".
+/// `start_folder_snapshot` (recursive baseline walk). The reject list
+/// only matches exact directory equality — opening a subdirectory of a
+/// listed root (e.g. `C:\Windows\Temp\my-project`) is still allowed,
+/// because users do occasionally have legit projects there. We never
+/// recursively block descendants.
 ///
-/// We don't try to be exhaustive (e.g. `C:\Windows` or `/usr` are still
-/// allowed); the goal is to catch the clearly accidental cases and give
-/// the user a clear error instead of a frozen UI.
+/// Categories:
+///   1. Filesystem root (`/`) and Windows drive roots (`C:\`).
+///   2. User home (`~`, `C:\Users\<name>`) — issue #34's failure mode.
+///   3. OS-managed config / cache / data dirs reported by the `dirs`
+///      crate (`%APPDATA%`, `~/.config`, `~/Library/Caches`, etc.).
+///   4. OS-specific system roots (`C:\Windows`, `/etc`, `/usr`, …).
 pub fn rejected_root_reason(root: &Path) -> Option<&'static str> {
-    // Filesystem root.
+    // 1. Filesystem root.
     if root.parent().is_none() {
         return Some("filesystem root");
     }
-    // Windows drive root: "C:\" has one component, a Prefix and a RootDir.
-    // Easier heuristic: path equals its own ancestor chain's first stop.
+    // 1b. Windows drive root: "C:\" has one component, a Prefix and a
+    // RootDir, so 2 components total. UNC paths add more and won't trip.
     #[cfg(target_os = "windows")]
     {
-        // e.g. C:\  -> components = [Prefix(C:), RootDir]
         let comp_count = root.components().count();
         if comp_count <= 2 {
             return Some("drive root");
         }
     }
-    // User home directory — catches the actual case that surfaced this bug.
+    // 2. User home directory — issue #34.
     if let Some(home) = dirs::home_dir() {
         if root == home {
             return Some("user home directory");
+        }
+    }
+    // 3. OS-managed config / cache / data dirs. The `dirs` crate already
+    // resolves these per-platform (%APPDATA%, ~/.config, Library/...).
+    // Equality-only check so a project nested inside `~/.config/foo` is
+    // still allowed (some power users do work there).
+    let osmanaged: [(fn() -> Option<std::path::PathBuf>, &'static str); 4] = [
+        (dirs::config_dir,     "user config directory"),
+        (dirs::cache_dir,      "user cache directory"),
+        (dirs::data_dir,       "user data directory"),
+        (dirs::data_local_dir, "user data directory"),
+    ];
+    for (getter, reason) in osmanaged {
+        if let Some(p) = getter() {
+            if root == p { return Some(reason); }
+        }
+    }
+    // 4. OS-specific system roots. Same equality-only rule.
+    #[cfg(target_os = "windows")]
+    {
+        for env in ["SystemRoot", "ProgramFiles", "ProgramFiles(x86)", "ProgramData"] {
+            if let Ok(v) = std::env::var(env) {
+                if root == Path::new(&v) {
+                    return Some("system directory");
+                }
+            }
+        }
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        for sys in ["/etc", "/usr", "/var", "/opt", "/System", "/Library", "/private"] {
+            if root == Path::new(sys) {
+                return Some("system directory");
+            }
         }
     }
     None
