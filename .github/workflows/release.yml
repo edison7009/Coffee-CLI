@@ -20,7 +20,16 @@ jobs:
             label: Windows x64
           - platform: macos-latest
             args: '--target aarch64-apple-darwin'
+            target: aarch64-apple-darwin
             label: macOS Apple Silicon
+          # GitHub Actions exposed a dedicated x86_64 macOS runner
+          # (`macos-15-intel`) in May 2026, after the `macos-13` Intel runner
+          # was deprecated. Without it, Intel Mac users had to run Coffee CLI
+          # under Rosetta from the arm64 DMG. Now we ship a native x64 DMG too.
+          - platform: macos-15-intel
+            args: '--target x86_64-apple-darwin'
+            target: x86_64-apple-darwin
+            label: macOS Intel
           - platform: ubuntu-22.04
             args: ''
             label: Linux x64
@@ -72,7 +81,7 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ contains(matrix.args, 'aarch64-apple-darwin') && 'aarch64-apple-darwin' || '' }}
+          targets: ${{ matrix.target || '' }}
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
@@ -90,13 +99,13 @@ jobs:
       # the DMG from the re-signed .app. Gatekeeper accepts adhoc-signed
       # apps that aren't claiming hardened runtime.
       - name: Build .app only (macOS)
-        if: matrix.platform == 'macos-latest'
+        if: runner.os == 'macOS'
         run: cargo tauri build --bundles app ${{ matrix.args }}
 
       - name: Re-sign without hardened runtime (macOS)
-        if: matrix.platform == 'macos-latest'
+        if: runner.os == 'macOS'
         run: |
-          APP=$(find target/aarch64-apple-darwin/release/bundle/macos -maxdepth 2 -name "*.app" | head -1)
+          APP=$(find target/${{ matrix.target }}/release/bundle/macos -maxdepth 2 -name "*.app" | head -1)
           if [ -z "$APP" ]; then
             echo "::error::No .app found"
             find target -name "*.app" 2>/dev/null
@@ -116,12 +125,12 @@ jobs:
           fi
 
       - name: Build DMG from re-signed .app (macOS)
-        if: matrix.platform == 'macos-latest'
+        if: runner.os == 'macOS'
         run: cargo tauri bundle --bundles dmg ${{ matrix.args }}
 
       # ── Windows / Linux: standard one-shot bundle build ──
       - name: Build all bundles (Windows / Linux)
-        if: matrix.platform != 'macos-latest'
+        if: runner.os != 'macOS'
         run: cargo tauri build ${{ matrix.args }}
 
       # ── Stage + rename artifacts to platform-labelled format ──
@@ -152,8 +161,11 @@ jobs:
               # Windows
               *_x64-setup.exe)        out="Coffee.CLI_${VERSION}_Windows_x64-setup.exe" ;;
               *_x64_*.msi|*_x64.msi)  out="Coffee.CLI_${VERSION}_Windows_x64.msi" ;;
-              # macOS (Coffee CLI ships arm64 only; Intel runs via Rosetta)
+              # macOS — separate native DMGs for Apple Silicon and Intel.
+              # Tauri's bundler uses `aarch64` / `x64` suffixes on the dmg
+              # name (matching the target triple's first segment).
               *_aarch64.dmg)          out="Coffee.CLI_${VERSION}_macOS_arm64.dmg" ;;
+              *_x64.dmg)              out="Coffee.CLI_${VERSION}_macOS_x64.dmg" ;;
               # Linux .deb (Tauri uses Debian "amd64"/"arm64")
               *_amd64.deb)            out="Coffee.CLI_${VERSION}_Linux_x64.deb" ;;
               *_arm64.deb)            out="Coffee.CLI_${VERSION}_Linux_arm64.deb" ;;
@@ -173,6 +185,7 @@ jobs:
           for root in \
             target/release/bundle \
             target/aarch64-apple-darwin/release/bundle \
+            target/x86_64-apple-darwin/release/bundle \
           ; do
             [ -d "$root" ] || continue
             echo "  $root"
