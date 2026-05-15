@@ -314,7 +314,14 @@ pub const AGENT_PRESETS: &[AgentPreset] = &[
         resume_args_before: &["--session"],
         resume_args_after: &[],
         session_id_pattern: None,
-        token_format: Some(r"^ses_[A-Za-z0-9]{25}$"),
+        // Observed token shape: `ses_` + 26 alnum (verified against 3
+        // real sessions, all 26 chars). A previous {25} guess was based
+        // on eyeballing length and rejected every real token — the
+        // history-list "resume" button silently failed for OpenCode
+        // from v2.5.x through v2.7.7. The {20,40} band leaves headroom
+        // if OpenCode ever shifts the token length, while still preventing
+        // whitespace/flag injection (alnum-only character class).
+        token_format: Some(r"^ses_[A-Za-z0-9]{20,40}$"),
         prompt_markers: &["┃"],
     },
     // Codex CLI resume: `codex resume <id>` is a positional subcommand,
@@ -1389,5 +1396,31 @@ mod tests {
     fn hermes_token_rejects_invalid() {
         assert!(!token_matches("hermes", "not-a-hermes-token"));
         assert!(!token_matches("hermes", "20240115_143022_a1b2c3 --extra"));
+    }
+
+    #[test]
+    fn opencode_token_valid_format() {
+        // Real session ids observed in `~/.local/share/opencode/storage/session/`
+        // and reported by `opencode -s <id>` — all 26 alnum chars after `ses_`.
+        assert!(token_matches("opencode", "ses_1d3161926ffeffCy3Y6l14Ezoy"));
+        assert!(token_matches("opencode", "ses_3a54b4f8affeiVHxL6g6ykOVUv"));
+        assert!(token_matches("opencode", "ses_3a99935beffeYEMwfzPtyxsFdT"));
+    }
+
+    #[test]
+    fn opencode_token_rejects_invalid() {
+        // Wrong prefix
+        assert!(!token_matches("opencode", "1d3161926ffeffCy3Y6l14Ezoy"));
+        // Flag injection
+        assert!(!token_matches("opencode", "ses_1d3161926ffeffCy3Y6l14Ezoy --pure"));
+        // Empty
+        assert!(!token_matches("opencode", ""));
+        assert!(!token_matches("opencode", "ses_"));
+        // Length outside the 20-40 band
+        assert!(!token_matches("opencode", "ses_short"));
+        assert!(!token_matches("opencode", &format!("ses_{}", "a".repeat(50))));
+        // Disallowed chars
+        assert!(!token_matches("opencode", "ses_1d3161926ffeffCy3Y6l14Ezo-"));
+        assert!(!token_matches("opencode", "ses_1d3161926ffeffCy3Y6l14Ezo "));
     }
 }
