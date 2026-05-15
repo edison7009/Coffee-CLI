@@ -353,19 +353,31 @@ pub const AGENT_PRESETS: &[AgentPreset] = &[
         token_format: Some(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"),
         prompt_markers: &["✦"],
     },
-    // OpenClaw resume: `openclaw resume <agentId>:<sessionId>` —
-    // composite token because openclaw indexes sessions per agent.
-    // Token format below intentionally matches both bare UUID and
-    // `<agentId>:<uuid>` shapes; the history reader writes the
-    // composite form, but a bare UUID still validates so users
-    // round-tripping through tool-config can copy the simpler value.
+    // OpenClaw exposes no CLI resume entry point. Verified against
+    // upstream `openclaw/openclaw` (TypeScript, registered command
+    // groups in `src/cli/program/core-command-descriptors.ts`): the
+    // top-level command set is `sessions` (list only — subcommands
+    // are `cleanup` and `export-trajectory --session-key`), `agent`,
+    // `status`, etc. There is no `openclaw resume <id>`, no
+    // `--resume` flag, no `sessions resume`. OpenClaw is a
+    // multi-channel gateway that orchestrates other CLIs (claude,
+    // gemini, anthropic) as backends; resuming an OpenClaw "session"
+    // is something OpenClaw does internally when you re-launch it,
+    // not something invokable via argv. So the resume button must be
+    // a no-op at the CLI level. Setting `resume_program: None` makes
+    // tier_terminal_resume return a clean
+    // "Tool 'openclaw' does not support resume" Err instead of
+    // spawning a `openclaw resume <token>` invocation that OpenClaw
+    // itself would reject as an unknown command. Frontend UX (hiding
+    // the resume button entirely for openclaw history rows) is a
+    // separate ChatReader change.
     AgentPreset {
         tool_name: "openclaw",
-        resume_program: Some("openclaw"),
-        resume_args_before: &["resume"],
+        resume_program: None,
+        resume_args_before: &[],
         resume_args_after: &[],
         session_id_pattern: None,
-        token_format: Some(r"^[A-Za-z0-9_\-]{1,64}(:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})?$"),
+        token_format: None,
         prompt_markers: &["❯"],
     },
 ];
