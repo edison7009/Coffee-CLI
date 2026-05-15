@@ -28,14 +28,20 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 use tauri::{AppHandle, Emitter};
 
-/// Refuse to recursively watch paths that are so broad they'd flood the
-/// event loop — drive roots, the user's home directory, or `/`. Returns
+/// Refuse to operate on paths that are so broad they'd flood whoever
+/// walks them — drive roots, the user's home directory, or `/`. Returns
 /// Some(reason) to reject, None to allow.
+///
+/// Shared between the fs-watcher (recursive OS event subscription) and
+/// `start_folder_snapshot` (recursive baseline walk). Both have the
+/// same failure mode: pointed at home or a drive root, they hang the
+/// IPC handler for tens of seconds chewing through AppData / Program
+/// Files and surface as Coffee CLI "未响应".
 ///
 /// We don't try to be exhaustive (e.g. `C:\Windows` or `/usr` are still
 /// allowed); the goal is to catch the clearly accidental cases and give
 /// the user a clear error instead of a frozen UI.
-fn rejected_root_reason(root: &Path) -> Option<&'static str> {
+pub fn rejected_root_reason(root: &Path) -> Option<&'static str> {
     // Filesystem root.
     if root.parent().is_none() {
         return Some("filesystem root");

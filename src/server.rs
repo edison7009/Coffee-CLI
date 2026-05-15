@@ -515,6 +515,15 @@ fn stats_walk(
 fn start_folder_snapshot(path: String) -> Result<(), String> {
     let dir = std::path::Path::new(&path);
     if !dir.is_dir() { return Err(format!("Not a directory: {}", path)); }
+    // Refuse home / drive root / fs root — walking these recursively
+    // chews through AppData, Program Files, etc. and freezes the UI for
+    // tens of seconds. Issue #34: fresh launch with no folder picked
+    // falls back to home dir in tier_terminal_start, then the snapshot
+    // walk fires on home. fs_watcher already had the same guard; this
+    // is the matching guard for the snapshot path.
+    if let Some(reason) = crate::fs_watcher::rejected_root_reason(dir) {
+        return Err(format!("Refusing to snapshot {} ({}).", path, reason));
+    }
     let extra_skip = gitignore_skip_dirs(dir);
     let mut new_files = std::collections::HashMap::new();
     stats_walk(dir, &mut new_files, None, STATS_MAX_FILES, &extra_skip);
