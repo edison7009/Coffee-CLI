@@ -52,6 +52,11 @@ use tauri::{AppHandle, Emitter};
 ///   3. OS-managed config / cache / data dirs reported by the `dirs`
 ///      crate (`%APPDATA%`, `~/.config`, `~/Library/Caches`, etc.).
 ///   4. OS-specific system roots (`C:\Windows`, `/etc`, `/usr`, …).
+///   5. Any directory whose leaf name starts with `.` — the dotdir
+///      convention (`.git`, `.next`, `.venv`, `.cache`, `.idea`, …) is
+///      used identically by cross-platform dev tooling on Windows /
+///      macOS / Linux. Opening one as the workspace root is virtually
+///      always a misclick.
 pub fn rejected_root_reason(root: &Path) -> Option<&'static str> {
     // 1. Filesystem root.
     if root.parent().is_none() {
@@ -104,6 +109,12 @@ pub fn rejected_root_reason(root: &Path) -> Option<&'static str> {
             if root == Path::new(sys) {
                 return Some("system directory");
             }
+        }
+    }
+    // 5. Dotdir as workspace root.
+    if let Some(name) = root.file_name() {
+        if name.to_string_lossy().starts_with('.') {
+            return Some("hidden directory");
         }
     }
     None
