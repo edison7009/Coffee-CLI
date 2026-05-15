@@ -294,8 +294,15 @@ pub const AGENT_PRESETS: &[AgentPreset] = &[
         resume_program: Some("hermes"),
         resume_args_before: &["--resume"],
         resume_args_after: &[],
-        session_id_pattern: Some(r"(\d{8}_\d{6}_[0-9a-f]{6})"),
-        token_format: Some(r"^\d{8}_\d{6}_[0-9a-f]{6}$"),
+        // Hermes prints `Resume this session with: hermes --resume
+        // <YYYYMMDD>_<HHMMSS>_<hex>` on exit. The hex tail length has
+        // moved across upstream versions — early Hermes used `[:6]`,
+        // current main branch uses `uuid.uuid4().hex[:8]` (gateway/
+        // session.py). Accept {4,16} so both legacy sessions on disk
+        // and freshly-minted ones validate. Alnum + underscore only,
+        // so the flag-injection guard at server.rs:2786 still bites.
+        session_id_pattern: Some(r"(\d{8}_\d{6}_[0-9a-f]{4,16})"),
+        token_format: Some(r"^\d{8}_\d{6}_[0-9a-f]{4,16}$"),
         prompt_markers: &["❯"],
     },
     // OpenCode 1.14+ resume: `opencode --session ses_<25-alnum>`. The TUI
@@ -1389,13 +1396,24 @@ mod tests {
 
     #[test]
     fn hermes_token_valid_format() {
+        // 6-hex tail — legacy Hermes (older `uuid.hex[:6]` slice).
         assert!(token_matches("hermes", "20240115_143022_a1b2c3"));
+        // 6-hex tail — real token observed in the wild today.
+        assert!(token_matches("hermes", "20260516_025413_d06297"));
+        // 8-hex tail — current upstream main (`uuid.hex[:8]`).
+        assert!(token_matches("hermes", "20260516_025413_d062979a"));
     }
 
     #[test]
     fn hermes_token_rejects_invalid() {
         assert!(!token_matches("hermes", "not-a-hermes-token"));
         assert!(!token_matches("hermes", "20240115_143022_a1b2c3 --extra"));
+        // Hex too short / too long sits outside the {4,16} band.
+        assert!(!token_matches("hermes", "20240115_143022_abc"));
+        assert!(!token_matches("hermes", &format!("20240115_143022_{}", "a".repeat(20))));
+        // Legacy `session_` filename prefix must not slip through — the
+        // server-side parser strips it; the regex would reject it anyway.
+        assert!(!token_matches("hermes", "session_20240115_143022_a1b2c3"));
     }
 
     #[test]

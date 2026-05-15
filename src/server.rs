@@ -2195,10 +2195,18 @@ fn parse_hermes_json(file_path: &std::path::Path) -> Option<SavedSession> {
     let content = std::fs::read_to_string(file_path).ok()?;
     let value: serde_json::Value = serde_json::from_str(&content).ok()?;
 
+    // Hermes session naming: legacy files were `session_<id>.json`, the
+    // `.jsonl` rewrite drops the prefix. If the JSON carries a `session_id`
+    // field, use it as-is (already bare). Otherwise fall back to the file
+    // stem and strip the legacy `session_` prefix — Hermes's `--resume`
+    // wants the bare `<YYYYMMDD>_<HHMMSS>_<hex>`, never the prefixed form.
     let session_id = value.get("session_id")
         .and_then(|v| v.as_str())
-        .unwrap_or_else(|| file_path.file_stem().and_then(|s| s.to_str()).unwrap_or("unknown"))
-        .to_string();
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| {
+            let stem = file_path.file_stem().and_then(|s| s.to_str()).unwrap_or("unknown");
+            stem.strip_prefix("session_").unwrap_or(stem).to_string()
+        });
 
     let mut title = String::new();
     let mut total_messages = 0u32;
