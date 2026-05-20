@@ -93,7 +93,7 @@ pub fn mcp_status() -> Result<()> {
 
     if let Some(a) = manifest.anonymous.as_ref() {
         let age = now.saturating_sub(a.started_at);
-        println!("Anonymous server (used by codex/gemini global injection):");
+        println!("Anonymous server (used by codex global injection):");
         println!("  URL          {}", a.url);
         println!("  Port         {}", a.port);
         println!("  Up for       {}s  ({})", age, format_age(age));

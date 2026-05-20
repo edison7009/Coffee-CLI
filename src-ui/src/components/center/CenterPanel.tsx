@@ -32,6 +32,7 @@ import './CenterPanel.css';
 // priming. See the comment block above OPENCODE_SVG below for the full
 // rationale and the history of failed attempts.
 import HERMES_DATA_URL from '../../icons-inline/hermes.png?inline';
+import ANTIGRAVITY_DATA_URL from '../../icons-inline/antigravity.png?inline';
 import TERMINAL_MAC_DATA_URL from '../../icons-inline/terminal-macos.png?inline';
 import TERMINAL_LINUX_DATA_URL from '../../icons-inline/terminal-linux.png?inline';
 import TERMINAL_PWSH_SVG from '../../icons-inline/terminal-powershell.svg?raw';
@@ -80,7 +81,10 @@ const bgIcon = (dataUrl: string, size = '1em', extra: React.CSSProperties = {}) 
 // identically each time, and browsers scope gradient refs per-element.
 const CLAUDE_SVG    = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" width="100%" height="100%"><path clip-rule="evenodd" d="M20.998 10.949H24v3.102h-3v3.028h-1.487V20H18v-2.921h-1.487V20H15v-2.921H9V20H7.488v-2.921H6V20H4.487v-2.921H3V14.05H0V10.95h3V5h17.998v5.949zM6 10.949h1.488V8.102H6v2.847zm10.51 0H18V8.102h-1.49v2.847z" fill="#D97757" fill-rule="evenodd"/></svg>';
 const CODEX_SVG     = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="100%" height="100%"><defs><linearGradient gradientUnits="userSpaceOnUse" id="codex-fill" x1="12" x2="12" y1="3" y2="21"><stop stop-color="#B1A7FF"/><stop offset=".5" stop-color="#7A9DFF"/><stop offset="1" stop-color="#3941FF"/></linearGradient></defs><path d="M19.503 0H4.496A4.496 4.496 0 000 4.496v15.007A4.496 4.496 0 004.496 24h15.007A4.496 4.496 0 0024 19.503V4.496A4.496 4.496 0 0019.503 0z" fill="#fff"/><path d="M9.064 3.344a4.578 4.578 0 012.285-.312c1 .115 1.891.54 2.673 1.275.01.01.024.017.037.021a.09.09 0 00.043 0 4.55 4.55 0 013.046.275l.047.022.116.057a4.581 4.581 0 012.188 2.399c.209.51.313 1.041.315 1.595a4.24 4.24 0 01-.134 1.223.123.123 0 00.03.115c.594.607.988 1.33 1.183 2.17.289 1.425-.007 2.71-.887 3.854l-.136.166a4.548 4.548 0 01-2.201 1.388.123.123 0 00-.081.076c-.191.551-.383 1.023-.74 1.494-.9 1.187-2.222 1.846-3.711 1.838-1.187-.006-2.239-.44-3.157-1.302a.107.107 0 00-.105-.024c-.388.125-.78.143-1.204.138a4.441 4.441 0 01-1.945-.466 4.544 4.544 0 01-1.61-1.335c-.152-.202-.303-.392-.414-.617a5.81 5.81 0 01-.37-.961 4.582 4.582 0 01-.014-2.298.124.124 0 00.006-.056.085.085 0 00-.027-.048 4.467 4.467 0 01-1.034-1.651 3.896 3.896 0 01-.251-1.192 5.189 5.189 0 01.141-1.6c.337-1.112.982-1.985 1.933-2.618.212-.141.413-.251.601-.33.215-.089.43-.164.646-.227a.098.098 0 00.065-.066 4.51 4.51 0 01.829-1.615 4.535 4.535 0 011.837-1.388zm3.482 10.565a.637.637 0 000 1.272h3.636a.637.637 0 100-1.272h-3.636zM8.462 9.23a.637.637 0 00-1.106.631l1.272 2.224-1.266 2.136a.636.636 0 101.095.649l1.454-2.455a.636.636 0 00.005-.64L8.462 9.23z" fill="url(#codex-fill)"/></svg>';
-const GEMINI_SVG    = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="100%" height="100%"><defs><linearGradient gradientUnits="userSpaceOnUse" id="gemini-fill" x1="24" x2="0" y1="6.587" y2="16.494"><stop stop-color="#EE4D5D"/><stop offset=".328" stop-color="#B381DD"/><stop offset=".476" stop-color="#207CFE"/></linearGradient></defs><path d="M0 4.391A4.391 4.391 0 014.391 0h15.217A4.391 4.391 0 0124 4.391v15.217A4.391 4.391 0 0119.608 24H4.391A4.391 4.391 0 010 19.608V4.391z" fill="url(#gemini-fill)"/><path clip-rule="evenodd" d="M19.74 1.444a2.816 2.816 0 012.816 2.816v15.48a2.816 2.816 0 01-2.816 2.816H4.26a2.816 2.816 0 01-2.816-2.816V4.26A2.816 2.816 0 014.26 1.444h15.48zM7.236 8.564l7.752 3.728-7.752 3.727v2.802l9.557-4.596v-3.866L7.236 5.763v2.801z" fill="#1E1E2E" fill-rule="evenodd"/></svg>';
+// Antigravity CLI uses a PNG (see bgIcon below). Successor to Gemini CLI as
+// of 2026-05-19 — Google retired Gemini CLI for consumers in favor of
+// Antigravity. The icon ships as a small PNG instead of inline SVG because
+// the user-supplied asset is rasterized; same data-URI route as Hermes.
 // OpenCode brand mark — inline SVG, ported from the official apple-touch-icon.
 // Earlier we shipped a PNG to chase pixel parity, but PNG-via-<img> kept
 // flashing on tab switch even with `decoding="sync"` + App-mount img.decode()
@@ -127,10 +131,10 @@ const SvgQwen      = () => inlineSvgIcon(QWEN_SVG);
 const SvgOpenCode  = () => inlineSvgIcon(OPENCODE_SVG);
 const SvgOpenClaw  = () => inlineSvgIcon(OPENCLAW_SVG);
 const SvgCodex     = () => inlineSvgIcon(CODEX_SVG);
-const SvgGemini    = () => inlineSvgIcon(GEMINI_SVG);
 // PNG-backed icons render via CSS background-image with data-URI sources
-// (see bgIcon). Hermes uses `cover` to fill the rounded square.
-const SvgHermes    = () => bgIcon(HERMES_DATA_URL, '1em', { borderRadius: 'var(--radius-xs)', backgroundSize: 'cover' });
+// (see bgIcon). Hermes and Antigravity use `cover` to fill the rounded square.
+const SvgHermes      = () => bgIcon(HERMES_DATA_URL, '1em', { borderRadius: 'var(--radius-xs)', backgroundSize: 'cover' });
+const SvgAntigravity = () => bgIcon(ANTIGRAVITY_DATA_URL, '1em', { borderRadius: 'var(--radius-xs)', backgroundSize: 'cover' });
 
 // Coffee 101 card icon — animated coffee mark (same as the left-panel
 // brand header in Explorer.tsx panel-header): steam wave loops 3s, cup
@@ -401,7 +405,7 @@ const SvgPlus = ({ active }: { active: boolean }) => (
 // still count. Update this set when adding or removing AGENT_CATALOG
 // entries below.
 const VALID_PIN_KEYS = new Set<string>([
-  'claude', 'opencode', 'openclaw', 'codex', 'gemini', 'qwen', 'hermes', 'terminal',
+  'claude', 'opencode', 'openclaw', 'codex', 'antigravity', 'qwen', 'hermes', 'terminal',
   'multi-agent', 'three-agent', 'two-agent', 'installer',
   'four-split', 'three-split', 'two-split', 'hyper-agent',
 ]);
@@ -472,7 +476,7 @@ export function CenterPanel() {
         'agent:claude',
         'agent:codex',
         'agent:opencode',
-        'agent:gemini',
+        'agent:antigravity',
         'agent:multi-agent',
         'agent:terminal',
       ];
@@ -495,7 +499,7 @@ export function CenterPanel() {
     opencode: <SvgOpenCode />,
     openclaw: <SvgOpenClaw />,
     codex: <SvgCodex />,
-    gemini: <SvgGemini />,
+    antigravity: <SvgAntigravity />,
     qwen: <SvgQwen />,
     hermes: <SvgHermes />,
   };
@@ -504,7 +508,7 @@ export function CenterPanel() {
   // names are sourced from the Rust registry (see lib/tool-info.ts);
   // the order here is the launchpad's preferred presentation order.
   const BUILTIN_AI_CLI_FALLBACK: { key: ToolType; label: string }[] = [
-    'claude', 'opencode', 'openclaw', 'codex', 'gemini', 'qwen', 'hermes',
+    'claude', 'opencode', 'openclaw', 'codex', 'antigravity', 'qwen', 'hermes',
   ].map((key) => ({ key: key as ToolType, label: getToolDisplayName(key) }));
 
   // Unified agent catalog — fully local. The remote catalog fetch
@@ -1073,7 +1077,7 @@ export function CenterPanel() {
       case 'opencode': return { icon: <SvgOpenCode />, title: cwd ?? getToolDisplayName('opencode'), tooltip: pathTip };
       case 'openclaw': return { icon: <SvgOpenClaw />, title: getToolDisplayName('openclaw'), tooltip: undefined };
       case 'codex': return { icon: <SvgCodex />, title: cwd ?? getToolDisplayName('codex'), tooltip: pathTip };
-      case 'gemini': return { icon: <SvgGemini />, title: cwd ?? getToolDisplayName('gemini'), tooltip: pathTip };
+      case 'antigravity': return { icon: <SvgAntigravity />, title: cwd ?? getToolDisplayName('antigravity'), tooltip: pathTip };
       case 'remote': {
         let title = t('tool.remote') as string;
         if (session.toolData) {
@@ -1654,7 +1658,7 @@ export function CenterPanel() {
                           {AGENT_CATALOG.filter(item => item.type === 'ai-cli').map(item => {
                             const pinId = `agent:${item.key}`;
                             const isPinned = pinnedItems.includes(pinId);
-                            const hasGear = (['claude', 'codex', 'gemini', 'qwen', 'opencode', 'openclaw', 'hermes'] as const).includes(item.key as any);
+                            const hasGear = (['claude', 'codex', 'antigravity', 'qwen', 'opencode', 'openclaw', 'hermes'] as const).includes(item.key as any);
                             return (
                               <div
                                 key={item.key}

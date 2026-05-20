@@ -45,14 +45,6 @@ pub enum HistoryShape {
         depth: u8,
     },
 
-    /// Gemini CLI: `tmp/<project-folder>/chats/session-*.jsonl`.
-    /// Custom parser plus a project-hash → cwd map loaded once
-    /// per scan. `parse_gemini_session_jsonl`.
-    GeminiTmp {
-        root_under_home: &'static str,
-        depth: u8,
-    },
-
     /// Qwen Code: `projects/<sanitized-cwd>/chats/<session>.jsonl`.
     /// Custom parser `parse_qwen_session_jsonl`.
     QwenProjects {
@@ -75,7 +67,6 @@ impl HistoryShape {
         match self {
             HistoryShape::GenericJsonl { root_under_home, .. }
             | HistoryShape::CodexRollout { root_under_home, .. }
-            | HistoryShape::GeminiTmp { root_under_home, .. }
             | HistoryShape::QwenProjects { root_under_home, .. }
             | HistoryShape::OpenCodeMixed { root_under_home } => Some(root_under_home),
             HistoryShape::HermesFlatJson => None,
@@ -107,7 +98,6 @@ impl HistoryShape {
         match self {
             HistoryShape::GenericJsonl { depth, .. }
             | HistoryShape::CodexRollout { depth, .. }
-            | HistoryShape::GeminiTmp { depth, .. }
             | HistoryShape::QwenProjects { depth, .. } => Some(*depth),
             HistoryShape::HermesFlatJson | HistoryShape::OpenCodeMixed { .. } => None,
         }
@@ -163,8 +153,8 @@ pub struct ToolDescriptor {
 
     /// `true` if Coffee CLI installs a status-indicator hook for
     /// this tool. Drives `hook_installer::dispatch_install`. Tools
-    /// without a hook surface (Gemini / Qwen / OpenClaw today) still
-    /// participate in ChangesBoard because the snapshot diff is
+    /// without a hook surface (Antigravity / Qwen / OpenClaw today)
+    /// still participate in ChangesBoard because the snapshot diff is
     /// tool-agnostic — only the live tab status dot is unavailable.
     pub has_hook_surface: bool,
 
@@ -211,9 +201,9 @@ impl ToolDescriptor {
     }
 }
 
+mod antigravity;
 mod claude;
 mod codex;
-mod gemini;
 pub mod hermes;
 mod openclaw;
 mod opencode;
@@ -226,7 +216,7 @@ pub static TOOLS: &[&ToolDescriptor] = &[
     &claude::DESCRIPTOR,
     &codex::DESCRIPTOR,
     &opencode::DESCRIPTOR,
-    &gemini::DESCRIPTOR,
+    &antigravity::DESCRIPTOR,
     &qwen::DESCRIPTOR,
     &openclaw::DESCRIPTOR,
     &hermes::DESCRIPTOR,

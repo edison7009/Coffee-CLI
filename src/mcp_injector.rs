@@ -3,7 +3,7 @@
 //! Each multi-agent pane gets:
 //!   - a private temp dir at `<temp>/coffee-cli/panes/<sanitized-pane-id>/`
 //!     holding the per-pane CLI artifacts (Claude mcp.json / Codex
-//!     instructions.md / Gemini extension manifest+GEMINI.md)
+//!     instructions.md / OpenCode opencode.json)
 //!   - a per-pane MCP HTTP server (with `self_pane_id` baked in at spawn
 //!     time), independently of CLI kind. So `whoami()`, `list_panes()`'s
 //!     `is_self`, and `[From <id>]` auto-prefixing in `send_to_pane()` are
@@ -17,31 +17,25 @@
 //! | Claude   | `--mcp-config <pane-temp>/claude-mcp.json`                 | that JSON file                                            |
 //! | Codex    | `-c mcp_servers.coffee-cli.url='<url>'`                    | command-line override (no file)                           |
 //! |          | `-c experimental_instructions_file='<pane-temp>/inst.md'`  | per-pane temp file (no workspace touch)                   |
-//! | Gemini   | `--extensions coffee-pane-<sanitized>`                     | `~/.gemini/extensions/coffee-pane-<sanitized>/` stub      |
-//! |          |                                                            | which holds a link → `<pane-temp>/gemini-extension.json`  |
-//! |          |                                                            | + `<pane-temp>/GEMINI.md`                                 |
 //! | OpenCode | `OPENCODE_CONFIG=<pane-temp>/opencode.json` env var        | that JSON file (merged onto user's global config; carries |
 //! |          |                                                            | `permission: "allow"` since OpenCode TUI has no CLI flag) |
+//!
+//! Antigravity CLI (replaced Gemini CLI 2026-05-19) is NOT in the table:
+//! its plugin model is `agy plugin install <name>` (persistent registry)
+//! rather than a per-invocation `--extensions <name>` flag, so the
+//! per-pane stub-dir trick we used for Gemini's hard-coded
+//! `~/.gemini/extensions/` loader doesn't map. Antigravity panes spawn
+//! without coffee-cli MCP wiring until a plugin-install lifecycle is
+//! designed.
 //!
 //! Workspace pollution: zero. No `.md`, no `settings.json`, no
 //! `mcp_servers` block ever lands in the user's project directory.
 //!
-//! Global pollution: zero for Claude and Codex (purely command-line +
-//! OS temp). One narrow exception for Gemini — Gemini CLI's extension
-//! loader ONLY scans `~/.gemini/extensions/<name>/` (no absolute-path
-//! flag exists), so each active pane drops a tiny stub directory there
-//! containing only a `.gemini-extension-install.json` link metadata
-//! file pointing at the real manifest in OS temp. Stubs are pruned at
-//! `start_ui` boot, on app shutdown, and on every tab close, so they
-//! never accumulate even across crashes (boot-time prune is the
-//! belt-and-suspenders catch-all).
-//!
-//! Auth safety: we never set `CODEX_HOME` / `GEMINI_CLI_HOME`, so
-//! Codex's `~/.codex/auth.json` and Gemini's `~/.gemini/oauth_creds.json`
-//! always remain reachable. Codex `-c` overrides merge onto the user's
-//! `~/.codex/config.toml` rather than replacing it; Gemini extension
-//! `mcpServers` merge into the user's existing MCP set. User customisation
-//! and credentials are preserved.
+//! Global pollution: zero. Purely command-line overrides + OS temp.
+//! Auth safety: we never set `CODEX_HOME`, so Codex's
+//! `~/.codex/auth.json` remains reachable. Codex `-c` overrides merge
+//! onto the user's `~/.codex/config.toml` rather than replacing it.
+//! User customisation and credentials are preserved.
 //!
 //! Lifecycle: `prune_pane_artifacts()` is called once at app start so
 //! the previous run's leftover dirs go away, again at shutdown for
@@ -57,12 +51,6 @@ use crate::mcp_server::McpEndpoint;
 /// Key used for the Coffee CLI entry in every per-pane CLI config.
 pub const MCP_KEY: &str = "coffee-cli";
 
-/// Stub-dir prefix in `~/.gemini/extensions/`. Each active multi-agent
-/// pane running Gemini gets one stub dir under this prefix. The prefix
-/// lets `prune_pane_artifacts()` find and delete stale stubs from
-/// previous Coffee CLI runs without touching user-installed extensions.
-pub const GEMINI_STUB_PREFIX: &str = "coffee-pane-";
-
 /// Output of [`prepare_pane_config_dir`]. The caller picks the right
 /// field based on CLI kind. Default-empty when `cli_kind` doesn't
 /// match a multi-agent CLI.
@@ -73,10 +61,6 @@ pub struct PaneConfigPaths {
     /// `cli_kind == "codex"` only. Caller appends these straight onto
     /// the codex argv (already in `-c key=value` pairs, ready to spawn).
     pub codex_extra_args: Vec<String>,
-    /// `cli_kind == "gemini"` only. Pass via `--extensions <name>`. The
-    /// stub dir at `~/.gemini/extensions/<name>/` has been created with
-    /// link metadata pointing at the real manifest in OS temp.
-    pub gemini_extension_name: Option<String>,
     /// `cli_kind == "opencode"` only. Pass via `OPENCODE_CONFIG=<path>`
     /// env var (NOT a CLI flag — OpenCode 1.14 reads only env var or
     /// project-local `opencode.json`; we use the env var so the user's
@@ -88,10 +72,10 @@ pub struct PaneConfigPaths {
 
 /// Build per-pane CLI artifacts for `pane_id` running `cli_kind`,
 /// pointed at `endpoint`. `protocol_text` is written into the CLI's
-/// instructions file (Codex `instructions.md`, Gemini `GEMINI.md`).
-/// Claude takes its protocol text via `--append-system-prompt` and
-/// doesn't read a file here — caller passes the same `protocol_text`
-/// through that flag separately.
+/// instructions file (Codex `instructions.md`). Claude takes its
+/// protocol text via `--append-system-prompt` and doesn't read a
+/// file here — caller passes the same `protocol_text` through that
+/// flag separately.
 ///
 /// Idempotent: re-invoking with the same args overwrites in place.
 /// Unknown `cli_kind` returns the default empty `PaneConfigPaths`.
@@ -144,39 +128,6 @@ pub fn prepare_pane_config_dir(
                 ),
             ];
         }
-        "gemini" => {
-            let sanitized = sanitize_pane_id(pane_id);
-            let extension_name = format!("{}{}", GEMINI_STUB_PREFIX, sanitized);
-
-            // Real manifest + GEMINI.md in OS temp.
-            fs::write(
-                dir.join("gemini-extension.json"),
-                gemini_extension_json(endpoint, &extension_name),
-            )?;
-            fs::write(dir.join("GEMINI.md"), protocol_text)?;
-
-            // Stub in ~/.gemini/extensions/<name>/ — link metadata
-            // pointing at the real manifest in OS temp. This is the
-            // `effectiveExtensionPath` escape hatch in Gemini CLI's
-            // loader (chunk-RNWNACRD.js:61763): when the stub contains
-            // a `.gemini-extension-install.json` with `type=link`, the
-            // loader reads the manifest from `source` instead of the
-            // stub itself. Lets us keep the real config in OS temp
-            // while still satisfying Gemini's "extensions live in
-            // ~/.gemini/extensions/" hard-coded path.
-            if let Some(stub_dir) = gemini_extensions_dir().map(|d| d.join(&extension_name)) {
-                fs::create_dir_all(&stub_dir)?;
-                let link_meta = serde_json::json!({
-                    "type": "link",
-                    "source": dir.display().to_string(),
-                });
-                fs::write(
-                    stub_dir.join(".gemini-extension-install.json"),
-                    serde_json::to_string_pretty(&link_meta).unwrap_or_default(),
-                )?;
-            }
-            out.gemini_extension_name = Some(extension_name);
-        }
         "opencode" => {
             // OpenCode 1.14 config-resolution chain (per opencode.ai/docs/config):
             //   1. ~/.config/opencode/opencode.json   (global user config)
@@ -209,7 +160,6 @@ pub fn prepare_pane_config_dir(
 
 /// Wipe per-pane artifacts from any previous Coffee CLI run:
 ///   - `<temp>/coffee-cli/panes/`
-///   - `~/.gemini/extensions/coffee-pane-*` stub directories
 ///
 /// Called once at app start (recover from crash residue), once at app
 /// shutdown (tidy exit). Best-effort — missing dirs and permission
@@ -226,27 +176,10 @@ pub fn prune_pane_artifacts() {
             );
         }
     }
-    if let Some(ext_dir) = gemini_extensions_dir() {
-        if let Ok(entries) = fs::read_dir(&ext_dir) {
-            for ent in entries.flatten() {
-                let name = ent.file_name();
-                if name.to_string_lossy().starts_with(GEMINI_STUB_PREFIX) {
-                    let p = ent.path();
-                    if let Err(e) = fs::remove_dir_all(&p) {
-                        log::warn!("[mcp-inject] prune stub {} failed: {}", p.display(), e);
-                    }
-                }
-            }
-        }
-    }
 }
 
 fn panes_root() -> PathBuf {
     std::env::temp_dir().join("coffee-cli").join("panes")
-}
-
-fn gemini_extensions_dir() -> Option<PathBuf> {
-    dirs::home_dir().map(|h| h.join(".gemini").join("extensions"))
 }
 
 /// Pane ids contain `::` and `/` which are unfriendly for filenames
@@ -303,21 +236,6 @@ fn opencode_config_json(endpoint: &McpEndpoint) -> String {
     serde_json::to_string_pretty(&body).unwrap_or_default()
 }
 
-fn gemini_extension_json(endpoint: &McpEndpoint, extension_name: &str) -> String {
-    let body = serde_json::json!({
-        "name": extension_name,
-        "version": "1.0.0",
-        "description": "Coffee CLI multi-agent pane bridge",
-        "contextFileName": "GEMINI.md",
-        "mcpServers": {
-            MCP_KEY: {
-                "httpUrl": endpoint.url,
-            }
-        }
-    });
-    serde_json::to_string_pretty(&body).unwrap_or_default()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -351,7 +269,6 @@ mod tests {
         let pid = unique_pane("codex");
         let out = prepare_pane_config_dir(&pid, "codex", &ep(), "PROTOCOL BODY").unwrap();
         assert!(out.claude_mcp_config_path.is_none());
-        assert!(out.gemini_extension_name.is_none());
         assert_eq!(out.codex_extra_args.len(), 4);
         assert_eq!(out.codex_extra_args[0], "-c");
         assert!(out.codex_extra_args[1].contains("mcp_servers.coffee-cli.url"));
@@ -368,48 +285,12 @@ mod tests {
     }
 
     #[test]
-    fn gemini_writes_real_manifest_and_stub() {
-        let pid = unique_pane("gemini");
-        let out = prepare_pane_config_dir(&pid, "gemini", &ep(), "GEMINI BODY").unwrap();
-        let name = out
-            .gemini_extension_name
-            .clone()
-            .expect("gemini returns name");
-        assert!(name.starts_with(GEMINI_STUB_PREFIX));
-        // Real manifest in OS temp.
-        let temp_dir = panes_root().join(sanitize_pane_id(&pid));
-        let manifest = fs::read_to_string(temp_dir.join("gemini-extension.json")).unwrap();
-        assert!(manifest.contains("coffee-cli"));
-        assert!(manifest.contains("httpUrl"));
-        assert!(manifest.contains("http://127.0.0.1:50000/mcp"));
-        let gemini_md = fs::read_to_string(temp_dir.join("GEMINI.md")).unwrap();
-        assert_eq!(gemini_md, "GEMINI BODY");
-        // Stub in ~/.gemini/extensions/.
-        if let Some(stub_dir) = gemini_extensions_dir().map(|d| d.join(&name)) {
-            let link = fs::read_to_string(stub_dir.join(".gemini-extension-install.json"))
-                .unwrap();
-            assert!(link.contains("\"type\""));
-            assert!(link.contains("\"link\""));
-            // serde_json escapes backslashes so the literal source path
-            // doesn't byte-match temp_dir.display(). Confirm the source
-            // field exists and contains the unique sanitized pane id —
-            // that's enough to prove this stub points at THIS pane's
-            // dir and not some shared one.
-            assert!(link.contains("\"source\""));
-            assert!(link.contains(&sanitize_pane_id(&pid)));
-            let _ = fs::remove_dir_all(&stub_dir);
-        }
-        let _ = fs::remove_dir_all(&temp_dir);
-    }
-
-    #[test]
     fn opencode_writes_config_file_with_url_and_allow_permission() {
         let pid = unique_pane("opencode");
         let out = prepare_pane_config_dir(&pid, "opencode", &ep(), "IGNORED").unwrap();
         let p = out.opencode_config_path.expect("opencode returns path");
         assert!(out.claude_mcp_config_path.is_none());
         assert!(out.codex_extra_args.is_empty());
-        assert!(out.gemini_extension_name.is_none());
         let body = fs::read_to_string(&p).unwrap();
         assert!(body.contains("coffee-cli"));
         assert!(body.contains("\"type\": \"remote\""));
@@ -428,7 +309,6 @@ mod tests {
         let out = prepare_pane_config_dir(&pid, "qwen", &ep(), "ignored").unwrap();
         assert!(out.claude_mcp_config_path.is_none());
         assert!(out.codex_extra_args.is_empty());
-        assert!(out.gemini_extension_name.is_none());
         assert!(out.opencode_config_path.is_none());
         let _ = fs::remove_dir_all(panes_root().join(sanitize_pane_id(&pid)));
     }

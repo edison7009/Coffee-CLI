@@ -5,7 +5,7 @@
 //!
 //! ## Where Hermes Agent stores its data
 //!
-//! Unlike the other agent CLIs (Claude/Codex/Gemini/Qwen/OpenClaw),
+//! Unlike the other agent CLIs (Claude/Codex/Antigravity/Qwen/OpenClaw),
 //! Hermes's data root is platform-dependent and runtime-overridable:
 //!
 //!   - macOS / Linux:  `~/.hermes/`

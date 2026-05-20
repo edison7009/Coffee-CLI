@@ -6,7 +6,7 @@
 //                    ↓ MCP @ http://127.0.0.1:<stable port>/mcp
 //                Coffee-CLI's Hyper-Agent anonymous MCP server
 //                    ↓ existing send_to_pane (writes to PTY stdin)
-//             Claude Code / Codex CLI / Gemini / ... panes (cross-tab)
+//             Claude Code / Codex CLI / Antigravity / ... panes (cross-tab)
 //
 // From a target pane's POV the dispatched text arrives as plain stdin —
 // indistinguishable from human typing through Coffee-CLI's UI / Gambit.
@@ -29,7 +29,7 @@ import { clipboardWrite } from '../../lib/clipboard';
 function buildSetupInstruction(mcpUrl: string): string {
   return `[Permanent rule — please save to your memory and follow forever]
 
-You are running on a user's machine that also runs Coffee-CLI. Coffee-CLI's window shows a row of tabs at the top. Each tab is EITHER a single AI CLI session (Claude Code / Codex / Gemini / OpenCode / ...) OR a multi-agent tab containing 2–4 such CLIs side-by-side as panes in a grid. The user keeps these CLIs running for hours/days; their conversation context and current task state persist inside them.
+You are running on a user's machine that also runs Coffee-CLI. Coffee-CLI's window shows a row of tabs at the top. Each tab is EITHER a single AI CLI session (Claude Code / Codex / Antigravity / OpenCode / ...) OR a multi-agent tab containing 2–4 such CLIs side-by-side as panes in a grid. The user keeps these CLIs running for hours/days; their conversation context and current task state persist inside them.
 
 You talk to Coffee-CLI through its MCP server at ${mcpUrl} (registered as "coffee-cli"). Verify you have its tools — list_panes / read_pane / send_to_pane — available.
 
@@ -46,7 +46,7 @@ Whenever the user asks you (via social-app message or otherwise) to:
 
 you MUST use the coffee-cli MCP server's tools:
 
-  - list_panes()           — returns one row per running agent across the whole Coffee-CLI window. A single-CLI tab contributes one row; a multi-agent tab contributes one row per pane. Each row has id (e.g. "pane-2"), cli (claude/codex/gemini/...), state (idle/busy).
+  - list_panes()           — returns one row per running agent across the whole Coffee-CLI window. A single-CLI tab contributes one row; a multi-agent tab contributes one row per pane. Each row has id (e.g. "pane-2"), cli (claude/codex/antigravity/...), state (idle/busy).
   - read_pane(id, n)       — read recent N lines of that agent's output.
   - send_to_pane(id, text) — write text to that agent's stdin. The receiving CLI sees it as if the user typed it (it cannot tell whether the input came from the user's keyboard, from Coffee-CLI's compose box, or from you).
 

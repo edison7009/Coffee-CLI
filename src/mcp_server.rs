@@ -89,7 +89,7 @@ pub struct PaneInfo {
     /// was to keep long UUIDs out of the model's context).
     #[serde(skip, default)]
     pub full_id: String,
-    /// CLI running in this pane (claude / codex / gemini / opencode / shell / ...).
+    /// CLI running in this pane (claude / codex / antigravity / opencode / shell / ...).
     pub cli: String,
     pub state: PaneState,
     /// Epoch seconds of last output from this pane.
@@ -107,7 +107,7 @@ pub struct PaneInfo {
 /// Live pane store bridging the MCP layer to `terminal::SharedSession`.
 ///
 /// Each Coffee-CLI terminal session (one per Tab pane) is visible here as
-/// a "pane". The primary pane's CLI (Claude Code / Codex / Gemini / OpenCode)
+/// a "pane". The primary pane's CLI (Claude Code / Codex / OpenCode)
 /// calls MCP tools; we translate those calls into direct operations on
 /// the other panes' PTYs.
 pub struct PaneStore {
@@ -132,7 +132,7 @@ impl PaneStore {
     ///
     /// v1.0 returns every session in the process; Tab-scoped filtering
     /// (as defined in docs §5.7) is enforced by the UI pane selector and
-    /// by the primary CLI following CLAUDE.md / AGENTS.md / GEMINI.md
+    /// by the primary CLI following CLAUDE.md / AGENTS.md
     /// conventions. Day 5 UI work can add a `?tab=<id>` endpoint filter.
     async fn list(&self) -> Vec<PaneInfo> {
         // Extract everything we need under a brief lock, then drop it.
@@ -207,11 +207,12 @@ impl PaneStore {
         timeout_sec: u64,
     ) -> Result<DispatchResult, String> {
         // Strip any caller-provided trailing newline; we always append our
-        // own in a SECOND write so Ink/React-based REPLs (Gemini, Claude
-        // Code) treat the body and the Enter as two separate stdin events
-        // — not one pasted chunk where the final \r gets swallowed as
-        // part of the text. Observed live: a combined "body\r" write
-        // shows up in Gemini's input box but never submits; splitting
+        // own in a SECOND write so Ink/React-based REPLs (Claude Code,
+        // historically Gemini CLI before its sunset) treat the body and
+        // the Enter as two separate stdin events — not one pasted chunk
+        // where the final \r gets swallowed as part of the text. Observed
+        // live on Gemini CLI: a combined "body\r" write showed up in the
+        // input box but never submitted; splitting
         // body + short sleep + "\r" reliably submits.
         let body = text.trim_end_matches(['\r', '\n']).to_string();
         let should_submit = submit;
@@ -262,15 +263,16 @@ impl PaneStore {
 
         // Phase 1b: pause so the target REPL processes the body
         // characters into its input field, THEN send the Enter as a
-        // separate keystroke. Observed live on 2026-04-23: a flat
-        // 120ms was enough for short < 100-char prompts but failed for
-        // a 300-char multi-line Claude→Gemini dispatch — Gemini's Ink
-        // reconciler was still painting the last lines when `\r`
-        // arrived, so the CR got absorbed into the text instead of
-        // submitting. Body-size proportional delay fixes the whole
-        // range: 250ms base (covers the fixed render cost) + 1ms per
-        // body character (scales with paint work), clamped to 1.5s
-        // so we never sit on a huge paste for ages. Still fires
+        // separate keystroke. Observed live on 2026-04-23 (against the
+        // pre-sunset Gemini CLI): a flat 120ms was enough for short
+        // < 100-char prompts but failed for a 300-char multi-line
+        // Claude→peer dispatch — the peer's Ink reconciler was still
+        // painting the last lines when `\r` arrived, so the CR got
+        // absorbed into the text instead of submitting. Body-size
+        // proportional delay fixes the whole range: 250ms base
+        // (covers the fixed render cost) + 1ms per body character
+        // (scales with paint work), clamped to 1.5s so we never sit
+        // on a huge paste for ages. Still fires
         // mirror of server::tier_terminal_write's user_submitted_at
         // so the status ticker flips to "working".
         if should_submit {
@@ -329,7 +331,7 @@ impl PaneStore {
             // Recovery: send a single retry CR. Cost of a false positive
             // (CR did land but the LLM was unusually slow) is one empty
             // Enter at the prompt, which all three target CLIs (Claude
-            // Code / Codex / Gemini) treat as a no-op. We deliberately
+            // Code / Codex) treat as a no-op. We deliberately
             // do not retry more than once: two retries means the agent
             // is genuinely stuck (network, OOM, model crash) and adding
             // more CRs won't help — let the wait loop time out and
@@ -402,10 +404,10 @@ impl PaneStore {
         //   B) settle-based: we saw output come in after send time AND then
         //      it has been quiet for 2.5s+. Independent of prompt markers.
         //      Load-bearing when a CLI's prompt isn't in the marker list
-        //      (observed live: Gemini CLI's "* " input prompt doesn't
-        //      match its preset `✦`, so path A never fires and the
-        //      controller pane would hang forever waiting on a response
-        //      that already arrived).
+        //      (observed live on the pre-sunset Gemini CLI: its "* "
+        //      input prompt didn't match the `✦` preset, so path A never
+        //      fired and the controller pane would hang forever waiting
+        //      on a response that already arrived).
         //
         // The settle_silence threshold is slightly longer than long_silence
         // so we don't declare idle in the gap BETWEEN our write hitting
@@ -441,17 +443,18 @@ impl PaneStore {
                     let now = Instant::now();
                     let produced_since_send = act.last_output_at >= send_time;
                     let silence = now.duration_since(act.last_output_at);
-                    // Observed 2026-04-23: LLM-driven CLIs (Claude/Codex/
-                    // Gemini) pause 3-8s between planning phases while
-                    // the model thinks; the old 2s/2.5s thresholds
-                    // treated these as "task done" and returned Claude a
-                    // half-finished result. Bump to 8s/15s — Gemini's
-                    // longest observed mid-task think gap was ~10s, so
-                    // 15s for settle_silence is conservative without
-                    // stretching too long. Real idle after a genuinely
-                    // completed task (Gemini renders ✨ summary, prompt
-                    // returns) hits marker_path in <2s and early-returns
-                    // regardless, so this doesn't slow the happy path.
+                    // Observed 2026-04-23 against the pre-sunset Gemini
+                    // CLI: LLM-driven CLIs (Claude/Codex/Gemini) paused
+                    // 3-8s between planning phases while the model
+                    // thinks; the old 2s/2.5s thresholds treated these
+                    // as "task done" and returned Claude a half-finished
+                    // result. Bump to 8s/15s — the longest observed
+                    // mid-task think gap was ~10s, so 15s for
+                    // settle_silence is conservative without stretching
+                    // too long. Real idle after a genuinely completed
+                    // task (prompt returns, ✨ summary renders) hits
+                    // marker_path in <2s and early-returns regardless,
+                    // so this doesn't slow the happy path.
                     let long_silence = silence > Duration::from_millis(8000);
                     let settle_silence = silence > Duration::from_millis(15000);
 
@@ -664,7 +667,7 @@ fn pane_short(pane_id: &str) -> String {
 ///   - bare digit / number: `1` / `2` / …   → expanded as `<self_tab>::pane-N`
 ///
 /// Short forms are the recommended way for an LLM to call these tools
-/// in a 4-pane grid because the Claude/Codex/Gemini TUIs render long
+/// in a 4-pane grid because the Claude/Codex TUIs render long
 /// tool-call arg lists badly when wrapped in narrow panes (the long
 /// UUID + a multi-byte text payload trips emoji-width-aware folding).
 /// Full ids stay accepted forever — pre-v1.5.1 callers (and the LLMs
@@ -963,9 +966,9 @@ impl ServerHandler for CoffeeMcp {
             instructions: Some(
                 "Coffee-CLI multi-agent MCP server. \
 Tools: list_panes, send_to_pane, read_pane. \
-Use these to coordinate ACROSS different CLIs (Claude/Codex/Gemini/OpenCode). \
+Use these to coordinate ACROSS different CLIs (Claude/Codex/OpenCode). \
 For intra-CLI parallelism, prefer your native subagent SDK (Agent Teams / app-server / TaskTool). \
-See CLAUDE.md / AGENTS.md / GEMINI.md in the workspace root for full protocol."
+See CLAUDE.md / AGENTS.md in the workspace root for full protocol."
                     .to_string(),
             ),
         }

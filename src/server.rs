@@ -17,7 +17,7 @@ pub struct AppState {
     /// Option replaces the watcher atomically on folder switch.
     pub fs_watcher: Mutex<Option<crate::fs_watcher::FsWatcher>>,
     /// Per-pane MCP server endpoints. Each multi-agent pane (Claude /
-    /// Codex / Gemini) gets its OWN HTTP listener on its own port with
+    /// Codex / OpenCode) gets its OWN HTTP listener on its own port with
     /// `self_pane_id` baked in, so `whoami()` / `is_self` in
     /// `list_panes` / `[From <id>]` prefixing in `send_to_pane` all
     /// behave deterministically regardless of which CLI is calling.
@@ -879,21 +879,26 @@ async fn tier_terminal_start(
     let sentinel_enabled = sentinel_enabled.unwrap_or(false);
     // ── Per-pane MCP wiring for multi-agent panes ────────────────────
     // For each multi-agent pane (session id like "tab-X::pane-N")
-    // running Claude, Codex, or Gemini, spawn an MCP server with that
+    // running Claude, Codex, or OpenCode, spawn an MCP server with that
     // pane's identity baked in and prepare per-pane CLI artifacts:
-    //   - Claude: `--mcp-config <pane>/claude-mcp.json` + `--append-system-prompt`
-    //   - Codex:  `-c mcp_servers.coffee-cli.url='...'` + `-c experimental_instructions_file='<pane>/inst.md'`
-    //   - Gemini: `--extensions coffee-pane-<sanitized>` (stub in `~/.gemini/extensions/`
-    //             linking to the real manifest in OS temp)
+    //   - Claude:   `--mcp-config <pane>/claude-mcp.json` + `--append-system-prompt`
+    //   - Codex:    `-c mcp_servers.coffee-cli.url='...'` + `-c experimental_instructions_file='<pane>/inst.md'`
+    //   - OpenCode: `OPENCODE_CONFIG=<pane>/opencode.json` env var
     // Across all three, `whoami()` returns the deterministic pane id,
     // `list_panes()` marks `is_self: true` on the matching row, and
     // dispatched text auto-prefixes with `[From <pane>]`. No global
     // config injection, no workspace files written, no env var that
     // would redirect the CLI's HOME and break auth.
     //
-    // For other tools (qwen, hermes, openclaw, opencode, …) this stays
-    // a no-op — their multi-agent participation is just "be a regular
-    // PTY the user can read"; they don't get a per-pane MCP server.
+    // Antigravity CLI replaced Gemini CLI 2026-05-19; its persistent
+    // `agy plugin install` model doesn't map to the per-invocation
+    // extension stub we used for Gemini, so Antigravity panes don't
+    // get coffee-cli MCP wiring yet.
+    //
+    // For other tools (antigravity, qwen, hermes, openclaw, …) this
+    // stays a no-op — their multi-agent participation is just "be a
+    // regular PTY the user can read"; they don't get a per-pane MCP
+    // server.
     let mut pane_paths: Option<crate::mcp_injector::PaneConfigPaths> = None;
     {
         let in_multi_agent = session_id.contains("::pane-");
@@ -904,7 +909,7 @@ async fn tier_terminal_start(
         // here; they belong to multi-agent mode unconditionally so all
         // four panes still run without manual approval clicks.
         let pane_cli_kind = match tool.as_deref() {
-            Some(k @ ("claude" | "codex" | "gemini" | "opencode"))
+            Some(k @ ("claude" | "codex" | "opencode"))
                 if in_multi_agent && sentinel_enabled => Some(k),
             _ => None,
         };
@@ -1005,11 +1010,10 @@ fn tier_terminal_start_blocking(
     // mode.
     let in_multi_agent = session_id.contains("::pane-");
 
-    // Multi-agent flag sets (claude / codex / gemini) carry per-pane
-    // MCP wiring that depends on `pane_paths` and `session_id`, so
-    // they live inline. `remote` and the fallback shell are not in
-    // the registry — `remote` parses tool_data at runtime, the shell
-    // is platform-derived.
+    // Multi-agent flag sets (claude / codex) carry per-pane MCP wiring
+    // that depends on `pane_paths` and `session_id`, so they live
+    // inline. `remote` and the fallback shell are not in the registry —
+    // `remote` parses tool_data at runtime, the shell is platform-derived.
     let registry_descriptor = tool.as_deref().and_then(crate::tools::find);
     let (cmd, args): (String, Vec<String>) = match (tool.as_deref(), registry_descriptor) {
         (Some(id), Some(descriptor)) => {
@@ -1092,43 +1096,6 @@ fn tier_terminal_start_blocking(
                             pane_paths.as_ref().map(|pp| pp.codex_extra_args.clone())
                         {
                             a.extend(extra);
-                        }
-                    }
-                    "gemini" => {
-                        // Gemini CLI's equivalent of Claude's
-                        // --dangerously-skip-permissions. Observed live
-                        // on 2026-04-23 (Gemini CLI v0.39.0): the
-                        // boolean `--yolo` flag did NOT reliably persist
-                        // into the interactive REPL's tool-confirmation
-                        // layer — the REPL still prompted "Allow
-                        // execution of [...]?" for every tool call,
-                        // which defeats hands-free multi-agent
-                        // dispatch. `--approval-mode yolo` is the
-                        // explicit, documented setting form (see
-                        // `gemini --help`) and holds for the entire
-                        // REPL session. Preferred over the shorter
-                        // `--yolo` for exactly this reason.
-                        a.push("--approval-mode".to_string());
-                        a.push("yolo".to_string());
-                        // Per-pane extension: Gemini reads
-                        //   ~/.gemini/extensions/coffee-pane-<sanitized>/
-                        // which our injector populated with link
-                        // metadata pointing at the real manifest in OS
-                        // temp. Loading this extension MERGES
-                        // `mcpServers.coffee-cli` (with the per-pane
-                        // HTTP URL) and the GEMINI.md context file into
-                        // the running session — without touching the
-                        // user's settings.json, OAuth creds, or
-                        // workspace. The `--extensions <name>` flag
-                        // takes the dir basename, NOT a path (Gemini
-                        // CLI's loader is hard-coded to
-                        // `~/.gemini/extensions/`).
-                        if let Some(name) = pane_paths
-                            .as_ref()
-                            .and_then(|pp| pp.gemini_extension_name.clone())
-                        {
-                            a.push("--extensions".to_string());
-                            a.push(name);
                         }
                     }
                     // Other registered tools have no multi-agent flag
@@ -1435,11 +1402,10 @@ fn sessions_file_path() -> PathBuf {
 }
 
 /// XML-style tags injected into the user message stream by Claude /
-/// Codex / Gemini when integrated with an IDE or shell. These are
-/// not things the user typed — filtering them out of the history
-/// title extractor keeps the sidebar readable (no more
-/// "<ide_opened_file>The user opened the..." or "# AGENTS.md
-/// instructions for ..." cards).
+/// Codex when integrated with an IDE or shell. These are not things
+/// the user typed — filtering them out of the history title extractor
+/// keeps the sidebar readable (no more "<ide_opened_file>The user
+/// opened the..." or "# AGENTS.md instructions for ..." cards).
 const SYSTEM_INJECTION_TAGS: &[&str] = &[
     "<environment_context>",
     "<ide_opened_file>",
@@ -1452,8 +1418,6 @@ const SYSTEM_INJECTION_TAGS: &[&str] = &[
     // pre-v1.5 Coffee-CLI workspace pointer as a synthetic user
     // message at session start.
     "# AGENTS.md",
-    // Gemini equivalent for `GEMINI.md`.
-    "# GEMINI.md",
 ];
 
 fn is_system_injected(text: &str) -> bool {
@@ -1687,110 +1651,13 @@ fn parse_codex_session_jsonl(file_path: &std::path::Path) -> Option<SavedSession
     })
 }
 
-/// Gemini CLI sessions live at
-/// `~/.gemini/tmp/<project-folder>/chats/session-<ts>-<hash>.jsonl`.
-/// Schema:
-///   - first row: `{sessionId, projectHash, startTime, lastUpdated, kind: "main"}`
-///   - subsequent rows: `{id, timestamp, type: "user"|"gemini", content}`
-///     where user content is `[{text}]` and gemini content is a string.
-///   - interleaved `{$set: {lastUpdated}}` rows that we just skip.
-///
-/// `cwd` isn't recorded in the file. We resolve it from
-/// `~/.gemini/projects.json` which maps absolute cwd → short folder
-/// name, so we reverse-lookup short-name → cwd. Falls back to the
-/// short folder name itself if the projects.json mapping is missing.
-fn parse_gemini_session_jsonl(
-    file_path: &std::path::Path,
-    project_short_to_cwd: &std::collections::HashMap<String, String>,
-) -> Option<SavedSession> {
-    use std::io::BufRead;
-    let file = std::fs::File::open(file_path).ok()?;
-    let reader = std::io::BufReader::new(file);
-
-    let mut session_id = file_path.file_stem()?.to_string_lossy().to_string();
-    let mut cwd = String::new();
-    let mut updated_at = String::new();
-    let mut title = String::new();
-    let mut total_messages = 0;
-
-    // cwd resolution: file path is `.gemini/tmp/<short>/chats/<file>.jsonl`,
-    // so the short project name is the parent's parent dir name.
-    if let Some(short) = file_path
-        .parent()
-        .and_then(|p| p.parent())
-        .and_then(|p| p.file_name())
-        .and_then(|n| n.to_str())
-    {
-        if let Some(real) = project_short_to_cwd.get(short) {
-            cwd = real.clone();
-        } else {
-            cwd = short.to_string(); // last-resort: show the short folder
-        }
-    }
-
-    for line in reader.lines().map_while(Result::ok) {
-        let Ok(value) = serde_json::from_str::<serde_json::Value>(&line) else {
-            continue;
-        };
-        if let Some(s) = value.get("sessionId").and_then(|v| v.as_str()) {
-            if !s.is_empty() {
-                session_id = s.to_string();
-            }
-        }
-        let row_type = value.get("type").and_then(|v| v.as_str()).unwrap_or("");
-        if row_type == "user" || row_type == "gemini" {
-            total_messages += 1;
-        }
-        if !title.is_empty() || row_type != "user" {
-            continue;
-        }
-        let Some(content_arr) = value.get("content").and_then(|v| v.as_array()) else {
-            continue;
-        };
-        for block in content_arr {
-            let Some(text) = block.get("text").and_then(|v| v.as_str()) else {
-                continue;
-            };
-            if is_system_injected(text) {
-                continue;
-            }
-            let safe = text.replace('\n', " ");
-            let mut chars = safe.chars();
-            let chunk: String = chars.by_ref().take(40).collect();
-            title = if chars.next().is_some() { format!("{}...", chunk) } else { chunk };
-            break;
-        }
-    }
-
-    if let Ok(meta) = std::fs::metadata(file_path) {
-        if let Ok(mod_time) = meta.modified() {
-            if let Ok(dur) = mod_time.duration_since(std::time::SystemTime::UNIX_EPOCH) {
-                updated_at = dur.as_millis().to_string();
-            }
-        }
-    }
-    if title.is_empty() {
-        title = "Gemini Session".to_string();
-    }
-    let turn_count = if total_messages > 0 { std::cmp::max(1, (total_messages + 1) / 2) } else { 0 };
-
-    Some(SavedSession {
-        id: format!("gemini_native_{}", session_id),
-        name: title,
-        tool: "gemini".to_string(),
-        cwd,
-        session_token: Some(session_id),
-        saved_at: updated_at,
-        file_path: Some(file_path.to_string_lossy().into_owned()),
-        turn_count: Some(turn_count),
-    })
-}
-
 /// Parse a Qwen Code session jsonl. Layout:
 ///   `~/.qwen/projects/<sanitized-cwd>/chats/<session>.jsonl`
 /// Each line: `{uuid, type: 'user'|'assistant'|'tool_result'|'system',
 ///   sessionId, cwd, timestamp, message: {role, parts: [{text|functionCall|...}]}}`
-/// Differences vs. Gemini CLI's format (these two are cousins, not twins):
+/// Qwen Code is descended from the now-retired Gemini CLI (Google
+/// transitioned that to Antigravity CLI 2026-05-19) but its layout
+/// differs from upstream:
 ///   • cwd is on every row (no separate projects.json reverse map needed)
 ///   • text lives in `message.parts[].text`, not the top-level `content[]`
 ///   • assistant rows use `type: 'assistant'`, not `'gemini'`
@@ -1873,31 +1740,6 @@ fn parse_qwen_session_jsonl(file_path: &std::path::Path) -> Option<SavedSession>
     })
 }
 
-/// Read `~/.gemini/projects.json` and build a reverse map
-/// `short_folder_name → real_cwd`. Used by
-/// `parse_gemini_session_jsonl` because the per-session jsonl file
-/// doesn't include the cwd anywhere — it only encodes which project
-/// folder it belongs to via the parent dir name.
-///
-/// Returns an empty map on any error (missing file, invalid JSON,
-/// permission denied) — Gemini sessions just fall back to using
-/// the short folder name as the cwd display.
-fn load_gemini_project_map() -> std::collections::HashMap<String, String> {
-    use std::collections::HashMap;
-    let mut map = HashMap::new();
-    let Some(home) = dirs::home_dir() else { return map };
-    let path = home.join(".gemini").join("projects.json");
-    let Ok(text) = std::fs::read_to_string(path) else { return map };
-    let Ok(value) = serde_json::from_str::<serde_json::Value>(&text) else { return map };
-    let Some(projects) = value.get("projects").and_then(|v| v.as_object()) else { return map };
-    for (cwd, short) in projects {
-        if let Some(short_str) = short.as_str() {
-            map.insert(short_str.to_string(), cwd.clone());
-        }
-    }
-    map
-}
-
 #[tauri::command]
 fn read_native_session(file_path: String) -> Result<String, String> {
     let path = std::path::Path::new(&file_path);
@@ -1944,15 +1786,18 @@ fn read_native_session(file_path: String) -> Result<String, String> {
         home.join(".claude"),
         hermes_root.clone(),
         home.join(".codex").join("sessions"),
-        home.join(".gemini").join("tmp"),
         home.join(".qwen").join("projects"),
         home.join(".local").join("share").join("opencode"),
         home.join(".openclaw").join("agents"),
+        // Antigravity CLI lives under `.gemini/antigravity-cli/` (shares
+        // namespace with retiring Gemini CLI). `~/.antigravitycli/` is
+        // an unrelated stale placeholder some installers leave behind.
+        home.join(".gemini").join("antigravity-cli"),
     ];
     if hermes_legacy != hermes_root {
         allowed.push(hermes_legacy);
     }
-    for tool in ["claude", "hermes", "codex", "gemini", "qwen", "opencode", "openclaw"] {
+    for tool in ["claude", "hermes", "codex", "antigravity", "qwen", "opencode", "openclaw"] {
         let cfg = crate::tool_config::get(tool).history_path;
         if !cfg.is_empty() {
             allowed.push(crate::tool_config::expand_path(&cfg));
@@ -2379,7 +2224,7 @@ fn find_opencode_sessions_sqlite(db_path: &std::path::Path, result: &mut Vec<Sav
             // Surface the shared SQLite DB path so the ChatReader copy-path
             // button has a target for OpenCode sessions too. Granularity
             // mismatch is OpenCode's own design choice — they bundle every
-            // session into ONE opencode.db (vs Claude/Codex/Gemini/Qwen/Hermes
+            // session into ONE opencode.db (vs Claude/Codex/Qwen/Hermes
             // jsonl-per-session) — so we expose the path that exists rather
             // than hide the button. Users who paste it into a file manager
             // land on the actual artifact that holds this conversation,
@@ -2452,19 +2297,10 @@ fn load_native_history_blocking() -> Result<Vec<SavedSession>, String> {
     file_candidates.sort_by(|a, b| b.0.cmp(&a.0));
     file_candidates.truncate(HISTORY_LIMIT);
 
-    // Lazy-load the Gemini project-hash → cwd map only if we actually
-    // have Gemini candidates (file I/O isn't free).
-    let gemini_project_map = if file_candidates.iter().any(|(_, _, t)| *t == "gemini") {
-        load_gemini_project_map()
-    } else {
-        std::collections::HashMap::new()
-    };
-
     for (_, path, tool) in &file_candidates {
         let parsed = match *tool {
             "hermes" => parse_hermes_json(path),
             "codex"  => parse_codex_session_jsonl(path),
-            "gemini" => parse_gemini_session_jsonl(path, &gemini_project_map),
             "qwen"   => parse_qwen_session_jsonl(path),
             other    => parse_agent_jsonl(path, other),
         };
@@ -3176,11 +3012,10 @@ pub async fn ensure_pane_mcp_running(
 ///
 /// Post-v1.5 this is a thin handshake — per-pane MCP servers and
 /// per-pane CLI artifacts (Claude `mcp.json` / Codex `instructions.md`
-/// / Gemini extension stub) are all created lazily inside
+/// / OpenCode `opencode.json`) are all created lazily inside
 /// `tier_terminal_start` when each pane spawns its CLI. No workspace
-/// files are written, no global `~/.codex` / `~/.gemini` `mcp_servers`
-/// blocks get injected, no env var redirects the CLI's HOME (so auth
-/// stays live).
+/// files are written, no global `~/.codex` `mcp_servers` blocks get
+/// injected, no env var redirects the CLI's HOME (so auth stays live).
 ///
 /// The frontend still calls this on tab mount as a structured place
 /// for cross-cutting validation (workspace must exist, future license
@@ -3212,9 +3047,9 @@ async fn enable_multi_agent_mode(
 /// mode no longer writes any workspace files or global config entries
 /// to clean up here. Per-pane MCP servers and their temp artifacts
 /// persist for the app's lifetime (they live under
-/// `<temp>/coffee-cli/panes/` + `~/.gemini/extensions/coffee-pane-*`
-/// and are pruned by `mcp_injector::prune_pane_artifacts()` at the
-/// next launch and at app shutdown).
+/// `<temp>/coffee-cli/panes/` and are pruned by
+/// `mcp_injector::prune_pane_artifacts()` at the next launch and at
+/// app shutdown).
 ///
 /// `_workspace` is kept in the signature for API compat with the TS
 /// caller in `MultiAgentGrid.tsx`'s unmount cleanup.
@@ -3230,10 +3065,9 @@ fn disable_multi_agent_mode(
 
 pub fn start_ui() -> anyhow::Result<()> {
     // Drop the previous run's per-pane artifacts before we boot —
-    // `<temp>/coffee-cli/panes/*` and `~/.gemini/extensions/coffee-pane-*`
-    // stub dirs from a crashed or hard-killed prior session would
-    // otherwise accumulate. New artifacts are recreated lazily by
-    // `tier_terminal_start` as multi-agent panes spawn.
+    // `<temp>/coffee-cli/panes/*` from a crashed or hard-killed prior
+    // session would otherwise accumulate. New artifacts are recreated
+    // lazily by `tier_terminal_start` as multi-agent panes spawn.
     crate::mcp_injector::prune_pane_artifacts();
 
     // Create shared session BEFORE the builder so we can clone it for the exit handler

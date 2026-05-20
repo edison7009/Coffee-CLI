@@ -62,7 +62,7 @@ export function ChatReader({ sessionId }: { sessionId: string }) {
     // so it has no `file_path`. Route those sessions through the
     // dedicated reader, which normalizes both layouts to the same
     // jsonl shape the parser below already handles. All other tools
-    // (Claude / Codex / Gemini / Hermes) keep their direct file path.
+    // (Claude / Codex / Qwen / Hermes) keep their direct file path.
     const isOpencode = session.tool === 'opencode' && !!session.session_token;
     if (!isOpencode && !session.file_path) {
       setLoading(false);
@@ -91,38 +91,27 @@ export function ChatReader({ sessionId }: { sessionId: string }) {
               msgObj = parsed.payload;
             }
 
-            // Gemini / Qwen format adapter — both use `type: '...'` at the
-            // row root instead of `message.role`, but with two different
-            // sub-shapes:
-            //   • Gemini  : { type: 'user'|'gemini',     content: [{text}] }
-            //   • Qwen    : { type: 'user'|'assistant',  message: { role, parts: [{text}] } }
-            // Detect Qwen first (has `message.parts`), fall back to Gemini.
-            // Either path gets normalized to the Claude shape so the parser
-            // below ({type:'text', text} blocks) handles all three CLIs in
-            // one code path.
+            // Qwen format adapter — uses `type: 'user'|'assistant'` at
+            // the row root with `message: { role, parts: [{text}] }`.
+            // Normalized to the Claude shape so the parser below
+            // ({type:'text', text} blocks) handles it in one code path.
+            // The earlier Gemini CLI adapter (`type: 'gemini'` with a
+            // root-level `content` array) was removed when Antigravity
+            // CLI replaced Gemini 2026-05-19; Antigravity stores
+            // conversations under `~/.antigravitycli/<uuid>.json` in a
+            // schema we haven't parsed yet (history scanner deferred
+            // until the schema is observed on a populated session).
             if (
               !msgObj &&
-              (parsed.type === 'user' ||
-                parsed.type === 'assistant' ||
-                parsed.type === 'gemini')
+              (parsed.type === 'user' || parsed.type === 'assistant') &&
+              parsed.message && Array.isArray(parsed.message.parts)
             ) {
-              let role: string | null = null;
-              let rawBlocks: any[] | null = null;
-              if (parsed.message && Array.isArray(parsed.message.parts)) {
-                // Qwen
-                role = parsed.message.role || (parsed.type === 'assistant' ? 'assistant' : 'user');
-                rawBlocks = parsed.message.parts;
-              } else if (Array.isArray(parsed.content)) {
-                // Gemini
-                role = parsed.type === 'gemini' ? 'assistant' : 'user';
-                rawBlocks = parsed.content;
-              }
-              if (role && rawBlocks) {
-                msgObj = {
-                  role,
-                  content: rawBlocks.map((b: any) => (b && !b.type ? { ...b, type: 'text' } : b)),
-                };
-              }
+              const role = parsed.message.role || (parsed.type === 'assistant' ? 'assistant' : 'user');
+              const rawBlocks = parsed.message.parts;
+              msgObj = {
+                role,
+                content: rawBlocks.map((b: any) => (b && !b.type ? { ...b, type: 'text' } : b)),
+              };
             }
 
             // Only care about entries that possess a "role"
@@ -226,9 +215,9 @@ export function ChatReader({ sessionId }: { sessionId: string }) {
 
   if (!currentSession) return null;
 
-  // On-disk path that physically holds this conversation. Five tools
-  // (Claude / Codex / Gemini / Qwen / Hermes) write one jsonl per
-  // session and set this directly. OpenCode is the odd one out — it
+  // On-disk path that physically holds this conversation. Four tools
+  // (Claude / Codex / Qwen / Hermes) write one jsonl per session and
+  // set this directly. OpenCode is the odd one out — it
   // stores every session in ONE shared `opencode.db` SQLite file, and
   // the Rust side surfaces that .db path here so the copy button still
   // shows up (granularity mismatch is OpenCode's own design choice;

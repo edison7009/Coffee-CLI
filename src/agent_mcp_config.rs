@@ -7,7 +7,7 @@
 //!                                          ↓ MCP @ 127.0.0.1:<stable-port>
 //!                                       Coffee-CLI (running with several panes)
 //!                                          ↓ existing send_to_pane → PTY stdin
-//!                                  Claude Code / Codex CLI / Gemini CLI / ... panes
+//!                                  Claude Code / Codex CLI / Antigravity CLI / ... panes
 //!                                  (don't know if input came from human or MCP —
 //!                                   it's just stdin, zero target-side adaptation)
 //!

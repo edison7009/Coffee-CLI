@@ -63,7 +63,7 @@ fn main() -> Result<()> {
     // installed via Homebrew, nvm, volta, asdf, npm-global, cargo, bun,
     // ~/.local/bin, etc. are invisible to every Command::new() in the
     // process. Symptom: tool-detection cards stay greyed out even though
-    // `claude` / `codex` / `gemini` / `hermes` are clearly installed.
+    // `claude` / `codex` / `agy` / `hermes` are clearly installed.
     //
     // Fix: ask the user's login shell for its real PATH ONCE at startup
     // and replace the process PATH. Every downstream subprocess

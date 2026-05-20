@@ -3,7 +3,7 @@
 // Same pane grid shape as MultiAgentGrid but with ZERO coordination:
 //   - No MCP server injection into the user's CLI configs
 //   - No `.multi-agent/` meta directory written to the workspace
-//   - No CLAUDE.md / AGENTS.md / GEMINI.md thin-pointers
+//   - No CLAUDE.md / AGENTS.md thin-pointers
 //   - Each pane is a plain independent PTY session; each pane can also
 //     point at its own folder (see onSelectTool → folder picker below).
 //
@@ -12,8 +12,10 @@
 //   - 2 / 3: forced side-by-side columns layout, no 2×2 option
 //     (so the TitleBar layout toggle should be hidden by the caller).
 //
-// Kept verbatim from MultiAgentGrid:
-//   - PANE_CLI_OPTIONS restricted to Claude / Codex / Gemini (same 3 CLIs)
+// PANE_CLI_OPTIONS is broader here than in MultiAgentGrid: independent
+// split isn't coordinated, so it accepts every registered CLI including
+// the ones that don't fit the per-pane MCP-injection model (Antigravity,
+// OpenClaw, Hermes).
 //   - Focus dimming, pane number badge with hover-× close, CSS classes
 //     (reuses .multi-agent-grid-standalone styling — pure visual parity)
 //   - Session id format `${tabId}::split-${paneIdx}` — distinct from the
@@ -49,7 +51,7 @@ interface Props {
 }
 
 const PANE_CLI_OPTIONS: Array<{ value: ToolType; label: string }> = (
-  ['claude', 'codex', 'gemini', 'opencode', 'openclaw', 'hermes'] as const
+  ['claude', 'codex', 'antigravity', 'opencode', 'openclaw', 'hermes'] as const
 ).map((value) => ({ value, label: getToolDisplayName(value) }));
 
 // OpenClaw (persona forge) is directory-agnostic — its primary workflow

@@ -280,14 +280,25 @@ pub const AGENT_PRESETS: &[AgentPreset] = &[
         token_format: Some(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"),
         prompt_markers: &["❯", "> "],
     },
+    // Antigravity CLI (Google) — `agy` binary, successor to Gemini CLI.
+    // Google retired Gemini CLI for consumers 2026-05-19 in favor of
+    // this tool. Resume uses `--conversation <uuid>` (NOT `--resume`).
+    // Conversation id is the basename of the JSON file under
+    // `~/.antigravitycli/<uuid>.json`; nothing in stdout scrapes
+    // reliably yet, so session_id_pattern is None and resume tokens
+    // can only come from the history reader (deferred until the JSON
+    // schema is observed). prompt_markers `>` is a guess based on
+    // typical Go-CLI conventions — when wrong, the settle-silence
+    // fallback in mcp_server.rs path B still flips idle correctly,
+    // just less promptly.
     AgentPreset {
-        tool_name: "gemini",
-        resume_program: Some("gemini"),
-        resume_args_before: &["--resume"],
+        tool_name: "antigravity",
+        resume_program: Some("agy"),
+        resume_args_before: &["--conversation"],
         resume_args_after: &[],
-        session_id_pattern: Some(r"Session ID:\s+([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})"),
+        session_id_pattern: None,
         token_format: Some(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"),
-        prompt_markers: &["✦"],
+        prompt_markers: &[">"],
     },
     AgentPreset {
         tool_name: "hermes",
@@ -343,7 +354,10 @@ pub const AGENT_PRESETS: &[AgentPreset] = &[
         prompt_markers: &["▌"],
     },
     // Qwen Code is a Gemini-CLI fork — same `--resume <uuid>` flag and
-    // UUID token format inherited from upstream.
+    // UUID token format inherited from upstream. Upstream Gemini CLI
+    // is retired (Google transitioned consumers to Antigravity CLI on
+    // 2026-05-19) but Qwen has not followed that change; the preset
+    // below still reflects what the Qwen binary accepts.
     AgentPreset {
         tool_name: "qwen",
         resume_program: Some("qwen"),
@@ -361,7 +375,7 @@ pub const AGENT_PRESETS: &[AgentPreset] = &[
     // `status`, etc. There is no `openclaw resume <id>`, no
     // `--resume` flag, no `sessions resume`. OpenClaw is a
     // multi-channel gateway that orchestrates other CLIs (claude,
-    // gemini, anthropic) as backends; resuming an OpenClaw "session"
+    // anthropic backends, etc.) as workers; resuming an OpenClaw "session"
     // is something OpenClaw does internally when you re-launch it,
     // not something invokable via argv. So the resume button must be
     // a no-op at the CLI level. Setting `resume_program: None` makes
@@ -522,7 +536,7 @@ pub fn spawn(
     // it — maximum benefit, zero risk for those that do.
     let is_ai_cli = matches!(
         tool_name.as_deref(),
-        Some("claude") | Some("qwen") | Some("opencode") | Some("hermes") | Some("codex") | Some("gemini")
+        Some("claude") | Some("qwen") | Some("opencode") | Some("hermes") | Some("codex") | Some("antigravity")
     );
 
     if is_ai_cli {
@@ -1357,7 +1371,7 @@ mod tests {
 
     #[test]
     fn find_preset_known_tools() {
-        for tool in &["claude", "gemini", "hermes"] {
+        for tool in &["claude", "antigravity", "hermes"] {
             assert!(find_preset(tool).is_some(), "preset not found for {tool}");
         }
     }

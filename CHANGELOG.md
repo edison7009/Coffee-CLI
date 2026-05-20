@@ -7,6 +7,35 @@ For releases prior to v1.5.5, see the
 [GitHub Releases page](https://github.com/edison7009/Coffee-CLI/releases)
 and `git tag --list "v*"`.
 
+## [Unreleased]
+
+### Changed
+- **Gemini CLI → Antigravity CLI**: Google retired Gemini CLI for
+  consumers on 2026-05-19 (consumer access ends 2026-06-18) and asked
+  users to move to Antigravity CLI. The Launchpad tile, history-board
+  icon, tool-config defaults, multi-agent grid options, and Web-Home
+  landing page now all surface Antigravity (binary `agy`). Resume uses
+  `--conversation <uuid>` instead of Gemini's `--resume`.
+- **Skills** are junctioned into `~/.gemini/antigravity/skills/` — the
+  same global dir the Antigravity IDE and 3rd-party `antigravity-
+  awesome-skills` installer use. Existing Coffee CLI skill junctions
+  at `~/.gemini/skills/` (the old Gemini CLI location) are left in
+  place but no longer toggled by Coffee CLI; remove manually if you
+  also uninstalled Gemini CLI.
+- The Gemini-specific MCP injection path (per-pane stub under
+  `~/.gemini/extensions/coffee-pane-*` + GEMINI.md context file) is
+  removed entirely. Antigravity uses a persistent `agy plugin install`
+  model that doesn't map to the per-invocation extension trick, so
+  Antigravity panes don't participate in Coffee Pane multi-agent
+  dispatch yet — single-tab and Independent Split still work.
+
+### Removed
+- Gemini session-history scanner (`~/.gemini/tmp/<project>/chats/*.jsonl`
+  parser and the projects.json reverse map). Enterprise users still on
+  Gemini CLI through Code Assist can re-enable a custom command via
+  `~/.coffee-cli/tools.json` if they want it back, but the built-in
+  Gemini tile is gone.
+
 ## [2.4.0] — 2026-05-07
 
 ### Added

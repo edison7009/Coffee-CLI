@@ -59,7 +59,14 @@ static BUNDLED_SKILLS: include_dir::Dir<'_> =
 // each `ToolDescriptor::skill_dir_relative` + resolved through
 // `ToolDescriptor::skill_dir(home)`:
 //
-//   - **Dotdir** (claude / codex / gemini / qwen): `~/.<tool>/skills`.
+//   - **Dotdir** (claude / codex / qwen): `~/.<tool>/skills`.
+//   - **Shared-dotdir-nested** (antigravity): `~/.gemini/antigravity/skills`.
+//     Antigravity CLI (`agy`) and the Antigravity IDE share this dir
+//     for skills — Coffee CLI junctions in alongside whatever the IDE
+//     and 3rd-party installers (e.g. `antigravity-awesome-skills`)
+//     drop there. Variant of Dotdir but two levels deep under the
+//     shared `.gemini/` namespace. `agy plugin install` is a separate
+//     richer mechanism not wired through this dir.
 //   - **XDG** (opencode): `~/.config/opencode/skills`. Skills are
 //     config, not data — don't apply the "history dir's parent"
 //     heuristic to XDG-family tools.
