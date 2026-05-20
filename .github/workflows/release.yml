@@ -226,20 +226,25 @@ jobs:
           done
 
           if ! gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
-            echo "Creating release $TAG"
-            # Notes body lives in install/release-notes-template.md so the
-            # YAML block doesn't have to fight bash heredoc indentation
-            # rules. `gh release create --notes-file` accepts a path; we
-            # don't need to interpolate the tag because the body is the
-            # generic install instructions, not version-specific changelog.
+            echo "Creating release $TAG (draft)"
+            # Releases are created as drafts so the maintainer can review CI
+            # artifacts and edit the changelog before users see the new
+            # version. Clicking "Publish release" in the GitHub UI fires the
+            # release.published event consumed by
+            # .github/workflows/bump-version-json.yml, which bumps
+            # Web-Home/version.json on main → CF Pages redeploys → in-app
+            # update check picks up the new version. Until then, in-app
+            # users and install scripts still see the previous release.
             NOTES_FILE="$GITHUB_WORKSPACE/install/release-notes-template.md"
             if [ -f "$NOTES_FILE" ]; then
               gh release create "$TAG" --repo "${{ github.repository }}" \
+                --draft \
                 --title "Coffee CLI $TAG" \
                 --notes-file "$NOTES_FILE" \
                 || echo "Release already exists (created by sibling matrix job)"
             else
               gh release create "$TAG" --repo "${{ github.repository }}" \
+                --draft \
                 --title "Coffee CLI $TAG" \
                 --notes "Coffee CLI $TAG. See README for install instructions." \
                 || echo "Release already exists (created by sibling matrix job)"

@@ -1,0 +1,54 @@
+name: Bump version.json on release publish
+
+# Fires when the maintainer clicks "Publish release" on a draft release
+# (drafts are created by .github/workflows/release.yml after each tag push).
+# That click is the final "ship to users" confirmation: bumping
+# Web-Home/version.json triggers a CF Pages redeploy, after which the in-app
+# update check (src-ui/.../Explorer.tsx checkUpdate) sees the new version and
+# shows the red download icon next to "Coffee CLI".
+#
+# Until the release is published, users see the previous version and install
+# scripts resolve to the previous tag — gives the maintainer a window to
+# finalize changelog notes without prematurely notifying users.
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          # Default GITHUB_TOKEN has contents:write from the job-level
+          # permissions block above, which is enough to push a single-file
+          # commit back to main.
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Write Web-Home/version.json
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -e
+          # Strip leading "v" — the file holds bare semver, matching what
+          # Tauri stamps into bundle filenames and what the in-app
+          # checkUpdate's split('.')→Number comparator expects.
+          VERSION="${TAG#v}"
+          echo "{\"version\": \"$VERSION\"}" > Web-Home/version.json
+
+          if git diff --quiet Web-Home/version.json; then
+            echo "version.json already at $VERSION — nothing to commit."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Web-Home/version.json
+          git commit -m "chore(web): bump version.json to $VERSION"
+          git push origin main
