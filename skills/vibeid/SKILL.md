@@ -44,7 +44,7 @@ At least one supported AI CLI has been used locally enough to generate session h
 |---|---|---|---|
 | Claude Code | `~/.claude/projects/<hash>/*.jsonl` | jsonl | 2 |
 | Codex | `~/.codex/sessions/<Y>/<M>/<D>/*.jsonl` | jsonl | 4 |
-| Gemini CLI | `~/.gemini/tmp/<short>/chats/*.jsonl` | jsonl | 3 |
+| Antigravity CLI | `~/.gemini/tmp/<short>/chats/*.jsonl` | jsonl | 3 (Gemini-format, written by `agy`) |
 | Qwen Code | `~/.qwen/projects/<short>/chats/*.jsonl` | jsonl | 3 |
 | OpenClaw | `~/.openclaw/agents/<id>/sessions/*.jsonl` | jsonl | 3 |
 | Hermes Agent | `~/.hermes/sessions/session_*.json` | json (flat) | 1 |
@@ -118,7 +118,7 @@ You are computing 10 numbers across whichever CLIs the user has. **You decide ho
 |---|---|---|
 | claude | `{"type":"user", "message":{"content": <string-or-[{type:"text",text}]>}, "timestamp"}` — content of `tool_result`-only blocks doesn't count | `{"type":"assistant", "message":{"content":[{"type":"tool_use","name":"Bash"|"Edit"|"Read"|"Grep"|"Write"|...}]}}` |
 | codex | `{"type":"response_item", "payload":{"type":"message","role":"user","content":[{"type":"input_text","text"}]}}` or `{"type":"user_message", "payload":{"role":"user","content":[...]}}` | `{"type":"response_item","payload":{"type":"function_call","name"}}` or `{"type":"response_item","payload":{"type":"local_shell_call"}}` |
-| gemini | `{"type":"user", "content":[{"text"}], "timestamp"}` | `{"type":"gemini","content":[{"functionCall":{"name"}}]}` |
+| antigravity | `{"type":"user", "content":[{"text"}], "timestamp"}` | `{"type":"gemini","content":[{"functionCall":{"name"}}]}` (assistant rows still use `type:"gemini"` because the JSONL format is inherited from the retired Gemini CLI — match by `type` value, not by tool name) |
 | qwen | `{"type":"user", "message":{"parts":[{"text"}]}, "timestamp"}` | `{"type":"assistant","message":{"parts":[{"functionCall":{"name"}}]}}` |
 | openclaw | Same as claude (role/content jsonl) | Same as claude |
 | hermes | Top-level `messages: [{"role":"user","content":<string>}]` in a single JSON file | `messages[].tool_calls[].name` (or `.function.name`) on assistant rows |
@@ -159,7 +159,7 @@ build_intent_share             buildHits / messages
 multi_clauding_pct             % of user messages that have, within ±60s, a user message
                                from a DIFFERENT session id (cross-CLI counts as different)
 tools_used                     array of CLI names sorted by per-CLI message count desc
-                               e.g. ["claude","codex","gemini"]
+                               e.g. ["claude","codex","antigravity"]
 top_tool                       bucket name (Bash/Edit/Read/Grep/Write) with the highest count
                                — CONTEXT ONLY, never feeds an axis. Use sparingly in narrative
                                and never as evidence about the user's personality

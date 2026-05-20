@@ -91,23 +91,25 @@ export function ChatReader({ sessionId }: { sessionId: string }) {
               msgObj = parsed.payload;
             }
 
-            // Gemini / Qwen format adapter — both use `type: '...'` at the
-            // row root instead of `message.role`, but with two different
-            // sub-shapes:
-            //   • Gemini  : { type: 'user'|'gemini',     content: [{text}] }
-            //   • Qwen    : { type: 'user'|'assistant',  message: { role, parts: [{text}] } }
-            // Detect Qwen first (has `message.parts`), fall back to Gemini.
-            // Either path gets normalized to the Claude shape so the parser
-            // below ({type:'text', text} blocks) handles all three CLIs in
-            // one code path.
+            // Antigravity / Qwen format adapter — both use `type: '...'`
+            // at the row root instead of `message.role`, with two
+            // different sub-shapes:
+            //   • Antigravity : { type: 'user'|'gemini',    content: [{text}] }
+            //   • Qwen        : { type: 'user'|'assistant', message: { role, parts: [{text}] } }
+            // Detect Qwen first (has `message.parts`), fall back to the
+            // Gemini-format branch. Either path gets normalized to the
+            // Claude shape so the parser below ({type:'text', text}
+            // blocks) handles all three CLIs in one code path.
             //
-            // The Gemini branch is retained for ORPHAN sessions only —
-            // Gemini CLI was removed from the launchpad 2026-05-19, but
-            // `~/.gemini/tmp/*/chats/*.jsonl` files still parse here so
-            // users can re-read past conversations. Antigravity's own
-            // conversations live as protobuf in `.gemini/antigravity-cli/
-            // conversations/<uuid>.pb` and aren't readable from this
-            // path yet.
+            // `type: 'gemini'` is the assistant-row marker in agy's
+            // JSONL — format inherited from the retired Gemini CLI,
+            // agy writes the exact same schema to `~/.gemini/tmp/`.
+            // We detect on the row-level `type` field, not the parent
+            // tool tag, so the same code path also reads any leftover
+            // older Gemini CLI sessions sitting in the same directory.
+            // Antigravity's own protobuf at `.gemini/antigravity-cli/
+            // conversations/<uuid>.pb` is the model-side state — not
+            // readable here yet (binary format).
             if (
               !msgObj &&
               (parsed.type === 'user' ||
@@ -121,7 +123,7 @@ export function ChatReader({ sessionId }: { sessionId: string }) {
                 role = parsed.message.role || (parsed.type === 'assistant' ? 'assistant' : 'user');
                 rawBlocks = parsed.message.parts;
               } else if (Array.isArray(parsed.content)) {
-                // Gemini (legacy)
+                // Antigravity / Gemini-format
                 role = parsed.type === 'gemini' ? 'assistant' : 'user';
                 rawBlocks = parsed.content;
               }
