@@ -1659,14 +1659,17 @@ fn parse_codex_session_jsonl(file_path: &std::path::Path) -> Option<SavedSession
     })
 }
 
-/// Legacy Gemini CLI session reader. Gemini CLI was removed as a
-/// supported tool slot on 2026-05-19 (Google transitioned consumers to
-/// Antigravity CLI), but historical session files at
-/// `~/.gemini/tmp/<project-folder>/chats/session-<ts>-<hash>.jsonl`
-/// don't go anywhere — `collect_gemini_legacy_history_candidates`
-/// keeps surfacing them in the history list so users don't lose
-/// reading access to past conversations. There is no launchpad tile
-/// for spawning new Gemini sessions; this is read-only.
+/// Reader for `~/.gemini/tmp/<project>/chats/session-*.jsonl`.
+///
+/// Format origin is the (now-retired-as-launchpad-tile) Gemini CLI,
+/// but the **agy** binary writes the exact same schema to the exact
+/// same directory — verified on populated 2026-05-20 sessions.
+/// Older Gemini sessions and newer Antigravity sessions are
+/// indistinguishable by content (no app/version field), so Coffee
+/// CLI labels everything in this dir as `tool="antigravity"`. Gemini
+/// CLI as a separate product is retiring (consumer access ends
+/// 2026-06-18), so the unified label matches user expectations
+/// after they've moved to agy.
 ///
 /// Schema:
 ///   - first row: `{sessionId, projectHash, startTime, lastUpdated, kind: "main"}`
@@ -1747,14 +1750,14 @@ fn parse_gemini_session_jsonl(
         }
     }
     if title.is_empty() {
-        title = "Gemini Session".to_string();
+        title = "Antigravity Session".to_string();
     }
     let turn_count = if total_messages > 0 { std::cmp::max(1, (total_messages + 1) / 2) } else { 0 };
 
     Some(SavedSession {
-        id: format!("gemini_native_{}", session_id),
+        id: format!("antigravity_native_{}", session_id),
         name: title,
-        tool: "gemini".to_string(),
+        tool: "antigravity".to_string(),
         cwd,
         session_token: Some(session_id),
         saved_at: updated_at,
@@ -1763,7 +1766,8 @@ fn parse_gemini_session_jsonl(
     })
 }
 
-/// Legacy Gemini project-hash → cwd map. Reads `~/.gemini/projects.json`.
+/// Antigravity / Gemini project-hash → cwd map. Reads `~/.gemini/projects.json`
+/// — same file both CLIs maintain (Gemini-format, written by agy too).
 /// Returns empty on any error (missing file, invalid JSON, permission
 /// denied) — sessions just fall back to using the short folder name
 /// as the cwd display.
@@ -1781,18 +1785,6 @@ fn load_gemini_project_map() -> std::collections::HashMap<String, String> {
         }
     }
     map
-}
-
-/// Walk `~/.gemini/tmp/<project>/chats/*.jsonl` and emit candidates
-/// tagged `tool = "gemini"` so the legacy parser picks them up. Used
-/// in both the history list scanner and the heatmap loader to keep
-/// orphan Gemini sessions visible after the launchpad tile retired.
-fn collect_gemini_legacy_history_candidates(
-    home: &std::path::Path,
-    out: &mut Vec<(std::time::SystemTime, std::path::PathBuf, &'static str)>,
-) {
-    let dir = home.join(".gemini").join("tmp");
-    collect_jsonl_paths_with_mtime(dir, 3, "gemini", out);
 }
 
 /// Parse a Qwen Code session jsonl. Layout:
@@ -1936,11 +1928,10 @@ fn read_native_session(file_path: String) -> Result<String, String> {
         // namespace with retiring Gemini CLI). `~/.antigravitycli/` is
         // an unrelated stale placeholder some installers leave behind.
         home.join(".gemini").join("antigravity-cli"),
-        // Legacy Gemini CLI session dir — Gemini was removed from the
-        // launchpad on 2026-05-19 but `parse_gemini_session_jsonl` keeps
-        // surfacing orphan sessions in the history list so users don't
-        // lose read access. ChatReader walks file_path through this
-        // gate, so the prefix must be allowed.
+        // Antigravity / legacy Gemini session dir — both CLIs write
+        // session JSONL under `~/.gemini/tmp/<project>/chats/`. Sessions
+        // surface in the history list tagged as Antigravity; ChatReader
+        // walks file_path through this gate to load them.
         home.join(".gemini").join("tmp"),
     ];
     if hermes_legacy != hermes_root {
@@ -2440,20 +2431,16 @@ fn load_native_history_blocking() -> Result<Vec<SavedSession>, String> {
     let home = dirs::home_dir();
     if let Some(home) = home.as_ref() {
         collect_registry_history_candidates(home, &mut file_candidates);
-        // Orphan Gemini CLI sessions (`~/.gemini/tmp/*/chats/*.jsonl`)
-        // — Gemini was removed from the launchpad 2026-05-19, but
-        // existing session files remain readable in the history list.
-        collect_gemini_legacy_history_candidates(home, &mut file_candidates);
     }
 
     // Sort candidates by mtime desc and parse only the newest HISTORY_LIMIT.
     file_candidates.sort_by(|a, b| b.0.cmp(&a.0));
     file_candidates.truncate(HISTORY_LIMIT);
 
-    // Lazy-load the legacy Gemini project-hash → cwd map only if we
-    // actually have Gemini candidates — file I/O isn't free and most
-    // users won't have orphan Gemini sessions on disk.
-    let gemini_project_map = if file_candidates.iter().any(|(_, _, t)| *t == "gemini") {
+    // Lazy-load the Antigravity / Gemini project-hash → cwd map only
+    // if we actually have antigravity candidates — file I/O isn't
+    // free and not every user has agy on this machine.
+    let antigravity_project_map = if file_candidates.iter().any(|(_, _, t)| *t == "antigravity") {
         load_gemini_project_map()
     } else {
         std::collections::HashMap::new()
@@ -2461,11 +2448,11 @@ fn load_native_history_blocking() -> Result<Vec<SavedSession>, String> {
 
     for (_, path, tool) in &file_candidates {
         let parsed = match *tool {
-            "hermes" => parse_hermes_json(path),
-            "codex"  => parse_codex_session_jsonl(path),
-            "qwen"   => parse_qwen_session_jsonl(path),
-            "gemini" => parse_gemini_session_jsonl(path, &gemini_project_map),
-            other    => parse_agent_jsonl(path, other),
+            "hermes"      => parse_hermes_json(path),
+            "codex"       => parse_codex_session_jsonl(path),
+            "qwen"        => parse_qwen_session_jsonl(path),
+            "antigravity" => parse_gemini_session_jsonl(path, &antigravity_project_map),
+            other         => parse_agent_jsonl(path, other),
         };
         if let Some(session) = parsed {
             result.push(session);
@@ -2588,12 +2575,6 @@ fn load_message_heatmap_blocking() -> Result<Vec<HeatmapEntry>, String> {
     let home = dirs::home_dir();
     if let Some(home) = home.as_ref() {
         collect_registry_history_candidates(home, &mut candidates);
-        // Orphan Gemini CLI sessions count toward the heatmap too —
-        // same walker as the history list, just feeding the
-        // contribution buckets. Without this the heatmap totals would
-        // silently shrink for users with past Gemini activity after
-        // the launchpad swap.
-        collect_gemini_legacy_history_candidates(home, &mut candidates);
     }
 
     // Per-file count cache. Heatmap re-scans every app launch and counts

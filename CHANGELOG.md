@@ -26,13 +26,15 @@ and `git tag --list "v*"`.
   also uninstalled Gemini CLI.
 
 ### Kept (no data loss)
-- **Past Gemini CLI sessions stay readable.** History board and
-  contribution heatmap continue to scan `~/.gemini/tmp/*/chats/*.jsonl`
-  via a legacy reader — sessions still appear with the original Gemini
-  icon and a `(legacy)` suffix on the label. You can re-read past
-  conversations but can't spawn new Gemini sessions from Coffee CLI's
-  Launchpad (run `gemini` from a regular terminal if you still have
-  it on PATH).
+- **Sessions in `~/.gemini/tmp/*/chats/*.jsonl` all surface as
+  Antigravity.** agy writes to the same dir using the same JSONL
+  schema as the (retired) Gemini CLI — verified on populated
+  sessions, no content-level marker distinguishes the two. Coffee
+  CLI labels the whole directory under the Antigravity tile, with
+  the Antigravity icon. Older Gemini-CLI sessions (if any) join the
+  same list — since Gemini CLI as a separate product is retiring,
+  a unified label is the cleaner UX. Heatmap counts include every
+  session in that dir.
 - The Gemini-specific MCP injection path (per-pane stub under
   `~/.gemini/extensions/coffee-pane-*` + GEMINI.md context file) is
   removed entirely. Antigravity uses a persistent `agy plugin install`

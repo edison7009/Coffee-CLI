@@ -39,13 +39,11 @@ const EMPTY: ToolConfigEntry = {
 const TOOL_DEFAULTS: Record<string, ToolConfigEntry> = {
   claude:   { command: 'claude',   extra_args: [], default_cwd: '', history_path: '~/.claude/projects' },
   codex:    { command: 'codex',    extra_args: [], default_cwd: '', history_path: '~/.codex/sessions' },
-  // Antigravity CLI data root is `~/.gemini/antigravity-cli/` (shares
-  // namespace with the retiring Gemini CLI, distinct subdir). The
-  // conversation transcripts live as protobuf `.pb` files in
-  // `conversations/`, not JSON/JSONL — so no history scanner yet
-  // (would need the .pb schema). The field is hidden in the modal
-  // via HISTORY_SCANNED_TOOLS below.
-  antigravity: { command: 'agy', extra_args: [], default_cwd: '', history_path: '' },
+  // Antigravity CLI session JSONL lives under `~/.gemini/tmp/<project>/
+  // chats/`. The protobuf at `~/.gemini/antigravity-cli/conversations/`
+  // is the model-side state; the JSONL is enough for history titles
+  // and turn counts (same format Gemini CLI used).
+  antigravity: { command: 'agy', extra_args: [], default_cwd: '', history_path: '~/.gemini/tmp' },
   qwen:     { command: 'qwen',     extra_args: [], default_cwd: '', history_path: '' },
   opencode: { command: 'opencode', extra_args: [], default_cwd: '', history_path: '~/.local/share/opencode' },
   openclaw: { command: 'openclaw', extra_args: [], default_cwd: '', history_path: '~/.openclaw/agents' },
@@ -58,12 +56,11 @@ const TOOL_DEFAULTS: Record<string, ToolConfigEntry> = {
 
 // Tools whose session history Coffee CLI's history scanner actually reads
 // (load_native_history_blocking in src/server.rs). For these we surface
-// the history_path field. For tools NOT in this set (qwen and
-// antigravity — no scanner written for either; Antigravity's JSON
-// schema isn't observed yet), the field is hidden — letting the user
-// fill a path that nothing ever scans would just be a footgun.
+// the history_path field. For tools NOT in this set (only qwen now —
+// no Qwen scanner has been written), the field is hidden — letting the
+// user fill a path that nothing ever scans would just be a footgun.
 const HISTORY_SCANNED_TOOLS = new Set([
-  'claude', 'codex', 'hermes', 'opencode', 'openclaw',
+  'claude', 'codex', 'antigravity', 'hermes', 'opencode', 'openclaw',
 ]);
 
 const defaultsFor = (key: string): ToolConfigEntry => TOOL_DEFAULTS[key] ?? EMPTY;

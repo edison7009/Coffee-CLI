@@ -22,17 +22,16 @@ import './HistoryBoard.css';
 // switch, so the one-time decode flash is invisible. Hermes/OpenCode are
 // PNG-inlined to share the same bytes the Launchpad uses (no duplicate files).
 //
-// `gemini` is kept in the registry even though Gemini CLI is no longer a
-// live tool slot — orphan sessions from `~/.gemini/tmp/*/chats/*.jsonl`
-// still surface in the history list and need their original Gemini icon
-// for visual continuity. See server.rs `collect_gemini_legacy_history_candidates`.
+// Antigravity covers both new agy sessions and any older Gemini-CLI
+// sessions sitting in the same `~/.gemini/tmp/` dir — see
+// `parse_gemini_session_jsonl` in server.rs for why we label both as
+// Antigravity rather than splitting the rows by writer.
 
 const TOOL_ICON_SRC: Record<string, string> = {
   claude:      '/icons/tools/claude.svg',
   codex:       '/icons/tools/codex.svg',
   qwen:        '/icons/tools/qwen.svg',
   antigravity: '/icons/tools/antigravity.svg',
-  gemini:      '/icons/tools/gemini.svg',
   hermes:      HERMES_DATA_URL,
   opencode:    OPENCODE_DATA_URL,
 };

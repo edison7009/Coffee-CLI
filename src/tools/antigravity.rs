@@ -87,7 +87,7 @@
 //!     doesn't wire plugins through it yet — users wanting plugins
 //!     install them directly via the CLI.
 
-use super::ToolDescriptor;
+use super::{HistoryShape, ToolDescriptor};
 
 pub static DESCRIPTOR: ToolDescriptor = ToolDescriptor {
     id: "antigravity",
@@ -95,6 +95,18 @@ pub static DESCRIPTOR: ToolDescriptor = ToolDescriptor {
     binary_name: "agy",
     skill_dir_relative: Some(".gemini/antigravity/skills"),
     has_hook_surface: false,
-    history_shape: None,
+    // agy writes session JSONL to `~/.gemini/tmp/<project>/chats/
+    // session-*.jsonl` using the format inherited from the retired
+    // Gemini CLI (verified on populated session files dated 2026-05-20).
+    // The protobuf at `~/.gemini/antigravity-cli/conversations/*.pb`
+    // is the model-side state, but the JSONL has enough to render
+    // titles and message counts in the history list. Same schema as
+    // older Gemini sessions in the same dir, which now also surface
+    // as Antigravity — Gemini CLI as a separate product is retiring
+    // anyway, so a unified label is the cleaner UX.
+    history_shape: Some(HistoryShape::AntigravityTmp {
+        root_under_home: ".gemini/tmp",
+        depth: 3,
+    }),
     default_args: &[],
 };

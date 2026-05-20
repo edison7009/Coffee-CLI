@@ -52,6 +52,16 @@ pub enum HistoryShape {
         depth: u8,
     },
 
+    /// Antigravity CLI (agy) — `tmp/<project-folder>/chats/session-*.jsonl`.
+    /// Custom parser `parse_gemini_session_jsonl` (format inherited
+    /// from the retired Gemini CLI; agy writes the same schema).
+    /// Project-folder names resolve to real cwd via a sibling
+    /// `projects.json` map (also Gemini-format, written by agy).
+    AntigravityTmp {
+        root_under_home: &'static str,
+        depth: u8,
+    },
+
     /// OpenCode: SQLite DB (`storage/db.sqlite`) plus legacy
     /// JSONL files. Walked by `find_opencode_sessions`, cannot be
     /// processed by the generic mtime-then-parse pipeline.
@@ -68,6 +78,7 @@ impl HistoryShape {
             HistoryShape::GenericJsonl { root_under_home, .. }
             | HistoryShape::CodexRollout { root_under_home, .. }
             | HistoryShape::QwenProjects { root_under_home, .. }
+            | HistoryShape::AntigravityTmp { root_under_home, .. }
             | HistoryShape::OpenCodeMixed { root_under_home } => Some(root_under_home),
             HistoryShape::HermesFlatJson => None,
         }
@@ -98,7 +109,8 @@ impl HistoryShape {
         match self {
             HistoryShape::GenericJsonl { depth, .. }
             | HistoryShape::CodexRollout { depth, .. }
-            | HistoryShape::QwenProjects { depth, .. } => Some(*depth),
+            | HistoryShape::QwenProjects { depth, .. }
+            | HistoryShape::AntigravityTmp { depth, .. } => Some(*depth),
             HistoryShape::HermesFlatJson | HistoryShape::OpenCodeMixed { .. } => None,
         }
     }
