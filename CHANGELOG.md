@@ -7,7 +7,7 @@ For releases prior to v1.5.5, see the
 [GitHub Releases page](https://github.com/edison7009/Coffee-CLI/releases)
 and `git tag --list "v*"`.
 
-## [Unreleased]
+## [2.7.9] — 2026-05-20
 
 ### Changed
 - **Gemini CLI → Antigravity CLI**: Google retired Gemini CLI for
