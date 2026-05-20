@@ -1418,6 +1418,14 @@ const SYSTEM_INJECTION_TAGS: &[&str] = &[
     // pre-v1.5 Coffee-CLI workspace pointer as a synthetic user
     // message at session start.
     "# AGENTS.md",
+    // Retained for orphan Gemini CLI sessions (see
+    // parse_gemini_session_jsonl) — Gemini's IDE integration injected
+    // the contents of `GEMINI.md` as a synthetic user message at
+    // session start, and we still filter those out when extracting
+    // titles for the history list. Coffee CLI no longer ships a
+    // Gemini tool tile, but legacy session files keep this constant
+    // relevant.
+    "# GEMINI.md",
 ];
 
 fn is_system_injected(text: &str) -> bool {
@@ -1651,13 +1659,148 @@ fn parse_codex_session_jsonl(file_path: &std::path::Path) -> Option<SavedSession
     })
 }
 
+/// Legacy Gemini CLI session reader. Gemini CLI was removed as a
+/// supported tool slot on 2026-05-19 (Google transitioned consumers to
+/// Antigravity CLI), but historical session files at
+/// `~/.gemini/tmp/<project-folder>/chats/session-<ts>-<hash>.jsonl`
+/// don't go anywhere — `collect_gemini_legacy_history_candidates`
+/// keeps surfacing them in the history list so users don't lose
+/// reading access to past conversations. There is no launchpad tile
+/// for spawning new Gemini sessions; this is read-only.
+///
+/// Schema:
+///   - first row: `{sessionId, projectHash, startTime, lastUpdated, kind: "main"}`
+///   - subsequent rows: `{id, timestamp, type: "user"|"gemini", content}`
+///     where user content is `[{text}]` and gemini content is a string.
+///   - interleaved `{$set: {lastUpdated}}` rows that we just skip.
+///
+/// `cwd` isn't recorded in the file. We resolve it from
+/// `~/.gemini/projects.json` which maps absolute cwd → short folder
+/// name, so we reverse-lookup short-name → cwd. Falls back to the
+/// short folder name itself if the projects.json mapping is missing.
+fn parse_gemini_session_jsonl(
+    file_path: &std::path::Path,
+    project_short_to_cwd: &std::collections::HashMap<String, String>,
+) -> Option<SavedSession> {
+    use std::io::BufRead;
+    let file = std::fs::File::open(file_path).ok()?;
+    let reader = std::io::BufReader::new(file);
+
+    let mut session_id = file_path.file_stem()?.to_string_lossy().to_string();
+    let mut cwd = String::new();
+    let mut updated_at = String::new();
+    let mut title = String::new();
+    let mut total_messages = 0;
+
+    if let Some(short) = file_path
+        .parent()
+        .and_then(|p| p.parent())
+        .and_then(|p| p.file_name())
+        .and_then(|n| n.to_str())
+    {
+        if let Some(real) = project_short_to_cwd.get(short) {
+            cwd = real.clone();
+        } else {
+            cwd = short.to_string();
+        }
+    }
+
+    for line in reader.lines().map_while(Result::ok) {
+        let Ok(value) = serde_json::from_str::<serde_json::Value>(&line) else {
+            continue;
+        };
+        if let Some(s) = value.get("sessionId").and_then(|v| v.as_str()) {
+            if !s.is_empty() {
+                session_id = s.to_string();
+            }
+        }
+        let row_type = value.get("type").and_then(|v| v.as_str()).unwrap_or("");
+        if row_type == "user" || row_type == "gemini" {
+            total_messages += 1;
+        }
+        if !title.is_empty() || row_type != "user" {
+            continue;
+        }
+        let Some(content_arr) = value.get("content").and_then(|v| v.as_array()) else {
+            continue;
+        };
+        for block in content_arr {
+            let Some(text) = block.get("text").and_then(|v| v.as_str()) else {
+                continue;
+            };
+            if is_system_injected(text) {
+                continue;
+            }
+            let safe = text.replace('\n', " ");
+            let mut chars = safe.chars();
+            let chunk: String = chars.by_ref().take(40).collect();
+            title = if chars.next().is_some() { format!("{}...", chunk) } else { chunk };
+            break;
+        }
+    }
+
+    if let Ok(meta) = std::fs::metadata(file_path) {
+        if let Ok(mod_time) = meta.modified() {
+            if let Ok(dur) = mod_time.duration_since(std::time::SystemTime::UNIX_EPOCH) {
+                updated_at = dur.as_millis().to_string();
+            }
+        }
+    }
+    if title.is_empty() {
+        title = "Gemini Session".to_string();
+    }
+    let turn_count = if total_messages > 0 { std::cmp::max(1, (total_messages + 1) / 2) } else { 0 };
+
+    Some(SavedSession {
+        id: format!("gemini_native_{}", session_id),
+        name: title,
+        tool: "gemini".to_string(),
+        cwd,
+        session_token: Some(session_id),
+        saved_at: updated_at,
+        file_path: Some(file_path.to_string_lossy().into_owned()),
+        turn_count: Some(turn_count),
+    })
+}
+
+/// Legacy Gemini project-hash → cwd map. Reads `~/.gemini/projects.json`.
+/// Returns empty on any error (missing file, invalid JSON, permission
+/// denied) — sessions just fall back to using the short folder name
+/// as the cwd display.
+fn load_gemini_project_map() -> std::collections::HashMap<String, String> {
+    use std::collections::HashMap;
+    let mut map = HashMap::new();
+    let Some(home) = dirs::home_dir() else { return map };
+    let path = home.join(".gemini").join("projects.json");
+    let Ok(text) = std::fs::read_to_string(path) else { return map };
+    let Ok(value) = serde_json::from_str::<serde_json::Value>(&text) else { return map };
+    let Some(projects) = value.get("projects").and_then(|v| v.as_object()) else { return map };
+    for (cwd, short) in projects {
+        if let Some(short_str) = short.as_str() {
+            map.insert(short_str.to_string(), cwd.clone());
+        }
+    }
+    map
+}
+
+/// Walk `~/.gemini/tmp/<project>/chats/*.jsonl` and emit candidates
+/// tagged `tool = "gemini"` so the legacy parser picks them up. Used
+/// in both the history list scanner and the heatmap loader to keep
+/// orphan Gemini sessions visible after the launchpad tile retired.
+fn collect_gemini_legacy_history_candidates(
+    home: &std::path::Path,
+    out: &mut Vec<(std::time::SystemTime, std::path::PathBuf, &'static str)>,
+) {
+    let dir = home.join(".gemini").join("tmp");
+    collect_jsonl_paths_with_mtime(dir, 3, "gemini", out);
+}
+
 /// Parse a Qwen Code session jsonl. Layout:
 ///   `~/.qwen/projects/<sanitized-cwd>/chats/<session>.jsonl`
 /// Each line: `{uuid, type: 'user'|'assistant'|'tool_result'|'system',
 ///   sessionId, cwd, timestamp, message: {role, parts: [{text|functionCall|...}]}}`
-/// Qwen Code is descended from the now-retired Gemini CLI (Google
-/// transitioned that to Antigravity CLI 2026-05-19) but its layout
-/// differs from upstream:
+/// Qwen Code is descended from the (now-retired-as-launchpad-tile)
+/// Gemini CLI but its layout differs from upstream:
 ///   • cwd is on every row (no separate projects.json reverse map needed)
 ///   • text lives in `message.parts[].text`, not the top-level `content[]`
 ///   • assistant rows use `type: 'assistant'`, not `'gemini'`
@@ -1793,6 +1936,12 @@ fn read_native_session(file_path: String) -> Result<String, String> {
         // namespace with retiring Gemini CLI). `~/.antigravitycli/` is
         // an unrelated stale placeholder some installers leave behind.
         home.join(".gemini").join("antigravity-cli"),
+        // Legacy Gemini CLI session dir — Gemini was removed from the
+        // launchpad on 2026-05-19 but `parse_gemini_session_jsonl` keeps
+        // surfacing orphan sessions in the history list so users don't
+        // lose read access. ChatReader walks file_path through this
+        // gate, so the prefix must be allowed.
+        home.join(".gemini").join("tmp"),
     ];
     if hermes_legacy != hermes_root {
         allowed.push(hermes_legacy);
@@ -2291,17 +2440,31 @@ fn load_native_history_blocking() -> Result<Vec<SavedSession>, String> {
     let home = dirs::home_dir();
     if let Some(home) = home.as_ref() {
         collect_registry_history_candidates(home, &mut file_candidates);
+        // Orphan Gemini CLI sessions (`~/.gemini/tmp/*/chats/*.jsonl`)
+        // — Gemini was removed from the launchpad 2026-05-19, but
+        // existing session files remain readable in the history list.
+        collect_gemini_legacy_history_candidates(home, &mut file_candidates);
     }
 
     // Sort candidates by mtime desc and parse only the newest HISTORY_LIMIT.
     file_candidates.sort_by(|a, b| b.0.cmp(&a.0));
     file_candidates.truncate(HISTORY_LIMIT);
 
+    // Lazy-load the legacy Gemini project-hash → cwd map only if we
+    // actually have Gemini candidates — file I/O isn't free and most
+    // users won't have orphan Gemini sessions on disk.
+    let gemini_project_map = if file_candidates.iter().any(|(_, _, t)| *t == "gemini") {
+        load_gemini_project_map()
+    } else {
+        std::collections::HashMap::new()
+    };
+
     for (_, path, tool) in &file_candidates {
         let parsed = match *tool {
             "hermes" => parse_hermes_json(path),
             "codex"  => parse_codex_session_jsonl(path),
             "qwen"   => parse_qwen_session_jsonl(path),
+            "gemini" => parse_gemini_session_jsonl(path, &gemini_project_map),
             other    => parse_agent_jsonl(path, other),
         };
         if let Some(session) = parsed {
@@ -2425,6 +2588,12 @@ fn load_message_heatmap_blocking() -> Result<Vec<HeatmapEntry>, String> {
     let home = dirs::home_dir();
     if let Some(home) = home.as_ref() {
         collect_registry_history_candidates(home, &mut candidates);
+        // Orphan Gemini CLI sessions count toward the heatmap too —
+        // same walker as the history list, just feeding the
+        // contribution buckets. Without this the heatmap totals would
+        // silently shrink for users with past Gemini activity after
+        // the launchpad swap.
+        collect_gemini_legacy_history_candidates(home, &mut candidates);
     }
 
     // Per-file count cache. Heatmap re-scans every app launch and counts

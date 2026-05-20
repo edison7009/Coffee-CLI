@@ -15,13 +15,24 @@ and `git tag --list "v*"`.
   users to move to Antigravity CLI. The Launchpad tile, history-board
   icon, tool-config defaults, multi-agent grid options, and Web-Home
   landing page now all surface Antigravity (binary `agy`). Resume uses
-  `--conversation <uuid>` instead of Gemini's `--resume`.
+  `--conversation <uuid>` instead of Gemini's `--resume`. Tile icon is
+  the official Lobe Icons Antigravity mark (4-colour ribbon under a
+  mountain mask).
 - **Skills** are junctioned into `~/.gemini/antigravity/skills/` — the
   same global dir the Antigravity IDE and 3rd-party `antigravity-
   awesome-skills` installer use. Existing Coffee CLI skill junctions
   at `~/.gemini/skills/` (the old Gemini CLI location) are left in
   place but no longer toggled by Coffee CLI; remove manually if you
   also uninstalled Gemini CLI.
+
+### Kept (no data loss)
+- **Past Gemini CLI sessions stay readable.** History board and
+  contribution heatmap continue to scan `~/.gemini/tmp/*/chats/*.jsonl`
+  via a legacy reader — sessions still appear with the original Gemini
+  icon and a `(legacy)` suffix on the label. You can re-read past
+  conversations but can't spawn new Gemini sessions from Coffee CLI's
+  Launchpad (run `gemini` from a regular terminal if you still have
+  it on PATH).
 - The Gemini-specific MCP injection path (per-pane stub under
   `~/.gemini/extensions/coffee-pane-*` + GEMINI.md context file) is
   removed entirely. Antigravity uses a persistent `agy plugin install`

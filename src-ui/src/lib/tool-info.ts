@@ -24,6 +24,18 @@ interface ToolInfo {
   displayName: string;
 }
 
+// Legacy / orphan tool labels — tools that no longer have a live registry
+// entry but still surface in the history list. The backend keeps a scanner
+// alive for orphan jsonl files (see server.rs collect_gemini_legacy_history_
+// candidates) so users don't lose access to old conversations after a tool
+// gets retired from the launchpad.
+const LEGACY_DISPLAY_NAMES: Record<string, string> = {
+  // Gemini CLI consumer access ends 2026-06-18; the launchpad tile was
+  // swapped for Antigravity CLI on 2026-05-19. Existing `~/.gemini/tmp/`
+  // sessions still appear in history under this label.
+  gemini: 'Gemini CLI (legacy)',
+};
+
 let cache: Map<string, string> | null = null;
 let pending: Promise<void> | null = null;
 
@@ -45,5 +57,5 @@ export async function loadToolInfo(): Promise<void> {
 }
 
 export function getToolDisplayName(id: string): string {
-  return cache?.get(id) ?? id;
+  return cache?.get(id) ?? LEGACY_DISPLAY_NAMES[id] ?? id;
 }

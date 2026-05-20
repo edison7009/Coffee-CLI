@@ -91,27 +91,46 @@ export function ChatReader({ sessionId }: { sessionId: string }) {
               msgObj = parsed.payload;
             }
 
-            // Qwen format adapter — uses `type: 'user'|'assistant'` at
-            // the row root with `message: { role, parts: [{text}] }`.
-            // Normalized to the Claude shape so the parser below
-            // ({type:'text', text} blocks) handles it in one code path.
-            // The earlier Gemini CLI adapter (`type: 'gemini'` with a
-            // root-level `content` array) was removed when Antigravity
-            // CLI replaced Gemini 2026-05-19; Antigravity stores
-            // conversations under `~/.antigravitycli/<uuid>.json` in a
-            // schema we haven't parsed yet (history scanner deferred
-            // until the schema is observed on a populated session).
+            // Gemini / Qwen format adapter — both use `type: '...'` at the
+            // row root instead of `message.role`, but with two different
+            // sub-shapes:
+            //   • Gemini  : { type: 'user'|'gemini',     content: [{text}] }
+            //   • Qwen    : { type: 'user'|'assistant',  message: { role, parts: [{text}] } }
+            // Detect Qwen first (has `message.parts`), fall back to Gemini.
+            // Either path gets normalized to the Claude shape so the parser
+            // below ({type:'text', text} blocks) handles all three CLIs in
+            // one code path.
+            //
+            // The Gemini branch is retained for ORPHAN sessions only —
+            // Gemini CLI was removed from the launchpad 2026-05-19, but
+            // `~/.gemini/tmp/*/chats/*.jsonl` files still parse here so
+            // users can re-read past conversations. Antigravity's own
+            // conversations live as protobuf in `.gemini/antigravity-cli/
+            // conversations/<uuid>.pb` and aren't readable from this
+            // path yet.
             if (
               !msgObj &&
-              (parsed.type === 'user' || parsed.type === 'assistant') &&
-              parsed.message && Array.isArray(parsed.message.parts)
+              (parsed.type === 'user' ||
+                parsed.type === 'assistant' ||
+                parsed.type === 'gemini')
             ) {
-              const role = parsed.message.role || (parsed.type === 'assistant' ? 'assistant' : 'user');
-              const rawBlocks = parsed.message.parts;
-              msgObj = {
-                role,
-                content: rawBlocks.map((b: any) => (b && !b.type ? { ...b, type: 'text' } : b)),
-              };
+              let role: string | null = null;
+              let rawBlocks: any[] | null = null;
+              if (parsed.message && Array.isArray(parsed.message.parts)) {
+                // Qwen
+                role = parsed.message.role || (parsed.type === 'assistant' ? 'assistant' : 'user');
+                rawBlocks = parsed.message.parts;
+              } else if (Array.isArray(parsed.content)) {
+                // Gemini (legacy)
+                role = parsed.type === 'gemini' ? 'assistant' : 'user';
+                rawBlocks = parsed.content;
+              }
+              if (role && rawBlocks) {
+                msgObj = {
+                  role,
+                  content: rawBlocks.map((b: any) => (b && !b.type ? { ...b, type: 'text' } : b)),
+                };
+              }
             }
 
             // Only care about entries that possess a "role"

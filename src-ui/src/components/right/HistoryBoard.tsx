@@ -15,28 +15,32 @@ import {
 // separate file copy on disk.
 import HERMES_DATA_URL from '../../icons-inline/hermes.png?inline';
 import OPENCODE_DATA_URL from '../../icons-inline/opencode.png?inline';
-import ANTIGRAVITY_DATA_URL from '../../icons-inline/antigravity.png?inline';
 import './HistoryBoard.css';
 
-// Tool icons — claude/codex/qwen still load via <img src=public/...>
+// Tool icons — claude/codex/qwen/antigravity load via <img src=public/...>
 // because HistoryBoard mounts once at app start and never re-mounts on tab
-// switch, so the one-time decode flash is invisible. Hermes/OpenCode/
-// Antigravity are inlined to share the same bytes the Launchpad uses
-// (no duplicate files).
+// switch, so the one-time decode flash is invisible. Hermes/OpenCode are
+// PNG-inlined to share the same bytes the Launchpad uses (no duplicate files).
+//
+// `gemini` is kept in the registry even though Gemini CLI is no longer a
+// live tool slot — orphan sessions from `~/.gemini/tmp/*/chats/*.jsonl`
+// still surface in the history list and need their original Gemini icon
+// for visual continuity. See server.rs `collect_gemini_legacy_history_candidates`.
 
 const TOOL_ICON_SRC: Record<string, string> = {
   claude:      '/icons/tools/claude.svg',
   codex:       '/icons/tools/codex.svg',
   qwen:        '/icons/tools/qwen.svg',
+  antigravity: '/icons/tools/antigravity.svg',
+  gemini:      '/icons/tools/gemini.svg',
   hermes:      HERMES_DATA_URL,
   opencode:    OPENCODE_DATA_URL,
-  antigravity: ANTIGRAVITY_DATA_URL,
 };
 
 const getToolIcon = (tool: string) => {
   const src = TOOL_ICON_SRC[tool];
   if (!src) return <div style={{ width: 14, height: 14, borderRadius: 'var(--radius-xs)', background: '#555' }}/>;
-  const extra = (tool === 'hermes' || tool === 'opencode' || tool === 'antigravity') ? { borderRadius: 'var(--radius-xs)', objectFit: 'cover' as const } : {};
+  const extra = (tool === 'hermes' || tool === 'opencode') ? { borderRadius: 'var(--radius-xs)', objectFit: 'cover' as const } : {};
   return <img src={src} alt="" style={{ width: '1em', height: '1em', flexShrink: 0, objectFit: 'contain', ...extra }}/>;
 };
 
