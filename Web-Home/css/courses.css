@@ -275,12 +275,17 @@
 /* Blockquotes */
 .markdown-body blockquote {
   border-left: 4px solid var(--brand-color);
-  padding-left: 1rem;
   color: var(--text-secondary);
   background: var(--glass-hover);
   padding: 1rem;
   border-radius: 0 8px 8px 0;
   margin-bottom: 1.5rem;
+}
+
+/* Renderer wraps blockquote content in <p> — kill the default 1em margins
+   so blockquote padding isn't doubled visually (extra blank row at bottom). */
+.markdown-body blockquote p {
+  margin: 0;
 }
 
 /* Extracted Tables */
