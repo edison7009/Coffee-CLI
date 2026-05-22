@@ -1,954 +1,832 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../../resources/logos/claude-howto-logo-dark.svg">
-  <img alt="Claude How To" src="../../resources/logos/claude-howto-logo.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="../resources/logos/claude-howto-logo-dark.svg">
+  <img alt="Claude How To" src="../resources/logos/claude-howto-logo.svg">
 </picture>
 
-# 高级功能
+# Advanced Features 指南
 
-这是一份关于 Claude Code 高级能力的完整指南，涵盖 planning mode、extended thinking、auto mode、后台任务、权限模式、打印模式（非交互）、会话管理、交互功能、消息通道（Channels）、语音输入、远程控制、网页会话、桌面应用、任务列表、提示词建议、Git 工作树、沙盒、受管设置和配置。
+当你已经会用 slash commands、memory、skills、MCP、hooks 和 subagents 之后，Claude Code 的高级能力会决定你能不能把它真正用到复杂项目和高自动化工作流里。
 
-## 目录
+这部分不是“你必须一口气全会”，而是你要知道：
 
-1. [概览](#概览)
-2. [规划模式](#规划模式)
-3. [扩展思考](#扩展思考)
-4. [自动模式](#自动模式)
-5. [后台任务](#后台任务)
-6. [定时任务](#定时任务)
-7. [权限模式](#权限模式)
-8. [无头模式](#无头模式)
-9. [会话管理](#会话管理)
-10. [交互功能](#交互功能)
-11. [语音输入](#语音输入)
-12. [消息通道（Channels）](#消息通道channels)
-13. [Chrome 集成](#chrome-集成)
-14. [远程控制](#远程控制)
-15. [网页会话](#网页会话)
-16. [桌面应用](#桌面应用)
-17. [任务列表](#任务列表)
-18. [提示词建议](#提示词建议)
-19. [Git 工作树（Git Worktrees）](#git-工作树git-worktrees)
-20. [沙盒](#沙盒)
-21. [企业受管设置](#企业受管设置)
-22. [配置与设置](#配置与设置)
-23. [最佳实践](#最佳实践)
-24. [更多资源](#更多资源)
+- 哪些高级能力最值得先学
+- 哪些适合日常开发
+- 哪些适合团队和自动化
+- 哪些不该在没准备好的情况下乱开
 
 ---
 
-<a id="overview"></a>
-## 概览
+## 这部分包含什么
 
-Claude Code 的高级功能把基础能力扩展到了规划、推理、自动化和控制层面。它们能支持更复杂的开发任务、代码审查、自动化流程以及多会话管理。
+主要包括：
 
-**核心高级功能包括：**
-- **Planning Mode**：先写详细实现计划，再开始编码
-- **Extended Thinking**：对复杂问题进行更深入的推理
-- **Auto Mode**：由后台安全分类器在每一步执行前进行审查（Research Preview）
-- **Background Tasks**：长时间任务不阻塞对话
-- **Permission Modes**：控制 Claude 可以做什么（`default`、`acceptEdits`、`plan`、`auto`、`dontAsk`、`bypassPermissions`）
-- **Print Mode**：非交互式运行，适合自动化和 CI/CD（`claude -p`）
-- **Session Management**：管理多个会话
-- **Interactive Features**：快捷键、多行输入、历史记录
-- **Voice Dictation**：按住说话，支持 20 种语言的语音识别
-- **Channels**：消息通道，允许 MCP server 向运行中的会话推送消息（Research Preview）
-- **Remote Control**：从 Claude.ai 或 Claude app 控制本地会话
-- **Web Sessions**：在浏览器中运行 Claude Code
-- **Desktop App**：支持可视化 diff 审查和多会话的独立应用
-- **Task List**：跨 context compaction 持久跟踪任务
-- **Prompt Suggestions**：根据上下文智能推荐命令
-- **Git 工作树（Git Worktrees）**：隔离的 worktree 分支，适合并行工作
-- **Sandboxing**：操作系统级文件系统和网络隔离
-- **Managed Settings**：通过 plist、Registry 或受管文件进行企业部署
-- **Configuration**：用 JSON 配置文件定制行为
+- planning mode
+- Ultraplan
+- extended thinking
+- Auto Mode
+- background tasks
+- TUI Mode
+- Monitor Tool
+- scheduled tasks
+- channels
+- permission modes
+- print mode / headless usage
+- session management
+- Agent Teams
+- remote / desktop / web sessions
+- worktrees
+- sandboxing
+- configuration
 
-<a id="planning-mode"></a>
-## 规划模式
+---
 
-更多规划示例见 [planning-mode-examples.md](planning-mode-examples.md)。
+## 最推荐先掌握的四项
 
-Planning mode 允许 Claude 在真正实现前先梳理复杂任务，生成一份你可以审阅并批准的详细计划。
+### 1. planning mode（规划模式）
 
-### 什么是 Planning Mode？
+复杂任务先规划再执行。
 
-Planning mode 是一个两阶段流程：
-1. **规划阶段**：Claude 分析任务并生成详细实现计划
-2. **实现阶段**：在你批准后，Claude 执行计划
+### 2. permission modes（权限模式）
 
-### 什么时候使用 Planning Mode
+明确 Claude 在本地到底能做多少事。
 
-✅ 适合：
-- 复杂的多文件重构
-- 新功能开发
+### 3. print mode（输出模式）
+
+把 Claude Code 接进脚本、CI/CD 和自动化流程的关键入口。
+
+### 4. background tasks（后台任务）
+
+让耗时任务后台跑，不阻塞当前会话。
+
+如果你不是重度用户，先掌握这四个就足够产生明显收益。
+
+如果你已经开始频繁做多文件任务，下一步最值得补的是：
+
+- `/ultraplan`：把复杂规划交给云端起草，再决定在浏览器还是本地执行
+- Monitor Tool：让 Claude 盯住后台命令的事件流，而不是不断轮询
+
+---
+
+## planning mode（规划模式）
+
+### planning mode 是什么
+
+它是“两阶段工作流”：
+
+1. 先做计划
+2. 再按计划执行
+
+适合：
+
+- 多文件重构
+- 新功能设计
 - 架构调整
-- 数据库迁移
-- 大型 API 重设计
+- 数据迁移
+- 高风险变更
 
-❌ 不建议：
-- 简单 bug 修复
-- 格式化修改
-- 单文件编辑
-- 快速查询
+不太适合：
 
-### 如何启动 Planning Mode
+- 小 bug
+- 单文件轻改
+- 只问一个简单问题
 
-**Slash command：**
-```bash
+### 常见入口
+
+```text
 /plan Implement user authentication system
 ```
 
-**CLI 参数：**
+也可以通过权限模式进入只读规划状态：
+
 ```bash
 claude --permission-mode plan
 ```
 
-**设为默认：**
+### 一个好的 planning mode 输出应该包含什么
+
+- 分阶段计划
+- 预计会改哪些文件
+- 风险点
+- 验证方式
+- 用户需要确认的地方
+
+如果 planning mode 只给你几句空话，那不是好计划。
+
+> `v2.1.136` 之后要特别注意：plan mode 现在会**无条件阻止所有文件写入**。即使你在 `permissions.allow` 里配过宽松的 `Edit(...)` 规则，也不能再绕过去。如果旧工作流依赖这种行为，现在必须先退出 plan mode，再做编辑。
+
+## Ultraplan（深度计划）
+
+`/ultraplan` 会把“起草计划”这一步交给 Claude Code on the web 的云端会话来完成。你本地终端不用一直等着，等云端把 plan 草案写好后，再去浏览器审阅，并决定继续在云端执行，还是把计划带回本地终端落地。
+
+你可以把它理解成：
+
+- `/plan`：更像本地规划模式
+- `/ultraplan`：更像云端起草 + 浏览器审阅 + 再决定执行位置
+
+### 什么时候最值
+
+- 高风险多文件修改
+- 需要先看详细计划再放权
+- 想让计划阶段和执行阶段彻底分开
+- 需要把计划发给同事或团队成员一起看
+
+### 使用门槛
+
+- 需要 Claude Code on the web 账户
+- 最好有一个可供云端克隆的 GitHub 仓库
+- 目前不适用于 Amazon Bedrock、Google Cloud Vertex AI、Microsoft Foundry
+
+### 三种进入方式
+
+1. 直接输入：
+
+```text
+/ultraplan <prompt>
+```
+
+2. 在普通请求里明确说要用 ultraplan。
+3. 先在本地做一轮 plan，再把草案交给 Ultraplan 深挖。
+
+> 按上游 2026-04-11 的说明，首次调用 `/ultraplan` 时会自动创建 Claude Code on the web 环境，不需要再手工等容器预热。
+
+### 你会看到的状态
+
+| 状态 | 含义 |
+|------|------|
+| `ultraplan` | Claude 正在云端研究代码并起草计划 |
+| `ultraplan needs your input` | 云端会话有澄清问题，需要你去浏览器回应 |
+| `ultraplan ready` | 计划已经准备好，可以在浏览器里审阅 |
+
+### 审阅后怎么执行
+
+当草案准备好后，你通常有两条路：
+
+1. **继续在云端执行**  
+   直接在浏览器里批准计划，让 Claude 在云端继续实现，并从 web 侧发起 PR。
+
+2. **把计划带回本地终端**  
+   适合你更想在本地环境里继续做实现、跑测试和手工检查。
+
+如果你选择带回本地，常见分支是：
+
+- `Implement here`：就在当前终端继续做
+- `Start new session`：新开一个本地 session 再做
+- `Cancel`：先把计划存下来，稍后再继续
+
+> 如果你当前开着 Remote Control，启动 Ultraplan 时它会断开，因为两者都会占用 Claude Code on the web 这个界面。
+
+---
+
+## extended thinking（扩展思考）
+
+extended thinking 的价值在于：让 Claude 对复杂问题多想一步，而不是急着下结论。
+
+它特别适合：
+
+- 架构对比
+- 技术选型
+- 高歧义问题
+- 边界条件分析
+
+对中国用户来说，一个实用理解是：  
+**不是所有问题都要更长思考，但复杂问题最好别让 Claude 秒答。**
+
+这轮上游纠正了一个容易误传的点：不要再把 `/think` 当成有效 slash command。
+如果你想让某一次回答更深地推理，可以在 prompt 里直接写 `ultrathink`；它影响的是这一轮回答，不会永久改变当前 session 的 effort level。
+
+如果你要调 session 级别的思考强度，用 `/effort`。
+如果你只是想切换是否显示更详细的推理 transcript，注意 `Ctrl+O` 更偏 verbose 显示切换；`Option+T` / `Alt+T` 才是 extended thinking 的开关入口。
+
+---
+
+## Auto Mode（自动模式）
+
+Auto Mode 属于更偏自动化、也更需要谨慎的能力。
+
+它适合：
+
+- 明确受控的自动化环境
+- 已经知道自己在放开什么权限
+- 你对项目风险边界比较清楚
+
+它不适合：
+
+- 你还没搞清 permission modes 差异
+- 你还不确定项目里哪些操作是危险的
+
+新手建议先不要把 Auto Mode 作为默认。
+
+### 当前要求要看清
+
+截至 2026 年 4 月，上游文档里对 Auto Mode 的要求已经更明确：
+
+- 不是 Pro / Max 就能直接用
+- 更偏向 Team、Enterprise 或 API 场景
+- 目前主要面向 Anthropic API 体系
+- Max 用户在 Opus 4.7 上已经不再强依赖 `--enable-auto-mode`
+
+如果你看到旧资料写得很宽泛，优先以最新官方能力范围为准。
+
+---
+
+## 没有 Team plan 时的替代方案：一次性权限种子脚本
+
+如果你没有 Team plan，或者你不想用“后台分类器 + 自动判定”这套模式，上游最近新增了一种更务实的替代方案：
+
+- 直接用一次性脚本把一组 **更保守的安全权限基线** 写进 `~/.claude/settings.json`
+
+脚本位置：
+
+```text
+09-advanced-features/setup-auto-mode-permissions.py
+```
+
+### 典型用法
+
+```bash
+# 先预览会加什么，不落盘
+python3 09-advanced-features/setup-auto-mode-permissions.py --dry-run
+
+# 写入保守基线
+python3 09-advanced-features/setup-auto-mode-permissions.py
+
+# 按需再放开能力
+python3 09-advanced-features/setup-auto-mode-permissions.py --include-edits --include-tests
+python3 09-advanced-features/setup-auto-mode-permissions.py --include-git-write --include-packages
+python3 09-advanced-features/setup-auto-mode-permissions.py --include-gh-read --include-gh-write
+```
+
+### 这组权限默认包含什么
+
+| 类别 | 示例 |
+|------|------|
+| Core read-only tools | `Read(*)`、`Glob(*)`、`Grep(*)`、`Agent(*)`、`WebSearch(*)`、`WebFetch(*)` |
+| Local inspection | `Bash(git status:*)`、`Bash(git log:*)`、`Bash(git diff:*)`、`Bash(cat:*)` |
+| Optional edits | `Edit(*)`、`Write(*)`、`NotebookEdit(*)` |
+| Optional test/build | `Bash(pytest:*)`、`Bash(cargo test:*)`、`Bash(make:*)` |
+| Optional git writes | `Bash(git add:*)`、`Bash(git commit:*)`、`Bash(git stash:*)` |
+| Optional packages | `Bash(npm install:*)`、`Bash(pip install:*)` |
+| Optional GitHub CLI | `Bash(gh pr view:*)`、`Bash(gh pr create:*)` |
+
+### 它和旧的 `auto-adapt-mode` 有什么不同
+
+旧思路：
+
+- 通过 hook 动态学习你批准过什么
+
+现在的新思路：
+
+- 一次性写入一组明确的规则
+- 再通过命令行参数按需增加范围
+
+这对中文用户尤其有帮助，因为它更容易解释清楚：
+
+- 现在到底开了哪些权限
+- 哪些是默认安全基线
+- 哪些是你主动额外放开的
+
+#### `autoMode.hard_deny`：无条件阻断的自动模式黑名单
+
+从 `v2.1.136+` 开始，`autoMode.hard_deny` 用来定义“无论模型怎么判断用户意图，都绝不允许”的动作。
+
 ```json
 {
-  "permissions": {
-    "defaultMode": "plan"
+  "autoMode": {
+    "hard_deny": ["Bash(rm -rf /:*)", "Bash(git push --force*)"]
   }
 }
 ```
 
-**快捷键：**
-- `Shift + Tab` - 切换权限模式（包括 plan）
-- `Alt + M` - 切换权限模式（Windows/Linux）
+它和 `soft_deny` 的区别是：
 
-### Planning Mode 的好处
+- `soft_deny`：模型仍可能结合上下文判断是否放行
+- `hard_deny`：直接阻断，不跟分类器讨价还价
 
-- **结构化实施方式**：把实现步骤拆得更清楚
-- **审阅和批准**：先看计划，再执行
-- **风险识别**：先发现潜在问题
-- **阶段清晰**：有明确的里程碑和阶段划分
+如果你在团队里推 auto mode，这个设置比“口头提醒大家别乱用危险命令”靠谱得多。
 
-### 示例：功能实现
+### 明确不会自动加进去的危险操作
 
-```text
-User: /plan Add a real-time notification system
+脚本明确不会帮你加入这些类型：
 
-Claude: 我会为实时通知系统制定计划。
+- `rm -rf`
+- `sudo`
+- force push
+- `git reset --hard`
+- `DROP TABLE`
+- `kubectl delete`
+- `terraform destroy`
+- `npm publish`
+- `curl | bash`
+- 生产环境 deploy
 
-## 实现计划
+如果你想要“更自动化”，请先明确你是**真的需要**，而不是只是觉得方便。
 
-### 阶段 1：基础设施
-1. 安装 WebSocket 库（socket.io）
-2. 搭建 WebSocket server
-3. 配置连接管理
+---
 
-### 阶段 2：后端
-4. 创建通知服务
-5. 实现通知队列
-6. 为通知添加数据库 schema
-7. 创建 API 端点
+## background tasks（后台任务）
 
-### 阶段 3：前端
-8. 搭建 WebSocket client
-9. 创建通知 UI 组件
-10. 实现通知状态管理
-11. 添加通知权限
+background tasks 适合这些场景：
 
-### 阶段 4：测试与发布
-12. 编写单元测试
-13. 编写集成测试
-14. 更新文档
-15. 部署到 staging
+- 长时间运行的任务
+- 不想阻塞当前对话
+- 需要并行推进的工作
+- 希望 Claude 先把耗时命令挂起来，自己继续做别的
 
-预计时间：3-4 小时
-需要修改的文件：12 个
-需要创建的新文件：8 个
+典型例子包括：
 
-准备继续吗？（yes/no/modify plan）
-```
+- 本地开发服务器
+- 长时间测试
+- 构建流程
+- 日志持续输出
 
-### 计划修改
+如果你已经会用 background tasks，下一步就很值得把 Monitor Tool 一起学掉。
 
-```text
-User: 修改计划 - 先跳过队列，后面再加
+## TUI Mode（全屏终端模式）
 
-Claude: 已更新计划：
-[展示删除队列后的计划]
+这是上游在 v2.1.110 明确加进文档的新能力，适合：
 
-User: 看起来不错，继续
+- tmux
+- iTerm2 分屏
+- 你想让 Claude Code 在终端里更稳定地全屏显示
 
-Claude: [按修改后的计划开始实现]
-```
-
-### Planning Mode 配置
-
-你可以通过 CLI 参数或 slash command 启用 planning mode：
+最直接的用法：
 
 ```bash
-# 通过 CLI 启用 plan mode
-claude --permission-mode plan
-
-# 或在 REPL 里使用 /plan
-/plan Implement user authentication system
+/tui
+claude --tui
 ```
 
-**规划专用模型别名**：使用 `opusplan`，规划用 Opus，执行用 Sonnet：
+如果你经常在终端里长时间工作，这个模式比普通输出更稳，也更不容易闪。
+
+另外：
+
+- `/focus` 更适合做“只看重点输出”的切换
+- `Ctrl+O` 现在更偏向普通 / verbose transcript 切换
+
+## Monitor Tool（监控工具）
+
+Monitor Tool 是上游最近更明确写进文档的新重点。它的核心价值是：
+
+- Claude 不需要再每隔几十秒 `sleep` 一下去轮询
+- 而是直接盯住后台命令的 stdout 事件流
+- 一旦匹配到事件，就立刻唤醒当前会话
+
+简单说：  
+**它适合“等某件事发生”这种场景，比低效轮询更省 token，也更及时。**
+
+### 它为什么值得学
+
+- 后台安静时几乎不消耗额外 token
+- 有事件发生时，Claude 能第一时间反应
+- 很适合日志、测试输出、服务启动、错误监控
+
+### 两种最常见用法
+
+#### 1. 持续流过滤
+
+适合一直往外吐日志的命令：
 
 ```bash
-claude --model opusplan "design and implement the new API"
+tail -F server.log | grep --line-buffered -E "ERROR|FATAL"
 ```
 
-**外部编辑计划**：按 `Ctrl+G` 可以把当前计划打开到外部编辑器里进行更详细的修改。
+#### 2. 定时查询后只在有变化时输出
 
-<a id="extended-thinking"></a>
-## 扩展思考
-
-Extended thinking 让 Claude 在给出解决方案前，花更多时间进行复杂推理。
-
-### 什么是 Extended Thinking？
-
-这是一个有意识的、分步骤的推理过程，Claude 会：
-- 拆解复杂问题
-- 比较多种方案
-- 评估权衡
-- 推导边界情况
-
-### 如何启用
-
-**快捷键：**
-- `Option + T`（macOS）/ `Alt + T`（Windows/Linux）- 切换 extended thinking
-
-**自动启用：**
-- 对所有模型默认开启（Opus 4.6、Sonnet 4.6、Haiku 4.5）
-- Opus 4.6 支持自适应推理，effort 等级为 `low`（○）、`medium`（◐）、`high`（●）、`max`（仅 Opus 4.6）
-
-### 好处
-
-- 更适合复杂问题
-- 更容易发现边界条件
-- 便于比较多个方案
-- 输出通常更稳健
-
-### 示例：架构决策
-
-```text
-Context Analysis
-Approach 1: Microservices
-Approach 2: Monolith
-Decision Factors
-Recommendation
-```
-
-### 配置
-
-```json
-{
-  "thinking": {
-    "enabled": true,
-    "effort": "high"
-  }
-}
-```
-
-<a id="auto-mode"></a>
-## 自动模式
-
-Auto mode 是一个研究预览功能。它会在每个动作执行前，用后台安全分类器评估风险，帮助你在自动化和安全之间取得平衡。
-
-### 需求
-
-- 支持 auto mode 的 Claude Code 版本
-- 合适的权限和配置
-
-### 启用方式
+适合没有原生事件流、只能自己轮询的接口：
 
 ```bash
-# 用 CLI 解锁 auto mode
-claude --enable-auto-mode
-
-# 然后在 REPL 中用 Shift+Tab 切换到它
+last=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+while true; do
+  gh api "repos/owner/repo/issues/123/comments?since=$last" || true
+  last=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  sleep 30
+done
 ```
 
-### 分类器如何工作
+### 一个很容易踩的坑
 
-在执行工具前，后台分类器会判断这个动作是否安全、是否需要提示、是否应该被阻止。
-
-### 默认阻止的动作
-
-- 明显危险的文件操作
-- 高风险 shell 命令
-- 可能泄露凭据的操作
-
-### 默认允许的动作
-
-- 只读检查
-- 常规分析
-- 低风险修改
-
-### 配置 Auto Mode
-
-Auto mode 可以在设置中进一步约束、放宽或与权限模式结合使用。
-
-### 回退行为
-
-如果分类器无法判定，Claude 会回退到更保守的权限处理方式。
-
-### 预置一份类似 Auto-Mode 的保守权限基线
+如果你是把流接到 `grep` 上，记得**一定**带：
 
 ```bash
-# 先预览将要添加的权限（不会写入）
-
-# 应用保守基线
-
-# 只有在需要时再逐步增加能力
+grep --line-buffered
 ```
 
-<a id="background-tasks"></a>
-## 后台任务
+不然 `grep` 可能会缓冲输出，看起来像“明明有事件，Claude 却迟迟没反应”。
 
-后台任务允许 Claude 在不阻塞对话的情况下运行长时间操作。
+## scheduled tasks（定时任务）
 
-### 什么是后台任务？
+scheduled tasks 适合：
 
-后台任务适合长时间运行的工作，例如构建、测试、下载、扫描或并行分析。你可以把它们交给 Claude，让对话继续保持响应。
+- 周期性检查
+- 定时重复 prompt
+- 简单提醒
+- 固定时间执行的轻量任务
 
-### 启动后台任务
+如果你还没掌握 print mode、permission modes 和 background tasks，先别急着把 scheduled tasks 配得太复杂。
 
-你可以从命令、计划或工具链中启动后台任务，让 Claude 在后台继续工作。
+---
 
-### 管理后台任务
+## permission modes（权限模式）
 
-- 查看任务状态
-- 中止任务
-- 等待任务完成
-- 从结果中恢复上下文
+permission modes 决定 Claude 在本地能做什么，以及什么时候会请求你确认。
 
-### 示例：并行开发
-
-```text
-任务 A：运行测试
-任务 B：生成文档
-任务 C：执行安全扫描
-```
-
-### 配置
-
-后台任务的超时、并发和通知行为都可以在设置中调整。
-
-<a id="scheduled-tasks"></a>
-## 定时任务
-
-Scheduled tasks 让 Claude 按计划重复执行某些提示词或任务。
-
-### `/loop` 命令
-
-```bash
-# 显式间隔
-/loop 10m Run tests and report failures
-
-# 自然语言
-/loop every day at 9am check release notes
-```
-
-### 一次性提醒
-
-```bash
-/schedule "remind me to review the PR in 30 minutes"
-```
-
-### 管理定时任务
-
-- 查看任务列表
-- 修改执行频率
-- 暂停或取消任务
-
-### 行为细节
-
-定时任务会遵循当前会话与权限配置，并按计划触发执行。
-
-### 云端定时任务
-
-部分场景可以在云端环境中运行调度任务。
-
-### 禁用定时任务
-
-如果你不希望自动触发，关闭相关设置即可。
-
-### 示例：监控部署
-
-```text
-每 5 分钟检查一次部署状态，直到 health check 通过。
-```
-
-<a id="permission-modes"></a>
-## 权限模式
-
-Permission modes 决定 Claude 可以直接执行哪些操作。
-
-### 可用模式
+### 常见模式
 
 - `default`
 - `acceptEdits`
 - `plan`
-- `auto`
 - `dontAsk`
 - `bypassPermissions`
+- `auto`
 
-### 启用方式
+### 如何理解
 
-可以通过命令行、设置或会话中的快捷操作切换权限模式。
+| 模式 | 适合什么 |
+|------|----------|
+| `default` | 日常安全使用 |
+| `acceptEdits` | 希望编辑流畅一些 |
+| `plan` | 只想分析，不想改 |
+| `dontAsk` | 非交互脚本 |
+| `bypassPermissions` | 可信环境中的强自动化 |
+| `auto` | 有更高自动化诉求、且明确接受风险 |
 
-### 示例
+### `--dangerously-skip-permissions` 变得更“锋利”了
 
-#### Default Mode
+从 `v2.1.121` 到 `v2.1.126`，`--dangerously-skip-permissions` / `bypassPermissions` 对更多路径写入不再弹确认，包括：
 
-默认的平衡模式，必要时会询问权限。
+- `.claude/skills/`
+- `.claude/agents/`
+- `.claude/commands/`
+- `.claude/`
+- `.git/`
+- `.vscode/`
+- shell 配置文件
 
-#### Plan Mode
+灾难性删除命令仍会被拦住，但这不代表它适合日常项目默认打开。
+对中文用户来说，最稳的原则是：只在可丢弃 sandbox、临时实验仓库或你完全理解风险的自动化环境里使用。
 
-只做规划，不直接执行高风险改动。
+### 一个常见误区
 
-#### Accept Edits Mode
+很多人以为权限模式只是“麻烦不麻烦”。  
+其实它决定的是：
 
-更偏向自动接受编辑，适合受控环境。
+- 风险控制
+- 自动化强度
+- 你是否还能及时拦住错误操作
 
-### 使用场景
+---
 
-- 代码审查
-- 自动化重构
+## print mode / headless usage（输出模式 / 无头用法）
+
+`claude -p` 是 Claude Code 进入自动化世界的关键入口。
+
+适合：
+
+- shell 脚本
 - CI/CD
-- 高风险操作前的审批流程
+- 一次性任务
+- 管道输入
+- 结构化输出
 
-<a id="headless-mode"></a>
-## 无头模式
-
-Headless mode 指非交互式运行 Claude Code，常用于自动化和 CI/CD。
-
-### 什么是 Print Mode？
-
-Print mode 就是 `claude -p`：给一个任务，输出结果，然后退出。
-
-### 在 Print Mode 中运行
+例如：
 
 ```bash
-# 运行指定任务
-claude -p "run tests and summarize failures"
-
-# 处理管道内容
-cat logs.txt | claude -p "find the root cause"
-
-# CI/CD 集成
-claude -p "review this diff and return JSON"
+claude -p "Run tests and summarize failures"
+cat error.log | claude -p "Explain this error"
 ```
 
-### 其他示例
+### Session Recap（会话回顾）
+
+上游从 v2.1.108 起补充了 session recap 的说明。简单说：
+
+- 你离开一段时间再回来
+- Claude 可以先给你一段简短回顾
+- 让你不用翻半天历史消息找上下文
+
+最常见入口：
 
 ```bash
-# 捕获输出
-claude -p "analyze this code" > report.txt
-
-# 结构化输出
-claude -p --output-format json "list files"
-
-# 标准输入
-echo "hello" | claude -p "translate to Chinese"
+/recap
 ```
 
-### CI/CD 示例
+如果你经常在多个 session 间切换，这个能力会很省脑子。
 
-```yaml
-# .github/workflows/code-review.yml
-```
+> 如果你的组织开启了 OpenTelemetry，上游从 `v2.1.136+` 起允许用 `CLAUDE_CODE_ENABLE_FEEDBACK_SURVEY_FOR_OTEL=1` 重新打开 Anthropic 的会话质量问卷；默认仍是关闭。
 
-### Print Mode 配置
+### Push Notifications（推送通知）
 
-- 限制自主回合数
-- 使用结构化 JSON 输出
-- 启用 schema 验证
-- 禁用会话持久化
+这是 v2.1.110 远程控制相关能力里比较值得注意的一项：
 
-<a id="session-management"></a>
-## 会话管理
+- 当 Remote Control 开启
+- 并且 `/config` 里打开了 push 相关选项
+- Claude 可以在长任务完成或需要你介入时给手机发通知
 
-会话管理用于在多个会话之间恢复、重命名、分叉和持续工作。
+对中国用户来说，可以把它理解成：<br>
+**不是“消息提醒功能”，而是“长任务别一直守着”的补充能力。**
 
-### 常用命令
+### `Remote Control` / `/schedule` / claude.ai connectors 在 API key 模式下会一起被关掉
 
-- `/resume`
-- `/rename`
-- `/fork`
-- `claude -c`
-- `claude -r`
+从 `v2.1.139` 开始，如果设置了下面任一项：
 
-### 恢复会话
+- `ANTHROPIC_API_KEY`
+- `ANTHROPIC_AUTH_TOKEN`
+- `apiKeyHelper`
 
-```bash
-# 继续最后一次对话
-claude -c
+### print mode 使用建议
 
-# 恢复指定名称或 ID 的会话
-claude -r "feature-auth"
-```
+- 任务尽量清晰明确
+- 一开始先用小任务试
+- 不要直接上高权限全自动流程
+- 需要 JSON 输出时，先确认消费端怎么解析
 
-### 分叉会话
+## Channels / 外部事件通道
 
-```bash
-# 恢复并分叉，适合实验
-claude -r "feature-auth" --fork
-```
+Channels 是 Research Preview 能力，可以把外部服务的事件推送进当前 Claude Code 会话。
 
-### 会话持久化
-
-你可以选择保留、继续或重建会话上下文。
-
-<a id="interactive-features"></a>
-## 交互功能
-
-交互功能包括快捷键、多行输入、历史记录、Vim 模式和 Bash 模式等。
-
-### 快捷键
-
-常用快捷键用于切换模式、编辑输入、查看历史和控制输出。
-
-### 自定义快捷键
-
-你可以在设置中绑定自己的按键组合。
-
-### 可用上下文
-
-不同上下文会影响快捷键的可用性和行为。
-
-### Chord 支持
-
-支持组合按键触发复杂操作。
-
-### 保留键与冲突键
-
-某些按键会被系统或终端占用，需要避免冲突。
-
-### Tab 补全
-
-输入命令、参数或路径时会提供补全建议。
-
-### 命令历史
-
-Claude 会保留历史记录，方便你快速重用之前的输入。
-
-### 多行输入
-
-```text
-第一行
-第二行
-第三行
-```
-
-### 行内编辑
-
-支持在输入过程中编辑中间内容。
-
-### Vim 模式
-
-如果你熟悉 Vim，可以启用类似的编辑体验。
-
-### Bash 模式
-
-可在会话中直接进入更偏 shell 风格的操作方式。
-
-<a id="voice-dictation"></a>
-## 语音输入
-
-语音输入支持按住说话和多语言识别，适合快速记录想法或在不方便键盘输入时使用。
-
-### 如何启用
-
-在设置中打开语音输入即可。
-
-### 特性
-
-- 支持按住说话
-- 支持 20 种语言的语音识别
-- 适合快速口述任务
-
-### 配置
-
-可在 settings 中控制灵敏度、语言和输入行为。
-
-<a id="channels"></a>
-## 消息通道（Channels）
-
-消息通道允许 MCP servers 向正在运行的会话推送消息。
-
-### 订阅 channels
-
-```bash
-# 启动时订阅 channel 插件
-```
-
-### 支持的集成
+常见来源包括：
 
 - Discord
 - Telegram
-- 其他 channel 型集成
+- iMessage
+- Webhooks
 
-### 配置
+对中国用户来说，一个简单理解是：  
+**不是 Claude 主动轮询外部系统，而是外部事件直接推到你的会话里。**
 
-通过 MCP 配置或 settings 订阅相应 channel。
+如果你还在早期上手阶段，知道它存在就够了；等你真的要做实时通知流，再重点看权限和网络环境。
 
-### 工作方式
+---
 
-外部系统可以把消息推送进 Claude 的当前会话里，让你在一个会话中接收通知或事件。
+## session management（会话管理）
 
-<a id="chrome-integration"></a>
-## Chrome 集成
+session 管理能力在任务复杂后会非常重要。
 
-Chrome 集成让 Claude 可以协助浏览器自动化和站点级操作。
+高频场景：
 
-### 启用 Chrome 集成
+- 恢复之前的工作
+- 给当前任务命名
+- 从当前 session 分叉实验
 
-开启相关开关后，Claude 就可以与浏览器协作。
+常见操作：
 
-### 能力
+- `/resume`
+- `/rename`
+- `/branch`（较新的主名称，部分环境中 `/fork` 仍可能作为兼容别名出现）
+- `claude -c`
+- `claude -r "session-name"`
 
-- 浏览器自动化
-- 页面操作
-- 网站级交互
+如果你不命名 session，后期会越来越难管理。
 
-### 站点级权限
+---
 
-你可以对站点设置更细粒度的访问权限。
+## Agent Teams（代理团队）
 
-### 工作方式
+Agent Teams 是实验性能力，默认关闭。它和 subagents 的区别在于：
 
-Claude 通过浏览器连接与页面交互。
+- `subagents`：主 Claude 委派一个子任务，等结果回来
+- `Agent Teams`：多个 Claude Code 实例协作，每个成员有自己的上下文窗口，还能直接通信
 
-### 已知限制
-
-- 某些站点会限制自动化
-- 复杂页面可能需要更多权限
-
-<a id="remote-control"></a>
-## 远程控制
-
-Remote Control 可以让你从 Claude.ai 或 Claude app 远程控制本地 Claude Code 会话。
-
-### 启动 Remote Control
+如果你想开启它，常见方式是：
 
 ```bash
-# 使用默认会话名启动
-claude --remote-control
-
-# 使用自定义名称
-claude --remote-control --name my-session
+export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
 ```
 
-### 连接到会话
+它更适合：
 
-你可以在远程端连接到已经启动的本地会话，继续同一个上下文。
+- 大型重构
+- 多模块并行推进
+- 需要团队成员之间直接交换信息的复杂任务
 
-### 安全性
+如果你只是刚学到 subagents，这一块先知道就行，不必急着上。
 
-远程控制会牵涉到会话和权限，因此建议只在可信环境中使用。
+---
 
-### Remote Control vs Claude Code on the web
+## remote / web / desktop（远程 / Web / 桌面）
 
-Remote Control 是控制本地会话；web 版则是在浏览器中直接运行。
+这些能力适合：
 
-### 局限
+- 在多台机器间切换
+- 在本地和云端之间接力
+- 用 desktop 做更好的可视化 diff 或会话管理
 
-- 网络可用性依赖更高
-- 某些本地资源可能不可远程访问
+对于新手，先知道它们存在即可。  
+真正要用时，再重点看网络和权限环境。
 
-### 使用场景
+---
 
-- 在手机上查看并接管会话
-- 远程继续长期任务
+## worktrees（工作树）
 
-<a id="web-sessions"></a>
-## 网页会话
+worktrees 特别适合：
 
-Web Sessions 允许你直接在浏览器里创建和恢复 Claude Code 会话。
+- 多分支并行方案
+- 大任务拆成多个实验方向
+- 和 planning mode / agent workflows 配合
 
-### 创建 Web Session
+如果你已经开始同时试两三种实现路线，worktrees 会非常有价值。
 
-```bash
-# 从 CLI 创建新的 web session
-claude --remote "implement API"
-```
+### `worktree.baseRef`：worktree 到底从哪里分支
 
-### 在本地恢复 Web Session
+从 `v2.1.133` 开始，可以通过 `worktree.baseRef` 控制 `claude --worktree` 是从远端默认分支还是本地 `HEAD` 开新分支：
 
-```bash
-# 在本地终端恢复 web session
-claude --teleport
-```
-
-### 使用场景
-
-- 浏览器里快速开始任务
-- 在本地和网页之间切换
-- 远程继续工作
-
-<a id="desktop-app"></a>
-## 桌面应用
-
-桌面应用提供独立界面，适合视觉化 diff 审查和多会话管理。
-
-### 安装
-
-按照桌面应用的安装说明安装即可。
-
-### 从 CLI 接力
-
-你可以把 CLI 会话交给桌面应用继续处理。
-
-### 核心功能
-
-- 可视化 diff
-- 多会话
-- 更直观的审查体验
-
-### App 预览配置
-
-可以调整预览、布局和视觉呈现方式。
-
-### Connectors
-
-桌面应用可以连接到不同的工作环境。
-
-### 远程和 SSH 会话
-
-桌面应用也支持远程或 SSH 场景下的接力。
-
-### Desktop 中的权限模式
-
-Desktop 里同样可以使用不同的权限模式。
-
-### 企业功能
-
-企业部署下可使用更多受管和合规相关能力。
-
-<a id="task-list"></a>
-## 任务列表
-
-Task List 用于跨 context compaction 持久保存任务进度。
-
-### 切换任务列表
-
-在设置里打开或关闭任务列表显示。
-
-### 持久任务
-
-任务会保留，即使上下文被压缩，也能继续跟踪。
-
-### 命名任务目录
-
-你可以给任务分组或目录命名，方便管理。
-
-<a id="prompt-suggestions"></a>
-## 提示词建议
-
-Prompt suggestions 会根据当前上下文智能推荐下一步命令或提示词。
-
-### 工作方式
-
-系统会结合你的历史、当前任务和上下文给出建议。
-
-### 禁用建议
-
-如果你不想看到建议，可以在设置里关闭。
-
-<a id="git-worktrees"></a>
-## Git 工作树（Git Worktrees）
-
-Git worktrees 让你在隔离的目录里并行工作，非常适合实验和分支开发。
-
-### 从 worktree 启动
-
-```bash
-# 在隔离 worktree 中启动 Claude Code
-claude -w
-```
-
-### Worktree 位置
-
-你可以控制 worktree 的放置位置，保持主工作区整洁。
-
-### Monorepo 的 sparse checkout
-
-在大型 monorepo 中，可配合 sparse checkout 只加载需要的部分。
-
-### Worktree 工具和 Hooks
-
-worktree 场景下依然可以配合工具和 hooks 自动化流程。
-
-### 自动清理
-
-不需要的 worktree 可以自动清理。
-
-### 使用场景
-
-- 并行尝试多个方案
-- 隔离高风险重构
-- 保持主分支整洁
-
-<a id="sandboxing"></a>
-## 沙盒
-
-沙盒提供文件系统和网络层面的隔离，能显著降低自动化操作的风险。
-
-### 启用沙盒
-
-开启后，Claude 的很多操作都会在受控环境里执行。
-
-### 配置项
-
-你可以配置允许访问的目录、网络行为和例外列表。
-
-### 示例配置
+- `"fresh"`：默认值，从 `origin/<default-branch>` 开始，忽略你本地还没 push 的提交
+- `"head"`：从你当前本地 `HEAD` 开始，保留未推送的本地状态
 
 ```json
 {
-  "sandbox": {
-    "enabled": true
-  }
+  "worktree": { "baseRef": "head" }
 }
 ```
 
-### 工作方式
+如果你在 `v2.1.128` 那段时间习惯了“worktree 自动继承我本地未推送改动”，这轮需要特别注意默认值已经回到更保守的 `"fresh"`。
 
-沙盒会限制 Claude 可触达的文件和网络边界。
+### `worktree.bgIsolation`：后台 session 要不要单独 worktree
 
-### 使用场景
+从 `v2.1.143` 开始，还能控制后台 session（例如 `/bg`、`claude --bg`、Agent View 派发）是默认单独开 worktree，还是用 `"none"` 直接改当前前台工作副本。
 
-- 低风险自动化
-- 在不完全信任的输入上执行任务
-- 受控环境中的批处理
+---
 
-<a id="managed-settings-enterprise"></a>
-## 企业受管设置
+## sandboxing（沙箱）
 
-企业可以通过受管设置统一分发 Claude Code 配置。
+sandboxing 的核心不是“更麻烦”，而是“更安全地控制 Claude 的能力范围”。
 
-### 部署方式
+适合：
 
-- plist
-- Registry
-- 受管文件
+- 风险敏感环境
+- 企业环境
+- 希望限制文件系统或网络访问
 
-### 受管配置片段
+不适合：
 
-通过受管配置片段，可以给团队统一推送策略。
+- 你还没搞清当前工具链本身怎么跑
 
-### 可用的受管设置
+如果你在 Linux / WSL 上把 `bubblewrap` 或 `socat` 装在非标准路径，上游还新增了两个设置可显式指定：
 
-- 权限模式
-- 功能开关
-- MCP / hooks / 插件约束
+- `sandbox.bwrapPath`
+- `sandbox.socatPath`
 
-### macOS plist 示例
+---
 
-```xml
-<!-- 示例略 -->
-```
+## configuration 与环境变量
 
-<a id="configuration-and-settings"></a>
-## 配置与设置
+高级能力很多都会回到配置层，例如：
 
-### 配置文件位置
+- permission mode
+- thinking effort
+- channels
+- auto mode
+- plugins
+- MCP
 
-- `~/.claude/settings.json`
-- `.claude/settings.json`
-- `.claude/settings.local.json`
+所以你最终还是会需要理解：
 
-### 完整配置示例
+- settings 文件
+- CLI flags
+- 环境变量
+
+如果你想长期高效使用 Claude Code，这一步绕不过去。
+
+常见环境变量里，最近更值得注意的是：
+
+- `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`
+- `CLAUDE_CODE_NEW_INIT=1`
+- `ENABLE_PROMPT_CACHING_1H=1`（把 prompt cache TTL 从默认 5 分钟拉长到 1 小时）
+- `CLAUDE_CODE_FORCE_SYNC_OUTPUT=1`（终端能力自动检测失误时，强制同步输出）
+- `CLAUDE_CODE_PACKAGE_MANAGER_AUTO_UPDATE=1`（让 Homebrew / WinGet 安装具备后台升级能力）
+- `CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY=1`（在设置了 `ANTHROPIC_BASE_URL` 时，显式开启网关 `/v1/models` 发现）
+- `CLAUDE_CODE_DISABLE_ALTERNATE_SCREEN=1`（退出全屏 alternate-screen 渲染，保留普通终端滚动历史）
+
+这里还有两个这轮很值得知道的行为修正：
+
+- `ENABLE_PROMPT_CACHING_1H=1` 在 `v2.1.129` 修复了一个回退 bug；之前某些场景会悄悄退回 5 分钟 TTL
+- `/context` 从 `v2.1.129` 起不再把 ASCII 可视化直接塞进对话上下文，而是只在界面里显示，这样每次调用大概能少吃掉约 1.6k token
+
+如果你在 SDK / 企业策略场景里工作，这轮还有个更偏管理员的设置值得知道：
+
+- `parentSettingsBehavior`：控制 SDK 的 `managedSettings` 和父进程 settings 发生冲突时，是保持旧的 `"first-wins"`，还是改为深度 `"merge"`
+
+---
+
+## effort level 这轮要纠正的一个误解
+
+上游这次修正了一个很容易写错的点：
+
+- `xhigh` **不是**所有高阶模型都有
+- 它是 **Opus 4.7 专属**
+
+更准确地说：
+
+- Opus 4.7：`low` / `medium` / `high` / `xhigh` / `max`
+- Opus 4.6、Sonnet 4.6：`low` / `medium` / `high` / `max`
+
+也就是说，如果你在中文文档里把 `xhigh` 写成“Opus 4.6 或 Sonnet 4.6 也支持”，那就是错误同步。
+
+对中国用户来说，一个最简单的记法是：
+
+- **`xhigh` 看作 Opus 4.7 的专属默认档位**
+- 其他模型别默认照抄这个设置
+
+---
+
+## 中国用户特别注意
+
+### 1. 自动化前先看网络
+
+如果你要用：
+
+- `claude -p`
+- remote / web / desktop
+- MCP
+- plugins
+
+先确认：
+
+- API 访问
+- GitHub 连通性
+- npm / uv / Python 依赖下载
+- 公司代理和证书环境
+
+### 2. 先理解权限，再追求自动化
+
+很多人会一开始就想“全自动”，但权限模式没搞清时，这很容易出事。
+
+### 3. Windows / WSL 差异要提前确认
+
+高级特性里很多命令和脚本默认更贴近 Unix 生态。
+
+新版 Windows 体验有两个变化值得知道：
+
+- Git for Windows / Git Bash 不再是硬前提；没有 Git Bash 时，Claude Code 可以使用 PowerShell 作为 shell tool
+- 开启 PowerShell tool 后，PowerShell 会成为主 shell；检测范围也覆盖 Microsoft Store、MSI 未进 PATH、以及 `.NET global tool` 安装的 PowerShell 7
+
+如果你的团队里同时有人用 macOS、Windows、WSL，示例脚本最好明确写出预期 shell。
+
+### 4. `Ctrl+R` 搜索范围变了
+
+从 `v2.1.129` 起，`Ctrl+R` 默认会搜 **所有项目里的所有 prompts**，不再只看当前项目。
+如果你在 picker 里只想缩到当前项目，再按一次 `Ctrl+S` 即可切换范围。
+
+### 5. `--channels` 不再强依赖 OAuth
+
+`v2.1.128+` 之后，`--channels` 不只支持 Pro / Max 的 OAuth 登录，也能和 API key（console auth）一起工作。
+
+### 6. 团队管理员现在可以禁用 Remote Control
+
+如果你在 Team / Enterprise 环境里，需要强制本地执行、不允许 remote control，上游新增了 `disableRemoteControl`：
 
 ```json
 {
-  "permissions": {
-    "defaultMode": "plan"
-  },
-  "thinking": {
-    "enabled": true,
-    "effort": "high"
-  },
-  "autoCheckpoint": true
+  "disableRemoteControl": true
 }
 ```
 
-### 环境变量
+这个设置应该放在受管策略层，而不是普通用户自己的本地设置里。对企业场景来说，它是组织级禁用，不是个人偏好开关。
 
-#### 模型选择
+---
 
-- `ANTHROPIC_API_KEY`
-- `CLAUDE_MODEL`
+## 常见坑
 
-#### API 配置
+### 1. 把 advanced features 全当成“酷炫功能”
 
-- `ANTHROPIC_API_KEY`
+它们本质上是控制力、风险边界和自动化能力，不只是花哨选项。
 
-#### Thinking 配置
+### 2. 还没理解权限就开高自动化
 
-- `CLAUDE_EFFORT`
+这会让“让 Claude 帮忙”很快变成“让 Claude 瞎动”。
 
-#### 功能开关
+### 3. print mode 用得太重太快
 
-- `CLAUDE_ENABLE_AUTO_MODE`
+建议从日志解释、测试摘要、静态分析这种低风险任务开始。
 
-#### MCP 配置
+### 4. session 不命名
 
-- `CLAUDE_MCP_CONFIG`
+长任务一多，后面很难找回。
 
-#### 任务管理
+---
 
-- `CLAUDE_TASK_LIST`
+## 故障排查
 
-#### Agent team（实验性）
+如果高级功能“看起来有、实际上跑不起来”，优先检查：
 
-- `CLAUDE_TEAM_MODE`
+1. 权限模式是否合适
+2. 当前命令是否应该用交互模式还是 print mode
+3. 环境变量是否齐全
+4. 远程或外部服务是否可访问
+5. 当前是否受网络、代理、公司策略影响
 
-#### Subagent 和 plugin 配置
+---
 
-- `CLAUDE_PLUGIN_DATA`
-
-#### 子进程和流式处理
-
-- `CLAUDE_OUTPUT_FORMAT`
-
-### 配置管理命令
-
-你可以用命令查看或更新当前配置，并把它们落到 settings 中。
-
-### 每个项目的配置
-
-推荐把项目专用设置放进项目内的 `.claude/settings.json`，这样能跟代码一起版本化。
-
-<a id="best-practices"></a>
 ## 最佳实践
 
-### Planning Mode
+- 先掌握 planning mode、permission modes、print mode、background tasks
+- 先小范围试自动化，再逐渐放权
+- 高风险任务优先用 plan / checkpoints / worktrees 保护自己
+- 中国用户优先排除网络和 shell 环境问题
 
-- 复杂任务先规划，再实现
-- 计划要可审阅
+---
 
-### Extended Thinking
+## 推荐下一步
 
-- 留给复杂问题
-- 不要在简单任务上过度使用
-
-### Background Tasks
-
-- 用于长时间、可并行的任务
-- 记得设置超时和可见性
-
-### Permissions
-
-- 默认最小权限
-- 只在必要时放宽
-
-### Sessions
-
-- 为重要会话命名
-- 必要时分叉，而不是硬改
-
-<a id="additional-resources"></a>
-## 更多资源
-
-- [根目录中文指南](../README.md)
-- [Slash Commands 中文参考](../01-slash-commands/README.md)
-- [Checkpoints 中文指南](../08-checkpoints/README.md)
-- [Plugins 中文指南](../07-plugins/README.md)
-- [CLI 中文参考](../10-cli/README.md)
+- 想把高级能力接进脚本：看 [10-cli](../10-cli/)
+- 想打包团队工作流：看 [07-plugins](../07-plugins/)
+- 想理解 checkpoint 和安全试错：看 [08-checkpoints](../08-checkpoints/)
