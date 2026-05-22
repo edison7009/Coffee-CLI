@@ -548,8 +548,8 @@ allowed-tools: Bash(npm *), Bash(git *)
 
 ---
 
-**最后更新**: 2026 年 4 月 9 日
-**Claude Code 版本**: 2.1.97
+**中文翻译版本**: 上游 zh README 截至 2026 年 4 月 9 日（Claude Code v2.1.97）
+**英文版**: 已同步到 v2.1.145（May 20, 2026）— 包含 `/usage-credits`、`/model` session-only、`/run`、`/verify` 等新内容。点击右上角 "中文 / English" 切换查看完整英文版。
 
 ---
 
