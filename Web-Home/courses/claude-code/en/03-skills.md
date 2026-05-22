@@ -95,6 +95,8 @@ sequenceDiagram
 
 When skills share the same name across levels, higher-priority locations win: **enterprise > personal > project**. Plugin skills use a `plugin-name:skill-name` namespace, so they cannot conflict.
 
+> **Subagent skill discovery (v2.1.133+)**: Subagents now discover project, user, and plugin skills via the Skill tool the same way the main session does. Earlier versions limited subagents to their own embedded set, which meant skill+subagent workflows quietly degraded; from v2.1.133 the same skill catalog is visible to both.
+
 ### Automatic Discovery
 
 **Nested directories**: When you work with files in subdirectories, Claude Code automatically discovers skills from nested `.claude/skills/` directories. For example, if you're editing a file in `packages/frontend/`, Claude Code also looks for skills in `packages/frontend/.claude/skills/`. This supports monorepo setups where packages have their own skills.
@@ -150,7 +152,7 @@ disable-model-invocation: true              # Only user can invoke
 user-invocable: false                       # Hide from slash menu
 allowed-tools: Read, Grep, Glob             # Restrict tool access
 model: opus                                 # Specific model to use
-effort: high                                # Effort level override (low, medium, high, max)
+effort: high                                # Effort level override (low, medium, high, xhigh, max)
 context: fork                               # Run in isolated subagent
 agent: Explore                              # Which agent type (with context: fork)
 shell: bash                                 # Shell for commands: bash (default) or powershell
@@ -173,10 +175,10 @@ paths: "src/api/**/*.ts"               # Glob patterns limiting when skill activ
 | `user-invocable` | `false` = hidden from the `/` menu. Only Claude can invoke it automatically. |
 | `allowed-tools` | Comma-separated list of tools the skill may use without permission prompts. |
 | `model` | Model override while the skill is active (e.g., `opus`, `sonnet`). |
-| `effort` | Effort level override while the skill is active: `low`, `medium`, `high`, or `max`. |
+| `effort` | Effort level override while the skill is active: `low`, `medium`, `high`, `xhigh`, or `max`. Available levels depend on the model — `xhigh` is the Claude Code default for Opus 4.7. |
 | `context` | `fork` to run the skill in a forked subagent context with its own context window. |
 | `agent` | Subagent type when `context: fork` (e.g., `Explore`, `Plan`, `general-purpose`). |
-| `shell` | Shell used for `!`command`` substitutions and scripts: `bash` (default) or `powershell`. |
+| `shell` | Shell used for `` !`command` `` substitutions and scripts: `bash` (default) or `powershell`. |
 | `hooks` | Hooks scoped to this skill's lifecycle (same format as global hooks). |
 | `paths` | Glob patterns that limit when the skill is auto-activated. Comma-separated string or YAML list. Same format as path-specific rules. |
 
@@ -242,6 +244,7 @@ Skills support dynamic values that are resolved before the skill content reaches
 | `$ARGUMENTS[N]` or `$N` | Access specific argument by index (0-based) |
 | `${CLAUDE_SESSION_ID}` | Current session ID |
 | `${CLAUDE_SKILL_DIR}` | Directory containing the skill's SKILL.md file |
+| `${CLAUDE_EFFORT}` | Current effort level (`low`, `medium`, `high`, `xhigh`, or `max`). Useful for branching skill behavior: e.g., `[ "${CLAUDE_EFFORT}" = "max" ] && deep_analysis` (v2.1.120+) |
 | `` !`command` `` | Dynamic context injection — runs a shell command and inlines the output |
 
 **Example:**
@@ -263,7 +266,7 @@ Running `/fix-issue 123` replaces `$ARGUMENTS` with `123`.
 
 ## Injecting Dynamic Context
 
-The `!`command`` syntax runs shell commands before the skill content is sent to Claude:
+The `` !`command` `` syntax runs shell commands before the skill content is sent to Claude:
 
 ```yaml
 ---
@@ -287,6 +290,8 @@ Commands execute immediately; Claude only sees the final output. By default, com
 ## Running Skills in Subagents
 
 Add `context: fork` to run a skill in an isolated subagent context. The skill content becomes the task for a dedicated subagent with its own context window, keeping the main conversation uncluttered.
+
+> **v2.1.145 fix**: A skill using `context: fork` could previously trigger an infinite re-invocation loop in rare cases. Upgrade to v2.1.145+ if you author or rely on forking skills.
 
 The `agent` field specifies which agent type to use:
 
@@ -598,6 +603,8 @@ ls ~/.claude/skills/
 ls .claude/skills/
 ```
 
+> **Tip (v2.1.121+):** Type to filter the `/skills` interactive menu — useful when many skills are installed.
+
 ### Testing a Skill
 
 Two ways to test:
@@ -645,6 +652,27 @@ Skill(deploy *)
 ```
 
 **Hide individual skills** by adding `disable-model-invocation: true` to their frontmatter.
+
+### Controlling Skill Override Behavior (`skillOverrides`)
+
+When a project skill and a user skill share the same name, project wins by default. The `skillOverrides` setting (v2.1.129+) lets you tune this. Add it to `~/.claude/settings.json` or project `.claude/settings.json`:
+
+```json
+{
+  "skillOverrides": "name-only"
+}
+```
+
+Accepted values:
+
+| Value | Behavior |
+|-------|----------|
+| `"on"` (default) | A repo skill can override a user skill of the same name. |
+| `"off"` | Disable overriding entirely — user skills always win. |
+| `"name-only"` | Match overrides only on skill name (ignore description / source). |
+| `"user-invocable-only"` | Only user-invocable skills can be overridden — model-invoked skills always come from their original location. |
+
+Useful when team policy says "user-defined skills must always take precedence" (`"off"`) or "only allow narrow name-based overrides" (`"name-only"`).
 
 ## Best Practices
 
@@ -766,15 +794,19 @@ When `disableSkillShellExecution` is `true`, any `` !`command` `` markers in a s
 
 ## Bundled Skills
 
-Claude Code ships with several built-in skills that are always available without installation:
+Claude Code ships with nine built-in skills that are always available without installation:
 
 | Skill | Description |
 |-------|-------------|
-| `/simplify` | Review changed files for reuse, quality, and efficiency; spawns 3 parallel review agents |
 | `/batch <instruction>` | Orchestrate large-scale parallel changes across codebase using git worktrees |
-| `/debug [description]` | Troubleshoot current session by reading debug log |
-| `/loop [interval] <prompt>` | Run prompt repeatedly on interval (e.g., `/loop 5m check the deploy`) |
 | `/claude-api` | Load Claude API/SDK reference; auto-activates on `anthropic`/`@anthropic-ai/sdk` imports |
+| `/debug [description]` | Troubleshoot current session by reading debug log |
+| `/fewer-permission-prompts` | Scan transcripts and propose a prioritized allowlist for common read-only tools |
+| `/loop [interval] <prompt>` | Run prompt repeatedly on interval (e.g., `/loop 5m check the deploy`) |
+| `/run` *(v2.1.145+)* | Launch this project's app to see a change running — looks for a project skill, otherwise falls back to built-in patterns per project type |
+| `/run-skill-generator` *(v2.1.145+)* | Teach `/run`/`/verify` how to handle a specific project by generating a per-project skill |
+| `/simplify` | Review changed files for reuse, quality, and efficiency; spawns 3 parallel review agents |
+| `/verify` *(v2.1.145+)* | Build, run, and observe the app to confirm a fix works (not just that tests pass) |
 
 These skills are available out-of-the-box and do not need to be installed or configured. They follow the same SKILL.md format as custom skills.
 
@@ -820,10 +852,12 @@ Once you start building skills seriously, two things become essential: a library
 - [Hooks Guide](../06-hooks/) - Event-driven automation
 
 ---
-**Last Updated**: April 24, 2026
-**Claude Code Version**: 2.1.119
+**Last Updated**: May 20, 2026
+**Claude Code Version**: 2.1.145
 **Sources**:
 - https://code.claude.com/docs/en/skills
 - https://code.claude.com/docs/en/settings
 - https://code.claude.com/docs/en/changelog
+- https://code.claude.com/docs/en/commands
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.145
 **Compatible Models**: Claude Sonnet 4.6, Claude Opus 4.7, Claude Haiku 4.5

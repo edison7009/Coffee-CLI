@@ -51,13 +51,16 @@ The older JavaScript bundle is still produced for Windows and for environments t
 | `/doctor` (slash command) | Diagnose installation, config, and plugin health. Since v2.1.116 it can be opened **while Claude is responding**, shows status icons inline, and accepts the `f` keypress to auto-fix detected issues | run `/doctor` inside the REPL |
 | `claude mcp` | Configure MCP servers | See [MCP documentation](../05-mcp/) |
 | `claude mcp serve` | Run Claude Code as an MCP server | `claude mcp serve` |
-| `claude agents` | List all configured subagents | `claude agents` |
+| `claude agents` | Open the **Agent View** (Research Preview, v2.1.139+) — multi-session manager listing every Claude Code session with its status. See [Agent View](#agent-view-claude-agents-v21139) below. | `claude agents` |
 | `claude auto-mode defaults` | Print auto mode default rules as JSON | `claude auto-mode defaults` |
 | `claude remote-control` | Start Remote Control server | `claude remote-control` |
 | `claude plugin` | Manage plugins (install, enable, disable) | `claude plugin install my-plugin` |
 | `claude plugin tag <version>` | Create a release git tag for a plugin with version validation (v2.1.118+) | `claude plugin tag v0.3.0` |
-| `claude install [version]` | Install a specific native-binary version. Accepts `stable`, `latest`, or an explicit version string | `claude install 2.1.119` |
-| `claude auth login` | Log in (supports `--email`, `--sso`) | `claude auth login --email user@example.com` |
+| `claude install [version]` | Install a specific native-binary version. Accepts `stable`, `latest`, or an explicit version string | `claude install 2.1.131` |
+| `claude project purge [path]` | Delete all local Claude Code state for a project (transcripts, tasks, debug logs, file-edit history, prompt history, and `~/.claude.json` entry). Omit `[path]` for an interactive picker. Flags: `--dry-run` to preview, `-y/--yes` to skip confirmation, `-i/--interactive` to confirm each item, `--all` for every project (v2.1.126+) | `claude project purge ~/work/repo --dry-run` |
+| `claude plugin prune` | Remove orphaned auto-installed plugin dependencies (parent plugin gone). `plugin uninstall --prune` does the same cascade after uninstalling a target (v2.1.121+) | `claude plugin prune` |
+| `claude ultrareview [target]` | Run `/ultrareview` non-interactively. Prints findings to stdout, exits 0 on success / 1 on failure. Use `--json` for raw payload, `--timeout <minutes>` to override the 30-minute default (v2.1.120+) | `claude ultrareview 1234 --json` |
+| `claude auth login` | Log in (supports `--email`, `--sso`). Since v2.1.126, accepts the OAuth code pasted into the terminal as a fallback when the browser callback can't reach localhost (WSL2, SSH, containers) | `claude auth login --email user@example.com` |
 | `claude auth logout` | Log out of current account | `claude auth logout` |
 | `claude auth status` | Check auth status (exit 0 if logged in, 1 if not) | `claude auth status` |
 
@@ -147,6 +150,8 @@ claude -p --model opus --fallback-model sonnet "analyze architecture"
 claude --model opusplan "design and implement the caching layer"
 ```
 
+> **Gateway model discovery (v2.1.129+, opt-in)**: When `ANTHROPIC_BASE_URL` points at an Anthropic-compatible gateway, set `CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY=1` to populate `/model` from the gateway's `/v1/models` endpoint. Without the env var, `/model` falls back to the built-in static list. The flag is opt-in (changed in v2.1.129) because the discovery call can surface models a user may not be entitled to use; v2.1.126 made it implicit and that behavior was reverted.
+
 ## System Prompt Customization
 
 | Flag | Description | Example |
@@ -193,6 +198,8 @@ claude -p --system-prompt-file ./prompts/code-reviewer.txt "review main.py"
 > **Glob / Grep footnote (v2.1.113+)**: On native macOS/Linux builds, `Glob` and `Grep` are provided as the embedded `bfs` and `ugrep` binaries invoked through the Bash tool rather than as separate first-class tools. Windows and npm-bundled (JS) installs still expose them as standalone tools. For subagent `allowedTools` / `disallowedTools` lists the backend substitution is transparent — you can keep referring to `Glob` / `Grep` in your configuration on every platform.
 
 > **PowerShell auto-approve (v2.1.119)**: PowerShell tool commands can be auto-approved in permission mode exactly the same way Bash commands are. Use the same matcher syntax you already use for `Bash(...)` rules to scope PowerShell permissions — for example, `PowerShell(Get-ChildItem:*)`.
+
+> **`--permission-mode` honored on resume (v2.1.132+)**: `claude -p --continue --permission-mode plan` (and `--resume`) now respects the flag. Earlier versions silently dropped `--permission-mode` when resuming a session, so a plan-mode session resumed without re-passing the flag would silently downgrade — that's fixed.
 
 ### Permission Examples
 
@@ -320,6 +327,21 @@ claude -r "feature-auth" --fork-session "test with different architecture"
 
 The original session remains unchanged, and the fork becomes a new independent session.
 
+### Project State Cleanup (v2.1.126+)
+
+`claude project purge` deletes all local Claude Code state for a project — transcripts, task lists, debug logs, file-edit history, prompt history lines, and the project's `~/.claude.json` entry. Use `--dry-run` first to preview the deletion; `--all` walks every project on the machine.
+
+```bash
+# Preview what would be deleted (safe)
+claude project purge ~/work/repo --dry-run
+
+# Delete state for a specific project, no prompts
+claude project purge ~/work/repo --yes
+
+# Walk every project interactively
+claude project purge --all --interactive
+```
+
 ## Advanced Features
 
 | Flag | Description | Example |
@@ -440,6 +462,34 @@ When multiple agent definitions exist, they are loaded in this priority order:
 
 CLI-defined agents override both project and user agents for the session. Project-level agents override user-level agents when their names collide. See [Lesson 04 — Subagents](../04-subagents/README.md#file-locations) for the full priority table including plugin-level agents.
 
+### Agent View (`claude agents`, v2.1.139+)
+
+> **Research Preview** — feature is stable enough for daily use but may change.
+
+`claude agents` opens the **Agent View** — a single list of every Claude Code session on the machine with its current status (`running`, `blocked on you`, `done`). It is the replacement for juggling multiple terminal tabs when you run background agents, scheduled tasks, or `--bg`-launched sessions.
+
+```bash
+# Open the Agent View
+claude agents
+```
+
+When you dispatch a session from the view (or via `claude --bg <prompt>`), you can pass the same configuration flags you would pass to `claude` itself. Flags introduced for the Agent View dispatch path:
+
+| Flag | Since | Description |
+|------|-------|-------------|
+| `--cwd <path>` | v2.1.141 | Scope the session list (or new session) to a specific working directory |
+| `--add-dir <path>` | v2.1.142 | Add directories to the dispatched session's workspace |
+| `--settings <path>` | v2.1.142 | Use a specific `settings.json` for the dispatched session |
+| `--mcp-config <path>` | v2.1.142 | Use a specific MCP config for the dispatched session |
+| `--plugin-dir <path>` | v2.1.142 | Use a specific plugin directory for the dispatched session |
+| `--permission-mode <mode>` | v2.1.142 | Set permission mode (`plan`, `acceptEdits`, `auto`, etc.) for the dispatched session |
+| `--model <model>` | v2.1.142 | Pin a model for the dispatched session |
+| `--effort <level>` | v2.1.142 | Pin an effort level (`low`/`medium`/`high`/`xhigh`/`max`) |
+| `--dangerously-skip-permissions` | v2.1.142 | Run the dispatched session without permission prompts (use only in sandboxes) |
+| `--json` | v2.1.145 | Print the agent list as machine-readable JSON for scripting (status bars, session pickers, tmux-resurrect integrations) |
+
+Sessions that finish their work but leave a background shell open move from "Working" to "Completed" (v2.1.141 fix). Within an attached agent session, `Shift+Tab` cycles through permission modes including auto mode (v2.1.143).
+
 ---
 
 ## High-Value Use Cases
@@ -504,6 +554,16 @@ pipeline {
     }
 }
 ```
+
+**Headless `ultrareview` (v2.1.120+):**
+
+```yaml
+# .github/workflows/ultrareview.yml
+- name: Claude ultrareview
+  run: claude ultrareview ${{ github.event.pull_request.number }} --json > review.json
+```
+
+`claude ultrareview` exits 0 on a clean review and 1 when findings are reported, so it's a drop-in PR gate. Use `--timeout <minutes>` to override the 30-minute default.
 
 ### 2. Script Piping
 
@@ -704,6 +764,8 @@ claude --model opusplan "design and implement the API"
 /fast
 ```
 
+> **Fast Mode default flipped to Opus 4.7 (v2.1.142)**: As of v2.1.142, `/fast` runs Opus 4.7 by default (was Opus 4.6 before). To opt back into Opus 4.6 for Fast Mode, export `CLAUDE_CODE_OPUS_4_6_FAST_MODE_OVERRIDE=1`.
+
 ### Effort Levels (Opus 4.7)
 
 Opus 4.7 supports adaptive reasoning with effort levels, ordered from lightest to heaviest: `low` (○), `medium` (◐), `high` (●), `xhigh` (default on Claude Code since Opus 4.7 launch, 2026-04-16), and `max` (Opus 4.7 only). On Opus 4.6 / Sonnet 4.6, the default effort for Pro/Max subscribers was raised from `medium` to `high` in v2.1.117.
@@ -760,7 +822,16 @@ The "ultrathink" keyword in prompts activates deep reasoning. The `max` effort l
 | `DISABLE_UPDATES` | Blocks all update paths including manual `claude update`. Stricter than `DISABLE_AUTOUPDATER`, which only blocks the background autoupdater (v2.1.118+) |
 | `CLAUDE_CODE_HIDE_CWD` | When set to `1`, hides the current working directory in the startup logo (privacy / screen-share use) (v2.1.119+) |
 | `CLAUDE_CODE_FORK_SUBAGENT` | Set to `1` to enable forked subagents on external builds (Bedrock, Vertex, Foundry). No effect on Anthropic API where forked subagents are GA (v2.1.117+) |
+| `CLAUDE_CODE_DISABLE_ALTERNATE_SCREEN` | Set to `1` to opt out of the fullscreen alternate-screen renderer; the session stays in normal terminal scrollback. Useful when piping transcripts to logs or pairing with `script(1)` (v2.1.132+). |
+| `CLAUDE_CODE_SESSION_ID` | Set in every Bash tool subprocess launched by Claude Code; equals the `session_id` in hook input JSON. Use to correlate bash logs with hook telemetry (v2.1.132+). |
+| `CLAUDE_CODE_ENABLE_FEEDBACK_SURVEY_FOR_OTEL` | Set to `1` to re-enable Anthropic's session-quality survey for organizations capturing OpenTelemetry data. Off by default in OTEL deployments (v2.1.136+). |
 | `OTEL_LOG_TOOL_DETAILS` | Set to `1` to unredact custom and MCP command names in OpenTelemetry events (v2.1.117+). Redaction remains the default. |
+| `ANTHROPIC_BEDROCK_SERVICE_TIER` | Selects the Bedrock service tier: `default`, `flex`, or `priority` (v2.1.122+) |
+| `AI_AGENT` | Set automatically on subprocesses so external CLIs (e.g., `gh`) can attribute traffic to Claude Code (v2.1.120+) |
+| `CLAUDE_CODE_FORCE_SYNC_OUTPUT` | Set to `1` to force synchronous output for terminals where auto-detection misses (e.g., Emacs `eat`) (v2.1.129+) |
+| `CLAUDE_CODE_PACKAGE_MANAGER_AUTO_UPDATE` | Set to `1` to enable background upgrades for Homebrew/WinGet installs (which normally do not auto-update) (v2.1.129+) |
+| `CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY` | Set to `1` to opt in to gateway `/v1/models` discovery when `ANTHROPIC_BASE_URL` is set. Without it, `/model` shows the built-in static list (v2.1.129+) |
+| `CLAUDE_CODE_OPUS_4_6_FAST_MODE_OVERRIDE` | Set to `1` to pin Fast Mode (`/fast`) back to Opus 4.6. The default flipped to Opus 4.7 in v2.1.142. |
 
 > **`ENABLE_TOOL_SEARCH` on Vertex AI (v2.1.119+)**: Tool search is **disabled by default on Google Cloud Vertex AI** deployments. Users who want the tool-search capability on Vertex must explicitly opt in with `export ENABLE_TOOL_SEARCH=true`. On direct Anthropic API it remains enabled by default.
 
@@ -791,7 +862,7 @@ claude -p --output-format json "query"
 
 | Use Case | Command |
 |----------|---------|
-| Quick code review | `cat file | claude -p "review"` |
+| Quick code review | `cat file \| claude -p "review"` |
 | Structured output | `claude -p --output-format json "query"` |
 | Safe exploration | `claude --permission-mode plan` |
 | Autonomous with safety | `claude --enable-auto-mode --permission-mode auto` |
@@ -868,16 +939,23 @@ claude -p --output-format json "query"
 
 ---
 
-**Last Updated**: April 24, 2026
-**Claude Code Version**: 2.1.119
+**Last Updated**: May 20, 2026
+**Claude Code Version**: 2.1.145
 **Sources**:
 - https://code.claude.com/docs/en/cli-reference
 - https://code.claude.com/docs/en/settings
 - https://code.claude.com/docs/en/changelog
+- https://code.claude.com/docs/en/agent-view
 - https://www.anthropic.com/news/claude-opus-4-7
 - https://github.com/anthropics/claude-code/releases/tag/v2.1.113
 - https://github.com/anthropics/claude-code/releases/tag/v2.1.116
 - https://github.com/anthropics/claude-code/releases/tag/v2.1.117
 - https://github.com/anthropics/claude-code/releases/tag/v2.1.118
-- https://github.com/anthropics/claude-code/releases/tag/v2.1.119
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.131
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.138
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.139
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.141
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.142
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.143
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.145
 **Compatible Models**: Claude Sonnet 4.6, Claude Opus 4.7, Claude Haiku 4.5

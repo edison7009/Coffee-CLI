@@ -28,7 +28,7 @@ Built-in commands are shortcuts for common actions. There are **60+ built-in com
 | `/btw <question>` | Ask an ephemeral side question while Claude is working on the main task; doesn't pollute the main conversation context |
 | `/chrome` | Configure Chrome browser integration |
 | `/clear` | Clear conversation (aliases: `/reset`, `/new`) |
-| `/color [color\|default]` | Set prompt bar color |
+| `/color [color\|default]` | Set prompt bar color. Bare `/color` (no args) picks a random session color (v2.1.128+); pass a color name or hex to set explicitly. |
 | `/compact [instructions]` | Compact conversation with optional focus instructions |
 | `/config` | Open Settings (alias: `/settings`) |
 | `/context` | Visualize context usage as colored grid |
@@ -40,10 +40,11 @@ Built-in commands are shortcuts for common actions. There are **60+ built-in com
 | `/effort [low\|medium\|high\|xhigh\|max\|auto]` | Set effort level via interactive arrow-key slider. Levels: `low` → `medium` → `high` → `xhigh` (new in v2.1.111) → `max`. Default is `xhigh` on Opus 4.7; `max` requires Opus 4.7 |
 | `/exit` | Exit the REPL (alias: `/quit`) |
 | `/export [filename]` | Export the current conversation to a file or clipboard |
-| `/extra-usage` | Configure extra usage for rate limits |
+| `/usage-credits` | Configure extra usage for rate limits (renamed from `/extra-usage` in v2.1.144; `/extra-usage` still works as an alias) |
 | `/fast [on\|off]` | Toggle fast mode |
-| `/feedback` | Submit feedback (alias: `/bug`) |
+| `/feedback` | Submit feedback (alias: `/bug`). Since v2.1.141, can attach recent sessions (last 24h or 7d) so reports spanning more than one session include context. |
 | `/focus` | Toggle focus view (added v2.1.110; replaces `Ctrl+O` for focus toggle) |
+| `/goal <statement>` | Register a session-level completion condition; Claude keeps working until the goal is met. `/goal clear` removes it. Active goal appears in the status line, with a live overlay panel showing elapsed time, turn count, and token usage (added v2.1.139). |
 | `/help` | Show help |
 | `/hooks` | View hook configurations |
 | `/ide` | Manage IDE integrations |
@@ -58,7 +59,7 @@ Built-in commands are shortcuts for common actions. There are **60+ built-in com
 | `/mcp` | Manage MCP servers and OAuth |
 | `/memory` | Edit `CLAUDE.md`, toggle auto-memory |
 | `/mobile` | QR code for mobile app (aliases: `/ios`, `/android`) |
-| `/model [model]` | Select model with left/right arrows for effort |
+| `/model [model]` | Select model with left/right arrows for effort. Since v2.1.144, the choice applies only to the current session by default; press `d` after selecting a model to set it as the default for new sessions. |
 | `/passes` | Share free week of Claude Code |
 | `/permissions` | View/update permissions (alias: `/allowed-tools`) |
 | `/plan [description]` | Enter plan mode |
@@ -77,6 +78,7 @@ Built-in commands are shortcuts for common actions. There are **60+ built-in com
 | `/rewind` | Rewind conversation and/or code (alias: `/checkpoint`) |
 | `/sandbox` | Toggle sandbox mode |
 | `/schedule [description]` | Create/manage Cloud scheduled tasks |
+| `/scroll-speed <+N\|-N>` | Tune mouse-wheel scroll speed of the TUI live-preview pane with a live preview. Persists per-machine to `~/.claude/preferences.json` (added v2.1.139). |
 | `/security-review` | Analyze branch for security vulnerabilities |
 | `/skills` | List available skills |
 | `/stats` | Typing-shortcut alias for `/usage` — opens the stats tab (daily usage, sessions, streaks) (v2.1.118+) |
@@ -144,6 +146,23 @@ These skills ship with Claude Code and are invoked like slash commands:
 - `/ultrareview` added for comprehensive cloud-based multi-agent code review (v2.1.111)
 - `/less-permission-prompts` added to analyze Bash/MCP tool calls and reduce permission prompts via an allowlist in `.claude/settings.json` (v2.1.111)
 - Auto mode no longer requires the `--enable-auto-mode` flag for Max subscribers on Opus 4.7 (v2.1.112)
+- `/goal` added — session-level completion condition that Claude works toward across turns; live overlay shows elapsed time, turn count, and token usage (v2.1.139)
+- `/scroll-speed` added — tune mouse-wheel scroll speed of the TUI live-preview pane; persists per-machine (v2.1.139)
+
+### `/goal` — Session-Level Completion Condition
+
+> **New in v2.1.139**
+
+Use `/goal` to register a completion condition for the current session. Claude works toward it across turns, and an overlay panel shows elapsed time, turn count, and tokens used. Clear it with `/goal clear`. Works in interactive mode, `claude -p`, and Remote Control.
+
+```
+User: /goal Migrate the payments service from REST to gRPC and get the integration tests passing.
+Claude: Goal registered. I'll work toward this until you clear it.
+[Goal panel: ⏱ 0s · turns 0 · tokens 0]
+
+User: start by listing the REST endpoints
+Claude: [does the work, panel updates]
+```
 
 ### `/team-onboarding` — Teammate Ramp-Up Guide
 
@@ -276,7 +295,7 @@ Usage: `/review-pr 456 high` → `$0`="456", `$1`="high"
 
 ### Dynamic Context with Shell Commands
 
-Execute bash commands before the prompt using `!`command``:
+Execute bash commands before the prompt using `` !`command` ``:
 
 ```yaml
 ---
@@ -601,14 +620,19 @@ If both exist with the same name, the **skill takes precedence**. Remove one or 
 
 ---
 
-**Last Updated**: April 24, 2026
-**Claude Code Version**: 2.1.119
+**Last Updated**: May 20, 2026
+**Claude Code Version**: 2.1.145
 **Sources**:
 - https://code.claude.com/docs/en/slash-commands
 - https://code.claude.com/docs/en/interactive-mode
 - https://code.claude.com/docs/en/changelog
+- https://code.claude.com/docs/en/commands
 - https://github.com/anthropics/claude-code/releases/tag/v2.1.118
 - https://github.com/anthropics/claude-code/releases/tag/v2.1.116
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.139
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.141
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.144
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.145
 **Compatible Models**: Claude Sonnet 4.6, Claude Opus 4.7, Claude Haiku 4.5
 
 *Part of the [Claude How To](../) guide series*

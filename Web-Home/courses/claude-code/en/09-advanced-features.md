@@ -202,6 +202,8 @@ claude --model opusplan "design and implement the new API"
 
 > **v2.1.112 update**: Plan files are now named after the prompt that produced them (instead of random words), making them easier to browse and reuse.
 
+> **v2.1.136 update — plan-mode write blocks are unconditional**: Plan mode now blocks all file writes, including when a matching `Edit(...)` rule exists in `permissions.allow`. Previously a permissive `Edit(...)` rule could let writes through in plan mode; that bypass is closed. If a workflow depended on the older behavior, exit plan mode (`Shift+Tab`) before editing.
+
 ---
 
 ## Ultraplan (Cloud Plan Drafting)
@@ -277,7 +279,7 @@ Extended thinking is a deliberate, step-by-step reasoning process where Claude:
 
 **Automatic activation**:
 - Enabled by default for all models (Opus 4.7, Sonnet 4.6, Haiku 4.5)
-- Opus 4.7: Adaptive reasoning with effort levels: `low` (○), `medium` (◐), `high` (●), `xhigh` (Opus 4.7 only, default on Claude Code since Opus 4.7 launch, 2026-04-16), `max`. Opus 4.6 and Sonnet 4.6 also support `low`, `medium`, `high`, `max` (no `xhigh`). Opus 4.7 has a 1M-token native context window (1M context fix landed in v2.1.117 — before that, `/context` miscounted Opus 4.7 against a 200K window and triggered premature autocompact).
+- Opus 4.7: Adaptive reasoning with effort levels: `low` (○), `medium` (◐), `high` (●), `xhigh` (Opus 4.7 only, default on Claude Code since Opus 4.7 launch, 2026-04-16), `max`. Opus 4.6 and Sonnet 4.6 also support `low`, `medium`, `high`, `max` (no `xhigh`). Opus 4.7 has a 1M-token native context window (1M context fix landed in v2.1.117 — before that, `/context` miscounted Opus 4.7 against a 200K window and triggered premature autocompact). Since v2.1.129, `/context` shows its visualization in-UI only; the ASCII viz no longer leaks into the conversation context (~1.6k tokens saved per call), so `/context` is safe to invoke freely.
 - Pro/Max subscribers on Opus 4.6 / Sonnet 4.6: default effort was raised from `medium` to `high` in v2.1.117.
 - Other models: Fixed budget up to 31,999 tokens
 
@@ -318,7 +320,7 @@ claude --effort high "complex architectural review"
 ### Example: Architectural Decision
 
 ```
-User: /think Should we use microservices or a monolith for our e-commerce platform?
+User: ultrathink Should we use microservices or a monolith for our e-commerce platform?
 
 Claude: Let me think through this architectural decision carefully...
 
@@ -482,6 +484,18 @@ claude auto-mode defaults
 #### Extending defaults with `"$defaults"` (v2.1.118)
 
 Since v2.1.118, `autoMode.allow`, `autoMode.soft_deny`, and `autoMode.environment` accept a `"$defaults"` token that **appends** your rules to the built-in list instead of replacing it. Before v2.1.118, any user-defined array silently clobbered the built-ins.
+
+#### Unconditional blocks with `autoMode.hard_deny` (v2.1.136)
+
+`autoMode.hard_deny` (v2.1.136+) is an array of classifier rules that block a class of actions **regardless of inferred user intent**. Use this for actions that must never run in auto mode — for example, `rm -rf` on root paths or `git push --force` on protected branches. Unlike `soft_deny`, hard-deny rules are not negotiable by the classifier.
+
+```json
+{
+  "autoMode": {
+    "hard_deny": ["Bash(rm -rf /:*)", "Bash(git push --force*)"]
+  }
+}
+```
 
 **Before (replaces built-ins — pre-v2.1.118 behavior):**
 
@@ -718,6 +732,8 @@ done
 
 Scheduled Tasks let you run prompts automatically on a recurring schedule or as one-time reminders. Tasks are session-scoped — they run while Claude Code is active and are cleared when the session ends. Available since v2.1.72+.
 
+> **Marketed as "Routines" on claude.com (2026-05-14)**: Anthropic's product blog introduces this surface as **Routines**. The CLI command stays `/schedule`; this guide uses the original "Scheduled Tasks" naming for continuity. If you see "Routines" in claude.com docs or the desktop app, it refers to the same feature.
+
 ### The `/loop` command
 
 ```bash
@@ -744,7 +760,7 @@ in 45 minutes, run the integration tests
 | Tool | Description |
 |------|-------------|
 | `CronCreate` | Create a new scheduled task |
-| `CronList` | List all active scheduled tasks |
+| `CronList` | List all active scheduled tasks. Since v2.1.136, output also includes the qualifier(s) and the scheduled prompt body, so you can audit what each cron will run without opening it. |
 | `CronDelete` | Remove a scheduled task |
 
 **Limits and behavior**:
@@ -778,6 +794,8 @@ Cloud scheduled tasks persist across restarts and do not require Claude Code to 
 export CLAUDE_CODE_DISABLE_CRON=1
 ```
 
+> **`/schedule` auto-disabled by API-key tiers (v2.1.139)**: Cloud `/schedule` is silently unavailable when any of `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`, or `apiKeyHelper` is set — even if you are also logged in with claude.ai. The same condition disables [Remote Control](#disabling-remote-control-disableremotecontrol-v21128), claude.ai MCP connectors, and notification preferences. Unset the API key (or run on a Pro/Max OAuth tier) to use `/schedule`. Local `CronCreate` is unaffected.
+
 ### Example: monitoring a deployment
 
 ```
@@ -806,6 +824,12 @@ Permission modes control what actions Claude can take without explicit approval.
 | `dontAsk` | Only pre-approved tools execute; all others denied |
 
 Cycle through modes with `Shift+Tab` in the CLI. Set a default with the `--permission-mode` flag or the `permissions.defaultMode` setting.
+
+> **`--dangerously-skip-permissions` extended path coverage (v2.1.121, v2.1.126)**: The `--dangerously-skip-permissions` CLI flag (and equivalent `bypassPermissions` mode) now bypasses prompts for writes to a much broader allowlist — `.claude/skills/`, `.claude/agents/`, `.claude/commands/`, `.claude/`, `.git/`, `.vscode/`, and shell config files. Catastrophic removal commands (`rm -rf /`, etc.) still prompt regardless of mode. Treat the flag as a sharper tool than before; use it only in throwaway sandboxes.
+
+> **Windows shell detection (v2.1.120, v2.1.126)**: Git for Windows / Git Bash is no longer required. When Git Bash is absent, Claude Code uses PowerShell as the shell tool. From v2.1.126 PowerShell is the *primary* shell when the PowerShell tool is enabled, and detection covers PowerShell 7 installed via the Microsoft Store, MSI without PATH, or as a `.NET global tool`.
+
+> **PowerShell tool enabled by default on Windows for Bedrock/Vertex/Foundry (v2.1.143)**: As of v2.1.143, the PowerShell tool is **enabled by default on Windows** for Bedrock, Vertex, and Foundry users. Claude Code invokes PowerShell with `-ExecutionPolicy Bypass` so scripts run even if the system policy is `Restricted`. To make Claude Code honor the system execution policy, set `CLAUDE_CODE_POWERSHELL_RESPECT_EXECUTION_POLICY=1`. To disable the PowerShell tool entirely, set `CLAUDE_CODE_USE_POWERSHELL_TOOL=0`.
 
 ### Activation Methods
 
@@ -1068,6 +1092,8 @@ claude --resume auth-refactor --fork-session "alternative approach"
 
 When you return to a session after being away, Claude can show a brief recap of what was accomplished. This is enabled by default for users with telemetry disabled (Bedrock, Vertex, Foundry users).
 
+> **OTEL telemetry — re-enable feedback survey (v2.1.136+)**: Organizations capturing OpenTelemetry data can re-enable Anthropic's session-quality survey by setting `CLAUDE_CODE_ENABLE_FEEDBACK_SURVEY_FOR_OTEL=1`. The survey is off by default in OTEL deployments because it was previously redirected away from telemetry pipelines.
+
 **Control recap behavior:**
 
 ```bash
@@ -1096,7 +1122,7 @@ Claude Code supports keyboard shortcuts for efficiency. Here's the complete refe
 | `Ctrl+G` | Edit plan in external editor |
 | `Ctrl+L` | Clear terminal screen |
 | `Ctrl+O` | Toggle verbose output (view reasoning) |
-| `Ctrl+R` | Reverse search history |
+| `Ctrl+R` | Reverse search history. Defaults to **all prompts across all projects** (v2.1.129+); press `Ctrl+S` inside the picker to narrow to the current project. Earlier versions defaulted to project-only. |
 | `Ctrl+T` | Toggle task list view |
 | `Ctrl+B` | Background running tasks |
 | `Esc+Esc` | Rewind code/conversation |
@@ -1366,6 +1392,8 @@ Customize the push-to-talk keybinding in your keybindings file (`/keybindings`).
 
 Channels is a Research Preview feature that pushes events from external services into a running Claude Code session via MCP servers. Sources include Telegram, Discord, iMessage, and arbitrary webhooks, allowing Claude to react to real-time notifications without polling.
 
+> **Auth (v2.1.128+)**: `--channels` now works with both Pro/Max OAuth **and** API-key (console) authentication. Earlier releases required OAuth.
+
 ### Subscribing to Channels
 
 ```bash
@@ -1534,6 +1562,26 @@ To enable:
 2. Open `/config` and enable **Push when Claude decides**
 
 Push notifications require a Claude subscription and the Claude mobile app.
+
+### Disabling Remote Control (`disableRemoteControl`, v2.1.128+)
+
+Admins on Team or Enterprise plans can block Remote Control entirely with the `disableRemoteControl` setting. When `true`, both `claude remote-control` and `/remote-control` refuse to start.
+
+```json
+{
+  "disableRemoteControl": true
+}
+```
+
+The setting is honored at the **managed/policy** scope (e.g., `/Library/Application Support/ClaudeCode/managed-settings.json` on macOS) so it cannot be overridden by individual users. Useful when local-only execution must be enforced organization-wide.
+
+> **When Remote Control is auto-disabled by API-key tiers (v2.1.139)**: Remote Control is **silently disabled** whenever any of these are set, even if you are simultaneously logged in with claude.ai:
+>
+> - `ANTHROPIC_API_KEY`
+> - `ANTHROPIC_AUTH_TOKEN`
+> - `apiKeyHelper` (settings.json)
+>
+> The same condition disables [`/schedule`](#scheduled-tasks), claude.ai MCP connectors, and notification preferences — all four claude.ai-bridged surfaces are gated on the OAuth login being the active credential. Unset the API key (or run on a Pro/Max OAuth tier) to use these features.
 
 ---
 
@@ -1731,6 +1779,32 @@ Use the `worktree.sparsePaths` setting to perform sparse-checkout in monorepos, 
 }
 ```
 
+### Base Branch Reference (`worktree.baseRef`)
+
+**`worktree.baseRef`** (added v2.1.133) — controls whether `claude --worktree` branches from `origin/<default>` or local `HEAD`.
+
+- `"fresh"` (default) — branch from `origin/<default-branch>`, ignoring local unpushed commits. **This reverts the behavior introduced in v2.1.128**, so users who relied on local-HEAD branching after v2.1.128 must opt back in.
+- `"head"` — branch from local `HEAD`, preserving unpushed commits.
+
+Set in `~/.claude/settings.json`:
+
+```json
+{ "worktree": { "baseRef": "head" } }
+```
+
+### Background-Session Isolation (`worktree.bgIsolation`)
+
+**`worktree.bgIsolation`** (added v2.1.143) — controls whether background sessions (e.g., from `/bg`, `claude --bg`, or the Agent View) get their own worktree or edit the foreground working copy directly.
+
+- *(default)* — background sessions create an isolated worktree under `<repo>/.claude/worktrees/`, the same way `--worktree` does.
+- `"none"` — background sessions edit the current working copy directly. Use this when worktrees are impractical (e.g., heavy native-build artifacts) or when a background agent must coordinate edits with the foreground session.
+
+```json
+{ "worktree": { "bgIsolation": "none" } }
+```
+
+Trade-off: `"none"` removes the safety net of worktree isolation — concurrent edits from background and foreground sessions can produce merge conflicts in the live working copy.
+
 ### Worktree Tools and Hooks
 
 | Item | Description |
@@ -1781,6 +1855,19 @@ claude --no-sandbox    # Disable sandboxing
 | `sandbox.network.allowedDomains` | Domains Bash-launched processes are allowed to reach (supports `*.` wildcard) |
 | `sandbox.network.deniedDomains` | Domains to block even when `allowedDomains` wildcard would otherwise permit them (v2.1.113+) |
 | `sandbox.enableWeakerNetworkIsolation` | Enable weaker network isolation on macOS |
+| `sandbox.bwrapPath` | (v2.1.133+, Linux/WSL) Path to the `bubblewrap` binary. Default: `$PATH` lookup. |
+| `sandbox.socatPath` | (v2.1.133+, Linux/WSL) Path to the `socat` binary. Default: `$PATH` lookup. |
+
+**Linux/WSL binary paths** (v2.1.133+) — point Claude Code at non-standard install locations:
+
+```json
+{
+  "sandbox": {
+    "bwrapPath": "/opt/bubblewrap/bin/bwrap",
+    "socatPath": "/opt/socat/bin/socat"
+  }
+}
+```
 
 Example of `deniedDomains` overriding a broad wildcard (v2.1.113+):
 
@@ -1862,6 +1949,7 @@ Since v2.1.83, administrators can deploy multiple managed settings files into a 
 | `allowedChannelPlugins` | Control which channel plugins are permitted |
 | `autoMode.environment` | Configure trusted infrastructure for auto mode |
 | `wslInheritsWindowsSettings` | Windows/WSL only (v2.1.118+): when `true`, Claude Code running inside WSL inherits managed settings from the Windows host, so enterprise policies deployed via Registry/MDM apply uniformly across the Windows and WSL shells |
+| `parentSettingsBehavior` | (v2.1.133+, admin-tier) Controls how the SDK's `managedSettings` merges with parent-process settings. `"first-wins"` keeps existing precedence (earlier setting wins on conflict); `"merge"` deep-merges values. |
 | Custom policies | Organization-specific permission and tool policies |
 
 ### Example: macOS Plist
@@ -2003,9 +2091,26 @@ export CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=80
 export CLAUDE_STREAM_IDLE_TIMEOUT_MS=30000
 export ANTHROPIC_CUSTOM_MODEL_OPTION=my-custom-model
 export SLASH_COMMAND_TOOL_CHAR_BUDGET=50000
+
+# Output and package manager (v2.1.129+)
+export CLAUDE_CODE_FORCE_SYNC_OUTPUT=1                      # Force synchronous output for terminals where auto-detect misses (Emacs eat, etc.)
+export CLAUDE_CODE_PACKAGE_MANAGER_AUTO_UPDATE=1            # Enable background upgrades for Homebrew/WinGet installs
+export CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY=1         # Opt in to /v1/models gateway discovery when ANTHROPIC_BASE_URL is set
+
+# Windows PowerShell tool (v2.1.143+) — default-on for Bedrock/Vertex/Foundry on Windows
+export CLAUDE_CODE_USE_POWERSHELL_TOOL=0                    # Disable the PowerShell tool entirely
+export CLAUDE_CODE_POWERSHELL_RESPECT_EXECUTION_POLICY=1    # Honor system ExecutionPolicy instead of `-ExecutionPolicy Bypass`
+
+# Workload identity federation (v2.1.141+)
+export ANTHROPIC_WORKSPACE_ID=ws_abc123                     # Scope the federated token to a specific workspace when the rule covers multiple
+
+# Stop hook safety cap (v2.1.143+)
+export CLAUDE_CODE_STOP_HOOK_BLOCK_CAP=8                    # Max consecutive Stop-hook blocks before the session ends with a warning. Set 0 to disable the cap.
 ```
 
-> **v2.1.108**: `ENABLE_PROMPT_CACHING_1H=1` — use a 1-hour prompt cache TTL instead of the default 5-minute TTL. Reduces cache misses in long, stable sessions.
+> **v2.1.108**: `ENABLE_PROMPT_CACHING_1H=1` — use a 1-hour prompt cache TTL instead of the default 5-minute TTL. Reduces cache misses in long, stable sessions. (v2.1.129 fixes a regression where the 1-hour TTL was silently downgraded to 5 minutes.)
+
+> **v2.1.129**: `CLAUDE_CODE_FORCE_SYNC_OUTPUT=1` forces synchronous output for terminals whose capability auto-detection fails (e.g., Emacs `eat`). `CLAUDE_CODE_PACKAGE_MANAGER_AUTO_UPDATE=1` enables background upgrades on Homebrew/WinGet installs, which otherwise never auto-update.
 
 ### Configuration Management Commands
 
@@ -2162,13 +2267,18 @@ For more information about Claude Code and related features:
 
 ---
 
-**Last Updated**: April 24, 2026
-**Claude Code Version**: 2.1.119
+**Last Updated**: May 19, 2026
+**Claude Code Version**: 2.1.143
 **Sources**:
 - https://code.claude.com/docs/en/permission-modes
 - https://code.claude.com/docs/en/interactive-mode
 - https://code.claude.com/docs/en/settings
+- https://code.claude.com/docs/en/cli-reference
 - https://www.anthropic.com/news/claude-opus-4-7
+- https://claude.com/blog/introducing-routines-in-claude-code
 - https://github.com/anthropics/claude-code/releases/tag/v2.1.117
 - https://github.com/anthropics/claude-code/releases/tag/v2.1.118
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.139
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.141
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.143
 **Compatible Models**: Claude Sonnet 4.6, Claude Opus 4.7, Claude Haiku 4.5
