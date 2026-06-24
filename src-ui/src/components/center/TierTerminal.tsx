@@ -410,6 +410,14 @@ function TierTerminalImpl({
 
       term.open(termRef.current);
 
+      // Fix CJK IME double-commit on Linux WebKitGTK (Tauri).
+      const helperTextarea = termRef.current?.querySelector('.xterm-helper-textarea') as HTMLTextAreaElement | null;
+      if (helperTextarea) {
+        helperTextarea.addEventListener('compositionstart', (e) => { e.stopPropagation(); }, { capture: true });
+        helperTextarea.addEventListener('compositionupdate', (e) => { e.stopPropagation(); }, { capture: true });
+        helperTextarea.addEventListener('compositionend', (e) => { e.stopPropagation(); }, { capture: true });
+      }
+
       // Disable font ligatures on the DOM renderer rows to prevent
       // box-drawing characters from being merged into ligature glyphs.
       const xtermRows = termRef.current.querySelector('.xterm-rows') as HTMLElement | null;
