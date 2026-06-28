@@ -1,23 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import type { ReactNode } from 'react';
 import { useT } from '../../i18n/useT';
 import { useAppState } from '../../store/app-state';
 import { isTauri, commands } from '../../tauri';
 import { getTabActions } from '../../lib/tab-actions';
 import './TaskBoard.css';
 import { ChangesBoard } from './ChangesBoard';
-
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-type TaskStatus = 'todo' | 'working' | 'done';
-
-interface TaskItem {
-  id: string;
-  title: string;
-  description?: string;
-  status: TaskStatus;
-  createdAt: number;
-}
+import { TaskNoteView } from './TaskNoteView';
+import { TaskEmptyState } from './TaskEmptyState';
+import { NEXT_STATUS, STATUS_ORDER, type TaskItem, type TaskStatus } from './task-types';
 
 // ─── Persistence (Rust file backend with localStorage fallback) ──────────────
 
@@ -70,13 +60,6 @@ function saveTasksToBackend(tasks: TaskItem[]) {
   }
 }
 
-const NEXT_STATUS: Record<TaskStatus, TaskStatus> = {
-  todo: 'working',
-  working: 'done',
-  done: 'todo',
-};
-
-const STATUS_ORDER: TaskStatus[] = ['working', 'todo', 'done'];
 const SECTION_LABEL_KEYS: Record<TaskStatus, 'task.section.working' | 'task.section.todo' | 'task.section.done'> = {
   working: 'task.section.working',
   todo: 'task.section.todo',
@@ -88,7 +71,7 @@ const SECTION_LABEL_KEYS: Record<TaskStatus, 'task.section.working' | 'task.sect
 export function TaskBoard() {
   const t = useT();
   const { state } = useAppState();
-  const isZh = state.currentLang.startsWith('zh');
+  const viewMode = state.taskViewMode;
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [addingId, setAddingId] = useState<string | null>(null);
@@ -254,6 +237,18 @@ export function TaskBoard() {
 
   const handleToggle = useCallback((id: string) => {
     setTasks(prev => prev.map(t => t.id === id ? { ...t, status: NEXT_STATUS[t.status] } : t));
+  }, []);
+
+  // Direct status set — used by the note view's traffic-light dots (the list
+  // view's checkbox cycles via handleToggle instead). Card auto-regroups.
+  const setStatus = useCallback((id: string, status: TaskStatus) => {
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, status } : t));
+  }, []);
+
+  // Live title edit — the note body is always-editable (no commit step), so it
+  // writes through on every keystroke. Empty is allowed while typing.
+  const updateTitle = useCallback((id: string, title: string) => {
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, title } : t));
   }, []);
 
   const handleRemove = useCallback((id: string) => {
@@ -562,7 +557,19 @@ export function TaskBoard() {
 
       {activeTab === 'tasks' && (
         <>
-          {/* ── Task List ── */}
+          {viewMode === 'note' ? (
+            <TaskNoteView
+              tasks={tasks}
+              addingId={addingId}
+              removingId={removingId}
+              canSend={!!state.activeTerminalId}
+              onSetStatus={setStatus}
+              onUpdateTitle={updateTitle}
+              onRemove={handleRemove}
+              onSend={sendToAgent}
+              onReorder={setTasks}
+            />
+          ) : (
           <div ref={listRef} className="task-list" style={{ paddingBottom: '80px' }}>
         {STATUS_ORDER.map(status => {
           const sectionTasks = tasks.filter(t => t.status === status);
@@ -728,47 +735,9 @@ export function TaskBoard() {
           );
         })}
 
-        {tasks.length === 0 && (() => {
-          const hour = new Date().getHours();
-          let greeting: string;
-          let icon: ReactNode;
-
-          const sunIcon = (
-            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--accent)' }}>
-              <circle cx="12" cy="12" r="4"/>
-              <path d="M12 2v2"/><path d="M12 20v2"/>
-              <path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/>
-              <path d="M2 12h2"/><path d="M20 12h2"/>
-              <path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>
-            </svg>
-          );
-          const moonIcon = (
-            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--accent)' }}>
-              <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
-            </svg>
-          );
-
-          if (hour >= 5 && hour < 12) {
-            greeting = t('task.greeting.morning');
-            icon = sunIcon;
-          } else if (hour >= 12 && hour < 18) {
-            greeting = t('task.greeting.afternoon');
-            icon = sunIcon;
-          } else {
-            greeting = t('task.greeting.evening');
-            icon = moonIcon;
-          }
-
-          return (
-            <div className="task-empty">
-              <div className="task-empty-icon">{icon}</div>
-              <div className="task-empty-text"
-                style={isZh ? { fontFamily: 'var(--font, system-ui)', fontStyle: 'normal', fontWeight: 400, letterSpacing: '0.08em' } : undefined}
-              >{greeting}</div>
-            </div>
-          );
-        })()}
+        {tasks.length === 0 && <TaskEmptyState />}
       </div>
+          )}
 
       {/* ── Floating Action Button (FAB) ── */}
       <div className="task-fab-container">

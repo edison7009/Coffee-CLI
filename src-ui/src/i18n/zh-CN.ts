@@ -108,6 +108,13 @@ export const zhCN = {
   'settings.gambit': '妙手',
   'settings.send.title': '发送消息',
   'settings.send.newline': '换行',
+  'settings.tasks': '任务',
+  'settings.tasks.view': '任务形态',
+  'task.view.list': '待办式',
+  'task.view.note': '便签式',
+  'task.view.list.sub': '紧凑清单，逐条勾选',
+  'task.view.note.sub': '大便签，随手写、整段发给 AI',
+  'task.note_placeholder': '写点什么，整段发给 AI…',
 
   // Theme Menu
   'theme.section.color': '配色',

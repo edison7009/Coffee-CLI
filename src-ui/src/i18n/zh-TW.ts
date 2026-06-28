@@ -108,6 +108,13 @@ export const zhTW = {
   'settings.gambit': '妙手',
   'settings.send.title': '發送訊息',
   'settings.send.newline': '換行',
+  'settings.tasks': '任務',
+  'settings.tasks.view': '任務形態',
+  'task.view.list': '待辦式',
+  'task.view.note': '便籤式',
+  'task.view.list.sub': '緊湊清單，逐條勾選',
+  'task.view.note.sub': '大便籤，隨手寫、整段發給 AI',
+  'task.note_placeholder': '寫點什麼，整段發給 AI…',
 
   // Theme Menu
   'theme.section.color': '配色',

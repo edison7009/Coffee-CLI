@@ -19,10 +19,26 @@ import { IS_MACOS } from '../../lib/platform';
 import { TERM_COLOR_SCHEMES } from '../center/TierTerminal';
 import { commands, type FontInfo } from '../../tauri';
 import { FontPicker } from './FontPicker';
-import { THEME_COLORS, THEME_SHAPES, ICON_ART_THEMES, LANGUAGES, isMaskTintTheme } from '../../lib/personalization';
+import { THEME_COLORS, THEME_SHAPES, ICON_ART_THEMES, LANGUAGES, TASK_VIEW_MODES, isMaskTintTheme } from '../../lib/personalization';
 import './SettingsModal.css';
 
-type Section = 'appearance' | 'wallpaper' | 'terminal' | 'gambit' | 'language';
+type Section = 'appearance' | 'wallpaper' | 'terminal' | 'gambit' | 'tasks' | 'language';
+
+// Per-mode preview glyphs for the Tasks section (checklist vs sticky note).
+const TASK_VIEW_ICONS: Record<'list' | 'note', ReactNode> = {
+  list: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 6h11" /><path d="M9 12h11" /><path d="M9 18h11" />
+      <path d="m3 6 1 1 2-2" /><path d="m3 12 1 1 2-2" /><circle cx="4" cy="18" r="1" />
+    </svg>
+  ),
+  note: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M15.5 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10l6-6V5a2 2 0 0 0-2-2Z" />
+      <path d="M15 21v-5a1 1 0 0 1 1-1h5" />
+    </svg>
+  ),
+};
 
 const ICONS: Record<Section, ReactNode> = {
   appearance: (
@@ -46,6 +62,12 @@ const ICONS: Record<Section, ReactNode> = {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <rect width="20" height="16" x="2" y="4" rx="2" />
       <path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M7 16h10" />
+    </svg>
+  ),
+  tasks: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M11 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6" />
+      <path d="m9 11 3 3L22 4" />
     </svg>
   ),
   language: (
@@ -139,6 +161,7 @@ export function SettingsModal() {
     dispatch({ type: 'SET_TERM_FONT', font: clean });
   };
   const setOpacity = (n: number) => dispatch({ type: 'SET_WALLPAPER_OPACITY', opacity: n });
+  const setTaskView = (mode: 'list' | 'note') => dispatch({ type: 'SET_TASK_VIEW_MODE', mode });
   const setEnterToSend = (value: boolean) => {
     dispatch({ type: 'SET_GAMBIT_ENTER_TO_SEND', value });
     try { localStorage.setItem('cc-gambit-enter-send', String(value)); } catch {}
@@ -152,6 +175,7 @@ export function SettingsModal() {
     { id: 'wallpaper',  label: t('settings.wallpaper' as any) },
     { id: 'terminal',   label: t('settings.terminal' as any) },
     { id: 'gambit',     label: t('settings.gambit' as any) },
+    { id: 'tasks',      label: t('settings.tasks' as any) },
     { id: 'language',   label: t('settings.language' as any) },
   ];
   const currentLabel = SECTIONS.find(s => s.id === section)?.label ?? '';
@@ -337,6 +361,31 @@ export function SettingsModal() {
                     <span className="settings-key-combo"><kbd>{modKey}</kbd><span className="settings-key-plus">+</span><kbd>Enter</kbd></span>
                     <span className="settings-key-sub">Enter {t('settings.send.newline' as any)}</span>
                   </button>
+                </div>
+              </>
+            )}
+
+            {section === 'tasks' && (
+              <>
+                <div className="settings-section-label">{t('settings.tasks.view' as any)}</div>
+                <div className="settings-key-row">
+                  {TASK_VIEW_MODES.map(m => {
+                    const active = state.taskViewMode === m.code;
+                    return (
+                      <button
+                        key={m.code}
+                        className={`settings-key-card settings-taskview-card${active ? ' active' : ''}`}
+                        onClick={() => setTaskView(m.code)}
+                        aria-pressed={active}
+                      >
+                        <span className="settings-key-combo">
+                          <span className="settings-taskview-icon">{TASK_VIEW_ICONS[m.code]}</span>
+                          <span className="settings-taskview-label">{t(m.labelKey as any)}</span>
+                        </span>
+                        <span className="settings-key-sub">{t(m.subKey as any)}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </>
             )}

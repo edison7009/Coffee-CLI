@@ -103,6 +103,13 @@ export const ko = {
   'settings.terminal.scheme': '글자 색',
   'settings.send.title': '메시지 전송',
   'settings.send.newline': '줄바꿈',
+  'settings.tasks': '작업',
+  'settings.tasks.view': '작업 표시 방식',
+  'task.view.list': '할 일 목록',
+  'task.view.note': '메모지',
+  'task.view.list.sub': '간결한 체크리스트, 하나씩 체크',
+  'task.view.note.sub': '큰 메모지에 자유롭게 적어 한 번에 전송',
+  'task.note_placeholder': '메모를 적어 에이전트로 한 번에 보내기…',
 
   // Theme Menu
   'theme.section.color': '색상',

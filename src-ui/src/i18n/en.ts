@@ -110,6 +110,14 @@ export const en = {
   'settings.gambit': 'Gambit',
   'settings.send.title': 'Send message',
   'settings.send.newline': 'for a new line',
+  // Task board form (to-do list vs sticky notes)
+  'settings.tasks': 'Tasks',
+  'settings.tasks.view': 'Task style',
+  'task.view.list': 'To-do List',
+  'task.view.note': 'Sticky Notes',
+  'task.view.list.sub': 'Compact checklist, tick off one by one',
+  'task.view.note.sub': 'Roomy notes — jot freely, send the whole thing',
+  'task.note_placeholder': 'Jot something down, send it all to your agent…',
 
   // Theme Menu
   'theme.section.color': 'Colors',

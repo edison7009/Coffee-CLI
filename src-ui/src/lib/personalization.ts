@@ -40,6 +40,14 @@ export const THEME_SHAPES: { code: ThemeShape; label: string }[] = [
   { code: 'carbon', label: 'Carbon' },
 ];
 
+// ─── Task board form (to-do list vs sticky notes) ────────────────────────────
+// Two presentations of the same task data, chosen in the settings "Tasks"
+// section. Icons are inlined in SettingsModal (mirrors the other sections).
+export const TASK_VIEW_MODES: { code: 'list' | 'note'; labelKey: string; subKey: string }[] = [
+  { code: 'list', labelKey: 'task.view.list', subKey: 'task.view.list.sub' },
+  { code: 'note', labelKey: 'task.view.note', subKey: 'task.view.note.sub' },
+];
+
 // ─── File-tree icon art themes ───────────────────────────────────────────────
 export const ICON_ART_THEMES: { id: IconTheme; folderSrc: string }[] = [
   { id: 'outline',          folderSrc: '/icons/themes/outline/folder-closed.svg'          },

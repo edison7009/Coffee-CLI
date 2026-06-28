@@ -106,6 +106,13 @@ export const vi = {
   'settings.terminal.scheme': 'Màu chữ',
   'settings.send.title': 'Gửi tin nhắn',
   'settings.send.newline': 'để xuống dòng',
+  'settings.tasks': 'Tác vụ',
+  'settings.tasks.view': 'Kiểu tác vụ',
+  'task.view.list': 'Danh sách việc cần làm',
+  'task.view.note': 'Ghi chú dán',
+  'task.view.list.sub': 'Danh sách gọn, tick từng mục',
+  'task.view.note.sub': 'Ghi chú lớn — viết thoải mái, gửi cả đoạn',
+  'task.note_placeholder': 'Ghi vài dòng rồi gửi cả đoạn cho agent…',
 
   // Theme Menu
   'theme.section.color': 'Màu sắc',

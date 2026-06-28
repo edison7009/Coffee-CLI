@@ -104,6 +104,13 @@ export const pt = {
   'settings.terminal.scheme': 'Cor do texto',
   'settings.send.title': 'Enviar mensagem',
   'settings.send.newline': 'para nova linha',
+  'settings.tasks': 'Tarefas',
+  'settings.tasks.view': 'Estilo de tarefas',
+  'task.view.list': 'Lista de tarefas',
+  'task.view.note': 'Notas adesivas',
+  'task.view.list.sub': 'Lista compacta, marque uma a uma',
+  'task.view.note.sub': 'Notas amplas: escreva e envie tudo',
+  'task.note_placeholder': 'Anote algo e envie tudo ao seu agente…',
 
   // Theme Menu
   'theme.section.color': 'Cores',

@@ -1,0 +1,228 @@
+/* TaskNoteView.css — sticky-note presentation of the task board. */
+
+.task-note-list {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  /* Top padding gives the first card's drop-before indicator (top: -6px) room
+     inside the scroll viewport — without it, reordering to the very top shows
+     no line. Bottom padding clears the floating add button. */
+  padding: 6px 0 80px;
+  /* Scrollbar hidden via global rule in styles/global.css. */
+}
+
+.task-note-list--empty {
+  padding-bottom: 0;
+}
+
+/* ─── Note card ─────────────────────────────────────────────────────────────── */
+
+.task-note-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 11px 12px 12px;
+  border-radius: var(--radius-md, 12px);
+  background: rgba(255, 255, 255, 0.035);
+  /* Quiet status tint on the leading edge — reinforces the active dot without
+     shouting. Colour set per status class below. */
+  border-left: 3px solid transparent;
+  transition: background-color 0.2s, opacity 0.25s, transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.task-note-card:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.task-note-card.status-working { border-left-color: color-mix(in srgb, #ff5f57 55%, transparent); }
+.task-note-card.status-todo    { border-left-color: color-mix(in srgb, #febc2e 50%, transparent); }
+.task-note-card.status-done    { border-left-color: color-mix(in srgb, #28c840 45%, transparent); opacity: 0.55; }
+
+.task-note-card.status-done:hover { opacity: 0.8; }
+
+/* Dragged card collapses to a faint placeholder; the floating ghost carries
+   the visible card. */
+.task-note-card.dragging {
+  opacity: 0.25;
+}
+
+/* Exit animation — fades + slides out during the parent's 300ms removal window
+   (matches the to-do list's removal feel). */
+.task-note-card.removing {
+  animation: task-note-out 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  pointer-events: none;
+}
+
+@keyframes task-note-out {
+  to {
+    opacity: 0;
+    transform: translateX(28px) scale(0.97);
+  }
+}
+
+/* Drop indicator — a 2px accent line at the edge the card would insert against. */
+.task-note-card.drop-before::before,
+.task-note-card.drop-after::after {
+  content: '';
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--accent, #c4956a);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--accent) 50%, transparent);
+}
+.task-note-card.drop-before::before { top: -6px; }
+.task-note-card.drop-after::after { bottom: -6px; }
+
+/* ─── Head row: dots · timestamp · actions ──────────────────────────────────── */
+
+.task-note-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.task-note-dots {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.task-note-dot {
+  width: 11px;
+  height: 11px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  flex-shrink: 0;
+  cursor: pointer;
+  /* Faint tint of the dot's own colour when inactive, so all three read as a
+     red/amber/green traffic light; the active one goes full-colour. */
+  background: color-mix(in srgb, var(--dot) 24%, transparent);
+  transition: background 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+
+.task-note-dot:hover {
+  background: color-mix(in srgb, var(--dot) 55%, transparent);
+  transform: scale(1.1);
+}
+
+.task-note-dot.active {
+  background: var(--dot);
+  /* Static halo — no animation, safe on WebKit2GTK (Linux). */
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--dot) 18%, transparent);
+}
+
+.task-note-time {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  margin-left: auto;
+  font-family: var(--font, system-ui);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--text-3, rgba(255, 255, 255, 0.4));
+  white-space: nowrap;
+  user-select: none;
+}
+
+.task-note-clock {
+  color: var(--text-2, rgba(255, 255, 255, 0.6));
+  font-variant-numeric: tabular-nums;
+}
+
+.task-note-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.task-note-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-xs, 6px);
+  background: transparent;
+  color: var(--accent, #c4956a);
+  cursor: pointer;
+  /* Calm at rest; revealed on card hover (mirrors the list view's action
+     slots) so the resting card stays clean. */
+  opacity: 0;
+  transition: opacity 0.15s, filter 0.15s, background 0.15s;
+}
+
+.task-note-card:hover .task-note-btn {
+  opacity: 0.85;
+}
+
+.task-note-btn:hover:not(:disabled) {
+  opacity: 1;
+  filter: brightness(1.25);
+}
+
+.task-note-send:disabled {
+  opacity: 0;
+  cursor: not-allowed;
+}
+.task-note-card:hover .task-note-send:disabled {
+  opacity: 0.25;
+}
+
+/* ─── Note body ─────────────────────────────────────────────────────────────── */
+
+.task-note-body {
+  width: 100%;
+  min-height: 56px;
+  resize: none;
+  overflow: hidden;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text-1, #e8e4de);
+  font-family: var(--font, system-ui);
+  font-size: 13.5px;
+  line-height: 1.55;
+  padding: 2px 2px 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  box-sizing: border-box;
+}
+
+.task-note-body::placeholder {
+  color: var(--text-3, rgba(255, 255, 255, 0.3));
+}
+
+.task-note-card.status-done .task-note-body {
+  color: var(--text-2, rgba(255, 255, 255, 0.55));
+}
+
+/* ─── Floating ghost (drag clone) ───────────────────────────────────────────── */
+
+.task-note-card-ghost {
+  position: fixed;
+  z-index: 99999;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 11px 12px 12px;
+  border-radius: var(--radius-md, 12px);
+  background: var(--bg-panel, rgba(40, 40, 42, 0.98));
+  border: 1px solid var(--accent, #c4956a);
+  box-shadow: 0 20px 30px -8px rgba(0, 0, 0, 0.5), 0 8px 12px -4px rgba(0, 0, 0, 0.3);
+  transform: scale(1.02);
+  opacity: 0.96;
+  overflow: hidden;
+}

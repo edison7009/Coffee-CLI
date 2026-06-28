@@ -104,6 +104,13 @@ export const ru = {
   'settings.terminal.scheme': 'Цвет текста',
   'settings.send.title': 'Отправить сообщение',
   'settings.send.newline': 'для новой строки',
+  'settings.tasks': 'Задачи',
+  'settings.tasks.view': 'Стиль задач',
+  'task.view.list': 'Список дел',
+  'task.view.note': 'Стикеры',
+  'task.view.list.sub': 'Компактный список, отмечайте по одному',
+  'task.view.note.sub': 'Большие стикеры — пишите и отправляйте целиком',
+  'task.note_placeholder': 'Запишите что-нибудь и отправьте целиком агенту…',
 
   // Theme Menu
   'theme.section.color': 'Цвета',

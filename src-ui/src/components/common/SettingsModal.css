@@ -315,6 +315,17 @@
 .settings-key-card.active kbd { border-color: color-mix(in srgb, var(--accent, #c4956a) 50%, transparent); }
 .settings-key-sub { font-size: 11px; color: var(--text-3, rgba(255, 255, 255, 0.45)); }
 
+/* ── Task view cards (To-do list vs Sticky notes) ──────────────────────── */
+.settings-taskview-card { flex: 1; min-width: 180px; }
+.settings-taskview-icon {
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  color: var(--accent, #c4956a);
+}
+.settings-taskview-icon svg { width: 100%; height: 100%; }
+.settings-taskview-label { font-size: 13px; font-weight: 600; color: var(--text-1, #fff); }
+
 /* ── Language list ─────────────────────────────────────────────────────── */
 .settings-lang-list {
   display: grid;

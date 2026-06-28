@@ -103,6 +103,13 @@ export const fr = {
   'settings.terminal.scheme': 'Couleur du texte',
   'settings.send.title': 'Envoyer le message',
   'settings.send.newline': 'pour un saut de ligne',
+  'settings.tasks': 'Tâches',
+  'settings.tasks.view': 'Style des tâches',
+  'task.view.list': 'Liste de tâches',
+  'task.view.note': 'Notes autocollantes',
+  'task.view.list.sub': 'Liste compacte, à cocher une par une',
+  'task.view.note.sub': 'Grandes notes : écrivez et envoyez tout',
+  'task.note_placeholder': 'Notez quelque chose et envoyez le tout à votre agent…',
 
   // Theme Menu
   'theme.section.color': 'Couleurs',

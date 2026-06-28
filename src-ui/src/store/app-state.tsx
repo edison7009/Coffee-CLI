@@ -139,6 +139,12 @@ export interface AppState {
   // 'columns' = 1×4 vertical strip. Only takes effect inside a tab
   // whose tool is 'multi-agent'; other tabs ignore it.
   multiAgentLayout: 'grid' | 'columns';
+
+  // Right-panel task board form. 'list' = compact to-do checklist (default),
+  // 'note' = big sticky-note cards (traffic-light status + timestamp + roomy
+  // text area). Same task data either way — purely a presentation choice made
+  // in the settings modal. Default 'list' so existing users see no change.
+  taskViewMode: 'list' | 'note';
 }
 
 // ─── Tab tool predicates ────────────────────────────────────────────────────
@@ -213,7 +219,8 @@ type Action =
   | { type: 'SET_FOCUSED_PANE'; tabId: string; paneIdx: number | null }
   | { type: 'TOGGLE_LEFT_PANEL' }
   | { type: 'TOGGLE_RIGHT_PANEL' }
-  | { type: 'SET_MULTI_AGENT_LAYOUT'; layout: 'grid' | 'columns' };
+  | { type: 'SET_MULTI_AGENT_LAYOUT'; layout: 'grid' | 'columns' }
+  | { type: 'SET_TASK_VIEW_MODE'; mode: 'list' | 'note' };
 
 // ─── Reducer ─────────────────────────────────────────────────────────────────
 
@@ -440,6 +447,10 @@ function reducer(state: AppState, action: Action): AppState {
       try { localStorage.setItem('cc-ma-layout', action.layout); } catch {}
       return { ...state, multiAgentLayout: action.layout };
     }
+    case 'SET_TASK_VIEW_MODE': {
+      try { localStorage.setItem('cc-task-view', action.mode); } catch {}
+      return { ...state, taskViewMode: action.mode };
+    }
     default:
       return state;
   }
@@ -549,11 +560,14 @@ function getInitialState(): AppState {
   let leftPanelHidden = false;
   let rightPanelHidden = false;
   let multiAgentLayout: 'grid' | 'columns' = 'grid';
+  let taskViewMode: 'list' | 'note' = 'list';
   try {
     leftPanelHidden = localStorage.getItem('cc-left-hidden') === '1';
     rightPanelHidden = localStorage.getItem('cc-right-hidden') === '1';
     const savedLayout = localStorage.getItem('cc-ma-layout');
     if (savedLayout === 'columns' || savedLayout === 'grid') multiAgentLayout = savedLayout;
+    const savedTaskView = localStorage.getItem('cc-task-view');
+    if (savedTaskView === 'list' || savedTaskView === 'note') taskViewMode = savedTaskView;
   } catch {}
 
   return {
@@ -574,6 +588,7 @@ function getInitialState(): AppState {
     leftPanelHidden,
     rightPanelHidden,
     multiAgentLayout,
+    taskViewMode,
   };
 }
 

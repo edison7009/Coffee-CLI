@@ -1505,9 +1505,9 @@ body.gambit-docked .chat-reader-container {
    Buttons / inputs / textareas / anchors aren't matched by the
    element list at all, so their own hover/focus bgs are
    untouched. */
-:is([data-shape="glass"], [data-shape="carbon"]) .panel-left :is(div, section, aside, nav, header, footer, main):not(.launchpad-card, .launchpad-card-group, .task-card, .task-droppable-area, .guide-card, .remote-form-card, .remote-form-overlay, .remote-protocol-toggle, .remote-pill, .chat-input-container, .library-item, .library-tabs, .ctx-menu, .gambit, .tool-config-modal, .tab-status-dot, .heatmap-cell, .diff-line),
-:is([data-shape="glass"], [data-shape="carbon"]) .panel-right :is(div, section, aside, nav, header, footer, main):not(.launchpad-card, .launchpad-card-group, .task-card, .task-droppable-area, .guide-card, .remote-form-card, .remote-form-overlay, .remote-protocol-toggle, .remote-pill, .chat-input-container, .library-item, .library-tabs, .ctx-menu, .gambit, .tool-config-modal, .tab-status-dot, .heatmap-cell, .diff-line),
-:is([data-shape="glass"], [data-shape="carbon"]) .panel-center :is(div, section, aside, nav, header, footer, main):not(.launchpad-card, .launchpad-card-group, .task-card, .task-droppable-area, .guide-card, .remote-form-card, .remote-form-overlay, .remote-protocol-toggle, .remote-pill, .chat-input-container, .library-item, .library-tabs, .ctx-menu, .gambit, .tool-config-modal, .tab-status-dot, .heatmap-cell, .diff-line) {
+:is([data-shape="glass"], [data-shape="carbon"]) .panel-left :is(div, section, aside, nav, header, footer, main):not(.launchpad-card, .launchpad-card-group, .task-card, .task-note-card, .task-droppable-area, .guide-card, .remote-form-card, .remote-form-overlay, .remote-protocol-toggle, .remote-pill, .chat-input-container, .library-item, .library-tabs, .ctx-menu, .gambit, .tool-config-modal, .tab-status-dot, .heatmap-cell, .diff-line),
+:is([data-shape="glass"], [data-shape="carbon"]) .panel-right :is(div, section, aside, nav, header, footer, main):not(.launchpad-card, .launchpad-card-group, .task-card, .task-note-card, .task-droppable-area, .guide-card, .remote-form-card, .remote-form-overlay, .remote-protocol-toggle, .remote-pill, .chat-input-container, .library-item, .library-tabs, .ctx-menu, .gambit, .tool-config-modal, .tab-status-dot, .heatmap-cell, .diff-line),
+:is([data-shape="glass"], [data-shape="carbon"]) .panel-center :is(div, section, aside, nav, header, footer, main):not(.launchpad-card, .launchpad-card-group, .task-card, .task-note-card, .task-droppable-area, .guide-card, .remote-form-card, .remote-form-overlay, .remote-protocol-toggle, .remote-pill, .chat-input-container, .library-item, .library-tabs, .ctx-menu, .gambit, .tool-config-modal, .tab-status-dot, .heatmap-cell, .diff-line) {
     background: transparent !important;
     border-color: transparent !important;
     box-shadow: none !important;
@@ -1549,6 +1549,7 @@ body.gambit-docked .chat-reader-container {
 }
 
 [data-shape="glass"] .task-card,
+[data-shape="glass"] .task-note-card,
 [data-shape="glass"] .guide-card,
 [data-shape="glass"] .chat-input-container,
 [data-shape="glass"] .library-item {

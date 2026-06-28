@@ -104,6 +104,13 @@ export const de = {
   'settings.terminal.scheme': 'Textfarbe',
   'settings.send.title': 'Nachricht senden',
   'settings.send.newline': 'für neue Zeile',
+  'settings.tasks': 'Aufgaben',
+  'settings.tasks.view': 'Aufgaben-Stil',
+  'task.view.list': 'To-do-Liste',
+  'task.view.note': 'Notizzettel',
+  'task.view.list.sub': 'Kompakte Liste, einzeln abhaken',
+  'task.view.note.sub': 'Große Zettel – frei schreiben, alles senden',
+  'task.note_placeholder': 'Schreib etwas auf und sende alles an deinen Agenten…',
 
   // Theme Menu
   'theme.section.color': 'Farben',

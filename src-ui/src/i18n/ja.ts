@@ -103,6 +103,13 @@ export const ja = {
   'settings.terminal.scheme': '文字色',
   'settings.send.title': 'メッセージを送信',
   'settings.send.newline': '改行',
+  'settings.tasks': 'タスク',
+  'settings.tasks.view': 'タスクの表示',
+  'task.view.list': 'To-Do リスト',
+  'task.view.note': '付箋',
+  'task.view.list.sub': 'コンパクトな一覧、ひとつずつチェック',
+  'task.view.note.sub': '大きな付箋にまとめて書いて送信',
+  'task.note_placeholder': 'メモを書いて、まとめて送信…',
 
   // Theme Menu
   'theme.section.color': 'カラー',
