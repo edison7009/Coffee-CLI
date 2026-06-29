@@ -104,6 +104,7 @@ export const pt = {
   'settings.terminal.scheme': 'Cor do texto',
   'settings.send.title': 'Enviar mensagem',
   'settings.send.newline': 'para nova linha',
+  'settings.gambit.hotkey': 'Atalho de teclado',
   'settings.tasks': 'Tarefas',
   'settings.tasks.view': 'Estilo de tarefas',
   'task.view.list': 'Lista de tarefas',

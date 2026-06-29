@@ -110,6 +110,7 @@ export const en = {
   'settings.gambit': 'Gambit',
   'settings.send.title': 'Send message',
   'settings.send.newline': 'for a new line',
+  'settings.gambit.hotkey': 'Toggle shortcut',
   // Task board form (to-do list vs sticky notes)
   'settings.tasks': 'Tasks',
   'settings.tasks.view': 'Task style',

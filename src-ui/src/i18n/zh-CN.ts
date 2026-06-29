@@ -108,6 +108,7 @@ export const zhCN = {
   'settings.gambit': '妙手',
   'settings.send.title': '发送消息',
   'settings.send.newline': '换行',
+  'settings.gambit.hotkey': '开关快捷键',
   'settings.tasks': '任务',
   'settings.tasks.view': '任务形态',
   'task.view.list': '待办式',

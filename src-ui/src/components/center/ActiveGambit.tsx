@@ -19,8 +19,8 @@
 // switching tabs swaps what's shown inside the (still-open) panel so
 // text can't be misdirected to the wrong terminal.
 
-import { useCallback, useMemo } from 'react';
-import { useAppState, isSplitTool, paneSessionId } from '../../store/app-state';
+import { useCallback, useEffect, useMemo } from 'react';
+import { useAppState, isSplitTool, paneSessionId, matchesGambitHotkey } from '../../store/app-state';
 import { getTabActions } from '../../lib/tab-actions';
 import { getFocusedPane } from '../../lib/pane-focus';
 import { Gambit } from './Gambit';
@@ -92,6 +92,32 @@ export function ActiveGambit() {
     if (!actions) return false;
     return actions.paste(text);
   }, [activeId, activeSession?.tool]);
+
+  // Global open/close hotkey (settings → 妙手). Registered in the CAPTURE
+  // phase on document so it fires BEFORE the focused xterm's own keydown —
+  // preventDefault then stops the combo (e.g. Ctrl+~) from leaking a control
+  // byte into the terminal. NOT gated on gambitOpen: ActiveGambit stays
+  // mounted app-wide even while the panel is closed, so the same key both
+  // opens and closes. Auto-repeat events are still suppressed (preventDefault)
+  // but don't re-toggle, so holding the key neither flickers nor leaks a byte.
+  const hotkey = state.gambitHotkey;
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      // IME composition in progress — let the IME keep the key (same guard
+      // every other keydown handler in this app uses, e.g. Gambit.tsx).
+      if (e.isComposing) return;
+      if (!matchesGambitHotkey(e, hotkey)) return;
+      // Suppress the combo for EVERY matching event — including auto-repeat —
+      // so a held key never leaks a byte into the xterm during the ~1 frame
+      // before Gambit grabs focus. Only the initial (non-repeat) press toggles.
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.repeat) return;
+      dispatch({ type: 'TOGGLE_GAMBIT' });
+    };
+    document.addEventListener('keydown', onKeyDown, true);
+    return () => document.removeEventListener('keydown', onKeyDown, true);
+  }, [hotkey, dispatch]);
 
   if (!gambitOpen || !activeId) return null;
 

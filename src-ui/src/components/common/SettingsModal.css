@@ -277,6 +277,16 @@
 
 /* ── Keyboard: send-key cards ──────────────────────────────────────────── */
 .settings-key-row { display: flex; gap: 10px; flex-wrap: wrap; }
+/* Hotkey picker (妙手 toggle): 4 equal presets as an auto-fit grid so they
+   fill evenly (4-up when wide, fewer when narrow) instead of wrapping to a
+   ragged 3+1 the way a plain flex row does. min-width:0 lets the cards shrink
+   to the column — the shared .settings-key-card keeps min-width:160px for the
+   2-up send row above. */
+.settings-key-row--keys {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+}
+.settings-key-row--keys .settings-key-card { min-width: 0; }
 .settings-key-card {
   display: flex;
   flex-direction: column;

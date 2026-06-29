@@ -103,6 +103,7 @@ export const es = {
   'settings.terminal.scheme': 'Color del texto',
   'settings.send.title': 'Enviar mensaje',
   'settings.send.newline': 'para nueva línea',
+  'settings.gambit.hotkey': 'Atajo de teclado',
   'settings.tasks': 'Tareas',
   'settings.tasks.view': 'Estilo de tareas',
   'task.view.list': 'Lista de tareas',

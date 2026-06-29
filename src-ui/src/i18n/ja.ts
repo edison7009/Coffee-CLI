@@ -103,6 +103,7 @@ export const ja = {
   'settings.terminal.scheme': '文字色',
   'settings.send.title': 'メッセージを送信',
   'settings.send.newline': '改行',
+  'settings.gambit.hotkey': '開閉ショートカット',
   'settings.tasks': 'タスク',
   'settings.tasks.view': 'タスクの表示',
   'task.view.list': 'To-Do リスト',

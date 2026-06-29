@@ -104,6 +104,7 @@ export const de = {
   'settings.terminal.scheme': 'Textfarbe',
   'settings.send.title': 'Nachricht senden',
   'settings.send.newline': 'für neue Zeile',
+  'settings.gambit.hotkey': 'Kürzel zum Umschalten',
   'settings.tasks': 'Aufgaben',
   'settings.tasks.view': 'Aufgaben-Stil',
   'task.view.list': 'To-do-Liste',

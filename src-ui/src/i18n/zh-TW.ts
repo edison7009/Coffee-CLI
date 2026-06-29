@@ -108,6 +108,7 @@ export const zhTW = {
   'settings.gambit': '妙手',
   'settings.send.title': '發送訊息',
   'settings.send.newline': '換行',
+  'settings.gambit.hotkey': '開關快捷鍵',
   'settings.tasks': '任務',
   'settings.tasks.view': '任務形態',
   'task.view.list': '待辦式',

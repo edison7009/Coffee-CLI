@@ -104,6 +104,7 @@ export const ru = {
   'settings.terminal.scheme': 'Цвет текста',
   'settings.send.title': 'Отправить сообщение',
   'settings.send.newline': 'для новой строки',
+  'settings.gambit.hotkey': 'Горячая клавиша',
   'settings.tasks': 'Задачи',
   'settings.tasks.view': 'Стиль задач',
   'task.view.list': 'Список дел',

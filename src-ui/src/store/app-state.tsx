@@ -37,6 +37,38 @@ export type IconTheme =
   | 'outline' | 'material' | 'vscode-icons' | 'catppuccin-mocha'
   | 'devicon' | 'fluent' | 'symbols' | 'coffee';
 
+// Gambit (妙手) open/close hotkey presets, each a single-modifier combo.
+// Default `ctrl-backquote` borrows VS Code's "toggle terminal panel" muscle
+// memory and is the safest pick: no CJK IME claim, no macOS dead-key/typed-
+// glyph side effect, and the host terminal rarely needs a bare Ctrl+`. The
+// `alt-*` entries are opt-in alternatives — a hosted CLI (Claude/Codex) may
+// itself bind Alt chords inside the PTY, so when the user picks one the global
+// listener will intercept it app-wide (acceptable because they chose it). We
+// show literal `Ctrl`/`Alt` (not ⌃/⌥) for the mass-market audience, and match
+// on `e.code` (physical key) because Alt on macOS rewrites `e.key` into the
+// typed glyph (å/œ) — only the code is stable.
+export const GAMBIT_HOTKEYS = [
+  { code: 'ctrl-backquote', mod: 'Ctrl', key: '~', eventCode: 'Backquote', modifier: 'ctrl' },
+  { code: 'alt-backquote',  mod: 'Alt',  key: '~', eventCode: 'Backquote', modifier: 'alt' },
+  { code: 'alt-a',          mod: 'Alt',  key: 'A', eventCode: 'KeyA',      modifier: 'alt' },
+  { code: 'alt-q',          mod: 'Alt',  key: 'Q', eventCode: 'KeyQ',      modifier: 'alt' },
+] as const;
+
+export type GambitHotkey = typeof GAMBIT_HOTKEYS[number]['code'];
+
+// True when a keydown matches the configured hotkey. The caller MUST then call
+// BOTH preventDefault (cancels the byte/glyph — this is what stops Alt+A from
+// typing `å` on macOS) AND stopPropagation (keeps the combo from reaching
+// xterm's own keydown). metaKey is always rejected: on macOS Cmd+` is the
+// system "cycle windows" shortcut, so the Ctrl preset stays Control everywhere.
+export function matchesGambitHotkey(e: KeyboardEvent, hotkey: GambitHotkey): boolean {
+  const def = GAMBIT_HOTKEYS.find(h => h.code === hotkey) ?? GAMBIT_HOTKEYS[0];
+  if (e.metaKey || e.code !== def.eventCode) return false;
+  return def.modifier === 'ctrl'
+    ? e.ctrlKey && !e.altKey
+    : e.altKey && !e.ctrlKey;
+}
+
 /// One pane inside a multi-agent Tab. `paneIdx` is 1-indexed (1..4)
 /// matching the user-visible badge and the MCP session id suffix —
 /// sessionId = `${tabId}::pane-${paneIdx}`. The Rust MCP server's
@@ -130,6 +162,10 @@ export interface AppState {
   // settings modal because the muscle-memory split is per-user / per-OS.
   gambitEnterToSend: boolean;
 
+  // Gambit open/close hotkey preset (settings → 妙手). One of GAMBIT_HOTKEYS;
+  // a global capture-phase listener in ActiveGambit toggles on a match.
+  gambitHotkey: GambitHotkey;
+
   // IDE-style layout toggles driven from titlebar controls.
   // Default both panels visible — matches first-time user expectation.
   leftPanelHidden: boolean;
@@ -212,6 +248,7 @@ type Action =
   | { type: 'TOGGLE_SETTINGS' }
   | { type: 'SET_SETTINGS_OPEN'; open: boolean }
   | { type: 'SET_GAMBIT_ENTER_TO_SEND'; value: boolean }
+  | { type: 'SET_GAMBIT_HOTKEY'; value: GambitHotkey }
   | { type: 'SET_GAMBIT_DRAFT'; id: string; draft: string }
   | { type: 'SET_PANE_TOOL'; tabId: string; paneIdx: number; tool: ToolType; toolData?: string; folderPath?: string | null }
   | { type: 'SET_PANE_SENTINEL'; tabId: string; paneIdx: number; enabled: boolean }
@@ -357,6 +394,8 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, settingsOpen: action.open };
     case 'SET_GAMBIT_ENTER_TO_SEND':
       return { ...state, gambitEnterToSend: action.value };
+    case 'SET_GAMBIT_HOTKEY':
+      return { ...state, gambitHotkey: action.value };
     case 'SET_GAMBIT_DRAFT':
       return {
         ...state,
@@ -511,6 +550,9 @@ function getInitialState(): AppState {
   let wallpaperOpacity = 70;
   // Default Enter-to-send; only opt-out if the user explicitly stored 'false'.
   let gambitEnterToSend = true;
+  // Default Gambit hotkey = Ctrl+~ (VS Code terminal-toggle muscle memory,
+  // no macOS dead-key clash). Overridden only by a stored valid preset.
+  let gambitHotkey: GambitHotkey = 'ctrl-backquote';
   try {
     const storedPath = localStorage.getItem('cc-bg-path');
     const storedType = localStorage.getItem('cc-bg-type') as 'image' | 'video' | 'none' | null;
@@ -534,6 +576,10 @@ function getInitialState(): AppState {
     termColorScheme = localStorage.getItem('cc-term-scheme') || '';
     termFont = localStorage.getItem('cc-term-font') || '';
     gambitEnterToSend = localStorage.getItem('cc-gambit-enter-send') !== 'false';
+    const storedHotkey = localStorage.getItem('cc-gambit-hotkey');
+    if (storedHotkey && GAMBIT_HOTKEYS.some(h => h.code === storedHotkey)) {
+      gambitHotkey = storedHotkey as GambitHotkey;
+    }
     // New key (post-refactor): wallpaper opacity, 0-100, larger = more
     // visible. Old key was `cc-wallpaper-dim` (0-80, larger = darker
     // overlay). On first load after upgrade, fall back to the legacy
@@ -585,6 +631,7 @@ function getInitialState(): AppState {
     gambitOpen: false,
     settingsOpen: false,
     gambitEnterToSend,
+    gambitHotkey,
     leftPanelHidden,
     rightPanelHidden,
     multiAgentLayout,

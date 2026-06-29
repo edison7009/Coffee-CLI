@@ -13,7 +13,7 @@
 // is unchanged; only the presentation moved.
 
 import { useEffect, useState, type ReactNode } from 'react';
-import { useAppState, useAppDispatch, type ThemeColor, type ThemeShape, type IconTheme } from '../../store/app-state';
+import { useAppState, useAppDispatch, GAMBIT_HOTKEYS, type GambitHotkey, type ThemeColor, type ThemeShape, type IconTheme } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
 import { IS_MACOS } from '../../lib/platform';
 import { TERM_COLOR_SCHEMES } from '../center/TierTerminal';
@@ -165,6 +165,10 @@ export function SettingsModal() {
   const setEnterToSend = (value: boolean) => {
     dispatch({ type: 'SET_GAMBIT_ENTER_TO_SEND', value });
     try { localStorage.setItem('cc-gambit-enter-send', String(value)); } catch {}
+  };
+  const setGambitHotkey = (value: GambitHotkey) => {
+    dispatch({ type: 'SET_GAMBIT_HOTKEY', value });
+    try { localStorage.setItem('cc-gambit-hotkey', value); } catch {}
   };
 
   const hasBg = state.bgType !== 'none' && state.bgPath !== '';
@@ -361,6 +365,23 @@ export function SettingsModal() {
                     <span className="settings-key-combo"><kbd>{modKey}</kbd><span className="settings-key-plus">+</span><kbd>Enter</kbd></span>
                     <span className="settings-key-sub">Enter {t('settings.send.newline' as any)}</span>
                   </button>
+                </div>
+
+                <div className="settings-section-label">{t('settings.gambit.hotkey' as any)}</div>
+                <div className="settings-key-row settings-key-row--keys">
+                  {GAMBIT_HOTKEYS.map(h => {
+                    const active = state.gambitHotkey === h.code;
+                    return (
+                      <button
+                        key={h.code}
+                        className={`settings-key-card${active ? ' active' : ''}`}
+                        onClick={() => setGambitHotkey(h.code)}
+                        aria-pressed={active}
+                      >
+                        <span className="settings-key-combo"><kbd>{h.mod}</kbd><span className="settings-key-plus">+</span><kbd>{h.key}</kbd></span>
+                      </button>
+                    );
+                  })}
                 </div>
               </>
             )}

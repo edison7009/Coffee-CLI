@@ -103,6 +103,7 @@ export const ko = {
   'settings.terminal.scheme': '글자 색',
   'settings.send.title': '메시지 전송',
   'settings.send.newline': '줄바꿈',
+  'settings.gambit.hotkey': '열기/닫기 단축키',
   'settings.tasks': '작업',
   'settings.tasks.view': '작업 표시 방식',
   'task.view.list': '할 일 목록',

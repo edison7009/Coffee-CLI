@@ -103,6 +103,7 @@ export const fr = {
   'settings.terminal.scheme': 'Couleur du texte',
   'settings.send.title': 'Envoyer le message',
   'settings.send.newline': 'pour un saut de ligne',
+  'settings.gambit.hotkey': 'Raccourci clavier',
   'settings.tasks': 'Tâches',
   'settings.tasks.view': 'Style des tâches',
   'task.view.list': 'Liste de tâches',
