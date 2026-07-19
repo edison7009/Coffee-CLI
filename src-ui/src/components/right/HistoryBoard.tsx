@@ -146,7 +146,7 @@ export function HistoryBoard() {
   // normalization means "no query → show all". Matching against projectName(cwd)
   // too so a user can find a project's sessions by typing its folder name — the
   // folder is already printed on every card, so this is the one search
-  // dimension the flat time-sorted list genuinely earns. Both fields are
+  // dimension the flat time-sorted list genuinely earns. All fields are
   // null-guarded: legacy sessions can carry a blank cwd (projectName then
   // falls back to the tool display name, which is still a useful match — e.g.
   // typing "claude" surfaces all Claude sessions).
@@ -162,7 +162,10 @@ export function HistoryBoard() {
       list = list.filter(s => {
         const name = (s.name ?? '').toLowerCase();
         const proj = projectName(s.cwd ?? '', s.tool ?? '').toLowerCase();
-        return name.includes(q) || proj.includes(q);
+        // Tool display name is searchable too ("kimi" finds all Kimi Code
+        // sessions) — cheap extra reach for keyboard users, no UI needed.
+        const tool = getToolName(s.tool ?? '', '').toLowerCase();
+        return name.includes(q) || proj.includes(q) || tool.includes(q);
       });
     }
     // Pinned (置顶) sessions sort to the top. history-cache already returns
