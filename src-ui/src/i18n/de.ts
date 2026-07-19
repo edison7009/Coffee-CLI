@@ -82,6 +82,7 @@ export const de = {
   'diff.unchanged_lines': '⋯ {count} unveränderte Zeilen',
   'task.default_title': 'Neue Aufgabe',
   'task.search_sessions': 'Sitzungen durchsuchen...',
+  'task.filter_all': 'Alle',
   'menu.no_recent': 'Keine aktuellen Sitzungen',
   'task.messages': '{count} Nachrichten',
 

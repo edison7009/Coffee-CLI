@@ -81,6 +81,7 @@ export const zhCN = {
   'diff.unchanged_lines': '⋯ {count} 行未改动',
   'task.default_title': '新任务',
   'task.search_sessions': '搜索历史对话...',
+  'task.filter_all': '全部',
   'menu.no_recent': '没有任何近期会话',
   'task.messages': '{count} 条消息',
 

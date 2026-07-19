@@ -82,6 +82,7 @@ export const pt = {
   'diff.unchanged_lines': '⋯ {count} linhas inalteradas',
   'task.default_title': 'Nova tarefa',
   'task.search_sessions': 'Buscar sessões...',
+  'task.filter_all': 'Todos',
   'menu.no_recent': 'Nenhuma sessão recente',
   'task.messages': '{count} mensagens',
 

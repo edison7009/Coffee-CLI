@@ -1706,6 +1706,7 @@ body.gambit-docked .multi-agent-grid-standalone {
    + outer drop shadow combo, so every floating overlay sits on
    the same Liquid-Glass tier above the panels. */
 [data-shape="glass"] .ctx-menu,
+[data-shape="glass"] .history-tool-filter-menu,
 [data-shape="glass"] .gambit-skill-popover {
     background: rgba(255, 255, 255, 0.06);
     border: 1px solid rgba(255, 255, 255, 0.14);

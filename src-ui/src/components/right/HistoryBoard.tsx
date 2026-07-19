@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
+import { createPortal } from 'react-dom';
 import { useT } from '../../i18n/useT';
 import { useAppState } from '../../store/app-state';
 import { isTauri } from '../../tauri';
@@ -118,6 +119,48 @@ export function HistoryBoard() {
   const isLoading = isTauri && (status === 'idle' || status === 'loading') && cachedSessions.length === 0;
 
   const [sessionSearchQuery, setSessionSearchQuery] = useState('');
+  // Agent filter dropdown: which tool's sessions to show (null = all). The
+  // option list is derived from the *visible* (unhidden) data so its counts
+  // always match what the list would show.
+  const [activeTool, setActiveTool] = useState<string | null>(null);
+  // The filter is a themed dropdown (NOT a native <select> — that can't be
+  // themed, and can't even open while a terminal is active because the
+  // global focus enforcer steals focus back; see FontPicker.tsx). React-
+  // state controlled + portaled to body like FontPicker's.
+  const [filterMenuOpen, setFilterMenuOpen] = useState(false);
+  const [filterMenuPos, setFilterMenuPos] = useState<{ left: number; top: number; width: number } | null>(null);
+  const filterTriggerRef = useRef<HTMLButtonElement>(null);
+
+  const toggleFilterMenu = () => {
+    if (filterMenuOpen) { setFilterMenuOpen(false); return; }
+    const r = filterTriggerRef.current?.getBoundingClientRect();
+    if (r) {
+      // Right-align to the trigger — the menu is wider than the button and
+      // the trigger hugs the rail's right edge.
+      const width = Math.max(r.width, 180);
+      setFilterMenuPos({ left: r.right - width, top: r.bottom + 4, width });
+    }
+    setFilterMenuOpen(true);
+  };
+
+  // Keep the portaled menu glued to the trigger on scroll/resize (it's
+  // fixed-positioned; same pattern as FontPicker).
+  useEffect(() => {
+    if (!filterMenuOpen) return;
+    const reposition = () => {
+      const r = filterTriggerRef.current?.getBoundingClientRect();
+      if (r) {
+        const width = Math.max(r.width, 180);
+        setFilterMenuPos({ left: r.right - width, top: r.bottom + 4, width });
+      }
+    };
+    window.addEventListener('scroll', reposition, true);
+    window.addEventListener('resize', reposition);
+    return () => {
+      window.removeEventListener('scroll', reposition, true);
+      window.removeEventListener('resize', reposition);
+    };
+  }, [filterMenuOpen]);
   // Right-click cut/copy/paste/select menu for the search box (same one
   // Gambit/terminal/task-list use).
   const { menu: ctxMenuEl, openMenu: openCtxMenu } = useTextContextMenu();
@@ -131,6 +174,26 @@ export function HistoryBoard() {
     { id: 'mock-2', name: 'build a snake game', tool: 'claude', cwd: '~/projects/snake', session_token: 'tk2', saved_at: new Date(Date.now() - 3600000).toISOString() },
     { id: 'mock-3', name: 'refactor components', tool: 'qwen', cwd: '~/projects/coffee', session_token: 'tk3', saved_at: new Date(Date.now() - 86400000 * 2).toISOString() },
   ], [cachedSessions]);
+
+  // Chip data: per-tool session counts over the *visible* (unhidden) list,
+  // most-used first so the agent you reach for most often stays leftmost.
+  const toolCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const s of baseSessions) {
+      const tool = s.tool ?? '';
+      if (!tool || hidden.has(`${tool}:${s.id}`)) continue;
+      counts.set(tool, (counts.get(tool) ?? 0) + 1);
+    }
+    return [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  }, [baseSessions, hidden]);
+
+  // If the active tool vanishes from the data (e.g. all its sessions got
+  // hidden), fall back to "all" instead of staring at an empty list.
+  useEffect(() => {
+    if (activeTool && !toolCounts.some(([tool]) => tool === activeTool)) {
+      setActiveTool(null);
+    }
+  }, [toolCounts, activeTool]);
 
   // Debounce the raw query so fast typing doesn't re-filter the full session
   // list on every keystroke (history-cache can hold thousands of sessions —
@@ -146,10 +209,11 @@ export function HistoryBoard() {
   // normalization means "no query → show all". Matching against projectName(cwd)
   // too so a user can find a project's sessions by typing its folder name — the
   // folder is already printed on every card, so this is the one search
-  // dimension the flat time-sorted list genuinely earns. Both fields are
+  // dimension the flat time-sorted list genuinely earns. The tool display name
+  // is matched as well ("kimi" surfaces all Kimi Code sessions) — the chip row
+  // below covers mouse users, this covers keyboard users. All fields are
   // null-guarded: legacy sessions can carry a blank cwd (projectName then
-  // falls back to the tool display name, which is still a useful match — e.g.
-  // typing "claude" surfaces all Claude sessions).
+  // falls back to the tool display name).
   const matchedSessions = useMemo(() => {
     // Hide filter first so soft-deleted sessions never take a visible slot or
     // count toward load-more paging.
@@ -157,12 +221,17 @@ export function HistoryBoard() {
     if (hidden.size > 0) {
       list = list.filter(s => !hidden.has(`${s.tool ?? ''}:${s.id}`));
     }
+    // Agent chip filter (AND with the text query below).
+    if (activeTool) {
+      list = list.filter(s => (s.tool ?? '') === activeTool);
+    }
     const q = debouncedQuery.trim().replace(/\s+/g, ' ').toLowerCase();
     if (q) {
       list = list.filter(s => {
         const name = (s.name ?? '').toLowerCase();
         const proj = projectName(s.cwd ?? '', s.tool ?? '').toLowerCase();
-        return name.includes(q) || proj.includes(q);
+        const tool = getToolName(s.tool ?? '', '').toLowerCase();
+        return name.includes(q) || proj.includes(q) || tool.includes(q);
       });
     }
     // Pinned (置顶) sessions sort to the top. history-cache already returns
@@ -176,7 +245,7 @@ export function HistoryBoard() {
       });
     }
     return list;
-  }, [baseSessions, debouncedQuery, hidden, pinned]);
+  }, [baseSessions, debouncedQuery, hidden, pinned, activeTool]);
 
   // Progressive render: data is already fully in memory (history-cache reads
   // every jsonl on startup), so "load more" is just rendering more rows.
@@ -187,7 +256,7 @@ export function HistoryBoard() {
   // change.
   const PAGE = 30;
   const [visibleCount, setVisibleCount] = useState(PAGE);
-  useEffect(() => { setVisibleCount(PAGE); }, [debouncedQuery]);
+  useEffect(() => { setVisibleCount(PAGE); }, [debouncedQuery, activeTool]);
   const filteredSessions = matchedSessions.slice(0, visibleCount);
   const hasMore = matchedSessions.length > visibleCount;
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -225,19 +294,46 @@ export function HistoryBoard() {
 
   return (
     <>
-      <div className="agent-session-search-wrap">
-        <svg className="agent-session-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="11" cy="11" r="8"></circle>
-          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-        </svg>
-        <input 
-          type="text" 
-          className="agent-session-search" 
-          placeholder={t('task.search_sessions' as any) || 'Search sessions...'}
-          value={sessionSearchQuery}
-          onChange={e => setSessionSearchQuery(e.target.value)}
-          onContextMenu={(e) => openCtxMenu(e, setSessionSearchQuery)}
-        />
+      <div className="agent-session-search-row">
+        <div className="agent-session-search-wrap">
+          <svg className="agent-session-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input
+            type="text"
+            className="agent-session-search"
+            placeholder={t('task.search_sessions' as any) || 'Search sessions...'}
+            value={sessionSearchQuery}
+            onChange={e => setSessionSearchQuery(e.target.value)}
+            onContextMenu={(e) => openCtxMenu(e, setSessionSearchQuery)}
+          />
+        </div>
+        {/* Agent filter dropdown — only worth the control when there's more
+            than one agent to tell apart. Shows the active agent's icon (or
+            全部), opens the portaled menu below. */}
+        {toolCounts.length >= 2 && (
+          <button
+            ref={filterTriggerRef}
+            type="button"
+            className={`history-tool-filter-trigger${activeTool ? ' active' : ''}`}
+            onClick={toggleFilterMenu}
+          >
+            {activeTool ? (
+              getToolIcon(activeTool)
+            ) : (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+              </svg>
+            )}
+            <span className="history-tool-filter-label">
+              {activeTool ? getToolName(activeTool, '') : (t('task.filter_all' as any) || 'All')}
+            </span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
+        )}
       </div>
       <div className="task-list" style={{ marginTop: '0', paddingBottom: '20px' }}>
       {isLoading && Array.from({ length: 6 }).map((_, i) => (
@@ -345,6 +441,37 @@ export function HistoryBoard() {
         </div>
       )}
     </div>
+    {filterMenuOpen && filterMenuPos && createPortal(
+      <>
+        <div className="history-tool-filter-backdrop" onClick={() => setFilterMenuOpen(false)} />
+        <div
+          className="history-tool-filter-menu"
+          style={{ position: 'fixed', left: filterMenuPos.left, top: filterMenuPos.top, width: filterMenuPos.width }}
+        >
+          <button
+            type="button"
+            className={`history-tool-filter-opt${activeTool === null ? ' active' : ''}`}
+            onClick={() => { setActiveTool(null); setFilterMenuOpen(false); }}
+          >
+            <span className="history-tool-filter-opt-name">{t('task.filter_all' as any) || 'All'}</span>
+            <span className="history-tool-filter-count">{toolCounts.reduce((n, [, c]) => n + c, 0)}</span>
+          </button>
+          {toolCounts.map(([tool, count]) => (
+            <button
+              type="button"
+              key={tool}
+              className={`history-tool-filter-opt${activeTool === tool ? ' active' : ''}`}
+              onClick={() => { setActiveTool(activeTool === tool ? null : tool); setFilterMenuOpen(false); }}
+            >
+              {getToolIcon(tool)}
+              <span className="history-tool-filter-opt-name">{getToolName(tool, '')}</span>
+              <span className="history-tool-filter-count">{count}</span>
+            </button>
+          ))}
+        </div>
+      </>,
+      document.body
+    )}
     {ctxMenu && <SessionContextMenu menu={ctxMenu} onClose={() => setCtxMenu(null)} />}
     {ctxMenuEl}
   </>

@@ -82,6 +82,7 @@ export const ru = {
   'diff.unchanged_lines': '⋯ {count} строк без изменений',
   'task.default_title': 'Новая задача',
   'task.search_sessions': 'Поиск сессий...',
+  'task.filter_all': 'Все',
   'menu.no_recent': 'Нет недавних сессий',
   'task.messages': '{count} сообщений',
 

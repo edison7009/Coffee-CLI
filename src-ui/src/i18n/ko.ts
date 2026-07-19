@@ -81,6 +81,7 @@ export const ko = {
   'diff.unchanged_lines': '⋯ 변경되지 않은 {count}줄',
   'task.default_title': '새 작업',
   'task.search_sessions': '세션 검색...',
+  'task.filter_all': '전부',
   'menu.no_recent': '최근 세션이 없습니다',
   'task.messages': '메시지 {count}개',
 

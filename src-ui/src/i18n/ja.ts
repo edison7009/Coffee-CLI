@@ -81,6 +81,7 @@ export const ja = {
   'diff.unchanged_lines': '⋯ 未変更 {count} 行',
   'task.default_title': '新しいタスク',
   'task.search_sessions': 'セッションを検索...',
+  'task.filter_all': 'すべて',
   'menu.no_recent': '最近のセッションはありません',
   'task.messages': 'メッセージ {count} 件',
 

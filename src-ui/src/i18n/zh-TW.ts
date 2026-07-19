@@ -81,6 +81,7 @@ export const zhTW = {
   'diff.unchanged_lines': '⋯ {count} 行未變更',
   'task.default_title': '新任務',
   'task.search_sessions': '搜尋歷史對話...',
+  'task.filter_all': '全部',
   'menu.no_recent': '沒有任何近期對話',
   'task.messages': '{count} 則訊息',
 
