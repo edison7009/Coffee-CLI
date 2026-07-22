@@ -643,6 +643,61 @@ function TierTerminalImpl({
         }
       }
 
+      // ── CJK IME symbol passthrough, commit side (issue #107) ───────────
+      // Companion to the keydown/keypress passthrough in
+      // attachCustomKeyEventHandler (full mechanism documented there). An IME
+      // commit arrives as a plain `input` event on the helper textarea
+      // (inputType 'insertText'). xterm's own `input` handler delivers it
+      // only when `(!ev.composed || !_keyDownSeen)`; we deliver exactly the
+      // complementary case (`ev.composed && keyDownSeen`) — i.e. the commits
+      // xterm drops: WKWebView's commit-first flow with a modifier held
+      // (Shift+symbol) and keys opted out via the passthrough handler. The
+      // 229-first Chromium ordering is left to xterm's CompositionHelper
+      // diff path (last229At guard), so every commit is delivered exactly
+      // once on every platform. After forwarding we stopPropagation (so
+      // xterm's listener can't double-deliver) and clear the textarea (so a
+      // later 229-diff can't re-send stale text).
+      //
+      // Registered CAPTURE-phase on the container so it runs before xterm's
+      // capture listener on the textarea itself. Composition commits
+      // (pinyin words), emoji-picker inserts and paste are left completely
+      // alone — xterm handles them as before.
+      if (!__IS_LINUX__) {
+        const imeTextarea = termRef.current.querySelector('.xterm-helper-textarea') as HTMLTextAreaElement | null;
+        if (imeTextarea) {
+          const host = termRef.current;
+          const markCompositionEnd = () => { ime.lastCompositionEndAt = performance.now(); };
+          imeTextarea.addEventListener('compositionend', markCompositionEnd, { capture: true });
+          const onImeCommitInput = (ev: Event) => {
+            if (ev.target !== imeTextarea) return;
+            const ie = ev as InputEvent;
+            if (ie.inputType !== 'insertText' || !ie.data || ie.isComposing) return;
+            // Non-ASCII commit — arm the caret-key swallow (see the custom
+            // key handler) no matter which path delivers the text.
+            if (/[^\x00-\x7f]/.test(ie.data)) ime.lastNonAsciiCommitAt = performance.now();
+            // Screen readers read the textarea itself — leave it untouched.
+            if (term.options.screenReaderMode) return;
+            // Chromium ordering: a 229 keydown just preceded this commit —
+            // xterm's CompositionHelper diff path owns it.
+            if (performance.now() - ime.last229At < 50) return;
+            // A composition session just finalized — CompositionHelper's
+            // compositionend readout owns that commit.
+            if (performance.now() - ime.lastCompositionEndAt < 100) return;
+            // Mirror of xterm's delivery condition `(!ev.composed ||
+            // !_keyDownSeen)`: only forward when xterm will NOT.
+            if (!ie.composed || !ime.keyDownSeen) return;
+            forwardInput(ie.data);
+            ev.stopPropagation();
+            imeTextarea.value = '';
+          };
+          host.addEventListener('input', onImeCommitInput, { capture: true });
+          unlisteners.push(() => {
+            host.removeEventListener('input', onImeCommitInput, { capture: true });
+            imeTextarea.removeEventListener('compositionend', markCompositionEnd, { capture: true });
+          });
+        }
+      }
+
       // Disable font ligatures on the DOM renderer rows to prevent
       // box-drawing characters from being merged into ligature glyphs.
       const xtermRows = termRef.current.querySelector('.xterm-rows') as HTMLElement | null;
@@ -706,7 +761,11 @@ function TierTerminalImpl({
     //                are filtered via a tiny per-line buffer so they don't strand the
     //                dot in "working" until the 30s auto-idle fallback.
     let codexLine = '';
-    term.onData((data) => {
+    // Single entry point for user-typed data on its way to the PTY. term.onData
+    // covers xterm's own key handling; the CJK-IME symbol passthrough below
+    // calls the same function for IME-committed text that deliberately bypasses
+    // xterm's keydown path (issue #107).
+    const forwardInput = (data: string) => {
       commands.tierTerminalInput(sessionId, data).catch(() => {});
       if (tool !== 'codex') return;
       for (let i = 0; i < data.length; i++) {
@@ -733,12 +792,102 @@ function TierTerminalImpl({
           codexLine += ch;
         }
       }
-    });
+    };
+    term.onData(forwardInput);
+
+    // ── CJK IME symbol passthrough (issue #107) ──────────────────────────
+    // With a Chinese IME active, symbol keys (Shift+9 → （, Shift+/ → ？)
+    // never open a composition session — the IME commits the fullwidth symbol
+    // straight into the helper textarea (insertText). Two platform flows, both
+    // broken in stock xterm (xterm.js #3533; VS Code #192509; Tabby #11013;
+    // fcitx5-macos #223):
+    //
+    //   1. Raw-keydown IMEs (Sogou/fcitx/微信输入法 on Chromium): the keydown
+    //      arrives as an ordinary ASCII keystroke (no composition, no 229).
+    //      xterm evaluates it, fires the HALFWIDTH char into the PTY and
+    //      preventDefault()s before the IME can translate → commit lost.
+    //   2. 229 IMEs on WKWebView (macOS built-in Pinyin etc.): the commit
+    //      lands FIRST (input event), the keyCode-229 keydown arrives AFTER.
+    //      xterm's `input` handler bails because the user is still holding
+    //      Shift (its private `_keyDownSeen` is true), and its 229-diff
+    //      fallback captures the textarea value AFTER the commit landed →
+    //      empty diff → nothing is ever sent. (Chromium's order is the
+    //      reverse — 229 first — so the same IME works there.)
+    //
+    // Fix, three cooperating pieces:
+    //   a. THIS HANDLER returns false for unmodified/shifted printable
+    //      non-letter keys (keydown AND keypress) so flow-1 keys are never
+    //      evaluated/prevented by xterm; the keystroke reaches the IME and
+    //      its commit arrives as a plain `input` event. With no IME active
+    //      the browser inserts the ASCII char itself — same event, same path,
+    //      so English typing is unchanged.
+    //   b. A capture-phase `input` listener on the container (wired in
+    //      initTerminal below) forwards exactly the commits xterm will NOT
+    //      deliver, mirroring xterm's own delivery condition
+    //      `(!ev.composed || !_keyDownSeen)` — we deliver only when
+    //      `ev.composed && keyDownSeen` — and clears the textarea afterwards
+    //      so stale text can never be re-diffed. The 229-first Chromium
+    //      ordering is left to xterm's diff path (last229At guard), so each
+    //      commit is delivered exactly once on every platform.
+    //   c. Pair-inserting IMEs (（）, “”, ‘’) synthesize an ArrowLeft after
+    //      the commit to park the caret between the brackets; in a terminal
+    //      that key must NOT reach the PTY (it moved the real cursor over
+    //      just-typed text — "光标乱窜"). Arrow keys within 150ms of a
+    //      non-ASCII commit are bounced back to the textarea (return false).
+    //
+    // Scope guards — everything else keeps xterm's native path:
+    //   • letters a-z/A-Z stay with xterm (the A-Z keypress hack for macOS
+    //     caps-lock IMEs depends on it, and pinyin composition works today);
+    //   • Ctrl/Alt/Meta combos stay with xterm (shortcuts, copy/paste above);
+    //   • composition sessions (pinyin word typing) stay with xterm's
+    //     CompositionHelper;
+    //   • Linux keeps its own input path (see the WebKitGTK duplication fix
+    //     above) and screen-reader mode must not lose textarea updates.
+    const ime = {
+      // Mirror of xterm's private `_keyDownSeen` (set on every keydown,
+      // cleared on every keyup) — piece (b) uses it to predict whether
+      // xterm's `input` handler will deliver a given commit.
+      keyDownSeen: false,
+      // Last keyCode-229 keydown. Distinguishes the two platform orderings:
+      // Chromium sends 229 BEFORE the commit (xterm's diff path delivers);
+      // WKWebView commits first and sends 229 after (we deliver).
+      last229At: 0,
+      // Last non-ASCII commit — the window for piece (c)'s caret-key swallow.
+      lastNonAsciiCommitAt: 0,
+      // Last compositionend — belt-and-braces guard so a composition's final
+      // commit can never be double-delivered by piece (b) alongside
+      // CompositionHelper's compositionend readout.
+      lastCompositionEndAt: 0,
+    };
+    const isImeSymbolKey = (e: KeyboardEvent): boolean =>
+      !__IS_LINUX__ &&
+      !term.options.screenReaderMode &&
+      !e.ctrlKey && !e.altKey && !e.metaKey && // Shift is allowed — it IS the bug
+      !e.isComposing && e.keyCode !== 229 &&
+      e.key.length === 1 &&
+      !/[a-zA-Z]/.test(e.key);
 
     // Handle native Copy/Paste shortcuts
     term.attachCustomKeyEventHandler((e) => {
+      // IME bookkeeping (issue #107) — mirrors xterm's `_keyDownSeen` and
+      // records the Chromium-style 229 ordering for the commit listener.
+      if (e.type === 'keydown') {
+        ime.keyDownSeen = true;
+        if (e.keyCode === 229) ime.last229At = performance.now();
+      } else if (e.type === 'keyup') {
+        ime.keyDownSeen = false;
+      }
       if (e.type === 'keydown') {
         rig.inputStart();
+        // Pair-inserting IMEs synthesize a caret-move right after committing
+        // （）/“”/‘’ — bounce it back to the textarea (moving the hidden
+        // caret is harmless) instead of letting xterm fire it into the PTY
+        // where it shifts the REAL cursor over just-typed text (issue #107).
+        if ((e.code === 'ArrowLeft' || e.code === 'ArrowRight') &&
+            !e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey && !e.isComposing &&
+            performance.now() - ime.lastNonAsciiCommitAt < 150) {
+          return false;
+        }
         const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
         const cmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
 
@@ -791,6 +940,13 @@ function TierTerminalImpl({
           })();
           return false;
         }
+      }
+      // CJK IME symbol passthrough (issue #107 — see the wiring comment
+      // above). Returning false opts the key out of xterm's keydown/keypress
+      // handling WITHOUT a preventDefault, so the IME (or the browser's own
+      // text insertion when no IME is active) can commit the real character.
+      if ((e.type === 'keydown' || e.type === 'keypress') && isImeSymbolKey(e)) {
+        return false;
       }
       return true; // Let xterm handle all other keys natively
     });
