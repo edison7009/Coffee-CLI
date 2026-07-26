@@ -941,23 +941,52 @@ function TierTerminalImpl({
     // vertical band of ghost text along the edge and cell-level misalignment
     // ("滑动之后页面文字错位"). Same WebGL framebuffer-staleness family as
     // issues #47 / #74, but those masks only cover tab-switch / window-focus,
-    // not the scroll path. Fix: shortly after the LAST wheel event of a
-    // gesture, re-mark every row dirty so the renderer re-uploads all row
-    // textures once the redraw storm settles. Cost is one extra viewport
-    // repaint per scroll gesture (debounced); harmless on the DOM renderer.
+    // not the scroll path. Fix: shortly after the LAST scroll event of a
+    // gesture, re-mark every row dirty AND rebuild the glyph texture atlas so
+    // the renderer re-uploads everything once the redraw storm settles.
+    //
+    // Three holes in the original wheel-only version (user report: "滚轮滚动
+    // 后重影/错行，拖滚动条也错位，错位后不自愈"):
+    //   • Scrollbar drags produce no wheel events, so the repaint never fired
+    //     on that path — term.onScroll covers every viewport move (wheel,
+    //     scrollbar drag, keyboard, programmatic scroll).
+    //   • refresh() only re-marks rows dirty; when the corruption lives in
+    //     the WebGL glyph texture atlas itself, re-rendering from the same
+    //     poisoned atlas reproduces the same smear forever — hence "never
+    //     self-heals". clearTextureAtlas() forces a full glyph re-raster.
+    //   • 150 ms could fire before the TUI's final PTY redraw round-trip
+    //     landed. Bumped to 250 ms, plus a second cheap refresh-only pass at
+    //     600 ms to catch late redraws (one extra viewport repaint).
     let scrollRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+    let scrollRefreshTimer2: ReturnType<typeof setTimeout> | null = null;
     const schedulePostScrollRefresh = () => {
       if (scrollRefreshTimer !== null) clearTimeout(scrollRefreshTimer);
+      if (scrollRefreshTimer2 !== null) clearTimeout(scrollRefreshTimer2);
       scrollRefreshTimer = setTimeout(() => {
         scrollRefreshTimer = null;
         try {
+          // Rebuild the glyph atlas first so the refresh below re-renders
+          // from clean textures; no-op cheap when the atlas was healthy.
+          webglRef.current?.clearTextureAtlas();
           if (term.rows > 0) term.refresh(0, term.rows - 1);
         } catch { /* term disposed */ }
-      }, 150);
+      }, 250);
+      // Late-arriving redraws (PTY round-trip slower than the debounce) can
+      // re-dirty rows after the first pass; one more refresh-only sweep.
+      scrollRefreshTimer2 = setTimeout(() => {
+        scrollRefreshTimer2 = null;
+        try {
+          if (term.rows > 0) term.refresh(0, term.rows - 1);
+        } catch { /* term disposed */ }
+      }, 600);
     };
     unlisteners.push(() => {
       if (scrollRefreshTimer !== null) clearTimeout(scrollRefreshTimer);
+      if (scrollRefreshTimer2 !== null) clearTimeout(scrollRefreshTimer2);
     });
+    // Scrollbar drags and keyboard/programmatic scrolls emit no wheel events
+    // — hook the viewport itself so those gestures get the same repaint.
+    term.onScroll(() => schedulePostScrollRefresh());
 
     // ── Alternate-scroll mode (mouse wheel in full-screen TUIs) ───────────
     // Real terminals (Windows Terminal, iTerm2, xterm) translate the mouse
