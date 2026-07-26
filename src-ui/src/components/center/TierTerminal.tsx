@@ -209,10 +209,11 @@ export const detachedSessions = new Set<string>();
 
 interface CtxMenu { x: number; y: number; hasSelection: boolean; }
 
-function TermContextMenu({ menu, onClose, onCopy, onPaste, onSelectAll }: {
+function TermContextMenu({ menu, onClose, onCopy, onCopyAll, onPaste, onSelectAll }: {
   menu: CtxMenu;
   onClose: () => void;
   onCopy: () => void;
+  onCopyAll: () => void;
   onPaste: () => void;
   onSelectAll: () => void;
 }) {
@@ -240,7 +241,7 @@ function TermContextMenu({ menu, onClose, onCopy, onPaste, onSelectAll }: {
 
   // Clamp to viewport so menu never overflows off-screen
   const left = Math.min(menu.x, window.innerWidth  - 164);
-  const top  = Math.min(menu.y, window.innerHeight - 116);
+  const top  = Math.min(menu.y, window.innerHeight - 144);
 
   return createPortal(
     <div ref={ref} className="term-ctx-menu" style={{ left, top }}>
@@ -249,6 +250,12 @@ function TermContextMenu({ menu, onClose, onCopy, onPaste, onSelectAll }: {
         onMouseDown={(e) => { e.preventDefault(); if (menu.hasSelection) onCopy(); }}
       >
         <span>{t('menu.copy')}</span><kbd>{mod}+C</kbd>
+      </button>
+      <button
+        className="term-ctx-item"
+        onMouseDown={(e) => { e.preventDefault(); onCopyAll(); }}
+      >
+        <span>{t('menu.copy_all')}</span>
       </button>
       <button
         className="term-ctx-item"
@@ -505,6 +512,31 @@ function TierTerminalImpl({
   const closeCtxMenu = useCallback(() => setCtxMenu(null), []);
 
   const t = useT();
+
+  // ── Copy feedback toast ──────────────────────────────────────────────────
+  // Every copy path (context menu, Ctrl/Cmd+C, Ctrl+Shift+C, OSC 52) used to
+  // write the clipboard silently — no confirmation the copy landed. Reuse
+  // CenterPanel's capsule toast style (.toast-notification is a global
+  // style), keyed by id so rapid back-to-back copies re-trigger the
+  // slideDownToast animation (it's `forwards` — runs once per mount).
+  const [copyToast, setCopyToast] = useState<{ msg: string; id: number } | null>(null);
+  useEffect(() => {
+    if (!copyToast) return;
+    const timer = setTimeout(() => setCopyToast(null), 3000);
+    return () => clearTimeout(timer);
+  }, [copyToast]);
+  // Ref so the once-only xterm init effect (keyboard handler, OSC 52) can
+  // reach the latest t() / state setter without re-running the effect.
+  const copyWithFeedbackRef = useRef<(text: string, lines?: number) => void>(() => {});
+  useEffect(() => {
+    copyWithFeedbackRef.current = (text, lines) => {
+      clipboardWrite(text);
+      setCopyToast({
+        msg: lines !== undefined ? t('term.copied_lines', { n: lines }) : t('term.copied'),
+        id: Date.now(),
+      });
+    };
+  });
 
   // Splash labels for registered AI CLIs come straight from the Rust
   // tool registry (lib/tool-info.ts). The pseudo-tools `remote` /
@@ -882,7 +914,7 @@ function TierTerminalImpl({
         // Copy: Ctrl+C / Cmd+C — only when text is selected (otherwise send SIGINT).
         if (cmdOrCtrl && e.code === 'KeyC') {
           if (term.hasSelection()) {
-            clipboardWrite(term.getSelection());
+            copyWithFeedbackRef.current(term.getSelection());
             return false;
           }
         }
@@ -912,7 +944,7 @@ function TierTerminalImpl({
 
         // Linux convention: Ctrl+Shift+C always copies, Ctrl+Shift+V always pastes
         if (e.ctrlKey && e.shiftKey && e.code === 'KeyC') {
-          if (term.hasSelection()) clipboardWrite(term.getSelection());
+          if (term.hasSelection()) copyWithFeedbackRef.current(term.getSelection());
           return false;
         }
         if (e.ctrlKey && e.shiftKey && e.code === 'KeyV') {
@@ -1032,7 +1064,7 @@ function TierTerminalImpl({
         if (payload === '?' || payload === '') return false;
         const bytes = Uint8Array.from(atob(payload), (ch) => ch.charCodeAt(0));
         const text = new TextDecoder().decode(bytes);
-        if (text) clipboardWrite(text);
+        if (text) copyWithFeedbackRef.current(text);
         return true;
       } catch {
         return false; // malformed base64 — not ours to handle
@@ -1925,7 +1957,32 @@ function TierTerminalImpl({
           onClose={closeCtxMenu}
           onCopy={() => {
             const text = xtermRef.current?.getSelection();
-            if (text) clipboardWrite(text);
+            if (text) copyWithFeedbackRef.current(text);
+            closeCtxMenu();
+          }}
+          onCopyAll={() => {
+            // Copy the whole buffer (scrollback + viewport) as plain text.
+            // Wrapped logical lines (soft-wrapped at the terminal width) are
+            // rejoined so a long command/paragraph pastes as one line, the
+            // same way xterm's own getSelection() treats them. Limitation of
+            // the medium, not the code: in an alt-screen fullscreen TUI the
+            // active buffer holds only the current viewport — there is no
+            // host scrollback to copy.
+            const term = xtermRef.current;
+            if (term) {
+              const buf = term.buffer.active;
+              const parts: string[] = [];
+              for (let i = 0; i < buf.length; i++) {
+                const line = buf.getLine(i);
+                if (!line) continue;
+                const text = line.translateToString(true); // trimRight
+                if (line.isWrapped && parts.length > 0) parts[parts.length - 1] += text;
+                else parts.push(text);
+              }
+              while (parts.length > 0 && parts[parts.length - 1] === '') parts.pop();
+              const text = parts.join('\n');
+              if (text) copyWithFeedbackRef.current(text, parts.length);
+            }
             closeCtxMenu();
           }}
           onPaste={async () => {
@@ -1946,6 +2003,18 @@ function TierTerminalImpl({
             closeCtxMenu();
           }}
         />
+      )}
+
+      {/* Copy feedback toast — same capsule style/animation as CenterPanel's
+          toast (global .toast-notification), portaled to body so it renders
+          above every terminal pane. Keyed by id to re-trigger the forwards
+          animation on back-to-back copies. */}
+      {copyToast && createPortal(
+        <div key={copyToast.id} className="toast-notification">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          {copyToast.msg}
+        </div>,
+        document.body
       )}
 
       {/* Gambit — the floating compose window — is rendered once at the App
