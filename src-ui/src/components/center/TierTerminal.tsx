@@ -12,6 +12,7 @@ import { memo, useEffect, useLayoutEffect, useRef, useState, useCallback } from 
 import { createPortal } from 'react-dom';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
+import { Unicode11Addon } from '@xterm/addon-unicode11';
 import { WebglAddon } from '@xterm/addon-webgl';
 import { clipboardRead, clipboardWrite, clipboardReadImage } from '../../lib/clipboard';
 import { subscribeTerminalEvents } from '../../lib/pty-event-bus';
@@ -553,11 +554,27 @@ function TierTerminalImpl({
       // shells the caret simply hides while the terminal is unfocused.
       cursorInactiveStyle: 'none',
       scrollback: 5000,
+      // Required to load Unicode11Addon below (xterm 6 gates the unicode
+      // provider API as proposed). No other proposed API is used.
+      allowProposedApi: true,
       theme: buildXtermTheme(theme, hasBg, termColorScheme, isRawShell),
     });
 
     const fit = new FitAddon();
     term.loadAddon(fit);
+
+    // Unicode 11 width tables. xterm's default V6 wcwidth scores common
+    // emoji as NARROW (✅ ❌ ⭐ 🚀 = 1 cell) while modern CLI frameworks
+    // (Claude Code's Ink, etc.) measure them as 2. Every table row
+    // containing one of these is then laid out 1 cell short per emoji: the
+    // fresh right border lands early and the PREVIOUS frame's border in
+    // that column is never overwritten — a stale border column that no
+    // repaint can fix (it's buffer layout, not rendering). That was the
+    // "涉及表格就错位 / 错位后不自愈" bug chased blindly in #110/#112.
+    // Registering the V11 provider aligns our cell accounting with the
+    // apps'. Same reason VS Code loads this addon in its terminal.
+    term.loadAddon(new Unicode11Addon());
+    term.unicode.activeVersion = '11';
 
     // Register focus function in the singleton focus registry.
     // CenterPanel handles the global focusin/mouseup listener and routes
