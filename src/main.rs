@@ -38,6 +38,13 @@ fn main() -> Result<()> {
             Some("__codex-hook") => hook_forwarder::run_codex_hook(),
             Some("__codex-notify") => hook_forwarder::run_codex_notify(&argv),
             Some("__kimi-hook") => hook_forwarder::run_kimi_hook(),
+            // Unknown `__`-prefixed subcommand: a hook config written by a
+            // NEWER build (or another install) pointing at an OLDER exe that
+            // doesn't know it yet (downgrade, dual install). Exit 0 quietly
+            // instead of falling through to a GUI launch inside the agent's
+            // hook spawn — a hanging/failing GUI there surfaces as
+            // "hook exited with code 1" in the agent's transcript.
+            Some(other) if other.starts_with("__") => std::process::exit(0),
             _ => {}
         }
     }

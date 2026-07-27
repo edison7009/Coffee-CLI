@@ -89,14 +89,23 @@ pub fn run_kimi_hook() -> ! {
 }
 
 fn forward_claude() -> Option<()> {
-    let ctx = HookCtx::from_env()?;
+    let Some(ctx) = HookCtx::from_env() else {
+        debug_log("__hook: no COFFEE_CLI_TAB_ID/PORT env — no-op");
+        return None;
+    };
 
     let mut buf = String::new();
     std::io::stdin().read_to_string(&mut buf).ok()?;
     // Tolerate a leading UTF-8 BOM — some shells/redirects prepend one and it
     // would otherwise break JSON parsing.
     let buf = buf.trim_start_matches('\u{feff}');
-    let data: Value = serde_json::from_str(buf).ok()?;
+    let data: Value = match serde_json::from_str(buf) {
+        Ok(d) => d,
+        Err(_) => {
+            debug_log("__hook: stdin JSON parse failed — no-op");
+            return None;
+        }
+    };
 
     let event = data
         .get("hook_event_name")
@@ -105,8 +114,40 @@ fn forward_claude() -> Option<()> {
         .to_string();
     let status = map_claude_status(&data, &event)?;
 
-    post(ctx.port, &ctx.tab_id, &ctx.tool, &status, &event);
+    let ok = post(ctx.port, &ctx.tab_id, &ctx.tool, &status, &event);
+    debug_log(&format!(
+        "__hook: event={} status={} post={}",
+        event,
+        status,
+        if ok { "ok" } else { "fail" }
+    ));
     Some(())
+}
+
+/// Debug trace, gated on COFFEE_HOOK_DEBUG=1. When set, appends one line per
+/// invocation to ~/.coffee-cli/hooks/hook-debug.log — agents surface hook
+/// failures as a bare "hook exited with code N" with no stderr, so this is
+/// the only way to see what the forwarder actually did. Off by default: the
+/// hot path stays silent and does zero file I/O.
+fn debug_log(msg: &str) {
+    if std::env::var_os("COFFEE_HOOK_DEBUG").is_none() {
+        return;
+    }
+    let Some(home) = dirs::home_dir() else { return };
+    let dir = home.join(".coffee-cli").join("hooks");
+    if std::fs::create_dir_all(&dir).is_err() {
+        return;
+    }
+    let ts = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let line = format!("[{}] {}\n", ts, msg);
+    let _ = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(dir.join("hook-debug.log"))
+        .and_then(|mut f| f.write_all(line.as_bytes()));
 }
 
 fn forward_codex(args: &[String]) -> Option<()> {
@@ -272,15 +313,16 @@ fn map_codex_status(event: &str) -> Option<String> {
 }
 
 /// One TCP connection per event to the loopback hook server. Every error is
-/// swallowed — the forwarder must never block the agent.
-fn post(port: u16, tab_id: &str, tool: &str, status: &str, event: &str) {
+/// swallowed — the forwarder must never block the agent. Returns whether the
+/// send succeeded (for the COFFEE_HOOK_DEBUG trace only).
+fn post(port: u16, tab_id: &str, tool: &str, status: &str, event: &str) -> bool {
     let payload = json!({
         "tab_id": tab_id,
         "tool": tool,
         "status": status,
         "event": event,
     });
-    let _ = send(port, &payload);
+    send(port, &payload).is_ok()
 }
 
 fn send(port: u16, payload: &Value) -> std::io::Result<()> {

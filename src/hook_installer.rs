@@ -716,7 +716,13 @@ fn patch_settings(path: &Path, command: &str) -> anyhow::Result<()> {
             .insert("hooks".into(), json!({}));
     }
 
-    let hook_cmd = json!({ "type": "command", "command": command });
+    // "shell": "bash" pins Claude Code's hook runner to Git Bash instead of
+    // its PowerShell fallback (used when Git Bash isn't detected). Under
+    // PowerShell a leading-quoted command like `"C:\…\coffee-cli.exe" __hook`
+    // is a parse error — PowerShell needs the `&` call operator — so the hook
+    // dies with exit 1 before our binary even starts. On macOS/Linux "bash"
+    // is already the default, so the field is a no-op there.
+    let hook_cmd = json!({ "type": "command", "command": command, "shell": "bash" });
 
     let hooks = root
         .get_mut("hooks")
