@@ -1633,8 +1633,9 @@ body.gambit-docked .multi-agent-grid-standalone {
 }
 
 /* Tab family — chrome / Explorer / TaskBoard tab strips go fully
-   transparent in glass. Active state indicated by text-1 color
-   contrast alone (source default). No container pill, no active
+   transparent in glass. Active state is indicated by brighter text-1
+   color plus the 2px top accent bar on .chrome-tab.active (box-shadow
+   survives the background strip below). No container pill, no active
    fill, no outline. Matches the "全部透明,只靠主背景半透层"
    architecture: every tab IS the body's --glass-tint — adding any
    local bg would stack a second visible layer.
@@ -1652,7 +1653,8 @@ body.gambit-docked .multi-agent-grid-standalone {
    re-strip here: every tab (active + hover included) stays fully transparent
    and shows the body's single --glass-tint / carbon mesh, instead of stacking
    an opaque --bg-terminal fill. The active tab is distinguished by brighter
-   text (rule above / --text-1), not a fill — the glass "no local layer" rule. */
+   text (rule above / --text-1) plus the 2px top accent bar — a box-shadow,
+   which this background strip doesn't remove. */
 :is([data-shape="glass"], [data-shape="carbon"]) .chrome-tab {
     background: transparent !important;
 }

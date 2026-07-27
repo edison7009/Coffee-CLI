@@ -46,7 +46,10 @@
   user-select: none;
   flex: 0 1 auto;
   max-width: 200px;
-  min-width: 0;
+  /* Content-sized width, but never narrower than this — short titles
+     (e.g. a codex tab titled "usage") otherwise shrink to a sliver that
+     reads as a different kind of control next to wider tabs. */
+  min-width: 120px;
   /* `transform` is part of the transition so siblings ease into their
    * shifted positions when another tab is being dragged past them
    * (browser-style slide-aside). The dragged tab itself overrides
@@ -63,6 +66,12 @@
 .chrome-tab.active {
   color: var(--text-1);
   background: var(--bg-terminal);
+  /* 2px accent bar across the top edge — the one active cue that survives
+     every shape. --bg-terminal ≈ --bg-app in all themes, and glass/carbon
+     strip the fill entirely (global.css), so fill+text alone left the
+     active tab nearly indistinguishable. sharp/panel keep their own 1px
+     variant via higher-specificity rules in global.css. */
+  box-shadow: inset 0 2px 0 0 var(--accent);
   z-index: 2;
   /* Prevent active tab from lagging behind during theme changes (flash bug) */
   transition: color 0.15s;
@@ -90,7 +99,9 @@
 /* The Chrome "flare" pseudo-elements that seamed the active tab into the
    terminal directly below it were removed when the strip moved up into the
    titlebar — there's no adjacent terminal to bridge into up here. The active
-   tab now reads via its --bg-terminal fill alone (WT-style flat tab). */
+   tab reads via its --bg-terminal fill plus a 2px top accent bar (see
+   .chrome-tab.active) — the bar is what carries the active state in the
+   transparent shapes (glass/carbon) where the fill is stripped. */
 
 .chrome-tab-new {
   width: 28px;
