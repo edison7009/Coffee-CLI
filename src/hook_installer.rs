@@ -210,8 +210,10 @@ fn install_claude(home: &Path) {
 
     // The hook command is the Coffee CLI binary itself: `<exe> __hook`. No
     // interpreter dependency — this is what fixes the "python not found"
-    // hook error on Windows machines without Python.
-    let command = match claude_hook_command() {
+    // hook error on Windows machines without Python. The handler entry is
+    // shell-pinned (bash or powershell, depending on whether Git Bash is
+    // detectable) — see claude_hook_entry for why.
+    let hook_entry = match claude_hook_entry() {
         Some(c) => c,
         None => {
             eprintln!("[hook-installer] current_exe() failed — cannot install claude hook");
@@ -223,7 +225,7 @@ fn install_claude(home: &Path) {
     // tried in v1.8.5 but hooks declared there fire unreliably under Claude
     // Code v2.x (workspace-trust gate, cf. anthropics/claude-code#11519).
     let primary = home.join(".claude").join("settings.json");
-    if let Err(e) = patch_settings(&primary, &command) {
+    if let Err(e) = patch_settings(&primary, &hook_entry) {
         eprintln!(
             "[hook-installer] failed to patch {}: {}",
             primary.display(),
@@ -690,7 +692,7 @@ fn patch_codex_config(path: &Path, exe: &Path) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn patch_settings(path: &Path, command: &str) -> anyhow::Result<()> {
+fn patch_settings(path: &Path, hook_cmd: &Value) -> anyhow::Result<()> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
     }
@@ -716,14 +718,8 @@ fn patch_settings(path: &Path, command: &str) -> anyhow::Result<()> {
             .insert("hooks".into(), json!({}));
     }
 
-    // "shell": "bash" pins Claude Code's hook runner to Git Bash instead of
-    // its PowerShell fallback (used when Git Bash isn't detected). Under
-    // PowerShell a leading-quoted command like `"C:\…\coffee-cli.exe" __hook`
-    // is a parse error — PowerShell needs the `&` call operator — so the hook
-    // dies with exit 1 before our binary even starts. On macOS/Linux "bash"
-    // is already the default, so the field is a no-op there.
-    let hook_cmd = json!({ "type": "command", "command": command, "shell": "bash" });
-
+    // The handler entry (command + shell) is built by claude_hook_entry —
+    // bash or powershell depending on whether Git Bash is detectable.
     let hooks = root
         .get_mut("hooks")
         .and_then(|h| h.as_object_mut())
@@ -798,6 +794,70 @@ fn hook_command(subcommand: &str) -> Option<String> {
 
 fn claude_hook_command() -> Option<String> {
     hook_command(HOOK_SUBCOMMAND)
+}
+
+/// Build the Claude Code hook handler entry (`{"type","command","shell"}`).
+/// Two shapes, chosen by whether Git Bash is detectable on this machine:
+///
+///   - Git Bash present → `{"command": "\"<exe>\" __hook", "shell": "bash"}`.
+///     Pinning "shell": "bash" defeats Claude Code's PowerShell fallback
+///     (used on Windows when Git Bash isn't detected): under PowerShell a
+///     leading-quoted command is a parse error — PowerShell needs the `&`
+///     call operator — so the hook dies with exit 1 before our binary even
+///     starts. On macOS/Linux "bash" is already the default, no-op there.
+///   - No Git Bash → `{"command": "& \"<exe>\" __hook", "shell": "powershell"}`.
+///     The `&`-prefixed form parses and runs under PowerShell (verified:
+///     exit 0), so the hook keeps working on machines where Claude would
+///     otherwise run it through the PowerShell fallback.
+///
+/// Both forms end with the bare `__hook` token, so is_coffee_entry's
+/// last-token match migrates older entries in place either way.
+fn claude_hook_entry() -> Option<Value> {
+    #[cfg(target_os = "windows")]
+    if !git_bash_available() {
+        let command = claude_hook_command()?;
+        // `"<exe>" __hook` → `& "<exe>" __hook`
+        return Some(json!({
+            "type": "command",
+            "command": format!("& {}", command),
+            "shell": "powershell",
+        }));
+    }
+    let command = claude_hook_command()?;
+    Some(json!({
+        "type": "command",
+        "command": command,
+        "shell": "bash",
+    }))
+}
+
+/// Mirror of Claude Code's Git Bash probe (Windows): CLAUDE_CODE_GIT_BASH_PATH,
+/// the two fixed Program Files install paths, then PATH. Used to decide which
+/// shell Claude will run hooks through — when this returns false, Claude
+/// falls back to PowerShell and our hook entry must use the `&`-form command.
+#[cfg(target_os = "windows")]
+fn git_bash_available() -> bool {
+    if let Some(p) = std::env::var_os("CLAUDE_CODE_GIT_BASH_PATH") {
+        if PathBuf::from(p).is_file() {
+            return true;
+        }
+    }
+    for fixed in [
+        r"C:\Program Files\Git\bin\bash.exe",
+        r"C:\Program Files (x86)\Git\bin\bash.exe",
+    ] {
+        if Path::new(fixed).is_file() {
+            return true;
+        }
+    }
+    if let Some(paths) = std::env::var_os("PATH") {
+        for dir in std::env::split_paths(&paths) {
+            if dir.join("bash.exe").is_file() {
+                return true;
+            }
+        }
+    }
+    false
 }
 
 /// Codex hooks subcommand — stdin protocol (like Claude's __hook), installed
