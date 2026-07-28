@@ -412,7 +412,7 @@ const SvgPlus = ({ active }: { active: boolean }) => (
 // drop obsolete IDs from `coffee_pinned_items` (e.g. `agent:vibeid`
 // from back when /vibeid was a launcher tool, before it became a
 // regular skill). Without this, retired pins inflate the
-// "Agents N/MAX_PINS" counter on the library tab — the stale cards
+// "Agents N" counter on the library tab — the stale cards
 // render nothing because no AGENT_CATALOG entry matches, but they
 // still count. Update this set when adding or removing AGENT_CATALOG
 // entries below.
@@ -466,9 +466,6 @@ export function CenterPanel() {
   const [showLibrary, setShowLibrary] = useState(false);
   const [libraryTab, setLibraryTab] = useState<'agents' | 'skills'>('agents');
   const [pinnedItems, setPinnedItems] = useState<string[]>(() => {
-    // Hard cap must match MAX_PINS constant below. Inlined as a literal
-    // because MAX_PINS is declared after this initializer runs.
-    const CAP = 6;
     try {
       const stored = localStorage.getItem('coffee_pinned_items');
       if (stored !== null) {
@@ -485,20 +482,17 @@ export function CenterPanel() {
         // `agent:vibeid` after /vibeid became a skill, or the other retired
         // coordinated tools `agent:two-agent` / `agent:three-agent` /
         // `agent:hyper-agent`). These ghosts render nothing but inflate the
-        // "Agents N/6" counter.
+        // "Agents N" counter.
         arr = arr.filter((id: unknown) =>
           typeof id === 'string' && id.startsWith('agent:') && VALID_PIN_KEYS.has(id.slice('agent:'.length))
         );
-        // Defensive cap: historical bugs (e.g. earlier migrations that
-        // pushed past the limit) may have left > CAP items in storage.
-        // Trim and persist back so the state stays consistent.
-        if (arr.length > CAP) arr = arr.slice(0, CAP);
         try { localStorage.setItem('coffee_pinned_items', JSON.stringify(arr)); } catch {}
         return arr;
       }
-      // First launch: pre-pin 6 useful defaults so desktop shows a full MAX_PINS
-      // grid out of the box (4 AI CLIs covering major providers + 2 utilities).
-      // Returning users' pin choices are respected (stored !== null path above).
+      // First launch: pre-pin a useful default set so the desktop isn't
+      // empty out of the box (4 AI CLIs covering major providers + 2
+      // utilities). Returning users' pin choices are respected (stored !==
+      // null path above).
       const defaults = [
         'agent:claude',
         'agent:codex',
@@ -511,8 +505,6 @@ export function CenterPanel() {
       return defaults;
     } catch { return []; }
   });
-
-  const MAX_PINS = 6;
 
   // Agent list is fully local (baked into BUILTIN_AI_CLI_FALLBACK below) — no
   // loading / cache state here. The remote catalog fetch at
@@ -611,7 +603,6 @@ export function CenterPanel() {
       if (isPinned) {
         next = prev.filter(x => x !== id);
       } else {
-        if (prev.length >= MAX_PINS) return prev;
         next = [...prev, id];
       }
       try { localStorage.setItem('coffee_pinned_items', JSON.stringify(next)); } catch {}
@@ -1969,7 +1960,7 @@ export function CenterPanel() {
                 className={`library-tab ${libraryTab === 'agents' ? 'active' : ''}`}
                 onClick={() => setLibraryTab('agents')}
               >
-                Agents {pinnedItems.length}/{MAX_PINS}
+                Agents {pinnedItems.length}
               </button>
               <button
                 className={`library-tab ${libraryTab === 'skills' ? 'active' : ''}`}
@@ -2008,4 +1999,3 @@ export function CenterPanel() {
     </>
   );
 }
-

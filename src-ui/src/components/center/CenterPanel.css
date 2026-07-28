@@ -301,7 +301,13 @@
   height: 100%;
   flex-shrink: 0;
   display: flex;
-  align-items: center;
+  /* Keep the page's scroll origin at its actual top. Centering a tall
+     flex item here gives it a negative cross-axis offset, so its first
+     rows sit above scrollTop: 0 and cannot be reached after pinning many
+     tools. Desktop content centers itself with auto margins below instead:
+     those margins absorb spare space when it fits, but resolve to zero
+     when it overflows. */
+  align-items: flex-start;
   justify-content: center;
   overflow-y: auto;
 }
@@ -350,6 +356,13 @@
   max-width: 628px;
   width: 100%;
   padding: 32px;
+}
+
+/* Preserve the sparse-desktop composition without sacrificing a reachable
+   scroll origin for a long pinned grid. Library pages manage their own top
+   alignment and header clearance, so this is deliberately desktop-only. */
+.launchpad-page:not(.library-page) .launchpad-inner {
+  margin-block: auto;
 }
 
 .launchpad-grid {
