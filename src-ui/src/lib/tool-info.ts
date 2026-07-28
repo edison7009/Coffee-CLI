@@ -47,3 +47,24 @@ export async function loadToolInfo(): Promise<void> {
 export function getToolDisplayName(id: string): string {
   return cache?.get(id) ?? id;
 }
+
+// Tabs that show the status-grid ("Dynamic Island") indicator: every AI CLI.
+// Hook-wired tools (claude/codex/opencode/mimocode/hermes/kimicode) drive it
+// live off session.agentStatus; the rest have no status bus and sit at
+// static 'idle' green — the "fake island" baseline so every AI-CLI tab reads
+// consistently. Non-CLI tabs (terminal/remote/history/splits/installer) get
+// no indicator.
+export const TAB_STATUS_TOOLS = new Set<string>([
+  'claude', 'codex', 'grok', 'opencode', 'mimocode', 'hermes',
+  'antigravity', 'qwen', 'openclaw',
+  'pi', 'crush', 'aider', 'kimicode', 'goose', 'copilot',
+]);
+
+// Tools whose last reply can be read back from an on-disk transcript —
+// gates TierTerminal's "copy last reply" button / context-menu item.
+// Backend: get_last_agent_reply in src/server.rs (claude transcript_path,
+// codex rollout, kimi wire.jsonl, hermes state.db). Other AI CLIs have no
+// transcript reader yet, so they don't get the button.
+export const COPY_REPLY_TOOLS = new Set<string>([
+  'claude', 'codex', 'kimicode', 'hermes',
+]);

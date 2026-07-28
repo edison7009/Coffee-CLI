@@ -114,7 +114,7 @@ fn forward_claude() -> Option<()> {
         .to_string();
     let status = map_claude_status(&data, &event)?;
 
-    let ok = post(ctx.port, &ctx.tab_id, &ctx.tool, &status, &event);
+    let ok = post(ctx.port, &ctx.tab_id, &ctx.tool, &status, &event, Some(&data));
     debug_log(&format!(
         "__hook: event={} status={} post={}",
         event,
@@ -173,7 +173,7 @@ fn forward_codex(args: &[String]) -> Option<()> {
         .to_string();
     let status = map_codex_status(&event)?;
 
-    post(ctx.port, &ctx.tab_id, &ctx.tool, &status, &event);
+    post(ctx.port, &ctx.tab_id, &ctx.tool, &status, &event, Some(&data));
     Some(())
 }
 
@@ -201,7 +201,7 @@ fn forward_codex_hook() -> Option<()> {
         .to_string();
     let status = map_codex_hook_status(&event)?;
 
-    post(ctx.port, &ctx.tab_id, &ctx.tool, &status, &event);
+    post(ctx.port, &ctx.tab_id, &ctx.tool, &status, &event, Some(&data));
     Some(())
 }
 
@@ -236,7 +236,7 @@ fn forward_kimi() -> Option<()> {
     // Stop/StopFailure fire, and let the frontend 30s auto-idle cover a
     // real turn end. mid-turn green is worse than a late green.
     if let Some(status) = map_kimi_status(&event) {
-        post(ctx.port, &ctx.tab_id, &ctx.tool, status, &event);
+        post(ctx.port, &ctx.tab_id, &ctx.tool, status, &event, Some(&data));
     }
     Some(())
 }
@@ -315,13 +315,32 @@ fn map_codex_status(event: &str) -> Option<String> {
 /// One TCP connection per event to the loopback hook server. Every error is
 /// swallowed — the forwarder must never block the agent. Returns whether the
 /// send succeeded (for the COFFEE_HOOK_DEBUG trace only).
-fn post(port: u16, tab_id: &str, tool: &str, status: &str, event: &str) -> bool {
-    let payload = json!({
+///
+/// `meta` is the tool's raw hook payload when available: `session_id` /
+/// `transcript_path` / `cwd` are lifted into the posted JSON so the hook
+/// server can map tab → transcript for the copy-last-response feature.
+/// Tools whose payloads lack those keys simply contribute nothing.
+fn post(
+    port: u16,
+    tab_id: &str,
+    tool: &str,
+    status: &str,
+    event: &str,
+    meta: Option<&Value>,
+) -> bool {
+    let mut payload = json!({
         "tab_id": tab_id,
         "tool": tool,
         "status": status,
         "event": event,
     });
+    if let Some(m) = meta {
+        for key in ["session_id", "transcript_path", "cwd"] {
+            if let Some(v) = m.get(key).and_then(|v| v.as_str()) {
+                payload[key] = json!(v);
+            }
+        }
+    }
     send(port, &payload).is_ok()
 }
 

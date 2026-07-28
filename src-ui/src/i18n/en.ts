@@ -23,6 +23,11 @@ export const en = {
   'menu.copy_resume_command': 'Copy resume command',
   'menu.copy_full_path': 'Copy full path',
 
+  // Terminal
+  'term.copy_last_reply': 'Copy last reply',
+  'term.copied': 'Copied',
+  'term.no_reply': 'No reply to copy yet',
+
 
   // Tools
   'tool.terminal': 'Terminal',

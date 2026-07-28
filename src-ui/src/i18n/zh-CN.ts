@@ -22,6 +22,11 @@ export const zhCN = {
   'menu.copy_resume_command': '复制恢复命令',
   'menu.copy_full_path': '复制完整路径',
 
+  // Terminal
+  'term.copy_last_reply': '复制最后回复',
+  'term.copied': '已复制',
+  'term.no_reply': '还没有可复制的回复',
+
 
   // Tools
   'tool.terminal': '终端',

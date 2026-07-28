@@ -22,6 +22,11 @@ export const pt = {
   'menu.copy_resume_command': 'Copiar comando de retomada',
   'menu.copy_full_path': 'Copiar caminho completo',
 
+  // Terminal
+  'term.copy_last_reply': 'Copiar última resposta',
+  'term.copied': 'Copiado',
+  'term.no_reply': 'Ainda não há resposta para copiar',
+
 
   // Tools
   'tool.terminal': 'Terminal',

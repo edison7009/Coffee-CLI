@@ -1811,15 +1811,12 @@ fn parse_qwen_session_jsonl(file_path: &std::path::Path) -> Option<SavedSession>
     })
 }
 
-#[tauri::command]
-fn read_native_session(file_path: String) -> Result<String, String> {
-    let path = std::path::Path::new(&file_path);
-
-    // Only allow .jsonl / .json files
-    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
-    if ext != "jsonl" && ext != "json" {
-        return Err("Only .jsonl and .json files are allowed".to_string());
-    }
+/// Canonicalize `file_path` and verify it sits under a known agent data
+/// directory. Shared by `read_native_session` (frontend-supplied paths) and
+/// `get_last_agent_reply` (hook-supplied transcript paths) so both get the
+/// same `..`/symlink-traversal screening before any bytes are read.
+fn canonical_agent_data_path(file_path: &str) -> Result<std::path::PathBuf, String> {
+    let path = std::path::Path::new(file_path);
 
     // Canonicalize to resolve any `..` or symlink traversal
     let canonical_raw = path.canonicalize().map_err(|e| format!("Invalid path: {e}"))?;
@@ -1883,6 +1880,20 @@ fn read_native_session(file_path: String) -> Result<String, String> {
         return Err("Access denied: path is outside allowed agent data directories".to_string());
     }
 
+    Ok(canonical)
+}
+
+#[tauri::command]
+fn read_native_session(file_path: String) -> Result<String, String> {
+    let path = std::path::Path::new(&file_path);
+
+    // Only allow .jsonl / .json files
+    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+    if ext != "jsonl" && ext != "json" {
+        return Err("Only .jsonl and .json files are allowed".to_string());
+    }
+
+    let canonical = canonical_agent_data_path(&file_path)?;
     std::fs::read_to_string(&canonical).map_err(|e| e.to_string())
 }
 
@@ -2971,6 +2982,488 @@ fn read_hermes_session(session_token: String) -> Result<String, String> {
     Ok(out)
 }
 
+// ─── Last Agent Reply (copy-last-response) ─────────────────────────────────
+//
+// `get_last_agent_reply` returns the tab's most recent assistant reply as
+// plain text (for the frontend's "copy last response" action). The hook
+// server caches per-tab session metadata (`hook_server::session_meta`) —
+// transcript path for Claude, session id / cwd for the rest — and each
+// tool branch below locates the transcript from that, then scans the file
+// BACKWARDS for the last assistant text. Transcripts grow to tens of MB,
+// so nothing here reads a whole file: `TailLines` pulls 64 KB chunks off
+// the end until a matching row shows up (a few hundred KB in practice),
+// capped at REPLY_SCAN_MAX_BYTES.
+
+/// How far back from EOF to scan for an assistant row before giving up.
+/// Assistant rows sit between tool_result rows, so the hit usually lands
+/// within a few hundred KB; 8 MB covers pathological tool-output spam.
+const REPLY_SCAN_MAX_BYTES: u64 = 8 * 1024 * 1024;
+
+/// Reverse line reader over the tail of a file. Reads backwards in 64 KB
+/// seeks (never loading the whole transcript) and yields complete lines
+/// from last to first. Stops once `max_bytes` have been pulled; the partial
+/// line straddling the scan boundary is dropped, so callers must tolerate
+/// missing the oldest line in the window.
+struct TailLines {
+    file: std::fs::File,
+    /// Offset of the first byte not yet pulled into `carry`.
+    next_read_end: u64,
+    /// Total bytes read so far (capped at `max_bytes`).
+    read: u64,
+    max_bytes: u64,
+    /// Undispensed bytes, oldest first. May hold a partial leading line
+    /// until `next_read_end` reaches 0.
+    carry: Vec<u8>,
+}
+
+impl TailLines {
+    fn open(path: &std::path::Path, max_bytes: u64) -> std::io::Result<Self> {
+        let file = std::fs::File::open(path)?;
+        let len = file.metadata()?.len();
+        Ok(Self { file, next_read_end: len, read: 0, max_bytes, carry: Vec::new() })
+    }
+
+    /// Pull older 64 KB chunks into `carry` until it holds at least one
+    /// newline, the file start is reached, or the byte cap is hit.
+    fn fill(&mut self) -> std::io::Result<()> {
+        use std::io::{Read, Seek, SeekFrom};
+        const CHUNK: u64 = 64 * 1024;
+        while !self.carry.contains(&b'\n') && self.next_read_end > 0 && self.read < self.max_bytes {
+            let size = CHUNK.min(self.next_read_end).min(self.max_bytes - self.read);
+            if size == 0 {
+                break;
+            }
+            let start = self.next_read_end - size;
+            self.file.seek(SeekFrom::Start(start))?;
+            let mut chunk = vec![0u8; size as usize];
+            self.file.read_exact(&mut chunk)?;
+            chunk.extend_from_slice(&self.carry);
+            self.carry = chunk;
+            self.next_read_end = start;
+            self.read += size;
+        }
+        Ok(())
+    }
+}
+
+impl Iterator for TailLines {
+    type Item = String;
+
+    fn next(&mut self) -> Option<String> {
+        loop {
+            if let Some(pos) = self.carry.iter().rposition(|&b| b == b'\n') {
+                let mut line = self.carry.split_off(pos + 1);
+                self.carry.pop(); // drop the '\n' itself
+                if line.last() == Some(&b'\r') {
+                    line.pop();
+                }
+                return Some(String::from_utf8_lossy(&line).into_owned());
+            }
+            if self.fill().is_err() {
+                return None;
+            }
+            if self.carry.contains(&b'\n') {
+                continue;
+            }
+            if self.next_read_end == 0 {
+                // File start reached: `carry` is the first line.
+                if self.carry.is_empty() {
+                    return None;
+                }
+                let mut line = std::mem::take(&mut self.carry);
+                if line.last() == Some(&b'\r') {
+                    line.pop();
+                }
+                return Some(String::from_utf8_lossy(&line).into_owned());
+            }
+            // Byte cap hit mid-line: the partial oldest line is unusable.
+            return None;
+        }
+    }
+}
+
+/// Join the `text` of every text block in a message `content` array.
+/// Claude assistant blocks are `{"type":"text"}`, Codex `{"type":"output_text"}`;
+/// thinking / tool_use / input_text blocks are skipped. Mirrors the block
+/// handling in `parse_agent_jsonl` / `parse_codex_session_jsonl`.
+fn join_text_blocks(content: Option<&serde_json::Value>) -> String {
+    let Some(arr) = content.and_then(|c| c.as_array()) else {
+        return String::new();
+    };
+    arr.iter()
+        .filter(|b| matches!(b.get("type").and_then(|t| t.as_str()), Some("text") | Some("output_text")))
+        .filter_map(|b| b.get("text").and_then(|t| t.as_str()))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// Separator- and (on Windows) case-insensitive cwd comparison. Hooks report
+/// `E:\proj` while session files may record `E:/proj`; treat them as equal.
+fn same_path(a: &str, b: &str) -> bool {
+    let norm = |s: &str| {
+        let s = s.replace('\\', "/");
+        let s = s.trim_end_matches('/');
+        #[cfg(windows)]
+        { s.to_lowercase() }
+        #[cfg(not(windows))]
+        { s.to_string() }
+    };
+    norm(a) == norm(b)
+}
+
+/// Normalize a raw agent reply for display/clipboard: strip ANSI escape
+/// sequences (same pattern as terminal.rs's output stripper), collapse runs
+/// of blank lines to a single blank line, trim the whole thing.
+fn clean_agent_reply(raw: &str) -> String {
+    static ANSI_RE: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+    let re = ANSI_RE.get_or_init(|| {
+        regex::Regex::new(r"\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\].*?(?:\x07|\x1b\\)|\x1b.").unwrap()
+    });
+    let stripped = re.replace_all(raw, "");
+    let mut out = String::with_capacity(stripped.len());
+    let mut last_blank = true; // leading blanks collapse into the final trim
+    for line in stripped.lines() {
+        let line = line.trim_end();
+        if line.is_empty() {
+            if last_blank {
+                continue;
+            }
+            last_blank = true;
+        } else {
+            last_blank = false;
+        }
+        out.push_str(line);
+        out.push('\n');
+    }
+    out.trim().to_string()
+}
+
+/// Claude branch: the hook payload carries `transcript_path` pointing
+/// straight at the session JSONL. Screened through the same canonicalize +
+/// allowlist gate as `read_native_session` before reading.
+fn last_claude_reply(meta: &crate::hook_server::SessionMeta) -> Result<String, String> {
+    let transcript = meta
+        .transcript_path
+        .as_deref()
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| "no transcript path for tab yet".to_string())?;
+    let canonical = canonical_agent_data_path(transcript)?;
+    scan_claude_tail(&canonical)
+}
+
+/// Tail-scan a Claude transcript for the last assistant text. Assistant rows
+/// look like `{"type":"assistant","message":{"role":"assistant","content":[
+/// {"type":"text","text":...},{"type":"thinking",...},{"type":"tool_use",...}]}}`;
+/// the first row (from EOF) with at least one text block wins.
+fn scan_claude_tail(path: &std::path::Path) -> Result<String, String> {
+    let lines = TailLines::open(path, REPLY_SCAN_MAX_BYTES)
+        .map_err(|e| format!("open transcript: {e}"))?;
+    for line in lines {
+        let Ok(v) = serde_json::from_str::<serde_json::Value>(&line) else { continue };
+        if v.get("type").and_then(|t| t.as_str()) != Some("assistant") {
+            continue;
+        }
+        // Sidechain rows are Task-subagent turns, not the tab's main reply.
+        if v.get("isSidechain").and_then(|b| b.as_bool()).unwrap_or(false) {
+            continue;
+        }
+        let Some(msg) = v.get("message") else { continue };
+        if msg.get("role").and_then(|r| r.as_str()) != Some("assistant") {
+            continue;
+        }
+        let text = join_text_blocks(msg.get("content"));
+        // Assistant turns with only thinking/tool_use blocks: keep scanning.
+        if !text.trim().is_empty() {
+            return Ok(text);
+        }
+    }
+    Err("no assistant text found in transcript tail".to_string())
+}
+
+/// Recursively collect `rollout-*.jsonl` under `~/.codex/sessions/<YYYY>/<MM>/<DD>/`
+/// with mtimes. Shallow tree (3 fixed levels), so a plain recursive walk is fine.
+fn collect_codex_rollouts(dir: &std::path::Path, out: &mut Vec<(std::time::SystemTime, std::path::PathBuf)>) {
+    let Ok(entries) = std::fs::read_dir(dir) else { return };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            collect_codex_rollouts(&path, out);
+        } else if entry.file_name().to_string_lossy().starts_with("rollout-")
+            && path.extension().and_then(|e| e.to_str()) == Some("jsonl")
+        {
+            let mtime = entry
+                .metadata()
+                .and_then(|m| m.modified())
+                .unwrap_or(std::time::SystemTime::UNIX_EPOCH);
+            out.push((mtime, path));
+        }
+    }
+}
+
+/// Codex branch: no direct transcript path in the notify payload, so locate
+/// the rollout by walking `~/.codex/sessions` newest-first and matching the
+/// first row's `session_meta.payload` against the tab's session id (exact)
+/// or cwd (see `parse_codex_session_jsonl` for the row schema). Then tail-scan
+/// that file for the last `response_item` assistant message.
+fn last_codex_reply(meta: &crate::hook_server::SessionMeta) -> Result<String, String> {
+    use std::io::BufRead;
+    let home = dirs::home_dir().ok_or_else(|| "no home dir".to_string())?;
+    let root = home.join(".codex").join("sessions");
+    let mut rollouts: Vec<(std::time::SystemTime, std::path::PathBuf)> = Vec::new();
+    collect_codex_rollouts(&root, &mut rollouts);
+    rollouts.sort_by(|a, b| b.0.cmp(&a.0));
+    // The tab's rollout is normally among the newest handful; cap the
+    // first-row probes so a huge archive can't stall the command.
+    rollouts.truncate(50);
+
+    for (_, path) in &rollouts {
+        let Ok(file) = std::fs::File::open(path) else { continue };
+        let Some(Ok(first)) = std::io::BufReader::new(file).lines().next() else { continue };
+        let Ok(v) = serde_json::from_str::<serde_json::Value>(&first) else { continue };
+        if v.get("type").and_then(|t| t.as_str()) != Some("session_meta") {
+            continue;
+        }
+        let Some(payload) = v.get("payload") else { continue };
+        let id_match = meta.session_id.as_deref().is_some_and(|want| {
+            payload.get("session_id").and_then(|x| x.as_str()) == Some(want)
+                || payload.get("id").and_then(|x| x.as_str()) == Some(want)
+        });
+        // cwd match doubles as the fallback locator; sub-agent rollouts share
+        // the parent's cwd, so exclude them or they'd shadow the main session.
+        let cwd_match = meta.cwd.as_deref().is_some_and(|want| {
+            payload.get("cwd").and_then(|x| x.as_str()).is_some_and(|c| same_path(c, want))
+        }) && !is_codex_subagent_session(payload);
+        if !id_match && !cwd_match {
+            continue;
+        }
+        let lines = TailLines::open(path, REPLY_SCAN_MAX_BYTES)
+            .map_err(|e| format!("open rollout: {e}"))?;
+        for line in lines {
+            let Ok(v) = serde_json::from_str::<serde_json::Value>(&line) else { continue };
+            if v.get("type").and_then(|t| t.as_str()) != Some("response_item") {
+                continue;
+            }
+            let Some(p) = v.get("payload") else { continue };
+            if p.get("type").and_then(|t| t.as_str()) != Some("message")
+                || p.get("role").and_then(|r| r.as_str()) != Some("assistant")
+            {
+                continue;
+            }
+            let text = join_text_blocks(p.get("content"));
+            if !text.trim().is_empty() {
+                return Ok(text);
+            }
+        }
+        return Err("no assistant text found in rollout tail".to_string());
+    }
+    Err("no codex rollout matches this tab".to_string())
+}
+
+/// Locate the tab's `<sessionDir>/agents/main/wire.jsonl`. Exact session-id
+/// lookup in `session_index.jsonl` first (same index `find_kimi_sessions`
+/// reads), then newest index entry whose workDir matches the tab's cwd, then
+/// a newest-mtime walk over `sessions/wd_*/session_*/agents/main/wire.jsonl`.
+fn locate_kimi_wire(
+    root: &std::path::Path,
+    meta: &crate::hook_server::SessionMeta,
+) -> Option<std::path::PathBuf> {
+    let wire_of = |dir: &std::path::Path| {
+        let w = dir.join("agents").join("main").join("wire.jsonl");
+        if w.is_file() { Some(w) } else { None }
+    };
+    if let Ok(index) = std::fs::read_to_string(root.join("session_index.jsonl")) {
+        let mut cwd_best: Option<(std::time::SystemTime, std::path::PathBuf)> = None;
+        for line in index.lines() {
+            let Ok(v) = serde_json::from_str::<serde_json::Value>(line) else { continue };
+            let session_id = v.get("sessionId").and_then(|x| x.as_str()).unwrap_or("");
+            let session_dir = v.get("sessionDir").and_then(|x| x.as_str()).unwrap_or("");
+            let work_dir = v.get("workDir").and_then(|x| x.as_str()).unwrap_or("");
+            if session_dir.is_empty() {
+                continue;
+            }
+            let dir = std::path::PathBuf::from(session_dir);
+            if meta.session_id.as_deref().is_some_and(|want| want == session_id) {
+                if let Some(w) = wire_of(&dir) {
+                    return Some(w);
+                }
+            }
+            if meta.cwd.as_deref().is_some_and(|want| !work_dir.is_empty() && same_path(work_dir, want)) {
+                let mtime = std::fs::metadata(dir.join("state.json"))
+                    .and_then(|m| m.modified())
+                    .unwrap_or(std::time::SystemTime::UNIX_EPOCH);
+                if cwd_best.as_ref().is_none_or(|(t, _)| mtime > *t) {
+                    cwd_best = Some((mtime, dir));
+                }
+            }
+        }
+        if let Some((_, dir)) = cwd_best {
+            if let Some(w) = wire_of(&dir) {
+                return Some(w);
+            }
+        }
+    }
+    // Fallback: newest wire.jsonl anywhere under sessions/wd_*/.
+    let mut best: Option<(std::time::SystemTime, std::path::PathBuf)> = None;
+    let Ok(wd_dirs) = std::fs::read_dir(root.join("sessions")) else { return None };
+    for wd in wd_dirs.flatten() {
+        let wd_path = wd.path();
+        if !wd_path.is_dir() {
+            continue;
+        }
+        let Ok(sess_dirs) = std::fs::read_dir(&wd_path) else { continue };
+        for sess in sess_dirs.flatten() {
+            let Some(w) = wire_of(&sess.path()) else { continue };
+            let mtime = std::fs::metadata(&w)
+                .and_then(|m| m.modified())
+                .unwrap_or(std::time::SystemTime::UNIX_EPOCH);
+            if best.as_ref().is_none_or(|(t, _)| mtime > *t) {
+                best = Some((mtime, w));
+            }
+        }
+    }
+    best.map(|(_, w)| w)
+}
+
+/// Kimi Code branch: wire.jsonl carries the assistant stream as
+/// `{"type":"context.append_loop_event","event":{"type":"content.part",
+/// "part":{"type":"text","text":...}}}` rows (thinking arrives as
+/// `part.type=="think"` — skipped). Tail-scan for the last text part; also
+/// accept the `context.append_message` assistant-row shape as a fallback.
+fn last_kimi_reply(meta: &crate::hook_server::SessionMeta) -> Result<String, String> {
+    let home = dirs::home_dir().ok_or_else(|| "no home dir".to_string())?;
+    let root = kimi_root(&home).ok_or_else(|| "kimi data root not found".to_string())?;
+    let wire = locate_kimi_wire(&root, meta)
+        .ok_or_else(|| "no kimi session found for this tab".to_string())?;
+    let lines = TailLines::open(&wire, REPLY_SCAN_MAX_BYTES)
+        .map_err(|e| format!("open wire.jsonl: {e}"))?;
+    for line in lines {
+        let Ok(v) = serde_json::from_str::<serde_json::Value>(&line) else { continue };
+        let row_type = v.get("type").and_then(|t| t.as_str()).unwrap_or("");
+        if row_type == "context.append_loop_event" {
+            let Some(event) = v.get("event") else { continue };
+            if event.get("type").and_then(|t| t.as_str()) != Some("content.part") {
+                continue;
+            }
+            let Some(part) = event.get("part") else { continue };
+            if part.get("type").and_then(|t| t.as_str()) != Some("text") {
+                continue;
+            }
+            if let Some(text) = part.get("text").and_then(|t| t.as_str()) {
+                if !text.trim().is_empty() {
+                    return Ok(text.to_string());
+                }
+            }
+            continue;
+        }
+        if row_type == "context.append_message" {
+            let Some(msg) = v.get("message") else { continue };
+            if msg.get("role").and_then(|r| r.as_str()) != Some("assistant") {
+                continue;
+            }
+            let text = join_text_blocks(msg.get("content"));
+            if !text.trim().is_empty() {
+                return Ok(text);
+            }
+        }
+    }
+    Err("no assistant text found in wire.jsonl tail".to_string())
+}
+
+/// Hermes branch: query `state.db` directly (same read-only flags and
+/// content decoding as `read_hermes_session`). The tab's session token comes
+/// from the hook payload; when absent, fall back to the newest non-archived
+/// session whose cwd matches the tab's (mirrors `find_hermes_sessions_sqlite`'s
+/// row schema). NOTE: Hermes isn't installed on the dev machine — this path
+/// is verified by code review against the schema, not by a live run.
+fn last_hermes_reply(meta: &crate::hook_server::SessionMeta) -> Result<String, String> {
+    let home = dirs::home_dir().ok_or_else(|| "no home dir".to_string())?;
+    let db = hermes_state_db(&home)
+        .filter(|p| p.is_file())
+        .ok_or_else(|| "hermes state.db not found".to_string())?;
+    let conn = rusqlite::Connection::open_with_flags(
+        &db,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX,
+    )
+    .map_err(|e| format!("open hermes state.db: {e}"))?;
+
+    let session_id = match meta.session_id.as_deref().filter(|s| !s.is_empty()) {
+        Some(token) => token.to_string(),
+        None => {
+            let mut stmt = conn
+                .prepare("SELECT id, cwd FROM sessions WHERE archived = 0 ORDER BY started_at DESC LIMIT 50")
+                .map_err(|e| e.to_string())?;
+            let rows = stmt
+                .query_map([], |row| {
+                    // Same tolerant id read as find_hermes_sessions_sqlite.
+                    let id: String = row
+                        .get::<_, String>(0)
+                        .or_else(|_| row.get::<_, i64>(0).map(|n| n.to_string()))?;
+                    let cwd: String = row.get::<_, Option<String>>(1).unwrap_or(None).unwrap_or_default();
+                    Ok((id, cwd))
+                })
+                .map_err(|e| e.to_string())?;
+            let mut found: Option<String> = None;
+            for row in rows.flatten() {
+                let (id, cwd) = row;
+                // Rows are newest-first: first cwd match wins; with no cwd
+                // on the tab, take the newest session outright.
+                match meta.cwd.as_deref() {
+                    Some(want) if same_path(&cwd, want) => {
+                        found = Some(id);
+                        break;
+                    }
+                    None => {
+                        found = Some(id);
+                        break;
+                    }
+                    _ => {}
+                }
+            }
+            found.ok_or_else(|| "no hermes session matches this tab".to_string())?
+        }
+    };
+
+    let mut stmt = conn
+        .prepare("SELECT content FROM messages WHERE session_id = ?1 AND role = 'assistant' ORDER BY rowid DESC LIMIT 1")
+        .map_err(|e| e.to_string())?;
+    let rows = stmt
+        .query_map([&session_id], |row| row.get::<_, Option<String>>(0))
+        .map_err(|e| e.to_string())?;
+    for content in rows.flatten().flatten() {
+        let text = hermes_decode_content(&content);
+        if !text.trim().is_empty() {
+            return Ok(text);
+        }
+    }
+    Err("no assistant text found in hermes session".to_string())
+}
+
+#[tauri::command]
+async fn get_last_agent_reply(tab_id: String) -> Result<String, String> {
+    // Async command + spawn_blocking so the transcript tail-scan runs on the
+    // blocking thread pool — same pattern as get_native_history.
+    tauri::async_runtime::spawn_blocking(move || last_agent_reply_blocking(&tab_id))
+        .await
+        .map_err(|e| format!("reply task join failed: {e}"))?
+}
+
+fn last_agent_reply_blocking(tab_id: &str) -> Result<String, String> {
+    let meta = crate::hook_server::session_meta(tab_id)
+        .ok_or_else(|| "no session metadata for tab yet".to_string())?;
+    let raw = match meta.tool.as_str() {
+        "claude" => last_claude_reply(&meta),
+        "codex" => last_codex_reply(&meta),
+        "kimicode" | "kimi" => last_kimi_reply(&meta),
+        "hermes" => last_hermes_reply(&meta),
+        other => Err(format!("unsupported tool: {other}")),
+    }?;
+    let cleaned = clean_agent_reply(&raw);
+    if cleaned.is_empty() {
+        return Err("no assistant reply found".to_string());
+    }
+    Ok(cleaned)
+}
+
 #[tauri::command]
 async fn get_native_history() -> Result<Vec<SavedSession>, String> {
     // Async command + spawn_blocking so the file I/O runs on a dedicated
@@ -3789,6 +4282,7 @@ pub fn start_ui(pending_launch: Option<crate::launch::LaunchRequest>) -> anyhow:
             set_background_mode,
             set_session_active,
             get_native_history,
+            get_last_agent_reply,
             get_message_heatmap,
             read_native_session,
             read_opencode_session,
@@ -4496,6 +4990,87 @@ mod tests {
         let got = parse_agent_jsonl(&f, "claude", &std::collections::HashMap::new()).expect("mixed-array session kept");
         // Title comes from the real text block, not the injected tool_result.
         assert_eq!(got.name, "帮我把这个文件重构一下");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// TailLines yields complete lines last-to-first without loading the
+    /// whole file, and a generous byte cap still reaches the first line.
+    #[test]
+    fn tail_lines_reads_backwards_to_file_start() {
+        let dir = std::env::temp_dir().join(format!("coffee-cli-tail-test-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let f = dir.join("t.jsonl");
+        // >64 KB so the reader must chain multiple chunks.
+        let mut content = String::new();
+        for i in 0..2000 {
+            content.push_str(&format!("{{\"n\":{},\"pad\":\"{}\"}}\n", i, "x".repeat(60)));
+        }
+        content.push_str("last-line-no-trailing-newline");
+        std::fs::write(&f, &content).unwrap();
+
+        let lines: Vec<String> = TailLines::open(&f, REPLY_SCAN_MAX_BYTES).unwrap().collect();
+        assert_eq!(lines.len(), 2001);
+        assert_eq!(lines[0], "last-line-no-trailing-newline");
+        assert!(lines[1].contains("\"n\":1999"));
+        assert!(lines[2000].contains("\"n\":0"));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// With a small byte cap the scan stops mid-file and the partial line
+    /// straddling the boundary is dropped, not half-returned.
+    #[test]
+    fn tail_lines_respects_byte_cap() {
+        let dir = std::env::temp_dir().join(format!("coffee-cli-cap-test-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let f = dir.join("t.jsonl");
+        let mut content = String::new();
+        for i in 0..100 {
+            content.push_str(&format!("line-{:04}-{}\n", i, "y".repeat(90)));
+        }
+        std::fs::write(&f, &content).unwrap();
+
+        let lines: Vec<String> = TailLines::open(&f, 1024).unwrap()
+            .filter(|l| !l.is_empty()) // trailing '\n' yields a final empty segment
+            .collect();
+        assert!(!lines.is_empty());
+        assert!(lines[0].starts_with("line-0099"));
+        // Every yielded line is complete — none starts mid-padding.
+        for l in &lines {
+            assert!(l.starts_with("line-"), "partial line leaked: {l}");
+        }
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn clean_agent_reply_strips_ansi_and_collapses_blanks() {
+        let raw = "\u{1b}[32mok\u{1b}[0m done\n\n\n\nnext  \n\n";
+        assert_eq!(clean_agent_reply(raw), "ok done\n\nnext");
+        assert_eq!(clean_agent_reply("   \n\n  "), "");
+    }
+
+    /// End-to-end-ish: a Claude-shaped transcript whose tail is tool noise
+    /// yields the last assistant TEXT (skipping thinking/tool_use-only turns
+    /// and sidechain rows), through the cleaner.
+    #[test]
+    fn last_agent_reply_extracts_last_assistant_text() {
+        let dir = std::env::temp_dir().join(format!("coffee-cli-reply-test-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let f = dir.join("s.jsonl");
+        write_jsonl(&f, &[
+            "{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":\"hi\"}}",
+            "{\"type\":\"assistant\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"first reply\"}]}}",
+            "{\"type\":\"assistant\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"thinking\",\"thinking\":\"...\"},{\"type\":\"text\",\"text\":\"second\\n\\n\\nreply\"}]}}",
+            // Sidechain (Task subagent) text must not win over the main reply.
+            "{\"type\":\"assistant\",\"isSidechain\":true,\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"subagent text\"}]}}",
+            // Tool-use-only assistant turn + tool_result noise at the tail.
+            "{\"type\":\"assistant\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"name\":\"Bash\",\"input\":{}}]}}",
+            "{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"type\":\"tool_result\",\"content\":\"ok\"}]}}",
+        ]);
+        let found = scan_claude_tail(&f).expect("assistant text found");
+        assert_eq!(clean_agent_reply(&found), "second\n\nreply");
         let _ = std::fs::remove_dir_all(&dir);
     }
 }

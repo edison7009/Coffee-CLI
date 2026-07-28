@@ -77,3 +77,4 @@ WebView2 对 `navigator.clipboard.*` 和 `document.execCommand('copy'|'paste')` 
 - **CF Worker 路由**：`coffeecli.com/version.json` 打到 Web-Home 静态；`coffeecli.com/download/<platform>` 走 Worker 重定向到 GitHub Releases
 - **PTY 锁死根因 #1 已修**（v0.6.1）：child watcher 线程；若复现视为根因 #2（emit/channel backpressure），看 `src/terminal.rs` reader 线程
 - **Hook forwarder 纪律**（v3.2.5+）：`__hook` 全路径 exit 0；`argv[1]` 以 `__` 开头但不认识的子命令也 exit 0（不起 GUI），防止"新配置 + 旧 exe"时 hook 报 exit 1。Claude hook 条目按 Git Bash 是否可探测写两种形态（`claude_hook_entry`）：有 Git Bash → `"shell": "bash"` + 引号命令；没有 → `"shell": "powershell"` + `& "..." __hook`——Windows 上 Claude 检测不到 Git Bash 会 fallback PowerShell，而 PowerShell 把引号开头的命令串当表达式直接 ParserError exit 1。排查 hook 问题用 `COFFEE_HOOK_DEBUG=1`，日志在 `~/.coffee-cli/hooks/hook-debug.log`
+- **Hook 载荷还承载 session 元数据**（v3.2.5+）：forwarder 会把 `session_id` / `transcript_path` / `cwd` 一并 post（有就带），hook server 缓存在 `SESSION_META`，`get_last_agent_reply` 命令（复制最后回复功能）靠它定位 transcript，不要删这些字段

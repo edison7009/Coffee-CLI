@@ -53,8 +53,28 @@ def _post(payload: dict) -> None:
         pass
 
 
+def _session_token(kwargs: dict):
+    """Best-effort extraction of the Hermes session token from hook kwargs.
+
+    The key name isn't documented; probe the likely shapes and only
+    return when we actually find something. Coffee CLI uses it to read
+    the session back from state.db for the copy-last-response feature.
+    """
+    for key in ("session_id", "session_token", "token", "session"):
+        v = kwargs.get(key)
+        if isinstance(v, str) and v:
+            return v
+        if v is not None and hasattr(v, "id"):
+            return str(v.id)
+    return None
+
+
 def _on_session_start(**kwargs):
-    _post({"status": "idle", "event": "on_session_start"})
+    payload = {"status": "idle", "event": "on_session_start", "cwd": os.getcwd()}
+    token = _session_token(kwargs)
+    if token:
+        payload["session_id"] = token
+    _post(payload)
 
 
 def _pre_llm_call(**kwargs):

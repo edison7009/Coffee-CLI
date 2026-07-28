@@ -106,7 +106,7 @@ interface RemoteHistoryItem {
   user: string;
 }
 import { isTauri, commands } from '../../tauri';
-import { getToolDisplayName } from '../../lib/tool-info';
+import { getToolDisplayName, TAB_STATUS_TOOLS } from '../../lib/tool-info';
 import { useT } from '../../i18n/useT';
 import './CenterPanel.css';
 
@@ -422,17 +422,8 @@ const VALID_PIN_KEYS = new Set<string>([
   'installer', 'four-split', 'three-split', 'two-split',
 ]);
 
-// Tabs that show the status-grid ("Dynamic Island") indicator: every AI CLI.
-// Hook-wired tools (claude/codex/opencode/mimocode/hermes/kimicode) drive it
-// live off session.agentStatus; the rest have no status bus and sit at
-// static 'idle' green — the "fake island" baseline so every AI-CLI tab reads
-// consistently.
-// Non-CLI tabs (terminal/remote/history/splits/installer) get no indicator.
-const TAB_STATUS_TOOLS = new Set<string>([
-  'claude', 'codex', 'grok', 'opencode', 'mimocode', 'hermes',
-  'antigravity', 'qwen', 'openclaw',
-  'pi', 'crush', 'aider', 'kimicode', 'goose', 'copilot',
-]);
+// TAB_STATUS_TOOLS moved to lib/tool-info.ts (also read by TierTerminal's
+// "copy last reply" affordance — see there for the shared definition).
 
 export function CenterPanel() {
   const { state, dispatch } = useAppState();
@@ -1191,7 +1182,7 @@ export function CenterPanel() {
       case 'antigravity': return { icon: <SvgAntigravity />, title: cwd ?? getToolDisplayName('antigravity'), tooltip: pathTip };
       // Directory-aware tabs (icon + cwd basename). Pi and the T3 set
       // (Crush/Aider/Goose/Copilot) are hookless — no real status bus, so
-      // they get the static "fake" island via TAB_STATUS_TOOLS below.
+      // they get the static "fake" island via TAB_STATUS_TOOLS (lib/tool-info).
       // Kimi Code renders the same shape but is hook-wired (T1): its
       // island is live off session.agentStatus.
       case 'pi': return { icon: <SvgPi />, title: cwd ?? getToolDisplayName('pi'), tooltip: pathTip };

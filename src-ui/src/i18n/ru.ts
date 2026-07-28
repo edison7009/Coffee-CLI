@@ -22,6 +22,11 @@ export const ru = {
   'menu.copy_resume_command': 'Копировать команду возобновления',
   'menu.copy_full_path': 'Копировать полный путь',
 
+  // Terminal
+  'term.copy_last_reply': 'Копировать последний ответ',
+  'term.copied': 'Скопировано',
+  'term.no_reply': 'Пока нет ответа для копирования',
+
 
   // Tools
   'tool.terminal': 'Терминал',

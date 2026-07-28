@@ -22,6 +22,11 @@ export const ja = {
   'menu.copy_resume_command': '再開コマンドをコピー',
   'menu.copy_full_path': '完全パスをコピー',
 
+  // Terminal
+  'term.copy_last_reply': '最後の返信をコピー',
+  'term.copied': 'コピーしました',
+  'term.no_reply': 'コピーできる返信がまだありません',
+
 
   // Tools
   'tool.terminal': 'ターミナル',

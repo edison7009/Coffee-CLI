@@ -22,6 +22,11 @@ export const ko = {
   'menu.copy_resume_command': '재개 명령 복사',
   'menu.copy_full_path': '전체 경로 복사',
 
+  // Terminal
+  'term.copy_last_reply': '마지막 답변 복사',
+  'term.copied': '복사됨',
+  'term.no_reply': '아직 복사할 답변이 없습니다',
+
 
   // Tools
   'tool.terminal': '터미널',

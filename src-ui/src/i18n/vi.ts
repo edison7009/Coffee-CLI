@@ -23,6 +23,11 @@ export const vi = {
   'menu.copy_resume_command': 'Sao chép lệnh tiếp tục',
   'menu.copy_full_path': 'Sao chép đường dẫn đầy đủ',
 
+  // Terminal
+  'term.copy_last_reply': 'Sao chép phản hồi cuối',
+  'term.copied': 'Đã sao chép',
+  'term.no_reply': 'Chưa có phản hồi để sao chép',
+
 
   // Tools
   'tool.terminal': 'Terminal',

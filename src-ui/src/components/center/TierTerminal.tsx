@@ -27,7 +27,7 @@ import { onWindowForeground } from '../../lib/window-focus-filter';
 import { commands } from '../../tauri';
 import { useAppDispatch, useAppState, type ToolType, type ThemeColor } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
-import { getToolDisplayName } from '../../lib/tool-info';
+import { getToolDisplayName, COPY_REPLY_TOOLS } from '../../lib/tool-info';
 import '@xterm/xterm/css/xterm.css';
 import './TierTerminal.css';
 
@@ -211,10 +211,14 @@ export const detachedSessions = new Set<string>();
 
 interface CtxMenu { x: number; y: number; hasSelection: boolean; }
 
-function TermContextMenu({ menu, onClose, onCopy, onPaste, onSelectAll }: {
+function TermContextMenu({ menu, onClose, onCopy, onCopyReply, onPaste, onSelectAll }: {
   menu: CtxMenu;
   onClose: () => void;
   onCopy: () => void;
+  /** "Copy last reply" — only passed for tabs whose transcripts the
+      backend can read back (COPY_REPLY_TOOLS);
+   *  omitted for raw shells / split panes, which hide the item. */
+  onCopyReply?: () => void;
   onPaste: () => void;
   onSelectAll: () => void;
 }) {
@@ -242,7 +246,7 @@ function TermContextMenu({ menu, onClose, onCopy, onPaste, onSelectAll }: {
 
   // Clamp to viewport so menu never overflows off-screen
   const left = Math.min(menu.x, window.innerWidth  - 164);
-  const top  = Math.min(menu.y, window.innerHeight - 116);
+  const top  = Math.min(menu.y, window.innerHeight - 148);
 
   return createPortal(
     <div ref={ref} className="term-ctx-menu" style={{ left, top }}>
@@ -252,6 +256,14 @@ function TermContextMenu({ menu, onClose, onCopy, onPaste, onSelectAll }: {
       >
         <span>{t('menu.copy')}</span><kbd>{mod}+C</kbd>
       </button>
+      {onCopyReply && (
+        <button
+          className="term-ctx-item"
+          onMouseDown={(e) => { e.preventDefault(); onCopyReply(); }}
+        >
+          <span>{t('term.copy_last_reply')}</span>
+        </button>
+      )}
       <button
         className="term-ctx-item"
         onMouseDown={(e) => { e.preventDefault(); onPaste(); }}
@@ -505,6 +517,40 @@ function TierTerminalImpl({
   // ── Terminal context menu ────────────────────────────────────────────────
   const [ctxMenu, setCtxMenu] = useState<CtxMenu | null>(null);
   const closeCtxMenu = useCallback(() => setCtxMenu(null), []);
+
+  // ── Copy last reply ──────────────────────────────────────────────────────
+  // Flash state for the floating pill + context-menu item: 'copied' /
+  // 'empty' show for 1.5s, then revert to the default label. One shared
+  // timer — a rapid second click just restarts the window.
+  const [copyReplyFlash, setCopyReplyFlash] = useState<'copied' | 'empty' | null>(null);
+  const copyReplyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (copyReplyTimerRef.current) clearTimeout(copyReplyTimerRef.current);
+  }, []);
+  const copyLastReply = useCallback(async () => {
+    if (copyReplyTimerRef.current) clearTimeout(copyReplyTimerRef.current);
+    try {
+      const text = await commands.getLastAgentReply(sessionId);
+      await clipboardWrite(text);
+      setCopyReplyFlash('copied');
+    } catch {
+      // Backend rejects on every failure mode (no reply captured yet
+      // included) — one message covers them all.
+      setCopyReplyFlash('empty');
+    }
+    copyReplyTimerRef.current = setTimeout(() => setCopyReplyFlash(null), 1500);
+  }, [sessionId]);
+
+  // Pill visibility: only tools whose transcripts the backend can read
+  // back (COPY_REPLY_TOOLS), and only once the agent is back to idle —
+  // the reply is complete then. Hookless tools have no agentStatus; they
+  // sit at the same implicit 'idle' baseline as the island. Split-grid
+  // panes (`<tabId>::pane-N`) don't resolve to a tab-level session, so
+  // they get no pill — the backend reply cache is keyed per tab.
+  const tabSession = _appState.terminals.find((s) => s.id === sessionId);
+  const showCopyReply = !!tabSession
+    && COPY_REPLY_TOOLS.has(tabSession.tool as string)
+    && (tabSession.agentStatus ?? 'idle') === 'idle';
 
   const t = useT();
 
@@ -1913,6 +1959,31 @@ function TierTerminalImpl({
         <div ref={termRef} className={`tier-xterm${isRawShell ? ' raw-shell' : ''}`} />
       </div>
 
+      {/* Copy-last-reply pill — bottom-right of the terminal, AI-CLI tabs
+          at idle only (see showCopyReply). mousedown is swallowed so
+          clicking it never yanks focus out of xterm. */}
+      {showCopyReply && (
+        <button
+          className={`term-copy-reply${copyReplyFlash ? ` term-copy-reply--${copyReplyFlash}` : ''}`}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={copyLastReply}
+        >
+          {copyReplyFlash === 'copied' ? (
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          ) : (
+            /* Copy glyph — same rect+path pair as SessionContextMenu's
+               "copy full path" icon. */
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+              <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+            </svg>
+          )}
+          <span>{copyReplyFlash === 'copied' ? t('term.copied') : copyReplyFlash === 'empty' ? t('term.no_reply') : t('term.copy_last_reply')}</span>
+        </button>
+      )}
+
       {/* Terminal right-click context menu */}
       {ctxMenu && (
         <TermContextMenu
@@ -1923,6 +1994,9 @@ function TierTerminalImpl({
             if (text) clipboardWrite(text);
             closeCtxMenu();
           }}
+          onCopyReply={tabSession && COPY_REPLY_TOOLS.has(tabSession.tool as string)
+            ? () => { copyLastReply(); closeCtxMenu(); }
+            : undefined}
           onPaste={async () => {
             // Image-first paste (issue #89), then text. Backend clipboard
             // read (arboard) avoids the WebView2 permission prompt (issue #96).

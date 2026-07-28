@@ -22,6 +22,11 @@ export const de = {
   'menu.copy_resume_command': 'Befehl zum Fortsetzen kopieren',
   'menu.copy_full_path': 'Vollständigen Pfad kopieren',
 
+  // Terminal
+  'term.copy_last_reply': 'Letzte Antwort kopieren',
+  'term.copied': 'Kopiert',
+  'term.no_reply': 'Noch keine Antwort zum Kopieren',
+
 
   // Tools
   'tool.terminal': 'Terminal',

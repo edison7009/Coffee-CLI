@@ -22,6 +22,11 @@ export const zhTW = {
   'menu.copy_resume_command': '複製恢復命令',
   'menu.copy_full_path': '複製完整路徑',
 
+  // Terminal
+  'term.copy_last_reply': '複製最後回覆',
+  'term.copied': '已複製',
+  'term.no_reply': '還沒有可複製的回覆',
+
 
   // Tools
   'tool.terminal': '終端機',

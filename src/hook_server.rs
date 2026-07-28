@@ -14,10 +14,14 @@
 //       `{tab_id, tool, status, event}` → emit `agent-status` event
 //       to the frontend's tab indicators.
 //
+// Payloads may also carry `session_id` / `transcript_path` / `cwd` —
+// cached per tab in SESSION_META and used by the `get_last_agent_reply`
+// command to locate the tab's transcript file.
+//
 // File-edit attribution per AI tool was removed in v2.7.x —
 // ChangesBoard is now sourced from a folder snapshot diff
 // (`compute_folder_stats` Tauri command, tool-agnostic by design).
-// `path` / `action` / `cwd` fields are kept in the wire payload for
+// `path` / `action` fields are kept in the wire payload for
 // backward compat with installed hook scripts; they are ignored.
 
 use serde::{Deserialize, Serialize};
@@ -38,6 +42,61 @@ pub struct HookPayload {
     /// Hook event name (Claude: PostToolUse / Notification / Stop;
     /// Codex: agent-turn-complete; OpenCode: session.status / etc.).
     pub event: Option<String>,
+    /// Session identifier, when the tool's hook payload carries one
+    /// (Claude/Codex/Kimi: session_id; Hermes plugin: session token).
+    /// Cached in SESSION_META so `get_last_agent_reply` can locate the
+    /// tab's transcript without guessing from the cwd.
+    pub session_id: Option<String>,
+    /// Direct path to the session transcript file (Claude hooks send
+    /// `transcript_path` in the stdin JSON). Most precise locator — used
+    /// first when present.
+    pub transcript_path: Option<String>,
+    /// Working directory of the agent session — fallback locator for
+    /// tools whose transcripts are found by cwd match (Codex rollouts).
+    pub cwd: Option<String>,
+}
+
+/// Per-tab session metadata, upserted from hook payloads that carry it.
+/// Read by the `get_last_agent_reply` Tauri command (src/server.rs) to
+/// find the tab's transcript file / session token.
+#[derive(Debug, Clone, Default)]
+pub struct SessionMeta {
+    pub tool: String,
+    pub session_id: Option<String>,
+    pub transcript_path: Option<String>,
+    pub cwd: Option<String>,
+}
+
+static SESSION_META: std::sync::LazyLock<std::sync::Mutex<std::collections::HashMap<String, SessionMeta>>> =
+    std::sync::LazyLock::new(|| std::sync::Mutex::new(std::collections::HashMap::new()));
+
+/// Snapshot the session metadata for a tab. None when no hook carrying
+/// metadata has fired for this tab yet.
+pub fn session_meta(tab_id: &str) -> Option<SessionMeta> {
+    SESSION_META.lock().ok()?.get(tab_id).cloned()
+}
+
+/// Upsert metadata from a payload — any field present overwrites, absent
+/// fields keep their previous value (hooks don't all carry the same keys).
+fn update_session_meta(payload: &HookPayload) {
+    if payload.session_id.is_none() && payload.transcript_path.is_none() && payload.cwd.is_none() {
+        return;
+    }
+    let Ok(mut map) = SESSION_META.lock() else { return };
+    let meta = map.entry(payload.tab_id.clone()).or_insert_with(|| SessionMeta {
+        tool: payload.tool.clone(),
+        ..Default::default()
+    });
+    meta.tool = payload.tool.clone();
+    if payload.session_id.is_some() {
+        meta.session_id = payload.session_id.clone();
+    }
+    if payload.transcript_path.is_some() {
+        meta.transcript_path = payload.transcript_path.clone();
+    }
+    if payload.cwd.is_some() {
+        meta.cwd = payload.cwd.clone();
+    }
 }
 
 /// Frontend payload for the `agent-status` Tauri event — unchanged
@@ -109,6 +168,7 @@ async fn handle_conn(app: AppHandle, socket: tokio::net::TcpStream) {
 /// path remains — see file-level doc for why per-tool file-edit
 /// attribution was removed.
 fn dispatch(app: &AppHandle, payload: HookPayload) {
+    update_session_meta(&payload);
     if let Some(status) = payload.status.as_deref() {
         let evt = AgentStatusEvent {
             tab_id: payload.tab_id.clone(),

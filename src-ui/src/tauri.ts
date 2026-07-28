@@ -132,6 +132,13 @@ export const commands = {
   tierTerminalResize: (sessionId: string, cols: number, rows: number) =>
     invoke<void>('tier_terminal_resize', { sessionId, cols, rows }),
 
+  /** Last agent reply for a tab — backs the "Copy last reply" pill and
+   *  context-menu item. Rejects when the tab has no captured reply yet
+   *  (or any backend error); the frontend shows one "no reply yet"
+   *  message for every failure mode. */
+  getLastAgentReply: (tabId: string) =>
+    invoke<string>('get_last_agent_reply', { tabId }),
+
   /** Notify the Rust backend that the window's visibility changed.
    *  When hidden=true, every per-session worker thread (ticker, emitter)
    *  widens its sleep / coalesce window so a backgrounded Coffee CLI
