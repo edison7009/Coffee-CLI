@@ -12,11 +12,13 @@
 import { commands, isTauri } from '../../tauri';
 import { useAppState, useAppDispatch, schemeLabels } from '../../store/app-state';
 import { IS_MACOS } from '../../lib/platform';
+import { useT } from '../../i18n/useT';
 import './TitleBar.css';
 
 export function TitleBar() {
   const { state } = useAppState();
   const dispatch = useAppDispatch();
+  const t = useT();
 
   // The active scheme's three combos, shown as persistent hints on the left /
   // Gambit / right buttons — a deliberate memory hook for the product's
@@ -185,11 +187,15 @@ export function TitleBar() {
         )}
 
         {/* Personalization settings — gear opens the consolidated modal that
-            replaced the old left-panel theme/language popovers. */}
+            replaced the old left-panel theme/language popovers. The `title`
+            tooltip matters here: new users reported not finding settings
+            because the gear sits unlabeled among the look-alike layout
+            toggles (those at least carry hotkey-hint text). */}
         <button
           className={`titlebar-btn titlebar-btn--layout${state.settingsOpen ? ' is-active' : ''}`}
           onClick={() => dispatch({ type: 'TOGGLE_SETTINGS' })}
-          aria-label="Settings"
+          aria-label={t('settings.title')}
+          title={t('settings.title')}
           aria-pressed={state.settingsOpen}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
