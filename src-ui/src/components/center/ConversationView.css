@@ -299,22 +299,27 @@ body.gambit-docked .conversation-navigation {
   line-height: inherit;
   font-weight: 400;
 }
-.conversation-bubble .md-body :is(strong, b, th),
+.conversation-bubble .md-body :is(strong, b),
 .conversation-reasoning .md-body :is(strong, b, th) { font-weight: 400; }
 .conversation-bubble .md-body p { margin: 0 0 10px; }
 .conversation-bubble .md-body ul,
 .conversation-bubble .md-body ol { padding-left: 22px; }
 .conversation-bubble .md-body table {
-  width: 100%;
+  display: block;
+  width: max-content;
   max-width: 100%;
-  table-layout: fixed;
+  overflow-x: auto;
   border-collapse: collapse;
 }
 .conversation-bubble .md-body :is(th, td) {
-  min-width: 0;
   padding: 5px 7px;
-  overflow-wrap: anywhere;
-  word-break: break-word;
+  border: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+.conversation-bubble .md-body th {
+  background: var(--bg-hover);
+  font-weight: 500;
 }
 .conversation-bubble .md-body a {
   color: var(--accent);
