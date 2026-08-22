@@ -76,23 +76,31 @@
 
 .conversation-navigation {
   position: absolute;
-  top: 50%;
+  top: 0;
+  bottom: 0;
   left: max(8px, calc(50% - 500px));
   z-index: 3;
   display: flex;
   width: 32px;
-  height: min(58%, 420px);
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
   overflow: visible;
-  transform: translateY(-50%);
+}
+
+/* Gambit is an app-level fixed overlay, while ConversationView remains full
+   height so its wallpaper can continue behind the dock. Match the navigation
+   rail's positioning area to the already-shrunk .conversation-scroll viewport
+   instead of centring it across the obscured full-height outer view. The CSS
+   variable updates live while the user resizes Gambit. */
+body.gambit-docked .conversation-navigation {
+  bottom: calc(var(--gambit-dock-h, 200px) + 16px);
 }
 
 .conversation-navigation-scroll {
   display: flex;
   width: 32px;
-  max-height: 100%;
+  max-height: min(58%, 420px);
   flex-direction: column;
   align-items: flex-start;
   gap: 1px;

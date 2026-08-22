@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { clearTerminalInteraction, type TerminalInteraction } from '../../lib/terminal-interaction';
 import { getTabActions } from '../../lib/tab-actions';
 import { useT } from '../../i18n/useT';
@@ -22,6 +22,7 @@ export function TerminalInteractionCard({
   const [keyboardPosition, setKeyboardPosition] = useState(() => (
     interaction.focusedPosition >= 0 ? interaction.focusedPosition : 0
   ));
+  const headingId = useId();
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -96,7 +97,7 @@ export function TerminalInteractionCard({
   return (
     <section
       className={`terminal-interaction terminal-interaction--${interaction.kind}`}
-      aria-labelledby={`terminal-interaction-${interaction.fingerprint}`}
+      aria-labelledby={headingId}
     >
       <div className="terminal-interaction-heading">
         <span className="terminal-interaction-icon" aria-hidden="true">
@@ -107,7 +108,7 @@ export function TerminalInteractionCard({
             {t(interaction.kind === 'permission' ? 'interaction.permission' : 'interaction.question')}
           </div>
           <div
-            id={`terminal-interaction-${interaction.fingerprint}`}
+            id={headingId}
             className="terminal-interaction-title"
           >
             {interaction.title}

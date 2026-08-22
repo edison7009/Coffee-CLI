@@ -257,6 +257,17 @@ const kimiPermissionSelector = screen(
   line('────────────────────────'),
 );
 
+const incompleteKimiPermissionSelector = screen(
+  line('────────────────────────'),
+  line(' Select permission mode', true),
+  line(' ↑↓ navigate · Enter select · Esc cancel'),
+  line(''),
+  line('  ❯ Manual ← current'),
+  line('    Approve every action yourself.'),
+  line('    Auto'),
+  line('────────────────────────'),
+);
+
 const codexWorking = screen(
   line('• Working (12s • esc to interrupt)'),
   line('› Write a message'),
@@ -508,6 +519,11 @@ export function main(): void {
     equal(parseTerminalInteraction(copiedNumbersOnly, tool), null, `${tool}: copied 1/2/3/4 summary`);
   }
   equal(parseTerminalInteraction(kimiMultiSelect, 'kimicode'), null, 'Kimi multi-select stays native');
+  equal(
+    parseTerminalInteraction(incompleteKimiPermissionSelector, 'kimicode'),
+    null,
+    'Kimi permission selector requires every source-defined option',
+  );
 
   const terminalOnlyTools = [
     'grok', 'pi', 'omp', 'qwen', 'antigravity', 'opencode', 'mimocode', 'kilo',

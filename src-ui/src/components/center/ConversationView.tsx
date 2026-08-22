@@ -520,16 +520,24 @@ const ConversationNavigation = memo(function ConversationNavigation({
   useEffect(() => {
     const container = navigationScrollRef.current;
     if (!container || !activeId) return;
-    const item = container.querySelector<HTMLElement>(
-      `[data-conversation-navigation-target="${CSS.escape(activeId)}"]`,
-    );
-    if (!item) return;
-    const itemTop = item.offsetTop;
-    const itemBottom = itemTop + item.offsetHeight;
-    if (itemTop < container.scrollTop) container.scrollTop = itemTop;
-    else if (itemBottom > container.scrollTop + container.clientHeight) {
-      container.scrollTop = itemBottom - container.clientHeight;
-    }
+    const centreActiveItem = () => {
+      const item = container.querySelector<HTMLElement>(
+        `[data-conversation-navigation-target="${CSS.escape(activeId)}"]`,
+      );
+      if (!item) return;
+      // Use viewport-relative rectangles instead of offsetTop: the navigation
+      // wrapper is positioned, so offsetParent changes must not skew the inner
+      // scroll coordinate. Re-run when Gambit resizing changes the rail height.
+      const containerRect = container.getBoundingClientRect();
+      const itemRect = item.getBoundingClientRect();
+      const itemTop = itemRect.top - containerRect.top + container.scrollTop;
+      container.scrollTop = itemTop - (container.clientHeight - itemRect.height) / 2;
+    };
+
+    centreActiveItem();
+    const observer = new ResizeObserver(centreActiveItem);
+    observer.observe(container);
+    return () => observer.disconnect();
   }, [activeId]);
 
   const showTooltip = (messageId: string, item: HTMLElement) => {

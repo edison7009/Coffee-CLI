@@ -504,15 +504,27 @@ function parseKimiInteraction(screen: ScreenLine[]): TerminalInteraction | null 
   }
 
   const pickerFooter = screen.findLastIndex(line => /↑↓ navigate.*Enter select.*Esc cancel/i.test(cleanLine(line.text)));
-  if (pickerFooter >= 0 && screen.some(line => /select permission mode/i.test(cleanLine(line.text)))) {
+  const pickerRegion = pickerFooter >= 0
+    ? screen.slice(Math.max(0, pickerFooter - 4), Math.min(screen.length, pickerFooter + 20))
+    : [];
+  if (
+    pickerFooter >= 0
+    && hasNearBottom(screen, pickerFooter)
+    && pickerRegion.some(line => /select permission mode/i.test(cleanLine(line.text)))
+  ) {
     const labels = ['Manual', 'YOLO', 'Auto'];
-    const options = labels.map((label, position) => {
-      const row = screen.find(line => new RegExp(`^\\s{2}([❯ ])\\s+${label}(?:\\s|$)`, 'u').test(cleanLine(line.text)));
-      const match = row ? /^\s{2}([❯ ])\s+/u.exec(cleanLine(row.text)) : null;
-      return { position, number: position + 1, label, acceptsText: false, focused: match?.[1] === '❯' };
-    });
-    if (options.filter(option => option.focused).length === 1) {
-      return interaction('kimi', 'permission', 'Select permission mode', options, 'vertical');
+    const rows = labels.map(label => (
+      pickerRegion.find(line => new RegExp(`^\\s{2}([❯ ])\\s+${label}(?:\\s|$)`, 'u').test(cleanLine(line.text)))
+    ));
+    if (rows.every((row): row is ScreenLine => Boolean(row))) {
+      const options = labels.map((label, position) => {
+        const row = rows[position];
+        const match = /^\s{2}([❯ ])\s+/u.exec(cleanLine(row.text));
+        return { position, number: position + 1, label, acceptsText: false, focused: match?.[1] === '❯' };
+      });
+      if (options.filter(option => option.focused).length === 1) {
+        return interaction('kimi', 'permission', 'Select permission mode', options, 'vertical');
+      }
     }
   }
   return null;
