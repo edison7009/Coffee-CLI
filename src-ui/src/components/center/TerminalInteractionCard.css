@@ -67,14 +67,13 @@
 .terminal-interaction-option:hover,
 .terminal-interaction-option:focus-visible,
 .terminal-interaction-option.is-expanded,
-.terminal-interaction-option.is-native-selected {
+.terminal-interaction-option.is-keyboard-selected {
   border-color: color-mix(in srgb, var(--accent) 48%, var(--border));
   background: var(--accent-bg);
   outline: none;
 }
 
 .terminal-interaction-option:active { transform: translateY(1px); }
-
 .terminal-interaction-number {
   display: grid;
   width: 22px;

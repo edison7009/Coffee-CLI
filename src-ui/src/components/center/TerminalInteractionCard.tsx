@@ -19,6 +19,9 @@ export function TerminalInteractionCard({
   const [customIndex, setCustomIndex] = useState<number | null>(null);
   const [customText, setCustomText] = useState('');
   const [failed, setFailed] = useState(false);
+  const [keyboardPosition, setKeyboardPosition] = useState(() => (
+    interaction.focusedPosition >= 0 ? interaction.focusedPosition : 0
+  ));
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -40,6 +43,7 @@ export function TerminalInteractionCard({
 
   const selectOption = useCallback((option: TerminalInteraction['options'][number]) => {
     setFailed(false);
+    setKeyboardPosition(option.position);
     if (option.acceptsText) setCustomIndex(option.position);
     else respond(option.position);
   }, [respond]);
@@ -55,16 +59,39 @@ export function TerminalInteractionCard({
       if (event.defaultPrevented || event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
       const target = event.target as HTMLElement | null;
       if (target?.closest('input, textarea, [contenteditable="true"]')) return;
-      if (!/^[1-9]$/.test(event.key)) return;
-      const option = interaction.options.find(item => item.number === Number(event.key));
-      if (!option) return;
-      event.preventDefault();
-      event.stopPropagation();
-      selectOption(option);
+
+      if (/^[1-9]$/.test(event.key)) {
+        const option = interaction.options.find(item => item.number === Number(event.key));
+        if (!option) return;
+        event.preventDefault();
+        event.stopPropagation();
+        selectOption(option);
+        return;
+      }
+
+      if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+        if (interaction.options.length === 0) return;
+        const direction = event.key === 'ArrowUp' ? -1 : 1;
+        event.preventDefault();
+        event.stopPropagation();
+        setFailed(false);
+        setKeyboardPosition(current => (
+          (current + direction + interaction.options.length) % interaction.options.length
+        ));
+        return;
+      }
+
+      if (event.key === 'Enter' && !event.repeat) {
+        const option = interaction.options.find(item => item.position === keyboardPosition);
+        if (!option) return;
+        event.preventDefault();
+        event.stopPropagation();
+        selectOption(option);
+      }
     };
     window.addEventListener('keydown', onKeyDown, true);
     return () => window.removeEventListener('keydown', onKeyDown, true);
-  }, [interaction.options, keyboardEnabled, selectOption]);
+  }, [interaction.options, keyboardEnabled, keyboardPosition, selectOption]);
 
   return (
     <section
@@ -95,8 +122,9 @@ export function TerminalInteractionCard({
             <div className="terminal-interaction-option-wrap" key={`${option.number}:${option.label}`}>
               <button
                 type="button"
-                className={`terminal-interaction-option${expanded ? ' is-expanded' : ''}${option.focused ? ' is-native-selected' : ''}`}
-                aria-keyshortcuts={String(option.number)}
+                className={`terminal-interaction-option${expanded ? ' is-expanded' : ''}${option.position === keyboardPosition ? ' is-keyboard-selected' : ''}`}
+                aria-keyshortcuts={`${option.number} ArrowUp ArrowDown Enter`}
+                aria-current={option.position === keyboardPosition ? 'true' : undefined}
                 onClick={() => selectOption(option)}
               >
                 <span className="terminal-interaction-number">{option.number}</span>

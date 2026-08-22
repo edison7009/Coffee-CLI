@@ -33,7 +33,6 @@ import {
 import { registerFileDropTarget, formatPathsForInsert } from '../../lib/file-drop';
 import { parseClaudeTerminalTitle } from '../../lib/claude-terminal-title';
 import { parseCodexTerminalTitle } from '../../lib/codex-terminal-title';
-import { parseGrokTerminalTitle } from '../../lib/grok-terminal-title';
 import { markNotifySoundPromptSubmitted } from '../../lib/notify-sound';
 import { onWindowForeground } from '../../lib/window-focus-filter';
 import { commands } from '../../tauri';
@@ -431,7 +430,6 @@ function TierTerminalImpl({
   // only after N losses on the same terminal instance, the signal that WebGL
   // is unstable here. Not reset on successful re-attach.
   const contextLossAttemptsRef = useRef(0);
-  const grokPermissionReleaseTimerRef = useRef<number | undefined>(undefined);
   const interactionSuppressionRef = useRef<string | null>(null);
 
   // ── Startup splash state ─────────────────────────────────────────────────
@@ -551,14 +549,19 @@ function TierTerminalImpl({
     const publishNativeStatus = (status: AgentStatus) => {
       nativeStatus = status;
       const screenIsFresh = Date.now() - screenStatusAt < 2_000;
+      const interactionIsLive = hasTerminalInteraction(sessionId);
       // A rendered selector is stronger than a coarse native idle title, and
       // a rendered working row should not be cancelled by an OSC repaint that
       // briefly drops its spinner frame. Native working/waiting may always
-      // promote an idle/unknown screen state.
+      // promote an idle/unknown screen state. A published interaction remains
+      // authoritative for its entire lifetime, not just for the first two
+      // seconds: permission prompts commonly stay open much longer than that.
       if (
-        screenIsFresh
-        && status === 'idle'
-        && (screenStatus === 'wait_input' || screenStatus === 'working')
+        status === 'idle'
+        && (
+          interactionIsLive
+          || (screenIsFresh && (screenStatus === 'wait_input' || screenStatus === 'working'))
+        )
       ) return;
       dispatch({ type: 'SET_AGENT_STATUS', id: sessionId, status });
     };
@@ -581,7 +584,7 @@ function TierTerminalImpl({
       clearScreenIdleTimer();
       screenIdleTimer = window.setTimeout(() => {
         screenIdleTimer = undefined;
-        // Claude/Codex/Grok expose an authoritative active-turn bit in their
+        // Claude/Codex expose an authoritative active-turn bit in their
         // OSC title. Rendered text can pause while the model thinks, so mere
         // screen stability must never end a turn that the CLI still reports
         // as working/waiting. The title's later idle transition completes it.
@@ -1127,13 +1130,19 @@ function TierTerminalImpl({
     // header); near-zero cost — one performance.now() + bounded ring-buffer
     // write per render, no-ops when no output armed this frame.
     term.onRender(() => rig.outputRenderEnd());
-    // Each supported agent owns its real PTY and TUI. After xterm has applied
+    // Each enhanced agent owns its real PTY and TUI. After xterm has applied
     // ANSI cursor movement and redraws, read the rendered screen once and feed
     // both the precise interaction card and the Dynamic Island state machine.
     // No hooks, model calls, or duplicate terminal readers are involved.
     if (supportsTerminalInteraction(tool)) {
       let publishedFingerprint: string | null = null;
       let lastScreenFingerprint = '';
+      let interactionClearTimer: number | undefined;
+      const cancelInteractionClear = () => {
+        if (interactionClearTimer === undefined) return;
+        window.clearTimeout(interactionClearTimer);
+        interactionClearTimer = undefined;
+      };
       const scanTerminalSemantics = () => {
         if (!mounted) return;
         const screen = readTerminalScreen(term);
@@ -1144,10 +1153,27 @@ function TierTerminalImpl({
         if (!rawInteraction) {
           interactionSuppressionRef.current = null;
           if (publishedFingerprint !== null || hasTerminalInteraction(sessionId)) {
-            publishedFingerprint = null;
-            clearTerminalInteraction(sessionId);
+            // TUIs redraw a selector across several terminal writes. A parser
+            // miss can be an intermediate paint, not a dismissed prompt. Keep
+            // the last complete interaction briefly, then verify once more.
+            liveInteraction = getTerminalInteraction(sessionId);
+            if (interactionClearTimer === undefined) {
+              interactionClearTimer = window.setTimeout(() => {
+                interactionClearTimer = undefined;
+                if (!mounted) return;
+                const retry = parseTerminalInteraction(readTerminalScreen(term), tool);
+                if (retry) {
+                  publishedFingerprint = retry.fingerprint;
+                  setTerminalInteraction(sessionId, retry);
+                  return;
+                }
+                publishedFingerprint = null;
+                clearTerminalInteraction(sessionId);
+              }, 100);
+            }
           }
         } else if (suppressed === rawInteraction.fingerprint) {
+          cancelInteractionClear();
           // The old frame can remain painted after Enter. Suppress the exact
           // answered prompt until xterm observes it disappear or change; this
           // prevents the historic infinite re-open loop without blocking a new
@@ -1156,6 +1182,7 @@ function TierTerminalImpl({
           publishedFingerprint = null;
           clearTerminalInteraction(sessionId);
         } else {
+          cancelInteractionClear();
           if (suppressed) interactionSuppressionRef.current = null;
           const publishedInteraction = getTerminalInteraction(sessionId);
           if (
@@ -1185,6 +1212,7 @@ function TierTerminalImpl({
       };
       const parsedListener = term.onWriteParsed(scanTerminalSemantics);
       unlisteners.push(() => parsedListener.dispose());
+      unlisteners.push(cancelInteractionClear);
       unlisteners.push(() => clearTerminalInteraction(sessionId));
     }
 
@@ -1210,23 +1238,11 @@ function TierTerminalImpl({
 
     // Tool sets its own tab title via OSC 0/2 (e.g. Claude Code's conversation
     // summary) → xterm fires onTitleChange → mirror it to the tab title.
-    // Claude, Codex, and Grok also carry their authoritative activity state in the
+    // Claude and Codex also carry their authoritative activity state in the
     // title. Strip animated prefixes from Coffee's visible tab title so native
     // title updates do not make the text jitter. Claude's title only exposes
     // working vs non-working; permission prompts share its static idle prefix.
     let lastTabTitle: string | undefined;
-    let grokStatus: AgentStatus = 'idle';
-    const clearGrokPermissionRelease = () => {
-      if (grokPermissionReleaseTimerRef.current !== undefined) {
-        window.clearTimeout(grokPermissionReleaseTimerRef.current);
-        grokPermissionReleaseTimerRef.current = undefined;
-      }
-    };
-    const setGrokStatus = (status: AgentStatus) => {
-      if (status === grokStatus) return;
-      grokStatus = status;
-      publishNativeStatus(status);
-    };
     term.onTitleChange((title) => {
       let displayTitle = title;
       if (tool === 'claude') {
@@ -1239,27 +1255,6 @@ function TierTerminalImpl({
         publishNativeStatus(parsed.status);
         if (parsed.status === 'wait_input') {
           requestTerminalForNativeAction('native:codex:action-required');
-        }
-      } else if (tool === 'grok') {
-        const parsed = parseGrokTerminalTitle(title);
-        displayTitle = parsed.displayTitle;
-
-        // When unfocused, Grok intentionally hides Action Required for half of
-        // each one-second blink cycle. Hold blue briefly so that native blink
-        // does not make Coffee's island alternate between wait and idle.
-        if (parsed.status === 'idle' && grokStatus === 'wait_input') {
-          if (grokPermissionReleaseTimerRef.current === undefined) {
-            grokPermissionReleaseTimerRef.current = window.setTimeout(() => {
-              grokPermissionReleaseTimerRef.current = undefined;
-              setGrokStatus('idle');
-            }, 1200);
-          }
-        } else {
-          clearGrokPermissionRelease();
-          setGrokStatus(parsed.status);
-          if (parsed.status === 'wait_input') {
-            requestTerminalForNativeAction('native:grok:action-required');
-          }
         }
       }
       if (displayTitle !== lastTabTitle) {
@@ -1575,10 +1570,6 @@ function TierTerminalImpl({
       unregisterFocus();
       ro.disconnect();
       if (resizeTimer !== null) clearTimeout(resizeTimer);
-      if (grokPermissionReleaseTimerRef.current !== undefined) {
-        window.clearTimeout(grokPermissionReleaseTimerRef.current);
-        grokPermissionReleaseTimerRef.current = undefined;
-      }
       term.dispose();
       outputScheduler.unregisterSession(sessionId);
       xtermRef.current = null;
@@ -1719,6 +1710,7 @@ function TierTerminalImpl({
         const term = xtermRef.current;
         const activeInteraction = getTerminalInteraction(sessionId);
         const options = activeInteraction?.options;
+        if (!activeInteraction) return false;
         if (!term || !options || optionIndex < 0 || optionIndex >= optionCount) return false;
         const option = options[optionIndex];
         if (!option) return false;
@@ -1753,29 +1745,24 @@ function TierTerminalImpl({
 
         if (activeInteraction.responseMode === 'digit' && option.number <= 9) {
           // Only tools whose source explicitly maps 1-9 to choices reach this
-          // path (Claude, Codex, Grok, and Kimi).
+          // path (Claude, Codex, and Kimi).
           commands.tierTerminalRawWrite(sessionId, String(option.number)).catch(() => {});
           submitCustomText();
           return true;
         }
 
-        // OpenCode uses a horizontal selector; Pi/OMP and OpenCode questions
-        // use vertical lists. Digit protocols also fall back to vertical
-        // navigation beyond 9.
+        // Kimi's permission-mode picker is vertical. Digit protocols also
+        // fall back to vertical navigation beyond 9.
         const focused = activeInteraction.focusedPosition;
         if (focused < 0) return false;
         const appCursor = term.modes.applicationCursorKeysMode;
         const up = appCursor ? '\x1bOA' : '\x1b[A';
         const down = appCursor ? '\x1bOB' : '\x1b[B';
-        const left = appCursor ? '\x1bOD' : '\x1b[D';
-        const right = appCursor ? '\x1bOC' : '\x1b[C';
         let nav = '';
         if (focused !== optionIndex) {
-          const forward = activeInteraction.responseMode === 'horizontal' ? right : down;
-          const backward = activeInteraction.responseMode === 'horizontal' ? left : up;
           nav = optionIndex > focused
-            ? forward.repeat(optionIndex - focused)
-            : backward.repeat(focused - optionIndex);
+            ? down.repeat(optionIndex - focused)
+            : up.repeat(focused - optionIndex);
         }
         if (customText) {
           commands.tierTerminalRawWrite(sessionId, `${nav}\r`).catch(() => {});

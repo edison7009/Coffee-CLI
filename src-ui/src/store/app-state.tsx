@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useReducer } from 'react';
 import type { ReactNode } from 'react';
+import { supportsEnhancedTool } from '../lib/chat-tools';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -9,11 +10,11 @@ export type ToolType = 'claude' | 'qwen' | 'installer' | 'hermes' | 'opencode' |
 
 /**
  * Tab status shown as an animated 9-dot glyph. Three states only —
- * Native OSC titles and the rendered-screen semantic parser can drive this
- * state. The screen parser covers tools that do not expose a title protocol.
+ * Native OSC titles and verified rendered-screen semantics drive this state
+ * for enhanced integrations.
  *
  *   idle       — ready for input (green Wave-Double)
- *   working    — LLM generating / tool call in flight (orange Snake-CCW)
+ *   working    — LLM generating / tool call in flight (orange Snake-CW)
  *   wait_input — permission prompt blocking, user must confirm (blue Ripple)
  *
  * CSS classes are `status-idle / -working / -waiting`
@@ -23,20 +24,14 @@ export type AgentStatus = 'idle' | 'working' | 'wait_input';
 
 /** True only when the upstream CLI exposes authoritative state via OSC title. */
 export function supportsNativeAgentStatus(tool: ToolType): boolean {
-  return tool === 'claude' || tool === 'codex' || tool === 'grok';
+  return tool === 'claude' || tool === 'codex';
 }
 
-/** Tools whose live TUI screen has a source-verified status/interaction
- * grammar. Native-title tools stay in this set because screen interactions
- * (especially permission prompts) are more precise than their coarse title. */
+/** Enhanced status/interaction integration is intentionally allowlisted to
+ * the tools that pass live Coffee UI testing. Every other CLI remains a
+ * first-class native terminal without projected status or interaction UI. */
 export function supportsAgentStatus(tool: ToolType): boolean {
-  return supportsNativeAgentStatus(tool)
-    || tool === 'opencode'
-    || tool === 'mimocode'
-    || tool === 'kilo'
-    || tool === 'pi'
-    || tool === 'omp'
-    || tool === 'kimicode';
+  return supportsEnhancedTool(tool);
 }
 
 // Theme: color palette (orthogonal to shape)

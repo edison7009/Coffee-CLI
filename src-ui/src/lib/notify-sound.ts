@@ -3,11 +3,11 @@
 // terminal to know it's done.
 //
 // Signal source: Redux store's agentStatus, which is the SAME source the
-// dynamic island uses. Claude/Codex/Grok have native-title fallback; the other
-// supported agents publish source-verified state from rendered terminal cells.
+// dynamic island uses. Claude/Codex have native-title fallback; Kimi publishes
+// source-verified state from rendered terminal cells.
 //
 // Reading the store keeps sound transitions identical to the visible island
-// state and avoids an independent event path. Codex and screen-only agents
+// state and avoids an independent event path. Codex and Kimi
 // additionally require a local user-submission marker to exclude startup TUI
 // activity from completion notifications.
 //
@@ -43,9 +43,24 @@ let ctx: AudioContext | null = null;
 // across calls.
 const prevStatus = new Map<string, AgentStatus>();
 
-// Codex emits real working/idle title transitions during startup. Screen-only
-// tools can likewise animate while restoring a session. Seeing idle is not
-// enough to distinguish those cycles from a completed turn, so notifications
+// A coarse OSC title can report idle a frame before the rendered terminal
+// exposes its permission selector. Delay completion very briefly so a
+// following wait_input transition can cancel the wrong chime. Timers live at
+// module scope for the same reason as prevStatus: this module is re-entered on
+// every Redux terminal-array update.
+const pendingDoneTimers = new Map<string, number>();
+const DONE_SETTLE_MS = 250;
+
+function cancelPendingDone(sessionId: string) {
+  const timer = pendingDoneTimers.get(sessionId);
+  if (timer === undefined) return;
+  window.clearTimeout(timer);
+  pendingDoneTimers.delete(sessionId);
+}
+
+// Codex emits real working/idle title transitions during startup. Kimi's
+// screen status can likewise animate while restoring a session. Seeing idle
+// is not enough to distinguish those cycles from a completed turn, so notifications
 // stay muted until the user submits input. This is local UI state, not a hook.
 const guardedPromptSubmitted = new Set<string>();
 
@@ -135,7 +150,10 @@ export function initNotifySound(
   );
 
   for (const id of prevStatus.keys()) {
-    if (!currentStatusIds.has(id)) prevStatus.delete(id);
+    if (!currentStatusIds.has(id)) {
+      prevStatus.delete(id);
+      cancelPendingDone(id);
+    }
   }
   for (const id of guardedPromptSubmitted) {
     if (!currentGuardedIds.has(id)) guardedPromptSubmitted.delete(id);
@@ -150,8 +168,9 @@ export function initNotifySound(
 
     // Update tracking
     prevStatus.set(terminal.id, currentStatus);
+    if (currentStatus !== 'idle') cancelPendingDone(terminal.id);
 
-    // Keep startup transitions silent for Codex and screen-only agents until
+    // Keep startup transitions silent for Codex and Kimi until
     // this session has received an actual user submission.
     const guarded = terminal.tool === 'codex' || !supportsNativeAgentStatus(terminal.tool);
     if (guarded && !guardedPromptSubmitted.has(terminal.id)) {
@@ -167,10 +186,23 @@ export function initNotifySound(
 
     if (!becameIdle && !becameWaiting) continue;
 
-    const kind: NotifyKind = becameIdle ? 'done' : 'wait';
-    if (!enabled(kind === 'done' ? 'cc-sound-done' : 'cc-sound-wait')) continue;
+    if (becameWaiting) {
+      cancelPendingDone(terminal.id);
+      if (enabled('cc-sound-wait')) playNotifySound('wait');
+      continue;
+    }
 
-    playNotifySound(kind);
+    if (!enabled('cc-sound-done')) continue;
+    cancelPendingDone(terminal.id);
+    const sessionId = terminal.id;
+    const timer = window.setTimeout(() => {
+      pendingDoneTimers.delete(sessionId);
+      // A permission frame or resumed work observed during the settle window
+      // wins; only a terminal that remained idle is genuinely complete.
+      if (prevStatus.get(sessionId) !== 'idle') return;
+      playNotifySound('done');
+    }, DONE_SETTLE_MS);
+    pendingDoneTimers.set(sessionId, timer);
   }
 
   // Cleanup: no-op. Live status-tab IDs are pruned at the start of each call.

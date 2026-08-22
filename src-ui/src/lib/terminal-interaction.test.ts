@@ -2,9 +2,9 @@
  * Fixture verification for the Claude TUI interaction parser.
  *
  * Every positive fixture is reconstructed from the installed Claude Code
- * bundle (v2.1.220): the menu row shape `[pointer] [space] [N.] [label]`,
+ * bundle (v2.1.220): the menu row shape `[pointer][N.] [label]`,
  * the ❯ (U+276F) focused-row cursor, the "Type something." free-text row,
- * the "escape to cancel" / "enter to select" key-guide, the "Do you want to
+ * the "Esc to cancel" / "Enter to select" key-guide, the "Do you want to
  * proceed?" permission prompt, the bold title, and the "press 1-N or type
  * your answer" input hint.
  *
@@ -15,7 +15,13 @@
  *
  * Run with `node scripts/run-terminal-interaction-test.mjs` (esbuild-based).
  */
-import { parseTerminalAgentStatus, parseTerminalInteraction, type ScreenLine } from './terminal-interaction';
+import { supportsConversationTool } from './chat-tools';
+import {
+  parseTerminalAgentStatus,
+  parseTerminalInteraction,
+  supportsTerminalInteraction,
+  type ScreenLine,
+} from './terminal-interaction';
 
 /** Minimal typed assert helpers (the app's `moduleResolution: bundler`
  *  tsconfig cannot resolve `node:assert` inside `src/`). */
@@ -31,17 +37,12 @@ function equal<T>(actual: T, expected: T, msg: string): void {
   }
 }
 
-function line(text: string, bold = false, optionIndexDim = false): ScreenLine {
-  return { text, bold, optionIndexDim };
+function line(text: string, bold = false): ScreenLine {
+  return { text, bold };
 }
 
-/** Claude's real selector paints its complete numeric marker with SGR dim. */
 function option(text: string): ScreenLine {
-  return line(text, false, true);
-}
-
-function backgrounds(text: string, ...runs: Array<[string, string]>): ScreenLine {
-  return { text, bold: false, optionIndexDim: false, backgroundRuns: runs.map(([runText, color]) => ({ text: runText, color })) };
+  return line(text);
 }
 
 function screen(...rows: ScreenLine[]): ScreenLine[] {
@@ -54,10 +55,10 @@ const bashPermission = screen(
   line('Bash command', true),
   line('git status -s'),
   line('Do you want to proceed?'),
-  option('❯ 1. Yes'),
-  option('  2. Yes, and don\u2019t ask again for bash commands in D:\\Coffee-CLI'),
-  option('  3. No'),
-  line('escape to cancel'),
+  option('❯1. Yes'),
+  option(' 2. Yes, and don\u2019t ask again for bash commands in D:\\Coffee-CLI'),
+  option(' 3. No'),
+  line('Esc to cancel'),
   line('❯'),
 );
 
@@ -66,10 +67,10 @@ const bashPermissionFocusedSecond = screen(
   line('Bash command', true),
   line('npm run build'),
   line('Do you want to proceed?'),
-  option('  1. Yes'),
-  option('❯ 2. Yes, and don\u2019t ask again for npm commands in D:\\Coffee-CLI'),
-  option('  3. No'),
-  line('escape to cancel'),
+  option(' 1. Yes'),
+  option('❯2. Yes, and don\u2019t ask again for npm commands in D:\\Coffee-CLI'),
+  option(' 3. No'),
+  line('Esc to cancel'),
   line('❯'),
 );
 
@@ -78,10 +79,10 @@ const editFilePermission = screen(
   line('Edit file', true),
   line('src/App.tsx'),
   line('Do you want to proceed?'),
-  option('❯ 1. Yes'),
-  option('  2. Yes, and always allow access to src/ from this project'),
-  option('  3. No'),
-  line('escape to cancel'),
+  option('❯1. Yes'),
+  option(' 2. Yes, and always allow access to src/ from this project'),
+  option(' 3. No'),
+  line('Esc to cancel'),
   line('❯'),
 );
 
@@ -89,21 +90,21 @@ const editFilePermission = screen(
 const askUserQuestion = screen(
   line('☐ Q1'),
   line('Which color?', true),
-  option('❯ 1. Red'),
-  option('  2. Blue'),
-  option('  3. Type something.'),
-  option('  4. Chat about this'),
-  line('enter to select · ↑↓ to navigate · escape to cancel'),
+  option('❯1. Red'),
+  option(' 2. Blue'),
+  option(' 3. Type something.'),
+  option(' 4. Chat about this'),
+  line('Enter to select · ↑/↓ to navigate · Esc to cancel'),
   line('❯ press 1-2 or type your answer'),
 );
 
 // ── Positive: question focus moved via arrows ───────────────────────────────
 const questionFocusedOther = screen(
   line('Which color?', true),
-  option('  1. Red'),
-  option('  2. Blue'),
-  option('❯ 3. Type something'),
-  line('enter to select · ↑↓ to navigate · escape to cancel'),
+  option(' 1. Red'),
+  option(' 2. Blue'),
+  option('❯3. Type something'),
+  line('Enter to select · ↑/↓ to navigate · Esc to cancel'),
   line('❯ press 1-2 or type your answer'),
 );
 
@@ -112,12 +113,65 @@ const wrappedPermission = screen(
   line('Bash command', true),
   line('npx create-tauri-app my-app'),
   line('Do you want to proceed?'),
-  option('❯ 1. Yes'),
-  option('  2. Yes, and don\u2019t ask again for npx create-tauri-app my-app --'),
+  option('❯1. Yes'),
+  option(' 2. Yes, and don\u2019t ask again for npx create-tauri-app my-app --'),
   line('force in D:\\Coffee-CLI'),
-  option('  3. No'),
-  line('escape to cancel'),
+  option(' 3. No'),
+  line('Esc to cancel'),
   line('❯'),
+);
+
+// ── Positive: real Claude 2.1.220 simple_expansion permission layout ───────
+const bashSimpleExpansion = screen(
+  line('Bash command', true),
+  line('CODEX="$HOME/.codex/sessions"; find "$CODEX" -name "rollout-*.jsonl"'),
+  line('Look for real Codex Desktop sessions with attachment markers'),
+  line(''),
+  line('Contains simple_expansion'),
+  line(''),
+  line('Do you want to proceed?'),
+  option('❯1. Yes'),
+  option(' 2. Yes, allow reading from sessions\\ from this project'),
+  line('   Authorize this operation'),
+  option(' 3. No'),
+  line('Esc to cancel · Tab to amend · ctrl+e to explain'),
+  line('❯'),
+);
+
+// Claude's accessibility/ASCII theme replaces U+276F with `>`; the parser
+// accepts both gap and no-gap spacing variants.
+const bashAsciiPointer = screen(
+  line('Bash command', true),
+  line('npm test'),
+  line('Do you want to proceed?'),
+  option('>1. Yes'),
+  option(' 2. No'),
+  line('Esc to cancel · ctrl+e to hide'),
+  line('>'),
+);
+
+const permissionExplainVisible = screen(
+  line('Bash command', true),
+  line('git status -s'),
+  line('Do you want to proceed?'),
+  option('❯1. Yes'),
+  option(' 2. No'),
+  line('Esc to cancel · ctrl+e to hide'),
+);
+
+// Real screen captured from Coffee on 2026-08-22. This is the layout that
+// regressed when the parser assumed no gap after the focus cursor and only
+// accepted the verb "proceed" in Claude's permission question.
+const writeCreatePermission = screen(
+  line('Write(test-permission.txt)'),
+  line('Create file', true),
+  line('test-permission.txt'),
+  line('1 permission test file'),
+  line('Do you want to create test-permission.txt?'),
+  option('❯ 1. Yes'),
+  option('  2. Yes, allow all edits during this session (shift+tab)'),
+  option('  3. No'),
+  line('Esc to cancel · Tab to amend'),
 );
 
 // ── Source-grounded fixtures for the other supported TUIs ─────────────────
@@ -129,26 +183,34 @@ const codexApproval = screen(
   line('Press enter to confirm or esc to cancel'),
 );
 
+const codexEditApproval = screen(
+  line('Would you like to make the following edits?', true),
+  line('src/app.ts | 2 +'),
+  line('› 1. Yes, proceed (y)'),
+  line('  2. No, continue without applying (esc)'),
+  line('Press enter to confirm or esc to cancel'),
+);
+
+const codexNetworkApproval = screen(
+  line('Do you want to approve network access to "api.example.com"?', true),
+  line('› 1. Yes, just this once (y)'),
+  line('  2. No, continue without network access (esc)'),
+  line('Press enter to confirm or esc to cancel'),
+);
+
+const codexMcpApproval = screen(
+  line('linear needs your approval.', true),
+  line('List project issues'),
+  line('› 1. Yes, proceed (y)'),
+  line('  2. No, continue without running it (esc)'),
+  line('Press enter to confirm or esc to cancel'),
+);
+
 const codexFreeform = screen(
   line('Question 1/1 (1 unanswered)'),
   line('Share details.', true),
   line('› Type your answer (optional)'),
   line('enter to submit answer | esc to interrupt'),
-);
-
-const openCodePermission = screen(
-  line('△ Permission required', true),
-  line('Run npm test'),
-  backgrounds(' Allow once   Allow always   Reject ', [' Allow once ', 'menu'], [' Allow always ', 'menu'], [' Reject ', 'warning']),
-  line('⇆ select     enter confirm'),
-);
-
-const openCodeQuestion = screen(
-  line('Choose a database', true),
-  backgrounds('1. SQLite', ['1. SQLite', 'active']),
-  line('2. Postgres'),
-  line('3. Type your own answer'),
-  line('↑↓ select     enter submit     esc dismiss'),
 );
 
 const kimiApproval = screen(
@@ -173,44 +235,31 @@ const kimiQuestion = screen(
   line('────────────────────────'),
 );
 
-const grokPermission = screen(
-  line('┃ Run this command?', true),
-  line('┃ npm test'),
-  line('┃ 1 (●) Yes, proceed', true),
-  line('┃ 2 (○) Always allow: npm test'),
-  line('┃ 3 (○) No, reject (type to add feedback)'),
-  line('1–3 select   Tab next option   Esc back'),
+const kimiPlanApproval = screen(
+  line('────────────────────────'),
+  line('▶ Ready to build with this plan?', true),
+  line('  ▶ 1. Approve'),
+  line('    2. Reject'),
+  line('    3. Revise'),
+  line('↑/↓ select · 1/2/3 choose · ↵ confirm'),
+  line('────────────────────────'),
 );
 
-const piSelector = screen(
-  line('Use production credentials?', true),
-  line('→ Yes'),
-  line('  No'),
-  line('↑↓ navigate  enter select  esc cancel'),
-);
-
-const ompApproval = screen(
-  line('╭─ Allow tool: dangerous_tool ─────────╮', true),
-  line('│                                      │'),
-  line('│ ❯ Approve                            │'),
-  line('│   Deny                               │'),
-  line('│                                      │'),
-  line('│ up/down navigate  enter select  esc cancel │'),
-  line('╰──────────────────────────────────────╯'),
+const kimiPermissionSelector = screen(
+  line('────────────────────────'),
+  line(' Select permission mode', true),
+  line(' ↑↓ navigate · Enter select · Esc cancel'),
+  line(''),
+  line('  ❯ Manual ← current'),
+  line('    Approve every action yourself.'),
+  line('    YOLO'),
+  line('    Auto'),
+  line('────────────────────────'),
 );
 
 const codexWorking = screen(
   line('• Working (12s • esc to interrupt)'),
   line('› Write a message'),
-);
-
-const openCodeWorking = screen(
-  line(' BUILD  ▰▱▱▱  esc interrupt                         kimi-k2.5'),
-);
-
-const piWorking = screen(
-  line('⠹ Working... (esc to interrupt)'),
-  line('> queued prompt'),
 );
 
 const kimiWorking = screen(
@@ -228,24 +277,12 @@ const kimiMoonWorking = screen(
   line('  Tip: Keep changes focused'),
 );
 
-const proseSayingWorking = screen(
-  line('Implementation summary:'),
-  line('Working... (esc to interrupt) is the status string we now parse.'),
-);
-
 const copiedNumbersOnly = screen(
   line('Permission implementation summary', true),
   line('› 1. Added the first branch'),
   line('  2. Added the second branch'),
   line('  3. Added the third branch'),
   line('  4. Added the fourth branch'),
-);
-
-const openCodeMultiSelect = screen(
-  line('Pick features (select all that apply)', true),
-  backgrounds('1. [ ] Search', ['1. [ ] Search', 'active']),
-  line('2. [ ] Export'),
-  line('↑↓ select     enter toggle     esc dismiss'),
 );
 
 const kimiMultiSelect = screen(
@@ -294,8 +331,8 @@ const quotedUserMessage = screen(
 // row, consecutive 1..N), but it is ordinary typed input: no "Other" row, no
 // key-guide, no permission prompt, no "press 1-N" hint.
 const typedInput = screen(
-  line('❯ 1. Deploy to prod'),
-  line('  2. Roll back'),
+  line('❯1. Deploy to prod'),
+  line(' 2. Roll back'),
 );
 
 // ── Negative: "consecutive numbers + Enter wording" but no cursor ───────────
@@ -307,33 +344,48 @@ const numberedProseWithEnter = screen(
 );
 
 // ── Negative: adversarial summary that copies every visible menu token ──────
-// Even a summary containing `❯ 1.`, consecutive choices and a key-guide-like
+// Even a summary containing `❯1.`, consecutive choices and a key-guide-like
 // sentence is not a selector: its numeric markers are ordinary cells, not the
 // dim marker cells emitted by Claude's menu component.
 const summaryMimickingMenu = screen(
   line('Implementation summary', true),
-  line('❯ 1. Restored the bubble card'),
-  line('  2. Added keyboard selection'),
-  line('  3. Added tests'),
+  line('❯1. Restored the bubble card'),
+  line(' 2. Added keyboard selection'),
+  line(' 3. Added tests'),
   line('You can press enter to select an item in the real menu.'),
+);
+
+// Documented stage-two adversarial case: a verbatim copied dialog contains
+// every stable live-screen token. We intentionally keep dim styling out of
+// the hard gate because real Claude renderers disagree on it; diagnostics
+// retain that metadata for a future discriminator that does not regress the
+// working prompt again.
+const proseWithExactMenuText = screen(
+  line('The terminal displayed this permission prompt:', true),
+  line('Contains simple_expansion'),
+  line('Do you want to proceed?'),
+  line('❯1. Yes'),
+  line(' 2. Yes, allow reading from sessions\\ from this project'),
+  line(' 3. No'),
+  line('Esc to cancel · Tab to amend · ctrl+e to explain'),
 );
 
 // ── Negative: multi-select flow (submit button) — left to native terminal ───
 const multiSelect = screen(
   line('Pick all that apply:', true),
-  option('❯ 1. Red'),
-  option('  2. Blue'),
-  option('  3. Type something'),
+  option('❯1. Red'),
+  option(' 2. Blue'),
+  option(' 3. Type something'),
   line('     Submit'),
-  line('enter to select · ↑↓ to navigate · escape to cancel'),
+  line('Enter to select · ↑/↓ to navigate · Esc to cancel'),
 );
 
 // ── Negative: stale menu buried in scrollback (last option > 20 rows up) ────
 const staleInScrollback = screen(
   ...[
-    option('❯ 1. Yes'),
-    option('  2. No'),
-    line('escape to cancel'),
+    option('❯1. Yes'),
+    option(' 2. No'),
+    line('Esc to cancel'),
     ...Array.from({ length: 40 }, (_, i) => line(`old output line ${i}`)),
   ],
 );
@@ -354,6 +406,7 @@ export function main(): void {
   // Positives
   const bash = parseTerminalInteraction(bashPermission, 'claude');
   assertInteraction('bash permission', bash, { kind: 'permission', optionCount: 3, focusedPosition: 0 });
+  equal(bash!.responseMode, 'digit', 'Claude uses its numeric shortcut');
   equal(bash!.title, 'Bash command', 'bash title');
   equal(bash!.options[0].number, 1, 'option 1 number');
   equal(bash!.options[2].number, 3, 'option 3 number');
@@ -381,54 +434,57 @@ export function main(): void {
   const wrapped = parseTerminalInteraction(wrappedPermission, 'claude');
   assertInteraction('wrapped permission label', wrapped, { kind: 'permission', optionCount: 3, focusedPosition: 0 });
 
+  const simpleExpansion = parseTerminalInteraction(bashSimpleExpansion, 'claude');
+  assertInteraction('bash simple_expansion', simpleExpansion, { kind: 'permission', optionCount: 3, focusedPosition: 0 });
+  equal(simpleExpansion!.title, 'Bash command', 'simple_expansion title');
+  equal(simpleExpansion!.options[1].label, 'Yes, allow reading from sessions\\ from this project', 'wrapped option label');
+
+  const ascii = parseTerminalInteraction(bashAsciiPointer, 'claude');
+  assertInteraction('Claude ASCII pointer', ascii, { kind: 'permission', optionCount: 2, focusedPosition: 0 });
+
+  const explain = parseTerminalInteraction(permissionExplainVisible, 'claude');
+  assertInteraction('permission explanation visible', explain, { kind: 'permission', optionCount: 2, focusedPosition: 0 });
+
+  const create = parseTerminalInteraction(writeCreatePermission, 'claude');
+  assertInteraction('Claude create-file permission', create, { kind: 'permission', optionCount: 3, focusedPosition: 0 });
+  equal(create!.title, 'Create file', 'create-file title');
+
   const codex = parseTerminalInteraction(codexApproval, 'codex');
   assertInteraction('Codex approval', codex, { kind: 'permission', optionCount: 2, focusedPosition: 0 });
   equal(codex!.responseMode, 'digit', 'Codex uses verified digit shortcuts');
+  for (const [name, fixture] of [
+    ['edit', codexEditApproval],
+    ['network', codexNetworkApproval],
+    ['MCP', codexMcpApproval],
+  ] as const) {
+    assertInteraction(`Codex ${name} approval`, parseTerminalInteraction(fixture, 'codex'), {
+      kind: 'permission', optionCount: 2, focusedPosition: 0,
+    });
+  }
   const codexText = parseTerminalInteraction(codexFreeform, 'codex');
   assertInteraction('Codex freeform', codexText, { kind: 'question', optionCount: 1, focusedPosition: 0 });
   equal(codexText!.responseMode, 'direct-text', 'Codex freeform writes directly');
-
-  for (const tool of ['opencode', 'mimocode', 'kilo'] as const) {
-    const parsed = parseTerminalInteraction(openCodePermission, tool);
-    assertInteraction(`${tool} permission`, parsed, { kind: 'permission', optionCount: 3, focusedPosition: 2 });
-    equal(parsed!.responseMode, 'horizontal', `${tool} uses horizontal buttons`);
-  }
-  const ocQuestion = parseTerminalInteraction(openCodeQuestion, 'opencode');
-  assertInteraction('OpenCode single question', ocQuestion, { kind: 'question', optionCount: 3, focusedPosition: 0 });
-  equal(ocQuestion!.responseMode, 'vertical', 'OpenCode question uses arrows');
 
   const kimi = parseTerminalInteraction(kimiApproval, 'kimicode');
   assertInteraction('Kimi approval', kimi, { kind: 'permission', optionCount: 3, focusedPosition: 0 });
   ok(kimi!.options[2].acceptsText, 'Kimi feedback option accepts text');
   const kimiAsk = parseTerminalInteraction(kimiQuestion, 'kimicode');
   assertInteraction('Kimi question', kimiAsk, { kind: 'question', optionCount: 3, focusedPosition: 0 });
+  const kimiPlan = parseTerminalInteraction(kimiPlanApproval, 'kimicode');
+  assertInteraction('Kimi plan approval', kimiPlan, { kind: 'permission', optionCount: 3, focusedPosition: 0 });
+  ok(kimiPlan!.options[2].acceptsText, 'Kimi Revise choice accepts feedback');
+  const kimiMode = parseTerminalInteraction(kimiPermissionSelector, 'kimicode');
+  assertInteraction('Kimi permission selector', kimiMode, { kind: 'permission', optionCount: 3, focusedPosition: 0 });
+  equal(kimiMode!.responseMode, 'vertical', 'Kimi permission selector uses arrows');
 
-  const grok = parseTerminalInteraction(grokPermission, 'grok');
-  assertInteraction('Grok permission', grok, { kind: 'permission', optionCount: 3, focusedPosition: 0 });
-  ok(grok!.options[2].acceptsText, 'Grok reject option accepts feedback');
-
-  const pi = parseTerminalInteraction(piSelector, 'pi');
-  assertInteraction('Pi extension selector', pi, { kind: 'permission', optionCount: 2, focusedPosition: 0 });
-  equal(pi!.responseMode, 'vertical', 'Pi uses vertical navigation');
-
-  const omp = parseTerminalInteraction(ompApproval, 'omp');
-  assertInteraction('Oh-My-Pi tool approval', omp, { kind: 'permission', optionCount: 2, focusedPosition: 0 });
-
-  // Shared Dynamic Island state comes from the same rendered screen. Working
-  // matches require each tool's TUI chrome, while a verified interaction is
-  // always the stronger wait_input state.
+  // Shared Dynamic Island state remains enabled only for verified enhanced
+  // integrations. A verified interaction is authoritative wait_input state.
   equal(parseTerminalAgentStatus(codexWorking, 'codex'), 'working', 'Codex screen working');
-  equal(parseTerminalAgentStatus(openCodeWorking, 'opencode'), 'working', 'OpenCode screen working');
-  equal(parseTerminalAgentStatus(openCodeWorking, 'mimocode'), 'working', 'Mimo screen working');
-  equal(parseTerminalAgentStatus(openCodeWorking, 'kilo'), 'working', 'Kilo screen working');
-  equal(parseTerminalAgentStatus(piWorking, 'pi'), 'working', 'Pi screen working');
-  equal(parseTerminalAgentStatus(piWorking, 'omp'), 'working', 'Oh-My-Pi screen working');
   equal(parseTerminalAgentStatus(kimiWorking, 'kimicode'), 'working', 'Kimi screen working');
   equal(parseTerminalAgentStatus(kimiThinking, 'kimicode'), 'working', 'Kimi screen thinking');
   equal(parseTerminalAgentStatus(kimiMoonWorking, 'kimicode'), 'working', 'Kimi label-less moon frame');
   equal(parseTerminalAgentStatus(bashPermission, 'claude'), 'wait_input', 'Claude interaction waits');
   equal(parseTerminalAgentStatus(codexApproval, 'codex'), 'wait_input', 'Codex interaction waits');
-  equal(parseTerminalAgentStatus(proseSayingWorking, 'pi'), null, 'working prose is not TUI chrome');
 
   // Negatives
   equal(parseTerminalInteraction(markdownList, 'claude'), null, 'markdown numbered list');
@@ -438,16 +494,35 @@ export function main(): void {
   equal(parseTerminalInteraction(typedInput, 'claude'), null, 'multi-line input box text');
   equal(parseTerminalInteraction(numberedProseWithEnter, 'claude'), null, 'numbered prose + enter wording');
   equal(parseTerminalInteraction(summaryMimickingMenu, 'claude'), null, 'summary mimicking a menu');
+  // Stage-one restoration intentionally does not make SGR dim styling a hard
+  // gate: real Claude versions/themes disagree on it. A verbatim copy of the
+  // complete dialog remains the stage-two adversarial case; ordinary numbered
+  // prose (including "enter to select") is already rejected above.
+  ok(parseTerminalInteraction(proseWithExactMenuText, 'claude'), 'verbatim copied dialog is the documented stage-two case');
   equal(parseTerminalInteraction(multiSelect, 'claude'), null, 'multi-select flow');
   equal(parseTerminalInteraction(staleInScrollback, 'claude'), null, 'stale menu in scrollback');
 
   // The central safety rule: prose containing 1/2/3/4 is never actionable
-  // without that tool's live footer, pointer/style, and structural anchors.
-  for (const tool of ['claude', 'codex', 'opencode', 'mimocode', 'kilo', 'grok', 'pi', 'omp', 'kimicode'] as const) {
+  // without a supported tool's live footer, pointer/style, and structure.
+  for (const tool of ['claude', 'codex', 'opencode', 'mimocode', 'kilo', 'kimicode'] as const) {
     equal(parseTerminalInteraction(copiedNumbersOnly, tool), null, `${tool}: copied 1/2/3/4 summary`);
   }
-  equal(parseTerminalInteraction(openCodeMultiSelect, 'opencode'), null, 'OpenCode multi-select stays native');
   equal(parseTerminalInteraction(kimiMultiSelect, 'kimicode'), null, 'Kimi multi-select stays native');
+
+  const terminalOnlyTools = [
+    'grok', 'pi', 'omp', 'qwen', 'antigravity', 'opencode', 'mimocode', 'kilo',
+    'hermes', 'openclaw', 'crush', 'aider', 'goose', 'copilot', 'cursor', 'cline',
+    'terminal', 'remote',
+  ] as const;
+  for (const tool of terminalOnlyTools) {
+    equal(supportsTerminalInteraction(tool), false, `${tool}: Coffee interaction disabled`);
+    equal(supportsConversationTool(tool), false, `${tool}: conversation mode disabled`);
+    equal(parseTerminalInteraction(bashPermission, tool), null, `${tool}: selectors stay native`);
+  }
+  for (const tool of ['claude', 'codex', 'kimicode'] as const) {
+    equal(supportsTerminalInteraction(tool), true, `${tool}: Coffee interaction enabled`);
+    equal(supportsConversationTool(tool), true, `${tool}: conversation mode enabled`);
+  }
 
   // A Claude-shaped prompt must not be accepted by another tool family.
   equal(parseTerminalInteraction(bashPermission, 'codex'), null, 'cross-family Claude prompt');
@@ -456,10 +531,10 @@ export function main(): void {
   // second is the same content re-wrapped at a narrower column).
   const resized = screen(
     line('Which color?', true),
-    option('❯ 1. Red'),
-    option('  2. Blue'),
-    option('  3. Type something.'),
-    line('enter to select · ↑↓ to navigate · escape to cancel'),
+    option('❯1. Red'),
+    option(' 2. Blue'),
+    option(' 3. Type something.'),
+    line('Enter to select · ↑/↓ to navigate · Esc to cancel'),
   );
   equal(
     parseTerminalInteraction(askUserQuestion, 'claude')!.fingerprint,

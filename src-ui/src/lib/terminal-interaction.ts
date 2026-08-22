@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import type { Terminal } from '@xterm/xterm';
 import type { AgentStatus, ToolType } from '../store/app-state';
+import { supportsEnhancedTool } from './chat-tools';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Detection of live agent interactions from xterm's already-rendered cells.
@@ -12,10 +13,9 @@ import type { AgentStatus, ToolType } from '../store/app-state';
 // paints, verified against the installed `claude` binary (v2.1.220, build
 // 2026-07-24, GIT_SHA 4073f595):
 //
-//   • Menu rows (Wr → lQs) render as `[pointer] [space] [N.] [label]` where
-//     N is 1-based, the index is dim, and the focused row's pointer column is
-//     the ❯ glyph (U+276F — Ink `je.pointer`). The pointer column is a blank
-//     for every other row, and ↑ / ↓ appear at the scroll window edges.
+//   • Menu rows render as a consecutive 1..N block. Claude versions/themes
+//     have used both `[pointer] [N.]` and `[pointer][N.]`; the focused row's
+//     pointer is `❯` (or `›`, `→`, `>` in other renderers/themes).
 //     Permission options use layout "compact" (+inline descriptions),
 //     AskUserQuestion options use "compact-vertical"; both share this shape.
 //
@@ -25,14 +25,13 @@ import type { AgentStatus, ToolType } from '../store/app-state';
 //     multi-select through Y4 which additionally paints a "Submit"/"Next"
 //     button row.
 //
-//   • The dialogs paint a footer key-guide (Qt/Ue): `enter to select`,
-//     `↑ to navigate`, `escape to cancel`, and permission dialogs (Ed) print
+//   • The dialogs paint a footer key-guide (Qt/Ue): `Enter to select`,
+//     `↑/↓ to navigate`, `Esc to cancel`, and permission dialogs (Ed) print
 //     a prompt line such as "Do you want to proceed?" and a bold title (GAe).
 //
-//   • The live state machine (WJs.handleKeyDown) maps digit keys 1-9 directly
-//     to option index digit-1 — pressing "2" selects option 2, and for the
-//     "Other" input option the digit focuses the inline text input instead of
-//     submitting. Coffee replays exactly those keys.
+//   • The live state machine maps digit keys 1-9 to the corresponding option.
+//     For the "Other" input option the digit enters its inline text input
+//     instead of submitting. Coffee replays the established numeric shortcut.
 //
 // The parser requires (1) a consecutive 1..N block of ≥2 option rows,
 // (2) exactly one row carrying the ❯ cursor, and (3) at least one structural
@@ -42,12 +41,12 @@ import type { AgentStatus, ToolType } from '../store/app-state';
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type TerminalInteractionKind = 'permission' | 'question';
-export type TerminalInteractionResponseMode = 'digit' | 'vertical' | 'horizontal' | 'direct-text';
+export type TerminalInteractionResponseMode = 'digit' | 'vertical' | 'direct-text';
 
 export interface TerminalInteractionOption {
   /** Zero-based visual position in the upstream menu. */
   position: number;
-  /** Number Coffee displays. It is sent upstream only in `digit` mode. */
+  /** Number Coffee displays. It is sent upstream only in a digit mode. */
   number: number;
   label: string;
   /** Selecting this option opens (or already represents) a text input. */
@@ -68,23 +67,11 @@ export interface TerminalInteraction {
   responseMode: TerminalInteractionResponseMode;
 }
 
-export interface ScreenBackgroundRun {
-  text: string;
-  /** Stable only within one rendered frame; used to compare sibling buttons. */
-  color: string;
-}
-
 /** A rendered line with its cell attributes, as read from the xterm buffer. */
 export interface ScreenLine {
   text: string;
   /** True when any cell in the line carries the bold (SGR 1) attribute. */
   bold: boolean;
-  /** True only when the numeric menu marker (`1.`, `2.`, ...) carries the
-   *  dim SGR attribute used by Claude's real selector renderer. */
-  optionIndexDim: boolean;
-  /** Contiguous non-default background runs. OpenCode uses these to mark the
-   * selected horizontal button; other parsers do not depend on theme colors. */
-  backgroundRuns?: ScreenBackgroundRun[];
 }
 
 type Listener = () => void;
@@ -149,26 +136,20 @@ export function useTerminalInteraction(sessionId: string): TerminalInteraction |
   );
 }
 
-const SUPPORTED_TOOLS = new Set<ToolType>([
-  'claude', 'codex', 'opencode', 'mimocode', 'kilo', 'grok', 'pi', 'omp', 'kimicode',
-]);
-
 export function supportsTerminalInteraction(tool: ToolType): boolean {
-  return SUPPORTED_TOOLS.has(tool);
+  return supportsEnhancedTool(tool);
 }
 
 // ── Screen-structure constants (verified against the installed bundle) ──────
 
-/** Ink `je.pointer` — the menu cursor glyph. Only the focused option row
- *  starts with it; a blank column is used for every other row. */
-const POINTER_GLYPH = '❯';
+/** Focus cursors observed across Claude's terminal renderers/themes. */
+const FOCUSED_POINTER_GLYPHS = new Set(['❯', '›', '→', '>']);
 
-/** Menu option row: `[pointer] [space] [N.] [label]`. The pointer column is
- *  exactly one cell wide, followed by the single space Ink inserts between
- *  the pointer and the label (`<Box gap={1}>`). The index is always `N.`
- *  (`${index}.`, possibly padded), never `N)` — but we accept `)` too so the
- *  parser stays tolerant of future renderer tweaks. */
-const OPTION_ROW_RE = /^([❯↑↓ ]) (\d{1,2})[.)] ?(.*)$/u;
+/** Menu option row. Spacing is deliberately flexible because real Claude
+ *  builds have emitted both `❯ 1. Yes` and `❯1. Yes`. Semantic safety comes
+ *  from the unique live pointer + consecutive block + dialog footer, not from
+ *  a version-specific column offset. */
+const OPTION_ROW_RE = /^[ \t]*([❯›→>]?)[ \t]*(\d{1,2})[.)][ \t]?(.*)$/u;
 
 /** AskUserQuestion's free-text "Other" option — its visible placeholder is
  *  "Type something." (single) / "Type something" (multi), hardcoded in Mdi. */
@@ -178,14 +159,14 @@ const OTHER_LABEL_RE = /^other$/i;
 /** "Chat about this" is a plan-mode side action, not an answer option. */
 const CHAT_ACTION_RE = /^chat about this$/i;
 
-/** Dialog footer key-guide (Qt/Ue): `<chord> to <action>`, e.g. "enter to
- *  select · ↑↓ to navigate · escape to cancel", plus the multi-question
+/** Dialog footer key-guide (Qt/Ue): `<chord> to <action>`, e.g. "Enter to
+ *  select · ↑/↓ to navigate · Esc to cancel", plus the multi-question
  *  "Tab/Arrow keys to navigate" hint. Rendered only by interactive dialogs,
  *  never by assistant prose. */
-const CHORD_GUIDE_RE = /(?:(?:enter|return|escape|esc|up|down|tab|space)\b|[↑↓←→]).{0,24}\bto\s+(?:select|navigate|cancel|confirm|toggle|submit|save|next|send|explain|hide|show)\b/i;
+const CHORD_GUIDE_RE = /(?:(?:enter|return|escape|esc|up|down|tab|space|ctrl\+e)\b|[↑↓←→]).{0,24}\bto\s+(?:select|navigate|cancel|confirm|toggle|submit|save|next|send|amend|explain|hide|show)\b/i;
 
 /** Permission prompt lines printed by the permission dialogs (Ed). */
-const PERMISSION_PROMPT_RE = /(?:do you want to (?:proceed|allow|use)|how (?:would|do) you like to proceed|allow (?:all actions|claude to)|permission needed|is this (?:ok|okay)\?)/i;
+const PERMISSION_PROMPT_RE = /(?:do you want to\s+.+\?|how (?:would|do) you like to proceed|allow (?:all actions|claude to)|permission needed|is this (?:ok|okay)\?)/i;
 
 /** The input box placeholder that Claude prints while an AskUserQuestion is
  *  active: `press 1-<N> or type your answer`. */
@@ -242,7 +223,7 @@ function parseClaudeInteraction(screen: ScreenLine[]): TerminalInteraction | nul
   for (let line = 0; line < screen.length; line += 1) {
     const text = cleanLine(screen[line].text);
     const match = OPTION_ROW_RE.exec(text);
-    if (!match || !screen[line].optionIndexDim) continue;
+    if (!match) continue;
     let label = match[3].trim();
     if (!label) continue;
     // Strip the multi-select tick glyph so selected rows keep a clean label.
@@ -254,7 +235,7 @@ function parseClaudeInteraction(screen: ScreenLine[]): TerminalInteraction | nul
       line,
       number: Number(match[2]),
       label,
-      focused: match[1] === POINTER_GLYPH,
+      focused: FOCUSED_POINTER_GLYPHS.has(match[1]),
     });
   }
 
@@ -324,7 +305,14 @@ function parseClaudeInteraction(screen: ScreenLine[]): TerminalInteraction | nul
   const hasOther = block.some(
     row => OTHER_OPTION_RE.test(row.label) || OTHER_LABEL_RE.test(row.label),
   );
-  const hasChordGuide = guideRegion.some(({ text }) => CHORD_GUIDE_RE.test(text));
+  // A live Claude selector always exposes an explicit cancel chord. Requiring
+  // that footer prevents ordinary prose such as "press enter to select" from
+  // turning a numbered response into a card, while remaining independent of
+  // the prompt verb and the renderer's color/spacing choices.
+  const hasChordGuide = guideRegion.some(({ text }) => (
+    CHORD_GUIDE_RE.test(text)
+    && /\b(?:esc|escape)\s+to\s+cancel\b/i.test(text)
+  ));
   const hasPrompt = regionAbove.some(line => PERMISSION_PROMPT_RE.test(line));
   const hasQuestionHint = regionBelow.some(line => QUESTION_HINT_RE.test(line));
 
@@ -437,8 +425,12 @@ function parseCodexInteraction(screen: ScreenLine[]): TerminalInteraction | null
   const block = consecutiveNumberedBlock(rows);
   if (block && block.filter(row => row.focused).length === 1) {
     const title = nearestTitle(screen, block[0].line, 'Input required');
+    // Keep this classification tied to Codex's ApprovalRequest variants in
+    // approval_overlay.rs. The option/footer grammar already proves that the
+    // view is live; these titles decide whether Coffee presents it as a
+    // permission (and uses the permission sound) rather than a question.
     const permission = screen.slice(Math.max(0, block[0].line - 12), block[0].line)
-      .some(line => /would you like to (?:run|grant)|permission rule:/i.test(cleanLine(line.text)));
+      .some(line => /(?:would you like to (?:run the following command|grant these permissions|make the following edits)|do you want to approve network access to|needs your approval\.|permission rule:)/i.test(cleanLine(line.text)));
     return interaction('codex', permission ? 'permission' : 'question', title, block.map((row, position) => ({
       position,
       number: row.number,
@@ -475,63 +467,6 @@ function consecutiveNumberedBlock(rows: OptionRow[]): OptionRow[] | null {
   return best;
 }
 
-function selectedBackgroundLabel(line: ScreenLine, labels: string[]): string | null {
-  const matches = labels.map(label => ({
-    label,
-    run: line.backgroundRuns?.find(run => run.text.includes(label)),
-  }));
-  const colored = matches.filter((item): item is { label: string; run: ScreenBackgroundRun } => Boolean(item.run));
-  if (colored.length === 1) return colored[0].label;
-  const counts = new Map<string, number>();
-  for (const item of colored) counts.set(item.run.color, (counts.get(item.run.color) ?? 0) + 1);
-  const unique = colored.filter(item => counts.get(item.run.color) === 1);
-  return unique.length === 1 ? unique[0].label : null;
-}
-
-function parseOpenCodeInteraction(screen: ScreenLine[]): TerminalInteraction | null {
-  // PermissionPrompt is a horizontal three-button selector. Its exact labels
-  // and footer come from routes/session/permission.tsx.
-  const footer = screen.findLastIndex(line => /⇆\s*select.*enter\s*confirm/i.test(cleanLine(line.text)));
-  if (footer >= 0 && hasNearBottom(screen, footer)) {
-    const candidates = [
-      ['Allow once', 'Allow always', 'Reject'],
-      ['Confirm', 'Cancel'],
-    ];
-    for (const labels of candidates) {
-      const optionLine = screen.findLastIndex((line, index) => index < footer && labels.every(label => line.text.includes(label)));
-      if (optionLine < 0) continue;
-      const selected = selectedBackgroundLabel(screen[optionLine], labels);
-      if (!selected) return null;
-      const titleLine = screen.findLastIndex((line, index) => index < optionLine && /permission required/i.test(cleanLine(line.text)));
-      const title = titleLine >= 0 ? normalizeTitle(screen[titleLine].text.replace(/^△\s*/u, '')) : 'Permission required';
-      return interaction('opencode', 'permission', title, labels.map((label, position) => ({
-        position, number: position + 1, label, acceptsText: false, focused: label === selected,
-      })), 'horizontal');
-    }
-  }
-
-  // Only the one-question, single-select form is projected. Multi-select and
-  // multi-tab flows require toggle/review semantics and stay native.
-  const questionFooter = screen.findLastIndex(line => /↑↓\s*select.*enter\s*submit.*esc\s*dismiss/i.test(cleanLine(line.text)));
-  if (questionFooter < 0 || !hasNearBottom(screen, questionFooter)) return null;
-  const near = screen.slice(Math.max(0, questionFooter - 20), questionFooter + 1).map(line => cleanLine(line.text)).join(' ');
-  if (/select all that apply|enter\s+toggle|⇆\s*tab/i.test(near)) return null;
-  const rows: OptionRow[] = [];
-  for (let line = Math.max(0, questionFooter - 18); line < questionFooter; line += 1) {
-    const match = /^\s*(\d{1,2})\.\s*(.+?)\s*$/u.exec(cleanLine(screen[line].text));
-    if (!match) continue;
-    const label = match[2].replace(/\s+✓\s*$/u, '').trim();
-    const focused = screen[line].backgroundRuns?.some(run => run.text.includes(match[1]) || run.text.includes(label)) ?? false;
-    rows.push({ line, number: Number(match[1]), label, focused });
-  }
-  const block = consecutiveNumberedBlock(rows);
-  if (!block || block.filter(row => row.focused).length !== 1) return null;
-  return interaction('opencode', 'question', nearestTitle(screen, block[0].line, 'Input required'), block.map((row, position) => ({
-    position, number: row.number, label: row.label,
-    acceptsText: /^type your own answer$/i.test(row.label), focused: row.focused,
-  })), 'vertical');
-}
-
 function parseKimiInteraction(screen: ScreenLine[]): TerminalInteraction | null {
   const approvalFooter = screen.findLastIndex(line => /↑\/↓ select.*\bchoose.*↵ confirm/i.test(cleanLine(line.text)));
   if (approvalFooter >= 0 && hasNearBottom(screen, approvalFooter)) {
@@ -545,7 +480,7 @@ function parseKimiInteraction(screen: ScreenLine[]): TerminalInteraction | null 
       const title = nearestTitle(screen, block[0].line, 'Permission required');
       return interaction('kimi', 'permission', title, block.map((row, position) => ({
         position, number: row.number, label: row.label,
-        acceptsText: /feedback|tell kimi|differently/i.test(row.label), focused: row.focused,
+        acceptsText: /feedback|tell kimi|differently|revise/i.test(row.label), focused: row.focused,
       })), 'digit');
     }
   }
@@ -583,96 +518,11 @@ function parseKimiInteraction(screen: ScreenLine[]): TerminalInteraction | null 
   return null;
 }
 
-function parseGrokInteraction(screen: ScreenLine[]): TerminalInteraction | null {
-  const rows: OptionRow[] = [];
-  const rowRe = /^\s*(?:┃\s*)?(\d)\s+\(([●•○◉])\)\s*(?:❯\s*)?(.+?)\s*$/u;
-  for (let line = Math.max(0, screen.length - 30); line < screen.length; line += 1) {
-    const match = rowRe.exec(cleanLine(screen[line].text));
-    if (!match) continue;
-    // Permission rows put the filled radio on the cursor; question rows use
-    // the radio for the committed answer and bold the actual cursor row.
-    // Bold is therefore the one focus signal shared by both Grok views.
-    rows.push({ line, number: Number(match[1]), label: match[3].trim(), focused: screen[line].bold });
-  }
-  const block = consecutiveNumberedBlock(rows);
-  if (!block || block.filter(row => row.focused).length !== 1 || !hasNearBottom(screen, block[block.length - 1].line)) return null;
-  const context = screen.slice(Math.max(0, block[0].line - 15), Math.min(screen.length, block[block.length - 1].line + 8))
-    .map(line => cleanLine(line.text)).join(' ');
-  if (!/(?:permission|allow|proceed|reject|tell grok|1\s*[-–]\s*\d.*select)/i.test(context)) return null;
-  const kind: TerminalInteractionKind = /permission|allow|proceed|reject/i.test(context) ? 'permission' : 'question';
-  return interaction('grok', kind, nearestTitle(screen, block[0].line, kind === 'permission' ? 'Permission required' : 'Input required'), block.map((row, position) => ({
-    position, number: row.number, label: row.label,
-    acceptsText: /type to add feedback|tell grok|other/i.test(row.label), focused: row.focused,
-  })), 'digit');
-}
-
-function parsePointerSelector(
-  screen: ScreenLine[],
-  family: string,
-  footerRe: RegExp,
-  rowRe: RegExp,
-): TerminalInteraction | null {
-  const footer = screen.findLastIndex(line => footerRe.test(cleanLine(line.text)));
-  if (footer < 0 || !hasNearBottom(screen, footer)) return null;
-  const rows: Array<{ line: number; label: string; focused: boolean }> = [];
-  for (let line = Math.max(0, footer - 16); line < footer; line += 1) {
-    const match = rowRe.exec(cleanLine(screen[line].text));
-    if (!match) continue;
-    rows.push({ line, label: match[2].trim(), focused: match[1] !== ' ' });
-  }
-  if (rows.length < 2 || rows.filter(row => row.focused).length !== 1) return null;
-  const first = rows[0].line;
-  const title = nearestTitle(screen, first, 'Input required');
-  const permission = /allow tool|permission|approve|confirm/i.test(title)
-    || rows.every(row => /^(?:approve|deny|yes|no|allow|reject)/i.test(row.label));
-  return interaction(family, permission ? 'permission' : 'question', title, rows.map((row, position) => ({
-    position, number: position + 1, label: row.label, acceptsText: false, focused: row.focused,
-  })), 'vertical');
-}
-
-function parsePiInteraction(screen: ScreenLine[]): TerminalInteraction | null {
-  return parsePointerSelector(screen, 'pi', /↑↓.*navigate.*(?:select|confirm).*cancel/i, /^\s*([→ ])\s(.+?)\s*$/u);
-}
-
-function parseOmpInteraction(screen: ScreenLine[]): TerminalInteraction | null {
-  // Rich AskDialog checkbox/radio flows need toggle + submit semantics and are
-  // deliberately left native. HookSelector confirmations remain safe.
-  const context = screen.slice(Math.max(0, screen.length - 24)).map(line => cleanLine(line.text)).join(' ');
-  if (/\[[✓ x]\]|submit answers|toggle/i.test(context)) return null;
-  const footer = screen.findLastIndex(line => /up\/down navigate\s+enter select\s+esc cancel/i.test(cleanLine(line.text)));
-  if (footer < 0 || !hasNearBottom(screen, footer)) return null;
-  const labels = ['Approve', 'Deny'];
-  const options = labels.map((label, position) => {
-    const selectedRe = new RegExp(`^[│┃]\\s[❯>▸\\uf054]\\s+${label}\\s*[│┃]$`, 'u');
-    const idleRe = new RegExp(`^[│┃]\\s{3}${label}\\s*[│┃]$`, 'u');
-    const row = screen.find(line => selectedRe.test(cleanLine(line.text)) || idleRe.test(cleanLine(line.text)));
-    return {
-      position,
-      number: position + 1,
-      label,
-      acceptsText: false,
-      focused: row ? selectedRe.test(cleanLine(row.text)) : false,
-    };
-  });
-  if (options.filter(option => option.focused).length !== 1 || options.some(option => !screen.some(line => cleanLine(line.text).includes(option.label)))) return null;
-  const titleRow = screen.find(line => /allow tool:/i.test(cleanLine(line.text)));
-  const title = titleRow
-    ? (cleanLine(titleRow.text).match(/allow tool:\s*.*?(?=\s*[─━]*[╮┐]?$)/i)?.[0] ?? 'Tool permission')
-    : 'Tool permission';
-  return interaction('omp', 'permission', title, options, 'vertical');
-}
-
 /** Parse only protocols verified in each tool's checked-in TUI source. */
 export function parseTerminalInteraction(screen: ScreenLine[], tool: ToolType): TerminalInteraction | null {
   switch (tool) {
     case 'claude': return parseClaudeInteraction(screen);
     case 'codex': return parseCodexInteraction(screen);
-    case 'opencode':
-    case 'mimocode':
-    case 'kilo': return parseOpenCodeInteraction(screen);
-    case 'grok': return parseGrokInteraction(screen);
-    case 'pi': return parsePiInteraction(screen);
-    case 'omp': return parseOmpInteraction(screen);
     case 'kimicode': return parseKimiInteraction(screen);
     default: return null;
   }
@@ -680,7 +530,6 @@ export function parseTerminalInteraction(screen: ScreenLine[], tool: ToolType): 
 
 const BRAILLE_SPINNER_RE = /^[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]/u;
 const MOON_SPINNER_RE = /^[🌑🌒🌓🌔🌕🌖🌗🌘]/u;
-
 /**
  * Extract the coarse agent state that powers Coffee's Dynamic Island from the
  * same rendered cells used by the interaction card. A verified interaction is
@@ -709,25 +558,6 @@ export function parseTerminalAgentStatus(
         ? 'working'
         : null;
 
-    case 'opencode':
-    case 'mimocode':
-    case 'kilo':
-      // OpenCode's run footer renders BUILD + an animated blocks spinner and
-      // `<binding> interrupt` only while session phase is `running`.
-      return recent.some(line => /\bBUILD\b.*\b(?:esc|ctrl\s*\+\s*c)\b.*\binterrupt\b/i.test(line))
-        ? 'working'
-        : null;
-
-    case 'pi':
-    case 'omp':
-      // Pi's WorkingStatusIndicator is a Loader row. Require both its spinner
-      // cell and a source-defined status label so copied prose cannot match.
-      return recent.some(line => (
-        BRAILLE_SPINNER_RE.test(line)
-        && /\b(?:Working|Retrying|Compacting context|Auto-compacting|Summarizing branch)\b/i.test(line)
-        && /\bto\s+(?:interrupt|cancel)\b/i.test(line)
-      )) ? 'working' : null;
-
     case 'kimicode':
       // Kimi uses braille `working...` / `thinking...` while composing and
       // moon frames for waiting/tool phases. Source permits an empty moon-row
@@ -738,8 +568,7 @@ export function parseTerminalAgentStatus(
         MOON_SPINNER_RE.test(line)
       )) ? 'working' : null;
 
-    // Claude and Grok retain native-title working fallback. Their rendered
-    // permission/question structures still return wait_input above.
+    // Claude retains its authoritative native-title working fallback.
     default:
       return null;
   }
@@ -747,7 +576,7 @@ export function parseTerminalAgentStatus(
 
 /**
  * Read the live bottom screen of the given xterm instance, preserving the cell
- * attributes used by source-verified selectors (bold/dim/background). Use
+ * attributes used by source-verified selectors (bold/dim). Use
  * `baseY`, not the user's scrolled viewportY: inspecting scrollback must not
  * make the Dynamic Island lose the agent that is still running at the bottom.
  */
@@ -761,14 +590,11 @@ export function readTerminalScreen(term: Terminal): ScreenLine[] {
   for (let row = start; row <= viewportEnd; row += 1) {
     const line = buffer.getLine(row);
     if (!line) {
-      screen.push({ text: '', bold: false, optionIndexDim: false });
+      screen.push({ text: '', bold: false });
       continue;
     }
     const text = line.translateToString(true);
     let bold = false;
-    const backgroundRuns: ScreenBackgroundRun[] = [];
-    let backgroundColor = '';
-    let backgroundText = '';
     // Terminal columns are not JavaScript string indices: CJK/wide glyphs
     // can occupy two cells, while astral glyphs use two UTF-16 code units.
     // Walk the actual xterm cells so a bold title is never missed.
@@ -776,49 +602,9 @@ export function readTerminalScreen(term: Terminal): ScreenLine[] {
       const current = line.getCell(col, cell);
       if (!current) continue;
       if (current.isBold()) bold = true;
-
-      const color = current.isBgDefault()
-        ? ''
-        : `${String(current.getBgColorMode())}:${String(current.getBgColor())}`;
-      if (color !== backgroundColor) {
-        if (backgroundColor && backgroundText) {
-          backgroundRuns.push({ text: backgroundText, color: backgroundColor });
-        }
-        backgroundColor = color;
-        backgroundText = '';
-      }
-      if (color) {
-        const chars = current.getChars();
-        backgroundText += chars || (current.getWidth() === 0 ? '' : ' ');
-      }
-    }
-    if (backgroundColor && backgroundText) {
-      backgroundRuns.push({ text: backgroundText, color: backgroundColor });
     }
 
-    // Claude's selector renders the complete numeric marker (`N.`) through a
-    // dim Text node. A summary/progress list may contain the same characters,
-    // even beside a copied `❯`, but it does not carry this menu-cell signal.
-    // The row prefix is fixed-width ASCII/one-cell glyphs, so the marker begins
-    // at terminal column 2 and spans the digits plus the trailing punctuation.
-    let optionIndexDim = false;
-    const optionMatch = OPTION_ROW_RE.exec(cleanLine(text));
-    if (optionMatch) {
-      const markerStart = 2;
-      const markerLength = optionMatch[2].length + 1;
-      optionIndexDim = true;
-      for (let col = markerStart; col < markerStart + markerLength; col += 1) {
-        if (!line.getCell(col, cell)?.isDim()) {
-          optionIndexDim = false;
-          break;
-        }
-      }
-    }
-    screen.push({ text, bold, optionIndexDim, backgroundRuns });
+    screen.push({ text, bold });
   }
   return screen;
-}
-
-export function readTerminalInteraction(term: Terminal, tool: ToolType): TerminalInteraction | null {
-  return parseTerminalInteraction(readTerminalScreen(term), tool);
 }

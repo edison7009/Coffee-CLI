@@ -48,16 +48,16 @@ This is not a web app. Not an Electron wrapper. A **true native desktop app** bu
 
 ### Supported AI CLIs
 
-Coffee CLI can launch **any** command-line agent — but the ones below get deeper, purpose-built integration. The tier tells you how much of the workspace lights up for each one: **Dynamic Island** (live status), **History** (saved conversations), **Heatmap** (activity), **Changes** (diff panel), **Brand icon**, **One-click launch**, and **Custom launch args** (per-tool flags).
+Coffee CLI can launch **any** command-line agent — but the ones below get deeper, purpose-built integration. **T1 means the complete Coffee desktop experience: Dynamic Island live status plus desktop-style conversation**, including conversation bubbles and permission/input cards. Lower tiers remain native terminal experiences, with the additional capabilities listed below.
 
 | Tier | What you get | CLIs |
 |---|---|---|
-| **T1** | Dynamic Island · History · Heatmap · Changes · Brand icon · One-click launch · Custom launch args | **Claude Code** · **Codex CLI** · **Grok Build** |
-| **T2** | History · Heatmap · Changes · Brand icon · One-click launch · Custom launch args | OpenCode · mimocode · Kimi Code · OpenClaw · Hermes Agent · Antigravity · Qwen Code · Pi |
+| **T1** | **Dynamic Island · Desktop-style conversation** (bubbles + permission/input cards) · History · Heatmap · Changes · Brand icon · One-click launch · Custom launch args | **Claude Code** · **Codex CLI** · **Kimi Code** |
+| **T2** | Native terminal · History · Heatmap · Changes · Brand icon · One-click launch · Custom launch args | OpenCode · mimocode · Grok Build · OpenClaw · Hermes Agent · Antigravity · Qwen Code · Pi |
 | **T3** | Brand icon · One-click launch | Crush · Aider · Goose · Copilot CLI · Cursor · Cline · Oh-My-Pi |
 | **T4** | Open a terminal tab and type the command to launch | any other CLI |
 
-*Dynamic Island status is hook-free and currently available only for Claude Code, Codex CLI, and Grok Build. Coffee CLI reads each tool's native terminal title state and does not install status hooks.*
+*T1 status and interaction detection is hook-free and currently available only for Claude Code, Codex CLI, and Kimi Code. Coffee CLI reads verified native-title or rendered-terminal state; it does not install status hooks. Other tools stay in their native terminal UI even when Coffee CLI can read their history.*
 
 *T1 and T2 CLIs ship today; T3 integrations are rolling in.*
 
@@ -198,6 +198,10 @@ cargo tauri build
 Coffee CLI 是专为 AI CLI Agent 打造的**原生桌面工作台**，支持 Claude Code、OpenAI Codex、Qwen、OpenCode 等主流 Agent。多 Tab 并行运行、Gambit 快捷操控、Hook 自动化——所有 AI CLI 工具在一个真正的桌面应用里井然有序，**原生支持 11 种界面语言**。
 
 这不是网页应用，不是 Electron 壳，而是基于 Tauri（Rust 内核）构建的**真正原生桌面应用**，性能优异，资源占用极低。
+
+### AI CLI 支持级别
+
+**T1 的定义：同时支持灵动岛和桌面端式对话**，包括泡泡对话以及权限/输入选择卡片。目前 T1 支持 **Claude Code、Codex CLI 和 Kimi Code**。OpenCode、mimocode、Grok Build 等其他工具保持原生终端界面；即使 Coffee CLI 可以读取其历史记录，也不代表它们支持 T1 界面。
 
 ### 为谁而生？
 

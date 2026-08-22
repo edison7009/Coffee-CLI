@@ -1480,7 +1480,7 @@ export function CenterPanel() {
               />
             ) : (
               <>
-                <div className="terminal-mode-surface" style={{ display: t.viewMode === 'chat' ? 'none' : 'flex' }}>
+                <div className="terminal-mode-surface" style={{ display: supportsConversationTool(t.tool) && t.viewMode === 'chat' ? 'none' : 'flex' }}>
                   <ErrorBoundary key={`err-${t.id}-${t.restartKey || 0}`} fallbackLabel="Tier Terminal Error">
                     <TierTerminal
                       key={`tier-${t.id}-${t.restartKey || 0}`}
@@ -1489,13 +1489,13 @@ export function CenterPanel() {
                       toolName={AGENT_CATALOG.find(a => a.key === t.tool)?.label}
                       theme={state.currentTheme}
                       lang={state.currentLang}
-                      isActive={t.id === activeTerminalId && !diffTabActive && t.viewMode !== 'chat'}
-                      conversationActive={t.id === activeTerminalId && !diffTabActive && t.viewMode === 'chat'}
+                      isActive={t.id === activeTerminalId && !diffTabActive && (!supportsConversationTool(t.tool) || t.viewMode !== 'chat')}
+                      conversationActive={t.id === activeTerminalId && !diffTabActive && supportsConversationTool(t.tool) && t.viewMode === 'chat'}
                       toolData={t.toolData}
                       folderPath={t.folderPath}
                       resumeToken={t.resumeToken}
-                      hasBg={hasBg && t.viewMode !== 'chat'}
-                      bgUrl={t.viewMode === 'chat' ? '' : bgUrl}
+                      hasBg={hasBg && (!supportsConversationTool(t.tool) || t.viewMode !== 'chat')}
+                      bgUrl={supportsConversationTool(t.tool) && t.viewMode === 'chat' ? '' : bgUrl}
                       bgType={bgType}
                       termColorScheme={state.termColorScheme}
                       termFont={state.termFont}
