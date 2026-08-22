@@ -9,7 +9,8 @@ export type ToolType = 'claude' | 'qwen' | 'installer' | 'hermes' | 'opencode' |
 
 /**
  * Tab status shown as an animated 9-dot glyph. Three states only —
- * Only native Claude/Codex/Grok terminal titles drive this state.
+ * Native OSC titles and the rendered-screen semantic parser can drive this
+ * state. The screen parser covers tools that do not expose a title protocol.
  *
  *   idle       — ready for input (green Wave-Double)
  *   working    — LLM generating / tool call in flight (orange Snake-CCW)
@@ -23,6 +24,19 @@ export type AgentStatus = 'idle' | 'working' | 'wait_input';
 /** True only when the upstream CLI exposes authoritative state via OSC title. */
 export function supportsNativeAgentStatus(tool: ToolType): boolean {
   return tool === 'claude' || tool === 'codex' || tool === 'grok';
+}
+
+/** Tools whose live TUI screen has a source-verified status/interaction
+ * grammar. Native-title tools stay in this set because screen interactions
+ * (especially permission prompts) are more precise than their coarse title. */
+export function supportsAgentStatus(tool: ToolType): boolean {
+  return supportsNativeAgentStatus(tool)
+    || tool === 'opencode'
+    || tool === 'mimocode'
+    || tool === 'kilo'
+    || tool === 'pi'
+    || tool === 'omp'
+    || tool === 'kimicode';
 }
 
 // Theme: color palette (orthogonal to shape)
@@ -467,9 +481,9 @@ function reducer(state: AppState, action: Action): AppState {
         activeTerminalId: state.activeTerminalId === action.id ? action.newId : state.activeTerminalId
       };
     case 'SET_AGENT_STATUS':
-      // Native-title tools emit frequent OSC activity frames. Their parsers
-      // dispatch each frame, but equal states must not re-render the app.
-      if (!state.terminals.some(t => t.id === action.id && supportsNativeAgentStatus(t.tool))) return state;
+      // Native titles and rendered-screen spinners can both emit frequent
+      // activity frames. Equal states must not re-render the app.
+      if (!state.terminals.some(t => t.id === action.id && supportsAgentStatus(t.tool))) return state;
       if (state.terminals.some(t => t.id === action.id && t.agentStatus === action.status)) return state;
       return {
         ...state,

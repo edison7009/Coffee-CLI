@@ -21,6 +21,13 @@ export interface TabActions {
    *  behavior — the path appears at the cursor as if typed, and the user
    *  edits/sends from there. */
   insertText: (text: string) => boolean;
+  /** Translate a themed interaction-card choice back into the upstream TUI's
+   * own cursor/navigation state machine. */
+  respondToInteraction: (response: {
+    optionIndex: number;
+    optionCount: number;
+    customText?: string;
+  }) => boolean;
   /** Current xterm cursor position in screen coordinates, used by Gambit to
    *  place itself just below the prompt on open. Returns null if the tab's
    *  xterm isn't fully initialized yet. */

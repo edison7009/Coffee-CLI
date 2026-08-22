@@ -3,12 +3,13 @@
 // terminal to know it's done.
 //
 // Signal source: Redux store's agentStatus, which is the SAME source the
-// dynamic island uses. Only Claude, Codex, and Grok populate it, directly from
-// their native terminal titles.
+// dynamic island uses. Claude/Codex/Grok have native-title fallback; the other
+// supported agents publish source-verified state from rendered terminal cells.
 //
-// Reading the store keeps sound transitions identical to the visible native
-// title state and avoids an independent event path. Codex additionally requires
-// a local user-submission marker solely to exclude its startup title cycle.
+// Reading the store keeps sound transitions identical to the visible island
+// state and avoids an independent event path. Codex and screen-only agents
+// additionally require a local user-submission marker to exclude startup TUI
+// activity from completion notifications.
 //
 // Sounds are synthesized with WebAudio — no audio assets, no WebView2
 // permission prompts. The two chimes are ported from DeepSeek-Reasonix's
@@ -23,6 +24,7 @@
 // chimes for single-window users, who are always focused on their one tab.)
 
 import {
+  supportsAgentStatus,
   supportsNativeAgentStatus,
   type AgentStatus,
   type ToolType,
@@ -41,15 +43,17 @@ let ctx: AudioContext | null = null;
 // across calls.
 const prevStatus = new Map<string, AgentStatus>();
 
-// Codex emits real working/idle title transitions during startup. Seeing an
-// initial idle title is not enough to distinguish that cycle from a completed
-// turn, so Codex notifications stay muted until the user actually submits
-// input in that terminal. This is local UI state, not a CLI hook.
-const codexPromptSubmitted = new Set<string>();
+// Codex emits real working/idle title transitions during startup. Screen-only
+// tools can likewise animate while restoring a session. Seeing idle is not
+// enough to distinguish those cycles from a completed turn, so notifications
+// stay muted until the user submits input. This is local UI state, not a hook.
+const guardedPromptSubmitted = new Set<string>();
 
-/** Arm Codex notifications after a real terminal/Gambit submission. */
+/** Arm guarded notifications after a real terminal/Gambit submission. */
 export function markNotifySoundPromptSubmitted(sessionId: string, tool: ToolType) {
-  if (tool === 'codex') codexPromptSubmitted.add(sessionId);
+  if (tool === 'codex' || (supportsAgentStatus(tool) && !supportsNativeAgentStatus(tool))) {
+    guardedPromptSubmitted.add(sessionId);
+  }
 }
 
 /** Lazy singleton AudioContext. Created on first play (almost always after
@@ -122,21 +126,23 @@ function enabled(key: string): boolean {
 export function initNotifySound(
   terminals: Array<{ id: string; tool: ToolType; agentStatus?: AgentStatus }>,
 ): () => void {
-  const nativeTerminals = terminals.filter(terminal => supportsNativeAgentStatus(terminal.tool));
-  const currentNativeIds = new Set(nativeTerminals.map(terminal => terminal.id));
-  const currentCodexIds = new Set(
-    nativeTerminals.filter(terminal => terminal.tool === 'codex').map(terminal => terminal.id),
+  const statusTerminals = terminals.filter(terminal => supportsAgentStatus(terminal.tool));
+  const currentStatusIds = new Set(statusTerminals.map(terminal => terminal.id));
+  const currentGuardedIds = new Set(
+    statusTerminals
+      .filter(terminal => terminal.tool === 'codex' || !supportsNativeAgentStatus(terminal.tool))
+      .map(terminal => terminal.id),
   );
 
   for (const id of prevStatus.keys()) {
-    if (!currentNativeIds.has(id)) prevStatus.delete(id);
+    if (!currentStatusIds.has(id)) prevStatus.delete(id);
   }
-  for (const id of codexPromptSubmitted) {
-    if (!currentCodexIds.has(id)) codexPromptSubmitted.delete(id);
+  for (const id of guardedPromptSubmitted) {
+    if (!currentGuardedIds.has(id)) guardedPromptSubmitted.delete(id);
   }
 
   // Check all terminals for transitions
-  for (const terminal of nativeTerminals) {
+  for (const terminal of statusTerminals) {
     const currentStatus = terminal.agentStatus;
     if (!currentStatus) continue;
 
@@ -145,9 +151,10 @@ export function initNotifySound(
     // Update tracking
     prevStatus.set(terminal.id, currentStatus);
 
-    // Codex drives the island immediately, but startup transitions remain
-    // silent until this session has received an actual user submission.
-    if (terminal.tool === 'codex' && !codexPromptSubmitted.has(terminal.id)) {
+    // Keep startup transitions silent for Codex and screen-only agents until
+    // this session has received an actual user submission.
+    const guarded = terminal.tool === 'codex' || !supportsNativeAgentStatus(terminal.tool);
+    if (guarded && !guardedPromptSubmitted.has(terminal.id)) {
       continue;
     }
 
@@ -166,7 +173,7 @@ export function initNotifySound(
     playNotifySound(kind);
   }
 
-  // Cleanup: no-op. Live native-tab IDs are pruned at the start of each call.
+  // Cleanup: no-op. Live status-tab IDs are pruned at the start of each call.
   // Clearing here would run before every effect re-run and erase the previous
   // status needed for transition detection.
   return () => {};

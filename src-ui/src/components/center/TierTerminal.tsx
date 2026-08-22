@@ -20,6 +20,16 @@ import { rig } from '../../lib/latency-rig';
 import * as outputScheduler from '../../lib/terminal-output-scheduler';
 import { registerTerminalFocus } from '../../lib/focus-registry';
 import { registerTabActions, getTabActions } from '../../lib/tab-actions';
+import {
+  clearTerminalInteraction,
+  getTerminalInteraction,
+  hasTerminalInteraction,
+  parseTerminalAgentStatus,
+  parseTerminalInteraction,
+  readTerminalScreen,
+  setTerminalInteraction,
+  supportsTerminalInteraction,
+} from '../../lib/terminal-interaction';
 import { registerFileDropTarget, formatPathsForInsert } from '../../lib/file-drop';
 import { parseClaudeTerminalTitle } from '../../lib/claude-terminal-title';
 import { parseCodexTerminalTitle } from '../../lib/codex-terminal-title';
@@ -27,7 +37,7 @@ import { parseGrokTerminalTitle } from '../../lib/grok-terminal-title';
 import { markNotifySoundPromptSubmitted } from '../../lib/notify-sound';
 import { onWindowForeground } from '../../lib/window-focus-filter';
 import { commands } from '../../tauri';
-import { supportsNativeAgentStatus, useAppDispatch, useAppState, type AgentStatus, type ToolType, type ThemeColor } from '../../store/app-state';
+import { supportsAgentStatus, useAppDispatch, useAppState, type AgentStatus, type ToolType, type ThemeColor } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
 import { getToolDisplayName } from '../../lib/tool-info';
 import { TermContextMenu, type TermContextMenuState } from './TermContextMenu';
@@ -422,6 +432,7 @@ function TierTerminalImpl({
   // is unstable here. Not reset on successful re-attach.
   const contextLossAttemptsRef = useRef(0);
   const grokPermissionReleaseTimerRef = useRef<number | undefined>(undefined);
+  const interactionSuppressionRef = useRef<string | null>(null);
 
   // ── Startup splash state ─────────────────────────────────────────────────
   const [showSplash, setShowSplash] = useState(true);
@@ -519,6 +530,66 @@ function TierTerminalImpl({
       allowProposedApi: true,
       theme: buildXtermTheme(theme, hasBg, termColorScheme, isRawShell),
     });
+
+    const usesAgentStatus = supportsAgentStatus(tool);
+    let screenStatus: AgentStatus | null = null;
+    let screenStatusAt = 0;
+    let nativeStatus: AgentStatus | null = null;
+    let screenIdleTimer: number | undefined;
+
+    const clearScreenIdleTimer = () => {
+      if (screenIdleTimer === undefined) return;
+      window.clearTimeout(screenIdleTimer);
+      screenIdleTimer = undefined;
+    };
+    const publishScreenStatus = (status: AgentStatus) => {
+      clearScreenIdleTimer();
+      screenStatus = status;
+      screenStatusAt = Date.now();
+      dispatch({ type: 'SET_AGENT_STATUS', id: sessionId, status });
+    };
+    const publishNativeStatus = (status: AgentStatus) => {
+      nativeStatus = status;
+      const screenIsFresh = Date.now() - screenStatusAt < 2_000;
+      // A rendered selector is stronger than a coarse native idle title, and
+      // a rendered working row should not be cancelled by an OSC repaint that
+      // briefly drops its spinner frame. Native working/waiting may always
+      // promote an idle/unknown screen state.
+      if (
+        screenIsFresh
+        && status === 'idle'
+        && (screenStatus === 'wait_input' || screenStatus === 'working')
+      ) return;
+      dispatch({ type: 'SET_AGENT_STATUS', id: sessionId, status });
+    };
+    const markAgentSubmission = () => {
+      if (!usesAgentStatus) return;
+      clearScreenIdleTimer();
+      // The old selector frame may still be painted, but Enter hands control
+      // back to the agent immediately. The next parsed screen will confirm or
+      // correct this optimistic transition.
+      screenStatus = null;
+      screenStatusAt = 0;
+      dispatch({ type: 'SET_AGENT_STATUS', id: sessionId, status: 'working' });
+      // Empty Enter / menu confirmation may not start an agent turn and may
+      // produce no new screen frame. Never leave the island stuck in working;
+      // a real turn's spinner/text repaint will cancel or extend this fallback.
+      scheduleScreenIdle(2_500);
+    };
+    const scheduleScreenIdle = (delayMs = 900) => {
+      if (!usesAgentStatus) return;
+      clearScreenIdleTimer();
+      screenIdleTimer = window.setTimeout(() => {
+        screenIdleTimer = undefined;
+        // Claude/Codex/Grok expose an authoritative active-turn bit in their
+        // OSC title. Rendered text can pause while the model thinks, so mere
+        // screen stability must never end a turn that the CLI still reports
+        // as working/waiting. The title's later idle transition completes it.
+        if (nativeStatus === 'working' || nativeStatus === 'wait_input') return;
+        publishScreenStatus('idle');
+      }, delayMs);
+    };
+    unlisteners.push(clearScreenIdleTimer);
 
     const fit = new FitAddon();
     term.loadAddon(fit);
@@ -845,6 +916,7 @@ function TierTerminalImpl({
       if (!data) return;
       if (data.includes('\r') || data.includes('\n')) {
         markNotifySoundPromptSubmitted(sessionId, tool);
+        markAgentSubmission();
       }
       commands.tierTerminalInput(sessionId, data).catch(() => {});
     };
@@ -1055,12 +1127,69 @@ function TierTerminalImpl({
     // header); near-zero cost — one performance.now() + bounded ring-buffer
     // write per render, no-ops when no output armed this frame.
     term.onRender(() => rig.outputRenderEnd());
-    const usesNativeStatus = supportsNativeAgentStatus(tool);
+    // Each supported agent owns its real PTY and TUI. After xterm has applied
+    // ANSI cursor movement and redraws, read the rendered screen once and feed
+    // both the precise interaction card and the Dynamic Island state machine.
+    // No hooks, model calls, or duplicate terminal readers are involved.
+    if (supportsTerminalInteraction(tool)) {
+      let publishedFingerprint: string | null = null;
+      let lastScreenFingerprint = '';
+      const scanTerminalSemantics = () => {
+        if (!mounted) return;
+        const screen = readTerminalScreen(term);
+        const rawInteraction = parseTerminalInteraction(screen, tool);
+        const suppressed = interactionSuppressionRef.current;
+        let liveInteraction = rawInteraction;
+
+        if (!rawInteraction) {
+          interactionSuppressionRef.current = null;
+          if (publishedFingerprint !== null || hasTerminalInteraction(sessionId)) {
+            publishedFingerprint = null;
+            clearTerminalInteraction(sessionId);
+          }
+        } else if (suppressed === rawInteraction.fingerprint) {
+          // The old frame can remain painted after Enter. Suppress the exact
+          // answered prompt until xterm observes it disappear or change; this
+          // prevents the historic infinite re-open loop without blocking a new
+          // question that has a different fingerprint.
+          liveInteraction = null;
+          publishedFingerprint = null;
+          clearTerminalInteraction(sessionId);
+        } else {
+          if (suppressed) interactionSuppressionRef.current = null;
+          const publishedInteraction = getTerminalInteraction(sessionId);
+          if (
+            publishedFingerprint !== rawInteraction.fingerprint
+            || !publishedInteraction
+            || publishedInteraction.focusedPosition !== rawInteraction.focusedPosition
+          ) {
+            publishedFingerprint = rawInteraction.fingerprint;
+            setTerminalInteraction(sessionId, rawInteraction);
+          }
+        }
+
+        const semanticStatus = parseTerminalAgentStatus(screen, tool, liveInteraction);
+        const nextScreenFingerprint = screen.slice(-30).map(line => line.text).join('\n');
+        const screenChanged = nextScreenFingerprint !== lastScreenFingerprint;
+        lastScreenFingerprint = nextScreenFingerprint;
+
+        if (semanticStatus) {
+          publishScreenStatus(semanticStatus);
+        } else if (screenChanged) {
+          // Working TUIs repaint their spinner/text continuously. Every real
+          // text-frame change restarts this timer; once the screen stabilizes
+          // (spinner removed, prompt ready), the island settles to idle. Cursor
+          // style repaints do not change text and therefore cannot hold it open.
+          scheduleScreenIdle();
+        }
+      };
+      const parsedListener = term.onWriteParsed(scanTerminalSemantics);
+      unlisteners.push(() => parsedListener.dispose());
+      unlisteners.push(() => clearTerminalInteraction(sessionId));
+    }
 
     let lastNativeAction = { fingerprint: '', switchedAt: 0 };
     const requestTerminalForNativeAction = (fingerprint: string) => {
-      const session = appStateRef.current.terminals.find(item => item.id === sessionId);
-      if (session?.viewMode !== 'chat') return;
       const now = Date.now();
       // Native Action Required titles blink repeatedly. Also let a user
       // deliberately switch back to chat without an immediate bounce.
@@ -1068,7 +1197,15 @@ function TierTerminalImpl({
         return;
       }
       lastNativeAction = { fingerprint, switchedAt: now };
-      dispatch({ type: 'SET_SESSION_VIEW', id: sessionId, viewMode: 'terminal' });
+      // Give the rendered-screen parser one frame to publish the bubble card.
+      // If this tool version changed and no verified grammar matches, retain
+      // the old terminal fallback so the user can still answer natively.
+      window.setTimeout(() => {
+        if (hasTerminalInteraction(sessionId)) return;
+        const session = appStateRef.current.terminals.find(item => item.id === sessionId);
+        if (session?.viewMode !== 'chat') return;
+        dispatch({ type: 'SET_SESSION_VIEW', id: sessionId, viewMode: 'terminal' });
+      }, 180);
     };
 
     // Tool sets its own tab title via OSC 0/2 (e.g. Claude Code's conversation
@@ -1088,18 +1225,18 @@ function TierTerminalImpl({
     const setGrokStatus = (status: AgentStatus) => {
       if (status === grokStatus) return;
       grokStatus = status;
-      dispatch({ type: 'SET_AGENT_STATUS', id: sessionId, status });
+      publishNativeStatus(status);
     };
     term.onTitleChange((title) => {
       let displayTitle = title;
       if (tool === 'claude') {
         const parsed = parseClaudeTerminalTitle(title);
         displayTitle = parsed.displayTitle;
-        dispatch({ type: 'SET_AGENT_STATUS', id: sessionId, status: parsed.status });
+        publishNativeStatus(parsed.status);
       } else if (tool === 'codex') {
         const parsed = parseCodexTerminalTitle(title);
         displayTitle = parsed.displayTitle;
-        dispatch({ type: 'SET_AGENT_STATUS', id: sessionId, status: parsed.status });
+        publishNativeStatus(parsed.status);
         if (parsed.status === 'wait_input') {
           requestTerminalForNativeAction('native:codex:action-required');
         }
@@ -1276,7 +1413,7 @@ function TierTerminalImpl({
         onStatus: (running) => {
           if (!mounted || running) return;
           setProcessExited(true);
-          if (usesNativeStatus) {
+          if (usesAgentStatus) {
             dispatch({ type: 'SET_AGENT_STATUS', id: sessionId, status: 'idle' });
           }
         },
@@ -1292,7 +1429,7 @@ function TierTerminalImpl({
           // already speaks for itself.
           if (!mounted) return;
           setProcessExited(true);
-          if (usesNativeStatus) {
+          if (usesAgentStatus) {
             dispatch({ type: 'SET_AGENT_STATUS', id: sessionId, status: 'idle' });
           }
         },
@@ -1578,6 +1715,76 @@ function TierTerminalImpl({
         term.paste(normalizePasteNewlines(text));
         return true;
       },
+      respondToInteraction: ({ optionIndex, optionCount, customText }): boolean => {
+        const term = xtermRef.current;
+        const activeInteraction = getTerminalInteraction(sessionId);
+        const options = activeInteraction?.options;
+        if (!term || !options || optionIndex < 0 || optionIndex >= optionCount) return false;
+        const option = options[optionIndex];
+        if (!option) return false;
+
+        // Suppress the exact prompt while xterm still has its old frame
+        // painted, so answering via the card cannot re-open it in the next
+        // scan before Claude's redraw removes the menu.
+        interactionSuppressionRef.current = activeInteraction.fingerprint;
+        clearTerminalInteraction(sessionId);
+        dispatch({ type: 'SET_AGENT_STATUS', id: sessionId, status: 'working' });
+        markNotifySoundPromptSubmitted(sessionId, tool);
+
+        const submitCustomText = (focusDelay = 200) => {
+          if (!customText) return;
+          // The selector key first moves the upstream TUI into its text input.
+          // Wait for that redraw, then keep bracketed paste and Enter in
+          // separate PTY reads (Ink/pi-tui can otherwise absorb the Enter).
+          window.setTimeout(() => {
+            const liveTerm = xtermRef.current;
+            if (!liveTerm) return;
+            liveTerm.paste(normalizePasteNewlines(customText));
+            window.setTimeout(() => {
+              commands.tierTerminalInput(sessionId, '\r').catch(() => {});
+            }, 170);
+          }, focusDelay);
+        };
+
+        if (activeInteraction.responseMode === 'direct-text') {
+          submitCustomText(0);
+          return Boolean(customText);
+        }
+
+        if (activeInteraction.responseMode === 'digit' && option.number <= 9) {
+          // Only tools whose source explicitly maps 1-9 to choices reach this
+          // path (Claude, Codex, Grok, and Kimi).
+          commands.tierTerminalRawWrite(sessionId, String(option.number)).catch(() => {});
+          submitCustomText();
+          return true;
+        }
+
+        // OpenCode uses a horizontal selector; Pi/OMP and OpenCode questions
+        // use vertical lists. Digit protocols also fall back to vertical
+        // navigation beyond 9.
+        const focused = activeInteraction.focusedPosition;
+        if (focused < 0) return false;
+        const appCursor = term.modes.applicationCursorKeysMode;
+        const up = appCursor ? '\x1bOA' : '\x1b[A';
+        const down = appCursor ? '\x1bOB' : '\x1b[B';
+        const left = appCursor ? '\x1bOD' : '\x1b[D';
+        const right = appCursor ? '\x1bOC' : '\x1b[C';
+        let nav = '';
+        if (focused !== optionIndex) {
+          const forward = activeInteraction.responseMode === 'horizontal' ? right : down;
+          const backward = activeInteraction.responseMode === 'horizontal' ? left : up;
+          nav = optionIndex > focused
+            ? forward.repeat(optionIndex - focused)
+            : backward.repeat(focused - optionIndex);
+        }
+        if (customText) {
+          commands.tierTerminalRawWrite(sessionId, `${nav}\r`).catch(() => {});
+          submitCustomText();
+        } else {
+          commands.tierTerminalRawWrite(sessionId, `${nav}\r`).catch(() => {});
+        }
+        return true;
+      },
       cursorScreenPos: () => {
         const wrap = wrapRef.current;
         const term = xtermRef.current;
@@ -1594,7 +1801,7 @@ function TierTerminalImpl({
       },
     });
     return unregister;
-  }, [sessionId, tool]);
+  }, [sessionId, tool, dispatch]);
 
   // ── File-drop target ────────────────────────────────────────────────────
   // Match OS-native terminal behavior: dragging a file onto the terminal

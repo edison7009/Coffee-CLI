@@ -9,12 +9,14 @@ import { bindAutoHideScrollbar } from '../../lib/auto-hide-scrollbar';
 import { clipboardRead, clipboardReadImage, clipboardWrite } from '../../lib/clipboard';
 import { getHistorySnapshot } from '../../lib/history-cache';
 import { subscribeTerminalEvents } from '../../lib/pty-event-bus';
+import { useTerminalInteraction } from '../../lib/terminal-interaction';
 import {
   updateChatTranscript, normalizePrompt, transcriptHasPrompt,
   type ChatMessage, type ChatTranscriptState,
 } from '../../lib/chat-transcript';
 import { MarkdownContent } from './MarkdownContent';
 import { TermContextMenu, type TermContextMenuState } from './TermContextMenu';
+import { TerminalInteractionCard } from './TerminalInteractionCard';
 import { useConversationVirtualizer } from './conversation-virtualizer';
 import { useT } from '../../i18n/useT';
 import './ConversationView.css';
@@ -601,6 +603,7 @@ function ConversationViewImpl({
   onPendingResolved, onPasteToDraft, hasBg, bgUrl, bgType, competingBindings = [],
 }: ConversationViewProps) {
   const t = useT();
+  const interaction = useTerminalInteraction(sessionId);
   const ownerKey = `${sessionId}:${tool ?? 'none'}:${resumeToken ?? 'fresh'}:${startedAt ?? 'unknown'}`;
   const cached = conversationCache.get(ownerKey);
   const initialTranscript = cached?.transcript ?? { messages: [], remainder: '', nextLineIndex: 0 };
@@ -1212,7 +1215,7 @@ function ConversationViewImpl({
       return;
     }
     if (pinnedRef.current) element.scrollTop = element.scrollHeight;
-  }, [messages, pending, activityLabel, virtual.total]);
+  }, [messages, pending, activityLabel, interaction?.fingerprint, virtual.total]);
 
   useLayoutEffect(() => {
     const target = pendingNavigationJumpRef.current;
@@ -1330,7 +1333,16 @@ function ConversationViewImpl({
           </article>
         )}
 
-        {activityLabel && (
+        {interaction && (
+          <TerminalInteractionCard
+            key={interaction.fingerprint}
+            sessionId={sessionId}
+            interaction={interaction}
+            keyboardEnabled={isActive && isVisible}
+          />
+        )}
+
+        {activityLabel && !interaction && (
           <div className="conversation-thinking" role="status" aria-live="polite">
             <span className="conversation-thinking-braille" aria-hidden="true" />
             <span className="conversation-thinking-text">{activityLabel}</span>

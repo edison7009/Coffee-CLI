@@ -9,7 +9,7 @@ import { ToolConfigModal } from './ToolConfigModal';
 import { ContributionHeatmap } from './ContributionHeatmap';
 import { ErrorBoundary } from '../common/ErrorBoundary';
 import { DiffPanel } from '../right/DiffPanel';
-import { supportsNativeAgentStatus, useAppState, type ToolType } from '../../store/app-state';
+import { supportsAgentStatus, useAppState, type ToolType } from '../../store/app-state';
 import { isFrostShape } from '../../lib/personalization';
 import { supportsConversationTool } from '../../lib/chat-tools';
 
@@ -479,9 +479,8 @@ const CONFIGURABLE_AGENT_TOOLS = new Set<ToolType>([
   'mimocode', 'kilo', 'openclaw', 'hermes', 'pi', 'kimicode',
 ]);
 
-// Only tools with an authoritative native OSC title protocol get a Dynamic
-// Island. Every other tab shows the normal close button without a fake idle
-// state or PTY activity guess.
+// Dynamic Island visibility follows the shared agent-status capability: native
+// OSC title tools plus TUIs covered by the rendered-screen semantic parser.
 export function CenterPanel() {
   const { state, dispatch } = useAppState();
   const t = useT();
@@ -1228,8 +1227,8 @@ export function CenterPanel() {
       case 'codex': return { icon, title: cwd ?? getToolDisplayName('codex'), tooltip: pathTip };
       case 'grok': return { icon, title: cwd ?? getToolDisplayName('grok'), tooltip: pathTip };
       case 'antigravity': return { icon, title: cwd ?? getToolDisplayName('antigravity'), tooltip: pathTip };
-      // Directory-aware tabs use their icon plus cwd basename. They do not
-      // expose an authoritative native title status, so no island is shown.
+      // Directory-aware tabs use their icon plus cwd basename. Status-capable
+      // TUIs below can still show an island through rendered-screen semantics.
       case 'pi': return { icon, title: cwd ?? getToolDisplayName('pi'), tooltip: pathTip };
       case 'crush': return { icon, title: cwd ?? getToolDisplayName('crush'), tooltip: pathTip };
       case 'aider': return { icon, title: cwd ?? getToolDisplayName('aider'), tooltip: pathTip };
@@ -1365,10 +1364,8 @@ export function CenterPanel() {
             >
               {icon}
               <span className="tab-title" style={{ flex: '0 1 auto', minWidth: 0, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{title}</span>
-              <div className={`tab-actions${supportsNativeAgentStatus(session.tool) ? '' : ' tab-actions--close-only'}`}>
-                {/* Only Claude/Codex/Grok expose authoritative native OSC
-                    state. All other tabs go straight to the close button. */}
-                {supportsNativeAgentStatus(session.tool) && (
+              <div className={`tab-actions${supportsAgentStatus(session.tool) ? '' : ' tab-actions--close-only'}`}>
+                {supportsAgentStatus(session.tool) && (
                   <div className={`tab-status-grid status-${
                     session.agentStatus === 'wait_input' ? 'waiting' : session.agentStatus ?? 'idle'
                   }${__IS_LINUX__ ? ' tab-status-grid--static' : ''}`}>
