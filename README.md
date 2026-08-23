@@ -129,8 +129,11 @@ The Coffee CLI app ships with a fully localized UI in 11 languages — menus, di
 | **Agent Installer** | One-click install of Claude Code, Codex, and more — no terminal required |
 | **Remote Terminal** | SSH into remote machines and run agents on servers without leaving the app |
 | **External Launch** | Open the app straight into a fresh agent tab at a chosen folder from scripts, launchers, and file-manager context menus |
+| **Orca Residue Cleanup** | Automatically removes the status hooks Orca silently injects into Claude Code / Codex / Cursor / Grok / Kimi configs, restoring your tools — only Orca's entries are removed, your own hooks stay intact, and it skips while Orca is running |
 
 **11 languages supported out of the box:** English · 简体中文 · 繁體中文 · Deutsch · Español · Français · 日本語 · 한국어 · Português · Русский · Tiếng Việt
+
+> **Orca polluted your AI tools?** Orca (stablyai/orca) writes status hooks into a dozen+ AI CLI configs (Claude Code, Codex, Cursor, Grok, Kimi…). Those tools already ship their own status logic, so the injection breaks them — hook errors on every session, Codex configs that fail to parse and refuse to start, hook commands that pop a black console per tool call or swallow stdin, even config directories created for tools you never installed. **Uninstalling Orca does not remove the residue** — it keeps re-installing the entries on every launch, which is why hand-deleting them is a losing battle and non-technical users have almost no way to clean up. Coffee CLI detects and removes the Orca-written entries automatically on launch: only Orca's rows are deleted, your own hooks stay untouched, and it skips entirely while Orca is running (no conflicts).
 
 ### External Launch (CLI)
 
@@ -216,9 +219,11 @@ Coffee CLI 同时消除两道门槛：**不需要终端经验，不需要懂英�
 
 ### 核心功能
 
-**多 Tab 会话** · **Gambit 快捷命令** · **Hook 自动化** · **会话历史** · **内置文件浏览器** · **任务板** · **Agent 安装器** · **远程终端** · **外部唤起**
+**多 Tab 会话** · **Gambit 快捷命令** · **Hook 自动化** · **会话历史** · **内置文件浏览器** · **任务板** · **Agent 安装器** · **远程终端** · **外部唤起** · **Orca 残留清理**
 
 原生支持 11 种语言，开箱即用。
+
+> **被 Orca 污染了 AI 工具？** Orca(stablyai/orca)会往十多个 AI CLI 工具的配置文件里偷偷写状态钩子(Claude Code、Codex、Cursor、Grok、Kimi……)。这些工具本来自带完整状态逻辑，被写坏后：每次会话报 hook 错误、Codex 配置解析失败无法启动、hook 命令每次工具调用都弹黑窗或吞 stdin、甚至为从没装过的工具创建配置目录。**卸载 Orca 不会清掉这些残留**——它每次启动都会重新写入，手动删是一条打不赢的仗，小白用户几乎无从下手。Coffee CLI 启动时自动检测并清除：只删 Orca 写的那几行，你自己的钩子原样保留，Orca 运行中自动跳过(绝不冲突)。
 
 ### 外部唤起（命令行）
 
