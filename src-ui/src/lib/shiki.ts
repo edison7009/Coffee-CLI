@@ -10,11 +10,17 @@ let highlighterPromise: Promise<Highlighter> | null = null;
 
 async function getHighlighter(): Promise<Highlighter> {
   if (!highlighterPromise) {
-    // Dynamic import keeps Shiki out of the main bundle until first use.
-    const { createHighlighter } = await import('shiki');
-    highlighterPromise = createHighlighter({
-      themes: ['github-dark-default', 'github-light-default'],
-      langs: [],
+    // Publish the promise before the import yields so concurrent code blocks
+    // and both sides of a diff share the same highlighter initialization.
+    highlighterPromise = (async () => {
+      const { createHighlighter } = await import('shiki');
+      return createHighlighter({
+        themes: ['github-dark-default', 'github-light-default'],
+        langs: [],
+      });
+    })().catch(error => {
+      highlighterPromise = null;
+      throw error;
     });
   }
   return highlighterPromise;
@@ -84,15 +90,11 @@ async function tokenizeAt(
   lang: string,
   theme: 'github-light-default' | 'github-dark-default',
 ): Promise<LineTokens[] | null> {
-  const highlighter = await getHighlighter();
-  if (!highlighter.getLoadedLanguages().includes(lang)) {
-    try {
-      await highlighter.loadLanguage(lang as BundledLanguage);
-    } catch {
-      return null;
-    }
-  }
   try {
+    const highlighter = await getHighlighter();
+    if (!highlighter.getLoadedLanguages().includes(lang)) {
+      await highlighter.loadLanguage(lang as BundledLanguage);
+    }
     return highlighter.codeToTokens(text, { lang: lang as BundledLanguage, theme }).tokens;
   } catch {
     return null;
