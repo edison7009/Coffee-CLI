@@ -766,8 +766,9 @@ function TierTerminalImpl({
       // modifyOtherKeys):
       //   a. A capture-phase `input` listener on the container (wired just
       //      below) forwards exactly the commits xterm will NOT deliver — the
-      //      complementary case to xterm's condition, i.e.
-      //      `ev.composed && keyDownSeen` — then stopPropagation (xterm's
+      //      complementary case to xterm's conditions, i.e.
+      //      `ev.composed && keyDownSeen && !keyPressHandled` (issue #128 for
+      //      the last term) — then stopPropagation (xterm's
       //      textarea-capture listener is a descendant target, so this prevents
       //      its double-delivery) and clears the textarea so a later 229-diff
       //      can't re-send stale text. The 229-first Chromium ordering is left
@@ -783,6 +784,7 @@ function TierTerminalImpl({
       const ime = isMac && !__IS_LINUX__
         ? {
             keyDownSeen: false,        // mirror of xterm `_keyDownSeen`
+            keyPressHandled: false,    // mirror of xterm `_keyPressHandled` (issue #128)
             last229At: 0,             // Chromium: 229 BEFORE commit → xterm owns it
             lastNonAsciiCommitAt: 0,  // window for the caret-key swallow
             lastCompositionEndAt: 0,  // guard so a composition's final commit
@@ -795,10 +797,11 @@ function TierTerminalImpl({
       // Companion to the keydown bookkeeping + caret-swallow in
       // attachCustomKeyEventHandler above. An IME commit arrives as a plain
       // `input` event on the helper textarea (inputType 'insertText').
-      // xterm delivers it only when `(!ev.composed || !_keyDownSeen)`
-      // (CoreBrowserTerminal.ts:1196); we forward exactly the complementary
-      // case (`ev.composed && keyDownSeen`) — the commits xterm drops on
-      // WKWebView's commit-first flow. Registered CAPTURE-phase on the
+      // xterm delivers it only when `(!ev.composed || !_keyDownSeen)` and
+      // `!_keyPressHandled` (CoreBrowserTerminal.ts:1196-1199); we forward
+      // exactly the complementary case (`ev.composed && keyDownSeen &&
+      // !keyPressHandled`) — the commits xterm drops on WKWebView's
+      // commit-first flow. Registered CAPTURE-phase on the
       // container (an ancestor of the textarea) so it runs BEFORE xterm's
       // own capture listener on the textarea; stopPropagation then prevents
       // xterm's listener from double-delivering, and clearing the textarea
@@ -830,6 +833,17 @@ function TierTerminalImpl({
             // Mirror of xterm's delivery condition `(!ev.composed ||
             // !_keyDownSeen)`: only forward when xterm will NOT.
             if (!ie.composed || !ime.keyDownSeen) return;
+            // Mirror of xterm's second guard, `if (this._keyPressHandled)
+            // return` (CoreBrowserTerminal.ts:1197). The character already went
+            // to the PTY via xterm's keypress path; this `input` is just the
+            // browser inserting it into the helper textarea afterwards, because
+            // `_keyPress` never preventDefaults (its `cancel(ev)` is a no-op
+            // under the default `cancelEvents: false`). Only two printable keys
+            // travel that path — Space (keyCode 32 fails evaluateKeyboardEvent's
+            // `keyCode >= 48` keydown test) and capital letters (xterm's
+            // caps-lock IME hack defers A–Z to keypress) — and forwarding them
+            // again was the "hello  " double space of issue #128.
+            if (ime.keyPressHandled) return;
             forwardInput(ie.data);
             ev.stopPropagation();
             imeTextarea.value = '';
@@ -929,19 +943,28 @@ function TierTerminalImpl({
     // `ime` (declared above, next to the macOS input listener) mirrors
     // xterm's private `_keyDownSeen` (set on keydown, cleared on keyup —
     // both fire `attachCustomKeyEventHandler` per CoreBrowserTerminal.ts:1025
-    // and :1122). Coupling is intentional and documented; pin against this
-    // xterm version on upgrade.
+    // and :1122) and `_keyPressHandled` (set when `_keyPress` delivers,
+    // :1149-1177; cleared on keyup, :1131). Coupling is intentional and
+    // documented; pin against this xterm version on upgrade.
 
     // Handle native Copy/Paste shortcuts
     term.attachCustomKeyEventHandler((e) => {
-      // macOS IME bookkeeping (issue #107) — mirror xterm's `_keyDownSeen` and
-      // record the Chromium-style 229 ordering for the commit listener.
+      // macOS IME bookkeeping (issues #107, #128) — mirror xterm's
+      // `_keyDownSeen` / `_keyPressHandled` and record the Chromium-style 229
+      // ordering for the commit listener.
       if (ime) {
         if (e.type === 'keydown') {
           ime.keyDownSeen = true;
           if (e.keyCode === 229) ime.last229At = performance.now();
+        } else if (e.type === 'keypress') {
+          // xterm's `_keyPress` delivers a keypress that carries a char code
+          // unless Ctrl/Alt/Meta is held (Option alone is a third-level shift
+          // on macOS while macOptionIsMeta is off, CoreBrowserTerminal.ts:1105).
+          const thirdLevelShift = e.altKey && !e.ctrlKey && !e.metaKey && !term.options.macOptionIsMeta;
+          ime.keyPressHandled = !!e.charCode && (!(e.altKey || e.ctrlKey || e.metaKey) || thirdLevelShift);
         } else if (e.type === 'keyup') {
           ime.keyDownSeen = false;
+          ime.keyPressHandled = false;
         }
       }
       if (e.type === 'keydown') {
