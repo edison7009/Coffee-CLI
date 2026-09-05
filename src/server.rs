@@ -575,26 +575,51 @@ fn show_in_folder(path: String) -> Result<(), String> {
     Ok(())
 }
 
-/// Validate that a path is safe to operate on:
-/// - Canonicalizes the path (resolves `..` and symlinks)
-/// - Rejects paths with fewer than 3 components (drive root, OS dirs, etc.)
+/// Resolve the parent, preserving the final entry (including dangling links).
+/// Canonicalizing the entry itself would delete/move a link's target instead.
 fn validate_fs_path(path: &str) -> Result<std::path::PathBuf, String> {
-    let canonical = std::path::Path::new(path)
+    let path = std::path::Path::new(path);
+    let name = path.file_name().ok_or("Invalid source path")?;
+    let parent = path.parent().ok_or("No parent directory")?;
+    let canonical = parent
         .canonicalize()
-        .map_err(|e| format!("Invalid path: {e}"))?;
-    // Require at least 3 components, e.g. C:\Users\foo or /home/user
-    // This blocks C:\, C:\Windows, /, /etc, /usr, etc.
-    if canonical.components().count() < 3 {
+        .map_err(|e| format!("Invalid parent directory: {e}"))?
+        .join(name);
+    validate_fs_depth(&canonical)?;
+    std::fs::symlink_metadata(&canonical).map_err(|e| format!("Invalid path: {e}"))?;
+    Ok(canonical)
+}
+
+fn validate_fs_depth(path: &std::path::Path) -> Result<(), String> {
+    // Count names, excluding drive/UNC prefixes and root separators on Windows.
+    if path.components().filter(|c| matches!(c, std::path::Component::Normal(_))).count() < 2 {
         return Err("Operation rejected: path is too shallow (system-level directory)".to_string());
     }
-    Ok(canonical)
+    Ok(())
+}
+
+fn require_unused_destination(path: &std::path::Path) -> Result<(), String> {
+    match std::fs::symlink_metadata(path) {
+        Ok(_) => Err("Destination already exists; choose another name or folder".into()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(e) => Err(format!("Cannot inspect destination: {e}")),
+    }
 }
 
 /// Delete a file or directory permanently (no recycle bin).
 #[tauri::command]
 fn fs_delete(path: String) -> Result<(), String> {
     let p = validate_fs_path(&path)?;
-    if p.is_dir() {
+    let metadata = std::fs::symlink_metadata(&p).map_err(|e| format!("Delete failed: {e}"))?;
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::FileTypeExt;
+        // Directory symlinks and junctions use RemoveDirectory, even dangling.
+        if metadata.file_type().is_symlink_dir() {
+            return std::fs::remove_dir(&p).map_err(|e| format!("Delete link failed: {e}"));
+        }
+    }
+    if metadata.is_dir() {
         std::fs::remove_dir_all(&p).map_err(|e| format!("Delete failed: {e}"))
     } else {
         std::fs::remove_file(&p).map_err(|e| format!("Delete failed: {e}"))
@@ -604,10 +629,18 @@ fn fs_delete(path: String) -> Result<(), String> {
 /// Rename / move a path to a new name within the same parent directory.
 #[tauri::command]
 fn fs_rename(path: String, new_name: String) -> Result<(), String> {
+    if new_name.is_empty() || new_name == "." || new_name == ".."
+        || new_name.contains(['/', '\\', '\0'])
+        || (cfg!(windows) && (new_name.contains(':') || new_name.ends_with(['.', ' '])))
+    {
+        return Err("New name must be a single file or directory name".into());
+    }
     let src = validate_fs_path(&path)?;
     let dest = src.parent()
         .ok_or_else(|| "No parent directory".to_string())?
         .join(&new_name);
+    if src == dest { return Ok(()); }
+    require_unused_destination(&dest)?;
     std::fs::rename(&src, dest).map_err(|e| format!("Rename failed: {e}"))
 }
 
@@ -616,45 +649,64 @@ fn fs_rename(path: String, new_name: String) -> Result<(), String> {
 #[tauri::command]
 fn fs_paste(action: String, src_path: String, target_dir: String) -> Result<(), String> {
     let src = validate_fs_path(&src_path)?;
-    // target_dir may not exist yet for copy — validate its parent instead
     let target_canonical = std::path::Path::new(&target_dir)
         .canonicalize()
         .map_err(|e| format!("Invalid target directory: {e}"))?;
-    if target_canonical.components().count() < 3 {
-        return Err("Operation rejected: target is a system-level directory".to_string());
-    }
+    validate_fs_depth(&target_canonical)?;
+    if !target_canonical.is_dir() { return Err("Target must be a directory".into()); }
     let file_name = src.file_name().ok_or("Invalid source path")?;
     let dest = target_canonical.join(file_name);
+    require_unused_destination(&dest)?;
+    // Resolve aliases in the target before checking ancestry. A directory must
+    // never be copied/moved into itself, including through a parent symlink.
+    if src.is_dir() && target_canonical.starts_with(src.canonicalize().map_err(|e| e.to_string())?) {
+        return Err("Cannot paste a directory inside itself".into());
+    }
 
     match action.as_str() {
         "cut" => {
             std::fs::rename(&src, &dest).map_err(|e| format!("Move failed: {e}"))
         }
         "copy" => {
-            if src.is_dir() {
-                copy_dir_all(&src, &dest).map_err(|e| format!("Copy dir failed: {e}"))
-            } else {
-                std::fs::copy(&src, &dest).map(|_| ()).map_err(|e| format!("Copy failed: {e}"))
-            }
+            copy_fs_entry(&src, &dest).map_err(|e| format!("Copy failed: {e}"))
         }
         _ => Err(format!("Unknown action: {action}")),
     }
 }
 
-/// Recursively copy a directory and all its contents.
-fn copy_dir_all(src: &std::path::Path, dest: &std::path::Path) -> std::io::Result<()> {
-    std::fs::create_dir_all(dest)?;
-    for entry in std::fs::read_dir(src)? {
-        let entry = entry?;
-        let ty = entry.file_type()?;
-        let target = dest.join(entry.file_name());
-        if ty.is_dir() {
-            copy_dir_all(&entry.path(), &target)?;
-        } else {
-            std::fs::copy(entry.path(), target)?;
+/// Copy entries without merging, overwriting files, or traversing symlinks.
+fn copy_fs_entry(src: &std::path::Path, dest: &std::path::Path) -> std::io::Result<()> {
+    let metadata = std::fs::symlink_metadata(src)?;
+    #[cfg(unix)]
+    if metadata.is_symlink() {
+        return std::os::unix::fs::symlink(std::fs::read_link(src)?, dest);
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::FileTypeExt;
+        if metadata.is_symlink() {
+            let target = std::fs::read_link(src)?;
+            return if metadata.file_type().is_symlink_dir() {
+                std::os::windows::fs::symlink_dir(target, dest)
+            } else {
+                std::os::windows::fs::symlink_file(target, dest)
+            };
         }
     }
-    Ok(())
+    if metadata.is_dir() {
+        std::fs::create_dir(dest)?;
+        for entry in std::fs::read_dir(src)? {
+            let entry = entry?;
+            copy_fs_entry(&entry.path(), &dest.join(entry.file_name()))?;
+        }
+    } else if metadata.is_file() {
+        let mut input = std::fs::File::open(src)?;
+        let mut output = std::fs::File::options().write(true).create_new(true).open(dest)?;
+        std::io::copy(&mut input, &mut output)?;
+    } else {
+        return Err(std::io::Error::new(std::io::ErrorKind::Unsupported, "Cannot copy a special file"));
+    }
+    std::fs::set_permissions(dest, metadata.permissions())
 }
 
 // ─── Tier Terminal API ────────────────────────────────────────────────────────
@@ -4448,15 +4500,23 @@ async fn check_network_port(host: String, port: u16) -> Result<bool, String> {
 
 #[tauri::command]
 fn open_url(url: String) -> Result<(), String> {
+    if url.is_empty() || url.starts_with('-') || url.contains('\0') {
+        return Err("Invalid URL or file path".into());
+    }
     #[cfg(target_os = "windows")]
     {
-        use std::os::windows::process::CommandExt;
-        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-        std::process::Command::new("cmd")
-            .args(["/C", "start", "", &url])
-            .creation_flags(CREATE_NO_WINDOW)
-            .spawn()
-            .map_err(|e| format!("Failed to open URL: {e}"))?;
+        use windows::{core::{w, PCWSTR}, Win32::{Foundation::HWND,
+            UI::{Shell::ShellExecuteW, WindowsAndMessaging::SW_SHOWNORMAL}}};
+        // Pass the entire URL/path as data to the native association handler.
+        // cmd /C start would interpret &, pipes and other shell syntax in it.
+        let target: Vec<u16> = url.encode_utf16().chain(Some(0)).collect();
+        let result = unsafe {
+            ShellExecuteW(HWND::default(), w!("open"), PCWSTR(target.as_ptr()),
+                PCWSTR::null(), PCWSTR::null(), SW_SHOWNORMAL)
+        };
+        if result.0 as isize <= 32 {
+            return Err(format!("Failed to open URL or file (Windows error {})", result.0 as isize));
+        }
     }
     #[cfg(target_os = "macos")]
     {
@@ -5054,6 +5114,9 @@ mod resume_cwd_tests {
         let _ = std::fs::remove_dir_all(&home);
     }
 }
+
+#[cfg(test)]
+mod file_ops_tests;
 
 #[cfg(test)]
 mod tests {
