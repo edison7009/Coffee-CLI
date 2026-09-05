@@ -11,6 +11,7 @@
   },
 
   "app": {
+    "macOSPrivateApi": true,
     "windows": [
       {
         "title": "Coffee CLI",

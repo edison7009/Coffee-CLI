@@ -34,7 +34,7 @@ clap = { version = "4", features = ["derive"] }
 # builds, and our shipped UI explicitly blocks F12 / Ctrl+Shift+I and the
 # context menu (see src-ui/src/main.tsx + App.tsx). Dev builds get devtools
 # automatically without the feature flag, so dev workflow is unaffected.
-tauri = { version = "2", features = ["protocol-asset"] }
+tauri = { version = "2", features = ["protocol-asset", "macos-private-api"] }
 tauri-plugin-dialog = "2"
 tauri-plugin-clipboard-manager = "2"
 
