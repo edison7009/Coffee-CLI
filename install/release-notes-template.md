@@ -1,59 +1,64 @@
 <details open>
 <summary><b>🇨🇳 简体中文</b></summary>
 
-### Coffee CLI v3.4.8
+### Coffee CLI v3.4.9
 
-- **T1 现在是一套完整、可操作的桌面体验。** Claude Code、Codex CLI 与 Kimi Code 同时支持灵动岛、泡泡对话以及权限/输入选择卡片；可点击选项，也可继续使用数字键、方向键与回车操作，等待权限与任务完成分别播放正确提示音。
-- **权限识别以真实终端结构为准。** Coffee CLI 直接读取各工具已经渲染的终端单元格和经过验证的原生状态，不依赖 Hook 或模型猜测；普通回复中的 1/2/3/4、编号列表和相似文本不会被当成选择。未验证的工具保持完整原生终端体验，不再显示不可靠的伪灵动岛或泡泡入口。
-- **Codex Desktop 历史标题恢复准确。** 会话列表会跳过插件目录、AGENTS、环境信息和附件包装等系统注入内容，并从真正的第一条用户请求生成标题。
-- **长对话导航始终保持视觉居中。** 左侧刻度会在可见对话区域内居中，并自动扣除 Gambit 输入区；当前轮次也会稳定滚到刻度栏中部，拖动 Gambit 高度后仍保持正确位置。
+- **优化普通终端与泡泡对话的标签切换。** 复用近期标签的终端渲染资源，限制后台缓存数量，减少无关标签重绘和重复尺寸通知；隐藏的长对话保留显示范围与阅读位置。
+- **修复 macOS 输入重复。** 修正输入法透传导致空格和大写字母重复发送的问题。
+- **修复文件操作与目录切换。** 删除、重命名和移动目录链接时保留目标目录；复制、移动和重命名遇到同名目标会报错，并阻止复制到自身子目录及越界重命名。后台终端切换目录、旧文件列表响应不再改写当前标签。
+- **改进对话与 Diff 显示。** 保留 Unix 路径大小写，改善 Markdown 表格布局；打开中的 Diff 原位刷新，内容未变时跳过重复高亮。语法高亮初始化失败后可重试，并保留纯文本显示。
+- **减少后台开销并修复 Windows 链接打开。** 清理无人读取的终端输出缓存和未使用依赖，修复异步事件监听器泄漏；Windows 通过系统接口打开链接及本地文件，避免将链接中的特殊字符解释为命令。
 
 </details>
 
 <details>
 <summary><b>🇬🇧 English</b></summary>
 
-### Coffee CLI v3.4.8
+### Coffee CLI v3.4.9
 
-- **T1 is now a complete, interactive desktop experience.** Claude Code, Codex CLI, and Kimi Code combine Dynamic Island status, Bubble Conversation, and permission/input cards. Choices work by click or by the familiar number keys, arrow keys, and Enter, with distinct sounds for permission waits and completed turns.
-- **Interaction detection is grounded in the real terminal UI.** Coffee CLI reads each supported tool's rendered terminal cells and verified native state—without hooks or model guesses. Ordinary 1/2/3/4 output, numbered prose, and look-alike text remain non-actionable. Unverified tools retain their full native terminal experience without unreliable projected status or conversation controls.
-- **Codex Desktop history titles are accurate again.** The session list skips injected plugin catalogues, AGENTS instructions, environment blocks, and attachment wrappers, then derives the title from the first genuine user request.
-- **Long-conversation navigation stays visually centred.** The prompt rail centres inside the visible conversation viewport, excludes the Gambit composer area, keeps the active turn near the middle, and readjusts live when Gambit is resized.
+- **Smoother terminal and Bubble Conversation tab switching.** Reuse recent terminal renderers within a bounded cache, reduce unrelated tab renders and duplicate resize notifications, and retain the visible range and reading position of hidden conversations.
+- **Fix duplicate macOS input.** Correct IME passthrough that could send spaces and capital letters twice.
+- **Safer file operations and workspace switching.** Deleting, renaming, or moving directory links preserves their targets. Copy, move, and rename reject existing destinations, copying into a source directory is blocked, and rename stays within its parent. Background terminal directory changes and stale file listings no longer replace the active tab's workspace.
+- **More reliable conversations and diffs.** Preserve Unix path case and improve Markdown tables. Open diffs refresh in place and skip repeated highlighting when text is unchanged. Failed highlighter initialization can retry while plain text remains available.
+- **Less background work and reliable Windows link opening.** Remove an unread terminal output buffer and unused dependencies, clean up late event listeners, and use the native Windows handler for URLs and local files so special characters are not interpreted as shell commands.
 
 </details>
 
 <details>
 <summary><b>🇹🇼 繁體中文</b></summary>
 
-### Coffee CLI v3.4.8
+### Coffee CLI v3.4.9
 
-- **T1 現在是一套完整且可操作的桌面體驗。** Claude Code、Codex CLI 與 Kimi Code 同時支援靈動島、泡泡對話及權限／輸入選擇卡片；可點擊選項，也可繼續使用數字鍵、方向鍵與 Enter，等待權限和任務完成會播放不同的正確提示音。
-- **互動識別以真實終端結構為準。** Coffee CLI 直接讀取各工具已渲染的終端單元格與經過驗證的原生狀態，不依賴 Hook 或模型猜測；一般回覆中的 1/2/3/4、編號清單和相似文字不會被當成選擇。尚未驗證的工具保留完整原生終端體驗，不再顯示不可靠的投影狀態或泡泡入口。
-- **Codex Desktop 歷史標題恢復準確。** 會話列表會略過外掛目錄、AGENTS、環境資訊與附件包裝等系統注入內容，再由真正的第一則使用者請求產生標題。
-- **長對話導覽始終保持視覺置中。** 左側刻度會在可見對話區域內置中並自動扣除 Gambit 輸入區；目前回合會穩定捲到刻度列中部，調整 Gambit 高度後也會即時校正。
+- **改善終端與泡泡對話的分頁切換。** 重用近期分頁的終端繪圖資源並限制背景快取數量，減少無關分頁重繪與重複尺寸通知；隱藏的長對話保留顯示範圍及閱讀位置。
+- **修正 macOS 重複輸入。** 修正輸入法透傳可能重複傳送空格與大寫字母的問題。
+- **修正檔案操作與目錄切換。** 刪除、重新命名或移動目錄連結時保留目標目錄；複製、移動及重新命名遇到同名目標會報錯，並阻止複製到自身子目錄及越界命名。背景終端的目錄變更與過期清單不再改寫目前分頁。
+- **改善對話及 Diff 顯示。** 保留 Unix 路徑大小寫並改善 Markdown 表格；開啟中的 Diff 就地更新，內容未變時略過重複上色。語法上色初始化失敗後可重試，並保留純文字顯示。
+- **減少背景負擔並修正 Windows 連結開啟。** 清除無人讀取的終端輸出快取及未使用依賴，修正非同步事件監聽器洩漏；Windows 改用系統介面開啟連結與本機檔案，避免將特殊字元解讀為命令。
 
 </details>
 
 <details>
 <summary><b>🇯🇵 日本語</b></summary>
 
-### Coffee CLI v3.4.8
+### Coffee CLI v3.4.9
 
-- **T1 が完全に操作できるデスクトップ体験になりました。** Claude Code、Codex CLI、Kimi Code で Dynamic Island、バブル会話、権限／入力カードを同時に利用できます。クリックに加え、数字キー、矢印キー、Enter でも選択でき、権限待ちとタスク完了にはそれぞれ正しい通知音が鳴ります。
-- **操作検出は実際のターミナル UI に基づきます。** Coffee CLI は対応ツールが描画したセルと検証済みのネイティブ状態を直接読み取り、Hook やモデルの推測には依存しません。通常の回答に含まれる 1/2/3/4、番号付き文章、類似テキストは選択肢として扱われません。未検証のツールは、不確かな状態表示や会話 UI を追加せず、完全なネイティブターミナルとして動作します。
-- **Codex Desktop の履歴タイトルが正確になりました。** プラグイン一覧、AGENTS 指示、環境情報、添付ファイルのラッパーなどの注入ブロックを読み飛ばし、最初の本当のユーザー依頼からタイトルを生成します。
-- **長い会話でもナビゲーションが常に中央に保たれます。** 左のプロンプトレールは Gambit 入力領域を除いた表示範囲内で中央に配置され、現在のターンも中央付近へ追従します。Gambit の高さを変更した場合も即座に再調整されます。
+- **ターミナルとバブル会話のタブ切り替えを改善。** 最近使った描画リソースを上限付きキャッシュで再利用し、無関係なタブの再描画と重複するサイズ通知を削減。非表示の会話も表示範囲と読んでいた位置を保持します。
+- **macOS の二重入力を修正。** IME の入力処理でスペースや大文字が二度送信される問題を修正しました。
+- **ファイル操作と作業フォルダー切り替えを修正。** ディレクトリリンクの削除・名前変更・移動でリンク先を保持。同名のコピー先・移動先・変更先を拒否し、自身の子ディレクトリへのコピーや親を越える名前変更を防ぎます。バックグラウンド端末や古い一覧応答が現在のタブのフォルダーを上書きしなくなりました。
+- **会話と Diff 表示を改善。** Unix パスの大文字・小文字を保持し、Markdown 表を改善。開いた Diff はその場で更新し、内容が同じなら再ハイライトを省略します。ハイライト初期化は失敗後に再試行でき、プレーンテキスト表示を維持します。
+- **バックグラウンド処理と Windows のリンク処理を改善。** 未使用の出力バッファと依存関係を削除し、非同期リスナーの解放漏れを修正。Windows はシステム API で URL とローカルファイルを開き、特殊文字がシェルコマンドとして解釈されるのを防ぎます。
 
 </details>
 
 <details>
 <summary><b>🇰🇷 한국어</b></summary>
 
-### Coffee CLI v3.4.8
+### Coffee CLI v3.4.9
 
-- **T1이 완전하게 조작할 수 있는 데스크톱 경험으로 완성되었습니다.** Claude Code, Codex CLI, Kimi Code에서 Dynamic Island, 버블 대화, 권한/입력 선택 카드를 함께 사용할 수 있습니다. 클릭뿐 아니라 숫자 키, 방향키, Enter로도 선택할 수 있으며 권한 대기와 작업 완료에 서로 다른 올바른 알림음이 재생됩니다.
-- **상호작용 감지는 실제 터미널 UI를 기준으로 합니다.** Coffee CLI는 지원 도구가 렌더링한 셀과 검증된 네이티브 상태를 직접 읽으며 Hook이나 모델 추측에 의존하지 않습니다. 일반 답변의 1/2/3/4, 번호 목록, 비슷한 문구는 선택지로 처리되지 않습니다. 검증되지 않은 도구는 신뢰할 수 없는 상태나 대화 UI를 덧씌우지 않고 완전한 네이티브 터미널로 유지됩니다.
-- **Codex Desktop 기록 제목이 다시 정확해졌습니다.** 세션 목록은 플러그인 카탈로그, AGENTS 지침, 환경 정보, 첨부 파일 래퍼 같은 주입 블록을 건너뛰고 첫 번째 실제 사용자 요청에서 제목을 생성합니다.
-- **긴 대화의 탐색 표시가 항상 시각적으로 중앙에 유지됩니다.** 왼쪽 프롬프트 레일은 Gambit 입력 영역을 제외한 실제 대화 뷰포트 안에서 중앙에 배치되고 현재 턴도 레일 가운데로 따라옵니다. Gambit 높이를 바꾸면 즉시 다시 맞춰집니다.
+- **터미널과 버블 대화의 탭 전환을 개선했습니다.** 최근 렌더러를 제한된 캐시 안에서 재사용하고 관련 없는 탭의 렌더링과 중복 크기 알림을 줄였습니다. 숨겨진 대화도 표시 범위와 읽던 위치를 유지합니다.
+- **macOS 중복 입력을 수정했습니다.** IME 입력 처리 중 공백과 대문자가 두 번 전송될 수 있던 문제를 해결했습니다.
+- **파일 작업과 작업 폴더 전환을 수정했습니다.** 디렉터리 링크를 삭제하거나 이름을 바꾸거나 이동해도 대상 폴더를 보존합니다. 복사·이동·이름 변경 시 동일한 대상이 있으면 오류를 표시하고, 자신의 하위 폴더로 복사하거나 상위 경로를 벗어나는 이름 변경을 차단합니다. 백그라운드 터미널과 오래된 파일 목록이 현재 탭의 폴더를 덮어쓰지 않습니다.
+- **대화와 Diff 표시를 개선했습니다.** Unix 경로의 대소문자를 보존하고 Markdown 표를 개선했습니다. 열린 Diff는 현재 화면에서 갱신하며 내용이 같으면 다시 강조하지 않습니다. 구문 강조 초기화에 실패해도 일반 텍스트를 표시하고 재시도할 수 있습니다.
+- **백그라운드 부담과 Windows 링크 처리를 개선했습니다.** 사용하지 않는 출력 버퍼와 의존성을 제거하고 비동기 이벤트 리스너 누수를 수정했습니다. Windows는 시스템 API로 URL과 로컬 파일을 열어 특수 문자가 셸 명령으로 해석되지 않도록 합니다.
 
 </details>
