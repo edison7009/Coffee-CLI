@@ -329,6 +329,7 @@ export function resolveDiffContext(session: TerminalSession | null | undefined):
 
 type Action =
   | { type: 'SET_FOLDER'; path: string }
+  | { type: 'SET_TERMINAL_CWD'; id: string; path: string }
   | { type: 'CLEAR_FOLDER' }
   | { type: 'SET_THEME'; theme: ThemeColor }
   | { type: 'SET_SHAPE'; shape: ThemeShape }
@@ -377,6 +378,31 @@ type Action =
 
 function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
+    case 'SET_TERMINAL_CWD': {
+      let changed = false;
+      const terminals = state.terminals.map(t => {
+        if (t.id === action.id && t.folderPath !== action.path) {
+          changed = true;
+          return { ...t, folderPath: action.path };
+        }
+        if (!t.multiAgent) return t;
+        const panes = t.multiAgent.panes.map(p => {
+          if ((paneSessionId(t.id, p.paneIdx, 'split') === action.id
+            || paneSessionId(t.id, p.paneIdx, 'pane') === action.id) && p.folderPath !== action.path) {
+            changed = true;
+            return { ...p, folderPath: action.path };
+          }
+          return p;
+        });
+        return panes.some((p, i) => p !== t.multiAgent!.panes[i])
+          ? { ...t, multiAgent: { ...t.multiAgent, panes } } : t;
+      });
+      if (!changed) return state;
+      if (action.id === state.activeTerminalId) {
+        try { localStorage.setItem('cc-folder', action.path); } catch { /* Best-effort operation; failure is non-fatal. */ }
+      }
+      return { ...state, terminals };
+    }
     case 'SET_FOLDER':
       // Persist as the "last folder" so a fresh launch lands here instead
       // of the C-drive default. Read back in getInitialState().

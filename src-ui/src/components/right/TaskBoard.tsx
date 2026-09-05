@@ -186,8 +186,11 @@ export function TaskBoard() {
   useEffect(() => {
     if (!isTauri) return;
     let unlisten: (() => void) | null = null;
+    let cancelled = false;
     import('@tauri-apps/api/event').then(({ listen }) => {
-      listen<string>('tasks-changed', (event) => {
+      if (cancelled) return;
+      return listen<string>('tasks-changed', (event) => {
+        if (cancelled) return;
         // IGNORE OUR OWN ECHOES to prevent rubber-banding jitter
         if (pendingEchoesRef.current.has(event.payload)) {
           pendingEchoesRef.current.delete(event.payload);
@@ -199,9 +202,9 @@ export function TaskBoard() {
           skipNextSyncRef.current = true; // Mark incoming external data so we don't circularly save it
           setTasks(updated);
         } catch { /* Best-effort operation; failure is non-fatal. */ }
-      }).then(u => { unlisten = u; });
-    });
-    return () => { unlisten?.(); };
+      }).then(u => { if (cancelled) u(); else unlisten = u; });
+    }).catch(() => {});
+    return () => { cancelled = true; unlisten?.(); };
   }, []);
 
   useEffect(() => {

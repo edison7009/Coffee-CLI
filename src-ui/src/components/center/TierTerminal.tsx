@@ -299,6 +299,7 @@ function attachWebglRenderer(
   try {
     const webgl = new WebglAddon();
     webgl.onContextLoss(() => {
+      if (webglRef.current !== webgl) return;
       hiddenWebglRenderers.delete(webglRef);
       // Browser force-loses a context when the ~16 active-context cap is hit
       // or the GPU driver resets. Drop THIS terminal's renderer. Don't latch
@@ -353,8 +354,9 @@ function detachWebglRenderer(
 ): void {
   hiddenWebglRenderers.delete(webglRef);
   if (!webglRef.current) return;
-  try { webglRef.current.dispose(); } catch { /* already gone */ }
+  const webgl = webglRef.current;
   webglRef.current = null;
+  try { webgl.dispose(); } catch { /* already gone */ }
 }
 
 function suspendWebglRenderer(webglRef: { current: WebglAddon | null }): void {
@@ -1464,7 +1466,7 @@ function TierTerminalImpl({
         },
         onCwd: (cwd) => {
           if (!mounted) return;
-          dispatch({ type: 'SET_FOLDER', path: cwd });
+          dispatch({ type: 'SET_TERMINAL_CWD', id: sessionId, path: cwd });
         },
       });
       if (mounted) unlisteners.push(unsubEvents); else { unsubEvents(); return; }

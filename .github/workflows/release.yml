@@ -36,18 +36,16 @@ jobs:
           cd src-ui
           npm ci
 
-      # Full frontend build (tsc -b typecheck + vite build). The matrix
-      # also builds the frontend, but repeating it here is ~1s and keeps
-      # the gate self-contained + identical to local `npm run build`, so a
-      # type error the matrix would hit is caught before any platform
-      # runner spins up. NOTE: `npm run lint` is intentionally NOT gated
-      # here — the repo has long-standing lint errors (empty catch blocks,
-      # react-refresh exports) that predate this workflow and would block
-      # every release until cleaned up. Add lint back once those are fixed.
-      - name: Frontend build (typecheck)
+      - name: Frontend build, lint, and regression tests
         run: |
           cd src-ui
           npm run build
+          npm run lint
+          node scripts/run-terminal-interaction-test.mjs
+          node scripts/run-shiki-test.mjs
+          node scripts/run-tab-renderer-test.mjs
+          node scripts/run-conversation-virtualizer-test.mjs
+          node scripts/run-review-regressions.mjs
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -163,6 +161,9 @@ jobs:
         uses: swatinem/rust-cache@v2
         with:
           key: ${{ matrix.label }}
+
+      - name: Native regression tests
+        run: cargo test --locked --no-fail-fast ${{ matrix.args }}
 
       - name: Install Tauri CLI
         run: cargo install tauri-cli --version "^2.0" --locked

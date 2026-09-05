@@ -563,30 +563,27 @@ export function Explorer() {
   useEffect(() => {
     if (!folderPath) { setRootEntries(null); return; }
     let cancelled = false;
-    commands.listDirectory(folderPath)
-      .then(entries => { if (!cancelled) setRootEntries(entries); })
-      .catch(() => { if (!cancelled) setRootEntries([]); });
-    return () => { cancelled = true; };
-  }, [folderPath]);
-
-  // Snapshot lifecycle and the +N/-M map are owned by FileStatsProvider at
-  // App level (lib/file-stats.tsx) so the right-side ChangesBoard can read
-  // the same data when Explorer is unmounted. Reload root level when
-  // fs-refresh targets the workspace root itself; subdirectory refreshes
-  // are handled inside each BrowserDirNode.
-  useEffect(() => {
-    if (!folderPath) return;
+    let request = 0;
+    const load = () => {
+      const current = ++request;
+      commands.listDirectory(folderPath)
+        .then(entries => { if (!cancelled && current === request) setRootEntries(entries); })
+        .catch(() => { if (!cancelled && current === request) setRootEntries([]); });
+    };
+    load();
+    // Initial reads and refreshes share one sequence so an older response
+    // cannot replace a newer directory listing after a tab switch or save.
     const norm = (p: string) => p.replace(/\\/g, '/').replace(/\/+$/, '');
     const target = norm(folderPath);
     const handler = (e: Event) => {
       const ev = e as CustomEvent<{ dirPath: string }>;
       const dir = norm(ev.detail.dirPath);
       if (dir === target) {
-        commands.listDirectory(folderPath).then(setRootEntries).catch(() => setRootEntries([]));
+        load();
       }
     };
     window.addEventListener('fs-refresh', handler);
-    return () => window.removeEventListener('fs-refresh', handler);
+    return () => { cancelled = true; window.removeEventListener('fs-refresh', handler); };
   }, [folderPath]);
 
   // Update check

@@ -939,19 +939,22 @@ export function CenterPanel() {
   // process invoked as `launch …` — the running instance never restarts).
   useEffect(() => {
     if (!isTauri) return;
+    let cancelled = false;
     commands.takePendingLaunch()
-      .then(req => { if (req) applyLaunchRequest(req.tool as ToolType, req.cwd); })
+      .then(req => { if (!cancelled && req) applyLaunchRequest(req.tool as ToolType, req.cwd); })
       .catch(() => {});
     let unlisten: (() => void) | undefined;
     (async () => {
       try {
         const { listen } = await import('@tauri-apps/api/event');
-        unlisten = await listen<{ tool: string; cwd?: string }>('launch-request', e => {
-          applyLaunchRequest(e.payload.tool as ToolType, e.payload.cwd);
+        if (cancelled) return;
+        const handle = await listen<{ tool: string; cwd?: string }>('launch-request', e => {
+          if (!cancelled) applyLaunchRequest(e.payload.tool as ToolType, e.payload.cwd);
         });
+        if (cancelled) handle(); else unlisten = handle;
       } catch { /* event bridge unavailable (e.g. browser dev) — ignore */ }
     })();
-    return () => { if (unlisten) unlisten(); };
+    return () => { cancelled = true; unlisten?.(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

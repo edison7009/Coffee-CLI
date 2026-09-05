@@ -53,13 +53,9 @@ type DiffResult =
 // would freeze the UI the instant it opens. Above either threshold we show
 // a summary card instead.
 //
-// DIFF_MAX_BYTES is checked against the file's REAL on-disk byte size,
-// fetched up front via commands.getDiffMeta (see the load effect), so an
-// oversized file is rejected BEFORE its contents are marshalled across IPC.
-// Using real UTF-8 bytes — not the decoded String.length, whose UTF-16 units
-// under-count multibyte CJK — is what keeps large CJK files from slipping
-// through. DIFF_MAX_CHANGED_LINES catches huge rewrites from the Rust
-// folder-stats badge, before any IPC at all.
+// DIFF_MAX_BYTES limits the combined UTF-8 text after reading, before diffing
+// and tokenizing. DIFF_MAX_CHANGED_LINES can reject huge rewrites earlier
+// when the git badge already provides their change counts.
 const DIFF_MAX_BYTES = 1_000_000;
 const DIFF_MAX_CHANGED_LINES = 5000;
 
@@ -134,7 +130,6 @@ export function DiffPanel({ path, repoRoot, rel, kind, commitHash, onClose, mode
   // (stable per file). Reset when the file changes so a new diff starts
   // fully folded.
   const [expandedGaps, setExpandedGaps] = useState<Set<string>>(() => new Set());
-  /* eslint-disable-next-line react-hooks/set-state-in-effect -- Fold state belongs to the selected path and must reset when that identity changes. */
   useEffect(() => { setExpandedGaps(new Set()); }, [path]);
   const toggleGap = (key: string) =>
     setExpandedGaps(prev => {
@@ -171,22 +166,22 @@ export function DiffPanel({ path, repoRoot, rel, kind, commitHash, onClose, mode
 
   useEffect(() => {
     let cancelled = false;
-    /* eslint-disable-next-line react-hooks/set-state-in-effect -- A new diff identity must synchronously replace stale content with its loading state. */
+    let loading = false;
+    let refreshPending = false;
+    let previousText: { oldText: string; newText: string } | null = null;
     setResult({ state: 'loading' });
 
-    // Cheap pre-read guard: the Rust badge already knows the change
-    // magnitude (multiset line diff). If it's huge, skip the IPC reads,
-    // jsdiff, and Shiki entirely — go straight to the summary card. Read
-    // from the ref (see badgeRef above) so this effect needn't depend on the
-    // live-polled counts.
-    const { added: badgeAdded, deleted: badgeDeleted } = badgeRef.current;
-    if (badgeAdded + badgeDeleted > DIFF_MAX_CHANGED_LINES) {
-      setResult({ state: 'too_large', added: badgeAdded, deleted: badgeDeleted });
-      return;
-    }
-
-    (async () => {
+    const load = async () => {
+      if (cancelled) return;
+      if (loading) { refreshPending = true; return; }
+      loading = true;
+      const { added: badgeAdded, deleted: badgeDeleted } = badgeRef.current;
       try {
+        if (badgeAdded + badgeDeleted > DIFF_MAX_CHANGED_LINES) {
+          previousText = null;
+          setResult({ state: 'too_large', added: badgeAdded, deleted: badgeDeleted });
+          return;
+        }
         // Fetch the two sides from git per group:
         //   untracked   → old ""            / new = working file (no git blob)
         //   uncommitted → old `HEAD:rel`   / new = working file (HEAD↔worktree)
@@ -216,12 +211,17 @@ export function DiffPanel({ path, repoRoot, rel, kind, commitHash, onClose, mode
           oldText = o ?? '';
           newText = n ?? '';
         }
-        if (cancelled) return;
+        if (cancelled || refreshPending) return;
+        // Filesystem events include sibling edits and the polling backstop.
+        // Unchanged text needs no diff, tokenization, or React update.
+        if (previousText?.oldText === oldText && previousText.newText === newText) return;
 
         // Post-fetch size guard (replaces the old getDiffMeta pre-probe): bail
         // to the summary card before the jsdiff + double-Shiki pass, which
         // would freeze the main thread on a multi-MB blob.
-        if (oldText.length + newText.length > DIFF_MAX_BYTES) {
+        if (oldText.length + newText.length > DIFF_MAX_BYTES
+          || new TextEncoder().encode(oldText).byteLength + new TextEncoder().encode(newText).byteLength > DIFF_MAX_BYTES) {
+          previousText = null;
           setResult({ state: 'too_large', added: badgeAdded, deleted: badgeDeleted });
           return;
         }
@@ -241,7 +241,7 @@ export function DiffPanel({ path, repoRoot, rel, kind, commitHash, onClose, mode
           tokenizeFile(oldText, path, theme),
           tokenizeFile(newText, path, theme),
         ]);
-        if (cancelled) return;
+        if (cancelled || refreshPending) return;
 
         const tokenized = (oldTokens || newTokens)
           ? lines.map(line => {
@@ -253,14 +253,43 @@ export function DiffPanel({ path, repoRoot, rel, kind, commitHash, onClose, mode
         // Fold unchanged runs into gaps for rendering; counts stay sourced
         // from the full flat list above.
         const rows = collapseToHunks(tokenized);
+        previousText = { oldText, newText };
         setResult({ state: 'ok', rows, added: addedLines, deleted: deletedLines });
       } catch {
-        if (cancelled) return;
+        if (cancelled || refreshPending) return;
+        previousText = null;
         setResult({ state: 'error', reason: 'ipc' });
+      } finally {
+        loading = false;
+        if (refreshPending && !cancelled) { refreshPending = false; void load(); }
       }
-    })();
+    };
+    void load();
 
-    return () => { cancelled = true; };
+    // Refresh in place, retaining the current rows and scroll position. The
+    // backstop also works with Explorer collapsed (its OS watcher is stopped).
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const norm = (value: string) => value.replace(/\\/g, '/').replace(/\/+$/, '');
+    const parent = norm(path).slice(0, norm(path).lastIndexOf('/'));
+    const refresh = (event: Event) => {
+      const dir = norm((event as CustomEvent<{ dirPath: string }>).detail.dirPath);
+      if (dir !== parent && dir !== norm(repoRoot)) return;
+      clearTimeout(timer);
+      timer = setTimeout(() => { void load(); }, 800);
+    };
+    // An explicit commit hash is immutable and does not need polling.
+    const live = kind !== 'committed' || !commitHash;
+    const poll = live ? window.setInterval(() => {
+      if (document.visibilityState === 'visible') void load();
+    }, 8000) : undefined;
+    if (live) window.addEventListener('fs-refresh', refresh);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      window.clearInterval(poll);
+      window.removeEventListener('fs-refresh', refresh);
+    };
   }, [path, repoRoot, rel, kind, commitHash, dataTheme]);
 
   const basename = useMemo(() => path.replace(/\\/g, '/').split('/').pop() || path, [path]);
