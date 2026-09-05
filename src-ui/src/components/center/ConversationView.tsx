@@ -171,7 +171,7 @@ function normalizedPath(path: string): string {
   let normalized = path.replace(/\\/g, '/').replace(/\/+$/, '');
   // Windows drive/UNC paths are case-insensitive. Preserve case on Unix,
   // including case-sensitive macOS volumes and paths from remote sessions.
-  if (/^(?:[a-z]:\/|\/\/)/i.test(normalized)) normalized = normalized.toLowerCase();
+  if (/^(?:[a-z]:(?:\/|$)|\/\/)/i.test(normalized)) normalized = normalized.toLowerCase();
   const worktreeMarker = normalized.indexOf('/.claude/worktrees/');
   return worktreeMarker >= 0 ? normalized.slice(0, worktreeMarker) : normalized;
 }

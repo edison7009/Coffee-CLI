@@ -168,6 +168,7 @@ export function DiffPanel({ path, repoRoot, rel, kind, commitHash, onClose, mode
     let cancelled = false;
     let loading = false;
     let refreshPending = false;
+    let oversized = false;
     let previousText: { oldText: string; newText: string } | null = null;
     setResult({ state: 'loading' });
 
@@ -178,6 +179,7 @@ export function DiffPanel({ path, repoRoot, rel, kind, commitHash, onClose, mode
       const { added: badgeAdded, deleted: badgeDeleted } = badgeRef.current;
       try {
         if (badgeAdded + badgeDeleted > DIFF_MAX_CHANGED_LINES) {
+          oversized = true;
           previousText = null;
           setResult({ state: 'too_large', added: badgeAdded, deleted: badgeDeleted });
           return;
@@ -221,10 +223,12 @@ export function DiffPanel({ path, repoRoot, rel, kind, commitHash, onClose, mode
         // would freeze the main thread on a multi-MB blob.
         if (oldText.length + newText.length > DIFF_MAX_BYTES
           || new TextEncoder().encode(oldText).byteLength + new TextEncoder().encode(newText).byteLength > DIFF_MAX_BYTES) {
+          oversized = true;
           previousText = null;
           setResult({ state: 'too_large', added: badgeAdded, deleted: badgeDeleted });
           return;
         }
+        oversized = false;
 
         const lines = computeUnifiedDiff(oldText, newText);
         // Renderer-side counts (order-sensitive jsdiff), distinct from the
@@ -280,7 +284,7 @@ export function DiffPanel({ path, repoRoot, rel, kind, commitHash, onClose, mode
     // An explicit commit hash is immutable and does not need polling.
     const live = kind !== 'committed' || !commitHash;
     const poll = live ? window.setInterval(() => {
-      if (document.visibilityState === 'visible') void load();
+      if (!oversized && document.visibilityState === 'visible') void load();
     }, 8000) : undefined;
     if (live) window.addEventListener('fs-refresh', refresh);
 

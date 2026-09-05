@@ -53,6 +53,7 @@ assert.equal(split.terminals[2].multiAgent.panes[1].folderPath, '/two/new');
 const normalize = evaluate(`${declaration('components/center/ConversationView.tsx', 'normalizedPath')}; normalizedPath`);
 assert.notEqual(normalize('/work/Project'), normalize('/work/project'));
 assert.equal(normalize('C:\\Work\\Project\\'), normalize('c:/work/project'));
+assert.equal(normalize('C:\\'), normalize('c:/'));
 assert.equal(normalize('\\\\Host\\Share\\Project'), normalize('//host/share/project'));
 assert.equal(normalize('/work/Project/.claude/worktrees/task'), '/work/Project');
 
@@ -99,7 +100,7 @@ requests[4].resolve(['new B']); await tick(); requests[3].resolve(['old B']); aw
 assert.equal(entries[0], 'new B'); closeB();
 
 // Actual Diff load effect: equal line counts still refresh text; unchanged polls skip tokenization.
-let poll, timer, output, tokenizations = 0, fileText = 'first', failure = false, pendingRead;
+let poll, timer, output, tokenizations = 0, reads = 0, fileText = 'first', failure = false, pendingRead;
 const diffCallbacks = new Map();
 const diffEffect = effect('components/right/DiffPanel.tsx', 'const load = async');
 const cleanupDiff = evaluate(`(${diffEffect})()`, {
@@ -108,6 +109,7 @@ const cleanupDiff = evaluate(`(${diffEffect})()`, {
   DIFF_MAX_CHANGED_LINES: 5000, DIFF_MAX_BYTES: 1_000_000,
   setResult: value => { output = value; },
   commands: { readTextFile: async () => {
+    reads++;
     if (pendingRead) return pendingRead.promise;
     if (failure) throw new Error('read failed');
     return fileText;
@@ -130,6 +132,12 @@ timer(); await tick(); assert.equal(output.rows[0].text, 'second');
 assert.equal(tokenizations, 4);
 failure = true; poll(); await tick(); assert.equal(output.state, 'error');
 failure = false; poll(); await tick(); assert.equal(output.rows[0].text, 'second', 'retry must recover identical text');
+fileText = '中'.repeat(400_000); poll(); await tick();
+assert.equal(output.state, 'too_large', 'size guard must count UTF-8 bytes');
+const largeReads = reads; poll(); await tick();
+assert.equal(reads, largeReads, 'do not repeatedly read oversized files on the polling backstop');
+fileText = 'second'; diffCallbacks.get('fs-refresh')({ detail: { dirPath: '/repo' } });
+timer(); await tick(); assert.equal(output.rows[0].text, 'second');
 pendingRead = deferred(); poll(); cleanupDiff();
 pendingRead.resolve('late result'); await tick();
 assert.equal(output.rows[0].text, 'second');
