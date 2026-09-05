@@ -89,6 +89,9 @@ export function useConversationVirtualizer(
         : { start: 0, end: 0 });
       return;
     }
+    // display:none reports a zero viewport and scrollTop. Keep the last visible
+    // rows mounted so switching back doesn't rebuild the list from its start.
+    if (scroll.clientHeight === 0) return;
     const viewportTop = Math.max(0, scroll.scrollTop - THREAD_TOP_PADDING_PX);
     const start = indexAtOffset(metrics.offsets, Math.max(0, viewportTop - OVERSCAN_PX));
     const end = Math.min(

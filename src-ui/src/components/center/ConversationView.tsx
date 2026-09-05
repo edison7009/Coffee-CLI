@@ -1066,7 +1066,7 @@ function ConversationViewImpl({
       if (!pinnedRef.current || frame !== null) return;
       frame = window.requestAnimationFrame(() => {
         frame = null;
-        if (pinnedRef.current) element.scrollTop = element.scrollHeight;
+        if (pinnedRef.current && element.clientHeight > 0) element.scrollTop = element.scrollHeight;
       });
     });
     observer.observe(element);
@@ -1214,7 +1214,7 @@ function ConversationViewImpl({
 
   useLayoutEffect(() => {
     const element = scrollRef.current;
-    if (!element) return;
+    if (!element || element.clientHeight === 0) return;
     const prependAnchor = prependAnchorRef.current;
     if (prependAnchor) {
       prependAnchorRef.current = null;
@@ -1223,7 +1223,7 @@ function ConversationViewImpl({
       return;
     }
     if (pinnedRef.current) element.scrollTop = element.scrollHeight;
-  }, [messages, pending, activityLabel, interaction?.fingerprint, virtual.total]);
+  }, [messages, pending, activityLabel, interaction?.fingerprint, virtual.total, isActive, isVisible]);
 
   useLayoutEffect(() => {
     const target = pendingNavigationJumpRef.current;

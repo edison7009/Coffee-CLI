@@ -36,7 +36,7 @@ import { parseCodexTerminalTitle } from '../../lib/codex-terminal-title';
 import { markNotifySoundPromptSubmitted } from '../../lib/notify-sound';
 import { onWindowForeground } from '../../lib/window-focus-filter';
 import { commands } from '../../tauri';
-import { supportsAgentStatus, useAppDispatch, useAppState, type AgentStatus, type ToolType, type ThemeColor } from '../../store/app-state';
+import { supportsAgentStatus, useAppDispatch, useAppStateRef, type AgentStatus, type ToolType, type ThemeColor } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
 import { getToolDisplayName } from '../../lib/tool-info';
 import { TermContextMenu, type TermContextMenuState } from './TermContextMenu';
@@ -275,12 +275,17 @@ function probeWebglOnce(): boolean {
 // terminal trips the process-wide latch.
 const MAX_WEBGL_RECOVERY_ATTEMPTS = 3;
 
+// Retain only the two most recently hidden renderers. Switching between a few
+// tabs reuses their contexts/atlases without reserving a context for every tab.
+const MAX_HIDDEN_WEBGL_RENDERERS = 2;
+const hiddenWebglRenderers = new Set<{ current: WebglAddon | null }>();
+
 // Attach the WebGL renderer to `term`, respecting the shared context budget.
 // Idempotent per terminal (guards on `webglRef`); a no-op once the latch is
 // tripped or on a software GPU. Safe to call on first reveal AND on tab
 // re-activation — a tab that is never shown never spends a context, and a
-// backgrounded tab releases its context (see detachWebglRenderer) so the ~16
-// active-context slots stay free for visible tabs. DOM fallback loses
+// least-recently hidden tabs release their contexts (see suspendWebglRenderer)
+// so the active-context slots stay available for visible tabs. DOM fallback loses
 // customGlyphs / rescaleOverlappingGlyphs, so box-drawing may misalign on
 // degraded terminals.
 function attachWebglRenderer(
@@ -288,11 +293,13 @@ function attachWebglRenderer(
   webglRef: { current: WebglAddon | null },
   attemptsRef: { current: number },
 ): void {
+  hiddenWebglRenderers.delete(webglRef);
   if (webglDisabled || webglRef.current) return;
   if (!probeWebglOnce()) return; // software GPU → DOM renderer is cheaper
   try {
     const webgl = new WebglAddon();
     webgl.onContextLoss(() => {
+      hiddenWebglRenderers.delete(webglRef);
       // Browser force-loses a context when the ~16 active-context cap is hit
       // or the GPU driver resets. Drop THIS terminal's renderer. Don't latch
       // process-wide on a single loss — re-attach is attempted on next
@@ -337,17 +344,26 @@ function attachWebglRenderer(
 }
 
 // Release this terminal's WebGL context WITHOUT tripping the recovery budget
-// or the process-wide latch — this is the intentional lifecycle dispose when
-// a tab is backgrounded (Orca's suspendRendering pattern). Frees one of the
+// or the process-wide latch — used on cache eviction or unmount. Frees one of the
 // ~16 active-context slots so new tabs don't get force-degraded to DOM. xterm
 // falls back to its DOM renderer; buffer state is preserved, so re-attach on
 // next visibility picks up where it left off. No-op when already detached.
 function detachWebglRenderer(
   webglRef: { current: WebglAddon | null },
 ): void {
+  hiddenWebglRenderers.delete(webglRef);
   if (!webglRef.current) return;
   try { webglRef.current.dispose(); } catch { /* already gone */ }
   webglRef.current = null;
+}
+
+function suspendWebglRenderer(webglRef: { current: WebglAddon | null }): void {
+  if (!webglRef.current || hiddenWebglRenderers.has(webglRef)) return;
+  hiddenWebglRenderers.add(webglRef);
+  if (hiddenWebglRenderers.size > MAX_HIDDEN_WEBGL_RENDERERS) {
+    const oldest = hiddenWebglRenderers.values().next().value;
+    if (oldest) detachWebglRenderer(oldest);
+  }
 }
 
 interface TierTerminalProps {
@@ -398,14 +414,9 @@ function TierTerminalImpl({
   const isRawShell = tool === 'terminal' || tool === 'remote';
   // Dispatch-only subscription. Never re-renders this component.
   const dispatch = useAppDispatch();
-  // Sentinel scanner needs access to the latest state to look up sibling
-  // panes (same parent tab, sentinelEnabled, etc.). Using the hook re-
-  // renders this component on every state change, which would thrash the
-  // xterm init effects. We keep the value in a ref and sync it with a
-  // cheap effect — the onOutput closure reads through the ref.
-  const { state: _appState } = useAppState();
-  const appStateRef = useRef(_appState);
-  useEffect(() => { appStateRef.current = _appState; }, [_appState]);
+  // Output handlers need current sibling-pane state, but rendering already
+  // receives its state through props. Avoid subscribing every hidden terminal.
+  const appStateRef = useAppStateRef();
   const projectionActiveRef = useRef(isActive || conversationActive);
   projectionActiveRef.current = isActive || conversationActive;
 
@@ -463,7 +474,7 @@ function TierTerminalImpl({
   // Inactive tabs are display:none (CenterPanel). While hidden, xterm's WebGL
   // canvas keeps its LAST drawn framebuffer. On switch-back the browser
   // composites that stale frame, and xterm's redraw is deferred to rAF (the
-  // activation effect below even waits a double-rAF before fit()), so for
+  // activation effect below waits for rAF before fit()), so for
   // 1-2 frames the user sees the *previous* agent UI ghosted in before it
   // snaps to current. We mask the canvas the instant the tab re-activates
   // (pre-paint, via useLayoutEffect) so the solid terminal background shows
@@ -869,8 +880,8 @@ function TierTerminalImpl({
     // and Intel UHD laptops as DOM-only and tanking their CPU.
     // WebGL is a scarce shared resource (Chromium caps it at ~16 contexts; see
     // attachWebglRenderer). Only spend a context once this terminal is actually
-    // on-screen, so tabs opened but never viewed cost zero context. Kept once
-    // attached (no renderer thrash on tab switch, matching VS Code's terminal).
+    // on-screen, so tabs opened but never viewed cost zero context. Recently
+    // viewed renderers remain attached within the bounded hidden-tab cache.
     // This laziness is per-TAB, not per-pane: a split tab (FourSplitGrid) dims
     // its inactive panes with opacity, not display:none, so every pane in an
     // ACTIVE split tab already has offsetParent set and attaches WebGL
@@ -892,7 +903,7 @@ function TierTerminalImpl({
         // `mounted` guards a dispose race: a queued callback firing after the
         // effect cleanup would loadAddon() onto a disposed terminal, and the
         // catch inside attachWebglRenderer would wrongly trip the latch to DOM.
-        if (mounted && entries.some((e) => e.isIntersecting)) {
+        if (mounted && termRef.current && termRef.current.offsetParent !== null && entries.some((e) => e.isIntersecting)) {
           attachWebglRenderer(term, webglRef, contextLossAttemptsRef);
           webglIO.disconnect();
         }
@@ -1495,25 +1506,25 @@ function TierTerminalImpl({
             // Backend no-ops on an unknown session either way, but matching
             // the WebGL observer's discipline keeps this from firing at all.
             if (!mounted) return;
-            const visible = entries.some((e) => e.isIntersecting);
+            // A queued intersecting entry may predate a rapid switch away.
+            // Never recreate a renderer for a tab that is already hidden.
+            const visible = termRef.current !== null && termRef.current.offsetParent !== null && entries.some((e) => e.isIntersecting);
             const backendActive = visible || projectionActiveRef.current;
             commands.setSessionActive(sessionId, backendActive).catch(() => {});
             outputScheduler.setActive(sessionId, visible);
-            // WebGL lifecycle (Orca suspendRendering pattern): release this
-            // tab's GL context when hidden so it doesn't hold one of the ~16
-            // active-context slots, and re-attach on reveal. The canvasHidden
+            // Keep recently hidden renderers warm within a bounded cache,
+            // and re-attach evicted renderers on reveal. The canvasHidden
             // mask (useLayoutEffect above) covers the re-attach transition —
             // it masks the canvas until xterm's first post-attach render fires
             // onRender → reveal. attachWebglRenderer is idempotent (no-op if
-            // already attached or process latched); detachWebglRenderer is a
-            // no-op when already detached. Element-level intersection is
+            // already attached or process latched). Element-level intersection is
             // correct for both whole-tab display:none toggles AND split panes,
             // so non-active panes in a split tab (still visible) keep their
             // contexts.
             if (visible) {
               attachWebglRenderer(term, webglRef, contextLossAttemptsRef);
             } else {
-              detachWebglRenderer(webglRef);
+              suspendWebglRenderer(webglRef);
             }
           });
           visibilityIO.observe(termRef.current);
@@ -1567,12 +1578,15 @@ function TierTerminalImpl({
     let resizeTimer: ReturnType<typeof setTimeout> | null = null;
     const runFit = () => {
       resizeTimer = null;
+      if (!termRef.current || termRef.current.offsetParent === null) return;
       try { fit.fit(); } catch { /* Best-effort operation; failure is non-fatal. */ }
       // Notify PTY backend of the new size so the CLI tool can redraw
       try {
         const cols = term.cols;
         const rows = term.rows;
-        if (cols > 0 && rows > 0) {
+        const previous = lastResizeRef.current;
+        if (cols > 0 && rows > 0 && (!previous || previous.cols !== cols || previous.rows !== rows)) {
+          lastResizeRef.current = { cols, rows };
           commands.tierTerminalResize(sessionId, cols, rows).catch(() => {});
         }
       } catch { /* Best-effort operation; failure is non-fatal. */ }
@@ -1593,6 +1607,7 @@ function TierTerminalImpl({
       unregisterFocus();
       ro.disconnect();
       if (resizeTimer !== null) clearTimeout(resizeTimer);
+      detachWebglRenderer(webglRef);
       term.dispose();
       outputScheduler.unregisterSession(sessionId);
       xtermRef.current = null;
@@ -1838,8 +1853,7 @@ function TierTerminalImpl({
   const lastResizeRef = useRef<{ cols: number; rows: number } | null>(null);
 
   // When this session becomes the active tab, refit + focus after layout.
-  // Uses double-rAF instead of a 150ms setTimeout so perceived switch latency
-  // drops from 150ms to ~32ms (two frames).
+  // Fit on the next animation frame after the display change is committed.
   //
   // useLayoutEffect (not useEffect) so the mask below is committed BEFORE the
   // browser paints the now-visible tab — useEffect runs post-paint, which is
@@ -1847,7 +1861,13 @@ function TierTerminalImpl({
   // only mask when xterm already exists (a real switch-back, not first mount,
   // where the splash covers init and there is no stale frame yet).
   useLayoutEffect(() => {
-    if (!isActive) return;
+    if (!isActive) {
+      // A rapid show/hide can occur between IntersectionObserver deliveries.
+      // Pair the synchronous attach below with a hide check after the commit;
+      // an unfocused split pane remains visible and must keep its renderer.
+      if (termRef.current?.offsetParent === null) suspendWebglRenderer(webglRef);
+      return;
+    }
     if (xtermRef.current) setCanvasHidden(true);
 
     // Synchronously re-attach WebGL if it was detached on hide. The visibility
@@ -1866,13 +1886,13 @@ function TierTerminalImpl({
     // own offsetParent/IO path owns the first attach and the splash covers
     // any race.
     if (
-      xtermRef.current && !webglRef.current &&
+      xtermRef.current &&
       termRef.current && termRef.current.offsetParent !== null
     ) {
       attachWebglRenderer(xtermRef.current, webglRef, contextLossAttemptsRef);
     }
 
-    let f1 = 0, f2 = 0;
+    let f1 = 0;
     let revealed = false;
     let renderSub: { dispose: () => void } | null = null;
     const reveal = () => {
@@ -1884,33 +1904,32 @@ function TierTerminalImpl({
     };
 
     f1 = requestAnimationFrame(() => {
-      f2 = requestAnimationFrame(() => {
-        // fit() can throw if the container is momentarily zero-size during a
-        // layout race — guard it (same as the ResizeObserver path) so a throw
-        // never skips the onRender subscription + resize IPC below and strand
-        // the resize. reveal() is still backstopped by the fallback regardless.
-        try { fitRef.current?.fit(); } catch { /* Best-effort operation; failure is non-fatal. */ }
-        xtermRef.current?.focus();
-        const term = xtermRef.current;
-        if (!term || term.cols <= 0 || term.rows <= 0) { reveal(); return; }
-        // Force a redraw of the current buffer, then unmask on the first real
-        // frame xterm draws — guarantees the fresh content is on the canvas
-        // before we reveal it.
-        renderSub = term.onRender(() => reveal());
-        term.refresh(0, term.rows - 1);
-        const prev = lastResizeRef.current;
-        if (!prev || prev.cols !== term.cols || prev.rows !== term.rows) {
-          lastResizeRef.current = { cols: term.cols, rows: term.rows };
-          commands.tierTerminalResize(sessionId, term.cols, term.rows).catch(() => {});
-        }
-      });
+      // The tab's display change is committed before this frame. ResizeObserver
+      // handles later geometry changes; a second frame only delays first paint.
+      // fit() can throw if the container is momentarily zero-size during a
+      // layout race — guard it (same as the ResizeObserver path) so a throw
+      // never skips the onRender subscription + resize IPC below and strand
+      // the resize. reveal() is still backstopped by the fallback regardless.
+      try { fitRef.current?.fit(); } catch { /* Best-effort operation; failure is non-fatal. */ }
+      xtermRef.current?.focus();
+      const term = xtermRef.current;
+      if (!term || term.cols <= 0 || term.rows <= 0) { reveal(); return; }
+      // Force a redraw of the current buffer, then unmask on the first real
+      // frame xterm draws — guarantees the fresh content is on the canvas
+      // before we reveal it.
+      renderSub = term.onRender(() => reveal());
+      term.refresh(0, term.rows - 1);
+      const prev = lastResizeRef.current;
+      if (!prev || prev.cols !== term.cols || prev.rows !== term.rows) {
+        lastResizeRef.current = { cols: term.cols, rows: term.rows };
+        commands.tierTerminalResize(sessionId, term.cols, term.rows).catch(() => {});
+      }
     });
 
     // Safety net: never strand the canvas masked if onRender doesn't fire.
     const fallback = setTimeout(reveal, 150);
     return () => {
       cancelAnimationFrame(f1);
-      cancelAnimationFrame(f2);
       clearTimeout(fallback);
       renderSub?.dispose();
       revealed = true;
@@ -1928,8 +1947,8 @@ function TierTerminalImpl({
   // tab bar. The tab-switch mask above doesn't catch it (isActive doesn't
   // change), so reuse the canvasHidden mechanism here: mask pre-paint, force
   // a refresh on the next frame, reveal on the first real render. Only the
-  // active terminal masks — background tabs already had their GL context
-  // detached by the visibility IO and re-attach via their own path.
+  // active terminal masks — background tabs follow their own visibility and
+  // renderer-cache lifecycle.
   // window-focus-filter absorbs the spurious blur+focus pair from
   // start_dragging (Windows), so this only fires on real alt-tabs.
   useEffect(() => {

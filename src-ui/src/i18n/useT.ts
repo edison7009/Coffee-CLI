@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { useAppState } from '../store/app-state';
+import { useAppLanguage } from '../store/app-state';
 import { en } from './en';
 import type { I18nKey } from './en';
 import { zhCN } from './zh-CN';
@@ -18,9 +18,9 @@ const strings: Record<string, Record<string, string>> = {
 };
 
 export function useT() {
-  const { state } = useAppState();
+  const lang = useAppLanguage();
   return useCallback(function t(key: I18nKey, vars?: Record<string, string | number>): string {
-    const dict = strings[state.currentLang] ?? en;
+    const dict = strings[lang] ?? en;
     let str = dict[key] ?? (en as Record<string, string>)[key] ?? key;
     if (vars) {
       for (const [k, v] of Object.entries(vars)) {
@@ -28,5 +28,5 @@ export function useT() {
       }
     }
     return str;
-  }, [state.currentLang]);
+  }, [lang]);
 }
