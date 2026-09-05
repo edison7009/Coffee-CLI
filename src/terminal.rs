@@ -464,13 +464,6 @@ pub struct TerminalSession {
     /// confirmed. The observer fires within a frame or two for a genuinely
     /// visible tab, so the visible-tab throttled window is tiny.
     pub is_tab_active: Arc<AtomicBool>,
-    /// Ring buffer of recent base64-encoded output chunks. Originally
-    /// populated for DetachedTerminal's history replay (retired 2026-04)
-    /// and the MCP `read_pane` tool (also archived). Currently referenced
-    /// only by the dormant `mcp_server` module; kept alive here so that
-    /// module still compiles and can be revived without re-plumbing.
-    #[allow(dead_code)] // intentionally unread in the active build (see above)
-    pub output_buffer: Arc<Mutex<Vec<String>>>,
 }
 
 pub type SharedSession = Arc<Mutex<std::collections::HashMap<String, TerminalSession>>>;
@@ -850,11 +843,9 @@ pub fn spawn(
     let is_tab_active: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
 
     // Store session with shared writer reference and master kept alive.
-    let output_buffer: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
     {
         let writer_clone = writer.clone();
         let master_clone = master_arc.clone();
-        let buffer_clone = output_buffer.clone();
         let mut map = session.lock().unwrap();
         map.insert(
             session_id.clone(),
@@ -864,7 +855,6 @@ pub fn spawn(
                 tool_name: tool_name.clone(),
                 session_token: Mutex::new(None),
                 _master: master_clone,
-                output_buffer: buffer_clone,
                 is_tab_active: is_tab_active.clone(),
             },
         );
@@ -954,7 +944,6 @@ pub fn spawn(
     // ── Emitter thread ──────────────────────────────────────────────────────
     let app_out = app.clone();
     let session_id_out = session_id.clone();
-    let output_buffer_for_emitter = output_buffer.clone();
     let is_active_for_emitter = is_tab_active.clone();
 
     std::thread::spawn(move || {
@@ -1052,11 +1041,11 @@ pub fn spawn(
                 let cwd_change = extract_osc7_cwd(&pending[..valid_end]);
 
                 let data = String::from_utf8_lossy(&pending[..valid_end]).to_string();
-                let stripped = ansi_re.replace_all(&data, "").to_string();
 
                 // Session token capture (once per session, for `--resume`).
                 if !token_captured {
                     if let Some(ref re) = session_id_regex {
+                        let stripped = ansi_re.replace_all(&data, "");
                         if let Some(caps) = re.captures(&stripped) {
                             if let Some(token) = caps.get(1) {
                                 let token_str = token.as_str().to_string();
@@ -1083,18 +1072,9 @@ pub fn spawn(
                     "tier-terminal-output",
                     TerminalOutput {
                         id: session_id_out.clone(),
-                        data: data.clone(),
+                        data,
                     },
                 );
-
-                // One entry per batch in the detached-window history ring.
-                if let Ok(mut ring) = output_buffer_for_emitter.lock() {
-                    ring.push(data);
-                    if ring.len() > 2000 {
-                        let drain = ring.len() - 2000;
-                        ring.drain(..drain);
-                    }
-                }
 
                 if let Some(new_cwd) = cwd_change {
                     eprintln!("[Tier Terminal] CWD changed: {}", new_cwd);

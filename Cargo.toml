@@ -57,20 +57,11 @@ png = "0.17"
 # In-app self-update downloader (Windows). Blocking + rustls, runs on a
 # spawn_blocking thread; streams the installer so we can emit download %.
 ureq = "2"
-notify = "6.1.1"
 # Coalesces bursts of fs events (e.g. CLI writing 50 files in a row) into a
 # single handler callback so the frontend doesn't re-scan 50 times.
 notify-debouncer-full = "0.3"
 rusqlite = { version = "0.32", features = ["bundled"] }
 keyring = "3"
-
-# Multi-agent MCP server (v1.0: 3 tools, HTTP Streamable transport)
-# See docs/MULTI-AGENT-ARCHITECTURE.md §5.5 for why HTTP over stdio.
-# Note: schemars is NOT a direct dep — we use rmcp's re-exported schemars
-# to avoid version conflicts (rmcp 0.8 uses schemars 1.x internally).
-rmcp = { version = "0.8", features = ["server", "macros", "transport-streamable-http-server"] }
-axum = "0.7"
-uuid = { version = "1", features = ["v4"] }
 
 [profile.release]
 opt-level = "z"
