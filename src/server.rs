@@ -1115,6 +1115,17 @@ fn tier_terminal_resize(
     use portable_pty::PtySize;
     let map = state.terminal_session.lock().unwrap();
     if let Some(session) = map.get(&session_id) {
+        // Already this size → nothing to do. A redundant resize is expensive
+        // rather than merely wasteful: it lands on the child as SIGWINCH, and
+        // a full-screen TUI answers by repainting from row 1. The frontend
+        // debounces its ResizeObserver and skips unchanged sizes, but it has
+        // three independent call sites and a remount resets its memo, so this
+        // is the one place that can actually guarantee the child is not
+        // signalled for a size it already has. A poisoned lock reads as
+        // "don't skip", i.e. the old always-resize behaviour.
+        if session.last_size.lock().map(|s| *s == (cols, rows)).unwrap_or(false) {
+            return Ok(());
+        }
         let master_guard = session._master.lock().unwrap();
         if let Some(ref master) = *master_guard {
             let size = PtySize {
@@ -1124,6 +1135,12 @@ fn tier_terminal_resize(
                 pixel_height: 0,
             };
             master.resize(size).map_err(|e| format!("Resize failed: {}", e))?;
+            // Record only once the resize succeeded, so a failure leaves the
+            // cache describing the size the PTY really still has and the next
+            // attempt isn't suppressed by a stale match.
+            if let Ok(mut last) = session.last_size.lock() {
+                *last = (cols, rows);
+            }
         }
     }
     Ok(())
