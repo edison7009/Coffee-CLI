@@ -1112,21 +1112,24 @@ fn tier_terminal_resize(
     rows: u16,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
-    use portable_pty::PtySize;
     let map = state.terminal_session.lock().unwrap();
     if let Some(session) = map.get(&session_id) {
         let master_guard = session._master.lock().unwrap();
         if let Some(ref master) = *master_guard {
-            let size = PtySize {
-                rows,
-                cols,
-                pixel_width: 0,
-                pixel_height: 0,
-            };
-            master.resize(size).map_err(|e| format!("Resize failed: {}", e))?;
+            resize_terminal_pty(master.as_ref(), cols, rows)?;
         }
     }
     Ok(())
+}
+
+fn resize_terminal_pty(master: &dyn portable_pty::MasterPty, cols: u16, rows: u16) -> Result<(), String> {
+    // get_size reads kernel state on Unix and ConPTY's applied size on Windows.
+    // In particular, a Unix child can change winsize itself (e.g. stty).
+    if master.get_size().is_ok_and(|size| size.cols == cols && size.rows == rows) {
+        return Ok(());
+    }
+    master.resize(portable_pty::PtySize { cols, rows, pixel_width: 0, pixel_height: 0 })
+        .map_err(|e| format!("Resize failed: {e}"))
 }
 
 // ─── Session Resume API ──────────────────────────────────────────────────────
@@ -1346,6 +1349,9 @@ fn load_claude_project_map(home: &std::path::Path) -> std::collections::HashMap<
     map
 }
 
+// Larger sequential reads reduce syscall overhead for long JSONL transcripts.
+const SESSION_READ_BUF: usize = 128 * 1024;
+
 fn parse_agent_jsonl(
     file_path: &std::path::Path,
     tool_name: &str,
@@ -1353,7 +1359,7 @@ fn parse_agent_jsonl(
 ) -> Option<SavedSession> {
     use std::io::BufRead;
     let file = std::fs::File::open(file_path).ok()?;
-    let reader = std::io::BufReader::new(file);
+    let reader = std::io::BufReader::with_capacity(SESSION_READ_BUF, file);
 
     let mut session_id = file_path.file_stem()?.to_string_lossy().to_string();
     let mut cwd = String::new();
@@ -1528,7 +1534,7 @@ fn parse_agent_jsonl(
 fn parse_pi_session_jsonl(file_path: &std::path::Path) -> Option<SavedSession> {
     use std::io::BufRead;
     let file = std::fs::File::open(file_path).ok()?;
-    let reader = std::io::BufReader::new(file);
+    let reader = std::io::BufReader::with_capacity(SESSION_READ_BUF, file);
 
     // File stem is `<ISO-ts>_<uuid>` — fall back to the trailing UUID if the
     // header row is missing/unparseable. `pi --session` accepts partial IDs,
@@ -1668,7 +1674,7 @@ fn strip_codex_desktop_file_preamble(text: &str) -> &str {
 fn parse_codex_session_jsonl(file_path: &std::path::Path) -> Option<SavedSession> {
     use std::io::BufRead;
     let file = std::fs::File::open(file_path).ok()?;
-    let reader = std::io::BufReader::new(file);
+    let reader = std::io::BufReader::with_capacity(SESSION_READ_BUF, file);
 
     let mut session_id = file_path.file_stem()?.to_string_lossy().to_string();
     let mut cwd = String::new();
@@ -1852,7 +1858,7 @@ fn parse_gemini_session_jsonl(
 ) -> Option<SavedSession> {
     use std::io::BufRead;
     let file = std::fs::File::open(file_path).ok()?;
-    let reader = std::io::BufReader::new(file);
+    let reader = std::io::BufReader::with_capacity(SESSION_READ_BUF, file);
 
     let mut session_id = file_path.file_stem()?.to_string_lossy().to_string();
     let mut cwd = String::new();
@@ -1969,7 +1975,7 @@ fn load_gemini_project_map() -> std::collections::HashMap<String, String> {
 fn parse_qwen_session_jsonl(file_path: &std::path::Path) -> Option<SavedSession> {
     use std::io::BufRead;
     let file = std::fs::File::open(file_path).ok()?;
-    let reader = std::io::BufReader::new(file);
+    let reader = std::io::BufReader::with_capacity(SESSION_READ_BUF, file);
 
     let mut session_id = file_path.file_stem()?.to_string_lossy().to_string();
     let mut cwd = String::new();
@@ -3307,7 +3313,25 @@ fn collect_jsonl_paths_with_mtime(
     if let Ok(entries) = std::fs::read_dir(dir) {
         for entry in entries.flatten() {
             let path = entry.path();
-            if path.is_file() {
+            // `entry.file_type()` is free — it comes out of the directory
+            // enumeration itself (FindNextFile on Windows, dirent d_type on
+            // Linux). `path.is_file()` and `path.is_dir()` each issue a real
+            // stat instead, and this walk runs on every history scan over a
+            // tree that reaches ~10k entries on a long-used machine (~5.3k
+            // under ~/.codex, ~4.7k under ~/.claude). Two saved syscalls per
+            // entry is the difference between a cheap scan and one the
+            // Defender filter driver has to inspect 20k times.
+            // Reparse points still need a stat to resolve their target; that
+            // is rare in an agent session store, and only then do we pay.
+            let (is_file, is_dir) = match entry.file_type() {
+                Ok(ft) if ft.is_symlink() => match std::fs::metadata(&path) {
+                    Ok(m) => (m.is_file(), m.is_dir()),
+                    Err(_) => continue,
+                },
+                Ok(ft) => (ft.is_file(), ft.is_dir()),
+                Err(_) => continue,
+            };
+            if is_file {
                 // OpenClaw writes two `.jsonl` per session side-by-side:
                 // `<uuid>.jsonl` (the conversation — what we want) and
                 // `<uuid>.trajectory.jsonl` (a trace/telemetry log). Both
@@ -3331,7 +3355,7 @@ fn collect_jsonl_paths_with_mtime(
                         .unwrap_or(std::time::SystemTime::UNIX_EPOCH);
                     out.push((mtime, path, tool));
                 }
-            } else if path.is_dir() {
+            } else if is_dir {
                 collect_jsonl_paths_with_mtime(path, depth - 1, tool, out);
             }
         }
@@ -3914,6 +3938,111 @@ fn saved_session_epoch_ms(value: &str) -> u64 {
     }
 }
 
+// Cache unchanged files only. A larger file may be a rewrite or replacement,
+// and appended rows can change metadata as well as counts. Changed files always
+// use the same full parser as a cold scan.
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct SessionFileStamp {
+    modified: std::time::SystemTime,
+    created: Option<std::time::SystemTime>,
+    size: u64,
+    #[cfg(unix)]
+    identity: (u64, u64),
+}
+
+fn file_stamp(path: &std::path::Path) -> Option<SessionFileStamp> {
+    let metadata = std::fs::metadata(path).ok()?;
+    #[cfg(unix)]
+    use std::os::unix::fs::MetadataExt;
+    Some(SessionFileStamp {
+        modified: metadata.modified().ok()?,
+        created: metadata.created().ok(),
+        size: metadata.len(),
+        #[cfg(unix)]
+        identity: (metadata.dev(), metadata.ino()),
+    })
+}
+
+struct CachedSession {
+    stamp: SessionFileStamp,
+    session: SavedSession,
+}
+
+#[derive(Default)]
+struct SessionParseCache {
+    // Compare the maps actually used by the parsers, avoiding timestamp
+    // collisions and a race between reading a map and statting it afterwards.
+    claude_projects: std::collections::HashMap<String, String>,
+    antigravity_projects: std::collections::HashMap<String, String>,
+    entries: std::collections::HashMap<std::path::PathBuf, CachedSession>,
+}
+
+fn session_parse_cache() -> &'static std::sync::Mutex<SessionParseCache> {
+    static CACHE: std::sync::OnceLock<std::sync::Mutex<SessionParseCache>> = std::sync::OnceLock::new();
+    CACHE.get_or_init(|| std::sync::Mutex::new(SessionParseCache::default()))
+}
+
+fn sync_aux_generation(
+    cache: &mut SessionParseCache,
+    claude_projects: &std::collections::HashMap<String, String>,
+    antigravity_projects: &std::collections::HashMap<String, String>,
+) -> bool {
+    if cache.claude_projects == *claude_projects && cache.antigravity_projects == *antigravity_projects {
+        return false;
+    }
+    cache.entries.clear();
+    cache.claude_projects = claude_projects.clone();
+    cache.antigravity_projects = antigravity_projects.clone();
+    true
+}
+
+/// Dispatch one candidate file to its tool-specific parser. Split out of
+/// `load_native_history_blocking` so the cache wrapper around it stays
+/// readable; the match arms are unchanged.
+fn parse_session_file(
+    path: &std::path::Path,
+    tool: &str,
+    antigravity_project_map: &std::collections::HashMap<String, String>,
+    claude_project_map: &std::collections::HashMap<String, String>,
+) -> Option<SavedSession> {
+    match tool {
+        "hermes"      => parse_hermes_json(path),
+        "codex"       => parse_codex_session_jsonl(path),
+        "pi"          => parse_pi_session_jsonl(path),
+        "qwen"        => parse_qwen_session_jsonl(path),
+        "antigravity" => parse_gemini_session_jsonl(path, antigravity_project_map),
+        other         => parse_agent_jsonl(path, other, claude_project_map),
+    }
+}
+
+/// Cache a stable successful parse. None also means an unreadable file in the
+/// existing parsers, so do not persist it: a temporary sharing/permission error
+/// must be retried even if the file's metadata does not change.
+fn parse_session_cached(
+    cache: &mut SessionParseCache,
+    path: &std::path::Path,
+    tool: &str,
+    antigravity_project_map: &std::collections::HashMap<String, String>,
+    claude_project_map: &std::collections::HashMap<String, String>,
+) -> Option<SavedSession> {
+    let before = file_stamp(path);
+    if let Some(hit) = cache.entries.get(path) {
+        if before.as_ref() == Some(&hit.stamp) {
+            return Some(hit.session.clone());
+        }
+    }
+    cache.entries.remove(path);
+    let session = parse_session_file(path, tool, antigravity_project_map, claude_project_map)?;
+    if let Some(stamp) = before {
+        // A writer may append/replace the transcript during parsing. Never
+        // associate that result with an earlier snapshot of the file.
+        if file_stamp(path).as_ref() == Some(&stamp) {
+            cache.entries.insert(path.to_path_buf(), CachedSession { stamp, session: session.clone() });
+        }
+    }
+    Some(session)
+}
+
 fn load_native_history_blocking() -> Result<Vec<SavedSession>, String> {
     // Cap history to the N most recent entries. Keeps UI responsive when users
     // have hundreds of sessions — parsing a full jsonl/json file is expensive,
@@ -3951,19 +4080,36 @@ fn load_native_history_blocking() -> Result<Vec<SavedSession>, String> {
         _ => std::collections::HashMap::new(),
     };
 
+    // Shared across scans; retain at most the newest HISTORY_LIMIT paths.
+    let mut guard = session_parse_cache().lock().ok();
+    // Poisoned mutex → run against a throwaway cache. Every lookup misses, so
+    // this is exactly the pre-cache behaviour: slower, never wrong.
+    let mut fallback = SessionParseCache::default();
+    let cache: &mut SessionParseCache = match guard.as_mut() {
+        Some(c) => c,
+        None => &mut fallback,
+    };
+    sync_aux_generation(cache, &claude_project_map, &antigravity_project_map);
+
+    let mut keep_paths: std::collections::HashSet<std::path::PathBuf> =
+        std::collections::HashSet::with_capacity(file_candidates.len());
     for (_, path, tool) in &file_candidates {
-        let parsed = match *tool {
-            "hermes"      => parse_hermes_json(path),
-            "codex"       => parse_codex_session_jsonl(path),
-            "pi"          => parse_pi_session_jsonl(path),
-            "qwen"        => parse_qwen_session_jsonl(path),
-            "antigravity" => parse_gemini_session_jsonl(path, &antigravity_project_map),
-            other         => parse_agent_jsonl(path, other, &claude_project_map),
-        };
+        keep_paths.insert(path.clone());
+        let parsed = parse_session_cached(
+            cache,
+            path,
+            tool,
+            &antigravity_project_map,
+            &claude_project_map,
+        );
         if let Some(session) = parsed {
             result.push(session);
         }
     }
+
+    // Drop entries for files that fell out of the newest-200 window so the cache
+    // can't grow without bound across a long-running session.
+    cache.entries.retain(|k, _| keep_paths.contains(k));
 
     // OpenCode second pass — SQLite is cheap (query already caps rows).
     // Bypasses the mtime pipeline: find_opencode_sessions pushes finished
@@ -5651,4 +5797,13 @@ mod tests {
         assert_eq!(got.name, "帮我把这个文件重构一下");
         let _ = std::fs::remove_dir_all(&dir);
     }
+
 }
+
+#[cfg(test)]
+#[path = "server/history_cache_tests.rs"]
+mod history_cache_tests;
+
+#[cfg(test)]
+#[path = "server/pty_resize_tests.rs"]
+mod pty_resize_tests;

@@ -35,10 +35,33 @@ interface HistoryState {
 let state: HistoryState = { sessions: [], status: 'idle' };
 const listeners = new Set<() => void>();
 
+/** Structural fingerprint of a history list. The backend caches each file's
+ *  parse result by (mtime, size), so a poll where nothing on disk moved comes
+ *  back identical — but doFetch still built a fresh array and emitted, which
+ *  re-rendered every HistoryBoard subscriber once a minute for nothing. An
+ *  unchanged poll now ends without touching the store. */
+function sessionsSignature(list: SavedSession[]): string {
+  return JSON.stringify(list.map(s => [
+    s.id, s.name, s.tool, s.cwd, s.session_token, s.saved_at,
+    s.created_at, s.file_path, s.turn_count,
+  ]));
+}
+let lastSig = '';
+
 // Refresh plumbing — see refreshHistory / doFetch.
 let inFlight = false;
 let lastFetchAt = 0;
 let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+/** A refresh that arrives while one is in flight, or inside the throttle
+ *  window, is remembered here and replayed rather than dropped. Both guards
+ *  used to `return` outright, which silently discarded the trigger: on a scan
+ *  that took seconds, the 60s poll, the alt-tab-back refresh and the
+ *  History-tab click all landed inside the same in-flight window, so a session
+ *  created during it never appeared until some later trigger happened to land
+ *  outside it — the "会话记录经常不刷新" report. Mirrors the `pending`
+ *  coalescing git-status.tsx already uses for the same failure mode. */
+let pendingRefresh = false;
+let pendingTimer: ReturnType<typeof setTimeout> | null = null;
 /** Skip a refresh within this window of the last fetch — multiple triggers
  *  (tab click + foreground + poll) routinely fire within a second of each
  *  other and one fetch is enough. */
@@ -70,25 +93,66 @@ function sortByMtime(list: SavedSession[]): SavedSession[] {
   return copy;
 }
 
+/// Arm the single replay timer for a throttle-blocked refresh. Idempotent —
+/// the first blocked trigger sets the deadline and later ones join it, so a
+/// burst produces one replay instead of one per trigger.
+function armPendingReplay(delayMs: number) {
+  if (pendingTimer !== null) return;
+  pendingTimer = setTimeout(() => {
+    pendingTimer = null;
+    if (!pendingRefresh) return;
+    pendingRefresh = false;
+    doFetch(true);
+  }, delayMs);
+}
+
 /// Perform a fetch. `isRefresh = false` is the initial prefetch (show loading +
 /// clear the list so the skeleton reads as "loading"). `isRefresh = true`
 /// keeps the previous sessions + `ready` status visible and swaps silently
 /// when the fetch lands — no flicker. Guarded by `inFlight` (no concurrent
 /// fetches) and a throttle (no re-fetch within REFRESH_THROTTLE_MS of the
-/// last one). Refresh is a no-op until the first prefetch has run.
+/// last one); a refresh turned away by either guard is queued in
+/// `pendingRefresh` and replayed, never dropped. Refresh is a no-op until the
+/// first prefetch has run.
 function doFetch(isRefresh: boolean) {
-  if (inFlight) return;
   if (isRefresh && state.status === 'idle') return; // never opened History
-  if (isRefresh && Date.now() - lastFetchAt < REFRESH_THROTTLE_MS) return;
+  if (inFlight) {
+    if (isRefresh) pendingRefresh = true;
+    return;
+  }
+  if (isRefresh) {
+    const wait = REFRESH_THROTTLE_MS - (Date.now() - lastFetchAt);
+    if (wait > 0) {
+      // Still inside the throttle window — defer to when it opens instead of
+      // discarding the trigger.
+      pendingRefresh = true;
+      armPendingReplay(wait);
+      return;
+    }
+  }
+  pendingRefresh = false;
+  if (pendingTimer !== null) {
+    clearTimeout(pendingTimer);
+    pendingTimer = null;
+  }
   inFlight = true;
   lastFetchAt = Date.now();
   if (!isRefresh) {
     state = { sessions: [], status: 'loading' };
     emit();
   }
-  commands.getNativeHistory()
+  // A queued refresh must reach the per-file scan even within the backend's
+  // five-second result TTL, otherwise it simply republishes the old list.
+  commands.getNativeHistory(isRefresh)
     .then(sessions => {
-      state = { sessions: sortByMtime(sessions || []), status: 'ready' };
+      const sorted = sortByMtime(sessions || []);
+      const sig = sessionsSignature(sorted);
+      // Identical to what is already published → no store write, no re-render.
+      // The initial prefetch always publishes (its status is still 'loading',
+      // and an empty first result is a legitimate empty list to show).
+      if (sig === lastSig && state.status === 'ready') return;
+      lastSig = sig;
+      state = { sessions: sorted, status: 'ready' };
       emit();
     })
     .catch(err => {
@@ -100,7 +164,16 @@ function doFetch(isRefresh: boolean) {
       }
       // Refresh failed — keep the previous data visible (silent).
     })
-    .finally(() => { inFlight = false; });
+    .finally(() => {
+      inFlight = false;
+      // Replay a refresh that was turned away while this one was running.
+      // Calling doFetch directly is safe: if the throttle is still warm it
+      // re-queues and arms the replay timer rather than looping.
+      if (pendingRefresh) {
+        pendingRefresh = false;
+        doFetch(true);
+      }
+    });
 }
 
 /** Kick off the background fetch. Idempotent — second call while loading or

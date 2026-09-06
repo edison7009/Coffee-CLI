@@ -1,0 +1,60 @@
+name: Review
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: review-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: src-ui/package-lock.json
+      - name: Build, lint, and regression tests
+        working-directory: src-ui
+        run: |
+          npm ci
+          npm run build
+          npm run lint
+          node scripts/run-terminal-interaction-test.mjs
+          node scripts/run-shiki-test.mjs
+          node scripts/run-tab-renderer-test.mjs
+          node scripts/run-conversation-virtualizer-test.mjs
+          node scripts/run-review-regressions.mjs
+          node scripts/run-history-cache-test.mjs
+
+  native:
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [windows-latest, macos-latest, macos-15-intel, ubuntu-22.04, ubuntu-22.04-arm]
+    runs-on: ${{ matrix.platform }}
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Linux system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          key: review-${{ matrix.platform }}
+      - name: Native check
+        run: cargo check --locked
+      - name: Native regression tests
+        run: cargo test --locked --no-fail-fast
