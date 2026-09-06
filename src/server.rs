@@ -1363,16 +1363,91 @@ fn load_claude_project_map(home: &std::path::Path) -> std::collections::HashMap<
     map
 }
 
+/// Read buffer for the session-file parsers below. A long agent run produces
+/// rollouts in the hundreds of MB (147 MB observed on a real `~/.codex`
+/// store); the 8 KB `BufReader` default turns one such file into ~18k read
+/// syscalls, each a round trip through the Windows filter-driver stack
+/// (Defender hooks every one). 128 KB cuts that ~16× at the cost of one
+/// extra allocation per parse — the parsers handle one file at a time.
+const SESSION_READ_BUF: usize = 128 * 1024;
+
+/// Message count → the "N messages" figure the history card shows. One
+/// definition so the whole-file parsers and the append-only resume path can't
+/// drift apart.
+fn turn_count_from_messages(total_messages: u32) -> u32 {
+    if total_messages > 0 {
+        std::cmp::max(1, (total_messages + 1) / 2)
+    } else {
+        0
+    }
+}
+
+/// Whether a user message's content is a real user turn rather than an
+/// IDE/system injection. Shared by `parse_agent_jsonl` (which tallies
+/// `real_user_messages` to reject Claude compaction sub-tasks) and by
+/// `count_agent_message_tail` (which extends that tally when a session file
+/// grows), so the two can never drift apart.
+fn is_real_user_content(msg_obj: &serde_json::Map<String, serde_json::Value>) -> bool {
+    match msg_obj.get("content") {
+        Some(c) if c.is_string() => {
+            c.as_str().map_or(false, |s| !is_system_injected(s))
+        }
+        Some(c) if c.is_array() => c.as_array().map_or(false, |arr| {
+            arr.iter().any(|block| {
+                let kind = block.get("type").and_then(|v| v.as_str());
+                if kind != Some("text") && kind != Some("input_text") {
+                    return false;
+                }
+                block.get("text").and_then(|v| v.as_str())
+                    .map_or(false, |t| !is_system_injected(t))
+            })
+        }),
+        _ => false,
+    }
+}
+
+/// The message role a Codex row contributes to `total_messages`, or `None` if
+/// the row is not a counted user/assistant message. Shared by
+/// `parse_codex_session_jsonl` and `count_codex_message_tail` for the same
+/// reason as `is_real_user_content`.
+fn codex_message_role<'a>(row_type: &str, payload: &'a serde_json::Value) -> Option<&'a str> {
+    let payload_type = payload.get("type").and_then(|v| v.as_str()).unwrap_or("");
+    let is_msg = (row_type == "response_item" && payload_type == "message")
+        || row_type == "user_message";
+    if !is_msg {
+        return None;
+    }
+    let role = payload.get("role").and_then(|v| v.as_str()).unwrap_or("");
+    if role == "user" || role == "assistant" { Some(role) } else { None }
+}
+
 fn parse_agent_jsonl(
     file_path: &std::path::Path,
     tool_name: &str,
     claude_projects: &std::collections::HashMap<String, String>,
 ) -> Option<SavedSession> {
-    use std::io::BufRead;
-    let file = std::fs::File::open(file_path).ok()?;
-    let reader = std::io::BufReader::new(file);
+    parse_agent_jsonl_with_tally(file_path, tool_name, claude_projects).0
+}
 
-    let mut session_id = file_path.file_stem()?.to_string_lossy().to_string();
+/// `parse_agent_jsonl` plus the two tallies a later append-only rescan needs.
+/// Both have to be reported rather than derived: `turn_count` is
+/// `max(1, (total_messages + 1) / 2)`, which is not invertible, and
+/// `real_user_messages` is what decides the compaction-sub-task rejection — a
+/// file rejected on one scan can become a real session when a later append
+/// adds the first genuine user turn, so the counts have to survive the
+/// rejection. The session is `None` in that case but the tallies still come
+/// back.
+fn parse_agent_jsonl_with_tally(
+    file_path: &std::path::Path,
+    tool_name: &str,
+    claude_projects: &std::collections::HashMap<String, String>,
+) -> (Option<SavedSession>, u32, u32, bool) {
+    use std::io::BufRead;
+    let Ok(file) = std::fs::File::open(file_path) else { return (None, 0, 0, false); };
+    let reader = std::io::BufReader::with_capacity(SESSION_READ_BUF, file);
+
+    let Some(stem) = file_path.file_stem() else { return (None, 0, 0, false); };
+    let mut session_id = stem.to_string_lossy().to_string();
     let mut cwd = String::new();
     let mut updated_at = String::new();
     let mut created_at = None;
@@ -1420,23 +1495,7 @@ fn parse_agent_jsonl(
                         // but runs on EVERY user line (the title branch only
                         // acts on the first). String content and array
                         // content (first text block) both covered.
-                        let is_real_user = match msg_obj.get("content") {
-                            Some(c) if c.is_string() => {
-                                c.as_str().map_or(false, |s| !is_system_injected(s))
-                            }
-                            Some(c) if c.is_array() => c.as_array().map_or(false, |arr| {
-                                arr.iter().any(|block| {
-                                    let kind = block.get("type").and_then(|v| v.as_str());
-                                    if kind != Some("text") && kind != Some("input_text") {
-                                        return false;
-                                    }
-                                    block.get("text").and_then(|v| v.as_str())
-                                        .map_or(false, |t| !is_system_injected(t))
-                                })
-                            }),
-                            _ => false,
-                        };
-                        if is_real_user {
+                        if is_real_user_content(msg_obj) {
                             real_user_messages += 1;
                         }
                     }
@@ -1499,9 +1558,9 @@ fn parse_agent_jsonl(
     // compaction file holds 1 injected user line + assistant summary lines
     // and nothing else; any live session has ≥1 real user line.
     if real_user_messages == 0 {
-        return None;
+        return (None, total_messages, real_user_messages, !title.is_empty());
     }
-    let turn_count = if total_messages > 0 { std::cmp::max(1, (total_messages + 1) / 2) } else { 0 };
+    let turn_count = turn_count_from_messages(total_messages);
 
     // Fallback date from file metadata
     if let Ok(meta) = std::fs::metadata(file_path) {
@@ -1512,6 +1571,10 @@ fn parse_agent_jsonl(
         }
     }
 
+    // See the matching note in parse_codex_session_with_tally: `name` is never
+    // empty because of this fallback, so "did the transcript yield a real
+    // title" has to be reported separately for the append-only resume path.
+    let title_found = !title.is_empty();
     if title.is_empty() {
         let mut chars = tool_name.chars();
         let cap_name = match chars.next() {
@@ -1521,17 +1584,22 @@ fn parse_agent_jsonl(
         title = format!("{} Session", cap_name);
     }
 
-    Some(SavedSession {
-        id: format!("{}_native_{}", tool_name, session_id),
-        name: title,
-        tool: tool_name.to_string(),
-        cwd,
-        session_token: Some(session_id),
-        saved_at: updated_at,
-        created_at: created_at.or_else(|| file_created_epoch_ms(file_path)),
-        file_path: Some(file_path.to_string_lossy().into_owned()),
-        turn_count: Some(turn_count),
-    })
+    (
+        Some(SavedSession {
+            id: format!("{}_native_{}", tool_name, session_id),
+            name: title,
+            tool: tool_name.to_string(),
+            cwd,
+            session_token: Some(session_id),
+            saved_at: updated_at,
+            created_at: created_at.or_else(|| file_created_epoch_ms(file_path)),
+            file_path: Some(file_path.to_string_lossy().into_owned()),
+            turn_count: Some(turn_count),
+        }),
+        total_messages,
+        real_user_messages,
+        title_found,
+    )
 }
 
 /// Pi CLI sessions live at
@@ -1545,7 +1613,7 @@ fn parse_agent_jsonl(
 fn parse_pi_session_jsonl(file_path: &std::path::Path) -> Option<SavedSession> {
     use std::io::BufRead;
     let file = std::fs::File::open(file_path).ok()?;
-    let reader = std::io::BufReader::new(file);
+    let reader = std::io::BufReader::with_capacity(SESSION_READ_BUF, file);
 
     // File stem is `<ISO-ts>_<uuid>` — fall back to the trailing UUID if the
     // header row is missing/unparseable. `pi --session` accepts partial IDs,
@@ -1683,11 +1751,23 @@ fn strip_codex_desktop_file_preamble(text: &str) -> &str {
 ///   - subsequent rows: `{type: "response_item", payload: {type: "message", role, content: [{type: "input_text", text}]}}`
 ///     (also `user_message`, `event_msg`, `turn_context`, etc. — we ignore the non-message ones)
 fn parse_codex_session_jsonl(file_path: &std::path::Path) -> Option<SavedSession> {
-    use std::io::BufRead;
-    let file = std::fs::File::open(file_path).ok()?;
-    let reader = std::io::BufReader::new(file);
+    parse_codex_session_with_tally(file_path).0
+}
 
-    let mut session_id = file_path.file_stem()?.to_string_lossy().to_string();
+/// `parse_codex_session_jsonl` plus the two facts a later append-only rescan
+/// needs: the message tally, and whether the header row rejected the file as a
+/// spawned sub-agent. The tally cannot be recovered from the returned session
+/// — `turn_count` is `max(1, (total_messages + 1) / 2)`, which is not
+/// invertible — so it has to be reported here while the whole file is in hand.
+fn parse_codex_session_with_tally(
+    file_path: &std::path::Path,
+) -> (Option<SavedSession>, u32, bool, bool) {
+    use std::io::BufRead;
+    let Ok(file) = std::fs::File::open(file_path) else { return (None, 0, false, false); };
+    let reader = std::io::BufReader::with_capacity(SESSION_READ_BUF, file);
+
+    let Some(stem) = file_path.file_stem() else { return (None, 0, false, false); };
+    let mut session_id = stem.to_string_lossy().to_string();
     let mut cwd = String::new();
     let mut updated_at = String::new();
     let mut title = String::new();
@@ -1695,6 +1775,29 @@ fn parse_codex_session_jsonl(file_path: &std::path::Path) -> Option<SavedSession
     let mut created_at = None;
 
     for line in reader.lines().map_while(Result::ok) {
+        // Reject the rows that cannot contribute anything BEFORE building a
+        // full serde_json::Value tree for them. A row matters only if it is
+        // the `session_meta` header or carries a message `role`; reasoning,
+        // tool-call, tool-result and turn_context rows are skipped here.
+        // Measured on real rollouts, role-bearing lines are 4–6% of codex
+        // lines and 3–31% of their bytes, so this avoids the parse for the
+        // bulk of a large file.
+        //
+        // The test is a true necessary condition — everything this parser
+        // extracts lives behind one of the two needles:
+        //   • `session_meta` → id, cwd, created_at
+        //   • `"role"`       → total_messages and the title (both message
+        //                      branches read `payload.get("role")`)
+        // Quotes embedded in tool output arrive escaped (`\"role\"`), so they
+        // never match the bare `"role"` needle.
+        //
+        // The same idea doesn't pay off in parse_agent_jsonl — 95–98% of
+        // Claude bytes are role-bearing because tool results ride inside user
+        // messages, and its created_at is read from ANY row. That path relies
+        // on the parse cache instead.
+        if !line.contains("\"role\"") && !line.contains("session_meta") {
+            continue;
+        }
         let Ok(value) = serde_json::from_str::<serde_json::Value>(&line) else {
             continue;
         };
@@ -1720,7 +1823,7 @@ fn parse_codex_session_jsonl(file_path: &std::path::Path) -> Option<SavedSession
             // marker: it identifies user-initiated fork/resume sessions, which
             // are legitimate top-level user sessions and must stay visible.
             if is_codex_subagent_session(payload) {
-                return None;
+                return (None, total_messages, true, !title.is_empty());
             }
             if let Some(id) = payload.get("id").and_then(|v| v.as_str()) {
                 if !id.is_empty() {
@@ -1738,16 +1841,10 @@ fn parse_codex_session_jsonl(file_path: &std::path::Path) -> Option<SavedSession
         // Message rows: response_item with payload.type=message, or
         // the dedicated user_message row type. Both wrap content as
         // an array of `{type: "input_text", text}` blocks.
-        let payload_type = payload.get("type").and_then(|v| v.as_str()).unwrap_or("");
-        let is_msg = (row_type == "response_item" && payload_type == "message")
-            || row_type == "user_message";
-        if !is_msg {
+        let Some(role) = codex_message_role(row_type, payload) else {
             continue;
-        }
-        let role = payload.get("role").and_then(|v| v.as_str()).unwrap_or("");
-        if role == "user" || role == "assistant" {
-            total_messages += 1;
-        }
+        };
+        total_messages += 1;
         if !title.is_empty() || role != "user" {
             continue;
         }
@@ -1786,22 +1883,33 @@ fn parse_codex_session_jsonl(file_path: &std::path::Path) -> Option<SavedSession
             }
         }
     }
+    // Whether a real title came out of the transcript, as opposed to the
+    // "Codex Session" fallback below. The fallback makes `name` non-empty in
+    // every case, so a caller that needs to know whether the title is settled
+    // — an append-only resume can only carry a title forward once one exists —
+    // has to be told separately.
+    let title_found = !title.is_empty();
     if title.is_empty() {
         title = "Codex Session".to_string();
     }
-    let turn_count = if total_messages > 0 { std::cmp::max(1, (total_messages + 1) / 2) } else { 0 };
+    let turn_count = turn_count_from_messages(total_messages);
 
-    Some(SavedSession {
-        id: format!("codex_native_{}", session_id),
-        name: title,
-        tool: "codex".to_string(),
-        cwd,
-        session_token: Some(session_id),
-        saved_at: updated_at,
-        created_at: created_at.or_else(|| file_created_epoch_ms(file_path)),
-        file_path: Some(file_path.to_string_lossy().into_owned()),
-        turn_count: Some(turn_count),
-    })
+    (
+        Some(SavedSession {
+            id: format!("codex_native_{}", session_id),
+            name: title,
+            tool: "codex".to_string(),
+            cwd,
+            session_token: Some(session_id),
+            saved_at: updated_at,
+            created_at: created_at.or_else(|| file_created_epoch_ms(file_path)),
+            file_path: Some(file_path.to_string_lossy().into_owned()),
+            turn_count: Some(turn_count),
+        }),
+        total_messages,
+        false,
+        title_found,
+    )
 }
 
 /// Whether a Codex `session_meta` payload describes an internal sub-agent
@@ -1869,7 +1977,7 @@ fn parse_gemini_session_jsonl(
 ) -> Option<SavedSession> {
     use std::io::BufRead;
     let file = std::fs::File::open(file_path).ok()?;
-    let reader = std::io::BufReader::new(file);
+    let reader = std::io::BufReader::with_capacity(SESSION_READ_BUF, file);
 
     let mut session_id = file_path.file_stem()?.to_string_lossy().to_string();
     let mut cwd = String::new();
@@ -1986,7 +2094,7 @@ fn load_gemini_project_map() -> std::collections::HashMap<String, String> {
 fn parse_qwen_session_jsonl(file_path: &std::path::Path) -> Option<SavedSession> {
     use std::io::BufRead;
     let file = std::fs::File::open(file_path).ok()?;
-    let reader = std::io::BufReader::new(file);
+    let reader = std::io::BufReader::with_capacity(SESSION_READ_BUF, file);
 
     let mut session_id = file_path.file_stem()?.to_string_lossy().to_string();
     let mut cwd = String::new();
@@ -3324,7 +3432,25 @@ fn collect_jsonl_paths_with_mtime(
     if let Ok(entries) = std::fs::read_dir(dir) {
         for entry in entries.flatten() {
             let path = entry.path();
-            if path.is_file() {
+            // `entry.file_type()` is free — it comes out of the directory
+            // enumeration itself (FindNextFile on Windows, dirent d_type on
+            // Linux). `path.is_file()` and `path.is_dir()` each issue a real
+            // stat instead, and this walk runs on every history scan over a
+            // tree that reaches ~10k entries on a long-used machine (~5.3k
+            // under ~/.codex, ~4.7k under ~/.claude). Two saved syscalls per
+            // entry is the difference between a cheap scan and one the
+            // Defender filter driver has to inspect 20k times.
+            // Reparse points still need a stat to resolve their target; that
+            // is rare in an agent session store, and only then do we pay.
+            let (is_file, is_dir) = match entry.file_type() {
+                Ok(ft) if ft.is_symlink() => match std::fs::metadata(&path) {
+                    Ok(m) => (m.is_file(), m.is_dir()),
+                    Err(_) => continue,
+                },
+                Ok(ft) => (ft.is_file(), ft.is_dir()),
+                Err(_) => continue,
+            };
+            if is_file {
                 // OpenClaw writes two `.jsonl` per session side-by-side:
                 // `<uuid>.jsonl` (the conversation — what we want) and
                 // `<uuid>.trajectory.jsonl` (a trace/telemetry log). Both
@@ -3348,7 +3474,7 @@ fn collect_jsonl_paths_with_mtime(
                         .unwrap_or(std::time::SystemTime::UNIX_EPOCH);
                     out.push((mtime, path, tool));
                 }
-            } else if path.is_dir() {
+            } else if is_dir {
                 collect_jsonl_paths_with_mtime(path, depth - 1, tool, out);
             }
         }
@@ -3931,6 +4057,425 @@ fn saved_session_epoch_ms(value: &str) -> u64 {
     }
 }
 
+// ─── Resumable session scan ──────────────────────────────────────────────
+//
+// These stores are append-only while an agent is live, and everything a parser
+// takes from the file header — session id, cwd, title, created_at — is
+// resolved from the first rows and never rewritten by a later append. So a
+// rescan of a file that merely grew only has to read the appended bytes and
+// extend the message tally, instead of re-reading a rollout that reaches
+// 147 MB on a long session. Without this, the history poll re-read the live
+// session end to end every 60 s for as long as it ran.
+
+/// How far a cached parse got through a file, plus the tallies an append has to
+/// extend. The header-derived fields themselves stay in the cached
+/// `SavedSession`; only the counters are carried here, because `turn_count` is
+/// `max(1, (total_messages + 1) / 2)` and cannot be inverted back to them.
+#[derive(Clone)]
+struct ResumeState {
+    /// Bytes consumed, always at a line boundary.
+    offset: u64,
+    total_messages: u32,
+    /// Claude only: real (non-injected) user rows. Zero is what rejects the
+    /// file as a compaction sub-task, so unlike `rejected` this can flip when a
+    /// later append adds the first genuine user turn.
+    real_user_messages: u32,
+    /// Codex only: the header row marked this rollout a spawned sub-agent. The
+    /// marker lives in the header, which an append cannot change, so this is
+    /// permanent and the file never needs another byte read.
+    rejected: bool,
+    /// True once the transcript settled every header-derived field the card
+    /// shows: a real title was found and a cwd is recorded. Until then an
+    /// append could still supply them, so the file keeps taking the full-parse
+    /// path rather than a resume.
+    header_complete: bool,
+}
+
+/// Feed every COMPLETE line of `file` from `offset` onward to `on_line`, and
+/// return the offset just past the last line consumed.
+///
+/// A scan can land while the agent is mid-write. Consuming a partial line would
+/// lose its tail forever and leave the next scan starting inside a row, so an
+/// unterminated remainder is left in place for the next pass. Newline handling
+/// matches `BufRead::lines` (`\n` and `\r\n` both stripped) so the text handed
+/// to `on_line` is identical to what the whole-file parsers see. `on_line`
+/// returns false to stop early; that line still counts as consumed.
+fn for_each_complete_line<F>(
+    file: &mut std::fs::File,
+    offset: u64,
+    mut on_line: F,
+) -> std::io::Result<u64>
+where
+    F: FnMut(&str) -> bool,
+{
+    use std::io::{BufRead, Seek, SeekFrom};
+    file.seek(SeekFrom::Start(offset))?;
+    let mut br = std::io::BufReader::with_capacity(SESSION_READ_BUF, file);
+    let mut buf: Vec<u8> = Vec::with_capacity(8 * 1024);
+    let mut consumed = offset;
+    loop {
+        buf.clear();
+        let n = br.read_until(b'\n', &mut buf)?;
+        if n == 0 {
+            break; // clean EOF
+        }
+        if buf[n - 1] != b'\n' {
+            break; // partial trailing line — leave it for the next scan
+        }
+        consumed += n as u64;
+        let end = if n >= 2 && buf[n - 2] == b'\r' { n - 2 } else { n - 1 };
+        if !on_line(&String::from_utf8_lossy(&buf[..end])) {
+            break;
+        }
+    }
+    Ok(consumed)
+}
+
+/// Offset just past `path`'s last complete (`\n`-terminated) line — where a
+/// resume starts. Scans backwards in 64 KB chunks, so the normal case (a file
+/// that ends on a newline) costs one read of the tail. `None` when the boundary
+/// can't be established, which makes the caller fall back to a full parse:
+/// always safe, just slower.
+fn last_complete_line_offset(path: &std::path::Path, size: u64) -> Option<u64> {
+    use std::io::{Read, Seek, SeekFrom};
+    const CHUNK: u64 = 64 * 1024;
+    if size == 0 {
+        return Some(0);
+    }
+    let mut f = std::fs::File::open(path).ok()?;
+    let mut buf = vec![0u8; CHUNK as usize];
+    let mut end = size;
+    loop {
+        let start = end.saturating_sub(CHUNK);
+        let len = (end - start) as usize;
+        f.seek(SeekFrom::Start(start)).ok()?;
+        f.read_exact(&mut buf[..len]).ok()?;
+        if let Some(pos) = buf[..len].iter().rposition(|&b| b == b'\n') {
+            return Some(start + pos as u64 + 1);
+        }
+        if start == 0 {
+            return Some(0); // no newline anywhere in the file
+        }
+        end = start;
+    }
+}
+
+/// Extend `state` over the rows appended to a Codex rollout since
+/// `state.offset`. Shares `codex_message_role` with the whole-file parser so
+/// the two cannot disagree about which rows count.
+fn count_codex_message_tail(path: &std::path::Path, state: &mut ResumeState) -> std::io::Result<()> {
+    let mut file = std::fs::File::open(path)?;
+    let start = state.offset;
+    let end = for_each_complete_line(&mut file, start, |line| {
+        // Same necessary-condition reject the whole-file parser uses: a row
+        // without a bare `"role"` key cannot be a counted message.
+        if !line.contains("\"role\"") {
+            return true;
+        }
+        let Ok(value) = serde_json::from_str::<serde_json::Value>(line) else { return true };
+        let row_type = value.get("type").and_then(|v| v.as_str()).unwrap_or("");
+        let Some(payload) = value.get("payload") else { return true };
+        if codex_message_role(row_type, payload).is_some() {
+            state.total_messages += 1;
+        }
+        true
+    })?;
+    state.offset = end;
+    Ok(())
+}
+
+/// Extend `state` over the rows appended to a Claude-shaped JSONL since
+/// `state.offset`. Shares `is_real_user_content` with the whole-file parser so
+/// the real-user tally behind the compaction-sub-task rejection cannot drift.
+fn count_agent_message_tail(path: &std::path::Path, state: &mut ResumeState) -> std::io::Result<()> {
+    let mut file = std::fs::File::open(path)?;
+    let start = state.offset;
+    let end = for_each_complete_line(&mut file, start, |line| {
+        let Ok(value) = serde_json::from_str::<serde_json::Value>(line) else { return true };
+        // Mirrors parse_agent_jsonl's message-object resolution: `message`,
+        // falling back to a `payload` whose type is exactly "message".
+        let msg_obj = value
+            .get("message")
+            .and_then(|v| v.as_object())
+            .or_else(|| {
+                value
+                    .get("payload")
+                    .and_then(|v| v.as_object())
+                    .filter(|p| p.get("type").and_then(|t| t.as_str()) == Some("message"))
+            });
+        let Some(msg_obj) = msg_obj else { return true };
+        let role = msg_obj.get("role").and_then(|v| v.as_str()).unwrap_or("");
+        if role != "user" && role != "assistant" {
+            return true;
+        }
+        state.total_messages += 1;
+        if role == "user" && is_real_user_content(msg_obj) {
+            state.real_user_messages += 1;
+        }
+        true
+    })?;
+    state.offset = end;
+    Ok(())
+}
+
+/// Which tools' session files are worth resuming. Codex and Claude are the two
+/// append-only JSONL stores that reach hundreds of MB (5.9 GB and 1.2 GB on one
+/// long-used machine); pi, qwen, gemini and hermes stay small enough that a
+/// full reparse costs less than carrying the extra state would.
+fn is_resumable_tool(tool: &str) -> bool {
+    matches!(tool, "codex" | "claude")
+}
+
+/// (mtime in epoch ms, size) for a cache key. `None` when metadata can't be
+/// read, which callers treat as "don't cache".
+fn file_stamp(path: &std::path::Path) -> Option<(u128, u64)> {
+    let m = std::fs::metadata(path).ok()?;
+    let mtime_ms = m
+        .modified()
+        .ok()
+        .and_then(|t| t.duration_since(std::time::SystemTime::UNIX_EPOCH).ok())
+        .map(|d| d.as_millis())
+        .unwrap_or(0);
+    Some((mtime_ms, m.len()))
+}
+
+/// One cached parse result: the stamp it was produced from, the parsed session,
+/// and — for the resumable tools — how far that parse got. `session` is `None`
+/// for files the parser deliberately rejects (Codex sub-agent rollouts, Claude
+/// compaction sub-tasks); caching the rejection matters, otherwise those files
+/// are re-read on every poll.
+struct CachedSession {
+    mtime_ms: u128,
+    size: u64,
+    session: Option<SavedSession>,
+    resume: Option<ResumeState>,
+}
+
+/// In-memory per-file parse cache for the history list, plus the generation
+/// stamp of the auxiliary maps the parsers consult.
+struct SessionParseCache {
+    /// Fingerprint of `~/.claude.json` + `~/.gemini/projects.json`. Both feed a
+    /// cwd fallback inside the parsers, so a cached entry parsed against an
+    /// older map could carry a stale (or empty) cwd. When either file moves the
+    /// whole cache is dropped and rebuilt.
+    aux_stamp: u128,
+    entries: std::collections::HashMap<String, CachedSession>,
+}
+
+fn session_parse_cache() -> &'static std::sync::Mutex<SessionParseCache> {
+    static CACHE: std::sync::OnceLock<std::sync::Mutex<SessionParseCache>> =
+        std::sync::OnceLock::new();
+    CACHE.get_or_init(|| {
+        std::sync::Mutex::new(SessionParseCache {
+            aux_stamp: 0,
+            entries: std::collections::HashMap::new(),
+        })
+    })
+}
+
+/// Combined mtime fingerprint of the auxiliary cwd maps. Missing files count as
+/// 0, so the sum moves whenever any one of them is created or rewritten.
+fn aux_map_stamp(home: &std::path::Path) -> u128 {
+    let file_ms = |p: std::path::PathBuf| -> u128 {
+        std::fs::metadata(&p)
+            .ok()
+            .and_then(|m| m.modified().ok())
+            .and_then(|t| t.duration_since(std::time::SystemTime::UNIX_EPOCH).ok())
+            .map(|d| d.as_millis())
+            .unwrap_or(0)
+    };
+    file_ms(home.join(".claude.json"))
+        .wrapping_add(file_ms(home.join(".gemini").join("projects.json")))
+}
+
+/// Roll the parse cache over to a new auxiliary-map generation, returning true
+/// when it actually cleared.
+fn sync_aux_generation(cache: &mut SessionParseCache, aux_stamp: u128) -> bool {
+    if cache.aux_stamp == aux_stamp {
+        return false;
+    }
+    cache.entries.clear();
+    cache.aux_stamp = aux_stamp;
+    true
+}
+
+/// The tool-specific extras `parse_and_record` needs beyond the shared message
+/// tally. Codex reports a header rejection; Claude reports the real-user tally
+/// behind its compaction-sub-task rejection.
+struct ResumeExtra {
+    rejected: bool,
+    real_user_messages: u32,
+}
+
+/// Dispatch one candidate file to its tool-specific parser and record the state
+/// a later append-only resume needs. Tools that aren't resumable get
+/// `resume: None` and simply take the full-parse path every time they change.
+fn parse_and_record(
+    path: &std::path::Path,
+    tool: &str,
+    size: u64,
+    antigravity_project_map: &std::collections::HashMap<String, String>,
+    claude_project_map: &std::collections::HashMap<String, String>,
+) -> (Option<SavedSession>, Option<ResumeState>) {
+    if !is_resumable_tool(tool) {
+        return (
+            parse_session_file(path, tool, antigravity_project_map, claude_project_map),
+            None,
+        );
+    }
+    // The two resumable tools report different third values: codex reports
+    // whether the header rejected the rollout as a sub-agent, Claude reports
+    // its real-user tally. Keep them in separate bindings rather than one
+    // overloaded slot.
+    let (session, total_messages, title_found, resume_extra) = if tool == "codex" {
+        let (s, total, rejected, found) = parse_codex_session_with_tally(path);
+        (s, total, found, ResumeExtra { rejected, real_user_messages: 0 })
+    } else {
+        let (s, total, real_user, found) =
+            parse_agent_jsonl_with_tally(path, tool, claude_project_map);
+        (s, total, found, ResumeExtra { rejected: false, real_user_messages: real_user })
+    };
+
+    // Only a file whose bytes end on a line boundary can be resumed; asking for
+    // the boundary costs one read of the tail, so a failure here just means the
+    // next change takes the full-parse path.
+    let offset = match last_complete_line_offset(path, size) {
+        Some(o) => o,
+        None => return (session, None),
+    };
+    let cwd_settled = session.as_ref().is_some_and(|s| !s.cwd.is_empty());
+    let resume = ResumeState {
+        offset,
+        total_messages,
+        real_user_messages: resume_extra.real_user_messages,
+        rejected: resume_extra.rejected,
+        header_complete: title_found && cwd_settled,
+    };
+    (session, Some(resume))
+}
+
+/// Try to extend a cached entry across an append instead of reparsing the whole
+/// file. `None` means "can't resume" — the tool isn't resumable, the file shrank
+/// (rewritten rather than appended), the header never settled, or the tail read
+/// failed — and the caller falls back to a full parse.
+fn resume_cached_session(
+    hit: &CachedSession,
+    path: &std::path::Path,
+    tool: &str,
+    size: u64,
+    mtime_ms: u128,
+) -> Option<CachedSession> {
+    if !is_resumable_tool(tool) {
+        return None;
+    }
+    let state = hit.resume.clone()?;
+
+    // A permanent rejection needs no further bytes ever: the sub-agent marker
+    // lives in the header row, which an append cannot change. Take the new size
+    // so the entry stops looking stale.
+    if state.rejected {
+        return Some(CachedSession { mtime_ms, size, session: None, resume: Some(state) });
+    }
+    // Title or cwd still unresolved → an append could supply either, so only a
+    // full parse can tell.
+    if !state.header_complete {
+        return None;
+    }
+    // Shrunk → rewritten, not appended. Offsets and tallies are meaningless.
+    if size < state.offset {
+        return None;
+    }
+    // header_complete implies the parser produced a session: for codex the only
+    // other outcome is `rejected` (handled above), and for Claude a title
+    // requires a real user turn, which is exactly what a `None` session means
+    // is absent.
+    let cached = hit.session.as_ref()?;
+
+    let mut next = state;
+    let counted = match tool {
+        "codex" => count_codex_message_tail(path, &mut next),
+        _ => count_agent_message_tail(path, &mut next),
+    };
+    if counted.is_err() {
+        return None;
+    }
+
+    let mut session = cached.clone();
+    // saved_at is the file mtime in epoch ms — the same value the whole-file
+    // parsers derive, and we already have it from the cache key.
+    session.saved_at = mtime_ms.to_string();
+    session.turn_count = Some(turn_count_from_messages(next.total_messages));
+
+    // A Claude file previously rejected for having no real user turn becomes a
+    // real session as soon as one is appended.
+    let out = if tool == "claude" && next.real_user_messages == 0 {
+        None
+    } else {
+        Some(session)
+    };
+    Some(CachedSession { mtime_ms, size, session: out, resume: Some(next) })
+}
+
+/// Dispatch one candidate file to its tool-specific parser. Split out of
+/// `load_native_history_blocking` so the cache wrapper around it stays
+/// readable; the match arms are unchanged.
+fn parse_session_file(
+    path: &std::path::Path,
+    tool: &str,
+    antigravity_project_map: &std::collections::HashMap<String, String>,
+    claude_project_map: &std::collections::HashMap<String, String>,
+) -> Option<SavedSession> {
+    match tool {
+        "hermes"      => parse_hermes_json(path),
+        "codex"       => parse_codex_session_jsonl(path),
+        "pi"          => parse_pi_session_jsonl(path),
+        "qwen"        => parse_qwen_session_jsonl(path),
+        "antigravity" => parse_gemini_session_jsonl(path, antigravity_project_map),
+        other         => parse_agent_jsonl(path, other, claude_project_map),
+    }
+}
+
+/// Resolve one candidate to a session, doing as little file reading as the
+/// change allows:
+///
+///   • (mtime, size) unchanged → serve the cached result, no read at all.
+///   • file grew and its header is settled → read only the appended tail.
+///   • anything else → full parse, then record state for the next time.
+///
+/// A file whose metadata can't be read is parsed uncached rather than served
+/// from a stamp we couldn't verify.
+fn parse_session_cached(
+    cache: &mut SessionParseCache,
+    path: &std::path::Path,
+    tool: &str,
+    antigravity_project_map: &std::collections::HashMap<String, String>,
+    claude_project_map: &std::collections::HashMap<String, String>,
+) -> Option<SavedSession> {
+    let key = path.to_string_lossy().into_owned();
+    let Some((mtime_ms, size)) = file_stamp(path) else {
+        return parse_session_file(path, tool, antigravity_project_map, claude_project_map);
+    };
+
+    if let Some(hit) = cache.entries.get(&key) {
+        if hit.mtime_ms == mtime_ms && hit.size == size {
+            return hit.session.clone();
+        }
+        if let Some(next) = resume_cached_session(hit, path, tool, size, mtime_ms) {
+            let session = next.session.clone();
+            cache.entries.insert(key, next);
+            return session;
+        }
+    }
+
+    let (session, resume) =
+        parse_and_record(path, tool, size, antigravity_project_map, claude_project_map);
+    cache.entries.insert(
+        key,
+        CachedSession { mtime_ms, size, session: session.clone(), resume },
+    );
+    session
+}
+
 fn load_native_history_blocking() -> Result<Vec<SavedSession>, String> {
     // Cap history to the N most recent entries. Keeps UI responsive when users
     // have hundreds of sessions — parsing a full jsonl/json file is expensive,
@@ -3968,19 +4513,45 @@ fn load_native_history_blocking() -> Result<Vec<SavedSession>, String> {
         _ => std::collections::HashMap::new(),
     };
 
+    // A parsed result is a pure function of the file's bytes, so (mtime, size)
+    // is a sufficient cache key — the same assumption the persisted heatmap
+    // count cache further down already relies on. Idle → no content reads at
+    // all, just the walk's directory enumeration. A live agent appending to one
+    // rollout → only that rollout's new tail is read.
+    //
+    // `load_native_history_cached` above already holds its own mutex across
+    // this call, so concurrent scans are serialised before they reach here;
+    // this lock only guards the static.
+    let aux_stamp = home.as_ref().map(|h| aux_map_stamp(h)).unwrap_or(0);
+    let mut guard = session_parse_cache().lock().ok();
+    // Poisoned mutex → run against a throwaway cache. Every lookup misses, so
+    // this is exactly the pre-cache behaviour: slower, never wrong.
+    let mut fallback = SessionParseCache { aux_stamp, entries: std::collections::HashMap::new() };
+    let cache: &mut SessionParseCache = match guard.as_mut() {
+        Some(c) => c,
+        None => &mut fallback,
+    };
+    sync_aux_generation(cache, aux_stamp);
+
+    let mut keep_paths: std::collections::HashSet<String> =
+        std::collections::HashSet::with_capacity(file_candidates.len());
     for (_, path, tool) in &file_candidates {
-        let parsed = match *tool {
-            "hermes"      => parse_hermes_json(path),
-            "codex"       => parse_codex_session_jsonl(path),
-            "pi"          => parse_pi_session_jsonl(path),
-            "qwen"        => parse_qwen_session_jsonl(path),
-            "antigravity" => parse_gemini_session_jsonl(path, &antigravity_project_map),
-            other         => parse_agent_jsonl(path, other, &claude_project_map),
-        };
+        keep_paths.insert(path.to_string_lossy().into_owned());
+        let parsed = parse_session_cached(
+            cache,
+            path,
+            tool,
+            &antigravity_project_map,
+            &claude_project_map,
+        );
         if let Some(session) = parsed {
             result.push(session);
         }
     }
+
+    // Drop entries for files that fell out of the newest-200 window so the cache
+    // can't grow without bound across a long-running session.
+    cache.entries.retain(|k, _| keep_paths.contains(k));
 
     // OpenCode second pass — SQLite is cheap (query already caps rows).
     // Bypasses the mtime pipeline: find_opencode_sessions pushes finished
@@ -5667,5 +6238,438 @@ mod tests {
         // Title comes from the real text block, not the injected tool_result.
         assert_eq!(got.name, "帮我把这个文件重构一下");
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    // ─── Codex prefilter · parse cache · append-only resume ────────────────
+    //
+    // All three exist because re-parsing the newest 200 session files on every
+    // history poll read ~1 GB per cycle on a machine with a few long rollouts.
+    // These pin the property that makes each shortcut safe: skipping a row,
+    // serving a cached entry, or reading only an appended tail must never
+    // change what the history list shows.
+
+    const CODEX_HEADER: &str = r#"{"type":"session_meta","payload":{"id":"sess-resume","cwd":"/proj","timestamp":"2026-09-01T10:00:00.000Z","source":"cli"}}"#;
+    const CODEX_USER: &str = r#"{"type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"add retry backoff"}]}}"#;
+    const CODEX_ASSISTANT: &str = r#"{"type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"done"}]}}"#;
+
+    /// Every field the UI reads, as one comparable string. SavedSession has no
+    /// PartialEq, and adding one to a serialized API type purely for tests
+    /// isn't worth it.
+    fn session_fields(s: &SavedSession) -> String {
+        format!(
+            "{}|{}|{}|{}|{:?}|{}|{:?}|{:?}|{:?}",
+            s.id, s.name, s.tool, s.cwd, s.session_token, s.saved_at,
+            s.created_at, s.file_path, s.turn_count
+        )
+    }
+
+    fn temp_jsonl(case: &str) -> std::path::PathBuf {
+        std::env::temp_dir().join(format!(
+            "coffee-cli-resume-{}-{}.jsonl",
+            std::process::id(),
+            case
+        ))
+    }
+
+    fn append_lines(path: &std::path::Path, lines: &[&str]) {
+        use std::io::Write;
+        let mut f = std::fs::OpenOptions::new().append(true).open(path).unwrap();
+        for l in lines {
+            writeln!(f, "{}", l).unwrap();
+        }
+    }
+
+    fn new_cache() -> SessionParseCache {
+        SessionParseCache { aux_stamp: 0, entries: std::collections::HashMap::new() }
+    }
+
+    /// One cached-scan cycle — what a single history poll does for a file.
+    fn scan_once(
+        cache: &mut SessionParseCache,
+        path: &std::path::Path,
+        tool: &str,
+    ) -> Option<SavedSession> {
+        let maps = std::collections::HashMap::new();
+        parse_session_cached(cache, path, tool, &maps, &maps)
+    }
+
+    /// A cold, uncached parse — the reference a resumed scan must match.
+    fn cold_parse(path: &std::path::Path, tool: &str) -> Option<SavedSession> {
+        let maps = std::collections::HashMap::new();
+        parse_session_file(path, tool, &maps, &maps)
+    }
+
+    fn assert_matches_cold(cache: &mut SessionParseCache, path: &std::path::Path, tool: &str, stage: &str) {
+        let resumed = scan_once(cache, path, tool);
+        let cold = cold_parse(path, tool);
+        assert_eq!(
+            resumed.as_ref().map(session_fields),
+            cold.as_ref().map(session_fields),
+            "{stage}: resumed scan diverged from a cold parse"
+        );
+    }
+
+    /// Rows carrying neither `session_meta` nor a bare `"role"` key are
+    /// rejected before the JSON parse. Reasoning, function_call,
+    /// function_call_output and turn_context rows are the bulk of a real
+    /// rollout and none of them can contribute a title, a cwd or a count.
+    #[test]
+    fn codex_parser_counts_only_message_rows_amid_tool_noise() {
+        let path = temp_jsonl("noise");
+        write_jsonl(&path, &[
+            CODEX_HEADER,
+            CODEX_USER,
+            r#"{"type":"response_item","payload":{"type":"reasoning","summary":[{"type":"summary_text","text":"thinking about the retry budget"}]}}"#,
+            r#"{"type":"response_item","payload":{"type":"function_call","name":"shell","arguments":"{\"cmd\":[\"cargo\",\"test\"]}"}}"#,
+            // Tool output that EMBEDS a role. Inside a JSON string the quotes
+            // arrive escaped (`\"role\"`), so the bare `"role"` needle doesn't
+            // match and the row is rejected — which is what a full parse would
+            // have concluded anyway, since `payload.role` is absent.
+            r#"{"type":"response_item","payload":{"type":"function_call_output","output":"{\"role\":\"user\",\"text\":\"injected\"}"}}"#,
+            // cwd here differs from the header: proves the header wins and a
+            // later turn_context row is not mistaken for session metadata.
+            r#"{"type":"turn_context","payload":{"model":"gpt-5","cwd":"/elsewhere"}}"#,
+            CODEX_ASSISTANT,
+        ]);
+
+        let got = parse_codex_session_jsonl(&path).expect("rollout should parse");
+        assert_eq!(got.name, "add retry backoff", "title = first real user message");
+        assert_eq!(got.cwd, "/proj", "cwd = session_meta, not the later turn_context");
+        assert_eq!(got.session_token.as_deref(), Some("sess-resume"));
+        // 1 user + 1 assistant = 2 counted rows -> (2+1)/2 = 1. A needle loose
+        // enough to admit the escaped-role output, or tight enough to drop a
+        // real message row, would both move this.
+        assert_eq!(got.turn_count, Some(1));
+        let _ = std::fs::remove_file(&path);
+    }
+
+    /// An unchanged file is served from the cache without being re-read. Proved
+    /// by overwriting the cached entry's name with a sentinel: the file on disk
+    /// still holds the real title, so only a cache hit can return it.
+    #[test]
+    fn history_parse_cache_serves_unchanged_file_without_rereading() {
+        let path = temp_jsonl("hit");
+        write_jsonl(&path, &[CODEX_HEADER, CODEX_USER]);
+        let mut cache = new_cache();
+
+        let first = scan_once(&mut cache, &path, "codex").expect("probe should parse");
+        assert_eq!(first.name, "add retry backoff");
+        assert_eq!(cache.entries.len(), 1, "first parse populates the cache");
+
+        let key = path.to_string_lossy().into_owned();
+        cache.entries.get_mut(&key).unwrap().session.as_mut().unwrap().name =
+            "SENTINEL-FROM-CACHE".to_string();
+
+        let second = scan_once(&mut cache, &path, "codex").expect("cached entry");
+        assert_eq!(second.name, "SENTINEL-FROM-CACHE", "an unchanged file must not be re-read");
+        assert_eq!(cache.entries.len(), 1, "a hit must not add a second entry");
+        let _ = std::fs::remove_file(&path);
+    }
+
+    /// A Codex sub-agent rollout is rejected from its header row, and the header
+    /// can't change on an append — so the rejection is cached permanently and
+    /// the file never needs another byte read. Codex writes one rollout per
+    /// spawned sub-agent, so those are numerous.
+    #[test]
+    fn history_parse_cache_stores_rejections_and_never_rereads_them() {
+        let path = write_codex_rollout(
+            "cache-reject",
+            serde_json::json!({ "subagent": {} }),
+            Some("subagent"),
+            None,
+        );
+        let mut cache = new_cache();
+
+        assert!(scan_once(&mut cache, &path, "codex").is_none(), "not a user session");
+        let key = path.to_string_lossy().into_owned();
+        let entry = cache.entries.get(&key).expect("the rejection itself must be cached");
+        assert!(entry.session.is_none());
+        assert!(entry.resume.as_ref().expect("codex is resumable").rejected);
+
+        // Grow the file: the cached rejection must survive without a re-read.
+        append_lines(&path, &[CODEX_USER, CODEX_ASSISTANT]);
+        assert!(scan_once(&mut cache, &path, "codex").is_none(), "still rejected after an append");
+        let _ = std::fs::remove_file(&path);
+    }
+
+    /// The cwd fallback comes from ~/.claude.json / ~/.gemini/projects.json.
+    /// When either moves, a cached entry could be holding a cwd resolved from
+    /// the older map, so the whole cache is dropped.
+    #[test]
+    fn history_parse_cache_drops_entries_when_aux_maps_move() {
+        let path = temp_jsonl("aux");
+        write_jsonl(&path, &[CODEX_HEADER, CODEX_USER]);
+        let mut cache = SessionParseCache { aux_stamp: 1, entries: std::collections::HashMap::new() };
+        scan_once(&mut cache, &path, "codex").unwrap();
+        assert_eq!(cache.entries.len(), 1);
+
+        assert!(!sync_aux_generation(&mut cache, 1), "same generation is a no-op");
+        assert_eq!(cache.entries.len(), 1, "an unchanged aux map keeps the cache warm");
+        assert!(sync_aux_generation(&mut cache, 2), "a moved aux map clears the cache");
+        assert!(cache.entries.is_empty());
+        assert_eq!(cache.aux_stamp, 2);
+        let _ = std::fs::remove_file(&path);
+    }
+
+    /// The core resume guarantee: appending to a Codex rollout and rescanning
+    /// through the cache must produce exactly what a cold parse of the same
+    /// file produces. Compared after every stage so a divergence names the
+    /// stage that introduced it.
+    #[test]
+    fn resumed_parse_matches_full_reparse_codex() {
+        let path = temp_jsonl("codex-equiv");
+        write_jsonl(&path, &[CODEX_HEADER]);
+        let mut cache = new_cache();
+
+        let stages: Vec<( &str, Vec<&str>)> = vec![
+            ("first user turn", vec![CODEX_USER]),
+            // Non-message rows: dropped by the prefilter on the cold path and
+            // by the same needle on the resume path, so they must not move the
+            // tally either way.
+            ("tool noise", vec![
+                r#"{"type":"response_item","payload":{"type":"reasoning","summary":[{"type":"summary_text","text":"thinking"}]}}"#,
+                r#"{"type":"response_item","payload":{"type":"function_call_output","output":"{\"role\":\"user\"}"}}"#,
+                r#"{"type":"turn_context","payload":{"model":"gpt-5","cwd":"/elsewhere"}}"#,
+            ]),
+            ("first assistant turn", vec![CODEX_ASSISTANT]),
+            ("second exchange", vec![
+                r#"{"type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"and again"}]}}"#,
+                r#"{"type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"ok"}]}}"#,
+            ]),
+        ];
+
+        for (stage, lines) in &stages {
+            append_lines(&path, lines);
+            assert_matches_cold(&mut cache, &path, "codex", stage);
+        }
+
+        let got = scan_once(&mut cache, &path, "codex").expect("session");
+        assert_eq!(got.name, "add retry backoff", "title stays the first user message");
+        assert_eq!(got.cwd, "/proj", "cwd stays the header value");
+        assert_eq!(got.session_token.as_deref(), Some("sess-resume"));
+        // 2 user + 2 assistant = 4 counted rows -> (4+1)/2 = 2
+        assert_eq!(got.turn_count, Some(2));
+        let _ = std::fs::remove_file(&path);
+    }
+
+    /// Same guarantee for the Claude-shaped store, whose tally has a second
+    /// component — `real_user_messages`, which decides the compaction-sub-task
+    /// rejection. A resume that only tracked total messages would eventually
+    /// disagree with a cold parse about whether the session is listed at all.
+    #[test]
+    fn resumed_parse_matches_full_reparse_claude() {
+        let path = temp_jsonl("claude-equiv");
+        write_jsonl(&path, &[
+            r#"{"sessionId":"s-claude","cwd":"/proj","timestamp":"2026-09-01T10:00:00.000Z","message":{"role":"user","content":"refactor the parser"}}"#,
+        ]);
+        let mut cache = new_cache();
+
+        let stages: Vec<(&str, Vec<&str>)> = vec![
+            ("assistant reply", vec![
+                r#"{"cwd":"/proj","message":{"role":"assistant","content":"ok"}}"#,
+            ]),
+            // An injected user row: counts as a message but NOT as a real user
+            // turn, on both paths.
+            ("ide injection", vec![
+                r#"{"cwd":"/proj","message":{"role":"user","content":"<environment_context>cwd=/proj</environment_context>"}}"#,
+            ]),
+            ("second exchange", vec![
+                r#"{"cwd":"/proj","message":{"role":"user","content":"now the tests"}}"#,
+                r#"{"cwd":"/proj","message":{"role":"assistant","content":[{"type":"text","text":"done"}]}}"#,
+            ]),
+        ];
+
+        assert_matches_cold(&mut cache, &path, "claude", "header only");
+        for (stage, lines) in &stages {
+            append_lines(&path, lines);
+            assert_matches_cold(&mut cache, &path, "claude", stage);
+        }
+
+        let got = scan_once(&mut cache, &path, "claude").expect("session");
+        assert_eq!(got.name, "refactor the parser", "title = first real user message");
+        assert_eq!(got.cwd, "/proj");
+        // 1 + 1 + 1 + 2 = 5 counted rows -> (5+1)/2 = 3
+        assert_eq!(got.turn_count, Some(3));
+        let _ = std::fs::remove_file(&path);
+    }
+
+    /// A scan can land while the agent is mid-write. An unterminated trailing
+    /// line must be left alone: consuming it would lose its tail forever and
+    /// start the next scan in the middle of a row.
+    #[test]
+    fn resume_leaves_partial_trailing_line_for_the_next_scan() {
+        let path = temp_jsonl("partial");
+        write_jsonl(&path, &[CODEX_HEADER]);
+        let mut cache = new_cache();
+        scan_once(&mut cache, &path, "codex");
+
+        // One complete user row, then HALF an assistant row with no newline.
+        {
+            use std::io::Write;
+            let mut f = std::fs::OpenOptions::new().append(true).open(&path).unwrap();
+            writeln!(f, "{}", CODEX_USER).unwrap();
+            write!(f, r#"{{"type":"response_item","payload":{{"type":"message","role":"assi"#).unwrap();
+        }
+        let partial = scan_once(&mut cache, &path, "codex").expect("session");
+        assert_eq!(partial.turn_count, Some(1), "the half-written row must not be counted");
+
+        // Completing the row makes it count, and still agrees with a cold parse.
+        append_lines(&path, &[r#"stant","content":[{"type":"output_text","text":"yo"}]}}"#]);
+        assert_matches_cold(&mut cache, &path, "codex", "completed row");
+        assert_eq!(scan_once(&mut cache, &path, "codex").unwrap().turn_count, Some(1));
+        let _ = std::fs::remove_file(&path);
+    }
+
+    /// A file that shrank was rewritten, not appended, so the cached offset and
+    /// tallies are meaningless. The resume must bail and the caller must
+    /// full-parse — otherwise the card would keep the old title forever.
+    #[test]
+    fn resume_falls_back_to_full_parse_when_file_shrinks() {
+        let path = temp_jsonl("shrink");
+        write_jsonl(&path, &[CODEX_HEADER, CODEX_USER, CODEX_ASSISTANT, CODEX_ASSISTANT]);
+        let mut cache = new_cache();
+        let first = scan_once(&mut cache, &path, "codex").expect("session");
+        assert_eq!(first.name, "add retry backoff");
+        assert_eq!(first.turn_count, Some(2), "1 user + 3 assistant -> (4+1)/2");
+
+        // Rewrite shorter, with a different first user turn.
+        write_jsonl(&path, &[
+            CODEX_HEADER,
+            r#"{"type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"second life"}]}}"#,
+        ]);
+        let got = scan_once(&mut cache, &path, "codex").expect("session");
+        assert_eq!(got.name, "second life", "a shrunk file must be reparsed, not resumed");
+        assert_eq!(got.turn_count, Some(1));
+        assert_eq!(session_fields(&got), session_fields(&cold_parse(&path, "codex").unwrap()));
+        let _ = std::fs::remove_file(&path);
+    }
+
+    /// A Claude file whose only user row is the compaction injection is
+    /// rejected. That rejection must NOT be treated as permanent the way a
+    /// Codex sub-agent marker is: appending the first genuine user turn has to
+    /// turn it into a listed session.
+    #[test]
+    fn claude_rejection_flips_to_session_when_a_real_user_turn_is_appended() {
+        let path = temp_jsonl("claude-flip");
+        write_jsonl(&path, &[
+            "{\"sessionId\":\"s-flip\",\"cwd\":\"/proj\",\"message\":{\"role\":\"user\",\"content\":\"Below is a conversation log from a Claude Code coding session.\\nCreate a summary.\"}}",
+            "{\"cwd\":\"/proj\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"# Session Summary\"}]}}",
+        ]);
+        let mut cache = new_cache();
+        assert!(scan_once(&mut cache, &path, "claude").is_none(), "compaction sub-task is not listed");
+
+        // header_complete is false here (no real title), so the next scan takes
+        // the full-parse path and picks the session up.
+        append_lines(&path, &[
+            r#"{"cwd":"/proj","message":{"role":"user","content":"continue the refactor"}}"#,
+        ]);
+        let got = scan_once(&mut cache, &path, "claude").expect("now a real session");
+        assert_eq!(got.name, "continue the refactor");
+        assert_eq!(session_fields(&got), session_fields(&cold_parse(&path, "claude").unwrap()));
+        let _ = std::fs::remove_file(&path);
+    }
+
+    /// Not a correctness test — a wall-clock benchmark against the real session
+    /// stores on whatever machine runs it. Ignored by default because it reads
+    /// the developer's ~/.codex and ~/.claude, so it is neither hermetic nor
+    /// portable. Run it explicitly:
+    ///
+    ///   cargo test perf_benchmark_real_session_stores -- --ignored --nocapture
+    ///
+    /// `cold` is what every history poll used to cost. `warm` is an idle poll
+    /// now (nothing on disk moved). `appended` is a live agent: one rollout
+    /// grew, so only its new tail is read.
+    #[test]
+    #[ignore]
+    fn perf_benchmark_real_session_stores() {
+        use std::time::Instant;
+        const MB: f64 = 1024.0 * 1024.0;
+
+        session_parse_cache().lock().unwrap().entries.clear();
+        let t = Instant::now();
+        let cold = load_native_history_blocking().expect("cold history scan");
+        let cold_at = t.elapsed();
+
+        let t = Instant::now();
+        let warm = load_native_history_blocking().expect("warm history scan");
+        let warm_at = t.elapsed();
+
+        let t = Instant::now();
+        let warm2 = load_native_history_blocking().expect("second warm history scan");
+        let warm2_at = t.elapsed();
+
+        println!("--- get_native_history ---");
+        println!("  sessions returned : {}", cold.len());
+        println!("  cold scan         : {:?}", cold_at);
+        println!("  warm scan         : {:?}", warm_at);
+        println!("  warm scan (2nd)   : {:?}", warm2_at);
+        println!(
+            "  warm speedup      : {:.1}x",
+            cold_at.as_secs_f64() / warm_at.as_secs_f64().max(1e-9)
+        );
+        assert_eq!(cold.len(), warm.len(), "a warm scan must return the same list");
+        assert_eq!(warm.len(), warm2.len(), "warm scans must be stable");
+
+        // Simulate a live agent without touching real session data: copy the
+        // largest resumable candidate to a temp file, prime the cache with a
+        // full parse, append one row, and time the resumed scan. This is the
+        // case the append-only resume exists for.
+        let largest = {
+            let cache = session_parse_cache().lock().unwrap();
+            cache
+                .entries
+                .iter()
+                .filter(|(_, e)| e.resume.is_some())
+                .max_by_key(|(_, e)| e.size)
+                .map(|(k, _)| k.clone())
+        };
+        if let Some(src) = largest {
+            let src = std::path::Path::new(&src);
+            let copy = std::env::temp_dir().join(format!(
+                "coffee-cli-bench-resume-{}.jsonl",
+                std::process::id()
+            ));
+            let copied = std::fs::copy(src, &copy).is_ok();
+            if copied {
+                let size = std::fs::metadata(&copy).map(|m| m.len()).unwrap_or(0);
+                let tool = if src.to_string_lossy().contains(".codex") { "codex" } else { "claude" };
+                let mut cache = SessionParseCache {
+                    aux_stamp: 0,
+                    entries: std::collections::HashMap::new(),
+                };
+                let maps = std::collections::HashMap::new();
+
+                // Prime: one full parse of the copy.
+                let t = Instant::now();
+                parse_session_cached(&mut cache, &copy, tool, &maps, &maps);
+                let full_at = t.elapsed();
+
+                // One appended row — what a live agent writes between polls.
+                {
+                    use std::io::Write;
+                    let mut f = std::fs::OpenOptions::new().append(true).open(&copy).unwrap();
+                    let _ = writeln!(f, "{{\"message\":{{\"role\":\"assistant\",\"content\":\"x\"}}}}");
+                }
+                let t = Instant::now();
+                parse_session_cached(&mut cache, &copy, tool, &maps, &maps);
+                let resumed_at = t.elapsed();
+
+                println!("--- one live session appending ({tool}, {:.1} MB file) ---", size as f64 / MB);
+                println!("  full reparse      : {:?}", full_at);
+                println!("  resumed tail scan : {:?}", resumed_at);
+                println!(
+                    "  speedup           : {:.1}x",
+                    full_at.as_secs_f64() / resumed_at.as_secs_f64().max(1e-9)
+                );
+                println!("  bytes read        : the appended row, not {:.1} MB", size as f64 / MB);
+                let _ = std::fs::remove_file(&copy);
+            }
+        }
+
+        let t = Instant::now();
+        let heat = load_message_heatmap_blocking().expect("heatmap scan");
+        println!("--- get_message_heatmap (warm count cache) ---");
+        println!("  entries           : {}", heat.len());
+        println!("  scan              : {:?}", t.elapsed());
     }
 }

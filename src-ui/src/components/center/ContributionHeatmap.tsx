@@ -55,7 +55,14 @@ const HEATMAP_CACHE_KEY = 'cc-heatmap-cache';
 // rescan so heatmap reflects intra-day activity (new sessions, new messages
 // in long-running CLI tabs). Backend `count_cache` keeps the rescan cheap —
 // any jsonl whose mtime is unchanged skips the file read.
-const FRESH_TTL_MS = 60_000;
+//
+// Was 60s, which made every switch back to the launchpad a full rescan: the
+// walk stats every candidate file (1703 files / 5 GB on a long-used machine)
+// and re-counts each session whose mtime moved, up to 32 MB apiece. On a
+// contended disk that stalled the tab switch. The grid is day-granular and
+// decorative, so a 10-minute-old today cell is indistinguishable from a live
+// one — 10× fewer rescans for no visible difference.
+const FRESH_TTL_MS = 600_000;
 let memoryCache: HeatmapCache | null = null;
 
 function readPersistedHeatmapCache(): HeatmapCache | null {
