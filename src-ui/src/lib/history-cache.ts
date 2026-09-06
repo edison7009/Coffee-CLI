@@ -41,9 +41,10 @@ const listeners = new Set<() => void>();
  *  re-rendered every HistoryBoard subscriber once a minute for nothing. An
  *  unchanged poll now ends without touching the store. */
 function sessionsSignature(list: SavedSession[]): string {
-  return list
-    .map(s => [s.id, s.name, s.cwd, s.saved_at, s.turn_count ?? ''].join('\x01'))
-    .join('\x02');
+  return JSON.stringify(list.map(s => [
+    s.id, s.name, s.tool, s.cwd, s.session_token, s.saved_at,
+    s.created_at, s.file_path, s.turn_count,
+  ]));
 }
 let lastSig = '';
 
@@ -129,13 +130,20 @@ function doFetch(isRefresh: boolean) {
       return;
     }
   }
+  pendingRefresh = false;
+  if (pendingTimer !== null) {
+    clearTimeout(pendingTimer);
+    pendingTimer = null;
+  }
   inFlight = true;
   lastFetchAt = Date.now();
   if (!isRefresh) {
     state = { sessions: [], status: 'loading' };
     emit();
   }
-  commands.getNativeHistory()
+  // A queued refresh must reach the per-file scan even within the backend's
+  // five-second result TTL, otherwise it simply republishes the old list.
+  commands.getNativeHistory(isRefresh)
     .then(sessions => {
       const sorted = sortByMtime(sessions || []);
       const sig = sessionsSignature(sorted);

@@ -464,13 +464,6 @@ pub struct TerminalSession {
     /// confirmed. The observer fires within a frame or two for a genuinely
     /// visible tab, so the visible-tab throttled window is tiny.
     pub is_tab_active: Arc<AtomicBool>,
-    /// Last PTY size actually applied, used to dedupe `tier_terminal_resize`.
-    /// A redundant resize is not merely wasteful — it reaches the child as
-    /// SIGWINCH, and a full-screen TUI (pi, Claude Code) answers by repainting
-    /// from row 1, which reads to the user as the conversation jumping to the
-    /// top. Seeded from the real spawn size so the first frontend resize is
-    /// compared against actual PTY state rather than an empty value.
-    pub last_size: Mutex<(u16, u16)>,
 }
 
 pub type SharedSession = Arc<Mutex<std::collections::HashMap<String, TerminalSession>>>;
@@ -863,7 +856,6 @@ pub fn spawn(
                 session_token: Mutex::new(None),
                 _master: master_clone,
                 is_tab_active: is_tab_active.clone(),
-                last_size: Mutex::new((cols, rows)),
             },
         );
     }

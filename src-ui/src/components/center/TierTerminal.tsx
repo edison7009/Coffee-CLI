@@ -1541,16 +1541,7 @@ function TierTerminalImpl({
         if (mounted && fitRef.current && xtermRef.current) {
           fitRef.current.fit();
           const t2 = xtermRef.current;
-          // Same cols/rows memo runFit uses, so this one-shot post-spawn fit
-          // neither sends a size the PTY already has nor leaves runFit unaware
-          // of the size it did send (which would make the next observation
-          // re-send it).
-          const previous = lastResizeRef.current;
-          if (
-            t2.cols > 0 && t2.rows > 0 &&
-            (!previous || previous.cols !== t2.cols || previous.rows !== t2.rows)
-          ) {
-            lastResizeRef.current = { cols: t2.cols, rows: t2.rows };
+          if (t2.cols > 0 && t2.rows > 0) {
             commands.tierTerminalResize(sessionId, t2.cols, t2.rows).catch(() => {});
           }
         }

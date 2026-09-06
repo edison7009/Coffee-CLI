@@ -46,6 +46,7 @@ jobs:
           node scripts/run-tab-renderer-test.mjs
           node scripts/run-conversation-virtualizer-test.mjs
           node scripts/run-review-regressions.mjs
+          node scripts/run-history-cache-test.mjs
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
