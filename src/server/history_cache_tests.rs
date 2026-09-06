@@ -23,7 +23,7 @@ fn history_cache_tracks_submillisecond_same_size_edits() {
 }
 
 #[test]
-fn codex_prefilter_accepts_unicode_escaped_json_keys_and_values() {
+fn codex_parser_accepts_unicode_escaped_json_keys_and_values() {
     let path = temp_jsonl("escaped-keys");
     let header = CODEX_HEADER.replace("session_meta", "session_\\u006deta");
     let user = CODEX_USER.replace("role", "r\\u006fle");
@@ -34,9 +34,10 @@ fn codex_prefilter_accepts_unicode_escaped_json_keys_and_values() {
     let _ = std::fs::remove_file(path);
 }
 
-#[cfg(unix)]
+// Linux permits arbitrary non-NUL filename bytes; APFS rejects invalid UTF-8.
+#[cfg(target_os = "linux")]
 #[test]
-fn history_cache_distinguishes_non_utf8_paths_and_replaced_inodes() {
+fn history_cache_distinguishes_non_utf8_paths() {
     use std::os::unix::ffi::OsStringExt;
     let directory = temp_jsonl("unix-paths").with_extension("");
     std::fs::create_dir_all(&directory).unwrap();
@@ -49,6 +50,20 @@ fn history_cache_distinguishes_non_utf8_paths_and_replaced_inodes() {
     scan_once(&mut cache, &one, "codex");
     assert_eq!(scan_once(&mut cache, &two, "codex").unwrap().name, "new retry backoff");
     assert_eq!(cache.entries.len(), 2);
+    let _ = std::fs::remove_dir_all(directory);
+}
+
+#[cfg(unix)]
+#[test]
+fn history_cache_tracks_replaced_inodes() {
+    let directory = temp_jsonl("unix-replacement").with_extension("");
+    std::fs::create_dir_all(&directory).unwrap();
+    let one = directory.join("session.jsonl");
+    let two = directory.join("replacement.jsonl");
+    write_jsonl(&one, &[CODEX_HEADER, CODEX_USER]);
+    write_jsonl(&two, &[CODEX_HEADER, &CODEX_USER.replace("add retry backoff", "new retry backoff")]);
+    let mut cache = new_cache();
+    scan_once(&mut cache, &one, "codex");
     // Replacement keeps the size/mtime, but is a different inode.
     let time = std::fs::metadata(&one).unwrap().modified().unwrap();
     std::fs::File::options().write(true).open(&two).unwrap()
@@ -158,10 +173,7 @@ fn assert_matches_cold(cache: &mut SessionParseCache, path: &std::path::Path, to
     );
 }
 
-/// Rows carrying neither `session_meta` nor a bare `"role"` key are
-/// rejected before the JSON parse. Reasoning, function_call,
-/// function_call_output and turn_context rows are the bulk of a real
-/// rollout and none of them can contribute a title, a cwd or a count.
+/// Tool output, reasoning and turn context must not affect message counts.
 #[test]
 fn codex_parser_counts_only_message_rows_amid_tool_noise() {
     let path = temp_jsonl("noise");
@@ -170,10 +182,7 @@ fn codex_parser_counts_only_message_rows_amid_tool_noise() {
         CODEX_USER,
         r#"{"type":"response_item","payload":{"type":"reasoning","summary":[{"type":"summary_text","text":"thinking about the retry budget"}]}}"#,
         r#"{"type":"response_item","payload":{"type":"function_call","name":"shell","arguments":"{\"cmd\":[\"cargo\",\"test\"]}"}}"#,
-        // Tool output that EMBEDS a role. Inside a JSON string the quotes
-        // arrive escaped (`\"role\"`), so the bare `"role"` needle doesn't
-        // match and the row is rejected — which is what a full parse would
-        // have concluded anyway, since `payload.role` is absent.
+        // JSON embedded in tool output is not a conversation message.
         r#"{"type":"response_item","payload":{"type":"function_call_output","output":"{\"role\":\"user\",\"text\":\"injected\"}"}}"#,
         // cwd here differs from the header: proves the header wins and a
         // later turn_context row is not mistaken for session metadata.
@@ -185,9 +194,7 @@ fn codex_parser_counts_only_message_rows_amid_tool_noise() {
     assert_eq!(got.name, "add retry backoff", "title = first real user message");
     assert_eq!(got.cwd, "/proj", "cwd = session_meta, not the later turn_context");
     assert_eq!(got.session_token.as_deref(), Some("sess-resume"));
-    // 1 user + 1 assistant = 2 counted rows -> (2+1)/2 = 1. A needle loose
-    // enough to admit the escaped-role output, or tight enough to drop a
-    // real message row, would both move this.
+    // 1 user + 1 assistant = 2 counted rows -> (2+1)/2 = 1.
     assert_eq!(got.turn_count, Some(1));
     let _ = std::fs::remove_file(&path);
 }
@@ -261,9 +268,7 @@ fn history_cache_matches_cold_after_append_codex() {
 
     let stages: Vec<( &str, Vec<&str>)> = vec![
         ("first user turn", vec![CODEX_USER]),
-        // Non-message rows: dropped by the prefilter on the cold path and
-        // by the same filter on each scan, so they must not move the
-        // tally either way.
+        // Non-message rows must not change the tally.
         ("tool noise", vec![
             r#"{"type":"response_item","payload":{"type":"reasoning","summary":[{"type":"summary_text","text":"thinking"}]}}"#,
             r#"{"type":"response_item","payload":{"type":"function_call_output","output":"{\"role\":\"user\"}"}}"#,
@@ -327,9 +332,7 @@ fn history_cache_matches_cold_after_append_claude() {
     let _ = std::fs::remove_file(&path);
 }
 
-/// A scan can land while the agent is mid-write. An unterminated trailing
-/// line must be left alone: consuming it would lose its tail forever and
-/// start the next scan in the middle of a row.
+/// A scan can land mid-write; completing the JSON must make it count once.
 #[test]
 fn history_cache_retries_partial_trailing_line() {
     let path = temp_jsonl("partial");

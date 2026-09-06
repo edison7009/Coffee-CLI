@@ -1684,11 +1684,6 @@ fn parse_codex_session_jsonl(file_path: &std::path::Path) -> Option<SavedSession
     let mut created_at = None;
 
     for line in reader.lines().map_while(Result::ok) {
-        // Only metadata and role-bearing rows affect history. Unicode escapes
-        // can encode JSON keys/values too, so those rows must still be parsed.
-        if !line.contains("\"role\"") && !line.contains("session_meta") && !line.contains("\\u") {
-            continue;
-        }
         let Ok(value) = serde_json::from_str::<serde_json::Value>(&line) else {
             continue;
         };
