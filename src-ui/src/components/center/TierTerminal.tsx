@@ -1474,8 +1474,17 @@ function TierTerminalImpl({
       // All listeners registered — NOW start the PTY process
       if (!mounted) return;
 
-      const initialCols = term.cols || 80;
-      const initialRows = term.rows || 24;
+      // A fit that ran during the birth layout storm (launch session restore,
+      // panel slide, gambit dock mount) can seed an absurd grid — 10×40 was
+      // captured in the wild on 2026-09-07, with the PTY spawned at that size
+      // so pi/Claude painted a 10-column screen they only ever repaint on the
+      // next resize. Spawning at the classic 80×24 instead costs one extra
+      // resize when the real size differs, and the post-spawn fit below sends
+      // it within two frames. Threshold 20 cols is below any pane a split can
+      // produce on a sane window, so it never misfires on genuinely narrow
+      // terminals.
+      const initialCols = term.cols >= 20 ? term.cols : 80;
+      const initialRows = term.rows >= 6 ? term.rows : 24;
 
         try {
           await commands.tierTerminalStart(sessionId, tool, initialCols, initialRows, theme, lang, toolData, folderPath ?? undefined, resumeToken, appStateRef.current.defaultShell);
@@ -1993,6 +2002,31 @@ function TierTerminalImpl({
     const dismiss = () => {
       if (dismissed) return;
       dismissed = true;
+      // Birth-time fit verification, run at the exact moment the splash
+      // reveals the terminal. Every fit before this point (open-time fit,
+      // post-spawn double-rAF fit, ResizeObserver trailing fit) can land
+      // mid-layout-storm and seed a collapsed grid — 10×40 observed on
+      // 2026-09-07 — and if the geometry settles before the next observer
+      // fire, that seed STICKS: the terminal is revealed at 10 columns and
+      // only a manual tab switch corrects it. By dismissal the branding
+      // window (≥800 ms) plus the tool's first frame have elapsed, so the
+      // container has reached its final size; one verified fit here is
+      // RO-independent and heals the seed before the content is ever seen.
+      // Hidden tabs are skipped (fit would read zero) — the activation
+      // effect owns their first reveal.
+      try {
+        const t = xtermRef.current;
+        if (t && termRef.current && termRef.current.offsetParent !== null && fitRef.current) {
+          fitRef.current.fit();
+          if (t.cols > 0 && t.rows > 0) {
+            const previous = lastResizeRef.current;
+            if (!previous || previous.cols !== t.cols || previous.rows !== t.rows) {
+              lastResizeRef.current = { cols: t.cols, rows: t.rows };
+              commands.tierTerminalResize(sessionId, t.cols, t.rows).catch(() => {});
+            }
+          }
+        }
+      } catch { /* Best-effort verification; failure is non-fatal. */ }
       setSplashFading(true);
       // 300 ms fade-out (was 600). The splash is dismissed quickly
       // now that we trigger on first real output, so the underlying
