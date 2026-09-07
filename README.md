@@ -53,8 +53,8 @@ Coffee CLI can launch **any** command-line agent — but the ones below get deep
 | Tier | What you get | CLIs |
 |---|---|---|
 | **T1** | **Dynamic Island · Desktop-style conversation** (bubbles + permission/input cards) · History · Heatmap · Changes · Brand icon · One-click launch · Custom launch args | **Claude Code** · **Codex CLI** · **Kimi Code** |
-| **T2** | Native terminal · History · Heatmap · Changes · Brand icon · One-click launch · Custom launch args | OpenCode · mimocode · Grok Build · OpenClaw · Hermes Agent · Antigravity · Qwen Code · Pi |
-| **T3** | Brand icon · One-click launch | Crush · Aider · Goose · Copilot CLI · Cursor · Cline · Oh-My-Pi |
+| **T2** | Native terminal · History · Heatmap · Changes · Brand icon · One-click launch · Custom launch args | OpenCode · mimocode · Grok Build · OpenClaw · Hermes Agent · Antigravity · Qwen Code · Pi · Kilo Code · Oh-My-Pi |
+| **T3** | Brand icon · One-click launch | Crush · Aider · Goose · Copilot CLI · Cursor · Cline |
 | **T4** | Open a terminal tab and type the command to launch | any other CLI |
 
 *T1 status and interaction detection is hook-free and currently available only for Claude Code, Codex CLI, and Kimi Code. Coffee CLI reads verified native-title or rendered-terminal state; it does not install status hooks. Other tools stay in their native terminal UI even when Coffee CLI can read their history.*
