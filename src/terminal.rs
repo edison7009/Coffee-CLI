@@ -415,6 +415,14 @@ pub const AGENT_PRESETS: &[AgentPreset] = &[
         session_id_pattern: None,
         token_format: Some(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"),
     },
+    AgentPreset {
+        tool_name: "omp",
+        resume_program: Some("omp"),
+        resume_args_before: &["--resume"],
+        resume_args_after: &[],
+        session_id_pattern: None,
+        token_format: Some(r"^[a-zA-Z0-9][a-zA-Z0-9_-]*$"),
+    },
     // Kimi Code (Moonshot `kimi` binary). Resume via `kimi --session <id>`
     // (canonical `-S, --session`, verified against `kimi --help`). Token is
     // `session_<uuid>` from session_index.jsonl, sourced by find_kimi_sessions
@@ -1263,6 +1271,21 @@ mod tests {
         assert_eq!(p.resume_program, Some("claude"));
         assert_eq!(p.resume_args_before, &["--resume"]);
         assert!(p.resume_args_after.is_empty());
+    }
+
+    #[test]
+    fn omp_resume_native_ids_without_accepting_flags() {
+        for (tool, flag, token) in [
+            ("omp", "--resume", "01900000-0000-7000-8000-000000000000"),
+        ] {
+            let preset = find_preset(tool).unwrap();
+            assert_eq!(preset.resume_program, Some(tool));
+            assert_eq!(preset.resume_args_before, &[flag]);
+            assert!(token_matches(tool, token));
+            for bad in ["", "--help", "../../file", "id --extra", "id;echo"] {
+                assert!(!token_matches(tool, bad));
+            }
+        }
     }
 
     // ── session_id_pattern (injection guard) ──────────────────────────────────

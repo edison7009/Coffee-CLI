@@ -16,9 +16,11 @@
  * Run with `node scripts/run-terminal-interaction-test.mjs` (esbuild-based).
  */
 import { supportsConversationTool } from './chat-tools';
+import type { Terminal } from '@xterm/xterm';
 import {
   parseTerminalAgentStatus,
   parseTerminalInteraction,
+  readTerminalScreen,
   supportsTerminalInteraction,
   type ScreenLine,
 } from './terminal-interaction';
@@ -417,6 +419,23 @@ export function main(): void {
   // Positives
   const bash = parseTerminalInteraction(bashPermission, 'claude');
   assertInteraction('bash permission', bash, { kind: 'permission', optionCount: 3, focusedPosition: 0 });
+  // An inline selector can sit above unused rows in a tall xterm viewport.
+  const tallScreen = [...bashPermission, ...Array.from({ length: 88 }, () => line(''))];
+  const tallTerminal = {
+    rows: tallScreen.length,
+    buffer: { active: {
+      baseY: 0, length: tallScreen.length,
+      getNullCell: () => ({ isBold: () => false }),
+      getLine: (index: number) => ({
+        length: tallScreen[index].text.length,
+        translateToString: () => tallScreen[index].text,
+        getCell: () => ({ isBold: () => tallScreen[index].bold }),
+      }),
+    } },
+  } as unknown as Terminal;
+  assertInteraction('permission above unused viewport rows',
+    parseTerminalInteraction(readTerminalScreen(tallTerminal), 'claude'),
+    { kind: 'permission', optionCount: 3, focusedPosition: 0 });
   equal(bash!.responseMode, 'digit', 'Claude uses its numeric shortcut');
   equal(bash!.title, 'Bash command', 'bash title');
   equal(bash!.options[0].number, 1, 'option 1 number');

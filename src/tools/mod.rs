@@ -211,9 +211,9 @@ mod mimocode;
 mod openclaw;
 mod opencode;
 mod qwen;
-// Lower-tier tools — see each module's doc comment for its tier (Pi is T2
-// with history; Aider/Crush/Goose/Copilot/Cursor/Cline/Oh-My-Pi are T3
-// launch-only, no history/status integration).
+// Pi/Oh-My-Pi are T2 with history; Kimi Code is T1;
+// Aider/Crush/Goose/Copilot/Cursor are T3
+// launch-only, no history/status integration.
 mod aider;
 mod cline;
 mod copilot;
@@ -245,9 +245,9 @@ pub static TOOLS: &[&ToolDescriptor] = &[
     // history/heatmap second pass in server.rs, resume preset in terminal.rs,
     // launchpad tile in CenterPanel's catalog.
     &kilo::DESCRIPTOR,
-    // Pi is T2 (history + heatmap + changes + resume; see its module doc).
-    // Kimi Code keeps the same history/resume features as Pi. The others —
-    // Crush / Aider / Goose / Copilot / Cursor / Cline / Oh-My-Pi — are T3
+    // Pi/Oh-My-Pi have T2 history/heatmap/resume; Kimi Code is T1.
+    // The others —
+    // Crush / Aider / Goose / Copilot / Cursor — are T3
     // launch-only: display name + PATH probe + launch binary, history_shape:
     // None and has_legacy_hook_artifacts: false.
     &pi::DESCRIPTOR,
@@ -287,3 +287,4 @@ pub fn list_tools() -> Vec<ToolInfo> {
         })
         .collect()
 }
+

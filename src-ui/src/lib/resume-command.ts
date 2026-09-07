@@ -27,6 +27,7 @@ const RESUME_SHAPES: Record<string, ResumeShape> = {
   grok:        { program: 'grok',    argsBefore: ['--resume'] },
   qwen:        { program: 'qwen',    argsBefore: ['--resume'] },
   pi:          { program: 'pi',      argsBefore: ['--session'] },
+  omp:         { program: 'omp',     argsBefore: ['--resume'] },
   kimicode:    { program: 'kimi',    argsBefore: ['--session'] },
   // openclaw has resume_program: None in AGENT_PRESETS - no CLI resume.
 };

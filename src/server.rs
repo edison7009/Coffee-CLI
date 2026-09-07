@@ -1535,7 +1535,7 @@ fn parse_agent_jsonl(
 /// here so no bucket-name decoding), and message rows are
 /// `{type:"message", message:{role, content:[{type:"text", text}]}}`.
 /// `pi --session <id>` resumes by (partial) UUID — see AGENT_PRESETS.
-fn parse_pi_session_jsonl(file_path: &std::path::Path) -> Option<SavedSession> {
+fn parse_pi_session_jsonl(file_path: &std::path::Path, tool: &str) -> Option<SavedSession> {
     use std::io::BufRead;
     let file = std::fs::File::open(file_path).ok()?;
     let reader = std::io::BufReader::with_capacity(SESSION_READ_BUF, file);
@@ -1550,10 +1550,20 @@ fn parse_pi_session_jsonl(file_path: &std::path::Path) -> Option<SavedSession> {
     let mut title = String::new();
     let mut total_messages = 0;
     let mut created_at = None;
+    let mut native_title = String::new();
 
     for line in reader.lines().map_while(Result::ok) {
         let Ok(value) = serde_json::from_str::<serde_json::Value>(&line) else { continue };
         let row_type = value.get("type").and_then(|v| v.as_str()).unwrap_or("");
+
+        if tool == "omp" && matches!(row_type, "title" | "title_change" | "session") {
+            if let Some(text) = value.get("title").and_then(|v| v.as_str()).filter(|s| !s.trim().is_empty()) {
+                // A fixed-width title slot precedes the header in newer OMP files.
+                if row_type != "session" || native_title.is_empty() {
+                    native_title = text.to_string();
+                }
+            }
+        }
 
         // Header: pull id (resume token) + cwd straight off line 1.
         if row_type == "session" {
@@ -1578,8 +1588,9 @@ fn parse_pi_session_jsonl(file_path: &std::path::Path) -> Option<SavedSession> {
                 total_messages += 1;
             }
             if !title.is_empty() || role != "user" { continue; }
-            let Some(content_arr) = msg.get("content").and_then(|v| v.as_array()) else { continue };
-            for block in content_arr {
+            let Some(content) = msg.get("content") else { continue };
+            let blocks = content.as_array().cloned().unwrap_or_else(|| vec![serde_json::json!({"type":"text", "text":content})]);
+            for block in &blocks {
                 let block_type = block.get("type").and_then(|v| v.as_str()).unwrap_or("");
                 if block_type != "text" && block_type != "input_text" { continue; }
                 let Some(text) = block.get("text").and_then(|v| v.as_str()) else { continue };
@@ -1604,15 +1615,17 @@ fn parse_pi_session_jsonl(file_path: &std::path::Path) -> Option<SavedSession> {
             }
         }
     }
+    if !native_title.is_empty() { title = native_title; }
+    if tool == "omp" && total_messages == 0 { return None; }
     if title.is_empty() {
-        title = "Pi Session".to_string();
+        title = if tool == "omp" { "Oh-My-Pi Session" } else { "Pi Session" }.to_string();
     }
     let turn_count = if total_messages > 0 { std::cmp::max(1, (total_messages + 1) / 2) } else { 0 };
 
     Some(SavedSession {
-        id: format!("pi_native_{}", session_id),
+        id: format!("{}_native_{}", tool, session_id),
         name: title,
-        tool: "pi".to_string(),
+        tool: tool.to_string(),
         cwd,
         session_token: Some(session_id),
         saved_at: updated_at,
@@ -2132,10 +2145,7 @@ fn validated_native_session_path(file_path: &str) -> Result<std::path::PathBuf, 
     // scanner. This also covers per-tool history-path overrides.
     for tool in crate::tools::TOOLS {
         if let Some(shape) = tool.history_shape.as_ref() {
-            allowed.push(crate::tool_config::history_path_for(
-                tool.id,
-                shape.join_under(&home),
-            ));
+            allowed.push(history_root(tool, shape, &home));
         }
     }
     if let Ok(kimi_home) = std::env::var("KIMI_CODE_HOME") {
@@ -4012,7 +4022,7 @@ fn parse_session_file(
     match tool {
         "hermes"      => parse_hermes_json(path),
         "codex"       => parse_codex_session_jsonl(path),
-        "pi"          => parse_pi_session_jsonl(path),
+        "pi" | "omp"  => parse_pi_session_jsonl(path, tool),
         "qwen"        => parse_qwen_session_jsonl(path),
         "antigravity" => parse_gemini_session_jsonl(path, antigravity_project_map),
         other         => parse_agent_jsonl(path, other, claude_project_map),
@@ -4165,8 +4175,8 @@ fn load_native_history_blocking() -> Result<Vec<SavedSession>, String> {
     // walks the two-level tree, stats summary.json for mtime to pre-select the
     // newest 200, then reads each survivor's summary.json for title / cwd /
     // timestamps. Pushes finished SavedSessions directly.
-    if let Some(home) = home.as_ref() {
-        find_grok_sessions(home, &mut result);
+    if let Some(_home) = home.as_ref() {
+        find_grok_sessions(_home, &mut result);
     }
 
     // Collapse any Claude-worktree cwd to its project root, for every tool's
@@ -4204,8 +4214,7 @@ fn collect_registry_history_candidates(
 ) {
     for tool in crate::tools::TOOLS {
         let Some(shape) = tool.history_shape.as_ref() else { continue };
-        let scan_dir =
-            crate::tool_config::history_path_for(tool.id, shape.join_under(home));
+        let scan_dir = history_root(tool, shape, home);
         match shape {
             crate::tools::HistoryShape::HermesFlatJson => {
                 collect_hermes_paths_with_mtime(scan_dir, out);
@@ -4222,6 +4231,19 @@ fn collect_registry_history_candidates(
             }
         }
     }
+}
+
+fn history_root(tool: &crate::tools::ToolDescriptor, shape: &crate::tools::HistoryShape, home: &std::path::Path) -> PathBuf {
+    let mut default = shape.join_under(home);
+    if tool.id == "omp" {
+        if let Ok(agent_dir) = std::env::var("PI_CODING_AGENT_DIR") {
+            if !agent_dir.is_empty() { default = PathBuf::from(agent_dir).join("sessions"); }
+        }
+        if let Ok(session_dir) = std::env::var("PI_CODING_AGENT_SESSION_DIR") {
+            if !session_dir.is_empty() { default = PathBuf::from(session_dir); }
+        }
+    }
+    crate::tool_config::history_path_for(tool.id, default)
 }
 
 /// Resolve OpenCode's session-store root (under the user's home,
@@ -4312,22 +4334,37 @@ fn load_message_heatmap_blocking() -> Result<Vec<HeatmapEntry>, String> {
     let mut keep_paths: std::collections::HashSet<String> = std::collections::HashSet::new();
 
     let mut out: Vec<HeatmapEntry> = Vec::with_capacity(candidates.len());
-    for (mtime, path, tool) in &candidates {
-        if *mtime < cutoff { continue; }
-        let ts = mtime
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_secs() as i64)
-            .unwrap_or(0);
-        let path_key = path.to_string_lossy().into_owned();
-        keep_paths.insert(path_key.clone());
+    if let Some(_home) = home.as_ref() {
+        for (mtime, path, tool) in &candidates {
+            if *mtime < cutoff { continue; }
+            let ts = mtime
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_secs() as i64)
+                .unwrap_or(0);
+            let path_key = path.to_string_lossy().into_owned();
+            keep_paths.insert(path_key.clone());
 
-        // Cache hit only when mtime exactly matches — any append to the jsonl
-        // bumps mtime and forces a recount.
-        let count = if let Some(entry) = count_cache.get(&path_key) {
-            if entry.mtime == ts {
-                entry.count
+            // Cache hit only when mtime exactly matches — any append to the
+            // jsonl bumps mtime and forces a recount.
+            let count = if let Some(entry) = count_cache.get(&path_key) {
+                if entry.mtime == ts {
+                    entry.count
+                } else {
+                    let c = if *tool == "omp" {
+                        count_omp_messages(path)
+                    } else if *tool == "hermes" {
+                        count_hermes_messages(path)
+                    } else {
+                        count_jsonl_message_lines(path)
+                    };
+                    count_cache.insert(path_key.clone(), CachedCount { mtime: ts, count: c });
+                    cache_dirty = true;
+                    c
+                }
             } else {
-                let c = if *tool == "hermes" {
+                let c = if *tool == "omp" {
+                    count_omp_messages(path)
+                } else if *tool == "hermes" {
                     count_hermes_messages(path)
                 } else {
                     count_jsonl_message_lines(path)
@@ -4335,19 +4372,10 @@ fn load_message_heatmap_blocking() -> Result<Vec<HeatmapEntry>, String> {
                 count_cache.insert(path_key.clone(), CachedCount { mtime: ts, count: c });
                 cache_dirty = true;
                 c
-            }
-        } else {
-            let c = if *tool == "hermes" {
-                count_hermes_messages(path)
-            } else {
-                count_jsonl_message_lines(path)
             };
-            count_cache.insert(path_key.clone(), CachedCount { mtime: ts, count: c });
-            cache_dirty = true;
-            c
-        };
-        if count > 0 {
-            out.push(HeatmapEntry { ts, count });
+            if count > 0 {
+                out.push(HeatmapEntry { ts, count });
+            }
         }
     }
 
@@ -4522,6 +4550,16 @@ fn count_jsonl_message_lines(path: &std::path::Path) -> u32 {
         buf.clear();
     }
     count
+}
+
+fn count_omp_messages(path: &std::path::Path) -> u32 {
+    use std::io::{BufRead, Read};
+    let Ok(file) = std::fs::File::open(path) else { return 0 };
+    std::io::BufReader::new(file.take(32 * 1024 * 1024)).lines().map_while(Result::ok)
+        .filter_map(|line| serde_json::from_str::<serde_json::Value>(&line).ok())
+        .filter(|row| row.get("type").and_then(|v| v.as_str()) == Some("message") &&
+            matches!(row.pointer("/message/role").and_then(|v| v.as_str()), Some("user" | "assistant" | "toolResult")))
+        .count().min(u32::MAX as usize) as u32
 }
 
 // Hermes stores one big JSON file per session, not JSONL — so line-

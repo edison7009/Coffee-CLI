@@ -1,6 +1,64 @@
 use super::*;
 
 #[test]
+fn omp_history_preserves_identity_titles_and_counts_only_messages() {
+    let path = temp_jsonl("omp");
+    write_jsonl(&path, &[
+        r#"{"type":"title","title":"Current title","pad":"   "}"#,
+        r#"{"type":"session","id":"01900000-0000-7000-8000-000000000000","cwd":"D:\\project","timestamp":"2026-09-08T00:00:00Z","title":"Old title"}"#,
+        r#"{"type":"model_change","modelId":"test"}"#,
+        r#"{"type":"message","message":{"role":"user","content":"你好"}}"#,
+        r#"{"type":"message","message":{"role":"assistant","content":[{"type":"text","text":"Hello"}]}}"#,
+        r#"{"type":"message","message":{"role":"toolResult","content":[]}}"#,
+        "{unfinished",
+    ]);
+    let session = cold_parse(&path, "omp").unwrap();
+    assert_eq!(session.tool, "omp");
+    assert!(session.id.starts_with("omp_native_"));
+    assert_eq!(session.cwd, "D:\\project");
+    assert_eq!(session.name, "Current title");
+    assert_eq!(session.turn_count, Some(1));
+    assert_eq!(count_omp_messages(&path), 3);
+    append_lines(&path, &[r#"{"type":"title_change","title":"Renamed"}"#]);
+    assert_eq!(cold_parse(&path, "omp").unwrap().name, "Renamed");
+    assert_eq!(count_omp_messages(&path), 3);
+    // Pi keeps its own identity and first-prompt title in the shared parser.
+    assert_eq!(cold_parse(&path, "pi").unwrap().name, "你好");
+    std::fs::remove_file(path).unwrap();
+}
+
+#[test]
+fn omp_metadata_only_session_has_no_history_or_activity() {
+    let path = temp_jsonl("omp-empty");
+    write_jsonl(&path, &[r#"{"type":"session","id":"empty","cwd":"/project"}"#]);
+    assert!(cold_parse(&path, "omp").is_none());
+    assert_eq!(count_omp_messages(&path), 0);
+    std::fs::remove_file(path).unwrap();
+}
+
+#[test]
+#[ignore = "reads the current user's installed Oh-My-Pi history"]
+fn omp_local_history_smoke() {
+    let home = dirs::home_dir().unwrap();
+    let tool = crate::tools::find("omp").unwrap();
+    let shape = tool.history_shape.as_ref().unwrap();
+    let mut candidates = Vec::new();
+    collect_jsonl_paths_with_mtime(history_root(tool, shape, &home), 2, "omp", &mut candidates);
+    assert!(!candidates.is_empty(), "No local OMP transcripts to verify");
+    let mut messages = 0;
+    for (_, path, _) in &candidates {
+        let session = cold_parse(path, "omp").expect("real OMP history should parse");
+        assert_eq!(session.tool, "omp");
+        assert!(!session.name.is_empty());
+        assert!(!session.cwd.is_empty());
+        assert!(session.session_token.is_some());
+        assert!(validated_native_session_path(&path.to_string_lossy()).is_ok());
+        messages += count_omp_messages(path);
+    }
+    println!("Verified {} local OMP sessions and {messages} messages", candidates.len());
+}
+
+#[test]
 fn history_cache_tracks_submillisecond_same_size_edits() {
     use std::fs::{File, FileTimes};
     use std::time::{Duration, UNIX_EPOCH};

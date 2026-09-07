@@ -122,7 +122,7 @@ import HERMES_DATA_URL from '../../icons-inline/hermes.png?inline';
 import TERMINAL_MAC_DATA_URL from '../../icons-inline/terminal-macos.png?inline';
 import TERMINAL_LINUX_DATA_URL from '../../icons-inline/terminal-linux.png?inline';
 import TERMINAL_PWSH_SVG from '../../icons-inline/terminal-powershell.svg?raw';
-// Additional tool icons (Pi & Kimi Code = T2; Crush/Aider/Goose/Copilot = T3).
+// Additional tool icons (Pi = T2; Kimi Code = T1; Crush/Aider/Goose/Copilot = T3).
 // SVG → ?raw, PNG → ?inline, same pipeline as the tools above.
 import PI_SVG from '../../icons-inline/pi.svg?raw';
 import COPILOT_SVG from '../../icons-inline/copilot.svg?raw';
@@ -476,7 +476,7 @@ const VALID_PIN_KEYS = new Set<string>([
 
 const CONFIGURABLE_AGENT_TOOLS = new Set<ToolType>([
   'claude', 'codex', 'grok', 'antigravity', 'qwen', 'opencode',
-  'mimocode', 'kilo', 'openclaw', 'hermes', 'pi', 'kimicode',
+  'mimocode', 'kilo', 'openclaw', 'hermes', 'pi', 'kimicode', 'omp',
 ]);
 
 // Dynamic Island visibility follows the shared agent-status capability: native
@@ -586,8 +586,8 @@ export function CenterPanel() {
   // the order here is the launchpad's preferred presentation order.
   const BUILTIN_AI_CLI_FALLBACK: { key: ToolType; label: string }[] = [
     'claude', 'opencode', 'mimocode', 'kilo', 'openclaw', 'codex', 'grok', 'antigravity', 'qwen', 'hermes',
-    // Pi (T2) + Crush/Aider/Goose/Copilot/Cursor/Cline/Oh-My-Pi (T3 launch-only). Kimi Code is T1.
-    'pi', 'crush', 'aider', 'kimicode', 'goose', 'copilot', 'cursor', 'cline', 'omp',
+    // Pi/Oh-My-Pi (T2), Kimi Code (T1), Crush/Aider/Goose/Copilot/Cursor (T3).
+    'pi', 'crush', 'aider', 'kimicode', 'goose', 'copilot', 'cursor', 'omp',
   ].map((key) => ({ key: key as ToolType, label: getToolDisplayName(key) }));
 
   // Unified agent catalog — fully local. The remote catalog fetch

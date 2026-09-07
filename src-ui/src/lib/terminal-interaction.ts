@@ -595,7 +595,12 @@ export function parseTerminalAgentStatus(
 export function readTerminalScreen(term: Terminal): ScreenLine[] {
   const buffer = term.buffer.active;
   const viewportStart = buffer.baseY;
-  const viewportEnd = Math.min(buffer.length - 1, viewportStart + term.rows - 1);
+  let viewportEnd = Math.min(buffer.length - 1, viewportStart + term.rows - 1);
+  // Trim unused bottom rows before taking the bounded screen so a tall
+  // window does not hide a live selector above 60 entirely empty rows.
+  while (viewportEnd >= viewportStart && !buffer.getLine(viewportEnd)?.translateToString(true).trim()) {
+    viewportEnd -= 1;
+  }
   const start = Math.max(viewportStart, viewportEnd - 59);
   const screen: ScreenLine[] = [];
   const cell = buffer.getNullCell(); // scratch cell reused by getCell()
