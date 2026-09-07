@@ -470,6 +470,16 @@ pub type SharedSession = Arc<Mutex<std::collections::HashMap<String, TerminalSes
 
 // ─── Spawn ────────────────────────────────────────────────
 
+fn initial_pty_size(cols: u16, rows: u16) -> anyhow::Result<portable_pty::PtySize> {
+    anyhow::ensure!(cols > 0 && rows > 0, "PTY size must be non-zero");
+    Ok(portable_pty::PtySize {
+        rows,
+        cols,
+        pixel_width: 0,
+        pixel_height: 0,
+    })
+}
+
 /// Spawns `program` with `args` inside a PTY via portable-pty.
 /// On Windows this uses ConPTY, on Unix it uses native PTYs.
 ///
@@ -493,14 +503,14 @@ pub fn spawn(
     locale: Option<String>,
     extra_env: Vec<(String, String)>,
 ) -> anyhow::Result<()> {
-    use portable_pty::{native_pty_system, CommandBuilder, PtySize};
+    use portable_pty::{native_pty_system, CommandBuilder};
 
-    // Default to at least 120 cols so wide terminal output (help screens,
-    // table output, etc.) doesn't wrap aggressively in small windows.
-    let cols = initial_cols.max(120);
-    let rows = initial_rows.max(24);
+    let initial_size = initial_pty_size(initial_cols, initial_rows)?;
     eprintln!("[Tier Terminal] Spawning '{}' args={:?}", program, args);
-    eprintln!("[Tier Terminal] Size: {}x{}", cols, rows);
+    eprintln!(
+        "[Tier Terminal] Size: {}x{}",
+        initial_size.cols, initial_size.rows
+    );
 
     // ── Build command ──────────────────────────────────────────────────────
     // On Windows: npm-installed tools are .cmd scripts, not real .exe files.
@@ -728,12 +738,7 @@ pub fn spawn(
 
     // ── Open PTY pair ──────────────────────────────────────────────────────
     let pty_system = native_pty_system();
-    let pair = pty_system.openpty(PtySize {
-        rows,
-        cols,
-        pixel_width: 0,
-        pixel_height: 0,
-    })?;
+    let pair = pty_system.openpty(initial_size)?;
 
     // Spawn command into the PTY slave.
     // `child` is owned by a dedicated watcher thread (see below) which blocks
@@ -1148,6 +1153,15 @@ fn resolve_program(name: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn initial_pty_size_preserves_the_frontend_grid() {
+        let size = initial_pty_size(10, 4).unwrap();
+        assert_eq!(size.cols, 10);
+        assert_eq!(size.rows, 4);
+        assert!(initial_pty_size(0, 4).is_err());
+        assert!(initial_pty_size(10, 0).is_err());
+    }
 
     // ── extract_osc7_cwd ──────────────────────────────────────────────────────
 

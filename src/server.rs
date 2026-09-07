@@ -1113,16 +1113,20 @@ fn tier_terminal_resize(
     state: State<'_, AppState>,
 ) -> Result<(), String> {
     let map = state.terminal_session.lock().unwrap();
-    if let Some(session) = map.get(&session_id) {
-        let master_guard = session._master.lock().unwrap();
-        if let Some(ref master) = *master_guard {
-            resize_terminal_pty(master.as_ref(), cols, rows)?;
-        }
-    }
-    Ok(())
+    let session = map
+        .get(&session_id)
+        .ok_or_else(|| format!("No active terminal session for id: {session_id}"))?;
+    let master_guard = session._master.lock().unwrap();
+    let master = master_guard
+        .as_ref()
+        .ok_or_else(|| format!("Terminal session has no PTY master: {session_id}"))?;
+    resize_terminal_pty(master.as_ref(), cols, rows)
 }
 
 fn resize_terminal_pty(master: &dyn portable_pty::MasterPty, cols: u16, rows: u16) -> Result<(), String> {
+    if cols == 0 || rows == 0 {
+        return Err("Resize requires a non-zero PTY size".to_string());
+    }
     // get_size reads kernel state on Unix and ConPTY's applied size on Windows.
     // In particular, a Unix child can change winsize itself (e.g. stty).
     if master.get_size().is_ok_and(|size| size.cols == cols && size.rows == rows) {

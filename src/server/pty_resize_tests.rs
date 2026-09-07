@@ -63,3 +63,15 @@ fn native_pty_deduplicates_applied_size_and_retries_failures() {
     resize_terminal_pty(&pty, 120, 40).unwrap();
     assert_eq!(pty.calls.get(), 5, "unknown size falls back to resizing");
 }
+
+#[test]
+fn resize_rejects_zero_dimensions() {
+    let pair = portable_pty::native_pty_system().openpty(PtySize::default()).unwrap();
+    let pty = ObservedPty {
+        master: pair.master, calls: Cell::new(0),
+        fail_resize: Cell::new(false), fail_query: Cell::new(false),
+    };
+    assert!(resize_terminal_pty(&pty, 0, 24).is_err());
+    assert!(resize_terminal_pty(&pty, 80, 0).is_err());
+    assert_eq!(pty.calls.get(), 0);
+}

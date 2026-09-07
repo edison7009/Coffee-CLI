@@ -66,3 +66,85 @@ assert.equal(b.current, replacement, 'late loss from a disposed renderer cannot 
 assert.equal(attempts.current, 1, 'late callbacks do not consume the recovery budget');
 lifecycle.close(a); lifecycle.close(b);
 console.log('OK: renderer reuse, hidden-cache bound, eviction, unmount, and context recovery');
+
+// Exercise the production tab-activation effect and measurement callback.
+// Rendering an old grid must not unmask a tab before its new grid is fitted.
+let activationEffect, measureCallback;
+function visit(node) {
+  if (ts.isCallExpression(node)) {
+    if (node.expression.getText(source) === 'useLayoutEffect'
+      && node.arguments[1]?.getText(source) === '[isActive, sessionId]') {
+      activationEffect = node.arguments[0];
+    }
+    if (node.expression.getText(source) === 'createTerminalSizeSync') {
+      measureCallback = node.arguments[0];
+    }
+  }
+  ts.forEachChild(node, visit);
+}
+visit(source);
+assert.ok(activationEffect && measureCallback, 'extract the actual activation and measurement code');
+
+function activationFixture() {
+  let frame, fallback, render;
+  let masked = false;
+  const refreshRows = [];
+  const term = {
+    cols: 80, rows: 24, focus() {},
+    onRender(callback) { render = callback; return { dispose() { render = undefined; } }; },
+    refresh(_start, end) { refreshRows.push(end + 1); },
+  };
+  const afterFitRef = { current: null };
+  const context = {
+    isActive: true, sessionId: 'test', terminalOpened: true, term,
+    termRef: { current: { offsetParent: {}, clientWidth: 1000, clientHeight: 600 } },
+    xtermRef: { current: term }, webglRef: { current: null }, contextLossAttemptsRef: { current: 0 },
+    afterFitRef, sizeSyncRef: { current: { schedule() {} } },
+    fit: {
+      proposeDimensions: () => ({ cols: 100, rows: 30 }),
+      fit() { term.cols = 100; term.rows = 30; },
+    },
+    setCanvasHidden(value) { masked = value; },
+    attachWebglRenderer() {}, suspendWebglRenderer() {},
+    requestAnimationFrame(callback) { frame = callback; return 1; },
+    cancelAnimationFrame() { frame = undefined; },
+    setTimeout(callback) { fallback = callback; return 2; },
+    clearTimeout() { fallback = undefined; },
+  };
+  const evaluate = node => runInNewContext(ts.transpileModule(`(${node.getText(source)})`, {
+    compilerOptions: { target: ts.ScriptTarget.ES2022 },
+  }).outputText, context);
+  const cleanup = evaluate(activationEffect)();
+  const measure = evaluate(measureCallback);
+  return {
+    cleanup, measure, afterFitRef, refreshRows,
+    frame: () => frame?.(), render: () => render?.(), fallback: () => fallback?.(),
+    masked: () => masked,
+  };
+}
+
+const activation = activationFixture();
+activation.frame();
+activation.render();
+assert.equal(activation.masked(), true, 'old-grid render cannot reveal the tab');
+assert.deepEqual(activation.refreshRows, [], 'refresh waits for successful fitting');
+activation.measure();
+assert.deepEqual(activation.refreshRows, [30], 'refresh uses the newly fitted rows');
+assert.equal(activation.masked(), true, 'fitting alone does not reveal an unpainted frame');
+activation.render();
+assert.equal(activation.masked(), false, 'new-grid render reveals the tab');
+activation.cleanup();
+
+const timedOut = activationFixture();
+timedOut.frame(); timedOut.fallback();
+assert.equal(timedOut.masked(), false, 'missing measurement/render cannot strand the mask');
+assert.equal(timedOut.afterFitRef.current, null, 'fallback cancels the pending reveal callback');
+timedOut.measure();
+assert.deepEqual(timedOut.refreshRows, [], 'late fit does not restart a completed reveal');
+timedOut.cleanup();
+
+const cancelled = activationFixture();
+cancelled.frame(); cancelled.cleanup(); cancelled.measure();
+assert.equal(cancelled.afterFitRef.current, null, 'switch-away cancels pending reveal work');
+assert.deepEqual(cancelled.refreshRows, [], 'late fit cannot refresh a cancelled activation');
+console.log('OK: activation waits for fitted render, fallback, and switch-away cleanup');

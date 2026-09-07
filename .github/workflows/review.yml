@@ -30,6 +30,7 @@ jobs:
           npm run build
           npm run lint
           node scripts/run-terminal-interaction-test.mjs
+          node scripts/run-terminal-size-sync-test.mjs
           node scripts/run-shiki-test.mjs
           node scripts/run-tab-renderer-test.mjs
           node scripts/run-conversation-virtualizer-test.mjs
