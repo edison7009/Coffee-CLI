@@ -33,6 +33,7 @@ import {
 import { registerFileDropTarget, formatPathsForInsert } from '../../lib/file-drop';
 import { parseClaudeTerminalTitle } from '../../lib/claude-terminal-title';
 import { parseCodexTerminalTitle } from '../../lib/codex-terminal-title';
+import { parseOmpTerminalTitle } from '../../lib/omp-terminal-title';
 import { markNotifySoundPromptSubmitted } from '../../lib/notify-sound';
 import { onWindowForeground } from '../../lib/window-focus-filter';
 import { createTerminalSizeSync, DEFAULT_TERMINAL_GRID } from '../../lib/terminal-size-sync';
@@ -582,7 +583,9 @@ function TierTerminalImpl({
       dispatch({ type: 'SET_AGENT_STATUS', id: sessionId, status });
     };
     const markAgentSubmission = () => {
-      if (!usesAgentStatus) return;
+      // OMP reports all three states and deduplicates unchanged titles. Enter
+      // may only advance a selector, so a guessed working state could stick.
+      if (!usesAgentStatus || tool === 'omp') return;
       clearScreenIdleTimer();
       // The old selector frame may still be painted, but Enter hands control
       // back to the agent immediately. The next parsed screen will confirm or
@@ -600,7 +603,7 @@ function TierTerminalImpl({
       clearScreenIdleTimer();
       screenIdleTimer = window.setTimeout(() => {
         screenIdleTimer = undefined;
-        // Claude/Codex expose an authoritative active-turn bit in their
+        // Claude/Codex/OMP expose an authoritative active-turn bit in their
         // OSC title. Rendered text can pause while the model thinks, so mere
         // screen stability must never end a turn that the CLI still reports
         // as working/waiting. The title's later idle transition completes it.
@@ -1330,7 +1333,7 @@ function TierTerminalImpl({
 
     // Tool sets its own tab title via OSC 0/2 (e.g. Claude Code's conversation
     // summary) → xterm fires onTitleChange → mirror it to the tab title.
-    // Claude and Codex also carry their authoritative activity state in the
+    // Claude, Codex and OMP carry their authoritative activity state in the
     // title. Strip animated prefixes from Coffee's visible tab title so native
     // title updates do not make the text jitter. Claude's title only exposes
     // working vs non-working; permission prompts share its static idle prefix.
@@ -1348,6 +1351,10 @@ function TierTerminalImpl({
         if (parsed.status === 'wait_input') {
           requestTerminalForNativeAction('native:codex:action-required');
         }
+      } else if (tool === 'omp') {
+        const parsed = parseOmpTerminalTitle(title);
+        displayTitle = parsed.displayTitle;
+        publishNativeStatus(parsed.status);
       }
       if (displayTitle !== lastTabTitle) {
         lastTabTitle = displayTitle;

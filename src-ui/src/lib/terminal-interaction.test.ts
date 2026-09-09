@@ -16,6 +16,8 @@
  * Run with `node scripts/run-terminal-interaction-test.mjs` (esbuild-based).
  */
 import { supportsConversationTool } from './chat-tools';
+import { supportsAgentStatus, supportsNativeAgentStatus } from '../store/app-state';
+import { parseOmpTerminalTitle } from './omp-terminal-title';
 import type { Terminal } from '@xterm/xterm';
 import {
   parseTerminalAgentStatus,
@@ -516,6 +518,28 @@ export function main(): void {
   equal(parseTerminalAgentStatus(bashPermission, 'claude'), 'wait_input', 'Claude interaction waits');
   equal(parseTerminalAgentStatus(codexApproval, 'codex'), 'wait_input', 'Codex interaction waits');
 
+  // OMP v17.2.12 title-generator.ts: the separator immediately after π owns
+  // state; punctuation/spinners inside the session label are ordinary text.
+  const ompLabel = '修复 Tab ! > : ⠋';
+  const ompStates = [
+    ['>', 'idle'], ['!', 'wait_input'], [':', 'working'],
+    ...Array.from('⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏', frame => [frame, 'working']),
+  ] as const;
+  for (const [separator, status] of ompStates) {
+    for (const label of ['', ompLabel]) {
+      const title = label ? `π ${separator} ${label}` : `π ${separator}`;
+      const parsed = parseOmpTerminalTitle(title);
+      equal(parsed.status, status, `OMP native title: ${title}`);
+      equal(parsed.displayTitle, label || 'π', `OMP stable label: ${title}`);
+    }
+  }
+  for (const title of ['π: project', 'π: ! project', 'π', '', 'PowerShell', 'project π !', 'π !important', 'π ? project']) {
+    const parsed = parseOmpTerminalTitle(title);
+    equal(parsed.status, 'idle', `OMP static/unknown title: ${title}`);
+    equal(parsed.displayTitle, title, `OMP preserves static/unknown title: ${title}`);
+  }
+  equal(parseOmpTerminalTitle('  π !  等待确认  ').displayTitle, '等待确认', 'OMP trims title padding');
+
   // Negatives
   equal(parseTerminalInteraction(markdownList, 'claude'), null, 'markdown numbered list');
   equal(parseTerminalInteraction(indentedList, 'claude'), null, 'indented numbered prose');
@@ -549,6 +573,8 @@ export function main(): void {
     'hermes', 'openclaw', 'crush', 'aider', 'goose', 'copilot', 'cursor', 'cline',
     'terminal', 'remote',
   ] as const;
+  equal(supportsAgentStatus('omp'), true, 'OMP Dynamic Island enabled');
+  equal(supportsNativeAgentStatus('omp'), true, 'OMP uses native title state');
   for (const tool of terminalOnlyTools) {
     equal(supportsTerminalInteraction(tool), false, `${tool}: Coffee interaction disabled`);
     equal(supportsConversationTool(tool), false, `${tool}: conversation mode disabled`);

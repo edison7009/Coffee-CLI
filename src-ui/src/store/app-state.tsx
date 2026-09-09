@@ -24,14 +24,13 @@ export type AgentStatus = 'idle' | 'working' | 'wait_input';
 
 /** True only when the upstream CLI exposes authoritative state via OSC title. */
 export function supportsNativeAgentStatus(tool: ToolType): boolean {
-  return tool === 'claude' || tool === 'codex';
+  return tool === 'claude' || tool === 'codex' || tool === 'omp';
 }
 
-/** Enhanced status/interaction integration is intentionally allowlisted to
- * the tools that pass live Coffee UI testing. Every other CLI remains a
- * first-class native terminal without projected status or interaction UI. */
+/** Status can come from native titles even without a conversation view or
+ * rendered-screen interaction parser. */
 export function supportsAgentStatus(tool: ToolType): boolean {
-  return supportsEnhancedTool(tool);
+  return supportsNativeAgentStatus(tool) || supportsEnhancedTool(tool);
 }
 
 // Theme: color palette (orthogonal to shape)
