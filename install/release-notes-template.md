@@ -1,59 +1,64 @@
 <details open>
 <summary><b>🇨🇳 简体中文</b></summary>
 
-### Coffee CLI v3.5.1
+### Coffee CLI v3.5.2
 
-- **提升 Oh-My-Pi 支持等级。** 将 Oh-My-Pi 从 T3 升级到 T2，支持更完整的常见工作流接入。
-- **Cline 保持保守策略。** Cline 继续保留为启动专用模式，不开启 Bubble 会话界面切换。
-- **补齐工具矩阵。** 在 AI 工具分级说明中补充 Kilo Code，便于快速确认工具能力。
-- **新增防御性更新。** 同步 PTY 生命周期与终端几何测量，降低在重建/重启期间触发错误窗口大小变更的风险。
+- **重新设计 18 款终端配色。** 采用低饱和度配色，按六列色系、三行深浅排列，减少相近蓝色，让主题更容易挑选。
+- **区分两种黑色主题。** 黑曜石恢复接近纯黑的底色和暗炭灰边框；代码夜采用中性黑底与更清晰的灰色边框。
+- **提升界面辨识度。** 工具管理中开启的开关统一使用蓝色，修复选中色卡的圆角缝隙，并改善文字及按钮对比度。
+- **支持 Oh-My-Pi 灵动岛状态。** 从终端原生标题识别工作中、等待输入和空闲，避免动画标题抖动以及空回车造成错误状态。
+- **升级保留主题选择。** 现有主题使用重新设计后的颜色；暗黑改名为深咖、品红改名为烟紫，原青碧替换为葡萄紫。形态、图标及终端文字配色设置继续保留，可在外观设置中重新选色。
 
 </details>
 
 <details>
 <summary><b>🇬🇧 English</b></summary>
 
-### Coffee CLI v3.5.1
+### Coffee CLI v3.5.2
 
-- **Upgrade Oh-My-Pi support level.** Oh-My-Pi is promoted from T3 to T2 for broader workflow coverage.
-- **Keep Cline conservative.** Cline remains launch-only for now, with Bubble chat mode intentionally not upgraded yet.
-- **Expand tier visibility.** Add Kilo Code to the AI CLI tier matrix documentation.
-- **Add defensive terminal-size synchronization.** Align terminal geometry sampling with PTY lifecycle transitions to avoid stale or incorrect resize events during terminal spawn/restart.
+- **Redesign all 18 terminal palettes.** Muted colors form six hue columns and three depth rows, with fewer similar blues and clearer choices.
+- **Give the dark themes distinct roles.** Obsidian uses near-black surfaces and quiet charcoal borders; Code Night uses neutral black surfaces with clearer gray borders.
+- **Improve visual clarity.** Enabled tool switches consistently use blue. Selected color cards have seamless rounded corners, with improved text and button contrast.
+- **Add Oh-My-Pi Dynamic Island status.** Native terminal titles report working, waiting for input, and idle states without animated title jitter or false activity from empty Enter presses.
+- **Keep saved theme selections.** Existing themes adopt the redesigned colors. Dark becomes Espresso, Fuchsia becomes Mauve, and the former Teal palette becomes Grape. Shape, icon, and terminal text color preferences are retained; another palette can be selected in Appearance.
 
 </details>
 
 <details>
 <summary><b>🇹🇼 繁體中文</b></summary>
 
-### Coffee CLI v3.5.1
+### Coffee CLI v3.5.2
 
-- **提升 Oh-My-Pi 支援等級。** 將 Oh-My-Pi 從 T3 升級到 T2，支援更完整的常見工作流程。
-- **Cline 採取保守策略。** Cline 保持啟動專用，不開啟 Bubble 對話介面切換。
-- **補齊工具矩陣。** 在 AI 工具分級說明中補充 Kilo Code，方便快速確認能力。
-- **新增防禦式更新。** 將 PTY 生命周期與終端幾何量測同步，避免在重建 / 重啟過程中發生過時或錯誤的調整大小事件。
+- **重新設計 18 款終端配色。** 採用低飽和度配色，依六欄色系、三列深淺排列，減少相近的藍色，讓主題更容易挑選。
+- **區分兩種黑色主題。** 黑曜石恢復接近純黑的底色與暗炭灰邊框；代碼夜採用中性黑底與更清晰的灰色邊框。
+- **提升介面辨識度。** 工具管理中開啟的開關統一使用藍色，修復已選色卡的圓角縫隙，並改善文字與按鈕對比度。
+- **支援 Oh-My-Pi 靈動島狀態。** 從終端原生標題辨識工作中、等待輸入與閒置，避免動畫標題抖動及空白 Enter 造成錯誤狀態。
+- **升級保留主題選擇。** 現有主題套用重新設計的顏色；暗黑改名為深咖、品紅改名為煙紫，原青碧替換為葡萄紫。形態、圖示與終端文字配色設定繼續保留，可於外觀設定重新選色。
 
 </details>
 
 <details>
 <summary><b>🇯🇵 日本語</b></summary>
 
-### Coffee CLI v3.5.1
+### Coffee CLI v3.5.2
 
-- **Oh-My-Pi のレベルアップ。** Oh-My-Pi を T3 から T2 に引き上げ、より多くのワークフローに対応します。
-- **Cline の運用は保守的に。** Cline は引き続き起動専用モードを維持し、Bubble モードの切り替えは有効化しません。
-- **ティア表を拡張。** AI CLI のティア表に Kilo Code を追加して可視性を改善しました。
-- **防御的な更新を追加。** PTY のライフサイクルに合わせて端末サイズ測定を同期し、再起動時に起こり得る古いサイズ更新を防ぎます。
+- **18 種のターミナル配色を刷新。** 落ち着いた配色を色相ごとの 6 列と明暗の 3 行に整理し、似た青色を減らして選びやすくしました。
+- **暗色テーマの違いを明確化。** Obsidian は黒に近い背景と控えめなチャコールの枠線、Code Night はニュートラルな黒と明瞭なグレーの枠線を採用しました。
+- **視認性を改善。** 有効なツールのスイッチを青色に統一。選択中の配色カードの角の隙間を修正し、文字とボタンのコントラストを改善しました。
+- **Oh-My-Pi の Dynamic Island 状態表示に対応。** ネイティブの端末タイトルから動作中・入力待ち・待機を判定し、アニメーションによるタイトルの揺れや空の Enter による誤判定を防ぎます。
+- **保存済みのテーマ選択を維持。** 各テーマには新しい配色が適用されます。Dark は Espresso、Fuchsia は Mauve、従来の Teal は Grape に変わります。形状、アイコン、端末の文字配色設定は維持され、外観設定で別の配色を選べます。
 
 </details>
 
 <details>
 <summary><b>🇰🇷 한국어</b></summary>
 
-### Coffee CLI v3.5.1
+### Coffee CLI v3.5.2
 
-- **Oh-My-Pi 업그레이드.** Oh-My-Pi를 T3에서 T2로 올려 더 다양한 워크플로우를 지원합니다.
-- **Cline은 보수적으로 운영.** Cline은 계속해서 실행 전용 모드로 유지하며 Bubble 채팅 모드 전환은 아직 제공하지 않습니다.
-- **매트릭스 보완.** AI CLI 티어 매트릭스에 Kilo Code를 추가해 도구 가시성을 개선했습니다.
-- **방어적 업데이트 추가.** PTY 생명주기에 맞춰 터미널 크기 측정을 동기화해, 재시작/재생성 시점에 잘못된 크기 변경이 반영되는 것을 방지했습니다.
+- **18개 터미널 테마 재설계.** 차분한 색상을 색상 계열별 6열과 밝기별 3행으로 정리하고 비슷한 파란색을 줄여 선택하기 쉽게 했습니다.
+- **어두운 테마의 차이 강화.** Obsidian은 검정에 가까운 배경과 어두운 차콜 테두리를, Code Night는 중성 검정 배경과 선명한 회색 테두리를 사용합니다.
+- **화면 가독성 개선.** 활성화된 도구 스위치를 파란색으로 통일하고, 선택된 색상 카드의 둥근 모서리 틈을 수정했으며 글자와 버튼의 대비를 개선했습니다.
+- **Oh-My-Pi Dynamic Island 상태 지원.** 터미널의 기본 제목에서 작업 중, 입력 대기, 유휴 상태를 인식하여 제목 애니메이션의 흔들림과 빈 Enter 입력으로 인한 잘못된 상태 표시를 방지합니다.
+- **기존 테마 선택 유지.** 저장된 테마에 새 색상이 적용됩니다. Dark는 Espresso, Fuchsia는 Mauve, 기존 Teal은 Grape로 바뀝니다. 모양, 아이콘, 터미널 글자 색상 설정은 유지되며 외관 설정에서 다른 색상을 선택할 수 있습니다.
 
 </details>
