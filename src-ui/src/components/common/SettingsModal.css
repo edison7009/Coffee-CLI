@@ -157,7 +157,7 @@
 /* ── Two-tone theme cards (surface band + accent band, label below) ────── */
 .settings-theme-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 11px;
 }
 .settings-theme-card {
@@ -180,7 +180,11 @@
   transition: border-color 0.14s ease, transform 0.14s ease;
 }
 .settings-theme-card:hover .settings-theme-preview { transform: translateY(-1px); }
-.settings-theme-card.active .settings-theme-preview { border-color: var(--ring, var(--accent)); }
+.settings-theme-card.active .settings-theme-preview {
+  border-color: var(--ring, var(--accent));
+  /* Cover antialiasing seams between the border and clipped color bands. */
+  background: var(--ring, var(--accent));
+}
 .settings-theme-band-bg { flex: 1; }
 .settings-theme-band-accent { height: 14px; }
 .settings-theme-check {

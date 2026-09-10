@@ -1262,7 +1262,7 @@
 
 .remote-proto-btn.active {
   background: var(--accent);
-  color: #fff;
+  color: var(--bg-app);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
@@ -1335,7 +1335,7 @@
   padding: 12px;
   font-size: 14px;
   font-weight: 600;
-  color: #fff;
+  color: var(--bg-app);
   background: var(--accent);
   border: none;
   border-radius: var(--radius-sm);
@@ -1377,7 +1377,8 @@
   transition: background-color 0.18s ease;
   margin-left: 8px;
 }
-.library-toggle.on { background: var(--accent); }
+/* Keep the on state recognizable even in themes with a gray accent. */
+.library-toggle.on { background: #007aff; }
 .library-toggle-knob {
   position: absolute;
   top: 2px;

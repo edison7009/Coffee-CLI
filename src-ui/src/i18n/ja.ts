@@ -165,7 +165,7 @@ export const ja = {
   'theme.section.shape': 'シェイプ',
   'theme.section.icons': 'アイコン',
   'theme.color.light': 'ライト',
-  'theme.color.dark': 'ダーク',
+  'theme.color.dark': 'エスプレッソ',
   'theme.color.cappuccino': 'コードダーク',
   'theme.color.sakura': '夜桜',
   'theme.color.lavender': 'ラベンダー',
@@ -177,9 +177,11 @@ export const ja = {
   'theme.color.sunset': 'サンセット',
   'theme.color.amber': 'アンバー',
   'theme.color.emerald': 'エメラルド',
-  'theme.color.teal': 'ティール',
+  'theme.color.teal': 'グレープ',
   'theme.color.indigo': 'インディゴ',
-  'theme.color.fuchsia': 'フューシャ',
+  'theme.color.fuchsia': 'モーブ',
+  'theme.color.glacier': '氷河ブルー',
+  'theme.color.slate': 'バーガンディ',
 
   // Gambit · 一手
   'gambit.title': '一手',

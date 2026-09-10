@@ -37,9 +37,8 @@ export function supportsAgentStatus(tool: ToolType): boolean {
 export type ThemeColor =
   | 'dark' | 'light' | 'cappuccino' | 'sakura' | 'lavender' | 'mint'
   | 'obsidian' | 'cobalt' | 'moss'
-  // Vibrant batch — saturated accents on tinted-dark bases (crimson is the
-  // Spider-Man hero, intended to pair with the carbon shape).
-  | 'crimson' | 'sunset' | 'amber' | 'emerald' | 'teal' | 'indigo' | 'fuchsia';
+  | 'crimson' | 'sunset' | 'amber' | 'emerald' | 'teal' | 'indigo' | 'fuchsia'
+  | 'glacier' | 'slate';
 // Theme: shape form (orthogonal to color)
 // Frost reuses the full glass chrome; only the frosted backdrop layer differs
 // (see isFrostShape + [data-frost] CSS). App.tsx normalizes it to
@@ -678,6 +677,7 @@ const VALID_THEMES: ThemeColor[] = [
   'dark', 'light', 'cappuccino', 'sakura', 'lavender', 'mint',
   'obsidian', 'cobalt', 'moss',
   'crimson', 'sunset', 'amber', 'emerald', 'teal', 'indigo', 'fuchsia',
+  'glacier', 'slate',
 ];
 const VALID_SHAPES: ThemeShape[] = [
   'soft', 'slab', 'sharp', 'glass',
@@ -692,7 +692,7 @@ const VALID_ICON_THEMES: IconTheme[] = [
 function getInitialState(): AppState {
   // Default 'obsidian' + 'panel' — the "严谨高级简约" out-of-box. Carbon's
   // hex-mesh + translucent chrome is polarizing (love-it-or-hate-it); obsidian
-  // (#0a0a0a near-black, neutral, no hue tint) + panel (sharp 0-radius corners,
+  // (near-black with a neutral accent) + panel (sharp 0-radius corners,
   // strong 2px borders) reads as a flat, restrained developer-tool aesthetic
   // that a broader 70% find acceptable vs carbon's 50/50 split. Panel is also
   // simpler than carbon (no mask/backdrop-filter/:not() nuclear rule), so less

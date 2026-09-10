@@ -75,29 +75,27 @@ export const TERM_COLOR_SCHEMES: TermColorScheme[] = [
 // pick the right background synchronously on theme prop change — reading the
 // CSS variable lags by one switch (child effects fire before App.tsx writes
 // `data-theme`). Must stay in sync with each [data-theme] block in global.css.
-// Dark themes follow "terminal bg == bg-app" for a continuous surface.
-// Light theme deliberately uses a softer cream than --bg-app: pure ivory
-// #FAFAF7 is too bright for CLI mid-tone palettes (Claude Code's RGB tan
-// branding, ANSI bright-black), and going too gray makes those same colors
-// vanish. #eeebe2 keeps the daytime feel while giving dark + gray text
-// 5–12:1 contrast so primary/secondary copy stays legible.
+// All themes follow "terminal bg == bg-app" for a continuous surface.
+// Light uses warm paper; dark themes use gently tinted charcoal.
 const THEME_TERMINAL_BG: Record<string, string> = {
-  dark:       '#1a1917',
-  light:      '#eeebe2',
-  cappuccino: '#1a1a1a',
-  sakura:     '#1a1520',
-  lavender:   '#1a1826',
-  mint:       '#0f1e1c',
+  dark:       '#15110e',
+  light:      '#eeece6',
+  cappuccino: '#1e1e1e',
+  sakura:     '#262024',
+  lavender:   '#25212b',
+  mint:       '#1f2723',
   obsidian:   '#0a0a0a',
-  cobalt:     '#0a1020',
-  moss:       '#0b1612',
-  crimson:    '#2a0d10',
-  sunset:     '#241408',
-  amber:      '#20180a',
-  emerald:    '#0a1c12',
-  teal:       '#0a2125',
-  indigo:     '#12142e',
-  fuchsia:    '#210f1d',
+  cobalt:     '#171d26',
+  moss:       '#101812',
+  crimson:    '#1c1619',
+  sunset:     '#1e1915',
+  amber:      '#272219',
+  emerald:    '#161e19',
+  teal:       '#15101b',
+  indigo:     '#101620',
+  fuchsia:    '#1e1824',
+  glacier:    '#20252d',
+  slate:      '#130f11',
 };
 
 // Per-theme selection accent. Picked so each theme's selection highlight
@@ -105,22 +103,24 @@ const THEME_TERMINAL_BG: Record<string, string> = {
 // brand coffee for every theme. deriveSelectionBg further darkens these
 // and applies alpha before they reach xterm.
 const THEME_SELECTION_ACCENT: Record<string, string> = {
-  dark:       '#c4956a',
-  light:      '#c4956a',
-  cappuccino: '#c4956a',
-  sakura:     '#e08aa8',
-  lavender:   '#a896d8',
-  mint:       '#7ec4a8',
-  obsidian:   '#9ca8b8',
-  cobalt:     '#5a8cd0',
-  moss:       '#88b87a',
-  crimson:    '#e23b42',
-  sunset:     '#f5803b',
-  amber:      '#e8a72c',
-  emerald:    '#24c281',
-  teal:       '#2bc4c4',
-  indigo:     '#6172f0',
-  fuchsia:    '#d94aa0',
+  dark:       '#a97d5c',
+  light:      '#5c6267',
+  cappuccino: '#b3b3b3',
+  sakura:     '#dab2be',
+  lavender:   '#c7b3d4',
+  mint:       '#b0c9bc',
+  obsidian:   '#858585',
+  cobalt:     '#86a5cd',
+  moss:       '#6d9d82',
+  crimson:    '#c58e9a',
+  sunset:     '#bd9270',
+  amber:      '#d2b28e',
+  emerald:    '#8ab59e',
+  teal:       '#9a78ae',
+  indigo:     '#6789b6',
+  fuchsia:    '#ad90bf',
+  glacier:    '#adc3dd',
+  slate:      '#ad7480',
 };
 
 // Collapse any mix of CRLF / bare CR into plain LF before handing text to
@@ -182,7 +182,7 @@ export function buildFontFamily(userFont?: string): string {
 function buildXtermTheme(themeName: string, hasBg: boolean | undefined, schemeId?: string, rawShell = false) {
   const isDark = themeName !== 'light';
   const scheme = schemeId ? TERM_COLOR_SCHEMES.find(s => s.id === schemeId) : undefined;
-  const bgOpaque = THEME_TERMINAL_BG[themeName] || (isDark ? '#0c0c0c' : '#eeebe2');
+  const bgOpaque = THEME_TERMINAL_BG[themeName] || THEME_TERMINAL_BG[isDark ? 'obsidian' : 'light'];
   const bg = hasBg ? 'rgba(0,0,0,0)' : bgOpaque;
 
   // Build the default warm palette first (full 16 ANSI colors), then let
@@ -2109,7 +2109,7 @@ function TierTerminalImpl({
 
   // ── Render ───────────────────────────────────────────────────────────────
 
-  const solidBg = THEME_TERMINAL_BG[theme] || (theme === 'light' ? '#eeebe2' : '#0c0c0c');
+  const solidBg = THEME_TERMINAL_BG[theme] || THEME_TERMINAL_BG[theme === 'light' ? 'light' : 'obsidian'];
   const terminalBg = hasBg ? 'transparent' : solidBg;
 
   return (

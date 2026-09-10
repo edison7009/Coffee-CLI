@@ -350,583 +350,618 @@ textarea,
     --carbon-mesh-opacity: 0.30;
 }
 
-/* ─── Dark Theme (Claude-inspired & Espresso) ──────────── */
+/* Terminal palettes: quiet surfaces, readable text, muted accents.
+   Keep swatches and xterm background/selection maps in sync. */
+/* ─── 深咖 — orange, deep ──── */
 [data-theme="dark"] {
-    --bg-app: #1a1917; /* Deep Espresso */
-    --bg-panel: #22201e; /* Minimal contrast */
-    --bg-card: rgba(255, 255, 255, 0.03);
-    --bg-input: #292624;
-    --bg-input-focus: #312e2b;
-    --bg-hover: rgba(255, 255, 255, 0.05);
-    --bg-active: rgba(255, 255, 255, 0.08);
+    --bg-app: #15110e;
+    --bg-panel: #1d1916;
+    --bg-card: rgba(229, 226, 220, 0.025);
+    --bg-input: #25211e;
+    --bg-input-focus: #2d2926;
+    --bg-hover: rgba(169, 125, 92, 0.07);
+    --bg-active: rgba(169, 125, 92, 0.11);
 
-    --border: rgba(255, 255, 255, 0.04);
-    --border-input: rgba(255, 255, 255, 0.06);
-    --border-focus: rgba(255, 255, 255, 0.15);
+    --border: rgba(229, 226, 220, 0.09);
+    --border-input: rgba(229, 226, 220, 0.14);
+    --border-focus: rgba(169, 125, 92, 0.5);
 
-    --text-1: #e4e1db;
-    --text-2: #aca79e;
-    --text-3: #807b74;
+    --text-1: #e5e2dc;
+    --text-2: #bab5ac;
+    --text-3: #a29a8e;
 
-    --accent: #c4956a;
-    --accent-hover: #d4a57a;
-    --accent-active: #b5865c;
-    --accent-bg: rgba(196, 149, 106, 0.12);
+    --accent: #a97d5c;
+    --accent-hover: #b58f73;
+    --accent-active: #9d7456;
+    --accent-bg: rgba(169, 125, 92, 0.13);
 
-    --green: #7ec77e;
-    --red: #e07070;
-    --blue: #78a8d4;
+    --green: #98b89d;
+    --red: #d99a9a;
+    --blue: #93b3d2;
 
-    --shadow-panel: 0 16px 48px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.15);
+    --shadow-panel: 0 16px 48px rgba(0, 0, 0, 0.5), 0 4px 16px rgba(0, 0, 0, 0.28);
+    --shadow-rgb: 169, 125, 92;
     --glass-blur: blur(24px);
-    /* RGB triplet of the colour used for floating drop-shadows on
-       theme-aware surfaces (currently Gambit). Pure-black drop shadows
-       vanish into the deep-espresso background; the accent-derived
-       triplet keeps the shadow readable while still feeling on-palette. */
-    --shadow-rgb: 196, 149, 106;
 
-    --bg-terminal: #1a1917; /* Match bg-app — unified surface rule across themes */
+    --bg-terminal: #15110e; /* Match bg-app */
 }
 
-/* ─── Light Theme (Latte / Warm Ivory Parchment) ──────── */
-/* Contrast tightened to match Claude desktop's light theme: near-black
-   primary, dark-gray secondary, mid-gray tertiary. The previous palette
-   (text-2 #6b6965, text-3 #9e9c98) hit ~5:1 / ~3:1 against the ivory
-   background — readable on paper but visibly washed once the .cwd
-   subtitle layered an extra opacity: 0.6 on top of text-3, dropping
-   that line to ~2:1 (effectively invisible). */
+/* ─── 明亮 — neutral, soft ──── */
 [data-theme="light"] {
-    --bg-app: #FAFAF7; /* Clean ivory */
-    --bg-panel: rgba(255, 255, 255, 0.7); /* Breathable transparency */
-    --bg-card: #ffffff;
-    --bg-input: #ffffff;
-    --bg-input-focus: #ffffff;
-    --bg-hover: rgba(0, 0, 0, 0.04);
-    --bg-active: rgba(0, 0, 0, 0.08);
+    --bg-app: #eeece6;
+    --bg-panel: #f6f4ef;
+    --bg-card: #f9f7f2;
+    --bg-input: #e7e4dc;
+    --bg-input-focus: #dfdcd3;
+    --bg-hover: rgba(92, 98, 103, 0.07);
+    --bg-active: rgba(92, 98, 103, 0.11);
 
-    --border: rgba(0, 0, 0, 0.1); /* Was 0.06 — too faint to delineate cards */
-    --border-input: rgba(0, 0, 0, 0.14);
-    --border-focus: rgba(196, 149, 106, 0.45);
+    --border: rgba(48, 51, 47, 0.14);
+    --border-input: rgba(48, 51, 47, 0.2);
+    --border-focus: rgba(92, 98, 103, 0.6);
 
-    --text-1: #1a1816; /* Near-black, matches Claude's primary */
-    --text-2: #4a4844; /* Darker secondary — sidebar nav level */
-    --text-3: #737170; /* Mid-gray — survives the .cwd opacity 0.6 multiplier */
+    --text-1: #30332f;
+    --text-2: #50564f;
+    --text-3: #5b6157;
 
-    --accent: #a87246; /* Darker tan — original #c4956a was 3:1 on white */
-    --accent-hover: #976237;
-    --accent-active: #855228;
-    --accent-bg: rgba(168, 114, 70, 0.1);
+    --accent: #5c6267;
+    --accent-hover: #53585d;
+    --accent-active: #4a4e52;
+    --accent-bg: rgba(92, 98, 103, 0.1);
 
-    --green: #34c759;
-    --red: #ff3b30;
-    --blue: #78a8d4;
+    --green: #496b4e;
+    --red: #9b4c49;
+    --blue: #476a8a;
 
-    --shadow-panel: 0 16px 48px rgba(0, 0, 0, 0.06), 0 4px 16px rgba(0, 0, 0, 0.03); /* Claude-like soft diffuse shadow */
-    --glass-blur: blur(28px);
-    /* Light theme keeps the classic black drop-shadow — the ivory
-       background reads it cleanly, no need for the accent-derived
-       coloured shadow that the dark themes use. */
+    --shadow-panel: 0 16px 48px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.04);
     --shadow-rgb: 0, 0, 0;
+    --glass-blur: blur(24px);
 
-    --bg-terminal: #eeebe2; /* Soft cream — slightly darker than ivory body
-                               so terminal reads as a recessed workspace
-                               between the two brighter side panels. */
+    --bg-terminal: #eeece6; /* Match bg-app */
 }
 
-/* ─── Code Dark (代码夜) — Cursor IDE faithful palette ──────── */
+/* ─── 代码夜 — neutral, balanced ──── */
 [data-theme="cappuccino"] {
-    --bg-app: #1a1a1a;
-    --bg-panel: #252525;
-    --bg-card: rgba(255, 255, 255, 0.03);
-    --bg-input: #3a3a3a;
-    --bg-input-focus: #444444;
-    --bg-hover: rgba(255, 255, 255, 0.05);
-    --bg-active: rgba(255, 255, 255, 0.08);
+    --bg-app: #1e1e1e;
+    --bg-panel: #262626;
+    --bg-card: rgba(228, 228, 228, 0.025);
+    --bg-input: #2e2e2e;
+    --bg-input-focus: #363636;
+    --bg-hover: rgba(179, 179, 179, 0.07);
+    --bg-active: rgba(179, 179, 179, 0.11);
 
-    --border: #333333;
-    --border-input: #3a3a3a;
-    --border-focus: #555555;
+    --border: rgba(228, 228, 228, 0.11);
+    --border-input: rgba(228, 228, 228, 0.16);
+    --border-focus: rgba(179, 179, 179, 0.5);
 
-    --text-1: #cccccc;
-    --text-2: #808080;
-    --text-3: #555555;
+    --text-1: #e4e4e4;
+    --text-2: #bcbcbc;
+    --text-3: #a5a5a5;
 
-    --accent: #4a4a4a;
-    --accent-hover: #5a5a5a;
-    --accent-active: #3a3a3a;
-    --accent-bg: rgba(255, 255, 255, 0.05);
+    --accent: #b3b3b3;
+    --accent-hover: #bebebe;
+    --accent-active: #a7a7a7;
+    --accent-bg: rgba(179, 179, 179, 0.13);
 
-    --green: #4ec9b0;
-    --red: #f14c4c;
-    --blue: #569cd6;
+    --green: #98b89d;
+    --red: #d99a9a;
+    --blue: #93b3d2;
 
-    --shadow-panel: 0 16px 48px rgba(0, 0, 0, 0.6), 0 4px 16px rgba(0, 0, 0, 0.4);
-    --shadow-rgb: 160, 160, 160;
+    --shadow-panel: 0 16px 48px rgba(0, 0, 0, 0.5), 0 4px 16px rgba(0, 0, 0, 0.28);
+    --shadow-rgb: 179, 179, 179;
     --glass-blur: blur(24px);
 
-    --bg-terminal: #1a1a1a; /* Match bg-app */
+    --bg-terminal: #1e1e1e; /* Match bg-app */
 }
 
-/* ─── Sakura Noir (夜樱) — pink on deep plum ──────── */
+/* ─── 夜樱 — rose, soft ──── */
 [data-theme="sakura"] {
-    --bg-app: #1a1520;
-    --bg-panel: #221b28;
-    --bg-card: rgba(248, 180, 200, 0.035);
-    --bg-input: #2a2230;
-    --bg-input-focus: #322838;
-    --bg-hover: rgba(248, 180, 200, 0.06);
-    --bg-active: rgba(248, 180, 200, 0.1);
+    --bg-app: #262024;
+    --bg-panel: #2e282c;
+    --bg-card: rgba(232, 225, 229, 0.025);
+    --bg-input: #363034;
+    --bg-input-focus: #3e383c;
+    --bg-hover: rgba(218, 178, 190, 0.07);
+    --bg-active: rgba(218, 178, 190, 0.11);
 
-    --border: rgba(248, 180, 200, 0.06);
-    --border-input: rgba(248, 180, 200, 0.09);
-    --border-focus: rgba(248, 180, 200, 0.4);
+    --border: rgba(232, 225, 229, 0.09);
+    --border-input: rgba(232, 225, 229, 0.14);
+    --border-focus: rgba(218, 178, 190, 0.5);
 
-    --text-1: #f0e4ea;
-    --text-2: #c4b0bc;
-    --text-3: #8a7684;
+    --text-1: #e8e1e5;
+    --text-2: #beb2bb;
+    --text-3: #b3a3ae;
 
-    --accent: #f8b4c8;
-    --accent-hover: #ffc6d6;
-    --accent-active: #e89cb4;
-    --accent-bg: rgba(248, 180, 200, 0.14);
+    --accent: #dab2be;
+    --accent-hover: #dfbdc7;
+    --accent-active: #cca6b2;
+    --accent-bg: rgba(218, 178, 190, 0.13);
 
-    --green: #a8dcc0;
-    --red: #ff8098;
-    --blue: #b4a8e0;
+    --green: #98b89d;
+    --red: #d99a9a;
+    --blue: #93b3d2;
 
-    --shadow-panel: 0 16px 48px rgba(40, 10, 30, 0.45), 0 4px 16px rgba(20, 5, 15, 0.2);
-    --shadow-rgb: 248, 180, 200;
+    --shadow-panel: 0 16px 48px rgba(0, 0, 0, 0.5), 0 4px 16px rgba(0, 0, 0, 0.28);
+    --shadow-rgb: 218, 178, 190;
     --glass-blur: blur(24px);
 
-    --bg-terminal: #1a1520; /* Match bg-app */
+    --bg-terminal: #262024; /* Match bg-app */
 }
 
-/* ─── Lavender Mist (薰衣草雾) — lilac on deep violet-grey ──────── */
+/* ─── 薰衣草雾 — violet, soft ──── */
 [data-theme="lavender"] {
-    --bg-app: #1a1826;
-    --bg-panel: #221f2e;
-    --bg-card: rgba(200, 182, 255, 0.035);
-    --bg-input: #2a2638;
-    --bg-input-focus: #322d42;
-    --bg-hover: rgba(200, 182, 255, 0.06);
-    --bg-active: rgba(200, 182, 255, 0.1);
+    --bg-app: #25212b;
+    --bg-panel: #2d2933;
+    --bg-card: rgba(228, 225, 235, 0.025);
+    --bg-input: #35313b;
+    --bg-input-focus: #3d3943;
+    --bg-hover: rgba(199, 179, 212, 0.07);
+    --bg-active: rgba(199, 179, 212, 0.11);
 
-    --border: rgba(200, 182, 255, 0.07);
-    --border-input: rgba(200, 182, 255, 0.1);
-    --border-focus: rgba(200, 182, 255, 0.38);
+    --border: rgba(228, 225, 235, 0.09);
+    --border-input: rgba(228, 225, 235, 0.14);
+    --border-focus: rgba(199, 179, 212, 0.5);
 
-    --text-1: #e8e4f2;
-    --text-2: #b8b0cc;
-    --text-3: #7e7890;
+    --text-1: #e4e1eb;
+    --text-2: #b9b3c6;
+    --text-3: #aca5b7;
 
-    --accent: #c8b6ff;
-    --accent-hover: #d8c8ff;
-    --accent-active: #b0a0ec;
-    --accent-bg: rgba(200, 182, 255, 0.13);
+    --accent: #c7b3d4;
+    --accent-hover: #cfbeda;
+    --accent-active: #baa7c6;
+    --accent-bg: rgba(199, 179, 212, 0.13);
 
-    --green: #a8d4b8;
-    --red: #f09090;
-    --blue: #a0b8e4;
+    --green: #98b89d;
+    --red: #d99a9a;
+    --blue: #93b3d2;
 
-    --shadow-panel: 0 16px 48px rgba(20, 15, 40, 0.45), 0 4px 16px rgba(10, 8, 20, 0.2);
-    --shadow-rgb: 200, 182, 255;
+    --shadow-panel: 0 16px 48px rgba(0, 0, 0, 0.5), 0 4px 16px rgba(0, 0, 0, 0.28);
+    --shadow-rgb: 199, 179, 212;
     --glass-blur: blur(24px);
 
-    --bg-terminal: #1a1826; /* Match bg-app */
+    --bg-terminal: #25212b; /* Match bg-app */
 }
 
-/* ─── Mint Abyss (薄荷深海) — mint on deep teal-black ──────── */
+/* ─── 薄荷深海 — green, soft ──── */
 [data-theme="mint"] {
-    --bg-app: #0f1e1c;
-    --bg-panel: #142623;
-    --bg-card: rgba(122, 232, 200, 0.035);
-    --bg-input: #1a2e2a;
-    --bg-input-focus: #203832;
-    --bg-hover: rgba(122, 232, 200, 0.06);
-    --bg-active: rgba(122, 232, 200, 0.1);
+    --bg-app: #1f2723;
+    --bg-panel: #272f2b;
+    --bg-card: rgba(224, 232, 228, 0.025);
+    --bg-input: #2f3733;
+    --bg-input-focus: #373f3b;
+    --bg-hover: rgba(176, 201, 188, 0.07);
+    --bg-active: rgba(176, 201, 188, 0.11);
 
-    --border: rgba(122, 232, 200, 0.07);
-    --border-input: rgba(122, 232, 200, 0.1);
-    --border-focus: rgba(122, 232, 200, 0.38);
+    --border: rgba(224, 232, 228, 0.09);
+    --border-input: rgba(224, 232, 228, 0.14);
+    --border-focus: rgba(176, 201, 188, 0.5);
 
-    --text-1: #e0f0ea;
-    --text-2: #a0c4b8;
-    --text-3: #688478;
+    --text-1: #e0e8e4;
+    --text-2: #b0c0b8;
+    --text-3: #9cafa4;
 
-    --accent: #7ae8c8;
-    --accent-hover: #94f2d6;
-    --accent-active: #60d0b0;
-    --accent-bg: rgba(122, 232, 200, 0.13);
+    --accent: #b0c9bc;
+    --accent-hover: #bbd1c5;
+    --accent-active: #a4bcb0;
+    --accent-bg: rgba(176, 201, 188, 0.13);
 
-    --green: #7ae8c8;
-    --red: #ff8878;
-    --blue: #78c8d4;
+    --green: #98b89d;
+    --red: #d99a9a;
+    --blue: #93b3d2;
 
-    --shadow-panel: 0 16px 48px rgba(0, 15, 12, 0.45), 0 4px 16px rgba(0, 8, 6, 0.2);
-    --shadow-rgb: 122, 232, 200;
+    --shadow-panel: 0 16px 48px rgba(0, 0, 0, 0.5), 0 4px 16px rgba(0, 0, 0, 0.28);
+    --shadow-rgb: 176, 201, 188;
     --glass-blur: blur(24px);
 
-    --bg-terminal: #0f1e1c; /* Match bg-app */
+    --bg-terminal: #1f2723; /* Match bg-app */
 }
 
-/* ─── Obsidian (黑曜石) — near-black with neutral-gray accent ──────
-   Deeper than every other dark theme (dark #1a1917, cappuccino #1a1a1a).
-   No hue — just pure carbon black with graphite-gray chrome. Accent is
-   intentionally a mid-gray, not orange; nothing competes with the black. */
+/* ─── 黑曜石 — near-black surfaces with quiet charcoal borders ──── */
 [data-theme="obsidian"] {
     --bg-app: #0a0a0a;
-    --bg-panel: #111111;
-    --bg-card: rgba(255, 255, 255, 0.02);
-    --bg-input: #181818;
-    --bg-input-focus: #1e1e1e;
-    --bg-hover: rgba(255, 255, 255, 0.035);
-    --bg-active: rgba(255, 255, 255, 0.06);
+    --bg-panel: #101010;
+    --bg-card: rgba(222, 222, 222, 0.02);
+    --bg-input: #151515;
+    --bg-input-focus: #1a1a1a;
+    --bg-hover: rgba(133, 133, 133, 0.07);
+    --bg-active: rgba(133, 133, 133, 0.11);
 
-    --border: rgba(255, 255, 255, 0.045);
-    --border-input: rgba(255, 255, 255, 0.065);
-    --border-focus: rgba(255, 255, 255, 0.2);
+    --border: #1f1f1f;
+    --border-input: #282828;
+    --border-focus: #5b5b5b;
 
-    --text-1: #d0d0d0;
-    --text-2: #8a8a8a;
-    --text-3: #5a5a5a;
+    --text-1: #dedede;
+    --text-2: #b5b5b5;
+    --text-3: #9b9b9b;
 
-    --accent: #5a5a5a;
-    --accent-hover: #6e6e6e;
-    --accent-active: #4a4a4a;
-    --accent-bg: rgba(255, 255, 255, 0.06);
+    --accent: #858585;
+    --accent-hover: #969696;
+    --accent-active: #7a7a7a;
+    --accent-bg: rgba(133, 133, 133, 0.11);
 
-    --green: #7fb07f;
-    --red: #d07070;
-    --blue: #6ea0cc;
+    --green: #98b89d;
+    --red: #d99a9a;
+    --blue: #93b3d2;
 
-    --shadow-panel: 0 16px 48px rgba(0, 0, 0, 0.75), 0 4px 16px rgba(0, 0, 0, 0.55);
-    --shadow-rgb: 160, 160, 160;
+    --shadow-panel: 0 16px 48px rgba(0, 0, 0, 0.5), 0 4px 16px rgba(0, 0, 0, 0.28);
+    --shadow-rgb: 133, 133, 133;
     --glass-blur: blur(24px);
 
     --bg-terminal: #0a0a0a; /* Match bg-app */
 }
 
-/* ─── Cobalt (钴蓝) — near-black with a faint blue wash ──────────
-   The hue is felt, not seen. Base #0a1020 is only a few points of red/green
-   below pure black but adds a measurable blue tilt. Accent is a muted
-   steel-blue, nowhere near cyan. */
+/* ─── 钴蓝 — blue, balanced ──── */
 [data-theme="cobalt"] {
-    --bg-app: #0a1020;
-    --bg-panel: #0f1628;
-    --bg-card: rgba(160, 190, 230, 0.025);
-    --bg-input: #141c32;
-    --bg-input-focus: #1a233c;
-    --bg-hover: rgba(160, 190, 230, 0.045);
-    --bg-active: rgba(160, 190, 230, 0.075);
+    --bg-app: #171d26;
+    --bg-panel: #1f252e;
+    --bg-card: rgba(223, 229, 238, 0.025);
+    --bg-input: #272d36;
+    --bg-input-focus: #2f353e;
+    --bg-hover: rgba(134, 165, 205, 0.07);
+    --bg-active: rgba(134, 165, 205, 0.11);
 
-    --border: rgba(160, 190, 230, 0.06);
-    --border-input: rgba(160, 190, 230, 0.09);
-    --border-focus: rgba(90, 133, 184, 0.5);
+    --border: rgba(223, 229, 238, 0.09);
+    --border-input: rgba(223, 229, 238, 0.14);
+    --border-focus: rgba(134, 165, 205, 0.5);
 
-    --text-1: #d0d6e2;
-    --text-2: #8e99b0;
-    --text-3: #5a6478;
+    --text-1: #dfe5ee;
+    --text-2: #b0bdcf;
+    --text-3: #97a6bb;
 
-    --accent: #5a85b8;
-    --accent-hover: #6e97c8;
-    --accent-active: #4a73a3;
-    --accent-bg: rgba(90, 133, 184, 0.14);
+    --accent: #86a5cd;
+    --accent-hover: #97b2d4;
+    --accent-active: #7d9ac0;
+    --accent-bg: rgba(134, 165, 205, 0.13);
 
-    --green: #7fa8b8;
-    --red: #c88888;
-    --blue: #7ea4cc;
+    --green: #98b89d;
+    --red: #d99a9a;
+    --blue: #93b3d2;
 
-    --shadow-panel: 0 16px 48px rgba(0, 2, 10, 0.65), 0 4px 16px rgba(0, 1, 6, 0.4);
-    --shadow-rgb: 90, 133, 184;
+    --shadow-panel: 0 16px 48px rgba(0, 0, 0, 0.5), 0 4px 16px rgba(0, 0, 0, 0.28);
+    --shadow-rgb: 134, 165, 205;
     --glass-blur: blur(24px);
 
-    --bg-terminal: #0a1020; /* Match bg-app */
+    --bg-terminal: #171d26; /* Match bg-app */
 }
 
-/* ─── Moss (苔藓) — near-black with a faint green wash ─────────
-   Same philosophy as cobalt: the base is nearly black, hue carried by a
-   small green offset. Accent is a sedate forest-green, not the bright
-   teal of "mint". Intended for long reading sessions. */
+/* ─── 苔藓 — green, deep ──── */
 [data-theme="moss"] {
-    --bg-app: #0b1612;
-    --bg-panel: #101c18;
-    --bg-card: rgba(160, 200, 180, 0.025);
-    --bg-input: #152320;
-    --bg-input-focus: #1a2a26;
-    --bg-hover: rgba(160, 200, 180, 0.045);
-    --bg-active: rgba(160, 200, 180, 0.075);
+    --bg-app: #101812;
+    --bg-panel: #18201a;
+    --bg-card: rgba(226, 231, 220, 0.025);
+    --bg-input: #202822;
+    --bg-input-focus: #28302a;
+    --bg-hover: rgba(109, 157, 130, 0.07);
+    --bg-active: rgba(109, 157, 130, 0.11);
 
-    --border: rgba(160, 200, 180, 0.06);
-    --border-input: rgba(160, 200, 180, 0.09);
-    --border-focus: rgba(106, 152, 120, 0.5);
+    --border: rgba(226, 231, 220, 0.09);
+    --border-input: rgba(226, 231, 220, 0.14);
+    --border-focus: rgba(109, 157, 130, 0.5);
 
-    --text-1: #d0d6d2;
-    --text-2: #8ea094;
-    --text-3: #5a6860;
+    --text-1: #e2e7dc;
+    --text-2: #b8c0ad;
+    --text-3: #a1ad94;
 
-    --accent: #6a9878;
-    --accent-hover: #7ea98a;
-    --accent-active: #568366;
-    --accent-bg: rgba(106, 152, 120, 0.13);
+    --accent: #6d9d82;
+    --accent-hover: #81ab94;
+    --accent-active: #669279;
+    --accent-bg: rgba(109, 157, 130, 0.13);
 
-    --green: #6a9878;
-    --red: #c88878;
-    --blue: #7ea4a4;
+    --green: #98b89d;
+    --red: #d99a9a;
+    --blue: #93b3d2;
 
-    --shadow-panel: 0 16px 48px rgba(2, 10, 7, 0.6), 0 4px 16px rgba(1, 5, 4, 0.35);
-    --shadow-rgb: 106, 152, 120;
+    --shadow-panel: 0 16px 48px rgba(0, 0, 0, 0.5), 0 4px 16px rgba(0, 0, 0, 0.28);
+    --shadow-rgb: 109, 157, 130;
     --glass-blur: blur(24px);
 
-    --bg-terminal: #0b1612; /* Match bg-app */
+    --bg-terminal: #101812; /* Match bg-app */
 }
 
-/* ══════════════════════════════════════════════════════════════════
-   VIBRANT BATCH (暗红 / 落日橙 / 琥珀 / 翠绿 / 青碧 / 靛蓝 / 品红)
-   Unlike the muted "near-black, hue felt not seen" set above, these
-   pair a tinted-dark base with a saturated accent so they read as
-   genuinely colourful. Same token recipe as the colored themes
-   (sakura/lavender/mint): every surface/border fill derives from the
-   accent's RGB; --bg-terminal matches --bg-app for the unified-surface
-   rule. 暗红 is the hero — its blood-red base + accent glow under the
-   carbon hex mesh gives the Spider-Man read.
-   ══════════════════════════════════════════════════════════════════ */
-
-/* ─── Crimson (暗红) — saturated red on blood-dark base (Spider-Man) ─ */
+/* ─── 暗红 — rose, balanced ──── */
 [data-theme="crimson"] {
-    --bg-app: #2a0d10;
-    --bg-panel: #341216;
-    --bg-card: rgba(226, 59, 66, 0.035);
-    --bg-input: #3a181c;
-    --bg-input-focus: #441f23;
-    --bg-hover: rgba(226, 59, 66, 0.06);
-    --bg-active: rgba(226, 59, 66, 0.1);
+    --bg-app: #1c1619;
+    --bg-panel: #241e21;
+    --bg-card: rgba(233, 224, 226, 0.025);
+    --bg-input: #2c2629;
+    --bg-input-focus: #342e31;
+    --bg-hover: rgba(197, 142, 154, 0.07);
+    --bg-active: rgba(197, 142, 154, 0.11);
 
-    --border: rgba(226, 59, 66, 0.08);
-    --border-input: rgba(226, 59, 66, 0.11);
-    --border-focus: rgba(226, 59, 66, 0.42);
+    --border: rgba(233, 224, 226, 0.09);
+    --border-input: rgba(233, 224, 226, 0.14);
+    --border-focus: rgba(197, 142, 154, 0.5);
 
-    --text-1: #f2e2e3;
-    --text-2: #c8a8aa;
-    --text-3: #8a6e70;
+    --text-1: #e9e0e2;
+    --text-2: #c1b2b6;
+    --text-3: #ad999f;
 
-    --accent: #e23b42;
-    --accent-hover: #f25058;
-    --accent-active: #c82c34;
-    --accent-bg: rgba(226, 59, 66, 0.14);
+    --accent: #c58e9a;
+    --accent-hover: #cd9ea8;
+    --accent-active: #b78490;
+    --accent-bg: rgba(197, 142, 154, 0.13);
 
-    --green: #86c98c;
-    --red: #ff6b6b;
-    --blue: #9aa8e8;
+    --green: #98b89d;
+    --red: #d99a9a;
+    --blue: #93b3d2;
 
-    --shadow-panel: 0 16px 48px rgba(30, 5, 8, 0.55), 0 4px 16px rgba(15, 3, 4, 0.3);
-    --shadow-rgb: 226, 59, 66;
+    --shadow-panel: 0 16px 48px rgba(0, 0, 0, 0.5), 0 4px 16px rgba(0, 0, 0, 0.28);
+    --shadow-rgb: 197, 142, 154;
     --glass-blur: blur(24px);
 
-    --bg-terminal: #2a0d10; /* Match bg-app */
+    --bg-terminal: #1c1619; /* Match bg-app */
 }
 
-/* ─── Sunset (落日橙) — vivid orange on warm dark base ──────── */
+/* ─── 落日橙 — orange, balanced ──── */
 [data-theme="sunset"] {
-    --bg-app: #241408;
-    --bg-panel: #2e1b0c;
-    --bg-card: rgba(245, 128, 59, 0.035);
-    --bg-input: #36230f;
-    --bg-input-focus: #402c14;
-    --bg-hover: rgba(245, 128, 59, 0.06);
-    --bg-active: rgba(245, 128, 59, 0.1);
+    --bg-app: #1e1915;
+    --bg-panel: #26211d;
+    --bg-card: rgba(233, 226, 220, 0.025);
+    --bg-input: #2e2925;
+    --bg-input-focus: #36312d;
+    --bg-hover: rgba(189, 146, 112, 0.07);
+    --bg-active: rgba(189, 146, 112, 0.11);
 
-    --border: rgba(245, 128, 59, 0.08);
-    --border-input: rgba(245, 128, 59, 0.11);
-    --border-focus: rgba(245, 128, 59, 0.42);
+    --border: rgba(233, 226, 220, 0.09);
+    --border-input: rgba(233, 226, 220, 0.14);
+    --border-focus: rgba(189, 146, 112, 0.5);
 
-    --text-1: #f4e6da;
-    --text-2: #c8b09c;
-    --text-3: #8a7866;
+    --text-1: #e9e2dc;
+    --text-2: #c3b6a9;
+    --text-3: #ae9c8c;
 
-    --accent: #f5803b;
-    --accent-hover: #ff9456;
-    --accent-active: #e06c28;
-    --accent-bg: rgba(245, 128, 59, 0.14);
+    --accent: #bd9270;
+    --accent-hover: #c6a184;
+    --accent-active: #b08869;
+    --accent-bg: rgba(189, 146, 112, 0.13);
 
-    --green: #9ad19a;
-    --red: #ff7a6a;
-    --blue: #88b4e0;
+    --green: #98b89d;
+    --red: #d99a9a;
+    --blue: #93b3d2;
 
-    --shadow-panel: 0 16px 48px rgba(28, 14, 4, 0.5), 0 4px 16px rgba(14, 7, 2, 0.28);
-    --shadow-rgb: 245, 128, 59;
+    --shadow-panel: 0 16px 48px rgba(0, 0, 0, 0.5), 0 4px 16px rgba(0, 0, 0, 0.28);
+    --shadow-rgb: 189, 146, 112;
     --glass-blur: blur(24px);
 
-    --bg-terminal: #241408; /* Match bg-app */
+    --bg-terminal: #1e1915; /* Match bg-app */
 }
 
-/* ─── Amber (琥珀) — warm gold on dark amber base ──────── */
+/* ─── 琥珀 — orange, soft ──── */
 [data-theme="amber"] {
-    --bg-app: #20180a;
-    --bg-panel: #2a200e;
-    --bg-card: rgba(232, 167, 44, 0.035);
-    --bg-input: #2e2410;
-    --bg-input-focus: #382e16;
-    --bg-hover: rgba(232, 167, 44, 0.06);
-    --bg-active: rgba(232, 167, 44, 0.1);
+    --bg-app: #272219;
+    --bg-panel: #2f2a21;
+    --bg-card: rgba(232, 228, 217, 0.025);
+    --bg-input: #373229;
+    --bg-input-focus: #3f3a31;
+    --bg-hover: rgba(210, 178, 142, 0.07);
+    --bg-active: rgba(210, 178, 142, 0.11);
 
-    --border: rgba(232, 167, 44, 0.08);
-    --border-input: rgba(232, 167, 44, 0.11);
-    --border-focus: rgba(232, 167, 44, 0.42);
+    --border: rgba(232, 228, 217, 0.09);
+    --border-input: rgba(232, 228, 217, 0.14);
+    --border-focus: rgba(210, 178, 142, 0.5);
 
-    --text-1: #f2ead6;
-    --text-2: #c6bc9e;
-    --text-3: #88806a;
+    --text-1: #e8e4d9;
+    --text-2: #c2baa7;
+    --text-3: #b1a690;
 
-    --accent: #e8a72c;
-    --accent-hover: #f7b945;
-    --accent-active: #d0921c;
-    --accent-bg: rgba(232, 167, 44, 0.14);
+    --accent: #d2b28e;
+    --accent-hover: #d8bd9e;
+    --accent-active: #c4a685;
+    --accent-bg: rgba(210, 178, 142, 0.13);
 
-    --green: #a8cf86;
-    --red: #ff8a6a;
-    --blue: #88b4e0;
+    --green: #98b89d;
+    --red: #d99a9a;
+    --blue: #93b3d2;
 
-    --shadow-panel: 0 16px 48px rgba(24, 18, 4, 0.5), 0 4px 16px rgba(12, 9, 2, 0.28);
-    --shadow-rgb: 232, 167, 44;
+    --shadow-panel: 0 16px 48px rgba(0, 0, 0, 0.5), 0 4px 16px rgba(0, 0, 0, 0.28);
+    --shadow-rgb: 210, 178, 142;
     --glass-blur: blur(24px);
 
-    --bg-terminal: #20180a; /* Match bg-app */
+    --bg-terminal: #272219; /* Match bg-app */
 }
 
-/* ─── Emerald (翠绿) — vivid emerald on deep green base ──────── */
+/* ─── 翠绿 — green, balanced ──── */
 [data-theme="emerald"] {
-    --bg-app: #0a1c12;
-    --bg-panel: #102619;
-    --bg-card: rgba(36, 194, 129, 0.035);
-    --bg-input: #16301f;
-    --bg-input-focus: #1c3a27;
-    --bg-hover: rgba(36, 194, 129, 0.06);
-    --bg-active: rgba(36, 194, 129, 0.1);
+    --bg-app: #161e19;
+    --bg-panel: #1e2621;
+    --bg-card: rgba(223, 232, 226, 0.025);
+    --bg-input: #262e29;
+    --bg-input-focus: #2e3631;
+    --bg-hover: rgba(138, 181, 158, 0.07);
+    --bg-active: rgba(138, 181, 158, 0.11);
 
-    --border: rgba(36, 194, 129, 0.08);
-    --border-input: rgba(36, 194, 129, 0.11);
-    --border-focus: rgba(36, 194, 129, 0.42);
+    --border: rgba(223, 232, 226, 0.09);
+    --border-input: rgba(223, 232, 226, 0.14);
+    --border-focus: rgba(138, 181, 158, 0.5);
 
-    --text-1: #def0e6;
-    --text-2: #a0c4b0;
-    --text-3: #688476;
+    --text-1: #dfe8e2;
+    --text-2: #afc1b6;
+    --text-3: #98ad9f;
 
-    --accent: #24c281;
-    --accent-hover: #3cd494;
-    --accent-active: #18a86c;
-    --accent-bg: rgba(36, 194, 129, 0.14);
+    --accent: #8ab59e;
+    --accent-hover: #9abfac;
+    --accent-active: #81a993;
+    --accent-bg: rgba(138, 181, 158, 0.13);
 
-    --green: #2cd68c;
-    --red: #ff8080;
-    --blue: #78c0d4;
+    --green: #98b89d;
+    --red: #d99a9a;
+    --blue: #93b3d2;
 
-    --shadow-panel: 0 16px 48px rgba(2, 18, 10, 0.55), 0 4px 16px rgba(1, 9, 5, 0.3);
-    --shadow-rgb: 36, 194, 129;
+    --shadow-panel: 0 16px 48px rgba(0, 0, 0, 0.5), 0 4px 16px rgba(0, 0, 0, 0.28);
+    --shadow-rgb: 138, 181, 158;
     --glass-blur: blur(24px);
 
-    --bg-terminal: #0a1c12; /* Match bg-app */
+    --bg-terminal: #161e19; /* Match bg-app */
 }
 
-/* ─── Teal (青碧) — bright cyan-teal on deep teal base ──────── */
+/* ─── 葡萄紫 — violet, deep ──── */
 [data-theme="teal"] {
-    --bg-app: #0a2125;
-    --bg-panel: #102b30;
-    --bg-card: rgba(43, 196, 196, 0.035);
-    --bg-input: #163338;
-    --bg-input-focus: #1c3d42;
-    --bg-hover: rgba(43, 196, 196, 0.06);
-    --bg-active: rgba(43, 196, 196, 0.1);
+    --bg-app: #15101b;
+    --bg-panel: #1d1823;
+    --bg-card: rgba(232, 224, 233, 0.025);
+    --bg-input: #25202b;
+    --bg-input-focus: #2d2833;
+    --bg-hover: rgba(154, 120, 174, 0.07);
+    --bg-active: rgba(154, 120, 174, 0.11);
 
-    --border: rgba(43, 196, 196, 0.08);
-    --border-input: rgba(43, 196, 196, 0.11);
-    --border-focus: rgba(43, 196, 196, 0.42);
+    --border: rgba(232, 224, 233, 0.09);
+    --border-input: rgba(232, 224, 233, 0.14);
+    --border-focus: rgba(154, 120, 174, 0.5);
 
-    --text-1: #def0f0;
-    --text-2: #a0c4c4;
-    --text-3: #688484;
+    --text-1: #e8e0e9;
+    --text-2: #c0b2c4;
+    --text-3: #ae9ab2;
 
-    --accent: #2bc4c4;
-    --accent-hover: #45d6d6;
-    --accent-active: #1ca8a8;
-    --accent-bg: rgba(43, 196, 196, 0.14);
+    --accent: #9a78ae;
+    --accent-hover: #a88bb9;
+    --accent-active: #8f70a2;
+    --accent-bg: rgba(154, 120, 174, 0.13);
 
-    --green: #4ad6b8;
-    --red: #ff8080;
-    --blue: #5ec8d8;
+    --green: #98b89d;
+    --red: #d99a9a;
+    --blue: #93b3d2;
 
-    --shadow-panel: 0 16px 48px rgba(2, 18, 20, 0.55), 0 4px 16px rgba(1, 9, 10, 0.3);
-    --shadow-rgb: 43, 196, 196;
+    --shadow-panel: 0 16px 48px rgba(0, 0, 0, 0.5), 0 4px 16px rgba(0, 0, 0, 0.28);
+    --shadow-rgb: 154, 120, 174;
     --glass-blur: blur(24px);
 
-    --bg-terminal: #0a2125; /* Match bg-app */
+    --bg-terminal: #15101b; /* Match bg-app */
 }
 
-/* ─── Indigo (靛蓝) — electric indigo on deep blue base ──────── */
+/* ─── 靛蓝 — blue, deep ──── */
 [data-theme="indigo"] {
-    --bg-app: #12142e;
-    --bg-panel: #1a1d3c;
-    --bg-card: rgba(97, 114, 240, 0.035);
-    --bg-input: #20244a;
-    --bg-input-focus: #282d56;
-    --bg-hover: rgba(97, 114, 240, 0.06);
-    --bg-active: rgba(97, 114, 240, 0.1);
+    --bg-app: #101620;
+    --bg-panel: #181e28;
+    --bg-card: rgba(225, 228, 239, 0.025);
+    --bg-input: #202630;
+    --bg-input-focus: #282e38;
+    --bg-hover: rgba(103, 137, 182, 0.07);
+    --bg-active: rgba(103, 137, 182, 0.11);
 
-    --border: rgba(97, 114, 240, 0.08);
-    --border-input: rgba(97, 114, 240, 0.11);
-    --border-focus: rgba(97, 114, 240, 0.42);
+    --border: rgba(225, 228, 239, 0.09);
+    --border-input: rgba(225, 228, 239, 0.14);
+    --border-focus: rgba(103, 137, 182, 0.5);
 
-    --text-1: #e4e6f4;
-    --text-2: #b0b4d4;
-    --text-3: #76799a;
+    --text-1: #e1e4ef;
+    --text-2: #b4bbd0;
+    --text-3: #9da7c2;
 
-    --accent: #6172f0;
-    --accent-hover: #7886ff;
-    --accent-active: #4f5ed8;
-    --accent-bg: rgba(97, 114, 240, 0.14);
+    --accent: #6789b6;
+    --accent-hover: #7c9ac0;
+    --accent-active: #6080aa;
+    --accent-bg: rgba(103, 137, 182, 0.13);
 
-    --green: #8ad0a0;
-    --red: #ff8080;
-    --blue: #7e9cf0;
+    --green: #98b89d;
+    --red: #d99a9a;
+    --blue: #93b3d2;
 
-    --shadow-panel: 0 16px 48px rgba(6, 8, 28, 0.55), 0 4px 16px rgba(3, 4, 14, 0.3);
-    --shadow-rgb: 97, 114, 240;
+    --shadow-panel: 0 16px 48px rgba(0, 0, 0, 0.5), 0 4px 16px rgba(0, 0, 0, 0.28);
+    --shadow-rgb: 103, 137, 182;
     --glass-blur: blur(24px);
 
-    --bg-terminal: #12142e; /* Match bg-app */
+    --bg-terminal: #101620; /* Match bg-app */
 }
 
-/* ─── Fuchsia (品红) — saturated magenta on deep plum base ──────── */
+/* ─── 烟紫 — violet, balanced ──── */
 [data-theme="fuchsia"] {
-    --bg-app: #210f1d;
-    --bg-panel: #2c1428;
-    --bg-card: rgba(217, 74, 160, 0.035);
-    --bg-input: #361b2e;
-    --bg-input-focus: #402338;
-    --bg-hover: rgba(217, 74, 160, 0.06);
-    --bg-active: rgba(217, 74, 160, 0.1);
+    --bg-app: #1e1824;
+    --bg-panel: #26202c;
+    --bg-card: rgba(232, 224, 233, 0.025);
+    --bg-input: #2e2834;
+    --bg-input-focus: #36303c;
+    --bg-hover: rgba(173, 144, 191, 0.07);
+    --bg-active: rgba(173, 144, 191, 0.11);
 
-    --border: rgba(217, 74, 160, 0.08);
-    --border-input: rgba(217, 74, 160, 0.11);
-    --border-focus: rgba(217, 74, 160, 0.42);
+    --border: rgba(232, 224, 233, 0.09);
+    --border-input: rgba(232, 224, 233, 0.14);
+    --border-focus: rgba(173, 144, 191, 0.5);
 
-    --text-1: #f0e2ec;
-    --text-2: #c6a8bc;
-    --text-3: #88707e;
+    --text-1: #e8e0e9;
+    --text-2: #c0b2c4;
+    --text-3: #ae9ab2;
 
-    --accent: #d94aa0;
-    --accent-hover: #e964b2;
-    --accent-active: #c03888;
-    --accent-bg: rgba(217, 74, 160, 0.14);
+    --accent: #ad90bf;
+    --accent-hover: #b8a0c8;
+    --accent-active: #a286b3;
+    --accent-bg: rgba(173, 144, 191, 0.13);
 
-    --green: #a0d0a8;
-    --red: #ff7090;
-    --blue: #a0a8e0;
+    --green: #98b89d;
+    --red: #d99a9a;
+    --blue: #93b3d2;
 
-    --shadow-panel: 0 16px 48px rgba(24, 6, 18, 0.55), 0 4px 16px rgba(12, 3, 9, 0.3);
-    --shadow-rgb: 217, 74, 160;
+    --shadow-panel: 0 16px 48px rgba(0, 0, 0, 0.5), 0 4px 16px rgba(0, 0, 0, 0.28);
+    --shadow-rgb: 173, 144, 191;
     --glass-blur: blur(24px);
 
-    --bg-terminal: #210f1d; /* Match bg-app */
+    --bg-terminal: #1e1824; /* Match bg-app */
+}
+
+/* ─── 冰川蓝 — blue, soft ──── */
+[data-theme="glacier"] {
+    --bg-app: #20252d;
+    --bg-panel: #282d35;
+    --bg-card: rgba(223, 232, 238, 0.025);
+    --bg-input: #30353d;
+    --bg-input-focus: #383d45;
+    --bg-hover: rgba(173, 195, 221, 0.07);
+    --bg-active: rgba(173, 195, 221, 0.11);
+
+    --border: rgba(223, 232, 238, 0.09);
+    --border-input: rgba(223, 232, 238, 0.14);
+    --border-focus: rgba(173, 195, 221, 0.5);
+
+    --text-1: #dfe8ee;
+    --text-2: #b0c0cc;
+    --text-3: #99adbd;
+
+    --accent: #adc3dd;
+    --accent-hover: #b8cbe2;
+    --accent-active: #a2b6cf;
+    --accent-bg: rgba(173, 195, 221, 0.13);
+
+    --green: #98b89d;
+    --red: #d99a9a;
+    --blue: #93b3d2;
+
+    --shadow-panel: 0 16px 48px rgba(0, 0, 0, 0.5), 0 4px 16px rgba(0, 0, 0, 0.28);
+    --shadow-rgb: 173, 195, 221;
+    --glass-blur: blur(24px);
+
+    --bg-terminal: #20252d; /* Match bg-app */
+}
+
+/* ─── 酒红 — rose, deep ──── */
+[data-theme="slate"] {
+    --bg-app: #130f11;
+    --bg-panel: #1b1719;
+    --bg-card: rgba(233, 224, 226, 0.025);
+    --bg-input: #231f21;
+    --bg-input-focus: #2b2729;
+    --bg-hover: rgba(173, 116, 128, 0.07);
+    --bg-active: rgba(173, 116, 128, 0.11);
+
+    --border: rgba(233, 224, 226, 0.09);
+    --border-input: rgba(233, 224, 226, 0.14);
+    --border-focus: rgba(173, 116, 128, 0.5);
+
+    --text-1: #e9e0e2;
+    --text-2: #c1b2b6;
+    --text-3: #ad999f;
+
+    --accent: #ad7480;
+    --accent-hover: #b88792;
+    --accent-active: #a16c77;
+    --accent-bg: rgba(173, 116, 128, 0.13);
+
+    --green: #98b89d;
+    --red: #d99a9a;
+    --blue: #93b3d2;
+
+    --shadow-panel: 0 16px 48px rgba(0, 0, 0, 0.5), 0 4px 16px rgba(0, 0, 0, 0.28);
+    --shadow-rgb: 173, 116, 128;
+    --glass-blur: blur(24px);
+
+    --bg-terminal: #130f11; /* Match bg-app */
 }
 
 /* ─── App Shell ──────────────────────────────────────── */
@@ -2119,6 +2154,12 @@ html.is-windows[data-frost="frost"] #root {
 [data-shape="panel"][data-theme="light"] {
     --border: rgba(0, 0, 0, 0.14);
     --border-input: rgba(0, 0, 0, 0.14);
+}
+
+/* Keep Obsidian's charcoal dividers instead of Panel's brighter defaults. */
+[data-shape="panel"][data-theme="obsidian"] {
+    --border: #1f1f1f;
+    --border-input: #282828;
 }
 
 /* Glass blur on left panel would tint it differently from center/right.

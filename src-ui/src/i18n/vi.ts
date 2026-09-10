@@ -168,7 +168,7 @@ Xóa tờ ghi chú này khi bạn sẵn sàng và bắt đầu tác vụ đầu 
   'theme.section.shape': 'Hình dạng',
   'theme.section.icons': 'Biểu tượng',
   'theme.color.light': 'Sáng',
-  'theme.color.dark': 'Tối',
+  'theme.color.dark': 'Cà phê đậm',
   'theme.color.cappuccino': 'Code Dark',
   'theme.color.sakura': 'Sakura',
   'theme.color.lavender': 'Oải hương',
@@ -180,9 +180,11 @@ Xóa tờ ghi chú này khi bạn sẵn sàng và bắt đầu tác vụ đầu 
   'theme.color.sunset': 'Hoàng hôn',
   'theme.color.amber': 'Hổ phách',
   'theme.color.emerald': 'Lục bảo',
-  'theme.color.teal': 'Mòng két',
+  'theme.color.teal': 'Tím nho',
   'theme.color.indigo': 'Chàm',
-  'theme.color.fuchsia': 'Hồng sen',
+  'theme.color.fuchsia': 'Tím khói',
+  'theme.color.glacier': 'Xanh băng',
+  'theme.color.slate': 'Đỏ rượu',
 
   // Gambit · Nước cờ
   'gambit.title': 'Nước cờ',

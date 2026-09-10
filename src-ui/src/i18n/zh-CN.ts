@@ -166,7 +166,7 @@ export const zhCN = {
   'theme.section.shape': '形态',
   'theme.section.icons': '图标风格',
   'theme.color.light': '明亮',
-  'theme.color.dark': '暗黑',
+  'theme.color.dark': '深咖',
   'theme.color.cappuccino': '代码夜',
   'theme.color.sakura': '夜樱',
   'theme.color.lavender': '薰衣草雾',
@@ -178,9 +178,11 @@ export const zhCN = {
   'theme.color.sunset': '落日橙',
   'theme.color.amber': '琥珀',
   'theme.color.emerald': '翠绿',
-  'theme.color.teal': '青碧',
+  'theme.color.teal': '葡萄紫',
   'theme.color.indigo': '靛蓝',
-  'theme.color.fuchsia': '品红',
+  'theme.color.fuchsia': '烟紫',
+  'theme.color.glacier': '冰川蓝',
+  'theme.color.slate': '酒红',
 
   // Gambit · 妙手
   'gambit.title': '妙手',

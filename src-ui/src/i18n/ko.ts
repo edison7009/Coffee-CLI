@@ -165,7 +165,7 @@ export const ko = {
   'theme.section.shape': '형태',
   'theme.section.icons': '아이콘 스타일',
   'theme.color.light': '라이트',
-  'theme.color.dark': '다크',
+  'theme.color.dark': '에스프레소',
   'theme.color.cappuccino': '코드 다크',
   'theme.color.sakura': '사쿠라',
   'theme.color.lavender': '라벤더',
@@ -177,9 +177,11 @@ export const ko = {
   'theme.color.sunset': '노을',
   'theme.color.amber': '호박',
   'theme.color.emerald': '에메랄드',
-  'theme.color.teal': '청록',
+  'theme.color.teal': '포도 보라',
   'theme.color.indigo': '인디고',
-  'theme.color.fuchsia': '푸시아',
+  'theme.color.fuchsia': '모브',
+  'theme.color.glacier': '빙하 블루',
+  'theme.color.slate': '버건디',
 
   // Gambit · 한 수
   'gambit.title': '한 수',

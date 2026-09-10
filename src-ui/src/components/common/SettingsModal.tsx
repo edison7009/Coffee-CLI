@@ -332,7 +332,7 @@ export function SettingsModal() {
                           <span className="settings-theme-band-accent" style={{ background: c.ring }} />
                           {active && (
                             <span className="settings-theme-check" style={{ background: c.ring }}>
-                              <svg viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                              <svg viewBox="0 0 24 24" fill="none" stroke={c.swatch} strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
                             </span>
                           )}
                         </span>
