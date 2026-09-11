@@ -41,6 +41,8 @@ tauri-plugin-clipboard-manager = "2"
 # Utilities
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+# Preserve comments and formatting in Devin's JSONC hook configuration.
+jsonc-parser = { version = "0.33.1", features = ["cst", "serde", "serde_json"] }
 anyhow = "1"
 
 log = "0.4"

@@ -209,6 +209,13 @@ fn cleanup_codex(home: &Path) {
 fn cleanup_codex_island_install(home: &Path) {
     let hooks_path = home.join(".codex").join("hooks.json");
     let config_path = home.join(".codex").join("config.toml");
+    if let Err(e) = strip_codex_hook_trust(&config_path, &hooks_path, None, is_coffee_codex_entry) {
+        eprintln!(
+            "[hook-installer] failed to strip codex managed trust: {}",
+            e
+        );
+        return;
+    }
     if let Err(e) = strip_codex_managed_hooks(&hooks_path) {
         eprintln!(
             "[hook-installer] failed to strip codex managed hooks: {}",
@@ -217,12 +224,6 @@ fn cleanup_codex_island_install(home: &Path) {
     }
     if let Err(e) = strip_codex_notify(&config_path) {
         eprintln!("[hook-installer] failed to strip codex notify line: {}", e);
-    }
-    if let Err(e) = strip_codex_managed_trust(&config_path, &hooks_path) {
-        eprintln!(
-            "[hook-installer] failed to strip codex managed trust: {}",
-            e
-        );
     }
 }
 
@@ -234,7 +235,11 @@ fn strip_codex_managed_hooks(hooks_path: &Path) -> anyhow::Result<()> {
         return Ok(());
     }
     let text = fs::read_to_string(hooks_path).unwrap_or_default();
-    let mut root: Value = serde_json::from_str(&text).unwrap_or_else(|_| json!({}));
+    let mut root: Value = jsonc_parser::parse_to_serde_value(
+        text.trim_start_matches('\u{feff}'),
+        &orca_json_parse_options(),
+    )
+    .unwrap_or_else(|_| json!({}));
     if !root.is_object() {
         return Ok(()); // malformed — don't touch
     }
@@ -326,55 +331,6 @@ fn is_our_notify_line(trimmed: &str) -> bool {
         return false;
     }
     rest.contains(CODEX_NOTIFY_SUBCOMMAND) || rest.contains(CODEX_NOTIFY_FILENAME)
-}
-
-/// Remove our `[hooks.state."<our-source>:<event>:g:h"]` blocks from
-/// ~/.codex/config.toml — keyed by our hooks.json path + the 4 managed event
-/// labels. Other tools'/user's trust blocks are preserved.
-fn strip_codex_managed_trust(config_path: &Path, hooks_path: &Path) -> anyhow::Result<()> {
-    if !config_path.exists() {
-        return Ok(());
-    }
-    let existing = fs::read_to_string(config_path).unwrap_or_default();
-    let source_prefix = format!("{}:", hooks_path.to_string_lossy());
-    let labels = [
-        "session_start",
-        "user_prompt_submit",
-        "permission_request",
-        "stop",
-    ];
-    let lines: Vec<&str> = existing.lines().collect();
-    let mut out: Vec<String> = Vec::new();
-    let mut changed = false;
-    let mut i = 0;
-    while i < lines.len() {
-        let trimmed = lines[i].trim_start();
-        if let Some(key) = parse_codex_state_header(trimmed) {
-            let is_ours = key.starts_with(&source_prefix)
-                && labels
-                    .iter()
-                    .any(|l| key[source_prefix.len()..].starts_with(&format!("{}:", l)));
-            if is_ours {
-                let mut j = i + 1;
-                while j < lines.len() && !is_toml_table_header(lines[j]) {
-                    j += 1;
-                }
-                changed = true;
-                i = j;
-                continue;
-            }
-        }
-        out.push(lines[i].to_string());
-        i += 1;
-    }
-    if changed {
-        let mut joined = out.join("\n");
-        if !joined.ends_with('\n') {
-            joined.push('\n');
-        }
-        fs::write(config_path, joined)?;
-    }
-    Ok(())
 }
 
 /// Remove the OpenCode-family plugin written by older Coffee releases. The
@@ -1419,9 +1375,8 @@ fn cleanup_grok_hook_dir(hooks_dir: &Path) {
 // every managed command carries `agent-hooks/<name>` under `~/.orca` or the
 // `ORCA_AGENT_HOOK_*` env tokens its curl/PowerShell launchers use, so
 // stripping is deterministic and user-owned hooks are never matched. Only
-// directories Orca owns outright (~/.orca, ~/.orca-relay, the opencode
-// overlays under its userData) are deleted whole; agent config files are
-// stripped in place and deleted only when nothing but Orca entries remains.
+// generated hook directories are deleted whole; agent configs and overlays
+// are stripped in place. Orca's session/auth stores are not hook residue.
 // The whole arm is skipped while an Orca process is running — Orca re-installs
 // its hooks on every launch (#2623), so cleaning then would fight it.
 // Errors are logged, never fatal; everything is idempotent.
@@ -1439,7 +1394,11 @@ const ORCA_PLUGIN_MARKER: &str =
 /// encoded blob.
 fn is_orca_marked_command(text: &str) -> bool {
     let normalized = text.replace('\\', "/");
-    if normalized.contains(ORCA_AGENT_HOOKS_FINGERPRINT)
+    let path_text = normalized.to_ascii_lowercase();
+    if path_text.contains(ORCA_AGENT_HOOKS_FINGERPRINT)
+        || path_text.contains(".orca-wsl/agent-hooks/")
+        || path_text.contains("/orca/agent-hooks/")
+        || path_text.contains("/orca-dev/agent-hooks/")
         || normalized.contains(ORCA_HOOK_ENV_FINGERPRINT)
     {
         return true;
@@ -1447,8 +1406,7 @@ fn is_orca_marked_command(text: &str) -> bool {
     if let Some(encoded) = encoded_command_payload(&normalized) {
         if let Ok(decoded) = decode_utf16le_base64(encoded) {
             let decoded_normalized = decoded.replace('\\', "/");
-            return decoded_normalized.contains(ORCA_AGENT_HOOKS_FINGERPRINT)
-                || decoded_normalized.contains(ORCA_HOOK_ENV_FINGERPRINT);
+            return is_orca_marked_command(&decoded_normalized);
         }
     }
     false
@@ -1502,166 +1460,180 @@ fn orca_entry_has_marker(entry: &Value) -> bool {
 /// Orca's removeManagedCommands semantics: strip managed direct
 /// command/bash/powershell keys and nested `hooks[]` entries, then drop the
 /// group entirely when no command survives. User entries inside a mixed group
-/// are preserved. Returns (cleaned group or None if dropped, changed).
-fn clean_orca_group(group: Value) -> (Option<Value>, bool) {
-    let mut next = group;
-    let Some(obj) = next.as_object_mut() else {
-        return (Some(next), false);
+/// and their JSONC comments are preserved. Returns whether anything changed.
+fn clean_orca_group(node: jsonc_parser::cst::CstNode) -> bool {
+    let Some(obj) = node.as_object() else {
+        return false;
+    };
+    let Some(value) = obj.to_serde_value() else {
+        return false;
     };
     let mut changed = false;
-    for key in ["command", "bash", "powershell"] {
-        if obj
-            .get(key)
-            .and_then(|v| v.as_str())
-            .map(is_orca_marked_command)
-            .unwrap_or(false)
-        {
-            obj.remove(key);
-            changed = true;
+    let managed_command = orca_entry_has_marker(&value);
+    for key in ["command", "args", "bash", "powershell"] {
+        let managed = if key == "command" || key == "args" {
+            managed_command
+        } else {
+            value
+                .get(key)
+                .and_then(Value::as_str)
+                .map(is_orca_marked_command)
+                .unwrap_or(false)
+        };
+        if managed {
+            if let Some(prop) = obj.get(key) {
+                prop.remove();
+                changed = true;
+            }
         }
     }
-    if let Some(entries) = obj.get_mut("hooks").and_then(|h| h.as_array_mut()) {
-        let before = entries.len();
-        entries.retain(|entry| !orca_entry_has_marker(entry));
-        changed |= entries.len() != before;
+    if let Some(hooks) = obj.array_value("hooks") {
+        let mut hooks_changed = false;
+        for hook in hooks.elements() {
+            hooks_changed |= clean_orca_group(hook);
+        }
+        if hooks_changed && hooks.elements().is_empty() {
+            if let Some(prop) = obj.get("hooks") {
+                prop.remove();
+            }
+        }
+        changed |= hooks_changed;
     }
-    if obj
-        .get("hooks")
-        .and_then(|h| h.as_array())
-        .map(|array| array.is_empty())
-        .unwrap_or(false)
-    {
-        obj.remove("hooks");
+    if changed {
+        let remaining = obj.to_serde_value().unwrap_or_default();
+        let has_command = ["command", "bash", "powershell"]
+            .iter()
+            .any(|key| remaining.get(*key).map(Value::is_string).unwrap_or(false));
+        let has_hooks = obj
+            .array_value("hooks")
+            .map(|hooks| !hooks.elements().is_empty())
+            .unwrap_or(false);
+        if !has_command && !has_hooks && obj.get("prompt").is_none() {
+            node.remove();
+        }
     }
-    let has_command = ["command", "bash", "powershell"]
-        .iter()
-        .any(|key| matches!(obj.get(*key), Some(Value::String(_))));
-    let has_nested = obj
-        .get("hooks")
-        .and_then(|h| h.as_array())
-        .map(|array| !array.is_empty())
-        .unwrap_or(false);
-    if !has_command && !has_nested {
-        return (None, true);
-    }
-    (Some(next), changed)
+    changed
 }
 
-/// Strip Orca entries from a Claude-shaped JSON hook config (settings.json /
-/// hooks.json / config.json): event → array of groups, cleaned per
-/// `clean_orca_group`. An Orca-owned top-level `statusLine` slot is removed
-/// too. The file is deleted when nothing but Orca entries remained (an
-/// Orca-created shell); malformed files are left untouched; user entries
-/// survive intact. Idempotent.
+/// Accept JSONC comments/trailing commas without repairing malformed configs.
+fn orca_json_parse_options() -> jsonc_parser::ParseOptions {
+    jsonc_parser::ParseOptions {
+        allow_comments: true,
+        allow_trailing_commas: true,
+        allow_loose_object_property_names: false,
+        allow_missing_commas: false,
+        allow_single_quoted_strings: false,
+        allow_hexadecimal_numbers: false,
+        allow_unary_plus_numbers: false,
+    }
+}
+
+/// Strip marked hook commands and statusLine entries, preserving user JSONC.
+/// Delete empty Orca-created shells; leave malformed files untouched.
 fn strip_orca_json_hooks(path: &Path) -> anyhow::Result<()> {
     if !path.exists() {
         return Ok(());
     }
-    let text = fs::read_to_string(path).unwrap_or_default();
-    let mut root: Value = match serde_json::from_str(&text) {
-        Ok(value) => value,
-        Err(_) => return Ok(()), // unparseable user file — leave it alone
+    let text = fs::read_to_string(path)?;
+    let root = match jsonc_parser::cst::CstRootNode::parse(
+        text.trim_start_matches('\u{feff}'),
+        &orca_json_parse_options(),
+    ) {
+        Ok(root) => root,
+        Err(_) => return Ok(()),
     };
-    let Some(obj) = root.as_object_mut() else {
+    let Some(obj) = root.object_value() else {
         return Ok(());
     };
-
     let mut changed = false;
-
-    let mut hooks_emptied = false;
-    if let Some(hooks) = obj.get_mut("hooks").and_then(|h| h.as_object_mut()) {
-        let mut empty_events = Vec::new();
-        for (event, slot) in hooks.iter_mut() {
-            let Some(arr) = slot.as_array_mut() else {
+    for key in ["hooks", "orca-status"] {
+        let Some(bundle) = obj.object_value(key) else {
+            continue;
+        };
+        let mut bundle_changed = false;
+        for event in bundle.properties() {
+            let Some(groups) = event.array_value() else {
                 continue;
             };
-            let original_len = arr.len();
-            let mut kept: Vec<Value> = Vec::with_capacity(original_len);
-            for group in arr.drain(..) {
-                let (cleaned, group_changed) = clean_orca_group(group);
-                changed |= group_changed;
-                if let Some(cleaned) = cleaned {
-                    kept.push(cleaned);
-                }
+            let mut event_changed = false;
+            for group in groups.elements() {
+                event_changed |= clean_orca_group(group);
             }
-            if kept.len() != original_len {
-                changed = true;
+            if event_changed && groups.elements().is_empty() {
+                event.remove();
             }
-            // drain(..) already emptied the array; always put the kept groups
-            // back, even when only in-place mutations happened (same count).
-            *arr = kept;
-            if arr.is_empty() {
-                empty_events.push(event.clone());
+            bundle_changed |= event_changed;
+        }
+        if bundle_changed && bundle.properties().is_empty() {
+            if let Some(prop) = obj.get(key) {
+                prop.remove();
             }
         }
-        for event in empty_events {
-            hooks.remove(&event);
+        changed |= bundle_changed;
+    }
+    if let Some(status_line) = obj.get("statusLine") {
+        if status_line
+            .to_serde_value()
+            .as_ref()
+            .map(orca_entry_has_marker)
+            .unwrap_or(false)
+        {
+            status_line.remove();
             changed = true;
         }
-        if hooks.is_empty() {
-            hooks_emptied = true;
-        }
     }
-    if hooks_emptied {
-        obj.remove("hooks");
-        changed = true;
-    }
-
-    let status_line_is_orca = obj
-        .get("statusLine")
-        .map(|status_line| {
-            status_line
-                .get("command")
-                .and_then(|v| v.as_str())
-                .map(is_orca_marked_command)
-                .unwrap_or(false)
-                || status_line
-                    .get("args")
-                    .and_then(|a| a.as_array())
-                    .map(|args| {
-                        args.iter()
-                            .any(|a| a.as_str().map(is_orca_marked_command).unwrap_or(false))
-                    })
-                    .unwrap_or(false)
-        })
-        .unwrap_or(false);
-    if status_line_is_orca {
-        obj.remove("statusLine");
-        changed = true;
-    }
-
     if !changed {
         return Ok(());
     }
-    if obj.is_empty() {
-        // Nothing but Orca entries lived here — the file was Orca-created.
+    if obj.properties().is_empty() {
         fs::remove_file(path)?;
-        return Ok(());
+    } else {
+        let bom = if text.starts_with('\u{feff}') {
+            "\u{feff}"
+        } else {
+            ""
+        };
+        fs::write(path, format!("{bom}{root}"))?;
     }
-    fs::write(path, serde_json::to_string_pretty(&root)?)?;
     Ok(())
 }
 
 /// Remove Orca-owned `[[hooks]]` tables from a TOML config (Kimi), preserving
 /// all user TOML byte-for-byte apart from blank lines adjacent to removed
-/// blocks. A block is Orca's iff any line carries the fingerprint. The file is
+/// blocks. A block is Orca's iff its command carries the fingerprint. The file is
 /// deleted when nothing but Orca blocks remain. Idempotent.
 fn strip_orca_toml_hooks(path: &Path) -> anyhow::Result<()> {
     if !path.exists() {
         return Ok(());
     }
     let existing = fs::read_to_string(path)?;
-    let lines: Vec<&str> = existing.lines().collect();
+    let lines: Vec<&str> = existing.split_inclusive('\n').collect();
+    let code_lines = toml_code_lines(&lines);
     let mut kept: Vec<&str> = Vec::new();
     let mut changed = false;
     let mut i = 0;
+    let command = regex::Regex::new(r#"^\s*command\s*=\s*(?:"((?:\\.|[^"\\])*)"|'([^']*)')"#)?;
     while i < lines.len() {
-        if lines[i].trim_start().starts_with("[[") {
+        if code_lines[i] && lines[i].trim().split('#').next().unwrap_or("").trim() == "[[hooks]]" {
             let mut j = i + 1;
-            while j < lines.len() && !lines[j].trim_start().starts_with('[') {
+            while j < lines.len() && !(code_lines[j] && is_toml_table_header(lines[j])) {
                 j += 1;
             }
-            if lines[i..j].iter().any(|line| is_orca_marked_command(line)) {
+            if (i..j).any(|line| {
+                code_lines[line]
+                    && command
+                        .captures(lines[line])
+                        .and_then(|captures| {
+                            if let Some(value) = captures.get(1) {
+                                serde_json::from_str::<String>(&format!("\"{}\"", value.as_str()))
+                                    .ok()
+                            } else {
+                                captures.get(2).map(|value| value.as_str().to_string())
+                            }
+                        })
+                        .map(|value| is_orca_marked_command(&value))
+                        .unwrap_or(false)
+            }) {
                 changed = true;
             } else {
                 kept.extend(&lines[i..j]);
@@ -1685,21 +1657,20 @@ fn strip_orca_toml_hooks(path: &Path) -> anyhow::Result<()> {
     if kept.is_empty() {
         fs::remove_file(path)?;
     } else {
-        let mut out = kept.join("\n");
-        out.push('\n');
-        fs::write(path, out)?;
+        fs::write(path, kept.concat())?;
     }
     Ok(())
 }
 
-/// Delete an Orca-dedicated file (e.g. ~/.copilot/hooks/orca.json,
-/// ~/.grok/hooks/orca-status.json) only when its content still carries Orca's
-/// fingerprint, so a user replacement with the same name survives.
+/// Delete a known plugin file only when it still carries Orca's fingerprint.
 fn remove_orca_marked_file(path: &Path) {
     let Ok(text) = fs::read_to_string(path) else {
         return;
     };
-    if !is_orca_marked_command(&text) && !text.contains(ORCA_PLUGIN_MARKER) {
+    if !is_orca_marked_command(&text)
+        && !text.contains(ORCA_PLUGIN_MARKER)
+        && !text.contains("OrcaOpenCodeStatusPlugin")
+    {
         return;
     }
     if let Err(e) = fs::remove_file(path) {
@@ -1712,7 +1683,7 @@ fn remove_orca_marked_file(path: &Path) {
 }
 
 /// Orca's writeHooksJson leaves a rolling `<config>.bak` next to every file it
-/// rewrites; remove it when the backup still carries Orca's fingerprint.
+/// rewrites; clean its hooks too while retaining recoverable user settings.
 fn remove_orca_backup(config: &Path) {
     let mut backup = config.as_os_str().to_os_string();
     backup.push(".bak");
@@ -1720,70 +1691,412 @@ fn remove_orca_backup(config: &Path) {
     if !backup.exists() {
         return;
     }
-    remove_orca_marked_file(&backup);
+    let result = match config.extension().and_then(|ext| ext.to_str()) {
+        Some("toml") => strip_orca_toml_hooks(&backup),
+        Some("yaml") => strip_hermes_plugin_from_yaml_named(&backup, "orca-status"),
+        _ => strip_orca_json_hooks(&backup),
+    };
+    if let Err(e) = result {
+        eprintln!("[hook-installer] failed to clean {}: {}", backup.display(), e);
+    }
 }
 
 /// Remove Orca's Hermes plugin dir and its config.yaml allow-list entry,
 /// mirroring cleanup_hermes_plugin for Orca's own plugin name.
-fn cleanup_orca_hermes() {
-    let hermes_home = crate::tools::hermes::hermes_home();
+fn cleanup_orca_hermes(hermes_home: &Path) {
     let plugin_dir = hermes_home.join("plugins").join("orca-status");
+    if plugin_dir.exists() && !is_orca_cleanup_directory(&plugin_dir) {
+        return;
+    }
     let init_path = plugin_dir.join("__init__.py");
     let manifest_path = plugin_dir.join("plugin.yaml");
 
+    if [&init_path, &manifest_path].iter().any(|path| {
+        path.exists()
+            && !fs::read_to_string(path)
+                .map(|text| text.contains(ORCA_PLUGIN_MARKER))
+                .unwrap_or(false)
+    }) {
+        return;
+    }
+    let cache = plugin_dir.join("__pycache__");
+    if (init_path.exists() || manifest_path.exists()) && is_orca_cleanup_directory(&cache) {
+        if let Ok(entries) = fs::read_dir(&cache) {
+            for entry in entries.flatten() {
+                let name = entry.file_name();
+                let name = name.to_string_lossy();
+                if name.starts_with("__init__.")
+                    && name.ends_with(".pyc")
+                    && entry
+                        .file_type()
+                        .map(|kind| kind.is_file())
+                        .unwrap_or(false)
+                {
+                    let _ = fs::remove_file(entry.path());
+                }
+            }
+            let _ = fs::remove_dir(cache);
+        }
+    }
     remove_marked_file(&init_path, &[ORCA_PLUGIN_MARKER]);
-    remove_marked_file(&manifest_path, &["orca-status"]);
+    remove_marked_file(&manifest_path, &[ORCA_PLUGIN_MARKER]);
     let _ = fs::remove_dir(&plugin_dir);
 
-    if let Err(e) = strip_hermes_plugin_from_yaml_named(
-        &hermes_home.join("config.yaml"),
-        "orca-status",
-    ) {
+    if let Err(e) =
+        strip_hermes_plugin_from_yaml_named(&hermes_home.join("config.yaml"), "orca-status")
+    {
         eprintln!("[hook-installer] failed to clean Orca Hermes config: {}", e);
+    }
+    remove_orca_backup(&hermes_home.join("config.yaml"));
+}
+
+/// Pi/OMP/Prime auto-load these global extensions with their own ownership marker.
+fn cleanup_orca_pi_extensions(home: &Path, agent_dir: Option<&Path>) {
+    let defaults = [
+        home.join(".pi").join("agent"),
+        home.join(".omp").join("agent"),
+        home.join(".prime").join("agent"),
+    ];
+    for agent in defaults.iter().map(PathBuf::as_path).chain(agent_dir) {
+        let extensions = agent.join("extensions");
+        for name in [
+            "orca-agent-status.ts",
+            "orca-prefill.ts",
+            "orca-titlebar-spinner.ts",
+        ] {
+            remove_marked_file(&extensions.join(name), &["@orca-managed-pi-extension"]);
+        }
     }
 }
 
-/// Orca's current source never writes ~/.opencode, but older builds did; the
-/// folder shows up on machines that never installed opencode (#11641). Only
-/// delete it when every entry is Orca-marked or it is empty; mixed content
-/// keeps the folder and drops only the marked files.
-fn cleanup_legacy_opencode_dir(dir: &Path) {
-    let Ok(entries) = fs::read_dir(dir) else {
+fn orca_agent_homes(home: &Path, default_dir: &str, env_key: &str) -> Vec<PathBuf> {
+    let mut homes = vec![home.join(default_dir)];
+    if let Some(path) = std::env::var_os(env_key).filter(|value| !value.is_empty()) {
+        let path = PathBuf::from(path);
+        if !homes.contains(&path) {
+            homes.push(path);
+        }
+    }
+    homes
+}
+
+fn cleanup_orca_json_config(path: &Path) {
+    if let Err(e) = strip_orca_json_hooks(path) {
+        eprintln!("[hook-installer] failed to clean {}: {}", path.display(), e);
+    }
+    remove_orca_backup(path);
+}
+
+fn cleanup_orca_plugin_files(dir: &Path) {
+    for name in ["orca-opencode-status.js", "orca-mimocode-status.js"] {
+        remove_orca_marked_file(&dir.join(name));
+    }
+    for name in [
+        "orca-agent-status.ts",
+        "orca-prefill.ts",
+        "orca-titlebar-spinner.ts",
+    ] {
+        remove_marked_file(&dir.join(name), &["@orca-managed-pi-extension"]);
+    }
+}
+
+/// Do not descend through symlinks or Windows junctions into user data.
+fn is_orca_cleanup_directory(path: &Path) -> bool {
+    fs::symlink_metadata(path)
+        .map(|meta| meta.is_dir() && !meta.file_type().is_symlink())
+        .unwrap_or(false)
+}
+
+/// Overlays can contain new sessions/auth or links to user data; remove only plugins.
+fn cleanup_orca_plugin_overlay(root: &Path) {
+    if !is_orca_cleanup_directory(root) {
+        return;
+    }
+    let mut dirs = vec![root.to_path_buf()];
+    if let Ok(entries) = fs::read_dir(root) {
+        for entry in entries.flatten() {
+            if is_orca_cleanup_directory(&entry.path()) {
+                dirs.push(entry.path());
+            }
+        }
+    }
+    for dir in dirs {
+        for base in [&dir, &dir.join("config")] {
+            if !is_orca_cleanup_directory(base) {
+                continue;
+            }
+            cleanup_orca_plugin_files(base);
+            for child in ["plugins", "extensions"] {
+                let child = base.join(child);
+                if is_orca_cleanup_directory(&child) {
+                    cleanup_orca_plugin_files(&child);
+                    let _ = fs::remove_dir(&child);
+                }
+            }
+            let _ = fs::remove_dir(base);
+        }
+        let _ = fs::remove_dir(&dir);
+    }
+    let _ = fs::remove_dir(root);
+}
+
+/// Distinguish TOML code from multiline string contents (e.g. instructions).
+fn toml_code_lines(lines: &[&str]) -> Vec<bool> {
+    let mut quote = None;
+    let mut multiline = false;
+    lines
+        .iter()
+        .map(|line| {
+            let is_code = quote.is_none();
+            let bytes = line.as_bytes();
+            let mut i = 0;
+            while i < bytes.len() {
+                let ch = bytes[i];
+                if let Some(delimiter) = quote {
+                    if delimiter == b'"' && ch == b'\\' {
+                        i += 2;
+                        continue;
+                    }
+                    if ch == delimiter {
+                        if !multiline {
+                            quote = None;
+                        } else if bytes.get(i..i + 3) == Some(&[delimiter; 3]) {
+                            quote = None;
+                            multiline = false;
+                            i += 2;
+                        }
+                    }
+                } else if ch == b'#' {
+                    break;
+                } else if ch == b'"' || ch == b'\'' {
+                    quote = Some(ch);
+                    multiline = bytes.get(i..i + 3) == Some(&[ch; 3]);
+                    if multiline {
+                        i += 2;
+                    }
+                }
+                i += 1;
+            }
+            if !multiline {
+                quote = None;
+            }
+            is_code
+        })
+        .collect()
+}
+
+fn normalized_orca_trust_key(key: &str) -> String {
+    let key = key.replace('\\', "/");
+    let key = key.strip_prefix("//?/").unwrap_or(&key);
+    if cfg!(windows) {
+        key.to_lowercase()
+    } else {
+        key.to_string()
+    }
+}
+
+/// Read identities before removing hooks; a user hook can share the same source file.
+fn strip_orca_codex_trust(home: &Path, ledger: Option<&Path>) -> anyhow::Result<()> {
+    strip_codex_hook_trust(
+        &home.join("config.toml"),
+        &home.join("hooks.json"),
+        ledger,
+        orca_entry_has_marker,
+    )
+}
+
+/// Match ownership before hook removal and move surviving identities with their
+/// array indices. Hashes cover the hook content, so they survive index changes.
+fn strip_codex_hook_trust(
+    config_path: &Path,
+    hooks_path: &Path,
+    ledger: Option<&Path>,
+    is_owned: fn(&Value) -> bool,
+) -> anyhow::Result<()> {
+    let text = match fs::read_to_string(config_path) {
+        Ok(text) => text,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(e) => return Err(e.into()),
+    };
+    let mut owned = std::collections::HashSet::new();
+    let mut moved = std::collections::HashMap::new();
+    if let Ok(hooks) = fs::read_to_string(hooks_path) {
+        if let Ok(root) = jsonc_parser::parse_to_serde_value::<Value>(
+            hooks.trim_start_matches('\u{feff}'),
+            &orca_json_parse_options(),
+        ) {
+            if let Some(events) = root.get("hooks").and_then(Value::as_object) {
+                for (event, groups) in events {
+                    let label =
+                        event
+                            .chars()
+                            .enumerate()
+                            .fold(String::new(), |mut label, (i, ch)| {
+                                if i > 0 && ch.is_uppercase() {
+                                    label.push('_');
+                                }
+                                label.extend(ch.to_lowercase());
+                                label
+                            });
+                    let mut new_g = 0;
+                    for (g, group) in groups.as_array().into_iter().flatten().enumerate() {
+                        let mut new_h = 0;
+                        let mut removed = false;
+                        for (h, hook) in group
+                            .get("hooks")
+                            .and_then(Value::as_array)
+                            .into_iter()
+                            .flatten()
+                            .enumerate()
+                        {
+                            let key = normalized_orca_trust_key(&format!(
+                                "{}:{label}:{g}:{h}",
+                                hooks_path.display()
+                            ));
+                            if is_owned(hook) {
+                                owned.insert(key);
+                                removed = true;
+                            } else {
+                                if g != new_g || h != new_h {
+                                    moved.insert(key, format!("{label}:{new_g}:{new_h}"));
+                                }
+                                new_h += 1;
+                            }
+                        }
+                        if !removed || new_h > 0 {
+                            new_g += 1;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    let mut recorded = std::collections::HashMap::new();
+    if let Some(ledger) = ledger.and_then(|path| fs::read_to_string(path).ok()) {
+        if let Ok(root) = serde_json::from_str::<Value>(&ledger) {
+            for home in root
+                .get("homes")
+                .and_then(Value::as_object)
+                .into_iter()
+                .flat_map(|homes| homes.values())
+            {
+                for (key, entry) in home
+                    .get("entries")
+                    .and_then(Value::as_object)
+                    .into_iter()
+                    .flatten()
+                {
+                    let signature = entry
+                        .get("signature")
+                        .and_then(Value::as_str)
+                        .and_then(|text| serde_json::from_str::<Value>(text).ok());
+                    if signature.as_ref().map(is_owned).unwrap_or(false) {
+                        if let Some(hash) = entry.get("trustedHash").and_then(Value::as_str) {
+                            recorded.insert(normalized_orca_trust_key(key), hash.to_string());
+                        }
+                    }
+                }
+            }
+        }
+    }
+    let lines: Vec<&str> = text.split_inclusive('\n').collect();
+    let code_lines = toml_code_lines(&lines);
+    let mut kept = String::new();
+    let mut changed = false;
+    let mut i = 0;
+    while i < lines.len() {
+        let mut end = i + 1;
+        if let Some(key) = code_lines[i]
+            .then(|| parse_codex_state_header(lines[i]))
+            .flatten()
+        {
+            while end < lines.len() && !(code_lines[end] && is_toml_table_header(lines[end])) {
+                end += 1;
+            }
+            let original_key = key;
+            let key = normalized_orca_trust_key(&original_key);
+            let recorded_hash_matches = recorded
+                .get(&key)
+                .map(|hash| {
+                    lines[i + 1..end].iter().any(|line| {
+                        line.split_once('=')
+                            .map(|(key, value)| {
+                                key.trim() == "trusted_hash"
+                                    && value.trim().trim_matches(['\'', '"']) == hash
+                            })
+                            .unwrap_or(false)
+                    })
+                })
+                .unwrap_or(false);
+            if owned.contains(&key) || recorded_hash_matches {
+                changed = true;
+                i = end;
+                continue;
+            }
+            if let Some(suffix) = moved.get(&key) {
+                let source = original_key.rsplitn(4, ':').nth(3).unwrap();
+                let new_key = serde_json::to_string(&format!("{source}:{suffix}"))?;
+                let ending = if lines[i].ends_with("\r\n") {
+                    "\r\n"
+                } else if lines[i].ends_with('\n') {
+                    "\n"
+                } else {
+                    ""
+                };
+                kept.push_str(&format!("[hooks.state.{new_key}]{ending}"));
+                kept.extend(lines[i + 1..end].iter().copied());
+                changed = true;
+                i = end;
+                continue;
+            }
+        }
+        kept.extend(lines[i..end].iter().copied());
+        i = end;
+    }
+    if changed {
+        fs::write(config_path, kept)?;
+    }
+    Ok(())
+}
+
+fn cleanup_orca_codex_home(home: &Path, ledger: Option<&Path>) {
+    if let Err(e) = strip_orca_codex_trust(home, ledger) {
+        eprintln!("[hook-installer] failed to clean Orca Codex trust: {}", e);
+        return;
+    }
+    cleanup_orca_json_config(&home.join("hooks.json"));
+    let profile = home.join("orca-agent-status.config.toml");
+    let Ok(text) = fs::read_to_string(&profile) else {
         return;
     };
-    let mut kept_user_content = false;
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if path.is_dir() {
-            kept_user_content = true; // unknown nested content — keep the folder
-            continue;
-        }
-        let Ok(text) = fs::read_to_string(&path) else {
-            kept_user_content = true;
-            continue;
-        };
-        if text.contains("OrcaOpenCodeStatusPlugin") || text.contains(ORCA_HOOK_ENV_FINGERPRINT)
-        {
-            if let Err(e) = fs::remove_file(&path) {
-                eprintln!(
-                    "[hook-installer] failed to remove {}: {}",
-                    path.display(),
-                    e
-                );
-            }
-        } else {
-            kept_user_content = true;
-        }
+    let start_marker = "# BEGIN ORCA AGENT STATUS HOOKS";
+    let end_marker = "# END ORCA AGENT STATUS HOOKS";
+    let Some(start) = text.find(start_marker) else {
+        return;
+    };
+    let Some(end) = text[start..].find(end_marker) else {
+        return;
+    };
+    let mut kept = text[..start].to_string();
+    kept.push_str(&text[start + end + end_marker.len()..]);
+    let result = if kept.trim().is_empty() {
+        fs::remove_file(&profile)
+    } else {
+        fs::write(&profile, kept)
+    };
+    if let Err(e) = result {
+        eprintln!(
+            "[hook-installer] failed to clean {}: {}",
+            profile.display(),
+            e
+        );
     }
-    if !kept_user_content {
-        if let Err(e) = fs::remove_dir(dir) {
-            eprintln!(
-                "[hook-installer] failed to remove {}: {}",
-                dir.display(),
-                e
-            );
-        }
-    }
+}
+
+/// Inspect the legacy ~/.opencode location for known managed plugins, retaining
+/// all other files and removing directories only when they become empty.
+fn cleanup_legacy_opencode_dir(dir: &Path) {
+    cleanup_orca_plugin_overlay(dir);
 }
 
 /// True iff an Orca process is running. Orca re-installs its hooks on every
@@ -1809,24 +2122,14 @@ fn pgrep_exact(name: &str) -> bool {
         .unwrap_or(false)
 }
 
-/// Delete the directories Orca owns outright — hook scripts, install locks,
-/// its own credential stores, and the relay/opencode overlays. Skipped
-/// entirely while an orca process is alive. The rest of Orca's userData (app
-/// state, account mirrors) is the uninstaller's job, not ours.
-fn cleanup_orca_dirs(home: &Path) {
-    let mut candidates: Vec<PathBuf> = vec![
-        home.join(".orca"),
-        home.join(".orca-relay"),
-        home.join(".orca-managed-home"),
-    ];
+fn orca_user_data_dirs(home: &Path) -> Vec<PathBuf> {
+    let mut paths = Vec::new();
     #[cfg(target_os = "windows")]
     {
         let appdata = std::env::var_os("APPDATA")
             .map(PathBuf::from)
             .unwrap_or_else(|| home.join("AppData").join("Roaming"));
-        let user_data = appdata.join("orca");
-        candidates.push(user_data.join("opencode-hooks"));
-        candidates.push(user_data.join("opencode-config-overlays"));
+        paths.push(appdata.join("orca"));
     }
     #[cfg(target_os = "macos")]
     {
@@ -1835,32 +2138,73 @@ fn cleanup_orca_dirs(home: &Path) {
             .join("Library")
             .join("Application Support")
             .join("orca");
-        candidates.push(user_data.join("opencode-hooks"));
-        candidates.push(user_data.join("opencode-config-overlays"));
+        paths.push(user_data);
     }
     #[cfg(target_os = "linux")]
     {
-        let user_data = home.join(".config").join("orca");
-        candidates.push(user_data.join("opencode-hooks"));
-        candidates.push(user_data.join("opencode-config-overlays"));
+        paths.push(home.join(".config").join("orca"));
+        if let Some(xdg) = std::env::var_os("XDG_CONFIG_HOME").filter(|value| !value.is_empty()) {
+            paths.push(PathBuf::from(xdg).join("orca"));
+        }
     }
 
-    let present: Vec<PathBuf> = candidates.into_iter().filter(|path| path.exists()).collect();
-    if present.is_empty() {
-        return;
+    if let Some(path) = std::env::var_os("ORCA_USER_DATA_PATH").filter(|value| !value.is_empty()) {
+        paths.push(PathBuf::from(path));
     }
-    if orca_process_running() {
-        eprintln!(
-            "[hook-installer] Orca is running — skipping Orca residue cleanup ({})",
-            present
-                .iter()
-                .map(|path| path.display().to_string())
-                .collect::<Vec<_>>()
-                .join(", ")
-        );
-        return;
+    paths.sort();
+    paths.dedup();
+    paths
+}
+
+fn cleanup_orca_user_data(user_data: &Path) {
+    for name in [
+        "opencode-hooks",
+        "opencode-config-overlays",
+        "mimocode-hooks",
+        "pi-agent-overlays",
+        "omp-agent-overlays",
+        "omp-managed-status-extension",
+    ] {
+        cleanup_orca_plugin_overlay(&user_data.join(name));
     }
-    remove_orca_owned_paths(present);
+    let ledger = user_data
+        .join("codex-runtime-home")
+        .join("trust-grant-ledger.json");
+    cleanup_orca_codex_home(
+        &user_data.join("codex-runtime-home").join("home"),
+        Some(&ledger),
+    );
+    if let Ok(accounts) = fs::read_dir(user_data.join("codex-accounts")) {
+        for account in accounts.flatten() {
+            if account
+                .file_type()
+                .map(|kind| kind.is_dir())
+                .unwrap_or(false)
+            {
+                cleanup_orca_codex_home(&account.path().join("home"), Some(&ledger));
+            }
+        }
+    }
+    remove_orca_owned_paths(vec![user_data.join("agent-hooks")]);
+}
+
+/// ~/.orca/sessions and legacy overlays can hold the user's only session/auth copy.
+fn cleanup_orca_dirs(home: &Path) {
+    for name in [
+        "opencode-overlays",
+        "pi-overlays",
+        "omp-overlays",
+        "omp-managed-status-extension",
+    ] {
+        cleanup_orca_plugin_overlay(&home.join(".orca-relay").join(name));
+    }
+    remove_orca_owned_paths(vec![
+        home.join(".orca").join("agent-hooks"),
+        home.join(".orca").join("managed-hook-install.lock"),
+        home.join(".orca-wsl").join("agent-hooks"),
+        home.join(".orca-wsl").join("hook-relay"),
+        home.join(".orca-managed-home"),
+    ]);
 }
 
 /// Delete the given Orca-owned paths (dirs recursively, files otherwise).
@@ -1868,6 +2212,9 @@ fn cleanup_orca_dirs(home: &Path) {
 /// the process gate.
 fn remove_orca_owned_paths(present: Vec<PathBuf>) {
     for path in present {
+        if !path.exists() {
+            continue;
+        }
         let result = if path.is_dir() {
             fs::remove_dir_all(&path)
         } else {
@@ -1885,17 +2232,29 @@ fn remove_orca_owned_paths(present: Vec<PathBuf>) {
 
 /// Remove Orca-managed agent hooks and residue left by stablyai/orca. The
 /// fingerprint match means user hooks survive; only Orca-owned directories
-/// and Orca-created empty shells are deleted. Gated on the Orca process not
-/// running for the directory sweep; the per-file strip is unconditional
-/// (cheap, idempotent, and a running agent never has these files open in a
-/// way that matters). Called from cleanup_all() at app launch.
+/// and Orca-created empty shells are deleted. Skipped while Orca is running.
+/// Called from cleanup_all() at app launch.
 fn cleanup_orca(home: &Path) {
+    if orca_process_running() {
+        eprintln!("[hook-installer] Orca is running — skipping Orca residue cleanup");
+        return;
+    }
+    let user_data_dirs = orca_user_data_dirs(home);
+    for codex_home in orca_agent_homes(home, ".codex", "CODEX_HOME") {
+        // Use Orca's ledger before dropping a hook that identifies a trust entry.
+        for user_data in &user_data_dirs {
+            let ledger = user_data
+                .join("codex-runtime-home")
+                .join("trust-grant-ledger.json");
+            cleanup_orca_codex_home(&codex_home, Some(&ledger));
+        }
+        cleanup_orca_codex_home(&codex_home, None);
+    }
     // Claude-shaped JSON hook configs. Antigravity shares .gemini with Gemini
     // (its own hooks.json under config/); Droid keeps its config in .factory.
     let mut configs: Vec<PathBuf> = vec![
         home.join(".claude").join("settings.json"),
         home.join(".openclaude").join("settings.json"),
-        home.join(".codex").join("hooks.json"),
         home.join(".gemini").join("settings.json"),
         home.join(".gemini").join("config").join("hooks.json"),
         home.join(".factory").join("settings.json"),
@@ -1913,43 +2272,33 @@ fn cleanup_orca(home: &Path) {
     configs.push(home.join(".config").join("devin").join("config.json"));
 
     for config in &configs {
-        if let Err(e) = strip_orca_json_hooks(config) {
-            eprintln!(
-                "[hook-installer] failed to clean {}: {}",
-                config.display(),
-                e
-            );
-        }
-        remove_orca_backup(config);
+        cleanup_orca_json_config(config);
     }
 
     // Kimi: KIMI_CODE_HOME or ~/.kimi-code/config.toml.
-    let kimi_config = std::env::var_os("KIMI_CODE_HOME")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| home.join(".kimi-code"))
-        .join("config.toml");
-    if let Err(e) = strip_orca_toml_hooks(&kimi_config) {
-        eprintln!(
-            "[hook-installer] failed to clean {}: {}",
-            kimi_config.display(),
-            e
-        );
+    for kimi_home in orca_agent_homes(home, ".kimi-code", "KIMI_CODE_HOME") {
+        let kimi_config = kimi_home.join("config.toml");
+        if let Err(e) = strip_orca_toml_hooks(&kimi_config) {
+            eprintln!(
+                "[hook-installer] failed to clean {}: {}",
+                kimi_config.display(),
+                e
+            );
+        }
+        remove_orca_backup(&kimi_config);
     }
-    remove_orca_backup(&kimi_config);
 
-    // Orca-dedicated hook files (whole-file removal, marker-checked).
-    let copilot_orca = home.join(".copilot").join("hooks").join("orca.json");
-    remove_orca_marked_file(&copilot_orca);
-    remove_orca_backup(&copilot_orca);
-    let grok_home = std::env::var_os("GROK_HOME")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| home.join(".grok"));
-    let grok_orca = grok_home.join("hooks").join("orca-status.json");
-    remove_orca_marked_file(&grok_orca);
-    remove_orca_backup(&grok_orca);
+    // Dedicated filenames can still contain user-added hooks.
+    for (default_dir, env_key, filename) in [
+        (".copilot", "COPILOT_HOME", "orca.json"),
+        (".grok", "GROK_HOME", "orca-status.json"),
+    ] {
+        for agent_home in orca_agent_homes(home, default_dir, env_key) {
+            cleanup_orca_json_config(&agent_home.join("hooks").join(filename));
+        }
+    }
 
-    // Provider-native plugin files (Amp writes a TS plugin, Hermes a plugin
-    // dir + config.yaml entry).
+    // Provider-native plugins and Pi-compatible global extensions.
     remove_marked_file(
         &home
             .join(".config")
@@ -1958,10 +2307,36 @@ fn cleanup_orca(home: &Path) {
             .join("orca-agent-status.ts"),
         &[ORCA_PLUGIN_MARKER],
     );
-    cleanup_orca_hermes();
+    for hermes_home in orca_agent_homes(home, ".hermes", "HERMES_HOME") {
+        cleanup_orca_hermes(&hermes_home);
+    }
+    let pi_agent_dir = std::env::var_os("PI_CODING_AGENT_DIR")
+        .filter(|dir| !dir.is_empty())
+        .map(PathBuf::from);
+    cleanup_orca_pi_extensions(home, pi_agent_dir.as_deref());
+    if let Some(prime_home) =
+        std::env::var_os("PRIME_AGENT_CODING_AGENT_DIR").filter(|value| !value.is_empty())
+    {
+        cleanup_orca_plugin_files(&PathBuf::from(prime_home).join("extensions"));
+    }
+    for tool in ["opencode", "mimocode"] {
+        for folder in ["plugins", "plugin"] {
+            cleanup_orca_plugin_files(&home.join(".config").join(tool).join(folder));
+        }
+    }
+    if let Some(config) = std::env::var_os("OPENCODE_CONFIG_DIR").filter(|value| !value.is_empty())
+    {
+        cleanup_orca_plugin_files(&PathBuf::from(config).join("plugins"));
+    }
+    if let Some(config) = std::env::var_os("MIMOCODE_HOME").filter(|value| !value.is_empty()) {
+        cleanup_orca_plugin_files(&PathBuf::from(config).join("config").join("plugins"));
+    }
 
     // ~/.opencode — legacy Orca builds only; deleted only when entirely Orca's.
     cleanup_legacy_opencode_dir(&home.join(".opencode"));
+    for user_data in &user_data_dirs {
+        cleanup_orca_user_data(user_data);
+    }
 
     // Orca-owned directories, gated on the process not running.
     cleanup_orca_dirs(home);
@@ -2160,6 +2535,18 @@ mod orca_cleanup_tests {
     }
 
     #[test]
+    fn kimi_windows_escaped_command_cleanup_preserves_crlf() {
+        let dir = fresh_dir("kimi-windows-escaped");
+        let path = dir.join("config.toml");
+        let user = "# user config\r\nmodel = 'user'\r\n";
+        let command = serde_json::to_string(r#""C:\Users\u\.orca\agent-hooks\kimi-hook.cmd""#).unwrap();
+        fs::write(&path, format!("{user}[[hooks]]\r\ncommand = {command}\r\n")).unwrap();
+        strip_orca_toml_hooks(&path).unwrap();
+        assert_eq!(fs::read_to_string(path).unwrap(), user);
+        let _ = fs::remove_dir_all(dir);
+    }
+
+    #[test]
     fn kimi_toml_deleted_when_only_orca() {
         let dir = fresh_dir("kimi-only-orca");
         let cfg = dir.join(".kimi-code").join("config.toml");
@@ -2193,6 +2580,509 @@ mod orca_cleanup_tests {
         remove_orca_marked_file(&copilot);
         assert!(copilot.exists(), "user replacement kept");
         let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn pi_extensions_removed_from_default_and_custom_agent_dirs() {
+        let dir = fresh_dir("pi-extensions");
+        let custom = dir.join("custom-agent");
+        let agents = [
+            dir.join(".pi").join("agent"),
+            dir.join(".omp").join("agent"),
+            dir.join(".prime").join("agent"),
+            custom.clone(),
+        ];
+        for agent in &agents {
+            let extensions = agent.join("extensions");
+            fs::create_dir_all(&extensions).unwrap();
+            for name in [
+                "orca-agent-status.ts",
+                "orca-prefill.ts",
+                "orca-titlebar-spinner.ts",
+            ] {
+                fs::write(
+                    extensions.join(name),
+                    "// @orca-managed-pi-extension\nexport default function (pi) {}\n",
+                )
+                .unwrap();
+            }
+            fs::write(agent.join("settings.json"), "{\"theme\":\"dark\"}\n").unwrap();
+        }
+
+        cleanup_orca_pi_extensions(&dir, Some(&custom));
+        cleanup_orca_pi_extensions(&dir, Some(&custom));
+
+        for agent in &agents {
+            assert_eq!(fs::read_dir(agent.join("extensions")).unwrap().count(), 0);
+            assert_eq!(
+                fs::read_to_string(agent.join("settings.json")).unwrap(),
+                "{\"theme\":\"dark\"}\n",
+            );
+        }
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn pi_extensions_keep_user_owned_files() {
+        let dir = fresh_dir("pi-user-extensions");
+        let custom = dir.join("custom-agent");
+        for agent in [
+            dir.join(".pi").join("agent"),
+            dir.join(".omp").join("agent"),
+            custom.clone(),
+        ] {
+            let extensions = agent.join("extensions");
+            fs::create_dir_all(&extensions).unwrap();
+            let files: [(&str, &[u8]); 5] = [
+                ("orca-agent-status.ts", b"// user replacement\n"),
+                ("orca-prefill.ts", b"// user prefill\n"),
+                ("orca-titlebar-spinner.ts", b"\xff\xfe"),
+                ("perm-test.ts", b"// permission test\n"),
+                ("user-extension.ts", b"// @orca-managed-pi-extension\n"),
+            ];
+            for (name, contents) in files {
+                fs::write(extensions.join(name), contents).unwrap();
+            }
+
+            cleanup_orca_pi_extensions(&dir, Some(&custom));
+
+            for (name, contents) in files {
+                assert_eq!(fs::read(extensions.join(name)).unwrap(), contents);
+            }
+        }
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn pi_extensions_missing_dirs_are_not_created() {
+        let dir = fresh_dir("pi-missing-extensions");
+        cleanup_orca_pi_extensions(&dir, Some(&dir.join("missing-agent")));
+        cleanup_orca_pi_extensions(&dir, None);
+        assert_eq!(fs::read_dir(&dir).unwrap().count(), 0);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn antigravity_bundle_and_platform_commands_preserve_user_hooks() {
+        let dir = fresh_dir("antigravity-bundle");
+        let path = dir.join("hooks.json");
+        let user_prompt = json!({"type": "prompt", "prompt": "Check the result"});
+        fs::write(&path, serde_json::to_vec(&json!({
+                "orca-status": {
+                    "BeforeAgent": [{"command": "~/.orca/agent-hooks/antigravity-hook.sh"}],
+                    "BeforeTool": [{"hooks": [
+                        {"bash": "~/.orca/agent-hooks/antigravity-hook.sh", "powershell": "echo user"},
+                        user_prompt.clone()
+                    ]}]
+                },
+                "user-bundle": {"BeforeAgent": [{"command": "echo user"}]},
+                "hooks": {"Stop": [
+                    {"command": "conhost.exe", "args": ["--headless", "C:\\Users\\u\\.orca\\agent-hooks\\codex-hook.cmd"]},
+                    user_prompt.clone(),
+                    {"hooks": []}
+                ]}
+            })).unwrap()).unwrap();
+        strip_orca_json_hooks(&path).unwrap();
+        let cleaned: Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+        assert!(cleaned["orca-status"].get("BeforeAgent").is_none());
+        assert_eq!(
+            cleaned["orca-status"]["BeforeTool"][0]["hooks"],
+            json!([
+                {"powershell": "echo user"}, user_prompt.clone()
+            ])
+        );
+        assert_eq!(
+            cleaned["hooks"]["Stop"],
+            json!([user_prompt, {"hooks": []}])
+        );
+        assert_eq!(
+            cleaned["user-bundle"]["BeforeAgent"][0]["command"],
+            "echo user"
+        );
+        let before = fs::read(&path).unwrap();
+        strip_orca_json_hooks(&path).unwrap();
+        assert_eq!(fs::read(&path).unwrap(), before);
+        let _ = fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn mixed_backup_preserves_user_configuration() {
+        let dir = fresh_dir("mixed-backup");
+        let path = dir.join("settings.json");
+        let backup = dir.join("settings.json.bak");
+        fs::write(
+            &backup,
+            serde_json::to_vec(&json!({
+                "theme": "user-theme",
+                "hooks": {"Stop": [
+                    {"command": "~/.orca/agent-hooks/claude-hook.sh"},
+                    {"command": "echo user"}
+                ]}
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        remove_orca_backup(&path);
+        let cleaned: Value = serde_json::from_slice(&fs::read(&backup).unwrap()).unwrap();
+        assert_eq!(cleaned["theme"], "user-theme");
+        assert_eq!(cleaned["hooks"]["Stop"], json!([{"command": "echo user"}]));
+        let _ = fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn devin_jsonc_cleanup_preserves_comments_formatting_and_bom() {
+        let dir = fresh_dir("devin-jsonc");
+        let path = dir.join("config.json");
+        let user = "      // my user hook\n      { \"command\": \"echo user\" },";
+        fs::write(&path, format!(
+                "\u{feff}{{\n  // my endpoint\n  \"endpoint\": \"https://example.test/a//b\",\n  \"hooks\": {{\n    \"Stop\": [\n      {{\"command\":\"C:/Users/u/AppData/Roaming/Orca/agent-hooks/devin-hook.cmd\"}},\n{user}\n    ],\n  }},\n}}\n"
+            )).unwrap();
+        strip_orca_json_hooks(&path).unwrap();
+        let after = fs::read_to_string(&path).unwrap();
+        assert!(after.starts_with('\u{feff}'));
+        assert!(after.contains("// my endpoint"));
+        assert!(after.contains("https://example.test/a//b"));
+        assert!(after.contains(user));
+        assert!(!after.contains("devin-hook.cmd"));
+        strip_orca_json_hooks(&path).unwrap();
+        assert_eq!(fs::read_to_string(path).unwrap(), after);
+        let _ = fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn kimi_cleanup_ignores_marker_mentions_in_comments_and_other_tables() {
+        let dir = fresh_dir("kimi-user-comments");
+        let path = dir.join("config.toml");
+        let user = "[[hooks]]\ncommand = 'echo user' # .orca/agent-hooks/kimi-hook.sh\n\n[[tools]]\ncommand = '~/.orca/agent-hooks/kimi-hook.sh'\n";
+        fs::write(
+            &path,
+            format!("{user}\n[[hooks]]\ncommand = '~/.orca/agent-hooks/kimi-hook.sh'\n"),
+        )
+        .unwrap();
+        strip_orca_toml_hooks(&path).unwrap();
+        assert_eq!(fs::read_to_string(path).unwrap(), user);
+        let _ = fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn user_data_plugins_removed_without_deleting_sessions_or_auth() {
+        let dir = fresh_dir("user-data-plugins");
+        let user_data = dir.join("app-data");
+        let files = [
+            (
+                "opencode-hooks/shared/plugins/orca-opencode-status.js",
+                "// OrcaOpenCodeStatusPlugin",
+            ),
+            (
+                "opencode-config-overlays/source/plugins/orca-opencode-status.js",
+                "// ORCA_AGENT_HOOK_ENDPOINT",
+            ),
+            (
+                "mimocode-hooks/shared/config/plugins/orca-mimocode-status.js",
+                "// ORCA_AGENT_HOOK_ENDPOINT",
+            ),
+            (
+                "pi-agent-overlays/source/extensions/orca-prefill.ts",
+                "// @orca-managed-pi-extension",
+            ),
+            (
+                "omp-agent-overlays/source/extensions/orca-titlebar-spinner.ts",
+                "// @orca-managed-pi-extension",
+            ),
+            (
+                "omp-managed-status-extension/orca-agent-status.ts",
+                "// @orca-managed-pi-extension",
+            ),
+        ];
+        for (path, marker) in files {
+            let path = user_data.join(path);
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+            fs::write(path, marker).unwrap();
+        }
+        let retained = [
+            user_data.join("mimocode-hooks/shared/data/auth.json"),
+            user_data.join("omp-agent-overlays/source/sessions/history.jsonl"),
+            user_data.join("opencode-config-overlays/source/plugins/user.js"),
+            dir.join(".orca/sessions/workspace/state.json"),
+            dir.join(".orca-relay/omp-overlays/source/auth.json"),
+        ];
+        for path in &retained {
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+            fs::write(path, "user data").unwrap();
+        }
+        let hook = dir.join(".orca/agent-hooks/claude-hook.sh");
+        fs::create_dir_all(hook.parent().unwrap()).unwrap();
+        fs::write(&hook, "generated hook").unwrap();
+        cleanup_orca_user_data(&user_data);
+        cleanup_orca_dirs(&dir);
+        cleanup_orca_user_data(&user_data);
+        for (path, _) in files {
+            assert!(!user_data.join(path).exists(), "{}", path);
+        }
+        assert!(!hook.exists());
+        for path in retained {
+            assert_eq!(fs::read_to_string(path).unwrap(), "user data");
+        }
+        let _ = fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn codex_trust_and_legacy_profile_cleanup_preserves_user_entries() {
+        let dir = fresh_dir("codex-orca-trust");
+        let hooks = dir.join("hooks.json");
+        let config = dir.join("config.toml");
+        let ledger = dir.join("ledger.json");
+        let profile = dir.join("orca-agent-status.config.toml");
+        let source = hooks.to_string_lossy();
+        fs::write(
+            &hooks,
+            serde_json::to_vec(&json!({"hooks": {"PreToolUse": [{"hooks": [
+                {"command": "~/.orca/agent-hooks/codex-hook.sh"}, {"command": "echo user"}
+            ]}]}}))
+            .unwrap(),
+        )
+        .unwrap();
+        fs::write(&config, format!(
+                    "model = 'user-model'\r\n[hooks.state.'{source}:pre_tool_use:0:0']\r\ntrusted_hash = 'orca-current'\r\n[hooks.state.'{source}:pre_tool_use:0:1']\r\ntrusted_hash = 'user'\r\n[hooks.state.'{source}:stop:0:0']\r\ntrusted_hash = 'orca-recorded'\r\n[hooks.state.'{source}:stop:1:0']\r\ntrusted_hash = 'user-replacement'\r\n"
+                )).unwrap();
+        let signature = json!({"command": "~/.orca/agent-hooks/codex-hook.sh"}).to_string();
+        fs::write(
+            &ledger,
+            serde_json::to_vec(&json!({"homes": {"runtime": {"entries": {
+                format!("{source}:stop:0:0"): {"signature": signature, "trustedHash": "orca-recorded"},
+                format!("{source}:stop:1:0"): {"signature": signature, "trustedHash": "old-orca-hash"}
+            }}}}))
+            .unwrap(),
+        )
+        .unwrap();
+        fs::write(&profile, "# my profile\n# BEGIN ORCA AGENT STATUS HOOKS\n[hooks]\n# END ORCA AGENT STATUS HOOKS\nmodel = 'user-model'\n").unwrap();
+        cleanup_orca_codex_home(&dir, Some(&ledger));
+        let after = fs::read_to_string(&config).unwrap();
+        assert!(!after.contains("orca-current"));
+        assert!(!after.contains("orca-recorded"));
+        assert!(after.contains("trusted_hash = 'user'\r\n"));
+        assert!(after
+            .lines()
+            .filter_map(parse_codex_state_header)
+            .any(|key| key == format!("{source}:pre_tool_use:0:0")));
+        assert!(!after
+            .lines()
+            .filter_map(parse_codex_state_header)
+            .any(|key| key == format!("{source}:pre_tool_use:0:1")));
+        assert!(after.contains("trusted_hash = 'user-replacement'\r\n"));
+        assert_eq!(
+            fs::read_to_string(&profile).unwrap(),
+            "# my profile\n\nmodel = 'user-model'\n"
+        );
+        let cleaned: Value = serde_json::from_slice(&fs::read(&hooks).unwrap()).unwrap();
+        assert_eq!(
+            cleaned["hooks"]["PreToolUse"][0]["hooks"],
+            json!([{"command": "echo user"}])
+        );
+        cleanup_orca_codex_home(&dir, Some(&ledger));
+        assert_eq!(fs::read_to_string(config).unwrap(), after);
+        let _ = fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn dedicated_hook_configs_keep_user_hooks_and_malformed_backups() {
+        let dir = fresh_dir("mixed-dedicated-configs");
+        for name in ["orca.json", "orca-status.json"] {
+            let path = dir.join(name);
+            let backup = dir.join(format!("{name}.bak"));
+            let malformed = "{ invalid JSON: .orca/agent-hooks/grok-hook.sh";
+            fs::write(
+                &path,
+                serde_json::to_vec(&json!({"hooks": {"Stop": [
+                    {"command": "~/.orca/agent-hooks/grok-hook.sh"}, {"command": "echo user"}
+                ]}}))
+                .unwrap(),
+            )
+            .unwrap();
+            fs::write(&backup, malformed).unwrap();
+            cleanup_orca_json_config(&path);
+            let cleaned: Value = serde_json::from_slice(&fs::read(path).unwrap()).unwrap();
+            assert_eq!(cleaned["hooks"]["Stop"], json!([{"command": "echo user"}]));
+            assert_eq!(fs::read_to_string(backup).unwrap(), malformed);
+        }
+        let _ = fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn hermes_cleanup_removes_generated_cache_but_preserves_user_replacement() {
+        let dir = fresh_dir("hermes-cache");
+        let plugin = dir.join("plugins/orca-status");
+        let cache = plugin.join("__pycache__");
+        fs::create_dir_all(&cache).unwrap();
+        fs::write(plugin.join("__init__.py"), ORCA_PLUGIN_MARKER).unwrap();
+        fs::write(plugin.join("plugin.yaml"), ORCA_PLUGIN_MARKER).unwrap();
+        fs::write(cache.join("__init__.cpython-313.pyc"), [0, 1, 2]).unwrap();
+        fs::write(
+            dir.join("config.yaml"),
+            "plugins:\n  enabled: [orca-status, user-plugin]\n",
+        )
+        .unwrap();
+        cleanup_orca_hermes(&dir);
+        assert!(!plugin.exists());
+        assert!(fs::read_to_string(dir.join("config.yaml"))
+            .unwrap()
+            .contains("user-plugin"));
+        fs::create_dir_all(&plugin).unwrap();
+        fs::write(plugin.join("__init__.py"), "# user replacement").unwrap();
+        fs::write(
+            plugin.join("plugin.yaml"),
+            "name: orca-status\nauthor: user\n",
+        )
+        .unwrap();
+        let user_config = "plugins:\n  enabled: [orca-status]\n";
+        fs::write(dir.join("config.yaml"), user_config).unwrap();
+        cleanup_orca_hermes(&dir);
+        assert!(plugin.join("__init__.py").exists());
+        assert_eq!(
+            fs::read_to_string(dir.join("config.yaml")).unwrap(),
+            user_config
+        );
+        let _ = fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn coffee_then_orca_cleanup_preserves_user_codex_trust_at_new_indices() {
+        let dir = fresh_dir("codex-trust-reindex");
+        let codex = dir.join(".codex");
+        fs::create_dir_all(&codex).unwrap();
+        let hooks = codex.join("hooks.json");
+        let config = codex.join("config.toml");
+        let source = hooks.to_string_lossy();
+        let value = json!({"hooks": {"Stop": [
+            {"hooks": [{"command": "coffee-cli __codex-hook"}]},
+            {"hooks": [{"command": "~/.orca/agent-hooks/codex-hook.sh"}]},
+            {"hooks": [
+                {"command": "~/.orca/agent-hooks/codex-hook.sh"},
+                {"command": "echo user"}
+            ]}
+        ]}});
+        fs::write(&hooks, format!("// user JSONC\n{value}\n")).unwrap();
+        fs::write(
+            &config,
+            format!(
+                "[hooks.state.'{source}:stop:0:0']\ntrusted_hash = 'coffee'\n\
+                 [hooks.state.'{source}:stop:1:0']\ntrusted_hash = 'orca'\n\
+                 [hooks.state.'{source}:stop:2:0']\ntrusted_hash = 'orca2'\n\
+                 [hooks.state.'{source}:stop:2:1']\ntrusted_hash = 'user'\nenabled = false\n"
+            ),
+        )
+        .unwrap();
+        cleanup_codex_island_install(&dir);
+        cleanup_orca_codex_home(&codex, None);
+        let after = fs::read_to_string(&config).unwrap();
+        assert!(after.contains("trusted_hash = 'user'\nenabled = false"));
+        assert!(!after.contains("'orca"));
+        assert!(!after.contains("'coffee'"));
+        let keys: Vec<_> = after.lines().filter_map(parse_codex_state_header).collect();
+        assert_eq!(keys, vec![format!("{source}:stop:0:0")]);
+        cleanup_codex_island_install(&dir);
+        cleanup_orca_codex_home(&codex, None);
+        assert_eq!(fs::read_to_string(&config).unwrap(), after);
+        let _ = fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn toml_cleanup_preserves_hook_examples_in_multiline_instructions() {
+        let dir = fresh_dir("toml-multiline-examples");
+        let hooks = dir.join("hooks.json");
+        let config = dir.join("config.toml");
+        let source = hooks.to_string_lossy();
+        fs::write(
+            &hooks,
+            r#"{"hooks":{"Stop":[{"hooks":[{"command":"~/.orca/agent-hooks/codex-hook.sh"}]}]}}"#,
+        )
+        .unwrap();
+        for delimiter in ["\"\"\"", "'''"] {
+            let user = format!("# {delimiter} in a comment\ninstructions = {delimiter}\n[hooks.state.'{source}:stop:0:0']\ntrusted_hash = 'example'\n[[hooks]]\ncommand = '~/.orca/agent-hooks/kimi-hook.sh'\n{delimiter}\n");
+            fs::write(&config, format!("{user}[hooks.state.'{source}:stop:0:0']\ntrusted_hash = 'orca'\n[[hooks]]\ncommand = '~/.orca/agent-hooks/kimi-hook.sh'\n")).unwrap();
+            strip_orca_codex_trust(&dir, None).unwrap();
+            strip_orca_toml_hooks(&config).unwrap();
+            assert_eq!(fs::read_to_string(&config).unwrap(), user);
+            let hook_example = format!("[[hooks]]\ncommand = 'echo user'\nnote = {delimiter}\ncommand = '~/.orca/agent-hooks/kimi-hook.sh'\n{delimiter}\n");
+            fs::write(&config, &hook_example).unwrap();
+            strip_orca_toml_hooks(&config).unwrap();
+            assert_eq!(fs::read_to_string(&config).unwrap(), hook_example);
+        }
+        let _ = fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn hermes_cache_without_ownership_and_directories_are_preserved() {
+        let dir = fresh_dir("hermes-cache-ownership");
+        let plugin = dir.join("plugins/orca-status");
+        let cache = plugin.join("__pycache__");
+        fs::create_dir_all(&cache).unwrap();
+        let pyc = cache.join("__init__.cpython-313.pyc");
+        fs::write(&pyc, "user bytecode").unwrap();
+        cleanup_orca_hermes(&dir);
+        assert!(pyc.exists(), "no marked source, no ownership proof");
+        fs::write(plugin.join("__init__.py"), ORCA_PLUGIN_MARKER).unwrap();
+        let user_dir = cache.join("__init__.custom.pyc");
+        fs::create_dir_all(&user_dir).unwrap();
+        fs::write(user_dir.join("user.txt"), "user data").unwrap();
+        cleanup_orca_hermes(&dir);
+        assert!(!pyc.exists());
+        assert!(user_dir.join("user.txt").exists());
+        let _ = fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn overlay_cleanup_does_not_follow_directory_links() {
+        let dir = fresh_dir("overlay-links");
+        let external = dir.join("user-config");
+        let root = dir.join("mimocode-hooks");
+        fs::create_dir_all(external.join("plugins")).unwrap();
+        fs::create_dir_all(root.join("shared")).unwrap();
+        let plugin = external.join("plugins/orca-mimocode-status.js");
+        fs::write(&plugin, "// ORCA_AGENT_HOOK_ENDPOINT").unwrap();
+        let links = [
+            root.join("shared").join("config"),
+            root.join("source"),
+            dir.join("plugins").join("orca-status").join("__pycache__"),
+        ];
+        fs::create_dir_all(external.join("config/plugins")).unwrap();
+        let nested_plugin = external.join("config/plugins/orca-opencode-status.js");
+        fs::write(&nested_plugin, "// OrcaOpenCodeStatusPlugin").unwrap();
+        let pyc = external.join("__init__.cpython-313.pyc");
+        fs::write(&pyc, "user bytecode").unwrap();
+        fs::create_dir_all(links[2].parent().unwrap()).unwrap();
+        fs::write(
+            links[2].parent().unwrap().join("__init__.py"),
+            ORCA_PLUGIN_MARKER,
+        )
+        .unwrap();
+        for link in &links {
+            #[cfg(windows)]
+            {
+                use std::os::windows::process::CommandExt;
+                let output = std::process::Command::new("cmd")
+                    .args(["/D", "/C", "mklink", "/J"])
+                    .arg(&link)
+                    .arg(&external)
+                    .creation_flags(0x08000000)
+                    .output()
+                    .unwrap();
+                assert!(
+                    output.status.success(),
+                    "{}",
+                    String::from_utf8_lossy(&output.stderr)
+                );
+            }
+            #[cfg(unix)]
+            std::os::unix::fs::symlink(&external, &link).unwrap();
+        }
+        cleanup_orca_plugin_overlay(&root);
+        cleanup_orca_hermes(&dir);
+        assert!(plugin.exists());
+        assert!(nested_plugin.exists());
+        assert!(pyc.exists());
+        assert!(links.iter().all(|link| link.exists()));
+        let _ = fs::remove_dir_all(dir);
     }
 
     #[test]
@@ -2232,7 +3122,7 @@ mod orca_cleanup_tests {
         let marked_backup = dir.join("settings.json.bak");
         fs::write(
             &marked_backup,
-            r#"{"hooks":{"Stop":[{"hooks":[{"command":"%USERPROFILE%\.orca\agent-hooks\claude-hook.cmd"}]}]}}"#,
+            r#"{"hooks":{"Stop":[{"hooks":[{"command":"%USERPROFILE%\\.orca\\agent-hooks\\claude-hook.cmd"}]}]}}"#,
         )
         .unwrap();
         remove_orca_backup(&settings);
