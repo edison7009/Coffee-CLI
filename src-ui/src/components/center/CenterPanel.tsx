@@ -586,8 +586,8 @@ export function CenterPanel() {
   // the order here is the launchpad's preferred presentation order.
   const BUILTIN_AI_CLI_FALLBACK: { key: ToolType; label: string }[] = [
     'claude', 'opencode', 'mimocode', 'kilo', 'openclaw', 'codex', 'grok', 'antigravity', 'qwen', 'hermes',
-    // Pi/Oh-My-Pi (T2), Kimi Code (T1), Crush/Aider/Goose/Copilot/Cursor (T3).
-    'pi', 'crush', 'aider', 'kimicode', 'goose', 'copilot', 'cursor', 'omp',
+    // Pi/Oh-My-Pi (T2), Kimi Code (T1), Crush/Aider/Goose/Copilot/Cursor/Cline (T3).
+    'pi', 'crush', 'aider', 'kimicode', 'goose', 'copilot', 'cursor', 'cline', 'omp',
   ].map((key) => ({ key: key as ToolType, label: getToolDisplayName(key) }));
 
   // Unified agent catalog — fully local. The remote catalog fetch

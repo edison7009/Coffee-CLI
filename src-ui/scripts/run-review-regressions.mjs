@@ -142,3 +142,61 @@ pendingRead = deferred(); poll(); cleanupDiff();
 pendingRead.resolve('late result'); await tick();
 assert.equal(output.rows[0].text, 'second');
 console.log('OK: background cwd, split ownership, path case, late listeners, Explorer races, and live Diff refresh');
+
+// Every saved launchpad pin must have a visible switch, including Cline.
+const centerTree = source('components/center/CenterPanel.tsx');
+const pinDeclarations = new Map();
+function collectPinDeclarations(node) {
+  if (ts.isVariableDeclaration(node)) pinDeclarations.set(node.name.getText(centerTree), node);
+  ts.forEachChild(node, collectPinDeclarations);
+}
+collectPinDeclarations(centerTree);
+const pinInitializer = pinDeclarations.get('[pinnedItems, setPinnedItems]').initializer.arguments[0].getText(centerTree);
+const validPinKeys = evaluate(pinDeclarations.get('VALID_PIN_KEYS').initializer.getText(centerTree));
+let savedPins = JSON.stringify(['agent:cline']);
+const pinContext = {
+  VALID_PIN_KEYS: validPinKeys,
+  localStorage: {
+    getItem: () => savedPins,
+    setItem: (_key, value) => { savedPins = value; },
+  },
+};
+const loadPins = () => Array.from(evaluate(`(${pinInitializer})()`, pinContext));
+assert.deepEqual(loadPins(), ['agent:cline'], 'preserve the existing Cline selection');
+assert.equal(savedPins, '["agent:cline"]');
+savedPins = JSON.stringify(['agent:vibeid']);
+assert.deepEqual(loadPins(), [], 'retired tools must not leave an invisible pin');
+assert.equal(savedPins, '[]', 'remove the ghost from storage as well as the counter');
+assert.deepEqual(loadPins(), [], 'reloading must keep an intentionally empty selection');
+
+// Compare against the actual rendered catalog so future removals cannot drift.
+const aiPins = evaluate(pinDeclarations.get('BUILTIN_AI_CLI_FALLBACK').initializer.getText(centerTree), {
+  getToolDisplayName: key => key,
+}).map(item => item.key);
+const utilityPins = pinDeclarations.get('utilities').initializer.elements.map(item => {
+  const key = item.properties.find(property => property.name?.getText(centerTree) === 'key');
+  return evaluate(key.initializer.getText(centerTree));
+});
+const catalogPins = [...aiPins, ...utilityPins];
+assert.ok(aiPins.includes('cline'), 'Cline must remain selectable as a launch-only tool');
+assert.deepEqual([...validPinKeys].sort(), catalogPins.sort(), 'every valid pin needs a visible switch');
+
+savedPins = JSON.stringify(['agent:cline', 'agent:claude', 'agent:multi-agent', 'agent:four-split']);
+let pins = loadPins();
+assert.deepEqual(pins, ['agent:cline', 'agent:claude', 'agent:four-split'], 'preserve visible choices and split migration');
+const togglePin = evaluate(pinDeclarations.get('togglePin').initializer.getText(centerTree), {
+  ...pinContext, MAX_PINS: 6, setPinnedItems: update => { pins = update(pins); },
+});
+for (const key of catalogPins) {
+  if (pins.includes(`agent:${key}`)) togglePin(`agent:${key}`);
+}
+assert.equal(pins.length, 0, 'turning off every visible switch must produce 0/6');
+assert.equal(savedPins, '[]');
+assert.deepEqual(loadPins(), [], 'reloading after switching everything off must stay empty');
+togglePin('agent:cline');
+assert.deepEqual(Array.from(pins), ['agent:cline'], 'Cline can be pinned again');
+togglePin('agent:cline');
+assert.equal(pins.length, 0, 'Cline can be switched off again');
+for (const key of catalogPins.slice(0, 7)) togglePin(`agent:${key}`);
+assert.equal(pins.length, 6, 'all six slots must be usable while the cap remains enforced');
+console.log('OK: Cline selection and toggling, retired pins, catalog consistency, persisted zero count, migration, and six-slot limit');
