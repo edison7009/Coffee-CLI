@@ -1,64 +1,54 @@
 <details open>
 <summary><b>🇨🇳 简体中文</b></summary>
 
-### Coffee CLI v3.5.2
+### Coffee CLI v3.5.3
 
-- **重新设计 18 款终端配色。** 采用低饱和度配色，按六列色系、三行深浅排列，减少相近蓝色，让主题更容易挑选。
-- **区分两种黑色主题。** 黑曜石恢复接近纯黑的底色和暗炭灰边框；代码夜采用中性黑底与更清晰的灰色边框。
-- **提升界面辨识度。** 工具管理中开启的开关统一使用蓝色，修复选中色卡的圆角缝隙，并改善文字及按钮对比度。
-- **支持 Oh-My-Pi 灵动岛状态。** 从终端原生标题识别工作中、等待输入和空闲，避免动画标题抖动以及空回车造成错误状态。
-- **升级保留主题选择。** 现有主题使用重新设计后的颜色；暗黑改名为深咖、品红改名为烟紫，原青碧替换为葡萄紫。形态、图标及终端文字配色设置继续保留，可在外观设置中重新选色。
+- **补上 Cline 启动入口。** 修复 Cline 未出现在 Agent 选择列表的问题，恢复选择与置顶操作。
+- **扩展 Orca 残留清理。** 启动时清理已识别的 Orca hook 和插件，补齐 Pi、Oh-My-Pi、Prime Agent 等扩展及旧版配置、备份中的残留；Orca 正在运行时跳过。
+- **保留用户配置与数据。** 清理保留用户 hook、扩展、登录信息和会话记录，处理混合 JSONC 配置、Windows 编码命令及 TOML 路径转义，并修正 Codex 清理后的 hook 信任记录索引。
 
 </details>
 
 <details>
 <summary><b>🇬🇧 English</b></summary>
 
-### Coffee CLI v3.5.2
+### Coffee CLI v3.5.3
 
-- **Redesign all 18 terminal palettes.** Muted colors form six hue columns and three depth rows, with fewer similar blues and clearer choices.
-- **Give the dark themes distinct roles.** Obsidian uses near-black surfaces and quiet charcoal borders; Code Night uses neutral black surfaces with clearer gray borders.
-- **Improve visual clarity.** Enabled tool switches consistently use blue. Selected color cards have seamless rounded corners, with improved text and button contrast.
-- **Add Oh-My-Pi Dynamic Island status.** Native terminal titles report working, waiting for input, and idle states without animated title jitter or false activity from empty Enter presses.
-- **Keep saved theme selections.** Existing themes adopt the redesigned colors. Dark becomes Espresso, Fuchsia becomes Mauve, and the former Teal palette becomes Grape. Shape, icon, and terminal text color preferences are retained; another palette can be selected in Appearance.
+- **Restore Cline in the launchpad.** Cline appears in the agent picker again, with selection and pin controls restored.
+- **Expand Orca residue cleanup.** Startup cleanup removes recognized Orca hooks and plugins, including Pi, Oh-My-Pi, and Prime Agent extensions, legacy configuration entries, and backup residue. Cleanup is skipped while Orca is running.
+- **Preserve user configuration and data.** Keep user hooks, extensions, credentials, and sessions while handling mixed JSONC files, Windows encoded commands, and escaped TOML paths. Codex hook trust indices stay aligned after cleanup.
 
 </details>
 
 <details>
 <summary><b>🇹🇼 繁體中文</b></summary>
 
-### Coffee CLI v3.5.2
+### Coffee CLI v3.5.3
 
-- **重新設計 18 款終端配色。** 採用低飽和度配色，依六欄色系、三列深淺排列，減少相近的藍色，讓主題更容易挑選。
-- **區分兩種黑色主題。** 黑曜石恢復接近純黑的底色與暗炭灰邊框；代碼夜採用中性黑底與更清晰的灰色邊框。
-- **提升介面辨識度。** 工具管理中開啟的開關統一使用藍色，修復已選色卡的圓角縫隙，並改善文字與按鈕對比度。
-- **支援 Oh-My-Pi 靈動島狀態。** 從終端原生標題辨識工作中、等待輸入與閒置，避免動畫標題抖動及空白 Enter 造成錯誤狀態。
-- **升級保留主題選擇。** 現有主題套用重新設計的顏色；暗黑改名為深咖、品紅改名為煙紫，原青碧替換為葡萄紫。形態、圖示與終端文字配色設定繼續保留，可於外觀設定重新選色。
+- **補回 Cline 啟動入口。** 修復 Cline 未出現在 Agent 選擇清單的問題，恢復選擇與置頂操作。
+- **擴充 Orca 殘留清理。** 啟動時清理已識別的 Orca hook 與外掛，補齊 Pi、Oh-My-Pi、Prime Agent 等擴充及舊版設定、備份中的殘留；Orca 執行中時跳過。
+- **保留使用者設定與資料。** 保留使用者 hook、擴充、登入資訊與工作階段，處理混合 JSONC 設定、Windows 編碼命令及 TOML 路徑跳脫，並修正 Codex 清理後的 hook 信任記錄索引。
 
 </details>
 
 <details>
 <summary><b>🇯🇵 日本語</b></summary>
 
-### Coffee CLI v3.5.2
+### Coffee CLI v3.5.3
 
-- **18 種のターミナル配色を刷新。** 落ち着いた配色を色相ごとの 6 列と明暗の 3 行に整理し、似た青色を減らして選びやすくしました。
-- **暗色テーマの違いを明確化。** Obsidian は黒に近い背景と控えめなチャコールの枠線、Code Night はニュートラルな黒と明瞭なグレーの枠線を採用しました。
-- **視認性を改善。** 有効なツールのスイッチを青色に統一。選択中の配色カードの角の隙間を修正し、文字とボタンのコントラストを改善しました。
-- **Oh-My-Pi の Dynamic Island 状態表示に対応。** ネイティブの端末タイトルから動作中・入力待ち・待機を判定し、アニメーションによるタイトルの揺れや空の Enter による誤判定を防ぎます。
-- **保存済みのテーマ選択を維持。** 各テーマには新しい配色が適用されます。Dark は Espresso、Fuchsia は Mauve、従来の Teal は Grape に変わります。形状、アイコン、端末の文字配色設定は維持され、外観設定で別の配色を選べます。
+- **Cline の起動項目を復元。** エージェント選択一覧に Cline が表示されない問題を修正し、選択とピン留めを復元しました。
+- **Orca の残留ファイルのクリーンアップを拡充。** 起動時に識別可能な Orca の hook やプラグインを削除します。Pi、Oh-My-Pi、Prime Agent の拡張機能、旧設定やバックアップ内の残留項目にも対応。Orca の実行中はスキップします。
+- **ユーザーの設定とデータを保持。** ユーザーの hook、拡張機能、認証情報、セッションを保持し、混在した JSONC 設定、Windows のエンコード済みコマンド、TOML パスのエスケープを処理します。削除後の Codex hook の信頼記録のインデックスも整合させます。
 
 </details>
 
 <details>
 <summary><b>🇰🇷 한국어</b></summary>
 
-### Coffee CLI v3.5.2
+### Coffee CLI v3.5.3
 
-- **18개 터미널 테마 재설계.** 차분한 색상을 색상 계열별 6열과 밝기별 3행으로 정리하고 비슷한 파란색을 줄여 선택하기 쉽게 했습니다.
-- **어두운 테마의 차이 강화.** Obsidian은 검정에 가까운 배경과 어두운 차콜 테두리를, Code Night는 중성 검정 배경과 선명한 회색 테두리를 사용합니다.
-- **화면 가독성 개선.** 활성화된 도구 스위치를 파란색으로 통일하고, 선택된 색상 카드의 둥근 모서리 틈을 수정했으며 글자와 버튼의 대비를 개선했습니다.
-- **Oh-My-Pi Dynamic Island 상태 지원.** 터미널의 기본 제목에서 작업 중, 입력 대기, 유휴 상태를 인식하여 제목 애니메이션의 흔들림과 빈 Enter 입력으로 인한 잘못된 상태 표시를 방지합니다.
-- **기존 테마 선택 유지.** 저장된 테마에 새 색상이 적용됩니다. Dark는 Espresso, Fuchsia는 Mauve, 기존 Teal은 Grape로 바뀝니다. 모양, 아이콘, 터미널 글자 색상 설정은 유지되며 외관 설정에서 다른 색상을 선택할 수 있습니다.
+- **Cline 실행 항목 복원.** 에이전트 선택 목록에서 Cline이 누락된 문제를 수정하고 선택 및 고정 기능을 복원했습니다.
+- **Orca 잔여 항목 정리 확대.** 시작 시 식별된 Orca hook과 플러그인을 정리합니다. Pi, Oh-My-Pi, Prime Agent 확장과 이전 설정 및 백업의 잔여 항목도 처리하며, Orca 실행 중에는 건너뜁니다.
+- **사용자 설정과 데이터 보존.** 사용자 hook, 확장, 인증 정보와 세션을 유지하면서 혼합 JSONC 설정, Windows 인코딩 명령과 TOML 경로 이스케이프를 처리합니다. 정리 후 Codex hook 신뢰 기록의 인덱스도 올바르게 맞춥니다.
 
 </details>
