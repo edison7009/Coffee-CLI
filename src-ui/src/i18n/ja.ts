@@ -161,6 +161,7 @@ export const ja = {
   'task.show_guide': '使い方ガイドを見る',
 
   // Theme Menu
+  'theme.auto': 'システムに合わせる',
   'theme.section.color': 'カラー',
   'theme.section.shape': 'シェイプ',
   'theme.section.icons': 'アイコン',

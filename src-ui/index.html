@@ -26,6 +26,14 @@
         var shape = 'panel';
         try { theme = localStorage.getItem('cc-theme') || 'obsidian'; } catch(e) {}
         try { shape = localStorage.getItem('cc-shape') || 'panel'; } catch(e) {}
+        // "跟随系统" auto-follow: if enabled, the OS light/dark preference
+        // overrides the saved theme on the very first paint (light ↔ obsidian)
+        // so there's no flash of the manual theme before React reconciles.
+        try {
+          if (localStorage.getItem('cc-theme-auto') === '1' && window.matchMedia) {
+            theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'obsidian' : 'light';
+          }
+        } catch(e) {}
         document.documentElement.setAttribute('data-theme', theme);
         // Frost renders as glass chrome + a data-frost backdrop variant
         // (mirrors App.tsx's shape effect) — pre-paint so no first-render flash.

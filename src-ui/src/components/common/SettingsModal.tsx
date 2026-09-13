@@ -174,7 +174,16 @@ export function SettingsModal() {
   if (!open) return null;
 
   // ── Handlers (identical to the former left-panel ThemeMenu/Lang wiring) ──
-  const setTheme = (th: ThemeColor) => dispatch({ type: 'SET_THEME', theme: th });
+  const setTheme = (th: ThemeColor) => {
+    // A manual swatch always wins over "跟随系统": flip auto off so the system
+    // listener can't immediately re-override the user's pick.
+    dispatch({ type: 'SET_THEME_AUTO', auto: false });
+    dispatch({ type: 'SET_THEME', theme: th });
+  };
+  const setThemeAuto = (auto: boolean) => {
+    dispatch({ type: 'SET_THEME_AUTO', auto });
+    try { localStorage.setItem('cc-theme-auto', String(auto)); } catch { /* Best-effort operation; failure is non-fatal. */ }
+  };
   const setShape = (s: ThemeShape) => dispatch({ type: 'SET_SHAPE', shape: s });
   const setIconTheme = (th: IconTheme) => {
     dispatch({ type: 'SET_ICON_THEME', theme: th });
@@ -316,8 +325,18 @@ export function SettingsModal() {
           <div className="settings-body">
             {section === 'appearance' && (
               <>
-                <div className="settings-section-label">{t('theme.section.color')}</div>
-                <div className="settings-theme-grid">
+                <div className="settings-section-head">
+                  <div className="settings-section-label">{t('theme.section.color')}</div>
+                  <button
+                    type="button"
+                    className={`settings-chip settings-chip-auto${state.themeAuto ? ' active' : ''}`}
+                    onClick={() => setThemeAuto(!state.themeAuto)}
+                    aria-pressed={state.themeAuto}
+                  >
+                    {t('theme.auto')}
+                  </button>
+                </div>
+                <div className={`settings-theme-grid${state.themeAuto ? ' theme-auto' : ''}`}>
                   {THEME_COLORS.map(c => {
                     const active = c.code === state.currentTheme;
                     return (

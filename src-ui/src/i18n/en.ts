@@ -164,6 +164,7 @@ Delete this note whenever you're ready, and start your first task.`,
   'task.show_guide': 'View the usage guide',
 
   // Theme Menu
+  'theme.auto': 'Follow system',
   'theme.section.color': 'Colors',
   'theme.section.shape': 'Shape',
   'theme.section.icons': 'Icon Style',

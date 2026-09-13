@@ -161,6 +161,7 @@ Borra esta nota cuando quieras y empieza tu primera tarea.`,
   'task.show_guide': 'Ver la guía de uso',
 
   // Theme Menu
+  'theme.auto': 'Seguir el sistema',
   'theme.section.color': 'Colores',
   'theme.section.shape': 'Forma',
   'theme.section.icons': 'Iconos',

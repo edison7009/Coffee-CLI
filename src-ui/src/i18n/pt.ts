@@ -162,6 +162,7 @@ Apague esta nota quando quiser e comece a sua primeira tarefa.`,
   'task.show_guide': 'Ver o guia de uso',
 
   // Theme Menu
+  'theme.auto': 'Seguir o sistema',
   'theme.section.color': 'Cores',
   'theme.section.shape': 'Forma',
   'theme.section.icons': 'Ícones',

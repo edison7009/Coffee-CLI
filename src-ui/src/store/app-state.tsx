@@ -3,6 +3,7 @@
 import { createContext, useContext, useLayoutEffect, useReducer, useRef } from 'react';
 import type { ReactNode, RefObject } from 'react';
 import { supportsEnhancedTool } from '../lib/chat-tools';
+import { systemThemeColor } from '../lib/system-theme';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -184,6 +185,9 @@ export interface TerminalSession {
 export interface AppState {
   // UI
   currentTheme: ThemeColor;
+  // "跟随系统" auto-follow: when true, the OS light/dark preference drives
+  // currentTheme (light ↔ obsidian) and App.tsx keeps it in sync live.
+  themeAuto: boolean;
   currentShape: ThemeShape;
   currentLang: string;
   iconTheme: IconTheme;
@@ -330,6 +334,7 @@ type Action =
   | { type: 'SET_TERMINAL_CWD'; id: string; path: string }
   | { type: 'CLEAR_FOLDER' }
   | { type: 'SET_THEME'; theme: ThemeColor }
+  | { type: 'SET_THEME_AUTO'; auto: boolean }
   | { type: 'SET_SHAPE'; shape: ThemeShape }
   | { type: 'SET_ICON_THEME'; theme: IconTheme }
   | { type: 'SET_LANG'; lang: string }
@@ -424,6 +429,8 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, terminals: state.terminals.map(t => t.id === action.id ? { ...t, toolTitle: action.title } : t) };
     case 'SET_THEME':
       return { ...state, currentTheme: action.theme };
+    case 'SET_THEME_AUTO':
+      return { ...state, themeAuto: action.auto };
     case 'SET_SHAPE':
       return { ...state, currentShape: action.shape };
     case 'SET_ICON_THEME':
@@ -710,6 +717,17 @@ function getInitialState(): AppState {
     if (savedTheme && VALID_THEMES.includes(savedTheme)) theme = savedTheme;
   } catch { /* Best-effort operation; failure is non-fatal. */ }
 
+  // "跟随系统" auto-follow persisted state. When on at launch, resolve the
+  // very first frame from the OS preference so there's no flash of the
+  // saved/manual theme; App.tsx's listener keeps it in sync thereafter.
+  let themeAuto = false;
+  try {
+    if (localStorage.getItem('cc-theme-auto') === '1') themeAuto = true;
+  } catch { /* Best-effort operation; failure is non-fatal. */ }
+  if (themeAuto) {
+    try { theme = systemThemeColor(); } catch { /* Best-effort operation; failure is non-fatal. */ }
+  }
+
   try {
     const savedShape = localStorage.getItem('cc-shape');
     if (savedShape === 'flower') {
@@ -844,6 +862,7 @@ function getInitialState(): AppState {
 
   return {
     currentTheme: theme,
+    themeAuto,
     currentShape: shape,
     iconTheme,
     currentLang: lang,

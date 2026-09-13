@@ -154,6 +154,25 @@
 }
 .settings-section-label:first-child { margin-top: 0; }
 
+/* ── Section title row with a trailing control (e.g. "跟随系统" on 配色) ──── */
+.settings-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 20px 0 11px;
+}
+.settings-section-head:first-child { margin-top: 0; }
+.settings-section-head .settings-section-label { margin: 0; }
+/* Compact chip so the switch sits neatly on the small-caps title line. */
+.settings-chip-auto { padding: 4px 10px; font-size: 11px; line-height: 1.2; }
+
+/* While "跟随系统" is on, the current swatch's solid ring turns dashed:
+   a visual cue that the system — not the user — owns the selection. */
+.settings-theme-grid.theme-auto .settings-theme-card.active .settings-theme-preview {
+  border-style: dashed;
+}
+
 /* ── Two-tone theme cards (surface band + accent band, label below) ────── */
 .settings-theme-grid {
   display: grid;

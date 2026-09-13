@@ -161,6 +161,7 @@ export const ko = {
   'task.show_guide': '사용 가이드 보기',
 
   // Theme Menu
+  'theme.auto': '시스템 따르기',
   'theme.section.color': '색상',
   'theme.section.shape': '형태',
   'theme.section.icons': '아이콘 스타일',

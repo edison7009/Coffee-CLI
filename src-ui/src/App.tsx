@@ -7,6 +7,7 @@ import { initNotifySound } from './lib/notify-sound';
 import { routeFileDrop } from './lib/file-drop';
 import { initHistoryAutoRefresh } from './lib/history-cache';
 import { isFrostShape } from './lib/personalization';
+import { systemThemeColor } from './lib/system-theme';
 import { TitleBar } from './components/common/TitleBar';
 import { ResizeEdges } from './components/common/ResizeEdges';
 import { PanelResizer, type PanelSide } from './components/common/PanelResizer';
@@ -185,7 +186,7 @@ function useSlidingPanel(hidden: boolean): { mounted: boolean; collapsed: boolea
 }
 
 export function App() {
-  const { state } = useAppState();
+  const { state, dispatch } = useAppState();
 
   const [panelWidths, setPanelWidths] = useState<PanelWidths>(() => loadPanelWidths(
     window.innerWidth,
@@ -279,6 +280,34 @@ export function App() {
     document.documentElement.setAttribute('data-theme', state.currentTheme);
     try { localStorage.setItem('cc-theme', state.currentTheme); } catch { /* Best-effort operation; failure is non-fatal. */ }
   }, [state.currentTheme]);
+
+  // "跟随系统" auto-follow: when on, keep currentTheme synced to the OS
+  // light/dark preference. Dual-listens to matchMedia (CSS
+  // prefers-color-scheme) and Tauri's onThemeChanged (OS-level; catches
+  // changes matchMedia misses on some hosts). Manual swatch picks flip
+  // themeAuto off (SettingsModal), so this listener is dormant whenever
+  // the user is choosing manually.
+  useEffect(() => {
+    if (!state.themeAuto) return;
+    const apply = () => {
+      const next = systemThemeColor();
+      if (next !== state.currentTheme) dispatch({ type: 'SET_THEME', theme: next });
+    };
+    apply();
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    mq.addEventListener('change', apply);
+    let unlisten: (() => void) | undefined;
+    (async () => {
+      try {
+        const { getCurrentWindow } = await import('@tauri-apps/api/window');
+        unlisten = await getCurrentWindow().onThemeChanged(apply);
+      } catch { /* Tauri API unavailable outside the desktop shell. */ }
+    })();
+    return () => {
+      mq.removeEventListener('change', apply);
+      unlisten?.();
+    };
+  }, [state.themeAuto, state.currentTheme, dispatch]);
 
   useEffect(() => {
     // Frost shapes reuse the whole glass chrome; normalize data-shape to

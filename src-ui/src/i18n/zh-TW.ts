@@ -162,6 +162,7 @@ export const zhTW = {
   'task.show_guide': '查看使用攻略',
 
   // Theme Menu
+  'theme.auto': '跟隨系統',
   'theme.section.color': '配色',
   'theme.section.shape': '形態',
   'theme.section.icons': '圖示風格',

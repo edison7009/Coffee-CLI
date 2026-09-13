@@ -161,6 +161,7 @@ Supprimez cette note quand vous voulez et commencez votre première tâche.`,
   'task.show_guide': "Voir le guide d'utilisation",
 
   // Theme Menu
+  'theme.auto': 'Suivre le système',
   'theme.section.color': 'Couleurs',
   'theme.section.shape': 'Forme',
   'theme.section.icons': 'Icônes',

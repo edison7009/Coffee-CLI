@@ -164,6 +164,7 @@ Xóa tờ ghi chú này khi bạn sẵn sàng và bắt đầu tác vụ đầu 
   'task.show_guide': 'Xem hướng dẫn sử dụng',
 
   // Theme Menu
+  'theme.auto': 'Theo hệ thống',
   'theme.section.color': 'Màu sắc',
   'theme.section.shape': 'Hình dạng',
   'theme.section.icons': 'Biểu tượng',

@@ -162,6 +162,7 @@ export const ru = {
   'task.show_guide': 'Открыть руководство',
 
   // Theme Menu
+  'theme.auto': 'Как в системе',
   'theme.section.color': 'Цвета',
   'theme.section.shape': 'Форма',
   'theme.section.icons': 'Иконки',

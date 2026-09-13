@@ -162,6 +162,7 @@ Lösch diesen Zettel, wann du willst, und starte deine erste Aufgabe.`,
   'task.show_guide': 'Anleitung ansehen',
 
   // Theme Menu
+  'theme.auto': 'System folgen',
   'theme.section.color': 'Farben',
   'theme.section.shape': 'Form',
   'theme.section.icons': 'Icon-Stil',
