@@ -153,7 +153,13 @@ export function useConversationVirtualizer(
   }, []);
 
   useEffect(() => () => {
-    if (measureFrameRef.current !== null) window.cancelAnimationFrame(measureFrameRef.current);
+    // Reset the ref as well: StrictMode (and Fast Refresh) re-runs effects on
+    // the same hook instance, and a stale frame id would stop measureRow from
+    // ever scheduling another flush — rows would keep estimated heights.
+    if (measureFrameRef.current !== null) {
+      window.cancelAnimationFrame(measureFrameRef.current);
+      measureFrameRef.current = null;
+    }
   }, []);
 
   const effectiveRange = range.end === 0 && messages.length > 0

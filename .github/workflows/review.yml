@@ -34,6 +34,7 @@ jobs:
           node scripts/run-shiki-test.mjs
           node scripts/run-tab-renderer-test.mjs
           node scripts/run-conversation-virtualizer-test.mjs
+          node scripts/run-conversation-scroll-test.mjs
           node scripts/run-review-regressions.mjs
           node scripts/run-history-cache-test.mjs
 
