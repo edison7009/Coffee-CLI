@@ -97,6 +97,23 @@ interface ConversationCacheEntry {
 const conversationCache = new Map<string, ConversationCacheEntry>();
 const sourceOwners = new Map<string, string>();
 const CONVERSATION_CACHE_LIMIT = 12;
+
+// Last known reading position per conversation. The DOM cannot be trusted to
+// preserve scrollTop across display:none round-trips, wholesale transcript
+// replaces, or remounts — and a clamped scrollTop is indistinguishable from
+// "user scrolled to the top" once the scroll event lands. Remembering the
+// position out-of-band lets the layout effect tell those apart.
+const conversationScrollPositions = new Map<string, { pinned: boolean; scrollTop: number }>();
+
+function recordConversationScrollPosition(ownerKey: string, pinned: boolean, scrollTop: number) {
+  conversationScrollPositions.delete(ownerKey);
+  conversationScrollPositions.set(ownerKey, { pinned, scrollTop });
+  while (conversationScrollPositions.size > CONVERSATION_CACHE_LIMIT) {
+    const oldestKey = conversationScrollPositions.keys().next().value as string | undefined;
+    if (!oldestKey) break;
+    conversationScrollPositions.delete(oldestKey);
+  }
+}
 let historyRequest: Promise<SavedSession[]> | null = null;
 let historyRequestForced = false;
 let recentHistory: { sessions: SavedSession[]; fetchedAt: number } | null = null;
@@ -632,7 +649,8 @@ function ConversationViewImpl({
   const scrollRef = useRef<HTMLDivElement>(null);
   const threadRef = useRef<HTMLDivElement>(null);
   const selectAllProxyRef = useRef<HTMLTextAreaElement>(null);
-  const pinnedRef = useRef(true);
+  const pinnedRef = useRef(conversationScrollPositions.get(ownerKey)?.pinned ?? true);
+  const lastScrollInputAtRef = useRef(0);
   const loadingOlderRef = useRef(false);
   const loadOlderRef = useRef<() => void>(() => undefined);
   const prependAnchorRef = useRef<{ scrollHeight: number; scrollTop: number } | null>(null);
@@ -893,6 +911,18 @@ function ConversationViewImpl({
             : applySessionRead(transcriptRef.current, rawRef.current, read);
           const nextTranscript = applied.transcript;
           const nextMessages = nextTranscript.messages;
+          // A wholesale snapshot that parses to ZERO rows while a conversation
+          // is already on screen almost always caught the tool mid-rewrite
+          // (truncate-then-write of a session file is not atomic). Applying it
+          // would empty the list, collapse scrollHeight and clamp scrollTop to
+          // 0; the auto-loadOlder cascade then chains the view to the oldest
+          // page — the "chat jumped to the top" report after returning to an
+          // idle window. Skip this read; the next poll re-reads the settled
+          // file, and revisionRef stays stale so nothing is lost.
+          if (!read.append && !read.prepend && nextMessages.length === 0 &&
+              transcriptRef.current.messages.length > 0) {
+            return;
+          }
           transcriptRef.current = nextTranscript;
           rawRef.current = applied.raw;
           if (!read.prepend) cursorRef.current = read.cursor;
@@ -1025,13 +1055,41 @@ function ConversationViewImpl({
   useEffect(() => {
     const element = scrollRef.current;
     if (!element) return;
+    // Wheel/drag/keyboard scrolling marks the position as user-owned; the
+    // layout effect's lost-position restore stays out of the way while any of
+    // these fired recently (a fast scrollbar fling otherwise looks exactly
+    // like a clamp and would be yanked back mid-drag).
+    const noteInput = () => { lastScrollInputAtRef.current = Date.now(); };
     const onScroll = (event: Event) => {
-      pinnedRef.current = element.scrollHeight - element.scrollTop - element.clientHeight < 72;
-      if (event.isTrusted && element.scrollTop < 520) loadOlderRef.current();
+      // A degenerate scroller — display:none (clientHeight 0) or a transient
+      // empty list while a tool rewrites its transcript — reports scrollTop 0
+      // with no user intent behind it. Neither the remembered position nor
+      // the pinned flag nor the auto-load trigger may trust that event:
+      // recording the 0 would destroy the restore target, and the <520px
+      // branch would chain loadOlder calls that drag the view to the oldest
+      // page (the "chat jumped to the top" report).
+      if (element.clientHeight > 0) {
+        const pinned = element.scrollHeight - element.scrollTop - element.clientHeight < 72;
+        pinnedRef.current = pinned;
+        if (element.scrollHeight > element.clientHeight + 80) {
+          recordConversationScrollPosition(ownerKey, pinned, element.scrollTop);
+        }
+        if (event.isTrusted && element.scrollTop < 520) loadOlderRef.current();
+      }
     };
     element.addEventListener('scroll', onScroll, { passive: true });
-    return () => element.removeEventListener('scroll', onScroll);
-  }, []);
+    element.addEventListener('wheel', noteInput, { passive: true });
+    element.addEventListener('pointerdown', noteInput, { passive: true });
+    element.addEventListener('touchstart', noteInput, { passive: true });
+    element.addEventListener('keydown', noteInput);
+    return () => {
+      element.removeEventListener('scroll', onScroll);
+      element.removeEventListener('wheel', noteInput);
+      element.removeEventListener('pointerdown', noteInput);
+      element.removeEventListener('touchstart', noteInput);
+      element.removeEventListener('keydown', noteInput);
+    };
+  }, [ownerKey]);
 
   // A heavily filtered page can contain fewer visible bubbles than one
   // viewport. In that case there is no scrollbar for the user to reach the
@@ -1225,8 +1283,26 @@ function ConversationViewImpl({
         Math.max(0, element.scrollHeight - prependAnchor.scrollHeight);
       return;
     }
-    if (pinnedRef.current) element.scrollTop = element.scrollHeight;
-  }, [messages, pending, activityLabel, interaction?.fingerprint, virtual.total, isActive, isVisible]);
+    if (pinnedRef.current) {
+      element.scrollTop = element.scrollHeight;
+      return;
+    }
+    // Restore the remembered reading position when the browser lost it: a
+    // display:none round-trip, a clamp after the transcript shrank under the
+    // viewport (tool rewrote/compacted its session file mid-poll), or a
+    // remount all land on scrollTop 0 with no user input. The DOM alone
+    // cannot tell that from a real scroll-to-top — the remembered position
+    // can. The recent-input guard keeps a fast scrollbar fling (whose scroll
+    // events lag a frame behind the drag) from being yanked back.
+    const saved = conversationScrollPositions.get(ownerKey);
+    if (saved && saved.scrollTop - element.scrollTop > element.clientHeight &&
+        Date.now() - lastScrollInputAtRef.current > 400) {
+      element.scrollTop = Math.min(
+        saved.scrollTop,
+        Math.max(0, element.scrollHeight - element.clientHeight),
+      );
+    }
+  }, [messages, pending, activityLabel, interaction?.fingerprint, virtual.total, isActive, isVisible, ownerKey]);
 
   useLayoutEffect(() => {
     const target = pendingNavigationJumpRef.current;
