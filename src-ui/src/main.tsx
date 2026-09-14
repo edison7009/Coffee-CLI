@@ -71,6 +71,9 @@ const syncBackgroundMode = () => {
   commands.setBackgroundMode(document.hidden).catch(() => {});
 };
 document.addEventListener('visibilitychange', syncBackgroundMode);
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) nudgeWholeWindowRepaint();
+});
 // Also catch focus/blur — visibilitychange does not fire when the
 // window is merely covered by another app on the same Space (macOS) or
 // pushed behind on Windows. Combined with visibilitychange this covers
@@ -86,7 +89,35 @@ onWindowBackground(() => {
 });
 onWindowForeground(() => {
   commands.setBackgroundMode(false).catch(() => {});
+  nudgeWholeWindowRepaint();
 });
+
+// ── Whole-window repaint on refocus ────────────────────────────────────────
+// While the app is backgrounded the WebView stops presenting (rAF throttles
+// to ~1fps or pauses). On alt-tab back, the window can be composited from the
+// last presented frame for a beat before any invalidation re-rasters it —
+// text then reads as a transient double image until something moves. The
+// terminal canvas has its own mask+refresh cycle (TierTerminal), but the
+// chrome around it (titlebar, tabs, sidebars, diff panel) has none.
+//
+// Nudge the whole tree through a fresh raster+present the moment the window
+// regains focus: a near-identity scale on <html> forces every layer's
+// content to re-raster, and the flip-back on the next frame leaves the
+// layout exactly as it was. 0.9999 is below any visible threshold for the
+// single frame it lives. The 250ms timeout backstops the case where rAF is
+// still on the background throttle right after refocus.
+function nudgeWholeWindowRepaint() {
+  const root = document.documentElement;
+  let done = false;
+  const restore = () => {
+    if (done) return;
+    done = true;
+    root.style.transform = '';
+  };
+  root.style.transform = 'scale(0.9999)';
+  requestAnimationFrame(restore);
+  setTimeout(restore, 250);
+}
 
 // Suppress the WebView's built-in context menu (Back / Reload / Save As / Print / Inspect…).
 // Our own React components handle onContextMenu directly and render
