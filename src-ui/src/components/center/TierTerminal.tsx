@@ -35,7 +35,7 @@ import { parseClaudeTerminalTitle } from '../../lib/claude-terminal-title';
 import { parseCodexTerminalTitle } from '../../lib/codex-terminal-title';
 import { parseOmpTerminalTitle } from '../../lib/omp-terminal-title';
 import { markNotifySoundPromptSubmitted } from '../../lib/notify-sound';
-import { onWindowForeground } from '../../lib/window-focus-filter';
+import { onRenderResume, onWindowForeground } from '../../lib/window-focus-filter';
 import { createTerminalSizeSync, DEFAULT_TERMINAL_GRID } from '../../lib/terminal-size-sync';
 import { commands } from '../../tauri';
 import { supportsAgentStatus, useAppDispatch, useAppStateRef, type AgentStatus, type ToolType, type ThemeColor } from '../../store/app-state';
@@ -1994,17 +1994,38 @@ function TierTerminalImpl({
   // a refresh on the next frame, reveal on the first real render. Only the
   // active terminal masks — background tabs follow their own visibility and
   // renderer-cache lifecycle.
+  //
+  // The refresh alone assumes the glyph atlas is still intact. Windows 11
+  // WebView2 can reclaim the canvas texture backing store while the window
+  // is occluded (the same class of loss as OS sleep → resume, where the GPU
+  // returns with atlas memory reclaimed underneath it — VS Code rebuilds
+  // there via onDidResumeOS → forceRedraw, i.e. clearTextureAtlas). With a
+  // half-dead atlas, refresh() re-rasterizes the same ghosted glyphs into a
+  // double image that persists until some later interaction forces a real
+  // repaint. Rebuild the atlas the same way, while the mask hides the work.
   // window-focus-filter absorbs the spurious blur+focus pair from
   // start_dragging (Windows), so this only fires on real alt-tabs.
+  //
+  // Two triggers, one redraw:
+  //   • onWindowForeground — the classic alt-tab back (focus changed).
+  //   • onRenderResume — rAF resumes after a starvation gap. Covers the case
+  //     where the window was fully occluded WITHOUT losing focus (covered by
+  //     another window, then revealed by closing/minimizing that window): no
+  //     blur/focus ever fires, so without this the ghost sits on screen until
+  //     the user clicks into the terminal (which finally focuses it). Also
+  //     fires on OS sleep/resume. A real alt-tab usually trips BOTH triggers
+  //     — the inFlight guard collapses the overlap.
   useEffect(() => {
-    const unsubscribe = onWindowForeground(() => {
+    let inFlight = false;
+    let f1 = 0, fallback = 0, retry = 0;
+    let renderSub: { dispose: () => void } | null = null;
+    const redraw = () => {
       if (!isActiveRef.current) return;
       const term = xtermRef.current;
-      if (!term) return;
+      if (!term || inFlight) return;
+      inFlight = true;
       setCanvasHidden(true);
       let revealed = false;
-      let renderSub: { dispose: () => void } | null = null;
-      let f1 = 0, fallback = 0;
       const reveal = () => {
         if (revealed) return;
         revealed = true;
@@ -2013,16 +2034,40 @@ function TierTerminalImpl({
         cancelAnimationFrame(f1);
         clearTimeout(fallback);
         setCanvasHidden(false);
+        inFlight = false;
+        // One more atlas rebuild shortly after reveal: WebView2's backing-
+        // store reclaim can still be in flight when the first redraw runs, so
+        // the ghost reappears a frame later and only a later interaction
+        // clears it ("动一下就好了"). A redundant clear+refresh once the
+        // compositor has settled is invisible when the atlas was healthy.
+        retry = setTimeout(() => {
+          try {
+            if (webglRef.current) webglRef.current.clearTextureAtlas();
+            if (term.rows > 0) term.refresh(0, term.rows - 1);
+          } catch { /* Best-effort operation; failure is non-fatal. */ }
+        }, 400);
       };
       f1 = requestAnimationFrame(() => {
-        try { if (term.rows > 0) term.refresh(0, term.rows - 1); } catch { /* Best-effort operation; failure is non-fatal. */ }
+        try {
+          if (webglRef.current) webglRef.current.clearTextureAtlas();
+          if (term.rows > 0) term.refresh(0, term.rows - 1);
+        } catch { /* Best-effort operation; failure is non-fatal. */ }
         renderSub = term.onRender(() => reveal());
       });
       // Same safety-net rationale as the activation effect: never strand the
       // canvas masked if onRender doesn't fire (idle terminal, no dirty rows).
       fallback = setTimeout(reveal, 180);
-    });
-    return unsubscribe;
+    };
+    const unsubFg = onWindowForeground(redraw);
+    const unsubResume = onRenderResume(redraw);
+    return () => {
+      unsubFg();
+      unsubResume();
+      renderSub?.dispose();
+      cancelAnimationFrame(f1);
+      clearTimeout(fallback);
+      clearTimeout(retry);
+    };
   }, []);
 
   // ── Startup splash dismissal ────────────────────────────────────────────

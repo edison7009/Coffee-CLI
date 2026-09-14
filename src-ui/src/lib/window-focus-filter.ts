@@ -14,13 +14,35 @@
 
 const SETTLE_MS = 100;
 
+// rAF-starvation watchdog: blur/focus only fires on KEYBOARD-focus changes.
+// A window that stays focused-but-fully-occluded (covered by another app,
+// then revealed by closing/minimizing the covering window) never blurs — yet
+// Chromium's occlusion tracking pauses its rAF the whole time, and WebView2
+// may reclaim canvas backing stores while occluded. On reveal there is no
+// focus event, so a stale/ghosted frame persists until the user clicks in.
+// Detect the reveal by the gap itself: a frame arriving > RAF_GAP_MS after
+// the previous one means the compositor starved us and every canvas is
+// suspect. Also covers OS sleep/resume. Long main-thread jank can false-fire
+// — subscribers must treat this as an idempotent "repaint if cheap" hint.
+const RAF_GAP_MS = 1000;
+
 type Fn = () => void;
 const fgListeners = new Set<Fn>();
 const bgListeners = new Set<Fn>();
+const resumeListeners = new Set<Fn>();
 
 let pendingBlurTimer: ReturnType<typeof setTimeout> | null = null;
 let state: 'foreground' | 'background' = 'foreground';
 let installed = false;
+let lastFrameAt = 0;
+
+function rafWatchdog(t: number) {
+  if (lastFrameAt && t - lastFrameAt > RAF_GAP_MS) {
+    for (const fn of resumeListeners) fn();
+  }
+  lastFrameAt = t;
+  requestAnimationFrame(rafWatchdog);
+}
 
 function fireForeground() { for (const fn of fgListeners) fn(); }
 function fireBackground() { for (const fn of bgListeners) fn(); }
@@ -50,6 +72,7 @@ function ensureInstalled() {
       fireForeground();
     }
   });
+  requestAnimationFrame(rafWatchdog);
 }
 
 export function onWindowForeground(fn: Fn): () => void {
@@ -62,4 +85,14 @@ export function onWindowBackground(fn: Fn): () => void {
   ensureInstalled();
   bgListeners.add(fn);
   return () => { bgListeners.delete(fn); };
+}
+
+// Fires when rAF resumes after a long starvation gap (occluded-window reveal
+// without a focus change, OS sleep/resume). Distinct from onWindowForeground:
+// foreground subscribers do "user came back" work (rescanning CLIs, polling),
+// which must NOT run on a mere compositor resume.
+export function onRenderResume(fn: Fn): () => void {
+  ensureInstalled();
+  resumeListeners.add(fn);
+  return () => { resumeListeners.delete(fn); };
 }
