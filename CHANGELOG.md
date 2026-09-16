@@ -9,6 +9,15 @@ and `git tag --list "v*"`.
 
 ## [Unreleased]
 
+### Fixed
+- **会话记录不显示 Antigravity 会话。** 扫描器只认得已退役的 Gemini CLI
+  布局 `~/.gemini/tmp/<project>/chats/`，而当前 agy 把会话写在
+  `~/.gemini/antigravity-cli/brain/<uuid>/…/transcript_full.jsonl`，历史列表与
+  贡献热力图因此漏掉全部 agy 会话。新增 brain 目录第二遍扫描：元数据索引用
+  于补全标题/工作目录/时间，索引缺失的会话（print 模式、索引未刷新）回退到
+  从首条 USER_INPUT 推导标题、从 last_conversations.json 解析目录；旧布局仍
+  保留扫描。
+
 ## [3.2.9] — 2026-07-31
 
 ### Fixed

@@ -31,15 +31,24 @@
 //! **`~/.gemini/antigravity-cli/`** — agy CLI's own operational data:
 //!
 //!   ├── bin/                              — embedded helper binaries
-//!   ├── brain/<conv-uuid>/.system_generated/logs/transcript.jsonl
-//!   │                                     — *empty in practice* on
-//!   │                                       observed sessions; NOT
-//!   │                                       the source of truth.
-//!   ├── conversations/<conv-uuid>.pb      — protobuf-encoded
-//!   │                                       conversation state
-//!   │                                       (binary, not JSON-
-//!   │                                       parseable).
+//!   ├── brain/<conv-uuid>/.system_generated/logs/transcript_full.jsonl
+//!   │                                     — full transcript, one JSON
+//!   │                                       row per step
+//!   │                                       (`USER_INPUT` / `GENERIC` /
+//!   │                                       `PLANNER_RESPONSE` / …).
+//!   │                                       Populated on current builds;
+//!   │                                       transcript.jsonl is the
+//!   │                                       windowed variant.
+//!   ├── conversations/<conv-uuid>.db      — SQLite conversation state
+//!   │                                       (protobuf `.pb` on early
+//!   │                                       builds). Not read by Coffee
+//!   │                                       CLI.
 //!   ├── implicit/<uuid>.pb                — protobuf side-state.
+//!   ├── cache/conversation_metadata.json  — the history index:
+//!   │                                       `{"conversations": {uuid:
+//!   │                                       {summary: {Title, Preview,
+//!   │                                       UpdatedAt, WorkspaceURIs},
+//!   │                                       is_internal, ...}}}`.
 //!   ├── cache/last_conversations.json     — `{ "<workspace>": "<conv-uuid>" }`
 //!   ├── history.jsonl                     — user prompt history rows:
 //!   │                                       `{display, timestamp,
@@ -72,13 +81,22 @@
 //! gate on `read_native_session` accepts conversation paths under it.
 //! Resume uses `--conversation <uuid>` (wired in `terminal::AGENT_PRESETS`).
 //!
+//! History surfaces come from two sources:
+//!   - `find_antigravity_cli_sessions` (server.rs) walks
+//!     `~/.gemini/antigravity-cli/brain/<uuid>/…/transcript_full.jsonl`
+//!     (stat-first, newest 200) and enriches each conversation with the
+//!     metadata index (`cache/conversation_metadata.json`) when present;
+//!     index-missing sessions derive their title from the first
+//!     USER_INPUT row and their cwd from `cache/last_conversations.json`.
+//!   - `history_shape` below walks `~/.gemini/tmp/<project>/chats/
+//!     session-*.jsonl`, the retired Gemini CLI layout early agy builds
+//!     still wrote (verified on populated 2026-05-20 session files).
+//!     Both surface as tool="antigravity".
+//!
 //! Deferred:
-//!   - `history_shape` stays `None` — the source of truth is the
-//!     protobuf `.pb` blob. `history.jsonl` only carries user prompts
-//!     (no model responses), and the per-conversation `transcript.jsonl`
-//!     is empty on every session observed. A real scanner needs either
-//!     the .pb schema (reverse-engineered or upstream-published) or a
-//!     future feature that flushes the model side to .jsonl too.
+//!   - `conversations/<uuid>.db` is unread — the source of truth lives
+//!     in the metadata index + transcript JSONL, which cover titles,
+//!     workspaces, timestamps and message content.
 //!   - `agy plugin install <target>` (the persistent plugin registry)
 //!     is a separate richer mechanism than our skills dir. Coffee CLI
 //!     doesn't wire plugins through it yet — users wanting plugins
@@ -91,15 +109,14 @@ pub static DESCRIPTOR: ToolDescriptor = ToolDescriptor {
     display_name: "Antigravity CLI",
     binary_name: "agy",
     has_legacy_hook_artifacts: false,
-    // agy writes session JSONL to `~/.gemini/tmp/<project>/chats/
-    // session-*.jsonl` using the format inherited from the retired
-    // Gemini CLI (verified on populated session files dated 2026-05-20).
-    // The protobuf at `~/.gemini/antigravity-cli/conversations/*.pb`
-    // is the model-side state, but the JSONL has enough to render
-    // titles and message counts in the history list. Same schema as
-    // older Gemini sessions in the same dir, which now also surface
-    // as Antigravity — Gemini CLI as a separate product is retiring
-    // anyway, so a unified label is the cleaner UX.
+    // Legacy Gemini CLI (and early agy builds) wrote session JSONL to
+    // `~/.gemini/tmp/<project>/chats/session-*.jsonl` — still walked here
+    // for users with old sessions. Current agy keeps conversations under
+    // `~/.gemini/antigravity-cli/brain/`, which server.rs's
+    // `find_antigravity_cli_sessions` second pass scans (metadata-index
+    // enriched). Both sources surface as tool="antigravity": Gemini CLI as
+    // a separate product is retiring anyway, so a unified label is the
+    // cleaner UX.
     history_shape: Some(HistoryShape::AntigravityTmp {
         root_under_home: ".gemini/tmp",
         depth: 3,

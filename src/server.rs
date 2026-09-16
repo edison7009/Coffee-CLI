@@ -1194,6 +1194,135 @@ fn json_timestamp_string(value: &serde_json::Value) -> Option<String> {
         .map(|value| value.to_string())
 }
 
+/// Parse an RFC3339 timestamp into epoch milliseconds. Hand-rolled: the
+/// project deliberately avoids a date library, and an explicit-offset
+/// timestamp needs no TZ database. Covers the two shapes agy writes —
+/// `2026-09-15T12:04:17.0031285Z` (UTC) and
+/// `2026-09-15T20:44:49.0681192+08:00` (numeric offset). Fractions
+/// beyond millisecond precision truncate.
+fn parse_rfc3339_epoch_ms(raw: &str) -> Option<u64> {
+    let b = raw.as_bytes();
+    if b.len() < 20
+        || b[4] != b'-' || b[7] != b'-' || b[10] != b'T'
+        || b[13] != b':' || b[16] != b':'
+    {
+        return None;
+    }
+    let num = |range: std::ops::Range<usize>| -> Option<i64> {
+        std::str::from_utf8(b.get(range)?).ok()?.parse::<i64>().ok()
+    };
+    let year = num(0..4)?;
+    let month = num(5..7)?;
+    let day = num(8..10)?;
+    let hour = num(11..13)?;
+    let minute = num(14..16)?;
+    let second = num(17..19)?;
+    if !(1..=12).contains(&month) || !(1..=31).contains(&day)
+        || hour > 23 || minute > 59 || second > 60
+    {
+        return None;
+    }
+    let mut cursor = 19;
+    let mut frac_ms = 0u64;
+    if b.get(cursor) == Some(&b'.') {
+        cursor += 1;
+        let start = cursor;
+        while cursor < b.len() && b[cursor].is_ascii_digit() {
+            cursor += 1;
+        }
+        let digits = &b[start..cursor];
+        let take = digits.len().min(3);
+        let mut ms = 0u64;
+        for &digit in &digits[..take] {
+            ms = ms * 10 + (digit - b'0') as u64;
+        }
+        frac_ms = ms * 10u64.pow(3 - take as u32);
+    }
+    let offset_secs: i64 = match b.get(cursor) {
+        Some(&b'Z') | Some(&b'z') => 0,
+        Some(&b'+') | Some(&b'-') => {
+            if b.len() < cursor + 6 || b[cursor + 3] != b':' {
+                return None;
+            }
+            let sign = if b[cursor] == b'+' { 1 } else { -1 };
+            let offset_hours = num(cursor + 1..cursor + 3)?;
+            let offset_minutes = num(cursor + 4..cursor + 6)?;
+            if offset_hours > 23 || offset_minutes > 59 {
+                return None;
+            }
+            sign * (offset_hours * 3600 + offset_minutes * 60)
+        }
+        _ => return None,
+    };
+    let secs = days_from_civil(year, month, day) * 86400
+        + hour * 3600 + minute * 60 + second - offset_secs;
+    if secs < 0 {
+        return None;
+    }
+    Some(secs as u64 * 1000 + frac_ms)
+}
+
+/// Days since 1970-01-01 for a civil date (Howard Hinnant's
+/// civil-from-days inverse — no year loop, valid over the whole i64 range).
+fn days_from_civil(year: i64, month: i64, day: i64) -> i64 {
+    let y = if month <= 2 { year - 1 } else { year };
+    let era = y.div_euclid(400);
+    let yoe = y - era * 400;                         // [0, 399]
+    let mp = (month + 9) % 12;                       // [0, 11], March = 0
+    let doy = (153 * mp + 2) / 5 + day - 1;          // [0, 365]
+    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy; // [0, 146096]
+    era * 146097 + doe - 719468
+}
+
+/// `file:///C:/work/proj` (Windows drive form) or `file:///home/u/proj`
+/// (Unix) → local path, percent-decoded. URIs with a real host component
+/// (e.g. `file://wsl.localhost/...`) yield None so the caller falls back
+/// to an empty cwd instead of a path that can't be resumed.
+fn file_uri_to_local_path(uri: &str) -> Option<String> {
+    let rest = uri.strip_prefix("file://")?;
+    let path = if cfg!(windows) {
+        // `file:///C:/...` carries an empty host: `/C:/...`. Strip the
+        // leading slash only when it precedes a drive letter, never for a
+        // rooted path (UNC/`file://server/share` keeps the server part).
+        let stripped = rest.strip_prefix('/')?;
+        if stripped.as_bytes().get(1) == Some(&b':') {
+            stripped
+        } else {
+            return None;
+        }
+    } else {
+        // `file:///home/...` → `/home/...`.
+        rest.strip_prefix('/').unwrap_or(rest)
+    };
+    Some(percent_decode(path))
+}
+
+fn percent_decode(input: &str) -> String {
+    let hex = |b: u8| -> Option<u8> {
+        match b {
+            b'0'..=b'9' => Some(b - b'0'),
+            b'a'..=b'f' => Some(b - b'a' + 10),
+            b'A'..=b'F' => Some(b - b'A' + 10),
+            _ => None,
+        }
+    };
+    let bytes = input.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'%' && i + 2 < bytes.len() {
+            if let (Some(hi), Some(lo)) = (hex(bytes[i + 1]), hex(bytes[i + 2])) {
+                out.push(hi * 16 + lo);
+                i += 3;
+                continue;
+            }
+        }
+        out.push(bytes[i]);
+        i += 1;
+    }
+    String::from_utf8_lossy(&out).into_owned()
+}
+
 /// XML-style tags injected into the user message stream by Claude /
 /// Codex when integrated with an IDE or shell. These are not things
 /// the user typed — filtering them out of the history title extractor
@@ -2142,6 +2271,217 @@ fn load_gemini_project_map() -> std::collections::HashMap<String, String> {
         }
     }
     map
+}
+
+/// Antigravity CLI (agy) history second pass. Current agy builds keep each
+/// conversation's transcript at
+/// `~/.gemini/antigravity-cli/brain/<conv-uuid>/.system_generated/logs/`
+/// (`transcript_full.jsonl`; `transcript.jsonl` is the truncated windowed
+/// variant). The brain tree is the candidate driver — a stat-first/top-N
+/// walk like the JSONL pipeline. Metadata (title / workspace / update
+/// timestamp) comes from the lazily-updated index at
+/// `~/.gemini/antigravity-cli/cache/conversation_metadata.json`, which
+/// lags behind live sessions; conversations missing from it (print-mode
+/// runs, fresh TUI sessions) fall back to a title derived from the first
+/// USER_INPUT row and a cwd from `cache/last_conversations.json`.
+/// The legacy `~/.gemini/tmp/<project>/chats/session-*.jsonl` layout
+/// (retired Gemini CLI and early agy builds) stays covered by the JSONL
+/// file walk in `collect_registry_history_candidates`.
+fn find_antigravity_cli_sessions(home: &std::path::Path, result: &mut Vec<SavedSession>) {
+    let root = home.join(".gemini").join("antigravity-cli");
+
+    // The metadata index is best-effort: missing file / invalid JSON just
+    // degrades to transcript-derived titles and empty cwds.
+    let index = std::fs::read_to_string(root.join("cache").join("conversation_metadata.json"))
+        .ok()
+        .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok());
+    let conversations = index
+        .as_ref()
+        .and_then(|v| v.get("conversations"))
+        .and_then(|v| v.as_object());
+
+    // last_conversations.json maps workspace → most recent conv-uuid.
+    // Inverted here so index-missing sessions can still resolve a cwd.
+    let mut last_convs: std::collections::HashMap<String, String> =
+        std::collections::HashMap::new();
+    if let Ok(text) = std::fs::read_to_string(root.join("cache").join("last_conversations.json")) {
+        if let Ok(value) = serde_json::from_str::<serde_json::Value>(&text) {
+            if let Some(map) = value.as_object() {
+                for (workspace, conv) in map {
+                    if let Some(uuid) = conv.as_str() {
+                        let cwd = file_uri_to_local_path(workspace)
+                            .unwrap_or_else(|| workspace.clone());
+                        last_convs.insert(uuid.to_string(), cwd);
+                    }
+                }
+            }
+        }
+    }
+
+    // (transcript mtime, conv-uuid, transcript path) — newest first.
+    let mut candidates: Vec<(std::time::SystemTime, String, std::path::PathBuf)> = Vec::new();
+    if let Ok(entries) = std::fs::read_dir(root.join("brain")) {
+        for entry in entries.flatten() {
+            let dir = entry.path();
+            if !dir.is_dir() {
+                continue;
+            }
+            let Some(uuid) = dir.file_name().and_then(|n| n.to_str()) else {
+                continue;
+            };
+            let logs = dir.join(".system_generated").join("logs");
+            let Some(transcript) = ["transcript_full.jsonl", "transcript.jsonl"]
+                .iter()
+                .map(|name| logs.join(name))
+                .find(|path| path.is_file())
+            else {
+                continue;
+            };
+            let mtime = std::fs::metadata(&transcript)
+                .and_then(|meta| meta.modified())
+                .unwrap_or(std::time::SystemTime::UNIX_EPOCH);
+            candidates.push((mtime, uuid.to_string(), transcript));
+        }
+    }
+    candidates.sort_by(|a, b| b.0.cmp(&a.0));
+    const ANTIGRAVITY_HISTORY_LIMIT: usize = 200;
+    candidates.truncate(ANTIGRAVITY_HISTORY_LIMIT);
+
+    let mut sessions: Vec<SavedSession> = Vec::with_capacity(candidates.len());
+    for (mtime, id, transcript) in &candidates {
+        let index_entry = conversations.and_then(|map| map.get(id));
+        let summary = index_entry.and_then(|v| v.get("summary"));
+        // IDE-internal conversations (`is_internal` / `Internal`) never
+        // surface as user sessions.
+        let internal = index_entry
+            .and_then(|v| v.get("is_internal"))
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false)
+            || summary
+                .and_then(|v| v.get("Internal"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+        if internal {
+            continue;
+        }
+
+        let (name, cwd, saved_at) = if let Some(entry) = index_entry {
+            let raw_title = summary
+                .and_then(|v| v.get("Title"))
+                .and_then(|v| v.as_str())
+                .map(str::trim)
+                .unwrap_or("");
+            let preview = summary
+                .and_then(|v| v.get("Preview"))
+                .and_then(|v| v.as_str())
+                .map(str::trim)
+                .unwrap_or("");
+            // Empty Title AND Preview = a conversation slot agy pre-created
+            // but never used (NumSteps 0). Nothing to show.
+            if raw_title.is_empty() && preview.is_empty() {
+                continue;
+            }
+            let source_title = if raw_title.is_empty() { preview } else { raw_title };
+            let name = cap_history_title(source_title);
+            let cwd = summary
+                .and_then(|v| v.get("WorkspaceURIs"))
+                .and_then(|v| v.as_array())
+                .and_then(|uris| uris.first())
+                .and_then(|v| v.as_str())
+                .and_then(file_uri_to_local_path)
+                .or_else(|| last_convs.get(id).cloned())
+                .unwrap_or_default();
+            // Authoritative update timestamps (UTC `UpdatedAt` first, then
+            // the local-offset `last_modified_time`); transcript mtime as the
+            // fallback — it advances per turn on every observed agy session.
+            let saved_at = summary
+                .and_then(|v| v.get("UpdatedAt"))
+                .and_then(|v| v.as_str())
+                .or_else(|| entry.get("last_modified_time").and_then(|v| v.as_str()))
+                .and_then(parse_rfc3339_epoch_ms)
+                .map(|value| value.to_string())
+                .unwrap_or_else(|| system_time_epoch_ms(*mtime));
+            (name, cwd, saved_at)
+        } else {
+            // Index-missing (print-mode runs, fresh sessions before the
+            // index updates): title from the first USER_INPUT row, cwd from
+            // last_conversations.json when this workspace last used it.
+            let name = agy_transcript_title(transcript);
+            let cwd = last_convs.get(id).cloned().unwrap_or_default();
+            (name, cwd, system_time_epoch_ms(*mtime))
+        };
+
+        sessions.push(SavedSession {
+            id: format!("antigravity_native_{id}"),
+            name,
+            tool: "antigravity".to_string(),
+            cwd,
+            session_token: Some(id.clone()),
+            saved_at,
+            created_at: file_created_epoch_ms(transcript),
+            file_path: Some(transcript.to_string_lossy().into_owned()),
+            // turn_count deferred — NumSteps in the index counts internal
+            // planner steps, not messages; counting USER_INPUT rows would be
+            // extra I/O per session (Kimi/Grok precedent: the History board
+            // renders fine without it).
+            turn_count: None,
+        });
+    }
+    sessions.sort_by(|a, b| saved_session_epoch_ms(&b.saved_at).cmp(&saved_session_epoch_ms(&a.saved_at)));
+    result.extend(sessions);
+}
+
+/// Cap a history title at 40 chars (ellipsis when truncated) and collapse
+/// embedded newlines — same discipline as the other session parsers.
+fn cap_history_title(source: &str) -> String {
+    let safe = source.replace('\n', " ");
+    let mut chars = safe.chars();
+    let chunk: String = chars.by_ref().take(40).collect();
+    if chars.next().is_some() { format!("{chunk}...") } else { chunk }
+}
+
+fn system_time_epoch_ms(time: std::time::SystemTime) -> String {
+    time.duration_since(std::time::UNIX_EPOCH)
+        .map(|dur| dur.as_millis().to_string())
+        .unwrap_or_default()
+}
+
+/// Title for an agy conversation missing from the metadata index: the first
+/// USER_INPUT row's `<USER_REQUEST>` block, first non-empty line, capped at
+/// 40 chars. `Antigravity Session` when no usable row exists.
+fn agy_transcript_title(path: &std::path::Path) -> String {
+    use std::io::BufRead;
+    let Ok(file) = std::fs::File::open(path) else {
+        return "Antigravity Session".to_string();
+    };
+    for line in std::io::BufReader::new(file).lines().map_while(Result::ok) {
+        let Ok(value) = serde_json::from_str::<serde_json::Value>(&line) else {
+            continue;
+        };
+        if value.get("type").and_then(|v| v.as_str()) != Some("USER_INPUT") {
+            continue;
+        }
+        let Some(content) = value.get("content").and_then(|v| v.as_str()) else {
+            continue;
+        };
+        let Some(request) = xml_block(content, "USER_REQUEST") else {
+            continue;
+        };
+        let Some(first_line) = request.lines().find(|line| !line.trim().is_empty()) else {
+            continue;
+        };
+        return cap_history_title(first_line.trim());
+    }
+    "Antigravity Session".to_string()
+}
+
+/// Content between `<tag>` and `</tag>` in an XML-style block.
+fn xml_block<'a>(content: &'a str, tag: &str) -> Option<&'a str> {
+    let open = format!("<{tag}>");
+    let close = format!("</{tag}>");
+    let start = content.find(&open)? + open.len();
+    let end = content[start..].find(&close)? + start;
+    Some(&content[start..end])
 }
 
 /// Parse a Qwen Code session jsonl. Layout:
@@ -3479,6 +3819,71 @@ fn collect_grok_heatmap_entries(
     }
 }
 
+/// Antigravity CLI heatmap second pass. Walks every conversation's brain
+/// transcript (the same stat-first tree the history pass drives) and emits
+/// (ts=transcript mtime, count=transcript line count) for sessions inside
+/// the cutoff window — deliberately independent of the metadata index,
+/// which lags behind live sessions. Shares the file-based count cache
+/// (keyed by transcript path + mtime) for warm-start re-count avoidance.
+/// transcript mtime ≈ last activity (agy appends per step); line count =
+/// intensity.
+fn collect_antigravity_cli_heatmap_entries(
+    home: &std::path::Path,
+    cutoff_secs: i64,
+    out: &mut Vec<HeatmapEntry>,
+    count_cache: &mut std::collections::HashMap<String, CachedCount>,
+    cache_dirty: &mut bool,
+    keep_paths: &mut std::collections::HashSet<String>,
+) {
+    let root = home.join(".gemini").join("antigravity-cli");
+    let Ok(entries) = std::fs::read_dir(root.join("brain")) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let dir = entry.path();
+        if !dir.is_dir() {
+            continue;
+        }
+        let Some(transcript) = ["transcript_full.jsonl", "transcript.jsonl"]
+            .iter()
+            .map(|name| dir.join(".system_generated").join("logs").join(name))
+            .find(|path| path.is_file())
+        else {
+            continue;
+        };
+        let Ok(meta) = std::fs::metadata(&transcript) else { continue };
+        let Ok(mtime) = meta.modified() else { continue };
+        let ts = mtime
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs() as i64)
+            .unwrap_or(0);
+        if ts < cutoff_secs {
+            continue;
+        }
+
+        let path_key = transcript.to_string_lossy().into_owned();
+        keep_paths.insert(path_key.clone());
+        let count = if let Some(entry) = count_cache.get(&path_key) {
+            if entry.mtime == ts {
+                entry.count
+            } else {
+                let c = count_jsonl_message_lines(&transcript);
+                count_cache.insert(path_key.clone(), CachedCount { mtime: ts, count: c });
+                *cache_dirty = true;
+                c
+            }
+        } else {
+            let c = count_jsonl_message_lines(&transcript);
+            count_cache.insert(path_key.clone(), CachedCount { mtime: ts, count: c });
+            *cache_dirty = true;
+            c
+        };
+        if count > 0 {
+            out.push(HeatmapEntry { ts, count });
+        }
+    }
+}
+
 fn collect_jsonl_paths_with_mtime(
     dir: std::path::PathBuf,
     depth: u8,
@@ -4344,6 +4749,14 @@ fn load_native_history_blocking() -> Result<Vec<SavedSession>, String> {
         find_grok_sessions(_home, &mut result);
     }
 
+    // Antigravity CLI second pass — index-backed store
+    // (conversation_metadata.json under ~/.gemini/antigravity-cli/cache/).
+    // Emits finished SavedSessions directly; the file walk above keeps
+    // covering legacy Gemini-CLI sessions under ~/.gemini/tmp.
+    if let Some(home) = home.as_ref() {
+        find_antigravity_cli_sessions(home, &mut result);
+    }
+
     // Collapse any Claude-worktree cwd to its project root, for every tool's
     // sessions (a session launched from <project>/.claude/worktrees/<x> should
     // resume in <project>, not the ephemeral worktree). No-op for normal dirs;
@@ -4583,6 +4996,19 @@ fn load_message_heatmap_blocking() -> Result<Vec<HeatmapEntry>, String> {
             .map(|d| d.as_secs() as i64)
             .unwrap_or(0);
         collect_grok_heatmap_entries(
+            home, cutoff_secs, &mut out, &mut count_cache, &mut cache_dirty, &mut keep_paths,
+        );
+    }
+
+    // Antigravity CLI heatmap second pass - same position/discipline as
+    // Grok's (before the cache prune/write) so its transcript_full.jsonl
+    // paths join keep_paths and their counts persist to count_cache.
+    if let Some(home) = home.as_ref() {
+        let cutoff_secs = cutoff
+            .duration_since(std::time::SystemTime::UNIX_EPOCH)
+            .map(|d| d.as_secs() as i64)
+            .unwrap_or(0);
+        collect_antigravity_cli_heatmap_entries(
             home, cutoff_secs, &mut out, &mut count_cache, &mut cache_dirty, &mut keep_paths,
         );
     }
@@ -5486,6 +5912,150 @@ mod tests {
     use super::*;
 
     #[test]
+    fn rfc3339_timestamps_parse_to_epoch_milliseconds() {
+        // UTC with a 7-digit fraction truncates past millisecond precision.
+        assert_eq!(
+            parse_rfc3339_epoch_ms("2026-09-15T12:04:17.0031285Z"),
+            Some(1789473857003)
+        );
+        assert_eq!(
+            parse_rfc3339_epoch_ms("2026-09-15T20:44:49.0681192+08:00"),
+            Some(1789476289068)
+        );
+        assert_eq!(
+            parse_rfc3339_epoch_ms("2026-09-15T20:44:49-08:00"),
+            Some(1789533889000)
+        );
+        assert_eq!(parse_rfc3339_epoch_ms("1970-01-01T00:00:00Z"), Some(0));
+        assert_eq!(parse_rfc3339_epoch_ms("1970-01-01T00:00:00.5Z"), Some(500));
+        // Pre-epoch dates compute a negative day count and are rejected.
+        assert_eq!(parse_rfc3339_epoch_ms("0001-01-01T00:00:00Z"), None);
+        assert_eq!(parse_rfc3339_epoch_ms("2026-09-15"), None);
+        assert_eq!(parse_rfc3339_epoch_ms("garbage"), None);
+    }
+
+    #[test]
+    fn file_uris_decode_to_local_paths() {
+        assert_eq!(
+            file_uri_to_local_path("file:///C:/Users/keros68"),
+            Some("C:/Users/keros68".to_string())
+        );
+        assert_eq!(
+            file_uri_to_local_path("file:///D:/work/usage%20tracker"),
+            Some("D:/work/usage tracker".to_string())
+        );
+        assert_eq!(
+            file_uri_to_local_path("file:///C:/work/%E4%BD%BF%E7%94%A8"),
+            Some("C:/work/使用".to_string())
+        );
+        assert_eq!(file_uri_to_local_path("https://example.com/a"), None);
+    }
+
+    #[test]
+    fn antigravity_cli_index_surfaces_sessions_and_skips_empty_or_internal() {
+        let home = std::env::temp_dir().join(format!(
+            "coffee-cli-agy-test-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&home);
+        let root = home.join(".gemini").join("antigravity-cli");
+        std::fs::create_dir_all(root.join("cache")).expect("mkdir cache");
+        let brain_logs = root.join("brain")
+            .join("e50ec390-777c-4c48-bc39-6d94cb246583")
+            .join(".system_generated")
+            .join("logs");
+        std::fs::create_dir_all(&brain_logs).expect("mkdir brain logs");
+        std::fs::write(
+            root.join("cache").join("conversation_metadata.json"),
+            r#"{"conversations":{
+  "e50ec390-777c-4c48-bc39-6d94cb246583": {
+    "summary": {
+      "ID": "e50ec390-777c-4c48-bc39-6d94cb246583",
+      "Title": "Implement Antigravity Quota Monitoring",
+      "Preview": "你好",
+      "NumSteps": 92,
+      "UpdatedAt": "2026-09-15T12:43:43.7932266Z",
+      "WorkspaceURIs": ["file:///D:/work/usage"],
+      "Internal": false
+    },
+    "is_internal": false,
+    "last_modified_time": "2026-09-15T20:44:49.0681192+08:00"
+  },
+  "c8c48431-d7cd-4a31-8e60-54888b399a25": {
+    "summary": {
+      "ID": "c8c48431-d7cd-4a31-8e60-54888b399a25",
+      "Title": "", "Preview": "", "NumSteps": 0,
+      "UpdatedAt": "0001-01-01T00:00:00Z",
+      "WorkspaceURIs": ["file:///C:/Users/keros68"], "Internal": false
+    },
+    "is_internal": false,
+    "last_modified_time": "2026-09-15T19:38:55.7769515+08:00"
+  },
+  "11111111-2222-3333-4444-555555555555": {
+    "summary": {
+      "ID": "11111111-2222-3333-4444-555555555555",
+      "Title": "secret", "Preview": "x", "NumSteps": 1,
+      "UpdatedAt": "2026-09-15T12:00:00Z",
+      "WorkspaceURIs": [], "Internal": true
+    },
+    "is_internal": true
+  }
+}}"#,
+        )
+        .expect("write index");
+        std::fs::write(
+            brain_logs.join("transcript_full.jsonl"),
+            "{\"type\":\"USER_INPUT\"}\n{\"type\":\"GENERIC\"}\n",
+        )
+        .expect("write transcript");
+
+        // Index-missing conversation (agy writes the index lazily): title
+        // derives from the first USER_INPUT row, cwd from
+        // last_conversations.json.
+        let fallback_uuid = "16dfa852-29e0-4083-b8cf-9865b5585586";
+        let fallback_logs = root.join("brain").join(fallback_uuid)
+            .join(".system_generated").join("logs");
+        std::fs::create_dir_all(&fallback_logs).expect("mkdir fallback logs");
+        std::fs::write(
+            fallback_logs.join("transcript_full.jsonl"),
+            "{\"step_index\":0,\"source\":\"USER_EXPLICIT\",\"type\":\"USER_INPUT\",\"content\":\"<USER_REQUEST>\\nreview this diff\\nline two\\n</USER_REQUEST>\\n<ADDITIONAL_METADATA>time</ADDITIONAL_METADATA>\"}\n",
+        )
+        .expect("write fallback transcript");
+        std::fs::write(
+            root.join("cache").join("last_conversations.json"),
+            format!(
+                "{{\"C:\\\\Users\\\\keros68\\\\scratch\":\"{fallback_uuid}\",\"file:///D:/work/usage\":\"e50ec390-777c-4c48-bc39-6d94cb246583\"}}"
+            ),
+        )
+        .expect("write last_conversations");
+
+        let mut out = Vec::new();
+        find_antigravity_cli_sessions(&home, &mut out);
+
+        assert_eq!(out.len(), 2, "empty and internal conversations are skipped");
+        let indexed = out.iter().find(|s| s.id == "antigravity_native_e50ec390-777c-4c48-bc39-6d94cb246583")
+            .expect("indexed session present");
+        assert_eq!(indexed.name, "Implement Antigravity Quota Monitoring");
+        assert_eq!(indexed.tool, "antigravity");
+        assert_eq!(indexed.cwd, "D:/work/usage");
+        assert_eq!(
+            indexed.session_token.as_deref(),
+            Some("e50ec390-777c-4c48-bc39-6d94cb246583")
+        );
+        // UpdatedAt is preferred over last_modified_time.
+        assert_eq!(indexed.saved_at, "1789476223793");
+        assert!(indexed.file_path.as_deref().unwrap().ends_with("transcript_full.jsonl"));
+
+        let fallback = out.iter().find(|s| s.id == format!("antigravity_native_{fallback_uuid}"))
+            .expect("fallback session present");
+        assert_eq!(fallback.name, "review this diff");
+        assert_eq!(fallback.cwd, "C:\\Users\\keros68\\scratch");
+        assert_eq!(fallback.session_token.as_deref(), Some(fallback_uuid));
+
+        let _ = std::fs::remove_dir_all(&home);
+    }
+
+    #[test]
     fn navigation_lines_keep_only_candidate_rows_and_exact_cursor() {
         let assistant = "{\"message\":{\"role\":\"assistant\",\"content\":\"done\"}}\n";
         let user = "{\"id\":\"u-1\",\"message\":{\"role\":\"user\",\"content\":\"hello\"}}\n";
@@ -6024,3 +6594,4 @@ mod history_cache_tests;
 #[cfg(test)]
 #[path = "server/pty_resize_tests.rs"]
 mod pty_resize_tests;
+

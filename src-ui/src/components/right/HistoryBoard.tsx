@@ -48,10 +48,12 @@ import './HistoryBoard.css';
 // switch, so the one-time decode flash is invisible. Hermes/OpenCode are
 // PNG-inlined to share the same bytes the Launchpad uses (no duplicate files).
 //
-// Antigravity covers both new agy sessions and any older Gemini-CLI
-// sessions sitting in the same `~/.gemini/tmp/` dir — see
-// `parse_gemini_session_jsonl` in server.rs for why we label both as
-// Antigravity rather than splitting the rows by writer.
+// Antigravity covers three sources under one label: current agy sessions
+// (brain/ transcript walk enriched by the conversation_metadata.json index
+// under ~/.gemini/antigravity-cli/, see `find_antigravity_cli_sessions` in
+// server.rs) and any older Gemini-CLI / early-agy sessions sitting in
+// `~/.gemini/tmp/` (see `parse_gemini_session_jsonl`) — all tagged
+// tool="antigravity" rather than splitting the rows by writer.
 
 const TOOL_ICON_SRC: Record<string, string> = {
   claude:      '/icons/tools/claude.svg',
