@@ -89,15 +89,23 @@ function activationFixture() {
   let frame, fallback, render;
   let masked = false;
   const refreshRows = [];
+  // Ordered log of the two drawing-buffer operations. Clearing the frames that
+  // accumulated behind the mask is only correct immediately BEFORE the reveal
+  // refresh — after it, the same call would wipe the frame being revealed.
+  const bufferOps = [];
   const term = {
     cols: 80, rows: 24, focus() {},
     onRender(callback) { render = callback; return { dispose() { render = undefined; } }; },
-    refresh(_start, end) { refreshRows.push(end + 1); },
+    refresh(_start, end) { refreshRows.push(end + 1); bufferOps.push('refresh'); },
   };
   const afterFitRef = { current: null };
+  const termElement = { offsetParent: {}, clientWidth: 1000, clientHeight: 600 };
   const context = {
     isActive: true, sessionId: 'test', terminalOpened: true, term,
-    termRef: { current: { offsetParent: {}, clientWidth: 1000, clientHeight: 600 } },
+    termRef: { current: termElement },
+    clearGhostedFrames(container) {
+      bufferOps.push(container === termElement ? 'clear' : 'clear:wrong-element');
+    },
     xtermRef: { current: term }, webglRef: { current: null }, contextLossAttemptsRef: { current: 0 },
     afterFitRef, sizeSyncRef: { current: { schedule() {} } },
     fit: {
@@ -117,7 +125,7 @@ function activationFixture() {
   const cleanup = evaluate(activationEffect)();
   const measure = evaluate(measureCallback);
   return {
-    cleanup, measure, afterFitRef, refreshRows,
+    cleanup, measure, afterFitRef, refreshRows, bufferOps,
     frame: () => frame?.(), render: () => render?.(), fallback: () => fallback?.(),
     masked: () => masked,
   };
@@ -130,6 +138,8 @@ assert.equal(activation.masked(), true, 'old-grid render cannot reveal the tab')
 assert.deepEqual(activation.refreshRows, [], 'refresh waits for successful fitting');
 activation.measure();
 assert.deepEqual(activation.refreshRows, [30], 'refresh uses the newly fitted rows');
+assert.deepEqual(activation.bufferOps, ['clear', 'refresh'],
+  'the ghosted drawing buffer is cleared on the terminal element, before the reveal refresh');
 assert.equal(activation.masked(), true, 'fitting alone does not reveal an unpainted frame');
 activation.render();
 assert.equal(activation.masked(), false, 'new-grid render reveals the tab');
@@ -141,6 +151,7 @@ assert.equal(timedOut.masked(), false, 'missing measurement/render cannot strand
 assert.equal(timedOut.afterFitRef.current, null, 'fallback cancels the pending reveal callback');
 timedOut.measure();
 assert.deepEqual(timedOut.refreshRows, [], 'late fit does not restart a completed reveal');
+assert.deepEqual(timedOut.bufferOps, [], 'a revealed tab is never cleared behind the user');
 timedOut.cleanup();
 
 const cancelled = activationFixture();

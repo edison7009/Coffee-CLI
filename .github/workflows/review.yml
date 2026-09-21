@@ -33,6 +33,7 @@ jobs:
           node scripts/run-terminal-size-sync-test.mjs
           node scripts/run-shiki-test.mjs
           node scripts/run-tab-renderer-test.mjs
+          node scripts/run-terminal-ghost-test.mjs
           node scripts/run-conversation-virtualizer-test.mjs
           node scripts/run-review-regressions.mjs
           node scripts/run-history-cache-test.mjs
