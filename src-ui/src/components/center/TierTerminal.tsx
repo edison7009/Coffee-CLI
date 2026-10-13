@@ -1385,6 +1385,31 @@ function TierTerminalImpl({
             altScreenRef.current = false;
           }
 
+          // ── ConPTY mouse-mode fix ───────────────────────────────────────
+          // ConPTY (Windows) silently discards mouse-capture mode sequences
+          // (?1000h/?1002h/?1003h/?1006h) from the application's output before
+          // they reach the PTY master. xterm.js never sees them, so its
+          // internal mouseTrackingMode stays 'none' and the wheel listener is
+          // never registered. The alternate-scroll fallback then converts
+          // scroll events to ↑/↓ arrow keys — breaking TUIs like Pi and
+          // Claude Code that parse SGR wheel reports for their own scrolling.
+          //
+          // Fix: enable SGR mouse tracking in xterm on alt-screen entry and
+          // disable it on exit. The app's own enable sequence never arrives,
+          // so there is no reliable per-app signal to gate on; ?1004h was
+          // tried and did not fire in practice. Disabling on ?1049l is needed
+          // because the app's disable sequence is dropped the same way.
+          //
+          // Limit: alt-screen apps without mouse support (less, man, vim
+          // without mouse=a) now receive SGR wheel reports instead of the
+          // arrow-key fallback, and plain drag-select there needs Shift.
+          // Upgrade path: gate on a per-tool allowlist if that matters.
+          if (data.includes('\x1b[?1049h') && !data.includes('\x1b[?1000h') && !data.includes('\x1b[?1006h')) {
+            outputScheduler.enqueue(sessionId, '\x1b[?1000h\x1b[?1002h\x1b[?1006h');
+          } else if (data.includes('\x1b[?1049l')) {
+            outputScheduler.enqueue(sessionId, '\x1b[?1006l\x1b[?1002l\x1b[?1000l');
+          }
+
           // ── Sentinel Protocol scanner ───────────────────────────
           // Sentinel sits on TOP of MCP. Forward dispatch (pane A → pane B)
           // is handled by the MCP `send_to_pane` tool (see mcp_server.rs)
