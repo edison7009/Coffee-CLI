@@ -139,7 +139,10 @@ FALLBACK_DOWNLOAD_URL=""
 # Parse version from version.json — minimal JSON, no jq required
 echo "  ${GRAY}Fetching latest version...${RESET}"
 VERSION_JSON=$(curl -fsSL "$VERSION_BASE?platform=$PLATFORM" 2>/dev/null || true)
-LATEST_VER=$(echo "$VERSION_JSON" | sed -E 's/.*"version"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/')
+# -n + p keeps unmatched lines out of the output (a plain substitution would
+# echo the whole pretty-printed JSON, release notes included, back into
+# $LATEST_VER). head -1 guards against repeated "version" keys in the notes.
+LATEST_VER=$(printf '%s\n' "$VERSION_JSON" | sed -nE 's/.*"version"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p' | head -1)
 
 # coffeecli.com unreachable (CF Worker 502 / network) → fall back to
 # api.github.com directly. This pulls the latest release JSON, extracts
