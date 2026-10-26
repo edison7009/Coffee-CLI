@@ -299,16 +299,19 @@ fn verified_runtime(path: &Path) -> bool {
 fn browser_executable() -> Option<PathBuf> {
     let mut candidates = Vec::new();
     #[cfg(windows)]
-    for variable in ["ProgramFiles(x86)", "ProgramFiles", "LOCALAPPDATA"] {
-        if let Some(base) = std::env::var_os(variable) {
-            candidates.push(PathBuf::from(&base).join("Google/Chrome/Application/chrome.exe"));
+    for (directory, executable) in [("Google/Chrome", "chrome.exe"), ("Microsoft/Edge", "msedge.exe")] {
+        for variable in ["ProgramFiles(x86)", "ProgramFiles", "LOCALAPPDATA"] {
+            if let Some(base) = std::env::var_os(variable) {
+                candidates.push(PathBuf::from(base).join(directory).join("Application").join(executable));
+            }
         }
     }
     #[cfg(target_os = "macos")]
-    { candidates.push(PathBuf::from("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")); }
+    { candidates.push(PathBuf::from("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"));
+      candidates.push(PathBuf::from("/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge")); }
     #[cfg(target_os = "linux")]
     for base in std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default()) {
-        for name in ["google-chrome", "chromium", "chromium-browser"] { candidates.push(base.join(name)); }
+        for name in ["google-chrome", "chromium", "chromium-browser", "microsoft-edge", "microsoft-edge-stable"] { candidates.push(base.join(name)); }
     }
     candidates.into_iter().find(|path| path.is_file())
 }
@@ -444,7 +447,7 @@ mod tests {
     use super::*;
     #[test]
     fn native_configuration_locations_respect_homes_and_existing_jsonc() {
-        let home = std::env::temp_dir().join(format!("coffee-control-paths-{}", uuid::Uuid::new_v4()));
+        let home = dunce::canonicalize(std::env::temp_dir()).unwrap().join(format!("coffee-control-paths-{}", uuid::Uuid::new_v4()));
         let expected = [("cursor",".cursor/mcp.json"),("copilot",".copilot/mcp-config.json"),("antigravity",".gemini/config/mcp_config.json"),
             ("qwen",".qwen/settings.json"),("kiro",".kiro/settings/mcp.json"),("opencode",".config/opencode/opencode.json"),("kilo",".config/kilo/kilo.json")];
         for (tool, suffix) in expected { assert_eq!(config_path_in(tool, &home, |_| None).unwrap(), home.join(suffix)); }
@@ -523,7 +526,7 @@ mod tests {
     }
     #[test]
     fn save_rejects_a_concurrent_edit() {
-        let directory = std::env::temp_dir().join(format!("coffee-control-{}", uuid::Uuid::new_v4()));
+        let directory = dunce::canonicalize(std::env::temp_dir()).unwrap().join(format!("coffee-control-{}", uuid::Uuid::new_v4()));
         fs::create_dir_all(&directory).unwrap();
         let path = directory.join("config.json"); fs::write(&path, "user edit").unwrap();
         assert!(save(&path, Some("old"), "new", &directory).is_err());
@@ -532,7 +535,7 @@ mod tests {
     }
     #[test]
     fn preparing_browser_connections_preserves_the_shared_configuration() {
-        let directory = std::env::temp_dir().join(format!("coffee-browser-config-{}", uuid::Uuid::new_v4()));
+        let directory = dunce::canonicalize(std::env::temp_dir()).unwrap().join(format!("coffee-browser-config-{}", uuid::Uuid::new_v4()));
         browser_command_in(Path::new("browser-runtime"), &directory).unwrap();
         let config = directory.join("browser-config.json");
         let original = fs::metadata(&config).unwrap();
@@ -548,7 +551,7 @@ mod tests {
     }
     #[test]
     fn parallel_connections_use_different_persistent_profiles() {
-        let directory = std::env::temp_dir().join(format!("coffee-browser-slots-{}", uuid::Uuid::new_v4()));
+        let directory = dunce::canonicalize(std::env::temp_dir()).unwrap().join(format!("coffee-browser-slots-{}", uuid::Uuid::new_v4()));
         let (first, first_profile, first_index) = browser_slot(&directory).unwrap();
         let (second, second_profile, _) = browser_slot(&directory).unwrap();
         assert_ne!(first_profile, second_profile);

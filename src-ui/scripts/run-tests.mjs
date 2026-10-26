@@ -6,6 +6,7 @@ const group = process.argv[2] ?? 'unit';
 if (!['unit', 'browser', 'native'].includes(group)) throw new Error(`Unknown test group: ${group}`);
 const scripts = await readdir(new URL('./', import.meta.url));
 const tests = scripts.filter(name => {
+  if (name === 'run-agent-capability-flow-test.mjs') return false; // Requires separately installed vendor CLIs.
   if (group === 'native') return name === 'run-orchestration-runtime-test.mjs';
   if (group === 'browser') return /^run-.*-browser-test\.mjs$/.test(name);
   return (name === 'run-review-regressions.mjs' || /^run-.*-test\.mjs$/.test(name))
