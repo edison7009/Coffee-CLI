@@ -12,6 +12,8 @@ const directory = await mkdtemp(join(tmpdir(), 'coffee-tool-memory-'));
 const native = `
 window.calls=[];window.docs={claude:{path:'C:/fixture/.claude/CLAUDE.md',content:'Claude 原文\\n第二行'},codex:{path:'C:/fixture/.codex/AGENTS.md',content:'Codex original'},pi:{path:'C:/fixture/.pi/agent/AGENTS.md',content:null},cursor:{path:null,content:null},copilot:{path:'C:/fixture/.copilot/copilot-instructions.md',content:'Copilot original'}};
 export const commands={
+ async getToolSkills(){return {supported:false,skills:[]}},
+ async searchToolSkills(){return []},
  async readToolMemory(tool){window.calls.push({type:'read',tool});if(window.failRead)throw 'memory_read';if(window.delayTool===tool)await new Promise(resolve=>{window.resolveRead=resolve});return {...window.docs[tool]}},
  async saveToolMemory(tool,path,original,content){window.calls.push({type:'save',tool,path,original,content});if(window.failSave)throw 'memory_write';if(window.docs[tool].path!==path||window.docs[tool].content!==original)throw 'memory_conflict';window.docs[tool]={path,content};return {...window.docs[tool]}}
 };`;
@@ -47,12 +49,12 @@ try{
     const marker=document.querySelector('.tool-settings-indicator')?.getBoundingClientRect(),selected=document.querySelector('[role="tab"][aria-selected="true"]')?.getBoundingClientRect();
     return marker&&selected&&Math.abs(marker.x-selected.x)<1&&Math.abs(marker.width-selected.width)<1;
   });
-  assert.equal(await page.getByRole('tab').count(),4);
+  assert.equal(await page.getByRole('tab').count(),3);
   await page.locator('.tool-settings-indicator[data-ready]').waitFor({state:'attached'});await aligned();
   assert.equal(await page.getByRole('tab',{selected:true}).evaluate(el=>getComputedStyle(el).borderTopWidth),'0px');
   await tab('Skills').click();
   assert.equal(await page.locator('.tool-settings-indicator').evaluate(el=>el.getAnimations().some(animation=>animation.transitionProperty==='transform'&&animation.playState==='running')),true,'shared selection background moves between tabs');
-  await aligned();await tab('MCP').click();await aligned();assert.equal(await page.evaluate(()=>window.calls.length),0,'placeholder tabs perform no native operations');
+  await aligned();assert.equal(await tab('MCP').count(),0);assert.equal(await page.evaluate(()=>window.calls.length),0,'Skills navigation performs no memory operations');
   await tab('主记忆').click();await value('Claude 原文\n第二行');
   await editor.fill('Claude 草稿\n未保存');
   await page.evaluate(()=>{window.delayTool='codex'});await switchTool('Codex CLI');
@@ -69,7 +71,7 @@ try{
   await page.getByRole('button',{name:'重新加载',exact:true}).click();await page.getByRole('button',{name:'取消',exact:true}).click();assert.equal(await editor.inputValue(),'My protected draft');
   await page.getByRole('button',{name:'重新加载',exact:true}).click();await page.getByRole('button',{name:'放弃修改并重新加载',exact:true}).click();await value('External edit');
   await switchTool('Claude Code');await value('Claude 草稿\n未保存');
-  await tab('选择 5/6').click();await tab('主记忆').click();await value('Claude 草稿\n未保存');
+  await tab('常用 5/6').click();await tab('主记忆').click();await value('Claude 草稿\n未保存');
   await page.locator('#navigate').click();assert.equal(await tab('主记忆').count(),0);
   await page.locator('#navigate').click();await value('Claude 草稿\n未保存');
   await switchTool('Pi');await value('');
@@ -87,7 +89,7 @@ try{
   await page.evaluate(()=>window.setEnabled(['codex']));await value('External edit');
   assert.equal(await page.getByRole('toolbar',{name:'工具',exact:true}).getByRole('button').count(),1,'only enabled tools remain available');
   const callsBeforeEmpty=await page.evaluate(()=>window.calls.length);
-  await page.evaluate(()=>window.setEnabled([]));await page.getByText('请先在「选择」中开启工具。',{exact:true}).waitFor({state:'visible'});
+  await page.evaluate(()=>window.setEnabled([]));await page.getByText('请先在「常用」中开启工具。',{exact:true}).waitFor({state:'visible'});
   assert.equal(await page.getByRole('button',{name:'重新加载',exact:true}).isDisabled(),true);
   assert.equal(await page.evaluate(()=>window.calls.length),callsBeforeEmpty,'no reads are issued for an empty selection');
   await page.evaluate(()=>window.setEnabled(['claude','codex']));await value('Claude 草稿\n未保存');
@@ -101,12 +103,12 @@ try{
   assert.equal(await editor.evaluate(el=>getComputedStyle(el).resize),'none');
   await page.evaluate(()=>{document.documentElement.dataset.mode='light';document.documentElement.dataset.theme='mint';document.documentElement.dataset.shape='soft'});await page.waitForTimeout(180);await page.screenshot({path:join(directory,'memory-light.png')});
   await page.setViewportSize({width:440,height:780});assert.equal(await page.locator('.tool-settings-page').evaluate(el=>el.scrollWidth>el.clientWidth),false);
-  await tab('Skills').click();await page.keyboard.press('ArrowRight');assert.equal(await tab('MCP').getAttribute('aria-selected'),'true');
+  await tab('Skills').click();await page.keyboard.press('ArrowRight');assert.match(await page.getByRole('tab',{selected:true}).innerText(),/^常用 /);
   await aligned();
   await page.evaluate(()=>document.querySelectorAll('[role="tab"]').forEach(tab=>{tab.style.fontSize='15px'}));await aligned();
   await page.emulateMedia({reducedMotion:'reduce'});
   assert.equal(await page.locator('.tool-settings-indicator').evaluate(el=>getComputedStyle(el).transitionDuration),'0s');
   assert.deepEqual(errors,[]);
-  console.log('OK: four themed tabs, placeholder isolation, actual editor/selector, lazy reads, late response isolation, per-tool drafts, page navigation, exact save payloads, conflict/failure retention, discard confirmation, missing/unsupported files, keyboard saving, themes and narrow layout');
+  console.log('OK: three themed tabs, Skills/memory isolation, actual editor/selector, lazy reads, late response isolation, per-tool drafts, page navigation, exact save payloads, conflict/failure retention, discard confirmation, missing/unsupported files, keyboard saving, themes and narrow layout');
   console.log('Screenshots: '+directory);
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve))}

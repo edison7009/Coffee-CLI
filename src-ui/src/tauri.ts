@@ -147,7 +147,17 @@ export interface ToolMemoryDocument {
   content: string | null;
 }
 
+export interface ToolSkill { name: string; description: string; source: string | null; path: string; managed: boolean; update: boolean; modified: boolean }
+export interface SkillInventory { supported: boolean; skills: ToolSkill[] }
+export interface CatalogSkill { source: string; name: string; description: string }
+
 export const commands = {
+  getToolSkills: (tool: string) => invoke<SkillInventory>('get_tool_skills', { tool }),
+  searchToolSkills: (query: string) => invoke<CatalogSkill[]>('search_tool_skills', { query }),
+  getToolSkillDescription: (source: string, name: string) => invoke<string>('get_tool_skill_description', { source, name }),
+  installToolSkill: (tool: string, source: string, name: string) => invoke<SkillInventory>('install_tool_skill', { tool, source, name }),
+  removeToolSkill: (tool: string, path: string) => invoke<SkillInventory>('remove_tool_skill', { tool, path }),
+  checkToolSkillUpdates: (tool: string) => invoke<SkillInventory>('check_tool_skill_updates', { tool }),
   readToolMemory: (tool: string) => invoke<ToolMemoryDocument>('read_tool_memory', { tool }),
   saveToolMemory: (tool: string, path: string, original: string | null, content: string) =>
     invoke<ToolMemoryDocument>('save_tool_memory', { tool, path, original, content }),

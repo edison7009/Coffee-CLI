@@ -1,13 +1,14 @@
 import { useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { useT } from '../../i18n/useT';
 import { ToolMemoryPanel } from './ToolMemoryPanel';
+import { ToolSkillsPanel } from './ToolSkillsPanel';
 import './ToolSettingsPage.css';
 
 export function ToolSettingsPage({ active, tools, count, limit, children }: {
   active: boolean; tools: { value: string; label: string; icon: ReactNode }[]; count: number; limit: number; children: ReactNode;
 }) {
   const t = useT(), id = useId();
-  const [tab, setTab] = useState<'selection' | 'memory' | 'skills' | 'mcp'>('selection');
+  const [tab, setTab] = useState<'selection' | 'memory' | 'skills'>('selection');
   const tabList = useRef<HTMLSpanElement>(null), indicator = useRef<HTMLSpanElement>(null);
   useLayoutEffect(() => {
     const list = tabList.current, marker = indicator.current;
@@ -26,7 +27,7 @@ export function ToolSettingsPage({ active, tools, count, limit, children }: {
     list.querySelectorAll('button').forEach(button => observer.observe(button));
     return () => { observer.disconnect(); if (frame !== undefined) cancelAnimationFrame(frame); };
   }, [active, tab, count, limit, t]);
-  const tabs = ['selection', 'memory', 'skills', 'mcp'] as const;
+  const tabs = ['selection', 'memory', 'skills'] as const;
   return <section className={`tool-settings-page${tab === 'memory' ? ' tool-settings-page--memory' : ''}`} aria-label={t('tools.title')} style={active ? undefined : { display: 'none' }}>
     <div className="tool-settings-inner">
       <span ref={tabList} className="tool-settings-tabs" role="tablist" aria-label={t('tools.title')}>
@@ -39,10 +40,7 @@ export function ToolSettingsPage({ active, tools, count, limit, children }: {
         }}>{t(`tools.tab.${key}`)}{key === 'selection' && <span className="tool-settings-tab-count"> {count}/{limit}</span>}</button>)}
       </span>
       {tabs.map(key => <div key={key} id={`${id}-panel-${key}`} role="tabpanel" aria-labelledby={`${id}-tab-${key}`} className="tool-settings-panel" hidden={tab !== key}>
-        {key === 'selection' ? (active && tab === 'selection' ? children : null) : key === 'memory' ? <ToolMemoryPanel active={active && tab === 'memory'} tools={tools} /> : <div className="tool-settings-placeholder">
-          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{key === 'skills' ? <><path d="M12 7v14M3 3h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5v16h-5a4 4 0 0 0-4 2 4 4 0 0 0-4-2H3z" /></> : <><rect x="8" y="3" width="8" height="6" rx="1" /><path d="M12 9v5M4 14h16M4 14v3m8-3v3m8-3v3" /><path d="M2 17h4v4H2zm8 0h4v4h-4zm8 0h4v4h-4z" /></>}</svg>
-          <p>{t(key === 'skills' ? 'tools.skills.placeholder' : 'tools.mcp.placeholder')}</p>
-        </div>}
+        {key === 'selection' ? (active && tab === 'selection' ? children : null) : key === 'memory' ? <ToolMemoryPanel active={active && tab === 'memory'} tools={tools} /> : <ToolSkillsPanel active={active && tab === 'skills'} tools={tools} />}
       </div>)}
     </div>
   </section>;

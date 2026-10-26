@@ -34,7 +34,7 @@ fn segment(value: &str) -> bool {
         && value.bytes().all(|c| c.is_ascii_alphanumeric() || b"-_.".contains(&c))
 }
 
-fn repository(source: &str) -> Result<String, String> {
+pub(crate) fn repository(source: &str) -> Result<String, String> {
     let source = source.trim().trim_end_matches('/').trim_end_matches(".git");
     let source = source.strip_prefix("https://github.com/").unwrap_or(source);
     let parts = source.split('/').collect::<Vec<_>>();
@@ -70,7 +70,7 @@ pub async fn discover(kind: &str, query: &str) -> Result<Value, String> {
     normalize_search(kind, &get_json(url).await?)
 }
 
-fn skill_metadata(body: &str) -> Result<(String,String),String> {
+pub(crate) fn skill_metadata(body: &str) -> Result<(String,String),String> {
     let body = body.trim_start_matches('\u{feff}').replace("\r\n","\n");
     let rest = body.strip_prefix("---\n").ok_or("SKILL.md must contain YAML frontmatter")?;
     let (head, instructions) = rest.split_once("\n---\n").ok_or("SKILL.md frontmatter is not closed")?;

@@ -17,8 +17,6 @@
 .tool-settings-page--memory .tool-settings-panel:not([hidden]) { display:flex; flex:1; min-height:0; }
 .tool-memory { display:flex; flex-direction:column; flex:1; min-width:0; min-height:0; }
 .tool-memory-toolbar, .tool-memory-notice, .tool-memory-confirm { flex-shrink:0; }
-.tool-settings-placeholder { min-height:320px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; color:var(--text-3); text-align:center; }
-.tool-settings-placeholder p { margin:0; font-size:13px; }
 .tool-memory-toolbar { display:flex; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px; }
 .tool-memory-actions { display:flex; align-items:center; gap:10px; flex:0 1 auto; min-width:0; max-width:100%; }
 .tool-memory-actions > .tool-memory-button { flex-shrink:0; }
