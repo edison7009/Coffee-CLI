@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { runInNewContext } from 'node:vm';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
+import ts from 'typescript';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const compiled = await build({
@@ -23,7 +24,15 @@ const compiled = await build({
 });
 const require = createRequire(import.meta.url);
 const tierSource = await readFile(new URL('../src/components/center/TierTerminal.tsx', import.meta.url), 'utf8');
-const forwardInputSource = tierSource.slice(tierSource.indexOf('    const forwardInput ='), tierSource.indexOf('    term.onData(forwardInput);'));
+const tierTree = ts.createSourceFile('TierTerminal.tsx', tierSource, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+let forwardInputNode;
+function findForwardInput(node) {
+  if (ts.isVariableDeclaration(node) && node.name.getText(tierTree) === 'forwardInput') forwardInputNode = node;
+  ts.forEachChild(node, findForwardInput);
+}
+findForwardInput(tierTree);
+assert.ok(forwardInputNode, 'find the actual TierTerminal input handler');
+const forwardInputSource = `const ${forwardInputNode.getText(tierTree)};`;
 assert.ok(forwardInputSource.includes('forwardTerminalInput'), 'extract the actual TierTerminal input handler');
 const forwardInputBuild = await build({ stdin: { contents: `${forwardInputSource}\nglobalThis.__forwardInput = forwardInput;`, loader: 'ts' }, write: false });
 let passed = 0;

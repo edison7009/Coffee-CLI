@@ -51,7 +51,7 @@ try{
   await page.evaluate(()=>window.showLauncher(false));await page.evaluate(()=>window.showLauncher(true));await updating.waitFor();
   assert.equal(await page.evaluate(()=>window.updates.length),1,'in-flight state survives launcher remounts');
   await page.evaluate(()=>window.releaseUpdates.claude('cli_update_timeout'));
-  const retry=card('Claude Code').getByRole('button',{name:'更新 1.2.0',exact:true});await retry.waitFor();await retry.hover();
+  const retry=card('Claude Code').getByRole('button',{name:'更新 1.2.0',exact:true});await retry.waitFor();await page.mouse.move(0,0);await retry.hover();
   await page.getByRole('tooltip').filter({hasText:'更新超时'}).waitFor();assert.equal(await retry.getAttribute('title'),null);
   await retry.press('Enter');await page.waitForFunction(()=>window.updates.length===2);
   await card('Codex CLI').getByRole('button',{name:'更新 2.0.0',exact:true}).click();await page.waitForFunction(()=>window.updates.length===3);
@@ -71,7 +71,7 @@ try{
     const update=await card('Claude Code').locator('.cli-update-button').boundingBox(),bounds=await card('Claude Code').boundingBox(),gear=await page.getByRole('button',{name:'设置',exact:true}).boundingBox();
     assert.ok(update.x>=bounds.x&&update.x+update.width<=bounds.x+bounds.width&&update.y+update.height<=gear.y+1,'update label fits above existing controls');
     assert.ok(Math.abs((bounds.x+bounds.width-update.x-update.width)-(update.y-bounds.y))<1,'top and right insets match');
-    await card('Claude Code').locator('.cli-update-button').hover();
+    await page.mouse.move(0,0);await card('Claude Code').locator('.cli-update-button').hover();
     const tip=await page.getByRole('tooltip').boundingBox();
     assert.ok(Math.abs(tip.x-update.x)<1&&tip.x+tip.width<=width-8,'tip shares the button left edge and stays inside the viewport');
     await page.screenshot({path:join(directory,`cli-updates-${mode}-${shape}.png`)});

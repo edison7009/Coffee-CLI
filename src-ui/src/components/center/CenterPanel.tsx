@@ -1281,8 +1281,8 @@ export function CenterPanel() {
             className={`terminal-wrapper${splitVisible && splitIds.includes(t.id) ? ` session-split-pane${t.id === activeTerminalId ? ' is-focused' : ''}` : ''}`}
             data-session-id={t.id}
             data-split-eligible="true"
-            onPointerDownCapture={() => { if (splitVisible && splitIds.includes(t.id) && t.id !== activeTerminalId) dispatch({ type: 'SET_ACTIVE_TERMINAL', id: t.id }); }}
-            onFocusCapture={() => { if (splitVisible && splitIds.includes(t.id) && t.id !== activeTerminalId) dispatch({ type: 'SET_ACTIVE_TERMINAL', id: t.id }); }}
+            onPointerDownCapture={event => { if (!(event.target as Element).closest('.pane-number-badge--closable') && splitVisible && splitIds.includes(t.id) && t.id !== activeTerminalId) dispatch({ type: 'SET_ACTIVE_TERMINAL', id: t.id }); }}
+            onFocusCapture={event => { if (!(event.target as Element).closest('.pane-number-badge--closable') && splitVisible && splitIds.includes(t.id) && t.id !== activeTerminalId) dispatch({ type: 'SET_ACTIVE_TERMINAL', id: t.id }); }}
             style={{
               // Hide every terminal wrapper while the diff tab is focused —
               // the diff surface takes over the content area (the underlying

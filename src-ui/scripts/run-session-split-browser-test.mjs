@@ -3,9 +3,12 @@ import assert from 'node:assert/strict';
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { createServer } from 'vite';
 const { chromium } = await import(process.env.COFFEE_PLAYWRIGHT_MODULE || 'playwright-core');
 const browser = await chromium.launch({ headless: true, ...(process.env.COFFEE_CHROMIUM_EXECUTABLE ? { executablePath: process.env.COFFEE_CHROMIUM_EXECUTABLE } : {}) });
 const directory = await mkdtemp(join(tmpdir(), 'coffee-session-split-'));
+const devServer = await createServer({ cacheDir: join(directory, 'vite-cache'), logLevel: 'error', server: { host: '127.0.0.1', port: 0 } });
+await devServer.listen();
 try {
   const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
   const errors = []; page.on('pageerror', error => errors.push(error.message));
@@ -23,7 +26,7 @@ try {
   await page.addInitScript(() => {
     for (const [key, value] of Object.entries({ 'cc-lang': 'en', 'cc-theme': 'sakura', 'cc-mode': 'dark', 'cc-shape': 'soft', 'cc-tasks-seeded': '1', 'coffee_pinned_items': JSON.stringify(['agent:claude', 'agent:codex', 'agent:four-split', 'agent:installer', 'agent:terminal']) })) localStorage.setItem(key, value);
   });
-  await page.goto('http://localhost:5173');
+  await page.goto(devServer.resolvedUrls.local[0]);
   await page.locator('.launchpad-mode-tabs').first().waitFor().catch(async error => { console.error(errors); console.error((await page.locator('body').innerText()).slice(0, 1500)); throw error; });
   await page.waitForTimeout(500);
   // Test-only access to the actual provider; production exports no debug bridge.
@@ -46,10 +49,11 @@ try {
   assert.equal(await page.getByText('Independent Quad', { exact: true }).count(), 0, 'fixed split launcher is retired');
   assert.equal(await page.getByText('Coffee 101', { exact: true }).count(), 0);
   assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('coffee_pinned_items'))), ['agent:claude', 'agent:codex', 'agent:terminal']);
-  await page.getByRole('button', { name: 'Open library', exact: true }).click();
+  assert.equal(await page.getByRole('button', { name: 'Open library', exact: true }).count(), 0);
+  await page.getByRole('button', { name: 'Agent configuration', exact: true }).click();
   assert.equal(await page.getByText('Agent Tools', { exact: true }).count(), 0, 'retired category is removed');
   assert.equal(await page.getByText('Coffee 101', { exact: true }).count(), 0);
-  await page.getByRole('button', { name: 'Back to desktop', exact: true }).click();
+  await page.getByRole('button', { name: 'New session', exact: true }).click();
   for (const session of [
     { id: 'a', tool: 'claude', claudeMode: 'conversation', resumeToken: 'thread-a', toolTitle: 'Claude desktop task' },
     { id: 'b', tool: 'codex', codexMode: 'conversation', resumeToken: 'thread-b', toolTitle: 'Codex desktop task' },
@@ -133,7 +137,11 @@ try {
   const lives = await page.evaluate(() => window.lifetimes);
   assert.deepEqual(lives.filter(([kind]) => kind === 'unmount'), [], 'add/remove/focus/resize never unmount an existing native view');
   for (const id of ['a', 'b', 'c', 'd', 'e']) assert.equal(lives.filter(([kind, sessionId]) => kind === 'mount' && sessionId === id).length, 1, 'start each view once: ' + id);
-  for (const [id, expected] of [['b', 3], ['c', 2]]) { await pane(id).getByRole('button', { name: /Close split view/ }).click(); await count(expected); }
+  for (const [id, expected] of [['b', 3], ['c', 2]]) {
+    const focused=await page.evaluate(()=>window.testState().activeTerminalId);
+    await pane(id).getByRole('button', { name: /Close split view/ }).click(); await count(expected);
+    if(focused!==id)assert.equal(await page.evaluate(()=>window.testState().activeTerminalId),focused,'closing an unfocused pane does not first move the composer or steal focus');
+  }
   await pane('d').getByRole('button', { name: /Close split view/ }).click(); await count(0);
   assert.equal(await pane('a').isVisible(), true);
   assert.ok((await pane('a').boundingBox()).width > 700, 'last pane expands to the whole area');
@@ -146,4 +154,4 @@ try {
   assert.deepEqual(errors, []);
   console.log('OK: actual sidebar pointer drops/context menu, nested 1→4→1, focus, resizing, deduplication, cancellation, stable view lifetimes, deletion and restart');
   console.log('Screenshot: ' + join(directory, 'four-sessions.png'));
-} finally { await browser.close(); }
+} finally { await browser.close(); await devServer.close(); }

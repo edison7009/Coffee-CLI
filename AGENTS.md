@@ -6,6 +6,13 @@
 
 ## 发版检查清单
 
+发布前使用统一入口，避免手写脚本名单漏掉新功能：
+- 前端：`cd src-ui && npm run build && npm run lint && npm test && npm run test:browser`；浏览器首次运行前执行 `npx playwright install chromium`。
+- 后端：`cargo check --locked`、`cargo clippy --locked --all-targets --all-features -- -D clippy::correctness -D clippy::suspicious`、`cargo test --locked --no-fail-fast`。
+- 原生编排协议：构建当前可执行文件后，通过 `COFFEE_TEST_EXE` 指定它，在 `src-ui` 执行 `npm run test:native`。此测试只连接本地模拟服务，不启动真实工具任务。
+- 主分支／PR 的 Review 和 Release 的 quality 必须运行上述自动回归；quality 失败不得进入安装包构建。手动真实账号测试和基准测试不纳入自动入口。
+- 全仓格式与普通 Clippy 风格警告存在历史基线；新增正确性／可疑行为错误必须阻止发布，不为消除风格警告顺带重构无关模块。
+
 每次发 Coffee CLI 新版本严格按照这 5 步，一步都不能省：
 
 1. **三处版本号同步**到同一个 SemVer 值：

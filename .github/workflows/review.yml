@@ -1,6 +1,9 @@
 name: Review
 
 on:
+  push:
+    branches: [main]
+    paths-ignore: ['Web-Home/**', 'README*', 'docs/**', 'install/release-notes-template.md']
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -29,19 +32,14 @@ jobs:
           npm ci
           npm run build
           npm run lint
-          node scripts/run-terminal-interaction-test.mjs
-          node scripts/run-terminal-enter-test.mjs
-          node scripts/run-terminal-size-sync-test.mjs
-          node scripts/run-ui-scale-test.mjs
-          node scripts/run-settings-slider-test.mjs
-          node scripts/run-terminal-output-scheduler-test.mjs
-          node scripts/run-shiki-test.mjs
-          node scripts/run-tab-renderer-test.mjs
-          node scripts/run-conversation-virtualizer-test.mjs
-          node scripts/run-review-regressions.mjs
-          node scripts/run-history-cache-test.mjs
-          node scripts/run-project-git-status-test.mjs
-          node scripts/run-session-replies-test.mjs
+          npm test
+          npm audit --audit-level=high --omit=dev
+      - name: Install test browser
+        working-directory: src-ui
+        run: npx playwright install --with-deps chromium
+      - name: Browser interaction regression tests
+        working-directory: src-ui
+        run: npm run test:browser
 
   native:
     strategy:
@@ -63,5 +61,7 @@ jobs:
           key: review-${{ matrix.platform }}
       - name: Native check
         run: cargo check --locked
+      - name: Native static analysis
+        run: cargo clippy --locked --all-targets --all-features -- -D clippy::correctness -D clippy::suspicious
       - name: Native regression tests
         run: cargo test --locked --no-fail-fast

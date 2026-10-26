@@ -50,6 +50,7 @@ export function ContextMenu(){return null}
 export function ThemedIcon({src,alt}){return <img className="icon-svg" src={src} alt={alt}/>}
 export function beginExplorerDrag(){}
 export async function tokenizeFile(){return null}
+export async function tokenizeByLang(){return null}
 export function getShikiTheme(){return 'github-dark-default'}
 export function useTextContextMenu(){return {menu:null,openMenu(){}}}
 export function getTabActions(){return {paste(text){window.pastedTask=text}}}
@@ -72,7 +73,7 @@ try{
  await page.goto('http://127.0.0.1:'+server.address().port);
  await page.getByText('选择工作区后查看修改记录。',{exact:true}).waitFor();
  assert.equal(await page.evaluate(()=>window.calls.gitReads),0,'a remembered directory without an open tool does not query Git');
- assert.equal(await page.locator('.changes-title-count').textContent(),'0');
+ assert.equal(await page.getByRole('tab',{name:/修改记录/}).locator('.changes-title-count').textContent(),'0');
  await page.evaluate(()=>{window.setFolder(null);window.setTool('claude')});
  await page.getByText('选择工作区后查看修改记录。',{exact:true}).waitFor();
  assert.equal(await page.evaluate(()=>window.calls.gitReads),0,'a tool without a directory also remains idle');
@@ -84,7 +85,7 @@ try{
  await page.evaluate(()=>window.setTool(null));
  await page.getByText('选择工作区后查看修改记录。',{exact:true}).waitFor();
  assert.equal(await rows.count(),0,'closing the tool hides its cached Git files');
- assert.equal(await page.locator('.changes-title-count').textContent(),'0','closing the tool clears the visible change count');
+ assert.equal(await page.getByRole('tab',{name:/修改记录/}).locator('.changes-title-count').textContent(),'0','closing the tool clears the visible change count');
  await page.evaluate(()=>window.setTool('claude'));await rows.first().waitFor();
  console.log('OK: launchpad with a remembered directory stays idle; real loading, tool launch and close recover correctly');
  const pickScope=async scope=>{await page.getByRole('combobox').click();await page.getByRole('option',{name:{all:'全部修改',working:'未提交',committed:'本次会话提交'}[scope],exact:true}).click()};

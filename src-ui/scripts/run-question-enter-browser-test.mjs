@@ -25,9 +25,9 @@ const bundle = await build({
     const respondClaude=(...args)=>record(args),respondCodex=(...args)=>record(args);
     ${await component('ClaudeConversation', 'Question')}
     ${await component('CodexConversation', 'RequestCard')}
-    function Fixture(){const [request,setRequest]=useState(null);window.show=(provider,questions)=>{window.calls=[];window.fail=false;setRequest({provider,questions,key:crypto.randomUUID()})};
+    function Fixture(){const [request,setRequest]=useState(null);window.show=(provider,questions)=>{window.calls=[];window.fail=false;const next={provider,questions,key:crypto.randomUUID()};setRequest(next);return next.key};
       if(!request)return null;
-      return request.provider==='claude'?<Question key={request.key} id="session" pending={{id:'question',request:{tool_name:'AskUserQuestion',input:{questions:request.questions}}}}/>:<RequestCard key={request.key} sessionId="session" request={{id:'question',method:'item/tool/requestUserInput',params:{questions:request.questions}}}/>;
+      return <div data-request-key={request.key}>{request.provider==='claude'?<Question key={request.key} id="session" pending={{id:'question',request:{tool_name:'AskUserQuestion',input:{questions:request.questions}}}}/>:<RequestCard key={request.key} sessionId="session" request={{id:'question',method:'item/tool/requestUserInput',params:{questions:request.questions}}}/>}</div>;
     }createRoot(document.getElementById('root')).render(<Fixture/>);
   ` },
   bundle: true, write: false, jsx: 'automatic', define: { 'process.env.NODE_ENV': '"development"' },
@@ -47,7 +47,8 @@ try {
   await page.waitForFunction(() => window.show);
   for (const provider of ['claude', 'codex']) {
     const show = async questions => {
-      await page.evaluate(({provider, questions}) => window.show(provider, questions), {provider, questions});
+      const key=await page.evaluate(({provider, questions}) => window.show(provider, questions), {provider, questions});
+      await page.locator(`[data-request-key="${key}"]`).waitFor();
       await page.locator('.claude-custom-answer').first().waitFor();
     };
     const inputs = page.locator('.claude-custom-answer');

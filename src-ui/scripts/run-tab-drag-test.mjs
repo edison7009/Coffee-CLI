@@ -210,16 +210,16 @@ test('closing a session selects a remaining real tab before the idle selector', 
   assert.equal(f.visible().includes('home'), false);
 });
 
-test('new session reuses the selector, clears Library and keeps running tabs', () => {
+test('new session reuses the selector, leaves application configuration and keeps running tabs', () => {
   const f = fixture();
-  let libraryOpen = true;
   const open = () => vm.runInNewContext(compile(`(${callback('openNewSession')})()`), {
     terminals: f.state.terminals, dispatch: f.dispatch,
-    crypto: { randomUUID: () => 'new-home' }, setShowLibrary: value => { libraryOpen = value; },
+    crypto: { randomUUID: () => 'new-home' },
   });
+  f.dispatch({ type: 'SET_TOOL_SETTINGS_OPEN', open: true });
   f.dispatch({ type: 'OPEN_AGENT_PAGE', page: 'agent' });
   open();
-  assert.equal(libraryOpen, false);
+  assert.equal(f.state.toolSettingsOpen, false);
   assert.equal(f.state.agentPageActive, null);
   assert.equal(f.state.activeTerminalId, 'new-home');
   const sessions = f.state.terminals.length;

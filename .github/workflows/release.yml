@@ -11,13 +11,7 @@ permissions:
 
 jobs:
   # ── Quality gate ─────────────────────────────────────────────────────
-  # Runs typecheck + unit tests on Ubuntu before any platform build starts,
-  # so a broken tag never reaches the release matrix. One cheap job
-  # instead of a separate `ci.yml` that fires on every push to main (that's
-  # the EchoBird pattern — a separate push-triggered CI is what makes every
-  # release look like "a big pile of CI"). Here the gate runs ONLY on tag
-  # push / workflow_dispatch, gated behind `needs:`, so a normal
-  # commit-to-main push pays zero CI cost.
+  # Build and regression checks must pass before any platform is packaged.
   quality:
     runs-on: ubuntu-latest
     steps:
@@ -41,34 +35,16 @@ jobs:
           cd src-ui
           npm run build
           npm run lint
-          node scripts/run-terminal-interaction-test.mjs
-          node scripts/run-terminal-enter-test.mjs
-          node scripts/run-omp-terminal-status-test.mjs
-          node scripts/run-opencode-island-test.mjs
-          node scripts/run-notify-sound-test.mjs
-          node scripts/run-terminal-size-sync-test.mjs
-          node scripts/run-conpty-bundle-test.mjs
-          node scripts/run-ui-scale-test.mjs
-          node scripts/run-settings-slider-test.mjs
-          node scripts/run-shiki-test.mjs
-          node scripts/run-tab-renderer-test.mjs
-          node scripts/run-conversation-virtualizer-test.mjs
-          node scripts/run-review-regressions.mjs
-          node scripts/run-history-cache-test.mjs
-          node scripts/run-project-git-status-test.mjs
-          node scripts/run-session-replies-test.mjs
-          node scripts/run-release-notes-test.mjs
-          node scripts/run-terminal-observer-test.mjs
-          node scripts/run-terminal-control-test.mjs
-          node scripts/run-agent-tools-test.mjs
-          node scripts/run-agent-desktop-session-test.mjs
-          node scripts/run-agent-sentinel-test.mjs
-          node scripts/run-agent-mode-toggle-test.mjs
-          node scripts/run-tab-drag-test.mjs
-          node scripts/run-agent-client-test.mjs
-          node scripts/run-agent-i18n-test.mjs
-          node scripts/run-character-background-test.mjs
-          node scripts/run-character-tab-interaction-test.mjs
+          npm test
+          npm audit --audit-level=high --omit=dev
+
+      - name: Install test browser
+        working-directory: src-ui
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser interaction regression tests
+        working-directory: src-ui
+        run: npm run test:browser
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -90,12 +66,24 @@ jobs:
         with:
           key: quality
 
+      - name: Rust static analysis
+        run: cargo clippy --locked --all-targets --all-features -- -D clippy::correctness -D clippy::suspicious
+
       # Unit tests — includes the shell_probe detection / fallback-chain
       # suite. On Linux this also exercises the Unix cfg branches that
       # Windows-hosted dev never runs locally (#[cfg(not(target_os =
       # "windows"))] tests are filtered out on Windows).
       - name: Cargo test
-        run: cargo test --no-fail-fast
+        run: cargo test --locked --no-fail-fast
+
+      - name: Build native test host
+        run: cargo build --locked
+
+      - name: Native orchestration protocol regression
+        working-directory: src-ui
+        env:
+          COFFEE_TEST_EXE: ${{ github.workspace }}/target/debug/coffee-cli
+        run: npm run test:native
 
   release:
     needs: quality
@@ -237,6 +225,17 @@ jobs:
       - name: Build all bundles (Windows / Linux)
         if: runner.os != 'macOS'
         run: cargo tauri build ${{ matrix.args }}
+
+      - name: Verify packaged orchestration protocol
+        shell: bash
+        env:
+          BUILD_TARGET: ${{ matrix.target || '' }}
+        run: |
+          EXE="$GITHUB_WORKSPACE/target/${BUILD_TARGET:+$BUILD_TARGET/}release/coffee-cli"
+          if [ "$RUNNER_OS" = "Windows" ]; then EXE="$EXE.exe"; fi
+          export COFFEE_TEST_EXE="$EXE"
+          cd src-ui
+          npm run test:native
 
       # ── Stage + rename artifacts to platform-labelled format ──
       # Tauri's bundler emits names like `Coffee CLI_1.9.2_amd64.deb` which

@@ -336,7 +336,11 @@ fn checked_targets(plan:&Plan)->Result<(),String> {
     for path in &plan.target_paths {
         reject_links(path)?;
         let mut ancestor=path.parent();
-        while let Some(parent)=ancestor {if parent==plan.cwd{break;} if parent.exists() && fs::symlink_metadata(parent).map_err(|_|"Project target unavailable")?.file_type().is_symlink(){return Err("Project installation path contains a symbolic link".into());} ancestor=parent.parent();}
+        while let Some(parent) = ancestor {
+            if parent == plan.cwd { break; }
+            if parent.exists() && fs::symlink_metadata(parent).map_err(|_| "Project target unavailable")?.file_type().is_symlink() { return Err("Project installation path contains a symbolic link".into()); }
+            ancestor = parent.parent();
+        }
     }
     Ok(())
 }

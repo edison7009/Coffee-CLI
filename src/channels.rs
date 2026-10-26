@@ -1009,8 +1009,8 @@ pub fn start_saved(app: AppHandle) {
 }
 
 fn start_channel(app: AppHandle, channel: &'static str) {
-    let runtime = app.state::<ChannelRuntime>();
     let (config, token, generation, cancel) = {
+        let runtime = app.state::<ChannelRuntime>();
         let Ok(mut state) = runtime.state.lock() else {
             return;
         };
@@ -1052,7 +1052,6 @@ fn start_channel(app: AppHandle, channel: &'static str) {
         current.error.clear();
         (config, token, current.generation, cancel)
     };
-    drop(runtime);
     tauri::async_runtime::spawn(async move {
         receive_loop(app, channel, config, token, generation, cancel).await;
     });
