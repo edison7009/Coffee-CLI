@@ -40,11 +40,15 @@ try{
   await card('Claude Code').getByRole('button',{name:'更新 1.2.0',exact:true}).dblclick();
   await page.waitForFunction(()=>window.updates.length===1);
   assert.equal(await page.evaluate(()=>window.launches),0,'update clicks never launch a CLI or open its folder menu');
-  const spinner=card('Claude Code').getByRole('button',{name:'正在更新',exact:true});
-  assert.equal(await spinner.isDisabled(),true);assert.equal(await spinner.innerText(),'');
-  assert.equal(await spinner.locator('.cli-update-spinner').evaluate(el=>getComputedStyle(el).borderRadius),'50%');
+  const updating=card('Claude Code').getByRole('button',{name:'正在更新',exact:true});
+  assert.equal(await updating.isDisabled(),true);assert.equal(await updating.innerText(),'');
+  assert.equal(await updating.locator('.cli-update-dots i').count(),4);
+  assert.equal(await updating.locator('.cli-update-dots i').first().evaluate(el=>getComputedStyle(el).animationName),'cli-update-dot');
+  await page.emulateMedia({reducedMotion:'reduce'});
+  assert.equal(await updating.locator('.cli-update-dots i').first().evaluate(el=>getComputedStyle(el).animationName),'none');
+  await page.emulateMedia({reducedMotion:'no-preference'});
   assert.equal(await card('Codex CLI').getByRole('button',{name:'更新 2.0.0',exact:true}).isEnabled(),true,'another tool retains its own update state');
-  await page.evaluate(()=>window.showLauncher(false));await page.evaluate(()=>window.showLauncher(true));await spinner.waitFor();
+  await page.evaluate(()=>window.showLauncher(false));await page.evaluate(()=>window.showLauncher(true));await updating.waitFor();
   assert.equal(await page.evaluate(()=>window.updates.length),1,'in-flight state survives launcher remounts');
   await page.evaluate(()=>window.releaseUpdates.claude('cli_update_timeout'));
   const retry=card('Claude Code').getByRole('button',{name:'更新 1.2.0',exact:true});await retry.waitFor();await retry.hover();
@@ -71,6 +75,14 @@ try{
     const tip=await page.getByRole('tooltip').boundingBox();
     assert.ok(Math.abs(tip.x-update.x)<1&&tip.x+tip.width<=width-8,'tip shares the button left edge and stays inside the viewport');
     await page.screenshot({path:join(directory,`cli-updates-${mode}-${shape}.png`)});
+    await card('Claude Code').locator('.cli-update-button').click();
+    await updating.waitFor();
+    const busyBounds=await updating.boundingBox();
+    assert.equal(busyBounds.width,update.width,'animation preserves the update button width');
+    assert.equal(await updating.evaluate(el=>getComputedStyle(el).backgroundColor==='rgba(0, 0, 0, 0)'),false,'busy track remains visible in each shape');
+    await page.screenshot({path:join(directory,`cli-updating-${mode}-${shape}.png`)});
+    await page.evaluate(()=>window.releaseUpdates.claude('cli_update_timeout'));
+    await card('Claude Code').getByRole('button',{name:'更新 1.3.0',exact:true}).waitFor();
   }
-  assert.deepEqual(errors,[]);console.log('OK: cached detection, favorite/installation gating, per-tool spinners, deduplication, remount retention, keyboard retry, verification state, themed geometry and existing launch controls');console.log('Screenshots: '+directory);
+  assert.deepEqual(errors,[]);console.log('OK: cached detection, favorite/installation gating, per-tool update animations, reduced motion, deduplication, remount retention, keyboard retry, verification state, themed geometry and existing launch controls');console.log('Screenshots: '+directory);
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve))}

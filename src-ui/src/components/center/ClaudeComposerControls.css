@@ -22,6 +22,7 @@
 .claude-control-menu button { display:flex; align-items:baseline; justify-content:space-between; flex-shrink:0; text-align:left; gap:12px; padding:7px 9px; background:transparent; color:var(--text-1); border:0; border-radius:var(--shape-radius-btn,5px); font:inherit; cursor:pointer; }
 .claude-control-menu button:hover,.claude-control-menu button.is-selected { background:var(--accent-bg,var(--bg-hover)); }
 .claude-control-menu button:disabled { opacity:.4; }
+.claude-control-menu .claude-thinking-toggle:disabled { opacity:1; cursor:default; }
 .claude-control-menu button strong { font-weight:500; flex-shrink:0; }
 .claude-control-menu button small { color:var(--text-3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; }
 .claude-menu-empty { padding:18px 10px; color:var(--text-3); }

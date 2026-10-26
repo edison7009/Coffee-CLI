@@ -29,7 +29,7 @@ export function CliUpdateButton({ tool, active, installed }: { tool: string; act
   return <span className="cli-update-control" onClick={event => event.stopPropagation()} onDoubleClick={event => event.stopPropagation()}>
     <button type="button" className={`cli-update-button${entry.error ? ' has-error' : ''}`} aria-label={label} aria-busy={entry.busy} disabled={entry.busy} onClick={event => { event.stopPropagation(); setTip(null); void updateCli(tool); }} onMouseEnter={event => { const rect = event.currentTarget.getBoundingClientRect(); setTip({ left: Math.max(8, rect.left), top: rect.bottom + 8 }); }} onMouseLeave={() => setTip(null)} onFocus={event => { const rect = event.currentTarget.getBoundingClientRect(); setTip({ left: Math.max(8, rect.left), top: rect.bottom + 8 }); }} onBlur={() => setTip(null)}>
       <span className="cli-update-label" style={entry.busy ? { visibility: 'hidden' } : undefined}>{updateLabel}</span>
-      {entry.busy && <i className="cli-update-spinner" aria-hidden="true" />}
+      {entry.busy && <span className="cli-update-dots" aria-hidden="true"><i /><i /><i /><i /></span>}
     </button>
     {entry.error && <span className="cli-update-error" role="alert">{error}</span>}
     {tip && createPortal(<span className="cli-update-tip" role="tooltip" style={{ left: tip.left, top: tip.top, maxWidth: Math.min(236, window.innerWidth - tip.left - 8) }}>{entry.error ? error : entry.busy ? label : t('cli_update.hint', { current: entry.status?.current ?? '', latest: entry.status?.latest ?? '' })}</span>, document.body)}
