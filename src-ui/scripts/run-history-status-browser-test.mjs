@@ -19,8 +19,12 @@ const mock = `
   export function useAppLanguage(){return 'en'};
   export function useAppStateRef(){return {current:state}};
   const sessions=[{id:'one',tool:'claude',session_token:'one',name:'Working on the first task',cwd:'D:/same',saved_at:'2026-10-23T00:00:00Z'},{id:'two',tool:'claude',session_token:'two',name:'Another task in the same folder',cwd:'D:/same',saved_at:'2026-10-22T00:00:00Z'},{id:'other',tool:'codex',session_token:'one',name:'Different tool with the same token',cwd:'D:/same',saved_at:'2026-10-21T00:00:00Z'}];
+  if(new URLSearchParams(location.search).has('perSession')) {
+    sessions[1].git_context={branch:'main',pull_requests:['https://github.com/example/repo/pull/42']};
+    sessions[2].git_context={branch:'main',pull_requests:['https://github.com/example/repo/pull/43']};
+  }
   const snapshot={sessions,status:'ready'}, emptySet=new Set(), emptyObject={}, agent={conversations:[]};
-  export const commands={async gitProjectStatus(folder){window.gitReadCount=(window.gitReadCount||0)+1;const p=new URLSearchParams(location.search),pr=p.get('pr')||'open';if(p.has('deferGit'))await new Promise(resolve=>{window.resolveGitStatus=resolve});return {repo_root:folder,branch:'feature/ui',github:'ok',pull_request:pr==='branch'?null:{number:42,url:'https://github.com/example/repo/pull/42',state:pr,ci:pr==='open'?(p.get('ci')||'success'):null}}}},isTauri=true;
+  export const commands={async gitProjectStatus(folder,context){window.gitReadCount=(window.gitReadCount||0)+1;const p=new URLSearchParams(location.search);let pr=p.get('pr')||'open',number=42;if(p.has('perSession')&&context){number=Number(context.pull_requests[0].split('/').at(-1));pr=number===42?'merged':'closed'}if(p.has('deferGit'))await new Promise(resolve=>{window.resolveGitStatus=resolve});return {repo_root:folder,branch:context?.branch||'feature/ui',github:'ok',pull_request:pr==='branch'?null:{number,url:'https://github.com/example/repo/pull/'+number,state:pr,ci:pr==='open'?(p.get('ci')||'success'):null}}}},isTauri=true;
   export const subscribeHistory=()=>()=>{},getHistorySnapshot=()=>snapshot,prefetchHistory=()=>{},refreshHistory=()=>{},sortByMtime=s=>s;
   export const subscribeHidden=()=>()=>{},getHiddenSnapshot=()=>emptySet,hideSession=()=>{window.deleted=true};
   export const subscribePinned=()=>()=>{},getPinnedSnapshot=()=>emptySet,togglePin=()=>{},isPinned=()=>false;
@@ -121,11 +125,33 @@ try {
       const before = await geometry();
       assert.equal(await page.locator('.history-git-mark').count(), 0, 'measure before metadata arrives');
       await page.evaluate(() => window.resolveGitStatus());
-      await page.locator(layout === 'projects' ? '.history-project-row .history-git-mark' : '.history-card .history-git-mark').waitFor();
+      if (state === 'branch') {
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        assert.equal(await page.locator('.history-git-mark').count(), 0, 'ordinary branch icons stay absent after metadata resolves');
+      } else {
+        await page.locator(layout === 'projects' ? '.history-project-row .history-git-mark' : '.history-card .history-git-mark').waitFor();
+      }
       assert.deepEqual(await geometry(), before, `${layout}/${state}/${ci}: status arrival must not resize or move any row`);
       await page.locator('.history-card').nth(1).hover();
       assert.deepEqual(await geometry(), before, `${layout}/${state}/${ci}: hover actions must not resize or move any row`);
     }
+  }
+  for (const layout of ['projects', 'list']) {
+    await page.evaluate(layout => localStorage.setItem('cc-history-layout', layout), layout);
+    await page.goto(`http://127.0.0.1:${server.address().port}/?perSession=1&pr=branch`);
+    await page.mouse.move(500, 300);
+    const merged = page.locator('.history-card').nth(1).locator('.history-git-mark.is-merged');
+    const closed = page.locator('.history-card').nth(2).locator('.history-git-mark.is-closed');
+    await merged.waitFor(); await closed.waitFor();
+    assert.match(await merged.getAttribute('title'), /main.*#42 Merged/);
+    assert.match(await closed.getAttribute('title'), /main.*#43 Closed/);
+    assert.equal(await merged.evaluate(el => getComputedStyle(el).color), 'rgb(163, 113, 247)');
+    assert.equal(await closed.evaluate(el => getComputedStyle(el).color), 'rgb(248, 81, 73)');
+    assert.equal(await page.locator('.history-card-working-indicator').count(), 1);
+    if (layout === 'projects') {
+      assert.equal(await page.locator('.history-project-row .history-git-mark').count(), 0, 'ordinary project branches stay hidden and do not inherit a session PR');
+    }
+    await page.screenshot({path:join(directory,`per-session-${layout}.png`)});
   }
   assert.deepEqual(errors, []);
   console.log('OK: real history rows, exact status identity, spinner/hover/keyboard actions, reduced motion, state clearing, deletion and Git/PR/CI project marks');

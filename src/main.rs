@@ -29,6 +29,7 @@ mod tools;
 mod usage_stats;
 mod git;
 mod git_project_status;
+mod session_git_context;
 mod shell_probe;
 #[cfg(target_os = "linux")]
 mod linux_blur;

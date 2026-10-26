@@ -183,7 +183,7 @@ for (const saved of ['{bad json', '{}', 'null', '[null]', '[{}]', JSON.stringify
   for (const [field, value] of Object.entries({
     file_path: '/moved/one.jsonl', created_at: '1788600000000',
     session_token: 'replacement', tool: 'claude', name: 'a\x01b',
-    cwd: '/another', turn_count: 2,
+    cwd: '/another', turn_count: 2, git_context: { branch: 'main', pull_requests: ['https://github.com/example/repo/pull/42'] },
   })) {
     const before = api.getHistorySnapshot();
     current = { ...current, [field]: value };

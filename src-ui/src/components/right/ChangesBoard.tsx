@@ -30,7 +30,7 @@ export function ChangesBoard({ selectedPath, diffMode, view, active, idPrefix }:
   useGitPollingGate(active);
   const ready = changes?.state === 'ok';
   const repoRoot = ready ? changes.repo_root : '';
-  const statuses = useProjectGitStatuses(active && ready && folder ? [folder] : []);
+  const statuses = useProjectGitStatuses(active && ready && folder ? [{ folder }] : []);
   const project = statuses.get(gitFolderKey(folder)), pr = project?.pull_request;
   const [scope, setScope] = useState<ChangeScope>('all');
   const [query, setQuery] = useState('');

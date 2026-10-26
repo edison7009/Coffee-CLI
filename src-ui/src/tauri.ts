@@ -85,6 +85,11 @@ export interface GitProjectStatus {
   pull_request: { number: number; url: string; state: 'open' | 'draft' | 'merged' | 'closed'; ci: 'success' | 'failure' | 'pending' | null } | null;
 }
 
+export interface SessionGitContext {
+  branch: string | null;
+  pull_requests: string[];
+}
+
 export async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
   if (!_invoke) throw new Error('Tauri IPC not available');
   return _invoke(cmd, args) as Promise<T>;
@@ -104,6 +109,7 @@ export interface SavedSession {
   created_at?: string;
   file_path?: string;
   turn_count?: number;
+  git_context?: SessionGitContext | null;
 }
 
 export interface ChatSessionRead {
@@ -244,7 +250,7 @@ export const commands = {
   // DiffPanel pulls each side's blob via `gitShowFile` and feeds the existing
   // jsdiff + Shiki pipeline.
   gitChanges: (folder: string) => invoke<GitChanges>('git_changes', { folder }),
-  gitProjectStatus: (folder: string) => invoke<GitProjectStatus | null>('git_project_status', { folder }),
+  gitProjectStatus: (folder: string, context?: SessionGitContext | null) => invoke<GitProjectStatus | null>('git_project_status', { folder, context: context ?? null }),
   // Content of `<spec>` — e.g. "HEAD:src/a.ts" (committed) or ":src/a.ts"
   // (staged/index blob). null when the path doesn't exist at that revision;
   // the panel treats null as an empty side (file renders as all-additions).

@@ -1215,6 +1215,8 @@ struct SavedSession {
     created_at: Option<String>,
     file_path: Option<String>,
     turn_count: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    git_context: Option<crate::session_git_context::SessionGitContext>,
 }
 
 #[tauri::command]
@@ -1298,7 +1300,7 @@ const SYSTEM_INJECTION_TAGS: &[&str] = &[
     "Below is a conversation log from a Claude Code coding session",
 ];
 
-fn is_system_injected(text: &str) -> bool {
+pub(crate) fn is_system_injected(text: &str) -> bool {
     let t = text.trim();
     SYSTEM_INJECTION_TAGS.iter().any(|tag| t.starts_with(tag))
 }
@@ -1426,6 +1428,7 @@ fn parse_agent_jsonl(
 
     let mut session_id = file_path.file_stem()?.to_string_lossy().to_string();
     let mut cwd = String::new();
+    let mut git_context = crate::session_git_context::SessionGitObserver::default();
     let mut updated_at = String::new();
     let mut created_at = None;
     let mut title = String::new();
@@ -1445,6 +1448,7 @@ fn parse_agent_jsonl(
 
     for line in reader.lines().map_while(Result::ok) {
         if let Ok(value) = serde_json::from_str::<serde_json::Value>(&line) {
+            git_context.observe(&value);
             if created_at.is_none() {
                 created_at = value.get("timestamp").and_then(json_timestamp_string);
             }
@@ -1614,6 +1618,7 @@ fn parse_agent_jsonl(
         created_at: created_at.or_else(|| file_created_epoch_ms(file_path)),
         file_path: Some(file_path.to_string_lossy().into_owned()),
         turn_count: Some(turn_count),
+        git_context: git_context.finish(),
     })
 }
 
@@ -1737,6 +1742,7 @@ fn parse_codebuddy_session_jsonl(file_path: &std::path::Path) -> Option<SavedSes
         created_at: created_at.or_else(|| file_created_epoch_ms(file_path)),
         file_path: Some(file_path.to_string_lossy().into_owned()),
         turn_count: Some(turn_count),
+        git_context: None,
     })
 }
 
@@ -1886,6 +1892,7 @@ fn parse_pi_session_jsonl(file_path: &std::path::Path, tool: &str) -> Option<Sav
         created_at: created_at.or_else(|| file_created_epoch_ms(file_path)),
         file_path: Some(file_path.to_string_lossy().into_owned()),
         turn_count: Some(turn_count),
+        git_context: None,
     })
 }
 
@@ -1910,7 +1917,7 @@ fn parse_pi_session_jsonl(file_path: &std::path::Path, tool: &str) -> Option<Sav
 /// files with no accompanying text), we return empty so the caller
 /// treats it like any other system injection and keeps scanning.
 /// Blocks without the preamble are returned unchanged.
-fn strip_codex_desktop_file_preamble(text: &str) -> &str {
+pub(crate) fn strip_codex_desktop_file_preamble(text: &str) -> &str {
     const PREAMBLE: &str = "# Files mentioned by the user";
     if !text.contains(PREAMBLE) {
         return text;
@@ -1949,6 +1956,7 @@ fn parse_codex_session_jsonl(file_path: &std::path::Path) -> Option<SavedSession
 
     let mut session_id = file_path.file_stem()?.to_string_lossy().to_string();
     let mut cwd = String::new();
+    let mut git_context = crate::session_git_context::SessionGitObserver::default();
     let mut updated_at = String::new();
     let mut title = String::new();
     let mut total_messages = 0;
@@ -1958,6 +1966,7 @@ fn parse_codex_session_jsonl(file_path: &std::path::Path) -> Option<SavedSession
         let Ok(value) = serde_json::from_str::<serde_json::Value>(&line) else {
             continue;
         };
+        git_context.observe(&value);
         let row_type = value.get("type").and_then(|v| v.as_str()).unwrap_or("");
         let payload = match value.get("payload") {
             Some(p) => p,
@@ -2061,6 +2070,7 @@ fn parse_codex_session_jsonl(file_path: &std::path::Path) -> Option<SavedSession
         created_at: created_at.or_else(|| file_created_epoch_ms(file_path)),
         file_path: Some(file_path.to_string_lossy().into_owned()),
         turn_count: Some(turn_count),
+        git_context: git_context.finish(),
     })
 }
 
@@ -2232,6 +2242,7 @@ fn parse_qwen_session_jsonl(file_path: &std::path::Path) -> Option<SavedSession>
         created_at: created_at.or_else(|| file_created_epoch_ms(file_path)),
         file_path: Some(file_path.to_string_lossy().into_owned()),
         turn_count: Some(turn_count),
+        git_context: None,
     })
 }
 
@@ -3349,6 +3360,7 @@ fn find_kimi_sessions(home: &std::path::Path, result: &mut Vec<SavedSession>) {
             // turn_count deferred — counting wire.jsonl is extra I/O per
             // session and the History board renders fine without it.
             turn_count: None,
+            git_context: None,
         });
     }
 }
@@ -3519,6 +3531,7 @@ fn find_grok_sessions(home: &std::path::Path, result: &mut Vec<SavedSession>) {
             // turn_count deferred - counting chat_history.jsonl is extra I/O per
             // session and the History board renders fine without it.
             turn_count: None,
+            git_context: None,
         });
     }
 }
@@ -3711,6 +3724,7 @@ fn parse_hermes_json(file_path: &std::path::Path) -> Option<SavedSession> {
         created_at: created_at.or_else(|| file_created_epoch_ms(file_path)),
         file_path: Some(file_path.to_string_lossy().into_owned()),
         turn_count: Some(turn_count),
+        git_context: None,
     })
 }
 
@@ -3757,6 +3771,7 @@ fn parse_opencode_session(file_path: &std::path::Path, message_dir: &std::path::
         created_at,
         file_path: Some(file_path.to_string_lossy().into_owned()),
         turn_count: Some(turn_count),
+        git_context: None,
     })
 }
 
@@ -3864,6 +3879,7 @@ fn find_drizzle_sessions_sqlite(
             // file_path, so read_opencode_session still owns parsing).
             file_path: Some(db_path.to_string_lossy().into_owned()),
             turn_count: Some(turn_count),
+            git_context: None,
         })
     });
 
@@ -4021,6 +4037,7 @@ fn find_hermes_sessions_sqlite(db_path: &std::path::Path, result: &mut Vec<Saved
             created_at: Some(((hermes_started_at_secs(started_at) * 1000.0) as i64).to_string()),
             file_path: None,
             turn_count: Some(turn_count),
+            git_context: None,
         })
     });
     if let Ok(iter) = iter {
@@ -6091,6 +6108,29 @@ mod tests {
     }
 
     #[test]
+    fn session_git_metadata_survives_history_parsing_and_serialization() {
+        let path = std::env::temp_dir().join(format!("coffee-session-git-{}.jsonl", uuid::Uuid::new_v4()));
+        write_jsonl(&path, &[
+            r#"{"type":"user","gitBranch":"feature/one","cwd":"D:/project","message":{"role":"user","content":"Review this change"}}"#,
+            r#"{"type":"pr-link","prUrl":"https://github.com/owner/repo/pull/42"}"#,
+            r#"{"type":"assistant","gitBranch":"main","message":{"role":"assistant","content":[]}}"#,
+        ]);
+        let session = parse_agent_jsonl(&path, "claude", &std::collections::HashMap::new()).unwrap();
+        let restored: SavedSession = serde_json::from_value(serde_json::to_value(&session).unwrap()).unwrap();
+        let context = restored.git_context.unwrap();
+        assert_eq!(context.branch.as_deref(), Some("main"));
+        assert_eq!(context.pull_requests, ["https://github.com/owner/repo/pull/42"]);
+        write_jsonl(&path, &[
+            r#"{"type":"session_meta","payload":{"id":"one","cwd":"D:/project","git":{"branch":"main"}}}"#,
+            r#"{"type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"Review https://github.com/owner/repo/pull/43"}]}}"#,
+        ]);
+        let context = parse_codex_session_jsonl(&path).unwrap().git_context.unwrap();
+        assert_eq!(context.branch.as_deref(), Some("main"));
+        assert_eq!(context.pull_requests, ["https://github.com/owner/repo/pull/43"]);
+        std::fs::remove_file(path).unwrap();
+    }
+
+    #[test]
     fn drops_pure_compaction_subtask_session() {
         let dir = std::env::temp_dir().join(format!("coffee-cli-compact-test-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
@@ -6188,6 +6228,7 @@ mod tests {
             created_at: None,
             file_path: None,
             turn_count: None,
+            git_context: None,
         };
         let mut sessions = vec![row("codex", "t1"), row("codex", "unnamed"), row("claude", "t1")];
         apply_codex_thread_names(&home.join(".codex/sessions"), &mut sessions);

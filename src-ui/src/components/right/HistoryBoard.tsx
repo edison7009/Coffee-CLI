@@ -20,7 +20,7 @@ import { subscribePinned, getPinnedSnapshot } from '../../lib/pinned-sessions';
 import { subscribeRenamed, getRenamedSnapshot, setCustomName } from '../../lib/renamed-sessions';
 import { SessionContextMenu, type SessionCtxMenuState } from './SessionContextMenu';
 import { useTextContextMenu } from '../../lib/use-text-context-menu';
-import { gitFolderKey, useProjectGitStatuses } from '../../lib/project-git-status';
+import { gitFolderKey, gitStatusKey, useProjectGitStatuses, type GitStatusTarget } from '../../lib/project-git-status';
 import { HistoryGitMark } from './HistoryGitMark';
 // hermes/opencode PNG assets live in src/icons-inline/ so the Launchpad
 // can `?inline`-import them as data URIs and bypass the <img> async-decode
@@ -298,9 +298,12 @@ export function HistoryBoard() {
   const liveSessionFolders = useMemo(() => new Map(state.terminals
     .filter(session => session.resumeToken && session.folderPath)
     .map(session => [`${session.tool}:${session.resumeToken}`, session.folderPath!])), [state.terminals]);
-  const gitFolders = filteredRows.flatMap(row => row.kind === 'project' ? row.group.cwd ? [row.group.cwd] : []
-    : [liveSessionFolders.get(`${row.session.tool}:${row.session.session_token}`) ?? '']);
-  const gitStatuses = useProjectGitStatuses(gitFolders);
+  const sessionGitTarget = (session: SavedSession): GitStatusTarget => {
+    const liveFolder = liveSessionFolders.get(`${session.tool}:${session.session_token}`);
+    return { folder: liveFolder ?? (session.git_context ? session.cwd : ''), context: session.git_context };
+  };
+  const gitTargets = filteredRows.map(row => row.kind === 'project' ? { folder: row.group.cwd } : sessionGitTarget(row.session));
+  const gitStatuses = useProjectGitStatuses(gitTargets);
   const searchResults = searchOpen ? matchedSessions.slice(0, searchCount) : [];
   const selectedSearchIndex = Math.min(searchSelection, Math.max(0, searchResults.length - 1));
   const hasMore = rows.length > visibleCount;
@@ -430,9 +433,8 @@ export function HistoryBoard() {
         const isRenaming = renamingKey === sessionKey;
         const owner = state.terminals.find(tab => `live:${tab.id}` === session.id || tab.tool === session.tool && session.session_token && tab.resumeToken === session.session_token);
         const isWorking = owner?.agentStatus === 'working' || Boolean(session.session_token && workingSessions.has(`${session.tool}:${session.session_token}`));
-        const liveFolder = owner?.folderPath ?? liveSessionFolders.get(`${session.tool}:${session.session_token}`);
         const isActive = owner?.id === state.activeTerminalId && !state.agentPageActive && !state.diffTabActive || session.tool === 'coffee-agent' && session.id === activeAgentConversation && state.agentPageActive === 'agent';
-        const gitStatus = liveFolder ? gitStatuses.get(gitFolderKey(liveFolder)) : undefined;
+        const gitStatus = gitStatuses.get(gitStatusKey(sessionGitTarget(session)));
         return (
           <div
             key={`${sessionKey}:${session.file_path ?? session.saved_at}`}
