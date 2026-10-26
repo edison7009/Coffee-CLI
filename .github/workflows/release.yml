@@ -42,6 +42,7 @@ jobs:
           npm run build
           npm run lint
           node scripts/run-terminal-interaction-test.mjs
+          node scripts/run-terminal-enter-test.mjs
           node scripts/run-omp-terminal-status-test.mjs
           node scripts/run-opencode-island-test.mjs
           node scripts/run-notify-sound-test.mjs

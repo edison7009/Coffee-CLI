@@ -44,6 +44,7 @@ import { UI_SCALE_CHANGED } from '../../lib/ui-scale';
 import { IS_WINDOWS } from '../../lib/platform';
 import { commands } from '../../tauri';
 import { registerTerminalObserver } from '../../lib/terminal-observer';
+import { createTerminalEnterEncoder } from '../../lib/terminal-enter';
 import { confirmTerminalAgentStatus, forwardTerminalInput, isTerminalSubmitInput, registerTerminalControl, setTerminalControlReady, submitTerminalPrompt, terminalControlStatus } from '../../lib/terminal-control';
 import { supportsAgentStatus, useAppDispatch, useAppStateRef, type AgentStatus, type ToolType, type ThemeColor } from '../../store/app-state';
 import { parseAdditionalAgentTitle, supportsAdditionalAgentStatus } from '../../lib/terminal-agent-status';
@@ -495,7 +496,7 @@ function TierTerminalImpl({
       cursorInactiveStyle: 'none',
       scrollback: 5000,
       // Required to load Unicode11Addon below (xterm 6 gates the unicode
-      // provider API as proposed). No other proposed API is used.
+      // provider API as proposed). Parser handlers also use this public API.
       allowProposedApi: true,
       theme: buildXtermTheme(theme, hasBg, termColorScheme, !selfRenderedCaret, isDarkTheme),
     });
@@ -1010,16 +1011,18 @@ function TierTerminalImpl({
     // covers xterm's own key handling; the macOS IME symbol-passthrough input
     // listener below calls the same function for IME-committed text that
     // xterm drops (issue #107, WKWebView commit-first ordering).
-    const forwardInput = (rawData: string) => {
+    const forwardInput = (rawData: string, editing = false) => {
       const data = stripRightClickMouse(rawData);
       if (!data) return;
-      forwardTerminalInput(sessionId, data).catch(() => {});
+      forwardTerminalInput(sessionId, data, editing).catch(() => {});
       if (isTerminalSubmitInput(sessionId, data)) {
         markNotifySoundPromptSubmitted(sessionId, tool);
         markAgentSubmission();
       }
     };
-    term.onData(forwardInput);
+    term.onData(data => forwardInput(data));
+    const enterEncoder = createTerminalEnterEncoder(term, tool);
+    unlisteners.push(enterEncoder.dispose);
 
     // ── macOS IME symbol commit passthrough (issue #107) ────────────────
     // `ime` (declared above, next to the macOS input listener) mirrors
@@ -1051,6 +1054,13 @@ function TierTerminalImpl({
       }
       if (e.type === 'keydown') {
         rig.inputStart();
+        const modifiedEnter = !ptyEnded && enterEncoder.encode(e);
+        if (modifiedEnter) {
+          e.preventDefault();
+          e.stopPropagation();
+          forwardInput(modifiedEnter, true);
+          return false;
+        }
         // macOS pair-inserting IMEs synthesize a caret-move right after
         // committing （）/“”/‘’ — bounce it back to the textarea (moving the
         // hidden caret is harmless) instead of letting xterm fire it into the

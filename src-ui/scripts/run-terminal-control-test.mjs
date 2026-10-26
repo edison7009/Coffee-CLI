@@ -85,6 +85,18 @@ await test('local history navigation protects recalled input in normal and appli
     assert.equal(f.api.terminalControlStatus('target').localInputPending, false);
   }
 });
+await test('modified Enter is unsent local editing input, not an Enter submission', async () => {
+  for (const data of ['\x1b[13;2u', '\x1b[13;5u', '\x1b[27;2;13~', '\x1b[13;28;13;1;16;1_\x1b[13;28;13;0;16;1_']) {
+    const f = fixture(); f.api.setTerminalControlReady('target', true);
+    await f.api.forwardTerminalInput('target', data, true);
+    assert.equal(f.api.isTerminalSubmitInput('target', data), false);
+    assert.equal(f.api.terminalControlStatus('target').localInputPending, true);
+    await assert.rejects(f.api.submitTerminalPrompt('target', 'remote'), /本地未提交/);
+    assert.equal(f.writes.length, 1);
+    assert.equal(f.writes[0].data, data);
+    assert.equal(f.submitted, 0);
+  }
+});
 await test('local takeover during paste delay leaves pasted text unsubmitted', async () => {
   const f = fixture(); f.api.setTerminalControlReady('target', true);
   const operation = f.api.submitTerminalPrompt('target', 'remote');

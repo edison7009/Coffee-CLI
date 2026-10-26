@@ -48,7 +48,7 @@ export function isTerminalSubmitInput(sessionId: string, data: string): boolean 
 
 /** Shared xterm onData path for locally typed input. Programmatic sends (Gambit/Agent)
  *  go through submitTerminalPrompt, which writes to the PTY directly. */
-export function forwardTerminalInput(sessionId: string, data: string): Promise<void> {
+export function forwardTerminalInput(sessionId: string, data: string, editing = false): Promise<void> {
   const control = controls.get(sessionId);
   let submitted = '';
   const localInput = control && !control.capture;
@@ -67,6 +67,7 @@ export function forwardTerminalInput(sessionId: string, data: string): Promise<v
   if (control && !control.capture) {
     control.localRevision++;
     if (data.startsWith('\x1b[200~')) control.dirty = true;
+    else if (editing) control.dirty = true;
     else if (data.includes('\x03') || data.includes('\x15') || /[\r\n]$/.test(data)) control.dirty = false;
     else if (data.startsWith('\x1b') && /^(?:\[[0-9;]*|O)[AB]/.test(data.slice(1))) control.dirty = true;
     else if (data && !data.startsWith('\x1b')) control.dirty = true;
