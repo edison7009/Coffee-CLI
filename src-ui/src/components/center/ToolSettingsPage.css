@@ -11,6 +11,9 @@
 .tool-settings-tab-count { margin-left:6px; color:var(--text-3); font-size:12px; font-variant-numeric:tabular-nums; }
 @media (prefers-reduced-motion:reduce) { .tool-settings-indicator[data-ready] { transition:none; } }
 .tool-settings-panel[hidden] { display:none; }
+.tool-settings-page--skills .tool-settings-inner { display:flex; flex-direction:column; min-height:100%; }
+.tool-settings-page--skills .tool-settings-tabs { flex-shrink:0; }
+.tool-settings-page--skills .tool-settings-panel:not([hidden]) { display:flex; flex:1; }
 .tool-settings-page.tool-settings-page--memory { overflow:hidden; padding-bottom:20px; }
 .tool-settings-page--memory .tool-settings-inner { display:flex; flex-direction:column; height:100%; min-height:0; }
 .tool-settings-page--memory .tool-settings-tabs { flex-shrink:0; }

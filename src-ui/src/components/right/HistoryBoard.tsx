@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useSyncExternalStore, useId, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { InlineSvgIcon } from '../InlineSvgIcon';
 import { useT } from '../../i18n/useT';
 import { useAppState, type ToolType } from '../../store/app-state';
 import { useSessionSplitDrag, type SessionSplitPlacement } from '../../lib/use-session-split-drag';
@@ -91,11 +92,7 @@ const getToolIcon = (tool: string) => {
   const svg = TOOL_ICON_SVG[tool];
   if (svg) {
     return (
-      <span
-        aria-hidden
-        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '1em', height: '1em', flexShrink: 0 }}
-        dangerouslySetInnerHTML={{ __html: svg }}
-      />
+      <InlineSvgIcon markup={svg} />
     );
   }
   if (tool === 'goose') {

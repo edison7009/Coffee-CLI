@@ -18,10 +18,11 @@ const errors: Record<string, I18nKey> = {
   memory_size: 'tools.memory.size', memory_encoding: 'tools.memory.encoding', memory_write: 'tools.memory.write_error',
 };
 
-export function ToolMemoryPanel({ active, tools }: { active: boolean; tools: { value: string; label: string; icon: ReactNode }[] }) {
+export function ToolMemoryPanel({ active, tools }: { active: boolean; tools: { value: string; label: string; icon: ReactNode; installed?: boolean }[] }) {
   const t = useT();
   const [selectedTool, setTool] = useState('claude');
   const tool = tools.some(item => item.value === selectedTool) ? selectedTool : tools[0]?.value ?? '';
+  const installed = tools.find(item => item.value === tool)?.installed !== false;
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
   const [confirmReload, setConfirmReload] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState<{ label: string; left: number; top: number } | null>(null);
@@ -49,13 +50,13 @@ export function ToolMemoryPanel({ active, tools }: { active: boolean; tools: { v
     } catch (error) { update(key, { loading: false, error: errors[String(error)] ?? 'tools.memory.read_error' }); }
   }, [update]);
   useEffect(() => {
-    if (!active || !tool || drafts[tool]) return;
+    if (!active || !tool || !installed || drafts[tool]) return;
     const timer = setTimeout(() => { void reload(tool); }, 0);
     return () => clearTimeout(timer);
-  }, [active, tool, drafts, reload]);
+  }, [active, tool, installed, drafts, reload]);
   const draft = drafts[tool], document = draft?.document;
-  const dirty = !!document?.path && draft.text !== editable(document.content);
-  const busy = !!draft?.loading || !!draft?.saving;
+  const dirty = installed && !!document?.path && draft.text !== editable(document.content);
+  const busy = installed && (!!draft?.loading || !!draft?.saving);
   const save = async () => {
     if (!document?.path || !draft || busy || !dirty) return;
     update(tool, { saving: true, error: undefined, saved: false });
@@ -68,8 +69,8 @@ export function ToolMemoryPanel({ active, tools }: { active: boolean; tools: { v
     {active && tooltip && createPortal(<span className="tool-memory-tool-tip" role="tooltip" style={{ left: tooltip.left, top: tooltip.top }}>{tooltip.label}</span>, window.document.body)}
     <div className="tool-memory-toolbar">
       <span className="tool-memory-name">{tools.find(item => item.value === tool)?.label}</span>
-      {document?.path && <code className="tool-memory-path">{document.path}</code>}
-      <span className="tool-memory-status" role="status">{draft?.loading ? t('diff.loading') : dirty ? t('tools.memory.unsaved') : draft?.saved ? t('tools.memory.saved') : ''}</span>
+      {installed && document?.path && <code className="tool-memory-path">{document.path}</code>}
+      <span className="tool-memory-status" role="status">{!installed ? '' : draft?.loading ? t('diff.loading') : dirty ? t('tools.memory.unsaved') : draft?.saved ? t('tools.memory.saved') : ''}</span>
       <div className="tool-memory-actions">
         {active && tools.length > 0 && <div className="tool-memory-tools" role="toolbar" aria-label={t('usage.tool')} onScroll={() => setTooltip(null)}>
           {tools.map((item, index) => <button type="button" key={item.value} aria-label={item.label} aria-pressed={tool === item.value} tabIndex={tool === item.value ? 0 : -1} disabled={!!draft?.saving} onClick={() => selectTool(item.value)} onMouseEnter={event => showToolName(event.currentTarget, item.label)} onMouseLeave={() => setTooltip(null)} onFocus={event => showToolName(event.currentTarget, item.label)} onBlur={() => setTooltip(null)} onKeyDown={event => {
@@ -79,20 +80,20 @@ export function ToolMemoryPanel({ active, tools }: { active: boolean; tools: { v
             selectTool(tools[next].value); event.currentTarget.parentElement?.querySelectorAll('button')[next]?.focus();
           }}><span className="tool-memory-tool-icon" aria-hidden="true">{item.icon}</span></button>)}
         </div>}
-        <button type="button" className="tool-memory-button" disabled={busy || !tool} onClick={() => dirty ? setConfirmReload(tool) : void reload(tool)}>{t('tools.memory.reload')}</button>
+        <button type="button" className="tool-memory-button" disabled={busy || !tool || !installed} onClick={() => dirty ? setConfirmReload(tool) : void reload(tool)}>{t('tools.memory.reload')}</button>
         <button type="button" className="tool-memory-button tool-memory-save" disabled={busy || !dirty} onClick={() => { void save(); }}>{t('tool_config.save')}</button>
       </div>
     </div>
-    {draft?.error && document?.path && <p className="tool-memory-notice" role="alert">{t(draft.error)}</p>}
-    {confirmReload === tool && <div className="tool-memory-confirm" role="alertdialog" aria-label={t('tools.memory.discard')}>
+    {installed && draft?.error && document?.path && <p className="tool-memory-notice" role="alert">{t(draft.error)}</p>}
+    {installed && confirmReload === tool && <div className="tool-memory-confirm" role="alertdialog" aria-label={t('tools.memory.discard')}>
       <span>{t('tools.memory.discard')}</span>
       <button type="button" className="tool-memory-button" onClick={() => setConfirmReload(null)}>{t('tool_config.cancel')}</button>
       <button type="button" className="tool-memory-button" onClick={() => { setConfirmReload(null); void reload(tool); }}>{t('tools.memory.discard_reload')}</button>
     </div>}
-    {document?.path ? <textarea className="tool-memory-editor" aria-label={t('tools.tab.memory')} value={draft.text} disabled={busy} spellCheck={false} onChange={event => update(tool, { text: event.target.value, saved: false })} onKeyDown={event => {
+    {installed && document?.path ? <textarea className="tool-memory-editor" aria-label={t('tools.tab.memory')} value={draft.text} disabled={busy} spellCheck={false} onChange={event => update(tool, { text: event.target.value, saved: false })} onKeyDown={event => {
         if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') { event.preventDefault(); event.stopPropagation(); void save(); }
       }} /> : <span className="tool-memory-editor tool-memory-empty" role={draft?.error ? 'alert' : 'status'}>
-        <span>{!tool ? t('tools.memory.no_tools') : draft?.error ? t(draft.error) : document ? t('tools.memory.unsupported') : ''}</span>
+        <span>{!tool ? t('tools.memory.no_tools') : !installed ? t('control.not_installed') : draft?.error ? t(draft.error) : document ? t('tools.memory.unsupported') : ''}</span>
       </span>}
   </div>;
 }

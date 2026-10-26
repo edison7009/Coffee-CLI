@@ -687,6 +687,7 @@ dependencies = [
  "tauri-plugin-single-instance",
  "tokio",
  "toml 0.9.12+spec-1.1.0",
+ "toml_edit 0.25.11+spec-1.1.0",
  "ttf-parser",
  "ureq",
  "uuid",
@@ -5513,6 +5514,7 @@ dependencies = [
  "indexmap 2.13.1",
  "toml_datetime 1.1.1+spec-1.1.0",
  "toml_parser",
+ "toml_writer",
  "winnow 1.0.1",
 ]
 

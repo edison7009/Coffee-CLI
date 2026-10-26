@@ -21,7 +21,8 @@ function SkillCardDetails({ item, children }: { item: CatalogSkill | ToolSkill; 
   const t = useT();
   const host = useRef<HTMLDivElement>(null);
   const [description, setDescription] = useState(item.description || (item.source && readSkillDescription(item.source, item.name)) || '');
-  const [avatarFailed, setAvatarFailed] = useState(false);
+  const [avatarLoaded, setAvatarLoaded] = useState<string | null>(null);
+  const [avatarFailed, setAvatarFailed] = useState<string | null>(null);
   const owner = item.source?.split('/')[0];
   const avatar = owner && /^[\w.-]+$/.test(owner) ? `https://github.com/${owner}.png?size=80` : null;
   useEffect(() => {
@@ -38,7 +39,10 @@ function SkillCardDetails({ item, children }: { item: CatalogSkill | ToolSkill; 
   return <div ref={host} className="skill-details">
     <div className="skill-card-top">
       <div className="skill-identity">
-        <span className="skill-avatar" aria-hidden="true">{avatar && !avatarFailed ? <img src={avatar} alt="" loading="lazy" referrerPolicy="no-referrer" onError={() => setAvatarFailed(true)} /> : item.name.slice(0, 1).toUpperCase()}</span>
+        <span className="skill-avatar" data-ready={!!avatar && avatarLoaded === avatar && avatarFailed !== avatar} aria-hidden="true">
+          <span className="skill-avatar-fallback">{item.name.slice(0, 1).toUpperCase()}</span>
+          {avatar && avatarFailed !== avatar && <img key={avatar} src={avatar} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onLoad={event => { void event.currentTarget.decode().then(() => setAvatarLoaded(avatar)).catch(() => setAvatarFailed(avatar)); }} onError={() => setAvatarFailed(avatar)} />}
+        </span>
         <div className="skill-card-heading"><strong>{item.name}</strong><span className="skill-source">{item.source ? <button type="button" onClick={() => { void commands.openUrl(`https://github.com/${item.source}`).catch(() => {}); }}>{item.source}</button> : t('skills.local')}</span></div>
       </div>
       {children}
@@ -56,11 +60,13 @@ export function ToolSkillsPanel({ active, tools }: { active: boolean; tools: { v
   const inventory = inventoryFor(view);
   const [catalogues, setCatalogues] = useState<Record<string, CatalogSkill[]>>({});
   const search = query.trim().length >= 2 ? query.trim() : '';
-  const catalogue = catalogues[search] ?? readSkillCatalogue(search) ?? [];
+  const catalogueSnapshot = catalogues[search] ?? readSkillCatalogue(search);
+  const catalogue = catalogueSnapshot ?? [];
   const [error, setError] = useState<{ scope: string; key: I18nKey; label?: string } | null>(null);
   const [pending, setPending] = useState<{ key: string; tool: string } | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null), [confirm, setConfirm] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [coldSearch, setColdSearch] = useState<string | null>(null);
   const [tip, setTip] = useState<{ label: string; left: number; top: number } | null>(null);
   const tabList = useRef<HTMLSpanElement>(null), tabMarker = useRef<HTMLSpanElement>(null);
   const versions = useRef<Record<string, number>>({}), alive = useRef(true);
@@ -101,9 +107,10 @@ export function ToolSkillsPanel({ active, tools }: { active: boolean; tools: { v
     if (!active || view !== 'discover') return;
     let cancelled = false;
     const timer = setTimeout(() => {
-      setLoading(true);
-      void fetchSkillCatalogue(search).then(items => {
-        if (!cancelled) { setCatalogues(previous => ({ ...previous, [search]:items })); setError(previous => previous?.key === 'skills.network_error' ? null : previous); }
+      setLoading(true); setColdSearch(readSkillCatalogue(search) ? null : search);
+      const receive = (items: CatalogSkill[]) => { if (!cancelled) setCatalogues(previous => previous[search] === items ? previous : ({ ...previous, [search]:items })); };
+      void fetchSkillCatalogue(search, receive).then(items => {
+        if (!cancelled) { receive(items); setError(previous => previous?.key === 'skills.network_error' ? null : previous); }
       }).catch(reason => { if (!cancelled) setError({ scope:'discover', key:errorKeys[String(reason)] ?? 'skills.network_error' }); }).finally(() => { if (!cancelled) setLoading(false); });
     }, search ? 350 : 0);
     return () => { cancelled = true; clearTimeout(timer); };
@@ -133,6 +140,7 @@ export function ToolSkillsPanel({ active, tools }: { active: boolean; tools: { v
   const installed = inventory?.skills ?? [];
   const searching = view === 'discover' && loading;
   const items = view === 'discover' ? catalogue : installed.filter(item => `${item.name} ${item.description} ${item.source ?? ''}`.toLowerCase().includes(query.trim().toLowerCase()));
+  const skeletons = view === 'discover' && error?.scope !== view && (!catalogueSnapshot || coldSearch === search && loading) ? Math.max(0, 6 - items.length) : 0;
   if (!active) return null;
   return <div className="tool-skills">
     <div className="skills-toolbar">
@@ -145,7 +153,7 @@ export function ToolSkillsPanel({ active, tools }: { active: boolean; tools: { v
     </div>
     {active && tip && createPortal(<span className="tool-memory-tool-tip" role="tooltip" style={{ left:tip.left, top:tip.top }}>{tip.label}</span>, document.body)}
     {error?.scope === view && <p className="skills-error" role="alert">{error.label && `${error.label} · `}{t(error.key)}</p>}
-    {view !== 'discover' && inventory?.supported === false ? <div className="skills-empty">{t('skills.unsupported')}</div> : <div className="skills-grid" aria-busy={!!pending || searching}>
+    {view !== 'discover' && inventory?.supported === false ? <div className="skills-empty">{t('skills.unsupported')}</div> : <div className="skills-grid" aria-busy={!!pending || searching || skeletons > 0}>
       {items.map(item => {
         const local = 'path' in item ? item : null;
         const key = 'path' in item ? item.path : `${item.source}/${item.name}`;
@@ -174,7 +182,8 @@ export function ToolSkillsPanel({ active, tools }: { active: boolean; tools: { v
           {confirm === key && local && <div className="skill-remove-confirm"><span>{t('skills.remove_confirm', { name:item.name })}</span><button type="button" onClick={() => setConfirm(null)}>{t('tool_config.cancel')}</button><button type="button" className="skill-remove-action" disabled={!!pending} onClick={() => { void operate(local, view, true); }}>{t('skills.remove')}</button></div>}
         </article>;
       })}
-      {items.length === 0 && !searching && error?.scope !== view && <div className="skills-empty">{t(view === 'discover' ? 'skills.no_results' : 'skills.empty')}</div>}
+      {Array.from({ length:skeletons }, (_, index) => <div className="skill-card skill-skeleton" key={`skeleton-${index}`} aria-hidden="true"><div className="skill-card-top"><span className="skill-skeleton-avatar" /><div className="skill-skeleton-heading"><span /><span /></div><span className="skill-skeleton-action" /></div><div className="skill-skeleton-description"><span /><span /></div></div>)}
+      {items.length === 0 && skeletons === 0 && !searching && error?.scope !== view && <div className="skills-empty">{t(view === 'discover' ? 'skills.no_results' : 'skills.empty')}</div>}
     </div>}
   </div>;
 }

@@ -1,0 +1,34 @@
+.tool-control { width:100%; min-width:0; }
+.tool-control-runtime { display:flex; align-items:center; flex-wrap:wrap; gap:16px; padding:22px; margin-bottom:18px; border:1px solid var(--border); border-radius:var(--shape-radius-panel,var(--radius-sm)); background:var(--bg-panel); }
+.tool-control-symbol { display:flex; align-items:center; justify-content:center; width:48px; height:48px; flex-shrink:0; color:var(--accent); }
+.tool-control-symbol svg { width:36px; height:36px; }
+.tool-control-summary { flex:1; min-width:180px; }
+.tool-control-summary strong { color:var(--accent); font-size:15px; font-weight:600; }
+.tool-control-summary p { margin:8px 0 0; color:var(--text-3); font-size:12px; line-height:1.6; }
+.tool-control-state { color:var(--text-3); font-size:12px; }
+.tool-control-state.is-ready { color:var(--text-2); }
+.tool-control-runtime > button { flex-shrink:0; }
+.tool-control-action { position:relative; }
+.tool-control-spinner { display:inline-block; width:13px; height:13px; flex-shrink:0; border:1.5px solid currentColor; border-top-color:transparent; border-radius:50%; color:var(--text-2); animation:tool-control-spin .8s linear infinite; }
+.tool-control-action > .tool-control-spinner { position:absolute; inset:0; margin:auto; color:inherit; }
+@keyframes tool-control-spin { to { transform:rotate(360deg); } }
+.tool-control-agents { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-top:18px; }
+.tool-control-agent { display:flex; align-items:center; gap:14px; min-width:0; padding:18px 20px; border:1px solid var(--border); border-radius:var(--shape-radius-panel,var(--radius-sm)); background:var(--bg-panel); }
+.tool-control-agent-icon { display:flex; justify-content:center; align-items:center; width:30px; height:30px; flex-shrink:0; font-size:30px; pointer-events:none; }
+.tool-control-agent-icon * { pointer-events:none; }
+.tool-control-agent-icon svg { width:30px; height:30px; }
+.tool-control-agent-name { display:flex; align-items:center; gap:8px; flex:1; min-width:0; color:var(--text-1); font-size:13px; font-weight:500; }
+.tool-control-agent-label { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tool-control-unavailable { position:relative; flex-shrink:0; color:var(--text-3); font-size:11px; white-space:nowrap; }
+.tool-control-unavailable[data-tip]:hover::after, .tool-control-unavailable[data-tip]:focus-visible::after { content:attr(data-tip); position:absolute; z-index:100; bottom:calc(100% + 8px); right:0; width:240px; max-width:70vw; padding:6px 10px; border:1px solid var(--border); border-radius:6px; background:var(--bg-panel); color:var(--text-1); font-size:11px; font-weight:500; line-height:1.5; white-space:normal; overflow-wrap:anywhere; pointer-events:none; box-shadow:0 1px 2px #0003,0 6px 20px #0004; }
+.tool-control-unavailable:focus-visible { outline:1px solid var(--accent); outline-offset:2px; }
+.tool-control-switch { position:relative; width:36px; height:20px; flex-shrink:0; padding:0; border:0; border-radius:20px; background:var(--bg-hover); cursor:pointer; transition:background 150ms; }
+.tool-control-switch > span { display:block; position:absolute; left:2px; top:2px; width:16px; height:16px; border-radius:50%; background:#fff; box-shadow:0 1px 3px #0003; transition:transform 150ms; }
+.tool-control-switch[aria-checked="true"] { background:#007aff; }
+.tool-control-switch[aria-checked="true"] > span { transform:translateX(16px); }
+.tool-control-switch:focus-visible { outline:1px solid var(--accent); outline-offset:3px; }
+.tool-control-switch:disabled { opacity:.4; cursor:default; }
+.tool-control-no-agents { margin:14px 0 0; color:var(--text-3); font-size:12px; line-height:1.6; }
+@container (max-width:850px) { .tool-control-agents { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@container (max-width:540px) { .tool-control-agents { grid-template-columns:1fr; } }
+@media (prefers-reduced-motion:reduce) { .tool-control-spinner { animation:none; } .tool-control-switch, .tool-control-switch > span { transition:none; } }

@@ -44,6 +44,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sha2 = "0.10"
 toml = "0.9"
+toml_edit = "0.25"
 # Preserve comments and formatting in Devin's JSONC hook configuration.
 jsonc-parser = { version = "0.33.1", features = ["cst", "serde", "serde_json"] }
 anyhow = "1"

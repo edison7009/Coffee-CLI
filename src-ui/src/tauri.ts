@@ -151,9 +151,18 @@ export interface ToolSkill { name: string; description: string; source: string |
 export interface SkillInventory { supported: boolean; skills: ToolSkill[] }
 export interface CatalogSkill { source: string; name: string; description: string }
 
+export interface ToolControlStatus { supported: boolean; installed: boolean; ready: boolean; browser: string | null; agents: { tool: string; supported: boolean; enabled: boolean; conflict: boolean; issue?: string | null }[] }
+
 export const commands = {
+  getToolControl: (kind: 'computer' | 'browser') => invoke<ToolControlStatus>('get_tool_control', { kind }),
+  checkToolControl: (kind: 'computer' | 'browser') => invoke<ToolControlStatus>('check_tool_control', { kind }),
+  installBrowserControl: () => invoke<ToolControlStatus>('install_browser_control'),
+  setToolControl: (kind: 'computer' | 'browser', tool: string, enabled: boolean) => invoke<ToolControlStatus>('set_tool_control', { kind, tool, enabled }),
   getToolSkills: (tool: string) => invoke<SkillInventory>('get_tool_skills', { tool }),
-  searchToolSkills: (query: string) => invoke<CatalogSkill[]>('search_tool_skills', { query }),
+  searchToolSkills: async (query: string, onUpdate?: (items: CatalogSkill[]) => void) => {
+    const updates = new (await import('@tauri-apps/api/core')).Channel<CatalogSkill[]>(onUpdate);
+    return invoke<CatalogSkill[]>('search_tool_skills', { query, onUpdate:updates });
+  },
   getToolSkillDescription: (source: string, name: string) => invoke<string>('get_tool_skill_description', { source, name }),
   installToolSkill: (tool: string, source: string, name: string) => invoke<SkillInventory>('install_tool_skill', { tool, source, name }),
   removeToolSkill: (tool: string, path: string) => invoke<SkillInventory>('remove_tool_skill', { tool, path }),

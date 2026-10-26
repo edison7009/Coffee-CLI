@@ -50,6 +50,23 @@ The full license is included beside the application as `CONPTY-LICENSE.txt`.
 Source: https://github.com/microsoft/terminal
 Package: https://www.nuget.org/packages/Microsoft.Windows.Console.ConPTY/1.24.261001001
 
+## Desktop control helper
+
+The embedded Windows desktop-control helper includes MIT-licensed code.
+
+Copyright (c) 2026 Lovecast Inc.
+
+The complete license is in `licenses/computer-use-windows.txt` and is extracted
+beside the helper when it runs.
+
+## Optional browser control runtime
+
+Browser control downloads the unmodified `agent-browser` v0.39.4 runtime on
+demand. It is licensed under Apache-2.0. The complete license is in
+`licenses/agent-browser.txt` and is saved beside the downloaded runtime.
+
+Source: https://github.com/vercel-labs/agent-browser
+
 ## Service names
 
 Weixin, WeChat, and Telegram are trademarks of their respective owners. Their

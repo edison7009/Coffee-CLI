@@ -27,6 +27,8 @@ mod launch;
 mod tool_config;
 mod tool_memory;
 mod tool_skills;
+mod tool_control;
+mod computer_control;
 mod tools;
 mod usage_stats;
 mod git;
@@ -43,6 +45,14 @@ use anyhow::Result;
 fn main() -> Result<()> {
     // These helpers run inside a visible Coffee Terminal, before single-instance GUI routing.
     let helper_args: Vec<String> = std::env::args().collect();
+    if helper_args.get(1).map(String::as_str) == Some("__ui-control") {
+        let result = match (helper_args.get(2), helper_args.get(3)) {
+            (Some(kind), Some(tool)) => tool_control::serve(kind, tool),
+            _ => Err("Expected capability and agent".into()),
+        };
+        if let Err(error) = result { eprintln!("{error}"); std::process::exit(1); }
+        return Ok(());
+    }
     if matches!(helper_args.get(1).map(String::as_str), Some("__capability-apply" | "__graphify-run")) {
         #[cfg(windows)]
         {

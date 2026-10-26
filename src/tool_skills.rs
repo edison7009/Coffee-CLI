@@ -158,7 +158,7 @@ fn open_license(bytes: &[u8]) -> bool {
     let start = String::from_utf8_lossy(bytes).lines().take(25).collect::<Vec<_>>().join(" ").to_lowercase();
     start.contains("permission is hereby granted, free of charge") || start.contains("apache license") && start.contains("version 2.0")
 }
-async fn featured(source: &str) -> Result<Vec<CatalogSkill>, String> {
+async fn featured(source: &str, on_update: Option<&tauri::ipc::Channel<Vec<CatalogSkill>>>) -> Result<Vec<CatalogSkill>, String> {
     let head = json_get(&format!("https://api.github.com/repos/{source}/commits/HEAD")).await?;
     let commit = head["sha"].as_str().ok_or("skills_source")?;
     let tree = tree(source, commit).await?;
@@ -182,7 +182,10 @@ async fn featured(source: &str) -> Result<Vec<CatalogSkill>, String> {
         });
     }
     let mut items = Vec::new();
-    while let Some(result) = jobs.join_next().await { if let Ok(Ok(Some(item))) = result { items.push(item); } }
+    while let Some(result) = jobs.join_next().await { if let Ok(Ok(Some(item))) = result {
+        if let Some(channel) = on_update { let _ = channel.send(vec![item.clone()]); }
+        items.push(item);
+    } }
     items.sort_by(|a,b| a.name.cmp(&b.name));
     if items.is_empty() { return Err("skills_network".into()); } Ok(items)
 }
@@ -238,19 +241,20 @@ async fn search_catalog(query: &str) -> Result<Vec<CatalogSkill>, String> {
     let result = crate::agent_capabilities::discover("skill", query).await.map_err(|_| "skills_network")?;
     Ok(result["results"].as_array().ok_or("skills_network")?.iter().filter_map(|v| Some(CatalogSkill { source:v["source"].as_str()?.into(), name:v["name"].as_str()?.into(), description:String::new() })).collect())
 }
-async fn catalog(query: &str, root: &Path) -> Result<Vec<CatalogSkill>, String> {
+async fn catalog(query: &str, root: &Path, on_update: Option<&tauri::ipc::Channel<Vec<CatalogSkill>>>) -> Result<Vec<CatalogSkill>, String> {
     let query = query.trim(); if query.len() > 200 { return Err("skills_source".into()); }
     let key = if query.is_empty() { "popular-v1" } else { query };
     let path = root.join("catalog").join(format!("{}.json", hash(key.as_bytes())));
     let cached = fs::read(&path).ok().and_then(|b| serde_json::from_slice::<CatalogCache>(&b).ok());
-    if cached.as_ref().is_some_and(|c| now().saturating_sub(c.at) < 6 * 3600) { return Ok(cached.unwrap().items); }
+    if let (Some(cached), Some(channel)) = (&cached, on_update) { let _ = channel.send(cached.items.clone()); }
+    if cached.as_ref().is_some_and(|c| now().saturating_sub(c.at) < 5 * 60) { return Ok(cached.unwrap().items); }
     let result = async {
         if !query.is_empty() {
-            if let Ok(source) = crate::agent_capabilities::repository(query) { return featured(&source).await; }
+            if let Ok(source) = crate::agent_capabilities::repository(query) { return featured(&source, on_update).await; }
             return search_catalog(query).await;
         }
         if let Ok(items) = popular_catalog().await { return Ok(items); }
-        let (first, second) = tokio::join!(featured("anthropics/skills"), featured("vercel-labs/skills"));
+        let (first, second) = tokio::join!(featured("anthropics/skills", on_update), featured("vercel-labs/skills", on_update));
         match (first, second) {
             (Ok(mut a), Ok(b)) => { a.extend(b); Ok(a) },
             (Ok(a), Err(_)) | (Err(_), Ok(a)) => Ok(a),
@@ -370,7 +374,7 @@ pub async fn get_tool_skills(tool: String) -> Result<Inventory, String> {
     tauri::async_runtime::spawn_blocking(move || inventory(&tool, &storage()?, &roots(&tool)?)).await.map_err(|_| "skills_read")?
 }
 #[tauri::command]
-pub async fn search_tool_skills(query: String) -> Result<Vec<CatalogSkill>, String> { catalog(&query, &storage()?).await }
+pub async fn search_tool_skills(query: String, on_update: tauri::ipc::Channel<Vec<CatalogSkill>>) -> Result<Vec<CatalogSkill>, String> { catalog(&query, &storage()?, Some(&on_update)).await }
 #[tauri::command]
 pub async fn get_tool_skill_description(source: String, name: String) -> Result<String, String> { description(&source, &name, &storage()?).await }
 #[tauri::command]
@@ -549,15 +553,33 @@ mod tests {
     }
 
     #[tokio::test(flavor = "current_thread")]
+    async fn catalogue_publishes_its_disk_snapshot_before_returning() {
+        let f = Fixture::new();
+        let path = f.root.join("catalog").join(format!("{}.json", hash(b"popular-v1")));
+        write_json(&path, &CatalogCache { at:now(), items:vec![CatalogSkill { source:"owner/repo".into(), name:"cached".into(), description:"Cached skill".into() }] }).unwrap();
+        let messages = std::sync::Arc::new(Mutex::new(Vec::new()));
+        let received = messages.clone();
+        let channel = tauri::ipc::Channel::new(move |body| {
+            if let tauri::ipc::InvokeResponseBody::Json(text) = body { received.lock().unwrap().push(text); }
+            Ok(())
+        });
+        let items = catalog("", &f.root, Some(&channel)).await.unwrap();
+        assert_eq!(items[0].name, "cached");
+        let messages = messages.lock().unwrap();
+        assert_eq!(messages.len(), 1);
+        assert_eq!(serde_json::from_str::<Value>(&messages[0]).unwrap()[0]["name"], "cached");
+    }
+
+    #[tokio::test(flavor = "current_thread")]
     #[ignore = "Reads public catalogues and writes only a temporary cache"]
     async fn public_catalog_smoke() {
         let f = Fixture::new();
         let popular = popular_catalog().await.unwrap();
         assert!(popular.len() >= 30);
-        let items = catalog("", &f.root).await.unwrap();
+        let items = catalog("", &f.root, None).await.unwrap();
         assert!(!items.is_empty());
         assert!(items.iter().any(|item| item.name == "find-skills"));
-        assert_eq!(catalog("", &f.root).await.unwrap().len(), items.len());
+        assert_eq!(catalog("", &f.root, None).await.unwrap().len(), items.len());
         let text = description("vercel-labs/skills", "find-skills", &f.root).await.unwrap();
         assert!(text.len() > 20);
         assert_eq!(description("vercel-labs/skills", "find-skills", &f.root).await.unwrap(), text);
@@ -567,8 +589,8 @@ mod tests {
     #[ignore = "Reads a public source; all installation writes remain in a temporary fixture"]
     async fn public_source_install_smoke() {
         let f = Fixture::new();
-        let searched = catalog("find skills", &f.root).await.unwrap(); assert!(!searched.is_empty());
-        let items = catalog("", &f.root).await.unwrap(); assert!(!items.is_empty());
+        let searched = catalog("find skills", &f.root, None).await.unwrap(); assert!(!searched.is_empty());
+        let items = catalog("", &f.root, None).await.unwrap(); assert!(!items.is_empty());
         let item = items.iter().find(|s| s.name == "find-skills").unwrap();
         let (next, files) = download(&item.source, &item.name).await.unwrap();
         assert!(files.iter().any(|f| f.path.to_ascii_uppercase().starts_with("LICENSE")));

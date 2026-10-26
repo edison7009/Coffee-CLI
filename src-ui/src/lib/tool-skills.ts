@@ -4,6 +4,7 @@ const KEY = 'cc-tool-skills-v1';
 const inventories = new Map<string, SkillInventory>();
 const catalogues = new Map<string, CatalogSkill[]>();
 const pending = new Map<string, Promise<CatalogSkill[]>>();
+const listeners = new Map<string, Set<(items: CatalogSkill[]) => void>>();
 const descriptions = new Map<string, string>();
 const pendingDescriptions = new Map<string, Promise<string>>();
 try {
@@ -28,10 +29,27 @@ export function fetchSkillDescription(source: string, name: string) {
   }
   return request;
 }
-export function fetchSkillCatalogue(query: string) {
+export function fetchSkillCatalogue(query: string, onUpdate?: (items: CatalogSkill[]) => void) {
+  if (!listeners.has(query)) listeners.set(query, new Set());
+  if (onUpdate) listeners.get(query)!.add(onUpdate);
   let request = pending.get(query);
   if (!request) {
-    request = commands.searchToolSkills(query).then(items => { catalogues.set(query, items); if (catalogues.size > 8) catalogues.delete(catalogues.keys().next().value!); persist(); return items; }).finally(() => pending.delete(query));
+    let complete = false;
+    const publish = (items: CatalogSkill[], complete = false) => {
+      const current = catalogues.get(query) ?? [];
+      const incoming = new Map(items.map(item => [`${item.source}/${item.name}`, item]));
+      const next = current.filter(item => !complete || incoming.has(`${item.source}/${item.name}`)).map(item => {
+        const key = `${item.source}/${item.name}`, value = incoming.get(key) ?? item;
+        incoming.delete(key); return value;
+      });
+      next.push(...incoming.values());
+      if (catalogues.has(query) && JSON.stringify(current) === JSON.stringify(next)) return current;
+      catalogues.set(query, next);
+      if (catalogues.size > 8) catalogues.delete(catalogues.keys().next().value!);
+      persist(); listeners.get(query)?.forEach(listener => listener(next));
+      return next;
+    };
+    request = commands.searchToolSkills(query, items => { if (!complete) publish(items); }).then(items => { complete = true; return publish(items, true); }).finally(() => { complete = true; pending.delete(query); listeners.delete(query); });
     pending.set(query, request);
   }
   return request;

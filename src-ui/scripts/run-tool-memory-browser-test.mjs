@@ -12,6 +12,7 @@ const directory = await mkdtemp(join(tmpdir(), 'coffee-tool-memory-'));
 const native = `
 window.calls=[];window.docs={claude:{path:'C:/fixture/.claude/CLAUDE.md',content:'Claude 原文\\n第二行'},codex:{path:'C:/fixture/.codex/AGENTS.md',content:'Codex original'},pi:{path:'C:/fixture/.pi/agent/AGENTS.md',content:null},cursor:{path:null,content:null},copilot:{path:'C:/fixture/.copilot/copilot-instructions.md',content:'Copilot original'}};
 export const commands={
+ async getToolControl(){return {supported:true,installed:false,ready:false,browser:null,agents:[]}},
  async getToolSkills(){return {supported:false,skills:[]}},
  async searchToolSkills(){return []},
  async readToolMemory(tool){window.calls.push({type:'read',tool});if(window.failRead)throw 'memory_read';if(window.delayTool===tool)await new Promise(resolve=>{window.resolveRead=resolve});return {...window.docs[tool]}},
@@ -22,7 +23,7 @@ import React,{useState} from 'react';import {createRoot} from 'react-dom/client'
 import {ToolSettingsPage} from './src/components/center/ToolSettingsPage';
 import './src/styles/global.css';import './src/components/center/CenterPanel.css';
 const tools=[{value:'claude',label:'Claude Code'},{value:'codex',label:'Codex CLI'},{value:'pi',label:'Pi'},{value:'cursor',label:'Cursor'},{value:'copilot',label:'Copilot CLI'}].map(item=>({...item,icon:<span>{item.label[0]}</span>}));
-function Fixture(){const[active,setActive]=useState(true),[enabled,setEnabled]=useState(tools);window.setEnabled=values=>setEnabled(tools.filter(item=>values.includes(item.value)));return <><button id="navigate" onClick={()=>setActive(!active)}>Navigate</button><div className="main-content" style={{position:'absolute',top:40,right:0,bottom:0,left:0}}><ToolSettingsPage active={active} tools={enabled} count={enabled.length} limit={6}><div id="selection">selection</div></ToolSettingsPage></div></>}
+function Fixture(){const[active,setActive]=useState(true),[enabled,setEnabled]=useState(tools),[missing,setMissing]=useState([]);window.setMissing=setMissing;window.setEnabled=values=>setEnabled(tools.filter(item=>values.includes(item.value)));return <><button id="navigate" onClick={()=>setActive(!active)}>Navigate</button><div className="main-content" style={{position:'absolute',top:40,right:0,bottom:0,left:0}}><ToolSettingsPage active={active} tools={enabled.map(item=>({...item,installed:!missing.includes(item.value)}))} count={enabled.length} limit={6}><div id="selection">selection</div></ToolSettingsPage></div></>}
 createRoot(document.getElementById('root')).render(<Fixture/>);` }, bundle:true, jsx:'automatic', outfile:join(directory,'fixture.js'), logLevel:'silent',
   plugins:[{name:'native-boundary',setup(b){
     b.onResolve({filter:/\/tauri$/},args=>({path:args.path,namespace:'fixture'}));
@@ -49,7 +50,7 @@ try{
     const marker=document.querySelector('.tool-settings-indicator')?.getBoundingClientRect(),selected=document.querySelector('[role="tab"][aria-selected="true"]')?.getBoundingClientRect();
     return marker&&selected&&Math.abs(marker.x-selected.x)<1&&Math.abs(marker.width-selected.width)<1;
   });
-  assert.equal(await page.getByRole('tab').count(),3);
+  assert.equal(await page.getByRole('tab').count(),5);
   await page.locator('.tool-settings-indicator[data-ready]').waitFor({state:'attached'});await aligned();
   assert.equal(await page.getByRole('tab',{selected:true}).evaluate(el=>getComputedStyle(el).borderTopWidth),'0px');
   await tab('Skills').click();
@@ -74,12 +75,20 @@ try{
   await tab('常用 5/6').click();await tab('主记忆').click();await value('Claude 草稿\n未保存');
   await page.locator('#navigate').click();assert.equal(await tab('主记忆').count(),0);
   await page.locator('#navigate').click();await value('Claude 草稿\n未保存');
+  await page.evaluate(()=>window.setMissing(['claude']));await page.getByText('未安装',{exact:true}).waitFor();
+  assert.equal(await editor.count(),0);assert.equal(await page.getByRole('button',{name:'保存',exact:true}).isDisabled(),true);
+  await page.evaluate(()=>window.setMissing([]));await value('Claude 草稿\n未保存');
   await switchTool('Pi');await value('');
   assert.equal(await page.locator('.tool-memory-notice').count(),0,'missing files open as a normal blank editor');
   const editorHeight=(await editor.boundingBox()).height;
   assert.equal(await page.evaluate(()=>window.calls.filter(call=>call.type==='save').length),2,'viewing a missing file does not create it');
   await editor.fill('New instructions');await page.getByRole('button',{name:'保存',exact:true}).click();await page.getByText('已保存',{exact:true}).waitFor({state:'visible'});
-  await switchTool('Cursor');await page.getByText('暂未接入此工具的全局主记忆文件。',{exact:true}).waitFor({state:'visible'});assert.equal(await editor.count(),0);assert.equal(await page.getByRole('button',{name:'保存',exact:true}).isDisabled(),true);
+  const beforeMissing=await page.evaluate(()=>window.calls.length);
+  await page.evaluate(()=>window.setMissing(['cursor']));await switchTool('Cursor');await page.getByText('未安装',{exact:true}).waitFor();
+  assert.equal(await page.getByRole('button',{name:'重新加载',exact:true}).isDisabled(),true);
+  assert.equal(await page.getByRole('button',{name:'保存',exact:true}).isDisabled(),true);
+  assert.equal(await page.evaluate(()=>window.calls.length),beforeMissing,'uninstalled tools never read or create memory files');
+  await page.evaluate(()=>window.setMissing([]));await page.getByText('暂不可用',{exact:true}).waitFor({state:'visible'});assert.equal(await editor.count(),0);assert.equal(await page.getByRole('button',{name:'保存',exact:true}).isDisabled(),true);
   const empty=page.locator('.tool-memory-empty');assert.equal((await empty.boundingBox()).height,editorHeight,'unavailable tools reuse the normal document surface');
   assert.equal(await empty.evaluate(el=>{const board=el.getBoundingClientRect(),text=el.firstElementChild.getBoundingClientRect();return Math.abs((board.left+board.right-text.left-text.right)/2)<1&&Math.abs((board.top+board.bottom-text.top-text.bottom)/2)<1}),true,'empty-state text is centered on both axes');
   await page.evaluate(()=>{window.failRead=true});await switchTool('Copilot CLI');await page.getByRole('alert').waitFor({state:'visible'});
@@ -103,12 +112,12 @@ try{
   assert.equal(await editor.evaluate(el=>getComputedStyle(el).resize),'none');
   await page.evaluate(()=>{document.documentElement.dataset.mode='light';document.documentElement.dataset.theme='mint';document.documentElement.dataset.shape='soft'});await page.waitForTimeout(180);await page.screenshot({path:join(directory,'memory-light.png')});
   await page.setViewportSize({width:440,height:780});assert.equal(await page.locator('.tool-settings-page').evaluate(el=>el.scrollWidth>el.clientWidth),false);
-  await tab('Skills').click();await page.keyboard.press('ArrowRight');assert.match(await page.getByRole('tab',{selected:true}).innerText(),/^常用 /);
+  await tab('Browser Use').click();await page.keyboard.press('ArrowRight');assert.match(await page.getByRole('tab',{selected:true}).innerText(),/^常用 /);
   await aligned();
   await page.evaluate(()=>document.querySelectorAll('[role="tab"]').forEach(tab=>{tab.style.fontSize='15px'}));await aligned();
   await page.emulateMedia({reducedMotion:'reduce'});
   assert.equal(await page.locator('.tool-settings-indicator').evaluate(el=>getComputedStyle(el).transitionDuration),'0s');
   assert.deepEqual(errors,[]);
-  console.log('OK: three themed tabs, Skills/memory isolation, actual editor/selector, lazy reads, late response isolation, per-tool drafts, page navigation, exact save payloads, conflict/failure retention, discard confirmation, missing/unsupported files, keyboard saving, themes and narrow layout');
+  console.log('OK: five themed tabs, Skills/memory isolation, actual editor/selector, lazy reads, late response isolation, per-tool drafts, page navigation, exact save payloads, conflict/failure retention, discard confirmation, missing/unsupported files, keyboard saving, themes and narrow layout');
   console.log('Screenshots: '+directory);
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve))}
