@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { commands, type ToolMemoryDocument } from '../../tauri';
 import { useT } from '../../i18n/useT';
@@ -57,6 +57,20 @@ export function ToolMemoryPanel({ active, tools }: { active: boolean; tools: { v
   const draft = drafts[tool], document = draft?.document;
   const dirty = installed && !!document?.path && draft.text !== editable(document.content);
   const busy = installed && (!!draft?.loading || !!draft?.saving);
+  const status = !installed ? '' : draft?.loading ? t('diff.loading') : dirty ? t('tools.memory.unsaved') : draft?.saved ? t('tools.memory.saved') : '';
+  const infoRefs = useRef(new Map<string, HTMLDivElement>());
+  const [detailWidths, setDetailWidths] = useState<Record<string, number>>({});
+  useLayoutEffect(() => {
+    if (!active) return;
+    const measure = () => {
+      const widths = Object.fromEntries([...infoRefs.current].map(([key, element]) => [key, element.scrollWidth]));
+      setDetailWidths(previous => Object.keys(previous).length === Object.keys(widths).length && Object.keys(widths).every(key => previous[key] === widths[key]) ? previous : widths);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    infoRefs.current.forEach(element => observer.observe(element));
+    return () => observer.disconnect();
+  }, [active, tools, drafts, tool, t]);
   const save = async () => {
     if (!document?.path || !draft || busy || !dirty) return;
     update(tool, { saving: true, error: undefined, saved: false });
@@ -68,18 +82,24 @@ export function ToolMemoryPanel({ active, tools }: { active: boolean; tools: { v
   return <div className="tool-memory" aria-busy={busy}>
     {active && tooltip && createPortal(<span className="tool-memory-tool-tip" role="tooltip" style={{ left: tooltip.left, top: tooltip.top }}>{tooltip.label}</span>, window.document.body)}
     <div className="tool-memory-toolbar">
-      <span className="tool-memory-name">{tools.find(item => item.value === tool)?.label}</span>
-      {installed && document?.path && <code className="tool-memory-path">{document.path}</code>}
-      <span className="tool-memory-status" role="status">{!installed ? '' : draft?.loading ? t('diff.loading') : dirty ? t('tools.memory.unsaved') : draft?.saved ? t('tools.memory.saved') : ''}</span>
-      <div className="tool-memory-actions">
-        {active && tools.length > 0 && <div className="tool-memory-tools" role="toolbar" aria-label={t('usage.tool')} onScroll={() => setTooltip(null)}>
-          {tools.map((item, index) => <button type="button" key={item.value} aria-label={item.label} aria-pressed={tool === item.value} tabIndex={tool === item.value ? 0 : -1} disabled={!!draft?.saving} onClick={() => selectTool(item.value)} onMouseEnter={event => showToolName(event.currentTarget, item.label)} onMouseLeave={() => setTooltip(null)} onFocus={event => showToolName(event.currentTarget, item.label)} onBlur={() => setTooltip(null)} onKeyDown={event => {
+      {active && tools.length > 0 && <div className="tool-memory-tools" role="toolbar" aria-label={t('usage.tool')} onScroll={() => setTooltip(null)} onTransitionStart={event => { if (event.propertyName === 'width') setTooltip(null); }}>
+          {tools.map((item, index) => <div className={`tool-memory-item${tool === item.value ? ' is-selected' : ''}`} key={item.value}>
+          <button type="button" aria-label={item.label} aria-pressed={tool === item.value} tabIndex={tool === item.value ? 0 : -1} disabled={!!draft?.saving} onClick={() => selectTool(item.value)} onMouseEnter={event => showToolName(event.currentTarget, item.label)} onMouseLeave={() => setTooltip(null)} onFocus={event => showToolName(event.currentTarget, item.label)} onBlur={() => setTooltip(null)} onKeyDown={event => {
             if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
             event.preventDefault();
             const next = event.key === 'Home' ? 0 : event.key === 'End' ? tools.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + tools.length) % tools.length;
-            selectTool(tools[next].value); event.currentTarget.parentElement?.querySelectorAll('button')[next]?.focus();
-          }}><span className="tool-memory-tool-icon" aria-hidden="true">{item.icon}</span></button>)}
-        </div>}
+            selectTool(tools[next].value); event.currentTarget.closest('.tool-memory-tools')?.querySelectorAll('button')[next]?.focus();
+          }}><span className="tool-memory-tool-icon" aria-hidden="true">{item.icon}</span></button>
+          <div className="tool-memory-tool-details" aria-hidden={tool !== item.value} style={{ width: tool === item.value ? detailWidths[item.value] ?? 0 : 0 }}>
+            <div className="tool-memory-tool-info" ref={element => { if (element) infoRefs.current.set(item.value, element); else infoRefs.current.delete(item.value); }}>
+              <span className="tool-memory-name">{item.label}</span>
+              {item.installed !== false && drafts[item.value]?.document?.path && <code className="tool-memory-path">{drafts[item.value]?.document?.path}</code>}
+              {tool === item.value && status && <span className="tool-memory-status" role="status">{status}</span>}
+            </div>
+          </div>
+          </div>)}
+      </div>}
+      <div className="tool-memory-actions">
         <button type="button" className="tool-memory-button" disabled={busy || !tool || !installed} onClick={() => dirty ? setConfirmReload(tool) : void reload(tool)}>{t('tools.memory.reload')}</button>
         <button type="button" className="tool-memory-button tool-memory-save" disabled={busy || !dirty} onClick={() => { void save(); }}>{t('tool_config.save')}</button>
       </div>

@@ -21,9 +21,12 @@ export const commands={
 await build({ stdin: { loader:'tsx', resolveDir:project, contents:`
 import React,{useState} from 'react';import {createRoot} from 'react-dom/client';
 import {ToolSettingsPage} from './src/components/center/ToolSettingsPage';
+import {InlineSvgIcon} from './src/components/InlineSvgIcon';
+import claudeIcon from './src/icons-inline/claude.svg';import codexIcon from './src/icons-inline/codex.svg';
 import './src/styles/global.css';import './src/components/center/CenterPanel.css';
-const tools=[{value:'claude',label:'Claude Code'},{value:'codex',label:'Codex CLI'},{value:'pi',label:'Pi'},{value:'cursor',label:'Cursor'},{value:'copilot',label:'Copilot CLI'}].map(item=>({...item,icon:<span>{item.label[0]}</span>}));
-function Fixture(){const[active,setActive]=useState(true),[enabled,setEnabled]=useState(tools),[missing,setMissing]=useState([]);window.setMissing=setMissing;window.setEnabled=values=>setEnabled(tools.filter(item=>values.includes(item.value)));return <><button id="navigate" onClick={()=>setActive(!active)}>Navigate</button><div className="main-content" style={{position:'absolute',top:40,right:0,bottom:0,left:0}}><ToolSettingsPage active={active} tools={enabled.map(item=>({...item,installed:!missing.includes(item.value)}))} count={enabled.length} limit={6}><div id="selection">selection</div></ToolSettingsPage></div></>}
+const tools=[{value:'claude',label:'Claude Code'},{value:'codex',label:'Codex CLI'},{value:'pi',label:'Pi'},{value:'cursor',label:'Cursor'},{value:'copilot',label:'Copilot CLI'}].map(item=>({...item,icon:item.value==='claude'||item.value==='codex'?<InlineSvgIcon markup={item.value==='claude'?claudeIcon:codexIcon}/>:<span>{item.label[0]}</span>}));
+const choices=[...tools,{value:'opencode',label:'OpenCode',icon:<span>O</span>}];
+function Fixture(){const[active,setActive]=useState(true),[enabled,setEnabled]=useState(tools),[missing,setMissing]=useState([]);window.setMissing=setMissing;window.setEnabled=values=>setEnabled(choices.filter(item=>values.includes(item.value)));return <><button id="navigate" onClick={()=>setActive(!active)}>Navigate</button><div className="main-content" style={{position:'absolute',top:40,right:0,bottom:0,left:0}}><ToolSettingsPage active={active} tools={enabled.map(item=>({...item,installed:!missing.includes(item.value)}))} count={enabled.length} limit={6}><div id="selection">selection</div></ToolSettingsPage></div></>}
 createRoot(document.getElementById('root')).render(<Fixture/>);` }, bundle:true, jsx:'automatic', loader:{'.svg':'text','.png':'dataurl'}, outfile:join(directory,'fixture.js'), logLevel:'silent',
   plugins:[{name:'native-boundary',setup(b){
     b.onResolve({filter:/\/tauri$/},args=>({path:args.path,namespace:'fixture'}));
@@ -57,8 +60,27 @@ try{
   assert.equal(await page.locator('.tool-settings-indicator').evaluate(el=>el.getAnimations().some(animation=>animation.transitionProperty==='transform'&&animation.playState==='running')),true,'shared selection background moves between tabs');
   await aligned();assert.equal(await tab('MCP').count(),0);assert.equal(await page.evaluate(()=>window.calls.length),0,'Skills navigation performs no memory operations');
   await tab('主记忆').click();await value('Claude 原文\n第二行');
+  const tools=page.getByRole('toolbar',{name:'工具',exact:true}),memoryActions=page.locator('.tool-memory-actions');
+  await page.waitForTimeout(350);
+  const first=await tools.getByRole('button',{name:'Claude Code',exact:true}).boundingBox(),second=await tools.getByRole('button',{name:'Codex CLI',exact:true}).boundingBox(),actions=await memoryActions.boundingBox();
+  assert.ok(Math.abs(first.x-(await tools.boundingBox()).x)<1,'tool icons start at the left edge');
+  const compactGap=()=>tools.evaluate(toolbar=>{const selected=toolbar.querySelector('.is-selected'),info=selected.querySelector('.tool-memory-tool-info'),next=selected.nextElementSibling?.querySelector('button');return !next||Math.abs(next.getBoundingClientRect().left-info.getBoundingClientRect().right-6)<1});
+  assert.equal(await compactGap(),true,'following icons sit directly after the selected information');
+  const group=await tools.boundingBox();assert.ok(actions.x-group.x-group.width>80,'spare toolbar space stays after the entire icon group');
+  assert.equal(await tools.locator('svg title, [title]').count(),0,'decorative icons do not expose native tooltips');
+  await tools.getByRole('button',{name:'Claude Code',exact:true}).hover();await page.getByRole('tooltip',{name:'Claude Code',exact:true}).waitFor();
+  assert.equal(await tools.locator('.is-selected .tool-memory-path').textContent(),'C:/fixture/.claude/CLAUDE.md');
+  const iconOrder=await tools.getByRole('button').evaluateAll(buttons=>buttons.map(button=>button.getAttribute('aria-label')));
   await editor.fill('Claude 草稿\n未保存');
   await page.evaluate(()=>{window.delayTool='codex'});await switchTool('Codex CLI');
+  assert.equal(await tools.locator('.tool-memory-tool-details').evaluateAll(items=>items.some(item=>item.getAnimations().some(animation=>animation.transitionProperty==='width'&&animation.playState==='running'))),true,'selection expands and collapses between icons');
+  await page.waitForTimeout(330);
+  const selected=await tools.getByRole('button',{name:'Codex CLI',exact:true}).boundingBox();
+  assert.ok(selected.x<second.x-80,'next tool slides left into the previous information space');
+  assert.equal(await compactGap(),true,'new information stays adjacent to the following icon');
+  assert.deepEqual(await tools.getByRole('button').evaluateAll(buttons=>buttons.map(button=>button.getAttribute('aria-label'))),iconOrder,'icon order stays unchanged');
+  assert.equal((await memoryActions.boundingBox()).x,actions.x,'save and reload stay fixed on the right');
+  assert.equal(await tools.locator('.tool-memory-tool-details[aria-hidden="false"]').count(),1,'only the selected tool exposes its information');
   await page.waitForFunction(()=>!!window.resolveRead);await switchTool('Claude Code');
   await value('Claude 草稿\n未保存');await page.evaluate(()=>{window.delayTool=null;window.resolveRead()});
   await switchTool('Codex CLI');await value('Codex original');
@@ -94,7 +116,7 @@ try{
   await page.evaluate(()=>{window.failRead=true});await switchTool('Copilot CLI');await page.getByRole('alert').waitFor({state:'visible'});
   await page.evaluate(()=>{window.failRead=false});await page.getByRole('button',{name:'重新加载',exact:true}).click();await value('Copilot original');
   await editor.fill('Keep after failure');await page.evaluate(()=>{window.failSave=true});await page.getByRole('button',{name:'保存',exact:true}).click();await page.getByRole('alert').waitFor({state:'visible'});assert.equal(await editor.inputValue(),'Keep after failure');
-  await switchTool('Claude Code');await page.screenshot({path:join(directory,'memory-dark.png')});
+  await switchTool('Claude Code');await page.waitForTimeout(350);await page.screenshot({path:join(directory,'memory-dark.png')});
   await page.evaluate(()=>window.setEnabled(['codex']));await value('External edit');
   assert.equal(await page.getByRole('toolbar',{name:'工具',exact:true}).getByRole('button').count(),1,'only enabled tools remain available');
   const callsBeforeEmpty=await page.evaluate(()=>window.calls.length);
@@ -112,11 +134,19 @@ try{
   assert.equal(await editor.evaluate(el=>getComputedStyle(el).resize),'none');
   await page.evaluate(()=>{document.documentElement.dataset.mode='light';document.documentElement.dataset.theme='mint';document.documentElement.dataset.shape='soft'});await page.waitForTimeout(180);await page.screenshot({path:join(directory,'memory-light.png')});
   await page.setViewportSize({width:440,height:780});assert.equal(await page.locator('.tool-settings-page').evaluate(el=>el.scrollWidth>el.clientWidth),false);
+  await page.evaluate(()=>window.setEnabled(['claude','codex','pi','cursor','copilot','opencode']));await page.waitForTimeout(350);
+  assert.equal(await tools.getByRole('button').count(),6);assert.equal(await page.locator('.tool-settings-page').evaluate(el=>el.scrollWidth>el.clientWidth),false,'six icons fit without widening narrow windows');
+  await page.screenshot({path:join(directory,'memory-six-tools-narrow.png')});
   await tab('Browser Use').click();await page.keyboard.press('ArrowRight');assert.match(await page.getByRole('tab',{selected:true}).innerText(),/^常用 /);
   await aligned();
   await page.evaluate(()=>document.querySelectorAll('[role="tab"]').forEach(tab=>{tab.style.fontSize='15px'}));await aligned();
+  await tab('主记忆').click();await value('Claude 草稿\n未保存');
+  const selectedButton=tools.getByRole('button',{pressed:true});await selectedButton.focus();await page.keyboard.press('ArrowRight');
+  assert.equal(await tools.getByRole('button',{name:'Codex CLI',exact:true}).getAttribute('aria-pressed'),'true','arrow keys still select the next icon');
+  await page.keyboard.press('Home');assert.equal(await tools.getByRole('button',{name:'Claude Code',exact:true}).getAttribute('aria-pressed'),'true');
   await page.emulateMedia({reducedMotion:'reduce'});
   assert.equal(await page.locator('.tool-settings-indicator').evaluate(el=>getComputedStyle(el).transitionDuration),'0s');
+  assert.equal(await tools.locator('.is-selected .tool-memory-tool-details').evaluate(el=>getComputedStyle(el).transitionDuration),'0s','reduced motion disables accordion movement');
   assert.deepEqual(errors,[]);
   console.log('OK: six themed tabs, Skills/memory isolation, actual editor/selector, lazy reads, late response isolation, per-tool drafts, page navigation, exact save payloads, conflict/failure retention, discard confirmation, missing/unsupported files, keyboard saving, themes and narrow layout');
   console.log('Screenshots: '+directory);
