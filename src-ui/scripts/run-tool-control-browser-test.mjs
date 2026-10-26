@@ -25,7 +25,7 @@ import {ToolSettingsPage} from './src/components/center/ToolSettingsPage';
 import {InlineSvgIcon} from './src/components/InlineSvgIcon';
 import './src/styles/global.css';import './src/components/center/CenterPanel.css';
 const tools=[{value:'claude',label:'Claude Code'},{value:'codex',label:'Codex CLI'},{value:'cursor',label:'Cursor'},{value:'copilot',label:'Copilot CLI'},{value:'antigravity',label:'Antigravity CLI',installed:false},{value:'pi',label:'Pi'},{value:'kiro',label:'Kiro'}].map(item=>({...item,icon:item.value==='antigravity'?<InlineSvgIcon markup={${JSON.stringify(antigravitySvg)}}/>:<span>{item.label[0]}</span>}));
-createRoot(document.getElementById('root')).render(<div className="main-content" style={{position:'absolute',inset:0}}><ToolSettingsPage active tools={tools} count={6} limit={6}><div>selection</div></ToolSettingsPage></div>);`
+createRoot(document.getElementById('root')).render(<div className="main-content panel-center" style={{position:'absolute',inset:0}}><span className="library-item" style={{display:'none'}}>reference</span><ToolSettingsPage active tools={tools} count={6} limit={6}><div className="library-item">selection</div></ToolSettingsPage></div>);`
 },bundle:true,jsx:'automatic',loader:{'.svg':'text','.png':'dataurl'},outfile:join(directory,'fixture.js'),logLevel:'silent',external:['/fonts/*','/monogram.svg'],plugins:[{name:'native-boundary',setup(b){
 b.onResolve({filter:/\/tauri$/},a=>({path:a.path,namespace:'fixture'}));b.onResolve({filter:/\/store\/app-state$/},a=>({path:a.path,namespace:'fixture'}));
 b.onLoad({filter:/.*/,namespace:'fixture'},a=>({loader:'js',contents:a.path.endsWith('/tauri')?mock:'export function useAppLanguage(){return "zh-CN"}'}));}}]});
@@ -40,7 +40,7 @@ const page=await browser.newPage({viewport:{width:1080,height:780}}),errors=[];p
 await page.goto(`http://127.0.0.1:${server.address().port}`);
 const tab=name=>page.getByRole('tab',{name,exact:true}),agent=name=>page.getByRole('switch',{name,exact:true});
 assert.equal(await page.getByRole('tab').count(),6);assert.deepEqual(await page.evaluate(()=>window.calls),[]);
-assert.deepEqual(await page.getByRole('tab').allTextContents(),['常用 6/6','主记忆','多智能体编排','Skills','Computer Use','Browser Use']);
+assert.deepEqual(await page.getByRole('tab').allTextContents(),['常用 6/6','主记忆','多智能体编排','技能','电脑控制','浏览器控制']);
 assert.deepEqual(await page.evaluate(()=>window.teamCalls),[],'orchestration reads only when opened');
 await tab('多智能体编排').click();await agent('Claude Code').waitFor();await page.waitForFunction(()=>!document.querySelector('.orchestration-config [role="switch"]').disabled);
 assert.equal(await agent('Claude Code').getAttribute('aria-checked'),'false');assert.equal(await page.locator('.orchestration-config .tool-control-agent').count(),6);
@@ -84,7 +84,7 @@ for (const enabled of [false, true]) {
 await tab('常用 6/6').click();await tab('多智能体编排').click();await page.waitForFunction(()=>!document.querySelector('.orchestration-config [role="switch"]').disabled);
 assert.equal(await agent('Codex CLI').getAttribute('aria-checked'),'true','saved choice survives page changes');
 await page.evaluate(()=>document.documentElement.dataset.mode='light');await page.screenshot({path:join(directory,'orchestration-light.png')});await page.evaluate(()=>document.documentElement.dataset.mode='dark');
-await tab('Computer Use').click();await agent('Claude Code').waitFor();assert.equal(await page.getByRole('switch').count(),6);assert.equal(await page.locator('.tool-control-agents').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),3);assert.equal(await agent('Pi').isDisabled(),true);assert.equal(await agent('Kiro').count(),0);await page.getByText('暂不可用',{exact:true}).waitFor();
+await tab('电脑控制').click();await agent('Claude Code').waitFor();assert.equal(await page.getByRole('switch').count(),6);assert.equal(await page.locator('.tool-control-agents').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),3);assert.equal(await agent('Pi').isDisabled(),true);assert.equal(await agent('Kiro').count(),0);await page.getByText('暂不可用',{exact:true}).waitFor();
 await page.getByText('未安装',{exact:true}).waitFor();assert.equal(await agent('Antigravity CLI').isDisabled(),true);
 assert.equal(await agent('Antigravity CLI').locator('..').locator('[data-tip]').count(),0,'missing tools take priority over config errors');
 assert.match(await agent('Pi').locator('..').locator('[data-tip]').getAttribute('aria-label'),/Pi/);
@@ -118,7 +118,7 @@ assert.equal(await agent('Claude Code').getAttribute('aria-busy'),'true');assert
 assert.equal(await page.locator('.tool-control-runtime .tool-control-spinner').count(),0);assert.equal(await checkButton.getAttribute('aria-busy'),'false');
 assert.equal(await checkButton.locator('span').innerText(),'检测','agent changes leave the runtime action label unchanged');
 await page.screenshot({path:join(directory,'agent-pending.png')});
-await tab('Browser Use').click();await page.getByRole('button',{name:'安装',exact:true}).waitFor();
+await tab('浏览器控制').click();await page.getByRole('button',{name:'安装',exact:true}).waitFor();
 assert.deepEqual(await agent('Antigravity CLI').locator('..').locator('.tool-control-agent-icon').screenshot(),computerIcon,'both control pages paint the same icon while the other page is hidden');
 assert.equal(await page.evaluate(()=>{
  const definitions=[...document.querySelectorAll('.tool-control-agent-icon svg [id]')];
@@ -128,10 +128,10 @@ assert.equal(await page.evaluate(()=>{
  });
 }),true,'all SVG masks and filters resolve within their own instance');
 await page.evaluate(()=>{window.delaySet=false;window.resolveSet()});
-await tab('Computer Use').click();await page.waitForFunction(()=>document.querySelector('[role="tabpanel"]:not([hidden]) [role="switch"]').getAttribute('aria-checked')==='true');
+await tab('电脑控制').click();await page.waitForFunction(()=>document.querySelector('[role="tabpanel"]:not([hidden]) [role="switch"]').getAttribute('aria-checked')==='true');
 await page.waitForTimeout(250);await page.screenshot({path:join(directory,'computer-dark.png')});
 await page.evaluate(()=>window.failSet=true);await agent('Claude Code').click();await page.getByRole('alert').waitFor();assert.equal(await agent('Claude Code').getAttribute('aria-checked'),'true');assert.equal(await agent('Claude Code').locator('..').locator('.tool-control-spinner').count(),0);await page.evaluate(()=>window.failSet=false);
-await tab('Browser Use').click();assert.equal(await agent('Claude Code').isDisabled(),true);await page.evaluate(()=>window.delayInstall=true);await page.getByRole('button',{name:'安装',exact:true}).click();await page.waitForFunction(()=>!!window.resolveInstall);
+await tab('浏览器控制').click();assert.equal(await agent('Claude Code').isDisabled(),true);await page.evaluate(()=>window.delayInstall=true);await page.getByRole('button',{name:'安装',exact:true}).click();await page.waitForFunction(()=>!!window.resolveInstall);
 assert.equal(await page.getByRole('button',{name:'安装',exact:true}).locator('.tool-control-spinner').isVisible(),true);
 assert.equal(await page.locator('.tool-control-agent > .tool-control-spinner').count(),0);
 await page.evaluate(()=>{window.delayInstall=false;window.resolveInstall()});assert.equal(await agent('Antigravity CLI').isDisabled(),true);
@@ -139,17 +139,17 @@ await page.getByText('请先安装 Chrome，然后重新检测。',{exact:true})
 await page.evaluate(()=>{window.controlStatus.browser.ready=true;window.controlStatus.browser.browser='Edge';window.failCheck=true});await page.getByRole('button',{name:'检测',exact:true}).click();await page.getByRole('alert').waitFor();
 await page.evaluate(()=>window.failCheck=false);await page.getByRole('button',{name:'检测',exact:true}).click();await page.locator('[role="tabpanel"]:not([hidden])').getByText('可用',{exact:true}).waitFor();await agent('Codex CLI').click();await page.waitForFunction(()=>window.controlStatus.browser.agents[1].enabled);
 assert.equal(await agent('Claude Code').getAttribute('aria-checked'),'false');
-await page.evaluate(()=>{window.controlStatus.computer.agents[1].conflict=true;window.controlStatus.computer.agents[1].issue='conflict'});await tab('Computer Use').click();await agent('Codex CLI').locator('..').getByText('暂不可用',{exact:true}).waitFor();
+await page.evaluate(()=>{window.controlStatus.computer.agents[1].conflict=true;window.controlStatus.computer.agents[1].issue='conflict'});await tab('电脑控制').click();await agent('Codex CLI').locator('..').getByText('暂不可用',{exact:true}).waitFor();
 assert.match(await agent('Codex CLI').locator('..').locator('[data-tip]').getAttribute('aria-label'),/coffee-computer-use/);assert.equal(await agent('Codex CLI').isDisabled(),true);
 await page.evaluate(()=>{window.controlStatus.computer.agents[1].conflict=false;window.delaySet=true;window.resolveSet=null;window.resolveRead=null;window.delayRead='computer'});await agent('Claude Code').click();await page.waitForFunction(()=>!!window.resolveSet);
-await tab('Browser Use').click();await tab('Computer Use').click();await page.waitForFunction(()=>!!window.resolveRead);
+await tab('浏览器控制').click();await tab('电脑控制').click();await page.waitForFunction(()=>!!window.resolveRead);
 await page.evaluate(()=>{window.delaySet=false;window.resolveSet()});await page.waitForFunction(()=>document.querySelector('[role="tabpanel"]:not([hidden]) [role="switch"]').getAttribute('aria-checked')==='false');await page.evaluate(()=>{window.delayRead=null;window.resolveRead()});await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
 assert.equal(await agent('Claude Code').getAttribute('aria-checked'),'false');
-await page.evaluate(()=>{document.documentElement.dataset.mode='light';document.documentElement.dataset.theme='mint';document.documentElement.dataset.shape='slate'});await tab('Browser Use').click();await page.waitForTimeout(250);await page.screenshot({path:join(directory,'browser-light.png')});
+await page.evaluate(()=>{document.documentElement.dataset.mode='light';document.documentElement.dataset.theme='mint';document.documentElement.dataset.shape='slate'});await tab('浏览器控制').click();await page.waitForTimeout(250);await page.screenshot({path:join(directory,'browser-light.png')});
 assert.equal(await themedHeadings(),true,'heading colors follow a changed light theme');
 await page.setViewportSize({width:440,height:720});assert.equal(await page.locator('.tool-settings-page').evaluate(el=>el.scrollWidth>el.clientWidth),false);
-await tab('Computer Use').focus();await page.keyboard.press('ArrowRight');assert.equal(await tab('Browser Use').getAttribute('aria-selected'),'true');
-await page.setViewportSize({width:1080,height:900});await tab('Computer Use').click();
+await tab('电脑控制').focus();await page.keyboard.press('ArrowRight');assert.equal(await tab('浏览器控制').getAttribute('aria-selected'),'true');
+await page.setViewportSize({width:1080,height:900});await tab('电脑控制').click();
 const demo=page.getByRole('region',{name:'操作演示',exact:true});await demo.scrollIntoViewIfNeeded();
 assert.equal(await page.locator('.control-demo').count(),1,'inactive control tabs do not keep animations mounted');
 const callsBeforeDemo=await page.evaluate(()=>window.calls.length);
@@ -166,7 +166,7 @@ assert.equal(await demo.locator('.control-demo-list-item').count(),3);
 assert.ok(Number(await demo.locator('.control-demo-list-item-2').evaluate(el=>getComputedStyle(el).opacity))>.99);
 await page.screenshot({path:join(directory,'demo-computer-complete.png')});await demo.screenshot({path:join(directory,'demo-wide.png')});
 await page.getByRole('button',{name:'播放演示',exact:true}).click();assert.equal(await demo.getAttribute('data-paused'),'false');
-await tab('Browser Use').click();await demo.scrollIntoViewIfNeeded();await page.getByRole('button',{name:'暂停演示',exact:true}).click();
+await tab('浏览器控制').click();await demo.scrollIntoViewIfNeeded();await page.getByRole('button',{name:'暂停演示',exact:true}).click();
 await phase(7700);assert.ok(Number(await demo.locator('.control-demo-act').evaluate(el=>getComputedStyle(el).opacity))>.99,'operation step is shown with browser search results');assert.ok(Number(await demo.locator('.control-demo-search-result').evaluate(el=>getComputedStyle(el).opacity))>.99);
 await page.screenshot({path:join(directory,'demo-browser-search.png')});
 await phase(12000);assert.ok(Number(await demo.locator('.control-demo-result').evaluate(el=>getComputedStyle(el).opacity))>.99);
@@ -191,6 +191,17 @@ assert.ok(Number(await demo.locator('.team-demo-worker-1.team-demo-tab').evaluat
 assert.ok(Number(await demo.locator('.team-demo-worker-0 .team-demo-running').evaluate(el=>getComputedStyle(el).opacity))>.99);
 assert.ok(Number(await demo.locator('.team-demo-summary').evaluate(el=>getComputedStyle(el).opacity))<.01,'summary waits for both workers');
 await page.screenshot({path:join(directory,'demo-orchestration-working.png')});
+for(const shape of ['glass','carbon','monogram']){
+  await page.evaluate(shape=>document.documentElement.dataset.shape=shape,shape);
+  const surface=await page.evaluate(()=>{const reference=getComputedStyle(document.querySelector('.library-item'));return [...document.querySelectorAll('.orchestration-config .tool-control-runtime,.orchestration-config .tool-control-agent,.orchestration-config .control-demo')].map(el=>{const style=getComputedStyle(el);return {border:style.borderTopColor,reference:reference.borderTopColor,width:style.borderTopWidth}})});
+  for(const card of surface){assert.equal(card.border,card.reference,shape+' cards share the favorites outline');assert.equal(card.width,'1px')}
+  assert.notEqual(await demo.locator('.control-demo-stage').evaluate(el=>getComputedStyle(el).backgroundImage),'none',shape+' preserves the desktop gradient');
+  assert.notEqual(await demo.locator('.control-demo-chat').evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)',shape+' keeps the animated window surface');
+  assert.ok(await demo.evaluate(el=>el.getAnimations({subtree:true}).length)>0,shape+' retains the demonstration animations');
+  await page.screenshot({path:join(directory,'demo-orchestration-'+shape+'.png')});
+}
+await page.evaluate(()=>document.documentElement.dataset.shape='panel');
+
 await phase(12500);assert.ok(Number(await demo.locator('.team-demo-worker-1 .team-demo-finished').evaluate(el=>getComputedStyle(el).opacity))>.99);
 assert.ok(Number(await demo.locator('.team-demo-worker-0 .team-demo-running').evaluate(el=>getComputedStyle(el).opacity))<.01);
 assert.ok(Number(await demo.locator('.team-demo-summary').evaluate(el=>getComputedStyle(el).opacity))>.99);
@@ -205,7 +216,7 @@ await page.screenshot({path:join(directory,'demo-orchestration-narrow.png')});
 await page.emulateMedia({reducedMotion:'reduce'});assert.equal(await demo.evaluate(el=>el.getAnimations({subtree:true}).length),0);assert.equal(await demo.locator('.team-demo-running').first().isVisible(),false);
 assert.equal(await demo.locator('.team-demo-summary').isVisible(),true);assert.equal(await page.evaluate(()=>window.teamCalls.filter(call=>typeof call==='object').length),teamWrites,'demonstration never starts real workers or changes configuration');
 await page.emulateMedia({reducedMotion:'no-preference'});
-await page.setViewportSize({width:1080,height:1000});await tab('Skills').click();await tab('Claude Code').click();await page.getByText('暂无技能',{exact:true}).waitFor();
+await page.setViewportSize({width:1080,height:1000});await tab('技能').click();await tab('Claude Code').click();await page.getByText('暂无技能',{exact:true}).waitFor();
 const emptyGeometry=await page.locator('.skills-empty').evaluate(element=>{const rect=element.getBoundingClientRect(),panel=document.querySelector('.tool-settings-page').getBoundingClientRect(),range=document.createRange();range.selectNodeContents(element);const text=range.getBoundingClientRect();return {bottom:rect.bottom,expected:panel.bottom-32,center:(rect.top+rect.bottom)/2,textCenter:(text.top+text.bottom)/2}});
 assert.ok(Math.abs(emptyGeometry.bottom-emptyGeometry.expected)<2,'empty skills fill the available page height');assert.ok(Math.abs(emptyGeometry.center-emptyGeometry.textCenter)<2,'empty text is vertically centered');
 assert.deepEqual(errors,[]);

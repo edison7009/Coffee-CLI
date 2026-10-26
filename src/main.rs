@@ -25,6 +25,7 @@ mod fonts;
 mod fs_watcher;
 mod launch;
 mod tool_config;
+mod cli_updates;
 mod tool_memory;
 mod tool_skills;
 mod tool_control;

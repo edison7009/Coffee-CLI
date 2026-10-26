@@ -1,0 +1,12 @@
+.cli-update-control { position:absolute; top:4px; right:4px; max-width:calc(100% - 8px); }
+.launchpad-card .cli-update-button { position:relative; display:flex; align-items:center; justify-content:center; min-width:18px; height:18px; max-width:100%; padding:1px 4px; border:0; border-radius:var(--shape-radius-btn,4px); background:transparent; color:var(--accent); font:500 11px/1.3 var(--font-nav,var(--font)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; }
+.launchpad-card .cli-update-label { font:inherit; color:inherit; overflow:hidden; text-overflow:ellipsis; }
+.launchpad-card .cli-update-button:hover { background:var(--accent-bg); color:var(--text-1); }
+.launchpad-card .cli-update-button:focus-visible { outline:1px solid var(--accent); outline-offset:-1px; }
+.launchpad-card .cli-update-button:disabled { cursor:default; opacity:1; }
+.launchpad-card .cli-update-button.has-error { color:var(--error,#d66); }
+.cli-update-spinner { position:absolute; inset:0; margin:auto; width:12px; height:12px; border:1.5px solid currentColor; border-top-color:transparent; border-radius:50%; animation:cli-update-spin .7s linear infinite; }
+.cli-update-error { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
+.cli-update-tip { position:fixed; z-index:10000; max-width:min(236px,calc(100vw - 16px)); padding:6px 10px; border:1px solid var(--border); border-radius:6px; background:var(--bg-panel); color:var(--text-1); font:500 11px/1.4 var(--font-nav,var(--font)); text-align:center; overflow-wrap:anywhere; pointer-events:none; box-shadow:0 1px 2px rgba(0,0,0,.2),0 6px 20px rgba(0,0,0,.22); }
+@keyframes cli-update-spin { to { transform:rotate(360deg); } }
+@media (prefers-reduced-motion:reduce) { .cli-update-spinner { animation:none; } }

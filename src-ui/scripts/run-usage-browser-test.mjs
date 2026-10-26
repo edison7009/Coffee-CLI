@@ -16,7 +16,9 @@ function App(){return <div className="panel-center"><UsageDashboard/></div>};cre
   b.onResolve({ filter: /store\/app-state$/ }, () => ({ path: 'store', namespace: 'fixture' }));
   b.onResolve({ filter: /(^|\/)tauri$/ }, () => ({ path: 'native', namespace: 'fixture' }));
   b.onLoad({ filter: /.*/, namespace: 'fixture' }, args => ({ contents: args.path === 'store' ? `export function useAppLanguage(){return 'zh-CN'}` : `
-window.queries=[];window.waiting=[];
+window.queries=[];window.waiting=[];window.heatmapCalls=0;
+const heatmapDate=days=>{const date=new Date();date.setHours(12,0,0,0);date.setDate(date.getDate()-days);return Math.floor(date.getTime()/1000)};
+export const isTauri=true;export const commands={async getMessageHeatmap(){window.heatmapCalls++;if(window.holdHeatmap)await new Promise(resolve=>{window.resolveHeatmap=resolve});return [{ts:heatmapDate(0),count:11},{ts:heatmapDate(250),count:7},{ts:heatmapDate(380),count:99}]}};
 const summary={sessions:12,prompts:36,calls:90,days:5,input:100000,output:20000,cacheRead:60000,cacheWrite:5000,reasoning:10000,tokens:185000};
 window.report={summary,daily:Array.from({length:7},(_,i)=>{const date=new Date();date.setDate(date.getDate()-6+i);const key=[date.getFullYear(),String(date.getMonth()+1).padStart(2,'0'),String(date.getDate()).padStart(2,'0')].join('-');return {key,summary:{...summary,tokens:[3000,8000,4500,28000,6000,19000,12000][i],sessions:i%3}}}),models:[{key:'model-alpha',summary},{key:'model-beta',summary:{...summary,tokens:60000}}],projects:['D:/Alpha','D:/Beta'],sources:[{tool:'claude',files:12,available:true,errors:0},{tool:'codex',files:8,available:true,errors:0}]};
 export async function invoke(command,args){window.queries.push(args.query);if(window.fail)throw Error('fixture');if(window.defer){window.defer=false;return new Promise(resolve=>window.waiting.push(()=>resolve(structuredClone(window.report))))}return structuredClone(window.report)}
@@ -41,6 +43,8 @@ try {
   };
   await page.addInitScript(() => {
     window.defer = true;
+    window.holdHeatmap = true;
+    localStorage.setItem('cc-heatmap-cache',JSON.stringify({date:new Date().toLocaleDateString('en-CA'),entries:[],fetchedAt:Date.now()}));
     const interval = window.setInterval;
     window.setInterval = (callback, delay, ...args) => {
       if (delay === 15000) window.refreshUsage = callback;
@@ -50,6 +54,17 @@ try {
   await page.goto(`http://127.0.0.1:${server.address().port}`);
   await page.locator('.usage-cards').waitFor();
   await page.waitForFunction(() => window.waiting.length === 1);
+  assert.equal(await page.locator('.heatmap-week').count(),53,'annual activity includes a full year of weeks');
+  assert.equal(await page.locator('.heatmap-grid .heatmap-cell').count(),371);
+  assert.equal(await page.locator('.heatmap-loading').count(),1,'the previous half-year cache cannot suppress the annual fetch');
+  await page.waitForFunction(()=>!!window.resolveHeatmap);await page.evaluate(()=>window.resolveHeatmap());
+  await page.getByText('2 次会话、18 条消息',{exact:true}).waitFor();
+  assert.equal(await page.locator('.heatmap-cell[data-tip*="7 条消息"]').count(),1,'activity older than six months is included');
+  assert.equal(await page.locator('.heatmap-cell[data-tip*="99 条消息"]').count(),0,'activity outside the annual grid is excluded');
+  assert.equal(await page.locator('.heatmap-card').evaluate(el=>el.getBoundingClientRect().bottom<document.querySelector('.usage-toolbar').getBoundingClientRect().top),true,'annual activity sits above the independent date filters');
+  assert.equal(await page.locator('.heatmap-card h2').count(),0,'annual activity has no extra heading');
+  assert.deepEqual(await page.locator('.heatmap-card').evaluate(el=>({background:getComputedStyle(el).backgroundColor,border:getComputedStyle(el).borderTopWidth})),{background:'rgba(0, 0, 0, 0)',border:'0px'},'annual activity uses the page surface instead of card chrome');
+  assert.equal(await page.locator('.heatmap-grid').evaluate(el=>Math.abs(el.getBoundingClientRect().left-document.querySelector('.usage-cards').getBoundingClientRect().left)<1),true,'calendar and numeric cards align on the left');
   assert.equal(await page.getByText('正在同步本地记录…', { exact: true }).count(), 0);
   assert.equal(await page.locator('.usage-cards > article').count(), 5, 'first launch shows the full layout while syncing');
   assert.equal(await page.locator('.usage-card-hero > strong').first().innerText(), '—', 'no invented totals before the first report');
@@ -57,6 +72,8 @@ try {
   const cachedTokens = await page.locator('.usage-card-hero > strong').first().innerText();
   await page.reload();
   await page.waitForFunction(() => window.waiting.length === 1);
+  assert.equal(await page.locator('.heatmap-title').innerText(),'2 次会话、18 条消息','annual activity is cached before native sync');
+  assert.equal(await page.evaluate(()=>window.heatmapCalls),0,'fresh annual cache avoids another scan');
   assert.equal(await page.locator('.usage-card-hero > strong').first().innerText(), cachedTokens, 'persistent snapshot is visible before native sync completes after reload');
   assert.equal(await page.getByText('正在同步本地记录…', { exact: true }).count(), 0);
   await page.evaluate(() => { window.report.summary.tokens = 250000; window.waiting.shift()(); });
@@ -114,9 +131,19 @@ try {
   assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('cc-usage-snapshots-v1')).some(([key]) => key === JSON.stringify([7, 'codex', 'D:/Beta']))), false, 'obsolete responses never populate persistent snapshots');
   await page.evaluate(() => { window.report.summary.tokens = 250000; });
   await page.getByRole('button', { name: '近 7 天', exact: true }).click(); await page.waitForTimeout(100);
+  assert.equal(await page.locator('.heatmap-title').innerText(),'2 次会话、18 条消息','date, tool and project filters do not change the annual overview');
+  assert.equal(await page.evaluate(()=>window.heatmapCalls),0,'filter changes do not rescan the annual overview');
   for (const [mode, shape, width] of [['dark', 'soft', 1100], ['light', 'soft', 1100], ['dark', 'glass', 760], ['light', 'panel', 360]]) {
     await page.evaluate(({ mode, shape }) => { document.documentElement.dataset.mode = mode; document.documentElement.dataset.shape = shape; }, { mode, shape }); await page.setViewportSize({ width, height: 1000 });
     assert.equal(await page.locator('.usage-dashboard').evaluate(el => el.scrollWidth <= el.clientWidth + 1), true, 'dashboard fits ' + width);
+    const calendar=page.locator('.heatmap-scroll');
+    assert.equal(await calendar.evaluate(el=>el.scrollWidth>el.clientWidth),width<760,'narrow calendars scroll horizontally without shrinking cells');
+    const lastActive=page.locator('.heatmap-grid .heatmap-cell[data-tip]').last();
+    await lastActive.hover();
+    const tip=page.getByRole('tooltip');await tip.waitFor();
+    const tipBox=await tip.boundingBox();assert.ok(tipBox.x>=0&&tipBox.x+tipBox.width<=width,'edge-cell tips stay inside the window');
+    assert.equal(await page.locator('.heatmap-grid [title]').count(),0);
+    await page.mouse.move(0,0);
     if (width > 600) {
       const charts = await page.locator('.usage-charts > article').evaluateAll(nodes => nodes.map(node => { const box = node.getBoundingClientRect(); return { x: box.x, y: box.y }; }));
       assert.ok(Math.abs(charts[0].y - charts[1].y) < 1 && charts[1].x > charts[0].x, 'the two charts stay side by side');
@@ -132,6 +159,7 @@ try {
     await page.screenshot({ path: join(directory, `usage-${mode}-${shape}-${width}.png`) });
     await toolPicker.press('Escape');
     await menu.waitFor({ state: 'hidden' });
+    if(width===1100&&mode==='dark')await page.screenshot({path:join(directory,'usage-annual-overview.png')});
   }
   await page.evaluate(() => { window.report.projects = Array.from({ length: 40 }, (_, i) => 'D:/LongProject-' + i); });
   await page.getByRole('button', { name: '同步', exact: true }).click();
@@ -158,5 +186,11 @@ try {
   await recoveryPage.locator('.usage-body[aria-busy="false"]').waitFor();
   assert.equal(await recoveryPage.locator('.usage-models tbody tr').count(), 2, 'invalid cache and unavailable storage cannot block a live report');
   await recoveryPage.close();
-  assert.deepEqual(errors, []); console.log('OK: persistent snapshots, silent background refresh, filter isolation, storage recovery, usage filters, concise sources, error recovery, missing values, whole-page scroll, themed charts and 360/760/1100px geometry'); console.log('Screenshots: ' + directory);
+  const stalePage=await browser.newPage();stalePage.on('pageerror',e=>errors.push(e.message));
+  await stalePage.addInitScript(()=>{const date=new Date(),key=[date.getFullYear(),String(date.getMonth()+1).padStart(2,'0'),String(date.getDate()).padStart(2,'0')].join('-');localStorage.setItem('cc-heatmap-year-cache',JSON.stringify({date:key,entries:[{ts:date.getTime()/1000,count:3}],fetchedAt:0}));window.holdHeatmap=true});
+  await stalePage.goto(`http://127.0.0.1:${server.address().port}`);
+  await stalePage.waitForFunction(()=>!!window.resolveHeatmap);
+  assert.equal(await stalePage.locator('.heatmap-title').innerText(),'1 次会话、3 条消息','stale annual cache stays visible during background refresh');
+  await stalePage.evaluate(()=>window.resolveHeatmap());await stalePage.getByText('2 次会话、18 条消息',{exact:true}).waitFor();await stalePage.close();
+  assert.deepEqual(errors, []); console.log('OK: annual activity, six-month cache migration, cached background refresh, filter isolation, edge-cell tips, persistent snapshots, storage recovery, usage filters, error recovery, whole-page scroll, themed charts and 360/760/1100px geometry'); console.log('Screenshots: ' + directory);
 } finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }

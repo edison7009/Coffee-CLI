@@ -1909,10 +1909,16 @@ html.is-windows[data-frost="frost"] #root {
    untouched. */
 :is([data-shape="glass"], [data-shape="carbon"], [data-shape="monogram"]) .panel-left :is(div, section, aside, nav, header, footer, main):not(.launchpad-card, .launchpad-card-group, .task-card, .task-note-card, .task-prompt-card, .task-prompt-category-menu, .task-note-head, .task-droppable-area, .guide-card, .remote-form-card, .remote-form-overlay, .remote-protocol-toggle, .remote-pill, .chat-input-container, .library-item, .library-toggle, .library-toggle-knob, .ctx-menu, .gambit, .tool-config-modal, .tab-status-dot, .heatmap-cell, .conversation-navigation-tooltip, .diff-line),
 :is([data-shape="glass"], [data-shape="carbon"], [data-shape="monogram"]) .panel-right :is(div, section, aside, nav, header, footer, main):not(.launchpad-card, .launchpad-card-group, .task-card, .task-note-card, .task-prompt-card, .task-prompt-category-menu, .task-note-head, .task-droppable-area, .guide-card, .remote-form-card, .remote-form-overlay, .remote-protocol-toggle, .remote-pill, .chat-input-container, .library-item, .library-toggle, .library-toggle-knob, .ctx-menu, .gambit, .tool-config-modal, .tab-status-dot, .heatmap-cell, .conversation-navigation-tooltip, .diff-line),
-:is([data-shape="glass"], [data-shape="carbon"], [data-shape="monogram"]) .panel-center :is(div, section, aside, nav, header, footer, main):not(.launchpad-card, .launchpad-card-group, .task-card, .task-note-card, .task-prompt-card, .task-prompt-category-menu, .task-note-head, .task-droppable-area, .guide-card, .remote-form-card, .remote-form-overlay, .remote-protocol-toggle, .remote-pill, .chat-input-container, .library-item, .library-toggle, .library-toggle-knob, .ctx-menu, .gambit, .tool-config-modal, .tab-status-dot, .heatmap-cell, .conversation-navigation-tooltip, .diff-line, .session-split-pane, .session-split-divider) {
+:is([data-shape="glass"], [data-shape="carbon"], [data-shape="monogram"]) .panel-center :is(div, section, aside, nav, header, footer, main):not(.launchpad-card, .launchpad-card-group, .task-card, .task-note-card, .task-prompt-card, .task-prompt-category-menu, .task-note-head, .task-droppable-area, .guide-card, .remote-form-card, .remote-form-overlay, .remote-protocol-toggle, .remote-pill, .chat-input-container, .library-item, .library-toggle, .library-toggle-knob, .ctx-menu, .gambit, .tool-config-modal, .tab-status-dot, .heatmap-cell, .conversation-navigation-tooltip, .diff-line, .session-split-pane, .session-split-divider, .tool-control-runtime, .tool-control-agent, .skill-card, .skill-card *, .control-demo, .control-demo *) {
     background: transparent !important;
     border-color: transparent !important;
     box-shadow: none !important;
+}
+
+/* Keep configuration cards on the same surface as favorite-tool cards.
+   Demonstrations own their nested desktop surfaces and must keep their fills. */
+:is([data-shape="carbon"], [data-shape="monogram"]) .panel-center :is(.tool-control-runtime, .tool-control-agent, .skill-card, .control-demo) {
+    background: var(--bg-card);
 }
 
 /* Cards & inputs — same Liquid-Glass treatment as the active tab:
@@ -1955,7 +1961,8 @@ html.is-windows[data-frost="frost"] #root {
 [data-shape="glass"] .task-prompt-card,
 [data-shape="glass"] .guide-card,
 [data-shape="glass"] .chat-input-container,
-[data-shape="glass"] .library-item {
+[data-shape="glass"] .library-item,
+[data-shape="glass"] .panel-center :is(.tool-control-runtime, .tool-control-agent, .skill-card, .control-demo) {
     background: rgba(255, 255, 255, 0.04);
     backdrop-filter: blur(20px) saturate(160%);
     -webkit-backdrop-filter: blur(20px) saturate(160%);

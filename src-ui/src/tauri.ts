@@ -17,6 +17,8 @@ export const isTauri =
   typeof window !== 'undefined' &&
   (!!window.__TAURI_INTERNALS__ || !!window.__TAURI__);
 
+export interface CliUpdateStatus { tool: string; current: string | null; latest: string | null; available: boolean }
+
 // Resolve the invoke function across Tauri v1 / v2
 function resolveInvoke(): ((cmd: string, args?: Record<string, unknown>) => Promise<unknown>) | null {
   const w = window as unknown as Record<string, unknown>;
@@ -154,6 +156,8 @@ export interface CatalogSkill { source: string; name: string; description: strin
 export interface ToolControlStatus { supported: boolean; installed: boolean; ready: boolean; browser: string | null; agents: { tool: string; supported: boolean; enabled: boolean; conflict: boolean; issue?: string | null }[] }
 
 export const commands = {
+  checkCliUpdate: (tool: string) => invoke<CliUpdateStatus>('check_cli_update', { tool }),
+  updateCli: (tool: string) => invoke<CliUpdateStatus>('update_cli', { tool }),
   orchestrationGet: () => invoke<import('./lib/orchestration').OrchestrationSnapshot>('orchestration_get'),
   orchestrationSetAgent: (tool: string, enabled: boolean) => invoke<import('./lib/orchestration').OrchestrationSnapshot>('orchestration_set_agent', { tool, enabled }),
   orchestrationSync: (sessions: unknown[]) => invoke<void>('orchestration_sync', { sessions }),

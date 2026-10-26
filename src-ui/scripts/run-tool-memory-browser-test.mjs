@@ -31,7 +31,7 @@ createRoot(document.getElementById('root')).render(<Fixture/>);` }, bundle:true,
   plugins:[{name:'native-boundary',setup(b){
     b.onResolve({filter:/\/tauri$/},args=>({path:args.path,namespace:'fixture'}));
     b.onResolve({filter:/\/store\/app-state$/},args=>({path:args.path,namespace:'fixture'}));
-    b.onLoad({filter:/.*/,namespace:'fixture'},args=>({loader:'js',contents:args.path.endsWith('/tauri')?native:'export function useAppLanguage(){return "zh-CN"}'}));
+    b.onLoad({filter:/.*/,namespace:'fixture'},args=>({loader:'js',contents:args.path.endsWith('/tauri')?native:'export function useAppLanguage(){return window.fixtureLanguage||"zh-CN"}'}));
   }}],
   external:['/fonts/*','/monogram.svg'],
 });
@@ -56,7 +56,7 @@ try{
   assert.equal(await page.getByRole('tab').count(),6);
   await page.locator('.tool-settings-indicator[data-ready]').waitFor({state:'attached'});await aligned();
   assert.equal(await page.getByRole('tab',{selected:true}).evaluate(el=>getComputedStyle(el).borderTopWidth),'0px');
-  await tab('Skills').click();
+  await tab('技能').click();
   assert.equal(await page.locator('.tool-settings-indicator').evaluate(el=>el.getAnimations().some(animation=>animation.transitionProperty==='transform'&&animation.playState==='running')),true,'shared selection background moves between tabs');
   await aligned();assert.equal(await tab('MCP').count(),0);assert.equal(await page.evaluate(()=>window.calls.length),0,'Skills navigation performs no memory operations');
   await tab('主记忆').click();await value('Claude 原文\n第二行');
@@ -137,7 +137,7 @@ try{
   await page.evaluate(()=>window.setEnabled(['claude','codex','pi','cursor','copilot','opencode']));await page.waitForTimeout(350);
   assert.equal(await tools.getByRole('button').count(),6);assert.equal(await page.locator('.tool-settings-page').evaluate(el=>el.scrollWidth>el.clientWidth),false,'six icons fit without widening narrow windows');
   await page.screenshot({path:join(directory,'memory-six-tools-narrow.png')});
-  await tab('Browser Use').click();await page.keyboard.press('ArrowRight');assert.match(await page.getByRole('tab',{selected:true}).innerText(),/^常用 /);
+  await tab('浏览器控制').click();await page.keyboard.press('ArrowRight');assert.match(await page.getByRole('tab',{selected:true}).innerText(),/^常用 /);
   await aligned();
   await page.evaluate(()=>document.querySelectorAll('[role="tab"]').forEach(tab=>{tab.style.fontSize='15px'}));await aligned();
   await tab('主记忆').click();await value('Claude 草稿\n未保存');
@@ -147,6 +147,11 @@ try{
   await page.emulateMedia({reducedMotion:'reduce'});
   assert.equal(await page.locator('.tool-settings-indicator').evaluate(el=>getComputedStyle(el).transitionDuration),'0s');
   assert.equal(await tools.locator('.is-selected .tool-memory-tool-details').evaluate(el=>getComputedStyle(el).transitionDuration),'0s','reduced motion disables accordion movement');
+  for(const [language,skills,computer,browser]of[['en','Skills','Computer Use','Browser Use'],['ja','スキル','コンピューター操作','ブラウザー操作'],['zh-CN','技能','电脑控制','浏览器控制']]){
+    await page.evaluate(language=>{window.fixtureLanguage=language;window.setEnabled(['claude','codex'])},language);
+    await tab(skills).waitFor();await tab(browser).waitFor();await tab(computer).click();
+    assert.equal(await page.locator('.tool-settings-panel:not([hidden]) .tool-control-summary strong').innerText(),'Computer Use','the page title retains the English technical term');
+  }
   assert.deepEqual(errors,[]);
   console.log('OK: six themed tabs, Skills/memory isolation, actual editor/selector, lazy reads, late response isolation, per-tool drafts, page navigation, exact save payloads, conflict/failure retention, discard confirmation, missing/unsupported files, keyboard saving, themes and narrow layout');
   console.log('Screenshots: '+directory);

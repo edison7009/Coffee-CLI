@@ -4597,9 +4597,8 @@ async fn get_message_heatmap() -> Result<Vec<HeatmapEntry>, String> {
 }
 
 fn load_message_heatmap_blocking() -> Result<Vec<HeatmapEntry>, String> {
-    // Frontend renders a 26-week (≈ 6-month) grid. ~210 days back so
-    // the leftmost column is always populated even mid-week.
-    const LOOKBACK_SECS: u64 = 210 * 86400;
+    // Cover the full 53-week grid, including its first partial week.
+    const LOOKBACK_SECS: u64 = 371 * 86400;
     let now = std::time::SystemTime::now();
     let cutoff = now.checked_sub(std::time::Duration::from_secs(LOOKBACK_SECS))
         .unwrap_or(std::time::UNIX_EPOCH);
@@ -5293,6 +5292,8 @@ pub fn start_ui(pending_launch: Option<crate::launch::LaunchRequest>) -> anyhow:
             get_terminal_session_token,
             check_network_port,
             check_tools_installed,
+            crate::cli_updates::check_cli_update,
+            crate::cli_updates::update_cli,
             detect_shells,
             crate::tools::list_tools,
             maintain_tool_integration,

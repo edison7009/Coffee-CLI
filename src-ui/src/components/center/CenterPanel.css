@@ -387,10 +387,8 @@ body.session-split-dragging { cursor: grabbing; user-select: none; }
 
 /* "Can't detect?" - plain small text hugging the bottom-right corner of
    the pinned cards. No pill / icon / border (per design feedback): just
-   muted right-aligned text with a dotted underline. Negative margin-bottom
-   cancels this line's own height so the grid->heatmap gap stays at the
-   heatmap-card's built-in 24px (this line lives inside that gap, adding
-   ~zero net height). Tooltip is a themed data-tip ::after (NOT native
+   muted right-aligned text with a dotted underline.
+   Tooltip is a themed data-tip ::after (NOT native
    title=); width is fixed at 340px + right-anchored so CJK wraps normally
    instead of one-char-per-line (width:auto + left:center shrank the
    available width to the tiny trigger). span so the Glass/Carbon nuclear
@@ -399,7 +397,6 @@ body.session-split-dragging { cursor: grabbing; user-select: none; }
   display: flex;
   justify-content: flex-end;
   margin-top: 6px;
-  margin-bottom: -20px;
 }
 .detect-help-trigger {
   position: relative;

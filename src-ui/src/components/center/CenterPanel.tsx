@@ -12,10 +12,10 @@ import { ToolSettingsPage } from './ToolSettingsPage';
 import { useOrchestration, workerState } from '../../lib/orchestration';
 import '../../styles/orchestration.css';
 import { LaunchModeControl } from './LaunchModeControl';
+import { CliUpdateButton } from './CliUpdateButton';
 import { SessionSplitDividers } from './SessionSplitDividers';
 import { sessionSplitRects, splitSessionIds } from '../../lib/session-split-layout';
 import { ToolConfigModal } from './ToolConfigModal';
-import { ContributionHeatmap } from './ContributionHeatmap';
 import { ErrorBoundary } from '../common/ErrorBoundary';
 import { DiffPanel } from '../right/DiffPanel';
 import { getTabOrder, supportsAgentStatus, useAppState, type ClaudeMode, type ToolType } from '../../store/app-state';
@@ -1446,6 +1446,7 @@ export function CenterPanel() {
                                   }}
                                 >
                                   <div className="launchpad-icon">{tool.icon}</div>
+                                  {!isTerminal && tool.key && <CliUpdateButton tool={tool.key} active={!utilityPageOpen && !configModalTool} installed={installed} />}
                                   <div className="launchpad-card-info">
                                     <span style={isTerminal ? { display: 'inline-flex', alignItems: 'center', gap: '6px' } : undefined}>
                                       {tool.label}
@@ -1484,7 +1485,7 @@ export function CenterPanel() {
                         non-ASCII path segments become mojibake so `where`
                         can't resolve the binary and the card stays greyed.
                         Hover reveals the cause + 3 fixes. Sits between the
-                        pinned cards and the heatmap; tiny + muted so it
+                        pinned cards; tiny + muted so it
                         doesn't compete with the cards. Tooltip is a themed
                         data-tip pill (same pattern as the heatmap / commit
                         subject tooltips), not a native title=. */}
@@ -1517,14 +1518,6 @@ export function CenterPanel() {
                         {t('launchpad.switch_model_trigger')}
                       </a>
                     </div>
-
-                    {/* Activity heatmap — sits below the pinned cards so
-                        when Gambit's input panel grows from the bottom and
-                        squeezes available height, the heatmap (decorative)
-                        gets cropped first, not the pinned cards (functional).
-                        Renders independently of pinned state so a brand-
-                        new install still sees the grid. */}
-                    <ContributionHeatmap />
 
                     {/* ─── Remote Terminal Connection Form ─── */}
                     {showRemoteForm && (

@@ -1,16 +1,12 @@
-/* Half-year contribution heatmap above the Launchpad pinned cards.
-   Cells follow the active theme's --accent so the grid recolours
-   automatically across Dark / Light / Sakura / Lavender / etc.
-
-   No card chrome — heatmap blends into the launchpad surface so the
-   pinned cards below stay the visual anchor. */
+/* Annual activity stays separate from the dashboard's date filters. */
 
 .heatmap-card {
   width: 100%;
   box-sizing: border-box;
-  padding: 12px 0 0;
-  margin-top: 24px;
+  margin-bottom: 22px;
 }
+
+.heatmap-scroll { overflow-x:auto; padding:2px; margin:-2px; scrollbar-width:thin; direction:rtl; }
 
 .heatmap-loading {
   opacity: 0.45;
@@ -20,6 +16,7 @@
    below the grid as a footer caption. */
 .heatmap-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
@@ -68,6 +65,8 @@
   display: flex;
   gap: 4px;
   width: 100%;
+  min-width: 636px;
+  direction: ltr;
 }
 
 .heatmap-week {
@@ -84,7 +83,6 @@
   border-radius: 3px;
   background: var(--bg-hover);
   transition: outline-color 0.12s ease, background 0.18s ease;
-  /* position:relative anchors the ::after / ::before tooltip pseudos. */
   position: relative;
   outline: 1px solid transparent;
   outline-offset: 1px;
@@ -111,15 +109,11 @@
   z-index: 3;
 }
 
-/* Custom tooltip — replaces the default native `title=` chrome
-   (white box, OS font) with a themed pill that matches the rest of
-   the app. data-tip is set on every non-future cell. */
-.heatmap-cell[data-tip]:hover::after {
-  content: attr(data-tip);
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
+/* Render outside the scrolling grid so edge cells keep a visible tip. */
+.heatmap-tooltip {
+  position: fixed;
+  transform: translate(-50%,-100%);
+  max-width: min(236px,calc(100vw - 16px));
   padding: 6px 10px;
   background: var(--bg-panel);
   color: var(--text-1);
@@ -129,29 +123,9 @@
   font-weight: 500;
   letter-spacing: 0.01em;
   line-height: 1.3;
-  white-space: nowrap;
+  text-align: center;
+  overflow-wrap: anywhere;
   pointer-events: none;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.20), 0 6px 20px rgba(0, 0, 0, 0.22);
-  z-index: 100;
-  /* Prevent the tooltip itself from triggering the parent's hover
-     state if the user lifts the cursor onto the pill (it already
-     sits above the cell, but pointer-events: none above is the
-     belt-and-braces guarantee). */
-}
-
-/* Tooltip arrow — a 4px triangle bridging the gap between cell and
-   pill so the tooltip reads as anchored, not floating. */
-.heatmap-cell[data-tip]:hover::before {
-  content: '';
-  position: absolute;
-  bottom: calc(100% + 4px);
-  left: 50%;
-  transform: translateX(-50%);
-  width: 0;
-  height: 0;
-  border-left: 4px solid transparent;
-  border-right: 4px solid transparent;
-  border-top: 4px solid var(--border);
-  pointer-events: none;
-  z-index: 100;
+  z-index: 10000;
 }

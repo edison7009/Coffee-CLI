@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { ThemedSelect } from '../common/ThemedSelect';
+import { ContributionHeatmap } from './ContributionHeatmap';
 import { useT } from '../../i18n/useT';
 import { getUsageStatistics, readUsageSnapshot, writeUsageSnapshot, usageDays, usageRange, type UsageReport } from '../../lib/usage-stats';
 import '../common/SettingsModal.css';
@@ -56,6 +57,7 @@ export function UsageDashboard() {
     { title: t('usage.cache'), value: cache, detail: `${t('usage.cacheRead')} ${format(s?.cacheRead)}` },
   ];
   return <section className="usage-dashboard" aria-label={t('usage.title')}>
+    <ContributionHeatmap />
     <div className="usage-toolbar"><div className="usage-range" role="group" aria-label={t('usage.range')}>{[1, 7, 30].map(value => <button type="button" key={value} aria-pressed={days === value} onClick={() => setDays(value)}>{t(value === 1 ? 'usage.today' : value === 7 ? 'usage.week' : 'usage.month')}</button>)}</div>
       <ThemedSelect className="usage-filter-trigger" menuClassName="usage-filter-menu" label={t('usage.tool')} value={tool} onChange={setTool} options={[{ value: '', label: t('usage.all_tools') }, { value: 'claude', label: 'Claude Code' }, { value: 'codex', label: 'Codex CLI' }]} />
       <ThemedSelect className="usage-filter-trigger" menuClassName="usage-filter-menu" label={t('usage.project')} value={project} onChange={setProject} options={[{ value: '', label: t('usage.all_projects') }, ...projects.map(path => ({ value: path, label: path }))]} />

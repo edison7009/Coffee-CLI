@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { isTauri, commands } from '../../tauri';
 import { useT } from '../../i18n/useT';
 import './ContributionHeatmap.css';
 
-// 26 weeks ≈ 6 months. Half-year view keeps activity dense enough that
-// the grid reads as a heatmap (not a sparsely-lit bar) for any user
-// who's been active in the last few weeks.
-const WEEKS = 26;
+// Include a full year even when the current week is incomplete.
+const WEEKS = 53;
 const DAYS = 7;
 
 interface DayCell {
@@ -37,7 +36,7 @@ function levelFor(count: number, max: number): 0 | 1 | 2 | 3 | 4 {
 }
 
 // Heatmap data only changes day-by-day. Re-fetching every time the user
-// switches launchpad ↔ tool tab (the component remounts on each visit)
+// opens usage statistics (the component remounts on each visit)
 // runs the 6-tool jsonl scan + opencode SQLite scan all over again. Cache
 // the fetched entries keyed by today's localDayKey so:
 //   - within one session: module-level memory hit, no API call at all
@@ -49,9 +48,9 @@ function levelFor(count: number, max: number): 0 | 1 | 2 | 3 | 4 {
 // ignored — the module-level cache still prevents intra-session refetch.
 type HeatmapEntry = { ts: number; count: number };
 type HeatmapCache = { date: string; entries: HeatmapEntry[]; fetchedAt: number };
-const HEATMAP_CACHE_KEY = 'cc-heatmap-cache';
+const HEATMAP_CACHE_KEY = 'cc-heatmap-year-cache';
 // Refetch coalescing window. Within this TTL, repeat mounts (user toggling
-// between launchpad ↔ tool tab) skip the IPC call entirely. Past it, we
+// between statistics and tool tabs) skip the IPC call entirely. Past it, we
 // rescan so heatmap reflects intra-day activity (new sessions, new messages
 // in long-running CLI tabs). Backend `count_cache` keeps the rescan cheap —
 // any jsonl whose mtime is unchanged skips the file read.
@@ -116,8 +115,9 @@ function pickInitialCache(): HeatmapCache | null {
 
 export function ContributionHeatmap() {
   const t = useT();
+  const [tooltip, setTooltip] = useState<{ label: string; left: number; top: number } | null>(null);
   // Lazy initializers seed state from cache BEFORE the first render — when
-  // the user switches launchpad ↔ tool tab there's no empty-grid flash
+  // the user returns to usage statistics there's no empty-grid flash
   // because by paint time the buckets are already populated.
   const [initialCache] = useState(pickInitialCache);
   const initialBuckets = initialCache ? entriesToBuckets(initialCache.entries) : null;
@@ -128,6 +128,13 @@ export function ContributionHeatmap() {
     () => initialBuckets?.sessions ?? new Map()
   );
   const [loaded, setLoaded] = useState(initialCache !== null || !isTauri);
+
+  useEffect(() => {
+    if (!tooltip) return;
+    const hide = () => setTooltip(null);
+    window.addEventListener('scroll', hide, true); window.addEventListener('resize', hide);
+    return () => { window.removeEventListener('scroll', hide, true); window.removeEventListener('resize', hide); };
+  }, [tooltip]);
 
   useEffect(() => {
     if (!isTauri) {
@@ -212,6 +219,8 @@ export function ContributionHeatmap() {
 
   return (
     <div className={`heatmap-card${!loaded ? ' heatmap-loading' : ''}`}>
+      {tooltip && createPortal(<span className="heatmap-tooltip" role="tooltip" style={{ left: tooltip.left, top: tooltip.top }}>{tooltip.label}</span>, document.body)}
+      <div className="heatmap-scroll">
       <div
         className="heatmap-grid"
         role="img"
@@ -233,11 +242,18 @@ export function ContributionHeatmap() {
                   className="heatmap-cell"
                   data-level={cell.future ? -1 : cell.level}
                   data-tip={tip || undefined}
+                  onMouseEnter={event => {
+                    if (!tip) return;
+                    const rect = event.currentTarget.getBoundingClientRect();
+                    setTooltip({ label: tip, left: Math.max(120, Math.min(rect.left + rect.width / 2, window.innerWidth - 120)), top: rect.top - 8 });
+                  }}
+                  onMouseLeave={() => setTooltip(null)}
                 />
               );
             })}
           </div>
         ))}
+      </div>
       </div>
       <div className="heatmap-header">
         <span className="heatmap-title">{headerLabel}</span>
