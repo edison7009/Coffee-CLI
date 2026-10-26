@@ -68,6 +68,15 @@ try {
   assert.match(await rows.nth(1).locator('.history-git-mark').getAttribute('title'),/feature\/ui.*#42 Open.*Passed/);
   assert.equal(await rows.nth(2).locator('.history-git-mark').count(),0,'closed history is not assigned the current project PR');
   assert.equal(await page.locator('.history-card-working').count(), 1, 'same folder/cross-tool tokens do not acquire another task status');
+  await page.goto(`http://127.0.0.1:${server.address().port}/?deferGit=1`);
+  await page.waitForFunction(() => typeof window.resolveGitStatus === 'function');
+  const restoredMark = rows.nth(1).locator('.history-git-mark.is-open');
+  await restoredMark.waitFor();
+  assert.equal(await page.evaluate(() => window.gitReadCount), 1, 'restart checks native status while the restored mark remains visible');
+  const restoredNode = await restoredMark.elementHandle();
+  await page.evaluate(() => window.resolveGitStatus());
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  assert.equal(await restoredMark.evaluate((element, previous) => element === previous, restoredNode), true, 'an unchanged refresh retains the same icon element');
   const working = rows.first();
   const circle = working.locator('.history-card-working-indicator');
   assert.equal(await circle.isVisible(), true);
@@ -106,6 +115,7 @@ try {
       await page.mouse.move(500, 300);
     }
   }
+  await page.evaluate(() => localStorage.removeItem('cc-project-git-status-v1'));
   await page.goto(`http://127.0.0.1:${server.address().port}/?perSession=1&pr=branch`);
   await page.mouse.move(500, 300);
   const unreadRow = page.locator('.history-card').nth(1);
@@ -148,7 +158,7 @@ try {
   await page.locator('.ctx-menu').getByRole('button', { name: 'Delete', exact: true }).click();
   assert.deepEqual(await page.evaluate(() => window.removed), ['a', 'b'], 'context menu deletion also closes its matching tab');
   for(const [state,ci] of [['open','failure'],['open','pending'],['draft',null],['merged',null],['closed',null]]) {
-    await page.evaluate(()=>localStorage.setItem('cc-history-layout','list'));
+    await page.evaluate(()=>{localStorage.setItem('cc-history-layout','list');localStorage.removeItem('cc-project-git-status-v1')});
     await page.goto(`http://127.0.0.1:${server.address().port}/?pr=${state}&ci=${ci??''}`);
     await page.mouse.move(500, 300);
     const mark=page.locator('.history-card').nth(1).locator('.history-git-mark');
@@ -164,7 +174,7 @@ try {
   }
   for (const layout of ['projects', 'list']) {
     for (const [state, ci] of [['branch', null], ['open', 'success'], ['open', 'failure'], ['open', 'pending'], ['draft', null], ['merged', null], ['closed', null]]) {
-      await page.evaluate(layout => localStorage.setItem('cc-history-layout', layout), layout);
+      await page.evaluate(layout => { localStorage.setItem('cc-history-layout', layout); localStorage.removeItem('cc-project-git-status-v1'); }, layout);
       await page.goto(`http://127.0.0.1:${server.address().port}/?deferGit=1&pr=${state}&ci=${ci ?? ''}`);
       await page.mouse.move(500, 300);
       await page.waitForFunction(() => typeof window.resolveGitStatus === 'function');
@@ -188,7 +198,7 @@ try {
     }
   }
   for (const layout of ['projects', 'list']) {
-    await page.evaluate(layout => localStorage.setItem('cc-history-layout', layout), layout);
+    await page.evaluate(layout => { localStorage.setItem('cc-history-layout', layout); localStorage.removeItem('cc-project-git-status-v1'); }, layout);
     await page.goto(`http://127.0.0.1:${server.address().port}/?perSession=1&pr=branch`);
     await page.mouse.move(500, 300);
     const merged = page.locator('.history-card').nth(1).locator('.history-git-mark.is-merged');

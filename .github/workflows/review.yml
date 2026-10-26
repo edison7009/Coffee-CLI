@@ -39,6 +39,7 @@ jobs:
           node scripts/run-conversation-virtualizer-test.mjs
           node scripts/run-review-regressions.mjs
           node scripts/run-history-cache-test.mjs
+          node scripts/run-project-git-status-test.mjs
           node scripts/run-session-replies-test.mjs
 
   native:
