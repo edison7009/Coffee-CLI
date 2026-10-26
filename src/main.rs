@@ -25,6 +25,7 @@ mod fonts;
 mod fs_watcher;
 mod launch;
 mod tool_config;
+mod tool_memory;
 mod tools;
 mod usage_stats;
 mod git;

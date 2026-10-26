@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { Fragment, useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { focusTerminal } from '../../lib/focus-registry';
 import { onWindowForeground } from '../../lib/window-focus-filter';
@@ -7,6 +7,7 @@ import { AgentPages } from '../agent/AgentPages';
 import { ClaudeConversation } from './ClaudeConversation';
 import { CodexConversation } from './CodexConversation';
 import { UsageDashboard } from './UsageDashboard';
+import { ToolSettingsPage } from './ToolSettingsPage';
 import { LaunchModeControl } from './LaunchModeControl';
 import { SessionSplitDividers } from './SessionSplitDividers';
 import { sessionSplitRects, splitSessionIds } from '../../lib/session-split-layout';
@@ -125,6 +126,7 @@ import './CenterPanel.css';
 // rationale and the history of failed attempts.
 import CLAUDE_SVG from '../../icons-inline/claude.svg?raw';
 import CODEX_SVG from '../../icons-inline/codex.svg?raw';
+import ANTIGRAVITY_SVG from '../../icons-inline/antigravity.svg?raw';
 import MIMOCODE_DATA_URL from '../../icons-inline/mimocode.png?inline';
 import HERMES_DATA_URL from '../../icons-inline/hermes.png?inline';
 import TERMINAL_MAC_DATA_URL from '../../icons-inline/terminal-macos.png?inline';
@@ -197,7 +199,6 @@ const bgIcon = (dataUrl: string, size = '1em', extra: React.CSSProperties = {}) 
 // SVGs above). Source SVG had `width="1em" height="1em"`; normalized to
 // `width="100%" height="100%"` so it fills the CSS-controlled 44px slot
 // like the other tool icons.
-const ANTIGRAVITY_SVG = '<svg height="100%" style="flex:none;line-height:1" viewBox="0 0 24 24" width="100%" xmlns="http://www.w3.org/2000/svg"><title>Antigravity</title><mask height="23" id="lobe-icons-antigravity-0-_R_0_" maskUnits="userSpaceOnUse" width="24" x="0" y="1"><path d="M21.751 22.607c1.34 1.005 3.35.335 1.508-1.508C17.73 15.74 18.904 1 12.037 1 5.17 1 6.342 15.74.815 21.1c-2.01 2.009.167 2.511 1.507 1.506 5.192-3.517 4.857-9.714 9.715-9.714 4.857 0 4.522 6.197 9.714 9.715z" fill="#fff"></path></mask><g mask="url(#lobe-icons-antigravity-0-_R_0_)"><g filter="url(#lobe-icons-antigravity-1-_R_0_)"><path d="M-1.018-3.992c-.408 3.591 2.686 6.89 6.91 7.37 4.225.48 7.98-2.043 8.387-5.633.408-3.59-2.686-6.89-6.91-7.37-4.225-.479-7.98 2.043-8.387 5.633z" fill="#FFE432"></path></g><g filter="url(#lobe-icons-antigravity-2-_R_0_)"><path d="M15.269 7.747c1.058 4.557 5.691 7.374 10.348 6.293 4.657-1.082 7.575-5.653 6.516-10.21-1.058-4.556-5.691-7.374-10.348-6.292-4.657 1.082-7.575 5.653-6.516 10.21z" fill="#FC413D"></path></g><g filter="url(#lobe-icons-antigravity-3-_R_0_)"><path d="M-12.443 10.804c1.338 4.703 7.36 7.11 13.453 5.378 6.092-1.733 9.947-6.95 8.61-11.652C8.282-.173 2.26-2.58-3.833-.848-9.925.884-13.78 6.1-12.443 10.804z" fill="#00B95C"></path></g><g filter="url(#lobe-icons-antigravity-4-_R_0_)"><path d="M-12.443 10.804c1.338 4.703 7.36 7.11 13.453 5.378 6.092-1.733 9.947-6.95 8.61-11.652C8.282-.173 2.26-2.58-3.833-.848-9.925.884-13.78 6.1-12.443 10.804z" fill="#00B95C"></path></g><g filter="url(#lobe-icons-antigravity-5-_R_0_)"><path d="M-7.608 14.703c3.352 3.424 9.126 3.208 12.896-.483 3.77-3.69 4.108-9.459.756-12.883C2.69-2.087-3.083-1.871-6.853 1.82c-3.77 3.69-4.108 9.458-.755 12.883z" fill="#00B95C"></path></g><g filter="url(#lobe-icons-antigravity-6-_R_0_)"><path d="M9.932 27.617c1.04 4.482 5.384 7.303 9.7 6.3 4.316-1.002 6.971-5.448 5.93-9.93-1.04-4.483-5.384-7.304-9.7-6.301-4.316 1.002-6.971 5.448-5.93 9.93z" fill="#3186FF"></path></g><g filter="url(#lobe-icons-antigravity-7-_R_0_)"><path d="M2.572-8.185C.392-3.329 2.778 2.472 7.9 4.771c5.122 2.3 11.042.227 13.222-4.63 2.18-4.855-.205-10.656-5.327-12.955-5.122-2.3-11.042-.227-13.222 4.63z" fill="#FBBC04"></path></g><g filter="url(#lobe-icons-antigravity-8-_R_0_)"><path d="M-3.267 38.686c-5.277-2.072 3.742-19.117 5.984-24.83 2.243-5.712 8.34-8.664 13.616-6.592 5.278 2.071 11.533 13.482 9.29 19.195-2.242 5.713-23.613 14.298-28.89 12.227z" fill="#3186FF"></path></g><g filter="url(#lobe-icons-antigravity-9-_R_0_)"><path d="M28.71 17.471c-1.413 1.649-5.1.808-8.236-1.878-3.135-2.687-4.531-6.201-3.118-7.85 1.412-1.649 5.1-.808 8.235 1.878s4.532 6.2 3.119 7.85z" fill="#749BFF"></path></g><g filter="url(#lobe-icons-antigravity-10-_R_0_)"><path d="M18.163 9.077c5.81 3.93 12.502 4.19 14.946.577 2.443-3.612-.287-9.727-6.098-13.658-5.81-3.931-12.502-4.19-14.946-.577-2.443 3.612.287 9.727 6.098 13.658z" fill="#FC413D"></path></g><g filter="url(#lobe-icons-antigravity-11-_R_0_)"><path d="M-.915 2.684c-1.44 3.473-.97 6.967 1.05 7.804 2.02.837 4.824-1.3 6.264-4.772 1.44-3.473.97-6.967-1.05-7.804-2.02-.837-4.824 1.3-6.264 4.772z" fill="#FFEE48"></path></g></g><defs><filter color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse" height="17.587" id="lobe-icons-antigravity-1-_R_0_" width="19.838" x="-3.288" y="-11.917"><feFlood flood-opacity="0" result="BackgroundImageFix"></feFlood><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"></feBlend><feGaussianBlur result="effect1_foregroundBlur_977_115" stdDeviation="1.117"></feGaussianBlur></filter><filter color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse" height="38.565" id="lobe-icons-antigravity-2-_R_0_" width="38.9" x="4.251" y="-13.493"><feFlood flood-opacity="0" result="BackgroundImageFix"></feFlood><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"></feBlend><feGaussianBlur result="effect1_foregroundBlur_977_115" stdDeviation="5.4"></feGaussianBlur></filter><filter color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse" height="36.517" id="lobe-icons-antigravity-3-_R_0_" width="40.955" x="-21.889" y="-10.592"><feFlood flood-opacity="0" result="BackgroundImageFix"></feFlood><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"></feBlend><feGaussianBlur result="effect1_foregroundBlur_977_115" stdDeviation="4.591"></feGaussianBlur></filter><filter color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse" height="36.517" id="lobe-icons-antigravity-4-_R_0_" width="40.955" x="-21.889" y="-10.592"><feFlood flood-opacity="0" result="BackgroundImageFix"></feFlood><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"></feBlend><feGaussianBlur result="effect1_foregroundBlur_977_115" stdDeviation="4.591"></feGaussianBlur></filter><filter color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse" height="36.595" id="lobe-icons-antigravity-5-_R_0_" width="36.632" x="-19.099" y="-10.278"><feFlood flood-opacity="0" result="BackgroundImageFix"></feFlood><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"></feBlend><feGaussianBlur result="effect1_foregroundBlur_977_115" stdDeviation="4.591"></feGaussianBlur></filter><filter color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse" height="34.087" id="lobe-icons-antigravity-6-_R_0_" width="33.533" x=".981" y="8.758"><feFlood flood-opacity="0" result="BackgroundImageFix"></feFlood><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"></feBlend><feGaussianBlur result="effect1_foregroundBlur_977_115" stdDeviation="4.363"></feGaussianBlur></filter><filter color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse" height="35.276" id="lobe-icons-antigravity-7-_R_0_" width="35.978" x="-6.143" y="-21.659"><feFlood flood-opacity="0" result="BackgroundImageFix"></feFlood><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"></feBlend><feGaussianBlur result="effect1_foregroundBlur_977_115" stdDeviation="3.954"></feGaussianBlur></filter><filter color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse" height="46.523" id="lobe-icons-antigravity-8-_R_0_" width="45.114" x="-11.96" y="-.46"><feFlood flood-opacity="0" result="BackgroundImageFix"></feFlood><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"></feBlend><feGaussianBlur result="effect1_foregroundBlur_977_115" stdDeviation="3.531"></feGaussianBlur></filter><filter color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse" height="24.054" id="lobe-icons-antigravity-9-_R_0_" width="25.094" x="10.485" y=".58"><feFlood flood-opacity="0" result="BackgroundImageFix"></feFlood><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"></feBlend><feGaussianBlur result="effect1_foregroundBlur_977_115" stdDeviation="3.159"></feGaussianBlur></filter><filter color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse" height="30.007" id="lobe-icons-antigravity-10-_R_0_" width="33.508" x="5.833" y="-12.467"><feFlood flood-opacity="0" result="BackgroundImageFix"></feFlood><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"></feBlend><feGaussianBlur result="effect1_foregroundBlur_977_115" stdDeviation="2.669"></feGaussianBlur></filter><filter color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse" height="26.151" id="lobe-icons-antigravity-11-_R_0_" width="22.194" x="-8.355" y="-8.876"><feFlood flood-opacity="0" result="BackgroundImageFix"></feFlood><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"></feBlend><feGaussianBlur result="effect1_foregroundBlur_977_115" stdDeviation="3.303"></feGaussianBlur></filter></defs></svg>';
 // OpenCode brand mark — inline SVG, ported from the official apple-touch-icon.
 // Earlier we shipped a PNG to chase pixel parity, but PNG-via-<img> kept
 // flashing on tab switch even with `decoding="sync"` + App-mount img.decode()
@@ -381,7 +382,8 @@ export function CenterPanel() {
   const diffTabActive = state.diffTabActive;
   const agentPageActive = state.agentPageActive;
   const usageOpen = state.usageOpen;
-  const contentActive = !usageOpen && !diffTabActive && !agentPageActive;
+  const utilityPageOpen = usageOpen || state.toolSettingsOpen;
+  const contentActive = !utilityPageOpen && !diffTabActive && !agentPageActive;
   const splitIds = splitSessionIds(state.sessionSplit);
   const splitVisible = contentActive && splitIds.length > 1 && splitIds.includes(activeTerminalId ?? '');
   const splitRects = splitVisible ? sessionSplitRects(state.sessionSplit!).leaves : [];
@@ -397,7 +399,6 @@ export function CenterPanel() {
   const [toolsInstalled, setToolsInstalled] = useState<Record<string, boolean>>({});
   // Per-tool launch override modal (gear icon → opens settings for that tool).
   const [configModalTool, setConfigModalTool] = useState<{ key: string; label: string } | null>(null);
-  const [showLibrary, setShowLibrary] = useState(false);
   const [pinnedItems, setPinnedItems] = useState<string[]>(() => {
     // Hard cap must match MAX_PINS constant below. Inlined as a literal
     // because MAX_PINS is declared after this initializer runs.
@@ -687,7 +688,7 @@ export function CenterPanel() {
   // Mirrored into a ref so the window-foreground rescan (which has [] deps and
   // can't see the latest value otherwise) can skip work while in a terminal tab.
   const isLaunchpadModeRef = useRef(isLaunchpadMode);
-  useEffect(() => { isLaunchpadModeRef.current = isLaunchpadMode; }, [isLaunchpadMode]);
+  useEffect(() => { isLaunchpadModeRef.current = isLaunchpadMode && !utilityPageOpen; }, [isLaunchpadMode, utilityPageOpen]);
 
 
 
@@ -696,23 +697,9 @@ export function CenterPanel() {
   // Scan runs on:
   //   - Launchpad first shown
   //   - Remote catalog refreshed
-  //   - User returns from Library to Desktop (back arrow) — picks up new pins' install state
-  // Never on pinnedItems changes → pin click stays instant.
+  // Returning to the launcher refreshes install state without reacting to pin changes.
   useEffect(() => {
-    if (!isTauri || !isLaunchpadMode) return;
-    if (showLibrary) return; // Library open: stay silent
-    // Debounce: rapid 9-dot ↔ back toggles would otherwise stack up
-    // checkToolsInstalled() IPCs (PATH scan for 7 CLIs, ~200ms-1s each
-    // on Windows). The serial IPC queue blocked React reconciliation
-    // and the next mode-switch click looked dead. Only fire after the
-    // user has actually settled on the launchpad for 300ms.
-    //
-    // Cache gate (30s TTL): tool install state doesn't change just
-    // because the user toggled in/out of Library — binaries are on
-    // PATH or not regardless of pin actions. Skipping the rescan when
-    // we just did one seconds ago kills the "click back, wait, click
-    // 9-dot, lag" feel without losing the legitimate refresh-after-
-    // a-real-install case (TTL expires after idle).
+    if (!isTauri || !isLaunchpadMode || utilityPageOpen) return;
     const SCAN_TTL_MS = 30_000;
     const handle = setTimeout(() => {
       if (Date.now() - lastToolsScanAt.current < SCAN_TTL_MS) return;
@@ -721,12 +708,12 @@ export function CenterPanel() {
         .catch(() => {});
     }, 300);
     return () => clearTimeout(handle);
-  }, [isLaunchpadMode, showLibrary]);
+  }, [isLaunchpadMode, utilityPageOpen]);
 
   // Window-focus rescan — picks up CLIs the user just installed in an
   // external terminal without forcing them to restart Coffee CLI. The
   // launchpad-mode useEffect above only re-fires when isLaunchpadMode
-  // / showLibrary actually change; sitting on the launchpad while
+  // / utilityPageOpen actually change; sitting on the launchpad while
   // alt-tabbing out to install a CLI doesn't toggle either, so the
   // scan-cache stays warm and the gray card never flips. Focus event
   // is the natural "user just came back, may have done something
@@ -765,7 +752,6 @@ export function CenterPanel() {
   // The sidebar opens the tool selector without adding an empty titlebar tab.
   useEffect(() => {
     const openNewSession = () => {
-      setShowLibrary(false);
       const idle = terminals.find(session => session.tool === null);
       if (idle) dispatch({ type: 'SET_ACTIVE_TERMINAL', id: idle.id });
       else dispatch({ type: 'ADD_TERMINAL', session: { id: crypto.randomUUID(), tool: null, folderPath: null } });
@@ -1200,7 +1186,7 @@ export function CenterPanel() {
             const page = tabId === 'agent:agent' ? 'agent' : 'config';
             return (
               <div key={tabId} data-tab-id={tabId}
-                className={`chrome-tab ${agentPageActive === page && !usageOpen ? 'active' : ''} ${isDragging ? 'dragging' : ''}`}
+                className={`chrome-tab ${agentPageActive === page && !utilityPageOpen ? 'active' : ''} ${isDragging ? 'dragging' : ''}`}
                 style={dragStyle} onClick={() => onTabClickGuarded(tabId)}
                 onPointerDown={event => onTabPointerDown(event, tabId)}>
                 <span className="tab-title">{page === 'agent' ? 'Coffee Agent' : t('agent.page.settings')}</span>
@@ -1275,7 +1261,7 @@ export function CenterPanel() {
             diff entirely. No status-grid (diff has no agent state). */}
         {diffTabVisible && (
           <div
-            className={`chrome-tab ${diffTabActive && !usageOpen ? 'active' : ''}`}
+            className={`chrome-tab ${diffTabActive && !utilityPageOpen ? 'active' : ''}`}
             onClick={() => dispatch({ type: 'SET_DIFF_TAB_ACTIVE', active: true })}
           >
             {/* Diff tab glyph: a document with text lines — reads as "file
@@ -1378,7 +1364,7 @@ export function CenterPanel() {
         {/* Diff tab content — fills the content area when the diff tab is
             focused. The DiffPanel body handles its own loading/error/too-large
             states; mode="tab" makes it fill this slot (no portal/backdrop). */}
-        {diffTabVisible && diffTabActive && !usageOpen && state.diffSelection && (
+        {diffTabVisible && diffTabActive && !utilityPageOpen && state.diffSelection && (
           <div className="terminal-wrapper" style={{ display: 'flex', width: '100%', height: '100%', position: 'relative' }}>
             <DiffPanel
               mode="tab"
@@ -1397,12 +1383,52 @@ export function CenterPanel() {
         )}
 
         {state.agentPages.map(page => (
-          <div key={page} className="terminal-wrapper" style={{ display: agentPageActive === page && !usageOpen ? 'flex' : 'none', width: '100%', height: '100%' }}>
+          <div key={page} className="terminal-wrapper" style={{ display: agentPageActive === page && !utilityPageOpen ? 'flex' : 'none', width: '100%', height: '100%' }}>
             <AgentPages page={page} />
           </div>
         ))}
 
         {usageOpen && <UsageDashboard />}
+        <ToolSettingsPage active={state.toolSettingsOpen} tools={AGENT_CATALOG.filter(item => pinnedItems.includes(`agent:${item.key}`)).map(item => ({ value: item.key as string, label: item.label, icon: item.icon }))} count={pinnedItems.length} limit={MAX_PINS}>
+          {[true, false].map(enabled => {
+            const items = AGENT_CATALOG.filter(item => item.type === 'ai-cli' && pinnedItems.includes(`agent:${item.key}`) === enabled);
+            return items.length > 0 ? <Fragment key={String(enabled)}>
+              {!enabled && pinnedItems.length > 0 && <hr className="library-divider" />}
+              <div className="library-grid" data-enabled={enabled}>
+                {items.map(item => {
+                  const pinId = `agent:${item.key}`;
+                  const isPinned = pinnedItems.includes(pinId);
+                  const hasGear = CONFIGURABLE_AGENT_TOOLS.has(item.key);
+                  return (
+                    <div
+                      key={item.key}
+                      className={`library-item ${isPinned ? 'is-pinned' : ''}`}
+                      onClick={() => togglePin(pinId)}
+                    >
+                      <div className="library-item-icon">{item.icon}</div>
+                      <span className="library-item-name">{item.label}</span>
+                      {hasGear && (
+                        <span
+                          className="library-gear-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setConfigModalTool({ key: item.key as string, label: item.label });
+                          }}
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="3"/>
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                          </svg>
+                        </span>
+                      )}
+                      <div className={`library-toggle${isPinned ? ' on' : ''}`}><div className="library-toggle-knob" /></div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Fragment> : null;
+          })}
+        </ToolSettingsPage>
         {isLaunchpadMode && activeTerminalId && contentActive && (
           <div className={`launchpad-container${hasBg && bgUrl ? ' launchpad-has-bg' : ''}`} style={{ position: 'relative' }}>
             {hasBg && bgUrl && (
@@ -1412,11 +1438,6 @@ export function CenterPanel() {
                   : <img src={bgUrl} alt="" onError={() => { setBgUrl(''); }} />}
               </div>
             )}
-            {/* The sidebar opens this selector without a titlebar tab. */}
-            <div className="launchpad-slider-viewport">
-              <div className={`launchpad-slider-track ${showLibrary ? 'slide-to-library' : ''}`}>
-
-                {/* ─── Page 1: Desktop (pinned items) ─── */}
                 <div className="launchpad-page">
                   <div className="launchpad-inner">
                     {(() => {
@@ -1677,109 +1698,8 @@ export function CenterPanel() {
 
                   </div>
                 </div>
-
-                {/* Page 2: Library (Agents) */}
-                <div className="launchpad-page library-page">
-                  <div className="launchpad-inner">
-                        {/* Section 1: AI CLI agents (3-col) */}
-                        <div className="library-grid">
-                          {AGENT_CATALOG.filter(item => item.type === 'ai-cli').map(item => {
-                            const pinId = `agent:${item.key}`;
-                            const isPinned = pinnedItems.includes(pinId);
-                            const hasGear = CONFIGURABLE_AGENT_TOOLS.has(item.key);
-                            return (
-                              <div
-                                key={item.key}
-                                className={`library-item ${isPinned ? 'is-pinned' : ''}`}
-                                onClick={() => togglePin(pinId)}
-                              >
-                                <div className="library-item-icon">{item.icon}</div>
-                                <span className="library-item-name">{item.label}</span>
-                                {hasGear && (
-                                  <span
-                                    className="library-gear-btn"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setConfigModalTool({ key: item.key as string, label: item.label });
-                                    }}
-                                  >
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                      <circle cx="12" cy="12" r="3"/>
-                                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-                                    </svg>
-                                  </span>
-                                )}
-                                <div className={`library-toggle${isPinned ? ' on' : ''}`}><div className="library-toggle-knob" /></div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                  </div>
-
-                </div>
-
-              </div>
-            </div>
-
-            {/* ── Top-anchored chrome (always mounted, opacity-toggled) ──
-                Placed OUTSIDE the slider track so it doesn't slide
-                horizontally with the page transition. Instead each
-                chrome group cross-fades against the other based on
-                showLibrary. Slide is for content (nav between modes);
-                fade is for chrome (the mode label). Mixing the two
-                kinds of motion reads more polished than forcing one
-                animation type onto both. */}
-            <div
-              className={`launchpad-chrome launchpad-chrome--desktop ${showLibrary ? '' : 'is-visible'}`}
-              aria-hidden={showLibrary}
-            >
-              <button
-                className="mode-switch-btn"
-                onClick={() => setShowLibrary(true)}
-                aria-label="Open library"
-              >
-                <div className="mode-switch-icon">
-                  {/* 2×2 app grid = "open the tools/apps library" — the
-                      macOS Launchpad / iOS App Library metaphor for this
-                      button's actual job. The "+" in the last cell reads as
-                      "more / add a tool". Replaces the former gear, which
-                      collided with the settings-screen gear and mis-read as
-                      "设置" rather than "应用页". A grid is concrete here, not
-                      abstract — it depicts the apps the button opens. */}
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="3" width="7.5" height="7.5" rx="1.6"/>
-                    <rect x="13.5" y="3" width="7.5" height="7.5" rx="1.6"/>
-                    <rect x="3" y="13.5" width="7.5" height="7.5" rx="1.6"/>
-                    <line x1="17.25" y1="14.3" x2="17.25" y2="20.2"/>
-                    <line x1="14.3" y1="17.25" x2="20.2" y2="17.25"/>
-                  </svg>
-                </div>
-              </button>
-            </div>
-
-            <div
-              className={`launchpad-chrome launchpad-chrome--library ${showLibrary ? 'is-visible' : ''}`}
-              aria-hidden={!showLibrary}
-            >
-              <button
-                className="mode-switch-btn launchpad-chrome-back"
-                onClick={() => setShowLibrary(false)}
-                aria-label="Back to desktop"
-              >
-                <div className="mode-switch-icon">
-                  {/* Pure chevron < — no extension line, fewer strokes,
-                      visually paired with the gear (both naked glyphs,
-                      same stroke width, same hit area). */}
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="15 18 9 12 15 6"/>
-                  </svg>
-                </div>
-              </button>
-              <div className="library-counter">{pinnedItems.length} / {MAX_PINS}</div>
-            </div>
-
           </div>
-                )}
+        )}
       </div>
 
       {/* Per-tool launch override modal. Mounted at root so its fixed-

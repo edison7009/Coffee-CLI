@@ -290,6 +290,18 @@ const split = reducer(state, { type: 'SET_TERMINAL_CWD', id: 'C', path: '/C/new'
 assert.equal(split.terminals[0], state.terminals[0]);
 assert.equal(split.terminals[2].folderPath, '/C/new');
 
+const toolSettings = reducer(state, { type: 'SET_TOOL_SETTINGS_OPEN', open: true });
+assert.equal(toolSettings.toolSettingsOpen, true);
+assert.equal(toolSettings.terminals, state.terminals, 'tool settings keeps existing sessions mounted');
+assert.equal(toolSettings.activeTerminalId, 'A');
+const statistics = reducer(toolSettings, { type: 'SET_USAGE_OPEN', open: true });
+assert.equal(statistics.toolSettingsOpen, false);
+assert.equal(statistics.usageOpen, true);
+assert.equal(reducer(statistics, { type: 'SET_TOOL_SETTINGS_OPEN', open: true }).usageOpen, false);
+const conversation = reducer(toolSettings, { type: 'SET_ACTIVE_TERMINAL', id: 'B' });
+assert.equal(conversation.toolSettingsOpen, false);
+assert.equal(conversation.activeTerminalId, 'B');
+
 // Cleanup during both async import and listen() registration, including StrictMode remounts.
 for (const [file, fragment] of [
   ['components/right/TaskBoard.tsx', "'tasks-changed'"],

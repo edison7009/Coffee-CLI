@@ -362,71 +362,14 @@ body.session-split-dragging { cursor: grabbing; user-select: none; }
   opacity: var(--wallpaper-opacity, 0.7);
 }
 
-.launchpad-slider-viewport {
+.launchpad-page {
+  position: relative;
   width: 100%;
   height: 100%;
-  flex: 1;
-  overflow: hidden;
-  position: relative;
-}
-
-.launchpad-slider-track {
-  display: flex;
-  width: 200%;
-  height: 100%;
-  transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
-}
-
-.launchpad-slider-track.slide-to-library {
-  transform: translateX(-50%);
-}
-
-.launchpad-page {
-  width: 50%;
-  height: 100%;
-  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow-y: auto;
-}
-
-/* ─── Top-anchored chrome (mode label) ───────────────────────────────
-   Lives at the launchpad-container level so it does NOT translate
-   with the slider track. Always mounted; cross-fades between Desktop
-   chrome (gear) and Library chrome (chevron back + tab pill with
-   inline pin-count badge) via opacity. Mixing motion types — content
-   slides, chrome fades — reads more polished than forcing both onto
-   the same animation. pointer-events:none in the hidden state so
-   users can't click an invisible button during the fade.
-*/
-.launchpad-chrome {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  z-index: 3;
-}
-.launchpad-chrome.is-visible {
-  opacity: 1;
-}
-.launchpad-chrome.is-visible > * {
-  pointer-events: auto;
-}
-
-/* Desktop chrome: only the 9-dot launcher at top-right. */
-.launchpad-chrome--desktop > .mode-switch-btn {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-}
-
-/* Library chrome: back button at top-left. */
-.launchpad-chrome--library > .launchpad-chrome-back {
-  position: absolute;
-  top: 16px;
-  left: 16px;
 }
 
 .launchpad-inner {
@@ -743,52 +686,6 @@ body.session-split-dragging { cursor: grabbing; user-select: none; }
 
 /* (folder button is now a transparent overlay — no per-shape overrides needed) */
 
-/* ─── Mode Switch Button (Library vs Desktop) ─────────────── */
-/* Naked glyph — no bg, no border, no plate. Chrome is the enemy of
-   high-end feel; a 48px filled pill around a 24px icon makes the
-   chrome carry more visual weight than the symbol it frames.
-   Color stays neutral (NOT accent) — having stripped border/bg to
-   reduce visual weight, then painting it in brand-accent would just
-   re-add weight via color. VS Code / Linear / Notion all keep
-   secondary chrome in dim grey for the same reason. */
-.mode-switch-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  background: transparent;
-  border: none;
-  /* Default: dim text-3 + opacity 0.7 → near-invisible-but-present
-     restraint. Hover: jump to full text-1 → noticeable affordance
-     lift without ever pulling attention when not interacting. */
-  color: var(--text-3);
-  opacity: 0.7;
-  cursor: pointer;
-  transition: color 0.2s ease, opacity 0.2s ease;
-}
-
-.mode-switch-btn:hover {
-  /* Hover lifts to brand accent — color as INTERACTION REWARD,
-     not default decoration. Same pattern as Linear/Arc: app feels
-     alive on intent, recedes when idle. */
-  color: var(--accent);
-  opacity: 1;
-}
-
-.mode-switch-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  /* Inherit color from .mode-switch-btn (text-2 → text-1 on hover)
-     instead of hardcoding accent. Naked glyph in subdued text-2 reads
-     as restrained chrome; hover lifts to text-1 for affordance. */
-  color: inherit;
-  background: transparent;
-  transition: transform 0.4s ease;
-}
 .empty-icon {
   color: var(--text-3);
   opacity: 0.6;
@@ -796,20 +693,20 @@ body.session-split-dragging { cursor: grabbing; user-select: none; }
 
 /* ─── Library (Agents) ─────────────────────────────────────────────────── */
 
-.library-page {
-  position: relative;
-  align-items: flex-start;
+.tool-settings-page {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  padding: 24px 32px 32px;
+  color: var(--text-2);
+  font-family: var(--font-nav, var(--font));
+  container-type: inline-size;
 }
+.tool-settings-inner { width: 100%; max-width: 1200px; margin: 0 auto; }
+@container (max-width: 760px) { .tool-settings-page .library-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@container (max-width: 480px) { .tool-settings-page .library-grid { grid-template-columns: minmax(0, 1fr); } }
 
-.library-page .launchpad-inner {
-  max-width: 1200px;
-  /* 84px top: tab pill bottom edge at 60 (top:24 + h:~36) + 24px
-     breathing room — matches the 24px above the pill for visual
-     symmetry. Back button (top:16 + h:48 → bottom:64) also clears
-     within this band. Bottom 32px standard; Gambit owns the bottom. */
-  padding-top: 84px;
-  padding-bottom: 32px;
-}
+.library-divider { width:100%; margin:20px 0; border:0; border-top:1px solid var(--border); }
 
 .library-grid {
   display: grid;
@@ -1399,17 +1296,3 @@ body.session-split-dragging { cursor: grabbing; user-select: none; }
   transition: transform 0.18s ease;
 }
 .library-toggle.on .library-toggle-knob { transform: translateX(16px); }
-
-/* Pin counter header above the agents grid (restores the N/6 hint lost
-   when the Agents/Skills tab strip was removed). */
-.library-counter {
-  position: absolute;
-  top: 26px;
-  right: 16px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-2, #aaa);
-  letter-spacing: 0.04em;
-  user-select: none;
-  z-index: 3;
-}

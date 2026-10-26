@@ -241,6 +241,7 @@ export interface AppState {
   /// renders on; this = which tab is focused right now).
   diffTabActive: boolean;
   usageOpen: boolean;
+  toolSettingsOpen: boolean;
 }
 
 /// Snapshot of the file the user clicked in ChangesBoard, plus the folderPath
@@ -276,6 +277,7 @@ export function resolveDiffContext(session: TerminalSession | null | undefined):
 
 type Action =
   | { type: 'SET_USAGE_OPEN'; open: boolean }
+  | { type: 'SET_TOOL_SETTINGS_OPEN'; open: boolean }
   | { type: 'SET_FOLDER'; path: string }
   | { type: 'SET_TERMINAL_CWD'; id: string; path: string }
   | { type: 'CLEAR_FOLDER' }
@@ -340,10 +342,12 @@ function splitForSession(state: AppState, id: string, targetId: string, edge: Sp
 }
 
 function reducer(state: AppState, action: Action): AppState {
-  if (state.usageOpen && ['ADD_TERMINAL', 'LAUNCH_TERMINAL_TOOL', 'SET_ACTIVE_TERMINAL', 'OPEN_AGENT_PAGE', 'OPEN_SESSION_SPLIT', 'SET_DIFF_SELECTION', 'SET_DIFF_TAB_ACTIVE'].includes(action.type)) state = { ...state, usageOpen: false };
+  if ((state.usageOpen || state.toolSettingsOpen) && ['ADD_TERMINAL', 'LAUNCH_TERMINAL_TOOL', 'SET_ACTIVE_TERMINAL', 'OPEN_AGENT_PAGE', 'OPEN_SESSION_SPLIT', 'SET_DIFF_SELECTION', 'SET_DIFF_TAB_ACTIVE'].includes(action.type)) state = { ...state, usageOpen: false, toolSettingsOpen: false };
   switch (action.type) {
     case 'SET_USAGE_OPEN':
-      return { ...state, usageOpen: action.open };
+      return { ...state, usageOpen: action.open, toolSettingsOpen: false };
+    case 'SET_TOOL_SETTINGS_OPEN':
+      return { ...state, toolSettingsOpen: action.open, usageOpen: false };
     case 'OPEN_SESSION_SPLIT': {
       const session = state.terminals.find(session => session.id === action.id);
       if (!session?.tool) return state;
@@ -837,6 +841,7 @@ function getInitialState(): AppState {
     diffMode,
     diffTabActive: false,
     usageOpen: false,
+    toolSettingsOpen: false,
     agentPages: [],
     agentPageActive: null,
     tabOrder: [defaultTerminalId],

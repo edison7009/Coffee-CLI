@@ -1999,15 +1999,6 @@ html.is-windows[data-frost="frost"] #root {
    the source uses for HOVER, so the buttons are always legible
    without needing the user to find them first. */
 
-/* Back chevron is the only one of its kind in this view — safe to
-   paint accent + full opacity (the source-default hover reward)
-   as the new baseline. No additional hover lift needed; reads as
-   "always primary action" against the frosted chrome. */
-[data-shape="glass"] .mode-switch-btn {
-    color: var(--accent);
-    opacity: 1;
-}
-
 /* Per-card gear renders 4–8× simultaneously, so painting all of
    them accent would compete with the toggle's accent color.
    and cluster the eye. Promote to text-1 + full opacity instead

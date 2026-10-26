@@ -142,7 +142,15 @@ export interface FontInfo {
 
 // ─── Typed Commands ──────────────────────────────────────────────────────────
 
+export interface ToolMemoryDocument {
+  path: string | null;
+  content: string | null;
+}
+
 export const commands = {
+  readToolMemory: (tool: string) => invoke<ToolMemoryDocument>('read_tool_memory', { tool }),
+  saveToolMemory: (tool: string, path: string, original: string | null, content: string) =>
+    invoke<ToolMemoryDocument>('save_tool_memory', { tool, path, original, content }),
   pickFolder: () => invoke<string>('pick_folder'),
   playNotifySound: (kind: 'done' | 'wait') => invoke<void>('play_notify_sound', { kind }),
 

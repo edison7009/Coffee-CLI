@@ -5310,6 +5310,8 @@ pub fn start_ui(pending_launch: Option<crate::launch::LaunchRequest>) -> anyhow:
             get_tool_config,
             get_all_tool_configs,
             set_tool_config,
+            crate::tool_memory::read_tool_memory,
+            crate::tool_memory::save_tool_memory,
             crate::git::git_changes,
             crate::git_project_status::git_project_status,
             crate::git::git_show_file,

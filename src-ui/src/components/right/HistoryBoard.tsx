@@ -50,6 +50,16 @@ import OPENCLAW_SVG from '../../icons-inline/openclaw.svg?raw';
 // CodeBuddy — same full-color inline treatment as OpenClaw (gradient squircle
 // with its own fills, no currentColor).
 import CODEBUDDY_SVG from '../../icons-inline/codebuddy.svg?raw';
+import CURSOR_SVG from '../../icons-inline/cursor.svg?raw';
+import COPILOT_SVG from '../../icons-inline/copilot.svg?raw';
+import CLINE_SVG from '../../icons-inline/cline.svg?raw';
+import KIRO_SVG from '../../icons-inline/kiro.svg?raw';
+import MINIMAX_SVG from '../../icons-inline/minimax.svg?raw';
+import ANTIGRAVITY_SVG from '../../icons-inline/antigravity.svg?raw';
+import AIDER_DATA_URL from '../../icons-inline/aider.png?inline';
+import CRUSH_DATA_URL from '../../icons-inline/crush.png?inline';
+import MUSE_DATA_URL from '../../icons-inline/muse.png?inline';
+import GOOSE_DATA_URL from '../../icons-inline/goose.png?inline';
 import './HistoryBoard.css';
 
 // Tool icons — qwen loads via <img src=public/...>
@@ -65,14 +75,21 @@ const TOOL_ICON_SRC: Record<string, string> = {
   kimicode:    KIMICODE_DATA_URL,
   mimocode:    MIMOCODE_DATA_URL,
   kilo:        '/icons/tools/kilo.svg',
+  aider:       AIDER_DATA_URL,
+  crush:       CRUSH_DATA_URL,
+  muse:        MUSE_DATA_URL,
+};
+
+const TOOL_ICON_SVG: Record<string, string> = {
+  pi: PI_SVG, grok: GROK_SVG, omp: OMP_SVG, codex: CODEX_SVG,
+  openclaw: OPENCLAW_SVG, codebuddy: CODEBUDDY_SVG, cursor: CURSOR_SVG,
+  copilot: COPILOT_SVG, cline: CLINE_SVG, kiro: KIRO_SVG,
+  minimax: MINIMAX_SVG, antigravity: ANTIGRAVITY_SVG,
 };
 
 const getToolIcon = (tool: string) => {
-  // Pi is a fixed-color brand mark. Keep it inline so it shares the
-  // synchronous rendering path used by the launchpad; other fixed-color
-  // brand marks stay <img>.
-  if (tool === 'pi' || tool === 'grok' || tool === 'omp' || tool === 'codex') {
-    const svg = tool === 'codex' ? CODEX_SVG : tool === 'pi' ? PI_SVG : tool === 'omp' ? OMP_SVG : GROK_SVG;
+  const svg = TOOL_ICON_SVG[tool];
+  if (svg) {
     return (
       <span
         aria-hidden
@@ -81,19 +98,8 @@ const getToolIcon = (tool: string) => {
       />
     );
   }
-  // OpenClaw / CodeBuddy are full-color brand marks (lobster gradient; teal →
-  // violet squircle) — inline SVG with their own fills, NOT currentColor.
-  // Renders as an inline span so the markup's hardcoded colors show verbatim
-  // (an <img> would also work, but we reuse the same SVG bytes CenterPanel
-  // imports).
-  if (tool === 'openclaw' || tool === 'codebuddy') {
-    return (
-      <span
-        aria-hidden
-        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '1em', height: '1em', flexShrink: 0 }}
-        dangerouslySetInnerHTML={{ __html: tool === 'codebuddy' ? CODEBUDDY_SVG : OPENCLAW_SVG }}
-      />
-    );
+  if (tool === 'goose') {
+    return <span aria-hidden style={{ display:'inline-block', width:'1em', height:'1em', flexShrink:0, backgroundColor:'currentColor', WebkitMask:`url(${GOOSE_DATA_URL}) center / contain no-repeat`, mask:`url(${GOOSE_DATA_URL}) center / contain no-repeat` }} />;
   }
   const src = TOOL_ICON_SRC[tool];
   if (!src) return null;

@@ -20,6 +20,10 @@ const mock = `
   export function useAppLanguage(){return 'en'};
   export function useAppStateRef(){return {current:state}};
   const sessions=[{id:'one',tool:'claude',session_token:'one',name:'Working on the first task',cwd:'D:/same',saved_at:'2026-10-23T00:00:00Z'},{id:'two',tool:'claude',session_token:'two',name:'Another task in the same folder',cwd:'D:/same',saved_at:'2026-10-22T00:00:00Z'},{id:'other',tool:'codex',session_token:'one',name:'Different tool with the same token',cwd:'D:/same',saved_at:'2026-10-21T00:00:00Z'}];
+  if(new URLSearchParams(location.search).has('toolIcons')) {
+    state={...state,terminals:[]};
+    sessions.splice(0,sessions.length,...['claude','codex','cursor','copilot','antigravity','openclaw','hermes','opencode','pi','cline','goose','aider','omp','crush','qwen','kilo','kiro','kimicode','codebuddy','grok','mimocode','minimax','muse'].map(tool=>({id:tool,tool,name:tool,cwd:'D:/icons',saved_at:'2026-10-23T00:00:00Z'})));
+  }
   if(new URLSearchParams(location.search).has('perSession')) {
     sessions[1].git_context={branch:'main',pull_requests:['https://github.com/example/repo/pull/42']};
     sessions[2].git_context={branch:'main',pull_requests:['https://github.com/example/repo/pull/43']};
@@ -41,8 +45,8 @@ await build({
   plugins: [{ name: 'isolated-history', setup(builder) {
     builder.onResolve({ filter: /(?:store\/app-state|tauri|lib\/(?:history-cache|hidden-sessions|pinned-sessions|renamed-sessions|agent-client|use-text-context-menu))$/ }, () => ({ path: 'mock', namespace: 'fixture' }));
     builder.onLoad({ filter: /.*/, namespace: 'fixture' }, () => ({ contents: mock, resolveDir: project, loader: 'js' }));
-    builder.onResolve({ filter: /\.(?:svg|png)\?(?:inline|raw)$/ }, args => ({ path: resolve(args.resolveDir, args.path.split('?')[0]), namespace: 'asset' }));
-    builder.onLoad({ filter: /.*/, namespace: 'asset' }, async args => ({ contents: `export default ${JSON.stringify(args.path.endsWith('.svg') ? await readFile(args.path, 'utf8') : '')}`, loader: 'js' }));
+    builder.onResolve({ filter: /\.(?:svg|png)\?(?:inline|raw)$/ }, args => ({ path: resolve(args.resolveDir, args.path.split('?')[0]), namespace: 'asset', pluginData: { inline:args.path.endsWith('?inline') } }));
+    builder.onLoad({ filter: /.*/, namespace: 'asset' }, async args => ({ contents: `export default ${JSON.stringify(args.pluginData.inline ? 'data:image/'+(args.path.endsWith('.svg')?'svg+xml':'png')+';base64,'+(await readFile(args.path)).toString('base64') : await readFile(args.path,'utf8'))}`, loader: 'js' }));
   } }],
 });
 const html = `<!doctype html><link rel="stylesheet" href="/fixture.css"><style>
@@ -50,6 +54,7 @@ const html = `<!doctype html><link rel="stylesheet" href="/fixture.css"><style>
 </style><div id="root"></div><script src="/fixture.js"></script>`;
 const server = http.createServer(async (req, res) => {
   if (req.url.split('?')[0] === '/') return res.setHeader('Content-Type', 'text/html').end(html);
+  if (['/icons/tools/qwen.svg','/icons/tools/kilo.svg'].includes(req.url)) return res.setHeader('Content-Type','image/svg+xml').end(await readFile(join(project,'public',req.url)));
   if (!['/fixture.js', '/fixture.css'].includes(req.url)) return res.writeHead(404).end();
   res.setHeader('Content-Type', req.url.endsWith('.js') ? 'text/javascript' : 'text/css');
   res.end(await readFile(join(directory, req.url.slice(1))));
@@ -214,7 +219,27 @@ try {
     }
     await page.screenshot({path:join(directory,`per-session-${layout}.png`)});
   }
+  for (const layout of ['projects','list']) {
+    await page.evaluate(layout=>localStorage.setItem('cc-history-layout',layout),layout);
+    await page.goto(`http://127.0.0.1:${server.address().port}/?toolIcons=1&pr=branch`);
+    await page.locator('.history-card-tool-icon').first().waitFor();
+    assert.equal(await page.locator('.history-card-tool-icon').count(),23);
+    for (const row of await page.locator('.history-card').all()) {
+      const name=await row.locator('.history-card-title').innerText(),icon=row.locator('.history-card-tool-icon');
+      assert.equal(await icon.locator(':scope > *').count(),1,`${layout}/${name} has a tool icon`);
+      assert.equal(await icon.evaluate(el=>{const i=el.getBoundingClientRect(),t=el.nextElementSibling.getBoundingClientRect();return i.height===14&&Math.abs(i.top+i.height/2-t.top-t.height/2)<1}),true,`${name} stays aligned with the title`);
+    }
+    await page.waitForFunction(()=>[...document.querySelectorAll('.history-card-tool-icon img')].every(img=>img.complete&&img.naturalWidth>0));
+    const cursor=page.locator('.history-card').filter({has:page.locator('.history-card-title',{hasText:/^cursor$/})});
+    for (const color of ['rgb(221, 221, 221)','rgb(40, 40, 40)']) {
+      await page.evaluate(color=>document.documentElement.style.setProperty('--text-2',color),color);
+      assert.equal(await cursor.locator('.history-card-tool-icon svg').evaluate(el=>getComputedStyle(el).color),color,'monochrome icons follow the theme text color');
+    }
+    await page.evaluate(()=>document.documentElement.style.setProperty('--text-2','#aba1aa'));
+    await page.screenshot({path:join(directory,`tool-icons-${layout}.png`),fullPage:true});
+  }
   assert.deepEqual(errors, []);
+  console.log('OK: all 23 tool icons in project/session lists, actual assets, title alignment and theme colors');
   console.log('OK: real history rows, exact status identity, spinner/hover/keyboard actions, reduced motion, state clearing, deletion and Git/PR/CI project marks');
   console.log('OK: project/list row heights and positions stay unchanged across delayed branch/PR/CI marks and hover actions');
   console.log(`Screenshot: ${join(directory, 'history-working.png')}`);
