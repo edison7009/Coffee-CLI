@@ -22,6 +22,7 @@ import { SessionContextMenu, type SessionCtxMenuState } from './SessionContextMe
 import { useTextContextMenu } from '../../lib/use-text-context-menu';
 import { gitFolderKey, gitStatusKey, useProjectGitStatuses, type GitStatusTarget } from '../../lib/project-git-status';
 import { HistoryGitMark } from './HistoryGitMark';
+import { getUnreadSessionReplies, subscribeSessionReplies, sessionReplyKey } from '../../lib/session-replies';
 // hermes/opencode PNG assets live in src/icons-inline/ so the Launchpad
 // can `?inline`-import them as data URIs and bypass the <img> async-decode
 // flash. We pull the same data URIs here so HistoryBoard doesn't need a
@@ -161,9 +162,13 @@ export function HistoryBoard() {
   // Pinned (置顶) markers from localStorage - re-renders + re-sorts the list
   // the instant a pin toggles from the context menu.
   const pinned = useSyncExternalStore(subscribePinned, getPinnedSnapshot);
+  const unreadReplies = useSyncExternalStore(subscribeSessionReplies, getUnreadSessionReplies);
   // Identity is tool + native conversation token, never the folder/title.
   const workingSessions = useMemo(() => new Set(state.terminals
     .filter(session => session.resumeToken && session.agentStatus === 'working')
+    .map(session => `${session.tool}:${session.resumeToken}`)), [state.terminals]);
+  const waitingSessions = useMemo(() => new Set(state.terminals
+    .filter(session => session.resumeToken && session.agentStatus === 'wait_input')
     .map(session => `${session.tool}:${session.resumeToken}`)), [state.terminals]);
   const workingSignature = [...workingSessions].sort().join('|');
   useEffect(() => {
@@ -433,12 +438,14 @@ export function HistoryBoard() {
         const isRenaming = renamingKey === sessionKey;
         const owner = state.terminals.find(tab => `live:${tab.id}` === session.id || tab.tool === session.tool && session.session_token && tab.resumeToken === session.session_token);
         const isWorking = owner?.agentStatus === 'working' || Boolean(session.session_token && workingSessions.has(`${session.tool}:${session.session_token}`));
+        const needsAttention = owner?.agentStatus === 'wait_input' || Boolean(session.session_token && waitingSessions.has(`${session.tool}:${session.session_token}`));
+        const isUnread = !isWorking && !needsAttention && Boolean(session.session_token && unreadReplies.has(sessionReplyKey(session.tool, session.session_token)));
         const isActive = owner?.id === state.activeTerminalId && !state.agentPageActive && !state.diffTabActive || session.tool === 'coffee-agent' && session.id === activeAgentConversation && state.agentPageActive === 'agent';
         const gitStatus = gitStatuses.get(gitStatusKey(sessionGitTarget(session)));
         return (
           <div
             key={`${sessionKey}:${session.file_path ?? session.saved_at}`}
-            className={`history-card${isWorking ? ' history-card-working' : ''}${grouped ? ' history-card-grouped' : ''}${isActive ? ' history-card-active' : ''}`}
+            className={`history-card${isWorking ? ' history-card-working' : ''}${needsAttention ? ' history-card-needs-attention' : ''}${isUnread ? ' history-card-unread' : ''}${grouped ? ' history-card-grouped' : ''}${isActive ? ' history-card-active' : ''}`}
             aria-describedby={preview?.key === sessionKey ? previewId : undefined}
             onPointerDown={event => {
               if (isRenaming || session.tool === 'coffee-agent') return;
@@ -502,8 +509,10 @@ export function HistoryBoard() {
                 ) : (
                   <>
                     <span className="history-card-title">{displayName}</span>
-                    {isWorking && <span className="history-card-working-indicator" role="img" aria-label={t('claude.status.working')}><span /></span>}
-                    {!isWorking && <HistoryGitMark status={gitStatus} />}
+                    {needsAttention ? <span className="history-card-attention-indicator" role="img" aria-label={t('history.needs_attention')}>{t('history.needs_attention')}</span>
+                      : isWorking ? <span className="history-card-working-indicator" role="img" aria-label={t('claude.status.working')}><span /></span>
+                      : isUnread ? <span className="history-card-unread-indicator" role="img" aria-label={t('history.unread_reply')} />
+                      : <HistoryGitMark status={gitStatus} />}
                     {/* One-click soft-delete (hide), revealed in the title row.
                         stopPropagation keeps it from resuming the session. */}
                     <button
@@ -531,7 +540,7 @@ export function HistoryBoard() {
               <div className="history-card-meta">
                 <span className="history-card-tool-wrap">
                   {session.tool !== 'coffee-agent' && getToolIcon(session.tool)}
-                  <span className="history-card-meta-text">{session.tool === 'coffee-agent' ? 'Coffee Agent' : projectName(session.cwd, session.tool)} &middot; {dateStr} {session.turn_count ? ` · ${(t('task.messages') || '{count} messages').replace('{count}', session.turn_count.toString())}` : ''}</span>
+                  <span className="history-card-meta-text">{(needsAttention || isUnread) && <span className="history-card-preview-status">{t(needsAttention ? 'history.needs_attention' : 'history.unread_reply')} &middot; </span>}{session.tool === 'coffee-agent' ? 'Coffee Agent' : projectName(session.cwd, session.tool)} &middot; {dateStr} {session.turn_count ? ` · ${(t('task.messages') || '{count} messages').replace('{count}', session.turn_count.toString())}` : ''}</span>
                 </span>
               </div>
             </div>, document.body)}

@@ -52,6 +52,8 @@ export const en = {
   'history.search_title': 'Search sessions or workspaces',
   'history.list': 'Sessions',
   'history.projects': 'Projects',
+  'history.needs_attention': "Awaiting action",
+  'history.unread_reply': "Unread reply",
   'history.git.current_branch': 'Current project branch',
   'history.git.open': 'Open',
   'history.git.draft': 'Draft',

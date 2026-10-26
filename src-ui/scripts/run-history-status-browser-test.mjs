@@ -15,6 +15,7 @@ const mock = `
   let state={currentLang:'en',terminals:[{id:'a',tool:'claude',resumeToken:'one',agentStatus:'working',folderPath:'D:/same'},{id:'b',tool:'claude',resumeToken:'two',agentStatus:'idle',folderPath:'D:/same'}]};
   const listeners=new Set();
   window.updateStatus=status=>{state={...state,terminals:state.terminals.map(t=>t.id==='a'?{...t,agentStatus:status}:t)};listeners.forEach(fn=>fn())};
+  window.updateView=patch=>{state={...state,...patch};listeners.forEach(fn=>fn())};
   export function useAppState(){return {state:useSyncExternalStore(fn=>{listeners.add(fn);return()=>listeners.delete(fn)},()=>state),dispatch(action){if(action.type==='REMOVE_TERMINAL')(window.removed??=[]).push(action.id);else window.opened=true}}}
   export function useAppLanguage(){return 'en'};
   export function useAppStateRef(){return {current:state}};
@@ -33,7 +34,7 @@ const mock = `
   export const useTextContextMenu=()=>({menu:null,openMenu(){}});
 `;
 await build({
-  stdin: { resolveDir: project, loader: 'tsx', contents: `import React from 'react';import {createRoot} from 'react-dom/client';import {HistoryBoard} from './src/components/right/HistoryBoard';createRoot(document.getElementById('root')).render(<HistoryBoard/>);` },
+  stdin: { resolveDir: project, loader: 'tsx', contents: `import React from 'react';import {createRoot} from 'react-dom/client';import {HistoryBoard} from './src/components/right/HistoryBoard';import {useAppState} from './src/store/app-state';import {useSessionReplyVisibility} from './src/lib/use-session-reply-visibility';import {recordSessionReply} from './src/lib/session-replies';window.recordReply=recordSessionReply;function Fixture(){const {state}=useAppState();useSessionReplyVisibility(state);return <HistoryBoard/>}createRoot(document.getElementById('root')).render(<Fixture/>);` },
   bundle: true, outfile: join(directory, 'fixture.js'), jsx: 'automatic',
   nodePaths: [join(project, 'node_modules')], loader: { '.png': 'dataurl' },
   define: { 'process.env.NODE_ENV': '"development"' },
@@ -86,7 +87,57 @@ try {
   for (const status of ['wait_input', 'idle', undefined]) {
     await page.evaluate(status => window.updateStatus(status), status);
     await page.waitForFunction(() => !document.querySelector('.history-card-working-indicator'));
+    assert.equal(await working.locator('.history-card-attention-indicator').count(), status === 'wait_input' ? 1 : 0);
+    if (status === 'wait_input') {
+      assert.equal(await working.locator('.history-git-mark').count(), 0, 'waiting takes priority over PR status');
+      const label = working.locator('.history-card-attention-indicator');
+      assert.equal(await label.textContent(), 'Awaiting action');
+      assert.equal(await label.locator('svg').count(), 0, 'waiting uses a text badge');
+      assert.equal(await label.evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(96, 165, 250)');
+      assert.equal(await label.evaluate(el => getComputedStyle(el).animationName), 'none', 'reduced motion disables badge entrance');
+      const beforeHover = await working.boundingBox();
+      const titleBeforeHover = await working.locator('.history-card-title').boundingBox();
+      await working.hover();
+      assert.equal(await label.isVisible(), true, 'waiting label stays visible on hover');
+      assert.equal(await working.locator('.history-card-delete-btn').isVisible(), false, 'waiting shows only its badge in the right-hand slot');
+      assert.deepEqual(await working.boundingBox(), beforeHover, 'waiting hover keeps the row geometry');
+      assert.deepEqual(await working.locator('.history-card-title').boundingBox(), titleBeforeHover, 'waiting hover does not squeeze the title');
+      assert.equal(await page.getByRole('tooltip').getByText('Awaiting action', { exact: false }).count(), 1);
+      await page.mouse.move(500, 300);
+    }
   }
+  await page.goto(`http://127.0.0.1:${server.address().port}/?perSession=1&pr=branch`);
+  await page.mouse.move(500, 300);
+  const unreadRow = page.locator('.history-card').nth(1);
+  const geometryBeforeUnread = await unreadRow.boundingBox();
+  await page.evaluate(() => window.recordReply('b', 'claude', 'two'));
+  const unreadDot = unreadRow.locator('.history-card-unread-indicator');
+  await unreadDot.waitFor();
+  assert.deepEqual(await unreadRow.boundingBox(), geometryBeforeUnread, 'unread markers do not move or resize a row');
+  assert.equal(await unreadRow.locator('.history-git-mark').count(), 0, 'unread replaces the PR mark in the same slot');
+  const dotBox = await unreadDot.boundingBox();
+  const titleBox = await unreadRow.locator('.history-card-title').boundingBox();
+  assert.ok(dotBox.x >= titleBox.x + titleBox.width, 'unread dot sits to the right of the title');
+  assert.equal(await unreadDot.evaluate(el => getComputedStyle(el, '::before').backgroundColor), 'rgb(96, 165, 250)', 'unread uses waiting-state blue');
+  await unreadRow.hover();
+  assert.equal(await unreadDot.isVisible(), false, 'hover swaps the blue dot for the delete action');
+  assert.equal(await unreadRow.locator('.history-card-delete-btn').isVisible(), true);
+  await page.mouse.move(500, 300);
+  assert.equal(await page.locator('.history-card-unread').count(), 1, 'same folder and cross-tool tokens do not share unread state');
+  assert.equal(await unreadRow.locator('.history-card-title').evaluate(el => getComputedStyle(el).fontWeight), '600');
+  await page.reload();
+  await page.locator('.history-card-unread').waitFor();
+  assert.equal(await page.locator('.history-card-unread').count(), 1, 'unread survives restart');
+  await page.evaluate(() => window.updateView({ activeTerminalId: 'b' }));
+  await page.waitForFunction(() => !document.querySelector('.history-card-unread'));
+  await unreadRow.locator('.history-git-mark').waitFor();
+  await page.evaluate(() => window.recordReply('b', 'claude', 'two'));
+  assert.equal(await page.locator('.history-card-unread').count(), 0, 'a visible foreground conversation stays read');
+  await page.evaluate(() => { window.updateView({ usageOpen: true }); });
+  await page.evaluate(() => window.recordReply('b', 'claude', 'two'));
+  await page.locator('.history-card-unread').waitFor();
+  await page.evaluate(() => window.updateView({ usageOpen: false }));
+  await page.waitForFunction(() => !document.querySelector('.history-card-unread'));
   await page.evaluate(() => window.updateStatus('working'));
   await circle.waitFor({ state: 'visible' });
   await working.hover();

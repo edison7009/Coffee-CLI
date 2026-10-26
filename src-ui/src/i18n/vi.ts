@@ -51,6 +51,8 @@ export const vi = {
   'history.search_title': 'Tìm phiên hoặc không gian làm việc',
   'history.list': 'Danh sách phiên',
   'history.projects': 'Dự án',
+  'history.needs_attention': "Chờ thao tác",
+  'history.unread_reply': "Phản hồi chưa đọc",
   'history.git.current_branch': 'Nhánh hiện tại của dự án',
   'history.git.open': 'Đang mở',
   'history.git.draft': 'Bản nháp',

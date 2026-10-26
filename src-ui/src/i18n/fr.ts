@@ -51,6 +51,8 @@ export const fr = {
   'history.search_title': 'Rechercher des sessions ou espaces de travail',
   'history.list': 'Sessions',
   'history.projects': 'Projets',
+  'history.needs_attention': "Action attendue",
+  'history.unread_reply': "Réponse non lue",
   'history.git.current_branch': 'Branche actuelle du projet',
   'history.git.open': 'Ouverte',
   'history.git.draft': 'Brouillon',

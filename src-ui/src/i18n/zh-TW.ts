@@ -53,6 +53,8 @@ export const zhTW = {
   'history.search_title': '搜尋會話或工作區',
   'history.list': '會話列表',
   'history.projects': '專案分類',
+  'history.needs_attention': "等待操作",
+  'history.unread_reply': "新回覆未讀",
   'history.git.current_branch': '專案目前分支',
   'history.git.open': '待合併',
   'history.git.draft': '草稿',

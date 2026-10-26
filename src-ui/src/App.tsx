@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useAppState } from './store/app-state';
 import { retryInvoke } from './tauri';
 import { initNotifySound } from './lib/notify-sound';
+import { useSessionReplyVisibility } from './lib/use-session-reply-visibility';
 import { routeFileDrop } from './lib/file-drop';
 import { initHistoryAutoRefresh } from './lib/history-cache';
 import { isFrostShape, resolveThemeMode } from './lib/personalization';
@@ -189,6 +190,7 @@ function useSlidingPanel(hidden: boolean): { mounted: boolean; collapsed: boolea
 
 export function App() {
   const { state } = useAppState();
+  useSessionReplyVisibility(state);
   const activeTabId = state.agentPageActive ? `agent:${state.agentPageActive}`
     : state.diffTabActive ? 'diff' : state.activeTerminalId;
   // Resolved half of the palette (index.html sets it pre-paint, the effect

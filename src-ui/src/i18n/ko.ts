@@ -53,6 +53,8 @@ export const ko = {
   'history.search_title': '세션 또는 작업 공간 검색',
   'history.list': '세션 목록',
   'history.projects': '프로젝트별',
+  'history.needs_attention': "작업 대기",
+  'history.unread_reply': "읽지 않은 답변",
   'history.git.current_branch': '프로젝트의 현재 브랜치',
   'history.git.open': '열림',
   'history.git.draft': '초안',

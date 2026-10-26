@@ -51,6 +51,8 @@ export const ru = {
   'history.search_title': 'Поиск сеансов или рабочих областей',
   'history.list': 'Сеансы',
   'history.projects': 'Проекты',
+  'history.needs_attention': "Ожидает действия",
+  'history.unread_reply': "Непрочитанный ответ",
   'history.git.current_branch': 'Текущая ветка проекта',
   'history.git.open': 'Открыт',
   'history.git.draft': 'Черновик',

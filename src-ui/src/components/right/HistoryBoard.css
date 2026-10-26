@@ -323,7 +323,7 @@
 .history-git-ci.is-failure { color:var(--git-closed); }
 .history-git-ci.is-pending { color:var(--git-pending); }
 .history-card:hover .history-git-mark,.history-card:focus-within .history-git-mark { display:none; }
-.history-card-working-indicator {
+.history-card-working-indicator, .history-card-unread-indicator {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -341,12 +341,27 @@
   animation: history-working-spin 0.9s linear infinite;
 }
 .history-card:hover .history-card-working-indicator,
-.history-card:focus-within .history-card-working-indicator {
+.history-card:focus-within .history-card-working-indicator,
+.history-card:hover .history-card-unread-indicator,
+.history-card:focus-within .history-card-unread-indicator {
   display: none;
 }
+.history-card-attention-indicator {
+  display:block; flex:0 1 auto; min-width:0; max-width:48%; height:18px; margin-left:6px; padding:0 6px;
+  border-radius:var(--shape-radius-btn, var(--radius-sm)); background:#60a5fa; color:#10253e;
+  font-size:11px; font-weight:600; line-height:18px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  animation:history-attention-enter .18s ease-out;
+}
+[data-mode="light"] .history-card-attention-indicator { background:#2563eb; color:#fff; }
+@keyframes history-attention-enter { from { opacity:0; transform:translateX(8px); } to { opacity:1; transform:translateX(0); } }
+.history-session-list .history-card-unread .history-card-title { color:var(--text-1); font-weight:600; }
+.history-card-unread-indicator::before { content:''; width:6px; height:6px; border-radius:50%; background:#60a5fa; }
+[data-mode="light"] .history-card-unread-indicator::before { background:#2563eb; }
+.history-card-preview-status { color:var(--accent); }
 @keyframes history-working-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) {
   .history-card-working-indicator > span { animation: none; }
+  .history-card-attention-indicator { animation:none; }
 }
 /* No permanent action gutter: the button occupies the title row on hover,
    shrinking the title while its trailing mask fades the text into the action. */
@@ -377,6 +392,7 @@
   opacity: 1;
   pointer-events: auto;
 }
+.history-card-needs-attention .history-card-delete-btn { display:none; }
 .history-card:hover .history-card-title,
 .history-card:focus-within .history-card-title {
   color: var(--text-1);

@@ -53,6 +53,8 @@ export const zhCN = {
   'history.search_title': '搜索会话或工作区',
   'history.list': '会话列表',
   'history.projects': '项目分类',
+  'history.needs_attention': "等待操作",
+  'history.unread_reply': "新答复未读",
   'history.git.current_branch': '项目当前分支',
   'history.git.open': '待合并',
   'history.git.draft': '草稿',
