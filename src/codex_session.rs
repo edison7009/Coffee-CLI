@@ -59,9 +59,10 @@ impl Session {
         input.write_all(b"\n").and_then(|_| input.flush()).map_err(|e| e.to_string())
     }
     fn stop(&self) {
-        // Close the protocol pipe as well: npm .cmd launchers can own a child server.
-        self.input.lock().unwrap().take();
+        // A blocked stdin writer must not prevent process termination.
         let _ = self.child.lock().unwrap().kill();
+        // Close an available protocol pipe too: .cmd launchers can own a child server.
+        if let Ok(mut input) = self.input.try_lock() { input.take(); }
     }
     fn request(&self, method: &str, params: Value) -> Result<Value, String> {
         let id = Value::String(uuid::Uuid::new_v4().to_string());
@@ -143,7 +144,9 @@ fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<Stri
     let s = session.clone(); let watcher_app = app.clone(); let watcher_id = id.clone();
     std::thread::spawn(move || {
         let code = loop {
-            match s.child.lock().unwrap().try_wait() {
+            // Release the process lock before sleeping so close can kill immediately.
+            let status = s.child.lock().unwrap().try_wait();
+            match status {
                 Ok(Some(status)) => break status.code(), Err(_) => break None,
                 _ => std::thread::sleep(Duration::from_millis(150)),
             }
@@ -202,6 +205,41 @@ pub fn shutdown(sessions: &CodexSessions) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn stop_does_not_wait_for_a_busy_input_pipe() {
+        #[cfg(windows)]
+        let mut command = {
+            use std::os::windows::process::CommandExt;
+            let mut command = Command::new("cmd.exe");
+            command.args(["/d", "/c", "pause"]).creation_flags(0x08000000);
+            command
+        };
+        #[cfg(not(windows))]
+        let mut command = {
+            let mut command = Command::new("sh");
+            command.args(["-c", "read line"]);
+            command
+        };
+        let mut child = command.stdin(Stdio::piped()).stdout(Stdio::null()).stderr(Stdio::null()).spawn().unwrap();
+        let input = child.stdin.take().unwrap();
+        let session = Arc::new(Session {
+            generation: String::new(), native_id: Mutex::new(String::new()), child: Mutex::new(child),
+            input: Mutex::new(Some(input)), protocol: Protocol::default(), stderr: Mutex::new(String::new()),
+            launch_config: Default::default(), launch_cwd: Default::default(),
+        });
+        let writing = session.input.lock().unwrap();
+        let stopping = session.clone();
+        let (tx, rx) = mpsc::channel();
+        let worker = std::thread::spawn(move || { stopping.stop(); let _ = tx.send(()); });
+        let stopped = rx.recv_timeout(Duration::from_secs(2)).is_ok();
+        drop(writing);
+        worker.join().unwrap();
+        session.stop();
+        session.child.lock().unwrap().wait().unwrap();
+        assert!(stopped, "closing must not wait for a thread holding the input pipe");
+        assert!(session.input.lock().unwrap().is_none());
+    }
+
     #[test]
     fn responses_and_native_request_ids_remain_distinct() {
         let p = Protocol::default(); let (tx, rx) = mpsc::channel();

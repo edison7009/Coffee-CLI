@@ -155,7 +155,9 @@ fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<Stri
     let s = session.clone(); let app_watcher = app.clone(); let watcher_id = id.clone();
     std::thread::spawn(move || {
         let status = loop {
-            match s.child.lock().unwrap().try_wait() {
+            // Release the process lock before sleeping so close can kill immediately.
+            let status = s.child.lock().unwrap().try_wait();
+            match status {
                 Ok(Some(status)) => break Some(status),
                 Err(_) => break None,
                 _ => std::thread::sleep(Duration::from_millis(200)),
