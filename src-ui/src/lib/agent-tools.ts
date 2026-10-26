@@ -5,7 +5,7 @@ import { getAgentSession } from './agent-session';
 import { isConversationSession } from './chat-tools';
 import { focusTerminal } from './focus-registry';
 
-export interface ToolRequest { requestId: string; name: string; arguments: Record<string, unknown> }
+export interface ToolRequest { requestId: string; name: string; arguments: Record<string, unknown>; parentId?: string; sessionId?: string; background?: boolean }
 const pause = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 function historyDirectory(path: string): string {
   const windows = /^[a-z]:[\\/]/i.test(path) || path.startsWith('\\\\');
@@ -18,8 +18,9 @@ interface ToolContext {
   dispatch: ReturnType<typeof useAppDispatch>;
   pending: (requestId: string) => Promise<boolean>;
   isCancelled: (requestId: string) => boolean;
+  openTimeoutMs?: number;
 }
-export function createAgentToolExecutor({ stateRef, dispatch, pending, isCancelled }: ToolContext) {
+export function createAgentToolExecutor({ stateRef, dispatch, pending, isCancelled, openTimeoutMs = 15_000 }: ToolContext) {
     const project = () => {
       return stateRef.current.terminals.flatMap(tab => {
         const items = tab.tool ? [{ sessionId: tab.id, tool: tab.tool, cwd: tab.folderPath, status: tab.agentStatus }] : [];
@@ -51,11 +52,12 @@ export function createAgentToolExecutor({ stateRef, dispatch, pending, isCancell
         if (typeof args.cwd !== 'string' || !args.cwd.trim()) throw new Error('请先询问用户要打开哪个目录');
         const cwd = await invoke<string>('agent_validate_directory', { path: args.cwd });
         if (!await pending(request.requestId)) throw new Error('操作已取消');
-        const id = crypto.randomUUID();
+        const id = request.sessionId ?? crypto.randomUUID();
+        if (stateRef.current.terminals.some(session => session.id === id)) throw new Error('该会话已存在，请读取状态，不要重复创建');
         let mode: 'terminal' | 'conversation' = 'conversation';
         try { if (localStorage.getItem(`coffee:${args.tool}-launch-mode`) === 'terminal') mode = 'terminal'; } catch { /* Use the desktop default when no preference is available. */ }
-        dispatch({ type: 'LAUNCH_TERMINAL_TOOL', id, tool: args.tool as ToolType, cwd, strictCwd: true, resumeToken: typeof args.resumeToken === 'string' ? args.resumeToken : undefined, claudeMode: args.tool === 'claude' ? mode : undefined, codexMode: args.tool === 'codex' ? mode : undefined });
-        const deadline = Date.now() + 15_000;
+        dispatch({ type: 'LAUNCH_TERMINAL_TOOL', id, tool: args.tool as ToolType, cwd, strictCwd: true, resumeToken: typeof args.resumeToken === 'string' ? args.resumeToken : undefined, claudeMode: args.tool === 'claude' ? mode : undefined, codexMode: args.tool === 'codex' ? mode : undefined, parentId: request.parentId, background: request.background });
+        const deadline = Date.now() + openTimeoutMs;
         let appeared = false;
         while (Date.now() < deadline) {
           if (isCancelled(request.requestId)) return { sessionId: id, cwd, opened: true, ready: false, message: '等待已取消；真实终端已打开' };

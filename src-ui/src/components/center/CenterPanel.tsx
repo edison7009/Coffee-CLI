@@ -9,6 +9,8 @@ import { ClaudeConversation } from './ClaudeConversation';
 import { CodexConversation } from './CodexConversation';
 import { UsageDashboard } from './UsageDashboard';
 import { ToolSettingsPage } from './ToolSettingsPage';
+import { useOrchestration, workerState } from '../../lib/orchestration';
+import '../../styles/orchestration.css';
 import { LaunchModeControl } from './LaunchModeControl';
 import { SessionSplitDividers } from './SessionSplitDividers';
 import { sessionSplitRects, splitSessionIds } from '../../lib/session-split-layout';
@@ -352,6 +354,7 @@ const CONFIGURABLE_AGENT_TOOLS = new Set<ToolType>([
 // OSC title tools plus TUIs covered by the rendered-screen semantic parser.
 export function CenterPanel() {
   const { state, dispatch } = useAppState();
+  const orchestration = useOrchestration();
   const t = useT();
   const terminals = state.terminals;
   const activeTerminalId = state.activeTerminalId;
@@ -1185,7 +1188,8 @@ export function CenterPanel() {
           // Tool's live OSC 0/2 title (Claude Code conversation summary, etc.)
           // overrides the cwd basename when the tool has set a non-empty one.
           // Muse inherits its Windows launcher's title; keep the workspace name.
-          const title = session.tool === 'muse' ? baseTitle : session.toolTitle?.trim() || baseTitle;
+          const worker = orchestration.tasks.find(task => task.sessionId === session.id);
+          const title = worker?.title || (session.tool === 'muse' ? baseTitle : session.toolTitle?.trim() || baseTitle);
           const showAgentStatus = supportsAgentStatus(session.tool)
             && (['claude', 'codex', 'kimicode', 'omp'].includes(session.tool ?? '') || session.agentStatus !== undefined);
           return (
@@ -1200,8 +1204,9 @@ export function CenterPanel() {
             >
               {icon}
               <span className="tab-title" style={{ flex: '0 1 auto', minWidth: 0, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{title}</span>
-              <div className={`tab-actions${showAgentStatus ? '' : ' tab-actions--close-only'}`}>
-                {showAgentStatus && (
+              <div className={`tab-actions${showAgentStatus || worker ? '' : ' tab-actions--close-only'}`}>
+                {worker && <span className="orchestration-status" data-state={workerState(worker, session)} role="img" aria-label={t(`orchestration.${workerState(worker, session)}`)} />}
+                {!worker && showAgentStatus && (
                   <div className={`tab-status-grid status-${
                     session.agentStatus === 'wait_input' ? 'waiting' : session.agentStatus ?? 'idle'
                   }${__IS_LINUX__ ? ' tab-status-grid--static' : ''}`}>

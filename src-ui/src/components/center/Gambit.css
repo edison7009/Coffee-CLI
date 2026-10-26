@@ -364,6 +364,13 @@
     gap: 8px;
     flex-shrink: 0;
 }
+.gambit-footer--capabilities .gambit-workspace { margin-right:0; }
+.gambit-capabilities { display:flex; align-items:center; gap:5px; min-width:0; margin-right:auto; overflow:hidden; }
+.gambit-capability { min-width:0; padding:4px 7px; border-radius:var(--shape-radius-btn,5px); background:color-mix(in srgb,var(--capability-color) 12%,transparent); color:var(--capability-color); font:12px var(--font); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.gambit-capability.is-orchestration { --capability-color:var(--green); }
+.gambit-capability.is-computer { --capability-color:var(--blue); }
+.gambit-capability.is-browser { --capability-color:#b59cce; }
+[data-mode="light"] .gambit-capability.is-browser { --capability-color:#7a6095; }
 
 .gambit-send {
     display: flex;

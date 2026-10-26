@@ -16,7 +16,7 @@ const mock = `
   const listeners=new Set();
   window.updateStatus=status=>{state={...state,terminals:state.terminals.map(t=>t.id==='a'?{...t,agentStatus:status}:t)};listeners.forEach(fn=>fn())};
   window.updateView=patch=>{state={...state,...patch};listeners.forEach(fn=>fn())};
-  export function useAppState(){return {state:useSyncExternalStore(fn=>{listeners.add(fn);return()=>listeners.delete(fn)},()=>state),dispatch(action){if(action.type==='REMOVE_TERMINAL')(window.removed??=[]).push(action.id);else window.opened=true}}}
+  export function useAppState(){return {state:useSyncExternalStore(fn=>{listeners.add(fn);return()=>listeners.delete(fn)},()=>state),dispatch(action){if(action.type==='REMOVE_TERMINAL')(window.removed??=[]).push(action.id);else if(action.type==='SET_ACTIVE_TERMINAL')window.selectedChild=action.id;else window.opened=true}}}
   export function useAppLanguage(){return 'en'};
   export function useAppStateRef(){return {current:state}};
   const sessions=[{id:'one',tool:'claude',session_token:'one',name:'Working on the first task',cwd:'D:/same',saved_at:'2026-10-23T00:00:00Z'},{id:'two',tool:'claude',session_token:'two',name:'Another task in the same folder',cwd:'D:/same',saved_at:'2026-10-22T00:00:00Z'},{id:'other',tool:'codex',session_token:'one',name:'Different tool with the same token',cwd:'D:/same',saved_at:'2026-10-21T00:00:00Z'}];
@@ -38,7 +38,7 @@ const mock = `
   export const useTextContextMenu=()=>({menu:null,openMenu(){}});
 `;
 await build({
-  stdin: { resolveDir: project, loader: 'tsx', contents: `import React from 'react';import {createRoot} from 'react-dom/client';import {HistoryBoard} from './src/components/right/HistoryBoard';import {useAppState} from './src/store/app-state';import {useSessionReplyVisibility} from './src/lib/use-session-reply-visibility';import {recordSessionReply} from './src/lib/session-replies';window.recordReply=recordSessionReply;function Fixture(){const {state}=useAppState();useSessionReplyVisibility(state);return <HistoryBoard/>}createRoot(document.getElementById('root')).render(<Fixture/>);` },
+  stdin: { resolveDir: project, loader: 'tsx', contents: `import React from 'react';import {createRoot} from 'react-dom/client';import {HistoryBoard} from './src/components/right/HistoryBoard';import {useAppState} from './src/store/app-state';import {useSessionReplyVisibility} from './src/lib/use-session-reply-visibility';import {recordSessionReply} from './src/lib/session-replies';import {receiveOrchestration} from './src/lib/orchestration';window.updateTeam=receiveOrchestration;window.recordReply=recordSessionReply;function Fixture(){const {state}=useAppState();useSessionReplyVisibility(state);return <HistoryBoard/>}createRoot(document.getElementById('root')).render(<Fixture/>);` },
   bundle: true, outfile: join(directory, 'fixture.js'), jsx: 'automatic',
   nodePaths: [join(project, 'node_modules')], loader: { '.png': 'dataurl' },
   define: { 'process.env.NODE_ENV': '"development"' },
@@ -50,7 +50,7 @@ await build({
   } }],
 });
 const html = `<!doctype html><link rel="stylesheet" href="/fixture.css"><style>
-*{box-sizing:border-box}body{margin:0;background:#181419;color:#ddd;font:15px system-ui}:root{--accent:#ce829c;--text-1:#ddd;--text-2:#aba1aa;--bg-hover:#30252d;--font:system-ui}#root{width:260px;padding:8px}
+*{box-sizing:border-box}body{margin:0;background:#181419;color:#ddd;font:15px system-ui}:root{--accent:#ce829c;--text-1:#ddd;--text-2:#aba1aa;--bg-hover:#30252d;--bg-app:#181419;--bg-panel:#211c22;--border:#453b45;--text-3:#867c86;--green:#98b89d;--blue:#93b3d2;--red:#d28b8b;--font:system-ui}#root{width:260px;padding:8px}
 </style><div id="root"></div><script src="/fixture.js"></script>`;
 const server = http.createServer(async (req, res) => {
   if (req.url.split('?')[0] === '/') return res.setHeader('Content-Type', 'text/html').end(html);
@@ -238,6 +238,30 @@ try {
     await page.evaluate(()=>document.documentElement.style.setProperty('--text-2','#aba1aa'));
     await page.screenshot({path:join(directory,`tool-icons-${layout}.png`),fullPage:true});
   }
+  await page.evaluate(()=>localStorage.setItem('cc-history-layout','list'));
+  await page.goto(`http://127.0.0.1:${server.address().port}`);
+  await rows.first().waitFor();
+  await page.evaluate(()=>{
+    window.workerTasks=['codex','opencode'].map((tool,index)=>({id:'task-'+index,parentId:'old-parent',parentNativeId:'one',parentTool:'claude',sessionId:'worker-'+index,nativeId:'worker-native-'+index,tool,title:index?'Check formatting':'Review code',cwd:'D:/same',phase:'running',summary:null,question:index?{id:'q1',text:'Need a file',answer:null}:null,activity:'working',generation:'g1'}));
+    window.updateView({terminals:[{id:'a',tool:'claude',resumeToken:'one',agentStatus:'idle',folderPath:'D:/same'},...window.workerTasks.map(task=>({id:task.sessionId,tool:task.tool,resumeToken:task.nativeId,folderPath:task.cwd,agentStatus:'working'}))]});
+    window.updateTeam({enabled:true,tasks:window.workerTasks,revision:1});
+  });
+  const workers=rows.first().locator('.history-worker');await workers.first().waitFor();assert.equal(await workers.count(),2);
+  assert.equal(await rows.nth(1).locator('.history-worker').count(),0,'other conversations in the same folder do not inherit children');
+  assert.equal(await rows.nth(2).locator('.history-worker').count(),0,'matching native tokens from other tools cannot inherit children');
+  const workerBox=await workers.first().boundingBox(),parentTitle=await rows.first().locator('.history-card-title-row').boundingBox();
+  assert.ok(workerBox.y>=parentTitle.y+parentTitle.height,'child icons appear below the parent conversation');
+  assert.equal(await workers.first().locator('.orchestration-status').getAttribute('data-state'),'working');
+  assert.equal(await workers.last().locator('.orchestration-status').getAttribute('data-state'),'waiting');
+  assert.equal(await workers.first().locator('.orchestration-status').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(152, 184, 157)');
+  assert.equal(await workers.last().locator('.orchestration-status').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(147, 179, 210)');
+  await page.evaluate(()=>window.opened=false);await workers.first().click();
+  assert.equal(await page.evaluate(()=>window.selectedChild),'worker-0');assert.equal(await page.evaluate(()=>window.opened),false,'child click only selects its existing tab');
+  await page.screenshot({path:join(directory,'orchestration-children.png')});
+  await page.evaluate(()=>{window.workerTasks[0].phase='completed';window.updateTeam({enabled:true,tasks:window.workerTasks,revision:2});window.updateView({terminals:[{id:'a',tool:'claude',resumeToken:'one',folderPath:'D:/same'}]})});
+  assert.equal(await workers.first().locator('.orchestration-status').getAttribute('data-state'),'completed');
+  assert.equal(await workers.first().isDisabled(),true,'closed child history does not silently start a replacement');
+  assert.equal(await workers.last().isDisabled(),true);
   assert.deepEqual(errors, []);
   console.log('OK: all 23 tool icons in project/session lists, actual assets, title alignment and theme colors');
   console.log('OK: real history rows, exact status identity, spinner/hover/keyboard actions, reduced motion, state clearing, deletion and Git/PR/CI project marks');

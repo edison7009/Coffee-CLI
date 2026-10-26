@@ -108,6 +108,9 @@ fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<Stri
     let history_path = claude_history_path(&cwd, &native_id);
     if is_resume { command.args(["--resume", &native_id]); }
     else { command.args(["--session-id", &native_id]); }
+    if let Some((mcp, prompt)) = crate::orchestration::parent_launch(&app, &id, &native_id, &cwd)? {
+        command.args(["--mcp-config", &mcp, "--append-system-prompt", &prompt]);
+    }
     let mut child = command.spawn().map_err(|e| crate::session_directory::validate(&cwd).err().unwrap_or_else(|| format!("无法启动 Claude：{e}")))?;
     #[cfg(windows)]
     crate::terminal::windows_job::assign_pid(child.id());

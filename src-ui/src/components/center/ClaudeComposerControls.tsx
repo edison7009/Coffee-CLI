@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MutableRefObject } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MutableRefObject, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { controlClaude, useClaudeSession } from '../../lib/claude-session';
 import { ClaudeEffortControl } from './ClaudeEffortControl';
@@ -9,9 +9,10 @@ import { claudeEffortLabel } from '../../lib/claude-i18n';
 import './ClaudeComposerControls.css';
 
 type Menu = 'commands' | 'model' | 'effort' | 'permissions' | 'context' | null;
-export function ClaudeComposerControls({ sessionId, draft, onDraftChange, keyHandler }: {
+export function ClaudeComposerControls({ sessionId, draft, onDraftChange, keyHandler, children }: {
   sessionId: string; draft: string; onDraftChange: (value: string) => void;
   keyHandler: MutableRefObject<((event: KeyboardEvent<HTMLTextAreaElement>) => boolean) | undefined>;
+  children?: ReactNode;
 }) {
   const t = useT();
   const s = useClaudeSession(sessionId);
@@ -115,6 +116,7 @@ export function ClaudeComposerControls({ sessionId, draft, onDraftChange, keyHan
     <button className="claude-control-icon" aria-label={t('claude.attach')} onClick={() => void attach()}>＋</button>
     <button ref={el => { anchors.current.commands = el; }} className="claude-control-icon" aria-label={t('claude.commands')} aria-expanded={shown === 'commands'} onClick={() => shown === 'commands' ? close() : open('commands')}>/</button>
     <button ref={el => { anchors.current.permissions = el; }} className="claude-permission-control" disabled={!s.ready} onClick={() => shown === 'permissions' ? close() : open('permissions')} aria-expanded={shown === 'permissions'} aria-label={t('claude.permissions')}>{modes.find(m => m.value === s.permissionMode)?.label ?? s.permissionMode}</button>
+    {children}
     <div className="claude-model-controls">
     <button ref={el => { anchors.current.model = el; }} className="claude-model-control" disabled={!s.ready} onClick={() => shown === 'model' ? close() : open('model')} aria-expanded={shown === 'model'} aria-label={t('claude.model')}>{model?.resolvedModel || s.model || 'Claude'}</button>
     {model?.supportsEffort && <button ref={el => { anchors.current.effort = el; }} className={`claude-effort-trigger${s.ultracode ? ' is-ultracode' : ''}`} disabled={!s.ready} onClick={() => shown === 'effort' ? close() : open('effort')} aria-expanded={shown === 'effort'} aria-label={t('claude.effort.title')}>{claudeEffortLabel(effort, t)}</button>}

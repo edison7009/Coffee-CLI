@@ -139,6 +139,7 @@ export interface TerminalSession {
   /// fresh launch. Cleared on any subsequent SET_TERMINAL_TOOL.
   resumeToken?: string;
   strictCwd?: boolean;
+  parentId?: string;
   isHidden?: boolean;
   agentStatus?: AgentStatus;
   gambitDraft?: string;    // Unsent textarea content, preserved across tab switches
@@ -290,7 +291,7 @@ type Action =
   | { type: 'OPEN_SESSION_SPLIT'; id: string; targetId: string; edge: SplitEdge }
   | { type: 'CLOSE_SESSION_SPLIT'; id: string }
   | { type: 'RESIZE_SESSION_SPLIT'; path: string; ratio: number }
-  | { type: 'LAUNCH_TERMINAL_TOOL'; id: string; tool: ToolType; cwd?: string; toolData?: string; resumeToken?: string; strictCwd?: boolean; claudeMode?: ClaudeMode; codexMode?: ClaudeMode }
+  | { type: 'LAUNCH_TERMINAL_TOOL'; id: string; tool: ToolType; cwd?: string; toolData?: string; resumeToken?: string; strictCwd?: boolean; claudeMode?: ClaudeMode; codexMode?: ClaudeMode; parentId?: string; background?: boolean }
   | { type: 'REMOVE_TERMINAL'; id: string }
   | { type: 'REORDER_TAB'; tabId: string; beforeId: string | null }
   | { type: 'SET_ACTIVE_TERMINAL'; id: string | null }
@@ -342,7 +343,7 @@ function splitForSession(state: AppState, id: string, targetId: string, edge: Sp
 }
 
 function reducer(state: AppState, action: Action): AppState {
-  if ((state.usageOpen || state.toolSettingsOpen) && ['ADD_TERMINAL', 'LAUNCH_TERMINAL_TOOL', 'SET_ACTIVE_TERMINAL', 'OPEN_AGENT_PAGE', 'OPEN_SESSION_SPLIT', 'SET_DIFF_SELECTION', 'SET_DIFF_TAB_ACTIVE'].includes(action.type)) state = { ...state, usageOpen: false, toolSettingsOpen: false };
+  if ((state.usageOpen || state.toolSettingsOpen) && !(action.type === 'LAUNCH_TERMINAL_TOOL' && action.background) && ['ADD_TERMINAL', 'LAUNCH_TERMINAL_TOOL', 'SET_ACTIVE_TERMINAL', 'OPEN_AGENT_PAGE', 'OPEN_SESSION_SPLIT', 'SET_DIFF_SELECTION', 'SET_DIFF_TAB_ACTIVE'].includes(action.type)) state = { ...state, usageOpen: false, toolSettingsOpen: false };
   switch (action.type) {
     case 'SET_USAGE_OPEN':
       return { ...state, usageOpen: action.open, toolSettingsOpen: false };
@@ -445,6 +446,7 @@ function reducer(state: AppState, action: Action): AppState {
         ...previous, id: action.id, tool: action.tool,
         folderPath: action.cwd ?? previous?.folderPath ?? null,
         toolData: action.toolData, resumeToken: action.resumeToken, strictCwd: action.strictCwd,
+        parentId: action.parentId,
         claudeMode: action.tool === 'claude' ? action.claudeMode ?? 'conversation' : undefined,
         codexMode: action.tool === 'codex' ? action.codexMode ?? 'terminal' : undefined,
         toolTitle: undefined, agentStatus: undefined, startedAt: Date.now(),
@@ -452,11 +454,16 @@ function reducer(state: AppState, action: Action): AppState {
       if (action.cwd) {
         try { localStorage.setItem('cc-folder', action.cwd); } catch { /* Best-effort operation; failure is non-fatal. */ }
       }
+      const order = getTabOrder(state);
+      const family = state.terminals.filter(tab => tab.id === action.parentId || tab.parentId === action.parentId).map(tab => order.indexOf(tab.id));
+      const index = action.parentId && family.length ? Math.max(...family) + 1 : order.length;
       return {
         ...state,
         terminals: previous ? state.terminals.map(tab => tab.id === action.id ? session : tab) : [...state.terminals, session],
-        tabOrder: previous ? state.tabOrder : [...getTabOrder(state), action.id],
-        activeTerminalId: action.id, agentPageActive: null, diffTabActive: false,
+        tabOrder: previous ? state.tabOrder : [...order.slice(0, index), action.id, ...order.slice(index)],
+        activeTerminalId: action.background ? state.activeTerminalId : action.id,
+        agentPageActive: action.background ? state.agentPageActive : null,
+        diffTabActive: action.background ? state.diffTabActive : false,
       };
     }
     case 'REMOVE_TERMINAL': {

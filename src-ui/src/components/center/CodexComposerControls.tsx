@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type MutableRefObject } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type MutableRefObject, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { configureCodex, runCodexCommand, useCodexSession } from '../../lib/codex-session';
 import { arr, obj, str, type Json } from '../../lib/codex-protocol';
@@ -11,10 +11,11 @@ import { useT } from '../../i18n/useT';
 import './ClaudeComposerControls.css';
 
 type Menu = 'commands' | 'model' | 'effort' | 'permissions' | 'context' | 'skills' | 'mcp' | null;
-export function CodexComposerControls({ sessionId, draft, onDraftChange, keyHandler, submitHandler }: {
+export function CodexComposerControls({ sessionId, draft, onDraftChange, keyHandler, submitHandler, children }: {
   sessionId: string; draft: string; onDraftChange: (value: string) => void;
   keyHandler: MutableRefObject<((event: KeyboardEvent<HTMLTextAreaElement>) => boolean) | undefined>;
   submitHandler: MutableRefObject<((text: string) => boolean) | undefined>;
+  children?: ReactNode;
 }) {
   const s = useCodexSession(sessionId), t = useT();
   const { state, dispatch } = useAppState();
@@ -125,6 +126,7 @@ export function CodexComposerControls({ sessionId, draft, onDraftChange, keyHand
     <button type="button" className="claude-control-icon" aria-label={t('claude.attach')} onClick={() => { void attach(); }}>＋</button>
     <button type="button" ref={commandsAnchor} className="claude-control-icon" aria-label={t('codex.command')} aria-expanded={shown === 'commands'} onClick={e => show('commands', e.currentTarget)}>/</button>
     <button type="button" className="claude-permission-control" disabled={!s.ready || s.busy} aria-label={t('codex.permissions')} aria-expanded={menu === 'permissions'} onClick={e => show('permissions', e.currentTarget)}>{permission}</button>
+    {children}
     <div className="claude-model-controls">
       <button type="button" className="claude-model-control" disabled={!s.ready || s.busy} aria-label={t('codex.model')} aria-expanded={menu === 'model'} onClick={e => show('model', e.currentTarget)}>{model?.displayName || s.model || 'Codex'}</button>
       {!!model?.supportedReasoningEfforts.length && <button type="button" className={`claude-effort-trigger${(s.effort || model.defaultReasoningEffort) === 'ultra' ? ' is-ultracode' : ''}`} disabled={!s.ready || s.busy} aria-label={t('claude.effort.title')} aria-expanded={menu === 'effort'} onClick={e => show('effort', e.currentTarget)}>{claudeEffortLabel(s.effort || model.defaultReasoningEffort, t)}</button>}

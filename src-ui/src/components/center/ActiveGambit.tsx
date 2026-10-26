@@ -24,6 +24,8 @@ import { getToolIcon } from './CenterPanel';
 import { Gambit } from './Gambit';
 import { controlClaude, sendClaudeMessage, useClaudeSession } from '../../lib/claude-session';
 import { interruptCodex, sendCodexMessage, useCodexSession } from '../../lib/codex-session';
+import { useOrchestration } from '../../lib/orchestration';
+import { useSessionControls } from '../../lib/session-controls';
 
 // Last path segment of a folder, Windows ("\") and POSIX ("/") safe. Local copy
 // (CenterPanel has the same helper) — tiny, not worth a shared util yet.
@@ -51,7 +53,9 @@ function remoteHost(toolData: string | undefined): string {
 
 export function ActiveGambit() {
   const { state, dispatch } = useAppState();
+  const orchestration = useOrchestration();
   const activeId = state.activeTerminalId;
+  const controls = useSessionControls(activeId ?? '');
   const activeSession = activeId
     ? state.terminals.find(t => t.id === activeId)
     : undefined;
@@ -62,6 +66,7 @@ export function ActiveGambit() {
   const gambitOpen = isClaude || isCodex || state.gambitOpen;
   const claude = useClaudeSession(isClaude ? activeId ?? '' : '');
   const codex = useCodexSession(isCodex ? activeId ?? '' : '');
+  const controlsReady = isClaude ? claude.ready : isCodex ? codex.ready : true;
   // Footer label telling the user where Send will land. Local sessions show
   // their working-folder name; SSH/WebSocket sessions show their connection
   // host, since folderPath may still contain the launchpad's previous folder.
@@ -75,6 +80,7 @@ export function ActiveGambit() {
   // Gambit target chip reads as "tool + target" (mirrors the tab's
   // icon+name pairing). null session → undefined → Gambit hides the icon.
   const toolIcon = activeSession ? getToolIcon(activeSession.tool) : undefined;
+  const coordinator = activeSession?.tool === 'claude' && !activeSession.parentId && orchestration.enabled && orchestration.coordinators?.includes(activeSession.id);
 
   const handleDraftChange = useCallback((draft: string) => {
     if (!activeId) return;
@@ -152,6 +158,9 @@ export function ActiveGambit() {
       onDraftChange={handleDraftChange}
       onClose={handleClose}
       onSend={handleSend}
+      orchestration={coordinator}
+      computer={controlsReady && controls.includes('computer')}
+      browser={controlsReady && controls.includes('browser')}
       claude={isClaude}
       codex={isCodex}
       running={isClaude ? claude.busy : isCodex && codex.busy}

@@ -36,8 +36,8 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
     ts.forEachChild(node, visit);
   }
   visit(tree); assert.ok(title);
-  const displayedTitle = (tool, toolTitle, baseTitle = 'E300') => evaluate(title.getText(tree), {
-    session: { tool, toolTitle, folderPath: 'E:\\E300' }, baseTitle,
+  const displayedTitle = (tool, toolTitle, baseTitle = 'E300', worker) => evaluate(title.getText(tree), {
+    session: { tool, toolTitle, folderPath: 'E:\\E300' }, baseTitle, worker,
   });
   for (const launcher of [String.raw`C:\WINDOWS\system32\cmd.exe`, String.raw`C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe`]) {
     assert.equal(displayedTitle('muse', launcher), 'E300', 'Muse keeps its actual workspace label');
@@ -45,6 +45,7 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
   assert.equal(displayedTitle('muse', undefined, 'Muse Code'), 'Muse Code');
   assert.equal(displayedTitle('claude', '  Implement feature  '), 'Implement feature', 'other tools retain native conversation titles');
   assert.equal(displayedTitle('codex', ''), 'E300');
+  assert.equal(displayedTitle('codex', 'Native summary', 'E300', { title: 'Review changes' }), 'Review changes');
   console.log('OK: Muse workspace tab name and existing-tool native titles');
 }
 

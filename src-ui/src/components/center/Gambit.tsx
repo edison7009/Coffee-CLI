@@ -56,6 +56,9 @@ interface GambitProps {
    *  left of the target name so the chip reads as "tool + target",
    *  mirroring the tab's icon+name pairing. undefined hides the icon. */
   toolIcon?: React.ReactNode;
+  orchestration?: boolean;
+  computer?: boolean;
+  browser?: boolean;
 }
 
 // Matches any absolute image path inside the compose draft — both our
@@ -113,6 +116,9 @@ function GambitImpl({
   rightPanelHidden,
   workspaceName,
   toolIcon,
+  orchestration,
+  computer,
+  browser,
 }: GambitProps) {
   const t = useT();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -696,6 +702,12 @@ function GambitImpl({
     height: dockedH,
   };
 
+  const capabilitiesStatus = (orchestration || computer || browser) && <div className="gambit-capabilities" role="status">
+    {orchestration && <span className="gambit-capability is-orchestration">{t('tools.tab.orchestration')}</span>}
+    {computer && <span className="gambit-capability is-computer">{t('control.computer_label')}</span>}
+    {browser && <span className="gambit-capability is-browser">{t('control.browser_label')}</span>}
+  </div>;
+
   return (
     <div
       ref={rootRef}
@@ -750,7 +762,7 @@ function GambitImpl({
         />
       </div>
 
-      <div className={`gambit-footer${claude || codex ? ' gambit-footer--claude' : ''}`}>
+      <div className={`gambit-footer${claude || codex ? ' gambit-footer--claude' : ''}${capabilitiesStatus ? ' gambit-footer--capabilities' : ''}`}>
 
         {/* Target label — leftmost footer item, symmetric to the send button.
             Shows the active tab's folder or remote host so a prompt can't be
@@ -764,9 +776,10 @@ function GambitImpl({
             <span className="gambit-workspace-name">{workspaceName}</span>
           </span>
         )}
+        {claude && <ClaudeComposerControls sessionId={sessionId} draft={draft} onDraftChange={onDraftChange} keyHandler={claudeKeyHandler}>{capabilitiesStatus}</ClaudeComposerControls>}
+        {codex && <CodexComposerControls key={sessionId} sessionId={sessionId} draft={draft} onDraftChange={onDraftChange} keyHandler={claudeKeyHandler} submitHandler={codexSubmitHandler}>{capabilitiesStatus}</CodexComposerControls>}
 
-        {claude && <ClaudeComposerControls sessionId={sessionId} draft={draft} onDraftChange={onDraftChange} keyHandler={claudeKeyHandler} />}
-        {codex && <CodexComposerControls key={sessionId} sessionId={sessionId} draft={draft} onDraftChange={onDraftChange} keyHandler={claudeKeyHandler} submitHandler={codexSubmitHandler} />}
+        {(!claude && !codex) && capabilitiesStatus}
 
         {sendFailed && (
           <span className="gambit-send-hint" role="status">

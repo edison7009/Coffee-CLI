@@ -24,7 +24,7 @@ import {ToolSettingsPage} from './src/components/center/ToolSettingsPage';
 import './src/styles/global.css';import './src/components/center/CenterPanel.css';
 const tools=[{value:'claude',label:'Claude Code'},{value:'codex',label:'Codex CLI'},{value:'pi',label:'Pi'},{value:'cursor',label:'Cursor'},{value:'copilot',label:'Copilot CLI'}].map(item=>({...item,icon:<span>{item.label[0]}</span>}));
 function Fixture(){const[active,setActive]=useState(true),[enabled,setEnabled]=useState(tools),[missing,setMissing]=useState([]);window.setMissing=setMissing;window.setEnabled=values=>setEnabled(tools.filter(item=>values.includes(item.value)));return <><button id="navigate" onClick={()=>setActive(!active)}>Navigate</button><div className="main-content" style={{position:'absolute',top:40,right:0,bottom:0,left:0}}><ToolSettingsPage active={active} tools={enabled.map(item=>({...item,installed:!missing.includes(item.value)}))} count={enabled.length} limit={6}><div id="selection">selection</div></ToolSettingsPage></div></>}
-createRoot(document.getElementById('root')).render(<Fixture/>);` }, bundle:true, jsx:'automatic', outfile:join(directory,'fixture.js'), logLevel:'silent',
+createRoot(document.getElementById('root')).render(<Fixture/>);` }, bundle:true, jsx:'automatic', loader:{'.svg':'text','.png':'dataurl'}, outfile:join(directory,'fixture.js'), logLevel:'silent',
   plugins:[{name:'native-boundary',setup(b){
     b.onResolve({filter:/\/tauri$/},args=>({path:args.path,namespace:'fixture'}));
     b.onResolve({filter:/\/store\/app-state$/},args=>({path:args.path,namespace:'fixture'}));
@@ -50,7 +50,7 @@ try{
     const marker=document.querySelector('.tool-settings-indicator')?.getBoundingClientRect(),selected=document.querySelector('[role="tab"][aria-selected="true"]')?.getBoundingClientRect();
     return marker&&selected&&Math.abs(marker.x-selected.x)<1&&Math.abs(marker.width-selected.width)<1;
   });
-  assert.equal(await page.getByRole('tab').count(),5);
+  assert.equal(await page.getByRole('tab').count(),6);
   await page.locator('.tool-settings-indicator[data-ready]').waitFor({state:'attached'});await aligned();
   assert.equal(await page.getByRole('tab',{selected:true}).evaluate(el=>getComputedStyle(el).borderTopWidth),'0px');
   await tab('Skills').click();
@@ -118,6 +118,6 @@ try{
   await page.emulateMedia({reducedMotion:'reduce'});
   assert.equal(await page.locator('.tool-settings-indicator').evaluate(el=>getComputedStyle(el).transitionDuration),'0s');
   assert.deepEqual(errors,[]);
-  console.log('OK: five themed tabs, Skills/memory isolation, actual editor/selector, lazy reads, late response isolation, per-tool drafts, page navigation, exact save payloads, conflict/failure retention, discard confirmation, missing/unsupported files, keyboard saving, themes and narrow layout');
+  console.log('OK: six themed tabs, Skills/memory isolation, actual editor/selector, lazy reads, late response isolation, per-tool drafts, page navigation, exact save payloads, conflict/failure retention, discard confirmation, missing/unsupported files, keyboard saving, themes and narrow layout');
   console.log('Screenshots: '+directory);
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve))}

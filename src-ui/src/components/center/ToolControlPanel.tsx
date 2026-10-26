@@ -62,6 +62,7 @@ export function ToolControlPanel({ kind, active, tools }: {
         const agent = status.agents.find(agent => agent.tool === tool.value) ?? { supported: false, enabled: false, conflict: false };
         const missing = tool.installed === false;
         const unavailable = !missing && (agent.supported === false || agent.conflict);
+        const disabled = missing || unavailable || (!agent.enabled && !status.ready);
         const help = !unavailable ? undefined : t(agent.supported === false ? 'control.agent_unsupported_help' : agent.issue === 'conflict' ? 'control.agent_conflict_help' : 'control.agent_config_help', { tool: tool.label, server: `coffee-${kind}-use` });
         return <div className="tool-control-agent" key={tool.value}>
           <span className="tool-control-agent-icon" aria-hidden="true">{tool.icon}</span>
@@ -69,7 +70,7 @@ export function ToolControlPanel({ kind, active, tools }: {
             {(missing || unavailable) && <span className="tool-control-unavailable" data-tip={help} tabIndex={help ? 0 : undefined} aria-label={help}>{t(missing ? 'control.not_installed' : 'control.agent_unavailable')}</span>}
           </span>
           {pending === tool.value && <span className="tool-control-spinner" aria-hidden="true" />}
-          <button type="button" role="switch" aria-label={tool.label} aria-checked={agent.enabled} aria-busy={pending === tool.value} className="tool-control-switch" disabled={busy || missing || agent.supported === false || agent.conflict || (!agent.enabled && !status.ready)} onClick={() => { void run(() => commands.setToolControl(kind, tool.value, !agent.enabled), tool.value); }}><span /></button>
+          <button type="button" role="switch" aria-label={tool.label} aria-checked={agent.enabled} aria-busy={pending === tool.value} data-unavailable={disabled} className="tool-control-switch tool-control-card-toggle" disabled={busy || disabled} onClick={() => { void run(() => commands.setToolControl(kind, tool.value, !agent.enabled), tool.value); }}><span /></button>
         </div>;
       })}
       {!agents.length && <span className="tool-control-no-agents">{t('control.no_agents')}</span>}

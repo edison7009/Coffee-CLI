@@ -13,7 +13,7 @@
 .tool-control-action > .tool-control-spinner { position:absolute; inset:0; margin:auto; color:inherit; }
 @keyframes tool-control-spin { to { transform:rotate(360deg); } }
 .tool-control-agents { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-top:18px; }
-.tool-control-agent { display:flex; align-items:center; gap:14px; min-width:0; padding:18px 20px; border:1px solid var(--border); border-radius:var(--shape-radius-panel,var(--radius-sm)); background:var(--bg-panel); }
+.tool-control-agent { position:relative; display:flex; align-items:center; gap:14px; min-width:0; padding:18px 70px 18px 20px; border:1px solid var(--border); border-radius:var(--shape-radius-panel,var(--radius-sm)); background:var(--bg-panel); }
 .tool-control-agent-icon { display:flex; justify-content:center; align-items:center; width:30px; height:30px; flex-shrink:0; font-size:30px; pointer-events:none; }
 .tool-control-agent-icon * { pointer-events:none; }
 .tool-control-agent-icon svg { width:30px; height:30px; }
@@ -27,7 +27,14 @@
 .tool-control-switch[aria-checked="true"] { background:#007aff; }
 .tool-control-switch[aria-checked="true"] > span { transform:translateX(16px); }
 .tool-control-switch:focus-visible { outline:1px solid var(--accent); outline-offset:3px; }
-.tool-control-switch:disabled { opacity:.4; cursor:default; }
+.tool-control-switch:disabled { cursor:default; }
+.tool-control-switch[data-unavailable="true"] { opacity:.4; }
+.tool-control-card-toggle { position:absolute; inset:0; width:100%; height:100%; border-radius:inherit; background:transparent; }
+.tool-control-card-toggle::before { content:''; position:absolute; right:20px; top:calc(50% - 10px); width:36px; height:20px; border-radius:20px; background:var(--bg-hover); transition:background 150ms; }
+.tool-control-card-toggle[aria-checked="true"] { background:transparent; }
+.tool-control-card-toggle[aria-checked="true"]::before { background:#007aff; }
+.tool-control-card-toggle > span { left:calc(100% - 54px); top:calc(50% - 8px); }
+.tool-control-unavailable[data-tip] { z-index:1; }
 .tool-control-no-agents { margin:14px 0 0; color:var(--text-3); font-size:12px; line-height:1.6; }
 @container (max-width:850px) { .tool-control-agents { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @container (max-width:540px) { .tool-control-agents { grid-template-columns:1fr; } }

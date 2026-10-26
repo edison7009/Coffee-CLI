@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import { readLaunchControls, setSessionControls, clearSessionControls } from './session-controls';
 import { directoryFailure } from './session-directory';
 import { recordSessionReply } from './session-replies';
 import { invoke } from '../tauri';
@@ -21,7 +22,7 @@ function publish(c: Client, immediate = false) {
 function listen() {
   return listening ??= import('@tauri-apps/api/event').then(({ listen }) => listen<{ id: string; generation: string; event: Json }>('codex-session-event', ({ payload }) => {
     const c = clients.get(payload.id); if (!c || c.generation !== payload.generation) return;
-    if (payload.event.method === 'coffee/exit') c.exited = true;
+    if (payload.event.method === 'coffee/exit') { c.exited = true; clearSessionControls(payload.id, c.generation); }
     if (c.connecting && !c.state.ready && payload.event.method === 'coffee/exit') { c.startupExit = str(obj(payload.event.params).detail) || 'Codex process exited'; return; }
     const wasBusy = c.state.busy;
     c.state = reduceCodexEvent(c.state, payload.event);
@@ -48,6 +49,8 @@ export function retainCodexSession(id: string, cwd: string | null, resumeToken?:
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
         await listen();
+        clearSessionControls(id, c.generation);
+        const controls = await readLaunchControls('codex');
         const result = await invoke<Json>('codex_session_start', { id, generation: c.generation, cwd, resumeToken: resumeToken ?? null });
         if (c.exited) throw new Error(c.startupExit || 'Codex process exited');
         const thread = obj(result.thread), history = restoreCodexTurns(arr(thread.turns));
@@ -55,11 +58,13 @@ export function retainCodexSession(id: string, cwd: string | null, resumeToken?:
         c.state = { ...c.state, ready: true, error: undefined, nativeId: str(thread.id), model: str(result.model), effort: str(result.reasoningEffort), approvalPolicy: result.approvalPolicy, sandbox: obj(result.sandbox), models: arr(result.models) as CodexModel[], messages: [...history.filter(m => !liveIds.has(m.id)), ...c.state.messages], historyCursor: str(result.turnsBackwardsCursor) || null };
         const active = arr(thread.turns).map(obj).find(turn => turn.status === 'inProgress');
         if (active && !c.state.turnId) c.state = { ...c.state, busy: true, turnId: str(active.id) };
+        if (c.owners) setSessionControls(id, c.generation, controls);
         publish(c, true);
         return;
       } catch (error) {
         if (directoryFailure(error) || attempt === 2) { c.state = { ...c.state, ready: false, error: String(error) }; publish(c, true); return; }
         const generation = c.generation;
+        clearSessionControls(id, generation);
         c.generation = crypto.randomUUID();
         await invoke('codex_session_close', { id, generation }).catch(() => {});
         await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
@@ -74,7 +79,7 @@ export function retainCodexSession(id: string, cwd: string | null, resumeToken?:
     c.closeTimer = setTimeout(() => {
       if (c.owners) return;
       void (c.starting ?? Promise.resolve()).finally(() => invoke('codex_session_close', { id, generation: c.generation })).catch(() => {});
-      clearTimeout(c.publishTimer); clients.delete(id);
+      clearTimeout(c.publishTimer); clearSessionControls(id, c.generation); clients.delete(id);
     }, 300);
   };
 }

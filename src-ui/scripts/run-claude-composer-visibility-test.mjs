@@ -24,19 +24,23 @@ const terminals = [{ id: 'claude', tool: 'claude' }, { id: 'terminal', tool: nul
 let state;
 const effects = [];
 const terminalSends = [], claudeSends = [], codexSends = [];
+let team = { enabled: false, agents: [], coordinators: [] };
 const context = {
   isClaudeConversation, isCodexConversation, isConversationSession,
   useAppState: () => ({ state, dispatch: action => { state = reducer(state, action); } }),
   useAppDispatch: () => context.useAppState().dispatch,
+  useOrchestration: () => team,
+  useSessionControls: () => [],
   useCallback: fn => fn, useEffect: fn => effects.push(fn), useT: () => key => key,
   useClaudeSession: () => ({ busy: false }), useCodexSession: () => ({ busy: false }), getToolIcon: () => '',
   schemeLabels: () => ({ left: 'Alt+Q', gambit: 'Alt+W', right: 'Alt+E' }),
   React: { createElement: (type, props, ...children) => ({ type, props, children }) },
-  Gambit: 'gambit', IS_MACOS: false,
+  Gambit: 'gambit', Changelog: 'changelog', IS_MACOS: false,
   submitTerminalPrompt: async (id, text) => terminalSends.push({ id, text }),
   sendClaudeMessage: async (id, text) => { claudeSends.push({ id, text }); return true; },
   sendCodexMessage: async (id, text) => { codexSends.push({ id, text }); return true; },
 };
+context.basename = evaluate('components/center/ActiveGambit.tsx', 'basename');
 const host = evaluate('components/center/ActiveGambit.tsx', 'ActiveGambit', context);
 const titlebar = evaluate('components/common/TitleBar.tsx', 'TitleBar', context);
 function buttons(node) {
@@ -127,3 +131,16 @@ for (const codexMode of ['conversation', 'terminal']) {
   assert.equal(restarted.terminals[0].codexMode, codexMode);
 }
 console.log('OK: Codex conversation uses its own backend, keeps its composer and retains mode on reconnect');
+team = { enabled: true, agents: ['codex'], coordinators: ['claude'] };
+state = {terminals:[{id:'claude',tool:'claude',claudeMode:'conversation',folderPath:'D:/Project'}],activeTerminalId:'claude',gambitOpen:true};
+assert.equal(host().props.orchestration,true);
+const before = claudeSends.length;
+assert.equal(await host().props.onSend('Complete this task'),true);
+assert.equal(claudeSends.length,before+1,'orchestration messages go to Claude for autonomous planning');
+assert.equal(claudeSends.at(-1).text,'Complete this task');
+assert.equal(host().props.assignment,undefined,'no manual executor selector');
+team = {...team,coordinators:[]};assert.equal(host().props.orchestration,false);
+team = {...team,enabled:false};assert.equal(host().props.orchestration,false);
+team = {...team,enabled:true,coordinators:['claude']};state.terminals[0].parentId='another';assert.equal(host().props.orchestration,false,'workers do not advertise coordinator capabilities');
+state = {terminals:[{id:'codex',tool:'codex',codexMode:'conversation'}],activeTerminalId:'codex',gambitOpen:true};assert.equal(host().props.orchestration,false,'unintegrated coordinators do not claim orchestration is enabled');
+console.log('OK: autonomous Claude routing, live coordinator badge, new-session activation and worker isolation');

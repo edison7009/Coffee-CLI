@@ -154,6 +154,11 @@ export interface CatalogSkill { source: string; name: string; description: strin
 export interface ToolControlStatus { supported: boolean; installed: boolean; ready: boolean; browser: string | null; agents: { tool: string; supported: boolean; enabled: boolean; conflict: boolean; issue?: string | null }[] }
 
 export const commands = {
+  orchestrationGet: () => invoke<import('./lib/orchestration').OrchestrationSnapshot>('orchestration_get'),
+  orchestrationSetAgent: (tool: string, enabled: boolean) => invoke<import('./lib/orchestration').OrchestrationSnapshot>('orchestration_set_agent', { tool, enabled }),
+  orchestrationSync: (sessions: unknown[]) => invoke<void>('orchestration_sync', { sessions }),
+  orchestrationPending: (requestId: string) => invoke<boolean>('orchestration_pending', { requestId }),
+  orchestrationResolve: (requestId: string, result: unknown) => invoke<void>('orchestration_resolve', { requestId, result }),
   getToolControl: (kind: 'computer' | 'browser') => invoke<ToolControlStatus>('get_tool_control', { kind }),
   checkToolControl: (kind: 'computer' | 'browser') => invoke<ToolControlStatus>('check_tool_control', { kind }),
   installBrowserControl: () => invoke<ToolControlStatus>('install_browser_control'),

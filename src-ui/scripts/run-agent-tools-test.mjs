@@ -66,8 +66,29 @@ function fixture({ deferOpen = false } = {}) {
     if (action.type === 'REMOVE_TERMINAL') { mounted.get(action.id)?.(); mounted.delete(action.id); }
   };
   const execute = api.createAgentToolExecutor({ stateRef, dispatch, pending: async () => !cancelled, isCancelled: () => cancelled });
-  return { api, stateRef, dispatch, execute: (name, args = {}) => execute({ requestId: 'request', name, arguments: args }), writes, actions, directories, files, mount, cancel: () => { cancelled = true; }, dispose: () => { mounted.forEach(stop => stop()); } };
+  return { api, stateRef, dispatch, execute: (name, args = {}, metadata = {}) => execute({ requestId: 'request', name, arguments: args, ...metadata }), writes, actions, directories, files, mount, cancel: () => { cancelled = true; }, dispose: () => { mounted.forEach(stop => stop()); } };
 }
+await test('coordinated worker tabs group after the parent without stealing focus or closing settings', async () => {
+  const f = fixture();
+  try {
+    f.dispatch({ type: 'ADD_TERMINAL', session: { id: 'parent', tool: 'claude', folderPath: 'project' } });
+    f.dispatch({ type: 'ADD_TERMINAL', session: { id: 'unrelated', tool: 'codex', folderPath: 'other' } });
+    f.dispatch({ type: 'SET_TOOL_SETTINGS_OPEN', open: true });
+    const focused = f.stateRef.current.activeTerminalId;
+    for (const id of ['worker-1', 'worker-2']) {
+      const result = await f.execute('sessions_open', { tool: 'codex', cwd: 'project' }, { parentId: 'parent', sessionId: id, background: true });
+      assert.equal(result.ready, true); assert.equal(result.sessionId, id);
+      assert.equal(f.stateRef.current.activeTerminalId, focused); assert.equal(f.stateRef.current.toolSettingsOpen, true);
+      assert.equal(f.stateRef.current.terminals.find(tab => tab.id === id).parentId, 'parent');
+    }
+    assert.deepEqual([...f.api.getTabOrder(f.stateRef.current)], ['parent','worker-1','worker-2','unrelated']);
+    const before = f.actions.length;
+    await assert.rejects(f.execute('sessions_open', { tool: 'codex', cwd: 'project' }, { parentId: 'parent', sessionId: 'worker-1', background: true }), /已存在/);
+    assert.equal(f.actions.length, before, 'repeated delivery cannot replace a running worker');
+    f.dispatch({ type: 'SET_ACTIVE_TERMINAL', id: 'worker-1' });
+    assert.equal(f.stateRef.current.activeTerminalId, 'worker-1'); assert.equal(f.stateRef.current.toolSettingsOpen, false);
+  } finally { f.dispose(); }
+});
 await test('remote open dispatches an ordinary visible tab with its own validated directory and preserves previous cwd', async () => {
   const f = fixture();
   try {

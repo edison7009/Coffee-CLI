@@ -43,7 +43,8 @@ import { createTerminalSizeSync, DEFAULT_TERMINAL_GRID } from '../../lib/termina
 import { UI_SCALE_CHANGED } from '../../lib/ui-scale';
 import { IS_WINDOWS } from '../../lib/platform';
 import { commands } from '../../tauri';
-import { registerTerminalObserver } from '../../lib/terminal-observer';
+import { registerTerminalObserver, getTerminalObserver } from '../../lib/terminal-observer';
+import { readLaunchControls, setSessionControls, clearSessionControls } from '../../lib/session-controls';
 import { createTerminalEnterEncoder } from '../../lib/terminal-enter';
 import { confirmTerminalAgentStatus, forwardTerminalInput, isTerminalSubmitInput, registerTerminalControl, setTerminalControlReady, submitTerminalPrompt, terminalControlStatus } from '../../lib/terminal-control';
 import { supportsAgentStatus, useAppDispatch, useAppStateRef, type AgentStatus, type ToolType, type ThemeColor } from '../../store/app-state';
@@ -1258,6 +1259,8 @@ function TierTerminalImpl({
     // must exist first to avoid a dropped-first-chunk race.
     outputScheduler.registerSession(sessionId, term);
     unlisteners.push(registerTerminalObserver(sessionId, term));
+    const controlsGeneration = getTerminalObserver(sessionId)!.generation;
+    unlisteners.push(() => clearSessionControls(sessionId, controlsGeneration));
     unlisteners.push(registerTerminalControl(sessionId, term, statusConfirmed => {
       markNotifySoundPromptSubmitted(sessionId, tool);
       if (!statusConfirmed) markAgentSubmission();
@@ -1456,6 +1459,7 @@ function TierTerminalImpl({
         },
         onStatus: (running) => {
           if (!mounted || running) return;
+          clearSessionControls(sessionId, controlsGeneration);
           markSentinelExit(sessionId);
           ptyEnded = true;
           setTerminalControlReady(sessionId, false);
@@ -1466,6 +1470,7 @@ function TierTerminalImpl({
           }
         },
         onExit: () => {
+          clearSessionControls(sessionId, controlsGeneration);
           // Authoritative "process is actually dead" signal from the Rust
           // child-watcher thread. Critical for the lockup scenario where an
           // intermediate cmd.exe keeps the PTY slave open so reader never
@@ -1508,8 +1513,10 @@ function TierTerminalImpl({
       }
 
         try {
+          const controls = await readLaunchControls(tool);
+          if (!mounted) return;
           await commands.tierTerminalStart(sessionId, tool, initialGrid.size.cols, initialGrid.size.rows, theme, lang, toolData, folderPath ?? undefined, resumeToken, appStateRef.current.defaultShell, strictCwd);
-          if (mounted && !ptyEnded) setTerminalControlReady(sessionId, true);
+          if (mounted && !ptyEnded) { setTerminalControlReady(sessionId, true); setSessionControls(sessionId, controlsGeneration, controls); }
           sizeSync.markPtyStarted();
         } catch (err) {
           // Resume / launch validation failures (missing cwd, bad token

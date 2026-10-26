@@ -29,6 +29,7 @@ mod tool_memory;
 mod tool_skills;
 mod tool_control;
 mod computer_control;
+mod orchestration;
 mod tools;
 mod usage_stats;
 mod git;
@@ -45,6 +46,21 @@ use anyhow::Result;
 fn main() -> Result<()> {
     // These helpers run inside a visible Coffee Terminal, before single-instance GUI routing.
     let helper_args: Vec<String> = std::env::args().collect();
+    if matches!(helper_args.get(1).map(String::as_str), Some("__team_mcp" | "__team_worker")) {
+        #[cfg(windows)]
+        if helper_args[1] == "__team_worker" {
+            use windows::Win32::System::Console::{AttachConsole, ATTACH_PARENT_PROCESS};
+            let _ = unsafe { AttachConsole(ATTACH_PARENT_PROCESS) };
+        }
+        let result = (|| {
+            let port = helper_args.get(2).and_then(|value| value.parse::<u16>().ok()).ok_or("Invalid local coordinator port")?;
+            let token = helper_args.get(3).ok_or("Coordinator token missing")?;
+            if helper_args[1] == "__team_mcp" { orchestration::mcp(port, token) }
+            else { orchestration::worker_cli(port, token, &helper_args[4..]) }
+        })();
+        if let Err(error) = result { eprintln!("{error}"); std::process::exit(1); }
+        return Ok(());
+    }
     if helper_args.get(1).map(String::as_str) == Some("__ui-control") {
         let result = match (helper_args.get(2), helper_args.get(3)) {
             (Some(kind), Some(tool)) => tool_control::serve(kind, tool),

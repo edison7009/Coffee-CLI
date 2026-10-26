@@ -1043,6 +1043,14 @@ fn tier_terminal_start_blocking(
     // single-terminal panes spawn with no extra env today.
     let extra_env: Vec<(String, String)> = Vec::new();
 
+    if tool.as_deref() == Some("claude") {
+        if let Some(native_id) = &native_token {
+            if let Some((mcp, prompt)) = crate::orchestration::parent_launch(&app, &session_id, native_id, std::path::Path::new(&actual_cwd))? {
+                args.extend(["--mcp-config".into(), mcp, "--append-system-prompt".into(), prompt]);
+            }
+        }
+    }
+
     terminal::spawn(
         app.clone(),
         session_id.clone(),
@@ -5322,6 +5330,11 @@ pub fn start_ui(pending_launch: Option<crate::launch::LaunchRequest>) -> anyhow:
             crate::tool_control::check_tool_control,
             crate::tool_control::install_browser_control,
             crate::tool_control::set_tool_control,
+            crate::orchestration::orchestration_get,
+            crate::orchestration::orchestration_set_agent,
+            crate::orchestration::orchestration_sync,
+            crate::orchestration::orchestration_pending,
+            crate::orchestration::orchestration_resolve,
             crate::git::git_changes,
             crate::git_project_status::git_project_status,
             crate::git::git_show_file,

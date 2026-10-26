@@ -4,6 +4,7 @@ import { invoke, isTauri } from '../../tauri';
 import { createAgentToolExecutor, type ToolRequest } from '../../lib/agent-tools';
 import { receiveAgentEvent, receiveConversationChanged, receiveChannelStatus, refreshChannels, refreshAgentConversation, refreshAgentConversations, type AgentEvent, type ChannelSettings } from '../../lib/agent-client';
 import { setSentinelEnabled, updateSentinelSessions } from '../../lib/agent-sentinel';
+import { OrchestrationBridge } from './OrchestrationBridge';
 
 /** Lives with the workspace, independently of Agent/configuration tabs and the sidebar. */
 export function AgentBridge() {
@@ -50,5 +51,5 @@ export function AgentBridge() {
     start().catch(error => console.error('[AgentBridge]', error));
     return () => { disposed = true; setSentinelEnabled(false); unlisteners.forEach(stop => stop()); };
   }, [dispatch, stateRef]);
-  return null;
+  return <OrchestrationBridge />;
 }

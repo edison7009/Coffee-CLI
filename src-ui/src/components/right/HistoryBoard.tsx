@@ -23,6 +23,8 @@ import { SessionContextMenu, type SessionCtxMenuState } from './SessionContextMe
 import { useTextContextMenu } from '../../lib/use-text-context-menu';
 import { gitFolderKey, gitStatusKey, useProjectGitStatuses, type GitStatusTarget } from '../../lib/project-git-status';
 import { HistoryGitMark } from './HistoryGitMark';
+import { useOrchestration, workerState } from '../../lib/orchestration';
+import '../../styles/orchestration.css';
 import { getUnreadSessionReplies, subscribeSessionReplies, sessionReplyKey } from '../../lib/session-replies';
 // hermes/opencode PNG assets live in src/icons-inline/ so the Launchpad
 // can `?inline`-import them as data URIs and bypass the <img> async-decode
@@ -142,6 +144,7 @@ const normCwd = (cwd: string) => {
 export function HistoryBoard() {
   const t = useT();
   const { state, dispatch } = useAppState();
+  const orchestration = useOrchestration();
   const splitDrag = useSessionSplitDrag();
   const { conversations, conversationId: activeAgentConversation } = useAgentClient();
   const agentConversations = useMemo(() => conversations.filter(conversation => conversation.messageCount > 0), [conversations]);
@@ -440,6 +443,7 @@ export function HistoryBoard() {
         const displayName = renamed[sessionKey] ?? session.name;
         const isRenaming = renamingKey === sessionKey;
         const owner = state.terminals.find(tab => `live:${tab.id}` === session.id || tab.tool === session.tool && session.session_token && tab.resumeToken === session.session_token);
+        const workers = orchestration.tasks.filter(task => task.parentId === owner?.id || task.parentTool === session.tool && task.parentNativeId && task.parentNativeId === session.session_token).slice(-6);
         const isWorking = owner?.agentStatus === 'working' || Boolean(session.session_token && workingSessions.has(`${session.tool}:${session.session_token}`));
         const needsAttention = owner?.agentStatus === 'wait_input' || Boolean(session.session_token && waitingSessions.has(`${session.tool}:${session.session_token}`));
         const isUnread = !isWorking && !needsAttention && Boolean(session.session_token && unreadReplies.has(sessionReplyKey(session.tool, session.session_token)));
@@ -538,6 +542,14 @@ export function HistoryBoard() {
                 )}
               </div>
             </div>
+            {workers.length > 0 && <div className="history-workers" onPointerDown={event => event.stopPropagation()} onMouseEnter={() => setPreview(null)}>
+              {workers.map(task => {
+                const child = state.terminals.find(tab => tab.id === task.sessionId), status = workerState(task, child);
+                return <button type="button" key={task.id} className="history-worker" disabled={!child} aria-label={`${getToolName(task.tool)} · ${task.title} · ${t(`orchestration.${status}`)}`} data-tip={`${task.title} · ${t(`orchestration.${status}`)}`} onClick={event => { event.stopPropagation(); if (child) dispatch({ type: 'SET_ACTIVE_TERMINAL', id: child.id }); }}>
+                  {getToolIcon(task.tool)}<span className="orchestration-status" data-state={status} aria-hidden="true" />
+                </button>;
+              })}
+            </div>}
             {preview?.key === sessionKey && !isRenaming && createPortal(<div id={previewId} className="history-card-preview" role="tooltip" style={{ left: preview.left, top: preview.top }}>
               <div className="history-card-preview-title">{displayName}</div>
               <div className="history-card-meta">

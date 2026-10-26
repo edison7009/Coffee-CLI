@@ -560,7 +560,7 @@ pub fn spawn(
     use portable_pty::{native_pty_system, CommandBuilder};
 
     let initial_size = initial_pty_size(initial_cols, initial_rows)?;
-    eprintln!("[Tier Terminal] Spawning '{}' args={:?}", program, args);
+    eprintln!("[Tier Terminal] Spawning '{}' args={:?}", program, crate::orchestration::log_args(&args));
     eprintln!(
         "[Tier Terminal] Size: {}x{}",
         initial_size.cols, initial_size.rows

@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { directoryFailure } from './session-directory';
 import { recordSessionReply } from './session-replies';
+import { readLaunchControls, setSessionControls, clearSessionControls } from './session-controls';
 import { invoke, type ToolConfigEntry } from '../tauri';
 import { emptyClaudeState, reduceClaudeEvent, object, list, text, type ClaudeState, type ClaudeModel, type ClaudeCommand, type Json } from './claude-protocol';
 
@@ -34,6 +35,7 @@ function listen() {
   return listening ??= import('@tauri-apps/api/event').then(({ listen }) => listen<{ id: string; generation: string; event: Json }>('claude-session-event', ({ payload }) => {
     const c = clients.get(payload.id);
     if (!c || c.generation !== payload.generation) return;
+    if (payload.event.type === 'coffee_exit') clearSessionControls(payload.id, c.generation);
     if (c.connecting && !c.state.ready && payload.event.type === 'coffee_exit') { c.startupExit = text(payload.event.detail) || 'Claude process exited'; return; }
     const wasBusy = c.state.busy;
     c.state = reduceClaudeEvent(c.state, payload.event);
@@ -60,6 +62,8 @@ async function readSettings(id: string, c: Client) {
 
 async function initializeClaude(id: string, c: Client, cwd: string | null, resumeToken?: string, ready = true) {
   await listen();
+  clearSessionControls(id, c.generation);
+  const controls = await readLaunchControls('claude');
   const result = await invoke<{ sessionId: string; initialization: Json; history: { data: string; cursor: number }; bypassAvailable?: boolean }>('claude_session_start', { id, generation: c.generation, cwd, resumeToken: resumeToken ?? null });
   const restoreHistory = !c.state.messages.length;
   if (restoreHistory) for (const line of result.history.data.split(/\r?\n/)) {
@@ -70,6 +74,7 @@ async function initializeClaude(id: string, c: Client, cwd: string | null, resum
   await readSettings(id, c);
   if (c.startupExit) throw new Error(c.startupExit);
   c.state = { ...c.state, ready, status: ready ? 'idle' : 'starting', error: undefined, errorKey: undefined };
+  if (c.owners) setSessionControls(id, c.generation, controls);
   publish(c, true);
 }
 
@@ -85,6 +90,7 @@ export function retainClaudeSession(id: string, cwd: string | null, resumeToken?
         catch (error) {
           if (directoryFailure(error) || attempt === 2) { c.state = { ...c.state, status: 'error', error: String(error), errorKey: undefined, ready: false }; publish(c, true); return; }
           const generation = c.generation;
+          clearSessionControls(id, generation);
           c.generation = crypto.randomUUID();
           await invoke('claude_session_close', { id, generation }).catch(() => {});
           await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
@@ -101,6 +107,7 @@ export function retainClaudeSession(id: string, cwd: string | null, resumeToken?
       if (c.owners) return;
       void (c.starting ?? Promise.resolve()).finally(() => invoke('claude_session_close', { id, generation: c.generation })).catch(() => {});
       clearTimeout(c.publishTimer);
+      clearSessionControls(id, c.generation);
       clients.delete(id);
     }, 300);
   };
@@ -190,6 +197,7 @@ function restartWithBypass(id: string, c: Client): Promise<Json> {
       publish(c, true);
       c.generation = crypto.randomUUID();
       await invoke('claude_session_close', { id, generation: previousGeneration });
+      clearSessionControls(id, previousGeneration);
       closed = true;
       // Empty sessions have no native transcript to resume yet.
       await initializeClaude(id, c, c.cwd ?? null, previous.messages.length ? previous.nativeId : undefined, false);

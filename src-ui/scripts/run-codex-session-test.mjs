@@ -12,6 +12,7 @@ globalThis.__codexBridge = {
   listen: async (_name, fn) => { listener = fn; return () => {}; },
   invoke: async (name, args) => {
     calls.push({ name, ...args });
+    if (name === 'get_tool_control') return { ready: true, agents: [{ tool: 'codex', enabled: args.kind === 'computer', conflict: false }] };
     if (name === 'codex_session_start') {
       if (delayStart) return new Promise(resolve => deferred.push(() => resolve(thread(args.id))));
       return thread(args.id);
@@ -29,7 +30,7 @@ globalThis.__codexBridge = {
   },
 };
 const result = await build({
-  stdin: { resolveDir: fileURLToPath(new URL('..', import.meta.url)), contents: `export * from './src/lib/codex-protocol';export * from './src/lib/codex-session'`, loader: 'ts' },
+  stdin: { resolveDir: fileURLToPath(new URL('..', import.meta.url)), contents: `export * from './src/lib/codex-protocol';export * from './src/lib/codex-session';export {useSessionControls} from './src/lib/session-controls'`, loader: 'ts' },
   bundle: true, write: false, format: 'esm', platform: 'node',
   plugins: [{ name: 'transport', setup(b) {
     b.onResolve({ filter: /^react$|^\.\.\/tauri$|^@tauri-apps\/api\/event$/ }, args => ({ path: args.path, namespace: 'mock' }));
@@ -81,6 +82,7 @@ const emit = (id, method, params = {}, nativeId) => {
 };
 const releases = [api.retainCodexSession('a', 'D:/Test'), api.retainCodexSession('b', 'D:/Test', 'resume-id')];
 await flush();
+assert.deepEqual(api.useSessionControls('a'), ['computer'], 'native session startup captures configured capabilities');
 await api.runCodexCommand('a','skills');
 const mcp=await api.runCodexCommand('a','mcp');assert.deepEqual(mcp.data.map(s=>s.name),['first','second']);
 await api.runCodexCommand('b','review');assert.equal(live('b').busy,true);assert.equal(live('b').turnId,'review-turn');
@@ -137,6 +139,7 @@ api.configureCodex('a', { sandbox: { type: 'readOnly' }, approvalPolicy: 'on-req
 await api.sendCodexMessage('a', 'Test read-only permissions');
 assert.equal(calls.filter(c => c.method === 'turn/start').at(-1).params.sandboxPolicy.type, 'readOnly');
 emit('a', 'coffee/exit', { code: 1, detail: 'Missing package' });
+assert.deepEqual(api.useSessionControls('a'), [], 'capability badges clear when the native process exits');
 assert.equal(live('a').ready, false);
 assert.equal(live('a').error, 'Missing package');
 delayStart = true;
@@ -145,6 +148,7 @@ emit('exit-race', 'coffee/exit', { code: 1 });
 deferred.shift()(); await flush();
 assert.equal(live('exit-race').ready, false, 'late initialization cannot revive a dead process');
 releases.forEach(fn => fn()); await new Promise(resolve => setTimeout(resolve, 350));
+assert.deepEqual(api.useSessionControls('b'), [], 'closing a tab clears its capability badges');
 assert.deepEqual(new Set(calls.filter(c => c.name === 'codex_session_close').map(c => c.id)), new Set(['a', 'b', 'history', 'exit-race']));
 delete globalThis.__codexBridge;
 console.log('ok independent sessions, stale events, immediate stop, attachments, approval and process lifecycle');
