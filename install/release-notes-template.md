@@ -1,54 +1,59 @@
 <details open>
 <summary><b>🇨🇳 简体中文</b></summary>
 
-### Coffee CLI v3.7.0 · 侧栏与模型显示优化
+### Coffee CLI v3.7.1 · 会话提醒与稳定性修复
 
-- **会话列表。** 新增与文字等高的工具图标，统一分支、PR 与 CI 状态配色，适配深浅主题。
-- **模型显示。** Codex 欢迎区显示当前模型 ID，修复 Claude Code 模型名称过早省略的问题。
-- **Codex 图标。** 更新为随深浅主题切换的单色标识。
+- **会话提醒。** 新增蓝色“等待操作”标签与后台完成未读蓝点，查看会话后清除未读。
+- **PR 状态。** 按会话关联 PR，正确显示合并、关闭等状态，隐藏普通分支图标。
+- **体验修复。** 修复 Claude Code、Codex 桌面会话关闭卡顿，使用统计悬停提示统一主题。
+- **安装修复。** 改善 macOS、Linux 安装脚本对更新信息的解析。
 
 </details>
 
 <details>
 <summary><b>🇬🇧 English</b></summary>
 
-### Coffee CLI v3.7.0 · Sidebar and Model Display
+### Coffee CLI v3.7.1 · Session Alerts and Stability Fixes
 
-- **Session list.** Text-sized tool icons beside titles, with consistent branch, PR and CI colors for light and dark themes.
-- **Model display.** Show the current model ID in the Codex welcome area and fix premature truncation of Claude Code model names.
-- **Codex icon.** A refreshed monochrome mark that follows the theme.
+- **Session alerts.** Blue awaiting-action labels and unread dots for replies completed in the background. Viewing a conversation clears its unread marker.
+- **PR status.** Associate PRs with individual conversations, show merged and closed states correctly, and hide plain branch icons.
+- **Experience fixes.** Fix slow closing with Claude Code and Codex desktop sessions, and apply themed usage-statistics tooltips.
+- **Installation fixes.** Improve update-response parsing in macOS and Linux installers.
 
 </details>
 
 <details>
 <summary><b>🇹🇼 繁體中文</b></summary>
 
-### Coffee CLI v3.7.0 · 側欄與模型顯示優化
+### Coffee CLI v3.7.1 · 對話提醒與穩定性修復
 
-- **對話列表。** 新增與文字等高的工具圖示，統一分支、PR 與 CI 狀態配色，適配深淺主題。
-- **模型顯示。** Codex 歡迎區顯示目前模型 ID，修復 Claude Code 模型名稱過早省略的問題。
-- **Codex 圖示。** 更新為隨深淺主題切換的單色標誌。
+- **對話提醒。** 新增藍色「等待操作」標籤與背景完成未讀藍點，查看對話後清除未讀。
+- **PR 狀態。** 依對話關聯 PR，正確顯示合併、關閉等狀態，隱藏一般分支圖示。
+- **體驗修復。** 修復 Claude Code、Codex 桌面對話關閉卡頓，使用統計懸停提示統一主題。
+- **安裝修復。** 改善 macOS、Linux 安裝腳本對更新資訊的解析。
 
 </details>
 
 <details>
 <summary><b>🇯🇵 日本語</b></summary>
 
-### Coffee CLI v3.7.0 · サイドバーとモデル表示の改善
+### Coffee CLI v3.7.1 · 会話通知と安定性の改善
 
-- **会話一覧。** 文字と同じ大きさのツールアイコンを表示。ブランチ、PR、CI の状態色を統一し、ライト・ダーク両テーマに対応しました。
-- **モデル表示。** Codex の歓迎画面に現在のモデル ID を表示し、Claude Code のモデル名が早く省略される問題を修正しました。
-- **Codex アイコン。** テーマに追従する新しい単色マークに更新しました。
+- **会話通知。** 操作待ちを青いラベルで、バックグラウンドで完了した返信を青い未読ドットで表示。会話を開くと未読を解除します。
+- **PR 状態。** 会話ごとに PR を関連付け、マージ済み・クローズ済みの状態を正しく表示し、通常のブランチアイコンを非表示にしました。
+- **操作性。** Claude Code と Codex のデスクトップ会話を閉じる際の遅延を修正し、使用統計のツールチップをテーマに統一しました。
+- **インストール。** macOS・Linux インストーラーの更新情報の解析を改善しました。
 
 </details>
 
 <details>
 <summary><b>🇰🇷 한국어</b></summary>
 
-### Coffee CLI v3.7.0 · 사이드바 및 모델 표시 개선
+### Coffee CLI v3.7.1 · 대화 알림 및 안정성 개선
 
-- **대화 목록.** 글자와 같은 크기의 도구 아이콘을 추가하고 밝은 테마와 어두운 테마에 맞춰 브랜치, PR, CI 상태 색상을 통일했습니다.
-- **모델 표시.** Codex 시작 화면에 현재 모델 ID를 표시하고 Claude Code 모델 이름이 너무 일찍 생략되는 문제를 수정했습니다.
-- **Codex 아이콘.** 테마에 따라 색상이 바뀌는 새 단색 표시로 갱신했습니다.
+- **대화 알림.** 파란색 작업 대기 표시와 백그라운드에서 완료된 답변의 읽지 않음 표시를 추가했습니다. 대화를 열면 읽지 않음 표시가 사라집니다.
+- **PR 상태.** 대화별로 PR을 연결해 병합 및 닫힘 상태를 올바르게 표시하고 일반 브랜치 아이콘을 숨겼습니다.
+- **사용성.** Claude Code와 Codex 데스크톱 대화를 닫을 때의 지연을 수정하고 사용 통계 툴팁에 테마를 적용했습니다.
+- **설치.** macOS와 Linux 설치 프로그램의 업데이트 정보 분석을 개선했습니다.
 
 </details>
