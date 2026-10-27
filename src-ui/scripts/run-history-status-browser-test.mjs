@@ -243,14 +243,34 @@ try {
     await page.screenshot({path:join(directory,`tool-icons-${layout}.png`),fullPage:true});
   }
   await page.evaluate(()=>localStorage.setItem('cc-history-layout','list'));
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.goto(`http://127.0.0.1:${server.address().port}/?workers=1`);
   await rows.first().waitFor();
   await page.evaluate(()=>{
+    window.pauseWorkerEntry = event => {
+      if (event.animationName === 'orchestration-worker-enter') for (const animation of event.target.getAnimations()) {
+        if (animation.animationName === event.animationName) { animation.pause(); animation.currentTime = 100; }
+      }
+    };
+    document.addEventListener('animationstart', window.pauseWorkerEntry);
     window.workerTasks=['codex','opencode'].map((tool,index)=>({id:'task-'+index,parentId:'old-parent',parentNativeId:'one',parentTool:'claude',sessionId:'worker-'+index,nativeId:'worker-native-'+index,tool,title:index?'Check formatting':'Review code',cwd:'D:/same',phase:'running',summary:null,question:index?{id:'q1',text:'Need a file',answer:null}:null,activity:'working',generation:'g1'}));
     window.updateView({terminals:[{id:'a',tool:'claude',resumeToken:'one',agentStatus:'idle',folderPath:'D:/same'},...window.workerTasks.map(task=>({id:task.sessionId,tool:task.tool,resumeToken:task.nativeId,folderPath:task.cwd,agentStatus:'working'}))]});
     window.updateTeam({enabled:true,tasks:window.workerTasks,revision:1});
   });
   const family=page.locator('.history-family').first(),workers=family.locator('.history-worker');await workers.first().waitFor();assert.equal(await workers.count(),2);
+  const reveal = await family.evaluate(group => {
+    const rows = [...group.querySelectorAll('.history-worker')], animations = rows.flatMap(row => row.getAnimations().filter(animation => animation.animationName === 'orchestration-worker-enter'));
+    const sample = time => { animations.forEach(animation => { animation.currentTime = time; }); return { height: rows[0].getBoundingClientRect().height, next: group.nextElementSibling.getBoundingClientRect().top }; };
+    const start = sample(0), middle = sample(100), end = sample(200);
+    animations.forEach(animation => animation.finish()); document.removeEventListener('animationstart', window.pauseWorkerEntry);
+    return { count: animations.length, start, middle, end };
+  });
+  assert.equal(reveal.count,2);assert.ok(reveal.start.height < reveal.middle.height && reveal.middle.height < reveal.end.height,'child rows expand instead of jumping into place');
+  assert.ok(reveal.start.next < reveal.middle.next && reveal.middle.next < reveal.end.next,'following conversations move down with the expanding rows');
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  assert.equal(await workers.first().evaluate(el=>getComputedStyle(el).animationName),'none','reduced motion shows child rows immediately');
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.evaluate(()=>Promise.all(document.getAnimations().filter(animation=>animation.animationName==='orchestration-worker-enter').map(animation=>animation.finished)));
   assert.equal(await rows.count(),3,'native child records are nested under their parent, not repeated as peer history rows');
   assert.equal(await workers.first().locator('.history-worker-title').innerText(),'Review code','sidebar shows the task title used by the top tab');
   assert.equal(await workers.first().locator('.history-worker-icon svg').evaluate(el=>el.getBoundingClientRect().height),14,'nested SVG stays compact');
@@ -315,9 +335,13 @@ try {
   await page.screenshot({path:join(directory,'orchestration-children.png')});
   for (const size of [1,3,6]) {
     await page.evaluate(size=>window.updateTeam({enabled:true,tasks:Array.from({length:size},(_,index)=>({...window.workerTasks[index%2],id:'branch-'+index,sessionId:'worker-'+index})),revision:10+size}),size);
-    assert.equal(await workers.count(),size);await checkConnectors();
+    assert.equal(await workers.count(),size);
+    await page.evaluate(()=>Promise.all(document.getAnimations().filter(animation=>animation.animationName==='orchestration-worker-enter').map(animation=>animation.finished)));
+    await checkConnectors();
   }
   await page.evaluate(()=>window.updateTeam({enabled:true,tasks:window.workerTasks,revision:20}));
+  await page.evaluate(()=>Promise.all(document.getAnimations().filter(animation=>animation.animationName==='orchestration-worker-enter').map(animation=>animation.finished)));
+  assert.equal(await workers.first().evaluate(el=>el.getAnimations().filter(animation=>animation.animationName==='orchestration-worker-enter').length),0,'status and title updates do not replay the entry animation');
   await page.evaluate(()=>{window.workerTasks[0].phase='completed';window.updateTeam({enabled:true,tasks:window.workerTasks,revision:21});window.updateView({terminals:[{id:'a',tool:'claude',resumeToken:'one',folderPath:'D:/same'}]})});
   assert.equal(await workers.first().locator('.orchestration-status').getAttribute('data-state'),'completed');
   assert.equal(await workers.first().locator('.history-worker-open').isEnabled(),true,'saved child history can be restored');

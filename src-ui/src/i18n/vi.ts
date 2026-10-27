@@ -11,6 +11,7 @@ export const vi = {
   "orchestration.close.description": "Kết thúc nhóm để dừng tất cả phiên con hoặc giữ chúng hoạt động độc lập.",
   "orchestration.close.keep": "Giữ phiên con",
   "orchestration.close.end": "Kết thúc nhóm",
+  "orchestration.tool.search": "Tìm công cụ phối hợp",
   "orchestration.tool.start": "Giao nhiệm vụ phối hợp",
   "orchestration.tool.list": "Xem nhiệm vụ phối hợp",
   "orchestration.tool.wait": "Chờ kết quả phối hợp",

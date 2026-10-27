@@ -11,6 +11,7 @@ export const de = {
   "orchestration.close.description": "Beenden Sie die gesamte Gruppe oder lassen Sie die untergeordneten Sitzungen unabhängig weiterlaufen.",
   "orchestration.close.keep": "Sitzungen behalten",
   "orchestration.close.end": "Gruppe beenden",
+  "orchestration.tool.search": "Zusammenarbeitswerkzeuge suchen",
   "orchestration.tool.start": "Aufgabe delegieren",
   "orchestration.tool.list": "Gemeinsame Aufgaben anzeigen",
   "orchestration.tool.wait": "Auf Ergebnisse warten",

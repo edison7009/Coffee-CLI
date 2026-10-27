@@ -11,6 +11,7 @@ export const pt = {
   "orchestration.close.description": "Encerre o grupo para parar todas as sessões filhas ou mantenha-as como sessões independentes.",
   "orchestration.close.keep": "Manter sessões",
   "orchestration.close.end": "Encerrar grupo",
+  "orchestration.tool.search": "Buscar ferramentas de colaboração",
   "orchestration.tool.start": "Delegar tarefa",
   "orchestration.tool.list": "Ver tarefas de colaboração",
   "orchestration.tool.wait": "Aguardar resultados da colaboração",

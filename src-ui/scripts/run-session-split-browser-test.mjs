@@ -153,6 +153,12 @@ try {
   await pane('b-restarted').waitFor(); assert.equal(await pane('b').count(), 0);
   await page.evaluate(async () => {
     const { receiveOrchestration } = await import('/src/lib/orchestration.ts');
+    window.pauseTabEntry = event => {
+      if (event.animationName === 'orchestration-tab-enter') for (const animation of event.target.getAnimations()) {
+        if (animation.animationName === event.animationName) { animation.pause(); animation.currentTime = 100; }
+      }
+    };
+    document.addEventListener('animationstart', window.pauseTabEntry);
     const tasks = ['codex', 'opencode'].map((tool, index) => ({ id: 'task-' + index, parentId: 'a', parentNativeId: 'thread-a', parentTool: 'claude', sessionId: 'worker-' + index, nativeId: 'worker-native-' + index, tool, title: index ? '检查交互' : '实现页面', cwd: 'D:/a', phase: 'running', question: null, activity: 'working' }));
     for (const task of tasks) window.testDispatch({ type: 'ADD_TERMINAL', session: { id: task.sessionId, parentId: 'a', tool: task.tool, resumeToken: task.nativeId, folderPath: task.cwd, toolTitle: 'You are a worker assigned to a task', agentStatus: 'working' } });
     window.testDispatch({ type: 'REORDER_TAB', tabId: 'worker-0', beforeId: 'b-restarted' });
@@ -162,6 +168,30 @@ try {
   });
   const parentTab = page.locator('.chrome-tab[data-tab-id="a"]'), childTab = page.locator('.chrome-tab[data-tab-id="worker-0"]'), siblingTab = page.locator('.chrome-tab[data-tab-id="worker-1"]');
   await childTab.waitFor();
+  const tabReveal = await childTab.evaluate(el => {
+    const animation = el.getAnimations().find(animation => animation.animationName === 'orchestration-tab-enter');
+    const sample = time => { animation.currentTime = time; return { width: el.getBoundingClientRect().width, opacity: Number(getComputedStyle(el).opacity) }; };
+    const start = sample(0), middle = sample(100), end = sample(200);
+    document.querySelectorAll('.orchestration-child').forEach(tab => tab.getAnimations().filter(animation=>animation.animationName==='orchestration-tab-enter').forEach(animation=>animation.finish()));
+    document.removeEventListener('animationstart', window.pauseTabEntry);
+    return { start, middle, end };
+  });
+  assert.ok(tabReveal.start.width < tabReveal.middle.width && tabReveal.middle.width <= tabReveal.end.width,'child tabs reveal horizontally');
+  assert.ok(tabReveal.start.opacity < tabReveal.middle.opacity && tabReveal.middle.opacity < tabReveal.end.opacity,'child titles fade in with their tab');
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  assert.equal(await childTab.evaluate(el=>getComputedStyle(el).animationName),'none','reduced motion disables child tab entry');
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.evaluate(()=>Promise.all(document.getAnimations().filter(animation=>['orchestration-tab-enter','orchestration-worker-enter'].includes(animation.animationName)).map(animation=>animation.finished)));
+  await page.evaluate(async()=>{
+    const {receiveOrchestration,getOrchestrationSnapshot}=await import('/src/lib/orchestration.ts');
+    const current=getOrchestrationSnapshot();receiveOrchestration({...current,revision:current.revision+1,tasks:current.tasks.map(task=>task.id==='task-0'?{...task,title:'Updated child title'}:task)});
+  });
+  await page.waitForFunction(()=>document.querySelector('.chrome-tab[data-tab-id="worker-0"] .tab-title')?.textContent==='Updated child title');
+  assert.equal(await childTab.evaluate(el=>el.getAnimations().filter(animation=>animation.animationName==='orchestration-tab-enter').length),0,'updating a title does not replay tab entry');
+  await page.evaluate(async()=>{
+    const {receiveOrchestration,getOrchestrationSnapshot}=await import('/src/lib/orchestration.ts');
+    const current=getOrchestrationSnapshot();receiveOrchestration({...current,revision:current.revision+1,tasks:current.tasks.map(task=>task.id==='task-0'?{...task,title:'实现页面'}:task)});
+  });
   const nested = page.locator('.history-worker').filter({ hasText: '实现页面' });
   assert.equal(await nested.locator('.history-worker-title').innerText(), await childTab.locator('.tab-title').innerText(), 'sidebar and top tab share the task title');
   assert.equal(await page.locator('.history-card-title').filter({ hasText: 'You are a worker' }).count(), 0, 'live workers never appear as peer history rows');
@@ -229,11 +259,11 @@ try {
   assert.equal(await page.locator('.history-card-title').filter({hasText:/^实现页面$/}).count(),1,'retained child has its own accessible history row and task title');
   assert.equal(await page.evaluate(()=>window.testState().terminals.find(tab=>tab.id==='worker-0').parentId),undefined);
   assert.deepEqual(await page.evaluate(()=>window.lifetimes.filter(([kind,id])=>kind==='unmount'&&id.startsWith('worker-'))),[],'detaching never restarts or unmounts worker views');
-  const addGroup=async(phase)=>page.evaluate(async phase=>{
+  const addGroup=async(phase)=>{await page.evaluate(async phase=>{
     const {receiveOrchestration,getOrchestrationSnapshot}=await import('/src/lib/orchestration.ts');
     for(const session of [{id:'group-parent',tool:'claude',claudeMode:'conversation',toolTitle:'Group parent'},{id:'group-child',parentId:'group-parent',tool:'codex',codexMode:'conversation',toolTitle:'Internal instructions',agentStatus:phase==='completed'?'idle':'working'}])window.testDispatch({type:'ADD_TERMINAL',session:{...session,folderPath:'D:/group'}});
     const s=getOrchestrationSnapshot();receiveOrchestration({...s,revision:s.revision+1,tasks:[...s.tasks.filter(task=>task.id!=='group-task'),{id:'group-task',sessionId:'group-child',parentId:'group-parent',parentTool:'claude',tool:'codex',title:'Visible child result',phase}]});
-  },phase);
+  },phase);await page.evaluate(()=>Promise.all(document.getAnimations().filter(animation=>animation.animationName==='orchestration-tab-enter').map(animation=>animation.finished)));};
   const groupParent=page.locator('.chrome-tab[data-tab-id="group-parent"]');
   await addGroup('completed');
   assert.equal(await page.locator('.chrome-tab[data-tab-id="group-child"]').count(),1,'completed tasks remain available until their parent is explicitly closed');

@@ -11,6 +11,7 @@ export const ko = {
   "orchestration.close.description": "그룹을 종료하면 모든 하위 세션이 중단되고 닫힙니다. 유지하면 독립적으로 실행됩니다.",
   "orchestration.close.keep": "하위 세션 유지",
   "orchestration.close.end": "그룹 종료",
+  "orchestration.tool.search": "협업 도구 검색",
   "orchestration.tool.start": "협업 작업 배정",
   "orchestration.tool.list": "협업 작업 확인",
   "orchestration.tool.wait": "협업 결과 대기",

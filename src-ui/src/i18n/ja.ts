@@ -11,6 +11,7 @@ export const ja = {
   "orchestration.close.description": "グループ全体を終了するか、子セッションを独立して実行し続けるか選択してください。",
   "orchestration.close.keep": "子セッションを保持",
   "orchestration.close.end": "グループを終了",
+  "orchestration.tool.search": "協働ツールを検索",
   "orchestration.tool.start": "協働タスクを割り当て",
   "orchestration.tool.list": "協働タスクを確認",
   "orchestration.tool.wait": "協働の結果を待機",

@@ -8,6 +8,7 @@ export interface OrchestrationTask {
   question: { id: string; text: string; answer: string | null } | null; generation: string | null; activity: string | null;
   detached?: boolean;
   hidden?: boolean;
+  resultDelivery?: string | null;
 }
 export interface OrchestrationSnapshot { enabled: boolean; agents: string[]; coordinators: string[]; tasks: OrchestrationTask[]; revision: number }
 export interface ResultDelivery { id: string; parentId: string; generation: string; text: string }

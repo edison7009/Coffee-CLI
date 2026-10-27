@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useAppState } from './store/app-state';
 import { retryInvoke } from './tauri';
 import { initNotifySound } from './lib/notify-sound';
+import { useOrchestration } from './lib/orchestration';
 import { useSessionReplyVisibility } from './lib/use-session-reply-visibility';
 import { routeFileDrop } from './lib/file-drop';
 import { initHistoryAutoRefresh } from './lib/history-cache';
@@ -190,6 +191,7 @@ function useSlidingPanel(hidden: boolean): { mounted: boolean; collapsed: boolea
 
 export function App() {
   const { state } = useAppState();
+  const orchestration = useOrchestration();
   useSessionReplyVisibility(state);
   const activeTabId = state.agentPageActive ? `agent:${state.agentPageActive}`
     : state.diffTabActive ? 'diff' : state.activeTerminalId;
@@ -281,8 +283,8 @@ export function App() {
   // array (the same source the dynamic island reads via agentStatus) so chimes
   // match the visual status exactly. This fires on every terminals change.
   useEffect(() => {
-    return initNotifySound(state.terminals);
-  }, [state.terminals]);
+    return initNotifySound(state.terminals, orchestration.tasks);
+  }, [state.terminals, orchestration.tasks]);
 
   // Apply theme + shape on mount and change — must sync with the inline script in index.html
   //

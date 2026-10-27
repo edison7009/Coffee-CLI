@@ -11,6 +11,7 @@ export const zhCN = {
   "orchestration.close.description": "结束整组会停止并关闭所有子会话；保留子会话会让它们独立运行。",
   "orchestration.close.keep": "保留子会话",
   "orchestration.close.end": "结束整组",
+  "orchestration.tool.search": "查找协作工具",
   "orchestration.tool.start": "派发协作任务",
   "orchestration.tool.list": "查看协作任务",
   "orchestration.tool.wait": "等待协作结果",

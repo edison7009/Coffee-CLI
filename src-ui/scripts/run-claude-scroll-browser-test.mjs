@@ -274,6 +274,21 @@ try {
   }
   console.log('ok seven readable orchestration headings preserve expandable inputs and outputs');
 
+  const searchQuery='select:mcp__coffee-team__worker_start,mcp__coffee-team__worker_list,mcp__coffee-team__worker_wait,mcp__coffee-team__';
+  await page.evaluate(query=>window.setSession({messages:[{...window.toolMessage,id:'team-search',toolName:'ToolSearch',input:{query},output:'Original search result'}]}),searchQuery);
+  const searchHeading=page.locator('.claude-tool-heading > button').first();
+  assert.equal(await searchHeading.innerText(),'Find collaboration tools');
+  assert.equal(await page.locator('.claude-tool-heading > span').innerText(),'Delegate task · View collaboration tasks · Wait for collaboration results');
+  assert.equal(await page.locator('.claude-tool-body').count(),0);
+  await searchHeading.click();
+  assert.ok((await page.locator('.claude-tool-body').innerText()).includes(searchQuery),'expanded search retains the exact native query');
+  assert.ok((await page.locator('.claude-tool-body').innerText()).includes('Original search result'));
+  const otherQuery='select:mcp__other__worker_start';
+  await page.evaluate(query=>window.setSession({messages:[{...window.toolMessage,id:'other-search',toolName:'ToolSearch',input:{query}}]}),otherQuery);
+  assert.equal(await searchHeading.innerText(),'ToolSearch');
+  assert.equal(await page.locator('.claude-tool-heading > span').innerText(),otherQuery,'unrelated tool searches retain their original display');
+  console.log('ok localized collaboration tool searches preserve raw details and leave unrelated searches unchanged');
+
   await page.evaluate(() => {
     window.setSession({messages:[{id:'stop-tool',role:'tool',toolName:'Bash',toolStatus:'running',content:'',input:{command:'echo hello'},output:'Already printed output',timestamp:Date.now()}],busy:true,pendingTurns:1,error:undefined});
     window.stopFixture(['[ede_diagnostic] result_type=user last_content_type=n/a stop_reason=tool_use']);

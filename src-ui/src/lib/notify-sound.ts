@@ -32,6 +32,7 @@ import {
 } from '../store/app-state';
 import { commands, isTauri } from '../tauri';
 import { IS_WINDOWS } from './platform';
+import type { OrchestrationTask } from './orchestration';
 
 export type NotifyKind = 'done' | 'wait';
 
@@ -153,7 +154,8 @@ function enabled(key: string): boolean {
  *  agentStatus), so it fires whenever Redux updates any terminal's status.
  *  Returns a cleanup function. */
 export function initNotifySound(
-  terminals: Array<{ id: string; tool: ToolType; agentStatus?: AgentStatus }>,
+  terminals: Array<{ id: string; tool: ToolType; agentStatus?: AgentStatus; parentId?: string; resumeToken?: string }>,
+  tasks: OrchestrationTask[] = [],
 ): () => void {
   const statusTerminals = terminals.filter(terminal => supportsAgentStatus(terminal.tool));
   const currentStatusIds = new Set(statusTerminals.map(terminal => terminal.id));
@@ -175,6 +177,13 @@ export function initNotifySound(
 
   // Check all terminals for transitions
   for (const terminal of statusTerminals) {
+    const isChild = Boolean(terminal.parentId || tasks.some(task => !task.detached && (task.sessionId === terminal.id || task.tool === terminal.tool && terminal.resumeToken && task.nativeId === terminal.resumeToken)));
+    const group = tasks.filter(task => !task.detached && (task.parentId === terminal.id || task.parentTool === terminal.tool && terminal.resumeToken && task.parentNativeId === terminal.resumeToken));
+    // A structured completion wins over a lagging native activity indicator.
+    const untrackedWork = terminals.some(child => child.parentId === terminal.id
+      && (child.agentStatus === 'working' || child.agentStatus === 'wait_input')
+      && !group.some(task => task.sessionId === child.id || task.tool === child.tool && child.resumeToken && task.nativeId === child.resumeToken));
+    const suppressDone = isChild || untrackedWork || group.some(task => ['starting', 'running', 'uncertain'].includes(task.phase) || task.resultDelivery === 'pending');
     const currentStatus = terminal.agentStatus;
     if (!currentStatus) {
       prevStatus.delete(terminal.id);
@@ -186,17 +195,17 @@ export function initNotifySound(
 
     // Update tracking
     prevStatus.set(terminal.id, currentStatus);
-    if (currentStatus !== 'idle') cancelPendingDone(terminal.id);
+    if (currentStatus !== 'idle' || suppressDone) cancelPendingDone(terminal.id);
 
-    // Keep startup transitions silent for Codex and Kimi until
-    // this session has received an actual user submission.
+    // Guard startup activity, while allowing delegated sessions to request
+    // user approval before any local submission.
     const guarded = terminal.tool === 'codex' || !supportsNativeAgentStatus(terminal.tool);
-    if (guarded && !guardedPromptSubmitted.has(terminal.id)) {
+    if (guarded && !isChild && !guardedPromptSubmitted.has(terminal.id)) {
       continue;
     }
 
-    // Skip if no previous state or no change
-    if (!prev || prev === currentStatus) continue;
+    // A delegated session may start at a real approval prompt.
+    if ((!prev && !(isChild && currentStatus === 'wait_input')) || prev === currentStatus) continue;
 
     // Detect meaningful transitions
     const becameIdle = (prev === 'working' || prev === 'wait_input') && currentStatus === 'idle';
@@ -210,7 +219,7 @@ export function initNotifySound(
       continue;
     }
 
-    if (!enabled('cc-sound-done')) continue;
+    if (suppressDone || !enabled('cc-sound-done')) continue;
     cancelPendingDone(terminal.id);
     const sessionId = terminal.id;
     const timer = window.setTimeout(() => {

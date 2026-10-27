@@ -58,6 +58,54 @@ for (const tool of ['codex', 'kimicode', 'opencode']) {
   assert.equal(f.calls.length, 0, `${tool} startup remains silent`);
 }
 
+for (const tool of ['claude', 'codex', 'opencode']) {
+  const f = fixture();
+  const update = agentStatus => f.api.initNotifySound([{ id: 'child', tool, parentId: 'parent', agentStatus }]);
+  update('working'); update('idle'); f.settle();
+  assert.equal(f.calls.length, 0, `${tool} child completion is silent`);
+  update('working'); update('wait_input'); update('wait_input'); f.settle();
+  assert.deepEqual(f.calls.map(call => call.kind), ['wait'], `${tool} child permission prompts still notify once without a local user submission`);
+  update('idle'); f.settle();
+  assert.equal(f.calls.length, 1, 'resuming after permission never adds a child completion sound');
+  const firstPrompt = fixture();
+  const prompt = [{ id: 'child', tool, parentId: 'parent', agentStatus: 'wait_input' }];
+  firstPrompt.api.initNotifySound(prompt); firstPrompt.api.initNotifySound(prompt);
+  assert.deepEqual(firstPrompt.calls.map(call=>call.kind),['wait'], `${tool} requests approval even when it is the first observed child status`);
+}
+
+const team = fixture();
+let tasks = [{ id: 'task', sessionId: 'child', parentId: 'parent', tool: 'codex', phase: 'running' }];
+const teamStatus = (parent, child = 'idle') => team.api.initNotifySound([
+  { id: 'parent', tool: 'claude', agentStatus: parent },
+  { id: 'child', tool: 'codex', parentId: tasks[0].detached ? undefined : 'parent', agentStatus: child },
+], tasks);
+teamStatus('working', 'working'); teamStatus('idle', 'working'); team.settle();
+assert.equal(team.calls.length, 0, 'coordinator pauses are silent while workers run');
+tasks = [{ ...tasks[0], phase: 'completed', resultDelivery: 'pending' }];
+teamStatus('working'); teamStatus('idle'); team.settle();
+assert.equal(team.calls.length, 0, 'undelivered results do not sound like a final summary');
+tasks = [{ ...tasks[0], resultDelivery: 'claimed' }];
+teamStatus('working', 'working'); teamStatus('idle', 'working'); teamStatus('idle', 'working'); team.settle();
+assert.deepEqual(team.calls.map(call => call.kind), ['done'], 'the final coordinator summary sounds once');
+tasks = [{ ...tasks[0], detached: true }];
+team.api.markNotifySoundPromptSubmitted('child', 'codex');
+teamStatus('idle', 'working'); teamStatus('idle', 'idle'); team.settle();
+assert.deepEqual(team.calls.map(call => call.kind), ['done', 'done'], 'independent sessions regain their normal completion sound');
+
+const lateTeam = fixture();
+lateTeam.status('claude', 'working'); lateTeam.status('claude', 'idle');
+lateTeam.api.initNotifySound([{ id: 'session', tool: 'claude', agentStatus: 'idle' }], [{ parentId: 'session', sessionId: 'new-child', phase: 'starting' }]);
+lateTeam.settle();
+assert.equal(lateTeam.calls.length, 0, 'a newly observed child cancels a queued premature parent chime');
+
+const untrackedTeam = fixture();
+const untrackedStatus = parentStatus => untrackedTeam.api.initNotifySound([
+  { id: 'parent', tool: 'claude', agentStatus: parentStatus },
+  { id: 'child', tool: 'claude', parentId: 'parent', agentStatus: 'working' },
+]);
+untrackedStatus('working'); untrackedStatus('idle'); untrackedTeam.settle();
+assert.equal(untrackedTeam.calls.length, 0, 'an active child stays silent and blocks premature parent completion before task metadata arrives');
+
 const preview = fixture();
 preview.api.playNotifySound('done'); preview.api.playNotifySound('wait');
 assert.deepEqual(preview.calls.map(call => call.kind), ['done', 'wait'], 'both preview buttons use the native path');

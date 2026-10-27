@@ -11,6 +11,7 @@ export const es = {
   "orchestration.close.description": "Finaliza el grupo para detener y cerrar todas las sesiones secundarias, o mantenlas como sesiones independientes.",
   "orchestration.close.keep": "Conservar sesiones",
   "orchestration.close.end": "Finalizar grupo",
+  "orchestration.tool.search": "Buscar herramientas de colaboración",
   "orchestration.tool.start": "Delegar tarea",
   "orchestration.tool.list": "Ver tareas de colaboración",
   "orchestration.tool.wait": "Esperar resultados de colaboración",

@@ -11,6 +11,7 @@ export const fr = {
   "orchestration.close.description": "Terminez le groupe pour arrêter toutes les sessions enfants, ou conservez-les comme sessions indépendantes.",
   "orchestration.close.keep": "Conserver les sessions",
   "orchestration.close.end": "Terminer le groupe",
+  "orchestration.tool.search": "Rechercher des outils de collaboration",
   "orchestration.tool.start": "Déléguer une tâche",
   "orchestration.tool.list": "Voir les tâches collaboratives",
   "orchestration.tool.wait": "Attendre les résultats",

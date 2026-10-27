@@ -3,7 +3,7 @@ import { diffLines } from 'diff';
 import { useAppLanguage, useAppState } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
 import type { ClaudeTranslate } from '../../lib/claude-i18n';
-import { orchestrationToolLabel } from '../../lib/orchestration-label';
+import { orchestrationSearchLabel, orchestrationToolLabel } from '../../lib/orchestration-label';
 import { clipboardWrite } from '../../lib/clipboard';
 import { directoryFailure, directoryFailureMessage } from '../../lib/session-directory';
 import { bindAutoHideScrollbar } from '../../lib/auto-hide-scrollbar';
@@ -194,14 +194,15 @@ export const ClaudeTool = memo(function ClaudeTool({ message }: { message: Claud
   const input = message.input ?? {}, name = message.toolName ?? t('claude.tool'), path = text(input.file_path) || text(input.path);
   const before = text(input.old_string), after = text(input.new_string);
   const edit = name === 'Edit', write = name === 'Write', bash = name === 'Bash';
-  const description = text(input.description) || path || text(input.pattern) || text(input.query) || text(input.skill);
+  const search = orchestrationSearchLabel(name, text(input.query), t);
+  const description = search?.description ?? (text(input.description) || path || text(input.pattern) || text(input.query) || text(input.skill));
   const changes = edit ? diffLines(before, after, { timeout: 100 }) ?? [] : [];
   const removed = changes.filter(c => c.removed).reduce((n, c) => n + c.count, 0), added = changes.filter(c => c.added).reduce((n, c) => n + c.count, 0);
   const showBody = bodyOpen;
   const output = message.output ?? '';
   return <section className={`claude-tool claude-tool--${message.toolStatus ?? 'running'}`}>
     <div className="claude-tool-heading">
-      <button onClick={() => setBodyOpen(v => !v)} aria-expanded={showBody}><strong>{orchestrationToolLabel(name, t) ?? name}</strong></button>
+      <button onClick={() => setBodyOpen(v => !v)} aria-expanded={showBody}><strong>{search?.title ?? orchestrationToolLabel(name, t) ?? name}</strong></button>
       {path ? <button className="claude-file-path" onClick={() => void commands.showInFolder(path)}>{description}</button> : <span>{description}</span>}
       {!bash && !edit && !write && <button className="claude-chevron" aria-label={t('claude.tool_details')} onClick={() => setBodyOpen(v => !v)}>{bodyOpen ? '⌄' : '›'}</button>}
     </div>

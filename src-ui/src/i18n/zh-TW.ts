@@ -11,6 +11,7 @@ export const zhTW = {
   "orchestration.close.description": "結束整組會停止並關閉所有子會話；保留子會話會讓它們獨立執行。",
   "orchestration.close.keep": "保留子會話",
   "orchestration.close.end": "結束整組",
+  "orchestration.tool.search": "尋找協作工具",
   "orchestration.tool.start": "派發協作任務",
   "orchestration.tool.list": "查看協作任務",
   "orchestration.tool.wait": "等待協作結果",

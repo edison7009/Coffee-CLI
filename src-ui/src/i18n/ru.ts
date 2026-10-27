@@ -11,6 +11,7 @@ export const ru = {
   "orchestration.close.description": "Завершите всю группу или оставьте дочерние сеансы работать независимо.",
   "orchestration.close.keep": "Оставить сеансы",
   "orchestration.close.end": "Завершить группу",
+  "orchestration.tool.search": "Найти инструменты совместной работы",
   "orchestration.tool.start": "Делегировать задачу",
   "orchestration.tool.list": "Просмотреть совместные задачи",
   "orchestration.tool.wait": "Ожидать результаты совместной работы",

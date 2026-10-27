@@ -9,6 +9,7 @@ export const en = {
   "orchestration.close.description": "End the group to stop and close all child sessions, or keep them running as independent sessions.",
   "orchestration.close.keep": "Keep child sessions",
   "orchestration.close.end": "End group",
+  "orchestration.tool.search": "Find collaboration tools",
   "orchestration.tool.start": "Delegate task",
   "orchestration.tool.list": "View collaboration tasks",
   "orchestration.tool.wait": "Wait for collaboration results",

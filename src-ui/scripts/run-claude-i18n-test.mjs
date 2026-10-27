@@ -37,7 +37,7 @@ const modules = result.outputFiles.map(file => {
   return module.exports;
 });
 const { claudeEffortLabel } = modules.find(module => module.claudeEffortLabel);
-const { orchestrationToolLabel } = modules.find(module => module.orchestrationToolLabel);
+const { orchestrationToolLabel, orchestrationSearchLabel } = modules.find(module => module.orchestrationToolLabel);
 for (const lang of languages) {
   const t = key => dictionaries[lang][key];
   for (const action of ['start','list','wait','read','send','reply','interrupt']) {
@@ -48,6 +48,12 @@ for (const lang of languages) {
     assert.equal(orchestrationToolLabel(name, t), undefined, 'bare names require the exact server identity');
   }
   for (const name of ['Bash','Read','mcp__other__worker_wait','mcp__coffee-team__unknown','mcp__coffee-team__constructor']) assert.equal(orchestrationToolLabel(name,t),undefined);
+  const query='select:mcp__coffee-team__worker_start,mcp__coffee-team__worker_list,mcp__coffee-team__worker_wait';
+  const search=orchestrationSearchLabel('ToolSearch',query,t);
+  assert.equal(search.title,t('orchestration.tool.search'));
+  assert.equal(search.description,['start','list','wait'].map(action=>t('orchestration.tool.'+action)).join(' · '));
+  assert.equal(orchestrationSearchLabel('ToolSearch',query+',mcp__coffee-team__',t).description,search.description,'streaming namespace suffix does not expose internal identifiers');
+  for (const [name,input] of [['Read',query],['ToolSearch','browser search'],['ToolSearch','select:mcp__other__worker_start'],['ToolSearch',query+',mcp__other__worker_wait'],['ToolSearch','select:mcp__coffee-team__unknown'],['ToolSearch','select:mcp__coffee-team__constructor'],['ToolSearch','select:mcp__coffee-team__']]) assert.equal(orchestrationSearchLabel(name,input,t),undefined,'ordinary searches and unrecognized tools remain unchanged');
   for (const level of ['low', 'medium', 'high', 'xhigh', 'max']) assert.equal(claudeEffortLabel(level, t), t(`claude.effort.${level}`));
   assert.equal(claudeEffortLabel('ultracode', t), 'Ultracode');
   assert.equal(claudeEffortLabel('provider-custom-level', t), 'provider-custom-level');
