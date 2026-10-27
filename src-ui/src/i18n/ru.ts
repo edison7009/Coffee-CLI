@@ -1,6 +1,12 @@
 import type { I18nKey } from './en';
 
 export const ru = {
+  "orchestration.open_history": "Открыть переписку",
+  "orchestration.detach": "Сделать независимым",
+  "orchestration.history_unavailable": "Для этого дочернего сеанса нет сохранённой истории.",
+  "orchestration.remove.title": "Удалить дочерний сеанс",
+  "orchestration.remove.description": "«{title}» будет удалён из списка, а его вкладка закрыта.",
+  "orchestration.remove.confirm": "Завершить и удалить",
   "orchestration.close.title": "Закрыть группу сеансов",
   "orchestration.close.description": "Завершите всю группу или оставьте дочерние сеансы работать независимо.",
   "orchestration.close.keep": "Оставить сеансы",

@@ -1,6 +1,12 @@
 import type { I18nKey } from './en';
 
 export const zhTW = {
+  "orchestration.open_history": "開啟原會話",
+  "orchestration.detach": "轉為獨立會話",
+  "orchestration.history_unavailable": "此子會話暫無可恢復的歷史紀錄。",
+  "orchestration.remove.title": "移除子會話",
+  "orchestration.remove.description": "將從清單移除「{title}」，並關閉它的 Tab。",
+  "orchestration.remove.confirm": "結束並移除",
   "orchestration.close.title": "關閉會話群組",
   "orchestration.close.description": "結束整組會停止並關閉所有子會話；保留子會話會讓它們獨立執行。",
   "orchestration.close.keep": "保留子會話",

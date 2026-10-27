@@ -1,6 +1,12 @@
 import type { I18nKey } from './en';
 
 export const pt = {
+  "orchestration.open_history": "Abrir conversa",
+  "orchestration.detach": "Tornar independente",
+  "orchestration.history_unavailable": "Não há histórico salvo para esta sessão filha.",
+  "orchestration.remove.title": "Remover sessão filha",
+  "orchestration.remove.description": "“{title}” será removida da lista e sua aba será fechada.",
+  "orchestration.remove.confirm": "Encerrar e remover",
   "orchestration.close.title": "Fechar grupo de sessões",
   "orchestration.close.description": "Encerre o grupo para parar todas as sessões filhas ou mantenha-as como sessões independentes.",
   "orchestration.close.keep": "Manter sessões",

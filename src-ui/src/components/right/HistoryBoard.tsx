@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef, useSyncExternalStore, useId, useC
 import { createPortal } from 'react-dom';
 import { InlineSvgIcon } from '../InlineSvgIcon';
 import { useT } from '../../i18n/useT';
-import { useAppState, type ToolType } from '../../store/app-state';
+import { useAppState, useAppStateRef, type TerminalSession, type ToolType } from '../../store/app-state';
 import { useSessionSplitDrag, type SessionSplitPlacement } from '../../lib/use-session-split-drag';
 import { splitSessionIds } from '../../lib/session-split-layout';
 import { commands, isTauri } from '../../tauri';
@@ -23,7 +23,8 @@ import { SessionContextMenu, type SessionCtxMenuState } from './SessionContextMe
 import { useTextContextMenu } from '../../lib/use-text-context-menu';
 import { gitFolderKey, gitStatusKey, useProjectGitStatuses, type GitStatusTarget } from '../../lib/project-git-status';
 import { HistoryGitMark } from './HistoryGitMark';
-import { useOrchestration, workerState } from '../../lib/orchestration';
+import { receiveOrchestration, useOrchestration, workerState, type OrchestrationTask } from '../../lib/orchestration';
+import { RemoveWorkerDialog } from '../center/RemoveWorkerDialog';
 import '../../styles/orchestration.css';
 import { getUnreadSessionReplies, subscribeSessionReplies, sessionReplyKey } from '../../lib/session-replies';
 // hermes/opencode PNG assets live in src/icons-inline/ so the Launchpad
@@ -144,6 +145,8 @@ const normCwd = (cwd: string) => {
 export function HistoryBoard() {
   const t = useT();
   const { state, dispatch } = useAppState();
+  const stateRef = useAppStateRef();
+  const openingWorkers = useRef(new Set<string>());
   const orchestration = useOrchestration();
   const splitDrag = useSessionSplitDrag();
   const { conversations, conversationId: activeAgentConversation } = useAgentClient();
@@ -197,6 +200,8 @@ export function HistoryBoard() {
   const cancelRenameRef = useRef(false);
   const [ctxMenu, setCtxMenu] = useState<SessionCtxMenuState | null>(null);
   const [preview, setPreview] = useState<{ key: string; left: number; top: number } | null>(null);
+  const [removeWorkerTarget, setRemoveWorkerTarget] = useState<{ task: OrchestrationTask; error?: string } | null>(null);
+  const removingWorkers = useRef(new Set<string>());
   const previewId = useId();
   useEffect(() => {
     if (!preview) return;
@@ -410,6 +415,66 @@ export function HistoryBoard() {
     if (saved.tool === 'coffee-agent' && saved.id === activeAgentConversation) dispatch({ type: 'CLOSE_AGENT_PAGE', page: 'agent' });
   };
 
+  const removeWorker = async (task: OrchestrationTask) => {
+    if (removingWorkers.current.has(task.id)) return;
+    removingWorkers.current.add(task.id);
+    try {
+      const snapshot = await commands.orchestrationRemoveWorker(task.id);
+      const nativeId = task.nativeId ?? state.terminals.find(tab => tab.id === task.sessionId)?.resumeToken;
+      hideSession(task.tool, `live:${task.sessionId}`);
+      if (nativeId) hideSession(task.tool, `${task.tool}_native_${nativeId}`);
+      for (const saved of baseSessions.filter(saved => saved.tool === task.tool && nativeId && saved.session_token === nativeId)) hideSession(task.tool, saved.id);
+      dispatch({ type: 'REMOVE_TERMINAL', id: task.sessionId });
+      receiveOrchestration(snapshot);
+    } finally { removingWorkers.current.delete(task.id); }
+  };
+  const requestWorkerRemoval = (task: OrchestrationTask) => {
+    setPreview(null);
+    const child = state.terminals.find(tab => tab.id === task.sessionId);
+    if (['starting', 'running', 'uncertain'].includes(task.phase) || child?.agentStatus === 'working' || child?.agentStatus === 'wait_input') setRemoveWorkerTarget({ task });
+    else void removeWorker(task).catch(error => setRemoveWorkerTarget({ task, error: String(error) }));
+  };
+  const openWorker = async (task: OrchestrationTask, savedParent: SavedSession, independent = false) => {
+    if (openingWorkers.current.has(task.id)) return;
+    openingWorkers.current.add(task.id); setAgentError(''); setPreview(null);
+    try {
+      let tabs = stateRef.current.terminals;
+      let child = tabs.find(tab => tab.tool === task.tool && (tab.id === task.sessionId || task.nativeId && tab.resumeToken === task.nativeId));
+      if (child && !independent) { dispatch({ type: 'SET_ACTIVE_TERMINAL', id: child.id }); return; }
+      if (child) { dispatch({ type: 'RESTORE_WORKER_SESSION', child }); return; }
+      if (!task.nativeId) throw new Error(t('orchestration.history_unavailable'));
+      const parentToken = task.parentNativeId ?? savedParent.session_token;
+      if (isTauri) {
+        const observed = await Promise.all(tabs.filter(tab => !tab.resumeToken && (tab.tool === task.tool || !independent && tab.tool === task.parentTool && parentToken)).map(async tab => ({ id: tab.id, token: await commands.getTerminalSessionToken(tab.id) })));
+        for (const { id, token } of observed) if (token) dispatch({ type: 'SET_SESSION_TOKEN', id, token });
+        tabs = stateRef.current.terminals.map(tab => { const token = observed.find(value => value.id === tab.id)?.token; return token ? { ...tab, resumeToken: token } : tab; });
+        child = tabs.find(tab => tab.tool === task.tool && tab.resumeToken === task.nativeId);
+        if (child && !independent) { dispatch({ type: 'SET_ACTIVE_TERMINAL', id: child.id }); return; }
+        if (child) { dispatch({ type: 'RESTORE_WORKER_SESSION', child }); return; }
+      }
+      const parent = tabs.find(tab => tab.tool === task.parentTool && (tab.id === task.parentId || `live:${tab.id}` === savedParent.id || parentToken && tab.resumeToken === parentToken));
+      if (!independent && !parent && !parentToken) throw new Error(t('orchestration.history_unavailable'));
+      const parentId = parent?.id ?? task.parentId;
+      const snapshot = await commands.orchestrationRestoreWorker(task.id, parentId, task.sessionId);
+      const restored: TerminalSession = { id: task.sessionId, tool: task.tool, folderPath: task.cwd, resumeToken: task.nativeId, toolTitle: task.title, strictCwd: true, claudeMode: task.tool === 'claude' ? 'conversation' : undefined, codexMode: task.tool === 'codex' ? 'conversation' : undefined };
+      dispatch({ type: 'RESTORE_WORKER_SESSION', parent: independent ? undefined : parent ?? { id: parentId, tool: task.parentTool as ToolType, folderPath: savedParent.cwd || task.cwd, resumeToken: parentToken ?? undefined, toolTitle: savedParent.name, strictCwd: true, claudeMode: 'conversation' }, child: restored });
+      receiveOrchestration(snapshot);
+    } catch (error) { setAgentError(String(error)); }
+    finally { openingWorkers.current.delete(task.id); }
+  };
+  const detachWorker = async (task: OrchestrationTask, parent: SavedSession) => {
+    setAgentError('');
+    try {
+      const snapshot = await commands.orchestrationDetachWorker(task.id);
+      const detached = snapshot.tasks.find(value => value.id === task.id)!;
+      receiveOrchestration(snapshot);
+      await openWorker(detached, parent, true);
+    } catch (error) { setAgentError(String(error)); }
+  };
+  const contextWorker = ctxMenu?.workerId ? orchestration.tasks.find(task => task.id === ctxMenu.workerId) : undefined;
+  const contextParent = ctxMenu?.workerParent;
+  const contextChild = contextWorker ? state.terminals.find(tab => tab.id === contextWorker.sessionId) : undefined;
+  const canDetachWorker = contextWorker && (contextChild || contextWorker.nativeId) && !['starting', 'running', 'uncertain'].includes(contextWorker.phase) && !['working', 'wait_input'].includes(contextChild?.agentStatus ?? '');
   const renderSession = (session: SavedSession, grouped = false) => {
         // Parse saved_at carefully to handle unix ms strings or invalid SystemTime strings
         let savedMs = Date.parse(session.saved_at);
@@ -436,7 +501,7 @@ export function HistoryBoard() {
         const displayName = renamed[sessionKey] ?? session.name;
         const isRenaming = renamingKey === sessionKey;
         const owner = state.terminals.find(tab => `live:${tab.id}` === session.id || tab.tool === session.tool && session.session_token && tab.resumeToken === session.session_token);
-        const workers = orchestration.tasks.filter(task => !task.detached && (task.parentId === owner?.id || task.parentTool === session.tool && task.parentNativeId && task.parentNativeId === session.session_token)).slice(-6);
+        const workers = orchestration.tasks.filter(task => !task.hidden && !task.detached && (task.parentId === owner?.id || task.parentTool === session.tool && task.parentNativeId && task.parentNativeId === session.session_token)).slice(-6);
         const isWorking = owner?.agentStatus === 'working' || Boolean(session.session_token && workingSessions.has(`${session.tool}:${session.session_token}`));
         const needsAttention = owner?.agentStatus === 'wait_input' || Boolean(session.session_token && waitingSessions.has(`${session.tool}:${session.session_token}`));
         const isUnread = !isWorking && !needsAttention && Boolean(session.session_token && unreadReplies.has(sessionReplyKey(session.tool, session.session_token)));
@@ -543,9 +608,15 @@ export function HistoryBoard() {
             {workers.length > 0 && <div className="history-workers" onPointerDown={event => event.stopPropagation()}>
               {workers.map(task => {
                 const child = state.terminals.find(tab => tab.id === task.sessionId), status = workerState(task, child);
-                return <button type="button" key={task.id} className={`history-worker${child?.id === state.activeTerminalId && !state.agentPageActive && !state.diffTabActive ? ' is-active' : ''}`} disabled={!child} aria-label={`${getToolName(task.tool)} · ${task.title} · ${t(`orchestration.${status}`)}`} onClick={event => { event.stopPropagation(); setPreview(null); if (child) dispatch({ type: 'SET_ACTIVE_TERMINAL', id: child.id }); }}>
-                  <span className="history-worker-icon" aria-hidden="true">{getToolIcon(task.tool)}</span><span className="history-worker-title">{task.title}</span><span className="orchestration-status" data-state={status} aria-hidden="true" />
-                </button>;
+                return <div key={task.id} className={`history-worker${child?.id === state.activeTerminalId && !state.agentPageActive && !state.diffTabActive ? ' is-active' : ''}`} onMouseEnter={event => {
+                  if (ctxMenu || searchOpen) return;
+                  const rect = event.currentTarget.getBoundingClientRect(), width = Math.min(320, window.innerWidth - 16);
+                  setPreview({ key: `worker:${task.id}`, left: Math.max(8, Math.min(rect.right + 8, window.innerWidth - width - 8)), top: Math.max(8, Math.min(rect.top + (rect.height - 72) / 2, window.innerHeight - 80)) });
+                }} onMouseLeave={() => setPreview(null)} onContextMenu={event => { event.preventDefault(); event.stopPropagation(); setPreview(null); setCtxMenu({ workerId: task.id, workerParent: session, session: { id: `${task.tool}_native_${task.nativeId ?? task.id}`, tool: task.tool, name: task.title, cwd: task.cwd, session_token: task.nativeId, saved_at: session.saved_at }, x: event.clientX, y: event.clientY }); }}>
+                  <button type="button" className="history-worker-open" aria-describedby={preview?.key === `worker:${task.id}` ? previewId : undefined} aria-label={`${getToolName(task.tool)} · ${task.title} · ${t(`orchestration.${status}`)}`} onClick={event => { event.stopPropagation(); void openWorker(task, session); }}><span className="history-worker-icon" aria-hidden="true">{getToolIcon(task.tool)}</span><span className="history-worker-title">{task.title}</span></button>
+                  <span className="history-worker-actions"><span className="orchestration-status" data-state={status} aria-hidden="true" /><button type="button" className="history-worker-delete" aria-label={`${t('menu.delete')} ${task.title}`} onClick={event => { event.stopPropagation(); requestWorkerRemoval(task); }}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="m19 6-.867 13.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 6"/><path d="M10 11v6M14 11v6M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button></span>
+                  {preview?.key === `worker:${task.id}` && createPortal(<div id={previewId} className="history-card-preview" role="tooltip" style={{ left: preview.left, top: preview.top }}><div className="history-card-preview-title">{task.title}</div><div className="history-card-meta"><span className="history-card-tool-wrap">{getToolIcon(task.tool)}<span className="history-card-meta-text">{getToolName(task.tool)} &middot; {projectName(task.cwd, task.tool)} &middot; {t(`orchestration.${status}`)}</span></span></div></div>, document.body)}
+                </div>;
               })}
             </div>}
           </div>
@@ -637,11 +708,14 @@ export function HistoryBoard() {
       </div>
       <footer className="history-search-footer">{t('history.search_hint')}</footer>
     </dialog>, document.body)}
-    {ctxMenu && <SessionContextMenu menu={ctxMenu} onClose={() => setCtxMenu(null)} onRename={startRename} onDelete={handleDeleteHistory}
+    {ctxMenu && <SessionContextMenu menu={ctxMenu} onClose={() => setCtxMenu(null)} onRename={startRename} onDelete={saved => contextWorker ? requestWorkerRemoval(contextWorker) : void handleDeleteHistory(saved)}
+      onOpenWorker={contextWorker && contextParent ? () => void openWorker(contextWorker, contextParent) : undefined}
+      onDetachWorker={canDetachWorker && contextWorker && contextParent ? () => void detachWorker(contextWorker, contextParent) : undefined}
       onOpenSplit={state.terminals.some(tab => tab.id === state.activeTerminalId && tab.tool) && (ctxMenu.session.session_token || liveSessions.some(tab => `live:${tab.id}` === ctxMenu.session.id)) ? saved => { void handleViewHistory(saved, { targetId: state.activeTerminalId!, edge: 'right' }); } : undefined}
       splitFull={splitSessionIds(state.sessionSplit).includes(state.activeTerminalId ?? '') && splitSessionIds(state.sessionSplit).length >= 4 && !state.terminals.some(tab => splitSessionIds(state.sessionSplit).includes(tab.id) && (`live:${tab.id}` === ctxMenu.session.id || tab.tool === ctxMenu.session.tool && tab.resumeToken === ctxMenu.session.session_token))} />}
     {splitDrag.overlay}
     {ctxMenuEl}
+    {removeWorkerTarget && <RemoveWorkerDialog title={removeWorkerTarget.task.title} error={removeWorkerTarget.error} onRemove={() => removeWorker(removeWorkerTarget.task)} onClose={() => setRemoveWorkerTarget(null)} />}
   </>
   );
 }

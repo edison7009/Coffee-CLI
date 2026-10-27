@@ -294,6 +294,7 @@ type Action =
   | { type: 'LAUNCH_TERMINAL_TOOL'; id: string; tool: ToolType; cwd?: string; toolData?: string; resumeToken?: string; strictCwd?: boolean; claudeMode?: ClaudeMode; codexMode?: ClaudeMode; parentId?: string; background?: boolean }
   | { type: 'REMOVE_TERMINAL'; id: string }
   | { type: 'CLOSE_TERMINAL_GROUP'; id: string; childIds: string[]; keepChildren: boolean }
+  | { type: 'RESTORE_WORKER_SESSION'; parent?: TerminalSession; child: TerminalSession }
   | { type: 'REORDER_TAB'; tabId: string; beforeId: string | null }
   | { type: 'SET_ACTIVE_TERMINAL'; id: string | null }
   | { type: 'SET_TERMINAL_TOOL'; id: string; tool: ToolType; toolData?: string; resumeToken?: string; claudeMode?: ClaudeMode; codexMode?: ClaudeMode }
@@ -466,6 +467,22 @@ function reducer(state: AppState, action: Action): AppState {
         agentPageActive: action.background ? state.agentPageActive : null,
         diffTabActive: action.background ? state.diffTabActive : false,
       };
+    }
+    case 'RESTORE_WORKER_SESSION': {
+      let next = state;
+      let parentId: string | undefined;
+      if (action.parent) {
+        const parent = next.terminals.find(tab => tab.id === action.parent!.id || tab.tool === action.parent!.tool && action.parent!.resumeToken && tab.resumeToken === action.parent!.resumeToken);
+        parentId = parent?.id ?? action.parent.id;
+        if (!parent) next = reducer(next, { type: 'ADD_TERMINAL', session: action.parent });
+      }
+      const existingChild = next.terminals.find(tab => tab.id === action.child.id || tab.tool === action.child.tool && action.child.resumeToken && tab.resumeToken === action.child.resumeToken);
+      next = existingChild ? reducer(next, { type: 'SET_ACTIVE_TERMINAL', id: existingChild.id }) : reducer(next, { type: 'ADD_TERMINAL', session: { ...action.child, parentId } });
+      const childId = next.activeTerminalId!;
+      const order = getTabOrder(next).filter(id => id !== childId);
+      const family = next.terminals.filter(tab => tab.id === parentId || tab.parentId === parentId && parentId).map(tab => order.indexOf(tab.id)).filter(index => index >= 0);
+      const index = parentId && family.length ? Math.max(...family) + 1 : order.length;
+      return { ...next, terminals: next.terminals.map(tab => tab.id === childId ? { ...tab, parentId, isHidden: false } : tab.id === parentId && tab.isHidden ? { ...tab, isHidden: false } : tab), tabOrder: [...order.slice(0, index), childId, ...order.slice(index)] };
     }
     case 'CLOSE_TERMINAL_GROUP': {
       const children = new Set([...action.childIds, ...state.terminals.filter(tab => tab.parentId === action.id).map(tab => tab.id)]);

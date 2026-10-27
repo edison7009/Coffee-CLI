@@ -16,7 +16,7 @@ const mock = `
   const listeners=new Set();
   window.updateStatus=status=>{state={...state,terminals:state.terminals.map(t=>t.id==='a'?{...t,agentStatus:status}:t)};listeners.forEach(fn=>fn())};
   window.updateView=patch=>{state={...state,...patch};listeners.forEach(fn=>fn())};
-  export function useAppState(){return {state:useSyncExternalStore(fn=>{listeners.add(fn);return()=>listeners.delete(fn)},()=>state),dispatch(action){if(action.type==='REMOVE_TERMINAL')(window.removed??=[]).push(action.id);else if(action.type==='SET_ACTIVE_TERMINAL')window.selectedChild=action.id;else window.opened=true}}}
+  export function useAppState(){return {state:useSyncExternalStore(fn=>{listeners.add(fn);return()=>listeners.delete(fn)},()=>state),dispatch(action){if(action.type==='REMOVE_TERMINAL')(window.removed??=[]).push(action.id);else if(action.type==='SET_ACTIVE_TERMINAL')window.selectedChild=action.id;else if(action.type==='RESTORE_WORKER_SESSION'){(window.restoreActions??=[]).push(action);window.opened=true}else window.opened=true}}}
   export function useAppLanguage(){return 'en'};
   export function useAppStateRef(){return {current:state}};
   const sessions=[{id:'one',tool:'claude',session_token:'one',name:'Working on the first task',cwd:'D:/same',saved_at:'2026-10-23T00:00:00Z'},{id:'two',tool:'claude',session_token:'two',name:'Another task in the same folder',cwd:'D:/same',saved_at:'2026-10-22T00:00:00Z'},{id:'other',tool:'codex',session_token:'one',name:'Different tool with the same token',cwd:'D:/same',saved_at:'2026-10-21T00:00:00Z'}];
@@ -30,8 +30,11 @@ const mock = `
     sessions[2].git_context={branch:'main',pull_requests:['https://github.com/example/repo/pull/43']};
   }
   const snapshot={sessions,status:'ready'}, emptySet=new Set(), emptyObject={}, agent={conversations:[]};
-  export const commands={async gitProjectStatus(folder,context){window.gitReadCount=(window.gitReadCount||0)+1;const p=new URLSearchParams(location.search);let pr=p.get('pr')||'open',number=42;if(p.has('perSession')&&context){number=Number(context.pull_requests[0].split('/').at(-1));pr=number===42?'merged':'closed'}if(p.has('deferGit'))await new Promise(resolve=>{window.resolveGitStatus=resolve});return {repo_root:folder,branch:context?.branch||'feature/ui',github:'ok',pull_request:pr==='branch'?null:{number,url:'https://github.com/example/repo/pull/'+number,state:pr,ci:pr==='open'?(p.get('ci')||'success'):null}}}},isTauri=true;
+  export const commands={async orchestrationRemoveWorker(taskId){if(window.failRemoval)throw new Error('Remove failed');(window.removeRequests??=[]).push(taskId);const s=window.getTeam();return {...s,revision:s.revision+1,tasks:s.tasks.map(task=>task.id===taskId?{...task,hidden:true,phase:['starting','running','uncertain'].includes(task.phase)?'closed':task.phase}:task)}},async gitProjectStatus(folder,context){window.gitReadCount=(window.gitReadCount||0)+1;const p=new URLSearchParams(location.search);let pr=p.get('pr')||'open',number=42;if(p.has('perSession')&&context){number=Number(context.pull_requests[0].split('/').at(-1));pr=number===42?'merged':'closed'}if(p.has('deferGit'))await new Promise(resolve=>{window.resolveGitStatus=resolve});return {repo_root:folder,branch:context?.branch||'feature/ui',github:'ok',pull_request:pr==='branch'?null:{number,url:'https://github.com/example/repo/pull/'+number,state:pr,ci:pr==='open'?(p.get('ci')||'success'):null}}}},isTauri=true;
   export const subscribeHistory=()=>()=>{},getHistorySnapshot=()=>snapshot,prefetchHistory=()=>{},refreshHistory=()=>{},sortByMtime=s=>s;
+  commands.orchestrationRestoreWorker=async(taskId,parentId,sessionId)=>{if(window.failRestore)throw new Error('Restore failed');(window.restoreCalls??=[]).push({taskId,parentId,sessionId});const s=window.getTeam();return {...s,revision:s.revision+1,tasks:s.tasks.map(task=>task.id===taskId?{...task,parentId:task.detached?task.parentId:parentId,sessionId}:task)}};
+  commands.getTerminalSessionToken=async id=>window.sessionTokens?.[id]??null;
+  commands.orchestrationDetachWorker=async taskId=>{const s=window.getTeam();return {...s,revision:s.revision+1,tasks:s.tasks.map(task=>task.id===taskId?{...task,detached:true}:task)}};
   export const subscribeHidden=()=>()=>{},getHiddenSnapshot=()=>emptySet,hideSession=()=>{window.deleted=true};
   export const subscribePinned=()=>()=>{},getPinnedSnapshot=()=>emptySet,togglePin=()=>{},isPinned=()=>false;
   export const subscribeRenamed=()=>()=>{},getRenamedSnapshot=()=>emptyObject,setCustomName=()=>{};
@@ -39,7 +42,7 @@ const mock = `
   export const useTextContextMenu=()=>({menu:null,openMenu(){}});
 `;
 await build({
-  stdin: { resolveDir: project, loader: 'tsx', contents: `import React from 'react';import {createRoot} from 'react-dom/client';import {HistoryBoard} from './src/components/right/HistoryBoard';import {useAppState} from './src/store/app-state';import {useSessionReplyVisibility} from './src/lib/use-session-reply-visibility';import {recordSessionReply} from './src/lib/session-replies';import {receiveOrchestration} from './src/lib/orchestration';window.updateTeam=receiveOrchestration;window.recordReply=recordSessionReply;function Fixture(){const {state}=useAppState();useSessionReplyVisibility(state);return <HistoryBoard/>}createRoot(document.getElementById('root')).render(<Fixture/>);` },
+  stdin: { resolveDir: project, loader: 'tsx', contents: `import React from 'react';import {createRoot} from 'react-dom/client';import {HistoryBoard} from './src/components/right/HistoryBoard';import {useAppState} from './src/store/app-state';import {useSessionReplyVisibility} from './src/lib/use-session-reply-visibility';import {recordSessionReply} from './src/lib/session-replies';import {receiveOrchestration,getOrchestrationSnapshot} from './src/lib/orchestration';window.updateTeam=receiveOrchestration;window.getTeam=getOrchestrationSnapshot;window.recordReply=recordSessionReply;function Fixture(){const {state}=useAppState();useSessionReplyVisibility(state);return <HistoryBoard/>}createRoot(document.getElementById('root')).render(<Fixture/>);` },
   bundle: true, outfile: join(directory, 'fixture.js'), jsx: 'automatic',
   nodePaths: [join(project, 'node_modules')], loader: { '.png': 'dataurl' },
   define: { 'process.env.NODE_ENV': '"development"' },
@@ -274,18 +277,32 @@ try {
     }
   };
   await checkConnectors();
+  await page.mouse.move(500,300);
+  const firstDot=workers.first().locator('.orchestration-status'),firstDelete=workers.first().locator('.history-worker-delete');
+  assert.equal(await firstDot.isVisible(),true);assert.equal(await firstDelete.isVisible(),false,'resting child shows only the status dot');
+  const beforeWorker=await workers.first().boundingBox(),beforeWorkerTitle=await workers.first().locator('.history-worker-title').boundingBox();
+  await workers.first().hover();
+  assert.equal(await firstDot.isVisible(),false);assert.equal(await firstDelete.isVisible(),true,'hover swaps the dot for the trash action');
+  assert.deepEqual(await workers.first().boundingBox(),beforeWorker);assert.deepEqual(await workers.first().locator('.history-worker-title').boundingBox(),beforeWorkerTitle,'hover never moves or squeezes the title');
+  await page.mouse.move(500,300);await workers.first().locator('.history-worker-open').focus();
+  assert.equal(await firstDot.isVisible(),false);assert.equal(await firstDelete.isVisible(),true,'keyboard focus exposes the same single action');
+  await page.locator('.history-search-trigger').focus();
   await rows.first().hover();
   assert.equal(await page.getByRole('tooltip').locator('.history-card-preview-title').innerText(),'Working on the first task');
   assert.equal(await page.getByRole('tooltip').locator('.history-card-meta').count(),1,'parent hover keeps the original two-level preview');
   assert.equal(await workers.last().evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)','parent hover leaves child rows unlit');
   await workers.first().hover();
-  assert.equal(await page.getByRole('tooltip').count(),0,'child hover does not open an extra preview');
+  assert.equal(await page.getByRole('tooltip').locator('.history-card-preview-title').innerText(),'Review code','child hover shows its own title');
+  assert.equal(await page.getByRole('tooltip').locator('.history-card-meta').count(),1,'child hover restores the second information line');
   assert.equal(await rows.first().evaluate(el=>el.matches(':hover')),false,'child row is outside the parent hover target');
   await page.waitForFunction(()=>getComputedStyle(document.querySelector('.history-card')).backgroundColor==='rgba(0, 0, 0, 0)');
   assert.equal(await rows.first().evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)','child hover does not light the parent row');
   assert.equal(await workers.last().evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)','child hover does not light a sibling');
   await workers.last().hover();
-  assert.equal(await page.getByRole('tooltip').count(),0,'siblings do not inherit the parent preview');
+  assert.equal(await page.getByRole('tooltip').locator('.history-card-preview-title').innerText(),'Check formatting','siblings have their own previews');
+  await workers.first().click({button:'right'});
+  assert.equal(await page.getByRole('button',{name:'Make independent',exact:true}).count(),0,'running tasks cannot be detached');
+  await page.mouse.click(500,300);
   assert.equal(await workers.first().locator('.orchestration-status').getAttribute('data-state'),'working');
   assert.equal(await workers.last().locator('.orchestration-status').getAttribute('data-state'),'waiting');
   assert.equal(await workers.first().locator('.orchestration-status').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(121, 201, 158)');
@@ -303,9 +320,47 @@ try {
   await page.evaluate(()=>window.updateTeam({enabled:true,tasks:window.workerTasks,revision:20}));
   await page.evaluate(()=>{window.workerTasks[0].phase='completed';window.updateTeam({enabled:true,tasks:window.workerTasks,revision:21});window.updateView({terminals:[{id:'a',tool:'claude',resumeToken:'one',folderPath:'D:/same'}]})});
   assert.equal(await workers.first().locator('.orchestration-status').getAttribute('data-state'),'completed');
-  assert.equal(await workers.first().isDisabled(),true,'closed child history does not silently start a replacement');
-  assert.equal(await workers.last().isDisabled(),true);
+  assert.equal(await workers.first().locator('.history-worker-open').isEnabled(),true,'saved child history can be restored');
+  await page.evaluate(()=>{window.sessionTokens={'equivalent-child':'worker-native-0'};window.updateView({terminals:[{id:'a',tool:'claude',resumeToken:'one'},{id:'equivalent-child',tool:'codex',folderPath:'D:/same'}]})});
+  await workers.first().locator('.history-worker-open').click();
+  assert.equal(await page.evaluate(()=>window.selectedChild),'equivalent-child','authoritative native identity detects an already open writer before its UI token arrives');
+  assert.equal(await page.evaluate(()=>window.restoreCalls?.length??0),0,'an existing native session is selected without resuming a second writer');
+  await page.evaluate(()=>window.updateView({terminals:[{id:'a',tool:'claude',resumeToken:'one'}]}));
+  await page.evaluate(()=>window.failRestore=true);await workers.first().locator('.history-worker-open').click();
+  await page.getByRole('alert').filter({hasText:'Restore failed'}).waitFor();assert.equal(await page.evaluate(()=>window.restoreActions?.length??0),0,'failed history restore never starts a blank session');
+  await page.evaluate(()=>window.failRestore=false);await workers.first().locator('.history-worker-open').click();
+  assert.equal(await page.evaluate(()=>window.restoreActions.at(-1).child.resumeToken),'worker-native-0','restore opens the exact original conversation');
+  assert.equal(await page.evaluate(()=>window.restoreActions.at(-1).child.id),'worker-0');
+  assert.equal(await page.evaluate(()=>window.restoreActions.at(-1).parent.id),'a','restore remains grouped with its current parent');
   assert.equal(await rows.count(),3,'saved child records stay nested after their live tabs close');
+  await workers.first().hover();await workers.first().locator('.history-worker-delete').click();
+  await page.waitForFunction(()=>document.querySelectorAll('.history-worker').length===1);
+  assert.equal(await page.getByRole('dialog').count(),0,'completed child is removed without confirmation');
+  assert.deepEqual(await page.evaluate(()=>window.removed),['worker-0'],'only the selected child tab is closed');
+  assert.equal(await workers.first().locator('.history-worker-title').innerText(),'Check formatting');
+  await page.evaluate(()=>{window.workerTasks=window.getTeam().tasks;window.workerTasks[1].phase='running';window.updateTeam({...window.getTeam(),tasks:window.workerTasks,revision:window.getTeam().revision+1});window.updateView({terminals:[{id:'a',tool:'claude',resumeToken:'one',folderPath:'D:/same'},{id:'worker-1',tool:'opencode',resumeToken:'worker-native-1',agentStatus:'working'}]})});
+  await workers.first().hover();await workers.first().locator('.history-worker-delete').click();
+  const removeDialog=page.getByRole('dialog',{name:'Remove child session'});await removeDialog.waitFor();
+  assert.deepEqual(await page.evaluate(()=>window.removed),['worker-0'],'running child remains open until confirmed');
+  await page.keyboard.press('Escape');assert.equal(await removeDialog.count(),0,'Escape cancels child removal');
+  await workers.first().hover();await workers.first().locator('.history-worker-delete').click();
+  await page.evaluate(()=>window.failRemoval=true);await removeDialog.getByRole('button',{name:'End and remove',exact:true}).click();
+  await removeDialog.getByRole('alert').waitFor();assert.equal(await workers.count(),1,'failed IPC keeps the child available');
+  await page.evaluate(()=>window.failRemoval=false);await removeDialog.getByRole('button',{name:'End and remove',exact:true}).click();
+  await page.waitForFunction(()=>document.querySelectorAll('.history-worker').length===0);
+  assert.deepEqual(await page.evaluate(()=>window.removed),['worker-0','worker-1'],'parent and unrelated sessions are never closed');
+  await page.evaluate(()=>window.updateTeam({...window.getTeam(),revision:window.getTeam().revision+1}));
+  assert.equal(await workers.count(),0,'hidden children stay removed after a snapshot refresh');
+  assert.equal(await rows.count(),3,'removal never turns children into standalone history entries');
+  await page.evaluate(()=>window.updateTeam({...window.getTeam(),revision:window.getTeam().revision+1,tasks:[...window.getTeam().tasks,{...window.workerTasks[0],id:'settled',sessionId:'saved-child',nativeId:'saved-native',hidden:false,phase:'completed',title:'Saved child conversation'}]}));
+  const savedChild=family.locator('.history-worker').filter({hasText:'Saved child conversation'});
+  await savedChild.click({button:'right'});await page.getByRole('button',{name:'Make independent',exact:true}).click();
+  await page.waitForFunction(()=>window.getTeam().tasks.find(task=>task.id==='settled').detached===true);
+  assert.equal(await page.evaluate(()=>window.restoreActions.at(-1).child.resumeToken),'saved-native');
+  assert.equal(await page.evaluate(()=>window.restoreActions.at(-1).parent),undefined,'independent restore does not reopen or clone the parent');
+  assert.equal(await savedChild.count(),0,'detached history is no longer nested');
+  await page.evaluate(()=>window.updateView({terminals:[{id:'a',tool:'claude',resumeToken:'one'},{id:'saved-child',tool:'codex',resumeToken:'saved-native',folderPath:'D:/same'}]}));
+  assert.equal(await page.locator('.history-card-title').filter({hasText:/^Saved child conversation$/}).count(),1,'independent session keeps its original task title in history');
   assert.deepEqual(errors, []);
   console.log('OK: all 23 tool icons in project/session lists, actual assets, title alignment and theme colors');
   console.log('OK: real history rows, exact status identity, spinner/hover/keyboard actions, reduced motion, state clearing, deletion and Git/PR/CI project marks');

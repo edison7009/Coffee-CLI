@@ -1,6 +1,12 @@
 import type { I18nKey } from './en';
 
 export const es = {
+  "orchestration.open_history": "Abrir conversación",
+  "orchestration.detach": "Convertir en independiente",
+  "orchestration.history_unavailable": "No hay historial guardado para esta sesión secundaria.",
+  "orchestration.remove.title": "Quitar sesión secundaria",
+  "orchestration.remove.description": "Se quitará «{title}» de la lista y se cerrará su pestaña.",
+  "orchestration.remove.confirm": "Finalizar y quitar",
   "orchestration.close.title": "Cerrar grupo de sesiones",
   "orchestration.close.description": "Finaliza el grupo para detener y cerrar todas las sesiones secundarias, o mantenlas como sesiones independientes.",
   "orchestration.close.keep": "Conservar sesiones",

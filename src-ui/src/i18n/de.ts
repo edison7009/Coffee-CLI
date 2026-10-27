@@ -1,6 +1,12 @@
 import type { I18nKey } from './en';
 
 export const de = {
+  "orchestration.open_history": "Unterhaltung öffnen",
+  "orchestration.detach": "Unabhängig machen",
+  "orchestration.history_unavailable": "Für diese untergeordnete Sitzung ist kein Verlauf verfügbar.",
+  "orchestration.remove.title": "Untergeordnete Sitzung entfernen",
+  "orchestration.remove.description": "„{title}“ wird aus der Liste entfernt und der Tab geschlossen.",
+  "orchestration.remove.confirm": "Beenden und entfernen",
   "orchestration.close.title": "Sitzungsgruppe schließen",
   "orchestration.close.description": "Beenden Sie die gesamte Gruppe oder lassen Sie die untergeordneten Sitzungen unabhängig weiterlaufen.",
   "orchestration.close.keep": "Sitzungen behalten",

@@ -19,6 +19,7 @@ pub struct Task {
     #[serde(default)] dispatch: Option<Dispatch>,
     #[serde(default)] result_delivery: Option<String>,
     #[serde(default)] detached: bool,
+    #[serde(default)] hidden: bool,
 }
 #[derive(Clone, Serialize, Deserialize)]
 struct Dispatch { ids: Vec<String>, source_turn: String, fingerprint: String }
@@ -41,7 +42,7 @@ pub struct LiveSession { id: String, tool: String, cwd: String, generation: Opti
 #[derive(Clone)]
 struct Parent { id: String, native_id: Option<String>, tool: String, agents: Vec<String>, connected: bool, cwd: String, generation: Option<String>, seen: bool, turn: String, running: bool, queued: VecDeque<String>, paused: bool, automatic: Option<AutomaticInput> }
 fn claude_tool() -> String { "claude".into() }
-struct Pending { parent: String, token: String, worker: Option<String>, deadline: Instant, sender: mpsc::Sender<Value> }
+struct Pending { parent: String, token: String, worker: Option<String>, session_id: Option<String>, deadline: Instant, sender: mpsc::Sender<Value> }
 struct State {
     snapshot: Snapshot, live: HashMap<String, LiveSession>, parents: HashMap<String, Parent>,
     workers: HashMap<String, String>, pending: HashMap<String, Pending>, runs: HashMap<String, WorkerRun>, app: Option<AppHandle>, port: Option<u16>,
@@ -94,6 +95,55 @@ fn publish(state: &mut State) {
 
 #[tauri::command]
 pub fn orchestration_get() -> Snapshot { current_snapshot(&hub().state.lock().unwrap()) }
+#[tauri::command]
+pub fn orchestration_restore_worker(task_id: String, parent_id: String, session_id: String) -> Result<Snapshot, String> {
+    if parent_id.is_empty() || session_id.is_empty() || parent_id.len() > 160 || session_id.len() > 160 || parent_id == session_id { return Err("Invalid session identity".into()); }
+    let mut state = hub().state.lock().map_err(|_| "Coordinator unavailable")?;
+    let mut next = state.snapshot.clone();
+    restore_worker(&mut next, &task_id, &parent_id, &session_id)?;
+    save(&next)?; state.snapshot = next; publish(&mut state); Ok(current_snapshot(&state))
+}
+fn restore_worker(snapshot: &mut Snapshot, id: &str, parent_id: &str, session_id: &str) -> Result<(), String> {
+    let task = snapshot.tasks.iter_mut().find(|task| task.id == id && !task.hidden).ok_or("Task not found")?;
+    if active(task) { return Err("Worker is still running; use its existing tab".into()); }
+    if task.native_id.as_deref().is_none_or(|id| id.is_empty()) { return Err("No saved worker conversation is available".into()); }
+    if !task.detached { task.parent_id = parent_id.into(); }
+    task.session_id = session_id.into(); task.generation = None; task.activity = None;
+    Ok(())
+}
+#[tauri::command]
+pub fn orchestration_detach_worker(task_id: String) -> Result<Snapshot, String> {
+    let mut state = hub().state.lock().map_err(|_| "Coordinator unavailable")?;
+    let mut next = state.snapshot.clone(); let session_id = detach_worker(&mut next, &state.live, &task_id)?;
+    save(&next)?; state.snapshot = next; remove_worker_runtime(&mut state, &session_id); publish(&mut state); Ok(current_snapshot(&state))
+}
+fn detach_worker(snapshot: &mut Snapshot, live: &HashMap<String, LiveSession>, id: &str) -> Result<String, String> {
+    let task = snapshot.tasks.iter_mut().find(|task| task.id == id && !task.hidden).ok_or("Task not found")?;
+    if active(task) || live.get(&task.session_id).is_some_and(|session| matches!(session.status.as_deref(), Some("working" | "wait_input"))) { return Err("Finish the worker task before detaching it".into()); }
+    if task.native_id.is_none() && !live.contains_key(&task.session_id) { return Err("No saved worker conversation is available".into()); }
+    task.detached = true; task.result_delivery = Some("retained".into()); Ok(task.session_id.clone())
+}
+#[tauri::command]
+pub fn orchestration_remove_worker(task_id: String) -> Result<Snapshot, String> {
+    let mut state = hub().state.lock().map_err(|_| "Coordinator unavailable")?;
+    let mut next = state.snapshot.clone();
+    let session_id = hide_worker(&mut next, &task_id)?;
+    save(&next)?;
+    state.snapshot = next;
+    remove_worker_runtime(&mut state, &session_id);
+    publish(&mut state);
+    Ok(current_snapshot(&state))
+}
+fn remove_worker_runtime(state: &mut State, session_id: &str) {
+    state.runs.remove(session_id);
+    state.pending.retain(|_, pending| pending.session_id.as_deref() != Some(session_id));
+}
+fn hide_worker(snapshot: &mut Snapshot, id: &str) -> Result<String, String> {
+    let task = snapshot.tasks.iter_mut().find(|task| task.id == id).ok_or("Task not found")?;
+    task.hidden = true;
+    if active(task) { task.phase = "closed".into(); task.question = None; task.result_delivery = None; }
+    Ok(task.session_id.clone())
+}
 #[tauri::command]
 pub fn orchestration_close_group(id: String, keep_children: bool) -> Result<Snapshot, String> {
     let mut state = hub().state.lock().map_err(|_| "Coordinator unavailable")?;
@@ -160,6 +210,11 @@ fn sync_live(state: &mut State, sessions: Vec<LiveSession>) -> bool {
     let pending_children: Vec<String> = state.pending.values().map(|pending| pending.parent.clone()).collect();
     let mut changed = false;
     for task in &mut state.snapshot.tasks {
+        if !task.hidden && !active(task) && !live.contains_key(&task.session_id) {
+            if let Some(session) = live.values().find(|session| session.tool == task.tool && session.native_id.is_some() && session.native_id == task.native_id) {
+                task.session_id = session.id.clone(); task.generation = session.generation.clone(); changed = true;
+            }
+        }
         if task.parent_native_id.is_none() {
             if let Some(native_id) = live.get(&task.parent_id).and_then(|parent| parent.native_id.clone()) { task.parent_native_id = Some(native_id); changed = true; }
         }
@@ -185,6 +240,7 @@ pub fn orchestration_pending(request_id: String) -> bool {
 }
 fn pending_allowed(state: &State, pending: &Pending) -> bool {
     pending.deadline > Instant::now() && parent(state, &pending.token).is_ok() && pending.worker.as_ref().is_none_or(|tool| state.snapshot.agents.contains(tool))
+        && pending.session_id.as_ref().is_none_or(|id| state.snapshot.tasks.iter().any(|task| task.session_id == *id && task.parent_id == pending.parent && !task.hidden && !task.detached))
 }
 #[tauri::command]
 pub fn orchestration_resolve(request_id: String, result: Value) -> Result<(), String> {
@@ -401,7 +457,7 @@ fn request_gui(token: &str, name: &str, arguments: Value, child_id: Option<&str>
         if worker.as_ref().is_some_and(|tool| !state.snapshot.agents.contains(tool)) { return Err("This worker is disabled in Agent configuration".into()); }
         let parent_id = &owner.id;
         let app = state.app.clone().ok_or("Coffee window unavailable")?;
-        state.pending.insert(id.clone(), Pending { parent: parent_id.into(), token: token.into(), worker, deadline: Instant::now() + Duration::from_secs(80), sender });
+        state.pending.insert(id.clone(), Pending { parent: parent_id.into(), token: token.into(), worker, session_id: child_id.map(str::to_owned), deadline: Instant::now() + Duration::from_secs(80), sender });
         if app.emit_to("main", "orchestration-request", json!({"requestId":id,"name":name,"arguments":arguments,"parentId":parent_id,"sessionId":child_id,"background":true})).is_err() {
             state.pending.remove(&id); return Err("Coffee window unavailable".into());
         }
@@ -457,7 +513,7 @@ fn start_worker(token: &str, args: &Value) -> Result<Value, String> {
         if state.snapshot.tasks.iter().filter(|task| !task.detached && task.parent_id == parent.id && active(task)).count() >= 6 { return Err("This coordinator already has six active workers".into()); }
         crate::session_directory::validate(Path::new(&parent.cwd))?;
         let dispatch = Dispatch { ids: operation.into_iter().map(str::to_owned).collect(), source_turn: parent.turn, fingerprint: fingerprint(&tool, &prompt) };
-        let task = Task { id: uuid::Uuid::new_v4().to_string(), parent_id: parent.id, parent_native_id: parent.native_id, parent_tool: parent.tool, session_id: child_id, native_id: None, tool, title, cwd: parent.cwd, phase: "starting".into(), summary: None, question: None, generation: None, activity: None, dispatch: Some(dispatch), result_delivery: None, detached: false };
+        let task = Task { id: uuid::Uuid::new_v4().to_string(), parent_id: parent.id, parent_native_id: parent.native_id, parent_tool: parent.tool, session_id: child_id, native_id: None, tool, title, cwd: parent.cwd, phase: "starting".into(), summary: None, question: None, generation: None, activity: None, dispatch: Some(dispatch), result_delivery: None, detached: false, hidden: false };
         if state.snapshot.tasks.len() >= 200 {
             if let Some(index) = state.snapshot.tasks.iter().position(|task| !active(task)) {
                 let removed = state.snapshot.tasks.remove(index);
@@ -535,7 +591,7 @@ fn parent_call(token: &str, action: &str, args: &Value) -> Result<Value, String>
     } else { None };
     drop(state);
     let name = if action == "worker_read" { "terminal_read_screen" } else if action == "worker_send" { "terminal_send" } else { "terminal_key" };
-    let result = request_gui(token, name, json!({"sessionId":task.session_id,"generation":generation,"expectedCwd":task.cwd,"key":"CtrlC","text":message}), None)?;
+    let result = request_gui(token, name, json!({"sessionId":task.session_id,"generation":generation,"expectedCwd":task.cwd,"key":"CtrlC","text":message}), Some(&task.session_id))?;
     if matches!(action, "worker_interrupt" | "worker_send") {
         let mut state = hub().state.lock().unwrap();
         if let Some(task) = state.snapshot.tasks.iter_mut().find(|task| task.id == task_id && active(task)) {
@@ -788,8 +844,72 @@ mod tests {
         assert!(state.snapshot.tasks[0].result_delivery.is_none());
     }
     fn fixture() -> State {
-        let task = Task { id: "task".into(), parent_id: "parent".into(), parent_native_id: Some("native-parent".into()), session_id: "child".into(), parent_tool: "claude".into(), native_id: None, tool: "codex".into(), title: "Review".into(), cwd: "D:\\Project".into(), phase: "running".into(), summary: None, question: None, generation: None, activity: None, dispatch: None, result_delivery: None, detached: false };
+        let task = Task { id: "task".into(), parent_id: "parent".into(), parent_native_id: Some("native-parent".into()), session_id: "child".into(), parent_tool: "claude".into(), native_id: None, tool: "codex".into(), title: "Review".into(), cwd: "D:\\Project".into(), phase: "running".into(), summary: None, question: None, generation: None, activity: None, dispatch: None, result_delivery: None, detached: false, hidden: false };
         State { snapshot: Snapshot { enabled: true, agents: default_agents(), tasks: vec![task], revision: 0, coordinators: vec![] }, live: HashMap::new(), parents: HashMap::from([("token".into(), Parent { id: "parent".into(), native_id: Some("native-parent".into()), tool: "claude".into(), agents: default_agents(), connected: false, cwd: "D:\\Project".into(), generation: None, seen: false, turn: String::new(), running: false, queued: VecDeque::new(), paused: false, automatic: None })]), workers: HashMap::new(), pending: HashMap::new(), runs: HashMap::new(), app: None, port: None }
+    }
+    #[test]
+    fn worker_history_restore_keeps_native_id_result_and_settled_phase() {
+        let mut state=fixture();let task=&mut state.snapshot.tasks[0];task.phase="completed".into();task.native_id=Some("saved-native".into());task.summary=Some("Saved result".into());task.result_delivery=Some("pending".into());
+        restore_worker(&mut state.snapshot,"task","new-parent","new-child").unwrap();
+        let task=&state.snapshot.tasks[0];assert_eq!(task.session_id,"new-child");assert_eq!(task.parent_id,"new-parent");assert_eq!(task.native_id.as_deref(),Some("saved-native"));assert_eq!(task.phase,"completed");assert_eq!(task.summary.as_deref(),Some("Saved result"));assert_eq!(task.result_delivery.as_deref(),Some("pending"));assert!(state.runs.is_empty());
+        state.snapshot.tasks[0].hidden=true;assert!(restore_worker(&mut state.snapshot,"task","p","c").is_err());
+        state.snapshot.tasks[0].hidden=false;state.snapshot.tasks[0].phase="running".into();assert!(restore_worker(&mut state.snapshot,"task","p","c").is_err());
+        state.snapshot.tasks[0].phase="closed".into();state.snapshot.tasks[0].native_id=None;assert!(restore_worker(&mut state.snapshot,"task","p","c").is_err());
+    }
+    #[test]
+    fn detach_requires_settled_task_and_preserves_original_conversation() {
+        let mut state=fixture();assert!(detach_worker(&mut state.snapshot,&state.live,"task").is_err());
+        state.snapshot.tasks[0].phase="completed".into();state.snapshot.tasks[0].native_id=Some("original".into());
+        let mut session=live("child","codex","g1");session.status=Some("working".into());state.live.insert("child".into(),session);
+        assert!(detach_worker(&mut state.snapshot,&state.live,"task").is_err());state.live.clear();
+        detach_worker(&mut state.snapshot,&state.live,"task").unwrap();assert!(state.snapshot.tasks[0].detached);assert_eq!(state.snapshot.tasks[0].native_id.as_deref(),Some("original"));
+        restore_worker(&mut state.snapshot,"task","another-parent","resumed-child").unwrap();assert_eq!(state.snapshot.tasks[0].parent_id,"parent");
+    }
+    #[test]
+    fn settled_history_follows_existing_native_session_without_rebinding_active_work() {
+        let mut state=fixture();state.snapshot.tasks[0].phase="closed".into();state.snapshot.tasks[0].native_id=Some("native-existing".into());
+        let mut existing=live("existing","codex","g2");existing.native_id=Some("native-existing".into());
+        sync_live(&mut state,vec![existing.clone()]);assert_eq!(state.snapshot.tasks[0].session_id,"existing");
+        state.snapshot.tasks[0].session_id="child".into();state.snapshot.tasks[0].phase="running".into();sync_live(&mut state,vec![existing]);assert_eq!(state.snapshot.tasks[0].session_id,"child");
+    }
+    #[test]
+    fn remove_worker_keeps_other_tasks_and_cancels_only_its_pending_launch() {
+        let mut state = fixture();
+        let mut other = state.snapshot.tasks[0].clone(); other.id = "other".into(); other.session_id = "other-child".into(); state.snapshot.tasks.push(other);
+        for child in ["child", "other-child"] {
+            let (sender, _receiver) = mpsc::channel();
+            state.pending.insert(child.into(), Pending { parent: "parent".into(), token: "token".into(), worker: Some("codex".into()), session_id: Some(child.into()), deadline: Instant::now() + Duration::from_secs(10), sender });
+            state.runs.insert(child.into(), WorkerRun::new("Task"));
+        }
+        let id = hide_worker(&mut state.snapshot, "task").unwrap(); remove_worker_runtime(&mut state, &id);
+        assert!(state.snapshot.tasks[0].hidden); assert_eq!(state.snapshot.tasks[0].phase, "closed");
+        assert!(!state.snapshot.tasks[1].hidden); assert_eq!(state.snapshot.tasks[1].phase, "running");
+        assert!(!state.pending.contains_key("child")); assert!(state.pending.contains_key("other-child"));
+        assert!(!state.runs.contains_key("child")); assert!(state.runs.contains_key("other-child")); assert!(state.parents.contains_key("token"));
+    }
+    #[test]
+    fn remove_completed_worker_keeps_result_and_persists_hidden_state() {
+        let mut state = fixture(); let task = &mut state.snapshot.tasks[0];
+        task.phase = "completed".into(); task.summary = Some("Verified output".into()); task.result_delivery = Some("pending".into());
+        hide_worker(&mut state.snapshot, "task").unwrap(); hide_worker(&mut state.snapshot, "task").unwrap();
+        assert_eq!(state.snapshot.tasks[0].summary.as_deref(), Some("Verified output")); assert_eq!(state.snapshot.tasks[0].result_delivery.as_deref(), Some("pending"));
+        let restored: Snapshot = serde_json::from_str(&serde_json::to_string(&state.snapshot).unwrap()).unwrap();
+        assert!(restored.tasks[0].hidden); assert_eq!(restored.tasks[0].phase, "completed");
+        assert!(hide_worker(&mut state.snapshot, "missing").is_err());
+    }
+    #[test]
+    fn queued_worker_controls_are_rejected_after_removal_or_detach() {
+        let mut state = fixture(); sync_live(&mut state, vec![live("parent", "claude", "g1"), live("child", "codex", "g1")]);
+        let (sender, _) = mpsc::channel();
+        let pending = Pending { parent: "parent".into(), token: "token".into(), worker: None, session_id: Some("child".into()), deadline: Instant::now() + Duration::from_secs(80), sender };
+        assert!(pending_allowed(&state, &pending));
+        hide_worker(&mut state.snapshot, "task").unwrap();
+        assert!(!pending_allowed(&state, &pending), "a late request cannot reopen a removed worker");
+        state.snapshot.tasks[0].hidden = false;
+        state.snapshot.tasks[0].phase = "completed".into();
+        assert!(pending_allowed(&state, &pending), "completed history remains readable");
+        detach_worker(&mut state.snapshot, &state.live, "task").unwrap();
+        assert!(!pending_allowed(&state, &pending), "the former coordinator cannot control an independent session");
     }
     #[test]
     fn closing_group_retires_active_work_without_losing_completed_results() {
@@ -807,7 +927,7 @@ mod tests {
     fn keeping_children_preserves_work_and_prevents_result_replay() {
         let mut state = fixture();
         let (sender, _receiver) = mpsc::channel();
-        state.pending.insert("pending".into(), Pending { parent: "parent".into(), token: "token".into(), worker: Some("codex".into()), deadline: Instant::now() + Duration::from_secs(10), sender });
+        state.pending.insert("pending".into(), Pending { parent: "parent".into(), token: "token".into(), worker: Some("codex".into()), session_id: Some("child".into()), deadline: Instant::now() + Duration::from_secs(10), sender });
         state.runs.insert("child".into(), WorkerRun::new("Task"));
         settle_group(&mut state.snapshot, "parent", true); revoke_group(&mut state, "parent", true);
         assert!(state.snapshot.tasks[0].detached); assert_eq!(state.snapshot.tasks[0].phase, "running");
@@ -891,7 +1011,7 @@ mod tests {
     fn closing_coordinator_revokes_pending_requests_and_closing_child_retires_task() {
         let mut state = fixture(); sync_live(&mut state, vec![live("parent", "claude", "g1"), live("child", "codex", "g1")]);
         let (sender, receiver) = mpsc::channel();
-        state.pending.insert("request".into(), Pending { parent: "parent".into(), token: "token".into(), worker: Some("codex".into()), deadline: Instant::now() + Duration::from_secs(80), sender });
+        state.pending.insert("request".into(), Pending { parent: "parent".into(), token: "token".into(), worker: Some("codex".into()), session_id: Some("child".into()), deadline: Instant::now() + Duration::from_secs(80), sender });
         sync_live(&mut state, vec![live("child", "codex", "g1")]);
         assert!(state.parents.is_empty()); assert!(state.pending.is_empty()); assert!(receiver.recv().is_err());
         assert_eq!(state.snapshot.tasks[0].phase, "running");
@@ -901,7 +1021,7 @@ mod tests {
     fn disabling_a_worker_cancels_its_start_but_preserves_existing_session_controls() {
         let mut state = fixture(); sync_live(&mut state, vec![live("parent", "claude", "g1")]);
         let (sender, _) = mpsc::channel();
-        let mut pending = Pending { parent: "parent".into(), token: "token".into(), worker: Some("codex".into()), deadline: Instant::now() + Duration::from_secs(80), sender };
+        let mut pending = Pending { parent: "parent".into(), token: "token".into(), worker: Some("codex".into()), session_id: Some("child".into()), deadline: Instant::now() + Duration::from_secs(80), sender };
         assert!(pending_allowed(&state, &pending));
         state.snapshot.agents.retain(|tool| tool != "codex");
         assert!(!pending_allowed(&state, &pending));

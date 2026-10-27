@@ -1,6 +1,12 @@
 import type { I18nKey } from './en';
 
 export const fr = {
+  "orchestration.open_history": "Ouvrir la conversation",
+  "orchestration.detach": "Rendre indépendante",
+  "orchestration.history_unavailable": "Aucun historique ne peut être restauré pour cette session enfant.",
+  "orchestration.remove.title": "Retirer la session enfant",
+  "orchestration.remove.description": "« {title} » sera retiré de la liste et son onglet sera fermé.",
+  "orchestration.remove.confirm": "Terminer et retirer",
   "orchestration.close.title": "Fermer le groupe de sessions",
   "orchestration.close.description": "Terminez le groupe pour arrêter toutes les sessions enfants, ou conservez-les comme sessions indépendantes.",
   "orchestration.close.keep": "Conserver les sessions",

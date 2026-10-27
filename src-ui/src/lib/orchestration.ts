@@ -7,6 +7,7 @@ export interface OrchestrationTask {
   parentTool: string; tool: 'claude' | 'codex' | 'opencode'; title: string; cwd: string; phase: string; summary: string | null;
   question: { id: string; text: string; answer: string | null } | null; generation: string | null; activity: string | null;
   detached?: boolean;
+  hidden?: boolean;
 }
 export interface OrchestrationSnapshot { enabled: boolean; agents: string[]; coordinators: string[]; tasks: OrchestrationTask[]; revision: number }
 export interface ResultDelivery { id: string; parentId: string; generation: string; text: string }
@@ -22,6 +23,10 @@ export function useOrchestration() {
   return useSyncExternalStore(listener => { listeners.add(listener); return () => listeners.delete(listener); }, getOrchestrationSnapshot, getOrchestrationSnapshot);
 }
 export function workerState(task: OrchestrationTask, session?: TerminalSession) {
+  if (!['starting', 'running', 'uncertain'].includes(task.phase)) {
+    if (session?.agentStatus === 'working') return 'working';
+    if (session?.agentStatus === 'wait_input') return 'waiting';
+  }
   if (task.phase === 'completed') return 'completed';
   if (task.phase === 'failed') return 'failed';
   if (task.phase === 'closed' || task.phase === 'interrupted') return 'closed';

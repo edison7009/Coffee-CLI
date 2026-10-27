@@ -19,6 +19,8 @@ import { buildResumeCommand } from '../../lib/resume-command';
 
 export interface SessionCtxMenuState {
   session: SavedSession;
+  workerId?: string;
+  workerParent?: SavedSession;
   x: number;
   y: number;
 }
@@ -34,7 +36,7 @@ const ICON_PROPS = {
   strokeLinejoin: 'round' as const,
 };
 
-export function SessionContextMenu({ menu, onClose, onRename, onDelete, onOpenSplit, splitFull }: { menu: SessionCtxMenuState; onClose: () => void; onRename: (session: SavedSession) => void; onDelete: (session: SavedSession) => void; onOpenSplit?: (session: SavedSession) => void; splitFull?: boolean }) {
+export function SessionContextMenu({ menu, onClose, onRename, onDelete, onOpenSplit, splitFull, onOpenWorker, onDetachWorker }: { menu: SessionCtxMenuState; onClose: () => void; onRename: (session: SavedSession) => void; onDelete: (session: SavedSession) => void; onOpenSplit?: (session: SavedSession) => void; splitFull?: boolean; onOpenWorker?: () => void; onDetachWorker?: () => void }) {
   const t = useT();
   const menuRef = useRef<HTMLDivElement>(null);
   const { session } = menu;
@@ -83,6 +85,11 @@ export function SessionContextMenu({ menu, onClose, onRename, onDelete, onOpenSp
     ...(isRightOverflow ? { right: Math.max(0, window.innerWidth - menu.x) } : { left: menu.x }),
   };
 
+  if (menu.workerId) return createPortal(<div className="ctx-menu" ref={menuRef} style={style}>
+    <button className="ctx-menu-item" onClick={() => { onClose(); onOpenWorker?.(); }}><svg {...ICON_PROPS}><path d="M9 5h10v14H5V9m8 0 6-4m-6 0h6v6" /></svg>{t('orchestration.open_history')}</button>
+    {onDetachWorker && <button className="ctx-menu-item" onClick={() => { onClose(); onDetachWorker(); }}><svg {...ICON_PROPS}><rect x="3" y="8" width="13" height="13" rx="2"/><path d="M8 3h13v13m-8-3 8-10"/></svg>{t('orchestration.detach')}</button>}
+    <div className="ctx-menu-divider"/><button className="ctx-menu-item" onClick={handleDelete}><svg {...ICON_PROPS}><polyline points="3 6 5 6 21 6"/><path d="m19 6-.867 13.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 6M10 11v6M14 11v6"/></svg>{t('menu.delete')}</button>
+  </div>,document.body);
   return createPortal(
     <div className="ctx-menu" ref={menuRef} style={style}>
       {onOpenSplit && <button className="ctx-menu-item" disabled={splitFull} title={splitFull ? t('split.full') : undefined} onClick={() => { onClose(); onOpenSplit(session); }}>

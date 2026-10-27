@@ -1202,11 +1202,6 @@ export function CenterPanel() {
           // Muse inherits its Windows launcher's title; keep the workspace name.
           const task = orchestration.tasks.find(task => task.sessionId === session.id);
           const worker = task?.detached ? undefined : task;
-          const previous = sessions.get(visibleTabs[visibleIndex - 1]);
-          const next = sessions.get(visibleTabs[visibleIndex + 1]);
-          const parentId = session.parentId || worker?.parentId;
-          const attached = parentId && (previous?.id === parentId || previous?.parentId === parentId);
-          const hasChild = next?.parentId === session.id || Boolean(parentId && next?.parentId === parentId);
           const title = task?.title || (session.tool === 'muse' ? baseTitle : session.toolTitle?.trim() || baseTitle);
           const showAgentStatus = supportsAgentStatus(session.tool)
             && (['claude', 'codex', 'kimicode', 'omp'].includes(session.tool ?? '') || session.agentStatus !== undefined);
@@ -1215,7 +1210,7 @@ export function CenterPanel() {
               key={session.id}
               data-session-id={session.id}
               data-tab-id={session.id}
-              className={`chrome-tab ${isActive ? 'active' : ''} ${isDragging ? 'dragging' : ''}${isFamilyActive ? ' orchestration-family-active' : ''}${worker || session.parentId ? ' orchestration-child' : ''}${attached ? ' orchestration-attached' : ''}${hasChild ? ' orchestration-has-child' : ''}`}
+              className={`chrome-tab ${isActive ? 'active' : ''} ${isDragging ? 'dragging' : ''}${isFamilyActive ? ' orchestration-family-active' : ''}${worker || session.parentId ? ' orchestration-child' : ''}`}
               style={dragStyle}
               onClick={() => onTabClickGuarded(session.id)}
               onPointerDown={(e) => onTabPointerDown(e, session.id)}

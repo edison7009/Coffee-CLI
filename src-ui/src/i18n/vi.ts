@@ -1,6 +1,12 @@
 import type { I18nKey } from './en';
 
 export const vi = {
+  "orchestration.open_history": "Mở cuộc trò chuyện gốc",
+  "orchestration.detach": "Chuyển thành phiên độc lập",
+  "orchestration.history_unavailable": "Phiên con này không có lịch sử để khôi phục.",
+  "orchestration.remove.title": "Xóa phiên con",
+  "orchestration.remove.description": "“{title}” sẽ được xóa khỏi danh sách và đóng tab tương ứng.",
+  "orchestration.remove.confirm": "Kết thúc và xóa",
   "orchestration.close.title": "Đóng nhóm phiên",
   "orchestration.close.description": "Kết thúc nhóm để dừng tất cả phiên con hoặc giữ chúng hoạt động độc lập.",
   "orchestration.close.keep": "Giữ phiên con",

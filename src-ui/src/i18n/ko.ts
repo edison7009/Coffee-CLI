@@ -1,6 +1,12 @@
 import type { I18nKey } from './en';
 
 export const ko = {
+  "orchestration.open_history": "원래 대화 열기",
+  "orchestration.detach": "독립 세션으로 전환",
+  "orchestration.history_unavailable": "이 하위 세션에 복원할 기록이 없습니다.",
+  "orchestration.remove.title": "하위 세션 제거",
+  "orchestration.remove.description": "목록에서 “{title}”을 제거하고 해당 탭을 닫습니다.",
+  "orchestration.remove.confirm": "종료 및 제거",
   "orchestration.close.title": "세션 그룹 닫기",
   "orchestration.close.description": "그룹을 종료하면 모든 하위 세션이 중단되고 닫힙니다. 유지하면 독립적으로 실행됩니다.",
   "orchestration.close.keep": "하위 세션 유지",

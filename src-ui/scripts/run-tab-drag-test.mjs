@@ -285,4 +285,26 @@ test('keeping children detaches them without replacing sessions or affecting unr
   assert.equal(child.parentId, undefined); assert.equal(child.resumeToken, 'original'); assert.equal(child.draft, 'keep draft');
   assert.equal(f.state.activeTerminalId, 'child'); assert.ok(f.state.terminals.some(tab => tab.id === 'two'));
 });
+test('restoring child history reuses native identity and positions it next to the parent', () => {
+  const f=fixture();
+  const parent={id:'restored-parent',tool:'claude',resumeToken:'parent-history',folderPath:'D:/same'};
+  const child={id:'restored-child',tool:'codex',resumeToken:'child-history',folderPath:'D:/same'};
+  f.dispatch({type:'RESTORE_WORKER_SESSION',parent,child});f.dispatch({type:'RESTORE_WORKER_SESSION',parent,child});
+  assert.equal(f.state.terminals.filter(tab=>tab.resumeToken==='parent-history').length,1);
+  assert.equal(f.state.terminals.filter(tab=>tab.resumeToken==='child-history').length,1);
+  assert.equal(f.state.activeTerminalId,child.id);assert.equal(f.state.terminals.find(tab=>tab.id===child.id).parentId,parent.id);
+  assert.equal(f.state.tabOrder.indexOf(child.id),f.state.tabOrder.indexOf(parent.id)+1);
+});
+test('restoring a known tab before its native token arrives never duplicates or restarts it', () => {
+  const f=fixture();f.dispatch({type:'ADD_TERMINAL',session:{id:'child',tool:'codex',isHidden:true,gambitDraft:'Unsent draft'}});
+  f.dispatch({type:'RESTORE_WORKER_SESSION',parent:{id:'one',tool:'claude'},child:{id:'child',tool:'codex',resumeToken:'newly-discovered-token'}});
+  assert.equal(f.state.terminals.filter(tab=>tab.id==='child').length,1);
+  const child=f.state.terminals.find(tab=>tab.id==='child');assert.equal(child.gambitDraft,'Unsent draft');assert.equal(child.isHidden,false);
+});
+test('making an existing child independent preserves its session and draft', () => {
+  const f=fixture();f.dispatch({type:'ADD_TERMINAL',session:{id:'child',parentId:'one',tool:'codex',resumeToken:'same-native',gambitDraft:'Keep this'}});
+  f.dispatch({type:'RESTORE_WORKER_SESSION',child:{id:'other-id',tool:'codex',resumeToken:'same-native'}});
+  const child=f.state.terminals.find(tab=>tab.id==='child');assert.equal(child.parentId,undefined);assert.equal(child.gambitDraft,'Keep this');
+  assert.equal(f.state.terminals.some(tab=>tab.id==='other-id'),false);assert.equal(f.state.activeTerminalId,'child');assert.ok(f.state.terminals.some(tab=>tab.id==='one'));
+});
 console.log(`\n${passed} shared tab, preview and new-session tests passed.`);

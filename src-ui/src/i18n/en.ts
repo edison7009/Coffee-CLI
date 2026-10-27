@@ -1,4 +1,10 @@
 export const en = {
+  "orchestration.open_history": "Open conversation",
+  "orchestration.detach": "Make independent",
+  "orchestration.history_unavailable": "No saved history is available for this child session.",
+  "orchestration.remove.title": "Remove child session",
+  "orchestration.remove.description": "This will remove “{title}” from the list and close its tab.",
+  "orchestration.remove.confirm": "End and remove",
   "orchestration.close.title": "Close session group",
   "orchestration.close.description": "End the group to stop and close all child sessions, or keep them running as independent sessions.",
   "orchestration.close.keep": "Keep child sessions",

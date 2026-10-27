@@ -21,7 +21,7 @@ for (const lang of languages) {
   vm.runInNewContext(ts.transpileModule(code, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, { module, exports: module.exports });
   dictionaries[lang] = Object.values(module.exports)[0];
 }
-const keys = Object.keys(dictionaries.en).filter(key => key.startsWith('claude.') || key.startsWith('orchestration.tool.') || key.startsWith('orchestration.close.') || ['gambit.attachment', 'gambit.preview_attachment', 'gambit.remove_attachment'].includes(key));
+const keys = Object.keys(dictionaries.en).filter(key => key.startsWith('claude.') || key.startsWith('orchestration.tool.') || key.startsWith('orchestration.close.') || key.startsWith('orchestration.remove.') || ['orchestration.open_history','orchestration.detach','orchestration.history_unavailable','gambit.attachment', 'gambit.preview_attachment', 'gambit.remove_attachment'].includes(key));
 const placeholders = value => [...value.matchAll(/\{(\w+)\}/g)].map(match => match[1]).sort();
 for (const lang of languages) {
   for (const key of keys) {

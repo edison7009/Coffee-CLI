@@ -1,6 +1,12 @@
 import type { I18nKey } from './en';
 
 export const zhCN = {
+  "orchestration.open_history": "打开原会话",
+  "orchestration.detach": "转为独立会话",
+  "orchestration.history_unavailable": "此子会话暂无可恢复的历史记录。",
+  "orchestration.remove.title": "移除子会话",
+  "orchestration.remove.description": "将从列表移除“{title}”，并关闭它的 Tab。",
+  "orchestration.remove.confirm": "结束并移除",
   "orchestration.close.title": "关闭会话组",
   "orchestration.close.description": "结束整组会停止并关闭所有子会话；保留子会话会让它们独立运行。",
   "orchestration.close.keep": "保留子会话",

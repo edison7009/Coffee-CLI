@@ -1,6 +1,12 @@
 import type { I18nKey } from './en';
 
 export const ja = {
+  "orchestration.open_history": "元の会話を開く",
+  "orchestration.detach": "独立した会話にする",
+  "orchestration.history_unavailable": "この子セッションには復元できる履歴がありません。",
+  "orchestration.remove.title": "子セッションを削除",
+  "orchestration.remove.description": "「{title}」を一覧から削除し、タブを閉じます。",
+  "orchestration.remove.confirm": "終了して削除",
   "orchestration.close.title": "セッショングループを閉じる",
   "orchestration.close.description": "グループ全体を終了するか、子セッションを独立して実行し続けるか選択してください。",
   "orchestration.close.keep": "子セッションを保持",
