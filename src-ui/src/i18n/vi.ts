@@ -1,6 +1,17 @@
 import type { I18nKey } from './en';
 
 export const vi = {
+  "orchestration.close.title": "Đóng nhóm phiên",
+  "orchestration.close.description": "Kết thúc nhóm để dừng tất cả phiên con hoặc giữ chúng hoạt động độc lập.",
+  "orchestration.close.keep": "Giữ phiên con",
+  "orchestration.close.end": "Kết thúc nhóm",
+  "orchestration.tool.start": "Giao nhiệm vụ phối hợp",
+  "orchestration.tool.list": "Xem nhiệm vụ phối hợp",
+  "orchestration.tool.wait": "Chờ kết quả phối hợp",
+  "orchestration.tool.read": "Xem tiến độ phối hợp",
+  "orchestration.tool.send": "Tiếp tục nhiệm vụ phối hợp",
+  "orchestration.tool.reply": "Trả lời câu hỏi phối hợp",
+  "orchestration.tool.interrupt": "Ngắt nhiệm vụ phối hợp",
   "tools.tab.orchestration": "Điều phối đa tác nhân",
   "orchestration.description": "Chọn trợ lý khả dụng. Trong phiên Claude mới, Claude tự quyết định giao việc, kiểm tra và tổng hợp kết quả.",
   "orchestration.demo.prompt": "Tạo trang web và kiểm tra tương tác",

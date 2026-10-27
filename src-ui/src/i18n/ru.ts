@@ -1,6 +1,17 @@
 import type { I18nKey } from './en';
 
 export const ru = {
+  "orchestration.close.title": "Закрыть группу сеансов",
+  "orchestration.close.description": "Завершите всю группу или оставьте дочерние сеансы работать независимо.",
+  "orchestration.close.keep": "Оставить сеансы",
+  "orchestration.close.end": "Завершить группу",
+  "orchestration.tool.start": "Делегировать задачу",
+  "orchestration.tool.list": "Просмотреть совместные задачи",
+  "orchestration.tool.wait": "Ожидать результаты совместной работы",
+  "orchestration.tool.read": "Проверить ход совместной работы",
+  "orchestration.tool.send": "Продолжить совместную задачу",
+  "orchestration.tool.reply": "Ответить помощнику",
+  "orchestration.tool.interrupt": "Прервать совместную задачу",
   "tools.tab.orchestration": "Оркестрация агентов",
   "orchestration.description": "Выберите доступных помощников. В новом сеансе Claude сам распределяет задачи, проверяет результаты и подводит итог.",
   "orchestration.demo.prompt": "Создай веб-страницу и проверь её интерактивность",

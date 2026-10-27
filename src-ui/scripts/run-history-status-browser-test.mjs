@@ -20,6 +20,7 @@ const mock = `
   export function useAppLanguage(){return 'en'};
   export function useAppStateRef(){return {current:state}};
   const sessions=[{id:'one',tool:'claude',session_token:'one',name:'Working on the first task',cwd:'D:/same',saved_at:'2026-10-23T00:00:00Z'},{id:'two',tool:'claude',session_token:'two',name:'Another task in the same folder',cwd:'D:/same',saved_at:'2026-10-22T00:00:00Z'},{id:'other',tool:'codex',session_token:'one',name:'Different tool with the same token',cwd:'D:/same',saved_at:'2026-10-21T00:00:00Z'}];
+  if(new URLSearchParams(location.search).has('workers')) sessions.push(...['codex','opencode'].map((tool,index)=>({id:'saved-worker-'+index,tool,session_token:'worker-native-'+index,name:'You are a worker assigned to an internal task',cwd:'D:/same',saved_at:'2026-10-24T00:00:00Z'})));
   if(new URLSearchParams(location.search).has('toolIcons')) {
     state={...state,terminals:[]};
     sessions.splice(0,sessions.length,...['claude','codex','cursor','copilot','antigravity','openclaw','hermes','opencode','pi','cline','goose','aider','omp','crush','qwen','kilo','kiro','kimicode','codebuddy','grok','mimocode','minimax','muse'].map(tool=>({id:tool,tool,name:tool,cwd:'D:/icons',saved_at:'2026-10-23T00:00:00Z'})));
@@ -116,7 +117,7 @@ try {
       assert.equal(await working.locator('.history-card-delete-btn').isVisible(), false, 'waiting shows only its badge in the right-hand slot');
       assert.deepEqual(await working.boundingBox(), beforeHover, 'waiting hover keeps the row geometry');
       assert.deepEqual(await working.locator('.history-card-title').boundingBox(), titleBeforeHover, 'waiting hover does not squeeze the title');
-      assert.equal(await page.getByRole('tooltip').getByText('Awaiting action', { exact: false }).count(), 1);
+      assert.equal(await page.getByRole('tooltip').getByText('Awaiting action', { exact: false }).count(), 1, 'parent preview retains its second metadata line');
       await page.mouse.move(500, 300);
     }
   }
@@ -239,29 +240,72 @@ try {
     await page.screenshot({path:join(directory,`tool-icons-${layout}.png`),fullPage:true});
   }
   await page.evaluate(()=>localStorage.setItem('cc-history-layout','list'));
-  await page.goto(`http://127.0.0.1:${server.address().port}`);
+  await page.goto(`http://127.0.0.1:${server.address().port}/?workers=1`);
   await rows.first().waitFor();
   await page.evaluate(()=>{
     window.workerTasks=['codex','opencode'].map((tool,index)=>({id:'task-'+index,parentId:'old-parent',parentNativeId:'one',parentTool:'claude',sessionId:'worker-'+index,nativeId:'worker-native-'+index,tool,title:index?'Check formatting':'Review code',cwd:'D:/same',phase:'running',summary:null,question:index?{id:'q1',text:'Need a file',answer:null}:null,activity:'working',generation:'g1'}));
     window.updateView({terminals:[{id:'a',tool:'claude',resumeToken:'one',agentStatus:'idle',folderPath:'D:/same'},...window.workerTasks.map(task=>({id:task.sessionId,tool:task.tool,resumeToken:task.nativeId,folderPath:task.cwd,agentStatus:'working'}))]});
     window.updateTeam({enabled:true,tasks:window.workerTasks,revision:1});
   });
-  const workers=rows.first().locator('.history-worker');await workers.first().waitFor();assert.equal(await workers.count(),2);
-  assert.equal(await rows.nth(1).locator('.history-worker').count(),0,'other conversations in the same folder do not inherit children');
-  assert.equal(await rows.nth(2).locator('.history-worker').count(),0,'matching native tokens from other tools cannot inherit children');
+  const family=page.locator('.history-family').first(),workers=family.locator('.history-worker');await workers.first().waitFor();assert.equal(await workers.count(),2);
+  assert.equal(await rows.count(),3,'native child records are nested under their parent, not repeated as peer history rows');
+  assert.equal(await workers.first().locator('.history-worker-title').innerText(),'Review code','sidebar shows the task title used by the top tab');
+  assert.equal(await workers.first().locator('.history-worker-icon svg').evaluate(el=>el.getBoundingClientRect().height),14,'nested SVG stays compact');
+  assert.equal(await page.locator('.history-family').nth(1).locator('.history-worker').count(),0,'other conversations in the same folder do not inherit children');
+  assert.equal(await page.locator('.history-family').nth(2).locator('.history-worker').count(),0,'matching native tokens from other tools cannot inherit children');
   const workerBox=await workers.first().boundingBox(),parentTitle=await rows.first().locator('.history-card-title-row').boundingBox();
   assert.ok(workerBox.y>=parentTitle.y+parentTitle.height,'child icons appear below the parent conversation');
+  const parentBox=await rows.first().boundingBox();assert.ok(workerBox.y>=parentBox.y+parentBox.height,'parent and child hover surfaces never overlap');
+  const rootIcon = await rows.first().locator('.history-card-tool-icon').boundingBox(), rootText = await rows.first().locator('.history-card-title').boundingBox();
+  const childIcon = await workers.first().locator('.history-worker-icon').boundingBox();
+  assert.equal(childIcon.x,rootText.x,'child icon aligns with the first character of the parent title');
+  const checkConnectors = async () => {
+    const tree = await family.locator('.history-workers').evaluate(group => {
+      const r=group.getBoundingClientRect(),s=getComputedStyle(group,'::before');
+      return {x:r.x+parseFloat(s.left),top:r.y+parseFloat(s.top),bottom:r.bottom-parseFloat(s.bottom),branches:[...group.children].map(el=>{const b=el.getBoundingClientRect(),p=getComputedStyle(el,'::before');return {x:b.x+parseFloat(p.left),right:b.x+parseFloat(p.left)+parseFloat(p.width),top:b.y+parseFloat(p.top),bottom:b.y+parseFloat(p.top)+parseFloat(p.height),rowLeft:b.x,center:b.y+b.height/2}})};
+    });
+    assert.equal(tree.x,rootIcon.x+rootIcon.width/2,'one continuous trunk descends from the parent icon');
+    for (const [index,branch] of tree.branches.entries()) {
+      assert.equal(branch.x,tree.x,'every branch meets the same trunk');
+      assert.equal(branch.right,branch.rowLeft,'branches stop outside child backgrounds');
+      assert.equal(branch.bottom,branch.center,'branches meet the child icon center');
+      assert.ok(branch.top>=tree.top && branch.top<=tree.bottom,'the trunk reaches every branch without gaps');
+      if(index===tree.branches.length-1) assert.equal(branch.top,tree.bottom,'last elbow joins the end of the trunk');
+    }
+  };
+  await checkConnectors();
+  await rows.first().hover();
+  assert.equal(await page.getByRole('tooltip').locator('.history-card-preview-title').innerText(),'Working on the first task');
+  assert.equal(await page.getByRole('tooltip').locator('.history-card-meta').count(),1,'parent hover keeps the original two-level preview');
+  assert.equal(await workers.last().evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)','parent hover leaves child rows unlit');
+  await workers.first().hover();
+  assert.equal(await page.getByRole('tooltip').count(),0,'child hover does not open an extra preview');
+  assert.equal(await rows.first().evaluate(el=>el.matches(':hover')),false,'child row is outside the parent hover target');
+  await page.waitForFunction(()=>getComputedStyle(document.querySelector('.history-card')).backgroundColor==='rgba(0, 0, 0, 0)');
+  assert.equal(await rows.first().evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)','child hover does not light the parent row');
+  assert.equal(await workers.last().evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)','child hover does not light a sibling');
+  await workers.last().hover();
+  assert.equal(await page.getByRole('tooltip').count(),0,'siblings do not inherit the parent preview');
   assert.equal(await workers.first().locator('.orchestration-status').getAttribute('data-state'),'working');
   assert.equal(await workers.last().locator('.orchestration-status').getAttribute('data-state'),'waiting');
-  assert.equal(await workers.first().locator('.orchestration-status').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(152, 184, 157)');
+  assert.equal(await workers.first().locator('.orchestration-status').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(121, 201, 158)');
+  assert.deepEqual(await workers.first().locator('.orchestration-status').evaluate(el=>{const s=getComputedStyle(el);return [s.boxShadow,s.outlineWidth,s.borderWidth]}),['none','0px','0px'],'working dot has no halo, outline or border');
   assert.equal(await workers.last().locator('.orchestration-status').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(147, 179, 210)');
   await page.evaluate(()=>window.opened=false);await workers.first().click();
   assert.equal(await page.evaluate(()=>window.selectedChild),'worker-0');assert.equal(await page.evaluate(()=>window.opened),false,'child click only selects its existing tab');
+  await page.evaluate(()=>window.updateView({activeTerminalId:'worker-0'}));
+  assert.equal(await rows.first().evaluate(el=>el.classList.contains('history-card-active')),false,'child selection highlights only its own sidebar row');
   await page.screenshot({path:join(directory,'orchestration-children.png')});
-  await page.evaluate(()=>{window.workerTasks[0].phase='completed';window.updateTeam({enabled:true,tasks:window.workerTasks,revision:2});window.updateView({terminals:[{id:'a',tool:'claude',resumeToken:'one',folderPath:'D:/same'}]})});
+  for (const size of [1,3,6]) {
+    await page.evaluate(size=>window.updateTeam({enabled:true,tasks:Array.from({length:size},(_,index)=>({...window.workerTasks[index%2],id:'branch-'+index,sessionId:'worker-'+index})),revision:10+size}),size);
+    assert.equal(await workers.count(),size);await checkConnectors();
+  }
+  await page.evaluate(()=>window.updateTeam({enabled:true,tasks:window.workerTasks,revision:20}));
+  await page.evaluate(()=>{window.workerTasks[0].phase='completed';window.updateTeam({enabled:true,tasks:window.workerTasks,revision:21});window.updateView({terminals:[{id:'a',tool:'claude',resumeToken:'one',folderPath:'D:/same'}]})});
   assert.equal(await workers.first().locator('.orchestration-status').getAttribute('data-state'),'completed');
   assert.equal(await workers.first().isDisabled(),true,'closed child history does not silently start a replacement');
   assert.equal(await workers.last().isDisabled(),true);
+  assert.equal(await rows.count(),3,'saved child records stay nested after their live tabs close');
   assert.deepEqual(errors, []);
   console.log('OK: all 23 tool icons in project/session lists, actual assets, title alignment and theme colors');
   console.log('OK: real history rows, exact status identity, spinner/hover/keyboard actions, reduced motion, state clearing, deletion and Git/PR/CI project marks');

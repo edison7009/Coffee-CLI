@@ -149,11 +149,12 @@ fn parse_line(
         let message = &v["message"];
         if v["type"] == "user" && v["isMeta"] != true && v["isCompactSummary"] != true {
             let content = &message["content"];
-            let prompt = content.is_string()
+            let notification = content.as_str().or_else(|| content[0]["text"].as_str()).is_some_and(|text| text.trim_start().starts_with("<task-notification>"));
+            let prompt = !notification && (content.is_string()
                 || content.as_array().is_some_and(|a| {
                     a.iter()
                         .any(|c| c["type"] == "text" || c["type"] == "image")
-                });
+                }));
             if prompt {
                 let id = v["uuid"]
                     .as_str()
@@ -570,6 +571,9 @@ mod tests {
             "claude",
             json!({"type":"user","uuid":"t","timestamp":"2026-10-24T08:01:00Z","message":{"content":[{"type":"tool_result","content":"private result"}]}}),
         );
+        for content in [json!("<task-notification>\nWorker result\n</task-notification>"), json!([{"type":"text","text":"<task-notification>\nWorker result\n</task-notification>"}])] {
+            line(&c, &mut p, "claude", json!({"type":"user","uuid":"automatic-result","timestamp":"2026-10-24T08:01:30Z","message":{"content":content}}));
+        }
         for output in [4, 12, 8] {
             line(
                 &c,

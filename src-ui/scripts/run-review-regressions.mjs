@@ -37,7 +37,7 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
   }
   visit(tree); assert.ok(title);
   const displayedTitle = (tool, toolTitle, baseTitle = 'E300', worker) => evaluate(title.getText(tree), {
-    session: { tool, toolTitle, folderPath: 'E:\\E300' }, baseTitle, worker,
+    session: { tool, toolTitle, folderPath: 'E:\\E300' }, baseTitle, task: worker,
   });
   for (const launcher of [String.raw`C:\WINDOWS\system32\cmd.exe`, String.raw`C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe`]) {
     assert.equal(displayedTitle('muse', launcher), 'E300', 'Muse keeps its actual workspace label');

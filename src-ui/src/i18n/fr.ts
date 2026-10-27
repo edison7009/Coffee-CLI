@@ -1,6 +1,17 @@
 import type { I18nKey } from './en';
 
 export const fr = {
+  "orchestration.close.title": "Fermer le groupe de sessions",
+  "orchestration.close.description": "Terminez le groupe pour arrêter toutes les sessions enfants, ou conservez-les comme sessions indépendantes.",
+  "orchestration.close.keep": "Conserver les sessions",
+  "orchestration.close.end": "Terminer le groupe",
+  "orchestration.tool.start": "Déléguer une tâche",
+  "orchestration.tool.list": "Voir les tâches collaboratives",
+  "orchestration.tool.wait": "Attendre les résultats",
+  "orchestration.tool.read": "Consulter la progression",
+  "orchestration.tool.send": "Poursuivre la tâche collaborative",
+  "orchestration.tool.reply": "Répondre au collaborateur",
+  "orchestration.tool.interrupt": "Interrompre la tâche collaborative",
   "tools.tab.orchestration": "Orchestration multi-agents",
   "orchestration.description": "Choisissez les assistants disponibles. Dans une nouvelle session Claude, Claude décide quand déléguer, vérifie et résume les résultats.",
   "orchestration.demo.prompt": "Créer une page web et vérifier ses interactions",

@@ -27,7 +27,7 @@ const compile = code => ts.transpileModule(code, {
   compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
 }).outputText;
 const splitLayout = await import(`data:text/javascript;base64,${Buffer.from(compile(readFileSync(new URL('../src/lib/session-split-layout.ts', import.meta.url), 'utf8'))).toString('base64')}`);
-const stateApi = vm.runInNewContext(compile(`${declaration(store, 'getTabOrder')}; ${declaration(store, 'reducer')}; ({ getTabOrder, reducer });`), {
+const stateApi = vm.runInNewContext(compile(`${declaration(store, 'getTabOrder')}; ${declaration(store, 'splitForSession')}; ${declaration(store, 'reducer')}; ({ getTabOrder, reducer });`), {
   ...splitLayout,
   localStorage: { setItem() {}, removeItem() {} }, crypto: { randomUUID: () => 'replacement-terminal' },
   supportsAgentStatus: () => true,
@@ -266,4 +266,23 @@ test('ordinary change selection keeps the overlay surface preference', () => {
   assert.equal(f.state.diffTabActive, false);
 });
 
+test('closing a session group removes its children and split references atomically', () => {
+  const f = fixture();
+  f.dispatch({ type: 'ADD_TERMINAL', session: { id: 'child', parentId: 'one', tool: 'codex' } });
+  f.dispatch({ type: 'OPEN_SESSION_SPLIT', id: 'child', targetId: 'two', edge: 'right' });
+  f.dispatch({ type: 'CLOSE_TERMINAL_GROUP', id: 'one', childIds: ['child'], keepChildren: false });
+  assert.deepEqual(native(f.state.terminals.map(tab => tab.id)), ['two']);
+  assert.equal(f.state.activeTerminalId, 'two');
+  assert.deepEqual(native(splitLayout.splitSessionIds(f.state.sessionSplit)), ['two'], 'split layout retains only the surviving session');
+  assert.ok(!f.state.tabOrder.includes('one') && !f.state.tabOrder.includes('child'));
+});
+test('keeping children detaches them without replacing sessions or affecting unrelated tabs', () => {
+  const f = fixture();
+  f.dispatch({ type: 'ADD_TERMINAL', session: { id: 'child', parentId: 'one', tool: 'codex', resumeToken: 'original', draft: 'keep draft' } });
+  f.dispatch({ type: 'SET_ACTIVE_TERMINAL', id: 'child' });
+  f.dispatch({ type: 'CLOSE_TERMINAL_GROUP', id: 'one', childIds: ['child'], keepChildren: true });
+  const child = f.state.terminals.find(tab => tab.id === 'child');
+  assert.equal(child.parentId, undefined); assert.equal(child.resumeToken, 'original'); assert.equal(child.draft, 'keep draft');
+  assert.equal(f.state.activeTerminalId, 'child'); assert.ok(f.state.terminals.some(tab => tab.id === 'two'));
+});
 console.log(`\n${passed} shared tab, preview and new-session tests passed.`);

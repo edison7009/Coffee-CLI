@@ -293,6 +293,7 @@ type Action =
   | { type: 'RESIZE_SESSION_SPLIT'; path: string; ratio: number }
   | { type: 'LAUNCH_TERMINAL_TOOL'; id: string; tool: ToolType; cwd?: string; toolData?: string; resumeToken?: string; strictCwd?: boolean; claudeMode?: ClaudeMode; codexMode?: ClaudeMode; parentId?: string; background?: boolean }
   | { type: 'REMOVE_TERMINAL'; id: string }
+  | { type: 'CLOSE_TERMINAL_GROUP'; id: string; childIds: string[]; keepChildren: boolean }
   | { type: 'REORDER_TAB'; tabId: string; beforeId: string | null }
   | { type: 'SET_ACTIVE_TERMINAL'; id: string | null }
   | { type: 'SET_TERMINAL_TOOL'; id: string; tool: ToolType; toolData?: string; resumeToken?: string; claudeMode?: ClaudeMode; codexMode?: ClaudeMode }
@@ -465,6 +466,14 @@ function reducer(state: AppState, action: Action): AppState {
         agentPageActive: action.background ? state.agentPageActive : null,
         diffTabActive: action.background ? state.diffTabActive : false,
       };
+    }
+    case 'CLOSE_TERMINAL_GROUP': {
+      const children = new Set([...action.childIds, ...state.terminals.filter(tab => tab.parentId === action.id).map(tab => tab.id)]);
+      let next = action.keepChildren ? { ...state, terminals: state.terminals.map(tab => children.has(tab.id) ? { ...tab, parentId: undefined } : tab) } : state;
+      for (const id of [...(action.keepChildren ? [] : children), action.id]) {
+        if (next.terminals.some(tab => tab.id === id)) next = reducer(next, { type: 'REMOVE_TERMINAL', id });
+      }
+      return next;
     }
     case 'REMOVE_TERMINAL': {
       let newTerminals = state.terminals.filter(t => t.id !== action.id);

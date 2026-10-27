@@ -1,6 +1,17 @@
 import type { I18nKey } from './en';
 
 export const es = {
+  "orchestration.close.title": "Cerrar grupo de sesiones",
+  "orchestration.close.description": "Finaliza el grupo para detener y cerrar todas las sesiones secundarias, o mantenlas como sesiones independientes.",
+  "orchestration.close.keep": "Conservar sesiones",
+  "orchestration.close.end": "Finalizar grupo",
+  "orchestration.tool.start": "Delegar tarea",
+  "orchestration.tool.list": "Ver tareas de colaboración",
+  "orchestration.tool.wait": "Esperar resultados de colaboración",
+  "orchestration.tool.read": "Consultar progreso de colaboración",
+  "orchestration.tool.send": "Continuar tarea de colaboración",
+  "orchestration.tool.reply": "Responder al colaborador",
+  "orchestration.tool.interrupt": "Interrumpir tarea de colaboración",
   "tools.tab.orchestration": "Orquestación multiagente",
   "orchestration.description": "Elige los asistentes disponibles. En una nueva sesión de Claude, Claude decide cuándo delegar, verifica y resume los resultados.",
   "orchestration.demo.prompt": "Crea una página web y comprueba sus interacciones",

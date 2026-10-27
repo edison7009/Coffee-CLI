@@ -22,9 +22,22 @@ export function OrchestrationBridge() {
       if (disposed) return;
       const sessions = stateRef.current.terminals.filter(tab => tab.tool).map(tab => {
         const session = getAgentSession(tab);
-        return { id: tab.id, tool: tab.tool, cwd: tab.folderPath ?? '', nativeId: tab.resumeToken ?? null, generation: session?.generation ?? null, ready: session?.ready ?? false, status: tab.agentStatus ?? null, error: session?.error ?? null };
+        return { id: tab.id, tool: tab.tool, cwd: tab.folderPath ?? '', nativeId: tab.resumeToken ?? null, generation: session?.generation ?? null, ready: session?.ready ?? false, status: tab.agentStatus ?? null, error: session?.error ?? null, canReceive: session?.mode === 'desktop' && session.canReceive === true };
       });
-      try { await commands.orchestrationSync(sessions); } catch { /* Retry the live registry on the next tick. */ }
+      try {
+        const deliveries = await commands.orchestrationSync(sessions);
+        for (const delivery of deliveries ?? []) {
+          const resolve = () => {
+            const tab = stateRef.current.terminals.find(tab => tab.id === delivery.parentId);
+            return tab && getAgentSession(tab);
+          };
+          const allowed = () => {
+            const session = resolve();
+            return !disposed && getOrchestrationSnapshot().enabled && session?.generation === delivery.generation && session.mode === 'desktop' && session.canReceive === true;
+          };
+          if (allowed()) await resolve()!.send(delivery.text, allowed, delivery.id).catch(error => console.warn('[OrchestrationBridge] Result delivery is unconfirmed; retained in task history.', String(error)));
+        }
+      } catch { /* Retry observation; claimed result inputs are never resent. */ }
       if (!disposed) timer = setTimeout(() => { void sync(); }, 1000);
     };
     const start = async () => {

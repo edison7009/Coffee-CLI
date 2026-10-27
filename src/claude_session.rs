@@ -7,6 +7,7 @@ use tauri::{Emitter, Manager, State};
 type Reply = mpsc::Sender<Result<Value, String>>;
 
 struct Session {
+    id: String,
     generation: String,
     native_id: String,
     child: Mutex<Child>,
@@ -31,7 +32,16 @@ pub(crate) fn launch_context(app: &tauri::AppHandle, id: &str) -> Option<(crate:
 
 impl Session {
     fn write(&self, value: &Value) -> Result<(), String> {
+        self.write_with_delivery(value, None)
+    }
+    fn write_with_delivery(&self, value: &Value, delivery: Option<&str>) -> Result<(), String> {
         let mut input = self.input.lock().map_err(|e| e.to_string())?;
+        if value["type"] == "user" {
+            let prompt = value["message"]["content"].as_array().into_iter().flatten().filter(|block| block["type"] == "text").filter_map(|block| block["text"].as_str()).collect::<Vec<_>>().join("\n");
+            crate::orchestration::native_input(&self.id, "claude", &self.generation, &prompt, value["uuid"].as_str().unwrap_or(""), delivery)?;
+        } else if value["request"]["subtype"] == "interrupt" {
+            crate::orchestration::native_stop(&self.id, "claude", &self.generation);
+        }
         serde_json::to_writer(&mut *input, value).map_err(|e| e.to_string())?;
         input.write_all(b"\n").and_then(|_| input.flush()).map_err(|e| e.to_string())
     }
@@ -57,6 +67,7 @@ fn get(sessions: &ClaudeSessions, id: &str, generation: &str) -> Result<Arc<Sess
 }
 
 fn emit(app: &tauri::AppHandle, id: &str, session: &Session, event: Value) {
+    crate::orchestration::native_event(id, "claude", &session.generation, &event);
     let _ = app.emit("claude-session-event", json!({"id":id,"generation":session.generation,"event":event}));
 }
 
@@ -117,7 +128,7 @@ fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<Stri
     let stdout = child.stdout.take().unwrap();
     let stderr = child.stderr.take().unwrap();
     let input = child.stdin.take().unwrap();
-    let session = Arc::new(Session { generation, native_id, child: Mutex::new(child), input: Mutex::new(input), pending: Mutex::new(HashMap::new()), permissions: Mutex::new(HashMap::new()), stderr: Mutex::new(String::new()), history_path, launch_config: config.clone(), launch_cwd: cwd.clone() });
+    let session = Arc::new(Session { id: id.clone(), generation, native_id, child: Mutex::new(child), input: Mutex::new(input), pending: Mutex::new(HashMap::new()), permissions: Mutex::new(HashMap::new()), stderr: Mutex::new(String::new()), history_path, launch_config: config.clone(), launch_cwd: cwd.clone() });
     let sessions = app.state::<ClaudeSessions>();
     {
         let mut map = sessions.0.lock().unwrap();
@@ -213,10 +224,11 @@ pub async fn claude_session_start(app: tauri::AppHandle, id: String, generation:
 }
 
 #[tauri::command]
-pub fn claude_session_send(sessions: State<ClaudeSessions>, id: String, generation: String, text: String) -> Result<(), String> {
+pub fn claude_session_send(sessions: State<ClaudeSessions>, id: String, generation: String, text: String, orchestration_delivery: Option<String>) -> Result<(), String> {
     let s = get(&sessions, &id, &generation)?;
     if text.trim().is_empty() { return Err("消息不能为空".into()); }
-    s.write(&json!({"type":"user","uuid":uuid::Uuid::new_v4().to_string(),"session_id":s.native_id,"parent_tool_use_id":null,"message":{"role":"user","content":user_content(&text)?}}))
+    let content = if orchestration_delivery.is_some() { json!([{"type":"text","text":text}]) } else { user_content(&text)? };
+    s.write_with_delivery(&json!({"type":"user","uuid":uuid::Uuid::new_v4().to_string(),"session_id":s.native_id,"parent_tool_use_id":null,"message":{"role":"user","content":content}}), orchestration_delivery.as_deref())
 }
 
 fn user_content(text: &str) -> Result<Value, String> {

@@ -1,6 +1,17 @@
 import type { I18nKey } from './en';
 
 export const zhCN = {
+  "orchestration.close.title": "关闭会话组",
+  "orchestration.close.description": "结束整组会停止并关闭所有子会话；保留子会话会让它们独立运行。",
+  "orchestration.close.keep": "保留子会话",
+  "orchestration.close.end": "结束整组",
+  "orchestration.tool.start": "派发协作任务",
+  "orchestration.tool.list": "查看协作任务",
+  "orchestration.tool.wait": "等待协作结果",
+  "orchestration.tool.read": "查看协作进展",
+  "orchestration.tool.send": "继续协作任务",
+  "orchestration.tool.reply": "回复协作问题",
+  "orchestration.tool.interrupt": "中断协作任务",
   "tools.tab.orchestration": "多智能体编排",
   "orchestration.description": "勾选可用助手。新建 Claude 会话后，Claude 会按任务需要自主指派，并检查、汇总结果。",
   "orchestration.demo.prompt": "做一个网页，并检查交互",

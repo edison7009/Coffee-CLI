@@ -60,6 +60,7 @@ export function getAgentSession(tab: TerminalSession) {
   };
   return {
     mode: 'desktop' as const, generation, ready: initial.ready,
+    canReceive: initial.ready && !initial.inputBusy && !initial.state.requests.length && !initial.state.error && !tab.gambitDraft?.trim(),
     localInputPending: !!tab.gambitDraft?.trim(), inputBusy: initial.inputBusy, error: initial.state.error,
     readScreen,
     readScrollback: async (startRow?: number, limit = 200) => {
@@ -70,7 +71,7 @@ export function getAgentSession(tab: TerminalSession) {
       const start = startRow === undefined ? Math.max(0, lines.length - count) : Math.max(0, Math.min(lines.length, Number.isFinite(startRow) ? Math.floor(startRow) : 0));
       return page(lines, start, count);
     },
-    send: async (text: string, guard: () => boolean) => {
+    send: async (text: string, guard: () => boolean, deliveryId?: string) => {
       const c = current();
       if (!guard()) throw new Error('目标会话已经改变');
       if (!text.trim()) throw new Error('消息不能为空');
@@ -78,7 +79,8 @@ export function getAgentSession(tab: TerminalSession) {
       if (tab.gambitDraft?.trim()) throw new Error('会话有本地未提交输入，请先处理后再发送');
       if (c.state.requests.length) throw new Error('会话正在等待用户处理请求，请先由用户处理');
       if (c.inputBusy) throw new Error('会话正在执行任务，请等待完成或明确请求中断');
-      const sent = await (claude ? sendClaudeMessage(id, text) : sendCodexMessage(id, text));
+      if (deliveryId && !claude) throw new Error('此会话不支持自动编排结果投递');
+      const sent = await (claude ? sendClaudeMessage(id, text, deliveryId) : sendCodexMessage(id, text));
       if (!sent) throw new TerminalInputError('消息发送未得到确认，请读取会话核实，不要自动重发', true);
     },
     key: async (key: string, guard: () => boolean) => {

@@ -6,8 +6,10 @@ export interface OrchestrationTask {
   id: string; parentId: string; parentNativeId: string | null; sessionId: string; nativeId: string | null;
   parentTool: string; tool: 'claude' | 'codex' | 'opencode'; title: string; cwd: string; phase: string; summary: string | null;
   question: { id: string; text: string; answer: string | null } | null; generation: string | null; activity: string | null;
+  detached?: boolean;
 }
 export interface OrchestrationSnapshot { enabled: boolean; agents: string[]; coordinators: string[]; tasks: OrchestrationTask[]; revision: number }
+export interface ResultDelivery { id: string; parentId: string; generation: string; text: string }
 let snapshot: OrchestrationSnapshot = { enabled: false, agents: [], coordinators: [], tasks: [], revision: 0 };
 const listeners = new Set<() => void>();
 export function receiveOrchestration(value: OrchestrationSnapshot) {

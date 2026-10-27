@@ -8,15 +8,15 @@ const project = fileURLToPath(new URL('..', import.meta.url));
 const mock = `
 export const isTauri=true;
 export async function invoke(command,args){if(command==='agent_validate_directory'){if(window.validate)await window.validate();return args.path}throw Error(command)}
-export const commands={listTools:async()=>[{id:'claude'},{id:'codex'},{id:'opencode'}],orchestrationGet:async()=>({enabled:true,agents:['claude','codex','opencode'],tasks:[],revision:1}),orchestrationSync:async()=>{},orchestrationPending:async()=>window.pending,orchestrationResolve:async(id,result)=>window.results.push({id,...result})};`;
+export const commands={listTools:async()=>[{id:'claude'},{id:'codex'},{id:'opencode'}],orchestrationGet:async()=>({enabled:true,agents:['claude','codex','opencode'],tasks:[],revision:1}),orchestrationSync:async()=>window.deliveries.splice(0),orchestrationPending:async()=>window.pending,orchestrationResolve:async(id,result)=>window.results.push({id,...result})};`;
 const compiled = await build({stdin:{resolveDir:project,contents:`export {OrchestrationBridge} from './src/components/agent/OrchestrationBridge';export {workerState,receiveOrchestration,getOrchestrationSnapshot} from './src/lib/orchestration';`},bundle:true,platform:'node',format:'cjs',write:false,plugins:[{name:'boundaries',setup(b){
   b.onResolve({filter:/\/tauri$|\/store\/app-state$|\/agent-session$|^react$|^@tauri-apps\/api\/event$/},a=>({path:a.path,namespace:'test'}));
   b.onLoad({filter:/.*/,namespace:'test'},a=>({loader:'js',contents:a.path.endsWith('/tauri')?mock:a.path.endsWith('/app-state')?'export const useAppStateRef=()=>window.stateRef,useAppDispatch=()=>window.dispatch;':a.path.endsWith('/agent-session')?'export const getAgentSession=tab=>window.sessions.get(tab.id);':a.path==='react'?'export const useEffect=fn=>{window.cleanup=fn()},useSyncExternalStore=()=>{};':'export async function listen(name,handler){window.listeners.set(name,handler);return ()=>window.listeners.delete(name)}'}));
 }}]});
 const require = createRequire(import.meta.url), tick=()=>new Promise(resolve=>setImmediate(resolve));
-function fixture({approval=false,terminal=false}={}) {
-  const window={pending:true,results:[],actions:[],writes:[],listeners:new Map(),sessions:new Map(),stateRef:{current:{terminals:[{id:'parent',tool:'claude',folderPath:'D:/Project',resumeToken:'native-parent',agentStatus:'idle'}],activeTerminalId:'parent',currentLang:'zh-CN'}}};
-  const session=(id,mode='desktop')=>({mode,generation:`${id}-g1`,ready:true,readScreen:async()=>({lines:[],pendingRequests:id==='parent'||!approval?[]:[{id:'approval'}]}),send:async(text,guard)=>{assert.equal(guard(),true);window.writes.push({id,text})}});
+function fixture({approval=false,terminal=false,deliveries=[]}={}) {
+  const window={pending:true,deliveries,results:[],actions:[],writes:[],listeners:new Map(),sessions:new Map(),stateRef:{current:{terminals:[{id:'parent',tool:'claude',folderPath:'D:/Project',resumeToken:'native-parent',agentStatus:'idle'}],activeTerminalId:'parent',currentLang:'zh-CN'}}};
+  const session=(id,mode='desktop')=>({mode,generation:`${id}-g1`,ready:true,canReceive:true,readScreen:async()=>({lines:[],pendingRequests:id==='parent'||!approval?[]:[{id:'approval'}]}),send:async(text,guard,deliveryId)=>{assert.equal(guard(),true);window.writes.push({id,text,...(deliveryId?{deliveryId}:{})})}});
   window.sessions.set('parent',session('parent'));
   window.dispatch=action=>{window.actions.push(action);if(action.type==='LAUNCH_TERMINAL_TOOL'){window.stateRef.current.terminals.push({...action,folderPath:action.cwd,agentStatus:approval?'wait_input':'idle'});window.sessions.set(action.id,session(action.id,terminal?'terminal':'desktop'))}};
   const module={exports:{}};
@@ -25,6 +25,18 @@ function fixture({approval=false,terminal=false}={}) {
   const ready=async()=>{for(let i=0;i<10&&!window.listeners.has('orchestration-request');i++)await tick();await tick()};
   const send=async(id='child',name='team_worker_start',args={tool:terminal?'opencode':'codex',cwd:'D:/Project',text:'Review the change'})=>window.listeners.get('orchestration-request')({payload:{requestId:id,name,parentId:'parent',sessionId:id,background:true,arguments:args}});
   return {window,api:module.exports,ready,send,dispose:()=>window.cleanup()};
+}
+{
+  const f=fixture({deliveries:[{id:'batch-1',parentId:'parent',generation:'parent-g1',text:'Worker replies'}]});await f.ready();
+  assert.deepEqual(f.window.writes,[{id:'parent',text:'Worker replies',deliveryId:'batch-1'}]);assert.equal(f.window.actions.length,0,'automatic replies use the existing parent, without opening a tab');f.dispose();
+}
+{
+  const f=fixture({deliveries:[{id:'batch-1',parentId:'parent',generation:'old-generation',text:'Stale reply'}]});await f.ready();
+  assert.equal(f.window.writes.length,0,'stale result batches cannot reach a restarted parent');f.dispose();
+}
+{
+  const f=fixture({deliveries:[{id:'batch-1',parentId:'parent',generation:'parent-g1',text:'Worker replies'}]});f.window.sessions.get('parent').canReceive=false;await f.ready();
+  assert.equal(f.window.writes.length,0,'busy, draft-bearing or approval-bearing parents do not receive automatic input');f.dispose();
 }
 {
   const f=fixture();await f.ready();await f.send();

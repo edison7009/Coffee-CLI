@@ -122,6 +122,18 @@ try {
     await assert.rejects(execute('terminal_send', { ...args, text: 'Uncertain delivery' }), error => error.uncertain === true);
     failSend = false; finish(tool);
   }
+  const beforeAutomatic = api.getClaudeSession('claude').messages.length;
+  const notification = '<task-notification>\nAutomatic delegated results\n</task-notification>';
+  assert.equal(await api.sendClaudeMessage('claude', notification, 'batch-1'), true);
+  assert.equal(calls.findLast(call => call.name === 'claude_session_send').orchestrationDelivery, 'batch-1');
+  assert.equal(api.getClaudeSession('claude').messages.length, beforeAutomatic, 'automatic task data is not shown as a user message');
+  emit('claude-session-event', 'claude', {type:'user',uuid:'automatic-input',message:{content:notification}});
+  assert.equal(api.getClaudeSession('claude').messages.length, beforeAutomatic, 'native task notifications remain hidden from user history');
+  finish('claude');
+  failSend = true;
+  assert.equal(await api.sendClaudeMessage('claude', notification, 'superseded-batch'), false);
+  assert.equal(api.getClaudeSession('claude').error, undefined, 'a rejected automatic continuation does not display a new user-facing error');
+  failSend = false;
   assert.equal(starts(), 2, 'reading, history, sending, interrupting and conflicts never start replacement processes');
   assert.equal(actions.some(action => action.type === 'LAUNCH_TERMINAL_TOOL'), false, 'existing sessions never create another tab');
   assert.equal(calls.some(call => call.name.startsWith('tier_terminal')), false, 'desktop control never writes to a PTY');

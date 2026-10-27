@@ -113,16 +113,16 @@ export function retainClaudeSession(id: string, cwd: string | null, resumeToken?
   };
 }
 
-export async function sendClaudeMessage(id: string, prompt: string): Promise<boolean> {
+export async function sendClaudeMessage(id: string, prompt: string, orchestrationDelivery?: string): Promise<boolean> {
   const c = client(id);
   if (!c.state.ready || c.restarting) return false;
   const snapshot = c.state;
   const pendingId = `pending:${crypto.randomUUID()}`, now = Date.now();
   c.state = { ...c.state, busy: true, interrupted: false, pendingTurns: c.state.pendingTurns + 1, status: c.state.busy ? c.state.status : 'working', error: undefined, errorKey: undefined, startedAt: c.state.busy ? c.state.startedAt : now, endedAt: undefined,
-    messages: [...c.state.messages, { id: pendingId, role: 'user', content: prompt, timestamp: now }] };
+    messages: orchestrationDelivery ? c.state.messages : [...c.state.messages, { id: pendingId, role: 'user', content: prompt, timestamp: now }] };
   publish(c, true);
-  try { await invoke('claude_session_send', { id, generation: c.generation, text: prompt }); return true; }
-  catch (error) { c.state = { ...c.state, busy: snapshot.busy, pendingTurns: Math.max(0, c.state.pendingTurns - 1), status: snapshot.status, messages: c.state.messages.filter(m => m.id !== pendingId), error: String(error), errorKey: undefined }; publish(c, true); return false; }
+  try { await invoke('claude_session_send', { id, generation: c.generation, text: prompt, orchestrationDelivery }); return true; }
+  catch (error) { c.state = { ...c.state, busy: snapshot.busy, pendingTurns: Math.max(0, c.state.pendingTurns - 1), status: snapshot.status, messages: c.state.messages.filter(m => m.id !== pendingId), ...(orchestrationDelivery ? {} : { error: String(error), errorKey: undefined }) }; publish(c, true); return false; }
 }
 
 export async function loadClaudeHistory(id: string): Promise<void> {

@@ -9,7 +9,8 @@ import { ClaudeConversation } from './ClaudeConversation';
 import { CodexConversation } from './CodexConversation';
 import { UsageDashboard } from './UsageDashboard';
 import { ToolSettingsPage } from './ToolSettingsPage';
-import { useOrchestration, workerState } from '../../lib/orchestration';
+import { receiveOrchestration, useOrchestration, workerState } from '../../lib/orchestration';
+import { CloseSessionGroupDialog } from './CloseSessionGroupDialog';
 import '../../styles/orchestration.css';
 import { LaunchModeControl } from './LaunchModeControl';
 import { CliUpdateButton } from './CliUpdateButton';
@@ -378,6 +379,7 @@ export function CenterPanel() {
   const [toolsInstalled, setToolsInstalled] = useState<Record<string, boolean>>({});
   // Per-tool launch override modal (gear icon → opens settings for that tool).
   const [configModalTool, setConfigModalTool] = useState<{ key: string; label: string } | null>(null);
+  const [closingGroup, setClosingGroup] = useState<{ id: string; error?: string } | null>(null);
   const [pinnedItems, setPinnedItems] = useState<string[]>(() => {
     // Hard cap must match MAX_PINS constant below. Inlined as a literal
     // because MAX_PINS is declared after this initializer runs.
@@ -792,8 +794,21 @@ export function CenterPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const closeGroup = async (id: string, keepChildren: boolean) => {
+    const childIds = orchestration.tasks.filter(task => !task.detached && task.parentId === id).map(task => task.sessionId);
+    const snapshot = await commands.orchestrationCloseGroup(id, keepChildren);
+    dispatch({ type: 'CLOSE_TERMINAL_GROUP', id, keepChildren, childIds });
+    receiveOrchestration(snapshot);
+  };
   const handleCloseTab = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
+    const tasks = orchestration.tasks.filter(task => !task.detached && task.parentId === id);
+    const children = terminals.filter(tab => tab.parentId === id || tasks.some(task => task.sessionId === tab.id));
+    if (tasks.length || children.length) {
+      if (tasks.some(task => ['starting', 'running', 'uncertain'].includes(task.phase)) || children.some(tab => tab.agentStatus === 'working' || tab.agentStatus === 'wait_input')) setClosingGroup({ id });
+      else void closeGroup(id, false).catch(error => setClosingGroup({ id, error: String(error) }));
+      return;
+    }
     dispatch({ type: 'REMOVE_TERMINAL', id });
   };
 
@@ -1180,12 +1195,19 @@ export function CenterPanel() {
           // when the diff tab is focused (diffTabActive), no terminal tab
           // should show the active highlight (the diff chrome-tab does).
           const isActive = session.id === activeTerminalId && contentActive;
-          const { icon, title: baseTitle } = renderTabContent(session, isActive);
+          const isFamilyActive = contentActive && activeTerminalId !== null && (sessions.get(activeTerminalId)?.parentId === session.id || orchestration.tasks.some(task => !task.detached && task.sessionId === activeTerminalId && task.parentId === session.id));
+          const { icon, title: baseTitle } = renderTabContent(session, isActive || isFamilyActive);
           // Tool's live OSC 0/2 title (Claude Code conversation summary, etc.)
           // overrides the cwd basename when the tool has set a non-empty one.
           // Muse inherits its Windows launcher's title; keep the workspace name.
-          const worker = orchestration.tasks.find(task => task.sessionId === session.id);
-          const title = worker?.title || (session.tool === 'muse' ? baseTitle : session.toolTitle?.trim() || baseTitle);
+          const task = orchestration.tasks.find(task => task.sessionId === session.id);
+          const worker = task?.detached ? undefined : task;
+          const previous = sessions.get(visibleTabs[visibleIndex - 1]);
+          const next = sessions.get(visibleTabs[visibleIndex + 1]);
+          const parentId = session.parentId || worker?.parentId;
+          const attached = parentId && (previous?.id === parentId || previous?.parentId === parentId);
+          const hasChild = next?.parentId === session.id || Boolean(parentId && next?.parentId === parentId);
+          const title = task?.title || (session.tool === 'muse' ? baseTitle : session.toolTitle?.trim() || baseTitle);
           const showAgentStatus = supportsAgentStatus(session.tool)
             && (['claude', 'codex', 'kimicode', 'omp'].includes(session.tool ?? '') || session.agentStatus !== undefined);
           return (
@@ -1193,7 +1215,7 @@ export function CenterPanel() {
               key={session.id}
               data-session-id={session.id}
               data-tab-id={session.id}
-              className={`chrome-tab ${isActive ? 'active' : ''} ${isDragging ? 'dragging' : ''}`}
+              className={`chrome-tab ${isActive ? 'active' : ''} ${isDragging ? 'dragging' : ''}${isFamilyActive ? ' orchestration-family-active' : ''}${worker || session.parentId ? ' orchestration-child' : ''}${attached ? ' orchestration-attached' : ''}${hasChild ? ' orchestration-has-child' : ''}`}
               style={dragStyle}
               onClick={() => onTabClickGuarded(session.id)}
               onPointerDown={(e) => onTabPointerDown(e, session.id)}
@@ -1676,6 +1698,7 @@ export function CenterPanel() {
       {/* Per-tool launch override modal. Mounted at root so its fixed-
           position backdrop covers the whole window, not just the
           launchpad area. */}
+      {closingGroup && <CloseSessionGroupDialog error={closingGroup.error} onChoose={keepChildren => closeGroup(closingGroup.id, keepChildren)} onClose={() => setClosingGroup(null)} />}
       {configModalTool && (
         <ToolConfigModal
           toolKey={configModalTool.key}

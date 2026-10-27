@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useAppState } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
+import { orchestrationToolLabel } from '../../lib/orchestration-label';
 import { arr, obj, str, num, pretty, type CodexMessage, type CodexRequest, type Json } from '../../lib/codex-protocol';
 import { interruptCodex, loadCodexHistory, respondCodex, retainCodexSession, useCodexSession } from '../../lib/codex-session';
 import { clipboardWrite } from '../../lib/clipboard';
@@ -143,10 +144,13 @@ export function CodexConversation({ sessionId, cwd, resumeToken, isActive, isVis
   };
   const toggle = (id: string) => setExpanded(old => ({ ...old, [id]: !old[id] }));
   const copy = (id: string, content: string) => { void clipboardWrite(content).then(() => { setCopied(id); setTimeout(() => setCopied(''), 1500); }); };
-  const tool = (message: CodexMessage) => <div className={`codex-tool is-${message.interrupted ? 'interrupted' : message.toolStatus ?? 'reasoning'}`} key={message.id}>
-    <div className="codex-tool-heading"><button type="button" className="claude-tool-heading" aria-expanded={!!expanded[message.id]} onClick={() => toggle(message.id)}><span className="codex-chevron" aria-hidden="true">{expanded[message.id] ? '⌄' : '›'}</span><strong>{message.role === 'reasoning' ? t('conversation.reasoning') : message.item.type === 'fileChange' ? t('codex.files') : message.item.type === 'commandExecution' ? t('codex.command') : str(message.item.type)}</strong><span>{title(message)}</span></button><MessageCopyButton copied={copied === message.id} onCopy={() => copy(message.id, [title(message), message.content].join('\n'))} /></div>
+  const tool = (message: CodexMessage) => {
+    const label = orchestrationToolLabel(str(message.item.tool), t, str(message.item.server));
+    return <div className={`codex-tool is-${message.interrupted ? 'interrupted' : message.toolStatus ?? 'reasoning'}`} key={message.id}>
+    <div className="codex-tool-heading"><button type="button" className="claude-tool-heading" aria-expanded={!!expanded[message.id]} onClick={() => toggle(message.id)}><span className="codex-chevron" aria-hidden="true">{expanded[message.id] ? '⌄' : '›'}</span><strong>{label ?? (message.role === 'reasoning' ? t('conversation.reasoning') : message.item.type === 'fileChange' ? t('codex.files') : message.item.type === 'commandExecution' ? t('codex.command') : str(message.item.type))}</strong><span>{label ? str(obj(message.item.arguments).title) : title(message)}</span></button><MessageCopyButton copied={copied === message.id} onCopy={() => copy(message.id, [title(message), message.content].join('\n'))} /></div>
     {expanded[message.id] && (message.role === 'reasoning' ? <MarkdownContent content={message.content} /> : <pre className="codex-tool-body">{message.content || pretty(message.item)}</pre>)}
   </div>;
+  };
   return <ConversationDirectory.Provider value={cwd}><div className={`claude-conversation codex-conversation${hasBg && bgUrl ? ' has-background' : ''}${navigationItems.length > 1 ? ' has-navigation' : ''}`}>
     {hasBg && bgUrl && <div className="conversation-background">{bgType === 'video' ? <video src={bgUrl} autoPlay loop muted /> : <img src={bgUrl} alt="" />}</div>}
     <div className="claude-scroll" ref={scroll} onContextMenu={conversationMenu.onContextMenu} onCopy={conversationMenu.onCopy} onWheelCapture={e => { if (e.deltaY < 0 && !e.ctrlKey) pause(); }} onTouchMoveCapture={pause} onKeyDownCapture={e => { if (['ArrowUp', 'PageUp', 'Home'].includes(e.key) && !(e.target as HTMLElement).closest('input,textarea,select')) pause(); }} onScroll={() => {

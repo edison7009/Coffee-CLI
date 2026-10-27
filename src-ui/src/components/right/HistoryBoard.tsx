@@ -255,10 +255,15 @@ export function HistoryBoard() {
   }))]), [nativeSessions, liveSessions, agentConversations, nowMs]);
 
   const availableSessions = useMemo(() => {
-    const list = baseSessions.filter(session => !hidden.has(`${session.tool ?? ''}:${session.id}`));
+    const list = baseSessions.filter(session => !hidden.has(`${session.tool ?? ''}:${session.id}`)
+      && !orchestration.tasks.some(task => !task.detached && (`live:${task.sessionId}` === session.id || task.tool === session.tool && session.session_token && (task.nativeId === session.session_token || state.terminals.some(tab => tab.id === task.sessionId && tab.resumeToken === session.session_token))))
+      && !state.terminals.some(tab => tab.parentId && (`live:${tab.id}` === session.id || tab.tool === session.tool && session.session_token && tab.resumeToken === session.session_token))).map(session => {
+        const task = orchestration.tasks.find(task => task.detached && (`live:${task.sessionId}` === session.id || task.tool === session.tool && session.session_token && (task.nativeId === session.session_token || state.terminals.some(tab => tab.id === task.sessionId && tab.resumeToken === session.session_token))));
+        return task ? { ...session, name: task.title } : session;
+      });
     if (!pinned.size) return list;
     return list.sort((a, b) => Number(pinned.has(`${b.tool ?? ''}:${b.id}`)) - Number(pinned.has(`${a.tool ?? ''}:${a.id}`)));
-  }, [baseSessions, hidden, pinned]);
+  }, [baseSessions, hidden, pinned, orchestration.tasks, state.terminals]);
   const projects = useMemo(() => {
     const groups = new Map<string, { key: string; name: string; cwd: string; sessions: SavedSession[] }>();
     for (const session of availableSessions) {
@@ -417,41 +422,29 @@ export function HistoryBoard() {
         let dateStr = '';
         const now = new Date(nowMs);
         const savedDate = new Date(savedMs);
-        
         const isSameDay = now.getDate() === savedDate.getDate() && now.getMonth() === savedDate.getMonth() && now.getFullYear() === savedDate.getFullYear();
-        
         const yesterday = new Date(nowMs - 86400000);
         const isYesterday = yesterday.getDate() === savedDate.getDate() && yesterday.getMonth() === savedDate.getMonth() && yesterday.getFullYear() === savedDate.getFullYear();
-
-        if (dateDiff < 3600000) {
-          dateStr = t('time.just_now') || 'Just now';
-        } else if (isSameDay) {
-          dateStr = t('time.today') || 'Today';
-        } else if (isYesterday) {
-          dateStr = t('time.yesterday') || 'Yesterday';
-        } else {
+        if (dateDiff < 3600000) dateStr = t('time.just_now') || 'Just now';
+        else if (isSameDay) dateStr = t('time.today') || 'Today';
+        else if (isYesterday) dateStr = t('time.yesterday') || 'Yesterday';
+        else {
           const days = Math.floor(dateDiff / 86400000);
-          if (days < 7) {
-            dateStr = (t('time.days_ago') || '{days} days ago').replace('{days}', days.toString());
-          } else {
-            const locale = state.currentLang === 'zh-CN' ? 'zh-CN' : 'en-US';
-            dateStr = savedDate.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
-          }
+          dateStr = days < 7 ? (t('time.days_ago') || '{days} days ago').replace('{days}', days.toString()) : savedDate.toLocaleDateString(state.currentLang === 'zh-CN' ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric' });
         }
-
         const sessionKey = `${session.tool ?? ''}:${session.id}`;
         const displayName = renamed[sessionKey] ?? session.name;
         const isRenaming = renamingKey === sessionKey;
         const owner = state.terminals.find(tab => `live:${tab.id}` === session.id || tab.tool === session.tool && session.session_token && tab.resumeToken === session.session_token);
-        const workers = orchestration.tasks.filter(task => task.parentId === owner?.id || task.parentTool === session.tool && task.parentNativeId && task.parentNativeId === session.session_token).slice(-6);
+        const workers = orchestration.tasks.filter(task => !task.detached && (task.parentId === owner?.id || task.parentTool === session.tool && task.parentNativeId && task.parentNativeId === session.session_token)).slice(-6);
         const isWorking = owner?.agentStatus === 'working' || Boolean(session.session_token && workingSessions.has(`${session.tool}:${session.session_token}`));
         const needsAttention = owner?.agentStatus === 'wait_input' || Boolean(session.session_token && waitingSessions.has(`${session.tool}:${session.session_token}`));
         const isUnread = !isWorking && !needsAttention && Boolean(session.session_token && unreadReplies.has(sessionReplyKey(session.tool, session.session_token)));
         const isActive = owner?.id === state.activeTerminalId && !state.agentPageActive && !state.diffTabActive || session.tool === 'coffee-agent' && session.id === activeAgentConversation && state.agentPageActive === 'agent';
         const gitStatus = gitStatuses.get(gitStatusKey(sessionGitTarget(session)));
         return (
+          <div key={`${sessionKey}:${session.file_path ?? session.saved_at}`} className="history-family">
           <div
-            key={`${sessionKey}:${session.file_path ?? session.saved_at}`}
             className={`history-card${isWorking ? ' history-card-working' : ''}${needsAttention ? ' history-card-needs-attention' : ''}${isUnread ? ' history-card-unread' : ''}${grouped ? ' history-card-grouped' : ''}${isActive ? ' history-card-active' : ''}`}
             aria-describedby={preview?.key === sessionKey ? previewId : undefined}
             onPointerDown={event => {
@@ -542,23 +535,19 @@ export function HistoryBoard() {
                 )}
               </div>
             </div>
-            {workers.length > 0 && <div className="history-workers" onPointerDown={event => event.stopPropagation()} onMouseEnter={() => setPreview(null)}>
+            {preview?.key === sessionKey && !isRenaming && createPortal(<div id={previewId} className="history-card-preview" role="tooltip" style={{ left: preview.left, top: preview.top }}>
+              <div className="history-card-preview-title">{displayName}</div>
+              <div className="history-card-meta"><span className="history-card-tool-wrap">{session.tool !== 'coffee-agent' && getToolIcon(session.tool)}<span className="history-card-meta-text">{(needsAttention || isUnread) && <span className="history-card-preview-status">{t(needsAttention ? 'history.needs_attention' : 'history.unread_reply')} &middot; </span>}{session.tool === 'coffee-agent' ? 'Coffee Agent' : projectName(session.cwd, session.tool)} &middot; {dateStr} {session.turn_count ? ` · ${(t('task.messages') || '{count} messages').replace('{count}', session.turn_count.toString())}` : ''}</span></span></div>
+            </div>, document.body)}
+          </div>
+            {workers.length > 0 && <div className="history-workers" onPointerDown={event => event.stopPropagation()}>
               {workers.map(task => {
                 const child = state.terminals.find(tab => tab.id === task.sessionId), status = workerState(task, child);
-                return <button type="button" key={task.id} className="history-worker" disabled={!child} aria-label={`${getToolName(task.tool)} · ${task.title} · ${t(`orchestration.${status}`)}`} data-tip={`${task.title} · ${t(`orchestration.${status}`)}`} onClick={event => { event.stopPropagation(); if (child) dispatch({ type: 'SET_ACTIVE_TERMINAL', id: child.id }); }}>
-                  {getToolIcon(task.tool)}<span className="orchestration-status" data-state={status} aria-hidden="true" />
+                return <button type="button" key={task.id} className={`history-worker${child?.id === state.activeTerminalId && !state.agentPageActive && !state.diffTabActive ? ' is-active' : ''}`} disabled={!child} aria-label={`${getToolName(task.tool)} · ${task.title} · ${t(`orchestration.${status}`)}`} onClick={event => { event.stopPropagation(); setPreview(null); if (child) dispatch({ type: 'SET_ACTIVE_TERMINAL', id: child.id }); }}>
+                  <span className="history-worker-icon" aria-hidden="true">{getToolIcon(task.tool)}</span><span className="history-worker-title">{task.title}</span><span className="orchestration-status" data-state={status} aria-hidden="true" />
                 </button>;
               })}
             </div>}
-            {preview?.key === sessionKey && !isRenaming && createPortal(<div id={previewId} className="history-card-preview" role="tooltip" style={{ left: preview.left, top: preview.top }}>
-              <div className="history-card-preview-title">{displayName}</div>
-              <div className="history-card-meta">
-                <span className="history-card-tool-wrap">
-                  {session.tool !== 'coffee-agent' && getToolIcon(session.tool)}
-                  <span className="history-card-meta-text">{(needsAttention || isUnread) && <span className="history-card-preview-status">{t(needsAttention ? 'history.needs_attention' : 'history.unread_reply')} &middot; </span>}{session.tool === 'coffee-agent' ? 'Coffee Agent' : projectName(session.cwd, session.tool)} &middot; {dateStr} {session.turn_count ? ` · ${(t('task.messages') || '{count} messages').replace('{count}', session.turn_count.toString())}` : ''}</span>
-                </span>
-              </div>
-            </div>, document.body)}
           </div>
         );
   };

@@ -3,6 +3,7 @@ import { diffLines } from 'diff';
 import { useAppLanguage, useAppState } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
 import type { ClaudeTranslate } from '../../lib/claude-i18n';
+import { orchestrationToolLabel } from '../../lib/orchestration-label';
 import { clipboardWrite } from '../../lib/clipboard';
 import { directoryFailure, directoryFailureMessage } from '../../lib/session-directory';
 import { bindAutoHideScrollbar } from '../../lib/auto-hide-scrollbar';
@@ -200,7 +201,7 @@ export const ClaudeTool = memo(function ClaudeTool({ message }: { message: Claud
   const output = message.output ?? '';
   return <section className={`claude-tool claude-tool--${message.toolStatus ?? 'running'}`}>
     <div className="claude-tool-heading">
-      <button onClick={() => setBodyOpen(v => !v)} aria-expanded={showBody}><strong>{name}</strong></button>
+      <button onClick={() => setBodyOpen(v => !v)} aria-expanded={showBody}><strong>{orchestrationToolLabel(name, t) ?? name}</strong></button>
       {path ? <button className="claude-file-path" onClick={() => void commands.showInFolder(path)}>{description}</button> : <span>{description}</span>}
       {!bash && !edit && !write && <button className="claude-chevron" aria-label={t('claude.tool_details')} onClick={() => setBodyOpen(v => !v)}>{bodyOpen ? '⌄' : '›'}</button>}
     </div>

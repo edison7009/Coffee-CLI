@@ -1753,15 +1753,15 @@ body.gambit-docked .multi-agent-grid-standalone {
         inset -1px -1px 0 0 var(--shape-edge-light-bottom);
 }
 
-[data-shape="slab"] .chrome-tab.active {
+[data-shape="slab"] .chrome-tab:is(.active, .orchestration-family-active) {
     box-shadow:
         inset 1px 1px 0 0 var(--shape-edge-light-top),
         inset -1px -1px 0 0 var(--shape-edge-light-bottom);
 }
 
 /* Detached tabs have no corner bridges into the content. */
-[data-shape="slab"] .chrome-tab.active::before,
-[data-shape="slab"] .chrome-tab.active::after {
+[data-shape="slab"] .chrome-tab:is(.active, .orchestration-family-active)::before,
+[data-shape="slab"] .chrome-tab:is(.active, .orchestration-family-active)::after {
     display: none;
 }
 
@@ -1776,15 +1776,15 @@ body.gambit-docked .multi-agent-grid-standalone {
         0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
-[data-shape="sharp"] .chrome-tab.active {
+[data-shape="sharp"] .chrome-tab:is(.active, .orchestration-family-active) {
     box-shadow: inset 0 0 0 1px var(--border);
 }
 
 /* Flat styles do not use rounded corner bridges. */
-[data-shape="sharp"] .chrome-tab.active::before,
-[data-shape="sharp"] .chrome-tab.active::after,
-[data-shape="panel"] .chrome-tab.active::before,
-[data-shape="panel"] .chrome-tab.active::after {
+[data-shape="sharp"] .chrome-tab:is(.active, .orchestration-family-active)::before,
+[data-shape="sharp"] .chrome-tab:is(.active, .orchestration-family-active)::after,
+[data-shape="panel"] .chrome-tab:is(.active, .orchestration-family-active)::before,
+[data-shape="panel"] .chrome-tab:is(.active, .orchestration-family-active)::after {
     display: none;
 }
 
@@ -1987,14 +1987,14 @@ html.is-windows[data-frost="frost"] #root {
 }
 
 /* Glass tabs keep the brighter selected text against the translucent surface. */
-[data-shape="glass"] .chrome-tab.active,
+[data-shape="glass"] .chrome-tab:is(.active, .orchestration-family-active),
 [data-shape="glass"] .explorer-tab.active {
     color: var(--text-1);
 }
 
 /* A light translucent fill keeps selected tabs visible without hiding the
    glass backdrop or the carbon/monogram material. Hover uses the theme tone. */
-:is([data-shape="glass"], [data-shape="carbon"], [data-shape="monogram"]) .chrome-tab.active {
+:is([data-shape="glass"], [data-shape="carbon"], [data-shape="monogram"]) .chrome-tab:is(.active, .orchestration-family-active) {
     background: color-mix(in srgb, var(--text-1) 10%, transparent);
 }
 
@@ -2196,8 +2196,8 @@ html.is-windows[data-frost="frost"] #root {
    bg below. In glass that bg is translucent --glass-tint, so the
    opaque arcs read as stray dark dots at the tab's bottom corners.
    Hide them. */
-[data-shape="glass"] .chrome-tab.active::before,
-[data-shape="glass"] .chrome-tab.active::after {
+[data-shape="glass"] .chrome-tab:is(.active, .orchestration-family-active)::before,
+[data-shape="glass"] .chrome-tab:is(.active, .orchestration-family-active)::after {
     display: none;
 }
 
@@ -2304,7 +2304,7 @@ html.is-windows[data-frost="frost"] #root {
     height: 31px;
 }
 
-[data-shape="panel"] .chrome-tab.active {
+[data-shape="panel"] .chrome-tab:is(.active, .orchestration-family-active) {
     height: calc(100% + 1px); /* Cover the titlebar's bottom divider. */
     background: var(--bg-app);
     box-shadow:
@@ -2501,10 +2501,10 @@ html.is-windows[data-frost="frost"] #root {
    light theme) to bridge the tab into the terminal below. On carbon the
    content area is transparent mesh, so those arcs read as stray white
    corners. Hide them — same as glass/slab/sharp/panel already do. */
-[data-shape="carbon"] .chrome-tab.active::before,
-[data-shape="monogram"] .chrome-tab.active::before,
-[data-shape="carbon"] .chrome-tab.active::after,
-[data-shape="monogram"] .chrome-tab.active::after {
+[data-shape="carbon"] .chrome-tab:is(.active, .orchestration-family-active)::before,
+[data-shape="monogram"] .chrome-tab:is(.active, .orchestration-family-active)::before,
+[data-shape="carbon"] .chrome-tab:is(.active, .orchestration-family-active)::after,
+[data-shape="monogram"] .chrome-tab:is(.active, .orchestration-family-active)::after {
     display: none;
 }
 

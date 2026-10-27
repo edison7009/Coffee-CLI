@@ -1,6 +1,17 @@
 import type { I18nKey } from './en';
 
 export const ko = {
+  "orchestration.close.title": "세션 그룹 닫기",
+  "orchestration.close.description": "그룹을 종료하면 모든 하위 세션이 중단되고 닫힙니다. 유지하면 독립적으로 실행됩니다.",
+  "orchestration.close.keep": "하위 세션 유지",
+  "orchestration.close.end": "그룹 종료",
+  "orchestration.tool.start": "협업 작업 배정",
+  "orchestration.tool.list": "협업 작업 확인",
+  "orchestration.tool.wait": "협업 결과 대기",
+  "orchestration.tool.read": "협업 진행 상황 확인",
+  "orchestration.tool.send": "협업 작업 계속",
+  "orchestration.tool.reply": "협업 질문에 답변",
+  "orchestration.tool.interrupt": "협업 작업 중단",
   "tools.tab.orchestration": "멀티 에이전트 오케스트레이션",
   "orchestration.description": "사용할 도우미를 선택하세요. 새 Claude 세션에서 Claude가 필요에 따라 작업을 할당하고 결과를 검증·요약합니다.",
   "orchestration.demo.prompt": "웹 페이지를 만들고 상호작용을 확인해 줘",

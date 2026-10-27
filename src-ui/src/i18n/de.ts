@@ -1,6 +1,17 @@
 import type { I18nKey } from './en';
 
 export const de = {
+  "orchestration.close.title": "Sitzungsgruppe schließen",
+  "orchestration.close.description": "Beenden Sie die gesamte Gruppe oder lassen Sie die untergeordneten Sitzungen unabhängig weiterlaufen.",
+  "orchestration.close.keep": "Sitzungen behalten",
+  "orchestration.close.end": "Gruppe beenden",
+  "orchestration.tool.start": "Aufgabe delegieren",
+  "orchestration.tool.list": "Gemeinsame Aufgaben anzeigen",
+  "orchestration.tool.wait": "Auf Ergebnisse warten",
+  "orchestration.tool.read": "Fortschritt prüfen",
+  "orchestration.tool.send": "Gemeinsame Aufgabe fortsetzen",
+  "orchestration.tool.reply": "Rückfrage beantworten",
+  "orchestration.tool.interrupt": "Gemeinsame Aufgabe unterbrechen",
   "tools.tab.orchestration": "Multi-Agent-Orchestrierung",
   "orchestration.description": "Verfügbare Assistenten wählen. In einer neuen Claude-Sitzung entscheidet Claude über die Delegation, prüft Ergebnisse und fasst sie zusammen.",
   "orchestration.demo.prompt": "Eine Webseite erstellen und ihre Interaktionen prüfen",

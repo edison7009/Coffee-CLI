@@ -15,6 +15,7 @@ const context = vm.createContext({
   getToolName: tool => ({ claude: 'Claude Code', codex: 'Codex CLI', openclaw: 'OpenClaw' }[tool] ?? tool),
   hidden: new Set(['claude:hidden']), pinned: new Set(['codex:pinned']),
   renamed: { 'claude:renamed': 'Custom session title' },
+  orchestration: { tasks: [] }, state: { terminals: [] },
 });
 function evaluate(name) {
   assert.ok(expressions.has(name), `Missing actual ${name}`);

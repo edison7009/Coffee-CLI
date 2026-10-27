@@ -264,6 +264,16 @@ try {
   assert.ok(await scroll.evaluate(el => el.scrollWidth <= el.clientWidth + 1));
   console.log('ok tool input/output copy, expansion, streaming updates, Write pending state and diff controls');
 
+  for (const [action,label] of [['start','Delegate task'],['list','View collaboration tasks'],['wait','Wait for collaboration results'],['read','Check collaboration progress'],['send','Continue collaboration task'],['reply','Answer collaborator'],['interrupt','Interrupt collaboration task']]) {
+    await page.evaluate(action => window.setSession({messages:[{...window.toolMessage,id:'team-'+action,toolName:'mcp__coffee-team__worker_'+action,input:{taskId:'original-task'},output:'Original worker output'}]}),action);
+    const heading=page.locator('.claude-tool-heading > button').first();
+    assert.equal(await heading.innerText(),label,'coordination headings use readable action labels');
+    await heading.click();
+    assert.ok((await page.locator('.claude-tool-body').innerText()).includes('original-task'),'expanded details retain the original input');
+    assert.ok((await page.locator('.claude-tool-body').innerText()).includes('Original worker output'),'expanded details retain the original result');
+  }
+  console.log('ok seven readable orchestration headings preserve expandable inputs and outputs');
+
   await page.evaluate(() => {
     window.setSession({messages:[{id:'stop-tool',role:'tool',toolName:'Bash',toolStatus:'running',content:'',input:{command:'echo hello'},output:'Already printed output',timestamp:Date.now()}],busy:true,pendingTurns:1,error:undefined});
     window.stopFixture(['[ede_diagnostic] result_type=user last_content_type=n/a stop_reason=tool_use']);

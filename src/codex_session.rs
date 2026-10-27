@@ -32,6 +32,7 @@ impl Protocol {
     }
 }
 struct Session {
+    id: String,
     generation: String,
     native_id: Mutex<String>,
     child: Mutex<Child>,
@@ -55,6 +56,12 @@ impl Session {
     fn write(&self, value: &Value) -> Result<(), String> {
         let mut input = self.input.lock().map_err(|e| e.to_string())?;
         let input = input.as_mut().ok_or("Codex connection is closed")?;
+        if value["method"] == "turn/start" {
+            let prompt = value["params"]["input"].as_array().into_iter().flatten().filter(|block| block["type"] == "text").filter_map(|block| block["text"].as_str()).collect::<Vec<_>>().join("\n");
+            crate::orchestration::native_input(&self.id, "codex", &self.generation, &prompt, value["id"].as_str().unwrap_or(""), None)?;
+        } else if value["method"] == "turn/interrupt" {
+            crate::orchestration::native_stop(&self.id, "codex", &self.generation);
+        }
         serde_json::to_writer(&mut *input, value).map_err(|e| e.to_string())?;
         input.write_all(b"\n").and_then(|_| input.flush()).map_err(|e| e.to_string())
     }
@@ -81,6 +88,9 @@ fn get(sessions: &CodexSessions, id: &str, generation: &str) -> Result<Arc<Sessi
     Ok(s)
 }
 fn emit(app: &tauri::AppHandle, id: &str, session: &Session, event: Value) {
+    if event["params"]["threadId"].as_str().is_none_or(|thread| thread == session.native_id.lock().unwrap().as_str()) {
+        crate::orchestration::native_event(id, "codex", &session.generation, &event);
+    }
     let _ = app.emit("codex-session-event", json!({"id":id,"generation":session.generation,"event":event}));
 }
 fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<String>, resume_token: Option<String>) -> Result<Value, String> {
@@ -119,7 +129,7 @@ fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<Stri
     let stdout = child.stdout.take().unwrap();
     let stderr = child.stderr.take().unwrap();
     let input = child.stdin.take().unwrap();
-    let session = Arc::new(Session { generation, native_id: Mutex::new(String::new()), child: Mutex::new(child), input: Mutex::new(Some(input)), protocol: Protocol::default(), stderr: Mutex::new(String::new()), launch_config: config.clone(), launch_cwd: cwd.clone() });
+    let session = Arc::new(Session { id: id.clone(), generation, native_id: Mutex::new(String::new()), child: Mutex::new(child), input: Mutex::new(Some(input)), protocol: Protocol::default(), stderr: Mutex::new(String::new()), launch_config: config.clone(), launch_cwd: cwd.clone() });
     {
         let sessions = app.state::<CodexSessions>();
         let mut map = sessions.0.lock().unwrap();
@@ -223,7 +233,7 @@ mod tests {
         let mut child = command.stdin(Stdio::piped()).stdout(Stdio::null()).stderr(Stdio::null()).spawn().unwrap();
         let input = child.stdin.take().unwrap();
         let session = Arc::new(Session {
-            generation: String::new(), native_id: Mutex::new(String::new()), child: Mutex::new(child),
+            id: "test".into(), generation: String::new(), native_id: Mutex::new(String::new()), child: Mutex::new(child),
             input: Mutex::new(Some(input)), protocol: Protocol::default(), stderr: Mutex::new(String::new()),
             launch_config: Default::default(), launch_cwd: Default::default(),
         });

@@ -59,11 +59,11 @@
   line-height: 18px;
 }
 
-.chrome-tab:hover:not(.active) {
+.chrome-tab:hover:not(.active, .orchestration-family-active) {
   background: var(--bg-hover);
 }
 
-.chrome-tab.active {
+.chrome-tab:is(.active, .orchestration-family-active) {
   color: var(--text-1);
   background: var(--bg-terminal);
   z-index: 2;
@@ -84,6 +84,34 @@
 .chrome-tab.dragging {
   z-index: 5;
   transition: none;
+}
+
+:root .chrome-tabs-header .chrome-tab.orchestration-child {
+  height: 26px;
+  align-self: center;
+  background: color-mix(in srgb, var(--accent) 16%, var(--bg-app));
+  box-shadow: none;
+}
+:root .chrome-tabs-header .chrome-tab.orchestration-child:hover,
+:root .chrome-tabs-header .chrome-tab.orchestration-child.active {
+  background: color-mix(in srgb, var(--accent) 26%, var(--bg-app));
+}
+:root[data-shape="panel"] .chrome-tabs-header .chrome-tab.orchestration-child {
+  align-self: flex-end;
+  margin-bottom: -1px;
+}
+:root .chrome-tabs-header .chrome-tab.orchestration-attached {
+  margin-left: -4px;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+:root .chrome-tabs-header .chrome-tab.orchestration-has-child {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+:root .chrome-tabs-header .chrome-tab.orchestration-child::before,
+:root .chrome-tabs-header .chrome-tab.orchestration-child::after {
+  display: none;
 }
 
 /* ─── Tab Actions (Status Dots ↔ Close Button Overlay) ─── */

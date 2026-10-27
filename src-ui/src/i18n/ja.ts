@@ -1,6 +1,17 @@
 import type { I18nKey } from './en';
 
 export const ja = {
+  "orchestration.close.title": "セッショングループを閉じる",
+  "orchestration.close.description": "グループ全体を終了するか、子セッションを独立して実行し続けるか選択してください。",
+  "orchestration.close.keep": "子セッションを保持",
+  "orchestration.close.end": "グループを終了",
+  "orchestration.tool.start": "協働タスクを割り当て",
+  "orchestration.tool.list": "協働タスクを確認",
+  "orchestration.tool.wait": "協働の結果を待機",
+  "orchestration.tool.read": "協働の進捗を確認",
+  "orchestration.tool.send": "協働タスクを継続",
+  "orchestration.tool.reply": "協働の質問に回答",
+  "orchestration.tool.interrupt": "協働タスクを中断",
   "tools.tab.orchestration": "マルチエージェント連携",
   "orchestration.description": "利用可能なアシスタントを選択します。新しい Claude セッションで、Claude が必要に応じて作業を割り当て、結果を確認してまとめます。",
   "orchestration.demo.prompt": "Web ページを作成して操作を確認",

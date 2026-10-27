@@ -5334,6 +5334,7 @@ pub fn start_ui(pending_launch: Option<crate::launch::LaunchRequest>) -> anyhow:
             crate::orchestration::orchestration_get,
             crate::orchestration::orchestration_set_agent,
             crate::orchestration::orchestration_sync,
+            crate::orchestration::orchestration_close_group,
             crate::orchestration::orchestration_pending,
             crate::orchestration::orchestration_resolve,
             crate::git::git_changes,

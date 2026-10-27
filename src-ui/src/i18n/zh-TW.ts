@@ -1,6 +1,17 @@
 import type { I18nKey } from './en';
 
 export const zhTW = {
+  "orchestration.close.title": "關閉會話群組",
+  "orchestration.close.description": "結束整組會停止並關閉所有子會話；保留子會話會讓它們獨立執行。",
+  "orchestration.close.keep": "保留子會話",
+  "orchestration.close.end": "結束整組",
+  "orchestration.tool.start": "派發協作任務",
+  "orchestration.tool.list": "查看協作任務",
+  "orchestration.tool.wait": "等待協作結果",
+  "orchestration.tool.read": "查看協作進展",
+  "orchestration.tool.send": "繼續協作任務",
+  "orchestration.tool.reply": "回覆協作問題",
+  "orchestration.tool.interrupt": "中斷協作任務",
   "tools.tab.orchestration": "多智慧體編排",
   "orchestration.description": "勾選可用助手。建立新的 Claude 對話後，Claude 會按任務需要自主指派，並檢查、彙整結果。",
   "orchestration.demo.prompt": "製作一個網頁，並檢查互動",

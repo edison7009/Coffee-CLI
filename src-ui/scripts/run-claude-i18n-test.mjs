@@ -21,7 +21,7 @@ for (const lang of languages) {
   vm.runInNewContext(ts.transpileModule(code, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, { module, exports: module.exports });
   dictionaries[lang] = Object.values(module.exports)[0];
 }
-const keys = Object.keys(dictionaries.en).filter(key => key.startsWith('claude.') || ['gambit.attachment', 'gambit.preview_attachment', 'gambit.remove_attachment'].includes(key));
+const keys = Object.keys(dictionaries.en).filter(key => key.startsWith('claude.') || key.startsWith('orchestration.tool.') || key.startsWith('orchestration.close.') || ['gambit.attachment', 'gambit.preview_attachment', 'gambit.remove_attachment'].includes(key));
 const placeholders = value => [...value.matchAll(/\{(\w+)\}/g)].map(match => match[1]).sort();
 for (const lang of languages) {
   for (const key of keys) {
@@ -30,15 +30,24 @@ for (const lang of languages) {
   }
   console.log(`OK: ${lang}, ${keys.length} translated keys and matching interpolation variables`);
 }
-const result = await build({ entryPoints: ['src/lib/claude-i18n.ts', 'src/lib/claude-protocol.ts'], bundle: true, platform: 'node', format: 'cjs', write: false, outdir: 'unused' });
+const result = await build({ entryPoints: ['src/lib/claude-i18n.ts', 'src/lib/claude-protocol.ts', 'src/lib/orchestration-label.ts'], bundle: true, platform: 'node', format: 'cjs', write: false, outdir: 'unused' });
 const modules = result.outputFiles.map(file => {
   const module = { exports: {} };
   vm.runInNewContext(file.text, { module, exports: module.exports });
   return module.exports;
 });
 const { claudeEffortLabel } = modules.find(module => module.claudeEffortLabel);
+const { orchestrationToolLabel } = modules.find(module => module.orchestrationToolLabel);
 for (const lang of languages) {
   const t = key => dictionaries[lang][key];
+  for (const action of ['start','list','wait','read','send','reply','interrupt']) {
+    const name = 'worker_' + action, expected = t('orchestration.tool.' + action);
+    assert.equal(orchestrationToolLabel('mcp__coffee-team__' + name, t), expected, lang + ': namespaced tool label');
+    assert.equal(orchestrationToolLabel(name, t, 'coffee-team'), expected, lang + ': structured server/tool label');
+    assert.equal(orchestrationToolLabel(name, t, 'another-server'), undefined, 'other servers retain their own names');
+    assert.equal(orchestrationToolLabel(name, t), undefined, 'bare names require the exact server identity');
+  }
+  for (const name of ['Bash','Read','mcp__other__worker_wait','mcp__coffee-team__unknown','mcp__coffee-team__constructor']) assert.equal(orchestrationToolLabel(name,t),undefined);
   for (const level of ['low', 'medium', 'high', 'xhigh', 'max']) assert.equal(claudeEffortLabel(level, t), t(`claude.effort.${level}`));
   assert.equal(claudeEffortLabel('ultracode', t), 'Ultracode');
   assert.equal(claudeEffortLabel('provider-custom-level', t), 'provider-custom-level');
