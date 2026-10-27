@@ -1210,6 +1210,7 @@ export function CenterPanel() {
               key={session.id}
               data-session-id={session.id}
               data-tab-id={session.id}
+              data-enter={worker?.phase === 'starting' || undefined}
               className={`chrome-tab ${isActive ? 'active' : ''} ${isDragging ? 'dragging' : ''}${isFamilyActive ? ' orchestration-family-active' : ''}${worker || session.parentId ? ' orchestration-child' : ''}`}
               style={dragStyle}
               onClick={() => onTabClickGuarded(session.id)}

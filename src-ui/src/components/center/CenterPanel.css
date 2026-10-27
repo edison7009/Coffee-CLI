@@ -92,6 +92,8 @@
   background: color-mix(in srgb, var(--text-1) 12%, var(--bg-app));
   color: var(--text-1);
   box-shadow: none;
+}
+:root .chrome-tabs-header .chrome-tab.orchestration-child[data-enter] {
   animation: orchestration-tab-enter .2s cubic-bezier(.2,.7,.2,1);
 }
 @keyframes orchestration-tab-enter {
@@ -99,7 +101,7 @@
   to { max-width: 200px; padding-inline: 12px; gap: 8px; opacity: 1; overflow: hidden; }
 }
 @media (prefers-reduced-motion: reduce) {
-  :root .chrome-tabs-header .chrome-tab.orchestration-child { animation: none; }
+  :root .chrome-tabs-header .chrome-tab.orchestration-child[data-enter] { animation: none; }
 }
 :root .chrome-tabs-header .chrome-tab.orchestration-child:hover,
 :root .chrome-tabs-header .chrome-tab.orchestration-child.active {

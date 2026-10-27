@@ -159,7 +159,7 @@ try {
       }
     };
     document.addEventListener('animationstart', window.pauseTabEntry);
-    const tasks = ['codex', 'opencode'].map((tool, index) => ({ id: 'task-' + index, parentId: 'a', parentNativeId: 'thread-a', parentTool: 'claude', sessionId: 'worker-' + index, nativeId: 'worker-native-' + index, tool, title: index ? '检查交互' : '实现页面', cwd: 'D:/a', phase: 'running', question: null, activity: 'working' }));
+    const tasks = ['codex', 'opencode'].map((tool, index) => ({ id: 'task-' + index, parentId: 'a', parentNativeId: 'thread-a', parentTool: 'claude', sessionId: 'worker-' + index, nativeId: 'worker-native-' + index, tool, title: index ? '检查交互' : '实现页面', cwd: 'D:/a', phase: 'starting', question: null, activity: 'working' }));
     for (const task of tasks) window.testDispatch({ type: 'ADD_TERMINAL', session: { id: task.sessionId, parentId: 'a', tool: task.tool, resumeToken: task.nativeId, folderPath: task.cwd, toolTitle: 'You are a worker assigned to a task', agentStatus: 'working' } });
     window.testDispatch({ type: 'REORDER_TAB', tabId: 'worker-0', beforeId: 'b-restarted' });
     window.testDispatch({ type: 'REORDER_TAB', tabId: 'worker-1', beforeId: 'b-restarted' });
@@ -182,6 +182,7 @@ try {
   assert.equal(await childTab.evaluate(el=>getComputedStyle(el).animationName),'none','reduced motion disables child tab entry');
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.evaluate(()=>Promise.all(document.getAnimations().filter(animation=>['orchestration-tab-enter','orchestration-worker-enter'].includes(animation.animationName)).map(animation=>animation.finished)));
+  await page.evaluate(async()=>{const {receiveOrchestration,getOrchestrationSnapshot}=await import('/src/lib/orchestration.ts');const current=getOrchestrationSnapshot();receiveOrchestration({...current,revision:current.revision+1,tasks:current.tasks.map(task=>({...task,phase:'running'}))})});
   await page.evaluate(async()=>{
     const {receiveOrchestration,getOrchestrationSnapshot}=await import('/src/lib/orchestration.ts');
     const current=getOrchestrationSnapshot();receiveOrchestration({...current,revision:current.revision+1,tasks:current.tasks.map(task=>task.id==='task-0'?{...task,title:'Updated child title'}:task)});
@@ -295,12 +296,14 @@ try {
   await historyChild.hover();
   assert.equal(await page.getByRole('tooltip').locator('.history-card-preview-title').innerText(),'Original child history');assert.equal(await page.getByRole('tooltip').locator('.history-card-meta').count(),1);
   await historyChild.locator('.history-worker-open').click();await restoredTab.waitFor();
+  assert.equal(await restoredTab.evaluate(el=>getComputedStyle(el).animationName),'none','restoring child history opens its tab without a new-task entrance animation');
   assert.equal(await page.evaluate(()=>window.testState().terminals.find(tab=>tab.id==='saved-history-child').resumeToken),'original-native-thread','history restore passes the original native conversation ID');
   assert.equal(await page.evaluate(()=>window.testState().terminals.find(tab=>tab.id==='saved-history-child').parentId),'history-parent');
   const relatedOrder=await page.evaluate(()=>window.testState().tabOrder);
   assert.equal(relatedOrder.indexOf('saved-history-child'),relatedOrder.indexOf('history-parent')+1,'restored child joins its existing parent in the tab strip');
   await restoredTab.hover();await restoredTab.locator('.tab-close-btn').click();await restoredTab.waitFor({state:'detached'});
   await historyChild.locator('.history-worker-open').dblclick();await restoredTab.waitFor();
+  assert.equal(await restoredTab.evaluate(el=>getComputedStyle(el).animationName),'none','reopening an existing child cannot replay the creation animation');
   assert.equal(await page.evaluate(()=>window.testState().terminals.filter(tab=>tab.resumeToken==='original-native-thread').length),1,'repeated clicks keep exactly one writer for the original history');
   assert.equal(await page.evaluate(()=>window.restoredHistory.length),2,'active child clicks select the tab without another restore request');
   const savedDraft=page.getByRole('textbox',{name:'draft saved-history-child',exact:true});await savedDraft.fill('Draft survives becoming independent');

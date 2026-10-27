@@ -608,7 +608,7 @@ export function HistoryBoard() {
             {workers.length > 0 && <div className="history-workers" onPointerDown={event => event.stopPropagation()}>
               {workers.map(task => {
                 const child = state.terminals.find(tab => tab.id === task.sessionId), status = workerState(task, child);
-                return <div key={task.id} className={`history-worker${child?.id === state.activeTerminalId && !state.agentPageActive && !state.diffTabActive ? ' is-active' : ''}`} onMouseEnter={event => {
+                return <div key={task.id} data-enter={task.phase === 'starting' || undefined} className={`history-worker${child?.id === state.activeTerminalId && !state.agentPageActive && !state.diffTabActive ? ' is-active' : ''}`} onMouseEnter={event => {
                   if (ctxMenu || searchOpen) return;
                   const rect = event.currentTarget.getBoundingClientRect(), width = Math.min(320, window.innerWidth - 16);
                   setPreview({ key: `worker:${task.id}`, left: Math.max(8, Math.min(rect.right + 8, window.innerWidth - width - 8)), top: Math.max(8, Math.min(rect.top + (rect.height - 72) / 2, window.innerHeight - 80)) });

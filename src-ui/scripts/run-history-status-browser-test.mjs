@@ -246,6 +246,11 @@ try {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.goto(`http://127.0.0.1:${server.address().port}/?workers=1`);
   await rows.first().waitFor();
+  await page.evaluate(()=>window.updateTeam({enabled:true,tasks:['codex','opencode'].map((tool,index)=>({id:'restored-'+index,parentId:'old-parent',parentNativeId:'one',parentTool:'claude',sessionId:'old-worker-'+index,nativeId:'worker-native-'+index,tool,title:'Restored child '+index,cwd:'D:/same',phase:index?'completed':'closed',question:null})),revision:1}));
+  await page.locator('.history-worker').first().waitFor();
+  assert.deepEqual(await page.locator('.history-worker').evaluateAll(rows=>rows.map(row=>getComputedStyle(row).animationName)),['none','none'],'startup restores child history immediately without entry animations');
+  await page.evaluate(()=>window.updateTeam({enabled:true,tasks:[],revision:2}));
+  await page.locator('.history-worker').waitFor({state:'detached'});
   await page.evaluate(()=>{
     window.pauseWorkerEntry = event => {
       if (event.animationName === 'orchestration-worker-enter') for (const animation of event.target.getAnimations()) {
@@ -253,9 +258,9 @@ try {
       }
     };
     document.addEventListener('animationstart', window.pauseWorkerEntry);
-    window.workerTasks=['codex','opencode'].map((tool,index)=>({id:'task-'+index,parentId:'old-parent',parentNativeId:'one',parentTool:'claude',sessionId:'worker-'+index,nativeId:'worker-native-'+index,tool,title:index?'Check formatting':'Review code',cwd:'D:/same',phase:'running',summary:null,question:index?{id:'q1',text:'Need a file',answer:null}:null,activity:'working',generation:'g1'}));
+    window.workerTasks=['codex','opencode'].map((tool,index)=>({id:'task-'+index,parentId:'old-parent',parentNativeId:'one',parentTool:'claude',sessionId:'worker-'+index,nativeId:'worker-native-'+index,tool,title:index?'Check formatting':'Review code',cwd:'D:/same',phase:'starting',summary:null,question:index?{id:'q1',text:'Need a file',answer:null}:null,activity:'working',generation:'g1'}));
     window.updateView({terminals:[{id:'a',tool:'claude',resumeToken:'one',agentStatus:'idle',folderPath:'D:/same'},...window.workerTasks.map(task=>({id:task.sessionId,tool:task.tool,resumeToken:task.nativeId,folderPath:task.cwd,agentStatus:'working'}))]});
-    window.updateTeam({enabled:true,tasks:window.workerTasks,revision:1});
+    window.updateTeam({enabled:true,tasks:window.workerTasks,revision:3});
   });
   const family=page.locator('.history-family').first(),workers=family.locator('.history-worker');await workers.first().waitFor();assert.equal(await workers.count(),2);
   const reveal = await family.evaluate(group => {
@@ -271,6 +276,7 @@ try {
   assert.equal(await workers.first().evaluate(el=>getComputedStyle(el).animationName),'none','reduced motion shows child rows immediately');
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.evaluate(()=>Promise.all(document.getAnimations().filter(animation=>animation.animationName==='orchestration-worker-enter').map(animation=>animation.finished)));
+  await page.evaluate(()=>{window.workerTasks.forEach(task=>task.phase='running');window.updateTeam({enabled:true,tasks:window.workerTasks,revision:4})});
   assert.equal(await rows.count(),3,'native child records are nested under their parent, not repeated as peer history rows');
   assert.equal(await workers.first().locator('.history-worker-title').innerText(),'Review code','sidebar shows the task title used by the top tab');
   assert.equal(await workers.first().locator('.history-worker-icon svg').evaluate(el=>el.getBoundingClientRect().height),14,'nested SVG stays compact');
