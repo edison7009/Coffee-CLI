@@ -24,11 +24,9 @@ export function ToolControlPanel({ kind, active, tools }: {
   const revision = useRef(0);
   useEffect(() => {
     if (!active) return;
-    let cancelled = false;
-    const version = revision.current;
-    void commands.getToolControl(kind).then(value => { if (!cancelled && version === revision.current) setStatus(value); })
-      .catch(reason => { if (!cancelled && version === revision.current) setError(errors[String(reason)] ?? 'control.read_error'); });
-    return () => { cancelled = true; };
+    const version = ++revision.current;
+    void commands.getToolControl(kind).then(value => { if (version === revision.current) { setStatus(value); setError(undefined); } })
+      .catch(reason => { if (version === revision.current) setError(errors[String(reason)] ?? 'control.read_error'); });
   }, [active, kind]);
   const run = async (action: () => Promise<ToolControlStatus>, target = 'runtime', check = false) => {
     if (busy) return;
@@ -39,6 +37,8 @@ export function ToolControlPanel({ kind, active, tools }: {
     finally { setPending(null); }
   };
   const agents = tools.slice(0, 6);
+  const install = kind === 'browser' && status?.installed === false;
+  const actionLabel = t(!status && error ? 'tools.memory.reload' : install ? 'skills.install' : 'control.check');
   return <div className="tool-control" aria-busy={busy || (!status && !error)}>
     <div className="tool-control-runtime">
       <span className="tool-control-symbol" aria-hidden="true">{kind === 'computer'
@@ -48,21 +48,20 @@ export function ToolControlPanel({ kind, active, tools }: {
         <strong>{kind === 'computer' ? 'Computer Use' : 'Browser Use'}</strong>
         <p>{t(kind === 'computer' ? 'control.computer_description' : 'control.browser_description')}</p>
       </div>
-      <span className={`tool-control-state${status?.ready ? ' is-ready' : ''}`} role="status">{!status ? error ? '' : t('diff.loading') : !status.supported ? t('control.unsupported') : checked && status.ready ? t('control.available') : status.installed ? t(kind === 'computer' ? 'control.builtin' : 'control.installed') : t('control.not_installed')}</span>
-      {status?.supported && <button type="button" className={`tool-memory-button tool-control-action${kind === 'browser' && !status.installed ? ' tool-memory-save' : ''}`} aria-label={t(kind === 'browser' && !status.installed ? 'skills.install' : 'control.check')} aria-busy={pending === 'runtime'} disabled={busy} onClick={() => { void run(() => kind === 'browser' && !status.installed ? commands.installBrowserControl() : commands.checkToolControl(kind), 'runtime', true); }}>
-        <span style={pending === 'runtime' ? { visibility: 'hidden' } : undefined}>{t(kind === 'browser' && !status.installed ? 'skills.install' : 'control.check')}</span>
+      <span className={`tool-control-state${status?.ready ? ' is-ready' : ''}`} role="status">{!status ? '' : !status.supported ? t('control.unsupported') : checked && status.ready ? t('control.available') : status.installed ? t(kind === 'computer' ? 'control.builtin' : 'control.installed') : t('control.not_installed')}</span>
+      <button type="button" className={`tool-memory-button tool-control-action${install ? ' tool-memory-save' : ''}`} aria-label={actionLabel} aria-busy={pending === 'runtime'} disabled={busy || (!status && !error) || status?.supported === false} onClick={() => { void run(() => !status ? commands.getToolControl(kind) : install ? commands.installBrowserControl() : commands.checkToolControl(kind), 'runtime', !!status); }}>
+        <span style={pending === 'runtime' ? { visibility: 'hidden' } : undefined}>{actionLabel}</span>
         {pending === 'runtime' && <span className="tool-control-spinner" aria-hidden="true" />}
-      </button>}
-      {!status && error && <button type="button" className="tool-memory-button tool-control-action" aria-label={t('tools.memory.reload')} aria-busy={pending === 'runtime'} disabled={busy} onClick={() => { void run(() => commands.getToolControl(kind)); }}><span style={pending === 'runtime' ? { visibility: 'hidden' } : undefined}>{t('tools.memory.reload')}</span>{pending === 'runtime' && <span className="tool-control-spinner" aria-hidden="true" />}</button>}
+      </button>
     </div>
     {error && <p className="tool-memory-notice" role="alert">{t(error)}</p>}
     {status?.supported && status.installed && kind === 'browser' && !status.browser && <p className="tool-memory-notice" role="status">{t('control.browser_missing')}</p>}
-    {status?.supported && <div className="tool-control-agents">
+    <div className="tool-control-agents">
       {agents.map(tool => {
-        const agent = status.agents.find(agent => agent.tool === tool.value) ?? { supported: false, enabled: false, conflict: false };
+        const agent = status?.agents.find(agent => agent.tool === tool.value) ?? { supported: false, enabled: false, conflict: false };
         const missing = tool.installed === false;
-        const unavailable = !missing && (agent.supported === false || agent.conflict);
-        const disabled = missing || unavailable || (!agent.enabled && !status.ready);
+        const unavailable = !!status && !missing && (!status.supported || agent.supported === false || agent.conflict);
+        const disabled = !status || missing || unavailable || (!agent.enabled && !status.ready);
         const help = !unavailable ? undefined : t(agent.supported === false ? 'control.agent_unsupported_help' : agent.issue === 'conflict' ? 'control.agent_conflict_help' : 'control.agent_config_help', { tool: tool.label, server: `coffee-${kind}-use` });
         return <div className="tool-control-agent" key={tool.value}>
           <span className="tool-control-agent-icon" aria-hidden="true">{tool.icon}</span>
@@ -74,7 +73,7 @@ export function ToolControlPanel({ kind, active, tools }: {
         </div>;
       })}
       {!agents.length && <span className="tool-control-no-agents">{t('control.no_agents')}</span>}
-    </div>}
+    </div>
     {active && <ToolControlDemo kind={kind} />}
   </div>;
 }

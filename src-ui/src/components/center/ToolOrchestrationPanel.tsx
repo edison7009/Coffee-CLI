@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { commands } from '../../tauri';
 import { useT } from '../../i18n/useT';
 import { receiveOrchestration, refreshOrchestration, useOrchestration } from '../../lib/orchestration';
@@ -10,12 +10,12 @@ export function ToolOrchestrationPanel({ active, tools }: {
 }) {
   const t = useT(), { agents = [] } = useOrchestration();
   const [ready, setReady] = useState(false), [pending, setPending] = useState<string | null>(null), [error, setError] = useState(false);
+  const revision = useRef(0);
   useEffect(() => {
     if (!active) return;
-    let cancelled = false;
-    void refreshOrchestration().then(() => { if (!cancelled) { setReady(true); setError(false); } })
-      .catch(() => { if (!cancelled) setError(true); });
-    return () => { cancelled = true; };
+    const version = ++revision.current;
+    void refreshOrchestration().then(() => { if (version === revision.current) { setReady(true); setError(false); } })
+      .catch(() => { if (version === revision.current) setError(true); });
   }, [active]);
   return <div className="tool-control orchestration-config">
     <div className="tool-control-runtime">
@@ -32,10 +32,11 @@ export function ToolOrchestrationPanel({ active, tools }: {
         {(missing || !supported) && <span className="tool-control-state">{t(missing ? 'control.not_installed' : 'orchestration.unsupported')}</span>}
         {pending === tool.value && <span className="tool-control-spinner" aria-hidden="true" />}
         <button type="button" role="switch" className="tool-control-switch tool-control-card-toggle" aria-label={tool.label} aria-checked={agents.includes(tool.value)} data-unavailable={missing || !supported} disabled={!ready || pending !== null || missing || !supported} onClick={async () => {
+          revision.current++;
           setPending(tool.value); setError(false);
           try { receiveOrchestration(await commands.orchestrationSetAgent(tool.value, !agents.includes(tool.value))); }
           catch { setError(true); }
-          finally { setPending(null); }
+          finally { revision.current++; setPending(null); }
         }}><span /></button>
       </div>})}
       {!tools.length && <span className="tool-control-no-agents">{t('control.no_agents')}</span>}

@@ -13,8 +13,8 @@ window.calls=[];const agents=()=>[{tool:'claude',supported:true,enabled:false,co
 window.controlStatus={computer:{supported:true,installed:true,ready:true,browser:null,agents:agents()},browser:{supported:true,installed:false,ready:false,browser:null,agents:agents()}};
 window.team={enabled:false,agents:[],tasks:[],revision:0};window.teamCalls=[];
 export const commands={
-async orchestrationGet(){window.teamCalls.push('get');return structuredClone(window.team)},async orchestrationSetAgent(tool,enabled){window.teamCalls.push({tool,enabled});if(window.delayTeam)await new Promise(resolve=>window.resolveTeam=resolve);if(window.failTeam)throw 'write failed';window.team.agents=window.team.agents.filter(id=>id!==tool);if(enabled)window.team.agents.push(tool);window.team.enabled=window.team.agents.length>0;window.team.revision++;return structuredClone(window.team)},
-async getToolControl(kind){window.calls.push({type:'read',kind});const value=structuredClone(window.controlStatus[kind]);if(window.delayRead===kind)await new Promise(resolve=>window.resolveRead=resolve);return value},
+async orchestrationGet(){window.teamCalls.push('get');const value=structuredClone(window.team);if(window.delayTeamRead)await new Promise(resolve=>window.resolveTeamRead=resolve);return value},async orchestrationSetAgent(tool,enabled){window.teamCalls.push({tool,enabled});if(window.delayTeam)await new Promise(resolve=>window.resolveTeam=resolve);if(window.failTeam)throw 'write failed';window.team.agents=window.team.agents.filter(id=>id!==tool);if(enabled)window.team.agents.push(tool);window.team.enabled=window.team.agents.length>0;window.team.revision++;return structuredClone(window.team)},
+async getToolControl(kind){window.calls.push({type:'read',kind});const value=structuredClone(window.controlStatus[kind]);if(window.delayRead===kind)await new Promise(resolve=>window.resolveRead=resolve);if(window.failRead===kind)throw 'control_read';return value},
 async checkToolControl(kind){window.calls.push({type:'check',kind});if(window.delayCheck)await new Promise(resolve=>window.resolveCheck=resolve);if(window.failCheck)throw 'control_unavailable';return structuredClone(window.controlStatus[kind])},
 async installBrowserControl(){window.calls.push({type:'install'});if(window.delayInstall)await new Promise(resolve=>window.resolveInstall=resolve);window.controlStatus.browser.installed=true;return structuredClone(window.controlStatus.browser)},
 async setToolControl(kind,tool,enabled){window.calls.push({type:'set',kind,tool,enabled});if(window.delaySet)await new Promise(resolve=>window.resolveSet=resolve);if(window.failSet)throw 'control_conflict';window.controlStatus[kind].agents.find(agent=>agent.tool===tool).enabled=enabled;return structuredClone(window.controlStatus[kind])},
@@ -38,14 +38,29 @@ const browser=await chromium.launch({headless:true,executablePath:process.env.CO
 try{
 const page=await browser.newPage({viewport:{width:1080,height:780}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
 await page.goto(`http://127.0.0.1:${server.address().port}`);
+const panel=page.locator('.tool-settings-panel:not([hidden])');
 const tab=name=>page.getByRole('tab',{name,exact:true}),agent=name=>page.getByRole('switch',{name,exact:true});
 assert.equal(await page.getByRole('tab').count(),6);assert.deepEqual(await page.evaluate(()=>window.calls),[]);
 assert.deepEqual(await page.getByRole('tab').allTextContents(),['常用 6/6','主记忆','多智能体编排','技能','电脑控制','浏览器控制']);
 assert.deepEqual(await page.evaluate(()=>window.teamCalls),[],'orchestration reads only when opened');
+await page.evaluate(()=>{window.delayRead='browser';window.resolveRead=null});
+await tab('浏览器控制').click();await page.waitForFunction(()=>!!window.resolveRead);
+assert.equal(await page.getByRole('switch').count(),6,'first browser read reserves all favorite cards immediately');
+assert.equal(await agent('Claude Code').isDisabled(),true,'unknown configuration cannot be toggled');
+const browserDemoTop=(await page.locator('.control-demo').boundingBox()).y;
+await tab('常用 6/6').click();await page.evaluate(()=>{window.delayRead=null;window.resolveRead()});
+await page.waitForFunction(()=>document.querySelector('[aria-labelledby$="-tab-browser"] .tool-control-action')?.textContent.includes('安装'));
+await page.evaluate(()=>{window.delayRead='browser';window.resolveRead=null});
+await tab('浏览器控制').click();await page.waitForFunction(()=>!!window.resolveRead);
+assert.equal(await page.getByRole('switch').count(),6,'returning to browser control retains its cards during refresh');
+assert.equal(await page.getByRole('button',{name:'安装',exact:true}).count(),1,'a read completed while hidden populates the retained page');
+assert.ok(Math.abs((await page.locator('.control-demo').boundingBox()).y-browserDemoTop)<1,'browser status arrival does not move the demonstration');
+await page.evaluate(()=>{window.delayRead=null;window.resolveRead()});await tab('常用 6/6').click();
+await page.evaluate(()=>window.calls=[]);
 await tab('多智能体编排').click();await agent('Claude Code').waitFor();await page.waitForFunction(()=>!document.querySelector('.orchestration-config [role="switch"]').disabled);
 assert.equal(await agent('Claude Code').getAttribute('aria-checked'),'false');assert.equal(await page.locator('.orchestration-config .tool-control-agent').count(),6);
 assert.equal(await agent('Cursor').isDisabled(),true);assert.equal(await agent('Antigravity CLI').isDisabled(),true);assert.equal(await agent('Kiro').count(),0);
-await page.getByText('未安装',{exact:true}).waitFor();assert.equal(await page.getByText('暂不支持',{exact:true}).count(),3);
+await panel.getByText('未安装',{exact:true}).waitFor();assert.equal(await panel.getByText('暂不支持',{exact:true}).count(),3);
 await page.evaluate(()=>window.delayTeam=true);await agent('Claude Code').click();await page.waitForFunction(()=>!!window.resolveTeam);
 assert.equal(await agent('Claude Code').isDisabled(),true);assert.equal(await page.locator('.orchestration-config .tool-control-spinner').count(),1);
 assert.equal(await agent('Claude Code').evaluate(el=>getComputedStyle(el).opacity),'1','saving must not flash the active switch to the unavailable opacity');
@@ -81,11 +96,18 @@ for (const enabled of [false, true]) {
   assert.ok(frames.every(frame=>frame.opacity===1),'no dim/bright flash in any sampled animation frame');
   assert.ok(frames.slice(1).every((frame,index)=>enabled?frame.x>=frames[index].x-.1:frame.x<=frames[index].x+.1),'thumb moves in one direction without bouncing back');
 }
-await tab('常用 6/6').click();await tab('多智能体编排').click();await page.waitForFunction(()=>!document.querySelector('.orchestration-config [role="switch"]').disabled);
+await tab('常用 6/6').click();await page.evaluate(()=>{window.delayTeamRead=true;window.resolveTeamRead=null});await tab('多智能体编排').click();await page.waitForFunction(()=>!!window.resolveTeamRead);
+assert.equal(await agent('Codex CLI').isDisabled(),false,'orchestration keeps the confirmed configuration usable during a background refresh');
+await page.evaluate(()=>{window.delayTeamRead=false;window.resolveTeamRead()});await page.waitForFunction(()=>!document.querySelector('.orchestration-config [role="switch"]').disabled);
 assert.equal(await agent('Codex CLI').getAttribute('aria-checked'),'true','saved choice survives page changes');
 await page.evaluate(()=>document.documentElement.dataset.mode='light');await page.screenshot({path:join(directory,'orchestration-light.png')});await page.evaluate(()=>document.documentElement.dataset.mode='dark');
-await tab('电脑控制').click();await agent('Claude Code').waitFor();assert.equal(await page.getByRole('switch').count(),6);assert.equal(await page.locator('.tool-control-agents').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),3);assert.equal(await agent('Pi').isDisabled(),true);assert.equal(await agent('Kiro').count(),0);await page.getByText('暂不可用',{exact:true}).waitFor();
-await page.getByText('未安装',{exact:true}).waitFor();assert.equal(await agent('Antigravity CLI').isDisabled(),true);
+await page.evaluate(()=>{window.delayRead='computer';window.resolveRead=null});await tab('电脑控制').click();await page.waitForFunction(()=>!!window.resolveRead);
+assert.equal(await page.getByRole('switch').count(),6,'computer control also reserves its cards before the first response');assert.equal(await agent('Claude Code').isDisabled(),true);
+const computerDemoTop=(await page.locator('.control-demo').boundingBox()).y;
+await page.evaluate(()=>{window.delayRead=null;window.resolveRead()});await panel.getByText('已内置',{exact:true}).waitFor();
+assert.ok(Math.abs((await page.locator('.control-demo').boundingBox()).y-computerDemoTop)<1,'computer status arrival does not move the demonstration');
+assert.equal(await panel.locator('.tool-control-agents').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),3);assert.equal(await agent('Pi').isDisabled(),true);assert.equal(await agent('Kiro').count(),0);await panel.getByText('暂不可用',{exact:true}).waitFor();
+await panel.getByText('未安装',{exact:true}).waitFor();assert.equal(await agent('Antigravity CLI').isDisabled(),true);
 assert.equal(await agent('Antigravity CLI').locator('..').locator('[data-tip]').count(),0,'missing tools take priority over config errors');
 assert.match(await agent('Pi').locator('..').locator('[data-tip]').getAttribute('aria-label'),/Pi/);
 const computerCard=agent('Claude Code').locator('..');const setCount=await page.evaluate(()=>window.calls.filter(call=>call.type==='set').length);
@@ -145,6 +167,11 @@ await page.evaluate(()=>{window.controlStatus.computer.agents[1].conflict=false;
 await tab('浏览器控制').click();await tab('电脑控制').click();await page.waitForFunction(()=>!!window.resolveRead);
 await page.evaluate(()=>{window.delaySet=false;window.resolveSet()});await page.waitForFunction(()=>document.querySelector('[role="tabpanel"]:not([hidden]) [role="switch"]').getAttribute('aria-checked')==='false');await page.evaluate(()=>{window.delayRead=null;window.resolveRead()});await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
 assert.equal(await agent('Claude Code').getAttribute('aria-checked'),'false');
+await page.evaluate(()=>{window.failRead='browser';window.delayRead='browser';window.resolveRead=null});await tab('浏览器控制').click();await page.waitForFunction(()=>!!window.resolveRead);
+assert.equal(await agent('Codex CLI').getAttribute('aria-checked'),'true','browser refresh retains confirmed enabled agents');assert.equal(await agent('Codex CLI').isDisabled(),false);
+await page.evaluate(()=>{window.delayRead=null;window.resolveRead()});await page.getByRole('alert').waitFor();
+assert.equal(await page.getByRole('switch').count(),6,'failed background refresh cannot remove cached cards');assert.equal(await agent('Codex CLI').getAttribute('aria-checked'),'true','failed refresh preserves the last confirmed choice');
+await page.evaluate(()=>window.failRead=null);await tab('电脑控制').click();await tab('浏览器控制').click();await page.getByRole('alert').waitFor({state:'hidden'});
 await page.evaluate(()=>{document.documentElement.dataset.mode='light';document.documentElement.dataset.theme='mint';document.documentElement.dataset.shape='slate'});await tab('浏览器控制').click();await page.waitForTimeout(250);await page.screenshot({path:join(directory,'browser-light.png')});
 assert.equal(await themedHeadings(),true,'heading colors follow a changed light theme');
 await page.setViewportSize({width:440,height:720});assert.equal(await page.locator('.tool-settings-page').evaluate(el=>el.scrollWidth>el.clientWidth),false);
@@ -220,5 +247,5 @@ await page.setViewportSize({width:1080,height:1000});await tab('技能').click()
 const emptyGeometry=await page.locator('.skills-empty').evaluate(element=>{const rect=element.getBoundingClientRect(),panel=document.querySelector('.tool-settings-page').getBoundingClientRect(),range=document.createRange();range.selectNodeContents(element);const text=range.getBoundingClientRect();return {bottom:rect.bottom,expected:panel.bottom-32,center:(rect.top+rect.bottom)/2,textCenter:(text.top+text.bottom)/2}});
 assert.ok(Math.abs(emptyGeometry.bottom-emptyGeometry.expected)<2,'empty skills fill the available page height');assert.ok(Math.abs(emptyGeometry.center-emptyGeometry.textCenter)<2,'empty text is vertically centered');
 assert.deepEqual(errors,[]);
-console.log('OK: six themed tabs, lazy reads, explicit installation, per-agent switches, serialization, conflicts, errors, late-read protection, themes, narrow layout, isolated SVG masks, demo phases, pause/resume and reduced motion');console.log('Screenshots: '+directory);
+console.log('OK: six themed tabs, retained control state, stable first-load geometry, hidden-page completion, background refresh failures, explicit installation, per-agent switches, serialization, late-read protection, themes, isolated SVG masks and demo motion');console.log('Screenshots: '+directory);
 }finally{await browser.close();await new Promise(r=>server.close(r))}

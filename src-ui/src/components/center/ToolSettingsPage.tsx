@@ -42,7 +42,7 @@ export function ToolSettingsPage({ active, tools, count, limit, children }: {
         }}>{t(`tools.tab.${key}`)}{key === 'selection' && <span className="tool-settings-tab-count"> {count}/{limit}</span>}</button>)}
       </span>
       {tabs.map(key => <div key={key} id={`${id}-panel-${key}`} role="tabpanel" aria-labelledby={`${id}-tab-${key}`} className="tool-settings-panel" hidden={tab !== key}>
-        {key === 'selection' ? (active && tab === 'selection' ? children : null) : key === 'memory' ? <ToolMemoryPanel active={active && tab === 'memory'} tools={tools} /> : key === 'orchestration' ? (active && tab === key ? <ToolOrchestrationPanel active tools={tools} /> : null) : key === 'skills' ? <ToolSkillsPanel active={active && tab === 'skills'} tools={tools} /> : <ToolControlPanel kind={key} active={active && tab === key} tools={tools} />}
+        {key === 'selection' ? (active && tab === 'selection' ? children : null) : key === 'memory' ? <ToolMemoryPanel active={active && tab === 'memory'} tools={tools} /> : key === 'orchestration' ? <ToolOrchestrationPanel active={active && tab === key} tools={tools} /> : key === 'skills' ? <ToolSkillsPanel active={active && tab === 'skills'} tools={tools} /> : <ToolControlPanel kind={key} active={active && tab === key} tools={tools} />}
       </div>)}
     </div>
   </section>;
