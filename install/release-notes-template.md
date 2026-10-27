@@ -1,7 +1,7 @@
 <details open>
 <summary><b>🇨🇳 简体中文</b></summary>
 
-### Coffee CLI v3.7.3 · 应用配置与智能体协作
+### Coffee CLI v3.7.4 · 应用配置与智能体协作
 
 - **应用配置。** 独立管理常用工具与全局主记忆，支持直接编辑、冲突保护和未安装状态提示。
 - **技能管理。** 从公开上游发现技能，按工具安装、更新和卸载；缓存优先加载，支持骨架屏与头像替代图标。
@@ -15,7 +15,7 @@
 <details>
 <summary><b>🇬🇧 English</b></summary>
 
-### Coffee CLI v3.7.3 · Agent Configuration and Collaboration
+### Coffee CLI v3.7.4 · Agent Configuration and Collaboration
 
 - **Agent configuration.** Manage favorite tools and global memory in a dedicated page, with direct editing, conflict protection, and installation status.
 - **Skill management.** Discover skills from public upstream sources and install, update, or remove them per tool. Cached lists, skeletons, and avatar fallbacks improve loading.
@@ -29,7 +29,7 @@
 <details>
 <summary><b>🇹🇼 繁體中文</b></summary>
 
-### Coffee CLI v3.7.3 · 應用配置與智慧體協作
+### Coffee CLI v3.7.4 · 應用配置與智慧體協作
 
 - **應用配置。** 獨立管理常用工具與全域主記憶，支援直接編輯、衝突保護和未安裝狀態提示。
 - **技能管理。** 從公開上游探索技能，依工具安裝、更新和解除安裝；優先載入快取，支援骨架畫面與頭像替代圖示。
@@ -43,7 +43,7 @@
 <details>
 <summary><b>🇯🇵 日本語</b></summary>
 
-### Coffee CLI v3.7.3 · エージェント設定と連携
+### Coffee CLI v3.7.4 · エージェント設定と連携
 
 - **エージェント設定。** よく使うツールとグローバルメモリを専用画面で管理。直接編集、競合保護、未インストール表示に対応。
 - **スキル管理。** 公開ソースからスキルを探し、ツールごとにインストール・更新・削除。キャッシュ、スケルトン、代替アバターで読み込みを改善。
@@ -57,7 +57,7 @@
 <details>
 <summary><b>🇰🇷 한국어</b></summary>
 
-### Coffee CLI v3.7.3 · 에이전트 설정과 협업
+### Coffee CLI v3.7.4 · 에이전트 설정과 협업
 
 - **에이전트 설정.** 즐겨 쓰는 도구와 전역 메모리를 전용 화면에서 관리하며 직접 편집, 충돌 보호, 설치 상태 표시를 지원합니다.
 - **스킬 관리.** 공개 소스에서 스킬을 찾아 도구별로 설치·업데이트·삭제합니다. 캐시, 스켈레톤 화면, 대체 아바타로 로딩을 개선했습니다.
