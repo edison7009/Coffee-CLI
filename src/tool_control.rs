@@ -203,7 +203,14 @@ fn save(path: &Path, original: Option<&str>, content: &str, storage: &Path) -> R
     fs::create_dir_all(path.parent().ok_or("control_write")?).map_err(|_| "control_write")?;
     let backup = storage.join("backups").join(uuid::Uuid::new_v4().to_string());
     fs::create_dir_all(&backup).map_err(|_| "control_write")?;
-    if let Some(original) = original { fs::write(backup.join(path.file_name().ok_or("control_write")?), original).map_err(|_| "control_write")?; }
+    if let Some(original) = original {
+        let mut options = fs::OpenOptions::new();
+        options.write(true).create_new(true);
+        #[cfg(unix)]
+        { use std::os::unix::fs::OpenOptionsExt; options.mode(0o600); }
+        options.open(backup.join(path.file_name().ok_or("control_write")?)).map_err(|_| "control_write")?
+            .write_all(original.as_bytes()).map_err(|_| "control_write")?;
+    }
     let temp = path.with_file_name(format!(".coffee-control-{}.tmp", uuid::Uuid::new_v4()));
     let result = (|| {
         let mut file = fs::OpenOptions::new().create_new(true).write(true).open(&temp).map_err(|_| "control_write")?;
@@ -532,6 +539,21 @@ mod tests {
         assert!(save(&path, Some("old"), "new", &directory).is_err());
         assert_eq!(fs::read_to_string(&path).unwrap(), "user edit");
         fs::remove_dir_all(directory).unwrap();
+    }
+    #[test]
+    fn saved_configuration_backups_are_private() {
+        let base = dunce::canonicalize(std::env::temp_dir()).unwrap().join(format!("coffee-backup-{}", uuid::Uuid::new_v4()));
+        fs::create_dir_all(&base).unwrap();
+        let path = base.join("config.json");
+        let storage = base.join("storage");
+        fs::write(&path, "previous private configuration").unwrap();
+        save(&path, Some("previous private configuration"), "new configuration", &storage).unwrap();
+        assert_eq!(fs::read_to_string(&path).unwrap(), "new configuration");
+        let backup = fs::read_dir(storage.join("backups")).unwrap().next().unwrap().unwrap().path().join("config.json");
+        assert_eq!(fs::read_to_string(&backup).unwrap(), "previous private configuration");
+        #[cfg(unix)]
+        { use std::os::unix::fs::PermissionsExt; assert_eq!(fs::metadata(backup).unwrap().permissions().mode() & 0o777, 0o600); }
+        fs::remove_dir_all(base).unwrap();
     }
     #[test]
     fn preparing_browser_connections_preserves_the_shared_configuration() {

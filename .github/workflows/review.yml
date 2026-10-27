@@ -36,7 +36,7 @@ jobs:
           npm audit --audit-level=high --omit=dev
       - name: Install test browser
         working-directory: src-ui
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps --only-shell chromium
       - name: Browser interaction regression tests
         working-directory: src-ui
         run: npm run test:browser

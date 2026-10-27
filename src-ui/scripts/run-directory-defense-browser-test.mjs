@@ -1,5 +1,12 @@
-// Run against npm run dev. The real app, menus, session stores and views are exercised.
+// Isolated dev server exercises the real app, menus, session stores and views.
 import assert from 'node:assert/strict';
+import { mkdtemp } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { createServer } from 'vite';
+const directory=await mkdtemp(join(tmpdir(),'coffee-directory-defense-'));
+const devServer=await createServer({cacheDir:join(directory,'vite-cache'),logLevel:'error',server:{host:'127.0.0.1',port:0}});
+await devServer.listen();
 const { chromium } = await import(process.env.COFFEE_PLAYWRIGHT_MODULE || 'playwright-core');
 const browser = await chromium.launch({ headless: true, ...(process.env.COFFEE_CHROMIUM_EXECUTABLE ? { executablePath: process.env.COFFEE_CHROMIUM_EXECUTABLE } : {}) });
 
@@ -33,7 +40,7 @@ async function prepare(recent, statuses = {}, realViews = false) {
       return paths.map(path => ({ path, status: window.directoryStatuses[path] ?? 'available' }));
     };
   }, { recent, statuses });
-  await page.goto('http://localhost:5173');
+  await page.goto(devServer.resolvedUrls.local[0]);
   await page.locator('.launchpad-mode-tabs').first().waitFor();
   return { page, errors };
 }
@@ -91,4 +98,4 @@ try {
     assert.deepEqual(errors, []); await page.close();
   }
   console.log('OK deleted recents pruned, unavailable recents retained, launch-time deletion and tab-switch races blocked; both desktop views explain directory errors and allow manual reconnect only for unavailable paths');
-} finally { await browser.close(); }
+} finally { await browser.close();await devServer.close(); }
