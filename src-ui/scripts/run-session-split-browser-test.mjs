@@ -219,8 +219,15 @@ try {
     assert.ok(c.x - p.x - p.width >= 3.5 && s.x - c.x - c.width >= 3.5, shape + ': child tabs keep their own gap and corners');
     assert.equal(await childTab.evaluate(el=>{const probe=document.createElement('span');probe.style.background='color-mix(in srgb,var(--text-1) 20%,var(--bg-app))';probe.style.color='var(--text-1)';document.body.append(probe);const s=getComputedStyle(el),p=getComputedStyle(probe),matches=s.backgroundColor===p.backgroundColor&&s.color===p.color;probe.remove();return matches}),true,shape+': child surface and text follow the theme');
     assert.equal(await childTab.evaluate(el => { const ctx = document.createElement('canvas').getContext('2d'); ctx.fillStyle = getComputedStyle(el).backgroundColor; ctx.fillRect(0, 0, 1, 1); return ctx.getImageData(0, 0, 1, 1).data[3]; }), 255, shape + ': child has a solid theme surface');
-    assert.deepEqual(await childTab.locator('.orchestration-status').evaluate(el => { const s = getComputedStyle(el); return [s.backgroundColor, s.boxShadow, s.outlineWidth, s.borderWidth]; }), ['rgb(121, 201, 158)', 'none', '0px', '0px'], shape + ': status is the timeline green with no ring');
+    assert.deepEqual(await childTab.locator('.orchestration-status').evaluate(el => { const s = getComputedStyle(el); return [s.backgroundColor, s.boxShadow, s.outlineWidth, s.borderWidth]; }), ['rgb(217, 119, 87)', 'none', '0px', '0px'], shape + ': working child status matches the ordinary tab orange with no ring');
   }
+  for(const [status,expected,color] of [['idle','idle','rgb(52, 211, 153)'],['working','working','rgb(217, 119, 87)'],['wait_input','waiting','rgb(96, 165, 250)']]) {
+    await page.evaluate(status=>{for(const id of ['a','worker-0'])window.testDispatch({type:'SET_AGENT_STATUS',id,status})},status);
+    await page.waitForFunction(expected=>document.querySelector('.chrome-tab[data-tab-id="worker-0"] .orchestration-status')?.dataset.state===expected,expected);
+    assert.equal(await childTab.locator('.orchestration-status').evaluate(el=>getComputedStyle(el).backgroundColor),color,'child tab uses the standard '+expected+' color');
+    assert.equal(await parentTab.locator('.tab-status-dot').first().evaluate(el=>getComputedStyle(el).backgroundColor),color,'ordinary and child tabs share '+expected+' colors');
+  }
+  await page.evaluate(()=>{for(const id of ['a','worker-0'])window.testDispatch({type:'SET_AGENT_STATUS',id,status:'working'})});
   for(const mode of ['light','dark']) {
     await page.evaluate(mode=>window.testDispatch({type:'SET_THEME_MODE',mode}),mode);
     await page.waitForFunction(mode=>document.documentElement.dataset.mode===mode,mode);

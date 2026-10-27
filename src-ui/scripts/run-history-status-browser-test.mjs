@@ -249,6 +249,8 @@ try {
   await page.evaluate(()=>window.updateTeam({enabled:true,tasks:['codex','opencode'].map((tool,index)=>({id:'restored-'+index,parentId:'old-parent',parentNativeId:'one',parentTool:'claude',sessionId:'old-worker-'+index,nativeId:'worker-native-'+index,tool,title:'Restored child '+index,cwd:'D:/same',phase:index?'completed':'closed',question:null})),revision:1}));
   await page.locator('.history-worker').first().waitFor();
   assert.deepEqual(await page.locator('.history-worker').evaluateAll(rows=>rows.map(row=>getComputedStyle(row).animationName)),['none','none'],'startup restores child history immediately without entry animations');
+  assert.equal(await page.locator('.history-worker .orchestration-status').count(),0,'closed and completed sidebar children have no idle dots');
+  await page.locator('.history-worker').first().hover();assert.equal(await page.getByRole('tooltip').locator('.history-card-meta').innerText().then(text=>text.includes('Closed')),false,'child preview omits the redundant closed label');await page.mouse.move(500,300);
   await page.evaluate(()=>window.updateTeam({enabled:true,tasks:[],revision:2}));
   await page.locator('.history-worker').waitFor({state:'detached'});
   await page.evaluate(()=>{
@@ -304,8 +306,8 @@ try {
   };
   await checkConnectors();
   await page.mouse.move(500,300);
-  const firstDot=workers.first().locator('.orchestration-status'),firstDelete=workers.first().locator('.history-worker-delete');
-  assert.equal(await firstDot.isVisible(),true);assert.equal(await firstDelete.isVisible(),false,'resting child shows only the status dot');
+  const firstDot=workers.first().locator('.history-card-working-indicator'),firstDelete=workers.first().locator('.history-worker-delete');
+  assert.equal(await firstDot.isVisible(),true);assert.equal(await firstDelete.isVisible(),false,'working child uses the same spinner as an ordinary history row');
   const beforeWorker=await workers.first().boundingBox(),beforeWorkerTitle=await workers.first().locator('.history-worker-title').boundingBox();
   await workers.first().hover();
   assert.equal(await firstDot.isVisible(),false);assert.equal(await firstDelete.isVisible(),true,'hover swaps the dot for the trash action');
@@ -329,11 +331,11 @@ try {
   await workers.first().click({button:'right'});
   assert.equal(await page.getByRole('button',{name:'Make independent',exact:true}).count(),0,'running tasks cannot be detached');
   await page.mouse.click(500,300);
-  assert.equal(await workers.first().locator('.orchestration-status').getAttribute('data-state'),'working');
+  assert.equal(await firstDot.locator('span').evaluate(el=>getComputedStyle(el).animationName),'history-working-spin');
   assert.equal(await workers.last().locator('.orchestration-status').getAttribute('data-state'),'waiting');
-  assert.equal(await workers.first().locator('.orchestration-status').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(121, 201, 158)');
-  assert.deepEqual(await workers.first().locator('.orchestration-status').evaluate(el=>{const s=getComputedStyle(el);return [s.boxShadow,s.outlineWidth,s.borderWidth]}),['none','0px','0px'],'working dot has no halo, outline or border');
-  assert.equal(await workers.last().locator('.orchestration-status').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(147, 179, 210)');
+  assert.equal(await workers.first().locator('.orchestration-status').count(),0,'working sidebar children do not also show a dot');
+  assert.equal(await workers.last().locator('.orchestration-status').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(96, 165, 250)');
+  await page.emulateMedia({reducedMotion:'reduce'});assert.equal(await firstDot.locator('span').evaluate(el=>getComputedStyle(el).animationName),'none');await page.emulateMedia({reducedMotion:'no-preference'});
   await page.evaluate(()=>window.opened=false);await workers.first().click();
   assert.equal(await page.evaluate(()=>window.selectedChild),'worker-0');assert.equal(await page.evaluate(()=>window.opened),false,'child click only selects its existing tab');
   await page.evaluate(()=>window.updateView({activeTerminalId:'worker-0'}));
@@ -349,7 +351,7 @@ try {
   await page.evaluate(()=>Promise.all(document.getAnimations().filter(animation=>animation.animationName==='orchestration-worker-enter').map(animation=>animation.finished)));
   assert.equal(await workers.first().evaluate(el=>el.getAnimations().filter(animation=>animation.animationName==='orchestration-worker-enter').length),0,'status and title updates do not replay the entry animation');
   await page.evaluate(()=>{window.workerTasks[0].phase='completed';window.updateTeam({enabled:true,tasks:window.workerTasks,revision:21});window.updateView({terminals:[{id:'a',tool:'claude',resumeToken:'one',folderPath:'D:/same'}]})});
-  assert.equal(await workers.first().locator('.orchestration-status').getAttribute('data-state'),'completed');
+  assert.equal(await workers.first().locator('.orchestration-status,.history-card-working-indicator').count(),0,'completed sidebar children have no status decoration');
   assert.equal(await workers.first().locator('.history-worker-open').isEnabled(),true,'saved child history can be restored');
   await page.evaluate(()=>{window.sessionTokens={'equivalent-child':'worker-native-0'};window.updateView({terminals:[{id:'a',tool:'claude',resumeToken:'one'},{id:'equivalent-child',tool:'codex',folderPath:'D:/same'}]})});
   await workers.first().locator('.history-worker-open').click();

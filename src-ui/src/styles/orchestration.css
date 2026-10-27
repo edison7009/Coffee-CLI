@@ -1,7 +1,7 @@
-.orchestration-status { display:inline-block; width:6px; height:6px; flex-shrink:0; border:0; outline:0; box-shadow:none; border-radius:50%; background:var(--text-3); }
-.orchestration-status[data-state="working"] { background:var(--success,#79c99e); }
-.orchestration-status[data-state="waiting"] { background:var(--blue); }
-.orchestration-status[data-state="failed"] { background:var(--red); }
+.orchestration-status { display:inline-block; width:6px; height:6px; flex-shrink:0; border:0; outline:0; box-shadow:none; border-radius:50%; }
+.status-idle .tab-status-dot, .orchestration-status { background-color:#34d399; }
+.status-working .tab-status-dot, .orchestration-status:is([data-state="working"],[data-state="starting"]) { background-color:#D97757; }
+.status-waiting .tab-status-dot, .orchestration-status[data-state="waiting"] { background-color:#60a5fa; }
 .tab-actions > .orchestration-status { pointer-events:none; transition:opacity .15s ease; }
 .chrome-tab:hover .tab-actions > .orchestration-status { opacity:0; }
 .history-family { display:flex; flex-direction:column; min-width:0; }
@@ -22,9 +22,10 @@
 .history-worker-open { display:flex; align-items:center; gap:6px; flex:1; min-width:0; padding:0; border:0; background:transparent; color:inherit; font:inherit; text-align:left; cursor:pointer; }
 .history-worker-open:disabled { cursor:default; opacity:.6; }
 .history-worker-actions { position:relative; display:flex; align-items:center; justify-content:center; width:18px; height:18px; flex-shrink:0; }
+.history-worker-actions > .history-card-working-indicator { flex:0 0 18px; height:18px; margin:0; }
 .history-worker-delete { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; padding:0; border:0; border-radius:var(--radius-xs); background:transparent; color:var(--text-2); visibility:hidden; pointer-events:none; cursor:pointer; }
 .history-worker-delete:hover { color:var(--text-1); background:var(--bg-hover); }
-.history-worker:hover .history-worker-actions > .orchestration-status, .history-worker:focus-within .history-worker-actions > .orchestration-status { visibility:hidden; }
+.history-worker:hover .history-worker-actions > :is(.orchestration-status,.history-card-working-indicator), .history-worker:focus-within .history-worker-actions > :is(.orchestration-status,.history-card-working-indicator) { visibility:hidden; }
 .history-worker:hover .history-worker-delete, .history-worker:focus-within .history-worker-delete { visibility:visible; pointer-events:auto; }
 .history-worker:hover, .history-worker:focus-within, .history-worker.is-active { background:var(--bg-hover); color:var(--text-1); }
 :is([data-shape="glass"], [data-shape="carbon"], [data-shape="monogram"]) .panel-left .history-worker:is(:hover,:focus-within,.is-active) { background:var(--bg-hover) !important; }
