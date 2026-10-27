@@ -17,6 +17,11 @@ try{
  assert.equal(await page.locator('.launchpad-cwd').count(),0,'cards do not show a remembered path');
  assert.equal(await page.locator('.launchpad-card-info').filter({hasText:/D:\//}).count(),0);
  assert.equal(await page.locator('.launchpad-directory').count(),0,'folder icons have been replaced');
+ for(let attempt=0;attempt<5;attempt++){
+   await page.locator('.launchpad-icon').first().click();
+   await page.keyboard.press('Escape');
+   await page.locator('.folder-menu').waitFor({state:'hidden'});
+ }
  for(const card of await page.locator('.launchpad-card').all()){
    await card.locator('.launchpad-icon').click();await page.locator('.folder-menu').waitFor();
    assert.equal((await state(page)).tool,null,'card always asks for a directory even when a legacy last directory exists');

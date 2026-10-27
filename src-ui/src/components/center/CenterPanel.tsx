@@ -1,4 +1,4 @@
-import { Fragment, useState, useEffect, useRef, useMemo } from 'react';
+import { Fragment, useState, useEffect, useLayoutEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { InlineSvgIcon } from '../InlineSvgIcon';
 import { focusTerminal } from '../../lib/focus-registry';
@@ -38,16 +38,12 @@ function RecentFolderMenu({ x, y, recent, openLabel, onPick, onRemove, onOpenNew
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const onDown = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) onClose(); };
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    // Defer so the opening click doesn't immediately close the menu.
-    const id = setTimeout(() => {
-      document.addEventListener('mousedown', onDown);
-      document.addEventListener('keydown', onKey);
-    }, 0);
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
     return () => {
-      clearTimeout(id);
       document.removeEventListener('mousedown', onDown);
       document.removeEventListener('keydown', onKey);
     };
