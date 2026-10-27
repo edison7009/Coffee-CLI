@@ -242,7 +242,15 @@ fn wait_quiet(command: &mut Command, timeout: Duration) -> Result<(), String> {
     }
 }
 
-fn browser_slot(directory: &Path) -> Result<(fs::File, PathBuf, usize), String> {
+struct BrowserLease(fs::File);
+impl Drop for BrowserLease {
+    fn drop(&mut self) {
+        // Duplicated or briefly inherited handles must not extend this connection's lease.
+        let _ = self.0.unlock();
+    }
+}
+
+fn browser_slot(directory: &Path) -> Result<(BrowserLease, PathBuf, usize), String> {
     plain_path(directory)?;
     fs::create_dir_all(directory).map_err(|_| "control_write")?;
     // A held OS file lock binds each persistent profile to one live MCP connection.
@@ -251,7 +259,7 @@ fn browser_slot(directory: &Path) -> Result<(fs::File, PathBuf, usize), String> 
         plain_path(&lock_path)?;
         let file = fs::OpenOptions::new().create(true).truncate(false).read(true).write(true).open(lock_path).map_err(|_| "control_write")?;
         match file.try_lock() {
-            Ok(()) => { let profile = directory.join(index.to_string()); plain_path(&profile)?; return Ok((file, profile, index)); }
+            Ok(()) => { let lease = BrowserLease(file); let profile = directory.join(index.to_string()); plain_path(&profile)?; return Ok((lease, profile, index)); }
             Err(std::fs::TryLockError::WouldBlock) => continue,
             Err(_) => return Err("control_write".into()),
         }
@@ -577,9 +585,13 @@ mod tests {
         let (first, first_profile, first_index) = browser_slot(&directory).unwrap();
         let (second, second_profile, _) = browser_slot(&directory).unwrap();
         assert_ne!(first_profile, second_profile);
+        let duplicated_handle = first.0.try_clone().unwrap();
         drop(first);
         let (reused, reused_profile, reused_index) = browser_slot(&directory).unwrap();
         assert_eq!(first_index, reused_index); assert_eq!(first_profile, reused_profile);
-        drop(second); drop(reused); fs::remove_dir_all(directory).unwrap();
+        drop(duplicated_handle);
+        let (third, _, third_index) = browser_slot(&directory).unwrap();
+        assert_ne!(third_index, reused_index);
+        drop(third); drop(second); drop(reused); fs::remove_dir_all(directory).unwrap();
     }
 }
