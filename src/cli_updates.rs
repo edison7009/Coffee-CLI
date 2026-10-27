@@ -67,9 +67,10 @@ fn tool_path(tool: &str) -> Option<PathBuf> {
     if let Some(value) = configured {
         // A wrapper (SSH, WSL, Docker, custom script) owns its own update process.
         let name = if Path::new(value).is_file() { value.to_string() } else { crate::tool_config::parse_command(value).0? };
-        let basename = Path::new(&name).file_stem()?.to_str()?;
-        if basename != descriptor.binary_name && !(tool == "cursor" && basename == "cursor-agent") { return None; }
-        return resolve(&name);
+        let name = crate::tool_config::command_binary(tool, &name);
+        let basename = Path::new(name).file_stem()?.to_str()?;
+        if basename != descriptor.binary_name { return None; }
+        return resolve(name);
     }
     resolve(descriptor.binary_name).or_else(|| {
         if tool != "claude" { return None; }
@@ -345,6 +346,23 @@ mod tests {
         assert!(!newer("1.0.0", "1.0.0", false));
         assert!(newer("2026.10.22-z123", "2026.10.22-a123", true));
         assert!(!newer("2026.10.23-a123", "2026.10.22-z123", true));
+    }
+
+    #[test]
+    fn cursor_detection_and_updates_do_not_select_another_agent() {
+        let temp = tempfile::tempdir().unwrap();
+        script(temp.path(), "agent", "@echo off\r\necho 1.0.70", "#!/bin/sh\necho 1.0.70");
+        let binary = crate::tools::find("cursor").unwrap().binary_name;
+        assert!(in_directory(temp.path(), binary).is_none(), "an unrelated agent is not a Cursor installation");
+        let cursor = script(temp.path(), "cursor-agent", "@echo off\r\necho 2026.10.21-abc", "#!/bin/sh\necho 2026.10.21-abc");
+        let resolved = in_directory(temp.path(), binary).unwrap();
+        assert_eq!(resolved, cursor);
+        let installed = installation(resolved, "cursor");
+        assert!(matches!(installed.source, Some(Source::Cursor)));
+        let update = installed.plan.unwrap();
+        assert_eq!(update.program, cursor);
+        assert_eq!(update.args, ["update"]);
+        assert_eq!(version(&run(&plan(cursor, &["--version"]), 5).unwrap()).as_deref(), Some("2026.10.21-abc"));
     }
 
     #[test]

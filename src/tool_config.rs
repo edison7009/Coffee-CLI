@@ -129,6 +129,11 @@ pub fn parse_command(cmd: &str) -> (Option<String>, Vec<String>) {
     (Some(bin.to_string()), rest)
 }
 
+/// Keep the previous default command bound to its original tool.
+pub fn command_binary<'a>(tool: &str, binary: &'a str) -> &'a str {
+    if tool == "cursor" && binary == "agent" { "cursor-agent" } else { binary }
+}
+
 /// Expand a leading `~/` or bare `~` to the user's home directory.
 /// Used by both `default_cwd` and `history_path` overrides since users
 /// reasonably write `~/.hermes/sessions` and expect us to handle it.
@@ -163,6 +168,15 @@ pub fn history_path_for(tool: &str, default: std::path::PathBuf) -> std::path::P
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn legacy_cursor_command_uses_its_distinct_launcher() {
+        assert_eq!(command_binary("cursor", "agent"), "cursor-agent");
+        assert_eq!(command_binary("cursor", "cursor-agent"), "cursor-agent");
+        assert_eq!(command_binary("cursor", "/opt/custom/agent"), "/opt/custom/agent");
+        assert_eq!(command_binary("cursor", "wsl"), "wsl");
+        assert_eq!(command_binary("other", "agent"), "agent");
+    }
 
     #[test]
     fn parse_simple() {

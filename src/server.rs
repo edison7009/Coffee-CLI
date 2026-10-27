@@ -981,7 +981,7 @@ fn tier_terminal_start_blocking(
                 // system-prompt / etc) follow them.
                 let mut new_args = prefix_args;
                 new_args.append(&mut args);
-                (bin, new_args)
+                (crate::tool_config::command_binary(name, &bin).to_owned(), new_args)
             } else {
                 (cmd, args)
             };
