@@ -73,7 +73,11 @@ try{
     assert.ok(Math.abs((bounds.x+bounds.width-update.x-update.width)-(update.y-bounds.y))<1,'top and right insets match');
     await page.mouse.move(0,0);await card('Claude Code').locator('.cli-update-button').hover();
     const tip=await page.getByRole('tooltip').boundingBox();
-    assert.ok(Math.abs(tip.x-update.x)<1&&tip.x+tip.width<=width-8,'tip shares the button left edge and stays inside the viewport');
+    const expectedLeft=Math.max(8,Math.min(update.x+update.width/2-tip.width/2,width-tip.width-8));
+    assert.ok(Math.abs(tip.x-expectedLeft)<1&&tip.x+tip.width<=width-8,'tip is centered beneath the update button and clamped at viewport edges');
+    assert.ok(Math.abs(tip.y-update.y-update.height-8)<1,'centered tip retains the space below the button');
+    await page.mouse.move(0,0);await card('Claude Code').locator('.cli-update-button').evaluate(el=>el.blur());await card('Claude Code').locator('.cli-update-button').focus();
+    assert.ok(Math.abs((await page.getByRole('tooltip').boundingBox()).x-tip.x)<1,'keyboard focus uses the same centered placement');
     await page.screenshot({path:join(directory,`cli-updates-${mode}-${shape}.png`)});
     await card('Claude Code').locator('.cli-update-button').click();
     await updating.waitFor();
@@ -84,5 +88,14 @@ try{
     await page.evaluate(()=>window.releaseUpdates.claude('cli_update_timeout'));
     await card('Claude Code').getByRole('button',{name:'更新 1.3.0',exact:true}).waitFor();
   }
-  assert.deepEqual(errors,[]);console.log('OK: cached detection, favorite/installation gating, per-tool update animations, reduced motion, deduplication, remount retention, keyboard retry, verification state, themed geometry and existing launch controls');console.log('Screenshots: '+directory);
+  await page.evaluate(()=>{window.failCheck=false;window.statuses.cursor={tool:'cursor',current:'1.0.70',latest:'2026.10.22-27dcf5f',available:true};window.showLauncher(false)});await page.evaluate(()=>window.showLauncher(true));
+  const cursorUpdate=card('Cursor').getByRole('button',{name:'更新 2026.10.22-27dcf5f',exact:true});await cursorUpdate.waitFor();
+  for(const edge of ['left','right']){
+    await card('Cursor').evaluate((el,edge)=>{el.style.position='fixed';el.style.top='180px';el.style.width='280px';el.style.left=edge==='left'?'-120px':'calc(100vw - 280px)'},edge);
+    await page.mouse.move(0,0);await cursorUpdate.hover();
+    const button=await cursorUpdate.boundingBox(),tip=await page.getByRole('tooltip').boundingBox(),width=page.viewportSize().width;
+    assert.ok(tip.x>=8&&tip.x+tip.width<=width-8,'long version tips stay inside both viewport edges');
+    assert.ok(Math.abs(tip.x-Math.max(8,Math.min(button.x+button.width/2-tip.width/2,width-tip.width-8)))<1,'long version tips center when space permits');
+  }
+  assert.deepEqual(errors,[]);console.log('OK: cached detection, favorite/installation gating, update animations, centered hover/focus tips, long versions at viewport edges, reduced motion, deduplication, remount retention and existing launch controls');console.log('Screenshots: '+directory);
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve))}

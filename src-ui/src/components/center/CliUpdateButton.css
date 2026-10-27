@@ -12,6 +12,6 @@
 .cli-update-dots i:nth-child(3) { animation-delay:260ms; }
 .cli-update-dots i:nth-child(4) { animation-delay:390ms; }
 .cli-update-error { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
-.cli-update-tip { position:fixed; z-index:10000; max-width:min(236px,calc(100vw - 16px)); padding:6px 10px; border:1px solid var(--border); border-radius:6px; background:var(--bg-panel); color:var(--text-1); font:500 11px/1.4 var(--font-nav,var(--font)); text-align:center; overflow-wrap:anywhere; pointer-events:none; box-shadow:0 1px 2px rgba(0,0,0,.2),0 6px 20px rgba(0,0,0,.22); }
+.cli-update-tip { position:fixed; z-index:10000; width:max-content; max-width:min(236px,calc(100vw - 16px)); padding:6px 10px; border:1px solid var(--border); border-radius:6px; background:var(--bg-panel); color:var(--text-1); font:500 11px/1.4 var(--font-nav,var(--font)); text-align:center; overflow-wrap:anywhere; pointer-events:none; box-shadow:0 1px 2px rgba(0,0,0,.2),0 6px 20px rgba(0,0,0,.22); }
 @keyframes cli-update-dot { 0%,65%,100% { opacity:.25; transform:translateY(0) scale(.85); } 30% { opacity:1; transform:translateY(-1px) scale(1.05); } }
 @media (prefers-reduced-motion:reduce) { .cli-update-dots i { animation:none; opacity:.7; } }
