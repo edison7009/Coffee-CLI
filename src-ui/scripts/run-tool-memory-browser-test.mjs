@@ -97,7 +97,7 @@ try{
   await tab('常用 5/6').click();await tab('主记忆').click();await value('Claude 草稿\n未保存');
   await page.locator('#navigate').click();assert.equal(await tab('主记忆').count(),0);
   await page.locator('#navigate').click();await value('Claude 草稿\n未保存');
-  await page.evaluate(()=>window.setMissing(['claude']));await page.getByText('未安装',{exact:true}).waitFor();
+  await page.evaluate(()=>window.setMissing(['claude']));await page.locator('.tool-memory').getByText('未安装',{exact:true}).waitFor();
   assert.equal(await editor.count(),0);assert.equal(await page.getByRole('button',{name:'保存',exact:true}).isDisabled(),true);
   await page.evaluate(()=>window.setMissing([]));await value('Claude 草稿\n未保存');
   await switchTool('Pi');await value('');
@@ -106,7 +106,7 @@ try{
   assert.equal(await page.evaluate(()=>window.calls.filter(call=>call.type==='save').length),2,'viewing a missing file does not create it');
   await editor.fill('New instructions');await page.getByRole('button',{name:'保存',exact:true}).click();await page.getByText('已保存',{exact:true}).waitFor({state:'visible'});
   const beforeMissing=await page.evaluate(()=>window.calls.length);
-  await page.evaluate(()=>window.setMissing(['cursor']));await switchTool('Cursor');await page.getByText('未安装',{exact:true}).waitFor();
+  await page.evaluate(()=>window.setMissing(['cursor']));await switchTool('Cursor');await page.locator('.tool-memory').getByText('未安装',{exact:true}).waitFor();
   assert.equal(await page.getByRole('button',{name:'重新加载',exact:true}).isDisabled(),true);
   assert.equal(await page.getByRole('button',{name:'保存',exact:true}).isDisabled(),true);
   assert.equal(await page.evaluate(()=>window.calls.length),beforeMissing,'uninstalled tools never read or create memory files');
@@ -120,7 +120,7 @@ try{
   await page.evaluate(()=>window.setEnabled(['codex']));await value('External edit');
   assert.equal(await page.getByRole('toolbar',{name:'工具',exact:true}).getByRole('button').count(),1,'only enabled tools remain available');
   const callsBeforeEmpty=await page.evaluate(()=>window.calls.length);
-  await page.evaluate(()=>window.setEnabled([]));await page.getByText('请先在「常用」中开启工具。',{exact:true}).waitFor({state:'visible'});
+  await page.evaluate(()=>window.setEnabled([]));await page.locator('.tool-memory').getByText('请先在「常用」中开启工具。',{exact:true}).waitFor({state:'visible'});
   assert.equal(await page.getByRole('button',{name:'重新加载',exact:true}).isDisabled(),true);
   assert.equal(await page.evaluate(()=>window.calls.length),callsBeforeEmpty,'no reads are issued for an empty selection');
   await page.evaluate(()=>window.setEnabled(['claude','codex']));await value('Claude 草稿\n未保存');
