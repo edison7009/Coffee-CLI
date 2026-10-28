@@ -386,12 +386,12 @@ export function HistoryBoard() {
       }
     }
     const targetId = crypto.randomUUID();
-    let codexMode: 'conversation' | undefined;
-    try { if (saved.tool === 'codex' && localStorage.getItem('coffee:codex-launch-mode') === 'conversation') codexMode = 'conversation'; } catch { /* optional preference */ }
+    let mode: 'terminal' | 'conversation' = 'conversation';
+    try { if (localStorage.getItem(`coffee:${saved.tool}-launch-mode`) === 'terminal') mode = 'terminal'; } catch { /* optional preference */ }
     dispatch({
       type: 'ADD_TERMINAL',
       split,
-      session: { id: targetId, tool: saved.tool as ToolType, folderPath: saved.cwd, resumeToken: saved.session_token, codexMode }
+      session: { id: targetId, tool: saved.tool as ToolType, folderPath: saved.cwd, resumeToken: saved.session_token, claudeMode: saved.tool === 'claude' ? mode : undefined, codexMode: saved.tool === 'codex' ? mode : undefined }
     });
   };
 
