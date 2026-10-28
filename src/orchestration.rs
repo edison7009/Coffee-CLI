@@ -94,9 +94,17 @@ fn publish(state: &mut State) {
 }
 
 #[tauri::command]
-pub fn orchestration_get() -> Snapshot { current_snapshot(&hub().state.lock().unwrap()) }
+pub async fn orchestration_get() -> Result<Snapshot, String> {
+    tauri::async_runtime::spawn_blocking(orchestration_get_blocking).await.map_err(|e| e.to_string())
+}
+
+fn orchestration_get_blocking() -> Snapshot { current_snapshot(&hub().state.lock().unwrap()) }
 #[tauri::command]
-pub fn orchestration_restore_worker(task_id: String, parent_id: String, session_id: String) -> Result<Snapshot, String> {
+pub async fn orchestration_restore_worker(task_id: String, parent_id: String, session_id: String) -> Result<Snapshot, String> {
+    tauri::async_runtime::spawn_blocking(move || orchestration_restore_worker_blocking(task_id, parent_id, session_id)).await.map_err(|e| e.to_string())?
+}
+
+fn orchestration_restore_worker_blocking(task_id: String, parent_id: String, session_id: String) -> Result<Snapshot, String> {
     if parent_id.is_empty() || session_id.is_empty() || parent_id.len() > 160 || session_id.len() > 160 || parent_id == session_id { return Err("Invalid session identity".into()); }
     let mut state = hub().state.lock().map_err(|_| "Coordinator unavailable")?;
     let mut next = state.snapshot.clone();
@@ -112,7 +120,11 @@ fn restore_worker(snapshot: &mut Snapshot, id: &str, parent_id: &str, session_id
     Ok(())
 }
 #[tauri::command]
-pub fn orchestration_detach_worker(task_id: String) -> Result<Snapshot, String> {
+pub async fn orchestration_detach_worker(task_id: String) -> Result<Snapshot, String> {
+    tauri::async_runtime::spawn_blocking(move || orchestration_detach_worker_blocking(task_id)).await.map_err(|e| e.to_string())?
+}
+
+fn orchestration_detach_worker_blocking(task_id: String) -> Result<Snapshot, String> {
     let mut state = hub().state.lock().map_err(|_| "Coordinator unavailable")?;
     let mut next = state.snapshot.clone(); let session_id = detach_worker(&mut next, &state.live, &task_id)?;
     save(&next)?; state.snapshot = next; remove_worker_runtime(&mut state, &session_id); publish(&mut state); Ok(current_snapshot(&state))
@@ -124,7 +136,11 @@ fn detach_worker(snapshot: &mut Snapshot, live: &HashMap<String, LiveSession>, i
     task.detached = true; task.result_delivery = Some("retained".into()); Ok(task.session_id.clone())
 }
 #[tauri::command]
-pub fn orchestration_remove_worker(task_id: String) -> Result<Snapshot, String> {
+pub async fn orchestration_remove_worker(task_id: String) -> Result<Snapshot, String> {
+    tauri::async_runtime::spawn_blocking(move || orchestration_remove_worker_blocking(task_id)).await.map_err(|e| e.to_string())?
+}
+
+fn orchestration_remove_worker_blocking(task_id: String) -> Result<Snapshot, String> {
     let mut state = hub().state.lock().map_err(|_| "Coordinator unavailable")?;
     let mut next = state.snapshot.clone();
     let session_id = hide_worker(&mut next, &task_id)?;
@@ -145,7 +161,11 @@ fn hide_worker(snapshot: &mut Snapshot, id: &str) -> Result<String, String> {
     Ok(task.session_id.clone())
 }
 #[tauri::command]
-pub fn orchestration_close_group(id: String, keep_children: bool) -> Result<Snapshot, String> {
+pub async fn orchestration_close_group(id: String, keep_children: bool) -> Result<Snapshot, String> {
+    tauri::async_runtime::spawn_blocking(move || orchestration_close_group_blocking(id, keep_children)).await.map_err(|e| e.to_string())?
+}
+
+fn orchestration_close_group_blocking(id: String, keep_children: bool) -> Result<Snapshot, String> {
     let mut state = hub().state.lock().map_err(|_| "Coordinator unavailable")?;
     let mut next = state.snapshot.clone();
     settle_group(&mut next, &id, keep_children);
@@ -172,7 +192,11 @@ fn settle_group(snapshot: &mut Snapshot, id: &str, keep_children: bool) {
     }
 }
 #[tauri::command]
-pub fn orchestration_set_agent(tool: String, enabled: bool) -> Result<Snapshot, String> {
+pub async fn orchestration_set_agent(tool: String, enabled: bool) -> Result<Snapshot, String> {
+    tauri::async_runtime::spawn_blocking(move || orchestration_set_agent_blocking(tool, enabled)).await.map_err(|e| e.to_string())?
+}
+
+fn orchestration_set_agent_blocking(tool: String, enabled: bool) -> Result<Snapshot, String> {
     if !default_agents().contains(&tool) { return Err("Agent does not support orchestration yet".into()); }
     let mut state = hub().state.lock().map_err(|_| "Coordinator unavailable")?;
     let mut next = state.snapshot.clone(); next.agents.retain(|agent| agent != &tool);
@@ -183,7 +207,11 @@ pub fn orchestration_set_agent(tool: String, enabled: bool) -> Result<Snapshot, 
     publish(&mut state); Ok(current_snapshot(&state))
 }
 #[tauri::command]
-pub fn orchestration_sync(sessions: Vec<LiveSession>) -> Result<Vec<ResultDelivery>, String> {
+pub async fn orchestration_sync(sessions: Vec<LiveSession>) -> Result<Vec<ResultDelivery>, String> {
+    tauri::async_runtime::spawn_blocking(move || orchestration_sync_blocking(sessions)).await.map_err(|e| e.to_string())?
+}
+
+fn orchestration_sync_blocking(sessions: Vec<LiveSession>) -> Result<Vec<ResultDelivery>, String> {
     if sessions.len() > 256 { return Err("Too many sessions".into()); }
     let mut state = hub().state.lock().map_err(|_| "Coordinator unavailable")?;
     if sync_live(&mut state, sessions) { save(&state.snapshot)?; publish(&mut state); }
@@ -234,7 +262,11 @@ fn sync_live(state: &mut State, sessions: Vec<LiveSession>) -> bool {
 }
 
 #[tauri::command]
-pub fn orchestration_pending(request_id: String) -> bool {
+pub async fn orchestration_pending(request_id: String) -> Result<bool, String> {
+    tauri::async_runtime::spawn_blocking(move || orchestration_pending_blocking(request_id)).await.map_err(|e| e.to_string())
+}
+
+fn orchestration_pending_blocking(request_id: String) -> bool {
     let state = hub().state.lock().unwrap();
     state.pending.get(&request_id).is_some_and(|pending| pending_allowed(&state, pending))
 }
@@ -243,7 +275,11 @@ fn pending_allowed(state: &State, pending: &Pending) -> bool {
         && pending.session_id.as_ref().is_none_or(|id| state.snapshot.tasks.iter().any(|task| task.session_id == *id && task.parent_id == pending.parent && !task.hidden && !task.detached))
 }
 #[tauri::command]
-pub fn orchestration_resolve(request_id: String, result: Value) -> Result<(), String> {
+pub async fn orchestration_resolve(request_id: String, result: Value) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || orchestration_resolve_blocking(request_id, result)).await.map_err(|e| e.to_string())?
+}
+
+fn orchestration_resolve_blocking(request_id: String, result: Value) -> Result<(), String> {
     let mut state = hub().state.lock().map_err(|_| "Coordinator unavailable")?;
     let pending = state.pending.remove(&request_id).ok_or("Request expired")?;
     pending.sender.send(result).map_err(|_| "Request expired".into())

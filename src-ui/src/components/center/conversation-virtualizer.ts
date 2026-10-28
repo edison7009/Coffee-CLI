@@ -19,6 +19,19 @@ interface VirtualMetrics {
   keys: string[];
 }
 
+// Protocol reducers replace changed messages. Reuse estimates for immutable
+// history rows, and let closed conversations be reclaimed with their messages.
+const measurements = new WeakMap<ChatMessage, { key: string; height: number }>();
+
+function messageMeasurement(message: ChatMessage) {
+  let value = measurements.get(message);
+  if (!value) {
+    value = { key: measurementKey(message), height: estimatedHeight(message) };
+    measurements.set(message, value);
+  }
+  return value;
+}
+
 function measurementKey(message: ChatMessage): string {
   const head = message.content.slice(0, 24);
   const tail = message.content.slice(-24);
@@ -72,9 +85,9 @@ export function useConversationVirtualizer(
     offsets[0] = 0;
     for (let index = 0; index < messages.length; index += 1) {
       const message = messages[index];
-      const key = measurementKey(message);
+      const { key, height: estimate } = messageMeasurement(message);
       keys[index] = key;
-      const height = heights.get(key) ?? estimatedHeight(message);
+      const height = heights.get(key) ?? estimate;
       offsets[index + 1] = offsets[index] + height;
     }
     return { offsets, total: offsets[messages.length] ?? 0, keys };

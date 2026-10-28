@@ -110,8 +110,10 @@ await test('typing while Enter acknowledgement is pending remains a protected lo
   const release = f.holdEnter();
   const operation = f.api.submitTerminalPrompt('target', 'remote');
   while (f.writes.length < 2) await new Promise(resolve => setTimeout(resolve, 10));
-  await f.api.forwardTerminalInput('target', 'new-local-draft');
-  release(); await operation;
+  const typing = f.api.forwardTerminalInput('target', 'new-local-draft');
+  assert.equal(f.api.terminalControlStatus('target').localInputPending, true, 'protect input immediately, before the ordered pipe write completes');
+  assert.equal(f.writes.length, 2, 'local text queues behind the pending Enter acknowledgement');
+  release(); await Promise.all([operation, typing]);
   assert.equal(f.api.terminalControlStatus('target').localInputPending, true);
   await assert.rejects(f.api.submitTerminalPrompt('target', 'next-remote'), /本地未提交/);
 });

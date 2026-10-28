@@ -1513,10 +1513,13 @@ function TierTerminalImpl({
       }
 
         try {
-          const controls = await readLaunchControls(tool);
+          const controls = readLaunchControls(tool);
           if (!mounted) return;
           await commands.tierTerminalStart(sessionId, tool, initialGrid.size.cols, initialGrid.size.rows, theme, lang, toolData, folderPath ?? undefined, resumeToken, appStateRef.current.defaultShell, strictCwd);
-          if (mounted && !ptyEnded) { setTerminalControlReady(sessionId, true); setSessionControls(sessionId, controlsGeneration, controls); }
+          if (mounted && !ptyEnded) {
+            setTerminalControlReady(sessionId, true);
+            void controls.then(value => { if (mounted && !ptyEnded) setSessionControls(sessionId, controlsGeneration, value); });
+          }
           sizeSync.markPtyStarted();
         } catch (err) {
           // Resume / launch validation failures (missing cwd, bad token

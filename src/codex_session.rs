@@ -193,23 +193,30 @@ pub async fn codex_session_request(sessions: State<'_, CodexSessions>, id: Strin
     tauri::async_runtime::spawn_blocking(move || s.request(&method, params)).await.map_err(|e| e.to_string())?
 }
 #[tauri::command]
-pub fn codex_session_respond(sessions: State<CodexSessions>, id: String, generation: String, request_id: Value, response: Value, reject: bool) -> Result<(), String> {
+pub async fn codex_session_respond(sessions: State<'_, CodexSessions>, id: String, generation: String, request_id: Value, response: Value, reject: bool) -> Result<(), String> {
     let s = get(&sessions, &id, &generation)?;
-    let mut requests = s.protocol.requests.lock().unwrap();
-    if !requests.contains_key(&request_id.to_string()) { return Err("This Codex request has ended".into()); }
-    s.write(&if reject { json!({"id":request_id,"error":{"code":-32601,"message":"Request is not supported by this client"}}) } else { json!({"id":request_id,"result":response}) })?;
-    requests.remove(&request_id.to_string());
-    Ok(())
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut requests = s.protocol.requests.lock().unwrap();
+        if !requests.contains_key(&request_id.to_string()) { return Err("This Codex request has ended".into()); }
+        s.write(&if reject { json!({"id":request_id,"error":{"code":-32601,"message":"Request is not supported by this client"}}) } else { json!({"id":request_id,"result":response}) })?;
+        requests.remove(&request_id.to_string());
+        Ok(())
+    }).await.map_err(|e| e.to_string())?
 }
 #[tauri::command]
-pub fn codex_session_close(sessions: State<CodexSessions>, id: String, generation: String) {
-    let mut map = sessions.0.lock().unwrap();
-    if map.get(&id).is_some_and(|s| s.generation == generation) {
-        if let Some(s) = map.remove(&id) { s.stop(); }
+pub async fn codex_session_close(sessions: State<'_, CodexSessions>, id: String, generation: String) -> Result<(), String> {
+    let session = {
+        let mut map = sessions.0.lock().unwrap();
+        if map.get(&id).is_some_and(|s| s.generation == generation) { map.remove(&id) } else { None }
+    };
+    if let Some(s) = session {
+        tauri::async_runtime::spawn_blocking(move || s.stop()).await.map_err(|e| e.to_string())?;
     }
+    Ok(())
 }
 pub fn shutdown(sessions: &CodexSessions) {
-    for (_, s) in sessions.0.lock().unwrap().drain() { s.stop(); }
+    let sessions: Vec<_> = sessions.0.lock().unwrap().drain().map(|(_, session)| session).collect();
+    for s in sessions { s.stop(); }
 }
 
 #[cfg(test)]

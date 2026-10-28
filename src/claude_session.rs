@@ -224,11 +224,13 @@ pub async fn claude_session_start(app: tauri::AppHandle, id: String, generation:
 }
 
 #[tauri::command]
-pub fn claude_session_send(sessions: State<ClaudeSessions>, id: String, generation: String, text: String, orchestration_delivery: Option<String>) -> Result<(), String> {
+pub async fn claude_session_send(sessions: State<'_, ClaudeSessions>, id: String, generation: String, text: String, orchestration_delivery: Option<String>) -> Result<(), String> {
     let s = get(&sessions, &id, &generation)?;
     if text.trim().is_empty() { return Err("消息不能为空".into()); }
-    let content = if orchestration_delivery.is_some() { json!([{"type":"text","text":text}]) } else { user_content(&text)? };
-    s.write_with_delivery(&json!({"type":"user","uuid":uuid::Uuid::new_v4().to_string(),"session_id":s.native_id,"parent_tool_use_id":null,"message":{"role":"user","content":content}}), orchestration_delivery.as_deref())
+    tauri::async_runtime::spawn_blocking(move || {
+        let content = if orchestration_delivery.is_some() { json!([{"type":"text","text":text}]) } else { user_content(&text)? };
+        s.write_with_delivery(&json!({"type":"user","uuid":uuid::Uuid::new_v4().to_string(),"session_id":s.native_id,"parent_tool_use_id":null,"message":{"role":"user","content":content}}), orchestration_delivery.as_deref())
+    }).await.map_err(|e| e.to_string())?
 }
 
 fn user_content(text: &str) -> Result<Value, String> {
@@ -257,24 +259,31 @@ pub async fn claude_session_control(sessions: State<'_, ClaudeSessions>, id: Str
 }
 
 #[tauri::command]
-pub fn claude_session_respond(sessions: State<ClaudeSessions>, id: String, generation: String, request_id: String, response: Value) -> Result<(), String> {
+pub async fn claude_session_respond(sessions: State<'_, ClaudeSessions>, id: String, generation: String, request_id: String, response: Value) -> Result<(), String> {
     let s = get(&sessions, &id, &generation)?;
-    if !s.permissions.lock().unwrap().contains_key(&request_id) { return Err("该请求已结束".into()); }
-    s.write(&json!({"type":"control_response","response":{"subtype":"success","request_id":request_id,"response":response}}))?;
-    s.permissions.lock().unwrap().remove(&request_id);
-    Ok(())
+    tauri::async_runtime::spawn_blocking(move || {
+        if !s.permissions.lock().unwrap().contains_key(&request_id) { return Err("该请求已结束".into()); }
+        s.write(&json!({"type":"control_response","response":{"subtype":"success","request_id":request_id,"response":response}}))?;
+        s.permissions.lock().unwrap().remove(&request_id);
+        Ok(())
+    }).await.map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
-pub fn claude_session_close(sessions: State<ClaudeSessions>, id: String, generation: String) {
-    let mut map = sessions.0.lock().unwrap();
-    if map.get(&id).is_some_and(|s| s.generation == generation) {
-        if let Some(s) = map.remove(&id) { let _ = s.child.lock().unwrap().kill(); }
+pub async fn claude_session_close(sessions: State<'_, ClaudeSessions>, id: String, generation: String) -> Result<(), String> {
+    let session = {
+        let mut map = sessions.0.lock().unwrap();
+        if map.get(&id).is_some_and(|s| s.generation == generation) { map.remove(&id) } else { None }
+    };
+    if let Some(s) = session {
+        tauri::async_runtime::spawn_blocking(move || { let _ = s.child.lock().unwrap().kill(); }).await.map_err(|e| e.to_string())?;
     }
+    Ok(())
 }
 
 pub fn shutdown(sessions: &ClaudeSessions) {
-    for (_, session) in sessions.0.lock().unwrap().drain() { let _ = session.child.lock().unwrap().kill(); }
+    let sessions: Vec<_> = sessions.0.lock().unwrap().drain().map(|(_, session)| session).collect();
+    for session in sessions { let _ = session.child.lock().unwrap().kill(); }
 }
 
 #[cfg(test)]

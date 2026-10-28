@@ -63,7 +63,7 @@ async function readSettings(id: string, c: Client) {
 async function initializeClaude(id: string, c: Client, cwd: string | null, resumeToken?: string, ready = true) {
   await listen();
   clearSessionControls(id, c.generation);
-  const controls = await readLaunchControls('claude');
+  const controls = readLaunchControls('claude'), generation = c.generation;
   const result = await invoke<{ sessionId: string; initialization: Json; history: { data: string; cursor: number }; bypassAvailable?: boolean }>('claude_session_start', { id, generation: c.generation, cwd, resumeToken: resumeToken ?? null });
   const restoreHistory = !c.state.messages.length;
   if (restoreHistory) for (const line of result.history.data.split(/\r?\n/)) {
@@ -74,7 +74,9 @@ async function initializeClaude(id: string, c: Client, cwd: string | null, resum
   await readSettings(id, c);
   if (c.startupExit) throw new Error(c.startupExit);
   c.state = { ...c.state, ready, status: ready ? 'idle' : 'starting', error: undefined, errorKey: undefined };
-  if (c.owners) setSessionControls(id, c.generation, controls);
+  void controls.then(value => {
+    if (clients.get(id) === c && c.owners && c.generation === generation && (c.state.ready || !ready && !c.startupExit && !c.state.error)) setSessionControls(id, generation, value);
+  });
   publish(c, true);
 }
 

@@ -298,7 +298,11 @@ fn join_abs(repo_root: &str, rel: &str) -> String {
 /// List the active folder's git working-tree changes. The frontend refreshes
 /// it from filesystem events plus a low-frequency polling backstop.
 #[tauri::command]
-pub fn git_changes(folder: String) -> GitChanges {
+pub async fn git_changes(folder: String) -> Result<GitChanges, String> {
+    tauri::async_runtime::spawn_blocking(move || git_changes_blocking(folder)).await.map_err(|e| e.to_string())
+}
+
+fn git_changes_blocking(folder: String) -> GitChanges {
     if !git_on_path() {
         return GitChanges::NoGit;
     }
@@ -419,7 +423,11 @@ pub fn git_changes(folder: String) -> GitChanges {
 ///   • staged   tracked: old = `HEAD:rel`        new = `:rel` (index)
 ///   • untracked:        old = ""                new = working file on disk
 #[tauri::command]
-pub fn git_show_file(repo_root: String, spec: String) -> Option<String> {
+pub async fn git_show_file(repo_root: String, spec: String) -> Result<Option<String>, String> {
+    tauri::async_runtime::spawn_blocking(move || git_show_file_blocking(repo_root, spec)).await.map_err(|e| e.to_string())
+}
+
+fn git_show_file_blocking(repo_root: String, spec: String) -> Option<String> {
     // Defense against arg-injection: `spec` is frontend-built (HEAD:rel,
     // <hash>:rel, :rel). Reject a leading '-' so a crafted commitHash can't
     // lead the spec and be parsed as a git option. (A legit spec never starts
@@ -433,7 +441,11 @@ pub fn git_show_file(repo_root: String, spec: String) -> Option<String> {
 /// `git init` the given folder so the not-a-repo state's "initialize here"
 /// button can turn an ordinary folder into a tracked workspace in one click.
 #[tauri::command]
-pub fn git_init(folder: String) -> Result<(), String> {
+pub async fn git_init(folder: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || git_init_blocking(folder)).await.map_err(|e| e.to_string())?
+}
+
+fn git_init_blocking(folder: String) -> Result<(), String> {
     git_output(&folder, &["init"]).map(|_| ())
 }
 
@@ -441,7 +453,11 @@ pub fn git_init(folder: String) -> Result<(), String> {
 /// Called at app launch + on tab switch (NOT poll-gated — one rev-parse).
 /// Scopes the "修改记录" session-commits list to commits made this window.
 #[tauri::command]
-pub fn git_capture_baseline(folder: String) {
+pub async fn git_capture_baseline(folder: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || git_capture_baseline_blocking(folder)).await.map_err(|e| e.to_string())
+}
+
+fn git_capture_baseline_blocking(folder: String) {
     let repo_root = match git_output(&folder, &["rev-parse", "--show-toplevel"]) {
         Ok(s) => s.trim().to_string(),
         Err(_) => return, // not a repo — nothing to baseline
@@ -462,7 +478,11 @@ pub fn git_capture_baseline(folder: String) {
 /// Files changed in a single commit (lazy — called when the user expands a
 /// session commit in the 修改记录 list). Reuses `commit_files`.
 #[tauri::command]
-pub fn git_commit_files(repo_root: String, hash: String) -> Vec<GitFileEntry> {
+pub async fn git_commit_files(repo_root: String, hash: String) -> Result<Vec<GitFileEntry>, String> {
+    tauri::async_runtime::spawn_blocking(move || git_commit_files_blocking(repo_root, hash)).await.map_err(|e| e.to_string())
+}
+
+fn git_commit_files_blocking(repo_root: String, hash: String) -> Vec<GitFileEntry> {
     // Defense against arg-injection: `hash` is round-tripped through the
     // frontend (session_commits[].hash). Reject non-hex so a crafted value
     // can't reach `git diff-tree` as an option. (Internal `commit_files("HEAD")`

@@ -265,8 +265,8 @@ pub(crate) fn check_tool_unix(bin: &str) -> bool {
 /// CLI while Coffee CLI is running also get the OpenCode-family transparent
 /// theme migration without restarting. Idempotent.
 #[tauri::command]
-fn maintain_tool_integration(tool: String) {
-    crate::hook_installer::maintain_for_tool(&tool);
+async fn maintain_tool_integration(tool: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || crate::hook_installer::maintain_for_tool(&tool)).await.map_err(|e| e.to_string())
 }
 
 /// Drain the cold-start external launch request (`launch --tool … --cwd …`),
@@ -279,15 +279,17 @@ fn take_pending_launch(state: State<'_, AppState>) -> Option<crate::launch::Laun
 }
 
 #[tauri::command]
-fn check_tools_installed() -> std::collections::HashMap<String, bool> {
-    let mut result = std::collections::HashMap::new();
-    for tool in crate::tools::TOOLS {
-        result.insert(tool.id.to_string(), binary_on_path(tool.binary_name));
-    }
-    // `terminal` (system shell) and `remote` (SSH) have no binary to
-    // probe — always available, not registered.
-    result.insert("terminal".to_string(), true);
-    result
+async fn check_tools_installed() -> Result<std::collections::HashMap<String, bool>, String> {
+    tauri::async_runtime::spawn_blocking(|| {
+        let mut result = std::collections::HashMap::new();
+        for tool in crate::tools::TOOLS {
+            result.insert(tool.id.to_string(), binary_on_path(tool.binary_name));
+        }
+        // `terminal` (system shell) and `remote` (SSH) have no binary to
+        // probe — always available, not registered.
+        result.insert("terminal".to_string(), true);
+        result
+    }).await.map_err(|e| e.to_string())
 }
 
 /// Probe which optional shells are installed, so the settings picker can
@@ -296,13 +298,15 @@ fn check_tools_installed() -> std::collections::HashMap<String, bool> {
 /// `where`/`exists` checks — safe to call on settings open. See
 /// `shell_probe::detect_capabilities` for the per-shell strategy.
 #[tauri::command]
-fn detect_shells() -> crate::shell_probe::ShellCapabilitiesJson {
-    let mut caps = crate::shell_probe::detect_capabilities();
-    // Exact versions are probed here (Settings open), not in
-    // detect_capabilities (startup/spawn) — powershell.exe's $PSVersionTable
-    // takes ~1-2s and would stall boot if it ran there.
-    crate::shell_probe::populate_versions(&mut caps);
-    crate::shell_probe::ShellCapabilitiesJson::from(&caps)
+async fn detect_shells() -> Result<crate::shell_probe::ShellCapabilitiesJson, String> {
+    tauri::async_runtime::spawn_blocking(|| {
+        let mut caps = crate::shell_probe::detect_capabilities();
+        // Exact versions are probed here (Settings open), not in
+        // detect_capabilities (startup/spawn) — powershell.exe's $PSVersionTable
+        // takes ~1-2s and would stall boot if it ran there.
+        crate::shell_probe::populate_versions(&mut caps);
+        crate::shell_probe::ShellCapabilitiesJson::from(&caps)
+    }).await.map_err(|e| e.to_string())
 }
 
 // ─── File System Live Watcher ────────────────────────────────────────────────
@@ -312,25 +316,25 @@ fn detect_shells() -> crate::shell_probe::ShellCapabilitiesJson {
 // into the Explorer tree immediately. See fs_watcher.rs for mechanics.
 
 #[tauri::command]
-fn start_fs_watcher(
+async fn start_fs_watcher(
     path: String,
     app: tauri::AppHandle,
-    state: State<'_, AppState>,
 ) -> Result<(), String> {
-    let root = PathBuf::from(&path);
-    let watcher = crate::fs_watcher::FsWatcher::start(app, root)?;
-    // Replace atomically; dropping the old FsWatcher stops its OS handle.
-    let mut guard = state.fs_watcher.lock().map_err(|e| format!("lock: {}", e))?;
-    *guard = Some(watcher);
-    Ok(())
+    tauri::async_runtime::spawn_blocking(move || {
+        let watcher = crate::fs_watcher::FsWatcher::start(app.clone(), PathBuf::from(path))?;
+        let old = app.state::<AppState>().fs_watcher.lock().map_err(|e| format!("lock: {}", e))?.replace(watcher);
+        drop(old);
+        Ok(())
+    }).await.map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
-fn stop_fs_watcher(state: State<'_, AppState>) -> Result<(), String> {
-    let mut guard = state.fs_watcher.lock().map_err(|e| format!("lock: {}", e))?;
-    // Drop releases the OS watcher handle.
-    *guard = None;
-    Ok(())
+async fn stop_fs_watcher(app: tauri::AppHandle) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let old = app.state::<AppState>().fs_watcher.lock().map_err(|e| format!("lock: {}", e))?.take();
+        drop(old);
+        Ok(())
+    }).await.map_err(|e| e.to_string())?
 }
 
 // ─── File System Browsing API ────────────────────────────────────────────────
@@ -347,7 +351,11 @@ struct DirEntry {
 /// List the immediate children of a directory.
 /// Returns files and subdirectories sorted: directories first, then files, both alphabetical.
 #[tauri::command]
-fn list_directory(path: String) -> Result<Vec<DirEntry>, String> {
+async fn list_directory(path: String) -> Result<Vec<DirEntry>, String> {
+    tauri::async_runtime::spawn_blocking(move || list_directory_blocking(path)).await.map_err(|e| e.to_string())?
+}
+
+fn list_directory_blocking(path: String) -> Result<Vec<DirEntry>, String> {
     let dir = std::path::Path::new(&path);
     if !dir.is_dir() {
         return Err(format!("Not a directory: {}", path));
@@ -425,10 +433,12 @@ pub(crate) fn normalize_path_key(path: &str) -> String {
 /// `get_baseline_content` to feed the right-side Diff panel: baseline +
 /// current = both sides of the diff.
 #[tauri::command]
-fn read_text_file(path: String) -> Option<String> {
-    let bytes = std::fs::read(&path).ok()?;
-    if !stats_is_text(&bytes) { return None; }
-    Some(String::from_utf8_lossy(&bytes).into_owned())
+async fn read_text_file(path: String) -> Option<String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let bytes = std::fs::read(&path).ok()?;
+        if !stats_is_text(&bytes) { return None; }
+        Some(String::from_utf8_lossy(&bytes).into_owned())
+    }).await.ok().flatten()
 }
 
 
@@ -1092,7 +1102,7 @@ fn tier_terminal_start_blocking(
 
 
 #[tauri::command]
-fn tier_terminal_input(
+async fn tier_terminal_input(
     session_id: String,
     data: String,
     state: State<'_, AppState>,
@@ -1109,36 +1119,23 @@ fn tier_terminal_input(
 
     // PTY write may block under back-pressure, after the session-map lock has
     // already been released so other tabs remain responsive.
-    use std::io::Write;
-    let mut w = writer_arc.lock().map_err(|e| format!("Writer lock poisoned: {}", e))?;
-    w.write_all(data.as_bytes()).map_err(|e| format!("Write failed: {}", e))?;
-    w.flush().map_err(|e| format!("Flush failed: {}", e))?;
-
-    Ok(())
+    tauri::async_runtime::spawn_blocking(move || {
+        use std::io::Write;
+        let mut w = writer_arc.lock().map_err(|e| format!("Writer lock poisoned: {}", e))?;
+        w.write_all(data.as_bytes()).map_err(|e| format!("Write failed: {}", e))?;
+        w.flush().map_err(|e| format!("Flush failed: {}", e))
+    }).await.map_err(|e| e.to_string())?
 }
 
 /// Raw write used for system-generated input like auto-skip Enter for the
 /// Claude trust prompt.
 #[tauri::command]
-fn tier_terminal_raw_write(
+async fn tier_terminal_raw_write(
     session_id: String,
     data: String,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
-    // Grab writer Arc, release map lock before PTY I/O
-    let writer_arc = {
-        let map = state.terminal_session.lock().unwrap();
-        match map.get(&session_id) {
-            Some(s) => s.writer_lock.clone(),
-            None => return Err(format!("No active terminal session for id: {}", session_id)),
-        }
-    };
-
-    use std::io::Write;
-    let mut w = writer_arc.lock().map_err(|e| format!("Writer lock poisoned: {}", e))?;
-    w.write_all(data.as_bytes()).map_err(|e| format!("Write failed: {}", e))?;
-    w.flush().map_err(|e| format!("Flush failed: {}", e))?;
-    Ok(())
+    tier_terminal_input(session_id, data, state).await
 }
 
 /// Toggle the global background-throttle flag. Called by the frontend
@@ -1179,21 +1176,25 @@ fn tier_terminal_kill(session_id: String, state: State<'_, AppState>) -> Result<
 }
 
 #[tauri::command]
-fn tier_terminal_resize(
+async fn tier_terminal_resize(
     session_id: String,
     cols: u16,
     rows: u16,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
-    let map = state.terminal_session.lock().unwrap();
-    let session = map
-        .get(&session_id)
-        .ok_or_else(|| format!("No active terminal session for id: {session_id}"))?;
-    let master_guard = session._master.lock().unwrap();
-    let master = master_guard
-        .as_ref()
-        .ok_or_else(|| format!("Terminal session has no PTY master: {session_id}"))?;
-    resize_terminal_pty(master.as_ref(), cols, rows)
+    resize_terminal_session(state.terminal_session.clone(), session_id, cols, rows).await
+}
+
+async fn resize_terminal_session(sessions: terminal::SharedSession, session_id: String, cols: u16, rows: u16) -> Result<(), String> {
+    let master = {
+        let map = sessions.lock().unwrap();
+        map.get(&session_id).ok_or_else(|| format!("No active terminal session for id: {session_id}"))?._master.clone()
+    };
+    tauri::async_runtime::spawn_blocking(move || {
+        let guard = master.lock().unwrap();
+        let master = guard.as_ref().ok_or_else(|| format!("Terminal session has no PTY master: {session_id}"))?;
+        resize_terminal_pty(master.as_ref(), cols, rows)
+    }).await.map_err(|e| e.to_string())?
 }
 
 fn resize_terminal_pty(master: &dyn portable_pty::MasterPty, cols: u16, rows: u16) -> Result<(), String> {

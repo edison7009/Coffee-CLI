@@ -50,7 +50,7 @@ export function retainCodexSession(id: string, cwd: string | null, resumeToken?:
       try {
         await listen();
         clearSessionControls(id, c.generation);
-        const controls = await readLaunchControls('codex');
+        const controls = readLaunchControls('codex'), generation = c.generation;
         const result = await invoke<Json>('codex_session_start', { id, generation: c.generation, cwd, resumeToken: resumeToken ?? null });
         if (c.exited) throw new Error(c.startupExit || 'Codex process exited');
         const thread = obj(result.thread), history = restoreCodexTurns(arr(thread.turns));
@@ -58,7 +58,9 @@ export function retainCodexSession(id: string, cwd: string | null, resumeToken?:
         c.state = { ...c.state, ready: true, error: undefined, nativeId: str(thread.id), model: str(result.model), effort: str(result.reasoningEffort), approvalPolicy: result.approvalPolicy, sandbox: obj(result.sandbox), models: arr(result.models) as CodexModel[], messages: [...history.filter(m => !liveIds.has(m.id)), ...c.state.messages], historyCursor: str(result.turnsBackwardsCursor) || null };
         const active = arr(thread.turns).map(obj).find(turn => turn.status === 'inProgress');
         if (active && !c.state.turnId) c.state = { ...c.state, busy: true, turnId: str(active.id) };
-        if (c.owners) setSessionControls(id, c.generation, controls);
+        void controls.then(value => {
+          if (clients.get(id) === c && c.owners && c.generation === generation && c.state.ready) setSessionControls(id, generation, value);
+        });
         publish(c, true);
         return;
       } catch (error) {

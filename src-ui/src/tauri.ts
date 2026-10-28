@@ -92,9 +92,34 @@ export interface SessionGitContext {
   pull_requests: string[];
 }
 
+const sharedReads = new Map<string, Promise<unknown>>();
+const orderedRequests = new Map<string, Promise<unknown>>();
+const readCommands = new Set(['get_tool_control', 'check_tools_installed', 'detect_shells', 'list_system_fonts']);
+
 export async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
   if (!_invoke) throw new Error('Tauri IPC not available');
-  return _invoke(cmd, args) as Promise<T>;
+  const controlKind = cmd === 'install_browser_control' ? 'browser' : args?.kind;
+  const controlKey = `get_tool_control:${JSON.stringify({ kind: controlKind })}`;
+  const changesControl = cmd === 'set_tool_control' || cmd === 'install_browser_control' || cmd === 'check_tool_control';
+  if (changesControl) sharedReads.delete(controlKey);
+  const key = readCommands.has(cmd) ? `${cmd}:${JSON.stringify(args ?? {})}` : null;
+  if (key && sharedReads.has(key)) return sharedReads.get(key) as Promise<T>;
+  // Pipe writes are ordered per tab and generation. Watcher changes are ordered separately,
+  // so a late start cannot overwrite a newer folder or restart after stop.
+  // Unrelated commands, particularly close, never wait behind these queues.
+  const writeKey = cmd === 'tier_terminal_input' || cmd === 'tier_terminal_raw_write' ? `terminal:${args?.sessionId}`
+    : cmd === 'claude_session_send' ? `claude:${args?.id}:${args?.generation}`
+    : cmd === 'start_fs_watcher' || cmd === 'stop_fs_watcher' ? 'fs-watcher' : null;
+  const previous = writeKey ? orderedRequests.get(writeKey) : undefined;
+  const request = previous ? previous.catch(() => {}).then(() => _invoke!(cmd, args)) : _invoke(cmd, args);
+  const settled = request.finally(() => {
+    if (key && sharedReads.get(key) === settled) sharedReads.delete(key);
+    if (writeKey && orderedRequests.get(writeKey) === settled) orderedRequests.delete(writeKey);
+    if (changesControl) sharedReads.delete(controlKey);
+  });
+  if (key) sharedReads.set(key, settled);
+  if (writeKey) orderedRequests.set(writeKey, settled);
+  return settled as Promise<T>;
 }
 
 // ─── Type Definitions ────────────────────────────────────────────────────────

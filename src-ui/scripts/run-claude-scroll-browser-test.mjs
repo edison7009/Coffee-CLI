@@ -74,6 +74,10 @@ const server = http.createServer(async (req, res) => {
 await new Promise(accept => server.listen(0, '127.0.0.1', accept));
 const browser = await chromium.launch({ headless: true, ...(process.env.COFFEE_CHROMIUM_EXECUTABLE ? { executablePath: process.env.COFFEE_CHROMIUM_EXECUTABLE } : {}) });
 const page = await browser.newPage({ viewport: { width: 1100, height: 800 }, reducedMotion: 'no-preference' });
+if (process.env.COFFEE_TEST_CPU_RATE) {
+  const session = await page.context().newCDPSession(page);
+  await session.send('Emulation.setCPUThrottlingRate', { rate: Number(process.env.COFFEE_TEST_CPU_RATE) });
+}
 const errors = []; page.on('pageerror', error => errors.push(error.message));
 const scroll = page.locator('.claude-scroll');
 const metrics = () => scroll.evaluate(el => ({ top: el.scrollTop, distance: el.scrollHeight - el.clientHeight - el.scrollTop }));

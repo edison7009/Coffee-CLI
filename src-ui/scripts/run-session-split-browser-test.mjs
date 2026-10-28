@@ -11,6 +11,10 @@ const devServer = await createServer({ cacheDir: join(directory, 'vite-cache'), 
 await devServer.listen();
 try {
   const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
+  if (process.env.COFFEE_TEST_CPU_RATE) {
+    const session = await page.context().newCDPSession(page);
+    await session.send('Emulation.setCPUThrottlingRate', { rate: Number(process.env.COFFEE_TEST_CPU_RATE) });
+  }
   const errors = []; page.on('pageerror', error => errors.push(error.message));
   await page.route(/\/src\/main\.tsx/, async route => { const response = await route.fetch(); await route.fulfill({ response, body: (await response.text()).replaceAll('StrictMode', 'Fragment') }); });
   await page.route(/\/src\/components\/center\/(TierTerminal|ClaudeConversation|CodexConversation)\.tsx/, async route => {
