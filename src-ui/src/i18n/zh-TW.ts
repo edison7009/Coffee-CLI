@@ -335,6 +335,7 @@ export const zhTW = {
   'task.view.note': '便籤式',
   'task.view.list.sub': '緊湊清單，逐條勾選',
   'task.view.note.sub': '大便籤，隨手寫、整段發給 AI',
+  'task.send_failed': "未能確認傳送，請查看目前會話。任務內容已保留。",
   'task.view.prompt': '分類式',
   'task.view.prompt.sub': '按分類攢 AI 提示詞，一鍵發送',
   'task.prompt.new_category': '新分類',

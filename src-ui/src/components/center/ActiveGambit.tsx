@@ -17,13 +17,13 @@
 // text can't be misdirected to the wrong terminal.
 
 import { useCallback, useEffect } from 'react';
-import { useAppState, matchHotkeyScheme } from '../../store/app-state';
-import { submitTerminalPrompt } from '../../lib/terminal-control';
+import { useAppState, useAppStateRef, matchHotkeyScheme } from '../../store/app-state';
+import { sendSessionPrompt } from '../../lib/send-session-prompt';
 import { isClaudeConversation, isCodexConversation } from '../../lib/chat-tools';
 import { getToolIcon } from './CenterPanel';
 import { Gambit } from './Gambit';
-import { controlClaude, sendClaudeMessage, useClaudeSession } from '../../lib/claude-session';
-import { interruptCodex, sendCodexMessage, useCodexSession } from '../../lib/codex-session';
+import { controlClaude, useClaudeSession } from '../../lib/claude-session';
+import { interruptCodex, useCodexSession } from '../../lib/codex-session';
 import { useOrchestration } from '../../lib/orchestration';
 import { useSessionControls } from '../../lib/session-controls';
 
@@ -53,6 +53,7 @@ function remoteHost(toolData: string | undefined): string {
 
 export function ActiveGambit() {
   const { state, dispatch } = useAppState();
+  const stateRef = useAppStateRef();
   const orchestration = useOrchestration();
   const activeId = state.activeTerminalId;
   const controls = useSessionControls(activeId ?? '');
@@ -92,18 +93,7 @@ export function ActiveGambit() {
   }, [dispatch]);
 
   // Both single and split views target the focused real session.
-  const handleSend = useCallback(async (text: string): Promise<boolean> => {
-    if (!activeId) return false;
-    if (isCodex) return sendCodexMessage(activeId, text);
-    if (isClaude) {
-      if (/^\/plan\s+\S/.test(text)) {
-        try { await controlClaude(activeId, { subtype: 'set_permission_mode', mode: 'plan' }); } catch { return false; }
-        return sendClaudeMessage(activeId, text.replace(/^\/plan\s+/, ''));
-      }
-      return sendClaudeMessage(activeId, text);
-    }
-    try { await submitTerminalPrompt(activeId, text); return true; } catch { return false; }
-  }, [activeId, isClaude, isCodex]);
+  const handleSend = useCallback((text: string) => sendSessionPrompt(stateRef.current.terminals.find(tab => tab.id === activeId), text), [activeId, stateRef]);
 
   // Global open/close hotkey (settings → 妙手). Registered in the CAPTURE
   // phase on document so it fires BEFORE the focused xterm's own keydown —

@@ -335,6 +335,7 @@ export const zhCN = {
   'task.view.note': '便签式',
   'task.view.list.sub': '紧凑清单，逐条勾选',
   'task.view.note.sub': '大便签，随手写、整段发给 AI',
+  'task.send_failed': "未能确认发送，请查看当前会话。任务内容已保留。",
   'task.view.prompt': '分类式',
   'task.view.prompt.sub': '按分类攒 AI 提示词，一键发送',
   'task.prompt.new_category': '新分类',

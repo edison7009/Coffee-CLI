@@ -32,8 +32,10 @@ function listen() {
     publish(c, payload.event.id !== undefined || ['turn/completed', 'serverRequest/resolved', 'coffee/exit'].includes(str(payload.event.method)));
   }));
 }
-export function useCodexSession(id: string): CodexState {
-  return useSyncExternalStore(fn => { const c = client(id); c.listeners.add(fn); return () => { c.listeners.delete(fn); }; }, () => clients.get(id)?.state ?? EMPTY, () => EMPTY);
+export function useCodexSession(id: string): CodexState;
+export function useCodexSession<T>(id: string, select: (state: CodexState) => T): T;
+export function useCodexSession(id: string, select: (state: CodexState) => unknown = state => state) {
+  return useSyncExternalStore(fn => { const c = client(id); c.listeners.add(fn); return () => { c.listeners.delete(fn); }; }, () => select(clients.get(id)?.state ?? EMPTY), () => select(EMPTY));
 }
 export function getCodexConnection(id: string) {
   const c = clients.get(id);

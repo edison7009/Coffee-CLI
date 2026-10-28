@@ -334,6 +334,7 @@ export const es = {
   'task.view.note': 'Notas adhesivas',
   'task.view.list.sub': 'Lista compacta, marca una a una',
   'task.view.note.sub': 'Notas amplias: escribe y envía todo',
+  'task.send_failed': "No se pudo confirmar el envío. Revisa la sesión actual. Tu tarea se ha conservado.",
   'task.view.prompt': 'Biblioteca de prompts',
   'task.view.prompt.sub': 'Categoriza prompts de IA, envía con un clic',
   'task.prompt.new_category': 'Nueva categoría',

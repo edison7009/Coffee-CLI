@@ -336,6 +336,7 @@ export const vi = {
   'task.view.note': 'Ghi chú dán',
   'task.view.list.sub': 'Danh sách gọn, tick từng mục',
   'task.view.note.sub': 'Ghi chú lớn — viết thoải mái, gửi cả đoạn',
+  'task.send_failed': "Không thể xác nhận việc gửi. Hãy kiểm tra phiên hiện tại. Nội dung tác vụ vẫn được giữ lại.",
   'task.view.prompt': 'Thư viện prompt',
   'task.view.prompt.sub': 'Phân loại prompt AI, gửi một chạm',
   'task.prompt.new_category': 'Phân loại mới',

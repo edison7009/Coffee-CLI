@@ -28,6 +28,7 @@ let team = { enabled: false, agents: [], coordinators: [] };
 const context = {
   isClaudeConversation, isCodexConversation, isConversationSession,
   useAppState: () => ({ state, dispatch: action => { state = reducer(state, action); } }),
+  useAppStateRef: () => ({ get current() { return state; } }),
   useAppDispatch: () => context.useAppState().dispatch,
   useOrchestration: () => team,
   useSessionControls: () => [],
@@ -41,6 +42,7 @@ const context = {
   sendCodexMessage: async (id, text) => { codexSends.push({ id, text }); return true; },
 };
 context.basename = evaluate('components/center/ActiveGambit.tsx', 'basename');
+context.sendSessionPrompt = evaluate('lib/send-session-prompt.ts', 'sendSessionPrompt', context);
 const host = evaluate('components/center/ActiveGambit.tsx', 'ActiveGambit', context);
 const titlebar = evaluate('components/common/TitleBar.tsx', 'TitleBar', context);
 function buttons(node) {

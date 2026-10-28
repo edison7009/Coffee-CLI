@@ -334,6 +334,7 @@ export const de = {
   'task.view.note': 'Notizzettel',
   'task.view.list.sub': 'Kompakte Liste, einzeln abhaken',
   'task.view.note.sub': 'Große Zettel – frei schreiben, alles senden',
+  'task.send_failed': "Das Senden konnte nicht bestätigt werden. Prüfe die aktuelle Sitzung. Deine Aufgabe bleibt erhalten.",
   'task.view.prompt': 'Prompt-Bibliothek',
   'task.view.prompt.sub': 'KI-Prompts kategorisieren, mit einem Klick senden',
   'task.prompt.new_category': 'Neue Kategorie',

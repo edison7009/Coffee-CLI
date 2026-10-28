@@ -14,6 +14,14 @@
   overflow: hidden;
 }
 
+.task-send-error {
+  flex-shrink: 0;
+  margin: 0;
+  color: var(--red);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 /* Global cursor override — desktop native (Apple HIG) */
 .task-board * {
   cursor: default !important;

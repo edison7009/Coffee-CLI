@@ -44,8 +44,10 @@ function listen() {
     publish(c, ['control_request', 'result', 'coffee_exit'].includes(text(payload.event.type)));
   }));
 }
-export function useClaudeSession(id: string): ClaudeState {
-  return useSyncExternalStore(fn => { const c = client(id); c.listeners.add(fn); return () => { c.listeners.delete(fn); }; }, () => clients.get(id)?.state ?? EMPTY, () => EMPTY);
+export function useClaudeSession(id: string): ClaudeState;
+export function useClaudeSession<T>(id: string, select: (state: ClaudeState) => T): T;
+export function useClaudeSession(id: string, select: (state: ClaudeState) => unknown = state => state) {
+  return useSyncExternalStore(fn => { const c = client(id); c.listeners.add(fn); return () => { c.listeners.delete(fn); }; }, () => select(clients.get(id)?.state ?? EMPTY), () => select(EMPTY));
 }
 export function getClaudeSession(id: string): ClaudeState { return clients.get(id)?.state ?? EMPTY; }
 export function getClaudeConnection(id: string) {

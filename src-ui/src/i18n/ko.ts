@@ -334,6 +334,7 @@ export const ko = {
   'task.view.note': '메모지',
   'task.view.list.sub': '간결한 체크리스트, 하나씩 체크',
   'task.view.note.sub': '큰 메모지에 자유롭게 적어 한 번에 전송',
+  'task.send_failed': "전송을 확인하지 못했습니다. 현재 대화를 확인해 주세요. 작업 내용은 유지됩니다.",
   'task.view.prompt': '프롬프트 모음',
   'task.view.prompt.sub': 'AI 프롬프트 분류, 한 번에 전송',
   'task.prompt.new_category': '새 분류',

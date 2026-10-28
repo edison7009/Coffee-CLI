@@ -34,6 +34,7 @@ window.getSelection=()=>state.diffSelection;
 window.movePreview=mode=>dispatch({type:'SET_DIFF_MODE',mode});
 window.calls={commits:0,init:0,taskLoads:0,taskSaves:0,gitReads:0,fileReads:0};
 export const isTauri=true;
+export async function invoke(){throw new Error('Unexpected native call in file-review fixture')}
 export const commands={
  async gitCaptureBaseline(){},
  async gitChanges(){window.calls.gitReads++;if(window.holdGit)await new Promise(resolve=>window.resolveGit=resolve);if(changes.state==='error')throw new Error('fixture read failure');return structuredClone(changes)},
@@ -53,11 +54,12 @@ export async function tokenizeFile(){return null}
 export async function tokenizeByLang(){return null}
 export function getShikiTheme(){return 'github-dark-default'}
 export function useTextContextMenu(){return {menu:null,openMenu(){}}}
-export function getTabActions(){return {paste(text){window.pastedTask=text}}}
+export async function submitTerminalPrompt(id,text){window.pastedTask=text}
 `;
 await build({stdin:{resolveDir:project,loader:'tsx',contents:`import React from 'react';import {createRoot} from 'react-dom/client';import {RightPanel} from './src/components/right/Compiler';import {GitStatusProvider} from './src/lib/git-status';import './src/styles/global.css';import './src/components/left/Explorer.css';createRoot(document.getElementById('root')).render(<GitStatusProvider><RightPanel/></GitStatusProvider>);`},bundle:true,outfile:join(directory,'fixture.js'),jsx:'automatic',nodePaths:[join(project,'node_modules')],loader:{'.woff2':'dataurl','.woff':'dataurl','.png':'dataurl','.svg':'dataurl'},define:{'process.env.NODE_ENV':'"development"','__IS_LINUX__':'false'},plugins:[{name:'review-fixture',setup(b){
  b.onResolve({filter:/^\/(?:fonts\/|monogram)/},args=>({path:join(project,'public',args.path)}));
- b.onResolve({filter:/(?:store\/app-state|tauri|lib\/(?:explorer-drag|shiki|use-text-context-menu|tab-actions)|left\/Explorer)$/},()=>({path:'mock',namespace:'fixture'}));
+ b.onResolve({filter:/^\.\/terminal-control$/},()=>({path:'mock',namespace:'fixture'}));
+ b.onResolve({filter:/(?:store\/app-state|tauri|lib\/(?:explorer-drag|shiki|use-text-context-menu|terminal-control)|left\/Explorer)$/},()=>({path:'mock',namespace:'fixture'}));
  b.onLoad({filter:/.*/,namespace:'fixture'},()=>({contents:mock,resolveDir:project,loader:'tsx'}));
 }}]});
 const html=`<!doctype html><html data-mode="dark" data-shape="soft"><link rel="stylesheet" href="/fixture.css"><style>:root{--font:Inter,'Segoe UI',sans-serif;--font-mono:Consolas,monospace;--accent:#ce829c;--text-1:#e0d7de;--text-2:#b5a7b1;--text-3:#a496a0;--border:#392e36;--bg-panel:#1d181d;--bg-terminal:#161216;--bg-hover:#30262e;--success:#7cb38f;--danger:#d7877f;--radius-sm:5px}html[data-mode=light]{--text-1:#34322e;--text-2:#625e57;--text-3:#746d65;--border:#ded8d0;--bg-panel:#f2eee8;--bg-terminal:#f6f3ef;--bg-hover:#e9e2dc;--success:#39754d;--danger:#ab5348}body{margin:0;background:var(--bg-terminal)}#root.panel-right{position:relative;width:360px;height:720px;min-width:0;max-width:none;padding:0;background:var(--bg-panel);display:flex}#root .compiler-top{height:100%;width:100%}</style><div id="root" class="panel-right"></div><script src="/fixture.js"></script></html>`;
@@ -154,6 +156,7 @@ try{
  await page.locator('.task-edit-inline').click();await page.locator('.task-title-edit').fill('移到右侧后保留任务');await page.locator('.task-title-edit').press('Enter');
  await listTab.click();await taskTab.click();assert.equal(await page.locator('.task-title-text').textContent(),'移到右侧后保留任务');
  await page.evaluate(()=>window.setFolder('D:/another-workspace'));assert.equal(await taskTab.getAttribute('aria-selected'),'true');assert.equal(await page.evaluate(()=>window.calls.taskLoads),1,'workspace changes must not remount task storage/editors');assert.equal(await page.locator('.task-title-text').textContent(),'移到右侧后保留任务');
+ await page.evaluate(()=>window.setTool('terminal'));
  await page.locator('.task-slot-send').click();assert.equal(await page.evaluate(()=>window.pastedTask),'移到右侧后保留任务');await page.waitForFunction(()=>window.savedTasks?.[0]?.status==='working');
  await page.locator('.task-check-btn').click();await page.waitForFunction(()=>window.savedTasks?.[0]?.status==='done');assert.equal(await page.evaluate(()=>window.savedTasks[0].title),'移到右侧后保留任务');
  await page.evaluate(()=>window.setTaskMode('note'));await page.locator('.task-note-body').waitFor();assert.equal(await page.locator('.task-note-body').inputValue(),'移到右侧后保留任务');

@@ -336,6 +336,7 @@ export const en = {
   'task.view.note': 'Sticky Notes',
   'task.view.list.sub': 'Compact checklist, tick off one by one',
   'task.view.note.sub': 'Roomy notes — jot freely, send the whole thing',
+  'task.send_failed': "Could not confirm sending. Check the current session. Your task has been kept.",
   'task.view.prompt': 'Prompt library',
   'task.view.prompt.sub': 'Categorize AI prompts, send in one click',
   'task.prompt.new_category': 'New category',

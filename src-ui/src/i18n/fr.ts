@@ -334,6 +334,7 @@ export const fr = {
   'task.view.note': 'Notes autocollantes',
   'task.view.list.sub': 'Liste compacte, à cocher une par une',
   'task.view.note.sub': 'Grandes notes : écrivez et envoyez tout',
+  'task.send_failed': "Envoi non confirmé. Vérifiez la session actuelle. Votre tâche a été conservée.",
   'task.view.prompt': 'Bibliothèque de prompts',
   'task.view.prompt.sub': 'Catégorisez vos prompts IA, envoyez en un clic',
   'task.prompt.new_category': 'Nouvelle catégorie',

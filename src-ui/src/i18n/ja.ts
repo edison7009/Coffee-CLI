@@ -334,6 +334,7 @@ export const ja = {
   'task.view.note': '付箋',
   'task.view.list.sub': 'コンパクトな一覧、ひとつずつチェック',
   'task.view.note.sub': '大きな付箋にまとめて書いて送信',
+  'task.send_failed': "送信を確認できませんでした。現在の会話を確認してください。タスクの内容は保持されています。",
   'task.view.prompt': 'プロンプト集',
   'task.view.prompt.sub': 'AIプロンプトを分類、一括送信',
   'task.prompt.new_category': '新規カテゴリ',
