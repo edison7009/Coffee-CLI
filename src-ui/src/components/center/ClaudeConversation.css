@@ -23,7 +23,8 @@ body.gambit-docked .claude-scroll-bottom { bottom:calc(var(--gambit-dock-h,200px
 /* Same bubble language as ConversationView: right-aligned accent tile, drawn border only on panel, no tile on material shapes. */
 .claude-user-content { min-width:0; max-width:min(76%,680px); padding:9px 14px; border-radius:var(--shape-radius-panel,8px); background:var(--accent-bg); }
 [data-shape="panel"] .claude-user-content { border:1px solid color-mix(in srgb, var(--accent) 46%, var(--border)); }
-:is([data-shape="glass"],[data-shape="carbon"],[data-shape="monogram"]) .claude-user-content { background:transparent; }
+/* Material shapes clear every .panel-center surface with !important at (0,3,1); the prompt bubble is content, not chrome, so it opts back in with a translucent tile. */
+:is([data-shape="glass"],[data-shape="carbon"],[data-shape="monogram"]) .panel-center .claude-row .claude-user-content { background:color-mix(in srgb, var(--accent) 22%, transparent) !important; }
 .claude-row .md-body > :first-child { margin-top:0; }
 .claude-row .md-body > :last-child { margin-bottom:0; }
 .claude-row .md-body p { margin:0 0 10px; }
