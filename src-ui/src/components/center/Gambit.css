@@ -365,6 +365,11 @@
     flex-shrink: 0;
 }
 .gambit-footer--capabilities .gambit-workspace { margin-right:0; }
+/* Terminal attach button sits right after the workspace label, matching the desktop composer's paperclip. */
+.gambit-attach { display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; width:26px; height:26px; padding:0; border:0; border-radius:var(--shape-radius-btn,5px); color:var(--text-2); background:var(--bg-hover); cursor:pointer; }
+.gambit-attach:hover { color:var(--text-1); background:var(--accent-bg,var(--bg-hover)); }
+.gambit-footer--attach .gambit-workspace { margin-right:0; }
+.gambit-footer--attach:not(.gambit-footer--capabilities) .gambit-attach { margin-right:auto; }
 .gambit-capabilities { display:flex; align-items:center; gap:5px; min-width:0; margin-right:auto; overflow:hidden; }
 .gambit-capability { min-width:0; padding:4px 7px; border-radius:var(--shape-radius-btn,5px); background:color-mix(in srgb,var(--capability-color) 12%,transparent); color:var(--capability-color); font:12px var(--font); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .gambit-capability.is-orchestration { --capability-color:var(--green); }

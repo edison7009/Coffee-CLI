@@ -153,6 +153,7 @@ export function ActiveGambit() {
       browser={controlsReady && controls.includes('browser')}
       claude={isClaude}
       codex={isCodex}
+      attachable={activeSession?.tool !== 'remote'}
       running={isClaude ? claude.busy : isCodex && codex.busy}
       onCancel={isCodex ? () => { void interruptCodex(activeId); } : isClaude ? () => { void controlClaude(activeId, { subtype: 'interrupt' }).catch(() => {}); } : undefined}
       leftPanelHidden={state.leftPanelHidden}

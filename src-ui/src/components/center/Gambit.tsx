@@ -22,7 +22,7 @@ import { useT } from '../../i18n/useT';
 import { useAppState } from '../../store/app-state';
 import { registerFileDropTarget, formatPathsForInsert } from '../../lib/file-drop';
 import { bindAutoHideScrollbar } from '../../lib/auto-hide-scrollbar';
-import { ClaudeComposerControls } from './ClaudeComposerControls';
+import { ClaudeComposerControls, AttachIcon } from './ClaudeComposerControls';
 import { CodexComposerControls } from './CodexComposerControls';
 import { gambitAttachments, removeGambitAttachment } from '../../lib/gambit-attachments';
 import './Gambit.css';
@@ -41,6 +41,8 @@ interface GambitProps {
   running?: boolean;
   claude?: boolean;
   codex?: boolean;
+  /** Local file paths are meaningful to this target (false for SSH tabs). */
+  attachable?: boolean;
   onCancel?: () => void;
   sendFailedHint?: string;
   /** Whether the left/right side panels are currently hidden. When Gambit
@@ -110,6 +112,7 @@ function GambitImpl({
   running = false,
   claude = false,
   codex = false,
+  attachable = false,
   onCancel,
   sendFailedHint,
   leftPanelHidden,
@@ -294,27 +297,28 @@ function GambitImpl({
   const onDraftChangeRef = useRef(onDraftChange);
   useEffect(() => { draftRef.current = draft; }, [draft]);
   useEffect(() => { onDraftChangeRef.current = onDraftChange; }, [onDraftChange]);
-  useEffect(() => {
-    return registerFileDropTarget({
-      priority: 200,
-      rect: () => rootRef.current?.getBoundingClientRect() ?? null,
-      insert: (paths) => {
-        const formatted = formatPathsForInsert(paths);
-        const textarea = textareaRef.current;
-        const cur = draftRef.current;
-        const start = textarea?.selectionStart ?? cur.length;
-        const end = textarea?.selectionEnd ?? cur.length;
-        const next = cur.slice(0, start) + formatted + cur.slice(end);
-        onDraftChangeRef.current(next);
-        requestAnimationFrame(() => {
-          if (!textarea) return;
-          textarea.focus();
-          textarea.selectionStart = start + formatted.length;
-          textarea.selectionEnd = start + formatted.length;
-        });
-      },
+  const insertPaths = useCallback((paths: string[]) => {
+    const formatted = formatPathsForInsert(paths);
+    const textarea = textareaRef.current;
+    const cur = draftRef.current;
+    const start = textarea?.selectionStart ?? cur.length;
+    const end = textarea?.selectionEnd ?? cur.length;
+    const next = cur.slice(0, start) + formatted + cur.slice(end);
+    onDraftChangeRef.current(next);
+    requestAnimationFrame(() => {
+      if (!textarea) return;
+      textarea.focus();
+      textarea.selectionStart = start + formatted.length;
+      textarea.selectionEnd = start + formatted.length;
     });
   }, []);
+  useEffect(() => registerFileDropTarget({ priority: 200, rect: () => rootRef.current?.getBoundingClientRect() ?? null, insert: insertPaths }), [insertPaths]);
+  // Picked files insert exactly like dropped ones: at the caret, quoted only when needed.
+  const attachFiles = async () => {
+    const { open } = await import('@tauri-apps/plugin-dialog');
+    const picked = await open({ multiple: true, directory: false });
+    if (picked) insertPaths(Array.isArray(picked) ? picked : [picked]);
+  };
 
   // Click a thumbnail → open a full-size preview overlay AND select the
   // matching path text in the textarea (so once the overlay closes, the
@@ -762,7 +766,7 @@ function GambitImpl({
         />
       </div>
 
-      <div className={`gambit-footer${claude || codex ? ' gambit-footer--claude' : ''}${capabilitiesStatus ? ' gambit-footer--capabilities' : ''}`}>
+      <div className={`gambit-footer${claude || codex ? ' gambit-footer--claude' : ''}${!claude && !codex && attachable ? ' gambit-footer--attach' : ''}${capabilitiesStatus ? ' gambit-footer--capabilities' : ''}`}>
 
         {/* Target label — leftmost footer item, symmetric to the send button.
             Shows the active tab's folder or remote host so a prompt can't be
@@ -779,6 +783,7 @@ function GambitImpl({
         {claude && <ClaudeComposerControls sessionId={sessionId} draft={draft} onDraftChange={onDraftChange} keyHandler={claudeKeyHandler}>{capabilitiesStatus}</ClaudeComposerControls>}
         {codex && <CodexComposerControls key={sessionId} sessionId={sessionId} draft={draft} onDraftChange={onDraftChange} keyHandler={claudeKeyHandler} submitHandler={codexSubmitHandler}>{capabilitiesStatus}</CodexComposerControls>}
 
+        {!claude && !codex && attachable && <button type="button" className="gambit-attach" aria-label={t('claude.attach')} onClick={() => { void attachFiles(); }}><AttachIcon /></button>}
         {(!claude && !codex) && capabilitiesStatus}
 
         {sendFailed && (
