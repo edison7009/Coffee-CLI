@@ -174,7 +174,7 @@
 }
 .explorer-view-switch .explorer-tab {
     flex: 0 0 30px;
-    height: 28px;
+    height: 26px;
     padding: 0;
     color: var(--text-3);
 }
@@ -185,7 +185,7 @@
     top: 2px;
     left: 2px;
     width: 30px;
-    height: 28px;
+    height: 26px;
     border-radius: max(0px, calc(var(--shape-radius-btn, 6px) - 2px));
     background: color-mix(in srgb, var(--accent) 34%, transparent);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.22);
@@ -194,7 +194,6 @@
     z-index: 1;
 }
 .explorer-view-switch[data-active="workspace"] .explorer-view-thumb { transform: translateX(30px); }
-[data-shape="panel"] .explorer-view-switch { border: 1px solid var(--border); }
 [data-shape="panel"] .explorer-view-switch .explorer-tab.active { background: transparent; }
 @media (prefers-reduced-motion: reduce) { .explorer-view-thumb { transition: none; } }
 
