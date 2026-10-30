@@ -2,7 +2,7 @@
 .claude-composer-controls button { color:var(--text-2); background:var(--bg-hover); border:0; height:26px; padding:4px 7px; border-radius:var(--shape-radius-btn,5px); font:12px var(--font); cursor:pointer; white-space:nowrap; }
 .claude-composer-controls button:hover { color:var(--text-1); background:var(--accent-bg,var(--bg-hover)); }
 .claude-composer-controls button:disabled { opacity:.45; cursor:default; }
-.claude-composer-controls .claude-control-icon { display:inline-flex; align-items:center; justify-content:center; width:26px; padding:0; flex-shrink:0; }
+.claude-composer-controls .claude-control-icon { display:inline-flex; align-items:center; justify-content:center; width:26px; padding:0; }
 .claude-composer-controls .claude-model-control { overflow:hidden; text-overflow:ellipsis; }
 /* Lift compact labels by 1px to optically center the CJK glyphs. */
 .claude-composer-controls .claude-permission-control,.claude-composer-controls .claude-effort-trigger { padding-block:3px 5px; }
