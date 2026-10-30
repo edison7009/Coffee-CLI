@@ -14,9 +14,10 @@ export function AttachIcon() {
   return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" /></svg>;
 }
 
-export function ClaudeComposerControls({ sessionId, draft, onDraftChange, keyHandler, children }: {
+export function ClaudeComposerControls({ sessionId, draft, onDraftChange, keyHandler, quota, children }: {
   sessionId: string; draft: string; onDraftChange: (value: string) => void;
   keyHandler: MutableRefObject<((event: KeyboardEvent<HTMLTextAreaElement>) => boolean) | undefined>;
+  quota?: ReactNode;
   children?: ReactNode;
 }) {
   const t = useT();
@@ -123,6 +124,7 @@ export function ClaudeComposerControls({ sessionId, draft, onDraftChange, keyHan
     <button ref={el => { anchors.current.permissions = el; }} className="claude-permission-control" disabled={!s.ready} onClick={() => shown === 'permissions' ? close() : open('permissions')} aria-expanded={shown === 'permissions'} aria-label={t('claude.permissions')}>{modes.find(m => m.value === s.permissionMode)?.label ?? s.permissionMode}</button>
     {children}
     <div className="claude-model-controls">
+    {quota}
     <button ref={el => { anchors.current.model = el; }} className="claude-model-control" disabled={!s.ready} onClick={() => shown === 'model' ? close() : open('model')} aria-expanded={shown === 'model'} aria-label={t('claude.model')}>{model?.resolvedModel || s.model || 'Claude'}</button>
     {model?.supportsEffort && <button ref={el => { anchors.current.effort = el; }} className={`claude-effort-trigger${s.ultracode ? ' is-ultracode' : ''}`} disabled={!s.ready} onClick={() => shown === 'effort' ? close() : open('effort')} aria-expanded={shown === 'effort'} aria-label={t('claude.effort.title')}>{claudeEffortLabel(effort, t)}</button>}
     <button ref={el => { anchors.current.context = el; }} className="claude-context-control" data-severity={contextSeverity} aria-label={`${t('claude.context_used')}: ${Math.round(contextPercent)}%`} aria-haspopup="dialog" aria-expanded={shown === 'context'} onClick={() => shown === 'context' ? close() : open('context')}>

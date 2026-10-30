@@ -145,6 +145,8 @@ export function ActiveGambit() {
       draft={gambitDraft}
       workspaceName={workspaceName}
       toolIcon={toolIcon}
+      tool={activeSession?.tool && activeSession.tool !== 'remote' ? activeSession.tool : undefined}
+      cwd={activeSession?.folderPath ?? undefined}
       onDraftChange={handleDraftChange}
       onClose={handleClose}
       onSend={handleSend}

@@ -24,6 +24,8 @@ import { registerFileDropTarget, formatPathsForInsert } from '../../lib/file-dro
 import { bindAutoHideScrollbar } from '../../lib/auto-hide-scrollbar';
 import { ClaudeComposerControls, AttachIcon } from './ClaudeComposerControls';
 import { CodexComposerControls } from './CodexComposerControls';
+import { UsageMeter } from './UsageMeter';
+import { useUsageQuota } from '../../lib/usage-quota';
 import { gambitAttachments, removeGambitAttachment } from '../../lib/gambit-attachments';
 import './Gambit.css';
 
@@ -58,6 +60,9 @@ interface GambitProps {
    *  left of the target name so the chip reads as "tool + target",
    *  mirroring the tab's icon+name pairing. undefined hides the icon. */
   toolIcon?: React.ReactNode;
+  /** Active tab's tool id and folder; the plan-usage meter reads the tool's own configuration. */
+  tool?: string;
+  cwd?: string;
   orchestration?: boolean;
   computer?: boolean;
   browser?: boolean;
@@ -119,11 +124,15 @@ function GambitImpl({
   rightPanelHidden,
   workspaceName,
   toolIcon,
+  tool,
+  cwd,
   orchestration,
   computer,
   browser,
 }: GambitProps) {
   const t = useT();
+  const quotas = useUsageQuota(sessionId, tool, cwd, claude ? 'claude' : codex ? 'codex' : null);
+  const usageMeter = <UsageMeter quotas={quotas} />;
   const rootRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const claudeKeyHandler = useRef<((event: React.KeyboardEvent<HTMLTextAreaElement>) => boolean) | undefined>(undefined);
@@ -780,11 +789,12 @@ function GambitImpl({
             <span className="gambit-workspace-name">{workspaceName}</span>
           </span>
         )}
-        {claude && <ClaudeComposerControls sessionId={sessionId} draft={draft} onDraftChange={onDraftChange} keyHandler={claudeKeyHandler}>{capabilitiesStatus}</ClaudeComposerControls>}
-        {codex && <CodexComposerControls key={sessionId} sessionId={sessionId} draft={draft} onDraftChange={onDraftChange} keyHandler={claudeKeyHandler} submitHandler={codexSubmitHandler}>{capabilitiesStatus}</CodexComposerControls>}
+        {claude && <ClaudeComposerControls sessionId={sessionId} draft={draft} onDraftChange={onDraftChange} keyHandler={claudeKeyHandler} quota={usageMeter}>{capabilitiesStatus}</ClaudeComposerControls>}
+        {codex && <CodexComposerControls key={sessionId} sessionId={sessionId} draft={draft} onDraftChange={onDraftChange} keyHandler={claudeKeyHandler} submitHandler={codexSubmitHandler} quota={usageMeter}>{capabilitiesStatus}</CodexComposerControls>}
 
         {!claude && !codex && attachable && <button type="button" className="gambit-attach" aria-label={t('claude.attach')} onClick={() => { void attachFiles(); }}><AttachIcon /></button>}
         {(!claude && !codex) && capabilitiesStatus}
+        {!claude && !codex && usageMeter}
 
         {sendFailed && (
           <span className="gambit-send-hint" role="status">

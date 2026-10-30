@@ -1,0 +1,19 @@
+.usage-meter { display:inline-flex; align-items:center; gap:12px; min-width:0; flex-shrink:1; overflow:hidden; font-size:11px; line-height:1; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.usage-meter-item { --usage-color:var(--text-2); display:inline-flex; flex-direction:column; justify-content:center; gap:4px; flex-shrink:0; }
+.usage-meter-item[data-tone="healthy"] { --usage-color:var(--green,#5fb36b); }
+.usage-meter-item[data-tone="low"] { --usage-color:var(--warning,#d6a34a); }
+.usage-meter-item[data-tone="critical"] { --usage-color:var(--red,#df735f); }
+.usage-meter-text { display:inline-flex; align-items:baseline; gap:6px; }
+.usage-meter-period { color:var(--text-3); }
+.usage-meter-countdown { color:var(--text-1); font-weight:600; }
+.usage-meter-percent { margin-left:auto; color:var(--usage-color); font-weight:600; }
+.usage-meter-bar { position:relative; display:block; height:3px; border-radius:999px; background:color-mix(in srgb, var(--usage-color) 22%, transparent); overflow:hidden; }
+.usage-meter-bar > span { position:absolute; inset:0 auto 0 0; border-radius:inherit; background:var(--usage-color); transition:width .3s ease; }
+.usage-meter-item--balance { flex-direction:row; align-items:baseline; gap:6px; }
+.usage-meter-item--balance strong { color:var(--text-1); font-weight:600; }
+/* Narrow footers keep the most important meter, then drop the meter entirely. */
+.gambit-footer { container-type:inline-size; }
+@container (max-width: 640px) { .usage-meter-item + .usage-meter-item { display:none; } }
+@container (max-width: 470px) { .usage-meter { display:none; } }
+@media(prefers-reduced-motion:reduce) { .usage-meter-bar > span { transition:none; } }
+@media(forced-colors:active) { .usage-meter-bar { border:1px solid CanvasText; background:Canvas; } .usage-meter-bar > span { background:Highlight; } .usage-meter-percent { color:CanvasText; } }

@@ -12,10 +12,11 @@ import { useT } from '../../i18n/useT';
 import './ClaudeComposerControls.css';
 
 type Menu = 'commands' | 'model' | 'effort' | 'permissions' | 'context' | 'skills' | 'mcp' | null;
-export function CodexComposerControls({ sessionId, draft, onDraftChange, keyHandler, submitHandler, children }: {
+export function CodexComposerControls({ sessionId, draft, onDraftChange, keyHandler, submitHandler, quota, children }: {
   sessionId: string; draft: string; onDraftChange: (value: string) => void;
   keyHandler: MutableRefObject<((event: KeyboardEvent<HTMLTextAreaElement>) => boolean) | undefined>;
   submitHandler: MutableRefObject<((text: string) => boolean) | undefined>;
+  quota?: ReactNode;
   children?: ReactNode;
 }) {
   const s = useCodexSession(sessionId), t = useT();
@@ -129,6 +130,7 @@ export function CodexComposerControls({ sessionId, draft, onDraftChange, keyHand
     <button type="button" className="claude-permission-control" disabled={!s.ready || s.busy} aria-label={t('codex.permissions')} aria-expanded={menu === 'permissions'} onClick={e => show('permissions', e.currentTarget)}>{permission}</button>
     {children}
     <div className="claude-model-controls">
+      {quota}
       <button type="button" className="claude-model-control" disabled={!s.ready || s.busy} aria-label={t('codex.model')} aria-expanded={menu === 'model'} onClick={e => show('model', e.currentTarget)}>{model?.displayName || s.model || 'Codex'}</button>
       {!!model?.supportedReasoningEfforts.length && <button type="button" className={`claude-effort-trigger${(s.effort || model.defaultReasoningEffort) === 'ultra' ? ' is-ultracode' : ''}`} disabled={!s.ready || s.busy} aria-label={t('claude.effort.title')} aria-expanded={menu === 'effort'} onClick={e => show('effort', e.currentTarget)}>{claudeEffortLabel(s.effort || model.defaultReasoningEffort, t)}</button>}
       <button type="button" className="claude-context-control" data-severity={percent >= 90 ? 'critical' : percent >= 75 ? 'warning' : 'normal'} aria-label={`${t('claude.context_used')}: ${Math.round(percent)}%`} aria-haspopup="dialog" aria-expanded={menu === 'context'} onClick={e => show('context', e.currentTarget)}><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle className="claude-context-track" cx="8" cy="8" r="6" /><circle className="claude-context-progress" cx="8" cy="8" r="6" pathLength="100" strokeDasharray="100" strokeDashoffset={100 - percent} /></svg></button>

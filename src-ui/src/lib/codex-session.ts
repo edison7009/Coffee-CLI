@@ -94,6 +94,11 @@ export function configureCodex(id: string, patch: Partial<Pick<CodexState, 'mode
   if (patch.sandbox) c.permissionOverride = { sandboxPolicy: patch.sandbox, approvalPolicy: patch.approvalPolicy };
   c.state = { ...c.state, ...patch }; publish(c, true);
 }
+export async function readCodexRateLimits(id: string): Promise<Json> {
+  const c = clients.get(id);
+  if (!c?.state.ready) throw new Error('Codex is not ready');
+  return rpc(c, id, 'account/rateLimits/read', {});
+}
 export async function runCodexCommand(id: string, command: 'compact' | 'review' | 'skills' | 'mcp'): Promise<Json> {
   const c = client(id), startsTurn = command === 'compact' || command === 'review';
   if (!c.state.ready || startsTurn && (c.state.busy || c.sending)) throw new Error('Codex is not ready');
