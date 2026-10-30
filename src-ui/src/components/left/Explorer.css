@@ -161,6 +161,43 @@
 
 .explorer-tab:focus-visible { outline: 1px solid var(--accent); outline-offset: -2px; }
 
+/* History / workspace switch: one track with a sliding accent thumb so the
+   current view reads like a toggle. Spans, not divs, so the material shapes'
+   global surface reset leaves the track and thumb visible. */
+.explorer-view-switch {
+    position: relative;
+    display: flex;
+    flex-shrink: 0;
+    padding: 2px;
+    border-radius: var(--shape-radius-btn, 6px);
+    background: color-mix(in srgb, var(--text-1) 7%, transparent);
+}
+.explorer-view-switch .explorer-tab {
+    flex: 0 0 30px;
+    height: 28px;
+    padding: 0;
+    color: var(--text-3);
+}
+.explorer-view-switch .explorer-tab:hover:not(.active) { color: var(--text-2); }
+.explorer-view-switch .explorer-tab.active { color: var(--text-1); }
+.explorer-view-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 30px;
+    height: 28px;
+    border-radius: max(0px, calc(var(--shape-radius-btn, 6px) - 2px));
+    background: color-mix(in srgb, var(--accent) 34%, transparent);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.22);
+    transition: transform 0.22s cubic-bezier(0.3, 0.7, 0.4, 1);
+    pointer-events: none;
+    z-index: 1;
+}
+.explorer-view-switch[data-active="workspace"] .explorer-view-thumb { transform: translateX(30px); }
+[data-shape="panel"] .explorer-view-switch { border: 1px solid var(--border); }
+[data-shape="panel"] .explorer-view-switch .explorer-tab.active { background: transparent; }
+@media (prefers-reduced-motion: reduce) { .explorer-view-thumb { transition: none; } }
+
 .explorer-panel .agent-channel-summary { margin-inline: 8px; }
 
 /* Recursive File Tree styles */

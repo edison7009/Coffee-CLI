@@ -806,6 +806,8 @@ export function Explorer() {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z" /></svg>
           <span>{t('explorer.new_session')}</span>
         </button>
+        <span className="explorer-view-switch" data-active={activeTab}>
+        <span className="explorer-view-thumb" aria-hidden="true" />
         <button
           className={`explorer-tab ${activeTab === 'history' ? 'active' : ''}`}
           aria-label={t('explorer.tab.history')}
@@ -823,6 +825,7 @@ export function Explorer() {
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" /></svg>
         </button>
+        </span>
       </div>
 
       <button type="button" className="explorer-new-session explorer-usage" aria-pressed={!!state.toolSettingsOpen} onClick={() => dispatch({ type: 'SET_TOOL_SETTINGS_OPEN', open: true })}>
