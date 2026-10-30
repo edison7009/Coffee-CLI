@@ -1,14 +1,18 @@
 .usage-meter { display:inline-flex; align-items:center; gap:12px; min-width:0; flex-shrink:1; overflow:hidden; font-size:11px; line-height:1; font-variant-numeric:tabular-nums; white-space:nowrap; }
-.usage-meter-item { --usage-color:var(--text-2); display:inline-flex; flex-direction:column; justify-content:center; gap:4px; flex-shrink:0; }
-.usage-meter-item[data-tone="healthy"] { --usage-color:var(--green,#5fb36b); }
-.usage-meter-item[data-tone="low"] { --usage-color:var(--warning,#d6a34a); }
-.usage-meter-item[data-tone="critical"] { --usage-color:var(--red,#df735f); }
+/* Tones match EchoBird's quota bars (Tailwind green-500 + its warning/error RGB). */
+.usage-meter-item { --usage-rgb:128 128 128; --usage-text:var(--text-2); display:inline-flex; flex-direction:column; justify-content:center; gap:4px; flex-shrink:0; }
+.usage-meter-item[data-tone="healthy"] { --usage-rgb:34 197 94; --usage-text:rgb(34 197 94); }
+.usage-meter-item[data-tone="low"] { --usage-rgb:250 204 21; --usage-text:rgb(250 204 21); }
+.usage-meter-item[data-tone="critical"] { --usage-rgb:224 109 109; --usage-text:rgb(224 109 109); }
+[data-mode="light"] .usage-meter-item[data-tone="healthy"] { --usage-text:#166534; }
+[data-mode="light"] .usage-meter-item[data-tone="low"] { --usage-rgb:181 130 14; --usage-text:#854d0e; }
+[data-mode="light"] .usage-meter-item[data-tone="critical"] { --usage-rgb:198 60 60; --usage-text:#b91c1c; }
 .usage-meter-text { display:inline-flex; align-items:baseline; gap:6px; }
 .usage-meter-period { color:var(--text-3); }
 .usage-meter-countdown { color:var(--text-1); font-weight:600; }
-.usage-meter-percent { margin-left:auto; color:var(--usage-color); font-weight:600; }
-.usage-meter-bar { position:relative; display:block; height:3px; border-radius:999px; background:color-mix(in srgb, var(--usage-color) 22%, transparent); overflow:hidden; }
-.usage-meter-bar > span { position:absolute; inset:0 auto 0 0; border-radius:inherit; background:var(--usage-color); transition:width .3s ease; }
+.usage-meter-percent { margin-left:auto; color:var(--usage-text); font-weight:600; }
+.usage-meter-bar { position:relative; display:block; height:3px; border-radius:999px; background:rgb(var(--usage-rgb) / .2); overflow:hidden; }
+.usage-meter-bar > span { position:absolute; inset:0 auto 0 0; border-radius:inherit; background:linear-gradient(to right, rgb(var(--usage-rgb)), rgb(var(--usage-rgb) / .7)); transition:width 450ms cubic-bezier(0.22, 1, 0.36, 1); }
 .usage-meter-item--balance { flex-direction:row; align-items:baseline; gap:6px; }
 .usage-meter-item--balance strong { color:var(--text-1); font-weight:600; }
 /* Narrow footers keep the most important meter, then drop the meter entirely. */
