@@ -598,6 +598,8 @@ export const ru = {
   'claude.status.brewing': 'Подготовка',
   'claude.status.considering': 'Обдумывание',
   'claude.status.working': 'Выполнение',
+  'claude.status.background': 'Выполняется фоновая задача',
+  'claude.status.background_count': 'Выполняется фоновых задач: {count}',
   'claude.status.crafting': 'Создание',
   'claude.status.pondering': 'Анализ',
   'claude.status.compacting': 'Сжатие контекста',

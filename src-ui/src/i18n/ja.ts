@@ -600,6 +600,8 @@ export const ja = {
   'claude.status.brewing': '構想中',
   'claude.status.considering': '検討中',
   'claude.status.working': '作業中',
+  'claude.status.background': 'バックグラウンドタスク実行中',
+  'claude.status.background_count': '{count} 件のバックグラウンドタスクを実行中',
   'claude.status.crafting': '作成中',
   'claude.status.pondering': '熟考中',
   'claude.status.compacting': 'コンテキスト圧縮中',

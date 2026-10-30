@@ -601,6 +601,8 @@ Xóa tờ ghi chú này khi bạn sẵn sàng và bắt đầu tác vụ đầu 
   'claude.status.brewing': 'Đang ấp ủ',
   'claude.status.considering': 'Đang cân nhắc',
   'claude.status.working': 'Đang làm việc',
+  'claude.status.background': 'Tác vụ nền đang chạy',
+  'claude.status.background_count': '{count} tác vụ nền đang chạy',
   'claude.status.crafting': 'Đang xây dựng',
   'claude.status.pondering': 'Đang suy xét',
   'claude.status.compacting': 'Đang nén ngữ cảnh',

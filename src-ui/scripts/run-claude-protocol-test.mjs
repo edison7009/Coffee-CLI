@@ -127,4 +127,15 @@ test('side calls streamed after a finished turn neither show working nor add row
   const legacy = reduceClaudeEvent(emptyClaudeState(),stream({type:'message_start',message:{id:'legacy'}}));
   assert.equal(legacy.busy,true);
 });
+test('background tasks outlive the turn and clear when the CLI reports none', () => {
+  const f = fixture();
+  f.send({type:'system',subtype:'background_tasks_changed',tasks:[{task_id:'b1',task_type:'local_bash',description:'Build installer'},{task_id:'mem',task_type:'local_bash',description:'internal',ambient:true}]});
+  f.send({type:'result',subtype:'success'});
+  assert.equal(f.state.busy,false);
+  assert.equal(JSON.stringify(f.state.backgroundTasks),JSON.stringify([{id:'b1',type:'local_bash',description:'Build installer'}]),'ambient tasks stay hidden');
+  f.send({type:'system',subtype:'background_tasks_changed',tasks:[]});
+  assert.equal(f.state.backgroundTasks.length,0);
+  f.send({type:'system',subtype:'background_tasks_changed',tasks:[{task_id:'b2',task_type:'local_agent',description:'Review'}]});
+  assert.equal(reduceClaudeEvent(f.state,{type:'coffee_exit',code:0}).backgroundTasks.length,0,'an exited CLI has no running tasks');
+});
 console.log(`${passed} Claude protocol checks passed`);

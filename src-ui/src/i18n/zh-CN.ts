@@ -603,6 +603,8 @@ export const zhCN = {
   'claude.status.brewing': '酝酿中',
   'claude.status.considering': '斟酌中',
   'claude.status.working': '工作中',
+  'claude.status.background': '后台任务运行中',
+  'claude.status.background_count': '{count} 个后台任务运行中',
   'claude.status.crafting': '构思中',
   'claude.status.pondering': '推敲中',
   'claude.status.compacting': '压缩上下文中',

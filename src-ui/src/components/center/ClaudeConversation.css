@@ -91,6 +91,8 @@ body.gambit-docked .claude-scroll-bottom { bottom:calc(var(--gambit-dock-h,200px
 @keyframes claude-working-orbit { from { transform:translateY(0); } to { transform:translateY(-98.66666667%); } }
 .claude-working-word { min-width:110px; white-space:pre; color:var(--text-2); background:linear-gradient(120deg,var(--text-2) 37.5%,color-mix(in srgb,var(--text-1) 30%,white) 50%,var(--text-2) 62.5%) 83.333% 0 / 400% 100% no-repeat; background-clip:text; -webkit-text-fill-color:transparent; animation:claude-word-shine 3s linear infinite; }
 @keyframes claude-word-shine { 0%,15% { background-position:83.333% 0; animation-timing-function:cubic-bezier(.714,.121,.211,.888); } 85%,100% { background-position:16.667% 0; } }
+.claude-background-tasks .claude-working-word { min-width:0; }
+.claude-background-description { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text-3); font-size:12px; }
 .claude-elapsed { color:var(--text-3); font:12px var(--font); font-variant-numeric:tabular-nums; }
 .claude-turn-summary { margin:4px 0 0; color:var(--text-3); font-size:12px; }
 .claude-row:has(> .claude-turn-summary) { padding-bottom:12px; }

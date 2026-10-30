@@ -600,6 +600,8 @@ export const ko = {
   'claude.status.brewing': '구상 중',
   'claude.status.considering': '검토 중',
   'claude.status.working': '작업 중',
+  'claude.status.background': '백그라운드 작업 실행 중',
+  'claude.status.background_count': '백그라운드 작업 {count}개 실행 중',
   'claude.status.crafting': '작성 중',
   'claude.status.pondering': '숙고 중',
   'claude.status.compacting': '컨텍스트 압축 중',

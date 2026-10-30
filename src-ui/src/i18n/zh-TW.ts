@@ -601,6 +601,8 @@ export const zhTW = {
   'claude.status.brewing': '醞釀中',
   'claude.status.considering': '斟酌中',
   'claude.status.working': '工作中',
+  'claude.status.background': '背景任務執行中',
+  'claude.status.background_count': '{count} 個背景任務執行中',
   'claude.status.crafting': '構思中',
   'claude.status.pondering': '推敲中',
   'claude.status.compacting': '壓縮上下文中',

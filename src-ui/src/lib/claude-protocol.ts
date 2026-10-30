@@ -36,6 +36,7 @@ export interface ClaudeModel {
 }
 export interface ClaudeCommand { name: string; description: string; argumentHint?: string }
 export interface ClaudeRequest { id: string; request: Json }
+export interface ClaudeBackgroundTask { id: string; type: string; description: string }
 export interface ClaudeState {
   messages: ClaudeMessage[];
   ready: boolean;
@@ -43,6 +44,8 @@ export interface ClaudeState {
   pendingTurns: number;
   /** CLI-reported run state (session_state_changed); undefined for CLIs that do not emit it. */
   sessionState?: string;
+  /** Background shells and agents still running after (or alongside) a turn. */
+  backgroundTasks: ClaudeBackgroundTask[];
   status: string;
   nativeId: string;
   model: string;
@@ -72,7 +75,7 @@ export interface ClaudeState {
   orphanToolResults: Record<string, Partial<ClaudeMessage>>;
 }
 export function emptyClaudeState(): ClaudeState {
-  return { messages: [], ready: false, busy: false, pendingTurns: 0, status: 'starting', nativeId: '', model: '', models: [], commands: [], permissionMode: 'default', effort: '', ultracode: false, thinking: true, requests: [], usage: {}, modelUsage: {}, currentMessageId: '', contextTokens: 0, contextWindow: 0, historyCursor: 0, orphanToolResults: {} };
+  return { messages: [], ready: false, busy: false, pendingTurns: 0, backgroundTasks: [], status: 'starting', nativeId: '', model: '', models: [], commands: [], permissionMode: 'default', effort: '', ultracode: false, thinking: true, requests: [], usage: {}, modelUsage: {}, currentMessageId: '', contextTokens: 0, contextWindow: 0, historyCursor: 0, orphanToolResults: {} };
 }
 
 function blockMessage(block: Json, id: string, now: number, historical: boolean): ClaudeMessage {
@@ -183,6 +186,10 @@ export function reduceClaudeEvent(state: ClaudeState, frame: Json, now = Date.no
       if (value === 'requires_action') s.status = value;
       // Idle is authoritative once no sent prompt is still awaiting its result.
       else if (value === 'idle' && s.busy && !s.pendingTurns && !historical) finish();
+    } else if (frame.subtype === 'background_tasks_changed' && !historical) {
+      // The full current list; ambient tasks are internal and not shown, as in the official extension.
+      s.backgroundTasks = list(frame.tasks).map(object).filter(task => task.ambient !== true && text(task.task_id))
+        .map(task => ({ id: text(task.task_id), type: text(task.task_type), description: text(task.description) }));
     } else if (frame.subtype === 'commands_changed') s.commands = list(frame.commands).map(v => object(v) as unknown as ClaudeCommand);
   } else if (frame.type === 'tool_progress') {
     s.status = 'tool';
@@ -206,7 +213,7 @@ export function reduceClaudeEvent(state: ClaudeState, frame: Json, now = Date.no
       }
     }
   } else if (frame.type === 'coffee_exit') {
-    const busy = s.busy; finish(); s.ready = false; s.pendingTurns = 0; s.requests = [];
+    const busy = s.busy; finish(); s.ready = false; s.pendingTurns = 0; s.requests = []; s.backgroundTasks = [];
     s.interruptRequested = false;
     if (number(frame.code) !== 0 || busy) { s.error = text(frame.detail); s.errorKey = s.error ? undefined : 'claude.error.process_exited'; s.error ||= 'Claude process exited'; }
   }
