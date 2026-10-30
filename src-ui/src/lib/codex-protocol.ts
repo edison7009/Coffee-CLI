@@ -38,7 +38,7 @@ export function codexMessage(item: Json, turnId: string, partial: boolean, times
     ...(role === 'tool' ? { toolName: str(item.type), toolStatus: item.status === 'inProgress' ? 'running' as const : item.status === 'failed' || item.status === 'declined' ? 'failed' as const : 'done' as const } : {}) };
 }
 export function restoreCodexTurns(turns: unknown[]): CodexMessage[] {
-  return turns.flatMap(value => { const turn = obj(value); return arr(turn.items).map(value => { const item = obj(value); return codexMessage(item, str(turn.id), turn.status === 'inProgress' && (item.status === 'inProgress' || ['agentMessage', 'reasoning'].includes(str(item.type))), num(turn.startedAt) * 1000 || Date.now()); }); });
+  return turns.flatMap(value => { const turn = obj(value); return arr(turn.items).map(value => { const item = obj(value); return codexMessage(item, str(turn.id), turn.status === 'inProgress' && (item.status === 'inProgress' || ['agentMessage', 'reasoning'].includes(str(item.type))), num(item.startedAtMs) || num(turn.startedAt) * 1000 || Date.now()); }); });
 }
 export function reduceCodexEvent(state: CodexState, event: Json): CodexState {
   const method = str(event.method), p = obj(event.params), thread = obj(p.thread);
