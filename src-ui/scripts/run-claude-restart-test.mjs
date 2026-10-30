@@ -123,6 +123,9 @@ for (const options of [{ wedged: true }, { hung: true }]) {
       assert.equal(h.api.getClaudeSession('tab').busy, true, 'acknowledged interrupt without result keeps the turn open');
       assert.equal(h.api.getClaudeSession('tab').interruptRequested, true);
       await h.api.controlClaude('tab', { subtype: 'interrupt' });
+      assert.equal(h.calls.filter(c => c.command === 'claude_session_start').length, 1, 'a quick double press does not kill the process');
+      await new Promise(resolve => setTimeout(resolve, 1600));
+      await h.api.controlClaude('tab', { subtype: 'interrupt' });
     }
     for (let i = 0; i < 400 && !(h.calls.filter(c => c.command === 'claude_session_start').length === 2 && h.api.getClaudeSession('tab').ready); i++) await new Promise(resolve => setTimeout(resolve, 20));
     await first;

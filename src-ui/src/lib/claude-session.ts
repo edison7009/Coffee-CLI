@@ -17,6 +17,7 @@ interface Client {
   restarting?: boolean;
   connecting?: boolean;
   startupExit?: string;
+  interruptAt?: number;
 }
 const clients = new Map<string, Client>();
 let listening: Promise<unknown> | undefined;
@@ -150,8 +151,10 @@ export async function controlClaude(id: string, request: Json): Promise<Json> {
   if (request.subtype === 'set_permission_mode' && request.mode === 'bypassPermissions' && !c.state.bypassAvailable) return restartWithBypass(id, c);
   const interrupting = request.subtype === 'interrupt' && c.state.busy, generation = c.generation;
   if (interrupting) {
-    // A wedged turn can acknowledge interrupt yet never emit `result` (#170): a second press, or the grace period, replaces the process.
-    if (c.state.interruptRequested) { forceStop(id, c, generation); return {}; }
+    // A wedged turn can acknowledge interrupt yet never emit `result` (#170): a deliberate second press, or the grace period, replaces the process.
+    // A quick double press (Esc Esc) is not deliberate and must not kill a turn that would stop on its own.
+    if (c.state.interruptRequested) { if (Date.now() - (c.interruptAt ?? 0) >= FORCE_STOP_REPRESS_MS) forceStop(id, c, generation); return {}; }
+    c.interruptAt = Date.now();
     c.state = { ...c.state, interruptRequested: true }; publish(c, true);
     setTimeout(() => forceStop(id, c, generation), FORCE_STOP_GRACE_MS);
   }
@@ -183,7 +186,7 @@ export async function controlClaude(id: string, request: Json): Promise<Json> {
   }
 }
 
-const FORCE_STOP_GRACE_MS = 5000;
+const FORCE_STOP_GRACE_MS = 5000, FORCE_STOP_REPRESS_MS = 1500;
 
 /** Stop must always land: end the turn locally, kill the wedged process and resume its transcript in place. */
 function forceStop(id: string, c: Client, generation: string) {

@@ -166,7 +166,7 @@ export function CodexConversation({ sessionId, cwd, resumeToken, isActive, isVis
         {s.historyCursor && <button className="claude-expand" disabled={s.loadingHistory} onClick={loadEarlier}>{t(s.loadingHistory ? 'diff.loading' : 'claude.history_earlier')}</button>}
         <div style={{ height: virtual.topSpacer }} aria-hidden="true" />
         {rows.slice(virtual.start, virtual.end).map((row, i) => <Measured key={row.id} id={virtual.measurementKeys[virtual.start + i]} measure={virtual.measureRow}>
-          <article className={`claude-row claude-row--${row.item.type === 'turnStatus' ? str(row.item.status) : row.partial ? 'running' : row.role} codex-row`} data-message-id={row.id}>
+          <article className={`claude-row claude-row--${row.item.type === 'turnStatus' ? str(row.item.status) : row.partial && row.role !== 'user' ? 'running' : row.role} codex-row`} data-message-id={row.id}>
             {row.members ? <>
               <button type="button" className="codex-group-heading" aria-expanded={!!expanded[row.id]} onClick={() => toggle(row.id)}><span aria-hidden="true">{expanded[row.id] ? '⌄' : '›'}</span><span>{t('codex.activity', { count: row.members.length })}</span>{row.partial && <span className="codex-spinner" aria-hidden="true" />}<small>{title(row.members.at(-1)!)}</small></button>
               {expanded[row.id] && <div className="codex-activity-list">{row.members.map(tool)}</div>}
