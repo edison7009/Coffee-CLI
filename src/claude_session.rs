@@ -253,7 +253,7 @@ fn user_content(text: &str) -> Result<Value, String> {
 
 #[tauri::command]
 pub async fn claude_session_control(sessions: State<'_, ClaudeSessions>, id: String, generation: String, request: Value) -> Result<Value, String> {
-    if !matches!(request["subtype"].as_str(), Some("set_model" | "set_permission_mode" | "apply_flag_settings" | "interrupt" | "get_settings" | "set_max_thinking_tokens")) { return Err("不支持的 Claude 控制请求".into()); }
+    if !matches!(request["subtype"].as_str(), Some("set_model" | "set_permission_mode" | "apply_flag_settings" | "interrupt" | "get_settings" | "set_max_thinking_tokens" | "get_usage")) { return Err("不支持的 Claude 控制请求".into()); }
     let s = get(&sessions, &id, &generation)?;
     tauri::async_runtime::spawn_blocking(move || s.request(request)).await.map_err(|e| e.to_string())?
 }

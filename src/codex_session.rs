@@ -187,9 +187,11 @@ pub async fn codex_session_start(app: tauri::AppHandle, id: String, generation: 
 }
 #[tauri::command]
 pub async fn codex_session_request(sessions: State<'_, CodexSessions>, id: String, generation: String, method: String, params: Value) -> Result<Value, String> {
-    if !matches!(method.as_str(), "turn/start" | "turn/interrupt" | "thread/items/list" | "thread/turns/list" | "thread/compact/start" | "review/start" | "skills/list" | "mcpServerStatus/list") { return Err("Unsupported Codex request".into()); }
+    if !matches!(method.as_str(), "turn/start" | "turn/interrupt" | "thread/items/list" | "thread/turns/list" | "thread/compact/start" | "review/start" | "skills/list" | "mcpServerStatus/list" | "account/rateLimits/read") { return Err("Unsupported Codex request".into()); }
     let s = get(&sessions, &id, &generation)?;
-    if params["threadId"].as_str() != Some(s.native_id.lock().unwrap().as_str()) { return Err("Codex thread does not belong to this tab".into()); }
+    // Rate limits belong to the signed-in account, not to this tab's thread.
+    let params = if method == "account/rateLimits/read" { json!({}) } else { params };
+    if method != "account/rateLimits/read" && params["threadId"].as_str() != Some(s.native_id.lock().unwrap().as_str()) { return Err("Codex thread does not belong to this tab".into()); }
     tauri::async_runtime::spawn_blocking(move || s.request(&method, params)).await.map_err(|e| e.to_string())?
 }
 #[tauri::command]

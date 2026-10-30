@@ -5244,6 +5244,7 @@ pub fn start_ui(pending_launch: Option<crate::launch::LaunchRequest>) -> anyhow:
             crate::claude_session::claude_session_respond,
             crate::claude_session::claude_session_close,
             crate::codex_session::codex_session_start,
+            crate::usage_quota::usage_quota_query,
             crate::codex_session::codex_session_request,
             crate::codex_session::codex_session_respond,
             crate::codex_session::codex_session_close,

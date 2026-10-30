@@ -33,6 +33,7 @@ mod computer_control;
 mod orchestration;
 mod tools;
 mod usage_stats;
+mod usage_quota;
 mod git;
 mod git_project_status;
 mod session_git_context;

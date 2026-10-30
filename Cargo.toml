@@ -72,6 +72,12 @@ ureq = "2"
 notify-debouncer-full = "0.3"
 rusqlite = { version = "0.32", features = ["bundled"] }
 keyring = "3"
+# Usage/balance meters (ported from EchoBird usage_providers).
+async-trait = "0.1"
+url = "2"
+chrono = "0.4"
+# Oh My Pi keeps providers in YAML; serde_yaml is archived, this is the maintained fork.
+serde_yaml_ng = "0.10"
 
 [profile.release]
 opt-level = "z"
