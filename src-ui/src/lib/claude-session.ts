@@ -148,11 +148,16 @@ export async function controlClaude(id: string, request: Json): Promise<Json> {
   const c = client(id);
   if (!c.state.ready && (request.subtype !== 'interrupt' || !c.state.nativeId)) throw new Error('Claude 尚未就绪');
   if (request.subtype === 'set_permission_mode' && request.mode === 'bypassPermissions' && !c.state.bypassAvailable) return restartWithBypass(id, c);
-  const interrupting = request.subtype === 'interrupt' && c.state.busy;
-  if (interrupting) { c.state = { ...c.state, interruptRequested: true }; publish(c, true); }
+  const interrupting = request.subtype === 'interrupt' && c.state.busy, generation = c.generation;
+  if (interrupting) {
+    // A wedged turn can acknowledge interrupt yet never emit `result` (#170): a second press, or the grace period, replaces the process.
+    if (c.state.interruptRequested) { forceStop(id, c, generation); return {}; }
+    c.state = { ...c.state, interruptRequested: true }; publish(c, true);
+    setTimeout(() => forceStop(id, c, generation), FORCE_STOP_GRACE_MS);
+  }
   let errorKey: ClaudeState['errorKey'];
   try {
-    const result = await invoke<Json>('claude_session_control', { id, generation: c.generation, request });
+    const result = await invoke<Json>('claude_session_control', { id, generation, request });
     const patch: Partial<ClaudeState> = request.subtype === 'interrupt' ? {} : { error: c.state.ready ? undefined : c.state.error, errorKey: c.state.ready ? undefined : c.state.errorKey };
     if (request.subtype === 'set_model') patch.model = text(request.model);
     if (request.subtype === 'set_permission_mode') patch.permissionMode = text(request.mode);
@@ -172,7 +177,44 @@ export async function controlClaude(id: string, request: Json): Promise<Json> {
       if (typeof applied.ultracode === 'boolean') patch.ultracode = applied.ultracode;
     }
     c.state = { ...c.state, ...patch }; publish(c, true); return result;
-  } catch (error) { c.state = { ...c.state, ...(interrupting ? { interruptRequested: false } : {}), error: String(error), errorKey }; publish(c, true); throw error; }
+  } catch (error) {
+    if (interrupting && c.generation !== generation) return {}; // force stop already replaced the process
+    c.state = { ...c.state, ...(interrupting ? { interruptRequested: false } : {}), error: String(error), errorKey }; publish(c, true); throw error;
+  }
+}
+
+const FORCE_STOP_GRACE_MS = 5000;
+
+/** Stop must always land: end the turn locally, kill the wedged process and resume its transcript in place. */
+function forceStop(id: string, c: Client, generation: string) {
+  if (clients.get(id) !== c || c.generation !== generation || c.restarting || !c.state.busy || !c.state.interruptRequested) return;
+  c.restarting = true;
+  const previous = c.state;
+  const ended = reduceClaudeEvent(c.state, { type: 'result', subtype: 'error_during_execution', usage: c.state.usage as Json, modelUsage: c.state.modelUsage as Json });
+  c.state = { ...ended, busy: false, pendingTurns: 0, ready: false, status: 'starting' };
+  c.generation = crypto.randomUUID();
+  publish(c, true);
+  c.starting = (async () => {
+    try {
+      clearSessionControls(id, generation);
+      await invoke('claude_session_close', { id, generation });
+      await initializeClaude(id, c, c.cwd ?? null, previous.messages.length ? previous.nativeId : undefined, false);
+      await restoreControls(id, c, previous, previous.permissionMode);
+      c.state = { ...c.state, ready: true, status: 'idle', requests: [] };
+    } catch (error) { c.state = { ...c.state, ready: false, error: String(error), errorKey: 'claude.error.restart' }; }
+    finally { c.restarting = false; publish(c, true); }
+  })();
+}
+
+/** Re-applies the controls a replaced process would otherwise lose. */
+async function restoreControls(id: string, c: Client, previous: ClaudeState, mode: string): Promise<Json> {
+  const request = (request: Json) => invoke<Json>('claude_session_control', { id, generation: c.generation, request });
+  if (previous.model) await request({ subtype: 'set_model', model: previous.model });
+  await request({ subtype: 'apply_flag_settings', settings: { ...(previous.effort ? { effortLevel: previous.effort } : {}), ultracode: previous.ultracode, alwaysThinkingEnabled: previous.thinking } });
+  const result = await request({ subtype: 'set_permission_mode', mode });
+  await readSettings(id, c);
+  c.state = { ...c.state, permissionMode: mode };
+  return result;
 }
 
 function waitUntilIdle(c: Client): Promise<void> {
@@ -205,12 +247,8 @@ function restartWithBypass(id: string, c: Client): Promise<Json> {
       closed = true;
       // Empty sessions have no native transcript to resume yet.
       await initializeClaude(id, c, c.cwd ?? null, previous.messages.length ? previous.nativeId : undefined, false);
-      const request = (request: Json) => invoke<Json>('claude_session_control', { id, generation: c.generation, request });
-      if (previous.model) await request({ subtype: 'set_model', model: previous.model });
-      await request({ subtype: 'apply_flag_settings', settings: { ...(previous.effort ? { effortLevel: previous.effort } : {}), ultracode: previous.ultracode, alwaysThinkingEnabled: previous.thinking } });
-      const result = await request({ subtype: 'set_permission_mode', mode: 'bypassPermissions' });
-      await readSettings(id, c);
-      c.state = { ...c.state, ready: true, status: 'idle', permissionMode: 'bypassPermissions', bypassAvailable: true, requests: [] };
+      const result = await restoreControls(id, c, previous, 'bypassPermissions');
+      c.state = { ...c.state, ready: true, status: 'idle', bypassAvailable: true, requests: [] };
       publish(c, true);
       return result;
     } catch (error) {

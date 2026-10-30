@@ -105,7 +105,7 @@ function Working({ status, startedAt }: { status: string; startedAt?: number }) 
   const words = [t('claude.status.thinking'), t('claude.status.brewing'), t('claude.status.considering'), t('claude.status.working'), t('claude.status.crafting'), t('claude.status.pondering')];
   const age = now - (startedAt ?? now);
   const wordIndex = age < 2000 ? 0 : age < 5000 ? 1 : 2 + Math.floor((age - 5000) / 5000);
-  const word = status === 'compacting' ? t('claude.status.compacting') : status === 'tool' ? t('claude.status.working') : status === 'starting' ? t('claude.status.connecting') : words[wordIndex % words.length];
+  const word = status === 'stopping' ? t('codex.stopping') : status === 'compacting' ? t('claude.status.compacting') : status === 'tool' ? t('claude.status.working') : status === 'starting' ? t('claude.status.connecting') : words[wordIndex % words.length];
   return <div className="claude-working" role="status"><span className="claude-working-mark" aria-hidden="true"><img src={CLAUDE_WORKING_MARK} alt="" /></span><span className="claude-working-word">{word}…</span>{startedAt && <span className="claude-elapsed">{elapsed(age, t)}</span>}</div>;
 }
 
@@ -372,7 +372,7 @@ export function ClaudeConversation({ sessionId, cwd, resumeToken, isActive, isVi
         </MeasuredRow>)}
         <div style={{ height: virtual.bottomSpacer }} aria-hidden="true" />
         {s.requests.map(p => <Question key={p.id} id={sessionId} pending={p} />)}
-        {s.ready && s.busy && !s.requests.length && <Working status={s.status} startedAt={s.startedAt} />}
+        {s.ready && s.busy && !s.requests.length && <Working status={s.interruptRequested ? 'stopping' : s.status} startedAt={s.startedAt} />}
         {s.interrupted && !s.busy && !s.error && <div className="claude-interrupted" role="status">{t('claude.interrupted')}</div>}
         {directoryIssue && <div className="claude-session-error" role="alert">{directoryError}</div>}
         {s.error && (s.ready || s.errorKey === 'claude.error.settings_readback' || s.errorKey === 'claude.error.restart') && <div className="claude-session-error" role="alert">{s.errorKey ? t(s.errorKey, { detail: s.error }) : s.error}</div>}
