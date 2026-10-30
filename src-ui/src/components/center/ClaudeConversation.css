@@ -86,9 +86,9 @@ body.gambit-docked .claude-scroll-bottom { bottom:calc(var(--gambit-dock-h,200px
 .claude-diff .is-gap { background:repeating-linear-gradient(135deg,transparent 0px,transparent 4px,var(--border) 5px,transparent 6px); }
 .claude-expand { display:block; margin:0 0 0 auto; padding:3px 8px; color:var(--text-2); background:var(--bg-hover); border:0; font-size:12px; cursor:pointer; }
 .claude-working { display:flex; gap:9px; align-items:center; min-height:32px; color:var(--accent); margin:0 0 20px 22px; }
-.claude-working-mark { display:block; position:relative; overflow:hidden; width:18px; height:18px; flex-shrink:0; align-self:center; }
-.claude-working-mark img { display:block; width:100%; height:auto; transform:translateY(-86.36363636%); animation:claude-working-orbit 3.666663s steps(110,jump-none) infinite; }
-@keyframes claude-working-orbit { from { transform:translateY(0); } to { transform:translateY(-99.09090909%); } }
+.claude-working-mark { display:block; position:relative; overflow:hidden; width:20px; height:20px; flex-shrink:0; align-self:center; }
+.claude-working-mark img { display:block; width:100%; height:auto; transform:translateY(-98.66666667%); animation:claude-working-orbit 2.5s steps(75,jump-none) infinite; }
+@keyframes claude-working-orbit { from { transform:translateY(0); } to { transform:translateY(-98.66666667%); } }
 .claude-working-word { min-width:110px; white-space:pre; color:var(--text-2); background:linear-gradient(120deg,var(--text-2) 37.5%,color-mix(in srgb,var(--text-1) 30%,white) 50%,var(--text-2) 62.5%) 83.333% 0 / 400% 100% no-repeat; background-clip:text; -webkit-text-fill-color:transparent; animation:claude-word-shine 3s linear infinite; }
 @keyframes claude-word-shine { 0%,15% { background-position:83.333% 0; animation-timing-function:cubic-bezier(.714,.121,.211,.888); } 85%,100% { background-position:16.667% 0; } }
 .claude-elapsed { color:var(--text-3); font:12px var(--font); font-variant-numeric:tabular-nums; }
