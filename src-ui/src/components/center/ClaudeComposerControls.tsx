@@ -9,6 +9,11 @@ import { claudeEffortLabel } from '../../lib/claude-i18n';
 import './ClaudeComposerControls.css';
 
 type Menu = 'commands' | 'model' | 'effort' | 'permissions' | 'context' | null;
+/** Paperclip drawn as SVG so it centres geometrically; the fullwidth ＋ glyph sat on the font baseline. */
+export function AttachIcon() {
+  return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" /></svg>;
+}
+
 export function ClaudeComposerControls({ sessionId, draft, onDraftChange, keyHandler, children }: {
   sessionId: string; draft: string; onDraftChange: (value: string) => void;
   keyHandler: MutableRefObject<((event: KeyboardEvent<HTMLTextAreaElement>) => boolean) | undefined>;
@@ -113,7 +118,7 @@ export function ClaudeComposerControls({ sessionId, draft, onDraftChange, keyHan
     { value: 'bypassPermissions', label: t('claude.permission.bypass'), description: t('claude.permission.bypass_description') },
   ];
   return <div className="claude-composer-controls" ref={root}>
-    <button className="claude-control-icon" aria-label={t('claude.attach')} onClick={() => void attach()}>＋</button>
+    <button className="claude-control-icon" aria-label={t('claude.attach')} onClick={() => void attach()}><AttachIcon /></button>
     <button ref={el => { anchors.current.commands = el; }} className="claude-control-icon" aria-label={t('claude.commands')} aria-expanded={shown === 'commands'} onClick={() => shown === 'commands' ? close() : open('commands')}>/</button>
     <button ref={el => { anchors.current.permissions = el; }} className="claude-permission-control" disabled={!s.ready} onClick={() => shown === 'permissions' ? close() : open('permissions')} aria-expanded={shown === 'permissions'} aria-label={t('claude.permissions')}>{modes.find(m => m.value === s.permissionMode)?.label ?? s.permissionMode}</button>
     {children}

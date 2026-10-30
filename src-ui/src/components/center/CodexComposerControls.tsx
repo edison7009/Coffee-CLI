@@ -6,6 +6,7 @@ import { clipboardWrite } from '../../lib/clipboard';
 import { useAppState } from '../../store/app-state';
 import { claudeEffortLabel } from '../../lib/claude-i18n';
 import { ClaudeEffortControl } from './ClaudeEffortControl';
+import { AttachIcon } from './ClaudeComposerControls';
 import { ContextUsage } from './ContextUsage';
 import { useT } from '../../i18n/useT';
 import './ClaudeComposerControls.css';
@@ -123,7 +124,7 @@ export function CodexComposerControls({ sessionId, draft, onDraftChange, keyHand
   const attach = async (text = draft) => { const { open } = await import('@tauri-apps/plugin-dialog'); const paths = await open({ directory: false, multiple: true }); if (paths) onDraftChange(`${text}${text ? '\n' : ''}${(Array.isArray(paths) ? paths : [paths]).map(p => `"${p}"`).join(' ')}`); };
   const permission = modes.find(mode => mode.type === str(s.sandbox.type))?.label ?? t('codex.permissions');
   return <div className="claude-composer-controls codex-composer-controls" ref={root}>
-    <button type="button" className="claude-control-icon" aria-label={t('claude.attach')} onClick={() => { void attach(); }}>＋</button>
+    <button type="button" className="claude-control-icon" aria-label={t('claude.attach')} onClick={() => { void attach(); }}><AttachIcon /></button>
     <button type="button" ref={commandsAnchor} className="claude-control-icon" aria-label={t('codex.command')} aria-expanded={shown === 'commands'} onClick={e => show('commands', e.currentTarget)}>/</button>
     <button type="button" className="claude-permission-control" disabled={!s.ready || s.busy} aria-label={t('codex.permissions')} aria-expanded={menu === 'permissions'} onClick={e => show('permissions', e.currentTarget)}>{permission}</button>
     {children}
