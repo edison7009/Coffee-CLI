@@ -101,4 +101,30 @@ test('only a locally requested stop downgrades its EDE diagnostic',()=>{
   const exit=reduceClaudeEvent(state,{type:'coffee_exit',code:1,detail:'Process crashed'},5000);
   assert.equal(exit.error,'Process crashed'); assert.equal(exit.ready,false); assert.equal(exit.interruptRequested,false);
 });
+test('side calls streamed after a finished turn neither show working nor add rows', () => {
+  const f = fixture();
+  f.send({type:'system',subtype:'session_state_changed',state:'running'});
+  f.send(stream({type:'message_start',message:{id:'turn'}}));
+  f.send({type:'result',subtype:'success'});
+  f.send({type:'system',subtype:'session_state_changed',state:'idle'});
+  const rows = f.state.messages.length;
+  f.send(stream({type:'message_start',message:{id:'idle-compaction'}}), 9000);
+  f.send(stream({type:'content_block_start',index:0,content_block:{type:'text',text:''}}));
+  f.send(stream({type:'content_block_delta',index:0,delta:{type:'text_delta',text:'Summary of the conversation'}}));
+  assert.equal(f.state.busy,false,'an idle session stays idle without a result frame');
+  assert.equal(f.state.messages.length,rows,'side-call text is not a transcript reply');
+  // A turn the CLI starts itself announces running first and still shows progress.
+  f.send({type:'system',subtype:'session_state_changed',state:'running'});
+  f.send(stream({type:'message_start',message:{id:'task-notification'}}));
+  assert.equal(f.state.busy,true);
+  // Idle ends a self-started run that never sent a result.
+  f.send({type:'system',subtype:'session_state_changed',state:'idle'});
+  assert.equal(f.state.busy,false);
+  // While a sent prompt awaits its result, an early idle does not end the turn.
+  const pending = reduceClaudeEvent({...f.state,busy:true,pendingTurns:1},{type:'system',subtype:'session_state_changed',state:'idle'});
+  assert.equal(pending.busy,true);
+  // CLIs without session state events keep the previous behavior.
+  const legacy = reduceClaudeEvent(emptyClaudeState(),stream({type:'message_start',message:{id:'legacy'}}));
+  assert.equal(legacy.busy,true);
+});
 console.log(`${passed} Claude protocol checks passed`);

@@ -41,6 +41,8 @@ export interface ClaudeState {
   ready: boolean;
   busy: boolean;
   pendingTurns: number;
+  /** CLI-reported run state (session_state_changed); undefined for CLIs that do not emit it. */
+  sessionState?: string;
   status: string;
   nativeId: string;
   model: string;
@@ -101,6 +103,9 @@ export function reduceClaudeEvent(state: ClaudeState, frame: Json, now = Date.no
     s.messages = s.messages.map(m => m.partial || m.toolStatus === 'running'
       ? { ...m, partial: false, endedAt: m.endedAt ?? now, ...(m.toolStatus === 'running' ? { toolStatus: 'failed' as const, output: m.output || 'Interrupted', interrupted } : {}) } : m);
   };
+  // An idle session can still stream side calls (idle compaction, suggestions) with no result frame;
+  // they are not a turn and must neither start the working indicator nor add transcript rows.
+  if (frame.type === 'stream_event' && !s.busy && s.sessionState === 'idle') return state;
   if (frame.type === 'stream_event') {
     const e = object(frame.event), block = object(e.content_block), delta = object(e.delta);
     const id = `${s.currentMessageId}:${number(e.index)}`;
@@ -174,7 +179,10 @@ export function reduceClaudeEvent(state: ClaudeState, frame: Json, now = Date.no
     else if (frame.subtype === 'status') s.status = text(frame.status) || 'working';
     else if (frame.subtype === 'session_state_changed') {
       const value = text(frame.state);
+      s.sessionState = value || undefined;
       if (value === 'requires_action') s.status = value;
+      // Idle is authoritative once no sent prompt is still awaiting its result.
+      else if (value === 'idle' && s.busy && !s.pendingTurns && !historical) finish();
     } else if (frame.subtype === 'commands_changed') s.commands = list(frame.commands).map(v => object(v) as unknown as ClaudeCommand);
   } else if (frame.type === 'tool_progress') {
     s.status = 'tool';
