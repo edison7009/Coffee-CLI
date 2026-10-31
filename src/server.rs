@@ -5272,6 +5272,7 @@ pub fn start_ui(pending_launch: Option<crate::launch::LaunchRequest>) -> anyhow:
             crate::codex_session::codex_session_close,
             crate::dsh_session::dsh_session_start,
             crate::dsh_session::dsh_session_request,
+            crate::dsh_session::dsh_session_set_preset,
             crate::dsh_session::dsh_session_respond,
             crate::dsh_session::dsh_session_close,
             crate::dsh_session::dsh_session_history,

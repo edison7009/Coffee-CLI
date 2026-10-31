@@ -49,7 +49,7 @@ export function DshComposerControls({ sessionId, draft, onDraftChange, keyHandle
     { name: 'new', description: t('codex.command.new'), target: 'new' as const },
     { name: 'status', description: t('claude.context_window'), target: 'context' as const },
   ].filter(command => (s.commands || !['compact', 'plan', 'goal'].includes(command.target)) && (!slash || command.name.includes(draft.slice(1).toLowerCase())));
-  const disabled = (target: string) => ['context', 'new', 'goal'].includes(target) ? false : locked;
+  const disabled = (target: string) => ['context', 'new', 'goal', 'permissions'].includes(target) ? false : locked;
   const close = () => { setMenu(null); setDismissed(draft); };
   const chooseCommand = (index: number) => {
     const command = commands[index]; if (!command || disabled(command.target)) return;
@@ -111,7 +111,7 @@ export function DshComposerControls({ sessionId, draft, onDraftChange, keyHandle
   return <div className="claude-composer-controls codex-composer-controls" ref={root}>
     <button type="button" className="claude-control-icon" aria-label={t('claude.attach')} onClick={() => { void attach(); }}><AttachIcon /></button>
     <button type="button" ref={commandsAnchor} className="claude-control-icon" aria-label={t('claude.commands')} aria-expanded={shown === 'commands'} onClick={e => show('commands', e.currentTarget)}>/</button>
-    <button type="button" className="claude-permission-control" disabled={locked} aria-label={t('dsh.command.permission')} aria-expanded={menu === 'permissions'} onClick={e => show('permissions', e.currentTarget)}>{preset ? t(preset.label) : s.preset || t('dsh.command.permission')}</button>
+    <button type="button" className="claude-permission-control" disabled={!s.ready || !!s.restarting} aria-label={t('dsh.command.permission')} aria-expanded={menu === 'permissions'} onClick={e => show('permissions', e.currentTarget)}>{preset ? t(preset.label) : s.preset || t('dsh.command.permission')}</button>
     {children}
     <div className="claude-model-controls">
       {quota}
@@ -121,7 +121,7 @@ export function DshComposerControls({ sessionId, draft, onDraftChange, keyHandle
     </div>
     {shown && createPortal(<div className="claude-control-menu" ref={popup} role="dialog" style={position} onMouseDown={e => e.stopPropagation()}>
       {shown === 'commands' ? commands.length ? commands.map((c, i) => <button type="button" key={c.name} disabled={disabled(c.target)} className={i === selected ? 'is-selected' : ''} onMouseEnter={() => setSelected(i)} onClick={() => chooseCommand(i)}><strong>/{c.name}</strong><small>{c.description}</small></button>) : <div className="claude-menu-empty">{t('claude.commands_empty')}</div>
-      : shown === 'permissions' ? PRESETS.map(p => <button type="button" key={p.value} disabled={locked} className={s.preset === p.value ? 'is-selected' : ''} onClick={() => { close(); if (s.preset !== p.value) void setDshPreset(sessionId, p.value); }}><strong>{t(p.label)}{s.preset === p.value ? ' ✓' : ''}</strong><small>{t(p.description)}</small></button>)
+      : shown === 'permissions' ? PRESETS.map(p => <button type="button" key={p.value} disabled={!s.ready || !!s.restarting} className={s.preset === p.value ? 'is-selected' : ''} onClick={() => { close(); if (s.preset !== p.value) void setDshPreset(sessionId, p.value); }}><strong>{t(p.label)}{s.preset === p.value ? ' ✓' : ''}</strong><small>{t(p.description)}</small></button>)
       : shown === 'model' ? s.models.map(m => { const current = m.provider === s.route.provider && m.model === s.route.model; return <button type="button" key={`${m.provider}/${m.model}`} disabled={locked} className={current ? 'is-selected' : ''} onClick={() => { close(); if (!current) void setDshRoute(sessionId, { provider: m.provider, model: m.model, effort: m.efforts.includes(effort) ? effort : null }); }}><strong>{m.name}{current ? ' ✓' : ''}</strong><small>{m.provider}</small></button>; })
       : shown === 'effort' && model ? <ClaudeEffortControl key={`${sessionId}:${model.provider}/${model.model}`} levels={model.efforts} value={effort} disabled={locked} onCommit={async level => { await setDshRoute(sessionId, { ...s.route, effort: level }); }} onClose={() => { close(); anchor.current?.focus(); }} />
       : shown === 'context' ? <ContextUsage used={s.contextTokens} capacity={s.contextWindow} total={s.contextTokens} /> : null}

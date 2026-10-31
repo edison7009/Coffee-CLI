@@ -104,12 +104,13 @@ export function setDshRoute(id: string, route: DshRoute): Promise<void> {
   return done;
 }
 
-/** Without a command channel the preset is applied by restarting silently into the same conversation. */
-export function setDshPreset(id: string, preset: string): Promise<unknown> {
-  const c = clients.get(id);
-  if (!c || c.state.commands) return sendDshMessage(id, `/permission ${preset}`);
-  c.preset = preset; c.state = { ...c.state, preset };
-  return setDshRoute(id, c.state.route);
+/** Applied live by Coffee's plugin, so a running turn carries on; the Session's own events confirm it. */
+export async function setDshPreset(id: string, preset: string) {
+  const c = clients.get(id); if (!c) return;
+  const previous = c.state.preset;
+  c.preset = preset; c.state = { ...c.state, preset }; publish(c, true);
+  try { await invoke('dsh_session_set_preset', { id, generation: c.generation, preset }); }
+  catch { c.preset = previous || undefined; c.state = { ...c.state, preset: previous }; publish(c, true); }
 }
 
 export async function sendDshMessage(id: string, prompt: string): Promise<boolean> {
