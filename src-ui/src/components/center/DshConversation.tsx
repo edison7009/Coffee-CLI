@@ -41,7 +41,7 @@ function Running({ since, stopping }: { since?: number; stopping: boolean }) {
   return <div className="dsh-running">
     <span className="dsh-running-status" role="status">{stopping ? t('codex.stopping') : t('dsh.deep_diving')}</span>
     <span className="dsh-running-whale" aria-hidden="true" style={{ maskImage: `url(${DSH_RUNNING_WHALE})`, WebkitMaskImage: `url(${DSH_RUNNING_WHALE})` }} />
-    <span className="dsh-shimmer" aria-hidden="true"><span>{label}</span><span className="dsh-shimmer-sweep"><span>{label}</span></span></span>
+    <span className="dsh-shimmer" aria-hidden="true">{label}</span>
   </div>;
 }
 function RequestCard({ sessionId, request }: { sessionId: string; request: DshRequest }) {
