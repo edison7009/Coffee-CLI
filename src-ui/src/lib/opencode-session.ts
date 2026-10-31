@@ -138,7 +138,8 @@ export async function replyOpenCodeForm(id: string, formID: string, answer: Json
 export async function configureOpenCode(id: string, patch: { model?: OpenCodeModelRef; agent?: string }): Promise<void> {
   const c = client(id); if (!c.state.ready) return;
   const previous = { model: c.state.model, agent: c.state.agent };
-  c.state = { ...c.state, ...(patch.model ? { model: patch.model } : {}), ...(patch.agent ? { agent: patch.agent } : {}) }; publish(c, true);
+  // A new choice replaces any error left by the last one.
+  c.state = { ...c.state, error: undefined, ...(patch.model ? { model: patch.model } : {}), ...(patch.agent ? { agent: patch.agent } : {}) }; publish(c, true);
   try {
     if (patch.model) await request(c, id, 'model', { id: patch.model.id, providerID: patch.model.providerID, ...(patch.model.variant ? { variant: patch.model.variant } : {}) });
     if (patch.agent) await request(c, id, 'agent', { agent: patch.agent });

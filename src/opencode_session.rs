@@ -310,7 +310,12 @@ fn route(native: &str, op: &str, params: &Value) -> Result<(&'static str, String
         }
         "form.reply" => ("POST", format!("{base}/form/{}/reply", id("formID", "frm_")?), Some(json!({"answer":params["answer"]}))),
         "form.cancel" => ("DELETE", format!("{base}/form/{}", id("formID", "frm_")?), None),
-        "model" => ("POST", format!("{base}/model"), Some(json!({"model":{"id":params["id"],"providerID":params["providerID"],"variant":params["variant"]}}))),
+        "model" => {
+            // The server takes a variant or no field at all: null is rejected, and leaving it out picks the model's default.
+            let mut model = json!({"id":params["id"],"providerID":params["providerID"]});
+            if let Some(variant) = params["variant"].as_str().filter(|variant| !variant.is_empty()) { model["variant"] = json!(variant); }
+            ("POST", format!("{base}/model"), Some(json!({"model":model})))
+        }
         "agent" => ("POST", format!("{base}/agent"), Some(json!({"agent":params["agent"]}))),
         "compact" => ("POST", format!("{base}/compact"), Some(json!({}))),
         "command" => {
@@ -365,6 +370,10 @@ mod tests {
         assert!(route("ses_a", "permission.reply", &json!({"requestID":"per_x","decision":"approve"})).is_err());
         assert_eq!(route("ses_a", "form.reply", &json!({"formID":"frm_1","answer":{"q0":"Blue"}})).unwrap().1, "/api/session/ses_a/form/frm_1/reply");
         assert!(route("ses_a", "session.remove", &json!({})).is_err());
+        let body = |params: Value| route("ses_a", "model", &params).unwrap().2.unwrap();
+        assert!(body(json!({"id":"m","providerID":"p"}))["model"].get("variant").is_none(), "no variant means no field, never null");
+        assert!(body(json!({"id":"m","providerID":"p","variant":null}))["model"].get("variant").is_none());
+        assert_eq!(body(json!({"id":"m","providerID":"p","variant":"high"}))["model"]["variant"], "high");
     }
     #[test]
     fn models_and_agents_drop_provider_secrets() {
@@ -418,6 +427,14 @@ mod tests {
         let event = std::iter::from_fn(|| rx.recv_timeout(Duration::from_secs(10)).ok()).find(|e| owned(e, &id)).unwrap();
         assert_eq!(event["type"], "session.created");
         assert!(session.http("GET", "/api/model", None).unwrap()["data"].is_array());
+        // Every effort the composer can pick has to pass the server's own validation.
+        let models = session.http("GET", "/api/model", None).unwrap();
+        let model = models["data"].as_array().unwrap().iter().find(|m| m["variants"].as_array().is_some_and(|v| !v.is_empty())).expect("a model with variants");
+        let variants = model["variants"].as_array().unwrap().iter().map(|v| v["id"].clone()).collect::<Vec<_>>();
+        for variant in variants.into_iter().chain([Value::Null]) {
+            let (method, path, body) = route(&id, "model", &json!({"id":model["id"],"providerID":model["providerID"],"variant":variant})).unwrap();
+            session.http(method, &path, body.as_ref()).unwrap_or_else(|error| panic!("{variant}: {error}"));
+        }
         let (method, path, _) = route(&id, "messages", &json!({"cursor":"eyJ4IjoxfQ"})).unwrap();
         assert_eq!(method, "GET"); assert!(path.contains(&id));
         session.http("DELETE", &format!("/api/session/{id}"), None).unwrap();

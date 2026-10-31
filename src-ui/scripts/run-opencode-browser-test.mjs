@@ -56,6 +56,7 @@ await build({
           agents:[{id:'build',name:'Build',description:'The default agent.',mode:'primary'},{id:'plan',name:'Plan',description:'Plan without editing.',mode:'primary'},{id:'general',name:'General',mode:'subagent'}],
           commands:[{name:'init',description:'guided AGENTS.md setup'},{name:'review',description:'review changes'}],messages:[],cursor:null,permissions:[],forms:[],running:false};
         if(name==='opencode_session_request'&&args.op==='prompt'){setTimeout(()=>window.replay(window.stopAt),0);return {data:{id:recorded.events[0].data.inboxID,type:'user',payload:{text:args.params.text},time:{created:Date.now()}}}}
+        if(name==='opencode_session_request'&&args.op==='model'&&window.failNextModel){const message=window.failNextModel;window.failNextModel=undefined;throw new Error(message)}
         if(name==='opencode_session_request'&&args.op==='interrupt'){window.emit({type:'session.execution.interrupted',id:'evt_stop',created:Date.now(),data:{reason:'user'}});return {data:{interrupted:true}}}
         return null;
       }
@@ -93,6 +94,18 @@ try {
   assert.equal(await page.getByRole('button', { name: 'Reasoning effort' }).count(), 0, 'models without variants hide the effort control');
   await page.getByRole('button', { name: 'Select OpenCode model', exact: true }).click();
   await page.getByRole('button', { name: /DeepSeek Flash/ }).click();
+  // A failed choice reports once; the next choice clears it.
+  await page.evaluate(() => { window.failNextModel = 'Expected string'; });
+  await page.locator('.claude-effort-trigger').click();
+  await page.locator('.claude-effort-control input[type="range"]').focus();
+  await page.keyboard.press('End');
+  await page.locator('.claude-session-error').waitFor();
+  await page.keyboard.press('Home');
+  await page.keyboard.press('End');
+  await page.waitForFunction(() => !document.querySelector('.claude-session-error'));
+  await page.keyboard.press('Home');
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => !document.querySelector('.claude-effort-control'));
   // The effort slider is the shared one, with Default before the model's own levels, and marks the top level.
   const effort = page.locator('.claude-effort-trigger');
   assert.equal(await effort.innerText(), 'Default');
