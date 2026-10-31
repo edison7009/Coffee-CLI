@@ -1,5 +1,5 @@
 /* Running status after DeepSeek Harness's own (ChatView .running, TextShimmer): colors from its design platform. */
-.dsh-running { position:relative; display:flex; align-items:center; gap:9px; min-height:28px; margin:0 0 20px 22px; font-size:14px; line-height:22px; font-variant-numeric:tabular-nums;
+.dsh-running { position:relative; display:flex; align-items:center; gap:9px; min-height:28px; margin:0 0 20px 22px; font-size:15px; line-height:24px; font-variant-numeric:tabular-nums;
   --dsh-running:color-mix(in srgb, rgb(86,134,254) 55%, rgb(173,178,184)); --dsh-running-shimmer:color-mix(in srgb, rgb(147,197,253) 65%, rgb(122,170,255)); color:var(--dsh-running); }
 [data-mode="light"] .dsh-running { --dsh-running:color-mix(in srgb, rgb(65,118,230) 70%, rgb(23,37,84)); --dsh-running-shimmer:color-mix(in srgb, rgb(65,118,230) 30%, rgb(23,37,84)); }
 .dsh-running-whale { width:16px; height:16px; flex:none; background:currentColor; mask-position:center; mask-size:100% 100%; mask-repeat:no-repeat; -webkit-mask-position:center; -webkit-mask-size:100% 100%; -webkit-mask-repeat:no-repeat; }

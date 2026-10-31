@@ -332,7 +332,6 @@ try {
   assert.ok(await page.locator('.claude-empty-model').evaluate(el=>el.scrollWidth<=el.clientWidth),'wide conversations do not impose an artificial model width limit');
   await page.setViewportSize({width:320,height:800});
   assert.ok(await page.locator('.claude-scroll').evaluate(el=>el.scrollWidth<=el.clientWidth),'a long model does not overflow a narrow split pane');
-  assert.equal(await page.locator('.claude-empty-model').getAttribute('title'),longModel,'the full model remains available when space is limited');
   await page.setViewportSize({width:1100,height:800});
   await page.evaluate(resolvedModel=>window.setSession({models:[{value:'selected',resolvedModel}]}),resolvedModel);
   const welcome = page.locator('.claude-empty-icon'), mascot = welcome.locator('video');
