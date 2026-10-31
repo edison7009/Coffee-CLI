@@ -57,6 +57,8 @@ import { useDataAttr } from '../../lib/use-data-attr';
 import { TermContextMenu, type TermContextMenuState } from './TermContextMenu';
 import '@xterm/xterm/css/xterm.css';
 import './TierTerminal.css';
+// The back-to-latest button shares the conversation views' style.
+import './ClaudeConversation.css';
 
 // Installer scripts are fetched at runtime from CF (hot-updatable, no release needed).
 // Falls back to GitHub raw if CF is unreachable.
@@ -1302,8 +1304,11 @@ function TierTerminalImpl({
     unlisteners.push(() => clearSessionControls(sessionId, controlsGeneration));
     // Same back-to-latest button as the conversation views. Output arriving while scrolled up keeps the
     // viewport in place, so new lines are rechecked too; an unchanged value does not re-render.
+    // Checked once per parsed write rather than per line, so streaming output stays off React's path;
+    // resize covers reflow, and a fresh terminal starts at the bottom.
     const syncScrolledUp = () => { const buffer = term.buffer.active; setScrolledUp(buffer.type === 'normal' && buffer.viewportY < buffer.baseY); };
-    for (const listener of [term.onScroll(syncScrolledUp), term.onLineFeed(syncScrolledUp), term.buffer.onBufferChange(syncScrolledUp)]) unlisteners.push(() => listener.dispose());
+    setScrolledUp(false);
+    for (const listener of [term.onScroll(syncScrolledUp), term.onWriteParsed(syncScrolledUp), term.onResize(syncScrolledUp), term.buffer.onBufferChange(syncScrolledUp)]) unlisteners.push(() => listener.dispose());
     unlisteners.push(registerTerminalControl(sessionId, term, statusConfirmed => {
       markNotifySoundPromptSubmitted(sessionId, tool);
       if (!statusConfirmed) markAgentSubmission();

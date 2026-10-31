@@ -69,7 +69,8 @@ export function reduceCodexEvent(state: CodexState, event: Json): CodexState {
   }
   const update = (id: string, change: (message: CodexMessage) => CodexMessage) => { s.messages = s.messages.map(message => message.id === id ? change(message) : message); };
   if (method === 'thread/started') { s.nativeId = str(thread.id) || s.nativeId; s.title = str(thread.name).trim() || s.title; }
-  else if (method === 'thread/name/updated') { if (str(p.threadId) === s.nativeId) s.title = str(p.threadName).trim() || s.title; }
+  // A rename can land before a resume sets the thread ID; a cleared name leaves the tab its folder.
+  else if (method === 'thread/name/updated') { if (!s.nativeId || str(p.threadId) === s.nativeId) s.title = str(p.threadName).trim(); }
   else if (method === 'turn/started') { s.turnId = str(obj(p.turn).id); s.busy = true; s.error = undefined; }
   else if (method === 'item/started' || method === 'item/completed') {
     const item = obj(p.item), id = `${str(p.turnId)}:${str(item.id)}`;

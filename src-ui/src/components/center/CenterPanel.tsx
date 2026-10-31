@@ -1218,7 +1218,7 @@ export function CenterPanel() {
           // Muse inherits its Windows launcher's title; keep the workspace name.
           const task = orchestration.tasks.find(task => task.sessionId === session.id);
           const worker = task?.detached ? undefined : task;
-          const title = task?.title || (session.tool === 'muse' ? baseTitle : session.toolTitle?.trim() || baseTitle);
+          const title = task?.title || (session.tool === 'muse' ? baseTitle : session.pinnedTitle || session.toolTitle?.trim() || baseTitle);
           const showAgentStatus = supportsAgentStatus(session.tool)
             && (['claude', 'codex', 'kimicode', 'omp', 'dsh'].includes(session.tool ?? '') || session.agentStatus !== undefined);
           return (

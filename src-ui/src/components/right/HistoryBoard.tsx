@@ -406,7 +406,7 @@ export function HistoryBoard() {
       type: 'ADD_TERMINAL',
       split,
       // The tab opens under the conversation's history title; a tool that names it later replaces it.
-      session: { id: targetId, tool: saved.tool as ToolType, folderPath: saved.cwd, resumeToken: saved.session_token, toolTitle: (renamed[`${saved.tool ?? ''}:${saved.id}`] ?? saved.name)?.trim() || undefined, claudeMode: saved.tool === 'claude' ? mode : undefined, codexMode: saved.tool === 'codex' ? mode : undefined, opencodeMode: saved.tool === 'opencode' ? mode : undefined }
+      session: { id: targetId, tool: saved.tool as ToolType, folderPath: saved.cwd, resumeToken: saved.session_token, toolTitle: saved.name?.trim() || undefined, pinnedTitle: renamed[`${saved.tool ?? ''}:${saved.id}`]?.trim() || undefined, claudeMode: saved.tool === 'claude' ? mode : undefined, codexMode: saved.tool === 'codex' ? mode : undefined, opencodeMode: saved.tool === 'opencode' ? mode : undefined }
     });
   };
 

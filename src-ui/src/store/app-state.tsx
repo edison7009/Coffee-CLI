@@ -134,6 +134,8 @@ export interface TerminalSession {
   /// conversation summary). When set, the tab shows this instead of the cwd
   /// basename — matching how other terminals display the tool's own title.
   toolTitle?: string;
+  /// The user's own name for a conversation reopened from history; outranks the tool's title.
+  pinnedTitle?: string;
   restartKey?: number;
   /// When set, this tab was opened from a history "Continue this session"
   /// action. TierTerminal's mount effect passes it to tierTerminalStart,
