@@ -1,79 +1,74 @@
 <details open>
 <summary><b>🇨🇳 简体中文</b></summary>
 
-### Coffee CLI v3.8.2 · 支持 OpenCode 桌面对话，回到旧对话更省额度
+### Coffee CLI v3.8.3 · 预测下一句，标签页和历史都显示对话标题
 
-- **OpenCode 桌面对话：** 新增桌面对话标签，支持切换模型、Build/Plan 和思考强度，可以审批权限、回答提问，也能选择启动命令。首页带 OpenCode 经典 logo 动画。用量统计、电脑控制和浏览器控制都已支持。
-- **回到旧对话更省额度：** Claude Code 对话闲置超过 70 分钟、上下文又很大时，发消息前会先询问：可以开一个新对话接着聊，避免重新加载整段上下文、一次消耗大量额度。Codex 闲置超过 12 小时也会询问。
-- **文件路径可点击：** 对话和终端里的文件路径，悬停时显示下划线，点击在资源管理器中显示，右键可复制路径。
-- **用量显示更完整：** 终端模式也显示账号套餐用量或 API 余额；切换标签后用量不再丢失；能读取 OpenCode 2 的密钥。
-- **历史记录更清爽：** 每个项目先显示 5 条对话，点击“显示更多”展开。
-- **Claude Code 斜杠命令多语言：** 命令说明已翻译成 11 种语言。
-- **界面更紧凑：** 右侧面板默认关闭，需要时再打开；默认窗口宽度从 1600 改为 1280。
-- **问题修复：** Claude Code 回复中途追加消息后，不再一直显示“工作中”；OpenCode 子代理请求权限时能弹出审批卡片；修复 OpenCode 选择默认强度时报错，以及子任务按钮颜色不对。
+- **Claude Code 预测下一句：** 在 Claude Code 桌面对话里，回复结束后，空输入框会以灰字显示 Claude 猜你想说的下一句，按 Tab 填入，可以修改后再发送。新对话通常要聊到第二轮才会出现。每条预测会多用一次模型请求；不需要的话，在 Claude Code 的 `settings.json` 里设置 `"promptSuggestionEnabled": false` 即可关闭。
+- **新对话自动起标题：** Claude Code 桌面对话发出第一句话后，会自动生成简短的标题，显示在标签页和历史记录里。
+- **桌面对话标签页显示标题：** Claude Code、Codex、OpenCode 和 DeepSeek Harness 的标签页显示对话标题，不再只显示目录名；从历史继续对话时也一样，你手动改过的名字优先。
+- **回到底部按钮：** 终端模式也有了回到底部按钮。按钮移到底部居中，改为深色底加主题色边框，形状跟随主题。
+- **历史记录更干净：** Claude Code 的历史标题过滤掉了系统自动插入的内容；只有系统内容、没有用户输入的记录不再显示；只运行过斜杠命令的对话会保留，并以命令名作为标题。
+- **OpenCode 不再留下空对话：** 打开标签页不发消息就关掉，不会再多一条“OpenCode Session”。发第一句话时才创建对话，之前选好的模型和 Agent 会一起生效。
+- **问题修复：** 四个桌面对话的“工作中”动画对齐到左侧时间线竖线下方。
 
 </details>
 
 <details>
 <summary><b>🇬🇧 English</b></summary>
 
-### Coffee CLI v3.8.2 · OpenCode Desktop Conversations, Cheaper Returns to Old Chats
+### Coffee CLI v3.8.3 · Next-Prompt Predictions, Conversation Titles on Tabs and in History
 
-- **OpenCode desktop conversations:** A new desktop conversation tab lets you switch models, Build/Plan and effort, approve permissions, answer questions, and pick a launch command. The welcome screen shows OpenCode's classic logo animation. Usage statistics, computer control and browser control all support it.
-- **Cheaper returns to old chats:** When a Claude Code conversation has been idle for over 70 minutes and its context is large, you are asked before sending. You can continue in a new conversation instead of reloading the whole context and spending a large share of your limit at once. Codex asks after 12 hours idle.
-- **Clickable file paths:** File paths in conversations and the terminal are underlined on hover, open in File Explorer on click, and can be copied from the right-click menu.
-- **More complete usage display:** Terminal tabs also show plan usage or API balance, usage no longer disappears when you switch tabs, and OpenCode 2 keys are read.
-- **Tidier history:** Each project shows 5 conversations first; click "Show more" for the rest.
-- **Claude Code slash commands in your language:** Command descriptions are translated into 11 languages.
-- **More compact layout:** The right panel starts closed and opens when you need it; the default window width is now 1280 instead of 1600.
-- **Fixes:** Claude Code no longer stays "working" after you add a message mid-reply; OpenCode sub-agent permission requests now show an approval card; fixed an error when choosing OpenCode's default effort, and the subtask button color.
+- **Claude Code next-prompt prediction:** In Claude Code desktop conversations, the empty composer shows Claude's guess at your next prompt in gray after a reply. Press Tab to fill it in, then edit or send it. New conversations usually show it from the second turn on. Each prediction uses one extra model request; to turn it off, set `"promptSuggestionEnabled": false` in Claude Code's `settings.json`.
+- **Automatic titles for new conversations:** After the first prompt in a Claude Code desktop conversation, a short title is generated and shown on the tab and in history.
+- **Desktop tabs show conversation titles:** Claude Code, Codex, OpenCode and DeepSeek Harness tabs show the conversation title rather than only the folder name, including when you continue from history. A name you gave a conversation takes priority.
+- **Back-to-latest button:** Terminal tabs now have one too. It moved to the bottom center and now has a dark fill with an accent border, and its shape follows your theme.
+- **Cleaner history:** Claude Code history titles skip text the system inserted, records with no user input are hidden, and conversations that only ran a slash command are kept and named after the command.
+- **No more empty OpenCode conversations:** Opening a tab and closing it without sending no longer adds an "OpenCode Session". The conversation is created by your first prompt, along with the model and agent you picked.
+- **Fixes:** The "working" animation in all four desktop conversations now sits directly under the timeline line.
 
 </details>
 
 <details>
 <summary><b>🇹🇼 繁體中文</b></summary>
 
-### Coffee CLI v3.8.2 · 支援 OpenCode 桌面對話，回到舊對話更省額度
+### Coffee CLI v3.8.3 · 預測下一句，分頁與歷史都顯示對話標題
 
-- **OpenCode 桌面對話：** 新增桌面對話分頁，支援切換模型、Build/Plan 與思考強度，可以審批權限、回答提問，也能選擇啟動指令。首頁帶 OpenCode 經典 logo 動畫。用量統計、電腦控制與瀏覽器控制都已支援。
-- **回到舊對話更省額度：** Claude Code 對話閒置超過 70 分鐘、上下文又很大時，送出訊息前會先詢問：可以開一個新對話接著聊，避免重新載入整段上下文、一次消耗大量額度。Codex 閒置超過 12 小時也會詢問。
-- **檔案路徑可點擊：** 對話與終端機裡的檔案路徑，懸停時顯示底線，點擊在檔案總管中顯示，右鍵可複製路徑。
-- **用量顯示更完整：** 終端機模式也顯示帳號方案用量或 API 餘額；切換分頁後用量不再遺失；能讀取 OpenCode 2 的金鑰。
-- **歷史紀錄更清爽：** 每個專案先顯示 5 筆對話，點擊「顯示更多」展開。
-- **Claude Code 斜線指令多語言：** 指令說明已翻譯成 11 種語言。
-- **介面更精簡：** 右側面板預設關閉，需要時再打開；預設視窗寬度從 1600 改為 1280。
-- **問題修復：** Claude Code 回覆中途追加訊息後，不再一直顯示「工作中」；OpenCode 子代理請求權限時能彈出審批卡片；修復 OpenCode 選擇預設強度時報錯，以及子任務按鈕顏色不對。
+- **Claude Code 預測下一句：** 在 Claude Code 桌面對話裡，回覆結束後，空白輸入框會以灰字顯示 Claude 猜你想說的下一句，按 Tab 填入，可以修改後再送出。新對話通常要聊到第二輪才會出現。每則預測會多用一次模型請求；不需要的話，在 Claude Code 的 `settings.json` 裡設定 `"promptSuggestionEnabled": false` 即可關閉。
+- **新對話自動命名：** Claude Code 桌面對話送出第一句話後，會自動產生簡短的標題，顯示在分頁和歷史紀錄裡。
+- **桌面對話分頁顯示標題：** Claude Code、Codex、OpenCode 和 DeepSeek Harness 的分頁顯示對話標題，不再只顯示目錄名稱；從歷史繼續對話時也一樣，你手動改過的名稱優先。
+- **回到底部按鈕：** 終端機模式也有了回到底部按鈕。按鈕移到底部置中，改為深色底加主題色邊框，形狀跟隨主題。
+- **歷史紀錄更乾淨：** Claude Code 的歷史標題過濾掉了系統自動插入的內容；只有系統內容、沒有使用者輸入的紀錄不再顯示；只執行過斜線指令的對話會保留，並以指令名稱作為標題。
+- **OpenCode 不再留下空對話：** 開啟分頁不送訊息就關閉，不會再多一筆「OpenCode Session」。送出第一句話時才建立對話，之前選好的模型和 Agent 會一起生效。
+- **問題修復：** 四個桌面對話的「工作中」動畫對齊到左側時間軸豎線下方。
 
 </details>
 
 <details>
 <summary><b>🇯🇵 日本語</b></summary>
 
-### Coffee CLI v3.8.2 · OpenCode のデスクトップ会話に対応、古い会話への復帰で利用枠を節約
+### Coffee CLI v3.8.3 · 次の入力を予測、タブと履歴に会話タイトルを表示
 
-- **OpenCode のデスクトップ会話：** 新しい会話タブで、モデル、Build/Plan、推論レベルの切り替え、権限の承認、質問への回答、起動コマンドの選択ができます。ホーム画面には OpenCode 定番のロゴアニメーションを表示します。利用統計、コンピューター操作、ブラウザー操作にも対応しました。
-- **古い会話への復帰で利用枠を節約：** Claude Code の会話が 70 分以上放置され、コンテキストが大きい場合は、送信前に確認します。新しい会話で続ければ、コンテキスト全体の再読み込みで利用枠を一度に大きく消費せずに済みます。Codex は 12 時間以上の放置で確認します。
-- **ファイルパスをクリック可能に：** 会話とターミナル内のファイルパスは、ホバーで下線が付き、クリックでエクスプローラーに表示し、右クリックでコピーできます。
-- **利用量表示を強化：** ターミナルタブでもプランの利用量や API 残高を表示し、タブを切り替えても表示が消えなくなりました。OpenCode 2 のキーも読み取ります。
-- **履歴をすっきり：** 各プロジェクトはまず 5 件の会話を表示し、「さらに表示」で展開します。
-- **Claude Code スラッシュコマンドの多言語化：** コマンドの説明を 11 言語に翻訳しました。
-- **よりコンパクトな画面：** 右パネルは最初は閉じており、必要なときに開けます。既定のウィンドウ幅は 1600 から 1280 になりました。
-- **修正：** Claude Code が応答中にメッセージを追加すると「作業中」のままになる問題、OpenCode のサブエージェントが権限を求めても承認カードが出ない問題、OpenCode で既定の推論レベルを選ぶとエラーになる問題、サブタスクボタンの色を修正しました。
+- **Claude Code の次の入力を予測：** Claude Code のデスクトップ会話では、応答のあと、空の入力欄に Claude が予測した次の入力をグレーで表示します。Tab で入力欄に入れ、編集してから送信できます。新しい会話では通常 2 回目のやり取りから表示されます。予測ごとにモデルへのリクエストが 1 回増えます。不要な場合は Claude Code の `settings.json` で `"promptSuggestionEnabled": false` を設定するとオフにできます。
+- **新しい会話に自動でタイトル：** Claude Code のデスクトップ会話で最初のメッセージを送ると、短いタイトルを自動生成し、タブと履歴に表示します。
+- **デスクトップ会話のタブにタイトルを表示：** Claude Code、Codex、OpenCode、DeepSeek Harness のタブには、フォルダー名だけでなく会話タイトルを表示します。履歴から再開した場合も同じで、自分で付けた名前が優先されます。
+- **最新へ戻るボタン：** ターミナルタブにも追加しました。ボタンは下部中央に移動し、暗い背景とアクセントカラーの枠線に変わり、形はテーマに合わせて変わります。
+- **履歴をすっきり：** Claude Code の履歴タイトルからシステムが挿入した内容を除外しました。ユーザー入力のない記録は表示せず、スラッシュコマンドだけを実行した会話はコマンド名をタイトルとして残します。
+- **OpenCode の空の会話が残らなくなりました：** タブを開いて何も送らずに閉じても、「OpenCode Session」は増えません。会話は最初のメッセージで作成され、事前に選んだモデルとエージェントも反映されます。
+- **修正：** 4 つのデスクトップ会話で、「作業中」のアニメーションが左側のタイムラインの線の真下に揃うようにしました。
 
 </details>
 
 <details>
 <summary><b>🇰🇷 한국어</b></summary>
 
-### Coffee CLI v3.8.2 · OpenCode 데스크톱 대화 지원, 이전 대화로 돌아갈 때 사용량 절약
+### Coffee CLI v3.8.3 · 다음 입력 예측, 탭과 기록에 대화 제목 표시
 
-- **OpenCode 데스크톱 대화:** 새 대화 탭에서 모델, Build/Plan, 사고 수준을 바꾸고, 권한을 승인하고, 질문에 답하고, 실행 명령을 고를 수 있습니다. 첫 화면에는 OpenCode의 클래식 로고 애니메이션이 표시됩니다. 사용 통계, 컴퓨터 제어, 브라우저 제어도 지원합니다.
-- **이전 대화로 돌아갈 때 사용량 절약:** Claude Code 대화가 70분 넘게 쉬었고 컨텍스트가 크면 보내기 전에 먼저 묻습니다. 새 대화로 이어 가면 전체 컨텍스트를 다시 불러오며 사용량을 한꺼번에 크게 쓰지 않습니다. Codex는 12시간 넘게 쉬면 묻습니다.
-- **파일 경로 클릭:** 대화와 터미널의 파일 경로에 마우스를 올리면 밑줄이 생기고, 클릭하면 파일 탐색기에서 보여 주며, 오른쪽 클릭으로 경로를 복사할 수 있습니다.
-- **더 완전한 사용량 표시:** 터미널 탭에도 요금제 사용량이나 API 잔액을 표시하고, 탭을 바꿔도 사용량이 사라지지 않으며, OpenCode 2 키도 읽습니다.
-- **깔끔한 기록:** 프로젝트마다 대화 5개를 먼저 보여 주고, "더 보기"로 펼칩니다.
-- **Claude Code 슬래시 명령 다국어:** 명령 설명을 11개 언어로 번역했습니다.
-- **더 간결한 화면:** 오른쪽 패널은 처음에 닫혀 있고 필요할 때 열 수 있습니다. 기본 창 너비는 1600에서 1280으로 바뀌었습니다.
-- **수정:** Claude Code 응답 중 메시지를 추가하면 계속 "작업 중"으로 남던 문제, OpenCode 하위 에이전트가 권한을 요청해도 승인 카드가 뜨지 않던 문제, OpenCode에서 기본 사고 수준을 고르면 오류가 나던 문제, 하위 작업 버튼 색상을 수정했습니다.
+- **Claude Code 다음 입력 예측:** Claude Code 데스크톱 대화에서 응답이 끝나면 빈 입력창에 Claude가 예상한 다음 입력이 회색으로 표시됩니다. Tab을 누르면 입력창에 채워지고, 수정한 뒤 보낼 수 있습니다. 새 대화에서는 보통 두 번째 턴부터 나타납니다. 예측마다 모델 요청이 한 번 더 사용되며, 끄려면 Claude Code의 `settings.json`에 `"promptSuggestionEnabled": false`를 설정하세요.
+- **새 대화 자동 제목:** Claude Code 데스크톱 대화에서 첫 메시지를 보내면 짧은 제목을 자동으로 만들어 탭과 기록에 표시합니다.
+- **데스크톱 대화 탭에 제목 표시:** Claude Code, Codex, OpenCode, DeepSeek Harness 탭에 폴더 이름만이 아니라 대화 제목을 표시합니다. 기록에서 이어 갈 때도 같으며, 직접 지정한 이름이 우선합니다.
+- **맨 아래로 버튼:** 터미널 탭에도 추가했습니다. 버튼은 아래쪽 가운데로 옮겼고, 어두운 배경과 강조색 테두리로 바꿨으며, 모양은 테마를 따릅니다.
+- **깔끔해진 기록:** Claude Code 기록 제목에서 시스템이 넣은 내용을 걸러 냅니다. 사용자 입력이 없는 기록은 숨기고, 슬래시 명령만 실행한 대화는 명령 이름을 제목으로 남깁니다.
+- **OpenCode 빈 대화 제거:** 탭을 열고 아무것도 보내지 않고 닫아도 "OpenCode Session"이 늘어나지 않습니다. 대화는 첫 메시지를 보낼 때 만들어지며, 미리 고른 모델과 에이전트도 함께 적용됩니다.
+- **수정:** 네 가지 데스크톱 대화의 "작업 중" 애니메이션을 왼쪽 타임라인 선 바로 아래에 맞췄습니다.
 
 </details>
