@@ -93,6 +93,24 @@ try {
   assert.equal(await page.getByRole('button', { name: 'Reasoning effort' }).count(), 0, 'models without variants hide the effort control');
   await page.getByRole('button', { name: 'Select OpenCode model', exact: true }).click();
   await page.getByRole('button', { name: /DeepSeek Flash/ }).click();
+  // The effort slider is the shared one, with Default before the model's own levels, and marks the top level.
+  const effort = page.locator('.claude-effort-trigger');
+  assert.equal(await effort.innerText(), 'Default');
+  await effort.click();
+  const slider = page.locator('.claude-effort-control input[type="range"]');
+  assert.equal(await slider.getAttribute('max'), '3', 'Default plus low, high and max');
+  await slider.focus();
+  await page.keyboard.press('End');
+  await page.waitForFunction(() => window.calls.some(c => c.op === 'model' && c.params.variant === 'max'));
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => document.querySelector('.claude-effort-trigger')?.classList.contains('is-ultracode'));
+  await page.waitForFunction(() => !document.querySelector('.claude-effort-control'));
+  await effort.click();
+  await slider.focus();
+  await page.keyboard.press('Home');
+  await page.waitForFunction(() => window.calls.at(-1).op === 'model' && !('variant' in window.calls.at(-1).params));
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => !document.querySelector('.claude-effort-control'));
   await page.getByRole('button', { name: 'Agent', exact: true }).click();
   assert.equal(await page.locator('.codex-control-menu .codex-permission-option').count(), 2, 'sub-agents are not offered as the session agent');
   await page.locator('.codex-control-menu .codex-permission-option', { hasText: 'Plan' }).click();

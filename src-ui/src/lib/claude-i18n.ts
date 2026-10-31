@@ -4,7 +4,7 @@ export type ClaudeTranslate = (key: I18nKey, vars?: Record<string, string | numb
 
 const effortKeys: Record<string, I18nKey> = {
   low: 'claude.effort.low', medium: 'claude.effort.medium', high: 'claude.effort.high',
-  xhigh: 'claude.effort.xhigh', max: 'claude.effort.max',
+  xhigh: 'claude.effort.xhigh', max: 'claude.effort.max', default: 'opencode.variant_default',
 };
 export function claudeEffortLabel(level: string, t: ClaudeTranslate): string {
   if (level === 'ultra') return 'Ultra';

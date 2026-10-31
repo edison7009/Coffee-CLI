@@ -5,6 +5,7 @@ import { openCodeRows } from '../../lib/opencode-protocol';
 import { clipboardWrite } from '../../lib/clipboard';
 import { useAppState } from '../../store/app-state';
 import { claudeEffortLabel } from '../../lib/claude-i18n';
+import { ClaudeEffortControl } from './ClaudeEffortControl';
 import { AttachIcon } from './ClaudeComposerControls';
 import { ContextUsage } from './ContextUsage';
 import { useT } from '../../i18n/useT';
@@ -33,7 +34,7 @@ export function OpenCodeComposerControls({ sessionId, draft, onDraftChange, keyH
   const percent = model?.context ? Math.min(100, s.contextTokens / model.context * 100) : 0;
   const slash = /^\/[\w:-]*$/.test(draft) && dismissed !== draft;
   const shown = menu ?? (slash ? 'commands' : null);
-  const variantLabel = (variant?: string) => variant ? claudeEffortLabel(variant, t) : t('opencode.variant_default');
+  const variantLabel = (variant?: string) => claudeEffortLabel(variant ?? 'default', t);
   const commands: Command[] = [
     { name: 'model', description: t('claude.command.model'), target: 'model' as const },
     ...(agents.length > 1 ? [{ name: 'agent', description: t('opencode.command.agent'), target: 'agent' as const }] : []),
@@ -84,7 +85,7 @@ export function OpenCodeComposerControls({ sessionId, draft, onDraftChange, keyH
   });
   useLayoutEffect(() => {
     if (!shown) return;
-    const update = () => { const r = (shown === 'commands' ? commandsAnchor.current : anchor.current)?.getBoundingClientRect(); if (!r) return; const width = Math.min(['agent', 'commands'].includes(shown) ? 420 : shown === 'context' ? 280 : 300, innerWidth - 16); const left = ['agent', 'commands'].includes(shown) ? r.left : r.right - width; setPosition({ position: 'fixed', left: Math.max(8, Math.min(left, innerWidth - width - 8)), bottom: innerHeight - r.top + 6, width, maxHeight: Math.max(50, r.top - 16) }); };
+    const update = () => { const r = (shown === 'commands' ? commandsAnchor.current : anchor.current)?.getBoundingClientRect(); if (!r) return; const width = Math.min(['agent', 'commands'].includes(shown) ? 420 : shown === 'variant' ? 320 : shown === 'context' ? 280 : 300, innerWidth - 16); const left = ['agent', 'commands'].includes(shown) ? r.left : r.right - width; setPosition({ position: 'fixed', left: Math.max(8, Math.min(left, innerWidth - width - 8)), bottom: innerHeight - r.top + 6, width, maxHeight: Math.max(50, r.top - 16) }); };
     const observer = new ResizeObserver(update);
     if (root.current) observer.observe(root.current);
     const gambit = root.current?.closest('.gambit'); if (gambit) observer.observe(gambit);
@@ -95,6 +96,7 @@ export function OpenCodeComposerControls({ sessionId, draft, onDraftChange, keyH
     if (!shown) return;
     const outside = (e: Event) => { if (!root.current?.contains(e.target as Node) && !popup.current?.contains(e.target as Node)) { setMenu(null); setDismissed(draft); } };
     const key = (e: globalThis.KeyboardEvent) => {
+      if ((e.target as HTMLElement)?.matches('input[type="range"]')) return;
       if (shown === 'commands' && (e.target as HTMLElement)?.matches('textarea')) return;
       if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); setMenu(null); setDismissed(draft); (shown === 'commands' ? commandsAnchor.current : anchor.current)?.focus(); }
       if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) {
@@ -116,13 +118,13 @@ export function OpenCodeComposerControls({ sessionId, draft, onDraftChange, keyH
     <div className="claude-model-controls">
       {quota}
       <button type="button" className="claude-model-control" disabled={!s.ready} aria-label={t('opencode.model')} aria-expanded={menu === 'model'} onClick={e => show('model', e.currentTarget)}>{model?.name || s.model?.id || 'OpenCode'}</button>
-      {!!model?.variants.length && <button type="button" className="claude-effort-trigger" disabled={!s.ready} aria-label={t('claude.effort.title')} aria-expanded={menu === 'variant'} onClick={e => show('variant', e.currentTarget)}>{variantLabel(s.model?.variant)}</button>}
+      {!!model?.variants.length && <button type="button" className={`claude-effort-trigger${s.model?.variant && s.model.variant === model.variants.at(-1) ? ' is-ultracode' : ''}`} disabled={!s.ready} aria-label={t('claude.effort.title')} aria-expanded={menu === 'variant'} onClick={e => show('variant', e.currentTarget)}>{variantLabel(s.model?.variant)}</button>}
       <button type="button" className="claude-context-control" data-severity={percent >= 90 ? 'critical' : percent >= 75 ? 'warning' : 'normal'} aria-label={`${t('claude.context_used')}: ${Math.round(percent)}%`} aria-haspopup="dialog" aria-expanded={menu === 'context'} onClick={e => show('context', e.currentTarget)}><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle className="claude-context-track" cx="8" cy="8" r="6" /><circle className="claude-context-progress" cx="8" cy="8" r="6" pathLength="100" strokeDasharray="100" strokeDashoffset={100 - percent} /></svg></button>
     </div>
     {shown && createPortal(<div ref={popup} className="claude-control-menu codex-control-menu" role="dialog" aria-label={t(shown === 'commands' ? 'codex.command' : shown === 'model' ? 'opencode.model' : shown === 'variant' ? 'claude.effort.title' : shown === 'context' ? 'claude.context_window' : 'opencode.agent')} style={position}>
       {shown === 'commands' ? commands.length ? commands.map((command, index) => <button type="button" key={command.name} className={index === selected ? 'is-selected' : ''} disabled={disabled(command.target)} onMouseEnter={() => setSelected(index)} onClick={() => chooseCommand(index)}><strong>/{command.name}</strong><small>{command.description}</small></button>) : <div className="claude-menu-empty">{t('claude.commands_empty')}</div>
         : shown === 'model' ? s.models.map(m => { const current = m.id === s.model?.id && m.providerID === s.model?.providerID; return <button type="button" key={`${m.providerID}/${m.id}`} className={current ? 'is-selected' : ''} onClick={() => { void configureOpenCode(sessionId, { model: { id: m.id, providerID: m.providerID, ...(s.model?.variant && m.variants.includes(s.model.variant) ? { variant: s.model.variant } : {}) } }); close(); }}><strong>{m.name}</strong><small>{m.providerID}</small>{current && <span aria-hidden="true">✓</span>}</button>; })
-        : shown === 'variant' && model ? [undefined, ...model.variants].map(variant => { const current = (s.model?.variant ?? undefined) === variant; return <button type="button" key={variant ?? 'default'} className={current ? 'is-selected' : ''} onClick={() => { if (s.model) void configureOpenCode(sessionId, { model: { id: s.model.id, providerID: s.model.providerID, ...(variant ? { variant } : {}) } }); close(); }}><strong>{variantLabel(variant)}</strong>{current && <span aria-hidden="true">✓</span>}</button>; })
+        : shown === 'variant' && model ? <ClaudeEffortControl key={`${sessionId}:${model.providerID}/${model.id}`} levels={['default', ...model.variants]} value={s.model?.variant ?? 'default'} disabled={!s.ready} onCommit={async level => { if (s.model) await configureOpenCode(sessionId, { model: { id: s.model.id, providerID: s.model.providerID, ...(level !== 'default' ? { variant: level } : {}) } }); }} onClose={() => { close(); anchor.current?.focus(); }} />
         : shown === 'context' ? <ContextUsage used={s.contextTokens} capacity={model?.context ?? 0} total={s.totalTokens} />
         : <>
           {agents.map(a => <button type="button" key={a.id} className={`codex-permission-option${a.id === agent?.id ? ' is-selected' : ''}`} onClick={() => { void configureOpenCode(sessionId, { agent: a.id }); setMenu(null); }}><strong>{a.name}{a.id === agent?.id ? ' ✓' : ''}</strong><small>{a.description}</small></button>)}
