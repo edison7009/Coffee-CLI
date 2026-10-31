@@ -286,9 +286,12 @@ try {
   await scroller.hover();await page.mouse.wheel(0,-400);await page.waitForTimeout(300);
   const reading=await metrics();
   const returnLatest=page.locator('.host:visible .claude-scroll-bottom');
-  assert.equal(await returnLatest.evaluate(el=>el.classList.contains('gambit-send')),true);
+  assert.equal(await returnLatest.evaluate(el=>el.classList.contains('gambit-send')),false,'return button is a dark chip, not the filled send button');
   assert.equal(await returnLatest.locator('svg path').count(),1,'return button uses the shared SVG arrow');
-  const returnSize=await returnLatest.boundingBox(),sendSize=await page.locator('.gambit-footer > .gambit-send').boundingBox();assert.equal(returnSize.width,sendSize.width);assert.equal(returnSize.height,sendSize.height);
+  const radius=locator=>locator.evaluate(el=>getComputedStyle(el).borderRadius);
+  assert.equal(await radius(returnLatest),await radius(page.locator('.gambit-footer > .gambit-send')),'return button takes the theme shape of the send button');
+  const returnSize=await returnLatest.boundingBox(),hostSize=await page.locator('.host:visible .claude-conversation').boundingBox();assert.equal(returnSize.width,32);assert.equal(returnSize.height,32);
+  assert.ok(Math.abs(returnSize.x+returnSize.width/2-(hostSize.x+hostSize.width/2))<2,'return button is centered in the conversation');
   await page.evaluate(()=>{window.emit('b','turn/started',{turn:{id:'live'}});window.emit('b','item/agentMessage/delta',{turnId:'live',itemId:'answer',delta:'New answer. '.repeat(90)})});
   await page.waitForTimeout(200);
   assert.ok(Math.abs((await metrics()).top-reading.top)<2,'streaming preserves upward reading position');
