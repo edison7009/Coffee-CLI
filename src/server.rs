@@ -1319,6 +1319,28 @@ pub(crate) fn is_system_injected(text: &str) -> bool {
     SYSTEM_INJECTION_TAGS.iter().any(|tag| t.starts_with(tag))
 }
 
+/// The title a Claude user text block contributes, by the rule Claude Code's
+/// own session list uses: anything opening with a lowercase XML-style tag is
+/// harness wrapping (IDE context, reminders, hook output, …) rather than a
+/// typed prompt, as is the "[Request interrupted by user]" marker. That one
+/// rule covers wrappers no list has seen yet. A slash command is remembered as
+/// a fallback; a `!` shell line reads as `! <command>`.
+fn claude_prompt_title(text: &str, command_fallback: &mut String) -> Option<String> {
+    use std::sync::LazyLock;
+    static COMMAND: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"<command-name>(.*?)</command-name>").unwrap());
+    static BASH: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"<bash-input>([\s\S]*?)</bash-input>").unwrap());
+    static WRAPPER: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"^(?:<[a-z][\w-]*[\s>/]|\[Request interrupted by user[^\]]*\])").unwrap());
+    let text = text.replace(['\r', '\n'], " ");
+    let text = text.trim();
+    if text.is_empty() { return None; }
+    if let Some(command) = COMMAND.captures(text) {
+        if command_fallback.is_empty() { *command_fallback = command[1].trim().to_string(); }
+        return None;
+    }
+    if let Some(shell) = BASH.captures(text) { return Some(format!("! {}", shell[1].trim())); }
+    (!WRAPPER.is_match(text) && !is_system_injected(text)).then(|| text.to_string())
+}
+
 /// Resolve a session's real project root from its recorded cwd.
 ///
 /// A session run inside an ephemeral worktree (`<project>/.claude/worktrees/<x>`,
@@ -1459,6 +1481,9 @@ fn parse_agent_jsonl(
     // injection + the assistant's generated summary), not a conversation the
     // user had. Surfacing it lists a phantom "Claude Session" card. Drop it.
     let mut real_user_messages = 0u32;
+    // A slash command (`<command-name>/x</command-name>`) names the session
+    // only when no typed prompt follows it.
+    let mut command_fallback = String::new();
 
     for line in reader.lines().map_while(Result::ok) {
         if let Ok(value) = serde_json::from_str::<serde_json::Value>(&line) {
@@ -1533,34 +1558,22 @@ fn parse_agent_jsonl(
                             real_user_messages += 1;
                         }
                     }
-                    if role == "user" && title.is_empty() {
-                        if let Some(content_str) = msg_obj.get("content").and_then(|v| v.as_str()) {
-                            // Skip whole-message IDE/system injections so the
-                            // next real user line becomes the title.
-                            if !is_system_injected(content_str) {
-                                let content_safe = content_str.replace('\n', " ");
-                                let mut chars = content_safe.chars();
-                                let t: String = chars.by_ref().take(40).collect();
-                                title = if chars.next().is_some() { format!("{}...", t) } else { t };
-                            }
-                        } else if let Some(content_arr) = msg_obj.get("content").and_then(|v| v.as_array()) {
-                            // Extract text from object array
-                            for block in content_arr {
-                                if let Some(t) = block.get("type").and_then(|v| v.as_str()) {
-                                    if t == "text" || t == "input_text" {
-                                        if let Some(text) = block.get("text").and_then(|v| v.as_str()) {
-                                            if is_system_injected(text) {
-                                                continue; // skip IDE / system-injected prompts
-                                            }
-                                            let safe_text = text.replace('\n', " ");
-                                            let mut chars = safe_text.chars();
-                                            let chunk: String = chars.by_ref().take(40).collect();
-                                            title = if chars.next().is_some() { format!("{}...", chunk) } else { chunk };
-                                            break;
-                                        }
-                                    }
-                                }
-                            }
+                    // Rows the CLI itself marks as not typed by the user never name the session.
+                    let flagged = |key: &str| value.get(key).and_then(|v| v.as_bool()) == Some(true);
+                    if role == "user" && title.is_empty() && !flagged("isMeta") && !flagged("isCompactSummary") {
+                        let texts: Vec<&str> = match msg_obj.get("content") {
+                            Some(serde_json::Value::String(text)) => vec![text.as_str()],
+                            // Only text blocks can be a prompt; a tool result riding in the row is skipped.
+                            Some(serde_json::Value::Array(blocks)) => blocks.iter()
+                                .filter(|b| matches!(b.get("type").and_then(|v| v.as_str()), Some("text" | "input_text")))
+                                .filter_map(|b| b.get("text").and_then(|v| v.as_str()))
+                                .collect(),
+                            _ => Vec::new(),
+                        };
+                        if let Some(prompt) = texts.into_iter().find_map(|text| claude_prompt_title(text, &mut command_fallback)) {
+                            let mut chars = prompt.chars();
+                            let chunk: String = chars.by_ref().take(40).collect();
+                            title = if chars.next().is_some() { format!("{}...", chunk) } else { chunk };
                         }
                     }
                 }
@@ -1612,6 +1625,9 @@ fn parse_agent_jsonl(
         title = custom_title;
     } else if !ai_title.is_empty() {
         title = ai_title;
+    }
+    if title.is_empty() {
+        title = command_fallback;
     }
     if title.is_empty() {
         let mut chars = tool_name.chars();
@@ -6225,6 +6241,43 @@ mod tests {
         ]);
         let got = parse_agent_jsonl(&f, "claude", &std::collections::HashMap::new()).expect("real session kept");
         assert_eq!(got.name, "修复一下历史记录的 bug");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn claude_title_skips_rows_the_cli_marks_as_not_typed() {
+        let dir = std::env::temp_dir().join(format!("coffee-cli-wrapper-test-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let f = dir.join("5b1c0f3e-fake-wrappers.jsonl");
+        write_jsonl(&f, &[
+            "{\"type\":\"user\",\"isMeta\":true,\"message\":{\"role\":\"user\",\"content\":\"Caveat: the messages below were generated by the user while running local commands.\"}}",
+            "{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"<some-new-wrapper>hook output</some-new-wrapper>\"}]}}",
+            "{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":\"[Request interrupted by user]\"}}",
+            "{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"type\":\"tool_result\",\"tool_use_id\":\"t1\",\"content\":\"tool output\"}]}}",
+            "{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"<ide_opened_file>a.rs</ide_opened_file>\"},{\"type\":\"text\",\"text\":\"把工作中动画对齐竖线\"}]}}",
+        ]);
+        let got = parse_agent_jsonl(&f, "claude", &std::collections::HashMap::new()).expect("session kept");
+        assert_eq!(got.name, "把工作中动画对齐竖线");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn claude_title_falls_back_to_slash_command_and_reads_shell_lines() {
+        let mut fallback = String::new();
+        assert_eq!(claude_prompt_title("<command-name>/model</command-name>\n<command-message>model</command-message>", &mut fallback), None);
+        assert_eq!(fallback, "/model");
+        assert_eq!(claude_prompt_title("<bash-input>git status</bash-input>", &mut fallback).as_deref(), Some("! git status"));
+        assert_eq!(claude_prompt_title("Use <b>bold</b> here", &mut fallback).as_deref(), Some("Use <b>bold</b> here"));
+        let dir = std::env::temp_dir().join(format!("coffee-cli-command-test-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let f = dir.join("7a2e9c1d-fake-command.jsonl");
+        write_jsonl(&f, &[
+            "{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":\"<command-name>/init</command-name>\"}}",
+            "{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":\"real prompt after the command\"}}",
+        ]);
+        assert_eq!(parse_agent_jsonl(&f, "claude", &std::collections::HashMap::new()).expect("kept").name, "real prompt after the command");
         let _ = std::fs::remove_dir_all(&dir);
     }
 
