@@ -1,3 +1,6 @@
+/* A plain click target: no button chrome, hover tint or pressed effect, even inside the composer controls. */
+.usage-meter,.claude-composer-controls .usage-meter,.claude-composer-controls .usage-meter:hover,.claude-composer-controls .usage-meter:disabled { height:auto; margin:0; padding:0; border:0; border-radius:0; background:none; color:inherit; font-family:inherit; opacity:1; cursor:pointer; }
+.usage-meter:disabled,.claude-composer-controls .usage-meter:disabled { cursor:default; }
 .usage-meter { display:inline-flex; align-items:center; gap:12px; min-width:0; flex-shrink:1; overflow:hidden; font-size:11px; line-height:1; font-variant-numeric:tabular-nums; white-space:nowrap; }
 /* Tones match EchoBird's quota bars (Tailwind green-500 + its warning/error RGB). */
 .usage-meter-item { --usage-rgb:128 128 128; --usage-text:var(--text-2); display:inline-flex; flex-direction:column; justify-content:center; gap:4px; flex-shrink:0; }

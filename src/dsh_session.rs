@@ -173,6 +173,39 @@ fn desktop_routes(home: &Path, overlay: &Path) -> Routes {
     routes
 }
 
+/// Where the balance of a DeepSeek Harness provider can be read.
+pub(crate) enum QuotaSource { Account { token: String }, Endpoint { base_url: String, api_key: String } }
+
+/// Resolves a provider's balance source from DeepSeek Harness's own configuration and stored credentials, read only.
+pub(crate) fn quota_source(provider: &str) -> Option<QuotaSource> {
+    quota_source_in(&dsh_home(), provider, &|key| std::env::var(key).ok())
+}
+
+fn quota_source_in(home: &Path, provider: &str, var: &dyn Fn(&str) -> Option<String>) -> Option<QuotaSource> {
+    let yaml = |path: PathBuf| std::fs::read_to_string(path).ok()
+        .and_then(|text| serde_yaml_ng::from_str::<serde_yaml_ng::Value>(&text).ok())
+        .and_then(|value| serde_json::to_value(value).ok()).unwrap_or(Value::Null);
+    let credentials = yaml(home.join(".credentials.yaml"));
+    if provider == "deepseek-account" {
+        let grant = &credentials["records"]["deepseek-account-platform/default"]["payload"];
+        // The account token only ever goes back to the DeepSeek Platform that issued it.
+        if grant["issuer"].as_str().is_some_and(|issuer| issuer != "https://platform.deepseek.com") { return None; }
+        return grant["token"].as_str().filter(|t| !t.is_empty()).map(|token| QuotaSource::Account { token: token.into() });
+    }
+    // Credential references resolve from the environment first, then DeepSeek Harness's stored refs.
+    let key = |name: &str| var(name).filter(|v| !v.is_empty()).or_else(|| credentials["refs"][name].as_str().filter(|v| !v.is_empty()).map(String::from));
+    if provider == "deepseek-official" {
+        return key("DEEPSEEK_API_KEY").map(|api_key| QuotaSource::Endpoint { base_url: "https://api.deepseek.com".into(), api_key });
+    }
+    yaml(home.join("profiles/desktop/cordis.patch.yml")).as_array()?.iter()
+        .filter(|row| row["id"].as_str().is_some_and(|id| id.starts_with("llm-")))
+        .find_map(|row| {
+            let entry = &row["config"]["providers"][provider];
+            let api_key = entry["apiKey"].as_str().filter(|v| !v.is_empty()).map(String::from).or_else(|| key(entry["apiKeyEnv"].as_str()?))?;
+            Some(QuotaSource::Endpoint { base_url: entry["baseURL"].as_str()?.into(), api_key })
+        })
+}
+
 /// Errors DeepSeek Harness raises when the requested provider or model is absent from its configuration.
 fn is_route_error(error: &str) -> bool {
     error.contains("no adapter registered for provider") || error.contains("has no configured model")
@@ -399,6 +432,22 @@ pub async fn dsh_session_history(session_id: String) -> Result<Vec<Value>, Strin
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn quota_sources_read_account_grants_and_provider_keys() {
+        let home = std::env::temp_dir().join(format!("coffee-dsh-quota-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(home.join("profiles/desktop")).unwrap();
+        std::fs::write(home.join(".credentials.yaml"), "version: 1\nrecords:\n  deepseek-account-platform/default:\n    kind: grant\n    payload:\n      token: tok\n      issuer: https://platform.deepseek.com\nrefs:\n  RELAY_KEY: stored\n").unwrap();
+        std::fs::write(home.join("profiles/desktop/cordis.patch.yml"), "- id: llm-pi-ai\n  config:\n    providers:\n      relay:\n        apiKeyEnv: RELAY_KEY\n        baseURL: https://relay.example/v1\n").unwrap();
+        let none = |_: &str| None;
+        assert!(matches!(quota_source_in(&home, "deepseek-account", &none), Some(QuotaSource::Account { token }) if token == "tok"));
+        assert!(matches!(quota_source_in(&home, "relay", &none), Some(QuotaSource::Endpoint { base_url, api_key }) if base_url == "https://relay.example/v1" && api_key == "stored"));
+        assert!(matches!(quota_source_in(&home, "relay", &|_| Some("env".into())), Some(QuotaSource::Endpoint { api_key, .. }) if api_key == "env"));
+        assert!(quota_source_in(&home, "deepseek-official", &none).is_none());
+        assert!(quota_source_in(&home, "missing", &none).is_none());
+        std::fs::write(home.join(".credentials.yaml"), "records:\n  deepseek-account-platform/default:\n    payload:\n      token: tok\n      issuer: https://evil.example\n").unwrap();
+        assert!(quota_source_in(&home, "deepseek-account", &none).is_none());
+        std::fs::remove_dir_all(home).unwrap();
+    }
     #[test]
     fn route_errors_are_only_missing_configuration() {
         // Messages verified against DeepSeek Harness 0.2.1-rc.5.

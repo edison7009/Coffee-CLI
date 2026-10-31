@@ -3,19 +3,19 @@
 // Codex account/rateLimits/read); third-party keys are resolved read-only from
 // the tool's configuration by the backend (src/usage_quota). Anything missing
 // hides the meter: there is no failure state.
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { invoke } from '../tauri';
 import { controlClaude, useClaudeSession } from './claude-session';
 import { readCodexRateLimits, useCodexSession } from './codex-session';
+import { useDshSession } from './dsh-session';
 
 export type QuotaPeriod = 'fiveHour' | 'daily' | 'weekly' | 'monthly';
 export interface Quota { period?: QuotaPeriod; used?: number; resetAt?: number; balance?: number; unit?: string }
 
 type Json = Record<string, unknown>;
+// Fixed-interval refresh; turn ends refresh conversation tabs at most this often too,
+// and a click on the meter refreshes at once, past the backend cache.
 const REFRESH_MS = 60_000;
-// Turn ends refresh conversation tabs; terminal tabs have no turn signal. A slow
-// poll keeps both honest without asking the CLI or provider every minute.
-const IDLE_REFRESH_MS = 5 * 60_000;
 const ORDER: QuotaPeriod[] = ['fiveHour', 'daily', 'weekly', 'monthly'];
 
 const num = (value: unknown) => typeof value === 'number' && Number.isFinite(value) ? value : typeof value === 'string' && value.trim() && Number.isFinite(Number(value)) ? Number(value) : undefined;
@@ -79,24 +79,31 @@ export function formatBalance(quota: Quota): string {
   return unit === 'CNY' ? `¥${amount}` : unit === 'USD' ? `$${amount}` : unit ? `${amount} ${quota.unit}` : amount;
 }
 
-export function useUsageQuota(id: string, tool: string | undefined, cwd: string | undefined, conversation: 'claude' | 'codex' | null): Quota[] {
+export function useUsageQuota(id: string, tool: string | undefined, cwd: string | undefined, conversation: 'claude' | 'codex' | 'dsh' | null): { quotas: Quota[]; refresh: () => void } {
   // Keyed so a tab switch never shows the previous tab's numbers while loading.
   const [result, setResult] = useState<{ key: string; quotas: Quota[] }>({ key: '', quotas: [] });
   const claudeIdle = useClaudeSession(conversation === 'claude' ? id : '', s => s.ready && !s.busy);
   const codexIdle = useCodexSession(conversation === 'codex' ? id : '', s => s.ready && !s.busy);
+  const dshIdle = useDshSession(conversation === 'dsh' ? id : '', s => s.ready && !s.busy);
+  // DeepSeek Harness reads the balance of the provider its runtime is using.
+  const dshProvider = useDshSession(conversation === 'dsh' ? id : '', s => s.route.provider);
   // Becomes true when the session is ready and idle: at start and after each turn.
-  const idle = conversation === 'claude' ? claudeIdle : conversation === 'codex' ? codexIdle : true;
+  const idle = conversation === 'claude' ? claudeIdle : conversation === 'codex' ? codexIdle : conversation === 'dsh' ? dshIdle : true;
   const last = useRef<{ key: string; at: number }>({ key: '', at: 0 });
-  const key = `${id}\n${tool ?? ''}\n${cwd ?? ''}`;
+  const loading = useRef('');
+  const reload = useRef<(force: boolean) => void>(() => {});
+  const provider = conversation === 'dsh' ? dshProvider : '';
+  const key = `${id}\n${tool ?? ''}\n${cwd ?? ''}\n${provider}`;
 
   useEffect(() => {
     if (!tool) return;
     let cancelled = false;
-    const load = async (force: boolean) => {
-      if (!force && Date.now() - last.current.at < REFRESH_MS) return;
+    const load = async (skipWait: boolean, force = false) => {
+      if (loading.current === key || (!skipWait && Date.now() - last.current.at < REFRESH_MS)) return;
       last.current = { key, at: Date.now() };
+      loading.current = key;
       try {
-        const route = await invoke<Json>('usage_quota_query', { tool, cwd: cwd ?? null });
+        const route = await invoke<Json>('usage_quota_query', { tool, cwd: cwd ?? null, provider: provider || null, force });
         let next: Quota[] = [];
         if (route.kind === 'provider') next = providerQuotas(route.quotas);
         else if (route.kind === 'official' && conversation === 'claude') next = claudeQuotas(await controlClaude(id, { subtype: 'get_usage', skip_behaviors: true }) as Json);
@@ -104,13 +111,17 @@ export function useUsageQuota(id: string, tool: string | undefined, cwd: string 
         if (!cancelled) setResult({ key, quotas: next });
       } catch {
         if (!cancelled) setResult({ key, quotas: [] });
+      } finally {
+        if (loading.current === key) loading.current = '';
       }
     };
+    reload.current = force => { void load(true, force); };
     if (!idle) return () => { cancelled = true; };
     void load(last.current.key !== key);
-    const timer = setInterval(() => { void load(false); }, IDLE_REFRESH_MS);
+    const timer = setInterval(() => { void load(false); }, REFRESH_MS);
     return () => { cancelled = true; clearInterval(timer); };
-  }, [id, tool, cwd, conversation, idle, key]);
+  }, [id, tool, cwd, conversation, idle, key, provider]);
 
-  return tool && result.key === key ? result.quotas : [];
+  const refresh = useCallback(() => reload.current(true), []);
+  return { quotas: tool && result.key === key ? result.quotas : [], refresh };
 }

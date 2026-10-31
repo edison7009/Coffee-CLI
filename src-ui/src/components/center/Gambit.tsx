@@ -137,8 +137,8 @@ function GambitImpl({
   const t = useT();
   // Desktop conversations own their composer controls and send prompts verbatim.
   const desktop = claude || codex || dsh;
-  const quotas = useUsageQuota(sessionId, tool, cwd, claude ? 'claude' : codex ? 'codex' : null);
-  const usageMeter = <UsageMeter quotas={quotas} />;
+  const usage = useUsageQuota(sessionId, tool, cwd, claude ? 'claude' : codex ? 'codex' : dsh ? 'dsh' : null);
+  const usageMeter = <UsageMeter quotas={usage.quotas} onRefresh={usage.refresh} />;
   const rootRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const claudeKeyHandler = useRef<((event: React.KeyboardEvent<HTMLTextAreaElement>) => boolean) | undefined>(undefined);

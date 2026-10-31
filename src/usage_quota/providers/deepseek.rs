@@ -1,6 +1,26 @@
-//! DeepSeek balance: GET https://api.deepseek.com/user/balance.
+//! DeepSeek balance: GET https://api.deepseek.com/user/balance for API keys, and the
+//! DeepSeek Platform account summary for accounts signed in through DeepSeek Harness.
 
-use super::{api_url, fetch_usage, parse_f64, UsageProvider, UsageQuota, UsageResult};
+use super::{api_url, fetch_usage, parse_f64, send_usage_request, UsageProvider, UsageQuota, UsageResult};
+
+/// Recharge plus granted wallets, as DeepSeek Harness counts an account's spendable balance.
+fn parse_account_summary(body: &serde_json::Value) -> Option<UsageQuota> {
+    if body["code"] != 0 || body["data"]["biz_code"] != 0 { return None; }
+    let data = &body["data"]["biz_data"];
+    let wallets: Vec<&serde_json::Value> = ["normal_wallets", "bonus_wallets"].iter()
+        .flat_map(|key| data[*key].as_array().into_iter().flatten()).collect();
+    let currency = wallets.iter().find_map(|w| w["currency"].as_str().filter(|c| matches!(*c, "CNY" | "USD")))?;
+    let amounts: Vec<f64> = wallets.iter().filter(|w| w["currency"] == currency).map(|w| parse_f64(&w["balance"])).collect::<Option<_>>()?;
+    UsageQuota::balance(amounts.iter().sum(), currency)
+}
+
+/// Balance of the DeepSeek account DeepSeek Harness signed in, with the token it stored.
+pub async fn query_account_balance(token: &str) -> Result<Vec<UsageQuota>, String> {
+    let body = send_usage_request(reqwest::Client::new()
+        .get("https://platform.deepseek.com/api/v0/users/get_user_summary")
+        .header("x-dsh-auth-token", token)).await?;
+    parse_account_summary(&body).map(|quota| vec![quota]).ok_or_else(|| "No balance data available".into())
+}
 
 pub struct DeepSeekProvider;
 
@@ -61,6 +81,18 @@ mod tests {
             assert_eq!(quota.balance_unit.as_deref(), Some(currency));
             assert_eq!(quota.reset_at, 0);
         }
+    }
+
+    #[test]
+    fn account_summary_adds_bonus_wallets_and_rejects_failures() {
+        let body = |biz: i64| json!({"code":0,"data":{"biz_code":biz,"biz_data":{
+            "normal_wallets":[{"currency":"CNY","balance":"9.4738512800000000"}],
+            "bonus_wallets":[{"currency":"CNY","balance":"0.5"},{"currency":"USD","balance":"3"}]}}});
+        let quota = parse_account_summary(&body(0)).unwrap();
+        assert!((quota.balance.unwrap() - 9.97385128).abs() < 1e-9);
+        assert_eq!(quota.balance_unit.as_deref(), Some("CNY"));
+        assert!(parse_account_summary(&body(1)).is_none());
+        assert!(parse_account_summary(&json!({"code":40003})).is_none());
     }
 
     #[test]
