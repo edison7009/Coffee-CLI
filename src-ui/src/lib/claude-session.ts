@@ -52,6 +52,10 @@ export function useClaudeSession<T>(id: string, select: (state: ClaudeState) => 
 export function useClaudeSession(id: string, select: (state: ClaudeState) => unknown = state => state) {
   return useSyncExternalStore(fn => { const c = client(id); c.listeners.add(fn); return () => { c.listeners.delete(fn); }; }, () => select(clients.get(id)?.state ?? EMPTY), () => select(EMPTY));
 }
+/** For the shared composer, which also serves tabs that have no Claude session. */
+export function useClaudeSuggestion(id: string, enabled: boolean): string | undefined {
+  return useSyncExternalStore(fn => { if (!enabled) return () => {}; const c = client(id); c.listeners.add(fn); return () => { c.listeners.delete(fn); }; }, () => enabled ? clients.get(id)?.state.suggestion : undefined, () => undefined);
+}
 export function getClaudeSession(id: string): ClaudeState { return clients.get(id)?.state ?? EMPTY; }
 export function getClaudeConnection(id: string) {
   const c = clients.get(id);
@@ -162,7 +166,7 @@ export async function sendClaudeMessage(id: string, prompt: string, orchestratio
   if (!c.state.ready || c.restarting) return false;
   const snapshot = c.state;
   const pendingId = `pending:${crypto.randomUUID()}`, now = Date.now();
-  c.state = { ...c.state, busy: true, interrupted: false, pendingTurns: c.state.pendingTurns + 1, sentSinceResult: c.state.sentSinceResult + 1, status: c.state.busy ? c.state.status : 'working', error: undefined, errorKey: undefined, startedAt: c.state.busy ? c.state.startedAt : now, endedAt: undefined,
+  c.state = { ...c.state, busy: true, suggestion: undefined, interrupted: false, pendingTurns: c.state.pendingTurns + 1, sentSinceResult: c.state.sentSinceResult + 1, status: c.state.busy ? c.state.status : 'working', error: undefined, errorKey: undefined, startedAt: c.state.busy ? c.state.startedAt : now, endedAt: undefined,
     messages: orchestrationDelivery ? c.state.messages : [...c.state.messages, { id: pendingId, renderKey: pendingId, role: 'user', content: prompt, timestamp: now }] };
   publish(c, true);
   try { await invoke('claude_session_send', { id, generation: c.generation, text: prompt, orchestrationDelivery }); return true; }

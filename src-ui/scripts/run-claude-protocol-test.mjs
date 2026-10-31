@@ -158,4 +158,12 @@ test('restored usage counts toward a cold return without touching the live conte
   s = reduceClaudeEvent(s, { type: 'system', subtype: 'compact_boundary' }, 2000, true);
   assert.equal(s.lastContextTokens, 0, 'compaction replaces the history');
 });
+test('a predicted next prompt is kept only while no prompt has moved past it', () => {
+  let s = emptyClaudeState();
+  s = reduceClaudeEvent(s, { type: 'prompt_suggestion', suggestion: '  next step  ' }, 1000);
+  assert.equal(s.suggestion, 'next step');
+  assert.equal(s.messages.length, 0, 'a suggestion is not a transcript row');
+  s = reduceClaudeEvent({ ...emptyClaudeState(), busy: true }, { type: 'prompt_suggestion', suggestion: 'late' }, 1000);
+  assert.equal(s.suggestion, undefined, 'a guess for a turn already answered by a new prompt is dropped');
+});
 console.log(`${passed} Claude protocol checks passed`);

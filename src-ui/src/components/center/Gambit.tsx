@@ -28,6 +28,7 @@ import { OpenCodeComposerControls } from './OpenCodeComposerControls';
 import { DshComposerControls } from './DshComposerControls';
 import { UsageMeter } from './UsageMeter';
 import { useUsageQuota } from '../../lib/usage-quota';
+import { useClaudeSuggestion } from '../../lib/claude-session';
 import { gambitAttachments, removeGambitAttachment } from '../../lib/gambit-attachments';
 import './Gambit.css';
 
@@ -145,6 +146,9 @@ function GambitImpl({
   const steerable = claude || dsh || opencode;
   const usage = useUsageQuota(sessionId, tool, cwd, claude ? 'claude' : codex ? 'codex' : dsh ? 'dsh' : null);
   const usageMeter = <UsageMeter quotas={usage.quotas} onRefresh={usage.refresh} />;
+  // Claude's guess at the next prompt shows as the empty composer's placeholder; Tab takes it.
+  const claudeSuggestion = useClaudeSuggestion(sessionId, !!claude);
+  const suggestion = draft ? undefined : claudeSuggestion;
   const rootRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const claudeKeyHandler = useRef<((event: React.KeyboardEvent<HTMLTextAreaElement>) => boolean) | undefined>(undefined);
@@ -626,6 +630,11 @@ function GambitImpl({
     // candidates. nativeEvent.isComposing is the canonical flag.
     if (e.nativeEvent.isComposing) return;
     if (desktop && claudeKeyHandler.current?.(e)) return;
+    if (e.key === 'Tab' && !e.shiftKey && suggestion) {
+      e.preventDefault();
+      onDraftChange(suggestion);
+      return;
+    }
     // History recall is gated behind Alt+↑/↓. Bare ↑/↓ stays native caret
     // movement — users complained that hijacking them stole vertical caret
     // positioning inside a multi-line draft. Alt+arrow has no native
@@ -778,7 +787,7 @@ function GambitImpl({
           ref={textareaRef}
           className="gambit-textarea"
           value={draft}
-          placeholder={t('gambit.placeholder', { send: sendCombo, newline: newlineCombo })}
+          placeholder={suggestion ?? t('gambit.placeholder', { send: sendCombo, newline: newlineCombo })}
           onChange={(e) => onDraftChange(e.target.value)}
           onKeyDown={onKeyDown}
           onPaste={onPaste}

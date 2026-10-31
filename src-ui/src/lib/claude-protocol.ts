@@ -57,6 +57,8 @@ export interface ClaudeState {
   coldReturn?: ClaudeColdReturn;
   /** Generated from a new conversation's first prompt; shown on the tab. */
   title?: string;
+  /** Claude's guess at the user's next prompt; the empty composer offers it. */
+  suggestion?: string;
   ready: boolean;
   busy: boolean;
   pendingTurns: number;
@@ -214,6 +216,9 @@ export function reduceClaudeEvent(state: ClaudeState, frame: Json, now = Date.no
     } else if (frame.subtype === 'commands_changed') s.commands = list(frame.commands).map(v => object(v) as unknown as ClaudeCommand);
   } else if (frame.type === 'tool_progress') {
     s.status = 'tool';
+  } else if (frame.type === 'prompt_suggestion') {
+    // It arrives after the turn; a prompt already sent has moved past it.
+    if (!s.busy) s.suggestion = text(frame.suggestion).trim() || undefined;
   } else if (frame.type === 'result') {
     const interrupted = !historical && s.interruptRequested === true;
     s.interruptRequested = false; s.interrupted = interrupted;

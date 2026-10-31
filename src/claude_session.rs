@@ -133,7 +133,7 @@ fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<Stri
     #[cfg(not(windows))]
     { command = Command::new(&bin); }
     command.args(prefix).args(&config.extra_args)
-        .args(["-p", "--verbose", "--input-format", "stream-json", "--output-format", "stream-json", "--include-partial-messages", "--permission-prompt-tool", "stdio", "--allow-dangerously-skip-permissions"])
+        .args(["-p", "--verbose", "--input-format", "stream-json", "--output-format", "stream-json", "--include-partial-messages", "--permission-prompt-tool", "stdio", "--allow-dangerously-skip-permissions", "--prompt-suggestions", "true"])
         .env_remove("CLAUDECODE").env("CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS", "1")
         .current_dir(&cwd).stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped());
     let resume_token = resume_token.filter(|s| !s.is_empty());
