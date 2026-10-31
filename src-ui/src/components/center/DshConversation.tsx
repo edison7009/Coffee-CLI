@@ -168,7 +168,7 @@ export function DshConversation({ sessionId, cwd, resumeToken, isActive, isVisib
         </Measured>)}
         <div style={{ height: virtual.bottomSpacer }} aria-hidden="true" />
         {s.requests.map(request => <RequestCard key={String(request.id)} sessionId={sessionId} request={request} />)}
-        {(s.busy || s.restarting) && !s.requests.length && <Running since={s.busy ? s.startedAt : undefined} stopping={!!s.restarting} />}
+        {(s.busy || (s.restarting && s.stopping)) && !s.requests.length && <Running since={s.busy ? s.startedAt : undefined} stopping={!!s.restarting} />}
         {/* A failed start must say why; Reconnect alone hides the cause. */}
         {s.error && !directoryIssue && <div className="claude-session-error" role="alert">{s.error}</div>}
         {directoryIssue && <div className="claude-session-error" role="alert">{directoryError}</div>}

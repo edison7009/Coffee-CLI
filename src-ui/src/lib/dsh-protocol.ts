@@ -38,6 +38,8 @@ export interface DshState {
   startedAt?: number;
   error?: string;
   restarting?: boolean;
+  /** The restart is a user stop, shown as stopping; a model or effort switch restarts silently. */
+  stopping?: boolean;
   /** Native slash commands need `session/query` (DeepSeek Harness 0.2.2+). */
   commands: boolean;
 }

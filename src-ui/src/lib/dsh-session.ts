@@ -46,7 +46,7 @@ async function connect(id: string, c: Client, resumeToken: string | undefined, r
   await listen();
   const result = await invoke<Json>('dsh_session_start', { id, generation: c.generation, cwd: c.cwd, resumeToken: resumeToken ?? null, route: route ?? null });
   const sessionId = str(result.sessionId), routeResult = obj(result.route);
-  let state: DshState = { ...c.state, sessionId, ready: true, restarting: false, error: undefined, routeError: str(result.routeError) || undefined, commands: result.commands !== false, models: arr(result.models).map(obj) as unknown as DshModel[],
+  let state: DshState = { ...c.state, sessionId, ready: true, restarting: false, stopping: false, error: undefined, routeError: str(result.routeError) || undefined, commands: result.commands !== false, models: arr(result.models).map(obj) as unknown as DshModel[],
     route: { provider: str(routeResult.provider), model: str(routeResult.model), effort: str(routeResult.effort) || null } };
   if (resumeToken && !keepTranscript) {
     const rows = await invoke<unknown[]>('dsh_session_history', { sessionId }).catch(() => []);
@@ -85,10 +85,16 @@ async function restart(id: string, route?: DshRoute) {
   const c = clients.get(id); if (!c || c.state.restarting || !c.state.sessionId) return;
   const previous = c.generation, sessionId = c.state.sessionId;
   c.generation = crypto.randomUUID();
-  c.state = { ...c.state, restarting: true, busy: false, requests: [], startedAt: undefined }; publish(c, true);
+  c.state = { ...c.state, restarting: true, stopping: !route, busy: false, requests: [], startedAt: undefined }; publish(c, true);
   await invoke('dsh_session_close', { id, generation: previous }).catch(() => {});
-  try { await connect(id, c, sessionId, route ?? c.state.route, true); }
-  catch (error) { c.state = { ...c.state, restarting: false, ready: false, error: String(error) }; publish(c, true); }
+  // DeepSeek Harness creates a Session on its first prompt; an untouched tab has nothing to resume.
+  const started = c.state.messages.length > 0;
+  try { await connect(id, c, started ? sessionId : undefined, route ?? c.state.route, true); }
+  catch (error) {
+    // The failed runtime's exit can arrive after this; its stderr must not replace the start error.
+    c.generation = crypto.randomUUID();
+    c.state = { ...c.state, restarting: false, stopping: false, ready: false, error: String(error) }; publish(c, true);
+  }
 }
 export const stopDsh = (id: string) => restart(id);
 export const setDshRoute = (id: string, route: DshRoute) => restart(id, route);

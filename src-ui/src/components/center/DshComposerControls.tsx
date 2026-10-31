@@ -35,7 +35,8 @@ export function DshComposerControls({ sessionId, draft, onDraftChange, keyHandle
   const effort = s.route.effort || (model?.efforts.includes('high') ? 'high' : model?.efforts[0] ?? '');
   const percent = s.contextWindow ? Math.min(100, s.contextTokens / s.contextWindow * 100) : 0;
   // Route changes replace the runtime, so they wait for an idle Session.
-  const locked = !s.ready || s.busy || !!s.restarting;
+  // A silent model or effort switch keeps the controls steady; restart() ignores a second switch meanwhile.
+  const locked = !s.ready || s.busy || (!!s.restarting && !!s.stopping);
   const slash = /^\/[\w:-]*$/.test(draft) && dismissed !== draft;
   const shown = menu ?? (slash ? 'commands' : null);
   const commands = [
