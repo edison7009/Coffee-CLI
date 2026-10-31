@@ -98,7 +98,7 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
   visit(tree); assert.ok(callback);
   const history = [], cleared = [], failed = [];
   const context = {
-    useCallback: fn => fn, draft: 'original prompt', running: false, claude: false, codex: false,
+    useCallback: fn => fn, draft: 'original prompt', running: false, claude: false, codex: false, dsh: false, desktop: false,
     sendingRef: { current: false }, latestDraftRef: { current: 'original prompt' }, historyCursorRef: { current: null },
     onSend: async () => true, onDraftChange: text => cleared.push(text),
     pushGambitHistory: text => history.push(text), setSendFailed: value => failed.push(value), setSendEmpty() {},

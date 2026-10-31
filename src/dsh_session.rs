@@ -506,6 +506,7 @@ mod tests {
         assert_eq!(history_in(&root, 1).len(), 1);
         std::fs::remove_dir_all(root).unwrap();
     }
+    #[cfg(windows)] // Registry values hold backslash paths, which only Windows splits into folders.
     #[test]
     fn registered_values_name_the_install_folder() {
         assert_eq!(registered_exe_dir(r"D:\tools\dsh\DeepSeek Harness.exe,0"), Some(PathBuf::from(r"D:\tools\dsh")));
