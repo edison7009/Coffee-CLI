@@ -457,6 +457,8 @@ function TierTerminalImpl({
   // (pre-paint, via useLayoutEffect) so the solid terminal background shows
   // through instead, then unmask once xterm paints its first fresh frame.
   const [canvasHidden, setCanvasHidden] = useState(false);
+  // The viewport sits above the newest output (normal buffer only: full-screen TUIs scroll themselves).
+  const [scrolledUp, setScrolledUp] = useState(false);
 
   // ── Terminal context menu ────────────────────────────────────────────────
   const [ctxMenu, setCtxMenu] = useState<(TermContextMenuState & { link: ConversationLink | null }) | null>(null);
@@ -1298,6 +1300,10 @@ function TierTerminalImpl({
     unlisteners.push(registerTerminalObserver(sessionId, term));
     const controlsGeneration = getTerminalObserver(sessionId)!.generation;
     unlisteners.push(() => clearSessionControls(sessionId, controlsGeneration));
+    // Same back-to-latest button as the conversation views. Output arriving while scrolled up keeps the
+    // viewport in place, so new lines are rechecked too; an unchanged value does not re-render.
+    const syncScrolledUp = () => { const buffer = term.buffer.active; setScrolledUp(buffer.type === 'normal' && buffer.viewportY < buffer.baseY); };
+    for (const listener of [term.onScroll(syncScrolledUp), term.onLineFeed(syncScrolledUp), term.buffer.onBufferChange(syncScrolledUp)]) unlisteners.push(() => listener.dispose());
     unlisteners.push(registerTerminalControl(sessionId, term, statusConfirmed => {
       markNotifySoundPromptSubmitted(sessionId, tool);
       if (!statusConfirmed) markAgentSubmission();
@@ -2232,6 +2238,9 @@ function TierTerminalImpl({
       >
         <div ref={termRef} className={`tier-xterm${selfRenderedCaret ? ' self-rendered-caret' : ''}`} />
       </div>
+      {scrolledUp && <button type="button" className="claude-scroll-bottom" aria-label={t('claude.scroll_latest')} onClick={() => { xtermRef.current?.scrollToBottom(); xtermRef.current?.focus(); setScrolledUp(false); }}>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 2v11M3 8l5 5 5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+      </button>}
 
       {/* Terminal right-click context menu */}
       {ctxMenu && (
