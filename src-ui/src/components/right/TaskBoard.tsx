@@ -3,10 +3,11 @@ import { useT } from '../../i18n/useT';
 import { useAppState } from '../../store/app-state';
 import { isTauri, commands } from '../../tauri';
 import { sendSessionPrompt } from '../../lib/send-session-prompt';
-import { isClaudeConversation, isCodexConversation, isDshConversation } from '../../lib/chat-tools';
+import { isClaudeConversation, isCodexConversation, isDshConversation, isOpenCodeConversation } from '../../lib/chat-tools';
 import { useClaudeSession } from '../../lib/claude-session';
 import { useCodexSession } from '../../lib/codex-session';
 import { useDshSession } from '../../lib/dsh-session';
+import { useOpenCodeSession } from '../../lib/opencode-session';
 import './TaskBoard.css';
 import { TaskNoteView } from './TaskNoteView';
 import { TaskPromptView } from './TaskPromptView';
@@ -89,11 +90,12 @@ export function TaskBoard({ onCountChange }: { onCountChange: (count: number) =>
   const sendingRef = useRef(false);
   const [sendErrorTarget, setSendErrorTarget] = useState<string | null>(null);
   const activeSession = state.terminals.find(tab => tab.id === state.activeTerminalId);
-  const isClaude = isClaudeConversation(activeSession), isCodex = isCodexConversation(activeSession), isDsh = isDshConversation(activeSession);
+  const isClaude = isClaudeConversation(activeSession), isCodex = isCodexConversation(activeSession), isDsh = isDshConversation(activeSession), isOpenCode = isOpenCodeConversation(activeSession);
   const claudeReady = useClaudeSession(isClaude ? state.activeTerminalId ?? '' : '', session => session.ready && !session.requests.length);
   const codexReady = useCodexSession(isCodex ? state.activeTerminalId ?? '' : '', session => session.ready && !session.busy && !session.requests.length);
   const dshReady = useDshSession(isDsh ? state.activeTerminalId ?? '' : '', session => session.ready && !session.busy && !session.requests.length);
-  const canSend = !!activeSession?.tool && !sending && (isClaude ? claudeReady : isCodex ? codexReady : isDsh ? dshReady : true);
+  const openCodeReady = useOpenCodeSession(isOpenCode ? state.activeTerminalId ?? '' : '', session => session.ready && !session.busy && !session.permissions.length && !session.forms.length);
+  const canSend = !!activeSession?.tool && !sending && (isClaude ? claudeReady : isCodex ? codexReady : isDsh ? dshReady : isOpenCode ? openCodeReady : true);
 
   // Inline title editing
   const [editingId, setEditingId] = useState<string | null>(null);

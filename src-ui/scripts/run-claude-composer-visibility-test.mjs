@@ -17,24 +17,25 @@ function evaluate(file, name, context = {}) {
 const isClaudeConversation = evaluate('lib/chat-tools.ts', 'isClaudeConversation');
 const isCodexConversation = evaluate('lib/chat-tools.ts', 'isCodexConversation');
 const isDshConversation = evaluate('lib/chat-tools.ts', 'isDshConversation');
-const isConversationSession = evaluate('lib/chat-tools.ts', 'isConversationSession', { isClaudeConversation, isCodexConversation, isDshConversation });
+const isOpenCodeConversation = evaluate('lib/chat-tools.ts', 'isOpenCodeConversation');
+const isConversationSession = evaluate('lib/chat-tools.ts', 'isConversationSession', { isClaudeConversation, isCodexConversation, isDshConversation, isOpenCodeConversation });
 const splitSessionIds = evaluate('lib/session-split-layout.ts', 'splitSessionIds');
 const replaceSplitSession = evaluate('lib/session-split-layout.ts', 'replaceSplitSession', { splitSessionIds });
 const reducer = evaluate('store/app-state.tsx', 'reducer', { isConversationSession, replaceSplitSession, getTabOrder: state => state.tabOrder });
 const terminals = [{ id: 'claude', tool: 'claude' }, { id: 'terminal', tool: null }];
 let state;
 const effects = [];
-const terminalSends = [], claudeSends = [], codexSends = [], dshSends = [];
+const terminalSends = [], claudeSends = [], codexSends = [], dshSends = [], openCodeSends = [];
 let team = { enabled: false, agents: [], coordinators: [] };
 const context = {
-  isClaudeConversation, isCodexConversation, isDshConversation, isConversationSession,
+  isClaudeConversation, isCodexConversation, isDshConversation, isOpenCodeConversation, isConversationSession,
   useAppState: () => ({ state, dispatch: action => { state = reducer(state, action); } }),
   useAppStateRef: () => ({ get current() { return state; } }),
   useAppDispatch: () => context.useAppState().dispatch,
   useOrchestration: () => team,
   useSessionControls: () => [],
   useCallback: fn => fn, useEffect: fn => effects.push(fn), useT: () => key => key,
-  useClaudeSession: () => ({ busy: false }), useCodexSession: () => ({ busy: false }), useDshSession: () => false, stopDsh: async () => {}, getToolIcon: () => '',
+  useClaudeSession: () => ({ busy: false }), useCodexSession: () => ({ busy: false }), useDshSession: () => false, stopDsh: async () => {}, useOpenCodeSession: () => false, interruptOpenCode: async () => {}, getToolIcon: () => '',
   schemeLabels: () => ({ left: 'Alt+Q', gambit: 'Alt+W', right: 'Alt+E' }),
   React: { createElement: (type, props, ...children) => ({ type, props, children }) },
   Gambit: 'gambit', Changelog: 'changelog', IS_MACOS: false,
@@ -42,6 +43,7 @@ const context = {
   sendClaudeMessage: async (id, text) => { claudeSends.push({ id, text }); return true; },
   sendCodexMessage: async (id, text) => { codexSends.push({ id, text }); return true; },
   sendDshMessage: async (id, text) => { dshSends.push({ id, text }); return true; },
+  sendOpenCodeMessage: async (id, text) => { openCodeSends.push({ id, text }); return true; },
 };
 context.basename = evaluate('components/center/ActiveGambit.tsx', 'basename');
 context.sendSessionPrompt = evaluate('lib/send-session-prompt.ts', 'sendSessionPrompt', context);
@@ -135,6 +137,20 @@ for (const codexMode of ['conversation', 'terminal']) {
   assert.equal(restarted.terminals[0].codexMode, codexMode);
 }
 console.log('OK: Codex conversation uses its own backend, keeps its composer and retains mode on reconnect');
+state = { terminals: [{ id: 'opencode-desktop', tool: 'opencode', opencodeMode: 'conversation' }], activeTerminalId: 'opencode-desktop', gambitOpen: false, agentPageActive: null, diffTabActive: false };
+assert.equal(host().props.opencode, true, 'OpenCode conversations always have their composer');
+assert.equal(toggle().props.disabled, true);
+assert.equal(await host().props.onSend('OpenCode prompt'), true);
+assert.deepEqual(openCodeSends.at(-1), { id: 'opencode-desktop', text: 'OpenCode prompt' });
+assert.equal(terminalSends.some(send => send.id === 'opencode-desktop'), false);
+for (const opencodeMode of ['conversation', 'terminal']) {
+  const launched = reducer({ terminals: [{ id: 'new', tool: null }], tabOrder: ['new'] }, { type: 'LAUNCH_TERMINAL_TOOL', id: 'new', tool: 'opencode', opencodeMode });
+  assert.equal(isOpenCodeConversation(launched.terminals[0]), opencodeMode === 'conversation');
+  const restarted = reducer({ ...launched, activeTerminalId: 'new' }, { type: 'RESTART_TERMINAL', id: 'new', newId: 'retry' });
+  assert.equal(restarted.terminals[0].opencodeMode, opencodeMode);
+}
+assert.equal(isOpenCodeConversation(reducer({ terminals: [{ id: 'new', tool: null }], tabOrder: ['new'] }, { type: 'LAUNCH_TERMINAL_TOOL', id: 'new', tool: 'opencode' }).terminals[0]), false, 'callers without a mode keep the terminal');
+console.log('OK: OpenCode conversation uses its own backend, keeps its composer and retains mode on reconnect');
 for (const preference of [false, true]) {
   state = { terminals: [{ id: 'dsh-desktop', tool: 'dsh' }], activeTerminalId: 'dsh-desktop', gambitOpen: preference, agentPageActive: null, diffTabActive: false };
   assert.equal(host().type, 'gambit', 'DeepSeek Harness always has its composer');

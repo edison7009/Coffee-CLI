@@ -24,6 +24,7 @@ import { registerFileDropTarget, formatPathsForInsert } from '../../lib/file-dro
 import { bindAutoHideScrollbar } from '../../lib/auto-hide-scrollbar';
 import { ClaudeComposerControls, AttachIcon } from './ClaudeComposerControls';
 import { CodexComposerControls } from './CodexComposerControls';
+import { OpenCodeComposerControls } from './OpenCodeComposerControls';
 import { DshComposerControls } from './DshComposerControls';
 import { UsageMeter } from './UsageMeter';
 import { useUsageQuota } from '../../lib/usage-quota';
@@ -46,6 +47,8 @@ interface GambitProps {
   codex?: boolean;
   /** DeepSeek Harness desktop conversation (always desktop in Coffee CLI). */
   dsh?: boolean;
+  /** OpenCode desktop conversation. */
+  opencode?: boolean;
   /** Local file paths are meaningful to this target (false for SSH tabs). */
   attachable?: boolean;
   onCancel?: () => void;
@@ -121,6 +124,7 @@ function GambitImpl({
   claude = false,
   codex = false,
   dsh = false,
+  opencode = false,
   attachable = false,
   onCancel,
   sendFailedHint,
@@ -136,7 +140,9 @@ function GambitImpl({
 }: GambitProps) {
   const t = useT();
   // Desktop conversations own their composer controls and send prompts verbatim.
-  const desktop = claude || codex || dsh;
+  const desktop = claude || codex || dsh || opencode;
+  // Claude, DeepSeek Harness and OpenCode accept prompts during a running turn.
+  const steerable = claude || dsh || opencode;
   const usage = useUsageQuota(sessionId, tool, cwd, claude ? 'claude' : codex ? 'codex' : dsh ? 'dsh' : null);
   const usageMeter = <UsageMeter quotas={usage.quotas} onRefresh={usage.refresh} />;
   const rootRef = useRef<HTMLDivElement>(null);
@@ -583,7 +589,7 @@ function GambitImpl({
   }, [history, draft, onDraftChange]);
 
   const handleSend = useCallback(async () => {
-    if (running && !claude && !dsh) return;
+    if (running && !steerable) return;
     // CRITICAL: the draft text is the ONLY thing that gets sent.
     // Thumbnails rendered from pastedImagePaths are a pure derived view
     // with zero data-side responsibility. DO NOT re-append paths or
@@ -595,7 +601,7 @@ function GambitImpl({
       setSendEmpty(true);
       return;
     }
-    if ((codex || dsh) && codexSubmitHandler.current?.(text)) return;
+    if ((codex || dsh || opencode) && codexSubmitHandler.current?.(text)) return;
     const body = desktop ? text : wrapImagePathsForSend(text);
     if (sendingRef.current) return;
     sendingRef.current = true;
@@ -613,7 +619,7 @@ function GambitImpl({
     // the newest entry (which is the one we just pushed).
     historyCursorRef.current = null;
     if (latestDraftRef.current === draft) onDraftChange('');
-  }, [draft, onSend, onDraftChange, running, claude, codex, dsh, desktop]);
+  }, [draft, onSend, onDraftChange, running, steerable, codex, dsh, opencode, desktop]);
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     // IME composition in progress — let the IME keep Enter for confirming
@@ -798,6 +804,7 @@ function GambitImpl({
         {claude && <ClaudeComposerControls sessionId={sessionId} draft={draft} onDraftChange={onDraftChange} keyHandler={claudeKeyHandler} quota={usageMeter}>{capabilitiesStatus}</ClaudeComposerControls>}
         {codex && <CodexComposerControls key={sessionId} sessionId={sessionId} draft={draft} onDraftChange={onDraftChange} keyHandler={claudeKeyHandler} submitHandler={codexSubmitHandler} quota={usageMeter}>{capabilitiesStatus}</CodexComposerControls>}
 
+        {opencode && <OpenCodeComposerControls key={sessionId} sessionId={sessionId} draft={draft} onDraftChange={onDraftChange} keyHandler={claudeKeyHandler} submitHandler={codexSubmitHandler} quota={usageMeter}>{capabilitiesStatus}</OpenCodeComposerControls>}
         {dsh && <DshComposerControls key={sessionId} sessionId={sessionId} draft={draft} onDraftChange={onDraftChange} keyHandler={claudeKeyHandler} submitHandler={codexSubmitHandler} quota={usageMeter}>{capabilitiesStatus}</DshComposerControls>}
         {!desktop && attachable && <button type="button" className="gambit-attach" aria-label={t('claude.attach')} onClick={() => { void attachFiles(); }}><AttachIcon /></button>}
         {!desktop && capabilitiesStatus}
@@ -816,11 +823,11 @@ function GambitImpl({
 
         <button
           className={`gambit-send${sendFailed ? ' gambit-send--failed' : ''}${!running && !draft.trim() ? ' gambit-send--empty' : ''}`}
-          aria-label={t(running && (!(claude || dsh) || !draft.trim()) ? 'gambit.stop' : 'gambit.send')}
+          aria-label={t(running && (!steerable || !draft.trim()) ? 'gambit.stop' : 'gambit.send')}
           disabled={running && !onCancel}
-          onClick={running && (!(claude || dsh) || !draft.trim()) ? onCancel : handleSend}
+          onClick={running && (!steerable || !draft.trim()) ? onCancel : handleSend}
         >
-          {running && (!(claude || dsh) || !draft.trim()) ? <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="4" y="4" width="8" height="8" rx="1" /></svg> : <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          {running && (!steerable || !draft.trim()) ? <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="4" y="4" width="8" height="8" rx="1" /></svg> : <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
             <path d="M8 14 V3 M3 8 L8 3 L13 8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>}
         </button>

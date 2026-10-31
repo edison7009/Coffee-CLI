@@ -7,6 +7,7 @@ import { TierTerminal } from './TierTerminal';
 import { AgentPages } from '../agent/AgentPages';
 import { ClaudeConversation } from './ClaudeConversation';
 import { CodexConversation } from './CodexConversation';
+import { OpenCodeConversation } from './OpenCodeConversation';
 import { DshConversation } from './DshConversation';
 import { UsageDashboard } from './UsageDashboard';
 import { ToolSettingsPage } from './ToolSettingsPage';
@@ -22,7 +23,7 @@ import { ErrorBoundary } from '../common/ErrorBoundary';
 import { DiffPanel } from '../right/DiffPanel';
 import { getTabOrder, supportsAgentStatus, useAppState, type ClaudeMode, type ToolType } from '../../store/app-state';
 import { isFrostShape } from '../../lib/personalization';
-import { isClaudeConversation, isCodexConversation, isDshConversation } from '../../lib/chat-tools';
+import { isClaudeConversation, isCodexConversation, isDshConversation, isOpenCodeConversation } from '../../lib/chat-tools';
 
 // Dropdown shown when a tool card is clicked: the globally
 // recent project folders (any tool that used one) + "Open folder…" last.
@@ -597,6 +598,13 @@ export function CenterPanel() {
     setCodexLaunchMode(mode);
     try { localStorage.setItem('coffee:codex-launch-mode', mode); } catch { /* optional preference */ }
   };
+  const [opencodeLaunchMode, setOpencodeLaunchMode] = useState<ClaudeMode>(() => {
+    try { return localStorage.getItem('coffee:opencode-launch-mode') === 'terminal' ? 'terminal' : 'conversation'; } catch { return 'conversation'; }
+  });
+  const changeOpencodeLaunchMode = (mode: ClaudeMode) => {
+    setOpencodeLaunchMode(mode);
+    try { localStorage.setItem('coffee:opencode-launch-mode', mode); } catch { /* optional preference */ }
+  };
   // Shared recent project folders, most recently used first.
   const [recentFolders, setRecentFolders] = useState<string[]>(() => {
     try { const r = localStorage.getItem('coffee:recent-folders'); return r ? JSON.parse(r) : []; } catch { return []; }
@@ -988,7 +996,7 @@ export function CenterPanel() {
       if (cwd) {
         pushRecentFolder(cwd);
       }
-      dispatch({ type: 'LAUNCH_TERMINAL_TOOL', id: activeTerminalId, tool, toolData, cwd, claudeMode: tool === 'claude' ? claudeLaunchMode : undefined, codexMode: tool === 'codex' ? codexLaunchMode : undefined });
+      dispatch({ type: 'LAUNCH_TERMINAL_TOOL', id: activeTerminalId, tool, toolData, cwd, claudeMode: tool === 'claude' ? claudeLaunchMode : undefined, codexMode: tool === 'codex' ? codexLaunchMode : undefined, opencodeMode: tool === 'opencode' ? opencodeLaunchMode : undefined });
     }
   };
 
@@ -1319,6 +1327,8 @@ export function CenterPanel() {
           >
             {isDshConversation(t) ? (
               <DshConversation key={`dsh-${t.id}-${t.restartKey ?? 0}`} sessionId={t.id} cwd={t.folderPath} resumeToken={t.resumeToken} isActive={t.id === activeTerminalId && contentActive} isVisible={contentActive && (splitVisible ? splitIds.includes(t.id) : t.id === activeTerminalId)} hasBg={hasBg} bgUrl={bgUrl} bgType={bgType} />
+            ) : isOpenCodeConversation(t) ? (
+              <OpenCodeConversation key={`opencode-${t.id}-${t.restartKey ?? 0}`} sessionId={t.id} cwd={t.folderPath} resumeToken={t.resumeToken} isActive={t.id === activeTerminalId && contentActive} isVisible={contentActive && (splitVisible ? splitIds.includes(t.id) : t.id === activeTerminalId)} hasBg={hasBg} bgUrl={bgUrl} bgType={bgType} />
             ) : isCodexConversation(t) ? (
               <CodexConversation key={`codex-${t.id}-${t.restartKey ?? 0}`} sessionId={t.id} cwd={t.folderPath} resumeToken={t.resumeToken} isActive={t.id === activeTerminalId && contentActive} isVisible={contentActive && (splitVisible ? splitIds.includes(t.id) : t.id === activeTerminalId)} hasBg={hasBg} bgUrl={bgUrl} bgType={bgType} />
             ) : isClaudeConversation(t) ? (
@@ -1494,7 +1504,7 @@ export function CenterPanel() {
                                       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
                                     </svg>
                                   </button>}
-                                  {tool.type === 'ai-cli' && <LaunchModeControl value={tool.key === 'claude' ? claudeLaunchMode : tool.key === 'codex' ? codexLaunchMode : tool.key === 'dsh' ? 'conversation' : 'terminal'} disabled={disabled} label={tool.key === 'codex' ? 'Codex' : tool.key === 'dsh' ? 'DeepSeek Harness' : undefined} modes={tool.key === 'dsh' ? ['conversation'] : undefined} onChange={tool.key === 'claude' ? changeClaudeLaunchMode : tool.key === 'codex' ? changeCodexLaunchMode : tool.key === 'dsh' ? () => {} : undefined} />}
+                                  {tool.type === 'ai-cli' && <LaunchModeControl value={tool.key === 'claude' ? claudeLaunchMode : tool.key === 'codex' ? codexLaunchMode : tool.key === 'opencode' ? opencodeLaunchMode : tool.key === 'dsh' ? 'conversation' : 'terminal'} disabled={disabled} label={tool.key === 'codex' ? 'Codex' : tool.key === 'opencode' ? 'OpenCode' : tool.key === 'dsh' ? 'DeepSeek Harness' : undefined} modes={tool.key === 'dsh' ? ['conversation'] : undefined} onChange={tool.key === 'claude' ? changeClaudeLaunchMode : tool.key === 'codex' ? changeCodexLaunchMode : tool.key === 'opencode' ? changeOpencodeLaunchMode : tool.key === 'dsh' ? () => {} : undefined} />}
                                 </div>
                               </div>
                             );

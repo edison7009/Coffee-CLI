@@ -19,11 +19,12 @@
 import { useCallback, useEffect } from 'react';
 import { useAppState, useAppStateRef, matchHotkeyScheme } from '../../store/app-state';
 import { sendSessionPrompt } from '../../lib/send-session-prompt';
-import { isClaudeConversation, isCodexConversation, isDshConversation } from '../../lib/chat-tools';
+import { isClaudeConversation, isCodexConversation, isDshConversation, isOpenCodeConversation } from '../../lib/chat-tools';
 import { getToolIcon } from './CenterPanel';
 import { Gambit } from './Gambit';
 import { controlClaude, useClaudeSession } from '../../lib/claude-session';
 import { interruptCodex, useCodexSession } from '../../lib/codex-session';
+import { interruptOpenCode, useOpenCodeSession } from '../../lib/opencode-session';
 import { stopDsh, useDshSession } from '../../lib/dsh-session';
 import { useOrchestration } from '../../lib/orchestration';
 import { useSessionControls } from '../../lib/session-controls';
@@ -66,10 +67,12 @@ export function ActiveGambit() {
   const isClaude = isClaudeConversation(activeSession);
   const isCodex = isCodexConversation(activeSession);
   const isDsh = isDshConversation(activeSession);
-  const gambitOpen = isClaude || isCodex || isDsh || state.gambitOpen;
+  const isOpenCode = isOpenCodeConversation(activeSession);
+  const gambitOpen = isClaude || isCodex || isDsh || isOpenCode || state.gambitOpen;
   const claude = useClaudeSession(isClaude ? activeId ?? '' : '');
   const codex = useCodexSession(isCodex ? activeId ?? '' : '');
   const dshBusy = useDshSession(isDsh ? activeId ?? '' : '', s => s.busy);
+  const openCodeBusy = useOpenCodeSession(isOpenCode ? activeId ?? '' : '', s => s.busy);
   const controlsReady = isClaude ? claude.ready : isCodex ? codex.ready : true;
   // Footer label telling the user where Send will land. Local sessions show
   // their working-folder name; SSH/WebSocket sessions show their connection
@@ -159,9 +162,10 @@ export function ActiveGambit() {
       claude={isClaude}
       codex={isCodex}
       dsh={isDsh}
+      opencode={isOpenCode}
       attachable={activeSession?.tool !== 'remote'}
-      running={isClaude ? claude.busy : isCodex ? codex.busy : isDsh && dshBusy}
-      onCancel={isDsh ? () => { void stopDsh(activeId); } : isCodex ? () => { void interruptCodex(activeId); } : isClaude ? () => { void controlClaude(activeId, { subtype: 'interrupt' }).catch(() => {}); } : undefined}
+      running={isClaude ? claude.busy : isCodex ? codex.busy : isOpenCode ? openCodeBusy : isDsh && dshBusy}
+      onCancel={isDsh ? () => { void stopDsh(activeId); } : isOpenCode ? () => { void interruptOpenCode(activeId); } : isCodex ? () => { void interruptCodex(activeId); } : isClaude ? () => { void controlClaude(activeId, { subtype: 'interrupt' }).catch(() => {}); } : undefined}
       leftPanelHidden={state.leftPanelHidden}
       rightPanelHidden={state.rightPanelHidden}
     />
