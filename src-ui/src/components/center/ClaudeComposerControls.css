@@ -27,7 +27,8 @@
 .claude-control-menu button small { color:var(--text-3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; }
 .claude-menu-empty { padding:18px 10px; color:var(--text-3); }
 .claude-composer-controls .claude-tasks-control { display:inline-flex; align-items:center; gap:6px; flex-shrink:0; padding-block:3px 5px; }
-.claude-tasks-dot { width:6px; height:6px; flex-shrink:0; border-radius:50%; background:var(--accent); animation:claude-tasks-pulse 1.15s ease-in-out infinite; }
+.claude-tasks-dot { width:6px; height:6px; flex-shrink:0; border-radius:50%; background:var(--claude-tasks-color,rgb(0,204,204)); animation:claude-tasks-pulse 1.15s ease-in-out infinite; }
+[data-mode="light"] .claude-tasks-dot { --claude-tasks-color:rgb(0,153,153); }
 @keyframes claude-tasks-pulse { 50% { opacity:.35; } }
 .claude-tasks-heading { padding:6px 9px 4px; color:var(--text-3); }
 .claude-tasks-item { display:flex; align-items:center; gap:8px; min-width:0; padding:6px 9px; color:var(--text-1); }
