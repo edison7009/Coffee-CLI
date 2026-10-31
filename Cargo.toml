@@ -78,6 +78,8 @@ url = "2"
 chrono = "0.4"
 # Oh My Pi keeps providers in YAML; serde_yaml is archived, this is the maintained fork.
 serde_yaml_ng = "0.10"
+# DeepSeek Harness stores Session logs as concatenated zstd frames.
+zstd = "0.13"
 
 [profile.release]
 opt-level = "z"
