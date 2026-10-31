@@ -38,7 +38,7 @@ export function useDshSession(id: string, select: (state: DshState) => unknown =
 }
 export function getDshConnection(id: string) {
   const c = clients.get(id);
-  return c && c.owners > 0 ? { generation: c.generation, state: c.state, ready: c.state.ready, inputBusy: c.state.busy } : undefined;
+  return c && c.owners > 0 ? { generation: c.generation, state: c.state, ready: c.state.ready && !c.state.restarting, inputBusy: c.state.busy } : undefined;
 }
 
 /** Starts (or restarts) the runtime; a known Session resumes and its persisted log restores the transcript. */
@@ -108,7 +108,8 @@ export function setDshRoute(id: string, route: DshRoute): Promise<void> {
  * own events confirm; an unstarted tab has no Session yet, so its choice waits for the first prompt. */
 export async function setDshPreset(id: string, preset: string) {
   const c = clients.get(id); if (!c) return;
-  await invoke('dsh_session_set_preset', { id, generation: c.generation, preset });
+  try { await invoke('dsh_session_set_preset', { id, generation: c.generation, preset }); }
+  catch (error) { c.state = { ...c.state, error: String(error) }; publish(c, true); return; }
   c.preset = preset;
   if (!c.state.messages.length) { c.state = { ...c.state, preset }; publish(c, true); }
 }

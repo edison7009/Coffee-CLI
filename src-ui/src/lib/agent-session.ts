@@ -93,7 +93,8 @@ export function getAgentSession(tab: TerminalSession) {
       if (key !== 'CtrlC') throw new Error('桌面会话仅支持 CtrlC 中断；发送消息请使用 terminal_send，审批请求由用户处理');
       if (!c.ready && !c.state.busy) throw new Error('桌面会话尚未就绪或已经断开');
       try {
-        if (dsh) await stopDsh(id);
+        // Stopping restarts the DeepSeek Harness runtime, which an idle session has no need of.
+        if (dsh) { if (c.state.busy) await stopDsh(id); }
         else if (claude) await controlClaude(id, { subtype: 'interrupt' });
         else {
           await interruptCodex(id);

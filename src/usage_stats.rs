@@ -390,14 +390,17 @@ fn parse_dsh(db: &Connection, file: &str, p: &mut Parser, v: &Value) -> rusqlite
         }
         Some("model/selection") => p.model = text(data, "model"),
         Some("user/message") if data["source"]["kind"] == "user" => {
-            record(db, file, &format!("dsh:prompt:{}:{seq}", p.session), "dsh", p, &stamp, "prompt", Tokens::default())?;
+            // Message ids survive into forked Sessions' logs, so copied history counts once.
+            let id = data["id"].as_str().map(str::to_owned).unwrap_or_else(|| format!("{}:{seq}", p.session));
+            record(db, file, &format!("dsh:prompt:{id}"), "dsh", p, &stamp, "prompt", Tokens::default())?;
         }
         Some("assistant/message") => {
             let usage = Tokens::dsh(&data["usage"]);
             if usage.any() {
-                // Sessions on the configured default route log no model selection.
-                if p.model.is_empty() { p.model = "DeepSeek Harness".into(); }
-                record(db, file, &format!("dsh:usage:{}:{seq}", p.session), "dsh", p, &stamp, "usage", usage)?;
+                let message = &data["message"];
+                if let Some(model) = message["source"]["model"].as_str() { p.model = model.into(); }
+                let id = message["id"].as_str().map(str::to_owned).unwrap_or_else(|| format!("{}:{seq}", p.session));
+                record(db, file, &format!("dsh:usage:{id}"), "dsh", p, &stamp, "usage", usage)?;
             }
         }
         _ => {}
@@ -630,14 +633,14 @@ mod tests {
             json!({"type":"model/selection","seq":1,"time":1793432653000i64,"data":{"model":"deepseek-flash"}}),
             json!({"type":"user/message","seq":2,"time":1793432653000i64,"data":{"source":{"kind":"user"}}}),
             json!({"type":"user/message","seq":3,"time":1793432653000i64,"data":{"source":{"kind":"runtime"}}}),
-            json!({"type":"assistant/message","seq":4,"time":1793432654000i64,"data":{"usage":{"inputTokens":490,"outputTokens":167,"cacheReadTokens":5760,"cacheWriteTokens":0,"totalTokens":6417}}}),
+            json!({"type":"assistant/message","seq":4,"time":1793432654000i64,"data":{"message":{"id":"reply","source":{"kind":"model","model":"deepseek-v4-pro"}},"usage":{"inputTokens":490,"outputTokens":167,"cacheReadTokens":5760,"cacheWriteTokens":0,"totalTokens":6417}}}),
             json!({"type":"assistant/message","seq":5,"time":1793432654000i64,"data":{}}),
         ] {
             parse_dsh(&c, "fixture", &mut p, &row).unwrap();
         }
         let report = totals(&c);
         assert_eq!((report.summary.prompts, report.summary.calls, report.summary.input, report.summary.cache_read), (1, 1, Some(490), Some(5760)));
-        assert_eq!(p.project, "D:/repo");
+        assert_eq!((p.project.as_str(), p.model.as_str()), ("D:/repo", "deepseek-v4-pro"));
     }
 
     fn line(c: &Connection, p: &mut Parser, tool: &str, v: Value) {
