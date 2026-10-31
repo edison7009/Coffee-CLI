@@ -44,7 +44,7 @@ await build({
       export async function clipboardWrite(text){window.copiedText=text};export async function clipboardRead(){return window.clipboardText||''};
     ` : args.path === 'claude-session' ? `
       import {useSyncExternalStore} from 'react';
-      let state={ready:true,busy:false,models:[],commands:[],model:'claude-test',permissionMode:'default',contextTokens:25000,contextWindow:100000,modelUsage:{first:{inputTokens:10000,outputTokens:300,cacheReadInputTokens:15000,cacheCreationInputTokens:1000},second:{inputTokens:6000,outputTokens:100}}};const listeners=new Set();
+      let state={ready:true,busy:false,backgroundTasks:[],models:[],commands:[],model:'claude-test',permissionMode:'default',contextTokens:25000,contextWindow:100000,modelUsage:{first:{inputTokens:10000,outputTokens:300,cacheReadInputTokens:15000,cacheCreationInputTokens:1000},second:{inputTokens:6000,outputTokens:100}}};const listeners=new Set();
       window.setClaude=patch=>{state={...state,...patch};listeners.forEach(fn=>fn())};
       export function useClaudeSession(){return useSyncExternalStore(fn=>{listeners.add(fn);return()=>listeners.delete(fn)},()=>state)};
       export async function controlClaude(){};

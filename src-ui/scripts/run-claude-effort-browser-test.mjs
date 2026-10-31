@@ -13,7 +13,7 @@ function App(){const handler=useRef();return <div style={{position:'absolute',bo
   b.onResolve({filter:/lib\/claude-session$/},()=>({path:'session',namespace:'fixture'}));
   b.onResolve({filter:/store\/app-state$/},()=>({path:'language',namespace:'fixture'}));
   b.onLoad({filter:/.*/,namespace:'fixture'},args=>({loader:'js',resolveDir:project,contents:args.path==='language'?`export function useAppLanguage(){return 'zh-CN'}`:`
-import{useSyncExternalStore}from'react';let listeners=new Set();let state={ready:true,model:'test',models:[{value:'test',supportsEffort:true,supportedEffortLevels:['low','medium','high','xhigh','max'],supportsThinkingOff:true}],effort:'high',thinking:true,commands:[],modelUsage:{},contextWindow:0,contextTokens:0,permissionMode:'default'};
+import{useSyncExternalStore}from'react';let listeners=new Set();let state={ready:true,backgroundTasks:[],model:'test',models:[{value:'test',supportsEffort:true,supportedEffortLevels:['low','medium','high','xhigh','max'],supportsThinkingOff:true}],effort:'high',thinking:true,commands:[],modelUsage:{},contextWindow:0,contextTokens:0,permissionMode:'default'};
 window.requests=[];export function useClaudeSession(){return useSyncExternalStore(fn=>{listeners.add(fn);return()=>listeners.delete(fn)},()=>state)}
 export async function controlClaude(id,request){window.requests.push(request);await new Promise(resolve=>{window.finishControl=()=>{state={...state,...(request.settings.effortLevel?{effort:request.settings.effortLevel}:{}),...(typeof request.settings.alwaysThinkingEnabled==='boolean'?{thinking:request.settings.alwaysThinkingEnabled}:{})};listeners.forEach(fn=>fn());resolve({})}})}
 `}));
