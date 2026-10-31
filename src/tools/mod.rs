@@ -195,6 +195,7 @@ mod codebuddy;
 mod grok;
 pub mod hermes;
 mod kilo;
+mod dsh;
 mod kiro;
 mod minimax;
 mod mimocode;
@@ -236,6 +237,7 @@ pub static TOOLS: &[&ToolDescriptor] = &[
     // history/heatmap second pass in server.rs, resume preset in terminal.rs,
     // launchpad tile in CenterPanel's catalog.
     &kilo::DESCRIPTOR,
+    &dsh::DESCRIPTOR,
     // Pi/Oh-My-Pi have T2 history/heatmap/resume; Kimi Code is T1.
     // The others —
     // Antigravity / Crush / Aider / Goose / Copilot / Cursor — are T3

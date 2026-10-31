@@ -98,13 +98,14 @@ pub(crate) fn executable() -> Option<(String, Vec<String>)> {
     bundled.filter(|p| p.is_file()).map(|p| (p.to_string_lossy().into_owned(), args))
 }
 
-/// Built-in routes of the SDK profile (`dsh-llm-deepseek`), shown alongside the user's own.
+/// Built-in DeepSeek routes, shown alongside the user's own: `deepseek-account` uses the account signed in
+/// through DeepSeek Harness (shared `$DSH_HOME/.credentials.yaml`), `deepseek-official` an API key.
 fn builtin_models() -> Vec<Value> {
     let efforts = json!(["off", "low", "high", "max"]);
-    vec![
-        json!({"provider":"deepseek-official","model":"deepseek-flash","name":"DeepSeek-V4.1-Flash","efforts":efforts}),
-        json!({"provider":"deepseek-official","model":"deepseek-v4-pro","name":"DeepSeek-V4-Pro","efforts":efforts}),
-    ]
+    ["deepseek-account", "deepseek-official"].iter().flat_map(|provider| [
+        json!({"provider":provider,"model":"deepseek-flash","name":"DeepSeek-V4.1-Flash","efforts":efforts}),
+        json!({"provider":provider,"model":"deepseek-v4-pro","name":"DeepSeek-V4-Pro","efforts":efforts}),
+    ]).collect()
 }
 
 struct Routes { patch: Option<PathBuf>, default: Option<(String, String)>, models: Vec<Value> }
@@ -208,7 +209,7 @@ fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<Stri
     let requested = route.unwrap_or(Value::Null);
     let (provider, model) = match (requested["provider"].as_str(), requested["model"].as_str()) {
         (Some(provider), Some(model)) => (provider.to_string(), model.to_string()),
-        _ => routes.default.clone().unwrap_or_else(|| ("deepseek-official".into(), "deepseek-flash".into())),
+        _ => routes.default.clone().unwrap_or_else(|| ("deepseek-account".into(), "deepseek-flash".into())),
     };
     let effort = requested["effort"].as_str().filter(|e| !e.is_empty()).map(String::from);
     let result = (|| {

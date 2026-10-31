@@ -7,6 +7,7 @@ import { TierTerminal } from './TierTerminal';
 import { AgentPages } from '../agent/AgentPages';
 import { ClaudeConversation } from './ClaudeConversation';
 import { CodexConversation } from './CodexConversation';
+import { DshConversation } from './DshConversation';
 import { UsageDashboard } from './UsageDashboard';
 import { ToolSettingsPage } from './ToolSettingsPage';
 import { receiveOrchestration, useOrchestration, workerState } from '../../lib/orchestration';
@@ -21,7 +22,7 @@ import { ErrorBoundary } from '../common/ErrorBoundary';
 import { DiffPanel } from '../right/DiffPanel';
 import { getTabOrder, supportsAgentStatus, useAppState, type ClaudeMode, type ToolType } from '../../store/app-state';
 import { isFrostShape } from '../../lib/personalization';
-import { isClaudeConversation, isCodexConversation } from '../../lib/chat-tools';
+import { isClaudeConversation, isCodexConversation, isDshConversation } from '../../lib/chat-tools';
 
 // Dropdown shown when a tool card is clicked: the globally
 // recent project folders (any tool that used one) + "Open folder…" last.
@@ -129,6 +130,7 @@ import CODEX_SVG from '../../icons-inline/codex.svg?raw';
 import ANTIGRAVITY_SVG from '../../icons-inline/antigravity.svg?raw';
 import MIMOCODE_DATA_URL from '../../icons-inline/mimocode.png?inline';
 import HERMES_DATA_URL from '../../icons-inline/hermes.png?inline';
+import DSH_DATA_URL from '../../icons-inline/dsh.png?inline';
 import TERMINAL_MAC_DATA_URL from '../../icons-inline/terminal-macos.png?inline';
 import TERMINAL_LINUX_DATA_URL from '../../icons-inline/terminal-linux.png?inline';
 import TERMINAL_PWSH_SVG from '../../icons-inline/terminal-powershell.svg?raw';
@@ -222,6 +224,8 @@ const SvgQwen      = () => inlineSvgIcon(QWEN_SVG);
 // trade-off (fixed flash-on-mount in WebView2) wasn't worth it; the inline
 // SVG with rounded outer rect matches the brand visually within a pixel or two.
 const SvgOpenCode  = () => inlineSvgIcon(OPENCODE_SVG);
+// DeepSeek Harness — the app icon shipped with DeepSeek Harness Desktop (own rounded tile).
+const SvgDsh       = () => bgIcon(DSH_DATA_URL, '1em', { borderRadius: 'var(--radius-xs)', backgroundSize: 'cover' });
 const SvgMimo      = () => bgIcon(MIMOCODE_DATA_URL, '1em', { borderRadius: 'var(--radius-xs)' });
 // Kilo Code (OpenCode fork, `kilo` binary) — official square favicon mark
 // from kilo.ai. Hard-square art gets a rounded crop.
@@ -320,6 +324,7 @@ const getToolIcon = (tool: ToolType): React.ReactNode => {
     case 'muse': return <SvgMuse />;
     case 'kiro': return <SvgKiro />;
     case 'minimax': return <SvgMiniMax />;
+    case 'dsh': return <SvgDsh />;
     case 'remote':
     case 'terminal': return <TerminalIcon />;
     default: return undefined;
@@ -338,7 +343,7 @@ export { getToolIcon };
 const VALID_PIN_KEYS = new Set<string>([
   'claude', 'opencode', 'mimocode', 'kilo', 'openclaw', 'codex', 'grok', 'antigravity', 'qwen', 'hermes', 'terminal',
   'pi', 'crush', 'aider', 'kimicode', 'goose', 'copilot', 'cursor', 'cline', 'omp',
-  'codebuddy', 'muse', 'kiro', 'minimax',
+  'codebuddy', 'muse', 'kiro', 'minimax', 'dsh',
 ]);
 
 const CONFIGURABLE_AGENT_TOOLS = new Set<ToolType>([
@@ -453,13 +458,14 @@ export function CenterPanel() {
     muse: <SvgMuse />,
     kiro: <SvgKiro />,
     minimax: <SvgMiniMax />,
+    dsh: <SvgDsh />,
   };
 
   // Built-in AI CLI catalog. Fully local — no remote fetch. Display
   // names are sourced from the Rust registry (see lib/tool-info.ts);
   // the order here is the launchpad's preferred presentation order.
   const BUILTIN_AI_CLI_FALLBACK: { key: ToolType; label: string }[] = [
-    'claude', 'codex', 'cursor', 'copilot', 'antigravity',
+    'claude', 'codex', 'dsh', 'cursor', 'copilot', 'antigravity',
     'openclaw', 'hermes', 'opencode', 'pi', 'cline', 'goose', 'aider',
     'omp', 'crush', 'qwen', 'kilo', 'kiro', 'kimicode',
     'codebuddy', 'grok', 'mimocode', 'minimax', 'muse',
@@ -1106,6 +1112,7 @@ export function CenterPanel() {
       case 'muse': return { icon, title: cwd ?? getToolDisplayName('muse'), tooltip: pathTip };
       case 'kiro': return { icon, title: cwd ?? getToolDisplayName('kiro'), tooltip: pathTip };
       case 'minimax': return { icon, title: cwd ?? getToolDisplayName('minimax'), tooltip: pathTip };
+      case 'dsh': return { icon, title: cwd ?? getToolDisplayName('dsh'), tooltip: pathTip };
       case 'remote': {
         let title = t('tool.remote') as string;
         if (session.toolData) {
@@ -1309,7 +1316,9 @@ export function CenterPanel() {
               top: splitVisible ? `${splitRects.find(rect => rect.id === t.id)?.top ?? 0}%` : undefined,
             }}
           >
-            {isCodexConversation(t) ? (
+            {isDshConversation(t) ? (
+              <DshConversation key={`dsh-${t.id}-${t.restartKey ?? 0}`} sessionId={t.id} cwd={t.folderPath} resumeToken={t.resumeToken} isActive={t.id === activeTerminalId && contentActive} isVisible={contentActive && (splitVisible ? splitIds.includes(t.id) : t.id === activeTerminalId)} hasBg={hasBg} bgUrl={bgUrl} bgType={bgType} />
+            ) : isCodexConversation(t) ? (
               <CodexConversation key={`codex-${t.id}-${t.restartKey ?? 0}`} sessionId={t.id} cwd={t.folderPath} resumeToken={t.resumeToken} isActive={t.id === activeTerminalId && contentActive} isVisible={contentActive && (splitVisible ? splitIds.includes(t.id) : t.id === activeTerminalId)} hasBg={hasBg} bgUrl={bgUrl} bgType={bgType} />
             ) : isClaudeConversation(t) ? (
               <ClaudeConversation
@@ -1484,7 +1493,7 @@ export function CenterPanel() {
                                       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
                                     </svg>
                                   </button>}
-                                  {tool.type === 'ai-cli' && <LaunchModeControl value={tool.key === 'claude' ? claudeLaunchMode : tool.key === 'codex' ? codexLaunchMode : 'terminal'} disabled={disabled} label={tool.key === 'codex' ? 'Codex' : undefined} onChange={tool.key === 'claude' ? changeClaudeLaunchMode : tool.key === 'codex' ? changeCodexLaunchMode : undefined} />}
+                                  {tool.type === 'ai-cli' && <LaunchModeControl value={tool.key === 'claude' ? claudeLaunchMode : tool.key === 'codex' ? codexLaunchMode : tool.key === 'dsh' ? 'conversation' : 'terminal'} disabled={disabled} label={tool.key === 'codex' ? 'Codex' : tool.key === 'dsh' ? 'DeepSeek Harness' : undefined} modes={tool.key === 'dsh' ? ['conversation'] : undefined} onChange={tool.key === 'claude' ? changeClaudeLaunchMode : tool.key === 'codex' ? changeCodexLaunchMode : tool.key === 'dsh' ? () => {} : undefined} />}
                                 </div>
                               </div>
                             );

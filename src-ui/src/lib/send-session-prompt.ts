@@ -1,7 +1,8 @@
 import type { TerminalSession } from '../store/app-state';
-import { isClaudeConversation, isCodexConversation } from './chat-tools';
+import { isClaudeConversation, isCodexConversation, isDshConversation } from './chat-tools';
 import { controlClaude, sendClaudeMessage } from './claude-session';
 import { sendCodexMessage } from './codex-session';
+import { sendDshMessage } from './dsh-session';
 import { submitTerminalPrompt } from './terminal-control';
 
 /** Send through the existing conversation or terminal without opening another session. */
@@ -9,6 +10,7 @@ export async function sendSessionPrompt(session: Pick<TerminalSession, 'id' | 't
   if (!session?.tool || !text.trim()) return false;
   try {
     if (isCodexConversation(session)) return await sendCodexMessage(session.id, text);
+    if (isDshConversation(session)) return await sendDshMessage(session.id, text);
     if (isClaudeConversation(session)) {
       if (/^\/plan\s+\S/.test(text)) {
         await controlClaude(session.id, { subtype: 'set_permission_mode', mode: 'plan' });

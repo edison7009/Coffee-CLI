@@ -8,7 +8,7 @@ import { insertSessionSplit, removeSessionSplit, replaceSplitSession, splitSessi
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type ToolType = 'claude' | 'qwen' | 'hermes' | 'opencode' | 'mimocode' | 'kilo' | 'openclaw' | 'codex' | 'grok' | 'antigravity' | 'pi' | 'crush' | 'aider' | 'kimicode' | 'goose' | 'copilot' | 'cursor' | 'cline' | 'omp' | 'codebuddy' | 'muse' | 'kiro' | 'minimax' | 'terminal' | 'remote' | null;
+export type ToolType = 'claude' | 'qwen' | 'hermes' | 'opencode' | 'mimocode' | 'kilo' | 'openclaw' | 'codex' | 'grok' | 'antigravity' | 'pi' | 'crush' | 'aider' | 'kimicode' | 'goose' | 'copilot' | 'cursor' | 'cline' | 'omp' | 'codebuddy' | 'muse' | 'kiro' | 'minimax' | 'dsh' | 'terminal' | 'remote' | null;
 export type ClaudeMode = 'conversation' | 'terminal';
 
 /**

@@ -19,11 +19,12 @@
 import { useCallback, useEffect } from 'react';
 import { useAppState, useAppStateRef, matchHotkeyScheme } from '../../store/app-state';
 import { sendSessionPrompt } from '../../lib/send-session-prompt';
-import { isClaudeConversation, isCodexConversation } from '../../lib/chat-tools';
+import { isClaudeConversation, isCodexConversation, isDshConversation } from '../../lib/chat-tools';
 import { getToolIcon } from './CenterPanel';
 import { Gambit } from './Gambit';
 import { controlClaude, useClaudeSession } from '../../lib/claude-session';
 import { interruptCodex, useCodexSession } from '../../lib/codex-session';
+import { stopDsh, useDshSession } from '../../lib/dsh-session';
 import { useOrchestration } from '../../lib/orchestration';
 import { useSessionControls } from '../../lib/session-controls';
 
@@ -64,9 +65,11 @@ export function ActiveGambit() {
   const gambitDraft = activeSession?.gambitDraft ?? '';
   const isClaude = isClaudeConversation(activeSession);
   const isCodex = isCodexConversation(activeSession);
-  const gambitOpen = isClaude || isCodex || state.gambitOpen;
+  const isDsh = isDshConversation(activeSession);
+  const gambitOpen = isClaude || isCodex || isDsh || state.gambitOpen;
   const claude = useClaudeSession(isClaude ? activeId ?? '' : '');
   const codex = useCodexSession(isCodex ? activeId ?? '' : '');
+  const dshBusy = useDshSession(isDsh ? activeId ?? '' : '', s => s.busy);
   const controlsReady = isClaude ? claude.ready : isCodex ? codex.ready : true;
   // Footer label telling the user where Send will land. Local sessions show
   // their working-folder name; SSH/WebSocket sessions show their connection
@@ -155,9 +158,10 @@ export function ActiveGambit() {
       browser={controlsReady && controls.includes('browser')}
       claude={isClaude}
       codex={isCodex}
+      dsh={isDsh}
       attachable={activeSession?.tool !== 'remote'}
-      running={isClaude ? claude.busy : isCodex && codex.busy}
-      onCancel={isCodex ? () => { void interruptCodex(activeId); } : isClaude ? () => { void controlClaude(activeId, { subtype: 'interrupt' }).catch(() => {}); } : undefined}
+      running={isClaude ? claude.busy : isCodex ? codex.busy : isDsh && dshBusy}
+      onCancel={isDsh ? () => { void stopDsh(activeId); } : isCodex ? () => { void interruptCodex(activeId); } : isClaude ? () => { void controlClaude(activeId, { subtype: 'interrupt' }).catch(() => {}); } : undefined}
       leftPanelHidden={state.leftPanelHidden}
       rightPanelHidden={state.rightPanelHidden}
     />
