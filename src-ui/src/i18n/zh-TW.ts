@@ -603,6 +603,7 @@ export const zhTW = {
   'claude.status.working': '工作中',
   'claude.status.background': '背景任務執行中',
   'claude.status.background_count': '{count} 個背景任務執行中',
+  'claude.status.background_short': '背景 {count}',
   'claude.status.crafting': '構思中',
   'claude.status.pondering': '推敲中',
   'claude.status.compacting': '壓縮上下文中',

@@ -603,6 +603,7 @@ Xóa tờ ghi chú này khi bạn sẵn sàng và bắt đầu tác vụ đầu 
   'claude.status.working': 'Đang làm việc',
   'claude.status.background': 'Tác vụ nền đang chạy',
   'claude.status.background_count': '{count} tác vụ nền đang chạy',
+  'claude.status.background_short': '{count} tác vụ nền',
   'claude.status.crafting': 'Đang xây dựng',
   'claude.status.pondering': 'Đang suy xét',
   'claude.status.compacting': 'Đang nén ngữ cảnh',

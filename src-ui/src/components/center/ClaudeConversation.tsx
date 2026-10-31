@@ -10,7 +10,7 @@ import { bindAutoHideScrollbar } from '../../lib/auto-hide-scrollbar';
 import { tokenizeFile, getShikiTheme, type LineTokens } from '../../lib/shiki';
 import { useDataAttr } from '../../lib/use-data-attr';
 import { controlClaude, loadClaudeHistory, respondClaude, retainClaudeSession, useClaudeSession } from '../../lib/claude-session';
-import { object, list, text, number, resultText, type ClaudeMessage, type ClaudeRequest, type ClaudeBackgroundTask } from '../../lib/claude-protocol';
+import { object, list, text, number, resultText, type ClaudeMessage, type ClaudeRequest } from '../../lib/claude-protocol';
 import { useConversationVirtualizer } from './conversation-virtualizer';
 import { MarkdownContent } from './MarkdownContent';
 import { WelcomeGreeting, WelcomeSessionMeta } from './WelcomeGreeting';
@@ -107,14 +107,6 @@ function Working({ status, startedAt }: { status: string; startedAt?: number }) 
   const wordIndex = age < 2000 ? 0 : age < 5000 ? 1 : 2 + Math.floor((age - 5000) / 5000);
   const word = status === 'stopping' ? t('codex.stopping') : status === 'compacting' ? t('claude.status.compacting') : status === 'tool' ? t('claude.status.working') : status === 'starting' ? t('claude.status.connecting') : words[wordIndex % words.length];
   return <div className="claude-working" role="status"><span className="claude-working-mark" aria-hidden="true"><img src={CLAUDE_WORKING_MARK} alt="" /></span><span className="claude-working-word">{word}…</span>{startedAt && <span className="claude-elapsed">{elapsed(age, t)}</span>}</div>;
-}
-
-// The turn has ended but shells or agents it started are still running.
-function BackgroundTasks({ tasks }: { tasks: ClaudeBackgroundTask[] }) {
-  const t = useT();
-  const label = tasks.length === 1 ? t('claude.status.background') : t('claude.status.background_count', { count: tasks.length });
-  const description = tasks.length === 1 ? tasks[0].description : '';
-  return <div className="claude-working claude-background-tasks" role="status"><span className="claude-working-mark" aria-hidden="true"><img src={CLAUDE_WORKING_MARK} alt="" /></span><span className="claude-working-word">{label}</span>{description && <span className="claude-background-description">{description}</span>}</div>;
 }
 
 function Code({ content, path, className = '' }: { content: string; path: string; className?: string }) {
@@ -381,7 +373,6 @@ export function ClaudeConversation({ sessionId, cwd, resumeToken, isActive, isVi
         <div style={{ height: virtual.bottomSpacer }} aria-hidden="true" />
         {s.requests.map(p => <Question key={p.id} id={sessionId} pending={p} />)}
         {s.ready && s.busy && !s.requests.length && <Working status={s.interruptRequested ? 'stopping' : s.status} startedAt={s.startedAt} />}
-        {s.ready && !s.busy && !s.requests.length && s.backgroundTasks.length > 0 && <BackgroundTasks tasks={s.backgroundTasks} />}
         {s.interrupted && !s.busy && !s.error && <div className="claude-interrupted" role="status">{t('claude.interrupted')}</div>}
         {directoryIssue && <div className="claude-session-error" role="alert">{directoryError}</div>}
         {s.error && (s.ready || s.errorKey === 'claude.error.settings_readback' || s.errorKey === 'claude.error.restart') && <div className="claude-session-error" role="alert">{s.errorKey ? t(s.errorKey, { detail: s.error }) : s.error}</div>}

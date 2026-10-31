@@ -600,6 +600,7 @@ export const ru = {
   'claude.status.working': 'Выполнение',
   'claude.status.background': 'Выполняется фоновая задача',
   'claude.status.background_count': 'Выполняется фоновых задач: {count}',
+  'claude.status.background_short': 'В фоне: {count}',
   'claude.status.crafting': 'Создание',
   'claude.status.pondering': 'Анализ',
   'claude.status.compacting': 'Сжатие контекста',
