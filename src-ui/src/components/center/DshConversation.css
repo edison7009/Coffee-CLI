@@ -8,3 +8,7 @@
 @keyframes dsh-shimmer-sweep { 0% { background-position:100% 0; } 66.6667%,100% { background-position:0 0; } }
 @media(prefers-reduced-motion:reduce),(forced-colors:active) { .dsh-shimmer { animation:none; background:none; -webkit-text-fill-color:currentColor; } }
 .dsh-running-status { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+/* The 512 × 640 frames carry wide margins; the window frames the character at the size of the other welcome marks. */
+.dsh-welcome-icon { display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; width:128px; height:124px; margin:0 auto 20px; color:#4d6bfe; }
+.dsh-welcome-icon img { position:absolute; top:-28px; left:0; width:128px; max-width:none; height:auto; }
+.dsh-welcome-still { width:56px; height:56px; background:currentColor; mask-position:center; mask-size:100% 100%; mask-repeat:no-repeat; -webkit-mask-position:center; -webkit-mask-size:100% 100%; -webkit-mask-repeat:no-repeat; }

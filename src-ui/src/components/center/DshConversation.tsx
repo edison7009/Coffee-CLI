@@ -10,6 +10,7 @@ import { useConversationVirtualizer } from './conversation-virtualizer';
 import type { ChatMessage } from '../../lib/chat-transcript';
 import { MarkdownContent } from './MarkdownContent';
 import { WelcomeGreeting, WelcomeSessionMeta } from './WelcomeGreeting';
+import { DshWelcomeIcon } from './DshWelcomeIcon';
 import { ConversationDirectory } from '../../lib/conversation-links';
 import { useConversationMenu } from '../../lib/use-conversation-menu';
 import { ConversationNavigation, MessageCopyButton, type ConversationNavigationItem } from './ConversationControls';
@@ -172,7 +173,7 @@ export function DshConversation({ sessionId, cwd, resumeToken, isActive, isVisib
         {/* A failed start must say why; Reconnect alone hides the cause. */}
         {s.error && !directoryIssue && <div className="claude-session-error" role="alert">{s.error}</div>}
         {directoryIssue && <div className="claude-session-error" role="alert">{directoryError}</div>}
-        {!directoryIssue && !rows.length && <div className="claude-empty"><WelcomeGreeting /><WelcomeSessionMeta cwd={cwd} model={s.models.find(m => m.provider === s.route.provider && m.model === s.route.model)?.name ?? s.route.model} /></div>}
+        {!directoryIssue && !rows.length && <div className="claude-empty"><DshWelcomeIcon isActive={isVisible} /><WelcomeGreeting /><WelcomeSessionMeta cwd={cwd} model={s.models.find(m => m.provider === s.route.provider && m.model === s.route.model)?.name ?? s.route.model} /></div>}
       </div>
     </div>
     {navigationItems.length > 1 && isActive && <ConversationNavigation items={navigationItems} scrollRef={scroll} onJump={jumpToTurn} />}
