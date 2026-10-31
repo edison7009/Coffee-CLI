@@ -127,7 +127,12 @@ body.gambit-docked .claude-scroll-bottom { bottom:calc(var(--gambit-dock-h,200px
 .claude-empty-separator { flex-shrink:0; color:var(--text-3); }
 .claude-empty-directory bdi, .claude-empty-model { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .claude-empty-model { min-width:0; text-align:left; }
-.claude-scroll-bottom { position:absolute; right:24px; bottom:20px; z-index:3; }
+/* Back to latest: centered above the composer, a dark chip of the workspace's own surface ringed in the accent, as mainstream agent apps draw it, rather than a filled accent button. */
+.claude-scroll-bottom { position:absolute; left:50%; bottom:20px; transform:translateX(-50%); z-index:3; display:flex; align-items:center; justify-content:center; width:32px; height:32px; padding:0; border-radius:50%; border:1px solid color-mix(in srgb,var(--accent) 70%,transparent); background:var(--bg-terminal); color:var(--text-1); cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.25); transition:border-color .12s,background .12s; }
+.claude-scroll-bottom:hover { border-color:var(--accent); background:color-mix(in srgb,var(--bg-terminal) 88%,var(--accent)); }
+.claude-scroll-bottom:focus-visible { outline:1px solid var(--accent); outline-offset:2px; }
+/* Material shapes may leave the terminal surface translucent; frost it so the chip still reads over text. */
+:is([data-shape="glass"],[data-shape="carbon"],[data-shape="monogram"]) .claude-scroll-bottom { background:color-mix(in srgb,var(--bg-terminal) 70%,transparent); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); }
 .claude-reconnect { position:absolute; left:50%; bottom:20px; transform:translateX(-50%); z-index:3; border-radius:var(--shape-radius-btn); font:13px var(--font); }
 body.gambit-docked .claude-reconnect { bottom:calc(var(--gambit-dock-h,200px) + 20px); }
 .claude-approval { padding:16px; margin:8px 0 24px 20px; border:1px solid var(--accent); border-radius:var(--shape-radius-btn,6px); background:var(--bg-terminal); }
