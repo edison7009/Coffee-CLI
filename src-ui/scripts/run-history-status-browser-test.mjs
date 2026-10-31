@@ -235,6 +235,18 @@ try {
     await page.evaluate(layout=>localStorage.setItem('cc-history-layout',layout),layout);
     await page.goto(`http://127.0.0.1:${server.address().port}/?toolIcons=1&pr=branch`);
     await page.locator('.history-card-tool-icon').first().waitFor();
+    if(layout==='projects'){
+      // A busy folder previews its newest sessions and grows click by click, then folds back.
+      const more=page.locator('.history-project-more');
+      const preview=await page.locator('.history-card').count();
+      assert.ok(preview<23,'one folder does not render every session at once');
+      if(process.env.COFFEE_HISTORY_SCREENSHOT)await page.screenshot({path:process.env.COFFEE_HISTORY_SCREENSHOT});
+      for(let i=0;i<5&&await page.locator('.history-card').count()<23;i++)await more.click();
+      assert.equal(await page.locator('.history-card').count(),23);
+      await more.click();
+      assert.equal(await page.locator('.history-card').count(),preview,'the last click folds back to the preview');
+      for(let i=0;i<5&&await page.locator('.history-card').count()<23;i++)await more.click();
+    }
     assert.equal(await page.locator('.history-card-tool-icon').count(),23);
     for (const row of await page.locator('.history-card').all()) {
       const name=await row.locator('.history-card-title').innerText(),icon=row.locator('.history-card-tool-icon');

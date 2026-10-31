@@ -162,6 +162,8 @@ export const zhCN = {
   'history.search_title': '搜索会话或工作区',
   'history.list': '会话列表',
   'history.projects': '项目分类',
+  'history.show_more': '显示更多',
+  'history.show_less': '收起',
   'history.needs_attention': "等待操作",
   'history.unread_reply': "新答复未读",
   'history.git.current_branch': '项目当前分支',

@@ -160,6 +160,8 @@ export const de = {
   'history.search_title': 'Sitzungen oder Arbeitsbereiche suchen',
   'history.list': 'Sitzungen',
   'history.projects': 'Projekte',
+  'history.show_more': 'Mehr anzeigen',
+  'history.show_less': 'Weniger anzeigen',
   'history.needs_attention': "Aktion ausstehend",
   'history.unread_reply': "Ungelesene Antwort",
   'history.git.current_branch': 'Aktueller Projektbranch',

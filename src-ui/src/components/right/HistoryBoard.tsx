@@ -113,6 +113,9 @@ const getToolIcon = (tool: string) => {
 
 const getToolName = (tool: string) => getToolDisplayName(tool);
 
+// Sessions a project shows before its Show more control, and how many each click adds.
+const PROJECT_PREVIEW = 5, PROJECT_STEP = 10;
+
 // Project folder basename (e.g. "EchoBird" from "E:\EchoBird", "coffee"
 // from "~/projects/coffee") — the icon already conveys the tool, so the
 // text line earns its keep by showing which project the session belongs
@@ -234,6 +237,8 @@ export function HistoryBoard() {
     try { return localStorage.getItem('cc-history-layout') === 'projects' ? 'projects' : 'list'; } catch { return 'list'; }
   });
   const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(new Set());
+  // How many sessions each project shows beyond its preview, so one busy folder cannot push the others away.
+  const [projectExtras, setProjectExtras] = useState<Map<string, number>>(new Map());
   useEffect(() => { try { localStorage.setItem('cc-history-layout', layout); } catch { /* Storage unavailable. */ } }, [layout]);
   useEffect(() => {
     const dialog = searchDialogRef.current;
@@ -294,12 +299,19 @@ export function HistoryBoard() {
     }
     return all;
   }, [availableSessions]);
+  const openSessions = useMemo(() => new Set(state.terminals.flatMap(tab => tab.resumeToken ? [`${tab.tool}:${tab.resumeToken}`] : [])), [state.terminals]);
   const rows = useMemo(() => layout === 'list'
     ? availableSessions.map(session => ({ kind: 'session' as const, session, grouped: false }))
-    : projects.flatMap(group => [
-      { kind: 'project' as const, group },
-      ...(collapsedProjects.has(group.key) ? [] : group.sessions.map(session => ({ kind: 'session' as const, session, grouped: true }))),
-    ] as Array<{ kind: 'project'; group: typeof group } | { kind: 'session'; session: SavedSession; grouped: boolean }>), [layout, availableSessions, projects, collapsedProjects]);
+    : projects.flatMap((group): Array<{ kind: 'project'; group: typeof group } | { kind: 'session'; session: SavedSession; grouped: boolean } | { kind: 'more'; group: typeof group; remaining: number }> => {
+      const header = { kind: 'project' as const, group };
+      if (collapsedProjects.has(group.key)) return [header];
+      const limit = PROJECT_PREVIEW + (projectExtras.get(group.key) ?? 0);
+      // An open session keeps its live status on screen wherever it falls in the list.
+      const shown = group.sessions.filter((session, index) => index < limit || session.id.startsWith('live:') || openSessions.has(`${session.tool}:${session.session_token}`));
+      const remaining = group.sessions.length - shown.length;
+      const expandable = remaining > 0 || limit > PROJECT_PREVIEW;
+      return [header, ...shown.map(session => ({ kind: 'session' as const, session, grouped: true })), ...(expandable ? [{ kind: 'more' as const, group, remaining }] : [])];
+    }), [layout, availableSessions, projects, collapsedProjects, projectExtras, openSessions]);
 
   // Search works across titles, tools and full project paths, independently of the sidebar view.
   const matchesQuery = useCallback((session: SavedSession, query: string) => {
@@ -325,7 +337,7 @@ export function HistoryBoard() {
     const liveFolder = liveSessionFolders.get(`${session.tool}:${session.session_token}`);
     return { folder: liveFolder ?? (session.git_context ? session.cwd : ''), context: session.git_context };
   };
-  const gitTargets = filteredRows.map(row => row.kind === 'project' ? { folder: row.group.cwd } : sessionGitTarget(row.session));
+  const gitTargets = filteredRows.flatMap(row => row.kind === 'more' ? [] : [row.kind === 'project' ? { folder: row.group.cwd } : sessionGitTarget(row.session)]);
   const gitStatuses = useProjectGitStatuses(gitTargets);
   const searchResults = searchOpen ? matchedSessions.slice(0, searchCount) : [];
   const selectedSearchIndex = Math.min(searchSelection, Math.max(0, searchResults.length - 1));
@@ -645,7 +657,12 @@ export function HistoryBoard() {
           </div>
         </div>
       ))}
-      {!isLoading && filteredRows.map(row => row.kind === 'session' ? renderSession(row.session, row.grouped) : (
+      {!isLoading && filteredRows.map(row => row.kind === 'session' ? renderSession(row.session, row.grouped) : row.kind === 'more' ? (
+        <button type="button" key={`more:${row.group.key}`} className="history-project-more" onClick={() => {
+          setPreview(null);
+          setProjectExtras(current => { const next = new Map(current); if (row.remaining > 0) next.set(row.group.key, (current.get(row.group.key) ?? 0) + PROJECT_STEP); else next.delete(row.group.key); return next; });
+        }}>{t(row.remaining > 0 ? 'history.show_more' : 'history.show_less')}</button>
+      ) : (
         <button type="button" key={row.group.key} className="history-project-row" aria-expanded={!collapsedProjects.has(row.group.key)} onClick={() => {
           setPreview(null);
           setCollapsedProjects(current => { const next = new Set(current); if (next.has(row.group.key)) next.delete(row.group.key); else next.add(row.group.key); return next; });

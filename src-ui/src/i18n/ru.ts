@@ -160,6 +160,8 @@ export const ru = {
   'history.search_title': 'Поиск сеансов или рабочих областей',
   'history.list': 'Сеансы',
   'history.projects': 'Проекты',
+  'history.show_more': 'Показать ещё',
+  'history.show_less': 'Свернуть',
   'history.needs_attention': "Ожидает действия",
   'history.unread_reply': "Непрочитанный ответ",
   'history.git.current_branch': 'Текущая ветка проекта',

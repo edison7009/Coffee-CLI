@@ -15,7 +15,7 @@ const context = vm.createContext({
   getToolName: tool => ({ claude: 'Claude Code', codex: 'Codex CLI', openclaw: 'OpenClaw' }[tool] ?? tool),
   hidden: new Set(['claude:hidden']), pinned: new Set(['codex:pinned']),
   renamed: { 'claude:renamed': 'Custom session title' },
-  orchestration: { tasks: [] }, state: { terminals: [] },
+  orchestration: { tasks: [] }, state: { terminals: [] }, projectExtras: new Map(), openSessions: new Set(), PROJECT_PREVIEW: 5,
 });
 function evaluate(name) {
   assert.ok(expressions.has(name), `Missing actual ${name}`);
@@ -52,6 +52,29 @@ let rows = evaluate('rows');
 assert.equal(rows.filter(row => row.kind === 'project').length, context.projects.length);
 assert.equal(rows.some(row => row.kind === 'session' && row.session.id === 'recent'), false);
 assert.equal(rows.some(row => row.kind === 'session' && row.session.id === 'pinned'), true);
+// One busy folder previews its newest sessions, keeps open ones, and grows on demand.
+const busy = { key: 'cwd:busy', name: 'Busy', cwd: 'D:/Busy', sessions: Array.from({ length: 23 }, (_, i) => session('s' + i, 'D:/Busy')) };
+const allProjects = context.projects;
+context.projects = [busy]; context.collapsedProjects = new Set();
+const ids = () => Array.from(evaluate('rows').filter(row => row.kind === 'session'), row => row.session.id);
+const more = () => evaluate('rows').find(row => row.kind === 'more');
+assert.deepEqual(ids(), ['s0', 's1', 's2', 's3', 's4']);
+assert.equal(more().remaining, 18, 'the rest stay behind Show more');
+context.projectExtras = new Map([[busy.key, 10]]);
+assert.equal(ids().length, 15);
+assert.equal(more().remaining, 8);
+context.projectExtras = new Map([[busy.key, 20]]);
+assert.equal(ids().length, 23);
+assert.equal(more().remaining, 0, 'fully expanded offers Show less');
+context.projectExtras = new Map();
+busy.sessions[20].session_token = 'open'; context.openSessions = new Set(['claude:open']);
+assert.equal(ids().includes('s20'), true, 'an open session stays visible past the preview');
+busy.sessions[21].id = 'live:tab';
+assert.equal(ids().includes('live:tab'), true, 'a running tab stays visible past the preview');
+context.openSessions = new Set();
+context.projects = [{ ...busy, sessions: busy.sessions.slice(0, 5) }];
+assert.equal(more(), undefined, 'short folders have no control');
+context.projects = allProjects;
 context.layout = 'list';
 rows = evaluate('rows');
 assert.deepEqual(Array.from(rows, row => row.session.id), Array.from(context.availableSessions, session => session.id), 'switching back restores the original session order');

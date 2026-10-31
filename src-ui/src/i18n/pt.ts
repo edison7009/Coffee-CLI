@@ -160,6 +160,8 @@ export const pt = {
   'history.search_title': 'Pesquisar sessões ou espaços de trabalho',
   'history.list': 'Sessões',
   'history.projects': 'Projetos',
+  'history.show_more': 'Mostrar mais',
+  'history.show_less': 'Mostrar menos',
   'history.needs_attention': "Aguardando ação",
   'history.unread_reply': "Resposta não lida",
   'history.git.current_branch': 'Branch atual do projeto',

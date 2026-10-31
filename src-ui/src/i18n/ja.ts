@@ -162,6 +162,8 @@ export const ja = {
   'history.search_title': 'セッションやワークスペースを検索',
   'history.list': 'セッション一覧',
   'history.projects': 'プロジェクト別',
+  'history.show_more': 'さらに表示',
+  'history.show_less': '折りたたむ',
   'history.needs_attention': "操作待ち",
   'history.unread_reply': "未読の返信",
   'history.git.current_branch': '現在のプロジェクトブランチ',
