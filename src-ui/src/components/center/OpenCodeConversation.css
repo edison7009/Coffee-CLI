@@ -1,5 +1,5 @@
-/* OpenCode's brand mark at the size of the other welcome marks. */
-.opencode-welcome-icon { display:flex; align-items:center; justify-content:center; width:128px; height:100px; margin:0 auto 20px; }
-.opencode-welcome-icon svg { display:block; width:64px; height:64px; }
+/* OpenCode's block wordmark, in terminal cells, where the other welcome marks sit. */
+.opencode-welcome-icon { display:flex; align-items:flex-end; justify-content:center; height:100px; margin:0 auto 20px; }
+.opencode-welcome-logo { display:block; touch-action:none; user-select:none; }
 .opencode-files { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
 .opencode-files span { padding:1px 8px; color:var(--text-2); background:var(--bg-hover); border-radius:var(--shape-radius-btn,6px); font-size:12px; }

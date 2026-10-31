@@ -9,6 +9,7 @@ import { bindAutoHideScrollbar } from '../../lib/auto-hide-scrollbar';
 import { useConversationVirtualizer } from './conversation-virtualizer';
 import { MarkdownContent } from './MarkdownContent';
 import { WelcomeGreeting, WelcomeSessionMeta } from './WelcomeGreeting';
+import { OpenCodeWelcomeLogo } from './OpenCodeWelcomeLogo';
 import { ConversationDirectory } from '../../lib/conversation-links';
 import { useConversationMenu } from '../../lib/use-conversation-menu';
 import { CollapsibleUserMessage, ConversationNavigation, MessageCopyButton, type ConversationNavigationItem } from './ConversationControls';
@@ -25,10 +26,6 @@ function Measured({ id, measure, children }: { id: string; measure: (id: string,
 function title(row: OpenCodeRow): string {
   if (row.role === 'reasoning') return row.content.split('\n').find(line => line.trim())?.trim() ?? '';
   return [row.toolName, row.title].filter(Boolean).join(' · ');
-}
-/** OpenCode's own brand mark. */
-function OpenCodeMark() {
-  return <span className="opencode-welcome-icon" aria-hidden="true"><svg viewBox="0 0 96 96" width="64" height="64"><rect width="96" height="96" rx="18" ry="18" fill="#131010" /><rect x="24" y="18" width="48" height="60" fill="#FFFFFF" /><rect x="36" y="30" width="24" height="36" fill="#5A5858" /><rect x="36" y="30" width="24" height="12" fill="#131010" /></svg></span>;
 }
 function PermissionCard({ sessionId, request }: { sessionId: string; request: Json }) {
   const t = useT(), [pending, setPending] = useState(false), [error, setError] = useState('');
@@ -221,7 +218,7 @@ export function OpenCodeConversation({ sessionId, cwd, resumeToken, isActive, is
         {s.ready && s.busy && <div className="codex-working" role="status"><span className="codex-spinner" aria-hidden="true" />{t(s.interrupting ? 'codex.stopping' : waiting ? 'codex.waiting' : 'claude.status.working')}…</div>}
         {s.error && !directoryIssue && <div className="claude-session-error" role="alert">{s.error}</div>}
         {directoryIssue && <div className="claude-session-error" role="alert">{directoryError}</div>}
-        {!directoryIssue && !rows.length && <div className="claude-empty"><OpenCodeMark /><WelcomeGreeting /><WelcomeSessionMeta cwd={cwd} model={s.models.find(m => m.id === s.model?.id && m.providerID === s.model?.providerID)?.name ?? s.model?.id ?? ''} /></div>}
+        {!directoryIssue && !rows.length && <div className="claude-empty"><OpenCodeWelcomeLogo isActive={isVisible} /><WelcomeGreeting /><WelcomeSessionMeta cwd={cwd} model={s.models.find(m => m.id === s.model?.id && m.providerID === s.model?.providerID)?.name ?? s.model?.id ?? ''} /></div>}
       </div>
     </div>
     {navigationItems.length > 1 && isActive && <ConversationNavigation items={navigationItems} scrollRef={scroll} onJump={jumpToTurn} />}
