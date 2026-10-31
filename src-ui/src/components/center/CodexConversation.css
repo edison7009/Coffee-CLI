@@ -11,7 +11,7 @@
 .codex-request { margin-left:0; }
 .codex-request .claude-approval-actions { flex-wrap:wrap; }
 .codex-request input { font:inherit; }
-.codex-working { display:flex; align-items:center; gap:10px; padding:10px 0 24px; color:var(--text-3); font-size:15px; }
+.codex-working { display:flex; align-items:center; gap:10px; padding:10px 0 24px 4.5px; color:var(--text-3); font-size:15px; }
 .codex-spinner { display:inline-block; width:12px; height:12px; border:1.5px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:codex-spin 1s linear infinite; }
 .codex-control-menu .codex-permission-option { flex-direction:column; align-items:stretch; gap:3px; }
 .codex-control-menu .codex-permission-option small { white-space:normal; line-height:1.5; }
