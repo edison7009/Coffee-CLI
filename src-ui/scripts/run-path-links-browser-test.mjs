@@ -66,6 +66,33 @@ try {
   await page.getByText('Reveal in File Explorer').click();
   assert.deepEqual(await native(), [['showInFolder', 'D:/Coffee-CLI/target/nsis/Coffee CLI_3.8.1_x64-setup.exe']]);
 
+  // Hovering a path in a code block or paragraph marks exactly that path and shows a hand; other text does not.
+  const hovered = () => page.evaluate(() => { const set = CSS.highlights.get('conversation-path'); return set ? [...set].map(range => range.toString()).join('') : ''; });
+  const cursor = () => page.evaluate(() => document.querySelector('.claude-row').style.cursor);
+  await page.locator('.md-code').hover({ position: { x: 300, y: 18 } });
+  await page.waitForFunction(() => CSS.highlights.has('conversation-path'));
+  assert.equal(await hovered(), 'D:\\Coffee-CLI\\target\\nsis\\Coffee CLI_3.8.1_x64-setup.exe');
+  assert.equal(await cursor(), 'pointer');
+  await page.getByText('Plain words here').hover();
+  await page.waitForFunction(() => !CSS.highlights.has('conversation-path'));
+  assert.equal(await cursor(), '');
+  await page.getByText('Details are in').hover({ position: { x: 180, y: 8 } });
+  await page.waitForFunction(() => CSS.highlights.has('conversation-path'));
+  assert.equal(await hovered(), 'D:\\Repo\\notes.md');
+  await page.mouse.move(600, 500);
+  await page.waitForFunction(() => !CSS.highlights.has('conversation-path'));
+
+  // Clicking reveals; a drag that selects text does not.
+  await page.evaluate(() => { window.native.length = 0; });
+  await page.locator('.md-code').click({ position: { x: 300, y: 18 } });
+  assert.deepEqual(await native(), [['showInFolder', 'D:/Coffee-CLI/target/nsis/Coffee CLI_3.8.1_x64-setup.exe']]);
+  await page.evaluate(() => { window.native.length = 0; });
+  const code = await page.locator('.md-code').boundingBox();
+  await page.mouse.move(code.x + 120, code.y + 18); await page.mouse.down(); await page.mouse.move(code.x + 320, code.y + 18); await page.mouse.up();
+  assert.deepEqual(await native(), [], 'a selection is not a click');
+  await page.evaluate(() => window.getSelection().removeAllRanges());
+  if (process.env.COFFEE_PATH_SCREENSHOT) { await page.locator('.md-code').hover({ position: { x: 300, y: 18 } }); await page.waitForFunction(() => CSS.highlights.has('conversation-path')); await page.screenshot({ path: process.env.COFFEE_PATH_SCREENSHOT }); }
+
   // Copy path gives the same target, and the same words in a paragraph work too.
   await page.getByText('Details are in').click({ button: 'right', position: { x: 180, y: 8 } });
   await page.getByText('Copy path').click();

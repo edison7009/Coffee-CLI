@@ -67,10 +67,13 @@ export function findPaths(text: string): PathMatch[] {
   }
 }
 
-/** The local file link at a character offset of `text`, if any. */
-export function pathLinkAt(text: string, index: number, cwd: string | null): ConversationLink | null {
-  const match = findPaths(text).find(path => index >= path.start && index <= path.end);
+/** The local file at a character offset of `text`, with where it sits in that text. */
+export function pathMatchAt(text: string, index: number, cwd: string | null): (PathMatch & { link: ConversationLink }) | null {
+  const match = findPaths(text).find(path => index >= path.start && index < path.end);
   const link = match ? conversationLink(match.text, cwd) : null;
-  return link?.local ? link : null;
+  return match && link?.local ? { ...match, link } : null;
+}
+export function pathLinkAt(text: string, index: number, cwd: string | null): ConversationLink | null {
+  return pathMatchAt(text, index, cwd)?.link ?? null;
 }
 

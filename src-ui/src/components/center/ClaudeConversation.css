@@ -35,6 +35,7 @@ body.gambit-docked .claude-scroll-bottom { bottom:calc(var(--gambit-dock-h,200px
 /* Material shapes clear every .panel-center surface with !important at (0,3,1); the prompt bubble is content, not chrome, so it opts back in with a translucent tile. */
 :is([data-shape="glass"],[data-shape="carbon"],[data-shape="monogram"]) .panel-center .claude-row .claude-user-content { background:color-mix(in srgb, var(--accent) 22%, transparent) !important; }
 .claude-row .md-body .md-code { margin:12px 0 14px; }
+::highlight(conversation-path) { color:var(--accent); text-decoration:underline; }
 .claude-row .md-body > :first-child { margin-top:0; }
 .claude-row .md-body > :last-child { margin-bottom:0; }
 .claude-row .md-body p { margin:0 0 14px; }
