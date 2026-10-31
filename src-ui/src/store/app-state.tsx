@@ -301,7 +301,7 @@ type Action =
   | { type: 'SET_ACTIVE_TERMINAL'; id: string | null }
   | { type: 'SET_TERMINAL_TOOL'; id: string; tool: ToolType; toolData?: string; resumeToken?: string; claudeMode?: ClaudeMode; codexMode?: ClaudeMode; opencodeMode?: ClaudeMode }
   | { type: 'SET_TERMINAL_HIDDEN'; id: string; isHidden: boolean }
-  | { type: 'RESTART_TERMINAL'; id: string; newId: string }
+  | { type: 'RESTART_TERMINAL'; id: string; newId: string; fresh?: boolean }
   | { type: 'OPEN_HYPER_AGENT_TAB' }
   | { type: 'SET_AGENT_STATUS'; id: string; status: AgentStatus | undefined }
   | { type: 'SET_BG'; path: string; bgType: 'image' | 'video' }
@@ -550,7 +550,7 @@ function reducer(state: AppState, action: Action): AppState {
         ...state,
         sessionSplit: replaceSplitSession(state.sessionSplit, action.id, action.newId),
         terminals: state.terminals.map(t =>
-          t.id === action.id ? { ...t, id: action.newId, toolTitle: undefined, agentStatus: undefined, startedAt: Date.now() } : t
+          t.id === action.id ? { ...t, id: action.newId, toolTitle: undefined, agentStatus: undefined, startedAt: Date.now(), ...(action.fresh ? { resumeToken: undefined } : {}) } : t
         ),
         tabOrder: getTabOrder(state).map(id => id === action.id ? action.newId : id),
         activeTerminalId: state.activeTerminalId === action.id ? action.newId : state.activeTerminalId

@@ -1,13 +1,13 @@
 import type { TerminalSession } from '../store/app-state';
 import { isClaudeConversation, isCodexConversation, isDshConversation, isOpenCodeConversation } from './chat-tools';
-import { controlClaude, sendClaudeMessage } from './claude-session';
+import { controlClaude, sendClaudeInteractive, sendClaudeMessage } from './claude-session';
 import { sendCodexMessage } from './codex-session';
 import { sendDshMessage } from './dsh-session';
 import { sendOpenCodeMessage } from './opencode-session';
 import { submitTerminalPrompt } from './terminal-control';
 
 /** Send through the existing conversation or terminal without opening another session. */
-export async function sendSessionPrompt(session: Pick<TerminalSession, 'id' | 'tool' | 'claudeMode' | 'codexMode' | 'opencodeMode'> | undefined, text: string): Promise<boolean> {
+export async function sendSessionPrompt(session: Pick<TerminalSession, 'id' | 'tool' | 'claudeMode' | 'codexMode' | 'opencodeMode' | 'parentId'> | undefined, text: string): Promise<boolean> {
   if (!session?.tool || !text.trim()) return false;
   try {
     if (isCodexConversation(session)) return await sendCodexMessage(session.id, text);
@@ -18,7 +18,8 @@ export async function sendSessionPrompt(session: Pick<TerminalSession, 'id' | 't
         await controlClaude(session.id, { subtype: 'set_permission_mode', mode: 'plan' });
         return await sendClaudeMessage(session.id, text.replace(/^\/plan\s+/, ''));
       }
-      return await sendClaudeMessage(session.id, text);
+      // Workers belong to their coordinator and keep their conversation.
+      return await (session.parentId ? sendClaudeMessage(session.id, text) : sendClaudeInteractive(session.id, text));
     }
     await submitTerminalPrompt(session.id, text);
     return true;

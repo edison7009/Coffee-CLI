@@ -9,7 +9,7 @@ import { directoryFailure, directoryFailureMessage } from '../../lib/session-dir
 import { bindAutoHideScrollbar } from '../../lib/auto-hide-scrollbar';
 import { tokenizeFile, getShikiTheme, type LineTokens } from '../../lib/shiki';
 import { useDataAttr } from '../../lib/use-data-attr';
-import { controlClaude, loadClaudeHistory, respondClaude, retainClaudeSession, useClaudeSession } from '../../lib/claude-session';
+import { continueClaudeInNewConversation, controlClaude, loadClaudeHistory, respondClaude, retainClaudeSession, settleClaudeColdReturn, useClaudeSession } from '../../lib/claude-session';
 import { object, list, text, number, resultText, type ClaudeMessage, type ClaudeRequest } from '../../lib/claude-protocol';
 import { useConversationVirtualizer } from './conversation-virtualizer';
 import { MarkdownContent } from './MarkdownContent';
@@ -258,6 +258,24 @@ function MeasuredRow({ id, measure, children }: { id: string; measure: (id: stri
   return <div ref={ref} className="claude-measured-row">{children}</div>;
 }
 
+/** Sending to a long idle conversation rewrites its whole context, so the person chooses how to continue first. */
+function ColdReturnCard({ id, idleMinutes, tokens }: { id: string; idleMinutes: number; tokens: number }) {
+  const t = useT(), { dispatch } = useAppState(), ref = useRef<HTMLElement>(null);
+  useEffect(() => { ref.current?.scrollIntoView({ block: 'nearest' }); }, []);
+  const idle = idleMinutes >= 60 ? `${Math.floor(idleMinutes / 60)}h${idleMinutes % 60 ? ` ${idleMinutes % 60}m` : ''}` : `${idleMinutes}m`;
+  const fresh = () => { const newId = crypto.randomUUID(); continueClaudeInNewConversation(id, newId); dispatch({ type: 'RESTART_TERMINAL', id, newId, fresh: true }); };
+  const cancel = async () => { dispatch({ type: 'SET_GAMBIT_DRAFT', id, draft: await settleClaudeColdReturn(id, 'cancel') }); };
+  return <section ref={ref} className="claude-approval" aria-label={t('claude.cold_return.title', { idle, tokens: `${Math.round(tokens / 1000)}k` })}>
+    <strong>{t('claude.cold_return.title', { idle, tokens: `${Math.round(tokens / 1000)}k` })}</strong>
+    <p>{t('claude.cold_return.detail')}</p>
+    <div className="claude-approval-actions">
+      <button type="button" onClick={() => { void cancel(); }}>{t('claude.cold_return.cancel')}</button>
+      <button type="button" onClick={() => { void settleClaudeColdReturn(id, 'never'); }}>{t('claude.cold_return.never')}</button>
+      <button type="button" onClick={() => { void settleClaudeColdReturn(id, 'full'); }}>{t('claude.cold_return.full')}</button>
+      <button type="button" onClick={fresh}>{t('claude.cold_return.new')}</button>
+    </div>
+  </section>;
+}
 export function ClaudeConversation({ sessionId, cwd, resumeToken, isActive, isVisible = isActive, bgUrl, bgType, hasBg }: {
   sessionId: string; cwd: string | null; resumeToken?: string; isActive: boolean; isVisible?: boolean; bgUrl?: string; bgType?: string; hasBg?: boolean;
 }) {
@@ -373,6 +391,7 @@ export function ClaudeConversation({ sessionId, cwd, resumeToken, isActive, isVi
         </MeasuredRow>)}
         <div style={{ height: virtual.bottomSpacer }} aria-hidden="true" />
         {s.requests.map(p => <Question key={p.id} id={sessionId} pending={p} />)}
+        {s.coldReturn && <ColdReturnCard id={sessionId} idleMinutes={s.coldReturn.idleMinutes} tokens={s.coldReturn.tokens} />}
         {s.ready && s.busy && !s.requests.length && <Working status={s.interruptRequested ? 'stopping' : s.status} startedAt={s.startedAt} />}
         {s.interrupted && !s.busy && !s.error && <div className="claude-interrupted" role="status">{t('claude.interrupted')}</div>}
         {directoryIssue && <div className="claude-session-error" role="alert">{directoryError}</div>}

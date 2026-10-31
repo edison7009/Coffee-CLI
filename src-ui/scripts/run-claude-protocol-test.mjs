@@ -4,7 +4,7 @@ import { runInNewContext } from 'node:vm';
 import { fileURLToPath } from 'node:url';
 const result = await build({ entryPoints: [fileURLToPath(new URL('../src/lib/claude-protocol.ts', import.meta.url))], bundle: true, platform: 'node', format: 'cjs', write: false });
 const module = { exports: {} }; runInNewContext(result.outputFiles[0].text, { module, exports: module.exports, console, Date });
-const { emptyClaudeState, reduceClaudeEvent } = module.exports;
+const { emptyClaudeState, reduceClaudeEvent, coldReturn } = module.exports;
 let passed = 0;
 function test(name, fn) { fn(); passed++; console.log(`ok ${name}`); }
 const stream = event => ({ type: 'stream_event', event });
@@ -137,5 +137,19 @@ test('background tasks outlive the turn and clear when the CLI reports none', ()
   assert.equal(f.state.backgroundTasks.length,0);
   f.send({type:'system',subtype:'background_tasks_changed',tasks:[{task_id:'b2',task_type:'local_agent',description:'Review'}]});
   assert.equal(reduceClaudeEvent(f.state,{type:'coffee_exit',code:0}).backgroundTasks.length,0,'an exited CLI has no running tasks');
+});
+test('restored usage counts toward a cold return without touching the live context meter', () => {
+  const usage = { input_tokens: 2, cache_read_input_tokens: 680000, cache_creation_input_tokens: 0, output_tokens: 10 };
+  let s = reduceClaudeEvent(emptyClaudeState(), { type: 'assistant', uuid: 'a', message: { id: 'm', role: 'assistant', content: [{ type: 'text', text: 'Done' }], usage } }, 1000, true);
+  assert.equal(s.lastContextTokens, 680012);
+  assert.equal(s.contextTokens, 0, 'history leaves the live meter alone');
+  const hour = 3_600_000, ready = { ...s, ready: true };
+  assert.equal(coldReturn(ready, 1000 + hour), null, 'inside the cache lifetime');
+  assert.equal(coldReturn(ready, 1000 + hour * 3).idleMinutes, 180);
+  assert.equal(coldReturn({ ...ready, busy: true }, 1000 + hour * 3), null, 'a running turn keeps its cache warm');
+  assert.equal(coldReturn({ ...ready, lastContextTokens: 99999 }, 1000 + hour * 3), null, 'small contexts are cheap to rewrite');
+  assert.equal(coldReturn({ ...ready, messages: [] }, 1000 + hour * 3), null);
+  s = reduceClaudeEvent(s, { type: 'system', subtype: 'compact_boundary' }, 2000, true);
+  assert.equal(s.lastContextTokens, 0, 'compaction replaces the history');
 });
 console.log(`${passed} Claude protocol checks passed`);

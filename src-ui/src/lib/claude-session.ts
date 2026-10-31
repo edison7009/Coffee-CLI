@@ -3,7 +3,7 @@ import { directoryFailure } from './session-directory';
 import { recordSessionReply } from './session-replies';
 import { readLaunchControls, setSessionControls, clearSessionControls } from './session-controls';
 import { invoke, type ToolConfigEntry } from '../tauri';
-import { emptyClaudeState, reduceClaudeEvent, object, list, text, type ClaudeState, type ClaudeModel, type ClaudeCommand, type Json } from './claude-protocol';
+import { emptyClaudeState, reduceClaudeEvent, object, list, text, type ClaudeState, type ClaudeModel, type ClaudeCommand, type Json, coldReturn } from './claude-protocol';
 
 interface Client {
   state: ClaudeState;
@@ -63,11 +63,15 @@ async function readSettings(id: string, c: Client) {
   c.state = { ...c.state, model: selected, effort: text(applied.effort) || text(applied.effortLevel) || text(effective.effortLevel), ultracode: typeof applied.ultracode === 'boolean' ? applied.ultracode : effective.ultracode === true, thinking: effective.alwaysThinkingEnabled !== false };
 }
 
+// Tabs restarted as a new conversation: which session they continue, and the prompt waiting to be sent.
+const continuations = new Map<string, { continueFrom: Json; prompt: string }>();
+const COLD_RETURN_NEVER = 'coffee:claude-cold-return-never';
+
 async function initializeClaude(id: string, c: Client, cwd: string | null, resumeToken?: string, ready = true) {
   await listen();
   clearSessionControls(id, c.generation);
   const controls = readLaunchControls('claude'), generation = c.generation;
-  const result = await invoke<{ sessionId: string; initialization: Json; history: { data: string; cursor: number }; bypassAvailable?: boolean }>('claude_session_start', { id, generation: c.generation, cwd, resumeToken: resumeToken ?? null });
+  const result = await invoke<{ sessionId: string; initialization: Json; history: { data: string; cursor: number }; bypassAvailable?: boolean }>('claude_session_start', { id, generation: c.generation, cwd, resumeToken: resumeToken ?? null, continueFrom: continuations.get(id)?.continueFrom ?? null });
   const restoreHistory = !c.state.messages.length;
   if (restoreHistory) for (const line of result.history.data.split(/\r?\n/)) {
     try { const row = object(JSON.parse(line)); c.state = reduceClaudeEvent(c.state, row, Date.parse(text(row.timestamp)) || Date.now(), true); } catch { /* partial native row */ }
@@ -91,7 +95,12 @@ export function retainClaudeSession(id: string, cwd: string | null, resumeToken?
     c.connecting = true;
     c.starting = (async () => {
       for (let attempt = 0; attempt < 3; attempt++) {
-        try { await initializeClaude(id, c, cwd, resumeToken); return; }
+        try {
+          await initializeClaude(id, c, cwd, resumeToken);
+          const continuation = continuations.get(id);
+          if (continuation) { continuations.delete(id); await sendClaudeMessage(id, continuation.prompt); }
+          return;
+        }
         catch (error) {
           if (directoryFailure(error) || attempt === 2) { c.state = { ...c.state, status: 'error', error: String(error), errorKey: undefined, ready: false }; publish(c, true); return; }
           const generation = c.generation;
@@ -118,6 +127,33 @@ export function retainClaudeSession(id: string, cwd: string | null, resumeToken?
   };
 }
 
+/** A person's send: returning to a long idle conversation asks first, because resuming it rewrites the whole context. */
+export async function sendClaudeInteractive(id: string, prompt: string): Promise<boolean> {
+  const c = client(id);
+  if (c.state.coldReturn) return false;
+  let dismissed = false;
+  try { dismissed = localStorage.getItem(COLD_RETURN_NEVER) === '1'; } catch { /* optional preference */ }
+  const cold = dismissed || prompt.startsWith('/') ? null : coldReturn(c.state, Date.now());
+  if (!cold) return sendClaudeMessage(id, prompt);
+  c.state = { ...c.state, coldReturn: { ...cold, prompt } }; publish(c, true);
+  return true;
+}
+/** Settles the held prompt in this conversation; returns it so `cancel` can put it back in the composer. */
+export async function settleClaudeColdReturn(id: string, choice: 'full' | 'never' | 'cancel'): Promise<string> {
+  const c = client(id), prompt = c.state.coldReturn?.prompt ?? '';
+  c.state = { ...c.state, coldReturn: undefined }; publish(c, true);
+  if (choice === 'never') { try { localStorage.setItem(COLD_RETURN_NEVER, '1'); } catch { /* optional preference */ } }
+  if (choice !== 'cancel' && prompt) await sendClaudeMessage(id, prompt);
+  return prompt;
+}
+/** Hands the held prompt to a new conversation in tab `newId`, with a pointer to this one instead of its history. */
+export function continueClaudeInNewConversation(id: string, newId: string): void {
+  const c = client(id), prompt = c.state.coldReturn?.prompt;
+  if (!prompt) return;
+  const messages = c.state.messages, lastPrompt = messages.findLast(m => m.role === 'user'), reply = messages.findLast(m => m.role === 'assistant');
+  continuations.set(newId, { prompt, continueFrom: { token: c.state.nativeId, prompt: lastPrompt?.content ?? '', reply: reply?.content ?? '' } });
+  c.state = { ...c.state, coldReturn: undefined };
+}
 export async function sendClaudeMessage(id: string, prompt: string, orchestrationDelivery?: string): Promise<boolean> {
   const c = client(id);
   if (!c.state.ready || c.restarting) return false;

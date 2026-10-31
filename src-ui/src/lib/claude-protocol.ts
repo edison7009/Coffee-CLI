@@ -39,8 +39,22 @@ export interface ClaudeModel {
 export interface ClaudeCommand { name: string; description: string; argumentHint?: string }
 export interface ClaudeRequest { id: string; request: Json }
 export interface ClaudeBackgroundTask { id: string; type: string; description: string }
+/** A prompt held back because sending it would rewrite an expired cache for the whole conversation. */
+export interface ClaudeColdReturn { prompt: string; idleMinutes: number; tokens: number }
+// The prompt cache lasts an hour, so past this idle time the next request rewrites all of the context.
+const COLD_IDLE_MINUTES = 70, COLD_CONTEXT_TOKENS = 100_000;
+/** The idle time and context size when sending now would pay that rewrite, otherwise null. */
+export function coldReturn(state: Pick<ClaudeState, 'messages' | 'lastContextTokens' | 'busy' | 'ready'>, now: number): Omit<ClaudeColdReturn, 'prompt'> | null {
+  const last = state.messages.at(-1);
+  if (!last || state.busy || !state.ready || state.lastContextTokens < COLD_CONTEXT_TOKENS) return null;
+  const idleMinutes = (now - last.timestamp) / 60_000;
+  return idleMinutes < COLD_IDLE_MINUTES ? null : { idleMinutes: Math.round(idleMinutes), tokens: state.lastContextTokens };
+}
 export interface ClaudeState {
   messages: ClaudeMessage[];
+  /** Tokens of the latest request, including ones restored from history, which `contextTokens` leaves out. */
+  lastContextTokens: number;
+  coldReturn?: ClaudeColdReturn;
   ready: boolean;
   busy: boolean;
   pendingTurns: number;
@@ -77,7 +91,7 @@ export interface ClaudeState {
   orphanToolResults: Record<string, Partial<ClaudeMessage>>;
 }
 export function emptyClaudeState(): ClaudeState {
-  return { messages: [], ready: false, busy: false, pendingTurns: 0, backgroundTasks: [], status: 'starting', nativeId: '', model: '', models: [], commands: [], permissionMode: 'default', effort: '', ultracode: false, thinking: true, requests: [], usage: {}, modelUsage: {}, currentMessageId: '', contextTokens: 0, contextWindow: 0, historyCursor: 0, orphanToolResults: {} };
+  return { messages: [], lastContextTokens: 0, ready: false, busy: false, pendingTurns: 0, backgroundTasks: [], status: 'starting', nativeId: '', model: '', models: [], commands: [], permissionMode: 'default', effort: '', ultracode: false, thinking: true, requests: [], usage: {}, modelUsage: {}, currentMessageId: '', contextTokens: 0, contextWindow: 0, historyCursor: 0, orphanToolResults: {} };
 }
 
 function blockMessage(block: Json, id: string, now: number, historical: boolean): ClaudeMessage {
@@ -220,6 +234,12 @@ export function reduceClaudeEvent(state: ClaudeState, frame: Json, now = Date.no
     if (number(frame.code) !== 0 || busy) { s.error = text(frame.detail); s.errorKey = s.error ? undefined : 'claude.error.process_exited'; s.error ||= 'Claude process exited'; }
   }
   const usage = frame.type === 'assistant' ? object(object(frame.message).usage) : frame.type === 'stream_event' && object(frame.event).type === 'message_start' ? object(object(object(frame.event).message).usage) : {};
-  if (!historical && Object.keys(usage).length) s.contextTokens = number(usage.input_tokens) + number(usage.cache_read_input_tokens) + number(usage.cache_creation_input_tokens) + number(usage.output_tokens);
+  if (Object.keys(usage).length) {
+    const tokens = number(usage.input_tokens) + number(usage.cache_read_input_tokens) + number(usage.cache_creation_input_tokens) + number(usage.output_tokens);
+    s.lastContextTokens = tokens;
+    if (!historical) s.contextTokens = tokens;
+  }
+  // Compaction replaces the history; the usage before it no longer describes the next request.
+  if (frame.type === 'system' && frame.subtype === 'compact_boundary') s.lastContextTokens = 0;
   return s;
 }

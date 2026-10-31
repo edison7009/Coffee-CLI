@@ -41,6 +41,7 @@ const context = {
   Gambit: 'gambit', Changelog: 'changelog', IS_MACOS: false,
   submitTerminalPrompt: async (id, text) => terminalSends.push({ id, text }),
   sendClaudeMessage: async (id, text) => { claudeSends.push({ id, text }); return true; },
+  sendClaudeInteractive: async (id, text) => { claudeSends.push({ id, text }); return true; },
   sendCodexMessage: async (id, text) => { codexSends.push({ id, text }); return true; },
   sendDshMessage: async (id, text) => { dshSends.push({ id, text }); return true; },
   sendOpenCodeMessage: async (id, text) => { openCodeSends.push({ id, text }); return true; },
