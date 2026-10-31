@@ -411,13 +411,14 @@ export function CenterPanel() {
         return arr;
       }
       // First launch: pre-pin 6 useful defaults so desktop shows a full MAX_PINS
-      // grid out of the box (4 AI CLIs covering major providers + 2 utilities).
+      // grid out of the box (5 AI CLIs + the terminal).
       // Returning users' pin choices are respected (stored !== null path above).
       const defaults = [
         'agent:claude',
         'agent:codex',
+        'agent:dsh',
         'agent:opencode',
-        'agent:antigravity',
+        'agent:pi',
         'agent:terminal',
       ];
       localStorage.setItem('coffee_pinned_items', JSON.stringify(defaults));
