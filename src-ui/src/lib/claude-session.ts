@@ -159,11 +159,11 @@ export async function sendClaudeMessage(id: string, prompt: string, orchestratio
   if (!c.state.ready || c.restarting) return false;
   const snapshot = c.state;
   const pendingId = `pending:${crypto.randomUUID()}`, now = Date.now();
-  c.state = { ...c.state, busy: true, interrupted: false, pendingTurns: c.state.pendingTurns + 1, status: c.state.busy ? c.state.status : 'working', error: undefined, errorKey: undefined, startedAt: c.state.busy ? c.state.startedAt : now, endedAt: undefined,
+  c.state = { ...c.state, busy: true, interrupted: false, pendingTurns: c.state.pendingTurns + 1, sentSinceResult: c.state.sentSinceResult + 1, status: c.state.busy ? c.state.status : 'working', error: undefined, errorKey: undefined, startedAt: c.state.busy ? c.state.startedAt : now, endedAt: undefined,
     messages: orchestrationDelivery ? c.state.messages : [...c.state.messages, { id: pendingId, renderKey: pendingId, role: 'user', content: prompt, timestamp: now }] };
   publish(c, true);
   try { await invoke('claude_session_send', { id, generation: c.generation, text: prompt, orchestrationDelivery }); return true; }
-  catch (error) { c.state = { ...c.state, busy: snapshot.busy, pendingTurns: Math.max(0, c.state.pendingTurns - 1), status: snapshot.status, messages: c.state.messages.filter(m => m.id !== pendingId), ...(orchestrationDelivery ? {} : { error: String(error), errorKey: undefined }) }; publish(c, true); return false; }
+  catch (error) { c.state = { ...c.state, busy: snapshot.busy, pendingTurns: Math.max(0, c.state.pendingTurns - 1), sentSinceResult: Math.max(0, c.state.sentSinceResult - 1), status: snapshot.status, messages: c.state.messages.filter(m => m.id !== pendingId), ...(orchestrationDelivery ? {} : { error: String(error), errorKey: undefined }) }; publish(c, true); return false; }
 }
 
 export async function loadClaudeHistory(id: string): Promise<void> {
@@ -230,7 +230,7 @@ function forceStop(id: string, c: Client, generation: string) {
   c.restarting = true;
   const previous = c.state;
   const ended = reduceClaudeEvent(c.state, { type: 'result', subtype: 'error_during_execution', usage: c.state.usage as Json, modelUsage: c.state.modelUsage as Json });
-  c.state = { ...ended, busy: false, pendingTurns: 0, ready: false, status: 'starting' };
+  c.state = { ...ended, busy: false, pendingTurns: 0, sentSinceResult: 0, ready: false, status: 'starting' };
   c.generation = crypto.randomUUID();
   publish(c, true);
   c.starting = (async () => {

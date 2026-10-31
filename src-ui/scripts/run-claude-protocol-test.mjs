@@ -121,8 +121,14 @@ test('side calls streamed after a finished turn neither show working nor add row
   f.send({type:'system',subtype:'session_state_changed',state:'idle'});
   assert.equal(f.state.busy,false);
   // While a sent prompt awaits its result, an early idle does not end the turn.
-  const pending = reduceClaudeEvent({...f.state,busy:true,pendingTurns:1},{type:'system',subtype:'session_state_changed',state:'idle'});
+  const pending = reduceClaudeEvent({...f.state,busy:true,pendingTurns:1,sentSinceResult:1},{type:'system',subtype:'session_state_changed',state:'idle'});
   assert.equal(pending.busy,true);
+  // A prompt sent mid-turn joins that turn: two sends, one result, then idle ends the turn.
+  const idle={type:'system',subtype:'session_state_changed',state:'idle'};
+  const joined = reduceClaudeEvent({...f.state,busy:true,pendingTurns:2,sentSinceResult:2},{type:'result',subtype:'success'});
+  assert.equal(joined.busy,true,'a result alone cannot tell whether another turn follows');
+  const ended = reduceClaudeEvent(joined,idle);
+  assert.equal(ended.busy,false); assert.equal(ended.pendingTurns,0); assert.equal(ended.status,'idle');
   // CLIs without session state events keep the previous behavior.
   const legacy = reduceClaudeEvent(emptyClaudeState(),stream({type:'message_start',message:{id:'legacy'}}));
   assert.equal(legacy.busy,true);

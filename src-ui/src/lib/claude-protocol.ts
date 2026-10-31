@@ -58,6 +58,8 @@ export interface ClaudeState {
   ready: boolean;
   busy: boolean;
   pendingTurns: number;
+  /** Prompts sent since the last result; a later idle may predate them. */
+  sentSinceResult: number;
   /** CLI-reported run state (session_state_changed); undefined for CLIs that do not emit it. */
   sessionState?: string;
   /** Background shells and agents still running after (or alongside) a turn. */
@@ -91,7 +93,7 @@ export interface ClaudeState {
   orphanToolResults: Record<string, Partial<ClaudeMessage>>;
 }
 export function emptyClaudeState(): ClaudeState {
-  return { messages: [], lastContextTokens: 0, ready: false, busy: false, pendingTurns: 0, backgroundTasks: [], status: 'starting', nativeId: '', model: '', models: [], commands: [], permissionMode: 'default', effort: '', ultracode: false, thinking: true, requests: [], usage: {}, modelUsage: {}, currentMessageId: '', contextTokens: 0, contextWindow: 0, historyCursor: 0, orphanToolResults: {} };
+  return { messages: [], lastContextTokens: 0, ready: false, busy: false, pendingTurns: 0, sentSinceResult: 0, backgroundTasks: [], status: 'starting', nativeId: '', model: '', models: [], commands: [], permissionMode: 'default', effort: '', ultracode: false, thinking: true, requests: [], usage: {}, modelUsage: {}, currentMessageId: '', contextTokens: 0, contextWindow: 0, historyCursor: 0, orphanToolResults: {} };
 }
 
 function blockMessage(block: Json, id: string, now: number, historical: boolean): ClaudeMessage {
@@ -200,8 +202,9 @@ export function reduceClaudeEvent(state: ClaudeState, frame: Json, now = Date.no
       const value = text(frame.state);
       s.sessionState = value || undefined;
       if (value === 'requires_action') s.status = value;
-      // Idle is authoritative once no sent prompt is still awaiting its result.
-      else if (value === 'idle' && s.busy && !s.pendingTurns && !historical) finish();
+      // Idle is authoritative unless a prompt was sent after the last result. A prompt sent mid-turn joins
+      // that turn and gets no result of its own, so the count of awaited results alone would never reach zero.
+      else if (value === 'idle' && s.busy && !s.sentSinceResult && !historical) { finish(); s.pendingTurns = 0; }
     } else if (frame.subtype === 'background_tasks_changed' && !historical) {
       // The full current list; ambient tasks are internal and not shown, as in the official extension.
       s.backgroundTasks = list(frame.tasks).map(object).filter(task => task.ambient !== true && text(task.task_id))
@@ -213,7 +216,7 @@ export function reduceClaudeEvent(state: ClaudeState, frame: Json, now = Date.no
     const interrupted = !historical && s.interruptRequested === true;
     s.interruptRequested = false; s.interrupted = interrupted;
     finish(interrupted); s.requests = [];
-    s.pendingTurns = Math.max(0, s.pendingTurns - 1);
+    s.pendingTurns = Math.max(0, s.pendingTurns - 1); s.sentSinceResult = 0;
     if (s.pendingTurns) { s.busy = true; s.status = 'working'; s.startedAt = now; s.endedAt = undefined; }
     if (!historical) {
       s.usage = object(frame.usage); s.modelUsage = object(frame.modelUsage);
@@ -229,7 +232,7 @@ export function reduceClaudeEvent(state: ClaudeState, frame: Json, now = Date.no
       }
     }
   } else if (frame.type === 'coffee_exit') {
-    const busy = s.busy; finish(); s.ready = false; s.pendingTurns = 0; s.requests = []; s.backgroundTasks = [];
+    const busy = s.busy; finish(); s.ready = false; s.pendingTurns = 0; s.sentSinceResult = 0; s.requests = []; s.backgroundTasks = [];
     s.interruptRequested = false;
     if (number(frame.code) !== 0 || busy) { s.error = text(frame.detail); s.errorKey = s.error ? undefined : 'claude.error.process_exited'; s.error ||= 'Claude process exited'; }
   }
