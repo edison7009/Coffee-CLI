@@ -1,7 +1,7 @@
 import type { TerminalSession } from '../store/app-state';
 import { isClaudeConversation, isCodexConversation, isDshConversation, isOpenCodeConversation } from './chat-tools';
 import { controlClaude, sendClaudeInteractive, sendClaudeMessage } from './claude-session';
-import { sendCodexMessage } from './codex-session';
+import { sendCodexInteractive, sendCodexMessage } from './codex-session';
 import { sendDshMessage } from './dsh-session';
 import { sendOpenCodeMessage } from './opencode-session';
 import { submitTerminalPrompt } from './terminal-control';
@@ -10,7 +10,7 @@ import { submitTerminalPrompt } from './terminal-control';
 export async function sendSessionPrompt(session: Pick<TerminalSession, 'id' | 'tool' | 'claudeMode' | 'codexMode' | 'opencodeMode' | 'parentId'> | undefined, text: string): Promise<boolean> {
   if (!session?.tool || !text.trim()) return false;
   try {
-    if (isCodexConversation(session)) return await sendCodexMessage(session.id, text);
+    if (isCodexConversation(session)) return await (session.parentId ? sendCodexMessage(session.id, text) : sendCodexInteractive(session.id, text));
     if (isDshConversation(session)) return await sendDshMessage(session.id, text);
     if (isOpenCodeConversation(session)) return await sendOpenCodeMessage(session.id, text);
     if (isClaudeConversation(session)) {

@@ -43,6 +43,7 @@ const context = {
   sendClaudeMessage: async (id, text) => { claudeSends.push({ id, text }); return true; },
   sendClaudeInteractive: async (id, text) => { claudeSends.push({ id, text }); return true; },
   sendCodexMessage: async (id, text) => { codexSends.push({ id, text }); return true; },
+  sendCodexInteractive: async (id, text) => { codexSends.push({ id, text }); return true; },
   sendDshMessage: async (id, text) => { dshSends.push({ id, text }); return true; },
   sendOpenCodeMessage: async (id, text) => { openCodeSends.push({ id, text }); return true; },
 };

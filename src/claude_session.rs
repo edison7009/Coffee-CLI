@@ -99,7 +99,7 @@ fn previous_conversation(cwd: &std::path::Path, from: &Value) -> Option<String> 
     transcript.is_file().then(|| previous_conversation_text(token, &transcript, from))
 }
 
-fn previous_conversation_text(token: &str, transcript: &std::path::Path, from: &Value) -> String {
+pub(crate) fn previous_conversation_text(token: &str, transcript: &std::path::Path, from: &Value) -> String {
     let escape = |text: &str| text.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;");
     let head = |text: &str| { let cut: String = text.chars().take(1500).collect(); if cut.chars().count() < text.chars().count() { format!("{cut}…") } else { cut } };
     let tail = |text: &str| { let count = text.chars().count(); if count > 1500 { format!("…{}", text.chars().skip(count - 1500).collect::<String>()) } else { text.to_string() } };

@@ -164,6 +164,7 @@ export const es = {
   'history.show_less': 'Mostrar menos',
   "claude.cold_return.title": "Inactiva durante {idle}, unos {tokens} de contexto",
   "claude.cold_return.detail": "La caché ha caducado: reanudar por completo reescribe todo el contexto y consume mucho de tu plan de una vez. Una conversación nueva lo evita y aún puede consultar esta.",
+  "codex.cold_return.detail": "Es muy probable que la caché de esta conversación haya caducado: continuar puede recalcularlo todo y consumir mucho de tu plan. Una conversación nueva lo evita y aún puede consultar esta.",
   "claude.cold_return.new": "Continuar en una conversación nueva (recomendado)",
   "claude.cold_return.full": "Reanudar por completo",
   "claude.cold_return.never": "No volver a preguntar",

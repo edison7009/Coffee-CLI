@@ -164,6 +164,7 @@ export const fr = {
   'history.show_less': 'Afficher moins',
   "claude.cold_return.title": "Inactive depuis {idle}, environ {tokens} de contexte",
   "claude.cold_return.detail": "Le cache a expiré : reprendre en entier réécrit tout le contexte et consomme beaucoup de votre forfait d’un coup. Une nouvelle conversation évite cela et peut toujours consulter celle-ci.",
+  "codex.cold_return.detail": "Le cache de cette conversation a très probablement expiré : continuer peut tout recalculer et consommer beaucoup de votre forfait. Une nouvelle conversation évite cela et peut toujours consulter celle-ci.",
   "claude.cold_return.new": "Continuer dans une nouvelle conversation (recommandé)",
   "claude.cold_return.full": "Reprendre en entier",
   "claude.cold_return.never": "Ne plus demander",

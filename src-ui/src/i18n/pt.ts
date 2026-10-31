@@ -164,6 +164,7 @@ export const pt = {
   'history.show_less': 'Mostrar menos',
   "claude.cold_return.title": "Inativa há {idle}, cerca de {tokens} de contexto",
   "claude.cold_return.detail": "O cache expirou: retomar por completo reescreve todo o contexto e consome muito do seu plano de uma vez. Uma nova conversa evita isso e ainda pode consultar esta.",
+  "codex.cold_return.detail": "É muito provável que o cache desta conversa tenha expirado: continuar pode recalcular tudo e consumir muito do seu plano. Uma nova conversa evita isso e ainda pode consultar esta.",
   "claude.cold_return.new": "Continuar em uma nova conversa (recomendado)",
   "claude.cold_return.full": "Retomar por completo",
   "claude.cold_return.never": "Não perguntar novamente",

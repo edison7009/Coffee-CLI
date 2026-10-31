@@ -166,6 +166,7 @@ export const zhTW = {
   'history.show_less': '收合',
   "claude.cold_return.title": "這段對話已閒置 {idle}，上下文約 {tokens}",
   "claude.cold_return.detail": "快取已過期，完整恢復會重新寫入全部上下文，一次消耗大量額度。開新對話可以省下這筆消耗，需要時模型仍能查閱這段對話。",
+  "codex.cold_return.detail": "這段對話的快取很可能已過期，繼續可能要重新計算全部上下文，消耗較多額度。開新對話可以省下這筆消耗，需要時模型仍能查閱這段對話。",
   "claude.cold_return.new": "開新對話繼續（推薦）",
   "claude.cold_return.full": "完整恢復",
   "claude.cold_return.never": "不再提示",

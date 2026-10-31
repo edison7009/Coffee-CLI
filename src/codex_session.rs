@@ -1,6 +1,6 @@
 //! One local app-server connection per Coffee conversation tab.
 use serde_json::{json, Value};
-use std::{collections::HashMap, io::{BufRead, BufReader, Write}, process::{Child, ChildStdin, Command, Stdio}, sync::{Arc, Mutex, mpsc}, time::Duration};
+use std::{collections::HashMap, io::{BufRead, BufReader, Read, Seek, SeekFrom, Write}, process::{Child, ChildStdin, Command, Stdio}, sync::{Arc, Mutex, mpsc}, time::Duration};
 use tauri::{Emitter, Manager, State};
 
 type Reply = mpsc::Sender<Result<Value, String>>;
@@ -93,7 +93,52 @@ fn emit(app: &tauri::AppHandle, id: &str, session: &Session, event: Value) {
     }
     let _ = app.emit("codex-session-event", json!({"id":id,"generation":session.generation,"event":event}));
 }
-fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<String>, resume_token: Option<String>) -> Result<Value, String> {
+fn codex_home() -> std::path::PathBuf {
+    std::env::var_os("CODEX_HOME").map(std::path::PathBuf::from).unwrap_or_else(|| dirs::home_dir().unwrap_or_default().join(".codex"))
+}
+
+/// A new thread continuing an idle one starts from a pointer instead of its history. Only a rollout of
+/// that thread under Codex's own home is accepted, since the path comes back through the webview.
+fn previous_rollout(from: &Value, home: &std::path::Path) -> Option<String> {
+    let token = from["token"].as_str().filter(|token| uuid::Uuid::parse_str(token).is_ok())?;
+    // Threads do not always report their rollout path, so it is looked up by thread ID.
+    let path = match from["path"].as_str().filter(|path| !path.is_empty()) {
+        Some(path) => std::path::PathBuf::from(path),
+        None => find_rollout(&home.join("sessions"), token, 4)?,
+    }.canonicalize().ok()?;
+    let inside = path.starts_with(home.canonicalize().ok()?) && path.is_file() && path.file_name()?.to_string_lossy().contains(token);
+    inside.then(|| crate::claude_session::previous_conversation_text(token, &dunce::simplified(&path), from))
+}
+
+fn find_rollout(dir: &std::path::Path, token: &str, depth: u8) -> Option<std::path::PathBuf> {
+    std::fs::read_dir(dir).ok()?.flatten().find_map(|entry| {
+        let path = entry.path();
+        if path.is_dir() { if depth > 0 { find_rollout(&path, token, depth - 1) } else { None } }
+        else { path.file_name()?.to_string_lossy().contains(token).then_some(path) }
+    })
+}
+
+/// Tokens the latest request carried, from the tail of the rollout; 0 when it is unknown or was compacted since.
+fn last_context_tokens(path: &std::path::Path) -> u64 {
+    const TAIL: u64 = 2 * 1024 * 1024;
+    let Ok(mut file) = std::fs::File::open(path) else { return 0 };
+    let start = file.metadata().map(|meta| meta.len().saturating_sub(TAIL)).unwrap_or(0);
+    let mut text = String::new();
+    let mut bytes = Vec::new();
+    if file.seek(SeekFrom::Start(start)).is_err() || file.read_to_end(&mut bytes).is_err() { return 0; }
+    text.push_str(&String::from_utf8_lossy(&bytes));
+    for line in text.lines().rev() {
+        if !line.contains("token_count") && !line.contains("compacted") { continue; }
+        let Ok(row) = serde_json::from_str::<Value>(line) else { continue };
+        if row["type"] == "compacted" || row["payload"]["type"] == "context_compacted" { return 0; }
+        if row["payload"]["type"] == "token_count" {
+            if let Some(tokens) = row["payload"]["info"]["last_token_usage"]["input_tokens"].as_u64() { return tokens; }
+        }
+    }
+    0
+}
+
+fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<String>, resume_token: Option<String>, continue_from: Option<Value>) -> Result<Value, String> {
     let config = crate::tool_config::get("codex");
     let cwd = cwd.filter(|p| !p.trim().is_empty()).or_else(|| (!config.default_cwd.is_empty()).then(|| config.default_cwd.clone()))
         .map(|p| crate::tool_config::expand_path(&p)).unwrap_or_else(|| dirs::home_dir().unwrap_or_default());
@@ -172,7 +217,12 @@ fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<Stri
         let models = session.request("model/list", json!({}))?;
         let mut thread = if let Some(token) = resume_token {
             session.request("thread/resume", json!({"threadId":token,"cwd":cwd,"excludeTurns":false}))?
-        } else { session.request("thread/start", json!({"cwd":cwd}))? };
+        } else {
+            let mut params = json!({"cwd":cwd});
+            if let Some(pointer) = continue_from.as_ref().and_then(|from| previous_rollout(from, &codex_home())) { params["developerInstructions"] = json!(pointer); }
+            session.request("thread/start", params)?
+        };
+        thread["lastContextTokens"] = json!(thread["thread"]["path"].as_str().map(|path| last_context_tokens(std::path::Path::new(path))).unwrap_or(0));
         *session.native_id.lock().unwrap() = thread["thread"]["id"].as_str().ok_or("Codex returned no thread ID")?.into();
         thread["models"] = models["data"].clone();
         Ok(thread)
@@ -182,8 +232,8 @@ fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<Stri
 }
 
 #[tauri::command]
-pub async fn codex_session_start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<String>, resume_token: Option<String>) -> Result<Value, String> {
-    tauri::async_runtime::spawn_blocking(move || start(app, id, generation, cwd, resume_token)).await.map_err(|e| e.to_string())?
+pub async fn codex_session_start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<String>, resume_token: Option<String>, continue_from: Option<Value>) -> Result<Value, String> {
+    tauri::async_runtime::spawn_blocking(move || start(app, id, generation, cwd, resume_token, continue_from)).await.map_err(|e| e.to_string())?
 }
 #[tauri::command]
 pub async fn codex_session_request(sessions: State<'_, CodexSessions>, id: String, generation: String, method: String, params: Value) -> Result<Value, String> {
@@ -257,6 +307,29 @@ mod tests {
         session.child.lock().unwrap().wait().unwrap();
         assert!(stopped, "closing must not wait for a thread holding the input pipe");
         assert!(session.input.lock().unwrap().is_none());
+    }
+
+    #[test]
+    fn rollouts_report_context_and_only_their_own_thread_is_accepted() {
+        let dir = tempfile::tempdir().unwrap();
+        let token = "11111111-1111-4111-8111-111111111111";
+        let path = dir.path().join(format!("rollout-2026-{token}.jsonl"));
+        let usage = |tokens: u64| json!({"type":"event_msg","payload":{"type":"token_count","info":{"last_token_usage":{"input_tokens":tokens}}}}).to_string();
+        std::fs::write(&path, format!("{}\n{}\npartial", usage(5), usage(446000))).unwrap();
+        assert_eq!(last_context_tokens(&path), 446000);
+        std::fs::write(&path, format!("{}\n{}\n", usage(446000), json!({"type":"compacted","payload":{}}))).unwrap();
+        assert_eq!(last_context_tokens(&path), 0, "compaction replaces the history");
+        assert_eq!(last_context_tokens(&dir.path().join("missing.jsonl")), 0);
+        let from = |path: &std::path::Path, token: &str| json!({"token":token,"path":path.to_string_lossy(),"prompt":"Earlier"});
+        assert!(previous_rollout(&from(&path, token), dir.path()).unwrap().contains("rollout-2026"));
+        assert!(previous_rollout(&from(&path, "22222222-2222-4222-8222-222222222222"), dir.path()).is_none(), "another thread's file");
+        assert!(previous_rollout(&from(&path, token), &dir.path().join("elsewhere")).is_none());
+        let dated = dir.path().join("sessions/2026/10/31");
+        std::fs::create_dir_all(&dated).unwrap();
+        std::fs::write(dated.join(format!("rollout-{token}.jsonl")), "").unwrap();
+        assert!(previous_rollout(&json!({"token":token,"prompt":"Earlier"}), dir.path()).unwrap().contains("sessions"), "a thread without a reported path is found by ID");
+        let other = tempfile::tempdir().unwrap();
+        assert!(previous_rollout(&from(&path, token), other.path()).is_none(), "outside Codex's home");
     }
 
     #[test]

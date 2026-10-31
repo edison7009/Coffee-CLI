@@ -165,6 +165,7 @@ export const en = {
   'history.show_less': 'Show less',
   "claude.cold_return.title": "Idle for {idle}, about {tokens} of context",
   "claude.cold_return.detail": "The cache has expired, so resuming rewrites the whole conversation and uses a lot of your plan at once. A new conversation skips that and can still look up this one.",
+  "codex.cold_return.detail": "This conversation has very likely lost its cache, so continuing may recompute all of it and use a lot of your plan. A new conversation skips that and can still look up this one.",
   "claude.cold_return.new": "Continue in a new conversation (recommended)",
   "claude.cold_return.full": "Resume in full",
   "claude.cold_return.never": "Don't ask again",

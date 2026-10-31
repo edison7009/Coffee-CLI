@@ -166,6 +166,7 @@ export const zhCN = {
   'history.show_less': '收起',
   "claude.cold_return.title": "这段对话已闲置 {idle}，上下文约 {tokens}",
   "claude.cold_return.detail": "缓存已过期，完整恢复会重新写入全部上下文，一次消耗大量额度。开新对话可以免掉这笔消耗，需要时模型仍能查阅这段对话。",
+  "codex.cold_return.detail": "这段对话的缓存很可能已过期，继续可能要重新计算全部上下文，消耗较多额度。开新对话可以免掉这笔消耗，需要时模型仍能查阅这段对话。",
   "claude.cold_return.new": "开新对话继续（推荐）",
   "claude.cold_return.full": "完整恢复",
   "claude.cold_return.never": "不再提示",

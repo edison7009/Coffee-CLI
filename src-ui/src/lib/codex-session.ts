@@ -4,10 +4,13 @@ import { directoryFailure } from './session-directory';
 import { recordSessionReply } from './session-replies';
 import { invoke } from '../tauri';
 import { gambitAttachments } from './gambit-attachments';
-import { arr, obj, str, emptyCodexState, reduceCodexEvent, restoreCodexTurns, type CodexState, type CodexModel, type Json } from './codex-protocol';
+import { arr, codexColdReturn, num, obj, str, emptyCodexState, reduceCodexEvent, restoreCodexTurns, type CodexState, type CodexModel, type Json } from './codex-protocol';
 
 interface Client { state: CodexState; generation: string; listeners: Set<() => void>; owners: number; starting?: Promise<void>; closeTimer?: ReturnType<typeof setTimeout>; publishTimer?: ReturnType<typeof setTimeout>; sending: boolean; exited?: boolean; connecting?: boolean; startupExit?: string; interruptSent?: string; permissionOverride?: Json; skills?: Json[] }
 const clients = new Map<string, Client>();
+// Tabs restarted as a new thread: which thread they continue, and the prompt waiting to be sent.
+const continuations = new Map<string, { continueFrom: Json; prompt: string }>();
+const COLD_RETURN_NEVER = 'coffee:codex-cold-return-never';
 const EMPTY = emptyCodexState();
 let listening: Promise<unknown> | undefined;
 function client(id: string): Client {
@@ -53,17 +56,19 @@ export function retainCodexSession(id: string, cwd: string | null, resumeToken?:
         await listen();
         clearSessionControls(id, c.generation);
         const controls = readLaunchControls('codex'), generation = c.generation;
-        const result = await invoke<Json>('codex_session_start', { id, generation: c.generation, cwd, resumeToken: resumeToken ?? null });
+        const result = await invoke<Json>('codex_session_start', { id, generation: c.generation, cwd, resumeToken: resumeToken ?? null, continueFrom: continuations.get(id)?.continueFrom ?? null });
         if (c.exited) throw new Error(c.startupExit || 'Codex process exited');
         const thread = obj(result.thread), history = restoreCodexTurns(arr(thread.turns));
         const liveIds = new Set(c.state.messages.map(m => m.id));
-        c.state = { ...c.state, ready: true, error: undefined, nativeId: str(thread.id), model: str(result.model), effort: str(result.reasoningEffort), approvalPolicy: result.approvalPolicy, sandbox: obj(result.sandbox), models: arr(result.models) as CodexModel[], messages: [...history.filter(m => !liveIds.has(m.id)), ...c.state.messages], historyCursor: str(result.turnsBackwardsCursor) || null };
+        c.state = { ...c.state, ready: true, error: undefined, nativeId: str(thread.id), threadPath: str(thread.path), lastContextTokens: num(result.lastContextTokens), model: str(result.model), effort: str(result.reasoningEffort), approvalPolicy: result.approvalPolicy, sandbox: obj(result.sandbox), models: arr(result.models) as CodexModel[], messages: [...history.filter(m => !liveIds.has(m.id)), ...c.state.messages], historyCursor: str(result.turnsBackwardsCursor) || null };
         const active = arr(thread.turns).map(obj).find(turn => turn.status === 'inProgress');
         if (active && !c.state.turnId) c.state = { ...c.state, busy: true, turnId: str(active.id) };
         void controls.then(value => {
           if (clients.get(id) === c && c.owners && c.generation === generation && c.state.ready) setSessionControls(id, generation, value);
         });
         publish(c, true);
+        const continuation = continuations.get(id);
+        if (continuation) { continuations.delete(id); await sendCodexMessage(id, continuation.prompt); }
         return;
       } catch (error) {
         if (directoryFailure(error) || attempt === 2) { c.state = { ...c.state, ready: false, error: String(error) }; publish(c, true); return; }
@@ -122,6 +127,33 @@ export async function runCodexCommand(id: string, command: 'compact' | 'review' 
     if (startsTurn) c.state = { ...c.state, busy: false, error: String(error) };
     throw error;
   } finally { if (startsTurn) { c.sending = false; publish(c, true); } }
+}
+/** A person's send: a thread idle for half a day asks first, because it has very likely lost its cache. */
+export async function sendCodexInteractive(id: string, prompt: string): Promise<boolean> {
+  const c = client(id);
+  if (c.state.coldReturn) return false;
+  let dismissed = false;
+  try { dismissed = localStorage.getItem(COLD_RETURN_NEVER) === '1'; } catch { /* optional preference */ }
+  const cold = dismissed || prompt.startsWith('/') ? null : codexColdReturn(c.state, Date.now());
+  if (!cold) return sendCodexMessage(id, prompt);
+  c.state = { ...c.state, coldReturn: { ...cold, prompt } }; publish(c, true);
+  return true;
+}
+/** Settles the held prompt in this thread; returns it so `cancel` can put it back in the composer. */
+export async function settleCodexColdReturn(id: string, choice: 'full' | 'never' | 'cancel'): Promise<string> {
+  const c = client(id), prompt = c.state.coldReturn?.prompt ?? '';
+  c.state = { ...c.state, coldReturn: undefined }; publish(c, true);
+  if (choice === 'never') { try { localStorage.setItem(COLD_RETURN_NEVER, '1'); } catch { /* optional preference */ } }
+  if (choice !== 'cancel' && prompt) await sendCodexMessage(id, prompt);
+  return prompt;
+}
+/** Hands the held prompt to a new thread in tab `newId`, with a pointer to this one instead of its history. */
+export function continueCodexInNewThread(id: string, newId: string): void {
+  const c = client(id), prompt = c.state.coldReturn?.prompt;
+  if (!prompt) return;
+  const messages = c.state.messages, lastPrompt = messages.findLast(m => m.role === 'user'), reply = messages.findLast(m => m.role === 'assistant');
+  continuations.set(newId, { prompt, continueFrom: { token: c.state.nativeId, path: c.state.threadPath, prompt: lastPrompt?.content ?? '', reply: reply?.content ?? '' } });
+  c.state = { ...c.state, coldReturn: undefined };
 }
 export async function sendCodexMessage(id: string, prompt: string): Promise<boolean> {
   const c = client(id); if (!c.state.ready || c.state.busy || c.sending || !prompt.trim()) return false;

@@ -164,6 +164,7 @@ export const de = {
   'history.show_less': 'Weniger anzeigen',
   "claude.cold_return.title": "{idle} inaktiv, etwa {tokens} Kontext",
   "claude.cold_return.detail": "Der Cache ist abgelaufen. Beim vollständigen Fortsetzen wird der gesamte Kontext neu geschrieben, was viel von deinem Kontingent auf einmal verbraucht. Eine neue Unterhaltung vermeidet das und kann diese bei Bedarf nachschlagen.",
+  "codex.cold_return.detail": "Der Cache dieser Unterhaltung ist sehr wahrscheinlich abgelaufen. Beim Fortsetzen wird womöglich alles neu berechnet, was viel von deinem Kontingent verbraucht. Eine neue Unterhaltung vermeidet das und kann diese bei Bedarf nachschlagen.",
   "claude.cold_return.new": "In neuer Unterhaltung fortsetzen (empfohlen)",
   "claude.cold_return.full": "Vollständig fortsetzen",
   "claude.cold_return.never": "Nicht mehr fragen",

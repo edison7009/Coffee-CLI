@@ -3,7 +3,7 @@ import { useAppState } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
 import { orchestrationToolLabel } from '../../lib/orchestration-label';
 import { arr, obj, str, num, pretty, type CodexMessage, type CodexRequest, type Json } from '../../lib/codex-protocol';
-import { interruptCodex, loadCodexHistory, respondCodex, retainCodexSession, useCodexSession } from '../../lib/codex-session';
+import { continueCodexInNewThread, interruptCodex, loadCodexHistory, respondCodex, retainCodexSession, settleCodexColdReturn, useCodexSession } from '../../lib/codex-session';
 import { clipboardWrite } from '../../lib/clipboard';
 import { directoryFailure, directoryFailureMessage } from '../../lib/session-directory';
 import { bindAutoHideScrollbar } from '../../lib/auto-hide-scrollbar';
@@ -13,7 +13,7 @@ import { WelcomeGreeting, WelcomeSessionMeta } from './WelcomeGreeting';
 import { CodexWelcomeIcon } from './CodexWelcomeIcon';
 import { ConversationDirectory } from '../../lib/conversation-links';
 import { useConversationMenu } from '../../lib/use-conversation-menu';
-import { CollapsibleUserMessage, ConversationNavigation, MessageCopyButton, type ConversationNavigationItem } from './ConversationControls';
+import { CollapsibleUserMessage, ColdReturnCard, ConversationNavigation, MessageCopyButton, type ConversationNavigationItem } from './ConversationControls';
 import './ConversationView.css';
 import './ClaudeConversation.css';
 import './CodexConversation.css';
@@ -180,6 +180,10 @@ export function CodexConversation({ sessionId, cwd, resumeToken, isActive, isVis
         </Measured>)}
         <div style={{ height: virtual.bottomSpacer }} aria-hidden="true" />
         {s.requests.map(request => <RequestCard key={JSON.stringify(request.id)} sessionId={sessionId} request={request} />)}
+        {s.coldReturn && <ColdReturnCard idleMinutes={s.coldReturn.idleMinutes} tokens={s.coldReturn.tokens} detailKey="codex.cold_return.detail"
+          onNew={() => { const newId = crypto.randomUUID(); continueCodexInNewThread(sessionId, newId); dispatch({ type: 'RESTART_TERMINAL', id: sessionId, newId, fresh: true }); }}
+          onFull={() => { void settleCodexColdReturn(sessionId, 'full'); }} onNever={() => { void settleCodexColdReturn(sessionId, 'never'); }}
+          onCancel={() => { void settleCodexColdReturn(sessionId, 'cancel').then(draft => dispatch({ type: 'SET_GAMBIT_DRAFT', id: sessionId, draft })); }} />}
         {s.ready && s.busy && <div className="codex-working" role="status"><span className="codex-spinner" aria-hidden="true" />{t(s.interrupting ? 'codex.stopping' : s.requests.length ? 'codex.waiting' : 'claude.status.working')}…</div>}
         {s.error && s.ready && <div className="claude-session-error" role="alert">{s.error}</div>}
         {directoryIssue && <div className="claude-session-error" role="alert">{directoryError}</div>}

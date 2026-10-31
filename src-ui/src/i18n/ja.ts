@@ -166,6 +166,7 @@ export const ja = {
   'history.show_less': '折りたたむ',
   "claude.cold_return.title": "この会話は {idle} 放置され、コンテキストは約 {tokens} です",
   "claude.cold_return.detail": "キャッシュの期限が切れているため、完全に再開すると全コンテキストを書き直し、一度に多くの利用枠を消費します。新しい会話ならこの消費を避けられ、必要なときはこの会話を参照できます。",
+  "codex.cold_return.detail": "この会話のキャッシュは期限切れの可能性が高く、続けると全コンテキストを再計算して利用枠を多く消費することがあります。新しい会話ならこの消費を避けられ、必要なときはこの会話を参照できます。",
   "claude.cold_return.new": "新しい会話で続ける（推奨）",
   "claude.cold_return.full": "完全に再開",
   "claude.cold_return.never": "今後表示しない",

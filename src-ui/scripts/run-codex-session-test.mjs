@@ -38,7 +38,16 @@ const result = await build({
   } }],
 });
 const api = await import(`data:text/javascript;base64,${Buffer.from(result.outputFiles[0].text).toString('base64')}`);
-const { emptyCodexState, reduceCodexEvent, restoreCodexTurns } = api;
+const { emptyCodexState, reduceCodexEvent, restoreCodexTurns, codexColdReturn } = api;
+{
+  const hour = 3_600_000, cold = { ...emptyCodexState(), ready: true, lastContextTokens: 400000, messages: [{ id: 'a', timestamp: 1000 }] };
+  assert.equal(codexColdReturn(cold, 1000 + hour * 11), null, 'most returns under half a day still hit the cache');
+  assert.equal(codexColdReturn(cold, 1000 + hour * 13).idleMinutes, 780);
+  assert.equal(codexColdReturn({ ...cold, lastContextTokens: 99999 }, 1000 + hour * 13), null);
+  assert.equal(codexColdReturn({ ...cold, busy: true }, 1000 + hour * 13), null);
+  const usage = reduceCodexEvent({ ...emptyCodexState(), nativeId: 't' }, { method: 'thread/tokenUsage/updated', params: { threadId: 't', tokenUsage: { last: { totalTokens: 123 }, total: { totalTokens: 456 } } } });
+  assert.equal(usage.lastContextTokens, 123);
+}
 let state = { ...emptyCodexState(), nativeId: 'thread-a', ready: true };
 const event = (method, params, id) => ({ method, params: { threadId: 'thread-a', ...params }, ...(id === undefined ? {} : { id }) });
 const reduce = (method, params, id) => { state = reduceCodexEvent(state, event(method, params, id)); };

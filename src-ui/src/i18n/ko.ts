@@ -166,6 +166,7 @@ export const ko = {
   'history.show_less': '접기',
   "claude.cold_return.title": "이 대화는 {idle} 동안 유휴 상태이며 컨텍스트는 약 {tokens}입니다",
   "claude.cold_return.detail": "캐시가 만료되어 전체를 재개하면 모든 컨텍스트를 다시 기록하므로 사용량을 한 번에 많이 소모합니다. 새 대화는 이 소모를 피하면서 필요할 때 이 대화를 찾아볼 수 있습니다.",
+  "codex.cold_return.detail": "이 대화의 캐시가 만료되었을 가능성이 높아 계속하면 전체 컨텍스트를 다시 계산하며 사용량을 많이 소모할 수 있습니다. 새 대화는 이 소모를 피하면서 필요할 때 이 대화를 찾아볼 수 있습니다.",
   "claude.cold_return.new": "새 대화로 계속(권장)",
   "claude.cold_return.full": "전체 재개",
   "claude.cold_return.never": "다시 묻지 않기",

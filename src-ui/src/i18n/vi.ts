@@ -164,6 +164,7 @@ export const vi = {
   'history.show_less': 'Thu gọn',
   "claude.cold_return.title": "Đã nhàn rỗi {idle}, ngữ cảnh khoảng {tokens}",
   "claude.cold_return.detail": "Bộ nhớ đệm đã hết hạn, khôi phục toàn bộ sẽ ghi lại toàn bộ ngữ cảnh và tiêu tốn nhiều hạn mức cùng lúc. Cuộc trò chuyện mới tránh được điều này và vẫn có thể tra cứu cuộc trò chuyện này.",
+  "codex.cold_return.detail": "Bộ nhớ đệm của cuộc trò chuyện này rất có thể đã hết hạn, tiếp tục có thể phải tính lại toàn bộ và tiêu tốn nhiều hạn mức. Cuộc trò chuyện mới tránh được điều này và vẫn có thể tra cứu cuộc trò chuyện này.",
   "claude.cold_return.new": "Tiếp tục trong cuộc trò chuyện mới (khuyên dùng)",
   "claude.cold_return.full": "Khôi phục toàn bộ",
   "claude.cold_return.never": "Không hỏi lại",

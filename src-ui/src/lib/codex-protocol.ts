@@ -15,7 +15,22 @@ export interface CodexMessage extends ChatMessage {
 }
 export interface CodexModel { id: string; model: string; displayName: string; defaultReasoningEffort: string; supportedReasoningEfforts: { reasoningEffort: string; description: string }[]; hidden?: boolean }
 export interface CodexRequest { id: string | number; method: string; params: Json }
+/** A prompt held back because a long idle thread has probably lost its cache. */
+export interface CodexColdReturn { prompt: string; idleMinutes: number; tokens: number }
+// Codex keeps its cache for an uneven time: most returns under half a day still hit, and past that they miss.
+const COLD_IDLE_MINUTES = 720, COLD_CONTEXT_TOKENS = 100_000;
+export function codexColdReturn(state: Pick<CodexState, 'messages' | 'lastContextTokens' | 'busy' | 'ready'>, now: number): Omit<CodexColdReturn, 'prompt'> | null {
+  const last = state.messages.at(-1);
+  if (!last || state.busy || !state.ready || state.lastContextTokens < COLD_CONTEXT_TOKENS) return null;
+  const idleMinutes = (now - last.timestamp) / 60_000;
+  return idleMinutes < COLD_IDLE_MINUTES ? null : { idleMinutes: Math.round(idleMinutes), tokens: state.lastContextTokens };
+}
 export interface CodexState {
+  /** Tokens of the latest request, including the one read back from a resumed rollout. */
+  lastContextTokens: number;
+  /** The thread's rollout file, which a continuing thread points at. */
+  threadPath: string;
+  coldReturn?: CodexColdReturn;
   ready: boolean; busy: boolean; nativeId: string; turnId: string;
   messages: CodexMessage[]; requests: CodexRequest[]; models: CodexModel[];
   model: string; effort: string; approvalPolicy: unknown; sandbox: Json;
@@ -24,7 +39,7 @@ export interface CodexState {
   error?: string; interrupting: boolean;
 }
 export function emptyCodexState(): CodexState {
-  return { ready: false, busy: false, nativeId: '', turnId: '', messages: [], requests: [], models: [], model: '', effort: '', approvalPolicy: undefined, sandbox: {}, contextTokens: 0, contextWindow: 0, totalTokens: 0, historyCursor: null, loadingHistory: false, interrupting: false };
+  return { lastContextTokens: 0, threadPath: '', ready: false, busy: false, nativeId: '', turnId: '', messages: [], requests: [], models: [], model: '', effort: '', approvalPolicy: undefined, sandbox: {}, contextTokens: 0, contextWindow: 0, totalTokens: 0, historyCursor: null, loadingHistory: false, interrupting: false };
 }
 function itemText(item: Json): string {
   if (item.type === 'userMessage') return arr(item.content).map(value => { const part = obj(value); return str(part.text) || str(part.path) || str(part.url); }).filter(Boolean).join('\n');
@@ -83,7 +98,7 @@ export function reduceCodexEvent(state: CodexState, event: Json): CodexState {
     }
   } else if (method === 'serverRequest/resolved') s.requests = s.requests.filter(r => r.id !== p.requestId);
   else if (method === 'thread/tokenUsage/updated') {
-    const usage = obj(p.tokenUsage); s.contextTokens = num(obj(usage.last).totalTokens); s.contextWindow = num(usage.modelContextWindow); s.totalTokens = num(obj(usage.total).totalTokens);
+    const usage = obj(p.tokenUsage); s.contextTokens = num(obj(usage.last).totalTokens); s.lastContextTokens = s.contextTokens; s.contextWindow = num(usage.modelContextWindow); s.totalTokens = num(obj(usage.total).totalTokens);
   } else if (method === 'turn/plan/updated') {
     const id = `${str(p.turnId)}:plan`;
     const plan = codexMessage({ id: 'plan', type: 'plan', text: [str(p.explanation), ...arr(p.plan).map(value => { const step = obj(value); return `- ${step.status === 'completed' ? '[x]' : '[ ]'} ${str(step.step)}`; })].filter(Boolean).join('\n') }, str(p.turnId), false);
