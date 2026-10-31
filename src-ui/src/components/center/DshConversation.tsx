@@ -13,7 +13,7 @@ import { WelcomeGreeting, WelcomeSessionMeta } from './WelcomeGreeting';
 import { DshWelcomeIcon } from './DshWelcomeIcon';
 import { ConversationDirectory } from '../../lib/conversation-links';
 import { useConversationMenu } from '../../lib/use-conversation-menu';
-import { ConversationNavigation, MessageCopyButton, type ConversationNavigationItem } from './ConversationControls';
+import { CollapsibleUserMessage, ConversationNavigation, MessageCopyButton, type ConversationNavigationItem } from './ConversationControls';
 import DSH_RUNNING_WHALE from '../../icons-inline/dsh-running-whale.png';
 import './ConversationView.css';
 import './ClaudeConversation.css';
@@ -162,7 +162,9 @@ export function DshConversation({ sessionId, cwd, resumeToken, isActive, isVisib
               <button type="button" className="codex-group-heading" aria-expanded={!!expanded[row.id]} onClick={() => toggle(row.id)}><span aria-hidden="true">{expanded[row.id] ? '⌄' : '›'}</span><span>{t('codex.activity', { count: row.members.length })}</span>{row.running && <span className="codex-spinner" aria-hidden="true" />}<small>{title(row.members.at(-1)!)}</small></button>
               {expanded[row.id] && <div className="codex-activity-list">{row.members.map(step)}</div>}
             </> : row.role === 'notice' ? <div className={`claude-turn-summary${row.tone === 'error' ? ' is-error' : ''}`} role="status">{row.content === 'interrupted' ? t('claude.interrupted') : row.content === 'commands-unsupported' ? t('dsh.commands_unsupported') : row.tone === 'error' && !row.content.startsWith('/') ? `${t('codex.failed')} · ${row.content}` : row.content}</div> : <>
-              <div className={row.role === 'user' ? 'claude-user-content' : ''}><MarkdownContent content={row.content} /></div>
+              {row.role === 'user'
+                ? <CollapsibleUserMessage expanded={!!expanded[row.id]} onToggle={() => setExpanded(old => ({ ...old, [row.id]: !old[row.id] }))}><MarkdownContent content={row.content} /></CollapsibleUserMessage>
+                : <div><MarkdownContent content={row.content} /></div>}
               <MessageCopyButton copied={copied === row.id} onCopy={() => copy(row.id, row.content)} />
             </>}
           </article>

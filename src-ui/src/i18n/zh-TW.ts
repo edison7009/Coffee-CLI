@@ -612,6 +612,8 @@ export const zhTW = {
   'claude.time.minutes': '{minutes}分{seconds}秒',
   'claude.tokens': '{count} 詞元',
   'claude.collapse': '收合',
+
+  'conversation.show_more': '顯示更多',
   'claude.expand': '點擊展開',
   'claude.tool': '工具',
   'claude.tool_details': '展開工具詳情',

@@ -611,6 +611,8 @@ export const ko = {
   'claude.time.minutes': '{minutes}분 {seconds}초',
   'claude.tokens': '{count} 토큰',
   'claude.collapse': '접기',
+
+  'conversation.show_more': '더 보기',
   'claude.expand': '클릭하여 펼치기',
   'claude.tool': '도구',
   'claude.tool_details': '도구 세부 정보 펼치기',

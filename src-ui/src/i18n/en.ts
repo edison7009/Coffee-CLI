@@ -615,6 +615,8 @@ Delete this note whenever you're ready, and start your first task.`,
   'claude.time.minutes': '{minutes}m {seconds}s',
   'claude.tokens': '{count} tokens',
   'claude.collapse': 'Collapse',
+
+  'conversation.show_more': 'Show more',
   'claude.expand': 'Click to expand',
   'claude.tool': 'Tool',
   'claude.tool_details': 'Expand tool details',

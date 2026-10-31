@@ -611,6 +611,8 @@ export const ja = {
   'claude.time.minutes': '{minutes}分{seconds}秒',
   'claude.tokens': '{count} トークン',
   'claude.collapse': '折りたたむ',
+
+  'conversation.show_more': 'もっと見る',
   'claude.expand': 'クリックして展開',
   'claude.tool': 'ツール',
   'claude.tool_details': 'ツールの詳細を展開',

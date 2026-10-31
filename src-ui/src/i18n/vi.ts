@@ -612,6 +612,7 @@ Xóa tờ ghi chú này khi bạn sẵn sàng và bắt đầu tác vụ đầu 
   'claude.time.minutes': '{minutes}ph {seconds}giây',
   'claude.tokens': '{count} token',
   'claude.collapse': 'Thu gọn',
+  'conversation.show_more': 'Xem thêm',
   'claude.expand': 'Nhấn để mở rộng',
   'claude.tool': 'Công cụ',
   'claude.tool_details': 'Mở chi tiết công cụ',

@@ -16,7 +16,7 @@ import { MarkdownContent } from './MarkdownContent';
 import { WelcomeGreeting, WelcomeSessionMeta } from './WelcomeGreeting';
 import { ConversationDirectory } from '../../lib/conversation-links';
 import { useConversationMenu } from '../../lib/use-conversation-menu';
-import { ConversationNavigation, MessageCopyButton, type ConversationNavigationItem } from './ConversationControls';
+import { CollapsibleUserMessage, ConversationNavigation, MessageCopyButton, type ConversationNavigationItem } from './ConversationControls';
 import { commands } from '../../tauri';
 import CLAWD_SVG from '../../icons-inline/clawd.svg?raw';
 import CLAUDE_WORKING_MARK from '../../icons-inline/claude-working-mark.webp';
@@ -276,6 +276,7 @@ export function ClaudeConversation({ sessionId, cwd, resumeToken, isActive, isVi
   const [expandedThinking, setExpandedThinking] = useState(false);
   const [thinkingExpansion, setThinkingExpansion] = useState<Record<string, boolean>>({});
   const virtual = useConversationVirtualizer(s.messages, scrollRef);
+  const [expandedMessages, setExpandedMessages] = useState<Record<string, boolean>>({});
   const navigationItems = useMemo<ConversationNavigationItem[]>(() => s.messages.flatMap((message, messageIndex) => message.role === 'user' ? [{ id: message.id, sourceMessageId: message.id, content: message.content, messageIndex, top: (virtual.offsets[messageIndex] ?? 0) + 32, cursor: null }] : []), [s.messages, virtual.offsets]);
   useEffect(() => retainClaudeSession(sessionId, cwd, initialToken.current), [sessionId, cwd]);
   useEffect(() => { dispatch({ type: 'SET_AGENT_STATUS', id: sessionId, status: s.requests.length ? 'wait_input' : s.busy ? 'working' : 'idle' }); }, [sessionId, s.busy, s.requests.length, dispatch]);
@@ -365,7 +366,7 @@ export function ClaudeConversation({ sessionId, cwd, resumeToken, isActive, isVi
         {s.messages.slice(virtual.start, virtual.end).map((m, i) => <MeasuredRow key={m.id} id={virtual.measurementKeys[virtual.start + i]} measure={virtual.measureRow}>
           {new Date(m.timestamp).toDateString() !== new Date(s.messages[virtual.start + i - 1]?.timestamp ?? 0).toDateString() && <div className="claude-date">{new Date(m.timestamp).toLocaleDateString(language, { weekday: 'short', month: 'short', day: 'numeric' })}</div>}
           <article data-message-id={m.id} className={`claude-row claude-row--${m.role} ${m.toolStatus ? `claude-row--${m.interrupted ? 'interrupted' : m.toolStatus}` : ''} ${m.parentId ? 'claude-row--nested' : ''}`}>
-            {m.role === 'user' ? <><time>{new Date(m.timestamp).toLocaleTimeString(language, { hour: 'numeric', minute: '2-digit' })}</time><div className="claude-user-content"><MarkdownContent content={m.content} /></div></> : m.role === 'tool' ? <ClaudeTool message={m} /> : m.role === 'reasoning' ? <ClaudeThinking message={m} expanded={thinkingExpansion[m.id] ?? expandedThinking} tokens={s.thinkingTokens} onToggle={open => setThinkingExpansion(previous => (previous[m.id] ?? expandedThinking) === open ? previous : { ...previous, [m.id]: open })} /> : <><time>{new Date(m.timestamp).toLocaleTimeString(language, { hour: 'numeric', minute: '2-digit' })}</time><MarkdownContent content={m.content} /></>}
+            {m.role === 'user' ? <><time>{new Date(m.timestamp).toLocaleTimeString(language, { hour: 'numeric', minute: '2-digit' })}</time><CollapsibleUserMessage expanded={!!expandedMessages[m.id]} onToggle={() => setExpandedMessages(old => ({ ...old, [m.id]: !old[m.id] }))}><MarkdownContent content={m.content} /></CollapsibleUserMessage></> : m.role === 'tool' ? <ClaudeTool message={m} /> : m.role === 'reasoning' ? <ClaudeThinking message={m} expanded={thinkingExpansion[m.id] ?? expandedThinking} tokens={s.thinkingTokens} onToggle={open => setThinkingExpansion(previous => (previous[m.id] ?? expandedThinking) === open ? previous : { ...previous, [m.id]: open })} /> : <><time>{new Date(m.timestamp).toLocaleTimeString(language, { hour: 'numeric', minute: '2-digit' })}</time><MarkdownContent content={m.content} /></>}
             {(m.role === 'user' || m.role === 'assistant') && !m.partial && <MessageCopyButton copied={copied === m.id} onCopy={() => copy(m)} />}
             {virtual.start + i === s.messages.length - 1 && summary}
           </article>

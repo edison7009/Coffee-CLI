@@ -1,4 +1,4 @@
-import { memo, useEffect, useId, useRef, useState, type RefObject } from 'react';
+import { memo, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { useT } from '../../i18n/useT';
 
 export interface ConversationNavigationItem {
@@ -8,6 +8,39 @@ export interface ConversationNavigationItem {
   messageIndex: number;
   top: number;
   cursor: number | null;
+}
+
+// Claude Desktop's limits: a message over 300px shows its first 200px, fading out over the last 3rem.
+const COLLAPSE_ABOVE = 300;
+
+/** The user's bubble. The expansion lives with the conversation, as virtual rows unmount off screen. */
+export function CollapsibleUserMessage({ expanded, onToggle, children }: { expanded: boolean; onToggle: () => void; children: ReactNode }) {
+  const t = useT(), id = useId();
+  const content = useRef<HTMLDivElement>(null), toggle = useRef<HTMLButtonElement>(null), toggleTop = useRef<number | null>(null);
+  const [overflows, setOverflows] = useState(false);
+  useLayoutEffect(() => {
+    const element = content.current;
+    if (!element) return;
+    const measure = () => setOverflows(element.offsetHeight > COLLAPSE_ABOVE);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  // Collapsing removes the height above the button; keep the button under the pointer.
+  useLayoutEffect(() => {
+    const top = toggleTop.current, button = toggle.current;
+    toggleTop.current = null;
+    const scroller = button?.closest('.claude-scroll');
+    if (top !== null && button && scroller) scroller.scrollTop += button.getBoundingClientRect().top - top;
+  }, [expanded]);
+  return <div className="claude-user-content">
+    <div id={id} className={`claude-user-body${overflows && !expanded ? ' is-collapsed' : ''}`}><div ref={content}>{children}</div></div>
+    {overflows && <button ref={toggle} type="button" className="claude-user-toggle" aria-expanded={expanded} aria-controls={id} onClick={event => {
+      if (expanded) toggleTop.current = event.currentTarget.getBoundingClientRect().top;
+      onToggle();
+    }}>{t(expanded ? 'claude.collapse' : 'conversation.show_more')}</button>}
+  </div>;
 }
 
 export function MessageCopyButton({ copied, onCopy }: { copied: boolean; onCopy: () => void }) {
