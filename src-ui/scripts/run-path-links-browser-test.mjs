@@ -54,12 +54,28 @@ page.setDefaultTimeout(4000);
 const errors = []; page.on('pageerror', error => errors.push(error.message));
 const items = () => page.locator('.term-ctx-item').allInnerTexts();
 const native = () => page.evaluate(() => window.native);
+// The middle of a word's second character: fonts differ between systems, so fixed offsets miss the text.
+const at = word => page.evaluate(word => {
+  for (const element of document.querySelectorAll('.md-code, p, li')) {
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const index = node.nodeValue.indexOf(word);
+      if (index < 0) continue;
+      const range = document.createRange(); range.setStart(node, index + 1); range.setEnd(node, index + 2);
+      const box = range.getBoundingClientRect();
+      return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+    }
+  }
+  throw new Error(`no text ${word}`);
+}, word);
+const rightClick = async word => { const { x, y } = await at(word); await page.mouse.click(x, y, { button: 'right' }); };
+const hover = async word => { const { x, y } = await at(word); await page.mouse.move(x, y); };
 try {
   await page.goto(`http://127.0.0.1:${server.address().port}`);
   await page.locator('.md-code').waitFor();
 
   // A path inside a code block has no link, yet offers the file actions, spaces included.
-  await page.locator('.md-code').click({ button: 'right', position: { x: 300, y: 18 } });
+  await rightClick('target');
   await page.locator('.term-ctx-menu').waitFor();
   const offered = await items();
   assert.ok(offered.includes('Reveal in File Explorer') && offered.includes('Copy path') && !offered.includes('Open link or file'), offered.join('|'));
@@ -69,14 +85,14 @@ try {
   // Hovering a path in a code block or paragraph marks exactly that path and shows a hand; other text does not.
   const hovered = () => page.evaluate(() => { const set = CSS.highlights.get('conversation-path'); return set ? [...set].map(range => range.toString()).join('') : ''; });
   const cursor = () => page.evaluate(() => document.querySelector('.claude-row').style.cursor);
-  await page.locator('.md-code').hover({ position: { x: 300, y: 18 } });
+  await hover('target');
   await page.waitForFunction(() => CSS.highlights.has('conversation-path'));
   assert.equal(await hovered(), 'D:\\Coffee-CLI\\target\\nsis\\Coffee CLI_3.8.1_x64-setup.exe');
   assert.equal(await cursor(), 'pointer');
   await page.getByText('Plain words here').hover();
   await page.waitForFunction(() => !CSS.highlights.has('conversation-path'));
   assert.equal(await cursor(), '');
-  await page.getByText('Details are in').hover({ position: { x: 180, y: 8 } });
+  await hover('notes');
   await page.waitForFunction(() => CSS.highlights.has('conversation-path'));
   assert.equal(await hovered(), 'D:\\Repo\\notes.md');
   await page.mouse.move(600, 500);
@@ -84,17 +100,17 @@ try {
 
   // Clicking reveals; a drag that selects text does not.
   await page.evaluate(() => { window.native.length = 0; });
-  await page.locator('.md-code').click({ position: { x: 300, y: 18 } });
+  { const { x, y } = await at('target'); await page.mouse.click(x, y); }
   assert.deepEqual(await native(), [['showInFolder', 'D:/Coffee-CLI/target/nsis/Coffee CLI_3.8.1_x64-setup.exe']]);
   await page.evaluate(() => { window.native.length = 0; });
   const code = await page.locator('.md-code').boundingBox();
   await page.mouse.move(code.x + 120, code.y + 18); await page.mouse.down(); await page.mouse.move(code.x + 320, code.y + 18); await page.mouse.up();
   assert.deepEqual(await native(), [], 'a selection is not a click');
   await page.evaluate(() => window.getSelection().removeAllRanges());
-  if (process.env.COFFEE_PATH_SCREENSHOT) { await page.locator('.md-code').hover({ position: { x: 300, y: 18 } }); await page.waitForFunction(() => CSS.highlights.has('conversation-path')); await page.screenshot({ path: process.env.COFFEE_PATH_SCREENSHOT }); }
+  if (process.env.COFFEE_PATH_SCREENSHOT) { await hover('target'); await page.waitForFunction(() => CSS.highlights.has('conversation-path')); await page.screenshot({ path: process.env.COFFEE_PATH_SCREENSHOT }); }
 
   // Copy path gives the same target, and the same words in a paragraph work too.
-  await page.getByText('Details are in').click({ button: 'right', position: { x: 180, y: 8 } });
+  await rightClick('notes');
   await page.getByText('Copy path').click();
   assert.equal(await page.evaluate(() => window.copied), 'D:/Repo/notes.md');
 
