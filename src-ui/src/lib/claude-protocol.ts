@@ -13,6 +13,8 @@ export function resultText(value: unknown): string {
 
 export interface ClaudeMessage extends ChatMessage {
   timestamp: number;
+  /** Keeps a sent message's row mounted while its pending id becomes the native one. */
+  renderKey?: string;
   partial?: boolean;
   input?: Json;
   inputJson?: string;

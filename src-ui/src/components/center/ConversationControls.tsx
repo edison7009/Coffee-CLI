@@ -12,10 +12,13 @@ export interface ConversationNavigationItem {
 
 // Claude Desktop's limits: a message over 300px shows its first 200px, fading out over the last 3rem.
 const COLLAPSE_ABOVE = 300;
+// A message this recent was just sent; history and rows scrolled back into view stay still.
+const ENTERING_WITHIN = 3000;
 
 /** The user's bubble. The expansion lives with the conversation, as virtual rows unmount off screen. */
-export function CollapsibleUserMessage({ expanded, onToggle, children }: { expanded: boolean; onToggle: () => void; children: ReactNode }) {
+export function CollapsibleUserMessage({ sentAt, expanded, onToggle, children }: { sentAt: number; expanded: boolean; onToggle: () => void; children: ReactNode }) {
   const t = useT(), id = useId();
+  const [entering] = useState(() => Date.now() - sentAt < ENTERING_WITHIN);
   const content = useRef<HTMLDivElement>(null), toggle = useRef<HTMLButtonElement>(null), toggleTop = useRef<number | null>(null);
   const [overflows, setOverflows] = useState(false);
   useLayoutEffect(() => {
@@ -34,7 +37,7 @@ export function CollapsibleUserMessage({ expanded, onToggle, children }: { expan
     const scroller = button?.closest('.claude-scroll');
     if (top !== null && button && scroller) scroller.scrollTop += button.getBoundingClientRect().top - top;
   }, [expanded]);
-  return <div className="claude-user-content">
+  return <div className={`claude-user-content${entering ? ' is-entering' : ''}`}>
     <div id={id} className={`claude-user-body${overflows && !expanded ? ' is-collapsed' : ''}`}><div ref={content}>{children}</div></div>
     {overflows && <button ref={toggle} type="button" className="claude-user-toggle" aria-expanded={expanded} aria-controls={id} onClick={event => {
       if (expanded) toggleTop.current = event.currentTarget.getBoundingClientRect().top;

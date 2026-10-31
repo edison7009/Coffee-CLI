@@ -10,8 +10,8 @@ const project = fileURLToPath(new URL('..', import.meta.url)), directory = await
 await build({ stdin: { loader: 'tsx', resolveDir: project, contents: `
 import React,{useState}from'react';import{createRoot}from'react-dom/client';import{CollapsibleUserMessage}from'./src/components/center/ConversationControls';import'./src/styles/global.css';import'./src/components/center/ClaudeConversation.css';
 const long=Array.from({length:40},(_,i)=>'Requirement line '+(i+1)).join('\\n');
-function Row({text}){const[expanded,setExpanded]=useState(false);return <article className="claude-row claude-row--user"><CollapsibleUserMessage expanded={expanded} onToggle={()=>setExpanded(old=>!old)}><p style={{margin:0,whiteSpace:'pre-wrap'}}>{text}</p></CollapsibleUserMessage></article>}
-function App(){return <div className="panel-center"><div className="claude-scroll" style={{height:520,overflow:'auto',padding:16,fontSize:14,lineHeight:1.65}}><div style={{height:300}}/><Row text="Short message"/><Row text={long}/><div style={{height:900}}/></div></div>}
+function Row({text,sentAt=0}){const[expanded,setExpanded]=useState(false);return <article className="claude-row claude-row--user"><CollapsibleUserMessage sentAt={sentAt} expanded={expanded} onToggle={()=>setExpanded(old=>!old)}><p style={{margin:0,whiteSpace:'pre-wrap'}}>{text}</p></CollapsibleUserMessage></article>}
+function App(){return <div className="panel-center"><div className="claude-scroll" style={{height:520,overflow:'auto',padding:16,fontSize:14,lineHeight:1.65}}><div style={{height:300}}/><Row text="Short message"/><Row text={long}/><Row text="Just sent" sentAt={Date.now()}/><div style={{height:900}}/></div></div>}
 createRoot(document.getElementById('root')).render(<App/>);
 ` }, bundle: true, outfile: join(directory, 'fixture.js'), jsx: 'automatic', define: { __IS_LINUX__: 'false' },
   loader: { '.woff2': 'dataurl', '.svg': 'dataurl', '.png': 'dataurl' }, external: ['/fonts/*', '/monogram.svg'],
@@ -31,6 +31,9 @@ try {
   await page.goto(`http://127.0.0.1:${server.address().port}`);
   const toggle = page.getByRole('button', { name: '显示更多', exact: true }), bodies = page.locator('.claude-user-body');
   await toggle.waitFor();
+  const animation = (target, index) => target.locator('.claude-row--user').nth(index).evaluate(el => getComputedStyle(el).animationName);
+  assert.equal(await animation(page, 2), 'claude-bubble-enter', 'a message just sent unfolds');
+  assert.equal(await animation(page, 0), 'none', 'history stays still');
   assert.equal(await toggle.count(), 1, 'a short message has no control');
   assert.equal((await bodies.nth(1).boundingBox()).height, 200);
   await page.locator('.claude-scroll').evaluate(el => { el.scrollTop = 260; });
@@ -53,6 +56,10 @@ try {
     assert.equal(await toggle.isVisible(), true, shape);
     await page.screenshot({ path: join(directory, `shape-${shape}.png`), clip: { x: 500, y: 0, width: 260, height: 400 } });
   }
-  console.log('OK: long user messages collapse, expand and keep the control in place; short messages have no control');
+  const still = await browser.newPage({ reducedMotion: 'reduce' });
+  await still.goto(`http://127.0.0.1:${server.address().port}`);
+  await still.locator('.claude-row--user').nth(2).waitFor();
+  assert.equal(await animation(still, 2), 'none', 'reduced motion skips the entrance');
+  console.log('OK: a sent message unfolds; long user messages collapse, expand and keep the control in place; short messages have no control');
   console.log(`Screenshots: ${directory}`);
 } finally { await browser.close(); server.close(); }
