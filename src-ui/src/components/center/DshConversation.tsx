@@ -13,10 +13,11 @@ import { WelcomeGreeting, WelcomeSessionMeta } from './WelcomeGreeting';
 import { ConversationDirectory } from '../../lib/conversation-links';
 import { useConversationMenu } from '../../lib/use-conversation-menu';
 import { ConversationNavigation, MessageCopyButton, type ConversationNavigationItem } from './ConversationControls';
-import CLAUDE_WORKING_MARK from '../../icons-inline/claude-working-mark.webp';
+import DSH_RUNNING_WHALE from '../../icons-inline/dsh-running-whale.png';
 import './ConversationView.css';
 import './ClaudeConversation.css';
 import './CodexConversation.css';
+import './DshConversation.css';
 
 function Measured({ id, measure, children }: { id: string; measure: (id: string, height: number) => void; children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -29,12 +30,19 @@ function title(message: DshMessage): string {
   try { const input = obj(JSON.parse(message.toolInput ?? '')); const first = Object.values(input).find(v => typeof v === 'string'); return [message.toolName, first].filter(Boolean).join(' · '); }
   catch { return [message.toolName, message.toolInput].filter(Boolean).join(' · '); }
 }
-function Elapsed({ since }: { since?: number }) {
+/** DeepSeek Harness's running status: the swinging whale tail and a blue sweep over "deep diving for …". */
+function Running({ since, stopping }: { since?: number; stopping: boolean }) {
+  const t = useT();
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(timer); }, []);
-  if (!since) return null;
-  const seconds = Math.max(0, Math.round((now - since) / 1000));
-  return <span className="claude-elapsed">{seconds >= 60 ? `${Math.floor(seconds / 60)}m ${seconds % 60}s` : `${seconds}s`}</span>;
+  const total = Math.floor(Math.max(1000, now - (since ?? now)) / 1000), hours = Math.floor(total / 3600), minutes = Math.floor(total / 60) % 60;
+  const duration = `${hours ? `${hours}${t('dsh.time.hour')}` : ''}${total >= 60 ? `${minutes}${t('dsh.time.minute')}` : ''}${total % 60}${t('dsh.time.second')}`;
+  const label = stopping ? `${t('codex.stopping')}…` : since ? t('dsh.deep_diving_for', { duration }) : t('dsh.deep_diving');
+  return <div className="dsh-running">
+    <span className="dsh-running-status" role="status">{stopping ? t('codex.stopping') : t('dsh.deep_diving')}</span>
+    <span className="dsh-running-whale" aria-hidden="true" style={{ maskImage: `url(${DSH_RUNNING_WHALE})`, WebkitMaskImage: `url(${DSH_RUNNING_WHALE})` }} />
+    <span className="dsh-shimmer" aria-hidden="true"><span>{label}</span><span className="dsh-shimmer-sweep"><span>{label}</span></span></span>
+  </div>;
 }
 function RequestCard({ sessionId, request }: { sessionId: string; request: DshRequest }) {
   const t = useT(), [pending, setPending] = useState(false), [error, setError] = useState('');
@@ -160,7 +168,7 @@ export function DshConversation({ sessionId, cwd, resumeToken, isActive, isVisib
         </Measured>)}
         <div style={{ height: virtual.bottomSpacer }} aria-hidden="true" />
         {s.requests.map(request => <RequestCard key={String(request.id)} sessionId={sessionId} request={request} />)}
-        {(s.busy || s.restarting) && !s.requests.length && <div className="claude-working" role="status"><span className="claude-working-mark" aria-hidden="true"><img src={CLAUDE_WORKING_MARK} alt="" /></span><span className="claude-working-word">{t(s.restarting ? 'codex.stopping' : 'claude.status.working')}…</span>{s.busy && <Elapsed since={s.startedAt} />}</div>}
+        {(s.busy || s.restarting) && !s.requests.length && <Running since={s.busy ? s.startedAt : undefined} stopping={!!s.restarting} />}
         {/* A failed start must say why; Reconnect alone hides the cause. */}
         {s.error && !directoryIssue && <div className="claude-session-error" role="alert">{s.error}</div>}
         {directoryIssue && <div className="claude-session-error" role="alert">{directoryError}</div>}

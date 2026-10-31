@@ -1,0 +1,13 @@
+/* Running status after DeepSeek Harness's own (ChatView .running, TextShimmer): colors from its design platform. */
+.dsh-running { position:relative; display:flex; align-items:center; gap:6px; min-height:28px; margin:0 0 20px 22px; font-size:12px; line-height:22px; font-variant-numeric:tabular-nums;
+  --dsh-running:color-mix(in srgb, rgb(86,134,254) 55%, rgb(173,178,184)); --dsh-running-shimmer:color-mix(in srgb, rgb(147,197,253) 65%, rgb(122,170,255)); color:var(--dsh-running); }
+[data-mode="light"] .dsh-running { --dsh-running:color-mix(in srgb, rgb(65,118,230) 70%, rgb(23,37,84)); --dsh-running-shimmer:color-mix(in srgb, rgb(65,118,230) 30%, rgb(23,37,84)); }
+.dsh-running-whale { width:14px; height:14px; flex:none; background:currentColor; mask-position:center; mask-size:100% 100%; mask-repeat:no-repeat; -webkit-mask-position:center; -webkit-mask-size:100% 100%; -webkit-mask-repeat:no-repeat; }
+.dsh-shimmer { position:relative; display:inline-grid; min-width:0; white-space:nowrap; }
+.dsh-shimmer-sweep { position:absolute; inset:0; overflow:hidden; color:var(--dsh-running-shimmer); pointer-events:none; mask-image:linear-gradient(105deg, transparent 0%, black 40% 60%, transparent 100%); -webkit-mask-image:linear-gradient(105deg, transparent 0%, black 40% 60%, transparent 100%); transform:translateX(-100%); animation:dsh-shimmer-sweep 1.5s steps(48,end) .3s infinite; }
+/* Opposite transforms keep the highlighted glyphs over the base text while the mask moves. */
+.dsh-shimmer-sweep > span { display:block; transform:translateX(100%); animation:dsh-shimmer-highlight 1.5s steps(48,end) .3s infinite; }
+@keyframes dsh-shimmer-sweep { 0% { transform:translateX(-100%); } 66.6667%,100% { transform:translateX(100%); } }
+@keyframes dsh-shimmer-highlight { 0% { transform:translateX(100%); } 66.6667%,100% { transform:translateX(-100%); } }
+@media(prefers-reduced-motion:reduce) { .dsh-shimmer-sweep { display:none; } }
+.dsh-running-status { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
