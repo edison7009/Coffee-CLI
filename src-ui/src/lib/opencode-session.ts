@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import { readLaunchControls, setSessionControls, clearSessionControls } from './session-controls';
 import { directoryFailure } from './session-directory';
 import { recordSessionReply } from './session-replies';
 import { invoke } from '../tauri';
@@ -23,7 +24,7 @@ function listen() {
   return listening ??= import('@tauri-apps/api/event').then(({ listen }) => listen<{ id: string; generation: string; event: Json }>('opencode-session-event', ({ payload }) => {
     const c = clients.get(payload.id); if (!c || c.generation !== payload.generation) return;
     const type = str(payload.event.type);
-    if (type === 'coffee.exit') c.exited = true;
+    if (type === 'coffee.exit') { c.exited = true; clearSessionControls(payload.id, c.generation); }
     if (c.connecting && !c.state.ready && type === 'coffee.exit') { c.startupExit = str(obj(payload.event.data).detail) || 'OpenCode process exited'; return; }
     const wasBusy = c.state.busy;
     c.state = reduceOpenCodeEvent(c.state, payload.event);
@@ -55,6 +56,9 @@ export function retainOpenCodeSession(id: string, cwd: string | null, resumeToke
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
         await listen();
+        clearSessionControls(id, c.generation);
+        // Computer and browser control are MCP servers in OpenCode's own config, read when the server starts.
+        const controls = readLaunchControls('opencode'), generation = c.generation;
         const result = await invoke<Json>('opencode_session_start', { id, generation: c.generation, cwd, resumeToken: resumeToken ?? null });
         if (c.exited) throw new Error(c.startupExit || 'OpenCode process exited');
         const session = obj(result.session), history = arr(result.messages).map(obj).reverse();
@@ -71,11 +75,15 @@ export function retainOpenCodeSession(id: string, cwd: string | null, resumeToke
           contextTokens: lastContextTokens(native), totalTokens: (() => { const t = obj(session.tokens), cache = obj(t.cache); return num(t.input) + num(t.output) + num(t.reasoning) + num(cache.read) + num(cache.write); })(),
           busy: result.running === true || c.state.busy,
         };
+        void controls.then(value => {
+          if (clients.get(id) === c && c.owners && c.generation === generation && c.state.ready) setSessionControls(id, generation, value);
+        });
         publish(c, true);
         return;
       } catch (error) {
         if (directoryFailure(error) || attempt === 2 || /not installed|version|2\.0/.test(String(error))) { c.state = { ...c.state, ready: false, error: String(error) }; publish(c, true); return; }
         const generation = c.generation;
+        clearSessionControls(id, generation);
         c.generation = crypto.randomUUID();
         await invoke('opencode_session_close', { id, generation }).catch(() => {});
         await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
@@ -90,7 +98,7 @@ export function retainOpenCodeSession(id: string, cwd: string | null, resumeToke
     c.closeTimer = setTimeout(() => {
       if (c.owners) return;
       void (c.starting ?? Promise.resolve()).finally(() => invoke('opencode_session_close', { id, generation: c.generation })).catch(() => {});
-      clearTimeout(c.publishTimer); clients.delete(id);
+      clearTimeout(c.publishTimer); clearSessionControls(id, c.generation); clients.delete(id);
     }, 300);
   };
 }
