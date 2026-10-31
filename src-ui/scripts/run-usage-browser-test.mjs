@@ -20,7 +20,7 @@ window.queries=[];window.waiting=[];window.heatmapCalls=0;
 const heatmapDate=days=>{const date=new Date();date.setHours(12,0,0,0);date.setDate(date.getDate()-days);return Math.floor(date.getTime()/1000)};
 export const isTauri=true;export const commands={async getMessageHeatmap(){window.heatmapCalls++;if(window.holdHeatmap)await new Promise(resolve=>{window.resolveHeatmap=resolve});return [{ts:heatmapDate(0),count:11},{ts:heatmapDate(250),count:7},{ts:heatmapDate(380),count:99}]}};
 const summary={sessions:12,prompts:36,calls:90,days:5,input:100000,output:20000,cacheRead:60000,cacheWrite:5000,reasoning:10000,tokens:185000};
-window.report={summary,daily:Array.from({length:7},(_,i)=>{const date=new Date();date.setDate(date.getDate()-6+i);const key=[date.getFullYear(),String(date.getMonth()+1).padStart(2,'0'),String(date.getDate()).padStart(2,'0')].join('-');return {key,summary:{...summary,tokens:[3000,8000,4500,28000,6000,19000,12000][i],sessions:i%3}}}),models:[{key:'model-alpha',summary},{key:'model-beta',summary:{...summary,tokens:60000}}],projects:['D:/Alpha','D:/Beta'],sources:[{tool:'claude',files:12,available:true,errors:0},{tool:'codex',files:8,available:true,errors:0}]};
+window.report={summary,daily:Array.from({length:7},(_,i)=>{const date=new Date();date.setDate(date.getDate()-6+i);const key=[date.getFullYear(),String(date.getMonth()+1).padStart(2,'0'),String(date.getDate()).padStart(2,'0')].join('-');return {key,summary:{...summary,tokens:[3000,8000,4500,28000,6000,19000,12000][i],sessions:i%3}}}),models:[{key:'model-alpha',summary},{key:'model-beta',summary:{...summary,tokens:60000}}],projects:['D:/Alpha','D:/Beta'],sources:[{tool:'claude',files:12,available:true,errors:0},{tool:'codex',files:8,available:true,errors:0},{tool:'opencode',files:1,available:true,errors:0}]};
 export async function invoke(command,args){window.queries.push(args.query);if(window.fail)throw Error('fixture');if(window.defer){window.defer=false;return new Promise(resolve=>window.waiting.push(()=>resolve(structuredClone(window.report))))}return structuredClone(window.report)}
 `, loader: 'js' }));
 } }] });
@@ -83,13 +83,13 @@ try {
   assert.equal(await page.locator('.usage-models tbody tr').count(), 2);
   assert.equal(await page.locator('.usage-header, .usage-icon-button, .usage-price-dialog').count(), 0);
   assert.equal(await page.locator('.usage-models thead th').count(), 5);
-  assert.deepEqual(await page.locator('.usage-footer p').allTextContents(), ['数据来源：Claude Code 12 个日志文件 · Codex CLI 8 个日志文件']);
+  assert.deepEqual(await page.locator('.usage-footer p').allTextContents(), ['数据来源：Claude Code 12 个日志文件 · Codex CLI 8 个日志文件 · OpenCode']);
   assert.equal(await page.locator('.usage-toolbar select').count(), 0, 'both filters use themed menus');
   const toolPicker = page.getByRole('combobox', { name: '工具', exact: true });
   await toolPicker.press('ArrowDown');
   await page.getByRole('listbox', { name: '工具', exact: true }).waitFor();
   await toolPicker.press('End'); await toolPicker.press('Enter');
-  await page.waitForFunction(() => window.queries.at(-1).tool === 'codex');
+  await page.waitForFunction(() => window.queries.at(-1).tool === 'opencode');
   await toolPicker.press('Home'); await toolPicker.press('Enter');
   await page.waitForFunction(() => window.queries.at(-1).tool === '');
   await page.setViewportSize({ width: 1100, height: 650 });
@@ -117,6 +117,8 @@ try {
   await page.waitForFunction(() => window.waiting.length === 1);
   assert.equal(await page.locator('.usage-card-hero > strong').first().innerText(), codexTokens, 'returning to a filter restores its own snapshot');
   await finishSync();
+  await choose('工具', 'OpenCode'); await page.waitForFunction(() => window.queries.at(-1).tool === 'opencode');
+  await choose('工具', 'Codex CLI'); await page.waitForFunction(() => window.queries.at(-1).tool === 'codex');
   await choose('项目', 'D:/Beta'); await page.waitForFunction(() => window.queries.at(-1).project === 'D:/Beta');
   await page.locator('.usage-body[aria-busy="false"]').waitFor();
   await page.evaluate(() => { window.defer = true; });

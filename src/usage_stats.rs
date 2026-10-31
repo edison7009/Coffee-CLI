@@ -408,6 +408,112 @@ fn parse_dsh(db: &Connection, file: &str, p: &mut Parser, v: &Value) -> rusqlite
     Ok(())
 }
 
+/// OpenCode keeps every session in one SQLite database (`opencode.db`, WAL mode). A change to the database
+/// or its WAL re-reads the counters whole; message IDs keep the import idempotent and deleted sessions drop out.
+fn import_opencode(db: &mut Connection, path: &Path) -> Result<(), String> {
+    let file = path.to_string_lossy().to_string();
+    let stamp = |path: &Path| path.metadata().ok().map(|m| (m.len(), m.modified().ok()));
+    let modified = format!("{:?}", (stamp(path), stamp(&path.with_extension("db-wal"))));
+    let cached: Option<String> = db
+        .query_row("SELECT modified FROM files WHERE path=?", [&file], |r| r.get(0))
+        .optional()
+        .map_err(|e| e.to_string())?;
+    if cached.as_deref() == Some(modified.as_str()) {
+        return Ok(());
+    }
+    let source = Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX)
+        .map_err(|e| e.to_string())?;
+    source.busy_timeout(Duration::from_secs(5)).map_err(|e| e.to_string())?;
+    let rows = opencode_rows(&source).map_err(|e| e.to_string())?;
+    let tx = db.transaction().map_err(|e| e.to_string())?;
+    tx.execute("DELETE FROM events WHERE file=?", [&file]).map_err(|e| e.to_string())?;
+    for row in &rows {
+        let parser = Parser { session: row.session.clone(), project: row.project.replace('\\', "/"), model: row.model.clone(), ..Parser::default() };
+        let stamp = chrono::DateTime::from_timestamp_millis(row.created)
+            .map(|time| time.to_rfc3339_opts(chrono::SecondsFormat::Millis, true))
+            .unwrap_or_default();
+        if row.kind == "user" {
+            record(&tx, &file, &format!("opencode:prompt:{}", row.id), "opencode", &parser, &stamp, "prompt", Tokens::default())
+        } else {
+            record(&tx, &file, &format!("opencode:usage:{}", row.id), "opencode", &parser, &stamp, "usage", row.tokens.clone())
+        }
+        .map_err(|e| e.to_string())?;
+    }
+    tx.execute("INSERT OR REPLACE INTO files VALUES (?1,?2,?3,?4)", params![file, 0, modified, "{}"])
+        .map_err(|e| e.to_string())?;
+    tx.commit().map_err(|e| e.to_string())
+}
+
+struct OpenCodeRow {
+    id: String,
+    kind: String,
+    session: String,
+    project: String,
+    model: String,
+    created: i64,
+    tokens: Tokens,
+}
+
+/// Prompts and settled usage from OpenCode's tables. OpenCode 2 moved sessions to `session_v2` /
+/// `session_message` and froze the 1.x `session` / `message` tables, so 1.x rows count only for
+/// sessions that were never migrated. Sub-agent sessions spend tokens for their parent conversation;
+/// their "user" turns come from the parent agent, not the person, and are not prompts.
+fn opencode_rows(source: &Connection) -> rusqlite::Result<Vec<OpenCodeRow>> {
+    let has = |table: &str| source.query_row("SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name=?1)", [table], |r| r.get::<_, bool>(0)).unwrap_or(false);
+    let v2 = has("session_v2") && has("session_message");
+    let tokens = "json_extract(m.data,'$.tokens.input'), json_extract(m.data,'$.tokens.output'), json_extract(m.data,'$.tokens.reasoning'), json_extract(m.data,'$.tokens.cache.read'), json_extract(m.data,'$.tokens.cache.write')";
+    let mut queries = Vec::new();
+    if v2 {
+        // Assistant steps settle with `time.completed`; compactions with a final status.
+        queries.push(format!("SELECT m.id, m.type, COALESCE(s.parent_id, s.id), s.directory, s.parent_id IS NOT NULL, \
+            COALESCE(json_extract(m.data,'$.time.created'), m.time_created), COALESCE(json_extract(m.data,'$.model.id'), json_extract(m.data,'$.model.modelID'), ''), {tokens} \
+            FROM session_message m JOIN session_v2 s ON s.id = m.session_id \
+            WHERE m.type = 'user' \
+               OR (m.type = 'assistant' AND json_extract(m.data,'$.time.completed') IS NOT NULL) \
+               OR (m.type = 'compaction' AND json_extract(m.data,'$.status') IN ('completed','failed'))"));
+    }
+    if has("session") && has("message") {
+        let unmigrated = if v2 { "AND NOT EXISTS(SELECT 1 FROM session_v2 WHERE id = s.id)" } else { "" };
+        queries.push(format!("SELECT m.id, json_extract(m.data,'$.role'), COALESCE(s.parent_id, s.id), s.directory, s.parent_id IS NOT NULL, \
+            COALESCE(json_extract(m.data,'$.time.created'), m.time_created), COALESCE(json_extract(m.data,'$.modelID'), ''), {tokens} \
+            FROM message m JOIN session s ON s.id = m.session_id \
+            WHERE (json_extract(m.data,'$.role') = 'user' \
+               OR (json_extract(m.data,'$.role') = 'assistant' AND json_extract(m.data,'$.time.completed') IS NOT NULL)) {unmigrated}"));
+    }
+    let mut rows = Vec::new();
+    for query in queries {
+        let mut statement = source.prepare(&query)?;
+        let found = statement.query_map([], |r| {
+            let count = |i: usize| -> rusqlite::Result<Option<u64>> { Ok(r.get::<_, Option<i64>>(i)?.map(|n| n.max(0) as u64)) };
+            let (output, reasoning) = (count(8)?, count(9)?);
+            Ok((r.get::<_, bool>(4)?, OpenCodeRow {
+                id: r.get(0)?,
+                kind: r.get::<_, Option<String>>(1)?.unwrap_or_default(),
+                session: r.get(2)?,
+                project: r.get::<_, Option<String>>(3)?.unwrap_or_default(),
+                model: r.get::<_, Option<String>>(6)?.unwrap_or_default(),
+                created: r.get::<_, Option<i64>>(5)?.unwrap_or(0),
+                // OpenCode counts reasoning beside output; the ledger counts it as part of output, like Codex.
+                tokens: Tokens {
+                    input: count(7)?,
+                    output: output.map(|n| n + reasoning.unwrap_or(0)),
+                    cache_read: count(10)?,
+                    cache_write: count(11)?,
+                    reasoning,
+                },
+            }))
+        })?;
+        for row in found {
+            let (child, row) = row?;
+            if row.kind == "user" && child { continue; }
+            let t = &row.tokens;
+            if row.kind != "user" && [t.input, t.output, t.cache_read, t.cache_write].iter().all(|n| n.unwrap_or(0) == 0) { continue; }
+            rows.push(row);
+        }
+    }
+    Ok(rows)
+}
+
 fn collect(root: &Path, depth: u8, out: &mut Vec<PathBuf>) {
     let Ok(entries) = std::fs::read_dir(root) else {
         return;
@@ -438,6 +544,13 @@ fn sync(db: &mut Connection, home: &Path) -> Vec<Source> {
     let (dsh_root, dsh_logs) = crate::dsh_session::usage_logs();
     let dsh_errors = dsh_logs.iter().filter(|path| import_dsh(db, path).is_err()).count();
     let dsh = Source { tool: "dsh".into(), files: dsh_logs.len(), available: dsh_root.is_dir(), errors: dsh_errors };
+    let opencode_db = crate::tool_config::history_path_for("opencode", home.join(".local/share/opencode")).join("opencode.db");
+    let opencode = Source {
+        tool: "opencode".into(),
+        files: usize::from(opencode_db.is_file()),
+        available: opencode_db.is_file(),
+        errors: usize::from(opencode_db.is_file() && import_opencode(db, &opencode_db).is_err()),
+    };
     ["claude", "codex"]
         .into_iter()
         .map(|tool| {
@@ -472,7 +585,7 @@ fn sync(db: &mut Connection, home: &Path) -> Vec<Source> {
                 errors,
             }
         })
-        .chain(std::iter::once(dsh))
+        .chain([dsh, opencode])
         .collect()
 }
 
@@ -587,7 +700,7 @@ pub async fn get_usage_statistics(query: Query) -> Result<Report, String> {
         || query.to <= query.from
         || !matches!(
             query.tool.as_deref(),
-            None | Some("") | Some("claude") | Some("codex") | Some("dsh")
+            None | Some("") | Some("claude") | Some("codex") | Some("dsh") | Some("opencode")
         )
     {
         return Err("Invalid usage range or tool".into());
@@ -641,6 +754,74 @@ mod tests {
         let report = totals(&c);
         assert_eq!((report.summary.prompts, report.summary.calls, report.summary.input, report.summary.cache_read), (1, 1, Some(490), Some(5760)));
         assert_eq!((p.project.as_str(), p.model.as_str()), ("D:/repo", "deepseek-v4-pro"));
+    }
+
+    /// An OpenCode database mid-migration: 2.x tables plus a 1.x session that was never migrated.
+    fn opencode_database(path: &Path) {
+        let source = Connection::open(path).unwrap();
+        source.execute_batch("PRAGMA journal_mode=WAL;
+            CREATE TABLE session_v2(id TEXT PRIMARY KEY, parent_id TEXT, directory TEXT, time_created INTEGER, time_updated INTEGER);
+            CREATE TABLE session_message(id TEXT PRIMARY KEY, session_id TEXT, type TEXT, seq INTEGER, time_created INTEGER, time_updated INTEGER, data TEXT);
+            CREATE TABLE session(id TEXT PRIMARY KEY, parent_id TEXT, directory TEXT);
+            CREATE TABLE message(id TEXT PRIMARY KEY, session_id TEXT, time_created INTEGER, data TEXT);").unwrap();
+        let v2 = |id: &str, session: &str, kind: &str, data: Value| { source.execute("INSERT INTO session_message VALUES (?1,?2,?3,0,1793453650000,1793453650000,?4)", params![id, session, kind, data.to_string()]).unwrap(); };
+        source.execute("INSERT INTO session_v2 VALUES ('ses_main',NULL,'D:\\Repo',0,0),('ses_child','ses_main','D:\\Repo',0,0)", []).unwrap();
+        v2("msg_user", "ses_main", "user", json!({"text":"Build it","time":{"created":1793453650397i64}}));
+        v2("msg_done", "ses_main", "assistant", json!({"model":{"id":"deepseek-flash","providerID":"echobird"},"time":{"created":1793453651000i64,"completed":1793453652000i64},"tokens":{"input":100,"output":20,"reasoning":5,"cache":{"read":1000,"write":0}}}));
+        v2("msg_running", "ses_main", "assistant", json!({"model":{"id":"deepseek-flash"},"time":{"created":1793453653000i64},"tokens":{"input":7,"output":0,"reasoning":0,"cache":{"read":0,"write":0}}}));
+        v2("msg_empty", "ses_main", "assistant", json!({"model":{"id":"deepseek-flash"},"time":{"created":1793453653000i64,"completed":1793453654000i64},"tokens":{"input":0,"output":0,"reasoning":0,"cache":{"read":0,"write":0}}}));
+        v2("msg_compact", "ses_main", "compaction", json!({"status":"completed","time":{"created":1793453655000i64},"tokens":{"input":50,"output":10,"reasoning":0,"cache":{"read":0,"write":0}}}));
+        v2("msg_child_user", "ses_child", "user", json!({"text":"Delegated task","time":{"created":1793453656000i64}}));
+        v2("msg_child_reply", "ses_child", "assistant", json!({"model":{"id":"big-pickle"},"time":{"created":1793453657000i64,"completed":1793453658000i64},"tokens":{"input":30,"output":3,"reasoning":0,"cache":{"read":0,"write":0}}}));
+        // A 1.x session already migrated (ignored) and one that never was (counted).
+        source.execute("INSERT INTO session VALUES ('ses_main',NULL,'D:\\Repo'),('ses_old',NULL,'/home/me/old')", []).unwrap();
+        for (id, session, data) in [
+            ("v1_dup", "ses_main", json!({"role":"assistant","modelID":"x","time":{"created":1793453650000i64,"completed":1793453650001i64},"tokens":{"input":9999,"output":1,"reasoning":0,"cache":{"read":0,"write":0}}})),
+            ("v1_user", "ses_old", json!({"role":"user","time":{"created":1693453650000i64}})),
+            ("v1_reply", "ses_old", json!({"role":"assistant","modelID":"gpt-4.1","time":{"created":1693453651000i64,"completed":1693453652000i64},"tokens":{"input":40,"output":4,"reasoning":0,"cache":{"read":0,"write":2}}})),
+        ] { source.execute("INSERT INTO message VALUES (?1,?2,0,?3)", params![id, session, data.to_string()]).unwrap(); }
+    }
+    #[test]
+    fn opencode_database_counts_settled_usage_and_people_prompts() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("opencode.db");
+        opencode_database(&path);
+        let mut c = db();
+        import_opencode(&mut c, &path).unwrap();
+        let report = totals(&c);
+        let s = &report.summary;
+        // Prompts: the person's two (2.x and 1.x); the sub-agent's delegated turn is not one.
+        assert_eq!((s.sessions, s.prompts, s.calls), (2, 2, 4));
+        // Settled steps, the compaction, the sub-agent reply and the unmigrated 1.x reply; reasoning joins output.
+        assert_eq!((s.input, s.output, s.reasoning, s.cache_read, s.cache_write), (Some(100 + 50 + 30 + 40), Some(25 + 10 + 3 + 4), Some(5), Some(1000), Some(2)));
+        assert_eq!(report.projects, ["/home/me/old", "D:/Repo"]);
+        let models: Vec<_> = report.models.iter().map(|m| m.key.as_str()).collect();
+        assert!(models.contains(&"deepseek-flash") && models.contains(&"big-pickle") && models.contains(&"gpt-4.1"));
+        // Unchanged files are skipped; a deleted session drops out on the next change.
+        import_opencode(&mut c, &path).unwrap();
+        assert_eq!(totals(&c).summary.calls, 4);
+        Connection::open(&path).unwrap().execute("DELETE FROM session_message WHERE session_id='ses_child'", []).unwrap();
+        import_opencode(&mut c, &path).unwrap();
+        assert_eq!(totals(&c).summary.calls, 3);
+    }
+
+    /// The local OpenCode database against OpenCode's own per-session totals:
+    /// `cargo test --bin coffee-cli opencode_live -- --ignored --nocapture`. Read-only.
+    #[test]
+    #[ignore]
+    fn opencode_live_database_matches_session_totals() {
+        let path = dirs::home_dir().unwrap().join(".local/share/opencode/opencode.db");
+        let source = Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+        let expected: (i64, i64, i64, i64, i64) = source.query_row("SELECT SUM(tokens_input), SUM(tokens_output), SUM(tokens_reasoning), SUM(tokens_cache_read), SUM(tokens_cache_write) FROM session_v2", [], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?))).unwrap();
+        let mut c = db();
+        import_opencode(&mut c, &path).unwrap();
+        let s = totals(&c).summary;
+        println!("OpenCode totals {expected:?}; ledger input {:?} output {:?} reasoning {:?} cache {:?}/{:?}, {} prompts, {} calls", s.input, s.output, s.reasoning, s.cache_read, s.cache_write, s.prompts, s.calls);
+        // Session totals also include calls that are not transcript messages (title generation on the small
+        // model); like the other tools' logs, the ledger counts only the conversation's own steps.
+        let ledger = (s.input.unwrap_or(0) as i64, s.output.unwrap_or(0) as i64, s.cache_read.unwrap_or(0) as i64);
+        assert!(ledger.0 <= expected.0 && ledger.1 <= expected.1 + expected.2 && ledger.2 <= expected.3);
+        assert!(ledger.0 * 10 >= expected.0 * 9, "message steps carry the bulk of the session's usage");
     }
 
     fn line(c: &Connection, p: &mut Parser, tool: &str, v: Value) {
