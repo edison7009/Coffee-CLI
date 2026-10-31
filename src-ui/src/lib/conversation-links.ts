@@ -35,6 +35,9 @@ const TOKEN = /[^\s"'`<>|*?()[\]{}，。；、：！？（）「」《》]+/g;
 const EXTENSION = /\.[A-Za-z][A-Za-z0-9]{0,7}(?::\d+)*$/;
 const ABSOLUTE = /^(?:[A-Za-z]:[\\/]|\\\\[^\\/]|\/[^\\/]+\/)/;
 const DRIVE = /^[A-Za-z]:[\\/]/;
+// Languages without spaces run straight into a path and on out of a file name.
+const LEADING_WORDS = /^[\u3400-\u9fff]+(?=[A-Za-z0-9.~])/;
+const afterFileName = (path: string) => path.replace(/^(.*\.[A-Za-z][A-Za-z0-9]{0,7}(?::\d+)*)[\u3400-\u9fff].*$/, '$1');
 
 /** File paths in plain text, which unlike links carry no markup. Relative ones must look like a file (`src/app.ts`),
  * so `and/or` or a date stay text. A Windows path may hold spaces: it extends only until a word ends in an extension. */
@@ -47,11 +50,11 @@ export function findPaths(text: string): PathMatch[] {
     if (!token) return found;
     from = TOKEN.lastIndex;
     if (token[0].includes('://')) continue;
-    const start = token.index;
-    let path = token[0].replace(/[.,;:!]+$/, '');
+    const lead = LEADING_WORDS.exec(token[0])?.[0].length ?? 0, start = token.index + lead;
+    let path = afterFileName(token[0].slice(lead).replace(/[.,;:!]+$/, ''));
     if (!ABSOLUTE.test(path) && !(/[\\/]/.test(path) && EXTENSION.test(path) && !/^[\\/]/.test(path))) continue;
     if (DRIVE.test(path) && !EXTENSION.test(path)) {
-      let cursor = start + token[0].length;
+      let cursor = token.index + token[0].length;
       for (let words = 0; words < 3 && text[cursor] === ' '; words++) {
         TOKEN.lastIndex = cursor;
         const next = TOKEN.exec(text);
@@ -61,8 +64,7 @@ export function findPaths(text: string): PathMatch[] {
         if (EXTENSION.test(word)) { path = text.slice(start, next.index + word.length); from = cursor; break; }
       }
     }
-    // A sentence can run straight on after a file name in languages without spaces.
-    path = path.replace(/^(.*\.[A-Za-z][A-Za-z0-9]{0,7}(?::\d+)*)[\u3400-\u9fff].*$/, '$1');
+    path = afterFileName(path);
     found.push({ start, end: start + path.length, text: path });
   }
 }

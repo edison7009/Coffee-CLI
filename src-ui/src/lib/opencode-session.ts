@@ -140,12 +140,14 @@ export async function interruptOpenCode(id: string): Promise<void> {
 }
 export async function replyOpenCodePermission(id: string, requestID: string, decision: 'once' | 'always' | 'reject'): Promise<void> {
   const c = client(id);
-  await request(c, id, 'permission.reply', { requestID, decision });
+  const asker = c.state.permissions.find(p => p.id === requestID);
+  await request(c, id, 'permission.reply', { requestID, decision, ...(asker?.sessionID ? { sessionID: asker.sessionID } : {}) });
   c.state = { ...c.state, permissions: c.state.permissions.filter(p => p.id !== requestID) }; publish(c, true);
 }
 export async function replyOpenCodeForm(id: string, formID: string, answer: Json | null): Promise<void> {
   const c = client(id);
-  await request(c, id, answer ? 'form.reply' : 'form.cancel', answer ? { formID, answer } : { formID });
+  const asker = c.state.forms.find(f => f.id === formID), sessionID = asker?.sessionID ? { sessionID: asker.sessionID } : {};
+  await request(c, id, answer ? 'form.reply' : 'form.cancel', answer ? { formID, answer, ...sessionID } : { formID, ...sessionID });
   c.state = { ...c.state, forms: c.state.forms.filter(f => f.id !== formID) }; publish(c, true);
 }
 /** Model, variant and agent switches apply to the session's next provider turn. */

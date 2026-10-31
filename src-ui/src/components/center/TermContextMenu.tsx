@@ -45,7 +45,8 @@ export function TermContextMenu({ menu, onClose, onCopy, onPaste, onSelectAll, l
   return createPortal(
     <div ref={ref} className="term-ctx-menu" style={{ left: menu.x, top: menu.y, maxWidth: 'calc(100vw - 8px)', maxHeight: 'calc(100vh - 8px)', overflowY: 'auto' }}>
       {link && <>
-        <button type="button" className="term-ctx-item" onMouseDown={event => { event.preventDefault(); link.onOpen(); }}>{t('conversation.open_link')}</button>
+        {/* A path named by program output is only revealed: opening it could run it. */}
+        {!link.local && <button type="button" className="term-ctx-item" onMouseDown={event => { event.preventDefault(); link.onOpen(); }}>{t('conversation.open_link')}</button>}
         {link.local && <button type="button" className="term-ctx-item" onMouseDown={event => { event.preventDefault(); link.onReveal(); }}>{t('menu.show_in_folder')}</button>}
         <button type="button" className="term-ctx-item" onMouseDown={event => { event.preventDefault(); link.onCopy(); }}>{t(link.local ? 'conversation.copy_path' : 'conversation.copy_link')}</button>
         <div className="term-ctx-sep" />

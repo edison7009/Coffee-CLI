@@ -141,10 +141,11 @@ export async function sendCodexInteractive(id: string, prompt: string): Promise<
 }
 /** Settles the held prompt in this thread; returns it so `cancel` can put it back in the composer. */
 export async function settleCodexColdReturn(id: string, choice: 'full' | 'never' | 'cancel'): Promise<string> {
-  const c = client(id), prompt = c.state.coldReturn?.prompt ?? '';
+  const c = client(id), held = c.state.coldReturn, prompt = held?.prompt ?? '';
   c.state = { ...c.state, coldReturn: undefined }; publish(c, true);
   if (choice === 'never') { try { localStorage.setItem(COLD_RETURN_NEVER, '1'); } catch { /* optional preference */ } }
-  if (choice !== 'cancel' && prompt) await sendCodexMessage(id, prompt);
+  // A session that cannot take it keeps the card, so the words are not lost.
+  if (choice !== 'cancel' && prompt && !await sendCodexMessage(id, prompt)) { c.state = { ...c.state, coldReturn: held }; publish(c, true); }
   return prompt;
 }
 /** Hands the held prompt to a new thread in tab `newId`, with a pointer to this one instead of its history. */

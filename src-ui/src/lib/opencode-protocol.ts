@@ -59,7 +59,8 @@ function upsert(native: Json[], message: Json): Json[] {
 
 export function reduceOpenCodeEvent(state: OpenCodeState, event: Json): OpenCodeState {
   const type = str(event.type), data = obj(event.data), created = num(event.created) || Date.now();
-  if (type !== 'coffee.exit' && str(data.sessionID || obj(data.form).sessionID) !== state.nativeId) return state;
+  // A sub-agent's requests are answered here too; its other events stay out of this transcript.
+  if (type !== 'coffee.exit' && !/^(permission|form)\./.test(type) && str(data.sessionID || obj(data.form).sessionID) !== state.nativeId) return state;
   const s = { ...state };
   const assistantId = str(data.assistantMessageID);
   switch (type) {

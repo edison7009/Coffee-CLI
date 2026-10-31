@@ -142,7 +142,16 @@ fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<Stri
     let parent = crate::orchestration::parent_launch(&app, &id, &native_id, &cwd)?;
     if let Some((mcp, _)) = &parent { command.args(["--mcp-config", mcp]); }
     let appended = [parent.map(|(_, prompt)| prompt), previous].into_iter().flatten().collect::<Vec<_>>().join("\n\n");
-    if !appended.is_empty() { command.args(["--append-system-prompt", &appended]); }
+    // cmd.exe ends a command line at the first newline, so npm installs read the text from a file.
+    let mut prompt_file = None;
+    if !appended.is_empty() {
+        if bin.to_ascii_lowercase().ends_with(".cmd") {
+            let path = std::env::temp_dir().join(format!("coffee-claude-prompt-{native_id}.txt"));
+            std::fs::write(&path, &appended).map_err(|e| format!("无法启动 Claude：{e}"))?;
+            command.arg("--append-system-prompt-file").arg(&path);
+            prompt_file = Some(path);
+        } else { command.args(["--append-system-prompt", &appended]); }
+    }
     let mut child = command.spawn().map_err(|e| crate::session_directory::validate(&cwd).err().unwrap_or_else(|| format!("无法启动 Claude：{e}")))?;
     #[cfg(windows)]
     crate::terminal::windows_job::assign_pid(child.id());
@@ -204,7 +213,10 @@ fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<Stri
         let mut map = sessions.0.lock().unwrap();
         if map.get(&watcher_id).is_some_and(|live| Arc::ptr_eq(live, &s)) { map.remove(&watcher_id); }
     });
-    match session.request(json!({"subtype":"initialize"})) {
+    let initialized = session.request(json!({"subtype":"initialize"}));
+    // Read at startup, and it can quote the previous conversation.
+    if let Some(path) = prompt_file { let _ = std::fs::remove_file(path); }
+    match initialized {
         Ok(initialization) => {
             // Native JSONL is only a restoration source. Live UI always consumes stdout events.
             let history = history_page(&session.history_path, None).unwrap_or_else(|_| json!({"data":"","cursor":0}));

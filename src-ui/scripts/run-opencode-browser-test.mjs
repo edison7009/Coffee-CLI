@@ -156,7 +156,7 @@ try {
   await page.getByText('Approval required').waitFor();
   assert.equal(await page.getByRole('button', { name: 'Always allow' }).count(), 1);
   await page.getByRole('button', { name: 'Allow once' }).click();
-  assert.deepEqual((await calls('permission.reply')).map(c => c.params), [{ requestID: 'per_1', decision: 'once' }]);
+  assert.deepEqual((await calls('permission.reply')).map(c => c.params), [{ requestID: 'per_1', decision: 'once', sessionID: 'ses_e6dc7b23effeDN7H0j9HAALm7v' }]);
   assert.equal(await page.getByText('Approval required').count(), 0);
   await page.evaluate(() => window.emit({ type: 'form.created', data: { form: { id: 'frm_1', title: 'Questions', fields: [{ key: 'q0', title: 'Color preference', description: 'Which color do you prefer?', type: 'string', options: [{ value: 'Red', label: 'Red' }, { value: 'Blue', label: 'Blue' }], custom: true }] } } }));
   await page.getByText('Color preference').waitFor();

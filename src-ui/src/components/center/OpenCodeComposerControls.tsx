@@ -76,6 +76,11 @@ export function OpenCodeComposerControls({ sessionId, draft, onDraftChange, keyH
       return false;
     };
     submitHandler.current = text => {
+      const withText = /^\/([\w:-]+)\s+(\S[\s\S]*)$/.exec(text);
+      if (withText && commands.some(command => command.target === 'native' && command.name === withText[1])) {
+        if (!disabled('native')) { onDraftChange(''); close(); void runOpenCodeCommand(sessionId, { name: withText[1], text: withText[2].trim() }).catch(() => {}); }
+        return true;
+      }
       if (!/^\/[\w:-]*$/.test(text)) return false;
       const index = commands.findIndex(command => `/${command.name}` === text);
       if (index >= 0) chooseCommand(index); else { setMenu('commands'); setDismissed(null); }

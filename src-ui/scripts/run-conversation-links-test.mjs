@@ -25,6 +25,12 @@ console.log('ok local, relative, file URL, Windows/POSIX paths, encoding, source
 const paths = text => findPaths(text).map(path => path.text);
 assert.deepEqual(paths('D:\\Coffee-CLI\\target\\release\\bundle\\nsis\\Coffee CLI_3.8.1_x64-setup.exe'), ['D:\\Coffee-CLI\\target\\release\\bundle\\nsis\\Coffee CLI_3.8.1_x64-setup.exe'], 'spaces inside a file name');
 assert.deepEqual(paths('C:\\Program Files\\Git\\bin\\git.exe is ready'), ['C:\\Program Files\\Git\\bin\\git.exe']);
+// Languages without spaces run into a path and on out of a file name; folders in those languages stay whole.
+assert.deepEqual(paths('已修改src/app.ts'), ['src/app.ts']);
+assert.deepEqual(paths('修改D:\\a.ts'), ['D:\\a.ts']);
+assert.deepEqual(paths('src/app.ts文件已更新'), ['src/app.ts']);
+assert.deepEqual(paths('文档/说明.md'), ['文档/说明.md']);
+assert.equal(findPaths('已修改src/app.ts')[0].start, 3);
 assert.deepEqual(paths('see D:\\repo\\app.ts, then D:/repo/b.ts.'), ['D:\\repo\\app.ts', 'D:/repo/b.ts']);
 assert.deepEqual(paths('D:\\repo\\src is a folder'), ['D:\\repo\\src'], 'prose after a folder stays out');
 assert.deepEqual(paths('D:\\one and D:\\two.txt'), ['D:\\one', 'D:\\two.txt'], 'a second path is not swallowed');

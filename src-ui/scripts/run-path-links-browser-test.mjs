@@ -62,7 +62,7 @@ try {
   await page.locator('.md-code').click({ button: 'right', position: { x: 300, y: 18 } });
   await page.locator('.term-ctx-menu').waitFor();
   const offered = await items();
-  assert.ok(offered.includes('Reveal in File Explorer') && offered.includes('Copy path') && offered.includes('Open link or file'), offered.join('|'));
+  assert.ok(offered.includes('Reveal in File Explorer') && offered.includes('Copy path') && !offered.includes('Open link or file'), offered.join('|'));
   await page.getByText('Reveal in File Explorer').click();
   assert.deepEqual(await native(), [['showInFolder', 'D:/Coffee-CLI/target/nsis/Coffee CLI_3.8.1_x64-setup.exe']]);
 

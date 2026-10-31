@@ -231,7 +231,7 @@ export const ConversationNavigation = memo(function ConversationNavigation({
 });
 
 /** Returning to a long idle conversation can rewrite its whole context, so the person chooses how to continue first. */
-export function ColdReturnCard({ idleMinutes, tokens, detailKey, onNew, onFull, onNever, onCancel }: { idleMinutes: number; tokens: number; detailKey: 'claude.cold_return.detail' | 'codex.cold_return.detail'; onNew: () => void; onFull: () => void; onNever: () => void; onCancel: () => void }) {
+export function ColdReturnCard({ idleMinutes, tokens, detailKey, onNew, onFull, onNever, onCancel }: { idleMinutes: number; tokens: number; detailKey: 'claude.cold_return.detail' | 'codex.cold_return.detail'; onNew?: () => void; onFull: () => void; onNever: () => void; onCancel: () => void }) {
   const t = useT(), ref = useRef<HTMLElement>(null);
   useEffect(() => { ref.current?.scrollIntoView({ block: 'nearest' }); }, []);
   const idle = idleMinutes >= 60 ? `${Math.floor(idleMinutes / 60)}h${idleMinutes % 60 ? ` ${idleMinutes % 60}m` : ''}` : `${idleMinutes}m`;
@@ -243,7 +243,7 @@ export function ColdReturnCard({ idleMinutes, tokens, detailKey, onNew, onFull, 
       <button type="button" onClick={onCancel}>{t('claude.cold_return.cancel')}</button>
       <button type="button" onClick={onNever}>{t('claude.cold_return.never')}</button>
       <button type="button" onClick={onFull}>{t('claude.cold_return.full')}</button>
-      <button type="button" onClick={onNew}>{t('claude.cold_return.new')}</button>
+      {onNew && <button type="button" onClick={onNew}>{t('claude.cold_return.new')}</button>}
     </div>
   </section>;
 }

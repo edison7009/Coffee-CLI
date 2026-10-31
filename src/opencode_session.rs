@@ -3,7 +3,7 @@
 //! `{"url":…}` once it listens, accepts Basic auth with the password we hand it, and exits when its
 //! stdin closes. Requests go over its HTTP API and events stream back from `/api/event` (SSE).
 use serde_json::{json, Value};
-use std::{collections::HashMap, io::{BufRead, BufReader}, path::PathBuf, process::{Child, ChildStdin, Command, Stdio}, sync::{atomic::{AtomicBool, Ordering}, mpsc, Arc, Mutex}, time::Duration};
+use std::{collections::HashMap, io::{BufRead, BufReader, Read}, path::PathBuf, process::{Child, ChildStdin, Command, Stdio}, sync::{atomic::{AtomicBool, Ordering}, mpsc, Arc, Mutex}, time::Duration};
 use tauri::{Emitter, Manager, State};
 
 struct Session {
@@ -50,7 +50,12 @@ impl Session {
             None => request.call(),
         };
         let text = match response {
-            Ok(response) => response.into_string().map_err(|e| e.to_string())?,
+            // Above ureq's own string limit: a page of a long session can carry inline media until strip_media runs.
+            Ok(response) => {
+                let mut text = String::new();
+                response.into_reader().take(RESPONSE_LIMIT).read_to_string(&mut text).map_err(|e| e.to_string())?;
+                text
+            }
             Err(ureq::Error::Status(code, response)) => {
                 let text = response.into_string().unwrap_or_default();
                 let message = serde_json::from_str::<Value>(&text).ok().and_then(|v| v["message"].as_str().map(str::to_owned)).unwrap_or(text);
@@ -73,6 +78,8 @@ fn emit(app: &tauri::AppHandle, id: &str, session: &Session, event: Value) {
 }
 
 /// OpenCode IDs are a fixed prefix plus URL-safe characters; anything else never reaches a URL path.
+const RESPONSE_LIMIT: u64 = 512 * 1024 * 1024;
+
 fn valid_id(value: &str, prefix: &str) -> bool {
     value.len() > prefix.len() && value.len() <= 128 && value.starts_with(prefix) && value.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
 }
@@ -96,10 +103,13 @@ fn read_events(reader: impl std::io::Read, mut on_event: impl FnMut(Value)) {
 }
 
 /// Events that belong to the tab's session. Each tab owns its server, but sub-agent sessions and
-/// global forms (MCP elicitation) share the stream.
+/// global forms (MCP elicitation) share the stream. A sub-agent's own requests still need an answer
+/// from the person, or its parent's turn waits forever.
 fn owned(event: &Value, native: &str) -> bool {
     let data = &event["data"];
-    data["sessionID"].as_str().or_else(|| data["form"]["sessionID"].as_str()).is_some_and(|id| id == native)
+    let Some(owner) = data["sessionID"].as_str().or_else(|| data["form"]["sessionID"].as_str()) else { return false };
+    let request = event["type"].as_str().is_some_and(|kind| kind.starts_with("permission.") || kind.starts_with("form."));
+    owner == native || (request && owner != "global")
 }
 
 /// Attachments and tool media carry their bytes inline (base64); the conversation only shows their names.
@@ -291,10 +301,12 @@ pub async fn opencode_session_start(app: tauri::AppHandle, id: String, generatio
     tauri::async_runtime::spawn_blocking(move || start(app, id, generation, cwd, resume_token)).await.map_err(|e| e.to_string())?
 }
 
-/// Session operations by name; every path is built here and scoped to the tab's own session.
+/// Session operations by name; every path is built here and scoped to the tab's own session, or for a
+/// request's reply to the sub-agent session that asked. The server is private to the tab.
 fn route(native: &str, op: &str, params: &Value) -> Result<(&'static str, String, Option<Value>), String> {
     let id = |key: &str, prefix: &str| params[key].as_str().filter(|v| valid_id(v, prefix)).map(str::to_owned).ok_or_else(|| format!("Invalid {key}"));
     let base = format!("/api/session/{native}");
+    let asker = format!("/api/session/{}", params["sessionID"].as_str().filter(|v| valid_id(v, "ses_")).unwrap_or(native));
     Ok(match op {
         "prompt" => {
             let text = params["text"].as_str().filter(|t| !t.trim().is_empty()).ok_or("Message is empty")?;
@@ -314,10 +326,10 @@ fn route(native: &str, op: &str, params: &Value) -> Result<(&'static str, String
         "session" => ("GET", base, None),
         "permission.reply" => {
             let decision = params["decision"].as_str().filter(|d| matches!(*d, "once" | "always" | "reject")).ok_or("Invalid decision")?;
-            ("POST", format!("{base}/permission/{}/reply", id("requestID", "per_")?), Some(json!({"decision":decision})))
+            ("POST", format!("{asker}/permission/{}/reply", id("requestID", "per_")?), Some(json!({"decision":decision})))
         }
-        "form.reply" => ("POST", format!("{base}/form/{}/reply", id("formID", "frm_")?), Some(json!({"answer":params["answer"]}))),
-        "form.cancel" => ("DELETE", format!("{base}/form/{}", id("formID", "frm_")?), None),
+        "form.reply" => ("POST", format!("{asker}/form/{}/reply", id("formID", "frm_")?), Some(json!({"answer":params["answer"]}))),
+        "form.cancel" => ("DELETE", format!("{asker}/form/{}", id("formID", "frm_")?), None),
         "model" => {
             // The server takes a variant or no field at all: null is rejected, and leaving it out picks the model's default.
             let mut model = json!({"id":params["id"],"providerID":params["providerID"]});
@@ -377,6 +389,8 @@ mod tests {
         assert!(route("ses_a", "permission.reply", &json!({"requestID":"per_x/../y","decision":"once"})).is_err());
         assert!(route("ses_a", "permission.reply", &json!({"requestID":"per_x","decision":"approve"})).is_err());
         assert_eq!(route("ses_a", "form.reply", &json!({"formID":"frm_1","answer":{"q0":"Blue"}})).unwrap().1, "/api/session/ses_a/form/frm_1/reply");
+        assert_eq!(route("ses_a", "permission.reply", &json!({"requestID":"per_x","decision":"once","sessionID":"ses_child"})).unwrap().1, "/api/session/ses_child/permission/per_x/reply");
+        assert_eq!(route("ses_a", "permission.reply", &json!({"requestID":"per_x","decision":"once","sessionID":"ses_../x"})).unwrap().1, "/api/session/ses_a/permission/per_x/reply");
         assert!(route("ses_a", "session.remove", &json!({})).is_err());
         let body = |params: Value| route("ses_a", "model", &params).unwrap().2.unwrap();
         assert!(body(json!({"id":"m","providerID":"p"}))["model"].get("variant").is_none(), "no variant means no field, never null");
@@ -463,5 +477,7 @@ mod tests {
         assert!(owned(&json!({"type":"form.created","data":{"form":{"sessionID":"ses_a"}}}), "ses_a"));
         assert!(!owned(&json!({"type":"session.text.delta","data":{"sessionID":"ses_child"}}), "ses_a"));
         assert!(!owned(&json!({"type":"form.created","data":{"form":{"sessionID":"global"}}}), "ses_a"));
+        assert!(owned(&json!({"type":"permission.asked","data":{"sessionID":"ses_child"}}), "ses_a"));
+        assert!(owned(&json!({"type":"form.created","data":{"form":{"sessionID":"ses_child"}}}), "ses_a"));
     }
 }

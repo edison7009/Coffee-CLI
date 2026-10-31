@@ -54,6 +54,11 @@ test('events of other sessions are ignored', () => {
   const other = reduceOpenCodeEvent(live, { type: 'session.text.delta', data: { sessionID: 'ses_other', assistantMessageID: 'x', delta: 'leak' } });
   assert.equal(other, live);
 });
+test('a sub-agent asks through the tab, and its other events stay out of the transcript', () => {
+  const child = reduceOpenCodeEvent(live, { type: 'permission.asked', data: { id: 'per_2', sessionID: 'ses_child', action: 'edit' } });
+  assert.equal(child.permissions[0].sessionID, 'ses_child');
+  assert.equal(reduceOpenCodeEvent(live, { type: 'session.renamed', data: { sessionID: 'ses_child', title: 'Other' } }), live);
+});
 test('permissions and forms queue until replied or the turn ends', () => {
   let s = reduceOpenCodeEvent(live, { type: 'permission.asked', data: { id: 'per_1', sessionID: session, action: 'read', resources: ['.env'], save: ['*'] } });
   s = reduceOpenCodeEvent(s, { type: 'form.created', data: { form: { id: 'frm_1', sessionID: session, title: 'Questions', fields: [{ key: 'q0', type: 'string', options: [{ value: 'Red', label: 'Red' }] }] } } });
