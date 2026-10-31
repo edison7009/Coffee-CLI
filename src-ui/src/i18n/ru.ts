@@ -704,4 +704,5 @@ export const ru = {
   "codex.mcp": "Серверы MCP",
   "conversation.open_link": "Открыть ссылку или файл",
   "conversation.copy_link": "Копировать адрес ссылки",
+  "conversation.copy_path": "Копировать путь",
 } as const satisfies Record<I18nKey, string>;

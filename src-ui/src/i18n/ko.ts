@@ -706,4 +706,5 @@ export const ko = {
   "codex.mcp": "MCP 서버",
   "conversation.open_link": "링크 또는 파일 열기",
   "conversation.copy_link": "링크 주소 복사",
+  "conversation.copy_path": "경로 복사",
 } as const satisfies Record<I18nKey, string>;

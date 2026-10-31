@@ -709,4 +709,5 @@ export const zhCN = {
   "codex.mcp": "MCP 服务",
   "conversation.open_link": "打开链接或文件",
   "conversation.copy_link": "复制链接地址",
+  "conversation.copy_path": "复制路径",
 } as const satisfies Record<I18nKey, string>;

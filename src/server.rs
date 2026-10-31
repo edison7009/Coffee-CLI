@@ -590,6 +590,8 @@ async fn read_clipboard_image(app: tauri::AppHandle) -> Result<Option<String>, S
 /// Open the native file explorer and highlight / reveal the given path.
 #[tauri::command]
 fn show_in_folder(path: String) -> Result<(), String> {
+    // Explorer opens an unrelated default folder for a path that does not exist.
+    if !std::path::Path::new(&path).exists() { return Err(format!("Path not found: {path}")); }
     #[cfg(target_os = "windows")]
     {
         // explorer /select, highlights the item in its parent folder.

@@ -704,4 +704,5 @@ Supprimez cette note quand vous voulez et commencez votre première tâche.`,
   "codex.mcp": "Serveurs MCP",
   "conversation.open_link": "Ouvrir le lien ou le fichier",
   "conversation.copy_link": "Copier l’adresse du lien",
+  "conversation.copy_path": "Copier le chemin",
 } as const satisfies Record<I18nKey, string>;

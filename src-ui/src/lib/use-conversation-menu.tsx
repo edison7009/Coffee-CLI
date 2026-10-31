@@ -3,10 +3,22 @@ import { TermContextMenu } from '../components/center/TermContextMenu';
 import { useAppState } from '../store/app-state';
 import { commands } from '../tauri';
 import { clipboardRead, clipboardWrite } from './clipboard';
-import type { ConversationLink } from './conversation-links';
+import { pathLinkAt, type ConversationLink } from './conversation-links';
+
+/** The file path under the pointer in rendered text, such as a code block, which has no link to read. */
+function pathAtPoint(x: number, y: number, cwd: string | null): ConversationLink | null {
+  const caret = document.caretRangeFromPoint?.(x, y);
+  if (!caret) return null;
+  const node = caret.startContainer, element = node.nodeType === Node.TEXT_NODE ? node.parentElement : node as Element;
+  const block = element?.closest('.md-code-line,code,p,li,td,th,pre');
+  if (!block) return null;
+  const before = document.createRange();
+  before.setStart(block, 0); before.setEnd(node, caret.startOffset);
+  return pathLinkAt(block.textContent ?? '', before.toString().length, cwd);
+}
 
 export function useConversationMenu(surface: RefObject<HTMLDivElement | null>, sessionId: string, isActive: boolean) {
-  const { dispatch } = useAppState();
+  const { state, dispatch } = useAppState();
   const [menu, setMenu] = useState<{ x: number; y: number; selection: string; link: ConversationLink | null } | null>(null);
   const close = () => setMenu(null);
   if (!isActive && menu) setMenu(null);
@@ -24,7 +36,8 @@ export function useConversationMenu(surface: RefObject<HTMLDivElement | null>, s
     const text = selection?.anchorNode && surface.current?.contains(selection.anchorNode) ? selection.toString() : '';
     const anchor = (event.target as HTMLElement).closest<HTMLAnchorElement>('a[data-conversation-target]');
     const target = anchor?.dataset.conversationTarget;
-    setMenu({ x: event.clientX, y: event.clientY, selection: text, link: target ? { target, local: anchor.dataset.conversationLocal === 'true' } : null });
+    const cwd = state?.terminals?.find(tab => tab.id === sessionId)?.folderPath ?? null;
+    setMenu({ x: event.clientX, y: event.clientY, selection: text, link: target ? { target, local: anchor.dataset.conversationLocal === 'true' } : pathAtPoint(event.clientX, event.clientY, cwd) });
   };
   return {
     onContextMenu,

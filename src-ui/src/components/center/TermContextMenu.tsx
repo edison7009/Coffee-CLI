@@ -47,7 +47,7 @@ export function TermContextMenu({ menu, onClose, onCopy, onPaste, onSelectAll, l
       {link && <>
         <button type="button" className="term-ctx-item" onMouseDown={event => { event.preventDefault(); link.onOpen(); }}>{t('conversation.open_link')}</button>
         {link.local && <button type="button" className="term-ctx-item" onMouseDown={event => { event.preventDefault(); link.onReveal(); }}>{t('menu.show_in_folder')}</button>}
-        <button type="button" className="term-ctx-item" onMouseDown={event => { event.preventDefault(); link.onCopy(); }}>{t('conversation.copy_link')}</button>
+        <button type="button" className="term-ctx-item" onMouseDown={event => { event.preventDefault(); link.onCopy(); }}>{t(link.local ? 'conversation.copy_path' : 'conversation.copy_link')}</button>
         <div className="term-ctx-sep" />
       </>}
       <button

@@ -9,7 +9,7 @@
 // etc.) don't cascade into this component.
 
 import { memo, useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react';
-import { Terminal, type ILink } from '@xterm/xterm';
+import { Terminal, type IBufferLine, type ILink } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { Unicode11Addon } from '@xterm/addon-unicode11';
 import { UnicodeGraphemesAddon } from '@xterm/addon-unicode-graphemes';
@@ -43,6 +43,7 @@ import { createTerminalSizeSync, DEFAULT_TERMINAL_GRID } from '../../lib/termina
 import { UI_SCALE_CHANGED } from '../../lib/ui-scale';
 import { IS_WINDOWS } from '../../lib/platform';
 import { commands } from '../../tauri';
+import { conversationLink, findPaths, pathLinkAt, type ConversationLink } from '../../lib/conversation-links';
 import { registerTerminalObserver, getTerminalObserver } from '../../lib/terminal-observer';
 import { readLaunchControls, setSessionControls, clearSessionControls } from '../../lib/session-controls';
 import { createTerminalEnterEncoder } from '../../lib/terminal-enter';
@@ -121,6 +122,21 @@ function deriveSelectionBg(hex: string, isDark: boolean): string {
   const g = Math.round(((n >> 8) & 0xff) * 0.8);
   const b = Math.round((n & 0xff) * 0.8);
   return `rgba(${r},${g},${b},${isDark ? 0.55 : 0.45})`;
+}
+
+const LINK_RE = /(https?:\/\/[^\s<>()"'-￿]+|file:\/\/\/[^\s<>()"'-￿]+)/g;
+
+/** A buffer line's text and the terminal column of each character: wide characters span two columns. */
+function lineCells(line: IBufferLine) {
+  let text = '';
+  const cols: number[] = [];
+  for (let col = 0; col < line.length; col++) {
+    const chars = line.getCell(col)?.getChars();
+    if (!chars) continue; // empty cell or the right half of a wide char
+    for (let i = 0; i < chars.length; i++) cols.push(col);
+    text += chars;
+  }
+  return { text, cols };
 }
 
 // Some verified TUIs paint their own caret, so xterm's cursor would be a
@@ -443,7 +459,23 @@ function TierTerminalImpl({
   const [canvasHidden, setCanvasHidden] = useState(false);
 
   // ── Terminal context menu ────────────────────────────────────────────────
-  const [ctxMenu, setCtxMenu] = useState<TermContextMenuState | null>(null);
+  const [ctxMenu, setCtxMenu] = useState<(TermContextMenuState & { link: ConversationLink | null }) | null>(null);
+  const folderPathRef = useRef(folderPath);
+  folderPathRef.current = folderPath;
+  /** The URL or file path under a right click, read from the buffer cell at that point. */
+  const linkAtPointer = (clientX: number, clientY: number): ConversationLink | null => {
+    const term = xtermRef.current, screen = termRef.current?.querySelector('.xterm-screen');
+    if (!term || !screen) return null;
+    const box = screen.getBoundingClientRect();
+    const col = Math.floor((clientX - box.left) / (box.width / term.cols)), row = Math.floor((clientY - box.top) / (box.height / term.rows));
+    const line = term.buffer.active.getLine(term.buffer.active.viewportY + row);
+    if (!line || col < 0 || col >= term.cols) return null;
+    const { text, cols } = lineCells(line);
+    const index = cols.findIndex(value => value >= col);
+    if (index < 0) return null;
+    const url = [...text.matchAll(LINK_RE)].find(match => index >= match.index && index < match.index + match[0].length);
+    return url ? { target: url[0].replace(/[),.]+$/, ''), local: false } : pathLinkAt(text, index, folderPathRef.current ?? null);
+  };
   const closeCtxMenu = useCallback(() => setCtxMenu(null), []);
 
   const t = useT();
@@ -1206,7 +1238,7 @@ function TierTerminalImpl({
     // URLs are ASCII per RFC 3986; the -￿ guard stops the match at
     // any non-ASCII char so trailing CJK punctuation/text (e.g. "https://x，看到…")
     // doesn't get swallowed into the link.
-    const LINK_RE = /(https?:\/\/[^\s<>()"'-￿]+|file:\/\/\/[^\s<>()"'-￿]+)/g;
+    // LINK_RE sits at module scope.
     term.registerLinkProvider({
       provideLinks(bufferLineNumber, callback) {
         const line = term.buffer.active.getLine(bufferLineNumber - 1);
@@ -1217,17 +1249,7 @@ function TierTerminalImpl({
         // makes the hover underline drift left by one column per wide char
         // sitting before the URL on the same line. Cell iteration keeps the
         // mapping accurate regardless of wide-char prefix.
-        let text = '';
-        const colByStrIdx: number[] = [];
-        const cellCount = line.length;
-        for (let col = 0; col < cellCount; col++) {
-          const cell = line.getCell(col);
-          if (!cell) continue;
-          const chars = cell.getChars();
-          if (!chars) continue; // empty cell or the right half of a wide char
-          for (let i = 0; i < chars.length; i++) colByStrIdx.push(col);
-          text += chars;
-        }
+        const { text, cols: colByStrIdx } = lineCells(line);
         const links: ILink[] = [];
         let m;
         LINK_RE.lastIndex = 0;
@@ -1245,6 +1267,21 @@ function TierTerminalImpl({
             text: raw,
             activate: () => {
               commands.openUrl(raw).catch(() => {});
+            },
+          });
+        }
+        // Paths show in the file manager instead of opening: a click must never run a program the output named.
+        for (const path of findPaths(text)) {
+          const link = conversationLink(path.text, folderPathRef.current ?? null);
+          if (!link?.local) continue;
+          links.push({
+            range: {
+              start: { x: (colByStrIdx[path.start] ?? path.start) + 1, y: bufferLineNumber },
+              end: { x: (colByStrIdx[path.end - 1] ?? path.end - 1) + 1, y: bufferLineNumber },
+            },
+            text: path.text,
+            activate: () => {
+              commands.showInFolder(link.target).catch(() => {});
             },
           });
         }
@@ -2097,7 +2134,7 @@ function TierTerminalImpl({
         onContextMenu={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          setCtxMenu({ x: e.clientX, y: e.clientY, hasSelection: !!xtermRef.current?.hasSelection() });
+          setCtxMenu({ x: e.clientX, y: e.clientY, hasSelection: !!xtermRef.current?.hasSelection(), link: linkAtPointer(e.clientX, e.clientY) });
         }}
         onMouseDown={(e) => {
           // Windows IME fix (issue #88), part 1 of 2: on left-click, re-anchor
@@ -2201,6 +2238,12 @@ function TierTerminalImpl({
         <TermContextMenu
           menu={ctxMenu}
           onClose={closeCtxMenu}
+          link={ctxMenu.link ? {
+            local: ctxMenu.link.local,
+            onOpen: () => { void commands.openUrl(ctxMenu.link!.target).catch(() => {}); closeCtxMenu(); },
+            onCopy: () => { void clipboardWrite(ctxMenu.link!.target); closeCtxMenu(); },
+            onReveal: () => { void commands.showInFolder(ctxMenu.link!.target).catch(() => {}); closeCtxMenu(); },
+          } : undefined}
           onCopy={() => {
             const text = xtermRef.current?.getSelection();
             if (text) clipboardWrite(text);

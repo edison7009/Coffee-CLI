@@ -704,4 +704,5 @@ Lösch diesen Zettel, wann du willst, und starte deine erste Aufgabe.`,
   "codex.mcp": "MCP-Server",
   "conversation.open_link": "Link oder Datei öffnen",
   "conversation.copy_link": "Linkadresse kopieren",
+  "conversation.copy_path": "Pfad kopieren",
 } as const satisfies Record<I18nKey, string>;

@@ -706,4 +706,5 @@ export const ja = {
   "codex.mcp": "MCP サーバー",
   "conversation.open_link": "リンクまたはファイルを開く",
   "conversation.copy_link": "リンク先をコピー",
+  "conversation.copy_path": "パスをコピー",
 } as const satisfies Record<I18nKey, string>;

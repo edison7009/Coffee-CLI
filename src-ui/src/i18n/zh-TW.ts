@@ -707,4 +707,5 @@ export const zhTW = {
   "codex.mcp": "MCP 服務",
   "conversation.open_link": "開啟連結或檔案",
   "conversation.copy_link": "複製連結位址",
+  "conversation.copy_path": "複製路徑",
 } as const satisfies Record<I18nKey, string>;

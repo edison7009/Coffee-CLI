@@ -704,4 +704,5 @@ Borra esta nota cuando quieras y empieza tu primera tarea.`,
   "codex.mcp": "Servidores MCP",
   "conversation.open_link": "Abrir enlace o archivo",
   "conversation.copy_link": "Copiar dirección del enlace",
+  "conversation.copy_path": "Copiar ruta",
 } as const satisfies Record<I18nKey, string>;

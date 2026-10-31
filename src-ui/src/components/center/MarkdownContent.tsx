@@ -5,7 +5,7 @@ import remarkGfm from 'remark-gfm';
 import { tokenizeByLang, getShikiTheme, type LineTokens } from '../../lib/shiki';
 import { useDataAttr } from '../../lib/use-data-attr';
 import { commands } from '../../tauri';
-import { ConversationDirectory, conversationLink } from '../../lib/conversation-links';
+import { ConversationDirectory, conversationLink, findPaths } from '../../lib/conversation-links';
 
 function CodeBlock({ code, lang }: { code: string; lang: string | null }) {
   const dataMode = useDataAttr('data-mode');
@@ -31,6 +31,18 @@ function CodeBlock({ code, lang }: { code: string; lang: string | null }) {
         : code}
     </code></pre>
   );
+}
+
+/** Inline code that is exactly a file path shows it in the file manager. Clicking never runs it: the path may be a program. */
+function InlineCode({ children, ...props }: ComponentProps<'code'>) {
+  const cwd = useContext(ConversationDirectory);
+  const text = String(children), [path] = findPaths(text);
+  const link = path && path.start === 0 && path.end === text.length ? conversationLink(text, cwd) : null;
+  if (!link?.local) return <code className="md-inline-code" {...props}>{children}</code>;
+  return <code className="md-inline-code" {...props}><a href={link.target} data-conversation-target={link.target} data-conversation-local="true" onClick={event => {
+    event.preventDefault(); event.stopPropagation();
+    void commands.showInFolder(link.target).catch(error => console.warn('[Markdown] failed to reveal file', link.target, error));
+  }}>{children}</a></code>;
 }
 
 function MarkdownLink({ children, href, ...props }: ComponentProps<'a'>) {
@@ -66,7 +78,7 @@ const MARKDOWN_COMPONENTS: Components = {
     const fenced = /language-(\w+)/.exec(className || '');
     const text = String(children).replace(/\n$/, '');
     if (!fenced && !String(children).includes('\n')) {
-      return <code className="md-inline-code" {...props}>{children}</code>;
+      return <InlineCode {...props}>{children}</InlineCode>;
     }
     return <CodeBlock code={text} lang={fenced?.[1] ?? null} />;
   },

@@ -707,4 +707,5 @@ Xóa tờ ghi chú này khi bạn sẵn sàng và bắt đầu tác vụ đầu 
   "codex.mcp": "Máy chủ MCP",
   "conversation.open_link": "Mở liên kết hoặc tệp",
   "conversation.copy_link": "Sao chép địa chỉ liên kết",
+  "conversation.copy_path": "Sao chép đường dẫn",
 } as const satisfies Record<I18nKey, string>;

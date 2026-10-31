@@ -710,6 +710,7 @@ Delete this note whenever you're ready, and start your first task.`,
   "codex.mcp": "MCP servers",
   "conversation.open_link": "Open link or file",
   "conversation.copy_link": "Copy link address",
+  "conversation.copy_path": "Copy path",
 } as const;
 
 export type I18nKey = keyof typeof en;
