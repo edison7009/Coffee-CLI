@@ -79,6 +79,7 @@ fn dsh_home() -> PathBuf {
 }
 
 /// The user's command override, then `dsh` on PATH, then the runtime bundled with DeepSeek Harness Desktop.
+/// Install detection uses this same lookup, so a lit launchpad card always has something to start.
 pub(crate) fn executable() -> Option<(String, Vec<String>)> {
     let (custom, args) = crate::tool_config::parse_command(&crate::tool_config::get("dsh").command);
     if let Some(custom) = custom { return Some((custom, args)); }
@@ -90,12 +91,45 @@ pub(crate) fn executable() -> Option<(String, Vec<String>)> {
     for dir in std::env::split_paths(&path) {
         for name in names { let candidate = dir.join(name); if candidate.is_file() { return Some((candidate.to_string_lossy().into_owned(), args)); } }
     }
-    let bundled = if cfg!(windows) {
-        dirs::data_local_dir().map(|dir| dir.join(r"Programs\DeepSeek Harness\resources\runtime\cli\bin\dsh.cmd"))
-    } else if cfg!(target_os = "macos") {
-        Some(PathBuf::from("/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh"))
-    } else { None };
-    bundled.filter(|p| p.is_file()).map(|p| (p.to_string_lossy().into_owned(), args))
+    let shim = if cfg!(windows) { r"resources\runtime\cli\bin\dsh.cmd" } else { "Contents/Resources/runtime/cli/bin/dsh" };
+    desktop_dirs().into_iter().map(|dir| dir.join(shim)).find(|p| p.is_file()).map(|p| (p.to_string_lossy().into_owned(), args))
+}
+
+/// The key DeepSeek Harness Desktop's electron-builder installer registers under (UUID v5 of `com.deepseek.dsh`).
+#[cfg(windows)]
+const DESKTOP_GUID: &str = "1bf39983-50d0-5fe0-9ef4-cece76f67c5e";
+
+/// Folders DeepSeek Harness Desktop may be installed in. The installer lets users pick any folder and
+/// registers it per user (HKCU) or for all users (HKLM); only the registry finds e.g. `D:\tools\dsh`.
+fn desktop_dirs() -> Vec<PathBuf> {
+    let mut dirs = Vec::new();
+    #[cfg(windows)]
+    {
+        let uninstall = format!(r"Software\Microsoft\Windows\CurrentVersion\Uninstall\{DESKTOP_GUID}");
+        for machine in [false, true] {
+            let read = |key: &str, name: &str| crate::windows_path::registry_string(machine, key, name).map(|v| v.trim().trim_matches('"').to_string()).filter(|v| !v.is_empty());
+            dirs.extend(read(&format!(r"Software\{DESKTOP_GUID}"), "InstallLocation").map(PathBuf::from));
+            dirs.extend(read(&uninstall, "InstallLocation").map(PathBuf::from));
+            for name in ["DisplayIcon", "UninstallString"] { dirs.extend(read(&uninstall, name).as_deref().and_then(registered_exe_dir)); }
+        }
+        dirs.extend(dirs::data_local_dir().map(|dir| dir.join(r"Programs\DeepSeek Harness")));
+        dirs.extend(std::env::var_os("ProgramFiles").map(|dir| PathBuf::from(dir).join("DeepSeek Harness")));
+    }
+    #[cfg(target_os = "macos")]
+    {
+        dirs.push(PathBuf::from("/Applications/DeepSeek Harness.app"));
+        dirs.extend(dirs::home_dir().map(|home| home.join("Applications/DeepSeek Harness.app")));
+    }
+    dirs
+}
+
+/// The folder of the program a registry value names (`D:\tools\dsh\DeepSeek Harness.exe,0`,
+/// `"…\Uninstall DeepSeek Harness.exe" /currentuser`).
+#[cfg_attr(not(windows), allow(dead_code))]
+fn registered_exe_dir(value: &str) -> Option<PathBuf> {
+    let value = value.trim();
+    let exe = match value.strip_prefix('"') { Some(rest) => rest.split('"').next()?, None => &value[..value.to_ascii_lowercase().rfind(".exe")? + 4] };
+    exe.to_ascii_lowercase().ends_with(".exe").then(|| PathBuf::from(exe).parent().map(Path::to_path_buf)).flatten()
 }
 
 /// Built-in DeepSeek routes, shown alongside the user's own: `deepseek-account` uses the account signed in
@@ -399,6 +433,12 @@ mod tests {
         assert_eq!((entries[1].title.as_deref(), entries[1].cwd.as_str()), (None, "D:\\old"), "an uncached Session falls back to its log header");
         assert_eq!(history_in(&root, 1).len(), 1);
         std::fs::remove_dir_all(root).unwrap();
+    }
+    #[test]
+    fn registered_values_name_the_install_folder() {
+        assert_eq!(registered_exe_dir(r"D:\tools\dsh\DeepSeek Harness.exe,0"), Some(PathBuf::from(r"D:\tools\dsh")));
+        assert_eq!(registered_exe_dir(r#""C:\Program Files\DeepSeek Harness\Uninstall DeepSeek Harness.exe" /allusers"#), Some(PathBuf::from(r"C:\Program Files\DeepSeek Harness")));
+        assert_eq!(registered_exe_dir("not a program"), None);
     }
     #[test]
     fn question_cancellation_retires_its_pending_request() {

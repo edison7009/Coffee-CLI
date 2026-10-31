@@ -285,8 +285,9 @@ async fn check_tools_installed() -> Result<std::collections::HashMap<String, boo
         for tool in crate::tools::TOOLS {
             result.insert(tool.id.to_string(), binary_on_path(tool.binary_name));
         }
-        // DeepSeek Harness Desktop bundles its runtime without putting `dsh` on PATH.
-        if crate::dsh_session::executable().is_some() { result.insert("dsh".to_string(), true); }
+        // DeepSeek Harness is "installed" exactly when its tab can start: `where dsh` also
+        // matches scripts it cannot run, and misses the Desktop runtime, which stays off PATH.
+        result.insert("dsh".to_string(), crate::dsh_session::executable().is_some());
         // `terminal` (system shell) and `remote` (SSH) have no binary to
         // probe — always available, not registered.
         result.insert("terminal".to_string(), true);

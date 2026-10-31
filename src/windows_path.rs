@@ -128,6 +128,13 @@ fn normalize(entry: &str) -> String {
     entry.trim().trim_end_matches('\\').to_ascii_lowercase()
 }
 
+/// One registry string from HKCU (or HKLM when `machine`), for lookups beyond PATH repair.
+pub(crate) fn registry_string(machine: bool, subkey: &str, value: &str) -> Option<String> {
+    let subkey: Vec<u16> = subkey.encode_utf16().chain([0]).collect();
+    let value: Vec<u16> = value.encode_utf16().chain([0]).collect();
+    read_path_value(if machine { HKEY_LOCAL_MACHINE } else { HKEY_CURRENT_USER }, PCWSTR(subkey.as_ptr()), PCWSTR(value.as_ptr()))
+}
+
 /// Read a registry string value (`REG_SZ` or `REG_EXPAND_SZ`, auto-expanded).
 fn read_path_value(root: HKEY, subkey: PCWSTR, value: PCWSTR) -> Option<String> {
     unsafe {

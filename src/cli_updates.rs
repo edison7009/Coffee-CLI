@@ -32,7 +32,9 @@ fn packages(tool: &str) -> &'static [&'static str] {
         "omp" => &["@oh-my-pi/pi-coding-agent"], "cline" => &["cline"],
         "crush" => &["@charmland/crush"], "codebuddy" => &["@tencent-ai/codebuddy-code"],
         "kilo" => &["@kilocode/cli"], "minimax" => &["@minimax-ai/code"],
-        "grok" => &["@xai-official/grok"], _ => &[],
+        "grok" => &["@xai-official/grok"],
+        // npm installs only; DeepSeek Harness Desktop updates its bundled runtime itself.
+        "dsh" => &["@deepseek-ai/dsh"], _ => &[],
     }
 }
 

@@ -161,7 +161,8 @@ export function DshConversation({ sessionId, cwd, resumeToken, isActive, isVisib
         <div style={{ height: virtual.bottomSpacer }} aria-hidden="true" />
         {s.requests.map(request => <RequestCard key={String(request.id)} sessionId={sessionId} request={request} />)}
         {(s.busy || s.restarting) && !s.requests.length && <div className="claude-working" role="status"><span className="claude-working-mark" aria-hidden="true"><img src={CLAUDE_WORKING_MARK} alt="" /></span><span className="claude-working-word">{t(s.restarting ? 'codex.stopping' : 'claude.status.working')}…</span>{s.busy && <Elapsed since={s.startedAt} />}</div>}
-        {s.error && s.ready && <div className="claude-session-error" role="alert">{s.error}</div>}
+        {/* A failed start must say why; Reconnect alone hides the cause. */}
+        {s.error && !directoryIssue && <div className="claude-session-error" role="alert">{s.error}</div>}
         {directoryIssue && <div className="claude-session-error" role="alert">{directoryError}</div>}
         {!directoryIssue && !rows.length && <div className="claude-empty"><WelcomeGreeting /><WelcomeSessionMeta cwd={cwd} model={s.models.find(m => m.provider === s.route.provider && m.model === s.route.model)?.name ?? s.route.model} /></div>}
       </div>
