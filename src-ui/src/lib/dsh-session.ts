@@ -46,7 +46,7 @@ async function connect(id: string, c: Client, resumeToken: string | undefined, r
   await listen();
   const result = await invoke<Json>('dsh_session_start', { id, generation: c.generation, cwd: c.cwd, resumeToken: resumeToken ?? null, route: route ?? null });
   const sessionId = str(result.sessionId), routeResult = obj(result.route);
-  let state: DshState = { ...c.state, sessionId, ready: true, restarting: false, error: undefined, commands: result.commands !== false, models: arr(result.models).map(obj) as unknown as DshModel[],
+  let state: DshState = { ...c.state, sessionId, ready: true, restarting: false, error: undefined, routeError: str(result.routeError) || undefined, commands: result.commands !== false, models: arr(result.models).map(obj) as unknown as DshModel[],
     route: { provider: str(routeResult.provider), model: str(routeResult.model), effort: str(routeResult.effort) || null } };
   if (resumeToken && !keepTranscript) {
     const rows = await invoke<unknown[]>('dsh_session_history', { sessionId }).catch(() => []);
@@ -96,6 +96,8 @@ export const setDshRoute = (id: string, route: DshRoute) => restart(id, route);
 export async function sendDshMessage(id: string, prompt: string): Promise<boolean> {
   const c = clients.get(id); const text = prompt.trim();
   if (!c?.state.ready || c.state.restarting || !text) return false;
+  // The configured model is missing: surface it now rather than answer from a model the user did not pick.
+  if (c.state.routeError) { c.state = { ...c.state, error: c.state.routeError }; publish(c, true); return false; }
   const command = COMMAND.test(text);
   if (command && !c.state.commands) {
     // An older runtime would hand the command to the model as an ordinary prompt.

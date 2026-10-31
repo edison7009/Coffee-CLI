@@ -26,6 +26,8 @@ export interface DshState {
   sessionId: string;
   title: string;
   route: DshRoute;
+  /** Set when the configured route is not in the configuration; the runtime runs on the built-in route until it is changed. */
+  routeError?: string;
   models: DshModel[];
   preset: string;
   policy: string;

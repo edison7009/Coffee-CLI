@@ -173,6 +173,11 @@ fn desktop_routes(home: &Path, overlay: &Path) -> Routes {
     routes
 }
 
+/// Errors DeepSeek Harness raises when the requested provider or model is absent from its configuration.
+fn is_route_error(error: &str) -> bool {
+    error.contains("no adapter registered for provider") || error.contains("has no configured model")
+}
+
 fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<String>, resume_token: Option<String>, route: Option<Value>) -> Result<Value, String> {
     let config = crate::tool_config::get("dsh");
     let cwd = cwd.filter(|p| !p.trim().is_empty()).or_else(|| (!config.default_cwd.is_empty()).then(|| config.default_cwd.clone()))
@@ -247,16 +252,27 @@ fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<Stri
     };
     let effort = requested["effort"].as_str().filter(|e| !e.is_empty()).map(String::from);
     let result = (|| {
-        let mut params = json!({"cwd":cwd,"provider":provider,"model":model,"approvalRequests":true,"capabilities":{"userQuestions":true}});
-        if let Some(effort) = &effort { params["reasoningEffort"] = json!(effort); }
-        // Initialization waits for the plugin tree, including MCP discovery; first launch also prepares the profile.
-        session.request("initialize", params, Duration::from_secs(180))?;
+        let initialize = |provider: &str, model: &str| {
+            let mut params = json!({"cwd":cwd,"provider":provider,"model":model,"approvalRequests":true,"capabilities":{"userQuestions":true}});
+            if let Some(effort) = &effort { params["reasoningEffort"] = json!(effort); }
+            // Initialization waits for the plugin tree, including MCP discovery; first launch also prepares the profile.
+            session.request("initialize", params, Duration::from_secs(180))
+        };
+        // Initialization only checks that the route exists in the configuration. A missing model should not
+        // block opening the tab: start on the built-in route and report the problem when the user sends.
+        let mut route_error = None;
+        if let Err(error) = initialize(&provider, &model) {
+            let fallback = ("deepseek-account", "deepseek-flash");
+            if !is_route_error(&error) || (provider.as_str(), model.as_str()) == fallback { return Err(error); }
+            initialize(fallback.0, fallback.1)?;
+            route_error = Some(error);
+        }
         if resume_token.is_some() { session.request("session/resume", json!({"sessionId":session.native_id}), Duration::from_secs(120))?; }
         // Native slash commands need `session/query` (DeepSeek Harness 0.2.2+). An empty query is rejected
         // before execution by runtimes that have it; older ones answer that the method is unknown.
         let commands = !session.request("session/query", json!({"sessionId":session.native_id,"contentBlocks":[]}), Duration::from_secs(15))
             .err().is_some_and(|error| error.contains("unknown") && error.contains("session/query"));
-        Ok(json!({"sessionId":session.native_id,"cwd":cwd,"route":{"provider":provider,"model":model,"effort":effort},"models":routes.models,"commands":commands}))
+        Ok(json!({"sessionId":session.native_id,"cwd":cwd,"route":{"provider":provider,"model":model,"effort":effort},"models":routes.models,"commands":commands,"routeError":route_error}))
     })();
     if result.is_err() { session.stop(); }
     result
@@ -383,6 +399,13 @@ pub async fn dsh_session_history(session_id: String) -> Result<Vec<Value>, Strin
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn route_errors_are_only_missing_configuration() {
+        // Messages verified against DeepSeek Harness 0.2.1-rc.5.
+        assert!(is_route_error("pi-ai provider \"relay\" has no configured model \"zzz\""));
+        assert!(is_route_error("no adapter registered for provider \"echobird\""));
+        assert!(!is_route_error("DeepSeek Harness process exited"));
+    }
     #[test]
     fn desktop_routes_keep_only_model_rows_and_list_their_models() {
         let root = std::env::temp_dir().join(format!("coffee-dsh-{}", uuid::Uuid::new_v4()));
