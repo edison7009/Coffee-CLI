@@ -80,6 +80,8 @@ export function CodexConversation({ sessionId, cwd, resumeToken, isActive, isVis
   const initialToken = useRef(resumeToken);
   useEffect(() => retainCodexSession(sessionId, cwd, initialToken.current), [sessionId, cwd]);
   useEffect(() => { if (s.nativeId) dispatch({ type: 'SET_SESSION_TOKEN', id: sessionId, token: s.nativeId }); }, [s.nativeId, sessionId, dispatch]);
+  // The conversation's own title names the tab, as a terminal tab takes the tool's OSC title.
+  useEffect(() => { if (s.title) dispatch({ type: 'SET_TAB_TITLE', id: sessionId, title: s.title }); }, [s.title, sessionId, dispatch]);
   useEffect(() => { dispatch({ type: 'SET_AGENT_STATUS', id: sessionId, status: s.requests.length ? 'wait_input' : s.busy ? 'working' : 'idle' }); }, [s.requests.length, s.busy, sessionId, dispatch]);
   const rows = useMemo<Row[]>(() => {
     const result: Row[] = [];

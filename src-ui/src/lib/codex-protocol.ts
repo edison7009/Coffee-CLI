@@ -26,6 +26,8 @@ export function codexColdReturn(state: Pick<CodexState, 'messages' | 'lastContex
   return idleMinutes < COLD_IDLE_MINUTES ? null : { idleMinutes: Math.round(idleMinutes), tokens: state.lastContextTokens };
 }
 export interface CodexState {
+  /** The thread's name, which Codex generates or the user renames; shown on the tab. */
+  title?: string;
   /** Tokens of the latest request, including the one read back from a resumed rollout. */
   lastContextTokens: number;
   /** The thread's rollout file, which a continuing thread points at. */
@@ -66,7 +68,8 @@ export function reduceCodexEvent(state: CodexState, event: Json): CodexState {
     return s;
   }
   const update = (id: string, change: (message: CodexMessage) => CodexMessage) => { s.messages = s.messages.map(message => message.id === id ? change(message) : message); };
-  if (method === 'thread/started') s.nativeId = str(thread.id) || s.nativeId;
+  if (method === 'thread/started') { s.nativeId = str(thread.id) || s.nativeId; s.title = str(thread.name).trim() || s.title; }
+  else if (method === 'thread/name/updated') { if (str(p.threadId) === s.nativeId) s.title = str(p.threadName).trim() || s.title; }
   else if (method === 'turn/started') { s.turnId = str(obj(p.turn).id); s.busy = true; s.error = undefined; }
   else if (method === 'item/started' || method === 'item/completed') {
     const item = obj(p.item), id = `${str(p.turnId)}:${str(item.id)}`;

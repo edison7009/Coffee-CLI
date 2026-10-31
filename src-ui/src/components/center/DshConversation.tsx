@@ -94,6 +94,8 @@ export function DshConversation({ sessionId, cwd, resumeToken, isActive, isVisib
   const initialToken = useRef(resumeToken);
   useEffect(() => retainDshSession(sessionId, cwd, initialToken.current), [sessionId, cwd]);
   useEffect(() => { if (s.sessionId) dispatch({ type: 'SET_SESSION_TOKEN', id: sessionId, token: s.sessionId }); }, [s.sessionId, sessionId, dispatch]);
+  // The conversation's own title names the tab, as a terminal tab takes the tool's OSC title.
+  useEffect(() => { if (s.title) dispatch({ type: 'SET_TAB_TITLE', id: sessionId, title: s.title }); }, [s.title, sessionId, dispatch]);
   useEffect(() => { dispatch({ type: 'SET_AGENT_STATUS', id: sessionId, status: s.requests.length ? 'wait_input' : s.busy ? 'working' : 'idle' }); }, [s.requests.length, s.busy, sessionId, dispatch]);
   // Tool calls and reasoning within one turn fold into a single process row, as in DeepSeek Harness.
   const rows = useMemo<Row[]>(() => {

@@ -109,7 +109,11 @@ export function OpenCodeConversation({ sessionId, cwd, resumeToken, isActive, is
   const [scrolled, setScrolled] = useState(false), [expanded, setExpanded] = useState<Record<string, boolean>>({}), [copied, setCopied] = useState('');
   const initialToken = useRef(resumeToken);
   useEffect(() => retainOpenCodeSession(sessionId, cwd, initialToken.current), [sessionId, cwd]);
+  // OpenCode's placeholder until it names the session ("New session - <ISO time>") is not a title.
+  const openCodeTitle = /^(New|Child) session - \d{4}-\d{2}-\d{2}T[\d:.]+Z$/.test(s.title.trim()) ? '' : s.title.trim();
   useEffect(() => { if (s.nativeId) dispatch({ type: 'SET_SESSION_TOKEN', id: sessionId, token: s.nativeId }); }, [s.nativeId, sessionId, dispatch]);
+  // The conversation's own title names the tab, as a terminal tab takes the tool's OSC title.
+  useEffect(() => { if (openCodeTitle) dispatch({ type: 'SET_TAB_TITLE', id: sessionId, title: openCodeTitle }); }, [openCodeTitle, sessionId, dispatch]);
   const waiting = s.permissions.length + s.forms.length;
   useEffect(() => { dispatch({ type: 'SET_AGENT_STATUS', id: sessionId, status: waiting ? 'wait_input' : s.busy ? 'working' : 'idle' }); }, [waiting, s.busy, sessionId, dispatch]);
   const messages = useMemo(() => openCodeRows(s.native), [s.native]);

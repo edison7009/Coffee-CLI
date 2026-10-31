@@ -60,7 +60,7 @@ export function retainCodexSession(id: string, cwd: string | null, resumeToken?:
         if (c.exited) throw new Error(c.startupExit || 'Codex process exited');
         const thread = obj(result.thread), history = restoreCodexTurns(arr(thread.turns));
         const liveIds = new Set(c.state.messages.map(m => m.id));
-        c.state = { ...c.state, ready: true, error: undefined, nativeId: str(thread.id), threadPath: str(thread.path), lastContextTokens: num(result.lastContextTokens), model: str(result.model), effort: str(result.reasoningEffort), approvalPolicy: result.approvalPolicy, sandbox: obj(result.sandbox), models: arr(result.models) as CodexModel[], messages: [...history.filter(m => !liveIds.has(m.id)), ...c.state.messages], historyCursor: str(result.turnsBackwardsCursor) || null };
+        c.state = { ...c.state, ready: true, error: undefined, nativeId: str(thread.id), title: str(thread.name).trim() || c.state.title, threadPath: str(thread.path), lastContextTokens: num(result.lastContextTokens), model: str(result.model), effort: str(result.reasoningEffort), approvalPolicy: result.approvalPolicy, sandbox: obj(result.sandbox), models: arr(result.models) as CodexModel[], messages: [...history.filter(m => !liveIds.has(m.id)), ...c.state.messages], historyCursor: str(result.turnsBackwardsCursor) || null };
         const active = arr(thread.turns).map(obj).find(turn => turn.status === 'inProgress');
         if (active && !c.state.turnId) c.state = { ...c.state, busy: true, turnId: str(active.id) };
         void controls.then(value => {
