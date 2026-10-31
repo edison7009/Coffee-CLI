@@ -49,8 +49,15 @@ impl Session {
         serde_json::to_writer(&mut *input, value).map_err(|e| e.to_string())?;
         input.write_all(b"\n").and_then(|_| input.flush()).map_err(|e| e.to_string())
     }
+    /// The control file and any reply the plugin never collected share its name.
+    fn remove_control_files(&self) {
+        let (Some(dir), Some(stem)) = (self.control.parent(), self.control.file_stem().map(|s| s.to_string_lossy().into_owned())) else { return };
+        for entry in std::fs::read_dir(dir).into_iter().flatten().flatten() {
+            if entry.file_name().to_string_lossy().starts_with(&stem) { let _ = std::fs::remove_file(entry.path()); }
+        }
+    }
     fn stop(&self) {
-        let _ = std::fs::remove_file(&self.control);
+        self.remove_control_files();
         // A blocked stdin writer must not prevent process termination.
         let _ = self.child.lock().unwrap().kill();
         // .cmd launchers own a child runtime; closing the pipe ends it too.
@@ -270,6 +277,12 @@ fn write_atomic(path: &Path, text: &str) -> Result<(), String> {
     std::fs::write(&next, text).and_then(|_| std::fs::rename(&next, path)).map_err(|e| e.to_string())
 }
 
+/// Tabs share the generated plugin and patch; a tab starting beside this one may be reading them.
+fn write_changed(path: &Path, text: &str) -> Result<(), String> {
+    if std::fs::read_to_string(path).is_ok_and(|current| current == text) { return Ok(()); }
+    write_atomic(path, text)
+}
+
 fn write_preset(control: &Path, preset: &str) -> Result<(), String> {
     if !PRESETS.contains(&preset) { return Err("Unknown permission preset".into()); }
     write_atomic(control, preset)
@@ -286,17 +299,17 @@ fn mcp_rows(dir: &Path) -> String {
 fn permission_patch(dir: &Path) -> Result<PathBuf, String> {
     std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
     let plugin = dir.join("permission-plugin.mjs");
-    std::fs::write(&plugin, PERMISSION_PLUGIN).map_err(|e| e.to_string())?;
-    let url = format!("file:///{}", plugin.to_string_lossy().replace('\\', "/").trim_start_matches('/').replace('\'', "''"));
+    write_changed(&plugin, PERMISSION_PLUGIN)?;
+    let url = url::Url::from_file_path(&plugin).map_err(|_| "Invalid plugin path")?.to_string().replace('\'', "''");
     let patch = dir.join("permission.patch.yml");
-    std::fs::write(&patch, format!("- insert:
+    write_changed(&patch, &format!("- insert:
     - id: coffee-permission
       name: '{url}'
       config: {{}}
     - id: coffee-tool-ask-user
       name: '@deepseek-ai/dsh-tool-ask-user'
       config: {{}}
-{}", mcp_rows(dir))).map_err(|e| e.to_string())?;
+{}", mcp_rows(dir)))?;
     Ok(patch)
 }
 
@@ -368,6 +381,8 @@ fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<Stri
             }
         };
         for (_, tx) in s.protocol.pending.lock().unwrap().drain() { let _ = tx.send(Err("DeepSeek Harness process exited".into())); }
+        s.remove_control_files();
+        crate::orchestration::native_stop(&watcher_id, "dsh", &s.generation);
         emit(&watcher_app, &watcher_id, &s, json!({"method":"coffee/exit","params":{"code":code,"detail":s.stderr.lock().unwrap().as_str()}}));
         let sessions = watcher_app.state::<DshSessions>(); let mut map = sessions.0.lock().unwrap();
         if map.get(&watcher_id).is_some_and(|live| Arc::ptr_eq(live, &s)) { map.remove(&watcher_id); }
@@ -410,8 +425,9 @@ pub async fn dsh_session_start(app: tauri::AppHandle, id: String, generation: St
     tauri::async_runtime::spawn_blocking(move || start(app, id, generation, cwd, resume_token, route, preset)).await.map_err(|e| e.to_string())?
 }
 #[tauri::command]
-pub fn dsh_session_set_preset(sessions: State<'_, DshSessions>, id: String, generation: String, preset: String) -> Result<(), String> {
-    write_preset(&get(&sessions, &id, &generation)?.control, &preset)
+pub async fn dsh_session_set_preset(sessions: State<'_, DshSessions>, id: String, generation: String, preset: String) -> Result<(), String> {
+    let s = get(&sessions, &id, &generation)?;
+    tauri::async_runtime::spawn_blocking(move || write_preset(&s.control, &preset)).await.map_err(|e| e.to_string())?
 }
 #[tauri::command]
 pub async fn dsh_session_request(sessions: State<'_, DshSessions>, id: String, generation: String, method: String, params: Value) -> Result<Value, String> {
@@ -463,8 +479,11 @@ pub fn shutdown(sessions: &DshSessions) {
 fn session_log(home: &Path, session_id: &str) -> Option<PathBuf> {
     if session_id.is_empty() || session_id.contains(['/', '\\']) || session_id.contains("..") { return None; }
     std::fs::read_dir(home.join("sessions")).ok()?.flatten()
-        .filter_map(|workspace| std::fs::read_dir(workspace.path().join(session_id)).ok())
-        .flat_map(|entries| entries.flatten().map(|entry| entry.path()))
+        .find_map(|workspace| latest_log(&workspace.path().join(session_id)))
+}
+
+fn latest_log(session: &Path) -> Option<PathBuf> {
+    std::fs::read_dir(session).ok()?.flatten().map(|entry| entry.path())
         .filter(|path| path.file_name().and_then(|n| n.to_str()).is_some_and(|name| name.starts_with("session.v") && (name.ends_with(".jsonl.zstd") || name.ends_with(".jsonl"))))
         .max_by_key(|path| path.file_name().and_then(|n| n.to_str()).and_then(|name| name.trim_start_matches("session.v").split('.').next()?.parse::<u32>().ok()).unwrap_or(0))
 }
@@ -493,12 +512,8 @@ pub(crate) fn usage_logs() -> (PathBuf, Vec<PathBuf>) {
     let root = dsh_home().join("sessions");
     let mut logs = Vec::new();
     for project in std::fs::read_dir(&root).into_iter().flatten().flatten() {
-        for session in std::fs::read_dir(project.path()).into_iter().flatten().flatten() {
-            let id = session.file_name().to_string_lossy().into_owned();
-            logs.extend(session_log(&dsh_home(), &id));
-        }
+        logs.extend(std::fs::read_dir(project.path()).into_iter().flatten().flatten().filter_map(|session| latest_log(&session.path())));
     }
-    logs.sort(); logs.dedup();
     (root, logs)
 }
 

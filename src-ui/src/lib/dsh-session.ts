@@ -44,7 +44,7 @@ export function getDshConnection(id: string) {
 /** Starts (or restarts) the runtime; a known Session resumes and its persisted log restores the transcript. */
 async function connect(id: string, c: Client, resumeToken: string | undefined, route: DshRoute | undefined, keepTranscript: boolean) {
   await listen();
-  const result = await invoke<Json>('dsh_session_start', { id, generation: c.generation, cwd: c.cwd, resumeToken: resumeToken ?? null, route: route ?? null, preset: c.preset ?? null });
+  const result = await invoke<Json>('dsh_session_start', { id, generation: c.generation, cwd: c.cwd, resumeToken: resumeToken ?? null, route: route ?? null, preset: resumeToken ? null : c.preset ?? null });
   const sessionId = str(result.sessionId), routeResult = obj(result.route);
   let state: DshState = { ...c.state, sessionId, ready: true, restarting: false, stopping: false, error: undefined, routeError: str(result.routeError) || undefined, commands: result.commands !== false, models: arr(result.models).map(obj) as unknown as DshModel[],
     route: { provider: str(routeResult.provider), model: str(routeResult.model), effort: str(routeResult.effort) || null } };
@@ -104,13 +104,13 @@ export function setDshRoute(id: string, route: DshRoute): Promise<void> {
   return done;
 }
 
-/** Applied live by Coffee's plugin, so a running turn carries on; the Session's own events confirm it. */
+/** Applied live by Coffee's plugin, so a running turn carries on. The control shows only what the Session's
+ * own events confirm; an unstarted tab has no Session yet, so its choice waits for the first prompt. */
 export async function setDshPreset(id: string, preset: string) {
   const c = clients.get(id); if (!c) return;
-  const previous = c.state.preset;
-  c.preset = preset; c.state = { ...c.state, preset }; publish(c, true);
-  try { await invoke('dsh_session_set_preset', { id, generation: c.generation, preset }); }
-  catch { c.preset = previous || undefined; c.state = { ...c.state, preset: previous }; publish(c, true); }
+  await invoke('dsh_session_set_preset', { id, generation: c.generation, preset });
+  c.preset = preset;
+  if (!c.state.messages.length) { c.state = { ...c.state, preset }; publish(c, true); }
 }
 
 export async function sendDshMessage(id: string, prompt: string): Promise<boolean> {
