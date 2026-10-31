@@ -130,9 +130,10 @@ fn public_agent(agent: &Value) -> Value {
 /// The user's command override, then `opencode` on PATH, then the CLI bundled with OpenCode Desktop.
 fn executable() -> Option<(String, Vec<String>)> {
     let (custom, args) = crate::tool_config::parse_command(&crate::tool_config::get("opencode").command);
-    if let Some(custom) = custom {
+    let args = server_args(args);
+    if let Some(custom) = custom.filter(|custom| custom != "opencode") {
         if std::path::Path::new(&custom).is_absolute() { return Some((custom, args)); }
-        return find_on_path(&custom).map(|bin| (bin, args)).or(Some((custom, vec![])));
+        return find_on_path(&custom).map(|bin| (bin, args.clone())).or(Some((custom, vec![])));
     }
     if let Some(bin) = find_on_path("opencode") { return Some((bin, args)); }
     #[cfg(windows)]
@@ -142,6 +143,11 @@ fn executable() -> Option<(String, Vec<String>)> {
     }
     None
 }
+/// A command preset may hold terminal flags, which `serve` rejects. Auto-approval is applied by this client instead.
+fn server_args(args: Vec<String>) -> Vec<String> {
+    args.into_iter().filter(|arg| !matches!(arg.as_str(), "--auto" | "--standalone" | "--continue" | "-c")).collect()
+}
+
 fn find_on_path(bin: &str) -> Option<String> {
     #[cfg(windows)]
     let (path, names) = (crate::windows_path::terminal_path(), [format!("{bin}.exe"), format!("{bin}.cmd"), bin.to_string()]);
@@ -173,6 +179,7 @@ fn spawn(bin: &str, prefix: &[String], cwd: &std::path::Path, password: &str) ->
 
 fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<String>, resume_token: Option<String>) -> Result<Value, String> {
     let config = crate::tool_config::get("opencode");
+    let auto_approve = config.command.split_whitespace().any(|arg| arg == "--auto");
     let cwd = cwd.filter(|p| !p.trim().is_empty()).or_else(|| (!config.default_cwd.is_empty()).then(|| config.default_cwd.clone()))
         .map(|p| crate::tool_config::expand_path(&p)).unwrap_or_else(|| dirs::home_dir().unwrap_or_default());
     crate::session_directory::validate(&cwd)?;
@@ -272,6 +279,7 @@ fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<Stri
             "messages": messages["data"], "cursor": messages["cursor"]["next"],
             "permissions": permissions["data"], "forms": forms["data"],
             "running": active["data"].get(&native).is_some(),
+            "autoApprove": auto_approve,
         }))
     })();
     if result.is_err() { session.stop(); }
@@ -441,6 +449,13 @@ mod tests {
         session.stop();
         let exited = (0..50).any(|_| { std::thread::sleep(Duration::from_millis(100)); session.child.lock().unwrap().try_wait().ok().flatten().is_some() });
         assert!(exited, "closing the lease ends the server");
+    }
+    #[test]
+    fn terminal_flags_never_reach_the_server() {
+        let args = |list: &[&str]| server_args(list.iter().map(|arg| arg.to_string()).collect());
+        assert!(args(&["--auto"]).is_empty());
+        assert_eq!(args(&["--auto", "--print-logs"]), ["--print-logs"]);
+        assert_eq!(args(&["opencode"]), ["opencode"], "a launcher's own arguments stay");
     }
     #[test]
     fn only_the_tabs_session_events_are_forwarded() {

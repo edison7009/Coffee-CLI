@@ -54,7 +54,7 @@ await build({
         if(name==='opencode_session_start')return {session:{id:session,title:'',agent:'build',model:{id:'deepseek-flash',providerID:'echobird'},tokens:{input:0,output:0,reasoning:0,cache:{read:0,write:0}}},
           models:[{id:'deepseek-flash',providerID:'echobird',name:'DeepSeek Flash',variants:['low','high','max'],context:200000},{id:'big-pickle',providerID:'opencode',name:'Big Pickle',variants:[],context:100000}],
           agents:[{id:'build',name:'Build',description:'The default agent.',mode:'primary'},{id:'plan',name:'Plan',description:'Plan without editing.',mode:'primary'},{id:'general',name:'General',mode:'subagent'}],
-          commands:[{name:'init',description:'guided AGENTS.md setup'},{name:'review',description:'review changes'}],messages:[],cursor:null,permissions:[],forms:[],running:false};
+          commands:[{name:'init',description:'guided AGENTS.md setup'},{name:'review',description:'review changes'}],messages:[],cursor:null,permissions:location.search?[{id:'per_waiting',action:'edit',resources:['a.ts']}]:[],forms:[],running:false,autoApprove:!!location.search};
         if(name==='opencode_session_request'&&args.op==='prompt'){setTimeout(()=>window.replay(window.stopAt),0);return {data:{id:recorded.events[0].data.inboxID,type:'user',payload:{text:args.params.text},time:{created:Date.now()}}}}
         if(name==='opencode_session_request'&&args.op==='model'&&window.failNextModel){const message=window.failNextModel;window.failNextModel=undefined;throw new Error(message)}
         if(name==='opencode_session_request'&&args.op==='interrupt'){window.emit({type:'session.execution.interrupted',id:'evt_stop',created:Date.now(),data:{reason:'user'}});return {data:{interrupted:true}}}
@@ -67,7 +67,7 @@ const html = `<!doctype html><link rel="stylesheet" href="/fixture.css"><style>
 *{box-sizing:border-box}body{margin:0}:root{--font:Arial,sans-serif;--mono:monospace;--accent:#b4937c;--bg-terminal:#211d19;--bg-panel:#29231f;--bg-hover:#39312a;--text-1:#ded8cf;--text-2:#bdb4aa;--text-3:#9d948b;--border:#4c4239;--shape-radius-btn:8px;--shape-radius-panel:14px;--shadow-rgb:0,0,0}.panel-center,.host{height:100vh;width:100%}.panel-center{padding:0!important}
 </style><body data-shape="soft"><div id="root"></div><script src="/fixture.js"></script>`;
 const server = http.createServer(async (req, res) => {
-  if (req.url === '/') return res.setHeader('Content-Type', 'text/html').end(html);
+  if (req.url.split('?')[0] === '/') return res.setHeader('Content-Type', 'text/html').end(html);
   const name = req.url.slice(1);
   if (!['fixture.js', 'fixture.css'].includes(name)) return res.writeHead(404).end();
   res.setHeader('Content-Type', name.endsWith('.js') ? 'text/javascript' : 'text/css'); res.end(await readFile(join(directory, name)));
@@ -177,6 +177,14 @@ try {
   await page.getByRole('button', { name: 'Reconnect OpenCode' }).waitFor();
   assert.match(await page.locator('.claude-session-error').textContent(), /cannot host desktop conversations/);
   await shot('exit');
+  // The --auto command preset answers requests by itself, as OpenCode's own client does.
+  await page.goto(`http://127.0.0.1:${server.address().port}/?auto`);
+  await page.waitForFunction(() => window.currentState?.ready);
+  await page.waitForFunction(() => window.calls.some(c => c.op === 'permission.reply' && c.params.requestID === 'per_waiting'));
+  await page.evaluate(() => window.emit({ type: 'permission.asked', data: { id: 'per_live', action: 'read', resources: ['.env'] } }));
+  await page.waitForFunction(() => window.calls.some(c => c.op === 'permission.reply' && c.params.requestID === 'per_live' && c.params.decision === 'once'));
+  await page.waitForFunction(() => !window.currentState.permissions.length);
+  assert.equal(await page.getByText('Approval required').count(), 0);
   assert.deepEqual(errors, []);
   console.log('ok OpenCode welcome, model/variant/agent controls, recorded turn, approval, question, stop and exit');
 } catch (error) {

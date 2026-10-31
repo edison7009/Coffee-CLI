@@ -111,6 +111,9 @@ export function ToolConfigModal({ toolKey, toolLabel, onClose }: Props) {
     { value: 'codex -c sandbox_mode=read-only -c approval_policy=on-request', label: t('codex.read_only') },
     { value: 'codex -c sandbox_mode=workspace-write -c approval_policy=on-request', label: t('codex.workspace') },
     { value: 'codex -c sandbox_mode=danger-full-access -c approval_policy=never', label: t('codex.full_access') },
+  ] : toolKey === 'opencode' ? [
+    { value: 'opencode', label: 'opencode' },
+    { value: 'opencode --auto', label: t('claude.permission.bypass') },
   ] : [];
 
   useEffect(() => {

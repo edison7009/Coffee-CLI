@@ -40,7 +40,7 @@ try {
   const page = await browser.newPage({ viewport: { width: 900, height: 680 } });
   const errors = [];page.on('pageerror', error => errors.push(error.message));
   await page.goto(`http://127.0.0.1:${server.address().port}`);await page.waitForFunction(() => window.openTool);
-  for (const tool of ['claude', 'codex']) {
+  for (const tool of ['claude', 'codex', 'opencode']) {
     const open = async () => { await page.evaluate(tool => window.openTool(tool), tool);await page.locator('.tool-config-body').waitFor(); };
     await open();
     const command = page.getByLabel('Launch command', { exact: true });
@@ -48,6 +48,8 @@ try {
     const expected = tool === 'claude' ? [
       ['claude', 'claude'], ['Plan', 'claude --permission-mode plan'],
       ['Edit automatically', 'claude --permission-mode acceptEdits'], ['Bypass permissions', 'claude --dangerously-skip-permissions'],
+    ] : tool === 'opencode' ? [
+      ['opencode', 'opencode'], ['Bypass permissions', 'opencode --auto'],
     ] : [
       ['codex', 'codex'], ['Read only', 'codex -c sandbox_mode=read-only -c approval_policy=on-request'],
       ['Workspace', 'codex -c sandbox_mode=workspace-write -c approval_policy=on-request'], ['Full access', 'codex -c sandbox_mode=danger-full-access -c approval_policy=never'],
@@ -78,14 +80,14 @@ try {
     await page.getByRole('button', { name: 'Save', exact: true }).click();await page.locator('.tool-config-modal').waitFor({ state: 'detached' });
     assert.deepEqual(await page.evaluate(() => window.writes.at(-1)), {tool,entry:{command:'/custom/wrapper --custom-flag',extra_args:['--model','test-model'],default_cwd:'D:/Keep',history_path:'D:/History'}});
     await open();assert.equal(await command.inputValue(), '/custom/wrapper --custom-flag', 'saved custom command is restored');
-    await trigger.click();await page.getByRole('option', { name: tool === 'claude' ? 'Plan' : 'Read only', exact: true }).click();
+    await trigger.click();await page.getByRole('option', { name: tool === 'claude' ? 'Plan' : tool === 'opencode' ? 'Bypass permissions' : 'Read only', exact: true }).click();
     await page.getByRole('button', { name: 'Cancel', exact: true }).click();await open();
     assert.equal(await command.inputValue(), '/custom/wrapper --custom-flag', 'cancel does not persist a selected preset');
     await page.getByRole('button', { name: 'Reset', exact: true }).click();await page.waitForFunction(tool => document.querySelector('#tool-launch-command')?.value === tool, tool);
     await page.getByRole('button', { name: 'Cancel', exact: true }).click();
     console.log(`ok ${tool}: presets, keyboard, viewport, custom editing, other fields preserved, save, restore, cancel and reset`);
   }
-  await page.evaluate(() => window.openTool('opencode'));await page.locator('.tool-config-body').waitFor();
+  await page.evaluate(() => window.openTool('kilo'));await page.locator('.tool-config-body').waitFor();
   assert.equal(await page.getByRole('combobox').count(), 0, 'other tools keep their existing editable launch command');
   assert.deepEqual(errors, []);
 } finally {

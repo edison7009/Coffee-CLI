@@ -6,7 +6,7 @@ import { invoke } from '../tauri';
 import { gambitAttachments } from './gambit-attachments';
 import { arr, obj, str, num, emptyOpenCodeState, lastContextTokens, reduceOpenCodeEvent, type Json, type OpenCodeAgent, type OpenCodeCommand, type OpenCodeModel, type OpenCodeModelRef, type OpenCodeState } from './opencode-protocol';
 
-interface Client { state: OpenCodeState; generation: string; listeners: Set<() => void>; owners: number; starting?: Promise<void>; closeTimer?: ReturnType<typeof setTimeout>; publishTimer?: ReturnType<typeof setTimeout>; sending: boolean; exited?: boolean; connecting?: boolean; startupExit?: string }
+interface Client { state: OpenCodeState; generation: string; listeners: Set<() => void>; owners: number; starting?: Promise<void>; closeTimer?: ReturnType<typeof setTimeout>; publishTimer?: ReturnType<typeof setTimeout>; sending: boolean; exited?: boolean; connecting?: boolean; startupExit?: string; autoApprove?: boolean; approving?: Set<string> }
 const clients = new Map<string, Client>();
 const EMPTY = emptyOpenCodeState();
 let listening: Promise<unknown> | undefined;
@@ -30,7 +30,19 @@ function listen() {
     c.state = reduceOpenCodeEvent(c.state, payload.event);
     if (wasBusy && !c.state.busy && type === 'session.execution.succeeded') recordSessionReply(payload.id, 'opencode', c.state.nativeId);
     publish(c, IMMEDIATE.has(type));
+    approvePending(payload.id, c);
   }));
+}
+/** The `--auto` command preset, applied the way OpenCode's own client does: every request is allowed once. */
+function approvePending(id: string, c: Client) {
+  if (!c.autoApprove) return;
+  const approving = c.approving ??= new Set();
+  for (const permission of c.state.permissions) {
+    const requestID = str(permission.id);
+    if (approving.has(requestID)) continue;
+    approving.add(requestID);
+    void replyOpenCodePermission(id, requestID, 'once').catch(() => { approving.delete(requestID); });
+  }
 }
 export function useOpenCodeSession(id: string): OpenCodeState;
 export function useOpenCodeSession<T>(id: string, select: (state: OpenCodeState) => T): T;
@@ -75,6 +87,8 @@ export function retainOpenCodeSession(id: string, cwd: string | null, resumeToke
           contextTokens: lastContextTokens(native), totalTokens: (() => { const t = obj(session.tokens), cache = obj(t.cache); return num(t.input) + num(t.output) + num(t.reasoning) + num(cache.read) + num(cache.write); })(),
           busy: result.running === true || c.state.busy,
         };
+        c.autoApprove = result.autoApprove === true;
+        approvePending(id, c);
         void controls.then(value => {
           if (clients.get(id) === c && c.owners && c.generation === generation && c.state.ready) setSessionControls(id, generation, value);
         });
