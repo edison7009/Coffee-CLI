@@ -36,7 +36,7 @@ export interface ClaudeModel {
   supportsAutoMode?: boolean;
   supportsThinkingOff?: boolean;
 }
-export interface ClaudeCommand { name: string; description: string; argumentHint?: string }
+export interface ClaudeCommand { name: string; description: string; argumentHint?: string; builtin?: boolean }
 export interface ClaudeRequest { id: string; request: Json }
 export interface ClaudeBackgroundTask { id: string; type: string; description: string }
 /** A prompt held back because sending it would rewrite an expired cache for the whole conversation. */

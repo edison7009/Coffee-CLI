@@ -5,7 +5,7 @@ import { ClaudeEffortControl } from './ClaudeEffortControl';
 import { ContextUsage } from './ContextUsage';
 import { object, number } from '../../lib/claude-protocol';
 import { useT } from '../../i18n/useT';
-import { claudeEffortLabel } from '../../lib/claude-i18n';
+import { claudeCommandDescription, claudeEffortLabel } from '../../lib/claude-i18n';
 import './ClaudeComposerControls.css';
 
 type Menu = 'commands' | 'model' | 'effort' | 'permissions' | 'context' | 'tasks' | null;
@@ -67,7 +67,7 @@ export function ClaudeComposerControls({ sessionId, draft, onDraftChange, keyHan
       { name: 'plan', description: t('claude.command.plan'), action: 'plan' },
       { name: 'thinking', description: t('claude.command.thinking'), action: 'thinking' },
     ];
-    const items = [...local, ...s.commands.filter(c => !local.some(l => l.name === c.name)).map(c => ({ ...c, action: 'send' }))];
+    const items = [...local, ...s.commands.filter(c => !local.some(l => l.name === c.name)).map(c => ({ ...c, description: claudeCommandDescription(c, t), action: 'send' }))];
     const query = slash ? draft.slice(1).toLowerCase() : '';
     return items.filter(c => c.name.toLowerCase().includes(query));
   }, [s.commands, draft, slash, t]);

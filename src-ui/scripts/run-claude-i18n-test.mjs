@@ -36,7 +36,7 @@ const modules = result.outputFiles.map(file => {
   vm.runInNewContext(file.text, { module, exports: module.exports });
   return module.exports;
 });
-const { claudeEffortLabel } = modules.find(module => module.claudeEffortLabel);
+const { claudeEffortLabel, claudeCommandDescription } = modules.find(module => module.claudeEffortLabel);
 const { orchestrationToolLabel, orchestrationSearchLabel } = modules.find(module => module.orchestrationToolLabel);
 for (const lang of languages) {
   const t = key => dictionaries[lang][key];
@@ -57,6 +57,13 @@ for (const lang of languages) {
   for (const level of ['low', 'medium', 'high', 'xhigh', 'max']) assert.equal(claudeEffortLabel(level, t), t(`claude.effort.${level}`));
   assert.equal(claudeEffortLabel('ultracode', t), 'Ultracode');
   assert.equal(claudeEffortLabel('provider-custom-level', t), 'provider-custom-level');
+  const compact = t('claude.command.compact');
+  assert.equal(claudeCommandDescription({ name: 'compact', description: 'Free up context', builtin: true }, t), compact, 'official commands are translated by name');
+  assert.equal(claudeCommandDescription({ name: 'compact', description: 'My own compact' }, t), 'My own compact', "a person's skill with an official name keeps its text");
+  assert.equal(claudeCommandDescription({ name: 'pdf', description: 'Use this skill whenever the user wants PDFs' }, t), t('claude.command.pdf'), 'account skills are recognized by their original text');
+  assert.equal(claudeCommandDescription({ name: 'pdf', description: 'My invoice helper' }, t), 'My invoice helper');
+  assert.equal(claudeCommandDescription({ name: 'brand-new', description: 'New upstream', builtin: true }, t), 'New upstream', 'commands we have no text for stay readable');
+  assert.equal(claudeCommandDescription({ name: 'constructor', description: 'Odd name', builtin: true }, t), 'Odd name');
 }
 const { emptyClaudeState, reduceClaudeEvent } = modules.find(module => module.reduceClaudeEvent);
 const failed = reduceClaudeEvent(emptyClaudeState(), { type: 'result', is_error: true, errors: [] });
