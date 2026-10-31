@@ -47,7 +47,7 @@ export function DshComposerControls({ sessionId, draft, onDraftChange, keyHandle
     { name: 'goal', description: t('dsh.command.goal'), target: 'goal' as const },
     { name: 'new', description: t('codex.command.new'), target: 'new' as const },
     { name: 'status', description: t('claude.context_window'), target: 'context' as const },
-  ].filter(command => !slash || command.name.includes(draft.slice(1).toLowerCase()));
+  ].filter(command => (s.commands || !['permissions', 'compact', 'plan', 'goal'].includes(command.target)) && (!slash || command.name.includes(draft.slice(1).toLowerCase())));
   const disabled = (target: string) => ['context', 'new', 'goal'].includes(target) ? false : locked;
   const close = () => { setMenu(null); setDismissed(draft); };
   const chooseCommand = (index: number) => {
@@ -110,7 +110,7 @@ export function DshComposerControls({ sessionId, draft, onDraftChange, keyHandle
   return <div className="claude-composer-controls codex-composer-controls" ref={root}>
     <button type="button" className="claude-control-icon" aria-label={t('claude.attach')} onClick={() => { void attach(); }}><AttachIcon /></button>
     <button type="button" ref={commandsAnchor} className="claude-control-icon" aria-label={t('claude.commands')} aria-expanded={shown === 'commands'} onClick={e => show('commands', e.currentTarget)}>/</button>
-    <button type="button" className="claude-permission-control" disabled={locked} aria-label={t('dsh.command.permission')} aria-expanded={menu === 'permissions'} onClick={e => show('permissions', e.currentTarget)}>{preset ? t(preset.label) : s.preset || t('dsh.command.permission')}</button>
+    <button type="button" className="claude-permission-control" disabled={locked || !s.commands} aria-label={t('dsh.command.permission')} aria-expanded={menu === 'permissions'} onClick={e => show('permissions', e.currentTarget)}>{preset ? t(preset.label) : s.preset || t('dsh.command.permission')}</button>
     {children}
     <div className="claude-model-controls">
       {quota}

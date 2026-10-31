@@ -653,6 +653,7 @@ export const ru = {
   "codex.waiting": "Ожидание подтверждения",
   "codex.reconnect": "Переподключить Codex",
   "dsh.reconnect": "Переподключить DeepSeek Harness",
+  "dsh.commands_unsupported": "Эта версия DeepSeek Harness пока не поддерживает команды. Обновите DeepSeek Harness, чтобы ими пользоваться.",
   "dsh.preset.workspace": "Изменения в рабочей области",
   "dsh.preset.workspace_description": "Может изменять рабочую область; спрашивает перед чувствительными действиями",
   "dsh.preset.full": "Полный доступ",

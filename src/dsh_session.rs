@@ -218,7 +218,11 @@ fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<Stri
         // Initialization waits for the plugin tree, including MCP discovery; first launch also prepares the profile.
         session.request("initialize", params, Duration::from_secs(180))?;
         if resume_token.is_some() { session.request("session/resume", json!({"sessionId":session.native_id}), Duration::from_secs(120))?; }
-        Ok(json!({"sessionId":session.native_id,"cwd":cwd,"route":{"provider":provider,"model":model,"effort":effort},"models":routes.models}))
+        // Native slash commands need `session/query` (DeepSeek Harness 0.2.2+). An empty query is rejected
+        // before execution by runtimes that have it; older ones answer that the method is unknown.
+        let commands = !session.request("session/query", json!({"sessionId":session.native_id,"contentBlocks":[]}), Duration::from_secs(15))
+            .err().is_some_and(|error| error.contains("unknown") && error.contains("session/query"));
+        Ok(json!({"sessionId":session.native_id,"cwd":cwd,"route":{"provider":provider,"model":model,"effort":effort},"models":routes.models,"commands":commands}))
     })();
     if result.is_err() { session.stop(); }
     result

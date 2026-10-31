@@ -656,6 +656,7 @@ Xóa tờ ghi chú này khi bạn sẵn sàng và bắt đầu tác vụ đầu 
   "codex.waiting": "Đang chờ xác nhận",
   "codex.reconnect": "Kết nối lại Codex",
   "dsh.reconnect": "Kết nối lại DeepSeek Harness",
+  "dsh.commands_unsupported": "Phiên bản DeepSeek Harness này chưa hỗ trợ lệnh. Hãy cập nhật DeepSeek Harness để sử dụng.",
   "dsh.preset.workspace": "Sửa trong không gian làm việc",
   "dsh.preset.workspace_description": "Có thể sửa không gian làm việc; hỏi trước thao tác nhạy cảm",
   "dsh.preset.full": "Toàn quyền",

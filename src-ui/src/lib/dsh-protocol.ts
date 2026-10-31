@@ -36,10 +36,12 @@ export interface DshState {
   startedAt?: number;
   error?: string;
   restarting?: boolean;
+  /** Native slash commands need `session/query` (DeepSeek Harness 0.2.2+). */
+  commands: boolean;
 }
 
 export function emptyDshState(): DshState {
-  return { ready: false, busy: false, sessionId: '', title: '', route: { provider: '', model: '' }, models: [], preset: '', policy: '', messages: [], requests: [], contextTokens: 0, contextWindow: 0 };
+  return { ready: false, busy: false, sessionId: '', title: '', route: { provider: '', model: '' }, models: [], preset: '', policy: '', messages: [], requests: [], contextTokens: 0, contextWindow: 0, commands: true };
 }
 
 function text(content: unknown): string {

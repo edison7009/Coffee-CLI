@@ -655,6 +655,7 @@ export const ja = {
   "codex.waiting": "確認待ち",
   "codex.reconnect": "Codex に再接続",
   "dsh.reconnect": "DeepSeek Harness に再接続",
+  "dsh.commands_unsupported": "このバージョンの DeepSeek Harness はまだコマンドに対応していません。DeepSeek Harness を更新すると使えます。",
   "dsh.preset.workspace": "ワークスペース内で変更",
   "dsh.preset.workspace_description": "ワークスペース内を変更でき、機密操作の前に確認します",
   "dsh.preset.full": "フルアクセス",

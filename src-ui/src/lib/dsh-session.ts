@@ -46,7 +46,7 @@ async function connect(id: string, c: Client, resumeToken: string | undefined, r
   await listen();
   const result = await invoke<Json>('dsh_session_start', { id, generation: c.generation, cwd: c.cwd, resumeToken: resumeToken ?? null, route: route ?? null });
   const sessionId = str(result.sessionId), routeResult = obj(result.route);
-  let state: DshState = { ...c.state, sessionId, ready: true, restarting: false, error: undefined, models: arr(result.models).map(obj) as unknown as DshModel[],
+  let state: DshState = { ...c.state, sessionId, ready: true, restarting: false, error: undefined, commands: result.commands !== false, models: arr(result.models).map(obj) as unknown as DshModel[],
     route: { provider: str(routeResult.provider), model: str(routeResult.model), effort: str(routeResult.effort) || null } };
   if (resumeToken && !keepTranscript) {
     const rows = await invoke<unknown[]>('dsh_session_history', { sessionId }).catch(() => []);
@@ -97,6 +97,11 @@ export async function sendDshMessage(id: string, prompt: string): Promise<boolea
   const c = clients.get(id); const text = prompt.trim();
   if (!c?.state.ready || c.state.restarting || !text) return false;
   const command = COMMAND.test(text);
+  if (command && !c.state.commands) {
+    // An older runtime would hand the command to the model as an ordinary prompt.
+    c.state = { ...c.state, messages: [...c.state.messages, { id: `unsupported:${Date.now()}`, role: 'notice', content: 'commands-unsupported', turn: 0, timestamp: Date.now(), tone: 'info' }] }; publish(c, true);
+    return true;
+  }
   if (!command) { c.state = { ...c.state, busy: true, startedAt: c.state.startedAt ?? Date.now(), error: undefined }; publish(c, true); }
   try {
     await invoke('dsh_session_request', { id, generation: c.generation, method: command ? 'session/query' : 'session/prompt', params: { contentBlocks: [{ type: 'text', text }] } });

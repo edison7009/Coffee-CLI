@@ -658,6 +658,7 @@ export const zhCN = {
   "codex.waiting": "等待你的确认",
   "codex.reconnect": "重新连接 Codex",
   "dsh.reconnect": "重新连接 DeepSeek Harness",
+  "dsh.commands_unsupported": "当前版本的 DeepSeek Harness 还不支持指令，更新 DeepSeek Harness 后即可使用。",
   "dsh.preset.workspace": "工作区内修改",
   "dsh.preset.workspace_description": "可修改工作区内容，敏感操作前询问",
   "dsh.preset.full": "完全权限",
