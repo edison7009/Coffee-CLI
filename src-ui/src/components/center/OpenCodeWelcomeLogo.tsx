@@ -90,6 +90,9 @@ export function OpenCodeWelcomeLogo({ isActive, autoplay = true }: { isActive: b
     state.current = { rings: [] };
     draw();
   };
+  // These are rebuilt each render; the autoplay effect below must only restart when its inputs change.
+  const timing = useRef({ rest, schedule });
+  timing.current = { rest, schedule };
 
   useEffect(() => {
     draw();
@@ -100,11 +103,11 @@ export function OpenCodeWelcomeLogo({ isActive, autoplay = true }: { isActive: b
     return () => { observer.disconnect(); clearTimeout(timer.current); cancelAnimationFrame(frame.current); frame.current = 0; };
   }, []);
   useEffect(() => {
-    if (!isActive || !autoplay) { rest(); return; }
-    schedule(700);
-    const visibility = () => { if (document.hidden) rest(); else schedule(700); };
+    if (!isActive || !autoplay) { timing.current.rest(); return; }
+    timing.current.schedule(700);
+    const visibility = () => { if (document.hidden) timing.current.rest(); else timing.current.schedule(700); };
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const preference = () => { if (reduced.matches) rest(); else schedule(700); };
+    const preference = () => { if (reduced.matches) timing.current.rest(); else timing.current.schedule(700); };
     document.addEventListener('visibilitychange', visibility);
     reduced.addEventListener('change', preference);
     return () => { clearTimeout(timer.current); document.removeEventListener('visibilitychange', visibility); reduced.removeEventListener('change', preference); };
