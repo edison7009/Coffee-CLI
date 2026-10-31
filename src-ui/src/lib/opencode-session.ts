@@ -26,6 +26,12 @@ function listen() {
     const type = str(payload.event.type);
     if (type === 'coffee.exit') { c.exited = true; clearSessionControls(payload.id, c.generation); }
     if (c.connecting && !c.state.ready && type === 'coffee.exit') { c.startupExit = str(obj(payload.event.data).detail) || 'OpenCode process exited'; return; }
+    // A new conversation's session is created by its first prompt; take it before that prompt's events arrive.
+    if (type === 'coffee.session') {
+      const session = obj(obj(payload.event.data).session);
+      c.state = { ...c.state, nativeId: str(session.id), title: str(session.title) || c.state.title, model: modelRef(session.model) ?? c.state.model, agent: str(session.agent) || c.state.agent };
+      publish(c, true); return;
+    }
     const wasBusy = c.state.busy;
     c.state = reduceOpenCodeEvent(c.state, payload.event);
     if (wasBusy && !c.state.busy && type === 'session.execution.succeeded') recordSessionReply(payload.id, 'opencode', c.state.nativeId);

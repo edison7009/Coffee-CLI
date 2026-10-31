@@ -18,6 +18,8 @@ struct Session {
     closed: AtomicBool,
     launch_config: crate::tool_config::ToolConfigEntry,
     launch_cwd: PathBuf,
+    /// Agent and model picked before a new conversation exists; its creation carries them. Held while creating.
+    draft: Mutex<Value>,
 }
 #[derive(Default)]
 pub struct OpenCodeSessions(Mutex<HashMap<String, Arc<Session>>>);
@@ -231,7 +233,7 @@ fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<Stri
     };
     use base64::Engine;
     let auth = format!("Basic {}", base64::engine::general_purpose::STANDARD.encode(format!("opencode:{password}")));
-    let session = Arc::new(Session { id: id.clone(), generation, native_id: Mutex::new(String::new()), child: Mutex::new(child), input: Mutex::new(Some(input)), url, auth, stderr: tail, closed: AtomicBool::new(false), launch_config: config, launch_cwd: cwd });
+    let session = Arc::new(Session { id: id.clone(), generation, native_id: Mutex::new(String::new()), child: Mutex::new(child), input: Mutex::new(Some(input)), url, auth, stderr: tail, closed: AtomicBool::new(false), launch_config: config, launch_cwd: cwd, draft: Mutex::new(json!({})) });
     {
         let sessions = app.state::<OpenCodeSessions>();
         let mut map = sessions.0.lock().unwrap();
@@ -265,21 +267,28 @@ fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<Stri
     });
     let result = (|| {
         connected_rx.recv_timeout(Duration::from_secs(20)).map_err(|_| "OpenCode event stream did not connect".to_string())??;
-        let info = match &resume_token {
-            Some(token) => session.http("GET", &format!("/api/session/{token}"), None)?,
-            None => session.http("POST", "/api/session", Some(&json!({})))?,
+        // A new conversation is created by its first prompt or command, as in OpenCode's own clients, so a
+        // tab opened and closed unused leaves no empty session behind.
+        let (info, native) = match &resume_token {
+            Some(token) => {
+                let info = session.http("GET", &format!("/api/session/{token}"), None)?;
+                let native = info["data"]["id"].as_str().filter(|id| valid_id(id, "ses_")).ok_or("OpenCode returned no session ID")?.to_string();
+                *session.native_id.lock().unwrap() = native.clone();
+                (info, native)
+            }
+            None => (Value::Null, String::new()),
         };
-        let native = info["data"]["id"].as_str().filter(|id| valid_id(id, "ses_")).ok_or("OpenCode returned no session ID")?.to_string();
-        *session.native_id.lock().unwrap() = native.clone();
         let models = session.http("GET", "/api/model", None)?;
         let default = session.http("GET", "/api/model/default", None).unwrap_or(Value::Null);
         let agents = session.http("GET", "/api/agent", None)?;
         let commands = session.http("GET", "/api/command", None).unwrap_or(Value::Null);
-        let mut messages = if resume_token.is_some() { session.http("GET", &format!("/api/session/{native}/message?limit=60&order=desc"), None)? } else { json!({"data":[]}) };
+        let (mut messages, permissions, forms, active) = if native.is_empty() { (json!({"data":[]}), Value::Null, Value::Null, Value::Null) } else { (
+            session.http("GET", &format!("/api/session/{native}/message?limit=60&order=desc"), None)?,
+            session.http("GET", &format!("/api/session/{native}/permission"), None).unwrap_or(Value::Null),
+            session.http("GET", &format!("/api/session/{native}/form"), None).unwrap_or(Value::Null),
+            session.http("GET", "/api/session/active", None).unwrap_or(Value::Null),
+        ) };
         strip_media(&mut messages);
-        let permissions = session.http("GET", &format!("/api/session/{native}/permission"), None).unwrap_or(Value::Null);
-        let forms = session.http("GET", &format!("/api/session/{native}/form"), None).unwrap_or(Value::Null);
-        let active = session.http("GET", "/api/session/active", None).unwrap_or(Value::Null);
         Ok(json!({
             "session": info["data"],
             "models": models["data"].as_array().into_iter().flatten().filter(|m| m["enabled"] != false).map(public_model).collect::<Vec<_>>(),
@@ -288,7 +297,7 @@ fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<Stri
             "commands": commands["data"].as_array().into_iter().flatten().map(|c| json!({"name":c["name"],"description":c["description"]})).collect::<Vec<_>>(),
             "messages": messages["data"], "cursor": messages["cursor"]["next"],
             "permissions": permissions["data"], "forms": forms["data"],
-            "running": active["data"].get(&native).is_some(),
+            "running": !native.is_empty() && active["data"].get(&native).is_some(),
             "autoApprove": auto_approve,
         }))
     })();
@@ -346,12 +355,46 @@ fn route(native: &str, op: &str, params: &Value) -> Result<(&'static str, String
     })
 }
 
+/// The tab's session, created on the first prompt or command. Before that, agent and model picks are kept
+/// for the creation (as OpenCode's own clients do) and other requests answer as for an empty conversation.
+/// `Ok(Err(reply))` answers the request without a session.
+fn native_or_draft(app: &tauri::AppHandle, s: &Session, op: &str, params: &Value) -> Result<Result<String, Value>, String> {
+    let native = s.native_id.lock().unwrap().clone();
+    if !native.is_empty() { return Ok(Ok(native)); }
+    let mut draft = s.draft.lock().unwrap();
+    // Another request may have created it while this one waited for the draft.
+    let native = s.native_id.lock().unwrap().clone();
+    if !native.is_empty() { return Ok(Ok(native)); }
+    match op {
+        "model" => {
+            let mut model = json!({"id":params["id"],"providerID":params["providerID"]});
+            if let Some(variant) = params["variant"].as_str().filter(|variant| !variant.is_empty()) { model["variant"] = json!(variant); }
+            draft["model"] = model;
+            Ok(Err(Value::Null))
+        }
+        "agent" => { draft["agent"] = params["agent"].clone(); Ok(Err(Value::Null)) }
+        "interrupt" => Ok(Err(Value::Null)),
+        "messages" => Ok(Err(json!({"data":[]}))),
+        "prompt" | "command" => {
+            let info = s.http("POST", "/api/session", Some(&draft))?;
+            let native = info["data"]["id"].as_str().filter(|id| valid_id(id, "ses_")).ok_or("OpenCode returned no session ID")?.to_string();
+            *s.native_id.lock().unwrap() = native.clone();
+            // Before the prompt goes out, so the tab takes this session's events from the first one on.
+            emit(app, &s.id, s, json!({"type":"coffee.session","data":{"sessionID":native,"session":info["data"]}}));
+            Ok(Ok(native))
+        }
+        _ => Err("OpenCode has no conversation yet".to_string()),
+    }
+}
+
 #[tauri::command]
-pub async fn opencode_session_request(sessions: State<'_, OpenCodeSessions>, id: String, generation: String, op: String, params: Value) -> Result<Value, String> {
+pub async fn opencode_session_request(app: tauri::AppHandle, sessions: State<'_, OpenCodeSessions>, id: String, generation: String, op: String, params: Value) -> Result<Value, String> {
     let s = get(&sessions, &id, &generation)?;
     tauri::async_runtime::spawn_blocking(move || {
-        let native = s.native_id.lock().unwrap().clone();
-        if native.is_empty() { return Err("OpenCode session is not ready".to_string()); }
+        let native = match native_or_draft(&app, &s, &op, &params)? {
+            Ok(native) => native,
+            Err(reply) => return Ok(reply),
+        };
         let (method, path, body) = route(&native, &op, &params)?;
         if op == "prompt" { crate::orchestration::native_input(&s.id, "opencode", &s.generation, params["text"].as_str().unwrap_or(""), params["requestId"].as_str().unwrap_or(""), None)?; }
         else if op == "interrupt" { crate::orchestration::native_stop(&s.id, "opencode", &s.generation); }
@@ -436,7 +479,7 @@ mod tests {
         let url = ready["url"].as_str().unwrap().to_string();
         use base64::Engine;
         let auth = format!("Basic {}", base64::engine::general_purpose::STANDARD.encode(format!("opencode:{password}")));
-        let session = Session { id: "test".into(), generation: String::new(), native_id: Mutex::new(String::new()), input: Mutex::new(child.stdin.take()), child: Mutex::new(child), url: url.clone(), auth: auth.clone(), stderr: Default::default(), closed: AtomicBool::new(false), launch_config: Default::default(), launch_cwd: dir.path().into() };
+        let session = Session { id: "test".into(), generation: String::new(), native_id: Mutex::new(String::new()), input: Mutex::new(child.stdin.take()), child: Mutex::new(child), url: url.clone(), auth: auth.clone(), stderr: Default::default(), closed: AtomicBool::new(false), launch_config: Default::default(), launch_cwd: dir.path().into(), draft: Mutex::new(json!({})) };
         assert!(agent(Some(Duration::from_secs(5))).get(&format!("{url}/api/model")).call().is_err(), "the server must require its password");
         let (tx, rx) = mpsc::channel();
         let stream = agent(None).get(&format!("{url}/api/event")).set("Authorization", &auth).call().unwrap().into_reader();
@@ -457,6 +500,14 @@ mod tests {
             let (method, path, body) = route(&id, "model", &json!({"id":model["id"],"providerID":model["providerID"],"variant":variant})).unwrap();
             session.http(method, &path, body.as_ref()).unwrap_or_else(|error| panic!("{variant}: {error}"));
         }
+        // A new tab's agent and model picks travel with the session creation its first prompt makes.
+        let agents = session.http("GET", "/api/agent", None).unwrap();
+        let picked = agents["data"].as_array().unwrap().iter().rev().find(|a| a["mode"] != "subagent" && a["hidden"] != true).expect("a primary agent")["id"].clone();
+        let draft = json!({"agent":picked,"model":{"id":model["id"],"providerID":model["providerID"],"variant":model["variants"][0]["id"]}});
+        let drafted = session.http("POST", "/api/session", Some(&draft)).unwrap_or_else(|error| panic!("draft creation: {error}"));
+        assert_eq!(drafted["data"]["agent"], picked);
+        assert_eq!(drafted["data"]["model"]["id"], model["id"]);
+        session.http("DELETE", &format!("/api/session/{}", drafted["data"]["id"].as_str().unwrap()), None).unwrap();
         let (method, path, _) = route(&id, "messages", &json!({"cursor":"eyJ4IjoxfQ"})).unwrap();
         assert_eq!(method, "GET"); assert!(path.contains(&id));
         session.http("DELETE", &format!("/api/session/{id}"), None).unwrap();
