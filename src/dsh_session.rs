@@ -213,17 +213,21 @@ fn is_route_error(error: &str) -> bool {
     error.contains("no adapter registered for provider") || error.contains("has no configured model")
 }
 
-/// A Host plugin that applies the preset named in this tab's control file through DeepSeek Harness's own service,
-/// as the Session opens and live during a turn: the SDK protocol has no call for it, and a resumed Session
-/// otherwise keeps its stored preset. Sub-agent Sessions are left alone, as the native command does.
-const PERMISSION_PLUGIN: &str = r#"import { readFileSync } from 'node:fs';
-export const inject = ['permissionPresets', 'sessions', 'approval', 'agents'];
+/// A Host plugin that fills what the SDK protocol leaves out. It applies the preset named in this tab's control
+/// file through DeepSeek Harness's own service, as the Session opens and live during a turn, because a resumed
+/// Session otherwise keeps its stored preset. It also answers approvals and user questions: these go out as
+/// requests on the runtime's stdout, and the replies come back as files beside the control file.
+/// Sub-agent Sessions keep their own presets, as with the native command.
+const PERMISSION_PLUGIN: &str = r#"import { readFileSync, rmSync } from 'node:fs';
+export const inject = ['permissionPresets', 'sessions', 'approval', 'agents', 'userQuestions'];
 export function apply(ctx) {
   const { COFFEE_DSH_CONTROL: file, COFFEE_DSH_SESSION: id } = process.env;
-  let applied = '';
-  const read = () => { try { return readFileSync(file, 'utf8').trim(); } catch { return ''; } };
+  const pending = new Map();
+  let applied = '', count = 0;
+  const read = path => { try { return readFileSync(path, 'utf8').trim(); } catch { return ''; } };
+  const send = frame => process.stdout.write(JSON.stringify({ jsonrpc: '2.0', ...frame }) + '\n');
   const update = () => {
-    const name = read();
+    const name = read(file);
     if (!name || name === applied) return;
     const session = ctx.sessions.list().find(s => String(s.id) === id);
     if (!session) return;
@@ -232,17 +236,42 @@ export function apply(ctx) {
     else ctx.permissionPresets.set(session, name);
     applied = name;
   };
+  const collect = () => {
+    for (const [request, finish] of pending) {
+      const path = file + '.' + request + '.reply', reply = read(path);
+      if (!reply) continue;
+      rmSync(path, { force: true }); pending.delete(request); finish(JSON.parse(reply));
+    }
+  };
+  const ask = (method, params, signal) => new Promise((resolve, reject) => {
+    const requestId = 'coffee-' + Date.now() + '-' + ++count;
+    const cancel = () => { pending.delete(requestId); send({ method: 'user-question.cancelled', params: { requestId } }); reject(new Error('The request was cancelled')); };
+    if (signal?.aborted) return reject(new Error('The request was cancelled'));
+    signal?.addEventListener('abort', cancel, { once: true });
+    pending.set(requestId, reply => { signal?.removeEventListener('abort', cancel); resolve(reply); });
+    send({ id: requestId, method, params: { ...params, requestId } });
+  });
   ctx.on('session/created', update);
-  ctx.effect(() => { const timer = setInterval(update, 250); return () => clearInterval(timer); });
+  ctx.on('approval/request', request => ask('approval/request', { toolName: request.toolName, reason: request.reason }, request.signal).then(reply => reply.outcome, () => 'cancelled'));
+  ctx.on('user-questions/request', async request => {
+    const reply = await ask('user-question/ask', { questions: request.questions }, request.signal);
+    if (reply.cancelled) throw new Error('The user declined to answer');
+    return { answers: reply.answers };
+  });
+  ctx.effect(() => { const timer = setInterval(() => { update(); collect(); }, 250); return () => clearInterval(timer); });
 }
 "#;
 const PRESETS: [&str; 2] = ["workspace-write", "danger-full-access"];
 
-/// Renames into place so the plugin never reads a half-written name.
+/// Renames into place so the plugin never reads a half-written file.
+fn write_atomic(path: &Path, text: &str) -> Result<(), String> {
+    let next = path.with_extension("next");
+    std::fs::write(&next, text).and_then(|_| std::fs::rename(&next, path)).map_err(|e| e.to_string())
+}
+
 fn write_preset(control: &Path, preset: &str) -> Result<(), String> {
     if !PRESETS.contains(&preset) { return Err("Unknown permission preset".into()); }
-    let next = control.with_extension("next");
-    std::fs::write(&next, preset).and_then(|_| std::fs::rename(&next, control)).map_err(|e| e.to_string())
+    write_atomic(control, preset)
 }
 
 fn permission_patch(dir: &Path) -> Result<PathBuf, String> {
@@ -254,6 +283,9 @@ fn permission_patch(dir: &Path) -> Result<PathBuf, String> {
     std::fs::write(&patch, format!("- insert:
     - id: coffee-permission
       name: '{url}'
+      config: {{}}
+    - id: coffee-tool-ask-user
+      name: '@deepseek-ai/dsh-tool-ask-user'
       config: {{}}
 ")).map_err(|e| e.to_string())?;
     Ok(patch)
@@ -388,7 +420,11 @@ pub async fn dsh_session_respond(sessions: State<'_, DshSessions>, id: String, g
     tauri::async_runtime::spawn_blocking(move || {
         let mut requests = s.protocol.requests.lock().unwrap();
         if !requests.contains_key(&request_id.to_string()) { return Err("This DeepSeek Harness request has ended".into()); }
-        s.write(&json!({"jsonrpc":"2.0","id":request_id,"result":result}))?;
+        // Requests from Coffee's plugin wait for a reply file; the runtime's own wait on stdin.
+        match request_id.as_str().filter(|id| id.starts_with("coffee-")) {
+            Some(plugin_id) => write_atomic(&s.control.with_extension(format!("preset.{plugin_id}.reply")), &result.to_string())?,
+            None => s.write(&json!({"jsonrpc":"2.0","id":request_id,"result":result}))?,
+        }
         requests.remove(&request_id.to_string());
         Ok(())
     }).await.map_err(|e| e.to_string())?
