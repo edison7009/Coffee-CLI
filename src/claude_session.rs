@@ -1,7 +1,7 @@
 //! Claude's bidirectional stream-json host. One owner per Coffee tab; no PTY scraping.
 use serde_json::{json, Value};
 use base64::Engine;
-use std::{collections::HashMap, io::{BufRead, BufReader, Read, Seek, SeekFrom, Write}, process::{Child, ChildStdin, Command, Stdio}, sync::{Arc, Mutex, mpsc}, time::Duration};
+use std::{collections::HashMap, io::{BufRead, BufReader, Read, Seek, SeekFrom, Write}, process::{Child, ChildStdin, Command, Stdio}, sync::{Arc, Mutex, mpsc, atomic::{AtomicBool, Ordering}}, time::Duration};
 use tauri::{Emitter, Manager, State};
 
 type Reply = mpsc::Sender<Result<Value, String>>;
@@ -18,6 +18,8 @@ struct Session {
     history_path: std::path::PathBuf,
     launch_config: crate::tool_config::ToolConfigEntry,
     launch_cwd: std::path::PathBuf,
+    /// A fresh conversation still waiting for its first prompt to name it.
+    wants_title: AtomicBool,
 }
 
 #[derive(Default)]
@@ -158,7 +160,7 @@ fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<Stri
     let stdout = child.stdout.take().unwrap();
     let stderr = child.stderr.take().unwrap();
     let input = child.stdin.take().unwrap();
-    let session = Arc::new(Session { id: id.clone(), generation, native_id, child: Mutex::new(child), input: Mutex::new(input), pending: Mutex::new(HashMap::new()), permissions: Mutex::new(HashMap::new()), stderr: Mutex::new(String::new()), history_path, launch_config: config.clone(), launch_cwd: cwd.clone() });
+    let session = Arc::new(Session { id: id.clone(), generation, native_id, child: Mutex::new(child), input: Mutex::new(input), pending: Mutex::new(HashMap::new()), permissions: Mutex::new(HashMap::new()), stderr: Mutex::new(String::new()), history_path, launch_config: config.clone(), launch_cwd: cwd.clone(), wants_title: AtomicBool::new(!is_resume) });
     let sessions = app.state::<ClaudeSessions>();
     {
         let mut map = sessions.0.lock().unwrap();
@@ -262,8 +264,20 @@ pub async fn claude_session_send(sessions: State<'_, ClaudeSessions>, id: String
     if text.trim().is_empty() { return Err("消息不能为空".into()); }
     tauri::async_runtime::spawn_blocking(move || {
         let content = if orchestration_delivery.is_some() { json!([{"type":"text","text":text}]) } else { user_content(&text)? };
-        s.write_with_delivery(&json!({"type":"user","uuid":uuid::Uuid::new_v4().to_string(),"session_id":s.native_id,"parent_tool_use_id":null,"message":{"role":"user","content":content}}), orchestration_delivery.as_deref())
+        s.write_with_delivery(&json!({"type":"user","uuid":uuid::Uuid::new_v4().to_string(),"session_id":s.native_id,"parent_tool_use_id":null,"message":{"role":"user","content":content}}), orchestration_delivery.as_deref())?;
+        if orchestration_delivery.is_none() && s.wants_title.swap(false, Ordering::SeqCst) { request_title(s, &text); }
+        Ok(())
     }).await.map_err(|e| e.to_string())?
+}
+
+/// Name a new conversation from its first prompt, as Claude's own desktop app does: the CLI asks the model
+/// for a short title and, with persist, appends an `ai-title` row to the transcript, which the history list
+/// already prefers over the first prompt. Best effort: an older CLI, a timeout or an error leaves the
+/// first prompt as the title.
+fn request_title(session: Arc<Session>, prompt: &str) {
+    let description: String = prompt.trim().chars().take(2000).collect();
+    if description.is_empty() { return; }
+    std::thread::spawn(move || { let _ = session.request(json!({"subtype":"generate_session_title","description":description,"persist":true})); });
 }
 
 fn user_content(text: &str) -> Result<Value, String> {
