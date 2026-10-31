@@ -1,4 +1,4 @@
-// OpenCode welcome wordmark: still by default, charges while held, bursts on release and settles back.
+// OpenCode welcome wordmark: shows its burst by itself, charges while held, bursts on release and settles back.
 import assert from 'node:assert/strict';
 import { mkdtemp, readFile, unlink, rmdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -14,7 +14,7 @@ await build({
   stdin: { resolveDir: project, loader: 'tsx', contents: `
     import React,{useState} from 'react';import {createRoot} from 'react-dom/client';
     import {OpenCodeWelcomeLogo} from './src/components/center/OpenCodeWelcomeLogo';
-    function Fixture(){const [active,setActive]=useState(true);window.setActive=setActive;return <OpenCodeWelcomeLogo isActive={active}/>};
+    function Fixture(){const [active,setActive]=useState(true),[auto,setAuto]=useState(false);window.setActive=setActive;window.setAuto=setAuto;return <OpenCodeWelcomeLogo isActive={active} autoplay={auto}/>};
     createRoot(document.getElementById('root')).render(<Fixture/>);
   ` },
   bundle: true, outfile: join(directory, 'fixture.js'), jsx: 'automatic', nodePaths: [join(project, 'node_modules')],
@@ -87,14 +87,37 @@ try {
   assert.equal(await frames(), hidden, 'hidden marks do not animate');
   assert.equal(await pixels(), still);
   await page.mouse.up();
-  // Reduced motion keeps the mark still.
   await page.evaluate(() => window.setActive(true));
+  await page.waitForTimeout(2600);
+  // The welcome shows the burst by itself, with pauses that draw nothing.
+  await page.evaluate(() => window.setAuto(true));
+  await page.waitForFunction(() => window.frames.count > 0, null, { timeout: 2000 });
+  const shown = new Set();
+  for (let i = 0; i < 12; i++) { shown.add(await pixels()); await page.waitForTimeout(150); }
+  assert.ok(shown.size > 3, 'the showcase animates without a click');
+  await shot('showcase');
+  let quiet = false;
+  for (let i = 0; i < 40 && !quiet; i++) { const a = await frames(); await page.waitForTimeout(250); quiet = await frames() === a; }
+  assert.ok(quiet, 'pauses between bursts draw no frames');
+  assert.equal(await pixels(), still, 'pauses show the still mark');
+  // A press takes over from the showcase, which resumes after.
+  await page.mouse.move(p.x, p.y); await page.mouse.down(); await page.waitForTimeout(300); await page.mouse.up();
+  await page.waitForFunction(() => window.frames.count > 0);
+  // Hiding stops the showcase at once.
+  await page.evaluate(() => window.setActive(false));
+  await page.waitForTimeout(50);
+  const off = await frames(); await page.waitForTimeout(4000);
+  assert.equal(await frames(), off, 'hidden marks stop the showcase');
+  assert.equal(await pixels(), still);
+  // Reduced motion keeps the mark still, by hand or by itself.
   await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.evaluate(() => window.setActive(true));
   const before = await frames();
   await page.mouse.move(p.x, p.y); await page.mouse.down(); await page.waitForTimeout(200); await page.mouse.up();
+  await page.waitForTimeout(4000);
   assert.equal(await frames(), before, 'reduced motion never animates');
   assert.deepEqual(errors, []);
-  console.log('ok OpenCode wordmark: still, charge, burst, settle, hidden and reduced motion');
+  console.log('ok OpenCode wordmark: showcase, charge, burst, settle, hidden and reduced motion');
 } finally {
   await browser.close(); await new Promise(resolve => server.close(resolve));
   for (const name of ['fixture.js', 'fixture.css']) await unlink(join(directory, name)).catch(() => {});

@@ -5,6 +5,9 @@ import './OpenCodeConversation.css';
 // One terminal cell: OpenCode's mark is drawn in cells twice as tall as wide.
 const CELL_W = 7, CELL_H = 14;
 const COLS = FULL[0].length, ROWS = FULL.length;
+// Solid letter cells the showcase presses, so every burst starts inside a letter.
+const LETTER_CELLS = FULL.flatMap((line, y) => Array.from(line).flatMap((char, x) => char === '█' ? [{ x, y }] : []));
+const between = (min: number, max: number) => min + Math.random() * (max - min);
 
 let probe: CanvasRenderingContext2D | null | undefined;
 /** Resolves any CSS color (variables, color-mix, named colors) to RGB through the canvas. */
@@ -26,9 +29,14 @@ function palette(element: HTMLElement): LogoPalette {
 }
 const css = ([r, g, b]: Rgb) => `rgb(${Math.round(r * 255)},${Math.round(g * 255)},${Math.round(b * 255)})`;
 
-/** OpenCode's wordmark on the welcome screen. Press and hold a letter to charge it; release to burst. */
-export function OpenCodeWelcomeLogo({ isActive }: { isActive: boolean }) {
+/** OpenCode's wordmark on the welcome screen. It shows its burst by itself: a letter charges, then releases a ring,
+ * with a pause between. Pressing and holding a letter plays it by hand; the showcase resumes afterwards. */
+export function OpenCodeWelcomeLogo({ isActive, autoplay = true }: { isActive: boolean; autoplay?: boolean }) {
   const canvas = useRef<HTMLCanvasElement>(null);
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const automatic = useRef(false);
+  const live = useRef({ isActive, autoplay });
+  live.current = { isActive, autoplay };
   const state = useRef<BurstState>({ rings: [] });
   const frame = useRef(0);
   const colors = useRef<LogoPalette | null>(null);
@@ -51,8 +59,37 @@ export function OpenCodeWelcomeLogo({ isActive }: { isActive: boolean }) {
     state.current = settle(state.current, t);
     draw(t);
     frame.current = animating(state.current) ? requestAnimationFrame(loop) : 0;
+    // Between bursts nothing is drawn; the next one is only a timer.
+    if (!frame.current) schedule(between(1800, 3200));
   };
   const start = () => { if (!frame.current) frame.current = requestAnimationFrame(loop); };
+  const motion = () => !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const allowed = () => live.current.isActive && live.current.autoplay && !document.hidden && motion();
+  const schedule = (delay: number) => {
+    clearTimeout(timer.current);
+    if (allowed()) timer.current = setTimeout(showcase, delay);
+  };
+  /** Charges a random letter for a varied time, then releases it. */
+  const showcase = () => {
+    if (!allowed() || state.current.hold || animating(state.current)) return;
+    const { x, y } = LETTER_CELLS[Math.floor(Math.random() * LETTER_CELLS.length)];
+    state.current = press(state.current, x, y, performance.now());
+    automatic.current = true;
+    start();
+    timer.current = setTimeout(() => {
+      if (!automatic.current || !state.current.hold) return;
+      automatic.current = false;
+      state.current = burst(state.current, performance.now());
+      start();
+    }, between(900, 1800));
+  };
+  /** Hidden, minimized or reduced-motion: stop at once and show the still mark. */
+  const rest = () => {
+    clearTimeout(timer.current); automatic.current = false;
+    cancelAnimationFrame(frame.current); frame.current = 0;
+    state.current = { rings: [] };
+    draw();
+  };
 
   useEffect(() => {
     draw();
@@ -60,32 +97,36 @@ export function OpenCodeWelcomeLogo({ isActive }: { isActive: boolean }) {
     const repaint = () => { colors.current = null; if (!frame.current) draw(); };
     const observer = new MutationObserver(repaint);
     for (const node of [document.documentElement, document.body]) observer.observe(node, { attributes: true });
-    return () => { observer.disconnect(); cancelAnimationFrame(frame.current); frame.current = 0; };
+    return () => { observer.disconnect(); clearTimeout(timer.current); cancelAnimationFrame(frame.current); frame.current = 0; };
   }, []);
-  // A hidden tab never keeps animating; it comes back still.
   useEffect(() => {
-    if (isActive) return;
-    cancelAnimationFrame(frame.current); frame.current = 0;
-    state.current = { rings: [] };
-    draw();
-  }, [isActive]);
+    if (!isActive || !autoplay) { rest(); return; }
+    schedule(700);
+    const visibility = () => { if (document.hidden) rest(); else schedule(700); };
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const preference = () => { if (reduced.matches) rest(); else schedule(700); };
+    document.addEventListener('visibilitychange', visibility);
+    reduced.addEventListener('change', preference);
+    return () => { clearTimeout(timer.current); document.removeEventListener('visibilitychange', visibility); reduced.removeEventListener('change', preference); };
+  }, [isActive, autoplay]);
 
   const cell = (event: React.PointerEvent<HTMLCanvasElement>) => {
     const box = event.currentTarget.getBoundingClientRect();
     return { x: Math.floor((event.clientX - box.left) / (box.width / COLS)), y: Math.floor((event.clientY - box.top) / (box.height / ROWS)) };
   };
-  const motion = () => !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const down = (event: React.PointerEvent<HTMLCanvasElement>) => {
     if (event.button !== 0 || !motion()) return;
     const { x, y } = cell(event);
     if (!hit(x, y)) return;
     event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
+    // The person takes over: the showcase waits until their burst has faded.
+    clearTimeout(timer.current); automatic.current = false;
     state.current = press(state.current, x, y, performance.now());
     start();
   };
   const up = () => {
-    if (!state.current.hold) return;
+    if (!state.current.hold || automatic.current) return;
     state.current = burst(state.current, performance.now());
     start();
   };
