@@ -1319,6 +1319,13 @@ pub(crate) fn is_system_injected(text: &str) -> bool {
     SYSTEM_INJECTION_TAGS.iter().any(|tag| t.starts_with(tag))
 }
 
+/// A first-prompt title, cut to the history card's 40 characters.
+fn clip_title(text: &str) -> String {
+    let mut chars = text.chars();
+    let chunk: String = chars.by_ref().take(40).collect();
+    if chars.next().is_some() { format!("{chunk}...") } else { chunk }
+}
+
 /// The title a Claude user text block contributes, by the rule Claude Code's
 /// own session list uses: anything opening with a lowercase XML-style tag is
 /// harness wrapping (IDE context, reminders, hook output, …) rather than a
@@ -1570,11 +1577,10 @@ fn parse_agent_jsonl(
                                 .collect(),
                             _ => Vec::new(),
                         };
-                        if let Some(prompt) = texts.into_iter().find_map(|text| claude_prompt_title(text, &mut command_fallback)) {
-                            let mut chars = prompt.chars();
-                            let chunk: String = chars.by_ref().take(40).collect();
-                            title = if chars.next().is_some() { format!("{}...", chunk) } else { chunk };
-                        }
+                        // Claude's wrapper rule is Claude's; other tools parsed here keep the known-prefix filter.
+                        let prompt = if tool_name == "claude" { texts.into_iter().find_map(|text| claude_prompt_title(text, &mut command_fallback)) }
+                            else { texts.into_iter().find(|text| !is_system_injected(text)).map(|text| text.replace('\n', " ")) };
+                        if let Some(prompt) = prompt { title = clip_title(&prompt); }
                     }
                 }
             }
@@ -1627,7 +1633,7 @@ fn parse_agent_jsonl(
         title = ai_title;
     }
     if title.is_empty() {
-        title = command_fallback;
+        title = clip_title(&command_fallback);
     }
     if title.is_empty() {
         let mut chars = tool_name.chars();

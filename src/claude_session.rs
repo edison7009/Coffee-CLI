@@ -265,7 +265,9 @@ pub async fn claude_session_send(sessions: State<'_, ClaudeSessions>, id: String
     tauri::async_runtime::spawn_blocking(move || {
         let content = if orchestration_delivery.is_some() { json!([{"type":"text","text":text}]) } else { user_content(&text)? };
         s.write_with_delivery(&json!({"type":"user","uuid":uuid::Uuid::new_v4().to_string(),"session_id":s.native_id,"parent_tool_use_id":null,"message":{"role":"user","content":content}}), orchestration_delivery.as_deref())?;
-        if orchestration_delivery.is_none() && s.wants_title.swap(false, Ordering::SeqCst) { request_title(s, &text); }
+        // A slash command or `!` shell line is not what the conversation is about; wait for a real prompt.
+        let prompt = text.trim_start();
+        if orchestration_delivery.is_none() && !prompt.starts_with(['/', '!']) && s.wants_title.swap(false, Ordering::SeqCst) { request_title(s, &text); }
         Ok(())
     }).await.map_err(|e| e.to_string())?
 }

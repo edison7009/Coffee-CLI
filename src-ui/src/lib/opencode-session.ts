@@ -169,6 +169,8 @@ export async function configureOpenCode(id: string, patch: { model?: OpenCodeMod
 }
 export async function runOpenCodeCommand(id: string, command: 'compact' | { name: string; text?: string }): Promise<void> {
   const c = client(id); if (!c.state.ready || c.state.busy || c.sending) throw new Error('OpenCode is not ready');
+  // A new conversation has no session until its first prompt, so there is nothing to compact yet.
+  if (command === 'compact' && !c.state.nativeId) return;
   c.sending = true; c.state = { ...c.state, busy: true, startedAt: Date.now(), error: undefined }; publish(c, true);
   try {
     if (command === 'compact') await request(c, id, 'compact');

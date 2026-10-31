@@ -339,12 +339,7 @@ fn route(native: &str, op: &str, params: &Value) -> Result<(&'static str, String
         }
         "form.reply" => ("POST", format!("{asker}/form/{}/reply", id("formID", "frm_")?), Some(json!({"answer":params["answer"]}))),
         "form.cancel" => ("DELETE", format!("{asker}/form/{}", id("formID", "frm_")?), None),
-        "model" => {
-            // The server takes a variant or no field at all: null is rejected, and leaving it out picks the model's default.
-            let mut model = json!({"id":params["id"],"providerID":params["providerID"]});
-            if let Some(variant) = params["variant"].as_str().filter(|variant| !variant.is_empty()) { model["variant"] = json!(variant); }
-            ("POST", format!("{base}/model"), Some(json!({"model":model})))
-        }
+        "model" => ("POST", format!("{base}/model"), Some(json!({"model":model_ref(params)}))),
         "agent" => ("POST", format!("{base}/agent"), Some(json!({"agent":params["agent"]}))),
         "compact" => ("POST", format!("{base}/compact"), Some(json!({}))),
         "command" => {
@@ -353,6 +348,13 @@ fn route(native: &str, op: &str, params: &Value) -> Result<(&'static str, String
         }
         _ => return Err("Unsupported OpenCode request".into()),
     })
+}
+
+/// The server takes a variant or no field at all: null is rejected, and leaving it out picks the model's default.
+fn model_ref(params: &Value) -> Value {
+    let mut model = json!({"id":params["id"],"providerID":params["providerID"]});
+    if let Some(variant) = params["variant"].as_str().filter(|variant| !variant.is_empty()) { model["variant"] = json!(variant); }
+    model
 }
 
 /// The tab's session, created on the first prompt or command. Before that, agent and model picks are kept
@@ -366,21 +368,16 @@ fn native_or_draft(app: &tauri::AppHandle, s: &Session, op: &str, params: &Value
     let native = s.native_id.lock().unwrap().clone();
     if !native.is_empty() { return Ok(Ok(native)); }
     match op {
-        "model" => {
-            let mut model = json!({"id":params["id"],"providerID":params["providerID"]});
-            if let Some(variant) = params["variant"].as_str().filter(|variant| !variant.is_empty()) { model["variant"] = json!(variant); }
-            draft["model"] = model;
-            Ok(Err(Value::Null))
-        }
+        "model" => { draft["model"] = model_ref(params); Ok(Err(Value::Null)) }
         "agent" => { draft["agent"] = params["agent"].clone(); Ok(Err(Value::Null)) }
         "interrupt" => Ok(Err(Value::Null)),
         "messages" => Ok(Err(json!({"data":[]}))),
         "prompt" | "command" => {
             let info = s.http("POST", "/api/session", Some(&draft))?;
             let native = info["data"]["id"].as_str().filter(|id| valid_id(id, "ses_")).ok_or("OpenCode returned no session ID")?.to_string();
-            *s.native_id.lock().unwrap() = native.clone();
-            // Before the prompt goes out, so the tab takes this session's events from the first one on.
+            // The tab learns its session before the event reader forwards any of that session's events.
             emit(app, &s.id, s, json!({"type":"coffee.session","data":{"sessionID":native,"session":info["data"]}}));
+            *s.native_id.lock().unwrap() = native.clone();
             Ok(Ok(native))
         }
         _ => Err("OpenCode has no conversation yet".to_string()),
@@ -391,6 +388,8 @@ fn native_or_draft(app: &tauri::AppHandle, s: &Session, op: &str, params: &Value
 pub async fn opencode_session_request(app: tauri::AppHandle, sessions: State<'_, OpenCodeSessions>, id: String, generation: String, op: String, params: Value) -> Result<Value, String> {
     let s = get(&sessions, &id, &generation)?;
     tauri::async_runtime::spawn_blocking(move || {
+        // Reject a malformed request before it can create the conversation's session.
+        route("ses_pending", &op, &params)?;
         let native = match native_or_draft(&app, &s, &op, &params)? {
             Ok(native) => native,
             Err(reply) => return Ok(reply),
