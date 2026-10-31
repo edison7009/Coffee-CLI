@@ -164,6 +164,7 @@ pub(crate) fn expert_inspect_session(app: &tauri::AppHandle, session_id: &str, t
     let desktop = match tool {
         "claude" => crate::claude_session::launch_context(app, session_id),
         "codex" => crate::codex_session::launch_context(app, session_id),
+        "opencode" => crate::opencode_session::launch_context(app, session_id),
         _ => None,
     };
     let source = if desktop.is_some() { "desktop-launch-snapshot" } else { "terminal-launch-snapshot" };

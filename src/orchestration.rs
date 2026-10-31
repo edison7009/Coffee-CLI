@@ -467,6 +467,18 @@ fn record_event(state: &mut State, id: &str, tool: &str, generation: &str, event
             });
         }
     }
+    if tool == "opencode" {
+        let data = &event["data"];
+        match event["type"].as_str() {
+            // Each step's text ends with its full content; the last one is the turn's reply.
+            Some("session.text.ended") => if let Some(text) = data["text"].as_str().filter(|text| !text.trim().is_empty()) { run.reply = text.into(); },
+            Some("session.execution.succeeded") => completed = Some(("completed", run.reply.clone())),
+            // A server shutdown resumes the same turn later; it is not the end of the assigned work.
+            Some("session.execution.interrupted") if data["reason"] != "shutdown" => completed = Some(("interrupted", "Worker turn interrupted".into())),
+            Some("session.execution.failed") => completed = Some(("failed", data["error"]["message"].as_str().unwrap_or("Worker turn failed").into())),
+            _ => {}
+        }
+    }
     let Some((phase, reply)) = completed else { return false };
     state.runs.remove(id);
     let Some(task) = state.snapshot.tasks.iter_mut().find(|task| task.session_id == id && task.tool == tool && active(task) && !task.question.as_ref().is_some_and(|question| question.answer.is_none())) else { return false };
@@ -886,6 +898,20 @@ mod tests {
         record_event(&mut state, "child", "dsh", "g1", &event(json!({"type":"assistant/message","data":{"message":{"content":[{"type":"reasoning","text":"Thinking"},{"type":"text","text":"Tests passed"}]}}})));
         assert!(!record_event(&mut state, "child", "dsh", "old-generation", &done));
         assert!(record_event(&mut state, "child", "dsh", "g1", &done));
+        assert_eq!((state.snapshot.tasks[0].phase.as_str(), state.snapshot.tasks[0].summary.as_deref()), ("completed", Some("Tests passed")));
+    }
+    #[test]
+    fn opencode_result_uses_the_last_text_of_the_execution() {
+        let mut state = fixture(); state.snapshot.tasks[0].tool = "opencode".into();
+        state.runs.insert("child".into(), WorkerRun::new("Assigned task"));
+        let done = json!({"type":"session.execution.succeeded","data":{"sessionID":"ses_a"}});
+        assert!(!record_event(&mut state, "child", "opencode", "g1", &done));
+        record_input(&mut state, "child", "opencode", "g1", "Assigned task", "input").unwrap();
+        record_event(&mut state, "child", "opencode", "g1", &json!({"type":"session.text.ended","data":{"text":"Reading files"}}));
+        record_event(&mut state, "child", "opencode", "g1", &json!({"type":"session.text.ended","data":{"text":"Tests passed"}}));
+        assert!(!record_event(&mut state, "child", "opencode", "g1", &json!({"type":"session.execution.interrupted","data":{"reason":"shutdown"}})));
+        assert!(!record_event(&mut state, "child", "opencode", "old-generation", &done));
+        assert!(record_event(&mut state, "child", "opencode", "g1", &done));
         assert_eq!((state.snapshot.tasks[0].phase.as_str(), state.snapshot.tasks[0].summary.as_deref()), ("completed", Some("Tests passed")));
     }
     #[test]

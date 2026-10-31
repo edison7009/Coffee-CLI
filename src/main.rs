@@ -3,6 +3,7 @@
 mod terminal;
 mod claude_session;
 mod codex_session;
+mod opencode_session;
 mod dsh_session;
 mod session_directory;
 mod opencode_island;
