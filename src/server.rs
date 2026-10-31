@@ -1335,12 +1335,14 @@ fn clip_title(text: &str) -> String {
 fn claude_prompt_title(text: &str, command_fallback: &mut String) -> Option<String> {
     use std::sync::LazyLock;
     static COMMAND: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"<command-name>(.*?)</command-name>").unwrap());
-    static BASH: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"<bash-input>([\s\S]*?)</bash-input>").unwrap());
+    static BASH: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"^<bash-input>([\s\S]*?)</bash-input>").unwrap());
     static WRAPPER: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"^(?:<[a-z][\w-]*[\s>/]|\[Request interrupted by user[^\]]*\])").unwrap());
     let text = text.replace(['\r', '\n'], " ");
     let text = text.trim();
     if text.is_empty() { return None; }
-    if let Some(command) = COMMAND.captures(text) {
+    // Only a row that opens with a tag is the CLI's own slash-command or shell record; a typed prompt
+    // that merely mentions those tags stays a prompt. Older CLIs put <command-message> before the name.
+    if let Some(command) = COMMAND.captures(text).filter(|_| text.starts_with("<command-")) {
         if command_fallback.is_empty() { *command_fallback = command[1].trim().to_string(); }
         return None;
     }
@@ -1538,36 +1540,9 @@ fn parse_agent_jsonl(
                     if role == "user" || role == "assistant" {
                         total_messages += 1;
                     }
-                    if role == "user" {
-                        // Tally real (non-injected) user messages for the
-                        // compaction-sub-task filter below. Mirrors the
-                        // is_system_injected checks the title extractor uses,
-                        // but runs on EVERY user line (the title branch only
-                        // acts on the first). String content and array
-                        // content (first text block) both covered.
-                        let is_real_user = match msg_obj.get("content") {
-                            Some(c) if c.is_string() => {
-                                c.as_str().map_or(false, |s| !is_system_injected(s))
-                            }
-                            Some(c) if c.is_array() => c.as_array().map_or(false, |arr| {
-                                arr.iter().any(|block| {
-                                    let kind = block.get("type").and_then(|v| v.as_str());
-                                    if kind != Some("text") && kind != Some("input_text") {
-                                        return false;
-                                    }
-                                    block.get("text").and_then(|v| v.as_str())
-                                        .map_or(false, |t| !is_system_injected(t))
-                                })
-                            }),
-                            _ => false,
-                        };
-                        if is_real_user {
-                            real_user_messages += 1;
-                        }
-                    }
-                    // Rows the CLI itself marks as not typed by the user never name the session.
+                    // Rows the CLI itself marks as not typed by the user are not user input.
                     let flagged = |key: &str| value.get(key).and_then(|v| v.as_bool()) == Some(true);
-                    if role == "user" && title.is_empty() && !flagged("isMeta") && !flagged("isCompactSummary") {
+                    if role == "user" && !flagged("isMeta") && !flagged("isCompactSummary") {
                         let texts: Vec<&str> = match msg_obj.get("content") {
                             Some(serde_json::Value::String(text)) => vec![text.as_str()],
                             // Only text blocks can be a prompt; a tool result riding in the row is skipped.
@@ -1578,9 +1553,14 @@ fn parse_agent_jsonl(
                             _ => Vec::new(),
                         };
                         // Claude's wrapper rule is Claude's; other tools parsed here keep the known-prefix filter.
-                        let prompt = if tool_name == "claude" { texts.into_iter().find_map(|text| claude_prompt_title(text, &mut command_fallback)) }
+                        let mut command = String::new();
+                        let prompt = if tool_name == "claude" { texts.into_iter().find_map(|text| claude_prompt_title(text, &mut command)) }
                             else { texts.into_iter().find(|text| !is_system_injected(text)).map(|text| text.replace('\n', " ")) };
-                        if let Some(prompt) = prompt { title = clip_title(&prompt); }
+                        // One rule decides both whether the user typed anything (the compaction-sub-task filter
+                        // below) and what names the session, so a kept session never falls back to a placeholder.
+                        if prompt.is_some() || !command.is_empty() { real_user_messages += 1; }
+                        if command_fallback.is_empty() { command_fallback = command; }
+                        if let Some(prompt) = prompt.filter(|_| title.is_empty()) { title = clip_title(&prompt); }
                     }
                 }
             }
@@ -6275,6 +6255,14 @@ mod tests {
         assert_eq!(fallback, "/model");
         assert_eq!(claude_prompt_title("<bash-input>git status</bash-input>", &mut fallback).as_deref(), Some("! git status"));
         assert_eq!(claude_prompt_title("Use <b>bold</b> here", &mut fallback).as_deref(), Some("Use <b>bold</b> here"));
+        // Older CLIs put the message tag first; a prompt that only mentions the tags is still a prompt.
+        let mut older = String::new();
+        assert_eq!(claude_prompt_title("<command-message>usage</command-message>\n<command-name>/usage</command-name>", &mut older), None);
+        assert_eq!(older, "/usage");
+        let mut untouched = String::new();
+        assert_eq!(claude_prompt_title("why is <command-name>/init</command-name> in the log?", &mut untouched).as_deref(), Some("why is <command-name>/init</command-name> in the log?"));
+        assert_eq!(claude_prompt_title("run <bash-input>ls</bash-input> for me", &mut untouched).as_deref(), Some("run <bash-input>ls</bash-input> for me"));
+        assert!(untouched.is_empty());
         let dir = std::env::temp_dir().join(format!("coffee-cli-command-test-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
@@ -6284,6 +6272,16 @@ mod tests {
             "{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":\"real prompt after the command\"}}",
         ]);
         assert_eq!(parse_agent_jsonl(&f, "claude", &std::collections::HashMap::new()).expect("kept").name, "real prompt after the command");
+        // A session the user only ran a slash command in is theirs, named by the command.
+        write_jsonl(&f, &["{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":\"<command-name>/usage</command-name>\"}}"]);
+        assert_eq!(parse_agent_jsonl(&f, "claude", &std::collections::HashMap::new()).expect("kept").name, "/usage");
+        // Hook output and interrupt markers alone are not a conversation the user had.
+        write_jsonl(&f, &[
+            "{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":\"<some-hook-output>ran</some-hook-output>\"}}",
+            "{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":\"[Request interrupted by user]\"}}",
+            "{\"type\":\"user\",\"isMeta\":true,\"message\":{\"role\":\"user\",\"content\":\"Caveat: generated while running local commands.\"}}",
+        ]);
+        assert!(parse_agent_jsonl(&f, "claude", &std::collections::HashMap::new()).is_none());
         let _ = std::fs::remove_dir_all(&dir);
     }
 

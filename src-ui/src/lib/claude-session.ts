@@ -38,6 +38,8 @@ function listen() {
     if (!c || c.generation !== payload.generation) return;
     if (payload.event.type === 'coffee_exit') clearSessionControls(payload.id, c.generation);
     if (c.connecting && !c.state.ready && payload.event.type === 'coffee_exit') { c.startupExit = text(payload.event.detail) || 'Claude process exited'; return; }
+    // The title Claude generated for a new conversation from its first prompt.
+    if (payload.event.type === 'coffee_title') { c.state = { ...c.state, title: text(payload.event.title) }; publish(c, true); return; }
     const wasBusy = c.state.busy;
     c.state = reduceClaudeEvent(c.state, payload.event);
     if (wasBusy && !c.state.busy && payload.event.type === 'result' && payload.event.subtype === 'success'

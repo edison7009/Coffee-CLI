@@ -49,6 +49,10 @@ impl Session {
     }
 
     fn request(&self, request: Value) -> Result<Value, String> {
+        self.request_within(request, Duration::from_secs(60))
+    }
+
+    fn request_within(&self, request: Value, timeout: Duration) -> Result<Value, String> {
         let id = uuid::Uuid::new_v4().to_string();
         let (tx, rx) = mpsc::channel();
         self.pending.lock().unwrap().insert(id.clone(), tx);
@@ -56,7 +60,7 @@ impl Session {
             self.pending.lock().unwrap().remove(&id);
             return Err(error);
         }
-        let result = rx.recv_timeout(Duration::from_secs(60)).map_err(|_| "Claude 控制请求超时，请检查进程或连接".to_string());
+        let result = rx.recv_timeout(timeout).map_err(|_| "Claude 控制请求超时，请检查进程或连接".to_string());
         self.pending.lock().unwrap().remove(&id);
         result?
     }
@@ -259,7 +263,7 @@ pub async fn claude_session_start(app: tauri::AppHandle, id: String, generation:
 }
 
 #[tauri::command]
-pub async fn claude_session_send(sessions: State<'_, ClaudeSessions>, id: String, generation: String, text: String, orchestration_delivery: Option<String>) -> Result<(), String> {
+pub async fn claude_session_send(app: tauri::AppHandle, sessions: State<'_, ClaudeSessions>, id: String, generation: String, text: String, orchestration_delivery: Option<String>) -> Result<(), String> {
     let s = get(&sessions, &id, &generation)?;
     if text.trim().is_empty() { return Err("消息不能为空".into()); }
     tauri::async_runtime::spawn_blocking(move || {
@@ -267,7 +271,7 @@ pub async fn claude_session_send(sessions: State<'_, ClaudeSessions>, id: String
         s.write_with_delivery(&json!({"type":"user","uuid":uuid::Uuid::new_v4().to_string(),"session_id":s.native_id,"parent_tool_use_id":null,"message":{"role":"user","content":content}}), orchestration_delivery.as_deref())?;
         // A slash command or `!` shell line is not what the conversation is about; wait for a real prompt.
         let prompt = text.trim_start();
-        if orchestration_delivery.is_none() && !prompt.starts_with(['/', '!']) && s.wants_title.swap(false, Ordering::SeqCst) { request_title(s, &text); }
+        if orchestration_delivery.is_none() && !prompt.starts_with(['/', '!']) && s.wants_title.swap(false, Ordering::SeqCst) { request_title(app, s, &text); }
         Ok(())
     }).await.map_err(|e| e.to_string())?
 }
@@ -276,10 +280,17 @@ pub async fn claude_session_send(sessions: State<'_, ClaudeSessions>, id: String
 /// for a short title and, with persist, appends an `ai-title` row to the transcript, which the history list
 /// already prefers over the first prompt. Best effort: an older CLI, a timeout or an error leaves the
 /// first prompt as the title.
-fn request_title(session: Arc<Session>, prompt: &str) {
+fn request_title(app: tauri::AppHandle, session: Arc<Session>, prompt: &str) {
     let description: String = prompt.trim().chars().take(2000).collect();
     if description.is_empty() { return; }
-    std::thread::spawn(move || { let _ = session.request(json!({"subtype":"generate_session_title","description":description,"persist":true})); });
+    std::thread::spawn(move || {
+        // Claude's desktop app gives up after 15 seconds; a CLI that ignores the request costs no longer.
+        let reply = session.request_within(json!({"subtype":"generate_session_title","description":description,"persist":true}), Duration::from_secs(15));
+        // The open tab takes the title too, not only the history list.
+        if let Some(title) = reply.ok().and_then(|reply| reply["title"].as_str().map(str::trim).filter(|title| !title.is_empty()).map(str::to_owned)) {
+            emit(&app, &session.id, &session, json!({"type":"coffee_title","title":title}));
+        }
+    });
 }
 
 fn user_content(text: &str) -> Result<Value, String> {

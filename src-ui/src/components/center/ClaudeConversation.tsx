@@ -290,6 +290,7 @@ export function ClaudeConversation({ sessionId, cwd, resumeToken, isActive, isVi
   useEffect(() => retainClaudeSession(sessionId, cwd, initialToken.current), [sessionId, cwd]);
   useEffect(() => { dispatch({ type: 'SET_AGENT_STATUS', id: sessionId, status: s.requests.length ? 'wait_input' : s.busy ? 'working' : 'idle' }); }, [sessionId, s.busy, s.requests.length, dispatch]);
   useEffect(() => { if (s.nativeId) dispatch({ type: 'SET_SESSION_TOKEN', id: sessionId, token: s.nativeId }); }, [sessionId, s.nativeId, dispatch]);
+  useEffect(() => { if (s.title) dispatch({ type: 'SET_TAB_TITLE', id: sessionId, title: s.title }); }, [sessionId, s.title, dispatch]);
   useEffect(() => { const scroll = scrollRef.current; if (!scroll) return; return bindAutoHideScrollbar(scroll, { wide: true }); }, []);
   const syncScroll = useCallback(() => {
     const scroll = scrollRef.current;

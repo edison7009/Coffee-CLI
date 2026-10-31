@@ -55,6 +55,8 @@ export interface ClaudeState {
   /** Tokens of the latest request, including ones restored from history, which `contextTokens` leaves out. */
   lastContextTokens: number;
   coldReturn?: ClaudeColdReturn;
+  /** Generated from a new conversation's first prompt; shown on the tab. */
+  title?: string;
   ready: boolean;
   busy: boolean;
   pendingTurns: number;
