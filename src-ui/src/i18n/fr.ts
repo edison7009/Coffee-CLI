@@ -609,7 +609,6 @@ Supprimez cette note quand vous voulez et commencez votre première tâche.`,
   'claude.time.minutes': '{minutes}min {seconds}s',
   'claude.tokens': '{count} jetons',
   'claude.collapse': 'Réduire',
-
   'conversation.show_more': 'Afficher plus',
   'claude.expand': 'Cliquer pour développer',
   'claude.tool': 'Outil',

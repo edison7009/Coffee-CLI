@@ -609,7 +609,6 @@ Apague esta nota quando quiser e comece a sua primeira tarefa.`,
   'claude.time.minutes': '{minutes}min {seconds}s',
   'claude.tokens': '{count} tokens',
   'claude.collapse': 'Recolher',
-
   'conversation.show_more': 'Mostrar mais',
   'claude.expand': 'Clique para expandir',
   'claude.tool': 'Ferramenta',

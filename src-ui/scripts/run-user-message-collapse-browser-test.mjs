@@ -34,6 +34,8 @@ try {
   const animation = (target, index) => target.locator('.claude-row--user').nth(index).evaluate(el => getComputedStyle(el).animationName);
   assert.equal(await animation(page, 2), 'claude-bubble-enter', 'a message just sent unfolds');
   assert.equal(await animation(page, 0), 'none', 'history stays still');
+  await page.waitForFunction(() => !document.querySelector('.is-entering'));
+  assert.equal(await animation(page, 2), 'none', 'returning to a hidden tab cannot replay the entrance');
   assert.equal(await toggle.count(), 1, 'a short message has no control');
   assert.equal((await bodies.nth(1).boundingBox()).height, 200);
   await page.locator('.claude-scroll').evaluate(el => { el.scrollTop = 260; });

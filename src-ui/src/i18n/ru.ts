@@ -609,7 +609,6 @@ export const ru = {
   'claude.time.minutes': '{minutes}м {seconds}с',
   'claude.tokens': 'Токены: {count}',
   'claude.collapse': 'Свернуть',
-
   'conversation.show_more': 'Показать больше',
   'claude.expand': 'Нажмите, чтобы развернуть',
   'claude.tool': 'Инструмент',

@@ -609,7 +609,6 @@ Borra esta nota cuando quieras y empieza tu primera tarea.`,
   'claude.time.minutes': '{minutes}min {seconds}s',
   'claude.tokens': '{count} tokens',
   'claude.collapse': 'Contraer',
-
   'conversation.show_more': 'Mostrar más',
   'claude.expand': 'Clic para ampliar',
   'claude.tool': 'Herramienta',

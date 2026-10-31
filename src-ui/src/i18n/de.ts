@@ -609,7 +609,6 @@ Lösch diesen Zettel, wann du willst, und starte deine erste Aufgabe.`,
   'claude.time.minutes': '{minutes}min {seconds}s',
   'claude.tokens': '{count} Token',
   'claude.collapse': 'Einklappen',
-
   'conversation.show_more': 'Mehr anzeigen',
   'claude.expand': 'Zum Erweitern klicken',
   'claude.tool': 'Werkzeug',

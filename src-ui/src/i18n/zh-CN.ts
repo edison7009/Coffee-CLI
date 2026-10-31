@@ -614,7 +614,6 @@ export const zhCN = {
   'claude.time.minutes': '{minutes}分{seconds}秒',
   'claude.tokens': '{count} 词元',
   'claude.collapse': '收起',
-
   'conversation.show_more': '显示更多',
   'claude.expand': '点击展开',
   'claude.tool': '工具',

@@ -14,11 +14,18 @@ export interface ConversationNavigationItem {
 const COLLAPSE_ABOVE = 300;
 // A message this recent was just sent; history and rows scrolled back into view stay still.
 const ENTERING_WITHIN = 3000;
+const ENTRANCE_MS = 450;
 
 /** The user's bubble. The expansion lives with the conversation, as virtual rows unmount off screen. */
 export function CollapsibleUserMessage({ sentAt, expanded, onToggle, children }: { sentAt: number; expanded: boolean; onToggle: () => void; children: ReactNode }) {
   const t = useT(), id = useId();
-  const [entering] = useState(() => Date.now() - sentAt < ENTERING_WITHIN);
+  const [entering, setEntering] = useState(() => Date.now() - sentAt < ENTERING_WITHIN);
+  // Hidden tabs use display:none, which would replay the animation on return.
+  useEffect(() => {
+    if (!entering) return;
+    const timer = setTimeout(() => setEntering(false), ENTRANCE_MS);
+    return () => clearTimeout(timer);
+  }, [entering]);
   const content = useRef<HTMLDivElement>(null), toggle = useRef<HTMLButtonElement>(null), toggleTop = useRef<number | null>(null);
   const [overflows, setOverflows] = useState(false);
   useLayoutEffect(() => {
@@ -38,7 +45,7 @@ export function CollapsibleUserMessage({ sentAt, expanded, onToggle, children }:
     if (top !== null && button && scroller) scroller.scrollTop += button.getBoundingClientRect().top - top;
   }, [expanded]);
   return <div className={`claude-user-content${entering ? ' is-entering' : ''}`}>
-    <div id={id} className={`claude-user-body${overflows && !expanded ? ' is-collapsed' : ''}`}><div ref={content}>{children}</div></div>
+    <div id={id} className={`claude-user-body${overflows && !expanded ? ' is-collapsed' : ''}`} onFocusCapture={() => { if (overflows && !expanded) onToggle(); }}><div ref={content}>{children}</div></div>
     {overflows && <button ref={toggle} type="button" className="claude-user-toggle" aria-expanded={expanded} aria-controls={id} onClick={event => {
       if (expanded) toggleTop.current = event.currentTarget.getBoundingClientRect().top;
       onToggle();
