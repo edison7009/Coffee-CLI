@@ -828,7 +828,7 @@ function getInitialState(): AppState {
   const defaultTerminalId = crypto.randomUUID();
 
   let leftPanelHidden = false;
-  let rightPanelHidden = false;
+  let rightPanelHidden = true;
   // Default 'note' (big sticky-note view) — the welcome guide + the whole
   // task-board UX are tuned for it. A saved pref in localStorage (written by
   // the SET_TASK_VIEW_MODE toggle) still wins for returning users. Previously
@@ -842,7 +842,7 @@ function getInitialState(): AppState {
   let gambitOpen = false;
   try {
     leftPanelHidden = localStorage.getItem('cc-left-hidden') === '1';
-    rightPanelHidden = localStorage.getItem('cc-right-hidden') === '1';
+    rightPanelHidden = localStorage.getItem('cc-right-hidden') !== '0';
     const savedTaskView = localStorage.getItem('cc-task-view');
     if (savedTaskView === 'list' || savedTaskView === 'note' || savedTaskView === 'prompt') taskViewMode = savedTaskView;
     const savedDiffMode = localStorage.getItem('cc-diff-mode');
