@@ -1,7 +1,8 @@
 // Plan usage and balance for the endpoint a tab's CLI is configured to call.
-// Official sign-ins report through the CLI's own protocol (Claude get_usage,
-// Codex account/rateLimits/read); third-party keys are resolved read-only from
-// the tool's configuration by the backend (src/usage_quota). Anything missing
+// In desktop conversations official sign-ins report through the CLI's own protocol
+// (Claude get_usage, Codex account/rateLimits/read). Terminal tabs have no such
+// channel, so the backend (src/usage_quota) reads their plan usage from the CLI's
+// stored sign-in; third-party keys resolve read-only from the tool's configuration. Anything missing
 // hides the meter: there is no failure state.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { invoke } from '../tauri';
@@ -103,7 +104,7 @@ export function useUsageQuota(id: string, tool: string | undefined, cwd: string 
       last.current = { key, at: Date.now() };
       loading.current = key;
       try {
-        const route = await invoke<Json>('usage_quota_query', { tool, cwd: cwd ?? null, provider: provider || null, force });
+        const route = await invoke<Json>('usage_quota_query', { tool, cwd: cwd ?? null, provider: provider || null, force, terminal: conversation === null });
         let next: Quota[] = [];
         if (route.kind === 'provider') next = providerQuotas(route.quotas);
         else if (route.kind === 'official' && conversation === 'claude') next = claudeQuotas(await controlClaude(id, { subtype: 'get_usage', skip_behaviors: true }) as Json);

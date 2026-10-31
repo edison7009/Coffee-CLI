@@ -5,6 +5,7 @@
 
 use serde::{Deserialize, Serialize};
 
+pub mod account;
 pub mod deepseek;
 pub mod kimi;
 pub mod minimax;
