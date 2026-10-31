@@ -25,9 +25,10 @@ export type ClaudeMode = 'conversation' | 'terminal';
  */
 export type AgentStatus = 'idle' | 'working' | 'wait_input';
 
-/** True only when the upstream CLI exposes authoritative state via OSC title. */
+/** True only when the upstream tool exposes authoritative state: an OSC title,
+ * or DeepSeek Harness's session protocol in its conversation tab. */
 export function supportsNativeAgentStatus(tool: ToolType): boolean {
-  return tool === 'claude' || tool === 'codex' || tool === 'omp';
+  return tool === 'claude' || tool === 'codex' || tool === 'omp' || tool === 'dsh';
 }
 
 /** OpenCode v2's process-local adapter and native titles can report status

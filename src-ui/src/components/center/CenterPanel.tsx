@@ -1212,7 +1212,7 @@ export function CenterPanel() {
           const worker = task?.detached ? undefined : task;
           const title = task?.title || (session.tool === 'muse' ? baseTitle : session.toolTitle?.trim() || baseTitle);
           const showAgentStatus = supportsAgentStatus(session.tool)
-            && (['claude', 'codex', 'kimicode', 'omp'].includes(session.tool ?? '') || session.agentStatus !== undefined);
+            && (['claude', 'codex', 'kimicode', 'omp', 'dsh'].includes(session.tool ?? '') || session.agentStatus !== undefined);
           return (
             <div
               key={session.id}
