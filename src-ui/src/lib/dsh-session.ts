@@ -4,7 +4,7 @@ import { recordSessionReply } from './session-replies';
 import { invoke } from '../tauri';
 import { arr, obj, str, emptyDshState, reduceDshNotification, restoreDshLog, type DshModel, type DshRoute, type DshState, type Json } from './dsh-protocol';
 
-interface Client { state: DshState; generation: string; listeners: Set<() => void>; owners: number; cwd: string | null; starting?: Promise<void>; closeTimer?: ReturnType<typeof setTimeout>; publishTimer?: ReturnType<typeof setTimeout> }
+interface Client { state: DshState; generation: string; listeners: Set<() => void>; owners: number; cwd: string | null; starting?: Promise<void>; switching?: Promise<void>; closeTimer?: ReturnType<typeof setTimeout>; publishTimer?: ReturnType<typeof setTimeout> }
 const clients = new Map<string, Client>();
 const EMPTY = emptyDshState();
 let listening: Promise<unknown> | undefined;
@@ -97,10 +97,17 @@ async function restart(id: string, route?: DshRoute) {
   }
 }
 export const stopDsh = (id: string) => restart(id);
-export const setDshRoute = (id: string, route: DshRoute) => restart(id, route);
+export function setDshRoute(id: string, route: DshRoute): Promise<void> {
+  const c = clients.get(id);
+  const done = restart(id, route);
+  if (c) { c.switching = done; void done.finally(() => { if (c.switching === done) c.switching = undefined; }); }
+  return done;
+}
 
 export async function sendDshMessage(id: string, prompt: string): Promise<boolean> {
   const c = clients.get(id); const text = prompt.trim();
+  // A model or effort switch reloads in the background; a message sent meanwhile goes out once it is back.
+  if (c?.switching) await c.switching;
   if (!c?.state.ready || c.state.restarting || !text) return false;
   // The configured model is missing: surface it now rather than answer from a model the user did not pick.
   if (c.state.routeError) { c.state = { ...c.state, error: c.state.routeError }; publish(c, true); return false; }
