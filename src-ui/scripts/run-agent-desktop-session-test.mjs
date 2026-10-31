@@ -9,7 +9,7 @@ import { build } from 'esbuild';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const compiled = await build({
-  stdin: { resolveDir: root, contents: `export * from './src/lib/agent-tools'; export * from './src/lib/claude-session'; export * from './src/lib/codex-session'; export { reducer } from './src/store/app-state';` },
+  stdin: { resolveDir: root, contents: `export * from './src/lib/agent-tools'; export * from './src/lib/claude-session'; export * from './src/lib/codex-session'; export * from './src/lib/dsh-session'; export { reducer } from './src/store/app-state';` },
   bundle: true, platform: 'node', format: 'cjs', write: false, external: ['react'],
   plugins: [{ name: 'desktop-transport', setup(builder) {
     builder.onLoad({ filter: /app-state\.tsx$/ }, async ({ path }) => ({ contents: `${await readFile(path, 'utf8')}\nexport { reducer };`, loader: 'tsx' }));
@@ -24,7 +24,7 @@ const compiled = await build({
 const listeners = new Map(), calls = [], releases = [], actions = [];
 let failSend = false, failSettings = false, cancelled = false, onPending;
 const emit = (name, id, event) => {
-  const start = calls.findLast(call => call.name === (name.startsWith('claude') ? 'claude_session_start' : 'codex_session_start') && call.id === id);
+  const start = calls.findLast(call => call.name === `${name.split('-')[0]}_session_start` && call.id === id);
   listeners.get(name)?.({ payload: { id, generation: start.generation, event } });
 };
 const stateRef = { current: { terminals: [], activeTerminalId: null, tabOrder: [], agentPages: [], agentPageActive: null, currentLang: 'en' } };
@@ -36,10 +36,12 @@ runInNewContext(compiled.outputFiles[0].text, {
     listen: async (name, fn) => { listeners.set(name, fn); return () => listeners.delete(name); },
     invoke: async (name, args = {}) => {
       calls.push({ name, ...args });
-      if (name === 'list_tools') return [{ id: 'claude', displayName: 'Claude Code' }, { id: 'codex', displayName: 'Codex CLI' }];
+      if (name === 'list_tools') return [{ id: 'claude', displayName: 'Claude Code' }, { id: 'codex', displayName: 'Codex CLI' }, { id: 'dsh', displayName: 'DeepSeek Harness' }];
       if (name === 'agent_validate_directory') return args.path;
       if (name === 'claude_session_start') return { sessionId: `native-${args.id}`, initialization: {}, history: { data: JSON.stringify({ type: 'assistant', message: { id: 'seed', content: [{ type: 'text', text: 'Existing Claude answer' }] } }), cursor: 42 } };
       if (name === 'codex_session_start') return { thread: { id: `native-${args.id}`, turns: [{ id: 'previous', status: 'completed', items: [{ id: 'answer', type: 'agentMessage', text: 'Existing Codex answer' }, { id: 'command', type: 'commandExecution', status: 'completed', command: 'npm test', aggregatedOutput: 'Tests passed' }] }] }, turnsBackwardsCursor: 'older', models: [] };
+      if (name === 'dsh_session_start') return { sessionId: `native-${args.id}`, route: { provider: 'deepseek-account', model: 'deepseek-flash' }, models: [], commands: false };
+      if (name === 'dsh_session_request') { if (failSend) throw Error('lost reply'); return { messageId: 'message' }; }
       if (name === 'claude_session_history') return { data: JSON.stringify({ type: 'assistant', message: { id: 'older', content: [{ type: 'text', text: 'Older Claude history' }] } }), cursor: 0 };
       if (name === 'claude_session_control') {
         if (args.request.subtype === 'get_settings' && failSettings) throw Error('Settings readback unavailable');
@@ -59,7 +61,7 @@ runInNewContext(compiled.outputFiles[0].text, {
   },
 });
 const api = module.exports;
-const mount = tab => releases.push(tab.tool === 'claude' ? api.retainClaudeSession(tab.id, tab.folderPath) : api.retainCodexSession(tab.id, tab.folderPath));
+const mount = tab => releases.push(tab.tool === 'dsh' ? api.retainDshSession(tab.id, tab.folderPath) : tab.tool === 'claude' ? api.retainClaudeSession(tab.id, tab.folderPath) : api.retainCodexSession(tab.id, tab.folderPath));
 const dispatch = action => {
   actions.push(action); stateRef.current = api.reducer(stateRef.current, action);
   if (action.type === 'LAUNCH_TERMINAL_TOOL') mount(stateRef.current.terminals.find(tab => tab.id === action.id));
@@ -180,5 +182,36 @@ try {
     assert.equal(stateRef.current.terminals.find(tab => tab.id === opened.sessionId)[`${tool}Mode`], 'conversation');
     await execute('sessions_close', { sessionId: opened.sessionId, generation: opened.generation });
   }
+  // DeepSeek Harness has no interrupt call: CtrlC restarts its runtime into the same Session under a new generation.
+  const dshTab = { id: 'dsh', tool: 'dsh', folderPath: 'D:/dsh' };
+  dispatch({ type: 'ADD_TERMINAL', session: dshTab }); mount(dshTab); await waitReady('dsh');
+  const dshArgs = await target('dsh');
+  assert.equal((await execute('sessions_list')).sessions.find(s => s.sessionId === 'dsh').mode, 'desktop');
+  const dshEvent = event => emit('dsh-session-event', 'dsh', { method: 'session.event', params: { sessionId: 'native-dsh', event } });
+  dshEvent({ type: 'tool/call', seq: 1, time: 1, data: { turn: 1, callId: 'call', name: 'pwsh', arguments: '{"command":"npm test"}' } });
+  dshEvent({ type: 'tool/result', seq: 2, time: 2, data: { turn: 1, message: { toolCallId: 'call', content: [{ type: 'text', text: 'Tests passed' }] } } });
+  const dshScreen = await execute('terminal_read_screen', dshArgs);
+  assert.equal(dshScreen.source, 'desktop-session'); assert.equal(dshScreen.nativeSessionId, 'native-dsh');
+  assert.ok(lineText(dshScreen).includes('npm test') && lineText(dshScreen).includes('Tests passed'));
+  const dshSent = await execute('terminal_send', { ...dshArgs, text: 'Update the existing task' });
+  assert.equal(dshSent.written, true); assert.equal(dshSent.screen.busy, true);
+  const dshPrompt = calls.findLast(call => call.name === 'dsh_session_request');
+  assert.equal(dshPrompt.method, 'session/prompt'); assert.equal(dshPrompt.params.contentBlocks[0].text, 'Update the existing task');
+  await assert.rejects(execute('terminal_send', { ...dshArgs, text: 'Duplicate' }), /正在执行/);
+  emit('dsh-session-event', 'dsh', { id: 'coffee-1', method: 'approval/request', params: { toolName: 'write', requestId: 'coffee-1' } });
+  const dshWaiting = await execute('terminal_read_screen', dshArgs);
+  assert.equal(dshWaiting.status, 'wait_input'); assert.equal(JSON.stringify(dshWaiting.pendingRequests), JSON.stringify([{ id: 'coffee-1', kind: 'approval/request' }]));
+  const dshStarts = calls.filter(call => call.name === 'dsh_session_start').length;
+  assert.equal((await execute('terminal_key', { ...dshArgs, key: 'CtrlC' })).written, true);
+  assert.equal(calls.filter(call => call.name === 'dsh_session_start').length, dshStarts + 1);
+  assert.equal(calls.findLast(call => call.name === 'dsh_session_start').resumeToken, 'native-dsh');
+  await assert.rejects(execute('terminal_read_screen', dshArgs), /关闭或重启/);
+  const dshResumed = await target('dsh');
+  assert.equal((await execute('terminal_read_screen', dshResumed)).status, 'idle');
+  await execute('sessions_close', dshResumed);
+  assert.ok(calls.some(call => call.name === 'dsh_session_close' && call.generation === calls.findLast(start => start.name === 'dsh_session_start').generation));
+  const dshOpened = await execute('sessions_open', { tool: 'dsh', cwd: 'D:/selected' });
+  assert.equal(dshOpened.ready, true); assert.equal(dshOpened.mode, 'desktop');
+  await execute('sessions_close', { sessionId: dshOpened.sessionId, generation: dshOpened.generation });
   console.log('OK: same-session desktop observation, tool output, history, dispatch, interruption, close, permissions, local drafts, stale generations, cancellation, workspace changes, uncertain delivery and desktop open defaults');
 } finally { releases.forEach(release => release()); await new Promise(resolve => setTimeout(resolve, 350)); }
