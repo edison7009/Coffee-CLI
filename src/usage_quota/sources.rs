@@ -63,7 +63,7 @@ fn builtin(provider: &str) -> Option<(&'static str, &'static str)> {
 
 fn endpoint(base_url: Option<String>, api_key: Option<String>) -> Route {
     let (Some(base_url), Some(api_key)) = (base_url.filter(|s| !s.trim().is_empty()), api_key.filter(|s| !s.trim().is_empty())) else { return Route::Unknown };
-    // A local proxy (cc-switch, a gateway) hides the provider behind it.
+    // A local proxy or gateway hides the provider behind it.
     let local = url::Url::parse(&base_url).ok().and_then(|url| url.host_str().map(str::to_ascii_lowercase))
         .is_none_or(|host| matches!(host.as_str(), "localhost" | "127.0.0.1" | "[::1]" | "::1" | "0.0.0.0"));
     if local { Route::Unknown } else { Route::Endpoint { base_url: base_url.trim().to_string(), api_key: api_key.trim().to_string() } }

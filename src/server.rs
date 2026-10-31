@@ -2144,8 +2144,7 @@ fn apply_codex_thread_names(history_dir: &std::path::Path, sessions: &mut [Saved
 ///     predate the `thread_source` field.
 ///   - `thread_source == "subagent"` (`ThreadSource::Subagent`).
 ///
-/// Mirrors orca's `isCodexWorkerSession` and cc-switch's `is_subagent_source`,
-/// both validated against real Codex Desktop data.
+/// Validated against real Codex Desktop data.
 fn is_codex_subagent_session(payload: &serde_json::Value) -> bool {
     // Primary: the `source` enum. `contains_key("subagent")` matches regardless
     // of which `SubAgentSource` variant is nested (thread_spawn object, "review"
