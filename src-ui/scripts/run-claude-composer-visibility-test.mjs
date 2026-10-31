@@ -16,30 +16,32 @@ function evaluate(file, name, context = {}) {
 }
 const isClaudeConversation = evaluate('lib/chat-tools.ts', 'isClaudeConversation');
 const isCodexConversation = evaluate('lib/chat-tools.ts', 'isCodexConversation');
-const isConversationSession = evaluate('lib/chat-tools.ts', 'isConversationSession', { isClaudeConversation, isCodexConversation });
+const isDshConversation = evaluate('lib/chat-tools.ts', 'isDshConversation');
+const isConversationSession = evaluate('lib/chat-tools.ts', 'isConversationSession', { isClaudeConversation, isCodexConversation, isDshConversation });
 const splitSessionIds = evaluate('lib/session-split-layout.ts', 'splitSessionIds');
 const replaceSplitSession = evaluate('lib/session-split-layout.ts', 'replaceSplitSession', { splitSessionIds });
 const reducer = evaluate('store/app-state.tsx', 'reducer', { isConversationSession, replaceSplitSession, getTabOrder: state => state.tabOrder });
 const terminals = [{ id: 'claude', tool: 'claude' }, { id: 'terminal', tool: null }];
 let state;
 const effects = [];
-const terminalSends = [], claudeSends = [], codexSends = [];
+const terminalSends = [], claudeSends = [], codexSends = [], dshSends = [];
 let team = { enabled: false, agents: [], coordinators: [] };
 const context = {
-  isClaudeConversation, isCodexConversation, isConversationSession,
+  isClaudeConversation, isCodexConversation, isDshConversation, isConversationSession,
   useAppState: () => ({ state, dispatch: action => { state = reducer(state, action); } }),
   useAppStateRef: () => ({ get current() { return state; } }),
   useAppDispatch: () => context.useAppState().dispatch,
   useOrchestration: () => team,
   useSessionControls: () => [],
   useCallback: fn => fn, useEffect: fn => effects.push(fn), useT: () => key => key,
-  useClaudeSession: () => ({ busy: false }), useCodexSession: () => ({ busy: false }), getToolIcon: () => '',
+  useClaudeSession: () => ({ busy: false }), useCodexSession: () => ({ busy: false }), useDshSession: () => false, stopDsh: async () => {}, getToolIcon: () => '',
   schemeLabels: () => ({ left: 'Alt+Q', gambit: 'Alt+W', right: 'Alt+E' }),
   React: { createElement: (type, props, ...children) => ({ type, props, children }) },
   Gambit: 'gambit', Changelog: 'changelog', IS_MACOS: false,
   submitTerminalPrompt: async (id, text) => terminalSends.push({ id, text }),
   sendClaudeMessage: async (id, text) => { claudeSends.push({ id, text }); return true; },
   sendCodexMessage: async (id, text) => { codexSends.push({ id, text }); return true; },
+  sendDshMessage: async (id, text) => { dshSends.push({ id, text }); return true; },
 };
 context.basename = evaluate('components/center/ActiveGambit.tsx', 'basename');
 context.sendSessionPrompt = evaluate('lib/send-session-prompt.ts', 'sendSessionPrompt', context);
@@ -133,6 +135,16 @@ for (const codexMode of ['conversation', 'terminal']) {
   assert.equal(restarted.terminals[0].codexMode, codexMode);
 }
 console.log('OK: Codex conversation uses its own backend, keeps its composer and retains mode on reconnect');
+for (const preference of [false, true]) {
+  state = { terminals: [{ id: 'dsh-desktop', tool: 'dsh' }], activeTerminalId: 'dsh-desktop', gambitOpen: preference, agentPageActive: null, diffTabActive: false };
+  assert.equal(host().type, 'gambit', 'DeepSeek Harness always has its composer');
+  assert.equal(host().props.dsh, true);
+  assert.equal(toggle().props.disabled, true);
+  assert.equal(await host().props.onSend('/compact'), true);
+  assert.deepEqual(dshSends.at(-1), { id: 'dsh-desktop', text: '/compact' });
+  assert.equal(terminalSends.some(send => send.id === 'dsh-desktop'), false, 'no PTY path exists for DeepSeek Harness');
+}
+console.log('OK: DeepSeek Harness is a desktop-only conversation with its own send path');
 team = { enabled: true, agents: ['codex'], coordinators: ['claude'] };
 state = {terminals:[{id:'claude',tool:'claude',claudeMode:'conversation',folderPath:'D:/Project'}],activeTerminalId:'claude',gambitOpen:true};
 assert.equal(host().props.orchestration,true);

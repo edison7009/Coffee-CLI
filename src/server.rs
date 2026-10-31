@@ -4463,6 +4463,24 @@ fn load_native_history_blocking() -> Result<Vec<SavedSession>, String> {
         find_grok_sessions(_home, &mut result);
     }
 
+    // DeepSeek Harness second pass - per-Session dirs under ~/.dsh/sessions with
+    // zstd logs; titles and times come from its own projection cache, so no log
+    // is decompressed. Desktop-only tool: resume opens a conversation tab.
+    for entry in crate::dsh_session::history_entries(200) {
+        result.push(SavedSession {
+            id: format!("dsh_native_{}", entry.session_id),
+            name: entry.title.unwrap_or_else(|| "DeepSeek Harness Session".to_string()),
+            tool: "dsh".to_string(),
+            cwd: entry.cwd,
+            session_token: Some(entry.session_id),
+            saved_at: entry.last_ms.to_string(),
+            created_at: entry.created_ms.map(|ms| ms.to_string()),
+            file_path: Some(entry.log.to_string_lossy().into_owned()),
+            turn_count: entry.turns,
+            git_context: None,
+        });
+    }
+
     // Collapse any Claude-worktree cwd to its project root, for every tool's
     // sessions (a session launched from <project>/.claude/worktrees/<x> should
     // resume in <project>, not the ephemeral worktree). No-op for normal dirs;

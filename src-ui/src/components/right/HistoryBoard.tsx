@@ -38,6 +38,7 @@ import HERMES_DATA_URL from '../../icons-inline/hermes.png?inline';
 import OPENCODE_DATA_URL from '../../icons-inline/opencode.png?inline';
 // Kimi Code (PNG squircle) — fixed-color brand mark, ?inline data URI.
 import KIMICODE_DATA_URL from '../../icons-inline/kimicode.png?inline';
+import DSH_DATA_URL from '../../icons-inline/dsh.png?inline';
 // Pi is a fixed-color brand mark, rendered as an INLINE SVG so it shares the
 // synchronous rendering path used by CenterPanel (?raw + inlineSvgIcon).
 import PI_SVG from '../../icons-inline/pi.svg?raw';
@@ -82,6 +83,7 @@ const TOOL_ICON_SRC: Record<string, string> = {
   aider:       AIDER_DATA_URL,
   crush:       CRUSH_DATA_URL,
   muse:        MUSE_DATA_URL,
+  dsh:         DSH_DATA_URL,
 };
 
 const TOOL_ICON_SVG: Record<string, string> = {
@@ -103,7 +105,7 @@ const getToolIcon = (tool: string) => {
   }
   const src = TOOL_ICON_SRC[tool];
   if (!src) return null;
-  const extra = (tool === 'hermes' || tool === 'opencode' || tool === 'kilo') ? { borderRadius: 'var(--radius-xs)', objectFit: 'cover' as const }
+  const extra = (tool === 'hermes' || tool === 'opencode' || tool === 'kilo' || tool === 'dsh') ? { borderRadius: 'var(--radius-xs)', objectFit: 'cover' as const }
     : tool === 'kimicode' ? { borderRadius: 'var(--radius-xs)', objectFit: 'contain' as const }
     : {};
   return <img src={src} alt="" style={{ width: '1em', height: '1em', flexShrink: 0, objectFit: 'contain', ...extra }}/>;

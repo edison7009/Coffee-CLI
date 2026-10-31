@@ -290,6 +290,52 @@ fn read_log(path: &Path) -> Result<Vec<Value>, String> {
     Ok(complete.lines().filter_map(|line| serde_json::from_str(line).ok()).collect())
 }
 
+pub(crate) struct HistoryEntry { pub session_id: String, pub title: Option<String>, pub cwd: String, pub created_ms: Option<u64>, pub last_ms: u64, pub turns: Option<u32>, pub log: PathBuf }
+
+/// Persisted root Sessions, newest first. Metadata comes from DeepSeek Harness's own projection cache
+/// (the same rows its Session list reads), so no log is decompressed; blank Sessions are skipped.
+pub(crate) fn history_entries(limit: usize) -> Vec<HistoryEntry> { history_in(&dsh_home(), limit) }
+
+fn history_in(home: &Path, limit: usize) -> Vec<HistoryEntry> {
+    let mut logs: Vec<(std::time::SystemTime, String, PathBuf)> = std::fs::read_dir(home.join("sessions")).into_iter().flatten().flatten()
+        .flat_map(|workspace| std::fs::read_dir(workspace.path()).into_iter().flatten().flatten())
+        .filter_map(|dir| {
+            let id = dir.file_name().to_string_lossy().into_owned();
+            let log = session_log(home, &id)?;
+            Some((std::fs::metadata(&log).and_then(|m| m.modified()).ok()?, id, log))
+        }).collect();
+    logs.sort_by(|a, b| b.0.cmp(&a.0));
+    let mut entries = Vec::new();
+    for (modified, session_id, log) in logs {
+        if entries.len() >= limit { break; }
+        let cache: Value = std::fs::read_to_string(home.join("storages/session_projcache/sessions").join(format!("{session_id}.json"))).ok()
+            .and_then(|text| serde_json::from_str(&text).ok()).unwrap_or(Value::Null);
+        let rows = &cache["record"]["rows"];
+        if rows["sessionListMetadata"]["val"]["blank"] == true { continue; }
+        let modified_ms = modified.duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(0);
+        let cwd = cache["record"]["identity"]["cwd"].as_str().map(String::from)
+            .or_else(|| read_log_header(&log).and_then(|header| header["cwd"].as_str().map(String::from))).unwrap_or_default();
+        entries.push(HistoryEntry {
+            title: rows["title"]["val"].as_str().filter(|t| !t.trim().is_empty()).map(String::from),
+            cwd,
+            created_ms: cache["record"]["identity"]["createdAt"].as_u64(),
+            last_ms: rows["sessionListMetadata"]["val"]["lastPromptAt"].as_u64().unwrap_or(modified_ms),
+            turns: rows["sessionStats"]["val"]["turns"].as_u64().map(|n| n as u32),
+            session_id, log,
+        });
+    }
+    entries
+}
+
+/// The first row only: the Session header carries the workspace when no projection cache exists yet.
+fn read_log_header(path: &Path) -> Option<Value> {
+    let file = std::fs::File::open(path).ok()?;
+    let mut line = String::new();
+    if path.extension().is_some_and(|e| e == "zstd") { BufReader::new(zstd::stream::read::Decoder::new(file).ok()?).read_line(&mut line).ok()?; }
+    else { BufReader::new(file).read_line(&mut line).ok()?; }
+    serde_json::from_str(line.trim()).ok()
+}
+
 #[tauri::command]
 pub async fn dsh_session_history(session_id: String) -> Result<Vec<Value>, String> {
     tauri::async_runtime::spawn_blocking(move || match session_log(&dsh_home(), &session_id) { Some(path) => read_log(&path), None => Ok(Vec::new()) })
@@ -327,6 +373,27 @@ mod tests {
         let rows = read_log(&path).unwrap();
         assert_eq!(rows.iter().map(|r| r["type"].as_str().unwrap()).collect::<Vec<_>>(), ["session", "user/message", "turn/end"]);
         assert!(session_log(&root, "../escape").is_none());
+        std::fs::remove_dir_all(root).unwrap();
+    }
+    #[test]
+    fn history_lists_cached_sessions_newest_first_and_skips_blanks() {
+        let root = std::env::temp_dir().join(format!("coffee-dsh-hist-{}", uuid::Uuid::new_v4()));
+        let write_log = |id: &str, cwd: &str| {
+            let dir = root.join("sessions/--D-repo--").join(id); std::fs::create_dir_all(&dir).unwrap();
+            std::fs::write(dir.join("session.v4.jsonl.zstd"), zstd::encode_all(format!("{{\"type\":\"session\",\"id\":\"{id}\",\"cwd\":{cwd:?}}}\n").as_bytes(), 3).unwrap()).unwrap();
+            std::thread::sleep(Duration::from_millis(20));
+        };
+        let cache = root.join("storages/session_projcache/sessions"); std::fs::create_dir_all(&cache).unwrap();
+        write_log("session-old", "D:\\old");
+        write_log("session-blank", "D:\\blank");
+        write_log("session-new", "D:\\repo");
+        std::fs::write(cache.join("session-new.json"), r#"{"version":7,"record":{"identity":{"cwd":"D:\\repo","createdAt":5},"rows":{"title":{"val":"Fix the build"},"sessionListMetadata":{"val":{"blank":false,"lastPromptAt":42}},"sessionStats":{"val":{"turns":3}}}}}"#).unwrap();
+        std::fs::write(cache.join("session-blank.json"), r#"{"record":{"rows":{"sessionListMetadata":{"val":{"blank":true}}}}}"#).unwrap();
+        let entries = history_in(&root, 10);
+        assert_eq!(entries.iter().map(|e| e.session_id.as_str()).collect::<Vec<_>>(), ["session-new", "session-old"]);
+        assert_eq!((entries[0].title.as_deref(), entries[0].last_ms, entries[0].turns, entries[0].created_ms), (Some("Fix the build"), 42, Some(3), Some(5)));
+        assert_eq!((entries[1].title.as_deref(), entries[1].cwd.as_str()), (None, "D:\\old"), "an uncached Session falls back to its log header");
+        assert_eq!(history_in(&root, 1).len(), 1);
         std::fs::remove_dir_all(root).unwrap();
     }
     #[test]
