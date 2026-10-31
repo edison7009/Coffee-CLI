@@ -136,7 +136,7 @@ export function reduceClaudeEvent(state: ClaudeState, frame: Json, now = Date.no
     const id = `${s.currentMessageId}:${number(e.index)}`;
     if (e.type === 'message_start') {
       if (!s.busy) s.startedAt = now;
-      s.busy = true;
+      s.busy = true; s.suggestion = undefined;
       s.currentMessageId = text(object(e.message).id);
       s.status = 'working';
     } else if (e.type === 'content_block_start') {
@@ -239,6 +239,7 @@ export function reduceClaudeEvent(state: ClaudeState, frame: Json, now = Date.no
       }
     }
   } else if (frame.type === 'coffee_exit') {
+    s.suggestion = undefined;
     const busy = s.busy; finish(); s.ready = false; s.pendingTurns = 0; s.sentSinceResult = 0; s.requests = []; s.backgroundTasks = [];
     s.interruptRequested = false;
     if (number(frame.code) !== 0 || busy) { s.error = text(frame.detail); s.errorKey = s.error ? undefined : 'claude.error.process_exited'; s.error ||= 'Claude process exited'; }

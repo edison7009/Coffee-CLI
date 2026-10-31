@@ -160,6 +160,7 @@ export function ActiveGambit() {
       computer={controlsReady && controls.includes('computer')}
       browser={controlsReady && controls.includes('browser')}
       claude={isClaude}
+      suggestion={isClaude ? claude.suggestion : undefined}
       codex={isCodex}
       dsh={isDsh}
       opencode={isOpenCode}

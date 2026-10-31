@@ -568,7 +568,7 @@ console.log('OK: actual tool-card folder selection uses the same launch action a
   assert.deepEqual(actions.map(action => action.type), ['OPEN_AGENT_PAGE']);
   await click({ id: 'claude-history', tool: 'claude', cwd: 'E:\\tmp', session_token: 'native-resume' });
   assert.deepEqual(actions.slice(1).map(action => action.type), ['ADD_TERMINAL']);
-  await click({ id: 'claude-renamed', tool: 'claude', name: 'History title', cwd: 'E:\tmp', session_token: 'native-renamed' });
+  await click({ id: 'claude-renamed', tool: 'claude', name: 'History title', cwd: 'E:\\tmp', session_token: 'native-renamed' });
   assert.equal(actions.at(-1).session.toolTitle, 'History title', 'a reopened tab starts under its history title');
   assert.equal(actions.at(-1).session.pinnedTitle, 'My name', 'the name the user gave it outranks later tool titles');
   const filtered = evaluate(filter, {

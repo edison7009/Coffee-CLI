@@ -28,7 +28,6 @@ import { OpenCodeComposerControls } from './OpenCodeComposerControls';
 import { DshComposerControls } from './DshComposerControls';
 import { UsageMeter } from './UsageMeter';
 import { useUsageQuota } from '../../lib/usage-quota';
-import { useClaudeSuggestion } from '../../lib/claude-session';
 import { gambitAttachments, removeGambitAttachment } from '../../lib/gambit-attachments';
 import './Gambit.css';
 
@@ -45,6 +44,8 @@ interface GambitProps {
   onSend: (text: string) => boolean | Promise<boolean>;
   running?: boolean;
   claude?: boolean;
+  /** The agent's guess at the next prompt, offered while the composer is empty; Tab takes it. */
+  suggestion?: string;
   codex?: boolean;
   /** DeepSeek Harness desktop conversation (always desktop in Coffee CLI). */
   dsh?: boolean;
@@ -122,6 +123,7 @@ function GambitImpl({
   onClose,
   onSend,
   running = false,
+  suggestion: offered,
   claude = false,
   codex = false,
   dsh = false,
@@ -146,9 +148,7 @@ function GambitImpl({
   const steerable = claude || dsh || opencode;
   const usage = useUsageQuota(sessionId, tool, cwd, claude ? 'claude' : codex ? 'codex' : dsh ? 'dsh' : null);
   const usageMeter = <UsageMeter quotas={usage.quotas} onRefresh={usage.refresh} />;
-  // Claude's guess at the next prompt shows as the empty composer's placeholder; Tab takes it.
-  const claudeSuggestion = useClaudeSuggestion(sessionId, !!claude);
-  const suggestion = draft ? undefined : claudeSuggestion;
+  const suggestion = draft ? undefined : offered;
   const rootRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const claudeKeyHandler = useRef<((event: React.KeyboardEvent<HTMLTextAreaElement>) => boolean) | undefined>(undefined);
@@ -630,7 +630,7 @@ function GambitImpl({
     // candidates. nativeEvent.isComposing is the canonical flag.
     if (e.nativeEvent.isComposing) return;
     if (desktop && claudeKeyHandler.current?.(e)) return;
-    if (e.key === 'Tab' && !e.shiftKey && suggestion) {
+    if (e.key === 'Tab' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey && suggestion) {
       e.preventDefault();
       onDraftChange(suggestion);
       return;
@@ -787,13 +787,16 @@ function GambitImpl({
           ref={textareaRef}
           className="gambit-textarea"
           value={draft}
-          placeholder={suggestion ?? t('gambit.placeholder', { send: sendCombo, newline: newlineCombo })}
+          placeholder={suggestion ? undefined : t('gambit.placeholder', { send: sendCombo, newline: newlineCombo })}
           onChange={(e) => onDraftChange(e.target.value)}
           onKeyDown={onKeyDown}
           onPaste={onPaste}
           spellCheck={false}
           rows={1}
+          aria-description={suggestion}
         />
+        {/* Not the placeholder: that cannot end in an ellipsis, and a long guess would be silently cut. */}
+        {suggestion && <div className="gambit-suggestion" aria-hidden="true">{suggestion}</div>}
       </div>
 
       <div className={`gambit-footer${desktop ? ' gambit-footer--claude' : ''}${!desktop && attachable ? ' gambit-footer--attach' : ''}${capabilitiesStatus ? ' gambit-footer--capabilities' : ''}`}>

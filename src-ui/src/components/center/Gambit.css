@@ -212,6 +212,27 @@
     opacity: 0.55;
 }
 
+/* The agent's guess at the next prompt, laid over the empty textarea's first line. */
+.gambit-suggestion {
+    position: absolute;
+    top: 10px;
+    left: 14px;
+    right: 14px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    color: var(--text-2, #9e9c98);
+    opacity: 0.55;
+    font-family: var(--font, inherit);
+    font-size: 14px;
+    line-height: 1.5;
+    pointer-events: none;
+}
+
+.gambit.gambit--docked .gambit-suggestion {
+    top: 4px;
+}
+
 /* ─── Workspace label (footer, far left) ───────────────────── */
 /* Read-only target label, styled like the desktop composer's controls.
    Long names ellipsize so they cannot displace the send button. */

@@ -52,10 +52,6 @@ export function useClaudeSession<T>(id: string, select: (state: ClaudeState) => 
 export function useClaudeSession(id: string, select: (state: ClaudeState) => unknown = state => state) {
   return useSyncExternalStore(fn => { const c = client(id); c.listeners.add(fn); return () => { c.listeners.delete(fn); }; }, () => select(clients.get(id)?.state ?? EMPTY), () => select(EMPTY));
 }
-/** For the shared composer, which also serves tabs that have no Claude session. */
-export function useClaudeSuggestion(id: string, enabled: boolean): string | undefined {
-  return useSyncExternalStore(fn => { if (!enabled) return () => {}; const c = client(id); c.listeners.add(fn); return () => { c.listeners.delete(fn); }; }, () => enabled ? clients.get(id)?.state.suggestion : undefined, () => undefined);
-}
 export function getClaudeSession(id: string): ClaudeState { return clients.get(id)?.state ?? EMPTY; }
 export function getClaudeConnection(id: string) {
   const c = clients.get(id);
@@ -141,7 +137,7 @@ export async function sendClaudeInteractive(id: string, prompt: string): Promise
   try { dismissed = localStorage.getItem(COLD_RETURN_NEVER) === '1'; } catch { /* optional preference */ }
   const cold = dismissed || prompt.startsWith('/') ? null : coldReturn(c.state, Date.now());
   if (!cold) return sendClaudeMessage(id, prompt);
-  c.state = { ...c.state, coldReturn: { ...cold, prompt } }; publish(c, true);
+  c.state = { ...c.state, suggestion: undefined, coldReturn: { ...cold, prompt } }; publish(c, true);
   return true;
 }
 /** Settles the held prompt in this conversation; returns it so `cancel` can put it back in the composer. */
@@ -170,7 +166,7 @@ export async function sendClaudeMessage(id: string, prompt: string, orchestratio
     messages: orchestrationDelivery ? c.state.messages : [...c.state.messages, { id: pendingId, renderKey: pendingId, role: 'user', content: prompt, timestamp: now }] };
   publish(c, true);
   try { await invoke('claude_session_send', { id, generation: c.generation, text: prompt, orchestrationDelivery }); return true; }
-  catch (error) { c.state = { ...c.state, busy: snapshot.busy, pendingTurns: Math.max(0, c.state.pendingTurns - 1), sentSinceResult: Math.max(0, c.state.sentSinceResult - 1), status: snapshot.status, messages: c.state.messages.filter(m => m.id !== pendingId), ...(orchestrationDelivery ? {} : { error: String(error), errorKey: undefined }) }; publish(c, true); return false; }
+  catch (error) { c.state = { ...c.state, busy: snapshot.busy, suggestion: snapshot.suggestion, pendingTurns: Math.max(0, c.state.pendingTurns - 1), sentSinceResult: Math.max(0, c.state.sentSinceResult - 1), status: snapshot.status, messages: c.state.messages.filter(m => m.id !== pendingId), ...(orchestrationDelivery ? {} : { error: String(error), errorKey: undefined }) }; publish(c, true); return false; }
 }
 
 export async function loadClaudeHistory(id: string): Promise<void> {

@@ -165,5 +165,11 @@ test('a predicted next prompt is kept only while no prompt has moved past it', (
   assert.equal(s.messages.length, 0, 'a suggestion is not a transcript row');
   s = reduceClaudeEvent({ ...emptyClaudeState(), busy: true }, { type: 'prompt_suggestion', suggestion: 'late' }, 1000);
   assert.equal(s.suggestion, undefined, 'a guess for a turn already answered by a new prompt is dropped');
+  s = reduceClaudeEvent(emptyClaudeState(), { type: 'prompt_suggestion', suggestion: 'kept' }, 1000);
+  s = reduceClaudeEvent(s, stream({ type: 'message_start', message: { id: 'm1' } }), 1100);
+  assert.equal(s.suggestion, undefined, 'a turn the user did not start still moves past the guess');
+  s = reduceClaudeEvent(emptyClaudeState(), { type: 'prompt_suggestion', suggestion: 'kept' }, 1000);
+  s = reduceClaudeEvent(s, { type: 'coffee_exit', code: 1 }, 1100);
+  assert.equal(s.suggestion, undefined, 'a session that exited offers nothing to send to');
 });
 console.log(`${passed} Claude protocol checks passed`);

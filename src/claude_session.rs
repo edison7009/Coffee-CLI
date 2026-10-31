@@ -133,7 +133,7 @@ fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<Stri
     #[cfg(not(windows))]
     { command = Command::new(&bin); }
     command.args(prefix).args(&config.extra_args)
-        .args(["-p", "--verbose", "--input-format", "stream-json", "--output-format", "stream-json", "--include-partial-messages", "--permission-prompt-tool", "stdio", "--allow-dangerously-skip-permissions", "--prompt-suggestions", "true"])
+        .args(["-p", "--verbose", "--input-format", "stream-json", "--output-format", "stream-json", "--include-partial-messages", "--permission-prompt-tool", "stdio", "--allow-dangerously-skip-permissions"])
         .env_remove("CLAUDECODE").env("CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS", "1")
         .current_dir(&cwd).stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped());
     let resume_token = resume_token.filter(|s| !s.is_empty());
@@ -219,7 +219,9 @@ fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<Stri
         let mut map = sessions.0.lock().unwrap();
         if map.get(&watcher_id).is_some_and(|live| Arc::ptr_eq(live, &s)) { map.remove(&watcher_id); }
     });
-    let initialized = session.request(json!({"subtype":"initialize"}));
+    // Asked for here, not with --prompt-suggestions: a CLI without the feature ignores the field, but an
+    // unknown flag would stop the tab from starting. A worker tab has no one to offer a prediction to.
+    let initialized = session.request(json!({"subtype":"initialize","promptSuggestions":!crate::orchestration::is_worker(&id)}));
     // Read at startup, and it can quote the previous conversation.
     if let Some(path) = prompt_file { let _ = std::fs::remove_file(path); }
     match initialized {
