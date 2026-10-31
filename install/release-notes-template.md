@@ -1,74 +1,79 @@
 <details open>
 <summary><b>🇨🇳 简体中文</b></summary>
 
-### Coffee CLI v3.8.1 · 支持 DeepSeek Harness，桌面对话更舒适
+### Coffee CLI v3.8.2 · 支持 OpenCode 桌面对话，回到旧对话更省额度
 
-- **DeepSeek Harness 桌面对话：** 新增桌面对话标签，支持历史记录、切换模型和思考强度、查看余额，回复进行中也能切换权限；首页有 5 个随机开场动画。首次启动时，启动台默认置顶 DeepSeek Harness 和 Pi。
-- **审批和提问弹窗：** DeepSeek Harness 需要确认操作或向你提问时会弹出卡片；顶部标签用绿、橙、蓝显示空闲、工作中和等待选择。
-- **应用配置全面支持：** 主记忆、技能、电脑控制、浏览器控制和使用统计都已支持 DeepSeek Harness，它还能作为多智能体编排的工作代理，Coffee Agent 也能控制它的窗口。
-- **桌面对话更舒适：** Claude Code、Codex 和 DeepSeek Harness 的字号、行距和气泡都放大放松；发送消息时气泡带动画展开，很长的消息自动折叠，可随时展开。
-- **用量一眼可见：** 输入框的模型旁显示当前工具的套餐用量或余额。
-- **Claude Code：** 显示后台运行的任务，工作图标换成四点样式，并修复空闲会话被误显示为工作中的问题。
-- **Codex：** 修复历史消息的时间显示。
+- **OpenCode 桌面对话：** 新增桌面对话标签，支持切换模型、Build/Plan 和思考强度，可以审批权限、回答提问，也能选择启动命令。首页带 OpenCode 经典 logo 动画。用量统计、电脑控制和浏览器控制都已支持。
+- **回到旧对话更省额度：** Claude Code 对话闲置超过 70 分钟、上下文又很大时，发消息前会先询问：可以开一个新对话接着聊，避免重新加载整段上下文、一次消耗大量额度。Codex 闲置超过 12 小时也会询问。
+- **文件路径可点击：** 对话和终端里的文件路径，悬停时显示下划线，点击在资源管理器中显示，右键可复制路径。
+- **用量显示更完整：** 终端模式也显示账号套餐用量或 API 余额；切换标签后用量不再丢失；能读取 OpenCode 2 的密钥。
+- **历史记录更清爽：** 每个项目先显示 5 条对话，点击“显示更多”展开。
+- **Claude Code 斜杠命令多语言：** 命令说明已翻译成 11 种语言。
+- **界面更紧凑：** 右侧面板默认关闭，需要时再打开；默认窗口宽度从 1600 改为 1280。
+- **问题修复：** Claude Code 回复中途追加消息后，不再一直显示“工作中”；OpenCode 子代理请求权限时能弹出审批卡片；修复 OpenCode 选择默认强度时报错，以及子任务按钮颜色不对。
 
 </details>
 
 <details>
 <summary><b>🇬🇧 English</b></summary>
 
-### Coffee CLI v3.8.1 · DeepSeek Harness Support, More Comfortable Conversations
+### Coffee CLI v3.8.2 · OpenCode Desktop Conversations, Cheaper Returns to Old Chats
 
-- **DeepSeek Harness desktop conversations:** A new desktop conversation tab with history, model and effort switching, and your balance. You can change permissions even during a reply, and the welcome screen shows one of five animations. On first launch, DeepSeek Harness and Pi are pinned to the launchpad.
-- **Approval and question prompts:** Cards appear when DeepSeek Harness needs a confirmation or has a question, and its tab shows idle, working, and waiting in green, orange, and blue.
-- **Full App settings support:** Main memory, skills, computer control, browser control, and usage statistics now support DeepSeek Harness. It can also work as a multi-agent orchestration worker, and Coffee Agent can control its windows.
-- **More comfortable conversations:** Text, line spacing, and bubbles are larger and airier in Claude Code, Codex, and DeepSeek Harness. Sent messages unfold with an animation, and very long messages collapse until you expand them.
-- **Usage at a glance:** Plan usage or balance for the current tool appears beside the model in the composer.
-- **Claude Code:** Background tasks are now shown, the working icon uses the four-dot mark, and idle sessions no longer appear as working.
-- **Codex:** Fixed the times shown on history messages.
+- **OpenCode desktop conversations:** A new desktop conversation tab lets you switch models, Build/Plan and effort, approve permissions, answer questions, and pick a launch command. The welcome screen shows OpenCode's classic logo animation. Usage statistics, computer control and browser control all support it.
+- **Cheaper returns to old chats:** When a Claude Code conversation has been idle for over 70 minutes and its context is large, you are asked before sending. You can continue in a new conversation instead of reloading the whole context and spending a large share of your limit at once. Codex asks after 12 hours idle.
+- **Clickable file paths:** File paths in conversations and the terminal are underlined on hover, open in File Explorer on click, and can be copied from the right-click menu.
+- **More complete usage display:** Terminal tabs also show plan usage or API balance, usage no longer disappears when you switch tabs, and OpenCode 2 keys are read.
+- **Tidier history:** Each project shows 5 conversations first; click "Show more" for the rest.
+- **Claude Code slash commands in your language:** Command descriptions are translated into 11 languages.
+- **More compact layout:** The right panel starts closed and opens when you need it; the default window width is now 1280 instead of 1600.
+- **Fixes:** Claude Code no longer stays "working" after you add a message mid-reply; OpenCode sub-agent permission requests now show an approval card; fixed an error when choosing OpenCode's default effort, and the subtask button color.
 
 </details>
 
 <details>
 <summary><b>🇹🇼 繁體中文</b></summary>
 
-### Coffee CLI v3.8.1 · 支援 DeepSeek Harness，桌面對話更舒適
+### Coffee CLI v3.8.2 · 支援 OpenCode 桌面對話，回到舊對話更省額度
 
-- **DeepSeek Harness 桌面對話：** 新增桌面對話分頁，支援歷史紀錄、切換模型與思考強度、查看餘額，回覆進行中也能切換權限；首頁有 5 個隨機開場動畫。首次啟動時，啟動台預設置頂 DeepSeek Harness 與 Pi。
-- **審批與提問彈窗：** DeepSeek Harness 需要確認操作或向你提問時會彈出卡片；頂部分頁以綠、橙、藍顯示閒置、工作中與等待選擇。
-- **應用配置全面支援：** 主記憶、技能、電腦控制、瀏覽器控制與使用統計都已支援 DeepSeek Harness，它也能作為多智能體編排的工作代理，Coffee Agent 也能控制它的視窗。
-- **桌面對話更舒適：** Claude Code、Codex 與 DeepSeek Harness 的字級、行距與泡泡都放大放鬆；送出訊息時泡泡帶動畫展開，很長的訊息自動折疊，可隨時展開。
-- **用量一眼可見：** 輸入框的模型旁顯示目前工具的方案用量或餘額。
-- **Claude Code：** 顯示背景執行的任務，工作圖示換成四點樣式，並修復閒置會話被誤顯示為工作中的問題。
-- **Codex：** 修復歷史訊息的時間顯示。
+- **OpenCode 桌面對話：** 新增桌面對話分頁，支援切換模型、Build/Plan 與思考強度，可以審批權限、回答提問，也能選擇啟動指令。首頁帶 OpenCode 經典 logo 動畫。用量統計、電腦控制與瀏覽器控制都已支援。
+- **回到舊對話更省額度：** Claude Code 對話閒置超過 70 分鐘、上下文又很大時，送出訊息前會先詢問：可以開一個新對話接著聊，避免重新載入整段上下文、一次消耗大量額度。Codex 閒置超過 12 小時也會詢問。
+- **檔案路徑可點擊：** 對話與終端機裡的檔案路徑，懸停時顯示底線，點擊在檔案總管中顯示，右鍵可複製路徑。
+- **用量顯示更完整：** 終端機模式也顯示帳號方案用量或 API 餘額；切換分頁後用量不再遺失；能讀取 OpenCode 2 的金鑰。
+- **歷史紀錄更清爽：** 每個專案先顯示 5 筆對話，點擊「顯示更多」展開。
+- **Claude Code 斜線指令多語言：** 指令說明已翻譯成 11 種語言。
+- **介面更精簡：** 右側面板預設關閉，需要時再打開；預設視窗寬度從 1600 改為 1280。
+- **問題修復：** Claude Code 回覆中途追加訊息後，不再一直顯示「工作中」；OpenCode 子代理請求權限時能彈出審批卡片；修復 OpenCode 選擇預設強度時報錯，以及子任務按鈕顏色不對。
 
 </details>
 
 <details>
 <summary><b>🇯🇵 日本語</b></summary>
 
-### Coffee CLI v3.8.1 · DeepSeek Harness に対応、より快適な会話
+### Coffee CLI v3.8.2 · OpenCode のデスクトップ会話に対応、古い会話への復帰で利用枠を節約
 
-- **DeepSeek Harness のデスクトップ会話：** 履歴、モデルと思考レベルの切り替え、残高表示に対応した会話タブを追加。応答中でも権限を切り替えられ、ホームには 5 種類のオープニングアニメーションが表示されます。初回起動時は DeepSeek Harness と Pi がランチパッドにピン留めされます。
-- **承認と質問のカード：** DeepSeek Harness が確認や質問を必要とするとカードを表示。タブには待機中、作業中、選択待ちが緑、オレンジ、青で表示されます。
-- **アプリ設定に全面対応：** メインメモリ、スキル、コンピューター操作、ブラウザー操作、使用統計が DeepSeek Harness に対応。マルチエージェント連携のワーカーとしても動作し、Coffee Agent からウィンドウを操作できます。
-- **より快適な会話：** Claude Code、Codex、DeepSeek Harness の文字、行間、吹き出しをゆったり調整。送信したメッセージはアニメーションで広がり、とても長いメッセージは折りたたまれていつでも展開できます。
-- **使用量をひと目で確認：** 入力欄のモデルの横に、現在のツールのプラン使用量または残高を表示します。
-- **Claude Code：** バックグラウンドタスクを表示し、作業アイコンを 4 点のデザインに変更。待機中のセッションが作業中と表示される問題も修正しました。
-- **Codex：** 履歴メッセージの時刻表示を修正しました。
+- **OpenCode のデスクトップ会話：** 新しい会話タブで、モデル、Build/Plan、推論レベルの切り替え、権限の承認、質問への回答、起動コマンドの選択ができます。ホーム画面には OpenCode 定番のロゴアニメーションを表示します。利用統計、コンピューター操作、ブラウザー操作にも対応しました。
+- **古い会話への復帰で利用枠を節約：** Claude Code の会話が 70 分以上放置され、コンテキストが大きい場合は、送信前に確認します。新しい会話で続ければ、コンテキスト全体の再読み込みで利用枠を一度に大きく消費せずに済みます。Codex は 12 時間以上の放置で確認します。
+- **ファイルパスをクリック可能に：** 会話とターミナル内のファイルパスは、ホバーで下線が付き、クリックでエクスプローラーに表示し、右クリックでコピーできます。
+- **利用量表示を強化：** ターミナルタブでもプランの利用量や API 残高を表示し、タブを切り替えても表示が消えなくなりました。OpenCode 2 のキーも読み取ります。
+- **履歴をすっきり：** 各プロジェクトはまず 5 件の会話を表示し、「さらに表示」で展開します。
+- **Claude Code スラッシュコマンドの多言語化：** コマンドの説明を 11 言語に翻訳しました。
+- **よりコンパクトな画面：** 右パネルは最初は閉じており、必要なときに開けます。既定のウィンドウ幅は 1600 から 1280 になりました。
+- **修正：** Claude Code が応答中にメッセージを追加すると「作業中」のままになる問題、OpenCode のサブエージェントが権限を求めても承認カードが出ない問題、OpenCode で既定の推論レベルを選ぶとエラーになる問題、サブタスクボタンの色を修正しました。
 
 </details>
 
 <details>
 <summary><b>🇰🇷 한국어</b></summary>
 
-### Coffee CLI v3.8.1 · DeepSeek Harness 지원, 더 편안한 대화
+### Coffee CLI v3.8.2 · OpenCode 데스크톱 대화 지원, 이전 대화로 돌아갈 때 사용량 절약
 
-- **DeepSeek Harness 데스크톱 대화:** 기록, 모델과 사고 수준 전환, 잔액 표시를 지원하는 대화 탭을 추가했습니다. 응답 중에도 권한을 바꿀 수 있고, 첫 화면에는 5가지 시작 애니메이션이 표시됩니다. 처음 실행하면 DeepSeek Harness와 Pi가 실행 화면에 고정됩니다.
-- **승인 및 질문 카드:** DeepSeek Harness가 확인이나 질문이 필요하면 카드를 표시합니다. 탭에는 대기, 작업 중, 선택 대기가 녹색, 주황색, 파란색으로 표시됩니다.
-- **앱 설정 전면 지원:** 메인 메모리, 스킬, 컴퓨터 제어, 브라우저 제어, 사용 통계가 DeepSeek Harness를 지원합니다. 멀티 에이전트 오케스트레이션의 작업 에이전트로도 동작하며, Coffee Agent로 창을 제어할 수 있습니다.
-- **더 편안한 대화:** Claude Code, Codex, DeepSeek Harness의 글자, 줄 간격, 말풍선을 더 여유롭게 조정했습니다. 보낸 메시지는 애니메이션으로 펼쳐지고, 아주 긴 메시지는 접혀 있다가 언제든 펼칠 수 있습니다.
-- **사용량을 한눈에:** 입력창의 모델 옆에 현재 도구의 요금제 사용량이나 잔액을 표시합니다.
-- **Claude Code:** 백그라운드 작업을 표시하고, 작업 아이콘을 4점 디자인으로 바꿨으며, 대기 중인 세션이 작업 중으로 표시되던 문제를 수정했습니다.
-- **Codex:** 기록 메시지의 시간 표시를 수정했습니다.
+- **OpenCode 데스크톱 대화:** 새 대화 탭에서 모델, Build/Plan, 사고 수준을 바꾸고, 권한을 승인하고, 질문에 답하고, 실행 명령을 고를 수 있습니다. 첫 화면에는 OpenCode의 클래식 로고 애니메이션이 표시됩니다. 사용 통계, 컴퓨터 제어, 브라우저 제어도 지원합니다.
+- **이전 대화로 돌아갈 때 사용량 절약:** Claude Code 대화가 70분 넘게 쉬었고 컨텍스트가 크면 보내기 전에 먼저 묻습니다. 새 대화로 이어 가면 전체 컨텍스트를 다시 불러오며 사용량을 한꺼번에 크게 쓰지 않습니다. Codex는 12시간 넘게 쉬면 묻습니다.
+- **파일 경로 클릭:** 대화와 터미널의 파일 경로에 마우스를 올리면 밑줄이 생기고, 클릭하면 파일 탐색기에서 보여 주며, 오른쪽 클릭으로 경로를 복사할 수 있습니다.
+- **더 완전한 사용량 표시:** 터미널 탭에도 요금제 사용량이나 API 잔액을 표시하고, 탭을 바꿔도 사용량이 사라지지 않으며, OpenCode 2 키도 읽습니다.
+- **깔끔한 기록:** 프로젝트마다 대화 5개를 먼저 보여 주고, "더 보기"로 펼칩니다.
+- **Claude Code 슬래시 명령 다국어:** 명령 설명을 11개 언어로 번역했습니다.
+- **더 간결한 화면:** 오른쪽 패널은 처음에 닫혀 있고 필요할 때 열 수 있습니다. 기본 창 너비는 1600에서 1280으로 바뀌었습니다.
+- **수정:** Claude Code 응답 중 메시지를 추가하면 계속 "작업 중"으로 남던 문제, OpenCode 하위 에이전트가 권한을 요청해도 승인 카드가 뜨지 않던 문제, OpenCode에서 기본 사고 수준을 고르면 오류가 나던 문제, 하위 작업 버튼 색상을 수정했습니다.
 
 </details>
