@@ -211,7 +211,32 @@ fn is_route_error(error: &str) -> bool {
     error.contains("no adapter registered for provider") || error.contains("has no configured model")
 }
 
-fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<String>, resume_token: Option<String>, route: Option<Value>) -> Result<Value, String> {
+/// A Host plugin that applies the chosen preset through DeepSeek Harness's own service as each Session opens:
+/// the SDK runtime before 0.2.2 has no command channel, and a resumed Session otherwise keeps its stored preset.
+const PERMISSION_PLUGIN: &str = "export const inject = ['permissionPresets', 'sessions'];
+export function apply(ctx) {
+  const name = process.env.COFFEE_DSH_PRESET;
+  ctx.on('session/created', session => { if (name) ctx.permissionPresets.set(session, name); });
+}
+";
+const PRESETS: [&str; 2] = ["workspace-write", "danger-full-access"];
+
+fn permission_patch(dir: &Path) -> Result<PathBuf, String> {
+    std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+    let plugin = dir.join("permission-plugin.mjs");
+    std::fs::write(&plugin, PERMISSION_PLUGIN).map_err(|e| e.to_string())?;
+    let url = format!("file:///{}", plugin.to_string_lossy().replace('\\', "/").trim_start_matches('/').replace('\'', "''"));
+    let patch = dir.join("permission.patch.yml");
+    std::fs::write(&patch, format!("- insert:
+    - id: coffee-permission
+      name: '{url}'
+      config: {{}}
+")).map_err(|e| e.to_string())?;
+    Ok(patch)
+}
+
+fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<String>, resume_token: Option<String>, route: Option<Value>, preset: Option<String>) -> Result<Value, String> {
+    if preset.as_deref().is_some_and(|p| !PRESETS.contains(&p)) { return Err("Unknown permission preset".into()); }
     let config = crate::tool_config::get("dsh");
     let cwd = cwd.filter(|p| !p.trim().is_empty()).or_else(|| (!config.default_cwd.is_empty()).then(|| config.default_cwd.clone()))
         .map(|p| crate::tool_config::expand_path(&p)).unwrap_or_else(|| dirs::home_dir().unwrap_or_default());
@@ -233,6 +258,9 @@ fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<Stri
     { command = Command::new(&bin); }
     command.args(prefix).args(["--profile", "sdk"]);
     if let Some(patch) = &routes.patch { command.arg("--patch").arg(patch); }
+    if let Some(preset) = &preset {
+        command.arg("--patch").arg(permission_patch(&dirs::home_dir().unwrap_or_default().join(".coffee-cli/dsh"))?).env("COFFEE_DSH_PRESET", preset);
+    }
     command.args(&config.extra_args).current_dir(&cwd).stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped());
     let mut child = command.spawn().map_err(|e| crate::session_directory::validate(&cwd).err().unwrap_or_else(|| format!("Could not start DeepSeek Harness: {e}")))?;
     #[cfg(windows)]
@@ -312,8 +340,8 @@ fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<Stri
 }
 
 #[tauri::command]
-pub async fn dsh_session_start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<String>, resume_token: Option<String>, route: Option<Value>) -> Result<Value, String> {
-    tauri::async_runtime::spawn_blocking(move || start(app, id, generation, cwd, resume_token, route)).await.map_err(|e| e.to_string())?
+pub async fn dsh_session_start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<String>, resume_token: Option<String>, route: Option<Value>, preset: Option<String>) -> Result<Value, String> {
+    tauri::async_runtime::spawn_blocking(move || start(app, id, generation, cwd, resume_token, route, preset)).await.map_err(|e| e.to_string())?
 }
 #[tauri::command]
 pub async fn dsh_session_request(sessions: State<'_, DshSessions>, id: String, generation: String, method: String, params: Value) -> Result<Value, String> {

@@ -4,7 +4,7 @@ import { recordSessionReply } from './session-replies';
 import { invoke } from '../tauri';
 import { arr, obj, str, emptyDshState, reduceDshNotification, restoreDshLog, type DshModel, type DshRoute, type DshState, type Json } from './dsh-protocol';
 
-interface Client { state: DshState; generation: string; listeners: Set<() => void>; owners: number; cwd: string | null; starting?: Promise<void>; switching?: Promise<void>; closeTimer?: ReturnType<typeof setTimeout>; publishTimer?: ReturnType<typeof setTimeout> }
+interface Client { state: DshState; generation: string; listeners: Set<() => void>; owners: number; cwd: string | null; starting?: Promise<void>; switching?: Promise<void>; preset?: string; closeTimer?: ReturnType<typeof setTimeout>; publishTimer?: ReturnType<typeof setTimeout> }
 const clients = new Map<string, Client>();
 const EMPTY = emptyDshState();
 let listening: Promise<unknown> | undefined;
@@ -44,7 +44,7 @@ export function getDshConnection(id: string) {
 /** Starts (or restarts) the runtime; a known Session resumes and its persisted log restores the transcript. */
 async function connect(id: string, c: Client, resumeToken: string | undefined, route: DshRoute | undefined, keepTranscript: boolean) {
   await listen();
-  const result = await invoke<Json>('dsh_session_start', { id, generation: c.generation, cwd: c.cwd, resumeToken: resumeToken ?? null, route: route ?? null });
+  const result = await invoke<Json>('dsh_session_start', { id, generation: c.generation, cwd: c.cwd, resumeToken: resumeToken ?? null, route: route ?? null, preset: c.preset ?? null });
   const sessionId = str(result.sessionId), routeResult = obj(result.route);
   let state: DshState = { ...c.state, sessionId, ready: true, restarting: false, stopping: false, error: undefined, routeError: str(result.routeError) || undefined, commands: result.commands !== false, models: arr(result.models).map(obj) as unknown as DshModel[],
     route: { provider: str(routeResult.provider), model: str(routeResult.model), effort: str(routeResult.effort) || null } };
@@ -102,6 +102,14 @@ export function setDshRoute(id: string, route: DshRoute): Promise<void> {
   const done = restart(id, route);
   if (c) { c.switching = done; void done.finally(() => { if (c.switching === done) c.switching = undefined; }); }
   return done;
+}
+
+/** Without a command channel the preset is applied by restarting silently into the same conversation. */
+export function setDshPreset(id: string, preset: string): Promise<unknown> {
+  const c = clients.get(id);
+  if (!c || c.state.commands) return sendDshMessage(id, `/permission ${preset}`);
+  c.preset = preset; c.state = { ...c.state, preset };
+  return setDshRoute(id, c.state.route);
 }
 
 export async function sendDshMessage(id: string, prompt: string): Promise<boolean> {
