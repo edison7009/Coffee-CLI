@@ -11,7 +11,7 @@ await build({ stdin: { loader: 'tsx', resolveDir: project, contents: `
 import React,{useState}from'react';import{createRoot}from'react-dom/client';import{CollapsibleUserMessage}from'./src/components/center/ConversationControls';import'./src/styles/global.css';import'./src/components/center/ClaudeConversation.css';
 const long=Array.from({length:40},(_,i)=>'Requirement line '+(i+1)).join('\\n');
 function Row({text}){const[expanded,setExpanded]=useState(false);return <article className="claude-row claude-row--user"><CollapsibleUserMessage expanded={expanded} onToggle={()=>setExpanded(old=>!old)}><p style={{margin:0,whiteSpace:'pre-wrap'}}>{text}</p></CollapsibleUserMessage></article>}
-function App(){return <div className="claude-scroll" style={{height:520,overflow:'auto',padding:16,fontSize:14,lineHeight:1.65}}><div style={{height:300}}/><Row text="Short message"/><Row text={long}/><div style={{height:900}}/></div>}
+function App(){return <div className="panel-center"><div className="claude-scroll" style={{height:520,overflow:'auto',padding:16,fontSize:14,lineHeight:1.65}}><div style={{height:300}}/><Row text="Short message"/><Row text={long}/><div style={{height:900}}/></div></div>}
 createRoot(document.getElementById('root')).render(<App/>);
 ` }, bundle: true, outfile: join(directory, 'fixture.js'), jsx: 'automatic', define: { __IS_LINUX__: 'false' },
   loader: { '.woff2': 'dataurl', '.svg': 'dataurl', '.png': 'dataurl' }, external: ['/fonts/*', '/monogram.svg'],
@@ -45,6 +45,14 @@ try {
   await collapse.click();
   await toggle.waitFor();
   assert.ok(Math.abs((await toggle.boundingBox()).y - before) < 1, 'collapsing keeps the control in place');
+  await page.locator('.claude-scroll').evaluate(el => { el.scrollTop = 260; });
+  for (const shape of ['soft', 'panel', 'glass', 'carbon', 'monogram']) {
+    await page.evaluate(value => { document.documentElement.dataset.shape = value; }, shape);
+    assert.equal((await bodies.nth(1).boundingBox()).height, 200, shape);
+    assert.notEqual(await bodies.nth(1).evaluate(el => getComputedStyle(el).maskImage), 'none', `${shape} keeps the fade`);
+    assert.equal(await toggle.isVisible(), true, shape);
+    await page.screenshot({ path: join(directory, `shape-${shape}.png`), clip: { x: 500, y: 0, width: 260, height: 400 } });
+  }
   console.log('OK: long user messages collapse, expand and keep the control in place; short messages have no control');
   console.log(`Screenshots: ${directory}`);
 } finally { await browser.close(); server.close(); }
