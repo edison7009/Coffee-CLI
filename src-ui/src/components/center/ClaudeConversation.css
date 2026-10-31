@@ -45,7 +45,6 @@ body.gambit-docked .claude-scroll-bottom { bottom:calc(var(--gambit-dock-h,200px
 .claude-row .md-body table { border-collapse:collapse; margin:8px 0 14px; max-width:100%; }
 .claude-row .md-body :is(td,th) { border:1px solid var(--border); padding:2px 8px; text-align:left; }
 .claude-row .md-body .md-code { padding:10px 12px; background:var(--bg-hover); overflow:auto; border:1px solid var(--border); border-radius:var(--shape-radius-btn,6px); font-size:13px; line-height:1.54; }
-.claude-row .md-body > .md-code:not(:last-child) { margin:0 0 14px; }
 .claude-row .md-inline-code { background:var(--bg-hover); border-radius:3px; padding:1px 4px; font-family:var(--mono); font-size:max(13px,.87em); }
 .claude-row .conversation-copy { position:static; display:inline-flex; margin:4px 6px 0 0; opacity:0; }
 .claude-row:hover .conversation-copy,.claude-row .conversation-copy:focus-visible { opacity:1; }
