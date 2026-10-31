@@ -122,7 +122,7 @@ export function ClaudeComposerControls({ sessionId, draft, onDraftChange, keyHan
     <button className="claude-control-icon" aria-label={t('claude.attach')} onClick={() => void attach()}><AttachIcon /></button>
     <button ref={el => { anchors.current.commands = el; }} className="claude-control-icon" aria-label={t('claude.commands')} aria-expanded={shown === 'commands'} onClick={() => shown === 'commands' ? close() : open('commands')}>/</button>
     <button ref={el => { anchors.current.permissions = el; }} className="claude-permission-control" disabled={!s.ready} onClick={() => shown === 'permissions' ? close() : open('permissions')} aria-expanded={shown === 'permissions'} aria-label={t('claude.permissions')}>{modes.find(m => m.value === s.permissionMode)?.label ?? s.permissionMode}</button>
-    {s.backgroundTasks.length > 0 && <button ref={el => { anchors.current.tasks = el; }} className="claude-tasks-control" aria-label={t('claude.status.background_count', { count: s.backgroundTasks.length })} aria-expanded={shown === 'tasks'} onClick={() => shown === 'tasks' ? close() : open('tasks')}><span className="claude-tasks-dot" aria-hidden="true" />{t('claude.status.background_short', { count: s.backgroundTasks.length })}</button>}
+    {s.backgroundTasks.length > 0 && <button ref={el => { anchors.current.tasks = el; }} className="claude-tasks-control" aria-label={t('claude.status.background_count', { count: s.backgroundTasks.length })} aria-expanded={shown === 'tasks'} onClick={() => shown === 'tasks' ? close() : open('tasks')}>{t('claude.status.background_short', { count: s.backgroundTasks.length })}</button>}
     {children}
     <div className="claude-model-controls">
     {quota}
