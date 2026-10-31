@@ -73,6 +73,7 @@ fn get(sessions: &DshSessions, id: &str, generation: &str) -> Result<Arc<Session
     Ok(s)
 }
 fn emit(app: &tauri::AppHandle, id: &str, session: &Session, event: Value) {
+    if event["params"]["sessionId"] == session.native_id.as_str() { crate::orchestration::native_event(id, "dsh", &session.generation, &event); }
     let _ = app.emit("dsh-session-event", json!({"id":id,"generation":session.generation,"event":event}));
 }
 
@@ -274,6 +275,14 @@ fn write_preset(control: &Path, preset: &str) -> Result<(), String> {
     write_atomic(control, preset)
 }
 
+/// MCP rows for what "App settings" enabled for DeepSeek Harness, as JSON flow values YAML reads unchanged.
+fn mcp_rows(dir: &Path) -> String {
+    let servers = std::fs::read_to_string(dir.join("mcp.json")).ok().and_then(|text| serde_json::from_str::<Value>(&text).ok());
+    let Some(servers) = servers.as_ref().and_then(|value| value["mcpServers"].as_object()) else { return String::new() };
+    servers.iter().map(|(name, server)| format!("    - id: coffee-mcp-{name}\n      name: '@deepseek-ai/dsh-mcp-client'\n      config: {}\n",
+        json!({"serverName":name,"transport":"stdio","command":server["command"],"args":server["args"]}))).collect()
+}
+
 fn permission_patch(dir: &Path) -> Result<PathBuf, String> {
     std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
     let plugin = dir.join("permission-plugin.mjs");
@@ -287,7 +296,7 @@ fn permission_patch(dir: &Path) -> Result<PathBuf, String> {
     - id: coffee-tool-ask-user
       name: '@deepseek-ai/dsh-tool-ask-user'
       config: {{}}
-")).map_err(|e| e.to_string())?;
+{}", mcp_rows(dir))).map_err(|e| e.to_string())?;
     Ok(patch)
 }
 
@@ -410,6 +419,10 @@ pub async fn dsh_session_request(sessions: State<'_, DshSessions>, id: String, g
     let s = get(&sessions, &id, &generation)?;
     // Requests always address this tab's own Session.
     let mut params = params; params["sessionId"] = json!(s.native_id);
+    if method == "session/prompt" {
+        let prompt = params["contentBlocks"].as_array().into_iter().flatten().filter_map(|block| block["text"].as_str()).collect::<Vec<_>>().join("\n");
+        crate::orchestration::native_input(&id, "dsh", &s.generation, &prompt, &uuid::Uuid::new_v4().to_string(), None)?;
+    }
     // Commands such as /compact run an auxiliary model request before answering.
     let timeout = Duration::from_secs(if method == "session/query" { 900 } else { 60 });
     tauri::async_runtime::spawn_blocking(move || s.request(&method, params, timeout)).await.map_err(|e| e.to_string())?
@@ -436,6 +449,7 @@ pub async fn dsh_session_close(sessions: State<'_, DshSessions>, id: String, gen
         if map.get(&id).is_some_and(|s| s.generation == generation) { map.remove(&id) } else { None }
     };
     if let Some(s) = session {
+        crate::orchestration::native_stop(&id, "dsh", &generation);
         tauri::async_runtime::spawn_blocking(move || s.stop()).await.map_err(|e| e.to_string())?;
     }
     Ok(())
@@ -456,7 +470,7 @@ fn session_log(home: &Path, session_id: &str) -> Option<PathBuf> {
 }
 
 /// Decodes a concatenated-frame zstd log; a torn final frame (a write in progress) keeps every complete row.
-fn read_log(path: &Path) -> Result<Vec<Value>, String> {
+pub(crate) fn read_log(path: &Path) -> Result<Vec<Value>, String> {
     let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
     let mut text = Vec::new();
     if path.extension().is_some_and(|e| e == "zstd") {
@@ -474,6 +488,20 @@ pub(crate) struct HistoryEntry { pub session_id: String, pub title: Option<Strin
 
 /// Persisted root Sessions, newest first. Metadata comes from DeepSeek Harness's own projection cache
 /// (the same rows its Session list reads), so no log is decompressed; blank Sessions are skipped.
+/// Every Session log, sub-agents included, for the usage ledger.
+pub(crate) fn usage_logs() -> (PathBuf, Vec<PathBuf>) {
+    let root = dsh_home().join("sessions");
+    let mut logs = Vec::new();
+    for project in std::fs::read_dir(&root).into_iter().flatten().flatten() {
+        for session in std::fs::read_dir(project.path()).into_iter().flatten().flatten() {
+            let id = session.file_name().to_string_lossy().into_owned();
+            logs.extend(session_log(&dsh_home(), &id));
+        }
+    }
+    logs.sort(); logs.dedup();
+    (root, logs)
+}
+
 pub(crate) fn history_entries(limit: usize) -> Vec<HistoryEntry> { history_in(&dsh_home(), limit) }
 
 fn history_in(home: &Path, limit: usize) -> Vec<HistoryEntry> {
@@ -605,6 +633,17 @@ mod tests {
         assert_eq!(registered_exe_dir(r"D:\tools\dsh\DeepSeek Harness.exe,0"), Some(PathBuf::from(r"D:\tools\dsh")));
         assert_eq!(registered_exe_dir(r#""C:\Program Files\DeepSeek Harness\Uninstall DeepSeek Harness.exe" /allusers"#), Some(PathBuf::from(r"C:\Program Files\DeepSeek Harness")));
         assert_eq!(registered_exe_dir("not a program"), None);
+    }
+    #[test]
+    fn enabled_controls_become_mcp_plugin_rows() {
+        let dir = std::env::temp_dir().join(format!("coffee-dsh-mcp-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        assert_eq!(mcp_rows(&dir), "");
+        std::fs::write(dir.join("mcp.json"), r#"{"mcpServers":{"coffee-browser-use":{"command":"C:\\Coffee CLI\\coffee.exe","args":["__ui-control","browser","dsh"]}}}"#).unwrap();
+        let rows: serde_yaml_ng::Value = serde_yaml_ng::from_str(&mcp_rows(&dir).replace("\n    - ", "\n- ").replacen("    - ", "- ", 1).replace("\n      ", "\n  ")).unwrap();
+        let row = serde_json::to_value(&rows[0]).unwrap();
+        assert_eq!((row["id"].as_str(), row["config"]["serverName"].as_str(), row["config"]["command"].as_str()), (Some("coffee-mcp-coffee-browser-use"), Some("coffee-browser-use"), Some(r"C:\Coffee CLI\coffee.exe")));
+        std::fs::remove_dir_all(dir).unwrap();
     }
     #[test]
     fn question_cancellation_retires_its_pending_request() {

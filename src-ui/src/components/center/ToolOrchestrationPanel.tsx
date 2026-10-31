@@ -25,7 +25,7 @@ export function ToolOrchestrationPanel({ active, tools }: {
     {error && <p className="tool-memory-notice" role="alert">{t(ready ? 'control.write_error' : 'control.read_error')}</p>}
     <div className="tool-control-agents">
       {tools.slice(0, 6).map(tool => {
-        const supported = ['claude', 'codex', 'opencode'].includes(tool.value), missing = tool.installed === false;
+        const supported = ['claude', 'codex', 'opencode', 'dsh'].includes(tool.value), missing = tool.installed === false;
         return <div className="tool-control-agent" key={tool.value}>
         <span className="tool-control-agent-icon" aria-hidden="true">{tool.icon}</span>
         <span className="tool-control-agent-name"><span className="tool-control-agent-label">{tool.label}</span></span>

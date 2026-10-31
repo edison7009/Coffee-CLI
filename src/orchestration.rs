@@ -7,7 +7,7 @@ use tauri::{AppHandle, Emitter};
 #[derive(Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct Snapshot { pub enabled: bool, #[serde(default = "default_agents")] pub agents: Vec<String>, pub tasks: Vec<Task>, pub revision: u64, #[serde(default, skip_deserializing)] pub coordinators: Vec<String> }
-fn default_agents() -> Vec<String> { ["claude", "codex", "opencode"].into_iter().map(str::to_owned).collect() }
+fn default_agents() -> Vec<String> { ["claude", "codex", "opencode", "dsh"].into_iter().map(str::to_owned).collect() }
 
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -453,6 +453,20 @@ fn record_event(state: &mut State, id: &str, tool: &str, generation: &str, event
             }
         }
     }
+    if tool == "dsh" && event["method"] == "session.event" {
+        let native = &event["params"]["event"];
+        if native["type"] == "assistant/message" {
+            let content = native["data"]["message"]["content"].as_array().into_iter().flatten();
+            let reply = content.filter(|block| block["type"] == "text").filter_map(|block| block["text"].as_str()).collect::<Vec<_>>().join("\n");
+            if !reply.trim().is_empty() { run.reply = reply; }
+        } else if native["type"] == "turn/end" {
+            completed = Some(match native["data"]["reason"]["kind"].as_str() {
+                Some("completed" | "max-tokens") => ("completed", run.reply.clone()),
+                Some("aborted") => ("interrupted", "Worker turn interrupted".into()),
+                _ => ("failed", "Worker turn failed".into()),
+            });
+        }
+    }
     let Some((phase, reply)) = completed else { return false };
     state.runs.remove(id);
     let Some(task) = state.snapshot.tasks.iter_mut().find(|task| task.session_id == id && task.tool == tool && active(task) && !task.question.as_ref().is_some_and(|question| question.answer.is_none())) else { return false };
@@ -521,7 +535,7 @@ fn worker_instructions(task: &Task, prompt: &str, command: &str) -> String {
 fn start_worker(token: &str, args: &Value) -> Result<Value, String> {
     parent(&hub().state.lock().unwrap(), token)?;
     let tool = text(args, "tool", 32)?;
-    if !default_agents().contains(&tool) { return Err("Choose claude, codex or opencode".into()); }
+    if !default_agents().contains(&tool) { return Err("Choose claude, codex, opencode or dsh".into()); }
     if !crate::tools::find(&tool).is_some_and(|tool| crate::server::binary_on_path(tool.binary_name)) { return Err("The requested tool is not installed".into()); }
     let title = text(args, "title", 160)?; let prompt = text(args, "prompt", 24_000)?;
     let operation = args.get("operationId").map(|value| value.as_str().filter(|id| !id.is_empty() && id.len() <= 64 && id.bytes().all(|byte| byte.is_ascii_alphanumeric() || b"._-".contains(&byte))).ok_or("Invalid operationId")).transpose()?;
@@ -860,6 +874,19 @@ mod tests {
         assert!(state.parents["token"].running);
         record_event(&mut state, "parent", "claude", "g1", &json!({"type":"result","subtype":"success"}));
         assert!(!state.parents["token"].running);
+    }
+    #[test]
+    fn dsh_result_uses_the_last_reply_of_the_assigned_turn() {
+        let mut state = fixture(); state.snapshot.tasks[0].tool = "dsh".into();
+        state.runs.insert("child".into(), WorkerRun::new("Assigned task"));
+        let event = |native: Value| json!({"method":"session.event","params":{"event":native}});
+        let done = event(json!({"type":"turn/end","data":{"reason":{"kind":"completed"}}}));
+        assert!(!record_event(&mut state, "child", "dsh", "g1", &done));
+        record_input(&mut state, "child", "dsh", "g1", "Assigned task", "input").unwrap();
+        record_event(&mut state, "child", "dsh", "g1", &event(json!({"type":"assistant/message","data":{"message":{"content":[{"type":"reasoning","text":"Thinking"},{"type":"text","text":"Tests passed"}]}}})));
+        assert!(!record_event(&mut state, "child", "dsh", "old-generation", &done));
+        assert!(record_event(&mut state, "child", "dsh", "g1", &done));
+        assert_eq!((state.snapshot.tasks[0].phase.as_str(), state.snapshot.tasks[0].summary.as_deref()), ("completed", Some("Tests passed")));
     }
     #[test]
     fn claude_final_reply_is_collected_but_history_tools_and_manual_input_are_not() {

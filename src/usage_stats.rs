@@ -22,6 +22,16 @@ struct Tokens {
 }
 
 impl Tokens {
+    fn dsh(v: &Value) -> Self {
+        Self {
+            input: number(v, "inputTokens"),
+            output: number(v, "outputTokens"),
+            cache_read: number(v, "cacheReadTokens"),
+            cache_write: number(v, "cacheWriteTokens"),
+            reasoning: None,
+        }
+    }
+
     fn claude(v: &Value) -> Self {
         Self {
             input: number(v, "input_tokens"),
@@ -339,6 +349,62 @@ fn import_file(db: &mut Connection, path: &Path, tool: &str) -> Result<(), Strin
     tx.commit().map_err(|e| e.to_string())
 }
 
+/// DeepSeek Harness logs are compressed, so a changed log is read whole; event keys keep that idempotent.
+fn import_dsh(db: &mut Connection, path: &Path) -> Result<(), String> {
+    let metadata = path.metadata().map_err(|e| e.to_string())?;
+    let file = path.to_string_lossy().to_string();
+    let modified = format!("{:?}", metadata.modified().map_err(|e| e.to_string())?);
+    let cached: Option<(u64, String)> = db
+        .query_row("SELECT offset,modified FROM files WHERE path=?", [&file], |r| Ok((r.get(0)?, r.get(1)?)))
+        .optional()
+        .map_err(|e| e.to_string())?;
+    if cached == Some((metadata.len(), modified.clone())) {
+        return Ok(());
+    }
+    let rows = crate::dsh_session::read_log(path)?;
+    let tx = db.transaction().map_err(|e| e.to_string())?;
+    let mut parser = Parser { session: file.clone(), ..Parser::default() };
+    for row in &rows {
+        parse_dsh(&tx, &file, &mut parser, row).map_err(|e| e.to_string())?;
+    }
+    tx.execute(
+        "INSERT OR REPLACE INTO files VALUES (?1,?2,?3,?4)",
+        params![file, metadata.len(), modified, serde_json::to_string(&parser).map_err(|e| e.to_string())?],
+    )
+    .map_err(|e| e.to_string())?;
+    tx.commit().map_err(|e| e.to_string())
+}
+
+fn parse_dsh(db: &Connection, file: &str, p: &mut Parser, v: &Value) -> rusqlite::Result<()> {
+    let data = &v["data"];
+    let stamp = v["time"]
+        .as_i64()
+        .and_then(chrono::DateTime::from_timestamp_millis)
+        .map(|time| time.to_rfc3339_opts(chrono::SecondsFormat::Millis, true))
+        .unwrap_or_default();
+    let seq = v["seq"].as_u64().unwrap_or(0);
+    match v["type"].as_str() {
+        Some("session") => {
+            p.session = text(v, "id");
+            p.project = text(v, "cwd").replace('\\', "/");
+        }
+        Some("model/selection") => p.model = text(data, "model"),
+        Some("user/message") if data["source"]["kind"] == "user" => {
+            record(db, file, &format!("dsh:prompt:{}:{seq}", p.session), "dsh", p, &stamp, "prompt", Tokens::default())?;
+        }
+        Some("assistant/message") => {
+            let usage = Tokens::dsh(&data["usage"]);
+            if usage.any() {
+                // Sessions on the configured default route log no model selection.
+                if p.model.is_empty() { p.model = "DeepSeek Harness".into(); }
+                record(db, file, &format!("dsh:usage:{}:{seq}", p.session), "dsh", p, &stamp, "usage", usage)?;
+            }
+        }
+        _ => {}
+    }
+    Ok(())
+}
+
 fn collect(root: &Path, depth: u8, out: &mut Vec<PathBuf>) {
     let Ok(entries) = std::fs::read_dir(root) else {
         return;
@@ -366,6 +432,9 @@ pub struct Source {
 }
 
 fn sync(db: &mut Connection, home: &Path) -> Vec<Source> {
+    let (dsh_root, dsh_logs) = crate::dsh_session::usage_logs();
+    let dsh_errors = dsh_logs.iter().filter(|path| import_dsh(db, path).is_err()).count();
+    let dsh = Source { tool: "dsh".into(), files: dsh_logs.len(), available: dsh_root.is_dir(), errors: dsh_errors };
     ["claude", "codex"]
         .into_iter()
         .map(|tool| {
@@ -400,6 +469,7 @@ fn sync(db: &mut Connection, home: &Path) -> Vec<Source> {
                 errors,
             }
         })
+        .chain(std::iter::once(dsh))
         .collect()
 }
 
@@ -514,7 +584,7 @@ pub async fn get_usage_statistics(query: Query) -> Result<Report, String> {
         || query.to <= query.from
         || !matches!(
             query.tool.as_deref(),
-            None | Some("") | Some("claude") | Some("codex")
+            None | Some("") | Some("claude") | Some("codex") | Some("dsh")
         )
     {
         return Err("Invalid usage range or tool".into());
@@ -551,6 +621,25 @@ mod tests {
         )
         .unwrap()
     }
+    #[test]
+    fn dsh_logs_count_user_prompts_and_assistant_usage_only() {
+        let c = db();
+        let mut p = Parser::default();
+        for row in [
+            json!({"type":"session","id":"session-1","cwd":"D:\\repo"}),
+            json!({"type":"model/selection","seq":1,"time":1793432653000i64,"data":{"model":"deepseek-flash"}}),
+            json!({"type":"user/message","seq":2,"time":1793432653000i64,"data":{"source":{"kind":"user"}}}),
+            json!({"type":"user/message","seq":3,"time":1793432653000i64,"data":{"source":{"kind":"runtime"}}}),
+            json!({"type":"assistant/message","seq":4,"time":1793432654000i64,"data":{"usage":{"inputTokens":490,"outputTokens":167,"cacheReadTokens":5760,"cacheWriteTokens":0,"totalTokens":6417}}}),
+            json!({"type":"assistant/message","seq":5,"time":1793432654000i64,"data":{}}),
+        ] {
+            parse_dsh(&c, "fixture", &mut p, &row).unwrap();
+        }
+        let report = totals(&c);
+        assert_eq!((report.summary.prompts, report.summary.calls, report.summary.input, report.summary.cache_read), (1, 1, Some(490), Some(5760)));
+        assert_eq!(p.project, "D:/repo");
+    }
+
     fn line(c: &Connection, p: &mut Parser, tool: &str, v: Value) {
         parse_line(c, "fixture", tool, p, &v, 1).unwrap();
     }

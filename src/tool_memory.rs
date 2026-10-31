@@ -42,6 +42,7 @@ fn load_from(tool: &str, home: &Path, env: impl Fn(&str) -> Option<std::ffi::OsS
         "opencode" => (root("XDG_CONFIG_HOME", home.join(".config")).join("opencode"), "AGENTS.md"),
         "pi" => (root("PI_CODING_AGENT_DIR", home.join(".pi/agent")), "AGENTS.md"),
         "hermes" => (crate::tools::hermes::hermes_home(), "SOUL.md"),
+        "dsh" => (root("DSH_HOME", home.join(".dsh")), "AGENTS.md"),
         _ => return Ok(ToolMemoryDocument { path: None, content: None }),
     };
     let directory = if directory.is_absolute() { directory } else {

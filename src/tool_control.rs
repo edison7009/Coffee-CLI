@@ -55,6 +55,8 @@ fn config_path_in(tool: &str, home: &Path, env: impl Fn(&str) -> Option<std::ffi
         "codex" => Ok(relocated("CODEX_HOME", home.join(".codex")).join("config.toml")),
         "cursor" => Ok(home.join(".cursor/mcp.json")),
         "copilot" => Ok(home.join(".copilot/mcp-config.json")),
+        // The desktop tab's runtime has no MCP settings file; dsh_session turns these entries into plugin rows.
+        "dsh" => Ok(home.join(".coffee-cli/dsh/mcp.json")),
         "antigravity" => Ok(home.join(".gemini/config/mcp_config.json")),
         "qwen" => Ok(home.join(".qwen/settings.json")),
         "kiro" => Ok(relocated("KIRO_HOME", home.join(".kiro")).join("settings/mcp.json")),

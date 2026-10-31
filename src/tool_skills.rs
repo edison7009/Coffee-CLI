@@ -32,6 +32,7 @@ fn roots_in(tool: &str, home: &Path, env: impl Fn(&str) -> Option<std::ffi::OsSt
         "qwen" => home.join(".qwen/skills"),
         "pi" => root("PI_CODING_AGENT_DIR", home.join(".pi/agent")).join("skills"),
         "hermes" => crate::tools::hermes::hermes_home().join("skills"),
+        "dsh" => root("DSH_HOME", home.join(".dsh")).join("skills"),
         "kilo" => home.join(".kilo/skills"),
         "goose" => config.join("goose/skills"),
         "grok" => root("GROK_HOME", home.join(".grok")).join("skills"),
@@ -48,6 +49,7 @@ fn roots_in(tool: &str, home: &Path, env: impl Fn(&str) -> Option<std::ffi::OsSt
     };
     let mut roots = vec![primary];
     if tool == "codex" { roots.push(home.join(".agents/skills")); }
+    if tool == "dsh" { roots.push(root("DSH_AGENTS_HOME", home.join(".agents")).join("skills")); }
     roots
 }
 fn roots(tool: &str) -> Result<Vec<PathBuf>, String> { Ok(roots_in(tool, &dirs::home_dir().ok_or("skills_read")?, |key| std::env::var_os(key))) }
@@ -454,6 +456,7 @@ mod tests {
         let custom = f.base.join("custom");
         assert_eq!(roots_in("claude", &f.base, |key| (key == "CLAUDE_CONFIG_DIR").then(|| custom.clone().into_os_string())), vec![custom.join("skills")]);
         assert_eq!(roots_in("codex", &f.base, |_| None), vec![f.base.join(".codex/skills"), f.base.join(".agents/skills")]);
+        assert_eq!(roots_in("dsh", &f.base, |_| None), vec![f.base.join(".dsh/skills"), f.base.join(".agents/skills")]);
         assert!(roots_in("terminal", &f.base, |_| None).is_empty());
         for path in ["../outside", "/absolute", "a/../../b", "a\\b", "C:/bad", "CON", "a/COM1.txt", "a.", "a/../b", "a//b"] { assert!(!normal_path(path), "{path}"); }
         assert!(normal_path("scripts/check.py"));
