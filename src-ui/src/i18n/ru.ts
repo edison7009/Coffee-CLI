@@ -422,6 +422,7 @@ export const ru = {
 
   'conversation.reasoning': 'Ход рассуждений',
   'conversation.thinking': 'Размышляет…',
+  'conversation.restoring': 'Возвращаемся к беседе…',
   'conversation.executing': 'Выполняется…',
   'conversation.copied': 'Скопировано',
   'conversation.copy_message': 'Копировать сообщение',

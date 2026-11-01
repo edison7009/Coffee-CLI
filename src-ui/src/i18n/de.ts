@@ -422,6 +422,7 @@ Lösch diesen Zettel, wann du willst, und starte deine erste Aufgabe.`,
 
   'conversation.reasoning': 'Denkprozess',
   'conversation.thinking': 'Denkt nach…',
+  'conversation.restoring': 'Zurück zur Unterhaltung…',
   'conversation.executing': 'Wird ausgeführt…',
   'conversation.copied': 'Kopiert',
   'conversation.copy_message': 'Nachricht kopieren',

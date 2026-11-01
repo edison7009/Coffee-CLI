@@ -426,6 +426,7 @@ export const zhTW = {
 
   'conversation.reasoning': '思考過程',
   'conversation.thinking': '正在思考中…',
+  'conversation.restoring': '正在回到對話中…',
   'conversation.executing': '正在執行中…',
   'conversation.copied': '已複製',
   'conversation.copy_message': '複製訊息',

@@ -427,6 +427,7 @@ export const zhCN = {
   // 贡献热力图（桌面 Launchpad 上的 6 张卡片上方）
   'conversation.reasoning': '思考过程',
   'conversation.thinking': '正在思考中…',
+  'conversation.restoring': '正在回到对话中…',
   'conversation.executing': '正在执行中…',
   'conversation.copied': '已复制',
   'conversation.copy_message': '复制消息',

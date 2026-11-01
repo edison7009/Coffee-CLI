@@ -422,6 +422,7 @@ Supprimez cette note quand vous voulez et commencez votre première tâche.`,
 
   'conversation.reasoning': 'Processus de réflexion',
   'conversation.thinking': 'Réflexion en cours…',
+  'conversation.restoring': 'Retour à la conversation…',
   'conversation.executing': 'Exécution en cours…',
   'conversation.copied': 'Copié',
   'conversation.copy_message': 'Copier le message',

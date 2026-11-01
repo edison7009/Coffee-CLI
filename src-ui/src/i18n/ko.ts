@@ -425,6 +425,7 @@ export const ko = {
 
   'conversation.reasoning': '사고 과정',
   'conversation.thinking': '생각 중…',
+  'conversation.restoring': '대화로 돌아가는 중…',
   'conversation.executing': '실행 중…',
   'conversation.copied': '복사됨',
   'conversation.copy_message': '메시지 복사',

@@ -9,7 +9,7 @@ import { bindAutoHideScrollbar } from '../../lib/auto-hide-scrollbar';
 import { useConversationVirtualizer } from './conversation-virtualizer';
 import type { ChatMessage } from '../../lib/chat-transcript';
 import { MarkdownContent } from './MarkdownContent';
-import { WelcomeGreeting, WelcomeSessionMeta } from './WelcomeGreeting';
+import { WelcomeGreeting, WelcomeRestoring, WelcomeSessionMeta } from './WelcomeGreeting';
 import { DshWelcomeIcon } from './DshWelcomeIcon';
 import { ConversationDirectory } from '../../lib/conversation-links';
 import { useConversationMenu } from '../../lib/use-conversation-menu';
@@ -177,7 +177,7 @@ export function DshConversation({ sessionId, cwd, resumeToken, isActive, isVisib
         {/* A failed start must say why; Reconnect alone hides the cause. */}
         {s.error && !directoryIssue && <div className="claude-session-error" role="alert">{s.error}</div>}
         {directoryIssue && <div className="claude-session-error" role="alert">{directoryError}</div>}
-        {!directoryIssue && !rows.length && <div className="claude-empty"><DshWelcomeIcon isActive={isVisible} /><WelcomeGreeting /><WelcomeSessionMeta cwd={cwd} model={s.models.find(m => m.provider === s.route.provider && m.model === s.route.model)?.name ?? s.route.model} /></div>}
+        {!directoryIssue && !rows.length && <div className="claude-empty"><DshWelcomeIcon isActive={isVisible} /><WelcomeGreeting />{initialToken.current && !s.ready && !s.error && <WelcomeRestoring className="dsh-running" labelClassName="dsh-shimmer" mark={<span className="dsh-running-whale" aria-hidden="true" style={{ maskImage: `url(${DSH_RUNNING_WHALE})`, WebkitMaskImage: `url(${DSH_RUNNING_WHALE})` }} />} />}<WelcomeSessionMeta cwd={cwd} model={s.models.find(m => m.provider === s.route.provider && m.model === s.route.model)?.name ?? s.route.model} /></div>}
       </div>
     </div>
     {navigationItems.length > 1 && isActive && <ConversationNavigation items={navigationItems} scrollRef={scroll} onJump={jumpToTurn} />}

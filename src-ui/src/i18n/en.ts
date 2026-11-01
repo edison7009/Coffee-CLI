@@ -428,6 +428,7 @@ Delete this note whenever you're ready, and start your first task.`,
   // Conversation display and annual activity.
   'conversation.reasoning': 'Thinking process',
   'conversation.thinking': 'Thinking…',
+  'conversation.restoring': 'Returning to the conversation…',
   'conversation.executing': 'Executing…',
   'conversation.copied': 'Copied',
   'conversation.copy_message': 'Copy message',

@@ -427,6 +427,7 @@ Xóa tờ ghi chú này khi bạn sẵn sàng và bắt đầu tác vụ đầu 
 
   'conversation.reasoning': 'Quá trình suy luận',
   'conversation.thinking': 'Đang suy nghĩ…',
+  'conversation.restoring': 'Đang quay lại cuộc trò chuyện…',
   'conversation.executing': 'Đang thực thi…',
   'conversation.copied': 'Đã sao chép',
   'conversation.copy_message': 'Sao chép tin nhắn',

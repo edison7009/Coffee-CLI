@@ -121,6 +121,9 @@ body.gambit-docked .claude-scroll-bottom { bottom:calc(var(--gambit-dock-h,200px
 .claude-empty-icon.is-animated :is(video,img) { visibility:visible; }
 .claude-empty-icon.is-animated .claude-empty-still { visibility:hidden; }
 .claude-empty-title { font-size:20px; font-weight:500; }
+.claude-empty-restoring { display:flex; align-items:center; justify-content:center; gap:9px; width:fit-content; margin:14px auto 0; min-height:24px; font-size:14px; }
+.claude-empty-restoring.dsh-running, .claude-empty-restoring.codex-working { margin:14px auto 0; padding:0; font-size:14px; }
+.claude-empty-restoring .claude-working-word { min-width:0; }
 .claude-empty-meta { display:flex; align-items:center; justify-content:center; gap:10px; width:fit-content; max-width:100%; margin:14px auto 0; font-size:14px; }
 .claude-empty-directory { display:flex; align-items:center; justify-content:flex-end; gap:6px; min-width:0; text-align:right; }
 .claude-empty-directory svg { flex-shrink:0; }

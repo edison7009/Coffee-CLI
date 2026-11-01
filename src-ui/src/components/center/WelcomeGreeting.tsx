@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { useT } from '../../i18n/useT';
 import { commands } from '../../tauri';
 import { welcomeGreeting } from '../../lib/welcome-greeting';
 
@@ -15,6 +16,12 @@ export function WelcomeSessionMeta({ cwd, model }: { cwd: string | null; model?:
       <span className="claude-empty-model" dir="ltr">{model}</span>
     </>}
   </div>;
+}
+
+/** Shown on the welcome screen while a resumed conversation's history is still loading; `mark` is the tool's own working animation. */
+export function WelcomeRestoring({ mark, className, labelClassName }: { mark: ReactNode; className?: string; labelClassName?: string }) {
+  const t = useT();
+  return <div className={`claude-empty-restoring${className ? ` ${className}` : ''}`} role="status">{mark}<span className={labelClassName}>{t('conversation.restoring')}</span></div>;
 }
 
 export function WelcomeGreeting() {

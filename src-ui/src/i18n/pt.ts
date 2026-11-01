@@ -422,6 +422,7 @@ Apague esta nota quando quiser e comece a sua primeira tarefa.`,
 
   'conversation.reasoning': 'Processo de raciocínio',
   'conversation.thinking': 'Pensando…',
+  'conversation.restoring': 'Voltando à conversa…',
   'conversation.executing': 'Executando…',
   'conversation.copied': 'Copiado',
   'conversation.copy_message': 'Copiar mensagem',

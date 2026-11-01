@@ -422,6 +422,7 @@ Borra esta nota cuando quieras y empieza tu primera tarea.`,
 
   'conversation.reasoning': 'Proceso de razonamiento',
   'conversation.thinking': 'Pensando…',
+  'conversation.restoring': 'Volviendo a la conversación…',
   'conversation.executing': 'Ejecutando…',
   'conversation.copied': 'Copiado',
   'conversation.copy_message': 'Copiar mensaje',

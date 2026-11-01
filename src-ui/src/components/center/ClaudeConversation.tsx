@@ -13,7 +13,7 @@ import { continueClaudeInNewConversation, controlClaude, loadClaudeHistory, resp
 import { object, list, text, number, resultText, type ClaudeMessage, type ClaudeRequest } from '../../lib/claude-protocol';
 import { useConversationVirtualizer } from './conversation-virtualizer';
 import { MarkdownContent } from './MarkdownContent';
-import { WelcomeGreeting, WelcomeSessionMeta } from './WelcomeGreeting';
+import { WelcomeGreeting, WelcomeRestoring, WelcomeSessionMeta } from './WelcomeGreeting';
 import { ConversationDirectory } from '../../lib/conversation-links';
 import { useConversationMenu } from '../../lib/use-conversation-menu';
 import { CollapsibleUserMessage, ConversationNavigation, MessageCopyButton, type ConversationNavigationItem, ColdReturnCard } from './ConversationControls';
@@ -391,6 +391,7 @@ export function ClaudeConversation({ sessionId, cwd, resumeToken, isActive, isVi
         {empty && <div className="claude-empty">
           <ClaudeWelcomeIcon isActive={isVisible} />
           <WelcomeGreeting />
+          {initialToken.current && !s.ready && !s.error && <WelcomeRestoring labelClassName="claude-working-word" mark={<span className="claude-working-mark" aria-hidden="true"><img src={CLAUDE_WORKING_MARK} alt="" /></span>} />}
           <WelcomeSessionMeta cwd={cwd} model={model?.resolvedModel || s.model} />
         </div>}
         {!s.messages.length && summary}

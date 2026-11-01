@@ -9,7 +9,7 @@ import { directoryFailure, directoryFailureMessage } from '../../lib/session-dir
 import { bindAutoHideScrollbar } from '../../lib/auto-hide-scrollbar';
 import { useConversationVirtualizer } from './conversation-virtualizer';
 import { MarkdownContent } from './MarkdownContent';
-import { WelcomeGreeting, WelcomeSessionMeta } from './WelcomeGreeting';
+import { WelcomeGreeting, WelcomeRestoring, WelcomeSessionMeta } from './WelcomeGreeting';
 import { CodexWelcomeIcon } from './CodexWelcomeIcon';
 import { ConversationDirectory } from '../../lib/conversation-links';
 import { useConversationMenu } from '../../lib/use-conversation-menu';
@@ -189,7 +189,7 @@ export function CodexConversation({ sessionId, cwd, resumeToken, isActive, isVis
         {s.ready && s.busy && <div className="codex-working" role="status"><span className="codex-spinner" aria-hidden="true" />{t(s.interrupting ? 'codex.stopping' : s.requests.length ? 'codex.waiting' : 'claude.status.working')}…</div>}
         {s.error && s.ready && <div className="claude-session-error" role="alert">{s.error}</div>}
         {directoryIssue && <div className="claude-session-error" role="alert">{directoryError}</div>}
-        {!directoryIssue && !rows.length && <div className="claude-empty"><CodexWelcomeIcon isActive={isVisible} /><WelcomeGreeting /><WelcomeSessionMeta cwd={cwd} model={s.model} /></div>}
+        {!directoryIssue && !rows.length && <div className="claude-empty"><CodexWelcomeIcon isActive={isVisible} /><WelcomeGreeting />{initialToken.current && !s.ready && !s.error && <WelcomeRestoring className="codex-working" mark={<span className="codex-spinner" aria-hidden="true" />} />}<WelcomeSessionMeta cwd={cwd} model={s.model} /></div>}
       </div>
     </div>
     {navigationItems.length > 1 && isActive && <ConversationNavigation items={navigationItems} scrollRef={scroll} onJump={jumpToTurn} />}

@@ -425,6 +425,7 @@ export const ja = {
 
   'conversation.reasoning': '思考プロセス',
   'conversation.thinking': '考え中…',
+  'conversation.restoring': '会話に戻っています…',
   'conversation.executing': '実行中…',
   'conversation.copied': 'コピーしました',
   'conversation.copy_message': 'メッセージをコピー',
