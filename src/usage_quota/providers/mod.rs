@@ -1,4 +1,4 @@
-//! Usage query providers, ported from EchoBird (src-tauri/src/services/usage_providers @ 6763d858).
+//! Usage query providers, ported from EchoBird (src-tauri/src/services/usage_providers @ 7b743eaa).
 //!
 //! Each provider is implemented in its own module for easy maintenance and extension.
 //! Volcengine and Zhipu team usage were left out: both need credentials EchoBird stores itself.
@@ -9,6 +9,8 @@ pub mod account;
 pub mod deepseek;
 pub mod kimi;
 pub mod minimax;
+pub mod moonshot;
+pub mod new_api;
 pub mod novita;
 pub mod opencode;
 pub mod openrouter;
@@ -93,6 +95,15 @@ impl UsageResult {
         }
     }
 
+    /// Nothing to show and nothing to report, for sites that simply do not offer this query.
+    fn no_data() -> Self {
+        Self {
+            success: false,
+            data: None,
+            error: None,
+        }
+    }
+
     fn failure(message: impl Into<String>) -> Self {
         Self {
             success: false,
@@ -137,6 +148,14 @@ async fn fetch_usage(url: &str, authorization: &str) -> Result<serde_json::Value
     .await
 }
 
+fn usage_status_error(status: reqwest::StatusCode) -> String {
+    match status.as_u16() {
+        401 => "Usage authentication failed (HTTP 401)".to_string(),
+        403 => "Usage access denied; check the key and subscription (HTTP 403)".to_string(),
+        _ => format!("Usage API error (HTTP {status})"),
+    }
+}
+
 async fn send_usage_request(request: reqwest::RequestBuilder) -> Result<serde_json::Value, String> {
     let response = request
         .header("Accept", "application/json")
@@ -147,11 +166,7 @@ async fn send_usage_request(request: reqwest::RequestBuilder) -> Result<serde_js
         .map_err(|_| "Unable to reach the usage API".to_string())?;
     let status = response.status();
     if !status.is_success() {
-        return Err(match status.as_u16() {
-            401 => "Usage authentication failed (HTTP 401)".to_string(),
-            403 => "Usage access denied; check the key and subscription (HTTP 403)".to_string(),
-            _ => format!("Usage API error (HTTP {status})"),
-        });
+        return Err(usage_status_error(status));
     }
     response
         .json()
@@ -177,6 +192,7 @@ pub trait UsageProvider {
 pub enum Provider {
     DeepSeek(deepseek::DeepSeekProvider),
     Kimi(kimi::KimiProvider),
+    Moonshot(moonshot::MoonshotProvider),
     MiniMax(minimax::MiniMaxProvider),
     Novita(novita::NovitaProvider),
     OpenCode(opencode::OpenCodeProvider),
@@ -193,6 +209,7 @@ impl Provider {
         match self {
             Provider::DeepSeek(p) => p.query_usage(api_key, base_url).await,
             Provider::Kimi(p) => p.query_usage(api_key, base_url).await,
+            Provider::Moonshot(p) => p.query_usage(api_key, base_url).await,
             Provider::MiniMax(p) => p.query_usage(api_key, base_url).await,
             Provider::Novita(p) => p.query_usage(api_key, base_url).await,
             Provider::OpenCode(p) => p.query_usage(api_key, base_url).await,
@@ -215,6 +232,9 @@ pub fn detect_provider(base_url: &str) -> Option<Provider> {
     }
     if kimi::KimiProvider.can_handle(&url) {
         return Some(Provider::Kimi(kimi::KimiProvider));
+    }
+    if moonshot::MoonshotProvider.can_handle(&url) {
+        return Some(Provider::Moonshot(moonshot::MoonshotProvider));
     }
     if minimax::MiniMaxProvider.can_handle(&url) {
         return Some(Provider::MiniMax(minimax::MiniMaxProvider));

@@ -57,10 +57,10 @@ export function providerQuotas(quotas: unknown): Quota[] {
   });
 }
 
-/** Windows first (shortest period first), then a balance, at most two meters. */
+/** Windows first (shortest period first), then balances, at most two meters. */
 export function visibleQuotas(quotas: Quota[]): Quota[] {
   const windows = quotas.filter(q => q.balance === undefined).sort((a, b) => (a.period ? ORDER.indexOf(a.period) : 9) - (b.period ? ORDER.indexOf(b.period) : 9));
-  return [...windows, ...quotas.filter(q => q.balance !== undefined).slice(0, 1)].slice(0, 2);
+  return [...windows, ...quotas.filter(q => q.balance !== undefined)].slice(0, 2);
 }
 
 export function remainingPercent(quota: Quota): number {

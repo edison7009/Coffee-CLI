@@ -10,15 +10,21 @@
 //! detect_provider so official providers (DeepSeek/Kimi/...) match first.
 //! Any unmatched base_url (relay/proxy) is tried against /v1/usage; if the
 //! response matches the usage schema, we render bars, otherwise (404, bad
-//! key, non-JSON, wrong shape) we silently show "暂无用量数据".
+//! key, non-JSON, wrong shape) the standard new-api queries get their turn,
+//! and a site answering neither silently shows "暂无用量数据".
 
 use super::{
-    api_url, now_millis, parse_f64, parse_reset_time, ModelUsageData, QuotaPeriod, UsageProvider,
-    UsageQuota, UsageResult,
+    api_url, new_api, now_millis, parse_f64, parse_reset_time, ModelUsageData, QuotaPeriod,
+    UsageProvider, UsageQuota, UsageResult,
 };
 use chrono::TimeZone;
 use reqwest;
+use sha2::{Digest, Sha256};
+use std::collections::HashMap;
+use std::future::Future;
+use std::sync::{Arc, Mutex, OnceLock, PoisonError};
 use std::time::Duration;
+use tokio::sync::OnceCell;
 
 pub struct RelaySubscriptionProvider;
 
@@ -159,21 +165,127 @@ fn parse_balance_quota(body: &serde_json::Value) -> Option<UsageQuota> {
     UsageQuota::balance(balance, unit)
 }
 
-/// Empty result: no usage data. This is the catch-all fallback provider, so
-/// every failure mode (unreachable host, non-2xx, non-JSON, or a 200 that isn't
-/// compatible usage response) collapses to this - the UI shows "暂无用量数据" instead of a
-/// provider-specific error toast.
-fn no_data() -> UsageResult {
-    UsageResult {
-        success: false,
-        data: None,
-        error: None,
-    }
+/// Vendors' own API hosts, which are not relays. Those without a usage query
+/// of their own here would only be sent the key on relay paths that cannot
+/// exist, so they show no usage data without a request. Hosts that customers
+/// can run their own services under are matched exactly, never by domain.
+const VENDOR_DOMAINS: &[&str] = &[
+    "agnes-ai.com",
+    "anthropic.com",
+    "ant-ling.com",
+    "bigmodel.cn",
+    "cerebras.ai",
+    "cohere.ai",
+    "deepseek.com",
+    "fireworks.ai",
+    "groq.com",
+    "kilo.ai",
+    "kimi.ai",
+    "kimi.com",
+    "longcat.chat",
+    "minimax.io",
+    "minimax.cn",
+    "minimaxi.com",
+    "mistral.ai",
+    "modelarts-maas.com",
+    "modelscope.cn",
+    "moonshot.ai",
+    "moonshot.cn",
+    "nousresearch.com",
+    "novita.ai",
+    "ollama.com",
+    "openai.com",
+    "opencode.ai",
+    "openrouter.ai",
+    "opentyphoon.ai",
+    "perplexity.ai",
+    "sambanova.ai",
+    "siliconflow.cn",
+    "siliconflow.com",
+    "stepfun.ai",
+    "stepfun.com",
+    "tencentcloudmaas.com",
+    "together.xyz",
+    "x.ai",
+    "xf-yun.com",
+    "xiaomimimo.com",
+    "z.ai",
+    "zenmux.ai",
+];
+const VENDOR_HOSTS: &[&str] = &[
+    "api.inference.wandb.ai",
+    "api.lkeap.cloud.tencent.com",
+    "api.scaleway.ai",
+    "ark.ap-southeast.bytepluses.com",
+    "ark.cn-beijing.volces.com",
+    "coding-intl.dashscope.aliyuncs.com",
+    "coding.dashscope.aliyuncs.com",
+    "dashscope-intl.aliyuncs.com",
+    "dashscope.aliyuncs.com",
+    "generativelanguage.googleapis.com",
+    "inference.baseten.co",
+    "integrate.api.nvidia.com",
+    "qianfan.baidubce.com",
+    "token-plan.ap-southeast-1.maas.aliyuncs.com",
+    "token-plan.cn-beijing.maas.aliyuncs.com",
+];
+
+/// The model directories list these vendors; a vendor added there without a
+/// usage query of its own also belongs here.
+fn is_vendor_api(base_url: &str) -> bool {
+    let Some(url) = url::Url::parse(base_url).ok() else {
+        return false;
+    };
+    // Domain hosts come back lowercased; a fully qualified trailing dot does not.
+    let Some(host) = url.host_str().map(|host| host.trim_end_matches('.')) else {
+        return false;
+    };
+    VENDOR_HOSTS.contains(&host)
+        || VENDOR_DOMAINS.iter().any(|domain| {
+            host.strip_suffix(domain)
+                .is_some_and(|rest| rest.is_empty() || rest.ends_with('.'))
+        })
 }
 
-#[async_trait::async_trait]
-impl UsageProvider for RelaySubscriptionProvider {
-    async fn query_usage(&self, api_key: &str, base_url: &str) -> Result<UsageResult, String> {
+/// The relay could not be reached at all, so no other query is worth waiting for.
+struct Unreachable;
+
+type SharedRead = Arc<OnceCell<UsageResult>>;
+
+/// Models on one key refresh together, and relays limit these queries per IP,
+/// so requests running at the same time share one read. Nothing outlives it:
+/// the next refresh always asks again.
+async fn share_read(
+    origin: &str,
+    api_key: &str,
+    read: impl Future<Output = UsageResult>,
+) -> UsageResult {
+    static READS: OnceLock<Mutex<HashMap<String, SharedRead>>> = OnceLock::new();
+    let reads = READS.get_or_init(Mutex::default);
+    let key = format!("{origin}\n{:x}", Sha256::digest(api_key.as_bytes()));
+    let shared = reads
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
+        .entry(key.clone())
+        .or_default()
+        .clone();
+    let usage = shared.get_or_init(|| read).await.clone();
+    let mut reads = reads.lock().unwrap_or_else(PoisonError::into_inner);
+    if reads
+        .get(&key)
+        .is_some_and(|current| Arc::ptr_eq(current, &shared))
+    {
+        reads.remove(&key);
+    }
+    usage
+}
+
+impl RelaySubscriptionProvider {
+    async fn query_compatible_usage(
+        &self,
+        api_key: &str,
+        base_url: &str,
+    ) -> Result<UsageResult, Unreachable> {
         let usage_url = build_usage_url(base_url);
         let client = reqwest::Client::new();
         let resp = match client
@@ -185,21 +297,21 @@ impl UsageProvider for RelaySubscriptionProvider {
             .await
         {
             Ok(r) => r,
-            // Can't reach the endpoint (DNS / network / timeout) -> no data.
-            Err(_) => return Ok(no_data()),
+            // DNS / network / timeout: the site is down, whatever it runs.
+            Err(_) => return Err(Unreachable),
         };
 
-        // Any non-2xx (404, 401/403, 5xx, ...) -> no data. As a
-        // guess fallback we can't tell a bad key from an incompatible endpoint, so
-        // we never surface a specific error; the UI shows "暂无用量数据".
+        // Any non-2xx (404, 401/403, 5xx, ...) -> no data. As a guess we can't
+        // tell a bad key from an incompatible endpoint, so this query surfaces no
+        // specific error; the UI shows "暂无用量数据" unless another query answers.
         if !resp.status().is_success() {
-            return Ok(no_data());
+            return Ok(UsageResult::no_data());
         }
 
         let body: serde_json::Value = match resp.json().await {
             Ok(b) => b,
             // 200 but not JSON / wrong shape -> no data.
-            Err(_) => return Ok(no_data()),
+            Err(_) => return Ok(UsageResult::no_data()),
         };
 
         // Prefer the structured `subscription` object: it carries explicit
@@ -223,7 +335,7 @@ impl UsageProvider for RelaySubscriptionProvider {
             .is_some_and(|value| !value.is_null())
             || body.get("mode").and_then(|value| value.as_str()) == Some("quota_limited")
         {
-            return Ok(no_data());
+            return Ok(UsageResult::no_data());
         }
 
         // Wallet / API-call mode exposes a remaining balance instead of enforced
@@ -251,7 +363,7 @@ impl UsageProvider for RelaySubscriptionProvider {
             .to_string();
         let plan_limit = parse_plan_limit(&plan_name);
         if plan_limit <= 0.0 {
-            return Ok(no_data());
+            return Ok(UsageResult::no_data());
         }
         let Some(actual_cost) = body
             .get("usage")
@@ -259,11 +371,11 @@ impl UsageProvider for RelaySubscriptionProvider {
             .and_then(|u| u.get("actual_cost"))
             .and_then(parse_f64)
         else {
-            return Ok(no_data());
+            return Ok(UsageResult::no_data());
         };
         let percentage = actual_cost / plan_limit * 100.0;
         if !percentage.is_finite() {
-            return Ok(no_data());
+            return Ok(UsageResult::no_data());
         }
 
         Ok(UsageResult {
@@ -279,6 +391,29 @@ impl UsageProvider for RelaySubscriptionProvider {
                 last_updated: Some(now_millis()),
             }),
             error: None,
+        })
+    }
+
+    async fn read_usage(&self, api_key: &str, base_url: &str) -> UsageResult {
+        match self.query_compatible_usage(api_key, base_url).await {
+            Ok(usage) if usage.success => usage,
+            Ok(_) => new_api::query_usage(api_key, base_url).await,
+            Err(Unreachable) => UsageResult::no_data(),
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl UsageProvider for RelaySubscriptionProvider {
+    async fn query_usage(&self, api_key: &str, base_url: &str) -> Result<UsageResult, String> {
+        if is_vendor_api(base_url) {
+            return Ok(UsageResult::no_data());
+        }
+        let read = self.read_usage(api_key, base_url);
+        // Both queries read from the site root, so the site identifies the read.
+        Ok(match new_api::site_origin(base_url) {
+            Some(origin) => share_read(&origin, api_key, read).await,
+            None => read.await,
         })
     }
 
@@ -518,6 +653,54 @@ mod tests {
             "usage":{"today":{"actual_cost":"NaN"}}
         });
         assert!(parse_subscription_quotas(&invalid_today, "https://cc-vibe.com/v1").is_none());
+    }
+
+    #[test]
+    fn vendor_api_hosts_are_recognised_by_domain_or_exact_host() {
+        for base in [
+            "https://token-plan-sgp.xiaomimimo.com/v1",
+            "https://token-plan-ams.xiaomimimo.com/anthropic",
+            "https://api.xiaomimimo.com/v1",
+            "https://ark.cn-beijing.volces.com/api/plan/v3",
+            "https://ark.ap-southeast.bytepluses.com/api/coding/v3",
+            "https://opencode.ai/zen/v1",
+            "https://api.openai.com/v1",
+            "https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1",
+            "https://qianfan.baidubce.com/v2/coding",
+            "https://API.Anthropic.com",
+            "https://api.openai.com./v1",
+            "https://api.sambanova.ai/v1",
+            "https://api.inference.wandb.ai/v1",
+            "https://coding.dashscope.aliyuncs.com/v1",
+        ] {
+            assert!(is_vendor_api(base), "{base}");
+        }
+        for base in [
+            "https://cc-vibe.com/v1",
+            "https://relay.example/v1",
+            "https://openai.com.relay.example/v1",
+            "https://notopenai.com/v1",
+            "https://my-app.cn-hangzhou.fcapp.run/v1",
+            "https://bucket.oss-cn-beijing.aliyuncs.com/v1",
+            "https://someone.baidubce.com/v1",
+            "https://bucket.tos-cn-beijing.volces.com/v1",
+            "https://app.bytepluses.com/v1",
+            "https://notz.ai/v1",
+            "not a url",
+        ] {
+            assert!(!is_vendor_api(base), "{base}");
+        }
+    }
+
+    #[tokio::test]
+    async fn a_vendor_api_without_its_own_usage_query_is_not_asked_at_all() {
+        let result = RelaySubscriptionProvider
+            .query_usage("sk-fixture", "https://token-plan-cn.xiaomimimo.com/v1")
+            .await
+            .unwrap();
+        assert!(!result.success);
+        assert!(result.data.is_none());
+        assert!(result.error.is_none());
     }
 
     #[test]
