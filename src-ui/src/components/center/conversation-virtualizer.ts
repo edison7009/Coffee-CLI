@@ -17,6 +17,7 @@ interface VirtualMetrics {
   offsets: number[];
   total: number;
   keys: string[];
+  indexes: Map<string, number>;
 }
 
 // Protocol reducers replace changed messages. Reuse estimates for immutable
@@ -75,6 +76,7 @@ export function useConversationVirtualizer(
 ) {
   const [heights, setHeights] = useState(() => new Map<string, number>());
   const pendingHeightsRef = useRef(new Map<string, number>());
+  const measuredRef = useRef(new Set<string>());
   const measureFrameRef = useRef<number | null>(null);
   const scrollFrameRef = useRef<number | null>(null);
   const [range, setRange] = useState<VirtualRange>({ start: 0, end: 0 });
@@ -82,16 +84,20 @@ export function useConversationVirtualizer(
   const metrics = useMemo<VirtualMetrics>(() => {
     const offsets = new Array<number>(messages.length + 1);
     const keys = new Array<string>(messages.length);
+    const indexes = new Map<string, number>();
     offsets[0] = 0;
     for (let index = 0; index < messages.length; index += 1) {
       const message = messages[index];
       const { key, height: estimate } = messageMeasurement(message);
       keys[index] = key;
+      indexes.set(key, index);
       const height = heights.get(key) ?? estimate;
       offsets[index + 1] = offsets[index] + height;
     }
-    return { offsets, total: offsets[messages.length] ?? 0, keys };
+    return { offsets, total: offsets[messages.length] ?? 0, keys, indexes };
   }, [messages, heights]);
+  const metricsRef = useRef(metrics);
+  metricsRef.current = metrics;
 
   const updateRange = useCallback(() => {
     scrollFrameRef.current = null;
@@ -145,6 +151,17 @@ export function useConversationVirtualizer(
 
   const measureRow = useCallback((messageId: string, height: number) => {
     if (!Number.isFinite(height) || height <= 0) return;
+    // A row replacing its estimate above the viewport would push the text being
+    // read. Rows measure in a layout effect, so this correction lands before paint.
+    // The tail may be streaming: its key changes with every delta, never settling.
+    const { offsets, indexes } = metricsRef.current;
+    const scroll = scrollRef.current;
+    const index = indexes.get(messageId);
+    if (scroll?.clientHeight && index !== undefined && index < indexes.size - 1
+      && !measuredRef.current.has(messageId) && offsets[index + 1] <= scroll.scrollTop - THREAD_TOP_PADDING_PX) {
+      scroll.scrollTop += height - (offsets[index + 1] - offsets[index]);
+    }
+    measuredRef.current.add(messageId);
     pendingHeightsRef.current.set(messageId, height);
     if (measureFrameRef.current === null) {
       measureFrameRef.current = window.requestAnimationFrame(() => {
@@ -163,7 +180,7 @@ export function useConversationVirtualizer(
         });
       });
     }
-  }, []);
+  }, [scrollRef]);
 
   useEffect(() => () => {
     if (measureFrameRef.current !== null) window.cancelAnimationFrame(measureFrameRef.current);
