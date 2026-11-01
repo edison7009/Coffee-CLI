@@ -407,6 +407,8 @@ export const ru = {
   'gambit.worktree': 'Worktree',
   'gambit.worktree_unavailable': 'Нужен git-репозиторий хотя бы с одним коммитом',
   'gambit.worktree_hint': 'Работать в изолированной копии репозитория',
+  'gambit.worktree_locked': 'После начала разговора переключить нельзя',
+  'gambit.worktree_branch': 'Работа в worktree на ветке {branch}',
   'gambit.worktree_failed': 'Не удалось создать worktree: {error}',
   'gambit.worktree_merge': 'Слить в {target}',
   'gambit.worktree_merged': 'Слито коммитов: {count}',

@@ -410,6 +410,8 @@ export const zhTW = {
   'gambit.worktree': '工作樹',
   'gambit.worktree_unavailable': '需要 git 儲存庫，且至少有一次提交',
   'gambit.worktree_hint': '在儲存庫的隔離副本中工作',
+  'gambit.worktree_locked': '對話開始後不能切換',
+  'gambit.worktree_branch': '正在工作樹中工作，分支 {branch}',
   'gambit.worktree_failed': '建立工作樹失敗：{error}',
   'gambit.worktree_merge': '合併到 {target}',
   'gambit.worktree_merged': '已合併 {count} 個提交',

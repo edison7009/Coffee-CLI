@@ -409,6 +409,8 @@ export const ja = {
   'gambit.worktree': 'ワークツリー',
   'gambit.worktree_unavailable': 'コミットが 1 つ以上ある git リポジトリが必要です',
   'gambit.worktree_hint': 'リポジトリの分離されたコピーで作業',
+  'gambit.worktree_locked': '会話開始後は切り替えできません',
+  'gambit.worktree_branch': 'ブランチ {branch} のワークツリーで作業中',
   'gambit.worktree_failed': 'ワークツリーを作成できません: {error}',
   'gambit.worktree_merge': '{target} にマージ',
   'gambit.worktree_merged': '{count} 件のコミットをマージしました',

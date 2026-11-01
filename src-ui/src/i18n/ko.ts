@@ -409,6 +409,8 @@ export const ko = {
   'gambit.worktree': '워크트리',
   'gambit.worktree_unavailable': '커밋이 하나 이상 있는 git 저장소가 필요합니다',
   'gambit.worktree_hint': '저장소의 격리된 사본에서 작업',
+  'gambit.worktree_locked': '대화가 시작되면 전환할 수 없습니다',
+  'gambit.worktree_branch': '브랜치 {branch}의 워크트리에서 작업 중',
   'gambit.worktree_failed': '워크트리를 만들 수 없습니다: {error}',
   'gambit.worktree_merge': '{target}에 병합',
   'gambit.worktree_merged': '커밋 {count}개를 병합했습니다',

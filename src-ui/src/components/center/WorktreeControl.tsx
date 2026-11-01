@@ -49,8 +49,11 @@ export function WorktreeControl({ tab, started, running }: { tab: TerminalSessio
     return () => clearTimeout(timer);
   }, [notice]);
 
-  if ((!worktree && locked) || (!worktree && insideWorktrees(cwd))) return null;
+  if (!worktree && insideWorktrees(cwd)) return null;
   const bubble = notice && <span className="gambit-worktree-notice" data-error={notice.error || undefined} role="status" onClick={() => setNotice(null)}>{notice.text}</span>;
+  const chip = (disabled: boolean, onClick?: () => void) => <button type="button" role="checkbox" className="gambit-worktree-toggle" aria-checked={!!worktree} disabled={disabled} onClick={onClick}>
+    {worktree && <CheckIcon />}{t('gambit.worktree')}
+  </button>;
 
   if (!locked) {
     const toggle = async () => {
@@ -67,12 +70,13 @@ export function WorktreeControl({ tab, started, running }: { tab: TerminalSessio
     };
     const disabled = pending || running || (!worktree && !available);
     return <span className="gambit-worktree" data-tip={notice ? undefined : !worktree && !available ? t('gambit.worktree_unavailable') : t('gambit.worktree_hint')}>
-      <button type="button" role="checkbox" className="gambit-worktree-toggle" aria-checked={!!worktree} disabled={disabled} onClick={() => { void toggle(); }}>
-        <span className="gambit-worktree-box" aria-hidden="true" />{t('gambit.worktree')}
-      </button>
+      {chip(disabled, () => { void toggle(); })}
       {bubble}
     </span>;
   }
+
+  // Once the conversation has started the switch stays as it was, locked.
+  if (!worktree) return <span className="gambit-worktree" data-tip={t('gambit.worktree_locked')}>{chip(true)}</span>;
 
   const merge = async () => {
     if (!worktree || pending || running) return;
@@ -86,15 +90,15 @@ export function WorktreeControl({ tab, started, running }: { tab: TerminalSessio
     } finally { refresh(worktree); setPending(false); }
   };
   const mergeable = !!status?.exists && (status.ahead > 0 || status.dirty);
-  return <span className="gambit-worktree">
-    <span className="gambit-worktree-branch"><BranchIcon /><span className="gambit-worktree-branch-name">{worktree!.branch}</span></span>
+  return <span className="gambit-worktree" data-locked="" data-tip={notice ? undefined : t('gambit.worktree_branch', { branch: worktree.branch })}>
+    {chip(true)}
     {mergeable && !running && <button type="button" className="gambit-worktree-merge" disabled={pending} onClick={() => { void merge(); }}>{t('gambit.worktree_merge', { target: status!.target || 'HEAD' })}</button>}
     {bubble}
   </span>;
 }
 
-function BranchIcon() {
-  return <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true"><circle cx="4.5" cy="3.5" r="1.75" /><circle cx="4.5" cy="12.5" r="1.75" /><circle cx="11.5" cy="5.5" r="1.75" /><path d="M4.5 5.25v5.5M11.5 7.25c0 2.5-2 3.25-5.25 3.75" /></svg>;
+function CheckIcon() {
+  return <svg className="gambit-worktree-check" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 8.5l3.25 3.25L13 5" /></svg>;
 }
 
 /** Removes a tab's worktree once no tab uses it, through git's safe removal. */
