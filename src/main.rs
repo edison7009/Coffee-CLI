@@ -33,6 +33,7 @@ mod tool_skills;
 mod tool_control;
 mod computer_control;
 mod orchestration;
+mod worker_worktree;
 mod tools;
 mod usage_stats;
 mod usage_quota;

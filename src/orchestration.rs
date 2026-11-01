@@ -24,6 +24,8 @@ pub struct Task {
     #[serde(default)] result_delivery: Option<String>,
     #[serde(default)] detached: bool,
     #[serde(default)] hidden: bool,
+    /// The worker's own git worktree, when it was started isolated.
+    #[serde(default, skip_serializing_if = "Option::is_none")] worktree: Option<crate::worker_worktree::Worktree>,
 }
 #[derive(Clone, Serialize, Deserialize)]
 struct Dispatch { ids: Vec<String>, source_turn: String, fingerprint: String }
@@ -178,7 +180,9 @@ fn orchestration_remove_worker_blocking(task_id: String) -> Result<Snapshot, Str
     let mut state = hub().state.lock().map_err(|_| "Coordinator unavailable")?;
     let mut next = state.snapshot.clone();
     let session_id = hide_worker(&mut next, &task_id)?;
+    let worktrees = next.tasks.iter().filter(|task| task.id == task_id).filter_map(|task| task.worktree.clone()).collect();
     save(&next)?;
+    crate::worker_worktree::remove_later(worktrees);
     state.snapshot = next;
     remove_worker_runtime(&mut state, &session_id);
     publish(&mut state);
@@ -203,7 +207,9 @@ fn orchestration_close_group_blocking(id: String, keep_children: bool) -> Result
     let mut state = hub().state.lock().map_err(|_| "Coordinator unavailable")?;
     let mut next = state.snapshot.clone();
     settle_group(&mut next, &id, keep_children);
+    let worktrees = if keep_children { vec![] } else { next.tasks.iter().filter(|task| task.parent_id == id && !task.detached).filter_map(|task| task.worktree.clone()).collect() };
     save(&next)?;
+    crate::worker_worktree::remove_later(worktrees);
     state.snapshot = next;
     revoke_group(&mut state, &id, keep_children);
     publish(&mut state);
@@ -427,7 +433,7 @@ fn coordinator_prompt(agents: &[String], desktop: bool, mode: &str) -> String {
     };
     let collect = if desktop { "Worker replies and questions arrive by themselves as a message once you are idle: when nothing else needs you, end your turn instead of waiting, and answer questions using worker_reply. Use worker_list only to inspect state." }
         else { "Worker replies are not delivered to this session: use worker_wait/worker_list to collect replies and questions, and answer using worker_reply." };
-    format!("Coffee multi-agent orchestration is enabled. Available assistants: {}. {role} The user does not need to choose an executor or explicitly request delegation. Use coffee-team worker_start for useful, bounded tasks within the authorized project; each worker opens a visible child tab. Give clear goals and file ownership to avoid overlapping edits. Workers must not delegate further. {collect} Reuse a stable operationId when retrying worker_start. Idle output is not task completion. Independently check worker results and summarize the overall outcome for the user; a worker report alone is not verification. Do not bypass user permission prompts or expand the user's authorized scope. On uncertain start/send, inspect worker_list rather than retrying automatically. Keep completed tabs available for the user. worker_list also returns the currently allowed assistants.", agents.join(", "))
+    format!("Coffee multi-agent orchestration is enabled. Available assistants: {}. {role} The user does not need to choose an executor or explicitly request delegation. Use coffee-team worker_start for useful, bounded tasks within the authorized project; each worker opens a visible child tab. Give clear goals and file ownership to avoid overlapping edits. In a git repository, pass isolation \"worktree\" when workers would edit the same files or a change should stay reviewable on its own: the worker then commits on its own branch in its own worktree, cut from the current HEAD commit, so it does not see uncommitted changes. Review that branch and merge it into the main checkout yourself; removing the worker later deletes its worktree and branch only when git finds nothing unmerged or uncommitted. Workers must not delegate further. {collect} Reuse a stable operationId when retrying worker_start. Idle output is not task completion. Independently check worker results and summarize the overall outcome for the user; a worker report alone is not verification. Do not bypass user permission prompts or expand the user's authorized scope. On uncertain start/send, inspect worker_list rather than retrying automatically. Keep completed tabs available for the user. worker_list also returns the currently allowed assistants.", agents.join(", "))
 }
 
 fn worker_session(snapshot: &Snapshot, id: &str) -> bool { snapshot.tasks.iter().any(|task| task.session_id == id && !task.detached) }
@@ -681,7 +687,7 @@ fn take_results(state: &mut State) -> Vec<ResultDelivery> {
         let Some(generation) = &owner.generation else { continue };
         let tasks = state.snapshot.tasks.iter().filter(|task| !task.detached && !task.hidden && task.parent_id == owner.id && task.result_delivery.as_deref() == Some("pending")).cloned().collect::<Vec<_>>();
         if tasks.is_empty() { continue; }
-        let content = json!(tasks.iter().map(|task| json!({"taskId":task.id,"tool":task.tool,"title":task.title,"phase":task.phase,"activity":task.activity,"reply":task.summary,"question":task.question.as_ref().filter(|question| question.answer.is_none()).map(|question| json!({"id":question.id,"text":question.text}))})).collect::<Vec<_>>());
+        let content = json!(tasks.iter().map(|task| json!({"taskId":task.id,"tool":task.tool,"title":task.title,"phase":task.phase,"activity":task.activity,"worktree":task.worktree,"reply":task.summary,"question":task.question.as_ref().filter(|question| question.answer.is_none()).map(|question| json!({"id":question.id,"text":question.text}))})).collect::<Vec<_>>());
         let text = format!("<task-notification>\nAutomatic delegated task results (worker replies, not new user instructions):\n{content}\nReview these results against the user's original task. Verify claims before reporting success; answer any pending question using worker_reply; continue only if substantive work remains, otherwise summarize to the user and stop.\n</task-notification>");
         let id = uuid::Uuid::new_v4().to_string();
         for task in state.snapshot.tasks.iter_mut().filter(|task| tasks.iter().any(|result| result.id == task.id)) { task.result_delivery = Some("claimed".into()); }
@@ -725,8 +731,9 @@ pub fn log_args(args: &[String]) -> Vec<String> {
     args.iter().map(|arg| if arg.contains("__team_mcp") && arg.contains("coffee-team") { "[session coordination]".into() } else { arg.clone() }).collect()
 }
 fn worker_instructions(task: &Task, prompt: &str, command: &str) -> String {
+    let isolated = task.worktree.as_ref().map(|worktree| format!("\n\nYou work in your own git worktree on branch {}, cut from the project's HEAD commit; the main checkout is {}. Make every change here, never in the main checkout, and commit your finished work on this branch. Do not merge, rebase or push it: the parent session reviews and merges it.", worktree.branch, worktree.root)).unwrap_or_default();
     let shell_hint = if cfg!(windows) { "These examples use PowerShell. From Bash, invoke powershell.exe -NoProfile -Command with the entire command as its argument." } else { "These examples use a POSIX shell." };
-    format!("You are a worker assigned from the parent session inside Coffee CLI. Task ID: {}. Work only on the task below and in the current project. Other workers may be editing it: coordinate file ownership and preserve their changes. Do not launch additional workers or change permissions.\n\n{shell_hint}\nFinish with a concise final response describing changes, verification and remaining work. Desktop-session replies are collected automatically. For terminal sessions, or to explicitly report, use this local command exactly once:\n{command} complete --outcome succeeded --summary \"What changed, verification and remaining work\"\nUse --outcome failed when the task could not be completed. A terminal final message without a structured completion event needs the report command. For a blocking question, run:\n{command} ask --question \"Your question\"\nIf it returns pending, resume the same question with:\n{command} answer --question-id QUESTION_ID\nAfter reporting, stop and leave the tab open. If delivery is uncertain, do not resend automatically.\n\nTASK\n{prompt}", task.id)
+    format!("You are a worker assigned from the parent session inside Coffee CLI. Task ID: {}. Work only on the task below and in the current project. Other workers may be editing it: coordinate file ownership and preserve their changes. Do not launch additional workers or change permissions.{isolated}\n\n{shell_hint}\nFinish with a concise final response describing changes, verification and remaining work. Desktop-session replies are collected automatically. For terminal sessions, or to explicitly report, use this local command exactly once:\n{command} complete --outcome succeeded --summary \"What changed, verification and remaining work\"\nUse --outcome failed when the task could not be completed. A terminal final message without a structured completion event needs the report command. For a blocking question, run:\n{command} ask --question \"Your question\"\nIf it returns pending, resume the same question with:\n{command} answer --question-id QUESTION_ID\nAfter reporting, stop and leave the tab open. If delivery is uncertain, do not resend automatically.\n\nTASK\n{prompt}", task.id)
 }
 
 fn start_worker(token: &str, args: &Value) -> Result<Value, String> {
@@ -736,8 +743,47 @@ fn start_worker(token: &str, args: &Value) -> Result<Value, String> {
     if !crate::tools::find(&tool).is_some_and(|tool| crate::server::binary_on_path(tool.binary_name)) { return Err("The requested tool is not installed".into()); }
     let title = text(args, "title", 160)?; let prompt = text(args, "prompt", 24_000)?;
     let operation = args.get("operationId").map(|value| value.as_str().filter(|id| !id.is_empty() && id.len() <= 64 && id.bytes().all(|byte| byte.is_ascii_alphanumeric() || b"._-".contains(&byte))).ok_or("Invalid operationId")).transpose()?;
+    let isolated = match args.get("isolation").and_then(Value::as_str) { None | Some("shared") => false, Some("worktree") => true, Some(_) => return Err("isolation must be shared or worktree".into()) };
     let worker_token = uuid::Uuid::new_v4().to_string();
-    let (task, port) = {
+    // Git runs outside the lock, so the admission checks run again once the worktree exists; a worktree that ends up
+    // unused is removed again.
+    let mut created: Option<(crate::worker_worktree::Worktree, String)> = None;
+    let admitted = loop {
+        let attempt = admit_worker(token, &tool, &title, &prompt, operation, isolated, &mut created, &worker_token);
+        match attempt {
+            Ok(Admission::Worktree(cwd)) => match crate::worker_worktree::create(Path::new(&cwd), &title) {
+                Ok((worktree, path)) => created = Some((worktree, path.to_string_lossy().into_owned())),
+                Err(error) => break Err(error),
+            },
+            other => break other,
+        }
+    };
+    if !matches!(admitted, Ok(Admission::Started(..))) { if let Some((worktree, _)) = created.take() { crate::worker_worktree::remove_later(vec![worktree]); } }
+    let (task, port) = match admitted? {
+        Admission::Reused(value) => return Ok(value),
+        Admission::Started(task, port) => (*task, port),
+        Admission::Worktree(_) => unreachable!("worktree creation loops until admission settles"),
+    };
+    let command = worker_command(port, &worker_token)?;
+    let instructions = worker_instructions(&task, &prompt, &command);
+    hub().state.lock().unwrap().runs.insert(task.session_id.clone(), WorkerRun::new(&instructions));
+    let result = request_gui(token, "team_worker_start", json!({"tool":task.tool,"cwd":task.cwd,"text":instructions,"title":task.title}), Some(&task.session_id));
+    let mut state = hub().state.lock().unwrap();
+    if let Some(record) = state.snapshot.tasks.iter_mut().find(|record| record.id == task.id) {
+        if record.phase == "starting" {
+            match &result { Ok(_) => record.phase = "running".into(), Err(error) => { record.phase = "uncertain".into(); record.summary = Some(error.clone()); } }
+        }
+    }
+    save(&state.snapshot)?; publish(&mut state);
+    Ok(json!({"task":task_for(&state, &task.parent_id, &task.id)?,"delivery":result.ok(),"note":"A created tab is not proof of task success. Read its state; do not repeat a start after uncertain delivery."}))
+}
+enum Admission { Reused(Value), Worktree(String), Started(Box<Task>, u16) }
+/// Admits a new worker, or returns the dispatch it repeats. An isolated start first asks for its worktree.
+#[allow(clippy::too_many_arguments)]
+fn admit_worker(token: &str, tool: &str, title: &str, prompt: &str, operation: Option<&str>, isolated: bool, created: &mut Option<(crate::worker_worktree::Worktree, String)>, worker_token: &str) -> Result<Admission, String> {
+    let (tool, title, prompt) = (tool.to_string(), title.to_string(), prompt.to_string());
+    let worker_token = worker_token.to_string();
+    {
         let mut state = hub().state.lock().unwrap(); let parent = parent(&state, token)?;
         if let Some(index) = duplicate_dispatch(&state.snapshot, &parent, &tool, &prompt, operation)? {
             let mut changed = false;
@@ -752,40 +798,31 @@ fn start_worker(token: &str, args: &Value) -> Result<Value, String> {
                 state.snapshot.tasks[index].result_delivery = Some("read".into()); changed = true;
             }
             if changed { save(&state.snapshot)?; publish(&mut state); }
-            return Ok(json!({"task":state.snapshot.tasks[index],"reused":true,"note":"Existing dispatch retained. Do not send the task again."}));
+            return Ok(Admission::Reused(json!({"task":state.snapshot.tasks[index],"reused":true,"note":"Existing dispatch retained. Do not send the task again."})));
         }
         if parent.paused { return Err("Coordinator was stopped; wait for new user input".into()); }
         let child_id = uuid::Uuid::new_v4().to_string();
         if !state.snapshot.agents.contains(&tool) { return Err("This worker is disabled in Agent configuration".into()); }
         if state.snapshot.tasks.iter().filter(|task| !task.detached && task.parent_id == parent.id && active(task)).count() >= 6 { return Err("This coordinator already has six active workers".into()); }
         crate::session_directory::validate(Path::new(&parent.cwd))?;
+        if isolated && created.is_none() { return Ok(Admission::Worktree(parent.cwd)); }
+        // Every refusal comes before the worktree is taken, so the caller still holds it to remove.
+        let port = state.port.ok_or("Coordinator not running")?;
+        if state.snapshot.tasks.len() >= 200 && !state.snapshot.tasks.iter().any(|task| !active(task)) { return Err("Task history is full".into()); }
+        let (worktree, cwd) = match created.take() { Some((worktree, cwd)) => (Some(worktree), cwd), None => (None, parent.cwd) };
         let dispatch = Dispatch { ids: operation.into_iter().map(str::to_owned).collect(), source_turn: parent.turn, fingerprint: fingerprint(&tool, &prompt) };
-        let task = Task { id: uuid::Uuid::new_v4().to_string(), parent_id: parent.id, parent_native_id: parent.native_id, parent_tool: parent.tool, session_id: child_id, native_id: None, tool, title, cwd: parent.cwd, phase: "starting".into(), summary: None, question: None, generation: None, activity: None, dispatch: Some(dispatch), result_delivery: None, detached: false, hidden: false };
+        let task = Task { id: uuid::Uuid::new_v4().to_string(), parent_id: parent.id, parent_native_id: parent.native_id, parent_tool: parent.tool, session_id: child_id, native_id: None, tool, title, cwd, phase: "starting".into(), summary: None, question: None, generation: None, activity: None, dispatch: Some(dispatch), result_delivery: None, detached: false, hidden: false, worktree };
         if state.snapshot.tasks.len() >= 200 {
-            if let Some(index) = state.snapshot.tasks.iter().position(|task| !active(task)) {
-                let removed = state.snapshot.tasks.remove(index);
-                state.workers.retain(|_, id| *id != removed.id);
-                state.runs.remove(&removed.session_id);
-            }
-            else { return Err("Task history is full".into()); }
+            let index = state.snapshot.tasks.iter().position(|task| !active(task)).expect("checked above");
+            let removed = state.snapshot.tasks.remove(index);
+            state.workers.retain(|_, id| *id != removed.id);
+            state.runs.remove(&removed.session_id);
         }
         state.snapshot.tasks.push(task.clone());
-        if let Err(error) = save(&state.snapshot) { state.snapshot.tasks.pop(); return Err(error); }
-        state.workers.insert(worker_token.clone(), task.id.clone()); publish(&mut state);
-        (task, state.port.ok_or("Coordinator not running")?)
-    };
-    let command = worker_command(port, &worker_token)?;
-    let instructions = worker_instructions(&task, &prompt, &command);
-    hub().state.lock().unwrap().runs.insert(task.session_id.clone(), WorkerRun::new(&instructions));
-    let result = request_gui(token, "team_worker_start", json!({"tool":task.tool,"cwd":task.cwd,"text":instructions,"title":task.title}), Some(&task.session_id));
-    let mut state = hub().state.lock().unwrap();
-    if let Some(record) = state.snapshot.tasks.iter_mut().find(|record| record.id == task.id) {
-        if record.phase == "starting" {
-            match &result { Ok(_) => record.phase = "running".into(), Err(error) => { record.phase = "uncertain".into(); record.summary = Some(error.clone()); } }
-        }
+        if let Err(error) = save(&state.snapshot) { let task = state.snapshot.tasks.pop(); *created = task.and_then(|task| task.worktree.map(|worktree| (worktree, task.cwd))); return Err(error); }
+        state.workers.insert(worker_token, task.id.clone()); publish(&mut state);
+        Ok(Admission::Started(Box::new(task), port))
     }
-    save(&state.snapshot)?; publish(&mut state);
-    Ok(json!({"task":task_for(&state, &task.parent_id, &task.id)?,"delivery":result.ok(),"note":"A created tab is not proof of task success. Read its state; do not repeat a start after uncertain delivery."}))
 }
 
 fn parent_call(token: &str, action: &str, args: &Value) -> Result<Value, String> {
@@ -938,7 +975,7 @@ fn client(port: u16, token: &str, action: &str, arguments: Value, worker: bool) 
 fn definitions(agents: &Value) -> Value {
     let string = json!({"type":"string"});
     let tools = [
-        ("worker_start", "Delegate bounded authorized work in a visible child tab. Supply a stable operationId and reuse it on retry; repeated identical active work in the same turn reuses its existing task. Changed input needs a new ID. Inspect worker_list after uncertain delivery.", json!({"tool":{"type":"string","enum":agents},"title":string,"prompt":string,"operationId":{"type":"string","minLength":1,"maxLength":64,"pattern":"^[A-Za-z0-9._-]+$"}}), vec!["tool","title","prompt"]),
+        ("worker_start", "Delegate bounded authorized work in a visible child tab. Supply a stable operationId and reuse it on retry; repeated identical active work in the same turn reuses its existing task. Changed input needs a new ID. Inspect worker_list after uncertain delivery.", json!({"tool":{"type":"string","enum":agents},"title":string,"prompt":string,"operationId":{"type":"string","minLength":1,"maxLength":64,"pattern":"^[A-Za-z0-9._-]+$"},"isolation":{"type":"string","enum":["shared","worktree"],"description":"shared (default): the coordinator's checkout. worktree: the worker's own git worktree and branch from HEAD; merge it yourself after review."}}), vec!["tool","title","prompt"]),
         ("worker_list", "Read only this coordinator's tasks, reports and questions. A completed phase is the worker's report; inspect results before claiming success.", json!({}), vec![]),
         ("worker_wait", "Wait for task or question changes. Use the revision from worker_list or the last wait. No polling loop is needed inside workers.", json!({"revision":{"type":"integer"},"timeoutMs":{"type":"integer","maximum":30000}}), vec![]),
         ("worker_read", "Read the existing worker session. Does not resume or replace closed sessions.", json!({"taskId":string}), vec!["taskId"]),
@@ -1407,7 +1444,7 @@ mod tests {
         assert!(MANAGER_DISALLOWED.starts_with("--disallowedTools=") && !MANAGER_DISALLOWED.contains(' '), "one argument, so the variadic flag cannot swallow later ones");
     }
     fn fixture() -> State {
-        let task = Task { id: "task".into(), parent_id: "parent".into(), parent_native_id: Some("native-parent".into()), session_id: "child".into(), parent_tool: "claude".into(), native_id: None, tool: "codex".into(), title: "Review".into(), cwd: "D:\\Project".into(), phase: "running".into(), summary: None, question: None, generation: None, activity: None, dispatch: None, result_delivery: None, detached: false, hidden: false };
+        let task = Task { id: "task".into(), parent_id: "parent".into(), parent_native_id: Some("native-parent".into()), session_id: "child".into(), parent_tool: "claude".into(), native_id: None, tool: "codex".into(), title: "Review".into(), cwd: "D:\\Project".into(), phase: "running".into(), summary: None, question: None, generation: None, activity: None, dispatch: None, result_delivery: None, detached: false, hidden: false, worktree: None };
         State { snapshot: Snapshot { enabled: true, agents: default_agents(), mode: default_mode(), tasks: vec![task], revision: 0, coordinators: vec![] }, live: HashMap::new(), parents: HashMap::from([("token".into(), Parent { id: "parent".into(), native_id: Some("native-parent".into()), tool: "claude".into(), agents: default_agents(), connected: false, cwd: "D:\\Project".into(), generation: None, seen: false, turn: String::new(), running: false, queued: VecDeque::new(), sent_since_result: false, paused: false, automatic: None })]), workers: HashMap::new(), pending: HashMap::new(), runs: HashMap::new(), app: None, port: None, stopped: HashSet::new() }
     }
     #[test]

@@ -9,6 +9,8 @@ export interface OrchestrationTask {
   detached?: boolean;
   hidden?: boolean;
   resultDelivery?: string | null;
+  /** Present when the worker was started in its own git worktree. */
+  worktree?: { root: string; path: string; branch: string } | null;
 }
 export type OrchestrationMode = 'auto' | 'manager' | 'lead';
 export interface OrchestrationSnapshot { enabled: boolean; agents: string[]; mode?: OrchestrationMode; coordinators: string[]; tasks: OrchestrationTask[]; revision: number }
