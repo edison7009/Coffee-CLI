@@ -76,7 +76,7 @@ struct Question { id: String, text: String, answer: Option<String> }
 #[serde(rename_all = "camelCase")]
 pub struct LiveSession { id: String, tool: String, cwd: String, generation: Option<String>, native_id: Option<String>, ready: bool, status: Option<String>, error: Option<String>, #[serde(default)] can_receive: bool }
 #[derive(Clone)]
-struct Parent { id: String, native_id: Option<String>, tool: String, agents: Vec<String>, connected: bool, cwd: String, generation: Option<String>, seen: bool, turn: String, running: bool, queued: VecDeque<String>, sent_since_result: bool, paused: bool, automatic: Option<AutomaticInput> }
+struct Parent { id: String, native_id: Option<String>, tool: String, agents: Vec<String>, connected: bool, cwd: String, generation: Option<String>, seen: bool, turn: String, running: bool, queued: VecDeque<String>, sent_since_result: bool, paused: bool, automatic: Option<AutomaticInput>, restart_tasks: Vec<String> }
 fn claude_tool() -> String { "claude".into() }
 struct Pending { parent: String, token: String, worker: Option<String>, session_id: Option<String>, deadline: Instant, sender: mpsc::Sender<Value> }
 struct State {
@@ -439,19 +439,19 @@ pub fn parent_launch(app: &AppHandle, id: &str, native_id: &str, cwd: &Path, des
     let mode = state.snapshot.mode.clone();
     state.parents.retain(|_, parent| parent.id != id);
     let paused = state.stopped.contains(native_id);
-    state.parents.insert(token.clone(), Parent { id: id.into(), native_id: Some(native_id.into()), tool: "claude".into(), agents: agents.clone(), connected: false, cwd: cwd.to_string_lossy().into_owned(), generation: None, seen: false, turn: String::new(), running: false, queued: VecDeque::new(), sent_since_result: false, paused, automatic: None });
+    state.parents.insert(token.clone(), Parent { id: id.into(), native_id: Some(native_id.into()), tool: "claude".into(), agents: agents.clone(), connected: false, cwd: cwd.to_string_lossy().into_owned(), generation: None, seen: false, turn: String::new(), running: false, queued: VecDeque::new(), sent_since_result: false, paused, automatic: None, restart_tasks: vec![] });
     for task in &mut state.snapshot.tasks {
         if !task.detached && task.parent_native_id.as_deref() == Some(native_id) {
             task.parent_id = id.into();
             if matches!(task.result_delivery.as_deref(), Some("pending" | "claimed")) { task.result_delivery = Some("retained".into()); }
         }
     }
+    // The note lives only in this process's system prompt, so it counts as told once a turn starts with it; a
+    // relaunch before that, such as a stop, carries it again.
     let recovered = state.snapshot.tasks.iter().filter(|task| task.restart_note && !task.detached && !task.hidden && task.parent_native_id.as_deref() == Some(native_id)).collect::<Vec<_>>();
     let note = restart_note(&recovered);
-    if note.is_some() {
-        for task in state.snapshot.tasks.iter_mut().filter(|task| task.parent_native_id.as_deref() == Some(native_id)) { task.restart_note = false; }
-        let _ = save(&state.snapshot);
-    }
+    let restart_tasks = recovered.iter().map(|task| task.id.clone()).collect::<Vec<_>>();
+    if let Some(owner) = state.parents.get_mut(&token) { owner.restart_tasks = restart_tasks; }
     publish(&mut state);
     let config = json!({"mcpServers":{"coffee-team":{"command":std::env::current_exe().map_err(|e| e.to_string())?,"args":["__team_mcp",port.to_string(),token]}}});
     let args = if mode == "manager" { vec![MANAGER_DISALLOWED.to_string()] } else { vec![] };
@@ -527,6 +527,7 @@ fn record_delivery_input(state: &mut State, id: &str, tool: &str, generation: &s
             return Err("Automatic results were superseded or the coordinator was stopped".into());
         }
     }
+    let mut told = vec![];
     for owner in state.parents.values_mut().filter(|owner| owner.id == id && owner.tool == tool && owner.generation.as_ref().is_none_or(|known| *known == generation)) {
         owner.sent_since_result = true;
         if delivery.is_some() {
@@ -534,13 +535,18 @@ fn record_delivery_input(state: &mut State, id: &str, tool: &str, generation: &s
             if let Some(input) = owner.automatic.take() {
                 for task in state.snapshot.tasks.iter_mut().filter(|task| input.tasks.contains(&task.id) && task.result_delivery.as_deref() == Some("claimed")) { task.result_delivery = Some("delivered".into()); }
             }
-            owner.running = true;
+            owner.running = true; told.append(&mut owner.restart_tasks);
         } else {
             if owner.running { owner.queued.push_back(turn.into()); }
             else { owner.turn = turn.into(); owner.running = true; }
             owner.paused = false;
             if let Some(native) = &owner.native_id { state.stopped.remove(native); }
+            told.append(&mut owner.restart_tasks);
         }
+    }
+    if !told.is_empty() {
+        for task in state.snapshot.tasks.iter_mut().filter(|task| told.contains(&task.id)) { task.restart_note = false; }
+        let _ = save(&state.snapshot);
     }
     let current = state.snapshot.tasks.iter().any(|task| task.session_id == id && task.tool == tool && active(task) && task.generation.as_ref().is_none_or(|known| *known == generation));
     if !current { state.runs.remove(id); return Ok(()); }
@@ -1463,6 +1469,12 @@ mod tests {
         assert!(restart_note(&[]).is_none());
         let json = serde_json::to_value(&state.snapshot.tasks[2]).unwrap();
         assert!(json.get("restartNote").is_none(), "the flag is stored only while set");
+        state.parents.get_mut("token").unwrap().restart_tasks = vec!["task".into(), "done".into()];
+        record_event(&mut state, "parent", "claude", "g1", &json!({"type":"system","subtype":"init"}));
+        assert!(state.snapshot.tasks[0].restart_note, "launching alone does not count as told");
+        record_input(&mut state, "parent", "claude", "g1", "Carry on", "first").unwrap();
+        assert!(!state.snapshot.tasks[0].restart_note && !state.snapshot.tasks[1].restart_note, "the first turn carried the note");
+        assert!(state.parents["token"].restart_tasks.is_empty());
     }
     #[test]
     fn a_worker_that_fails_while_asking_still_settles() {
@@ -1528,7 +1540,7 @@ mod tests {
     }
     fn fixture() -> State {
         let task = Task { id: "task".into(), parent_id: "parent".into(), parent_native_id: Some("native-parent".into()), session_id: "child".into(), parent_tool: "claude".into(), native_id: None, tool: "codex".into(), title: "Review".into(), cwd: "D:\\Project".into(), phase: "running".into(), summary: None, question: None, generation: None, activity: None, dispatch: None, result_delivery: None, detached: false, hidden: false, worktree: None, restart_note: false };
-        State { snapshot: Snapshot { enabled: true, agents: default_agents(), mode: default_mode(), tasks: vec![task], revision: 0, coordinators: vec![] }, live: HashMap::new(), parents: HashMap::from([("token".into(), Parent { id: "parent".into(), native_id: Some("native-parent".into()), tool: "claude".into(), agents: default_agents(), connected: false, cwd: "D:\\Project".into(), generation: None, seen: false, turn: String::new(), running: false, queued: VecDeque::new(), sent_since_result: false, paused: false, automatic: None })]), workers: HashMap::new(), pending: HashMap::new(), runs: HashMap::new(), app: None, port: None, stopped: HashSet::new() }
+        State { snapshot: Snapshot { enabled: true, agents: default_agents(), mode: default_mode(), tasks: vec![task], revision: 0, coordinators: vec![] }, live: HashMap::new(), parents: HashMap::from([("token".into(), Parent { id: "parent".into(), native_id: Some("native-parent".into()), tool: "claude".into(), agents: default_agents(), connected: false, cwd: "D:\\Project".into(), generation: None, seen: false, turn: String::new(), running: false, queued: VecDeque::new(), sent_since_result: false, paused: false, automatic: None, restart_tasks: vec![] })]), workers: HashMap::new(), pending: HashMap::new(), runs: HashMap::new(), app: None, port: None, stopped: HashSet::new() }
     }
     #[test]
     fn worker_history_restore_keeps_native_id_result_and_settled_phase() {
