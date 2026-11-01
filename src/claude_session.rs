@@ -146,8 +146,8 @@ fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<Stri
     else { command.args(["--session-id", &native_id]); }
     let previous = continue_from.as_ref().and_then(|from| previous_conversation(&cwd, from));
     let parent = crate::orchestration::parent_launch(&app, &id, &native_id, &cwd, true)?;
-    if let Some((mcp, _)) = &parent { command.args(["--mcp-config", mcp]); }
-    let appended = [parent.map(|(_, prompt)| prompt), previous].into_iter().flatten().collect::<Vec<_>>().join("\n\n");
+    if let Some(parent) = &parent { command.args(["--mcp-config", &parent.mcp]).args(&parent.args); }
+    let appended = [parent.map(|parent| parent.prompt), previous].into_iter().flatten().collect::<Vec<_>>().join("\n\n");
     // cmd.exe ends a command line at the first newline, so npm installs read the text from a file.
     let mut prompt_file = None;
     if !appended.is_empty() {

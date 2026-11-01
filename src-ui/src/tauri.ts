@@ -184,6 +184,7 @@ export const commands = {
   checkCliUpdate: (tool: string) => invoke<CliUpdateStatus>('check_cli_update', { tool }),
   updateCli: (tool: string) => invoke<CliUpdateStatus>('update_cli', { tool }),
   orchestrationGet: () => invoke<import('./lib/orchestration').OrchestrationSnapshot>('orchestration_get'),
+  orchestrationSetMode: (mode: string) => invoke<import('./lib/orchestration').OrchestrationSnapshot>('orchestration_set_mode', { mode }),
   orchestrationSetAgent: (tool: string, enabled: boolean) => invoke<import('./lib/orchestration').OrchestrationSnapshot>('orchestration_set_agent', { tool, enabled }),
   orchestrationSync: (sessions: unknown[]) => invoke<import('./lib/orchestration').ResultDelivery[]>('orchestration_sync', { sessions }),
   orchestrationCloseGroup: (id: string, keepChildren: boolean) => invoke<import('./lib/orchestration').OrchestrationSnapshot>('orchestration_close_group', { id, keepChildren }),

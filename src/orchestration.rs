@@ -6,7 +6,11 @@ use tauri::{AppHandle, Emitter};
 
 #[derive(Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
-pub struct Snapshot { pub enabled: bool, #[serde(default = "default_agents")] pub agents: Vec<String>, pub tasks: Vec<Task>, pub revision: u64, #[serde(default, skip_deserializing)] pub coordinators: Vec<String> }
+pub struct Snapshot { pub enabled: bool, #[serde(default = "default_agents")] pub agents: Vec<String>, #[serde(default = "default_mode")] pub mode: String, pub tasks: Vec<Task>, pub revision: u64, #[serde(default, skip_deserializing)] pub coordinators: Vec<String> }
+/// The coordinator's role: `auto` decides for itself, `manager` only plans, delegates and audits, `lead` does the core
+/// work itself and delegates only peripheral tasks.
+const MODES: [&str; 3] = ["auto", "manager", "lead"];
+fn default_mode() -> String { "auto".into() }
 fn default_agents() -> Vec<String> { ["claude", "codex", "opencode", "dsh"].into_iter().map(str::to_owned).collect() }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -222,6 +226,17 @@ fn settle_group(snapshot: &mut Snapshot, id: &str, keep_children: bool) {
     }
 }
 #[tauri::command]
+pub async fn orchestration_set_mode(mode: String) -> Result<Snapshot, String> {
+    tauri::async_runtime::spawn_blocking(move || orchestration_set_mode_blocking(mode)).await.map_err(|e| e.to_string())?
+}
+/// Applies to coordinators launched from now on; a running one keeps the role it started with.
+fn orchestration_set_mode_blocking(mode: String) -> Result<Snapshot, String> {
+    if !MODES.contains(&mode.as_str()) { return Err("Unknown coordinator role".into()); }
+    let mut state = hub().state.lock().map_err(|_| "Coordinator unavailable")?;
+    let mut next = state.snapshot.clone(); next.mode = mode;
+    save(&next)?; state.snapshot = next; publish(&mut state); Ok(current_snapshot(&state))
+}
+#[tauri::command]
 pub async fn orchestration_set_agent(tool: String, enabled: bool) -> Result<Snapshot, String> {
     tauri::async_runtime::spawn_blocking(move || orchestration_set_agent_blocking(tool, enabled)).await.map_err(|e| e.to_string())?
 }
@@ -374,8 +389,12 @@ fn initialize(app: &AppHandle) -> Result<u16, String> {
     Ok(port)
 }
 
+/// What a coordinator launch adds to Claude: its MCP configuration, its prompt and any further arguments.
+pub struct ParentLaunch { pub mcp: String, pub prompt: String, pub args: Vec<String> }
+/// A project manager delegates every change, so it loses the tools that edit files. Bash stays for audits.
+const MANAGER_DISALLOWED: &str = "--disallowedTools=Edit,Write,NotebookEdit";
 /// Session-only MCP configuration: no hooks, project files or global agent settings are written.
-pub fn parent_launch(app: &AppHandle, id: &str, native_id: &str, cwd: &Path, desktop: bool) -> Result<Option<(String, String)>, String> {
+pub fn parent_launch(app: &AppHandle, id: &str, native_id: &str, cwd: &Path, desktop: bool) -> Result<Option<ParentLaunch>, String> {
     {
         let state = hub().state.lock().unwrap();
         if !state.snapshot.enabled || state.snapshot.agents.is_empty() || worker_session(&state.snapshot, id) { return Ok(None); }
@@ -384,6 +403,7 @@ pub fn parent_launch(app: &AppHandle, id: &str, native_id: &str, cwd: &Path, des
     let token = uuid::Uuid::new_v4().to_string();
     let mut state = hub().state.lock().unwrap();
     let agents = state.snapshot.agents.clone();
+    let mode = state.snapshot.mode.clone();
     state.parents.retain(|_, parent| parent.id != id);
     let paused = state.stopped.contains(native_id);
     state.parents.insert(token.clone(), Parent { id: id.into(), native_id: Some(native_id.into()), tool: "claude".into(), agents: agents.clone(), connected: false, cwd: cwd.to_string_lossy().into_owned(), generation: None, seen: false, turn: String::new(), running: false, queued: VecDeque::new(), sent_since_result: false, paused, automatic: None });
@@ -395,13 +415,19 @@ pub fn parent_launch(app: &AppHandle, id: &str, native_id: &str, cwd: &Path, des
     }
     publish(&mut state);
     let config = json!({"mcpServers":{"coffee-team":{"command":std::env::current_exe().map_err(|e| e.to_string())?,"args":["__team_mcp",port.to_string(),token]}}});
-    Ok(Some((config.to_string(), coordinator_prompt(&agents, desktop))))
+    let args = if mode == "manager" { vec![MANAGER_DISALLOWED.to_string()] } else { vec![] };
+    Ok(Some(ParentLaunch { mcp: config.to_string(), prompt: coordinator_prompt(&agents, desktop, &mode), args }))
 }
 
-fn coordinator_prompt(agents: &[String], desktop: bool) -> String {
+fn coordinator_prompt(agents: &[String], desktop: bool, mode: &str) -> String {
+    let role = match mode {
+        "manager" => "You are the coordinator in project manager mode: you plan and audit, and never implement. Do not edit files or make changes yourself, even small ones; your file-editing tools are disabled for that reason, so do not work around it with shell commands. Answer the user's questions directly, but divide every change into bounded tasks and delegate each one, choosing the assistant that fits. Then audit the results yourself by reading the changes and running checks, and send corrections back to the worker. If no assistant fits a task, tell the user instead of doing it yourself.",
+        "lead" => "You are the coordinator in lead mode: you own the core of the task. Do the central design, decisions and implementation yourself. Delegate only peripheral, self-contained work that does not touch the core, such as research, lookups, documentation, or independent chores any assistant could do, so that the main work moves faster. Never delegate the core change or its key decisions.",
+        _ => "You are the coordinator: decide for yourself whether delegation helps the user's task, which assistant to use, and how to divide the work. Handle simple tasks yourself.",
+    };
     let collect = if desktop { "Worker replies and questions arrive by themselves as a message once you are idle: when nothing else needs you, end your turn instead of waiting, and answer questions using worker_reply. Use worker_list only to inspect state." }
         else { "Worker replies are not delivered to this session: use worker_wait/worker_list to collect replies and questions, and answer using worker_reply." };
-    format!("Coffee multi-agent orchestration is enabled. Available assistants: {}. You are the coordinator: decide for yourself whether delegation helps the user's task, which assistant to use, and how to divide the work. Handle simple tasks yourself. The user does not need to choose an executor or explicitly request delegation. Use coffee-team worker_start for useful, bounded tasks within the authorized project; each worker opens a visible child tab. Give clear goals and file ownership to avoid overlapping edits. Workers must not delegate further. {collect} Reuse a stable operationId when retrying worker_start. Idle output is not task completion. Independently check worker results and summarize the overall outcome for the user; a worker report alone is not verification. Do not bypass user permission prompts or expand the user's authorized scope. On uncertain start/send, inspect worker_list rather than retrying automatically. Keep completed tabs available for the user. worker_list also returns the currently allowed assistants.", agents.join(", "))
+    format!("Coffee multi-agent orchestration is enabled. Available assistants: {}. {role} The user does not need to choose an executor or explicitly request delegation. Use coffee-team worker_start for useful, bounded tasks within the authorized project; each worker opens a visible child tab. Give clear goals and file ownership to avoid overlapping edits. Workers must not delegate further. {collect} Reuse a stable operationId when retrying worker_start. Idle output is not task completion. Independently check worker results and summarize the overall outcome for the user; a worker report alone is not verification. Do not bypass user permission prompts or expand the user's authorized scope. On uncertain start/send, inspect worker_list rather than retrying automatically. Keep completed tabs available for the user. worker_list also returns the currently allowed assistants.", agents.join(", "))
 }
 
 fn worker_session(snapshot: &Snapshot, id: &str) -> bool { snapshot.tasks.iter().any(|task| task.session_id == id && !task.detached) }
@@ -1365,13 +1391,24 @@ mod tests {
     #[test]
     fn desktop_coordinators_are_told_not_to_wait() {
         let agents = default_agents();
-        assert!(coordinator_prompt(&agents, true).contains("end your turn instead of waiting"));
-        assert!(!coordinator_prompt(&agents, true).contains("worker_wait"));
-        assert!(coordinator_prompt(&agents, false).contains("use worker_wait"));
+        assert!(coordinator_prompt(&agents, true, "auto").contains("end your turn instead of waiting"));
+        assert!(!coordinator_prompt(&agents, true, "auto").contains("worker_wait"));
+        assert!(coordinator_prompt(&agents, false, "auto").contains("use worker_wait"));
+    }
+    #[test]
+    fn coordinator_roles_change_the_prompt_and_saved_snapshots_default_to_auto() {
+        let agents = default_agents();
+        let manager = coordinator_prompt(&agents, true, "manager");
+        assert!(manager.contains("never implement") && !manager.contains("Handle simple tasks yourself"));
+        assert!(coordinator_prompt(&agents, true, "lead").contains("Never delegate the core"));
+        assert!(coordinator_prompt(&agents, true, "auto").contains("Handle simple tasks yourself"));
+        let old: Snapshot = serde_json::from_value(json!({"enabled":true,"tasks":[],"revision":0})).unwrap();
+        assert_eq!(old.mode, "auto");
+        assert!(MANAGER_DISALLOWED.starts_with("--disallowedTools=") && !MANAGER_DISALLOWED.contains(' '), "one argument, so the variadic flag cannot swallow later ones");
     }
     fn fixture() -> State {
         let task = Task { id: "task".into(), parent_id: "parent".into(), parent_native_id: Some("native-parent".into()), session_id: "child".into(), parent_tool: "claude".into(), native_id: None, tool: "codex".into(), title: "Review".into(), cwd: "D:\\Project".into(), phase: "running".into(), summary: None, question: None, generation: None, activity: None, dispatch: None, result_delivery: None, detached: false, hidden: false };
-        State { snapshot: Snapshot { enabled: true, agents: default_agents(), tasks: vec![task], revision: 0, coordinators: vec![] }, live: HashMap::new(), parents: HashMap::from([("token".into(), Parent { id: "parent".into(), native_id: Some("native-parent".into()), tool: "claude".into(), agents: default_agents(), connected: false, cwd: "D:\\Project".into(), generation: None, seen: false, turn: String::new(), running: false, queued: VecDeque::new(), sent_since_result: false, paused: false, automatic: None })]), workers: HashMap::new(), pending: HashMap::new(), runs: HashMap::new(), app: None, port: None, stopped: HashSet::new() }
+        State { snapshot: Snapshot { enabled: true, agents: default_agents(), mode: default_mode(), tasks: vec![task], revision: 0, coordinators: vec![] }, live: HashMap::new(), parents: HashMap::from([("token".into(), Parent { id: "parent".into(), native_id: Some("native-parent".into()), tool: "claude".into(), agents: default_agents(), connected: false, cwd: "D:\\Project".into(), generation: None, seen: false, turn: String::new(), running: false, queued: VecDeque::new(), sent_since_result: false, paused: false, automatic: None })]), workers: HashMap::new(), pending: HashMap::new(), runs: HashMap::new(), app: None, port: None, stopped: HashSet::new() }
     }
     #[test]
     fn worker_history_restore_keeps_native_id_result_and_settled_phase() {
@@ -1487,7 +1524,7 @@ mod tests {
         let mut state = fixture(); state.snapshot.agents = vec!["codex".into()];
         sync_live(&mut state, vec![live("parent", "claude", "g1")]);
         assert!(parent(&state, "token").is_ok());
-        let prompt = coordinator_prompt(&state.snapshot.agents, true);
+        let prompt = coordinator_prompt(&state.snapshot.agents, true, "auto");
         assert!(prompt.contains("Available assistants: codex."));
         assert!(prompt.contains("Handle simple tasks yourself"));
         assert!(prompt.contains("Independently check worker results"));

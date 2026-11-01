@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { commands } from '../../tauri';
 import { useT } from '../../i18n/useT';
-import { receiveOrchestration, refreshOrchestration, useOrchestration } from '../../lib/orchestration';
+import { receiveOrchestration, refreshOrchestration, useOrchestration, type OrchestrationMode } from '../../lib/orchestration';
 import { ToolControlDemo } from './ToolControlDemo';
 import './ToolControlPanel.css';
 
 export function ToolOrchestrationPanel({ active, tools }: {
   active: boolean; tools: { value: string; label: string; icon: ReactNode; installed?: boolean }[];
 }) {
-  const t = useT(), { agents = [] } = useOrchestration();
+  const t = useT(), { agents = [], mode = 'auto' } = useOrchestration();
+  const roles: OrchestrationMode[] = ['auto', 'manager', 'lead'];
   const [ready, setReady] = useState(false), [pending, setPending] = useState<string | null>(null), [error, setError] = useState(false);
   const revision = useRef(0);
   useEffect(() => {
@@ -40,6 +41,22 @@ export function ToolOrchestrationPanel({ active, tools }: {
         }}><span /></button>
       </div>})}
       {!tools.length && <span className="tool-control-no-agents">{t('control.no_agents')}</span>}
+    </div>
+    <div className="orchestration-roles-head"><strong>{t('orchestration.role.title')}</strong><span>{t('orchestration.role.hint')}</span></div>
+    {/* One role at a time: each switch turns the others off, so they behave as one choice. */}
+    <div className="tool-control-agents orchestration-roles" role="radiogroup" aria-label={t('orchestration.role.title')}>
+      {roles.map(role => <div className="tool-control-agent orchestration-role" key={role}>
+        <span className="tool-control-agent-name orchestration-role-text"><span className="tool-control-agent-label">{t(`orchestration.role.${role}`)}</span><span className="orchestration-role-desc">{t(`orchestration.role.${role}_desc`)}</span></span>
+        {pending === `role:${role}` && <span className="tool-control-spinner" aria-hidden="true" />}
+        <button type="button" role="radio" className="tool-control-switch tool-control-card-toggle" aria-label={t(`orchestration.role.${role}`)} aria-checked={mode === role} disabled={!ready || pending !== null} onClick={async () => {
+          if (mode === role) return;
+          revision.current++;
+          setPending(`role:${role}`); setError(false);
+          try { receiveOrchestration(await commands.orchestrationSetMode(role)); }
+          catch { setError(true); }
+          finally { revision.current++; setPending(null); }
+        }}><span /></button>
+      </div>)}
     </div>
     {active && <ToolControlDemo kind="orchestration" />}
   </div>;

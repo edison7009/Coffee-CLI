@@ -13,7 +13,7 @@ window.calls=[];const agents=()=>[{tool:'claude',supported:true,enabled:false,co
 window.controlStatus={computer:{supported:true,installed:true,ready:true,browser:null,agents:agents()},browser:{supported:true,installed:false,ready:false,browser:null,agents:agents()}};
 window.team={enabled:false,agents:[],tasks:[],revision:0};window.teamCalls=[];
 export const commands={
-async orchestrationGet(){window.teamCalls.push('get');const value=structuredClone(window.team);if(window.delayTeamRead)await new Promise(resolve=>window.resolveTeamRead=resolve);return value},async orchestrationSetAgent(tool,enabled){window.teamCalls.push({tool,enabled});if(window.delayTeam)await new Promise(resolve=>window.resolveTeam=resolve);if(window.failTeam)throw 'write failed';window.team.agents=window.team.agents.filter(id=>id!==tool);if(enabled)window.team.agents.push(tool);window.team.enabled=window.team.agents.length>0;window.team.revision++;return structuredClone(window.team)},
+async orchestrationGet(){window.teamCalls.push('get');const value=structuredClone(window.team);if(window.delayTeamRead)await new Promise(resolve=>window.resolveTeamRead=resolve);return value},async orchestrationSetMode(mode){window.teamCalls.push({mode});window.team.mode=mode;window.team.revision++;return structuredClone(window.team)},async orchestrationSetAgent(tool,enabled){window.teamCalls.push({tool,enabled});if(window.delayTeam)await new Promise(resolve=>window.resolveTeam=resolve);if(window.failTeam)throw 'write failed';window.team.agents=window.team.agents.filter(id=>id!==tool);if(enabled)window.team.agents.push(tool);window.team.enabled=window.team.agents.length>0;window.team.revision++;return structuredClone(window.team)},
 async getToolControl(kind){window.calls.push({type:'read',kind});const value=structuredClone(window.controlStatus[kind]);if(window.delayRead===kind)await new Promise(resolve=>window.resolveRead=resolve);if(window.failRead===kind)throw 'control_read';return value},
 async checkToolControl(kind){window.calls.push({type:'check',kind});if(window.delayCheck)await new Promise(resolve=>window.resolveCheck=resolve);if(window.failCheck)throw 'control_unavailable';return structuredClone(window.controlStatus[kind])},
 async installBrowserControl(){window.calls.push({type:'install'});if(window.delayInstall)await new Promise(resolve=>window.resolveInstall=resolve);window.controlStatus.browser.installed=true;return structuredClone(window.controlStatus.browser)},
@@ -58,7 +58,7 @@ assert.ok(Math.abs((await page.locator('.control-demo').boundingBox()).y-browser
 await page.evaluate(()=>{window.delayRead=null;window.resolveRead()});await tab('常用 6/6').click();
 await page.evaluate(()=>window.calls=[]);
 await tab('多智能体编排').click();await agent('Claude Code').waitFor();await page.waitForFunction(()=>!document.querySelector('.orchestration-config [role="switch"]').disabled);
-assert.equal(await agent('Claude Code').getAttribute('aria-checked'),'false');assert.equal(await page.locator('.orchestration-config .tool-control-agent').count(),6);
+assert.equal(await agent('Claude Code').getAttribute('aria-checked'),'false');assert.equal(await page.locator('.orchestration-config .tool-control-agent:not(.orchestration-role)').count(),6);
 assert.equal(await agent('Cursor').isDisabled(),true);assert.equal(await agent('Antigravity CLI').isDisabled(),true);assert.equal(await agent('Kiro').count(),0);
 await panel.getByText('未安装',{exact:true}).waitFor();assert.equal(await panel.getByText('暂不支持',{exact:true}).count(),3);
 await page.evaluate(()=>window.delayTeam=true);await agent('Claude Code').click();await page.waitForFunction(()=>!!window.resolveTeam);
@@ -69,6 +69,12 @@ assert.ok(Number(await agent('Cursor').evaluate(el=>getComputedStyle(el).opacity
 await page.evaluate(()=>{window.delayTeam=false;window.resolveTeam()});await page.waitForFunction(()=>window.team.agents.includes('claude'));
 assert.equal(await agent('Codex CLI').getAttribute('aria-checked'),'false','each agent has an independent switch');
 await agent('Codex CLI').click();await page.waitForFunction(()=>window.team.agents.includes('codex'));
+const role=name=>page.locator('.orchestration-config').getByRole('radio',{name,exact:true});
+assert.equal(await role('自主决定').getAttribute('aria-checked'),'true','a saved snapshot without a role reads as automatic');
+await role('项目经理').click();await page.waitForFunction(()=>window.team.mode==='manager');
+assert.deepEqual([await role('自主决定').getAttribute('aria-checked'),await role('项目经理').getAttribute('aria-checked'),await role('主导').getAttribute('aria-checked')],['false','true','false'],'one role at a time');
+const roleCalls=await page.evaluate(()=>window.teamCalls.filter(call=>call.mode).length);await role('项目经理').click();await page.waitForTimeout(100);
+assert.equal(await page.evaluate(()=>window.teamCalls.filter(call=>call.mode).length),roleCalls,'choosing the current role saves nothing');
 await page.waitForTimeout(260);await page.screenshot({path:join(directory,'orchestration-dark.png')});
 await page.evaluate(()=>window.failTeam=true);await agent('Claude Code').click();await page.getByRole('alert').waitFor();assert.equal(await agent('Claude Code').getAttribute('aria-checked'),'true');
 await page.evaluate(()=>window.failTeam=false);await agent('Claude Code').click();await page.waitForFunction(()=>!window.team.agents.includes('claude'));

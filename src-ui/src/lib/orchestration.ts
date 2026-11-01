@@ -10,7 +10,8 @@ export interface OrchestrationTask {
   hidden?: boolean;
   resultDelivery?: string | null;
 }
-export interface OrchestrationSnapshot { enabled: boolean; agents: string[]; coordinators: string[]; tasks: OrchestrationTask[]; revision: number }
+export type OrchestrationMode = 'auto' | 'manager' | 'lead';
+export interface OrchestrationSnapshot { enabled: boolean; agents: string[]; mode?: OrchestrationMode; coordinators: string[]; tasks: OrchestrationTask[]; revision: number }
 /** `parentId` is the target tab: the coordinator for results, the worker itself for a retry. */
 export interface ResultDelivery { id: string; parentId: string; generation: string; text: string; kind?: 'retry' }
 let snapshot: OrchestrationSnapshot = { enabled: false, agents: [], coordinators: [], tasks: [], revision: 0 };

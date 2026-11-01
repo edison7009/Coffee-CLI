@@ -1060,8 +1060,9 @@ fn tier_terminal_start_blocking(
 
     if tool.as_deref() == Some("claude") {
         if let Some(native_id) = &native_token {
-            if let Some((mcp, prompt)) = crate::orchestration::parent_launch(&app, &session_id, native_id, std::path::Path::new(&actual_cwd), false)? {
-                args.extend(["--mcp-config".into(), mcp, "--append-system-prompt".into(), prompt]);
+            if let Some(parent) = crate::orchestration::parent_launch(&app, &session_id, native_id, std::path::Path::new(&actual_cwd), false)? {
+                args.extend(["--mcp-config".into(), parent.mcp, "--append-system-prompt".into(), parent.prompt]);
+                args.extend(parent.args);
             }
         }
     }
@@ -5370,6 +5371,7 @@ pub fn start_ui(pending_launch: Option<crate::launch::LaunchRequest>) -> anyhow:
             crate::tool_control::set_tool_control,
             crate::orchestration::orchestration_get,
             crate::orchestration::orchestration_set_agent,
+            crate::orchestration::orchestration_set_mode,
             crate::orchestration::orchestration_sync,
             crate::orchestration::orchestration_close_group,
             crate::orchestration::orchestration_remove_worker,
