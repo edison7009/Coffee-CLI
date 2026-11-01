@@ -275,6 +275,8 @@ export function ClaudeConversation({ sessionId, cwd, resumeToken, isActive, isVi
   const { dispatch } = useAppState();
   const s = useClaudeSession(sessionId);
   const initialToken = useRef(resumeToken);
+  // Captured at mount like initialToken; state, not a ref, because the welcome screen renders from it.
+  const [resumed] = useState(() => !!resumeToken);
   const scrollRef = useRef<HTMLDivElement>(null);
   const conversationMenu = useConversationMenu(scrollRef, sessionId, isActive);
   const pinned = useRef(true);
@@ -365,7 +367,7 @@ export function ClaudeConversation({ sessionId, cwd, resumeToken, isActive, isVi
   const directoryIssue = !s.ready ? directoryFailure(s.error) : undefined;
   const directoryError = directoryFailureMessage(s.error, t);
   const empty = !directoryIssue && !s.messages.length && !s.busy && !s.requests.length && (!s.ready || !s.error);
-  const restoring = !!initialToken.current && !s.ready && !s.error;
+  const restoring = resumed && !s.ready && !s.error;
   const restoringMark = <span className="claude-working-mark" aria-hidden="true"><img src={CLAUDE_WORKING_MARK} alt="" /></span>;
   const model = s.models.find(m => m.value === s.model) ?? s.models.find(m => m.resolvedModel === s.model);
   const summary = !empty && !s.busy && s.endedAt && <div className="claude-turn-summary">{t('claude.worked_for', { duration: elapsed(s.endedAt - (s.startedAt ?? s.endedAt), t) })}{used > 0 && <> · {t('claude.tokens', { count: count(used) })}</>}{s.totalCost !== undefined && s.totalCost > 0 && <> · ~${s.totalCost.toFixed(4)}</>}</div>;

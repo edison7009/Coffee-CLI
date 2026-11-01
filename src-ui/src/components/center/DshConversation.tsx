@@ -92,6 +92,8 @@ export function DshConversation({ sessionId, cwd, resumeToken, isActive, isVisib
   const anchor = useRef<{ messageId: string; offset: number } | null>(null);
   const [scrolled, setScrolled] = useState(false), [expanded, setExpanded] = useState<Record<string, boolean>>({}), [copied, setCopied] = useState('');
   const initialToken = useRef(resumeToken);
+  // Captured at mount like initialToken; state, not a ref, because the welcome screen renders from it.
+  const [resumed] = useState(() => !!resumeToken);
   useEffect(() => retainDshSession(sessionId, cwd, initialToken.current), [sessionId, cwd]);
   useEffect(() => { if (s.sessionId) dispatch({ type: 'SET_SESSION_TOKEN', id: sessionId, token: s.sessionId }); }, [s.sessionId, sessionId, dispatch]);
   // The conversation's own title names the tab, as a terminal tab takes the tool's OSC title.
@@ -177,7 +179,7 @@ export function DshConversation({ sessionId, cwd, resumeToken, isActive, isVisib
         {/* A failed start must say why; Reconnect alone hides the cause. */}
         {s.error && !directoryIssue && <div className="claude-session-error" role="alert">{s.error}</div>}
         {directoryIssue && <div className="claude-session-error" role="alert">{directoryError}</div>}
-        {!directoryIssue && !rows.length && <div className="claude-empty"><DshWelcomeIcon isActive={isVisible} /><WelcomeGreeting />{initialToken.current && !s.ready && !s.error && <WelcomeRestoring className="dsh-running" labelClassName="dsh-shimmer" mark={<span className="dsh-running-whale" aria-hidden="true" style={{ maskImage: `url(${DSH_RUNNING_WHALE})`, WebkitMaskImage: `url(${DSH_RUNNING_WHALE})` }} />} />}<WelcomeSessionMeta cwd={cwd} model={s.models.find(m => m.provider === s.route.provider && m.model === s.route.model)?.name ?? s.route.model} /></div>}
+        {!directoryIssue && !rows.length && <div className="claude-empty"><DshWelcomeIcon isActive={isVisible} /><WelcomeGreeting />{resumed && !s.ready && !s.error && <WelcomeRestoring className="dsh-running" labelClassName="dsh-shimmer" mark={<span className="dsh-running-whale" aria-hidden="true" style={{ maskImage: `url(${DSH_RUNNING_WHALE})`, WebkitMaskImage: `url(${DSH_RUNNING_WHALE})` }} />} />}<WelcomeSessionMeta cwd={cwd} model={s.models.find(m => m.provider === s.route.provider && m.model === s.route.model)?.name ?? s.route.model} /></div>}
       </div>
     </div>
     {navigationItems.length > 1 && isActive && <ConversationNavigation items={navigationItems} scrollRef={scroll} onJump={jumpToTurn} />}

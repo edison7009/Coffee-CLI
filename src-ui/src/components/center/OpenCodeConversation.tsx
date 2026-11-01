@@ -108,6 +108,8 @@ export function OpenCodeConversation({ sessionId, cwd, resumeToken, isActive, is
   const anchor = useRef<{ firstId: string; messageId: string; offset: number; top: number; height: number; applied: boolean } | null>(null);
   const [scrolled, setScrolled] = useState(false), [expanded, setExpanded] = useState<Record<string, boolean>>({}), [copied, setCopied] = useState('');
   const initialToken = useRef(resumeToken);
+  // Captured at mount like initialToken; state, not a ref, because the welcome screen renders from it.
+  const [resumed] = useState(() => !!resumeToken);
   useEffect(() => retainOpenCodeSession(sessionId, cwd, initialToken.current), [sessionId, cwd]);
   // OpenCode's placeholder until it names the session ("New session - <ISO time>") is not a title.
   const openCodeTitle = /^(New|Child) session - \d{4}-\d{2}-\d{2}T[\d:.]+Z$/.test(s.title.trim()) ? '' : s.title.trim();
@@ -222,7 +224,7 @@ export function OpenCodeConversation({ sessionId, cwd, resumeToken, isActive, is
         {s.ready && s.busy && <div className="codex-working" role="status"><span className="codex-spinner" aria-hidden="true" />{t(s.interrupting ? 'codex.stopping' : waiting ? 'codex.waiting' : 'claude.status.working')}…</div>}
         {s.error && !directoryIssue && <div className="claude-session-error" role="alert">{s.error}</div>}
         {directoryIssue && <div className="claude-session-error" role="alert">{directoryError}</div>}
-        {!directoryIssue && !rows.length && <div className="claude-empty"><OpenCodeWelcomeLogo isActive={isVisible} /><WelcomeGreeting />{initialToken.current && !s.ready && !s.error && <WelcomeRestoring className="codex-working" mark={<span className="codex-spinner" aria-hidden="true" />} />}<WelcomeSessionMeta cwd={cwd} model={s.models.find(m => m.id === s.model?.id && m.providerID === s.model?.providerID)?.name ?? s.model?.id ?? ''} /></div>}
+        {!directoryIssue && !rows.length && <div className="claude-empty"><OpenCodeWelcomeLogo isActive={isVisible} /><WelcomeGreeting />{resumed && !s.ready && !s.error && <WelcomeRestoring className="codex-working" mark={<span className="codex-spinner" aria-hidden="true" />} />}<WelcomeSessionMeta cwd={cwd} model={s.models.find(m => m.id === s.model?.id && m.providerID === s.model?.providerID)?.name ?? s.model?.id ?? ''} /></div>}
       </div>
     </div>
     {navigationItems.length > 1 && isActive && <ConversationNavigation items={navigationItems} scrollRef={scroll} onJump={jumpToTurn} />}
