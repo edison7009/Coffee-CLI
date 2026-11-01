@@ -66,7 +66,7 @@ export function WorktreeControl({ tab, started, running }: { tab: TerminalSessio
       finally { setPending(false); }
     };
     const disabled = pending || running || (!worktree && !available);
-    return <span className="gambit-worktree" data-tip={!worktree && !available ? t('gambit.worktree_unavailable') : undefined}>
+    return <span className="gambit-worktree" data-tip={notice ? undefined : !worktree && !available ? t('gambit.worktree_unavailable') : t('gambit.worktree_hint')}>
       <button type="button" role="checkbox" className="gambit-worktree-toggle" aria-checked={!!worktree} disabled={disabled} onClick={() => { void toggle(); }}>
         <span className="gambit-worktree-box" aria-hidden="true" />{t('gambit.worktree')}
       </button>

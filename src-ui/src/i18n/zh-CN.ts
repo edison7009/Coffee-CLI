@@ -409,6 +409,7 @@ export const zhCN = {
   'gambit.send_failed_hint': '请先打开活动会话',
   'gambit.worktree': '工作树',
   'gambit.worktree_unavailable': '需要 git 仓库，且至少有一次提交',
+  'gambit.worktree_hint': '在仓库的隔离副本中工作',
   'gambit.worktree_failed': '创建工作树失败：{error}',
   'gambit.worktree_merge': '合并到 {target}',
   'gambit.worktree_merged': '已合并 {count} 个提交',

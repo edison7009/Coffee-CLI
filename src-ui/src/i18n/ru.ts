@@ -406,6 +406,7 @@ export const ru = {
   'gambit.send_failed_hint': 'Сначала откройте активную сессию',
   'gambit.worktree': 'Worktree',
   'gambit.worktree_unavailable': 'Нужен git-репозиторий хотя бы с одним коммитом',
+  'gambit.worktree_hint': 'Работать в изолированной копии репозитория',
   'gambit.worktree_failed': 'Не удалось создать worktree: {error}',
   'gambit.worktree_merge': 'Слить в {target}',
   'gambit.worktree_merged': 'Слито коммитов: {count}',

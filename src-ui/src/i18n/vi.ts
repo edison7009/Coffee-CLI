@@ -410,6 +410,7 @@ Xóa tờ ghi chú này khi bạn sẵn sàng và bắt đầu tác vụ đầu 
   'gambit.send_failed_hint': 'Hãy mở một phiên hoạt động trước',
   'gambit.worktree': 'Worktree',
   'gambit.worktree_unavailable': 'Cần kho git có ít nhất một commit',
+  'gambit.worktree_hint': 'Làm việc trong bản sao tách biệt của kho',
   'gambit.worktree_failed': 'Không tạo được worktree: {error}',
   'gambit.worktree_merge': 'Hợp nhất vào {target}',
   'gambit.worktree_merged': 'Đã hợp nhất {count} commit',
