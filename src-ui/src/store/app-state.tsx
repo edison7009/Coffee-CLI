@@ -142,6 +142,8 @@ export interface TerminalSession {
   /// which spawns the tool with its `--resume <token>` flag instead of a
   /// fresh launch. Cleared on any subsequent SET_TERMINAL_TOOL.
   resumeToken?: string;
+  /** The token this tab's own session reported after starting fresh; equal to `resumeToken` when it was not resumed. */
+  ownToken?: string;
   strictCwd?: boolean;
   /** The conversation works in its own git worktree; `worktreeOrigin` is the folder it was opened on. */
   worktree?: import('../lib/worktree').Worktree;
@@ -620,7 +622,7 @@ function reducer(state: AppState, action: Action): AppState {
           : t),
       };
     case 'SET_SESSION_TOKEN':
-      return { ...state, terminals: state.terminals.map(t => t.id === action.id && t.resumeToken !== action.token ? { ...t, resumeToken: action.token } : t) };
+      return { ...state, terminals: state.terminals.map(t => t.id === action.id && t.resumeToken !== action.token ? { ...t, resumeToken: action.token, ownToken: t.resumeToken && t.resumeToken !== t.ownToken ? t.ownToken : action.token } : t) };
     case 'TOGGLE_LEFT_PANEL': {
       const next = !state.leftPanelHidden;
       try { localStorage.setItem('cc-left-hidden', next ? '1' : '0'); } catch { /* Best-effort operation; failure is non-fatal. */ }

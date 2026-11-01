@@ -15,7 +15,7 @@ export function WorktreeControl({ tab, started, running }: { tab: TerminalSessio
   const t = useT(), dispatch = useAppDispatch(), { state } = useAppState();
   const [available, setAvailable] = useState(false), [pending, setPending] = useState(false);
   const [status, setStatus] = useState<WorktreeStatus | null>(null), [notice, setNotice] = useState<{ text: string; error?: boolean } | null>(null);
-  const worktree = tab.worktree, locked = started || !!tab.resumeToken;
+  const worktree = tab.worktree, locked = started || (!!tab.resumeToken && tab.resumeToken !== tab.ownToken);
   const cwd = tab.worktreeOrigin ?? tab.folderPath ?? '';
   // Creating a worktree takes a moment; the conversation may start meanwhile, which then keeps its folder.
   const live = useRef({ started, running });
