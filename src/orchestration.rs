@@ -26,6 +26,8 @@ pub struct Task {
     #[serde(default)] hidden: bool,
     /// The worker's own git worktree, when it was started isolated.
     #[serde(default, skip_serializing_if = "Option::is_none")] worktree: Option<crate::worker_worktree::Worktree>,
+    /// A restart cut this work short, or kept its result from the coordinator, which has not been told yet.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")] restart_note: bool,
 }
 #[derive(Clone, Serialize, Deserialize)]
 struct Dispatch { ids: Vec<String>, source_turn: String, fingerprint: String }
@@ -93,12 +95,37 @@ fn hub() -> &'static Hub {
         let mut snapshot = path().ok().and_then(|path| fs::read(path).ok()).filter(|bytes| bytes.len() < 8_000_000)
             .and_then(|bytes| serde_json::from_slice::<Snapshot>(&bytes).ok()).unwrap_or_default();
         if !snapshot.enabled { snapshot.agents.clear(); }
-        for task in &mut snapshot.tasks {
-            if active(task) { task.phase = "closed".into(); }
-            if matches!(task.result_delivery.as_deref(), Some("pending" | "claimed")) { task.result_delivery = Some("retained".into()); }
-        }
+        recover(&mut snapshot);
         Hub { state: Mutex::new(State { snapshot, live: HashMap::new(), parents: HashMap::new(), workers: HashMap::new(), pending: HashMap::new(), runs: HashMap::new(), app: None, port: None, stopped: HashSet::new() }), changed: Condvar::new() }
     })
+}
+/// After a restart no worker tab survives: running work stopped mid-task, and results not yet delivered would be lost.
+/// Both are kept for the coordinator's next launch.
+fn recover(snapshot: &mut Snapshot) {
+    for task in &mut snapshot.tasks {
+        if active(task) {
+            task.phase = "closed".into();
+            task.summary = Some(match task.summary.take().filter(|summary| !summary.trim().is_empty()) {
+                Some(last) => format!("Interrupted by a Coffee CLI restart.\n\nLast report before it: {last}"),
+                None => "Interrupted by a Coffee CLI restart.".into(),
+            });
+            task.restart_note = !task.detached && !task.hidden;
+        }
+        if matches!(task.result_delivery.as_deref(), Some("pending" | "claimed")) {
+            task.result_delivery = Some("retained".into());
+            task.restart_note = !task.detached && !task.hidden;
+        }
+    }
+}
+/// What a coordinator resuming after a restart is told about its workers, once.
+fn restart_note(tasks: &[&Task]) -> Option<String> {
+    if tasks.is_empty() { return None; }
+    let lines = tasks.iter().map(|task| {
+        let place = task.worktree.as_ref().map(|worktree| format!(" in worktree {} on branch {}", worktree.path, worktree.branch)).unwrap_or_default();
+        let state = task.summary.as_deref().map(|summary| result_preview(summary).replace('\n', " ")).unwrap_or_else(|| "no report".into());
+        format!("- {} ({}, task {}, {}){place}: {state}", task.title, task.tool, task.id, task.phase)
+    }).collect::<Vec<_>>().join("\n");
+    Some(format!("Coffee CLI restarted since your workers last ran. Their tabs closed: a worker that was still running stopped mid-task, and a finished result may never have reached you.\n{lines}\nBefore continuing, check what they actually changed (the files, git status and git log, and any worktree branch listed) instead of trusting their reports, and do not repeat outside actions such as commits, pushes or messages without first checking whether they already happened. Start a new worker for whatever remains; the user can reopen the old conversations from History. Tell the user briefly about this when you next reply."))
 }
 fn active(task: &Task) -> bool { matches!(task.phase.as_str(), "starting" | "running" | "uncertain") }
 fn same_directory(left: &str, right: &str) -> bool {
@@ -419,10 +446,17 @@ pub fn parent_launch(app: &AppHandle, id: &str, native_id: &str, cwd: &Path, des
             if matches!(task.result_delivery.as_deref(), Some("pending" | "claimed")) { task.result_delivery = Some("retained".into()); }
         }
     }
+    let recovered = state.snapshot.tasks.iter().filter(|task| task.restart_note && !task.detached && !task.hidden && task.parent_native_id.as_deref() == Some(native_id)).collect::<Vec<_>>();
+    let note = restart_note(&recovered);
+    if note.is_some() {
+        for task in state.snapshot.tasks.iter_mut().filter(|task| task.parent_native_id.as_deref() == Some(native_id)) { task.restart_note = false; }
+        let _ = save(&state.snapshot);
+    }
     publish(&mut state);
     let config = json!({"mcpServers":{"coffee-team":{"command":std::env::current_exe().map_err(|e| e.to_string())?,"args":["__team_mcp",port.to_string(),token]}}});
     let args = if mode == "manager" { vec![MANAGER_DISALLOWED.to_string()] } else { vec![] };
-    Ok(Some(ParentLaunch { mcp: config.to_string(), prompt: coordinator_prompt(&agents, desktop, &mode), args }))
+    let prompt = coordinator_prompt(&agents, desktop, &mode);
+    Ok(Some(ParentLaunch { mcp: config.to_string(), prompt: note.map(|note| format!("{prompt}\n\n{note}")).unwrap_or(prompt), args }))
 }
 
 fn coordinator_prompt(agents: &[String], desktop: bool, mode: &str) -> String {
@@ -824,7 +858,7 @@ fn admit_worker(token: &str, tool: &str, title: &str, prompt: &str, operation: O
         if state.snapshot.tasks.len() >= 200 && !state.snapshot.tasks.iter().any(|task| !active(task)) { return Err("Task history is full".into()); }
         let (worktree, cwd) = match created.take() { Some((worktree, cwd)) => (Some(worktree), cwd), None => (None, parent.cwd) };
         let dispatch = Dispatch { ids: operation.into_iter().map(str::to_owned).collect(), source_turn: parent.turn, fingerprint: fingerprint(&tool, &prompt) };
-        let task = Task { id: uuid::Uuid::new_v4().to_string(), parent_id: parent.id, parent_native_id: parent.native_id, parent_tool: parent.tool, session_id: child_id, native_id: None, tool, title, cwd, phase: "starting".into(), summary: None, question: None, generation: None, activity: None, dispatch: Some(dispatch), result_delivery: None, detached: false, hidden: false, worktree };
+        let task = Task { id: uuid::Uuid::new_v4().to_string(), parent_id: parent.id, parent_native_id: parent.native_id, parent_tool: parent.tool, session_id: child_id, native_id: None, tool, title, cwd, phase: "starting".into(), summary: None, question: None, generation: None, activity: None, dispatch: Some(dispatch), result_delivery: None, detached: false, hidden: false, worktree, restart_note: false };
         if state.snapshot.tasks.len() >= 200 {
             let index = state.snapshot.tasks.iter().position(|task| !active(task)).expect("checked above");
             let removed = state.snapshot.tasks.remove(index);
@@ -1410,6 +1444,27 @@ mod tests {
         assert!(state.runs["child"].manual, "a user's steer is still the user's");
     }
     #[test]
+    fn a_restart_keeps_interrupted_work_and_undelivered_results_for_the_coordinator() {
+        let mut state = fixture();
+        state.snapshot.tasks[0].summary = Some("Half done".into());
+        let mut finished = state.snapshot.tasks[0].clone(); finished.id = "done".into(); finished.phase = "completed".into(); finished.summary = Some("Tests pass".into()); finished.result_delivery = Some("pending".into());
+        let mut seen = finished.clone(); seen.id = "seen".into(); seen.result_delivery = Some("delivered".into());
+        let mut gone = state.snapshot.tasks[0].clone(); gone.id = "gone".into(); gone.hidden = true;
+        state.snapshot.tasks.extend([finished, seen, gone]);
+        recover(&mut state.snapshot);
+        let tasks = &state.snapshot.tasks;
+        assert_eq!(tasks[0].phase, "closed");
+        assert!(tasks[0].summary.as_deref().unwrap().starts_with("Interrupted by a Coffee CLI restart") && tasks[0].summary.as_deref().unwrap().contains("Half done"));
+        assert_eq!(tasks.iter().map(|task| task.restart_note).collect::<Vec<_>>(), [true, true, false, false]);
+        assert_eq!(tasks[1].result_delivery.as_deref(), Some("retained"));
+        let flagged = tasks.iter().filter(|task| task.restart_note).collect::<Vec<_>>();
+        let note = restart_note(&flagged).unwrap();
+        assert!(note.contains("task task, closed") && note.contains("Tests pass") && note.contains("do not repeat outside actions"));
+        assert!(restart_note(&[]).is_none());
+        let json = serde_json::to_value(&state.snapshot.tasks[2]).unwrap();
+        assert!(json.get("restartNote").is_none(), "the flag is stored only while set");
+    }
+    #[test]
     fn a_worker_that_fails_while_asking_still_settles() {
         let mut state = assigned("dsh");
         state.snapshot.tasks[0].question = Some(Question { id: "q".into(), text: "Which file?".into(), answer: None });
@@ -1472,7 +1527,7 @@ mod tests {
         assert!(MANAGER_DISALLOWED.starts_with("--disallowedTools=") && !MANAGER_DISALLOWED.contains(' '), "one argument, so the variadic flag cannot swallow later ones");
     }
     fn fixture() -> State {
-        let task = Task { id: "task".into(), parent_id: "parent".into(), parent_native_id: Some("native-parent".into()), session_id: "child".into(), parent_tool: "claude".into(), native_id: None, tool: "codex".into(), title: "Review".into(), cwd: "D:\\Project".into(), phase: "running".into(), summary: None, question: None, generation: None, activity: None, dispatch: None, result_delivery: None, detached: false, hidden: false, worktree: None };
+        let task = Task { id: "task".into(), parent_id: "parent".into(), parent_native_id: Some("native-parent".into()), session_id: "child".into(), parent_tool: "claude".into(), native_id: None, tool: "codex".into(), title: "Review".into(), cwd: "D:\\Project".into(), phase: "running".into(), summary: None, question: None, generation: None, activity: None, dispatch: None, result_delivery: None, detached: false, hidden: false, worktree: None, restart_note: false };
         State { snapshot: Snapshot { enabled: true, agents: default_agents(), mode: default_mode(), tasks: vec![task], revision: 0, coordinators: vec![] }, live: HashMap::new(), parents: HashMap::from([("token".into(), Parent { id: "parent".into(), native_id: Some("native-parent".into()), tool: "claude".into(), agents: default_agents(), connected: false, cwd: "D:\\Project".into(), generation: None, seen: false, turn: String::new(), running: false, queued: VecDeque::new(), sent_since_result: false, paused: false, automatic: None })]), workers: HashMap::new(), pending: HashMap::new(), runs: HashMap::new(), app: None, port: None, stopped: HashSet::new() }
     }
     #[test]
