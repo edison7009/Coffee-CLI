@@ -75,8 +75,8 @@ export function WorktreeControl({ tab, started, running }: { tab: TerminalSessio
     </span>;
   }
 
-  // Once the conversation has started the switch stays as it was, locked.
-  if (!worktree) return <span className="gambit-worktree" data-tip={t('gambit.worktree_locked')}>{chip(true)}</span>;
+  // Once the conversation has started, only a worktree conversation keeps its chip, locked.
+  if (!worktree) return null;
 
   const merge = async () => {
     if (!worktree || pending || running) return;

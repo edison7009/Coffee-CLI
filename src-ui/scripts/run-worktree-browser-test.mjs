@@ -104,13 +104,12 @@ try {
   await view.evaluate(() => window.setFixture({ tab: { resumeToken: 'own-1', ownToken: 'own-1' } }));
   assert.equal(await view.locator('.gambit-worktree-toggle').count(), 1, 'a fresh conversation keeps the switch once its own session reports a token');
   await view.evaluate(() => window.setFixture({ tab: { resumeToken: 'old-1', ownToken: undefined } }));
-  assert.ok(await view.getByRole('checkbox').isDisabled(), 'a conversation resumed from history keeps the switch locked');
+  assert.equal(await view.locator('.gambit-worktree').count(), 0, 'a conversation resumed from history shows nothing');
   await view.evaluate(() => window.setFixture({ tab: { resumeToken: undefined } }));
 
   await view.evaluate(() => window.setFixture({ started: true }));
-  await view.waitForFunction(() => document.querySelector('.gambit-worktree-toggle').disabled);
-  assert.equal(await view.getByRole('checkbox').getAttribute('aria-checked'), 'false', 'a started conversation without a worktree keeps the switch, off and locked');
-  assert.equal(await view.locator('.gambit-worktree').getAttribute('data-tip'), 'Can no longer be switched once the conversation starts');
+  await view.waitForFunction(() => !document.querySelector('.gambit-worktree'));
+  assert.equal(await view.locator('.gambit-worktree').count(), 0, 'a started conversation without a worktree shows nothing');
 
   await view.evaluate(() => { window.wtStatus = { exists: true, ahead: 2, dirty: false, target: 'main' }; window.setFixture({ started: true, tab: { id: 't2', folderPath: 'D:/Project/.claude/worktrees/coffee-claude-a1b2c3', worktreeOrigin: 'D:/Project', worktree: { root: 'D:/Project', path: 'D:/Project/.claude/worktrees/coffee-claude-a1b2c3', branch: 'coffee/claude-a1b2c3' }, toolTitle: 'Fix login' } }); });
   const merge = view.getByRole('button', { name: 'Merge into main' });

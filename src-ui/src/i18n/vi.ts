@@ -411,7 +411,6 @@ Xóa tờ ghi chú này khi bạn sẵn sàng và bắt đầu tác vụ đầu 
   'gambit.worktree': 'Worktree',
   'gambit.worktree_unavailable': 'Cần kho git có ít nhất một commit',
   'gambit.worktree_hint': 'Làm việc trong bản sao tách biệt của kho',
-  'gambit.worktree_locked': 'Không thể chuyển sau khi cuộc trò chuyện bắt đầu',
   'gambit.worktree_branch': 'Đang làm việc trong worktree trên nhánh {branch}',
   'gambit.worktree_failed': 'Không tạo được worktree: {error}',
   'gambit.worktree_merge': 'Hợp nhất vào {target}',
