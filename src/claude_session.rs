@@ -135,6 +135,8 @@ fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<Stri
     command.args(prefix).args(&config.extra_args)
         .args(["-p", "--verbose", "--input-format", "stream-json", "--output-format", "stream-json", "--include-partial-messages", "--permission-prompt-tool", "stdio", "--allow-dangerously-skip-permissions"])
         .env_remove("CLAUDECODE").env("CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS", "1")
+        // Overwrite rather than default: a parent Claude process would hand down its own sdk-* label.
+        .env("CLAUDE_CODE_ENTRYPOINT", "coffee-cli")
         .current_dir(&cwd).stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped());
     let resume_token = resume_token.filter(|s| !s.is_empty());
     let is_resume = resume_token.is_some();
