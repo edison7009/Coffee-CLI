@@ -156,10 +156,16 @@ export function continueCodexInNewThread(id: string, newId: string): void {
   continuations.set(newId, { prompt, continueFrom: { token: c.state.nativeId, path: c.state.threadPath, prompt: lastPrompt?.content ?? '', reply: reply?.content ?? '' } });
   c.state = { ...c.state, coldReturn: undefined };
 }
+/** A prompt with the images it attaches and the skills it names, as `turn/start` and `turn/steer` both take it. */
+function codexInput(c: Client, prompt: string) {
+  const images = [...new Set(gambitAttachments(prompt).filter(a => a.image).map(a => a.path))];
+  const skills = (c.skills ?? []).filter(skill => new RegExp(`\\$${str(skill.name).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w-])`).test(prompt)).map(skill => ({ type: 'skill', name: skill.name, path: skill.path }));
+  return [{ type: 'text', text: prompt }, ...images.map(path => ({ type: 'localImage', path })), ...skills];
+}
 /** A prompt during a running turn joins it, as `turn/steer` does in Codex's own clients. */
 async function steerCodex(c: Client, id: string, prompt: string): Promise<boolean> {
   if (!c.state.turnId || c.state.interrupting) return false;
-  try { await rpc(c, id, 'turn/steer', { expectedTurnId: c.state.turnId, input: [{ type: 'text', text: prompt }] }); return true; }
+  try { await rpc(c, id, 'turn/steer', { expectedTurnId: c.state.turnId, input: codexInput(c, prompt) }); return true; }
   catch (error) { c.state = { ...c.state, error: String(error) }; publish(c, true); return false; }
 }
 export async function sendCodexMessage(id: string, prompt: string): Promise<boolean> {
@@ -169,9 +175,7 @@ export async function sendCodexMessage(id: string, prompt: string): Promise<bool
   c.sending = true; c.interruptSent = undefined;
   c.state = { ...c.state, busy: true, turnId: '', interrupting: false, error: undefined }; publish(c, true);
   try {
-    const images = [...new Set(gambitAttachments(prompt).filter(a => a.image).map(a => a.path))];
-    const skills = (c.skills ?? []).filter(skill => new RegExp(`\\$${str(skill.name).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w-])`).test(prompt)).map(skill => ({ type: 'skill', name: skill.name, path: skill.path }));
-    const result = await rpc(c, id, 'turn/start', { input: [{ type: 'text', text: prompt }, ...images.map(path => ({ type: 'localImage', path })), ...skills], ...(c.state.model ? { model: c.state.model } : {}), ...(c.state.effort ? { effort: c.state.effort } : {}), ...c.permissionOverride });
+    const result = await rpc(c, id, 'turn/start', { input: codexInput(c, prompt), ...(c.state.model ? { model: c.state.model } : {}), ...(c.state.effort ? { effort: c.state.effort } : {}), ...c.permissionOverride });
     const turn = obj(result.turn);
     if (!c.state.turnId) c.state = { ...c.state, turnId: str(turn.id) };
     if (c.state.interrupting) await performInterrupt(c, id);

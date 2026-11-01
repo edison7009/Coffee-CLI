@@ -109,6 +109,11 @@ try {
     const steer = calls.findLast(call => call.name === (tool === 'claude' ? 'claude_session_send' : 'codex_session_request'));
     if (tool === 'codex') { assert.deepEqual([steer.method, steer.params.input[0].text], ['turn/steer', 'Also check the docs']); assert.ok(steer.params.expectedTurnId, 'a steer names the turn it joins'); }
     else assert.ok(JSON.stringify(steer).includes('Also check the docs'));
+    if (tool === 'codex') {
+      await execute('terminal_send', { ...args, text: 'See "D:/shot.png"' });
+      const pictured = calls.findLast(call => call.name === 'codex_session_request');
+      assert.equal(JSON.stringify(pictured.params.input.slice(1)), JSON.stringify([{ type: 'localImage', path: 'D:/shot.png' }]), 'a steer carries the images a new turn would');
+    }
     const interrupted = await execute('terminal_key', { ...args, key: 'CtrlC' });
     assert.equal(interrupted.written, true); assert.equal(interrupted.screen.busy, false);
     assert.ok(lineText(interrupted.screen).includes('Existing'));
