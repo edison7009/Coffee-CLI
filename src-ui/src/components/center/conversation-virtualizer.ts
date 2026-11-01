@@ -1,5 +1,5 @@
 import {
-  useCallback, useEffect, useMemo, useRef, useState,
+  useCallback, useEffect, useInsertionEffect, useMemo, useRef, useState,
   type RefObject,
 } from 'react';
 import type { ChatMessage } from '../../lib/chat-transcript';
@@ -97,7 +97,8 @@ export function useConversationVirtualizer(
     return { offsets, total: offsets[messages.length] ?? 0, keys, indexes };
   }, [messages, heights]);
   const metricsRef = useRef(metrics);
-  metricsRef.current = metrics;
+  // Before any layout effect, as the rows below measure in theirs.
+  useInsertionEffect(() => { metricsRef.current = metrics; }, [metrics]);
 
   const updateRange = useCallback(() => {
     scrollFrameRef.current = null;
@@ -154,10 +155,12 @@ export function useConversationVirtualizer(
     // A row replacing its estimate above the viewport would push the text being
     // read. Rows measure in a layout effect, so this correction lands before paint.
     // The tail may be streaming: its key changes with every delta, never settling.
+    // At the latest message there is no text to hold, and moving would read as scrolling up.
     const { offsets, indexes } = metricsRef.current;
     const scroll = scrollRef.current;
     const index = indexes.get(messageId);
-    if (scroll?.clientHeight && index !== undefined && index < indexes.size - 1
+    if (scroll?.clientHeight && scroll.scrollHeight - scroll.clientHeight - scroll.scrollTop >= 2
+      && index !== undefined && index < indexes.size - 1
       && !measuredRef.current.has(messageId) && offsets[index + 1] <= scroll.scrollTop - THREAD_TOP_PADDING_PX) {
       scroll.scrollTop += height - (offsets[index + 1] - offsets[index]);
     }
