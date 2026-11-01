@@ -95,6 +95,7 @@ fn hub() -> &'static Hub {
         let mut snapshot = path().ok().and_then(|path| fs::read(path).ok()).filter(|bytes| bytes.len() < 8_000_000)
             .and_then(|bytes| serde_json::from_slice::<Snapshot>(&bytes).ok()).unwrap_or_default();
         if !snapshot.enabled { snapshot.agents.clear(); }
+        if snapshot.mode.is_empty() { snapshot.mode = default_mode(); }
         recover(&mut snapshot);
         Hub { state: Mutex::new(State { snapshot, live: HashMap::new(), parents: HashMap::new(), workers: HashMap::new(), pending: HashMap::new(), runs: HashMap::new(), app: None, port: None, stopped: HashSet::new() }), changed: Condvar::new() }
     })
@@ -334,7 +335,8 @@ fn sync_live(state: &mut State, sessions: Vec<LiveSession>) -> bool {
             let activity = if session.error.is_some() { Some("error".into()) } else if session.ready { session.status.clone() } else if task.generation.is_some() { Some("disconnected".into()) } else { Some("starting".into()) };
             if task.activity != activity {
                 // A crashed worker sends no completion event, so its coordinator would wait for ever.
-                if activity.as_deref() == Some("error") && active(task) && !task.detached { task.summary = session.error.as_deref().map(result_preview); task.result_delivery = Some("pending".into()); }
+                let lost = session.status.as_deref() != Some("working") && !state.runs.get(&task.session_id).is_some_and(|run| run.retry.is_some());
+                if activity.as_deref() == Some("error") && lost && active(task) && !task.detached { task.summary = session.error.as_deref().map(result_preview); task.result_delivery = Some("pending".into()); }
                 task.activity = activity; changed = true;
             }
         } else if active(task) && task.phase != "starting" && !pending_children.contains(&task.parent_id) {
@@ -451,7 +453,9 @@ pub fn parent_launch(app: &AppHandle, id: &str, native_id: &str, cwd: &Path, des
     let recovered = state.snapshot.tasks.iter().filter(|task| task.restart_note && !task.detached && !task.hidden && task.parent_native_id.as_deref() == Some(native_id)).collect::<Vec<_>>();
     let note = restart_note(&recovered);
     let restart_tasks = recovered.iter().map(|task| task.id.clone()).collect::<Vec<_>>();
-    if let Some(owner) = state.parents.get_mut(&token) { owner.restart_tasks = restart_tasks; }
+    // A terminal reports no turns, so there its launch is the only telling.
+    if desktop { if let Some(owner) = state.parents.get_mut(&token) { owner.restart_tasks = restart_tasks; } }
+    else { for task in state.snapshot.tasks.iter_mut().filter(|task| restart_tasks.contains(&task.id)) { task.restart_note = false; } }
     publish(&mut state);
     let config = json!({"mcpServers":{"coffee-team":{"command":std::env::current_exe().map_err(|e| e.to_string())?,"args":["__team_mcp",port.to_string(),token]}}});
     let args = if mode == "manager" { vec![MANAGER_DISALLOWED.to_string()] } else { vec![] };
@@ -1630,6 +1634,26 @@ mod tests {
         assert!(task_for(&state, "parent", "task").is_err());
         let json = serde_json::to_string(&state.snapshot).unwrap();
         let restored: Snapshot = serde_json::from_str(&json).unwrap(); assert!(restored.tasks[0].detached);
+    }
+    #[test]
+    fn an_error_is_a_crash_only_when_nothing_will_answer_it() {
+        let outcome = |status: &str, retry: bool| {
+            let mut state = fixture();
+            sync_live(&mut state, vec![live("parent", "claude", "g1"), live("child", "codex", "g1")]);
+            state.snapshot.tasks[0].phase = "running".into();
+            if retry {
+                let mut run = WorkerRun::new("work");
+                run.retry = Some(Retry { due: Instant::now(), text: "continue".into(), error: "overloaded".into(), sent: None });
+                state.runs.insert("child".into(), run);
+            }
+            let mut child = live("child", "codex", "g1");
+            child.status = Some(status.into()); child.error = Some("failed".into());
+            sync_live(&mut state, vec![live("parent", "claude", "g1"), child]);
+            state.snapshot.tasks[0].result_delivery.clone()
+        };
+        assert_eq!(outcome("idle", false).as_deref(), Some("pending"), "a dead worker reaches its coordinator");
+        assert_eq!(outcome("working", false), None, "a rejected steer leaves the turn running");
+        assert_eq!(outcome("idle", true), None, "a scheduled retry answers the error");
     }
     fn live(id: &str, tool: &str, generation: &str) -> LiveSession {
         LiveSession { id: id.into(), tool: tool.into(), cwd: "D:\\Project".into(), generation: Some(generation.into()), native_id: Some(format!("native-{id}")), ready: true, status: Some("idle".into()), error: None, can_receive: false }

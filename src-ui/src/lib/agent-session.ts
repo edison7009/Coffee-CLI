@@ -70,6 +70,8 @@ export function getAgentSession(tab: TerminalSession) {
   return {
     mode: 'desktop' as const, generation, ready: initial.ready,
     canReceive: initial.ready && !initial.inputBusy && !requests().length && !initial.state.error && !tab.gambitDraft?.trim(),
+    // The failed turn a retry answers leaves its error on the session.
+    canRetry: initial.ready && !initial.inputBusy && !requests().length && !tab.gambitDraft?.trim(),
     localInputPending: !!tab.gambitDraft?.trim(), inputBusy: initial.inputBusy, error: initial.state.error,
     readScreen,
     readScrollback: async (startRow?: number, limit = 200) => {

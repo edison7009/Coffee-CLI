@@ -39,6 +39,10 @@ function fixture({approval=false,terminal=false,deliveries=[]}={}) {
   assert.equal(f.window.writes.length,0,'busy, draft-bearing or approval-bearing parents do not receive automatic input');f.dispose();
 }
 {
+  const f=fixture({deliveries:[{id:'retry-1',kind:'retry',parentId:'parent',generation:'parent-g1',text:'Continue'}]});const failed=f.window.sessions.get('parent');failed.canReceive=false;failed.canRetry=true;await f.ready();
+  assert.equal(f.window.writes.length,1,'a retry reaches the session whose failed turn left its error');f.dispose();
+}
+{
   const f=fixture();await f.ready();await f.send();
   assert.equal(f.window.actions.length,1);assert.equal(f.window.actions[0].parentId,'parent');assert.equal(f.window.actions[0].background,true);
   assert.equal(f.window.writes.length,1);assert.equal(f.window.writes[0].id,'child');assert.equal(f.window.results[0].ok,true);
