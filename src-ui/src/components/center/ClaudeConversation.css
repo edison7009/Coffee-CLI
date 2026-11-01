@@ -97,7 +97,7 @@ body.gambit-docked .claude-scroll-bottom { bottom:calc(var(--gambit-dock-h,200px
 .claude-diff .is-removed { background:color-mix(in srgb,#df584b 22%,transparent); }
 .claude-diff .is-added { background:color-mix(in srgb,#9bba4e 22%,transparent); }
 .claude-diff .is-gap { background:repeating-linear-gradient(135deg,transparent 0px,transparent 4px,var(--border) 5px,transparent 6px); }
-.claude-expand { display:block; margin:0 0 0 auto; padding:3px 8px; color:var(--text-2); background:var(--bg-hover); border:0; font-size:12px; cursor:pointer; }
+.claude-expand { display:block; margin:0 auto; padding:3px 8px; color:var(--text-2); background:var(--bg-hover); border:0; font-size:12px; cursor:pointer; }
 .claude-working { display:flex; gap:9px; align-items:center; min-height:32px; color:var(--accent); margin:0 0 20px .5px; }
 .claude-working-mark { display:block; position:relative; overflow:hidden; width:20px; height:20px; flex-shrink:0; align-self:center; }
 .claude-working-mark img { display:block; width:100%; height:auto; transform:translateY(-98.66666667%); animation:claude-working-orbit 2.5s steps(75,jump-none) infinite; }
