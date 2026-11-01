@@ -690,6 +690,8 @@ export const ru = {
   'usage.resets_in': 'сброс через {time}',
   'usage.balance_label': 'Баланс',
   'usage.balance': 'Баланс {amount}',
+  'usage.spent_label': 'Использовано',
+  'usage.spent': 'Использовано {amount}',
   'claude.context_window': 'Контекст',
   'claude.commands_empty': 'Нет подходящих команд',
   'claude.status.thinking': 'Размышление',

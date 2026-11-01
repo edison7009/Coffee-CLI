@@ -692,6 +692,8 @@ export const ja = {
   'usage.resets_in': '{time}後にリセット',
   'usage.balance_label': '残高',
   'usage.balance': '残高 {amount}',
+  'usage.spent_label': '使用済み',
+  'usage.spent': '使用済み {amount}',
   'claude.context_window': 'コンテキスト',
   'claude.commands_empty': '一致するコマンドがありません',
   'claude.status.thinking': '思考中',

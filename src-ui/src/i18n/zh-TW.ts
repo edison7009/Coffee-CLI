@@ -693,6 +693,8 @@ export const zhTW = {
   'usage.resets_in': '{time}後重置',
   'usage.balance_label': '餘額',
   'usage.balance': '餘額 {amount}',
+  'usage.spent_label': '已用',
+  'usage.spent': '已用 {amount}',
   'claude.context_window': '上下文',
   'claude.commands_empty': '沒有符合的指令',
   'claude.status.thinking': '思考中',

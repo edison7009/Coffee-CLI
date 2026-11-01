@@ -27,9 +27,10 @@ export function UsageMeter({ quotas, onRefresh }: { quotas: Quota[]; onRefresh?:
   const items = shown.map((quota, index) => {
     if (quota.balance !== undefined) {
       const amount = formatBalance(quota);
-      labels.push(t('usage.balance', { amount }));
-      return <span key={`balance-${index}`} className="usage-meter-item usage-meter-item--balance" role="img" aria-label={t('usage.balance', { amount })}>
-        <span className="usage-meter-period" aria-hidden="true">{t('usage.balance_label')}</span>
+      const label = t(quota.spent ? 'usage.spent' : 'usage.balance', { amount });
+      labels.push(label);
+      return <span key={`balance-${index}`} className="usage-meter-item usage-meter-item--balance" role="img" aria-label={label}>
+        <span className="usage-meter-period" aria-hidden="true">{t(quota.spent ? 'usage.spent_label' : 'usage.balance_label')}</span>
         <strong aria-hidden="true">{amount}</strong>
       </span>;
     }

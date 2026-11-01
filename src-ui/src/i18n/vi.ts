@@ -693,6 +693,8 @@ Xóa tờ ghi chú này khi bạn sẵn sàng và bắt đầu tác vụ đầu 
   'usage.resets_in': 'đặt lại sau {time}',
   'usage.balance_label': 'Số dư',
   'usage.balance': 'Số dư {amount}',
+  'usage.spent_label': 'Đã dùng',
+  'usage.spent': 'Đã dùng {amount}',
   'claude.context_window': 'Ngữ cảnh',
   'claude.commands_empty': 'Không có lệnh phù hợp',
   'claude.status.thinking': 'Đang suy nghĩ',

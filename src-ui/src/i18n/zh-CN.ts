@@ -695,6 +695,8 @@ export const zhCN = {
   'usage.resets_in': '{time}后重置',
   'usage.balance_label': '余额',
   'usage.balance': '余额 {amount}',
+  'usage.spent_label': '已用',
+  'usage.spent': '已用 {amount}',
   'claude.context_window': '上下文',
   'claude.commands_empty': '没有匹配的命令',
   'claude.status.thinking': '思考中',

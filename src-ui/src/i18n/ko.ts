@@ -692,6 +692,8 @@ export const ko = {
   'usage.resets_in': '{time} 후 초기화',
   'usage.balance_label': '잔액',
   'usage.balance': '잔액 {amount}',
+  'usage.spent_label': '사용량',
+  'usage.spent': '사용량 {amount}',
   'claude.context_window': '컨텍스트',
   'claude.commands_empty': '일치하는 명령이 없습니다',
   'claude.status.thinking': '생각 중',

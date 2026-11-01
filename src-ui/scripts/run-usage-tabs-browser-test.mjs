@@ -13,13 +13,17 @@ const directory = await mkdtemp(join(tmpdir(), 'coffee-usage-tabs-'));
 await build({
   stdin: { resolveDir: project, loader: 'tsx', contents: `
     import React,{useState} from 'react';import {createRoot} from 'react-dom/client';
-    import {useUsageQuota} from './src/lib/usage-quota';
+    import {providerQuotas,useUsageQuota} from './src/lib/usage-quota';
+    import {AppProvider} from './src/store/app-state';
+    import {UsageMeter} from './src/components/center/UsageMeter';
     function Meter({id}){const u=useUsageQuota(id,'claude','D:/'+id,null);window.refresh=u.refresh;return <output>{u.quotas.map(q=>q.balance).join(',')||'none'}</output>}
-    function Fixture(){const [id,setId]=useState('a');window.setTab=setId;return <Meter id={id}/>}
-    createRoot(document.getElementById('root')).render(<Fixture/>);
+    function Fixture(){const [id,setId]=useState('a');window.setTab=setId;return <><Meter id={id}/>
+      <div id="left"><UsageMeter quotas={providerQuotas([{balance:3.5,balanceUnit:'CNY'}])}/></div>
+      <div id="spent"><UsageMeter quotas={providerQuotas([{balance:3.5,balanceUnit:'CNY',spent:true}])}/></div></>}
+    createRoot(document.getElementById('root')).render(<AppProvider><Fixture/></AppProvider>);
   ` },
   bundle: true, outfile: join(directory, 'fixture.js'), jsx: 'automatic', nodePaths: [join(project, 'node_modules')],
-  loader: { '.webp': 'dataurl', '.webm': 'dataurl', '.gif': 'dataurl', '.png': 'dataurl' },
+  loader: { '.webp': 'dataurl', '.webm': 'dataurl', '.gif': 'dataurl', '.png': 'dataurl', '.css': 'empty' },
   define: { 'process.env.NODE_ENV': '"development"' },
   plugins: [{ name: 'native-boundary', setup(b) {
     b.onResolve({ filter: /(^|\/)tauri$/ }, () => ({ path: 'tauri', namespace: 'fixture' }));
@@ -52,6 +56,13 @@ const waiting = cwd => page.waitForFunction(cwd => window.pending.some(p => p.cw
 const queries = cwd => page.evaluate(cwd => window.queries.filter(q => q.cwd === cwd).length, cwd);
 try {
   await page.goto(`http://127.0.0.1:${server.address().port}`);
+
+  // A key that only reports spending is never labelled as having that balance.
+  assert.equal(await page.locator('#left .usage-meter-item').getAttribute('aria-label'), '余额 ¥3.50');
+  assert.equal(await page.locator('#left .usage-meter-period').textContent(), '余额');
+  assert.equal(await page.locator('#spent .usage-meter-item').getAttribute('aria-label'), '已用 ¥3.50');
+  assert.equal(await page.locator('#spent .usage-meter-period').textContent(), '已用');
+
   await waiting('D:/a');
   await finish('D:/a', 11); await shown('11.00'.replace('.00', ''));
 

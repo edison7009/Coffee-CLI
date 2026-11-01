@@ -11,7 +11,7 @@ import { readCodexRateLimits, useCodexSession } from './codex-session';
 import { useDshSession } from './dsh-session';
 
 export type QuotaPeriod = 'fiveHour' | 'daily' | 'weekly' | 'monthly';
-export interface Quota { period?: QuotaPeriod; used?: number; resetAt?: number; balance?: number; unit?: string }
+export interface Quota { period?: QuotaPeriod; used?: number; resetAt?: number; balance?: number; unit?: string; spent?: boolean }
 
 type Json = Record<string, unknown>;
 // Fixed-interval refresh; turn ends refresh conversation tabs at most this often too,
@@ -50,7 +50,7 @@ export function codexQuotas(response: Json): Quota[] {
 export function providerQuotas(quotas: unknown): Quota[] {
   return (Array.isArray(quotas) ? quotas : []).map(obj).flatMap((quota): Quota[] => {
     const balance = num(quota.balance);
-    if (balance !== undefined) return [{ balance, unit: typeof quota.balanceUnit === 'string' ? quota.balanceUnit : undefined }];
+    if (balance !== undefined) return [{ balance, unit: typeof quota.balanceUnit === 'string' ? quota.balanceUnit : undefined, spent: quota.spent === true || undefined }];
     const used = num(quota.percentage);
     const period = ORDER.includes(quota.period as QuotaPeriod) ? quota.period as QuotaPeriod : undefined;
     return used === undefined ? [] : [{ period, used, resetAt: num(quota.resetAt) || undefined }];
