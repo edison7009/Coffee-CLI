@@ -570,7 +570,7 @@ fn record_event(state: &mut State, id: &str, tool: &str, generation: &str, event
 /// Ends the assigned work once its turn has ended; every outcome here reaches the coordinator except a plain stop.
 fn settle(state: &mut State, id: &str, tool: &str, phase: &str, reply: String) -> bool {
     let current = |task: &&mut Task| task.session_id == id && task.tool == tool && active(task);
-    if state.snapshot.tasks.iter_mut().find(current).is_some_and(|task| task.question.as_ref().is_some_and(|question| question.answer.is_none())) {
+    if phase == "completed" && state.snapshot.tasks.iter_mut().find(current).is_some_and(|task| task.question.as_ref().is_some_and(|question| question.answer.is_none())) {
         // Only a new message can continue this worker, so the run has to outlive the turn.
         if let Some(run) = state.runs.get_mut(id) { run.parked = true; run.held = None; run.turn = None; }
         return false;
@@ -1208,6 +1208,15 @@ mod tests {
         assert!(dsh_turn(&mut state, "Updated main.rs"));
         assert_eq!(state.snapshot.tasks[0].summary.as_deref(), Some("Updated main.rs"));
         assert!(state.snapshot.tasks[0].question.is_none());
+    }
+    #[test]
+    fn a_worker_that_fails_while_asking_still_settles() {
+        let mut state = assigned("dsh");
+        state.snapshot.tasks[0].question = Some(Question { id: "q".into(), text: "Which file?".into(), answer: None });
+        assert!(settle(&mut state, "child", "dsh", "failed", "The worker process exited unexpectedly".into()));
+        let task = &state.snapshot.tasks[0];
+        assert_eq!((task.phase.as_str(), task.result_delivery.as_deref()), ("failed", Some("pending")));
+        assert!(task.question.is_none()); assert!(state.runs.is_empty());
     }
     #[test]
     fn a_turn_without_a_reply_tells_the_coordinator() {
