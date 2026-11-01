@@ -227,6 +227,9 @@ fn is_route_error(error: &str) -> bool {
 /// requests on the runtime's stdout, and the replies come back as files beside the control file.
 /// Sub-agent Sessions keep their own presets, as with the native command.
 const PERMISSION_PLUGIN: &str = r#"import { readFileSync, rmSync } from 'node:fs';
+import { readdirSync } from 'node:fs';
+import { basename, dirname, join } from 'node:path';
+import { randomUUID } from 'node:crypto';
 export const inject = ['permissionPresets', 'sessions', 'approval', 'agents', 'userQuestions'];
 export function apply(ctx) {
   const { COFFEE_DSH_CONTROL: file, COFFEE_DSH_SESSION: id } = process.env;
@@ -267,6 +270,19 @@ export function apply(ctx) {
     background = jobs + children;
     send({ method: 'coffee/background', params: { sessionId: id, count: background } });
   };
+  // A message for the running turn is read at its next step, as DeepSeek Harness's own clients steer.
+  const steer = () => {
+    const prefix = basename(file) + '.steer.';
+    for (const name of readdirSync(dirname(file)).filter(name => name.startsWith(prefix) && !name.endsWith('.next'))) {
+      const path = join(dirname(file), name), text = JSON.parse(read(path) || '{}').text;
+      rmSync(path, { force: true });
+      const session = ctx.sessions.list().find(s => String(s.id) === id);
+      const agent = session && ctx.agents.list().find(a => a.session === session);
+      if (!agent || typeof text !== 'string' || !text.trim()) continue;
+      const message = Object.freeze({ id: randomUUID(), role: 'user', content: Object.freeze([Object.freeze({ type: 'text', text })]), source: Object.freeze({ kind: 'user' }) });
+      if (agent.status === 'running') agent.steer(message); else agent.followup(message);
+    }
+  };
   ctx.on('session/created', update);
   ctx.on('approval/request', request => ask('approval/request', { toolName: request.toolName, reason: request.reason }, request.signal).then(reply => reply.outcome, () => 'cancelled'));
   ctx.on('user-questions/request', async request => {
@@ -274,7 +290,7 @@ export function apply(ctx) {
     if (reply.cancelled) throw new Error('The user declined to answer');
     return { answers: reply.answers };
   });
-  ctx.effect(() => { const timer = setInterval(() => { update(); collect(); try { report(); } catch {} }, 250); return () => clearInterval(timer); });
+  ctx.effect(() => { const timer = setInterval(() => { update(); collect(); try { steer(); } catch {} try { report(); } catch {} }, 250); return () => clearInterval(timer); });
 }
 "#;
 const PRESETS: [&str; 2] = ["workspace-write", "danger-full-access"];
@@ -439,13 +455,20 @@ pub async fn dsh_session_set_preset(sessions: State<'_, DshSessions>, id: String
 }
 #[tauri::command]
 pub async fn dsh_session_request(sessions: State<'_, DshSessions>, id: String, generation: String, method: String, params: Value) -> Result<Value, String> {
-    if !matches!(method.as_str(), "session/prompt" | "session/query" | "session/working-directory/get") { return Err("Unsupported DeepSeek Harness request".into()); }
+    if !matches!(method.as_str(), "session/prompt" | "session/steer" | "session/query" | "session/working-directory/get") { return Err("Unsupported DeepSeek Harness request".into()); }
     let s = get(&sessions, &id, &generation)?;
     // Requests always address this tab's own Session.
     let mut params = params; params["sessionId"] = json!(s.native_id);
+    let prompt = params["contentBlocks"].as_array().into_iter().flatten().filter_map(|block| block["text"].as_str()).collect::<Vec<_>>().join("\n");
     if method == "session/prompt" {
-        let prompt = params["contentBlocks"].as_array().into_iter().flatten().filter_map(|block| block["text"].as_str()).collect::<Vec<_>>().join("\n");
         crate::orchestration::native_input(&id, "dsh", &s.generation, &prompt, &uuid::Uuid::new_v4().to_string(), None)?;
+    }
+    // The SDK queues every prompt for the next turn; the Host plugin hands this one to the running turn instead.
+    if method == "session/steer" {
+        if prompt.trim().is_empty() { return Err("Message is empty".into()); }
+        crate::orchestration::native_steer(&id, "dsh", &s.generation, &prompt)?;
+        let file = s.control.with_extension(format!("preset.steer.{}", uuid::Uuid::new_v4().simple()));
+        return tauri::async_runtime::spawn_blocking(move || write_atomic(&file, &json!({"text":prompt}).to_string()).map(|_| json!({}))).await.map_err(|e| e.to_string())?;
     }
     // Commands such as /compact run an auxiliary model request before answering.
     let timeout = Duration::from_secs(if method == "session/query" { 900 } else { 60 });

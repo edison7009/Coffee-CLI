@@ -87,7 +87,8 @@ export function getAgentSession(tab: TerminalSession) {
       if (!c.ready) throw new Error('桌面会话尚未就绪或已经断开');
       if (tab.gambitDraft?.trim()) throw new Error('会话有本地未提交输入，请先处理后再发送');
       if (requests().length) throw new Error('会话正在等待用户处理请求，请先由用户处理');
-      if (c.inputBusy) throw new Error('会话正在执行任务，请等待完成或明确请求中断');
+      // A running desktop session takes the message into its current turn; automatic results still wait for idle.
+      if (c.inputBusy && deliveryId) throw new Error('会话正在执行任务，请等待完成或明确请求中断');
       if (deliveryId && !claude) throw new Error('此会话不支持自动编排结果投递');
       const sent = await (opencode ? sendOpenCodeMessage(id, text) : dsh ? sendDshMessage(id, text) : claude ? sendClaudeMessage(id, text, deliveryId) : sendCodexMessage(id, text));
       if (!sent) throw new TerminalInputError('消息发送未得到确认，请读取会话核实，不要自动重发', true);

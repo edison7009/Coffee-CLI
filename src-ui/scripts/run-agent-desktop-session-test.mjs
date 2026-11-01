@@ -45,7 +45,7 @@ runInNewContext(compiled.outputFiles[0].text, {
       if (name === 'claude_session_history') return { data: JSON.stringify({ type: 'assistant', message: { id: 'older', content: [{ type: 'text', text: 'Older Claude history' }] } }), cursor: 0 };
       if (name === 'claude_session_control') {
         if (args.request.subtype === 'get_settings' && failSettings) throw Error('Settings readback unavailable');
-        if (args.request.subtype === 'interrupt') emit('claude-session-event', args.id, { type: 'result', subtype: 'success', result: 'Interrupted' });
+        if (args.request.subtype === 'interrupt') { emit('claude-session-event', args.id, { type: 'result', subtype: 'success', result: 'Interrupted' }); emit('claude-session-event', args.id, { type: 'system', subtype: 'session_state_changed', state: 'idle' }); }
         return { applied: {}, effective: {} };
       }
       if (name === 'claude_session_send') { if (failSend) throw Error('lost reply'); return; }
@@ -103,7 +103,12 @@ try {
     assert.equal(sent.id, tool);
     assert.equal(sent.generation, calls.find(call => call.name === `${tool}_session_start`).generation);
     if (tool === 'codex') assert.equal(sent.params.threadId, 'native-codex');
-    await assert.rejects(execute('terminal_send', { ...args, text: 'Duplicate' }), /正在执行/);
+    // A running desktop session takes a follow-up into its current turn.
+    const steered = await execute('terminal_send', { ...args, text: 'Also check the docs' });
+    assert.equal(steered.written, true);
+    const steer = calls.findLast(call => call.name === (tool === 'claude' ? 'claude_session_send' : 'codex_session_request'));
+    if (tool === 'codex') { assert.deepEqual([steer.method, steer.params.input[0].text], ['turn/steer', 'Also check the docs']); assert.ok(steer.params.expectedTurnId, 'a steer names the turn it joins'); }
+    else assert.ok(JSON.stringify(steer).includes('Also check the docs'));
     const interrupted = await execute('terminal_key', { ...args, key: 'CtrlC' });
     assert.equal(interrupted.written, true); assert.equal(interrupted.screen.busy, false);
     assert.ok(lineText(interrupted.screen).includes('Existing'));
@@ -197,7 +202,10 @@ try {
   assert.equal(dshSent.written, true); assert.equal(dshSent.screen.busy, true);
   const dshPrompt = calls.findLast(call => call.name === 'dsh_session_request');
   assert.equal(dshPrompt.method, 'session/prompt'); assert.equal(dshPrompt.params.contentBlocks[0].text, 'Update the existing task');
-  await assert.rejects(execute('terminal_send', { ...dshArgs, text: 'Duplicate' }), /正在执行/);
+  // During a turn the message goes to the Host plugin, which steers the running turn instead of queueing the next one.
+  assert.equal((await execute('terminal_send', { ...dshArgs, text: 'Also check the docs' })).written, true);
+  const dshSteer = calls.findLast(call => call.name === 'dsh_session_request');
+  assert.deepEqual([dshSteer.method, dshSteer.params.contentBlocks[0].text], ['session/steer', 'Also check the docs']);
   emit('dsh-session-event', 'dsh', { id: 'coffee-1', method: 'approval/request', params: { toolName: 'write', requestId: 'coffee-1' } });
   const dshWaiting = await execute('terminal_read_screen', dshArgs);
   assert.equal(dshWaiting.status, 'wait_input'); assert.equal(JSON.stringify(dshWaiting.pendingRequests), JSON.stringify([{ id: 'coffee-1', kind: 'approval/request' }]));

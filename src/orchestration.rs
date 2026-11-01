@@ -472,13 +472,19 @@ fn duplicate_dispatch(snapshot: &Snapshot, owner: &Parent, tool: &str, prompt: &
 // Observe only the existing session transport. No process or provider configuration is added.
 pub(crate) fn native_input(id: &str, tool: &str, generation: &str, prompt: &str, turn: &str, delivery: Option<&str>) -> Result<(), String> {
     let mut state = hub().state.lock().map_err(|_| "Coordinator unavailable")?;
-    record_delivery_input(&mut state, id, tool, generation, prompt, turn, delivery)
+    record_delivery_input(&mut state, id, tool, generation, prompt, turn, delivery, false)
+}
+/// Input that joins the turn already running rather than starting one, so the worker's turn identity stays.
+pub(crate) fn native_steer(id: &str, tool: &str, generation: &str, prompt: &str) -> Result<(), String> {
+    let mut state = hub().state.lock().map_err(|_| "Coordinator unavailable")?;
+    record_delivery_input(&mut state, id, tool, generation, prompt, &uuid::Uuid::new_v4().to_string(), None, true)
 }
 #[cfg(test)]
 fn record_input(state: &mut State, id: &str, tool: &str, generation: &str, prompt: &str, turn: &str) -> Result<(), String> {
-    record_delivery_input(state, id, tool, generation, prompt, turn, None)
+    record_delivery_input(state, id, tool, generation, prompt, turn, None, false)
 }
-fn record_delivery_input(state: &mut State, id: &str, tool: &str, generation: &str, prompt: &str, turn: &str, delivery: Option<&str>) -> Result<(), String> {
+#[allow(clippy::too_many_arguments)]
+fn record_delivery_input(state: &mut State, id: &str, tool: &str, generation: &str, prompt: &str, turn: &str, delivery: Option<&str>, steer: bool) -> Result<(), String> {
     let generation = format!("desktop:{tool}:{generation}");
     if let Some(delivery) = delivery {
         let owner = state.parents.values().find(|owner| owner.id == id && owner.tool == tool && owner.generation.as_deref() == Some(&generation)).ok_or("Coordinator session changed")?;
@@ -506,7 +512,10 @@ fn record_delivery_input(state: &mut State, id: &str, tool: &str, generation: &s
     if !current { state.runs.remove(id); return Ok(()); }
     if let Some(run) = state.runs.get_mut(id) {
         let sent = fingerprint("", prompt);
-        if run.expected == sent || run.next.as_ref() == Some(&sent) {
+        if (run.expected == sent || run.next.as_ref() == Some(&sent)) && steer && run.generation.as_deref() == Some(&generation) {
+            // The running turn absorbs it and still ends the assigned work.
+            run.expected = sent; run.next = None; run.manual = false; run.parked = false;
+        } else if run.expected == sent || run.next.as_ref() == Some(&sent) {
             run.expected = sent; run.next = None; run.generation = Some(generation); run.turn = None; run.reply.clear();
             run.manual = false; run.parked = false; run.held = None; run.retry = None;
         } else if run.generation.is_some() { run.manual = true; run.held = None; run.retry = None; }
@@ -979,7 +988,7 @@ fn definitions(agents: &Value) -> Value {
         ("worker_list", "Read only this coordinator's tasks, reports and questions. A completed phase is the worker's report; inspect results before claiming success.", json!({}), vec![]),
         ("worker_wait", "Wait for task or question changes. Use the revision from worker_list or the last wait. No polling loop is needed inside workers.", json!({"revision":{"type":"integer"},"timeoutMs":{"type":"integer","maximum":30000}}), vec![]),
         ("worker_read", "Read the existing worker session. Does not resume or replace closed sessions.", json!({"taskId":string}), vec!["taskId"]),
-        ("worker_send", "Send a follow-up to an existing active worker after reading it. Never use this to approve prompts or automatically retry uncertain delivery. A worker awaiting initial setup has received no task; include the task and reporting instructions when explicitly resuming it.", json!({"taskId":string,"text":string}), vec!["taskId","text"]),
+        ("worker_send", "Send a follow-up to an existing active worker after reading it. A worker that is still running receives it within its current turn, so use it to correct course early. Never use this to approve prompts or automatically retry uncertain delivery. A worker awaiting initial setup has received no task; include the task and reporting instructions when explicitly resuming it.", json!({"taskId":string,"text":string}), vec!["taskId","text"]),
         ("worker_reply", "Answer a pending worker question. Do not approve permission prompts on the user's behalf.", json!({"taskId":string,"questionId":string,"answer":string}), vec!["taskId","questionId","answer"]),
         ("worker_interrupt", "Interrupt an active worker while leaving its visible tab available.", json!({"taskId":string}), vec!["taskId"]),
     ].into_iter().map(|(name, description, properties, required)| json!({"name":name,"description":description,"inputSchema":{"type":"object","properties":properties,"required":required,"additionalProperties":false}})).collect::<Vec<_>>();
@@ -1112,10 +1121,10 @@ mod tests {
         assert!(take_results(&mut state).is_empty(), "a claimed batch cannot be resent");
         let delivery = &deliveries[0];
         stop_input(&mut state, "parent", "claude", "g1");
-        assert!(record_delivery_input(&mut state, "parent", "claude", "g1", &delivery.text, "auto", Some(&delivery.id)).is_err());
+        assert!(record_delivery_input(&mut state, "parent", "claude", "g1", &delivery.text, "auto", Some(&delivery.id), false).is_err());
         record_input(&mut state, "parent", "claude", "g1", "Fresh user task", "new-input").unwrap();
-        assert!(record_delivery_input(&mut state, "parent", "claude", "g1", &delivery.text, "auto", Some(&delivery.id)).is_err(), "new user input invalidates a previously claimed batch");
-        assert!(record_delivery_input(&mut state, "parent", "claude", "g2", &delivery.text, "auto", Some(&delivery.id)).is_err());
+        assert!(record_delivery_input(&mut state, "parent", "claude", "g1", &delivery.text, "auto", Some(&delivery.id), false).is_err(), "new user input invalidates a previously claimed batch");
+        assert!(record_delivery_input(&mut state, "parent", "claude", "g2", &delivery.text, "auto", Some(&delivery.id), false).is_err());
     }
     #[test]
     fn one_result_batch_is_admitted_once_without_changing_the_user_task_identity() {
@@ -1128,9 +1137,9 @@ mod tests {
         state.snapshot.tasks[0].result_delivery = Some("pending".into());
         state.live.get_mut("parent").unwrap().can_receive = true;
         let delivery = take_results(&mut state).pop().unwrap();
-        record_delivery_input(&mut state, "parent", "claude", "g1", &delivery.text, "automatic", Some(&delivery.id)).unwrap();
+        record_delivery_input(&mut state, "parent", "claude", "g1", &delivery.text, "automatic", Some(&delivery.id), false).unwrap();
         assert_eq!(state.parents["token"].turn, "original");
-        assert!(record_delivery_input(&mut state, "parent", "claude", "g1", &delivery.text, "automatic", Some(&delivery.id)).is_err());
+        assert!(record_delivery_input(&mut state, "parent", "claude", "g1", &delivery.text, "automatic", Some(&delivery.id), false).is_err());
     }
     #[test]
     fn queued_user_inputs_do_not_change_the_identity_of_the_current_dispatch() {
@@ -1295,11 +1304,11 @@ mod tests {
         state.parents.get_mut("token").unwrap().automatic.as_mut().unwrap().at -= CLAIM_LIMIT;
         let again = take_results(&mut state).pop().expect("an unsent batch returns");
         assert_ne!(again.id, delivery.id);
-        record_delivery_input(&mut state, "parent", "claude", "g1", &again.text, "automatic", Some(&again.id)).unwrap();
+        record_delivery_input(&mut state, "parent", "claude", "g1", &again.text, "automatic", Some(&again.id), false).unwrap();
         assert_eq!(state.snapshot.tasks[0].result_delivery.as_deref(), Some("delivered"));
         let mut state = fixture(); let delivery = claimed(&mut state);
         record_input(&mut state, "parent", "claude", "g1", "New user task", "input").unwrap();
-        assert!(record_delivery_input(&mut state, "parent", "claude", "g1", &delivery.text, "automatic", Some(&delivery.id)).is_err());
+        assert!(record_delivery_input(&mut state, "parent", "claude", "g1", &delivery.text, "automatic", Some(&delivery.id), false).is_err());
         assert_eq!(state.snapshot.tasks[0].result_delivery.as_deref(), Some("pending"), "a refused batch waits for the next idle");
     }
     #[test]
@@ -1380,6 +1389,21 @@ mod tests {
         assert!(transient("API Error: 529 {\"type\":\"overloaded_error\"}", None));
         assert!(transient("stream disconnected: connection reset by peer", None) && transient("stream disconnected before completion", None));
         assert!(!transient("Invalid API key", None) && !transient("exceeded 4290 tokens", None));
+    }
+    #[test]
+    fn a_coordinator_steer_keeps_the_running_codex_turn() {
+        let mut state = assigned("codex");
+        record_event(&mut state, "child", "codex", "g1", &json!({"method":"turn/started","params":{"turn":{"id":"turn-1"}}}));
+        state.runs.get_mut("child").unwrap().next = Some(fingerprint("", "Also update the docs"));
+        record_delivery_input(&mut state, "child", "codex", "g1", "Also update the docs", "steer", None, true).unwrap();
+        assert_eq!(state.runs["child"].turn.as_deref(), Some("turn-1"));
+        assert!(!state.runs["child"].manual);
+        record_event(&mut state, "child", "codex", "g1", &json!({"method":"item/completed","params":{"turnId":"turn-1","item":{"type":"agentMessage","text":"Code and docs updated"}}}));
+        assert!(record_event(&mut state, "child", "codex", "g1", &json!({"method":"turn/completed","params":{"turn":{"id":"turn-1","status":"completed"}}})));
+        assert_eq!(state.snapshot.tasks[0].summary.as_deref(), Some("Code and docs updated"));
+        let mut state = assigned("codex");
+        record_delivery_input(&mut state, "child", "codex", "g1", "User's own note", "steer", None, true).unwrap();
+        assert!(state.runs["child"].manual, "a user's steer is still the user's");
     }
     #[test]
     fn a_worker_that_fails_while_asking_still_settles() {

@@ -127,12 +127,14 @@ export async function sendDshMessage(id: string, prompt: string): Promise<boolea
     c.state = { ...c.state, messages: [...c.state.messages, { id: `unsupported:${Date.now()}`, role: 'notice', content: 'commands-unsupported', turn: 0, timestamp: Date.now(), tone: 'info' }] }; publish(c, true);
     return true;
   }
+  // A message typed during a turn steers it; the SDK alone would hold it for the next turn.
+  const steer = !command && c.state.busy;
   if (!command) { c.state = { ...c.state, busy: true, startedAt: c.state.startedAt ?? Date.now(), error: undefined }; publish(c, true); }
   try {
-    await invoke('dsh_session_request', { id, generation: c.generation, method: command ? 'session/query' : 'session/prompt', params: { contentBlocks: [{ type: 'text', text }] } });
+    await invoke('dsh_session_request', { id, generation: c.generation, method: command ? 'session/query' : steer ? 'session/steer' : 'session/prompt', params: { contentBlocks: [{ type: 'text', text }] } });
     return true;
   } catch (error) {
-    c.state = { ...c.state, busy: false, error: String(error) }; publish(c, true);
+    c.state = { ...c.state, busy: steer, error: String(error) }; publish(c, true);
     return false;
   }
 }

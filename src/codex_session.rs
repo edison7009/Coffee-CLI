@@ -59,6 +59,9 @@ impl Session {
         if value["method"] == "turn/start" {
             let prompt = value["params"]["input"].as_array().into_iter().flatten().filter(|block| block["type"] == "text").filter_map(|block| block["text"].as_str()).collect::<Vec<_>>().join("\n");
             crate::orchestration::native_input(&self.id, "codex", &self.generation, &prompt, value["id"].as_str().unwrap_or(""), None)?;
+        } else if value["method"] == "turn/steer" {
+            let prompt = value["params"]["input"].as_array().into_iter().flatten().filter(|block| block["type"] == "text").filter_map(|block| block["text"].as_str()).collect::<Vec<_>>().join("\n");
+            crate::orchestration::native_steer(&self.id, "codex", &self.generation, &prompt)?;
         } else if value["method"] == "turn/interrupt" {
             crate::orchestration::native_stop(&self.id, "codex", &self.generation);
         }
@@ -237,7 +240,7 @@ pub async fn codex_session_start(app: tauri::AppHandle, id: String, generation: 
 }
 #[tauri::command]
 pub async fn codex_session_request(sessions: State<'_, CodexSessions>, id: String, generation: String, method: String, params: Value) -> Result<Value, String> {
-    if !matches!(method.as_str(), "turn/start" | "turn/interrupt" | "thread/items/list" | "thread/turns/list" | "thread/compact/start" | "review/start" | "skills/list" | "mcpServerStatus/list" | "account/rateLimits/read") { return Err("Unsupported Codex request".into()); }
+    if !matches!(method.as_str(), "turn/start" | "turn/steer" | "turn/interrupt" | "thread/items/list" | "thread/turns/list" | "thread/compact/start" | "review/start" | "skills/list" | "mcpServerStatus/list" | "account/rateLimits/read") { return Err("Unsupported Codex request".into()); }
     let s = get(&sessions, &id, &generation)?;
     // Rate limits belong to the signed-in account, not to this tab's thread.
     let params = if method == "account/rateLimits/read" { json!({}) } else { params };

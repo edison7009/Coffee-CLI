@@ -144,8 +144,8 @@ function GambitImpl({
   const t = useT();
   // Desktop conversations own their composer controls and send prompts verbatim.
   const desktop = claude || codex || dsh || opencode;
-  // Claude, DeepSeek Harness and OpenCode accept prompts during a running turn.
-  const steerable = claude || dsh || opencode;
+  // Every desktop conversation accepts prompts during a running turn.
+  const steerable = claude || codex || dsh || opencode;
   const usage = useUsageQuota(sessionId, tool, cwd, claude ? 'claude' : codex ? 'codex' : dsh ? 'dsh' : null);
   const usageMeter = <UsageMeter quotas={usage.quotas} onRefresh={usage.refresh} />;
   const suggestion = draft ? undefined : offered;

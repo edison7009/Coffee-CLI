@@ -156,8 +156,16 @@ export function continueCodexInNewThread(id: string, newId: string): void {
   continuations.set(newId, { prompt, continueFrom: { token: c.state.nativeId, path: c.state.threadPath, prompt: lastPrompt?.content ?? '', reply: reply?.content ?? '' } });
   c.state = { ...c.state, coldReturn: undefined };
 }
+/** A prompt during a running turn joins it, as `turn/steer` does in Codex's own clients. */
+async function steerCodex(c: Client, id: string, prompt: string): Promise<boolean> {
+  if (!c.state.turnId || c.state.interrupting) return false;
+  try { await rpc(c, id, 'turn/steer', { expectedTurnId: c.state.turnId, input: [{ type: 'text', text: prompt }] }); return true; }
+  catch (error) { c.state = { ...c.state, error: String(error) }; publish(c, true); return false; }
+}
 export async function sendCodexMessage(id: string, prompt: string): Promise<boolean> {
-  const c = client(id); if (!c.state.ready || c.state.busy || c.sending || !prompt.trim()) return false;
+  const c = client(id);
+  if (c.state.ready && c.state.busy && !c.sending && prompt.trim()) return steerCodex(c, id, prompt);
+  if (!c.state.ready || c.state.busy || c.sending || !prompt.trim()) return false;
   c.sending = true; c.interruptSent = undefined;
   c.state = { ...c.state, busy: true, turnId: '', interrupting: false, error: undefined }; publish(c, true);
   try {
