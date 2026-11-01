@@ -10,3 +10,7 @@ export const worktreeStatus = (worktree: Worktree) => invoke<WorktreeStatus>('wo
 /** Resolves to the number of commits merged; rejects with `COFFEE_MERGE:conflict` or `COFFEE_MERGE:local_changes` when git refuses. */
 export const mergeWorktree = (worktree: Worktree, message: string) => invoke<number>('worktree_merge', { worktree, message });
 export const removeWorktree = (worktree: Worktree) => invoke<void>('worktree_remove', { worktree }).catch(() => {});
+/** Reclaims the project's worktrees that no tab or worker holds, as a quit leaves them behind. */
+export const sweepWorktrees = (cwd: string, inUse: string[]) => invoke<number>('worktree_sweep', { cwd, inUse }).catch(() => 0);
+
+export { insideWorktrees, worktreeFromPath } from './worktree-path';

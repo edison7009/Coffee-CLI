@@ -1232,6 +1232,9 @@ struct SavedSession {
     turn_count: Option<u32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     git_context: Option<crate::session_git_context::SessionGitContext>,
+    /// A conversation held in a Coffee worktree that still exists resumes there rather than in the project.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    worktree_cwd: Option<String>,
 }
 
 #[tauri::command]
@@ -1376,6 +1379,11 @@ fn claude_prompt_title(text: &str, command_fallback: &mut String) -> Option<Stri
 /// Any cwd without that exact segment (a normal project dir, a real subdir, a
 /// plain non-hidden `worktrees/` folder) is returned unchanged. Guaranteed to
 /// never return an empty string when given a non-empty one.
+/// A cwd inside a worktree Coffee made (`.claude/worktrees/coffee-*`), as opposed to one Claude Code made itself.
+fn coffee_worktree_cwd(cwd: &str) -> bool {
+    let parts = cwd.split(['/', '\\']).collect::<Vec<_>>();
+    parts.windows(3).any(|w| w[0] == ".claude" && w[1] == "worktrees" && w[2].starts_with("coffee-"))
+}
 fn project_root_from_cwd(cwd: &str) -> String {
     let is_sep = |b: u8| b == b'\\' || b == b'/';
     let bytes = cwd.as_bytes();
@@ -1636,6 +1644,7 @@ fn parse_agent_jsonl(
         file_path: Some(file_path.to_string_lossy().into_owned()),
         turn_count: Some(turn_count),
         git_context: git_context.finish(),
+        worktree_cwd: None,
     })
 }
 
@@ -1760,6 +1769,7 @@ fn parse_codebuddy_session_jsonl(file_path: &std::path::Path) -> Option<SavedSes
         file_path: Some(file_path.to_string_lossy().into_owned()),
         turn_count: Some(turn_count),
         git_context: None,
+        worktree_cwd: None,
     })
 }
 
@@ -1910,6 +1920,7 @@ fn parse_pi_session_jsonl(file_path: &std::path::Path, tool: &str) -> Option<Sav
         file_path: Some(file_path.to_string_lossy().into_owned()),
         turn_count: Some(turn_count),
         git_context: None,
+        worktree_cwd: None,
     })
 }
 
@@ -2088,6 +2099,7 @@ fn parse_codex_session_jsonl(file_path: &std::path::Path) -> Option<SavedSession
         file_path: Some(file_path.to_string_lossy().into_owned()),
         turn_count: Some(turn_count),
         git_context: git_context.finish(),
+        worktree_cwd: None,
     })
 }
 
@@ -2259,6 +2271,7 @@ fn parse_qwen_session_jsonl(file_path: &std::path::Path) -> Option<SavedSession>
         file_path: Some(file_path.to_string_lossy().into_owned()),
         turn_count: Some(turn_count),
         git_context: None,
+        worktree_cwd: None,
     })
 }
 
@@ -3377,6 +3390,7 @@ fn find_kimi_sessions(home: &std::path::Path, result: &mut Vec<SavedSession>) {
             // session and the History board renders fine without it.
             turn_count: None,
             git_context: None,
+            worktree_cwd: None,
         });
     }
 }
@@ -3548,6 +3562,7 @@ fn find_grok_sessions(home: &std::path::Path, result: &mut Vec<SavedSession>) {
             // session and the History board renders fine without it.
             turn_count: None,
             git_context: None,
+            worktree_cwd: None,
         });
     }
 }
@@ -3741,6 +3756,7 @@ fn parse_hermes_json(file_path: &std::path::Path) -> Option<SavedSession> {
         file_path: Some(file_path.to_string_lossy().into_owned()),
         turn_count: Some(turn_count),
         git_context: None,
+        worktree_cwd: None,
     })
 }
 
@@ -3788,6 +3804,7 @@ fn parse_opencode_session(file_path: &std::path::Path, message_dir: &std::path::
         file_path: Some(file_path.to_string_lossy().into_owned()),
         turn_count: Some(turn_count),
         git_context: None,
+        worktree_cwd: None,
     })
 }
 
@@ -3896,6 +3913,7 @@ fn find_drizzle_sessions_sqlite(
             file_path: Some(db_path.to_string_lossy().into_owned()),
             turn_count: Some(turn_count),
             git_context: None,
+            worktree_cwd: None,
         })
     });
 
@@ -4054,6 +4072,7 @@ fn find_hermes_sessions_sqlite(db_path: &std::path::Path, result: &mut Vec<Saved
             file_path: None,
             turn_count: Some(turn_count),
             git_context: None,
+            worktree_cwd: None,
         })
     });
     if let Ok(iter) = iter {
@@ -4483,6 +4502,7 @@ fn load_native_history_blocking() -> Result<Vec<SavedSession>, String> {
             file_path: Some(entry.log.to_string_lossy().into_owned()),
             turn_count: entry.turns,
             git_context: None,
+            worktree_cwd: None,
         });
     }
 
@@ -4494,6 +4514,7 @@ fn load_native_history_blocking() -> Result<Vec<SavedSession>, String> {
     // never disagree.
     for s in result.iter_mut() {
         if !s.cwd.is_empty() {
+            if coffee_worktree_cwd(&s.cwd) && std::path::Path::new(&s.cwd).is_dir() { s.worktree_cwd = Some(s.cwd.clone()); }
             s.cwd = project_root_from_cwd(&s.cwd);
         }
     }
@@ -5377,6 +5398,7 @@ pub fn start_ui(pending_launch: Option<crate::launch::LaunchRequest>) -> anyhow:
             crate::worker_worktree::worktree_status,
             crate::worker_worktree::worktree_merge,
             crate::worker_worktree::worktree_remove,
+            crate::worker_worktree::worktree_sweep,
             crate::orchestration::orchestration_sync,
             crate::orchestration::orchestration_close_group,
             crate::orchestration::orchestration_remove_worker,
@@ -5550,7 +5572,7 @@ pub fn start_ui(pending_launch: Option<crate::launch::LaunchRequest>) -> anyhow:
 
 #[cfg(test)]
 mod resume_cwd_tests {
-    use super::{load_claude_project_map, project_root_from_cwd};
+    use super::{coffee_worktree_cwd, load_claude_project_map, project_root_from_cwd};
     use std::io::Write;
 
     // The exact path that was landing wrong in the wild: a Claude session run
@@ -5604,6 +5626,14 @@ mod resume_cwd_tests {
         // `.claude` itself, without a worktrees child, is a real (if unusual) dir.
         assert_eq!(project_root_from_cwd(r"D:\Coffee-CLI\.claude"), r"D:\Coffee-CLI\.claude");
         assert_eq!(project_root_from_cwd(r"D:\Coffee-CLI\.claude\settings"), r"D:\Coffee-CLI\.claude\settings");
+    }
+
+    #[test]
+    fn only_coffee_worktrees_resume_in_place() {
+        assert!(coffee_worktree_cwd(r"D:\Proj\.claude\worktrees\coffee-fix-a1b2c3\src"));
+        assert!(coffee_worktree_cwd("/home/e/proj/.claude/worktrees/coffee-x-1"));
+        assert!(!coffee_worktree_cwd(r"D:\Proj\.claude\worktrees\intelligent-heyrovsky-b3d421"));
+        assert!(!coffee_worktree_cwd(r"D:\Proj\coffee-x"));
     }
 
     #[test]
@@ -6360,6 +6390,7 @@ mod tests {
             file_path: None,
             turn_count: None,
             git_context: None,
+            worktree_cwd: None,
         };
         let mut sessions = vec![row("codex", "t1"), row("codex", "unnamed"), row("claude", "t1")];
         apply_codex_thread_names(&home.join(".codex/sessions"), &mut sessions);

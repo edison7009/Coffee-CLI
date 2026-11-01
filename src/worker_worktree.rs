@@ -16,7 +16,8 @@ pub struct Worktree { pub root: String, pub path: String, pub branch: String }
 
 fn git(dir: &Path, args: &[&str]) -> Result<String, String> {
     let mut command = Command::new("git");
-    command.arg("-C").arg(dir).args(args).env("GIT_TERMINAL_PROMPT", "0");
+    // Refusals are recognised by git's English text, which a localized git would translate.
+    command.arg("-C").arg(dir).args(args).env("GIT_TERMINAL_PROMPT", "0").env("LC_ALL", "C").env("LANGUAGE", "C");
     #[cfg(windows)]
     command.creation_flags(0x08000000);
     let output = command.output().map_err(|_| "Git is not available".to_string())?;
@@ -25,6 +26,12 @@ fn git(dir: &Path, args: &[&str]) -> Result<String, String> {
         return Err(if error.is_empty() { format!("git {} failed", args.join(" ")) } else { error });
     }
     Ok(String::from_utf8_lossy(&output.stdout).trim_end_matches(['\r', '\n']).to_string())
+}
+
+/// A path inside some project's `.claude/worktrees/`, where a further worktree would nest.
+pub fn inside_worktrees(path: &str) -> bool {
+    let parts = path.split(['/', '\\']).collect::<Vec<_>>();
+    parts.windows(2).any(|pair| pair == [".claude", "worktrees"])
 }
 
 fn native(path: &str) -> PathBuf { PathBuf::from(path.replace('/', std::path::MAIN_SEPARATOR_STR)) }
@@ -45,6 +52,7 @@ fn name(title: &str, suffix: &str) -> String {
 /// the same subdirectory of the project as `cwd`.
 pub fn create(cwd: &Path, title: &str) -> Result<(Worktree, PathBuf), String> {
     let root = git(cwd, &["rev-parse", "--show-toplevel"]).map_err(|_| "Worktree isolation needs the project to be a git repository".to_string())?;
+    if inside_worktrees(&root) { return Err("This folder is already a worktree; start from the project itself".into()); }
     let prefix = git(cwd, &["rev-parse", "--show-prefix"])?;
     git(cwd, &["rev-parse", "--verify", "--quiet", "HEAD"]).map_err(|_| "Worktree isolation needs at least one commit in the repository".to_string())?;
     let root_path = native(&root);
@@ -83,9 +91,39 @@ pub fn remove(worktree: &Worktree) -> (bool, bool) {
 pub fn remove_later(worktrees: Vec<Worktree>) {
     if worktrees.is_empty() { return; }
     std::thread::spawn(move || {
-        std::thread::sleep(std::time::Duration::from_secs(3));
-        for worktree in &worktrees { let _ = remove(worktree); }
+        let mut left = worktrees;
+        // A tool that is still shutting down can hold the folder open for a while.
+        for wait in [3, 10, 30] {
+            std::thread::sleep(std::time::Duration::from_secs(wait));
+            left.retain(|worktree| Path::new(&worktree.path).is_dir() && !remove(worktree).0);
+            if left.is_empty() { break; }
+        }
     });
+}
+
+/// Removes the project's Coffee worktrees that nothing uses any more, and merged `coffee/` branches without one, by
+/// git's safe rules. Tabs are not kept across restarts, so this is what reclaims a worktree left by a quit.
+fn sweep(cwd: &Path, in_use: &[String]) -> Result<u32, String> {
+    let root = git(cwd, &["rev-parse", "--show-toplevel"])?;
+    if inside_worktrees(&root) { return Ok(0); }
+    let root = native(&root);
+    let _ = git(&root, &["worktree", "prune"]);
+    let base = root.join(".claude").join("worktrees");
+    let used = |path: &Path| in_use.iter().any(|known| Path::new(known) == path);
+    let mut removed = 0;
+    let mut live = vec![];
+    for line in git(&root, &["worktree", "list", "--porcelain"])?.lines() {
+        let Some(path) = line.strip_prefix("worktree ") else { continue };
+        let path = native(path);
+        let name = path.file_name().and_then(|name| name.to_str()).unwrap_or_default().to_string();
+        if path.parent() != Some(base.as_path()) || !name.starts_with("coffee-") { continue; }
+        let worktree = Worktree { root: root.to_string_lossy().into_owned(), path: path.to_string_lossy().into_owned(), branch: format!("coffee/{}", &name["coffee-".len()..]) };
+        if used(&path) || !remove(&worktree).0 { live.push(worktree.branch); } else { removed += 1; }
+    }
+    for branch in git(&root, &["branch", "--merged", "HEAD", "--list", "coffee/*", "--format=%(refname:short)"])?.lines() {
+        if !live.iter().any(|known| known == branch) && git(&root, &["branch", "-d", branch]).is_ok() { removed += 1; }
+    }
+    Ok(removed)
 }
 
 /// Only worktrees Coffee made: under the project's `.claude/worktrees/coffee-*`, on a `coffee/` branch.
@@ -116,13 +154,16 @@ fn status(worktree: &Worktree) -> Result<WorktreeStatus, String> {
 fn merge(worktree: &Worktree, message: &str) -> Result<u32, String> {
     checked(worktree)?;
     let (root, tree) = (Path::new(&worktree.root), Path::new(&worktree.path));
-    if !git(tree, &["status", "--porcelain"])?.trim().is_empty() {
+    let committed = !git(tree, &["status", "--porcelain"])?.trim().is_empty();
+    if committed {
         git(tree, &["add", "-A"])?;
         git(tree, &["commit", "-q", "-m", message])?;
     }
     let ahead: u32 = git(root, &["rev-list", "--count", &format!("HEAD..{}", worktree.branch)])?.trim().parse().unwrap_or(0);
     if ahead == 0 { return Ok(0); }
     if let Err(error) = git(root, &["merge", "--no-edit", &worktree.branch]) {
+        // A merge that did not happen leaves the worktree as it was, so the next attempt starts from the same place.
+        if committed { let _ = git(tree, &["reset", "-q", "--soft", "HEAD~1"]); }
         if git(root, &["rev-parse", "-q", "--verify", "MERGE_HEAD"]).is_ok() {
             let _ = git(root, &["merge", "--abort"]);
             return Err("COFFEE_MERGE:conflict".into());
@@ -155,6 +196,12 @@ pub async fn worktree_status(worktree: Worktree) -> Result<WorktreeStatus, Strin
 #[tauri::command]
 pub async fn worktree_merge(worktree: Worktree, message: String) -> Result<u32, String> {
     tauri::async_runtime::spawn_blocking(move || merge(&worktree, &message)).await.map_err(|e| e.to_string())?
+}
+/// `in_use` lists the worktrees open tabs hold; orchestration workers' worktrees are added here.
+#[tauri::command]
+pub async fn worktree_sweep(cwd: String, in_use: Vec<String>) -> Result<u32, String> {
+    let mut in_use = in_use; in_use.extend(crate::orchestration::worktree_paths());
+    tauri::async_runtime::spawn_blocking(move || sweep(Path::new(&cwd), &in_use)).await.map_err(|e| e.to_string())?
 }
 /// For a tab that closed or turned the worktree off; git keeps anything uncommitted or unmerged.
 #[tauri::command]
@@ -241,8 +288,24 @@ mod tests {
         let (other, _) = create(repo.path(), "Local").unwrap();
         commit_in(Path::new(&other.path), "local.txt", "theirs");
         std::fs::write(repo.path().join("local.txt"), "unsaved").unwrap();
-        assert!(merge(&other, "m").is_err());
+        std::fs::write(Path::new(&other.path).join("left.txt"), "leftover").unwrap();
+        assert_eq!(merge(&other, "m").unwrap_err(), "COFFEE_MERGE:local_changes");
         assert_eq!(std::fs::read_to_string(repo.path().join("local.txt")).unwrap(), "unsaved", "the user's file is untouched");
+        assert_eq!(status(&other).unwrap().ahead, 1, "the leftover commit was undone");
+        assert!(status(&other).unwrap().dirty, "and its files are uncommitted again");
+    }
+    #[test]
+    fn worktrees_do_not_nest_and_unused_ones_are_swept() {
+        let repo = repository(); identity(repo.path());
+        let (kept, _) = create(repo.path(), "Kept").unwrap();
+        let (unused, _) = create(repo.path(), "Unused").unwrap();
+        let (busy, _) = create(repo.path(), "Busy").unwrap();
+        std::fs::write(Path::new(&busy.path).join("work.txt"), "x").unwrap();
+        assert!(create(Path::new(&kept.path), "Nested").unwrap_err().contains("already a worktree"));
+        assert_eq!(sweep(repo.path(), std::slice::from_ref(&kept.path)).unwrap(), 1, "the unused worktree, with its merged branch");
+        assert!(Path::new(&kept.path).is_dir() && Path::new(&busy.path).is_dir() && !Path::new(&unused.path).exists());
+        assert!(git(repo.path(), &["rev-parse", "--verify", "--quiet", &unused.branch]).is_err());
+        assert!(inside_worktrees("D:\\p\\.claude\\worktrees\\coffee-x") && !inside_worktrees("D:\\p\\worktrees"));
     }
     #[test]
     fn only_coffee_worktrees_are_accepted() {

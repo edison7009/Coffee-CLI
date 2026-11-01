@@ -14,6 +14,7 @@ await build({
   stdin: { resolveDir: project, loader: 'tsx', contents: `
     import React,{useSyncExternalStore} from 'react';import {createRoot} from 'react-dom/client';
     import {WorktreeControl} from './src/components/center/WorktreeControl';
+    import {worktreeFromPath} from './src/lib/worktree';window.worktreeFromPath=worktreeFromPath;
     import {subscribe,snapshot} from 'fixture-tab';
     import './src/styles/global.css';import './src/components/center/Gambit.css';
     function Fixture(){const s=useSyncExternalStore(subscribe,snapshot);return <div style={{width:680,margin:30,padding:10,borderRadius:12,background:"var(--bg-panel)",border:"1px solid var(--border)"}}><div className="gambit-footer gambit-footer--claude">
@@ -44,6 +45,7 @@ await build({
       export const isTauri=false,commands={};
       export async function invoke(name,args){window.calls.push({name,...args});
         if(name==='worktree_available')return window.available??true;
+        if(name==='worktree_create'&&window.createGate)await window.createGate;
         if(name==='worktree_create')return {worktree:{root:'D:/Project',path:'D:/Project/.claude/worktrees/coffee-claude-a1b2c3',branch:'coffee/claude-a1b2c3'},cwd:'D:/Project/.claude/worktrees/coffee-claude-a1b2c3'};
         if(name==='worktree_status')return window.wtStatus;
         if(name==='worktree_merge'){if(window.mergeError)throw window.mergeError;window.wtStatus={...window.wtStatus,ahead:0,dirty:false};return 2}
@@ -78,6 +80,21 @@ try {
   await toggle.click(); await view.waitForFunction(() => document.querySelector('.gambit-worktree-toggle')?.getAttribute('aria-checked') === 'false');
   const off = await view.evaluate(() => window.actions.at(-1));
   assert.deepEqual([off.cwd, off.worktree], ['D:/Project', undefined], 'turning it off returns to the original folder');
+  assert.ok(await view.evaluate(() => window.calls.some(call => call.name === 'worktree_sweep' && call.cwd === 'D:/Project')), 'opening on a repository reclaims leftover worktrees');
+
+  // A conversation that starts while the worktree is being created keeps its folder; the new worktree is dropped.
+  const before = await view.evaluate(() => { window.createGate = new Promise(done => { window.openGate = done; }); return window.actions.length; });
+  await toggle.click(); await view.waitForFunction(() => window.calls.filter(call => call.name === 'worktree_create').length === 2);
+  await view.evaluate(() => { window.setFixture({ started: true }); window.openGate(); });
+  await view.waitForFunction(() => window.calls.some(call => call.name === 'worktree_remove'));
+  assert.equal(await view.evaluate(() => window.actions.length), before, 'the started conversation is not moved');
+  await view.evaluate(() => { window.createGate = undefined; window.setFixture({ started: false }); });
+  assert.deepEqual(await view.evaluate(() => window.worktreeFromPath('D:\\Proj\\.claude\\worktrees\\coffee-fix-a1b2c3\\src')),
+    { root: 'D:\\Proj', path: 'D:\\Proj\\.claude\\worktrees\\coffee-fix-a1b2c3', branch: 'coffee/fix-a1b2c3' }, 'history resumes the worktree it ran in');
+  assert.equal(await view.evaluate(() => window.worktreeFromPath('D:/Proj/.claude/worktrees/intelligent-b3')), undefined);
+
+  await view.evaluate(() => window.setFixture({ tab: { id: 't-nested', folderPath: 'D:/Proj/.claude/worktrees/intelligent-b3' } }));
+  await view.waitForFunction(() => !document.querySelector('.gambit-worktree'));
 
   await view.evaluate(() => { window.available = false; window.setFixture({ tab: { id: 't-plain', folderPath: 'D:/Plain' } }); });
   await view.waitForFunction(() => document.querySelector('.gambit-worktree-toggle').disabled);

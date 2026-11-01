@@ -77,6 +77,8 @@ export function ActiveGambit() {
   const dshStarted = useDshSession(isDsh ? activeId ?? '' : '', s => s.messages.length > 0);
   const openCodeStarted = useOpenCodeSession(isOpenCode ? activeId ?? '' : '', s => s.native.length > 0);
   const controlsReady = isClaude ? claude.ready : isCodex ? codex.ready : true;
+  const running = isClaude ? claude.busy : isCodex ? codex.busy : isOpenCode ? openCodeBusy : isDsh && dshBusy;
+  const started = isClaude ? claude.messages.length > 0 : isCodex ? codex.messages.length > 0 : isDsh ? dshStarted : openCodeStarted;
   // Footer label telling the user where Send will land. Local sessions show
   // their working-folder name; SSH/WebSocket sessions show their connection
   // host, since folderPath may still contain the launchpad's previous folder.
@@ -162,16 +164,15 @@ export function ActiveGambit() {
       orchestration={coordinator}
       computer={controlsReady && controls.includes('computer')}
       browser={controlsReady && controls.includes('browser')}
-      worktreeControl={activeSession && (isClaude || isCodex || isDsh || isOpenCode) ? <WorktreeControl tab={activeSession}
-        started={isClaude ? claude.messages.length > 0 : isCodex ? codex.messages.length > 0 : isDsh ? dshStarted : openCodeStarted}
-        running={isClaude ? claude.busy : isCodex ? codex.busy : isOpenCode ? openCodeBusy : dshBusy} /> : undefined}
+      worktreeControl={activeSession && !activeSession.parentId && (isClaude || isCodex || isDsh || isOpenCode)
+        ? <WorktreeControl key={activeSession.id} tab={activeSession} started={started} running={running} /> : undefined}
       claude={isClaude}
       suggestion={isClaude ? claude.suggestion : undefined}
       codex={isCodex}
       dsh={isDsh}
       opencode={isOpenCode}
       attachable={activeSession?.tool !== 'remote'}
-      running={isClaude ? claude.busy : isCodex ? codex.busy : isOpenCode ? openCodeBusy : isDsh && dshBusy}
+      running={running}
       onCancel={isDsh ? () => { void stopDsh(activeId); } : isOpenCode ? () => { void interruptOpenCode(activeId); } : isCodex ? () => { void interruptCodex(activeId); } : isClaude ? () => { void controlClaude(activeId, { subtype: 'interrupt' }).catch(() => {}); } : undefined}
       leftPanelHidden={state.leftPanelHidden}
       rightPanelHidden={state.rightPanelHidden}

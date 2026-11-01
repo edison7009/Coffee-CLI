@@ -528,6 +528,10 @@ fn release_claim(state: &mut State, id: &str, delivery: Option<&str>) {
     let Some(input) = owner.automatic.take() else { return };
     for task in state.snapshot.tasks.iter_mut().filter(|task| input.tasks.contains(&task.id) && task.result_delivery.as_deref() == Some("claimed")) { task.result_delivery = Some("pending".into()); }
 }
+/// Worktrees that orchestration workers hold, which a sweep must leave alone.
+pub(crate) fn worktree_paths() -> Vec<String> {
+    hub().state.lock().map(|state| state.snapshot.tasks.iter().filter_map(|task| task.worktree.as_ref().map(|worktree| worktree.path.clone())).collect()).unwrap_or_default()
+}
 /// A tab driven by a coordinator rather than a person.
 pub(crate) fn is_worker(id: &str) -> bool {
     worker_session(&hub().state.lock().unwrap().snapshot, id)

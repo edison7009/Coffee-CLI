@@ -137,6 +137,8 @@ export interface SavedSession {
   file_path?: string;
   turn_count?: number;
   git_context?: SessionGitContext | null;
+  /** Set when the conversation ran in a Coffee worktree that still exists; it resumes there. */
+  worktree_cwd?: string;
 }
 
 export interface ChatSessionRead {

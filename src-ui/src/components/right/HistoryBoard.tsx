@@ -1,3 +1,4 @@
+import { worktreeFromPath } from '../../lib/worktree-path';
 import { useState, useEffect, useMemo, useRef, useSyncExternalStore, useId, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { InlineSvgIcon } from '../InlineSvgIcon';
@@ -402,11 +403,13 @@ export function HistoryBoard() {
     const targetId = crypto.randomUUID();
     let mode: 'terminal' | 'conversation' = 'conversation';
     try { if (localStorage.getItem(`coffee:${saved.tool}-launch-mode`) === 'terminal') mode = 'terminal'; } catch { /* optional preference */ }
+    // A conversation that ran in a Coffee worktree goes back into it, with its branch and merge button.
+    const worktree = saved.worktree_cwd ? worktreeFromPath(saved.worktree_cwd) : undefined;
     dispatch({
       type: 'ADD_TERMINAL',
       split,
       // The tab opens under the conversation's history title; a tool that names it later replaces it.
-      session: { id: targetId, tool: saved.tool as ToolType, folderPath: saved.cwd, resumeToken: saved.session_token, toolTitle: saved.name?.trim() || undefined, pinnedTitle: renamed[`${saved.tool ?? ''}:${saved.id}`]?.trim() || undefined, claudeMode: saved.tool === 'claude' ? mode : undefined, codexMode: saved.tool === 'codex' ? mode : undefined, opencodeMode: saved.tool === 'opencode' ? mode : undefined }
+      session: { id: targetId, tool: saved.tool as ToolType, folderPath: worktree ? saved.worktree_cwd! : saved.cwd, ...(worktree ? { worktree, worktreeOrigin: saved.cwd } : {}), resumeToken: saved.session_token, toolTitle: saved.name?.trim() || undefined, pinnedTitle: renamed[`${saved.tool ?? ''}:${saved.id}`]?.trim() || undefined, claudeMode: saved.tool === 'claude' ? mode : undefined, codexMode: saved.tool === 'codex' ? mode : undefined, opencodeMode: saved.tool === 'opencode' ? mode : undefined }
     });
   };
 
