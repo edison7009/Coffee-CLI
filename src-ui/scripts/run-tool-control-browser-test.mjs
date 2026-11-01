@@ -70,9 +70,9 @@ await page.evaluate(()=>{window.delayTeam=false;window.resolveTeam()});await pag
 assert.equal(await agent('Codex CLI').getAttribute('aria-checked'),'false','each agent has an independent switch');
 await agent('Codex CLI').click();await page.waitForFunction(()=>window.team.agents.includes('codex'));
 const role=name=>page.locator('.orchestration-config').getByRole('radio',{name,exact:true});
-assert.equal(await role('自主决定').getAttribute('aria-checked'),'true','a saved snapshot without a role reads as automatic');
+assert.equal(await role('自主决策').getAttribute('aria-checked'),'true','a saved snapshot without a role reads as automatic');
 await role('项目经理').click();await page.waitForFunction(()=>window.team.mode==='manager');
-assert.deepEqual([await role('自主决定').getAttribute('aria-checked'),await role('项目经理').getAttribute('aria-checked'),await role('主导').getAttribute('aria-checked')],['false','true','false'],'one role at a time');
+assert.deepEqual([await role('自主决策').getAttribute('aria-checked'),await role('项目经理').getAttribute('aria-checked'),await role('主刀').getAttribute('aria-checked')],['false','true','false'],'one role at a time');
 const roleCalls=await page.evaluate(()=>window.teamCalls.filter(call=>call.mode).length);await role('项目经理').click();await page.waitForTimeout(100);
 assert.equal(await page.evaluate(()=>window.teamCalls.filter(call=>call.mode).length),roleCalls,'choosing the current role saves nothing');
 await page.waitForTimeout(260);await page.screenshot({path:join(directory,'orchestration-dark.png')});
