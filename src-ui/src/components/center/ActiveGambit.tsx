@@ -165,7 +165,8 @@ export function ActiveGambit() {
       computer={controlsReady && controls.includes('computer')}
       browser={controlsReady && controls.includes('browser')}
       worktreeControl={activeSession && !activeSession.parentId && (isClaude || isCodex || isDsh || isOpenCode)
-        ? <WorktreeControl key={activeSession.id} tab={activeSession} started={started} running={running} /> : undefined}
+        // Sits beside the tool's composer controls, keyed by session: a shared key would strand a stale switch in the footer.
+        ? <WorktreeControl key={`worktree:${activeSession.id}`} tab={activeSession} started={started} running={running} /> : undefined}
       claude={isClaude}
       suggestion={isClaude ? claude.suggestion : undefined}
       codex={isCodex}

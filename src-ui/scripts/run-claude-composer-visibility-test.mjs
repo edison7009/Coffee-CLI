@@ -108,6 +108,8 @@ for (const mode of ['conversation', 'terminal']) {
   const restarted = reducer({ ...launched, activeTerminalId: 'new' }, { type: 'RESTART_TERMINAL', id: 'new', newId: 'restarted' });
   assert.equal(restarted.terminals[0].claudeMode, mode, 'reconnect retains the tab mode');
 }
+state = { terminals: [{ id: 'keyed', tool: 'codex', codexMode: 'conversation', folderPath: 'D:/Project' }], activeTerminalId: 'keyed', gambitOpen: true };
+assert.notEqual(host().props.worktreeControl.props.key, 'keyed', 'the worktree switch never shares a session key with the composer controls');
 console.log('OK: both launch modes route prompts to the correct backend and retain mode on restart');
 
 for (const tool of ['codex', 'kimicode', 'qwen', 'opencode', 'terminal']) {
