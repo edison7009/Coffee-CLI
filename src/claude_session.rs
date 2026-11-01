@@ -117,8 +117,7 @@ pub(crate) fn previous_conversation_text(token: &str, transcript: &std::path::Pa
 
 fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<String>, resume_token: Option<String>, continue_from: Option<Value>) -> Result<Value, String> {
     let config = crate::tool_config::get("claude");
-    let cwd = cwd.filter(|p| !p.trim().is_empty()).or_else(|| (!config.default_cwd.is_empty()).then(|| config.default_cwd.clone()))
-        .map(|p| crate::tool_config::expand_path(&p)).unwrap_or_else(|| dirs::home_dir().unwrap_or_default());
+    let cwd = session_cwd(&config, cwd);
     crate::session_directory::validate(&cwd)?;
     let (bin, prefix) = executable(&config);
     let mut command;
@@ -236,6 +235,11 @@ fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<Stri
     }
 }
 
+fn session_cwd(config: &crate::tool_config::ToolConfigEntry, cwd: Option<String>) -> std::path::PathBuf {
+    cwd.filter(|p| !p.trim().is_empty()).or_else(|| (!config.default_cwd.is_empty()).then(|| config.default_cwd.clone()))
+        .map(|p| crate::tool_config::expand_path(&p)).unwrap_or_else(|| dirs::home_dir().unwrap_or_default())
+}
+
 fn claude_history_path(cwd: &std::path::Path, native_id: &str) -> std::path::PathBuf {
     let root = std::env::var_os("CLAUDE_CONFIG_DIR").map(std::path::PathBuf::from)
         .unwrap_or_else(|| dirs::home_dir().unwrap_or_default().join(".claude"));
@@ -259,6 +263,17 @@ fn history_page(path: &std::path::Path, before: Option<u64>) -> Result<Value, St
 pub async fn claude_session_history(sessions: State<'_, ClaudeSessions>, id: String, generation: String, before: u64) -> Result<Value, String> {
     let s = get(&sessions, &id, &generation)?;
     tauri::async_runtime::spawn_blocking(move || history_page(&s.history_path, Some(before))).await.map_err(|e| e.to_string())?
+}
+
+/// The newest history page of a resumed conversation, read straight from disk so the tab can show it while
+/// `claude --resume` is still loading the whole transcript before it answers `initialize`.
+#[tauri::command]
+pub async fn claude_session_preview(cwd: Option<String>, resume_token: String) -> Result<Value, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        if uuid::Uuid::parse_str(&resume_token).is_err() { return Err("无效的 Claude 会话 ID".into()); }
+        let cwd = session_cwd(&crate::tool_config::get("claude"), cwd);
+        history_page(&claude_history_path(&cwd, &resume_token), None)
+    }).await.map_err(|e| e.to_string())?
 }
 
 #[tauri::command]

@@ -5260,6 +5260,7 @@ pub fn start_ui(pending_launch: Option<crate::launch::LaunchRequest>) -> anyhow:
             crate::session_directory::check_project_directories,
             crate::claude_session::claude_session_start,
             crate::claude_session::claude_session_history,
+            crate::claude_session::claude_session_preview,
             crate::claude_session::claude_session_send,
             crate::claude_session::claude_session_control,
             crate::claude_session::claude_session_respond,

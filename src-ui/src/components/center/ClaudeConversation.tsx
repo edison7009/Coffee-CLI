@@ -365,13 +365,15 @@ export function ClaudeConversation({ sessionId, cwd, resumeToken, isActive, isVi
   const directoryIssue = !s.ready ? directoryFailure(s.error) : undefined;
   const directoryError = directoryFailureMessage(s.error, t);
   const empty = !directoryIssue && !s.messages.length && !s.busy && !s.requests.length && (!s.ready || !s.error);
+  const restoring = !!initialToken.current && !s.ready && !s.error;
+  const restoringMark = <span className="claude-working-mark" aria-hidden="true"><img src={CLAUDE_WORKING_MARK} alt="" /></span>;
   const model = s.models.find(m => m.value === s.model) ?? s.models.find(m => m.resolvedModel === s.model);
   const summary = !empty && !s.busy && s.endedAt && <div className="claude-turn-summary">{t('claude.worked_for', { duration: elapsed(s.endedAt - (s.startedAt ?? s.endedAt), t) })}{used > 0 && <> · {t('claude.tokens', { count: count(used) })}</>}{s.totalCost !== undefined && s.totalCost > 0 && <> · ~${s.totalCost.toFixed(4)}</>}</div>;
   return <ConversationDirectory.Provider value={cwd}><div className={`claude-conversation${hasBg && bgUrl ? ' has-background' : ''}${navigationItems.length > 1 ? ' has-navigation' : ''}`}>
     {hasBg && bgUrl && <div className="conversation-background">{bgType === 'video' ? <video src={bgUrl} autoPlay loop muted /> : <img src={bgUrl} alt="" />}</div>}
     <div className="claude-scroll" ref={scrollRef} onContextMenu={conversationMenu.onContextMenu} onCopy={conversationMenu.onCopy} onScroll={onScroll} onWheelCapture={event => { if (event.deltaY < 0 && !event.ctrlKey) pauseFollow(); }} onTouchMoveCapture={pauseFollow} onKeyDownCapture={event => { if ((['ArrowUp', 'PageUp', 'Home'].includes(event.key) || event.key === ' ' && event.shiftKey) && !(event.target as HTMLElement).closest('input,textarea,select,[contenteditable="true"]')) pauseFollow(); }}>
       <div className={`claude-thread${empty ? ' is-empty' : ''}`}>
-        {s.historyCursor > 0 && <button className="claude-expand" disabled={s.loadingHistory} onClick={loadEarlier}>{t(s.loadingHistory ? 'diff.loading' : 'claude.history_earlier')}</button>}
+        {s.historyCursor > 0 && <button className="claude-expand" disabled={s.loadingHistory || !s.ready} onClick={loadEarlier}>{t(s.loadingHistory ? 'diff.loading' : 'claude.history_earlier')}</button>}
         <div style={{ height: virtual.topSpacer }} aria-hidden="true" />
         {s.messages.slice(virtual.start, virtual.end).map((m, i) => <MeasuredRow key={m.renderKey ?? m.id} id={virtual.measurementKeys[virtual.start + i]} measure={virtual.measureRow}>
           {new Date(m.timestamp).toDateString() !== new Date(s.messages[virtual.start + i - 1]?.timestamp ?? 0).toDateString() && <div className="claude-date">{new Date(m.timestamp).toLocaleDateString(language, { weekday: 'short', month: 'short', day: 'numeric' })}</div>}
@@ -384,6 +386,7 @@ export function ClaudeConversation({ sessionId, cwd, resumeToken, isActive, isVi
         <div style={{ height: virtual.bottomSpacer }} aria-hidden="true" />
         {s.requests.map(p => <Question key={p.id} id={sessionId} pending={p} />)}
         {s.coldReturn && <ClaudeColdReturn id={sessionId} idleMinutes={s.coldReturn.idleMinutes} tokens={s.coldReturn.tokens} />}
+        {restoring && s.messages.length > 0 && <div className="claude-working" role="status">{restoringMark}<span className="claude-working-word">{t('conversation.restoring')}</span></div>}
         {s.ready && s.busy && !s.requests.length && <Working status={s.interruptRequested ? 'stopping' : s.status} startedAt={s.startedAt} />}
         {s.interrupted && !s.busy && !s.error && <div className="claude-interrupted" role="status">{t('claude.interrupted')}</div>}
         {directoryIssue && <div className="claude-session-error" role="alert">{directoryError}</div>}
@@ -391,7 +394,7 @@ export function ClaudeConversation({ sessionId, cwd, resumeToken, isActive, isVi
         {empty && <div className="claude-empty">
           <ClaudeWelcomeIcon isActive={isVisible} />
           <WelcomeGreeting />
-          {initialToken.current && !s.ready && !s.error && <WelcomeRestoring labelClassName="claude-working-word" mark={<span className="claude-working-mark" aria-hidden="true"><img src={CLAUDE_WORKING_MARK} alt="" /></span>} />}
+          {restoring && <WelcomeRestoring labelClassName="claude-working-word" mark={restoringMark} />}
           <WelcomeSessionMeta cwd={cwd} model={model?.resolvedModel || s.model} />
         </div>}
         {!s.messages.length && summary}

@@ -69,15 +69,32 @@ async function readSettings(id: string, c: Client) {
 const continuations = new Map<string, { continueFrom: Json; prompt: string }>();
 const COLD_RETURN_NEVER = 'coffee:claude-cold-return-never';
 
+function restoreHistoryPage(state: ClaudeState, data: string): ClaudeState {
+  for (const line of data.split(/\r?\n/)) {
+    try { const row = object(JSON.parse(line)); state = reduceClaudeEvent(state, row, Date.parse(text(row.timestamp)) || Date.now(), true); } catch { /* partial native row */ }
+  }
+  return state;
+}
+
+async function previewClaudeHistory(id: string, c: Client, cwd: string | null, resumeToken: string) {
+  try {
+    const page = await invoke<{ data: string; cursor: number }>('claude_session_preview', { cwd, resumeToken });
+    if (clients.get(id) !== c || c.state.messages.length) return;
+    c.state = { ...restoreHistoryPage(c.state, page.data), historyCursor: page.cursor };
+    publish(c, true);
+  } catch { /* the start reply carries the same page */ }
+}
+
 async function initializeClaude(id: string, c: Client, cwd: string | null, resumeToken?: string, ready = true) {
   await listen();
   clearSessionControls(id, c.generation);
   const controls = readLaunchControls('claude'), generation = c.generation;
+  // `claude --resume` reads the whole transcript before it answers; show the newest page from disk meanwhile.
+  const preview = resumeToken && !c.state.messages.length ? previewClaudeHistory(id, c, cwd, resumeToken) : undefined;
   const result = await invoke<{ sessionId: string; initialization: Json; history: { data: string; cursor: number }; bypassAvailable?: boolean }>('claude_session_start', { id, generation: c.generation, cwd, resumeToken: resumeToken ?? null, continueFrom: continuations.get(id)?.continueFrom ?? null });
+  await preview;
   const restoreHistory = !c.state.messages.length;
-  if (restoreHistory) for (const line of result.history.data.split(/\r?\n/)) {
-    try { const row = object(JSON.parse(line)); c.state = reduceClaudeEvent(c.state, row, Date.parse(text(row.timestamp)) || Date.now(), true); } catch { /* partial native row */ }
-  }
+  if (restoreHistory) c.state = restoreHistoryPage(c.state, result.history.data);
   const init = result.initialization;
   c.state = { ...c.state, nativeId: result.sessionId, historyCursor: restoreHistory ? result.history.cursor : c.state.historyCursor, models: list(init.models) as ClaudeModel[], commands: list(init.commands) as ClaudeCommand[], permissionMode: text(init.current_permission_mode) || 'default', bypassAvailable: result.bypassAvailable === true };
   await readSettings(id, c);
@@ -171,7 +188,8 @@ export async function sendClaudeMessage(id: string, prompt: string, orchestratio
 
 export async function loadClaudeHistory(id: string): Promise<void> {
   const c = client(id);
-  if (!c.state.historyCursor || c.state.loadingHistory) return;
+  // Older pages are read through the live session; a previewed tab waits until it has connected.
+  if (!c.state.ready || !c.state.historyCursor || c.state.loadingHistory) return;
   c.state = { ...c.state, loadingHistory: true }; publish(c, true);
   try {
     const page = await invoke<{ data: string; cursor: number }>('claude_session_history', { id, generation: c.generation, before: c.state.historyCursor });
