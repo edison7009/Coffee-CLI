@@ -214,6 +214,18 @@ function GambitImpl({
     textareaRef.current?.focus();
   }, []);
 
+  // A mouse click on a footer control or its menu leaves the caret in the draft, so Enter still sends instead of
+  // pressing that control again. Only the mouse: tabbing to a control still focuses it.
+  useEffect(() => {
+    const keepCaret = (e: MouseEvent) => {
+      if (!(e.target as Element).closest?.('button')?.closest('.gambit-footer, .claude-control-menu')) return;
+      e.preventDefault();
+      if (!document.querySelector('.claude-control-menu')) textareaRef.current?.focus();
+    };
+    document.addEventListener('mousedown', keepCaret, true);
+    return () => document.removeEventListener('mousedown', keepCaret, true);
+  }, []);
+
   // Floating scrollbar for the input box. A long draft's scroll owner is
   // .gambit-input (the textarea auto-grows and stays overflow:hidden), and
   // native scrollbars are hidden globally (global.css) — WebView2 can't drop

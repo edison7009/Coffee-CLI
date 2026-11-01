@@ -207,12 +207,15 @@ try {
   assert.equal(await input.inputValue(),'Keep this draft','stop preserves a draft');
   assert.equal(await page.locator('.claude-session-error').count(),0,'user stop is neutral');
   await page.getByText('Interrupted · 2s',{exact:true}).waitFor();
+  await input.focus();
   await page.getByRole('button',{name:'Codex permissions',exact:true}).click();
   const permissions=page.getByRole('dialog',{name:'Codex permissions',exact:true});
+  assert.equal(await page.evaluate(()=>document.activeElement?.tagName),'TEXTAREA','clicking a footer control leaves the caret in the draft');
   assert.equal(await permissions.locator('pre').count(),0,'permission menu does not expose protocol JSON');
   assert.equal(await permissions.locator('.codex-permission-option').count(),3);
   if(process.env.COFFEE_CODEX_SCREENSHOT)await page.screenshot({path:process.env.COFFEE_CODEX_SCREENSHOT.replace('.png','-permissions.png')});
   await permissions.getByRole('button',{name:/^Workspace/}).click();
+  assert.equal(await page.evaluate(()=>document.activeElement?.tagName),'TEXTAREA','choosing from a footer menu leaves the caret in the draft');
   assert.equal(await page.evaluate(()=>window.currentState.sandbox.type),'workspaceWrite');
   await page.locator('.claude-effort-trigger').click();
   const effort=page.getByRole('slider');
