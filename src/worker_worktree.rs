@@ -5,6 +5,7 @@
 //! history resumes already map back to the project. Removal goes through git's own safety checks, so a worktree with
 //! uncommitted files or a branch that was never merged is kept.
 use serde::{Deserialize, Serialize};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 #[cfg(windows)]
@@ -55,6 +56,11 @@ pub fn create(cwd: &Path, title: &str) -> Result<(Worktree, PathBuf), String> {
     if inside_worktrees(&root) { return Err("This folder is already a worktree; start from the project itself".into()); }
     let prefix = git(cwd, &["rev-parse", "--show-prefix"])?;
     git(cwd, &["rev-parse", "--verify", "--quiet", "HEAD"]).map_err(|_| "Worktree isolation needs at least one commit in the repository".to_string())?;
+    let folder = prefix.trim_end_matches('/');
+    // A worktree holds only what HEAD holds, so a new or ignored folder would not exist in it.
+    if !folder.is_empty() && git(cwd, &["cat-file", "-e", &format!("HEAD:{folder}")]).is_err() {
+        return Err("This folder is not in the last commit, so a worktree would not contain it; commit it or start from the project root".into());
+    }
     let root_path = native(&root);
     let name = name(title, &uuid::Uuid::new_v4().simple().to_string()[..6]);
     let path = root_path.join(".claude").join("worktrees").join(format!("coffee-{name}"));
@@ -63,7 +69,7 @@ pub fn create(cwd: &Path, title: &str) -> Result<(Worktree, PathBuf), String> {
     git(&root_path, &["worktree", "add", "-b", &branch, &target, "HEAD"])?;
     exclude(&root_path, &path);
     let worktree = Worktree { root: root_path.to_string_lossy().into_owned(), path: target, branch };
-    Ok((worktree, path.join(native(prefix.trim_end_matches('/')))))
+    Ok((worktree, path.join(native(folder))))
 }
 
 /// Keeps the worktrees out of the project's `git status`, through the local exclude file only.
@@ -71,11 +77,14 @@ fn exclude(root: &Path, path: &Path) {
     if git(root, &["check-ignore", "-q", &path.to_string_lossy()]).is_ok() { return; }
     let Ok(file) = git(root, &["rev-parse", "--git-path", "info/exclude"]) else { return };
     let file = root.join(native(&file));
-    let current = std::fs::read_to_string(&file).unwrap_or_default();
-    if current.lines().any(|line| line.trim() == "/.claude/worktrees/") { return; }
-    let separator = if current.is_empty() || current.ends_with('\n') { "" } else { "\n" };
+    // Appended, not rewritten: the file is the user's and need not be UTF-8.
+    let current = std::fs::read(&file).unwrap_or_default();
+    if String::from_utf8_lossy(&current).lines().any(|line| line.trim() == "/.claude/worktrees/") { return; }
+    let separator = if current.is_empty() || current.ends_with(b"\n") { "" } else { "\n" };
     if let Some(parent) = file.parent() { let _ = std::fs::create_dir_all(parent); }
-    let _ = std::fs::write(&file, format!("{current}{separator}/.claude/worktrees/\n"));
+    if let Ok(mut out) = std::fs::OpenOptions::new().create(true).append(true).open(&file) {
+        let _ = writeln!(out, "{separator}/.claude/worktrees/");
+    }
 }
 
 /// Removes a worktree and its branch when git considers that safe: no uncommitted or untracked files, and a branch
@@ -87,15 +96,23 @@ pub fn remove(worktree: &Worktree) -> (bool, bool) {
     (tree, branch)
 }
 
+/// For a conversation: its branch must be merged too, as an unmerged one has no merge button without the folder that
+/// history reopens the conversation in.
+fn remove_merged(worktree: &Worktree) -> bool {
+    git(Path::new(&worktree.root), &["merge-base", "--is-ancestor", &worktree.branch, "HEAD"]).is_ok() && remove(worktree).0
+}
+
 /// Removal after the worker's tab has had time to close, as Windows keeps its directory open until then.
-pub fn remove_later(worktrees: Vec<Worktree>) {
+pub fn remove_later(worktrees: Vec<Worktree>) { retry_removal(worktrees, |worktree| remove(worktree).0); }
+
+fn retry_removal(worktrees: Vec<Worktree>, attempt: fn(&Worktree) -> bool) {
     if worktrees.is_empty() { return; }
     std::thread::spawn(move || {
         let mut left = worktrees;
         // A tool that is still shutting down can hold the folder open for a while.
         for wait in [3, 10, 30] {
             std::thread::sleep(std::time::Duration::from_secs(wait));
-            left.retain(|worktree| Path::new(&worktree.path).is_dir() && !remove(worktree).0);
+            left.retain(|worktree| Path::new(&worktree.path).is_dir() && !attempt(worktree));
             if left.is_empty() { break; }
         }
     });
@@ -118,7 +135,7 @@ fn sweep(cwd: &Path, in_use: &[String]) -> Result<u32, String> {
         let name = path.file_name().and_then(|name| name.to_str()).unwrap_or_default().to_string();
         if path.parent() != Some(base.as_path()) || !name.starts_with("coffee-") { continue; }
         let worktree = Worktree { root: root.to_string_lossy().into_owned(), path: path.to_string_lossy().into_owned(), branch: format!("coffee/{}", &name["coffee-".len()..]) };
-        if used(&path) || !remove(&worktree).0 { live.push(worktree.branch); } else { removed += 1; }
+        if used(&path) || !remove_merged(&worktree) { live.push(worktree.branch); } else { removed += 1; }
     }
     for branch in git(&root, &["branch", "--merged", "HEAD", "--list", "coffee/*", "--format=%(refname:short)"])?.lines() {
         if !live.iter().any(|known| known == branch) && git(&root, &["branch", "-d", branch]).is_ok() { removed += 1; }
@@ -203,11 +220,11 @@ pub async fn worktree_sweep(cwd: String, in_use: Vec<String>) -> Result<u32, Str
     let mut in_use = in_use; in_use.extend(crate::orchestration::worktree_paths());
     tauri::async_runtime::spawn_blocking(move || sweep(Path::new(&cwd), &in_use)).await.map_err(|e| e.to_string())?
 }
-/// For a tab that closed or turned the worktree off; git keeps anything uncommitted or unmerged.
+/// For a tab that closed or turned the worktree off; anything uncommitted or unmerged stays.
 #[tauri::command]
 pub fn worktree_remove(worktree: Worktree) -> Result<(), String> {
     checked(&worktree)?;
-    remove_later(vec![worktree]); Ok(())
+    retry_removal(vec![worktree], remove_merged); Ok(())
 }
 
 #[cfg(test)]
@@ -219,6 +236,9 @@ mod tests {
         run(dir.path(), &["init", "-q"]);
         run(dir.path(), &["-c", "user.email=t@example.com", "-c", "user.name=t", "commit", "-q", "--allow-empty", "-m", "start"]);
         std::fs::create_dir_all(dir.path().join("app")).unwrap();
+        std::fs::write(dir.path().join("app/main.txt"), "app").unwrap();
+        run(dir.path(), &["add", "app"]);
+        run(dir.path(), &["-c", "user.email=t@example.com", "-c", "user.name=t", "commit", "-q", "-m", "app"]);
         dir
     }
     #[test]
@@ -232,7 +252,7 @@ mod tests {
         let repo = repository();
         let (worktree, cwd) = create(&repo.path().join("app"), "Write docs").unwrap();
         assert!(Path::new(&worktree.path).is_dir());
-        assert!(cwd.ends_with("app"));
+        assert!(cwd.ends_with("app") && cwd.is_dir());
         assert!(worktree.branch.starts_with("coffee/write-docs-"));
         assert_eq!(git(repo.path(), &["status", "--porcelain"]).unwrap(), "", "the worktree folder is excluded locally");
         create(repo.path(), "Second").unwrap();
@@ -253,6 +273,35 @@ mod tests {
         assert_eq!(remove(&unmerged), (true, false), "the branch keeps the commit");
         let (clean, _) = create(repo.path(), "Clean").unwrap();
         assert_eq!(remove(&clean), (true, true));
+    }
+    #[test]
+    fn a_conversation_keeps_its_folder_until_its_branch_is_merged() {
+        let repo = repository(); identity(repo.path());
+        let (worktree, _) = create(repo.path(), "Unmerged").unwrap();
+        commit_in(Path::new(&worktree.path), "note.txt", "work");
+        assert!(!remove_merged(&worktree), "the commit has no merge button without the folder");
+        assert!(Path::new(&worktree.path).is_dir());
+        assert_eq!(sweep(repo.path(), &[]).unwrap(), 0);
+        assert!(Path::new(&worktree.path).is_dir(), "a sweep keeps it too");
+        run(repo.path(), &["merge", "-q", "--no-edit", &worktree.branch]);
+        assert!(remove_merged(&worktree));
+    }
+    #[test]
+    fn a_folder_outside_the_last_commit_is_refused_before_anything_is_created() {
+        let repo = repository();
+        let scratch = repo.path().join("scratch");
+        std::fs::create_dir_all(&scratch).unwrap();
+        assert!(create(&scratch, "Scratch").unwrap_err().contains("last commit"));
+        assert!(!repo.path().join(".claude").exists());
+    }
+    #[test]
+    fn excluding_keeps_rules_that_are_not_utf8() {
+        let repo = repository();
+        let file = repo.path().join(".git/info/exclude");
+        std::fs::write(&file, b"# \xd6\xd0\xce\xc4\nsecret/").unwrap();
+        create(repo.path(), "Bytes").unwrap();
+        create(repo.path(), "Again").unwrap();
+        assert_eq!(std::fs::read(&file).unwrap(), b"# \xd6\xd0\xce\xc4\nsecret/\n/.claude/worktrees/\n");
     }
     fn commit_in(dir: &Path, file: &str, text: &str) {
         std::fs::write(dir.join(file), text).unwrap(); run(dir, &["add", file]);

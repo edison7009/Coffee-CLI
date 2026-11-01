@@ -8,6 +8,7 @@ import { AttachIcon } from './ClaudeComposerControls';
 import { ContextUsage } from './ContextUsage';
 import { useT } from '../../i18n/useT';
 import './ClaudeComposerControls.css';
+import { sameFolder } from '../../lib/worktree-path';
 
 type Menu = 'commands' | 'model' | 'effort' | 'permissions' | 'context' | null;
 // The two presets DeepSeek Harness offers in its own composer.
@@ -59,7 +60,7 @@ export function DshComposerControls({ sessionId, draft, onDraftChange, keyHandle
     if (target === 'compact' || target === 'plan') { close(); void sendDshMessage(sessionId, `/${target}`); }
     // A goal needs its objective, so it starts a command line instead of running.
     else if (target === 'goal') { close(); onDraftChange('/goal '); }
-    else if (target === 'new') { close(); dispatch({ type: 'ADD_TERMINAL', session: { id: crypto.randomUUID(), tool: 'dsh', folderPath: state.terminals.find(tab => tab.id === sessionId)?.folderPath ?? null, startedAt: Date.now() } }); }
+    else if (target === 'new') { close(); dispatch({ type: 'ADD_TERMINAL', session: { id: crypto.randomUUID(), tool: 'dsh', ...sameFolder(state.terminals.find(tab => tab.id === sessionId)), startedAt: Date.now() } }); }
     else setMenu(target);
   };
   useEffect(() => {

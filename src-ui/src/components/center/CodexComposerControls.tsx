@@ -10,6 +10,7 @@ import { AttachIcon } from './ClaudeComposerControls';
 import { ContextUsage } from './ContextUsage';
 import { useT } from '../../i18n/useT';
 import './ClaudeComposerControls.css';
+import { sameFolder } from '../../lib/worktree-path';
 
 type Menu = 'commands' | 'model' | 'effort' | 'permissions' | 'context' | 'skills' | 'mcp' | null;
 export function CodexComposerControls({ sessionId, draft, onDraftChange, keyHandler, submitHandler, quota, children }: {
@@ -69,7 +70,7 @@ export function CodexComposerControls({ sessionId, draft, onDraftChange, keyHand
     anchor.current = commandsAnchor.current; setSelected(0);
     const target = command.target;
     if (target === 'compact' || target === 'review' || target === 'skills' || target === 'mcp') void nativeCommand(target);
-    else if (target === 'new') { close(); dispatch({ type: 'ADD_TERMINAL', session: { id: crypto.randomUUID(), tool: 'codex', folderPath: state.terminals.find(tab => tab.id === sessionId)?.folderPath ?? null, codexMode: 'conversation', startedAt: Date.now() } }); }
+    else if (target === 'new') { close(); dispatch({ type: 'ADD_TERMINAL', session: { id: crypto.randomUUID(), tool: 'codex', ...sameFolder(state.terminals.find(tab => tab.id === sessionId)), codexMode: 'conversation', startedAt: Date.now() } }); }
     else if (target === 'copy') { const message = s.messages.findLast(message => message.role === 'assistant' && !message.partial); if (message) void clipboardWrite(message.content); close(); }
     else if (target === 'mention') { close(); void attach(/^\/[\w:-]*$/.test(draft) ? '' : draft); }
     else setMenu(target);

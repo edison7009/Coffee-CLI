@@ -10,6 +10,7 @@ import { AttachIcon } from './ClaudeComposerControls';
 import { ContextUsage } from './ContextUsage';
 import { useT } from '../../i18n/useT';
 import './ClaudeComposerControls.css';
+import { sameFolder } from '../../lib/worktree-path';
 
 type Menu = 'commands' | 'model' | 'variant' | 'agent' | 'context' | null;
 type Command = { name: string; description: string; target: 'model' | 'variant' | 'agent' | 'context' | 'new' | 'compact' | 'copy' | 'mention' | 'native' };
@@ -61,7 +62,7 @@ export function OpenCodeComposerControls({ sessionId, draft, onDraftChange, keyH
     anchor.current = commandsAnchor.current; setSelected(0);
     const target = command.target;
     if (target === 'compact' || target === 'native') { close(); void runOpenCodeCommand(sessionId, target === 'compact' ? 'compact' : { name: command.name }).catch(() => {}); }
-    else if (target === 'new') { close(); dispatch({ type: 'ADD_TERMINAL', session: { id: crypto.randomUUID(), tool: 'opencode', folderPath: state.terminals.find(tab => tab.id === sessionId)?.folderPath ?? null, opencodeMode: 'conversation', startedAt: Date.now() } }); }
+    else if (target === 'new') { close(); dispatch({ type: 'ADD_TERMINAL', session: { id: crypto.randomUUID(), tool: 'opencode', ...sameFolder(state.terminals.find(tab => tab.id === sessionId)), opencodeMode: 'conversation', startedAt: Date.now() } }); }
     else if (target === 'copy') { const reply = lastReply(); if (reply) void clipboardWrite(reply.content); close(); }
     else if (target === 'mention') { close(); void attach(/^\/[\w:-]*$/.test(draft) ? '' : draft); }
     else setMenu(target);
