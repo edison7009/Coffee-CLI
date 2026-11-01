@@ -35,7 +35,9 @@ export function OrchestrationBridge() {
             const session = resolve();
             return !disposed && getOrchestrationSnapshot().enabled && session?.generation === delivery.generation && session.mode === 'desktop' && session.canReceive === true;
           };
-          if (allowed()) await resolve()!.send(delivery.text, allowed, delivery.id).catch(error => console.warn('[OrchestrationBridge] Result delivery is unconfirmed; retained in task history.', String(error)));
+          // A retry continues a worker in its own tab; it is ordinary input there, not a coordinator result.
+          const retry = delivery.kind === 'retry';
+          if (allowed()) await resolve()!.send(delivery.text, allowed, retry ? undefined : delivery.id).catch(error => console.warn(retry ? '[OrchestrationBridge] Worker retry was not sent; the task reports its failure.' : '[OrchestrationBridge] Result delivery is unconfirmed; retained in task history.', String(error)));
         }
       } catch { /* Retry observation; claimed result inputs are never resent. */ }
       if (!disposed) timer = setTimeout(() => { void sync(); }, 1000);

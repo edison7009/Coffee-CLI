@@ -33,18 +33,33 @@ struct WorkerRun {
     /// The turn ended on an unanswered question; only a new message can start the worker again.
     parked: bool,
     background: usize, held: Option<Held>,
+    /// Retries after passing failures; a retry's message is due at its time, then waits to be admitted.
+    retries: u32, retry: Option<Retry>,
 }
+struct Retry { due: Instant, text: String, error: String, sent: Option<Instant> }
 impl WorkerRun {
-    fn new(prompt: &str) -> Self { Self { expected: fingerprint("", prompt), next: None, generation: None, turn: None, reply: String::new(), manual: false, parked: false, background: 0, held: None } }
+    fn new(prompt: &str) -> Self { Self { expected: fingerprint("", prompt), next: None, generation: None, turn: None, reply: String::new(), manual: false, parked: false, background: 0, held: None, retries: 0, retry: None } }
 }
 const BACKGROUND_QUIET: Duration = Duration::from_secs(3);
 const BACKGROUND_LIMIT: Duration = Duration::from_secs(30 * 60);
 const CLAIM_LIMIT: Duration = Duration::from_secs(10);
+const RETRY_LIMIT: u32 = 3;
+const RETRY_BACKOFF: Duration = Duration::from_secs(15);
+/// A failure the provider or network will likely not repeat: HTTP 408, 429 or 5xx, or a connection that dropped.
+/// The tools retry these themselves first, so this only covers what is left after they gave up.
+fn transient(error: &str, status: Option<u64>) -> bool {
+    if let Some(status) = status { return status == 408 || status == 429 || (500..600).contains(&status); }
+    let text = error.to_ascii_lowercase();
+    ["econnreset", "econnrefused", "etimedout", "eai_again", "enotfound", "epipe", "socket hang up", "fetch failed", "network error",
+        "connection reset", "connection refused", "stream disconnected", "timed out", "overloaded", "rate limit", "rate_limit", "too many requests", "service unavailable", "bad gateway"]
+        .iter().any(|word| text.contains(word))
+        || text.split(|c: char| !c.is_ascii_digit()).any(|code| matches!(code, "408" | "429" | "500" | "502" | "503" | "504" | "529"))
+}
 #[derive(Clone)]
 struct AutomaticInput { id: String, fingerprint: String, source_turn: String, tasks: Vec<String>, at: Instant }
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ResultDelivery { id: String, parent_id: String, generation: String, text: String }
+pub struct ResultDelivery { id: String, parent_id: String, generation: String, text: String, #[serde(skip_serializing_if = "Option::is_none")] kind: Option<&'static str> }
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct Question { id: String, text: String, answer: Option<String> }
@@ -230,7 +245,8 @@ fn orchestration_sync_blocking(sessions: Vec<LiveSession>) -> Result<Vec<ResultD
     if sessions.len() > 256 { return Err("Too many sessions".into()); }
     let mut state = hub().state.lock().map_err(|_| "Coordinator unavailable")?;
     if sync_live(&mut state, sessions) { save(&state.snapshot)?; publish(&mut state); }
-    let deliveries = take_results(&mut state);
+    let mut deliveries = take_results(&mut state);
+    deliveries.extend(take_retries(&mut state));
     if !deliveries.is_empty() { save(&state.snapshot)?; publish(&mut state); }
     Ok(deliveries)
 }
@@ -277,8 +293,29 @@ fn sync_live(state: &mut State, sessions: Vec<LiveSession>) -> bool {
             task.phase = "closed".into(); changed = true;
         }
     }
-    changed |= settle_held(state);
+    changed |= settle_held(state) | expire_retries(state);
     changed || coordinators != current_snapshot(state).coordinators
+}
+/// Messages that continue workers after a passing failure, once their backoff is over.
+fn take_retries(state: &mut State) -> Vec<ResultDelivery> {
+    let now = Instant::now();
+    state.runs.iter_mut().filter_map(|(id, run)| {
+        let generation = run.generation.clone()?;
+        let retry = run.retry.as_mut().filter(|retry| retry.sent.is_none() && retry.due <= now)?;
+        retry.sent = Some(now); run.next = Some(fingerprint("", &retry.text));
+        Some(ResultDelivery { id: uuid::Uuid::new_v4().to_string(), parent_id: id.clone(), generation, text: retry.text.clone(), kind: Some("retry") })
+    }).collect()
+}
+/// A retry the worker never took, because it was busy, closed or had a draft, ends the work with its failure.
+fn expire_retries(state: &mut State) -> bool {
+    let failed = state.runs.iter().filter_map(|(id, run)| {
+        let retry = run.retry.as_ref()?;
+        let tool = run.generation.as_deref()?.split(':').nth(1)?.to_string();
+        retry.sent.is_some_and(|sent| sent.elapsed() >= CLAIM_LIMIT).then(|| (id.clone(), tool, retry.error.clone()))
+    }).collect::<Vec<_>>();
+    let mut changed = false;
+    for (id, tool, error) in failed { changed |= settle(state, &id, &tool, "failed", error); }
+    changed
 }
 /// Ends turns whose background work has finished without waking the worker, or has run past its limit.
 fn settle_held(state: &mut State) -> bool {
@@ -439,8 +476,8 @@ fn record_delivery_input(state: &mut State, id: &str, tool: &str, generation: &s
         let sent = fingerprint("", prompt);
         if run.expected == sent || run.next.as_ref() == Some(&sent) {
             run.expected = sent; run.next = None; run.generation = Some(generation); run.turn = None; run.reply.clear();
-            run.manual = false; run.parked = false; run.held = None;
-        } else if run.generation.is_some() { run.manual = true; run.held = None; }
+            run.manual = false; run.parked = false; run.held = None; run.retry = None;
+        } else if run.generation.is_some() { run.manual = true; run.held = None; run.retry = None; }
     }
     Ok(())
 }
@@ -503,6 +540,7 @@ fn record_event(state: &mut State, id: &str, tool: &str, generation: &str, event
     let Some(run) = state.runs.get_mut(id) else { return false };
     if run.generation.as_deref() != Some(&format!("desktop:{tool}:{generation}")) { return false; }
     let mut completed = None;
+    let mut status = None;
     if tool == "claude" {
         if event["type"] == "system" && event["subtype"] == "background_tasks_changed" {
             run.background = event["tasks"].as_array().into_iter().flatten().filter(|task| task["ambient"] != true && task["task_id"].as_str().is_some_and(|id| !id.is_empty())).count();
@@ -545,7 +583,11 @@ fn record_event(state: &mut State, id: &str, tool: &str, generation: &str, event
             completed = Some(match native["data"]["reason"]["kind"].as_str() {
                 Some("completed" | "max-tokens") => ("completed", run.reply.clone()),
                 Some("aborted") => ("interrupted", "Worker turn interrupted".into()),
-                _ => ("failed", "Worker turn failed".into()),
+                _ => {
+                    let error = &native["data"]["reason"]["error"];
+                    status = error["status"].as_u64();
+                    ("failed", error["message"].as_str().filter(|text| !text.trim().is_empty()).unwrap_or("Worker turn failed").into())
+                }
             });
         }
     }
@@ -557,11 +599,25 @@ fn record_event(state: &mut State, id: &str, tool: &str, generation: &str, event
             Some("session.execution.succeeded") => completed = Some(("completed", run.reply.clone())),
             // A server shutdown resumes the same turn later; it is not the end of the assigned work.
             Some("session.execution.interrupted") if data["reason"] != "shutdown" => completed = Some(("interrupted", "Worker turn interrupted".into())),
-            Some("session.execution.failed") => completed = Some(("failed", data["error"]["message"].as_str().unwrap_or("Worker turn failed").into())),
+            Some("session.execution.failed") => {
+                let error = &data["error"];
+                status = error["statusCode"].as_u64().or_else(|| error["data"]["statusCode"].as_u64());
+                completed = Some(("failed", error["message"].as_str().or_else(|| error["data"]["message"].as_str()).unwrap_or("Worker turn failed").into()));
+            }
             _ => {}
         }
     }
     let Some((phase, reply)) = completed else { return false };
+    if phase == "failed" && !run.manual && run.retries < RETRY_LIMIT && transient(&reply, status) {
+        run.retries += 1; run.held = None;
+        let text = format!("Your last turn failed for a passing reason ({}). Continue the assigned task where it stopped; do not repeat completed work.", reply.chars().take(200).collect::<String>());
+        run.retry = Some(Retry { due: Instant::now() + RETRY_BACKOFF * 2u32.pow(run.retries - 1), text, error: reply.clone(), sent: None });
+        let attempt = run.retries;
+        if let Some(task) = state.snapshot.tasks.iter_mut().find(|task| task.session_id == id && task.tool == tool && active(task)) {
+            task.summary = Some(format!("Retrying after a passing failure (attempt {attempt} of {RETRY_LIMIT}): {}", result_preview(&reply))); return true;
+        }
+        return false;
+    }
     if phase == "completed" && run.background > 0 {
         run.held = Some(Held { reply, tool: tool.into(), at: Instant::now(), quiet: None }); return false;
     }
@@ -606,7 +662,7 @@ fn take_results(state: &mut State) -> Vec<ResultDelivery> {
         if let Some(current) = state.parents.values_mut().find(|current| current.id == owner.id) {
             current.automatic = Some(AutomaticInput { id: id.clone(), fingerprint: fingerprint("", &text), source_turn: owner.turn, tasks: tasks.iter().map(|task| task.id.clone()).collect(), at: Instant::now() });
         }
-        deliveries.push(ResultDelivery { id, parent_id: owner.id, generation: generation.clone(), text });
+        deliveries.push(ResultDelivery { id, parent_id: owner.id, generation: generation.clone(), text, kind: None });
     }
     deliveries
 }
@@ -1208,6 +1264,59 @@ mod tests {
         assert!(dsh_turn(&mut state, "Updated main.rs"));
         assert_eq!(state.snapshot.tasks[0].summary.as_deref(), Some("Updated main.rs"));
         assert!(state.snapshot.tasks[0].question.is_none());
+    }
+    fn dsh_failure(state: &mut State, status: u64) -> bool {
+        record_event(state, "child", "dsh", "g1", &dsh_event(json!({"type":"turn/end","data":{"reason":{"kind":"error","error":{"message":"Provider error","code":"HTTP","status":status}}}})))
+    }
+    fn retry_due(state: &mut State) -> ResultDelivery {
+        state.runs.get_mut("child").unwrap().retry.as_mut().unwrap().due = Instant::now();
+        let mut due = take_retries(state); assert_eq!(due.len(), 1); due.pop().unwrap()
+    }
+    #[test]
+    fn passing_failures_retry_with_backoff_then_report() {
+        let mut state = assigned("dsh");
+        for attempt in 1..=RETRY_LIMIT {
+            assert!(dsh_failure(&mut state, 503));
+            assert_eq!(state.snapshot.tasks[0].phase, "running");
+            let retry = state.runs["child"].retry.as_ref().unwrap();
+            assert!(retry.due > Instant::now() + RETRY_BACKOFF * 2u32.pow(attempt - 1) - Duration::from_secs(1));
+            assert!(take_retries(&mut state).is_empty(), "the backoff has not passed");
+            let delivery = retry_due(&mut state);
+            assert_eq!((delivery.parent_id.as_str(), delivery.kind), ("child", Some("retry")));
+            record_input(&mut state, "child", "dsh", "g1", &delivery.text, "retry").unwrap();
+            assert!(state.runs["child"].retry.is_none() && !state.runs["child"].manual);
+        }
+        assert!(dsh_failure(&mut state, 503));
+        assert_eq!((state.snapshot.tasks[0].phase.as_str(), state.snapshot.tasks[0].result_delivery.as_deref()), ("failed", Some("pending")));
+    }
+    #[test]
+    fn a_retry_recovers_the_result_and_lasting_failures_do_not_retry() {
+        let mut state = assigned("dsh");
+        dsh_failure(&mut state, 429);
+        let delivery = retry_due(&mut state);
+        record_input(&mut state, "child", "dsh", "g1", &delivery.text, "retry").unwrap();
+        assert!(dsh_turn(&mut state, "Done after retry"));
+        assert_eq!(state.snapshot.tasks[0].summary.as_deref(), Some("Done after retry"));
+        let mut state = assigned("dsh");
+        assert!(dsh_failure(&mut state, 401));
+        assert_eq!(state.snapshot.tasks[0].phase, "failed");
+    }
+    #[test]
+    fn a_retry_that_is_never_taken_reports_the_failure() {
+        let mut state = assigned("dsh");
+        dsh_failure(&mut state, 500);
+        retry_due(&mut state);
+        assert!(!expire_retries(&mut state));
+        state.runs.get_mut("child").unwrap().retry.as_mut().unwrap().sent = Some(Instant::now() - CLAIM_LIMIT);
+        assert!(expire_retries(&mut state));
+        assert_eq!((state.snapshot.tasks[0].phase.as_str(), state.snapshot.tasks[0].summary.as_deref()), ("failed", Some("Provider error")));
+    }
+    #[test]
+    fn transient_failures_are_recognised_by_status_or_text() {
+        assert!(transient("x", Some(429)) && transient("x", Some(502)) && !transient("overloaded", Some(400)));
+        assert!(transient("API Error: 529 {\"type\":\"overloaded_error\"}", None));
+        assert!(transient("stream disconnected: connection reset by peer", None) && transient("stream disconnected before completion", None));
+        assert!(!transient("Invalid API key", None) && !transient("exceeded 4290 tokens", None));
     }
     #[test]
     fn a_worker_that_fails_while_asking_still_settles() {

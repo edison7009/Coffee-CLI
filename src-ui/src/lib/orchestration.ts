@@ -11,7 +11,8 @@ export interface OrchestrationTask {
   resultDelivery?: string | null;
 }
 export interface OrchestrationSnapshot { enabled: boolean; agents: string[]; coordinators: string[]; tasks: OrchestrationTask[]; revision: number }
-export interface ResultDelivery { id: string; parentId: string; generation: string; text: string }
+/** `parentId` is the target tab: the coordinator for results, the worker itself for a retry. */
+export interface ResultDelivery { id: string; parentId: string; generation: string; text: string; kind?: 'retry' }
 let snapshot: OrchestrationSnapshot = { enabled: false, agents: [], coordinators: [], tasks: [], revision: 0 };
 const listeners = new Set<() => void>();
 export function receiveOrchestration(value: OrchestrationSnapshot) {
