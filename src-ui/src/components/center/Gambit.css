@@ -467,7 +467,11 @@
 /* A worktree conversation that has started is locked, not unavailable: keep it at full strength. */
 .gambit-worktree[data-locked] .gambit-worktree-toggle:disabled { opacity: 1; }
 .gambit-worktree-toggle:focus-visible, .gambit-worktree-merge:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
-.gambit-worktree-check { flex-shrink: 0; margin-top: 2px; color: var(--accent); }
+/* A checkbox inside the chip says it can be ticked; ticked, it fills with the accent. */
+.gambit-worktree-toggle { gap: 6px; }
+.gambit-worktree-box { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; box-sizing: border-box; width: 13px; height: 13px; margin-top: 2px; border: 1.5px solid currentColor; border-radius: 3px; }
+.gambit-worktree-toggle[aria-checked="true"] .gambit-worktree-box { border-color: var(--accent); background: var(--accent); }
+.gambit-worktree-check { color: var(--bg-panel); }
 .gambit-worktree-notice { position: absolute; z-index: 100; bottom: calc(100% + 8px); left: 0; width: max-content; max-width: 300px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-panel); color: var(--text-1); font-size: 12px; line-height: 1.5; white-space: normal; box-shadow: 0 1px 2px #0003, 0 6px 20px #0004; cursor: default; }
 .gambit-worktree-notice[data-error] { color: var(--danger, #e5484d); }
 .gambit-worktree-toggle, .gambit-worktree-merge { flex-shrink: 0; }

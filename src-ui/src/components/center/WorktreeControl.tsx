@@ -52,7 +52,7 @@ export function WorktreeControl({ tab, started, running }: { tab: TerminalSessio
   if (!worktree && insideWorktrees(cwd)) return null;
   const bubble = notice && <span className="gambit-worktree-notice" data-error={notice.error || undefined} role="status" onClick={() => setNotice(null)}>{notice.text}</span>;
   const chip = (disabled: boolean, onClick?: () => void) => <button type="button" role="checkbox" className="gambit-worktree-toggle" aria-checked={!!worktree} disabled={disabled} onClick={onClick}>
-    {worktree && <CheckIcon />}{t('gambit.worktree')}
+    <span className="gambit-worktree-box" aria-hidden="true">{worktree && <CheckIcon />}</span>{t('gambit.worktree')}
   </button>;
 
   if (!locked) {
@@ -98,7 +98,7 @@ export function WorktreeControl({ tab, started, running }: { tab: TerminalSessio
 }
 
 function CheckIcon() {
-  return <svg className="gambit-worktree-check" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 8.5l3.25 3.25L13 5" /></svg>;
+  return <svg className="gambit-worktree-check" width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 8.5l3.25 3.25L13 5" /></svg>;
 }
 
 /** Removes a tab's worktree once no tab uses it, through git's safe removal. */

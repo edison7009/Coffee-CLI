@@ -118,6 +118,7 @@ try {
   assert.ok(await view.getByRole('checkbox').isDisabled(), 'the switch locks once the conversation has started');
   assert.equal(await view.getByRole('checkbox').getAttribute('aria-checked'), 'true');
   assert.equal(await view.locator('.gambit-worktree-check').count(), 1, 'a worktree conversation shows the check');
+  assert.equal(await view.locator('.gambit-worktree-box').count(), 1);
   await view.screenshot({ path: join(directory, 'mergeable.png') });
 
   await view.evaluate(() => window.setFixture({ running: true }));
