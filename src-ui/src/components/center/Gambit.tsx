@@ -13,7 +13,7 @@
 // editable path strings. AI CLI agents that support local image paths (e.g.
 // Claude Code) will read the file; agents that don't just see the raw path.
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { clipboardRead, clipboardWrite } from '../../lib/clipboard';
 import { subscribeGambitHistory, getGambitHistorySnapshot, pushGambitHistory } from '../../lib/gambit-history';
@@ -116,6 +116,7 @@ function wrapImagePathsForSend(text: string): string {
 // mirroring how VS Code's bottom panel works.
 const DOCK_MIN_HEIGHT = 120;
 const DOCK_MAX_HEIGHT_RATIO = 0.7; // never let the dock eat more than 70% of viewport height
+const DOCK_AUTO_HEIGHT_RATIO = 0.5; // a long draft stops lifting the dock here and scrolls instead
 const LS_DOCK_H = 'cc-gambit-dock-h';
 
 function GambitImpl({
@@ -201,6 +202,9 @@ function GambitImpl({
     } catch { /* optional preference */ }
     return DOCK_MIN_HEIGHT;
   });
+  // Height the draft needs. The dragged height stays the floor, so clearing the draft returns to it.
+  const [contentH, setContentH] = useState(0);
+  const effectiveH = Math.max(dockedH, contentH);
   // Caches the latest height written to the DOM during a resize drag, so
   // onUp commits it back to React state once without thrashing intermediate
   // renders. Null when no resize is in progress.
@@ -232,12 +236,12 @@ function GambitImpl({
     const root = document.documentElement;
     const body = document.body;
     body.classList.add('gambit-docked');
-    root.style.setProperty('--gambit-dock-h', `${dockedH}px`);
+    root.style.setProperty('--gambit-dock-h', `${effectiveH}px`);
     return () => {
       body.classList.remove('gambit-docked');
       root.style.removeProperty('--gambit-dock-h');
     };
-  }, [dockedH]);
+  }, [effectiveH]);
 
   // Persist dock height. Cheap to write — runs only on settle.
   useEffect(() => {
@@ -254,7 +258,7 @@ function GambitImpl({
     handle.classList.add('resizing');
     dockResizeRef.current = {
       startY: e.clientY,
-      origH: dockedH,
+      origH: effectiveH,
       handle,
     };
     e.preventDefault();
@@ -394,7 +398,7 @@ function GambitImpl({
   const { state: appState } = useAppState();
 
   // Auto-grow the textarea to fit its content as the user types.
-  useEffect(() => {
+  useLayoutEffect(() => {
     const ta = textareaRef.current;
     if (!ta) return;
     const scroller = inputRef.current;
@@ -409,6 +413,8 @@ function GambitImpl({
     ta.style.height = 'auto';
     ta.style.height = `${ta.scrollHeight}px`;
     if (!scroller) return;
+    const dock = rootRef.current;
+    if (dock) setContentH(Math.min(dock.offsetHeight - scroller.clientHeight + ta.scrollHeight, Math.floor(window.innerHeight * DOCK_AUTO_HEIGHT_RATIO)));
     // Remeasuring via height:'auto' momentarily collapses the (rows=1) textarea
     // for the synchronous reflow that reading scrollHeight forces; while
     // collapsed the scroll container has almost no content, so the browser
@@ -736,7 +742,7 @@ function GambitImpl({
     bottom: 8,
     top: 'auto',
     width: 'auto',
-    height: dockedH,
+    height: effectiveH,
   };
 
   const capabilitiesStatus = (orchestration || computer || browser) && <div className="gambit-capabilities" role="status">
