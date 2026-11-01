@@ -39,7 +39,8 @@ const ExternalLinkArrow = () => (
 // Both sound prefs default to ON (absent = true).
 /** A long sound file name, cut in the middle so its ending stays readable. */
 function shortFileName(name: string): string {
-  return name.length > 28 ? `${name.slice(0, 16)}…${name.slice(-10)}` : name;
+  const characters = Array.from(name);
+  return characters.length > 28 ? `${characters.slice(0, 16).join('')}…${characters.slice(-10).join('')}` : name;
 }
 
 function readSoundPref(key: string): boolean {
@@ -154,9 +155,10 @@ export function SettingsModal() {
   const [soundFiles, setSoundFiles] = useState<{ done: string | null; wait: string | null }>({ done: null, wait: null });
   const [soundFailed, setSoundFailed] = useState<'done' | 'wait' | null>(null);
   useEffect(() => {
-    if (section !== 'sound' || !isTauri) return;
+    setSoundFailed(null);
+    if (section !== 'sound' || !state.settingsOpen || !isTauri) return;
     commands.notifySoundFiles().then(setSoundFiles, err => console.warn('[Settings] sound files unavailable:', err));
-  }, [section]);
+  }, [section, state.settingsOpen]);
 
   const open = state.settingsOpen;
   const close = () => { finishScaleDrag(); dispatch({ type: 'SET_SETTINGS_OPEN', open: false }); };
@@ -283,7 +285,7 @@ export function SettingsModal() {
   };
   const clearSound = (kind: 'done' | 'wait') => {
     setSoundFailed(null);
-    commands.notifySoundClear(kind).then(() => setSoundFiles(files => ({ ...files, [kind]: null })), err => console.warn('[Settings] sound removal failed:', err));
+    commands.notifySoundClear(kind).then(() => setSoundFiles(files => ({ ...files, [kind]: null })), err => { console.warn('[Settings] sound removal failed:', err); setSoundFailed(kind); });
   };
   const setSoundDonePref = writeSoundPref('cc-sound-done', setSoundDone);
   const setSoundWaitPref = writeSoundPref('cc-sound-wait', setSoundWait);

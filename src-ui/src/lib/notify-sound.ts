@@ -119,6 +119,7 @@ function note(ac: AudioContext, freq: number, start: number, dur: number, peak: 
 /** Play one of the two notification chimes. Exported so Settings can offer
  *  a "preview" button per kind. */
 export function playNotifySound(kind: NotifyKind) {
+  const turn = ++latestSound;
   if (IS_WINDOWS && isTauri) {
     commands.playNotifySound(kind).catch(error => {
       console.warn('[notify-sound] Native playback failed:', error);
@@ -127,7 +128,8 @@ export function playNotifySound(kind: NotifyKind) {
     return;
   }
   if (isTauri) {
-    void playChosenSound(kind).then(played => { if (!played) playWebAudioSound(kind); }, () => playWebAudioSound(kind));
+    const chime = () => { if (turn === latestSound) { stopChosenSound(); playWebAudioSound(kind); } };
+    void playChosenSound(kind, turn).then(played => { if (!played) chime(); }, chime);
     return;
   }
   playWebAudioSound(kind);
@@ -135,15 +137,25 @@ export function playNotifySound(kind: NotifyKind) {
 
 const LONGEST_SOUND_SECONDS = 10;
 let chosenSound: AudioBufferSourceNode | null = null;
+/** The newest sound. A file that finishes decoding after a newer one began stays silent. */
+let latestSound = 0;
 
-async function playChosenSound(kind: NotifyKind): Promise<boolean> {
+function stopChosenSound() {
+  chosenSound?.stop();
+  chosenSound = null;
+}
+
+async function playChosenSound(kind: NotifyKind, turn: number): Promise<boolean> {
   const bytes = await commands.notifySoundRead(kind), ac = audioCtx();
   if (!ac || !bytes.byteLength) return false;
   const source = ac.createBufferSource();
   source.buffer = await ac.decodeAudioData(bytes);
+  if (turn !== latestSound) return true;
   source.connect(ac.destination);
-  chosenSound?.stop();
+  stopChosenSound();
   chosenSound = source;
+  // The decoded audio can be far larger than the file; let it go once it has played.
+  source.onended = () => { if (chosenSound === source) chosenSound = null; };
   source.start();
   source.stop(ac.currentTime + LONGEST_SOUND_SECONDS);
   return true;

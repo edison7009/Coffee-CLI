@@ -135,7 +135,9 @@ assert.deepEqual(disconnected.calls.map(call => call.kind), ['done'], 'a fresh c
 
 for (const options of [{ platform: 'MacIntel' }, { platform: 'Linux x86_64' }, { native: false }]) {
   const f = fixture(options);
-  f.api.playNotifySound('done'); f.api.playNotifySound('wait');
+  f.api.playNotifySound('done');
+  await new Promise(resolve => setImmediate(resolve));
+  f.api.playNotifySound('wait');
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(f.calls.filter(call => call.command === 'play_notify_sound').length, 0);
   assert.equal(f.notes(), 10, 'other platforms and browser previews retain both synthesized chimes');
@@ -149,6 +151,10 @@ for (const options of [{ platform: 'MacIntel' }, { platform: 'Linux x86_64' }, {
   broken.api.playNotifySound('done');
   await new Promise(resolve => setImmediate(resolve));
   assert.deepEqual([broken.chosenPlays(), broken.notes()], [0, 6], 'a file that cannot play falls back to the chime');
+  const superseded = fixture({ platform: 'MacIntel', chosen: 'sound' });
+  superseded.api.playNotifySound('done'); superseded.api.playNotifySound('wait');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(superseded.chosenPlays(), 1, 'a file decoded after a newer sound began stays silent');
 }
 
 const fallback = fixture({ failNative: true });
