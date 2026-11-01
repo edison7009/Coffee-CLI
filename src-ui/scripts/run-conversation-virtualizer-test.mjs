@@ -30,7 +30,7 @@ runInNewContext(ts.transpileModule(`${code}; useConversationVirtualizer(messages
     state.push(typeof initial === 'function' ? initial() : initial);
     return [state[index], update => { state[index] = typeof update === 'function' ? update(state[index]) : update; }];
   },
-  useEffect: effect => effect(),
+  useEffect: effect => effect(), useInsertionEffect: effect => effect(),
   ResizeObserver: class {
     constructor(callback) { resize = callback; }
     observe() {}

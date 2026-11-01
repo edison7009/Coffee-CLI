@@ -12,7 +12,7 @@ const messages = Array.from({ length: 2000 }, (_, i) => ({ id: String(i), role: 
 const context = {
   messages, performance,
   useRef: current => ({ current }), useCallback: fn => fn, useMemo: fn => fn(),
-  useState: initial => [typeof initial === 'function' ? initial() : initial, () => {}], useEffect() {},
+  useState: initial => [typeof initial === 'function' ? initial() : initial, () => {}], useEffect() {}, useInsertionEffect() {},
 };
 runInNewContext(ts.transpileModule(`${code}; globalThis.measure = () => useConversationVirtualizer(messages, {current:null});`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText, context);
 context.measure();
