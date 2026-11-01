@@ -408,6 +408,15 @@ Xóa tờ ghi chú này khi bạn sẵn sàng và bắt đầu tác vụ đầu 
   'gambit.stop': 'Dừng',
   'gambit.placeholder': 'Cân nhắc nước cờ... ({send} để gửi, {newline} xuống dòng, dán ảnh được, Alt+↑↓ xem lịch sử)',
   'gambit.send_failed_hint': 'Hãy mở một phiên hoạt động trước',
+  'gambit.worktree': 'Worktree',
+  'gambit.worktree_unavailable': 'Cần kho git có ít nhất một commit',
+  'gambit.worktree_failed': 'Không tạo được worktree: {error}',
+  'gambit.worktree_merge': 'Hợp nhất vào {target}',
+  'gambit.worktree_merged': 'Đã hợp nhất {count} commit',
+  'gambit.worktree_nothing': 'Không có gì để hợp nhất',
+  'gambit.worktree_conflict': 'Xung đột với bản chính; đã hủy hợp nhất và bản chính không thay đổi',
+  'gambit.worktree_local_changes': 'Thay đổi chưa commit ở bản chính sẽ bị ghi đè; hãy commit hoặc stash trước',
+  'gambit.worktree_merge_failed': 'Hợp nhất thất bại: {error}',
   'gambit.send_empty_hint': 'Nhập nội dung hoặc dán ảnh trước (Ctrl+V)',
 
 

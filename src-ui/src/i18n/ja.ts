@@ -406,6 +406,15 @@ export const ja = {
   'gambit.stop': '停止',
   'gambit.placeholder': '静かに一手を思案... ({send}で送信、{newline}で改行、画像貼付可、Alt+↑↓で履歴)',
   'gambit.send_failed_hint': 'アクティブなセッションを先に開いてください',
+  'gambit.worktree': 'ワークツリー',
+  'gambit.worktree_unavailable': 'コミットが 1 つ以上ある git リポジトリが必要です',
+  'gambit.worktree_failed': 'ワークツリーを作成できません: {error}',
+  'gambit.worktree_merge': '{target} にマージ',
+  'gambit.worktree_merged': '{count} 件のコミットをマージしました',
+  'gambit.worktree_nothing': 'マージする変更はありません',
+  'gambit.worktree_conflict': 'メインの作業ツリーと競合したため、マージを取り消しました（変更はありません）',
+  'gambit.worktree_local_changes': 'メインの作業ツリーの未コミットの変更が上書きされます。先にコミットまたは退避してください',
+  'gambit.worktree_merge_failed': 'マージに失敗しました: {error}',
   'gambit.send_empty_hint': 'メッセージを入力するか画像を貼り付けてください (Ctrl+V)',
 
 

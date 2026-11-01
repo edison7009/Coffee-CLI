@@ -88,6 +88,81 @@ pub fn remove_later(worktrees: Vec<Worktree>) {
     });
 }
 
+/// Only worktrees Coffee made: under the project's `.claude/worktrees/coffee-*`, on a `coffee/` branch.
+fn checked(worktree: &Worktree) -> Result<(), String> {
+    let path = Path::new(&worktree.path);
+    let inside = path.parent().is_some_and(|parent| parent == Path::new(&worktree.root).join(".claude").join("worktrees"));
+    let named = path.file_name().and_then(|name| name.to_str()).is_some_and(|name| name.starts_with("coffee-"));
+    let branch = worktree.branch.strip_prefix("coffee/").is_some_and(|rest| !rest.is_empty() && rest.chars().all(|c| c.is_ascii_alphanumeric() || c == '-'));
+    if inside && named && branch { Ok(()) } else { Err("Not a Coffee worktree".into()) }
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorktreeStatus { pub exists: bool, pub ahead: u32, pub dirty: bool, pub target: String }
+
+fn status(worktree: &Worktree) -> Result<WorktreeStatus, String> {
+    checked(worktree)?;
+    let root = Path::new(&worktree.root);
+    let target = git(root, &["branch", "--show-current"]).unwrap_or_default();
+    if !Path::new(&worktree.path).is_dir() { return Ok(WorktreeStatus { exists: false, ahead: 0, dirty: false, target }); }
+    let ahead = git(root, &["rev-list", "--count", &format!("HEAD..{}", worktree.branch)])?.trim().parse().unwrap_or(0);
+    let dirty = !git(Path::new(&worktree.path), &["status", "--porcelain"])?.trim().is_empty();
+    Ok(WorktreeStatus { exists: true, ahead, dirty, target })
+}
+
+/// Commits what the conversation left uncommitted, then merges the branch into the project's checkout. A conflict
+/// is aborted, and changes in the checkout that the merge would overwrite are refused, both by git's own rules.
+fn merge(worktree: &Worktree, message: &str) -> Result<u32, String> {
+    checked(worktree)?;
+    let (root, tree) = (Path::new(&worktree.root), Path::new(&worktree.path));
+    if !git(tree, &["status", "--porcelain"])?.trim().is_empty() {
+        git(tree, &["add", "-A"])?;
+        git(tree, &["commit", "-q", "-m", message])?;
+    }
+    let ahead: u32 = git(root, &["rev-list", "--count", &format!("HEAD..{}", worktree.branch)])?.trim().parse().unwrap_or(0);
+    if ahead == 0 { return Ok(0); }
+    if let Err(error) = git(root, &["merge", "--no-edit", &worktree.branch]) {
+        if git(root, &["rev-parse", "-q", "--verify", "MERGE_HEAD"]).is_ok() {
+            let _ = git(root, &["merge", "--abort"]);
+            return Err("COFFEE_MERGE:conflict".into());
+        }
+        if error.contains("would be overwritten") { return Err("COFFEE_MERGE:local_changes".into()); }
+        return Err(error);
+    }
+    Ok(ahead)
+}
+
+#[derive(Serialize)]
+pub struct Created { worktree: Worktree, cwd: String }
+
+#[tauri::command]
+pub async fn worktree_available(cwd: String) -> bool {
+    tauri::async_runtime::spawn_blocking(move || {
+        let dir = Path::new(&cwd);
+        dir.is_dir() && git(dir, &["rev-parse", "--verify", "--quiet", "HEAD"]).is_ok()
+    }).await.unwrap_or(false)
+}
+#[tauri::command]
+pub async fn worktree_create(cwd: String, title: String) -> Result<Created, String> {
+    tauri::async_runtime::spawn_blocking(move || create(Path::new(&cwd), &title).map(|(worktree, cwd)| Created { worktree, cwd: cwd.to_string_lossy().into_owned() }))
+        .await.map_err(|e| e.to_string())?
+}
+#[tauri::command]
+pub async fn worktree_status(worktree: Worktree) -> Result<WorktreeStatus, String> {
+    tauri::async_runtime::spawn_blocking(move || status(&worktree)).await.map_err(|e| e.to_string())?
+}
+#[tauri::command]
+pub async fn worktree_merge(worktree: Worktree, message: String) -> Result<u32, String> {
+    tauri::async_runtime::spawn_blocking(move || merge(&worktree, &message)).await.map_err(|e| e.to_string())?
+}
+/// For a tab that closed or turned the worktree off; git keeps anything uncommitted or unmerged.
+#[tauri::command]
+pub fn worktree_remove(worktree: Worktree) -> Result<(), String> {
+    checked(&worktree)?;
+    remove_later(vec![worktree]); Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -131,6 +206,52 @@ mod tests {
         assert_eq!(remove(&unmerged), (true, false), "the branch keeps the commit");
         let (clean, _) = create(repo.path(), "Clean").unwrap();
         assert_eq!(remove(&clean), (true, true));
+    }
+    fn commit_in(dir: &Path, file: &str, text: &str) {
+        std::fs::write(dir.join(file), text).unwrap(); run(dir, &["add", file]);
+        run(dir, &["-c", "user.email=t@example.com", "-c", "user.name=t", "commit", "-q", "-m", file]);
+    }
+    fn identity(dir: &Path) { run(dir, &["config", "user.email", "t@example.com"]); run(dir, &["config", "user.name", "t"]); }
+    #[test]
+    fn merging_commits_leftovers_and_brings_the_branch_into_the_checkout() {
+        let repo = repository(); identity(repo.path());
+        let (worktree, _) = create(repo.path(), "Feature").unwrap();
+        let tree = Path::new(&worktree.path);
+        commit_in(tree, "a.txt", "a");
+        std::fs::write(tree.join("b.txt"), "b").unwrap();
+        let before = status(&worktree).unwrap();
+        assert_eq!((before.exists, before.ahead, before.dirty), (true, 1, true));
+        assert_eq!(merge(&worktree, "Coffee: Feature").unwrap(), 2);
+        assert!(repo.path().join("a.txt").exists() && repo.path().join("b.txt").exists());
+        let after = status(&worktree).unwrap();
+        assert_eq!((after.ahead, after.dirty), (0, false));
+        assert_eq!(merge(&worktree, "again").unwrap(), 0);
+        assert_eq!(remove(&worktree), (true, true), "a merged worktree is removed with its branch");
+    }
+    #[test]
+    fn a_conflicting_merge_is_aborted_and_overwritten_changes_are_refused() {
+        let repo = repository(); identity(repo.path());
+        commit_in(repo.path(), "shared.txt", "base");
+        let (worktree, _) = create(repo.path(), "Conflict").unwrap();
+        commit_in(Path::new(&worktree.path), "shared.txt", "theirs");
+        commit_in(repo.path(), "shared.txt", "ours");
+        assert_eq!(merge(&worktree, "m").unwrap_err(), "COFFEE_MERGE:conflict");
+        assert!(git(repo.path(), &["rev-parse", "-q", "--verify", "MERGE_HEAD"]).is_err(), "the merge was aborted");
+        assert_eq!(std::fs::read_to_string(repo.path().join("shared.txt")).unwrap(), "ours");
+        let (other, _) = create(repo.path(), "Local").unwrap();
+        commit_in(Path::new(&other.path), "local.txt", "theirs");
+        std::fs::write(repo.path().join("local.txt"), "unsaved").unwrap();
+        assert!(merge(&other, "m").is_err());
+        assert_eq!(std::fs::read_to_string(repo.path().join("local.txt")).unwrap(), "unsaved", "the user's file is untouched");
+    }
+    #[test]
+    fn only_coffee_worktrees_are_accepted() {
+        let root = Path::new("project");
+        let good = Worktree { root: root.to_string_lossy().into_owned(), path: root.join(".claude").join("worktrees").join("coffee-x-1").to_string_lossy().into_owned(), branch: "coffee/x-1".into() };
+        assert!(checked(&good).is_ok());
+        assert!(checked(&Worktree { path: "project".into(), ..good.clone() }).is_err());
+        assert!(checked(&Worktree { branch: "main".into(), ..good.clone() }).is_err());
+        assert!(checked(&Worktree { branch: "coffee/x;rm".into(), ..good }).is_err());
     }
     #[test]
     fn non_repositories_and_empty_repositories_are_refused() {

@@ -74,6 +74,8 @@ interface GambitProps {
   orchestration?: boolean;
   computer?: boolean;
   browser?: boolean;
+  /** The worktree switch, beside the target label, for desktop conversations. */
+  worktreeControl?: React.ReactNode;
 }
 
 // Matches any absolute image path inside the compose draft — both our
@@ -140,6 +142,7 @@ function GambitImpl({
   orchestration,
   computer,
   browser,
+  worktreeControl,
 }: GambitProps) {
   const t = useT();
   // Desktop conversations own their composer controls and send prompts verbatim.
@@ -813,6 +816,7 @@ function GambitImpl({
             <span className="gambit-workspace-name">{workspaceName}</span>
           </span>
         )}
+        {worktreeControl}
         {claude && <ClaudeComposerControls sessionId={sessionId} draft={draft} onDraftChange={onDraftChange} keyHandler={claudeKeyHandler} quota={usageMeter}>{capabilitiesStatus}</ClaudeComposerControls>}
         {codex && <CodexComposerControls key={sessionId} sessionId={sessionId} draft={draft} onDraftChange={onDraftChange} keyHandler={claudeKeyHandler} submitHandler={codexSubmitHandler} quota={usageMeter}>{capabilitiesStatus}</CodexComposerControls>}
 

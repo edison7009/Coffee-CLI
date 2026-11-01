@@ -407,6 +407,15 @@ export const zhTW = {
   'gambit.stop': '停止',
   'gambit.placeholder': '靜心琢磨，再落子... ({send} 發送, {newline} 換行, 可貼上圖片, Alt+↑↓ 翻歷史)',
   'gambit.send_failed_hint': '請先開啟活動工作階段',
+  'gambit.worktree': '工作樹',
+  'gambit.worktree_unavailable': '需要 git 儲存庫，且至少有一次提交',
+  'gambit.worktree_failed': '建立工作樹失敗：{error}',
+  'gambit.worktree_merge': '合併到 {target}',
+  'gambit.worktree_merged': '已合併 {count} 個提交',
+  'gambit.worktree_nothing': '沒有需要合併的變更',
+  'gambit.worktree_conflict': '與主目錄有衝突，已撤銷本次合併，主目錄沒有變更',
+  'gambit.worktree_local_changes': '主目錄有未提交的變更會被覆寫，請先提交或暫存',
+  'gambit.worktree_merge_failed': '合併失敗：{error}',
   'gambit.send_empty_hint': '先輸入內容或貼上圖片 (Ctrl+V)',
 
 

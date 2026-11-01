@@ -407,6 +407,15 @@ export const zhCN = {
   'gambit.stop': '停止',
   'gambit.placeholder': '静心琢磨，再落子... ({send} 发送, {newline} 换行, 可粘贴图片, Alt+↑↓ 翻历史)',
   'gambit.send_failed_hint': '请先打开活动会话',
+  'gambit.worktree': '工作树',
+  'gambit.worktree_unavailable': '需要 git 仓库，且至少有一次提交',
+  'gambit.worktree_failed': '创建工作树失败：{error}',
+  'gambit.worktree_merge': '合并到 {target}',
+  'gambit.worktree_merged': '已合并 {count} 个提交',
+  'gambit.worktree_nothing': '没有需要合并的改动',
+  'gambit.worktree_conflict': '与主目录有冲突，已撤销本次合并，主目录没有改动',
+  'gambit.worktree_local_changes': '主目录里有未提交的改动会被覆盖，请先提交或暂存',
+  'gambit.worktree_merge_failed': '合并失败：{error}',
   'gambit.send_empty_hint': '先输入内容或粘贴图片 (Ctrl+V)',
 
 

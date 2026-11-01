@@ -1,0 +1,101 @@
+import { useEffect, useRef, useState } from 'react';
+import { useAppDispatch, useAppState, type TerminalSession } from '../../store/app-state';
+import { useT } from '../../i18n/useT';
+import { createWorktree, mergeWorktree, removeWorktree, worktreeAvailable, worktreeStatus, type WorktreeStatus } from '../../lib/worktree';
+
+/**
+ * The composer's worktree switch. Before a conversation starts it moves the tab into its own copy of the project on
+ * a new branch, or back; once the conversation has started it shows the branch and merges it into the project.
+ */
+export function WorktreeControl({ tab, started, running }: { tab: TerminalSession; started: boolean; running: boolean }) {
+  const t = useT(), dispatch = useAppDispatch();
+  const [available, setAvailable] = useState(false), [pending, setPending] = useState(false);
+  const [status, setStatus] = useState<WorktreeStatus | null>(null), [notice, setNotice] = useState<{ text: string; error?: boolean } | null>(null);
+  const worktree = tab.worktree, locked = started || !!tab.resumeToken;
+  const cwd = tab.worktreeOrigin ?? tab.folderPath ?? '';
+  const revision = useRef(0);
+
+  // A notice floats above the composer: a success fades on its own, a refusal stays until dismissed or replaced.
+  useEffect(() => {
+    if (!notice || notice.error) return;
+    const timer = setTimeout(() => setNotice(null), 4000);
+    return () => clearTimeout(timer);
+  }, [notice]);
+
+  useEffect(() => {
+    if (worktree || locked || !cwd) { setAvailable(false); return; }
+    let live = true;
+    void worktreeAvailable(cwd).then(value => { if (live) setAvailable(value); });
+    return () => { live = false; };
+  }, [worktree, locked, cwd]);
+
+  // The branch is read again whenever a turn ends, as that is when the conversation leaves new work on it.
+  useEffect(() => {
+    if (!worktree || !locked || running) return;
+    const version = ++revision.current;
+    void worktreeStatus(worktree).then(value => { if (version === revision.current) setStatus(value); }, () => {});
+  }, [worktree, locked, running]);
+
+  if (!worktree && locked) return null;
+
+  if (!locked) {
+    const toggle = async () => {
+      if (pending || running) return;
+      setPending(true); setNotice(null);
+      try {
+        const newId = crypto.randomUUID();
+        if (worktree) dispatch({ type: 'SET_TERMINAL_WORKTREE', id: tab.id, newId, cwd, worktree: undefined });
+        else {
+          const created = await createWorktree(cwd, tab.tool ?? 'session');
+          dispatch({ type: 'SET_TERMINAL_WORKTREE', id: tab.id, newId, cwd: created.cwd, worktree: created.worktree, origin: cwd });
+        }
+      } catch (error) { setNotice({ text: t('gambit.worktree_failed', { error: String(error) }), error: true }); }
+      finally { setPending(false); }
+    };
+    const disabled = pending || running || (!worktree && !available);
+    return <span className="gambit-worktree" data-tip={!worktree && !available ? t('gambit.worktree_unavailable') : undefined}>
+      <button type="button" role="checkbox" className="gambit-worktree-toggle" aria-checked={!!worktree} disabled={disabled} onClick={() => { void toggle(); }}>
+        <span className="gambit-worktree-box" aria-hidden="true" />{t('gambit.worktree')}
+      </button>
+      {notice && <span className="gambit-worktree-notice" data-error={notice.error || undefined} role="status" onClick={() => setNotice(null)}>{notice.text}</span>}
+    </span>;
+  }
+
+  const merge = async () => {
+    if (!worktree || pending || running) return;
+    setPending(true); setNotice(null);
+    try {
+      const count = await mergeWorktree(worktree, `Coffee: ${tab.pinnedTitle || tab.toolTitle || worktree.branch}`);
+      setNotice({ text: count ? t('gambit.worktree_merged', { count }) : t('gambit.worktree_nothing') });
+    } catch (error) {
+      const text = String(error);
+      setNotice({ error: true, text: text.includes('COFFEE_MERGE:conflict') ? t('gambit.worktree_conflict') : text.includes('COFFEE_MERGE:local_changes') ? t('gambit.worktree_local_changes') : t('gambit.worktree_merge_failed', { error: text }) });
+    } finally {
+      const version = ++revision.current;
+      void worktreeStatus(worktree).then(value => { if (version === revision.current) setStatus(value); }, () => {});
+      setPending(false);
+    }
+  };
+  const mergeable = !!status?.exists && (status.ahead > 0 || status.dirty);
+  return <span className="gambit-worktree">
+    <span className="gambit-worktree-branch"><BranchIcon /><span className="gambit-worktree-branch-name">{worktree!.branch}</span></span>
+    {mergeable && !running && <button type="button" className="gambit-worktree-merge" disabled={pending} onClick={() => { void merge(); }}>{t('gambit.worktree_merge', { target: status!.target || 'HEAD' })}</button>}
+    {notice && <span className="gambit-worktree-notice" data-error={notice.error || undefined} role="status" onClick={() => setNotice(null)}>{notice.text}</span>}
+  </span>;
+}
+
+function BranchIcon() {
+  return <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true"><circle cx="4.5" cy="3.5" r="1.75" /><circle cx="4.5" cy="12.5" r="1.75" /><circle cx="11.5" cy="5.5" r="1.75" /><path d="M4.5 5.25v5.5M11.5 7.25c0 2.5-2 3.25-5.25 3.75" /></svg>;
+}
+
+/** Removes a tab's worktree once no tab uses it, through git's safe removal. */
+export function WorktreeJanitor() {
+  const { state } = useAppState();
+  const known = useRef(new Map<string, NonNullable<TerminalSession['worktree']>>());
+  useEffect(() => {
+    const live = new Set(state.terminals.flatMap(tab => tab.worktree ? [tab.worktree.path] : []));
+    for (const [path, worktree] of known.current) if (!live.has(path)) { known.current.delete(path); void removeWorktree(worktree); }
+    for (const tab of state.terminals) if (tab.worktree) known.current.set(tab.worktree.path, tab.worktree);
+  }, [state.terminals]);
+  return null;
+}

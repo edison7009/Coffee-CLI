@@ -458,3 +458,23 @@
 /* Right-click context menu styles live in TierTerminal.css under
    .term-ctx-menu / .term-ctx-item / .term-ctx-sep — Gambit reuses them so
    both panels share one visual language. */
+
+/* ─── Worktree switch (beside the target label) ───────────── */
+.gambit-worktree { position: relative; display: flex; align-items: center; gap: 6px; flex: 0 1 auto; min-width: 0; font: 12px/16px var(--font); color: var(--text-2); }
+.gambit-worktree-toggle { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 4px 7px; border: 0; border-radius: var(--shape-radius-btn, 5px); background: transparent; color: inherit; font: inherit; white-space: nowrap; cursor: pointer; }
+.gambit-worktree-toggle:hover:not(:disabled) { background: var(--bg-hover); color: var(--text-1); }
+.gambit-worktree-toggle:disabled { cursor: default; opacity: .45; }
+.gambit-worktree-toggle:focus-visible, .gambit-worktree-merge:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
+.gambit-worktree-box { position: relative; width: 12px; height: 12px; flex-shrink: 0; border: 1px solid var(--text-3); border-radius: 3px; }
+.gambit-worktree-toggle[aria-checked="true"] .gambit-worktree-box { border-color: var(--accent); background: var(--accent); }
+.gambit-worktree-toggle[aria-checked="true"] .gambit-worktree-box::after { content: ''; position: absolute; left: 3px; top: 0; width: 3px; height: 7px; border: solid #fff; border-width: 0 1.5px 1.5px 0; transform: rotate(45deg); }
+.gambit-worktree-branch { display: inline-flex; align-items: center; gap: 5px; min-width: 0; max-width: 180px; height: 26px; padding: 4px 7px; border-radius: var(--shape-radius-btn, 5px); background: var(--bg-hover); white-space: nowrap; }
+.gambit-worktree-branch svg { flex-shrink: 0; }
+.gambit-worktree-branch-name { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.gambit-worktree-merge { height: 26px; padding: 4px 9px; border: 1px solid var(--border); border-radius: var(--shape-radius-btn, 5px); background: transparent; color: var(--text-1); font: inherit; white-space: nowrap; cursor: pointer; }
+.gambit-worktree-merge:hover:not(:disabled) { background: var(--bg-hover); }
+.gambit-worktree-merge:disabled { cursor: default; opacity: .5; }
+.gambit-worktree-notice { position: absolute; z-index: 100; bottom: calc(100% + 8px); left: 0; width: max-content; max-width: 300px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-panel); color: var(--text-1); font-size: 12px; line-height: 1.5; white-space: normal; box-shadow: 0 1px 2px #0003, 0 6px 20px #0004; cursor: default; }
+.gambit-worktree-notice[data-error] { color: var(--danger, #e5484d); }
+.gambit-worktree-toggle, .gambit-worktree-merge { flex-shrink: 0; }
+.gambit-worktree[data-tip]:hover::after { content: attr(data-tip); position: absolute; z-index: 100; bottom: calc(100% + 8px); left: 0; width: 220px; max-width: 70vw; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-panel); color: var(--text-1); font-size: 11px; font-weight: 500; line-height: 1.5; white-space: normal; pointer-events: none; box-shadow: 0 1px 2px #0003, 0 6px 20px #0004; }

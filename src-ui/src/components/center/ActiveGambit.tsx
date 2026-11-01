@@ -28,6 +28,7 @@ import { interruptOpenCode, useOpenCodeSession } from '../../lib/opencode-sessio
 import { stopDsh, useDshSession } from '../../lib/dsh-session';
 import { useOrchestration } from '../../lib/orchestration';
 import { useSessionControls } from '../../lib/session-controls';
+import { WorktreeControl } from './WorktreeControl';
 
 // Last path segment of a folder, Windows ("\") and POSIX ("/") safe. Local copy
 // (CenterPanel has the same helper) — tiny, not worth a shared util yet.
@@ -73,6 +74,8 @@ export function ActiveGambit() {
   const codex = useCodexSession(isCodex ? activeId ?? '' : '');
   const dshBusy = useDshSession(isDsh ? activeId ?? '' : '', s => s.busy);
   const openCodeBusy = useOpenCodeSession(isOpenCode ? activeId ?? '' : '', s => s.busy);
+  const dshStarted = useDshSession(isDsh ? activeId ?? '' : '', s => s.messages.length > 0);
+  const openCodeStarted = useOpenCodeSession(isOpenCode ? activeId ?? '' : '', s => s.native.length > 0);
   const controlsReady = isClaude ? claude.ready : isCodex ? codex.ready : true;
   // Footer label telling the user where Send will land. Local sessions show
   // their working-folder name; SSH/WebSocket sessions show their connection
@@ -81,7 +84,7 @@ export function ActiveGambit() {
   const workspaceName = activeSession?.tool === 'remote'
     ? remoteHost(activeSession.toolData)
     : activeSession?.folderPath && activeSession.tool
-      ? basename(activeSession.folderPath)
+      ? basename(activeSession.worktreeOrigin ?? activeSession.folderPath)
       : '';
   // The active tab's tool glyph — the same icon its chrome-tab shows, so the
   // Gambit target chip reads as "tool + target" (mirrors the tab's
@@ -159,6 +162,9 @@ export function ActiveGambit() {
       orchestration={coordinator}
       computer={controlsReady && controls.includes('computer')}
       browser={controlsReady && controls.includes('browser')}
+      worktreeControl={activeSession && (isClaude || isCodex || isDsh || isOpenCode) ? <WorktreeControl tab={activeSession}
+        started={isClaude ? claude.messages.length > 0 : isCodex ? codex.messages.length > 0 : isDsh ? dshStarted : openCodeStarted}
+        running={isClaude ? claude.busy : isCodex ? codex.busy : isOpenCode ? openCodeBusy : dshBusy} /> : undefined}
       claude={isClaude}
       suggestion={isClaude ? claude.suggestion : undefined}
       codex={isCodex}

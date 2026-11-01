@@ -1,3 +1,4 @@
+import { WorktreeJanitor } from '../center/WorktreeControl';
 import { useEffect } from 'react';
 import { useAppDispatch, useAppState, useAppStateRef } from '../../store/app-state';
 import { invoke, isTauri } from '../../tauri';
@@ -51,5 +52,5 @@ export function AgentBridge() {
     start().catch(error => console.error('[AgentBridge]', error));
     return () => { disposed = true; setSentinelEnabled(false); unlisteners.forEach(stop => stop()); };
   }, [dispatch, stateRef]);
-  return <OrchestrationBridge />;
+  return <><OrchestrationBridge /><WorktreeJanitor /></>;
 }

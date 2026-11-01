@@ -406,6 +406,15 @@ export const ko = {
   'gambit.stop': '중지',
   'gambit.placeholder': '한 수를 고르는 중... ({send} 전송, {newline} 줄바꿈, 이미지 붙여넣기, Alt+↑↓ 기록)',
   'gambit.send_failed_hint': '활성 세션을 먼저 여세요',
+  'gambit.worktree': '워크트리',
+  'gambit.worktree_unavailable': '커밋이 하나 이상 있는 git 저장소가 필요합니다',
+  'gambit.worktree_failed': '워크트리를 만들 수 없습니다: {error}',
+  'gambit.worktree_merge': '{target}에 병합',
+  'gambit.worktree_merged': '커밋 {count}개를 병합했습니다',
+  'gambit.worktree_nothing': '병합할 변경 사항이 없습니다',
+  'gambit.worktree_conflict': '메인 작업 폴더와 충돌해 병합을 취소했습니다(변경 없음)',
+  'gambit.worktree_local_changes': '메인 작업 폴더의 커밋하지 않은 변경 사항이 덮어써집니다. 먼저 커밋하거나 스태시하세요',
+  'gambit.worktree_merge_failed': '병합 실패: {error}',
   'gambit.send_empty_hint': '내용을 입력하거나 이미지를 붙여넣으세요 (Ctrl+V)',
 
 

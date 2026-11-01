@@ -143,6 +143,9 @@ export interface TerminalSession {
   /// fresh launch. Cleared on any subsequent SET_TERMINAL_TOOL.
   resumeToken?: string;
   strictCwd?: boolean;
+  /** The conversation works in its own git worktree; `worktreeOrigin` is the folder it was opened on. */
+  worktree?: import('../lib/worktree').Worktree;
+  worktreeOrigin?: string;
   parentId?: string;
   isHidden?: boolean;
   agentStatus?: AgentStatus;
@@ -304,6 +307,7 @@ type Action =
   | { type: 'SET_TERMINAL_TOOL'; id: string; tool: ToolType; toolData?: string; resumeToken?: string; claudeMode?: ClaudeMode; codexMode?: ClaudeMode; opencodeMode?: ClaudeMode }
   | { type: 'SET_TERMINAL_HIDDEN'; id: string; isHidden: boolean }
   | { type: 'RESTART_TERMINAL'; id: string; newId: string; fresh?: boolean }
+  | { type: 'SET_TERMINAL_WORKTREE'; id: string; newId: string; cwd: string; worktree?: import('../lib/worktree').Worktree; origin?: string }
   | { type: 'OPEN_HYPER_AGENT_TAB' }
   | { type: 'SET_AGENT_STATUS'; id: string; status: AgentStatus | undefined }
   | { type: 'SET_BG'; path: string; bgType: 'image' | 'video' }
@@ -556,6 +560,15 @@ function reducer(state: AppState, action: Action): AppState {
         ),
         tabOrder: getTabOrder(state).map(id => id === action.id ? action.newId : id),
         activeTerminalId: state.activeTerminalId === action.id ? action.newId : state.activeTerminalId
+      };
+    case 'SET_TERMINAL_WORKTREE':
+      // A conversation that has not started moves into (or out of) its worktree as a fresh session there.
+      return {
+        ...state,
+        sessionSplit: replaceSplitSession(state.sessionSplit, action.id, action.newId),
+        terminals: state.terminals.map(t => t.id === action.id ? { ...t, id: action.newId, folderPath: action.cwd, worktree: action.worktree, worktreeOrigin: action.worktree ? action.origin : undefined, toolTitle: undefined, agentStatus: undefined, startedAt: Date.now(), resumeToken: undefined } : t),
+        tabOrder: getTabOrder(state).map(id => id === action.id ? action.newId : id),
+        activeTerminalId: state.activeTerminalId === action.id ? action.newId : state.activeTerminalId,
       };
     case 'SET_AGENT_STATUS': {
       // Native titles and rendered-screen spinners can both emit frequent
