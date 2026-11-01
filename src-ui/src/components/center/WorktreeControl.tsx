@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAppDispatch, useAppState, type TerminalSession } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
 import { createWorktree, insideWorktrees, worktreeFromPath, mergeWorktree, removeWorktree, sweepWorktrees, worktreeAvailable, worktreeStatus, type Worktree, type WorktreeStatus } from '../../lib/worktree';
@@ -21,7 +21,8 @@ export function WorktreeControl({ tab, started, running }: { tab: TerminalSessio
   const live = useRef({ started, running });
   useEffect(() => { live.current = { started, running }; }, [started, running]);
   const revision = useRef(0);
-  const inUse = useMemo(() => state.terminals.flatMap(other => other.worktree ? [other.worktree.path] : []), [state.terminals]);
+  // Only a change in which worktrees are open matters: each check below runs git, and tabs update on every status frame.
+  const inUse = state.terminals.flatMap(other => other.worktree ? [other.worktree.path] : []).join('\n');
 
   const refresh = useCallback((target: Worktree) => {
     const version = ++revision.current;
@@ -34,7 +35,7 @@ export function WorktreeControl({ tab, started, running }: { tab: TerminalSessio
     void worktreeAvailable(cwd).then(value => {
       if (!current) return;
       setAvailable(value);
-      if (value && !swept.has(cwd)) { swept.add(cwd); void sweepWorktrees(cwd, inUse); }
+      if (value && !swept.has(cwd)) { swept.add(cwd); void sweepWorktrees(cwd, inUse ? inUse.split('\n') : []); }
     });
     return () => { current = false; };
   }, [worktree, locked, cwd, inUse]);

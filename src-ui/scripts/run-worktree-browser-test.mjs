@@ -69,6 +69,11 @@ try {
   await toggle.waitFor(); await view.waitForFunction(() => !document.querySelector('.gambit-worktree-toggle').disabled);
   assert.equal(await toggle.getAttribute('aria-checked'), 'false');
   await view.screenshot({ path: join(directory, 'off.png') });
+  const asked = () => view.evaluate(() => window.calls.filter(call => call.name === 'worktree_available').length);
+  const askedOnce = await asked();
+  for (const toolTitle of ['one', 'two', 'three']) await view.evaluate(title => window.setFixture({ tab: { toolTitle: title } }), toolTitle);
+  await view.waitForTimeout(50);
+  assert.equal(await asked(), askedOnce, 'a status or title frame does not run git again');
 
   await toggle.click(); await view.waitForFunction(() => document.querySelector('.gambit-worktree-toggle')?.getAttribute('aria-checked') === 'true');
   const on = await view.evaluate(() => window.actions.at(-1));
