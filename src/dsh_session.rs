@@ -231,7 +231,7 @@ export const inject = ['permissionPresets', 'sessions', 'approval', 'agents', 'u
 export function apply(ctx) {
   const { COFFEE_DSH_CONTROL: file, COFFEE_DSH_SESSION: id } = process.env;
   const pending = new Map();
-  let applied = '', count = 0;
+  let applied = '', count = 0, background = 0;
   const read = path => { try { return readFileSync(path, 'utf8').trim(); } catch { return ''; } };
   const send = frame => process.stdout.write(JSON.stringify({ jsonrpc: '2.0', ...frame }) + '\n');
   const update = () => {
@@ -259,6 +259,14 @@ export function apply(ctx) {
     pending.set(requestId, reply => { signal?.removeEventListener('abort', cancel); resolve(reply); });
     send({ id: requestId, method, params: { ...params, requestId } });
   });
+  // Jobs and sub-agents outlive the turn that started them, which the SDK protocol does not show.
+  const report = () => {
+    const jobs = ctx.get('jobs')?.list(id).filter(job => job.owner === id && (job.status === 'running' || job.status === 'stopping')).length ?? 0;
+    const children = ctx.agents.list().filter(agent => String(agent.session.header?.parentSession) === id && agent.status !== 'idle').length;
+    if (jobs + children === background) return;
+    background = jobs + children;
+    send({ method: 'coffee/background', params: { sessionId: id, count: background } });
+  };
   ctx.on('session/created', update);
   ctx.on('approval/request', request => ask('approval/request', { toolName: request.toolName, reason: request.reason }, request.signal).then(reply => reply.outcome, () => 'cancelled'));
   ctx.on('user-questions/request', async request => {
@@ -266,7 +274,7 @@ export function apply(ctx) {
     if (reply.cancelled) throw new Error('The user declined to answer');
     return { answers: reply.answers };
   });
-  ctx.effect(() => { const timer = setInterval(() => { update(); collect(); }, 250); return () => clearInterval(timer); });
+  ctx.effect(() => { const timer = setInterval(() => { update(); collect(); try { report(); } catch {} }, 250); return () => clearInterval(timer); });
 }
 "#;
 const PRESETS: [&str; 2] = ["workspace-write", "danger-full-access"];
@@ -382,7 +390,7 @@ fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<Stri
         };
         for (_, tx) in s.protocol.pending.lock().unwrap().drain() { let _ = tx.send(Err("DeepSeek Harness process exited".into())); }
         s.remove_control_files();
-        crate::orchestration::native_stop(&watcher_id, "dsh", &s.generation);
+        crate::orchestration::native_exit(&watcher_id, "dsh", &s.generation);
         emit(&watcher_app, &watcher_id, &s, json!({"method":"coffee/exit","params":{"code":code,"detail":s.stderr.lock().unwrap().as_str()}}));
         let sessions = watcher_app.state::<DshSessions>(); let mut map = sessions.0.lock().unwrap();
         if map.get(&watcher_id).is_some_and(|live| Arc::ptr_eq(live, &s)) { map.remove(&watcher_id); }

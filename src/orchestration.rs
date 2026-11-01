@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
-use std::{collections::{HashMap, VecDeque}, fs, io::{BufRead, BufReader, Read, Write}, net::{Ipv4Addr, SocketAddrV4, TcpListener, TcpStream}, path::Path, sync::{mpsc, Arc, Condvar, Mutex, OnceLock, atomic::{AtomicUsize, Ordering}}, time::{Duration, Instant}};
+use std::{collections::{HashMap, HashSet, VecDeque}, fs, io::{BufRead, BufReader, Read, Write}, net::{Ipv4Addr, SocketAddrV4, TcpListener, TcpStream}, path::Path, sync::{mpsc, Arc, Condvar, Mutex, OnceLock, atomic::{AtomicUsize, Ordering}}, time::{Duration, Instant}};
 use tauri::{AppHandle, Emitter};
 
 #[derive(Clone, Serialize, Deserialize, Default)]
@@ -23,12 +23,25 @@ pub struct Task {
 }
 #[derive(Clone, Serialize, Deserialize)]
 struct Dispatch { ids: Vec<String>, source_turn: String, fingerprint: String }
-struct WorkerRun { expected: String, generation: Option<String>, turn: Option<String>, reply: String }
-impl WorkerRun {
-    fn new(prompt: &str) -> Self { Self { expected: fingerprint("", prompt), generation: None, turn: None, reply: String::new() } }
+/// A finished turn waiting for the worker's background work. Jobs and sub-agents outlive their turn and wake the
+/// worker with their results, so the turn's last words may only announce them.
+struct Held { reply: String, tool: String, at: Instant, quiet: Option<Instant> }
+struct WorkerRun {
+    expected: String, next: Option<String>, generation: Option<String>, turn: Option<String>, reply: String,
+    /// Someone else wrote into this worker, so its replies are no longer the assigned result.
+    manual: bool,
+    /// The turn ended on an unanswered question; only a new message can start the worker again.
+    parked: bool,
+    background: usize, held: Option<Held>,
 }
+impl WorkerRun {
+    fn new(prompt: &str) -> Self { Self { expected: fingerprint("", prompt), next: None, generation: None, turn: None, reply: String::new(), manual: false, parked: false, background: 0, held: None } }
+}
+const BACKGROUND_QUIET: Duration = Duration::from_secs(3);
+const BACKGROUND_LIMIT: Duration = Duration::from_secs(30 * 60);
+const CLAIM_LIMIT: Duration = Duration::from_secs(10);
 #[derive(Clone)]
-struct AutomaticInput { id: String, fingerprint: String, source_turn: String }
+struct AutomaticInput { id: String, fingerprint: String, source_turn: String, tasks: Vec<String>, at: Instant }
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ResultDelivery { id: String, parent_id: String, generation: String, text: String }
@@ -40,12 +53,14 @@ struct Question { id: String, text: String, answer: Option<String> }
 #[serde(rename_all = "camelCase")]
 pub struct LiveSession { id: String, tool: String, cwd: String, generation: Option<String>, native_id: Option<String>, ready: bool, status: Option<String>, error: Option<String>, #[serde(default)] can_receive: bool }
 #[derive(Clone)]
-struct Parent { id: String, native_id: Option<String>, tool: String, agents: Vec<String>, connected: bool, cwd: String, generation: Option<String>, seen: bool, turn: String, running: bool, queued: VecDeque<String>, paused: bool, automatic: Option<AutomaticInput> }
+struct Parent { id: String, native_id: Option<String>, tool: String, agents: Vec<String>, connected: bool, cwd: String, generation: Option<String>, seen: bool, turn: String, running: bool, queued: VecDeque<String>, sent_since_result: bool, paused: bool, automatic: Option<AutomaticInput> }
 fn claude_tool() -> String { "claude".into() }
 struct Pending { parent: String, token: String, worker: Option<String>, session_id: Option<String>, deadline: Instant, sender: mpsc::Sender<Value> }
 struct State {
     snapshot: Snapshot, live: HashMap<String, LiveSession>, parents: HashMap<String, Parent>,
     workers: HashMap<String, String>, pending: HashMap<String, Pending>, runs: HashMap<String, WorkerRun>, app: Option<AppHandle>, port: Option<u16>,
+    /// Conversations the user stopped. A stop can replace the process, which drops its `Parent`.
+    stopped: HashSet<String>,
 }
 struct Hub { state: Mutex<State>, changed: Condvar }
 static HUB: OnceLock<Hub> = OnceLock::new();
@@ -59,9 +74,9 @@ fn hub() -> &'static Hub {
         if !snapshot.enabled { snapshot.agents.clear(); }
         for task in &mut snapshot.tasks {
             if active(task) { task.phase = "closed".into(); }
-            if task.result_delivery.as_deref() == Some("pending") { task.result_delivery = Some("retained".into()); }
+            if matches!(task.result_delivery.as_deref(), Some("pending" | "claimed")) { task.result_delivery = Some("retained".into()); }
         }
-        Hub { state: Mutex::new(State { snapshot, live: HashMap::new(), parents: HashMap::new(), workers: HashMap::new(), pending: HashMap::new(), runs: HashMap::new(), app: None, port: None }), changed: Condvar::new() }
+        Hub { state: Mutex::new(State { snapshot, live: HashMap::new(), parents: HashMap::new(), workers: HashMap::new(), pending: HashMap::new(), runs: HashMap::new(), app: None, port: None, stopped: HashSet::new() }), changed: Condvar::new() }
     })
 }
 fn active(task: &Task) -> bool { matches!(task.phase.as_str(), "starting" | "running" | "uncertain") }
@@ -253,12 +268,32 @@ fn sync_live(state: &mut State, sessions: Vec<LiveSession>) -> bool {
             if task.generation.is_none() && session.ready { task.generation = session.generation.clone(); changed = true; }
             if task.native_id.is_none() && session.native_id.is_some() { task.native_id = session.native_id.clone(); changed = true; }
             let activity = if session.error.is_some() { Some("error".into()) } else if session.ready { session.status.clone() } else if task.generation.is_some() { Some("disconnected".into()) } else { Some("starting".into()) };
-            if task.activity != activity { task.activity = activity; changed = true; }
+            if task.activity != activity {
+                // A crashed worker sends no completion event, so its coordinator would wait for ever.
+                if activity.as_deref() == Some("error") && active(task) && !task.detached { task.summary = session.error.as_deref().map(result_preview); task.result_delivery = Some("pending".into()); }
+                task.activity = activity; changed = true;
+            }
         } else if active(task) && task.phase != "starting" && !pending_children.contains(&task.parent_id) {
             task.phase = "closed".into(); changed = true;
         }
     }
+    changed |= settle_held(state);
     changed || coordinators != current_snapshot(state).coordinators
+}
+/// Ends turns whose background work has finished without waking the worker, or has run past its limit.
+fn settle_held(state: &mut State) -> bool {
+    let now = Instant::now(); let mut ready = vec![];
+    for (id, run) in &mut state.runs {
+        let background = run.background;
+        let Some(held) = &mut run.held else { continue };
+        if background > 0 {
+            held.quiet = None;
+            if now.duration_since(held.at) >= BACKGROUND_LIMIT { ready.push((id.clone(), held.tool.clone(), format!("{}\n\nBackground work was still running when this result was collected.", held.reply))); }
+        } else if now.duration_since(*held.quiet.get_or_insert(now)) >= BACKGROUND_QUIET { ready.push((id.clone(), held.tool.clone(), held.reply.clone())); }
+    }
+    let mut changed = false;
+    for (id, tool, reply) in ready { changed |= settle(state, &id, &tool, "completed", reply); }
+    changed
 }
 
 #[tauri::command]
@@ -303,32 +338,36 @@ fn initialize(app: &AppHandle) -> Result<u16, String> {
 }
 
 /// Session-only MCP configuration: no hooks, project files or global agent settings are written.
-pub fn parent_launch(app: &AppHandle, id: &str, native_id: &str, cwd: &Path) -> Result<Option<(String, String)>, String> {
+pub fn parent_launch(app: &AppHandle, id: &str, native_id: &str, cwd: &Path, desktop: bool) -> Result<Option<(String, String)>, String> {
     {
         let state = hub().state.lock().unwrap();
-        if !state.snapshot.enabled || state.snapshot.agents.is_empty() || state.snapshot.tasks.iter().any(|task| task.session_id == id) { return Ok(None); }
+        if !state.snapshot.enabled || state.snapshot.agents.is_empty() || worker_session(&state.snapshot, id) { return Ok(None); }
     }
     let port = initialize(app)?;
     let token = uuid::Uuid::new_v4().to_string();
     let mut state = hub().state.lock().unwrap();
     let agents = state.snapshot.agents.clone();
     state.parents.retain(|_, parent| parent.id != id);
-    state.parents.insert(token.clone(), Parent { id: id.into(), native_id: Some(native_id.into()), tool: "claude".into(), agents: agents.clone(), connected: false, cwd: cwd.to_string_lossy().into_owned(), generation: None, seen: false, turn: String::new(), running: false, queued: VecDeque::new(), paused: false, automatic: None });
+    let paused = state.stopped.contains(native_id);
+    state.parents.insert(token.clone(), Parent { id: id.into(), native_id: Some(native_id.into()), tool: "claude".into(), agents: agents.clone(), connected: false, cwd: cwd.to_string_lossy().into_owned(), generation: None, seen: false, turn: String::new(), running: false, queued: VecDeque::new(), sent_since_result: false, paused, automatic: None });
     for task in &mut state.snapshot.tasks {
         if !task.detached && task.parent_native_id.as_deref() == Some(native_id) {
             task.parent_id = id.into();
-            if task.result_delivery.as_deref() == Some("pending") { task.result_delivery = Some("retained".into()); }
+            if matches!(task.result_delivery.as_deref(), Some("pending" | "claimed")) { task.result_delivery = Some("retained".into()); }
         }
     }
     publish(&mut state);
     let config = json!({"mcpServers":{"coffee-team":{"command":std::env::current_exe().map_err(|e| e.to_string())?,"args":["__team_mcp",port.to_string(),token]}}});
-    Ok(Some((config.to_string(), coordinator_prompt(&agents))))
+    Ok(Some((config.to_string(), coordinator_prompt(&agents, desktop))))
 }
 
-fn coordinator_prompt(agents: &[String]) -> String {
-    format!("Coffee multi-agent orchestration is enabled. Available assistants: {}. You are the coordinator: decide for yourself whether delegation helps the user's task, which assistant to use, and how to divide the work. Handle simple tasks yourself. The user does not need to choose an executor or explicitly request delegation. Use coffee-team worker_start for useful, bounded tasks within the authorized project; each worker opens a visible child tab. Give clear goals and file ownership to avoid overlapping edits. Workers must not delegate further. Desktop worker replies are collected automatically and delivered when you are idle; use worker_wait/worker_list while active to collect replies and questions, and answer using worker_reply. Reuse a stable operationId when retrying worker_start. Idle output is not task completion. Independently check worker results and summarize the overall outcome for the user; a worker report alone is not verification. Do not bypass user permission prompts or expand the user's authorized scope. On uncertain start/send, inspect worker_list rather than retrying automatically. Keep completed tabs available for the user. worker_list also returns the currently allowed assistants.", agents.join(", "))
+fn coordinator_prompt(agents: &[String], desktop: bool) -> String {
+    let collect = if desktop { "Worker replies and questions arrive by themselves as a message once you are idle: when nothing else needs you, end your turn instead of waiting, and answer questions using worker_reply. Use worker_list only to inspect state." }
+        else { "Worker replies are not delivered to this session: use worker_wait/worker_list to collect replies and questions, and answer using worker_reply." };
+    format!("Coffee multi-agent orchestration is enabled. Available assistants: {}. You are the coordinator: decide for yourself whether delegation helps the user's task, which assistant to use, and how to divide the work. Handle simple tasks yourself. The user does not need to choose an executor or explicitly request delegation. Use coffee-team worker_start for useful, bounded tasks within the authorized project; each worker opens a visible child tab. Give clear goals and file ownership to avoid overlapping edits. Workers must not delegate further. {collect} Reuse a stable operationId when retrying worker_start. Idle output is not task completion. Independently check worker results and summarize the overall outcome for the user; a worker report alone is not verification. Do not bypass user permission prompts or expand the user's authorized scope. On uncertain start/send, inspect worker_list rather than retrying automatically. Keep completed tabs available for the user. worker_list also returns the currently allowed assistants.", agents.join(", "))
 }
 
+fn worker_session(snapshot: &Snapshot, id: &str) -> bool { snapshot.tasks.iter().any(|task| task.session_id == id && !task.detached) }
 fn parent(state: &State, token: &str) -> Result<Parent, String> {
     if !state.snapshot.enabled { return Err("Multi-agent orchestration is disabled".into()); }
     let parent = state.parents.get(token).ok_or("Coordinator session expired")?;
@@ -337,7 +376,7 @@ fn parent(state: &State, token: &str) -> Result<Parent, String> {
     Ok(parent.clone())
 }
 fn task_for(state: &State, parent_id: &str, task_id: &str) -> Result<Task, String> {
-    state.snapshot.tasks.iter().find(|task| task.id == task_id && !task.detached && task.parent_id == parent_id).cloned().ok_or("Task does not belong to this coordinator".into())
+    state.snapshot.tasks.iter().find(|task| task.id == task_id && !task.detached && !task.hidden && task.parent_id == parent_id).cloned().ok_or("Task does not belong to this coordinator".into())
 }
 fn fingerprint(tool: &str, prompt: &str) -> String {
     format!("{:x}", Sha256::digest(serde_json::to_vec(&(tool, prompt.trim())).unwrap()))
@@ -375,29 +414,45 @@ fn record_delivery_input(state: &mut State, id: &str, tool: &str, generation: &s
     if let Some(delivery) = delivery {
         let owner = state.parents.values().find(|owner| owner.id == id && owner.tool == tool && owner.generation.as_deref() == Some(&generation)).ok_or("Coordinator session changed")?;
         if owner.paused || owner.running || !owner.queued.is_empty() || !owner.automatic.as_ref().is_some_and(|input| input.id == delivery && input.source_turn == owner.turn && input.fingerprint == fingerprint("", prompt)) {
+            release_claim(state, id, Some(delivery));
             return Err("Automatic results were superseded or the coordinator was stopped".into());
         }
     }
     for owner in state.parents.values_mut().filter(|owner| owner.id == id && owner.tool == tool && owner.generation.as_ref().is_none_or(|known| *known == generation)) {
-        if delivery.is_some() { owner.automatic = None; owner.running = true; }
-        else {
+        owner.sent_since_result = true;
+        if delivery.is_some() {
+            // Admission precedes the write, so from here on a batch is never offered again.
+            if let Some(input) = owner.automatic.take() {
+                for task in state.snapshot.tasks.iter_mut().filter(|task| input.tasks.contains(&task.id) && task.result_delivery.as_deref() == Some("claimed")) { task.result_delivery = Some("delivered".into()); }
+            }
+            owner.running = true;
+        } else {
             if owner.running { owner.queued.push_back(turn.into()); }
             else { owner.turn = turn.into(); owner.running = true; }
             owner.paused = false;
+            if let Some(native) = &owner.native_id { state.stopped.remove(native); }
         }
     }
     let current = state.snapshot.tasks.iter().any(|task| task.session_id == id && task.tool == tool && active(task) && task.generation.as_ref().is_none_or(|known| *known == generation));
     if !current { state.runs.remove(id); return Ok(()); }
     if let Some(run) = state.runs.get_mut(id) {
-        if run.expected == fingerprint("", prompt) {
-            run.generation = Some(generation); run.turn = None; run.reply.clear();
-        } else { state.runs.remove(id); }
+        let sent = fingerprint("", prompt);
+        if run.expected == sent || run.next.as_ref() == Some(&sent) {
+            run.expected = sent; run.next = None; run.generation = Some(generation); run.turn = None; run.reply.clear();
+            run.manual = false; run.parked = false; run.held = None;
+        } else if run.generation.is_some() { run.manual = true; run.held = None; }
     }
     Ok(())
 }
+/// Offers a batch again. Only for one that was never admitted, which means nothing reached the coordinator.
+fn release_claim(state: &mut State, id: &str, delivery: Option<&str>) {
+    let Some(owner) = state.parents.values_mut().find(|owner| owner.id == id && owner.automatic.as_ref().is_some_and(|input| delivery.is_none_or(|known| known == input.id))) else { return };
+    let Some(input) = owner.automatic.take() else { return };
+    for task in state.snapshot.tasks.iter_mut().filter(|task| input.tasks.contains(&task.id) && task.result_delivery.as_deref() == Some("claimed")) { task.result_delivery = Some("pending".into()); }
+}
 /// A tab driven by a coordinator rather than a person.
 pub(crate) fn is_worker(id: &str) -> bool {
-    hub().state.lock().unwrap().snapshot.tasks.iter().any(|task| task.session_id == id)
+    worker_session(&hub().state.lock().unwrap().snapshot, id)
 }
 
 pub(crate) fn native_stop(id: &str, tool: &str, generation: &str) {
@@ -408,6 +463,7 @@ fn stop_input(state: &mut State, id: &str, tool: &str, generation: &str) -> bool
     let generation = format!("desktop:{tool}:{generation}");
     for owner in state.parents.values_mut().filter(|owner| owner.id == id && owner.generation.as_ref().is_none_or(|known| *known == generation)) {
         owner.paused = true;
+        if let Some(native) = &owner.native_id { state.stopped.insert(native.clone()); }
     }
     if state.runs.get(id).is_none_or(|run| run.generation.as_deref() != Some(&generation)) { return false; }
     state.runs.remove(id);
@@ -415,6 +471,13 @@ fn stop_input(state: &mut State, id: &str, tool: &str, generation: &str) -> bool
         task.phase = "interrupted".into(); task.result_delivery = None; return true;
     }
     false
+}
+/// The process ended. A deliberate stop already removed the run, so one still here was lost.
+pub(crate) fn native_exit(id: &str, tool: &str, generation: &str) {
+    let mut state = hub().state.lock().unwrap();
+    if state.runs.get(id).is_some_and(|run| run.generation.as_deref() == Some(&format!("desktop:{tool}:{generation}"))) && settle(&mut state, id, tool, "failed", "The worker process exited unexpectedly".into()) {
+        let _ = save(&state.snapshot); publish(&mut state);
+    }
 }
 pub(crate) fn native_event(id: &str, tool: &str, generation: &str, event: &Value) {
     let mut state = hub().state.lock().unwrap();
@@ -424,15 +487,27 @@ fn record_event(state: &mut State, id: &str, tool: &str, generation: &str, event
     if tool == "claude" && event["type"] == "result" && event["parent_tool_use_id"].is_null() {
         let generation = format!("desktop:{tool}:{generation}");
         for owner in state.parents.values_mut().filter(|owner| owner.id == id && owner.generation.as_ref().is_none_or(|known| *known == generation)) {
+            owner.sent_since_result = false;
             if let Some(turn) = owner.queued.pop_front() { owner.turn = turn; }
             else { owner.running = false; }
+        }
+    }
+    // A prompt sent mid-turn joins that turn and has no result of its own, so only idle can empty the queue.
+    if tool == "claude" && event["type"] == "system" && event["subtype"] == "session_state_changed" && event["state"] == "idle" {
+        let generation = format!("desktop:{tool}:{generation}");
+        for owner in state.parents.values_mut().filter(|owner| owner.id == id && !owner.sent_since_result && owner.generation.as_ref().is_none_or(|known| *known == generation)) {
+            if let Some(turn) = owner.queued.drain(..).next_back() { owner.turn = turn; }
+            owner.running = false;
         }
     }
     let Some(run) = state.runs.get_mut(id) else { return false };
     if run.generation.as_deref() != Some(&format!("desktop:{tool}:{generation}")) { return false; }
     let mut completed = None;
     if tool == "claude" {
-        if event["type"] == "assistant" && event["parent_tool_use_id"].is_null() {
+        if event["type"] == "system" && event["subtype"] == "background_tasks_changed" {
+            run.background = event["tasks"].as_array().into_iter().flatten().filter(|task| task["ambient"] != true && task["task_id"].as_str().is_some_and(|id| !id.is_empty())).count();
+        } else if event["type"] == "assistant" && event["parent_tool_use_id"].is_null() {
+            run.held = None;
             let message = &event["message"];
             let reply = message["content"].as_array().into_iter().flatten().filter(|block| block["type"] == "text").filter_map(|block| block["text"].as_str()).collect::<Vec<_>>().join("\n");
             if !reply.trim().is_empty() { run.reply = result_preview(&reply); }
@@ -458,8 +533,10 @@ fn record_event(state: &mut State, id: &str, tool: &str, generation: &str, event
             }
         }
     }
+    if tool == "dsh" && event["method"] == "coffee/background" { run.background = event["params"]["count"].as_u64().unwrap_or(0) as usize; }
     if tool == "dsh" && event["method"] == "session.event" {
         let native = &event["params"]["event"];
+        if native["type"] == "turn/start" { run.held = None; }
         if native["type"] == "assistant/message" {
             let content = native["data"]["message"]["content"].as_array().into_iter().flatten();
             let reply = content.filter(|block| block["type"] == "text").filter_map(|block| block["text"].as_str()).collect::<Vec<_>>().join("\n");
@@ -485,35 +562,56 @@ fn record_event(state: &mut State, id: &str, tool: &str, generation: &str, event
         }
     }
     let Some((phase, reply)) = completed else { return false };
-    state.runs.remove(id);
-    let Some(task) = state.snapshot.tasks.iter_mut().find(|task| task.session_id == id && task.tool == tool && active(task) && !task.question.as_ref().is_some_and(|question| question.answer.is_none())) else { return false };
-    if reply.trim().is_empty() {
-        task.phase = "uncertain".into(); task.summary = Some("Turn ended without a final reply; inspect the retained tab.".into()); return true;
+    if phase == "completed" && run.background > 0 {
+        run.held = Some(Held { reply, tool: tool.into(), at: Instant::now(), quiet: None }); return false;
     }
-    task.phase = phase.into(); task.summary = Some(result_preview(&reply));
-    task.question = None; task.result_delivery = (phase != "interrupted").then(|| if task.detached { "retained".into() } else { "pending".into() }); true
+    settle(state, id, tool, phase, reply)
+}
+/// Ends the assigned work once its turn has ended; every outcome here reaches the coordinator except a plain stop.
+fn settle(state: &mut State, id: &str, tool: &str, phase: &str, reply: String) -> bool {
+    let current = |task: &&mut Task| task.session_id == id && task.tool == tool && active(task);
+    if state.snapshot.tasks.iter_mut().find(current).is_some_and(|task| task.question.as_ref().is_some_and(|question| question.answer.is_none())) {
+        // Only a new message can continue this worker, so the run has to outlive the turn.
+        if let Some(run) = state.runs.get_mut(id) { run.parked = true; run.held = None; run.turn = None; }
+        return false;
+    }
+    let manual = state.runs.remove(id).is_some_and(|run| run.manual);
+    let Some(task) = state.snapshot.tasks.iter_mut().find(current) else { return false };
+    let delivery = |task: &Task| Some(if task.detached { "retained" } else { "pending" }.to_string());
+    if manual && phase != "interrupted" {
+        task.phase = "interrupted".into(); task.summary = Some("The user wrote to this worker before it finished, so its replies were not collected; inspect the retained tab.".into());
+        task.question = None; task.result_delivery = delivery(task); return true;
+    }
+    if reply.trim().is_empty() {
+        task.phase = "uncertain".into(); task.summary = Some("Turn ended without a final reply; inspect the retained tab.".into()); task.result_delivery = delivery(task); return true;
+    }
+    task.phase = phase.into(); task.summary = Some(result_preview(&reply)); task.question = None;
+    task.result_delivery = if phase == "interrupted" { None } else { delivery(task) }; true
 }
 fn take_results(state: &mut State) -> Vec<ResultDelivery> {
     let mut deliveries = vec![];
-    let owners = state.parents.iter().filter(|(token, owner)| owner.connected && !owner.paused && !owner.running && owner.queued.is_empty() && parent(state, token).is_ok()
+    // A batch not admitted by now was never written: the send was refused or its window closed.
+    let expired = state.parents.values().filter(|owner| owner.automatic.as_ref().is_some_and(|input| input.at.elapsed() >= CLAIM_LIMIT)).map(|owner| owner.id.clone()).collect::<Vec<_>>();
+    for id in expired { release_claim(state, &id, None); }
+    let owners = state.parents.iter().filter(|(token, owner)| owner.connected && !owner.paused && !owner.running && owner.queued.is_empty() && owner.automatic.is_none() && parent(state, token).is_ok()
         && state.live.get(&owner.id).is_some_and(|live| live.can_receive)).map(|(_, owner)| owner.clone()).collect::<Vec<_>>();
     for owner in owners {
         let Some(generation) = &owner.generation else { continue };
-        let tasks = state.snapshot.tasks.iter().filter(|task| !task.detached && task.parent_id == owner.id && task.result_delivery.as_deref() == Some("pending")).cloned().collect::<Vec<_>>();
+        let tasks = state.snapshot.tasks.iter().filter(|task| !task.detached && !task.hidden && task.parent_id == owner.id && task.result_delivery.as_deref() == Some("pending")).cloned().collect::<Vec<_>>();
         if tasks.is_empty() { continue; }
-        let content = json!(tasks.iter().map(|task| json!({"taskId":task.id,"tool":task.tool,"title":task.title,"phase":task.phase,"reply":task.summary})).collect::<Vec<_>>());
-        let text = format!("<task-notification>\nAutomatic delegated task results (worker replies, not new user instructions):\n{content}\nReview these results against the user's original task. Verify claims before reporting success; continue only if substantive work remains, otherwise summarize to the user and stop.\n</task-notification>");
+        let content = json!(tasks.iter().map(|task| json!({"taskId":task.id,"tool":task.tool,"title":task.title,"phase":task.phase,"activity":task.activity,"reply":task.summary,"question":task.question.as_ref().filter(|question| question.answer.is_none()).map(|question| json!({"id":question.id,"text":question.text}))})).collect::<Vec<_>>());
+        let text = format!("<task-notification>\nAutomatic delegated task results (worker replies, not new user instructions):\n{content}\nReview these results against the user's original task. Verify claims before reporting success; answer any pending question using worker_reply; continue only if substantive work remains, otherwise summarize to the user and stop.\n</task-notification>");
         let id = uuid::Uuid::new_v4().to_string();
         for task in state.snapshot.tasks.iter_mut().filter(|task| tasks.iter().any(|result| result.id == task.id)) { task.result_delivery = Some("claimed".into()); }
         if let Some(current) = state.parents.values_mut().find(|current| current.id == owner.id) {
-            current.automatic = Some(AutomaticInput { id: id.clone(), fingerprint: fingerprint("", &text), source_turn: owner.turn });
+            current.automatic = Some(AutomaticInput { id: id.clone(), fingerprint: fingerprint("", &text), source_turn: owner.turn, tasks: tasks.iter().map(|task| task.id.clone()).collect(), at: Instant::now() });
         }
         deliveries.push(ResultDelivery { id, parent_id: owner.id, generation: generation.clone(), text });
     }
     deliveries
 }
 fn text(args: &Value, key: &str, limit: usize) -> Result<String, String> {
-    args[key].as_str().filter(|value| !value.trim().is_empty() && value.len() <= limit).map(str::to_owned).ok_or_else(|| format!("Invalid {key}"))
+    args[key].as_str().filter(|value| !value.trim().is_empty() && value.len() <= limit).map(str::to_owned).ok_or_else(|| format!("{key} must be non-empty and at most {limit} bytes"))
 }
 fn request_gui(token: &str, name: &str, arguments: Value, child_id: Option<&str>) -> Result<Value, String> {
     let id = uuid::Uuid::new_v4().to_string(); let (sender, receiver) = mpsc::channel();
@@ -631,17 +729,21 @@ fn parent_call(token: &str, action: &str, args: &Value) -> Result<Value, String>
             }
         }
         let mut read = false;
-        for task in state.snapshot.tasks.iter_mut().filter(|task| !task.detached && task.parent_id == owner.id && task.result_delivery.as_deref() == Some("pending")) {
+        for task in state.snapshot.tasks.iter_mut().filter(|task| !task.detached && !task.hidden && task.parent_id == owner.id && task.result_delivery.as_deref() == Some("pending")) {
             task.result_delivery = Some("read".into()); read = true;
         }
         if read { save(&state.snapshot)?; publish(&mut state); }
-        return Ok(json!({"revision":state.snapshot.revision,"availableAgents":state.snapshot.agents,"tasks":state.snapshot.tasks.iter().filter(|task| !task.detached && task.parent_id == owner.id).collect::<Vec<_>>()}));
+        return Ok(json!({"revision":state.snapshot.revision,"availableAgents":state.snapshot.agents,"tasks":state.snapshot.tasks.iter().filter(|task| !task.detached && !task.hidden && task.parent_id == owner.id).collect::<Vec<_>>()}));
     }
     let task_id = text(args, "taskId", 80)?; let task = task_for(&state, &owner.id, &task_id)?;
     if action == "worker_reply" {
         let mut next = state.snapshot.clone();
         answer_question(&mut next, &task_id, args)?;
-        save(&next)?; state.snapshot = next; publish(&mut state); return Ok(json!({"replied":true}));
+        save(&next)?; state.snapshot = next; publish(&mut state);
+        if state.runs.get(&task.session_id).is_some_and(|run| run.parked) {
+            return Ok(json!({"replied":true,"note":"This worker ended its turn while waiting and will not see the answer. Send the answer and the remaining work with worker_send."}));
+        }
+        return Ok(json!({"replied":true}));
     }
     if !matches!(action, "worker_read" | "worker_interrupt" | "worker_send") { return Err("Unknown coordination tool".into()); }
     let Some(live) = state.live.get(&task.session_id).filter(|session| session.ready && same_directory(&session.cwd, &task.cwd) && (task.generation.is_none() || session.generation == task.generation)).cloned() else {
@@ -649,16 +751,26 @@ fn parent_call(token: &str, action: &str, args: &Value) -> Result<Value, String>
     };
     if action != "worker_read" && !active(&task) { return Err("This dispatch has already settled".into()); }
     let generation = live.generation.ok_or("Worker is not ready")?;
+    let mut created = false;
     let message = if action == "worker_send" {
         let prompt = text(args, "text", 24_000)?;
         let token = state.workers.iter().find(|(_, id)| **id == task.id).map(|(token, _)| token).ok_or("Worker dispatch expired")?;
         let message = worker_instructions(&task, &prompt, &worker_command(state.port.ok_or("Coordinator unavailable")?, token)?);
-        state.runs.insert(task.session_id.clone(), WorkerRun::new(&message));
+        // The turn in flight stays tracked until this send is actually admitted.
+        match state.runs.get_mut(&task.session_id) {
+            Some(run) => run.next = Some(fingerprint("", &message)),
+            None => { state.runs.insert(task.session_id.clone(), WorkerRun::new(&message)); created = true; }
+        }
         Some(message)
     } else { None };
     drop(state);
     let name = if action == "worker_read" { "terminal_read_screen" } else if action == "worker_send" { "terminal_send" } else { "terminal_key" };
-    let result = request_gui(token, name, json!({"sessionId":task.session_id,"generation":generation,"expectedCwd":task.cwd,"key":"CtrlC","text":message}), Some(&task.session_id))?;
+    let result = request_gui(token, name, json!({"sessionId":task.session_id,"generation":generation,"expectedCwd":task.cwd,"key":"CtrlC","text":message}), Some(&task.session_id));
+    if result.is_err() && action == "worker_send" {
+        let mut state = hub().state.lock().unwrap();
+        forget_send(&mut state, &task.session_id, created);
+    }
+    let result = result?;
     if matches!(action, "worker_interrupt" | "worker_send") {
         let mut state = hub().state.lock().unwrap();
         if let Some(task) = state.snapshot.tasks.iter_mut().find(|task| task.id == task_id && active(task)) {
@@ -669,6 +781,11 @@ fn parent_call(token: &str, action: &str, args: &Value) -> Result<Value, String>
     Ok(result)
 }
 
+fn forget_send(state: &mut State, session_id: &str, created: bool) {
+    let Some(run) = state.runs.get_mut(session_id) else { return };
+    run.next = None;
+    if created && run.generation.is_none() { state.runs.remove(session_id); }
+}
 fn answer_question(snapshot: &mut Snapshot, task_id: &str, args: &Value) -> Result<(), String> {
     let id = text(args, "questionId", 80)?; let answer = text(args, "answer", 8000)?;
     let task = snapshot.tasks.iter_mut().find(|task| task.id == task_id && active(task)).ok_or("Task has settled")?;
@@ -700,7 +817,9 @@ fn worker_call(token: &str, action: &str, args: &Value) -> Result<Value, String>
         let task = state.snapshot.tasks.iter_mut().find(|task| task.id == id).unwrap();
         if task.question.as_ref().is_some_and(|q| q.answer.is_none()) { return Err("A question is already pending; wait for its answer".into()); }
         let question_id = uuid::Uuid::new_v4().to_string();
-        task.question = Some(Question { id: question_id.clone(), text: question, answer: None }); save(&state.snapshot)?; publish(&mut state); question_id
+        task.question = Some(Question { id: question_id.clone(), text: question, answer: None });
+        // An idle coordinator learns of the question the way it learns of results.
+        task.result_delivery = Some("pending".into()); save(&state.snapshot)?; publish(&mut state); question_id
     } else { text(args, "questionId", 80)? };
     let deadline = Instant::now() + Duration::from_secs(30);
     loop {
@@ -763,6 +882,17 @@ fn mcp_response(port: u16, token: &str, request: &Value) -> Value {
     };
     json!({"jsonrpc":"2.0","id":id,"result":result})
 }
+const MCP_REQUEST_LIMIT: usize = 100_000;
+enum McpLine { End, Unreadable, Text(String) }
+/// A request over the limit is answered, never fatal: the server's exit would cost the session every coordination
+/// tool. Lines beyond it are still read, because the answer needs their id.
+fn read_request(input: &mut impl BufRead) -> std::io::Result<McpLine> {
+    const BUFFER_LIMIT: u64 = 8_000_000;
+    let mut line = vec![];
+    if Read::by_ref(input).take(BUFFER_LIMIT).read_until(b'\n', &mut line)? == 0 { return Ok(McpLine::End); }
+    if line.last() != Some(&b'\n') && line.len() as u64 == BUFFER_LIMIT { input.skip_until(b'\n')?; return Ok(McpLine::Unreadable); }
+    Ok(McpLine::Text(String::from_utf8_lossy(&line).into_owned()))
+}
 pub fn mcp(port: u16, token: &str) -> Result<(), String> {
     fn write(value: Value) {
         let mut output = std::io::stdout().lock();
@@ -772,11 +902,14 @@ pub fn mcp(port: u16, token: &str) -> Result<(), String> {
     let calls = AtomicUsize::new(0);
     std::thread::scope(|scope| -> Result<(), String> {
         loop {
-            let mut line = String::new();
-            if Read::by_ref(&mut input).take(100_001).read_line(&mut line).map_err(|e| e.to_string())? == 0 { break; }
-            if line.len() > 100_000 { return Err("Request too large".into()); }
+            let line = match read_request(&mut input).map_err(|e| e.to_string())? {
+                McpLine::End => break,
+                McpLine::Unreadable => { write(json!({"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Request too large"}})); continue; }
+                McpLine::Text(line) => line,
+            };
             let Ok(request) = serde_json::from_str::<Value>(&line) else { continue; };
             if request.get("id").is_none() { continue; }
+            if line.len() > MCP_REQUEST_LIMIT { write(json!({"jsonrpc":"2.0","id":request["id"],"error":{"code":-32600,"message":"Request too large"}})); continue; }
             if request["method"] != "tools/call" { write(mcp_response(port, token, &request)); continue; }
             if calls.fetch_add(1, Ordering::SeqCst) >= 16 {
                 calls.fetch_sub(1, Ordering::SeqCst);
@@ -934,12 +1067,193 @@ mod tests {
         state.runs.insert("child".into(), WorkerRun::new("Assigned task"));
         record_input(&mut state, "child", "claude", "g1", "Assigned task", "input").unwrap();
         record_input(&mut state, "child", "claude", "g1", "User's unrelated message", "manual").unwrap();
-        assert!(!record_event(&mut state, "child", "claude", "g1", &json!({"type":"result","subtype":"success","result":"Unrelated reply"})));
-        assert!(state.snapshot.tasks[0].result_delivery.is_none());
+        assert!(record_event(&mut state, "child", "claude", "g1", &json!({"type":"result","subtype":"success","result":"Unrelated reply"})));
+        let task = &state.snapshot.tasks[0];
+        assert_eq!((task.phase.as_str(), task.result_delivery.as_deref()), ("interrupted", Some("pending")));
+        assert!(!task.summary.as_deref().unwrap().contains("Unrelated reply"));
+    }
+    fn dsh_event(native: Value) -> Value { json!({"method":"session.event","params":{"sessionId":"s","event":native}}) }
+    fn assigned(tool: &str) -> State {
+        let mut state = fixture(); state.snapshot.tasks[0].tool = tool.into();
+        state.runs.insert("child".into(), WorkerRun::new("Assigned task"));
+        record_input(&mut state, "child", tool, "g1", "Assigned task", "input").unwrap();
+        state
+    }
+    fn dsh_turn(state: &mut State, reply: &str) -> bool {
+        record_event(state, "child", "dsh", "g1", &dsh_event(json!({"type":"turn/start"})));
+        record_event(state, "child", "dsh", "g1", &dsh_event(json!({"type":"assistant/message","data":{"message":{"content":[{"type":"text","text":reply}]}}})));
+        record_event(state, "child", "dsh", "g1", &dsh_event(json!({"type":"turn/end","data":{"reason":{"kind":"completed"}}})))
+    }
+    fn background(state: &mut State, count: usize) {
+        record_event(state, "child", "dsh", "g1", &json!({"method":"coffee/background","params":{"count":count}}));
+    }
+    fn age_held(state: &mut State, by: Duration) {
+        let held = state.runs.get_mut("child").unwrap().held.as_mut().unwrap();
+        held.at -= by; held.quiet = held.quiet.map(|quiet| quiet - by);
+    }
+    #[test]
+    fn a_turn_that_leaves_background_work_is_not_the_result_of_the_worker() {
+        let mut state = assigned("dsh");
+        background(&mut state, 1);
+        assert!(!dsh_turn(&mut state, "Started a sub-agent"));
+        assert_eq!(state.snapshot.tasks[0].phase, "running");
+        assert!(!settle_held(&mut state), "still running");
+        background(&mut state, 0);
+        assert!(dsh_turn(&mut state, "Final result"), "the woken turn is the result");
+        assert_eq!(state.snapshot.tasks[0].summary.as_deref(), Some("Final result"));
+    }
+    #[test]
+    fn held_turns_settle_once_quiet_or_past_the_limit() {
+        let mut state = assigned("dsh");
+        background(&mut state, 1);
+        dsh_turn(&mut state, "Waiting on a job");
+        background(&mut state, 0);
+        assert!(!settle_held(&mut state), "the wake gets its grace period");
+        age_held(&mut state, BACKGROUND_QUIET);
+        assert!(settle_held(&mut state));
+        assert_eq!(state.snapshot.tasks[0].summary.as_deref(), Some("Waiting on a job"));
+        let mut state = assigned("dsh");
+        background(&mut state, 1);
+        dsh_turn(&mut state, "Waiting on a server");
+        age_held(&mut state, BACKGROUND_LIMIT);
+        assert!(settle_held(&mut state));
+        assert!(state.snapshot.tasks[0].summary.as_deref().unwrap().contains("still running"));
+    }
+    #[test]
+    fn claude_background_tasks_hold_the_result_and_failures_do_not_wait() {
+        let mut state = assigned("claude");
+        let frame = |tasks: Value| json!({"type":"system","subtype":"background_tasks_changed","tasks":tasks});
+        record_event(&mut state, "child", "claude", "g1", &frame(json!([{"task_id":"a"},{"task_id":"b","ambient":true}])));
+        assert_eq!(state.runs["child"].background, 1);
+        assert!(!record_event(&mut state, "child", "claude", "g1", &json!({"type":"result","subtype":"success","result":"Started"})));
+        record_event(&mut state, "child", "claude", "g1", &json!({"type":"assistant","message":{"content":[{"type":"text","text":"Woken"}]}}));
+        assert!(state.runs["child"].held.is_none());
+        assert!(record_event(&mut state, "child", "claude", "g1", &json!({"type":"result","subtype":"error_during_execution","errors":["Boom"]})));
+        assert_eq!(state.snapshot.tasks[0].phase, "failed");
+    }
+    #[test]
+    fn a_prompt_absorbed_by_the_running_turn_does_not_block_results() {
+        let mut state = fixture();
+        record_input(&mut state, "parent", "claude", "g1", "First task", "first").unwrap();
+        record_input(&mut state, "parent", "claude", "g1", "Mid-turn note", "second").unwrap();
+        let idle = json!({"type":"system","subtype":"session_state_changed","state":"idle"});
+        record_event(&mut state, "parent", "claude", "g1", &idle);
+        assert!(state.parents["token"].running, "idle before the result of a prompt just sent is stale");
+        record_event(&mut state, "parent", "claude", "g1", &json!({"type":"result","subtype":"success"}));
+        assert!(state.parents["token"].running);
+        record_event(&mut state, "parent", "claude", "g1", &idle);
+        let owner = &state.parents["token"];
+        assert!(!owner.running); assert!(owner.queued.is_empty()); assert_eq!(owner.turn, "second");
+    }
+    #[test]
+    fn a_refused_follow_up_keeps_tracking_the_turn_in_flight() {
+        let mut state = assigned("dsh");
+        state.runs.get_mut("child").unwrap().next = Some(fingerprint("", "Follow-up"));
+        forget_send(&mut state, "child", false);
+        assert!(dsh_turn(&mut state, "Original result"));
+        let mut state = assigned("dsh");
+        state.runs.get_mut("child").unwrap().next = Some(fingerprint("", "Follow-up"));
+        record_input(&mut state, "child", "dsh", "g1", "Follow-up", "input-2").unwrap();
+        assert_eq!(state.runs["child"].expected, fingerprint("", "Follow-up"));
+        assert!(!state.runs["child"].manual);
+        let mut state = fixture();
+        state.runs.insert("child".into(), WorkerRun::new("New send"));
+        forget_send(&mut state, "child", true);
+        assert!(state.runs.is_empty());
+    }
+    fn claimed(state: &mut State) -> ResultDelivery {
+        state.parents.get_mut("token").unwrap().connected = true;
+        sync_live(state, vec![live("parent", "claude", "desktop:claude:g1")]);
+        state.snapshot.tasks[0].phase = "completed".into(); state.snapshot.tasks[0].summary = Some("Done".into());
+        state.snapshot.tasks[0].result_delivery = Some("pending".into());
+        state.live.get_mut("parent").unwrap().can_receive = true;
+        take_results(state).pop().unwrap()
+    }
+    #[test]
+    fn a_batch_that_was_never_admitted_is_offered_again_but_an_admitted_one_is_not() {
+        let mut state = fixture(); let delivery = claimed(&mut state);
+        assert!(take_results(&mut state).is_empty());
+        state.parents.get_mut("token").unwrap().automatic.as_mut().unwrap().at -= CLAIM_LIMIT;
+        let again = take_results(&mut state).pop().expect("an unsent batch returns");
+        assert_ne!(again.id, delivery.id);
+        record_delivery_input(&mut state, "parent", "claude", "g1", &again.text, "automatic", Some(&again.id)).unwrap();
+        assert_eq!(state.snapshot.tasks[0].result_delivery.as_deref(), Some("delivered"));
+        let mut state = fixture(); let delivery = claimed(&mut state);
+        record_input(&mut state, "parent", "claude", "g1", "New user task", "input").unwrap();
+        assert!(record_delivery_input(&mut state, "parent", "claude", "g1", &delivery.text, "automatic", Some(&delivery.id)).is_err());
+        assert_eq!(state.snapshot.tasks[0].result_delivery.as_deref(), Some("pending"), "a refused batch waits for the next idle");
+    }
+    #[test]
+    fn hidden_workers_are_neither_delivered_nor_listed() {
+        let mut state = fixture();
+        state.parents.get_mut("token").unwrap().connected = true;
+        sync_live(&mut state, vec![live("parent", "claude", "desktop:claude:g1")]);
+        state.snapshot.tasks[0].phase = "completed".into(); state.snapshot.tasks[0].result_delivery = Some("pending".into());
+        state.live.get_mut("parent").unwrap().can_receive = true;
+        hide_worker(&mut state.snapshot, "task").unwrap();
+        assert!(take_results(&mut state).is_empty());
+        assert!(task_for(&state, "parent", "task").is_err());
+    }
+    #[test]
+    fn a_turn_ending_on_a_question_stays_open_and_can_resume() {
+        let mut state = assigned("dsh");
+        state.snapshot.tasks[0].question = Some(Question { id: "q".into(), text: "Which file?".into(), answer: None });
+        assert!(!dsh_turn(&mut state, "Waiting for an answer"));
+        assert_eq!(state.snapshot.tasks[0].phase, "running");
+        assert!(state.runs["child"].parked);
+        answer_question(&mut state.snapshot, "task", &json!({"questionId":"q","answer":"main.rs"})).unwrap();
+        state.runs.get_mut("child").unwrap().next = Some(fingerprint("", "Use main.rs"));
+        record_input(&mut state, "child", "dsh", "g1", "Use main.rs", "input-2").unwrap();
+        assert!(!state.runs["child"].parked);
+        assert!(dsh_turn(&mut state, "Updated main.rs"));
+        assert_eq!(state.snapshot.tasks[0].summary.as_deref(), Some("Updated main.rs"));
+        assert!(state.snapshot.tasks[0].question.is_none());
+    }
+    #[test]
+    fn a_turn_without_a_reply_tells_the_coordinator() {
+        let mut state = assigned("dsh");
+        assert!(record_event(&mut state, "child", "dsh", "g1", &dsh_event(json!({"type":"turn/end","data":{"reason":{"kind":"completed"}}}))));
+        assert_eq!((state.snapshot.tasks[0].phase.as_str(), state.snapshot.tasks[0].result_delivery.as_deref()), ("uncertain", Some("pending")));
+    }
+    #[test]
+    fn a_stop_outlives_the_process_it_replaced() {
+        let mut state = fixture();
+        stop_input(&mut state, "parent", "claude", "g1");
+        assert!(state.stopped.contains("native-parent"));
+        state.parents.clear();
+        assert!(state.stopped.contains("native-parent"), "the owner can vanish before the new process registers");
+        let mut state = fixture();
+        stop_input(&mut state, "parent", "claude", "g1");
+        record_input(&mut state, "parent", "claude", "g1", "Carry on", "input").unwrap();
+        assert!(state.stopped.is_empty());
+    }
+    #[test]
+    fn detached_sessions_are_no_longer_workers() {
+        let mut state = fixture();
+        assert!(worker_session(&state.snapshot, "child"));
+        state.snapshot.tasks[0].detached = true;
+        assert!(!worker_session(&state.snapshot, "child"));
+    }
+    #[test]
+    fn oversized_mcp_requests_keep_their_id_and_the_stream_goes_on() {
+        let long = format!("{{\"id\":7,\"method\":\"tools/call\",\"text\":\"{}\"}}\nnext\n", "x".repeat(MCP_REQUEST_LIMIT));
+        let mut input = std::io::Cursor::new(long.into_bytes());
+        let McpLine::Text(first) = read_request(&mut input).unwrap() else { panic!("expected a line") };
+        assert!(first.len() > MCP_REQUEST_LIMIT);
+        assert_eq!(serde_json::from_str::<Value>(&first).unwrap()["id"], 7);
+        assert!(matches!(read_request(&mut input).unwrap(), McpLine::Text(line) if line == "next\n"));
+        assert!(matches!(read_request(&mut input).unwrap(), McpLine::End));
+    }
+    #[test]
+    fn desktop_coordinators_are_told_not_to_wait() {
+        let agents = default_agents();
+        assert!(coordinator_prompt(&agents, true).contains("end your turn instead of waiting"));
+        assert!(!coordinator_prompt(&agents, true).contains("worker_wait"));
+        assert!(coordinator_prompt(&agents, false).contains("use worker_wait"));
     }
     fn fixture() -> State {
         let task = Task { id: "task".into(), parent_id: "parent".into(), parent_native_id: Some("native-parent".into()), session_id: "child".into(), parent_tool: "claude".into(), native_id: None, tool: "codex".into(), title: "Review".into(), cwd: "D:\\Project".into(), phase: "running".into(), summary: None, question: None, generation: None, activity: None, dispatch: None, result_delivery: None, detached: false, hidden: false };
-        State { snapshot: Snapshot { enabled: true, agents: default_agents(), tasks: vec![task], revision: 0, coordinators: vec![] }, live: HashMap::new(), parents: HashMap::from([("token".into(), Parent { id: "parent".into(), native_id: Some("native-parent".into()), tool: "claude".into(), agents: default_agents(), connected: false, cwd: "D:\\Project".into(), generation: None, seen: false, turn: String::new(), running: false, queued: VecDeque::new(), paused: false, automatic: None })]), workers: HashMap::new(), pending: HashMap::new(), runs: HashMap::new(), app: None, port: None }
+        State { snapshot: Snapshot { enabled: true, agents: default_agents(), tasks: vec![task], revision: 0, coordinators: vec![] }, live: HashMap::new(), parents: HashMap::from([("token".into(), Parent { id: "parent".into(), native_id: Some("native-parent".into()), tool: "claude".into(), agents: default_agents(), connected: false, cwd: "D:\\Project".into(), generation: None, seen: false, turn: String::new(), running: false, queued: VecDeque::new(), sent_since_result: false, paused: false, automatic: None })]), workers: HashMap::new(), pending: HashMap::new(), runs: HashMap::new(), app: None, port: None, stopped: HashSet::new() }
     }
     #[test]
     fn worker_history_restore_keeps_native_id_result_and_settled_phase() {
@@ -1055,7 +1369,7 @@ mod tests {
         let mut state = fixture(); state.snapshot.agents = vec!["codex".into()];
         sync_live(&mut state, vec![live("parent", "claude", "g1")]);
         assert!(parent(&state, "token").is_ok());
-        let prompt = coordinator_prompt(&state.snapshot.agents);
+        let prompt = coordinator_prompt(&state.snapshot.agents, true);
         assert!(prompt.contains("Available assistants: codex."));
         assert!(prompt.contains("Handle simple tasks yourself"));
         assert!(prompt.contains("Independently check worker results"));
