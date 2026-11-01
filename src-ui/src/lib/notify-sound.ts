@@ -21,6 +21,8 @@
 // User controls (Settings ▸ Sound, localStorage `cc-*` keys, both default ON):
 //   cc-sound-done  — chime when a turn completes
 //   cc-sound-wait  — chime on permission / input prompts
+// A file chosen there replaces a kind's chime. Windows plays it natively too;
+// elsewhere it is decoded here. Whatever cannot play falls back to the chime.
 // (A "only when window unfocused" toggle was removed — it silently muted all
 // chimes for single-window users, who are always focused on their one tab.)
 
@@ -124,7 +126,27 @@ export function playNotifySound(kind: NotifyKind) {
     });
     return;
   }
+  if (isTauri) {
+    void playChosenSound(kind).then(played => { if (!played) playWebAudioSound(kind); }, () => playWebAudioSound(kind));
+    return;
+  }
   playWebAudioSound(kind);
+}
+
+const LONGEST_SOUND_SECONDS = 10;
+let chosenSound: AudioBufferSourceNode | null = null;
+
+async function playChosenSound(kind: NotifyKind): Promise<boolean> {
+  const bytes = await commands.notifySoundRead(kind), ac = audioCtx();
+  if (!ac || !bytes.byteLength) return false;
+  const source = ac.createBufferSource();
+  source.buffer = await ac.decodeAudioData(bytes);
+  source.connect(ac.destination);
+  chosenSound?.stop();
+  chosenSound = source;
+  source.start();
+  source.stop(ac.currentTime + LONGEST_SOUND_SECONDS);
+  return true;
 }
 
 function playWebAudioSound(kind: NotifyKind) {

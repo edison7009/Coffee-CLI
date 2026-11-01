@@ -213,6 +213,10 @@ export const commands = {
     invoke<ToolMemoryDocument>('save_tool_memory', { tool, path, original, content }),
   pickFolder: () => invoke<string>('pick_folder'),
   playNotifySound: (kind: 'done' | 'wait') => invoke<void>('play_notify_sound', { kind }),
+  notifySoundFiles: () => invoke<{ done: string | null; wait: string | null }>('notify_sound_files'),
+  notifySoundChoose: (kind: 'done' | 'wait', path: string) => invoke<string>('notify_sound_choose', { kind, path }),
+  notifySoundClear: (kind: 'done' | 'wait') => invoke<void>('notify_sound_clear', { kind }),
+  notifySoundRead: (kind: 'done' | 'wait') => invoke<ArrayBuffer>('notify_sound_read', { kind }),
 
   // Window decorators
   windowMinimize: () => invoke<void>('window_minimize'),

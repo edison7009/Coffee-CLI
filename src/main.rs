@@ -34,6 +34,7 @@ mod tool_control;
 mod computer_control;
 mod orchestration;
 mod worker_worktree;
+mod notify_sound;
 mod tools;
 mod usage_stats;
 mod usage_quota;

@@ -32,33 +32,6 @@ fn window_minimize(window: tauri::Window) {
 }
 
 #[tauri::command]
-fn play_notify_sound(kind: &str) -> Result<(), String> {
-    #[cfg(windows)]
-    {
-        use windows::core::PCWSTR;
-        use windows::Win32::Media::Audio::{PlaySoundW, SND_ASYNC, SND_MEMORY, SND_NODEFAULT};
-
-        let wav: &'static [u8] = match kind {
-            "done" => include_bytes!("assets/notify-done.wav"),
-            "wait" => include_bytes!("assets/notify-wait.wav"),
-            _ => return Err("Unknown notification sound".into()),
-        };
-        // SND_MEMORY interprets the pointer as WAV bytes. Static storage must
-        // outlive this asynchronous call; no WebView audio renderer is involved.
-        unsafe {
-            PlaySoundW(PCWSTR(wav.as_ptr().cast()), None, SND_ASYNC | SND_MEMORY | SND_NODEFAULT)
-                .ok()
-                .map_err(|error| error.to_string())
-        }
-    }
-    #[cfg(not(windows))]
-    {
-        let _ = kind;
-        Err("Native notification sounds are Windows-only".into())
-    }
-}
-
-#[tauri::command]
 fn window_maximize(window: tauri::Window) {
     let is_max = window.is_maximized().unwrap_or(false);
     if is_max { let _ = window.unmaximize(); } else { let _ = window.maximize(); }
@@ -5331,7 +5304,11 @@ pub fn start_ui(pending_launch: Option<crate::launch::LaunchRequest>) -> anyhow:
             crate::channels::channel_weixin_poll,
             pick_folder,
             window_minimize,
-            play_notify_sound,
+            crate::notify_sound::play_notify_sound,
+            crate::notify_sound::notify_sound_files,
+            crate::notify_sound::notify_sound_choose,
+            crate::notify_sound::notify_sound_clear,
+            crate::notify_sound::notify_sound_read,
             window_maximize,
             window_close,
             show_main_window,

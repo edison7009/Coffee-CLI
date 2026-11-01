@@ -18,7 +18,7 @@ import { playNotifySound } from '../../lib/notify-sound';
 import { useT } from '../../i18n/useT';
 import { IS_MACOS, IS_WINDOWS } from '../../lib/platform';
 import { TERM_COLOR_SCHEMES } from '../center/TierTerminal';
-import { commands, type FontInfo } from '../../tauri';
+import { commands, isTauri, type FontInfo } from '../../tauri';
 import { FontPicker } from './FontPicker';
 import { SettingsSlider } from './SettingsSlider';
 import { setUiScale, useUiScale } from '../../lib/ui-scale';
@@ -37,6 +37,11 @@ const ExternalLinkArrow = () => (
 // Read a `cc-*` boolean localStorage preference. Module-level
 // so the SettingsModal sound toggles can seed their useState initializers.
 // Both sound prefs default to ON (absent = true).
+/** A long sound file name, cut in the middle so its ending stays readable. */
+function shortFileName(name: string): string {
+  return name.length > 28 ? `${name.slice(0, 16)}…${name.slice(-10)}` : name;
+}
+
 function readSoundPref(key: string): boolean {
   try {
     return localStorage.getItem(key) !== 'false';
@@ -146,6 +151,12 @@ export function SettingsModal() {
   // `if (!open) return null` early-return — hooks can't run conditionally.
   const [soundDone, setSoundDone] = useState(() => readSoundPref('cc-sound-done'));
   const [soundWait, setSoundWait] = useState(() => readSoundPref('cc-sound-wait'));
+  const [soundFiles, setSoundFiles] = useState<{ done: string | null; wait: string | null }>({ done: null, wait: null });
+  const [soundFailed, setSoundFailed] = useState<'done' | 'wait' | null>(null);
+  useEffect(() => {
+    if (section !== 'sound' || !isTauri) return;
+    commands.notifySoundFiles().then(setSoundFiles, err => console.warn('[Settings] sound files unavailable:', err));
+  }, [section]);
 
   const open = state.settingsOpen;
   const close = () => { finishScaleDrag(); dispatch({ type: 'SET_SETTINGS_OPEN', open: false }); };
@@ -258,6 +269,21 @@ export function SettingsModal() {
   const writeSoundPref = (key: string, setter: (v: boolean) => void) => (v: boolean) => {
     setter(v);
     try { localStorage.setItem(key, String(v)); } catch { /* Best-effort operation; failure is non-fatal. */ }
+  };
+  const pickSound = async (kind: 'done' | 'wait') => {
+    setSoundFailed(null);
+    try {
+      const { open: openDialog } = await import('@tauri-apps/plugin-dialog');
+      const selected = await openDialog({ filters: [{ name: 'Audio', extensions: ['mp3', 'wav'] }] });
+      if (selected && typeof selected === 'string') {
+        const name = await commands.notifySoundChoose(kind, selected);
+        setSoundFiles(files => ({ ...files, [kind]: name }));
+      }
+    } catch (err) { console.warn('[Settings] sound picker failed:', err); setSoundFailed(kind); }
+  };
+  const clearSound = (kind: 'done' | 'wait') => {
+    setSoundFailed(null);
+    commands.notifySoundClear(kind).then(() => setSoundFiles(files => ({ ...files, [kind]: null })), err => console.warn('[Settings] sound removal failed:', err));
   };
   const setSoundDonePref = writeSoundPref('cc-sound-done', setSoundDone);
   const setSoundWaitPref = writeSoundPref('cc-sound-wait', setSoundWait);
@@ -632,16 +658,29 @@ export function SettingsModal() {
 
             {section === 'sound' && (
               <>
-                {/* Each row: setting label + On/Off cards (same settings-key-card
-                    idiom as the other toggles). The two sound kinds get a
-                    preview button that plays the chime immediately. */}
+                {/* Each row: label with what can be done to the sound, then On/Off
+                    cards (same settings-key-card idiom as the other toggles). Preview
+                    stays out of the cards, where it would read as a third setting. */}
                 {([
                   { labelKey: 'settings.sound.done', value: soundDone, set: setSoundDonePref, preview: 'done' as const },
                   { labelKey: 'settings.sound.wait', value: soundWait, set: setSoundWaitPref, preview: 'wait' as const },
                 ] as const).map(row => (
                   <div key={row.labelKey} style={{ marginBottom: 18 }}>
-                    <div className="settings-section-label">{t(row.labelKey)}</div>
-                    <div className="settings-key-row">
+                    <div className="settings-section-head">
+                      <div className="settings-section-label">{t(row.labelKey)}</div>
+                      <div className="settings-sound-actions">
+                        {soundFiles[row.preview]
+                          ? <span className="settings-sound-file">
+                              <span className="settings-sound-name">{shortFileName(soundFiles[row.preview]!)}</span>
+                              <button className="settings-sound-remove close-button" aria-label={t('settings.sound.remove')} onClick={() => clearSound(row.preview)}>
+                                <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true"><path d="m3 3 6 6m0-6-6 6" /></svg>
+                              </button>
+                            </span>
+                          : <button className="settings-btn" onClick={() => { void pickSound(row.preview); }}>{t('settings.sound.custom')}</button>}
+                        <button className="settings-btn" onClick={() => playNotifySound(row.preview)}>{t('settings.sound.preview')}</button>
+                      </div>
+                    </div>
+                    <div className="settings-key-row settings-sound-switch">
                       <button
                         className={`settings-key-card${row.value ? ' active' : ''}`}
                         onClick={() => row.set(true)}
@@ -656,15 +695,8 @@ export function SettingsModal() {
                       >
                         <span className="settings-key-combo">{t('settings.sound.off')}</span>
                       </button>
-                      {row.preview && (
-                        <button
-                          className="settings-key-card"
-                          onClick={() => playNotifySound(row.preview!)}
-                        >
-                          <span className="settings-key-combo">{t('settings.sound.preview')}</span>
-                        </button>
-                      )}
                     </div>
+                    {soundFailed === row.preview && <div className="settings-sound-failed" role="alert">{t('settings.sound.failed')}</div>}
                   </div>
                 ))}
               </>

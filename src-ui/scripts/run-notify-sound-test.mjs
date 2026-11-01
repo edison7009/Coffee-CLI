@@ -9,15 +9,17 @@ const compiled = await build({
   define: { 'process.env.NODE_ENV': '"production"' },
 });
 
-function fixture({ platform = 'Win32', native = true, failNative = false, disabled = [] } = {}) {
+function fixture({ platform = 'Win32', native = true, failNative = false, disabled = [], chosen = '' } = {}) {
   const calls = [], timers = new Map();
-  let nextTimer = 0, contexts = 0, notes = 0;
+  let nextTimer = 0, contexts = 0, notes = 0, chosenPlays = 0;
   class AudioContext {
     state = 'running'; currentTime = 0; destination = {};
     constructor() { contexts++; }
     createOscillator() {
       return { frequency: {}, connect() { return this; }, start() { notes++; }, stop() {} };
     }
+    async decodeAudioData() { if (chosen === 'broken') throw new Error('Undecodable'); return {}; }
+    createBufferSource() { return { connect() { return this; }, start() { chosenPlays++; }, stop() {} }; }
     createGain() {
       return { gain: { setValueAtTime() {}, linearRampToValueAtTime() {}, exponentialRampToValueAtTime() {} }, connect() { return this; } };
     }
@@ -31,13 +33,14 @@ function fixture({ platform = 'Win32', native = true, failNative = false, disabl
       ...(native ? { __TAURI_INTERNALS__: { async invoke(command, args) {
         calls.push({ command, kind: args.kind });
         if (failNative) throw new Error('Native playback unavailable');
+        if (command === 'notify_sound_read') return new ArrayBuffer(chosen ? 8 : 0);
       } } } : {}),
       setTimeout(callback) { timers.set(++nextTimer, callback); return nextTimer; },
       clearTimeout(id) { timers.delete(id); },
     },
   });
   return {
-    api: module.exports, calls, contexts: () => contexts, notes: () => notes,
+    api: module.exports, calls, contexts: () => contexts, notes: () => notes, chosenPlays: () => chosenPlays,
     status(tool, agentStatus) { module.exports.initNotifySound([{ id: 'session', tool, agentStatus }]); },
     settle() { const pending = [...timers.values()]; timers.clear(); pending.forEach(callback => callback()); },
   };
@@ -133,8 +136,19 @@ assert.deepEqual(disconnected.calls.map(call => call.kind), ['done'], 'a fresh c
 for (const options of [{ platform: 'MacIntel' }, { platform: 'Linux x86_64' }, { native: false }]) {
   const f = fixture(options);
   f.api.playNotifySound('done'); f.api.playNotifySound('wait');
-  assert.equal(f.calls.length, 0);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(f.calls.filter(call => call.command === 'play_notify_sound').length, 0);
   assert.equal(f.notes(), 10, 'other platforms and browser previews retain both synthesized chimes');
+}
+{
+  const f = fixture({ platform: 'MacIntel', chosen: 'sound' });
+  f.api.playNotifySound('done');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual([f.chosenPlays(), f.notes()], [1, 0], 'a chosen file replaces the chime');
+  const broken = fixture({ platform: 'MacIntel', chosen: 'broken' });
+  broken.api.playNotifySound('done');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual([broken.chosenPlays(), broken.notes()], [0, 6], 'a file that cannot play falls back to the chime');
 }
 
 const fallback = fixture({ failNative: true });
