@@ -1,6 +1,7 @@
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
+import { patchXtermWebglAtlas } from './xterm-webgl-atlas-patch';
 
 // xterm.js's WebGL addon (RectangleRenderer.updateBackgrounds) decides
 // "draw a bg rect for this cell?" by `cell.bg !== 0`. But cell.bg is a
@@ -44,9 +45,20 @@ function patchXtermWebglBgFlags(): Plugin {
   };
 }
 
+function patchXtermWebglAtlasPlugin(): Plugin {
+  return {
+    name: 'coffee-cli:patch-xterm-webgl-atlas',
+    enforce: 'pre',
+    transform(code, id) {
+      if (!id.includes('@xterm/addon-webgl')) return null;
+      return { code: patchXtermWebglAtlas(code), map: null };
+    },
+  };
+}
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), patchXtermWebglBgFlags()],
+  plugins: [react(), patchXtermWebglBgFlags(), patchXtermWebglAtlasPlugin()],
   // The patch plugin above runs as a Vite transform — but Vite's dev
   // server pre-bundles node_modules with esbuild *before* plugin
   // transforms run, so the addon would ship un-patched in `tauri dev`.
