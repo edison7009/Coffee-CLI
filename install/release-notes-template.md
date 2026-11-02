@@ -1,7 +1,7 @@
 <details open>
 <summary><b>🇨🇳 简体中文</b></summary>
 
-### Coffee CLI v3.8.5 · 长对话回得更快
+### Coffee CLI v3.8.6 · 长对话回得更快
 
 - **长对话回得更快：** 打开很长的 Claude Code 历史对话时，最近的消息会先显示出来，不用等整段历史加载完。
 - **回到对话有提示：** 恢复 Claude Code、Codex、OpenCode 和 DeepSeek Harness 的历史对话时，会显示各自的思考动画和「正在回到对话中」，不再停在首页像是卡住了。
@@ -12,7 +12,7 @@
 <details>
 <summary><b>🇬🇧 English</b></summary>
 
-### Coffee CLI v3.8.5 · Faster Return to Long Conversations
+### Coffee CLI v3.8.6 · Faster Return to Long Conversations
 
 - **Faster return to long conversations:** When you open a long Claude Code conversation from history, the latest messages show up first instead of waiting for the whole history to load.
 - **A sign that you're on your way back:** Resuming a Claude Code, Codex, OpenCode or DeepSeek Harness conversation now shows that tool's own working animation with "Returning to the conversation", instead of a welcome screen that looks stuck.
@@ -23,7 +23,7 @@
 <details>
 <summary><b>🇹🇼 繁體中文</b></summary>
 
-### Coffee CLI v3.8.5 · 長對話回得更快
+### Coffee CLI v3.8.6 · 長對話回得更快
 
 - **長對話回得更快：** 開啟很長的 Claude Code 歷史對話時，最近的訊息會先顯示出來，不用等整段歷史載入完。
 - **回到對話有提示：** 恢復 Claude Code、Codex、OpenCode 和 DeepSeek Harness 的歷史對話時，會顯示各自的思考動畫和「正在回到對話中」，不再停在首頁像是卡住了。
@@ -34,7 +34,7 @@
 <details>
 <summary><b>🇯🇵 日本語</b></summary>
 
-### Coffee CLI v3.8.5 · 長い会話へすばやく戻る
+### Coffee CLI v3.8.6 · 長い会話へすばやく戻る
 
 - **長い会話へすばやく戻る：** 長い Claude Code の会話を履歴から開くと、履歴全体の読み込みを待たずに最新のメッセージから表示されます。
 - **会話に戻る途中を表示：** Claude Code、Codex、OpenCode、DeepSeek Harness の会話を再開するとき、各ツールの作業中アニメーションと「会話に戻っています」を表示します。止まったように見えるウェルカム画面のままにはなりません。
@@ -45,7 +45,7 @@
 <details>
 <summary><b>🇰🇷 한국어</b></summary>
 
-### Coffee CLI v3.8.5 · 긴 대화로 더 빠르게 복귀
+### Coffee CLI v3.8.6 · 긴 대화로 더 빠르게 복귀
 
 - **긴 대화로 더 빠르게 복귀:** 기록에서 긴 Claude Code 대화를 열면 전체 기록이 로드될 때까지 기다리지 않고 최신 메시지부터 표시됩니다.
 - **대화로 돌아가는 중 표시:** Claude Code, Codex, OpenCode, DeepSeek Harness 대화를 다시 열 때 각 도구의 작업 애니메이션과 "대화로 돌아가는 중"을 표시합니다. 멈춘 것처럼 보이는 시작 화면에 머물지 않습니다.
