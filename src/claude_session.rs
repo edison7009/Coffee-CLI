@@ -101,7 +101,7 @@ fn executable(config: &crate::tool_config::ToolConfigEntry) -> (String, Vec<Stri
 /// what it needs. Quoted text is escaped and fenced because it may echo tool, file or web content.
 fn previous_conversation(cwd: &std::path::Path, from: &Value) -> Option<String> {
     let token = from["token"].as_str().filter(|token| uuid::Uuid::parse_str(token).is_ok())?;
-    let transcript = claude_history_path(cwd, token);
+    let transcript = claude_transcript(cwd, token);
     transcript.is_file().then(|| previous_conversation_text(token, &transcript, from))
 }
 
@@ -142,7 +142,7 @@ fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<Stri
     let native_id = resume_token.unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
     if uuid::Uuid::parse_str(&native_id).is_err() { return Err("无效的 Claude 会话 ID".into()); }
     // A known token resumes an idle native session; a fresh token is chosen before the first prompt.
-    let history_path = claude_history_path(&cwd, &native_id);
+    let history_path = claude_transcript(&cwd, &native_id);
     if is_resume { command.args(["--resume", &native_id]); }
     else { command.args(["--session-id", &native_id]); }
     let previous = continue_from.as_ref().and_then(|from| previous_conversation(&cwd, from));
@@ -247,6 +247,18 @@ fn claude_history_path(cwd: &std::path::Path, native_id: &str) -> std::path::Pat
     root.join("projects").join(key).join(format!("{native_id}.jsonl"))
 }
 
+/// `--resume` finds a conversation by id alone, but its transcript stays in the folder of the directory it began
+/// in: one begun in a worktree reopens at the project root with the file still under the worktree's key.
+fn claude_transcript(cwd: &std::path::Path, native_id: &str) -> std::path::PathBuf {
+    transcript_among_projects(claude_history_path(cwd, native_id))
+}
+
+fn transcript_among_projects(expected: std::path::PathBuf) -> std::path::PathBuf {
+    if expected.is_file() { return expected; }
+    let (Some(name), Some(projects)) = (expected.file_name(), expected.parent().and_then(|folder| folder.parent())) else { return expected };
+    std::fs::read_dir(projects).into_iter().flatten().flatten().map(|folder| folder.path().join(name)).find(|path| path.is_file()).unwrap_or(expected)
+}
+
 fn history_page(path: &std::path::Path, before: Option<u64>) -> Result<Value, String> {
     let mut file = std::fs::File::open(path).map_err(|e| e.to_string())?;
     let end = before.unwrap_or(file.metadata().map_err(|e| e.to_string())?.len());
@@ -272,7 +284,7 @@ pub async fn claude_session_preview(cwd: Option<String>, resume_token: String) -
     tauri::async_runtime::spawn_blocking(move || {
         if uuid::Uuid::parse_str(&resume_token).is_err() { return Err("无效的 Claude 会话 ID".into()); }
         let cwd = session_cwd(&crate::tool_config::get("claude"), cwd);
-        history_page(&claude_history_path(&cwd, &resume_token), None)
+        history_page(&claude_transcript(&cwd, &resume_token), None)
     }).await.map_err(|e| e.to_string())?
 }
 
@@ -378,6 +390,22 @@ mod tests {
         assert!(!text.contains("END") && !text.contains("START"), "the prompt keeps its head and the reply its tail");
         assert!(!previous_conversation_text("id", path, &json!({"prompt":" ","reply":""})).contains("<previous-conversation>\n"), "nothing to quote means no fence");
         assert!(previous_conversation(std::path::Path::new("."), &json!({"token":"../../etc/passwd"})).is_none());
+    }
+
+    #[test]
+    fn a_transcript_is_found_in_the_folder_the_conversation_began_in() {
+        let projects = std::env::temp_dir().join(format!("coffee-claude-{}", uuid::Uuid::new_v4()));
+        let root = projects.join("D--repo");
+        let worktree = projects.join("D--repo--claude-worktrees-x");
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::create_dir_all(&worktree).unwrap();
+        let expected = root.join("id.jsonl");
+        assert_eq!(transcript_among_projects(expected.clone()), expected, "a new conversation keeps its own folder");
+        std::fs::write(worktree.join("id.jsonl"), "{}\n").unwrap();
+        assert_eq!(transcript_among_projects(expected.clone()), worktree.join("id.jsonl"));
+        std::fs::write(&expected, "{}\n").unwrap();
+        assert_eq!(transcript_among_projects(expected.clone()), expected, "the session's own folder wins");
+        std::fs::remove_dir_all(projects).unwrap();
     }
 
     #[test]
