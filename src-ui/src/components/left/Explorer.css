@@ -174,6 +174,9 @@
 }
 .explorer-view-switch .explorer-tab {
     flex: 0 0 30px;
+    /* WebKit sizes the track from its content and ignores the flex-basis here,
+       so the folder button overflowed and got clipped (issue #172). */
+    width: 30px;
     height: 26px;
     padding: 0;
     color: var(--text-3);
