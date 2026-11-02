@@ -259,13 +259,32 @@ export function HistoryBoard() {
     { id: 'mock-3', name: 'refactor components', tool: 'qwen', cwd: '~/projects/coffee', session_token: 'tk3', saved_at: new Date(nowMs - 86400000 * 2).toISOString() },
   ], [cachedSessions, nowMs]);
   const liveSessions = useMemo(() => state.terminals.filter(session => session.tool && !nativeSessions.some(saved => saved.tool === session.tool && saved.session_token && saved.session_token === session.resumeToken)), [state.terminals, nativeSessions]);
-  const baseSessions: SavedSession[] = useMemo(() => sortByMtime([...nativeSessions, ...liveSessions.map(session => ({
+  const baseSessions: SavedSession[] = useMemo(() => {
+    const sorted = sortByMtime([...nativeSessions.map(saved => {
+    // The disk cache refreshes lazily, so an open session's recent activity outranks its stale file mtime.
+    const open = saved.session_token ? state.terminals.find(tab => tab.tool === saved.tool && tab.resumeToken === saved.session_token) : undefined;
+    if (!open?.activeAt) return saved;
+    const numeric = Number(saved.saved_at);
+    const mtime = Date.parse(saved.saved_at) || (numeric < 1e11 ? numeric * 1000 : numeric) || 0;
+    return open.activeAt > mtime ? { ...saved, saved_at: new Date(open.activeAt).toISOString() } : saved;
+  }), ...liveSessions.map(session => ({
     id: `live:${session.id}`, name: session.toolTitle || getToolDisplayName(session.tool!), tool: session.tool!,
-    cwd: session.folderPath ?? '', session_token: session.resumeToken ?? null, saved_at: new Date(session.startedAt ?? nowMs).toISOString(),
+    cwd: session.folderPath ?? '', session_token: session.resumeToken ?? null, saved_at: new Date(session.activeAt ?? session.startedAt ?? nowMs).toISOString(),
   })), ...agentConversations.map(conversation => ({
     id: conversation.id, name: conversation.title, tool: 'coffee-agent', cwd: '', session_token: null,
     saved_at: new Date(conversation.updatedAt).toISOString(), turn_count: conversation.messageCount,
-  }))]), [nativeSessions, liveSessions, agentConversations, nowMs]);
+  }))]);
+    // Sessions that are running right now float to the top, in tab order. Ranking them by
+    // mtime/activeAt made concurrent sessions swap places on every status flip.
+    const tabIndex = (session: SavedSession) => state.terminals.findIndex(tab => session.id === `live:${tab.id}`
+      || (!!session.session_token && tab.tool === session.tool && tab.resumeToken === session.session_token));
+    const busy = (session: SavedSession) => {
+      const tab = state.terminals[tabIndex(session)];
+      return tab?.agentStatus === 'working' || tab?.agentStatus === 'wait_input';
+    };
+    const running = sorted.filter(busy).sort((a, b) => tabIndex(a) - tabIndex(b));
+    return running.length ? [...running, ...sorted.filter(session => !busy(session))] : sorted;
+  }, [nativeSessions, liveSessions, agentConversations, nowMs, state.terminals]);
 
   const availableSessions = useMemo(() => {
     const list = baseSessions.filter(session => !hidden.has(`${session.tool ?? ''}:${session.id}`)

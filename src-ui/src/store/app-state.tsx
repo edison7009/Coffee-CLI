@@ -151,6 +151,8 @@ export interface TerminalSession {
   parentId?: string;
   isHidden?: boolean;
   agentStatus?: AgentStatus;
+  /** Last time agentStatus changed; keeps an active session on top of the history list before the disk cache catches up. */
+  activeAt?: number;
   gambitDraft?: string;    // Unsent textarea content, preserved across tab switches
   /** Local launch timestamp used to reject older history files when binding
    *  a live conversation to this terminal tab. */
@@ -578,7 +580,7 @@ function reducer(state: AppState, action: Action): AppState {
       let changed = false;
       const terminals = state.terminals.map(t => {
         if (t.id === action.id && supportsAgentStatus(t.tool) && t.agentStatus !== action.status) {
-          changed = true; return { ...t, agentStatus: action.status };
+          changed = true; return { ...t, agentStatus: action.status, activeAt: action.status ? Date.now() : t.activeAt };
         }
         return t;
       });
