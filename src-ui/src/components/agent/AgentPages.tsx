@@ -188,13 +188,14 @@ function AgentChatPage() {
 
   const startNew = () => { setLocalError(''); startNewAgentConversation().catch(failure => setLocalError(String(failure))); };
 
+  const newChat = messages.length > 0 && <button type="button" className="gambit-new-chat" disabled={running} onClick={startNew}>
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>{t('agent.chat.new')}
+  </button>;
+
   return <PageFrame page="agent">
-    {messages.length > 0 && <button type="button" className="agent-button quiet agent-new-chat" disabled={running} onClick={startNew}>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>{t('agent.chat.new')}
-    </button>}
     <div className={`conversation-view agent-chat-surface${navigationItems.length > 1 ? ' agent-chat-surface--has-navigation' : ''}`}>
     {navigationItems.length > 1 && state.agentPageActive === 'agent' && <ConversationNavigation items={navigationItems} scrollRef={threadRef} onJump={jumpToMessage} />}
-    <div className={`agent-chat-thread${messages.length > 0 ? ' agent-chat-thread--new-chat' : ''}`} ref={threadRef} onScroll={() => {
+    <div className="agent-chat-thread" ref={threadRef} onScroll={() => {
       const node = threadRef.current;
       if (node) followOutput.current = node.scrollHeight - node.scrollTop - node.clientHeight < 120;
     }}>
@@ -223,7 +224,7 @@ function AgentChatPage() {
       onClose={() => {}} onSend={send} running={running}
       onCancel={cancelling ? undefined : () => void cancel()}
       sendFailedHint={t('agent.chat.send_failed')}
-      workspaceName="Coffee Agent"
+      workspaceName="Coffee Agent" worktreeControl={newChat}
       leftPanelHidden={state.leftPanelHidden} rightPanelHidden={state.rightPanelHidden}
     />}
   </PageFrame>;

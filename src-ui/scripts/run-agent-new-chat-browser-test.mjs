@@ -8,7 +8,7 @@ import { build } from 'esbuild';
 const { chromium } = await import(process.env.COFFEE_PLAYWRIGHT_MODULE || 'playwright-core');
 const project = fileURLToPath(new URL('..', import.meta.url)), directory = await mkdtemp(join(tmpdir(), 'coffee-agent-new-chat-'));
 const fixtures = {
-  'store/app-state': `export function useAppState(){return{state:{agentPageActive:'agent',leftPanelHidden:false,rightPanelHidden:false},dispatch(){}}} export function useAppLanguage(){return 'zh-CN'}`,
+  'store/app-state': `export function useAppState(){return{state:{agentPageActive:'agent',leftPanelHidden:true,rightPanelHidden:true,gambitEnterToSend:true,terminals:[]},dispatch(){}}} export function useAppLanguage(){return 'zh-CN'}`,
   'tauri': `export const commands={}; export const isTauri=true; export async function invoke(){return null}`,
   '/clipboard': `export async function clipboardRead(){return ''} export async function clipboardWrite(){}`,
   'lib/agent-client': `import{useSyncExternalStore}from'react';
@@ -18,13 +18,12 @@ const fixtures = {
     export async function startNewAgentConversation(){window.started=(window.started||0)+1;window.setAgent({conversationId:'fresh',messages:[]});}
     export const formatAgentError=e=>e; export const formatAgentActivity=()=>''; export const formatAgentMessage=text=>text;
     export const loadOlderAgentMessages=async()=>{}; export const refreshChannels=async()=>{}; export const sendAgentMessage=async()=>{};`,
-  'center/Gambit': 'export const Gambit=()=>null;',
   'center/MarkdownContent': `import{jsx}from'react/jsx-runtime'; export const MarkdownContent=({content})=>jsx('p',{children:content});`,
 };
 await build({ stdin: { loader: 'tsx', resolveDir: project, contents: `
 import React from'react';import{createRoot}from'react-dom/client';import{AgentChatPage}from'./src/components/agent/AgentPages';import'./src/styles/global.css';
 window.agent={conversationId:'desktop',messages:[],hasOlder:false,loadingOlder:false,running:false,activity:'',error:''};
-createRoot(document.getElementById('root')).render(<div style={{height:520}}><AgentChatPage/></div>);
+createRoot(document.getElementById('root')).render(<div style={{height:640}}><AgentChatPage/></div>);
 ` }, bundle: true, outfile: join(directory, 'fixture.js'), jsx: 'automatic', define: { __IS_LINUX__: 'false' },
   loader: { '.woff2': 'dataurl', '.svg': 'dataurl', '.png': 'dataurl', '.webp': 'dataurl' }, external: ['/fonts/*', '/monogram.svg'],
   plugins: [{ name: 'agent-chat-fixtures', setup(b) {
@@ -40,7 +39,7 @@ const server = http.createServer(async (req, res) => {
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const browser = await chromium.launch({ headless: true, ...(process.env.COFFEE_CHROMIUM_EXECUTABLE ? { executablePath: process.env.COFFEE_CHROMIUM_EXECUTABLE } : {}) });
 try {
-  const page = await browser.newPage({ viewport: { width: 900, height: 520 } });
+  const page = await browser.newPage({ viewport: { width: 900, height: 640 } });
   const errors = []; page.on('pageerror', error => errors.push(error.message));
   await page.goto(`http://127.0.0.1:${server.address().port}`);
   const button = page.getByRole('button', { name: '新对话', exact: true });
@@ -49,9 +48,11 @@ try {
 
   await page.evaluate(() => window.setAgent({ messages: [{ id: 1, role: 'user', text: '看看现在打开了哪些终端' }, { id: 2, role: 'assistant', text: '现在打开了 3 个终端。' }] }));
   await button.waitFor();
-  const [box, thread] = await Promise.all([button.boundingBox(), page.locator('.agent-message-list').boundingBox()]);
-  assert.ok(box.x + box.width > 900 - 40 && box.y < 30, `New chat sits in the top-right corner: ${JSON.stringify(box)}`);
-  assert.ok(box.x >= thread.x + thread.width || box.y + box.height <= thread.y, 'New chat never covers message text');
+  assert.equal(await button.evaluate(el => el.parentElement.classList.contains('gambit-footer')), true, 'New chat lives in the composer footer');
+  const [box, label, send] = await Promise.all([button.boundingBox(), page.locator('.gambit-workspace').boundingBox(), page.locator('.gambit-send').boundingBox()]);
+  assert.ok(box.x >= label.x + label.width && box.x - (label.x + label.width) <= 10, `New chat sits right beside the Coffee Agent label: ${JSON.stringify({ box, label })}`);
+  assert.ok(Math.abs(box.y + box.height / 2 - (label.y + label.height / 2)) < 1 && Math.abs(box.height - label.height) < 1, 'New chat matches the label row and height');
+  assert.ok(send.x - (box.x + box.width) > 200, 'the send button stays at the far right');
   await page.screenshot({ path: join(directory, 'new-chat.png') });
 
   await page.evaluate(() => window.setAgent({ running: true }));
@@ -62,6 +63,6 @@ try {
   assert.equal(await page.evaluate(() => window.started), 1);
   assert.equal(await button.count(), 0, 'the fresh chat shows the welcome view without the button');
   assert.deepEqual(errors, []);
-  console.log('OK: Coffee Agent New chat appears only with messages, sits top-right clear of the text, waits for a running reply and opens a fresh chat');
+  console.log('OK: Coffee Agent New chat appears only with messages, sits beside the composer label, waits for a running reply and opens a fresh chat');
   console.log(`Screenshots: ${directory}`);
 } finally { await browser.close(); server.close(); }

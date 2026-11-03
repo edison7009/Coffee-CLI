@@ -75,7 +75,7 @@ interface GambitProps {
   orchestration?: boolean;
   computer?: boolean;
   browser?: boolean;
-  /** The worktree switch, beside the target label, for desktop conversations. */
+  /** Controls beside the target label: the worktree switch for desktop conversations, New chat for Coffee Agent. */
   worktreeControl?: React.ReactNode;
 }
 

@@ -17,11 +17,7 @@
 .agent-button:disabled { opacity: .45; cursor: default; }
 .agent-button:focus-visible, .agent-suggestions button:focus-visible, .agent-channel-summary-label:focus-visible, .agent-sidebar-button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
-.agent-page-agent { position: relative; }
-.agent-new-chat { position: absolute; top: 10px; inset-inline-end: 16px; z-index: 3; min-height: 30px; padding: 5px 11px; color: var(--text-2); background: var(--bg-terminal, var(--bg-app)); }
 .agent-chat-surface { display: flex; }
-/* Room above the first message so a right-aligned user bubble starts below New chat. */
-.agent-chat-thread.agent-chat-thread--new-chat { padding-top: 50px; }
 .agent-chat-thread { flex: 1; min-width: 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 26px 32px; }
 .agent-chat-surface--has-navigation .agent-chat-thread { padding-left: 56px; padding-right: 56px; }
 body.gambit-docked .agent-chat-surface .conversation-navigation { bottom: 0; }
