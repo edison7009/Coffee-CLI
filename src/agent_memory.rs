@@ -55,6 +55,37 @@ pub struct Memory {
     pub updated_at: i64,
     pub source_conversation: Option<String>,
     pub automatic: bool,
+    /// A learned procedure; `content` is its cue. Only capture attaches one, from verified tool evidence.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub experience: Option<Experience>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Experience {
+    pub procedure: String,
+    pub evidence: Vec<String>,
+}
+
+impl Experience {
+    pub(crate) fn validate(&self, cue: &str) -> Result<(), String> {
+        if cue.is_empty() || cue.len() > 400 || self.procedure.trim().is_empty() || self.procedure.len() > 800
+            || self.evidence.is_empty() || self.evidence.len() > 3 || self.evidence.iter().any(|item| item.is_empty() || item.len() > 700) {
+            return Err("Task experience exceeds its content limits".into());
+        }
+        if ![cue, &self.procedure].into_iter().chain(self.evidence.iter().map(String::as_str)).all(memory_text_is_safe) {
+            return Err("Task experience must not contain secrets".into());
+        }
+        Ok(())
+    }
+
+    fn chars(&self) -> usize {
+        self.procedure.chars().count() + self.evidence.iter().map(|item| item.chars().count()).sum::<usize>()
+    }
+}
+
+pub(crate) fn memory_chars(memory: &Memory) -> usize {
+    memory.content.chars().count() + memory.experience.as_ref().map_or(0, Experience::chars)
 }
 
 #[derive(Clone, Serialize)]
@@ -71,6 +102,9 @@ pub struct MemoryChange {
     pub id: Option<String>,
     pub scope: Option<String>,
     pub content: Option<String>,
+    /// Backend-attached for `learn`; the model can never supply it.
+    #[serde(skip)]
+    pub experience: Option<Experience>,
 }
 
 pub struct Context {
@@ -141,6 +175,7 @@ impl Store {
             ("updated_at", "INTEGER NOT NULL DEFAULT 0"),
             ("source_conversation", "TEXT"),
             ("automatic", "INTEGER NOT NULL DEFAULT 0"),
+            ("experience", "TEXT"),
         ] {
             if !columns.contains(name) {
                 tx.execute(&format!("ALTER TABLE memories ADD COLUMN {name} {definition}"), []).map_err(|e| e.to_string())?;
@@ -317,6 +352,17 @@ impl Store {
         )
         .map_err(|e| e.to_string())?;
         tx.commit().map_err(|e| e.to_string())
+    }
+
+    /// A run that ended without a reply (app exit or crash) leaves a dangling user turn; close it so
+    /// the next request alternates roles and the model never treats that turn's outcome as known.
+    pub fn recover_interrupted(&mut self, id: &str) -> Result<bool, String> {
+        let last: Option<String> = self.db.query_row(
+            "SELECT role FROM messages WHERE conversation_id=?1 AND role IN ('user','assistant') ORDER BY id DESC LIMIT 1",
+            [id], |row| row.get(0)).optional().map_err(|e| e.to_string())?;
+        if last.as_deref() != Some("user") { return Ok(false); }
+        self.append(id, "assistant", "上一次请求在完成前中断（应用可能已退出）；其结果未确认，请先查看终端实际状态。")?;
+        Ok(true)
     }
 
     /// Background receipts never activate a conversation or fabricate a user turn.
@@ -506,7 +552,7 @@ impl Store {
         let mut result = Vec::new();
         let mut chars = 0;
         for (_, memory) in ranked {
-            let size = memory.content.chars().count();
+            let size = memory_chars(&memory);
             if chars + size > 8_000 { continue; }
             chars += size;
             result.push(memory);
@@ -537,7 +583,7 @@ impl Store {
         let count = memories
             .iter()
             .filter(|memory| Some(memory.id.as_str()) != existing.map(|memory| memory.id.as_str()))
-            .map(|memory| memory.content.chars().count())
+            .map(memory_chars)
             .sum::<usize>()
             + content.chars().count();
         if count > MEMORY_CHARS || existing.is_none() && memories.len() >= MAX_MEMORIES {
@@ -547,7 +593,7 @@ impl Store {
             .map(|memory| memory.id.clone())
             .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
         tx.execute("INSERT INTO memories(id,route,content,updated_at) VALUES(?1,?2,?3,?4)
-            ON CONFLICT(id) DO UPDATE SET content=excluded.content,updated_at=excluded.updated_at,automatic=0,source_conversation=NULL",
+            ON CONFLICT(id) DO UPDATE SET content=excluded.content,updated_at=excluded.updated_at,automatic=0,source_conversation=NULL,experience=NULL",
             params![id,route,content,now_ms()]).map_err(|e|e.to_string())?;
         bump_memory_state(&tx, route, true)?;
         tx.commit().map_err(|e| e.to_string())?;
@@ -581,7 +627,7 @@ impl Store {
         let mut protected = HashSet::new();
         for change in changes {
             match change.action.as_str() {
-                "add" if change.id.is_none() => {
+                "add" if change.id.is_none() && change.experience.is_none() => {
                     let content = change.content.as_deref().ok_or("Memory addition has no content")?.trim();
                     validate_memory_text(content, true)?;
                     let scope = match change.scope.as_deref() {
@@ -594,10 +640,26 @@ impl Store {
                     } else {
                         let id = uuid::Uuid::new_v4().to_string();
                         protected.insert(id.clone());
-                        memories.push(Memory { id, content:content.into(), project:scope.into(), updated_at:now_ms(), source_conversation:Some(conversation.into()), automatic:true });
+                        memories.push(Memory { id, content:content.into(), project:scope.into(), updated_at:now_ms(), source_conversation:Some(conversation.into()), automatic:true, experience:None });
                     }
                 }
-                "update" | "forget" if change.scope.is_none() => {
+                // Experiences are project-scoped only: a procedure observed in one directory never becomes a global rule.
+                "learn" if change.id.is_none() && !project.is_empty() => {
+                    let experience = change.experience.clone().ok_or("Task experience has no verified evidence")?;
+                    let cue = change.content.as_deref().ok_or("Task experience has no cue")?.trim();
+                    experience.validate(cue)?;
+                    if let Some(existing) = memories.iter_mut().find(|memory| memory.project == project && memory.experience.is_some() && same_memory(&memory.content, cue)) {
+                        if !protected.insert(existing.id.clone()) { return Err("Memory capture changes the same note more than once".into()); }
+                        existing.experience = Some(experience);
+                        existing.updated_at = now_ms();
+                        existing.source_conversation = Some(conversation.into());
+                    } else {
+                        let id = uuid::Uuid::new_v4().to_string();
+                        protected.insert(id.clone());
+                        memories.push(Memory { id, content:cue.into(), project:project.clone(), updated_at:now_ms(), source_conversation:Some(conversation.into()), automatic:true, experience:Some(experience) });
+                    }
+                }
+                "update" | "forget" if change.scope.is_none() && change.experience.is_none() => {
                     let id = change.id.as_deref().ok_or("Memory change has no exact ID")?;
                     if !protected.insert(id.to_string()) { return Err("Memory capture changes the same note more than once".into()); }
                     let expected = snapshot.memories.iter().find(|memory| memory.id == id).ok_or("Memory change is outside its snapshot")?;
@@ -626,7 +688,7 @@ impl Store {
                 return Err("Memory capture would duplicate another note; merge or forget it in the same batch".into());
             }
         }
-        while memories.len() > MAX_MEMORIES || memories.iter().map(|memory| memory.content.chars().count()).sum::<usize>() > MEMORY_CHARS {
+        while memories.len() > MAX_MEMORIES || memories.iter().map(memory_chars).sum::<usize>() > MEMORY_CHARS {
             let candidate = memories.iter().enumerate().filter(|(_, memory)| memory.automatic && !protected.contains(&memory.id))
                 .min_by(|(_, left), (_, right)| left.project.is_empty().cmp(&right.project.is_empty())
                     .then_with(|| left.updated_at.cmp(&right.updated_at)).then_with(|| left.id.cmp(&right.id)))
@@ -639,9 +701,10 @@ impl Store {
             }
         }
         for memory in memories.iter().filter(|memory| !original.contains(memory)) {
-            tx.execute("INSERT INTO memories(id,route,content,project,updated_at,source_conversation,automatic) VALUES(?1,?2,?3,?4,?5,?6,?7)
-                ON CONFLICT(id) DO UPDATE SET content=excluded.content,updated_at=excluded.updated_at,source_conversation=excluded.source_conversation",
-                params![memory.id,route,memory.content,memory.project,memory.updated_at,memory.source_conversation,memory.automatic]).map_err(|e| e.to_string())?;
+            let experience = memory.experience.as_ref().map(serde_json::to_string).transpose().map_err(|_| "Cannot encode task experience")?;
+            tx.execute("INSERT INTO memories(id,route,content,project,updated_at,source_conversation,automatic,experience) VALUES(?1,?2,?3,?4,?5,?6,?7,?8)
+                ON CONFLICT(id) DO UPDATE SET content=excluded.content,updated_at=excluded.updated_at,source_conversation=excluded.source_conversation,experience=excluded.experience",
+                params![memory.id,route,memory.content,memory.project,memory.updated_at,memory.source_conversation,memory.automatic,experience]).map_err(|e| e.to_string())?;
         }
         bump_memory_state(&tx, route, false)?;
         tx.commit().map_err(|e| e.to_string())?;
@@ -665,10 +728,12 @@ impl Store {
 }
 
 fn read_memories(db: &Connection, route: &str) -> Result<Vec<Memory>, String> {
-    let mut statement = db.prepare("SELECT id,content,project,updated_at,source_conversation,automatic FROM memories WHERE route=?1 ORDER BY rowid").map_err(|e| e.to_string())?;
+    let mut statement = db.prepare("SELECT id,content,project,updated_at,source_conversation,automatic,experience FROM memories WHERE route=?1 ORDER BY rowid").map_err(|e| e.to_string())?;
     let rows = statement.query_map([route], |row| Ok(Memory {
         id:row.get(0)?, content:row.get(1)?, project:row.get(2)?, updated_at:row.get(3)?,
         source_conversation:row.get(4)?, automatic:row.get(5)?,
+        // An unreadable procedure degrades to its plain cue rather than hiding the note.
+        experience:row.get::<_, Option<String>>(6)?.and_then(|text| serde_json::from_str(&text).ok()),
     })).map_err(|e| e.to_string())?;
     rows.collect::<Result<_, _>>().map_err(|e| e.to_string())
 }
@@ -755,6 +820,43 @@ fn message_row(r: &rusqlite::Row<'_>) -> rusqlite::Result<Message> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn a_crashed_turn_is_closed_once_before_the_next_request() {
+        let directory = root();
+        let mut store = Store::open(&directory).unwrap();
+        let id = store.resolve("desktop").unwrap();
+        assert!(!store.recover_interrupted(&id).unwrap());
+        store.append(&id, "user", "运行测试").unwrap();
+        store.archive_output(&id, "terminal_send", "{}").unwrap();
+        assert!(store.recover_interrupted(&id).unwrap());
+        assert!(!store.recover_interrupted(&id).unwrap());
+        let messages = store.page(&id, None).unwrap().messages;
+        assert_eq!(messages.last().unwrap().role, "assistant");
+        drop(store);
+        fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn a_manual_edit_turns_a_learned_procedure_into_a_plain_note() {
+        let directory = root();
+        let mut store = Store::open(&directory).unwrap();
+        let conversation = store.resolve("desktop").unwrap();
+        let project = std::env::temp_dir().to_string_lossy().into_owned();
+        let snapshot = store.memory_snapshot("desktop", Some(&project)).unwrap();
+        let mut learn = change(json!({"action":"learn","scope":"project","content":"构建"}));
+        learn.experience = Some(Experience { procedure:"npm run build".into(), evidence:vec!["terminal_read_screen: built".into()] });
+        assert!(store.apply_memory_changes("desktop", Some(&project), &conversation, &snapshot, &[learn]).unwrap());
+        let saved = store.memories("desktop").unwrap();
+        assert!(saved[0].experience.is_some() && saved[0].automatic);
+        store.save_memory("desktop", Some(&saved[0].id), "构建前先装依赖").unwrap();
+        assert!(store.memories("desktop").unwrap()[0].experience.is_none());
+        let model_learn = change(json!({"action":"learn","scope":"project","content":"x"}));
+        let snapshot = store.memory_snapshot("desktop", Some(&project)).unwrap();
+        assert!(store.apply_memory_changes("desktop", Some(&project), &conversation, &snapshot, &[model_learn]).is_err());
+        drop(store);
+        fs::remove_dir_all(directory).unwrap();
+    }
+
     #[test]
     fn archived_output_pages_are_complete_historical_and_identity_scoped() {
         let directory = root();
