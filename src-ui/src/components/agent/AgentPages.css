@@ -30,7 +30,7 @@ body.gambit-docked .agent-page-agent { padding-bottom: calc(var(--gambit-dock-h,
 .agent-suggestions button:hover { background: var(--bg-hover); }
 .agent-suggestions span { color: var(--accent); }
 .agent-message-list { width: min(100%, 820px); margin: auto; }
-.agent-activity { display: flex; align-items: center; gap: 9px; padding: 14px 0; color: var(--text-3); font-size: 12px; }
+.agent-activity { display: flex; align-items: center; gap: 9px; padding: 14px 0; color: var(--text-3); font-size: 14px; }
 .agent-working-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: agent-pulse 1.5s ease-in-out infinite; }
 @keyframes agent-pulse { 50% { opacity: .3; } }
 .agent-chat-feedback { flex-shrink: 0; width: min(calc(100% - 64px), 820px); margin: 0 auto 8px; }
@@ -136,10 +136,10 @@ body.gambit-docked .agent-page-agent { padding-bottom: calc(var(--gambit-dock-h,
 }
 @media (prefers-reduced-motion: reduce) { .agent-working-dot { animation: none; } }
 
-.agent-tool-summary { margin: 0 0 6px; color: var(--text-3); font-size: 12px; }
+.agent-tool-summary { margin: 0 0 6px; color: var(--text-3); font-size: 14px; line-height: 1.65; }
 .agent-tool-summary summary { cursor: pointer; width: fit-content; user-select: none; }
 .agent-tool-summary summary:hover { color: var(--text-2); }
 .agent-tool-summary ol { margin: 6px 0 0; padding: 0 0 0 4px; list-style: none; display: grid; gap: 3px; }
 .agent-tool-summary li { display: flex; align-items: center; gap: 7px; }
 .agent-tool-summary li.failed { color: var(--danger, #d9534f); }
-.agent-tool-summary code { font-size: 11.5px; }
+.agent-tool-summary code { font-size: 13px; }
