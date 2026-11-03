@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type FormEvent, type InputHTMLAttributes, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import QRCode from 'qrcode';
 import { commands, invoke } from '../../tauri';
@@ -6,7 +6,8 @@ import { useAppState, type AgentPage } from '../../store/app-state';
 import { formatAgentActivity, formatAgentError, formatAgentMessage, loadOlderAgentMessages, refreshChannels, sendAgentMessage, useAgentClient } from '../../lib/agent-client';
 import { useT } from '../../i18n/useT';
 import type { I18nKey } from '../../i18n/en';
-import { clipboardWrite } from '../../lib/clipboard';
+import { clipboardRead, clipboardWrite } from '../../lib/clipboard';
+import { useTextContextMenu } from '../../lib/use-text-context-menu';
 import { MarkdownContent } from '../center/MarkdownContent';
 import { Gambit } from '../center/Gambit';
 import { ConversationNavigation, MessageCopyButton, type ConversationNavigationItem } from '../center/ConversationControls';
@@ -223,19 +224,31 @@ function AgentChatPage() {
   </PageFrame>;
 }
 
+/** A plain text field with the shared right-click menu and a paste button inside its right edge. */
+function AgentPasteInput({ label, value, onValue, openMenu, ...input }: {
+  label: string; value: string; onValue: (value: string) => void;
+  openMenu: ReturnType<typeof useTextContextMenu>['openMenu'];
+} & Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange'>) {
+  const t = useT();
+  // Pasting replaces the whole value: copied URLs and keys often carry a trailing newline.
+  const paste = () => void clipboardRead().then(text => { const next = text.trim(); if (next) onValue(next); });
+  return <label className="agent-field"><span>{label}</span><span className="agent-paste-input">
+    <input {...input} aria-label={label} value={value} spellCheck={false} onChange={event => onValue(event.target.value)} onContextMenu={event => openMenu(event, onValue)} />
+    <button type="button" aria-label={`${t('menu.paste')} ${label}`} onClick={paste}>{t('menu.paste')}</button>
+  </span></label>;
+}
+
 interface ModelSettings {
   provider: 'openai' | 'anthropic';
   baseUrl: string;
   model: string;
-  hasApiKey: boolean;
+  apiKey: string;
 }
 const DEFAULT_URL = { openai: 'https://api.openai.com/v1', anthropic: 'https://api.anthropic.com' };
 
 function AgentModelSection() {
   const t = useT();
-  const [config, setConfig] = useState<ModelSettings>({ provider: 'openai', baseUrl: DEFAULT_URL.openai, model: '', hasApiKey: false });
-  const [saved, setSaved] = useState<ModelSettings | null>(null);
-  const [apiKey, setApiKey] = useState('');
+  const [config, setConfig] = useState<ModelSettings>({ provider: 'openai', baseUrl: DEFAULT_URL.openai, model: '', apiKey: '' });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<I18nKey | ''>('');
@@ -244,19 +257,23 @@ function AgentModelSection() {
   useEffect(() => {
     let active = true;
     invoke<ModelSettings>('agent_get_model').then(value => {
-      if (active) { setConfig(value); setSaved(value); }
+      if (active) setConfig(value);
     }).catch(failure => { if (active) setError(String(failure)); }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, []);
 
-  const endpointChanged = saved !== null && (config.provider !== saved.provider || config.baseUrl.trim().replace(/\/$/, '') !== saved.baseUrl);
+  const { menu, openMenu } = useTextContextMenu();
+  const setBaseUrl = (baseUrl: string) => { setConfig(current => ({ ...current, baseUrl })); setFeedback(''); };
+  const setModel = (model: string) => { setConfig(current => ({ ...current, model })); setFeedback(''); };
+  const setKey = (apiKey: string) => { setConfig(current => ({ ...current, apiKey })); setFeedback(''); };
+
   const save = async (event: FormEvent) => {
     event.preventDefault();
     setSaving(true); setError(''); setFeedback('');
     try {
-      await invoke('agent_save_model', { config: { provider: config.provider, baseUrl: config.baseUrl.trim(), model: config.model.trim(), ...(apiKey.trim() ? { apiKey: apiKey.trim() } : {}) } });
+      await invoke('agent_save_model', { config: { provider: config.provider, baseUrl: config.baseUrl.trim(), model: config.model.trim(), apiKey: config.apiKey.trim() } });
       const next = await invoke<ModelSettings>('agent_get_model');
-      setConfig(next); setSaved(next); setApiKey(''); setFeedback('agent.model.saved');
+      setConfig(next); setFeedback('agent.model.saved');
     } catch (failure) { setError(String(failure)); }
     finally { setSaving(false); }
   };
@@ -268,13 +285,14 @@ function AgentModelSection() {
           <label className="agent-field"><span>{t('agent.model.provider')}</span><AgentSelect label={t('agent.model.provider')} value={config.provider} options={[{ value: 'openai', label: t('agent.model.provider_openai') }, { value: 'anthropic', label: t('agent.model.provider_anthropic') }]} onChange={provider => {
             setConfig({ ...config, provider, baseUrl: DEFAULT_URL[provider] }); setFeedback('');
           }} /></label>
-          <label className="agent-field"><span>{t('agent.model.url')}</span><input type="url" value={config.baseUrl} spellCheck={false} placeholder={DEFAULT_URL[config.provider]} onChange={event => { setConfig({ ...config, baseUrl: event.target.value }); setFeedback(''); }} /></label>
-          <label className="agent-field"><span>{t('agent.model.id')}</span><input value={config.model} maxLength={200} spellCheck={false} placeholder={t('agent.model.id_placeholder')} onChange={event => { setConfig({ ...config, model: event.target.value }); setFeedback(''); }} /></label>
-          <label className="agent-field"><span>{t('agent.model.api_key')}</span><input type="password" autoComplete="new-password" value={apiKey} spellCheck={false} placeholder={t(config.hasApiKey && !endpointChanged ? 'agent.model.api_key_saved' : 'agent.model.api_key_placeholder')} onChange={event => { setApiKey(event.target.value); setFeedback(''); }} /></label>
+          <AgentPasteInput label={t('agent.model.url')} type="url" value={config.baseUrl} placeholder={DEFAULT_URL[config.provider]} onValue={setBaseUrl} openMenu={openMenu} />
+          <AgentPasteInput label={t('agent.model.id')} value={config.model} maxLength={200} placeholder={t('agent.model.id_placeholder')} onValue={setModel} openMenu={openMenu} />
+          <AgentPasteInput label={t('agent.model.api_key')} value={config.apiKey} autoComplete="off" placeholder={t('agent.model.api_key_placeholder')} onValue={setKey} openMenu={openMenu} />
           <div className="agent-form-footer"><button type="submit" className="agent-button primary">{saving ? t('agent.model.saving') : t('agent.model.save')}</button><span className="agent-feedback" role="status">{loading ? t('agent.model.loading') : feedback && t(feedback)}</span></div>
         </fieldset>
         {error && <p className="agent-feedback error" role="alert">{formatAgentError(error, t)}</p>}
       </form>
+      {menu}
   </section>;
 }
 
@@ -501,7 +519,7 @@ function AgentChannelsSection() {
             <div className="agent-channel-heading"><h3>Telegram</h3><span className={`agent-status ${channels?.status.telegram === 'connected' ? 'connected' : ''}`}>{t(CHANNEL_STATUS[channels?.status.telegram ?? 'disconnected'] ?? 'agent.channels.status.disconnected')}</span></div>
             <p className="agent-channel-description">{t('agent.channels.telegram_description')}</p>
             {channels?.telegram.botName && <p className="agent-channel-account">@{channels.telegram.botName}</p>}
-            <form className="agent-channel-controls" onSubmit={connectTelegram}><input className="agent-inline-input" aria-label={t('agent.channels.token_label')} type="password" autoComplete="new-password" value={token} spellCheck={false} placeholder={t(channels?.telegram.hasToken ? 'agent.channels.token_reconnect' : 'agent.channels.token_placeholder')} onChange={event => setToken(event.target.value)} /><button type="submit" className="agent-button" disabled={!!busy || !token.trim()}>{t(busy === 'telegram' ? 'agent.channels.connecting' : 'agent.channels.connect')}</button>{channels?.telegram.enabled && <button type="button" className="agent-button quiet" disabled={!!busy} onClick={() => void disconnect('telegram')}>{t('agent.channels.disconnect')}</button>}</form>
+            <form className="agent-channel-controls" onSubmit={connectTelegram}><input className="agent-inline-input" aria-label={t('agent.channels.token_label')} autoComplete="off" value={token} spellCheck={false} placeholder={t(channels?.telegram.hasToken ? 'agent.channels.token_reconnect' : 'agent.channels.token_placeholder')} onChange={event => setToken(event.target.value)} /><button type="submit" className="agent-button" disabled={!!busy || !token.trim()}>{t(busy === 'telegram' ? 'agent.channels.connecting' : 'agent.channels.connect')}</button>{channels?.telegram.enabled && <button type="button" className="agent-button quiet" disabled={!!busy} onClick={() => void disconnect('telegram')}>{t('agent.channels.disconnect')}</button>}</form>
             {pairing && channels?.status.telegram !== 'connected' && <div className="agent-pairing"><p>{t('agent.channels.pairing_prompt', { bot: pairing.botName })}</p><code>/pair {pairing.pairingCode}</code></div>}
             {channels?.status.telegram === 'waiting_pairing' && !pairing && <p className="agent-field-hint">{t('agent.channels.pairing_refresh')}</p>}
             {channels?.status.telegramError && <p className="agent-feedback error">{formatAgentError(channels.status.telegramError, t)}</p>}

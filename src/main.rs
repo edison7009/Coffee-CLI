@@ -22,6 +22,7 @@ mod agent_memory_capture;
 mod agent_output;
 mod agent_workspace;
 mod channels;
+mod credentials;
 mod hook_installer;
 mod fonts;
 mod fs_watcher;

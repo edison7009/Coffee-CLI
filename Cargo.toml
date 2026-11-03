@@ -71,7 +71,6 @@ ureq = "2"
 # single handler callback so the frontend doesn't re-scan 50 times.
 notify-debouncer-full = "0.3"
 rusqlite = { version = "0.32", features = ["bundled"] }
-keyring = "3"
 # Usage/balance meters (ported from EchoBird usage_providers).
 async-trait = "0.1"
 url = "2"
@@ -117,7 +116,6 @@ tauri-plugin-single-instance = "2"
 #     installer etc. — replaces the old 5-dir hardcoded PATH repair
 #     (src/windows_path.rs).
 [target.'cfg(windows)'.dependencies]
-keyring = { version = "3", features = ["windows-native"] }
 windows = { version = "0.58", features = [
     "Win32_Foundation",
     "Win32_Graphics_Dwm",
@@ -140,9 +138,6 @@ windows = { version = "0.58", features = [
 [target.'cfg(any(target_os = "windows", target_os = "macos"))'.dependencies]
 window-vibrancy = "0.6"
 
-[target.'cfg(target_os = "macos")'.dependencies]
-keyring = { version = "3", features = ["apple-native"] }
-
 # `libc::kill(pid, 0)` for process-liveness probe in cli::mcp_status.
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
@@ -155,7 +150,6 @@ libc = "0.2"
 # Other compositors keep the same genuinely transparent, theme-tinted window
 # without pretending that an in-page wallpaper is the desktop.
 [target.'cfg(target_os = "linux")'.dependencies]
-keyring = { version = "3", features = ["sync-secret-service", "crypto-rust", "vendored"] }
 raw-window-handle = "0.6"
 wayland-backend = { version = "0.3", features = ["client_system", "dlopen"] }
 wayland-client = { version = "0.31", features = ["system", "dlopen"] }

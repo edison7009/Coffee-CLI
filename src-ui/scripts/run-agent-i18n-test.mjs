@@ -55,7 +55,7 @@ const module = { exports: {} };
 const context = {
   module, exports: module.exports,
   __agentTestLanguage: 'en', __agentTestState: { agentPageActive: 'config' },
-  document: { body: {} },
+  document: { body: {} }, navigator: { platform: 'Win32' },
   require: name => name === 'react' ? {
     ...React,
     useSyncExternalStore: (subscribe, getSnapshot) => React.useSyncExternalStore(subscribe, getSnapshot, getSnapshot),
@@ -121,10 +121,9 @@ for (const language of ['en', 'zh-CN', 'ja']) {
   assert.equal(api.formatAgentError('Error: Agent 正在处理上一条消息', translate), api.dictionaries[language]['agent.error.busy']);
   assert.equal(api.formatAgentError('请先在 Agent 配置中填写服务地址', translate), api.dictionaries[language]['agent.error.url_required']);
   assert.equal(api.formatAgentError('请先在 Agent 配置中填写模型 ID', translate), api.dictionaries[language]['agent.error.model_required']);
-  assert.equal(api.formatAgentError('Error: 请先在 Agent 配置中填写 API 密钥', translate), api.dictionaries[language]['agent.error.api_key_required']);
   assert.equal(api.formatAgentError('HTTP 401: Invalid API key', translate), 'HTTP 401: Invalid API key');
   assert.equal(api.formatAgentMessage('Agent 请求已取消；已经提交的终端任务可能继续运行。', translate), api.dictionaries[language]['agent.chat.cancelled']);
-  assert.equal(api.formatAgentMessage('Agent 请求未完成：请先在 Agent 配置中填写 API 密钥', translate), translate('agent.chat.incomplete', { error: translate('agent.error.api_key_required') }));
+  assert.equal(api.formatAgentMessage('Agent 请求未完成：请先在 Agent 配置中填写模型 ID', translate), translate('agent.chat.incomplete', { error: translate('agent.error.model_required') }));
   assert.equal(api.formatAgentMessage('Read E:\\MyProject and report in Chinese.', translate), 'Read E:\\MyProject and report in Chinese.');
 }
 console.log(`OK: Coffee Agent rendering, ${keys.length} translation keys in 11 languages, placeholders, help links, and live activity language changes`);

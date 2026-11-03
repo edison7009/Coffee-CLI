@@ -355,7 +355,7 @@ export const commands = {
   loadTasks: () => invoke<string>('load_tasks'),
   saveTasks: (data: string) => invoke<void>('save_tasks', { data }),
 
-  // Credential store — passwords live in OS keychain, never in localStorage
+  // Saved remote passwords — plain text in ~/.coffee-cli/credentials.json
   savePassword: (host: string, username: string, password: string) =>
     invoke<void>('save_password', { host, username, password }),
   loadPassword: (host: string, username: string) =>

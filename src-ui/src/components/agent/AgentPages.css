@@ -45,6 +45,12 @@ body.gambit-docked .agent-page-agent { padding-bottom: calc(var(--gambit-dock-h,
 .agent-model-form fieldset { display: grid; grid-template-columns: max-content minmax(0, 1fr) max-content minmax(0, 1fr); gap: 10px 12px; min-width: 0; margin: 0; padding: 0; border: none; }
 .agent-field { display: grid; grid-column: span 2; grid-template-columns: subgrid; align-items: center; min-width: 0; margin: 0; color: var(--text-2); font-size: 13px; }
 .agent-field > span { white-space: nowrap; }
+.agent-paste-input { position: relative; display: block; min-width: 0; }
+.agent-field .agent-paste-input input { padding-inline-end: 56px; }
+.agent-paste-input button { position: absolute; inset-inline-end: 4px; top: 50%; transform: translateY(-50%); height: 26px; padding: 0 9px; border: 0; border-radius: calc(var(--shape-radius-btn) - 2px); color: var(--text-2); background: transparent; font: inherit; font-size: 12px; cursor: pointer; transition: background 120ms, color 120ms; }
+.agent-paste-input button:hover:not(:disabled) { color: var(--text-1); background: var(--bg-hover); }
+.agent-paste-input button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.agent-paste-input button:disabled { opacity: .45; cursor: default; }
 .agent-field input, .agent-inline-input { width: 100%; min-width: 0; min-height: 34px; padding: 7px 10px; border: 1px solid var(--border-input); border-radius: var(--shape-radius-btn); outline: none; color: var(--text-1); background: var(--bg-input); font: inherit; font-size: 13px; }
 .agent-field input:focus, .agent-inline-input:focus { border-color: var(--border-focus); background: var(--bg-input-focus); }
 .agent-field input::placeholder, .agent-inline-input::placeholder { color: var(--text-3); }

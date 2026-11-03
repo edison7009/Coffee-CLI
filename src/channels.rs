@@ -1,4 +1,4 @@
-//! Private phone channels. Credentials stay in the OS keyring; consumed messages
+//! Private phone channels. Credentials are saved as plain text; consumed messages
 //! are never replayed into the agent after an application restart.
 
 use base64::Engine;
@@ -11,7 +11,7 @@ use tauri::{AppHandle, Emitter, Manager};
 use tokio::sync::watch;
 
 const WEIXIN_URL: &str = "https://ilinkai.weixin.qq.com";
-const KEYRING_SERVICE: &str = "coffee-cli-channels";
+const CREDENTIAL_SERVICE: &str = "coffee-cli-channels";
 const PAIRING_TTL_MS: u64 = 10 * 60_000;
 const TELEGRAM_IDLE_RESET_MS: u64 = 7 * 24 * 60 * 60_000;
 
@@ -245,9 +245,9 @@ fn save_config(config: &ChannelConfig) -> Result<(), String> {
     std::fs::rename(temporary, path).map_err(|e| format!("Cannot replace channel settings: {e}"))
 }
 
-fn secret_entry(channel: &str, authorization: &str) -> Result<keyring::Entry, String> {
-    keyring::Entry::new(KEYRING_SERVICE, &format!("{channel}-{authorization}"))
-        .map_err(|error| format!("OS credential store is unavailable: {error}"))
+fn secret_entry(channel: &str, authorization: &str) -> Result<crate::credentials::Entry, String> {
+    crate::credentials::Entry::new(CREDENTIAL_SERVICE, &format!("{channel}-{authorization}"))
+        .map_err(|error| format!("Saved credentials are unavailable: {error}"))
 }
 
 fn read_secret(channel: &str, authorization: &str) -> Result<String, String> {
@@ -263,7 +263,7 @@ fn forget_secret(channel: &str, authorization: &str) -> Result<(), String> {
         return Ok(());
     }
     match secret_entry(channel, authorization)?.delete_credential() {
-        Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
+        Ok(()) | Err(crate::credentials::Error::NoEntry) => Ok(()),
         Err(error) => Err(format!("Cannot remove {channel} credential: {error}")),
     }
 }
@@ -278,7 +278,7 @@ fn install_secret(channel: &str, authorization: &str, token: &str) -> Result<(),
         .map_err(|e| format!("Cannot verify credential storage: {e}"))?
         != token
     {
-        return Err("OS credential storage did not retain the token".into());
+        return Err("Credential storage did not retain the token".into());
     }
     Ok(())
 }
@@ -288,9 +288,9 @@ fn context_account(authorization: &str, recipient: &str) -> String {
     format!("weixin-context:{}", json!([authorization, recipient]))
 }
 
-fn context_entry(authorization: &str, recipient: &str) -> Result<keyring::Entry, String> {
-    keyring::Entry::new(KEYRING_SERVICE, &context_account(authorization, recipient))
-        .map_err(|_| "OS credential store is unavailable".into())
+fn context_entry(authorization: &str, recipient: &str) -> Result<crate::credentials::Entry, String> {
+    crate::credentials::Entry::new(CREDENTIAL_SERVICE, &context_account(authorization, recipient))
+        .map_err(|_| "Saved credentials are unavailable".into())
 }
 
 fn save_notification_context(authorization: &str, recipient: &str, token: &str) -> Result<(), String> {
@@ -308,7 +308,7 @@ fn read_notification_context(authorization: &str, recipient: &str) -> Result<Opt
                 .map_err(|_| "Weixin notification context is invalid")?;
             Ok((!value.token.is_empty()).then_some(value.token))
         }
-        Err(keyring::Error::NoEntry) => Ok(None),
+        Err(crate::credentials::Error::NoEntry) => Ok(None),
         Err(_) => Err("Could not read Weixin notification context".into()),
     }
 }
@@ -316,7 +316,7 @@ fn read_notification_context(authorization: &str, recipient: &str) -> Result<Opt
 fn forget_notification_context(authorization: &str, recipient: &str) -> Result<(), String> {
     if authorization.is_empty() || recipient.is_empty() { return Ok(()); }
     match context_entry(authorization, recipient)?.delete_credential() {
-        Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
+        Ok(()) | Err(crate::credentials::Error::NoEntry) => Ok(()),
         Err(_) => Err("Could not remove Weixin notification context".into()),
     }
 }
@@ -624,10 +624,10 @@ fn service_url(raw: &str) -> Result<String, String> {
     Ok(format!("https://{host}"))
 }
 
-fn weixin_login_tokens(entry: &keyring::Entry) -> Result<Vec<String>, String> {
+fn weixin_login_tokens(entry: &crate::credentials::Entry) -> Result<Vec<String>, String> {
     match entry.get_password() {
         Ok(token) => Ok(vec![token]),
-        Err(keyring::Error::NoEntry) => Ok(Vec::new()),
+        Err(crate::credentials::Error::NoEntry) => Ok(Vec::new()),
         Err(error) => Err(format!("Cannot read weixin credential: {error}")),
     }
 }
@@ -2042,24 +2042,17 @@ mod tests {
 
     #[test]
     fn weixin_reconnect_allows_missing_credentials_but_reports_storage_failures() {
-        let entry =
-            keyring::Entry::new_with_credential(Box::new(keyring::mock::MockCredential::default()));
+        let directory = std::env::temp_dir().join(format!("coffee-channels-{}", uuid::Uuid::new_v4()));
+        let path = directory.join("credentials.json");
+        let entry = crate::credentials::Entry::at(path.clone(), CREDENTIAL_SERVICE, "weixin-test");
         assert!(weixin_login_tokens(&entry).unwrap().is_empty());
         entry.set_password("existing-token").unwrap();
         assert_eq!(weixin_login_tokens(&entry).unwrap(), vec!["existing-token"]);
         entry.delete_credential().unwrap();
         assert!(weixin_login_tokens(&entry).unwrap().is_empty());
-        let mock = entry
-            .get_credential()
-            .downcast_ref::<keyring::mock::MockCredential>()
-            .unwrap();
-        for error in [
-            keyring::Error::NoStorageAccess(Box::new(std::io::Error::other("locked"))),
-            keyring::Error::PlatformFailure(Box::new(std::io::Error::other("unavailable"))),
-        ] {
-            mock.set_error(error);
-            assert!(weixin_login_tokens(&entry).is_err());
-        }
+        std::fs::write(&path, "damaged").unwrap();
+        assert!(weixin_login_tokens(&entry).is_err());
+        std::fs::remove_dir_all(directory).unwrap();
     }
 
     #[test]

@@ -22,7 +22,6 @@ export function formatAgentError(error: string, t: AgentTranslator): string {
     case '请求失败': return t('agent.error.request_failed');
     case '请先在 Agent 配置中填写服务地址': return t('agent.error.url_required');
     case '请先在 Agent 配置中填写模型 ID': return t('agent.error.model_required');
-    case '请先在 Agent 配置中填写 API 密钥': return t('agent.error.api_key_required');
     case 'Agent 正在处理上一条消息':
     case '请先停止当前身份正在执行的 Agent 请求，再开始新对话':
     case '这个身份的 Agent 正在处理上一条请求，请先等待完成或取消': return t('agent.error.busy');

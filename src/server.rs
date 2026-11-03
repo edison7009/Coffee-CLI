@@ -4927,46 +4927,46 @@ fn save_tasks(data: String, app: tauri::AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-// ─── Credential Store (OS Keychain) ──────────────────────────────────────────
+// ─── Saved Passwords (plain text) ──────────────────────────────────────────
 
-const KEYRING_SERVICE: &str = "coffee-cli";
+const CREDENTIAL_SERVICE: &str = "coffee-cli";
 
-/// Persist a remote password in the OS keychain (Windows Credential Manager /
-/// macOS Keychain / Linux Secret Service). The key is `username@host`.
+/// Save a remote password as plain text in ~/.coffee-cli/credentials.json.
+/// The key is `username@host`.
 #[tauri::command]
 fn save_password(host: String, username: String, password: String) -> Result<(), String> {
     let account = format!("{}@{}", username, host);
-    keyring::Entry::new(KEYRING_SERVICE, &account)
+    crate::credentials::Entry::new(CREDENTIAL_SERVICE, &account)
         .map_err(|e| e.to_string())?
         .set_password(&password)
         .map_err(|e| e.to_string())
 }
 
-/// Load a previously saved password from the OS keychain.
+/// Load a previously saved password.
 /// Returns `None` if no entry exists (user hasn't saved one yet).
 #[tauri::command]
 fn load_password(host: String, username: String) -> Result<Option<String>, String> {
     let account = format!("{}@{}", username, host);
-    match keyring::Entry::new(KEYRING_SERVICE, &account)
+    match crate::credentials::Entry::new(CREDENTIAL_SERVICE, &account)
         .map_err(|e| e.to_string())?
         .get_password()
     {
         Ok(pw) => Ok(Some(pw)),
-        Err(keyring::Error::NoEntry) => Ok(None),
+        Err(crate::credentials::Error::NoEntry) => Ok(None),
         Err(e) => Err(e.to_string()),
     }
 }
 
-/// Remove a saved password from the OS keychain (e.g. user clicked "forget").
+/// Remove a saved password (e.g. user clicked "forget").
 #[tauri::command]
 fn delete_password(host: String, username: String) -> Result<(), String> {
     let account = format!("{}@{}", username, host);
-    match keyring::Entry::new(KEYRING_SERVICE, &account)
+    match crate::credentials::Entry::new(CREDENTIAL_SERVICE, &account)
         .map_err(|e| e.to_string())?
         .delete_credential()
     {
         Ok(()) => Ok(()),
-        Err(keyring::Error::NoEntry) => Ok(()), // already gone, not an error
+        Err(crate::credentials::Error::NoEntry) => Ok(()), // already gone, not an error
         Err(e) => Err(e.to_string()),
     }
 }

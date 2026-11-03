@@ -659,7 +659,7 @@ export function CenterPanel() {
     };
   }, []);
 
-  // Load sticky config — non-sensitive fields from localStorage, password from OS keychain
+  // Load sticky config — other fields from localStorage, password from ~/.coffee-cli/credentials.json
   useEffect(() => {
     try {
       const saved = localStorage.getItem('coffee_remote_cfg');
@@ -1054,14 +1054,14 @@ export function CenterPanel() {
       host: sshHost.trim(),
       port: parseInt(sshPort) || (remoteProtocol === 'ssh' ? 22 : 7681),
       username: sshUser.trim(),
-      // password intentionally omitted — stored in OS keychain, not localStorage
+      // password omitted here — saved by the backend in ~/.coffee-cli/credentials.json
     };
 
     try {
       localStorage.setItem('coffee_remote_cfg', JSON.stringify(connDataObj));
     } catch { /* Best-effort operation; failure is non-fatal. */ }
 
-    // Save password to OS keychain (Windows Credential Manager / macOS Keychain)
+    // Save password as plain text via the backend (~/.coffee-cli/credentials.json)
     if (isTauri && sshPass) {
       commands.savePassword(sshHost.trim(), sshUser.trim(), sshPass).catch(() => {});
     }
@@ -1616,7 +1616,8 @@ export function CenterPanel() {
                                 <div className="remote-form-row">
                                   <label>{t('remote.password')}</label>
                                   <input
-                                    type="password"
+                                    autoComplete="off"
+                                    spellCheck={false}
                                     value={sshPass}
                                     onChange={e => setSshPass(e.target.value)}
                                     className="remote-input"
@@ -1676,7 +1677,7 @@ export function CenterPanel() {
                                     // password omitted from localStorage
                                   };
                                   try { localStorage.setItem('coffee_remote_cfg', JSON.stringify(connDataObj)); } catch { /* Best-effort operation; failure is non-fatal. */ }
-                                  // Load password for this specific host from keychain, fall back to current sshPass state
+                                  // Load the saved password for this specific host, fall back to current sshPass state
                                   const doConnect = (pw: string) => {
                                     if (isTauri && pw) commands.savePassword(item.host.trim(), item.user || '', pw).catch(() => {});
                                     selectTool('remote', JSON.stringify({ ...connDataObj, password: pw }));

@@ -11,7 +11,6 @@ use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager};
 use tokio::sync::{oneshot, watch};
 
-const KEYRING_SERVICE: &str = "coffee-cli-agent";
 const MAX_TEXT_CHARS: usize = 20_000;
 const MAX_TOOL_ROUNDS: usize = 20;
 /// A third identical call inside the recent window is refused instead of executed.
@@ -46,6 +45,9 @@ struct ModelConfig {
     model: String,
     #[serde(default = "default_english_delegation")]
     english_delegation: bool,
+    /// Plain text and optional: local services often need no key.
+    #[serde(default)]
+    api_key: String,
     #[serde(skip)]
     work_modes: crate::agent_modes::WorkModes,
 }
@@ -81,6 +83,7 @@ impl Default for ModelConfig {
             base_url: "https://api.openai.com/v1".into(),
             model: String::new(),
             english_delegation: true,
+            api_key: String::new(),
             work_modes: Default::default(),
         }
     }
@@ -92,7 +95,7 @@ pub struct ModelView {
     provider: Provider,
     base_url: String,
     model: String,
-    has_api_key: bool,
+    api_key: String,
     english_delegation: bool,
 }
 
@@ -103,7 +106,7 @@ pub struct SaveModel {
     base_url: String,
     model: String,
     english_delegation: Option<bool>,
-    /// Omission preserves the credential for the same endpoint; empty clears it.
+    /// Omission preserves the saved key; empty clears it.
     api_key: Option<String>,
 }
 
@@ -114,6 +117,13 @@ impl SaveModel {
             base_url: self.base_url.trim().trim_end_matches('/').into(),
             model: self.model.trim().into(),
             english_delegation: self.english_delegation.unwrap_or(previous.english_delegation),
+            api_key: match &self.api_key {
+                Some(key) => key.trim().into(),
+                // A key is never carried over to a different service.
+                None if self.provider == previous.provider
+                    && self.base_url.trim().trim_end_matches('/') == previous.base_url => previous.api_key.clone(),
+                None => String::new(),
+            },
             work_modes: Default::default(),
         }
     }
@@ -159,26 +169,6 @@ fn read_model_file(path: &Path) -> Result<ModelConfig, String> {
     }
     let raw = fs::read_to_string(path).map_err(|_| "Could not read Agent model settings")?;
     serde_json::from_str(&raw).map_err(|_| "Agent model settings are invalid".into())
-}
-
-fn key_entry(config: &ModelConfig) -> Result<keyring::Entry, String> {
-    let provider = match config.provider {
-        Provider::Openai => "openai",
-        Provider::Anthropic => "anthropic",
-    };
-    // Bind each key to its endpoint so a failed settings write cannot send a
-    // replacement credential to the previously configured service.
-    let account = format!("{provider}:{}", config.base_url);
-    keyring::Entry::new(KEYRING_SERVICE, &account)
-        .map_err(|_| "OS credential store is unavailable".into())
-}
-
-fn read_key(config: &ModelConfig) -> Result<Option<String>, String> {
-    match key_entry(config)?.get_password() {
-        Ok(key) => Ok(Some(key)),
-        Err(keyring::Error::NoEntry) => Ok(None),
-        Err(_) => Err("Could not read the model API key from the OS credential store".into()),
-    }
 }
 
 fn save_json(path: &Path, value: &impl Serialize) -> Result<(), String> {
@@ -263,12 +253,11 @@ pub fn agent_get_model(app: AppHandle) -> Result<ModelView, String> {
         .lock()
         .map_err(|_| "Agent storage is unavailable")?;
     let config = read_model(&app)?;
-    let has_api_key = read_key(&config)?.is_some();
     Ok(ModelView {
+        api_key: config.api_key.clone(),
         provider: config.provider,
         base_url: config.base_url,
         model: config.model,
-        has_api_key,
         english_delegation: config.english_delegation,
     })
 }
@@ -302,18 +291,6 @@ pub fn agent_save_model(app: AppHandle, config: SaveModel) -> Result<(), String>
         .map_err(|_| "Agent storage is unavailable")?;
     let next = config.model_config(&read_model(&app)?);
     validate_model_settings(&next)?;
-    if let Some(key) = config.api_key {
-        if key.trim().is_empty() {
-            match key_entry(&next)?.delete_credential() {
-                Ok(()) | Err(keyring::Error::NoEntry) => {}
-                Err(_) => return Err("Could not clear the model API key".into()),
-            }
-        } else {
-            key_entry(&next)?
-                .set_password(key.trim())
-                .map_err(|_| "Could not save the model API key in the OS credential store")?;
-        }
-    }
     save_json(&data_dir(&app)?.join("model.json"), &next)
 }
 
@@ -826,13 +803,15 @@ async fn complete_with_prompt(
             let mut body = json!({"model":config.model,"messages":messages,"stream":false});
             if !summary { body["tools"] = json!(tools.into_iter().map(|tool| json!({"type":"function","function":tool})).collect::<Vec<_>>()); }
             else { body["max_tokens"] = json!(4096); }
-            request.bearer_auth(key).json(&body)
+            let request = if key.is_empty() { request } else { request.bearer_auth(key) };
+            request.json(&body)
         }
         Provider::Anthropic => {
             let system = read_only_prompt.map(str::to_owned).unwrap_or_else(|| system_prompt(config));
             let mut body = json!({"model":config.model,"system":system,"messages":messages,"max_tokens":4096});
             if !summary { body["tools"] = json!(tools.into_iter().map(|tool| json!({"name":tool["name"],"description":tool["description"],"input_schema":tool["parameters"]})).collect::<Vec<_>>()); }
-            request.header("x-api-key",key).header("anthropic-version","2023-06-01").json(&body)
+            let request = if key.is_empty() { request } else { request.header("x-api-key",key) };
+            request.header("anthropic-version","2023-06-01").json(&body)
         }
     };
     let response = async {
@@ -883,7 +862,7 @@ pub(crate) async fn extract_memories(app: &AppHandle, text: &str) -> Result<Stri
         let _lock = STORAGE_LOCK.lock().map_err(|_| "Agent storage is unavailable")?;
         let config = read_model(&app)?;
         validate_model_request(&config)?;
-        let key = read_key(&config)?.filter(|key| !key.is_empty()).ok_or("Agent API key is missing")?;
+        let key = config.api_key.clone();
         Ok::<_, String>((config, key))
     }).await.map_err(|_| "Could not load Agent configuration")??;
     let client = reqwest::Client::builder().timeout(Duration::from_secs(30))
@@ -899,7 +878,7 @@ pub(crate) async fn summarize_observation(app: &AppHandle, text: &str) -> Result
         let _lock = STORAGE_LOCK.lock().map_err(|_| "Agent storage is unavailable")?;
         let config = read_model(&app)?;
         validate_model_request(&config)?;
-        let key = read_key(&config)?.filter(|key| !key.is_empty()).ok_or("Agent API key is missing")?;
+        let key = config.api_key.clone();
         Ok::<_, String>((config, key))
     }).await.map_err(|_| "Could not load Agent configuration")??;
     let client = reqwest::Client::builder().timeout(Duration::from_secs(60))
@@ -1235,12 +1214,10 @@ async fn run_loop(
         let mut config = read_model(&app)?;
         config.work_modes = crate::agent_modes::read(&app)?;
         validate_model_request(&config)?;
-        let key = read_key(&config)?
-            .filter(|key| !key.is_empty())
-            .ok_or("请先在 Agent 配置中填写 API 密钥")?;
+        let key = config.api_key.clone();
         Ok::<_, String>((config, key))
     });
-    // OS credential access may block. The worker only reads, so abandoning
+    // File access may block. The worker only reads, so abandoning
     // this wait cannot persist a cancelled turn or overwrite a later run.
     let loaded = tokio::select! {
         biased;
@@ -1969,7 +1946,7 @@ mod tests {
         assert_eq!(stored["model"], "second");
         let reloaded: ModelConfig = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
         assert!(!reloaded.english_delegation);
-        assert!(stored.get("apiKey").is_none());
+        assert_eq!(stored["apiKey"], "");
         assert!(!path.with_extension("json.tmp").exists());
         fs::remove_file(path).unwrap();
         fs::remove_dir(directory).unwrap();
@@ -2032,7 +2009,8 @@ mod tests {
             for field in ["provider", "baseUrl", "model"] {
                 assert_eq!(stored[field], original[field]);
             }
-            assert_eq!(stored.as_object().unwrap().len(), 4);
+            assert_eq!(stored["apiKey"], "");
+            assert_eq!(stored.as_object().unwrap().len(), 5);
             assert_eq!(read_model_file(&path).unwrap().english_delegation, enabled);
             assert!(!path.with_extension("json.tmp").exists());
         }
@@ -2253,5 +2231,80 @@ mod tests {
         assert_eq!(result.err().as_deref(), Some("Cancelled"));
         let _ = release_tx.send(());
         server.join().unwrap();
+    }
+
+    #[test]
+    fn api_key_is_plain_optional_text_in_the_settings_file() {
+        let directory =
+            std::env::temp_dir().join(format!("coffee-agent-test-{}", uuid::Uuid::new_v4()));
+        let path = directory.join("model.json");
+        let save = |value: Value| serde_json::from_value::<SaveModel>(value).unwrap();
+        let first = save(json!({"provider":"openai","baseUrl":"http://localhost:11434/v1","model":"llama","apiKey":"  sk-plain \n"}))
+            .model_config(&read_model_file(&path).unwrap());
+        save_json(&path, &first).unwrap();
+        let stored: Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+        assert_eq!(stored["apiKey"], "sk-plain");
+        let reloaded = read_model_file(&path).unwrap();
+        assert_eq!(reloaded.api_key, "sk-plain");
+        // Omitting the key keeps it only for the same service; an empty key is valid.
+        let renamed = save(json!({"provider":"openai","baseUrl":"http://localhost:11434/v1/","model":"other"})).model_config(&reloaded);
+        assert_eq!(renamed.api_key, "sk-plain");
+        let moved = save(json!({"provider":"openai","baseUrl":"https://example.com/v1","model":"llama"})).model_config(&reloaded);
+        assert_eq!(moved.api_key, "");
+        let switched = save(json!({"provider":"anthropic","baseUrl":"http://localhost:11434/v1","model":"llama"})).model_config(&reloaded);
+        assert_eq!(switched.api_key, "");
+        let cleared = save(json!({"provider":"openai","baseUrl":"http://localhost:11434/v1","model":"llama","apiKey":""})).model_config(&reloaded);
+        assert_eq!(cleared.api_key, "");
+        assert!(validate_model_request(&cleared).is_ok());
+        // Settings from older versions simply start without a key.
+        let older: ModelConfig = serde_json::from_value(json!({"provider":"openai","baseUrl":"https://example.com/v1","model":"m"})).unwrap();
+        assert_eq!(older.api_key, "");
+        fs::remove_file(path).unwrap();
+        fs::remove_dir(directory).unwrap();
+    }
+
+    #[tokio::test]
+    async fn an_empty_api_key_sends_no_credential_header() {
+        for (provider, key, expected) in [
+            (Provider::Openai, "", None),
+            (Provider::Openai, "sk-plain", Some(("authorization", "Bearer sk-plain"))),
+            (Provider::Anthropic, "", None),
+            (Provider::Anthropic, "sk-plain", Some(("x-api-key", "sk-plain"))),
+        ] {
+            let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+            let address = listener.local_addr().unwrap();
+            let server = std::thread::spawn(move || {
+                let (stream, _) = listener.accept().unwrap();
+                stream.set_read_timeout(Some(Duration::from_secs(5))).unwrap();
+                let mut reader = BufReader::new(stream);
+                let (mut headers, mut length) = (Vec::new(), 0);
+                loop {
+                    let mut header = String::new();
+                    reader.read_line(&mut header).unwrap();
+                    if header == "\r\n" { break; }
+                    let header = header.trim_end().to_owned();
+                    if let Some(value) = header.to_lowercase().strip_prefix("content-length:") { length = value.trim().parse().unwrap(); }
+                    headers.push(header);
+                }
+                reader.read_exact(&mut vec![0; length]).unwrap();
+                let response = if provider == Provider::Openai {
+                    json!({"choices":[{"message":{"role":"assistant","content":"ok"}}]})
+                } else {
+                    json!({"content":[{"type":"text","text":"ok"}],"stop_reason":"end_turn"})
+                }.to_string();
+                write!(reader.get_mut(), "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}", response.len(), response).unwrap();
+                headers
+            });
+            let config = ModelConfig { provider, base_url: format!("http://{address}/v1"), model: "test".into(), ..ModelConfig::default() };
+            let (_cancel_tx, mut cancel) = watch::channel(false);
+            let client = reqwest::Client::builder().no_proxy().build().unwrap();
+            let messages = [json!({"role":"user","content":"hello"})];
+            assert_eq!(complete(&client, &config, key, &messages, &mut cancel, false).await.unwrap().text, "ok");
+            let headers = server.join().unwrap();
+            let credentials: Vec<_> = headers.iter().filter_map(|header| header.split_once(':'))
+                .filter(|(name, _)| matches!(name.to_lowercase().as_str(), "authorization" | "x-api-key"))
+                .map(|(name, value)| (name.to_lowercase(), value.trim().to_owned())).collect();
+            assert_eq!(credentials, expected.map(|(name, value)| (name.to_owned(), value.to_owned())).into_iter().collect::<Vec<_>>());
+        }
     }
 }
