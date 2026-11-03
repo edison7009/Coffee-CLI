@@ -30,6 +30,7 @@ import CLAUDE_CLOUD from '../../icons-inline/claude-cloud.gif';
 import './ConversationView.css';
 import './Gambit.css';
 import './ClaudeConversation.css';
+import { pasteImageIntoAnswer } from '../../lib/answer-image-paste';
 
 function useClock(active: boolean, ms = 1000) {
   const [now, setNow] = useState(Date.now);
@@ -240,7 +241,7 @@ function Question({ id, pending }: { id: string; pending: ClaudeRequest }) {
     <strong>{question ? t('claude.question') : tool === 'ExitPlanMode' ? t('claude.plan_ready') : t('claude.allow_tool', { tool: tool || text(pending.request.subtype) })}</strong>
     {question ? questions.map((q, i) => {
       const key = text(q.question), values = answers[key] ?? [];
-      return <fieldset key={i}><legend>{key}</legend>{list(q.options).map((v, j) => { const option = object(v), label = text(option.label); return <label key={j}><input type={q.multiSelect ? 'checkbox' : 'radio'} name={key} checked={values.includes(label)} onChange={() => setAnswers(a => ({ ...a, [key]: q.multiSelect ? values.includes(label) ? values.filter(v => v !== label) : [...values, label] : [label] }))} /><span>{label}{!!option.description && <small>{text(option.description)}</small>}</span></label>; })}<input className="claude-custom-answer" placeholder={t('interaction.custom_placeholder')} value={custom[key] ?? ''} onChange={e => setCustom(a => ({ ...a, [key]: e.target.value }))} onKeyDown={e => {
+      return <fieldset key={i}><legend>{key}</legend>{list(q.options).map((v, j) => { const option = object(v), label = text(option.label); return <label key={j}><input type={q.multiSelect ? 'checkbox' : 'radio'} name={key} checked={values.includes(label)} onChange={() => setAnswers(a => ({ ...a, [key]: q.multiSelect ? values.includes(label) ? values.filter(v => v !== label) : [...values, label] : [label] }))} /><span>{label}{!!option.description && <small>{text(option.description)}</small>}</span></label>; })}<input className="claude-custom-answer" placeholder={t('interaction.custom_placeholder')} value={custom[key] ?? ''} onChange={e => setCustom(a => ({ ...a, [key]: e.target.value }))} onPaste={e => pasteImageIntoAnswer(e, value => setCustom(a => ({ ...a, [key]: value })))} onKeyDown={e => {
         if (e.key !== 'Enter' || e.shiftKey || e.ctrlKey || e.altKey || e.metaKey || e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) return;
         e.preventDefault();
         if (!e.repeat) approve();

@@ -37,7 +37,7 @@ export function formatAgentMessage(message: string, t: AgentTranslator): string 
   return message;
 }
 
-export interface AgentMessage { id: number; role: 'user' | 'assistant'; text: string }
+export interface AgentMessage { id: number; role: 'user' | 'assistant'; text: string; tools?: { name: string; ok: boolean }[] }
 export interface AgentConversation { id: string; route: string; source: string; title: string; updatedAt: number; messageCount: number }
 interface ConversationPage { id: string; route: string; messages: AgentMessage[]; hasOlder: boolean; runId: string | null }
 export interface ChannelSettings {

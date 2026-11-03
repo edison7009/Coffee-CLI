@@ -9,7 +9,7 @@ const compiled = await build({
   define: { 'process.env.NODE_ENV': '"production"' },
 });
 
-function fixture({ platform = 'Win32', native = true, failNative = false, disabled = [], chosen = '' } = {}) {
+function fixture({ platform = 'Win32', native = true, failNative = false, disabled = [], chosen = '', focused = true } = {}) {
   const calls = [], timers = new Map();
   let nextTimer = 0, contexts = 0, notes = 0, chosenPlays = 0;
   class AudioContext {
@@ -27,10 +27,10 @@ function fixture({ platform = 'Win32', native = true, failNative = false, disabl
   const module = { exports: {} };
   runInNewContext(compiled.outputFiles[0].text, {
     module, exports: module.exports, AudioContext,
-    navigator: { platform }, console: { warn() {} },
+    navigator: { platform }, console: { warn() {} }, document: { hasFocus: () => focused },
     localStorage: { getItem: key => disabled.includes(key) ? 'false' : null },
     window: {
-      ...(native ? { __TAURI_INTERNALS__: { async invoke(command, args) {
+      ...(native ? { __TAURI_INTERNALS__: { metadata: { currentWindow: { label: "main" }, currentWebview: { label: "main", windowLabel: "main" } }, async invoke(command, args) {
         calls.push({ command, kind: args.kind });
         if (failNative) throw new Error('Native playback unavailable');
         if (command === 'notify_sound_read') return new ArrayBuffer(chosen ? 8 : 0);
@@ -162,3 +162,19 @@ fallback.api.playNotifySound('done');
 await new Promise(resolve => setImmediate(resolve));
 assert.equal(fallback.notes(), 6, 'native errors retain the WebAudio fallback');
 console.log('Notification sound tests passed (completion, preview, permissions, mute and platform routing).');
+
+{
+  // A background window flashes for approval and completion even with every sound muted.
+  const f = fixture({ focused: false, disabled: ['cc-sound-wait', 'cc-sound-done'] });
+  f.status('claude', 'idle'); f.status('claude', 'working'); f.status('claude', 'wait_input');
+  f.status('claude', 'working'); f.status('claude', 'idle'); f.settle();
+  await new Promise(resolve => setTimeout(resolve, 50));
+  const attention = f.calls.filter(call => call.command === 'plugin:window|request_user_attention');
+  assert.equal(attention.length, 2, 'wait and done each request attention');
+  assert.ok(!f.calls.some(call => call.command === 'play_notify_sound'), 'muted sounds stay silent');
+  const focused = fixture();
+  focused.status('claude', 'idle'); focused.status('claude', 'working'); focused.status('claude', 'wait_input');
+  await new Promise(resolve => setTimeout(resolve, 50));
+  assert.ok(!focused.calls.some(call => call.command === 'plugin:window|request_user_attention'), 'a focused window is not flashed');
+  console.log('notify attention: ok');
+}

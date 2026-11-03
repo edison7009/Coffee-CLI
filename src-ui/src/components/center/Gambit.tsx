@@ -30,6 +30,7 @@ import { UsageMeter } from './UsageMeter';
 import { useUsageQuota } from '../../lib/usage-quota';
 import { gambitAttachments, removeGambitAttachment } from '../../lib/gambit-attachments';
 import './Gambit.css';
+import { fileToBase64 } from '../../lib/answer-image-paste';
 
 interface GambitProps {
   sessionId: string;
@@ -938,17 +939,4 @@ function GambitImpl({
 // use for smooth resizing and making the panel visibly snap back.
 export const Gambit = memo(GambitImpl);
 
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      // data:image/png;base64,xxxx — strip the prefix so Rust gets pure base64.
-      const comma = result.indexOf(',');
-      resolve(comma >= 0 ? result.slice(comma + 1) : result);
-    };
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
-}
 

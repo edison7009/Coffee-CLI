@@ -464,6 +464,8 @@ Xóa tờ ghi chú này khi bạn sẵn sàng và bắt đầu tác vụ đầu 
   'agent.chat.loading': 'Đang tải…',
   'agent.chat.older': 'Xem tin nhắn trước đó',
   'agent.chat.send_failed': 'Gửi thất bại. Hãy xem chi tiết lỗi.',
+  'agent.chat.tools': 'Đã dùng {count} công cụ',
+  'agent.chat.tools_failed': '{count} lỗi',
   'agent.activity.thinking': 'Đang suy nghĩ…',
   'agent.activity.operating': 'Đang sử dụng {tool}…',
   'agent.activity.context': 'Đang chuẩn bị ngữ cảnh…',

@@ -177,6 +177,7 @@ mod tests {
             id,
             role: role.into(),
             text: text.into(),
+            tools: Vec::new(),
         }
     }
 

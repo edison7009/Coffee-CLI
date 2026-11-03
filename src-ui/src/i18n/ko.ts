@@ -463,6 +463,8 @@ export const ko = {
   'agent.chat.loading': '불러오는 중…',
   'agent.chat.older': '이전 메시지 보기',
   'agent.chat.send_failed': '전송에 실패했습니다. 오류 내용을 확인해 주세요.',
+  'agent.chat.tools': '도구 {count}개 사용',
+  'agent.chat.tools_failed': '{count}개 실패',
   'agent.activity.thinking': '생각 중…',
   'agent.activity.operating': '{tool} 사용 중…',
   'agent.activity.context': '문맥 준비 중…',

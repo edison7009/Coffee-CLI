@@ -17,6 +17,7 @@ import { CollapsibleUserMessage, ColdReturnCard, ConversationNavigation, Message
 import './ConversationView.css';
 import './ClaudeConversation.css';
 import './CodexConversation.css';
+import { pasteImageIntoAnswer } from '../../lib/answer-image-paste';
 
 function Measured({ id, measure, children }: { id: string; measure: (id: string, height: number) => void; children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -51,7 +52,7 @@ function RequestCard({ sessionId, request }: { sessionId: string; request: Codex
     {input ? questions.map(question => <fieldset key={str(question.id)} disabled={pending}>
       <legend>{str(question.question)}</legend>
       {arr(question.options).map(value => { const option = obj(value); return <label key={str(option.label)}><input type="radio" name={`${JSON.stringify(request.id)}-${str(question.id)}`} checked={answers[str(question.id)] === option.label} onChange={() => setAnswers(a => ({ ...a, [str(question.id)]: str(option.label) }))} /><span>{str(option.label)}<small>{str(option.description)}</small></span></label>; })}
-      {(!arr(question.options).length || question.isOther === true) && <input className="claude-custom-answer" type={question.isSecret ? 'password' : 'text'} aria-label={str(question.header) || str(question.question)} value={answers[str(question.id)] ?? ''} onChange={e => setAnswers(a => ({ ...a, [str(question.id)]: e.target.value }))} onKeyDown={e => {
+      {(!arr(question.options).length || question.isOther === true) && <input className="claude-custom-answer" type={question.isSecret ? 'password' : 'text'} aria-label={str(question.header) || str(question.question)} value={answers[str(question.id)] ?? ''} onChange={e => setAnswers(a => ({ ...a, [str(question.id)]: e.target.value }))} onPaste={question.isSecret ? undefined : e => pasteImageIntoAnswer(e, value => setAnswers(a => ({ ...a, [str(question.id)]: value })))} onKeyDown={e => {
         if (e.key !== 'Enter' || e.shiftKey || e.ctrlKey || e.altKey || e.metaKey || e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) return;
         e.preventDefault();
         if (!e.repeat) submitAnswers();

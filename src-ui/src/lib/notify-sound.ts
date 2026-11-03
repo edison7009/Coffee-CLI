@@ -177,6 +177,15 @@ function playWebAudioSound(kind: NotifyKind) {
   }
 }
 
+/** With the window in the background, flash its taskbar button: until focused when an
+ *  agent waits for approval, once when a turn completes. Independent of the sound toggles. */
+function requestAttention(kind: NotifyKind) {
+  if (!isTauri || document.hasFocus()) return;
+  void import('@tauri-apps/api/window').then(({ getCurrentWindow, UserAttentionType }) =>
+    getCurrentWindow().requestUserAttention(kind === 'wait' ? UserAttentionType.Critical : UserAttentionType.Informational))
+    .catch(error => console.warn('[notify-sound] Attention request failed:', error));
+}
+
 function enabled(key: string): boolean {
   try {
     return localStorage.getItem(key) !== 'false';
@@ -250,10 +259,11 @@ export function initNotifySound(
     if (becameWaiting) {
       cancelPendingDone(terminal.id);
       if (enabled('cc-sound-wait')) playNotifySound('wait');
+      requestAttention('wait');
       continue;
     }
 
-    if (suppressDone || !enabled('cc-sound-done')) continue;
+    if (suppressDone) continue;
     cancelPendingDone(terminal.id);
     const sessionId = terminal.id;
     const timer = window.setTimeout(() => {
@@ -261,7 +271,8 @@ export function initNotifySound(
       // A permission frame or resumed work observed during the settle window
       // wins; only a terminal that remained idle is genuinely complete.
       if (prevStatus.get(sessionId) !== 'idle') return;
-      playNotifySound('done');
+      if (enabled('cc-sound-done')) playNotifySound('done');
+      requestAttention('done');
     }, DONE_SETTLE_MS);
     pendingDoneTimers.set(sessionId, timer);
   }

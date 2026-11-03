@@ -465,6 +465,8 @@ export const zhCN = {
   'agent.chat.loading': '正在加载…',
   'agent.chat.older': '查看更早的对话',
   'agent.chat.send_failed': '发送失败，请查看错误信息',
+  'agent.chat.tools': '使用了 {count} 个工具',
+  'agent.chat.tools_failed': '{count} 个失败',
   'agent.activity.thinking': '正在思考…',
   'agent.activity.operating': '正在操作 {tool}…',
   'agent.activity.context': '正在整理上下文…',

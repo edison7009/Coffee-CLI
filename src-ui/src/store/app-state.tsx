@@ -1,10 +1,11 @@
 // Coffee CLI — Global App State (React Context)
 
-import { createContext, useContext, useLayoutEffect, useReducer, useRef } from 'react';
+import { createContext, useContext, useEffect, useLayoutEffect, useReducer, useRef } from 'react';
 import type { ReactNode, RefObject } from 'react';
 import { isConversationSession, supportsEnhancedTool } from '../lib/chat-tools';
 import { supportsAdditionalAgentStatus } from '../lib/terminal-agent-status';
 import { insertSessionSplit, removeSessionSplit, replaceSplitSession, splitSessionIds, setSessionSplitRatio, type SessionSplitLayout, type SplitEdge } from '../lib/session-split-layout';
+import { loadOpenTabs, saveOpenTabs } from '../lib/open-tabs';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -845,6 +846,7 @@ function getInitialState(): AppState {
   } catch { /* Best-effort operation; failure is non-fatal. */ }
 
   const defaultTerminalId = crypto.randomUUID();
+  const restored = loadOpenTabs();
 
   let leftPanelHidden = false;
   let rightPanelHidden = true;
@@ -881,8 +883,8 @@ function getInitialState(): AppState {
     termColorScheme,
     termFont,
     defaultShell,
-    terminals: [{ id: defaultTerminalId, tool: null, folderPath }],
-    activeTerminalId: defaultTerminalId,
+    terminals: restored?.terminals ?? [{ id: defaultTerminalId, tool: null, folderPath }],
+    activeTerminalId: restored?.activeId ?? defaultTerminalId,
     sessionSplit: null,
     gambitOpen,
     settingsOpen: false,
@@ -899,7 +901,7 @@ function getInitialState(): AppState {
     toolSettingsOpen: false,
     agentPages: [],
     agentPageActive: null,
-    tabOrder: [defaultTerminalId],
+    tabOrder: restored?.terminals.map(tab => tab.id) ?? [defaultTerminalId],
   };
 }
 
@@ -924,6 +926,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined, getInitialState);
   const stateRef = useRef(state);
   useLayoutEffect(() => { stateRef.current = state; }, [state]);
+  // Saved after a short pause so tab churn and token binding coalesce into one write.
+  const { terminals, tabOrder, activeTerminalId } = state;
+  useEffect(() => {
+    const timer = window.setTimeout(() => saveOpenTabs({ terminals, tabOrder, activeTerminalId }), 500);
+    return () => window.clearTimeout(timer);
+  }, [terminals, tabOrder, activeTerminalId]);
   // The combined-context value has to be recomputed whenever state changes,
   // so keeping the split contexts lets hot components subscribe only to the
   // half they care about.

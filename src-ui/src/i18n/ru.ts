@@ -460,6 +460,8 @@ export const ru = {
   'agent.chat.loading': 'Загрузка…',
   'agent.chat.older': 'Посмотреть предыдущие сообщения',
   'agent.chat.send_failed': 'Не удалось отправить. Посмотрите подробности ошибки.',
+  'agent.chat.tools': 'Использовано инструментов: {count}',
+  'agent.chat.tools_failed': 'с ошибкой: {count}',
   'agent.activity.thinking': 'Размышляет…',
   'agent.activity.operating': 'Использует {tool}…',
   'agent.activity.context': 'Подготовка контекста…',

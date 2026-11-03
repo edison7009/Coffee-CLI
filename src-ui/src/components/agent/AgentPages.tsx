@@ -200,6 +200,10 @@ function AgentChatPage() {
           <button type="button" key={text} onClick={() => { setDraft(text); document.querySelector<HTMLTextAreaElement>('.gambit-textarea')?.focus(); }}>{text}<span aria-hidden="true">↗</span></button>)}</div>
       </div> : <div className="agent-message-list" ref={messageListRef}>{messages.map((message, index) =>
         <article className={`conversation-message conversation-message--${message.role}`} data-conversation-navigation-id={String(message.id)} aria-label={message.role === 'user' ? t('agent.chat.user') : 'Coffee Agent'} key={message.id}>
+          {!!message.tools?.length && <details className="agent-tool-summary">
+            <summary>{t('agent.chat.tools', { count: message.tools.length })}{message.tools.some(tool => !tool.ok) ? ` · ${t('agent.chat.tools_failed', { count: message.tools.filter(tool => !tool.ok).length })}` : ''}</summary>
+            <ol>{message.tools.map((tool, i) => <li key={i} className={tool.ok ? undefined : 'failed'}><span aria-hidden="true">{tool.ok ? '✓' : '✕'}</span><code>{tool.name}</code></li>)}</ol>
+          </details>}
           <div className="conversation-bubble"><MarkdownContent content={message.role === 'assistant' ? formatAgentMessage(message.text, t) : message.text} /></div>
           {(message.role === 'user' || !running || index < messages.length - 1) && <MessageCopyButton copied={copiedMessageId === `${conversationId}:${message.id}`} onCopy={() => copyMessage(message.id, message.role === 'assistant' ? formatAgentMessage(message.text, t) : message.text)} />}
         </article>)}

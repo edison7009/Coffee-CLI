@@ -24,6 +24,15 @@ pub struct Message {
     pub id: i64,
     pub role: String,
     pub text: String,
+    /// Tool calls the Agent made before this reply, for the chat's collapsed summary.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub tools: Vec<ToolUse>,
+}
+
+#[derive(Clone, Serialize)]
+pub struct ToolUse {
+    pub name: String,
+    pub ok: bool,
 }
 
 #[derive(Serialize)]
@@ -439,6 +448,21 @@ impl Store {
         let has_older = messages.len() > PAGE_SIZE;
         messages.truncate(PAGE_SIZE);
         messages.reverse();
+        // Archived tool rows sit between a user turn and the reply they led to.
+        let mut tools = self.db.prepare("SELECT text FROM messages WHERE conversation_id=?1 AND role='tool' AND id>?2 AND id<?3 ORDER BY id")
+            .map_err(|e| e.to_string())?;
+        for index in 0..messages.len() {
+            if messages[index].role != "assistant" { continue; }
+            let after = if index > 0 { messages[index - 1].id } else {
+                self.db.query_row("SELECT COALESCE(MAX(id),0) FROM messages WHERE conversation_id=?1 AND role!='tool' AND id<?2",
+                    params![id, messages[index].id], |row| row.get(0)).map_err(|e| e.to_string())?
+            };
+            messages[index].tools = tools.query_map(params![id, after, messages[index].id], |row| row.get::<_, String>(0))
+                .map_err(|e| e.to_string())?
+                .filter_map(Result::ok)
+                .filter_map(|text| text.split_once(": ").map(|(name, result)| ToolUse { name: name.into(), ok: result.starts_with("{\"ok\":true") }))
+                .collect();
+        }
         Ok(ConversationPage {
             id: id.into(),
             route,
@@ -814,12 +838,34 @@ fn message_row(r: &rusqlite::Row<'_>) -> rusqlite::Result<Message> {
         id: r.get(0)?,
         role: r.get(1)?,
         text: r.get(2)?,
+        tools: Vec::new(),
     })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn each_reply_lists_only_the_tool_calls_of_its_own_turn() {
+        let directory = root();
+        let mut store = Store::open(&directory).unwrap();
+        let id = store.resolve("desktop").unwrap();
+        store.append(&id, "user", "看看终端").unwrap();
+        store.archive_output(&id, "sessions_list", r#"{"ok":true,"result":[]}"#).unwrap();
+        store.archive_output(&id, "terminal_send", r#"{"error":"Read the screen first","ok":false}"#).unwrap();
+        store.append(&id, "assistant", "完成").unwrap();
+        store.append(&id, "user", "谢谢").unwrap();
+        store.append(&id, "assistant", "不客气").unwrap();
+        let messages = store.page(&id, None).unwrap().messages;
+        let tools: Vec<_> = messages[1].tools.iter().map(|tool| (tool.name.as_str(), tool.ok)).collect();
+        assert_eq!(tools, [("sessions_list", true), ("terminal_send", false)]);
+        assert!(messages[3].tools.is_empty() && messages.iter().all(|message| message.role != "tool"));
+        let older = store.page(&id, Some(messages[2].id)).unwrap().messages;
+        assert_eq!(older[1].tools.len(), 2, "the first reply of a page still finds its turn");
+        drop(store);
+        fs::remove_dir_all(directory).unwrap();
+    }
+
     #[test]
     fn a_crashed_turn_is_closed_once_before_the_next_request() {
         let directory = root();

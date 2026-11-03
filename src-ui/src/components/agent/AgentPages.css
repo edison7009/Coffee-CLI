@@ -129,3 +129,11 @@ body.gambit-docked .agent-page-agent { padding-bottom: calc(var(--gambit-dock-h,
   .agent-chat-feedback { width: calc(100% - 40px); }
 }
 @media (prefers-reduced-motion: reduce) { .agent-working-dot { animation: none; } }
+
+.agent-tool-summary { margin: 0 0 6px; color: var(--text-3); font-size: 12px; }
+.agent-tool-summary summary { cursor: pointer; width: fit-content; user-select: none; }
+.agent-tool-summary summary:hover { color: var(--text-2); }
+.agent-tool-summary ol { margin: 6px 0 0; padding: 0 0 0 4px; list-style: none; display: grid; gap: 3px; }
+.agent-tool-summary li { display: flex; align-items: center; gap: 7px; }
+.agent-tool-summary li.failed { color: var(--danger, #d9534f); }
+.agent-tool-summary code { font-size: 11.5px; }

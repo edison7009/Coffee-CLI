@@ -19,6 +19,7 @@ import './ConversationView.css';
 import './ClaudeConversation.css';
 import './CodexConversation.css';
 import './DshConversation.css';
+import { pasteImageIntoAnswer } from '../../lib/answer-image-paste';
 
 function Measured({ id, measure, children }: { id: string; measure: (id: string, height: number) => void; children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -65,7 +66,7 @@ function RequestCard({ sessionId, request }: { sessionId: string; request: DshRe
       <legend>{str(q.question)}</legend>
       {!!q.detail && <MarkdownContent content={str(q.detail)} />}
       {arr(q.options).map(value => { const option = obj(value), label = str(option.label); return <label key={label}><input type={multi ? 'checkbox' : 'radio'} name={`${request.id}-${id}`} checked={(answers[id] ?? []).includes(label)} onChange={() => choose(id, label, multi)} /><span>{label}<small>{str(option.description)}</small></span></label>; })}
-      <input className="claude-custom-answer" type="text" aria-label={str(q.header) || str(q.question)} value={custom[id] ?? ''} onChange={e => setCustom(c => ({ ...c, [id]: e.target.value }))} />
+      <input className="claude-custom-answer" type="text" aria-label={str(q.header) || str(q.question)} value={custom[id] ?? ''} onChange={e => setCustom(c => ({ ...c, [id]: e.target.value }))} onPaste={e => pasteImageIntoAnswer(e, value => setCustom(c => ({ ...c, [id]: value })))} />
     </fieldset>; }) : <>
       <pre className="codex-request-details">{[str(request.params.toolName), str(request.params.reason)].filter(Boolean).join('\n')}</pre>
     </>}

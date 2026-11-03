@@ -463,6 +463,8 @@ export const ja = {
   'agent.chat.loading': '読み込み中…',
   'agent.chat.older': '以前のメッセージを見る',
   'agent.chat.send_failed': '送信に失敗しました。エラーの詳細を確認してください。',
+  'agent.chat.tools': '{count} 個のツールを使用',
+  'agent.chat.tools_failed': '{count} 件失敗',
   'agent.activity.thinking': '考え中…',
   'agent.activity.operating': '{tool} を使用中…',
   'agent.activity.context': 'コンテキストを準備中…',
