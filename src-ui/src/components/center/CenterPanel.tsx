@@ -117,6 +117,7 @@ interface RemoteHistoryItem {
 }
 import { isTauri, commands } from '../../tauri';
 import { titlebarPxPerClientPx } from '../../lib/ui-scale';
+import { NewSessionTabButton } from './NewSessionTabButton';
 import { getToolDisplayName } from '../../lib/tool-info';
 import { useT } from '../../i18n/useT';
 import './CenterPanel.css';
@@ -1304,6 +1305,8 @@ export function CenterPanel() {
             </div>
           </div>
         )}
+
+        <NewSessionTabButton />
 
       </div>,
       tabSlot)}

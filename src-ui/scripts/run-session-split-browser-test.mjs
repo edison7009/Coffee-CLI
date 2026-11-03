@@ -57,7 +57,7 @@ try {
   await page.getByRole('button', { name: 'Agent configuration', exact: true }).click();
   assert.equal(await page.getByText('Agent Tools', { exact: true }).count(), 0, 'retired category is removed');
   assert.equal(await page.getByText('Coffee 101', { exact: true }).count(), 0);
-  await page.getByRole('button', { name: 'New session', exact: true }).click();
+  await page.getByRole('complementary').getByRole('button', { name: 'New session', exact: true }).click();
   for (const session of [
     { id: 'a', tool: 'claude', claudeMode: 'conversation', resumeToken: 'thread-a', toolTitle: 'Claude desktop task' },
     { id: 'b', tool: 'codex', codexMode: 'conversation', resumeToken: 'thread-b', toolTitle: 'Codex desktop task' },

@@ -123,6 +123,24 @@
   flex-shrink: 0;
 }
 
+.chrome-tab-add {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+}
+.chrome-tab-add:hover { background: var(--bg-hover); color: var(--text-1); }
+.chrome-tab-add:focus-visible { outline: 1px solid var(--accent); outline-offset: -1px; }
+
 .tab-close-btn {
   position: absolute;
   inset: 0;
