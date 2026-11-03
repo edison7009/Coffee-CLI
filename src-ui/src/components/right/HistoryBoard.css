@@ -32,7 +32,8 @@
 .history-project-row > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .history-project-row[aria-expanded="true"] .history-project-chevron { transform: rotate(90deg); }
 .history-session-list .history-card-grouped { margin-left: 0; }
-.history-project-more { display: block; width: 100%; padding: 4px 10px; border: 0; border-radius: var(--shape-radius-btn, 6px); background: transparent; color: var(--text-3); font: 500 12px/18px var(--font, system-ui); text-align: left; cursor: pointer; }
+.history-project-more-row { display: flex; gap: 2px; }
+.history-project-more { display: block; padding: 4px 10px; border: 0; border-radius: var(--shape-radius-btn, 6px); background: transparent; color: var(--text-3); font: 500 12px/18px var(--font, system-ui); text-align: left; cursor: pointer; }
 .history-project-more:hover { background: var(--bg-hover); color: var(--text-1); }
 .history-project-more:focus-visible { outline: 1px solid var(--accent); outline-offset: -1px; }
 

@@ -322,15 +322,15 @@ export function HistoryBoard() {
   const openSessions = useMemo(() => new Set(state.terminals.flatMap(tab => tab.resumeToken ? [`${tab.tool}:${tab.resumeToken}`] : [])), [state.terminals]);
   const rows = useMemo(() => layout === 'list'
     ? availableSessions.map(session => ({ kind: 'session' as const, session, grouped: false }))
-    : projects.flatMap((group): Array<{ kind: 'project'; group: typeof group } | { kind: 'session'; session: SavedSession; grouped: boolean } | { kind: 'more'; group: typeof group; remaining: number }> => {
+    : projects.flatMap((group): Array<{ kind: 'project'; group: typeof group } | { kind: 'session'; session: SavedSession; grouped: boolean } | { kind: 'more'; group: typeof group; remaining: number; expanded: boolean }> => {
       const header = { kind: 'project' as const, group };
       if (collapsedProjects.has(group.key)) return [header];
       const limit = PROJECT_PREVIEW + (projectExtras.get(group.key) ?? 0);
       // An open session keeps its live status on screen wherever it falls in the list.
       const shown = group.sessions.filter((session, index) => index < limit || session.id.startsWith('live:') || openSessions.has(`${session.tool}:${session.session_token}`));
       const remaining = group.sessions.length - shown.length;
-      const expandable = remaining > 0 || limit > PROJECT_PREVIEW;
-      return [header, ...shown.map(session => ({ kind: 'session' as const, session, grouped: true })), ...(expandable ? [{ kind: 'more' as const, group, remaining }] : [])];
+      const expanded = limit > PROJECT_PREVIEW;
+      return [header, ...shown.map(session => ({ kind: 'session' as const, session, grouped: true })), ...(remaining > 0 || expanded ? [{ kind: 'more' as const, group, remaining, expanded }] : [])];
     }), [layout, availableSessions, projects, collapsedProjects, projectExtras, openSessions]);
 
   // Search works across titles, tools and full project paths, independently of the sidebar view.
@@ -681,10 +681,16 @@ export function HistoryBoard() {
         </div>
       ))}
       {!isLoading && filteredRows.map(row => row.kind === 'session' ? renderSession(row.session, row.grouped) : row.kind === 'more' ? (
-        <button type="button" key={`more:${row.group.key}`} className="history-project-more" onClick={() => {
-          setPreview(null);
-          setProjectExtras(current => { const next = new Map(current); if (row.remaining > 0) next.set(row.group.key, (current.get(row.group.key) ?? 0) + PROJECT_STEP); else next.delete(row.group.key); return next; });
-        }}>{t(row.remaining > 0 ? 'history.show_more' : 'history.show_less')}</button>
+        <div key={`more:${row.group.key}`} className="history-project-more-row">
+          {row.remaining > 0 && <button type="button" className="history-project-more" onClick={() => {
+            setPreview(null);
+            setProjectExtras(current => new Map(current).set(row.group.key, (current.get(row.group.key) ?? 0) + PROJECT_STEP));
+          }}>{t('history.show_more')}</button>}
+          {row.expanded && <button type="button" className="history-project-more" onClick={() => {
+            setPreview(null);
+            setProjectExtras(current => { const next = new Map(current); next.delete(row.group.key); return next; });
+          }}>{t('history.show_less')}</button>}
+        </div>
       ) : (
         <button type="button" key={row.group.key} className="history-project-row" aria-expanded={!collapsedProjects.has(row.group.key)} onClick={() => {
           setPreview(null);

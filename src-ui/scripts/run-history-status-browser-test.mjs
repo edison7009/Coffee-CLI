@@ -236,16 +236,27 @@ try {
     await page.goto(`http://127.0.0.1:${server.address().port}/?toolIcons=1&pr=branch`);
     await page.locator('.history-card-tool-icon').first().waitFor();
     if(layout==='projects'){
-      // A busy folder previews its newest sessions and grows click by click, then folds back.
-      const more=page.locator('.history-project-more');
-      const preview=await page.locator('.history-card').count();
+      // A busy folder previews its newest sessions and grows click by click; it can fold back at any point.
+      const more=page.getByRole('button',{name:'Show more',exact:true}),less=page.getByRole('button',{name:'Show less',exact:true});
+      const cards=()=>page.locator('.history-card').count();
+      const preview=await cards();
       assert.ok(preview<23,'one folder does not render every session at once');
+      assert.equal(await more.count(),1);assert.equal(await less.count(),0,'the preview offers only Show more');
       if(process.env.COFFEE_HISTORY_SCREENSHOT)await page.screenshot({path:process.env.COFFEE_HISTORY_SCREENSHOT});
-      for(let i=0;i<5&&await page.locator('.history-card').count()<23;i++)await more.click();
-      assert.equal(await page.locator('.history-card').count(),23);
       await more.click();
-      assert.equal(await page.locator('.history-card').count(),preview,'the last click folds back to the preview');
-      for(let i=0;i<5&&await page.locator('.history-card').count()<23;i++)await more.click();
+      const partial=await cards();
+      assert.ok(partial>preview&&partial<23,'Show more adds one step');
+      assert.equal(await more.count(),1);assert.equal(await less.count(),1,'a partly expanded folder offers both Show more and Show less');
+      const [moreBox,lessBox]=await Promise.all([more.boundingBox(),less.boundingBox()]);
+      assert.ok(Math.abs(moreBox.y-lessBox.y)<1&&lessBox.x>moreBox.x+moreBox.width-1,'Show less sits beside Show more');
+      await less.click();
+      assert.equal(await cards(),preview,'Show less folds back from a partial expansion');
+      for(let i=0;i<5&&await cards()<23;i++)await more.click();
+      assert.equal(await cards(),23);
+      assert.equal(await more.count(),0);assert.equal(await less.count(),1,'a fully expanded folder offers only Show less');
+      await less.click();
+      assert.equal(await cards(),preview,'Show less folds back to the preview');
+      for(let i=0;i<5&&await cards()<23;i++)await more.click();
     }
     assert.equal(await page.locator('.history-card-tool-icon').count(),23);
     for (const row of await page.locator('.history-card').all()) {
