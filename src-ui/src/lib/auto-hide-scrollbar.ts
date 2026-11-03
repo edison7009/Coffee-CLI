@@ -78,8 +78,10 @@ export function bindAutoHideScrollbar(
       const trackHeight = Math.max(0, viewportHeight - insetTop - insetBottom - 4);
       // Long conversations made a proportional thumb a hard-to-grab nub; keep
       // it at least a quarter of the track (min 64px) like the desktop apps.
+      // A barely overflowing list made it fill almost the whole track instead:
+      // like native scrollbars, it never grows past half the track.
       const minThumb = Math.min(trackHeight, Math.max(64, trackHeight / 4));
-      const thumbHeight = Math.max(minThumb, trackHeight * (element.clientHeight / element.scrollHeight));
+      const thumbHeight = Math.min(trackHeight / 2, Math.max(minThumb, trackHeight * (element.clientHeight / element.scrollHeight)));
       thumbTravel = Math.max(0, trackHeight - thumbHeight);
       const thumbTop = maxScroll > 0 ? (element.scrollTop / maxScroll) * thumbTravel : 0;
       slider.style.height = `${Math.round(thumbHeight)}px`;
