@@ -286,6 +286,10 @@ try {
   await page.waitForTimeout(400);
   const metrics=()=>scroller.evaluate(el=>({top:el.scrollTop,distance:el.scrollHeight-el.clientHeight-el.scrollTop}));
   assert.ok((await metrics()).distance<2,'restored history starts at the latest message: '+JSON.stringify(await metrics()));
+  // macOS WebKit can restore an older position after a programmatic jump; without user input, keep following.
+  await scroller.evaluate(el=>{el.scrollTop-=400});await page.waitForTimeout(200);
+  assert.ok((await metrics()).distance<2,'an engine scroll restore keeps following: '+JSON.stringify(await metrics()));
+  assert.equal(await page.locator('.host:visible .claude-scroll-bottom').count(),0,'an engine scroll restore shows no jump button');
   await scroller.hover();await page.mouse.wheel(0,-400);await page.waitForTimeout(300);
   const reading=await metrics();
   const returnLatest=page.locator('.host:visible .claude-scroll-bottom');

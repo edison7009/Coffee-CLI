@@ -9,7 +9,8 @@ import { fileURLToPath } from 'node:url';
 import http from 'node:http';
 import { build } from 'esbuild';
 
-const { chromium } = await import(process.env.COFFEE_PLAYWRIGHT_MODULE || 'playwright-core');
+// COFFEE_TEST_BROWSER=webkit runs the same checks in the engine macOS uses.
+const chromium = (await import(process.env.COFFEE_PLAYWRIGHT_MODULE || 'playwright-core'))[process.env.COFFEE_TEST_BROWSER || 'chromium'];
 const project = fileURLToPath(new URL('..', import.meta.url));
 const directory = await mkdtemp(join(tmpdir(), 'coffee-scroll-'));
 await build({
@@ -65,10 +66,10 @@ const html = `<!doctype html><link rel="stylesheet" href="/fixture.css"><style>
 *{box-sizing:border-box}body{margin:0;background:#15101d}:root{--font:Arial,sans-serif;--mono:monospace;--accent:#937fa3;--bg-terminal:#15101d;--bg-panel:#231c2b;--bg-hover:#302838;--text-1:#ded5e5;--text-2:#bdb0c7;--text-3:#a597af;--border:#463b50;--gambit-dock-h:180px}#root,.host{height:100vh}.host{width:100%}
 </style><body class="gambit-docked"><div id="root"></div><script src="/fixture.js"></script>`;
 const server = http.createServer(async (req, res) => {
-  if (req.url === '/') return res.setHeader('Content-Type', 'text/html').end(html);
+  if (req.url === '/') return res.setHeader('Content-Type', 'text/html; charset=utf-8').end(html);
   const name = req.url.slice(1);
   if (!['fixture.js', 'fixture.css'].includes(name)) return res.writeHead(404).end();
-  res.setHeader('Content-Type', name.endsWith('.js') ? 'text/javascript' : 'text/css');
+  res.setHeader('Content-Type', `${name.endsWith('.js') ? 'text/javascript' : 'text/css'}; charset=utf-8`);
   res.end(await readFile(join(directory, name)));
 });
 await new Promise(accept => server.listen(0, '127.0.0.1', accept));
@@ -143,15 +144,33 @@ try {
   assert.ok(Math.abs((await metrics()).top - keyboardPosition.top) < 2, 'keyboard reading stays paused');
   await scroll.evaluate(el => { el.scrollTop = el.scrollHeight; el.dispatchEvent(new Event('scroll')); }); await page.evaluate(() => window.startStream()); await page.waitForTimeout(200); await atBottom(); await page.evaluate(() => window.stopStream());
   console.log('ok keyboard reading and manual bottom resume');
+  await scroll.hover(); await page.waitForTimeout(100);
+  await page.locator('.cc-scrollbar-wide .cc-scrollbar-slider').dispatchEvent('pointerdown', { button: 0, clientY: 300 });
   await scroll.evaluate(el => { el.scrollTop -= 30; window.appendReply(); }); await page.waitForTimeout(200);
+  await page.evaluate(() => document.dispatchEvent(new PointerEvent('pointerup')));
   assert.ok((await metrics()).distance > 10, 'a scrollbar movement is respected even before its scroll event is delivered');
   await returnBottom(); await scroll.dispatchEvent('touchmove');
   await scroll.evaluate(el => { el.scrollTop -= 30; window.appendReply(); }); await page.waitForTimeout(200);
   assert.ok((await metrics()).distance > 10, 'touch movement pauses follow before content updates');
-  console.log('ok scrollbar event race and touch intent');
+  await returnBottom(); await scroll.dispatchEvent('pointerdown', { button: 0 });
+  await scroll.evaluate(el => { el.scrollTop -= 30; window.appendReply(); }); await page.waitForTimeout(200);
+  await page.evaluate(() => document.dispatchEvent(new PointerEvent('pointerup')));
+  assert.ok((await metrics()).distance > 10, 'selecting text upward with the button held pauses follow');
+  console.log('ok scrollbar event race, touch and selection intent');
+
+  // macOS WebKit can restore an older scroll position after a programmatic jump.
+  // Without user input that must not stop following the reply.
+  await returnBottom(); await page.evaluate(() => window.startStream()); await page.waitForTimeout(150);
+  for (const delay of [0, 120]) {
+    await scroll.evaluate(el => { el.scrollTop -= 400; }); await page.waitForTimeout(delay);
+    await page.evaluate(() => window.appendReply()); await page.waitForTimeout(250); await atBottom();
+    assert.equal(await page.locator('.claude-scroll-bottom').count(), 0, 'an engine scroll restore keeps following without the jump button');
+  }
+  await page.evaluate(() => window.stopStream());
+  console.log('ok engine scroll restore keeps following');
 
   await page.evaluate(() => window.reset('assistant')); await page.waitForTimeout(400);
-  await scroll.evaluate(el => { el.scrollTop = 0; el.dispatchEvent(new Event('scroll')); }); await page.waitForTimeout(350);
+  await scroll.evaluate(el => { el.dispatchEvent(new WheelEvent('wheel', { deltaY: -100, bubbles: true })); el.scrollTop = 0; el.dispatchEvent(new Event('scroll')); }); await page.waitForTimeout(350);
   const anchor = page.locator('[data-message-id="history-0"]');
   const before = await anchor.boundingBox(); await page.getByRole('button', { name: 'Load earlier messages', exact: true }).click(); await page.waitForTimeout(400);
   const after = await anchor.boundingBox(); assert.ok(Math.abs(after.y - before.y) < 2, `loading earlier history preserves its visible anchor: ${JSON.stringify({ before, after, scroll: await metrics() })}`);
@@ -173,7 +192,7 @@ try {
   const jumped = await metrics(); await page.evaluate(() => window.startStream()); await page.waitForTimeout(350);
   assert.ok(Math.abs((await metrics()).top - jumped.top) < 2, 'navigation pauses streaming follow');
   await wheelUp(90); const afterJumpWheel = await metrics(); await page.waitForTimeout(200);
-  assert.ok(afterJumpWheel.top < jumped.top - 30 && Math.abs((await metrics()).top - afterJumpWheel.top) < 2, 'manual scrolling releases the navigation anchor');
+  assert.ok(afterJumpWheel.top < jumped.top - 30 && Math.abs((await metrics()).top - afterJumpWheel.top) < 2, `manual scrolling releases the navigation anchor: ${JSON.stringify({ jumped, afterJumpWheel, now: await metrics() })}`);
   await returnBottom(); await page.waitForTimeout(200); await atBottom(); await page.evaluate(() => window.stopStream());
   await turn.click(); await page.waitForTimeout(300);
   assert.ok(Math.abs((await page.locator('[data-message-id="history-10"]').boundingBox()).y - 24) < 2, 'repeat jumps use measured rows accurately');
@@ -224,7 +243,7 @@ try {
   await page.evaluate(() => window.setSession({ messages: [window.reasoningMessage, ...Array.from({ length: 60 }, (_, i) => ({ id: 'toggle-tail-' + i, role: 'user', content: 'Another turn. '.repeat(50), timestamp: Date.now() }))] }));
   await scroll.evaluate(el => { el.scrollTop = el.scrollHeight; el.dispatchEvent(new Event('scroll')); }); await page.waitForTimeout(350);
   assert.equal(await thinking.count(), 0, 'offscreen reasoning is virtualized');
-  await scroll.evaluate(el => { el.scrollTop = 0; el.dispatchEvent(new Event('scroll')); }); await page.waitForTimeout(350);
+  await scroll.evaluate(el => { el.dispatchEvent(new WheelEvent('wheel', { deltaY: -100, bubbles: true })); el.scrollTop = 0; el.dispatchEvent(new Event('scroll')); }); await page.waitForTimeout(350);
   assert.equal(await thinking.evaluate(el => el.open), true, 'expansion survives virtual row remounting');
   await page.evaluate(() => window.setSession({ messages: [{ ...window.reasoningMessage, content: '' }] }));
   assert.equal(await thinking.locator('summary').count(), 0, 'empty or withheld reasoning has no misleading expand arrow');

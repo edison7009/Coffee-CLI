@@ -73,7 +73,7 @@ export function CodexConversation({ sessionId, cwd, resumeToken, isActive, isVis
   const s = useCodexSession(sessionId), t = useT(), { dispatch } = useAppState();
   const directoryIssue = !s.ready ? directoryFailure(s.error) : undefined;
   const directoryError = directoryFailureMessage(s.error, t);
-  const scroll = useRef<HTMLDivElement>(null), pinned = useRef(true), lastTop = useRef(0);
+  const scroll = useRef<HTMLDivElement>(null), pinned = useRef(true), pointerHeld = useRef(false), lastTop = useRef(0);
   const conversationMenu = useConversationMenu(scroll, sessionId, isActive);
   const viewport = useRef({ width: 0, height: 0 });
   const anchor = useRef<{ firstId: string; messageId: string; offset: number; top: number; height: number; applied: boolean } | null>(null);
@@ -104,7 +104,7 @@ export function CodexConversation({ sessionId, cwd, resumeToken, isActive, isVis
   const sync = useCallback(() => {
     const node = scroll.current; if (!node || !isVisible || !node.clientHeight) return;
     const resized = viewport.current.width !== node.clientWidth || viewport.current.height !== node.clientHeight;
-    if (!resized && node.scrollTop < lastTop.current && node.scrollHeight - node.scrollTop - node.clientHeight > 2) pinned.current = false;
+    if (pointerHeld.current && !resized && node.scrollTop < lastTop.current && node.scrollHeight - node.scrollTop - node.clientHeight > 2) pinned.current = false;
     viewport.current = { width: node.clientWidth, height: node.clientHeight };
     const saved = anchor.current;
     if (saved?.applied) {
@@ -113,7 +113,13 @@ export function CodexConversation({ sessionId, cwd, resumeToken, isActive, isVis
     } else if (pinned.current) node.scrollTop = node.scrollHeight;
     lastTop.current = node.scrollTop; setScrolled(!pinned.current);
   }, [isVisible]);
-  useEffect(() => { if (scroll.current) return bindAutoHideScrollbar(scroll.current, { wide: true }); }, []);
+  useEffect(() => {
+    const node = scroll.current; if (!node) return;
+    const unbind = bindAutoHideScrollbar(node, { wide: true, onDragStart: () => { anchor.current = null; pinned.current = false; setScrolled(true); } });
+    const release = () => { pointerHeld.current = false; };
+    document.addEventListener('pointerup', release); document.addEventListener('pointercancel', release);
+    return () => { unbind(); document.removeEventListener('pointerup', release); document.removeEventListener('pointercancel', release); };
+  }, []);
   useLayoutEffect(() => {
     const node = scroll.current, saved = anchor.current;
     if (!node || !isVisible || !node.clientHeight) return;
@@ -158,13 +164,17 @@ export function CodexConversation({ sessionId, cwd, resumeToken, isActive, isVis
   };
   return <ConversationDirectory.Provider value={cwd}><div className={`claude-conversation codex-conversation${hasBg && bgUrl ? ' has-background' : ''}${navigationItems.length > 1 ? ' has-navigation' : ''}`}>
     {hasBg && bgUrl && <div className="conversation-background">{bgType === 'video' ? <video src={bgUrl} autoPlay loop muted /> : <img src={bgUrl} alt="" />}</div>}
-    <div className="claude-scroll" ref={scroll} onContextMenu={conversationMenu.onContextMenu} onCopy={conversationMenu.onCopy} onWheelCapture={e => { if (e.deltaY < 0 && !e.ctrlKey) pause(); }} onTouchMoveCapture={pause} onKeyDownCapture={e => { if (['ArrowUp', 'PageUp', 'Home'].includes(e.key) && !(e.target as HTMLElement).closest('input,textarea,select')) pause(); }} onScroll={() => {
+    <div className="claude-scroll" ref={scroll} onPointerDownCapture={e => { if (e.button === 0) pointerHeld.current = true; }} onContextMenu={conversationMenu.onContextMenu} onCopy={conversationMenu.onCopy} onWheelCapture={e => { if (e.deltaY < 0 && !e.ctrlKey) pause(); }} onTouchMoveCapture={pause} onKeyDownCapture={e => { if (['ArrowUp', 'PageUp', 'Home'].includes(e.key) && !(e.target as HTMLElement).closest('input,textarea,select')) pause(); }} onScroll={() => {
       const node = scroll.current; if (!node?.clientHeight) return;
       if (node.scrollTop !== lastTop.current) anchor.current = null;
       const distance = node.scrollHeight - node.scrollTop - node.clientHeight;
       const resized = viewport.current.width !== node.clientWidth || viewport.current.height !== node.clientHeight;
-      if (!resized && node.scrollTop < lastTop.current && distance > 2) pinned.current = false;
-      else if (node.scrollTop > lastTop.current && distance < 2) pinned.current = true;
+      if (!resized && node.scrollTop < lastTop.current && distance > 2) {
+        // Only a held pointer (text selection) moves away here; wheel, touch, keys and the
+        // scrollbar pause first. Otherwise the engine restored an older position (macOS WebKit).
+        if (pointerHeld.current) pinned.current = false;
+        else if (pinned.current) node.scrollTop = node.scrollHeight;
+      } else if (node.scrollTop > lastTop.current && distance < 2) pinned.current = true;
       lastTop.current = node.scrollTop; setScrolled(!pinned.current);
     }}>
       <div className={`claude-thread${!rows.length ? ' is-empty' : ''}`}>

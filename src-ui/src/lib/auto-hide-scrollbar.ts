@@ -25,13 +25,15 @@ interface AutoHideScrollbarOptions {
   insetTop?: number;
   /** px inset from the element's bottom edge — e.g. clear a resize handle. */
   insetBottom?: number;
+  /** Called when the user starts dragging the slider, before it moves. */
+  onDragStart?: () => void;
 }
 
 export function bindAutoHideScrollbar(
   element: HTMLElement,
   options: AutoHideScrollbarOptions = {},
 ): () => void {
-  const { hideDelay = 450, slim = false, wide = false, insetTop = 0, insetBottom = 0 } = options;
+  const { hideDelay = 450, slim = false, wide = false, insetTop = 0, insetBottom = 0, onDragStart } = options;
   // Hide the native bar entirely (CSS in global.css: .auto-hide-scrollbar).
   element.classList.add('auto-hide-scrollbar');
 
@@ -117,6 +119,7 @@ export function bindAutoHideScrollbar(
   const handleDragStart = (event: PointerEvent) => {
     if (event.button !== 0 || maxScroll <= 0) return;
     event.preventDefault();
+    onDragStart?.();
     dragStartY = event.clientY;
     dragStartScrollTop = element.scrollTop;
     rail.classList.add('is-dragging', 'is-visible');

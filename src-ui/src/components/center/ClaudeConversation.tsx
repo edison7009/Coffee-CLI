@@ -281,6 +281,7 @@ export function ClaudeConversation({ sessionId, cwd, resumeToken, isActive, isVi
   const scrollRef = useRef<HTMLDivElement>(null);
   const conversationMenu = useConversationMenu(scrollRef, sessionId, isActive);
   const pinned = useRef(true);
+  const pointerHeld = useRef(false);
   const lastScrollTop = useRef(0);
   const prependAnchor = useRef<{ firstId: string; messageId: string; offset: number; top: number; height: number; applied: boolean } | null>(null);
   const [copied, setCopied] = useState('');
@@ -294,11 +295,10 @@ export function ClaudeConversation({ sessionId, cwd, resumeToken, isActive, isVi
   useEffect(() => { dispatch({ type: 'SET_AGENT_STATUS', id: sessionId, status: s.requests.length ? 'wait_input' : s.busy ? 'working' : 'idle' }); }, [sessionId, s.busy, s.requests.length, dispatch]);
   useEffect(() => { if (s.nativeId) dispatch({ type: 'SET_SESSION_TOKEN', id: sessionId, token: s.nativeId }); }, [sessionId, s.nativeId, dispatch]);
   useEffect(() => { if (s.title) dispatch({ type: 'SET_TAB_TITLE', id: sessionId, title: s.title }); }, [sessionId, s.title, dispatch]);
-  useEffect(() => { const scroll = scrollRef.current; if (!scroll) return; return bindAutoHideScrollbar(scroll, { wide: true }); }, []);
   const syncScroll = useCallback(() => {
     const scroll = scrollRef.current;
     if (!scroll || !isVisible || !scroll.clientHeight) return;
-    if (scroll.scrollTop < lastScrollTop.current && scroll.scrollHeight - scroll.scrollTop - scroll.clientHeight >= 2) pinned.current = false;
+    if (pointerHeld.current && scroll.scrollTop < lastScrollTop.current && scroll.scrollHeight - scroll.scrollTop - scroll.clientHeight >= 2) pinned.current = false;
     const anchor = prependAnchor.current;
     if (anchor?.applied) {
       // Measurements above the viewport can settle over several virtual-list frames.
@@ -333,6 +333,12 @@ export function ClaudeConversation({ sessionId, cwd, resumeToken, isActive, isVi
     window.addEventListener('keydown', onKey); return () => window.removeEventListener('keydown', onKey);
   }, [isActive, s.busy, s.requests.length, sessionId]);
   const pauseFollow = useCallback(() => { prependAnchor.current = null; pinned.current = false; setScrolled(true); }, []);
+  useEffect(() => { const scroll = scrollRef.current; if (!scroll) return; return bindAutoHideScrollbar(scroll, { wide: true, onDragStart: pauseFollow }); }, [pauseFollow]);
+  useEffect(() => {
+    const release = () => { pointerHeld.current = false; };
+    document.addEventListener('pointerup', release); document.addEventListener('pointercancel', release);
+    return () => { document.removeEventListener('pointerup', release); document.removeEventListener('pointercancel', release); };
+  }, []);
   const jumpToTurn = (item: ConversationNavigationItem) => {
     pauseFollow();
     virtual.scrollToIndex(item.messageIndex, 'instant');
@@ -348,8 +354,13 @@ export function ClaudeConversation({ sessionId, cwd, resumeToken, isActive, isVi
     if (!scroll || !scroll.clientHeight) return;
     if (scroll.scrollTop !== lastScrollTop.current) prependAnchor.current = null;
     const distance = scroll.scrollHeight - scroll.scrollTop - scroll.clientHeight;
-    if (scroll.scrollTop < lastScrollTop.current && distance >= 2) pinned.current = false;
-    else if (scroll.scrollTop > lastScrollTop.current && distance < 2) pinned.current = true;
+    if (scroll.scrollTop < lastScrollTop.current && distance >= 2) {
+      // Wheel, touch, keys and the scrollbar pause follow before they move; a held
+      // pointer is a text selection. Anything else is the engine restoring an older
+      // position (macOS WebKit does this after programmatic jumps), so stay at the end.
+      if (pointerHeld.current) pinned.current = false;
+      else if (pinned.current) scroll.scrollTop = scroll.scrollHeight;
+    } else if (scroll.scrollTop > lastScrollTop.current && distance < 2) pinned.current = true;
     lastScrollTop.current = scroll.scrollTop;
     setScrolled(!pinned.current);
   }, []);
@@ -374,7 +385,7 @@ export function ClaudeConversation({ sessionId, cwd, resumeToken, isActive, isVi
   const summary = !empty && !s.busy && s.endedAt && <div className="claude-turn-summary">{t('claude.worked_for', { duration: elapsed(s.endedAt - (s.startedAt ?? s.endedAt), t) })}{used > 0 && <> · {t('claude.tokens', { count: count(used) })}</>}{s.totalCost !== undefined && s.totalCost > 0 && <> · ~${s.totalCost.toFixed(4)}</>}</div>;
   return <ConversationDirectory.Provider value={cwd}><div className={`claude-conversation${hasBg && bgUrl ? ' has-background' : ''}${navigationItems.length > 1 ? ' has-navigation' : ''}`}>
     {hasBg && bgUrl && <div className="conversation-background">{bgType === 'video' ? <video src={bgUrl} autoPlay loop muted /> : <img src={bgUrl} alt="" />}</div>}
-    <div className="claude-scroll" ref={scrollRef} onContextMenu={conversationMenu.onContextMenu} onCopy={conversationMenu.onCopy} onScroll={onScroll} onWheelCapture={event => { if (event.deltaY < 0 && !event.ctrlKey) pauseFollow(); }} onTouchMoveCapture={pauseFollow} onKeyDownCapture={event => { if ((['ArrowUp', 'PageUp', 'Home'].includes(event.key) || event.key === ' ' && event.shiftKey) && !(event.target as HTMLElement).closest('input,textarea,select,[contenteditable="true"]')) pauseFollow(); }}>
+    <div className="claude-scroll" ref={scrollRef} onPointerDownCapture={event => { if (event.button === 0) pointerHeld.current = true; }} onContextMenu={conversationMenu.onContextMenu} onCopy={conversationMenu.onCopy} onScroll={onScroll} onWheelCapture={event => { if (event.deltaY < 0 && !event.ctrlKey) pauseFollow(); }} onTouchMoveCapture={pauseFollow} onKeyDownCapture={event => { if ((['ArrowUp', 'PageUp', 'Home'].includes(event.key) || event.key === ' ' && event.shiftKey) && !(event.target as HTMLElement).closest('input,textarea,select,[contenteditable="true"]')) pauseFollow(); }}>
       <div className={`claude-thread${empty ? ' is-empty' : ''}`}>
         {s.historyCursor > 0 && <button className="claude-expand" disabled={s.loadingHistory || !s.ready} onClick={loadEarlier}>{t(s.loadingHistory ? 'diff.loading' : 'claude.history_earlier')}</button>}
         <div style={{ height: virtual.topSpacer }} aria-hidden="true" />
