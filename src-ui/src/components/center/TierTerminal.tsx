@@ -356,6 +356,36 @@ function suspendWebglRenderer(webglRef: { current: WebglAddon | null }): void {
   }
 }
 
+// Every mounted terminal's renderer slot, so an atlas rebuild reaches all of them.
+const mountedWebglRenderers = new Set<{ current: WebglAddon | null }>();
+
+// Re-rasterise the WebGL glyph atlas and repaint every terminal. Recovers
+// screens where cells show the wrong glyph because the GPU textures behind the
+// atlas no longer match it. Terminals with the same font and theme share
+// one atlas, but `clearTextureAtlas` only resets the calling terminal's cached
+// cell→glyph positions, so it has to run on every renderer or the others keep
+// sampling glyphs from the old layout.
+function rebuildAllGlyphAtlases(reason: string): void {
+  let count = 0;
+  for (const ref of mountedWebglRenderers) {
+    if (!ref.current) continue;
+    try { ref.current.clearTextureAtlas(); count++; } catch { /* renderer disposed */ }
+  }
+  console.info(`[TierTerminal] glyph atlas rebuilt (${reason}) on ${count} renderer(s)`);
+}
+
+if (typeof window !== 'undefined') {
+  // Manual recovery: Ctrl+Shift+K. Capture phase so xterm never forwards the
+  // combo to the PTY.
+  window.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.shiftKey && !e.altKey && e.code === 'KeyK') {
+      e.preventDefault();
+      e.stopPropagation();
+      rebuildAllGlyphAtlases('Ctrl+Shift+K');
+    }
+  }, true);
+}
+
 interface TierTerminalProps {
   sessionId: string;
   tool: ToolType;
@@ -1294,6 +1324,7 @@ function TierTerminalImpl({
     });
 
     xtermRef.current = term;
+    mountedWebglRenderers.add(webglRef);
     // Register with the output scheduler before any PTY output can arrive —
     // onOutput (subscribed below in startPty) routes through
     // outputScheduler.enqueue instead of term.write directly, so the session
@@ -1684,6 +1715,7 @@ function TierTerminalImpl({
       ro.disconnect();
       sizeSync.dispose();
       if (sizeSyncRef.current === sizeSync) sizeSyncRef.current = null;
+      mountedWebglRenderers.delete(webglRef);
       detachWebglRenderer(webglRef);
       term.dispose();
       outputScheduler.unregisterSession(sessionId);
