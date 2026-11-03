@@ -88,7 +88,14 @@ struct State {
 struct Hub { state: Mutex<State>, changed: Condvar }
 static HUB: OnceLock<Hub> = OnceLock::new();
 
-fn path() -> Result<std::path::PathBuf, String> { Ok(dirs::home_dir().ok_or("Home directory unavailable")?.join(".coffee-cli/orchestration.json")) }
+fn path() -> Result<std::path::PathBuf, String> {
+    // Tests save fixture snapshots (orchestration on, every assistant enabled); they must never
+    // overwrite the user's real settings.
+    #[cfg(test)]
+    return Ok(std::env::temp_dir().join(format!("coffee-orchestration-test-{}", std::process::id())).join("orchestration.json"));
+    #[cfg(not(test))]
+    Ok(dirs::home_dir().ok_or("Home directory unavailable")?.join(".coffee-cli/orchestration.json"))
+}
 fn hub() -> &'static Hub {
     HUB.get_or_init(|| {
         // The bounded 200-task history includes replies and retry identities.
@@ -1452,6 +1459,12 @@ mod tests {
         let mut state = assigned("codex");
         record_delivery_input(&mut state, "child", "codex", "g1", "User's own note", "steer", None, true).unwrap();
         assert!(state.runs["child"].manual, "a user's steer is still the user's");
+    }
+    #[test]
+    fn tests_never_save_into_the_users_home() {
+        let path = path().unwrap();
+        assert!(path.starts_with(std::env::temp_dir()), "{path:?}");
+        if let Some(home) = dirs::home_dir() { assert!(!path.starts_with(home.join(".coffee-cli")), "{path:?}"); }
     }
     #[test]
     fn a_restart_keeps_interrupted_work_and_undelivered_results_for_the_coordinator() {
