@@ -398,8 +398,8 @@ try {
   await page.getByRole('link',{name:'Website',exact:true}).click();assert.deepEqual(await page.evaluate(()=>window.nativeActions.at(-1).args),['https://example.com']);
   await local.click({button:'right'});await page.locator('.term-ctx-menu').getByRole('button',{name:'Copy path',exact:true}).click();assert.equal(await page.evaluate(()=>window.copiedText),'D:/Test/test page.html');
   await local.click({button:'right'});await page.locator('.term-ctx-menu').getByRole('button',{name:'Reveal in File Explorer',exact:true}).click();assert.equal(await page.evaluate(()=>window.nativeActions.at(-1).name),'showInFolder');
-  await local.evaluate(el=>window.getSelection().selectAllChildren(el));await local.click({button:'right'});await page.locator('.term-ctx-menu').getByRole('button',{name:/^Copy Ctrl/}).dispatchEvent('mousedown');assert.equal(await page.evaluate(()=>window.copiedText),'Open page');
-  await local.click({button:'right'});await page.locator('.term-ctx-menu').getByRole('button',{name:/^Paste Ctrl/}).dispatchEvent('mousedown');assert.deepEqual(await page.evaluate(()=>window.actions.at(-1)),{type:'APPEND_GAMBIT_DRAFT',id:'scroll',text:'pasted text'});
+  await local.evaluate(el=>window.getSelection().selectAllChildren(el));await local.click({button:'right'});await page.locator('.term-ctx-menu').getByRole('button',{name:/^Copy (Ctrl|⌘)/}).dispatchEvent('mousedown');assert.equal(await page.evaluate(()=>window.copiedText),'Open page');
+  await local.click({button:'right'});await page.locator('.term-ctx-menu').getByRole('button',{name:/^Paste (Ctrl|⌘)/}).dispatchEvent('mousedown');assert.deepEqual(await page.evaluate(()=>window.actions.at(-1)),{type:'APPEND_GAMBIT_DRAFT',id:'scroll',text:'pasted text'});
   console.log('ok Claude local files, website clicks, link actions, selection copy and paste into draft');
   assert.deepEqual(errors, []);
 } finally {
