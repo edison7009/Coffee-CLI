@@ -36,6 +36,8 @@ import CLAUDE_DATA_URL from '../../icons-inline/claude.svg?inline';
 import CODEX_SVG from '../../icons-inline/codex.svg?raw';
 import MIMOCODE_DATA_URL from '../../icons-inline/mimocode.png?inline';
 import HERMES_DATA_URL from '../../icons-inline/hermes.png?inline';
+// Coffee Agent uses the desktop app icon (Windows source, rounded corners baked in).
+import COFFEE_AGENT_DATA_URL from '../../icons-inline/coffee-agent.png?inline';
 import OPENCODE_DATA_URL from '../../icons-inline/opencode.png?inline';
 // Kimi Code (PNG squircle) — fixed-color brand mark, ?inline data URI.
 import KIMICODE_DATA_URL from '../../icons-inline/kimicode.png?inline';
@@ -85,6 +87,7 @@ const TOOL_ICON_SRC: Record<string, string> = {
   crush:       CRUSH_DATA_URL,
   muse:        MUSE_DATA_URL,
   dsh:         DSH_DATA_URL,
+  'coffee-agent': COFFEE_AGENT_DATA_URL,
 };
 
 const TOOL_ICON_SVG: Record<string, string> = {
@@ -574,7 +577,7 @@ export function HistoryBoard() {
             <div className="history-card-content">
               <div className="history-card-title-row">
                 <span className="history-card-tool-icon" aria-hidden="true">
-                  {session.tool !== 'coffee-agent' && getToolIcon(session.tool)}
+                  {getToolIcon(session.tool)}
                 </span>
                 {isRenaming ? (
                   <input
@@ -639,7 +642,7 @@ export function HistoryBoard() {
             </div>
             {preview?.key === sessionKey && !isRenaming && createPortal(<div id={previewId} className="history-card-preview" role="tooltip" style={{ left: preview.left, top: preview.top }}>
               <div className="history-card-preview-title">{displayName}</div>
-              <div className="history-card-meta"><span className="history-card-tool-wrap">{session.tool !== 'coffee-agent' && getToolIcon(session.tool)}<span className="history-card-meta-text">{(needsAttention || isUnread) && <span className="history-card-preview-status">{t(needsAttention ? 'history.needs_attention' : 'history.unread_reply')} &middot; </span>}{session.tool === 'coffee-agent' ? 'Coffee Agent' : projectName(session.cwd, session.tool)} &middot; {dateStr} {session.turn_count ? ` · ${(t('task.messages') || '{count} messages').replace('{count}', session.turn_count.toString())}` : ''}</span></span></div>
+              <div className="history-card-meta"><span className="history-card-tool-wrap">{getToolIcon(session.tool)}<span className="history-card-meta-text">{(needsAttention || isUnread) && <span className="history-card-preview-status">{t(needsAttention ? 'history.needs_attention' : 'history.unread_reply')} &middot; </span>}{session.tool === 'coffee-agent' ? 'Coffee Agent' : projectName(session.cwd, session.tool)} &middot; {dateStr} {session.turn_count ? ` · ${(t('task.messages') || '{count} messages').replace('{count}', session.turn_count.toString())}` : ''}</span></span></div>
             </div>, document.body)}
           </div>
             {workers.length > 0 && <div className="history-workers" onPointerDown={event => event.stopPropagation()}>
@@ -748,7 +751,7 @@ export function HistoryBoard() {
       </div>
       <div className="history-search-results" id={searchId + '-results'} ref={searchResultsRef} role="listbox" aria-label={t('explorer.tab.history')}>
         {searchResults.map((session, index) => <button type="button" tabIndex={-1} key={session.tool + ':' + session.id} id={searchId + '-result-' + index} className="history-search-result" role="option" aria-selected={selectedSearchIndex === index} onMouseEnter={() => setSearchSelection(index)} onClick={() => openSearchResult(session)}>
-          {session.tool !== 'coffee-agent' && getToolIcon(session.tool)}
+          {getToolIcon(session.tool)}
           <span><strong>{renamed[session.tool + ':' + session.id] ?? session.name}</strong><small>{session.tool === 'coffee-agent' ? 'Coffee Agent' : projectName(session.cwd ?? '', session.tool)}</small></span>
         </button>)}
         {searchHasMore && <div ref={searchSentinelRef} className="history-search-sentinel" />}

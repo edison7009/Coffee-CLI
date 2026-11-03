@@ -29,7 +29,7 @@ const mock = `
     sessions[1].git_context={branch:'main',pull_requests:['https://github.com/example/repo/pull/42']};
     sessions[2].git_context={branch:'main',pull_requests:['https://github.com/example/repo/pull/43']};
   }
-  const snapshot={sessions,status:'ready'}, emptySet=new Set(), emptyObject={}, agent={conversations:[]};
+  const snapshot={sessions,status:'ready'}, emptySet=new Set(), emptyObject={}, agent={conversations:new URLSearchParams(location.search).has('agent')?[{id:'agent-1',title:'Daily plan',updatedAt:Date.now(),messageCount:4}]:[]};
   export const commands={async orchestrationRemoveWorker(taskId){if(window.failRemoval)throw new Error('Remove failed');(window.removeRequests??=[]).push(taskId);const s=window.getTeam();return {...s,revision:s.revision+1,tasks:s.tasks.map(task=>task.id===taskId?{...task,hidden:true,phase:['starting','running','uncertain'].includes(task.phase)?'closed':task.phase}:task)}},async gitProjectStatus(folder,context){window.gitReadCount=(window.gitReadCount||0)+1;const p=new URLSearchParams(location.search);let pr=p.get('pr')||'open',number=42;if(p.has('perSession')&&context){number=Number(context.pull_requests[0].split('/').at(-1));pr=number===42?'merged':'closed'}if(p.has('deferGit'))await new Promise(resolve=>{window.resolveGitStatus=resolve});return {repo_root:folder,branch:context?.branch||'feature/ui',github:'ok',pull_request:pr==='branch'?null:{number,url:'https://github.com/example/repo/pull/'+number,state:pr,ci:pr==='open'?(p.get('ci')||'success'):null}}}},isTauri=true;
   export const subscribeHistory=()=>()=>{},getHistorySnapshot=()=>snapshot,prefetchHistory=()=>{},refreshHistory=()=>{},sortByMtime=s=>s;
   commands.orchestrationRestoreWorker=async(taskId,parentId,sessionId)=>{if(window.failRestore)throw new Error('Restore failed');(window.restoreCalls??=[]).push({taskId,parentId,sessionId});const s=window.getTeam();return {...s,revision:s.revision+1,tasks:s.tasks.map(task=>task.id===taskId?{...task,parentId:task.detached?task.parentId:parentId,sessionId}:task)}};
@@ -272,6 +272,18 @@ try {
     }
     await page.evaluate(()=>document.documentElement.style.setProperty('--text-2','#aba1aa'));
     await page.screenshot({path:join(directory,`tool-icons-${layout}.png`),fullPage:true});
+  }
+  // Coffee Agent conversations carry the desktop app icon, never the animated title-bar logo.
+  for (const layout of ['projects','list']) {
+    await page.evaluate(layout=>localStorage.setItem('cc-history-layout',layout),layout);
+    await page.goto(`http://127.0.0.1:${server.address().port}/?toolIcons=1&agent=1`);
+    const agentCard=page.locator('.history-card').filter({has:page.locator('.history-card-title',{hasText:/^Daily plan$/})});
+    const agentIcon=agentCard.locator('.history-card-tool-icon');
+    await agentIcon.locator('img').waitFor();
+    assert.deepEqual(await agentIcon.locator('img').evaluate(img=>new Promise(resolve=>{const done=()=>resolve([img.src.startsWith('data:image/png'),img.naturalWidth,img.naturalHeight]);img.complete?done():img.onload=done;})),[true,64,64],`${layout}: Coffee Agent shows the 64px desktop app icon`);
+    assert.equal(await agentIcon.locator('svg, animate').count(),0,`${layout}: the Coffee Agent icon is the static image, not the animated logo`);
+    assert.equal(await agentIcon.evaluate(el=>{const i=el.getBoundingClientRect(),t=el.nextElementSibling.getBoundingClientRect();return i.height===14&&Math.abs(i.top+i.height/2-t.top-t.height/2)<1}),true,`${layout}: the Coffee Agent icon aligns with its title`);
+    await agentCard.screenshot({path:join(directory,`coffee-agent-${layout}.png`)});
   }
   await page.evaluate(()=>localStorage.setItem('cc-history-layout','list'));
   await page.emulateMedia({ reducedMotion: 'no-preference' });
