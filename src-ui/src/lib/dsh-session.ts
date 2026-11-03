@@ -4,7 +4,7 @@ import { recordSessionReply } from './session-replies';
 import { invoke } from '../tauri';
 import { arr, obj, str, emptyDshState, reduceDshNotification, restoreDshLog, type DshModel, type DshRoute, type DshState, type Json } from './dsh-protocol';
 
-interface Client { state: DshState; generation: string; listeners: Set<() => void>; owners: number; cwd: string | null; starting?: Promise<void>; switching?: Promise<void>; preset?: string; closeTimer?: ReturnType<typeof setTimeout>; publishTimer?: ReturnType<typeof setTimeout> }
+interface Client { state: DshState; generation: string; listeners: Set<() => void>; owners: number; cwd: string | null; starting?: Promise<void>; switching?: Promise<void>; nextRoute?: DshRoute; preset?: string; closeTimer?: ReturnType<typeof setTimeout>; publishTimer?: ReturnType<typeof setTimeout> }
 const clients = new Map<string, Client>();
 const EMPTY = emptyDshState();
 let listening: Promise<unknown> | undefined;
@@ -99,6 +99,11 @@ async function restart(id: string, route?: DshRoute) {
 export const stopDsh = (id: string) => restart(id);
 export function setDshRoute(id: string, route: DshRoute): Promise<void> {
   const c = clients.get(id);
+  // A switch requested while another reloads waits for it; only the latest request is then applied.
+  if (c?.switching) {
+    c.nextRoute = route;
+    return c.switching.then(() => { if (c.nextRoute !== route) return; c.nextRoute = undefined; return setDshRoute(id, route); });
+  }
   const done = restart(id, route);
   if (c) { c.switching = done; void done.finally(() => { if (c.switching === done) c.switching = undefined; }); }
   return done;

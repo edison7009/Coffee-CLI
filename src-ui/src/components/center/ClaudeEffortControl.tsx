@@ -61,13 +61,20 @@ export function ClaudeEffortControl({ levels, value, disabled, onCommit, onClose
   if (motion.index !== index) setMotion({ index, direction: index > motion.index ? 1 : -1 });
   const level = levels[index] ?? value;
   const label = claudeEffortLabel(level, t);
+  // A level chosen while an earlier one is still being applied is kept and applied next;
+  // only the latest choice counts, and the control never falls back to the earlier one.
   const commit = async () => {
-    const next = draftIndex.current;
-    if (next === null || disabled || committing.current) return;
-    draftIndex.current = null;
-    if (levels[next] === value) { setPreview(null); return; }
+    if (draftIndex.current === null || disabled || committing.current) return;
     committing.current = true;
-    try { await onCommit(levels[next]); } finally { committing.current = false; setPreview(null); }
+    let current = value;
+    try {
+      for (let next: number | null = draftIndex.current; next !== null; next = draftIndex.current) {
+        draftIndex.current = null;
+        if (levels[next] === current) continue;
+        await onCommit(levels[next]);
+        current = levels[next];
+      }
+    } finally { committing.current = false; setPreview(null); }
   };
   const cancel = () => { pointer.current = false; draftIndex.current = null; setPreview(null); };
   return <div className="claude-effort-control" style={{ '--effort-progress': `calc(9px + (100% - 18px) * ${index / Math.max(1, levels.length - 1)})`, '--effort-direction': motion.direction } as CSSProperties}>
