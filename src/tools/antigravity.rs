@@ -1,9 +1,10 @@
-//! Antigravity CLI (Google) — third-class (T3) integration.
+//! Antigravity CLI (Google).
 //!
-//! Antigravity is closed-source and its private session formats have changed
-//! across releases. Coffee CLI therefore treats `agy` as launch-only: brand
-//! icon, PATH detection, and one-click terminal startup, with no history,
-//! resume, heatmap, hook, or protocol integration.
+//! Antigravity is closed-source and its private conversation files have changed
+//! across releases, so Coffee CLI reads only its own conversation index
+//! (`~/.gemini/antigravity-cli/conversation_summaries.db`, in server.rs) for
+//! history and heatmap, and resumes with `agy --conversation <id>`. No hook or
+//! protocol integration.
 
 use super::ToolDescriptor;
 
@@ -21,7 +22,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn antigravity_is_launch_only() {
+    fn antigravity_history_is_read_from_its_index_not_scanned_files() {
         assert!(DESCRIPTOR.history_shape.is_none());
         assert!(!DESCRIPTOR.has_legacy_hook_artifacts);
     }

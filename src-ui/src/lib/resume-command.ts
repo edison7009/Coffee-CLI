@@ -9,8 +9,8 @@
 // Every preset in AGENT_PRESETS has resume_args_after = [] (verified
 // 2026-07-11), so the command is always: `<program> <before...> <token>`.
 //
-// KEEP IN SYNC with AGENT_PRESETS (src/terminal.rs:283-464). If a tool's
-// resume flag changes upstream, update both this table and the Rust preset.
+// KEEP IN SYNC with AGENT_PRESETS in src/terminal.rs (scripts/run-resume-command-test.mjs
+// checks every preset). If a tool's resume flag changes upstream, update both.
 
 interface ResumeShape {
   program: string;
@@ -22,6 +22,7 @@ const RESUME_SHAPES: Record<string, ResumeShape> = {
   hermes:      { program: 'hermes',  argsBefore: ['--resume'] },
   opencode:    { program: 'opencode', argsBefore: ['--session'] },
   mimocode:    { program: 'mimo',    argsBefore: ['--session'] },
+  kilo:        { program: 'kilo',    argsBefore: ['--session'] },
   codex:       { program: 'codex',   argsBefore: ['resume'] },
   grok:        { program: 'grok',    argsBefore: ['--resume'] },
   qwen:        { program: 'qwen',    argsBefore: ['--resume'] },
@@ -29,6 +30,7 @@ const RESUME_SHAPES: Record<string, ResumeShape> = {
   omp:         { program: 'omp',     argsBefore: ['--resume'] },
   codebuddy:   { program: 'codebuddy', argsBefore: ['--resume'] },
   kimicode:    { program: 'kimi',    argsBefore: ['--session'] },
+  antigravity: { program: 'agy',     argsBefore: ['--conversation'] },
   // openclaw has resume_program: None in AGENT_PRESETS - no CLI resume.
 };
 

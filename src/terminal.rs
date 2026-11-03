@@ -440,6 +440,17 @@ pub const AGENT_PRESETS: &[AgentPreset] = &[
         // preventing whitespace/flag injection.
         token_format: Some(r"^session_[A-Za-z0-9._-]+$"),
     },
+    // Antigravity CLI (`agy`). Resume via `agy --conversation <id>` (verified against
+    // `agy --help`, 1.4.12). The id is the UUID primary key of its
+    // conversation_summaries.db, sourced by find_antigravity_sessions.
+    AgentPreset {
+        tool_name: "antigravity",
+        resume_program: Some("agy"),
+        resume_args_before: &["--conversation"],
+        resume_args_after: &[],
+        session_id_pattern: None,
+        token_format: Some(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"),
+    },
 ];
 
 pub fn find_preset(tool_name: &str) -> Option<&'static AgentPreset> {
@@ -1357,7 +1368,7 @@ mod tests {
 
     #[test]
     fn find_preset_known_tools() {
-        for tool in &["claude", "hermes", "pi", "kimicode"] {
+        for tool in &["claude", "hermes", "pi", "kimicode", "antigravity"] {
             assert!(find_preset(tool).is_some(), "preset not found for {tool}");
         }
     }
@@ -1371,7 +1382,6 @@ mod tests {
         assert!(find_preset("definitely_not_a_tool").is_none());
         assert!(find_preset("").is_none());
         assert!(find_preset("gpt").is_none());
-        assert!(find_preset("antigravity").is_none(), "T3 tools have no resume preset");
     }
 
     #[test]

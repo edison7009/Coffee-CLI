@@ -4055,6 +4055,102 @@ fn find_hermes_sessions_sqlite(db_path: &std::path::Path, result: &mut Vec<Saved
     }
 }
 
+/// Antigravity CLI (`agy`) keeps one row per conversation in its own index,
+/// `~/.gemini/antigravity-cli/conversation_summaries.db` (verified against agy 1.4.12):
+/// title, step count, last change and the workspace as `file://` URIs. Sub-agent
+/// conversations carry a parent id and are skipped; resume is `agy --conversation <id>`.
+fn antigravity_summaries_db(home: &std::path::Path) -> Option<std::path::PathBuf> {
+    let db = home.join(".gemini").join("antigravity-cli").join("conversation_summaries.db");
+    db.is_file().then_some(db)
+}
+
+/// `last_modified_time` is SQLite text such as `2026-11-03 22:19:37.954952+00:00`;
+/// a value without an offset is UTC.
+fn antigravity_time_ms(text: &str) -> Option<i64> {
+    let text = text.trim();
+    chrono::DateTime::parse_from_str(text, "%Y-%m-%d %H:%M:%S%.f%:z")
+        .or_else(|_| chrono::DateTime::parse_from_rfc3339(text))
+        .map(|time| time.timestamp_millis())
+        .ok()
+        .or_else(|| chrono::NaiveDateTime::parse_from_str(text, "%Y-%m-%d %H:%M:%S%.f").ok().map(|time| time.and_utc().timestamp_millis()))
+}
+
+/// First workspace of the JSON array of `file://` URIs, as a local path.
+fn antigravity_workspace(uris: &str) -> String {
+    serde_json::from_str::<Vec<String>>(uris).ok()
+        .and_then(|uris| uris.into_iter().next())
+        .and_then(|uri| url::Url::parse(&uri).ok())
+        .and_then(|url| url.to_file_path().ok())
+        .map(|path| path.to_string_lossy().into_owned())
+        .unwrap_or_default()
+}
+
+fn antigravity_connection(db_path: &std::path::Path) -> Option<rusqlite::Connection> {
+    rusqlite::Connection::open_with_flags(
+        db_path,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX,
+    ).ok()
+}
+
+/// Only ids `agy --conversation` can take count as conversations.
+fn antigravity_valid_id(id: &str) -> bool {
+    !id.is_empty() && id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-')
+}
+
+const ANTIGRAVITY_ROOT_CONVERSATIONS: &str =
+    "FROM conversation_summaries WHERE parent_conversation_id = '' AND step_count > 0";
+
+fn find_antigravity_sessions(db_path: &std::path::Path, result: &mut Vec<SavedSession>) {
+    let Some(conn) = antigravity_connection(db_path) else { return };
+    let query = format!("SELECT conversation_id, title, preview, last_modified_time, workspace_uris \
+        {ANTIGRAVITY_ROOT_CONVERSATIONS} ORDER BY last_modified_time DESC LIMIT 200");
+    let Ok(mut stmt) = conn.prepare(&query) else { return };
+    let rows = stmt.query_map([], |row| Ok((
+        row.get::<_, String>(0)?,
+        row.get::<_, Option<String>>(1).unwrap_or(None).unwrap_or_default(),
+        row.get::<_, Option<String>>(2).unwrap_or(None).unwrap_or_default(),
+        row.get::<_, Option<String>>(3).unwrap_or(None).unwrap_or_default(),
+        row.get::<_, Option<String>>(4).unwrap_or(None).unwrap_or_default(),
+    )));
+    let Ok(rows) = rows else { return };
+    for (id, title, preview, modified, uris) in rows.flatten() {
+        if !antigravity_valid_id(&id) { continue }
+        let Some(saved_at) = antigravity_time_ms(&modified) else { continue };
+        let name = [title.trim(), preview.lines().next().unwrap_or("").trim()].into_iter()
+            .find(|text| !text.is_empty())
+            .map(|text| text.chars().take(80).collect())
+            .unwrap_or_else(|| "Antigravity CLI Session".to_string());
+        result.push(SavedSession {
+            id: format!("antigravity_native_{id}"),
+            name,
+            tool: "antigravity".to_string(),
+            cwd: antigravity_workspace(&uris),
+            session_token: Some(id),
+            saved_at: saved_at.to_string(),
+            created_at: None,
+            file_path: None,
+            turn_count: None,
+            git_context: None,
+            worktree_cwd: None,
+        });
+    }
+}
+
+/// Heatmap second pass for Antigravity CLI: one entry per root conversation,
+/// its last change and step count.
+fn collect_antigravity_heatmap_entries(db_path: &std::path::Path, cutoff_secs: i64, out: &mut Vec<HeatmapEntry>) {
+    let Some(conn) = antigravity_connection(db_path) else { return };
+    let Ok(mut stmt) = conn.prepare(&format!("SELECT conversation_id, last_modified_time, step_count {ANTIGRAVITY_ROOT_CONVERSATIONS}")) else { return };
+    let Ok(rows) = stmt.query_map([], |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?, row.get::<_, i64>(2).unwrap_or(0)))) else { return };
+    for (id, modified, steps) in rows.flatten() {
+        if !antigravity_valid_id(&id) { continue }
+        let Some(ts) = antigravity_time_ms(&modified).map(|ms| ms / 1000) else { continue };
+        if ts >= cutoff_secs {
+            out.push(HeatmapEntry { ts, count: steps.clamp(1, u32::MAX as i64) as u32 });
+        }
+    }
+}
+
 /// Heatmap second pass for Hermes `state.db` — one entry per session
 /// (started_at seconds + message_count). Mirrors
 /// `collect_opencode_heatmap_entries`. Best-effort.
@@ -4460,6 +4556,11 @@ fn load_native_history_blocking() -> Result<Vec<SavedSession>, String> {
         find_grok_sessions(_home, &mut result);
     }
 
+    // Antigravity CLI second pass - its own conversation index (SQLite), read-only.
+    if let Some(db) = home.as_ref().and_then(|home| antigravity_summaries_db(home)) {
+        find_antigravity_sessions(&db, &mut result);
+    }
+
     // DeepSeek Harness second pass - per-Session dirs under ~/.dsh/sessions with
     // zstd logs; titles and times come from its own projection cache, so no log
     // is decompressed. Desktop-only tool: resume opens a conversation tab.
@@ -4759,6 +4860,15 @@ fn load_message_heatmap_blocking() -> Result<Vec<HeatmapEntry>, String> {
                 collect_hermes_heatmap_entries(&db, cutoff_secs, &mut out);
             }
         }
+    }
+
+    // Antigravity CLI heatmap second pass - the same conversation index as its history.
+    if let Some(db) = home.as_ref().and_then(|home| antigravity_summaries_db(home)) {
+        let cutoff_secs = cutoff
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs() as i64)
+            .unwrap_or(0);
+        collect_antigravity_heatmap_entries(&db, cutoff_secs, &mut out);
     }
 
     // MiMo Code heatmap second pass — identical schema to OpenCode, so it
@@ -5731,6 +5841,53 @@ mod resume_cwd_tests {
 
 #[cfg(test)]
 mod file_ops_tests;
+
+#[cfg(test)]
+mod antigravity_history_tests {
+    #[test]
+    fn antigravity_history_reads_root_conversations_from_its_index() {
+        use super::*;
+        let dir = std::env::temp_dir().join(format!("coffee-agy-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let db = dir.join("conversation_summaries.db");
+        let conn = rusqlite::Connection::open(&db).unwrap();
+        // Columns as created by agy 1.4.12.
+        conn.execute_batch(r#"CREATE TABLE `conversation_summaries` (`conversation_id` text,`title` text NOT NULL DEFAULT "",`preview` text NOT NULL DEFAULT "",`step_count` integer NOT NULL DEFAULT 0,`last_modified_time` datetime NOT NULL,`workspace_uris` text NOT NULL,`status` text NOT NULL DEFAULT "",`source` text NOT NULL DEFAULT "",`project_id` text NOT NULL DEFAULT "",`agent_name` text NOT NULL DEFAULT "",`parent_conversation_id` text NOT NULL DEFAULT "",`nesting_depth` integer NOT NULL DEFAULT 0,`battle_id` text NOT NULL DEFAULT "",`winning_conversation_id` text NOT NULL DEFAULT "",`not_fully_idle` numeric NOT NULL DEFAULT false,`killed` numeric NOT NULL DEFAULT false,`last_user_input_time` datetime NOT NULL,`last_user_input_step_index` integer NOT NULL DEFAULT -1,`app_data_dir` text NOT NULL DEFAULT "",`raw_summary` blob,`group_id` text NOT NULL DEFAULT "",PRIMARY KEY (`conversation_id`));"#).unwrap();
+        let row = |id: &str, title: &str, preview: &str, steps: i64, time: &str, uris: &str, parent: &str| {
+            conn.execute("INSERT INTO conversation_summaries (conversation_id, title, preview, step_count, last_modified_time, workspace_uris, parent_conversation_id, last_user_input_time) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?5)",
+                rusqlite::params![id, title, preview, steps, time, uris, parent]).unwrap();
+        };
+        row("f99ca1a5-1184-4740-8c60-5c28d2252186", "Chinese Greeting", "你好", 10, "2026-11-03 22:19:37.954952+00:00", r#"["file:///Users/eben"]"#, "");
+        row("0a1b2c3d-0000-4000-8000-000000000001", "", "修复构建\n第二行", 4, "2026-11-04 08:00:00.5+00:00", r#"["file:///Volumes/%E6%89%A9%E5%B1%95%E5%AD%98%E5%82%A8/coffee-cli"]"#, "");
+        row("0a1b2c3d-0000-4000-8000-000000000002", "Worker", "", 6, "2026-11-04 09:00:00+00:00", r#"["file:///Users/eben"]"#, "f99ca1a5-1184-4740-8c60-5c28d2252186");
+        row("0a1b2c3d-0000-4000-8000-000000000003", "", "", 0, "2026-11-04 10:00:00+00:00", "[]", "");
+        row("not a conversation --flag", "Bad id", "", 3, "2026-11-04 11:00:00+00:00", "[]", "");
+        drop(conn);
+
+        let mut sessions = Vec::new();
+        find_antigravity_sessions(&db, &mut sessions);
+        let summary: Vec<_> = sessions.iter().map(|s| (s.name.as_str(), s.cwd.as_str(), s.session_token.as_deref(), s.saved_at.as_str(), s.tool.as_str())).collect();
+        assert_eq!(summary, vec![
+            ("修复构建", if cfg!(windows) { "" } else { "/Volumes/扩展存储/coffee-cli" }, Some("0a1b2c3d-0000-4000-8000-000000000001"), "1793779200500", "antigravity"),
+            ("Chinese Greeting", if cfg!(windows) { "" } else { "/Users/eben" }, Some("f99ca1a5-1184-4740-8c60-5c28d2252186"), "1793744377954", "antigravity"),
+        ], "root conversations only, newest first; sub-agent and empty conversations are skipped");
+        assert!(crate::terminal::find_preset("antigravity").is_some_and(|preset| preset.resume_program == Some("agy") && preset.resume_args_before == ["--conversation"]));
+
+        let mut heatmap = Vec::new();
+        collect_antigravity_heatmap_entries(&db, 1793744377, &mut heatmap);
+        let mut counts: Vec<_> = heatmap.iter().map(|entry| (entry.ts, entry.count)).collect();
+        counts.sort();
+        assert_eq!(counts, vec![(1793744377, 10), (1793779200, 4)]);
+        // Older index rows may carry no offset; they are UTC.
+        assert_eq!(antigravity_time_ms("2026-11-03 22:19:37.954952"), Some(1793744377954));
+        assert_eq!(antigravity_time_ms("2026-11-03T22:19:37Z"), Some(1793744377000));
+        assert_eq!(antigravity_time_ms("yesterday"), None);
+        let mut recent = Vec::new();
+        collect_antigravity_heatmap_entries(&db, 1793744378, &mut recent);
+        assert_eq!(recent.len(), 1, "the cutoff applies");
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+}
 
 #[cfg(test)]
 mod tests {
