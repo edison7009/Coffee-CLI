@@ -4,7 +4,7 @@ import type { AppState, TerminalSession } from '../store/app-state';
 // history's "continue". Only tabs that can return to the same place are saved:
 // a tool tab with a bound session token, or a plain shell in its folder. A tool
 // tab without a token would start a brand-new session, and SSH tabs carry
-// connection data, so both are left out.
+// connection data, so both are left out, as are orchestration workers.
 const KEY = 'cc-open-tabs';
 const LIMIT = 30;
 
@@ -23,7 +23,8 @@ interface SavedTab {
 }
 
 function saved(tab: TerminalSession, active: boolean): SavedTab | null {
-  if (!tab.tool || tab.tool === 'remote' || tab.isHidden || !tab.folderPath) return null;
+  // Workers come back through orchestration's own restore, under their coordinator.
+  if (!tab.tool || tab.tool === 'remote' || tab.isHidden || tab.parentId || !tab.folderPath) return null;
   if (tab.tool !== 'terminal' && !tab.resumeToken) return null;
   return {
     tool: tab.tool, folderPath: tab.folderPath, resumeToken: tab.tool === 'terminal' ? undefined : tab.resumeToken,

@@ -14,8 +14,9 @@ export async function main(): Promise<void> {
     tab('d', { tool: 'remote', toolData: '{"host":"x"}', resumeToken: 'tok-d' }),
     tab('e', { tool: 'claude', resumeToken: 'tok-e', isHidden: true }),
     tab('f', {}),
+    tab('g', { tool: 'codex', resumeToken: 'tok-g', parentId: 'a' }),
   ];
-  const text = serializeOpenTabs({ terminals, tabOrder: ['c', 'a', 'b', 'd', 'e', 'f'], activeTerminalId: 'a' });
+  const text = serializeOpenTabs({ terminals, tabOrder: ['c', 'a', 'b', 'd', 'e', 'f', 'g'], activeTerminalId: 'a' });
   check(!text.includes('host'), 'SSH connection data is never saved');
   const restored = parseOpenTabs(text);
   check(!!restored, 'tabs restore');

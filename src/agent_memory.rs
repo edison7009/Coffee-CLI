@@ -460,7 +460,7 @@ impl Store {
             messages[index].tools = tools.query_map(params![id, after, messages[index].id], |row| row.get::<_, String>(0))
                 .map_err(|e| e.to_string())?
                 .filter_map(Result::ok)
-                .filter_map(|text| text.split_once(": ").map(|(name, result)| ToolUse { name: name.into(), ok: result.starts_with("{\"ok\":true") }))
+                .filter_map(|text| text.split_once(": ").map(|(name, result)| ToolUse { name: name.into(), ok: tool_succeeded(result) }))
                 .collect();
         }
         Ok(ConversationPage {
@@ -751,6 +751,13 @@ impl Store {
     }
 }
 
+/// Key order in archived results is not fixed, so read the top-level flag instead of matching a prefix.
+fn tool_succeeded(result: &str) -> bool {
+    #[derive(Deserialize)]
+    struct Outcome { ok: Option<bool> }
+    serde_json::from_str::<Outcome>(result).ok().and_then(|outcome| outcome.ok).unwrap_or(false)
+}
+
 fn read_memories(db: &Connection, route: &str) -> Result<Vec<Memory>, String> {
     let mut statement = db.prepare("SELECT id,content,project,updated_at,source_conversation,automatic,experience FROM memories WHERE route=?1 ORDER BY rowid").map_err(|e| e.to_string())?;
     let rows = statement.query_map([route], |row| Ok(Memory {
@@ -851,7 +858,7 @@ mod tests {
         let mut store = Store::open(&directory).unwrap();
         let id = store.resolve("desktop").unwrap();
         store.append(&id, "user", "看看终端").unwrap();
-        store.archive_output(&id, "sessions_list", r#"{"ok":true,"result":[]}"#).unwrap();
+        store.archive_output(&id, "sessions_list", r#"{"generation":"g1","ok":true,"result":[]}"#).unwrap();
         store.archive_output(&id, "terminal_send", r#"{"error":"Read the screen first","ok":false}"#).unwrap();
         store.append(&id, "assistant", "完成").unwrap();
         store.append(&id, "user", "谢谢").unwrap();
