@@ -197,7 +197,7 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
     cursor = 0;
     const page = component();
     const nodes = elements(page);
-    const thread = nodes.find(node => node.props.className === 'agent-chat-thread');
+    const thread = nodes.find(node => String(node.props.className ?? '').split(' ').includes('agent-chat-thread'));
     thread.props.ref.current = scroll;
     const list = nodes.find(node => node.props.className === 'agent-message-list');
     if (list) list.props.ref.current = {};
@@ -248,7 +248,7 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
   assert.equal(elements(nodes.find(node => node.type === 'article' && node.props['data-conversation-navigation-id'] === '102')).find(node => node.type === 'copy').props.copied, false);
 
   scroll.scrollTop = 700;
-  nodes.find(node => node.props.className === 'agent-chat-thread').props.onScroll();
+  nodes.find(node => String(node.props.className ?? '').split(' ').includes('agent-chat-thread')).props.onScroll();
   nodes.find(node => node.type === 'button' && node.children.includes('agent.chat.older')).props.onClick();
   assert.ok(olderRequest, 'the real older-history handler requested the archive');
   // Older rows add 300 px above, while an active reply grows another 500 px

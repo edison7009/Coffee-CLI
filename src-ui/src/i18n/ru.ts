@@ -458,6 +458,7 @@ export const ru = {
   'agent.chat.user': 'Вы',
   'agent.chat.loading': 'Загрузка…',
   'agent.chat.older': 'Посмотреть предыдущие сообщения',
+  'agent.chat.new': 'Новый чат',
   'agent.chat.send_failed': 'Не удалось отправить. Посмотрите подробности ошибки.',
   'agent.chat.tools': 'Использовано инструментов: {count}',
   'agent.chat.tools_failed': 'с ошибкой: {count}',

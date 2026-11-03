@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import QRCode from 'qrcode';
 import { commands, invoke } from '../../tauri';
 import { useAppState, type AgentPage } from '../../store/app-state';
-import { formatAgentActivity, formatAgentError, formatAgentMessage, loadOlderAgentMessages, refreshChannels, sendAgentMessage, useAgentClient } from '../../lib/agent-client';
+import { formatAgentActivity, formatAgentError, formatAgentMessage, loadOlderAgentMessages, refreshChannels, sendAgentMessage, startNewAgentConversation, useAgentClient } from '../../lib/agent-client';
 import { useT } from '../../i18n/useT';
 import type { I18nKey } from '../../i18n/en';
 import { clipboardRead, clipboardWrite } from '../../lib/clipboard';
@@ -186,10 +186,15 @@ function AgentChatPage() {
     finally { setCancelling(false); }
   };
 
+  const startNew = () => { setLocalError(''); startNewAgentConversation().catch(failure => setLocalError(String(failure))); };
+
   return <PageFrame page="agent">
+    {messages.length > 0 && <button type="button" className="agent-button quiet agent-new-chat" disabled={running} onClick={startNew}>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>{t('agent.chat.new')}
+    </button>}
     <div className={`conversation-view agent-chat-surface${navigationItems.length > 1 ? ' agent-chat-surface--has-navigation' : ''}`}>
     {navigationItems.length > 1 && state.agentPageActive === 'agent' && <ConversationNavigation items={navigationItems} scrollRef={threadRef} onJump={jumpToMessage} />}
-    <div className="agent-chat-thread" ref={threadRef} onScroll={() => {
+    <div className={`agent-chat-thread${messages.length > 0 ? ' agent-chat-thread--new-chat' : ''}`} ref={threadRef} onScroll={() => {
       const node = threadRef.current;
       if (node) followOutput.current = node.scrollHeight - node.scrollTop - node.clientHeight < 120;
     }}>

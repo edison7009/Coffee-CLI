@@ -463,6 +463,7 @@ export const zhCN = {
   'agent.chat.user': '你',
   'agent.chat.loading': '正在加载…',
   'agent.chat.older': '查看更早的对话',
+  'agent.chat.new': '新对话',
   'agent.chat.send_failed': '发送失败，请查看错误信息',
   'agent.chat.tools': '使用了 {count} 个工具',
   'agent.chat.tools_failed': '{count} 个失败',

@@ -10,6 +10,7 @@ const reads = [];
 const channelReads = [];
 const listReads = [];
 const sends = [];
+const created = [];
 const page = (id, messages, extra = {}) => ({ id: id === 'desktop' ? 'desktop-thread' : id, route: 'desktop', messages, hasOlder: false, runId: null, ...extra });
 runInNewContext(compiled.outputFiles[0].text, {
   module, exports: module.exports,
@@ -18,7 +19,7 @@ runInNewContext(compiled.outputFiles[0].text, {
   window: { __TAURI_INTERNALS__: { invoke: (command, args) => {
     if (command === 'agent_get_conversation') return new Promise(resolve => reads.push(messages => resolve(Array.isArray(messages) ? page(args.conversationId, messages) : messages)));
     if (command === 'agent_list_conversations') return new Promise(resolve => listReads.push(resolve));
-    if (command === 'agent_new_conversation') return Promise.resolve('new-thread');
+    if (command === 'agent_new_conversation') { created.push(args.conversationId); return Promise.resolve(created.length === 1 ? 'new-thread' : 'button-thread'); }
     if (command === 'channel_get_settings') return new Promise(resolve => channelReads.push(resolve));
     if (command === 'agent_send_message') { sends.push(args); return Promise.resolve('new-run'); }
     throw new Error(`Unexpected IPC ${command}`);
@@ -104,6 +105,17 @@ await fresh;
 assert.equal(api.useAgentClient().conversationId, 'new-thread');
 assert.equal(api.useAgentClient().messages.length, 0);
 console.log('  ok  conversational /new starts a saved thread without sending a CLI task');
+
+const fromButton = api.startNewAgentConversation();
+await new Promise(resolve => setImmediate(resolve));
+reads.shift()(page('button-thread', []));
+await new Promise(resolve => setImmediate(resolve));
+while (listReads.length) listReads.shift()([]);
+await fromButton;
+assert.deepEqual(created, ['streaming-history', 'new-thread'], 'the button starts from the open thread exactly like /new');
+assert.equal(api.useAgentClient().conversationId, 'button-thread');
+assert.equal(sends.filter(send => send.text === '/new').length, 0, 'neither path sends /new to the model');
+console.log('  ok  the New chat button starts a saved thread the same way as /new');
 
 const channelSettings = status => ({ telegram: { enabled: false }, weixin: { enabled: true }, status: { telegram: 'disconnected', weixin: status } });
 const channelRefresh = api.refreshChannels();

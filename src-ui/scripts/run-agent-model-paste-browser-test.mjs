@@ -11,7 +11,7 @@ const fixtures = {
   'store/app-state': `export function useAppState(){return{state:{agentPageActive:'config'}}} export function useAppLanguage(){return 'zh-CN'}`,
   'tauri': `export const commands={}; export const isTauri=true; export async function invoke(name,args){window.invokes.push([name,args]); if(name==='agent_save_model')window.stored=args.config; if(name==='agent_get_model')return{...window.stored}; return null}`,
   '/clipboard': `export async function clipboardRead(){return window.clipboardText} export async function clipboardWrite(text){window.copiedText=text}`,
-  'lib/agent-client': `export const formatAgentError=e=>e; export const formatAgentActivity=()=>''; export const formatAgentMessage=()=>''; export const loadOlderAgentMessages=async()=>{}; export const refreshChannels=async()=>{}; export const sendAgentMessage=async()=>{}; export const useAgentClient=()=>({})`,
+  'lib/agent-client': `export const formatAgentError=e=>e; export const formatAgentActivity=()=>''; export const formatAgentMessage=()=>''; export const loadOlderAgentMessages=async()=>{}; export const refreshChannels=async()=>{}; export const sendAgentMessage=async()=>{}; export const startNewAgentConversation=async()=>{}; export const useAgentClient=()=>({})`,
   'center/Gambit': 'export const Gambit=()=>null;',
   'center/MarkdownContent': 'export const MarkdownContent=()=>null;',
 };

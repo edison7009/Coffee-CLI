@@ -462,6 +462,7 @@ export const zhTW = {
   'agent.chat.user': '你',
   'agent.chat.loading': '正在載入…',
   'agent.chat.older': '查看更早的對話',
+  'agent.chat.new': '新對話',
   'agent.chat.send_failed': '傳送失敗，請查看錯誤資訊。',
   'agent.chat.tools': '使用了 {count} 個工具',
   'agent.chat.tools_failed': '{count} 個失敗',

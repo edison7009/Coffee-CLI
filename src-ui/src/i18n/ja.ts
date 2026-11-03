@@ -461,6 +461,7 @@ export const ja = {
   'agent.chat.user': 'あなた',
   'agent.chat.loading': '読み込み中…',
   'agent.chat.older': '以前のメッセージを見る',
+  'agent.chat.new': '新しい会話',
   'agent.chat.send_failed': '送信に失敗しました。エラーの詳細を確認してください。',
   'agent.chat.tools': '{count} 個のツールを使用',
   'agent.chat.tools_failed': '{count} 件失敗',

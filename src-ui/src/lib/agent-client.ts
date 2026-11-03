@@ -151,15 +151,17 @@ export function receiveAgentEvent(event: AgentEvent) {
     }
   }
 }
-export async function sendAgentMessage(text: string) {
+export async function startNewAgentConversation() {
   if (!snapshot.conversationId) await refreshAgentConversation();
   if (snapshot.running) throw new Error('Agent 正在处理上一条消息');
-  if (['/new', '新对话', '开始新对话'].includes(text.trim())) {
-    const id = await invoke<string>('agent_new_conversation', { conversationId: snapshot.conversationId });
-    await openAgentConversation(id);
-    await refreshAgentConversations();
-    return;
-  }
+  const id = await invoke<string>('agent_new_conversation', { conversationId: snapshot.conversationId });
+  await openAgentConversation(id);
+  await refreshAgentConversations();
+}
+export async function sendAgentMessage(text: string) {
+  if (['/new', '新对话', '开始新对话'].includes(text.trim())) return startNewAgentConversation();
+  if (!snapshot.conversationId) await refreshAgentConversation();
+  if (snapshot.running) throw new Error('Agent 正在处理上一条消息');
   const conversationId = snapshot.conversationId;
   update({ messages: [...snapshot.messages, { id: -Date.now(), role: 'user', text }], running: true, error: '', activity: '正在连接模型…' });
   try { await invoke('agent_send_message', { conversationId, text }); }
