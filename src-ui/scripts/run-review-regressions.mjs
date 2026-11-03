@@ -540,7 +540,7 @@ console.log('OK: actual tool-card folder selection uses the same launch action a
     id: 'coffee-history', route: 'weixin-bound', source: '微信', title: 'hello', updatedAt: newest, messageCount: 2,
   }];
   const sortByMtime = evaluate(`${declaration('lib/history-cache.ts', 'sortByMtime').replace(/^export\s+/, '')}; sortByMtime`);
-  const merged = evaluate(merge, { useMemo: callback => callback(), nativeSessions, liveSessions: [], nowMs: newest, agentConversations, sortByMtime });
+  const merged = evaluate(merge, { useMemo: callback => callback(), nativeSessions, liveSessions: [], state: { terminals: [] }, nowMs: newest, agentConversations, sortByMtime });
   assert.equal(merged[0].id, 'coffee-history', 'the newest Agent conversation must lead mixed timestamp histories');
   assert.equal(merged.slice(0, 30).some(session => session.id === 'coffee-history'), true, 'Agent history must appear on the first visible page');
   assert.deepEqual(Array.from(merged.slice(-2), session => session.id), ['native-seconds', 'native-iso']);

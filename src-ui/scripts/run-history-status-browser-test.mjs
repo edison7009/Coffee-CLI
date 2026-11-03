@@ -284,7 +284,7 @@ try {
     window.updateView({terminals:[{id:'a',tool:'claude',resumeToken:'one',agentStatus:'idle',folderPath:'D:/same'},...window.workerTasks.map(task=>({id:task.sessionId,tool:task.tool,resumeToken:task.nativeId,folderPath:task.cwd,agentStatus:'working'}))]});
     window.updateTeam({enabled:true,tasks:window.workerTasks,revision:3});
   });
-  const family=page.locator('.history-family').first(),workers=family.locator('.history-worker');await workers.first().waitFor();assert.equal(await workers.count(),2);
+  const family=page.locator('.history-family').filter({hasText:'Working on the first task'}).first(),workers=family.locator('.history-worker');await workers.first().waitFor();assert.equal(await workers.count(),2);
   const reveal = await family.evaluate(group => {
     const rows = [...group.querySelectorAll('.history-worker')], animations = rows.flatMap(row => row.getAnimations().filter(animation => animation.animationName === 'orchestration-worker-enter'));
     const sample = time => { animations.forEach(animation => { animation.currentTime = time; }); return { height: rows[0].getBoundingClientRect().height, next: group.nextElementSibling.getBoundingClientRect().top }; };
