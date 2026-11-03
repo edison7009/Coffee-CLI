@@ -12,14 +12,16 @@ const compiled = await build({
   } }],
 });
 
-function fixture(saved) {
+function fixture(saved, platform = 'Win32') {
   const values = new Map(saved === undefined ? [] : [['cc-ui-scale', saved]]);
-  const zooms = [], writes = [], events = [], handlers = {};
+  const zooms = [], writes = [], events = [], handlers = {}, cssVars = {};
   let failure = false;
   let zoomGate;
   const module = { exports: {} };
   runInNewContext(compiled.outputFiles[0].text, {
     module, exports: module.exports, Event,
+    navigator: { platform },
+    document: { documentElement: { style: { setProperty: (name, value) => { cssVars[name] = value; } } } },
     zoom: async value => { zooms.push(value); if (failure) throw new Error('native failure'); if (zoomGate) { const gate = zoomGate; zoomGate = undefined; await gate; } },
     window: {
       __TAURI_INTERNALS__: {},
@@ -31,7 +33,7 @@ function fixture(saved) {
       setItem: (key, value) => { writes.push([key, value]); values.set(key, value); },
     },
   });
-  return { api: module.exports, values, zooms, writes, events, handlers, fail: value => { failure = value; }, holdZoom: () => { let release; zoomGate = new Promise(resolve => { release = resolve; }); return release; } };
+  return { api: module.exports, cssVars, values, zooms, writes, events, handlers, fail: value => { failure = value; }, holdZoom: () => { let release; zoomGate = new Promise(resolve => { release = resolve; }); return release; } };
 }
 
 let passed = 0;
@@ -98,5 +100,18 @@ await test('fast dragging replaces stale queued steps and saves only the latest 
   assert.deepEqual(f.writes.map(write => write[1]), ['120']);
   assert.equal(f.api.useUiScale().requestedPercent, null);
   assert.equal(f.api.useUiScale().pending, false);
+});
+await test('applied scale reaches CSS and only macOS counter-zooms titlebar coordinates', async () => {
+  const mac = fixture(undefined, 'MacIntel');
+  await mac.api.setUiScale(150);
+  assert.equal(mac.cssVars['--ui-scale'], '1.5');
+  assert.equal(mac.api.titlebarPxPerClientPx(), 1.5);
+  mac.fail(true); await mac.api.setUiScale(80);
+  assert.equal(mac.cssVars['--ui-scale'], '1.5');
+  assert.equal(mac.api.titlebarPxPerClientPx(), 1.5);
+  const win = fixture();
+  await win.api.setUiScale(150);
+  assert.equal(win.cssVars['--ui-scale'], '1.5');
+  assert.equal(win.api.titlebarPxPerClientPx(), 1);
 });
 console.log(`\n${passed} interface scale tests passed.`);

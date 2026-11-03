@@ -233,6 +233,8 @@ textarea,
        width; its traffic-light clearance comes from the brand's own 88px
        padding, not from the rail width. */
     --w-left: clamp(240px, 28vw, 320px);
+    /* Webview zoom factor, kept in sync by lib/ui-scale.ts. */
+    --ui-scale: 1;
     /* The right rail additionally YIELDS below this value (flex-shrink,
        min-width 200px on .panel-right) when space runs out — it is the
        last flex item and clips first. Everything positioning against it
@@ -1144,6 +1146,16 @@ body {
 html.is-macos #root {
     border-radius: 0 !important;
     clip-path: none !important;
+}
+/* The native traffic lights ignore webview zoom, so the macOS titlebar
+   counter-zooms to stay at 100% and keep its height, brand inset and tabs
+   aligned with them. Widths that must line up with the zoomed panels below
+   multiply by --ui-scale (WebKit scales vw inside a zoomed element too). */
+html.is-macos .titlebar {
+    zoom: calc(1 / var(--ui-scale));
+}
+html.is-macos .titlebar-left-slot:not(.is-collapsed) {
+    width: calc(var(--w-left) * var(--ui-scale));
 }
 
 

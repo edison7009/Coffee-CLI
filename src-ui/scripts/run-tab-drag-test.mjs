@@ -59,7 +59,7 @@ for (const tab of renderedTabs) {
 }
 assert.ok(agentClose, 'Use the actual Agent tab close click handler');
 
-function fixture(order = ['one', 'two', 'agent:config', 'agent:agent']) {
+function fixture(order = ['one', 'two', 'agent:config', 'agent:agent'], titlebarScale = 1) {
   let state = {
     terminals: [{ id: 'one', tool: 'claude', folderPath: 'E:\\one' }, { id: 'two', tool: 'codex', folderPath: 'E:\\two' }],
     agentPages: ['config', 'agent'], tabOrder: order,
@@ -74,6 +74,7 @@ function fixture(order = ['one', 'two', 'agent:config', 'agent:agent']) {
   }));
   const context = {
     dispatch, tabDrag: null, tabDragSuppressClickRef: { current: false },
+    titlebarPxPerClientPx: () => titlebarScale,
     tabsHeaderRef: { current: { querySelectorAll(selector) {
       assert.equal(selector, '.chrome-tab[data-tab-id]');
       return visible().map((id, index) => ({ dataset: { tabId: id }, getBoundingClientRect: () => ({ left: index * 100, width: 100 }) }));
@@ -106,6 +107,15 @@ test('message settings drag left across terminal tabs without changing the focus
   assert.deepEqual(f.visible(), ['agent:config', 'one', 'two', 'agent:agent']);
   assert.equal(f.state.activeTerminalId, 'one'); assert.equal(f.state.agentPageActive, null);
   assert.equal(f.listeners.size, 0); assert.equal(f.dragFrames.at(-1), null);
+});
+
+test('a counter-zoomed titlebar keeps the dragged tab under the pointer', () => {
+  const f = fixture(undefined, 1.5);
+  f.down('agent:config'); f.move(-50);
+  assert.equal(f.dragFrames.at(-1).deltaX, -450);
+  assert.deepEqual(native(f.api.getTabDragStyle('one', 0)), { transform: 'translateX(150px)' });
+  f.up(-50);
+  assert.deepEqual(f.actions, [{ type: 'REORDER_TAB', tabId: 'agent:config', beforeId: 'one' }]);
 });
 
 test('Coffee Agent drags right through terminals and message settings', () => {

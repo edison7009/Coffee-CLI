@@ -116,6 +116,7 @@ interface RemoteHistoryItem {
   user: string;
 }
 import { isTauri, commands } from '../../tauri';
+import { titlebarPxPerClientPx } from '../../lib/ui-scale';
 import { getToolDisplayName } from '../../lib/tool-info';
 import { useT } from '../../i18n/useT';
 import './CenterPanel.css';
@@ -923,12 +924,15 @@ export function CenterPanel() {
       const dx = ev.clientX - startX;
       if (!started && Math.abs(dx) < THRESHOLD) return;
       started = true;
+      // Pointer and rect math is in client px; transforms apply in the
+      // titlebar's own (possibly counter-zoomed) px.
+      const toTitlebarPx = titlebarPxPerClientPx();
       setTabDrag({
         tabId,
-        deltaX: dx,
+        deltaX: dx * toTitlebarPx,
         fromIdx,
         targetIdx: computeTargetIdx(ev.clientX),
-        slotWidth,
+        slotWidth: slotWidth * toTitlebarPx,
       });
     };
 
