@@ -5889,6 +5889,12 @@ mod antigravity_history_tests {
         let mut counts: Vec<_> = heatmap.iter().map(|entry| (entry.ts, entry.count)).collect();
         counts.sort();
         assert_eq!(counts, vec![(1793744377, 10), (1793779200, 4)]);
+        // Workspaces decode per platform, including percent-encoded non-ASCII folders.
+        #[cfg(windows)]
+        assert_eq!(antigravity_workspace(r#"["file:///C:/Users/eben/%E6%89%A9%E5%B1%95%E5%AD%98%E5%82%A8"]"#), r"C:\Users\eben\扩展存储");
+        #[cfg(not(windows))]
+        assert_eq!(antigravity_workspace(r#"["file:///home/eben/%E6%89%A9%E5%B1%95%E5%AD%98%E5%82%A8"]"#), "/home/eben/扩展存储");
+        assert_eq!(antigravity_workspace("[]"), "");
         // Older index rows may carry no offset; they are UTC.
         assert_eq!(antigravity_time_ms("2026-11-03 22:19:37.954952"), Some(1793744377954));
         assert_eq!(antigravity_time_ms("2026-11-03T22:19:37Z"), Some(1793744377000));
