@@ -16,8 +16,10 @@ window.dsh={ready:true,busy:false,sessionId:'s1',title:'',route:{provider:'deeps
 window.routes=[];window.pending=[];
 const publish=()=>listeners.forEach(listener=>listener());
 export function useDshSession(id,select=state=>state){return useSyncExternalStore(listener=>{listeners.add(listener);return()=>listeners.delete(listener)},()=>select(window.dsh))}
-export function setDshRoute(id,route){window.routes.push(route.effort);return new Promise(resolve=>window.pending.push(()=>{window.dsh={...window.dsh,route};publish();resolve();}));}
-window.finishRoute=()=>window.pending.shift()();
+export function setDshRoute(id,route){window.routes.push(route.effort);return new Promise((resolve,reject)=>window.pending.push(fail=>{if(fail){reject(new Error('restart failed'));return;}window.dsh={...window.dsh,route};publish();resolve();}));}
+window.finishRoute=fail=>window.pending.shift()(fail);
+window.setDsh=next=>{window.dsh={...window.dsh,...next};publish();};
+export function setDshEffort(id,effort){return setDshRoute(id,{...window.dsh.route,effort});}
 export async function sendDshMessage(){return true} export async function setDshPreset(){}`;
 await build({ stdin: { loader: 'tsx', resolveDir: project, contents: `
 import React,{useRef}from'react';import{createRoot}from'react-dom/client';import{DshComposerControls}from'./src/components/center/DshComposerControls';import'./src/styles/global.css';
@@ -76,6 +78,29 @@ try {
   await page.waitForFunction(() => window.dsh.route.effort === 'low');
   assert.deepEqual(await page.evaluate(() => window.routes), ['low', 'max', 'off', 'low'], 'intermediate choices are skipped; the final one wins');
   assert.equal(await shown(), 1);
-  assert.deepEqual(errors, []);
-  console.log('OK: DeepSeek Harness effort changes made during a restart are kept, applied in order with the latest winning, and never jump back');
+
+  // A level queued behind a pending switch is dropped once the control is disabled (a turn started).
+  await dragTo(3);
+  await page.waitForFunction(() => window.routes.length === 5);
+  await dragTo(0);
+  await page.evaluate(() => window.setDsh({ busy: true }));
+  await page.evaluate(() => window.finishRoute());
+  await page.waitForFunction(() => window.dsh.route.effort === 'max');
+  await page.waitForTimeout(200);
+  assert.equal(await page.evaluate(() => window.routes.length), 5, 'no effort change is sent while the session is busy');
+  await page.evaluate(() => window.setDsh({ busy: false }));
+
+  // A failed switch also drops the level queued behind it; closing the menu later commits nothing.
+  await dragTo(1);
+  await page.waitForFunction(() => window.routes.length === 6);
+  await dragTo(2);
+  await page.evaluate(() => window.finishRoute(true));
+  await page.waitForTimeout(200);
+  assert.equal(await shown(), 3, 'a failed switch shows the level actually applied');
+  await slider.evaluate(el => el.blur());
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(200);
+  assert.equal(await page.evaluate(() => window.routes.length), 6, 'the stale queued level is never committed later');
+  assert.deepEqual(errors.filter(error => !error.includes('restart failed')), []);
+  console.log('OK: DeepSeek Harness effort changes made during a restart are kept, applied in order with the latest winning, never jump back, and stop when the control is disabled or a switch fails');
 } finally { await browser.close(); server.close(); }

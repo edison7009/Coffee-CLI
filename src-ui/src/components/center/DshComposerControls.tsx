@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type MutableRefObject, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { sendDshMessage, setDshPreset, setDshRoute, useDshSession } from '../../lib/dsh-session';
+import { sendDshMessage, setDshEffort, setDshPreset, setDshRoute, useDshSession } from '../../lib/dsh-session';
 import { useAppState } from '../../store/app-state';
 import { claudeEffortLabel } from '../../lib/claude-i18n';
 import { ClaudeEffortControl } from './ClaudeEffortControl';
@@ -124,7 +124,7 @@ export function DshComposerControls({ sessionId, draft, onDraftChange, keyHandle
       {shown === 'commands' ? commands.length ? commands.map((c, i) => <button type="button" key={c.name} disabled={disabled(c.target)} className={i === selected ? 'is-selected' : ''} onMouseEnter={() => setSelected(i)} onClick={() => chooseCommand(i)}><strong>/{c.name}</strong><small>{c.description}</small></button>) : <div className="claude-menu-empty">{t('claude.commands_empty')}</div>
       : shown === 'permissions' ? PRESETS.map(p => <button type="button" key={p.value} disabled={!s.ready || !!s.restarting} className={s.preset === p.value ? 'is-selected' : ''} onClick={() => { close(); if (s.preset !== p.value) void setDshPreset(sessionId, p.value); }}><strong>{t(p.label)}{s.preset === p.value ? ' ✓' : ''}</strong><small>{t(p.description)}</small></button>)
       : shown === 'model' ? s.models.map(m => { const current = m.provider === s.route.provider && m.model === s.route.model; return <button type="button" key={`${m.provider}/${m.model}`} disabled={locked} className={current ? 'is-selected' : ''} onClick={() => { close(); if (!current) void setDshRoute(sessionId, { provider: m.provider, model: m.model, effort: m.efforts.includes(effort) ? effort : null }); }}><strong>{m.name}{current ? ' ✓' : ''}</strong><small>{m.provider}</small></button>; })
-      : shown === 'effort' && model ? <ClaudeEffortControl key={`${sessionId}:${model.provider}/${model.model}`} levels={model.efforts} value={effort} disabled={locked} onCommit={async level => { await setDshRoute(sessionId, { ...s.route, effort: level }); }} onClose={() => { close(); anchor.current?.focus(); }} />
+      : shown === 'effort' && model ? <ClaudeEffortControl key={`${sessionId}:${model.provider}/${model.model}`} levels={model.efforts} value={effort} disabled={locked} onCommit={level => setDshEffort(sessionId, level)} onClose={() => { close(); anchor.current?.focus(); }} />
       : shown === 'context' ? <ContextUsage used={s.contextTokens} capacity={s.contextWindow} total={s.contextTokens} /> : null}
     </div>, document.body)}
   </div>;

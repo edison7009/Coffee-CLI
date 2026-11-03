@@ -332,7 +332,8 @@ export function HistoryBoard() {
       // An open session keeps its live status on screen wherever it falls in the list.
       const shown = group.sessions.filter((session, index) => index < limit || session.id.startsWith('live:') || openSessions.has(`${session.tool}:${session.session_token}`));
       const remaining = group.sessions.length - shown.length;
-      const expanded = limit > PROJECT_PREVIEW;
+      // A group that shrank to the preview size has nothing left to fold.
+      const expanded = limit > PROJECT_PREVIEW && group.sessions.length > PROJECT_PREVIEW;
       return [header, ...shown.map(session => ({ kind: 'session' as const, session, grouped: true })), ...(remaining > 0 || expanded ? [{ kind: 'more' as const, group, remaining, expanded }] : [])];
     }), [layout, availableSessions, projects, collapsedProjects, projectExtras, openSessions]);
 

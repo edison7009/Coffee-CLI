@@ -4,7 +4,7 @@ import { recordSessionReply } from './session-replies';
 import { invoke } from '../tauri';
 import { arr, obj, str, emptyDshState, reduceDshNotification, restoreDshLog, type DshModel, type DshRoute, type DshState, type Json } from './dsh-protocol';
 
-interface Client { state: DshState; generation: string; listeners: Set<() => void>; owners: number; cwd: string | null; starting?: Promise<void>; switching?: Promise<void>; nextRoute?: DshRoute; preset?: string; closeTimer?: ReturnType<typeof setTimeout>; publishTimer?: ReturnType<typeof setTimeout> }
+interface Client { state: DshState; generation: string; listeners: Set<() => void>; owners: number; cwd: string | null; starting?: Promise<void>; switching?: Promise<void>; target?: DshRoute; nextRoute?: DshRoute; preset?: string; closeTimer?: ReturnType<typeof setTimeout>; publishTimer?: ReturnType<typeof setTimeout> }
 const clients = new Map<string, Client>();
 const EMPTY = emptyDshState();
 let listening: Promise<unknown> | undefined;
@@ -105,8 +105,15 @@ export function setDshRoute(id: string, route: DshRoute): Promise<void> {
     return c.switching.then(() => { if (c.nextRoute !== route) return; c.nextRoute = undefined; return setDshRoute(id, route); });
   }
   const done = restart(id, route);
-  if (c) { c.switching = done; void done.finally(() => { if (c.switching === done) c.switching = undefined; }); }
+  if (c) { c.switching = done; c.target = route; void done.finally(() => { if (c.switching === done) { c.switching = undefined; c.target = undefined; } }); }
   return done;
+}
+
+/** Changes only the effort, on top of the route being switched to (queued or applying), so an
+ * effort change made during a model switch never brings back the previous model. */
+export function setDshEffort(id: string, effort: string): Promise<void> {
+  const c = clients.get(id); if (!c) return Promise.resolve();
+  return setDshRoute(id, { ...(c.nextRoute ?? c.target ?? c.state.route), effort });
 }
 
 /** Applied live by Coffee's plugin, so a running turn carries on. The control shows only what the Session's

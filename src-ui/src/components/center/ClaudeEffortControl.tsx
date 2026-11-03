@@ -55,6 +55,9 @@ export function ClaudeEffortControl({ levels, value, disabled, onCommit, onClose
   const pointer = useRef(false);
   const committing = useRef(false);
   const draftIndex = useRef<number | null>(null);
+  // Read live: a queued level must not be applied once the control is disabled (e.g. a turn started).
+  const disabledRef = useRef(disabled);
+  useEffect(() => { disabledRef.current = disabled; }, [disabled]);
   const applied = Math.max(0, levels.indexOf(value));
   const index = Math.min(preview ?? applied, levels.length - 1);
   const [motion, setMotion] = useState({ index, direction: 1 });
@@ -68,13 +71,13 @@ export function ClaudeEffortControl({ levels, value, disabled, onCommit, onClose
     committing.current = true;
     let current = value;
     try {
-      for (let next: number | null = draftIndex.current; next !== null; next = draftIndex.current) {
+      for (let next: number | null = draftIndex.current; next !== null && !disabledRef.current; next = draftIndex.current) {
         draftIndex.current = null;
         if (levels[next] === current) continue;
         await onCommit(levels[next]);
         current = levels[next];
       }
-    } finally { committing.current = false; setPreview(null); }
+    } finally { committing.current = false; draftIndex.current = null; setPreview(null); }
   };
   const cancel = () => { pointer.current = false; draftIndex.current = null; setPreview(null); };
   return <div className="claude-effort-control" style={{ '--effort-progress': `calc(9px + (100% - 18px) * ${index / Math.max(1, levels.length - 1)})`, '--effort-direction': motion.direction } as CSSProperties}>

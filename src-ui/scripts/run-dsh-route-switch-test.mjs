@@ -46,4 +46,15 @@ assert.equal(starts[0].route.effort, 'max', 'only the latest waiting switch is a
 starts.shift().finish(); await Promise.all([second, third]);
 assert.equal(effort(), 'max', 'the session ends on the latest choice');
 assert.equal(starts.length, 0, 'the skipped intermediate switch never restarts the runtime');
-console.log('OK: DeepSeek Harness route switches during a restart wait and apply only the latest choice');
+
+// An effort change during a model switch builds on the model being switched to, not the one on screen.
+const model = api.setDshRoute('tab', { provider: 'deepseek-account', model: 'deepseek-v4-pro', effort: 'max' });
+await tick();
+assert.equal(api.useDshSession('tab').route.model, 'deepseek-flash', 'the screen still shows the previous model while it restarts');
+const effortChange = api.setDshEffort('tab', 'low');
+starts.shift().finish(); await model;
+await tick(); await tick();
+assert.deepEqual(starts[0].route, { provider: 'deepseek-account', model: 'deepseek-v4-pro', effort: 'low' }, 'the queued effort keeps the new model');
+starts.shift().finish(); await effortChange;
+assert.deepEqual(api.useDshSession('tab').route, { provider: 'deepseek-account', model: 'deepseek-v4-pro', effort: 'low' });
+console.log('OK: DeepSeek Harness route switches during a restart wait and apply only the latest choice; effort changes keep a pending model switch');

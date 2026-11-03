@@ -4097,13 +4097,19 @@ fn antigravity_valid_id(id: &str) -> bool {
     !id.is_empty() && id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-')
 }
 
-const ANTIGRAVITY_ROOT_CONVERSATIONS: &str =
-    "FROM conversation_summaries WHERE parent_conversation_id = '' AND step_count > 0";
+/// Root conversations with at least one step. An index without those columns (another agy
+/// version) still lists every row rather than none: the filter is optional, the history is not.
+fn antigravity_rows(conn: &rusqlite::Connection) -> &'static str {
+    if conn.prepare("SELECT parent_conversation_id, step_count FROM conversation_summaries LIMIT 0").is_ok() {
+        "1, step_count FROM conversation_summaries WHERE parent_conversation_id = '' AND step_count > 0"
+    } else {
+        "1, 1 FROM conversation_summaries"
+    }
+}
 
 fn find_antigravity_sessions(db_path: &std::path::Path, result: &mut Vec<SavedSession>) {
     let Some(conn) = antigravity_connection(db_path) else { return };
-    let query = format!("SELECT conversation_id, title, preview, last_modified_time, workspace_uris \
-        {ANTIGRAVITY_ROOT_CONVERSATIONS} ORDER BY last_modified_time DESC LIMIT 200");
+    let query = format!("SELECT conversation_id, title, preview, last_modified_time, workspace_uris, {}", antigravity_rows(&conn));
     let Ok(mut stmt) = conn.prepare(&query) else { return };
     let rows = stmt.query_map([], |row| Ok((
         row.get::<_, String>(0)?,
@@ -4113,9 +4119,14 @@ fn find_antigravity_sessions(db_path: &std::path::Path, result: &mut Vec<SavedSe
         row.get::<_, Option<String>>(4).unwrap_or(None).unwrap_or_default(),
     )));
     let Ok(rows) = rows else { return };
-    for (id, title, preview, modified, uris) in rows.flatten() {
-        if !antigravity_valid_id(&id) { continue }
-        let Some(saved_at) = antigravity_time_ms(&modified) else { continue };
+    // Sort by the parsed time: the index stores text, whose order is not always chronological.
+    let mut rows: Vec<_> = rows.flatten()
+        .filter(|(id, ..)| antigravity_valid_id(id))
+        .filter_map(|(id, title, preview, modified, uris)| antigravity_time_ms(&modified).map(|time| (time, id, title, preview, uris)))
+        .collect();
+    rows.sort_by(|a, b| b.0.cmp(&a.0));
+    rows.truncate(200);
+    for (saved_at, id, title, preview, uris) in rows {
         let name = [title.trim(), preview.lines().next().unwrap_or("").trim()].into_iter()
             .find(|text| !text.is_empty())
             .map(|text| text.chars().take(80).collect())
@@ -4140,8 +4151,8 @@ fn find_antigravity_sessions(db_path: &std::path::Path, result: &mut Vec<SavedSe
 /// its last change and step count.
 fn collect_antigravity_heatmap_entries(db_path: &std::path::Path, cutoff_secs: i64, out: &mut Vec<HeatmapEntry>) {
     let Some(conn) = antigravity_connection(db_path) else { return };
-    let Ok(mut stmt) = conn.prepare(&format!("SELECT conversation_id, last_modified_time, step_count {ANTIGRAVITY_ROOT_CONVERSATIONS}")) else { return };
-    let Ok(rows) = stmt.query_map([], |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?, row.get::<_, i64>(2).unwrap_or(0)))) else { return };
+    let Ok(mut stmt) = conn.prepare(&format!("SELECT conversation_id, last_modified_time, {}", antigravity_rows(&conn))) else { return };
+    let Ok(rows) = stmt.query_map([], |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?, row.get::<_, i64>(3).unwrap_or(1)))) else { return };
     for (id, modified, steps) in rows.flatten() {
         if !antigravity_valid_id(&id) { continue }
         let Some(ts) = antigravity_time_ms(&modified).map(|ms| ms / 1000) else { continue };
@@ -5885,6 +5896,22 @@ mod antigravity_history_tests {
         let mut recent = Vec::new();
         collect_antigravity_heatmap_entries(&db, 1793744378, &mut recent);
         assert_eq!(recent.len(), 1, "the cutoff applies");
+
+        // An index without the filter columns still lists its conversations, ordered by parsed time.
+        let legacy = dir.join("legacy.db");
+        let conn = rusqlite::Connection::open(&legacy).unwrap();
+        conn.execute_batch("CREATE TABLE conversation_summaries(conversation_id TEXT,title TEXT,workspace_uris TEXT,preview TEXT,last_modified_time TEXT);").unwrap();
+        for (id, time) in [("0a1b2c3d-0000-4000-8000-00000000000a", "2026-11-04 09:00:00"), ("0a1b2c3d-0000-4000-8000-00000000000b", "2026-11-04T10:00:00Z")] {
+            conn.execute("INSERT INTO conversation_summaries VALUES (?1, 'Legacy', '[]', '', ?2)", rusqlite::params![id, time]).unwrap();
+        }
+        drop(conn);
+        let mut legacy_sessions = Vec::new();
+        find_antigravity_sessions(&legacy, &mut legacy_sessions);
+        assert_eq!(legacy_sessions.iter().map(|s| s.session_token.as_deref().unwrap()).collect::<Vec<_>>(),
+            ["0a1b2c3d-0000-4000-8000-00000000000b", "0a1b2c3d-0000-4000-8000-00000000000a"], "newest by time, not by text");
+        let mut legacy_heatmap = Vec::new();
+        collect_antigravity_heatmap_entries(&legacy, 0, &mut legacy_heatmap);
+        assert_eq!(legacy_heatmap.iter().map(|entry| entry.count).collect::<Vec<_>>(), [1, 1]);
         std::fs::remove_dir_all(dir).unwrap();
     }
 }
