@@ -74,7 +74,10 @@ export function bindAutoHideScrollbar(
       rail.style.height = `${Math.round(viewportHeight - insetTop - insetBottom)}px`;
 
       const trackHeight = Math.max(0, viewportHeight - insetTop - insetBottom - 4);
-      const thumbHeight = Math.max(28, trackHeight * (element.clientHeight / element.scrollHeight));
+      // Long conversations made a proportional thumb a hard-to-grab nub; keep
+      // it at least a quarter of the track (min 64px) like the desktop apps.
+      const minThumb = Math.min(trackHeight, Math.max(64, trackHeight / 4));
+      const thumbHeight = Math.max(minThumb, trackHeight * (element.clientHeight / element.scrollHeight));
       thumbTravel = Math.max(0, trackHeight - thumbHeight);
       const thumbTop = maxScroll > 0 ? (element.scrollTop / maxScroll) * thumbTravel : 0;
       slider.style.height = `${Math.round(thumbHeight)}px`;
@@ -82,10 +85,15 @@ export function bindAutoHideScrollbar(
     });
   };
 
+  let hovered = false;
   const reveal = () => {
     updatePosition();
     rail.classList.add('is-visible');
     if (hideTimer != null) window.clearTimeout(hideTimer);
+    hideTimer = null;
+    // The rail lives outside the element, so hovering it fires no element
+    // events; hold it visible until the pointer leaves so it can be grabbed.
+    if (hovered || rail.classList.contains('is-dragging')) return;
     hideTimer = window.setTimeout(() => {
       hideTimer = null;
       rail.classList.remove('is-visible');
@@ -124,7 +132,11 @@ export function bindAutoHideScrollbar(
   element.addEventListener('touchstart', reveal, { passive: true });
   element.addEventListener('keydown', reveal);
   element.addEventListener('focusin', reveal);
+  const handleRailEnter = () => { hovered = true; reveal(); };
+  const handleRailLeave = () => { hovered = false; reveal(); };
   slider.addEventListener('pointerdown', handleDragStart);
+  rail.addEventListener('pointerenter', handleRailEnter);
+  rail.addEventListener('pointerleave', handleRailLeave);
   window.addEventListener('resize', updatePosition);
   document.addEventListener('scroll', updatePosition, true);
   const resizeObserver = new ResizeObserver(updatePosition);
@@ -141,6 +153,8 @@ export function bindAutoHideScrollbar(
     element.removeEventListener('keydown', reveal);
     element.removeEventListener('focusin', reveal);
     slider.removeEventListener('pointerdown', handleDragStart);
+    rail.removeEventListener('pointerenter', handleRailEnter);
+    rail.removeEventListener('pointerleave', handleRailLeave);
     window.removeEventListener('resize', updatePosition);
     document.removeEventListener('scroll', updatePosition, true);
     document.removeEventListener('pointermove', handleDragMove);

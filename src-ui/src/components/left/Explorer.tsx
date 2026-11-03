@@ -8,6 +8,7 @@ import type { IconTheme, ToolType } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
 import { isMaskTintTheme } from '../../lib/personalization';
 import { ScrollPanel } from '../common/ScrollPanel';
+import { bindAutoHideScrollbar } from '../../lib/auto-hide-scrollbar';
 import { clipboardWrite } from '../../lib/clipboard';
 import { beginExplorerDrag } from '../../lib/explorer-drag';
 import { getFileIconSrc } from '../../lib/file-icons';
@@ -704,6 +705,11 @@ export function Explorer() {
     };
   }, [folderPath]);
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (activeTab !== 'history' || !scrollRef.current) return;
+    return bindAutoHideScrollbar(scrollRef.current);
+  }, [activeTab]);
 
   return (
     <div className="panel panel-left explorer-panel" data-icon-theme={state.iconTheme}>
@@ -800,6 +806,9 @@ export function Explorer() {
         brandSlot
       )}
 
+      {/* History scrolls as one sheet with the actions above it; the workspace
+          tree keeps its own scroller so its header stays put. */}
+      <div className="explorer-scroll" data-tab={activeTab} ref={scrollRef}>
       <div className="explorer-tabs">
         <button className="explorer-new-session" onClick={() => window.dispatchEvent(new Event('coffee-new-session'))}>
           {/* Lucide square-pen; license in /icons/LICENSE-lucide.txt. */}
@@ -906,8 +915,7 @@ export function Explorer() {
           </ScrollPanel>
         )}
       </div>
-
-
+      </div>
 
       <ChannelConnectionSummary />
 

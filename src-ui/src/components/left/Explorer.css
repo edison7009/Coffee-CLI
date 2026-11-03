@@ -219,6 +219,25 @@
     padding: 0 8px;
 }
 
+/* History mode: tabs, actions and list share one scroller. */
+.explorer-scroll {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+.explorer-scroll[data-tab="history"] {
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+.explorer-scroll[data-tab="history"] > * { flex-shrink: 0; }
+.explorer-scroll[data-tab="history"] > .explorer-content,
+.explorer-scroll[data-tab="history"] .explorer-history-host,
+.explorer-scroll[data-tab="history"] .history-session-list {
+    flex: none;
+    overflow: visible;
+}
+
 .tree-dir, .tree-file {
     font-family: var(--font);
     font-size: 14px;
