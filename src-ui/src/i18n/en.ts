@@ -252,6 +252,7 @@ export const en = {
   'changes.empty': 'No changes yet.',
   'launchpad.open_folder': 'Open Folder',
   'launchpad.pick_folder': 'Choose a project folder',
+  'launchpad.remote': 'Remote',
   'launchpad.detect_help_trigger': "Can't detect?",
   'launchpad.detect_help_tip': "If you've used an AI terminal tool made by English-only developers, it may have garbled PATH segments with CJK or other non-ASCII characters into mojibake, so all terminals fail to detect your tools. 3 fixes: ① Reinstall the AI tool ② Manually fix the tool's PATH ③ Let AI fix the PATH for you",
   'launchpad.switch_model_trigger': "Switch model",

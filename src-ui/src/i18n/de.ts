@@ -252,6 +252,7 @@ export const de = {
   'changes.empty': 'Noch keine Änderungen.',
   'launchpad.open_folder': 'Ordner öffnen',
   'launchpad.pick_folder': 'Projektordner wählen',
+  'launchpad.remote': 'Remote',
   'launchpad.detect_help_trigger': "Nicht erkannt?",
   'launchpad.detect_help_tip': "Falls Sie ein von englischsprachigen Entwicklern erstelltes KI-Terminal-Tool genutzt haben, könnte es PATH-Segmente mit CJK- oder anderen Nicht-ASCII-Zeichen verstümmelt haben (Mojibake), sodass kein Terminal Ihre Tools mehr erkennt. 3 Lösungswege: ① KI-Tool neu installieren ② PATH manuell korrigieren ③ PATH von der KI korrigieren lassen",
   'launchpad.switch_model_trigger': "Modell wechseln",

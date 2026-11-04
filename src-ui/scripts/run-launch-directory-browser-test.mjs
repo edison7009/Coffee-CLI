@@ -40,7 +40,17 @@ try{
      await page.keyboard.press('Escape');await page.locator('.folder-menu').waitFor({state:'hidden'});assert.equal((await state(page)).tool,null);
    }
  }
- console.log('OK cards have no settings gear; the folder button and a never-opened card open the list, aligned under the button, without launching');
+ const terminal=page.locator('.launchpad-card').filter({has:page.locator('.launchpad-card-name',{hasText:/^Terminal$/})});
+ const remote=terminal.getByRole('button',{name:'Remote',exact:true});
+ const [remoteBox,nameBox]=await Promise.all([remote.boundingBox(),terminal.locator('.launchpad-card-name').boundingBox()]);
+ assert.ok(remoteBox.x>=nameBox.x+nameBox.width&&Math.abs(remoteBox.y+remoteBox.height/2-(nameBox.y+nameBox.height/2))<2,'Remote is a text chip on the terminal name line');
+ await remote.click();await page.locator('.remote-form-overlay').waitFor();
+ assert.equal((await state(page)).tool,null,'Remote opens the connection form instead of a local terminal');
+ assert.equal(await page.locator('.folder-menu').count(),0);
+ const [terminalIcon,claudeIcon]=await Promise.all([terminal.locator('.launchpad-icon').boundingBox(),page.locator('.launchpad-icon').first().boundingBox()]);
+ assert.equal(terminalIcon.width,claudeIcon.width,'the terminal icon fills the same box as the other tools');
+ await page.reload();await page.locator('.launchpad-mode-tabs').first().waitFor();
+ console.log('OK cards have no settings gear; the folder button and a never-opened card open the list, aligned under the button, without launching; Remote is a name-line chip');
  const claude=page.getByRole('group',{name:'Claude launch mode'});
  await claude.getByRole('button',{name:'Terminal',exact:true}).click();assert.equal(await page.locator('.folder-menu').count(),0);assert.equal((await state(page)).tool,null);
  await claude.locator('..').locator('.launchpad-card-info').click();await page.locator('.folder-menu-item:not(.folder-menu-open)').nth(1).click();

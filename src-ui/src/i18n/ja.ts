@@ -252,6 +252,7 @@ export const ja = {
   'changes.empty': 'まだ変更はありません。',
   'launchpad.open_folder': 'フォルダを開く',
   'launchpad.pick_folder': 'プロジェクトフォルダを選択',
+  'launchpad.remote': 'リモート',
   'launchpad.detect_help_trigger': "検出できない?",
   'launchpad.detect_help_tip': "英語圏開発者が制作した AI ターミナルツールを使ったことがある場合、中日韓などの非 ASCII 文字を含む PATH が文字化けし、すべてのターミナルで検出できなくなることがあります。3つの修復方法 ① 当該 AI ツールを再インストール ② ツールの PATH を手動で修復 ③ AI に PATH の修復を任せる",
   'launchpad.switch_model_trigger': "モデル切替",

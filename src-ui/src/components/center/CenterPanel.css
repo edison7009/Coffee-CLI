@@ -717,14 +717,34 @@ body.session-split-dragging { cursor: grabbing; user-select: none; }
   white-space: nowrap;
 }
 
-/* Agent name: ellipsize when the card is squeezed instead of overflowing
-   onto the settings button. The terminal card's inline-flex name (with the
-   remote-link icon) only clips — flex items can't ellipsize — which is
-   fine for its short CJK label. */
-.launchpad-card-info > span:first-child {
+/* Name line: the name ellipsizes first, its update or remote chip stays whole. */
+.launchpad-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.launchpad-card-name {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.launchpad-card-title .cli-update-control { position: static; flex-shrink: 0; max-width: none; }
+/* Same chip as the update label, neutral: an entry point, not a notice. */
+.launchpad-card .launchpad-chip {
+  flex-shrink: 0;
+  height: 18px;
+  padding: 1px 4px;
+  border: 0;
+  border-radius: var(--shape-radius-btn, 4px);
+  background: transparent;
+  color: var(--text-3);
+  font: 500 11px/1.3 var(--font-nav, var(--font));
+  white-space: nowrap;
+  cursor: pointer;
+}
+.launchpad-card .launchpad-chip:hover { background: var(--bg-hover); color: var(--text-1); }
+.launchpad-card .launchpad-chip:focus-visible { outline: 1px solid var(--accent); outline-offset: -1px; }
 
 /* Second line: the tool's last project folder, or a hint before its first use.
    A long path keeps its end (the folder name) and elides its start. */
@@ -1043,24 +1063,6 @@ body.session-split-dragging { cursor: grabbing; user-select: none; }
 }
 
 /* ─── Terminal Card Subtle Remote Hint ─── */
-
-.remote-link-hint {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px;
-  color: var(--text-3);
-  opacity: 0.18;
-  cursor: pointer;
-  background: transparent;
-  border: none;
-  transition: opacity 0.15s;
-}
-
-.remote-link-hint:hover {
-  opacity: 0.7;
-}
 
 /* ─── Remote Terminal Connection Form ─── */
 

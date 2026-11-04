@@ -1510,29 +1510,19 @@ export function CenterPanel() {
                                   }}
                                 >
                                   <div className="launchpad-icon">{tool.icon}</div>
-                                  {!isTerminal && tool.key && <CliUpdateButton tool={tool.key} active={!utilityPageOpen && !configModalTool} installed={installed} />}
                                   <div className="launchpad-card-info">
-                                    <span style={isTerminal ? { display: 'inline-flex', alignItems: 'center', gap: '6px' } : undefined}>
-                                      {tool.label}
-                                      {isTerminal && (
-                                        <span
-                                          className="remote-link-hint"
-                                          onClick={(e) => { e.stopPropagation(); setShowRemoteForm(true); }}
-                                        >
-                                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                                            <circle cx="12" cy="12" r="10"/>
-                                            <path d="M2 12h20"/>
-                                            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-                                          </svg>
-                                        </span>
-                                      )}
-                                    </span>
+                                    {/* Name line: the tool name, then its update or remote chip. */}
+                                    <div className="launchpad-card-title">
+                                      <span className="launchpad-card-name">{tool.label}</span>
+                                      {!isTerminal && tool.key && <CliUpdateButton tool={tool.key} active={!utilityPageOpen && !configModalTool} installed={installed} />}
+                                      {isTerminal && <button type="button" className="launchpad-chip" onClick={(e) => { e.stopPropagation(); setShowRemoteForm(true); }}>{t('launchpad.remote')}</button>}
+                                    </div>
                                     {tool.requiresCwd && (tool.key && lastFolders[tool.key]
                                       ? <span className="launchpad-card-path is-path"><bdi>{homeShortPath(lastFolders[tool.key])}</bdi></span>
                                       : <span className="launchpad-card-path">{t('launchpad.pick_folder')}</span>)}
                                   </div>
                                   {tool.requiresCwd && <button type="button" className="launchpad-folder" aria-label={t('launchpad.open_folder')} disabled={disabled} onClick={event => { event.stopPropagation(); openToolFolderMenu(tool.key, event.currentTarget); }}>
-                                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2" /></svg>
+                                    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2" /></svg>
                                   </button>}
                                   {tool.type === 'ai-cli' && <LaunchModeControl value={tool.key === 'claude' ? claudeLaunchMode : tool.key === 'codex' ? codexLaunchMode : tool.key === 'opencode' ? opencodeLaunchMode : tool.key === 'dsh' ? 'conversation' : 'terminal'} disabled={disabled} label={tool.key === 'codex' ? 'Codex' : tool.key === 'opencode' ? 'OpenCode' : tool.key === 'dsh' ? 'DeepSeek Harness' : undefined} modes={tool.key === 'dsh' ? ['conversation'] : undefined} onChange={tool.key === 'claude' ? changeClaudeLaunchMode : tool.key === 'codex' ? changeCodexLaunchMode : tool.key === 'opencode' ? changeOpencodeLaunchMode : tool.key === 'dsh' ? () => {} : undefined} />}
                                 </div>
