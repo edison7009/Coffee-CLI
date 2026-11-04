@@ -34,6 +34,7 @@ import { registerFileDropTarget, formatPathsForInsert } from '../../lib/file-dro
 import { parseClaudeTerminalTitle } from '../../lib/claude-terminal-title';
 import { parseCodexTerminalTitle } from '../../lib/codex-terminal-title';
 import { parseOmpTerminalTitle } from '../../lib/omp-terminal-title';
+import { parsePiTerminalTitle } from '../../lib/pi-terminal-title';
 import { parseOpenCodeTerminalTitle } from '../../lib/opencode-terminal-title';
 import { markNotifySoundPromptSubmitted } from '../../lib/notify-sound';
 import { markSentinelExit, markSentinelWorking } from '../../lib/agent-sentinel';
@@ -1446,6 +1447,12 @@ function TierTerminalImpl({
           // not establish state. Recheck the screen after a known mark leaves.
           nativeStatus = null;
           scheduleScreenIdle();
+        }
+        if (tool === 'pi') {
+          // An unnamed session's title is just the folder; the tab keeps its history name.
+          const name = parsePiTerminalTitle(title);
+          if (!name) return;
+          displayTitle = name;
         }
       }
       if (displayTitle !== lastTabTitle) {

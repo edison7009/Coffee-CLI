@@ -349,6 +349,17 @@ export function HistoryBoard() {
     return all;
   }, [availableSessions]);
   const openSessions = useMemo(() => new Set(state.terminals.flatMap(tab => tab.resumeToken ? [`${tab.tool}:${tab.resumeToken}`] : [])), [state.terminals]);
+  // Pi names neither its terminal nor its desktop session on its own, so an open Pi tab takes
+  // the name this list shows for its conversation once the session appears in history.
+  useEffect(() => {
+    for (const tab of state.terminals) {
+      // A folder title Pi set before its titles were filtered (`π - <folder>`) does not count as a name.
+      if (tab.tool !== 'pi' || !tab.resumeToken || (tab.toolTitle?.trim() && !tab.toolTitle.startsWith('π - ')) || tab.pinnedTitle?.trim()) continue;
+      const saved = nativeSessions.find(session => session.tool === 'pi' && session.session_token === tab.resumeToken);
+      const name = saved && (renamed[`pi:${saved.id}`] ?? saved.name)?.trim();
+      if (name) dispatch({ type: 'SET_TAB_TITLE', id: tab.id, title: name });
+    }
+  }, [state.terminals, nativeSessions, renamed, dispatch]);
   const rows = useMemo(() => layout === 'list'
     ? availableSessions.map(session => ({ kind: 'session' as const, session, grouped: false }))
     : projects.flatMap((group): Array<{ kind: 'project'; group: typeof group } | { kind: 'session'; session: SavedSession; grouped: boolean } | { kind: 'more'; group: typeof group; remaining: number; expanded: boolean }> => {
@@ -458,7 +469,7 @@ export function HistoryBoard() {
       type: 'ADD_TERMINAL',
       split,
       // The tab opens under the conversation's history title; a tool that names it later replaces it.
-      session: { id: targetId, tool: saved.tool as ToolType, folderPath: worktree ? saved.worktree_cwd! : saved.cwd, ...(worktree ? { worktree, worktreeOrigin: saved.cwd } : {}), resumeToken: saved.session_token, toolTitle: saved.name?.trim() || undefined, pinnedTitle: renamed[`${saved.tool ?? ''}:${saved.id}`]?.trim() || undefined, claudeMode: saved.tool === 'claude' ? mode : undefined, codexMode: saved.tool === 'codex' ? mode : undefined, opencodeMode: saved.tool === 'opencode' ? mode : undefined }
+      session: { id: targetId, tool: saved.tool as ToolType, folderPath: worktree ? saved.worktree_cwd! : saved.cwd, ...(worktree ? { worktree, worktreeOrigin: saved.cwd } : {}), resumeToken: saved.session_token, toolTitle: saved.name?.trim() || undefined, pinnedTitle: renamed[`${saved.tool ?? ''}:${saved.id}`]?.trim() || undefined, claudeMode: saved.tool === 'claude' ? mode : undefined, codexMode: saved.tool === 'codex' ? mode : undefined, opencodeMode: saved.tool === 'opencode' ? mode : undefined, piMode: saved.tool === 'pi' ? mode : undefined }
     });
   };
 
@@ -523,7 +534,7 @@ export function HistoryBoard() {
       if (!independent && !parent && !parentToken) throw new Error(t('orchestration.history_unavailable'));
       const parentId = parent?.id ?? task.parentId;
       const snapshot = await commands.orchestrationRestoreWorker(task.id, parentId, task.sessionId);
-      const restored: TerminalSession = { id: task.sessionId, tool: task.tool, folderPath: task.cwd, resumeToken: task.nativeId, toolTitle: task.title, strictCwd: true, claudeMode: task.tool === 'claude' ? 'conversation' : undefined, codexMode: task.tool === 'codex' ? 'conversation' : undefined, opencodeMode: task.tool === 'opencode' ? 'conversation' : undefined };
+      const restored: TerminalSession = { id: task.sessionId, tool: task.tool, folderPath: task.cwd, resumeToken: task.nativeId, toolTitle: task.title, strictCwd: true, claudeMode: task.tool === 'claude' ? 'conversation' : undefined, codexMode: task.tool === 'codex' ? 'conversation' : undefined, opencodeMode: task.tool === 'opencode' ? 'conversation' : undefined, piMode: task.tool === 'pi' ? 'conversation' : undefined };
       dispatch({ type: 'RESTORE_WORKER_SESSION', parent: independent ? undefined : parent ?? { id: parentId, tool: task.parentTool as ToolType, folderPath: savedParent.cwd || task.cwd, resumeToken: parentToken ?? undefined, toolTitle: savedParent.name, strictCwd: true, claudeMode: 'conversation' }, child: restored });
       receiveOrchestration(snapshot);
     } catch (error) { setAgentError(String(error)); }

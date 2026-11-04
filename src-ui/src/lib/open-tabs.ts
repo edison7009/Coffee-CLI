@@ -15,6 +15,7 @@ interface SavedTab {
   claudeMode?: TerminalSession['claudeMode'];
   codexMode?: TerminalSession['codexMode'];
   opencodeMode?: TerminalSession['opencodeMode'];
+  piMode?: TerminalSession['piMode'];
   pinnedTitle?: string;
   toolTitle?: string;
   worktree?: TerminalSession['worktree'];
@@ -28,7 +29,7 @@ function saved(tab: TerminalSession, active: boolean): SavedTab | null {
   if (tab.tool !== 'terminal' && !tab.resumeToken) return null;
   return {
     tool: tab.tool, folderPath: tab.folderPath, resumeToken: tab.tool === 'terminal' ? undefined : tab.resumeToken,
-    claudeMode: tab.claudeMode, codexMode: tab.codexMode, opencodeMode: tab.opencodeMode,
+    claudeMode: tab.claudeMode, codexMode: tab.codexMode, opencodeMode: tab.opencodeMode, piMode: tab.piMode,
     pinnedTitle: tab.pinnedTitle, toolTitle: tab.toolTitle, worktree: tab.worktree, worktreeOrigin: tab.worktreeOrigin,
     ...(active ? { active } : {}),
   };
@@ -60,7 +61,7 @@ export function parseOpenTabs(text: string | null): { terminals: TerminalSession
     const id = crypto.randomUUID();
     terminals.push({
       id, tool: item.tool, folderPath: item.folderPath, resumeToken: item.tool === 'terminal' ? undefined : item.resumeToken,
-      claudeMode: item.claudeMode, codexMode: item.codexMode, opencodeMode: item.opencodeMode,
+      claudeMode: item.claudeMode, codexMode: item.codexMode, opencodeMode: item.opencodeMode, piMode: item.piMode,
       pinnedTitle: item.pinnedTitle, toolTitle: item.toolTitle, worktree: item.worktree, worktreeOrigin: item.worktreeOrigin, startedAt: Date.now(),
     });
     if (item.active) activeId = id;

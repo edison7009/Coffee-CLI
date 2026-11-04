@@ -130,6 +130,7 @@ export interface TerminalSession {
   claudeMode?: ClaudeMode;
   codexMode?: ClaudeMode;
   opencodeMode?: ClaudeMode;
+  piMode?: ClaudeMode;
   folderPath: string | null;
   /// Live terminal title set by the tool via OSC 0/2 (e.g. Claude Code's
   /// conversation summary). When set, the tab shows this instead of the cwd
@@ -303,13 +304,13 @@ type Action =
   | { type: 'OPEN_SESSION_SPLIT'; id: string; targetId: string; edge: SplitEdge }
   | { type: 'CLOSE_SESSION_SPLIT'; id: string }
   | { type: 'RESIZE_SESSION_SPLIT'; path: string; ratio: number }
-  | { type: 'LAUNCH_TERMINAL_TOOL'; id: string; tool: ToolType; cwd?: string; toolData?: string; resumeToken?: string; strictCwd?: boolean; claudeMode?: ClaudeMode; codexMode?: ClaudeMode; opencodeMode?: ClaudeMode; parentId?: string; background?: boolean }
+  | { type: 'LAUNCH_TERMINAL_TOOL'; id: string; tool: ToolType; cwd?: string; toolData?: string; resumeToken?: string; strictCwd?: boolean; claudeMode?: ClaudeMode; codexMode?: ClaudeMode; opencodeMode?: ClaudeMode; piMode?: ClaudeMode; parentId?: string; background?: boolean }
   | { type: 'REMOVE_TERMINAL'; id: string }
   | { type: 'CLOSE_TERMINAL_GROUP'; id: string; childIds: string[]; keepChildren: boolean }
   | { type: 'RESTORE_WORKER_SESSION'; parent?: TerminalSession; child: TerminalSession }
   | { type: 'REORDER_TAB'; tabId: string; beforeId: string | null }
   | { type: 'SET_ACTIVE_TERMINAL'; id: string | null }
-  | { type: 'SET_TERMINAL_TOOL'; id: string; tool: ToolType; toolData?: string; resumeToken?: string; claudeMode?: ClaudeMode; codexMode?: ClaudeMode; opencodeMode?: ClaudeMode }
+  | { type: 'SET_TERMINAL_TOOL'; id: string; tool: ToolType; toolData?: string; resumeToken?: string; claudeMode?: ClaudeMode; codexMode?: ClaudeMode; opencodeMode?: ClaudeMode; piMode?: ClaudeMode }
   | { type: 'SET_TERMINAL_HIDDEN'; id: string; isHidden: boolean }
   | { type: 'RESTART_TERMINAL'; id: string; newId: string; fresh?: boolean }
   | { type: 'SET_TERMINAL_WORKTREE'; id: string; newId: string; cwd: string; worktree?: import('../lib/worktree').Worktree; origin?: string }
@@ -465,6 +466,7 @@ function reducer(state: AppState, action: Action): AppState {
         claudeMode: action.tool === 'claude' ? action.claudeMode ?? 'conversation' : undefined,
         codexMode: action.tool === 'codex' ? action.codexMode ?? 'terminal' : undefined,
         opencodeMode: action.tool === 'opencode' ? action.opencodeMode ?? 'terminal' : undefined,
+        piMode: action.tool === 'pi' ? action.piMode ?? 'terminal' : undefined,
         toolTitle: undefined, agentStatus: undefined, startedAt: Date.now(),
       };
       if (action.cwd) {
@@ -549,7 +551,7 @@ function reducer(state: AppState, action: Action): AppState {
     case 'SET_TERMINAL_TOOL':
       return {
         ...state,
-        terminals: state.terminals.map(t => t.id === action.id ? { ...t, tool: action.tool, claudeMode: action.tool === 'claude' ? action.claudeMode ?? 'conversation' : undefined, codexMode: action.tool === 'codex' ? action.codexMode ?? 'terminal' : undefined, opencodeMode: action.tool === 'opencode' ? action.opencodeMode ?? 'terminal' : undefined, toolData: action.toolData, resumeToken: action.resumeToken, toolTitle: undefined, agentStatus: undefined, startedAt: Date.now() } : t)
+        terminals: state.terminals.map(t => t.id === action.id ? { ...t, tool: action.tool, claudeMode: action.tool === 'claude' ? action.claudeMode ?? 'conversation' : undefined, codexMode: action.tool === 'codex' ? action.codexMode ?? 'terminal' : undefined, opencodeMode: action.tool === 'opencode' ? action.opencodeMode ?? 'terminal' : undefined, piMode: action.tool === 'pi' ? action.piMode ?? 'terminal' : undefined, toolData: action.toolData, resumeToken: action.resumeToken, toolTitle: undefined, agentStatus: undefined, startedAt: Date.now() } : t)
       };
     case 'SET_TERMINAL_HIDDEN':
       return {

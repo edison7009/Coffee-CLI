@@ -41,6 +41,16 @@ impl Tokens {
             reasoning: None,
         }
     }
+    /// Pi reports cache reads apart from input; reasoning is part of output.
+    fn pi(v: &Value) -> Self {
+        Self {
+            input: number(v, "input"),
+            output: number(v, "output"),
+            cache_read: number(v, "cacheRead"),
+            cache_write: number(v, "cacheWrite"),
+            reasoning: number(v, "reasoning"),
+        }
+    }
     fn codex(v: &Value) -> Self {
         Self {
             input: number(v, "input_tokens"),
@@ -204,6 +214,8 @@ fn parse_line(
                 )?;
             }
         }
+    } else if tool == "pi" {
+        parse_pi(db, file, p, v, &stamp)?;
     } else {
         let data = &v["payload"];
         if v["type"] == "session_meta" {
@@ -282,6 +294,44 @@ fn parse_line(
                 _ => {}
             }
         }
+    }
+    Ok(())
+}
+
+/// One row of a Pi session log (`~/.pi/agent/sessions/<folder>/<time>_<id>.jsonl`). A fork copies the
+/// rows it keeps into a new file, so keys come from what a copy preserves: the provider's response ID,
+/// else the message's own time, and never the per-file row ID.
+fn parse_pi(db: &Connection, file: &str, p: &mut Parser, v: &Value, stamp: &str) -> rusqlite::Result<()> {
+    match v["type"].as_str() {
+        Some("session") => {
+            p.session = text(v, "id");
+            p.project = text(v, "cwd").replace('\\', "/");
+        }
+        Some("model_change") => p.model = text(v, "modelId"),
+        Some("message") => {
+            let message = &v["message"];
+            let time = message["timestamp"].as_u64().map(|ms| ms.to_string()).unwrap_or_else(|| stamp.to_string());
+            match message["role"].as_str() {
+                Some("user") => {
+                    let content = &message["content"];
+                    let words = content.as_str().map(str::to_owned).unwrap_or_else(|| content.as_array().into_iter().flatten().filter_map(|block| block["text"].as_str()).collect::<Vec<_>>().join("\n"));
+                    let image = content.as_array().is_some_and(|blocks| blocks.iter().any(|block| block["type"] == "image"));
+                    if !words.trim().is_empty() || image {
+                        record(db, file, &format!("pi:prompt:{}", fingerprint((&time, &words))), "pi", p, stamp, "prompt", Tokens::default())?;
+                    }
+                }
+                Some("assistant") => {
+                    let usage = Tokens::pi(&message["usage"]);
+                    if usage.any() {
+                        if let Some(model) = message["model"].as_str().filter(|model| !model.is_empty()) { p.model = model.into(); }
+                        let id = message["responseId"].as_str().filter(|id| !id.is_empty()).map(str::to_owned).unwrap_or_else(|| format!("{time}:{}", p.model));
+                        record(db, file, &format!("pi:usage:{id}"), "pi", p, stamp, "usage", usage)?;
+                    }
+                }
+                _ => {}
+            }
+        }
+        _ => {}
     }
     Ok(())
 }
@@ -551,6 +601,10 @@ fn sync(db: &mut Connection, home: &Path) -> Vec<Source> {
         available: opencode_db.is_file(),
         errors: usize::from(opencode_db.is_file() && import_opencode(db, &opencode_db).is_err()),
     };
+    let pi_root = crate::tool_config::history_path_for("pi", std::env::var_os("PI_CODING_AGENT_DIR").filter(|dir| !dir.is_empty()).map(PathBuf::from).unwrap_or_else(|| home.join(".pi/agent")).join("sessions"));
+    let mut pi_files = Vec::new();
+    collect(&pi_root, 2, &mut pi_files);
+    let pi = Source { tool: "pi".into(), files: pi_files.len(), available: pi_root.is_dir(), errors: pi_files.iter().filter(|path| import_file(db, path, "pi").is_err()).count() };
     ["claude", "codex"]
         .into_iter()
         .map(|tool| {
@@ -585,7 +639,7 @@ fn sync(db: &mut Connection, home: &Path) -> Vec<Source> {
                 errors,
             }
         })
-        .chain([dsh, opencode])
+        .chain([dsh, opencode, pi])
         .collect()
 }
 
@@ -700,7 +754,7 @@ pub async fn get_usage_statistics(query: Query) -> Result<Report, String> {
         || query.to <= query.from
         || !matches!(
             query.tool.as_deref(),
-            None | Some("") | Some("claude") | Some("codex") | Some("dsh") | Some("opencode")
+            None | Some("") | Some("claude") | Some("codex") | Some("dsh") | Some("opencode") | Some("pi")
         )
     {
         return Err("Invalid usage range or tool".into());
@@ -754,6 +808,28 @@ mod tests {
         let report = totals(&c);
         assert_eq!((report.summary.prompts, report.summary.calls, report.summary.input, report.summary.cache_read), (1, 1, Some(490), Some(5760)));
         assert_eq!((p.project.as_str(), p.model.as_str()), ("D:/repo", "deepseek-v4-pro"));
+    }
+
+    #[test]
+    fn pi_logs_count_prompts_and_replies_once_across_forks() {
+        let c = db();
+        // Rows as Pi 1.5.0 writes them; the second file is a fork that copied the first two messages.
+        let rows = |session: &str, ids: [&str; 4]| vec![
+            json!({"type":"session","version":3,"id":session,"timestamp":"2026-11-04T08:02:23.567Z","cwd":"/Volumes/Work/Downloads"}),
+            json!({"type":"model_change","id":ids[0],"timestamp":"2026-11-04T08:02:23.587Z","provider":"echobird","modelId":"deepseek-flash"}),
+            json!({"type":"message","id":ids[1],"timestamp":"2026-11-04T08:02:50.280Z","message":{"role":"system","content":"","timestamp":1793779370279u64}}),
+            json!({"type":"message","id":ids[2],"timestamp":"2026-11-04T08:02:50.280Z","message":{"role":"user","content":[{"type":"text","text":"制作一个 简单网页 测试一下"}],"timestamp":1793779370279u64}}),
+            json!({"type":"message","id":ids[3],"timestamp":"2026-11-04T08:02:51.640Z","message":{"role":"assistant","model":"deepseek-flash","responseId":"b5594130","timestamp":1793779370294u64,"usage":{"input":221,"output":76,"cacheRead":1280,"cacheWrite":0,"reasoning":25,"totalTokens":1577}}}),
+            json!({"type":"message","id":"tool","timestamp":"2026-11-04T08:02:51.780Z","message":{"role":"toolResult","toolCallId":"call","toolName":"bash","content":[],"isError":false,"timestamp":1793779371780u64}}),
+        ];
+        for (file, session, ids) in [("original", "s1", ["a1", "a2", "a3", "a4"]), ("fork", "s2", ["b1", "b2", "b3", "b4"])] {
+            let mut p = Parser::default();
+            for row in rows(session, ids) { parse_line(&c, file, "pi", &mut p, &row, 0).unwrap(); }
+            assert_eq!((p.project.as_str(), p.model.as_str()), ("/Volumes/Work/Downloads", "deepseek-flash"));
+        }
+        let report = totals(&c);
+        assert_eq!((report.summary.prompts, report.summary.calls), (1, 1));
+        assert_eq!((report.summary.input, report.summary.output, report.summary.cache_read, report.summary.cache_write, report.summary.reasoning), (Some(221), Some(76), Some(1280), Some(0), Some(25)));
     }
 
     /// An OpenCode database mid-migration: 2.x tables plus a 1.x session that was never migrated.

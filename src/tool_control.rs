@@ -60,6 +60,8 @@ fn config_path_in(tool: &str, home: &Path, env: impl Fn(&str) -> Option<std::ffi
         "antigravity" => Ok(home.join(".gemini/config/mcp_config.json")),
         "qwen" => Ok(home.join(".qwen/settings.json")),
         "kiro" => Ok(relocated("KIRO_HOME", home.join(".kiro")).join("settings/mcp.json")),
+        // Pi reads user-level servers from its agent folder; terminal and desktop tabs share it.
+        "pi" => Ok(relocated("PI_CODING_AGENT_DIR", home.join(".pi/agent")).join("mcp.json")),
         "opencode" => Ok(env("OPENCODE_CONFIG").map(PathBuf::from).filter(|path| path.is_absolute()).unwrap_or_else(|| json_config(relocated("OPENCODE_CONFIG_DIR", config.join("opencode")), "opencode"))),
         "kilo" => {
             let directory = config.join("kilo");
@@ -466,20 +468,21 @@ mod tests {
     fn native_configuration_locations_respect_homes_and_existing_jsonc() {
         let home = dunce::canonicalize(std::env::temp_dir()).unwrap().join(format!("coffee-control-paths-{}", uuid::Uuid::new_v4()));
         let expected = [("cursor",".cursor/mcp.json"),("copilot",".copilot/mcp-config.json"),("antigravity",".gemini/config/mcp_config.json"),
-            ("qwen",".qwen/settings.json"),("kiro",".kiro/settings/mcp.json"),("opencode",".config/opencode/opencode.json"),("kilo",".config/kilo/kilo.json")];
+            ("qwen",".qwen/settings.json"),("kiro",".kiro/settings/mcp.json"),("pi",".pi/agent/mcp.json"),("opencode",".config/opencode/opencode.json"),("kilo",".config/kilo/kilo.json")];
         for (tool, suffix) in expected { assert_eq!(config_path_in(tool, &home, |_| None).unwrap(), home.join(suffix)); }
         let relocated = home.join("custom");
         assert_eq!(config_path_in("kiro", &home, |key| (key == "KIRO_HOME").then(|| relocated.clone().into_os_string())).unwrap(), relocated.join("settings/mcp.json"));
         assert_eq!(config_path_in("kilo", &home, |key| (key == "XDG_CONFIG_HOME").then(|| relocated.clone().into_os_string())).unwrap(), relocated.join("kilo/kilo.json"));
         fs::create_dir_all(home.join(".config/kilo")).unwrap(); fs::write(home.join(".config/kilo/kilo.jsonc"), "{}").unwrap();
         assert_eq!(config_path_in("kilo", &home, |_| None).unwrap(), home.join(".config/kilo/kilo.jsonc"));
-        assert!(config_path_in("pi", &home, |_| None).is_err());
+        assert_eq!(config_path_in("pi", &home, |key| (key == "PI_CODING_AGENT_DIR").then(|| relocated.clone().into_os_string())).unwrap(), relocated.join("mcp.json"));
+        assert!(config_path_in("grok", &home, |_| None).is_err());
         fs::remove_dir_all(home).unwrap();
     }
     #[test]
     fn json_clients_round_trip_only_the_owned_entry_and_keep_comments() {
         let exe = Path::new("C:/Program Files/Coffee/coffee-cli.exe");
-        for tool in ["claude","cursor","copilot","antigravity","qwen","kiro","kilo","opencode"] {
+        for tool in ["claude","cursor","copilot","antigravity","qwen","kiro","pi","kilo","opencode"] {
             for nested in [false,true] {
                 if nested && tool != "opencode" { continue; }
                 let original = if nested { "{\n// keep model\n\"model\":\"my-model\",\"mcp\":{\"servers\":{\"mine\":{\"type\":\"local\",\"command\":[\"custom\"]}},\"timeout\":{\"startup\":30000}},\"hooks\":[],\n}\n" }
@@ -515,7 +518,7 @@ mod tests {
         let broken = agent_status("cursor", "computer", exe, Ok(Some("{ broken".into())));
         assert!(broken.supported && broken.conflict && !broken.enabled);
         assert_eq!(broken.issue, Some("configuration"));
-        let unsupported = agent_status("pi", "computer", exe, Err("control_unsupported".into()));
+        let unsupported = agent_status("grok", "computer", exe, Err("control_unsupported".into()));
         assert!(!unsupported.supported && !unsupported.enabled && !unsupported.conflict);
         assert_eq!(unsupported.issue, Some("unsupported"));
         let healthy = agent_status("copilot", "computer", exe, Ok(None));

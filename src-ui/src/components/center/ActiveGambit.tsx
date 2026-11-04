@@ -19,12 +19,13 @@
 import { useCallback, useEffect } from 'react';
 import { useAppState, useAppStateRef, matchHotkeyScheme } from '../../store/app-state';
 import { sendSessionPrompt } from '../../lib/send-session-prompt';
-import { isClaudeConversation, isCodexConversation, isDshConversation, isOpenCodeConversation } from '../../lib/chat-tools';
+import { isClaudeConversation, isCodexConversation, isDshConversation, isOpenCodeConversation, isPiConversation } from '../../lib/chat-tools';
 import { getToolIcon } from './CenterPanel';
 import { Gambit } from './Gambit';
 import { controlClaude, useClaudeSession } from '../../lib/claude-session';
 import { interruptCodex, useCodexSession } from '../../lib/codex-session';
 import { interruptOpenCode, useOpenCodeSession } from '../../lib/opencode-session';
+import { abortPi, usePiSession } from '../../lib/pi-session';
 import { stopDsh, useDshSession } from '../../lib/dsh-session';
 import { useOrchestration } from '../../lib/orchestration';
 import { useSessionControls } from '../../lib/session-controls';
@@ -69,16 +70,19 @@ export function ActiveGambit() {
   const isCodex = isCodexConversation(activeSession);
   const isDsh = isDshConversation(activeSession);
   const isOpenCode = isOpenCodeConversation(activeSession);
-  const gambitOpen = isClaude || isCodex || isDsh || isOpenCode || state.gambitOpen;
+  const isPi = isPiConversation(activeSession);
+  const gambitOpen = isClaude || isCodex || isDsh || isOpenCode || isPi || state.gambitOpen;
   const claude = useClaudeSession(isClaude ? activeId ?? '' : '');
   const codex = useCodexSession(isCodex ? activeId ?? '' : '');
   const dshBusy = useDshSession(isDsh ? activeId ?? '' : '', s => s.busy);
   const openCodeBusy = useOpenCodeSession(isOpenCode ? activeId ?? '' : '', s => s.busy);
   const dshStarted = useDshSession(isDsh ? activeId ?? '' : '', s => s.messages.length > 0);
   const openCodeStarted = useOpenCodeSession(isOpenCode ? activeId ?? '' : '', s => s.native.length > 0);
+  const piBusy = usePiSession(isPi ? activeId ?? '' : '', s => s.busy);
+  const piStarted = usePiSession(isPi ? activeId ?? '' : '', s => s.messages.length > 0);
   const controlsReady = isClaude ? claude.ready : isCodex ? codex.ready : true;
-  const running = isClaude ? claude.busy : isCodex ? codex.busy : isOpenCode ? openCodeBusy : isDsh && dshBusy;
-  const started = isClaude ? claude.messages.length > 0 : isCodex ? codex.messages.length > 0 : isDsh ? dshStarted : openCodeStarted;
+  const running = isClaude ? claude.busy : isCodex ? codex.busy : isOpenCode ? openCodeBusy : isPi ? piBusy : isDsh && dshBusy;
+  const started = isClaude ? claude.messages.length > 0 : isCodex ? codex.messages.length > 0 : isDsh ? dshStarted : isPi ? piStarted : openCodeStarted;
   // Footer label telling the user where Send will land. Local sessions show
   // their working-folder name; SSH/WebSocket sessions show their connection
   // host, since folderPath may still contain the launchpad's previous folder.
@@ -172,9 +176,10 @@ export function ActiveGambit() {
       codex={isCodex}
       dsh={isDsh}
       opencode={isOpenCode}
+      pi={isPi}
       attachable={activeSession?.tool !== 'remote'}
       running={running}
-      onCancel={isDsh ? () => { void stopDsh(activeId); } : isOpenCode ? () => { void interruptOpenCode(activeId); } : isCodex ? () => { void interruptCodex(activeId); } : isClaude ? () => { void controlClaude(activeId, { subtype: 'interrupt' }).catch(() => {}); } : undefined}
+      onCancel={isDsh ? () => { void stopDsh(activeId); } : isPi ? () => { void abortPi(activeId); } : isOpenCode ? () => { void interruptOpenCode(activeId); } : isCodex ? () => { void interruptCodex(activeId); } : isClaude ? () => { void controlClaude(activeId, { subtype: 'interrupt' }).catch(() => {}); } : undefined}
       leftPanelHidden={state.leftPanelHidden}
       rightPanelHidden={state.rightPanelHidden}
     />

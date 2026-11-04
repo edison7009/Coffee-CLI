@@ -18,24 +18,25 @@ const isClaudeConversation = evaluate('lib/chat-tools.ts', 'isClaudeConversation
 const isCodexConversation = evaluate('lib/chat-tools.ts', 'isCodexConversation');
 const isDshConversation = evaluate('lib/chat-tools.ts', 'isDshConversation');
 const isOpenCodeConversation = evaluate('lib/chat-tools.ts', 'isOpenCodeConversation');
-const isConversationSession = evaluate('lib/chat-tools.ts', 'isConversationSession', { isClaudeConversation, isCodexConversation, isDshConversation, isOpenCodeConversation });
+const isPiConversation = evaluate('lib/chat-tools.ts', 'isPiConversation');
+const isConversationSession = evaluate('lib/chat-tools.ts', 'isConversationSession', { isClaudeConversation, isCodexConversation, isDshConversation, isOpenCodeConversation, isPiConversation });
 const splitSessionIds = evaluate('lib/session-split-layout.ts', 'splitSessionIds');
 const replaceSplitSession = evaluate('lib/session-split-layout.ts', 'replaceSplitSession', { splitSessionIds });
 const reducer = evaluate('store/app-state.tsx', 'reducer', { isConversationSession, replaceSplitSession, getTabOrder: state => state.tabOrder });
 const terminals = [{ id: 'claude', tool: 'claude' }, { id: 'terminal', tool: null }];
 let state;
 const effects = [];
-const terminalSends = [], claudeSends = [], codexSends = [], dshSends = [], openCodeSends = [];
+const terminalSends = [], claudeSends = [], codexSends = [], dshSends = [], openCodeSends = [], piSends = [];
 let team = { enabled: false, agents: [], coordinators: [] };
 const context = {
-  isClaudeConversation, isCodexConversation, isDshConversation, isOpenCodeConversation, isConversationSession,
+  isClaudeConversation, isCodexConversation, isDshConversation, isOpenCodeConversation, isPiConversation, isConversationSession,
   useAppState: () => ({ state, dispatch: action => { state = reducer(state, action); } }),
   useAppStateRef: () => ({ get current() { return state; } }),
   useAppDispatch: () => context.useAppState().dispatch,
   useOrchestration: () => team,
   useSessionControls: () => [],
   useCallback: fn => fn, useEffect: fn => effects.push(fn), useT: () => key => key,
-  useClaudeSession: () => ({ busy: false, messages: [] }), useCodexSession: () => ({ busy: false, messages: [] }), useDshSession: () => false, stopDsh: async () => {}, useOpenCodeSession: () => false, interruptOpenCode: async () => {}, getToolIcon: () => '',
+  useClaudeSession: () => ({ busy: false, messages: [] }), useCodexSession: () => ({ busy: false, messages: [] }), useDshSession: () => false, stopDsh: async () => {}, useOpenCodeSession: () => false, interruptOpenCode: async () => {}, usePiSession: () => false, abortPi: async () => {}, getToolIcon: () => '',
   schemeLabels: () => ({ left: 'Alt+Q', gambit: 'Alt+W', right: 'Alt+E' }),
   React: { createElement: (type, props, ...children) => ({ type, props, children }) },
   Gambit: 'gambit', WorktreeControl: 'worktree-control', Changelog: 'changelog', IS_MACOS: false,
@@ -46,6 +47,7 @@ const context = {
   sendCodexInteractive: async (id, text) => { codexSends.push({ id, text }); return true; },
   sendDshMessage: async (id, text) => { dshSends.push({ id, text }); return true; },
   sendOpenCodeMessage: async (id, text) => { openCodeSends.push({ id, text }); return true; },
+  sendPiMessage: async (id, text) => { piSends.push({ id, text }); return true; },
 };
 context.basename = evaluate('components/center/ActiveGambit.tsx', 'basename');
 context.sendSessionPrompt = evaluate('lib/send-session-prompt.ts', 'sendSessionPrompt', context);
@@ -155,6 +157,20 @@ for (const opencodeMode of ['conversation', 'terminal']) {
 }
 assert.equal(isOpenCodeConversation(reducer({ terminals: [{ id: 'new', tool: null }], tabOrder: ['new'] }, { type: 'LAUNCH_TERMINAL_TOOL', id: 'new', tool: 'opencode' }).terminals[0]), false, 'callers without a mode keep the terminal');
 console.log('OK: OpenCode conversation uses its own backend, keeps its composer and retains mode on reconnect');
+state = { terminals: [{ id: 'pi-desktop', tool: 'pi', piMode: 'conversation' }], activeTerminalId: 'pi-desktop', gambitOpen: false, agentPageActive: null, diffTabActive: false };
+assert.equal(host().props.pi, true, 'Pi conversations always have their composer');
+assert.equal(toggle().props.disabled, true);
+assert.equal(await host().props.onSend('Pi prompt'), true);
+assert.deepEqual(piSends.at(-1), { id: 'pi-desktop', text: 'Pi prompt' });
+assert.equal(terminalSends.some(send => send.id === 'pi-desktop'), false);
+for (const piMode of ['conversation', 'terminal']) {
+  const launched = reducer({ terminals: [{ id: 'new', tool: null }], tabOrder: ['new'] }, { type: 'LAUNCH_TERMINAL_TOOL', id: 'new', tool: 'pi', piMode });
+  assert.equal(isPiConversation(launched.terminals[0]), piMode === 'conversation');
+  const restarted = reducer({ ...launched, activeTerminalId: 'new' }, { type: 'RESTART_TERMINAL', id: 'new', newId: 'retry' });
+  assert.equal(restarted.terminals[0].piMode, piMode);
+}
+assert.equal(isPiConversation(reducer({ terminals: [{ id: 'new', tool: null }], tabOrder: ['new'] }, { type: 'LAUNCH_TERMINAL_TOOL', id: 'new', tool: 'pi' }).terminals[0]), false, 'callers without a mode keep the terminal');
+console.log('OK: Pi conversation uses its own backend, keeps its composer and retains mode on reconnect');
 for (const preference of [false, true]) {
   state = { terminals: [{ id: 'dsh-desktop', tool: 'dsh' }], activeTerminalId: 'dsh-desktop', gambitOpen: preference, agentPageActive: null, diffTabActive: false };
   assert.equal(host().type, 'gambit', 'DeepSeek Harness always has its composer');

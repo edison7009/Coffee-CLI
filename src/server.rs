@@ -5437,6 +5437,7 @@ pub fn start_ui(pending_launch: Option<crate::launch::LaunchRequest>) -> anyhow:
         .manage(crate::claude_session::ClaudeSessions::default())
         .manage(crate::codex_session::CodexSessions::default())
         .manage(crate::dsh_session::DshSessions::default())
+        .manage(crate::pi_session::PiSessions::default())
         .manage(crate::opencode_session::OpenCodeSessions::default())
         .manage(AppState {
             terminal_session,
@@ -5466,6 +5467,10 @@ pub fn start_ui(pending_launch: Option<crate::launch::LaunchRequest>) -> anyhow:
             crate::dsh_session::dsh_session_respond,
             crate::dsh_session::dsh_session_close,
             crate::dsh_session::dsh_session_history,
+            crate::pi_session::pi_session_start,
+            crate::pi_session::pi_session_request,
+            crate::pi_session::pi_session_respond,
+            crate::pi_session::pi_session_close,
             crate::fonts::list_system_fonts,
             agent_bridge_ready,
             crate::agent::agent_get_model,
@@ -5714,6 +5719,7 @@ pub fn start_ui(pending_launch: Option<crate::launch::LaunchRequest>) -> anyhow:
                 crate::claude_session::shutdown(&app_handle.state::<crate::claude_session::ClaudeSessions>());
                 crate::codex_session::shutdown(&app_handle.state::<crate::codex_session::CodexSessions>());
                 crate::dsh_session::shutdown(&app_handle.state::<crate::dsh_session::DshSessions>());
+                crate::pi_session::shutdown(&app_handle.state::<crate::pi_session::PiSessions>());
                 crate::opencode_session::shutdown(&app_handle.state::<crate::opencode_session::OpenCodeSessions>());
                 let state = app_handle.state::<AppState>();
                 let mut n = 0usize;

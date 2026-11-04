@@ -25,6 +25,7 @@ import { bindAutoHideScrollbar } from '../../lib/auto-hide-scrollbar';
 import { ClaudeComposerControls, AttachIcon } from './ClaudeComposerControls';
 import { CodexComposerControls } from './CodexComposerControls';
 import { OpenCodeComposerControls } from './OpenCodeComposerControls';
+import { PiComposerControls } from './PiComposerControls';
 import { DshComposerControls } from './DshComposerControls';
 import { UsageMeter } from './UsageMeter';
 import { useUsageQuota } from '../../lib/usage-quota';
@@ -52,6 +53,8 @@ interface GambitProps {
   dsh?: boolean;
   /** OpenCode desktop conversation. */
   opencode?: boolean;
+  /** Pi desktop conversation. */
+  pi?: boolean;
   /** Local file paths are meaningful to this target (false for SSH tabs). */
   attachable?: boolean;
   onCancel?: () => void;
@@ -132,6 +135,7 @@ function GambitImpl({
   codex = false,
   dsh = false,
   opencode = false,
+  pi = false,
   attachable = false,
   onCancel,
   sendFailedHint,
@@ -148,9 +152,9 @@ function GambitImpl({
 }: GambitProps) {
   const t = useT();
   // Desktop conversations own their composer controls and send prompts verbatim.
-  const desktop = claude || codex || dsh || opencode;
+  const desktop = claude || codex || dsh || opencode || pi;
   // Every desktop conversation accepts prompts during a running turn.
-  const steerable = claude || codex || dsh || opencode;
+  const steerable = claude || codex || dsh || opencode || pi;
   const usage = useUsageQuota(sessionId, tool, cwd, claude ? 'claude' : codex ? 'codex' : dsh ? 'dsh' : null);
   const usageMeter = <UsageMeter quotas={usage.quotas} onRefresh={usage.refresh} />;
   const suggestion = draft ? undefined : offered;
@@ -627,7 +631,7 @@ function GambitImpl({
       setSendEmpty(true);
       return;
     }
-    if ((codex || dsh || opencode) && codexSubmitHandler.current?.(text)) return;
+    if ((codex || dsh || opencode || pi) && codexSubmitHandler.current?.(text)) return;
     const body = desktop ? text : wrapImagePathsForSend(text);
     if (sendingRef.current) return;
     sendingRef.current = true;
@@ -645,7 +649,7 @@ function GambitImpl({
     // the newest entry (which is the one we just pushed).
     historyCursorRef.current = null;
     if (latestDraftRef.current === draft) onDraftChange('');
-  }, [draft, onSend, onDraftChange, running, steerable, codex, dsh, opencode, desktop]);
+  }, [draft, onSend, onDraftChange, running, steerable, codex, dsh, opencode, pi, desktop]);
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     // IME composition in progress — let the IME keep Enter for confirming
@@ -840,6 +844,7 @@ function GambitImpl({
         {codex && <CodexComposerControls key={sessionId} sessionId={sessionId} draft={draft} onDraftChange={onDraftChange} keyHandler={claudeKeyHandler} submitHandler={codexSubmitHandler} quota={usageMeter}>{capabilitiesStatus}</CodexComposerControls>}
 
         {opencode && <OpenCodeComposerControls key={sessionId} sessionId={sessionId} draft={draft} onDraftChange={onDraftChange} keyHandler={claudeKeyHandler} submitHandler={codexSubmitHandler} quota={usageMeter}>{capabilitiesStatus}</OpenCodeComposerControls>}
+        {pi && <PiComposerControls key={sessionId} sessionId={sessionId} draft={draft} onDraftChange={onDraftChange} keyHandler={claudeKeyHandler} submitHandler={codexSubmitHandler} quota={usageMeter}>{capabilitiesStatus}</PiComposerControls>}
         {dsh && <DshComposerControls key={sessionId} sessionId={sessionId} draft={draft} onDraftChange={onDraftChange} keyHandler={claudeKeyHandler} submitHandler={codexSubmitHandler} quota={usageMeter}>{capabilitiesStatus}</DshComposerControls>}
         {!desktop && attachable && <button type="button" className="gambit-attach" aria-label={t('claude.attach')} onClick={() => { void attachFiles(); }}><AttachIcon /></button>}
         {!desktop && capabilitiesStatus}

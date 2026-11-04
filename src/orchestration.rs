@@ -12,6 +12,8 @@ pub struct Snapshot { pub enabled: bool, #[serde(default = "default_agents")] pu
 const MODES: [&str; 3] = ["auto", "manager", "lead"];
 fn default_mode() -> String { "auto".into() }
 fn default_agents() -> Vec<String> { ["claude", "codex", "opencode", "dsh"].into_iter().map(str::to_owned).collect() }
+/// Agents that can be workers. Pi is supported but stays off until the user turns it on.
+fn supported_agents() -> Vec<String> { ["claude", "codex", "opencode", "dsh", "pi"].into_iter().map(str::to_owned).collect() }
 
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -285,7 +287,7 @@ pub async fn orchestration_set_agent(tool: String, enabled: bool) -> Result<Snap
 }
 
 fn orchestration_set_agent_blocking(tool: String, enabled: bool) -> Result<Snapshot, String> {
-    if !default_agents().contains(&tool) { return Err("Agent does not support orchestration yet".into()); }
+    if !supported_agents().contains(&tool) { return Err("Agent does not support orchestration yet".into()); }
     let mut state = hub().state.lock().map_err(|_| "Coordinator unavailable")?;
     let mut next = state.snapshot.clone(); next.agents.retain(|agent| agent != &tool);
     if enabled { next.agents.push(tool.clone()); }
@@ -689,6 +691,24 @@ fn record_event(state: &mut State, id: &str, tool: &str, generation: &str, event
             });
         }
     }
+    if tool == "pi" {
+        match event["type"].as_str() {
+            Some("message_end") if event["message"]["role"] == "assistant" => {
+                let reply = event["message"]["content"].as_array().into_iter().flatten().filter(|block| block["type"] == "text").filter_map(|block| block["text"].as_str()).collect::<Vec<_>>().join("\n");
+                if !reply.trim().is_empty() { run.reply = result_preview(&reply); }
+            }
+            // A provider error ends the run unless Pi retries it.
+            Some("agent_end") if event["willRetry"] != true => {
+                let last = event["messages"].as_array().into_iter().flatten().rfind(|message| message["role"] == "assistant");
+                if let Some(message) = last.filter(|message| message["stopReason"] == "error") {
+                    completed = Some(("failed", message["errorMessage"].as_str().filter(|text| !text.trim().is_empty()).unwrap_or("Worker turn failed").into()));
+                }
+            }
+            // Pi settles once retries, compaction recovery and queued messages are done.
+            Some("agent_settled") => completed = Some(if event["aborted"] == true { ("interrupted", "Worker turn interrupted".into()) } else { ("completed", run.reply.clone()) }),
+            _ => {}
+        }
+    }
     if tool == "opencode" {
         let data = &event["data"];
         match event["type"].as_str() {
@@ -805,7 +825,7 @@ fn worker_instructions(task: &Task, prompt: &str, command: &str) -> String {
 fn start_worker(token: &str, args: &Value) -> Result<Value, String> {
     parent(&hub().state.lock().unwrap(), token)?;
     let tool = text(args, "tool", 32)?;
-    if !default_agents().contains(&tool) { return Err("Choose claude, codex, opencode or dsh".into()); }
+    if !supported_agents().contains(&tool) { return Err("Choose claude, codex, opencode, dsh or pi".into()); }
     if !crate::tools::find(&tool).is_some_and(|tool| crate::server::binary_on_path(tool.binary_name)) { return Err("The requested tool is not installed".into()); }
     let title = text(args, "title", 160)?; let prompt = text(args, "prompt", 24_000)?;
     let operation = args.get("operationId").map(|value| value.as_str().filter(|id| !id.is_empty() && id.len() <= 64 && id.bytes().all(|byte| byte.is_ascii_alphanumeric() || b"._-".contains(&byte))).ok_or("Invalid operationId")).transpose()?;
@@ -1235,6 +1255,19 @@ mod tests {
         assert!(!record_event(&mut state, "child", "opencode", "g1", &json!({"type":"session.execution.interrupted","data":{"reason":"shutdown"}})));
         assert!(!record_event(&mut state, "child", "opencode", "old-generation", &done));
         assert!(record_event(&mut state, "child", "opencode", "g1", &done));
+        assert_eq!((state.snapshot.tasks[0].phase.as_str(), state.snapshot.tasks[0].summary.as_deref()), ("completed", Some("Tests passed")));
+    }
+    #[test]
+    fn pi_result_waits_for_the_settled_run() {
+        let mut state = fixture(); state.snapshot.tasks[0].tool = "pi".into();
+        state.runs.insert("child".into(), WorkerRun::new("Assigned task"));
+        record_input(&mut state, "child", "pi", "g1", "Assigned task", "input").unwrap();
+        let reply = |text: &str| json!({"type":"message_end","message":{"role":"assistant","content":[{"type":"text","text":text}],"stopReason":"stop"}});
+        record_event(&mut state, "child", "pi", "g1", &reply("Reading files"));
+        record_event(&mut state, "child", "pi", "g1", &reply("Tests passed"));
+        assert!(!record_event(&mut state, "child", "pi", "g1", &json!({"type":"agent_end","willRetry":true,"messages":[{"role":"assistant","stopReason":"error","errorMessage":"overloaded"}]})));
+        assert!(!record_event(&mut state, "child", "pi", "old-generation", &json!({"type":"agent_settled","aborted":false})));
+        assert!(record_event(&mut state, "child", "pi", "g1", &json!({"type":"agent_settled","aborted":false})));
         assert_eq!((state.snapshot.tasks[0].phase.as_str(), state.snapshot.tasks[0].summary.as_deref()), ("completed", Some("Tests passed")));
     }
     #[test]

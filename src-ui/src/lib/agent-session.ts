@@ -1,11 +1,12 @@
 import type { TerminalSession } from '../store/app-state';
 import { invoke, commands } from '../tauri';
-import { isClaudeConversation, isCodexConversation, isDshConversation, isOpenCodeConversation } from './chat-tools';
+import { isClaudeConversation, isCodexConversation, isDshConversation, isOpenCodeConversation, isPiConversation } from './chat-tools';
 import { getClaudeConnection, sendClaudeMessage, controlClaude, loadClaudeHistory } from './claude-session';
 import { getCodexConnection, sendCodexMessage, interruptCodex, loadCodexHistory } from './codex-session';
 import { getDshConnection, sendDshMessage, stopDsh } from './dsh-session';
 import { getOpenCodeConnection, sendOpenCodeMessage, interruptOpenCode, loadOpenCodeHistory, openCodeRequests } from './opencode-session';
 import { openCodeRows } from './opencode-protocol';
+import { abortPi, getPiConnection, sendPiMessage } from './pi-session';
 import type { ClaudeMessage } from './claude-protocol';
 import type { CodexMessage } from './codex-protocol';
 import type { DshMessage } from './dsh-protocol';
@@ -15,8 +16,8 @@ import { terminalControlStatus, submitTerminalPrompt, sendTerminalKey, TerminalI
 
 /** Adapt the existing session; observation and control never start another process. */
 export function getAgentSession(tab: TerminalSession) {
-  const id = tab.id, claude = isClaudeConversation(tab), codex = isCodexConversation(tab), dsh = isDshConversation(tab), opencode = isOpenCodeConversation(tab);
-  if (!claude && !codex && !dsh && !opencode) {
+  const id = tab.id, claude = isClaudeConversation(tab), codex = isCodexConversation(tab), dsh = isDshConversation(tab), opencode = isOpenCodeConversation(tab), pi = isPiConversation(tab);
+  if (!claude && !codex && !dsh && !opencode && !pi) {
     const observer = getTerminalObserver(id);
     return observer && {
       mode: 'terminal' as const, generation: observer.generation, ...terminalControlStatus(id),
@@ -26,7 +27,7 @@ export function getAgentSession(tab: TerminalSession) {
       close: () => commands.tierTerminalKill(id),
     };
   }
-  const connection = () => opencode ? getOpenCodeConnection(id) : dsh ? getDshConnection(id) : claude ? getClaudeConnection(id) : getCodexConnection(id);
+  const connection = () => pi ? getPiConnection(id) : opencode ? getOpenCodeConnection(id) : dsh ? getDshConnection(id) : claude ? getClaudeConnection(id) : getCodexConnection(id);
   const initial = connection();
   if (!initial) return;
   const generation = `desktop:${tab.tool}:${initial.generation}`;
@@ -92,7 +93,7 @@ export function getAgentSession(tab: TerminalSession) {
       // A running desktop session takes the message into its current turn; automatic results still wait for idle.
       if (c.inputBusy && deliveryId) throw new Error('会话正在执行任务，请等待完成或明确请求中断');
       if (deliveryId && !claude) throw new Error('此会话不支持自动编排结果投递');
-      const sent = await (opencode ? sendOpenCodeMessage(id, text) : dsh ? sendDshMessage(id, text) : claude ? sendClaudeMessage(id, text, deliveryId) : sendCodexMessage(id, text));
+      const sent = await (pi ? sendPiMessage(id, text) : opencode ? sendOpenCodeMessage(id, text) : dsh ? sendDshMessage(id, text) : claude ? sendClaudeMessage(id, text, deliveryId) : sendCodexMessage(id, text));
       if (!sent) throw new TerminalInputError('消息发送未得到确认，请读取会话核实，不要自动重发', true);
     },
     key: async (key: string, guard: () => boolean) => {
@@ -104,6 +105,7 @@ export function getAgentSession(tab: TerminalSession) {
         // Stopping restarts the DeepSeek Harness runtime, which an idle session has no need of.
         if (dsh) { if (c.state.busy) await stopDsh(id); }
         else if (opencode) { if (c.state.busy) await interruptOpenCode(id); }
+        else if (pi) { if (c.state.busy) await abortPi(id); }
         else if (claude) await controlClaude(id, { subtype: 'interrupt' });
         else {
           await interruptCodex(id);
@@ -112,6 +114,6 @@ export function getAgentSession(tab: TerminalSession) {
         }
       } catch (error) { throw new TerminalInputError(String(error), true); }
     },
-    close: () => invoke<void>(opencode ? 'opencode_session_close' : dsh ? 'dsh_session_close' : claude ? 'claude_session_close' : 'codex_session_close', { id, generation: current().generation }),
+    close: () => invoke<void>(pi ? 'pi_session_close' : opencode ? 'opencode_session_close' : dsh ? 'dsh_session_close' : claude ? 'claude_session_close' : 'codex_session_close', { id, generation: current().generation }),
   };
 }

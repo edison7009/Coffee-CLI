@@ -1,0 +1,28 @@
+/* Pi brand colors from its installer; they stay fixed across themes, like Pi's own logo. */
+.pi-welcome-logo {
+  --pi-cell: 12px;
+  display: grid;
+  grid-template-columns: repeat(6, var(--pi-cell));
+  grid-auto-rows: var(--pi-cell);
+  margin: 0 auto 20px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: default;
+}
+.pi-welcome-logo > span.is-coral { background: rgb(240 144 130); }
+.pi-welcome-logo > span.is-blue { background: rgb(77 154 191); }
+.pi-welcome-logo > span.is-gold { background: rgb(241 190 88); }
+.pi-welcome-logo > span.is-turquoise { background: rgb(131 204 210); }
+.pi-welcome-logo > span.is-flash { background: #fff; }
+.pi-welcome-logo > span.is-white { background: var(--text-1); }
+
+/* Running status: the Pi mark with its colors moving clockwise, the label and the time. */
+/* Centered on the timeline line (x = 10.5px): the 12px mark starts 4.5px in, as the Codex spinner does. */
+.pi-running { display: flex; align-items: center; gap: 10px; min-height: 28px; margin: 0 0 20px 4.5px; color: var(--text-2); font-size: var(--type-body); }
+.pi-mark { display: inline-grid; grid-template-columns: repeat(4, 3px); grid-auto-rows: 3px; flex-shrink: 0; }
+.pi-mark > span { transition: background-color 0.15s ease; }
+.pi-mark > span.is-coral { background: rgb(240 144 130); }
+.pi-mark > span.is-blue { background: rgb(77 154 191); }
+.pi-mark > span.is-gold { background: rgb(241 190 88); }
+.pi-running-elapsed { color: var(--text-3, var(--text-2)); font-variant-numeric: tabular-nums; }
