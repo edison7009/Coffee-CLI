@@ -15,7 +15,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
   
   <!-- External CSS -->
-  <link rel="stylesheet" href="./css/style.css?v=0.4.8">
+  <link rel="stylesheet" href="./css/style.css?v=0.4.9">
+  <link rel="stylesheet" href="./css/hero-features.css?v=1.0.0">
 </head>
 <body>
 
@@ -62,143 +63,162 @@
     </nav>
   </header>
 
-  <!-- Main Hero Section -->
-  <main class="hero-section">
-    <!-- Coffee 101 Link -->
-    <a href="./courses/claude-code.html" class="opc-university-link" id="opc-link">
-      <span data-i18n="opc-link">Coffee 101</span>
-      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-    </a>
-    <div class="hero-content">
-      <h1 class="headline">
-        <span class="static-text" data-i18n="hero-title-1">Enjoy life while you work.</span><br/>
-        <span class="static-text" data-i18n="hero-title-2">Coffee CLI for</span>
-        <span class="dynamic-wrapper">
-          <span id="typewriter" class="type-text"></span><span class="cursor">|</span>
-        </span>
-      </h1>
-      <p class="subtitle" data-i18n="hero-subtitle">
-        Off the games and dating. <span class="accent">Something more interesting…</span>
-      </p>
-    </div>
+  <!-- Main Hero Section: copy + CTA on the left, feature showcase on the right -->
+  <main class="hero-section hero-split">
+    <div class="hero-copy">
+      <!-- Coffee 101 Link -->
+      <a href="./courses/claude-code.html" class="opc-university-link" id="opc-link">
+        <span data-i18n="opc-link">Coffee 101</span>
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+      </a>
+      <div class="hero-content">
+        <h1 class="headline">
+          <span class="static-text" data-i18n="hero-title-1">Enjoy life while you work.</span><br/>
+          <span class="static-text" data-i18n="hero-title-2">Coffee CLI for</span>
+          <span class="dynamic-wrapper">
+            <span id="typewriter" class="type-text"></span><span class="cursor">|</span>
+          </span>
+        </h1>
+        <p class="subtitle" data-i18n="hero-subtitle">
+          Off the games and dating. <span class="accent">Something more interesting…</span>
+        </p>
+      </div>
 
-    <!-- Supported AI CLIs (kept as a sibling of .hero-content so it is
-         sized by its own content and never reflows with the typewriter) -->
-    <div class="supported-tools" aria-label="Supported AI CLIs">
-      <img src="agents/icons/claude.svg" alt="Claude Code" width="28" height="28" loading="lazy">
-      <img src="agents/icons/opencode.svg" alt="OpenCode" width="28" height="28" loading="lazy">
-      <img src="agents/icons/mimocode.svg" alt="MiMo Code" width="28" height="28" loading="lazy">
-      <img src="agents/icons/codex.svg" alt="Codex CLI" width="28" height="28" loading="lazy">
-      <img src="agents/icons/antigravity.svg" alt="Antigravity CLI" width="28" height="28" loading="lazy">
-      <img src="agents/icons/qwen.svg" alt="Qwen Code" width="28" height="28" loading="lazy">
-      <img src="agents/icons/hermes.png" alt="Hermes Agent" width="28" height="28" loading="lazy">
-      <img src="agents/icons/openclaw.svg" alt="OpenClaw" width="28" height="28" loading="lazy">
-      <!-- Pi: inlined (not <img>) so currentColor tracks the theme text color -->
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" width="28" height="28" fill="currentColor" role="img" aria-label="Pi"><path fill-rule="evenodd" d="M165.29 165.29 H517.36 V400 H400 V517.36 H282.65 V634.72 H165.29 Z M282.65 282.65 V400 H400 V282.65 Z"/><path d="M517.36 400 H634.72 V634.72 H517.36 Z"/></svg>
-      <!-- Grok Build: inlined too (currentColor) — same monochrome treatment as Pi -->
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28" fill="currentColor" fill-rule="evenodd" role="img" aria-label="Grok Build"><title>Grok Build</title><path d="M6.469 8.776L16.512 23h-4.464L2.005 8.776H6.47zm-.004 7.9l2.233 3.164L6.467 23H2l4.465-6.324zM22 2.582V23h-3.659V7.764L22 2.582zM22 1l-9.952 14.095-2.233-3.163L17.533 1H22z"/></svg>
-      <img src="agents/icons/kimicode.png" alt="Kimi Code" width="28" height="28" loading="lazy">
-      <span class="supported-tools-more" role="img" aria-label="and more AI CLIs coming soon">
-        <span class="more-dot"></span>
-        <span class="more-dot"></span>
-        <span class="more-dot"></span>
-      </span>
-    </div>
-
-    <!-- Quick Start Installation Window -->
-    <div class="quick-start-container">
-      <div class="mac-window">
-        <!-- Window Header (Traffic Lights & Tabs) -->
-        <div class="window-header">
-          <div class="traffic-lights">
-            <div class="dot red"></div>
-            <div class="dot yellow"></div>
-            <div class="dot green"></div>
-          </div>
+      <!-- Quick Start Installation Window -->
+      <div class="quick-start-container">
+        <div class="mac-window">
+          <!-- Window Header (Traffic Lights & Tabs) -->
+          <div class="window-header">
+            <div class="traffic-lights">
+              <div class="dot red"></div>
+              <div class="dot yellow"></div>
+              <div class="dot green"></div>
+            </div>
           
-          <div class="platform-tabs">
-            <button class="tab-btn active" data-platform="windows">Windows</button>
-            <button class="tab-btn" data-platform="macos">macOS</button>
-            <button class="tab-btn" data-platform="linux">Linux</button>
-          </div>
+            <div class="platform-tabs">
+              <button class="tab-btn active" data-platform="windows">Windows</button>
+              <button class="tab-btn" data-platform="macos">macOS</button>
+              <button class="tab-btn" data-platform="linux">Linux</button>
+            </div>
           
-          <div class="header-spacer"></div>
-        </div>
-
-        <!-- Window Body (Instructions & Commands) -->
-        <div class="window-body">
-          <div class="instruction-hint" id="install-hint">
-            Right-click Start > Terminal (Admin) > Paste:
+            <div class="header-spacer"></div>
           </div>
-          <div class="code-block">
-            <span class="prompt-symbol">$</span>
-            <code id="install-command">iwr -useb https://coffeecli.com/install.ps1 | iex</code>
-            <button id="copy-btn" class="copy-button" aria-label="Copy to clipboard">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-              </svg>
-            </button>
+
+          <!-- Window Body (Instructions & Commands) -->
+          <div class="window-body">
+            <div class="instruction-hint" id="install-hint">
+              Right-click Start > Terminal (Admin) > Paste:
+            </div>
+            <div class="code-block">
+              <span class="prompt-symbol">$</span>
+              <code id="install-command">iwr -useb https://coffeecli.com/install.ps1 | iex</code>
+              <button id="copy-btn" class="copy-button" aria-label="Copy to clipboard">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </div>
+
+      <!-- Mainland China download mirrors. Hidden by default; main.js renderI18N()
+           unhides this row when currentLang is "zh" or "zh-TW", since these mirrors
+           only matter for users where GitHub Releases is slow or unreachable. The
+           brand names live in the i18n dict so zh-TW gets traditional characters
+           (網盤 / 雲盤) without needing a second DOM node. -->
+      <section class="cn-mirrors" id="cn-mirrors" hidden>
+        <span class="cn-mirrors-title" data-i18n="cn-mirrors-title">其他下载渠道：</span>
+        <a href="https://pan.baidu.com/s/1mNUkPk1IQD8A-Ga_os_BHQ?pwd=cm74" target="_blank" rel="noopener" data-i18n="cn-mirrors-baidu">百度网盘</a>
+        <span class="cn-mirrors-sep">·</span>
+        <a href="https://pan.quark.cn/s/fe37fca17aed" target="_blank" rel="noopener" data-i18n="cn-mirrors-quark">夸克网盘</a>
+        <span class="cn-mirrors-sep">·</span>
+        <a href="https://1842244417.share.123865.com/123pan/rqi0Td-7QmxH" target="_blank" rel="noopener" data-i18n="cn-mirrors-123">123云盘</a>
+        <span class="cn-mirrors-sep">|</span>
+        <a href="https://gitcode.com/edison7009/Coffee-CLI/issues" target="_blank" rel="noopener" data-i18n="cn-mirrors-feedback">国内用户问题反馈</a>
+      </section>
+
+      <!-- Direct Download Section ------------------------------------------------
+           For users who prefer click-and-install over running the install
+           command above. Each button hits the CF Worker's /download/<platform>
+           route (see Web-Home/_worker.js), which returns the latest GitHub
+           Release asset for that platform; if the asset isn't uploaded yet
+           (CI mid-build), the worker returns 404 and the user can retry. -->
+      <section class="downloads-section">
+        <p class="downloads-title" data-i18n="downloads-title">Or download the desktop app</p>
+        <div class="downloads-row">
+          <a class="download-btn" href="/download/windows" data-platform="windows">
+            <svg class="dl-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M3 5.5L10 4.45V11.4H3V5.5zM11 4.3L21 3V11.4H11V4.3zM3 12.6H10V19.55L3 18.5V12.6zM11 12.6H21V21L11 19.7V12.6z"/>
+            </svg>
+            <span class="dl-label">Windows</span>
+            <span class="dl-suffix">.exe</span>
+          </a>
+          <a class="download-btn" href="/download/macos-arm" data-platform="macos">
+            <svg class="dl-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M17.5 12.5c-.02-2.4 1.96-3.55 2.05-3.61-1.12-1.64-2.86-1.86-3.48-1.89-1.48-.15-2.89.87-3.64.87-.76 0-1.92-.85-3.16-.83-1.62.02-3.12.94-3.96 2.4-1.69 2.93-.43 7.27 1.21 9.65.8 1.16 1.75 2.46 3 2.42 1.21-.05 1.66-.78 3.13-.78 1.45 0 1.87.78 3.15.75 1.3-.02 2.13-1.18 2.92-2.35.93-1.35 1.31-2.66 1.33-2.73-.03-.01-2.55-.98-2.55-3.9zM15.07 5.32c.66-.81 1.11-1.92.99-3.04-.96.04-2.13.65-2.82 1.45-.61.71-1.16 1.85-1.01 2.93 1.07.08 2.18-.55 2.84-1.34z"/>
+            </svg>
+            <span class="dl-label">macOS</span>
+            <span class="dl-suffix">.dmg</span>
+          </a>
+          <a class="download-btn" href="/download/linux-deb" data-platform="linux">
+            <svg class="dl-icon" width="20" height="20" viewBox="-150 -150 1300 1300" fill="currentColor" aria-hidden="true">
+              <path d="M896,809.4c-25.9-10.6-47.2-27.4-45.7-59.4c1.5-32-22.9-53.2-22.9-53.2s21.3-70.1,1.5-128c-19.8-58-85.3-150.8-135.5-220.9c-50.2-70.1-7.6-150.9-53.2-254.4C594.4-10,475.7-4,411.7,40.2c-64,44.1-44.2,153.8-41.2,205.6c3.1,51.7,1.4,88.6-4.5,102c-6,13.4-47.2,62.5-74.7,103.6c-27.4,41.1-47.2,126.4-67.1,161.5c-19.8,35-6.1,67-6.1,67s-13.7,4.5-24.4,27.5c-10.7,22.8-32,33.4-70.1,41c-38.1,7.6-38.1,32.1-29,59.5c9.2,27.4,0,42.7-10.6,77.6c-10.7,34.9,42.6,45.7,94.4,51.7c51.8,6.2,109.7,39.7,158.5,45.7c48.7,6.1,63.9-33.5,63.9-33.5s54.8-12.3,112.7-13.7c57.9-1.5,112.7,12.2,112.7,12.2s10.7,24.4,30.5,35c19.8,10.7,62.5,12.2,89.9-16.7c27.5-29,100.6-65.5,141.7-88.4C929.5,855,921.9,820,896,809.4z M539.6,137.7c26.1,0,47.2,25.9,47.2,57.8c0,22.7-10.6,42.2-26,51.7c-3.9-1.7-8.1-3.5-12.5-5.4c9.3-4.6,15.9-16.4,15.9-30.3c0-18-11.1-32.6-24.9-32.6c-13.6,0-24.8,14.6-24.8,32.6c0,6.7,1.6,13.1,4.3,18.3c-8.1-3.2-15.6-6.2-21.5-8.5c-3.2-7.8-5-16.6-5-25.9C492.3,163.6,513.4,137.7,539.6,137.7z M536.2,259.6c13.1,4.5,27.6,13,26.1,21.4c-1.5,8.5-8.4,8.5-26.1,19.3c-17.7,10.7-56,34.5-68.3,36c-12.3,1.5-19.2-5.4-32.3-13.8c-13.1-8.5-37.6-28.5-31.4-39.2c0,0,19.1-14.6,27.5-22.3c8.5-7.7,30-26.1,43-23.7C487.8,239.6,523.1,255,536.2,259.6z M418.4,146.8c20.6,0,37.3,24.5,37.3,54.8c0,5.6-0.5,10.7-1.6,15.7c-5,1.7-10.1,4.5-15.1,8.7c-2.5,2.1-4.7,4-6.9,5.9c3.3-6.1,4.6-14.8,3.1-24c-2.8-16.5-13.8-28.6-24.7-26.9c-10.9,1.9-17.5,16.7-14.7,33.4c2.8,16.6,13.8,28.7,24.6,26.9c0.6-0.1,1.2-0.3,1.8-0.5c-5.3,5.1-10.2,9.5-15.2,13.2c-15.1-7-26.1-27.8-26.1-52.4C381.2,171.3,397.9,146.8,418.4,146.8z M378.2,916.5c-4.9,21.8-30.4,37.7-30.4,37.7c-23.2,7.3-87.6-20.7-116.8-32.9c-29.2-12.1-103.4-15.9-113.2-26.7c-9.7-11,4.9-35.4,8.6-58.4c3.6-23.2-7.3-37.7-3.7-53.6c3.7-15.8,51.1-15.8,69.3-26.7c18.3-11,21.9-42.6,36.5-51.1c14.6-8.6,41.3,21.8,52.3,39c10.9,16.9,52.3,90,69.3,108.3C367.3,870.2,383.1,894.6,378.2,916.5z M647.6,704.2c-4.4,21.5-4.4,99.1-4.4,99.1s-47.2,65.4-120.4,76.1c-73.1,10.7-109.7,3-109.7,3L372,835.3c0,0,31.9-4.6,27.4-36.6c-4.6-32-97.5-76.2-114.2-115.8c-16.7-39.5-3-106.6,18.3-140.2c21.3-33.5,34.9-106.5,56.3-131c21.3-24.3,38-76.1,30.4-99c0,0,45.7,54.9,77.6,45.8c32-9.2,103.7-62.5,114.2-53.3c10.6,9.2,102,210.2,111.1,274.2c9.2,63.9-6.1,112.7-6.1,112.7S652.1,682.9,647.6,704.2z M881.4,847.7c-14.2,13.1-93.4,45-117.1,70c-23.6,24.7-54.4,44.9-73.3,39c-19-6-35.5-32-27.2-69.9c8.2-37.8,15.4-79.2,14.2-102.9c-1.2-23.7-6-55.7,0-60.4c5.9-4.6,15.3-2.3,15.3-2.3s-4.6,44.9,22.5,56.8c27.2,11.7,66.2-4.7,78.1-16.7c11.9-11.8,20.2-29.5,20.2-29.5s11.8,6,10.6,24.9c-1.2,18.9,8.2,46.2,26.1,55.6C868.4,821.7,895.6,834.8,881.4,847.7z"/>
+            </svg>
+            <span class="dl-label">Linux</span>
+            <span class="dl-suffix">.deb</span>
+          </a>
+        </div>
+        <p class="downloads-note" data-i18n="downloads-note">
+          <strong>macOS:</strong> if it won't open on first launch, run <code>xattr -cr '/Applications/Coffee CLI.app'</code> in Terminal, then reopen. <strong>Linux:</strong> may need extra terminal steps after download.
+        </p>
+        <a class="downloads-other" href="https://github.com/edison7009/Coffee-CLI/releases/latest" target="_blank" rel="noopener" data-i18n="downloads-other">
+          Other variants (Intel Mac · ARM Linux · AppImage) →
+        </a>
+      </section>
+
+      <!-- Supported AI CLIs (kept as a sibling of .hero-content so it is
+           sized by its own content and never reflows with the typewriter) -->
+      <div class="supported-tools" aria-label="Supported AI CLIs">
+        <img src="agents/icons/claude.svg" alt="Claude Code" width="28" height="28" loading="lazy">
+        <img src="agents/icons/opencode.svg" alt="OpenCode" width="28" height="28" loading="lazy">
+        <img src="agents/icons/mimocode.svg" alt="MiMo Code" width="28" height="28" loading="lazy">
+        <img src="agents/icons/codex.svg" alt="Codex CLI" width="28" height="28" loading="lazy">
+        <img src="agents/icons/antigravity.svg" alt="Antigravity CLI" width="28" height="28" loading="lazy">
+        <img src="agents/icons/qwen.svg" alt="Qwen Code" width="28" height="28" loading="lazy">
+        <img src="agents/icons/hermes.png" alt="Hermes Agent" width="28" height="28" loading="lazy">
+        <img src="agents/icons/openclaw.svg" alt="OpenClaw" width="28" height="28" loading="lazy">
+        <!-- Pi: inlined (not <img>) so currentColor tracks the theme text color -->
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" width="28" height="28" fill="currentColor" role="img" aria-label="Pi"><path fill-rule="evenodd" d="M165.29 165.29 H517.36 V400 H400 V517.36 H282.65 V634.72 H165.29 Z M282.65 282.65 V400 H400 V282.65 Z"/><path d="M517.36 400 H634.72 V634.72 H517.36 Z"/></svg>
+        <!-- Grok Build: inlined too (currentColor) — same monochrome treatment as Pi -->
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28" fill="currentColor" fill-rule="evenodd" role="img" aria-label="Grok Build"><title>Grok Build</title><path d="M6.469 8.776L16.512 23h-4.464L2.005 8.776H6.47zm-.004 7.9l2.233 3.164L6.467 23H2l4.465-6.324zM22 2.582V23h-3.659V7.764L22 2.582zM22 1l-9.952 14.095-2.233-3.163L17.533 1H22z"/></svg>
+        <img src="agents/icons/kimicode.png" alt="Kimi Code" width="28" height="28" loading="lazy">
+        <span class="supported-tools-more" role="img" aria-label="and more AI CLIs coming soon">
+          <span class="more-dot"></span>
+          <span class="more-dot"></span>
+          <span class="more-dot"></span>
+        </span>
+      </div>
+
     </div>
+
+    <!-- Feature showcase: js/hero-features.js draws seven scenes on one shared
+         mini-app frame and cycles them; the caption follows the active scene. -->
+    <figure class="hero-fx" id="hero-features">
+      <div class="fx-stage">
+        <div class="fx-screen" aria-hidden="true">
+          <div class="fx-titlebar"><i></i><i></i><i></i><span class="fx-tab"></span><span class="fx-brandname">Coffee CLI</span></div>
+        </div>
+      </div>
+      <figcaption class="fx-caption" aria-live="polite">
+        <span class="fx-caption-title"></span>
+        <span class="fx-caption-body"></span>
+      </figcaption>
+      <div class="fx-dots" role="group" aria-label="Features"></div>
+    </figure>
   </main>
 
-  <!-- Mainland China download mirrors. Hidden by default; main.js renderI18N()
-       unhides this row when currentLang is "zh" or "zh-TW", since these mirrors
-       only matter for users where GitHub Releases is slow or unreachable. The
-       brand names live in the i18n dict so zh-TW gets traditional characters
-       (網盤 / 雲盤) without needing a second DOM node. -->
-  <section class="cn-mirrors" id="cn-mirrors" hidden>
-    <span class="cn-mirrors-title" data-i18n="cn-mirrors-title">其他下载渠道：</span>
-    <a href="https://pan.baidu.com/s/1mNUkPk1IQD8A-Ga_os_BHQ?pwd=cm74" target="_blank" rel="noopener" data-i18n="cn-mirrors-baidu">百度网盘</a>
-    <span class="cn-mirrors-sep">·</span>
-    <a href="https://pan.quark.cn/s/fe37fca17aed" target="_blank" rel="noopener" data-i18n="cn-mirrors-quark">夸克网盘</a>
-    <span class="cn-mirrors-sep">·</span>
-    <a href="https://1842244417.share.123865.com/123pan/rqi0Td-7QmxH" target="_blank" rel="noopener" data-i18n="cn-mirrors-123">123云盘</a>
-    <span class="cn-mirrors-sep">|</span>
-    <a href="https://gitcode.com/edison7009/Coffee-CLI/issues" target="_blank" rel="noopener" data-i18n="cn-mirrors-feedback">国内用户问题反馈</a>
-  </section>
-
-  <!-- Direct Download Section ------------------------------------------------
-       For users who prefer click-and-install over running the install
-       command above. Each button hits the CF Worker's /download/<platform>
-       route (see Web-Home/_worker.js), which returns the latest GitHub
-       Release asset for that platform; if the asset isn't uploaded yet
-       (CI mid-build), the worker returns 404 and the user can retry. -->
-  <section class="downloads-section">
-    <p class="downloads-title" data-i18n="downloads-title">Or download the desktop app</p>
-    <div class="downloads-row">
-      <a class="download-btn" href="/download/windows" data-platform="windows">
-        <svg class="dl-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-          <path d="M3 5.5L10 4.45V11.4H3V5.5zM11 4.3L21 3V11.4H11V4.3zM3 12.6H10V19.55L3 18.5V12.6zM11 12.6H21V21L11 19.7V12.6z"/>
-        </svg>
-        <span class="dl-label">Windows</span>
-        <span class="dl-suffix">.exe</span>
-      </a>
-      <a class="download-btn" href="/download/macos-arm" data-platform="macos">
-        <svg class="dl-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-          <path d="M17.5 12.5c-.02-2.4 1.96-3.55 2.05-3.61-1.12-1.64-2.86-1.86-3.48-1.89-1.48-.15-2.89.87-3.64.87-.76 0-1.92-.85-3.16-.83-1.62.02-3.12.94-3.96 2.4-1.69 2.93-.43 7.27 1.21 9.65.8 1.16 1.75 2.46 3 2.42 1.21-.05 1.66-.78 3.13-.78 1.45 0 1.87.78 3.15.75 1.3-.02 2.13-1.18 2.92-2.35.93-1.35 1.31-2.66 1.33-2.73-.03-.01-2.55-.98-2.55-3.9zM15.07 5.32c.66-.81 1.11-1.92.99-3.04-.96.04-2.13.65-2.82 1.45-.61.71-1.16 1.85-1.01 2.93 1.07.08 2.18-.55 2.84-1.34z"/>
-        </svg>
-        <span class="dl-label">macOS</span>
-        <span class="dl-suffix">.dmg</span>
-      </a>
-      <a class="download-btn" href="/download/linux-deb" data-platform="linux">
-        <svg class="dl-icon" width="20" height="20" viewBox="-150 -150 1300 1300" fill="currentColor" aria-hidden="true">
-          <path d="M896,809.4c-25.9-10.6-47.2-27.4-45.7-59.4c1.5-32-22.9-53.2-22.9-53.2s21.3-70.1,1.5-128c-19.8-58-85.3-150.8-135.5-220.9c-50.2-70.1-7.6-150.9-53.2-254.4C594.4-10,475.7-4,411.7,40.2c-64,44.1-44.2,153.8-41.2,205.6c3.1,51.7,1.4,88.6-4.5,102c-6,13.4-47.2,62.5-74.7,103.6c-27.4,41.1-47.2,126.4-67.1,161.5c-19.8,35-6.1,67-6.1,67s-13.7,4.5-24.4,27.5c-10.7,22.8-32,33.4-70.1,41c-38.1,7.6-38.1,32.1-29,59.5c9.2,27.4,0,42.7-10.6,77.6c-10.7,34.9,42.6,45.7,94.4,51.7c51.8,6.2,109.7,39.7,158.5,45.7c48.7,6.1,63.9-33.5,63.9-33.5s54.8-12.3,112.7-13.7c57.9-1.5,112.7,12.2,112.7,12.2s10.7,24.4,30.5,35c19.8,10.7,62.5,12.2,89.9-16.7c27.5-29,100.6-65.5,141.7-88.4C929.5,855,921.9,820,896,809.4z M539.6,137.7c26.1,0,47.2,25.9,47.2,57.8c0,22.7-10.6,42.2-26,51.7c-3.9-1.7-8.1-3.5-12.5-5.4c9.3-4.6,15.9-16.4,15.9-30.3c0-18-11.1-32.6-24.9-32.6c-13.6,0-24.8,14.6-24.8,32.6c0,6.7,1.6,13.1,4.3,18.3c-8.1-3.2-15.6-6.2-21.5-8.5c-3.2-7.8-5-16.6-5-25.9C492.3,163.6,513.4,137.7,539.6,137.7z M536.2,259.6c13.1,4.5,27.6,13,26.1,21.4c-1.5,8.5-8.4,8.5-26.1,19.3c-17.7,10.7-56,34.5-68.3,36c-12.3,1.5-19.2-5.4-32.3-13.8c-13.1-8.5-37.6-28.5-31.4-39.2c0,0,19.1-14.6,27.5-22.3c8.5-7.7,30-26.1,43-23.7C487.8,239.6,523.1,255,536.2,259.6z M418.4,146.8c20.6,0,37.3,24.5,37.3,54.8c0,5.6-0.5,10.7-1.6,15.7c-5,1.7-10.1,4.5-15.1,8.7c-2.5,2.1-4.7,4-6.9,5.9c3.3-6.1,4.6-14.8,3.1-24c-2.8-16.5-13.8-28.6-24.7-26.9c-10.9,1.9-17.5,16.7-14.7,33.4c2.8,16.6,13.8,28.7,24.6,26.9c0.6-0.1,1.2-0.3,1.8-0.5c-5.3,5.1-10.2,9.5-15.2,13.2c-15.1-7-26.1-27.8-26.1-52.4C381.2,171.3,397.9,146.8,418.4,146.8z M378.2,916.5c-4.9,21.8-30.4,37.7-30.4,37.7c-23.2,7.3-87.6-20.7-116.8-32.9c-29.2-12.1-103.4-15.9-113.2-26.7c-9.7-11,4.9-35.4,8.6-58.4c3.6-23.2-7.3-37.7-3.7-53.6c3.7-15.8,51.1-15.8,69.3-26.7c18.3-11,21.9-42.6,36.5-51.1c14.6-8.6,41.3,21.8,52.3,39c10.9,16.9,52.3,90,69.3,108.3C367.3,870.2,383.1,894.6,378.2,916.5z M647.6,704.2c-4.4,21.5-4.4,99.1-4.4,99.1s-47.2,65.4-120.4,76.1c-73.1,10.7-109.7,3-109.7,3L372,835.3c0,0,31.9-4.6,27.4-36.6c-4.6-32-97.5-76.2-114.2-115.8c-16.7-39.5-3-106.6,18.3-140.2c21.3-33.5,34.9-106.5,56.3-131c21.3-24.3,38-76.1,30.4-99c0,0,45.7,54.9,77.6,45.8c32-9.2,103.7-62.5,114.2-53.3c10.6,9.2,102,210.2,111.1,274.2c9.2,63.9-6.1,112.7-6.1,112.7S652.1,682.9,647.6,704.2z M881.4,847.7c-14.2,13.1-93.4,45-117.1,70c-23.6,24.7-54.4,44.9-73.3,39c-19-6-35.5-32-27.2-69.9c8.2-37.8,15.4-79.2,14.2-102.9c-1.2-23.7-6-55.7,0-60.4c5.9-4.6,15.3-2.3,15.3-2.3s-4.6,44.9,22.5,56.8c27.2,11.7,66.2-4.7,78.1-16.7c11.9-11.8,20.2-29.5,20.2-29.5s11.8,6,10.6,24.9c-1.2,18.9,8.2,46.2,26.1,55.6C868.4,821.7,895.6,834.8,881.4,847.7z"/>
-        </svg>
-        <span class="dl-label">Linux</span>
-        <span class="dl-suffix">.deb</span>
-      </a>
-    </div>
-    <p class="downloads-note" data-i18n="downloads-note">
-      <strong>macOS:</strong> if it won't open on first launch, run <code>xattr -cr '/Applications/Coffee CLI.app'</code> in Terminal, then reopen. <strong>Linux:</strong> may need extra terminal steps after download.
-    </p>
-    <a class="downloads-other" href="https://github.com/edison7009/Coffee-CLI/releases/latest" target="_blank" rel="noopener" data-i18n="downloads-other">
-      Other variants (Intel Mac · ARM Linux · AppImage) →
-    </a>
-  </section>
 
   <!-- Demo Showcase Section -->
   <section class="demo-section">
@@ -235,5 +255,6 @@
   </footer>
 
   <script src="./js/main.js?v=0.9.15"></script>
+  <script src="./js/hero-features.js?v=1.0.0"></script>
 </body>
 </html>
