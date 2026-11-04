@@ -118,6 +118,7 @@ interface RemoteHistoryItem {
 import { isTauri, commands } from '../../tauri';
 import { titlebarPxPerClientPx } from '../../lib/ui-scale';
 import { NewSessionTabButton } from './NewSessionTabButton';
+import { homeShortPath } from '../../lib/home-short-path';
 import { getToolDisplayName } from '../../lib/tool-info';
 import { useT } from '../../i18n/useT';
 import './CenterPanel.css';
@@ -612,6 +613,21 @@ export function CenterPanel() {
     try { const r = localStorage.getItem('coffee:recent-folders'); return r ? JSON.parse(r) : []; } catch { return []; }
   });
   const [folderMenu, setFolderMenu] = useState<{ x: number; y: number; tool: ToolType } | null>(null);
+  // Each tool's last project folder: clicking its card opens straight there.
+  const [lastFolders, setLastFolders] = useState<Record<string, string>>(() => {
+    try { const r = localStorage.getItem('coffee:last-folder-by-tool'); const parsed = r ? JSON.parse(r) : {}; return parsed && typeof parsed === 'object' ? parsed : {}; } catch { return {}; }
+  });
+  const updateLastFolders = (update: (current: Record<string, string>) => Record<string, string>) => {
+    setLastFolders(prev => {
+      const next = update(prev);
+      try { localStorage.setItem('coffee:last-folder-by-tool', JSON.stringify(next)); } catch { /* Best-effort operation; failure is non-fatal. */ }
+      return next;
+    });
+  };
+  const rememberFolder = (tool: ToolType, folder: string) => {
+    pushRecentFolder(folder);
+    if (tool) updateLastFolders(prev => ({ ...prev, [tool]: folder }));
+  };
   const pushRecentFolder = (folder: string) => {
     setRecentFolders(prev => {
       const next = [folder, ...prev.filter(f => f !== folder)].slice(0, 8);
@@ -625,6 +641,8 @@ export function CenterPanel() {
       try { localStorage.setItem('coffee:recent-folders', JSON.stringify(next)); } catch { /* Best-effort operation; failure is non-fatal. */ }
       return next;
     });
+    // A folder that no longer exists is no tool's last folder either.
+    updateLastFolders(prev => Object.values(prev).includes(folder) ? Object.fromEntries(Object.entries(prev).filter(([, value]) => value !== folder)) : prev);
   };
 
   // ── Global focus enforcer ────────────────────────────────────────────────
@@ -782,7 +800,7 @@ export function CenterPanel() {
     }
     if (cwd) {
       dispatch({ type: 'SET_FOLDER', path: cwd });
-      pushRecentFolder(cwd);
+      rememberFolder(tool, cwd);
     }
     dispatch({ type: 'SET_TERMINAL_TOOL', id, tool });
   };
@@ -999,7 +1017,7 @@ export function CenterPanel() {
     // The old single-instance lock that lived here has been removed.
     if (activeTerminalId) {
       if (cwd) {
-        pushRecentFolder(cwd);
+        rememberFolder(tool, cwd);
       }
       dispatch({ type: 'LAUNCH_TERMINAL_TOOL', id: activeTerminalId, tool, toolData, cwd, claudeMode: tool === 'claude' ? claudeLaunchMode : undefined, codexMode: tool === 'codex' ? codexLaunchMode : undefined, opencodeMode: tool === 'opencode' ? opencodeLaunchMode : undefined });
     }
@@ -1020,9 +1038,10 @@ export function CenterPanel() {
 
   const openToolFolderMenu = (tool: ToolType, anchor: HTMLElement) => {
     if (recentFolders.length === 0) { void handlePickFolder(tool); return; }
+    // The list opens below the card, its left edge on the folder button's left edge.
     const card = anchor.closest('.launchpad-card');
-    const rect = (card ?? anchor).getBoundingClientRect();
-    setFolderMenu({ x: rect.left + rect.width * 0.55, y: rect.bottom + 4, tool });
+    const button = card?.querySelector('.launchpad-folder') ?? anchor;
+    setFolderMenu({ x: button.getBoundingClientRect().left, y: (card ?? anchor).getBoundingClientRect().bottom + 4, tool });
     void commands.checkProjectDirectories(recentFolders).then(checks => {
       for (const check of checks) {
         if (check.status === 'missing' || check.status === 'not_directory') removeRecentFolder(check.path);
@@ -1482,7 +1501,11 @@ export function CenterPanel() {
                                   className="launchpad-card"
                                   onClick={(event) => {
                                     if (disabled) return;
-                                    if (tool.requiresCwd) { openToolFolderMenu(tool.key, event.currentTarget); return; }
+                                    if (tool.requiresCwd) {
+                                      const last = tool.key ? lastFolders[tool.key] : undefined;
+                                      if (last) void selectTool(tool.key, undefined, last); else openToolFolderMenu(tool.key, event.currentTarget);
+                                      return;
+                                    }
                                     selectTool(tool.key);
                                   }}
                                 >
@@ -1504,12 +1527,12 @@ export function CenterPanel() {
                                         </span>
                                       )}
                                     </span>
+                                    {tool.requiresCwd && (tool.key && lastFolders[tool.key]
+                                      ? <span className="launchpad-card-path is-path"><bdi>{homeShortPath(lastFolders[tool.key])}</bdi></span>
+                                      : <span className="launchpad-card-path">{t('launchpad.pick_folder')}</span>)}
                                   </div>
-                                  {CONFIGURABLE_AGENT_TOOLS.has(tool.key) && <button type="button" className="launchpad-config" aria-label={`${tool.label} ${t('settings.title')}`} onClick={event => { event.stopPropagation(); setFolderMenu(null); setConfigModalTool({ key: tool.key as string, label: tool.label }); }}>
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                                      <circle cx="12" cy="12" r="3" />
-                                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-                                    </svg>
+                                  {tool.requiresCwd && <button type="button" className="launchpad-folder" aria-label={t('launchpad.open_folder')} disabled={disabled} onClick={event => { event.stopPropagation(); openToolFolderMenu(tool.key, event.currentTarget); }}>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2" /></svg>
                                   </button>}
                                   {tool.type === 'ai-cli' && <LaunchModeControl value={tool.key === 'claude' ? claudeLaunchMode : tool.key === 'codex' ? codexLaunchMode : tool.key === 'opencode' ? opencodeLaunchMode : tool.key === 'dsh' ? 'conversation' : 'terminal'} disabled={disabled} label={tool.key === 'codex' ? 'Codex' : tool.key === 'opencode' ? 'OpenCode' : tool.key === 'dsh' ? 'DeepSeek Harness' : undefined} modes={tool.key === 'dsh' ? ['conversation'] : undefined} onChange={tool.key === 'claude' ? changeClaudeLaunchMode : tool.key === 'codex' ? changeCodexLaunchMode : tool.key === 'opencode' ? changeOpencodeLaunchMode : tool.key === 'dsh' ? () => {} : undefined} />}
                                 </div>

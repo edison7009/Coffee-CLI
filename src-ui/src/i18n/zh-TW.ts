@@ -251,6 +251,7 @@ export const zhTW = {
   'task.tab.changes': '修改記錄',
   'changes.empty': '暫無修改。',
   'launchpad.open_folder': '開啟資料夾',
+  'launchpad.pick_folder': '選擇專案目錄',
   'launchpad.detect_help_trigger': "識別不到?",
   'launchpad.detect_help_tip': "若你曾經用過英文開發者製作的 AI 終端工具,可能把含中日韓等其他語言字元的 PATH 改成亂碼,導致所有終端都識別不到。3種修復方案 ① 重裝該 AI 工具 ② 手動修復工具 PATH ③ 讓 AI 幫你修復 PATH",
   'launchpad.switch_model_trigger': "切換模型",

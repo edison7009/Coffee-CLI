@@ -251,6 +251,7 @@ export const ko = {
   'task.tab.changes': '변경 기록',
   'changes.empty': '아직 변경 사항이 없습니다.',
   'launchpad.open_folder': '폴더 열기',
+  'launchpad.pick_folder': '프로젝트 폴더 선택',
   'launchpad.detect_help_trigger': "인식 안 됨?",
   'launchpad.detect_help_tip': "영어권 개발자가 만든 AI 터미널 도구를 사용한 적이 있다면, 중일한 등 다른 언어 문자가 포함된 PATH가 깨져서 모든 터미널에서 인식하지 못할 수 있습니다. 3가지 복구 방법 ① 해당 AI 도구 재설치 ② 도구 PATH 수동 복구 ③ AI가 PATH를 복구하도록 맡기기",
   'launchpad.switch_model_trigger': "모델 전환",

@@ -498,11 +498,12 @@ console.log('OK: Cline selection and toggling, retired pins, catalog consistency
 // Exercise the actual tool-card handler: manual and Agent launch share one action.
 const manualLaunches = [];
 const checkedLaunchFolders = [];
+const rememberedFolders = [];
 const selectTool = evaluate(pinDeclarations.get('selectTool').initializer.getText(centerTree), {
   activeTerminalId: 'launchpad', dispatch: action => manualLaunches.push(action),
   activeIdRef: { current: 'launchpad' },
   commands: { async checkProjectDirectories(paths) { checkedLaunchFolders.push(...paths); return paths.map(path => ({ path, status: 'available' })); } },
-  pushRecentFolder() {}, claudeLaunchMode: 'conversation',
+  rememberFolder(tool, folder) { rememberedFolders.push([tool, folder]); }, claudeLaunchMode: 'conversation',
 });
 await selectTool('claude', undefined, 'E:\\tmp');
 assert.deepEqual(checkedLaunchFolders, ['E:\\tmp']);
@@ -511,7 +512,8 @@ assert.equal(manualLaunches[0].type, 'LAUNCH_TERMINAL_TOOL');
 assert.equal(manualLaunches[0].id, 'launchpad');
 assert.equal(manualLaunches[0].tool, 'claude');
 assert.equal(manualLaunches[0].cwd, 'E:\\tmp');
-console.log('OK: actual tool-card folder selection uses the same launch action as Coffee Agent');
+assert.deepEqual(rememberedFolders, [['claude', 'E:\\tmp']], 'the launch is remembered as this tool\'s last folder');
+console.log('OK: actual tool-card folder selection uses the same launch action as Coffee Agent and remembers the tool\'s folder');
 
 // Exercise the actual history-card click: a directoryless Coffee conversation
 // must open its Agent page, while native history still resumes a real CLI tab.

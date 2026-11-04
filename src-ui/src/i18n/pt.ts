@@ -251,6 +251,7 @@ export const pt = {
   'task.tab.changes': 'Histórico',
   'changes.empty': 'Ainda sem alterações.',
   'launchpad.open_folder': 'Abrir pasta',
+  'launchpad.pick_folder': 'Escolher pasta do projeto',
   'launchpad.detect_help_trigger': "Não detectado?",
   'launchpad.detect_help_tip': "Se você usou uma ferramenta de terminal de IA feita por desenvolvedores anglófonos, ela pode ter corrompido segmentos de PATH com caracteres CJK ou não-ASCII (mojibake), fazendo com que nenhum terminal detecte suas ferramentas. 3 formas de corrigir: ① Reinstalar a ferramenta de IA ② Corrigir o PATH manualmente ③ Deixar a IA corrigir o PATH",
   'launchpad.switch_model_trigger': "Trocar modelo",

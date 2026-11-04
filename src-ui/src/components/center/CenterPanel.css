@@ -581,9 +581,10 @@ body.session-split-dragging { cursor: grabbing; user-select: none; }
   min-width: 0;
 }
 
-.launchpad-config { display:flex; align-items:center; justify-content:center; flex:0 0 36px; width:36px; height:36px; margin-left:auto; padding:6px; border:0; border-radius:var(--shape-radius-btn,5px); background:transparent; color:var(--text-2); }
-.launchpad-config:hover { background:var(--bg-hover); }
-.launchpad-config svg { display:block; flex-shrink:0; }
+.launchpad-folder { display:flex; align-items:center; justify-content:center; flex:0 0 36px; width:36px; height:36px; margin-left:auto; padding:6px; border:0; border-radius:var(--shape-radius-btn,5px); background:transparent; color:var(--text-2); }
+.launchpad-folder:hover:not(:disabled) { background:var(--bg-hover); color:var(--text-1); }
+.launchpad-folder:disabled { cursor:default; }
+.launchpad-folder svg { display:block; flex-shrink:0; }
 .launchpad-mode-tabs { position:absolute; right:0; bottom:0; display:flex; height:18px; overflow:hidden; border-top-left-radius:var(--radius-md); }
 .launchpad-mode-tabs button { display:flex; align-items:center; justify-content:center; width:70px; height:18px; padding:0 8px; border:0; border-radius:0; background:var(--bg-hover); color:var(--text-2); font:12px/1 var(--font); white-space:nowrap; cursor:pointer; }
 .launchpad-mode-tabs button:first-child { padding-left:10px; padding-right:6px; }
@@ -591,7 +592,7 @@ body.session-split-dragging { cursor: grabbing; user-select: none; }
 .launchpad-mode-tabs button:hover { color:var(--text-1); }
 .launchpad-mode-tabs button.is-selected { background:var(--accent); color:var(--bg-app); }
 .launchpad-mode-tabs button:disabled { cursor:default; }
-.launchpad-mode-tabs button:focus-visible, .launchpad-config:focus-visible { outline:1px solid var(--accent); outline-offset:-2px; }
+.launchpad-mode-tabs button:focus-visible, .launchpad-folder:focus-visible { outline:1px solid var(--accent); outline-offset:-2px; }
 
 /* Recent-folders dropdown (opened from a tool card).
    Same opaque-bg recipe as .term-ctx-menu so it reads solid across every
@@ -725,7 +726,21 @@ body.session-split-dragging { cursor: grabbing; user-select: none; }
   text-overflow: ellipsis;
 }
 
-/* (folder button is now a transparent overlay — no per-shape overrides needed) */
+/* Second line: the tool's last project folder, or a hint before its first use.
+   A long path keeps its end (the folder name) and elides its start. */
+.launchpad-card .launchpad-card-path {
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 16px;
+  color: var(--text-3);
+  text-overflow: ellipsis;
+}
+.launchpad-card .launchpad-card-path.is-path {
+  direction: rtl;
+  text-align: left;
+}
+.launchpad-card-path bdi { unicode-bidi: isolate; }
 
 .empty-icon {
   color: var(--text-3);
