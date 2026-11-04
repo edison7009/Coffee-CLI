@@ -15,8 +15,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
   
   <!-- External CSS -->
-  <link rel="stylesheet" href="./css/style.css?v=0.6.2">
-  <link rel="stylesheet" href="./css/hero-features.css?v=2.0.1">
+  <link rel="stylesheet" href="./css/style.css?v=0.7.0">
+  <link rel="stylesheet" href="./css/hero-features.css?v=2.1.0">
 </head>
 <body>
 
@@ -132,75 +132,58 @@
         <div class="fx-screen"></div>
       </div>
     </figure>
-
-    <!-- Command install: its own full-width row under the hero -->
-    <div class="quick-start-container hero-install">
-      <div class="mac-window">
-        <!-- Window Header (Traffic Lights & Tabs) -->
-        <div class="window-header">
-          <div class="traffic-lights">
-            <div class="dot red"></div>
-            <div class="dot yellow"></div>
-            <div class="dot green"></div>
-          </div>
-        
-          <div class="platform-tabs">
-            <button class="tab-btn active" data-platform="windows">Windows</button>
-            <button class="tab-btn" data-platform="macos">macOS</button>
-            <button class="tab-btn" data-platform="linux">Linux</button>
-          </div>
-        
-          <!-- Supported AI CLIs, sharing the install window's tab row -->
-          <div class="supported-tools" aria-label="Supported AI CLIs">
-            <img src="agents/icons/claude.svg" alt="Claude Code" width="28" height="28" loading="lazy">
-            <img src="agents/icons/opencode.svg" alt="OpenCode" width="28" height="28" loading="lazy">
-            <img src="agents/icons/mimocode.svg" alt="MiMo Code" width="28" height="28" loading="lazy">
-            <img src="agents/icons/codex.svg" alt="Codex CLI" width="28" height="28" loading="lazy">
-            <img src="agents/icons/antigravity.svg" alt="Antigravity CLI" width="28" height="28" loading="lazy">
-            <img src="agents/icons/qwen.svg" alt="Qwen Code" width="28" height="28" loading="lazy">
-            <img src="agents/icons/hermes.png" alt="Hermes Agent" width="28" height="28" loading="lazy">
-            <img src="agents/icons/openclaw.svg" alt="OpenClaw" width="28" height="28" loading="lazy">
-            <!-- Pi: inlined (not <img>) so currentColor tracks the theme text color -->
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" width="28" height="28" fill="currentColor" role="img" aria-label="Pi"><path fill-rule="evenodd" d="M165.29 165.29 H517.36 V400 H400 V517.36 H282.65 V634.72 H165.29 Z M282.65 282.65 V400 H400 V282.65 Z"/><path d="M517.36 400 H634.72 V634.72 H517.36 Z"/></svg>
-            <!-- Grok Build: inlined too (currentColor) — same monochrome treatment as Pi -->
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28" fill="currentColor" fill-rule="evenodd" role="img" aria-label="Grok Build"><title>Grok Build</title><path d="M6.469 8.776L16.512 23h-4.464L2.005 8.776H6.47zm-.004 7.9l2.233 3.164L6.467 23H2l4.465-6.324zM22 2.582V23h-3.659V7.764L22 2.582zM22 1l-9.952 14.095-2.233-3.163L17.533 1H22z"/></svg>
-            <img src="agents/icons/kimicode.png" alt="Kimi Code" width="28" height="28" loading="lazy">
-            <span class="supported-tools-more" role="img" aria-label="and more AI CLIs coming soon">
-              <span class="more-dot"></span>
-              <span class="more-dot"></span>
-              <span class="more-dot"></span>
-            </span>
-          </div>
-        </div>
-
-        <!-- Window Body (Instructions & Commands) -->
-        <div class="window-body">
-          <div class="instruction-hint" id="install-hint">
-            Right-click Start > Terminal (Admin) > Paste:
-          </div>
-          <div class="code-block">
-            <span class="prompt-symbol">$</span>
-            <code id="install-command">iwr -useb https://coffeecli.com/install.ps1 | iex</code>
-            <button id="copy-btn" class="copy-button" aria-label="Copy to clipboard">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-              </svg>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
   </main>
 
 
-  <!-- Footer: brand + quick links, then the legal line (copyright, license,
-       ICP filing — the filing number must stay visible on the home page). -->
+  <!-- Command install: a simple block at the bottom of the page. main.js
+       drives the tabs (.tab-btn), #install-command, #install-hint, #copy-btn. -->
+  <section class="install-strip" aria-labelledby="install-title">
+    <div class="is-inner">
+      <h2 class="is-title" id="install-title" data-i18n="install-title">Or install from the terminal</h2>
+      <div class="is-bar">
+        <div class="platform-tabs">
+          <button class="tab-btn active" data-platform="windows">Windows</button>
+          <button class="tab-btn" data-platform="macos">macOS</button>
+          <button class="tab-btn" data-platform="linux">Linux</button>
+        </div>
+        <!-- Supported AI CLIs, on the platform row -->
+        <div class="supported-tools" aria-label="Supported AI CLIs">
+          <img src="agents/icons/claude.svg" alt="Claude Code" width="28" height="28" loading="lazy">
+          <img src="agents/icons/opencode.svg" alt="OpenCode" width="28" height="28" loading="lazy">
+          <img src="agents/icons/mimocode.svg" alt="MiMo Code" width="28" height="28" loading="lazy">
+          <img src="agents/icons/codex.svg" alt="Codex CLI" width="28" height="28" loading="lazy">
+          <img src="agents/icons/antigravity.svg" alt="Antigravity CLI" width="28" height="28" loading="lazy">
+          <img src="agents/icons/qwen.svg" alt="Qwen Code" width="28" height="28" loading="lazy">
+          <img src="agents/icons/hermes.png" alt="Hermes Agent" width="28" height="28" loading="lazy">
+          <img src="agents/icons/openclaw.svg" alt="OpenClaw" width="28" height="28" loading="lazy">
+          <!-- Pi: inlined (not <img>) so currentColor tracks the theme text color -->
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" width="28" height="28" fill="currentColor" role="img" aria-label="Pi"><path fill-rule="evenodd" d="M165.29 165.29 H517.36 V400 H400 V517.36 H282.65 V634.72 H165.29 Z M282.65 282.65 V400 H400 V282.65 Z"/><path d="M517.36 400 H634.72 V634.72 H517.36 Z"/></svg>
+          <!-- Grok Build: inlined too (currentColor) — same monochrome treatment as Pi -->
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28" fill="currentColor" fill-rule="evenodd" role="img" aria-label="Grok Build"><title>Grok Build</title><path d="M6.469 8.776L16.512 23h-4.464L2.005 8.776H6.47zm-.004 7.9l2.233 3.164L6.467 23H2l4.465-6.324zM22 2.582V23h-3.659V7.764L22 2.582zM22 1l-9.952 14.095-2.233-3.163L17.533 1H22z"/></svg>
+          <img src="agents/icons/kimicode.png" alt="Kimi Code" width="28" height="28" loading="lazy">
+          <span class="supported-tools-more" role="img" aria-label="and more AI CLIs coming soon">
+            <span class="more-dot"></span>
+            <span class="more-dot"></span>
+            <span class="more-dot"></span>
+          </span>
+        </div>
+      </div>
+      <p class="is-hint" id="install-hint">Right-click Start &gt; Terminal (Admin) &gt; Paste:</p>
+      <div class="is-cmd">
+        <span class="prompt-symbol">$</span>
+        <code id="install-command">iwr -useb https://coffeecli.com/install.ps1 | iex</code>
+        <button id="copy-btn" class="is-copy" type="button"><span data-i18n="copy-label">Copy</span></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer: brand + contact email + quick links, then copyright / license. -->
   <footer class="site-footer">
     <div class="sf-inner">
       <div class="sf-top">
         <div class="sf-brand">
           <span class="sf-name">Coffee CLI</span>
+          <a class="sf-mail" href="mailto:hi@coffeecli.com">hi@coffeecli.com</a>
         </div>
         <nav class="sf-links" aria-label="Footer">
           <a href="https://github.com/edison7009/Coffee-CLI" target="_blank" rel="noopener">GitHub</a>
@@ -213,8 +196,6 @@
           &copy; 2026 <a href="https://github.com/edison7009" target="_blank" rel="noopener">edison7009</a>
           <span class="sf-sep" aria-hidden="true">·</span>
           <a href="https://github.com/edison7009/Coffee-CLI/blob/main/LICENSE" target="_blank" rel="noopener">AGPL-3.0-or-later</a>
-          <span class="sf-sep" aria-hidden="true">·</span>
-          <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener">粤ICP备2026035651号-2</a>
         </p>
       </div>
     </div>
@@ -222,6 +203,6 @@
 
 
   <script src="./js/main.js?v=0.9.15"></script>
-  <script src="./js/hero-features.js?v=2.0.1"></script>
+  <script src="./js/hero-features.js?v=2.1.0"></script>
 </body>
 </html>

@@ -714,6 +714,13 @@ code::-webkit-scrollbar-thumb {
   gap: 0.4rem 1.1rem;
   min-width: 0;
 }
+.sf-mail {
+  font-size: 0.88rem;
+  color: var(--brand-color);
+  text-decoration: none;
+  font-weight: 600;
+}
+.sf-mail:hover { text-decoration: underline; }
 .sf-name {
   font-weight: 700;
   font-size: 1rem;

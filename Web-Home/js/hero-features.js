@@ -65,6 +65,20 @@
     }
   };
 
+  // Bottom install block: heading and the copy button label.
+  const INSTALL_COPY = {
+    en: { "install-title": "Or install from the terminal", "copy-label": "Copy" },
+    zh: { "install-title": "或者用命令一键安装", "copy-label": "复制" },
+    "zh-TW": { "install-title": "或者用命令一鍵安裝", "copy-label": "複製" },
+    ja: { "install-title": "ターミナルからインストール", "copy-label": "コピー" },
+    ko: { "install-title": "터미널로 설치하기", "copy-label": "복사" },
+    es: { "install-title": "O instálalo desde la terminal", "copy-label": "Copiar" },
+    fr: { "install-title": "Ou installez depuis le terminal", "copy-label": "Copier" },
+    de: { "install-title": "Oder im Terminal installieren", "copy-label": "Kopieren" },
+    pt: { "install-title": "Ou instale pelo terminal", "copy-label": "Copiar" },
+    ru: { "install-title": "Или установите из терминала", "copy-label": "Копировать" }
+  };
+
   // Seven feature names over the hero image, as plain text tabs. Clicking one
   // highlights it and shows its clip (looped). A feature whose recording is not
   // ready yet (`file: null`) shows the first clip until
@@ -96,7 +110,7 @@
   if (typeof I18N_DICT === "object") {
     Object.keys(HERO_COPY).forEach(function (lang) {
       const dict = I18N_DICT[lang] || (I18N_DICT[lang] = {});
-      Object.assign(dict, HERO_COPY[lang]);
+      Object.assign(dict, HERO_COPY[lang], INSTALL_COPY[lang] || {});
       Object.keys(LABELS[lang] || {}).forEach(function (id) {
         dict["fxl-" + id] = LABELS[lang][id];
       });

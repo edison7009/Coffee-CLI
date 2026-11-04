@@ -91,21 +91,6 @@ html[data-theme='dark'] .hx-lead { color: rgba(235, 235, 235, 0.78); }
 .hero-split .downloads-row { justify-content: flex-start; }
 .hero-split .downloads-note { max-width: 32rem; }
 
-/* Tool icons ride on the install window's tab row: lights | tabs | icons. */
-.hero-install .window-header {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  gap: 1rem;
-}
-.hero-install .supported-tools {
-  margin: 0;
-  justify-self: end;
-  gap: 0.85rem;
-  flex-wrap: nowrap;
-}
-.hero-install .supported-tools img,
-.hero-install .supported-tools svg { width: 20px; height: 20px; }
-.hero-install .supported-tools-more { height: 20px; }
 
 .hero-split .cn-mirrors {
   justify-content: flex-start;
@@ -204,20 +189,8 @@ html[data-theme='dark'] .fx-screen {
 }
 .fx-tab:focus-visible { outline: 2px solid var(--brand-color); outline-offset: 3px; border-radius: 2px; }
 
-/* ── Command install row: spans the full hero width under both columns ── */
-.hero-split .hero-install {
-  grid-column: 1 / -1;
-  max-width: none;
-  width: 100%;
-  margin-top: clamp(0.5rem, 2vw, 1.5rem);
-}
-
 /* ── Responsive ────────────────────────────────────────────────────────── */
 @media (max-width: 960px) {
-  /* Narrow: icons drop under the tabs on their own centered line. */
-  .hero-install .window-header { grid-template-columns: 1fr; justify-items: center; }
-  .hero-install .traffic-lights { display: none; }
-  .hero-install .supported-tools { justify-self: center; flex-wrap: wrap; justify-content: center; }
   .hero-section.hero-split {
     grid-template-columns: minmax(0, 1fr);
     gap: 2.5rem;
@@ -232,9 +205,76 @@ html[data-theme='dark'] .fx-screen {
   }
   .hero-split .download-btn { flex: 1 1 auto; justify-content: center; padding: 0.6rem 0.8rem; }
   .hero-split .download-btn .dl-suffix { display: none; }
-  .hero-split .window-header { padding: 0.6rem 0.75rem; }
-  .hero-split .traffic-lights { display: none; }
-  .hero-split .window-body { padding: 1rem; }
-  .hero-split code { font-size: 0.75rem; }
 }
 
+
+/* ── Bottom install block: platform row, one command with Copy, a hint. ─ */
+.install-strip {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  margin-top: clamp(2rem, 5vw, 4rem);
+}
+.is-inner {
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+.is-title {
+  margin: 0 0 1rem;
+  font-size: clamp(1.3rem, 2vw, 1.6rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-highlight);
+}
+.is-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  margin-bottom: 0.75rem;
+}
+.is-bar .supported-tools {
+  margin: 0;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+.is-bar .supported-tools img,
+.is-bar .supported-tools svg { width: 20px; height: 20px; }
+.is-bar .supported-tools-more { height: 20px; }
+.is-cmd {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: 100%;
+  padding: 0.85rem 0.85rem 0.85rem 1.2rem;
+  border-radius: 12px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+}
+.is-cmd .prompt-symbol { margin-right: 0; }
+.is-cmd code { min-width: 0; font-size: 0.92rem; }
+.is-copy {
+  flex: none;
+  padding: 0.45rem 0.95rem;
+  border-radius: 8px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-hover);
+  color: var(--text-primary);
+  font: 600 0.82rem/1 var(--font-primary);
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+.is-copy:hover { background: var(--brand-color); color: #2a1c10; border-color: transparent; }
+.is-copy svg { display: block; }
+.is-hint {
+  margin: 0.4rem 0 0.6rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 600px) {
+  .is-inner { padding: 0 16px; }
+  .is-cmd code { font-size: 0.78rem; }
+}
