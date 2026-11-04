@@ -60,6 +60,7 @@
 
 /* Conversation CJK text keeps using OS fonts: PingFang on macOS,
    Microsoft YaHei on Windows, and distro fonts on Linux. */
+.claude-conversation, .conversation-view, .gambit-textarea { --font: var(--font-content); }
 
 /* ─── Brand Serif (splash-label "art font") ──
    Lora italic 500, Latin + Latin-Ext only (~36 KB total). Splash text is
@@ -201,11 +202,14 @@ textarea,
        handled by Inter; zh-CN/zh-TW/ja/ko by OS faces below). Mac faces
        come before Windows faces because Mac users hit them first; Windows
        installs don't have the Mac names so the cascade keeps walking. */
-    --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    /* Conversation text and the composer keep OS CJK faces (see below). */
+    --font-content: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
         'PingFang SC', 'PingFang TC', 'Hiragino Sans', 'Hiragino Sans GB', 'Apple SD Gothic Neo',
         'Microsoft YaHei', 'Microsoft JhengHei', 'Yu Gothic UI', 'Malgun Gothic',
         Helvetica, Arial, sans-serif,
         'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+    /* Every other surface uses the sidebar's face. */
+    --font: var(--font-nav);
     --font-nav: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
         'PingFang SC', 'PingFang TC', 'Hiragino Sans', 'Hiragino Sans GB', 'Apple SD Gothic Neo',
         'Coffee Navigation CJK', 'Microsoft YaHei', 'Microsoft JhengHei', 'Yu Gothic UI', 'Malgun Gothic',
@@ -215,6 +219,11 @@ textarea,
         'PingFang SC', 'PingFang TC', 'Hiragino Mincho ProN', 'Apple SD Gothic Neo',
         'Microsoft YaHei', 'Microsoft JhengHei', 'Yu Mincho', 'Malgun Gothic',
         sans-serif;
+    /* UI type scale, matching the sidebar: body = session names, 12px is the floor. */
+    --type-title: 16px;
+    --type-body: 14px;
+    --type-label: 13px;
+    --type-caption: 12px;
     --mono: 'Cascadia Code', 'Cascadia Mono', 'SF Mono', Menlo, Monaco, Consolas, 'Courier New', monospace;
     --radius-xs: 4px;
     --radius-sm: 8px;
