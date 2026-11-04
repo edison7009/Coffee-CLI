@@ -47,8 +47,10 @@ function defaultPanelWidths(
   leftHidden = false,
   rightHidden = false,
 ): PanelWidths {
-  const fluid = clamp(viewportWidth * 0.28, 240, 320);
-  return normalizePanelWidths({ left: fluid, right: fluid }, viewportWidth, leftHidden, rightHidden);
+  // The session list reads comfortably at 280px; the wider workspace goes to the center.
+  const left = clamp(viewportWidth * 0.24, 240, 280);
+  const right = clamp(viewportWidth * 0.28, 240, 320);
+  return normalizePanelWidths({ left, right }, viewportWidth, leftHidden, rightHidden);
 }
 
 function normalizePanelWidths(

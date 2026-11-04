@@ -242,7 +242,7 @@ textarea,
        var, so the tab strip stays aligned with the center column at any
        width; its traffic-light clearance comes from the brand's own 88px
        padding, not from the rail width. */
-    --w-left: clamp(240px, 28vw, 320px);
+    --w-left: clamp(240px, 24vw, 280px);
     /* Webview zoom factor, kept in sync by lib/ui-scale.ts. */
     --ui-scale: 1;
     /* The right rail additionally YIELDS below this value (flex-shrink,
@@ -1225,6 +1225,10 @@ html.is-macos .titlebar-left-slot:not(.is-collapsed) {
    logo, matching the spacing Finder/ Safari keep around their own chrome. */
 html.is-macos .titlebar-left-slot .brand {
     padding-left: 88px;
+}
+/* Measured on screen, the capitals' centre sat 1px above the traffic lights' centre. */
+html.is-macos .titlebar-left-slot .brand span {
+    transform: translateY(1px);
 }
 .titlebar-left-slot.is-collapsed {
     width: 0;

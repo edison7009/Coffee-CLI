@@ -5,8 +5,8 @@
       {
         "title": "Coffee CLI",
         "label": "main",
-        "width": 1600,
-        "height": 900,
+        "width": 1150,
+        "height": 820,
         "minWidth": 900,
         "minHeight": 600,
         "resizable": true,

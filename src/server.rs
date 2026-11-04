@@ -5433,6 +5433,12 @@ pub fn start_ui(pending_launch: Option<crate::launch::LaunchRequest>) -> anyhow:
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
+        // Reopen the window at the size and place the user left it. Visibility stays with
+        // show_main_window (the window appears after the first paint), decorations differ per
+        // platform, and a restored fullscreen opens awkwardly on macOS, so only these three persist.
+        .plugin(tauri_plugin_window_state::Builder::new()
+            .with_state_flags(tauri_plugin_window_state::StateFlags::SIZE | tauri_plugin_window_state::StateFlags::POSITION | tauri_plugin_window_state::StateFlags::MAXIMIZED)
+            .build())
         .manage(crate::channels::ChannelRuntime::default())
         .manage(crate::claude_session::ClaudeSessions::default())
         .manage(crate::codex_session::CodexSessions::default())

@@ -16,8 +16,8 @@
       {
         "title": "Coffee CLI",
         "label": "main",
-        "width": 1280,
-        "height": 900,
+        "width": 1150,
+        "height": 780,
         "minWidth": 900,
         "minHeight": 600,
         "resizable": true,

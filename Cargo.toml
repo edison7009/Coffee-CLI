@@ -99,6 +99,9 @@ tauri-plugin-global-shortcut = "2"
 # duplicate. Multi-window users still get there via the existing tab-detach
 # path (same process, no IME conflict).
 tauri-plugin-single-instance = "2"
+# Remembers the main window's size and position. Pinned: 2.4.1+ needs Tauri 2.12, which
+# would pull a WebView (wry/tao) upgrade along with it.
+tauri-plugin-window-state = "=2.4.0"
 
 # Win32 bindings:
 #   - DWM: force square window corners on Windows 11 (otherwise rounds
