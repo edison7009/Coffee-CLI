@@ -259,10 +259,15 @@ export function HistoryBoard() {
     document.addEventListener('keydown', closeKey);
     const closeAll = () => setLayoutMenu(null);
     window.addEventListener('resize', closeAll);
+    // The menu is fixed-position, so scrolling the sidebar would leave it detached from its button.
+    // Scoped to the sidebar: a window-level capture would also catch streaming terminal output.
+    const sidebar = layoutBtnRef.current?.closest('.panel-left');
+    sidebar?.addEventListener('scroll', closeAll, true);
     return () => {
       document.removeEventListener('mousedown', close);
       document.removeEventListener('keydown', closeKey);
       window.removeEventListener('resize', closeAll);
+      sidebar?.removeEventListener('scroll', closeAll, true);
     };
   }, [layoutMenu]);
   useEffect(() => {
