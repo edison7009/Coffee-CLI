@@ -168,9 +168,12 @@
     position: relative;
     display: flex;
     flex-shrink: 0;
+    /* Clear of the sidebar's scrollbar rail on the right. */
+    margin-right: 6px;
     padding: 2px;
     border-radius: var(--shape-radius-btn, 6px);
-    background: color-mix(in srgb, var(--text-1) 7%, transparent);
+    /* The unselected track blends into the panel; only the thumb is tinted. */
+    background: transparent;
 }
 .explorer-view-switch .explorer-tab {
     flex: 0 0 30px;
@@ -190,8 +193,7 @@
     width: 30px;
     height: 26px;
     border-radius: max(0px, calc(var(--shape-radius-btn, 6px) - 2px));
-    background: color-mix(in srgb, var(--accent) 34%, transparent);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.22);
+    background: color-mix(in srgb, var(--text-1) 8%, transparent);
     transition: transform 0.22s cubic-bezier(0.3, 0.7, 0.4, 1);
     pointer-events: none;
     z-index: 1;

@@ -19,6 +19,8 @@ import type { DirEntryInfo } from '../../tauri';
 import { HistoryBoard } from '../right/HistoryBoard';
 import './Explorer.css';
 
+const BRAND_REPLAY_MS = 30_000;
+
 // Snapshot lifecycle and the `+N -M` map live in lib/file-stats.tsx so the
 // right-side ChangesBoard can read the same data when the left panel is
 // collapsed. Explorer is now a pure consumer.
@@ -711,12 +713,22 @@ export function Explorer() {
     return bindAutoHideScrollbar(scrollRef.current);
   }, [activeTab]);
 
+  // The brand mark draws its cup once on load; replay it now and then so it never sits still for good.
+  const brandIconRef = useRef<SVGSVGElement>(null);
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      if (document.hidden || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      brandIconRef.current?.setCurrentTime(0);
+    }, BRAND_REPLAY_MS);
+    return () => window.clearInterval(timer);
+  }, []);
+
   return (
     <div className="panel panel-left explorer-panel" data-icon-theme={state.iconTheme}>
       {/* Brand + theme/lang controls */}
       {brandSlot && createPortal(
         <div className="brand">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" className="brand-icon">
+          <svg ref={brandIconRef} xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" className="brand-icon">
             <defs>
               <mask id="brandIconMask">
                 {/* Steam (3 wavy lines). The `<animate>` is gated to non-Linux
