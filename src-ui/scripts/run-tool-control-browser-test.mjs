@@ -60,7 +60,7 @@ await page.evaluate(()=>window.calls=[]);
 await tab('多智能体编排').click();await agent('Claude Code').waitFor();await page.waitForFunction(()=>!document.querySelector('.orchestration-config [role="switch"]').disabled);
 assert.equal(await agent('Claude Code').getAttribute('aria-checked'),'false');assert.equal(await page.locator('.orchestration-config .tool-control-agent:not(.orchestration-role)').count(),6);
 assert.equal(await agent('Cursor').isDisabled(),true);assert.equal(await agent('Antigravity CLI').isDisabled(),true);assert.equal(await agent('Kiro').count(),0);
-await panel.getByText('未安装',{exact:true}).waitFor();assert.equal(await panel.getByText('暂不支持',{exact:true}).count(),3);
+await panel.getByText('未安装',{exact:true}).waitFor();assert.equal(await panel.getByText('暂不支持',{exact:true}).count(),2,'Pi joined the supported workers');
 await page.evaluate(()=>window.delayTeam=true);await agent('Claude Code').click();await page.waitForFunction(()=>!!window.resolveTeam);
 assert.equal(await agent('Claude Code').isDisabled(),true);assert.equal(await page.locator('.orchestration-config .tool-control-spinner').count(),1);
 assert.equal(await agent('Claude Code').evaluate(el=>getComputedStyle(el).opacity),'1','saving must not flash the active switch to the unavailable opacity');

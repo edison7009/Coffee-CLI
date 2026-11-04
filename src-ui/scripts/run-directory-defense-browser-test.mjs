@@ -15,7 +15,7 @@ async function prepare(recent, statuses = {}, realViews = false) {
   page.on('pageerror', error => errors.push(error.message));
   if (!realViews) await page.route(/\/src\/components\/center\/(TierTerminal|ClaudeConversation|CodexConversation)\.tsx/, route => {
     const name = route.request().url().match(/\/([A-Za-z]+)\.tsx/)[1];
-    return route.fulfill({ contentType: 'text/javascript', body: `export function ${name}(){return null} export const TERM_COLOR_SCHEMES=[];` });
+    return route.fulfill({ contentType: 'text/javascript', body: `export function ${name}(){return null} export const TERM_COLOR_SCHEMES=[]; export const ClaudeTool=()=>null, ClaudeThinking=()=>null;` });
   });
   await page.route(/@tauri-apps_plugin-dialog/, route => route.fulfill({ contentType: 'text/javascript', body: 'export async function open(){window.pickCount=(window.pickCount??0)+1;return null}' }));
   await page.route(/@tauri-apps_api_event/, route => route.fulfill({ contentType: 'text/javascript', body: 'export async function listen(){return ()=>{}} export async function emit(){}' }));

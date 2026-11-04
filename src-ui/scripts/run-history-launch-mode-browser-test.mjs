@@ -24,7 +24,7 @@ try {
     const reactUrl = source.match(/from "([^"\n]*\/react\.js\?v=[^"]+)"/)[1];
     await route.fulfill({ contentType: 'text/javascript', body: `
       import React from '${reactUrl}';
-      export const TERM_COLOR_SCHEMES=[];
+      export const TERM_COLOR_SCHEMES=[]; export const ClaudeTool=()=>null, ClaudeThinking=()=>null;
       export function ${name}(props){return React.createElement('div',{'data-native-view':'${name}','data-native-token':props.resumeToken,'data-session-id':props.sessionId},'${name}')}
     ` });
   });

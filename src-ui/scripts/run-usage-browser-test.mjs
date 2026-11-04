@@ -89,7 +89,8 @@ try {
   await toolPicker.press('ArrowDown');
   await page.getByRole('listbox', { name: '工具', exact: true }).waitFor();
   await toolPicker.press('End'); await toolPicker.press('Enter');
-  await page.waitForFunction(() => window.queries.at(-1).tool === 'opencode');
+  // Pi is the last tool in the menu.
+  await page.waitForFunction(() => window.queries.at(-1).tool === 'pi');
   await toolPicker.press('Home'); await toolPicker.press('Enter');
   await page.waitForFunction(() => window.queries.at(-1).tool === '');
   await page.setViewportSize({ width: 1100, height: 650 });
