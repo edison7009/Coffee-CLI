@@ -673,53 +673,6 @@ code::-webkit-scrollbar-thumb {
   }
 }
 
-/* =====================
-   Demo Showcase Section
-   ===================== */
-
-.demo-section {
-  width: 100%;
-  padding: 4rem 2rem 6rem;
-  display: flex;
-  justify-content: center;
-}
-
-.demo-wrapper {
-  width: 100%;
-  max-width: 900px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0;
-}
-
-/* The screen / TV bezel */
-.demo-screen {
-  width: 100%;
-  background: #0E0E0F;
-  border-radius: 14px;
-  border: 1px solid var(--glass-border);
-  box-shadow: 0 -4px 40px -10px rgba(0, 0, 0, 0.12);
-  overflow: hidden;
-  transition: box-shadow 0.3s ease;
-}
-
-html[data-theme='dark'] .demo-screen {
-  box-shadow: 0 -4px 60px -10px rgba(196, 149, 106, 0.08);
-}
-
-.demo-screen-inner {
-  width: 100%;
-  overflow: hidden;
-  position: relative;
-}
-
-.demo-screen-inner img {
-  width: 100%;
-  height: auto;
-  display: block;
-}
-
 /* Responsive constraints */
 @media (max-width: 768px) {
   .navbar {
@@ -730,9 +683,6 @@ html[data-theme='dark'] .demo-screen {
   }
   code {
     font-size: 0.85rem;
-  }
-  .demo-section {
-    padding: 2rem 1rem 4rem;
   }
 }
 
