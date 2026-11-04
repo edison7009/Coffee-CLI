@@ -1042,6 +1042,7 @@ fn tier_terminal_start_blocking(
         }
     }
 
+    let launched_at = std::time::SystemTime::now();
     terminal::spawn(
         app.clone(),
         session_id.clone(),
@@ -1064,6 +1065,11 @@ fn tier_terminal_start_blocking(
             *session.session_token.lock().unwrap() = Some(token.clone());
         }
         let _ = app.emit("tier-terminal-token", terminal::SessionTokenPayload { id: session_id.clone(), token });
+    }
+
+    #[cfg(unix)]
+    if tool.as_deref() == Some("omp") {
+        watch_omp_session_token(app.clone(), terminal_session.clone(), session_id.clone(), launched_at);
     }
 
     // Emit the initial CWD to the frontend so the left panel can map immediately.
@@ -1210,6 +1216,33 @@ struct SavedSession {
     /// A conversation held in a Coffee worktree that still exists resumes there rather than in the project.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     worktree_cwd: Option<String>,
+}
+
+/// Follow the breadcrumb omp keeps for this tab's TTY, for the PTY's whole
+/// life (an in-app `/new` switches sessions), and report each new native id.
+#[cfg(unix)]
+fn watch_omp_session_token(
+    app: tauri::AppHandle,
+    sessions: terminal::SharedSession,
+    session_id: String,
+    launched_at: std::time::SystemTime,
+) {
+    let Some(master) = sessions.lock().ok().and_then(|map| map.get(&session_id).map(|s| s._master.clone())) else { return };
+    let Some(tty) = master.lock().ok().and_then(|m| m.as_ref().and_then(|m| m.tty_name())) else { return };
+    std::thread::spawn(move || loop {
+        std::thread::sleep(std::time::Duration::from_secs(1));
+        let token = terminal::omp_terminal_token(&tty, launched_at);
+        let Ok(map) = sessions.lock() else { return };
+        // Stop once this PTY is gone or the id was reused by a restart.
+        let Some(session) = map.get(&session_id).filter(|s| std::sync::Arc::ptr_eq(&s._master, &master)) else { return };
+        let Some(token) = token else { continue };
+        let Ok(mut current) = session.session_token.lock() else { return };
+        if current.as_deref() == Some(token.as_str()) { continue }
+        *current = Some(token.clone());
+        drop(current);
+        drop(map);
+        let _ = app.emit("tier-terminal-token", terminal::SessionTokenPayload { id: session_id.clone(), token });
+    });
 }
 
 #[tauri::command]

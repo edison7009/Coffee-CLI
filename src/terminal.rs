@@ -547,6 +547,56 @@ pub(crate) fn pi_launch_token(args: &mut Vec<String>, assign_new: bool) -> Optio
     token
 }
 
+/// Oh-My-Pi has no way to pick a new session's id at launch, but it records
+/// each terminal's current session in a breadcrumb keyed by the TTY
+/// (`<agent state>/terminal-sessions/<tty>`, `/dev/ttys012` → `ttys012`):
+/// line 1 the cwd, line 2 the session file (possibly relative to that cwd,
+/// and possibly not written yet). Reading it for the tab's own PTY gives the
+/// native id without guessing by cwd. Windows PTYs have no TTY path, so omp
+/// keeps no breadcrumb there and this stays None.
+#[cfg_attr(not(unix), allow(dead_code))]
+pub(crate) fn omp_breadcrumb_token(content: &str) -> Option<String> {
+    let mut lines = content.lines();
+    let cwd = std::path::Path::new(lines.next()?.trim());
+    let file = lines.next()?.trim();
+    if file.is_empty() { return None; }
+    let path = cwd.join(file);
+    let header_id = std::fs::File::open(&path).ok().and_then(|f| {
+        use std::io::BufRead;
+        std::io::BufReader::new(f).lines().map_while(Result::ok).take(4).find_map(|line| {
+            let value: serde_json::Value = serde_json::from_str(&line).ok()?;
+            (value.get("type")?.as_str()? == "session").then(|| value.get("id")?.as_str().map(str::to_string)).flatten()
+        })
+    });
+    let stem = path.file_stem()?.to_string_lossy().to_string();
+    let id = header_id.unwrap_or_else(|| stem.rsplit_once('_').map(|(_, id)| id.to_string()).unwrap_or(stem));
+    uuid::Uuid::parse_str(&id).is_ok().then_some(id)
+}
+
+#[cfg_attr(not(unix), allow(dead_code))]
+fn omp_breadcrumb_dir() -> Option<std::path::PathBuf> {
+    if let Some(dir) = std::env::var_os("PI_CODING_AGENT_DIR").filter(|v| !v.is_empty()) {
+        return Some(std::path::PathBuf::from(dir).join("terminal-sessions"));
+    }
+    #[cfg(target_os = "linux")]
+    if let Some(state) = std::env::var_os("XDG_STATE_HOME").filter(|v| !v.is_empty()) {
+        let root = std::path::PathBuf::from(state).join("omp");
+        if root.is_dir() { return Some(root.join("terminal-sessions")); }
+    }
+    Some(dirs::home_dir()?.join(".omp").join("agent").join("terminal-sessions"))
+}
+
+/// The session omp currently runs in this PTY, from a breadcrumb written after
+/// `since` (TTY names are reused, so an older crumb belongs to a previous process).
+#[cfg_attr(not(unix), allow(dead_code))]
+pub(crate) fn omp_terminal_token(tty: &std::path::Path, since: std::time::SystemTime) -> Option<String> {
+    let name = tty.to_string_lossy();
+    let id = name.strip_prefix("/dev/")?.replace('/', "-");
+    let crumb = omp_breadcrumb_dir()?.join(id);
+    if std::fs::metadata(&crumb).ok()?.modified().ok()? < since { return None; }
+    omp_breadcrumb_token(&std::fs::read_to_string(crumb).ok()?)
+}
+
 // ─── Spawn ────────────────────────────────────────────────
 
 pub(crate) fn shell_working_directory(path: &std::path::Path) -> anyhow::Result<std::path::PathBuf> {
@@ -1291,6 +1341,25 @@ mod tests {
         let mut custom = vec!["wrapper-arg".to_string()];
         assert_eq!(claude_launch_token(&mut custom, false), None);
         assert_eq!(custom, vec!["wrapper-arg".to_string()]);
+    }
+
+    #[test]
+    fn omp_breadcrumb_names_the_tab_session() {
+        let dir = std::env::temp_dir().join(format!("coffee-omp-crumb-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(dir.join("s")).unwrap();
+        let id = "01900000-0000-7000-8000-000000000000";
+        let cwd = dir.to_string_lossy();
+        // Fresh session: file not written yet, the id comes from the file name.
+        assert_eq!(omp_breadcrumb_token(&format!("{cwd}\ns/2026-11-03T01-02-03-000Z_{id}.jsonl\nfresh\n")), Some(id.to_string()));
+        // Written session: the header id wins, relative paths resolve against the cwd line.
+        let other = "01900000-0000-7000-8000-000000000001";
+        std::fs::write(dir.join("s/x_y.jsonl"), format!("{{\"type\":\"session\",\"id\":\"{other}\"}}\n")).unwrap();
+        assert_eq!(omp_breadcrumb_token(&format!("{cwd}\ns/x_y.jsonl\n")), Some(other.to_string()));
+        assert_eq!(omp_breadcrumb_token(&format!("{cwd}\ns/not-an-id.jsonl\n")), None);
+        assert_eq!(omp_breadcrumb_token(&format!("{cwd}\n")), None);
+        // A crumb older than the PTY belongs to a previous process on a reused TTY.
+        assert_eq!(omp_terminal_token(std::path::Path::new("/dev/ttys999"), std::time::SystemTime::now() + std::time::Duration::from_secs(3600)), None);
+        std::fs::remove_dir_all(dir).unwrap();
     }
 
     #[test]
