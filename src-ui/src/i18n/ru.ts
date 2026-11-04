@@ -432,6 +432,7 @@ export const ru = {
   'conversation.navigation': 'Навигация по диалогу',
   'conversation.jump_to_turn': 'Перейти к вопросу {turn}',
   'cli_update.action': 'Обновить {version}',
+  'cli_update.label': 'Обновить',
   'cli_update.updating': 'Обновление',
   'cli_update.hint': '{current} → {latest}',
   'cli_update.failed': 'Не удалось обновить. Проверьте сеть и права установки, затем повторите.',

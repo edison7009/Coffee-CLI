@@ -30,6 +30,7 @@ try{
   await page.goto(`http://127.0.0.1:${server.address().port}`);
   const card=name=>page.locator('.launchpad-card').filter({has:page.locator('.launchpad-card-info',{hasText:name})});
   await card('Claude Code').getByRole('button',{name:'更新 1.1.0',exact:true}).waitFor();
+  assert.equal(await card('Claude Code').locator('.cli-update-label').textContent(),'更新','the card shows one word; the version is in the tip');
   await page.waitForFunction(()=>window.checks.length===4);
   assert.deepEqual(await page.evaluate(()=>window.checks.sort()),['claude','codex','copilot','cursor'],'only installed favorites are checked');
   await page.evaluate(()=>{window.holdChecks=false;window.releaseChecks.splice(0).forEach(resolve=>resolve())});

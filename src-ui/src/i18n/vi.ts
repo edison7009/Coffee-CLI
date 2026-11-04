@@ -437,6 +437,7 @@ Xóa tờ ghi chú này khi bạn sẵn sàng và bắt đầu tác vụ đầu 
   'conversation.navigation': 'Điều hướng cuộc trò chuyện',
   'conversation.jump_to_turn': 'Chuyển đến câu hỏi {turn}',
   'cli_update.action': 'Cập nhật {version}',
+  'cli_update.label': 'Cập nhật',
   'cli_update.updating': 'Đang cập nhật',
   'cli_update.hint': '{current} → {latest}',
   'cli_update.failed': 'Cập nhật thất bại. Kiểm tra mạng và quyền cài đặt rồi thử lại.',

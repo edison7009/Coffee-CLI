@@ -435,6 +435,7 @@ export const ko = {
   'conversation.navigation': '대화 탐색',
   'conversation.jump_to_turn': '{turn}번째 질문으로 이동',
   'cli_update.action': '업데이트 {version}',
+  'cli_update.label': '업데이트',
   'cli_update.updating': '업데이트 중',
   'cli_update.hint': '{current} → {latest}',
   'cli_update.failed': '업데이트 실패. 네트워크와 설치 권한을 확인한 후 다시 시도하세요.',

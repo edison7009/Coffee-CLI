@@ -435,6 +435,7 @@ export const ja = {
   'conversation.navigation': '会話ナビゲーション',
   'conversation.jump_to_turn': '質問 {turn} に移動',
   'cli_update.action': '更新 {version}',
+  'cli_update.label': '更新',
   'cli_update.updating': '更新中',
   'cli_update.hint': '{current} → {latest}',
   'cli_update.failed': '更新に失敗しました。ネットワークとインストール権限を確認してください。',
