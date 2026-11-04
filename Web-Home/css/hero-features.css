@@ -69,12 +69,24 @@
   line-height: 1.75;
   color: var(--text-secondary);
 }
+/* Feature tags as small chips: they wrap as whole units, never mid-word. */
 .hx-tags {
-  margin: 1rem 0 0;
-  max-width: 34rem;
-  font: 400 0.8rem/1.7 var(--font-mono);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 1.1rem 0 0;
+  max-width: 36rem;
+}
+.hx-tag {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  padding: 0.28rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  font: 400 0.78rem/1.3 var(--font-primary);
   color: var(--text-secondary);
-  opacity: 0.75;
 }
 
 .hero-split .downloads-section {
