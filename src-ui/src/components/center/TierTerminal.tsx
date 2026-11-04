@@ -2317,7 +2317,9 @@ function TierTerminalImpl({
                   <mask id={`splashMask-${sessionId}`}>
                     <path fill="none" stroke="#fff" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
                       d="M8 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M12 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M16 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4">
-                      {/* Linux gate — see Explorer.tsx brand-icon for full rationale. */}
+                      {/* WebKit2GTK re-rasters a SMIL path morph inside a mask on every frame, so Linux keeps
+                          the steam still. The loop repaints the page each frame elsewhere too, which is
+                          acceptable only because the splash shows just while a terminal starts. */}
                       {!__IS_LINUX__ && (
                         <animate attributeName="d" dur="3s" repeatCount="indefinite"
                           values="M8 0c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M12 0c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M16 0c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4;M8 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M12 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M16 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4"/>

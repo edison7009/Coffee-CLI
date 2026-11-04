@@ -19,7 +19,6 @@ import type { DirEntryInfo } from '../../tauri';
 import { HistoryBoard } from '../right/HistoryBoard';
 import './Explorer.css';
 
-const BRAND_REPLAY_MS = 30_000;
 
 // Snapshot lifecycle and the `+N -M` map live in lib/file-stats.tsx so the
 // right-side ChangesBoard can read the same data when the left panel is
@@ -586,7 +585,7 @@ export function Explorer() {
 
   // Update check
   const [hasUpdate, setHasUpdate] = useState(false);
-  // The brand (logo + title + the self-update button) renders here but DISPLAYS
+  // The brand (title + the self-update button) renders here but DISPLAYS
   // in the titlebar's left slot via portal — so it keeps all its Explorer-local
   // self-update state untouched, and hides together with the left panel (this
   // component unmounts when the panel is hidden, which is exactly what we want:
@@ -713,59 +712,11 @@ export function Explorer() {
     return bindAutoHideScrollbar(scrollRef.current);
   }, [activeTab]);
 
-  // The brand mark draws its cup once on load; replay it now and then so it never sits still for good.
-  const brandIconRef = useRef<SVGSVGElement>(null);
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      if (document.hidden || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-      brandIconRef.current?.setCurrentTime(0);
-    }, BRAND_REPLAY_MS);
-    return () => window.clearInterval(timer);
-  }, []);
-
   return (
     <div className="panel panel-left explorer-panel" data-icon-theme={state.iconTheme}>
       {/* Brand + theme/lang controls */}
       {brandSlot && createPortal(
         <div className="brand">
-          <svg ref={brandIconRef} xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" className="brand-icon">
-            <defs>
-              <mask id="brandIconMask">
-                {/* Steam (3 wavy lines). The `<animate>` is gated to non-Linux
-                    because WebKit2GTK has no GPU path for SMIL `path d` morphing
-                    inside a `<mask>`: every frame re-evaluates the bezier
-                    geometry, re-rasters the mask, and re-composites the masked
-                    full-viewport path on line ~1108. With the mask applied
-                    over the entire 24×24 brand icon and the indefinite loop
-                    running idle, the kompositor → IPC ack chain pegs Linux
-                    WebKitWebProcess + coffee-cli at ~1.2 cores combined even
-                    when nothing else is on screen (verified live: SSH 5s
-                    increments dropped from 37%/89% to ~0% the moment WebKit
-                    was killed; same coffee-cli on Windows WebView2 / macOS
-                    WKWebView is silent because both have hardware-accelerated
-                    SMIL). Static `d` on Linux means the steam stops drifting
-                    upward but the cup glyph itself is fully intact. */}
-                <path fill="none" stroke="#fff" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M12 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M16 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4">
-                  {!__IS_LINUX__ && (
-                    <animate attributeName="d" dur="3s" repeatCount="indefinite" values="M8 0c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M12 0c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M16 0c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4;M8 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M12 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M16 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4"/>
-                  )}
-                </path>
-                <path d="M4 7h16v0h-16v12h16v-32h-16Z">
-                  <animate fill="freeze" attributeName="d" begin="1s" dur="0.6s" to="M4 2h16v5h-16v12h16v-24h-16Z"/>
-                </path>
-              </mask>
-            </defs>
-            <g stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2">
-              <path fill="currentColor" fillOpacity="0" strokeDasharray="48" d="M17 9v9c0 1.66 -1.34 3 -3 3h-6c-1.66 0 -3 -1.34 -3 -3v-9Z">
-                <animate fill="freeze" attributeName="stroke-dashoffset" dur="0.6s" values="48;0"/>
-                <animate fill="freeze" attributeName="fill-opacity" begin="1.6s" dur="0.4s" to="1"/>
-              </path>
-              <path fill="none" strokeDasharray="16" strokeDashoffset="16" d="M17 9h3c0.55 0 1 0.45 1 1v3c0 0.55 -0.45 1 -1 1h-3">
-                <animate fill="freeze" attributeName="stroke-dashoffset" begin="0.6s" dur="0.3s" to="0"/>
-              </path>
-            </g>
-            <path fill="currentColor" d="M0 0h24v24H0z" mask="url(#brandIconMask)"/>
-          </svg>
           <span>{t('app.title')}</span>
           {hasUpdate && (
             <button

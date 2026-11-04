@@ -1514,10 +1514,6 @@ body.resizing-panels .pane-resizer {
     color: var(--text-2);
 }
 
-.brand-icon {
-    color: var(--accent);
-}
-
 .icon-btn {
     padding: 6px;
     border: none;

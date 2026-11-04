@@ -17,14 +17,8 @@
     color: var(--text-2);
 }
 
-.brand-icon {
-    /* SVG size is 18x18, so we let it render natively but ensure it's vertically centered */
-    display: block;
-    color: var(--accent); /* Uses theme variable to support light/dark mode gracefully */
-}
-
 .brand span {
-    font-size: 16px;       /* Increased size per user request, visually matches 18px SVG */
+    font-size: 16px;
     font-weight: 700;
     letter-spacing: 0.04em; /* Give Chinese characters more breathing room */
     line-height: 1;
