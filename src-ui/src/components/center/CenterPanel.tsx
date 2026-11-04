@@ -421,9 +421,10 @@ export function CenterPanel() {
       const defaults = [
         'agent:claude',
         'agent:codex',
-        'agent:dsh',
         'agent:opencode',
         'agent:pi',
+        // DeepSeek Harness is desktop-only, unlike the four before it.
+        'agent:dsh',
         'agent:terminal',
       ];
       localStorage.setItem('coffee_pinned_items', JSON.stringify(defaults));
