@@ -4,8 +4,8 @@
 .tool-control-symbol svg { width:36px; height:36px; }
 .tool-control-summary { flex:1; min-width:180px; }
 .tool-control-summary strong { color:var(--accent); font-size:15px; font-weight:600; }
-.tool-control-summary p { margin:8px 0 0; color:var(--text-3); font-size:12px; line-height:1.6; }
-.tool-control-state { color:var(--text-3); font-size:12px; }
+.tool-control-summary p { margin:8px 0 0; color:var(--text-2); font-size:var(--type-label); line-height:22px; }
+.tool-control-state { color:var(--text-2); font-size:var(--type-label); }
 .tool-control-state.is-ready { color:var(--text-2); }
 .tool-control-runtime > button { flex-shrink:0; }
 .tool-control-action { position:relative; }
@@ -17,10 +17,10 @@
 .tool-control-agent-icon { display:flex; justify-content:center; align-items:center; width:30px; height:30px; flex-shrink:0; font-size:30px; pointer-events:none; }
 .tool-control-agent-icon * { pointer-events:none; }
 .tool-control-agent-icon svg { width:30px; height:30px; }
-.tool-control-agent-name { display:flex; align-items:center; gap:8px; flex:1; min-width:0; color:var(--text-1); font-size:13px; font-weight:500; }
+.tool-control-agent-name { display:flex; align-items:center; gap:8px; flex:1; min-width:0; color:var(--text-1); font-size:var(--type-body); font-weight:500; }
 .tool-control-agent-label { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.tool-control-unavailable { position:relative; flex-shrink:0; color:var(--text-3); font-size:11px; white-space:nowrap; }
-.tool-control-unavailable[data-tip]:hover::after, .tool-control-unavailable[data-tip]:focus-visible::after { content:attr(data-tip); position:absolute; z-index:100; bottom:calc(100% + 8px); right:0; width:240px; max-width:70vw; padding:6px 10px; border:1px solid var(--border); border-radius:6px; background:var(--bg-panel); color:var(--text-1); font-size:11px; font-weight:500; line-height:1.5; white-space:normal; overflow-wrap:anywhere; pointer-events:none; box-shadow:0 1px 2px #0003,0 6px 20px #0004; }
+.tool-control-unavailable { position:relative; flex-shrink:0; color:var(--text-3); font-size:var(--type-caption); white-space:nowrap; }
+.tool-control-unavailable[data-tip]:hover::after, .tool-control-unavailable[data-tip]:focus-visible::after { content:attr(data-tip); position:absolute; z-index:100; bottom:calc(100% + 8px); right:0; width:240px; max-width:70vw; padding:6px 10px; border:1px solid var(--border); border-radius:6px; background:var(--bg-panel); color:var(--text-1); font-size:var(--type-caption); font-weight:500; line-height:1.5; white-space:normal; overflow-wrap:anywhere; pointer-events:none; box-shadow:0 1px 2px #0003,0 6px 20px #0004; }
 .tool-control-unavailable:focus-visible { outline:1px solid var(--accent); outline-offset:2px; }
 .tool-control-switch { position:relative; width:36px; height:20px; flex-shrink:0; padding:0; border:0; border-radius:20px; background:var(--bg-hover); cursor:pointer; transition:background 150ms; }
 .tool-control-switch > span { display:block; position:absolute; left:2px; top:2px; width:16px; height:16px; border-radius:50%; background:#fff; box-shadow:0 1px 3px #0003; transition:transform 150ms; }
@@ -35,12 +35,12 @@
 .tool-control-card-toggle[aria-checked="true"]::before { background:#007aff; }
 .tool-control-card-toggle > span { left:calc(100% - 54px); top:calc(50% - 8px); }
 .tool-control-unavailable[data-tip] { z-index:1; }
-.tool-control-no-agents { margin:14px 0 0; color:var(--text-3); font-size:12px; line-height:1.6; }
-.orchestration-roles-head { display:flex; align-items:baseline; gap:10px; margin-top:26px; color:var(--text-1); font-size:13px; }
-.orchestration-roles-head span { color:var(--text-3); font-size:12px; }
+.tool-control-no-agents { margin:14px 0 0; color:var(--text-2); font-size:var(--type-label); line-height:1.6; }
+.orchestration-roles-head { display:flex; align-items:baseline; gap:10px; margin-top:26px; color:var(--text-1); font-size:var(--type-body); }
+.orchestration-roles-head span { color:var(--text-2); font-size:var(--type-label); }
 .orchestration-roles { margin-top:12px; }
 .orchestration-role-text { flex-direction:column; align-items:flex-start; gap:4px; }
-.orchestration-role-desc { color:var(--text-3); font-size:12px; font-weight:400; line-height:1.45; white-space:normal; }
+.orchestration-role-desc { color:var(--text-2); font-size:var(--type-label); font-weight:400; line-height:1.45; white-space:normal; }
 @container (max-width:850px) { .tool-control-agents { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @container (max-width:540px) { .tool-control-agents { grid-template-columns:1fr; } }
 @media (prefers-reduced-motion:reduce) { .tool-control-spinner { animation:none; } .tool-control-switch, .tool-control-switch > span { transition:none; } }

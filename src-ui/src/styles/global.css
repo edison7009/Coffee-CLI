@@ -219,11 +219,12 @@ textarea,
         'PingFang SC', 'PingFang TC', 'Hiragino Mincho ProN', 'Apple SD Gothic Neo',
         'Microsoft YaHei', 'Microsoft JhengHei', 'Yu Mincho', 'Malgun Gothic',
         sans-serif;
-    /* UI type scale, matching the sidebar: body = session names, 12px is the floor. */
-    --type-title: 16px;
-    --type-body: 14px;
-    --type-label: 13px;
-    --type-caption: 12px;
+    /* UI type scale (the roomy set, chosen for long sessions): body = session
+       names and setting items, 13px is the floor. */
+    --type-title: 17px;
+    --type-body: 15px;
+    --type-label: 14px;
+    --type-caption: 13px;
     --mono: 'Cascadia Code', 'Cascadia Mono', 'SF Mono', Menlo, Monaco, Consolas, 'Courier New', monospace;
     --radius-xs: 4px;
     --radius-sm: 8px;
@@ -1113,7 +1114,7 @@ body {
     height: 100%;
     margin: 0;
     font-family: var(--font);
-    font-size: 14px;
+    font-size: var(--type-body);
     /* No bg here — moved to #root so the rounded clip on #root
        fully owns where the app's surface paints. Body with both
        a bg AND clip-path was leaking square corners in non-Glass
@@ -1297,7 +1298,7 @@ html.is-macos .titlebar-left-slot.is-collapsed {
        read as heavy and spread. Kept at 13px for legibility; color inherits
        the button so the label stays unified with the keyboard icon. */
     font-family: var(--font);
-    font-size: 13px;
+    font-size: var(--type-body);
     font-weight: 500;
     line-height: 1.2;
     letter-spacing: normal;
@@ -1549,7 +1550,7 @@ body.resizing-panels .pane-resizer {
     justify-content: space-between;
     align-items: center;
     padding: 12px 16px 8px;
-    font-size: 11px;
+    font-size: var(--type-caption);
     font-weight: 700;
     color: var(--text-3);
     letter-spacing: 0.05em;
@@ -1702,7 +1703,7 @@ body.gambit-docked .multi-agent-grid-standalone {
     align-items: center;
     gap: 6px;
     padding: 6px 8px;
-    font-size: 13px;
+    font-size: var(--type-body);
     color: var(--text-2);
     cursor: pointer;
     /* Follow the active shape form (Panel/Sharp = 0, Soft/Glass = radius-sm).
@@ -1719,7 +1720,7 @@ body.gambit-docked .multi-agent-grid-standalone {
 .tree-children.collapsed { display: none; }
 
 .tree-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tree-badge { font-size: 10px; color: var(--text-3); }
+.tree-badge { font-size: var(--type-caption); color: var(--text-3); }
 
 .icon-svg {
     width: 16px;
@@ -1734,7 +1735,7 @@ body.gambit-docked .multi-agent-grid-standalone {
 .toast {
     position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
     background: var(--text-1); color: var(--bg-app);
-    padding: 10px 24px; border-radius: 20px; font-size: 13px; font-weight: 600;
+    padding: 10px 24px; border-radius: 20px; font-size: var(--type-body); font-weight: 600;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.20), 0 6px 20px rgba(0, 0, 0, 0.22); z-index: 1000;
     animation: toastIn 0.3s ease;
 }

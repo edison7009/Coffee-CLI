@@ -18,12 +18,12 @@
   border-radius: var(--shape-radius-btn, var(--radius-sm));
   background: transparent;
   color: var(--text-2);
-  font: 500 14px/18px var(--font, system-ui);
+  font: 500 var(--type-body)/18px var(--font, system-ui);
   text-align: left;
 }
 .history-search-trigger { margin-bottom: 18px; }
 .history-search-trigger > svg { display: block; flex-shrink: 0; }
-.history-layout-toggle { justify-content: space-between; margin-bottom: 6px; color: var(--accent); font-size: 12px; }
+.history-layout-toggle { justify-content: space-between; margin-bottom: 6px; color: var(--accent); font-size: var(--type-label); }
 .history-search-trigger:hover, .history-layout-toggle:hover, .history-project-row:hover { background: var(--bg-hover); }
 .history-search-trigger:hover, .history-project-row:hover { color: var(--text-1); }
 .history-search-trigger:focus-visible, .history-layout-toggle:focus-visible, .history-project-row:focus-visible { outline: 1px solid var(--accent); outline-offset: -1px; }
@@ -33,7 +33,7 @@
 .history-project-row[aria-expanded="true"] .history-project-chevron { transform: rotate(90deg); }
 .history-session-list .history-card-grouped { margin-left: 0; }
 .history-project-more-row { display: flex; gap: 2px; }
-.history-project-more { display: block; padding: 4px 10px; border: 0; border-radius: var(--shape-radius-btn, 6px); background: transparent; color: var(--text-3); font: 500 12px/18px var(--font, system-ui); text-align: left; cursor: pointer; }
+.history-project-more { display: block; padding: 4px 10px; border: 0; border-radius: var(--shape-radius-btn, 6px); background: transparent; color: var(--text-2); font: 500 var(--type-label)/18px var(--font, system-ui); text-align: left; cursor: pointer; }
 .history-project-more:hover { background: var(--bg-hover); color: var(--text-1); }
 .history-project-more:focus-visible { outline: 1px solid var(--accent); outline-offset: -1px; }
 
@@ -66,16 +66,16 @@
 .history-search-dialog .agent-session-search-wrap { flex-shrink: 0; margin: 0 20px 12px; }
 .history-search-dialog .agent-session-search { height: 38px; }
 .history-search-results { flex: 1; min-height: 0; overflow: auto; padding: 0 12px 12px; }
-.history-search-result { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px; border: 0; border-radius: var(--shape-radius-btn, 6px); background: transparent; color: var(--text-2); text-align: left; font: 13px/1.4 var(--font, system-ui); }
+.history-search-result { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px; border: 0; border-radius: var(--shape-radius-btn, 6px); background: transparent; color: var(--text-2); text-align: left; font: var(--type-body)/1.4 var(--font, system-ui); }
 .history-search-result:hover, .history-search-result[aria-selected="true"] { background: var(--bg-hover); color: var(--text-1); }
 .history-search-result > :first-child:not(span) { width: 18px !important; height: 18px !important; }
 .history-search-result > span:last-child { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 4px; }
 .history-search-result strong, .history-search-result small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .history-search-result strong { font-weight: 500; }
-.history-search-result small { color: var(--text-2); font-size: 12px; }
-.history-search-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; height: 100%; min-height: 140px; color: var(--text-2); font-size: 13px; }
+.history-search-result small { color: var(--text-2); font-size: var(--type-label); }
+.history-search-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; height: 100%; min-height: 140px; color: var(--text-2); font-size: var(--type-body); }
 .history-search-sentinel { height: 1px; }
-.history-search-footer { flex-shrink: 0; padding: 10px 20px; border-top: 1px solid var(--border); color: var(--text-2); font-size: 12px; }
+.history-search-footer { flex-shrink: 0; padding: 10px 20px; border-top: 1px solid var(--border); color: var(--text-2); font-size: var(--type-label); }
 
 .history-session-list .history-card {
   position: relative;
@@ -142,7 +142,7 @@
   display: block;
   flex: 1;
   min-width: 0;
-  font-size: 14px;
+  font-size: var(--type-body);
   color: var(--text-2);
   font-family: var(--font, system-ui);
   font-weight: 500;
@@ -175,7 +175,7 @@
   flex: 1;
   min-width: 0;
   overflow: hidden;
-  font-size: 10.5px;
+  font-size: var(--type-caption);
   color: var(--text-2);
   font-weight: 500;
   letter-spacing: 0.02em;
@@ -215,12 +215,12 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font: 500 14px/1.4 var(--font, system-ui);
+  font: 500 var(--type-body)/1.4 var(--font, system-ui);
 }
 
 .history-card-preview .history-card-tool-wrap {
   gap: 6px;
-  font-size: 12px;
+  font-size: var(--type-label);
 }
 
 /* Pinned (置顶) marker - a static pushpin icon on the right of the meta row,
@@ -292,7 +292,7 @@
   border-radius: var(--radius-sm);
   padding: 8px 10px 8px 32px;
   color: var(--text-1);
-  font-size: 13px;
+  font-size: var(--type-body);
   font-family: var(--font, system-ui);
   line-height: 1;
   outline: none;
@@ -353,7 +353,7 @@
 .history-card-attention-indicator {
   display:block; flex:0 1 auto; min-width:0; max-width:48%; height:18px; margin-left:6px; padding:0 6px;
   border-radius:var(--shape-radius-btn, var(--radius-sm)); background:#60a5fa; color:#10253e;
-  font-size:11px; font-weight:600; line-height:18px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  font-size:var(--type-caption); font-weight:600; line-height:18px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   animation:history-attention-enter .18s ease-out;
 }
 [data-mode="light"] .history-card-attention-indicator { background:#2563eb; color:#fff; }
@@ -424,7 +424,7 @@
   padding: 0;
   margin: 0;
   color: var(--text-2);
-  font-size: 14px;
+  font-size: var(--type-body);
   font-family: var(--font, system-ui);
   font-weight: 500;
   line-height: 1.4;

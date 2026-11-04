@@ -2,5 +2,5 @@
 .context-usage .claude-context-readout { padding:6px 4px; }
 .context-usage-meter { height:5px; margin:4px; overflow:hidden; border-radius:var(--shape-radius-btn,5px); background:var(--border); }
 .context-usage-meter span { display:block; height:100%; background:var(--accent); }
-.context-usage-count { padding:4px; color:var(--text-3); font-size:12px; font-variant-numeric:tabular-nums; }
+.context-usage-count { padding:4px; color:var(--text-2); font-size:var(--type-label); font-variant-numeric:tabular-nums; }
 .context-usage .context-usage-total { margin-top:8px; border-top:1px solid var(--border); padding-top:10px; }

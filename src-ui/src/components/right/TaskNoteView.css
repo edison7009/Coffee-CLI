@@ -112,7 +112,7 @@
   flex: 1;
   text-align: center;
   font-family: var(--font, system-ui);
-  font-size: 11px;
+  font-size: var(--type-caption);
   font-weight: 500;
   letter-spacing: 0.02em;
   color: var(--text-2, rgba(255, 255, 255, 0.55));
@@ -167,7 +167,7 @@
   background: transparent;
   color: var(--text-1, #e8e4de);
   font-family: var(--font, system-ui);
-  font-size: 13.5px;
+  font-size: var(--type-body);
   line-height: 1.55;
   padding: 9px 12px 11px;
   white-space: pre-wrap;

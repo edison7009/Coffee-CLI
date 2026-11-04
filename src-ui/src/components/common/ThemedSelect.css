@@ -1,3 +1,3 @@
-.themed-select-menu { overflow-y:auto; font:13px/1.5 var(--font-nav,var(--font)); }
+.themed-select-menu { overflow-y:auto; font:var(--type-body)/1.5 var(--font-nav,var(--font)); }
 .themed-select-menu .settings-font-opt { flex-shrink:0; font-family:inherit; }
 .themed-select-menu .is-highlighted { background:var(--bg-hover); }

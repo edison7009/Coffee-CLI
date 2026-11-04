@@ -9,5 +9,5 @@
 .settings-range-ticks { position: relative; height: 9px; margin: 0 7px; }
 .settings-range-ticks span { position: absolute; width: 1px; height: 4px; background: var(--text-3); transform: translateX(-50%); }
 .settings-range-ticks span.major { height: 6px; background: var(--text-2); }
-.settings-range-labels { position: relative; height: 16px; margin: 0 7px; font-size: 11px; font-variant-numeric: tabular-nums; color: var(--text-3); }
+.settings-range-labels { position: relative; height: 16px; margin: 0 7px; font-size: var(--type-caption); font-variant-numeric: tabular-nums; color: var(--text-3); }
 .settings-range-labels span { position: absolute; }

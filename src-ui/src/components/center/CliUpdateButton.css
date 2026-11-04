@@ -1,5 +1,5 @@
 .cli-update-control { position:absolute; top:4px; right:4px; max-width:calc(100% - 8px); }
-.launchpad-card .cli-update-button { position:relative; display:flex; align-items:center; justify-content:center; min-width:18px; height:18px; max-width:100%; padding:1px 4px; border:0; border-radius:var(--shape-radius-btn,4px); background:transparent; color:var(--accent); font:500 11px/1.3 var(--font-nav,var(--font)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; }
+.launchpad-card .cli-update-button { position:relative; display:flex; align-items:center; justify-content:center; min-width:18px; height:18px; max-width:100%; padding:1px 4px; border:0; border-radius:var(--shape-radius-btn,4px); background:transparent; color:var(--accent); font:500 var(--type-caption)/1.3 var(--font-nav,var(--font)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; }
 .launchpad-card .cli-update-label { font:inherit; color:inherit; overflow:hidden; text-overflow:ellipsis; }
 .launchpad-card .cli-update-button:hover { background:var(--accent-bg); color:var(--text-1); }
 .launchpad-card .cli-update-button:focus-visible { outline:1px solid var(--accent); outline-offset:-1px; }
@@ -12,6 +12,6 @@
 .cli-update-dots i:nth-child(3) { animation-delay:260ms; }
 .cli-update-dots i:nth-child(4) { animation-delay:390ms; }
 .cli-update-error { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
-.cli-update-tip { position:fixed; z-index:10000; width:max-content; max-width:min(236px,calc(100vw - 16px)); padding:6px 10px; border:1px solid var(--border); border-radius:6px; background:var(--bg-panel); color:var(--text-1); font:500 11px/1.4 var(--font-nav,var(--font)); text-align:center; overflow-wrap:anywhere; pointer-events:none; box-shadow:0 1px 2px rgba(0,0,0,.2),0 6px 20px rgba(0,0,0,.22); }
+.cli-update-tip { position:fixed; z-index:10000; width:max-content; max-width:min(236px,calc(100vw - 16px)); padding:6px 10px; border:1px solid var(--border); border-radius:6px; background:var(--bg-panel); color:var(--text-1); font:500 var(--type-caption)/1.4 var(--font-nav,var(--font)); text-align:center; overflow-wrap:anywhere; pointer-events:none; box-shadow:0 1px 2px rgba(0,0,0,.2),0 6px 20px rgba(0,0,0,.22); }
 @keyframes cli-update-dot { 0%,65%,100% { opacity:.25; transform:translateY(0) scale(.85); } 30% { opacity:1; transform:translateY(-1px) scale(1.05); } }
 @media (prefers-reduced-motion:reduce) { .cli-update-dots i { animation:none; opacity:.7; } }

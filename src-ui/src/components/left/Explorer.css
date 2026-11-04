@@ -53,7 +53,7 @@
     /* Match the directory filter trigger's readable secondary text. */
     color: var(--text-2);
     font-family: var(--font, system-ui);
-    font-size: 14px;
+    font-size: var(--type-body);
     font-weight: 600;
     letter-spacing: 0.02em;
     cursor: default;
@@ -80,7 +80,7 @@
     border-radius: var(--shape-radius-btn, var(--radius-sm));
     background: transparent;
     color: var(--text-2);
-    font: 500 14px/18px var(--font, system-ui);
+    font: 500 var(--type-body)/18px var(--font, system-ui);
     text-align: left;
     white-space: nowrap;
     overflow: hidden;
@@ -115,7 +115,7 @@
     border-radius: var(--radius-sm);
     color: var(--text-3);
     font-family: var(--font);
-    font-size: 14px;
+    font-size: var(--type-body);
     font-weight: 500;
     line-height: 1;
     cursor: default;
@@ -141,12 +141,12 @@
 .workspace-dir-btn > svg { flex-shrink: 0; }
 .workspace-dir-btn.is-searching { background: transparent; }
 .workspace-dir-btn.is-searching:focus-within { border-color: var(--accent); }
-.workspace-filter-input { flex: 1; width: 0; min-width: 0; border: 0; outline: 0; padding: 0; background: transparent; color: var(--text-2); font: 400 14px/20px var(--font); }
+.workspace-filter-input { flex: 1; width: 0; min-width: 0; border: 0; outline: 0; padding: 0; background: transparent; color: var(--text-2); font: 400 var(--type-body)/20px var(--font); }
 .workspace-filter-input::placeholder { color: var(--text-3); }
 .workspace-filter-toggle { display: flex; align-items: center; justify-content: center; flex: 0 0 20px; height: 24px; padding: 0; border: 0; border-radius: var(--shape-radius-btn); background: transparent; color: var(--text-3); }
 .workspace-filter-toggle:hover { color: var(--text-1); background: var(--bg-hover); }
 .workspace-filter-toggle:focus-visible { outline: 1px solid var(--accent); }
-.workspace-filter-empty { padding: 8px; color: var(--text-3); font-size: 14px; line-height: 1.4; }
+.workspace-filter-empty { padding: 8px; color: var(--text-3); font-size: var(--type-body); line-height: 1.4; }
 
 /* Custom styling removed for first child separator */
 
@@ -240,7 +240,7 @@
 
 .tree-dir, .tree-file {
     font-family: var(--font);
-    font-size: 14px;
+    font-size: var(--type-body);
     font-weight: 500;
 }
 
@@ -352,7 +352,7 @@
 }
 
 .tree-badge {
-    font-size: 11px;
+    font-size: var(--type-caption);
     color: var(--text-3);
     flex-shrink: 0;
 }
@@ -421,7 +421,7 @@
   border-radius: var(--radius-xs);
   color: var(--text-2);
   font-family: var(--font);
-  font-size: 12.5px;
+  font-size: var(--type-label);
   font-weight: 500;
   cursor: pointer;
   text-align: left;

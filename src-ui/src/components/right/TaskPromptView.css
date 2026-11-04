@@ -23,7 +23,7 @@
 .task-prompt-empty {
   text-align: center;
   color: var(--text-3, rgba(255, 255, 255, 0.3));
-  font-size: 13px;
+  font-size: var(--type-body);
   padding: 44px 16px;
 }
 
@@ -75,7 +75,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-family: var(--font, system-ui);
-  font-size: 12px;
+  font-size: var(--type-label);
   font-weight: 600;
   letter-spacing: 0.01em;
   color: var(--text-2, rgba(255, 255, 255, 0.55));
@@ -93,7 +93,7 @@
   background: transparent;
   color: var(--text-1, #e8e4de);
   font-family: var(--font, system-ui);
-  font-size: 12px;
+  font-size: var(--type-label);
   font-weight: 600;
   letter-spacing: 0.01em;
   box-sizing: border-box;
@@ -103,7 +103,7 @@
 .task-prompt-count {
   flex-shrink: 0;
   font-family: var(--font, system-ui);
-  font-size: 11px;
+  font-size: var(--type-caption);
   font-variant-numeric: tabular-nums;
   color: var(--text-3, rgba(255, 255, 255, 0.3));
 }
@@ -191,7 +191,7 @@
   background: transparent;
   color: var(--text-2, rgba(255, 255, 255, 0.55));
   font-family: var(--font, system-ui);
-  font-size: 12px;
+  font-size: var(--type-label);
   border-radius: var(--radius-xs, 6px);
   cursor: pointer;
   transition: background 0.12s, color 0.12s;
@@ -258,7 +258,7 @@
   background: transparent;
   color: var(--text-1, #e8e4de);
   font-family: var(--font, system-ui);
-  font-size: 13px;
+  font-size: var(--type-body);
   line-height: 1.5;
   padding: 9px 38px 4px 12px;
   white-space: pre-wrap;

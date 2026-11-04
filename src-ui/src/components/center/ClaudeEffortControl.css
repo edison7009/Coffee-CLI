@@ -1,5 +1,5 @@
 .claude-effort-control { padding:8px; }
-.claude-effort-heading,.claude-effort-scale { display:flex; align-items:center; justify-content:space-between; gap:12px; font:12px var(--font); color:var(--text-3); }
+.claude-effort-heading,.claude-effort-scale { display:flex; align-items:center; justify-content:space-between; gap:12px; font:var(--type-label) var(--font); color:var(--text-2); }
 .claude-effort-label-window { overflow:hidden; color:var(--text-1); margin-left:auto; }
 .claude-effort-label { position:relative; display:block; isolation:isolate; animation:claude-effort-label-in 200ms ease-out; }
 .claude-effort-label-glow { position:absolute; inset:0; pointer-events:none; mix-blend-mode:plus-lighter; filter:blur(var(--effort-blur)); opacity:0; animation:claude-effort-glow-in 200ms linear; }

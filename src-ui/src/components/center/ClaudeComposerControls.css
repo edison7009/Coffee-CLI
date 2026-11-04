@@ -1,5 +1,5 @@
 .claude-composer-controls { display:flex; align-items:center; gap:7px; flex:1; min-width:0; font-family:var(--font); }
-.claude-composer-controls button { color:var(--text-2); background:var(--bg-hover); border:0; height:26px; padding:4px 7px; border-radius:var(--shape-radius-btn,5px); font:12px var(--font); cursor:pointer; white-space:nowrap; }
+.claude-composer-controls button { color:var(--text-2); background:var(--bg-hover); border:0; height:26px; padding:4px 7px; border-radius:var(--shape-radius-btn,5px); font:var(--type-caption) var(--font); cursor:pointer; white-space:nowrap; }
 .claude-composer-controls button:hover { color:var(--text-1); background:var(--accent-bg,var(--bg-hover)); }
 .claude-composer-controls button:disabled { opacity:.45; cursor:default; }
 .claude-composer-controls .claude-control-icon { display:inline-flex; align-items:center; justify-content:center; width:26px; padding:0; }
@@ -15,16 +15,16 @@
 .claude-context-control circle { fill:none; stroke-width:2px; }
 .claude-context-track { stroke:var(--border); }
 .claude-context-progress { stroke:var(--context-color); stroke-linecap:round; transition:stroke-dashoffset .3s,stroke .3s; }
-.claude-context-readout { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:8px; font-size:12px; color:var(--text-2); }
+.claude-context-readout { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:8px; font-size:var(--type-label); color:var(--text-2); }
 .claude-context-readout > :last-child { font-variant-numeric:tabular-nums; }
 @media(prefers-reduced-motion:reduce) { .claude-context-progress { transition:none; } }
-.claude-control-menu { position:fixed; z-index:10020; display:flex; flex-direction:column; overflow:auto; padding:5px; background:var(--bg-panel,var(--bg-terminal)); border:1px solid var(--border); border-radius:var(--shape-radius-panel,8px); box-shadow:0 8px 30px #0005; color:var(--text-1); font:12px var(--font); }
+.claude-control-menu { position:fixed; z-index:10020; display:flex; flex-direction:column; overflow:auto; padding:5px; background:var(--bg-panel,var(--bg-terminal)); border:1px solid var(--border); border-radius:var(--shape-radius-panel,8px); box-shadow:0 8px 30px #0005; color:var(--text-1); font:var(--type-label) var(--font); }
 .claude-control-menu button { display:flex; align-items:baseline; justify-content:space-between; flex-shrink:0; text-align:left; gap:12px; padding:7px 9px; background:transparent; color:var(--text-1); border:0; border-radius:var(--shape-radius-btn,5px); font:inherit; cursor:pointer; }
 .claude-control-menu button:hover,.claude-control-menu button.is-selected { background:var(--accent-bg,var(--bg-hover)); }
 .claude-control-menu button:disabled { opacity:.4; }
 .claude-control-menu .claude-thinking-toggle:disabled { opacity:1; cursor:default; }
 .claude-control-menu button strong { font-weight:500; flex-shrink:0; }
-.claude-control-menu button small { color:var(--text-3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; }
+.claude-control-menu button small { color:var(--text-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:var(--type-label); }
 .claude-menu-empty { padding:18px 10px; color:var(--text-3); }
 .claude-tasks-control,.claude-tasks-dot { --claude-tasks-color:rgb(0,204,204); }
 .claude-composer-controls .claude-tasks-control { display:inline-flex; align-items:center; flex-shrink:0; padding-block:3px 5px; color:rgb(0,32,32); background:color-mix(in srgb,var(--claude-tasks-color) 72%,transparent); animation:claude-tasks-breathe 1.8s ease-in-out infinite; }

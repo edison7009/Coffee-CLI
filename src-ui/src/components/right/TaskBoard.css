@@ -18,7 +18,7 @@
   flex-shrink: 0;
   margin: 0;
   color: var(--red);
-  font-size: 12px;
+  font-size: var(--type-label);
   line-height: 1.5;
 }
 
@@ -55,7 +55,7 @@
   align-items: center;
   gap: 6px;
   padding: 10px 4px 6px;
-  font-size: 14px;
+  font-size: var(--type-body);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -323,7 +323,7 @@
 
 .task-title {
   flex: 1;
-  font-size: 14px;
+  font-size: var(--type-body);
   font-family: var(--font, system-ui);
   color: var(--text-1, #e8e4de);
   line-height: 1.4;
@@ -343,7 +343,7 @@
    manual handle or inner scrollbar appears. */
 .task-title-edit {
   flex: 1;
-  font-size: 14px;
+  font-size: var(--type-body);
   font-family: var(--font, system-ui);
   color: var(--text-1, #e8e4de);
   line-height: 1.4;
@@ -529,7 +529,7 @@
   border: none;
   color: var(--text-2, rgba(255, 255, 255, 0.6));
   font-family: var(--font, system-ui);
-  font-size: 14px;
+  font-size: var(--type-body);
   line-height: 1.5;
   padding: 0;
   resize: vertical;
@@ -580,7 +580,7 @@
   background: transparent;
   color: var(--text-2);
   font-family: var(--font, system-ui);
-  font-size: 14px;
+  font-size: var(--type-body);
   font-weight: 500;
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s, transform 0.15s;
@@ -660,7 +660,7 @@
 }
 
 .history-card-title {
-  font-size: 13px;
+  font-size: var(--type-body);
   color: var(--text-1, #e8e4de);
   font-family: var(--font, system-ui);
   font-weight: 500;
@@ -677,7 +677,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
+  font-size: var(--type-caption);
   color: var(--text-2, rgba(255, 255, 255, 0.6));
   font-weight: 600;
   letter-spacing: 0.02em;

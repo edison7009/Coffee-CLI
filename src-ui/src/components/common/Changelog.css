@@ -3,7 +3,7 @@
 .settings-modal.changelog-modal { flex-direction:column; width:min(620px,92vw); height:auto; max-height:82vh; font-family:var(--font); }
 .changelog-modal:focus { outline:none; }
 .changelog-modal .settings-header { flex-shrink:0; }
-.changelog-version { margin-inline-start:8px; color:var(--text-3); font-size:var(--type-label); font-weight:400; }
+.changelog-version { margin-inline-start:8px; color:var(--text-2); font-size:var(--type-label); font-weight:400; }
 .changelog-body { min-height:0; overflow-y:auto; padding:6px 24px 24px; color:var(--text-1); font-size:var(--type-body); line-height:1.8; overflow-wrap:anywhere; }
 .changelog-body .md-body > :first-child { margin-top:0; }
 .changelog-body .md-body > :last-child { margin-bottom:0; }
