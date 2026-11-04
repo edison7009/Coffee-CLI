@@ -14,7 +14,7 @@
   width: 100%;
   max-width: 1360px;
   margin: 0 auto;
-  padding: clamp(1rem, 3vh, 2.5rem) 2rem 3rem;
+  padding: clamp(0.5rem, 2vh, 1.5rem) 2rem 3rem;
   text-align: left;
   flex-grow: 0;
 }
@@ -26,7 +26,6 @@
   align-items: flex-start;
 }
 
-.hero-split .opc-university-link { margin-bottom: 1.4rem; }
 .hero-split .hero-content { margin-bottom: 1.6rem; }
 .hero-split .headline {
   font-size: clamp(2.1rem, 3.5vw, 3.1rem);
@@ -38,7 +37,7 @@
 
 .hero-split .downloads-section {
   max-width: none;
-  margin: 0 0 1.4rem;
+  margin: 0;
   padding: 0;
   align-items: flex-start;
   text-align: left;
@@ -47,10 +46,6 @@
 .hero-split .downloads-row { justify-content: flex-start; }
 .hero-split .downloads-note { max-width: 32rem; }
 
-.hero-split .quick-start-container {
-  max-width: 100%;
-  align-items: stretch;
-}
 .hero-split .supported-tools {
   margin: 1.5rem 0 0;
   gap: 1rem;
@@ -63,10 +58,12 @@
 .hero-split .cn-mirrors {
   justify-content: flex-start;
   max-width: none;
-  margin: 0.9rem 0 0;
+  margin: 0.1rem 0 0;
   padding: 0;
 }
-.hero-split .downloads-section { margin-top: 1.5rem; }
+.hero-split .downloads-section { margin-top: 1.8rem; }
+/* The download buttons are the main CTA on the left now. */
+.hero-split .download-btn { padding: 0.8rem 1.35rem; font-size: 0.98rem; }
 
 /* ── Feature stage ─────────────────────────────────────────────────────── */
 .hero-fx {
@@ -75,24 +72,14 @@
   margin: 0;
 }
 
-/* One frame for every clip: same ratio, radius, bezel and shadow, so seven
-   recordings read as one set however each was framed. */
-.fx-stage {
-  padding: 0.55rem;
-  border-radius: 18px;
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.3);
-}
-html[data-theme='dark'] .fx-stage {
-  box-shadow: 0 30px 70px -28px rgba(0, 0, 0, 0.8), 0 0 60px -20px rgba(196, 149, 106, 0.08);
-}
+/* The clip itself is the picture: no bezel, no border. */
+.fx-stage { width: 100%; }
 
 .fx-screen {
   position: relative;
   width: 100%;
   aspect-ratio: 16 / 9;
-  border-radius: 11px;
+  border-radius: 10px;
   overflow: hidden;
   background: #0E0E0F;
   cursor: pointer;
@@ -112,9 +99,8 @@ html[data-theme='dark'] .fx-stage {
 
 /* ── Caption + dots ────────────────────────────────────────────────────── */
 .fx-caption {
-  margin-top: 1.25rem;
-  min-height: 4.4rem;
-  text-align: left;
+  margin-top: 1.1rem;
+  text-align: center;
 }
 .fx-caption-title {
   display: block;
@@ -123,17 +109,19 @@ html[data-theme='dark'] .fx-stage {
   letter-spacing: -0.01em;
   color: var(--text-highlight);
 }
-.fx-caption-body {
-  display: block;
-  margin-top: 0.35rem;
-  font-size: 0.95rem;
-  line-height: 1.55;
-  color: var(--text-secondary);
-}
 .fx-dots {
   display: flex;
+  justify-content: center;
   gap: 0.45rem;
-  margin-top: 0.9rem;
+  margin-top: 0.8rem;
+}
+
+/* ── Command install row: spans the full hero width under both columns ── */
+.hero-split .hero-install {
+  grid-column: 1 / -1;
+  max-width: none;
+  width: 100%;
+  margin-top: clamp(0.5rem, 2vw, 1.5rem);
 }
 .fx-dot {
   position: relative;
@@ -183,7 +171,6 @@ html[data-theme='dark'] .fx-dot { background: rgba(255, 255, 255, 0.16); }
   .hero-split .traffic-lights { display: none; }
   .hero-split .window-body { padding: 1rem; }
   .hero-split code { font-size: 0.75rem; }
-  .fx-caption { min-height: 5.6rem; }
 }
 
 /* ── Reduced motion: no autoplay (handled in JS), no fades ─────────────── */

@@ -2,7 +2,7 @@
  * hero-features.js — the feature showcase on the right of the hero.
  *
  * Plays seven short screen recordings of the real app, one after another,
- * inside one shared frame; the caption under the frame follows the clip.
+ * with a one-line caption under the clip that follows it.
  * Only the active clip is loaded. zh / zh-TW visitors get the Chinese
  * recordings, everyone else the English ones; phones get the 960px encodes.
  *
@@ -143,8 +143,7 @@
     const screen = root.querySelector(".fx-screen");
     const dots = root.querySelector(".fx-dots");
     const titleEl = root.querySelector(".fx-caption-title");
-    const bodyEl = root.querySelector(".fx-caption-body");
-    if (!screen || !dots || !titleEl || !bodyEl) return;
+    if (!screen || !dots || !titleEl) return;
 
     const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)");
     const reduced = () => !!(reduce && reduce.matches);
@@ -202,9 +201,7 @@
     function caption(slide) {
       const dict = (typeof I18N_DICT === "object" && (I18N_DICT[currentLang] || I18N_DICT.en)) || {};
       titleEl.setAttribute("data-i18n", "fx-" + slide.id + "-title");
-      bodyEl.setAttribute("data-i18n", "fx-" + slide.id + "-body");
       titleEl.innerHTML = dict["fx-" + slide.id + "-title"] || CAPTIONS.en[slide.id][0];
-      bodyEl.innerHTML = dict["fx-" + slide.id + "-body"] || CAPTIONS.en[slide.id][1];
     }
 
     function play() {

@@ -15,8 +15,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
   
   <!-- External CSS -->
-  <link rel="stylesheet" href="./css/style.css?v=0.5.0">
-  <link rel="stylesheet" href="./css/hero-features.css?v=1.1.0">
+  <link rel="stylesheet" href="./css/style.css?v=0.5.1">
+  <link rel="stylesheet" href="./css/hero-features.css?v=1.2.0">
 </head>
 <body>
 
@@ -38,12 +38,11 @@
       <span data-i18n="logo-text">Coffee CLI</span>
     </div>
     <nav class="nav-links">
-      <a class="feedback-btn" href="https://tiernote.org/" target="_blank" rel="noopener noreferrer">TierNote</a>
+      <a class="feedback-btn nav-101" href="./courses/claude-code.html" id="opc-link"><span data-i18n="opc-link">Coffee 101</span></a>
       <a class="icon-switch" href="https://github.com/edison7009/Coffee-CLI" target="_blank" rel="noopener noreferrer" aria-label="GitHub Repository">
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56 0-.27-.01-1-.02-1.97-3.2.7-3.87-1.54-3.87-1.54-.52-1.33-1.28-1.69-1.28-1.69-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.03 1.76 2.69 1.25 3.35.96.1-.74.4-1.25.73-1.54-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.28 1.18-3.08-.12-.29-.51-1.46.11-3.05 0 0 .96-.31 3.15 1.18a10.9 10.9 0 0 1 5.74 0c2.18-1.49 3.14-1.18 3.14-1.18.62 1.59.23 2.76.11 3.05.74.8 1.18 1.82 1.18 3.08 0 4.42-2.69 5.39-5.25 5.68.41.36.78 1.06.78 2.13 0 1.54-.01 2.78-.01 3.16 0 .31.21.68.8.56C20.21 21.39 23.5 17.07 23.5 12 23.5 5.65 18.35.5 12 .5Z"/></svg>
       </a>
       <a class="feedback-btn" href="https://github.com/edison7009/Coffee-CLI/issues" target="_blank" rel="noopener noreferrer" data-i18n="feedback">Feedback</a>
-      <a class="enterprise-btn" href="#enterprise" data-i18n="enterprise">Enterprise</a>
       <button class="icon-switch" id="theme-toggle" aria-label="Toggle Theme">
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="theme-icon"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg>
       </button>
@@ -66,11 +65,6 @@
   <!-- Main Hero Section: copy + CTA on the left, feature showcase on the right -->
   <main class="hero-section hero-split">
     <div class="hero-copy">
-      <!-- Coffee 101 Link -->
-      <a href="./courses/claude-code.html" class="opc-university-link" id="opc-link">
-        <span data-i18n="opc-link">Coffee 101</span>
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-      </a>
       <div class="hero-content">
         <h1 class="headline">
           <span class="static-text" data-i18n="hero-title-1">Enjoy life while you work.</span><br/>
@@ -84,60 +78,6 @@
         </p>
       </div>
 
-      <!-- Quick Start Installation Window -->
-      <div class="quick-start-container">
-        <div class="mac-window">
-          <!-- Window Header (Traffic Lights & Tabs) -->
-          <div class="window-header">
-            <div class="traffic-lights">
-              <div class="dot red"></div>
-              <div class="dot yellow"></div>
-              <div class="dot green"></div>
-            </div>
-          
-            <div class="platform-tabs">
-              <button class="tab-btn active" data-platform="windows">Windows</button>
-              <button class="tab-btn" data-platform="macos">macOS</button>
-              <button class="tab-btn" data-platform="linux">Linux</button>
-            </div>
-          
-            <div class="header-spacer"></div>
-          </div>
-
-          <!-- Window Body (Instructions & Commands) -->
-          <div class="window-body">
-            <div class="instruction-hint" id="install-hint">
-              Right-click Start > Terminal (Admin) > Paste:
-            </div>
-            <div class="code-block">
-              <span class="prompt-symbol">$</span>
-              <code id="install-command">iwr -useb https://coffeecli.com/install.ps1 | iex</code>
-              <button id="copy-btn" class="copy-button" aria-label="Copy to clipboard">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                </svg>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Mainland China download mirrors. Hidden by default; main.js renderI18N()
-           unhides this row when currentLang is "zh" or "zh-TW", since these mirrors
-           only matter for users where GitHub Releases is slow or unreachable. The
-           brand names live in the i18n dict so zh-TW gets traditional characters
-           (網盤 / 雲盤) without needing a second DOM node. -->
-      <section class="cn-mirrors" id="cn-mirrors" hidden>
-        <span class="cn-mirrors-title" data-i18n="cn-mirrors-title">其他下载渠道：</span>
-        <a href="https://pan.baidu.com/s/1mNUkPk1IQD8A-Ga_os_BHQ?pwd=cm74" target="_blank" rel="noopener" data-i18n="cn-mirrors-baidu">百度网盘</a>
-        <span class="cn-mirrors-sep">·</span>
-        <a href="https://pan.quark.cn/s/fe37fca17aed" target="_blank" rel="noopener" data-i18n="cn-mirrors-quark">夸克网盘</a>
-        <span class="cn-mirrors-sep">·</span>
-        <a href="https://1842244417.share.123865.com/123pan/rqi0Td-7QmxH" target="_blank" rel="noopener" data-i18n="cn-mirrors-123">123云盘</a>
-        <span class="cn-mirrors-sep">|</span>
-        <a href="https://gitcode.com/edison7009/Coffee-CLI/issues" target="_blank" rel="noopener" data-i18n="cn-mirrors-feedback">国内用户问题反馈</a>
-      </section>
 
       <!-- Direct Download Section ------------------------------------------------
            For users who prefer click-and-install over running the install
@@ -146,7 +86,6 @@
            Release asset for that platform; if the asset isn't uploaded yet
            (CI mid-build), the worker returns 404 and the user can retry. -->
       <section class="downloads-section">
-        <p class="downloads-title" data-i18n="downloads-title">Or download the desktop app</p>
         <div class="downloads-row">
           <a class="download-btn" href="/download/windows" data-platform="windows">
             <svg class="dl-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -170,6 +109,21 @@
             <span class="dl-suffix">.deb</span>
           </a>
         </div>
+        <!-- Mainland China download mirrors. Hidden by default; main.js renderI18N()
+             unhides this row when currentLang is "zh" or "zh-TW", since these mirrors
+             only matter for users where GitHub Releases is slow or unreachable. The
+             brand names live in the i18n dict so zh-TW gets traditional characters
+             (網盤 / 雲盤) without needing a second DOM node. -->
+        <section class="cn-mirrors" id="cn-mirrors" hidden>
+          <span class="cn-mirrors-title" data-i18n="cn-mirrors-title">其他下载渠道：</span>
+          <a href="https://pan.baidu.com/s/1mNUkPk1IQD8A-Ga_os_BHQ?pwd=cm74" target="_blank" rel="noopener" data-i18n="cn-mirrors-baidu">百度网盘</a>
+          <span class="cn-mirrors-sep">·</span>
+          <a href="https://pan.quark.cn/s/fe37fca17aed" target="_blank" rel="noopener" data-i18n="cn-mirrors-quark">夸克网盘</a>
+          <span class="cn-mirrors-sep">·</span>
+          <a href="https://1842244417.share.123865.com/123pan/rqi0Td-7QmxH" target="_blank" rel="noopener" data-i18n="cn-mirrors-123">123云盘</a>
+          <span class="cn-mirrors-sep">|</span>
+          <a href="https://gitcode.com/edison7009/Coffee-CLI/issues" target="_blank" rel="noopener" data-i18n="cn-mirrors-feedback">国内用户问题反馈</a>
+        </section>
         <p class="downloads-note" data-i18n="downloads-note">
           <strong>macOS:</strong> if it won't open on first launch, run <code>xattr -cr '/Applications/Coffee CLI.app'</code> in Terminal, then reopen. <strong>Linux:</strong> may need extra terminal steps after download.
         </p>
@@ -211,10 +165,48 @@
       </div>
       <figcaption class="fx-caption" aria-live="polite">
         <span class="fx-caption-title"></span>
-        <span class="fx-caption-body"></span>
       </figcaption>
       <div class="fx-dots" role="group" aria-label="Features"></div>
     </figure>
+
+    <!-- Command install: its own full-width row under the hero -->
+    <div class="quick-start-container hero-install">
+      <div class="mac-window">
+        <!-- Window Header (Traffic Lights & Tabs) -->
+        <div class="window-header">
+          <div class="traffic-lights">
+            <div class="dot red"></div>
+            <div class="dot yellow"></div>
+            <div class="dot green"></div>
+          </div>
+        
+          <div class="platform-tabs">
+            <button class="tab-btn active" data-platform="windows">Windows</button>
+            <button class="tab-btn" data-platform="macos">macOS</button>
+            <button class="tab-btn" data-platform="linux">Linux</button>
+          </div>
+        
+          <div class="header-spacer"></div>
+        </div>
+
+        <!-- Window Body (Instructions & Commands) -->
+        <div class="window-body">
+          <div class="instruction-hint" id="install-hint">
+            Right-click Start > Terminal (Admin) > Paste:
+          </div>
+          <div class="code-block">
+            <span class="prompt-symbol">$</span>
+            <code id="install-command">iwr -useb https://coffeecli.com/install.ps1 | iex</code>
+            <button id="copy-btn" class="copy-button" aria-label="Copy to clipboard">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </main>
 
 
@@ -242,6 +234,6 @@
   </footer>
 
   <script src="./js/main.js?v=0.9.15"></script>
-  <script src="./js/hero-features.js?v=1.1.0"></script>
+  <script src="./js/hero-features.js?v=1.2.0"></script>
 </body>
 </html>
