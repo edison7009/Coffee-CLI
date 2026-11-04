@@ -8,7 +8,8 @@
 .hero-section.hero-split {
   display: grid;
   grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.2fr);
-  align-items: center;
+  /* Top-aligned: the clip dots share a line with the eyebrow on the left. */
+  align-items: start;
   gap: clamp(2rem, 4vw, 4rem);
   width: 100%;
   max-width: 1360px;
@@ -139,7 +140,66 @@ html[data-theme='dark'] .fx-screen {
   height: 100%;
   object-fit: cover;
   display: block;
+  opacity: 0;
+  transition: opacity 0.45s ease;
 }
+.fx-video.is-on { opacity: 1; }
+
+/* ── Clip dots: seven dots on the eyebrow line; the active one expands
+      into a pill with its name and a playback progress fill. ─────────── */
+.fx-dots {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  min-height: 1.6rem;
+  margin: -0.2rem 0 1.05rem;
+}
+.fx-dot {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 0.6rem;
+  min-width: 0.6rem;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  overflow: hidden;
+  cursor: pointer;
+  background: rgba(127, 127, 127, 0.35);
+  font: 500 0.78rem/1 var(--font-primary);
+  color: var(--text-highlight);
+  transition: height 0.3s ease, padding 0.3s ease, background-color 0.3s ease;
+}
+html[data-theme='dark'] .fx-dot { background: rgba(255, 255, 255, 0.22); }
+.fx-dot:hover:not(:disabled) { background: rgba(127, 127, 127, 0.55); }
+.fx-dot.is-soon { opacity: 0.4; cursor: default; }
+.fx-dot-fill {
+  position: absolute;
+  inset: 0;
+  background: var(--brand-color);
+  opacity: 0.28;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.25s linear;
+}
+.fx-dot-label {
+  position: relative;
+  max-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-width 0.4s ease, opacity 0.3s ease;
+}
+.fx-dot.is-on,
+html[data-theme='dark'] .fx-dot.is-on {
+  height: 1.6rem;
+  padding: 0 0.8rem;
+  background: hsla(28, 42%, 59%, 0.16);
+  box-shadow: inset 0 0 0 1px hsla(28, 42%, 59%, 0.45);
+}
+.fx-dot.is-on .fx-dot-label { max-width: 14rem; opacity: 1; }
+.fx-dot:focus-visible { outline: 2px solid var(--brand-color); outline-offset: 3px; }
 
 /* ── Command install row: spans the full hero width under both columns ── */
 .hero-split .hero-install {
@@ -150,6 +210,10 @@ html[data-theme='dark'] .fx-screen {
 }
 
 /* ── Responsive ────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .fx-video, .fx-dot, .fx-dot-fill, .fx-dot-label { transition: none; }
+}
+
 @media (max-width: 960px) {
   /* Narrow: icons drop under the tabs on their own centered line. */
   .hero-install .window-header { grid-template-columns: 1fr; justify-items: center; }

@@ -65,70 +65,165 @@
     }
   };
 
+  // Seven feature clips over the hero image. A clip with no file yet keeps its
+  // dot dimmed and skipped; drop demo/<file>.webm + demo/<file>-poster.webp in
+  // and set `file` to light it up.
+  const FEATURES = [
+    { id: "split", file: "split-view" },
+    { id: "agents", file: null },
+    { id: "usage", file: null },
+    { id: "themes", file: null },
+    { id: "modes", file: null },
+    { id: "changes", file: null },
+    { id: "tasks", file: null }
+  ];
+
+  // One short label per clip, shown inside the active (expanded) dot.
+  const LABELS = {
+    en: { split: "Drag to split", agents: "Multi-agent", usage: "Usage meter", themes: "Themes & styles", modes: "Desktop / terminal", changes: "Changes & PRs", tasks: "To-do prompts" },
+    zh: { split: "拖拽分屏", agents: "多智能体编排", usage: "额度显示", themes: "配色与形态", modes: "桌面 / 终端", changes: "改动 / 对比 / PR", tasks: "ToDo 预输入" },
+    "zh-TW": { split: "拖曳分割", agents: "多智能體編排", usage: "額度顯示", themes: "配色與形態", modes: "桌面 / 終端機", changes: "改動 / 對比 / PR", tasks: "ToDo 預輸入" },
+    ja: { split: "ドラッグで分割", agents: "マルチエージェント", usage: "利用枠表示", themes: "配色とスタイル", modes: "デスクトップ / ターミナル", changes: "変更 / 差分 / PR", tasks: "ToDo 事前入力" },
+    ko: { split: "드래그 분할", agents: "멀티 에이전트", usage: "사용량 표시", themes: "색상과 스타일", modes: "데스크톱 / 터미널", changes: "변경 / 비교 / PR", tasks: "ToDo 미리 입력" },
+    es: { split: "Dividir arrastrando", agents: "Multiagente", usage: "Uso y saldo", themes: "Temas y estilos", modes: "Escritorio / terminal", changes: "Cambios y PR", tasks: "Prompts en lista" },
+    fr: { split: "Glisser pour partager", agents: "Multi-agents", usage: "Quotas", themes: "Thèmes et styles", modes: "Bureau / terminal", changes: "Modifications et PR", tasks: "Prompts en liste" },
+    de: { split: "Split per Drag", agents: "Multi-Agent", usage: "Kontingent", themes: "Farben & Stile", modes: "Desktop / Terminal", changes: "Änderungen & PRs", tasks: "To-do-Prompts" },
+    pt: { split: "Dividir arrastando", agents: "Multiagente", usage: "Uso e saldo", themes: "Temas e estilos", modes: "Desktop / terminal", changes: "Alterações e PRs", tasks: "Prompts em lista" },
+    ru: { split: "Разделение экрана", agents: "Мультиагенты", usage: "Лимиты", themes: "Темы и стили", modes: "Стол / терминал", changes: "Изменения и PR", tasks: "Список задач" }
+  };
+
   if (typeof I18N_DICT === "object") {
     Object.keys(HERO_COPY).forEach(function (lang) {
-      Object.assign(I18N_DICT[lang] || (I18N_DICT[lang] = {}), HERO_COPY[lang]);
+      const dict = I18N_DICT[lang] || (I18N_DICT[lang] = {});
+      Object.assign(dict, HERO_COPY[lang]);
+      Object.keys(LABELS[lang] || {}).forEach(function (id) {
+        dict["fxl-" + id] = LABELS[lang][id];
+      });
     });
   }
-
-  const CLIP = "demo/split-view.webm";
-  const POSTER = "demo/split-view-poster.webp";
 
   function init() {
     const root = document.getElementById("hero-features");
     const screen = root && root.querySelector(".fx-screen");
-    if (!screen) return;
+    const dots = root && root.querySelector(".fx-dots");
+    if (!screen || !dots) return;
 
     const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)");
     const reduced = () => !!(reduce && reduce.matches);
+    const dict = () => (typeof I18N_DICT === "object" && (I18N_DICT[currentLang] || I18N_DICT.en)) || {};
 
-    const video = document.createElement("video");
-    video.className = "fx-video is-on";
-    video.muted = true;
-    video.defaultMuted = true;
-    video.loop = true;
-    video.playsInline = true;
-    video.setAttribute("muted", "");
-    video.setAttribute("playsinline", "");
-    video.preload = "none";
-    video.width = 1920;
-    video.height = 1080;
-    video.poster = POSTER;
-    video.setAttribute("aria-hidden", "true");
-    screen.appendChild(video);
+    const slides = FEATURES.map(function (f, i) {
+      const dot = document.createElement("button");
+      dot.type = "button";
+      dot.className = "fx-dot";
+      dot.innerHTML = '<span class="fx-dot-fill"></span><span class="fx-dot-label" data-i18n="fxl-' + f.id + '"></span>';
+      const label = dot.querySelector(".fx-dot-label");
+      label.innerHTML = dict()["fxl-" + f.id] || LABELS.en[f.id];
+      dot.setAttribute("aria-label", label.textContent);
+      dots.appendChild(dot);
 
+      const slide = { f: f, dot: dot, fill: dot.firstChild, video: null };
+      if (!f.file) {
+        dot.disabled = true;
+        dot.classList.add("is-soon");
+        return slide;
+      }
+      dot.addEventListener("click", function () { show(i, true); });
+
+      const video = document.createElement("video");
+      video.className = "fx-video";
+      video.muted = true;
+      video.defaultMuted = true;
+      video.playsInline = true;
+      video.setAttribute("muted", "");
+      video.setAttribute("playsinline", "");
+      video.preload = "none";
+      video.width = 1920;
+      video.height = 1080;
+      video.poster = "demo/" + f.file + "-poster.webp";
+      video.setAttribute("aria-hidden", "true");
+      screen.appendChild(video);
+      slide.video = video;
+
+      video.addEventListener("ended", function () {
+        if (i === current) next();
+      });
+      video.addEventListener("timeupdate", function () {
+        if (i !== current || !video.duration) return;
+        slide.fill.style.transform = "scaleX(" + (video.currentTime / video.duration).toFixed(3) + ")";
+      });
+      return slide;
+    });
+
+    const playable = slides.filter(function (s) { return s.video; });
+    if (!playable.length) return;
+    // A single clip simply loops; with several, each plays once then hands over.
+    if (playable.length === 1) playable[0].video.loop = true;
+
+    let current = -1;
     let visible = true;
-    let loaded = false;
 
-    // Attach the clip on first play so a page that never shows it never downloads it.
-    function source() {
-      if (loaded) return;
-      loaded = true;
-      video.src = CLIP;
+    function load(slide) {
+      // Attach the file on first play so unseen clips never download.
+      if (!slide.video.getAttribute("src")) slide.video.src = "demo/" + slide.f.file + ".webm";
     }
 
     function sync() {
-      source();
+      if (current < 0) return;
+      const v = slides[current].video;
       if (reduced() || !visible || document.hidden) {
-        video.pause();
+        v.pause();
         return;
       }
-      const p = video.play();
+      load(slides[current]);
+      const p = v.play();
       if (p && p.catch) p.catch(function () {});
     }
 
-    // Reduced motion: the clip waits on its poster; a click plays / pauses it.
-    screen.addEventListener("click", function () {
-      source();
-      if (video.paused) {
-        const p = video.play();
+    function next() {
+      let i = current;
+      do { i = (i + 1) % slides.length; } while (!slides[i].video);
+      show(i, false);
+    }
+
+    function show(i, fromUser) {
+      if (current >= 0 && current !== i) {
+        const old = slides[current];
+        old.video.pause();
+        old.video.classList.remove("is-on");
+        old.dot.classList.remove("is-on");
+        old.dot.removeAttribute("aria-current");
+        old.fill.style.transform = "";
+      }
+      current = i;
+      const s = slides[i];
+      try { s.video.currentTime = 0; } catch (e) { /* not loaded yet */ }
+      s.video.classList.add("is-on");
+      s.dot.classList.add("is-on");
+      s.dot.setAttribute("aria-current", "true");
+      if (fromUser && reduced()) {
+        // Reduced motion: an explicit click still plays the clip.
+        load(s);
+        const p = s.video.play();
         if (p && p.catch) p.catch(function () {});
       } else {
-        video.pause();
+        sync();
+      }
+    }
+
+    // Clicking the picture plays / pauses it.
+    screen.addEventListener("click", function () {
+      const s = slides[current];
+      load(s);
+      if (s.video.paused) {
+        const p = s.video.play();
+        if (p && p.catch) p.catch(function () {});
+      } else {
+        s.video.pause();
       }
     });
 
-    sync();
+    show(slides.indexOf(playable[0]), false);
     if ("IntersectionObserver" in window) {
       new IntersectionObserver(function (entries) {
         visible = entries[0].isIntersecting;
@@ -137,6 +232,17 @@
     }
     document.addEventListener("visibilitychange", sync);
     if (reduce && reduce.addEventListener) reduce.addEventListener("change", sync);
+
+    // Keep the dots' accessible names in step with language changes.
+    if (typeof window.renderI18N === "function") {
+      const render = window.renderI18N;
+      window.renderI18N = function () {
+        render.apply(this, arguments);
+        slides.forEach(function (s) {
+          s.dot.setAttribute("aria-label", s.dot.querySelector(".fx-dot-label").textContent);
+        });
+      };
+    }
   }
 
   if (document.readyState === "loading") {
