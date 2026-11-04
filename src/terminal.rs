@@ -522,6 +522,31 @@ pub(crate) fn claude_launch_token(args: &mut Vec<String>, assign_new: bool) -> O
     token
 }
 
+/// Pi 0.76+ accepts `--session-id <id>` (opens that project session, creating
+/// it when missing), so a fresh tab owns its native id from launch and the
+/// history row merges with the live tab instead of duplicating it (#180).
+/// Older Pi swallows the unknown `--flag value` pair as an extension flag.
+pub(crate) fn pi_launch_token(args: &mut Vec<String>, assign_new: bool) -> Option<String> {
+    let mut token = None;
+    let mut has_selector = false;
+    for (index, arg) in args.iter().enumerate() {
+        if matches!(arg.as_str(), "--session" | "--session-id") {
+            has_selector = true;
+            // `--session` also takes a path or partial id; only a full UUID is a usable identity.
+            token = args.get(index + 1).filter(|value| uuid::Uuid::parse_str(value).is_ok()).cloned();
+        } else if matches!(arg.as_str(), "--continue" | "-c" | "--resume" | "-r" | "--fork" | "--no-session") {
+            // These pick another conversation, or none; `--session-id` conflicts with them.
+            return None;
+        }
+    }
+    if !has_selector && assign_new {
+        let id = uuid::Uuid::new_v4().to_string();
+        args.extend(["--session-id".to_string(), id.clone()]);
+        token = Some(id);
+    }
+    token
+}
+
 // ─── Spawn ────────────────────────────────────────────────
 
 pub(crate) fn shell_working_directory(path: &std::path::Path) -> anyhow::Result<std::path::PathBuf> {
@@ -1266,6 +1291,29 @@ mod tests {
         let mut custom = vec!["wrapper-arg".to_string()];
         assert_eq!(claude_launch_token(&mut custom, false), None);
         assert_eq!(custom, vec!["wrapper-arg".to_string()]);
+    }
+
+    #[test]
+    fn pi_fresh_launch_owns_its_history_identity() {
+        let mut fresh = Vec::new();
+        let id = pi_launch_token(&mut fresh, true).unwrap();
+        assert_eq!(fresh, vec!["--session-id".to_string(), id.clone()]);
+        assert_eq!(pi_launch_token(&mut fresh, true), Some(id.clone()));
+        for flag in ["--session", "--session-id"] {
+            let mut args = vec![flag.to_string(), id.clone()];
+            let original = args.clone();
+            assert_eq!(pi_launch_token(&mut args, true), Some(id.clone()));
+            assert_eq!(args, original);
+        }
+        for flags in [vec!["--session", "/tmp/a.jsonl"], vec!["--continue"], vec!["-c"], vec!["--resume"], vec!["--fork", "abc"], vec!["--no-session"]] {
+            let mut args: Vec<String> = flags.iter().map(|value| value.to_string()).collect();
+            let original = args.clone();
+            assert_eq!(pi_launch_token(&mut args, true), None);
+            assert_eq!(args, original);
+        }
+        let mut custom = Vec::new();
+        assert_eq!(pi_launch_token(&mut custom, false), None);
+        assert!(custom.is_empty());
     }
 
     #[cfg(windows)]

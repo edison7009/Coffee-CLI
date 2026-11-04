@@ -988,6 +988,8 @@ fn tier_terminal_start_blocking(
     let mut args = args;
     let native_token = if tool.as_deref() == Some("claude") {
         terminal::claude_launch_token(&mut args, launch_config.command.trim().is_empty())
+    } else if tool.as_deref() == Some("pi") {
+        terminal::pi_launch_token(&mut args, launch_config.command.trim().is_empty())
     } else {
         None
     };
