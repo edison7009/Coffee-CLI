@@ -1,5 +1,6 @@
 /**
- * hero-features.js — the feature showcase on the right of the hero.
+ * hero-features.js — hero copy (all languages) and the feature showcase
+ * on the right of the hero.
  *
  * Plays seven short screen recordings of the real app, one after another,
  * with a one-line caption under the clip that follows it.
@@ -121,6 +122,72 @@
   // Fallback hop if a clip cannot play (autoplay refused, decode error).
   const FALLBACK_MS = 9000;
 
+
+  // Hero copy (left column): eyebrow, two-line title, lead, feature tags.
+  const L = (a, b) => '<span class="hx-line">' + a + '</span><span class="hx-line">' + b + "</span>";
+  const HERO_COPY = {
+    en: {
+      "hx-eyebrow": "Free &amp; open source · Windows / macOS / Linux",
+      "hx-title": L("Give your terminal AI agents", "a desktop, <em>beautifully</em>."),
+      "hx-lead": "Claude Code, Codex, OpenCode, Pi and other command-line AIs get a good-looking, easy desktop in Coffee CLI.",
+      "hx-tags": "# drag-to-split · multi-agent · usage meter · 12 themes · diff view · task list"
+    },
+    zh: {
+      "hx-eyebrow": "免费开源 · Windows / macOS / Linux",
+      "hx-title": L("让终端里的 AI Agent", "用上桌面，<em>美得不可方物</em>"),
+      "hx-lead": "Claude Code、Codex、OpenCode、Pi 这些命令行 AI，在 Coffee CLI 里都有了好看又顺手的桌面。",
+      "hx-tags": "# 拖拽分屏 · 多智能体编排 · 额度显示 · 12 种配色 · 改动对比 · 任务列表"
+    },
+    "zh-TW": {
+      "hx-eyebrow": "免費開源 · Windows / macOS / Linux",
+      "hx-title": L("讓終端機裡的 AI Agent", "用上桌面，<em>美得不可方物</em>"),
+      "hx-lead": "Claude Code、Codex、OpenCode、Pi 這些命令列 AI，在 Coffee CLI 裡都有了好看又順手的桌面。",
+      "hx-tags": "# 拖曳分割 · 多智能體編排 · 額度顯示 · 12 種配色 · 改動對比 · 任務清單"
+    },
+    ja: {
+      "hx-eyebrow": "無料・オープンソース · Windows / macOS / Linux",
+      "hx-title": L("ターミナルの AI エージェントに", "<em>美しい</em>デスクトップを。"),
+      "hx-lead": "Claude Code、Codex、OpenCode、Pi などのコマンドライン AI が、Coffee CLI で見やすく使いやすいデスクトップに。",
+      "hx-tags": "# ドラッグで分割 · マルチエージェント · 利用枠表示 · 12 テーマ · 差分表示 · タスクリスト"
+    },
+    ko: {
+      "hx-eyebrow": "무료 오픈 소스 · Windows / macOS / Linux",
+      "hx-title": L("터미널 속 AI 에이전트에", "<em>아름다운</em> 데스크톱을."),
+      "hx-lead": "Claude Code, Codex, OpenCode, Pi 같은 명령줄 AI가 Coffee CLI에서 보기 좋고 쓰기 편한 데스크톱을 얻습니다.",
+      "hx-tags": "# 드래그 분할 · 멀티 에이전트 · 사용량 표시 · 12가지 테마 · 변경 비교 · 작업 목록"
+    },
+    es: {
+      "hx-eyebrow": "Gratis y de código abierto · Windows / macOS / Linux",
+      "hx-title": L("Dale a tus agentes de IA", "un escritorio <em>precioso</em>."),
+      "hx-lead": "Claude Code, Codex, OpenCode, Pi y otras IA de terminal tienen en Coffee CLI un escritorio bonito y cómodo.",
+      "hx-tags": "# dividir arrastrando · multiagente · uso y saldo · 12 temas · cambios · lista de tareas"
+    },
+    fr: {
+      "hx-eyebrow": "Gratuit et open source · Windows / macOS / Linux",
+      "hx-title": L("Offrez à vos agents IA", "un bureau <em>magnifique</em>."),
+      "hx-lead": "Claude Code, Codex, OpenCode, Pi et les autres IA en ligne de commande ont enfin un bureau beau et pratique avec Coffee CLI.",
+      "hx-tags": "# écran partagé · multi-agents · quotas · 12 thèmes · modifications · liste de tâches"
+    },
+    de: {
+      "hx-eyebrow": "Kostenlos &amp; Open Source · Windows / macOS / Linux",
+      "hx-title": L("Gib deinen Terminal-KI-Agenten", "einen <em>wunderschönen</em> Desktop."),
+      "hx-lead": "Claude Code, Codex, OpenCode, Pi und andere Kommandozeilen-KIs bekommen in Coffee CLI einen schönen, bequemen Desktop.",
+      "hx-tags": "# Split per Drag · Multi-Agent · Kontingent · 12 Themes · Änderungen · Aufgabenliste"
+    },
+    pt: {
+      "hx-eyebrow": "Grátis e de código aberto · Windows / macOS / Linux",
+      "hx-title": L("Dê aos seus agentes de IA", "um desktop <em>lindo</em>."),
+      "hx-lead": "Claude Code, Codex, OpenCode, Pi e outras IAs de terminal ganham no Coffee CLI um desktop bonito e fácil de usar.",
+      "hx-tags": "# dividir arrastando · multiagente · uso e saldo · 12 temas · alterações · lista de tarefas"
+    },
+    ru: {
+      "hx-eyebrow": "Бесплатно и с открытым кодом · Windows / macOS / Linux",
+      "hx-title": L("Дайте ИИ-агентам из терминала", "<em>красивый</em> рабочий стол."),
+      "hx-lead": "Claude Code, Codex, OpenCode, Pi и другие ИИ для командной строки получают в Coffee CLI красивый и удобный рабочий стол.",
+      "hx-tags": "# разделение перетаскиванием · мультиагенты · лимиты · 12 тем · изменения · задачи"
+    }
+  };
+
   // Merge captions into main.js's dictionary before it renders.
   if (typeof I18N_DICT === "object") {
     Object.keys(CAPTIONS).forEach(function (lang) {
@@ -129,6 +196,7 @@
         dict["fx-" + id + "-title"] = CAPTIONS[lang][id][0];
         dict["fx-" + id + "-body"] = CAPTIONS[lang][id][1];
       });
+      Object.assign(dict, HERO_COPY[lang] || {});
     });
   }
 

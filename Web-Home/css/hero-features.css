@@ -26,26 +26,56 @@
   align-items: flex-start;
 }
 
-/* Headline (3 lines) + subtitle: four rows with one equal gap between them. */
+/* Hero copy: eyebrow → two-line title → one lead sentence → feature tags. */
 .hero-split .hero-content {
-  --hero-row-gap: 1.15rem;
   display: flex;
   flex-direction: column;
-  gap: var(--hero-row-gap);
-  margin-bottom: 0.4rem;
-}
-.hero-split .headline {
-  display: flex;
-  flex-direction: column;
-  gap: var(--hero-row-gap);
+  align-items: flex-start;
   margin: 0;
-  font-size: clamp(1.8rem, 2.7vw, 2.5rem);
-  line-height: 1.1;
 }
-.hero-split .headline br { display: none; }
-/* Keep the typewriter row one line tall even while it is empty. */
-.hero-split .dynamic-wrapper { display: block; min-height: 1.1em; white-space: nowrap; }
-.hero-split .subtitle { margin: 0; max-width: 30rem; line-height: 1.4; }
+.hx-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0 0 1.4rem;
+  font: 400 0.82rem/1.4 var(--font-mono);
+  letter-spacing: 0.01em;
+  color: var(--text-secondary);
+}
+.hx-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 2px;
+  background: var(--brand-color);
+  box-shadow: 0 0 0 3px hsla(28, 42%, 59%, 0.18);
+}
+.hx-title {
+  margin: 0;
+  font-size: clamp(2rem, 3.2vw, 3rem);
+  font-weight: 700;
+  line-height: 1.18;
+  letter-spacing: -0.035em;
+  color: var(--text-highlight);
+}
+.hx-line { display: block; }
+.hx-title em {
+  font-style: normal;
+  color: var(--brand-color);
+}
+.hx-lead {
+  margin: 1.25rem 0 0;
+  max-width: 34rem;
+  font-size: clamp(0.98rem, 1.15vw, 1.08rem);
+  line-height: 1.75;
+  color: var(--text-secondary);
+}
+.hx-tags {
+  margin: 1rem 0 0;
+  max-width: 34rem;
+  font: 400 0.8rem/1.7 var(--font-mono);
+  color: var(--text-secondary);
+  opacity: 0.75;
+}
 
 .hero-split .downloads-section {
   max-width: none;
@@ -79,7 +109,7 @@
   margin: 0.1rem 0 0;
   padding: 0;
 }
-.hero-split .downloads-section { margin-top: 2.6rem; gap: 1.1rem; }
+.hero-split .downloads-section { margin-top: 2.2rem; gap: 1.1rem; }
 /* The download buttons are the main CTA on the left now. */
 .hero-split .download-btn { padding: 0.8rem 1.35rem; font-size: 0.98rem; }
 
@@ -181,7 +211,7 @@ html[data-theme='dark'] .fx-dot { background: rgba(255, 255, 255, 0.16); }
 }
 
 @media (max-width: 600px) {
-  .hero-split .headline { font-size: 1.75rem; }
+  .hx-title { font-size: 1.85rem; }
   .hero-split .downloads-row {
     flex-direction: row;
     max-width: none;
