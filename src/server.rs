@@ -988,7 +988,12 @@ fn tier_terminal_start_blocking(
     let mut args = args;
     let native_token = if tool.as_deref() == Some("claude") {
         terminal::claude_launch_token(&mut args, launch_config.command.trim().is_empty())
-    } else if tool.as_deref() == Some("pi") {
+    } else {
+        None
+    };
+    // Pi writes the session only after the first message (and Pi before 0.76
+    // ignores `--session-id`), so its id is reported once the file exists.
+    let pi_token = if tool.as_deref() == Some("pi") {
         terminal::pi_launch_token(&mut args, launch_config.command.trim().is_empty())
     } else {
         None
@@ -1067,9 +1072,25 @@ fn tier_terminal_start_blocking(
         let _ = app.emit("tier-terminal-token", terminal::SessionTokenPayload { id: session_id.clone(), token });
     }
 
+    if let Some(token) = pi_token {
+        let root = crate::tools::find("pi").and_then(|t| Some(history_root(t, t.history_shape.as_ref()?, &dirs::home_dir()?)));
+        if let Some(root) = root {
+            let suffix = format!("_{token}.jsonl");
+            watch_session_token(app.clone(), terminal_session.clone(), session_id.clone(), false, move || {
+                pi_session_written(&root, &suffix).then(|| token.clone())
+            });
+        }
+    }
     #[cfg(unix)]
     if tool.as_deref() == Some("omp") {
-        watch_omp_session_token(app.clone(), terminal_session.clone(), session_id.clone(), launched_at);
+        let tty = terminal_session.lock().ok()
+            .and_then(|map| map.get(&session_id).map(|s| s._master.clone()))
+            .and_then(|master| master.lock().ok().and_then(|m| m.as_ref().and_then(|m| m.tty_name())));
+        if let Some(tty) = tty {
+            watch_session_token(app.clone(), terminal_session.clone(), session_id.clone(), true, move || {
+                terminal::omp_terminal_token(&tty, launched_at)
+            });
+        }
     }
 
     // Emit the initial CWD to the frontend so the left panel can map immediately.
@@ -1218,31 +1239,41 @@ struct SavedSession {
     worktree_cwd: Option<String>,
 }
 
-/// Follow the breadcrumb omp keeps for this tab's TTY, for the PTY's whole
-/// life (an in-app `/new` switches sessions), and report each new native id.
-#[cfg(unix)]
-fn watch_omp_session_token(
+/// Poll `probe` once a second for this PTY's native id and report it. With
+/// `follow`, keep watching for the PTY's whole life (omp's in-app `/new`
+/// switches sessions); otherwise stop at the first id.
+fn watch_session_token(
     app: tauri::AppHandle,
     sessions: terminal::SharedSession,
     session_id: String,
-    launched_at: std::time::SystemTime,
+    follow: bool,
+    probe: impl Fn() -> Option<String> + Send + 'static,
 ) {
     let Some(master) = sessions.lock().ok().and_then(|map| map.get(&session_id).map(|s| s._master.clone())) else { return };
-    let Some(tty) = master.lock().ok().and_then(|m| m.as_ref().and_then(|m| m.tty_name())) else { return };
     std::thread::spawn(move || loop {
         std::thread::sleep(std::time::Duration::from_secs(1));
-        let token = terminal::omp_terminal_token(&tty, launched_at);
+        let token = probe();
         let Ok(map) = sessions.lock() else { return };
         // Stop once this PTY is gone or the id was reused by a restart.
         let Some(session) = map.get(&session_id).filter(|s| std::sync::Arc::ptr_eq(&s._master, &master)) else { return };
         let Some(token) = token else { continue };
         let Ok(mut current) = session.session_token.lock() else { return };
-        if current.as_deref() == Some(token.as_str()) { continue }
-        *current = Some(token.clone());
-        drop(current);
-        drop(map);
-        let _ = app.emit("tier-terminal-token", terminal::SessionTokenPayload { id: session_id.clone(), token });
+        if current.as_deref() != Some(token.as_str()) {
+            *current = Some(token.clone());
+            drop(current);
+            drop(map);
+            let _ = app.emit("tier-terminal-token", terminal::SessionTokenPayload { id: session_id.clone(), token });
+        }
+        if !follow { return; }
     });
+}
+
+/// Pi keeps `<root>/--<encoded-cwd>--/<ts>_<id>.jsonl`; true once that file exists.
+fn pi_session_written(root: &std::path::Path, suffix: &str) -> bool {
+    std::fs::read_dir(root).into_iter().flatten().flatten().any(|bucket| {
+        std::fs::read_dir(bucket.path()).into_iter().flatten().flatten()
+            .any(|file| file.file_name().to_string_lossy().ends_with(suffix))
+    })
 }
 
 #[tauri::command]
@@ -6647,6 +6678,22 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
     }
 
+}
+
+#[cfg(test)]
+mod pi_session_written_tests {
+    #[test]
+    fn pi_token_waits_for_the_session_file() {
+        let root = std::env::temp_dir().join(format!("coffee-pi-root-{}", uuid::Uuid::new_v4()));
+        let bucket = root.join("--Users-me-proj--");
+        std::fs::create_dir_all(&bucket).unwrap();
+        let id = "0f0f0f0f-1111-2222-3333-444444444444";
+        let suffix = format!("_{id}.jsonl");
+        assert!(!super::pi_session_written(&root, &suffix));
+        std::fs::write(bucket.join(format!("2026-11-03T01-02-03-000Z{suffix}")), "{}").unwrap();
+        assert!(super::pi_session_written(&root, &suffix));
+        std::fs::remove_dir_all(root).unwrap();
+    }
 }
 
 #[cfg(test)]

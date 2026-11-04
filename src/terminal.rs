@@ -551,7 +551,7 @@ pub(crate) fn pi_launch_token(args: &mut Vec<String>, assign_new: bool) -> Optio
 /// each terminal's current session in a breadcrumb keyed by the TTY
 /// (`<agent state>/terminal-sessions/<tty>`, `/dev/ttys012` → `ttys012`):
 /// line 1 the cwd, line 2 the session file (possibly relative to that cwd,
-/// and possibly not written yet). Reading it for the tab's own PTY gives the
+/// and possibly not written yet). Once that file exists, reading it for the tab's own PTY gives the
 /// native id without guessing by cwd. Windows PTYs have no TTY path, so omp
 /// keeps no breadcrumb there and this stays None.
 #[cfg_attr(not(unix), allow(dead_code))]
@@ -560,17 +560,16 @@ pub(crate) fn omp_breadcrumb_token(content: &str) -> Option<String> {
     let cwd = std::path::Path::new(lines.next()?.trim());
     let file = lines.next()?.trim();
     if file.is_empty() { return None; }
-    let path = cwd.join(file);
-    let header_id = std::fs::File::open(&path).ok().and_then(|f| {
-        use std::io::BufRead;
-        std::io::BufReader::new(f).lines().map_while(Result::ok).take(4).find_map(|line| {
-            let value: serde_json::Value = serde_json::from_str(&line).ok()?;
-            (value.get("type")?.as_str()? == "session").then(|| value.get("id")?.as_str().map(str::to_string)).flatten()
-        })
-    });
-    let stem = path.file_stem()?.to_string_lossy().to_string();
-    let id = header_id.unwrap_or_else(|| stem.rsplit_once('_').map(|(_, id)| id.to_string()).unwrap_or(stem));
-    uuid::Uuid::parse_str(&id).is_ok().then_some(id)
+    // Only a session omp has written resumes; a fresh crumb names a file that
+    // may never appear, and reporting it would make a restart resume nothing.
+    let file = std::fs::File::open(cwd.join(file)).ok()?;
+    use std::io::BufRead;
+    std::io::BufReader::new(file).lines().map_while(Result::ok).take(4).find_map(|line| {
+        let value: serde_json::Value = serde_json::from_str(&line).ok()?;
+        if value.get("type")?.as_str()? != "session" { return None; }
+        let id = value.get("id")?.as_str()?;
+        uuid::Uuid::parse_str(id).is_ok().then(|| id.to_string())
+    })
 }
 
 #[cfg_attr(not(unix), allow(dead_code))]
@@ -1349,8 +1348,8 @@ mod tests {
         std::fs::create_dir_all(dir.join("s")).unwrap();
         let id = "01900000-0000-7000-8000-000000000000";
         let cwd = dir.to_string_lossy();
-        // Fresh session: file not written yet, the id comes from the file name.
-        assert_eq!(omp_breadcrumb_token(&format!("{cwd}\ns/2026-11-03T01-02-03-000Z_{id}.jsonl\nfresh\n")), Some(id.to_string()));
+        // Fresh session: nothing written yet, so there is nothing to resume.
+        assert_eq!(omp_breadcrumb_token(&format!("{cwd}\ns/2026-11-03T01-02-03-000Z_{id}.jsonl\nfresh\n")), None);
         // Written session: the header id wins, relative paths resolve against the cwd line.
         let other = "01900000-0000-7000-8000-000000000001";
         std::fs::write(dir.join("s/x_y.jsonl"), format!("{{\"type\":\"session\",\"id\":\"{other}\"}}\n")).unwrap();
