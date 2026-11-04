@@ -168,6 +168,7 @@ export const ru = {
   'history.search_title': 'Поиск сеансов или рабочих областей',
   'history.list': 'Сеансы',
   'history.projects': 'Проекты',
+  'history.layout': 'Вид',
   'history.show_more': 'Показать ещё',
   'history.show_less': 'Свернуть',
   "claude.cold_return.title": "Простой {idle}, контекст около {tokens}",

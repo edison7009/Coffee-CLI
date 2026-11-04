@@ -170,6 +170,7 @@ export const ja = {
   'history.search_title': 'セッションやワークスペースを検索',
   'history.list': 'セッション一覧',
   'history.projects': 'プロジェクト別',
+  'history.layout': '表示方法',
   'history.show_more': 'さらに表示',
   'history.show_less': '折りたたむ',
   "claude.cold_return.title": "この会話は {idle} 放置され、コンテキストは約 {tokens} です",

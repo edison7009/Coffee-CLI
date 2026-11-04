@@ -168,6 +168,7 @@ export const vi = {
   'history.search_title': 'Tìm phiên hoặc không gian làm việc',
   'history.list': 'Danh sách phiên',
   'history.projects': 'Dự án',
+  'history.layout': 'Chế độ xem',
   'history.show_more': 'Hiển thị thêm',
   'history.show_less': 'Thu gọn',
   "claude.cold_return.title": "Đã nhàn rỗi {idle}, ngữ cảnh khoảng {tokens}",

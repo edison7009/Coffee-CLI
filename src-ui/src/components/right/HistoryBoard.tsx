@@ -244,6 +244,27 @@ export function HistoryBoard() {
   // How many sessions each project shows beyond its preview, so one busy folder cannot push the others away.
   const [projectExtras, setProjectExtras] = useState<Map<string, number>>(new Map());
   useEffect(() => { try { localStorage.setItem('cc-history-layout', layout); } catch { /* Storage unavailable. */ } }, [layout]);
+  const [layoutMenu, setLayoutMenu] = useState<{ top: number; right: number } | null>(null);
+  const layoutBtnRef = useRef<HTMLButtonElement>(null);
+  const layoutMenuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!layoutMenu) return;
+    const close = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (layoutMenuRef.current?.contains(target) || layoutBtnRef.current?.contains(target)) return;
+      setLayoutMenu(null);
+    };
+    const closeKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setLayoutMenu(null); };
+    document.addEventListener('mousedown', close);
+    document.addEventListener('keydown', closeKey);
+    const closeAll = () => setLayoutMenu(null);
+    window.addEventListener('resize', closeAll);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      document.removeEventListener('keydown', closeKey);
+      window.removeEventListener('resize', closeAll);
+    };
+  }, [layoutMenu]);
   useEffect(() => {
     const dialog = searchDialogRef.current;
     if (!dialog) return;
@@ -671,10 +692,33 @@ export function HistoryBoard() {
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34" /><circle cx="11" cy="11" r="8" /></svg>
         <span>{t('history.search')}</span>
       </button>
-      <button type="button" className="history-layout-toggle" aria-label={t(layout === 'list' ? 'history.projects' : 'history.list')} aria-pressed={layout === 'projects'} onClick={() => { setPreview(null); setLayout(layout === 'list' ? 'projects' : 'list'); setVisibleCount(PAGE); }}>
+      <div className="history-layout-toggle">
         <span>{t(layout === 'list' ? 'history.list' : 'history.projects')}</span>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{layout === 'list' ? <><path d="M3 7h6l2 3h10v10H3z" /><path d="M7 3h6l2 3h6" /></> : <><path d="M8 6h13M8 12h13M8 18h13" /><path d="M3 6h.01M3 12h.01M3 18h.01" /></>}</svg>
-      </button>
+        <button type="button" ref={layoutBtnRef} className={`history-layout-menu-btn${layoutMenu ? ' open' : ''}`} aria-label={t('history.layout')} aria-haspopup="menu" aria-expanded={!!layoutMenu} onClick={() => {
+          if (layoutMenu) { setLayoutMenu(null); return; }
+          const r = layoutBtnRef.current?.getBoundingClientRect();
+          if (r) setLayoutMenu({ right: Math.max(0, window.innerWidth - r.right), top: r.bottom + 4 });
+        }}>
+          {/* Lucide list-filter; license in /icons/LICENSE-lucide.txt. */}
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 6h18M7 12h10M10 18h4" /></svg>
+        </button>
+      </div>
+      {layoutMenu && createPortal(
+        <div className="ctx-menu history-layout-menu" role="menu" ref={layoutMenuRef} style={{ position: 'fixed', top: layoutMenu.top, right: layoutMenu.right }}>
+          {(['list', 'projects'] as const).map(value => (
+            <button type="button" key={value} role="menuitemradio" aria-checked={layout === value} className="ctx-menu-item" onClick={() => {
+              setLayoutMenu(null);
+              if (value === layout) return;
+              setPreview(null); setLayout(value); setVisibleCount(PAGE);
+            }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{value === 'list' ? <><path d="M8 6h13M8 12h13M8 18h13" /><path d="M3 6h.01M3 12h.01M3 18h.01" /></> : <path d="M3 7h6l2 3h10v10H3z" />}</svg>
+              <span>{t(value === 'list' ? 'history.list' : 'history.projects')}</span>
+              <svg className="history-layout-check" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ visibility: layout === value ? 'visible' : 'hidden' }}><path d="M20 6 9 17l-5-5" /></svg>
+            </button>
+          ))}
+        </div>,
+        document.body,
+      )}
       {agentError && <p className="agent-feedback error" role="alert">{agentError}</p>}
       <div className="task-list history-session-list" style={{ marginTop: '0', paddingBottom: '20px' }}>
       {isLoading && Array.from({ length: 6 }).map((_, i) => (

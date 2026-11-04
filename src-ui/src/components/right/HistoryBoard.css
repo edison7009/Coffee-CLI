@@ -24,9 +24,16 @@
 .history-search-trigger { margin-bottom: 18px; }
 .history-search-trigger > svg { display: block; flex-shrink: 0; }
 .history-layout-toggle { justify-content: space-between; margin-bottom: 6px; color: var(--accent); font-size: var(--type-label); }
-.history-search-trigger:hover, .history-layout-toggle:hover, .history-project-row:hover { background: var(--bg-hover); }
+.history-search-trigger:hover, .history-project-row:hover { background: var(--bg-hover); }
 .history-search-trigger:hover, .history-project-row:hover { color: var(--text-1); }
-.history-search-trigger:focus-visible, .history-layout-toggle:focus-visible, .history-project-row:focus-visible { outline: 1px solid var(--accent); outline-offset: -1px; }
+.history-search-trigger:focus-visible, .history-project-row:focus-visible { outline: 1px solid var(--accent); outline-offset: -1px; }
+.history-layout-menu-btn { display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin: -3px -4px -3px 0; padding: 3px; border: 0; border-radius: var(--shape-radius-btn, var(--radius-sm)); background: transparent; color: var(--text-2); cursor: pointer; transition: background 0.2s; }
+.history-layout-menu-btn:hover, .history-layout-menu-btn.open { background: var(--bg-hover); color: var(--text-1); }
+.history-layout-menu-btn:focus-visible { outline: 1px solid var(--accent); outline-offset: -1px; }
+.history-layout-menu-btn > svg { display: block; }
+.history-layout-menu { min-width: 160px; }
+.history-layout-menu .ctx-menu-item > span { flex: 1; }
+.history-layout-menu .history-layout-check { opacity: 1; color: var(--accent); }
 .history-project-row { margin: 4px 0 2px; }
 .history-project-row > svg { flex-shrink: 0; }
 .history-project-row > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -97,25 +104,29 @@
 /* Light palettes keep session rows flush with the rail until hover, then lift
    the active row onto the brighter workspace surface. This restores the same
    clear block feedback as night mode without bringing back permanent cards. */
-[data-mode="light"] .history-card:hover {
+[data-mode="light"] .history-card:hover,
+[data-mode="light"] .history-layout-menu-btn:is(:hover, .open) {
   background: var(--bg-app);
 }
 
 /* Panel intentionally collapses app/panel/card to one surface, so switching
    surface tokens cannot produce a hover state. Use the same overlay feedback
    as night mode for this shape. */
-[data-mode="light"][data-shape="panel"] .history-card:hover {
+[data-mode="light"][data-shape="panel"] .history-card:hover,
+[data-mode="light"][data-shape="panel"] .history-layout-menu-btn:is(:hover, .open) {
   background: var(--bg-hover);
 }
 
 /* Transparent material shapes strip descendant div backgrounds globally.
    Restore only the hovered session row, using a translucent form of the same
    light workspace surface so Glass/Frost keeps showing its backdrop. */
-:is([data-shape="glass"], [data-shape="carbon"], [data-shape="monogram"]) .panel-left .history-card:hover {
+:is([data-shape="glass"], [data-shape="carbon"], [data-shape="monogram"]) .panel-left .history-card:hover,
+:is([data-shape="glass"], [data-shape="carbon"], [data-shape="monogram"]) .panel-left .history-layout-menu-btn:is(:hover, .open) {
   background: var(--bg-hover) !important;
 }
 
-[data-mode="light"]:is([data-shape="glass"], [data-shape="carbon"], [data-shape="monogram"]) .panel-left .history-card:hover {
+[data-mode="light"]:is([data-shape="glass"], [data-shape="carbon"], [data-shape="monogram"]) .panel-left .history-card:hover,
+[data-mode="light"]:is([data-shape="glass"], [data-shape="carbon"], [data-shape="monogram"]) .panel-left .history-layout-menu-btn:is(:hover, .open) {
   background: color-mix(in oklab, var(--bg-app) 78%, transparent) !important;
 }
 

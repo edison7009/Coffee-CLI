@@ -170,6 +170,7 @@ export const zhTW = {
   'history.search_title': '搜尋會話或工作區',
   'history.list': '會話列表',
   'history.projects': '專案分類',
+  'history.layout': '顯示方式',
   'history.show_more': '顯示更多',
   'history.show_less': '收合',
   "claude.cold_return.title": "這段對話已閒置 {idle}，上下文約 {tokens}",

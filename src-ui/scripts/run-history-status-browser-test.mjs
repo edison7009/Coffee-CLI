@@ -186,7 +186,9 @@ try {
     await page.mouse.move(500,300);
     await page.screenshot({path:join(directory,`git-${state}-${ci??'none'}.png`)});
     assert.equal(await page.locator('.history-card').first().locator('.history-git-mark').count(),0,'working spinner wins over PR status');
-    await page.locator('.history-layout-toggle').click();
+    await page.locator('.history-layout-menu-btn').click();
+    await page.locator('.history-layout-menu [role="menuitemradio"]').nth(1).click();
+    assert.equal(await page.locator('.history-layout-menu').count(),0,'layout menu closes after choosing');
     await page.locator('.history-project-row .history-git-mark').waitFor();
   }
   for (const layout of ['projects', 'list']) {

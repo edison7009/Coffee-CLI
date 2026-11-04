@@ -168,6 +168,7 @@ export const fr = {
   'history.search_title': 'Rechercher des sessions ou espaces de travail',
   'history.list': 'Sessions',
   'history.projects': 'Projets',
+  'history.layout': 'Affichage',
   'history.show_more': 'Afficher plus',
   'history.show_less': 'Afficher moins',
   "claude.cold_return.title": "Inactive depuis {idle}, environ {tokens} de contexte",
