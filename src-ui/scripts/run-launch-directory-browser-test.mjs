@@ -23,6 +23,9 @@ try{
  for(const card of await page.locator('.launchpad-card').all()){
    const folder=card.locator('.launchpad-folder');
    assert.equal(await folder.count(),1,'every directory-based card has a folder button');
+   await folder.hover();
+   assert.equal(await folder.evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)','the folder is a plain enlarged icon, with no button background even on hover');
+   assert.ok((await folder.locator('svg').boundingBox()).width>=24,'the folder icon is enlarged');
    assert.equal((await card.locator('.launchpad-card-path').innerText()).trim(),'Choose a project folder','a tool never opened shows the folder hint on its second line');
    assert.equal(await card.locator('.launchpad-card-path').evaluate(el=>getComputedStyle(el).direction),'ltr','the hint elides at its end; only paths keep their end');
    const [icon,info,path]=await Promise.all([card.locator('.launchpad-icon').boundingBox(),card.locator('.launchpad-card-info').boundingBox(),card.locator('.launchpad-card-path').boundingBox()]);

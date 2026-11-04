@@ -417,7 +417,7 @@ body.session-split-dragging { cursor: grabbing; user-select: none; }
 }
 
 .launchpad-inner {
-  max-width: 628px;
+  max-width: 760px;
   width: 100%;
   padding: 32px;
 }
@@ -573,16 +573,16 @@ body.session-split-dragging { cursor: grabbing; user-select: none; }
   flex-direction: row;
   align-items: center;
   justify-content: flex-start;
-  gap: clamp(6px, 0.9vw, 12px);
-  height: 80px;
+  gap: clamp(8px, 1.1vw, 16px);
+  height: 96px;
   cursor: pointer;
   position: relative;
   transition: background-color 0.2s;
   min-width: 0;
 }
 
-.launchpad-folder { display:flex; align-items:center; justify-content:center; flex:0 0 36px; width:36px; height:36px; margin-left:auto; padding:6px; border:0; border-radius:var(--shape-radius-btn,5px); background:transparent; color:var(--text-2); }
-.launchpad-folder:hover:not(:disabled) { background:var(--bg-hover); color:var(--text-1); }
+.launchpad-folder { display:flex; align-items:center; justify-content:center; flex:0 0 auto; margin-left:auto; padding:4px; border:0; background:transparent; color:var(--text-2); cursor:pointer; }
+.launchpad-folder:hover:not(:disabled) { color:var(--text-1); }
 .launchpad-folder:disabled { cursor:default; }
 .launchpad-folder svg { display:block; flex-shrink:0; }
 .launchpad-mode-tabs { position:absolute; right:0; bottom:0; display:flex; height:18px; overflow:hidden; border-top-left-radius:var(--radius-md); }
@@ -680,8 +680,8 @@ body.session-split-dragging { cursor: grabbing; user-select: none; }
      sizes stay uniform regardless of the source asset's internal
      viewBox utilization (brand SVGs had wildly different content-to-
      viewBox ratios before). Tune here if the grid density changes. */
-  width: clamp(32px, 3.2vw, 44px);
-  height: clamp(32px, 3.2vw, 44px);
+  width: clamp(36px, 3.6vw, 52px);
+  height: clamp(36px, 3.6vw, 52px);
   display: flex;
   align-items: center;
   justify-content: center;
