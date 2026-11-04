@@ -213,7 +213,7 @@ html[data-theme='dark'] .fx-screen {
   position: relative;
   z-index: 10;
   width: 100%;
-  margin-top: clamp(2rem, 5vw, 4rem);
+  margin-top: clamp(4rem, 9vw, 8rem);
 }
 .is-inner {
   max-width: 1360px;
@@ -277,4 +277,84 @@ html[data-theme='dark'] .fx-screen {
 @media (max-width: 600px) {
   .is-inner { padding: 0 16px; }
   .is-cmd code { font-size: 0.78rem; }
+}
+
+/* ── Feature sections: picture and text, alternating sides ────────────── */
+.features {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 1360px;
+  margin: clamp(3rem, 8vw, 6.5rem) auto 0;
+  padding: 0 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(4rem, 9vw, 8rem);
+}
+.ft-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(2rem, 5vw, 5rem);
+}
+/* Every second row flips: text left, picture right. */
+.ft-row:nth-child(even) { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); }
+.ft-row:nth-child(even) .ft-media { order: 2; }
+.ft-media img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 12px;
+  background: #EEF2F6;
+  box-shadow: 0 24px 56px -28px rgba(15, 30, 50, 0.32), 0 2px 10px -4px rgba(15, 30, 50, 0.12);
+}
+html[data-theme='dark'] .ft-media img { box-shadow: 0 28px 70px -30px rgba(0, 0, 0, 0.85); }
+.ft-text { min-width: 0; max-width: 32rem; }
+.ft-no {
+  display: block;
+  margin-bottom: 0.9rem;
+  font: 600 0.85rem/1 var(--font-mono);
+  color: var(--brand-color);
+}
+.ft-title {
+  margin: 0;
+  font-size: clamp(1.5rem, 2.4vw, 2.1rem);
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.025em;
+  color: var(--text-highlight);
+}
+.ft-body {
+  margin: 1rem 0 0;
+  font-size: clamp(0.98rem, 1.1vw, 1.05rem);
+  line-height: 1.8;
+  color: var(--text-secondary);
+}
+html[data-theme='dark'] .ft-body { color: rgba(235, 235, 235, 0.72); }
+
+/* Scroll reveal (js adds .reveal, then .is-in once the row is on screen):
+   picture and text rise and fade in, the text a beat after the picture. */
+.ft-row.reveal .ft-media,
+.ft-row.reveal .ft-text {
+  opacity: 0;
+  transform: translateY(48px);
+  transition: opacity 0.8s ease, transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.ft-row.reveal .ft-text { transition-delay: 0.12s; }
+.ft-row.reveal.is-in .ft-media,
+.ft-row.reveal.is-in .ft-text {
+  opacity: 1;
+  transform: none;
+}
+
+@media (max-width: 860px) {
+  .ft-row,
+  .ft-row:nth-child(even) { grid-template-columns: minmax(0, 1fr); gap: 1.4rem; }
+  .ft-row:nth-child(even) .ft-media { order: 0; }
+  .ft-text { max-width: none; }
+}
+@media (max-width: 600px) {
+  .features { padding: 0 16px; }
 }

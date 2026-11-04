@@ -16,7 +16,7 @@
   
   <!-- External CSS -->
   <link rel="stylesheet" href="./css/style.css?v=0.7.0">
-  <link rel="stylesheet" href="./css/hero-features.css?v=2.1.0">
+  <link rel="stylesheet" href="./css/hero-features.css?v=2.2.1">
 </head>
 <body>
 
@@ -135,6 +135,82 @@
   </main>
 
 
+  <!-- Seven feature sections, picture and text alternating sides. The
+       pictures are temporary (all the split-view poster) until each
+       feature's own screenshot is ready: swap the img src per row. -->
+  <section class="features" id="features" aria-label="Features">
+    <article class="ft-row" data-reveal>
+      <div class="ft-media">
+        <img src="demo/split-view-poster.webp" alt="" width="960" height="540" loading="lazy" decoding="async">
+      </div>
+      <div class="ft-text">
+        <span class="ft-no">01</span>
+        <h3 class="ft-title" data-i18n="ft-split-title">Split view, up to four sessions</h3>
+        <p class="ft-body" data-i18n="ft-split-body">Drag a chat from the sidebar into the middle to split left/right or top/bottom. Watch two, three or four sessions at once and see who is working.</p>
+      </div>
+    </article>
+    <article class="ft-row" data-reveal>
+      <div class="ft-media">
+        <img src="demo/split-view-poster.webp" alt="" width="960" height="540" loading="lazy" decoding="async">
+      </div>
+      <div class="ft-text">
+        <span class="ft-no">02</span>
+        <h3 class="ft-title" data-i18n="ft-agents-title">One lead, many helpers</h3>
+        <p class="ft-body" data-i18n="ft-agents-body">Claude Code breaks a big job into parts and hands them to helpers like DeepSeek Harness that work at the same time. The sidebar shows each helper's progress and ticks it off when done.</p>
+      </div>
+    </article>
+    <article class="ft-row" data-reveal>
+      <div class="ft-media">
+        <img src="demo/split-view-poster.webp" alt="" width="960" height="540" loading="lazy" decoding="async">
+      </div>
+      <div class="ft-text">
+        <span class="ft-no">03</span>
+        <h3 class="ft-title" data-i18n="ft-usage-title">Usage and balance at a glance</h3>
+        <p class="ft-body" data-i18n="ft-usage-body">Right next to the message box: the 5-hour and weekly limits for Claude and Codex, or your account balance with providers like DeepSeek. No more checking web dashboards.</p>
+      </div>
+    </article>
+    <article class="ft-row" data-reveal>
+      <div class="ft-media">
+        <img src="demo/split-view-poster.webp" alt="" width="960" height="540" loading="lazy" decoding="async">
+      </div>
+      <div class="ft-text">
+        <span class="ft-no">04</span>
+        <h3 class="ft-title" data-i18n="ft-themes-title">Themes × styles, hundreds of looks</h3>
+        <p class="ft-body" data-i18n="ft-themes-body">12 color themes in light, night or follow-system mode, combined with several interface styles. Pick one in Settings and it applies instantly.</p>
+      </div>
+    </article>
+    <article class="ft-row" data-reveal>
+      <div class="ft-media">
+        <img src="demo/split-view-poster.webp" alt="" width="960" height="540" loading="lazy" decoding="async">
+      </div>
+      <div class="ft-text">
+        <span class="ft-no">05</span>
+        <h3 class="ft-title" data-i18n="ft-modes-title">Desktop mode or terminal mode</h3>
+        <p class="ft-body" data-i18n="ft-modes-body">Claude Code, Codex, OpenCode and Pi switch with one click on their launch card: a desktop chat view, or back to the native terminal.</p>
+      </div>
+    </article>
+    <article class="ft-row" data-reveal>
+      <div class="ft-media">
+        <img src="demo/split-view-poster.webp" alt="" width="960" height="540" loading="lazy" decoding="async">
+      </div>
+      <div class="ft-text">
+        <span class="ft-no">06</span>
+        <h3 class="ft-title" data-i18n="ft-changes-title">See every change</h3>
+        <p class="ft-body" data-i18n="ft-changes-body">The right panel lists every file the AI changed; open one for a line-by-line diff, green added and red removed. The sidebar color-codes each session's pull request.</p>
+      </div>
+    </article>
+    <article class="ft-row" data-reveal>
+      <div class="ft-media">
+        <img src="demo/split-view-poster.webp" alt="" width="960" height="540" loading="lazy" decoding="async">
+      </div>
+      <div class="ft-text">
+        <span class="ft-no">07</span>
+        <h3 class="ft-title" data-i18n="ft-tasks-title">To-do style prompts, one click to send</h3>
+        <p class="ft-body" data-i18n="ft-tasks-body">Jot ideas into the task list on the right while the AI is busy, then send one with a click when it's free. Keep your favourite prompts ready too.</p>
+      </div>
+    </article>
+  </section>
+
   <!-- Command install: a simple block at the bottom of the page. main.js
        drives the tabs (.tab-btn), #install-command, #install-hint, #copy-btn. -->
   <section class="install-strip" aria-labelledby="install-title">
@@ -203,6 +279,6 @@
 
 
   <script src="./js/main.js?v=0.9.15"></script>
-  <script src="./js/hero-features.js?v=2.1.0"></script>
+  <script src="./js/hero-features.js?v=2.2.0"></script>
 </body>
 </html>
