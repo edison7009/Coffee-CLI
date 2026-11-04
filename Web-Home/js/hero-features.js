@@ -5,8 +5,7 @@
  * Loaded right after main.js: it merges the hero copy into I18N_DICT before
  * main.js renders on DOMContentLoaded, and main.js's renderI18N() keeps it in
  * sync on language change via data-i18n. The clip is a real recording of the
- * app; zh / zh-TW visitors get the Chinese recording, everyone else the
- * English one, and phones get the 960px encode.
+ * app (960x540 window, Glacier theme), looped and muted.
  */
 (function () {
   "use strict";
@@ -72,9 +71,8 @@
     });
   }
 
-  const CLIP = "split-drag";
-  const clipLang = () => (currentLang === "zh" || currentLang === "zh-TW" ? "zh" : "en");
-  const narrow = window.matchMedia ? window.matchMedia("(max-width: 768px)") : null;
+  const CLIP = "demo/split-view.webm";
+  const POSTER = "demo/split-view-poster.webp";
 
   function init() {
     const root = document.getElementById("hero-features");
@@ -95,19 +93,18 @@
     video.preload = "none";
     video.width = 1920;
     video.height = 1080;
+    video.poster = POSTER;
     video.setAttribute("aria-hidden", "true");
     screen.appendChild(video);
 
-    let lang = "";
     let visible = true;
+    let loaded = false;
 
+    // Attach the clip on first play so a page that never shows it never downloads it.
     function source() {
-      const l = clipLang();
-      if (l === lang) return;
-      lang = l;
-      const base = "demo/features/" + l + "/" + CLIP;
-      video.poster = base + "-poster.webp";
-      video.src = base + (narrow && narrow.matches ? "-960.mp4" : ".mp4");
+      if (loaded) return;
+      loaded = true;
+      video.src = CLIP;
     }
 
     function sync() {
@@ -122,6 +119,7 @@
 
     // Reduced motion: the clip waits on its poster; a click plays / pauses it.
     screen.addEventListener("click", function () {
+      source();
       if (video.paused) {
         const p = video.play();
         if (p && p.catch) p.catch(function () {});
@@ -139,15 +137,6 @@
     }
     document.addEventListener("visibilitychange", sync);
     if (reduce && reduce.addEventListener) reduce.addEventListener("change", sync);
-
-    // Follow language changes: main.js's dropdown calls the global renderI18N().
-    if (typeof window.renderI18N === "function") {
-      const render = window.renderI18N;
-      window.renderI18N = function () {
-        render.apply(this, arguments);
-        if (clipLang() !== lang) sync();
-      };
-    }
   }
 
   if (document.readyState === "loading") {
