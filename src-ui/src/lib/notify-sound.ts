@@ -35,6 +35,7 @@ import {
 import { commands, isTauri } from '../tauri';
 import { IS_WINDOWS } from './platform';
 import type { OrchestrationTask } from './orchestration';
+import { promptSubmitted } from './notify-prompts';
 
 export type NotifyKind = 'done' | 'wait';
 
@@ -68,7 +69,7 @@ function cancelPendingDone(sessionId: string) {
 // screen status can likewise animate while restoring a session. Seeing idle
 // is not enough to distinguish those cycles from a completed turn, so notifications
 // stay muted until the user submits input. This is local UI state, not a hook.
-const guardedPromptSubmitted = new Set<string>();
+const guardedPromptSubmitted = promptSubmitted;
 
 /** Arm guarded notifications after a real terminal/Gambit submission. */
 export function markNotifySoundPromptSubmitted(sessionId: string, tool: ToolType) {

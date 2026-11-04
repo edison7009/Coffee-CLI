@@ -4,7 +4,8 @@ import { runInNewContext } from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const compiled = await build({
-  entryPoints: [fileURLToPath(new URL('../src/lib/notify-sound.ts', import.meta.url))],
+  // The desktop session clients mark a send through notify-prompts; one bundle shares its state.
+  stdin: { resolveDir: fileURLToPath(new URL('../src/lib/', import.meta.url)), contents: "export * from './notify-sound'; export { markPromptSubmitted } from './notify-prompts';", loader: 'ts' },
   bundle: true, platform: 'node', format: 'cjs', write: false,
   define: { 'process.env.NODE_ENV': '"production"' },
 });
@@ -53,6 +54,15 @@ for (const tool of ['claude', 'codex', 'omp', 'kimicode', 'opencode']) {
   f.status(tool, 'working'); f.status(tool, 'idle'); f.settle();
   assert.deepEqual(f.calls, [{ command: 'play_notify_sound', kind: 'done' }], `${tool} completion uses native playback`);
   assert.equal(f.contexts(), 0, 'Windows notifications work without a WebView AudioContext');
+}
+
+// Desktop conversations mark the send in their session client, not through the terminal.
+for (const tool of ['codex', 'opencode', 'pi']) {
+  const f = fixture();
+  f.status(tool, 'idle');
+  f.api.markPromptSubmitted('session');
+  f.status(tool, 'working'); f.status(tool, 'idle'); f.settle();
+  assert.deepEqual(f.calls, [{ command: 'play_notify_sound', kind: 'done' }], `${tool} desktop completion chimes after a sent prompt`);
 }
 
 for (const tool of ['codex', 'kimicode', 'opencode']) {

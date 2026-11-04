@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react';
 import { readLaunchControls, setSessionControls, clearSessionControls } from './session-controls';
 import { directoryFailure } from './session-directory';
 import { recordSessionReply } from './session-replies';
+import { markPromptSubmitted } from './notify-prompts';
 import { invoke } from '../tauri';
 import { gambitAttachments } from './gambit-attachments';
 import { arr, codexColdReturn, num, obj, str, emptyCodexState, reduceCodexEvent, restoreCodexTurns, type CodexState, type CodexModel, type Json } from './codex-protocol';
@@ -170,6 +171,8 @@ async function steerCodex(c: Client, id: string, prompt: string): Promise<boolea
 }
 export async function sendCodexMessage(id: string, prompt: string): Promise<boolean> {
   const c = client(id);
+  // The chime announces a finished Codex turn only after a prompt the user sent, as in the terminal.
+  if (c.state.ready && !c.sending && prompt.trim()) markPromptSubmitted(id);
   if (c.state.ready && c.state.busy && !c.sending && prompt.trim()) return steerCodex(c, id, prompt);
   if (!c.state.ready || c.state.busy || c.sending || !prompt.trim()) return false;
   c.sending = true; c.interruptSent = undefined;

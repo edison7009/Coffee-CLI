@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react';
 import { readLaunchControls, setSessionControls, clearSessionControls } from './session-controls';
 import { directoryFailure } from './session-directory';
 import { recordSessionReply } from './session-replies';
+import { markPromptSubmitted } from './notify-prompts';
 import { invoke } from '../tauri';
 import { gambitAttachments } from './gambit-attachments';
 import { arr, obj, str, num, emptyOpenCodeState, lastContextTokens, reduceOpenCodeEvent, type Json, type OpenCodeAgent, type OpenCodeCommand, type OpenCodeModel, type OpenCodeModelRef, type OpenCodeState } from './opencode-protocol';
@@ -126,6 +127,8 @@ export function retainOpenCodeSession(id: string, cwd: string | null, resumeToke
 /** Prompts sent during a turn are steered into it, as in OpenCode's own clients. */
 export async function sendOpenCodeMessage(id: string, prompt: string): Promise<boolean> {
   const c = client(id); if (!c.state.ready || c.sending || !prompt.trim()) return false;
+  // OpenCode's status is not native to the chime, which waits for a prompt the user sent.
+  markPromptSubmitted(id);
   c.sending = true;
   c.state = { ...c.state, busy: true, startedAt: c.state.startedAt ?? Date.now(), error: undefined }; publish(c, true);
   try {

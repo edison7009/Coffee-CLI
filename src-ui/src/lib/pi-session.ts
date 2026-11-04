@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { directoryFailure } from './session-directory';
 import { recordSessionReply } from './session-replies';
+import { markPromptSubmitted } from './notify-prompts';
 import { invoke } from '../tauri';
 import { arr, emptyPiState, obj, piModel, piStats, reducePiEvent, restorePiMessages, str, type Json, type PiModel, type PiState } from './pi-protocol';
 
@@ -92,6 +93,8 @@ export async function sendPiMessage(id: string, prompt: string): Promise<boolean
   if (!c?.state.ready || !message) return false;
   if (!c.state.model) { c.state = { ...c.state, error: 'no-model' }; publish(c, true); return false; }
   const steer = c.state.busy;
+  // Pi's status is not native to the chime, which waits for a prompt the user sent before announcing a finished run.
+  markPromptSubmitted(id);
   if (!steer) { c.state = { ...c.state, busy: true, startedAt: Date.now(), endedAt: undefined, interrupted: false, error: undefined }; publish(c, true); }
   try {
     await request(id, steer ? { type: 'steer', message } : { type: 'prompt', message });
