@@ -1,74 +1,79 @@
 <details open>
 <summary><b>🇨🇳 简体中文</b></summary>
 
-### Coffee CLI v3.8.7 · 重启不丢标签页，Agent 越用越懂你
+### Coffee CLI v3.8.8 · 支持 Antigravity CLI，界面更大更好读
 
-- **重启后标签页自动回来：** 关掉 Coffee CLI 再打开，之前开着的 AI 会话会按原来的顺序接着上次的对话，普通终端也会在原来的文件夹重新打开。
-- **Coffee Agent 会积累经验：** 在同一个项目里做过、并且确认成功的事，Agent 会记下做法，下次遇到同类任务直接参考；记忆快满时会先合并旧笔记，不再直接丢掉。
-- **看得到 Agent 做了什么：** 每条 Agent 回复上方会显示用了哪些工具，失败的会标出来，点开就能看。
-- **窗口在后台也能注意到：** AI 卡在等你批准时，任务栏按钮会一直闪，直到你切回来；任务完成时闪一下。关掉提示音也照样提醒。
-- **回答问题可以贴截图：** Claude Code、Codex、DeepSeek Harness 向你提问时，可以直接把截图粘贴进回答框。
-- **正在运行的会话排在最前：** 历史列表里正在工作的会话固定排在最上面，按标签页顺序，不再来回跳。
-- **修复：** 长输出时终端偶尔出现的乱码字形；macOS 和 Linux 下文件夹按钮被裁掉一截。
+- **Antigravity CLI 对话记录：** 左侧列表和热力图里能看到 Antigravity 的对话，点一下在原目录接着聊。
+- **启动更顺手：** 每个工具卡片会记住上次打开的目录，点卡片直接进入；点文件夹图标再换目录。标签栏右侧新增“＋”，和“新建会话”一样。
+- **Claude 桌面式显示当前步骤：** 工作中的状态行会显示 Claude Code 正在做的事，切换时带过渡动画。
+- **Coffee Agent：** 输入框旁新增“新对话”按钮；左侧列表显示 Coffee CLI 图标；模型配置的输入框可以直接粘贴。
+- **界面更好读：** 全界面统一使用更大的字号；启动页卡片更宽松，更新提示和“远程”移到名字旁边；换上新版 macOS 终端图标。
+- **不再弹钥匙串授权：** 模型密钥、消息渠道令牌和 SSH 密码改为保存在本机配置文件里。升级后需要重新填写一次。
+- **修复：** macOS 上对话不自动滚到最新消息；DeepSeek Harness 调节强度时会跳回；多智能体编排的开关被意外全部打开；滚动条滑块过长；界面缩放时 macOS 标题栏闪动。
+- **想听听你的意见：** 我们计划为 Pi 做桌面式对话，你希望它像 Claude、Codex 还是 DeepSeek Harness 的风格？欢迎在 GitHub Issues 留言。
 
 </details>
 
 <details>
 <summary><b>🇬🇧 English</b></summary>
 
-### Coffee CLI v3.8.7 · Tabs Survive Restarts, and the Agent Learns
+### Coffee CLI v3.8.8 · Antigravity CLI History, and Easier-to-Read Text
 
-- **Tabs come back after a restart:** Close Coffee CLI and open it again, and your AI sessions return in their original order, continuing the same conversations. Plain terminals reopen in their folders.
-- **Coffee Agent builds up experience:** When the Agent does something in a project and confirms it worked, it remembers how, and uses that next time a similar task comes up. When memory is nearly full, it merges old notes first instead of just dropping them.
-- **See what the Agent did:** Each Agent reply lists the tools it used, with failures marked. Click to expand.
-- **Notice it from the background:** When an AI is waiting for your approval, its taskbar button keeps flashing until you come back; when a task finishes, it flashes once. This works even with sounds turned off.
-- **Paste screenshots into answers:** When Claude Code, Codex or DeepSeek Harness asks you a question, you can paste a screenshot straight into the answer box.
-- **Running sessions stay on top:** Sessions that are working right now stay at the top of the history list, in tab order, instead of jumping around.
-- **Fixes:** Garbled glyphs that sometimes appeared in long terminal output; the folder button being clipped on macOS and Linux.
+- **Antigravity CLI history:** Antigravity conversations now appear in the sidebar and the heatmap. Click one to continue it in its original folder.
+- **Faster launching:** Each tool card remembers the folder you last opened it in, so one click takes you straight there; use the folder icon to pick another. A new + after the tabs works like New session.
+- **Claude desktop shows the current step:** While Claude Code works, its status line shows what it is doing, with a smooth transition between steps.
+- **Coffee Agent:** A New chat button beside the input box; the Coffee CLI icon in the sidebar; paste straight into the model settings fields.
+- **Easier to read:** Larger text across the app; roomier launch cards with the update label and Remote next to the name; the current macOS Terminal icon.
+- **No more keychain prompts:** Model keys, message-channel tokens and SSH passwords are now saved in local settings files. Enter them once again after updating.
+- **Fixes:** Conversations not following the newest message on macOS; DeepSeek Harness effort jumping back; multi-agent orchestration switches turning themselves on; an overly long scrollbar thumb; the macOS title bar flickering while changing interface scale.
+- **Tell us what you'd like:** We plan a desktop conversation view for Pi. Should it feel like Claude, Codex or DeepSeek Harness? Let us know in GitHub Issues.
 
 </details>
 
 <details>
 <summary><b>🇹🇼 繁體中文</b></summary>
 
-### Coffee CLI v3.8.7 · 重啟不丟分頁，Agent 越用越懂你
+### Coffee CLI v3.8.8 · 支援 Antigravity CLI，介面更大更好讀
 
-- **重啟後分頁自動回來：** 關掉 Coffee CLI 再開啟，之前開著的 AI 對話會依原來的順序接續上次的對話，一般終端機也會在原來的資料夾重新開啟。
-- **Coffee Agent 會累積經驗：** 在同一個專案裡做過、並且確認成功的事，Agent 會記下做法，下次遇到同類任務直接參考；記憶快滿時會先合併舊筆記，不再直接丟掉。
-- **看得到 Agent 做了什麼：** 每則 Agent 回覆上方會顯示用了哪些工具，失敗的會標出來，點開就能看。
-- **視窗在背景也能注意到：** AI 卡在等你核准時，工作列按鈕會一直閃，直到你切回來；任務完成時閃一下。關掉提示音也照樣提醒。
-- **回答問題可以貼截圖：** Claude Code、Codex、DeepSeek Harness 向你提問時，可以直接把截圖貼進回答框。
-- **正在執行的對話排在最前：** 歷史清單裡正在工作的對話固定排在最上面，依分頁順序，不再來回跳。
-- **修正：** 長輸出時終端機偶爾出現的亂碼字形；macOS 和 Linux 下資料夾按鈕被裁掉一截。
+- **Antigravity CLI 對話紀錄：** 左側清單和熱力圖裡能看到 Antigravity 的對話，點一下在原資料夾接著聊。
+- **啟動更順手：** 每個工具卡片會記住上次開啟的資料夾，點卡片直接進入；點資料夾圖示再換資料夾。分頁列右側新增「＋」，和「新增對話」一樣。
+- **Claude 桌面式顯示目前步驟：** 工作中的狀態列會顯示 Claude Code 正在做的事，切換時帶過渡動畫。
+- **Coffee Agent：** 輸入框旁新增「新對話」按鈕；左側清單顯示 Coffee CLI 圖示；模型設定的輸入框可以直接貼上。
+- **介面更好讀：** 全介面統一使用更大的字級；啟動頁卡片更寬鬆，更新提示和「遠端」移到名稱旁邊；換上新版 macOS 終端機圖示。
+- **不再彈出鑰匙圈授權：** 模型金鑰、訊息管道權杖和 SSH 密碼改為儲存在本機設定檔裡。升級後需要重新填寫一次。
+- **修正：** macOS 上對話不會自動捲到最新訊息；DeepSeek Harness 調整強度時會跳回；多智能體編排的開關被意外全部開啟；捲軸滑塊過長；調整介面縮放時 macOS 標題列閃動。
+- **想聽聽你的意見：** 我們計畫為 Pi 做桌面式對話，你希望它像 Claude、Codex 還是 DeepSeek Harness 的風格？歡迎在 GitHub Issues 留言。
 
 </details>
 
 <details>
 <summary><b>🇯🇵 日本語</b></summary>
 
-### Coffee CLI v3.8.7 · 再起動してもタブが残り、Agent は経験を積む
+### Coffee CLI v3.8.8 · Antigravity CLI の履歴に対応、文字が大きく読みやすく
 
-- **再起動後にタブが戻る：** Coffee CLI を閉じて開き直すと、開いていた AI セッションが元の順番で戻り、同じ会話の続きから再開します。通常のターミナルも元のフォルダで開き直します。
-- **Coffee Agent が経験を積む：** プロジェクト内で実行し、成功を確認できた作業の手順を Agent が覚え、似た作業のときに参考にします。メモリがいっぱいに近づくと、古いメモを捨てる前にまず統合します。
-- **Agent の作業内容が見える：** Agent の各返信に使ったツールが表示され、失敗したものには印が付きます。クリックで展開できます。
-- **バックグラウンドでも気付ける：** AI があなたの承認を待っている間はタスクバーのボタンが戻るまで点滅し、作業が終わると一度点滅します。通知音をオフにしていても有効です。
-- **回答にスクリーンショットを貼り付け：** Claude Code、Codex、DeepSeek Harness から質問されたとき、回答欄にスクリーンショットを直接貼り付けられます。
-- **実行中のセッションを先頭に：** 作業中のセッションは履歴リストの先頭にタブ順で固定され、行き来しなくなりました。
-- **修正：** 長いターミナル出力でまれに文字化けしていた問題、macOS と Linux でフォルダボタンが欠けて表示される問題。
+- **Antigravity CLI の会話履歴：** Antigravity の会話がサイドバーとヒートマップに表示され、クリックすると元のフォルダで続きから再開できます。
+- **起動がもっと手軽に：** 各ツールのカードが前回開いたフォルダを覚え、クリックするとそのまま開きます。別のフォルダはフォルダアイコンから選べます。タブの右に「＋」を追加し、新規セッションと同じように使えます。
+- **Claude デスクトップ表示に現在の手順：** Claude Code の作業中、ステータス行に今取り組んでいる内容が表示され、切り替わるときはアニメーションで移り変わります。
+- **Coffee Agent：** 入力欄の横に「新しい会話」ボタン、サイドバーに Coffee CLI のアイコン、モデル設定の入力欄に直接貼り付け可能に。
+- **読みやすく：** アプリ全体の文字を大きく統一。起動カードにゆとりを持たせ、更新表示と「リモート」を名前の横へ。macOS ターミナルのアイコンを最新版に。
+- **キーチェーンの確認が出なくなりました：** モデルのキー、メッセージチャネルのトークン、SSH パスワードはローカルの設定ファイルに保存されます。アップデート後に一度入力し直してください。
+- **修正：** macOS で会話が最新メッセージまでスクロールしない問題、DeepSeek Harness の推論強度が戻ってしまう問題、マルチエージェント連携のスイッチが勝手にオンになる問題、スクロールバーのつまみが長すぎる問題、表示倍率の変更中に macOS のタイトルバーがちらつく問題。
+- **ご意見をお聞かせください：** Pi のデスクトップ会話表示を計画しています。Claude、Codex、DeepSeek Harness のどれに近いスタイルがよいか、GitHub Issues でお知らせください。
 
 </details>
 
 <details>
 <summary><b>🇰🇷 한국어</b></summary>
 
-### Coffee CLI v3.8.7 · 재시작해도 탭이 그대로, Agent는 경험을 쌓습니다
+### Coffee CLI v3.8.8 · Antigravity CLI 기록 지원, 더 크고 읽기 쉬운 글자
 
-- **재시작 후 탭 복원:** Coffee CLI를 닫았다가 다시 열면 열려 있던 AI 세션이 원래 순서대로 돌아와 같은 대화를 이어갑니다. 일반 터미널도 원래 폴더에서 다시 열립니다.
-- **Coffee Agent가 경험을 쌓음:** 프로젝트에서 작업하고 성공을 확인한 방법을 Agent가 기억해 두었다가 비슷한 작업에 참고합니다. 메모리가 거의 차면 오래된 메모를 버리기 전에 먼저 합칩니다.
-- **Agent가 한 일 확인:** Agent의 각 답변에 사용한 도구가 표시되고 실패한 도구는 따로 표시됩니다. 클릭하면 펼쳐집니다.
-- **백그라운드에서도 알아차리기:** AI가 승인을 기다리는 동안 작업 표시줄 버튼이 돌아올 때까지 깜박이고, 작업이 끝나면 한 번 깜박입니다. 알림음을 꺼도 동작합니다.
-- **답변에 스크린샷 붙여넣기:** Claude Code, Codex, DeepSeek Harness가 질문하면 답변 칸에 스크린샷을 바로 붙여넣을 수 있습니다.
-- **실행 중인 세션을 맨 위에:** 작업 중인 세션은 기록 목록 맨 위에 탭 순서대로 고정되어 더 이상 오르내리지 않습니다.
-- **수정:** 긴 터미널 출력에서 가끔 글자가 깨지던 문제, macOS와 Linux에서 폴더 버튼이 잘려 보이던 문제.
+- **Antigravity CLI 대화 기록:** Antigravity 대화가 사이드바와 히트맵에 표시되고, 클릭하면 원래 폴더에서 이어서 대화합니다.
+- **더 빠른 실행:** 각 도구 카드가 마지막으로 연 폴더를 기억해 클릭 한 번으로 바로 열립니다. 다른 폴더는 폴더 아이콘으로 고를 수 있습니다. 탭 오른쪽에 새 세션과 같은 「＋」를 추가했습니다.
+- **Claude 데스크톱 보기에 현재 단계 표시:** Claude Code가 작업하는 동안 상태 줄에 지금 하는 일이 표시되고, 바뀔 때 부드럽게 전환됩니다.
+- **Coffee Agent:** 입력창 옆에 「새 대화」 버튼, 사이드바에 Coffee CLI 아이콘, 모델 설정 입력칸에 바로 붙여넣기.
+- **더 읽기 쉽게:** 앱 전체 글자를 더 크게 통일했습니다. 실행 카드는 여유 있게, 업데이트 표시와 「원격」은 이름 옆으로 옮겼고, 최신 macOS 터미널 아이콘으로 바꿨습니다.
+- **키체인 확인 창이 더 이상 뜨지 않음:** 모델 키, 메시지 채널 토큰, SSH 비밀번호는 로컬 설정 파일에 저장됩니다. 업데이트 후 한 번 다시 입력해 주세요.
+- **수정:** macOS에서 대화가 최신 메시지를 따라가지 않던 문제, DeepSeek Harness 추론 강도가 되돌아가던 문제, 멀티 에이전트 연동 스위치가 저절로 켜지던 문제, 스크롤바 손잡이가 지나치게 길던 문제, 화면 배율을 바꿀 때 macOS 제목 표시줄이 깜박이던 문제.
+- **의견을 들려주세요:** Pi용 데스크톱 대화 보기를 계획하고 있습니다. Claude, Codex, DeepSeek Harness 중 어떤 스타일이 좋을지 GitHub Issues에 남겨 주세요.
 
 </details>
