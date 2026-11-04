@@ -35,7 +35,7 @@
 .history-layout-menu .ctx-menu-item > span { flex: 1; }
 .history-layout-menu .history-layout-check { opacity: 1; color: var(--accent); }
 .history-project-row { margin: 4px 0 2px; }
-.history-session-list > .history-project-row:not(:first-child) { margin-top: 10px; }
+.history-session-list > .history-project-row:not(:first-child) { margin-top: 20px; }
 .history-project-row > svg { flex-shrink: 0; }
 .history-project-row > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .history-project-row[aria-expanded="true"] .history-project-chevron { transform: rotate(90deg); }
