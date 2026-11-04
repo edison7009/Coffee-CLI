@@ -45,5 +45,10 @@ try {
   await list.evaluate(el => { el.scrollTop = el.scrollHeight; });
   const end = await measure();
   assert.ok(Math.abs(end.thumbBottom - end.track) <= 3, `the thumb reaches the end of the track: ${JSON.stringify(end)}`);
-  console.log('OK: the scrollbar thumb never exceeds half its track, keeps its minimum on long lists and still reaches the end');
+  // A short panel keeps the grabbable 64px minimum even where half the track is less.
+  await list.evaluate(el => { el.style.height = '110px'; el.scrollTop = 0; });
+  await page.evaluate(() => window.setContent(120));
+  const short = await measure();
+  assert.ok(short.thumb >= 63, `a short track keeps the minimum thumb: ${JSON.stringify(short)}`);
+  console.log('OK: the scrollbar thumb never exceeds half its track, keeps its minimum on long lists and short tracks, and still reaches the end');
 } finally { await browser.close(); server.close(); }

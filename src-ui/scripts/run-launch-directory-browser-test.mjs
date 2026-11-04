@@ -73,6 +73,39 @@ try{
  launched=await state(page);assert.equal(launched.tool,'claude','clicking the card opens the tool directly');assert.equal(launched.folderPath,'D:/Older','in its last folder');
  assert.equal(await page.locator('.folder-menu').count(),0,'without asking for a folder');await page.keyboard.press('Escape');
  assert.deepEqual(errors,[]);await page.close();console.log('OK explicit directory and current mode reach the session; most recent first, deduplication, per-tool last folder shown and reopened directly after reload');
+ {
+  // A double click on a card with a remembered folder launches once.
+  const {page:dbl,errors:dblErrors}=await prepare(['D:/Recent']);
+  await dbl.evaluate(()=>{localStorage.setItem('coffee:last-folder-by-tool',JSON.stringify({claude:'D:/Recent'}));});
+  await dbl.reload();await dbl.locator('.launchpad-mode-tabs').first().waitFor();
+  const launches=[];await dbl.exposeFunction('countLaunch',tool=>launches.push(tool));
+  await dbl.evaluate(()=>{const root=document.getElementById('root'),fiber=root[Object.keys(root).find(k=>k.startsWith('__reactContainer$'))];let ctx;(function walk(f){if(!f||ctx)return;const v=f.memoizedProps?.value;if(v?.state?.terminals&&typeof v.dispatch==='function'){ctx=v;return}walk(f.child);walk(f.sibling)})(fiber);const dispatch=ctx.dispatch;ctx.dispatch=a=>{if(a.type==='LAUNCH_TERMINAL_TOOL')window.countLaunch(a.tool);return dispatch(a)};});
+  const card=dbl.getByRole('group',{name:'Claude launch mode'}).locator('..').locator('.launchpad-card-info');
+  await card.dblclick();await dbl.waitForTimeout(400);
+  assert.ok(launches.length<=1,`a double click launches at most once: ${launches.join(',')}`);
+  assert.deepEqual(dblErrors,[]);await dbl.close();
+
+  // Removing a folder from the recents list by hand keeps it as a tool's last folder.
+  const {page:tidy}=await prepare(['D:/Recent','D:/Older']);
+  await tidy.evaluate(()=>{localStorage.setItem('coffee:last-folder-by-tool',JSON.stringify({claude:'D:/Recent'}));});
+  await tidy.reload();await tidy.locator('.launchpad-mode-tabs').first().waitFor();
+  const claudeCard=tidy.getByRole('group',{name:'Claude launch mode'}).locator('..');
+  await claudeCard.locator('.launchpad-folder').click();await tidy.locator('.folder-menu').waitFor();
+  await tidy.locator('.folder-menu-item',{hasText:'Recent'}).first().locator('.folder-menu-del').dispatchEvent('mousedown');
+  await tidy.keyboard.press('Escape');
+  assert.deepEqual(await tidy.evaluate(()=>JSON.parse(localStorage.getItem('coffee:recent-folders'))),['D:/Older']);
+  assert.deepEqual(await tidy.evaluate(()=>JSON.parse(localStorage.getItem('coffee:last-folder-by-tool'))),{claude:'D:/Recent'},'tidying recents keeps the tool\'s last folder');
+  assert.equal((await claudeCard.locator('.launchpad-card-path').innerText()).trim(),'D:/Recent');
+  await tidy.close();
+
+  // A damaged per-tool entry falls back to the hint instead of breaking the launch page.
+  const {page:bad,errors:badErrors}=await prepare([]);
+  await bad.evaluate(()=>{localStorage.setItem('coffee:last-folder-by-tool',JSON.stringify({claude:123,codex:{},opencode:'D:/Ok'}));});
+  await bad.reload();await bad.locator('.launchpad-mode-tabs').first().waitFor();
+  assert.equal((await bad.getByRole('group',{name:'Claude launch mode'}).locator('..').locator('.launchpad-card-path').innerText()).trim(),'Choose a project folder');
+  assert.deepEqual(badErrors,[]);await bad.close();
+  console.log('OK a double click launches once, tidying recents keeps last folders, damaged entries fall back to the hint');
+ }
  const empty=await prepare([]),p=empty.page;
  await p.getByRole('group',{name:'Claude launch mode'}).locator('..').locator('.launchpad-card-info').click();await p.waitForFunction(()=>window.pickCount===1);assert.equal((await state(p)).tool,null,'cancelling a native chooser does not launch');
  await p.evaluate(()=>window.pickedFolder='D:/NewProject');await p.getByRole('group',{name:'Codex launch mode'}).locator('..').locator('.launchpad-card-info').click();await p.waitForFunction(()=>window.pickCount===2);

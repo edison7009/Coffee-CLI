@@ -91,8 +91,10 @@ static HUB: OnceLock<Hub> = OnceLock::new();
 fn path() -> Result<std::path::PathBuf, String> {
     // Tests save fixture snapshots (orchestration on, every assistant enabled); they must never
     // overwrite the user's real settings.
+    // The temp dir is resolved: on macOS it sits behind the /var -> /private/var link, which save() refuses.
     #[cfg(test)]
-    return Ok(std::env::temp_dir().join(format!("coffee-orchestration-test-{}", std::process::id())).join("orchestration.json"));
+    return Ok(fs::canonicalize(std::env::temp_dir()).unwrap_or_else(|_| std::env::temp_dir())
+        .join(format!("coffee-orchestration-test-{}", std::process::id())).join("orchestration.json"));
     #[cfg(not(test))]
     Ok(dirs::home_dir().ok_or("Home directory unavailable")?.join(".coffee-cli/orchestration.json"))
 }
@@ -1463,8 +1465,12 @@ mod tests {
     #[test]
     fn tests_never_save_into_the_users_home() {
         let path = path().unwrap();
-        assert!(path.starts_with(std::env::temp_dir()), "{path:?}");
+        assert!(path.starts_with(fs::canonicalize(std::env::temp_dir()).unwrap()), "{path:?}");
         if let Some(home) = dirs::home_dir() { assert!(!path.starts_with(home.join(".coffee-cli")), "{path:?}"); }
+        // Saving really works there, on every platform.
+        let mut snapshot = Snapshot::default(); snapshot.mode = default_mode();
+        save(&snapshot).unwrap();
+        assert!(path.is_file());
     }
     #[test]
     fn a_restart_keeps_interrupted_work_and_undelivered_results_for_the_coordinator() {

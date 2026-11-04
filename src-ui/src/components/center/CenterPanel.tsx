@@ -615,8 +615,28 @@ export function CenterPanel() {
   const [folderMenu, setFolderMenu] = useState<{ x: number; y: number; tool: ToolType } | null>(null);
   // Each tool's last project folder: clicking its card opens straight there.
   const [lastFolders, setLastFolders] = useState<Record<string, string>>(() => {
-    try { const r = localStorage.getItem('coffee:last-folder-by-tool'); const parsed = r ? JSON.parse(r) : {}; return parsed && typeof parsed === 'object' ? parsed : {}; } catch { return {}; }
+    try {
+      const parsed: unknown = JSON.parse(localStorage.getItem('coffee:last-folder-by-tool') || '{}');
+      // A damaged entry is dropped rather than allowed to break the launch page.
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+        ? Object.fromEntries(Object.entries(parsed).filter((entry): entry is [string, string] => typeof entry[1] === 'string' && entry[1] !== ''))
+        : {};
+    } catch { return {}; }
   });
+  const [homeDir, setHomeDir] = useState<string | null>(null);
+  useEffect(() => {
+    if (!isTauri) return;
+    let alive = true;
+    import('@tauri-apps/api/path').then(path => path.homeDir()).then(home => { if (alive) setHomeDir(home); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
+  // A launch in flight: a second click (or another card) waits instead of launching again.
+  const cardLaunching = useRef(false);
+  const launchFromCard = (tool: ToolType, folder: string) => {
+    if (cardLaunching.current) return;
+    cardLaunching.current = true;
+    void selectTool(tool, undefined, folder).finally(() => { cardLaunching.current = false; });
+  };
   const updateLastFolders = (update: (current: Record<string, string>) => Record<string, string>) => {
     setLastFolders(prev => {
       const next = update(prev);
@@ -641,7 +661,11 @@ export function CenterPanel() {
       try { localStorage.setItem('coffee:recent-folders', JSON.stringify(next)); } catch { /* Best-effort operation; failure is non-fatal. */ }
       return next;
     });
-    // A folder that no longer exists is no tool's last folder either.
+  };
+  // A folder that no longer exists leaves the recents and is no tool's last folder either.
+  // (Tidying the recents list by hand keeps the tools' last folders.)
+  const forgetMissingFolder = (folder: string) => {
+    removeRecentFolder(folder);
     updateLastFolders(prev => Object.values(prev).includes(folder) ? Object.fromEntries(Object.entries(prev).filter(([, value]) => value !== folder)) : prev);
   };
 
@@ -1004,7 +1028,7 @@ export function CenterPanel() {
       const checks = await commands.checkProjectDirectories([cwd]).catch(() => []);
       if (activeIdRef.current !== activeTerminalId) return;
       if (checks.some(check => check.status === 'missing' || check.status === 'not_directory')) {
-        removeRecentFolder(cwd);
+        forgetMissingFolder(cwd);
         void handlePickFolder(tool);
         return;
       }
@@ -1044,7 +1068,7 @@ export function CenterPanel() {
     setFolderMenu({ x: button.getBoundingClientRect().left, y: (card ?? anchor).getBoundingClientRect().bottom + 4, tool });
     void commands.checkProjectDirectories(recentFolders).then(checks => {
       for (const check of checks) {
-        if (check.status === 'missing' || check.status === 'not_directory') removeRecentFolder(check.path);
+        if (check.status === 'missing' || check.status === 'not_directory') forgetMissingFolder(check.path);
       }
     }).catch(() => {});
   };
@@ -1503,7 +1527,7 @@ export function CenterPanel() {
                                     if (disabled) return;
                                     if (tool.requiresCwd) {
                                       const last = tool.key ? lastFolders[tool.key] : undefined;
-                                      if (last) void selectTool(tool.key, undefined, last); else openToolFolderMenu(tool.key, event.currentTarget);
+                                      if (last) launchFromCard(tool.key, last); else openToolFolderMenu(tool.key, event.currentTarget);
                                       return;
                                     }
                                     selectTool(tool.key);
@@ -1518,7 +1542,7 @@ export function CenterPanel() {
                                       {isTerminal && <button type="button" className="launchpad-chip" onClick={(e) => { e.stopPropagation(); setShowRemoteForm(true); }}>{t('launchpad.remote')}</button>}
                                     </div>
                                     {tool.requiresCwd && (tool.key && lastFolders[tool.key]
-                                      ? <span className="launchpad-card-path is-path"><bdi>{homeShortPath(lastFolders[tool.key])}</bdi></span>
+                                      ? <span className="launchpad-card-path is-path"><bdi>{homeShortPath(lastFolders[tool.key], homeDir)}</bdi></span>
                                       : <span className="launchpad-card-path">{t('launchpad.pick_folder')}</span>)}
                                   </div>
                                   {tool.requiresCwd && <button type="button" className="launchpad-folder" aria-label={t('launchpad.open_folder')} disabled={disabled} onClick={event => { event.stopPropagation(); openToolFolderMenu(tool.key, event.currentTarget); }}>

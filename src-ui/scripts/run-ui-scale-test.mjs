@@ -114,4 +114,14 @@ await test('applied scale reaches CSS and only macOS counter-zooms titlebar coor
   assert.equal(win.cssVars['--ui-scale'], '1.5');
   assert.equal(win.api.titlebarPxPerClientPx(), 1);
 });
+await test('the titlebar counter-zoom changes with the native zoom, not a frame after it', async () => {
+  const mac = fixture(undefined, 'MacIntel');
+  const release = mac.holdZoom();
+  const applying = mac.api.setUiScale(130);
+  await Promise.resolve(); await Promise.resolve();
+  assert.equal(mac.zooms.at(-1), 1.3, 'the native zoom is in flight');
+  assert.equal(mac.cssVars['--ui-scale'], '1.3', 'the titlebar compensation is already in place');
+  release(); await applying;
+  assert.equal(mac.cssVars['--ui-scale'], '1.3');
+});
 console.log(`\n${passed} interface scale tests passed.`);
