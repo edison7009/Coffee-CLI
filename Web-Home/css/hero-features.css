@@ -26,14 +26,26 @@
   align-items: flex-start;
 }
 
-.hero-split .hero-content { margin-bottom: 1.6rem; }
-.hero-split .headline {
-  font-size: clamp(1.8rem, 2.7vw, 2.5rem);
-  /* Reserve three lines so the typewriter never pushes the CTA around. */
-  min-height: 3.45em;
+/* Headline (3 lines) + subtitle: four rows with one equal gap between them. */
+.hero-split .hero-content {
+  --hero-row-gap: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--hero-row-gap);
+  margin-bottom: 0.4rem;
 }
-.hero-split .dynamic-wrapper { display: block; }
-.hero-split .subtitle { margin: 0; max-width: 30rem; }
+.hero-split .headline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hero-row-gap);
+  margin: 0;
+  font-size: clamp(1.8rem, 2.7vw, 2.5rem);
+  line-height: 1.1;
+}
+.hero-split .headline br { display: none; }
+/* Keep the typewriter row one line tall even while it is empty. */
+.hero-split .dynamic-wrapper { display: block; min-height: 1.1em; white-space: nowrap; }
+.hero-split .subtitle { margin: 0; max-width: 30rem; line-height: 1.4; }
 
 .hero-split .downloads-section {
   max-width: none;
@@ -156,7 +168,6 @@ html[data-theme='dark'] .fx-dot { background: rgba(255, 255, 255, 0.16); }
     gap: 2.5rem;
     padding: 0.5rem 1rem 2.5rem;
   }
-  .hero-split .headline { min-height: 0; }
 }
 
 @media (max-width: 600px) {
