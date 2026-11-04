@@ -686,9 +686,6 @@ code::-webkit-scrollbar-thumb {
   }
 }
 
-/* Smooth in-page jumps (e.g. #enterprise in the footer). */
-html { scroll-behavior: smooth; }
-
 /* ── Footer ─────────────────────────────────────────────────────────── */
 .site-footer {
   position: relative;
@@ -697,7 +694,6 @@ html { scroll-behavior: smooth; }
   margin-top: clamp(2.5rem, 6vw, 5rem);
   border-top: 1px solid var(--glass-border);
   background: var(--bg-color);
-  scroll-margin-top: 90px;
 }
 .sf-inner {
   max-width: 1360px;
@@ -724,16 +720,6 @@ html { scroll-behavior: smooth; }
   letter-spacing: -0.01em;
   color: var(--text-highlight);
 }
-.sf-biz {
-  font-size: 0.88rem;
-  color: var(--text-secondary);
-}
-.sf-biz a {
-  color: var(--brand-color);
-  text-decoration: none;
-  font-weight: 600;
-}
-.sf-biz a:hover { text-decoration: underline; }
 .sf-links {
   display: flex;
   flex-wrap: wrap;
@@ -758,7 +744,6 @@ html { scroll-behavior: smooth; }
 .sf-legal p { margin: 0; }
 .sf-legal a { color: inherit; text-decoration: none; white-space: nowrap; }
 .sf-legal a:hover { color: var(--text-highlight); text-decoration: underline; }
-.sf-tm { margin-top: 0.3rem !important; opacity: 0.7; }
 
 @media (max-width: 600px) {
   .sf-inner { padding: 1.6rem 16px 2rem; }
