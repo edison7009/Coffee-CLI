@@ -124,6 +124,15 @@ body.gambit-docked .claude-scroll-bottom { bottom:calc(var(--gambit-dock-h,200px
 .claude-empty-restoring { display:flex; align-items:center; justify-content:center; gap:9px; width:fit-content; margin:14px auto 0; min-height:24px; font-size:14px; }
 .claude-empty-restoring.dsh-running, .claude-empty-restoring.codex-working { margin:14px auto 0; padding:0; font-size:14px; }
 .claude-empty-restoring .claude-working-word { min-width:0; }
+/* Status title morph, as on Claude Desktop: faces cross in 180ms, 3px of rise each, width follows. */
+.claude-morph { position:relative; display:inline-flex; min-width:0; max-width:min(560px,100%); overflow:hidden; transition:width .18s cubic-bezier(.2,0,0,1); }
+.claude-morph-face { display:flex; min-width:0; }
+.claude-morph-face > * { min-width:0; overflow:hidden; text-overflow:ellipsis; }
+.claude-morph-face.is-entering { animation:claude-morph-in .18s cubic-bezier(.2,0,0,1); }
+.claude-morph-face.is-leaving { position:absolute; inset-inline-start:0; top:0; animation:claude-morph-out .18s cubic-bezier(.2,0,0,1) forwards; pointer-events:none; }
+@keyframes claude-morph-in { from { opacity:0; transform:translateY(3px); } }
+@keyframes claude-morph-out { to { opacity:0; transform:translateY(-3px); } }
+.claude-working .claude-morph .claude-working-word { min-width:0; }
 .claude-empty-meta { display:flex; align-items:center; justify-content:center; gap:10px; width:fit-content; max-width:100%; margin:14px auto 0; font-size:14px; }
 .claude-empty-directory { display:flex; align-items:center; justify-content:flex-end; gap:6px; min-width:0; text-align:right; }
 .claude-empty-directory svg { flex-shrink:0; }
@@ -153,7 +162,7 @@ body.gambit-docked .claude-reconnect { bottom:calc(var(--gambit-dock-h,200px) + 
 .claude-approval-actions button:last-child:hover:not(:disabled) { background:var(--text-1); }
 .claude-approval-actions button:disabled { opacity:.4; cursor:default; }
 @keyframes claude-pulse { 50% { opacity:.35; } }
-@media(prefers-reduced-motion:reduce) { .claude-row::before,.claude-working-word,.claude-working-mark img { animation:none; } .claude-working-word { background:none; -webkit-text-fill-color:currentColor; } }
+@media(prefers-reduced-motion:reduce) { .claude-row::before,.claude-working-word,.claude-working-mark img,.claude-morph-face { animation:none; } .claude-morph { transition:none; } .claude-morph-face.is-leaving { display:none; } .claude-working-word { background:none; -webkit-text-fill-color:currentColor; } }
 @media(prefers-reduced-motion:reduce) { .claude-empty-icon.is-animated :is(video,img) { visibility:hidden; } .claude-empty-icon.is-animated .claude-empty-still { visibility:visible; } }
 @media(forced-colors:active) { .claude-working-word { animation:none; background:none; color:CanvasText; -webkit-text-fill-color:currentColor; } }
 @container(max-width:600px) { .claude-thread { width:calc(100% - 32px); } }

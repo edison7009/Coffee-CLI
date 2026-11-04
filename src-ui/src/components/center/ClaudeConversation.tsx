@@ -20,6 +20,7 @@ import { CollapsibleUserMessage, ConversationNavigation, MessageCopyButton, type
 import { commands } from '../../tauri';
 import CLAWD_SVG from '../../icons-inline/clawd.svg?raw';
 import CLAUDE_WORKING_MARK from '../../icons-inline/claude-working-mark.webp';
+import { turnTitle } from '../../lib/turn-title';
 import CLAUDE_WELCOME from '../../icons-inline/claude-welcome.webm';
 import CLAUDE_WAVING from '../../icons-inline/claude-waving.gif';
 import CLAUDE_JUMPING from '../../icons-inline/claude-jumping.gif';
@@ -100,14 +101,39 @@ function ClaudeThinking({ message, expanded, onToggle, tokens }: { message: Clau
   </details>;
 }
 
-function Working({ status, startedAt }: { status: string; startedAt?: number }) {
+/** Text that changes the way Claude Desktop's status line does: the old face rises 3px and
+ *  fades while the new one rises in from 3px below, and the width follows, over 180ms. */
+function MorphText({ text, faceClassName }: { text: string; faceClassName?: string }) {
+  const [faces, setFaces] = useState<{ shown: string; leaving?: string; key: number }>({ shown: text, key: 0 });
+  if (faces.shown !== text) setFaces(prev => ({ shown: text, leaving: prev.shown, key: prev.key + 1 }));
+  const box = useRef<HTMLSpanElement>(null);
+  useLayoutEffect(() => {
+    const node = box.current;
+    if (!node) return;
+    // Measure the new face at its natural width, then move from the old width to it.
+    const from = node.style.width;
+    node.style.width = 'auto';
+    const to = `${node.getBoundingClientRect().width}px`;
+    if (!from || from === to) { node.style.width = to; return; }
+    node.style.width = from;
+    void node.offsetWidth;
+    node.style.width = to;
+  }, [faces.shown]);
+  return <span ref={box} className="claude-morph">
+    {faces.leaving !== undefined && <span key={`out-${faces.key}`} className="claude-morph-face is-leaving" aria-hidden="true" onAnimationEnd={() => setFaces(prev => prev.key === faces.key ? { ...prev, leaving: undefined } : prev)}><span className={faceClassName}>{faces.leaving}</span></span>}
+    <span key={`in-${faces.key}`} className={`claude-morph-face${faces.key ? ' is-entering' : ''}`}><span className={faceClassName}>{faces.shown}</span></span>
+  </span>;
+}
+
+function Working({ status, startedAt, title }: { status: string; startedAt?: number; title?: string }) {
   const t = useT();
   const now = useClock(true);
   const words = [t('claude.status.thinking'), t('claude.status.brewing'), t('claude.status.considering'), t('claude.status.working'), t('claude.status.crafting'), t('claude.status.pondering')];
   const age = now - (startedAt ?? now);
   const wordIndex = age < 2000 ? 0 : age < 5000 ? 1 : 2 + Math.floor((age - 5000) / 5000);
-  const word = status === 'stopping' ? t('codex.stopping') : status === 'compacting' ? t('claude.status.compacting') : status === 'tool' ? t('claude.status.working') : status === 'starting' ? t('claude.status.connecting') : words[wordIndex % words.length];
-  return <div className="claude-working" role="status"><span className="claude-working-mark" aria-hidden="true"><img src={CLAUDE_WORKING_MARK} alt="" /></span><span className="claude-working-word">{word}…</span>{startedAt && <span className="claude-elapsed">{elapsed(age, t)}</span>}</div>;
+  // Claude Code's own description of the current step titles the turn; the rotating words fill in until it gives one.
+  const word = status === 'stopping' ? t('codex.stopping') : status === 'compacting' ? t('claude.status.compacting') : status === 'starting' ? t('claude.status.connecting') : title ?? (status === 'tool' ? t('claude.status.working') : words[wordIndex % words.length]);
+  return <div className="claude-working" role="status"><span className="claude-working-mark" aria-hidden="true"><img src={CLAUDE_WORKING_MARK} alt="" /></span><MorphText faceClassName="claude-working-word" text={`${word}…`} />{startedAt && <span className="claude-elapsed">{elapsed(age, t)}</span>}</div>;
 }
 
 function Code({ content, path, className = '' }: { content: string; path: string; className?: string }) {
@@ -401,7 +427,7 @@ export function ClaudeConversation({ sessionId, cwd, resumeToken, isActive, isVi
         {s.requests.map(p => <Question key={p.id} id={sessionId} pending={p} />)}
         {s.coldReturn && <ClaudeColdReturn id={sessionId} idleMinutes={s.coldReturn.idleMinutes} tokens={s.coldReturn.tokens} />}
         {restoring && s.messages.length > 0 && <div className="claude-working" role="status">{restoringMark}<span className="claude-working-word">{t('conversation.restoring')}</span></div>}
-        {s.ready && s.busy && !s.requests.length && <Working status={s.interruptRequested ? 'stopping' : s.status} startedAt={s.startedAt} />}
+        {s.ready && s.busy && !s.requests.length && <Working status={s.interruptRequested ? 'stopping' : s.status} startedAt={s.startedAt} title={turnTitle(s.messages, s.startedAt)} />}
         {s.interrupted && !s.busy && !s.error && <div className="claude-interrupted" role="status">{t('claude.interrupted')}</div>}
         {directoryIssue && <div className="claude-session-error" role="alert">{directoryError}</div>}
         {s.error && (s.ready || s.errorKey === 'claude.error.settings_readback' || s.errorKey === 'claude.error.restart') && <div className="claude-session-error" role="alert">{s.errorKey ? t(s.errorKey, { detail: s.error }) : s.error}</div>}
