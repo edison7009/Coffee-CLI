@@ -145,13 +145,13 @@ html[data-theme='dark'] .fx-screen {
 }
 .fx-video.is-on { opacity: 1; }
 
-/* ── Clip dots: seven dots on the eyebrow line; the active one expands
-      into a pill with its name and a playback progress fill. ─────────── */
+/* ── Clip dots: a row of small dots on the eyebrow line; the active one
+      grows out of its dot into its name, with a thin progress line. ──── */
 .fx-dots {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 0.75rem;
   min-height: 1.6rem;
   margin: -0.2rem 0 1.05rem;
 }
@@ -159,47 +159,61 @@ html[data-theme='dark'] .fx-screen {
   position: relative;
   display: inline-flex;
   align-items: center;
-  height: 0.6rem;
-  min-width: 0.6rem;
+  height: 0.5rem;
+  min-width: 0.5rem;
   padding: 0;
   border: none;
   border-radius: 999px;
-  overflow: hidden;
   cursor: pointer;
-  background: rgba(127, 127, 127, 0.35);
-  font: 500 0.78rem/1 var(--font-primary);
+  background: rgba(127, 127, 127, 0.45);
   color: var(--text-highlight);
-  transition: height 0.3s ease, padding 0.3s ease, background-color 0.3s ease;
+  font: 600 0.85rem/1 var(--font-primary);
+  transition: background-color 0.35s ease, height 0.35s ease;
 }
-html[data-theme='dark'] .fx-dot { background: rgba(255, 255, 255, 0.22); }
-.fx-dot:hover:not(:disabled) { background: rgba(127, 127, 127, 0.55); }
-.fx-dot.is-soon { opacity: 0.4; cursor: default; }
-.fx-dot-fill {
+/* A comfortable hit area around the small dot. */
+.fx-dot::before {
+  content: "";
   position: absolute;
-  inset: 0;
+  inset: -0.55rem -0.4rem;
+}
+html[data-theme='dark'] .fx-dot { background: rgba(255, 255, 255, 0.3); }
+.fx-dot:hover { background: var(--brand-color); }
+.fx-dot-label {
+  display: block;
+  max-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  opacity: 0;
+  transition: max-width 0.5s cubic-bezier(0.22, 0.8, 0.26, 1), opacity 0.3s ease;
+}
+.fx-dot-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -0.45rem;
+  height: 2px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: rgba(127, 127, 127, 0.25);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.fx-dot-fill {
+  display: block;
+  height: 100%;
   background: var(--brand-color);
-  opacity: 0.28;
   transform: scaleX(0);
   transform-origin: left center;
-  transition: transform 0.25s linear;
-}
-.fx-dot-label {
-  position: relative;
-  max-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  opacity: 0;
-  transition: max-width 0.4s ease, opacity 0.3s ease;
 }
 .fx-dot.is-on,
 html[data-theme='dark'] .fx-dot.is-on {
-  height: 1.6rem;
-  padding: 0 0.8rem;
-  background: hsla(28, 42%, 59%, 0.16);
-  box-shadow: inset 0 0 0 1px hsla(28, 42%, 59%, 0.45);
+  height: 1.3rem;
+  background: transparent;
+  cursor: default;
 }
 .fx-dot.is-on .fx-dot-label { max-width: 14rem; opacity: 1; }
-.fx-dot:focus-visible { outline: 2px solid var(--brand-color); outline-offset: 3px; }
+.fx-dot.is-on .fx-dot-bar { opacity: 1; }
+.fx-dot:focus-visible { outline: 2px solid var(--brand-color); outline-offset: 4px; }
 
 /* ── Command install row: spans the full hero width under both columns ── */
 .hero-split .hero-install {
@@ -211,7 +225,7 @@ html[data-theme='dark'] .fx-dot.is-on {
 
 /* ── Responsive ────────────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
-  .fx-video, .fx-dot, .fx-dot-fill, .fx-dot-label { transition: none; }
+  .fx-video, .fx-dot, .fx-dot-label, .fx-dot-bar { transition: none; }
 }
 
 @media (max-width: 960px) {

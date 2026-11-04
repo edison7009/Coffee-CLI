@@ -65,9 +65,10 @@
     }
   };
 
-  // Seven feature clips over the hero image. A clip with no file yet keeps its
-  // dot dimmed and skipped; drop demo/<file>.webm + demo/<file>-poster.webp in
-  // and set `file` to light it up.
+  // Seven feature clips over the hero image. Every dot takes part in the
+  // rotation; a feature whose recording is not ready yet (`file: null`) keeps
+  // showing the first clip until demo/<file>.webm + demo/<file>-poster.webp
+  // are dropped in and `file` is set.
   const FEATURES = [
     { id: "split", file: "split-view" },
     { id: "agents", file: null },
@@ -102,6 +103,9 @@
     });
   }
 
+  // How long a feature without its own recording stays on before moving on.
+  const HOLD_MS = 4500;
+
   function init() {
     const root = document.getElementById("hero-features");
     const screen = root && root.querySelector(".fx-screen");
@@ -112,98 +116,129 @@
     const reduced = () => !!(reduce && reduce.matches);
     const dict = () => (typeof I18N_DICT === "object" && (I18N_DICT[currentLang] || I18N_DICT.en)) || {};
 
+    function makeVideo(file) {
+      const v = document.createElement("video");
+      v.className = "fx-video";
+      v.muted = true;
+      v.defaultMuted = true;
+      v.playsInline = true;
+      v.setAttribute("muted", "");
+      v.setAttribute("playsinline", "");
+      v.preload = "none";
+      v.width = 1920;
+      v.height = 1080;
+      v.poster = "demo/" + file + "-poster.webp";
+      v.dataset.file = file;
+      v.setAttribute("aria-hidden", "true");
+      screen.appendChild(v);
+      return v;
+    }
+
+    // Features share a video element per recording file.
+    const fallbackFile = FEATURES.filter(function (f) { return f.file; })[0].file;
+    const videos = {};
     const slides = FEATURES.map(function (f, i) {
+      const file = f.file || fallbackFile;
+      if (!videos[file]) videos[file] = makeVideo(file);
+
       const dot = document.createElement("button");
       dot.type = "button";
       dot.className = "fx-dot";
-      dot.innerHTML = '<span class="fx-dot-fill"></span><span class="fx-dot-label" data-i18n="fxl-' + f.id + '"></span>';
+      dot.innerHTML = '<span class="fx-dot-label" data-i18n="fxl-' + f.id + '"></span><span class="fx-dot-bar"><span class="fx-dot-fill"></span></span>';
       const label = dot.querySelector(".fx-dot-label");
       label.innerHTML = dict()["fxl-" + f.id] || LABELS.en[f.id];
       dot.setAttribute("aria-label", label.textContent);
+      dot.addEventListener("click", function () { show(i, true); });
       dots.appendChild(dot);
 
-      const slide = { f: f, dot: dot, fill: dot.firstChild, video: null };
-      if (!f.file) {
-        dot.disabled = true;
-        dot.classList.add("is-soon");
-        return slide;
-      }
-      dot.addEventListener("click", function () { show(i, true); });
-
-      const video = document.createElement("video");
-      video.className = "fx-video";
-      video.muted = true;
-      video.defaultMuted = true;
-      video.playsInline = true;
-      video.setAttribute("muted", "");
-      video.setAttribute("playsinline", "");
-      video.preload = "none";
-      video.width = 1920;
-      video.height = 1080;
-      video.poster = "demo/" + f.file + "-poster.webp";
-      video.setAttribute("aria-hidden", "true");
-      screen.appendChild(video);
-      slide.video = video;
-
-      video.addEventListener("ended", function () {
-        if (i === current) next();
-      });
-      video.addEventListener("timeupdate", function () {
-        if (i !== current || !video.duration) return;
-        slide.fill.style.transform = "scaleX(" + (video.currentTime / video.duration).toFixed(3) + ")";
-      });
-      return slide;
+      return { f: f, own: !!f.file, video: videos[file], dot: dot, fill: dot.querySelector(".fx-dot-fill") };
     });
-
-    const playable = slides.filter(function (s) { return s.video; });
-    if (!playable.length) return;
-    // A single clip simply loops; with several, each plays once then hands over.
-    if (playable.length === 1) playable[0].video.loop = true;
 
     let current = -1;
     let visible = true;
+    let timer = 0;
+    let holdStart = 0;
+    let holdLeft = HOLD_MS;
+    let raf = 0;
 
-    function load(slide) {
+    function load(v) {
       // Attach the file on first play so unseen clips never download.
-      if (!slide.video.getAttribute("src")) slide.video.src = "demo/" + slide.f.file + ".webm";
+      if (!v.getAttribute("src")) v.src = "demo/" + v.dataset.file + ".webm";
+    }
+
+    function running() {
+      return !reduced() && visible && !document.hidden;
+    }
+
+    function setFill(x) {
+      slides[current].fill.style.transform = "scaleX(" + Math.max(0, Math.min(1, x)).toFixed(3) + ")";
+    }
+
+    // Progress for features that borrow a clip: a timer, not the video clock.
+    function tickHold() {
+      cancelAnimationFrame(raf);
+      if (current < 0 || slides[current].own) return;
+      setFill((HOLD_MS - holdLeft + (performance.now() - holdStart)) / HOLD_MS);
+      raf = requestAnimationFrame(tickHold);
     }
 
     function sync() {
       if (current < 0) return;
-      const v = slides[current].video;
-      if (reduced() || !visible || document.hidden) {
-        v.pause();
+      const s = slides[current];
+      clearTimeout(timer);
+      cancelAnimationFrame(raf);
+      // Bank the time already spent on a borrowed clip before (re)starting.
+      if (holdStart) holdLeft -= performance.now() - holdStart;
+      holdStart = 0;
+      if (!running()) {
+        s.video.pause();
         return;
       }
-      load(slides[current]);
-      const p = v.play();
+      load(s.video);
+      // A borrowed clip loops quietly; an own clip plays once and hands over.
+      s.video.loop = !s.own;
+      const p = s.video.play();
       if (p && p.catch) p.catch(function () {});
+      if (!s.own) {
+        holdStart = performance.now();
+        timer = setTimeout(next, Math.max(0, holdLeft));
+        tickHold();
+      }
     }
 
     function next() {
-      let i = current;
-      do { i = (i + 1) % slides.length; } while (!slides[i].video);
-      show(i, false);
+      show((current + 1) % slides.length, false);
     }
 
     function show(i, fromUser) {
-      if (current >= 0 && current !== i) {
-        const old = slides[current];
-        old.video.pause();
-        old.video.classList.remove("is-on");
-        old.dot.classList.remove("is-on");
-        old.dot.removeAttribute("aria-current");
-        old.fill.style.transform = "";
+      clearTimeout(timer);
+      cancelAnimationFrame(raf);
+      const prev = current >= 0 ? slides[current] : null;
+      if (prev && current !== i) {
+        prev.dot.classList.remove("is-on");
+        prev.dot.removeAttribute("aria-current");
+        prev.fill.style.transform = "";
       }
       current = i;
       const s = slides[i];
-      try { s.video.currentTime = 0; } catch (e) { /* not loaded yet */ }
-      s.video.classList.add("is-on");
+      if (!prev || prev.video !== s.video) {
+        if (prev) {
+          prev.video.pause();
+          prev.video.classList.remove("is-on");
+        }
+        s.video.classList.add("is-on");
+      }
+      // An own clip always starts from the top; a borrowed one just keeps going.
+      if (s.own) {
+        try { s.video.currentTime = 0; } catch (e) { /* not loaded yet */ }
+      }
+      holdLeft = HOLD_MS;
+      holdStart = 0;
       s.dot.classList.add("is-on");
       s.dot.setAttribute("aria-current", "true");
       if (fromUser && reduced()) {
         // Reduced motion: an explicit click still plays the clip.
-        load(s);
+        load(s.video);
         const p = s.video.play();
         if (p && p.catch) p.catch(function () {});
       } else {
@@ -211,19 +246,30 @@
       }
     }
 
+    Object.keys(videos).forEach(function (file) {
+      const v = videos[file];
+      v.addEventListener("ended", function () {
+        if (current >= 0 && slides[current].video === v && slides[current].own) next();
+      });
+      v.addEventListener("timeupdate", function () {
+        if (current < 0 || slides[current].video !== v || !slides[current].own || !v.duration) return;
+        setFill(v.currentTime / v.duration);
+      });
+    });
+
     // Clicking the picture plays / pauses it.
     screen.addEventListener("click", function () {
-      const s = slides[current];
-      load(s);
-      if (s.video.paused) {
-        const p = s.video.play();
+      const v = slides[current].video;
+      load(v);
+      if (v.paused) {
+        const p = v.play();
         if (p && p.catch) p.catch(function () {});
       } else {
-        s.video.pause();
+        v.pause();
       }
     });
 
-    show(slides.indexOf(playable[0]), false);
+    show(0, false);
     if ("IntersectionObserver" in window) {
       new IntersectionObserver(function (entries) {
         visible = entries[0].isIntersecting;
