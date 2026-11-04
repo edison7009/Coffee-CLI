@@ -69,6 +69,8 @@
   line-height: 1.75;
   color: var(--text-secondary);
 }
+/* Night: the site-wide secondary gray (#888) reads too dim for a paragraph. */
+html[data-theme='dark'] .hx-lead { color: rgba(235, 235, 235, 0.78); }
 
 .hero-split .downloads-section {
   max-width: none;
