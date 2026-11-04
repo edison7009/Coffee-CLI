@@ -28,7 +28,7 @@
 
 .hero-split .hero-content { margin-bottom: 1.6rem; }
 .hero-split .headline {
-  font-size: clamp(2.1rem, 3.5vw, 3.1rem);
+  font-size: clamp(1.8rem, 2.7vw, 2.5rem);
   /* Reserve three lines so the typewriter never pushes the CTA around. */
   min-height: 3.45em;
 }
@@ -160,7 +160,7 @@ html[data-theme='dark'] .fx-dot { background: rgba(255, 255, 255, 0.16); }
 }
 
 @media (max-width: 600px) {
-  .hero-split .headline { font-size: 2rem; }
+  .hero-split .headline { font-size: 1.75rem; }
   .hero-split .downloads-row {
     flex-direction: row;
     max-width: none;
