@@ -134,13 +134,13 @@
     },
     zh: {
       "hx-eyebrow": "免费开源 · Windows / macOS / Linux",
-      "hx-title": L("让终端里的 AI Agent", "用上桌面，<em>美得不可方物</em>"),
+      "hx-title": L("让终端里的 AI Agent", "体验丝滑，又<em>美得不可方物</em>"),
       "hx-lead": "Claude Code、Codex、OpenCode、Pi 这些命令行 AI，在 Coffee CLI 里都有了好看又顺手的桌面。",
       "hx-tags": "# 拖拽分屏 · 多智能体编排 · 额度显示 · 12 种配色 · 改动对比 · 任务列表"
     },
     "zh-TW": {
       "hx-eyebrow": "免費開源 · Windows / macOS / Linux",
-      "hx-title": L("讓終端機裡的 AI Agent", "用上桌面，<em>美得不可方物</em>"),
+      "hx-title": L("讓終端機裡的 AI Agent", "體驗絲滑，又<em>美得不可方物</em>"),
       "hx-lead": "Claude Code、Codex、OpenCode、Pi 這些命令列 AI，在 Coffee CLI 裡都有了好看又順手的桌面。",
       "hx-tags": "# 拖曳分割 · 多智能體編排 · 額度顯示 · 12 種配色 · 改動對比 · 任務清單"
     },
