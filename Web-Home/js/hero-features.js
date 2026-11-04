@@ -65,10 +65,10 @@
     }
   };
 
-  // Seven feature clips over the hero image. Every dot takes part in the
-  // rotation; a feature whose recording is not ready yet (`file: null`) keeps
-  // showing the first clip until demo/<file>.webm + demo/<file>-poster.webp
-  // are dropped in and `file` is set.
+  // Seven feature names over the hero image, as plain text tabs. Clicking one
+  // highlights it and shows its clip (looped). A feature whose recording is not
+  // ready yet (`file: null`) shows the first clip until
+  // demo/<file>.webm + demo/<file>-poster.webp are dropped in and `file` is set.
   const FEATURES = [
     { id: "split", file: "split-view" },
     { id: "agents", file: null },
@@ -79,18 +79,18 @@
     { id: "tasks", file: null }
   ];
 
-  // One short label per clip, shown inside the active (expanded) dot.
+  // One short label per clip.
   const LABELS = {
-    en: { split: "Drag to split", agents: "Multi-agent", usage: "Usage meter", themes: "Themes & styles", modes: "Desktop / terminal", changes: "Changes & PRs", tasks: "To-do prompts" },
-    zh: { split: "拖拽分屏", agents: "多智能体编排", usage: "额度显示", themes: "配色与形态", modes: "桌面 / 终端", changes: "改动 / 对比 / PR", tasks: "ToDo 预输入" },
-    "zh-TW": { split: "拖曳分割", agents: "多智能體編排", usage: "額度顯示", themes: "配色與形態", modes: "桌面 / 終端機", changes: "改動 / 對比 / PR", tasks: "ToDo 預輸入" },
-    ja: { split: "ドラッグで分割", agents: "マルチエージェント", usage: "利用枠表示", themes: "配色とスタイル", modes: "デスクトップ / ターミナル", changes: "変更 / 差分 / PR", tasks: "ToDo 事前入力" },
-    ko: { split: "드래그 분할", agents: "멀티 에이전트", usage: "사용량 표시", themes: "색상과 스타일", modes: "데스크톱 / 터미널", changes: "변경 / 비교 / PR", tasks: "ToDo 미리 입력" },
-    es: { split: "Dividir arrastrando", agents: "Multiagente", usage: "Uso y saldo", themes: "Temas y estilos", modes: "Escritorio / terminal", changes: "Cambios y PR", tasks: "Prompts en lista" },
-    fr: { split: "Glisser pour partager", agents: "Multi-agents", usage: "Quotas", themes: "Thèmes et styles", modes: "Bureau / terminal", changes: "Modifications et PR", tasks: "Prompts en liste" },
-    de: { split: "Split per Drag", agents: "Multi-Agent", usage: "Kontingent", themes: "Farben & Stile", modes: "Desktop / Terminal", changes: "Änderungen & PRs", tasks: "To-do-Prompts" },
-    pt: { split: "Dividir arrastando", agents: "Multiagente", usage: "Uso e saldo", themes: "Temas e estilos", modes: "Desktop / terminal", changes: "Alterações e PRs", tasks: "Prompts em lista" },
-    ru: { split: "Разделение экрана", agents: "Мультиагенты", usage: "Лимиты", themes: "Темы и стили", modes: "Стол / терминал", changes: "Изменения и PR", tasks: "Список задач" }
+    en: { split: "Split view", agents: "Multi-agent", usage: "Usage", themes: "Themes", modes: "Desktop mode", changes: "Diffs & PRs", tasks: "To-dos" },
+    zh: { split: "拖拽分屏", agents: "多智能体编排", usage: "额度显示", themes: "配色与形态", modes: "桌面或终端", changes: "改动对比", tasks: "ToDo 预输入" },
+    "zh-TW": { split: "拖曳分割", agents: "多智能體編排", usage: "額度顯示", themes: "配色與形態", modes: "桌面或終端機", changes: "改動對比", tasks: "ToDo 預輸入" },
+    ja: { split: "画面分割", agents: "マルチエージェント", usage: "利用枠", themes: "テーマ", modes: "デスクトップ", changes: "差分と PR", tasks: "ToDo" },
+    ko: { split: "화면 분할", agents: "멀티 에이전트", usage: "사용량", themes: "테마", modes: "데스크톱 모드", changes: "변경 비교", tasks: "할 일" },
+    es: { split: "Pantalla dividida", agents: "Multiagente", usage: "Uso", themes: "Temas", modes: "Modo escritorio", changes: "Cambios y PR", tasks: "Tareas" },
+    fr: { split: "Écran partagé", agents: "Multi-agents", usage: "Quotas", themes: "Thèmes", modes: "Mode bureau", changes: "Diffs et PR", tasks: "Tâches" },
+    de: { split: "Split-View", agents: "Multi-Agent", usage: "Kontingent", themes: "Themes", modes: "Desktop-Modus", changes: "Diffs & PRs", tasks: "To-dos" },
+    pt: { split: "Tela dividida", agents: "Multiagente", usage: "Uso", themes: "Temas", modes: "Modo desktop", changes: "Diffs e PRs", tasks: "Tarefas" },
+    ru: { split: "Сплит-экран", agents: "Мультиагенты", usage: "Лимиты", themes: "Темы", modes: "Режим стола", changes: "Диффы и PR", tasks: "Задачи" }
   };
 
   if (typeof I18N_DICT === "object") {
@@ -103,14 +103,45 @@
     });
   }
 
-  // How long a feature without its own recording stays on before moving on.
-  const HOLD_MS = 4500;
+  // Keep each headline row on one line: shrink the title until its widest
+  // row fits the column (long languages get a smaller size instead of a
+  // third line). Below the floor size, rows are allowed to wrap again.
+  const TITLE_MIN_PX = 24;
+  function fitTitle() {
+    const title = document.querySelector(".hx-title");
+    if (!title) return;
+    title.style.fontSize = "";
+    title.classList.add("is-fit");
+    const lines = title.querySelectorAll(".hx-line");
+    const avail = title.clientWidth;
+    let widest = 0;
+    lines.forEach(function (l) { widest = Math.max(widest, l.scrollWidth); });
+    if (!avail || widest <= avail) return;
+    const base = parseFloat(getComputedStyle(title).fontSize);
+    const size = Math.floor(base * (avail / widest) * 0.98);
+    if (size >= TITLE_MIN_PX) {
+      title.style.fontSize = size + "px";
+    } else {
+      title.style.fontSize = TITLE_MIN_PX + "px";
+      title.classList.remove("is-fit");
+    }
+  }
+
+  function initTitleFit() {
+    let raf = 0;
+    const run = function () { cancelAnimationFrame(raf); raf = requestAnimationFrame(fitTitle); };
+    run();
+    window.addEventListener("resize", run);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(run);
+    return run;
+  }
 
   function init() {
+    const refitTitle = initTitleFit();
     const root = document.getElementById("hero-features");
     const screen = root && root.querySelector(".fx-screen");
-    const dots = root && root.querySelector(".fx-dots");
-    if (!screen || !dots) return;
+    const tabs = root && root.querySelector(".fx-tabs");
+    if (!screen || !tabs) return;
 
     const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)");
     const reduced = () => !!(reduce && reduce.matches);
@@ -121,6 +152,7 @@
       v.className = "fx-video";
       v.muted = true;
       v.defaultMuted = true;
+      v.loop = true;
       v.playsInline = true;
       v.setAttribute("muted", "");
       v.setAttribute("playsinline", "");
@@ -141,126 +173,77 @@
       const file = f.file || fallbackFile;
       if (!videos[file]) videos[file] = makeVideo(file);
 
-      const dot = document.createElement("button");
-      dot.type = "button";
-      dot.className = "fx-dot";
-      dot.innerHTML = '<span class="fx-dot-label" data-i18n="fxl-' + f.id + '"></span><span class="fx-dot-bar"><span class="fx-dot-fill"></span></span>';
-      const label = dot.querySelector(".fx-dot-label");
-      label.innerHTML = dict()["fxl-" + f.id] || LABELS.en[f.id];
-      dot.setAttribute("aria-label", label.textContent);
-      dot.addEventListener("click", function () { show(i, true); });
-      dots.appendChild(dot);
-
-      return { f: f, own: !!f.file, video: videos[file], dot: dot, fill: dot.querySelector(".fx-dot-fill") };
+      const tab = document.createElement("button");
+      tab.type = "button";
+      tab.className = "fx-tab";
+      tab.setAttribute("data-i18n", "fxl-" + f.id);
+      tab.innerHTML = dict()["fxl-" + f.id] || LABELS.en[f.id];
+      tab.addEventListener("click", function () { show(i); });
+      tabs.appendChild(tab);
+      return { video: videos[file], tab: tab };
     });
 
     let current = -1;
     let visible = true;
-    let timer = 0;
-    let holdStart = 0;
-    let holdLeft = HOLD_MS;
-    let raf = 0;
 
-    function load(v) {
-      // Attach the file on first play so unseen clips never download.
-      if (!v.getAttribute("src")) v.src = "demo/" + v.dataset.file + ".webm";
+    // The tab row stays on one line; when it is wider than the column it
+    // scrolls sideways, fades at the cut edge, and keeps the selected tab in view.
+    function updateFade() {
+      const over = tabs.scrollWidth > tabs.clientWidth + 1;
+      tabs.classList.toggle("is-overflow", over);
+      tabs.classList.toggle("at-end", !over || tabs.scrollLeft + tabs.clientWidth >= tabs.scrollWidth - 1);
+      tabs.classList.toggle("at-start", tabs.scrollLeft <= 1);
     }
-
-    function running() {
-      return !reduced() && visible && !document.hidden;
+    function revealTab(tab) {
+      if (tabs.scrollWidth <= tabs.clientWidth + 1) return updateFade();
+      const left = tab.offsetLeft - tabs.offsetLeft;
+      const target = Math.max(0, Math.min(left - 24, tabs.scrollWidth - tabs.clientWidth));
+      tabs.scrollTo({ left: target, behavior: "auto" });
+      updateFade();
     }
-
-    function setFill(x) {
-      slides[current].fill.style.transform = "scaleX(" + Math.max(0, Math.min(1, x)).toFixed(3) + ")";
-    }
-
-    // Progress for features that borrow a clip: a timer, not the video clock.
-    function tickHold() {
-      cancelAnimationFrame(raf);
-      if (current < 0 || slides[current].own) return;
-      setFill((HOLD_MS - holdLeft + (performance.now() - holdStart)) / HOLD_MS);
-      raf = requestAnimationFrame(tickHold);
-    }
+    tabs.addEventListener("scroll", updateFade, { passive: true });
+    window.addEventListener("resize", updateFade);
 
     function sync() {
       if (current < 0) return;
-      const s = slides[current];
-      clearTimeout(timer);
-      cancelAnimationFrame(raf);
-      // Bank the time already spent on a borrowed clip before (re)starting.
-      if (holdStart) holdLeft -= performance.now() - holdStart;
-      holdStart = 0;
-      if (!running()) {
-        s.video.pause();
+      const v = slides[current].video;
+      if (reduced() || !visible || document.hidden) {
+        v.pause();
         return;
       }
-      load(s.video);
-      // A borrowed clip loops quietly; an own clip plays once and hands over.
-      s.video.loop = !s.own;
-      const p = s.video.play();
+      // Attach the file on first play so unseen clips never download.
+      if (!v.getAttribute("src")) v.src = "demo/" + v.dataset.file + ".webm";
+      const p = v.play();
       if (p && p.catch) p.catch(function () {});
-      if (!s.own) {
-        holdStart = performance.now();
-        timer = setTimeout(next, Math.max(0, holdLeft));
-        tickHold();
-      }
     }
 
-    function next() {
-      show((current + 1) % slides.length, false);
-    }
-
-    function show(i, fromUser) {
-      clearTimeout(timer);
-      cancelAnimationFrame(raf);
+    function show(i) {
       const prev = current >= 0 ? slides[current] : null;
-      if (prev && current !== i) {
-        prev.dot.classList.remove("is-on");
-        prev.dot.removeAttribute("aria-current");
-        prev.fill.style.transform = "";
+      if (prev) {
+        prev.tab.classList.remove("is-on");
+        prev.tab.removeAttribute("aria-pressed");
       }
       current = i;
       const s = slides[i];
+      s.tab.classList.add("is-on");
+      s.tab.setAttribute("aria-pressed", "true");
+      revealTab(s.tab);
       if (!prev || prev.video !== s.video) {
         if (prev) {
           prev.video.pause();
           prev.video.classList.remove("is-on");
         }
         s.video.classList.add("is-on");
-      }
-      // An own clip always starts from the top; a borrowed one just keeps going.
-      if (s.own) {
         try { s.video.currentTime = 0; } catch (e) { /* not loaded yet */ }
       }
-      holdLeft = HOLD_MS;
-      holdStart = 0;
-      s.dot.classList.add("is-on");
-      s.dot.setAttribute("aria-current", "true");
-      if (fromUser && reduced()) {
-        // Reduced motion: an explicit click still plays the clip.
-        load(s.video);
-        const p = s.video.play();
-        if (p && p.catch) p.catch(function () {});
-      } else {
-        sync();
-      }
+      sync();
     }
 
-    Object.keys(videos).forEach(function (file) {
-      const v = videos[file];
-      v.addEventListener("ended", function () {
-        if (current >= 0 && slides[current].video === v && slides[current].own) next();
-      });
-      v.addEventListener("timeupdate", function () {
-        if (current < 0 || slides[current].video !== v || !slides[current].own || !v.duration) return;
-        setFill(v.currentTime / v.duration);
-      });
-    });
-
-    // Clicking the picture plays / pauses it.
+    // Clicking the picture plays / pauses it (the only way to play it when
+    // the visitor asked for reduced motion).
     screen.addEventListener("click", function () {
       const v = slides[current].video;
-      load(v);
+      if (!v.getAttribute("src")) v.src = "demo/" + v.dataset.file + ".webm";
       if (v.paused) {
         const p = v.play();
         if (p && p.catch) p.catch(function () {});
@@ -269,7 +252,7 @@
       }
     });
 
-    show(0, false);
+    show(0);
     if ("IntersectionObserver" in window) {
       new IntersectionObserver(function (entries) {
         visible = entries[0].isIntersecting;
@@ -279,14 +262,13 @@
     document.addEventListener("visibilitychange", sync);
     if (reduce && reduce.addEventListener) reduce.addEventListener("change", sync);
 
-    // Keep the dots' accessible names in step with language changes.
+    // Language changes swap the copy: refit the title and recheck the tab row.
     if (typeof window.renderI18N === "function") {
       const render = window.renderI18N;
       window.renderI18N = function () {
         render.apply(this, arguments);
-        slides.forEach(function (s) {
-          s.dot.setAttribute("aria-label", s.dot.querySelector(".fx-dot-label").textContent);
-        });
+        refitTitle();
+        if (current >= 0) revealTab(slides[current].tab);
       };
     }
   }

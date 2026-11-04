@@ -31,11 +31,15 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  /* Pin to the column width: the title is measured against it (fitTitle). */
+  width: 100%;
+  min-width: 0;
   margin: 0;
 }
 .hx-eyebrow {
-  display: inline-flex;
-  align-items: center;
+  display: flex;
+  align-items: baseline;
+  max-width: 100%;
   gap: 0.6rem;
   margin: 0 0 1.4rem;
   font: 400 0.82rem/1.4 var(--font-mono);
@@ -43,6 +47,8 @@
   color: var(--text-secondary);
 }
 .hx-dot {
+  flex: none;
+  align-self: center;
   width: 0.5rem;
   height: 0.5rem;
   border-radius: 2px;
@@ -50,6 +56,7 @@
   box-shadow: 0 0 0 3px hsla(28, 42%, 59%, 0.18);
 }
 .hx-title {
+  width: 100%;
   margin: 0;
   font-size: clamp(2rem, 3.2vw, 3rem);
   font-weight: 700;
@@ -58,6 +65,8 @@
   color: var(--text-highlight);
 }
 .hx-line { display: block; }
+/* js fits the font size so each row stays on one line (see fitTitle). */
+.hx-title.is-fit .hx-line { white-space: nowrap; }
 .hx-title em {
   font-style: normal;
   color: var(--brand-color);
@@ -140,80 +149,60 @@ html[data-theme='dark'] .fx-screen {
   height: 100%;
   object-fit: cover;
   display: block;
-  opacity: 0;
-  transition: opacity 0.45s ease;
+  visibility: hidden;
 }
-.fx-video.is-on { opacity: 1; }
+.fx-video.is-on { visibility: visible; }
 
-/* ── Clip dots: a row of small dots on the eyebrow line; the active one
-      grows out of its dot into its name, with a thin progress line. ──── */
-.fx-dots {
+/* ── Feature tabs: plain text names on the eyebrow line, " / " between
+      them; the selected one is highlighted. No motion. ─────────────────── */
+.fx-tabs {
   display: flex;
+  flex-wrap: nowrap;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  min-height: 1.6rem;
-  margin: -0.2rem 0 1.05rem;
+  margin: -0.15rem 0 1.05rem;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  white-space: nowrap;
+  font: 500 0.88rem/1.4 var(--font-primary);
+  color: var(--text-secondary);
 }
-.fx-dot {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  height: 0.5rem;
-  min-width: 0.5rem;
+.fx-tabs::-webkit-scrollbar { display: none; }
+/* Too long for the column: fade the cut edge(s) so it reads as scrollable. */
+.fx-tabs.is-overflow:not(.at-end) {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 3rem), transparent);
+          mask-image: linear-gradient(to right, #000 calc(100% - 3rem), transparent);
+}
+.fx-tabs.is-overflow.at-end:not(.at-start) {
+  -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 3rem), transparent);
+          mask-image: linear-gradient(to left, #000 calc(100% - 3rem), transparent);
+}
+.fx-tab {
+  flex: none;
   padding: 0;
   border: none;
-  border-radius: 999px;
+  background: none;
+  font: inherit;
+  color: inherit;
   cursor: pointer;
-  background: rgba(127, 127, 127, 0.45);
-  color: var(--text-highlight);
-  font: 600 0.85rem/1 var(--font-primary);
-  transition: background-color 0.35s ease, height 0.35s ease;
 }
-/* A comfortable hit area around the small dot. */
-.fx-dot::before {
-  content: "";
-  position: absolute;
-  inset: -0.55rem -0.4rem;
+/* The slash trails each name, so a wrapped line never starts with "/". */
+.fx-tab:not(:last-child)::after {
+  content: "/";
+  display: inline-block;
+  margin: 0 0.6rem;
+  color: var(--text-secondary);
+  opacity: 0.45;
+  font-weight: 400;
 }
-html[data-theme='dark'] .fx-dot { background: rgba(255, 255, 255, 0.3); }
-.fx-dot:hover { background: var(--brand-color); }
-.fx-dot-label {
-  display: block;
-  max-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  opacity: 0;
-  transition: max-width 0.5s cubic-bezier(0.22, 0.8, 0.26, 1), opacity 0.3s ease;
-}
-.fx-dot-bar {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -0.45rem;
-  height: 2px;
-  border-radius: 2px;
-  overflow: hidden;
-  background: rgba(127, 127, 127, 0.25);
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-.fx-dot-fill {
-  display: block;
-  height: 100%;
-  background: var(--brand-color);
-  transform: scaleX(0);
-  transform-origin: left center;
-}
-.fx-dot.is-on,
-html[data-theme='dark'] .fx-dot.is-on {
-  height: 1.3rem;
-  background: transparent;
+.fx-tab:hover { color: var(--text-highlight); }
+.fx-tab.is-on::after { font-weight: 400; color: var(--text-secondary); }
+.fx-tab.is-on {
+  color: var(--brand-color);
+  font-weight: 700;
   cursor: default;
 }
-.fx-dot.is-on .fx-dot-label { max-width: 14rem; opacity: 1; }
-.fx-dot.is-on .fx-dot-bar { opacity: 1; }
-.fx-dot:focus-visible { outline: 2px solid var(--brand-color); outline-offset: 4px; }
+.fx-tab:focus-visible { outline: 2px solid var(--brand-color); outline-offset: 3px; border-radius: 2px; }
 
 /* ── Command install row: spans the full hero width under both columns ── */
 .hero-split .hero-install {
@@ -224,10 +213,6 @@ html[data-theme='dark'] .fx-dot.is-on {
 }
 
 /* ── Responsive ────────────────────────────────────────────────────────── */
-@media (prefers-reduced-motion: reduce) {
-  .fx-video, .fx-dot, .fx-dot-label, .fx-dot-bar { transition: none; }
-}
-
 @media (max-width: 960px) {
   /* Narrow: icons drop under the tabs on their own centered line. */
   .hero-install .window-header { grid-template-columns: 1fr; justify-items: center; }
@@ -241,7 +226,6 @@ html[data-theme='dark'] .fx-dot.is-on {
 }
 
 @media (max-width: 600px) {
-  .hx-title { font-size: 1.85rem; }
   .hero-split .downloads-row {
     flex-direction: row;
     max-width: none;
