@@ -275,6 +275,29 @@ try {
     await page.evaluate(()=>document.documentElement.style.setProperty('--text-2','#aba1aa'));
     await page.screenshot({path:join(directory,`tool-icons-${layout}.png`),fullPage:true});
   }
+  // The Tools view lists one favourite tool's sessions, picked from a submenu level with its row.
+  await page.evaluate(()=>{localStorage.setItem('cc-history-layout','list');localStorage.setItem('coffee_pinned_items',JSON.stringify(['agent:claude','agent:codex','agent:pi','agent:terminal']));});
+  await page.goto(`http://127.0.0.1:${server.address().port}/?toolIcons=1`);
+  await page.locator('.history-card').first().waitFor();
+  const allCards=await page.locator('.history-card').count();
+  await page.locator('.history-layout-menu-btn').click();
+  const toolsRow=page.getByRole('menuitem',{name:'Tools'});await toolsRow.hover();
+  const toolMenu=page.getByRole('menu',{name:'Tools'});await toolMenu.waitFor();
+  assert.deepEqual(await toolMenu.getByRole('menuitemradio').evaluateAll(items=>items.map(item=>item.dataset.tool)),['claude','codex','pi'],'favourite AI tools in launchpad order, without the terminal');
+  const piName=await toolMenu.locator('[data-tool="pi"] .history-layout-tool-name').textContent();
+  const [rowBox,firstToolBox,menuBox,subBox]=await Promise.all([toolsRow.boundingBox(),toolMenu.getByRole('menuitemradio').first().boundingBox(),page.locator('.history-layout-menu').first().boundingBox(),toolMenu.boundingBox()]);
+  assert.ok(Math.abs(rowBox.y-firstToolBox.y)<1.5,'the first tool sits level with the Tools row');
+  assert.ok(subBox.x>=menuBox.x+menuBox.width,'the submenu opens beside the menu');
+  await page.getByRole('menuitemradio',{name:'Projects'}).hover();
+  assert.equal(await toolMenu.count(),0,'hovering another row closes the submenu');
+  await toolsRow.hover();await toolMenu.locator('[data-tool="pi"]').click();
+  assert.equal(await page.locator('.history-layout-menu').count(),0,'choosing a tool closes both menus');
+  assert.equal(await page.locator('.history-layout-toggle > span').textContent(),piName,'the heading names the tool');
+  const piCards=await page.locator('.history-card').count();
+  assert.ok(piCards>=1&&piCards<allCards,'only that tool\'s sessions are listed');
+  await page.reload();await page.locator('.history-card').first().waitFor();
+  assert.equal(await page.locator('.history-layout-toggle > span').textContent(),piName,'the chosen tool is remembered');
+  await page.evaluate(()=>{localStorage.setItem('cc-history-layout','list');localStorage.removeItem('coffee_pinned_items');});
   // Coffee Agent conversations carry the desktop app icon, never the animated title-bar logo.
   for (const layout of ['projects','list']) {
     await page.evaluate(layout=>localStorage.setItem('cc-history-layout',layout),layout);

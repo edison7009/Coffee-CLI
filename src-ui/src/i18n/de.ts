@@ -169,6 +169,7 @@ export const de = {
   'history.list': 'Sitzungen',
   'history.projects': 'Projekte',
   'history.layout': 'Ansicht',
+  'history.by_tool': 'Werkzeuge',
   'history.show_more': 'Mehr anzeigen',
   'history.show_less': 'Weniger anzeigen',
   "claude.cold_return.title": "{idle} inaktiv, etwa {tokens} Kontext",

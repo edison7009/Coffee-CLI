@@ -1,5 +1,5 @@
 import { worktreeFromPath } from '../../lib/worktree-path';
-import { useState, useEffect, useMemo, useRef, useSyncExternalStore, useId, useCallback } from 'react';
+import { useState, useEffect, useLayoutEffect, useMemo, useRef, useSyncExternalStore, useId, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { InlineSvgIcon } from '../InlineSvgIcon';
 import { useT } from '../../i18n/useT';
@@ -116,6 +116,13 @@ const getToolIcon = (tool: string) => {
 };
 
 const getToolName = (tool: string) => getToolDisplayName(tool);
+/** The AI tools among the launchpad favourites, in their order; the terminal keeps no sessions. */
+function favoriteTools(): string[] {
+  try {
+    const pins: unknown = JSON.parse(localStorage.getItem('coffee_pinned_items') ?? '[]');
+    return Array.isArray(pins) ? pins.filter((id): id is string => typeof id === 'string' && id.startsWith('agent:') && id !== 'agent:terminal').map(id => id.slice('agent:'.length)) : [];
+  } catch { return []; }
+}
 
 // Sessions a project shows before its Show more control, and how many each click adds.
 const PROJECT_PREVIEW = 5, PROJECT_STEP = 10;
@@ -237,21 +244,47 @@ export function HistoryBoard() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchResultsRef = useRef<HTMLDivElement>(null);
   const searchId = useId();
-  const [layout, setLayout] = useState<'list' | 'projects'>(() => {
-    try { return localStorage.getItem('cc-history-layout') === 'projects' ? 'projects' : 'list'; } catch { return 'list'; }
+  const [layout, setLayout] = useState<'list' | 'projects' | 'tool'>(() => {
+    try {
+      const saved = localStorage.getItem('cc-history-layout');
+      // The Tools view needs its tool; without one it falls back to the full list.
+      return saved === 'projects' || (saved === 'tool' && localStorage.getItem('cc-history-tool')) ? saved : 'list';
+    } catch { return 'list'; }
   });
+  // The one tool whose sessions the "tool" view lists.
+  const [toolFilter, setToolFilter] = useState(() => { try { return localStorage.getItem('cc-history-tool') ?? ''; } catch { return ''; } });
+  useEffect(() => { try { localStorage.setItem('cc-history-tool', toolFilter); } catch { /* Storage unavailable. */ } }, [toolFilter]);
   const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(new Set());
   // How many sessions each project shows beyond its preview, so one busy folder cannot push the others away.
   const [projectExtras, setProjectExtras] = useState<Map<string, number>>(new Map());
   useEffect(() => { try { localStorage.setItem('cc-history-layout', layout); } catch { /* Storage unavailable. */ } }, [layout]);
-  const [layoutMenu, setLayoutMenu] = useState<{ top: number; right: number } | null>(null);
+  const [layoutMenu, setLayoutMenu] = useState<{ top: number; right: number; tools: string[] } | null>(null);
+  const [toolMenu, setToolMenu] = useState<{ rowTop: number; top: number; left: number } | null>(null);
   const layoutBtnRef = useRef<HTMLButtonElement>(null);
   const layoutMenuRef = useRef<HTMLDivElement>(null);
+  const toolMenuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { if (!layoutMenu) setToolMenu(null); }, [layoutMenu]);
+  // The tools open beside the menu with their first row level with "Tools"; they flip left at the screen edge.
+  const openToolMenu = (row: HTMLElement) => {
+    const item = row.getBoundingClientRect(), menu = layoutMenuRef.current?.getBoundingClientRect();
+    // No favourite AI tool: nothing to choose, so no empty submenu.
+    if (!menu || !layoutMenu?.tools.length) return;
+    setToolMenu(current => current && current.rowTop === item.top ? current : { rowTop: item.top, top: item.top, left: menu.right + 4 });
+  };
+  // Placement depends on the rendered submenu: its padding and its width in this language.
+  useLayoutEffect(() => {
+    const node = toolMenuRef.current, menu = layoutMenuRef.current?.getBoundingClientRect();
+    if (!toolMenu || !node || !menu) return;
+    const box = node.getBoundingClientRect(), first = node.firstElementChild?.getBoundingClientRect();
+    const top = Math.round(toolMenu.top + toolMenu.rowTop - (first?.top ?? box.top));
+    const left = box.right > window.innerWidth - 8 ? Math.max(8, menu.left - 4 - box.width) : toolMenu.left;
+    if (top !== toolMenu.top || left !== toolMenu.left) setToolMenu({ ...toolMenu, top, left });
+  }, [toolMenu]);
   useEffect(() => {
     if (!layoutMenu) return;
     const close = (e: MouseEvent) => {
       const target = e.target as Node;
-      if (layoutMenuRef.current?.contains(target) || layoutBtnRef.current?.contains(target)) return;
+      if (layoutMenuRef.current?.contains(target) || toolMenuRef.current?.contains(target) || layoutBtnRef.current?.contains(target)) return;
       setLayoutMenu(null);
     };
     const closeKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setLayoutMenu(null); };
@@ -360,8 +393,8 @@ export function HistoryBoard() {
       if (name) dispatch({ type: 'SET_TAB_TITLE', id: tab.id, title: name });
     }
   }, [state.terminals, nativeSessions, renamed, dispatch]);
-  const rows = useMemo(() => layout === 'list'
-    ? availableSessions.map(session => ({ kind: 'session' as const, session, grouped: false }))
+  const rows = useMemo(() => layout !== 'projects'
+    ? availableSessions.filter(session => layout === 'list' || session.tool === toolFilter).map(session => ({ kind: 'session' as const, session, grouped: false }))
     : projects.flatMap((group): Array<{ kind: 'project'; group: typeof group } | { kind: 'session'; session: SavedSession; grouped: boolean } | { kind: 'more'; group: typeof group; remaining: number; expanded: boolean }> => {
       const header = { kind: 'project' as const, group };
       if (collapsedProjects.has(group.key)) return [header];
@@ -372,7 +405,7 @@ export function HistoryBoard() {
       // A group that shrank to the preview size has nothing left to fold.
       const expanded = limit > PROJECT_PREVIEW && group.sessions.length > PROJECT_PREVIEW;
       return [header, ...shown.map(session => ({ kind: 'session' as const, session, grouped: true })), ...(remaining > 0 || expanded ? [{ kind: 'more' as const, group, remaining, expanded }] : [])];
-    }), [layout, availableSessions, projects, collapsedProjects, projectExtras, openSessions]);
+    }), [layout, toolFilter, availableSessions, projects, collapsedProjects, projectExtras, openSessions]);
 
   // Search works across titles, tools and full project paths, independently of the sidebar view.
   const matchesQuery = useCallback((session: SavedSession, query: string) => {
@@ -709,11 +742,13 @@ export function HistoryBoard() {
         <span>{t('history.search')}</span>
       </button>
       <div className="history-layout-toggle">
-        <span>{t(layout === 'list' ? 'history.list' : 'history.projects')}</span>
+        <span>{layout === 'tool' ? getToolName(toolFilter) : t(layout === 'list' ? 'history.list' : 'history.projects')}</span>
         <button type="button" ref={layoutBtnRef} className={`history-layout-menu-btn${layoutMenu ? ' open' : ''}`} aria-label={t('history.layout')} aria-haspopup="menu" aria-expanded={!!layoutMenu} onClick={() => {
           if (layoutMenu) { setLayoutMenu(null); return; }
           const r = layoutBtnRef.current?.getBoundingClientRect();
-          if (r) setLayoutMenu({ right: Math.max(0, window.innerWidth - r.right), top: r.bottom + 4 });
+          // A tool chosen earlier stays listed even after it leaves the favourites.
+          const favorites = favoriteTools(), tools = toolFilter && !favorites.includes(toolFilter) ? [...favorites, toolFilter] : favorites;
+          if (r) setLayoutMenu({ right: Math.max(0, window.innerWidth - r.right), top: r.bottom + 4, tools });
         }}>
           {/* Lucide list-filter; license in /icons/LICENSE-lucide.txt. */}
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 6h18M7 12h10M10 18h4" /></svg>
@@ -722,7 +757,7 @@ export function HistoryBoard() {
       {layoutMenu && createPortal(
         <div className="ctx-menu history-layout-menu" role="menu" ref={layoutMenuRef} style={{ position: 'fixed', top: layoutMenu.top, right: layoutMenu.right }}>
           {(['list', 'projects'] as const).map(value => (
-            <button type="button" key={value} role="menuitemradio" aria-checked={layout === value} className="ctx-menu-item" onClick={() => {
+            <button type="button" key={value} role="menuitemradio" aria-checked={layout === value} className="ctx-menu-item" onMouseEnter={() => setToolMenu(null)} onClick={() => {
               setLayoutMenu(null);
               if (value === layout) return;
               setPreview(null); setLayout(value); setVisibleCount(PAGE);
@@ -730,6 +765,27 @@ export function HistoryBoard() {
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{value === 'list' ? <><path d="M8 6h13M8 12h13M8 18h13" /><path d="M3 6h.01M3 12h.01M3 18h.01" /></> : <path d="M3 7h6l2 3h10v10H3z" />}</svg>
               <span>{t(value === 'list' ? 'history.list' : 'history.projects')}</span>
               <svg className="history-layout-check" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ visibility: layout === value ? 'visible' : 'hidden' }}><path d="M20 6 9 17l-5-5" /></svg>
+            </button>
+          ))}
+          {/* Hover or click opens the tools beside this row, top-aligned with it. */}
+          <button type="button" role="menuitem" aria-haspopup="menu" aria-expanded={!!toolMenu} className={`ctx-menu-item history-layout-tools${toolMenu ? ' is-open' : ''}`} onMouseEnter={event => openToolMenu(event.currentTarget)} onClick={event => openToolMenu(event.currentTarget)} onKeyDown={event => { if (event.key === 'ArrowRight') { event.preventDefault(); openToolMenu(event.currentTarget); } }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></svg>
+            <span>{t('history.by_tool')}</span>
+            <svg className="history-layout-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
+          </button>
+        </div>,
+        document.body,
+      )}
+      {layoutMenu && toolMenu && createPortal(
+        <div className="ctx-menu history-layout-menu" role="menu" aria-label={t('history.by_tool')} ref={toolMenuRef} style={{ position: 'fixed', top: toolMenu.top, left: toolMenu.left }}>
+          {layoutMenu.tools.map(tool => (
+            <button type="button" key={tool} data-tool={tool} role="menuitemradio" aria-checked={layout === 'tool' && toolFilter === tool} className="ctx-menu-item" onClick={() => {
+              setLayoutMenu(null); setPreview(null);
+              setLayout('tool'); setToolFilter(tool); setVisibleCount(PAGE);
+            }}>
+              <span className="history-layout-tool-icon" aria-hidden="true">{getToolIcon(tool)}</span>
+              <span className="history-layout-tool-name">{getToolName(tool)}</span>
+              <svg className="history-layout-check" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ visibility: layout === 'tool' && toolFilter === tool ? 'visible' : 'hidden' }}><path d="M20 6 9 17l-5-5" /></svg>
             </button>
           ))}
         </div>,

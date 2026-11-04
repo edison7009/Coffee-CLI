@@ -169,6 +169,7 @@ export const fr = {
   'history.list': 'Sessions',
   'history.projects': 'Projets',
   'history.layout': 'Affichage',
+  'history.by_tool': 'Outils',
   'history.show_more': 'Afficher plus',
   'history.show_less': 'Afficher moins',
   "claude.cold_return.title": "Inactive depuis {idle}, environ {tokens} de contexte",

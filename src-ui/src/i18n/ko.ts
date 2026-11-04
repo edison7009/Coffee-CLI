@@ -171,6 +171,7 @@ export const ko = {
   'history.list': '세션 목록',
   'history.projects': '프로젝트별',
   'history.layout': '보기 방식',
+  'history.by_tool': '도구별',
   'history.show_more': '더 보기',
   'history.show_less': '접기',
   "claude.cold_return.title": "이 대화는 {idle} 동안 유휴 상태이며 컨텍스트는 약 {tokens}입니다",

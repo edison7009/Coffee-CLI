@@ -15,7 +15,7 @@ const context = vm.createContext({
   getToolName: tool => ({ claude: 'Claude Code', codex: 'Codex CLI', openclaw: 'OpenClaw' }[tool] ?? tool),
   hidden: new Set(['claude:hidden']), pinned: new Set(['codex:pinned']),
   renamed: { 'claude:renamed': 'Custom session title' },
-  orchestration: { tasks: [] }, state: { terminals: [] }, projectExtras: new Map(), openSessions: new Set(), PROJECT_PREVIEW: 5,
+  orchestration: { tasks: [] }, state: { terminals: [] }, projectExtras: new Map(), openSessions: new Set(), PROJECT_PREVIEW: 5, toolFilter: '',
 });
 function evaluate(name) {
   assert.ok(expressions.has(name), `Missing actual ${name}`);
@@ -78,6 +78,11 @@ context.projects = allProjects;
 context.layout = 'list';
 rows = evaluate('rows');
 assert.deepEqual(Array.from(rows, row => row.session.id), Array.from(context.availableSessions, session => session.id), 'switching back restores the original session order');
+context.layout = 'tool'; context.toolFilter = 'codex';
+rows = evaluate('rows');
+assert.deepEqual(Array.from(rows, row => row.session.id), Array.from(context.availableSessions.filter(session => session.tool === 'codex'), session => session.id), 'the Tools view lists only the chosen tool, in list order');
+assert.equal(rows.every(row => row.kind === 'session' && !row.grouped), true);
+context.layout = 'list'; context.toolFilter = '';
 const matches = evaluate('matchesQuery');
 assert.equal(matches(original.at(-1), '  CUSTOM session  '), true);
 assert.equal(matches(original.at(-1), 'renamed'), false, 'search follows custom titles');

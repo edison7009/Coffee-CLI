@@ -171,6 +171,7 @@ export const zhCN = {
   'history.list': '会话列表',
   'history.projects': '项目分类',
   'history.layout': '显示方式',
+  'history.by_tool': '应用工具',
   'history.show_more': '显示更多',
   'history.show_less': '收起',
   "claude.cold_return.title": "这段对话已闲置 {idle}，上下文约 {tokens}",

@@ -170,6 +170,7 @@ export const en = {
   'history.list': 'Sessions',
   'history.projects': 'Projects',
   'history.layout': 'View',
+  'history.by_tool': 'Tools',
   'history.show_more': 'Show more',
   'history.show_less': 'Show less',
   "claude.cold_return.title": "Idle for {idle}, about {tokens} of context",

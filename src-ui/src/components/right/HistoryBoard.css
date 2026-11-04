@@ -31,9 +31,16 @@
 .history-layout-menu-btn:hover, .history-layout-menu-btn.open { background: var(--bg-hover); color: var(--text-1); }
 .history-layout-menu-btn:focus-visible { outline: 1px solid var(--accent); outline-offset: -1px; }
 .history-layout-menu-btn > svg { display: block; }
-.history-layout-menu { min-width: 160px; }
+/* As wide as its longest label in the current language, not the shared menus' 200px floor. */
+.ctx-menu.history-layout-menu { min-width: 0; width: max-content; }
 .history-layout-menu .ctx-menu-item > span { flex: 1; }
-.history-layout-menu .history-layout-check { opacity: 1; color: var(--accent); }
+.history-layout-menu .history-layout-check { margin-left: 12px; opacity: 1; color: var(--accent); }
+/* The chevron sits in the right-hand column, as the checks do above it. */
+.history-layout-menu .history-layout-chevron { margin-left: 12px; }
+.history-layout-menu .history-layout-tools.is-open { background: var(--bg-hover); color: var(--text-1); }
+.history-layout-menu .ctx-menu-item > .history-layout-tool-icon { flex: 0 0 14px; display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; }
+.history-layout-tool-icon > :is(svg, img, span) { width: 14px; height: 14px; }
+.ctx-menu-item .history-layout-tool-icon svg { opacity: 1; }
 .history-project-row { margin: 4px 0 2px; }
 .history-session-list > .history-project-row:not(:first-child) { margin-top: 20px; }
 .history-project-row > svg { flex-shrink: 0; }

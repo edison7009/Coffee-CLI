@@ -169,6 +169,7 @@ export const pt = {
   'history.list': 'Sessões',
   'history.projects': 'Projetos',
   'history.layout': 'Visualização',
+  'history.by_tool': 'Ferramentas',
   'history.show_more': 'Mostrar mais',
   'history.show_less': 'Mostrar menos',
   "claude.cold_return.title": "Inativa há {idle}, cerca de {tokens} de contexto",
