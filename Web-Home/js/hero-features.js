@@ -1,11 +1,10 @@
 /**
  * hero-features.js — the feature showcase on the right of the hero.
  *
- * Seven short scenes drawn in HTML/CSS on one shared mini-app skeleton
- * (title bar, sidebar, chat, composer), so every scene has the same frame,
- * scale and padding and highlights exactly one thing in the brand color.
- * Everything is sized in em off a container-relative font size, so the
- * stage scales as one picture at any width.
+ * Plays seven short screen recordings of the real app, one after another,
+ * inside one shared frame; the caption under the frame follows the clip.
+ * Only the active clip is loaded. zh / zh-TW visitors get the Chinese
+ * recordings, everyone else the English ones; phones get the 960px encodes.
  *
  * Loaded right after main.js: it merges its captions into I18N_DICT before
  * main.js renders on DOMContentLoaded, and main.js's renderI18N() keeps the
@@ -110,6 +109,17 @@
   };
 
   const ORDER = ["split", "agents", "usage", "themes", "modes", "changes", "tasks"];
+  const CLIPS = {
+    split: "split-drag",
+    agents: "multi-agent",
+    usage: "usage-meter",
+    themes: "themes-shapes",
+    modes: "desktop-terminal",
+    changes: "git-diff-pr",
+    tasks: "task-list-send"
+  };
+  // Fallback hop if a clip cannot play (autoplay refused, decode error).
+  const FALLBACK_MS = 9000;
 
   // Merge captions into main.js's dictionary before it renders.
   if (typeof I18N_DICT === "object") {
@@ -122,253 +132,181 @@
     });
   }
 
-  /* ---------- shared skeleton pieces ---------- */
-
-  const bar = (w, cls) => `<b class="fx-bar${cls ? " " + cls : ""}" style="width:${w}"></b>`;
-
-  function row(w, opts) {
-    opts = opts || {};
-    return `<div class="fx-row${opts.cls ? " " + opts.cls : ""}"><i class="fx-ico${opts.ico ? " " + opts.ico : ""}"></i>${bar(w)}${opts.tail || ""}</div>`;
-  }
-
-  function side(rows) {
-    return `<div class="fx-side">
-      <div class="fx-side-head">${bar("62%")}${bar("48%")}${bar("54%")}</div>
-      <div class="fx-side-label">${bar("34%")}</div>
-      ${rows}
-    </div>`;
-  }
-
-  const SIDE_DEFAULT = [row("70%", { ico: "is-brand" }), row("58%"), row("74%"), row("50%"), row("64%")].join("");
-
-  function composer(tail) {
-    return `<div class="fx-composer">${bar("46%", "is-soft")}<div class="fx-composer-tail">${tail || ""}<i class="fx-send"></i></div></div>`;
-  }
-
-  function chat() {
-    return `<div class="fx-chat">
-      <div class="fx-user">${bar("100%", "is-ink")}</div>
-      <div class="fx-reply">${bar("86%")}${bar("72%")}${bar("80%")}<div class="fx-code">${bar("54%")}${bar("68%")}${bar("40%")}</div></div>
-    </div>`;
-  }
-
-  function app(inner, opts) {
-    opts = opts || {};
-    return `<div class="fx-app${opts.cls ? " " + opts.cls : ""}">${opts.side || side(SIDE_DEFAULT)}${inner}</div>`;
-  }
-
-  const cursor = (cls) => `<i class="fx-cursor ${cls}"><svg viewBox="0 0 16 20"><path d="M1 1v15l4-3.6 2.7 6 2.6-1.2-2.6-5.8H13Z"/></svg></i>`;
-  const check = `<svg class="fx-check" viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7"/></svg>`;
-
-  /* ---------- the seven scenes ---------- */
-
-  const pane = (n) => `<div class="fx-pane fx-pane-${n}"><span class="fx-pane-no">${n}</span>${bar("70%")}${bar("52%")}${bar("62%")}</div>`;
-
-  const SCENES = {
-    split: app(
-      `<div class="fx-main">
-        <div class="fx-panes">${pane(1)}${pane(2)}${pane(3)}${pane(4)}</div>
-        <div class="fx-drop"></div>
-        <div class="fx-ghost">${row("64%", { ico: "is-brand" })}</div>
-        ${cursor("fx-cursor-split")}
-      </div>`,
-      { side: side([row("70%", { ico: "is-brand" }), row("58%"), row("74%", { cls: "fx-row-pick" }), row("50%"), row("64%")].join("")) }
-    ),
-
-    agents: app(
-      `<div class="fx-main">
-        <div class="fx-chat">
-          <div class="fx-user">${bar("100%", "is-ink")}</div>
-          <div class="fx-reply">${bar("78%")}
-            <div class="fx-steps">
-              <div class="fx-step fx-step-1"><i></i>${bar("52%")}</div>
-              <div class="fx-step fx-step-2"><i></i>${bar("44%")}</div>
-              <div class="fx-step fx-step-3"><i></i>${bar("58%")}</div>
-            </div>
-            <div class="fx-done-line">${check}${bar("60%")}</div>
-          </div>
-        </div>
-        ${composer()}
-      </div>`,
-      {
-        side: side(
-          row("72%", { ico: "is-brand", cls: "fx-lead", tail: `<i class="fx-spin fx-spin-lead"></i>` }) +
-          [1, 2, 3].map((n) => `<div class="fx-row fx-sub fx-sub-${n}"><i class="fx-ico is-helper"></i>${bar(["58%", "50%", "64%"][n - 1])}<i class="fx-spin"></i>${check}</div>`).join("") +
-          row("54%") + row("66%")
-        )
-      }
-    ),
-
-    usage: app(
-      `<div class="fx-main">
-        ${chat()}
-        <div class="fx-focus fx-focus-usage"></div>
-        ${composer(`<span class="fx-meter fx-meter-a"><em>5h</em><span class="fx-track"><span class="fx-fill"></span></span><strong class="fx-num">68%</strong></span>
-          <span class="fx-meter fx-meter-b"><em>7d</em><span class="fx-track"><span class="fx-fill"></span></span><strong class="fx-num">53%</strong></span>
-          <span class="fx-balance">¥ 86.40</span>`)}
-      </div>`
-    ),
-
-    themes: app(
-      `<div class="fx-main">
-        ${chat()}
-        ${composer()}
-        <div class="fx-palette">
-          <div class="fx-palette-title">${bar("40%")}</div>
-          <div class="fx-swatches">
-            ${["graphite", "glacier", "sakura", "mint", "amber", "grape"].map((c) => `<i class="fx-sw fx-sw-${c}"><i></i></i>`).join("")}
-          </div>
-          <i class="fx-sw-ring"></i>
-        </div>
-        ${cursor("fx-cursor-themes")}
-      </div>`,
-      { cls: "fx-app-themes" }
-    ),
-
-    modes: app(
-      `<div class="fx-main">
-        <div class="fx-launch">
-          <div class="fx-card">
-            <img src="agents/icons/claude.svg" alt="" width="20" height="20">
-            <span class="fx-card-name">Claude Code</span>
-            <span class="fx-toggle"><i class="fx-toggle-pill"></i><span>Terminal</span><span>Desktop</span></span>
-          </div>
-        </div>
-        <div class="fx-modes-view">
-          <div class="fx-term">
-            <p><span class="fx-prompt">❯</span> claude</p>
-            <p class="fx-dim">${bar("62%")}</p>
-            <p class="fx-dim">${bar("48%")}</p>
-            <p><span class="fx-prompt">❯</span> <i class="fx-caret"></i></p>
-          </div>
-          <div class="fx-desk">${chat()}${composer()}</div>
-        </div>
-        ${cursor("fx-cursor-modes")}
-      </div>`
-    ),
-
-    changes: app(
-      `<div class="fx-main fx-with-panel">
-        <div class="fx-diff">
-          <div class="fx-diff-head">${bar("38%")}</div>
-          ${["ctx", "del", "add", "add", "ctx", "add", "del", "add"].map((t, i) => `<div class="fx-dl fx-dl-${t}" style="--i:${i}"><span>${t === "add" ? "+" : t === "del" ? "−" : ""}</span>${bar(["58%", "46%", "64%", "52%", "40%", "70%", "38%", "56%"][i])}</div>`).join("")}
-        </div>
-        <div class="fx-panel">
-          <div class="fx-panel-tabs"><span class="is-on"></span><span></span></div>
-          ${[["+19", "−0"], ["+2", "−1"], ["+3", "−0"], ["+20", "−4"]].map((n, i) => `<div class="fx-file fx-file-${i}"><i class="fx-doc"></i>${bar(["56%", "44%", "38%", "50%"][i])}<span class="fx-plus">${n[0]}</span><span class="fx-minus">${n[1]}</span></div>`).join("")}
-        </div>
-        ${cursor("fx-cursor-changes")}
-      </div>`,
-      {
-        side: side(
-          ["open", "merged", "closed", "draft", "open"].map((s, i) =>
-            row(["70%", "58%", "66%", "50%", "62%"][i], { ico: i === 0 ? "is-brand" : "", tail: `<i class="fx-pr fx-pr-${s}" style="--i:${i}"></i>` })
-          ).join("")
-        )
-      }
-    ),
-
-    tasks: app(
-      `<div class="fx-main fx-with-panel">
-        <div class="fx-chat">
-          <div class="fx-user">${bar("100%", "is-ink")}</div>
-          <div class="fx-reply">${bar("80%")}${bar("66%")}</div>
-          <div class="fx-user fx-user-new">${bar("100%", "is-ink")}</div>
-          <div class="fx-reply fx-reply-new">${bar("74%")}${bar("58%")}</div>
-        </div>
-        ${composer()}
-        <div class="fx-flyer">${bar("100%", "is-ink")}</div>
-        <div class="fx-panel">
-          <div class="fx-panel-tabs"><span class="is-on"></span><span></span></div>
-          ${[0, 1, 2, 3].map((i) => `<div class="fx-task fx-task-${i}"><i class="fx-box">${check}</i>${bar(["64%", "72%", "52%", "60%"][i])}</div>`).join("")}
-        </div>
-        ${cursor("fx-cursor-tasks")}
-      </div>`
-    )
-  };
-
   /* ---------- carousel ---------- */
+
+  const clipLang = () => (currentLang === "zh" || currentLang === "zh-TW" ? "zh" : "en");
+  const narrow = window.matchMedia ? window.matchMedia("(max-width: 768px)") : null;
 
   function init() {
     const root = document.getElementById("hero-features");
     if (!root) return;
     const screen = root.querySelector(".fx-screen");
     const dots = root.querySelector(".fx-dots");
-    const caption = root.querySelector(".fx-caption");
-    if (!screen || !dots || !caption) return;
+    const titleEl = root.querySelector(".fx-caption-title");
+    const bodyEl = root.querySelector(".fx-caption-body");
+    if (!screen || !dots || !titleEl || !bodyEl) return;
 
     const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)");
-    const scenes = ORDER.map(function (id, i) {
-      const el = document.createElement("div");
-      el.className = "fx-scene fx-scene-" + id;
-      el.innerHTML = SCENES[id];
-      screen.appendChild(el);
+    const reduced = () => !!(reduce && reduce.matches);
+
+    const slides = ORDER.map(function (id, i) {
+      const video = document.createElement("video");
+      video.className = "fx-video";
+      video.muted = true;
+      video.defaultMuted = true;
+      video.playsInline = true;
+      video.setAttribute("muted", "");
+      video.setAttribute("playsinline", "");
+      video.preload = "none";
+      video.width = 1920;
+      video.height = 1080;
+      video.setAttribute("aria-hidden", "true");
+      screen.appendChild(video);
 
       const dot = document.createElement("button");
       dot.type = "button";
       dot.className = "fx-dot";
       dot.setAttribute("aria-label", String(i + 1) + " / " + ORDER.length);
-      dot.addEventListener("click", function () {
-        show(i);
-        schedule();
-      });
+      dot.innerHTML = '<span class="fx-dot-fill"></span>';
+      dot.addEventListener("click", function () { show(i, true); });
       dots.appendChild(dot);
-      return { el: el, dot: dot };
+
+      return { id: id, video: video, dot: dot, fill: dot.firstChild, lang: "" };
     });
 
-    const titleEl = caption.querySelector(".fx-caption-title");
-    const bodyEl = caption.querySelector(".fx-caption-body");
-
     let current = -1;
-    let timer = 0;
     let visible = true;
+    let fallback = 0;
 
-    function show(i) {
-      if (i === current) {
-        // Replay the same scene from the start.
-        scenes[i].el.classList.remove("is-on");
-        void scenes[i].el.offsetWidth;
-        scenes[i].el.classList.add("is-on");
+    function base(slide) {
+      return "demo/features/" + clipLang() + "/" + CLIPS[slide.id];
+    }
+
+    // Point a slide at the clip for the current language; posters are cheap,
+    // so every slide gets one, but only the active clip downloads video.
+    function prime(slide, withVideo) {
+      const lang = clipLang();
+      if (slide.lang !== lang) {
+        slide.lang = lang;
+        slide.video.poster = base(slide) + "-poster.webp";
+        if (slide.video.getAttribute("src")) {
+          slide.video.removeAttribute("src");
+          slide.video.load();
+        }
+      }
+      if (withVideo && !slide.video.getAttribute("src")) {
+        slide.video.src = base(slide) + (narrow && narrow.matches ? "-960.mp4" : ".mp4");
+      }
+    }
+
+    function caption(slide) {
+      const dict = (typeof I18N_DICT === "object" && (I18N_DICT[currentLang] || I18N_DICT.en)) || {};
+      titleEl.setAttribute("data-i18n", "fx-" + slide.id + "-title");
+      bodyEl.setAttribute("data-i18n", "fx-" + slide.id + "-body");
+      titleEl.innerHTML = dict["fx-" + slide.id + "-title"] || CAPTIONS.en[slide.id][0];
+      bodyEl.innerHTML = dict["fx-" + slide.id + "-body"] || CAPTIONS.en[slide.id][1];
+    }
+
+    function play() {
+      clearTimeout(fallback);
+      if (current < 0) return;
+      const slide = slides[current];
+      if (reduced() || !visible || document.hidden) {
+        slide.video.pause();
         return;
       }
-      if (current >= 0) {
-        scenes[current].el.classList.remove("is-on");
-        scenes[current].dot.classList.remove("is-on");
-        scenes[current].dot.removeAttribute("aria-current");
+      prime(slide, true);
+      const p = slide.video.play();
+      if (p && p.catch) {
+        p.catch(function () {
+          fallback = setTimeout(next, FALLBACK_MS);
+        });
+      }
+    }
+
+    function next() {
+      show((current + 1) % slides.length, false);
+    }
+
+    function show(i, fromUser) {
+      clearTimeout(fallback);
+      if (current >= 0 && current !== i) {
+        const old = slides[current];
+        old.video.pause();
+        old.video.classList.remove("is-on");
+        old.dot.classList.remove("is-on");
+        old.dot.removeAttribute("aria-current");
+        old.fill.style.transform = "";
       }
       current = i;
-      scenes[i].el.classList.add("is-on");
-      scenes[i].dot.classList.add("is-on");
-      scenes[i].dot.setAttribute("aria-current", "true");
-      const id = ORDER[i];
-      titleEl.setAttribute("data-i18n", "fx-" + id + "-title");
-      bodyEl.setAttribute("data-i18n", "fx-" + id + "-body");
-      const dict = (typeof I18N_DICT === "object" && (I18N_DICT[currentLang] || I18N_DICT.en)) || {};
-      titleEl.innerHTML = dict["fx-" + id + "-title"] || CAPTIONS.en[id][0];
-      bodyEl.innerHTML = dict["fx-" + id + "-body"] || CAPTIONS.en[id][1];
+      const slide = slides[i];
+      prime(slide, !reduced() || fromUser);
+      try { slide.video.currentTime = 0; } catch (e) { /* not loaded yet */ }
+      slide.video.classList.add("is-on");
+      slide.dot.classList.add("is-on");
+      slide.dot.setAttribute("aria-current", "true");
+      caption(slide);
+      // Warm the next poster so the hand-off never flashes empty.
+      prime(slides[(i + 1) % slides.length], false);
+      if (fromUser && reduced()) {
+        // Reduced motion: an explicit click still plays the clip once.
+        const p = slide.video.play();
+        if (p && p.catch) p.catch(function () {});
+      } else {
+        play();
+      }
     }
 
-    function schedule() {
-      clearTimeout(timer);
-      if ((reduce && reduce.matches) || !visible || document.hidden) return;
-      timer = setTimeout(function () {
-        show((current + 1) % ORDER.length);
-        schedule();
-      }, SCENE_MS);
-    }
+    slides.forEach(function (slide, i) {
+      slide.video.addEventListener("ended", function () {
+        if (i === current && !reduced()) next();
+      });
+      slide.video.addEventListener("error", function () {
+        if (i === current && !reduced()) {
+          clearTimeout(fallback);
+          fallback = setTimeout(next, 1500);
+        }
+      });
+      slide.video.addEventListener("timeupdate", function () {
+        if (i !== current || !slide.video.duration) return;
+        slide.fill.style.transform = "scaleX(" + (slide.video.currentTime / slide.video.duration).toFixed(3) + ")";
+      });
+    });
 
-    show(Math.floor(Math.random() * ORDER.length));
-    schedule();
+    // Clicking the frame toggles play / pause.
+    screen.addEventListener("click", function () {
+      const v = slides[current].video;
+      if (v.paused) {
+        prime(slides[current], true);
+        const p = v.play();
+        if (p && p.catch) p.catch(function () {});
+      } else {
+        v.pause();
+      }
+    });
+
+    show(Math.floor(Math.random() * slides.length), false);
 
     if ("IntersectionObserver" in window) {
       new IntersectionObserver(function (entries) {
         visible = entries[0].isIntersecting;
-        root.classList.toggle("is-paused", !visible);
-        schedule();
-      }).observe(root);
+        play();
+      }, { threshold: 0.25 }).observe(root);
     }
-    document.addEventListener("visibilitychange", schedule);
-    if (reduce && reduce.addEventListener) reduce.addEventListener("change", schedule);
+    document.addEventListener("visibilitychange", play);
+    if (reduce && reduce.addEventListener) reduce.addEventListener("change", play);
+
+    // Follow language changes: main.js's dropdown calls the global renderI18N().
+    if (typeof window.renderI18N === "function") {
+      const render = window.renderI18N;
+      window.renderI18N = function () {
+        render.apply(this, arguments);
+        if (current >= 0 && slides[current].lang !== clipLang()) {
+          slides.forEach(function (s) { s.lang = s.lang && "stale"; });
+          show(current, false);
+        }
+      };
+    }
   }
 
   if (document.readyState === "loading") {

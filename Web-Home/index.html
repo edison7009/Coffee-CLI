@@ -16,7 +16,7 @@
   
   <!-- External CSS -->
   <link rel="stylesheet" href="./css/style.css?v=0.4.9">
-  <link rel="stylesheet" href="./css/hero-features.css?v=1.0.0">
+  <link rel="stylesheet" href="./css/hero-features.css?v=1.1.0">
 </head>
 <body>
 
@@ -203,13 +203,11 @@
 
     </div>
 
-    <!-- Feature showcase: js/hero-features.js draws seven scenes on one shared
-         mini-app frame and cycles them; the caption follows the active scene. -->
+    <!-- Feature showcase: js/hero-features.js plays seven short recordings of
+         the app (demo/features/<zh|en>/) in turn; the caption follows the clip. -->
     <figure class="hero-fx" id="hero-features">
       <div class="fx-stage">
-        <div class="fx-screen" aria-hidden="true">
-          <div class="fx-titlebar"><i></i><i></i><i></i><span class="fx-tab"></span><span class="fx-brandname">Coffee CLI</span></div>
-        </div>
+        <div class="fx-screen"></div>
       </div>
       <figcaption class="fx-caption" aria-live="polite">
         <span class="fx-caption-title"></span>
@@ -255,6 +253,6 @@
   </footer>
 
   <script src="./js/main.js?v=0.9.15"></script>
-  <script src="./js/hero-features.js?v=1.0.0"></script>
+  <script src="./js/hero-features.js?v=1.1.0"></script>
 </body>
 </html>
