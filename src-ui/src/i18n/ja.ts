@@ -423,6 +423,8 @@ export const ja = {
   'gambit.worktree_nothing': 'マージする変更はありません',
   'gambit.worktree_conflict': 'メインの作業ツリーと競合したため、マージを取り消しました（変更はありません）',
   'gambit.worktree_local_changes': 'メインの作業ツリーの未コミットの変更が上書きされます。先にコミットまたは退避してください',
+  'gambit.worktree_busy': "メインのチェックアウトでマージ、リベース、チェリーピックが進行中です。先に完了するか中止してください",
+  'gambit.worktree_detached': "メインのチェックアウトがブランチ上にありません。先にマージ先のブランチに切り替えてください",
   'gambit.worktree_merge_failed': 'マージに失敗しました: {error}',
   'gambit.send_empty_hint': 'メッセージを入力するか画像を貼り付けてください (Ctrl+V)',
 

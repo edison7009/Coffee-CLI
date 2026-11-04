@@ -421,6 +421,8 @@ Apague esta nota quando quiser e comece a sua primeira tarefa.`,
   'gambit.worktree_nothing': 'Nada para mesclar',
   'gambit.worktree_conflict': 'Conflito com a cópia principal; a mesclagem foi desfeita e nada mudou lá',
   'gambit.worktree_local_changes': 'Alterações não confirmadas na cópia principal seriam sobrescritas; confirme ou guarde-as primeiro',
+  'gambit.worktree_busy': "Há uma mesclagem, rebase ou cherry-pick em andamento na cópia principal; conclua ou cancele primeiro",
+  'gambit.worktree_detached': "A cópia principal não está em nenhum branch; mude primeiro para o branch de destino",
   'gambit.worktree_merge_failed': 'Falha ao mesclar: {error}',
   'gambit.send_empty_hint': 'Digite uma mensagem ou cole uma imagem primeiro (Ctrl+V)',
 

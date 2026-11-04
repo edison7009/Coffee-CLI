@@ -421,6 +421,8 @@ Borra esta nota cuando quieras y empieza tu primera tarea.`,
   'gambit.worktree_nothing': 'Nada que fusionar',
   'gambit.worktree_conflict': 'Hay conflictos con la copia principal; se deshizo la fusión y allí no cambió nada',
   'gambit.worktree_local_changes': 'Se sobrescribirían cambios sin confirmar en la copia principal; confírmalos o guárdalos primero',
+  'gambit.worktree_busy': "Hay una fusión, un rebase o un cherry-pick en curso en la copia principal; termínalo o cancélalo primero",
+  'gambit.worktree_detached': "La copia principal no está en ninguna rama; cambia primero a la rama de destino",
   'gambit.worktree_merge_failed': 'Error al fusionar: {error}',
   'gambit.send_empty_hint': 'Escribe un mensaje o pega una imagen primero (Ctrl+V)',
 

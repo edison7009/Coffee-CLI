@@ -424,6 +424,8 @@ export const zhTW = {
   'gambit.worktree_nothing': '沒有需要合併的變更',
   'gambit.worktree_conflict': '與主目錄有衝突，已撤銷本次合併，主目錄沒有變更',
   'gambit.worktree_local_changes': '主目錄有未提交的變更會被覆寫，請先提交或暫存',
+  'gambit.worktree_busy': "主目錄正在進行合併、變基或揀選，請先完成或放棄",
+  'gambit.worktree_detached': "主目錄不在任何分支上，請先切換到要合併的分支",
   'gambit.worktree_merge_failed': '合併失敗：{error}',
   'gambit.send_empty_hint': '先輸入內容或貼上圖片 (Ctrl+V)',
 

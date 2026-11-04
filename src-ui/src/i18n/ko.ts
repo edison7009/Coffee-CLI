@@ -423,6 +423,8 @@ export const ko = {
   'gambit.worktree_nothing': '병합할 변경 사항이 없습니다',
   'gambit.worktree_conflict': '메인 작업 폴더와 충돌해 병합을 취소했습니다(변경 없음)',
   'gambit.worktree_local_changes': '메인 작업 폴더의 커밋하지 않은 변경 사항이 덮어써집니다. 먼저 커밋하거나 스태시하세요',
+  'gambit.worktree_busy': "메인 체크아웃에서 병합, 리베이스 또는 체리픽이 진행 중입니다. 먼저 완료하거나 중단하세요",
+  'gambit.worktree_detached': "메인 체크아웃이 브랜치에 있지 않습니다. 먼저 병합할 브랜치로 전환하세요",
   'gambit.worktree_merge_failed': '병합 실패: {error}',
   'gambit.send_empty_hint': '내용을 입력하거나 이미지를 붙여넣으세요 (Ctrl+V)',
 

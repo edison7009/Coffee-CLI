@@ -424,6 +424,8 @@ export const zhCN = {
   'gambit.worktree_nothing': '没有需要合并的改动',
   'gambit.worktree_conflict': '与主目录有冲突，已撤销本次合并，主目录没有改动',
   'gambit.worktree_local_changes': '主目录里有未提交的改动会被覆盖，请先提交或暂存',
+  'gambit.worktree_busy': "主目录正在进行合并、变基或拣选，请先完成或放弃",
+  'gambit.worktree_detached': "主目录不在任何分支上，请先切换到要合并的分支",
   'gambit.worktree_merge_failed': '合并失败：{error}',
   'gambit.send_empty_hint': '先输入内容或粘贴图片 (Ctrl+V)',
 

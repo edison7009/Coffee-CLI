@@ -87,7 +87,7 @@ export function WorktreeControl({ tab, started, running }: { tab: TerminalSessio
       setNotice({ text: count ? t('gambit.worktree_merged', { count }) : t('gambit.worktree_nothing') });
     } catch (error) {
       const text = String(error);
-      setNotice({ error: true, text: text.includes('COFFEE_MERGE:conflict') ? t('gambit.worktree_conflict') : text.includes('COFFEE_MERGE:local_changes') ? t('gambit.worktree_local_changes') : t('gambit.worktree_merge_failed', { error: text }) });
+      setNotice({ error: true, text: text.includes('COFFEE_MERGE:conflict') ? t('gambit.worktree_conflict') : text.includes('COFFEE_MERGE:local_changes') ? t('gambit.worktree_local_changes') : text.includes('COFFEE_MERGE:busy') ? t('gambit.worktree_busy') : text.includes('COFFEE_MERGE:detached') ? t('gambit.worktree_detached') : t('gambit.worktree_merge_failed', { error: text }) });
     } finally { refresh(worktree); setPending(false); }
   };
   const mergeable = !!status?.exists && (status.ahead > 0 || status.dirty);

@@ -425,6 +425,8 @@ Xóa tờ ghi chú này khi bạn sẵn sàng và bắt đầu tác vụ đầu 
   'gambit.worktree_nothing': 'Không có gì để hợp nhất',
   'gambit.worktree_conflict': 'Xung đột với bản chính; đã hủy hợp nhất và bản chính không thay đổi',
   'gambit.worktree_local_changes': 'Thay đổi chưa commit ở bản chính sẽ bị ghi đè; hãy commit hoặc stash trước',
+  'gambit.worktree_busy': "Thư mục chính đang có merge, rebase hoặc cherry-pick dở dang; hãy hoàn tất hoặc hủy trước",
+  'gambit.worktree_detached': "Thư mục chính không ở nhánh nào; hãy chuyển sang nhánh cần gộp trước",
   'gambit.worktree_merge_failed': 'Hợp nhất thất bại: {error}',
   'gambit.send_empty_hint': 'Nhập nội dung hoặc dán ảnh trước (Ctrl+V)',
 

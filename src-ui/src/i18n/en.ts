@@ -426,6 +426,8 @@ Delete this note whenever you're ready, and start your first task.`,
   'gambit.worktree_nothing': 'Nothing to merge',
   'gambit.worktree_conflict': 'Conflicts with the main checkout; the merge was undone and nothing changed there',
   'gambit.worktree_local_changes': 'Uncommitted changes in the main checkout would be overwritten; commit or stash them first',
+  'gambit.worktree_busy': "The main checkout is in the middle of a merge, rebase or cherry-pick; finish or abort it first",
+  'gambit.worktree_detached': "The main checkout is not on a branch; switch to the branch to merge into first",
   'gambit.worktree_merge_failed': 'Merge failed: {error}',
   'gambit.send_empty_hint': 'Type a message or paste an image first (Ctrl+V)',
 

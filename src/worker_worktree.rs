@@ -49,9 +49,15 @@ fn name(title: &str, suffix: &str) -> String {
     format!("{}-{suffix}", if slug.is_empty() { "task" } else { slug })
 }
 
+/// Creating and sweeping take turns, so a sweep never sees a worktree whose tab has not yet recorded it.
+static WORKTREES: std::sync::Mutex<()> = std::sync::Mutex::new(());
+/// How long a new worktree is spared by sweeps: its tab may still be about to record it.
+const SWEEP_GRACE: std::time::Duration = std::time::Duration::from_secs(600);
+
 /// Creates a worktree for a worker started from `cwd`, and returns it with the directory the worker opens in,
 /// the same subdirectory of the project as `cwd`.
 pub fn create(cwd: &Path, title: &str) -> Result<(Worktree, PathBuf), String> {
+    let _turn = WORKTREES.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
     let root = git(cwd, &["rev-parse", "--show-toplevel"]).map_err(|_| "Worktree isolation needs the project to be a git repository".to_string())?;
     if inside_worktrees(&root) { return Err("This folder is already a worktree; start from the project itself".into()); }
     let prefix = git(cwd, &["rev-parse", "--show-prefix"])?;
@@ -120,13 +126,19 @@ fn retry_removal(worktrees: Vec<Worktree>, attempt: fn(&Worktree) -> bool) {
 
 /// Removes the project's Coffee worktrees that nothing uses any more, and merged `coffee/` branches without one, by
 /// git's safe rules. Tabs are not kept across restarts, so this is what reclaims a worktree left by a quit.
-fn sweep(cwd: &Path, in_use: &[String]) -> Result<u32, String> {
+fn sweep(cwd: &Path, in_use: &[String]) -> Result<u32, String> { sweep_older_than(cwd, in_use, SWEEP_GRACE) }
+
+fn sweep_older_than(cwd: &Path, in_use: &[String], grace: std::time::Duration) -> Result<u32, String> {
+    let _turn = WORKTREES.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
     let root = git(cwd, &["rev-parse", "--show-toplevel"])?;
     if inside_worktrees(&root) { return Ok(0); }
     let root = native(&root);
     let _ = git(&root, &["worktree", "prune"]);
     let base = root.join(".claude").join("worktrees");
-    let used = |path: &Path| in_use.iter().any(|known| Path::new(known) == path);
+    // `git worktree add` writes the worktree's `.git` file, so its age is the worktree's.
+    let recent = |path: &Path| std::fs::metadata(path.join(".git")).and_then(|meta| meta.modified()).ok()
+        .and_then(|made| made.elapsed().ok()).is_some_and(|age| age < grace);
+    let used = |path: &Path| recent(path) || in_use.iter().any(|known| Path::new(known) == path);
     let mut removed = 0;
     let mut live = vec![];
     for line in git(&root, &["worktree", "list", "--porcelain"])?.lines() {
@@ -171,6 +183,14 @@ fn status(worktree: &Worktree) -> Result<WorktreeStatus, String> {
 fn merge(worktree: &Worktree, message: &str) -> Result<u32, String> {
     checked(worktree)?;
     let (root, tree) = (Path::new(&worktree.root), Path::new(&worktree.path));
+    // The checkout must be idle and on a branch. A merge, rebase, cherry-pick or revert already under way is the
+    // user's own, and the abort below must never undo it; on a detached HEAD the merge would leave its commits on
+    // no branch.
+    if ["MERGE_HEAD", "CHERRY_PICK_HEAD", "REVERT_HEAD"].iter().any(|head| git(root, &["rev-parse", "-q", "--verify", head]).is_ok())
+        || ["rebase-merge", "rebase-apply"].iter().any(|dir| git(root, &["rev-parse", "--git-path", dir]).is_ok_and(|path| root.join(native(&path)).exists())) {
+        return Err("COFFEE_MERGE:busy".into());
+    }
+    if git(root, &["symbolic-ref", "-q", "HEAD"]).is_err() { return Err("COFFEE_MERGE:detached".into()); }
     let committed = !git(tree, &["status", "--porcelain"])?.trim().is_empty();
     if committed {
         git(tree, &["add", "-A"])?;
@@ -281,7 +301,7 @@ mod tests {
         commit_in(Path::new(&worktree.path), "note.txt", "work");
         assert!(!remove_merged(&worktree), "the commit has no merge button without the folder");
         assert!(Path::new(&worktree.path).is_dir());
-        assert_eq!(sweep(repo.path(), &[]).unwrap(), 0);
+        assert_eq!(sweep_older_than(repo.path(), &[], std::time::Duration::ZERO).unwrap(), 0);
         assert!(Path::new(&worktree.path).is_dir(), "a sweep keeps it too");
         run(repo.path(), &["merge", "-q", "--no-edit", &worktree.branch]);
         assert!(remove_merged(&worktree));
@@ -344,6 +364,30 @@ mod tests {
         assert!(status(&other).unwrap().dirty, "and its files are uncommitted again");
     }
     #[test]
+    fn a_merge_never_touches_a_git_operation_the_user_has_under_way() {
+        let repo = repository(); identity(repo.path());
+        commit_in(repo.path(), "f.txt", "base");
+        let (worktree, _) = create(repo.path(), "Work").unwrap();
+        commit_in(Path::new(&worktree.path), "n.txt", "work");
+        std::fs::write(Path::new(&worktree.path).join("left.txt"), "leftover").unwrap();
+        // The user's own conflicted merge, resolved but not yet committed.
+        let main = git(repo.path(), &["branch", "--show-current"]).unwrap();
+        run(repo.path(), &["checkout", "-q", "-b", "other"]); commit_in(repo.path(), "f.txt", "other");
+        run(repo.path(), &["checkout", "-q", &main]); commit_in(repo.path(), "f.txt", "mine");
+        assert!(Command::new("git").arg("-C").arg(repo.path()).args(["merge", "other"]).output().unwrap().status.code() != Some(0));
+        std::fs::write(repo.path().join("f.txt"), "resolved").unwrap();
+        assert_eq!(merge(&worktree, "m").unwrap_err(), "COFFEE_MERGE:busy");
+        assert!(git(repo.path(), &["rev-parse", "-q", "--verify", "MERGE_HEAD"]).is_ok(), "the user's merge is still under way");
+        assert_eq!(std::fs::read_to_string(repo.path().join("f.txt")).unwrap(), "resolved", "with their resolution intact");
+        assert!(status(&worktree).unwrap().dirty, "and nothing was committed in the worktree");
+        run(repo.path(), &["merge", "--abort"]);
+        // A detached checkout would take the merge onto no branch.
+        run(repo.path(), &["checkout", "-q", "--detach"]);
+        assert_eq!(merge(&worktree, "m").unwrap_err(), "COFFEE_MERGE:detached");
+        run(repo.path(), &["checkout", "-q", &main]);
+        assert_eq!(merge(&worktree, "m").unwrap(), 2, "an idle branch merges as before");
+    }
+    #[test]
     fn worktrees_do_not_nest_and_unused_ones_are_swept() {
         let repo = repository(); identity(repo.path());
         let (kept, _) = create(repo.path(), "Kept").unwrap();
@@ -351,7 +395,8 @@ mod tests {
         let (busy, _) = create(repo.path(), "Busy").unwrap();
         std::fs::write(Path::new(&busy.path).join("work.txt"), "x").unwrap();
         assert!(create(Path::new(&kept.path), "Nested").unwrap_err().contains("already a worktree"));
-        assert_eq!(sweep(repo.path(), std::slice::from_ref(&kept.path)).unwrap(), 1, "the unused worktree, with its merged branch");
+        assert_eq!(sweep(repo.path(), &[]).unwrap(), 0, "worktrees made moments ago are spared: their tabs may not have recorded them yet");
+        assert_eq!(sweep_older_than(repo.path(), std::slice::from_ref(&kept.path), std::time::Duration::ZERO).unwrap(), 1, "the unused worktree, with its merged branch");
         assert!(Path::new(&kept.path).is_dir() && Path::new(&busy.path).is_dir() && !Path::new(&unused.path).exists());
         assert!(git(repo.path(), &["rev-parse", "--verify", "--quiet", &unused.branch]).is_err());
         assert!(inside_worktrees("D:\\p\\.claude\\worktrees\\coffee-x") && !inside_worktrees("D:\\p\\worktrees"));

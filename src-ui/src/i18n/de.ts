@@ -421,6 +421,8 @@ Lösch diesen Zettel, wann du willst, und starte deine erste Aufgabe.`,
   'gambit.worktree_nothing': 'Nichts zusammenzuführen',
   'gambit.worktree_conflict': 'Konflikt mit dem Haupt-Checkout; das Zusammenführen wurde rückgängig gemacht, dort hat sich nichts geändert',
   'gambit.worktree_local_changes': 'Nicht committete Änderungen im Haupt-Checkout würden überschrieben; zuerst committen oder stashen',
+  'gambit.worktree_busy': "Im Haupt-Checkout läuft ein Merge, Rebase oder Cherry-Pick; schließe ihn zuerst ab oder brich ihn ab",
+  'gambit.worktree_detached': "Der Haupt-Checkout ist auf keinem Branch; wechsle zuerst zum Ziel-Branch",
   'gambit.worktree_merge_failed': 'Zusammenführen fehlgeschlagen: {error}',
   'gambit.send_empty_hint': 'Gib zuerst eine Nachricht ein oder füge ein Bild ein (Ctrl+V)',
 

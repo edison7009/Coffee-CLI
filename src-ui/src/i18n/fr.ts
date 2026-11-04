@@ -421,6 +421,8 @@ Supprimez cette note quand vous voulez et commencez votre première tâche.`,
   'gambit.worktree_nothing': 'Rien à fusionner',
   'gambit.worktree_conflict': 'Conflit avec la copie principale ; la fusion a été annulée et rien n’y a changé',
   'gambit.worktree_local_changes': 'Des modifications non validées de la copie principale seraient écrasées ; validez-les ou mettez-les de côté d’abord',
+  'gambit.worktree_busy': "Une fusion, un rebase ou un cherry-pick est en cours dans le dépôt principal ; terminez-le ou annulez-le d'abord",
+  'gambit.worktree_detached': "Le dépôt principal n'est sur aucune branche ; passez d'abord sur la branche cible",
   'gambit.worktree_merge_failed': 'Échec de la fusion : {error}',
   'gambit.send_empty_hint': "Saisissez un message ou collez d'abord une image (Ctrl+V)",
 
