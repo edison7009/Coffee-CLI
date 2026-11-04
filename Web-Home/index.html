@@ -15,7 +15,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
   
   <!-- External CSS -->
-  <link rel="stylesheet" href="./css/style.css?v=0.5.1">
+  <link rel="stylesheet" href="./css/style.css?v=0.6.1">
   <link rel="stylesheet" href="./css/hero-features.css?v=2.0.1">
 </head>
 <body>
@@ -194,28 +194,41 @@
   </main>
 
 
-  <!-- Enterprise procurement / commercial licensing. Anchor target for the
-       navbar "Enterprise" link. Placed low — after the hero showcase — so
-       regular users meet the product first; copy mirrors the README. -->
-  <section class="enterprise-section" id="enterprise">
-    <h2 class="enterprise-title" data-i18n="enterprise-title">Enterprise &amp; commercial licensing</h2>
-    <p class="enterprise-body" data-i18n="enterprise-body">The open-source edition is <strong>free, forever</strong> (AGPL-3.0) — companies are welcome to use it as-is. You only need a paid commercial license to step outside AGPL's copyleft: to <strong>customize Coffee CLI and keep your changes closed-source</strong>, <strong>ship it under your own brand / white-label</strong>, or <strong>embed it in a proprietary product you distribute</strong>. <strong>Custom development, priority support, and SLAs</strong> are available too. Tell us what you're building and we'll tailor a quote.</p>
-    <a class="enterprise-contact" href="mailto:hi@coffeecli.com?subject=Coffee%20CLI%20Enterprise" data-i18n="enterprise-contact">Contact us: hi@coffeecli.com</a>
-  </section>
-
-  <footer style="text-align: center; padding: 2.5rem 1rem 3rem; font-size: 0.8rem; color: var(--text-secondary); opacity: 0.6; line-height: 1.7;">
-    <div>
-      &copy; 2026 <a href="https://github.com/edison7009" target="_blank" rel="noopener" style="color: inherit;">edison7009</a>
-      &middot; Licensed under <a href="https://github.com/edison7009/Coffee-CLI/blob/main/LICENSE" target="_blank" rel="noopener" style="color: inherit;">AGPL-3.0-or-later</a>
-    </div>
-    <div style="margin-top: 0.4rem;">
-      <em>Coffee CLI</em>, <em>Gambit</em>, <em>Pitch</em>, <em>VibeID</em>, <em>Vibetype</em>, <em>Coffee-CLI MCP</em>, <em>Sentinel Protocol</em>, and <em>Hyper-Agent</em> are trademarks of edison7009.
-      See <a href="https://github.com/edison7009/Coffee-CLI/blob/main/TRADEMARKS.md" target="_blank" rel="noopener" style="color: inherit;">TRADEMARKS</a>.
-    </div>
-    <div style="margin-top: 0.4rem;">
-      <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener" style="color: inherit;">粤ICP备2026035651号-2</a>
+  <!-- Footer: brand + commercial-licensing contact, quick links, then the
+       legal line (copyright, license, trademarks, ICP filing — the filing
+       number must stay visible on the home page). -->
+  <footer class="site-footer" id="enterprise">
+    <div class="sf-inner">
+      <div class="sf-top">
+        <div class="sf-brand">
+          <span class="sf-name">Coffee CLI</span>
+          <span class="sf-biz">
+            <span data-i18n="enterprise-title">Enterprise &amp; commercial licensing</span>
+            <span class="sf-sep" aria-hidden="true">·</span>
+            <a href="mailto:hi@coffeecli.com?subject=Coffee%20CLI%20Enterprise">hi@coffeecli.com</a>
+          </span>
+        </div>
+        <nav class="sf-links" aria-label="Footer">
+          <a href="https://github.com/edison7009/Coffee-CLI" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://github.com/edison7009/Coffee-CLI/issues" target="_blank" rel="noopener" data-i18n="feedback">Feedback</a>
+          <a href="./courses/claude-code.html" data-i18n="opc-link">Coffee 101</a>
+        </nav>
+      </div>
+      <div class="sf-legal">
+        <p>
+          &copy; 2026 <a href="https://github.com/edison7009" target="_blank" rel="noopener">edison7009</a>
+          <span class="sf-sep" aria-hidden="true">·</span>
+          <a href="https://github.com/edison7009/Coffee-CLI/blob/main/LICENSE" target="_blank" rel="noopener">AGPL-3.0-or-later</a>
+          <span class="sf-sep" aria-hidden="true">·</span>
+          <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener">粤ICP备2026035651号-2</a>
+        </p>
+        <p class="sf-tm">
+          <em>Coffee CLI</em>, <em>Gambit</em>, <em>Pitch</em>, <em>VibeID</em>, <em>Vibetype</em>, <em>Coffee-CLI MCP</em>, <em>Sentinel Protocol</em>, and <em>Hyper-Agent</em> are trademarks of edison7009. See <a href="https://github.com/edison7009/Coffee-CLI/blob/main/TRADEMARKS.md" target="_blank" rel="noopener">TRADEMARKS</a>.
+        </p>
+      </div>
     </div>
   </footer>
+
 
   <script src="./js/main.js?v=0.9.15"></script>
   <script src="./js/hero-features.js?v=2.0.1"></script>
