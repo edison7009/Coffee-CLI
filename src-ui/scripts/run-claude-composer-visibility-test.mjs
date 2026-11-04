@@ -159,6 +159,8 @@ assert.equal(isOpenCodeConversation(reducer({ terminals: [{ id: 'new', tool: nul
 console.log('OK: OpenCode conversation uses its own backend, keeps its composer and retains mode on reconnect');
 state = { terminals: [{ id: 'pi-desktop', tool: 'pi', piMode: 'conversation' }], activeTerminalId: 'pi-desktop', gambitOpen: false, agentPageActive: null, diffTabActive: false };
 assert.equal(host().props.pi, true, 'Pi conversations always have their composer');
+assert.equal(host().props.worktreeControl?.type, 'worktree-control', 'Pi conversations offer the worktree switch');
+assert.equal(host().props.worktreeControl.props.key, 'worktree:pi-desktop', 'the switch is keyed to the Pi tab');
 assert.equal(toggle().props.disabled, true);
 assert.equal(await host().props.onSend('Pi prompt'), true);
 assert.deepEqual(piSends.at(-1), { id: 'pi-desktop', text: 'Pi prompt' });
