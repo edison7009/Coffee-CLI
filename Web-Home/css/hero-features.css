@@ -28,7 +28,7 @@
 
 /* Headline (3 lines) + subtitle: four rows with one equal gap between them. */
 .hero-split .hero-content {
-  --hero-row-gap: 0.85rem;
+  --hero-row-gap: 1.15rem;
   display: flex;
   flex-direction: column;
   gap: var(--hero-row-gap);
@@ -53,19 +53,25 @@
   padding: 0;
   align-items: flex-start;
   text-align: left;
-  gap: 0.7rem;
 }
 .hero-split .downloads-row { justify-content: flex-start; }
 .hero-split .downloads-note { max-width: 32rem; }
 
-.hero-split .supported-tools {
-  margin: 1.5rem 0 0;
+/* Tool icons ride on the install window's tab row: lights | tabs | icons. */
+.hero-install .window-header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   gap: 1rem;
-  flex-wrap: wrap;
-  justify-content: flex-start;
 }
-.hero-split .supported-tools img,
-.hero-split .supported-tools svg { width: 24px; height: 24px; }
+.hero-install .supported-tools {
+  margin: 0;
+  justify-self: end;
+  gap: 0.85rem;
+  flex-wrap: nowrap;
+}
+.hero-install .supported-tools img,
+.hero-install .supported-tools svg { width: 20px; height: 20px; }
+.hero-install .supported-tools-more { height: 20px; }
 
 .hero-split .cn-mirrors {
   justify-content: flex-start;
@@ -73,7 +79,7 @@
   margin: 0.1rem 0 0;
   padding: 0;
 }
-.hero-split .downloads-section { margin-top: 1.8rem; }
+.hero-split .downloads-section { margin-top: 2.6rem; gap: 1.1rem; }
 /* The download buttons are the main CTA on the left now. */
 .hero-split .download-btn { padding: 0.8rem 1.35rem; font-size: 0.98rem; }
 
@@ -163,6 +169,10 @@ html[data-theme='dark'] .fx-dot { background: rgba(255, 255, 255, 0.16); }
 
 /* ── Responsive ────────────────────────────────────────────────────────── */
 @media (max-width: 960px) {
+  /* Narrow: icons drop under the tabs on their own centered line. */
+  .hero-install .window-header { grid-template-columns: 1fr; justify-items: center; }
+  .hero-install .traffic-lights { display: none; }
+  .hero-install .supported-tools { justify-self: center; flex-wrap: wrap; justify-content: center; }
   .hero-section.hero-split {
     grid-template-columns: minmax(0, 1fr);
     gap: 2.5rem;
