@@ -1,8 +1,7 @@
 /*
  * Hero split layout + feature showcase.
  * Left: headline, subtitle, install/download CTA. Right: one framed stage
- * that plays seven short recordings of the real app in turn, with a
- * one-line caption under the frame.
+ * that loops the split-view recording of the real app.
  */
 
 /* ── Hero grid ─────────────────────────────────────────────────────────── */
@@ -135,28 +134,6 @@ html[data-theme='dark'] .hx-lead { color: rgba(235, 235, 235, 0.78); }
   height: 100%;
   object-fit: cover;
   display: block;
-  opacity: 0;
-  transition: opacity 0.45s ease;
-}
-.fx-video.is-on { opacity: 1; }
-
-/* ── Caption + dots ────────────────────────────────────────────────────── */
-.fx-caption {
-  margin-top: 1.1rem;
-  text-align: center;
-}
-.fx-caption-title {
-  display: block;
-  font-size: 1.1rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  color: var(--text-highlight);
-}
-.fx-dots {
-  display: flex;
-  justify-content: center;
-  gap: 0.45rem;
-  margin-top: 0.8rem;
 }
 
 /* ── Command install row: spans the full hero width under both columns ── */
@@ -166,31 +143,6 @@ html[data-theme='dark'] .hx-lead { color: rgba(235, 235, 235, 0.78); }
   width: 100%;
   margin-top: clamp(0.5rem, 2vw, 1.5rem);
 }
-.fx-dot {
-  position: relative;
-  width: 1.9rem;
-  height: 0.3rem;
-  padding: 0;
-  border: none;
-  border-radius: 1rem;
-  overflow: hidden;
-  cursor: pointer;
-  background: rgba(127, 127, 127, 0.25);
-}
-html[data-theme='dark'] .fx-dot { background: rgba(255, 255, 255, 0.16); }
-.fx-dot-fill {
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: var(--brand-color);
-  transform: scaleX(0);
-  transform-origin: left center;
-  transition: transform 0.25s linear;
-}
-.fx-dot.is-on .fx-dot-fill { opacity: 1; }
-.fx-dot:not(.is-on) .fx-dot-fill { transform: scaleX(0) !important; }
-.fx-dot:hover { background: rgba(127, 127, 127, 0.4); }
-.fx-dot:focus-visible { outline: 2px solid var(--brand-color); outline-offset: 3px; }
 
 /* ── Responsive ────────────────────────────────────────────────────────── */
 @media (max-width: 960px) {
@@ -219,7 +171,3 @@ html[data-theme='dark'] .fx-dot { background: rgba(255, 255, 255, 0.16); }
   .hero-split code { font-size: 0.75rem; }
 }
 
-/* ── Reduced motion: no autoplay (handled in JS), no fades ─────────────── */
-@media (prefers-reduced-motion: reduce) {
-  .fx-video, .fx-dot-fill { transition: none; }
-}
