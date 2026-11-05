@@ -173,19 +173,69 @@
     }
   };
 
-  // Seven feature names over the hero image, as plain text tabs. Clicking one
-  // highlights it and shows its clip (looped). A feature whose recording is not
-  // ready yet (`file: null`) shows the first clip until
-  // demo/<file>.webm + demo/<file>-poster.webp are dropped in and `file` is set.
+  // Seven feature names under the hero picture, as plain text tabs; clicking
+  // one shows its clip (looped). Each feature also has a section further down
+  // that plays the same clip. Clips live in
+  // demo/features/<zh|en>/<glacier|black>/<file>.(webm|mp4) + <file>-poster.webp:
+  // zh / zh-TW visitors get the Chinese recordings, everyone else English;
+  // the light page uses the Glacier recordings, the dark page the black ones.
   const FEATURES = [
-    { id: "split", file: "split-view" },
-    { id: "agents", file: null },
-    { id: "usage", file: null },
-    { id: "themes", file: null },
-    { id: "modes", file: null },
-    { id: "changes", file: null },
-    { id: "tasks", file: null }
+    { id: "split", file: "split-drag" },
+    { id: "agents", file: "multi-agent" },
+    { id: "usage", file: "usage-meter" },
+    { id: "themes", file: "themes-shapes" },
+    { id: "modes", file: "desktop-terminal" },
+    { id: "changes", file: "git-diff-pr" },
+    { id: "tasks", file: "task-list-send" }
   ];
+
+  const clipLang = () => (currentLang === "zh" || currentLang === "zh-TW" ? "zh" : "en");
+  const clipTheme = () => (document.documentElement.getAttribute("data-theme") === "dark" ? "black" : "glacier");
+  const CAN_WEBM = (function () {
+    try { return document.createElement("video").canPlayType('video/webm; codecs="vp9"') !== ""; } catch (e) { return false; }
+  })();
+  const clipBase = (file) => "demo/features/" + clipLang() + "/" + clipTheme() + "/" + file;
+
+  // Every clip <video> on the page, so a theme or language switch can swap
+  // them all. A clip downloads only when attach() is first called for it.
+  const CLIP_VIDEOS = [];
+  function makeClip(v, file) {
+    v.muted = true;
+    v.defaultMuted = true;
+    v.loop = true;
+    v.playsInline = true;
+    v.setAttribute("muted", "");
+    v.setAttribute("playsinline", "");
+    v.setAttribute("aria-hidden", "true");
+    v.preload = "none";
+    v.dataset.file = file;
+    v.dataset.base = clipBase(file);
+    v.poster = v.dataset.base + "-poster.webp";
+    CLIP_VIDEOS.push(v);
+    return v;
+  }
+  function attach(v) {
+    if (!v.getAttribute("src")) v.src = v.dataset.base + (CAN_WEBM ? ".webm" : ".mp4");
+  }
+  function playClip(v) {
+    attach(v);
+    const p = v.play();
+    if (p && p.catch) p.catch(function () {});
+  }
+  function refreshClips() {
+    CLIP_VIDEOS.forEach(function (v) {
+      const base = clipBase(v.dataset.file);
+      if (v.dataset.base === base) return;
+      const wasPlaying = !v.paused;
+      const loaded = !!v.getAttribute("src");
+      v.dataset.base = base;
+      v.poster = base + "-poster.webp";
+      if (loaded) {
+        v.src = base + (CAN_WEBM ? ".webm" : ".mp4");
+        if (wasPlaying) playClip(v);
+      }
+    });
+  }
 
   // One short label per clip.
   const LABELS = {
@@ -259,31 +309,12 @@
     const reduced = () => !!(reduce && reduce.matches);
     const dict = () => (typeof I18N_DICT === "object" && (I18N_DICT[currentLang] || I18N_DICT.en)) || {};
 
-    function makeVideo(file) {
-      const v = document.createElement("video");
-      v.className = "fx-video";
-      v.muted = true;
-      v.defaultMuted = true;
-      v.loop = true;
-      v.playsInline = true;
-      v.setAttribute("muted", "");
-      v.setAttribute("playsinline", "");
-      v.preload = "none";
-      v.width = 1920;
-      v.height = 1080;
-      v.poster = "demo/" + file + "-poster.webp";
-      v.dataset.file = file;
-      v.setAttribute("aria-hidden", "true");
-      screen.appendChild(v);
-      return v;
-    }
-
-    // Features share a video element per recording file.
-    const fallbackFile = FEATURES.filter(function (f) { return f.file; })[0].file;
-    const videos = {};
     const slides = FEATURES.map(function (f, i) {
-      const file = f.file || fallbackFile;
-      if (!videos[file]) videos[file] = makeVideo(file);
+      const v = makeClip(document.createElement("video"), f.file);
+      v.className = "fx-video";
+      v.width = 960;
+      v.height = 540;
+      screen.appendChild(v);
 
       const tab = document.createElement("button");
       tab.type = "button";
@@ -292,7 +323,7 @@
       tab.innerHTML = dict()["fxl-" + f.id] || LABELS.en[f.id];
       tab.addEventListener("click", function () { show(i); });
       tabs.appendChild(tab);
-      return { video: videos[file], tab: tab };
+      return { video: v, tab: tab };
     });
 
     let current = -1;
@@ -323,10 +354,7 @@
         v.pause();
         return;
       }
-      // Attach the file on first play so unseen clips never download.
-      if (!v.getAttribute("src")) v.src = "demo/" + v.dataset.file + ".webm";
-      const p = v.play();
-      if (p && p.catch) p.catch(function () {});
+      playClip(v);
     }
 
     function show(i) {
@@ -334,20 +362,16 @@
       if (prev) {
         prev.tab.classList.remove("is-on");
         prev.tab.removeAttribute("aria-pressed");
+        prev.video.pause();
+        prev.video.classList.remove("is-on");
       }
       current = i;
       const s = slides[i];
       s.tab.classList.add("is-on");
       s.tab.setAttribute("aria-pressed", "true");
       revealTab(s.tab);
-      if (!prev || prev.video !== s.video) {
-        if (prev) {
-          prev.video.pause();
-          prev.video.classList.remove("is-on");
-        }
-        s.video.classList.add("is-on");
-        try { s.video.currentTime = 0; } catch (e) { /* not loaded yet */ }
-      }
+      s.video.classList.add("is-on");
+      try { s.video.currentTime = 0; } catch (e) { /* not loaded yet */ }
       sync();
     }
 
@@ -355,13 +379,7 @@
     // the visitor asked for reduced motion).
     screen.addEventListener("click", function () {
       const v = slides[current].video;
-      if (!v.getAttribute("src")) v.src = "demo/" + v.dataset.file + ".webm";
-      if (v.paused) {
-        const p = v.play();
-        if (p && p.catch) p.catch(function () {});
-      } else {
-        v.pause();
-      }
+      if (v.paused) playClip(v); else v.pause();
     });
 
     show(0);
@@ -374,16 +392,52 @@
     document.addEventListener("visibilitychange", sync);
     if (reduce && reduce.addEventListener) reduce.addEventListener("change", sync);
 
-    // Language changes swap the copy: refit the title and recheck the tab row.
+    // Language changes swap the copy and the clips: refit the title, recheck
+    // the tab row, point every clip at the right language.
     if (typeof window.renderI18N === "function") {
       const render = window.renderI18N;
       window.renderI18N = function () {
         render.apply(this, arguments);
         refitTitle();
         syncDocTitle();
+        refreshClips();
         if (current >= 0) revealTab(slides[current].tab);
       };
     }
+  }
+
+  // Feature sections: each plays its own clip while it is on screen.
+  function initFeatureClips() {
+    const vids = document.querySelectorAll(".ft-media video[data-clip]");
+    if (!vids.length) return;
+    const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)");
+    const reduced = () => !!(reduce && reduce.matches);
+    vids.forEach(function (v) {
+      makeClip(v, v.getAttribute("data-clip"));
+      v.addEventListener("click", function () { if (v.paused) playClip(v); else v.pause(); });
+    });
+    if (!("IntersectionObserver" in window)) return;
+    const io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        const v = e.target;
+        v.dataset.inView = e.isIntersecting ? "1" : "";
+        if (e.isIntersecting && !reduced() && !document.hidden) playClip(v);
+        else v.pause();
+      });
+    }, { threshold: 0.35 });
+    vids.forEach(function (v) { io.observe(v); });
+    document.addEventListener("visibilitychange", function () {
+      vids.forEach(function (v) {
+        if (document.hidden) v.pause();
+        else if (v.dataset.inView && !reduced()) playClip(v);
+      });
+    });
+  }
+
+  // The theme toggle (main.js) flips html[data-theme]: swap clips to match.
+  function watchTheme() {
+    if (!("MutationObserver" in window)) return;
+    new MutationObserver(refreshClips).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
   }
 
   // Feature rows rise into place as they scroll into view (once each).
@@ -461,6 +515,8 @@
 
   function boot() {
     initFold();
+    initFeatureClips();
+    watchTheme();
     syncDocTitle();
     initPrimaryDownload();
     init();

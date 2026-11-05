@@ -91,35 +91,70 @@ html[data-theme='dark'] .hx-lead { color: rgba(235, 235, 235, 0.78); }
 .hero-split .downloads-row { justify-content: flex-start; }
 /* Download buttons: quiet outline at rest; on hover — and always on the
    visitor's own OS (.is-primary, set in js) — a rainbow light runs around
-   the border. The border is a conic gradient behind a solid fill, turned by
-   animating the registered --dl-ang. */
-@property --dl-ang { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+   the border with a blurred rainbow glow underneath. On the light page the
+   lit button turns black so the colors pop.
+   Layers (inside the button's own stacking context): ::before = glow,
+   ::after = fill + border (a conic gradient behind a solid fill), then text.
+   --dl-ang is registered (and inherited) so it can be animated. */
+@property --dl-ang { syntax: "<angle>"; inherits: true; initial-value: 0deg; }
 .hero-split .download-btn {
   --dl-fill: var(--bg-color);
+  --dl-edge: linear-gradient(var(--glass-border), var(--glass-border));
+  --dl-rainbow: conic-gradient(from var(--dl-ang), #ff4d4d, #ffa24d, #ffe14d, #4dff88, #4dd2ff, #6b6bff, #d24dff, #ff4d4d);
+  position: relative;
+  isolation: isolate;
+  border: none;
+  background: none;
+  color: var(--text-primary);
+  transition: transform 0.25s ease, color 0.25s ease;
+}
+.hero-split .download-btn::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
   border: 1px solid transparent;
   background:
     linear-gradient(var(--dl-fill), var(--dl-fill)) padding-box,
-    linear-gradient(var(--glass-border), var(--glass-border)) border-box;
-  color: var(--text-primary);
-  transition: transform 0.25s ease, box-shadow 0.25s ease, color 0.25s ease;
+    var(--dl-edge) border-box;
+  transition: background 0.25s ease;
+}
+.hero-split .download-btn::before {
+  content: "";
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  top: 35%;
+  bottom: -6px;
+  z-index: -2;
+  border-radius: 999px;
+  background: var(--dl-rainbow);
+  filter: blur(14px);
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
 .hero-split .download-btn:hover,
 .hero-split .download-btn.is-primary {
-  background:
-    linear-gradient(var(--dl-fill), var(--dl-fill)) padding-box,
-    conic-gradient(from var(--dl-ang), #ff4d4d, #ffa24d, #ffe14d, #4dff88, #4dd2ff, #6b6bff, #d24dff, #ff4d4d) border-box;
-  border-color: transparent;
+  --dl-edge: var(--dl-rainbow);
+  background: none;
   color: var(--text-highlight);
-  box-shadow: 0 0 24px -6px rgba(160, 120, 255, 0.5);
   animation: dl-flow 3s linear infinite;
 }
+.hero-split .download-btn:hover::before,
+.hero-split .download-btn.is-primary::before { opacity: 0.55; }
 .hero-split .download-btn:hover { transform: translateY(-1px); }
 .hero-split .download-btn.is-primary { font-weight: 600; }
 .hero-split .download-btn.is-primary:not(:hover) { animation-duration: 6s; }
-html[data-theme='light'] .hero-split .download-btn:hover,
-html[data-theme='light'] .hero-split .download-btn.is-primary {
-  box-shadow: 0 8px 22px -10px rgba(160, 120, 255, 0.5);
+/* Light page: the lit button is black, its rainbow glow stronger. */
+html:not([data-theme='dark']) .hero-split .download-btn:hover,
+html:not([data-theme='dark']) .hero-split .download-btn.is-primary {
+  --dl-fill: #0b0b0c;
+  color: #fff;
 }
+html:not([data-theme='dark']) .hero-split .download-btn:hover::before,
+html:not([data-theme='dark']) .hero-split .download-btn.is-primary::before { opacity: 0.8; }
+.hero-split .download-btn .dl-icon { position: relative; }
 .hero-split .download-btn .dl-suffix { color: inherit; opacity: 0.55; }
 .hero-split .download-btn:hover .dl-suffix,
 .hero-split .download-btn.is-primary .dl-suffix { opacity: 0.65; }
@@ -162,7 +197,9 @@ html[data-theme='light'] .hero-split .download-btn.is-primary {
   box-shadow: 0 24px 56px -28px rgba(15, 30, 50, 0.32), 0 2px 10px -4px rgba(15, 30, 50, 0.12);
 }
 html[data-theme='dark'] .fx-screen {
-  box-shadow: 0 28px 70px -30px rgba(0, 0, 0, 0.85);
+  background: #111113;
+  /* Night clips are near-black: a hairline keeps their edge on the dark page. */
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 28px 70px -30px rgba(0, 0, 0, 0.85);
 }
 
 .fx-video {
@@ -337,6 +374,7 @@ html[data-theme='dark'] .fx-screen {
 /* Every second row flips: text left, picture right. */
 .ft-row:nth-child(even) { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); }
 .ft-row:nth-child(even) .ft-media { order: 2; }
+.ft-media video,
 .ft-media img {
   display: block;
   width: 100%;
@@ -347,7 +385,8 @@ html[data-theme='dark'] .fx-screen {
   background: #EEF2F6;
   box-shadow: 0 24px 56px -28px rgba(15, 30, 50, 0.32), 0 2px 10px -4px rgba(15, 30, 50, 0.12);
 }
-html[data-theme='dark'] .ft-media img { box-shadow: 0 28px 70px -30px rgba(0, 0, 0, 0.85); }
+html[data-theme='dark'] .ft-media video,
+.ft-media img { box-shadow: 0 28px 70px -30px rgba(0, 0, 0, 0.85); }
 .ft-text { min-width: 0; max-width: 32rem; }
 .ft-no {
   display: block;

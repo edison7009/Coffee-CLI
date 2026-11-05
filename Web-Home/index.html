@@ -16,7 +16,7 @@
   
   <!-- External CSS -->
   <link rel="stylesheet" href="./css/style.css?v=0.7.0">
-  <link rel="stylesheet" href="./css/hero-features.css?v=2.9.0">
+  <link rel="stylesheet" href="./css/hero-features.css?v=3.0.1">
 </head>
 <body>
 
@@ -170,13 +170,12 @@
     </div>
   </section>
 
-  <!-- Seven feature sections, picture and text alternating sides. The
-       pictures are temporary (all the split-view poster) until each
-       feature's own screenshot is ready: swap the img src per row. -->
+  <!-- Seven feature sections, clip and text alternating sides. Each clip
+       (data-clip) is wired up and played on screen by js/hero-features.js. -->
   <section class="features" id="features" aria-label="Features">
     <article class="ft-row" data-reveal>
       <div class="ft-media">
-        <img src="demo/split-view-poster.webp" alt="" width="960" height="540" loading="lazy" decoding="async">
+        <video class="ft-video" data-clip="split-drag" width="960" height="540" muted loop playsinline preload="none" aria-hidden="true"></video>
       </div>
       <div class="ft-text">
         <span class="ft-no">01</span>
@@ -186,7 +185,7 @@
     </article>
     <article class="ft-row" data-reveal>
       <div class="ft-media">
-        <img src="demo/split-view-poster.webp" alt="" width="960" height="540" loading="lazy" decoding="async">
+        <video class="ft-video" data-clip="multi-agent" width="960" height="540" muted loop playsinline preload="none" aria-hidden="true"></video>
       </div>
       <div class="ft-text">
         <span class="ft-no">02</span>
@@ -196,7 +195,7 @@
     </article>
     <article class="ft-row" data-reveal>
       <div class="ft-media">
-        <img src="demo/split-view-poster.webp" alt="" width="960" height="540" loading="lazy" decoding="async">
+        <video class="ft-video" data-clip="usage-meter" width="960" height="540" muted loop playsinline preload="none" aria-hidden="true"></video>
       </div>
       <div class="ft-text">
         <span class="ft-no">03</span>
@@ -206,7 +205,7 @@
     </article>
     <article class="ft-row" data-reveal>
       <div class="ft-media">
-        <img src="demo/split-view-poster.webp" alt="" width="960" height="540" loading="lazy" decoding="async">
+        <video class="ft-video" data-clip="themes-shapes" width="960" height="540" muted loop playsinline preload="none" aria-hidden="true"></video>
       </div>
       <div class="ft-text">
         <span class="ft-no">04</span>
@@ -216,7 +215,7 @@
     </article>
     <article class="ft-row" data-reveal>
       <div class="ft-media">
-        <img src="demo/split-view-poster.webp" alt="" width="960" height="540" loading="lazy" decoding="async">
+        <video class="ft-video" data-clip="desktop-terminal" width="960" height="540" muted loop playsinline preload="none" aria-hidden="true"></video>
       </div>
       <div class="ft-text">
         <span class="ft-no">05</span>
@@ -226,7 +225,7 @@
     </article>
     <article class="ft-row" data-reveal>
       <div class="ft-media">
-        <img src="demo/split-view-poster.webp" alt="" width="960" height="540" loading="lazy" decoding="async">
+        <video class="ft-video" data-clip="git-diff-pr" width="960" height="540" muted loop playsinline preload="none" aria-hidden="true"></video>
       </div>
       <div class="ft-text">
         <span class="ft-no">06</span>
@@ -236,7 +235,7 @@
     </article>
     <article class="ft-row" data-reveal>
       <div class="ft-media">
-        <img src="demo/split-view-poster.webp" alt="" width="960" height="540" loading="lazy" decoding="async">
+        <video class="ft-video" data-clip="task-list-send" width="960" height="540" muted loop playsinline preload="none" aria-hidden="true"></video>
       </div>
       <div class="ft-text">
         <span class="ft-no">07</span>
@@ -294,6 +293,6 @@
 
 
   <script src="./js/main.js?v=0.9.15"></script>
-  <script src="./js/hero-features.js?v=2.8.0"></script>
+  <script src="./js/hero-features.js?v=3.0.0"></script>
 </body>
 </html>
