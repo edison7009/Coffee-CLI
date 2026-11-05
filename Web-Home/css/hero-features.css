@@ -535,9 +535,9 @@ html[data-theme='dark'] .clip-frame { background: rgba(255, 255, 255, 0.12); }
   /* Fixed px, so the wedge only just clears the bottom corners on any size. */
   /* The full band turns the corner and tapers within ~30px; the innermost
      1.5px line then carries a faint tail a long way up before it vanishes. */
-  clip-path: polygon(0 100%, 0 calc(100% - 10px), 2.5px calc(100% - 30px), 2.5px 30%, calc(100% - 2.5px) 30%, calc(100% - 2.5px) calc(100% - 30px), 100% calc(100% - 10px), 100% 100%);
-  -webkit-mask-image: linear-gradient(to top, #000 0, #000 14px, rgba(0, 0, 0, 0.5) 34px, rgba(0, 0, 0, 0.18) 35%, transparent 68%);
-          mask-image: linear-gradient(to top, #000 0, #000 14px, rgba(0, 0, 0, 0.5) 34px, rgba(0, 0, 0, 0.18) 35%, transparent 68%);
+  clip-path: polygon(0 100%, 0 calc(100% - 10px), 2.5px calc(100% - 30px), 2.5px 70%, calc(100% - 2.5px) 70%, calc(100% - 2.5px) calc(100% - 30px), 100% calc(100% - 10px), 100% 100%);
+  -webkit-mask-image: linear-gradient(to top, #000 0, #000 14px, rgba(0, 0, 0, 0.5) 34px, rgba(0, 0, 0, 0.2) 14%, transparent 26%);
+          mask-image: linear-gradient(to top, #000 0, #000 14px, rgba(0, 0, 0, 0.5) 34px, rgba(0, 0, 0, 0.2) 14%, transparent 26%);
 }
 /* The glow: under the bottom edge and curling up the outside of both sides,
    shaped by the same kind of ellipse so its outer parts fade first. */
