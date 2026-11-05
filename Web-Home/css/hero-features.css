@@ -523,24 +523,18 @@ html[data-theme='dark'] .clip-frame { background: rgba(255, 255, 255, 0.12); }
 }
 .clip-frame[data-live]::before,
 .clip-frame[data-live]::after { animation-play-state: running; }
-/* The rim: a 3px band (1.5px outside the frame + the 1.5px padding) lit
-   along the bottom and rising up both sides, tapering from the OUTSIDE IN:
-   the outermost pixel lets go first, the inner ones climb higher. The mask
-   is an ellipse just wider than the frame, centred on its bottom edge —
-   its curved boundary crosses the band's outer pixels lower than its inner
-   ones, which is exactly that taper. */
+/* The rim: a 4px band (2.5px outside the frame + its 1.5px padding) lit
+   along the bottom and both bottom corners, then climbing the sides as a
+   wedge: the clip-path's slanted edges move the band's outer boundary
+   inward as it rises, so the outermost pixel stops first and each inner one
+   climbs a little higher (a staircase from outside in); the mask softens
+   the tip of the innermost line. The video covers everything inside. */
 .clip-frame::after {
-  inset: -1.5px;
-  border-radius: 13.5px;
-  /* Second layer keeps the top edge dark (the ellipse alone reaches it). */
-  -webkit-mask-image:
-    radial-gradient(ellipse 50.8% 240% at 50% 100%, #000 98.4%, transparent 100%),
-    linear-gradient(to top, #000 0%, #000 30%, transparent 55%);
-  -webkit-mask-composite: source-in;
-          mask-image:
-    radial-gradient(ellipse 50.8% 240% at 50% 100%, #000 98.4%, transparent 100%),
-    linear-gradient(to top, #000 0%, #000 30%, transparent 55%);
-          mask-composite: intersect;
+  inset: -2.5px;
+  border-radius: 14.5px;
+  clip-path: polygon(0 100%, 0 calc(100% - 18px), 4px 42%, calc(100% - 4px) 42%, 100% calc(100% - 18px), 100% 100%);
+  -webkit-mask-image: linear-gradient(to top, #000 0%, #000 22%, transparent 58%);
+          mask-image: linear-gradient(to top, #000 0%, #000 22%, transparent 58%);
 }
 /* The glow: under the bottom edge and curling up the outside of both sides,
    shaped by the same kind of ellipse so its outer parts fade first. */
