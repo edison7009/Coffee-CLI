@@ -380,6 +380,7 @@
       window.renderI18N = function () {
         render.apply(this, arguments);
         refitTitle();
+        syncDocTitle();
         if (current >= 0) revealTab(slides[current].tab);
       };
     }
@@ -428,7 +429,23 @@
     if (btn) btn.classList.add("is-primary");
   }
 
+  // Tab title follows the page language: "Coffee CLI — <hero title>".
+  function syncDocTitle() {
+    const dict = (typeof I18N_DICT === "object" && (I18N_DICT[currentLang] || I18N_DICT.en)) || {};
+    if (!dict["hx-title"]) return;
+    const tmp = document.createElement("div");
+    tmp.innerHTML = dict["hx-title"];
+    // Join the two title rows; a space only after Latin text ("Agent 丝滑"),
+    // none between CJK rows ("エージェントに美しい").
+    const text = Array.prototype.reduce.call(tmp.querySelectorAll(".hx-line"), function (acc, el) {
+      const part = el.textContent.trim();
+      return acc ? acc + (/[A-Za-z0-9.,!?]$/.test(acc) ? " " : "") + part : part;
+    }, "") || tmp.textContent.trim();
+    document.title = "Coffee CLI — " + text;
+  }
+
   function boot() {
+    syncDocTitle();
     initPrimaryDownload();
     init();
     initMarquee();
