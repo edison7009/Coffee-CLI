@@ -444,7 +444,23 @@
     document.title = "Coffee CLI — " + text;
   }
 
+  // First screen = hero + tool strip: publish the space between the navbar
+  // and the strip as --fold-h for the hero's min-height (CSS, desktop only).
+  function initFold() {
+    const nav = document.querySelector(".navbar");
+    const strip = document.querySelector(".tool-marquee");
+    if (!nav || !strip) return;
+    const set = function () {
+      const h = window.innerHeight - nav.offsetHeight - strip.offsetHeight;
+      document.documentElement.style.setProperty("--fold-h", Math.max(0, h) + "px");
+    };
+    set();
+    window.addEventListener("resize", set);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(set);
+  }
+
   function boot() {
+    initFold();
     syncDocTitle();
     initPrimaryDownload();
     init();

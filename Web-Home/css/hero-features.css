@@ -384,7 +384,7 @@ html[data-theme='dark'] .ft-body { color: rgba(235, 235, 235, 0.72); }
   position: relative;
   z-index: 10;
   width: 100%;
-  margin: clamp(2.5rem, 6vw, 4.5rem) 0 0;
+  margin: clamp(2rem, 6vw, 4.5rem) 0 0;
   padding: 1.4rem 0;
   border-top: 1px solid var(--glass-border);
   border-bottom: 1px solid var(--glass-border);
@@ -435,4 +435,18 @@ html:not([data-theme='dark']) .tm-item img.tm-mono-white { filter: invert(1); }
   .tool-marquee { padding: 1.1rem 0; }
   .tm-item { margin-right: 1.8rem; font-size: 0.85rem; }
   .tm-item img { width: 24px; height: 24px; }
+}
+
+/* ── First screen = hero + tool strip (desktop). js sets --fold-h to the
+      viewport height minus the navbar and the strip, so the strip sits on
+      the bottom edge of the first screen and the hero centers in the rest.
+      If the hero is taller than that, it simply grows (min-height). ───── */
+@media (min-width: 961px) {
+  .hero-section.hero-split {
+    min-height: var(--fold-h, auto);
+    align-content: center;
+    padding-top: 2rem;
+    padding-bottom: 2.5rem;
+  }
+  .hero-split + .tool-marquee { margin-top: 0; }
 }
