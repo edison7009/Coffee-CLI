@@ -1,0 +1,162 @@
+name: Mirror release to China
+
+# Copies a published release's installers into the download-only mirror repos
+#   https://cnb.cool/echobird/coffee-cli-releases
+#   https://gitcode.com/edison7009/coffee-cli-releases
+# so visitors in mainland China can download from a domestic host
+# (Web-Home/_worker.js sends them there when the mirror has the version).
+#
+# Each run force-pushes ONE orphan commit holding only the latest installers
+# plus manifest.json, so the mirror repos never grow with old versions. These
+# repos hold nothing else; never point this at a source repository.
+#
+# Runs after the maintainer publishes a release (same trigger as
+# bump-version-json.yml) and can be re-run by hand for any tag. It is a
+# separate workflow so a mirror failure can never block or undo a release.
+#
+# Secrets: CNB_TOKEN (git user "cnb"), GITCODE_TOKEN (git user "edison7009"),
+# each with write access to its mirror repo only.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to mirror (e.g. v3.9.1). Empty = latest release."
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mirror-release
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+      EXPECTED_ASSETS: 8
+    steps:
+      - name: Resolve tag
+        id: tag
+        run: |
+          tag="${{ github.event.release.tag_name || inputs.tag }}"
+          if [ -z "$tag" ]; then
+            tag=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName -q .tagName)
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "Mirroring $tag"
+
+      - name: Download installers and verify digests
+        run: |
+          set -euo pipefail
+          tag="${{ steps.tag.outputs.tag }}"
+          mkdir -p out
+          gh api "repos/$GITHUB_REPOSITORY/releases/tags/$tag" > release.json
+          if [ "$(jq -r .draft release.json)" = "true" ]; then
+            echo "::error::$tag is still a draft; mirror only published releases."; exit 1
+          fi
+          jq -r '.assets[] | .name' release.json | grep -E '\.(exe|msi|dmg|deb|rpm|AppImage)$' > names.txt || true
+          count=$(wc -l < names.txt | tr -d ' ')
+          if [ "$count" -lt "$EXPECTED_ASSETS" ]; then
+            echo "::error::$tag has $count installers, expected $EXPECTED_ASSETS"; exit 1
+          fi
+          while read -r name; do
+            gh release download "$tag" --repo "$GITHUB_REPOSITORY" --pattern "$name" --dir out --clobber
+            want=$(jq -r --arg n "$name" '.assets[] | select(.name == $n) | .digest // ""' release.json | sed 's/^sha256://')
+            got=$(sha256sum "out/$name" | cut -d' ' -f1)
+            size=$(stat -c %s "out/$name")
+            if [ -z "$want" ] || [ "$want" != "$got" ] || [ "$size" -eq 0 ]; then
+              echo "::error::$name failed verification (want=$want got=$got size=$size)"; exit 1
+            fi
+            echo "ok $name $size $got"
+          done < names.txt
+
+      - name: Build mirror commit
+        run: |
+          set -euo pipefail
+          tag="${{ steps.tag.outputs.tag }}"
+          version="${tag#v}"
+          cd out
+          jq -n --arg version "$version" --arg tag "$tag" \
+                --arg published "$(jq -r .published_at ../release.json)" \
+                --arg source "https://github.com/$GITHUB_REPOSITORY/releases/tag/$tag" \
+                '{version: $version, tag: $tag, publishedAt: $published, source: $source, files: {}}' > manifest.json
+          while read -r name; do
+            size=$(stat -c %s "$name")
+            sha=$(sha256sum "$name" | cut -d' ' -f1)
+            jq --arg n "$name" --argjson s "$size" --arg h "$sha" '.files[$n] = {size: $s, sha256: $h}' manifest.json > m.tmp && mv m.tmp manifest.json
+          done < ../names.txt
+          cat > README.md <<EOF
+          # Coffee CLI installers ($tag)
+
+          Download-only mirror of the official release:
+          https://github.com/$GITHUB_REPOSITORY/releases/tag/$tag
+
+          This repository is rewritten automatically on every release and only
+          ever holds the latest installers. Do not commit to it by hand.
+          File sizes and SHA-256 checksums are listed in manifest.json.
+          EOF
+          git init -q -b main
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Coffee CLI $tag installers"
+          cat manifest.json
+
+      - name: Push to CNB
+        id: cnb
+        continue-on-error: true
+        env:
+          TOKEN: ${{ secrets.CNB_TOKEN }}
+        run: |
+          set -euo pipefail
+          [ -n "$TOKEN" ] || { echo "::error::CNB_TOKEN secret is not set"; exit 1; }
+          auth=$(printf 'cnb:%s' "$TOKEN" | base64 -w0)
+          cd out
+          for i in 1 2 3; do
+            git -c http.extraHeader="Authorization: Basic $auth" push --force \
+              https://cnb.cool/echobird/coffee-cli-releases.git main && exit 0
+            sleep $((i * 15))
+          done
+          exit 1
+
+      - name: Push to GitCode
+        id: gitcode
+        continue-on-error: true
+        env:
+          TOKEN: ${{ secrets.GITCODE_TOKEN }}
+        run: |
+          set -euo pipefail
+          [ -n "$TOKEN" ] || { echo "::error::GITCODE_TOKEN secret is not set"; exit 1; }
+          auth=$(printf 'edison7009:%s' "$TOKEN" | base64 -w0)
+          cd out
+          for i in 1 2 3; do
+            git -c http.extraHeader="Authorization: Basic $auth" push --force \
+              https://gitcode.com/edison7009/coffee-cli-releases.git main && exit 0
+            sleep $((i * 15))
+          done
+          exit 1
+
+      - name: Check mirrors serve the files
+        if: always()
+        run: |
+          set -uo pipefail
+          tag="${{ steps.tag.outputs.tag }}"
+          name=$(head -1 names.txt)
+          want=$(jq -r --arg n "$name" '.files[$n].sha256' out/manifest.json)
+          bad=0
+          check() {
+            got=$(curl -fsL --retry 3 "$2" | sha256sum | cut -d' ' -f1)
+            if [ "$got" = "$want" ]; then echo "ok $1 serves $name"; else echo "::warning::$1 does not serve $name yet"; bad=1; fi
+          }
+          [ "${{ steps.cnb.outcome }}" = "success" ] && check CNB "https://cnb.cool/echobird/coffee-cli-releases/-/git/raw/main/$name"
+          [ "${{ steps.gitcode.outcome }}" = "success" ] && check GitCode "https://api.gitcode.com/api/v5/repos/edison7009/coffee-cli-releases/raw/$name?ref=main"
+          if [ "${{ steps.cnb.outcome }}" != "success" ] || [ "${{ steps.gitcode.outcome }}" != "success" ] || [ "$bad" = 1 ]; then
+            echo "::error::Mirror incomplete for $tag (CNB: ${{ steps.cnb.outcome }}, GitCode: ${{ steps.gitcode.outcome }}). The GitHub release itself is unaffected; re-run this workflow."
+            exit 1
+          fi

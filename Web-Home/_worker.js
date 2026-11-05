@@ -2,7 +2,11 @@
 // Uses env.ASSETS to serve CF Pages static files directly.
 //
 // Routes:
-//   /download/<platform>   → proxy GitHub Release assets
+//   /download/<platform>   → visitors in mainland China: redirect to the CNB /
+//                            GitCode mirror when it holds this version;
+//                            everyone else (and any mirror miss): proxy the
+//                            GitHub Release asset. ?source=github|cnb|gitcode
+//                            forces one source (for testing).
 //   /*                     → CF Pages static files (env.ASSETS)
 //                            (includes /version.json — bumped by hand at
 //                             release time; install scripts and the in-app
@@ -39,6 +43,60 @@ const PLATFORM_PATTERNS = {
     name.endsWith("Linux_arm64.rpm") || name.endsWith("aarch64.rpm"),
   "linux-arm64-appimage": (name) =>
     name.endsWith("Linux_arm64.AppImage") || name.endsWith("aarch64.AppImage"),
+}
+
+// Download-only mirrors in mainland China, filled by
+// .github/workflows/mirror-release.yml. Each holds the latest installers plus
+// manifest.json ({ version, files: { <asset name>: { size, sha256 } } }).
+const MIRRORS = [
+  {
+    id: "cnb",
+    manifest: "https://cnb.cool/echobird/coffee-cli-releases/-/git/raw/main/manifest.json",
+    file: (name) => `https://cnb.cool/echobird/coffee-cli-releases/-/git/raw/main/${encodeURIComponent(name)}`,
+  },
+  {
+    id: "gitcode",
+    manifest: "https://api.gitcode.com/api/v5/repos/edison7009/coffee-cli-releases/raw/manifest.json?ref=main",
+    file: (name) => `https://api.gitcode.com/api/v5/repos/edison7009/coffee-cli-releases/raw/${encodeURIComponent(name)}?ref=main`,
+  },
+]
+
+// A mirror's manifest, cached in KV for 5 minutes (a failed fetch is cached
+// as null for 2 minutes so a slow mirror can't stall every download).
+async function getMirrorManifest(env, mirror) {
+  const key = `mirror-manifest-${mirror.id}`
+  if (env.KV) {
+    const cached = await env.KV.get(key)
+    if (cached) return JSON.parse(cached).manifest
+  }
+  let manifest = null
+  try {
+    const res = await fetch(mirror.manifest, {
+      headers: { "User-Agent": "CoffeeCLI-Worker" },
+      signal: AbortSignal.timeout(4000),
+    })
+    if (res.ok) {
+      const data = await res.json()
+      if (data && typeof data.version === "string" && data.files && typeof data.files === "object") manifest = data
+    }
+  } catch (e) {
+    manifest = null
+  }
+  if (env.KV) {
+    await env.KV.put(key, JSON.stringify({ manifest }), { expirationTtl: manifest ? 300 : 120 })
+  }
+  return manifest
+}
+
+// The first mirror (in order) that holds exactly this release's asset.
+async function findMirror(env, asset, only) {
+  for (const mirror of MIRRORS) {
+    if (only && mirror.id !== only) continue
+    const m = await getMirrorManifest(env, mirror)
+    const entry = m && m.version === asset.version && m.files[asset.name]
+    if (entry) return { mirror, size: entry.size }
+  }
+  return null
 }
 
 async function getLatestAssets(env) {
@@ -131,6 +189,28 @@ export default {
       const asset = assets[platform]
       if (!asset) {
         return new Response(`No asset found for "${platform}"`, { status: 404 })
+      }
+
+      // Mainland China: send the browser / installer straight to a domestic
+      // mirror that has this exact version (fast there, and no long proxy
+      // through Cloudflare). Falls through to the proxy below on any miss.
+      const source = url.searchParams.get("source") || ""
+      const country = request.cf && request.cf.country
+      const wantMirror = source === "cnb" || source === "gitcode" || (source !== "github" && country === "CN")
+      if (wantMirror) {
+        const hit = await findMirror(env, asset, source === "cnb" || source === "gitcode" ? source : "")
+        if (hit) {
+          return new Response(null, {
+            status: 302,
+            headers: {
+              "Location": hit.mirror.file(asset.name),
+              "Cache-Control": "no-store",
+              "X-Coffee-Version": asset.version,
+              "X-Coffee-Source": hit.mirror.id,
+              "X-Coffee-Size": String(hit.size),
+            },
+          })
+        }
       }
 
       // Proxy the asset so the download stays on coffeecli.com (reachable
