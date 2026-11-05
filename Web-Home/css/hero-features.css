@@ -151,11 +151,11 @@ html:not([data-theme='dark']) .hero-split .download-btn.is-primary:hover { box-s
   aspect-ratio: 16 / 9;
   border-radius: 10px;
   overflow: hidden;
-  /* Same tone as the page (light page → Glacier clips, dark → black). */
-  background: #EEF2F6;
+  /* Plain page colour while loading: white on light, black on dark. */
+  background: #fff;
   cursor: pointer;
 }
-html[data-theme='dark'] .fx-screen { background: #111113; }
+html[data-theme='dark'] .fx-screen { background: #000; }
 
 .fx-video {
   position: absolute;
@@ -337,10 +337,10 @@ html[data-theme='dark'] .fx-screen { background: #111113; }
   aspect-ratio: 16 / 9;
   object-fit: cover;
   border-radius: 10px;
-  background: #EEF2F6;
+  background: #fff;
 }
 html[data-theme='dark'] .ft-media video,
-html[data-theme='dark'] .ft-media img { background: #111113; }
+html[data-theme='dark'] .ft-media img { background: #000; }
 .ft-media video { cursor: pointer; }
 .ft-text { min-width: 0; max-width: 32rem; }
 .ft-no {
@@ -474,25 +474,11 @@ html:not([data-theme='dark']) .tm-item img.tm-mono-white { filter: invert(1); }
   .hero-split + .tool-marquee { margin-top: 0; }
 }
 
-/* ── Clip loading: a soft sheen and a small spinner until the poster or
-      first frame arrives (data-loading set by js). ─────────────────────── */
+/* ── Clip loading: a plain box (page colour) with the brand coffee cup in
+      the middle until the poster or first frame arrives (data-loading set
+      by js). Nothing else moves. ────────────────────────────────────────── */
 .fx-screen,
 .ft-media { position: relative; }
-.fx-screen[data-loading]::before,
-.ft-media[data-loading]::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  border-radius: inherit;
-  pointer-events: none;
-  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.10) 50%, transparent 70%) 0 0 / 250% 100%;
-  animation: clip-sheen 1.4s ease-in-out infinite;
-}
-html[data-theme='dark'] .fx-screen[data-loading]::before,
-html[data-theme='dark'] .ft-media[data-loading]::before {
-  background-image: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.75) 50%, transparent 70%);
-}
 /* Waiting mark: the brand coffee cup with rising steam (same drawing as the
    navbar logo, SMIL animated inside the SVG image). */
 .fx-screen[data-loading]::after,
@@ -507,16 +493,6 @@ html[data-theme='dark'] .ft-media[data-loading]::before {
   margin: -24px 0 0 -24px;
   pointer-events: none;
   background: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 overflow=%22visible%22%3E%3Cdefs%3E%3Cmask id=%22m%22%3E%3Cpath fill=%22none%22 stroke=%22%23fff%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 stroke-width=%222%22 d=%22M8 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M12 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M16 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4%22%3E%3Canimate attributeName=%22d%22 dur=%223s%22 repeatCount=%22indefinite%22 values=%22M8 0c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M12 0c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M16 0c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4;M8 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M12 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M16 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4%22/%3E%3C/path%3E%3Cpath d=%22M4 2h16v5h-16v12h16v-24h-16Z%22/%3E%3C/mask%3E%3C/defs%3E%3Cg stroke=%22%23c4956a%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 stroke-width=%222%22%3E%3Cpath fill=%22%23c4956a%22 d=%22M17 9v9c0 1.66 -1.34 3 -3 3h-6c-1.66 0 -3 -1.34 -3 -3v-9Z%22/%3E%3Cpath fill=%22none%22 d=%22M17 9h3c0.55 0 1 0.45 1 1v3c0 0.55 -0.45 1 -1 1h-3%22/%3E%3C/g%3E%3Cpath fill=%22%23c4956a%22 d=%22M0 0h24v24H0z%22 mask=%22url%28%23m%29%22/%3E%3C/svg%3E") center / contain no-repeat;
-  animation: clip-cup 2s ease-in-out infinite;
-}
-.ft-media[data-loading]::before { border-radius: 12px; }
-@keyframes clip-sheen { from { background-position: 150% 0; } to { background-position: -150% 0; } }
-@keyframes clip-cup { 0%, 100% { opacity: 0.75; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-3px); } }
-@media (prefers-reduced-motion: reduce) {
-  .fx-screen[data-loading]::before,
-  .ft-media[data-loading]::before,
-  .fx-screen[data-loading]::after,
-  .ft-media[data-loading]::after { animation: none; }
 }
 
 /* ── Clip frame: the download buttons' rainbow light, around every clip.
