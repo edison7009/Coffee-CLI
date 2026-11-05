@@ -16,15 +16,15 @@
   
   <!-- External CSS -->
   <link rel="stylesheet" href="./css/style.css?v=0.7.0">
-  <link rel="stylesheet" href="./css/hero-features.css?v=3.1.1">
+  <link rel="stylesheet" href="./css/hero-features.css?v=3.2.0">
   <!-- Fetch the first hero clip's poster right away (same language / theme
-       rules as js/hero-features.js: light page → black clips, dark → glacier). -->
+       rules as js/hero-features.js: light page → Glacier clips, dark → black). -->
   <script>
     (function () {
       try {
         var l = localStorage.getItem("coffee-cli-lang") || (navigator.language || "").toLowerCase();
         var th = localStorage.getItem("coffee-cli-theme") || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-        var href = "demo/features/" + (/^zh/i.test(l) ? "zh" : "en") + "/" + (th === "dark" ? "glacier" : "black") + "/split-drag-poster.webp";
+        var href = "demo/features/" + (/^zh/i.test(l) ? "zh" : "en") + "/" + (th === "dark" ? "black" : "glacier") + "/split-drag-poster.webp";
         var link = document.createElement("link");
         link.rel = "preload"; link.as = "image"; link.href = href;
         document.head.appendChild(link);
@@ -142,7 +142,7 @@
     <!-- Feature clips: real recordings of the app (demo/*.webm), played by
          js/hero-features.js; the text tabs below switch clips. -->
     <figure class="hero-fx" id="hero-features">
-      <div class="fx-stage">
+      <div class="fx-stage clip-frame">
         <div class="fx-screen"></div>
       </div>
       <div class="fx-tabs" role="group" aria-label="Features"></div>
@@ -189,7 +189,7 @@
   <section class="features" id="features" aria-label="Features">
     <article class="ft-row" data-reveal>
       <div class="ft-media">
-        <video class="ft-video" data-clip="split-drag" width="960" height="540" muted loop playsinline preload="none" aria-hidden="true"></video>
+        <div class="clip-frame"><video class="ft-video" data-clip="split-drag" width="960" height="540" muted loop playsinline preload="none" aria-hidden="true"></video></div>
       </div>
       <div class="ft-text">
         <span class="ft-no">01</span>
@@ -199,7 +199,7 @@
     </article>
     <article class="ft-row" data-reveal>
       <div class="ft-media">
-        <video class="ft-video" data-clip="multi-agent" width="960" height="540" muted loop playsinline preload="none" aria-hidden="true"></video>
+        <div class="clip-frame"><video class="ft-video" data-clip="multi-agent" width="960" height="540" muted loop playsinline preload="none" aria-hidden="true"></video></div>
       </div>
       <div class="ft-text">
         <span class="ft-no">02</span>
@@ -209,7 +209,7 @@
     </article>
     <article class="ft-row" data-reveal>
       <div class="ft-media">
-        <video class="ft-video" data-clip="usage-meter" width="960" height="540" muted loop playsinline preload="none" aria-hidden="true"></video>
+        <div class="clip-frame"><video class="ft-video" data-clip="usage-meter" width="960" height="540" muted loop playsinline preload="none" aria-hidden="true"></video></div>
       </div>
       <div class="ft-text">
         <span class="ft-no">03</span>
@@ -219,7 +219,7 @@
     </article>
     <article class="ft-row" data-reveal>
       <div class="ft-media">
-        <video class="ft-video" data-clip="themes-shapes" width="960" height="540" muted loop playsinline preload="none" aria-hidden="true"></video>
+        <div class="clip-frame"><video class="ft-video" data-clip="themes-shapes" width="960" height="540" muted loop playsinline preload="none" aria-hidden="true"></video></div>
       </div>
       <div class="ft-text">
         <span class="ft-no">04</span>
@@ -229,7 +229,7 @@
     </article>
     <article class="ft-row" data-reveal>
       <div class="ft-media">
-        <video class="ft-video" data-clip="desktop-terminal" width="960" height="540" muted loop playsinline preload="none" aria-hidden="true"></video>
+        <div class="clip-frame"><video class="ft-video" data-clip="desktop-terminal" width="960" height="540" muted loop playsinline preload="none" aria-hidden="true"></video></div>
       </div>
       <div class="ft-text">
         <span class="ft-no">05</span>
@@ -239,7 +239,7 @@
     </article>
     <article class="ft-row" data-reveal>
       <div class="ft-media">
-        <video class="ft-video" data-clip="git-diff-pr" width="960" height="540" muted loop playsinline preload="none" aria-hidden="true"></video>
+        <div class="clip-frame"><video class="ft-video" data-clip="git-diff-pr" width="960" height="540" muted loop playsinline preload="none" aria-hidden="true"></video></div>
       </div>
       <div class="ft-text">
         <span class="ft-no">06</span>
@@ -249,7 +249,7 @@
     </article>
     <article class="ft-row" data-reveal>
       <div class="ft-media">
-        <video class="ft-video" data-clip="task-list-send" width="960" height="540" muted loop playsinline preload="none" aria-hidden="true"></video>
+        <div class="clip-frame"><video class="ft-video" data-clip="task-list-send" width="960" height="540" muted loop playsinline preload="none" aria-hidden="true"></video></div>
       </div>
       <div class="ft-text">
         <span class="ft-no">07</span>
@@ -307,6 +307,6 @@
 
 
   <script src="./js/main.js?v=0.9.15"></script>
-  <script src="./js/hero-features.js?v=3.1.0"></script>
+  <script src="./js/hero-features.js?v=3.2.0"></script>
 </body>
 </html>

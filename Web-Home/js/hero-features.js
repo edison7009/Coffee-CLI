@@ -178,7 +178,7 @@
   // that plays the same clip. Clips live in
   // demo/features/<zh|en>/<glacier|black>/<file>.(webm|mp4) + <file>-poster.webp:
   // zh / zh-TW visitors get the Chinese recordings, everyone else English;
-  // the light page uses the black recordings, the dark page the Glacier ones.
+  // the light page uses the Glacier recordings, the dark page the black ones.
   const FEATURES = [
     { id: "split", file: "split-drag" },
     { id: "agents", file: "multi-agent" },
@@ -190,8 +190,8 @@
   ];
 
   const clipLang = () => (currentLang === "zh" || currentLang === "zh-TW" ? "zh" : "en");
-  // Contrast with the page: the light page shows the black recordings, the dark page the Glacier (light) ones.
-  const clipTheme = () => (document.documentElement.getAttribute("data-theme") === "dark" ? "glacier" : "black");
+  // Same tone as the page: light page → Glacier recordings, dark page → black.
+  const clipTheme = () => (document.documentElement.getAttribute("data-theme") === "dark" ? "black" : "glacier");
   const CAN_WEBM = (function () {
     try { return document.createElement("video").canPlayType('video/webm; codecs="vp9"') !== ""; } catch (e) { return false; }
   })();
@@ -439,8 +439,10 @@
     setTimeout(warmRest, 6000);
 
     if ("IntersectionObserver" in window) {
+      const frame = root.querySelector(".clip-frame");
       new IntersectionObserver(function (entries) {
         visible = entries[0].isIntersecting;
+        if (frame) { if (visible) frame.setAttribute("data-live", ""); else frame.removeAttribute("data-live"); }
         sync();
       }, { threshold: 0.25 }).observe(root);
     }
@@ -483,6 +485,10 @@
       entries.forEach(function (e) {
         const v = e.target;
         v.dataset.inView = e.isIntersecting ? "1" : "";
+        const frame = v.parentElement;
+        if (frame && frame.classList.contains("clip-frame")) {
+          if (e.isIntersecting) frame.setAttribute("data-live", ""); else frame.removeAttribute("data-live");
+        }
         if (e.isIntersecting && v._ready === undefined) track(v, v._box);
         if (e.isIntersecting && !reduced() && !document.hidden) playClip(v);
         else v.pause();

@@ -191,16 +191,11 @@ html:not([data-theme='dark']) .hero-split .download-btn.is-primary::before { opa
   aspect-ratio: 16 / 9;
   border-radius: 10px;
   overflow: hidden;
-  /* Light page shows the black recordings: dark backdrop + soft shadow. */
-  background: #111113;
-  cursor: pointer;
-  box-shadow: 0 24px 56px -24px rgba(15, 30, 50, 0.45), 0 2px 10px -4px rgba(15, 30, 50, 0.15);
-}
-html[data-theme='dark'] .fx-screen {
-  /* Dark page shows the light (Glacier) recordings. */
+  /* Same tone as the page (light page → Glacier clips, dark → black). */
   background: #EEF2F6;
-  box-shadow: 0 28px 70px -30px rgba(0, 0, 0, 0.85);
+  cursor: pointer;
 }
+html[data-theme='dark'] .fx-screen { background: #111113; }
 
 .fx-video {
   position: absolute;
@@ -381,16 +376,11 @@ html[data-theme='dark'] .fx-screen {
   height: auto;
   aspect-ratio: 16 / 9;
   object-fit: cover;
-  border-radius: 12px;
-  /* Light page: black recordings; dark page: Glacier (light) ones. */
-  background: #111113;
-  box-shadow: 0 24px 56px -24px rgba(15, 30, 50, 0.45), 0 2px 10px -4px rgba(15, 30, 50, 0.15);
+  border-radius: 10px;
+  background: #EEF2F6;
 }
 html[data-theme='dark'] .ft-media video,
-html[data-theme='dark'] .ft-media img {
-  background: #EEF2F6;
-  box-shadow: 0 28px 70px -30px rgba(0, 0, 0, 0.85);
-}
+html[data-theme='dark'] .ft-media img { background: #111113; }
 .ft-media video { cursor: pointer; }
 .ft-text { min-width: 0; max-width: 32rem; }
 .ft-no {
@@ -567,4 +557,39 @@ html[data-theme='dark'] .ft-media[data-loading]::before {
   .ft-media[data-loading]::before,
   .fx-screen[data-loading]::after,
   .ft-media[data-loading]::after { animation: none; }
+}
+
+/* ── Clip frame: the download buttons' rainbow light, around every clip.
+      A thin conic-gradient rim (the frame's own background, showing through
+      its padding) turns slowly, with a blurred rainbow glow underneath. It
+      only animates while the clip is on screen (data-live, set in js). ─── */
+.clip-frame {
+  position: relative;
+  isolation: isolate;
+  padding: 1.5px;
+  border-radius: 12px;
+  background: conic-gradient(from var(--dl-ang), #ff4d4d, #ffa24d, #ffe14d, #4dff88, #4dd2ff, #6b6bff, #d24dff, #ff4d4d);
+  animation: dl-flow 9s linear infinite;
+  animation-play-state: paused;
+}
+.clip-frame[data-live] { animation-play-state: running; }
+.clip-frame::before {
+  content: "";
+  position: absolute;
+  left: 6%;
+  right: 6%;
+  top: 30%;
+  bottom: -14px;
+  z-index: -1;
+  border-radius: 40px;
+  background: inherit;
+  filter: blur(36px);
+  opacity: 0.35;
+  pointer-events: none;
+}
+html[data-theme='dark'] .clip-frame::before { opacity: 0.3; }
+.clip-frame > .fx-screen,
+.clip-frame > video { border-radius: 10.5px; }
+@media (prefers-reduced-motion: reduce) {
+  .clip-frame { animation: none; }
 }
