@@ -61,10 +61,15 @@ const MIRRORS = [
   },
 ]
 
-// A mirror's manifest, cached in KV for 5 minutes (a failed fetch is cached
-// as null for 2 minutes so a slow mirror can't stall every download).
+// A mirror's manifest, cached for 5 minutes in memory (and KV when bound);
+// a failed fetch is cached as null for 2 minutes so a slow mirror can't
+// stall every download.
+const mirrorCache = new Map() // id -> { at, manifest } (per isolate, when no KV)
+
 async function getMirrorManifest(env, mirror) {
   const key = `mirror-manifest-${mirror.id}`
+  const mem = mirrorCache.get(mirror.id)
+  if (mem && Date.now() - mem.at < (mem.manifest ? 300000 : 120000)) return mem.manifest
   if (env.KV) {
     const cached = await env.KV.get(key)
     if (cached) return JSON.parse(cached).manifest
@@ -82,6 +87,7 @@ async function getMirrorManifest(env, mirror) {
   } catch (e) {
     manifest = null
   }
+  mirrorCache.set(mirror.id, { at: Date.now(), manifest })
   if (env.KV) {
     await env.KV.put(key, JSON.stringify({ manifest }), { expirationTtl: manifest ? 300 : 120 })
   }
@@ -99,67 +105,78 @@ async function findMirror(env, asset, only) {
   return null
 }
 
-async function getLatestAssets(env) {
-  // Cache key bumped to v2 after changing the `version` field shape
-  // (strip leading "v"). Old v1 entries would otherwise linger in KV
-  // for up to an hour after deploy.
-  const cacheKey = "latest-release-v2"
-  // Separate "last known good" key with no TTL. Used as a stale
-  // fallback when the GitHub API call fails (rate limit, outage).
-  // Without this, a single 60/hr unauthenticated rate-limit hit on
-  // the shared CF Worker IP pool turns every install attempt into a
-  // 502 until the next hour rolls over.
-  const stableKey = "latest-release-stable-v2"
-  if (env.KV) {
-    const cached = await env.KV.get(cacheKey)
-    if (cached) return JSON.parse(cached)
-  }
+// Asset names CI publishes for each platform (`Coffee.CLI_<version>_<suffix>`).
+const PLATFORM_SUFFIX = {
+  "windows": "Windows_x64-setup.exe",
+  "windows-msi": "Windows_x64.msi",
+  "macos-arm": "macOS_arm64.dmg",
+  "macos-intel": "macOS_x64.dmg",
+  "linux-deb": "Linux_x64.deb",
+  "linux-rpm": "Linux_x64.rpm",
+  "linux-appimage": "Linux_x64.AppImage",
+  "linux-arm64-deb": "Linux_arm64.deb",
+  "linux-arm64-rpm": "Linux_arm64.rpm",
+  "linux-arm64-appimage": "Linux_arm64.AppImage",
+}
 
-  let res
-  try {
-    res = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, {
-      headers: { "User-Agent": "CoffeeCLI-Worker" }
-    })
-  } catch (e) {
-    if (env.KV) {
-      const stale = await env.KV.get(stableKey)
-      if (stale) return JSON.parse(stale)
-    }
-    throw e
-  }
-  if (!res.ok) {
-    if (env.KV) {
-      const stale = await env.KV.get(stableKey)
-      if (stale) return JSON.parse(stale)
-    }
-    throw new Error(`GitHub API ${res.status}`)
-  }
-
-  const release = await res.json()
+function assetsFor(version, available) {
   const assets = {}
-  for (const [platform, match] of Object.entries(PLATFORM_PATTERNS)) {
-    const asset = release.assets.find(a => match(a.name))
-    if (asset) assets[platform] = {
-      url: asset.browser_download_url,
-      name: asset.name,
-      // Strip the leading "v" from the git tag name so `version` is a
-      // clean semver. install.ps1 / install.sh prepend their own "v"
-      // when displaying, and compare against the Windows registry
-      // DisplayVersion field (which has no "v"). Returning "v1.0.7"
-      // here produced "vv1.0.7" in the UI and broke the up-to-date
-      // check (registry "1.0.7" != API "v1.0.7" → infinite "upgrade").
-      version: release.tag_name.replace(/^v/, '')
+  for (const [platform, suffix] of Object.entries(PLATFORM_SUFFIX)) {
+    const name = `Coffee.CLI_${version}_${suffix}`
+    if (available && !available.has(name)) continue
+    assets[platform] = {
+      url: `https://github.com/${REPO}/releases/download/v${version}/${encodeURIComponent(name)}`,
+      name,
+      version,
     }
   }
+  return assets
+}
 
-  if (env.KV) {
-    const payload = JSON.stringify(assets)
-    await env.KV.put(cacheKey, payload, { expirationTtl: 3600 })
-    // Stable copy has no TTL — only ever overwritten by a successful
-    // fetch, never expires on its own. Worst case during a long
-    // outage: users see the previous release until GitHub recovers.
-    await env.KV.put(stableKey, payload)
+// The latest release's assets, WITHOUT the GitHub API: the unauthenticated
+// API allows 60 calls/hour per IP and Cloudflare's shared egress IPs exhaust
+// it almost permanently, which made most downloads fail with 502. Instead:
+//   version — this site's own /version.json (bumped when a release is
+//             published, see .github/workflows/bump-version-json.yml);
+//   names   — the fixed CI naming, narrowed to files a mirror manifest
+//             lists for that version when one is reachable.
+// Kept per isolate for 5 minutes. The API is only a last resort.
+let latestCache = null // { at, assets }
+
+async function getLatestAssets(env) {
+  if (latestCache && Date.now() - latestCache.at < 5 * 60 * 1000) return latestCache.assets
+
+  let version = null
+  try {
+    const res = await env.ASSETS.fetch(new Request("https://coffeecli.com/version.json"))
+    if (res.ok) {
+      const v = (await res.json()).version
+      if (typeof v === "string" && /^\d+\.\d+\.\d+$/.test(v.replace(/^v/, ""))) version = v.replace(/^v/, "")
+    }
+  } catch (e) { /* fall through */ }
+
+  let assets = null
+  if (version) {
+    let available = null
+    for (const mirror of MIRRORS) {
+      const m = await getMirrorManifest(env, mirror)
+      if (m && m.version === version) { available = new Set(Object.keys(m.files)); break }
+    }
+    assets = assetsFor(version, available)
+  } else {
+    const res = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, {
+      headers: { "User-Agent": "CoffeeCLI-Worker" },
+    })
+    if (!res.ok) throw new Error(`GitHub API ${res.status}`)
+    const release = await res.json()
+    const tag = release.tag_name.replace(/^v/, "")
+    assets = {}
+    for (const [platform, match] of Object.entries(PLATFORM_PATTERNS)) {
+      const asset = release.assets.find(a => match(a.name))
+      if (asset) assets[platform] = { url: asset.browser_download_url, name: asset.name, version: tag }
+    }
   }
+  latestCache = { at: Date.now(), assets }
   return assets
 }
 
@@ -167,22 +184,6 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url)
     const { pathname } = url
-
-    // ── /download-diag (temporary): time each step of a download lookup ─────
-    if (pathname === "/download-diag") {
-      const out = { kv: !!env.KV, country: (request.cf && request.cf.country) || null, colo: (request.cf && request.cf.colo) || null, steps: [] }
-      const step = async (name, fn) => {
-        const t = Date.now()
-        try { out.steps.push({ name, ok: true, ms: Date.now() - t, result: await fn() }) }
-        catch (e) { out.steps.push({ name, ok: false, ms: Date.now() - t, error: String(e && e.stack || e) }) }
-      }
-      await step("kv-get-latest", async () => env.KV ? !!(await env.KV.get("latest-release-v2")) : "no KV")
-      await step("kv-get-stable", async () => env.KV ? !!(await env.KV.get("latest-release-stable-v2")) : "no KV")
-      await step("github-api", async () => { const r = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, { headers: { "User-Agent": "CoffeeCLI-Worker" } }); return { status: r.status, remaining: r.headers.get("x-ratelimit-remaining") } })
-      for (const m of MIRRORS) await step("manifest-" + m.id, async () => { const r = await fetch(m.manifest, { headers: { "User-Agent": "CoffeeCLI-Worker" }, signal: AbortSignal.timeout(4000) }); return { status: r.status } })
-      await step("getLatestAssets", async () => Object.keys(await getLatestAssets(env)).length)
-      return new Response(JSON.stringify(out, null, 2), { headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } })
-    }
 
     // ── /download/<platform> ─────────────────────────────────────────────────
     const dlMatch = pathname.match(/^\/download\/([a-z0-9-]+)$/)
