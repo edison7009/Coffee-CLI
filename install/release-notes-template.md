@@ -1,5 +1,5 @@
 <details open>
-<summary><b>🇨🇳 简体中文</b></summary>
+<summary><b>简体中文</b></summary>
 
 ### Coffee CLI v3.9.2 · macOS 和 Linux 也能在应用内更新
 
@@ -12,7 +12,7 @@
 </details>
 
 <details>
-<summary><b>🇬🇧 English</b></summary>
+<summary><b>English</b></summary>
 
 ### Coffee CLI v3.9.2 · In-App Updates on macOS and Linux
 
@@ -25,7 +25,7 @@
 </details>
 
 <details>
-<summary><b>🇹🇼 繁體中文</b></summary>
+<summary><b>繁體中文</b></summary>
 
 ### Coffee CLI v3.9.2 · macOS 與 Linux 也能在應用內更新
 
@@ -38,7 +38,7 @@
 </details>
 
 <details>
-<summary><b>🇯🇵 日本語</b></summary>
+<summary><b>日本語</b></summary>
 
 ### Coffee CLI v3.9.2 · macOS と Linux でもアプリ内アップデート
 
@@ -51,7 +51,7 @@
 </details>
 
 <details>
-<summary><b>🇰🇷 한국어</b></summary>
+<summary><b>한국어</b></summary>
 
 ### Coffee CLI v3.9.2 · macOS와 Linux에서도 앱 내 업데이트
 
