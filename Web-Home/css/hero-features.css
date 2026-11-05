@@ -235,14 +235,6 @@ html[data-theme='dark'] .fx-screen {
   gap: 0.75rem 1.5rem;
   margin-bottom: 0.75rem;
 }
-.is-bar .supported-tools {
-  margin: 0;
-  gap: 0.8rem;
-  flex-wrap: wrap;
-}
-.is-bar .supported-tools img,
-.is-bar .supported-tools svg { width: 20px; height: 20px; }
-.is-bar .supported-tools-more { height: 20px; }
 .is-cmd {
   display: flex;
   align-items: center;
@@ -285,7 +277,7 @@ html[data-theme='dark'] .fx-screen {
   z-index: 10;
   width: 100%;
   max-width: 1360px;
-  margin: clamp(3rem, 8vw, 6.5rem) auto 0;
+  margin: clamp(3.5rem, 8vw, 6.5rem) auto 0;
   padding: 0 2rem;
   display: flex;
   flex-direction: column;
@@ -369,4 +361,62 @@ html[data-theme='dark'] .ft-body { color: rgba(235, 235, 235, 0.72); }
 .install-strip { scroll-margin-top: 1.5rem; }
 @media (prefers-reduced-motion: no-preference) {
   html { scroll-behavior: smooth; }
+}
+
+/* ── Supported-tools strip: endless sideways scroll, faded at both ends ── */
+.tool-marquee {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  margin: clamp(2.5rem, 6vw, 4.5rem) 0 0;
+  padding: 1.4rem 0;
+  border-top: 1px solid var(--glass-border);
+  border-bottom: 1px solid var(--glass-border);
+  background: var(--bg-color);
+}
+.tm-viewport {
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 10%, #000 90%, transparent);
+          mask-image: linear-gradient(to right, transparent, #000 10%, #000 90%, transparent);
+}
+.tm-track {
+  display: flex;
+  width: max-content;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.tm-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-right: 2.6rem;
+  white-space: nowrap;
+  font: 500 0.95rem/1 var(--font-primary);
+  color: var(--text-secondary);
+}
+.tm-item img {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  object-fit: contain;
+  flex: none;
+}
+/* Monochrome marks are drawn in black; flip them to white on the dark page. */
+html[data-theme='dark'] .tm-item img.tm-mono { filter: invert(1); }
+/* The goose mark is white; flip it to black on the light page. */
+html:not([data-theme='dark']) .tm-item img.tm-mono-white { filter: invert(1); }
+.tm-track.is-looping { animation: tm-slide 70s linear infinite; }
+.tool-marquee:hover .tm-track { animation-play-state: paused; }
+@keyframes tm-slide {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tm-track.is-looping { animation: none; }
+}
+@media (max-width: 600px) {
+  .tool-marquee { padding: 1.1rem 0; }
+  .tm-item { margin-right: 1.8rem; font-size: 0.85rem; }
+  .tm-item img { width: 24px; height: 24px; }
 }

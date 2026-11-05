@@ -404,8 +404,23 @@
     });
   }
 
+  // Tool strip: duplicate the list once (hidden from assistive tech) so the
+  // CSS animation can slide by exactly half and loop without a seam.
+  function initMarquee() {
+    const track = document.querySelector(".tm-track");
+    if (!track || track.dataset.cloned) return;
+    track.dataset.cloned = "1";
+    Array.prototype.slice.call(track.children).forEach(function (li) {
+      const copy = li.cloneNode(true);
+      copy.setAttribute("aria-hidden", "true");
+      track.appendChild(copy);
+    });
+    track.classList.add("is-looping");
+  }
+
   function boot() {
     init();
+    initMarquee();
     initReveal();
   }
 

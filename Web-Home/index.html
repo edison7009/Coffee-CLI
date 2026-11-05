@@ -16,7 +16,7 @@
   
   <!-- External CSS -->
   <link rel="stylesheet" href="./css/style.css?v=0.7.0">
-  <link rel="stylesheet" href="./css/hero-features.css?v=2.3.0">
+  <link rel="stylesheet" href="./css/hero-features.css?v=2.4.1">
 </head>
 <body>
 
@@ -136,6 +136,40 @@
   </main>
 
 
+  <!-- Supported AI CLIs as an endless scrolling strip between the hero and
+       the feature sections (same set and order as the app's launchpad).
+       js/hero-features.js clones the list once so the loop is seamless. -->
+  <section class="tool-marquee" aria-label="Supported AI CLIs">
+    <div class="tm-viewport">
+      <ul class="tm-track">
+        <li class="tm-item"><img src="agents/icons/claude.svg" alt="" width="28" height="28" decoding="async"><span>Claude Code</span></li>
+        <li class="tm-item"><img src="agents/icons/codex.svg" alt="" width="28" height="28" decoding="async"><span>Codex CLI</span></li>
+        <li class="tm-item"><img src="agents/icons/dsh.png" alt="" width="28" height="28" decoding="async"><span>DeepSeek Harness</span></li>
+        <li class="tm-item"><img src="agents/icons/cursor.svg" alt="" width="28" height="28" decoding="async" class="tm-mono"><span>Cursor</span></li>
+        <li class="tm-item"><img src="agents/icons/copilot.svg" alt="" width="28" height="28" decoding="async" class="tm-mono"><span>Copilot CLI</span></li>
+        <li class="tm-item"><img src="agents/icons/antigravity.svg" alt="" width="28" height="28" decoding="async"><span>Antigravity CLI</span></li>
+        <li class="tm-item"><img src="agents/icons/openclaw.svg" alt="" width="28" height="28" decoding="async"><span>OpenClaw</span></li>
+        <li class="tm-item"><img src="agents/icons/hermes.png" alt="" width="28" height="28" decoding="async"><span>Hermes Agent</span></li>
+        <li class="tm-item"><img src="agents/icons/opencode.svg" alt="" width="28" height="28" decoding="async"><span>OpenCode</span></li>
+        <li class="tm-item"><img src="agents/icons/pi.svg" alt="" width="28" height="28" decoding="async"><span>Pi</span></li>
+        <li class="tm-item"><img src="agents/icons/cline.svg" alt="" width="28" height="28" decoding="async" class="tm-mono"><span>Cline</span></li>
+        <li class="tm-item"><img src="agents/icons/goose.png" alt="" width="28" height="28" decoding="async" class="tm-mono-white"><span>Goose</span></li>
+        <li class="tm-item"><img src="agents/icons/aider.png" alt="" width="28" height="28" decoding="async"><span>Aider</span></li>
+        <li class="tm-item"><img src="agents/icons/omp.svg" alt="" width="28" height="28" decoding="async"><span>Oh-My-Pi</span></li>
+        <li class="tm-item"><img src="agents/icons/crush.png" alt="" width="28" height="28" decoding="async"><span>Crush</span></li>
+        <li class="tm-item"><img src="agents/icons/qwen.svg" alt="" width="28" height="28" decoding="async"><span>Qwen Code</span></li>
+        <li class="tm-item"><img src="agents/icons/kilo.svg" alt="" width="28" height="28" decoding="async"><span>Kilo Code</span></li>
+        <li class="tm-item"><img src="agents/icons/kiro.svg" alt="" width="28" height="28" decoding="async"><span>Kiro</span></li>
+        <li class="tm-item"><img src="agents/icons/kimicode.png" alt="" width="28" height="28" decoding="async"><span>Kimi Code</span></li>
+        <li class="tm-item"><img src="agents/icons/codebuddy.svg" alt="" width="28" height="28" decoding="async"><span>CodeBuddy</span></li>
+        <li class="tm-item"><img src="agents/icons/grok.svg" alt="" width="28" height="28" decoding="async" class="tm-mono"><span>Grok Build</span></li>
+        <li class="tm-item"><img src="agents/icons/mimocode.svg" alt="" width="28" height="28" decoding="async"><span>MiMo Code</span></li>
+        <li class="tm-item"><img src="agents/icons/minimax.svg" alt="" width="28" height="28" decoding="async"><span>MiniMax Code</span></li>
+        <li class="tm-item"><img src="agents/icons/muse.png" alt="" width="28" height="28" decoding="async"><span>Muse Code</span></li>
+      </ul>
+    </div>
+  </section>
+
   <!-- Seven feature sections, picture and text alternating sides. The
        pictures are temporary (all the split-view poster) until each
        feature's own screenshot is ready: swap the img src per row. -->
@@ -223,27 +257,6 @@
           <button class="tab-btn" data-platform="macos">macOS</button>
           <button class="tab-btn" data-platform="linux">Linux</button>
         </div>
-        <!-- Supported AI CLIs, on the platform row -->
-        <div class="supported-tools" aria-label="Supported AI CLIs">
-          <img src="agents/icons/claude.svg" alt="Claude Code" width="28" height="28" loading="lazy">
-          <img src="agents/icons/opencode.svg" alt="OpenCode" width="28" height="28" loading="lazy">
-          <img src="agents/icons/mimocode.svg" alt="MiMo Code" width="28" height="28" loading="lazy">
-          <img src="agents/icons/codex.svg" alt="Codex CLI" width="28" height="28" loading="lazy">
-          <img src="agents/icons/antigravity.svg" alt="Antigravity CLI" width="28" height="28" loading="lazy">
-          <img src="agents/icons/qwen.svg" alt="Qwen Code" width="28" height="28" loading="lazy">
-          <img src="agents/icons/hermes.png" alt="Hermes Agent" width="28" height="28" loading="lazy">
-          <img src="agents/icons/openclaw.svg" alt="OpenClaw" width="28" height="28" loading="lazy">
-          <!-- Pi: inlined (not <img>) so currentColor tracks the theme text color -->
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" width="28" height="28" fill="currentColor" role="img" aria-label="Pi"><path fill-rule="evenodd" d="M165.29 165.29 H517.36 V400 H400 V517.36 H282.65 V634.72 H165.29 Z M282.65 282.65 V400 H400 V282.65 Z"/><path d="M517.36 400 H634.72 V634.72 H517.36 Z"/></svg>
-          <!-- Grok Build: inlined too (currentColor) — same monochrome treatment as Pi -->
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28" fill="currentColor" fill-rule="evenodd" role="img" aria-label="Grok Build"><title>Grok Build</title><path d="M6.469 8.776L16.512 23h-4.464L2.005 8.776H6.47zm-.004 7.9l2.233 3.164L6.467 23H2l4.465-6.324zM22 2.582V23h-3.659V7.764L22 2.582zM22 1l-9.952 14.095-2.233-3.163L17.533 1H22z"/></svg>
-          <img src="agents/icons/kimicode.png" alt="Kimi Code" width="28" height="28" loading="lazy">
-          <span class="supported-tools-more" role="img" aria-label="and more AI CLIs coming soon">
-            <span class="more-dot"></span>
-            <span class="more-dot"></span>
-            <span class="more-dot"></span>
-          </span>
-        </div>
       </div>
       <p class="is-hint" id="install-hint">Right-click Start &gt; Terminal (Admin) &gt; Paste:</p>
       <div class="is-cmd">
@@ -280,6 +293,6 @@
 
 
   <script src="./js/main.js?v=0.9.15"></script>
-  <script src="./js/hero-features.js?v=2.3.0"></script>
+  <script src="./js/hero-features.js?v=2.4.0"></script>
 </body>
 </html>
