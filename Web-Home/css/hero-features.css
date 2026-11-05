@@ -533,9 +533,9 @@ html[data-theme='dark'] .clip-frame { background: rgba(255, 255, 255, 0.12); }
   inset: -2.5px;
   border-radius: 14.5px;
   /* Fixed px, so the wedge only just clears the bottom corners on any size. */
-  clip-path: polygon(0 100%, 0 calc(100% - 14px), 4px calc(100% - 52px), calc(100% - 4px) calc(100% - 52px), 100% calc(100% - 14px), 100% 100%);
-  -webkit-mask-image: linear-gradient(to top, #000 0, #000 26px, transparent 58px);
-          mask-image: linear-gradient(to top, #000 0, #000 26px, transparent 58px);
+  clip-path: polygon(0 100%, 0 calc(100% - 10px), 4px calc(100% - 30px), calc(100% - 4px) calc(100% - 30px), 100% calc(100% - 10px), 100% 100%);
+  -webkit-mask-image: linear-gradient(to top, #000 0, #000 14px, transparent 32px);
+          mask-image: linear-gradient(to top, #000 0, #000 14px, transparent 32px);
 }
 /* The glow: under the bottom edge and curling up the outside of both sides,
    shaped by the same kind of ellipse so its outer parts fade first. */
