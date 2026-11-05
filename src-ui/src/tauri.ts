@@ -392,7 +392,7 @@ export const commands = {
 
 // In-app self-update progress, emitted by download_and_install_update.
 export interface SelfUpdateProgress {
-  status: 'speed_test' | 'downloading' | 'launching' | 'error';
+  status: 'speed_test' | 'downloading' | 'launching' | 'downloaded' | 'error';
   percent: number;
 }
 

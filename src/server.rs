@@ -1480,70 +1480,100 @@ fn emit_self_update(app: &tauri::AppHandle, status: &str, percent: u32) {
 
 #[tauri::command]
 async fn download_and_install_update(app: tauri::AppHandle) -> Result<(), String> {
-    let os = if cfg!(target_os = "windows") {
-        "windows"
-    } else if cfg!(target_os = "macos") {
-        "macos"
-    } else {
-        "linux"
-    };
-    let official_url = format!("https://coffeecli.com/download/{os}");
     let app2 = app.clone();
-    tauri::async_runtime::spawn_blocking(move || run_self_update(&app2, os, &official_url))
+    tauri::async_runtime::spawn_blocking(move || run_self_update(&app2))
         .await
         .map_err(|e| format!("self-update task join failed: {e}"))?
 }
 
-fn run_self_update(app: &tauri::AppHandle, os: &str, official_url: &str) -> Result<(), String> {
+/// The update platform this build runs on, in `update_sources` terms.
+fn self_update_os() -> Option<&'static str> {
+    if cfg!(target_os = "windows") {
+        Some("windows")
+    } else if cfg!(target_os = "macos") {
+        Some("macos")
+    } else {
+        crate::update_sources::linux_package_kind(program_on_path)
+    }
+}
+
+fn program_on_path(name: &str) -> bool {
+    std::env::var_os("PATH")
+        .map(|paths| std::env::split_paths(&paths).any(|dir| dir.join(name).is_file()))
+        .unwrap_or(false)
+}
+
+/// Download the installer for this platform into the user's Downloads
+/// folder, then: Windows launches it and exits so it can overwrite our
+/// files; macOS opens the DMG (Finder mounts it and shows the drag-to-
+/// Applications window); Linux opens the Downloads folder so the user can
+/// double-click the package. Mac and Linux keep running.
+fn run_self_update(app: &tauri::AppHandle) -> Result<(), String> {
+    let arch = std::env::consts::ARCH;
+    let os = self_update_os().ok_or("no installer for this system")?;
+    let suffix = crate::update_sources::asset_suffix(os, arch).ok_or("no installer for this system")?;
+    let platform = crate::update_sources::website_platform(os, arch).ok_or("no installer for this system")?;
+    let official_url = format!("https://coffeecli.com/download/{platform}");
     emit_self_update(app, "speed_test", 0);
 
-    let (_target, candidates) = crate::update_sources::resolve(os, official_url);
+    let (target, candidates) = crate::update_sources::resolve(os, &official_url);
     let opened = crate::update_sources::probe(&candidates, std::time::Duration::from_millis(1500));
     if opened.is_empty() {
         emit_self_update(app, "error", 0);
         return Err("no download source reachable".into());
     }
 
-    let ext = if cfg!(target_os = "windows") {
-        "exe"
-    } else if cfg!(target_os = "macos") {
-        "dmg"
-    } else {
-        "bin"
+    let dir = dirs::download_dir()
+        .or_else(dirs::home_dir)
+        .unwrap_or_else(std::env::temp_dir);
+    let file_name = match &target {
+        Some(version) => format!("Coffee.CLI_{version}_{suffix}"),
+        None => format!("Coffee.CLI_{suffix}"),
     };
-    let out_path = std::env::temp_dir().join(format!("coffee-cli-update-setup.{ext}"));
+    let out_path = dir.join(&file_name);
+    // Download beside the final name and rename once verified, so a failed
+    // or partial download never leaves a broken installer in Downloads.
+    let part_path = dir.join(format!("{file_name}.part"));
 
     let mut last_err = String::from("download failed");
     let mut done = false;
     for source in opened {
-        match download_installer(app, source, &out_path) {
+        match download_installer(app, source, &part_path) {
             Ok(()) => { done = true; break; }
             Err(e) => last_err = e,
         }
     }
     if !done {
-        let _ = std::fs::remove_file(&out_path);
+        let _ = std::fs::remove_file(&part_path);
         emit_self_update(app, "error", 0);
         return Err(last_err);
     }
+    if let Err(e) = std::fs::rename(&part_path, &out_path) {
+        let _ = std::fs::remove_file(&part_path);
+        emit_self_update(app, "error", 100);
+        return Err(format!("save installer failed: {e}"));
+    }
     emit_self_update(app, "downloading", 100);
 
-    // Launch the installer, then exit so it can overwrite our running files.
     emit_self_update(app, "launching", 100);
     #[cfg(target_os = "windows")]
     let launch = std::process::Command::new(&out_path).spawn();
     #[cfg(target_os = "macos")]
     let launch = std::process::Command::new("open").arg(&out_path).spawn();
-    #[cfg(target_os = "linux")]
-    let launch = std::process::Command::new("xdg-open").arg(&out_path).spawn();
+    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    let launch = std::process::Command::new("xdg-open").arg(&dir).spawn();
     if let Err(e) = launch {
         emit_self_update(app, "error", 100);
-        return Err(format!("launch installer failed: {e}"));
+        return Err(format!("open installer failed: {e}"));
     }
 
-    // Let the wizard come up before we tear the app down.
-    std::thread::sleep(std::time::Duration::from_millis(800));
-    app.exit(0);
+    if cfg!(target_os = "windows") {
+        // Let the wizard come up before we tear the app down.
+        std::thread::sleep(std::time::Duration::from_millis(800));
+        app.exit(0);
+    } else {
+        emit_self_update(app, "downloaded", 100);
+    }
     Ok(())
 }
 

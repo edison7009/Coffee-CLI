@@ -100,13 +100,52 @@ fn parse_semver(v: &str) -> Option<(u64, u64, u64)> {
 }
 
 /// Does this release asset name belong to the running platform?
-/// `os` is "windows" | "macos" | "linux"; `arch` is std::env::consts::ARCH.
+/// `os` is "windows" | "macos" | "linux-deb" | "linux-rpm";
+/// `arch` is std::env::consts::ARCH.
 pub fn asset_for_platform(os: &str, arch: &str, name: &str) -> bool {
-    match os {
-        "windows" => name.ends_with("Windows_x64-setup.exe"),
-        "macos" if arch == "aarch64" => name.ends_with("macOS_arm64.dmg"),
-        "macos" => name.ends_with("macOS_x64.dmg"),
-        _ => false,
+    asset_suffix(os, arch).is_some_and(|suffix| name.ends_with(suffix))
+}
+
+/// The CI asset-name suffix (`Coffee.CLI_<version>_<suffix>`) for a platform.
+pub fn asset_suffix(os: &str, arch: &str) -> Option<&'static str> {
+    let arm = arch == "aarch64";
+    Some(match os {
+        "windows" => "Windows_x64-setup.exe",
+        "macos" if arm => "macOS_arm64.dmg",
+        "macos" => "macOS_x64.dmg",
+        "linux-deb" if arm => "Linux_arm64.deb",
+        "linux-deb" => "Linux_x64.deb",
+        "linux-rpm" if arm => "Linux_arm64.rpm",
+        "linux-rpm" => "Linux_x64.rpm",
+        _ => return None,
+    })
+}
+
+/// The website's `/download/<platform>` id (see Web-Home/_worker.js).
+pub fn website_platform(os: &str, arch: &str) -> Option<&'static str> {
+    let arm = arch == "aarch64";
+    Some(match os {
+        "windows" => "windows",
+        "macos" if arm => "macos-arm",
+        "macos" => "macos-intel",
+        "linux-deb" if arm => "linux-arm64-deb",
+        "linux-deb" => "linux-deb",
+        "linux-rpm" if arm => "linux-arm64-rpm",
+        "linux-rpm" => "linux-rpm",
+        _ => return None,
+    })
+}
+
+/// Which Linux package format this system installs: dpkg first (Debian,
+/// Ubuntu, Mint, deepin, UOS…), then rpm (Fedora, openSUSE, RHEL…).
+/// `has` reports whether a program exists, so this stays testable.
+pub fn linux_package_kind(has: impl Fn(&str) -> bool) -> Option<&'static str> {
+    if has("dpkg") {
+        Some("linux-deb")
+    } else if has("rpm") {
+        Some("linux-rpm")
+    } else {
+        None
     }
 }
 
@@ -303,6 +342,28 @@ mod tests {
         "Coffee.CLI_3.9.2_Linux_x64.deb",
     ];
     const SITE: &str = "https://coffeecli.com/download/windows";
+
+    #[test]
+    fn linux_and_mac_assets() {
+        assert!(asset_for_platform("macos", "aarch64", "Coffee.CLI_3.9.2_macOS_arm64.dmg"));
+        assert!(!asset_for_platform("macos", "aarch64", "Coffee.CLI_3.9.2_macOS_x64.dmg"));
+        assert!(asset_for_platform("macos", "x86_64", "Coffee.CLI_3.9.2_macOS_x64.dmg"));
+        assert!(asset_for_platform("linux-deb", "x86_64", "Coffee.CLI_3.9.2_Linux_x64.deb"));
+        assert!(asset_for_platform("linux-deb", "aarch64", "Coffee.CLI_3.9.2_Linux_arm64.deb"));
+        assert!(!asset_for_platform("linux-deb", "x86_64", "Coffee.CLI_3.9.2_Linux_x64.rpm"));
+        assert!(asset_for_platform("linux-rpm", "aarch64", "Coffee.CLI_3.9.2_Linux_arm64.rpm"));
+        assert!(!asset_for_platform("linux", "x86_64", "Coffee.CLI_3.9.2_Linux_x64.deb"));
+        assert_eq!(website_platform("macos", "aarch64"), Some("macos-arm"));
+        assert_eq!(website_platform("linux-rpm", "aarch64"), Some("linux-arm64-rpm"));
+        assert_eq!(website_platform("linux", "x86_64"), None);
+    }
+
+    #[test]
+    fn linux_package_detection() {
+        assert_eq!(linux_package_kind(|p| p == "dpkg" || p == "rpm"), Some("linux-deb"));
+        assert_eq!(linux_package_kind(|p| p == "rpm"), Some("linux-rpm"));
+        assert_eq!(linux_package_kind(|_| false), None);
+    }
 
     #[test]
     fn platform_assets() {

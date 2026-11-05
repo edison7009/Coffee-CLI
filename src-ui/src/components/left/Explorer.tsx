@@ -15,6 +15,7 @@ import { getFileIconSrc } from '../../lib/file-icons';
 import { useFileStats, useDirtyDirs } from '../../lib/git-status';
 import { refreshHistory } from '../../lib/history-cache';
 import { commands, onSelfUpdateProgress } from '../../tauri';
+import { IS_WINDOWS } from '../../lib/platform';
 import type { DirEntryInfo } from '../../tauri';
 import { HistoryBoard } from '../right/HistoryBoard';
 import './Explorer.css';
@@ -607,19 +608,16 @@ export function Explorer() {
   }, []);
 
   // In-app self-update. Click the logo's update icon → a circular ring fills
-  // as the installer downloads, then the wizard launches and the app exits.
-  // Windows only; elsewhere (or on download failure) fall back to the page.
+  // as the installer downloads into the Downloads folder. Windows then runs
+  // the wizard and the app exits; macOS opens the DMG and Linux opens the
+  // folder, and the app keeps running. On failure fall back to the page.
   const [installing, setInstalling] = useState(false);
   const [installPct, setInstallPct] = useState(0);
   const [installPhase, setInstallPhase] = useState<
-    'speed_test' | 'downloading' | 'launching' | 'error' | null
+    'speed_test' | 'downloading' | 'launching' | 'downloaded' | 'error' | null
   >(null);
   const handleSelfUpdate = useCallback(async () => {
     if (installing) return;
-    if (!navigator.userAgent.toLowerCase().includes('win')) {
-      commands.openUrl('https://coffeecli.com');
-      return;
-    }
     setInstalling(true);
     setInstallPhase('speed_test');
     setInstallPct(0);
@@ -630,8 +628,14 @@ export function Explorer() {
         setInstallPct(p.percent);
       });
       await commands.downloadAndInstallUpdate();
-      // Success: installer launched and the app is about to exit — leave the
-      // ring as-is until the window goes away.
+      // Windows: the installer launched and the app is about to exit, so
+      // leave the ring until the window goes away. macOS / Linux keep
+      // running with the DMG or Downloads folder open: reset the button.
+      if (!IS_WINDOWS) {
+        setInstalling(false);
+        setInstallPhase(null);
+        setInstallPct(0);
+      }
     } catch {
       commands.openUrl('https://coffeecli.com');
       setInstalling(false);
