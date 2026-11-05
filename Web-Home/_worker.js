@@ -168,6 +168,22 @@ export default {
     const url = new URL(request.url)
     const { pathname } = url
 
+    // ── /download-diag (temporary): time each step of a download lookup ─────
+    if (pathname === "/download-diag") {
+      const out = { kv: !!env.KV, country: (request.cf && request.cf.country) || null, colo: (request.cf && request.cf.colo) || null, steps: [] }
+      const step = async (name, fn) => {
+        const t = Date.now()
+        try { out.steps.push({ name, ok: true, ms: Date.now() - t, result: await fn() }) }
+        catch (e) { out.steps.push({ name, ok: false, ms: Date.now() - t, error: String(e && e.stack || e) }) }
+      }
+      await step("kv-get-latest", async () => env.KV ? !!(await env.KV.get("latest-release-v2")) : "no KV")
+      await step("kv-get-stable", async () => env.KV ? !!(await env.KV.get("latest-release-stable-v2")) : "no KV")
+      await step("github-api", async () => { const r = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, { headers: { "User-Agent": "CoffeeCLI-Worker" } }); return { status: r.status, remaining: r.headers.get("x-ratelimit-remaining") } })
+      for (const m of MIRRORS) await step("manifest-" + m.id, async () => { const r = await fetch(m.manifest, { headers: { "User-Agent": "CoffeeCLI-Worker" }, signal: AbortSignal.timeout(4000) }); return { status: r.status } })
+      await step("getLatestAssets", async () => Object.keys(await getLatestAssets(env)).length)
+      return new Response(JSON.stringify(out, null, 2), { headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } })
+    }
+
     // ── /download/<platform> ─────────────────────────────────────────────────
     const dlMatch = pathname.match(/^\/download\/([a-z0-9-]+)$/)
     if (dlMatch) {
