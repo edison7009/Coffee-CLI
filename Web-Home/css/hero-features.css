@@ -523,3 +523,53 @@ html:not([data-theme='dark']) .tm-item img.tm-mono-white { filter: invert(1); }
   }
   .hero-split + .tool-marquee { margin-top: 0; }
 }
+
+/* ── Clip loading: a soft sheen and a small spinner until the poster or
+      first frame arrives (data-loading set by js). ─────────────────────── */
+.fx-screen,
+.ft-media { position: relative; }
+.fx-screen[data-loading]::before,
+.ft-media[data-loading]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.10) 50%, transparent 70%) 0 0 / 250% 100%;
+  animation: clip-sheen 1.4s ease-in-out infinite;
+}
+html[data-theme='dark'] .fx-screen[data-loading]::before,
+html[data-theme='dark'] .ft-media[data-loading]::before {
+  background-image: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.75) 50%, transparent 70%);
+}
+.fx-screen[data-loading]::after,
+.ft-media[data-loading]::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 3;
+  width: 26px;
+  height: 26px;
+  margin: -13px 0 0 -13px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  border-top-color: rgba(255, 255, 255, 0.75);
+  pointer-events: none;
+  animation: clip-spin 0.8s linear infinite;
+}
+html[data-theme='dark'] .fx-screen[data-loading]::after,
+html[data-theme='dark'] .ft-media[data-loading]::after {
+  border-color: rgba(20, 30, 45, 0.15);
+  border-top-color: rgba(20, 30, 45, 0.6);
+}
+.ft-media[data-loading]::before { border-radius: 12px; }
+@keyframes clip-sheen { from { background-position: 150% 0; } to { background-position: -150% 0; } }
+@keyframes clip-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .fx-screen[data-loading]::before,
+  .ft-media[data-loading]::before,
+  .fx-screen[data-loading]::after,
+  .ft-media[data-loading]::after { animation: none; }
+}

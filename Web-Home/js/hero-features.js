@@ -215,6 +215,39 @@
     CLIP_VIDEOS.push(v);
     return v;
   }
+  // Loading state: a clip's box (data-loading on its container) shows a
+  // shimmer until its poster or first frame is in. The hero box tracks
+  // whichever clip is active (container._active).
+  function setBoxLoading(box, on) {
+    if (!box) return;
+    if (on) box.setAttribute("data-loading", ""); else box.removeAttribute("data-loading");
+  }
+  function warm(v) {
+    v._ready = false;
+    const box = v._box;
+    const done = function () {
+      if (v._ready) return;
+      v._ready = true;
+      if (box && box._active === v) setBoxLoading(box, false);
+    };
+    const img = new Image();
+    img.onload = done;
+    img.src = v.dataset.base + "-poster.webp";
+    if (img.complete && img.naturalWidth) done();
+  }
+  function track(v, box) {
+    v._box = box;
+    v.addEventListener("loadeddata", function () {
+      v._ready = true;
+      if (box._active === v) setBoxLoading(box, false);
+    });
+    warm(v);
+  }
+  function showInBox(box, v) {
+    box._active = v;
+    setBoxLoading(box, !v._ready);
+  }
+
   function attach(v) {
     if (!v.getAttribute("src")) v.src = v.dataset.base + (CAN_WEBM ? ".webm" : ".mp4");
   }
@@ -231,6 +264,10 @@
       const loaded = !!v.getAttribute("src");
       v.dataset.base = base;
       v.poster = base + "-poster.webp";
+      if (v._box) {
+        warm(v);
+        if (v._box._active === v && !v._ready) setBoxLoading(v._box, true);
+      }
       if (loaded) {
         v.src = base + (CAN_WEBM ? ".webm" : ".mp4");
         if (wasPlaying) playClip(v);
@@ -316,6 +353,9 @@
       v.width = 960;
       v.height = 540;
       screen.appendChild(v);
+      // Only the first clip's poster is fetched up front; the rest warm up
+      // once the first one is showing (see warmRest below).
+      if (i === 0) track(v, screen); else v._box = screen;
 
       const tab = document.createElement("button");
       tab.type = "button";
@@ -372,6 +412,8 @@
       s.tab.setAttribute("aria-pressed", "true");
       revealTab(s.tab);
       s.video.classList.add("is-on");
+      if (s.video._ready === undefined) track(s.video, screen);
+      showInBox(screen, s.video);
       try { s.video.currentTime = 0; } catch (e) { /* not loaded yet */ }
       sync();
     }
@@ -384,6 +426,18 @@
     });
 
     show(0);
+    // First clip in hand: fetch it eagerly, then warm the other posters in
+    // the background so switching tabs shows a picture at once.
+    slides[0].video.preload = "auto";
+    const warmRest = function () {
+      slides.forEach(function (sl) { if (sl.video._ready === undefined) track(sl.video, screen); });
+    };
+    const first = slides[0].video;
+    const later = window.requestIdleCallback || function (fn) { return setTimeout(fn, 1200); };
+    if (first._ready) later(warmRest);
+    else first.addEventListener("loadeddata", function () { later(warmRest); }, { once: true });
+    setTimeout(warmRest, 6000);
+
     if ("IntersectionObserver" in window) {
       new IntersectionObserver(function (entries) {
         visible = entries[0].isIntersecting;
@@ -415,13 +469,21 @@
     const reduced = () => !!(reduce && reduce.matches);
     vids.forEach(function (v) {
       makeClip(v, v.getAttribute("data-clip"));
+      const box = v.closest(".ft-media");
+      box._active = v;
+      setBoxLoading(box, true);
+      v._box = box;
       v.addEventListener("click", function () { if (v.paused) playClip(v); else v.pause(); });
     });
-    if (!("IntersectionObserver" in window)) return;
+    if (!("IntersectionObserver" in window)) {
+      vids.forEach(function (v) { track(v, v._box); });
+      return;
+    }
     const io = new IntersectionObserver(function (entries) {
       entries.forEach(function (e) {
         const v = e.target;
         v.dataset.inView = e.isIntersecting ? "1" : "";
+        if (e.isIntersecting && v._ready === undefined) track(v, v._box);
         if (e.isIntersecting && !reduced() && !document.hidden) playClip(v);
         else v.pause();
       });
