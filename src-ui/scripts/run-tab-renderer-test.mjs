@@ -6,13 +6,15 @@ import ts from 'typescript';
 
 const file = new URL('../src/components/center/TierTerminal.tsx', import.meta.url);
 const source = ts.createSourceFile(file.pathname, readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+const webglFile = new URL('../src/lib/terminal-webgl.ts', import.meta.url);
+const webglSource = ts.createSourceFile(webglFile.pathname, readFileSync(webglFile, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
 const names = new Set([
   'MAX_WEBGL_RECOVERY_ATTEMPTS', 'MAX_HIDDEN_WEBGL_RENDERERS', 'hiddenWebglRenderers',
   'attachWebglRenderer', 'detachWebglRenderer', 'suspendWebglRenderer',
 ]);
-const declarations = source.statements.filter(node => {
+const declarations = webglSource.statements.filter(node => {
   if (ts.isFunctionDeclaration(node)) return names.has(node.name?.text);
-  if (ts.isVariableStatement(node)) return node.declarationList.declarations.some(decl => names.has(decl.name.getText(source)));
+  if (ts.isVariableStatement(node)) return node.declarationList.declarations.some(decl => names.has(decl.name.getText(webglSource)));
   return false;
 });
 assert.equal(declarations.length, names.size, 'extract every lifecycle declaration from production code');
@@ -25,7 +27,7 @@ class Renderer {
 }
 const lifecycle = runInNewContext(ts.transpileModule(`
   let webglDisabled = false;
-  ${declarations.map(node => node.getText(source)).join('\n')}
+  ${declarations.map(node => node.getText(webglSource).replace(/^export /, '')).join('\n')}
   ({attach: attachWebglRenderer, hide: suspendWebglRenderer, close: detachWebglRenderer});
 `, { compilerOptions: { target: ts.ScriptTarget.ES2022 }}).outputText, {
   WebglAddon: Renderer, probeWebglOnce: () => true,

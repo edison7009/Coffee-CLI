@@ -17,7 +17,9 @@ function visit(node) {
   ts.forEachChild(node, visit);
 }
 visit(tree); assert.ok(keyboard);
-const normalize = tree.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === 'normalizePasteNewlines').getText(tree);
+const themeSource = await readFile(join(project, 'src/lib/terminal-theme.ts'), 'utf8');
+const themeTree = ts.createSourceFile('terminal-theme.ts', themeSource, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+const normalize = themeTree.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === 'normalizePasteNewlines').getText(themeTree).replace(/^export /, '');
 const directory = await mkdtemp(join(tmpdir(), 'coffee-enter-browser-'));
 await build({ stdin: { resolveDir: project, loader: 'ts', contents: `
 import {Terminal} from '@xterm/xterm';
