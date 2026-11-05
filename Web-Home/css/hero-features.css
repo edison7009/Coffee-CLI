@@ -8,7 +8,7 @@
 .hero-section.hero-split {
   display: grid;
   grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.2fr);
-  /* Top-aligned: the clip dots share a line with the eyebrow on the left. */
+  /* Top-aligned: the picture starts level with the eyebrow on the left. */
   align-items: start;
   gap: clamp(2rem, 4vw, 4rem);
   width: 100%;
@@ -147,13 +147,13 @@ html[data-theme='dark'] .fx-screen {
 }
 .fx-video.is-on { visibility: visible; }
 
-/* ── Feature tabs: plain text names on the eyebrow line, " / " between
+/* ── Feature tabs: plain text names under the picture, " / " between
       them; the selected one is highlighted. No motion. ─────────────────── */
 .fx-tabs {
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
-  margin: -0.15rem 0 1.05rem;
+  margin: 1.1rem 0 0;
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scrollbar-width: none;
@@ -162,6 +162,10 @@ html[data-theme='dark'] .fx-screen {
   color: var(--text-secondary);
 }
 .fx-tabs::-webkit-scrollbar { display: none; }
+/* Centered under the picture; auto margins (not justify-content) keep the
+   row scrollable from its first tab when it is wider than the column. */
+.fx-tabs > .fx-tab:first-child { margin-left: auto; }
+.fx-tabs > .fx-tab:last-child { margin-right: auto; }
 /* Too long for the column: fade the cut edge(s) so it reads as scrollable. */
 .fx-tabs.is-overflow:not(.at-end) {
   -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 3rem), transparent);
