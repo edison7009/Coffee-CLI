@@ -540,19 +540,26 @@ html[data-theme='dark'] .clip-frame { background: rgba(255, 255, 255, 0.12); }
   -webkit-mask-image: linear-gradient(to top, #000 0, #000 6px, rgba(0, 0, 0, 0.55) 9%, rgba(0, 0, 0, 0.2) 18%, transparent 26%);
           mask-image: linear-gradient(to top, #000 0, #000 6px, rgba(0, 0, 0, 0.55) 9%, rgba(0, 0, 0, 0.2) 18%, transparent 26%);
 }
-/* The glow: under the bottom edge and curling up the outside of both sides,
-   shaped by the same kind of ellipse so its outer parts fade first. */
+/* The glow: a soft rainbow haze from the bottom edge, fading away below it
+   and toward both ends. The box reaches 90px under the frame so the blur
+   has room, and a second mask layer fades it to nothing well before the
+   box's own edge — no hard cut-off line. */
 .clip-frame::before {
-  /* Tall enough below the frame that the blur isn't clipped by the mask. */
   left: -14px;
   right: -14px;
-  bottom: -44px;
-  height: calc(46% + 28px);
+  bottom: -90px;
+  height: calc(40% + 90px);
   border-radius: 40px;
   filter: blur(22px);
   opacity: 0.6;
-  -webkit-mask-image: radial-gradient(ellipse 58% 100% at 50% 100%, #000 45%, rgba(0, 0, 0, 0.35) 72%, transparent 100%);
-          mask-image: radial-gradient(ellipse 58% 100% at 50% 100%, #000 45%, rgba(0, 0, 0, 0.35) 72%, transparent 100%);
+  -webkit-mask-image:
+    radial-gradient(ellipse 50% 100% at 50% calc(100% - 90px), #000 35%, rgba(0, 0, 0, 0.3) 68%, transparent 96%),
+    linear-gradient(to top, transparent 0, rgba(0, 0, 0, 0.25) 30px, #000 80px);
+  -webkit-mask-composite: source-in;
+          mask-image:
+    radial-gradient(ellipse 50% 100% at 50% calc(100% - 90px), #000 35%, rgba(0, 0, 0, 0.3) 68%, transparent 96%),
+    linear-gradient(to top, transparent 0, rgba(0, 0, 0, 0.25) 30px, #000 80px);
+          mask-composite: intersect;
 }
 html[data-theme='dark'] .clip-frame::before { opacity: 0.45; }
 @keyframes clip-flow { from { background-position: 0% 0; } to { background-position: -200% 0; } }
