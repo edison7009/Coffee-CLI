@@ -227,6 +227,7 @@ export const fr = {
   'tool_config.reset': 'Réinitialiser',
   'tool_config.cancel': 'Annuler',
   'tool_config.save': 'Enregistrer',
+  'tool_config.save_failed': 'Échec de l’enregistrement : {detail}',
 
   // Remote Terminal
   'remote.title': 'Terminal distant',

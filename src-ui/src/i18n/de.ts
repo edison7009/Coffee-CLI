@@ -227,6 +227,7 @@ export const de = {
   'tool_config.reset': 'Zurücksetzen',
   'tool_config.cancel': 'Abbrechen',
   'tool_config.save': 'Speichern',
+  'tool_config.save_failed': 'Speichern fehlgeschlagen: {detail}',
 
   // Remote Terminal
   'remote.title': 'Remote-Terminal',

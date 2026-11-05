@@ -227,6 +227,7 @@ export const ko = {
   'tool_config.reset': '재설정',
   'tool_config.cancel': '취소',
   'tool_config.save': '저장',
+  'tool_config.save_failed': '저장하지 못했습니다: {detail}',
 
   // Remote Terminal
   'remote.title': '원격 터미널',

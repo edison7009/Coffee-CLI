@@ -227,6 +227,7 @@ export const pt = {
   'tool_config.reset': 'Redefinir',
   'tool_config.cancel': 'Cancelar',
   'tool_config.save': 'Salvar',
+  'tool_config.save_failed': 'Não foi possível salvar: {detail}',
 
   // Remote Terminal
   'remote.title': 'Terminal remoto',

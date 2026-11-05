@@ -1021,6 +1021,8 @@ body.session-split-dragging { cursor: grabbing; user-select: none; }
 .tool-command-presets .settings-font-current { display:none; }
 .tool-command-presets:disabled { opacity:.5; cursor:not-allowed; }
 
+.tool-config-error { margin: 0; padding: 0 20px 12px; color: var(--danger, #da8076); font-size: var(--type-label); line-height: 1.5; overflow-wrap: anywhere; user-select: text; }
+
 .tool-config-buttons {
   display: flex;
   gap: 8px;

@@ -227,6 +227,7 @@ export const ja = {
   'tool_config.reset': 'リセット',
   'tool_config.cancel': 'キャンセル',
   'tool_config.save': '保存',
+  'tool_config.save_failed': '保存できませんでした：{detail}',
 
   // Remote Terminal
   'remote.title': 'リモートターミナル',

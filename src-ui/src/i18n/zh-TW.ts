@@ -227,6 +227,7 @@ export const zhTW = {
   'tool_config.reset': '重設',
   'tool_config.cancel': '取消',
   'tool_config.save': '儲存',
+  'tool_config.save_failed': '儲存失敗：{detail}',
 
   // Remote Terminal
   'remote.title': '遠端終端機',

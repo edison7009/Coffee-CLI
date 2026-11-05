@@ -228,6 +228,7 @@ export const vi = {
   'tool_config.reset': 'Đặt lại',
   'tool_config.cancel': 'Hủy',
   'tool_config.save': 'Lưu',
+  'tool_config.save_failed': 'Không thể lưu: {detail}',
 
   // Remote Terminal
   'remote.title': 'Terminal từ xa',

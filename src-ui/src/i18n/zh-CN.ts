@@ -227,6 +227,7 @@ export const zhCN = {
   'tool_config.reset': '重置',
   'tool_config.cancel': '取消',
   'tool_config.save': '保存',
+  'tool_config.save_failed': '保存失败：{detail}',
 
   // Remote Terminal
   'remote.title': '远程终端',

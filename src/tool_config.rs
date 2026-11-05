@@ -43,7 +43,8 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ToolConfigEntry {
@@ -72,49 +73,58 @@ fn config_path() -> Option<PathBuf> {
     Some(dirs::home_dir()?.join(".coffee-cli").join("tools.json"))
 }
 
+/// Serializes read-modify-write cycles so two saves never lose each other.
+static WRITE_LOCK: Mutex<()> = Mutex::new(());
+
+/// Read the config. A missing or empty file is an empty config; a file that
+/// cannot be read or parsed is an error, so callers that write never replace
+/// a damaged file (the user may have hand-edited it) with a near-empty one.
+fn read_config(path: &Path) -> Result<ToolConfig, String> {
+    let text = match std::fs::read_to_string(path) {
+        Ok(text) => text,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(HashMap::new()),
+        Err(e) => return Err(format!("Cannot read {}: {e}", path.display())),
+    };
+    if text.trim().is_empty() {
+        return Ok(HashMap::new());
+    }
+    serde_json::from_str::<ToolConfig>(&text).map_err(|e| {
+        format!("{} is damaged ({e}). Fix or delete it, then try again.", path.display())
+    })
+}
+
+/// Launch-time read: a damaged file falls back to the built-in defaults so
+/// tools still start. Nothing here ever writes the file back.
 pub fn load() -> ToolConfig {
     let Some(p) = config_path() else {
         return HashMap::new();
     };
-    let Ok(s) = std::fs::read_to_string(&p) else {
-        return HashMap::new();
-    };
-    serde_json::from_str::<ToolConfig>(&s).unwrap_or_default()
-}
-
-pub fn save(cfg: &ToolConfig) -> std::io::Result<()> {
-    let Some(p) = config_path() else {
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            "no home dir",
-        ));
-    };
-    if let Some(parent) = p.parent() {
-        std::fs::create_dir_all(parent)?;
-    }
-    let body = serde_json::to_string_pretty(cfg).map_err(|e| {
-        std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string())
-    })?;
-    // Atomic write so an interrupted save can't leave the file
-    // half-written and unparseable on the next launch.
-    let tmp = p.with_extension("json.tmp");
-    std::fs::write(&tmp, body)?;
-    std::fs::rename(&tmp, &p)?;
-    Ok(())
+    read_config(&p).unwrap_or_else(|e| {
+        eprintln!("[tool_config] {e}");
+        HashMap::new()
+    })
 }
 
 pub fn get(tool: &str) -> ToolConfigEntry {
     load().remove(tool).unwrap_or_default()
 }
 
-pub fn set(tool: &str, entry: ToolConfigEntry) -> std::io::Result<()> {
-    let mut cfg = load();
+fn set_at(path: &Path, tool: &str, entry: ToolConfigEntry) -> Result<(), String> {
+    let _guard = WRITE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let mut cfg = read_config(path)?;
     if entry.is_empty() {
         cfg.remove(tool);
     } else {
         cfg.insert(tool.to_string(), entry);
     }
-    save(&cfg)
+    let body = serde_json::to_string_pretty(&cfg).map_err(|e| e.to_string())?;
+    crate::json_file::write_atomic(path, body.as_bytes())
+        .map_err(|e| format!("Cannot save {}: {e}", path.display()))
+}
+
+pub fn set(tool: &str, entry: ToolConfigEntry) -> Result<(), String> {
+    let path = config_path().ok_or("Cannot find the home directory")?;
+    set_at(&path, tool, entry)
 }
 
 /// Whitespace-split the user's `command` field into (binary, prefix_args).
@@ -227,5 +237,66 @@ mod tests {
             ..Default::default()
         }
         .is_empty());
+    }
+
+    fn entry(command: &str) -> ToolConfigEntry {
+        ToolConfigEntry { command: command.into(), ..Default::default() }
+    }
+
+    #[test]
+    fn damaged_file_is_never_overwritten() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("tools.json");
+        let broken = br#"{"claude": {"command": "claude", "extra_args": ["--x"]"#;
+        std::fs::write(&path, broken).unwrap();
+        let error = set_at(&path, "codex", entry("codex")).unwrap_err();
+        assert!(error.contains("damaged"), "{error}");
+        assert_eq!(std::fs::read(&path).unwrap(), broken, "the user's file must stay as it was");
+    }
+
+    #[test]
+    fn missing_or_blank_file_starts_fresh() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("tools.json");
+        set_at(&path, "claude", entry("claude --x")).unwrap();
+        assert_eq!(read_config(&path).unwrap()["claude"].command, "claude --x");
+        std::fs::write(&path, "  \n").unwrap();
+        assert!(read_config(&path).unwrap().is_empty());
+        set_at(&path, "codex", entry("codex")).unwrap();
+        assert_eq!(read_config(&path).unwrap().len(), 1);
+    }
+
+    #[test]
+    fn empty_entry_removes_only_that_tool() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("tools.json");
+        set_at(&path, "claude", entry("a")).unwrap();
+        set_at(&path, "codex", entry("b")).unwrap();
+        set_at(&path, "claude", ToolConfigEntry::default()).unwrap();
+        let cfg = read_config(&path).unwrap();
+        assert!(!cfg.contains_key("claude"));
+        assert_eq!(cfg["codex"].command, "b");
+    }
+
+    #[test]
+    fn concurrent_saves_keep_every_tool() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("tools.json");
+        let threads: Vec<_> = (0..12)
+            .map(|id| {
+                let path = path.clone();
+                std::thread::spawn(move || set_at(&path, &format!("tool{id}"), entry(&format!("cmd{id}"))).unwrap())
+            })
+            .collect();
+        for thread in threads {
+            thread.join().unwrap();
+        }
+        let cfg = read_config(&path).unwrap();
+        assert_eq!(cfg.len(), 12, "no save may be lost to another");
+        for id in 0..12 {
+            assert_eq!(cfg[&format!("tool{id}")].command, format!("cmd{id}"));
+        }
+        let leftovers: Vec<_> = std::fs::read_dir(dir.path()).unwrap().map(|e| e.unwrap().file_name()).collect();
+        assert_eq!(leftovers.len(), 1, "no temp files left behind: {leftovers:?}");
     }
 }

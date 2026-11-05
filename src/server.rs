@@ -1323,7 +1323,7 @@ fn save_tasks(data: String, app: tauri::AppHandle) -> Result<(), String> {
     serde_json::from_str::<serde_json::Value>(&data)
         .map_err(|e| format!("Invalid task data (not valid JSON): {e}"))?;
     let path = tasks_file_path();
-    std::fs::write(&path, &data)
+    crate::json_file::write_atomic(&path, data.as_bytes())
         .map_err(|e| format!("Failed to save tasks: {}", e))?;
     // Notify all windows so other instances can reload
     let _ = app.emit("tasks-changed", &data);

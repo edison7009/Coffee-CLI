@@ -100,6 +100,7 @@ export function ToolConfigModal({ toolKey, toolLabel, onClose }: Props) {
   const [entry, setEntry] = useState<ToolConfigEntry>(def);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const [extraArgsText, setExtraArgsText] = useState('');
   const presets = toolKey === 'claude' ? [
     { value: 'claude', label: 'claude' },
@@ -136,6 +137,7 @@ export function ToolConfigModal({ toolKey, toolLabel, onClose }: Props) {
 
   const handleSave = async () => {
     setSaving(true);
+    setSaveError('');
     try {
       const args = extraArgsText.split('\n').map(s => s.trim()).filter(Boolean);
       const payload: ToolConfigEntry = {
@@ -146,6 +148,8 @@ export function ToolConfigModal({ toolKey, toolLabel, onClose }: Props) {
       };
       await commands.setToolConfig(toolKey, payload);
       onClose();
+    } catch (error) {
+      setSaveError(String(error));
     } finally {
       setSaving(false);
     }
@@ -153,10 +157,13 @@ export function ToolConfigModal({ toolKey, toolLabel, onClose }: Props) {
 
   const handleReset = async () => {
     setSaving(true);
+    setSaveError('');
     try {
       await commands.setToolConfig(toolKey, EMPTY);
       setEntry(def);
       setExtraArgsText(def.extra_args.join('\n'));
+    } catch (error) {
+      setSaveError(String(error));
     } finally {
       setSaving(false);
     }
@@ -201,6 +208,8 @@ export function ToolConfigModal({ toolKey, toolLabel, onClose }: Props) {
             )}
           </div>
         )}
+
+        {saveError && <p className="tool-config-error" role="alert">{t('tool_config.save_failed', { detail: saveError })}</p>}
 
         <div className="tool-config-buttons">
           <button onClick={handleReset} disabled={saving || loading} className="tool-config-btn tool-config-btn-subtle">

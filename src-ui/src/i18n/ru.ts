@@ -227,6 +227,7 @@ export const ru = {
   'tool_config.reset': 'Сброс',
   'tool_config.cancel': 'Отмена',
   'tool_config.save': 'Сохранить',
+  'tool_config.save_failed': 'Не удалось сохранить: {detail}',
 
   // Remote Terminal
   'remote.title': 'Удалённый терминал',
