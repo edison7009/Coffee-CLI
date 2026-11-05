@@ -133,19 +133,36 @@ export default {
         return new Response(`No asset found for "${platform}"`, { status: 404 })
       }
 
-      const fileRes = await fetch(asset.url, {
-        headers: { "User-Agent": "CoffeeCLI-Worker" }
-      })
-      return new Response(fileRes.body, {
-        status: 200,
-        headers: {
-          "Content-Type": "application/octet-stream",
-          "Content-Disposition": `attachment; filename="${asset.name}"`,
-          "Content-Length": fileRes.headers.get("Content-Length") || "",
-          "X-Coffee-Version": asset.version,
-          "Cache-Control": "no-store",
+      // Proxy the asset so the download stays on coffeecli.com (reachable
+      // where github.com is slow). If GitHub's CDN answers badly for this
+      // edge — or the subrequest throws — retry once, then send the browser
+      // straight to the GitHub asset instead of surfacing a bare 502.
+      let fileRes = null
+      for (let attempt = 0; attempt < 2 && !(fileRes && fileRes.ok && fileRes.body); attempt++) {
+        try {
+          fileRes = await fetch(asset.url, {
+            headers: { "User-Agent": "CoffeeCLI-Worker" },
+            redirect: "follow",
+          })
+        } catch (e) {
+          fileRes = null
         }
-      })
+      }
+      if (!fileRes || !fileRes.ok || !fileRes.body) {
+        return new Response(null, {
+          status: 302,
+          headers: { "Location": asset.url, "Cache-Control": "no-store", "X-Coffee-Version": asset.version },
+        })
+      }
+      const headers = {
+        "Content-Type": "application/octet-stream",
+        "Content-Disposition": `attachment; filename="${asset.name}"`,
+        "X-Coffee-Version": asset.version,
+        "Cache-Control": "no-store",
+      }
+      const len = fileRes.headers.get("Content-Length")
+      if (len) headers["Content-Length"] = len
+      return new Response(fileRes.body, { status: 200, headers })
     }
 
     // ── /lang-packs/<path> → 410 Gone ────────────────────────────────────────
