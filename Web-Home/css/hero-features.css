@@ -191,15 +191,15 @@ html:not([data-theme='dark']) .hero-split .download-btn.is-primary::before { opa
   aspect-ratio: 16 / 9;
   border-radius: 10px;
   overflow: hidden;
-  background: #EEF2F6;
+  /* Light page shows the black recordings: dark backdrop + soft shadow. */
+  background: #111113;
   cursor: pointer;
-  /* Light page: a soft drop shadow lifts the light clip off the white page. */
-  box-shadow: 0 24px 56px -28px rgba(15, 30, 50, 0.32), 0 2px 10px -4px rgba(15, 30, 50, 0.12);
+  box-shadow: 0 24px 56px -24px rgba(15, 30, 50, 0.45), 0 2px 10px -4px rgba(15, 30, 50, 0.15);
 }
 html[data-theme='dark'] .fx-screen {
-  background: #111113;
-  /* Night clips are near-black: a hairline keeps their edge on the dark page. */
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 28px 70px -30px rgba(0, 0, 0, 0.85);
+  /* Dark page shows the light (Glacier) recordings. */
+  background: #EEF2F6;
+  box-shadow: 0 28px 70px -30px rgba(0, 0, 0, 0.85);
 }
 
 .fx-video {
@@ -382,11 +382,16 @@ html[data-theme='dark'] .fx-screen {
   aspect-ratio: 16 / 9;
   object-fit: cover;
   border-radius: 12px;
-  background: #EEF2F6;
-  box-shadow: 0 24px 56px -28px rgba(15, 30, 50, 0.32), 0 2px 10px -4px rgba(15, 30, 50, 0.12);
+  /* Light page: black recordings; dark page: Glacier (light) ones. */
+  background: #111113;
+  box-shadow: 0 24px 56px -24px rgba(15, 30, 50, 0.45), 0 2px 10px -4px rgba(15, 30, 50, 0.15);
 }
 html[data-theme='dark'] .ft-media video,
-.ft-media img { box-shadow: 0 28px 70px -30px rgba(0, 0, 0, 0.85); }
+html[data-theme='dark'] .ft-media img {
+  background: #EEF2F6;
+  box-shadow: 0 28px 70px -30px rgba(0, 0, 0, 0.85);
+}
+.ft-media video { cursor: pointer; }
 .ft-text { min-width: 0; max-width: 32rem; }
 .ft-no {
   display: block;

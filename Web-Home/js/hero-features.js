@@ -178,7 +178,7 @@
   // that plays the same clip. Clips live in
   // demo/features/<zh|en>/<glacier|black>/<file>.(webm|mp4) + <file>-poster.webp:
   // zh / zh-TW visitors get the Chinese recordings, everyone else English;
-  // the light page uses the Glacier recordings, the dark page the black ones.
+  // the light page uses the black recordings, the dark page the Glacier ones.
   const FEATURES = [
     { id: "split", file: "split-drag" },
     { id: "agents", file: "multi-agent" },
@@ -190,7 +190,8 @@
   ];
 
   const clipLang = () => (currentLang === "zh" || currentLang === "zh-TW" ? "zh" : "en");
-  const clipTheme = () => (document.documentElement.getAttribute("data-theme") === "dark" ? "black" : "glacier");
+  // Contrast with the page: the light page shows the black recordings, the dark page the Glacier (light) ones.
+  const clipTheme = () => (document.documentElement.getAttribute("data-theme") === "dark" ? "glacier" : "black");
   const CAN_WEBM = (function () {
     try { return document.createElement("video").canPlayType('video/webm; codecs="vp9"') !== ""; } catch (e) { return false; }
   })();
