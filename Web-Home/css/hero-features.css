@@ -358,3 +358,15 @@ html[data-theme='dark'] .ft-body { color: rgba(235, 235, 235, 0.72); }
 @media (max-width: 600px) {
   .features { padding: 0 16px; }
 }
+
+/* "Install via terminal → / More versions →" under the download buttons. */
+.hero-split .dl-more {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.6rem;
+  margin: 0;
+}
+.install-strip { scroll-margin-top: 1.5rem; }
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}

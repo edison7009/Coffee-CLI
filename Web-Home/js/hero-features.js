@@ -67,16 +67,16 @@
 
   // Bottom install block: heading and the copy button label.
   const INSTALL_COPY = {
-    en: { "install-title": "Or install from the terminal", "copy-label": "Copy" },
-    zh: { "install-title": "或者用命令一键安装", "copy-label": "复制" },
-    "zh-TW": { "install-title": "或者用命令一鍵安裝", "copy-label": "複製" },
-    ja: { "install-title": "ターミナルからインストール", "copy-label": "コピー" },
-    ko: { "install-title": "터미널로 설치하기", "copy-label": "복사" },
-    es: { "install-title": "O instálalo desde la terminal", "copy-label": "Copiar" },
-    fr: { "install-title": "Ou installez depuis le terminal", "copy-label": "Copier" },
-    de: { "install-title": "Oder im Terminal installieren", "copy-label": "Kopieren" },
-    pt: { "install-title": "Ou instale pelo terminal", "copy-label": "Copiar" },
-    ru: { "install-title": "Или установите из терминала", "copy-label": "Копировать" }
+    en: { "install-title": "Or install from the terminal", "copy-label": "Copy", "hx-install-link": "Install via terminal", "hx-more-link": "More versions" },
+    zh: { "install-title": "或者用命令一键安装", "copy-label": "复制", "hx-install-link": "命令安装", "hx-more-link": "更多版本" },
+    "zh-TW": { "install-title": "或者用命令一鍵安裝", "copy-label": "複製", "hx-install-link": "命令安裝", "hx-more-link": "更多版本" },
+    ja: { "install-title": "ターミナルからインストール", "copy-label": "コピー", "hx-install-link": "コマンドでインストール", "hx-more-link": "その他のバージョン" },
+    ko: { "install-title": "터미널로 설치하기", "copy-label": "복사", "hx-install-link": "명령어로 설치", "hx-more-link": "더 많은 버전" },
+    es: { "install-title": "O instálalo desde la terminal", "copy-label": "Copiar", "hx-install-link": "Instalar por terminal", "hx-more-link": "Más versiones" },
+    fr: { "install-title": "Ou installez depuis le terminal", "copy-label": "Copier", "hx-install-link": "Installer en ligne de commande", "hx-more-link": "Plus de versions" },
+    de: { "install-title": "Oder im Terminal installieren", "copy-label": "Kopieren", "hx-install-link": "Per Terminal installieren", "hx-more-link": "Weitere Versionen" },
+    pt: { "install-title": "Ou instale pelo terminal", "copy-label": "Copiar", "hx-install-link": "Instalar pelo terminal", "hx-more-link": "Mais versões" },
+    ru: { "install-title": "Или установите из терминала", "copy-label": "Копировать", "hx-install-link": "Установка из терминала", "hx-more-link": "Другие версии" }
   };
 
   // Feature sections under the hero: [title, description] per feature.

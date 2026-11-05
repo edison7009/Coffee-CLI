@@ -16,7 +16,7 @@
   
   <!-- External CSS -->
   <link rel="stylesheet" href="./css/style.css?v=0.7.0">
-  <link rel="stylesheet" href="./css/hero-features.css?v=2.2.1">
+  <link rel="stylesheet" href="./css/hero-features.css?v=2.3.0">
 </head>
 <body>
 
@@ -117,9 +117,10 @@
           <span class="cn-mirrors-sep">|</span>
           <a href="https://gitcode.com/edison7009/Coffee-CLI/issues" target="_blank" rel="noopener" data-i18n="cn-mirrors-feedback">国内用户问题反馈</a>
         </section>
-        <a class="downloads-other" href="https://github.com/edison7009/Coffee-CLI/releases/latest" target="_blank" rel="noopener" data-i18n="downloads-other">
-          Other variants (Intel Mac · ARM Linux · AppImage) →
-        </a>
+        <p class="dl-more">
+          <a class="downloads-other" href="#install"><span data-i18n="hx-install-link">Install via terminal</span> →</a>
+          <a class="downloads-other" href="https://github.com/edison7009/Coffee-CLI/releases/latest" target="_blank" rel="noopener"><span data-i18n="hx-more-link">More versions</span> →</a>
+        </p>
       </section>
 
     </div>
@@ -213,7 +214,7 @@
 
   <!-- Command install: a simple block at the bottom of the page. main.js
        drives the tabs (.tab-btn), #install-command, #install-hint, #copy-btn. -->
-  <section class="install-strip" aria-labelledby="install-title">
+  <section class="install-strip" id="install" aria-labelledby="install-title">
     <div class="is-inner">
       <h2 class="is-title" id="install-title" data-i18n="install-title">Or install from the terminal</h2>
       <div class="is-bar">
@@ -279,6 +280,6 @@
 
 
   <script src="./js/main.js?v=0.9.15"></script>
-  <script src="./js/hero-features.js?v=2.2.0"></script>
+  <script src="./js/hero-features.js?v=2.3.0"></script>
 </body>
 </html>
