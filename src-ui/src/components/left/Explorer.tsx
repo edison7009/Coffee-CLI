@@ -18,6 +18,7 @@ import { commands, onSelfUpdateProgress } from '../../tauri';
 import type { DirEntryInfo } from '../../tauri';
 import { HistoryBoard } from '../right/HistoryBoard';
 import './Explorer.css';
+import { fetchLatestManifest, isNewerVersion } from '../../lib/update-manifest';
 
 
 // Snapshot lifecycle and the `+N -M` map live in lib/file-stats.tsx so the
@@ -596,20 +597,10 @@ export function Explorer() {
     const checkUpdate = async () => {
       try {
         const { getVersion } = await import('@tauri-apps/api/app');
-        const [local, remote] = await Promise.all([
-          getVersion(),
-          fetch('https://coffeecli.com/version.json').then(r => r.json()),
-        ]);
-        const isNewer = (r: string, l: string) => {
-          const rv = r.split('.').map(Number);
-          const lv = l.split('.').map(Number);
-          for (let i = 0; i < 3; i++) {
-            if ((rv[i] ?? 0) > (lv[i] ?? 0)) return true;
-            if ((rv[i] ?? 0) < (lv[i] ?? 0)) return false;
-          }
-          return false;
-        };
-        if (remote?.version && isNewer(remote.version, local)) setHasUpdate(true);
+        // Domestic mirrors and the website are asked together; the newest
+        // version any of them reports wins (see lib/update-manifest.ts).
+        const [local, remote] = await Promise.all([getVersion(), fetchLatestManifest()]);
+        if (remote && isNewerVersion(remote.version, local)) setHasUpdate(true);
       } catch { /* offline or fetch failed — silent */ }
     };
     checkUpdate();

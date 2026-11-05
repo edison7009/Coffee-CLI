@@ -1,6 +1,7 @@
 name: Mirror release to China
 
-# Copies a published release's installers into the download-only mirror repos
+# Copies a published release's installers (and its version, date and notes,
+# as manifest.json) into the download-only mirror repos
 #   https://cnb.cool/echobird/coffee-cli-releases
 #   https://gitcode.com/edison7009/coffee-cli-releases
 # so visitors in mainland China can download from a domestic host
@@ -82,10 +83,13 @@ jobs:
           tag="${{ steps.tag.outputs.tag }}"
           version="${tag#v}"
           cd out
+          # Same fields as Web-Home/version.json (version, releaseDate,
+          # releaseNotes) so the client reads either one; plus the files.
           jq -n --arg version "$version" --arg tag "$tag" \
                 --arg published "$(jq -r .published_at ../release.json)" \
+                --arg notes "$(jq -r '.body // ""' ../release.json)" \
                 --arg source "https://github.com/$GITHUB_REPOSITORY/releases/tag/$tag" \
-                '{version: $version, tag: $tag, publishedAt: $published, source: $source, files: {}}' > manifest.json
+                '{version: $version, tag: $tag, releaseDate: $published, publishedAt: $published, releaseNotes: $notes, source: $source, files: {}}' > manifest.json
           while read -r name; do
             size=$(stat -c %s "$name")
             sha=$(sha256sum "$name" | cut -d' ' -f1)

@@ -38,6 +38,7 @@ mod orchestration;
 mod worker_worktree;
 mod notify_sound;
 mod tools;
+mod update_sources;
 mod usage_stats;
 mod usage_quota;
 mod git;

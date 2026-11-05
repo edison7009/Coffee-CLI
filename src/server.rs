@@ -5239,13 +5239,15 @@ fn open_url(url: String) -> Result<(), String> {
 
 // ─── In-app self-update ────────────────────────────────────────────────────
 //
-// Downloads the latest installer from `coffeecli.com/download/<os>` — a CF
-// Worker that proxies the matching GitHub Release asset (China-accessible,
-// stable name, no per-version URL to construct). Streams the body so the
-// frontend can paint a circular download-progress ring via the
-// `self-update-progress` event, then launches the installer and exits so it
-// can replace our running files. ureq is blocking + rustls, so the whole
-// thing runs on a spawn_blocking thread; `app.emit` works from any thread.
+// Downloads the latest installer and launches it. Sources (see
+// update_sources.rs): the CNB and GitCode mirrors when their manifest has the
+// newest version, then `coffeecli.com/download/<os>` (a CF Worker proxying
+// the GitHub Release asset). The sources race briefly ("speed_test"), the
+// fastest is downloaded, and a mirror's installer is checked against its
+// manifest's size and SHA-256 — a failed check falls through to the next
+// source. Progress streams to the frontend's ring via `self-update-progress`.
+// ureq is blocking + rustls, so the whole thing runs on a spawn_blocking
+// thread; `app.emit` works from any thread.
 
 #[derive(serde::Serialize, Clone)]
 struct SelfUpdateProgress {
@@ -5269,29 +5271,22 @@ async fn download_and_install_update(app: tauri::AppHandle) -> Result<(), String
     } else {
         "linux"
     };
-    let url = format!("https://coffeecli.com/download/{os}");
+    let official_url = format!("https://coffeecli.com/download/{os}");
     let app2 = app.clone();
-    tauri::async_runtime::spawn_blocking(move || run_self_update(&app2, &url))
+    tauri::async_runtime::spawn_blocking(move || run_self_update(&app2, os, &official_url))
         .await
         .map_err(|e| format!("self-update task join failed: {e}"))?
 }
 
-fn run_self_update(app: &tauri::AppHandle, url: &str) -> Result<(), String> {
-    use std::io::{Read, Write};
-
+fn run_self_update(app: &tauri::AppHandle, os: &str, official_url: &str) -> Result<(), String> {
     emit_self_update(app, "speed_test", 0);
 
-    let resp = match ureq::get(url).call() {
-        Ok(r) => r,
-        Err(e) => {
-            emit_self_update(app, "error", 0);
-            return Err(format!("download request failed: {e}"));
-        }
-    };
-    let total: u64 = resp
-        .header("Content-Length")
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(0);
+    let (_target, candidates) = crate::update_sources::resolve(os, official_url);
+    let opened = crate::update_sources::probe(&candidates, std::time::Duration::from_millis(1500));
+    if opened.is_empty() {
+        emit_self_update(app, "error", 0);
+        return Err("no download source reachable".into());
+    }
 
     let ext = if cfg!(target_os = "windows") {
         "exe"
@@ -5302,39 +5297,19 @@ fn run_self_update(app: &tauri::AppHandle, url: &str) -> Result<(), String> {
     };
     let out_path = std::env::temp_dir().join(format!("coffee-cli-update-setup.{ext}"));
 
-    let mut reader = resp.into_reader();
-    let mut file = std::fs::File::create(&out_path).map_err(|e| {
-        emit_self_update(app, "error", 0);
-        format!("create temp file: {e}")
-    })?;
-
-    let mut buf = [0u8; 65536];
-    let mut downloaded: u64 = 0;
-    let mut last_pct: u32 = 0;
-    emit_self_update(app, "downloading", 0);
-    loop {
-        let n = reader.read(&mut buf).map_err(|e| {
-            emit_self_update(app, "error", last_pct);
-            format!("download read failed: {e}")
-        })?;
-        if n == 0 {
-            break;
-        }
-        file.write_all(&buf[..n]).map_err(|e| {
-            emit_self_update(app, "error", last_pct);
-            format!("write temp file failed: {e}")
-        })?;
-        downloaded += n as u64;
-        if total > 0 {
-            // Cap at 99 during streaming; 100 is reserved for "fully written".
-            let pct = (downloaded.saturating_mul(100) / total).min(99) as u32;
-            if pct != last_pct {
-                last_pct = pct;
-                emit_self_update(app, "downloading", pct);
-            }
+    let mut last_err = String::from("download failed");
+    let mut done = false;
+    for source in opened {
+        match download_installer(app, source, &out_path) {
+            Ok(()) => { done = true; break; }
+            Err(e) => last_err = e,
         }
     }
-    drop(file);
+    if !done {
+        let _ = std::fs::remove_file(&out_path);
+        emit_self_update(app, "error", 0);
+        return Err(last_err);
+    }
     emit_self_update(app, "downloading", 100);
 
     // Launch the installer, then exit so it can overwrite our running files.
@@ -5354,6 +5329,59 @@ fn run_self_update(app: &tauri::AppHandle, url: &str) -> Result<(), String> {
     std::thread::sleep(std::time::Duration::from_millis(800));
     app.exit(0);
     Ok(())
+}
+
+/// Stream one opened source to `out_path`, reporting progress, then check it
+/// against the source's manifest entry (size + SHA-256).
+fn download_installer(
+    app: &tauri::AppHandle,
+    source: crate::update_sources::Opened,
+    out_path: &std::path::Path,
+) -> Result<(), String> {
+    use sha2::{Digest, Sha256};
+    use std::io::{Read, Write};
+
+    let crate::update_sources::Opened { candidate, head, mut reader, total, header_version, eof, .. } = source;
+    // The manifest knows the size even when the mirror sends no Content-Length.
+    let total = candidate.expect.as_ref().map(|e| e.size).or(total).unwrap_or(0);
+    let mut file = std::fs::File::create(out_path).map_err(|e| format!("create temp file: {e}"))?;
+    let mut hasher = Sha256::new();
+    let mut downloaded: u64 = 0;
+    let mut last_pct: u32 = 0;
+    emit_self_update(app, "downloading", 0);
+
+    let mut write = |chunk: &[u8], downloaded: &mut u64, last_pct: &mut u32| -> Result<(), String> {
+        file.write_all(chunk).map_err(|e| format!("write temp file failed: {e}"))?;
+        hasher.update(chunk);
+        *downloaded += chunk.len() as u64;
+        if total > 0 {
+            // Cap at 99 during streaming; 100 is reserved for "fully written".
+            let pct = (downloaded.saturating_mul(100) / total).min(99) as u32;
+            if pct != *last_pct {
+                *last_pct = pct;
+                emit_self_update(app, "downloading", pct);
+            }
+        }
+        Ok(())
+    };
+    write(&head, &mut downloaded, &mut last_pct)?;
+    if !eof {
+        let mut buf = [0u8; 65536];
+        loop {
+            let n = reader
+                .read(&mut buf)
+                .map_err(|e| format!("{}: download read failed: {e}", candidate.id))?;
+            if n == 0 {
+                break;
+            }
+            write(&buf[..n], &mut downloaded, &mut last_pct)?;
+        }
+    }
+    drop(write);
+    file.sync_all().map_err(|e| format!("flush temp file failed: {e}"))?;
+    drop(file);
+    let digest = format!("{:x}", hasher.finalize());
+    crate::update_sources::verify(&candidate, header_version.as_deref(), downloaded, &digest)
 }
 
 // ─── Hyper-Agent: global anonymous MCP server for external orchestrators ──

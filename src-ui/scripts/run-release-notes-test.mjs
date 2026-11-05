@@ -5,14 +5,19 @@ import ts from 'typescript';
 
 const bundled = readFileSync(new URL('../../install/release-notes-template.md', import.meta.url), 'utf8');
 const source = readFileSync(new URL('../src/lib/release-notes.ts', import.meta.url), 'utf8');
+const manifestSource = readFileSync(new URL('../src/lib/update-manifest.ts', import.meta.url), 'utf8');
 const values = new Map(), calls = [];
 let respond;
+const transpile = code => ts.transpileModule(code, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+const fetchStub = async (url, options) => { calls.push({ url, signal: options.signal }); return respond(url); };
+const manifestContext = { exports: {}, fetch: fetchStub, setTimeout, clearTimeout, AbortController, DOMException };
+vm.runInNewContext(transpile(manifestSource), manifestContext);
 const context = {
-  exports: {}, require: () => ({ default: bundled }),
+  exports: {}, require: id => id.endsWith('update-manifest') ? manifestContext.exports : { default: bundled },
   localStorage: { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value) },
-  fetch: async (url, options) => { calls.push({ url, signal: options.signal }); return respond(url); },
+  fetch: fetchStub,
 };
-vm.runInNewContext(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, context);
+vm.runInNewContext(transpile(source), context);
 const { BUNDLED_VERSION, shouldShowReleaseNotes, notesForLocale, cachedReleaseNotes, loadReleaseNotes } = context.exports;
 const version = BUNDLED_VERSION;
 assert.equal(version, readFileSync(new URL('../../Cargo.toml', import.meta.url), 'utf8').match(/^version = "([^"]+)"/m)[1], 'bundled release notes match the application version');
@@ -41,15 +46,20 @@ assert.equal(await loadReleaseNotes(version,signal),multilingual);
 assert.equal(calls.length,1,'matching manifest needs no extra request');
 assert.equal(cachedReleaseNotes(version),multilingual,'remote notes persist for offline viewing');
 calls.length=0;
-respond = url => response(url.includes('version.json') ? {version:'99.0.0',releaseNotes:'future notes'} : {tag_name:`v${version}`,body:'installed notes',draft:false});
+respond = url => response(url.includes('manifest.json') || url.includes('version.json') ? {version:'99.0.0',releaseNotes:'future notes'} : {tag_name:`v${version}`,body:'installed notes',draft:false});
 assert.equal(await loadReleaseNotes(version,signal),'installed notes');
-assert.equal(calls.length,2);
-assert.ok(calls[1].url.endsWith(`/tags/v${version}`),'fetch the installed release rather than the latest one');
+assert.equal(calls.length,4,'both mirrors and the website are asked before GitHub');
+assert.ok(calls[0].url.includes('cnb.cool') && calls[1].url.includes('gitcode.com') && calls[2].url.includes('coffeecli.com'),'mirrors come before the website');
+assert.ok(calls[3].url.endsWith(`/tags/v${version}`),'fetch the installed release rather than the latest one');
 calls.length=0;
-respond = url => { if(url.includes('version.json'))throw new Error('offline manifest');return response({tag_name:`v${version}`,body:'direct notes'}); };
+respond = url => url.includes('cnb.cool') ? response({version,releaseNotes:''}) : url.includes('gitcode.com') ? response({version,releaseNotes:'gitcode notes'}) : response({version,releaseNotes:'site notes'});
+assert.equal(await loadReleaseNotes(version,signal),'gitcode notes','an empty mirror entry falls through to the next mirror');
+assert.equal(calls.length,2);
+calls.length=0;
+respond = url => { if(url.includes('manifest.json') || url.includes('version.json'))throw new Error('offline manifest');return response({tag_name:`v${version}`,body:'direct notes'}); };
 assert.equal(await loadReleaseNotes(version,signal),'direct notes','exact release fallback survives a manifest failure');
 for(const badRelease of [{tag_name:'v99.0.0',body:'future'}, {tag_name:`v${version}`,body:'draft',draft:true}, {tag_name:`v${version}`,body:''}]) {
-  respond = url => response(url.includes('version.json')?{version}:badRelease);
+  respond = url => response(url.includes('manifest.json') || url.includes('version.json')?{version}:badRelease);
   await assert.rejects(loadReleaseNotes(version,signal));
   assert.equal(cachedReleaseNotes(version),'direct notes','failed refresh cannot erase the last good cache');
 }

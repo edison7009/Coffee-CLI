@@ -1,4 +1,5 @@
 import bundledNotes from '../../../install/release-notes-template.md?raw';
+import { fetchNotesForVersion } from './update-manifest';
 
 export const BUNDLED_VERSION = bundledNotes.match(/^### Coffee CLI v(\d+\.\d+\.\d+)/m)?.[1] ?? '';
 export const RELEASE_NOTES_SEEN = 'cc-release-notes-seen';
@@ -32,14 +33,9 @@ export function cachedReleaseNotes(version: string): string {
 }
 
 export async function loadReleaseNotes(version: string, signal: AbortSignal): Promise<string> {
-  let notes = '';
-  try {
-    const response = await fetch('https://coffeecli.com/version.json', { signal });
-    if (response.ok) {
-      const manifest = await response.json();
-      if (manifest.version === version && typeof manifest.releaseNotes === 'string') notes = manifest.releaseNotes;
-    }
-  } catch (error) { if (signal.aborted) throw error; }
+  // Mirrors first, then the website (see update-manifest.ts); GitHub's
+  // release API is the last resort.
+  let notes = await fetchNotesForVersion(version, signal);
   if (!notes.trim()) {
     const response = await fetch(`https://api.github.com/repos/edison7009/Coffee-CLI/releases/tags/v${encodeURIComponent(version)}`, { signal });
     if (!response.ok) throw new Error('Release notes unavailable');
