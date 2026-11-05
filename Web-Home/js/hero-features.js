@@ -237,11 +237,14 @@
   }
   function track(v, box) {
     v._box = box;
-    v.addEventListener("loadeddata", function () {
+    const ready = function () {
       v._ready = true;
       if (box._active === v) setBoxLoading(box, false);
-    });
+    };
+    v.addEventListener("loadeddata", ready);
     warm(v);
+    // Already preloaded: the first frame is in, no need to wait for the poster.
+    if (v.readyState >= 2) ready();
   }
   function showInBox(box, v) {
     box._active = v;
@@ -334,6 +337,40 @@
     window.addEventListener("resize", run);
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(run);
     return run;
+  }
+
+  // Background preload: once the first clip is showing, fetch every other
+  // clip one at a time (hero tabs first, then the feature sections), so a
+  // tab switch or a scroll down plays at once. ~1 MB in all. Skipped when
+  // the visitor asked to save data. The feature sections use the same clip
+  // files, so they come out of the browser cache.
+  const preloadQueue = [];
+  let preloading = false;
+  function preloadAll(videos) {
+    const conn = navigator.connection;
+    if (conn && (conn.saveData || /(^|-)2g$/.test(conn.effectiveType || ""))) return;
+    videos.forEach(function (v) { if (preloadQueue.indexOf(v) < 0) preloadQueue.push(v); });
+    if (!preloading) preloadNext();
+  }
+  function preloadNext() {
+    const v = preloadQueue.shift();
+    if (!v) { preloading = false; return; }
+    preloading = true;
+    if (v.readyState >= 3) return preloadNext();
+    let done = false;
+    const next = function () {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      v.removeEventListener("canplaythrough", next);
+      v.removeEventListener("error", next);
+      preloadNext();
+    };
+    const timer = setTimeout(next, 15000);
+    v.addEventListener("canplaythrough", next);
+    v.addEventListener("error", next);
+    v.preload = "auto";
+    if (v.getAttribute("src")) v.load(); else attach(v);
   }
 
   function init() {
@@ -429,8 +466,12 @@
     // First clip in hand: fetch it eagerly, then warm the other posters in
     // the background so switching tabs shows a picture at once.
     slides[0].video.preload = "auto";
+    let warmed = false;
     const warmRest = function () {
+      if (warmed) return;
+      warmed = true;
       slides.forEach(function (sl) { if (sl.video._ready === undefined) track(sl.video, screen); });
+      preloadAll(slides.map(function (sl) { return sl.video; }).concat(featureVideos));
     };
     const first = slides[0].video;
     const later = window.requestIdleCallback || function (fn) { return setTimeout(fn, 1200); };
@@ -463,18 +504,25 @@
     }
   }
 
-  // Feature sections: each plays its own clip while it is on screen.
+  // Feature sections: each plays its own clip while it is on screen; after the
+  // hero clips are preloaded they are fetched too (from the browser cache).
+  let featureVideos = [];
   function initFeatureClips() {
     const vids = document.querySelectorAll(".ft-media video[data-clip]");
     if (!vids.length) return;
     const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)");
     const reduced = () => !!(reduce && reduce.matches);
+    featureVideos = Array.prototype.slice.call(vids);
     vids.forEach(function (v) {
       makeClip(v, v.getAttribute("data-clip"));
       const box = v.closest(".ft-media");
       box._active = v;
       setBoxLoading(box, true);
       v._box = box;
+      v.addEventListener("loadeddata", function () {
+        v._ready = true;
+        if (box._active === v) setBoxLoading(box, false);
+      });
       v.addEventListener("click", function () { if (v.paused) playClip(v); else v.pause(); });
     });
     if (!("IntersectionObserver" in window)) {
