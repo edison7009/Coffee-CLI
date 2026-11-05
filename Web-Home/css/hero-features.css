@@ -89,15 +89,44 @@ html[data-theme='dark'] .hx-lead { color: rgba(235, 235, 235, 0.78); }
   text-align: left;
 }
 .hero-split .downloads-row { justify-content: flex-start; }
-/* The visitor's own OS (detected in js) gets the filled brand button. */
-.hero-split .download-btn.is-primary {
-  background: var(--brand-color);
-  border-color: transparent;
-  color: #2a1c10;
-  font-weight: 600;
+/* Download buttons: quiet outline at rest; on hover — and always on the
+   visitor's own OS (.is-primary, set in js) — a rainbow light runs around
+   the border. The border is a conic gradient behind a solid fill, turned by
+   animating the registered --dl-ang. */
+@property --dl-ang { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+.hero-split .download-btn {
+  --dl-fill: var(--bg-color);
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--dl-fill), var(--dl-fill)) padding-box,
+    linear-gradient(var(--glass-border), var(--glass-border)) border-box;
+  color: var(--text-primary);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, color 0.25s ease;
 }
-.hero-split .download-btn.is-primary .dl-suffix { opacity: 0.7; }
-.hero-split .download-btn.is-primary:hover { filter: brightness(1.06); }
+.hero-split .download-btn:hover,
+.hero-split .download-btn.is-primary {
+  background:
+    linear-gradient(var(--dl-fill), var(--dl-fill)) padding-box,
+    conic-gradient(from var(--dl-ang), #ff4d4d, #ffa24d, #ffe14d, #4dff88, #4dd2ff, #6b6bff, #d24dff, #ff4d4d) border-box;
+  border-color: transparent;
+  color: var(--text-highlight);
+  box-shadow: 0 0 24px -6px rgba(160, 120, 255, 0.5);
+  animation: dl-flow 3s linear infinite;
+}
+.hero-split .download-btn:hover { transform: translateY(-1px); }
+.hero-split .download-btn.is-primary { font-weight: 600; }
+.hero-split .download-btn.is-primary:not(:hover) { animation-duration: 6s; }
+html[data-theme='light'] .hero-split .download-btn:hover,
+html[data-theme='light'] .hero-split .download-btn.is-primary {
+  box-shadow: 0 8px 22px -10px rgba(160, 120, 255, 0.5);
+}
+.hero-split .download-btn .dl-suffix { color: inherit; opacity: 0.55; }
+.hero-split .download-btn:hover .dl-suffix,
+.hero-split .download-btn.is-primary .dl-suffix { opacity: 0.65; }
+@keyframes dl-flow { to { --dl-ang: 360deg; } }
+@media (prefers-reduced-motion: reduce) {
+  .hero-split .download-btn { animation: none !important; transition: none; }
+}
 .hero-split .downloads-note { max-width: 32rem; }
 
 
