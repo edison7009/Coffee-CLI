@@ -496,7 +496,7 @@ html:not([data-theme='dark']) .tm-item img.tm-mono-white { filter: invert(1); }
 }
 
 /* ── Clip frame: a neutral hairline all round; a rainbow light runs along
-      the bottom edge (just round the two bottom corners) and glows
+      the bottom edge, rises up the sides fading out on a curve, and glows
       underneath, flowing sideways. The rainbow layers sit behind the clip
       (z-index -1 inside the frame's stacking context), so they only show
       through the 1.5px rim and below the frame. Animates only while the clip
@@ -523,23 +523,29 @@ html[data-theme='dark'] .clip-frame { background: rgba(255, 255, 255, 0.12); }
 }
 .clip-frame[data-live]::before,
 .clip-frame[data-live]::after { animation-play-state: running; }
-/* The rim: the bottom edge, curling just round the two bottom corners
-   before fading out (a fixed ~28px, whatever the frame's height). */
+/* The rim: lit along the bottom, rising up both sides and fading out on a
+   curve — an ellipse centred on the bottom edge, so the light lingers
+   longest near the middle and lets go first at the outside, like a breeze
+   blowing up from below. */
 .clip-frame::after {
   inset: 0;
   border-radius: inherit;
-  -webkit-mask-image: linear-gradient(to bottom, transparent calc(100% - 28px), #000 calc(100% - 6px));
-          mask-image: linear-gradient(to bottom, transparent calc(100% - 28px), #000 calc(100% - 6px));
+  -webkit-mask-image: radial-gradient(ellipse 72% 62% at 50% 100%, #000 66%, rgba(0, 0, 0, 0.45) 80%, transparent 100%);
+          mask-image: radial-gradient(ellipse 72% 62% at 50% 100%, #000 66%, rgba(0, 0, 0, 0.45) 80%, transparent 100%);
 }
-/* The glow: a soft band under the bottom edge. */
+/* The glow: under the bottom edge and curling up the outside of both sides,
+   shaped by the same kind of ellipse so its outer parts fade first. */
 .clip-frame::before {
-  left: 8%;
-  right: 8%;
-  bottom: -10px;
-  height: 46px;
-  border-radius: 999px;
-  filter: blur(26px);
-  opacity: 0.55;
+  /* Tall enough below the frame that the blur isn't clipped by the mask. */
+  left: -14px;
+  right: -14px;
+  bottom: -44px;
+  height: calc(46% + 28px);
+  border-radius: 40px;
+  filter: blur(22px);
+  opacity: 0.6;
+  -webkit-mask-image: radial-gradient(ellipse 58% 100% at 50% 100%, #000 45%, rgba(0, 0, 0, 0.35) 72%, transparent 100%);
+          mask-image: radial-gradient(ellipse 58% 100% at 50% 100%, #000 45%, rgba(0, 0, 0, 0.35) 72%, transparent 100%);
 }
 html[data-theme='dark'] .clip-frame::before { opacity: 0.45; }
 @keyframes clip-flow { from { background-position: 0% 0; } to { background-position: -200% 0; } }
