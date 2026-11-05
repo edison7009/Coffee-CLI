@@ -1,0 +1,3795 @@
+//! Native chat history: discovery, parsing, caching, paging and the
+//! message heatmap for every supported tool. Split out of server.rs.
+
+#![allow(clippy::too_many_arguments)]
+use super::*;
+
+pub(super) fn file_created_epoch_ms(path: &std::path::Path) -> Option<String> {
+    let metadata = std::fs::metadata(path).ok()?;
+    // `modified()` is deliberately not a fallback here: session transcripts
+    // are append-only, so mtime advances on every turn and is not a stable
+    // identity signal. On filesystems without birth time support, callers
+    // should prefer the creation timestamp embedded in the CLI transcript.
+    let timestamp = metadata.created().ok()?;
+    let duration = timestamp.duration_since(std::time::SystemTime::UNIX_EPOCH).ok()?;
+    Some(duration.as_millis().to_string())
+}
+
+pub(super) fn json_timestamp_string(value: &serde_json::Value) -> Option<String> {
+    if let Some(value) = value.as_str().filter(|value| !value.is_empty()) {
+        return Some(value.to_string());
+    }
+    if let Some(value) = value.as_i64() {
+        return Some(value.to_string());
+    }
+    if let Some(value) = value.as_u64() {
+        return Some(value.to_string());
+    }
+    value
+        .as_f64()
+        .filter(|value| value.is_finite())
+        .map(|value| value.to_string())
+}
+
+/// XML-style tags injected into the user message stream by Claude /
+/// Codex when integrated with an IDE or shell. These are not things
+/// the user typed — filtering them out of the history title extractor
+/// keeps the sidebar readable (no more "<ide_opened_file>The user
+/// opened the..." or "# AGENTS.md instructions for ..." cards).
+pub(super) const SYSTEM_INJECTION_TAGS: &[&str] = &[
+    // Codex Desktop injects the currently available-but-uninstalled plugin
+    // catalogue as the first synthetic user message. It can be several KB
+    // long and must never become a session title.
+    "<recommended_plugins>",
+    "<environment_context>",
+    "<ide_opened_file>",
+    "<ide_closed_file>",
+    "<ide_selection>",
+    "<system-reminder>",
+    "<command-message>",
+    "<command-name>",
+    // Codex Desktop stores attached images as separate synthetic user
+    // wrapper messages around the actual request block.
+    "<image name=",
+    "</image>",
+    // Codex injects the contents of `AGENTS.md` (project) and any
+    // pre-v1.5 Coffee-CLI workspace pointer as a synthetic user
+    // message at session start.
+    "# AGENTS.md",
+    // Gemini-derived tools and imported legacy logs may inject their project
+    // instructions as a synthetic first user message.
+    "# GEMINI.md",
+    // Claude Code's own session-summary / compaction prompt, injected as
+    // a user message at session start (by Claude Code's compaction, and by
+    // community "save-session" skills that reuse the same template).
+    // It isn't something the user typed, so skip it in the title
+    // extractor and let the next real user line become the title —
+    // otherwise the history card reads "Below is a conversation log from
+    // a Claud...". Verified against real transcripts: this literal prefix
+    // is the only injection observed in practice.
+    "Below is a conversation log from a Claude Code coding session",
+];
+
+pub(crate) fn is_system_injected(text: &str) -> bool {
+    let t = text.trim();
+    SYSTEM_INJECTION_TAGS.iter().any(|tag| t.starts_with(tag))
+}
+
+/// A first-prompt title, cut to the history card's 40 characters.
+pub(super) fn clip_title(text: &str) -> String {
+    let mut chars = text.chars();
+    let chunk: String = chars.by_ref().take(40).collect();
+    if chars.next().is_some() { format!("{chunk}...") } else { chunk }
+}
+
+/// The title a Claude user text block contributes, by the rule Claude Code's
+/// own session list uses: anything opening with a lowercase XML-style tag is
+/// harness wrapping (IDE context, reminders, hook output, …) rather than a
+/// typed prompt, as is the "[Request interrupted by user]" marker. That one
+/// rule covers wrappers no list has seen yet. A slash command is remembered as
+/// a fallback; a `!` shell line reads as `! <command>`.
+pub(super) fn claude_prompt_title(text: &str, command_fallback: &mut String) -> Option<String> {
+    use std::sync::LazyLock;
+    static COMMAND: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"<command-name>(.*?)</command-name>").unwrap());
+    static BASH: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"^<bash-input>([\s\S]*?)</bash-input>").unwrap());
+    static WRAPPER: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"^(?:<[a-z][\w-]*[\s>/]|\[Request interrupted by user[^\]]*\])").unwrap());
+    let text = text.replace(['\r', '\n'], " ");
+    let text = text.trim();
+    if text.is_empty() { return None; }
+    // Only a row that opens with a tag is the CLI's own slash-command or shell record; a typed prompt
+    // that merely mentions those tags stays a prompt. Older CLIs put <command-message> before the name.
+    if let Some(command) = COMMAND.captures(text).filter(|_| text.starts_with("<command-")) {
+        if command_fallback.is_empty() { *command_fallback = command[1].trim().to_string(); }
+        return None;
+    }
+    if let Some(shell) = BASH.captures(text) { return Some(format!("! {}", shell[1].trim())); }
+    (!WRAPPER.is_match(text) && !is_system_injected(text)).then(|| text.to_string())
+}
+
+/// Resolve a session's real project root from its recorded cwd.
+///
+/// A session run inside an ephemeral worktree (`<project>/.claude/worktrees/<x>`,
+/// created by the harness for each Claude dev session) records that worktree as
+/// its cwd. Resuming there is wrong — the worktree is scratch space that may be
+/// on a stale branch or already gone; the user wants to continue in the actual
+/// project. `<tool> --resume <token>` finds the session by its global id
+/// regardless of cwd, so running from the project root both recovers the
+/// conversation and lands in the right place (verified live).
+///
+/// Rule: match the `.claude/worktrees` segment specifically and strip back to
+/// the segment before `.claude`. That layout is the harness's own (verified on
+/// disk — `git worktree list` shows every worktree at `<project>/.claude/
+/// worktrees/<name>`), and it is the ONLY dot-directory that is ever a real
+/// working cwd: a `.git/worktrees/<x>` is git's internal metadata (never a
+/// working dir), and an ordinary hidden dir (`~/.config/nvim`, `~/.dotfiles`)
+/// has no `worktrees` child. Anchoring on `.claude/worktrees` therefore:
+///   • fixes the worktree case on every OS (both `\` and `/` separators);
+///   • never over-collapses a legitimate hidden-dir cwd (important on
+///     Linux/macOS where editing dotfiles with an agent is a real workflow);
+///   • covers any tool Coffee CLI launched inside such a worktree (they all
+///     record the same `.claude/worktrees` path), without a per-tool branch.
+/// Any cwd without that exact segment (a normal project dir, a real subdir, a
+/// plain non-hidden `worktrees/` folder) is returned unchanged. Guaranteed to
+/// never return an empty string when given a non-empty one.
+/// A cwd inside a worktree Coffee made (`.claude/worktrees/coffee-*`), as opposed to one Claude Code made itself.
+pub(super) fn coffee_worktree_cwd(cwd: &str) -> bool {
+    let parts = cwd.split(['/', '\\']).collect::<Vec<_>>();
+    parts.windows(3).any(|w| w[0] == ".claude" && w[1] == "worktrees" && w[2].starts_with("coffee-"))
+}
+pub(super) fn project_root_from_cwd(cwd: &str) -> String {
+    let is_sep = |b: u8| b == b'\\' || b == b'/';
+    let bytes = cwd.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        if is_sep(bytes[i]) {
+            // Component immediately after this separator.
+            let start = i + 1;
+            let mut j = start;
+            while j < bytes.len() && !is_sep(bytes[j]) {
+                j += 1;
+            }
+            // Must be `.claude`, and its next component must be `worktrees`.
+            // `i > 0` keeps a non-empty input from ever collapsing to "".
+            if i > 0 && &cwd[start..j] == ".claude" && j < bytes.len() {
+                let mut k = j + 1;
+                while k < bytes.len() && !is_sep(bytes[k]) {
+                    k += 1;
+                }
+                if &cwd[j + 1..k] == "worktrees" {
+                    return cwd[..i].to_string();
+                }
+            }
+        }
+        i += 1;
+    }
+    cwd.to_string()
+}
+
+/// Claude Code mangles a project's absolute path into its `~/.claude/projects/`
+/// folder name by replacing every non-alphanumeric ASCII character with a
+/// single `-` (verified against live folder names on disk, e.g.
+/// `D:\Coffee-CLI\.claude\worktrees\foo` -> `D--Coffee-CLI--claude-worktrees-foo`).
+/// That mapping is **not reversible**: a literal `-` already inside a path
+/// segment (extremely common — "Coffee-CLI", any kebab-case folder) is
+/// indistinguishable from an encoded separator once collapsed. A previous
+/// version of this function tried to reverse it by splitting the folder name
+/// on "--", which silently produced a plausible-but-wrong path for any
+/// project whose name contained a hyphen — the wrong path would fail the
+/// `path.exists()` guard in `terminal::spawn`, so the CWD override was
+/// silently dropped and `claude --resume <token>` launched from Coffee
+/// CLI's own process directory instead of the session's real project.
+///
+/// Fixed by going the other direction: `~/.claude.json`'s top-level
+/// `projects` object is keyed by the *real*, unmangled absolute path for
+/// every project Claude Code knows about. Forward-encode each key with the
+/// same rule — encoding is deterministic and lossless in this direction, so a
+/// match is exact, never a guess.
+///
+/// Built ONCE per history scan and passed into `parse_agent_jsonl`, rather than
+/// re-reading + re-parsing this (often 100 KB+) file per candidate session.
+pub(super) fn load_claude_project_map(home: &std::path::Path) -> std::collections::HashMap<String, String> {
+    let mut map = std::collections::HashMap::new();
+    let path = home.join(".claude.json");
+    let raw = match std::fs::read_to_string(&path) {
+        Ok(r) => r,
+        // Missing file is the normal "no Claude yet" case — silent. A present
+        // file we can't read is worth a breadcrumb (a resume that later refuses
+        // has a diagnosable root cause instead of a silent empty map).
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return map,
+        Err(e) => {
+            eprintln!("[history] could not read {}: {e}", path.display());
+            return map;
+        }
+    };
+    let json: serde_json::Value = match serde_json::from_str(&raw) {
+        Ok(v) => v,
+        Err(e) => {
+            eprintln!("[history] {} is not valid JSON: {e}", path.display());
+            return map;
+        }
+    };
+    if let Some(projects) = json.get("projects").and_then(|v| v.as_object()) {
+        for real_path in projects.keys() {
+            let encoded: String = real_path
+                .chars()
+                .map(|c| if c.is_ascii_alphanumeric() { c } else { '-' })
+                .collect();
+            map.insert(encoded, real_path.clone());
+        }
+    }
+    map
+}
+
+// Larger sequential reads reduce syscall overhead for long JSONL transcripts.
+pub(super) const SESSION_READ_BUF: usize = 128 * 1024;
+
+pub(super) fn parse_agent_jsonl(
+    file_path: &std::path::Path,
+    tool_name: &str,
+    claude_projects: &std::collections::HashMap<String, String>,
+) -> Option<SavedSession> {
+    use std::io::BufRead;
+    let file = std::fs::File::open(file_path).ok()?;
+    let reader = std::io::BufReader::with_capacity(SESSION_READ_BUF, file);
+
+    let mut session_id = file_path.file_stem()?.to_string_lossy().to_string();
+    let mut cwd = String::new();
+    let mut git_context = crate::session_git_context::SessionGitObserver::default();
+    let mut updated_at = String::new();
+    let mut created_at = None;
+    let mut title = String::new();
+    // Titles Claude Code writes into the transcript itself: `ai-title` rows
+    // (generated, rewritten as the session evolves) and `custom-title` rows
+    // (`/rename`). The last row of each kind wins.
+    let mut custom_title = String::new();
+    let mut ai_title = String::new();
+    let mut total_messages = 0;
+    // Count of REAL user messages — ones that are not IDE/system injections
+    // (compaction prompt, AGENTS.md, environment_context, etc.). A session
+    // file with zero real user messages is a Claude Code compaction / summary
+    // sub-task (it contains only the "Below is a conversation log..."
+    // injection + the assistant's generated summary), not a conversation the
+    // user had. Surfacing it lists a phantom "Claude Session" card. Drop it.
+    let mut real_user_messages = 0u32;
+    // A slash command (`<command-name>/x</command-name>`) names the session
+    // only when no typed prompt follows it.
+    let mut command_fallback = String::new();
+
+    for line in reader.lines().map_while(Result::ok) {
+        if let Ok(value) = serde_json::from_str::<serde_json::Value>(&line) {
+            git_context.observe(&value);
+            if created_at.is_none() {
+                created_at = value.get("timestamp").and_then(json_timestamp_string);
+            }
+            if let Some(s) = value.get("sessionId").and_then(|v| v.as_str()) {
+                if !s.is_empty() { session_id = s.to_string(); }
+            }
+            if let Some(c) = value.get("cwd").and_then(|v| v.as_str()) {
+                if cwd.is_empty() && !c.is_empty() { cwd = c.to_string(); }
+            }
+            let row_title = |key: &str| -> Option<String> {
+                value.get(key)
+                    .and_then(|v| v.as_str())
+                    .map(str::trim)
+                    .filter(|t| !t.is_empty())
+                    .map(str::to_string)
+            };
+            match value.get("type").and_then(|v| v.as_str()).unwrap_or("") {
+                "custom-title" => {
+                    if let Some(t) = row_title("customTitle") { custom_title = t; }
+                    continue;
+                }
+                "ai-title" => {
+                    if let Some(t) = row_title("aiTitle") { ai_title = t; }
+                    continue;
+                }
+                _ => {}
+            }
+            let mut maybe_msg_obj = value.get("message").and_then(|v| v.as_object());
+            if maybe_msg_obj.is_none() {
+                if let Some(payload) = value.get("payload").and_then(|v| v.as_object()) {
+                    if let Some(ptype) = payload.get("type").and_then(|v| v.as_str()) {
+                        if ptype == "message" {
+                            maybe_msg_obj = Some(payload);
+                        }
+                    }
+                }
+            }
+
+            if let Some(msg_obj) = maybe_msg_obj {
+                if let Some(role) = msg_obj.get("role").and_then(|v| v.as_str()) {
+                    if role == "user" || role == "assistant" {
+                        total_messages += 1;
+                    }
+                    // Rows the CLI itself marks as not typed by the user are not user input.
+                    let flagged = |key: &str| value.get(key).and_then(|v| v.as_bool()) == Some(true);
+                    if role == "user" && !flagged("isMeta") && !flagged("isCompactSummary") {
+                        let texts: Vec<&str> = match msg_obj.get("content") {
+                            Some(serde_json::Value::String(text)) => vec![text.as_str()],
+                            // Only text blocks can be a prompt; a tool result riding in the row is skipped.
+                            Some(serde_json::Value::Array(blocks)) => blocks.iter()
+                                .filter(|b| matches!(b.get("type").and_then(|v| v.as_str()), Some("text" | "input_text")))
+                                .filter_map(|b| b.get("text").and_then(|v| v.as_str()))
+                                .collect(),
+                            _ => Vec::new(),
+                        };
+                        // Claude's wrapper rule is Claude's; other tools parsed here keep the known-prefix filter.
+                        let mut command = String::new();
+                        let prompt = if tool_name == "claude" { texts.into_iter().find_map(|text| claude_prompt_title(text, &mut command)) }
+                            else { texts.into_iter().find(|text| !is_system_injected(text)).map(|text| text.replace('\n', " ")) };
+                        // One rule decides both whether the user typed anything (the compaction-sub-task filter
+                        // below) and what names the session, so a kept session never falls back to a placeholder.
+                        if prompt.is_some() || !command.is_empty() { real_user_messages += 1; }
+                        if command_fallback.is_empty() { command_fallback = command; }
+                        if let Some(prompt) = prompt.filter(|_| title.is_empty()) { title = clip_title(&prompt); }
+                    }
+                }
+            }
+        }
+    }
+    
+    // Fallback: JSONL had no embedded cwd (older session, or a line we didn't
+    // recognize). Claude Code's own `~/.claude.json` projects registry is the
+    // only reliable source at that point — see load_claude_project_map for why
+    // guessing from the folder name is actively wrong, not just imprecise. Only
+    // Claude has that registry; any other tool routed through this generic
+    // parser keeps a blank cwd rather than a guess (a wrong-but-existing path
+    // would silently send `--resume` into the wrong project).
+    if cwd.is_empty() && tool_name == "claude" {
+        if let Some(real_path) = file_path
+            .parent()
+            .and_then(|p| p.file_name())
+            .and_then(|n| n.to_str())
+            .and_then(|folder| claude_projects.get(folder))
+        {
+            cwd = real_path.clone();
+        }
+    }
+    // No real user message anywhere in the file → this is a Claude Code
+    // compaction / summary sub-task (or an empty/crashed shell), not a
+    // conversation the user had. Excluding it keeps phantom "Claude Session"
+    // cards out of the history list. Verified on real transcripts: a pure
+    // compaction file holds 1 injected user line + assistant summary lines
+    // and nothing else; any live session has ≥1 real user line.
+    if real_user_messages == 0 {
+        return None;
+    }
+    let turn_count = if total_messages > 0 { std::cmp::max(1, (total_messages + 1) / 2) } else { 0 };
+
+    // Fallback date from file metadata
+    if let Ok(meta) = std::fs::metadata(file_path) {
+        if let Ok(mod_time) = meta.modified() {
+            if let Ok(dur) = mod_time.duration_since(std::time::SystemTime::UNIX_EPOCH) {
+                updated_at = dur.as_millis().to_string();
+            }
+        }
+    }
+
+    // Title precedence mirrors the CLI's own: a user rename wins over a
+    // generated title, and both win over the first prompt — so the row reads
+    // the same here as in the CLI's own session picker.
+    if !custom_title.is_empty() {
+        title = custom_title;
+    } else if !ai_title.is_empty() {
+        title = ai_title;
+    }
+    if title.is_empty() {
+        title = clip_title(&command_fallback);
+    }
+    if title.is_empty() {
+        let mut chars = tool_name.chars();
+        let cap_name = match chars.next() {
+            None => String::new(),
+            Some(f) => f.to_uppercase().collect::<String>() + chars.as_str(),
+        };
+        title = format!("{} Session", cap_name);
+    }
+
+    Some(SavedSession {
+        id: format!("{}_native_{}", tool_name, session_id),
+        name: title,
+        tool: tool_name.to_string(),
+        cwd,
+        session_token: Some(session_id),
+        saved_at: updated_at,
+        created_at: created_at.or_else(|| file_created_epoch_ms(file_path)),
+        file_path: Some(file_path.to_string_lossy().into_owned()),
+        turn_count: Some(turn_count),
+        git_context: git_context.finish(),
+        worktree_cwd: None,
+    })
+}
+
+/// CodeBuddy Code sessions live at
+/// `~/.codebuddy/projects/<compressed-cwd>/<uuid>.jsonl`. Two row shapes
+/// coexist on disk: the current kernel store writes envelope rows
+/// (`{type, uuid, timestamp, payload:{…history item…}}`), while `session-meta`
+/// rows (and anything written before envelopes landed) are the bare item.
+/// The item itself carries `cwd`, a millisecond `timestamp`, and — for
+/// conversation rows — `type:"message"` + `role` + content blocks.
+pub(super) fn parse_codebuddy_session_jsonl(file_path: &std::path::Path) -> Option<SavedSession> {
+    use std::io::BufRead;
+    let file = std::fs::File::open(file_path).ok()?;
+    let reader = std::io::BufReader::with_capacity(SESSION_READ_BUF, file);
+
+    // The file name IS the resume token: `codebuddy --resume <token>` resolves
+    // `<project-dir-for-cwd>/<token>.jsonl` (SessionStore.get in the shipped
+    // bundle), so the stem is what we must hand back — not the `sessionId`
+    // embedded in the rows, which can differ for copied/forked transcripts.
+    let session_id = file_path.file_stem()?.to_string_lossy().to_string();
+    let mut cwd = String::new();
+    let mut created_at = None;
+    // Title precedence mirrors the CLI's own getEffectiveSessionTitle(): a
+    // user rename wins over a generated title, and both win over the first
+    // prompt text.
+    let mut custom_title = String::new();
+    let mut ai_title = String::new();
+    let mut topic = String::new();
+    let mut first_prompt = String::new();
+    let mut total_messages = 0u32;
+    let mut real_user_messages = 0u32;
+
+    for line in reader.lines().map_while(Result::ok) {
+        let Ok(root) = serde_json::from_str::<serde_json::Value>(&line) else { continue };
+        // Current transcripts wrap every history item in an envelope
+        // (`{type, uuid, timestamp, payload}`); `session-meta` rows and any
+        // pre-envelope transcript are the bare item itself.
+        let item = root.get("payload").filter(|value| value.is_object()).unwrap_or(&root);
+
+        if created_at.is_none() {
+            created_at = item.get("timestamp").and_then(json_timestamp_string);
+        }
+        if cwd.is_empty() {
+            if let Some(value) = item.get("cwd").and_then(|value| value.as_str()) {
+                if !value.is_empty() {
+                    cwd = value.to_string();
+                }
+            }
+        }
+
+        let item_title = |key: &str| -> Option<String> {
+            item.get(key)
+                .and_then(|value| value.as_str())
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .map(str::to_string)
+        };
+        match item.get("type").and_then(|value| value.as_str()).unwrap_or("") {
+            "custom-title" => {
+                if let Some(value) = item_title("customTitle") { custom_title = value; }
+            }
+            "ai-title" => {
+                if let Some(value) = item_title("aiTitle") { ai_title = value; }
+            }
+            "topic" => {
+                if let Some(value) = item_title("topic") { topic = value; }
+            }
+            "message" => {
+                let role = item.get("role").and_then(|value| value.as_str()).unwrap_or("");
+                if role != "user" && role != "assistant" { continue; }
+                total_messages += 1;
+                if role != "user" { continue; }
+                let text = codebuddy_content_text(item.get("content"));
+                if text.is_empty() || is_system_injected(&text) { continue; }
+                if !codebuddy_is_real_user_prompt(item) { continue; }
+                real_user_messages += 1;
+                if first_prompt.is_empty() {
+                    let safe = text.replace('\n', " ");
+                    let mut chars = safe.chars();
+                    let chunk: String = chars.by_ref().take(40).collect();
+                    first_prompt = if chars.next().is_some() { format!("{}...", chunk) } else { chunk };
+                }
+            }
+            _ => {}
+        }
+    }
+
+    // No real user prompt anywhere → a sub-agent / meta-only shell rather than
+    // a conversation the user had. Same filter as the Claude parser, so these
+    // never surface as phantom history cards.
+    if real_user_messages == 0 {
+        return None;
+    }
+    let mut title = if !custom_title.is_empty() { custom_title }
+        else if !ai_title.is_empty() { ai_title }
+        else if !topic.is_empty() { topic }
+        else { first_prompt };
+    if title.is_empty() {
+        title = "CodeBuddy Session".to_string();
+    }
+    let turn_count = if total_messages > 0 { std::cmp::max(1, (total_messages + 1) / 2) } else { 0 };
+
+    // Fallback date from file metadata (matches the other JSONL parsers: file
+    // mtime is the last activity, which is what the history list sorts on).
+    let mut updated_at = String::new();
+    if let Ok(meta) = std::fs::metadata(file_path) {
+        if let Ok(mod_time) = meta.modified() {
+            if let Ok(dur) = mod_time.duration_since(std::time::SystemTime::UNIX_EPOCH) {
+                updated_at = dur.as_millis().to_string();
+            }
+        }
+    }
+
+    Some(SavedSession {
+        id: format!("codebuddy_native_{}", session_id),
+        name: title,
+        tool: "codebuddy".to_string(),
+        cwd,
+        session_token: Some(session_id),
+        saved_at: updated_at,
+        created_at: created_at.or_else(|| file_created_epoch_ms(file_path)),
+        file_path: Some(file_path.to_string_lossy().into_owned()),
+        turn_count: Some(turn_count),
+        git_context: None,
+        worktree_cwd: None,
+    })
+}
+
+/// Flatten a CodeBuddy history item's `content` (a string, or an array of
+/// `{type:"input_text"|"output_text"|"text", text}` blocks) to plain text.
+pub(super) fn codebuddy_content_text(content: Option<&serde_json::Value>) -> String {
+    let Some(content) = content else { return String::new() };
+    if let Some(text) = content.as_str() {
+        return text.to_string();
+    }
+    let Some(blocks) = content.as_array() else { return String::new() };
+    blocks
+        .iter()
+        .filter_map(|block| block.get("text").and_then(|value| value.as_str()))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// Does this user row come from the human, or from the agent runtime?
+/// Mirrors CodeBuddy's own `isRealUserMessageForTitle`: skill preloads
+/// (`providerData.skipRun`), compaction bookkeeping
+/// (`providerData.isCompactInternal`, `providerData.agent === "compact"`) and
+/// incoming teammate mail (`providerData.teammateMessage.from`) are all stored
+/// as ordinary `role:"user"` rows. Without this they'd win the title and — for
+/// a session that holds nothing else — surface a phantom history card.
+pub(super) fn codebuddy_is_real_user_prompt(item: &serde_json::Value) -> bool {
+    let Some(provider) = item.get("providerData") else { return true };
+    let flag = |key: &str| provider.get(key).and_then(|value| value.as_bool()).unwrap_or(false);
+    if flag("skipRun") || flag("isCompactInternal") {
+        return false;
+    }
+    if provider
+        .get("agent")
+        .and_then(|value| value.as_str())
+        .is_some_and(|agent| agent.eq_ignore_ascii_case("compact"))
+    {
+        return false;
+    }
+    !provider
+        .get("teammateMessage")
+        .and_then(|value| value.get("from"))
+        .is_some_and(|from| !from.is_null())
+}
+
+/// Pi CLI sessions live at
+/// `~/.pi/agent/sessions/--<encoded-cwd>--/<ISO-ts>_<uuid>.jsonl` — same
+/// depth-2 layout as Claude Code, so the generic file-walker finds them.
+/// The per-line schema differs from Claude/Codex though: line 1 is a header
+/// `{type:"session", id, cwd, timestamp}` (id = the resume token, cwd lives
+/// here so no bucket-name decoding), and message rows are
+/// `{type:"message", message:{role, content:[{type:"text", text}]}}`.
+/// `pi --session <id>` resumes by (partial) UUID — see AGENT_PRESETS.
+pub(super) fn parse_pi_session_jsonl(file_path: &std::path::Path, tool: &str) -> Option<SavedSession> {
+    use std::io::BufRead;
+    let file = std::fs::File::open(file_path).ok()?;
+    let reader = std::io::BufReader::with_capacity(SESSION_READ_BUF, file);
+
+    // File stem is `<ISO-ts>_<uuid>` — fall back to the trailing UUID if the
+    // header row is missing/unparseable. `pi --session` accepts partial IDs,
+    // so even a stem-derived token resumes.
+    let stem = file_path.file_stem()?.to_string_lossy().to_string();
+    let stem_uuid = stem.rsplit_once('_').map(|(_, u)| u.to_string()).unwrap_or(stem.clone());
+    let mut session_id = stem_uuid;
+    let mut cwd = String::new();
+    let mut title = String::new();
+    let mut total_messages = 0;
+    let mut created_at = None;
+    let mut native_title = String::new();
+
+    for line in reader.lines().map_while(Result::ok) {
+        let Ok(value) = serde_json::from_str::<serde_json::Value>(&line) else { continue };
+        let row_type = value.get("type").and_then(|v| v.as_str()).unwrap_or("");
+
+        if tool == "omp" && matches!(row_type, "title" | "title_change" | "session") {
+            if let Some(text) = value.get("title").and_then(|v| v.as_str()).filter(|s| !s.trim().is_empty()) {
+                // A fixed-width title slot precedes the header in newer OMP files.
+                if row_type != "session" || native_title.is_empty() {
+                    native_title = text.to_string();
+                }
+            }
+        }
+
+        // Header: pull id (resume token) + cwd straight off line 1.
+        if row_type == "session" {
+            created_at = value
+                .get("timestamp")
+                .and_then(json_timestamp_string)
+                .or(created_at);
+            if let Some(id) = value.get("id").and_then(|v| v.as_str()) {
+                if !id.is_empty() { session_id = id.to_string(); }
+            }
+            if let Some(c) = value.get("cwd").and_then(|v| v.as_str()) {
+                if !c.is_empty() { cwd = c.to_string(); }
+            }
+            continue;
+        }
+
+        // Message rows: nested under `message.{role, content}`.
+        if row_type == "message" {
+            let Some(msg) = value.get("message").and_then(|v| v.as_object()) else { continue };
+            let role = msg.get("role").and_then(|v| v.as_str()).unwrap_or("");
+            if role == "user" || role == "assistant" {
+                total_messages += 1;
+            }
+            if !title.is_empty() || role != "user" { continue; }
+            let Some(content) = msg.get("content") else { continue };
+            let blocks = content.as_array().cloned().unwrap_or_else(|| vec![serde_json::json!({"type":"text", "text":content})]);
+            for block in &blocks {
+                let block_type = block.get("type").and_then(|v| v.as_str()).unwrap_or("");
+                if block_type != "text" && block_type != "input_text" { continue; }
+                let Some(text) = block.get("text").and_then(|v| v.as_str()) else { continue };
+                if is_system_injected(text) { continue; }
+                let safe = text.replace('\n', " ");
+                let mut chars = safe.chars();
+                let chunk: String = chars.by_ref().take(40).collect();
+                title = if chars.next().is_some() { format!("{}...", chunk) } else { chunk };
+                break;
+            }
+        }
+    }
+
+    // Fallback date from file mtime (matches parse_agent_jsonl — file mtime
+    // reflects last append = last activity, more accurate than the header's
+    // creation timestamp for "recent sessions" sorting).
+    let mut updated_at = String::new();
+    if let Ok(meta) = std::fs::metadata(file_path) {
+        if let Ok(mod_time) = meta.modified() {
+            if let Ok(dur) = mod_time.duration_since(std::time::SystemTime::UNIX_EPOCH) {
+                updated_at = dur.as_millis().to_string();
+            }
+        }
+    }
+    if !native_title.is_empty() { title = native_title; }
+    if tool == "omp" && total_messages == 0 { return None; }
+    if title.is_empty() {
+        title = if tool == "omp" { "Oh-My-Pi Session" } else { "Pi Session" }.to_string();
+    }
+    let turn_count = if total_messages > 0 { std::cmp::max(1, (total_messages + 1) / 2) } else { 0 };
+
+    Some(SavedSession {
+        id: format!("{}_native_{}", tool, session_id),
+        name: title,
+        tool: tool.to_string(),
+        cwd,
+        session_token: Some(session_id),
+        saved_at: updated_at,
+        created_at: created_at.or_else(|| file_created_epoch_ms(file_path)),
+        file_path: Some(file_path.to_string_lossy().into_owned()),
+        turn_count: Some(turn_count),
+        git_context: None,
+        worktree_cwd: None,
+    })
+}
+
+/// Strip Codex Desktop's synthetic "Files mentioned by the user"
+/// preamble from a user `input_text` block, returning the user's real
+/// request text for title display.
+///
+/// Codex Desktop (the ChatGPT desktop app's Codex/agent mode;
+/// `session_meta.originator == "Codex Desktop"`) packs attached-file
+/// references and the user's actual question into a single block:
+///
+/// ```text
+/// \n# Files mentioned by the user:\n\n## <file>: <path>\n...\n\n## My request for Codex:\n<real text>
+/// ```
+///
+/// Without stripping, the history title becomes the meaningless
+/// "# Files mentioned by the user: ## <file>..." preamble instead of
+/// the user's real first question. We split on either desktop request
+/// marker (`## My request for Codex:` or `## My request:`) and return
+/// what follows it (after the optional product name + colon);
+/// if the block has the preamble but no request marker (user attached
+/// files with no accompanying text), we return empty so the caller
+/// treats it like any other system injection and keeps scanning.
+/// Blocks without the preamble are returned unchanged.
+pub(crate) fn strip_codex_desktop_file_preamble(text: &str) -> &str {
+    const PREAMBLE: &str = "# Files mentioned by the user";
+    if !text.contains(PREAMBLE) {
+        return text;
+    }
+    // Desktop has emitted both forms over time:
+    //   `## My request for Codex:` (older)
+    //   `## My request:`           (current)
+    if let Some(idx) = text.find("## My request for") {
+        let after_marker = &text[idx + "## My request for".len()..];
+        // Skip the product name (e.g. "Codex") and the colon that ends
+        // the marker, then any leading whitespace.
+        return match after_marker.find(':') {
+            Some(colon) => after_marker[colon + 1..].trim_start(),
+            None => after_marker.trim_start(),
+        };
+    }
+    if let Some(idx) = text.find("## My request:") {
+        return text[idx + "## My request:".len()..].trim_start();
+    }
+    "" // files-only message, no real text -> skip
+}
+
+/// Codex CLI sessions live at
+/// `~/.codex/sessions/<YYYY>/<MM>/<DD>/rollout-<ts>-<uuid>.jsonl`.
+/// Schema:
+///   - first row: `{type: "session_meta", payload: {id, cwd, originator, ...}}`
+///     (`originator` is `"Codex Desktop"` for the ChatGPT desktop app's
+///     Codex/agent mode, `"codex-tui"` for the terminal CLI; both share
+///     the same row schema and are parsed here uniformly)
+///   - subsequent rows: `{type: "response_item", payload: {type: "message", role, content: [{type: "input_text", text}]}}`
+///     (also `user_message`, `event_msg`, `turn_context`, etc. — we ignore the non-message ones)
+pub(super) fn parse_codex_session_jsonl(file_path: &std::path::Path) -> Option<SavedSession> {
+    use std::io::BufRead;
+    let file = std::fs::File::open(file_path).ok()?;
+    let reader = std::io::BufReader::with_capacity(SESSION_READ_BUF, file);
+
+    let mut session_id = file_path.file_stem()?.to_string_lossy().to_string();
+    let mut cwd = String::new();
+    let mut git_context = crate::session_git_context::SessionGitObserver::default();
+    let mut updated_at = String::new();
+    let mut title = String::new();
+    let mut total_messages = 0;
+    let mut created_at = None;
+
+    for line in reader.lines().map_while(Result::ok) {
+        let Ok(value) = serde_json::from_str::<serde_json::Value>(&line) else {
+            continue;
+        };
+        git_context.observe(&value);
+        let row_type = value.get("type").and_then(|v| v.as_str()).unwrap_or("");
+        let payload = match value.get("payload") {
+            Some(p) => p,
+            None => continue,
+        };
+
+        // Session meta: pull id + cwd off the first row.
+        if row_type == "session_meta" {
+            created_at = payload
+                .get("timestamp")
+                .or_else(|| value.get("timestamp"))
+                .and_then(json_timestamp_string)
+                .or(created_at);
+            // Codex (incl. Codex Desktop) writes a separate rollout JSONL for
+            // every sub-agent it spawns, alongside the user's main session.
+            // Sub-agent rollouts inherit the parent's first user message, so
+            // without filtering they surface as duplicate top-level cards that
+            // multiply as the main session runs. See `is_codex_subagent_session`
+            // for the marker rationale. `forked_from_id` is deliberately NOT a
+            // marker: it identifies user-initiated fork/resume sessions, which
+            // are legitimate top-level user sessions and must stay visible.
+            if is_codex_subagent_session(payload) {
+                return None;
+            }
+            if let Some(id) = payload.get("id").and_then(|v| v.as_str()) {
+                if !id.is_empty() {
+                    session_id = id.to_string();
+                }
+            }
+            if let Some(c) = payload.get("cwd").and_then(|v| v.as_str()) {
+                if !c.is_empty() {
+                    cwd = c.to_string();
+                }
+            }
+            continue;
+        }
+
+        // Message rows: response_item with payload.type=message, or
+        // the dedicated user_message row type. Both wrap content as
+        // an array of `{type: "input_text", text}` blocks.
+        let payload_type = payload.get("type").and_then(|v| v.as_str()).unwrap_or("");
+        let is_msg = (row_type == "response_item" && payload_type == "message")
+            || row_type == "user_message";
+        if !is_msg {
+            continue;
+        }
+        let role = payload.get("role").and_then(|v| v.as_str()).unwrap_or("");
+        if role == "user" || role == "assistant" {
+            total_messages += 1;
+        }
+        if !title.is_empty() || role != "user" {
+            continue;
+        }
+        let Some(content_arr) = payload.get("content").and_then(|v| v.as_array()) else {
+            continue;
+        };
+        for block in content_arr {
+            let block_type = block.get("type").and_then(|v| v.as_str()).unwrap_or("");
+            if block_type != "input_text" && block_type != "text" {
+                continue;
+            }
+            let Some(raw) = block.get("text").and_then(|v| v.as_str()) else {
+                continue;
+            };
+            // Codex Desktop packs attached files + the real question
+            // into one `input_text` block prefixed with
+            // "# Files mentioned by the user"; strip that preamble so
+            // the title is the user's actual request, not the file
+            // list. Returns "" for files-only blocks (no text).
+            let text = strip_codex_desktop_file_preamble(raw);
+            if text.is_empty() || is_system_injected(text) {
+                continue; // skip AGENTS.md / environment_context wrappers
+            }
+            let safe = text.replace('\n', " ");
+            let mut chars = safe.chars();
+            let chunk: String = chars.by_ref().take(40).collect();
+            title = if chars.next().is_some() { format!("{}...", chunk) } else { chunk };
+            break;
+        }
+    }
+
+    if let Ok(meta) = std::fs::metadata(file_path) {
+        if let Ok(mod_time) = meta.modified() {
+            if let Ok(dur) = mod_time.duration_since(std::time::SystemTime::UNIX_EPOCH) {
+                updated_at = dur.as_millis().to_string();
+            }
+        }
+    }
+    if title.is_empty() {
+        title = "Codex Session".to_string();
+    }
+    let turn_count = if total_messages > 0 { std::cmp::max(1, (total_messages + 1) / 2) } else { 0 };
+
+    Some(SavedSession {
+        id: format!("codex_native_{}", session_id),
+        name: title,
+        tool: "codex".to_string(),
+        cwd,
+        session_token: Some(session_id),
+        saved_at: updated_at,
+        created_at: created_at.or_else(|| file_created_epoch_ms(file_path)),
+        file_path: Some(file_path.to_string_lossy().into_owned()),
+        turn_count: Some(turn_count),
+        git_context: git_context.finish(),
+        worktree_cwd: None,
+    })
+}
+
+/// Thread names Codex keeps for its own session picker, keyed by thread id.
+/// `~/.codex/session_index.jsonl` is append-only — one
+/// `{"id", "thread_name", "updated_at"}` row per (re)naming — so a later row
+/// for the same id replaces the earlier one.
+pub(super) fn parse_codex_thread_names(index: &str) -> std::collections::HashMap<String, String> {
+    let mut names = std::collections::HashMap::new();
+    for line in index.lines() {
+        let Ok(row) = serde_json::from_str::<serde_json::Value>(line) else { continue };
+        let field = |key: &str| {
+            row.get(key).and_then(|v| v.as_str()).map(str::trim).filter(|v| !v.is_empty())
+        };
+        if let (Some(id), Some(name)) = (field("id"), field("thread_name")) {
+            names.insert(id.to_string(), name.to_string());
+        }
+    }
+    names
+}
+
+/// Replace the first-prompt title of Codex rows with the thread name Codex
+/// itself shows. Applied to the finished list rather than inside
+/// `parse_codex_session_jsonl` because the name lives outside the rollout
+/// file: a rename leaves the rollout's stamp untouched, so a name baked into
+/// the per-file parse cache would go stale.
+pub(super) fn apply_codex_thread_names(history_dir: &std::path::Path, sessions: &mut [SavedSession]) {
+    if !sessions.iter().any(|s| s.tool == "codex") {
+        return;
+    }
+    // The index is a sibling of the configured sessions directory. Never
+    // fall back to another profile's index when the matching index is absent.
+    let Some(profile_dir) = history_dir.parent() else { return };
+    let Ok(index) = std::fs::read_to_string(profile_dir.join("session_index.jsonl")) else {
+        return;
+    };
+    let names = parse_codex_thread_names(&index);
+    for session in sessions.iter_mut().filter(|s| s.tool == "codex") {
+        if let Some(name) = session.session_token.as_ref().and_then(|id| names.get(id)) {
+            session.name = name.clone();
+        }
+    }
+}
+
+/// Whether a Codex `session_meta` payload describes an internal sub-agent
+/// rollout rather than a user-created top-level session. Codex (incl. Codex
+/// Desktop) writes one rollout JSONL per spawned sub-agent, which re-inherits
+/// the parent's first user message and would otherwise show up as a duplicate
+/// top-level card. Two conclusive markers (see Codex's `SessionMeta` in
+/// codex-rs/protocol/src/protocol.rs):
+///
+///   - `source` is an object `{"subagent": ...}`. This is `SessionSource::SubAgent`
+///     serialized - the structural source-of-truth. User sessions serialize
+///     `source` as a string ("cli", "vscode", ...), so the object-shape check
+///     alone separates the two. The parent thread id lives nested under
+///     `source.subagent.thread_spawn.parent_thread_id`, NOT as a top-level
+///     field, so a top-level `parent_thread_id` lookup would miss real
+///     sub-agent rollouts. This signal also catches older rollouts that
+///     predate the `thread_source` field.
+///   - `thread_source == "subagent"` (`ThreadSource::Subagent`).
+///
+/// Validated against real Codex Desktop data.
+pub(super) fn is_codex_subagent_session(payload: &serde_json::Value) -> bool {
+    // Primary: the `source` enum. `contains_key("subagent")` matches regardless
+    // of which `SubAgentSource` variant is nested (thread_spawn object, "review"
+    // unit variant, etc.).
+    if payload
+        .get("source")
+        .and_then(|v| v.as_object())
+        .map_or(false, |obj| obj.contains_key("subagent"))
+    {
+        return true;
+    }
+    // Secondary: the analytics `thread_source` classification.
+    payload
+        .get("thread_source")
+        .and_then(|v| v.as_str())
+        .map_or(false, |s| s == "subagent")
+}
+
+/// Parse a Qwen Code session jsonl. Layout:
+///   `~/.qwen/projects/<sanitized-cwd>/chats/<session>.jsonl`
+/// Each line: `{uuid, type: 'user'|'assistant'|'tool_result'|'system',
+///   sessionId, cwd, timestamp, message: {role, parts: [{text|functionCall|...}]}}`
+/// Qwen Code is descended from the (now-retired-as-launchpad-tile)
+/// Gemini CLI but its layout differs from upstream:
+///   • cwd is on every row (no separate projects.json reverse map needed)
+///   • text lives in `message.parts[].text`, not the top-level `content[]`
+///   • assistant rows use `type: 'assistant'`, not `'gemini'`
+pub(super) fn parse_qwen_session_jsonl(file_path: &std::path::Path) -> Option<SavedSession> {
+    use std::io::BufRead;
+    let file = std::fs::File::open(file_path).ok()?;
+    let reader = std::io::BufReader::with_capacity(SESSION_READ_BUF, file);
+
+    let mut session_id = file_path.file_stem()?.to_string_lossy().to_string();
+    let mut cwd = String::new();
+    let mut updated_at = String::new();
+    let mut title = String::new();
+    let mut total_messages = 0;
+    let mut created_at = None;
+
+    for line in reader.lines().map_while(Result::ok) {
+        let Ok(value) = serde_json::from_str::<serde_json::Value>(&line) else {
+            continue;
+        };
+        if let Some(s) = value.get("sessionId").and_then(|v| v.as_str()) {
+            if !s.is_empty() {
+                session_id = s.to_string();
+            }
+        }
+        if created_at.is_none() {
+            created_at = value.get("timestamp").and_then(json_timestamp_string);
+        }
+        if cwd.is_empty() {
+            if let Some(c) = value.get("cwd").and_then(|v| v.as_str()) {
+                cwd = c.to_string();
+            }
+        }
+        let row_type = value.get("type").and_then(|v| v.as_str()).unwrap_or("");
+        if row_type == "user" || row_type == "assistant" {
+            total_messages += 1;
+        }
+        // Title: first user message, first 40 chars.
+        if !title.is_empty() || row_type != "user" {
+            continue;
+        }
+        let Some(parts) = value
+            .get("message")
+            .and_then(|m| m.get("parts"))
+            .and_then(|v| v.as_array())
+        else {
+            continue;
+        };
+        for block in parts {
+            let Some(text) = block.get("text").and_then(|v| v.as_str()) else {
+                continue;
+            };
+            if is_system_injected(text) {
+                continue;
+            }
+            let safe = text.replace('\n', " ");
+            let mut chars = safe.chars();
+            let chunk: String = chars.by_ref().take(40).collect();
+            title = if chars.next().is_some() { format!("{}...", chunk) } else { chunk };
+            break;
+        }
+    }
+
+    if let Ok(meta) = std::fs::metadata(file_path) {
+        if let Ok(mod_time) = meta.modified() {
+            if let Ok(dur) = mod_time.duration_since(std::time::SystemTime::UNIX_EPOCH) {
+                updated_at = dur.as_millis().to_string();
+            }
+        }
+    }
+    if title.is_empty() {
+        title = "Qwen Session".to_string();
+    }
+    let turn_count = if total_messages > 0 { std::cmp::max(1, (total_messages + 1) / 2) } else { 0 };
+
+    Some(SavedSession {
+        id: format!("qwen_native_{}", session_id),
+        name: title,
+        tool: "qwen".to_string(),
+        cwd,
+        session_token: Some(session_id),
+        saved_at: updated_at,
+        created_at: created_at.or_else(|| file_created_epoch_ms(file_path)),
+        file_path: Some(file_path.to_string_lossy().into_owned()),
+        turn_count: Some(turn_count),
+        git_context: None,
+        worktree_cwd: None,
+    })
+}
+
+pub(super) fn validated_native_session_path(file_path: &str) -> Result<std::path::PathBuf, String> {
+    let path = std::path::Path::new(&file_path);
+
+    // Only allow .jsonl / .json files
+    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+    if ext != "jsonl" && ext != "json" {
+        return Err("Only .jsonl and .json files are allowed".to_string());
+    }
+
+    // Canonicalize to resolve any `..` or symlink traversal
+    let canonical_raw = path.canonicalize().map_err(|e| format!("Invalid path: {e}"))?;
+    // On Windows, canonicalize() prepends \\?\ (UNC extended-length prefix).
+    // Strip it so that starts_with() comparisons against plain home-dir paths work.
+    #[cfg(windows)]
+    let canonical = {
+        let s = canonical_raw.to_string_lossy();
+        if s.starts_with(r"\\?\") {
+            std::path::PathBuf::from(s[4..].to_string())
+        } else {
+            canonical_raw
+        }
+    };
+    #[cfg(not(windows))]
+    let canonical = canonical_raw;
+
+    // Must reside under a known agent data directory.
+    //
+    // Built-in defaults cover the standard install locations; any
+    // additional paths the user configured via tool_config.history_path
+    // are also allowed (otherwise the WSL-redirected scanner would find
+    // sessions but reading them back would 403). Path canonicalization
+    // already resolved symlinks, so this is a pure prefix check.
+    let home = dirs::home_dir().ok_or("Cannot determine home directory")?;
+    // Hermes Agent's data root is platform-dependent (`%LOCALAPPDATA%\hermes`
+    // on Windows, `~/.hermes` elsewhere, or `$HERMES_HOME` if set). See
+    // tools/hermes.rs::hermes_home. We also push the legacy `~/.hermes` when
+    // it's distinct from the resolved root so a user who exports HERMES_HOME
+    // mid-life can still read previously-collected sessions still sitting at
+    // the dotdir path.
+    let hermes_root = crate::tools::hermes::hermes_home();
+    let hermes_legacy = home.join(".hermes");
+    let mut allowed: Vec<std::path::PathBuf> = vec![
+        home.join(".claude"),
+        hermes_root.clone(),
+        home.join(".codex").join("sessions"),
+        home.join(".qwen").join("projects"),
+        home.join(".local").join("share").join("opencode"),
+        home.join(".openclaw").join("agents"),
+    ];
+    if hermes_legacy != hermes_root {
+        allowed.push(hermes_legacy);
+    }
+    for tool in ["claude", "hermes", "codex", "qwen", "opencode", "openclaw"] {
+        let cfg = crate::tool_config::get(tool).history_path;
+        if !cfg.is_empty() {
+            allowed.push(crate::tool_config::expand_path(&cfg));
+        }
+    }
+    // Registry-backed tools added after the original allowlist (Pi, Kimi,
+    // Grok, MiMo, Kilo, etc.) use the exact same resolved history root as the
+    // scanner. This also covers per-tool history-path overrides.
+    for tool in crate::tools::TOOLS {
+        if let Some(shape) = tool.history_shape.as_ref() {
+            allowed.push(history_root(tool, shape, &home));
+        }
+    }
+    if let Ok(kimi_home) = std::env::var("KIMI_CODE_HOME") {
+        if !kimi_home.is_empty() {
+            allowed.push(std::path::PathBuf::from(kimi_home));
+        }
+    }
+    if let Ok(grok_home) = std::env::var("GROK_HOME") {
+        if !grok_home.is_empty() {
+            allowed.push(std::path::PathBuf::from(grok_home).join("sessions"));
+        }
+    }
+    if !allowed.iter().any(|prefix| canonical.starts_with(prefix)) {
+        return Err("Access denied: path is outside allowed agent data directories".to_string());
+    }
+    Ok(canonical)
+}
+
+// ─── OpenCode Session Reader ─────────────────────────────────────────────────
+//
+// OpenCode stores chat history in these layouts depending on version:
+//   • SQLite V2:         `~/.local/share/opencode/opencode.db`
+//                         `session_v2` + `session_message` (inline content).
+//   • SQLite V1:         same DB, `session` + `message` + `part` tables.
+//   • JSON  (legacy):    `~/.local/share/opencode/storage/message/<sid>/*.json`
+//                         one file per message, content blocks inline.
+//
+// All are normalized to the same JSONL shape ConversationView understands
+// (Claude Code shape with `{message:{role, content[]}}`):
+//
+//   {"message": {"role": "user", "content": [{"type":"text","text":"..."}]}}
+//   {"message": {"role": "assistant", "content": [{"type":"text","text":"..."}]}}
+//
+// One line per message. Tool calls / patches / snapshots are dropped — the
+// preview only cares about the text the user/assistant said. If the session
+// has zero text turns, returns an empty string and the frontend renders the
+// "no readable conversation records" empty state.
+
+pub(super) struct DatabaseChatPage {
+    pub(super) data: String,
+    pub(super) history_cursor: u64,
+    pub(super) has_older: bool,
+}
+
+pub(super) fn sqlite_table_exists(conn: &rusqlite::Connection, table: &str) -> bool {
+    conn.query_row(
+        "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?1)",
+        [table],
+        |row| row.get(0),
+    ).unwrap_or(false)
+}
+
+pub(super) fn opencode_v2_session(conn: &rusqlite::Connection, session_id: &str) -> bool {
+    if !sqlite_table_exists(conn, "session_message") {
+        return false;
+    }
+    // The beta importer retains V1 rows. Prefer the V2 session even when
+    // empty, and also support earlier builds that kept the `session` table.
+    for table in ["session_v2", "session_message"] {
+        let column = if table == "session_v2" { "id" } else { "session_id" };
+        if sqlite_table_exists(conn, table) && conn.query_row(
+            &format!("SELECT EXISTS(SELECT 1 FROM {table} WHERE {column} = ?1)"),
+            [session_id],
+            |row| row.get::<_, bool>(0),
+        ).unwrap_or(false) {
+            return true;
+        }
+    }
+    false
+}
+
+/// Shared session/count source for history and heatmap. A migrated V2 row
+/// replaces its V1 row, including its archived state, so neither scan doubles it.
+pub(super) fn opencode_sessions_sql(conn: &rusqlite::Connection) -> String {
+    let has_v2_sessions = sqlite_table_exists(conn, "session_v2");
+    let has_v2_messages = sqlite_table_exists(conn, "session_message");
+    let v2_count = "(SELECT COUNT(*) FROM session_message WHERE session_id = s.id \
+                    AND type IN ('user', 'assistant'))";
+    let v1_count = "(SELECT COUNT(*) FROM message WHERE session_id = s.id)";
+    let mut queries = Vec::new();
+    for table in ["session_v2", "session"] {
+        if !sqlite_table_exists(conn, table) { continue; }
+        let count = if table == "session_v2" {
+            v2_count.to_string()
+        } else if has_v2_messages {
+            format!("CASE WHEN EXISTS(SELECT 1 FROM session_message WHERE session_id = s.id) \
+                     THEN {v2_count} ELSE {v1_count} END")
+        } else {
+            v1_count.to_string()
+        };
+        let filter = if table == "session" && has_v2_sessions {
+            "WHERE NOT EXISTS(SELECT 1 FROM session_v2 WHERE id = s.id)"
+        } else { "" };
+        queries.push(format!(
+            "SELECT s.id, s.title, s.directory, s.time_created, s.time_updated, \
+             s.time_archived, s.parent_id, {count} AS msg_count \
+             FROM {table} s {filter}"
+        ));
+    }
+    queries.join(" UNION ALL ")
+}
+
+pub(super) fn read_opencode_v2_session_page(
+    conn: &rusqlite::Connection,
+    session_id: &str,
+    before: Option<u64>,
+) -> Result<DatabaseChatPage, String> {
+    let total: u64 = conn.query_row(
+        "SELECT COUNT(*) FROM session_message WHERE session_id = ?1 AND type IN ('user', 'assistant')",
+        [session_id],
+        |row| row.get(0),
+    ).map_err(|e| format!("count V2 messages: {e}"))?;
+    let end = before.unwrap_or(total).min(total);
+    let start = end.saturating_sub(CHAT_WINDOW_ROWS as u64);
+    let mut stmt = conn.prepare(
+        "SELECT id, type, data FROM session_message WHERE session_id = ?1 \
+         AND type IN ('user', 'assistant') ORDER BY seq ASC LIMIT ?2 OFFSET ?3",
+    ).map_err(|e| format!("prepare V2 message query: {e}"))?;
+    let rows = stmt.query_map(rusqlite::params![session_id, end - start, start], |row| {
+        Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?, row.get::<_, String>(2)?))
+    }).map_err(|e| format!("query V2 messages: {e}"))?;
+    let mut out = String::new();
+    for row in rows.flatten() {
+        let (id, role, data) = row;
+        let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&data) else { continue; };
+        let texts: Vec<&str> = if role == "user" {
+            parsed.get("text").and_then(|v| v.as_str()).into_iter().collect()
+        } else {
+            parsed.get("content").and_then(|v| v.as_array()).into_iter().flatten()
+                .filter(|block| block.get("type").and_then(|v| v.as_str()) == Some("text"))
+                .filter_map(|block| block.get("text").and_then(|v| v.as_str()))
+                .collect()
+        };
+        let content: Vec<serde_json::Value> = texts.into_iter().filter(|text| !text.is_empty())
+            .map(|text| serde_json::json!({"type": "text", "text": text})).collect();
+        if content.is_empty() { continue; }
+        out.push_str(&serde_json::json!({"id": id, "message": {"role": role, "content": content}}).to_string());
+        out.push('\n');
+    }
+    Ok(DatabaseChatPage { data: out, history_cursor: start, has_older: start > 0 })
+}
+
+pub(super) fn read_opencode_sqlite_session_page(
+    db_path: &std::path::Path,
+    session_id: &str,
+    before: Option<u64>,
+) -> Result<DatabaseChatPage, String> {
+    use rusqlite::Connection;
+    let conn = Connection::open_with_flags(
+        db_path,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX,
+    )
+    .map_err(|e| format!("open opencode.db: {e}"))?;
+
+    if opencode_v2_session(&conn, session_id) {
+        return read_opencode_v2_session_page(&conn, session_id, before);
+    }
+
+    let total: u64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM message WHERE session_id = ?1",
+            [session_id],
+            |row| row.get(0),
+        )
+        .map_err(|e| format!("count messages: {e}"))?;
+    let end = before.unwrap_or(total).min(total);
+    let start = end.saturating_sub(CHAT_WINDOW_ROWS as u64);
+    let limit = end.saturating_sub(start);
+
+    // 1. Pull only this history window, ordered by creation time.
+    let mut msg_stmt = conn
+        .prepare(
+            "SELECT id, data FROM message WHERE session_id = ?1 \
+             ORDER BY time_created ASC LIMIT ?2 OFFSET ?3",
+        )
+        .map_err(|e| format!("prepare message query: {e}"))?;
+    let msg_rows = msg_stmt
+        .query_map(rusqlite::params![session_id, limit, start], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })
+        .map_err(|e| format!("query messages: {e}"))?;
+
+    // (message_id, role)
+    let mut messages: Vec<(String, String)> = Vec::new();
+    for row in msg_rows.flatten() {
+        let (id, data) = row;
+        if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&data) {
+            if let Some(role) = parsed.get("role").and_then(|v| v.as_str()) {
+                messages.push((id, role.to_string()));
+            }
+        }
+    }
+    if messages.is_empty() {
+        return Ok(DatabaseChatPage {
+            data: String::new(), history_cursor: start, has_older: start > 0,
+        });
+    }
+
+    // 2. Pull parts only for the same selected messages. The subquery keeps
+    // SQLite work proportional to one page even for whale sessions.
+    let mut part_stmt = conn
+        .prepare(
+            "SELECT p.message_id, p.data FROM part p \
+             JOIN (SELECT id FROM message WHERE session_id = ?1 \
+                   ORDER BY time_created ASC LIMIT ?2 OFFSET ?3) selected \
+               ON selected.id = p.message_id \
+             WHERE p.session_id = ?1 ORDER BY p.time_created ASC",
+        )
+        .map_err(|e| format!("prepare part query: {e}"))?;
+    let part_rows = part_stmt
+        .query_map(rusqlite::params![session_id, limit, start], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })
+        .map_err(|e| format!("query parts: {e}"))?;
+
+    use std::collections::HashMap;
+    let mut parts_by_msg: HashMap<String, Vec<String>> = HashMap::new();
+    for row in part_rows.flatten() {
+        let (msg_id, data) = row;
+        if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&data) {
+            // Only TextPart contributes to the preview transcript.
+            if parsed.get("type").and_then(|v| v.as_str()) == Some("text") {
+                if let Some(text) = parsed.get("text").and_then(|v| v.as_str()) {
+                    if !text.is_empty() {
+                        parts_by_msg.entry(msg_id).or_default().push(text.to_string());
+                    }
+                }
+            }
+        }
+    }
+
+    // 3. Emit one JSONL row per message, joining its text parts.
+    let mut out = String::new();
+    for (msg_id, role) in messages {
+        let text_blocks: Vec<serde_json::Value> = parts_by_msg
+            .get(&msg_id)
+            .map(|v| {
+                v.iter()
+                    .map(|t| {
+                        serde_json::json!({ "type": "text", "text": t })
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+        if text_blocks.is_empty() {
+            continue;
+        }
+        let line = serde_json::json!({
+            "id": msg_id,
+            "message": { "role": role, "content": text_blocks }
+        });
+        out.push_str(&line.to_string());
+        out.push('\n');
+    }
+    Ok(DatabaseChatPage { data: out, history_cursor: start, has_older: start > 0 })
+}
+
+pub(super) fn read_opencode_sqlite_session(
+    db_path: &std::path::Path,
+    session_id: &str,
+) -> Result<String, String> {
+    read_opencode_sqlite_session_page(db_path, session_id, None).map(|page| page.data)
+}
+
+pub(super) fn read_opencode_json_dir(message_dir: &std::path::Path) -> Result<String, String> {
+    // Legacy layout: storage/message/<sid>/<msg-id>.json. Each file is the
+    // full message info JSON (including role + content blocks). Sort by file
+    // name so chronological order of message creation is preserved (OpenCode
+    // file names are time-prefixed IDs).
+    let mut files: Vec<std::path::PathBuf> = std::fs::read_dir(message_dir)
+        .map_err(|e| format!("read message dir: {e}"))?
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| p.is_file())
+        .collect();
+    files.sort();
+
+    let mut out = String::new();
+    for path in files {
+        let raw = match std::fs::read_to_string(&path) {
+            Ok(s) => s,
+            Err(_) => continue,
+        };
+        let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&raw) else {
+            continue;
+        };
+        let role = match parsed.get("role").and_then(|v| v.as_str()) {
+            Some(r) => r.to_string(),
+            None => continue,
+        };
+        let mut text_blocks: Vec<serde_json::Value> = Vec::new();
+        if let Some(arr) = parsed.get("content").and_then(|v| v.as_array()) {
+            for block in arr {
+                if block.get("type").and_then(|v| v.as_str()) == Some("text") {
+                    if let Some(text) = block.get("text").and_then(|v| v.as_str()) {
+                        if !text.is_empty() {
+                            text_blocks.push(serde_json::json!({ "type": "text", "text": text }));
+                        }
+                    }
+                }
+            }
+        }
+        if text_blocks.is_empty() {
+            continue;
+        }
+        let message_id = path.file_stem()
+            .and_then(|value| value.to_str())
+            .unwrap_or("legacy-message");
+        let line = serde_json::json!({
+            "id": message_id,
+            "message": { "role": role, "content": text_blocks }
+        });
+        out.push_str(&line.to_string());
+        out.push('\n');
+    }
+    Ok(out)
+}
+
+pub(super) fn read_opencode_session(session_id: String) -> Result<String, String> {
+    let home = dirs::home_dir().ok_or("Cannot determine home directory")?;
+
+    // Honor user-configured OpenCode history path from
+    // ~/.coffee-cli/tools.json (same source the listing pass uses
+    // at line ~2129). Falls through to the platform default
+    // ~/.local/share/opencode when the user hasn't customized it.
+    let opencode_root = crate::tool_config::history_path_for(
+        "opencode",
+        home.join(".local").join("share").join("opencode"),
+    );
+
+    // Prefer current SQLite layout.
+    let db_path = opencode_root.join("opencode.db");
+    if db_path.is_file() {
+        return read_opencode_sqlite_session(&db_path, &session_id);
+    }
+
+    // Fall back to legacy JSON layout. Message dir name == session_id.
+    // Canonicalize and assert containment so a crafted session_id like
+    // "../../../etc" can't escape the OpenCode storage root. SQLite
+    // branch above is safe because session_id is only bound as a SQL
+    // parameter, not joined into a path.
+    let message_root = opencode_root.join("storage").join("message");
+    let message_dir = message_root.join(&session_id);
+    if message_dir.is_dir() {
+        let canonical_dir = std::fs::canonicalize(&message_dir)
+            .map_err(|e| format!("canonicalize session dir: {e}"))?;
+        let canonical_root = std::fs::canonicalize(&message_root)
+            .unwrap_or(message_root.clone());
+        if !canonical_dir.starts_with(&canonical_root) {
+            return Err("Access denied: session_id escapes OpenCode storage root".to_string());
+        }
+        return read_opencode_json_dir(&canonical_dir);
+    }
+
+    Err("OpenCode session storage not found".to_string())
+}
+
+/// Resolve MiMo Code's SQLite db (Xiaomi's OpenCode fork — identical Drizzle
+/// schema). Primary path is `~/.local/share/mimocode/mimocode.db`, with the
+/// older/atypical `~/.config/mimocode/mimocode.db` as fallback. None when
+/// neither exists.
+pub(super) fn mimocode_db(home: &std::path::Path) -> Option<std::path::PathBuf> {
+    // Primary root honors any tools.json history-path override (the field
+    // ToolConfigModal surfaces for MiMo Code), defaulting to the descriptor's
+    // declared `.local/share/mimocode` root — same contract as opencode_root /
+    // hermes_state_db. `.config/mimocode` stays a secondary fallback for
+    // atypical installs that the single override path can't express.
+    let primary_root = crate::tools::find("mimocode")
+        .and_then(|tool| {
+            tool.history_shape
+                .as_ref()
+                .map(|shape| crate::tool_config::history_path_for(tool.id, shape.join_under(home)))
+        })
+        .unwrap_or_else(|| home.join(".local").join("share").join("mimocode"));
+    let candidates = [
+        primary_root.join("mimocode.db"),
+        home.join(".config").join("mimocode").join("mimocode.db"),
+    ];
+    candidates.into_iter().find(|p| p.is_file())
+}
+
+/// Resolve Kilo Code's SQLite db (an OpenCode fork — identical Drizzle
+/// schema). XDG data root is `~/.local/share/kilo/kilo.db` (`app = "kilo"` in
+/// the fork's packages/core/src/global.ts; the fork also honors a `KILO_DB`
+/// env override that Coffee CLI does not read). None when absent.
+pub(super) fn kilo_db(home: &std::path::Path) -> Option<std::path::PathBuf> {
+    let primary_root = crate::tools::find("kilo")
+        .and_then(|tool| {
+            tool.history_shape
+                .as_ref()
+                .map(|shape| crate::tool_config::history_path_for(tool.id, shape.join_under(home)))
+        })
+        .unwrap_or_else(|| home.join(".local").join("share").join("kilo"));
+    let db = primary_root.join("kilo.db");
+    db.is_file().then_some(db)
+}
+
+/// Read one MiMo Code session transcript. Same schema as OpenCode, so this
+/// just points `read_opencode_sqlite_session` at `mimocode.db`.
+pub(super) fn read_mimocode_session(session_token: String) -> Result<String, String> {
+    let home = dirs::home_dir().ok_or("Cannot determine home directory")?;
+    let db = mimocode_db(&home).ok_or("MiMo Code session storage not found")?;
+    read_opencode_sqlite_session(&db, &session_token)
+}
+
+#[derive(Serialize)]
+pub(super) struct ChatSessionRead {
+    pub(super) data: String,
+    pub(super) cursor: Option<u64>,
+    pub(super) history_cursor: Option<u64>,
+    pub(super) has_older: bool,
+    pub(super) revision: String,
+    pub(super) append: bool,
+    pub(super) prepend: bool,
+    pub(super) unchanged: bool,
+}
+
+#[derive(Serialize)]
+pub(super) struct ChatNavigationRow {
+    pub(super) data: String,
+    pub(super) cursor: u64,
+}
+
+/// Read one session through the storage adapter for its tool. Append-only
+/// JSONL sources return only bytes written after `cursor`; database and JSON
+/// sources return a full snapshot only when their revision changed.
+#[tauri::command]
+pub(super) async fn read_chat_session(
+    session: SavedSession,
+    cursor: Option<u64>,
+    revision: Option<String>,
+    before: Option<u64>,
+) -> Result<ChatSessionRead, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        read_chat_session_blocking(session, cursor, revision.as_deref(), before)
+    })
+    .await
+    .map_err(|e| format!("Chat session task join failed: {e}"))?
+}
+
+#[tauri::command]
+pub(super) async fn read_chat_navigation(session: SavedSession) -> Result<Vec<ChatNavigationRow>, String> {
+    tauri::async_runtime::spawn_blocking(move || read_chat_navigation_blocking(session))
+        .await
+        .map_err(|error| format!("Chat navigation task join failed: {error}"))?
+}
+
+pub(super) fn navigation_candidate(line: &str) -> bool {
+    // Native writers serialize compact JSON in practice; the frontend's
+    // normal transcript parser remains the final injected-message filter.
+    line.contains("\"role\":\"user\"") ||
+        line.contains("\"role\": \"user\"") ||
+        line.contains("context.append_message")
+}
+
+pub(super) fn push_navigation_lines(
+    rows: &mut Vec<ChatNavigationRow>,
+    data: &str,
+    base_cursor: u64,
+    exact_byte_offsets: bool,
+) {
+    let mut offset = 0u64;
+    for line in data.split_inclusive('\n') {
+        if navigation_candidate(line) {
+            rows.push(ChatNavigationRow {
+                data: line.to_string(),
+                cursor: if exact_byte_offsets { base_cursor + offset } else { base_cursor },
+            });
+        }
+        offset += line.len() as u64;
+    }
+}
+
+pub(super) fn read_chat_navigation_blocking(
+    session: SavedSession,
+) -> Result<Vec<ChatNavigationRow>, String> {
+    if let Some(path) = chat_session_file_path(&session)? {
+        if path.extension().and_then(|extension| extension.to_str()) != Some("jsonl") {
+            let data = std::fs::read_to_string(&path).map_err(|error| error.to_string())?;
+            let mut rows = Vec::new();
+            if let Ok(root) = serde_json::from_str::<serde_json::Value>(&data) {
+                let root_id = root
+                    .get("uuid")
+                    .or_else(|| root.get("id"))
+                    .or_else(|| root.get("session_id"))
+                    .and_then(|value| value.as_str())
+                    .unwrap_or("document");
+                if let Some(messages) = root.get("messages").and_then(|value| value.as_array()) {
+                    for (index, message) in messages.iter().enumerate() {
+                        if message.get("role").and_then(|value| value.as_str()) != Some("user") {
+                            continue;
+                        }
+                        rows.push(ChatNavigationRow {
+                            data: serde_json::json!({
+                                "id": format!("{root_id}:message-{index}"),
+                                "message": message,
+                            })
+                            .to_string(),
+                            cursor: 0,
+                        });
+                    }
+                    return Ok(rows);
+                }
+            }
+            if navigation_candidate(&data) {
+                rows.push(ChatNavigationRow { data, cursor: 0 });
+            }
+            return Ok(rows);
+        }
+
+        use std::io::BufRead;
+        let file = std::fs::File::open(&path).map_err(|error| error.to_string())?;
+        let mut reader = std::io::BufReader::new(file);
+        let mut rows = Vec::new();
+        let mut line = Vec::new();
+        let mut cursor = 0u64;
+        loop {
+            line.clear();
+            let consumed = reader.read_until(b'\n', &mut line).map_err(|error| error.to_string())?;
+            if consumed == 0 { break; }
+            let text = String::from_utf8_lossy(&line);
+            if navigation_candidate(&text) {
+                rows.push(ChatNavigationRow { data: text.into_owned(), cursor });
+            }
+            cursor += consumed as u64;
+        }
+        return Ok(rows);
+    }
+
+    let token = session.session_token.clone().unwrap_or_default();
+    if !token.is_empty() && database_chat_revision(&session.tool, &token).is_some() {
+        let mut page_groups: Vec<Vec<ChatNavigationRow>> = Vec::new();
+        let mut before = None;
+        loop {
+            let Some(page) = database_chat_page(&session.tool, &token, before) else { break };
+            let page = page?;
+            let mut page_rows = Vec::new();
+            push_navigation_lines(&mut page_rows, &page.data, page.history_cursor, false);
+            page_groups.push(page_rows);
+            if !page.has_older { break; }
+            before = Some(page.history_cursor);
+        }
+        page_groups.reverse();
+        return Ok(page_groups.into_iter().flatten().collect());
+    }
+
+    // Legacy directory/document adapters do not expose an ordinal query, but
+    // their normalized JSONL projection is still cheap to reduce to user rows
+    // here and never crosses IPC as a full transcript.
+    let data = match session.tool.as_str() {
+        "opencode" if !token.is_empty() => read_opencode_session(token),
+        _ => Err("Session navigation adapter is unavailable".to_string()),
+    }?;
+    let mut rows = Vec::new();
+    push_navigation_lines(&mut rows, &data, 0, true);
+    Ok(rows)
+}
+
+// A conversation window is bounded by both row count and bytes. The row cap
+// keeps ordinary chats close to Zeron's recent-tail strategy, while the byte
+// cap prevents one turn with a large tool payload from monopolising the IPC
+// channel and React's Markdown pipeline.
+pub(super) const CHAT_WINDOW_ROWS: usize = 192;
+pub(super) const CHAT_WINDOW_BYTES: u64 = 1024 * 1024;
+
+pub(super) fn jsonl_window_bounds(bytes: &[u8], absolute_start: u64) -> (usize, u64) {
+    let mut aligned_start = 0usize;
+    if absolute_start > 0 {
+        // The byte window can begin in the middle of a UTF-8 codepoint or JSON
+        // row. Drop only that leading fragment. Its complete row remains
+        // reachable from the previous history page, whose end is the aligned
+        // absolute offset returned here.
+        aligned_start = bytes
+            .iter()
+            .position(|byte| *byte == b'\n')
+            .map_or(bytes.len(), |index| index + 1);
+    }
+
+    let aligned = &bytes[aligned_start..];
+    let mut line_starts = Vec::with_capacity(CHAT_WINDOW_ROWS + 1);
+    if !aligned.is_empty() {
+        line_starts.push(0usize);
+        for (index, byte) in aligned.iter().enumerate() {
+            if *byte == b'\n' && index + 1 < aligned.len() {
+                line_starts.push(index + 1);
+            }
+        }
+    }
+    let selected_line = line_starts.len().saturating_sub(CHAT_WINDOW_ROWS);
+    let selected_start = aligned_start + line_starts.get(selected_line).copied().unwrap_or(0);
+    (selected_start, absolute_start + selected_start as u64)
+}
+
+pub(super) fn decode_window(bytes: Vec<u8>) -> (String, u64) {
+    match String::from_utf8(bytes) {
+        Ok(data) => {
+            let consumed = data.len() as u64;
+            (data, consumed)
+        }
+        Err(error) => {
+            // A live writer may have flushed only part of the last UTF-8
+            // codepoint. Return the valid prefix and let the append cursor
+            // retry the remaining bytes on the next poll.
+            let valid = error.utf8_error().valid_up_to();
+            let bytes = error.into_bytes();
+            (String::from_utf8_lossy(&bytes[..valid]).into_owned(), valid as u64)
+        }
+    }
+}
+
+pub(super) fn read_jsonl_file_window(
+    path: &std::path::Path,
+    end: u64,
+) -> Result<(String, u64, u64, bool), String> {
+    use std::io::{Read, Seek, SeekFrom};
+
+    let read_start = end.saturating_sub(CHAT_WINDOW_BYTES);
+    let mut file = std::fs::File::open(path).map_err(|error| error.to_string())?;
+    file.seek(SeekFrom::Start(read_start)).map_err(|error| error.to_string())?;
+    let mut bytes = vec![0u8; end.saturating_sub(read_start) as usize];
+    file.read_exact(&mut bytes).map_err(|error| error.to_string())?;
+    let (relative_start, history_cursor) = jsonl_window_bounds(&bytes, read_start);
+    if read_start > 0 && relative_start == bytes.len() {
+        // One JSONL row is larger than the IPC window. Scanning farther back
+        // into the same row would either allocate the entire tool payload or
+        // loop forever with an unchanged history cursor. Find that row's
+        // beginning with small reverse probes and omit it from the preview;
+        // older normal rows remain available and live polling resumes at EOF.
+        let mut probe_end = read_start;
+        let oversized_row_start = loop {
+            if probe_end == 0 { break 0; }
+            let probe_start = probe_end.saturating_sub(64 * 1024);
+            file.seek(SeekFrom::Start(probe_start)).map_err(|error| error.to_string())?;
+            let mut probe = vec![0u8; probe_end.saturating_sub(probe_start) as usize];
+            file.read_exact(&mut probe).map_err(|error| error.to_string())?;
+            if let Some(index) = probe.iter().rposition(|byte| *byte == b'\n') {
+                break probe_start + index as u64 + 1;
+            }
+            probe_end = probe_start;
+        };
+        let (data, history_cursor, valid_end, _) =
+            read_jsonl_file_window(path, oversized_row_start)?;
+        return Ok((data, history_cursor, valid_end, true));
+    }
+    let (data, consumed) = decode_window(bytes[relative_start..].to_vec());
+    Ok((data, history_cursor, history_cursor + consumed, false))
+}
+
+pub(super) fn slice_jsonl_window(data: &str, end: u64) -> (String, u64) {
+    let bytes = data.as_bytes();
+    let safe_end = (end as usize).min(bytes.len());
+    let read_start = (safe_end as u64).saturating_sub(CHAT_WINDOW_BYTES) as usize;
+    let (relative_start, history_cursor) = jsonl_window_bounds(
+        &bytes[read_start..safe_end],
+        read_start as u64,
+    );
+    let start = read_start + relative_start;
+    (data[start..safe_end].to_string(), history_cursor)
+}
+
+pub(super) fn chat_session_file_path(session: &SavedSession) -> Result<Option<std::path::PathBuf>, String> {
+    let path = match session.tool.as_str() {
+        "opencode" | "mimocode" | "kilo" => return Ok(None),
+        "hermes" if session.file_path.is_none() => return Ok(None),
+        "kimicode" => std::path::Path::new(
+            session.file_path.as_deref().ok_or("Kimi Code session path is missing")?,
+        )
+        .join("agents")
+        .join("main")
+        .join("wire.jsonl"),
+        "grok" => std::path::Path::new(
+            session.file_path.as_deref().ok_or("Grok session path is missing")?,
+        )
+        .join("chat_history.jsonl"),
+        _ => std::path::PathBuf::from(
+            session.file_path.as_deref().ok_or("Session transcript path is missing")?,
+        ),
+    };
+    Ok(Some(validated_native_session_path(&path.to_string_lossy())?))
+}
+
+pub(super) fn content_revision(content: &str) -> String {
+    use std::hash::{Hash, Hasher};
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    content.hash(&mut hasher);
+    format!("content:{:016x}", hasher.finish())
+}
+
+pub(super) fn drizzle_session_revision(
+    db_path: &std::path::Path,
+    session_token: &str,
+) -> Result<String, String> {
+    let conn = rusqlite::Connection::open_with_flags(
+        db_path,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX,
+    )
+    .map_err(|error| error.to_string())?;
+    if opencode_v2_session(&conn, session_token) {
+        let (count, updated, seq): (i64, i64, i64) = conn.query_row(
+            "SELECT COUNT(*), COALESCE(MAX(time_updated), 0), COALESCE(MAX(seq), 0) \
+             FROM session_message WHERE session_id = ?1 AND type IN ('user', 'assistant')",
+            [session_token],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        ).map_err(|error| error.to_string())?;
+        return Ok(format!("opencode-v2:{count}:{updated}:{seq}"));
+    }
+    let (message_count, message_updated, part_count, part_updated): (i64, i64, i64, i64) = conn
+        .query_row(
+            "SELECT \
+                (SELECT COUNT(*) FROM message WHERE session_id = ?1), \
+                COALESCE((SELECT MAX(time_updated) FROM message WHERE session_id = ?1), 0), \
+                (SELECT COUNT(*) FROM part WHERE session_id = ?1), \
+                COALESCE((SELECT MAX(time_updated) FROM part WHERE session_id = ?1), 0)",
+            [session_token],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+        )
+        .map_err(|error| error.to_string())?;
+    Ok(format!(
+        "drizzle:{message_count}:{message_updated}:{part_count}:{part_updated}"
+    ))
+}
+
+pub(super) fn hermes_session_revision(
+    db_path: &std::path::Path,
+    session_token: &str,
+) -> Result<String, String> {
+    let conn = rusqlite::Connection::open_with_flags(
+        db_path,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX,
+    )
+    .map_err(|error| error.to_string())?;
+    if let Ok((message_count, last_activity, tool_call_count)) = conn.query_row(
+        "SELECT message_count, COALESCE(last_activity_at, 0), tool_call_count \
+         FROM sessions WHERE id = ?1",
+        [session_token],
+        |row| Ok((row.get::<_, i64>(0)?, row.get::<_, f64>(1)?, row.get::<_, i64>(2)?)),
+    ) {
+        return Ok(format!(
+            "hermes:{message_count}:{last_activity}:{tool_call_count}"
+        ));
+    }
+
+    // Older Hermes databases may not have last_activity_at/tool_call_count.
+    // Their messages table is still narrow-indexable by session_id, so retain
+    // a compatibility fallback without reading or decoding content bodies.
+    let (message_count, max_id, max_timestamp): (i64, i64, f64) = conn.query_row(
+        "SELECT COUNT(*), COALESCE(MAX(id), 0), COALESCE(MAX(timestamp), 0) \
+         FROM messages WHERE session_id = ?1",
+        [session_token],
+        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+    )
+    .map_err(|error| error.to_string())?;
+    Ok(format!("hermes-legacy:{message_count}:{max_id}:{max_timestamp}"))
+}
+
+/// Return a cheap database revision without materializing message bodies.
+/// Older/variant schemas fall back to the content hash path so compatibility
+/// is preserved even if a fork lacks one of the timestamp columns.
+pub(super) fn database_chat_revision(tool: &str, session_token: &str) -> Option<String> {
+    let home = dirs::home_dir()?;
+    match tool {
+        "opencode" => {
+            let root = crate::tool_config::history_path_for(
+                "opencode",
+                home.join(".local").join("share").join("opencode"),
+            );
+            let db = root.join("opencode.db");
+            db.is_file().then(|| drizzle_session_revision(&db, session_token).ok()).flatten()
+        }
+        "mimocode" => mimocode_db(&home)
+            .and_then(|db| drizzle_session_revision(&db, session_token).ok()),
+        "kilo" => kilo_db(&home)
+            .and_then(|db| drizzle_session_revision(&db, session_token).ok()),
+        "hermes" => hermes_state_db(&home)
+            .and_then(|db| hermes_session_revision(&db, session_token).ok()),
+        _ => None,
+    }
+}
+
+pub(super) fn database_chat_page(
+    tool: &str,
+    session_token: &str,
+    before: Option<u64>,
+) -> Option<Result<DatabaseChatPage, String>> {
+    let home = dirs::home_dir()?;
+    match tool {
+        "opencode" => {
+            let root = crate::tool_config::history_path_for(
+                "opencode",
+                home.join(".local").join("share").join("opencode"),
+            );
+            let db = root.join("opencode.db");
+            db.is_file().then(|| read_opencode_sqlite_session_page(&db, session_token, before))
+        }
+        "mimocode" => mimocode_db(&home)
+            .map(|db| read_opencode_sqlite_session_page(&db, session_token, before)),
+        "kilo" => kilo_db(&home)
+            .map(|db| read_opencode_sqlite_session_page(&db, session_token, before)),
+        "hermes" => Some(read_hermes_session_page(session_token, before)),
+        _ => None,
+    }
+}
+
+pub(super) fn read_chat_session_blocking(
+    session: SavedSession,
+    cursor: Option<u64>,
+    known_revision: Option<&str>,
+    before: Option<u64>,
+) -> Result<ChatSessionRead, String> {
+    if let Some(path) = chat_session_file_path(&session)? {
+        use std::io::{Read, Seek, SeekFrom};
+        let metadata = std::fs::metadata(&path).map_err(|e| e.to_string())?;
+        let len = metadata.len();
+        let modified = metadata
+            .modified()
+            .ok()
+            .and_then(|value| value.duration_since(std::time::SystemTime::UNIX_EPOCH).ok())
+            .map(|value| value.as_nanos())
+            .unwrap_or(0);
+        let next_revision = format!("file:{len}:{modified}");
+        if before.is_none() && known_revision == Some(next_revision.as_str()) && cursor == Some(len) {
+            return Ok(ChatSessionRead {
+                data: String::new(), cursor: Some(len), history_cursor: None,
+                has_older: false, revision: next_revision, append: true,
+                prepend: false, unchanged: true,
+            });
+        }
+
+        let is_jsonl = path.extension().and_then(|value| value.to_str()) == Some("jsonl");
+        let needs_snapshot = cursor.is_none() || cursor.is_some_and(|offset| offset > len) ||
+            (cursor == Some(len) && known_revision != Some(next_revision.as_str()));
+        if is_jsonl && (before.is_some() || needs_snapshot) {
+            let window_end = before.unwrap_or(len).min(len);
+            let (data, history_cursor, valid_end, skipped_oversized) =
+                read_jsonl_file_window(&path, window_end)?;
+            return Ok(ChatSessionRead {
+                data,
+                // History reads must not rewind the live append cursor. The
+                // frontend retains its existing cursor for prepend responses.
+                cursor: before.is_some().then_some(len).or(Some(
+                    if skipped_oversized { len } else { valid_end }
+                )),
+                history_cursor: Some(history_cursor),
+                has_older: history_cursor > 0,
+                revision: next_revision,
+                append: false,
+                prepend: before.is_some(),
+                unchanged: false,
+            });
+        }
+        let can_append = is_jsonl && cursor.is_some_and(|offset| offset < len);
+        let offset = if can_append { cursor.unwrap_or(0) } else { 0 };
+        let mut file = std::fs::File::open(&path).map_err(|e| e.to_string())?;
+        if offset > 0 {
+            file.seek(SeekFrom::Start(offset)).map_err(|e| e.to_string())?;
+        }
+        let mut bytes = Vec::with_capacity((len.saturating_sub(offset)).min(1_048_576) as usize);
+        file.read_to_end(&mut bytes).map_err(|e| e.to_string())?;
+        let (data, consumed) = match String::from_utf8(bytes) {
+            Ok(data) => {
+                let consumed = data.len() as u64;
+                (data, consumed)
+            }
+            Err(error) => {
+                // A poll can land between bytes of one UTF-8 codepoint. Stop
+                // at the last valid boundary and retry the remainder from the
+                // returned cursor instead of inserting U+FFFD permanently.
+                let valid = error.utf8_error().valid_up_to();
+                let bytes = error.into_bytes();
+                (String::from_utf8_lossy(&bytes[..valid]).into_owned(), valid as u64)
+            }
+        };
+        return Ok(ChatSessionRead {
+            data,
+            cursor: Some(offset + consumed),
+            history_cursor: None,
+            has_older: false,
+            revision: next_revision,
+            append: can_append,
+            prepend: false,
+            unchanged: false,
+        });
+    }
+
+    let token = session.session_token.clone().unwrap_or_default();
+    let cheap_revision = (!token.is_empty())
+        .then(|| database_chat_revision(&session.tool, &token))
+        .flatten();
+    if let Some(next_revision) = cheap_revision.as_ref() {
+        if before.is_none() && known_revision == Some(next_revision.as_str()) {
+            return Ok(ChatSessionRead {
+                data: String::new(),
+                cursor: None,
+                history_cursor: None,
+                has_older: false,
+                revision: next_revision.clone(),
+                append: false,
+                prepend: false,
+                unchanged: true,
+            });
+        }
+    }
+    if let Some(page) = (cheap_revision.is_some() && !token.is_empty())
+        .then(|| database_chat_page(&session.tool, &token, before))
+        .flatten()
+    {
+        let page = page?;
+        return Ok(ChatSessionRead {
+            data: page.data,
+            cursor: None,
+            history_cursor: Some(page.history_cursor),
+            has_older: page.has_older,
+            revision: cheap_revision.unwrap_or_default(),
+            append: false,
+            prepend: before.is_some(),
+            unchanged: false,
+        });
+    }
+    let data = match session.tool.as_str() {
+        "opencode" if !token.is_empty() => read_opencode_session(token),
+        "mimocode" if !token.is_empty() => read_mimocode_session(token),
+        "kilo" if !token.is_empty() => {
+            let home = dirs::home_dir().ok_or("Cannot determine home directory")?;
+            let db = kilo_db(&home).ok_or("Kilo Code session storage not found")?;
+            read_opencode_sqlite_session(&db, &token)
+        }
+        "hermes" if !token.is_empty() => read_hermes_session(token),
+        _ => Err("Session storage adapter is unavailable".to_string()),
+    }?;
+    let next_revision = cheap_revision.unwrap_or_else(|| content_revision(&data));
+    let unchanged = before.is_none() && known_revision == Some(next_revision.as_str());
+    let data_len = data.len() as u64;
+    let (window, history_cursor) = if unchanged {
+        (String::new(), 0)
+    } else {
+        slice_jsonl_window(&data, before.unwrap_or(data_len).min(data_len))
+    };
+    Ok(ChatSessionRead {
+        data: window,
+        cursor: None,
+        history_cursor: (!unchanged).then_some(history_cursor),
+        has_older: !unchanged && history_cursor > 0,
+        revision: next_revision,
+        append: false,
+        prepend: before.is_some(),
+        unchanged,
+    })
+}
+
+// ── Kimi Code (Moonshot `kimi`) — index-based second pass ──────────────
+// Sessions live under a flat `~/.kimi-code/` root (same path on every OS;
+// override `KIMI_CODE_HOME`) in an INDEX layout, not a dir of JSONL and not
+// SQLite: `session_index.jsonl` is the entry point (one line per main
+// session: sessionId/sessionDir/workDir), with per-session metadata at
+// `<sessionDir>/state.json` and the full conversation at
+// `<sessionDir>/agents/main/wire.jsonl`. Bypasses the generic mtime-then-
+// parse pipeline like OpenCode/MiMo — KimiIndex is skipped in
+// collect_registry_history_candidates and emitted here instead.
+
+/// Resolve Kimi Code's data root. `KIMI_CODE_HOME` env (Kimi's own override,
+/// per the data-locations doc) wins so a user who moved the data dir doesn't
+/// also need to configure our tools.json override; otherwise the registry-
+/// declared `~/.kimi-code/` (honoring any tools.json history-path override).
+/// Flat on every OS — no XDG / `%APPDATA%` split (verified).
+pub(super) fn kimi_root(home: &std::path::Path) -> Option<std::path::PathBuf> {
+    if let Ok(env_home) = std::env::var("KIMI_CODE_HOME") {
+        if !env_home.is_empty() {
+            let p = std::path::PathBuf::from(env_home);
+            if p.is_dir() {
+                return Some(p);
+            }
+        }
+    }
+    let path = crate::tools::find("kimicode")
+        .and_then(|t| t.history_shape.as_ref())
+        .map(|s| crate::tool_config::history_path_for("kimicode", s.join_under(home)))?;
+    if path.is_dir() { Some(path) } else { None }
+}
+
+/// Kimi Code history second pass. Reads `session_index.jsonl`, stats each
+/// `state.json` for mtime to pre-select the newest 200 (mirrors the JSONL
+/// pipeline's stat-first/parse-top-N discipline), then reads each survivor's
+/// `state.json` for title / updatedAt. Sub-agents (`agents/agent-0/`) are
+/// nested under each main session's dir and never get their own index entry,
+/// so the index yields main sessions only — no parent_id filtering needed.
+pub(super) fn find_kimi_sessions(home: &std::path::Path, result: &mut Vec<SavedSession>) {
+    let Some(root) = kimi_root(home) else { return };
+    let Ok(index) = std::fs::read_to_string(root.join("session_index.jsonl")) else { return };
+
+    // (state.json mtime, sessionDir, sessionId, workDir)
+    let mut candidates: Vec<(std::time::SystemTime, std::path::PathBuf, String, String)> = Vec::new();
+    for line in index.lines() {
+        let line = line.trim();
+        if line.is_empty() { continue; }
+        let Ok(v) = serde_json::from_str::<serde_json::Value>(line) else { continue };
+        let Some(session_id) = v.get("sessionId").and_then(|x| x.as_str()) else { continue };
+        let Some(session_dir) = v.get("sessionDir").and_then(|x| x.as_str()) else { continue };
+        let work_dir = v.get("workDir").and_then(|x| x.as_str()).unwrap_or("").to_string();
+        let state_path = std::path::Path::new(session_dir).join("state.json");
+        let mtime = std::fs::metadata(&state_path)
+            .and_then(|m| m.modified())
+            .unwrap_or(std::time::SystemTime::UNIX_EPOCH);
+        candidates.push((mtime, std::path::PathBuf::from(session_dir), session_id.to_string(), work_dir));
+    }
+    candidates.sort_by(|a, b| b.0.cmp(&a.0));
+    const KIMI_HISTORY_LIMIT: usize = 200;
+    candidates.truncate(KIMI_HISTORY_LIMIT);
+
+    for (mtime, session_dir, session_id, work_dir) in &candidates {
+        let Ok(state_bytes) = std::fs::read_to_string(session_dir.join("state.json")) else { continue };
+        let Ok(state) = serde_json::from_str::<serde_json::Value>(&state_bytes) else { continue };
+
+        let title = state
+            .get("title").and_then(|x| x.as_str()).filter(|s| !s.is_empty())
+            .or_else(|| state.get("lastPrompt").and_then(|x| x.as_str()))
+            .filter(|s| !s.is_empty())
+            .map(|s| {
+                let safe = s.replace('\n', " ");
+                let mut chars = safe.chars();
+                let chunk: String = chars.by_ref().take(40).collect();
+                if chars.next().is_some() { format!("{}...", chunk) } else { chunk }
+            })
+            .unwrap_or_else(|| "Kimi Code Session".to_string());
+
+        // Keep every SavedSession timestamp in the same epoch-ms format. The
+        // metadata file is rewritten whenever state changes and its mtime was
+        // already collected for pre-selection, so no second stat is needed.
+        let saved_at = mtime
+            .duration_since(std::time::SystemTime::UNIX_EPOCH)
+            .map(|d| d.as_millis().to_string())
+            .unwrap_or_default();
+        let created_at = state.get("createdAt")
+            .and_then(|value| value.as_str())
+            .map(|value| value.to_string())
+            .or_else(|| file_created_epoch_ms(&session_dir.join("state.json")));
+
+        result.push(SavedSession {
+            id: format!("kimicode_native_{}", session_id),
+            name: title,
+            tool: "kimicode".to_string(),
+            cwd: work_dir.clone(),
+            session_token: Some(session_id.clone()),
+            saved_at,
+            created_at,
+            // sessionDir exposes the session's on-disk location (holds
+            // state.json + wire.jsonl). Mirrors OpenCode's file_path surface.
+            file_path: Some(session_dir.to_string_lossy().into_owned()),
+            // turn_count deferred — counting wire.jsonl is extra I/O per
+            // session and the History board renders fine without it.
+            turn_count: None,
+            git_context: None,
+            worktree_cwd: None,
+        });
+    }
+}
+
+/// Kimi Code heatmap second pass. For each session in the cutoff window,
+/// emits (ts=agents/main/wire.jsonl mtime, count=wire.jsonl line count).
+/// wire.jsonl mtime ≈ last activity (Kimi appends to it on every turn);
+/// counting only the MAIN agent's wire.jsonl (NOT `agents/agent-0/` sub-
+/// agents) avoids double-counting one conversation. Shares the file-based
+/// heatmap count cache (keyed by wire.jsonl path + mtime) so warm starts
+/// skip the re-count — same optimization as the JSONL pipeline.
+pub(super) fn collect_kimi_heatmap_entries(
+    home: &std::path::Path,
+    cutoff_secs: i64,
+    out: &mut Vec<HeatmapEntry>,
+    count_cache: &mut std::collections::HashMap<String, CachedCount>,
+    cache_dirty: &mut bool,
+    keep_paths: &mut std::collections::HashSet<String>,
+) {
+    let Some(root) = kimi_root(home) else { return };
+    let Ok(index) = std::fs::read_to_string(root.join("session_index.jsonl")) else { return };
+
+    for line in index.lines() {
+        let line = line.trim();
+        if line.is_empty() { continue; }
+        let Ok(v) = serde_json::from_str::<serde_json::Value>(line) else { continue };
+        let Some(session_dir) = v.get("sessionDir").and_then(|x| x.as_str()) else { continue };
+        let wire_path = std::path::Path::new(session_dir)
+            .join("agents").join("main").join("wire.jsonl");
+        let Ok(meta) = std::fs::metadata(&wire_path) else { continue };
+        let Ok(mtime) = meta.modified() else { continue };
+        let ts = mtime
+            .duration_since(std::time::SystemTime::UNIX_EPOCH)
+            .map(|d| d.as_secs() as i64)
+            .unwrap_or(0);
+        if ts < cutoff_secs { continue; }
+
+        let path_key = wire_path.to_string_lossy().into_owned();
+        keep_paths.insert(path_key.clone());
+        let count = if let Some(entry) = count_cache.get(&path_key) {
+            if entry.mtime == ts {
+                entry.count
+            } else {
+                let c = count_jsonl_message_lines(&wire_path);
+                count_cache.insert(path_key.clone(), CachedCount { mtime: ts, count: c });
+                *cache_dirty = true;
+                c
+            }
+        } else {
+            let c = count_jsonl_message_lines(&wire_path);
+            count_cache.insert(path_key.clone(), CachedCount { mtime: ts, count: c });
+            *cache_dirty = true;
+            c
+        };
+        if count > 0 {
+            out.push(HeatmapEntry { ts, count });
+        }
+    }
+}
+
+// ── Grok Build (xAI `grok`) - per-session-dir second pass ──────────────
+// Sessions live under `~/.grok/sessions/<url-encoded-cwd>/<uuid>/`, each dir
+// holding a `summary.json` index (info.id / info.cwd / generated_title /
+// updated_at / created_at) and a `chat_history.jsonl` conversation log. The
+// metadata is in summary.json (not the JSONL filename/mtime), so this bypasses
+// the generic mtime-then-parse pipeline like Kimi/OpenCode - GrokSessions is
+// skipped in collect_registry_history_candidates and emitted here instead.
+// `GROK_HOME` overrides the `~/.grok` base (per Grok's data-locations doc).
+
+/// Resolve Grok Build's sessions root. `GROK_HOME` env (Grok's own override)
+/// wins so a user who moved ~/.grok doesn't also need a tools.json override;
+/// otherwise the registry-declared `~/.grok/sessions` (honoring any tools.json
+/// history-path override). `GROK_HOME` points at the base (~/.grok), so we
+/// append `sessions`.
+pub(super) fn grok_root(home: &std::path::Path) -> Option<std::path::PathBuf> {
+    if let Ok(env_home) = std::env::var("GROK_HOME") {
+        if !env_home.is_empty() {
+            let p = std::path::PathBuf::from(env_home).join("sessions");
+            if p.is_dir() {
+                return Some(p);
+            }
+        }
+    }
+    let path = crate::tools::find("grok")
+        .and_then(|t| t.history_shape.as_ref())
+        .map(|s| crate::tool_config::history_path_for("grok", s.join_under(home)))?;
+    if path.is_dir() { Some(path) } else { None }
+}
+
+/// Grok Build history second pass. Walks `sessions/<encoded-cwd>/<uuid>/`,
+/// stats each `summary.json` for mtime to pre-select the newest 200 (mirrors
+/// the JSONL pipeline's stat-first/parse-top-N discipline), then reads each
+/// survivor's `summary.json` for title / cwd / timestamps. `summary.json`
+/// carries the real cwd in `info.cwd`, so the URL-encoded parent dir name
+/// never needs decoding.
+pub(super) fn find_grok_sessions(home: &std::path::Path, result: &mut Vec<SavedSession>) {
+    let Some(root) = grok_root(home) else { return };
+
+    // (summary.json mtime, session_dir)
+    let mut candidates: Vec<(std::time::SystemTime, std::path::PathBuf)> = Vec::new();
+    let Ok(cwd_dirs) = std::fs::read_dir(&root) else { return };
+    for cwd_entry in cwd_dirs.flatten() {
+        let cwd_path = cwd_entry.path();
+        if !cwd_path.is_dir() { continue; }
+        let Ok(session_dirs) = std::fs::read_dir(&cwd_path) else { continue };
+        for session_entry in session_dirs.flatten() {
+            let session_dir = session_entry.path();
+            if !session_dir.is_dir() { continue; }
+            let summary = session_dir.join("summary.json");
+            let mtime = std::fs::metadata(&summary)
+                .and_then(|m| m.modified())
+                .unwrap_or(std::time::SystemTime::UNIX_EPOCH);
+            candidates.push((mtime, session_dir));
+        }
+    }
+    candidates.sort_by(|a, b| b.0.cmp(&a.0));
+    const GROK_HISTORY_LIMIT: usize = 200;
+    candidates.truncate(GROK_HISTORY_LIMIT);
+
+    for (mtime, session_dir) in &candidates {
+        let Ok(summary_bytes) = std::fs::read_to_string(session_dir.join("summary.json")) else { continue };
+        let Ok(s) = serde_json::from_str::<serde_json::Value>(&summary_bytes) else { continue };
+
+        let info = s.get("info");
+        let session_id = info
+            .and_then(|i| i.get("id")).and_then(|x| x.as_str())
+            .unwrap_or("").to_string();
+        // info.cwd is the real working directory - no URL-decode needed.
+        let work_dir = info
+            .and_then(|i| i.get("cwd")).and_then(|x| x.as_str())
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_string())
+            .unwrap_or_default();
+
+        let title = s.get("generated_title").and_then(|x| x.as_str()).filter(|s| !s.is_empty())
+            .or_else(|| s.get("session_summary").and_then(|x| x.as_str()))
+            .filter(|s| !s.is_empty())
+            .map(|s| {
+                let safe = s.replace('\n', " ");
+                let mut chars = safe.chars();
+                let chunk: String = chars.by_ref().take(40).collect();
+                if chars.next().is_some() { format!("{}...", chunk) } else { chunk }
+            })
+            .unwrap_or_else(|| "Grok Build Session".to_string());
+
+        // Normalize to epoch milliseconds, matching every other scanner. The
+        // summary mtime is also the pre-selection key and advances per turn.
+        let saved_at = mtime
+            .duration_since(std::time::SystemTime::UNIX_EPOCH)
+            .map(|d| d.as_millis().to_string())
+            .unwrap_or_default();
+        let created_at = s.get("created_at")
+            .and_then(|value| value.as_str())
+            .map(|value| value.to_string())
+            .or_else(|| file_created_epoch_ms(&session_dir.join("summary.json")));
+
+        result.push(SavedSession {
+            id: format!("grok_native_{}", session_id),
+            name: title,
+            tool: "grok".to_string(),
+            cwd: work_dir,
+            session_token: if session_id.is_empty() { None } else { Some(session_id.clone()) },
+            saved_at,
+            created_at,
+            // session_dir exposes the on-disk location (holds summary.json +
+            // chat_history.jsonl). Mirrors OpenCode/Kimi's file_path surface.
+            file_path: Some(session_dir.to_string_lossy().into_owned()),
+            // turn_count deferred - counting chat_history.jsonl is extra I/O per
+            // session and the History board renders fine without it.
+            turn_count: None,
+            git_context: None,
+            worktree_cwd: None,
+        });
+    }
+}
+
+/// Grok Build heatmap second pass. For each session dir in the cutoff window,
+/// emits (ts=chat_history.jsonl mtime, count=chat_history.jsonl line count).
+/// chat_history.jsonl mtime ≈ last activity (Grok appends on every turn);
+/// line count = intensity. Shares the file-based heatmap count cache (keyed
+/// by chat_history.jsonl path + mtime) so warm starts skip the re-count -
+/// same optimization as the JSONL pipeline and Kimi's wire.jsonl pass.
+pub(super) fn collect_grok_heatmap_entries(
+    home: &std::path::Path,
+    cutoff_secs: i64,
+    out: &mut Vec<HeatmapEntry>,
+    count_cache: &mut std::collections::HashMap<String, CachedCount>,
+    cache_dirty: &mut bool,
+    keep_paths: &mut std::collections::HashSet<String>,
+) {
+    let Some(root) = grok_root(home) else { return };
+    let Ok(cwd_dirs) = std::fs::read_dir(&root) else { return };
+    for cwd_entry in cwd_dirs.flatten() {
+        let cwd_path = cwd_entry.path();
+        if !cwd_path.is_dir() { continue; }
+        let Ok(session_dirs) = std::fs::read_dir(&cwd_path) else { continue };
+        for session_entry in session_dirs.flatten() {
+            let session_dir = session_entry.path();
+            if !session_dir.is_dir() { continue; }
+            let chat_path = session_dir.join("chat_history.jsonl");
+            let Ok(meta) = std::fs::metadata(&chat_path) else { continue };
+            let Ok(mtime) = meta.modified() else { continue };
+            let ts = mtime
+                .duration_since(std::time::SystemTime::UNIX_EPOCH)
+                .map(|d| d.as_secs() as i64)
+                .unwrap_or(0);
+            if ts < cutoff_secs { continue; }
+
+            let path_key = chat_path.to_string_lossy().into_owned();
+            keep_paths.insert(path_key.clone());
+            let count = if let Some(entry) = count_cache.get(&path_key) {
+                if entry.mtime == ts {
+                    entry.count
+                } else {
+                    let c = count_jsonl_message_lines(&chat_path);
+                    count_cache.insert(path_key.clone(), CachedCount { mtime: ts, count: c });
+                    *cache_dirty = true;
+                    c
+                }
+            } else {
+                let c = count_jsonl_message_lines(&chat_path);
+                count_cache.insert(path_key.clone(), CachedCount { mtime: ts, count: c });
+                *cache_dirty = true;
+                c
+            };
+            if count > 0 {
+                out.push(HeatmapEntry { ts, count });
+            }
+        }
+    }
+}
+
+pub(super) fn collect_jsonl_paths_with_mtime(
+    dir: std::path::PathBuf,
+    depth: u8,
+    tool: &'static str,
+    out: &mut Vec<(std::time::SystemTime, std::path::PathBuf, &'static str)>,
+) {
+    if depth == 0 || !dir.is_dir() {
+        return;
+    }
+    if let Ok(entries) = std::fs::read_dir(dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            // `entry.file_type()` is free — it comes out of the directory
+            // enumeration itself (FindNextFile on Windows, dirent d_type on
+            // Linux). `path.is_file()` and `path.is_dir()` each issue a real
+            // stat instead, and this walk runs on every history scan over a
+            // tree that reaches ~10k entries on a long-used machine (~5.3k
+            // under ~/.codex, ~4.7k under ~/.claude). Two saved syscalls per
+            // entry is the difference between a cheap scan and one the
+            // Defender filter driver has to inspect 20k times.
+            // Reparse points still need a stat to resolve their target; that
+            // is rare in an agent session store, and only then do we pay.
+            let (is_file, is_dir) = match entry.file_type() {
+                Ok(ft) if ft.is_symlink() => match std::fs::metadata(&path) {
+                    Ok(m) => (m.is_file(), m.is_dir()),
+                    Err(_) => continue,
+                },
+                Ok(ft) => (ft.is_file(), ft.is_dir()),
+                Err(_) => continue,
+            };
+            if is_file {
+                // OpenClaw writes two `.jsonl` per session side-by-side:
+                // `<uuid>.jsonl` (the conversation — what we want) and
+                // `<uuid>.trajectory.jsonl` (a trace/telemetry log). Both
+                // sit at depth 3 under `.openclaw/agents` and both end in
+                // `.jsonl`, so the bare-extension check below would collect
+                // both. The trajectory file carries a top-level `sessionId`
+                // per line, which parse_agent_jsonl latches onto — producing
+                // a second SavedSession with the SAME id as the real one.
+                // Two history rows share `key={session.id}` in HistoryBoard
+                // → React duplicate-key chaos (a junk "Openclaw Session · 0
+                // messages" card next to the real one, and soft-delete
+                // hide-keys both rows at once so it reads as "can't delete").
+                // No other tool writes `.trajectory.jsonl`, so skip it here.
+                let file_name = path.file_name().and_then(|n| n.to_str());
+                let is_trajectory = file_name
+                    .map(|n| n.ends_with(".trajectory.jsonl"))
+                    .unwrap_or(false);
+                if !is_trajectory && path.extension().and_then(|e| e.to_str()) == Some("jsonl") {
+                    let mtime = entry.metadata().ok()
+                        .and_then(|m| m.modified().ok())
+                        .unwrap_or(std::time::SystemTime::UNIX_EPOCH);
+                    out.push((mtime, path, tool));
+                }
+            } else if is_dir {
+                collect_jsonl_paths_with_mtime(path, depth - 1, tool, out);
+            }
+        }
+    }
+}
+
+pub(super) fn parse_hermes_json(file_path: &std::path::Path) -> Option<SavedSession> {
+    let content = std::fs::read_to_string(file_path).ok()?;
+    let value: serde_json::Value = serde_json::from_str(&content).ok()?;
+    let created_at = value
+        .get("started_at")
+        .or_else(|| value.get("created_at"))
+        .or_else(|| value.get("start_time"))
+        .and_then(json_timestamp_string);
+
+    // Hermes session naming: legacy files were `session_<id>.json`, the
+    // `.jsonl` rewrite drops the prefix. If the JSON carries a `session_id`
+    // field, use it as-is (already bare). Otherwise fall back to the file
+    // stem and strip the legacy `session_` prefix — Hermes's `--resume`
+    // wants the bare `<YYYYMMDD>_<HHMMSS>_<hex>`, never the prefixed form.
+    let session_id = value.get("session_id")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| {
+            let stem = file_path.file_stem().and_then(|s| s.to_str()).unwrap_or("unknown");
+            stem.strip_prefix("session_").unwrap_or(stem).to_string()
+        });
+
+    let mut title = String::new();
+    let mut total_messages = 0u32;
+
+    if let Some(messages) = value.get("messages").and_then(|v| v.as_array()) {
+        for msg in messages {
+            let role = msg.get("role").and_then(|v| v.as_str()).unwrap_or("");
+            if role == "user" || role == "assistant" {
+                total_messages += 1;
+            }
+            if role == "user" && title.is_empty() {
+                if let Some(content_str) = msg.get("content").and_then(|v| v.as_str()) {
+                    let s = content_str.trim();
+                    // Skip internal/system messages
+                    if !s.is_empty() && !s.starts_with("[Note:") && !s.starts_with("[CONTEXT") {
+                        let safe = s.replace('\n', " ");
+                        let mut chars = safe.chars();
+                        let t: String = chars.by_ref().take(40).collect();
+                        title = if chars.next().is_some() { format!("{}...", t) } else { t };
+                    }
+                }
+            }
+        }
+    }
+
+    if title.is_empty() {
+        title = "Hermes Agent Session".to_string();
+    }
+
+    let turn_count = if total_messages > 0 { std::cmp::max(1, (total_messages + 1) / 2) } else { 0 };
+
+    let mut saved_at = String::new();
+    if let Ok(meta) = std::fs::metadata(file_path) {
+        if let Ok(mod_time) = meta.modified() {
+            if let Ok(dur) = mod_time.duration_since(std::time::SystemTime::UNIX_EPOCH) {
+                saved_at = dur.as_millis().to_string();
+            }
+        }
+    }
+
+    Some(SavedSession {
+        id: format!("hermes_native_{}", session_id),
+        name: title,
+        tool: "hermes".to_string(),
+        cwd: String::new(),
+        session_token: Some(session_id),
+        saved_at,
+        created_at: created_at.or_else(|| file_created_epoch_ms(file_path)),
+        file_path: Some(file_path.to_string_lossy().into_owned()),
+        turn_count: Some(turn_count),
+        git_context: None,
+        worktree_cwd: None,
+    })
+}
+
+pub(super) fn parse_opencode_session(file_path: &std::path::Path, message_dir: &std::path::Path) -> Option<SavedSession> {
+    let content = std::fs::read_to_string(file_path).ok()?;
+    let value: serde_json::Value = serde_json::from_str(&content).ok()?;
+
+    let id = value.get("id").and_then(|v| v.as_str())?.to_string();
+    let title = value.get("title")
+        .and_then(|v| v.as_str())
+        .filter(|s| !s.is_empty())
+        .unwrap_or("OpenCode Session")
+        .to_string();
+    let cwd = value.get("directory").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    let saved_at = value.get("time")
+        .and_then(|t| t.get("updated"))
+        .and_then(|v| v.as_u64())
+        .map(|ms| ms.to_string())
+        .unwrap_or_default();
+    let created_at = value.get("time")
+        .and_then(|t| t.get("created"))
+        .and_then(|v| v.as_u64())
+        .map(|ms| ms.to_string())
+        .or_else(|| file_created_epoch_ms(file_path));
+
+    // Count message files to estimate turn count
+    let msg_dir = message_dir.join(&id);
+    let msg_count = if msg_dir.is_dir() {
+        std::fs::read_dir(&msg_dir)
+            .map(|entries| entries.flatten().filter(|e| e.path().is_file()).count() as u32)
+            .unwrap_or(0)
+    } else {
+        0
+    };
+    let turn_count = std::cmp::max(1, msg_count / 2);
+
+    Some(SavedSession {
+        id: format!("opencode_native_{}", id),
+        name: title,
+        tool: "opencode".to_string(),
+        cwd,
+        session_token: Some(id),
+        saved_at,
+        created_at,
+        file_path: Some(file_path.to_string_lossy().into_owned()),
+        turn_count: Some(turn_count),
+        git_context: None,
+        worktree_cwd: None,
+    })
+}
+
+pub(super) fn find_opencode_sessions(base_dir: std::path::PathBuf, result: &mut Vec<SavedSession>) {
+    // Prefer SQLite DB (current OpenCode format) over legacy JSON files
+    let db_path = base_dir.join("opencode.db");
+    if db_path.is_file() {
+        find_drizzle_sessions_sqlite(&db_path, "opencode", "OpenCode Session", result);
+        return;
+    }
+
+    // Fallback: legacy JSON layout — storage/session/<project-id>/ses_*.json
+    let session_dir = base_dir.join("storage").join("session");
+    let message_dir = base_dir.join("storage").join("message");
+    if !session_dir.is_dir() { return; }
+
+    if let Ok(projects) = std::fs::read_dir(&session_dir) {
+        for project_entry in projects.flatten() {
+            let project_path = project_entry.path();
+            if !project_path.is_dir() { continue; }
+            if let Ok(sessions) = std::fs::read_dir(&project_path) {
+                for session_entry in sessions.flatten() {
+                    let path = session_entry.path();
+                    if !path.is_file() { continue; }
+                    let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+                    if name.starts_with("ses_") && name.ends_with(".json") {
+                        if let Some(session) = parse_opencode_session(&path, &message_dir) {
+                            result.push(session);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Read V1/V2 SQLite sessions. Shared by OpenCode and its forks, which pass
+/// their own `tool_id` / `default_title` and db path.
+pub(super) fn find_drizzle_sessions_sqlite(
+    db_path: &std::path::Path,
+    tool_id: &str,
+    default_title: &str,
+    result: &mut Vec<SavedSession>,
+) {
+    let conn = match rusqlite::Connection::open_with_flags(
+        db_path,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX,
+    ) {
+        Ok(c) => c,
+        Err(_) => return,
+    };
+
+    // Skip archived sessions AND sub-agent children (parent_id != NULL).
+    // OpenCode writes one row per spawned sub-agent; its own desktop excludes
+    // them from the root list (WHERE parent_id IS NULL) and loads them
+    // on-demand from the parent's timeline. Surfacing them here flat-clutters
+    // the Sessions board with un-resumable child conversations. MiMo Code
+    // shares this Drizzle schema/scanner, so the same filter applies.
+    let query = format!("WITH sessions AS ({}) \
+                 SELECT s.id, s.title, s.directory, s.time_created, s.time_updated, s.msg_count \
+                 FROM sessions s \
+                 WHERE s.time_archived IS NULL \
+                   AND s.parent_id IS NULL \
+                 ORDER BY s.time_updated DESC \
+                 LIMIT 30", opencode_sessions_sql(&conn));
+
+    let mut stmt = match conn.prepare(&query) {
+        Ok(s) => s,
+        Err(_) => return,
+    };
+
+    let sessions_iter = stmt.query_map([], |row| {
+        let id: String = row.get(0)?;
+        let title: String = row.get::<_, Option<String>>(1)
+            .unwrap_or(None)
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| default_title.to_string());
+        // V1 and V2 store the actual cwd in `directory`; `path` is relative
+        // to the project root, not a child of this directory.
+        let directory: String = row.get::<_, Option<String>>(2)
+            .unwrap_or(None)
+            .unwrap_or_default();
+        let time_created: i64 = row.get(3).unwrap_or(0);
+        let time_updated: i64 = row.get(4).unwrap_or(0);
+        let msg_count: i64 = row.get(5).unwrap_or(0);
+        let turn_count = std::cmp::max(1, msg_count / 2) as u32;
+
+        Ok(SavedSession {
+            id: format!("{}_native_{}", tool_id, id),
+            name: title,
+            tool: tool_id.to_string(),
+            cwd: directory,
+            session_token: Some(id),
+            saved_at: time_updated.to_string(),
+            created_at: Some(time_created.to_string()),
+            // Surface the shared SQLite DB path so SessionContextMenu's
+            // file action has a target for OpenCode sessions too. Granularity
+            // mismatch is OpenCode's own design choice — they bundle every
+            // session into ONE opencode.db (vs Claude/Codex/Qwen/Hermes
+            // jsonl-per-session) — so we expose the path that exists rather
+            // than hide the button. Users who paste it into a file manager
+            // land on the actual artifact that holds this conversation,
+            // even if it also holds the others. Doesn't affect the read
+            // path (the chat adapter gates on tool + session_token, not on
+            // file_path, so read_opencode_session still owns parsing).
+            file_path: Some(db_path.to_string_lossy().into_owned()),
+            turn_count: Some(turn_count),
+            git_context: None,
+            worktree_cwd: None,
+        })
+    });
+
+    if let Ok(iter) = sessions_iter {
+        for session in iter.flatten() {
+            result.push(session);
+        }
+    }
+}
+
+pub(super) fn collect_hermes_paths_with_mtime(
+    dir: std::path::PathBuf,
+    out: &mut Vec<(std::time::SystemTime, std::path::PathBuf, &'static str)>,
+) {
+    if !dir.is_dir() {
+        return;
+    }
+    // Newer Hermes Agent keeps the authoritative session store in
+    // `<sessions>/state.db` (SQLite); the per-session `session_*.json` files
+    // are a legacy/export layout that may be absent. When the db is present
+    // AND actually yields sessions, `find_hermes_sessions_sqlite` is the
+    // source of truth — skip the JSON candidates so the two paths can't
+    // double-count. But if the db is empty / locked / corrupt / wrong-schema,
+    // keep scanning JSON: suppressing it unconditionally would silently empty
+    // the History board for a user whose legacy sessions are still on disk.
+    let state_db = dir.join("state.db");
+    if state_db.is_file() && hermes_db_has_sessions(&state_db) {
+        return;
+    }
+    if let Ok(entries) = std::fs::read_dir(dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if !path.is_file() { continue; }
+            let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+            // Only session_*.json files — skip request_dump_* and state.db
+            if name.starts_with("session_") && name.ends_with(".json") {
+                let mtime = entry.metadata().ok()
+                    .and_then(|m| m.modified().ok())
+                    .unwrap_or(std::time::SystemTime::UNIX_EPOCH);
+                out.push((mtime, path, "hermes"));
+            }
+        }
+    }
+}
+
+/// Resolve `<HERMES_HOME>/sessions/state.db` (honouring any `tools.json`
+/// history-path override), or None if Hermes Agent isn't in the registry.
+/// Mirrors `opencode_root` so the history + heatmap passes resolve the
+/// identical db path.
+pub(super) fn hermes_state_db(home: &std::path::Path) -> Option<std::path::PathBuf> {
+    let tool = crate::tools::find("hermes")?;
+    let shape = tool.history_shape.as_ref()?;
+    let dir = crate::tool_config::history_path_for(tool.id, shape.join_under(home));
+    Some(dir.join("state.db"))
+}
+
+/// Cheap probe: does `state.db` open and hold at least one non-archived
+/// session row? Drives the decision to suppress the legacy `session_*.json`
+/// scan — if the db is missing, empty, locked, corrupt, or has an unexpected
+/// schema this returns false and the JSON path stays as a fallback, so Hermes
+/// history never silently empties out from under a usable legacy store.
+pub(super) fn hermes_db_has_sessions(db_path: &std::path::Path) -> bool {
+    let Ok(conn) = rusqlite::Connection::open_with_flags(
+        db_path,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX,
+    ) else {
+        return false;
+    };
+    conn.query_row("SELECT 1 FROM sessions WHERE archived = 0 LIMIT 1", [], |_| Ok(()))
+        .is_ok()
+}
+
+/// Normalize a Hermes `started_at` to epoch SECONDS. Hermes is documented to
+/// store float seconds, but the unit is unverified across versions; treat any
+/// value past ~year-5138-in-seconds (i.e. a millisecond timestamp) as ms so the
+/// history sort and the seconds-based heatmap stay correct either way.
+pub(super) fn hermes_started_at_secs(raw: f64) -> f64 {
+    if raw > 1e11 { raw / 1000.0 } else { raw }
+}
+
+/// Read Hermes Agent sessions from the SQLite `state.db`. Newer Hermes
+/// stores everything here (sessions + messages + FTS5 search); the
+/// `session_*.json` files our legacy path reads may be absent.
+///
+/// Schema (sessions table): `id`, `title`, `cwd`, `started_at` /
+/// `last_activity_at` (epoch SECONDS, REAL), `message_count`, `archived`. Best-effort: any error
+/// (missing table, renamed column, locked db) yields zero rows and the
+/// caller falls back to the JSON scan — no regression for older Hermes.
+///
+/// `file_path` is intentionally None: these sessions live in the shared db,
+/// not a per-session file, so the chat adapter routes them through
+/// `read_hermes_session` instead of the JSONL file path.
+pub(super) fn find_hermes_sessions_sqlite(db_path: &std::path::Path, result: &mut Vec<SavedSession>) {
+    let conn = match rusqlite::Connection::open_with_flags(
+        db_path,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX,
+    ) {
+        Ok(c) => c,
+        Err(_) => return,
+    };
+    // `last_activity_at` was added after the first SQLite schema. Keep older
+    // databases discoverable; their revision reader already has an equivalent
+    // fallback and history scanning should not silently return zero sessions.
+    let has_last_activity = conn
+        .prepare("SELECT last_activity_at FROM sessions LIMIT 0")
+        .is_ok();
+    let query = if has_last_activity {
+        "SELECT id, title, cwd, started_at, \
+         COALESCE(last_activity_at, started_at), message_count \
+         FROM sessions WHERE archived = 0 \
+         ORDER BY started_at DESC LIMIT 200"
+    } else {
+        "SELECT id, title, cwd, started_at, started_at, message_count \
+         FROM sessions WHERE archived = 0 \
+         ORDER BY started_at DESC LIMIT 200"
+    };
+    let mut stmt = match conn.prepare(query) {
+        Ok(s) => s,
+        Err(_) => return,
+    };
+    let iter = stmt.query_map([], |row| {
+        // id is the resume token (TEXT). Read tolerantly: if a Hermes version
+        // stores it as INTEGER rowid, fall back to stringifying it rather than
+        // erroring the row (which `?` would, silently dropping EVERY session).
+        let id: String = row
+            .get::<_, String>(0)
+            .or_else(|_| row.get::<_, i64>(0).map(|n| n.to_string()))?;
+        let title: Option<String> = row.get::<_, Option<String>>(1).unwrap_or(None);
+        let cwd: String = row.get::<_, Option<String>>(2).unwrap_or(None).unwrap_or_default();
+        // started_at → epoch ms for the saved_at string the frontend sorts on.
+        // hermes_started_at_secs normalizes a seconds-or-ms value to seconds.
+        let started_at: f64 = row.get(3).unwrap_or(0.0);
+        let last_activity_at: f64 = row.get(4).unwrap_or(started_at);
+        let msg_count: i64 = row.get(5).unwrap_or(0);
+        // Title fallback: explicit title → cwd basename → placeholder.
+        let name = title
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| {
+                std::path::Path::new(&cwd)
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .filter(|s| !s.is_empty())
+                    .map(|s| s.to_string())
+                    .unwrap_or_else(|| "Hermes Agent Session".to_string())
+            });
+        let turn_count = if msg_count > 0 { std::cmp::max(1, (msg_count / 2) as u32) } else { 0 };
+        Ok(SavedSession {
+            id: format!("hermes_native_{}", id),
+            name,
+            tool: "hermes".to_string(),
+            cwd,
+            session_token: Some(id),
+            saved_at: ((hermes_started_at_secs(last_activity_at) * 1000.0) as i64).to_string(),
+            created_at: Some(((hermes_started_at_secs(started_at) * 1000.0) as i64).to_string()),
+            file_path: None,
+            turn_count: Some(turn_count),
+            git_context: None,
+            worktree_cwd: None,
+        })
+    });
+    if let Ok(iter) = iter {
+        for session in iter.flatten() {
+            result.push(session);
+        }
+    }
+}
+
+/// Antigravity CLI (`agy`) keeps one row per conversation in its own index,
+/// `~/.gemini/antigravity-cli/conversation_summaries.db` (verified against agy 1.4.12):
+/// title, step count, last change and the workspace as `file://` URIs. Sub-agent
+/// conversations carry a parent id and are skipped; resume is `agy --conversation <id>`.
+pub(super) fn antigravity_summaries_db(home: &std::path::Path) -> Option<std::path::PathBuf> {
+    let db = home.join(".gemini").join("antigravity-cli").join("conversation_summaries.db");
+    db.is_file().then_some(db)
+}
+
+/// `last_modified_time` is SQLite text such as `2026-11-03 22:19:37.954952+00:00`;
+/// a value without an offset is UTC.
+pub(super) fn antigravity_time_ms(text: &str) -> Option<i64> {
+    let text = text.trim();
+    chrono::DateTime::parse_from_str(text, "%Y-%m-%d %H:%M:%S%.f%:z")
+        .or_else(|_| chrono::DateTime::parse_from_rfc3339(text))
+        .map(|time| time.timestamp_millis())
+        .ok()
+        .or_else(|| chrono::NaiveDateTime::parse_from_str(text, "%Y-%m-%d %H:%M:%S%.f").ok().map(|time| time.and_utc().timestamp_millis()))
+}
+
+/// First workspace of the JSON array of `file://` URIs, as a local path.
+pub(super) fn antigravity_workspace(uris: &str) -> String {
+    serde_json::from_str::<Vec<String>>(uris).ok()
+        .and_then(|uris| uris.into_iter().next())
+        .and_then(|uri| url::Url::parse(&uri).ok())
+        .and_then(|url| url.to_file_path().ok())
+        .map(|path| path.to_string_lossy().into_owned())
+        .unwrap_or_default()
+}
+
+pub(super) fn antigravity_connection(db_path: &std::path::Path) -> Option<rusqlite::Connection> {
+    rusqlite::Connection::open_with_flags(
+        db_path,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX,
+    ).ok()
+}
+
+/// Only ids `agy --conversation` can take count as conversations.
+pub(super) fn antigravity_valid_id(id: &str) -> bool {
+    !id.is_empty() && id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-')
+}
+
+/// Root conversations with at least one step. An index without those columns (another agy
+/// version) still lists every row rather than none: the filter is optional, the history is not.
+pub(super) fn antigravity_rows(conn: &rusqlite::Connection) -> &'static str {
+    if conn.prepare("SELECT parent_conversation_id, step_count FROM conversation_summaries LIMIT 0").is_ok() {
+        "1, step_count FROM conversation_summaries WHERE parent_conversation_id = '' AND step_count > 0"
+    } else {
+        "1, 1 FROM conversation_summaries"
+    }
+}
+
+pub(super) fn find_antigravity_sessions(db_path: &std::path::Path, result: &mut Vec<SavedSession>) {
+    let Some(conn) = antigravity_connection(db_path) else { return };
+    let query = format!("SELECT conversation_id, title, preview, last_modified_time, workspace_uris, {}", antigravity_rows(&conn));
+    let Ok(mut stmt) = conn.prepare(&query) else { return };
+    let rows = stmt.query_map([], |row| Ok((
+        row.get::<_, String>(0)?,
+        row.get::<_, Option<String>>(1).unwrap_or(None).unwrap_or_default(),
+        row.get::<_, Option<String>>(2).unwrap_or(None).unwrap_or_default(),
+        row.get::<_, Option<String>>(3).unwrap_or(None).unwrap_or_default(),
+        row.get::<_, Option<String>>(4).unwrap_or(None).unwrap_or_default(),
+    )));
+    let Ok(rows) = rows else { return };
+    // Sort by the parsed time: the index stores text, whose order is not always chronological.
+    let mut rows: Vec<_> = rows.flatten()
+        .filter(|(id, ..)| antigravity_valid_id(id))
+        .filter_map(|(id, title, preview, modified, uris)| antigravity_time_ms(&modified).map(|time| (time, id, title, preview, uris)))
+        .collect();
+    rows.sort_by(|a, b| b.0.cmp(&a.0));
+    rows.truncate(200);
+    for (saved_at, id, title, preview, uris) in rows {
+        let name = [title.trim(), preview.lines().next().unwrap_or("").trim()].into_iter()
+            .find(|text| !text.is_empty())
+            .map(|text| text.chars().take(80).collect())
+            .unwrap_or_else(|| "Antigravity CLI Session".to_string());
+        result.push(SavedSession {
+            id: format!("antigravity_native_{id}"),
+            name,
+            tool: "antigravity".to_string(),
+            cwd: antigravity_workspace(&uris),
+            session_token: Some(id),
+            saved_at: saved_at.to_string(),
+            created_at: None,
+            file_path: None,
+            turn_count: None,
+            git_context: None,
+            worktree_cwd: None,
+        });
+    }
+}
+
+/// Heatmap second pass for Antigravity CLI: one entry per root conversation,
+/// its last change and step count.
+pub(super) fn collect_antigravity_heatmap_entries(db_path: &std::path::Path, cutoff_secs: i64, out: &mut Vec<HeatmapEntry>) {
+    let Some(conn) = antigravity_connection(db_path) else { return };
+    let Ok(mut stmt) = conn.prepare(&format!("SELECT conversation_id, last_modified_time, {}", antigravity_rows(&conn))) else { return };
+    let Ok(rows) = stmt.query_map([], |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?, row.get::<_, i64>(3).unwrap_or(1)))) else { return };
+    for (id, modified, steps) in rows.flatten() {
+        if !antigravity_valid_id(&id) { continue }
+        let Some(ts) = antigravity_time_ms(&modified).map(|ms| ms / 1000) else { continue };
+        if ts >= cutoff_secs {
+            out.push(HeatmapEntry { ts, count: steps.clamp(1, u32::MAX as i64) as u32 });
+        }
+    }
+}
+
+/// Heatmap second pass for Hermes `state.db` — one entry per session
+/// (started_at seconds + message_count). Mirrors
+/// `collect_opencode_heatmap_entries`. Best-effort.
+pub(super) fn collect_hermes_heatmap_entries(
+    db_path: &std::path::Path,
+    cutoff_secs: i64,
+    out: &mut Vec<HeatmapEntry>,
+) {
+    let conn = match rusqlite::Connection::open_with_flags(
+        db_path,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX,
+    ) {
+        Ok(c) => c,
+        Err(_) => return,
+    };
+    let query = "SELECT started_at, message_count FROM sessions \
+                 WHERE archived = 0 AND started_at >= ?1";
+    let mut stmt = match conn.prepare(query) {
+        Ok(s) => s,
+        Err(_) => return,
+    };
+    let rows = match stmt.query_map([cutoff_secs as f64], |row| {
+        let started_at: f64 = row.get(0)?;
+        let count: i64 = row.get(1).unwrap_or(0);
+        // Normalize seconds-or-ms → seconds (HeatmapEntry.ts is seconds; the
+        // frontend does `new Date(ts*1000)`). The WHERE filter above uses the
+        // raw value, so an ms store just over-fetches slightly — still correct.
+        Ok((hermes_started_at_secs(started_at) as i64, count))
+    }) {
+        Ok(r) => r,
+        Err(_) => return,
+    };
+    for row in rows.flatten() {
+        let (ts, count) = row;
+        if count > 0 {
+            out.push(HeatmapEntry { ts, count: count.clamp(0, u32::MAX as i64) as u32 });
+        }
+    }
+}
+
+/// Decode one Hermes `messages.content` cell. Plain text is stored raw;
+/// structured / multimodal content is `"\x00json:"` + JSON (Hermes'
+/// `_encode_content`). Strip the marker and pull the text back out.
+pub(super) fn hermes_decode_content(raw: &str) -> String {
+    let Some(json_part) = raw.strip_prefix("\u{0}json:") else {
+        return raw.to_string();
+    };
+    match serde_json::from_str::<serde_json::Value>(json_part) {
+        Ok(v) => hermes_extract_text(&v),
+        Err(_) => raw.to_string(),
+    }
+}
+
+/// Best-effort text extraction from a decoded Hermes content value — a bare
+/// string, `{text: ...}`, or an array of `{type, text}` blocks. Anything
+/// else collapses to compact JSON so the turn still shows something.
+pub(super) fn hermes_extract_text(v: &serde_json::Value) -> String {
+    match v {
+        serde_json::Value::String(s) => s.clone(),
+        serde_json::Value::Array(items) => items
+            .iter()
+            .filter_map(|it| it.get("text").and_then(|t| t.as_str()))
+            .collect::<Vec<_>>()
+            .join("\n"),
+        serde_json::Value::Object(_) => v
+            .get("text")
+            .and_then(|t| t.as_str())
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| v.to_string()),
+        _ => v.to_string(),
+    }
+}
+
+/// Read one Hermes session's transcript from `state.db` for ConversationView.
+/// Emits the same newline-delimited `{"message":{role,content}}` shape as
+/// JSONL tools, so the frontend parser handles it unchanged.
+///
+/// Schema (messages table): `session_id`, `role`, `content`, ordered by
+/// rowid (insertion order). Best-effort.
+pub(super) fn read_hermes_session_page(
+    session_token: &str,
+    before: Option<u64>,
+) -> Result<DatabaseChatPage, String> {
+    let home = dirs::home_dir().ok_or_else(|| "no home dir".to_string())?;
+    let db = hermes_state_db(&home).ok_or_else(|| "hermes not in registry".to_string())?;
+    let conn = rusqlite::Connection::open_with_flags(
+        &db,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX,
+    )
+    .map_err(|e| format!("open hermes state.db: {e}"))?;
+    let total: u64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM messages WHERE session_id = ?1",
+            [session_token],
+            |row| row.get(0),
+        )
+        .map_err(|e| format!("count Hermes messages: {e}"))?;
+    let end = before.unwrap_or(total).min(total);
+    let start = end.saturating_sub(CHAT_WINDOW_ROWS as u64);
+    let limit = end.saturating_sub(start);
+    let mut stmt = conn
+        .prepare(
+            "SELECT rowid, role, content FROM messages WHERE session_id = ?1 \
+             ORDER BY rowid LIMIT ?2 OFFSET ?3",
+        )
+        .map_err(|e| e.to_string())?;
+    let rows = stmt
+        .query_map(rusqlite::params![session_token, limit, start], |row| {
+            let row_id: i64 = row.get(0)?;
+            let role: String = row.get(1)?;
+            let content: String =
+                row.get::<_, Option<String>>(2).unwrap_or(None).unwrap_or_default();
+            Ok((row_id, role, content))
+        })
+        .map_err(|e| e.to_string())?;
+    let mut out = String::new();
+    for r in rows.flatten() {
+        let (row_id, role, content) = r;
+        let line = serde_json::json!({
+            "id": format!("hermes-{row_id}"),
+            "message": { "role": role, "content": hermes_decode_content(&content) }
+        });
+        out.push_str(&line.to_string());
+        out.push('\n');
+    }
+    Ok(DatabaseChatPage { data: out, history_cursor: start, has_older: start > 0 })
+}
+
+pub(super) fn read_hermes_session(session_token: String) -> Result<String, String> {
+    read_hermes_session_page(&session_token, None).map(|page| page.data)
+}
+
+#[tauri::command]
+pub(super) async fn get_native_history(force: Option<bool>) -> Result<Vec<SavedSession>, String> {
+    // Async command + spawn_blocking so the file I/O runs on a dedicated
+    // blocking thread pool and never blocks the Tauri command dispatcher.
+    // Other IPC calls (resize, theme switches, etc.) stay responsive while
+    // history is being scanned on app startup.
+    tauri::async_runtime::spawn_blocking(move || load_native_history_cached(force.unwrap_or(false)))
+        .await
+        .map_err(|e| format!("History task join failed: {e}"))?
+}
+
+pub(super) struct NativeHistoryCache {
+    pub(super) fetched_at: std::time::Instant,
+    pub(super) sessions: Vec<SavedSession>,
+}
+
+pub(super) static NATIVE_HISTORY_CACHE: OnceLock<Mutex<Option<NativeHistoryCache>>> = OnceLock::new();
+
+/// Coalesce native-history requests from the History board and conversation
+/// tabs. Holding this mutex through the scan intentionally gives concurrent
+/// callers one producer; waiters then clone the same fresh result instead of
+/// walking every CLI history directory again.
+pub(super) fn load_native_history_cached(force: bool) -> Result<Vec<SavedSession>, String> {
+    const CACHE_TTL: std::time::Duration = std::time::Duration::from_secs(5);
+    let cache = NATIVE_HISTORY_CACHE.get_or_init(|| Mutex::new(None));
+    let mut guard = cache
+        .lock()
+        .map_err(|_| "Native history cache lock poisoned".to_string())?;
+    if !force {
+        if let Some(cached) = guard.as_ref() {
+            if cached.fetched_at.elapsed() < CACHE_TTL {
+                return Ok(cached.sessions.clone());
+            }
+        }
+    }
+
+    let sessions = load_native_history_blocking()?;
+    *guard = Some(NativeHistoryCache {
+        fetched_at: std::time::Instant::now(),
+        sessions: sessions.clone(),
+    });
+    Ok(sessions)
+}
+
+pub(super) fn saved_session_epoch_ms(value: &str) -> u64 {
+    let parsed = value.parse::<u64>().unwrap_or(0);
+    if parsed > 0 && parsed < 100_000_000_000 {
+        parsed.saturating_mul(1_000)
+    } else {
+        parsed
+    }
+}
+
+// Cache unchanged files only. A larger file may be a rewrite or replacement,
+// and appended rows can change metadata as well as counts. Changed files always
+// use the same full parser as a cold scan.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(super) struct SessionFileStamp {
+    pub(super) modified: std::time::SystemTime,
+    pub(super) created: Option<std::time::SystemTime>,
+    pub(super) size: u64,
+    #[cfg(unix)]
+    pub(super) identity: (u64, u64),
+}
+
+pub(super) fn file_stamp(path: &std::path::Path) -> Option<SessionFileStamp> {
+    let metadata = std::fs::metadata(path).ok()?;
+    #[cfg(unix)]
+    use std::os::unix::fs::MetadataExt;
+    Some(SessionFileStamp {
+        modified: metadata.modified().ok()?,
+        created: metadata.created().ok(),
+        size: metadata.len(),
+        #[cfg(unix)]
+        identity: (metadata.dev(), metadata.ino()),
+    })
+}
+
+pub(super) struct CachedSession {
+    pub(super) stamp: SessionFileStamp,
+    pub(super) session: SavedSession,
+}
+
+#[derive(Default)]
+pub(super) struct SessionParseCache {
+    // Compare the map actually used by the parser, avoiding timestamp
+    // collisions and a race between reading it and statting it afterwards.
+    pub(super) claude_projects: std::collections::HashMap<String, String>,
+    pub(super) entries: std::collections::HashMap<std::path::PathBuf, CachedSession>,
+}
+
+pub(super) fn session_parse_cache() -> &'static std::sync::Mutex<SessionParseCache> {
+    static CACHE: std::sync::OnceLock<std::sync::Mutex<SessionParseCache>> = std::sync::OnceLock::new();
+    CACHE.get_or_init(|| std::sync::Mutex::new(SessionParseCache::default()))
+}
+
+pub(super) fn sync_aux_generation(
+    cache: &mut SessionParseCache,
+    claude_projects: &std::collections::HashMap<String, String>,
+) -> bool {
+    if cache.claude_projects == *claude_projects {
+        return false;
+    }
+    cache.entries.clear();
+    cache.claude_projects = claude_projects.clone();
+    true
+}
+
+/// Dispatch one candidate file to its tool-specific parser. Split out of
+/// `load_native_history_blocking` so the cache wrapper around it stays
+/// readable; the match arms are unchanged.
+pub(super) fn parse_session_file(
+    path: &std::path::Path,
+    tool: &str,
+    claude_project_map: &std::collections::HashMap<String, String>,
+) -> Option<SavedSession> {
+    match tool {
+        "hermes"      => parse_hermes_json(path),
+        "codex"       => parse_codex_session_jsonl(path),
+        "codebuddy"   => parse_codebuddy_session_jsonl(path),
+        "pi" | "omp"  => parse_pi_session_jsonl(path, tool),
+        "qwen"        => parse_qwen_session_jsonl(path),
+        other         => parse_agent_jsonl(path, other, claude_project_map),
+    }
+}
+
+/// Cache a stable successful parse. None also means an unreadable file in the
+/// existing parsers, so do not persist it: a temporary sharing/permission error
+/// must be retried even if the file's metadata does not change.
+pub(super) fn parse_session_cached(
+    cache: &mut SessionParseCache,
+    path: &std::path::Path,
+    tool: &str,
+    claude_project_map: &std::collections::HashMap<String, String>,
+) -> Option<SavedSession> {
+    let before = file_stamp(path);
+    if let Some(hit) = cache.entries.get(path) {
+        if before.as_ref() == Some(&hit.stamp) {
+            return Some(hit.session.clone());
+        }
+    }
+    cache.entries.remove(path);
+    let session = parse_session_file(path, tool, claude_project_map)?;
+    if let Some(stamp) = before {
+        // A writer may append/replace the transcript during parsing. Never
+        // associate that result with an earlier snapshot of the file.
+        if file_stamp(path).as_ref() == Some(&stamp) {
+            cache.entries.insert(path.to_path_buf(), CachedSession { stamp, session: session.clone() });
+        }
+    }
+    Some(session)
+}
+
+pub(super) fn load_native_history_blocking() -> Result<Vec<SavedSession>, String> {
+    // Cap history to the N most recent entries. Keeps UI responsive when users
+    // have hundreds of sessions — parsing a full jsonl/json file is expensive,
+    // so we pre-select candidates by file mtime and only parse the top N.
+    // 200 covers months of daily use; the frontend renders 30 at a time and
+    // pages in the rest progressively as the user scrolls (HistoryBoard).
+    const HISTORY_LIMIT: usize = 200;
+
+    let mut file_candidates: Vec<(std::time::SystemTime, std::path::PathBuf, &'static str)> = Vec::new();
+    let mut result: Vec<SavedSession> = Vec::new();
+
+    let home = dirs::home_dir();
+    if let Some(home) = home.as_ref() {
+        collect_registry_history_candidates(home, &mut file_candidates);
+    }
+
+    // Sort candidates by mtime desc and parse only the newest HISTORY_LIMIT.
+    file_candidates.sort_by(|a, b| b.0.cmp(&a.0));
+    file_candidates.truncate(HISTORY_LIMIT);
+
+    // Same treatment for Claude's encoded-folder → real-cwd registry: read and
+    // encode `~/.claude.json` ONCE (not per empty-cwd session), and only if
+    // there are Claude candidates that might need the fallback at all.
+    let claude_project_map = match (&home, file_candidates.iter().any(|(_, _, t)| *t == "claude")) {
+        (Some(h), true) => load_claude_project_map(h),
+        _ => std::collections::HashMap::new(),
+    };
+
+    // Shared across scans; retain at most the newest HISTORY_LIMIT paths.
+    let mut guard = session_parse_cache().lock().ok();
+    // Poisoned mutex → run against a throwaway cache. Every lookup misses, so
+    // this is exactly the pre-cache behaviour: slower, never wrong.
+    let mut fallback = SessionParseCache::default();
+    let cache: &mut SessionParseCache = match guard.as_mut() {
+        Some(c) => c,
+        None => &mut fallback,
+    };
+    sync_aux_generation(cache, &claude_project_map);
+
+    let mut keep_paths: std::collections::HashSet<std::path::PathBuf> =
+        std::collections::HashSet::with_capacity(file_candidates.len());
+    for (_, path, tool) in &file_candidates {
+        keep_paths.insert(path.clone());
+        let parsed = parse_session_cached(
+            cache,
+            path,
+            tool,
+            &claude_project_map,
+        );
+        if let Some(session) = parsed {
+            result.push(session);
+        }
+    }
+
+    // Drop entries for files that fell out of the newest-200 window so the cache
+    // can't grow without bound across a long-running session.
+    cache.entries.retain(|k, _| keep_paths.contains(k));
+
+    if let Some(home) = home.as_ref() {
+        if let Some(tool) = crate::tools::find("codex") {
+            if let Some(shape) = tool.history_shape.as_ref() {
+                apply_codex_thread_names(&history_root(tool, shape, home), &mut result);
+            }
+        }
+    }
+
+    // OpenCode second pass — SQLite is cheap (query already caps rows).
+    // Bypasses the mtime pipeline: find_opencode_sessions pushes finished
+    // SavedSession objects directly.
+    if let Some(home) = home.as_ref() {
+        if let Some(opencode_dir) = opencode_root(home) {
+            find_opencode_sessions(opencode_dir, &mut result);
+        }
+    }
+
+    // Hermes second pass — read state.db when present (newer Hermes). The
+    // JSON candidates were already skipped in collect_hermes_paths_with_mtime
+    // when the db exists, so this is the sole Hermes source then; with no db,
+    // the JSON path already populated `result` and this is a no-op.
+    if let Some(home) = home.as_ref() {
+        if let Some(db) = hermes_state_db(home) {
+            if db.is_file() {
+                find_hermes_sessions_sqlite(&db, &mut result);
+            }
+        }
+    }
+
+    // MiMo Code second pass — Xiaomi's OpenCode fork, identical Drizzle schema,
+    // so it reuses find_drizzle_sessions_sqlite with its own db path + labels.
+    if let Some(home) = home.as_ref() {
+        if let Some(db) = mimocode_db(home) {
+            find_drizzle_sessions_sqlite(&db, "mimocode", "MiMo Code Session", &mut result);
+        }
+    }
+
+    // Kilo Code second pass — an OpenCode fork (`kilo` binary), identical
+    // Drizzle schema, so it reuses find_drizzle_sessions_sqlite like MiMo Code.
+    if let Some(home) = home.as_ref() {
+        if let Some(db) = kilo_db(home) {
+            find_drizzle_sessions_sqlite(&db, "kilo", "Kilo Code Session", &mut result);
+        }
+    }
+
+    // Kimi Code second pass — index-based store (session_index.jsonl + state.json,
+    // NOT a dir walk). find_kimi_sessions reads the index, stats state.json for
+    // mtime to pre-select the newest 200, then reads each survivor's state.json
+    // for title / updatedAt. Pushes finished SavedSessions directly.
+    if let Some(home) = home.as_ref() {
+        find_kimi_sessions(home, &mut result);
+    }
+
+    // Grok Build second pass - per-session-dir store (summary.json index +
+    // chat_history.jsonl under sessions/<encoded-cwd>/<uuid>/). find_grok_sessions
+    // walks the two-level tree, stats summary.json for mtime to pre-select the
+    // newest 200, then reads each survivor's summary.json for title / cwd /
+    // timestamps. Pushes finished SavedSessions directly.
+    if let Some(_home) = home.as_ref() {
+        find_grok_sessions(_home, &mut result);
+    }
+
+    // Antigravity CLI second pass - its own conversation index (SQLite), read-only.
+    if let Some(db) = home.as_ref().and_then(|home| antigravity_summaries_db(home)) {
+        find_antigravity_sessions(&db, &mut result);
+    }
+
+    // DeepSeek Harness second pass - per-Session dirs under ~/.dsh/sessions with
+    // zstd logs; titles and times come from its own projection cache, so no log
+    // is decompressed. Desktop-only tool: resume opens a conversation tab.
+    for entry in crate::dsh_session::history_entries(200) {
+        result.push(SavedSession {
+            id: format!("dsh_native_{}", entry.session_id),
+            name: entry.title.unwrap_or_else(|| "DeepSeek Harness Session".to_string()),
+            tool: "dsh".to_string(),
+            cwd: entry.cwd,
+            session_token: Some(entry.session_id),
+            saved_at: entry.last_ms.to_string(),
+            created_at: entry.created_ms.map(|ms| ms.to_string()),
+            file_path: Some(entry.log.to_string_lossy().into_owned()),
+            turn_count: entry.turns,
+            git_context: None,
+            worktree_cwd: None,
+        });
+    }
+
+    // Collapse any Claude-worktree cwd to its project root, for every tool's
+    // sessions (a session launched from <project>/.claude/worktrees/<x> should
+    // resume in <project>, not the ephemeral worktree). No-op for normal dirs;
+    // project_root_from_cwd never shrinks a non-empty path to empty. Single
+    // point so the folder shown in the UI and the folder used for resume can
+    // never disagree.
+    for s in result.iter_mut() {
+        if !s.cwd.is_empty() {
+            if coffee_worktree_cwd(&s.cwd) && std::path::Path::new(&s.cwd).is_dir() { s.worktree_cwd = Some(s.cwd.clone()); }
+            s.cwd = project_root_from_cwd(&s.cwd);
+        }
+    }
+
+    // Numeric sorting is required: lexicographic comparison misorders values
+    // when a legacy source emits epoch seconds rather than milliseconds.
+    result.sort_by(|a, b| {
+        saved_session_epoch_ms(&b.saved_at).cmp(&saved_session_epoch_ms(&a.saved_at))
+    });
+    result.truncate(HISTORY_LIMIT);
+    Ok(result)
+}
+
+/// Walk every registry tool with a JSONL/Hermes history shape and
+/// push (mtime, path, tool_id) tuples into `out`. OpenCodeMixed is
+/// skipped — its SQLite scanner runs as a second pass and emits
+/// finished SavedSession objects, not file candidates.
+///
+/// Shared between `load_native_history_blocking` (History board)
+/// and `load_message_heatmap_blocking` (contribution heatmap) so
+/// the two surfaces can't drift.
+pub(super) fn collect_registry_history_candidates(
+    home: &std::path::Path,
+    out: &mut Vec<(std::time::SystemTime, std::path::PathBuf, &'static str)>,
+) {
+    for tool in crate::tools::TOOLS {
+        let Some(shape) = tool.history_shape.as_ref() else { continue };
+        let scan_dir = history_root(tool, shape, home);
+        match shape {
+            crate::tools::HistoryShape::HermesFlatJson => {
+                collect_hermes_paths_with_mtime(scan_dir, out);
+            }
+            // Index/DB-backed shapes bypass the file-walk pipeline — their
+            // bespoke second passes emit finished SavedSessions / HeatmapEntries.
+            crate::tools::HistoryShape::OpenCodeMixed { .. }
+            | crate::tools::HistoryShape::KimiIndex { .. }
+            | crate::tools::HistoryShape::GrokSessions { .. } => {}
+            _ => {
+                if let Some(depth) = shape.jsonl_depth() {
+                    collect_jsonl_paths_with_mtime(scan_dir, depth, tool.id, out);
+                }
+            }
+        }
+    }
+}
+
+pub(super) fn history_root(tool: &crate::tools::ToolDescriptor, shape: &crate::tools::HistoryShape, home: &std::path::Path) -> PathBuf {
+    let mut default = shape.join_under(home);
+    if tool.id == "omp" {
+        if let Ok(agent_dir) = std::env::var("PI_CODING_AGENT_DIR") {
+            if !agent_dir.is_empty() { default = PathBuf::from(agent_dir).join("sessions"); }
+        }
+        if let Ok(session_dir) = std::env::var("PI_CODING_AGENT_SESSION_DIR") {
+            if !session_dir.is_empty() { default = PathBuf::from(session_dir); }
+        }
+    }
+    if tool.id == "codebuddy" {
+        // CodeBuddy's documented config-dir override replaces `~/.codebuddy`
+        // wholesale (getHomeDir in the shipped bundle), and transcripts hang
+        // off `<config-dir>/projects`.
+        if let Ok(config_dir) = std::env::var("CODEBUDDY_CONFIG_DIR") {
+            if !config_dir.is_empty() {
+                default = PathBuf::from(config_dir).join("projects");
+            }
+        }
+    }
+    crate::tool_config::history_path_for(tool.id, default)
+}
+
+/// Resolve OpenCode's session-store root (under the user's home,
+/// or wherever `~/.coffee-cli/tools.json` redirects). `None` if
+/// OpenCode isn't in the registry — should never happen in
+/// practice, but keeps the call sites total.
+pub(super) fn opencode_root(home: &std::path::Path) -> Option<std::path::PathBuf> {
+    let tool = crate::tools::find("opencode")?;
+    let shape = tool.history_shape.as_ref()?;
+    Some(crate::tool_config::history_path_for(tool.id, shape.join_under(home)))
+}
+
+// Contribution-heatmap entry: one tuple per session file (mtime + message
+// count). The frontend buckets these into local-day boxes — doing the
+// bucketing here would require a TZ database (chrono/time) just to honour
+// the user's local midnight, which isn't worth the dependency.
+#[derive(serde::Serialize)]
+pub(super) struct HeatmapEntry {
+    pub(super) ts: i64,    // file mtime, seconds since UNIX_EPOCH
+    pub(super) count: u32, // approximate message count for the session
+}
+
+/// Persisted line-count cache for the heatmap scanner. One JSON file at
+/// `~/.coffee-cli/cache/heatmap-counts.json`. Best-effort across the board:
+/// any I/O / parse error returns an empty map and the scanner just recounts
+/// from disk. The mtime stored is seconds-since-epoch (matches the i64 `ts`
+/// field on HeatmapEntry) so a single integer comparison decides cache hit.
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
+pub(super) struct CachedCount {
+    pub(super) mtime: i64,
+    pub(super) count: u32,
+}
+
+pub(super) fn count_cache_path() -> Option<std::path::PathBuf> {
+    let home = dirs::home_dir()?;
+    Some(home.join(".coffee-cli").join("cache").join("heatmap-counts.json"))
+}
+
+pub(super) fn read_count_cache() -> std::collections::HashMap<String, CachedCount> {
+    let Some(path) = count_cache_path() else { return std::collections::HashMap::new(); };
+    let Ok(content) = std::fs::read_to_string(&path) else { return std::collections::HashMap::new(); };
+    serde_json::from_str(&content).unwrap_or_default()
+}
+
+pub(super) fn write_count_cache(map: &std::collections::HashMap<String, CachedCount>) {
+    let Some(path) = count_cache_path() else { return; };
+    if let Some(parent) = path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    if let Ok(json) = serde_json::to_string(map) {
+        let _ = std::fs::write(&path, json);
+    }
+}
+
+#[tauri::command]
+pub(super) async fn get_message_heatmap() -> Result<Vec<HeatmapEntry>, String> {
+    tauri::async_runtime::spawn_blocking(load_message_heatmap_blocking)
+        .await
+        .map_err(|e| format!("Heatmap task join failed: {e}"))?
+}
+
+pub(super) fn load_message_heatmap_blocking() -> Result<Vec<HeatmapEntry>, String> {
+    // Cover the full 53-week grid, including its first partial week.
+    const LOOKBACK_SECS: u64 = 371 * 86400;
+    let now = std::time::SystemTime::now();
+    let cutoff = now.checked_sub(std::time::Duration::from_secs(LOOKBACK_SECS))
+        .unwrap_or(std::time::UNIX_EPOCH);
+
+    let mut candidates: Vec<(std::time::SystemTime, std::path::PathBuf, &'static str)> = Vec::new();
+
+    let home = dirs::home_dir();
+    if let Some(home) = home.as_ref() {
+        collect_registry_history_candidates(home, &mut candidates);
+    }
+
+    // Per-file count cache. Heatmap re-scans every app launch and counts
+    // every jsonl line in every history file — for users with hundreds of
+    // past sessions that's the bulk of the cold-start I/O. Past sessions are
+    // immutable: once a session file's mtime is stable, its line count is
+    // stable forever. So we cache `path -> (mtime, count)` to disk, and on
+    // subsequent runs skip the open+read for any file whose mtime is
+    // unchanged from the cached entry. Cache corruption / partial writes
+    // are safe — `read_count_cache` returns empty on any error and we just
+    // recount once.
+    let mut count_cache = read_count_cache();
+    let mut cache_dirty = false;
+    let mut keep_paths: std::collections::HashSet<String> = std::collections::HashSet::new();
+
+    let mut out: Vec<HeatmapEntry> = Vec::with_capacity(candidates.len());
+    if let Some(_home) = home.as_ref() {
+        for (mtime, path, tool) in &candidates {
+            if *mtime < cutoff { continue; }
+            let ts = mtime
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_secs() as i64)
+                .unwrap_or(0);
+            let path_key = path.to_string_lossy().into_owned();
+            keep_paths.insert(path_key.clone());
+
+            // Cache hit only when mtime exactly matches — any append to the
+            // jsonl bumps mtime and forces a recount.
+            let count = if let Some(entry) = count_cache.get(&path_key) {
+                if entry.mtime == ts {
+                    entry.count
+                } else {
+                    let c = if *tool == "omp" {
+                        count_omp_messages(path)
+                    } else if *tool == "hermes" {
+                        count_hermes_messages(path)
+                    } else {
+                        count_jsonl_message_lines(path)
+                    };
+                    count_cache.insert(path_key.clone(), CachedCount { mtime: ts, count: c });
+                    cache_dirty = true;
+                    c
+                }
+            } else {
+                let c = if *tool == "omp" {
+                    count_omp_messages(path)
+                } else if *tool == "hermes" {
+                    count_hermes_messages(path)
+                } else {
+                    count_jsonl_message_lines(path)
+                };
+                count_cache.insert(path_key.clone(), CachedCount { mtime: ts, count: c });
+                cache_dirty = true;
+                c
+            };
+            if count > 0 {
+                out.push(HeatmapEntry { ts, count });
+            }
+        }
+    }
+
+    // Kimi Code heatmap second pass — runs BEFORE the cache prune/write below
+    // so its wire.jsonl paths join keep_paths (retained by the retain() below)
+    // and their counts land in count_cache (persisted by write_count_cache).
+    // Shares the file-based cache (keyed by wire.jsonl path + mtime) for
+    // warm-start re-count avoidance. wire.jsonl mtime = ts, line count =
+    // intensity (main agent only; sub-agent wire.jsonl is NOT counted, to
+    // avoid double-counting one conversation).
+    if let Some(home) = home.as_ref() {
+        let cutoff_secs = cutoff
+            .duration_since(std::time::SystemTime::UNIX_EPOCH)
+            .map(|d| d.as_secs() as i64)
+            .unwrap_or(0);
+        collect_kimi_heatmap_entries(
+            home, cutoff_secs, &mut out, &mut count_cache, &mut cache_dirty, &mut keep_paths,
+        );
+    }
+
+    // Grok Build heatmap second pass - runs BEFORE the cache prune/write below
+    // so its chat_history.jsonl paths join keep_paths (retained by the retain()
+    // below) and their counts land in count_cache (persisted by write_count_cache).
+    // Shares the file-based cache (keyed by chat_history.jsonl path + mtime) for
+    // warm-start re-count avoidance. chat_history.jsonl mtime = ts, line count =
+    // intensity.
+    if let Some(home) = home.as_ref() {
+        let cutoff_secs = cutoff
+            .duration_since(std::time::SystemTime::UNIX_EPOCH)
+            .map(|d| d.as_secs() as i64)
+            .unwrap_or(0);
+        collect_grok_heatmap_entries(
+            home, cutoff_secs, &mut out, &mut count_cache, &mut cache_dirty, &mut keep_paths,
+        );
+    }
+
+    // Prune stale entries (files that disappeared from disk). Non-jsonl tools
+    // like opencode use a separate cache layer below, so don't get caught
+    // here; the heuristic is "if we didn't see the path this scan, drop it".
+    let before = count_cache.len();
+    count_cache.retain(|k, _| keep_paths.contains(k));
+    if count_cache.len() != before { cache_dirty = true; }
+    if cache_dirty { write_count_cache(&count_cache); }
+
+    // OpenCode SQLite second pass — one GROUP BY query gets the same
+    // (timestamp, message_count) tuples the heatmap consumes, pre-
+    // filtered by the same 210-day cutoff so we don't read rows the
+    // frontend would discard anyway.
+    if let Some(home) = home.as_ref() {
+        if let Some(db_path) = opencode_root(home).map(|r| r.join("opencode.db")) {
+            if db_path.is_file() {
+                let cutoff_secs = cutoff
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_secs() as i64)
+                    .unwrap_or(0);
+                collect_opencode_heatmap_entries(&db_path, cutoff_secs, &mut out);
+            }
+        }
+    }
+
+    // Hermes heatmap second pass — state.db when present, same shape as
+    // OpenCode. The JSON candidate path was skipped above when the db exists,
+    // so there's no double-counting.
+    if let Some(home) = home.as_ref() {
+        if let Some(db) = hermes_state_db(home) {
+            if db.is_file() {
+                let cutoff_secs = cutoff
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_secs() as i64)
+                    .unwrap_or(0);
+                collect_hermes_heatmap_entries(&db, cutoff_secs, &mut out);
+            }
+        }
+    }
+
+    // Antigravity CLI heatmap second pass - the same conversation index as its history.
+    if let Some(db) = home.as_ref().and_then(|home| antigravity_summaries_db(home)) {
+        let cutoff_secs = cutoff
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs() as i64)
+            .unwrap_or(0);
+        collect_antigravity_heatmap_entries(&db, cutoff_secs, &mut out);
+    }
+
+    // MiMo Code heatmap second pass — identical schema to OpenCode, so it
+    // reuses collect_opencode_heatmap_entries with the mimocode.db path.
+    if let Some(home) = home.as_ref() {
+        if let Some(db) = mimocode_db(home) {
+            let cutoff_secs = cutoff
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_secs() as i64)
+                .unwrap_or(0);
+            collect_opencode_heatmap_entries(&db, cutoff_secs, &mut out);
+        }
+    }
+
+    // Kilo Code heatmap second pass — same schema as OpenCode/MiMo Code.
+    if let Some(home) = home.as_ref() {
+        if let Some(db) = kilo_db(home) {
+            let cutoff_secs = cutoff
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_secs() as i64)
+                .unwrap_or(0);
+            collect_opencode_heatmap_entries(&db, cutoff_secs, &mut out);
+        }
+    }
+
+    Ok(out)
+}
+
+/// One-shot SQLite scan of opencode's session table for heatmap entries.
+/// Mirrors `find_opencode_sessions_sqlite` (same WHERE/GROUP BY shape) so
+/// any schema drift in opencode.db hits both queries together. Best-effort:
+/// any error (locked DB, schema change, file missing) silently yields zero
+/// rows — opencode just doesn't appear in the heatmap that session.
+pub(super) fn collect_opencode_heatmap_entries(
+    db_path: &std::path::Path,
+    cutoff_secs: i64,
+    out: &mut Vec<HeatmapEntry>,
+) {
+    let conn = match rusqlite::Connection::open_with_flags(
+        db_path,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX,
+    ) {
+        Ok(c) => c,
+        Err(_) => return,
+    };
+    // opencode.db stores time_updated in MILLISECONDS since epoch (verified
+    // via parse_opencode_session at L2006 which treats the JSON `time.updated`
+    // as `u64 ms`). Heatmap entries downstream are seconds (frontend does
+    // `new Date(ts * 1000)` in ContributionHeatmap.tsx). So compare and emit
+    // in millis at the SQL boundary, then divide by 1000 once.
+    let cutoff_ms: i64 = cutoff_secs.saturating_mul(1000);
+    let query = format!("WITH sessions AS ({}) \
+                 SELECT s.time_updated, s.msg_count FROM sessions s \
+                 WHERE s.time_archived IS NULL AND s.time_updated >= ?1",
+                 opencode_sessions_sql(&conn));
+    let mut stmt = match conn.prepare(&query) {
+        Ok(s) => s,
+        Err(_) => return,
+    };
+    let rows = match stmt.query_map([cutoff_ms], |row| {
+        let ts_ms: i64 = row.get(0)?;
+        let count: i64 = row.get(1)?;
+        Ok((ts_ms, count))
+    }) {
+        Ok(r) => r,
+        Err(_) => return,
+    };
+    for row in rows.flatten() {
+        let (ts_ms, count) = row;
+        if count > 0 {
+            out.push(HeatmapEntry { ts: ts_ms / 1000, count: count as u32 });
+        }
+    }
+}
+
+// Cheap line-count for JSONL session files. We treat every non-empty
+// line as one "turn" — including system / tool-result rows. The heatmap
+// is an activity proxy, not a strict user-message tally, so over-
+// counting tool spam is fine (more chatter = darker square).
+pub(super) fn count_jsonl_message_lines(path: &std::path::Path) -> u32 {
+    use std::io::{BufRead, BufReader, Read};
+    let file = match std::fs::File::open(path) {
+        Ok(f) => f,
+        Err(_) => return 0,
+    };
+    // Cap reading at ~32 MiB to keep one runaway session from stalling
+    // the whole heatmap scan. 32 MiB of JSONL is ~50k+ lines — already
+    // off the chart visually, so capping doesn't affect the bucket.
+    const MAX_BYTES: u64 = 32 * 1024 * 1024;
+    let mut br = BufReader::new(file.take(MAX_BYTES));
+    let mut buf: Vec<u8> = Vec::with_capacity(512);
+    let mut count = 0u32;
+    while let Ok(n) = br.read_until(b'\n', &mut buf) {
+        if n == 0 { break; }
+        if buf.iter().any(|&b| !b.is_ascii_whitespace()) {
+            count = count.saturating_add(1);
+        }
+        buf.clear();
+    }
+    count
+}
+
+pub(super) fn count_omp_messages(path: &std::path::Path) -> u32 {
+    use std::io::{BufRead, Read};
+    let Ok(file) = std::fs::File::open(path) else { return 0 };
+    std::io::BufReader::new(file.take(32 * 1024 * 1024)).lines().map_while(Result::ok)
+        .filter_map(|line| serde_json::from_str::<serde_json::Value>(&line).ok())
+        .filter(|row| row.get("type").and_then(|v| v.as_str()) == Some("message") &&
+            matches!(row.pointer("/message/role").and_then(|v| v.as_str()), Some("user" | "assistant" | "toolResult")))
+        .count().min(u32::MAX as usize) as u32
+}
+
+// Hermes stores one big JSON file per session, not JSONL — so line-
+// counting wouldn't work. Approximate message count by counting
+// "role" key occurrences. Cheaper than a full serde_json parse.
+pub(super) fn count_hermes_messages(path: &std::path::Path) -> u32 {
+    let bytes = match std::fs::read(path) {
+        Ok(b) => b,
+        Err(_) => return 0,
+    };
+    let needle = b"\"role\"";
+    let mut count = 0u32;
+    let mut i = 0;
+    while i + needle.len() <= bytes.len() {
+        if &bytes[i..i + needle.len()] == needle {
+            count = count.saturating_add(1);
+            i += needle.len();
+        } else {
+            i += 1;
+        }
+    }
+    count
+}
+
