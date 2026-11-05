@@ -30,15 +30,9 @@ function patchXtermWebglBgFlags(): Plugin {
         .replace(/u!==0\|\|d&&c!==0/g, '(u&50331648)!==0||d&&c!==0')
         .replace(/0!==a\|\|h&&0!==l/g, '0!==(a&50331648)||h&&0!==l');
       if (after === before) {
-        // Don't fail the build if upstream changes its mangling — leave
-        // a console hint and ship the unpatched bundle (degrades to
-        // current behavior, doesn't break the app).
-        this.warn(
-          '[patch-xterm-webgl-bg-flags] guard pattern not found in ' +
-          id +
-          ' — xterm.js bundle layout changed, Glass dark plates will reappear until the regex is updated'
-        );
-        return null;
+        // Fail loudly: shipping unpatched silently brings Glass dark plates
+        // back. Update the regex when xterm's bundle mangling changes.
+        this.error('[patch-xterm-webgl-bg-flags] guard pattern not found in ' + id);
       }
       return { code: after, map: null };
     },
