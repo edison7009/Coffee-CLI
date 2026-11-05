@@ -418,7 +418,18 @@
     track.classList.add("is-looping");
   }
 
+  // Highlight the download button for the visitor's own OS (desktop only;
+  // phones can't install it, so nothing is singled out there).
+  function initPrimaryDownload() {
+    const ua = navigator.userAgent || "";
+    if (/iPhone|iPad|iPod|Android/i.test(ua)) return;
+    const os = /Mac/i.test(ua) ? "macos" : /Win/i.test(ua) ? "windows" : /Linux/i.test(ua) ? "linux" : "";
+    const btn = os && document.querySelector('.downloads-row .download-btn[data-platform="' + os + '"]');
+    if (btn) btn.classList.add("is-primary");
+  }
+
   function boot() {
+    initPrimaryDownload();
     init();
     initMarquee();
     initReveal();

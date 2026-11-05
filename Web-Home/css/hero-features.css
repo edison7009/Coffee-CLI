@@ -89,6 +89,15 @@ html[data-theme='dark'] .hx-lead { color: rgba(235, 235, 235, 0.78); }
   text-align: left;
 }
 .hero-split .downloads-row { justify-content: flex-start; }
+/* The visitor's own OS (detected in js) gets the filled brand button. */
+.hero-split .download-btn.is-primary {
+  background: var(--brand-color);
+  border-color: transparent;
+  color: #2a1c10;
+  font-weight: 600;
+}
+.hero-split .download-btn.is-primary .dl-suffix { opacity: 0.7; }
+.hero-split .download-btn.is-primary:hover { filter: brightness(1.06); }
 .hero-split .downloads-note { max-width: 32rem; }
 
 
@@ -221,7 +230,8 @@ html[data-theme='dark'] .fx-screen {
   padding: 0 2rem;
   display: grid;
   grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.7fr);
-  align-items: center;
+  /* Title lines up with the platform tabs: title → pick a platform → copy. */
+  align-items: start;
   gap: 1.5rem clamp(2rem, 5vw, 5rem);
 }
 .is-title {
