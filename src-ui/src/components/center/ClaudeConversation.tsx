@@ -32,6 +32,7 @@ import './ConversationView.css';
 import './Gambit.css';
 import './ClaudeConversation.css';
 import { pasteImageIntoAnswer } from '../../lib/answer-image-paste';
+import { ScrollLatestIcon } from './ScrollLatestIcon';
 
 function useClock(active: boolean, ms = 1000) {
   const [now, setNow] = useState(Date.now);
@@ -442,9 +443,7 @@ export function ClaudeConversation({ sessionId, cwd, resumeToken, isActive, isVi
     </div>
     {navigationItems.length > 1 && isActive && <ConversationNavigation items={navigationItems} scrollRef={scrollRef} onJump={jumpToTurn} />}
     {scrolled && <button className="claude-scroll-bottom" aria-label={t('claude.scroll_latest')} onClick={() => { prependAnchor.current = null; pinned.current = true; syncScroll(); setScrolled(false); }}>
-      {s.ready && s.busy && !s.requests.length
-        ? <span className="claude-working-mark" aria-hidden="true"><img src={CLAUDE_WORKING_MARK} alt="" /></span>
-        : <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 2v11M3 8l5 5 5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+      <ScrollLatestIcon working={s.ready && s.busy && !s.requests.length ? <span className="claude-working-mark" aria-hidden="true"><img src={CLAUDE_WORKING_MARK} alt="" /></span> : undefined} />
     </button>}
     {s.error && !s.ready && (!directoryIssue || directoryIssue.status === 'unavailable') && <button type="button" className="claude-expand claude-reconnect" title={directoryError || s.error} onClick={() => dispatch({ type: 'RESTART_TERMINAL', id: sessionId, newId: crypto.randomUUID() })}>{t('claude.reconnect')}</button>}
     {conversationMenu.menu}

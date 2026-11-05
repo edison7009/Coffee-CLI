@@ -17,6 +17,7 @@ import './ConversationView.css';
 import './ClaudeConversation.css';
 import './CodexConversation.css';
 import './OpenCodeConversation.css';
+import { ScrollLatestIcon } from './ScrollLatestIcon';
 
 function Measured({ id, measure, children }: { id: string; measure: (id: string, height: number) => void; children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -239,9 +240,7 @@ export function OpenCodeConversation({ sessionId, cwd, resumeToken, isActive, is
     </div>
     {navigationItems.length > 1 && isActive && <ConversationNavigation items={navigationItems} scrollRef={scroll} onJump={jumpToTurn} />}
     {scrolled && <button type="button" className="claude-scroll-bottom" aria-label={t('claude.scroll_latest')} onClick={() => { anchor.current = null; pinned.current = true; lastTop.current = scroll.current?.scrollTop ?? 0; sync(); }}>
-      {s.ready && s.busy && !waiting
-        ? <span className="codex-spinner" aria-hidden="true" />
-        : <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 2v11M3 8l5 5 5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+      <ScrollLatestIcon working={s.ready && s.busy && !waiting ? <span className="codex-spinner" aria-hidden="true" /> : undefined} />
     </button>}
     {s.error && !s.ready && (!directoryIssue || directoryIssue.status === 'unavailable') && <button type="button" className="claude-expand claude-reconnect" onClick={() => dispatch({ type: 'RESTART_TERMINAL', id: sessionId, newId: crypto.randomUUID() })}>{t('opencode.reconnect')}</button>}
     {conversationMenu.menu}

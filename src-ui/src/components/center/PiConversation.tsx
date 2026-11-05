@@ -20,6 +20,7 @@ import './ConversationView.css';
 import './Gambit.css';
 import './ClaudeConversation.css';
 import './PiWelcomeLogo.css';
+import { ScrollLatestIcon } from './ScrollLatestIcon';
 
 function count(value: number) { return value >= 1000 ? `${(value / 1000).toFixed(1)}k` : String(Math.round(value)); }
 function elapsed(ms: number, t: ClaudeTranslate) { const seconds = Math.max(0, Math.round(ms / 1000)); return seconds >= 60 ? t('claude.time.minutes', { minutes: Math.floor(seconds / 60), seconds: seconds % 60 }) : t('claude.time.seconds', { seconds }); }
@@ -189,9 +190,7 @@ export function PiConversation({ sessionId, cwd, resumeToken, isActive, isVisibl
     </div>
     {navigationItems.length > 1 && isActive && <ConversationNavigation items={navigationItems} scrollRef={scrollRef} onJump={jumpToTurn} />}
     {scrolled && <button type="button" className="claude-scroll-bottom" aria-label={t('claude.scroll_latest')} onClick={() => { anchor.current = null; pinned.current = true; syncScroll(); setScrolled(false); }}>
-      {s.ready && s.busy && !s.requests.length
-        ? <PiMark />
-        : <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 2v11M3 8l5 5 5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+      <ScrollLatestIcon working={s.ready && s.busy && !s.requests.length ? <PiMark /> : undefined} />
     </button>}
     {s.error && !s.ready && !noModel && (!directoryIssue || directoryIssue.status === 'unavailable') && <button type="button" className="claude-expand claude-reconnect" onClick={() => dispatch({ type: 'RESTART_TERMINAL', id: sessionId, newId: crypto.randomUUID() })}>{t('pi.reconnect')}</button>}
     {conversationMenu.menu}
