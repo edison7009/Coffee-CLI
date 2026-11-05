@@ -89,63 +89,35 @@ html[data-theme='dark'] .hx-lead { color: rgba(235, 235, 235, 0.78); }
   text-align: left;
 }
 .hero-split .downloads-row { justify-content: flex-start; }
-/* Download buttons: liquid glass — a translucent, blurred pane with a lit
-   top edge and a soft drop shadow; hover lifts it. The visitor's own OS
-   (.is-primary, set in js) is the brighter pane on the dark page and a dark
-   pane on the light page. (--dl-ang below drives the clip frames.) */
+/* Download buttons: plain and solid. The visitor's own OS (.is-primary,
+   set in js) is a solid inverse button — white on the dark page, black on
+   the light one; the others are thin outlines. Hover lifts with a soft
+   shadow. (--dl-ang below drives the clip frames.) */
 @property --dl-ang { syntax: "<angle>"; inherits: true; initial-value: 0deg; }
 .hero-split .download-btn {
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  background: rgba(255, 255, 255, 0.07);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-          backdrop-filter: blur(20px) saturate(180%);
-  box-shadow:
-    inset 0 1px 1px rgba(255, 255, 255, 0.30),
-    inset 0 -1px 1px rgba(0, 0, 0, 0.30),
-    0 10px 26px -14px rgba(0, 0, 0, 0.7);
+  background: var(--bg-color);
+  border: 1px solid var(--glass-border);
   color: var(--text-primary);
-  transition: transform 0.25s ease, background-color 0.25s ease, box-shadow 0.25s ease, color 0.25s ease;
+  transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
 }
 .hero-split .download-btn:hover {
   transform: translateY(-2px);
-  background: rgba(255, 255, 255, 0.13);
-  border-color: rgba(255, 255, 255, 0.10);
+  background: var(--glass-bg);
+  border-color: var(--text-secondary);
   color: var(--text-highlight);
-  box-shadow:
-    inset 0 1px 1px rgba(255, 255, 255, 0.45),
-    inset 0 -1px 1px rgba(0, 0, 0, 0.25),
-    0 16px 34px -14px rgba(0, 0, 0, 0.8);
+  box-shadow: 0 10px 24px -14px rgba(0, 0, 0, 0.5);
 }
-.hero-split .download-btn.is-primary {
+.hero-split .download-btn.is-primary,
+.hero-split .download-btn.is-primary:hover {
   font-weight: 600;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0.12));
-  border-color: rgba(255, 255, 255, 0.28);
-  color: #fff;
-  box-shadow:
-    inset 0 1px 1px rgba(255, 255, 255, 0.6),
-    inset 0 -1px 1px rgba(0, 0, 0, 0.2),
-    0 0 0 4px rgba(255, 255, 255, 0.04),
-    0 16px 36px -14px rgba(0, 0, 0, 0.8);
+  background: var(--text-highlight);
+  border-color: transparent;
+  color: var(--bg-color);
 }
-html:not([data-theme='dark']) .hero-split .download-btn {
-  background: rgba(255, 255, 255, 0.6);
-  border-color: rgba(0, 0, 0, 0.06);
-  box-shadow: inset 0 1px 1px #fff, inset 0 -1px 1px rgba(0, 0, 0, 0.06), 0 10px 26px -16px rgba(0, 0, 0, 0.35);
-}
-html:not([data-theme='dark']) .hero-split .download-btn:hover {
-  background: rgba(255, 255, 255, 0.85);
-  box-shadow: inset 0 1px 1px #fff, inset 0 -1px 1px rgba(0, 0, 0, 0.06), 0 16px 30px -16px rgba(0, 0, 0, 0.4);
-}
-html:not([data-theme='dark']) .hero-split .download-btn.is-primary {
-  background: linear-gradient(180deg, rgba(60, 60, 66, 0.9), rgba(24, 24, 26, 0.92));
-  border-color: rgba(0, 0, 0, 0.2);
-  color: #fff;
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.3), 0 14px 30px -14px rgba(0, 0, 0, 0.5);
-}
+.hero-split .download-btn.is-primary:hover { box-shadow: 0 12px 28px -12px rgba(255, 255, 255, 0.35); }
+html:not([data-theme='dark']) .hero-split .download-btn.is-primary:hover { box-shadow: 0 12px 28px -12px rgba(0, 0, 0, 0.45); }
 .hero-split .download-btn .dl-suffix { color: inherit; opacity: 0.55; }
-.hero-split .download-btn:hover .dl-suffix,
-.hero-split .download-btn.is-primary .dl-suffix { opacity: 0.7; }
+.hero-split .download-btn.is-primary .dl-suffix { opacity: 0.65; }
 @keyframes dl-flow { to { --dl-ang: 360deg; } }
 @media (prefers-reduced-motion: reduce) {
   .hero-split .download-btn { transition: none; }
