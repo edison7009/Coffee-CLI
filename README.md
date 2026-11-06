@@ -48,16 +48,16 @@ This is not a web app. Not an Electron wrapper. A **true native desktop app** bu
 
 ### Supported AI CLIs
 
-Coffee CLI can launch **any** command-line agent — but the ones below get deeper, purpose-built integration. **T1 provides enhanced status and interaction handling. Dedicated Desktop mode is available for Claude Code and Codex CLI; Kimi Code uses the enhanced terminal interface.** Lower tiers remain native terminal experiences, with the additional capabilities listed below.
+Coffee CLI can launch **any** command-line agent — but the ones below get deeper, purpose-built integration. **T1 supports two modes — a dedicated Desktop conversation and the native Terminal — plus usage statistics.** Lower tiers remain native terminal experiences, with the additional capabilities listed below.
 
 | Tier | What you get | CLIs |
 |---|---|---|
-| **T1** | **Dynamic Island · Enhanced interaction · Desktop mode (Claude Code / Codex CLI)** · History · Heatmap · Changes · Brand icon · One-click launch · Custom launch args | **Claude Code** · **Codex CLI** · **Kimi Code** |
-| **T2** | Native terminal · History · Heatmap · Changes · Brand icon · One-click launch · Custom launch args | OpenCode · mimocode · Grok Build · OpenClaw · Hermes Agent · Qwen Code · Pi · Kilo Code · Oh-My-Pi · CodeBuddy |
+| **T1** | **Desktop mode + Terminal mode · Usage statistics** · History · Heatmap · Changes · Brand icon · One-click launch · Custom launch args | **Claude Code** · **DeepSeek Harness** · **Codex CLI** · **OpenCode** · **Pi** |
+| **T2** | Native terminal · History · Heatmap · Changes · Brand icon · One-click launch · Custom launch args | Kimi Code · mimocode · Grok Build · OpenClaw · Hermes Agent · Qwen Code · Kilo Code · Oh-My-Pi · CodeBuddy |
 | **T3** | Brand icon · One-click launch | Crush · Aider · Goose · Copilot CLI · Cursor · Cline · Antigravity · Muse Code |
 | **T4** | Open a terminal tab and type the command to launch | any other CLI |
 
-*T1 status and interaction detection is hook-free and currently available only for Claude Code, Codex CLI, and Kimi Code. Coffee CLI reads native session events, native titles, or verified rendered-terminal state. Other tools stay in their native terminal UI even when Coffee CLI can read their history.*
+*Desktop mode and usage statistics are currently available for Claude Code, DeepSeek Harness, Codex CLI, OpenCode, and Pi. Other tools stay in their native terminal UI even when Coffee CLI can read their history.*
 
 *T1 and T2 CLIs ship today; T3 integrations are rolling in.*
 
@@ -195,7 +195,7 @@ Coffee CLI 是专为 AI CLI Agent 打造的**原生桌面工作台**，支持 Cl
 
 ### AI CLI 支持级别
 
-**T1 提供增强的状态识别与交互支持**，目前包括 **Claude Code、Codex CLI 和 Kimi Code**。其中，Claude Code 和 Codex CLI 支持独立的桌面式对话模式，Kimi Code 保持增强终端界面。OpenCode、mimocode、Grok Build 等其他工具保持原生终端界面；可读取历史记录不代表支持桌面式模式。
+**T1 支持桌面式与终端式两种模式，并提供用量统计**，目前包括 **Claude Code、DeepSeek Harness、Codex CLI、OpenCode 和 Pi** 共 5 个。Kimi Code、mimocode、Grok Build 等其他工具保持原生终端界面；可读取历史记录不代表支持桌面式模式。
 
 Muse Code 目前支持在所选目录启动 `muse`，暂未接入 Coffee CLI 的会话记录和热力图。
 
