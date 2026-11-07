@@ -1,5 +1,6 @@
 // DeepSeek Harness Session events (persisted log rows and live SDK `session.event`
 // notifications share one vocabulary) reduced into conversation rows.
+import type { ClaudeMessage } from './claude-protocol';
 export type Json = Record<string, unknown>;
 export const obj = (value: unknown): Json => value && typeof value === 'object' && !Array.isArray(value) ? value as Json : {};
 export const arr = (value: unknown): unknown[] => Array.isArray(value) ? value : [];
@@ -17,6 +18,8 @@ export interface DshMessage {
   toolName?: string;
   toolInput?: string;
   toolStatus?: 'running' | 'done' | 'failed';
+  /** Tool result metadata; file mutations record the applied `diffs` here. */
+  toolMeta?: Json;
   tone?: 'info' | 'error';
 }
 export interface DshRequest { id: string | number; method: string; params: Json }
@@ -86,7 +89,7 @@ export function reduceDshEvent(state: DshState, event: Json, historical = false)
   } else if (type === 'tool/result') {
     const message = obj(data.message), id = `tool:${str(message.toolCallId)}`;
     const existing = s.messages.find(m => m.id === id);
-    upsert({ ...(existing ?? { id, role: 'tool', turn, timestamp: time }), content: text(message.content), toolStatus: message.isError === true ? 'failed' : 'done' } as DshMessage);
+    upsert({ ...(existing ?? { id, role: 'tool', turn, timestamp: time }), content: text(message.content), toolMeta: obj(data.meta), toolStatus: message.isError === true ? 'failed' : 'done' } as DshMessage);
   } else if (type === 'turn/start') {
     if (!historical) { s.busy = true; s.startedAt ??= time; }
   } else if (type === 'turn/end') {
@@ -128,4 +131,39 @@ export function reduceDshNotification(state: DshState, frame: Json): DshState {
 
 export function restoreDshLog(rows: unknown[], base = emptyDshState()): DshState {
   return rows.map(obj).reduce((state, row) => reduceDshEvent(state, row, true), base);
+}
+
+/** The hunks a settled file mutation actually applied, from its result metadata. */
+function appliedDiffs(meta: Json | undefined): { path: string; oldText: string; newText: string }[] {
+  return arr(meta?.diffs).map(obj).filter(hunk => typeof hunk.path === 'string' && typeof hunk.newText === 'string')
+    .map(hunk => ({ path: str(hunk.path), oldText: str(hunk.oldText), newText: str(hunk.newText) }));
+}
+
+/** A DeepSeek Harness tool call under the names the shared tool card renders: edits become a diff, commands get input/output panes. */
+export function dshToolMessage(message: DshMessage): ClaudeMessage {
+  let args: Json = {};
+  try { args = obj(JSON.parse(message.toolInput ?? '')); } catch { /* Streamed or malformed arguments render as the generic card. */ }
+  const name = message.toolName ?? '', path = str(args.file_path) || str(args.path);
+  const settled = message.toolStatus === 'done' ? appliedDiffs(message.toolMeta) : [];
+  const diff = (fallback: { old_string: string; new_string: string }) => settled.length
+    // Applied hunks are what landed on disk; prefer them over the requested replacement.
+    ? { file_path: path || settled[0].path, old_string: settled.map(h => h.oldText).join('\n'), new_string: settled.map(h => h.newText).join('\n') }
+    : { file_path: path, ...fallback };
+  let toolName = name, input: Json = args;
+  switch (name) {
+    case 'bash': case 'pwsh': toolName = 'Bash'; input = { command: str(args.command), description: str(args.description) }; break;
+    case 'edit': toolName = 'Edit'; input = diff({ old_string: str(args.old_string), new_string: str(args.new_string) }); break;
+    case 'apply_patch': if (settled.length) { toolName = 'Edit'; input = diff({ old_string: '', new_string: '' }); } break;
+    case 'write': toolName = 'Write'; input = { file_path: path, ...(typeof args.content === 'string' ? { content: args.content } : {}) }; break;
+    case 'str_replace_editor':
+      if (args.command === 'create') { toolName = 'Write'; input = { file_path: path, content: str(args.file_text) }; }
+      else if (args.command === 'str_replace') { toolName = 'Edit'; input = { file_path: path, old_string: str(args.old_str), new_string: str(args.new_str) }; }
+      break;
+    case 'read': case 'read_image': toolName = 'Read'; input = { file_path: path }; break;
+    case 'grep': toolName = 'Grep'; input = { pattern: str(args.pattern), path }; break;
+    case 'glob': toolName = 'Glob'; input = { pattern: str(args.pattern), path }; break;
+  }
+  const settledAt = message.toolStatus === 'running' ? undefined : message.timestamp;
+  return { id: message.id, role: 'tool', content: '', timestamp: message.timestamp, toolName, input, toolStatus: message.toolStatus ?? 'running',
+    ...(message.toolStatus && message.toolStatus !== 'running' ? { output: message.content, endedAt: settledAt } : {}) };
 }

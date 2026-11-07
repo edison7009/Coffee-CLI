@@ -4,7 +4,7 @@ import { runInNewContext } from 'node:vm';
 import { fileURLToPath } from 'node:url';
 const result = await build({ entryPoints: [fileURLToPath(new URL('../src/lib/dsh-protocol.ts', import.meta.url))], bundle: true, platform: 'node', format: 'cjs', write: false });
 const module = { exports: {} }; runInNewContext(result.outputFiles[0].text, { module, exports: module.exports, console, Date, JSON });
-const { emptyDshState, reduceDshEvent, reduceDshNotification, restoreDshLog } = module.exports;
+const { emptyDshState, reduceDshEvent, reduceDshNotification, restoreDshLog, dshToolMessage } = module.exports;
 let passed = 0;
 function test(name, fn) { fn(); passed++; console.log(`ok ${name}`); }
 const plain = value => JSON.parse(JSON.stringify(value));
@@ -75,6 +75,28 @@ test('live notifications drive running state, requests, and exit', () => {
 test('unknown events leave the state untouched', () => {
   const s = emptyDshState();
   assert.equal(reduceDshEvent(s, { type: 'job/registered', data: {} }), s);
+});
+
+test('tool calls render as the shared tool card: commands, requested and applied edits', () => {
+  const call = (id, name, args) => ({ type: 'tool/call', seq: 1, time: 5, data: { turn: 1, callId: id, name, arguments: JSON.stringify(args) } });
+  const result = (id, extra) => ({ type: 'tool/result', seq: 2, time: 6, data: { turn: 1, message: { role: 'tool', toolCallId: id, content: [{ type: 'text', text: 'ok' }], isError: false }, ...extra } });
+  let s = emptyDshState();
+  for (const event of [
+    call('b', 'bash', { command: 'df -h', description: 'Check disk' }),
+    call('e', 'edit', { file_path: '/r/a.ts', old_string: 'a', new_string: 'b' }),
+    call('p', 'apply_patch', { patch: '*** Begin Patch' }),
+    result('b'),
+    result('p', { meta: { diffs: [{ path: '/r/c.ts', oldText: 'x', newText: 'y' }] } }),
+  ]) s = reduceDshEvent(s, event);
+  const tool = id => dshToolMessage(s.messages.find(m => m.id === `tool:${id}`));
+  const bash = tool('b');
+  assert.equal(bash.toolName, 'Bash'); assert.equal(bash.input.command, 'df -h'); assert.equal(bash.output, 'ok'); assert.equal(bash.toolStatus, 'done');
+  const edit = tool('e');
+  assert.equal(edit.toolName, 'Edit'); assert.deepEqual(plain(edit.input), { file_path: '/r/a.ts', old_string: 'a', new_string: 'b' });
+  assert.equal(edit.toolStatus, 'running'); assert.equal(edit.output, undefined, 'a running call has no output pane yet');
+  const patch = tool('p');
+  assert.equal(patch.toolName, 'Edit'); assert.deepEqual(plain(patch.input), { file_path: '/r/c.ts', old_string: 'x', new_string: 'y' });
+  assert.equal(dshToolMessage({ id: 'x', role: 'tool', content: '', turn: 1, timestamp: 1, toolName: 'mystery', toolInput: '{"a":1}', toolStatus: 'done' }).toolName, 'mystery');
 });
 
 console.log(`${passed} DeepSeek Harness protocol checks passed`);
