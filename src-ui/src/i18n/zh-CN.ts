@@ -171,7 +171,7 @@ export const zhCN = {
   'history.list': '会话列表',
   'history.projects': '项目分类',
   'history.layout': '显示方式',
-  'history.by_tool': '应用工具',
+  'history.all_apps': "全部应用",
   'history.icons': "应用图标",
   'history.icons_show': "显示",
   'history.icons_hide': "不显示",

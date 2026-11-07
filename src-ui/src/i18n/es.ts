@@ -169,7 +169,7 @@ export const es = {
   'history.list': 'Sesiones',
   'history.projects': 'Proyectos',
   'history.layout': 'Vista',
-  'history.by_tool': 'Herramientas',
+  'history.all_apps': "Todas las apps",
   'history.icons': "Iconos de apps",
   'history.icons_show': "Mostrar",
   'history.icons_hide': "Ocultar",

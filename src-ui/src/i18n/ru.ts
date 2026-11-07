@@ -169,7 +169,7 @@ export const ru = {
   'history.list': 'Сеансы',
   'history.projects': 'Проекты',
   'history.layout': 'Вид',
-  'history.by_tool': 'Инструменты',
+  'history.all_apps': "Все приложения",
   'history.icons': "Значки приложений",
   'history.icons_show': "Показывать",
   'history.icons_hide': "Скрыть",

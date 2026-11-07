@@ -171,7 +171,7 @@ export const ko = {
   'history.list': '세션 목록',
   'history.projects': '프로젝트별',
   'history.layout': '보기 방식',
-  'history.by_tool': '도구별',
+  'history.all_apps': "모든 앱",
   'history.icons': "앱 아이콘",
   'history.icons_show': "표시",
   'history.icons_hide': "숨김",

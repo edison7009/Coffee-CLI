@@ -171,7 +171,7 @@ export const ja = {
   'history.list': 'セッション一覧',
   'history.projects': 'プロジェクト別',
   'history.layout': '表示方法',
-  'history.by_tool': 'ツール別',
+  'history.all_apps': "すべてのアプリ",
   'history.icons': "アプリアイコン",
   'history.icons_show': "表示",
   'history.icons_hide': "非表示",

@@ -169,7 +169,7 @@ export const vi = {
   'history.list': 'Danh sách phiên',
   'history.projects': 'Dự án',
   'history.layout': 'Chế độ xem',
-  'history.by_tool': 'Công cụ',
+  'history.all_apps': "Tất cả ứng dụng",
   'history.icons': "Biểu tượng ứng dụng",
   'history.icons_show': "Hiện",
   'history.icons_hide': "Ẩn",

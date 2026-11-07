@@ -187,7 +187,8 @@ try {
     await page.screenshot({path:join(directory,`git-${state}-${ci??'none'}.png`)});
     assert.equal(await page.locator('.history-card').first().locator('.history-git-mark').count(),0,'working spinner wins over PR status');
     await page.locator('.history-layout-menu-btn').click();
-    await page.locator('.history-layout-menu [role="menuitemradio"]').nth(1).click();
+    await page.getByRole('menuitem',{name:'Projects'}).hover();
+    await page.getByRole('menu',{name:'Projects'}).getByRole('menuitemradio').first().click();
     assert.equal(await page.locator('.history-layout-menu').count(),0,'layout menu closes after choosing');
     await page.locator('.history-project-row .history-git-mark').waitFor();
   }
@@ -275,20 +276,21 @@ try {
     await page.evaluate(()=>document.documentElement.style.setProperty('--text-2','#aba1aa'));
     await page.screenshot({path:join(directory,`tool-icons-${layout}.png`),fullPage:true});
   }
-  // The Tools view lists one favourite tool's sessions, picked from a submenu level with its row.
+  // The session list's submenu offers all apps, then one favourite tool's sessions, level with its row.
   await page.evaluate(()=>{localStorage.setItem('cc-history-layout','list');localStorage.setItem('coffee_pinned_items',JSON.stringify(['agent:claude','agent:codex','agent:pi','agent:terminal']));});
   await page.goto(`http://127.0.0.1:${server.address().port}/?toolIcons=1`);
   await page.locator('.history-card').first().waitFor();
   const allCards=await page.locator('.history-card').count();
   await page.locator('.history-layout-menu-btn').click();
-  const toolsRow=page.getByRole('menuitem',{name:'Tools'});await toolsRow.hover();
-  const toolMenu=page.getByRole('menu',{name:'Tools'});await toolMenu.waitFor();
-  assert.deepEqual(await toolMenu.getByRole('menuitemradio').evaluateAll(items=>items.map(item=>item.dataset.tool)),['claude','codex','pi'],'favourite AI tools in launchpad order, without the terminal');
+  const toolsRow=page.getByRole('menuitem',{name:'Sessions'});await toolsRow.hover();
+  const toolMenu=page.getByRole('menu',{name:'Sessions'});await toolMenu.waitFor();
+  assert.equal(await toolMenu.getByRole('menuitemradio').first().getAttribute('aria-checked'),'true','all apps comes first and is chosen by default');
+  assert.deepEqual(await toolMenu.locator('[data-tool]').evaluateAll(items=>items.map(item=>item.dataset.tool)),['claude','codex','pi'],'favourite AI tools in launchpad order, without the terminal');
   const piName=await toolMenu.locator('[data-tool="pi"] .history-layout-tool-name').textContent();
   const [rowBox,firstToolBox,menuBox,subBox]=await Promise.all([toolsRow.boundingBox(),toolMenu.getByRole('menuitemradio').first().boundingBox(),page.locator('.history-layout-menu').first().boundingBox(),toolMenu.boundingBox()]);
-  assert.ok(Math.abs(rowBox.y-firstToolBox.y)<1.5,'the first tool sits level with the Tools row');
+  assert.ok(Math.abs(rowBox.y-firstToolBox.y)<1.5,'the first entry sits level with the session list row');
   assert.ok(subBox.x>=menuBox.x+menuBox.width,'the submenu opens beside the menu');
-  await page.getByRole('menuitemradio',{name:'Projects'}).hover();
+  await page.getByRole('menuitem',{name:'Projects'}).hover();
   assert.equal(await toolMenu.count(),0,'hovering another row closes the submenu');
   await toolsRow.hover();await toolMenu.locator('[data-tool="pi"]').click();
   assert.equal(await page.locator('.history-layout-menu').count(),0,'choosing a tool closes both menus');

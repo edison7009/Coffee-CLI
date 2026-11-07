@@ -275,7 +275,7 @@ export function HistoryBoard() {
   const openToolMenu = (row: HTMLElement, kind: 'tools' | 'icons' | 'scope' = 'tools') => {
     const item = row.getBoundingClientRect(), menu = layoutMenuRef.current?.getBoundingClientRect();
     // No favourite AI tool: nothing to choose, so no empty submenu.
-    if (!menu || (kind === 'tools' && !layoutMenu?.tools.length)) return;
+    if (!menu) return;
     setToolMenu(current => current && current.kind === kind && current.rowTop === item.top ? current : { kind, rowTop: item.top, top: item.top, left: menu.right + 4 });
   };
   // Placement depends on the rendered submenu: its padding and its width in this language.
@@ -769,27 +769,16 @@ export function HistoryBoard() {
       </div>
       {layoutMenu && createPortal(
         <div className="ctx-menu history-layout-menu" role="menu" ref={layoutMenuRef} style={{ position: 'fixed', top: layoutMenu.top, right: layoutMenu.right }}>
-          {(['list'] as const).map(value => (
-            <button type="button" key={value} role="menuitemradio" aria-checked={layout === value} className="ctx-menu-item" onMouseEnter={() => setToolMenu(null)} onClick={() => {
-              setLayoutMenu(null);
-              if (value === layout) return;
-              setPreview(null); setLayout(value); setVisibleCount(PAGE);
-            }}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{value === 'list' ? <><path d="M8 6h13M8 12h13M8 18h13" /><path d="M3 6h.01M3 12h.01M3 18h.01" /></> : <path d="M3 7h6l2 3h10v10H3z" />}</svg>
-              <span>{t(value === 'list' ? 'history.list' : 'history.projects')}</span>
-              <svg className="history-layout-check" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ visibility: layout === value ? 'visible' : 'hidden' }}><path d="M20 6 9 17l-5-5" /></svg>
-            </button>
-          ))}
+          {/* The session list opens its apps beside the row: all apps, or one app's sessions. */}
+          <button type="button" role="menuitem" aria-haspopup="menu" aria-expanded={toolMenu?.kind === 'tools'} className={`ctx-menu-item history-layout-tools${toolMenu?.kind === 'tools' ? ' is-open' : ''}`} onMouseEnter={event => openToolMenu(event.currentTarget)} onClick={event => openToolMenu(event.currentTarget)} onKeyDown={event => { if (event.key === 'ArrowRight') { event.preventDefault(); openToolMenu(event.currentTarget); } }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13" /><path d="M3 6h.01M3 12h.01M3 18h.01" /></svg>
+            <span>{t('history.list')}</span>
+            <svg className="history-layout-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
+          </button>
           {/* Projects open their scope beside the row: every session's folder, or only the launchpad's. */}
           <button type="button" role="menuitem" aria-haspopup="menu" aria-expanded={toolMenu?.kind === 'scope'} className={`ctx-menu-item history-layout-tools${toolMenu?.kind === 'scope' ? ' is-open' : ''}`} onMouseEnter={event => openToolMenu(event.currentTarget, 'scope')} onClick={event => openToolMenu(event.currentTarget, 'scope')} onKeyDown={event => { if (event.key === 'ArrowRight') { event.preventDefault(); openToolMenu(event.currentTarget, 'scope'); } }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 7h6l2 3h10v10H3z" /></svg>
             <span>{t('history.projects')}</span>
-            <svg className="history-layout-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
-          </button>
-          {/* Hover or click opens the tools beside this row, top-aligned with it. */}
-          <button type="button" role="menuitem" aria-haspopup="menu" aria-expanded={toolMenu?.kind === 'tools'} className={`ctx-menu-item history-layout-tools${toolMenu?.kind === 'tools' ? ' is-open' : ''}`} onMouseEnter={event => openToolMenu(event.currentTarget)} onClick={event => openToolMenu(event.currentTarget)} onKeyDown={event => { if (event.key === 'ArrowRight') { event.preventDefault(); openToolMenu(event.currentTarget); } }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></svg>
-            <span>{t('history.by_tool')}</span>
             <svg className="history-layout-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
           </button>
           <div className="ctx-menu-divider" role="separator" />
@@ -802,7 +791,7 @@ export function HistoryBoard() {
         document.body,
       )}
       {layoutMenu && toolMenu && createPortal(
-        <div className="ctx-menu history-layout-menu" role="menu" aria-label={t(toolMenu.kind === 'icons' ? 'history.icons' : toolMenu.kind === 'scope' ? 'history.projects' : 'history.by_tool')} ref={toolMenuRef} style={{ position: 'fixed', top: toolMenu.top, left: toolMenu.left }}>
+        <div className="ctx-menu history-layout-menu" role="menu" aria-label={t(toolMenu.kind === 'icons' ? 'history.icons' : toolMenu.kind === 'scope' ? 'history.projects' : 'history.list')} ref={toolMenuRef} style={{ position: 'fixed', top: toolMenu.top, left: toolMenu.left }}>
           {toolMenu.kind === 'scope' ? (['all', 'added'] as const).map(scope => (
             <button type="button" key={scope} role="menuitemradio" aria-checked={layout === 'projects' && projectScope === scope} className="ctx-menu-item" onClick={() => { setLayoutMenu(null); chooseScope(scope); if (layout !== 'projects') { setLayout('projects'); setVisibleCount(PAGE); } }}>
               <span className="history-layout-tool-name">{t(scope === 'all' ? 'history.scope_all' : 'history.scope_added')}</span>
@@ -813,7 +802,16 @@ export function HistoryBoard() {
               <span className="history-layout-tool-name">{t(show ? 'history.icons_show' : 'history.icons_hide')}</span>
               <svg className="history-layout-check" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ visibility: showIcons === show ? 'visible' : 'hidden' }}><path d="M20 6 9 17l-5-5" /></svg>
             </button>
-          )) : layoutMenu.tools.map(tool => (
+          )) : [
+            <button type="button" key="all" role="menuitemradio" aria-checked={layout === 'list'} className="ctx-menu-item" onClick={() => {
+              setLayoutMenu(null);
+              if (layout === 'list') return;
+              setPreview(null); setLayout('list'); setVisibleCount(PAGE);
+            }}>
+              <span className="history-layout-tool-name">{t('history.all_apps')}</span>
+              <svg className="history-layout-check" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ visibility: layout === 'list' ? 'visible' : 'hidden' }}><path d="M20 6 9 17l-5-5" /></svg>
+            </button>,
+            ...layoutMenu.tools.map(tool => (
             <button type="button" key={tool} data-tool={tool} role="menuitemradio" aria-checked={layout === 'tool' && toolFilter === tool} className="ctx-menu-item" onClick={() => {
               setLayoutMenu(null); setPreview(null);
               setLayout('tool'); setToolFilter(tool); setVisibleCount(PAGE);
@@ -822,7 +820,7 @@ export function HistoryBoard() {
               <span className="history-layout-tool-name">{getToolName(tool)}</span>
               <svg className="history-layout-check" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ visibility: layout === 'tool' && toolFilter === tool ? 'visible' : 'hidden' }}><path d="M20 6 9 17l-5-5" /></svg>
             </button>
-          ))}
+          ))]}
         </div>,
         document.body,
       )}

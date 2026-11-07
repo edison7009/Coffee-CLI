@@ -171,7 +171,7 @@ export const zhTW = {
   'history.list': '會話列表',
   'history.projects': '專案分類',
   'history.layout': '顯示方式',
-  'history.by_tool': '應用工具',
+  'history.all_apps': "全部應用",
   'history.icons': "應用圖示",
   'history.icons_show': "顯示",
   'history.icons_hide': "不顯示",

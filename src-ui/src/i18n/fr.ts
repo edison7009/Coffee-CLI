@@ -169,7 +169,7 @@ export const fr = {
   'history.list': 'Sessions',
   'history.projects': 'Projets',
   'history.layout': 'Affichage',
-  'history.by_tool': 'Outils',
+  'history.all_apps': "Toutes les apps",
   'history.icons': "Icônes des apps",
   'history.icons_show': "Afficher",
   'history.icons_hide': "Masquer",
