@@ -92,9 +92,10 @@
 .history-search-sentinel { height: 1px; }
 .history-search-footer { flex-shrink: 0; padding: 10px 20px; border-top: 1px solid var(--border); color: var(--text-2); font-size: var(--type-label); }
 
+/* Spacing and type follow Claude Desktop's sidebar: taller rows, one step smaller, regular weight. */
 .history-session-list .history-card {
   position: relative;
-  padding: 4px 10px;
+  padding: 6px 10px;
   margin-bottom: 2px;
   cursor: default !important;
   background: transparent;
@@ -161,10 +162,10 @@
   display: block;
   flex: 1;
   min-width: 0;
-  font-size: var(--type-body);
+  font-size: var(--type-label);
   color: var(--text-2);
   font-family: var(--font, system-ui);
-  font-weight: 500;
+  font-weight: 400;
   line-height: 1.4;
   white-space: nowrap;
   overflow: hidden;
@@ -355,9 +356,12 @@
   margin-left: 6px;
   color: var(--accent);
 }
+/* Even size, border-box and its own layer: an odd box centers on a half pixel, and macOS WebKit re-snaps it every frame, so the ring bobs. */
 .history-card-working-indicator > span {
-  width: 13px;
-  height: 13px;
+  box-sizing: border-box;
+  width: 14px;
+  height: 14px;
+  will-change: transform;
   border: 1.5px solid currentColor;
   border-right-color: transparent;
   border-radius: 50%;
@@ -443,9 +447,9 @@
   padding: 0;
   margin: 0;
   color: var(--text-2);
-  font-size: var(--type-body);
+  font-size: var(--type-label);
   font-family: var(--font, system-ui);
-  font-weight: 500;
+  font-weight: 400;
   line-height: 1.4;
   white-space: nowrap;
   overflow: hidden;
