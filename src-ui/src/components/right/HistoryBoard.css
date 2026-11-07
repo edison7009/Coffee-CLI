@@ -92,7 +92,7 @@
 .history-search-sentinel { height: 1px; }
 .history-search-footer { flex-shrink: 0; padding: 10px 20px; border-top: 1px solid var(--border); color: var(--text-2); font-size: var(--type-label); }
 
-/* Spacing and type follow Claude Desktop's sidebar: taller rows, one step smaller, regular weight. */
+/* Spacing and type follow Claude Desktop's sidebar: taller rows, regular weight. */
 .history-session-list .history-card {
   position: relative;
   padding: 6px 10px;
@@ -162,7 +162,7 @@
   display: block;
   flex: 1;
   min-width: 0;
-  font-size: var(--type-label);
+  font-size: var(--type-body);
   color: var(--text-2);
   font-family: var(--font, system-ui);
   font-weight: 400;
@@ -447,7 +447,7 @@
   padding: 0;
   margin: 0;
   color: var(--text-2);
-  font-size: var(--type-label);
+  font-size: var(--type-body);
   font-family: var(--font, system-ui);
   font-weight: 400;
   line-height: 1.4;

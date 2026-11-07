@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useAppState } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
-import { arr, dshToolMessage, obj, str, type DshMessage, type DshRequest } from '../../lib/dsh-protocol';
+import { arr, dshToolCard, obj, str, type DshMessage, type DshRequest } from '../../lib/dsh-protocol';
 import { respondDsh, retainDshSession, stopDsh, useDshSession } from '../../lib/dsh-session';
 import { clipboardWrite } from '../../lib/clipboard';
 import { directoryFailure, directoryFailureMessage } from '../../lib/session-directory';
@@ -177,7 +177,7 @@ export function DshConversation({ sessionId, cwd, resumeToken, isActive, isVisib
             {row.members ? <>
               <button type="button" className="codex-group-heading" aria-expanded={groupOpen(row.id)} onClick={() => setExpanded(old => ({ ...old, [row.id]: !groupOpen(row.id) }))}><span aria-hidden="true">{groupOpen(row.id) ? '⌄' : '›'}</span><span>{t('codex.activity', { count: row.members.length })}</span>{row.running && <span className="codex-spinner" aria-hidden="true" />}<small>{title(row.members.at(-1)!)}</small></button>
               {groupOpen(row.id) && <div className="dsh-activity-steps">{row.members.map(m => m.role === 'tool'
-                ? <ClaudeTool key={m.id} message={dshToolMessage(m)} />
+                ? <ClaudeTool key={m.id} message={dshToolCard(m)} />
                 : <details key={m.id} className="claude-reasoning" open={!!expanded[m.id]} onToggle={event => { const open = event.currentTarget.open; setExpanded(old => ({ ...old, [m.id]: open })); }}><summary>{t('conversation.reasoning')}</summary><MarkdownContent content={m.content} /></details>)}</div>}
             </>
             : row.role === 'notice' ? <div className={`claude-turn-summary${row.tone === 'error' ? ' is-error' : ''}`} role="status">{row.content === 'interrupted' ? t('claude.interrupted') : row.content === 'commands-unsupported' ? t('dsh.commands_unsupported') : row.tone === 'error' && !row.content.startsWith('/') ? `${t('codex.failed')} · ${row.content}` : row.content}</div> : <>

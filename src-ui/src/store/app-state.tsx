@@ -847,9 +847,6 @@ function getInitialState(): AppState {
   } catch { /* Best-effort operation; failure is non-fatal. */ }
 
   const defaultTerminalId = crypto.randomUUID();
-  // Tabs used to be restored across restarts; that resumed sessions still open
-  // elsewhere and empty sessions with no transcript. Drop the stale key.
-  try { localStorage.removeItem('cc-open-tabs'); } catch { /* Best-effort operation; failure is non-fatal. */ }
 
   let leftPanelHidden = false;
   let rightPanelHidden = true;

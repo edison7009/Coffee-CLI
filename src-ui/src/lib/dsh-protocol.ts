@@ -108,6 +108,8 @@ export function reduceDshEvent(state: DshState, event: Json, historical = false)
   } else if (type === 'turn/end') {
     const reason = str(obj(data.reason).kind);
     if (reason && reason !== 'completed') upsert({ id: `turn-end:${turn}:${num(event.seq)}`, role: 'notice', content: reason, turn, timestamp: time, tone: reason === 'interrupted' ? 'info' : 'error' });
+    // A turn that ends without committing its stream (stop, error) keeps what was shown.
+    s.messages = settleStream(s.messages);
     // Tool calls left running by an interrupted turn will never settle.
     s.messages = s.messages.map(m => m.toolStatus === 'running' && m.turn === turn ? { ...m, toolStatus: 'failed' } : m);
   } else if (type === 'session/title') s.title = str(data.title) || s.title;
@@ -139,7 +141,7 @@ export function reduceDshNotification(state: DshState, frame: Json): DshState {
     const busy = params.status === 'running';
     return { ...state, busy, startedAt: busy ? state.startedAt ?? Date.now() : undefined, requests: busy ? state.requests : [] };
   }
-  if (method === 'coffee/exit') return { ...state, ready: false, busy: false, requests: [], error: state.restarting ? undefined : str(params.detail).trim() || `DeepSeek Harness exited (${params.code ?? 'unknown'})` };
+  if (method === 'coffee/exit') return { ...state, messages: settleStream(state.messages), ready: false, busy: false, requests: [], error: state.restarting ? undefined : str(params.detail).trim() || `DeepSeek Harness exited (${params.code ?? 'unknown'})` };
   return state;
 }
 
@@ -149,18 +151,29 @@ export function restoreDshLog(rows: unknown[], base = emptyDshState()): DshState
 
 const LIVE = 'live:';
 
+/** Rows a stopped or crashed attempt streamed stay as shown: no longer live, under ids the next attempt cannot reuse. */
+function settleStream(messages: DshMessage[]): DshMessage[] {
+  if (!messages.some(m => m.streaming || m.id.startsWith(LIVE))) return messages;
+  const stamp = Date.now();
+  return messages.map(m => m.streaming || m.id.startsWith(LIVE) ? { ...m, streaming: false, ...(m.id.startsWith(LIVE) ? { id: `stopped:${stamp}:${m.id.slice(LIVE.length)}` } : {}) } : m);
+}
+
 /** Live assistant-stream frames forwarded by Coffee's Host plugin: text and reasoning grow in place, tool arguments fill in as they stream. */
 export function reduceDshStream(state: DshState, frame: Json): DshState {
   const type = str(frame.type);
-  // A new attempt or one that ended without committing (retry, abort) drops what streamed so far.
-  if (type === 'start' || type === 'end') {
+  // A new attempt drops what an uncommitted one (a retry) streamed. The end frame changes nothing: it can arrive before or
+  // after the committed message, which arrives on another writer; an aborted turn is settled by its turn/end.
+  if (type === 'end') return state;
+  if (type === 'start') {
     return state.messages.some(m => m.streaming) ? { ...state, messages: state.messages.filter(m => !m.streaming) } : state;
   }
   const chunk = obj(frame.chunk), kind = str(chunk.type), index = num(chunk.index);
-  const turn = state.messages.at(-1)?.turn ?? 0, now = Date.now();
+  // The user's message opens each turn; a trailing notice can carry another turn number.
+  const turn = state.messages.findLast(m => m.role === 'user')?.turn ?? state.messages.at(-1)?.turn ?? 0, now = Date.now();
   const messages = [...state.messages];
   const put = (id: string, change: (old: DshMessage | undefined) => DshMessage) => {
-    const at = messages.findIndex(m => m.id === id);
+    // Live rows sit at the tail, so search backwards.
+    const at = messages.findLastIndex(m => m.id === id);
     if (at >= 0) messages[at] = change(messages[at]); else messages.push(change(undefined));
   };
   if (kind === 'text-delta' || kind === 'reasoning-delta') {
@@ -177,6 +190,14 @@ export function reduceDshStream(state: DshState, frame: Json): DshState {
 function appliedDiffs(meta: Json | undefined): { path: string; oldText: string; newText: string }[] {
   return arr(meta?.diffs).map(obj).filter(hunk => typeof hunk.path === 'string' && typeof hunk.newText === 'string')
     .map(hunk => ({ path: str(hunk.path), oldText: str(hunk.oldText), newText: str(hunk.newText) }));
+}
+
+const toolCards = new WeakMap<DshMessage, ClaudeMessage>();
+/** The tool card for a row, built once per row object so unchanged cards keep their memo and do not recompute diffs. */
+export function dshToolCard(message: DshMessage): ClaudeMessage {
+  let card = toolCards.get(message);
+  if (!card) { card = dshToolMessage(message); toolCards.set(message, card); }
+  return card;
 }
 
 /** A DeepSeek Harness tool call under the names the shared tool card renders: edits become a diff, commands get input/output panes. */

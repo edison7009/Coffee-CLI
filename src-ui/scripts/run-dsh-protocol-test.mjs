@@ -4,7 +4,7 @@ import { runInNewContext } from 'node:vm';
 import { fileURLToPath } from 'node:url';
 const result = await build({ entryPoints: [fileURLToPath(new URL('../src/lib/dsh-protocol.ts', import.meta.url))], bundle: true, platform: 'node', format: 'cjs', write: false });
 const module = { exports: {} }; runInNewContext(result.outputFiles[0].text, { module, exports: module.exports, console, Date, JSON });
-const { emptyDshState, reduceDshEvent, reduceDshNotification, restoreDshLog, dshToolMessage } = module.exports;
+const { emptyDshState, reduceDshEvent, reduceDshNotification, restoreDshLog, dshToolMessage, dshToolCard } = module.exports;
 let passed = 0;
 function test(name, fn) { fn(); passed++; console.log(`ok ${name}`); }
 const plain = value => JSON.parse(JSON.stringify(value));
@@ -112,15 +112,32 @@ test('live stream frames show text, reasoning and tool arguments before the mess
   s = stream(s, chunk({ type: 'tool-call-delta', index: 2, id: 'c1', argumentsDelta: 's"}' }));
   assert.deepEqual(plain(s.messages.map(m => [m.role, m.content || m.toolInput])), [['user', 'hi'], ['reasoning', 'Let me look'], ['assistant', 'Checking.'], ['tool', '{"command":"ls"}']]);
   assert.equal(reduceDshNotification(s, { method: 'coffee/stream', params: { sessionId: 'other', frame: chunk({ type: 'text-delta', index: 1, text: 'x' }) } }), s, 'another session is ignored');
-  s = stream(s, { type: 'end' });
-  assert.deepEqual(plain(s.messages.map(m => m.id)), ['user:u'], 'an attempt that ends without committing drops its live rows');
+  assert.equal(stream(s, { type: 'end' }), s, 'the end frame alone changes nothing; it may precede the committed message');
   s = stream(s, { type: 'start' });
+  assert.deepEqual(plain(s.messages.map(m => m.id)), ['user:u'], 'a retry drops what the uncommitted attempt streamed');
   s = stream(s, chunk({ type: 'text-delta', index: 0, text: 'Chec' }));
   s = stream(s, chunk({ type: 'text-delta', index: 1, text: 'stray' }));
   s = stream(s, chunk({ type: 'tool-call-delta', index: 2, id: 'c1', name: 'bash', argumentsDelta: '{"comm' }));
   s = reduceDshEvent(s, { type: 'assistant/message', seq: 5, time: 5, data: { turn: 1, message: { id: 'a1', content: [{ type: 'text', text: 'Checking.' }, { type: 'tool-call', id: 'c1', name: 'bash', arguments: '{"command":"ls"}' }] } } });
   assert.deepEqual(plain(s.messages.map(m => [m.id, m.content || m.toolInput, !!m.streaming])), [['user:u', 'hi', false], ['a1:0', 'Checking.', false], ['tool:c1', '{"command":"ls"}', false]], 'committed blocks replace live rows in place; a stray block is dropped');
   assert.equal(stream(s, { type: 'end' }).messages.length, 3, 'the committed end frame keeps everything');
+  assert.equal(dshToolCard(s.messages[2]), dshToolCard(s.messages[2]), 'an unchanged row reuses its tool card');
+});
+
+test('a stopped turn keeps what it streamed, and the next turn starts clean', () => {
+  const stream = (s, frame) => reduceDshNotification(s, { method: 'coffee/stream', params: { sessionId: 's1', frame } });
+  const chunk = c => ({ type: 'chunk', chunk: c });
+  let s = { ...emptyDshState(), sessionId: 's1' };
+  s = reduceDshEvent(s, { type: 'user/message', seq: 1, time: 1, data: { turn: 2, id: 'u', content: [{ type: 'text', text: 'hi' }], source: { kind: 'user' } } });
+  s = { ...s, messages: [...s.messages, { id: 'note', role: 'notice', content: '/plan', turn: 0, timestamp: 1, tone: 'info' }] };
+  s = stream(s, { type: 'start' });
+  s = stream(s, chunk({ type: 'text-delta', index: 0, text: 'Half a rep' }));
+  assert.equal(s.messages.at(-1).turn, 2, 'live rows take the turn of the user message, not a trailing notice');
+  s = reduceDshNotification(s, { method: 'coffee/exit', params: { code: 0 } });
+  assert.ok(s.messages.some(m => m.content === 'Half a rep' && !m.streaming && !m.id.startsWith('live:')), 'the partial reply stays, settled');
+  s = stream(s, { type: 'start' });
+  s = stream(s, chunk({ type: 'text-delta', index: 0, text: 'New' }));
+  assert.deepEqual(plain(s.messages.filter(m => m.role === 'assistant').map(m => m.content)), ['Half a rep', 'New'], 'the next attempt neither drops nor appends to it');
 });
 
 console.log(`${passed} DeepSeek Harness protocol checks passed`);
