@@ -31,13 +31,14 @@ export interface ClaudeMessage extends ChatMessage {
 }
 /** One turn's totals. `cost` is what Claude reported for a live turn; history has only tokens to estimate from. */
 export interface TurnStats {
-  durationMs: number;
+  /** Unknown for a turn whose prompt is not in view (an earlier page) and that recorded no duration. */
+  durationMs?: number;
   usage: { input: number; output: number; cacheRead: number; cacheWrite: number; cacheWrite1h: number };
   model?: string;
   cost?: number;
 }
 /** A turn in progress: each request's usage by message id, as a message's blocks repeat it. */
-interface TurnProgress { startedAt: number; lastAt: number; model?: string; requests: Record<string, Json>; durationMs?: number }
+interface TurnProgress { startedAt: number; lastAt: number; model?: string; requests: Record<string, Json>; durationMs?: number; prompted?: boolean }
 export interface ClaudeModel {
   value: string;
   resolvedModel?: string;
@@ -123,7 +124,8 @@ export function finishTurn(state: ClaudeState, durationMs?: number, cost?: numbe
   const sum = (key: string) => requests.reduce((total, usage) => total + number(usage[key]), 0);
   const usage = { input: sum('input_tokens'), output: sum('output_tokens'), cacheRead: sum('cache_read_input_tokens'), cacheWrite: sum('cache_creation_input_tokens'),
     cacheWrite1h: requests.reduce((total, u) => total + number(object(u.cache_creation).ephemeral_1h_input_tokens), 0) };
-  const turnStats: TurnStats = { durationMs: durationMs ?? turn.durationMs ?? Math.max(0, turn.lastAt - turn.startedAt), usage, model: turn.model, ...(cost !== undefined ? { cost } : {}) };
+  const measured = turn.prompted ? Math.max(0, turn.lastAt - turn.startedAt) : undefined;
+  const turnStats: TurnStats = { durationMs: durationMs ?? turn.durationMs ?? measured, usage, model: turn.model, ...(cost !== undefined ? { cost } : {}) };
   next.messages = state.messages.map((m, index) => index === at ? { ...m, turnStats } : m);
   return next;
 }
@@ -225,12 +227,12 @@ export function reduceClaudeEvent(state: ClaudeState, frame: Json, now = Date.no
         // Claude records a stop as a user line; the turn already shows it was cancelled.
         if (INTERRUPT_MARKER.test(content.trim())) continue;
         const pending = s.messages.findLast(m => m.role === 'user' && m.id.startsWith('pending:') && m.content === content);
-        if (pending) { update(pending.id, { id: text(frame.uuid) || pending.id }); s.turn = { startedAt: pending.timestamp, lastAt: now, requests: {} }; }
+        if (pending) { update(pending.id, { id: text(frame.uuid) || pending.id }); s.turn = { startedAt: pending.timestamp, lastAt: now, requests: {}, prompted: true }; }
         else if (!s.messages.some(m => m.id === frame.uuid)) {
           // A prompt opens a turn; in history the previous one ends here.
           if (historical) Object.assign(s, finishTurn(s));
           s.messages.push({ id: text(frame.uuid) || `user:${now}:${s.messages.length}`, role: 'user', content, timestamp: now });
-          s.turn = { startedAt: now, lastAt: now, requests: {} };
+          s.turn = { startedAt: now, lastAt: now, requests: {}, prompted: true };
         }
       }
     }

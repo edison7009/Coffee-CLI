@@ -3,7 +3,7 @@ import { useT } from '../../i18n/useT';
 import { formatElapsed, formatTokens } from '../../lib/claude-i18n';
 import { costOf, refreshModelPrices, type TokenUsage } from '../../lib/model-prices';
 
-export interface TurnSummaryStats { durationMs: number; usage: TokenUsage; model?: string; cost?: number }
+export interface TurnSummaryStats { durationMs?: number; usage: TokenUsage; model?: string; cost?: number }
 
 const costKey = (session: string, message: string) => `cc-turn-cost:${session}:${message}`;
 function savedCost(session: string, message: string): number | undefined {
@@ -26,9 +26,7 @@ export function TurnSummary({ stats, sessionKey, messageId, prefix }: { stats: T
   const tokens = input + output + cacheRead + cacheWrite;
   const cost = stats.cost ?? (sessionKey ? savedCost(sessionKey, messageId) : undefined) ?? costOf(stats.model, stats.usage);
   return <div className="claude-turn-summary" role={prefix ? 'status' : undefined}>
-    {prefix && <>{prefix} · </>}
-    {t('claude.worked_for', { duration: formatElapsed(stats.durationMs, t) })}
-    {tokens > 0 && <> · {t('claude.tokens', { count: formatTokens(tokens) })}</>}
-    {cost !== undefined && cost > 0 && <> · ~${cost < 0.01 ? cost.toFixed(4) : cost.toFixed(2)}</>}
+    {[prefix, stats.durationMs !== undefined && t('claude.worked_for', { duration: formatElapsed(stats.durationMs, t) }), tokens > 0 && t('claude.tokens', { count: formatTokens(tokens) }),
+      cost !== undefined && cost > 0 && `~$${cost < 0.01 ? cost.toFixed(4) : cost.toFixed(2)}`].filter(Boolean).join(' · ')}
   </div>;
 }
