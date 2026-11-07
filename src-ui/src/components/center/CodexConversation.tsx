@@ -15,7 +15,7 @@ import { WelcomeGreeting, WelcomeRestoring, WelcomeSessionMeta } from './Welcome
 import { CodexWelcomeIcon } from './CodexWelcomeIcon';
 import { ConversationDirectory } from '../../lib/conversation-links';
 import { useConversationMenu } from '../../lib/use-conversation-menu';
-import { CollapsibleUserMessage, ColdReturnCard, ConversationNavigation, MessageCopyButton, type ConversationNavigationItem } from './ConversationControls';
+import { CollapsibleUserMessage, ColdReturnCard, ConversationNavigation, MessageCopyButton, type ConversationNavigationItem, Chevron } from './ConversationControls';
 import './ConversationView.css';
 import './ClaudeConversation.css';
 import './CodexConversation.css';
@@ -162,7 +162,7 @@ export function CodexConversation({ sessionId, cwd, resumeToken, isActive, isVis
   const tool = (message: CodexMessage) => {
     const label = orchestrationToolLabel(str(message.item.tool), t, str(message.item.server));
     return <div className={`codex-tool is-${message.interrupted ? 'interrupted' : message.toolStatus ?? 'reasoning'}`} key={message.id}>
-    <div className="codex-tool-heading"><button type="button" className="claude-tool-heading" aria-expanded={!!expanded[message.id]} onClick={() => toggle(message.id)}><span className="codex-chevron" aria-hidden="true">{expanded[message.id] ? '⌄' : '›'}</span><strong>{label ?? (message.role === 'reasoning' ? t('conversation.reasoning') : message.item.type === 'fileChange' ? t('codex.files') : message.item.type === 'commandExecution' ? t('codex.command') : str(message.item.type))}</strong><span>{label ? str(obj(message.item.arguments).title) : title(message)}</span></button><MessageCopyButton copied={copied === message.id} onCopy={() => copy(message.id, [title(message), message.content].join('\n'))} /></div>
+    <div className="codex-tool-heading"><button type="button" className="claude-tool-heading" aria-expanded={!!expanded[message.id]} onClick={() => toggle(message.id)}><span className="codex-chevron" aria-hidden="true"><Chevron open={expanded[message.id]} /></span><strong>{label ?? (message.role === 'reasoning' ? t('conversation.reasoning') : message.item.type === 'fileChange' ? t('codex.files') : message.item.type === 'commandExecution' ? t('codex.command') : str(message.item.type))}</strong><span>{label ? str(obj(message.item.arguments).title) : title(message)}</span></button><MessageCopyButton copied={copied === message.id} onCopy={() => copy(message.id, [title(message), message.content].join('\n'))} /></div>
     {expanded[message.id] && (message.role === 'reasoning' ? <MarkdownContent content={message.content} /> : <pre className="codex-tool-body">{message.content || pretty(message.item)}</pre>)}
   </div>;
   };
@@ -187,7 +187,7 @@ export function CodexConversation({ sessionId, cwd, resumeToken, isActive, isVis
         {rows.slice(virtual.start, virtual.end).map((row, i) => <Measured key={row.id} id={virtual.measurementKeys[virtual.start + i]} measure={virtual.measureRow}>
           <article className={`claude-row claude-row--${row.item.type === 'turnStatus' ? str(row.item.status) : row.partial && row.role !== 'user' ? 'running' : row.role} codex-row`} data-message-id={row.id}>
             {row.members ? <>
-              <button type="button" className="codex-group-heading" aria-expanded={!!expanded[row.id]} onClick={() => toggle(row.id)}><span aria-hidden="true">{expanded[row.id] ? '⌄' : '›'}</span><span>{t('codex.activity', { count: row.members.length })}</span>{row.partial && <span className="codex-spinner" aria-hidden="true" />}<small>{title(row.members.at(-1)!)}</small></button>
+              <button type="button" className="codex-group-heading" aria-expanded={!!expanded[row.id]} onClick={() => toggle(row.id)}><span aria-hidden="true"><Chevron open={expanded[row.id]} /></span><span>{t('codex.activity', { count: row.members.length })}</span>{row.partial && <span className="codex-spinner" aria-hidden="true" />}<small>{title(row.members.at(-1)!)}</small></button>
               {expanded[row.id] && <div className="codex-activity-list">{row.members.map(tool)}</div>}
             </> : row.item.type === 'turnStatus' ? (row.turnStats
               ? <TurnSummary stats={row.turnStats} sessionKey={s.nativeId} messageId={row.id} prefix={t(row.item.status === 'interrupted' ? 'claude.interrupted' : row.item.status === 'failed' ? 'codex.failed' : 'codex.completed')} />

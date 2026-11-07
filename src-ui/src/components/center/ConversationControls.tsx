@@ -53,6 +53,11 @@ export function CollapsibleUserMessage({ sentAt, expanded, onToggle, children }:
   </div>;
 }
 
+/** A disclosure arrow: one shape turned a quarter when open, so it never shifts as two glyphs with different metrics did. */
+export function Chevron({ open }: { open: boolean }) {
+  return <svg className="conversation-chevron" data-open={open} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>;
+}
+
 export function MessageCopyButton({ copied, onCopy }: { copied: boolean; onCopy: () => void }) {
   const t = useT();
   return (

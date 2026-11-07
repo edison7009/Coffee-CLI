@@ -178,3 +178,7 @@ body.gambit-docked .claude-reconnect { bottom:calc(var(--gambit-dock-h,200px) + 
 @media(prefers-reduced-motion:reduce) { .claude-empty-icon.is-animated :is(video,img) { visibility:hidden; } .claude-empty-icon.is-animated .claude-empty-still { visibility:visible; } }
 @media(forced-colors:active) { .claude-working-word { animation:none; background:none; color:CanvasText; -webkit-text-fill-color:currentColor; } }
 @container(max-width:600px) { .claude-thread { width:calc(100% - 32px); } }
+/* Disclosure arrows: one centred shape that turns, sized to the text beside it. */
+.conversation-chevron { flex:none; display:inline-block; vertical-align:-1px; transition:transform .15s ease; }
+.conversation-chevron[data-open="true"] { transform:rotate(90deg); }
+@media(prefers-reduced-motion:reduce) { .conversation-chevron { transition:none; } }

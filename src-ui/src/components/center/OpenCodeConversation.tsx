@@ -14,7 +14,7 @@ import { WelcomeGreeting, WelcomeRestoring, WelcomeSessionMeta } from './Welcome
 import { OpenCodeWelcomeLogo } from './OpenCodeWelcomeLogo';
 import { ConversationDirectory } from '../../lib/conversation-links';
 import { useConversationMenu } from '../../lib/use-conversation-menu';
-import { CollapsibleUserMessage, ConversationNavigation, MessageCopyButton, type ConversationNavigationItem } from './ConversationControls';
+import { CollapsibleUserMessage, ConversationNavigation, MessageCopyButton, type ConversationNavigationItem, Chevron } from './ConversationControls';
 import './ConversationView.css';
 import './ClaudeConversation.css';
 import './CodexConversation.css';
@@ -192,7 +192,7 @@ export function OpenCodeConversation({ sessionId, cwd, resumeToken, isActive, is
   const tool = (message: OpenCodeRow) => {
     const body = message.role === 'reasoning' ? message.content : [message.input !== undefined && Object.keys(obj(message.input)).length ? pretty(message.input) : typeof message.input === 'string' ? message.input : '', message.content].filter(Boolean).join('\n\n');
     return <div className={`codex-tool is-${message.toolStatus ?? 'reasoning'}`} key={message.id}>
-      <div className="codex-tool-heading"><button type="button" className="claude-tool-heading" aria-expanded={!!expanded[message.id]} onClick={() => toggle(message.id)}><span className="codex-chevron" aria-hidden="true">{expanded[message.id] ? '⌄' : '›'}</span><strong>{message.role === 'reasoning' ? t('conversation.reasoning') : message.toolName}</strong><span>{message.role === 'reasoning' ? title(message) : message.title}</span></button><MessageCopyButton copied={copied === message.id} onCopy={() => copy(message.id, [title(message), body].join('\n'))} /></div>
+      <div className="codex-tool-heading"><button type="button" className="claude-tool-heading" aria-expanded={!!expanded[message.id]} onClick={() => toggle(message.id)}><span className="codex-chevron" aria-hidden="true"><Chevron open={expanded[message.id]} /></span><strong>{message.role === 'reasoning' ? t('conversation.reasoning') : message.toolName}</strong><span>{message.role === 'reasoning' ? title(message) : message.title}</span></button><MessageCopyButton copied={copied === message.id} onCopy={() => copy(message.id, [title(message), body].join('\n'))} /></div>
       {expanded[message.id] && (message.role === 'reasoning' ? <MarkdownContent content={message.content} /> : <pre className="codex-tool-body">{body}</pre>)}
     </div>;
   };
@@ -226,7 +226,7 @@ export function OpenCodeConversation({ sessionId, cwd, resumeToken, isActive, is
         {rows.slice(virtual.start, virtual.end).map((row, i) => <Measured key={row.id} id={virtual.measurementKeys[virtual.start + i]} measure={virtual.measureRow}>
           <article className={`claude-row claude-row--${row.kind === 'idle' ? (row.outcome === 'succeeded' ? 'completed' : row.outcome) : row.partial && row.role !== 'user' ? 'running' : row.role} codex-row`} data-message-id={row.id}>
             {row.members ? <>
-              <button type="button" className="codex-group-heading" aria-expanded={!!expanded[row.id]} onClick={() => toggle(row.id)}><span aria-hidden="true">{expanded[row.id] ? '⌄' : '›'}</span><span>{t('codex.activity', { count: row.members.length })}</span>{row.partial && <span className="codex-spinner" aria-hidden="true" />}<small>{title(row.members.at(-1)!)}</small></button>
+              <button type="button" className="codex-group-heading" aria-expanded={!!expanded[row.id]} onClick={() => toggle(row.id)}><span aria-hidden="true"><Chevron open={expanded[row.id]} /></span><span>{t('codex.activity', { count: row.members.length })}</span>{row.partial && <span className="codex-spinner" aria-hidden="true" />}<small>{title(row.members.at(-1)!)}</small></button>
               {expanded[row.id] && <div className="codex-activity-list">{row.members.map(tool)}</div>}
             </> : row.kind ? turnStatus(row) : <>
               {row.role === 'user'
