@@ -259,17 +259,20 @@ export function HistoryBoard() {
   const [projectExtras, setProjectExtras] = useState<Map<string, number>>(new Map());
   useEffect(() => { try { localStorage.setItem('cc-history-layout', layout); } catch { /* Storage unavailable. */ } }, [layout]);
   const [layoutMenu, setLayoutMenu] = useState<{ top: number; right: number; tools: string[] } | null>(null);
-  const [toolMenu, setToolMenu] = useState<{ rowTop: number; top: number; left: number } | null>(null);
+  const [toolMenu, setToolMenu] = useState<{ kind: 'tools' | 'icons'; rowTop: number; top: number; left: number } | null>(null);
+  // Each row's tool icon; filtered to one tool, the heading already names it, so it can be turned off.
+  const [showIcons, setShowIcons] = useState(() => { try { return localStorage.getItem('cc-history-icons') !== 'hidden'; } catch { return true; } });
+  const chooseIcons = (show: boolean) => { setShowIcons(show); try { localStorage.setItem('cc-history-icons', show ? 'shown' : 'hidden'); } catch { /* Best-effort operation; failure is non-fatal. */ } };
   const layoutBtnRef = useRef<HTMLButtonElement>(null);
   const layoutMenuRef = useRef<HTMLDivElement>(null);
   const toolMenuRef = useRef<HTMLDivElement>(null);
   useEffect(() => { if (!layoutMenu) setToolMenu(null); }, [layoutMenu]);
   // The tools open beside the menu with their first row level with "Tools"; they flip left at the screen edge.
-  const openToolMenu = (row: HTMLElement) => {
+  const openToolMenu = (row: HTMLElement, kind: 'tools' | 'icons' = 'tools') => {
     const item = row.getBoundingClientRect(), menu = layoutMenuRef.current?.getBoundingClientRect();
     // No favourite AI tool: nothing to choose, so no empty submenu.
-    if (!menu || !layoutMenu?.tools.length) return;
-    setToolMenu(current => current && current.rowTop === item.top ? current : { rowTop: item.top, top: item.top, left: menu.right + 4 });
+    if (!menu || (kind === 'tools' && !layoutMenu?.tools.length)) return;
+    setToolMenu(current => current && current.kind === kind && current.rowTop === item.top ? current : { kind, rowTop: item.top, top: item.top, left: menu.right + 4 });
   };
   // Placement depends on the rendered submenu: its padding and its width in this language.
   useLayoutEffect(() => {
@@ -647,9 +650,9 @@ export function HistoryBoard() {
           >
             <div className="history-card-content">
               <div className="history-card-title-row">
-                <span className="history-card-tool-icon" aria-hidden="true">
+                {showIcons && <span className="history-card-tool-icon" aria-hidden="true">
                   {getToolIcon(session.tool)}
-                </span>
+                </span>}
                 {isRenaming ? (
                   <input
                     className="history-card-rename-input"
@@ -768,17 +771,28 @@ export function HistoryBoard() {
             </button>
           ))}
           {/* Hover or click opens the tools beside this row, top-aligned with it. */}
-          <button type="button" role="menuitem" aria-haspopup="menu" aria-expanded={!!toolMenu} className={`ctx-menu-item history-layout-tools${toolMenu ? ' is-open' : ''}`} onMouseEnter={event => openToolMenu(event.currentTarget)} onClick={event => openToolMenu(event.currentTarget)} onKeyDown={event => { if (event.key === 'ArrowRight') { event.preventDefault(); openToolMenu(event.currentTarget); } }}>
+          <button type="button" role="menuitem" aria-haspopup="menu" aria-expanded={toolMenu?.kind === 'tools'} className={`ctx-menu-item history-layout-tools${toolMenu?.kind === 'tools' ? ' is-open' : ''}`} onMouseEnter={event => openToolMenu(event.currentTarget)} onClick={event => openToolMenu(event.currentTarget)} onKeyDown={event => { if (event.key === 'ArrowRight') { event.preventDefault(); openToolMenu(event.currentTarget); } }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></svg>
             <span>{t('history.by_tool')}</span>
+            <svg className="history-layout-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
+          </button>
+          <div className="ctx-menu-divider" role="separator" />
+          <button type="button" role="menuitem" aria-haspopup="menu" aria-expanded={toolMenu?.kind === 'icons'} className={`ctx-menu-item history-layout-tools${toolMenu?.kind === 'icons' ? ' is-open' : ''}`} onMouseEnter={event => openToolMenu(event.currentTarget, 'icons')} onClick={event => openToolMenu(event.currentTarget, 'icons')} onKeyDown={event => { if (event.key === 'ArrowRight') { event.preventDefault(); openToolMenu(event.currentTarget, 'icons'); } }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="9" cy="9" r="2" /><path d="m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21" /></svg>
+            <span>{t('history.icons')}</span>
             <svg className="history-layout-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
           </button>
         </div>,
         document.body,
       )}
       {layoutMenu && toolMenu && createPortal(
-        <div className="ctx-menu history-layout-menu" role="menu" aria-label={t('history.by_tool')} ref={toolMenuRef} style={{ position: 'fixed', top: toolMenu.top, left: toolMenu.left }}>
-          {layoutMenu.tools.map(tool => (
+        <div className="ctx-menu history-layout-menu" role="menu" aria-label={t(toolMenu.kind === 'icons' ? 'history.icons' : 'history.by_tool')} ref={toolMenuRef} style={{ position: 'fixed', top: toolMenu.top, left: toolMenu.left }}>
+          {toolMenu.kind === 'icons' ? ([true, false] as const).map(show => (
+            <button type="button" key={String(show)} role="menuitemradio" aria-checked={showIcons === show} className="ctx-menu-item" onClick={() => { setLayoutMenu(null); chooseIcons(show); }}>
+              <span className="history-layout-tool-name">{t(show ? 'history.icons_show' : 'history.icons_hide')}</span>
+              <svg className="history-layout-check" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ visibility: showIcons === show ? 'visible' : 'hidden' }}><path d="M20 6 9 17l-5-5" /></svg>
+            </button>
+          )) : layoutMenu.tools.map(tool => (
             <button type="button" key={tool} data-tool={tool} role="menuitemradio" aria-checked={layout === 'tool' && toolFilter === tool} className="ctx-menu-item" onClick={() => {
               setLayoutMenu(null); setPreview(null);
               setLayout('tool'); setToolFilter(tool); setVisibleCount(PAGE);
