@@ -170,6 +170,7 @@ export const zhCN = {
   'history.search_title': '搜索会话或工作区',
   'history.list': '会话列表',
   'history.projects': '项目分类',
+  'history.no_projects': '尚未添加项目。打开文件夹后，项目会显示在这里。',
   'history.layout': '显示方式',
   'history.by_tool': '应用工具',
   'history.show_more': '显示更多',

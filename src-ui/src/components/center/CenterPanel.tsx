@@ -1,4 +1,4 @@
-import { Fragment, useState, useEffect, useLayoutEffect, useRef, useMemo } from 'react';
+import { Fragment, useState, useEffect, useLayoutEffect, useRef, useMemo, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { InlineSvgIcon } from '../InlineSvgIcon';
 import { focusTerminal } from '../../lib/focus-registry';
@@ -25,6 +25,7 @@ import { DiffPanel } from '../right/DiffPanel';
 import { getTabOrder, supportsAgentStatus, useAppState, type ClaudeMode, type ToolType } from '../../store/app-state';
 import { isFrostShape } from '../../lib/personalization';
 import { isClaudeConversation, isCodexConversation, isDshConversation, isOpenCodeConversation, isPiConversation } from '../../lib/chat-tools';
+import { addProjectFolder, getProjectFoldersSnapshot, removeProjectFolder, subscribeProjectFolders } from '../../lib/project-folders';
 
 // Dropdown shown when a tool card is clicked: the globally
 // recent project folders (any tool that used one) + "Open folder…" last.
@@ -618,9 +619,7 @@ export function CenterPanel() {
     try { localStorage.setItem('coffee:pi-launch-mode', mode); } catch { /* optional preference */ }
   };
   // Shared recent project folders, most recently used first.
-  const [recentFolders, setRecentFolders] = useState<string[]>(() => {
-    try { const r = localStorage.getItem('coffee:recent-folders'); return r ? JSON.parse(r) : []; } catch { return []; }
-  });
+  const recentFolders = useSyncExternalStore(subscribeProjectFolders, getProjectFoldersSnapshot, getProjectFoldersSnapshot);
   const [folderMenu, setFolderMenu] = useState<{ x: number; y: number; tool: ToolType } | null>(null);
   // Each tool's last project folder: clicking its card opens straight there.
   const [lastFolders, setLastFolders] = useState<Record<string, string>>(() => {
@@ -654,27 +653,13 @@ export function CenterPanel() {
     });
   };
   const rememberFolder = (tool: ToolType, folder: string) => {
-    pushRecentFolder(folder);
+    addProjectFolder(folder);
     if (tool) updateLastFolders(prev => ({ ...prev, [tool]: folder }));
-  };
-  const pushRecentFolder = (folder: string) => {
-    setRecentFolders(prev => {
-      const next = [folder, ...prev.filter(f => f !== folder)].slice(0, 8);
-      try { localStorage.setItem('coffee:recent-folders', JSON.stringify(next)); } catch { /* Best-effort operation; failure is non-fatal. */ }
-      return next;
-    });
-  };
-  const removeRecentFolder = (folder: string) => {
-    setRecentFolders(prev => {
-      const next = prev.filter(f => f !== folder);
-      try { localStorage.setItem('coffee:recent-folders', JSON.stringify(next)); } catch { /* Best-effort operation; failure is non-fatal. */ }
-      return next;
-    });
   };
   // A folder that no longer exists leaves the recents and is no tool's last folder either.
   // (Tidying the recents list by hand keeps the tools' last folders.)
   const forgetMissingFolder = (folder: string) => {
-    removeRecentFolder(folder);
+    removeProjectFolder(folder);
     updateLastFolders(prev => Object.values(prev).includes(folder) ? Object.fromEntries(Object.entries(prev).filter(([, value]) => value !== folder)) : prev);
   };
 
@@ -1785,7 +1770,7 @@ export function CenterPanel() {
           recent={recentFolders}
           openLabel={t('launchpad.open_folder') || 'Open folder…'}
           onPick={(f) => { selectTool(folderMenu.tool, undefined, f); setFolderMenu(null); }}
-          onRemove={(f) => removeRecentFolder(f)}
+          onRemove={removeProjectFolder}
           onOpenNew={() => { const tk = folderMenu.tool; setFolderMenu(null); handlePickFolder(tk); }}
           onClose={() => setFolderMenu(null)}
         />

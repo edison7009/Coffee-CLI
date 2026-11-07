@@ -168,6 +168,7 @@ export const ru = {
   'history.search_title': 'Поиск сеансов или рабочих областей',
   'history.list': 'Сеансы',
   'history.projects': 'Проекты',
+  'history.no_projects': 'Проекты ещё не добавлены. Откройте папку, и она появится здесь.',
   'history.layout': 'Вид',
   'history.by_tool': 'Инструменты',
   'history.show_more': 'Показать ещё',

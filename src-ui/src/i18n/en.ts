@@ -169,6 +169,7 @@ export const en = {
   'history.search_title': 'Search sessions or workspaces',
   'history.list': 'Sessions',
   'history.projects': 'Projects',
+  'history.no_projects': 'No projects added. Open a folder to see it here.',
   'history.layout': 'View',
   'history.by_tool': 'Tools',
   'history.show_more': 'Show more',

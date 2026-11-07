@@ -170,6 +170,7 @@ export const ja = {
   'history.search_title': 'セッションやワークスペースを検索',
   'history.list': 'セッション一覧',
   'history.projects': 'プロジェクト別',
+  'history.no_projects': '追加されたプロジェクトはありません。フォルダを開くとここに表示されます。',
   'history.layout': '表示方法',
   'history.by_tool': 'ツール別',
   'history.show_more': 'さらに表示',

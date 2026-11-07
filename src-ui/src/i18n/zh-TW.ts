@@ -170,6 +170,7 @@ export const zhTW = {
   'history.search_title': '搜尋會話或工作區',
   'history.list': '會話列表',
   'history.projects': '專案分類',
+  'history.no_projects': '尚未新增專案。開啟資料夾後，專案會顯示在這裡。',
   'history.layout': '顯示方式',
   'history.by_tool': '應用工具',
   'history.show_more': '顯示更多',

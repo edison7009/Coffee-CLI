@@ -33,6 +33,7 @@ context.baseSessions = [
   session('agent', '', 'coffee-agent'), session('claw', '/internal/workspace', 'openclaw'),
   session('renamed', 'D:/Coffee-CLI'),
 ];
+context.projectFolders = ['D:/Coffee-CLI', '/one/shared', '/two/shared', '/projects/App', '/projects/app', 'D:/Empty'];
 const original = [...context.baseSessions];
 context.availableSessions = evaluate('availableSessions');
 assert.equal(context.availableSessions[0].id, 'pinned');
@@ -44,14 +45,16 @@ assert.deepEqual(Array.from(coffee.sessions, session => session.id), ['recent', 
 assert.equal(context.projects.some(group => group.name === '/one/shared'), true);
 assert.equal(context.projects.some(group => group.name === '/two/shared'), true);
 assert.equal(context.projects.filter(group => ['App', 'app'].includes(group.name)).length, 2, 'case-sensitive Unix directories stay distinct');
-assert.equal(context.projects.find(group => group.sessions[0].id === 'agent').name, 'Coffee Agent');
-assert.equal(context.projects.find(group => group.sessions[0].id === 'claw').name, 'OpenClaw');
+assert.equal(context.projects.some(group => group.cwd === 'D:/EchoBird'), false, 'history alone never adds a project');
+assert.equal(context.projects.find(group => group.sessions.some(session => session.id === 'agent')).name, 'Coffee Agent');
+assert.equal(context.projects.find(group => group.sessions.some(session => session.id === 'claw')).name, 'OpenClaw', 'directoryless tool groups keep their existing behavior');
+assert.deepEqual(Array.from(context.projects.find(group => group.cwd === 'D:/Empty').sessions), [], 'an added project stays visible without history');
 context.collapsedProjects = new Set([coffee.key]);
 context.layout = 'projects';
 let rows = evaluate('rows');
 assert.equal(rows.filter(row => row.kind === 'project').length, context.projects.length);
 assert.equal(rows.some(row => row.kind === 'session' && row.session.id === 'recent'), false);
-assert.equal(rows.some(row => row.kind === 'session' && row.session.id === 'pinned'), true);
+assert.equal(rows.some(row => row.kind === 'session' && row.session.id === 'pinned'), false, 'an unadded folder does not leak its sessions into project rows');
 // One busy folder previews its newest sessions, keeps open ones, and grows on demand.
 const busy = { key: 'cwd:busy', name: 'Busy', cwd: 'D:/Busy', sessions: Array.from({ length: 23 }, (_, i) => session('s' + i, 'D:/Busy')) };
 const allProjects = context.projects;
@@ -78,6 +81,13 @@ context.projects = allProjects;
 context.layout = 'list';
 rows = evaluate('rows');
 assert.deepEqual(Array.from(rows, row => row.session.id), Array.from(context.availableSessions, session => session.id), 'switching back restores the original session order');
+context.layout = 'projects';
+context.projectFolders = ['/one/shared'];
+context.projects = evaluate('projects');
+assert.deepEqual(Array.from(context.projects.filter(group => group.cwd), group => group.cwd), ['/one/shared'], 'removing a folder removes only its project group');
+context.layout = 'list';
+rows = evaluate('rows');
+assert.equal(rows.some(row => row.session.id === 'recent'), true, 'sessions from removed projects remain in the full list');
 context.layout = 'tool'; context.toolFilter = 'codex';
 rows = evaluate('rows');
 assert.deepEqual(Array.from(rows, row => row.session.id), Array.from(context.availableSessions.filter(session => session.tool === 'codex'), session => session.id), 'the Tools view lists only the chosen tool, in list order');
@@ -91,7 +101,7 @@ assert.equal(matches(original[3], 'codex cli'), true);
 assert.equal(matches(original[8], 'coffee agent'), true);
 assert.equal(matches(original[9], 'internal/workspace'), false, 'directoryless tools do not expose internal workspaces');
 assert.equal(matches(original[0], 'no such conversation'), false);
-console.log('OK: hidden/pinned sessions, stable cache, directory grouping, duplicate names, case-sensitive paths, directoryless tools, collapse/toggle, renamed title and project/tool search');
+console.log('OK: hidden/pinned sessions, stable cache, added-folder grouping, removed-folder history, duplicate names, case-sensitive paths, directoryless tools, collapse/toggle, renamed title and project/tool search');
 
 context.state = { terminals: [
   { tool: 'claude', resumeToken: 'active', agentStatus: 'working', folderPath: 'D:/same' },

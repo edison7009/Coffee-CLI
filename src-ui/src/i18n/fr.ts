@@ -168,6 +168,7 @@ export const fr = {
   'history.search_title': 'Rechercher des sessions ou espaces de travail',
   'history.list': 'Sessions',
   'history.projects': 'Projets',
+  'history.no_projects': 'Aucun projet ajouté. Ouvrez un dossier pour le voir ici.',
   'history.layout': 'Affichage',
   'history.by_tool': 'Outils',
   'history.show_more': 'Afficher plus',

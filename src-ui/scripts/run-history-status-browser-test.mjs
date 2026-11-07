@@ -20,6 +20,7 @@ const mock = `
   export function useAppLanguage(){return 'en'};
   export function useAppStateRef(){return {current:state}};
   const sessions=[{id:'one',tool:'claude',session_token:'one',name:'Working on the first task',cwd:'D:/same',saved_at:'2026-10-23T00:00:00Z'},{id:'two',tool:'claude',session_token:'two',name:'Another task in the same folder',cwd:'D:/same',saved_at:'2026-10-22T00:00:00Z'},{id:'other',tool:'codex',session_token:'one',name:'Different tool with the same token',cwd:'D:/same',saved_at:'2026-10-21T00:00:00Z'}];
+  if(new URLSearchParams(location.search).has('projectFilter')) sessions.push({id:'unadded',tool:'claude',session_token:'unadded',name:'History from an unadded folder',cwd:'D:/not-added',saved_at:'2026-10-20T00:00:00Z'});
   if(new URLSearchParams(location.search).has('workers')) sessions.push(...['codex','opencode'].map((tool,index)=>({id:'saved-worker-'+index,tool,session_token:'worker-native-'+index,name:'You are a worker assigned to an internal task',cwd:'D:/same',saved_at:'2026-10-24T00:00:00Z'})));
   if(new URLSearchParams(location.search).has('toolIcons')) {
     state={...state,terminals:[]};
@@ -68,6 +69,38 @@ const browser = await chromium.launch({ headless: true, ...(process.env.COFFEE_C
 try {
   const page = await browser.newPage({ viewport: { width: 640, height: 400 } });
   const errors = []; page.on('pageerror', error => errors.push(error.message));
+  await page.addInitScript(() => {
+    if (!localStorage.getItem('coffee:recent-folders')) {
+      const folders = new URLSearchParams(location.search).has('toolIcons') ? ['D:/icons'] : ['D:/same'];
+      localStorage.setItem('coffee:recent-folders', JSON.stringify(folders));
+    }
+  });
+  await page.goto(`http://127.0.0.1:${server.address().port}/?projectFilter=1&pr=branch`);
+  await page.evaluate(() => {
+    localStorage.setItem('cc-history-layout', 'projects');
+    localStorage.setItem('coffee:recent-folders', JSON.stringify(['D:/same']));
+  });
+  await page.reload();
+  await page.locator('.history-project-row').first().waitFor();
+  assert.deepEqual(await page.locator('.history-project-row').allTextContents(), ['same'], 'only the user-added folder becomes a project');
+  assert.equal(await page.locator('.history-card').count(), 3);
+  assert.equal(await page.locator('.history-card').filter({ hasText: 'History from an unadded folder' }).count(), 0);
+  await page.evaluate(() => localStorage.setItem('cc-history-layout', 'list'));
+  await page.reload();
+  assert.equal(await page.locator('.history-card').count(), 4, 'the full session list retains history from unadded folders');
+  assert.equal(await page.locator('.history-card').filter({ hasText: 'History from an unadded folder' }).count(), 1);
+  await page.evaluate(() => {
+    localStorage.setItem('cc-history-layout', 'projects');
+    localStorage.setItem('coffee:recent-folders', '[]');
+  });
+  await page.reload();
+  await page.locator('.task-empty-text').waitFor();
+  assert.equal(await page.locator('.task-empty-text').textContent(), 'No projects added. Open a folder to see it here.');
+  assert.equal(await page.locator('.history-project-row').count(), 0);
+  await page.evaluate(() => {
+    localStorage.setItem('cc-history-layout', 'list');
+    localStorage.setItem('coffee:recent-folders', JSON.stringify(['D:/same']));
+  });
   await page.goto(`http://127.0.0.1:${server.address().port}`);
   for (const tool of ['claude','codex']) for (const mode of ['terminal','conversation']) {
     await page.evaluate(({tool,mode})=>{window.updateView({terminals:[]});localStorage.setItem('coffee:'+tool+'-launch-mode',mode)}, {tool,mode});
@@ -234,7 +267,10 @@ try {
     await page.screenshot({path:join(directory,`per-session-${layout}.png`)});
   }
   for (const layout of ['projects','list']) {
-    await page.evaluate(layout=>localStorage.setItem('cc-history-layout',layout),layout);
+    await page.evaluate(layout=>{
+      localStorage.setItem('cc-history-layout',layout);
+      localStorage.setItem('coffee:recent-folders',JSON.stringify(['D:/icons']));
+    },layout);
     await page.goto(`http://127.0.0.1:${server.address().port}/?toolIcons=1&pr=branch`);
     await page.locator('.history-card-tool-icon').first().waitFor();
     if(layout==='projects'){
