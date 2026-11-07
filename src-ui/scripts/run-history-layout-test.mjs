@@ -15,7 +15,7 @@ const context = vm.createContext({
   getToolName: tool => ({ claude: 'Claude Code', codex: 'Codex CLI', openclaw: 'OpenClaw' }[tool] ?? tool),
   hidden: new Set(['claude:hidden']), pinned: new Set(['codex:pinned']),
   renamed: { 'claude:renamed': 'Custom session title' },
-  orchestration: { tasks: [] }, state: { terminals: [] }, projectExtras: new Map(), openSessions: new Set(), PROJECT_PREVIEW: 5, toolFilter: '',
+  orchestration: { tasks: [] }, state: { terminals: [] }, projectExtras: new Map(), openSessions: new Set(), PROJECT_PREVIEW: 5, toolFilter: '', projectScope: 'all', projectFolders: [],
 });
 function evaluate(name) {
   assert.ok(expressions.has(name), `Missing actual ${name}`);
@@ -46,6 +46,16 @@ assert.equal(context.projects.some(group => group.name === '/two/shared'), true)
 assert.equal(context.projects.filter(group => ['App', 'app'].includes(group.name)).length, 2, 'case-sensitive Unix directories stay distinct');
 assert.equal(context.projects.find(group => group.sessions[0].id === 'agent').name, 'Coffee Agent');
 assert.equal(context.projects.find(group => group.sessions[0].id === 'claw').name, 'OpenClaw');
+// Added folders only: the launchpad's folders, even without sessions; other folders leave, folderless groups stay.
+const everyProject = context.projects;
+context.projectScope = 'added'; context.projectFolders = ['d:\\coffee-cli', 'D:/Fresh'];
+const added = evaluate('projects');
+assert.deepEqual(Array.from(added.find(group => group.cwd.toLowerCase().includes('coffee')).sessions, s => s.id), ['recent', 'same-project', 'renamed'], 'a folder matches however its path is written');
+assert.equal(added.find(group => group.name === 'Fresh').sessions.length, 0, 'an added folder shows before its first session');
+assert.equal(added.some(group => group.name === 'EchoBird' || group.name === '/one/shared'), false, 'folders never added stay out');
+assert.equal(added.some(group => group.name === 'Coffee Agent') && added.some(group => group.name === 'OpenClaw'), true, 'sessions without a folder keep their group');
+context.projectScope = 'all'; context.projectFolders = [];
+context.projects = everyProject;
 context.collapsedProjects = new Set([coffee.key]);
 context.layout = 'projects';
 let rows = evaluate('rows');

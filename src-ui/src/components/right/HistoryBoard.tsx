@@ -19,6 +19,7 @@ import {
 } from '../../lib/history-cache';
 import { subscribeHidden, getHiddenSnapshot, hideSession } from '../../lib/hidden-sessions';
 import { subscribePinned, getPinnedSnapshot } from '../../lib/pinned-sessions';
+import { getProjectFolders, subscribeProjectFolders } from '../../lib/project-folders';
 import { subscribeRenamed, getRenamedSnapshot, setCustomName } from '../../lib/renamed-sessions';
 import { SessionContextMenu, type SessionCtxMenuState } from './SessionContextMenu';
 import { useTextContextMenu } from '../../lib/use-text-context-menu';
@@ -259,16 +260,19 @@ export function HistoryBoard() {
   const [projectExtras, setProjectExtras] = useState<Map<string, number>>(new Map());
   useEffect(() => { try { localStorage.setItem('cc-history-layout', layout); } catch { /* Storage unavailable. */ } }, [layout]);
   const [layoutMenu, setLayoutMenu] = useState<{ top: number; right: number; tools: string[] } | null>(null);
-  const [toolMenu, setToolMenu] = useState<{ kind: 'tools' | 'icons'; rowTop: number; top: number; left: number } | null>(null);
+  const [toolMenu, setToolMenu] = useState<{ kind: 'tools' | 'icons' | 'scope'; rowTop: number; top: number; left: number } | null>(null);
   // Each row's tool icon; filtered to one tool, the heading already names it, so it can be turned off.
   const [showIcons, setShowIcons] = useState(() => { try { return localStorage.getItem('cc-history-icons') !== 'hidden'; } catch { return true; } });
+  // Projects come from every session's folder, or only from the folders added on the launchpad.
+  const [projectScope, setProjectScope] = useState<'all' | 'added'>(() => { try { return localStorage.getItem('cc-history-project-scope') === 'added' ? 'added' : 'all'; } catch { return 'all'; } });
+  const chooseScope = (scope: 'all' | 'added') => { setProjectScope(scope); setPreview(null); try { localStorage.setItem('cc-history-project-scope', scope); } catch { /* Best-effort operation; failure is non-fatal. */ } };
   const chooseIcons = (show: boolean) => { setShowIcons(show); try { localStorage.setItem('cc-history-icons', show ? 'shown' : 'hidden'); } catch { /* Best-effort operation; failure is non-fatal. */ } };
   const layoutBtnRef = useRef<HTMLButtonElement>(null);
   const layoutMenuRef = useRef<HTMLDivElement>(null);
   const toolMenuRef = useRef<HTMLDivElement>(null);
   useEffect(() => { if (!layoutMenu) setToolMenu(null); }, [layoutMenu]);
   // The tools open beside the menu with their first row level with "Tools"; they flip left at the screen edge.
-  const openToolMenu = (row: HTMLElement, kind: 'tools' | 'icons' = 'tools') => {
+  const openToolMenu = (row: HTMLElement, kind: 'tools' | 'icons' | 'scope' = 'tools') => {
     const item = row.getBoundingClientRect(), menu = layoutMenuRef.current?.getBoundingClientRect();
     // No favourite AI tool: nothing to choose, so no empty submenu.
     if (!menu || (kind === 'tools' && !layoutMenu?.tools.length)) return;
@@ -361,11 +365,16 @@ export function HistoryBoard() {
     if (!pinned.size) return list;
     return list.sort((a, b) => Number(pinned.has(`${b.tool ?? ''}:${b.id}`)) - Number(pinned.has(`${a.tool ?? ''}:${a.id}`)));
   }, [baseSessions, hidden, pinned, orchestration.tasks, state.terminals]);
+  const projectFolders = useSyncExternalStore(subscribeProjectFolders, getProjectFolders, getProjectFolders);
   const projects = useMemo(() => {
     const groups = new Map<string, { key: string; name: string; cwd: string; sessions: SavedSession[] }>();
+    // "Added folders only" keeps the launchpad's folders, even before they have a session; sessions elsewhere stay in
+    // the list view and search. Sessions without a folder keep their tool's group either way.
+    const added = projectScope === 'added' ? new Map(projectFolders.map(folder => ['cwd:' + normCwd(folder.trim()), folder.trim()] as const)) : null;
     for (const session of availableSessions) {
       const cwd = session.tool === 'openclaw' ? '' : (session.cwd ?? '').trim();
       const key = cwd ? 'cwd:' + normCwd(cwd) : 'tool:' + session.tool;
+      if (added && cwd && !added.has(key)) continue;
       let group = groups.get(key);
       if (!group) {
         group = { key, name: session.tool === 'coffee-agent' ? 'Coffee Agent' : projectName(cwd, session.tool), cwd, sessions: [] };
@@ -373,6 +382,7 @@ export function HistoryBoard() {
       }
       group.sessions.push(session);
     }
+    if (added) for (const [key, cwd] of added) if (cwd && !groups.has(key)) groups.set(key, { key, name: projectName(cwd, ''), cwd, sessions: [] });
     const all = [...groups.values()];
     const names = new Map<string, number>();
     for (const group of all) names.set(group.name, (names.get(group.name) ?? 0) + 1);
@@ -383,7 +393,7 @@ export function HistoryBoard() {
       }
     }
     return all;
-  }, [availableSessions]);
+  }, [availableSessions, projectScope, projectFolders]);
   const openSessions = useMemo(() => new Set(state.terminals.flatMap(tab => tab.resumeToken ? [`${tab.tool}:${tab.resumeToken}`] : [])), [state.terminals]);
   // Pi names neither its terminal nor its desktop session on its own, so an open Pi tab takes
   // the name this list shows for its conversation once the session appears in history.
@@ -782,12 +792,22 @@ export function HistoryBoard() {
             <span>{t('history.icons')}</span>
             <svg className="history-layout-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
           </button>
+          <button type="button" role="menuitem" aria-haspopup="menu" aria-expanded={toolMenu?.kind === 'scope'} className={`ctx-menu-item history-layout-tools${toolMenu?.kind === 'scope' ? ' is-open' : ''}`} onMouseEnter={event => openToolMenu(event.currentTarget, 'scope')} onClick={event => openToolMenu(event.currentTarget, 'scope')} onKeyDown={event => { if (event.key === 'ArrowRight') { event.preventDefault(); openToolMenu(event.currentTarget, 'scope'); } }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 7h6l2 3h10v10H3z" /></svg>
+            <span>{t('history.project_scope')}</span>
+            <svg className="history-layout-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
+          </button>
         </div>,
         document.body,
       )}
       {layoutMenu && toolMenu && createPortal(
-        <div className="ctx-menu history-layout-menu" role="menu" aria-label={t(toolMenu.kind === 'icons' ? 'history.icons' : 'history.by_tool')} ref={toolMenuRef} style={{ position: 'fixed', top: toolMenu.top, left: toolMenu.left }}>
-          {toolMenu.kind === 'icons' ? ([true, false] as const).map(show => (
+        <div className="ctx-menu history-layout-menu" role="menu" aria-label={t(toolMenu.kind === 'icons' ? 'history.icons' : toolMenu.kind === 'scope' ? 'history.project_scope' : 'history.by_tool')} ref={toolMenuRef} style={{ position: 'fixed', top: toolMenu.top, left: toolMenu.left }}>
+          {toolMenu.kind === 'scope' ? (['all', 'added'] as const).map(scope => (
+            <button type="button" key={scope} role="menuitemradio" aria-checked={projectScope === scope} className="ctx-menu-item" onClick={() => { setLayoutMenu(null); chooseScope(scope); }}>
+              <span className="history-layout-tool-name">{t(scope === 'all' ? 'history.scope_all' : 'history.scope_added')}</span>
+              <svg className="history-layout-check" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ visibility: projectScope === scope ? 'visible' : 'hidden' }}><path d="M20 6 9 17l-5-5" /></svg>
+            </button>
+          )) : toolMenu.kind === 'icons' ? ([true, false] as const).map(show => (
             <button type="button" key={String(show)} role="menuitemradio" aria-checked={showIcons === show} className="ctx-menu-item" onClick={() => { setLayoutMenu(null); chooseIcons(show); }}>
               <span className="history-layout-tool-name">{t(show ? 'history.icons_show' : 'history.icons_hide')}</span>
               <svg className="history-layout-check" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ visibility: showIcons === show ? 'visible' : 'hidden' }}><path d="M20 6 9 17l-5-5" /></svg>
@@ -856,9 +876,9 @@ export function HistoryBoard() {
         </>
       )}
 
-      {!isLoading && availableSessions.length === 0 && (
+      {!isLoading && (layout === 'projects' && projectScope === 'added' ? projects.length === 0 : availableSessions.length === 0) && (
         <div className="task-empty">
-          <div className="task-empty-text">{t('menu.no_recent') || 'No recent sessions'}</div>
+          <div className="task-empty-text">{layout === 'projects' && projectScope === 'added' ? t('history.no_projects') : t('menu.no_recent') || 'No recent sessions'}</div>
         </div>
       )}
     </div>
