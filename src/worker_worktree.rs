@@ -38,15 +38,24 @@ pub fn inside_worktrees(path: &str) -> bool {
 fn native(path: &str) -> PathBuf { PathBuf::from(path.replace('/', std::path::MAIN_SEPARATOR_STR)) }
 
 /// A short, branch-safe name from the task title, unique by its suffix.
-fn name(title: &str, suffix: &str) -> String {
+fn slug(text: &str, fallback: &str) -> String {
     let mut slug = String::new();
-    for c in title.chars() {
+    for c in text.chars() {
         if c.is_ascii_alphanumeric() { slug.push(c.to_ascii_lowercase()); }
         else if !slug.ends_with('-') && !slug.is_empty() { slug.push('-'); }
         if slug.len() >= 24 { break; }
     }
     let slug = slug.trim_matches('-');
-    format!("{}-{suffix}", if slug.is_empty() { "task" } else { slug })
+    if slug.is_empty() { fallback.to_string() } else { slug.to_string() }
+}
+
+fn name(title: &str, suffix: &str) -> String { format!("{}-{suffix}", slug(title, "task")) }
+
+/// The git config key that marks a branch as Coffee's own. Branches are named after the project, not `coffee/`, so
+/// cleanup cannot tell them from the user's by name; git drops the key with the branch.
+const OWNED: &str = "coffeeWorktree";
+fn owned(root: &Path, branch: &str) -> bool {
+    branch.starts_with("coffee/") || git(root, &["config", "--get", &format!("branch.{branch}.{OWNED}")]).is_ok_and(|value| value.trim() == "true")
 }
 
 /// Creating and sweeping take turns, so a sweep never sees a worktree whose tab has not yet recorded it.
@@ -70,9 +79,12 @@ pub fn create(cwd: &Path, title: &str) -> Result<(Worktree, PathBuf), String> {
     let root_path = native(&root);
     let name = name(title, &uuid::Uuid::new_v4().simple().to_string()[..6]);
     let path = root_path.join(".claude").join("worktrees").join(format!("coffee-{name}"));
-    let branch = format!("coffee/{name}");
+    // Named after the project, as the branch list reads `<project>/<tool>-<id>`; folders with no ASCII name fall back.
+    let project = slug(root_path.file_name().and_then(|name| name.to_str()).unwrap_or_default(), "coffee");
+    let branch = format!("{project}/{name}");
     let target = path.to_string_lossy().into_owned();
     git(&root_path, &["worktree", "add", "-b", &branch, &target, "HEAD"])?;
+    git(&root_path, &["config", &format!("branch.{branch}.{OWNED}"), "true"])?;
     exclude(&root_path, &path);
     let worktree = Worktree { root: root_path.to_string_lossy().into_owned(), path: target, branch };
     Ok((worktree, path.join(native(folder))))
@@ -141,27 +153,33 @@ fn sweep_older_than(cwd: &Path, in_use: &[String], grace: std::time::Duration) -
     let used = |path: &Path| recent(path) || in_use.iter().any(|known| Path::new(known) == path);
     let mut removed = 0;
     let mut live = vec![];
+    // Porcelain lists each worktree's path, then its branch; the branch is read, not derived from the folder name.
+    let mut entries: Vec<(PathBuf, String)> = vec![];
     for line in git(&root, &["worktree", "list", "--porcelain"])?.lines() {
-        let Some(path) = line.strip_prefix("worktree ") else { continue };
-        let path = native(path);
+        if let Some(path) = line.strip_prefix("worktree ") { entries.push((native(path), String::new())); }
+        else if let (Some(branch), Some(entry)) = (line.strip_prefix("branch refs/heads/"), entries.last_mut()) { entry.1 = branch.to_string(); }
+    }
+    for (path, branch) in entries {
         let name = path.file_name().and_then(|name| name.to_str()).unwrap_or_default().to_string();
-        if path.parent() != Some(base.as_path()) || !name.starts_with("coffee-") { continue; }
-        let worktree = Worktree { root: root.to_string_lossy().into_owned(), path: path.to_string_lossy().into_owned(), branch: format!("coffee/{}", &name["coffee-".len()..]) };
+        if path.parent() != Some(base.as_path()) || !name.starts_with("coffee-") || branch.is_empty() || !owned(&root, &branch) { continue; }
+        let worktree = Worktree { root: root.to_string_lossy().into_owned(), path: path.to_string_lossy().into_owned(), branch };
         if used(&path) || !remove_merged(&worktree) { live.push(worktree.branch); } else { removed += 1; }
     }
-    for branch in git(&root, &["branch", "--merged", "HEAD", "--list", "coffee/*", "--format=%(refname:short)"])?.lines() {
-        if !live.iter().any(|known| known == branch) && git(&root, &["branch", "-d", branch]).is_ok() { removed += 1; }
+    for branch in git(&root, &["branch", "--merged", "HEAD", "--format=%(refname:short)"])?.lines() {
+        if owned(&root, branch) && !live.iter().any(|known| known == branch) && git(&root, &["branch", "-d", branch]).is_ok() { removed += 1; }
     }
     Ok(removed)
 }
 
-/// Only worktrees Coffee made: under the project's `.claude/worktrees/coffee-*`, on a `coffee/` branch.
+/// Only worktrees Coffee made: under the project's `.claude/worktrees/coffee-*`, on a `<project>/<name>` branch that
+/// Coffee marked as its own (or a `coffee/` branch from before project names).
 fn checked(worktree: &Worktree) -> Result<(), String> {
     let path = Path::new(&worktree.path);
     let inside = path.parent().is_some_and(|parent| parent == Path::new(&worktree.root).join(".claude").join("worktrees"));
     let named = path.file_name().and_then(|name| name.to_str()).is_some_and(|name| name.starts_with("coffee-"));
-    let branch = worktree.branch.strip_prefix("coffee/").is_some_and(|rest| !rest.is_empty() && rest.chars().all(|c| c.is_ascii_alphanumeric() || c == '-'));
-    if inside && named && branch { Ok(()) } else { Err("Not a Coffee worktree".into()) }
+    let safe = |part: &str| !part.is_empty() && part.chars().all(|c| c.is_ascii_alphanumeric() || c == '-');
+    let shaped = worktree.branch.split_once('/').is_some_and(|(project, rest)| safe(project) && safe(rest));
+    if inside && named && shaped && owned(Path::new(&worktree.root), &worktree.branch) { Ok(()) } else { Err("Not a Coffee worktree".into()) }
 }
 
 #[derive(Serialize)]
@@ -265,6 +283,7 @@ mod tests {
     fn names_are_branch_safe_and_unique_by_suffix() {
         assert_eq!(name("Fix the login page!", "a1b2c3"), "fix-the-login-page-a1b2c3");
         assert_eq!(name("修复登录", "a1b2c3"), "task-a1b2c3");
+        assert_eq!((slug("Coffee CLI", "coffee"), slug("咖啡", "coffee")), ("coffee-cli".to_string(), "coffee".to_string()));
         assert!(name(&"x".repeat(80), "a1b2c3").len() <= 31);
     }
     #[test]
@@ -273,7 +292,16 @@ mod tests {
         let (worktree, cwd) = create(&repo.path().join("app"), "Write docs").unwrap();
         assert!(Path::new(&worktree.path).is_dir());
         assert!(cwd.ends_with("app") && cwd.is_dir());
-        assert!(worktree.branch.starts_with("coffee/write-docs-"));
+        let (project, rest) = worktree.branch.split_once('/').unwrap();
+        assert_eq!(project, slug(repo.path().file_name().unwrap().to_str().unwrap(), "coffee"), "the branch is named after the project");
+        assert!(rest.starts_with("write-docs-") && owned(repo.path(), &worktree.branch));
+        // A merged branch of the user's own with the same shape is never Coffee's to delete.
+        let mine = format!("{project}/mine");
+        git(repo.path(), &["branch", &mine]).unwrap();
+        assert!(!owned(repo.path(), &mine));
+        assert!(checked(&Worktree { branch: mine.clone(), ..worktree.clone() }).is_err());
+        sweep_older_than(repo.path(), &[], std::time::Duration::ZERO).unwrap();
+        assert!(git(repo.path(), &["rev-parse", "--verify", "--quiet", &mine]).is_ok(), "sweeping leaves the user's branch");
         assert_eq!(git(repo.path(), &["status", "--porcelain"]).unwrap(), "", "the worktree folder is excluded locally");
         create(repo.path(), "Second").unwrap();
         let exclude = std::fs::read_to_string(repo.path().join(".git/info/exclude")).unwrap();
