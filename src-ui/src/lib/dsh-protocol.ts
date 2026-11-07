@@ -22,6 +22,8 @@ export interface DshMessage {
   toolMeta?: Json;
   /** Shown from the live stream; dropped if its attempt ends without committing. */
   streaming?: boolean;
+  /** On a turn's last row: what the turn took. */
+  turnStats?: { durationMs: number; usage: { input: number; output: number; cacheRead: number; cacheWrite: number }; model?: string };
   tone?: 'info' | 'error';
 }
 export interface DshRequest { id: string | number; method: string; params: Json }
@@ -49,6 +51,8 @@ export interface DshState {
   commands: boolean;
   /** Sub-agents this Session started that are still running, reported by Coffee's Host plugin. */
   backgroundTasks: DshBackgroundTask[];
+  /** The turn in progress: when it started and the usage its responses reported. */
+  turnProgress?: { turn: number; startedAt: number; usage: { input: number; output: number; cacheRead: number; cacheWrite: number }; model?: string };
   /** Jobs registered and not yet settled, from the Session's job events; `callId` is the tool call that started one. */
   jobs: { id: string; label: string; callId: string }[];
 }
@@ -97,6 +101,10 @@ export function reduceDshEvent(state: DshState, event: Json, historical = false)
     // A streamed block the committed message does not carry (empty, or indexed differently) must not linger.
     if (renamed.size) s.messages = s.messages.filter(m => !renamed.has(m.id) || touched.has(m.id));
     const usage = obj(data.usage);
+    if (s.turnProgress && usage.totalTokens !== undefined) {
+      const u = s.turnProgress.usage;
+      s.turnProgress = { ...s.turnProgress, model: str(obj(data.message).model) || s.turnProgress.model, usage: { input: u.input + num(usage.inputTokens), output: u.output + num(usage.outputTokens), cacheRead: u.cacheRead + num(usage.cacheReadTokens), cacheWrite: u.cacheWrite + num(usage.cacheWriteTokens) } };
+    }
     if (!historical && usage.totalTokens !== undefined) s.contextTokens = num(usage.inputTokens) + num(usage.cacheReadTokens) + num(usage.cacheWriteTokens) + num(usage.outputTokens);
   } else if (type === 'tool/call') {
     const id = `tool:${str(data.callId)}`;
@@ -110,6 +118,7 @@ export function reduceDshEvent(state: DshState, event: Json, historical = false)
     upsert({ ...(existing ?? { id, role: 'tool', turn, timestamp: time }), content: text(message.content), toolMeta: obj(data.meta), toolStatus: message.isError === true ? 'failed' : 'done' } as DshMessage);
   } else if (type === 'turn/start') {
     if (!historical) { s.busy = true; s.startedAt ??= time; }
+    s.turnProgress = { turn, startedAt: time, usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }, model: s.route.model || undefined };
   } else if (type === 'turn/end') {
     const reason = str(obj(data.reason).kind);
     if (reason && reason !== 'completed') upsert({ id: `turn-end:${turn}:${num(event.seq)}`, role: 'notice', content: reason, turn, timestamp: time, tone: reason === 'interrupted' ? 'info' : 'error' });
@@ -117,6 +126,10 @@ export function reduceDshEvent(state: DshState, event: Json, historical = false)
     s.messages = settleStream(s.messages);
     // Tool calls left running by an interrupted turn will never settle.
     s.messages = s.messages.map(m => m.toolStatus === 'running' && m.turn === turn ? { ...m, toolStatus: 'failed' } : m);
+    // The turn's totals go on its last row, for the summary under it.
+    const progress = s.turnProgress, last = s.messages.findLastIndex(m => m.turn === turn && m.role !== 'user');
+    if (progress && last >= 0) s.messages = s.messages.map((m, index) => index === last ? { ...m, turnStats: { durationMs: Math.max(0, time - progress.startedAt), usage: progress.usage, model: progress.model } } : m);
+    s.turnProgress = undefined;
   } else if (type === 'job/registered') {
     const id = str(data.jobId);
     if (id && !s.jobs.some(job => job.id === id)) s.jobs = [...s.jobs, { id, label: str(data.label), callId: str(obj(data.toolCall).callId) }];

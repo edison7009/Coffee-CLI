@@ -108,4 +108,15 @@ test('sub-agents show while their call waits, and in the background until their 
   s = reduceOpenCodeEvent(s, { type: 'session.execution.started', data: { sessionID: 'ses_bg' } });
   assert.deepEqual(names(reduceOpenCodeEvent(s, { type: 'coffee.exit', data: { code: 0 } })), [], 'an exited server runs nothing');
 });
+test('an idle row carries its turn\'s time, tokens and OpenCode\'s own cost', () => {
+  const native = [
+    { id: 'u', type: 'user', content: [{ type: 'text', text: 'hi' }], time: { created: 1000 } },
+    { id: 'a1', type: 'assistant', model: { modelID: 'claude-x' }, content: [{ type: 'text', text: 'one' }], time: { created: 1100, completed: 2000 }, tokens: { input: 10, output: 3, reasoning: 2, cache: { read: 40, write: 5 } }, cost: 0.01 },
+    { id: 'a2', type: 'assistant', model: { modelID: 'claude-x' }, content: [{ type: 'text', text: 'two' }], time: { created: 2100, completed: 3000 }, tokens: { input: 1, output: 1, cache: { read: 0, write: 0 } }, cost: 0.002 },
+    { id: 'i', type: 'idle', outcome: 'succeeded', time: { created: 4000 } },
+  ];
+  const idle = openCodeRows(native).find(row => row.kind === 'idle');
+  assert.deepEqual(plain(idle.turnStats), { durationMs: 3000, usage: { input: 11, output: 6, cacheRead: 40, cacheWrite: 5 }, model: 'claude-x', cost: 0.012 });
+});
+
 console.log(`${passed} OpenCode protocol tests passed`);

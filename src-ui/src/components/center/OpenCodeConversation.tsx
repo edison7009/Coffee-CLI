@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { TurnSummary } from './TurnSummary';
 import { useWorktreePending } from '../../lib/worktree-pending';
 import { useAppState } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
@@ -196,7 +197,11 @@ export function OpenCodeConversation({ sessionId, cwd, resumeToken, isActive, is
     </div>;
   };
   const turnStatus = (row: Row) => {
-    if (row.kind === 'idle') return <div className="claude-turn-summary" role="status">{t(row.outcome === 'interrupted' ? 'claude.interrupted' : row.outcome === 'failed' ? 'codex.failed' : 'codex.completed')}{num(row.durationMs) >= 1000 && ` · ${Math.round(num(row.durationMs) / 1000)}s`}</div>;
+    if (row.kind === 'idle') {
+      const label = t(row.outcome === 'interrupted' ? 'claude.interrupted' : row.outcome === 'failed' ? 'codex.failed' : 'codex.completed');
+      return row.turnStats ? <TurnSummary stats={row.turnStats} sessionKey={s.nativeId} messageId={row.id} prefix={label} />
+        : <div className="claude-turn-summary" role="status">{label}{num(row.durationMs) >= 1000 && ` · ${Math.round(num(row.durationMs) / 1000)}s`}</div>;
+    }
     if (row.outcome?.startsWith('compaction:')) return <div className="claude-turn-summary" role="status">{t(row.outcome === 'compaction:running' ? 'opencode.compacting' : row.outcome === 'compaction:failed' ? 'opencode.compaction_failed' : 'opencode.compacted')}</div>;
     return <div className="claude-session-error" role="alert">{row.content}</div>;
   };

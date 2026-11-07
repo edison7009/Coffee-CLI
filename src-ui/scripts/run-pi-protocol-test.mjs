@@ -113,4 +113,19 @@ test('the process exiting ends the session with its stderr', () => {
   const s = reducePiEvent({ ...base, busy: true, requests: [{ id: 'd' }] }, { type: 'coffee_exit', code: 1, detail: 'boom\n' });
   assert.deepEqual(plain([s.ready, s.busy, s.requests.length, s.error]), [false, false, 0, 'boom']);
 });
+test('every run keeps its time, tokens and Pi\'s cost on its last row', () => {
+  const reply = (at, input, output, cost) => ({ role: 'assistant', timestamp: at, model: 'claude-x', content: [{ type: 'text', text: `at ${at}` }], usage: { input, output, cacheRead: 1, cacheWrite: 0, totalTokens: input + output + 1, cost: { total: cost } } });
+  const restored = restorePiMessages([
+    { role: 'user', timestamp: 1000, content: 'one' }, reply(2000, 10, 2, 0.01), reply(3000, 5, 1, 0.02),
+    { role: 'user', timestamp: 5000, content: 'two' }, reply(7000, 3, 3, 0.005),
+  ], emptyPiState());
+  const stats = restored.messages.filter(m => m.turnStats).map(m => [m.turnStats.durationMs, m.turnStats.usage.input, m.turnStats.cost]);
+  assert.deepEqual(plain(stats), [[2000, 15, 0.03], [2000, 3, 0.005]]);
+  let s = { ...emptyPiState(), messages: [] };
+  s = reducePiEvent(s, { type: 'agent_start' });
+  s = reducePiEvent(s, { type: 'message_end', message: reply(Date.now(), 4, 4, 0.004) });
+  s = reducePiEvent(s, { type: 'agent_settled' });
+  assert.equal(s.messages.at(-1).turnStats.cost, 0.004, 'a live run takes its totals when it settles');
+});
+
 console.log(`${passed} Pi protocol tests passed`);

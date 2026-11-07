@@ -1,6 +1,6 @@
 // Pi RPC records (`pi --mode rpc`) reduced into the same conversation rows the Claude desktop
 // view renders, so edits show as diffs and commands show their streamed output.
-import type { ClaudeMessage } from './claude-protocol';
+import type { ClaudeMessage, TurnStats } from './claude-protocol';
 
 export type Json = Record<string, unknown>;
 export const obj = (value: unknown): Json => value && typeof value === 'object' && !Array.isArray(value) ? value as Json : {};
@@ -26,6 +26,8 @@ export interface PiState {
   status: PiStatus;
   retry?: { attempt: number; maxAttempts: number };
   stats: PiStats;
+  /** The run in progress, for the totals under its last row. */
+  turn?: PiTurn;
   startedAt?: number;
   endedAt?: number;
   interrupted: boolean;
@@ -109,6 +111,23 @@ function assistantRows(rows: Rows, message: Json, key: string, partial: boolean)
 
 const assistantKey = (message: Json) => `assistant:${num(message.timestamp)}`;
 
+/** A run's usage so far: Pi reports each response's tokens and its own cost. */
+export interface PiTurn { startedAt: number; lastAt: number; usage: TurnStats['usage']; cost?: number; model?: string }
+const newTurn = (at: number): PiTurn => ({ startedAt: at, lastAt: at, usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cacheWrite1h: 0 } });
+function addUsage(turn: PiTurn, message: Json): PiTurn {
+  const usage = obj(message.usage), u = turn.usage, cost = obj(usage.cost).total;
+  return { ...turn, lastAt: num(message.timestamp) || turn.lastAt, model: str(message.model) || turn.model,
+    usage: { ...u, input: u.input + num(usage.input), output: u.output + num(usage.output), cacheRead: u.cacheRead + num(usage.cacheRead), cacheWrite: u.cacheWrite + num(usage.cacheWrite) },
+    ...(typeof cost === 'number' ? { cost: (turn.cost ?? 0) + cost } : {}) };
+}
+/** Puts a finished run's totals on its last row. */
+function finishPiTurn(rows: Rows, turn: PiTurn | undefined, durationMs?: number): Rows {
+  const at = rows.findLastIndex(row => row.role !== 'user');
+  if (!turn || at < 0 || rows[at].timestamp < turn.startedAt) return rows;
+  const turnStats: TurnStats = { durationMs: durationMs ?? Math.max(0, turn.lastAt - turn.startedAt), usage: turn.usage, model: turn.model, ...(turn.cost !== undefined ? { cost: turn.cost } : {}) };
+  return rows.map((row, index) => index === at ? { ...row, turnStats } : row);
+}
+
 /** One persisted or live `AgentMessage`. */
 export function addPiMessage(rows: Rows, value: unknown) {
   const message = obj(value), role = str(message.role), timestamp = num(message.timestamp) || Date.now();
@@ -125,9 +144,16 @@ export function addPiMessage(rows: Rows, value: unknown) {
 }
 
 export function restorePiMessages(messages: unknown[], base: PiState): PiState {
-  const rows: Rows = [];
-  for (const message of messages) addPiMessage(rows, message);
-  return { ...base, messages: rows };
+  let rows: Rows = [], turn: PiTurn | undefined;
+  for (const value of messages) {
+    const message = obj(value), role = str(message.role), at = num(message.timestamp) || 0;
+    // A prompt ends the previous run and opens the next.
+    if (role === 'user') { rows = finishPiTurn(rows, turn); turn = newTurn(at); }
+    addPiMessage(rows, message);
+    if (turn && role === 'assistant') turn = addUsage(turn, message);
+    else if (turn && at) turn = { ...turn, lastAt: at };
+  }
+  return { ...base, messages: finishPiTurn(rows, turn) };
 }
 
 /** Live session events and extension records. */
@@ -136,10 +162,11 @@ export function reducePiEvent(state: PiState, event: Json): PiState {
   const s: PiState = { ...state };
   const rows = () => (s.messages === state.messages ? (s.messages = [...state.messages]) : s.messages);
   switch (type) {
-    case 'agent_start': s.busy = true; s.status = 'working'; s.startedAt = state.busy ? state.startedAt : Date.now(); s.endedAt = undefined; s.interrupted = false; s.error = undefined; return s;
+    case 'agent_start': s.busy = true; s.status = 'working'; s.startedAt = state.busy ? state.startedAt : Date.now(); s.endedAt = undefined; s.interrupted = false; s.error = undefined; s.turn = state.busy && state.turn ? state.turn : newTurn(s.startedAt ?? Date.now()); return s;
     case 'agent_settled': s.busy = false; s.streams = {}; s.status = 'working'; s.retry = undefined; s.endedAt = Date.now(); s.interrupted = event.aborted === true;
+      s.messages = finishPiTurn([...state.messages], state.turn, state.turn ? s.endedAt - state.turn.startedAt : undefined); s.turn = undefined;
       // Calls an aborted run left open will never finish.
-      if (s.interrupted) s.messages = state.messages.map(row => row.toolStatus === 'running' ? { ...row, toolStatus: 'failed', interrupted: true, partial: false } : row.partial ? { ...row, partial: false } : row);
+      if (s.interrupted) s.messages = s.messages.map(row => row.toolStatus === 'running' ? { ...row, toolStatus: 'failed', interrupted: true, partial: false } : row.partial ? { ...row, partial: false } : row);
       return s;
     case 'message_start': case 'message_end': {
       const message = obj(event.message), role = str(message.role);
@@ -147,6 +174,7 @@ export function reducePiEvent(state: PiState, event: Json): PiState {
         // Streamed updates carry no message; they belong to the assistant message that started last.
         if (type === 'message_start') { s.current = assistantKey(message); return s; }
         assistantRows(rows(), message, assistantKey(message), false);
+        if (type === 'message_end' && s.turn) s.turn = addUsage(s.turn, message);
         const usage = obj(message.usage);
         if (usage.totalTokens !== undefined) s.stats = { ...s.stats, contextTokens: num(usage.input) + num(usage.cacheRead) + num(usage.cacheWrite) + num(usage.output) };
         return s;

@@ -110,6 +110,7 @@ export function reduceOpenCodeEvent(state: OpenCodeState, event: Json): OpenCode
         message.time = { ...obj(message.time), completed: created };
         message.finish = data.finish ?? (type === 'session.step.failed' ? 'error' : undefined);
         if (data.tokens) message.tokens = data.tokens;
+        if (typeof data.cost === 'number') message.cost = data.cost;
         if (type === 'session.step.failed') { message.error = data.error; message.retry = undefined; }
       });
       if (data.tokens) s.contextTokens = stepContext(data.tokens);
@@ -185,6 +186,8 @@ export interface OpenCodeRow extends ChatMessage {
   kind?: 'idle' | 'notice';
   outcome?: string;
   durationMs?: number;
+  /** On an idle row: what the turn took. OpenCode prices each step itself. */
+  turnStats?: { durationMs: number; usage: { input: number; output: number; cacheRead: number; cacheWrite: number }; model?: string; cost?: number };
   title?: string;
   input?: unknown;
   output?: string;
@@ -243,11 +246,23 @@ function rowsOf(message: Json, turn: number, busy: boolean): OpenCodeRow[] {
 export function openCodeRows(native: Json[]): OpenCodeRow[] {
   const rows: OpenCodeRow[] = [];
   let turn = 0, started = 0;
+  let usage = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }, cost: number | undefined, model: string | undefined;
   for (const message of native) {
     if (message.type === 'user' && !started) started = num(obj(message.time).created);
+    if (message.type === 'assistant') {
+      // Reasoning tokens bill as output.
+      const tokens = obj(message.tokens), cache = obj(tokens.cache);
+      usage = { input: usage.input + num(tokens.input), output: usage.output + num(tokens.output) + num(tokens.reasoning), cacheRead: usage.cacheRead + num(cache.read), cacheWrite: usage.cacheWrite + num(cache.write) };
+      if (typeof message.cost === 'number') cost = (cost ?? 0) + message.cost;
+      model = str(obj(message.model).modelID) || str(message.model) || model;
+    }
     const busy = message.type === 'assistant' && !obj(message.time).completed;
-    for (const row of rowsOf(message, turn, busy)) rows.push(row.kind === 'idle' && started ? { ...row, durationMs: row.timestamp - started } : row);
-    if (message.type === 'idle') { turn++; started = 0; }
+    for (const row of rowsOf(message, turn, busy)) {
+      if (row.kind !== 'idle' || !started) { rows.push(row); continue; }
+      const durationMs = row.timestamp - started;
+      rows.push({ ...row, durationMs, turnStats: { durationMs, usage, model, ...(cost !== undefined ? { cost } : {}) } });
+    }
+    if (message.type === 'idle') { turn++; started = 0; usage = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }; cost = undefined; }
   }
   return rows;
 }

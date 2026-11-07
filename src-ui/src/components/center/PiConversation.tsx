@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { TurnSummary } from './TurnSummary';
 import { useWorktreePending } from '../../lib/worktree-pending';
 import { useAppLanguage, useAppState } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
-import type { ClaudeTranslate } from '../../lib/claude-i18n';
+import { formatElapsed } from '../../lib/claude-i18n';
 import { clipboardWrite } from '../../lib/clipboard';
 import { directoryFailure, directoryFailureMessage } from '../../lib/session-directory';
 import { bindAutoHideScrollbar } from '../../lib/auto-hide-scrollbar';
@@ -23,8 +24,6 @@ import './ClaudeConversation.css';
 import './PiWelcomeLogo.css';
 import { ScrollLatestIcon } from './ScrollLatestIcon';
 
-function count(value: number) { return value >= 1000 ? `${(value / 1000).toFixed(1)}k` : String(Math.round(value)); }
-function elapsed(ms: number, t: ClaudeTranslate) { const seconds = Math.max(0, Math.round(ms / 1000)); return seconds >= 60 ? t('claude.time.minutes', { minutes: Math.floor(seconds / 60), seconds: seconds % 60 }) : t('claude.time.seconds', { seconds }); }
 
 /** Pi's working status: its logo with the three colors moving clockwise, the label and the time. */
 function Running({ label, startedAt }: { label: string; startedAt?: number }) {
@@ -34,7 +33,7 @@ function Running({ label, startedAt }: { label: string; startedAt?: number }) {
   return <div className="pi-running" role="status">
     <PiMark />
     <span>{label}</span>
-    {startedAt && <span className="pi-running-elapsed">{elapsed(now - startedAt, t)}</span>}
+    {startedAt && <span className="pi-running-elapsed">{formatElapsed(now - startedAt, t)}</span>}
   </div>;
 }
 
@@ -155,8 +154,6 @@ export function PiConversation({ sessionId, cwd, resumeToken, isActive, isVisibl
   const restoring = resumed && !s.ready && !s.error;
   const creatingWorktree = useWorktreePending(sessionId, s.ready || !!s.error);
   const label = s.status === 'compacting' ? t('claude.status.compacting') : s.status === 'retrying' && s.retry ? t('pi.retrying', { attempt: s.retry.attempt, max: s.retry.maxAttempts }) : t('pi.working');
-  const used = s.stats.input + s.stats.output + s.stats.cacheRead + s.stats.cacheWrite;
-  const summary = !empty && !s.busy && s.endedAt && s.startedAt && <div className="claude-turn-summary">{t('claude.worked_for', { duration: elapsed(s.endedAt - s.startedAt, t) })}{used > 0 && <> · {t('claude.tokens', { count: count(used) })}</>}{s.stats.cost > 0 && <> · ~${s.stats.cost.toFixed(4)}</>}</div>;
   const system = (m: ClaudeMessage) => m.content === 'compacted' ? t('pi.compacted') : m.content;
   return <ConversationDirectory.Provider value={cwd}><div className={`claude-conversation pi-conversation${hasBg && bgUrl ? ' has-background' : ''}${navigationItems.length > 1 ? ' has-navigation' : ''}`}>
     {hasBg && bgUrl && <div className="conversation-background">{bgType === 'video' ? <video src={bgUrl} autoPlay loop muted /> : <img src={bgUrl} alt="" />}</div>}
@@ -172,7 +169,7 @@ export function PiConversation({ sessionId, cwd, resumeToken, isActive, isVisibl
               : m.role === 'notice' ? <div className={`claude-turn-summary${m.toolStatus === 'failed' ? ' is-error' : ''}`} role="status">{system(m)}</div>
               : <><time>{new Date(m.timestamp).toLocaleTimeString(language, { hour: 'numeric', minute: '2-digit' })}</time><MarkdownContent content={m.content} /></>}
             {(m.role === 'user' || m.role === 'assistant') && !m.partial && <MessageCopyButton copied={copied === m.id} onCopy={() => copy(m)} />}
-            {virtual.start + i === s.messages.length - 1 && summary}
+            {m.turnStats && !(s.busy && virtual.start + i === s.messages.length - 1) && <TurnSummary stats={m.turnStats} sessionKey={s.sessionId} messageId={m.id} />}
           </article>
         </MeasuredRow>)}
         <div style={{ height: virtual.bottomSpacer }} aria-hidden="true" />

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { TurnSummary } from './TurnSummary';
 import { useWorktreePending } from '../../lib/worktree-pending';
 import { useAppState } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
@@ -188,6 +189,7 @@ export function DshConversation({ sessionId, cwd, resumeToken, isActive, isVisib
                 : <div><MarkdownContent content={row.content} /></div>}
               <MessageCopyButton copied={copied === row.id} onCopy={() => copy(row.id, row.content)} />
             </>}
+            {(() => { const owner = row.members?.findLast(m => m.turnStats) ?? row; return owner.turnStats && <TurnSummary stats={owner.turnStats} sessionKey={s.sessionId} messageId={owner.id} />; })()}
           </article>
         </Measured>)}
         <div style={{ height: virtual.bottomSpacer }} aria-hidden="true" />

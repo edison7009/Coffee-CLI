@@ -12,7 +12,11 @@ export interface CodexMessage extends ChatMessage {
   partial: boolean;
   timestamp: number;
   interrupted?: boolean;
+  /** On a turn's status row: what the turn took. History records only the duration. */
+  turnStats?: { durationMs: number; usage: TurnUsage; model?: string };
 }
+export interface TurnUsage { input: number; output: number; cacheRead: number; cacheWrite: number }
+const noUsage = (): TurnUsage => ({ input: 0, output: 0, cacheRead: 0, cacheWrite: 0 });
 export interface CodexModel { id: string; model: string; displayName: string; defaultReasoningEffort: string; supportedReasoningEfforts: { reasoningEffort: string; description: string }[]; hidden?: boolean }
 export interface CodexRequest { id: string | number; method: string; params: Json }
 /** A prompt held back because a long idle thread has probably lost its cache. */
@@ -39,6 +43,8 @@ export interface CodexState {
   contextTokens: number; contextWindow: number; totalTokens: number;
   historyCursor: string | null; loadingHistory: boolean;
   error?: string; interrupting: boolean;
+  /** The running turn's usage: each request's `last` breakdown added up. */
+  turnUsage?: TurnUsage;
   /** Sub-agent threads this thread spawned, by thread ID: what they were asked to do and whether they still run. */
   subAgents?: Record<string, { description: string; running: boolean }>;
 }
@@ -57,7 +63,15 @@ export function codexMessage(item: Json, turnId: string, partial: boolean, times
     ...(role === 'tool' ? { toolName: str(item.type), toolStatus: item.status === 'inProgress' ? 'running' as const : item.status === 'failed' || item.status === 'declined' ? 'failed' as const : 'done' as const } : {}) };
 }
 export function restoreCodexTurns(turns: unknown[]): CodexMessage[] {
-  return turns.flatMap(value => { const turn = obj(value); return arr(turn.items).map(value => { const item = obj(value); return codexMessage(item, str(turn.id), turn.status === 'inProgress' && (item.status === 'inProgress' || ['agentMessage', 'reasoning'].includes(str(item.type))), num(item.startedAtMs) || num(turn.startedAt) * 1000 || Date.now()); }); });
+  return turns.flatMap(value => {
+    const turn = obj(value), turnId = str(turn.id);
+    const rows = arr(turn.items).map(value => { const item = obj(value); return codexMessage(item, turnId, turn.status === 'inProgress' && (item.status === 'inProgress' || ['agentMessage', 'reasoning'].includes(str(item.type))), num(item.startedAtMs) || num(turn.startedAt) * 1000 || Date.now()); });
+    // An ended turn keeps its status line; the thread records its duration but not its tokens.
+    if (turn.status === 'inProgress' || !num(turn.durationMs) || !rows.length) return rows;
+    const status = turn.status === 'interrupted' ? 'interrupted' : turn.status === 'failed' ? 'failed' : 'completed';
+    const row = codexMessage({ id: 'status', type: 'turnStatus', status, durationMs: turn.durationMs }, turnId, false, num(turn.completedAt) * 1000 || rows.at(-1)!.timestamp);
+    return [...rows, { ...row, turnStats: { durationMs: num(turn.durationMs), usage: noUsage() } }];
+  });
 }
 export function reduceCodexEvent(state: CodexState, event: Json): CodexState {
   const method = str(event.method), p = obj(event.params), thread = obj(p.thread);
@@ -77,7 +91,7 @@ export function reduceCodexEvent(state: CodexState, event: Json): CodexState {
   if (method === 'thread/started') { s.nativeId = str(thread.id) || s.nativeId; s.title = str(thread.name).trim() || s.title; }
   // A rename can land before a resume sets the thread ID; a cleared name leaves the tab its folder.
   else if (method === 'thread/name/updated') { if (!s.nativeId || str(p.threadId) === s.nativeId) s.title = str(p.threadName).trim(); }
-  else if (method === 'turn/started') { s.turnId = str(obj(p.turn).id); s.busy = true; s.error = undefined; }
+  else if (method === 'turn/started') { s.turnId = str(obj(p.turn).id); s.busy = true; s.error = undefined; s.turnUsage = noUsage(); }
   else if (method === 'item/started' || method === 'item/completed') {
     const item = obj(p.item), id = `${str(p.turnId)}:${str(item.id)}`;
     const message = codexMessage(item, str(p.turnId), method === 'item/started', num(p.startedAtMs) || Date.now());
@@ -105,11 +119,16 @@ export function reduceCodexEvent(state: CodexState, event: Json): CodexState {
       s.busy = false; s.interrupting = false;
       if (turn.status === 'failed') s.error = str(obj(turn.error).message) || 'Codex turn failed';
       const status = turn.status === 'interrupted' ? 'interrupted' : turn.status === 'failed' ? 'failed' : 'completed';
-      s.messages = [...s.messages.filter(m => m.id !== `${turnId}:status`), codexMessage({ id: 'status', type: 'turnStatus', status, durationMs: turn.durationMs }, turnId, false)];
+      const row = codexMessage({ id: 'status', type: 'turnStatus', status, durationMs: turn.durationMs }, turnId, false);
+      s.messages = [...s.messages.filter(m => m.id !== `${turnId}:status`), { ...row, turnStats: { durationMs: num(turn.durationMs), usage: s.turnUsage ?? noUsage(), model: s.model || undefined } }];
+      s.turnUsage = undefined;
     }
   } else if (method === 'serverRequest/resolved') s.requests = s.requests.filter(r => r.id !== p.requestId);
   else if (method === 'thread/tokenUsage/updated') {
-    const usage = obj(p.tokenUsage); s.contextTokens = num(obj(usage.last).totalTokens); s.lastContextTokens = s.contextTokens; s.contextWindow = num(usage.modelContextWindow); s.totalTokens = num(obj(usage.total).totalTokens);
+    const usage = obj(p.tokenUsage), last = obj(usage.last);
+    // Input includes the cached part; the price table bills it apart.
+    if (s.turnUsage) s.turnUsage = { input: s.turnUsage.input + Math.max(0, num(last.inputTokens) - num(last.cachedInputTokens)), output: s.turnUsage.output + num(last.outputTokens), cacheRead: s.turnUsage.cacheRead + num(last.cachedInputTokens), cacheWrite: s.turnUsage.cacheWrite + num(last.cacheWriteInputTokens) };
+    s.contextTokens = num(obj(usage.last).totalTokens); s.lastContextTokens = s.contextTokens; s.contextWindow = num(usage.modelContextWindow); s.totalTokens = num(obj(usage.total).totalTokens);
   } else if (method === 'turn/plan/updated') {
     const id = `${str(p.turnId)}:plan`;
     const plan = codexMessage({ id: 'plan', type: 'plan', text: [str(p.explanation), ...arr(p.plan).map(value => { const step = obj(value); return `- ${step.status === 'completed' ? '[x]' : '[ ]'} ${str(step.step)}`; })].filter(Boolean).join('\n') }, str(p.turnId), false);

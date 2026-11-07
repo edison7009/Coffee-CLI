@@ -165,4 +165,18 @@ test('sub-tasks are running sub-agents and backgrounded jobs, never a foreground
   assert.equal(restoreDshLog([{ type: 'job/registered', seq: 1, data: { jobId: 'old', label: 'x' } }]).jobs.length, 0, 'a restored log brings no running jobs');
 });
 
+test('a turn keeps its time and tokens on its last row, live or restored', () => {
+  const log = [
+    { type: 'turn/start', seq: 1, time: 1000, data: { turn: 1 } },
+    { type: 'user/message', seq: 2, time: 1000, data: { turn: 1, id: 'u', content: [{ type: 'text', text: 'hi' }], source: { kind: 'user' } } },
+    { type: 'assistant/message', seq: 3, time: 2000, data: { turn: 1, message: { id: 'a1', content: [{ type: 'text', text: 'one' }] }, usage: { inputTokens: 10, outputTokens: 2, cacheReadTokens: 30, cacheWriteTokens: 0, totalTokens: 42 } } },
+    { type: 'assistant/message', seq: 4, time: 3000, data: { turn: 1, message: { id: 'a2', content: [{ type: 'text', text: 'two' }] }, usage: { inputTokens: 5, outputTokens: 4, cacheReadTokens: 0, cacheWriteTokens: 8, totalTokens: 17 } } },
+    { type: 'turn/end', seq: 5, time: 4500, data: { turn: 1, reason: { kind: 'completed' } } },
+  ];
+  const s = restoreDshLog(log);
+  assert.deepEqual(plain(s.messages.at(-1).turnStats.usage), { input: 15, output: 6, cacheRead: 30, cacheWrite: 8 });
+  assert.equal(s.messages.at(-1).turnStats.durationMs, 3500);
+  assert.equal(s.messages.filter(m => m.turnStats).length, 1, 'only the last row carries it');
+});
+
 console.log(`${passed} DeepSeek Harness protocol checks passed`);

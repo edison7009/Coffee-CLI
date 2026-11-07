@@ -15,7 +15,7 @@ function savedCost(session: string, message: string): number | undefined {
  * a live turn is kept per session and message, so history shows it later; otherwise the cost is estimated from list
  * prices, and left out for a model with no price.
  */
-export function TurnSummary({ stats, sessionKey, messageId }: { stats: TurnSummaryStats; sessionKey: string; messageId: string }) {
+export function TurnSummary({ stats, sessionKey, messageId, prefix }: { stats: TurnSummaryStats; sessionKey: string; messageId: string; prefix?: string }) {
   const t = useT();
   useEffect(() => { void refreshModelPrices(); }, []);
   useEffect(() => {
@@ -25,7 +25,8 @@ export function TurnSummary({ stats, sessionKey, messageId }: { stats: TurnSumma
   const { input, output, cacheRead = 0, cacheWrite = 0 } = stats.usage;
   const tokens = input + output + cacheRead + cacheWrite;
   const cost = stats.cost ?? (sessionKey ? savedCost(sessionKey, messageId) : undefined) ?? costOf(stats.model, stats.usage);
-  return <div className="claude-turn-summary">
+  return <div className="claude-turn-summary" role={prefix ? 'status' : undefined}>
+    {prefix && <>{prefix} · </>}
     {t('claude.worked_for', { duration: formatElapsed(stats.durationMs, t) })}
     {tokens > 0 && <> · {t('claude.tokens', { count: formatTokens(tokens) })}</>}
     {cost !== undefined && cost > 0 && <> · ~${cost < 0.01 ? cost.toFixed(4) : cost.toFixed(2)}</>}
