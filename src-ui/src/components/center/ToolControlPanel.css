@@ -36,7 +36,8 @@
 .tool-control-card-toggle > span { left:calc(100% - 54px); top:calc(50% - 8px); }
 .tool-control-unavailable[data-tip] { z-index:1; }
 .tool-control-no-agents { margin:14px 0 0; color:var(--text-2); font-size:var(--type-label); line-height:1.6; }
-.orchestration-roles-head { display:flex; align-items:baseline; gap:10px; margin-top:26px; color:var(--text-1); font-size:var(--type-body); }
+/* Inset to the cards' own text (20px padding + 1px border), so the heading reads as theirs. */
+.orchestration-roles-head { display:flex; align-items:baseline; gap:10px; margin-top:26px; padding-left:21px; color:var(--text-1); font-size:var(--type-body); }
 .orchestration-roles-head span { color:var(--text-2); font-size:var(--type-label); }
 .orchestration-roles { margin-top:12px; }
 .orchestration-role-text { flex-direction:column; align-items:flex-start; gap:4px; }
