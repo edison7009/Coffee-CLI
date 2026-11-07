@@ -253,6 +253,20 @@ fn main() -> Result<()> {
         }
     }
 
+    // ── Codex bundled with the ChatGPT desktop app (macOS) ──────────────
+    // The ChatGPT app ships a full Codex CLI for its own Codex feature, signed
+    // into the same ~/.codex account. With no `codex` installed on PATH,
+    // Codex sessions listed from ~/.codex could not be resumed. Appending that
+    // folder (after everything else, so a real install always wins) lets the
+    // launchpad, terminal and desktop modes all find it.
+    #[cfg(target_os = "macos")]
+    {
+        let path = std::env::var("PATH").unwrap_or_default();
+        if let Some(dir) = bundled_codex_dir(&path) {
+            std::env::set_var("PATH", format!("{path}:{dir}"));
+        }
+    }
+
     // ── PATH inheritance fix (Windows) ──────────────────────────────────
     // Windows has no login-shell rc to source, but the same class of problem
     // exists as on macOS/Linux: a GUI-launched process can inherit a PATH
@@ -477,5 +491,30 @@ fn webkit_minor_version() -> Option<u32> {
         let minor = func();
         dlclose(handle);
         Some(minor)
+    }
+}
+
+/// The ChatGPT app's bundled Codex CLI folder, when `path` has no `codex` of its own.
+#[cfg(target_os = "macos")]
+fn bundled_codex_dir(path: &str) -> Option<String> {
+    if path.split(':').any(|dir| !dir.is_empty() && std::path::Path::new(dir).join("codex").is_file()) { return None; }
+    let suffix = "ChatGPT.app/Contents/Resources/codex-cli/bin";
+    let roots = [Some(std::path::PathBuf::from("/Applications")), dirs::home_dir().map(|home| home.join("Applications"))];
+    roots.into_iter().flatten().map(|root| root.join(suffix)).find(|dir| dir.join("codex").is_file()).map(|dir| dir.to_string_lossy().into_owned())
+}
+
+#[cfg(all(test, target_os = "macos"))]
+mod bundled_codex_tests {
+    #[test]
+    fn a_codex_on_path_keeps_the_bundled_one_out() {
+        let dir = std::env::temp_dir().join(format!("coffee-codex-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("codex"), "#!/bin/sh\n").unwrap();
+        assert_eq!(super::bundled_codex_dir(&format!("/usr/bin:{}", dir.display())), None, "an installed codex wins");
+        // Without one, the bundled folder is offered only where the ChatGPT app actually ships it.
+        if let Some(found) = super::bundled_codex_dir("/usr/bin:/bin") {
+            assert!(found.ends_with("ChatGPT.app/Contents/Resources/codex-cli/bin") && std::path::Path::new(&found).join("codex").is_file());
+        }
+        std::fs::remove_dir_all(dir).unwrap();
     }
 }
