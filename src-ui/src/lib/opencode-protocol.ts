@@ -24,6 +24,8 @@ export interface OpenCodeState {
   contextTokens: number; totalTokens: number;
   cursor: string | null; loadingHistory: boolean;
   startedAt?: number; error?: string; interrupting: boolean;
+  /** Sub-agent sessions seen running (true) or settled (false), from their own execution events. */
+  children?: Record<string, boolean>;
 }
 export function emptyOpenCodeState(): OpenCodeState {
   return { ready: false, busy: false, nativeId: '', title: '', native: [], permissions: [], forms: [], models: [], agents: [], commands: [], model: null, agent: '', contextTokens: 0, totalTokens: 0, cursor: null, loadingHistory: false, interrupting: false };
@@ -59,6 +61,9 @@ function upsert(native: Json[], message: Json): Json[] {
 
 export function reduceOpenCodeEvent(state: OpenCodeState, event: Json): OpenCodeState {
   const type = str(event.type), data = obj(event.data), created = num(event.created) || Date.now();
+  // A sub-agent's execution events only mark it running or settled, for the composer's sub-task list.
+  const owner = str(data.sessionID);
+  if (type.startsWith('session.execution.') && owner && owner !== state.nativeId) return { ...state, children: { ...state.children, [owner]: type === 'session.execution.started' } };
   // A sub-agent's requests are answered here too; its other events stay out of this transcript.
   if (type !== 'coffee.exit' && !/^(permission|form)\./.test(type) && str(data.sessionID || obj(data.form).sessionID) !== state.nativeId) return state;
   const s = { ...state };
@@ -80,7 +85,13 @@ export function reduceOpenCodeEvent(state: OpenCodeState, event: Json): OpenCode
       break;
     }
     case 'session.inbox.cancelled': s.native = s.native.filter(m => m.id !== data.inboxID); break;
-    case 'session.synthetic': s.native = [...s.native, { id: str(event.id), type: 'synthetic', text: data.text, description: data.description, time: { created } }]; break;
+    case 'session.synthetic': {
+      s.native = [...s.native, { id: str(event.id), type: 'synthetic', text: data.text, description: data.description, time: { created } }];
+      // A background sub-agent reports back to its parent when it settles.
+      const child = str(obj(data.metadata).childID);
+      if (child) s.children = { ...s.children, [child]: false };
+      break;
+    }
     case 'session.shell.started': { const shell = obj(data.shell); s.native = [...s.native, { id: str(event.id), type: 'shell', shellID: shell.id, command: shell.command, status: shell.status, time: { created } }]; break; }
     case 'session.shell.ended': {
       const shell = obj(data.shell), index = s.native.findLastIndex(m => m.type === 'shell' && m.shellID === shell.id);
@@ -153,7 +164,7 @@ export function reduceOpenCodeEvent(state: OpenCodeState, event: Json): OpenCode
     case 'permission.replied': s.permissions = s.permissions.filter(p => p.id !== data.requestID); break;
     case 'form.created': { const form = obj(data.form); if (!s.forms.some(f => f.id === form.id)) s.forms = [...s.forms, form]; break; }
     case 'form.replied': case 'form.cancelled': s.forms = s.forms.filter(f => f.id !== data.id); break;
-    case 'coffee.exit': s.ready = false; s.busy = false; s.interrupting = false; s.permissions = []; s.forms = []; s.error = str(data.detail).trim() || `OpenCode exited (${data.code ?? 'unknown'})`; break;
+    case 'coffee.exit': s.children = {}; s.ready = false; s.busy = false; s.interrupting = false; s.permissions = []; s.forms = []; s.error = str(data.detail).trim() || `OpenCode exited (${data.code ?? 'unknown'})`; break;
     default: return state;
   }
   return s;
@@ -239,4 +250,24 @@ export function openCodeRows(native: Json[]): OpenCodeRow[] {
     if (message.type === 'idle') { turn++; started = 0; }
   }
   return rows;
+}
+
+/**
+ * Running sub-agents: a `subagent` call (`task` before OpenCode 2) still waiting on its child, or one started with
+ * `background` whose child session was seen starting and has not settled since.
+ */
+export function opencodeSubTasks(state: OpenCodeState): { id: string; description: string }[] {
+  // An exited server runs nothing, though its open calls were never settled.
+  if (!state.ready) return [];
+  const tasks: { id: string; description: string }[] = [];
+  for (const message of state.native) {
+    if (message.type !== 'assistant') continue;
+    for (const part of arr(message.content).map(obj)) {
+      if (part.type !== 'tool' || !['subagent', 'task'].includes(str(part.name))) continue;
+      const toolState = obj(part.state), input = obj(toolState.input), child = str(obj(toolState.metadata).sessionID);
+      const running = RUNNING.has(str(toolState.status)) || (toolState.status === 'completed' && input.background === true && !!child && state.children?.[child] === true);
+      if (running) tasks.push({ id: child || str(part.id), description: str(input.description).trim() });
+    }
+  }
+  return tasks;
 }

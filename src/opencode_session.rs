@@ -110,8 +110,10 @@ fn read_events(reader: impl std::io::Read, mut on_event: impl FnMut(Value)) {
 fn owned(event: &Value, native: &str) -> bool {
     let data = &event["data"];
     let Some(owner) = data["sessionID"].as_str().or_else(|| data["form"]["sessionID"].as_str()) else { return false };
-    let request = event["type"].as_str().is_some_and(|kind| kind.starts_with("permission.") || kind.starts_with("form."));
-    owner == native || (request && owner != "global")
+    let kind = event["type"].as_str().unwrap_or("");
+    let request = kind.starts_with("permission.") || kind.starts_with("form.");
+    // A sub-agent's execution events tell the parent's composer when it runs and settles.
+    owner == native || (request && owner != "global") || (kind.starts_with("session.execution.") && owner != "global")
 }
 
 /// Attachments and tool media carry their bytes inline (base64); the conversation only shows their names.
@@ -529,5 +531,6 @@ mod tests {
         assert!(!owned(&json!({"type":"form.created","data":{"form":{"sessionID":"global"}}}), "ses_a"));
         assert!(owned(&json!({"type":"permission.asked","data":{"sessionID":"ses_child"}}), "ses_a"));
         assert!(owned(&json!({"type":"form.created","data":{"form":{"sessionID":"ses_child"}}}), "ses_a"));
+        assert!(owned(&json!({"type":"session.execution.started","data":{"sessionID":"ses_child"}}), "ses_a"), "a sub-agent's run state reaches the composer");
     }
 }

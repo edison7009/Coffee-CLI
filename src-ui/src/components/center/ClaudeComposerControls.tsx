@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MutableRefObject, type ReactNode } from 'react';
+import { useHoverOpen } from '../../lib/use-hover-open';
 import { createPortal } from 'react-dom';
 import { controlClaude, useClaudeSession } from '../../lib/claude-session';
 import { ClaudeEffortControl } from './ClaudeEffortControl';
@@ -60,6 +61,8 @@ export function ClaudeComposerControls({ sessionId, draft, onDraftChange, keyHan
   }, [shown]);
   const close = () => { setMenu(null); setDismissed(draft); };
   const open = (value: Menu) => { setMenu(value); setSelected(0); };
+  // Sub-tasks open on hover, as a glance at what is still running.
+  const tasksHover = useHoverOpen(() => open('tasks'), () => setMenu(null), shown === 'tasks');
   const commands = useMemo(() => {
     const local = [
       { name: 'model', description: t('claude.command.model'), action: 'model' },
@@ -122,7 +125,7 @@ export function ClaudeComposerControls({ sessionId, draft, onDraftChange, keyHan
     <button className="claude-control-icon" aria-label={t('claude.attach')} onClick={() => void attach()}><AttachIcon /></button>
     <button ref={el => { anchors.current.commands = el; }} className="claude-control-icon" aria-label={t('claude.commands')} aria-expanded={shown === 'commands'} onClick={() => shown === 'commands' ? close() : open('commands')}>/</button>
     <button ref={el => { anchors.current.permissions = el; }} className="claude-permission-control" disabled={!s.ready} onClick={() => shown === 'permissions' ? close() : open('permissions')} aria-expanded={shown === 'permissions'} aria-label={t('claude.permissions')}>{modes.find(m => m.value === s.permissionMode)?.label ?? s.permissionMode}</button>
-    {s.backgroundTasks.length > 0 && <button ref={el => { anchors.current.tasks = el; }} className="claude-tasks-control" aria-label={t('claude.status.background_count', { count: s.backgroundTasks.length })} aria-expanded={shown === 'tasks'} onClick={() => shown === 'tasks' ? close() : open('tasks')}>{t('claude.status.background_short', { count: s.backgroundTasks.length })}</button>}
+    {s.backgroundTasks.length > 0 && <button ref={el => { anchors.current.tasks = el; }} className="claude-tasks-control" aria-label={t('claude.status.background_count', { count: s.backgroundTasks.length })} aria-expanded={shown === 'tasks'} {...tasksHover.trigger} onClick={() => open('tasks')}>{t('claude.status.background_short', { count: s.backgroundTasks.length })}</button>}
     {children}
     <div className="claude-model-controls">
     {quota}
@@ -132,7 +135,7 @@ export function ClaudeComposerControls({ sessionId, draft, onDraftChange, keyHan
       <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle className="claude-context-track" cx="8" cy="8" r="6" /><circle className="claude-context-progress" cx="8" cy="8" r="6" pathLength="100" strokeDasharray="100" strokeDashoffset={100 - contextPercent} /></svg>
     </button>
     </div>
-    {shown && createPortal(<div className="claude-control-menu" ref={popup} role="dialog" aria-label={shown === 'tasks' ? t('claude.status.background_count', { count: s.backgroundTasks.length }) : t(shown === 'context' ? 'claude.context_window' : shown === 'commands' ? 'claude.commands' : shown === 'model' ? 'claude.model' : shown === 'effort' ? 'claude.effort.title' : 'claude.permissions')} style={position} onMouseDown={e => e.stopPropagation()}>
+    {shown && createPortal(<div className="claude-control-menu" ref={popup} {...(shown === 'tasks' ? tasksHover.popover : {})} role="dialog" aria-label={shown === 'tasks' ? t('claude.status.background_count', { count: s.backgroundTasks.length }) : t(shown === 'context' ? 'claude.context_window' : shown === 'commands' ? 'claude.commands' : shown === 'model' ? 'claude.model' : shown === 'effort' ? 'claude.effort.title' : 'claude.permissions')} style={position} onMouseDown={e => e.stopPropagation()}>
       {shown === 'tasks' ? <><div className="claude-tasks-heading">{t('claude.status.background_count', { count: s.backgroundTasks.length })}</div>{s.backgroundTasks.map(task => <div key={task.id} className="claude-tasks-item"><span className="claude-tasks-dot" aria-hidden="true" /><span>{task.description || task.type}</span></div>)}</> : shown === 'context' ? <ContextUsage used={s.contextTokens} capacity={s.contextWindow} total={totalTokens} /> : shown === 'commands' ? commands.length ? commands.map((c, i) => <button key={c.name} className={i === selected ? 'is-selected' : ''} onMouseEnter={() => setSelected(i)} onClick={() => chooseCommand(i)}><strong>/{c.name}</strong><small>{c.description}</small></button>) : <div className="claude-menu-empty">{t('claude.commands_empty')}</div> : shown === 'permissions' ? modes.map(m => <button key={m.value} disabled={pending} className={s.permissionMode === m.value ? 'is-selected' : ''} onClick={() => void change({ subtype: 'set_permission_mode', mode: m.value }, true)}><strong>{m.label}{s.permissionMode === m.value ? ' ✓' : ''}</strong><small>{m.description}</small></button>) : <>
         {shown === 'model' && s.models.map(m => <button key={m.value} disabled={pending} className={m.value === model?.value ? 'is-selected' : ''} onClick={() => void change({ subtype: 'set_model', model: m.value })}><strong>{m.displayName}{m.value === model?.value ? ' ✓' : ''}</strong><small>{m.description}</small></button>)}
         {shown === 'effort' && model?.supportsEffort && <ClaudeEffortControl key={`${sessionId}:${model.value}`} levels={[...(model.supportedEffortLevels ?? []), 'ultracode']} value={effort} disabled={pending} onClose={() => { close(); anchors.current.effort?.focus(); }} onCommit={level => change({ subtype: 'apply_flag_settings', settings: level === 'ultracode' ? { effortLevel: 'xhigh', ultracode: true } : { effortLevel: level, ultracode: false } }, true)} />}

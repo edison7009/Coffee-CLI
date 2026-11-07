@@ -39,6 +39,8 @@ export interface CodexState {
   contextTokens: number; contextWindow: number; totalTokens: number;
   historyCursor: string | null; loadingHistory: boolean;
   error?: string; interrupting: boolean;
+  /** Sub-agent threads this thread spawned, by thread ID: what they were asked to do and whether they still run. */
+  subAgents?: Record<string, { description: string; running: boolean }>;
 }
 export function emptyCodexState(): CodexState {
   return { lastContextTokens: 0, threadPath: '', ready: false, busy: false, nativeId: '', turnId: '', messages: [], requests: [], models: [], model: '', effort: '', approvalPolicy: undefined, sandbox: {}, contextTokens: 0, contextWindow: 0, totalTokens: 0, historyCursor: null, loadingHistory: false, interrupting: false };
@@ -60,6 +62,10 @@ export function restoreCodexTurns(turns: unknown[]): CodexMessage[] {
 export function reduceCodexEvent(state: CodexState, event: Json): CodexState {
   const method = str(event.method), p = obj(event.params), thread = obj(p.thread);
   const threadId = str(p.threadId) || str(thread.id);
+  // A spawned sub-agent runs on its own thread; its status changes only mark it running or settled.
+  if (method === 'thread/status/changed' && state.subAgents?.[threadId]) {
+    return { ...state, subAgents: { ...state.subAgents, [threadId]: { ...state.subAgents[threadId], running: obj(p.status).type === 'active' } } };
+  }
   if (state.nativeId && threadId && threadId !== state.nativeId) return state;
   const s = { ...state };
   if (event.id !== undefined && method) {
@@ -78,6 +84,7 @@ export function reduceCodexEvent(state: CodexState, event: Json): CodexState {
     const previous = s.messages.find(m => m.id === id);
     if (previous) update(id, old => ({ ...message, timestamp: old.timestamp, content: message.content || old.content }));
     else s.messages = [...s.messages, message];
+    if (item.type === 'collabAgentToolCall') s.subAgents = collabAgents(s.subAgents, item);
   } else if (method.endsWith('/delta') || method.endsWith('/outputDelta')) {
     const id = `${str(p.turnId)}:${str(p.itemId)}`;
     const kind = method.includes('/agentMessage/') ? 'agentMessage' : method.includes('/reasoning/') ? 'reasoning' : method.includes('/fileChange/') ? 'fileChange' : method.includes('/commandExecution/') ? 'commandExecution' : '';
@@ -111,6 +118,24 @@ export function reduceCodexEvent(state: CodexState, event: Json): CodexState {
   } else if (method === 'item/fileChange/patchUpdated') {
     update(`${str(p.turnId)}:${str(p.itemId)}`, m => { const item = { ...m.item, changes: p.changes }; return { ...m, item, content: itemText(item) }; });
   } else if (method === 'error' && p.willRetry !== true) s.error = str(obj(p.error).message) || pretty(p.error);
-  else if (method === 'coffee/exit') { s.ready = false; s.busy = false; s.interrupting = false; s.requests = []; s.error = str(p.detail) || `Codex process exited (${p.code ?? 'unknown'})`; }
+  else if (method === 'coffee/exit') { s.subAgents = {}; s.ready = false; s.busy = false; s.interrupting = false; s.requests = []; s.error = str(p.detail) || `Codex process exited (${p.code ?? 'unknown'})`; }
   return s;
+}
+
+const AGENT_RUNNING = new Set(['pendingInit', 'running']);
+/** Fold a collaboration call into the known sub-agents: a spawn names new ones, and every call reports their states. */
+function collabAgents(known: CodexState['subAgents'], item: Json): CodexState['subAgents'] {
+  const next = { ...known }, states = obj(item.agentsStates);
+  const description = str(item.prompt).split('\n').find(line => line.trim())?.trim().slice(0, 120) ?? '';
+  for (const id of arr(item.receiverThreadIds).map(str).filter(Boolean)) {
+    if (!next[id] && item.tool !== 'spawnAgent') continue;
+    const status = str(obj(states[id]).status);
+    next[id] = { description: next[id]?.description || description, running: status ? AGENT_RUNNING.has(status) : next[id]?.running ?? true };
+  }
+  return next;
+}
+
+/** Sub-agent threads still running, for the composer's sub-task list. */
+export function codexSubTasks(state: CodexState): { id: string; description: string }[] {
+  return Object.entries(state.subAgents ?? {}).filter(([, agent]) => agent.running).map(([id, agent]) => ({ id, description: agent.description }));
 }

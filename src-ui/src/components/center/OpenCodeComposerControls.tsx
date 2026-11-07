@@ -1,6 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type MutableRefObject, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { configureOpenCode, runOpenCodeCommand, useOpenCodeSession } from '../../lib/opencode-session';
+import { opencodeSubTasks } from '../../lib/opencode-protocol';
+import { SubTasksControl } from './SubTasksControl';
 import { openCodeRows } from '../../lib/opencode-protocol';
 import { clipboardWrite } from '../../lib/clipboard';
 import { useAppState } from '../../store/app-state';
@@ -120,6 +122,7 @@ export function OpenCodeComposerControls({ sessionId, draft, onDraftChange, keyH
     <button type="button" className="claude-control-icon" aria-label={t('claude.attach')} onClick={() => { void attach(); }}><AttachIcon /></button>
     <button type="button" ref={commandsAnchor} className="claude-control-icon" aria-label={t('codex.command')} aria-expanded={shown === 'commands'} onClick={e => show('commands', e.currentTarget)}>/</button>
     {agents.length > 1 && <button type="button" className="claude-permission-control" disabled={!s.ready} aria-label={t('opencode.agent')} aria-expanded={menu === 'agent'} onClick={e => show('agent', e.currentTarget)}>{agent?.name ?? s.agent}</button>}
+    <SubTasksControl tasks={opencodeSubTasks(s)} fallback={t('dsh.task.agent')} />
     {children}
     <div className="claude-model-controls">
       {quota}

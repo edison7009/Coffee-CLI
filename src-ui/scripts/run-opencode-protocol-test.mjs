@@ -5,7 +5,7 @@ import { runInNewContext } from 'node:vm';
 import { fileURLToPath } from 'node:url';
 const result = await build({ entryPoints: [fileURLToPath(new URL('../src/lib/opencode-protocol.ts', import.meta.url))], bundle: true, platform: 'node', format: 'cjs', write: false });
 const module = { exports: {} }; runInNewContext(result.outputFiles[0].text, { module, exports: module.exports, console, Date, JSON, WeakMap });
-const { emptyOpenCodeState, reduceOpenCodeEvent, openCodeRows, lastContextTokens } = module.exports;
+const { emptyOpenCodeState, reduceOpenCodeEvent, openCodeRows, lastContextTokens, opencodeSubTasks } = module.exports;
 let passed = 0;
 function test(name, fn) { fn(); passed++; console.log(`ok ${name}`); }
 const plain = value => JSON.parse(JSON.stringify(value));
@@ -86,5 +86,26 @@ test('empty reasoning blocks and provider errors render as expected', () => {
 test('the process exit ends the session with its detail', () => {
   const s = reduceOpenCodeEvent({ ...live, busy: true }, { type: 'coffee.exit', data: { code: 1, detail: 'boom\n' } });
   assert.equal(s.ready, false); assert.equal(s.busy, false); assert.equal(s.error, 'boom');
+});
+test('sub-agents show while their call waits, and in the background until their session settles', () => {
+  const part = (id, status, input, metadata) => ({ type: 'tool', id, name: 'subagent', state: { status, input, ...(metadata ? { metadata } : {}) } });
+  let s = { ...emptyOpenCodeState(), ready: true, nativeId: 'ses_main', native: [{ type: 'assistant', id: 'a1', content: [
+    part('p1', 'running', { description: 'Scan the repo', prompt: '...' }),
+    part('p2', 'completed', { description: 'Write docs', background: true }, { sessionID: 'ses_bg' }),
+    part('p3', 'completed', { description: 'Done already' }, { sessionID: 'ses_fg' }),
+    { type: 'tool', id: 'p4', name: 'bash', state: { status: 'running', input: { command: 'ls' } } },
+  ] }] };
+  const names = state => JSON.parse(JSON.stringify(opencodeSubTasks(state).map(task => task.description)));
+  assert.deepEqual(names(s), ['Scan the repo'], 'a background child counts only once seen running');
+  s = reduceOpenCodeEvent(s, { type: 'session.execution.started', data: { sessionID: 'ses_bg' } });
+  assert.deepEqual(names(s), ['Scan the repo', 'Write docs']);
+  assert.equal(s.native.length, 1, 'a child event does not enter this transcript');
+  s = reduceOpenCodeEvent(s, { type: 'session.execution.succeeded', data: { sessionID: 'ses_bg' } });
+  assert.deepEqual(names(s), ['Scan the repo']);
+  s = reduceOpenCodeEvent(s, { type: 'session.execution.started', data: { sessionID: 'ses_bg' } });
+  s = reduceOpenCodeEvent(s, { type: 'session.synthetic', data: { sessionID: 'ses_main', text: '<subagent/>', metadata: { childID: 'ses_bg' } } });
+  assert.deepEqual(names(s), ['Scan the repo'], 'the completion report settles it too');
+  s = reduceOpenCodeEvent(s, { type: 'session.execution.started', data: { sessionID: 'ses_bg' } });
+  assert.deepEqual(names(reduceOpenCodeEvent(s, { type: 'coffee.exit', data: { code: 0 } })), [], 'an exited server runs nothing');
 });
 console.log(`${passed} OpenCode protocol tests passed`);

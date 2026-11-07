@@ -10,6 +10,7 @@ import { ContextUsage } from './ContextUsage';
 import { useT } from '../../i18n/useT';
 import './ClaudeComposerControls.css';
 import { sameFolder } from '../../lib/worktree-path';
+import { useHoverOpen } from '../../lib/use-hover-open';
 
 type Menu = 'commands' | 'model' | 'effort' | 'permissions' | 'context' | 'tasks' | null;
 // The two presets DeepSeek Harness offers in its own composer.
@@ -54,6 +55,9 @@ export function DshComposerControls({ sessionId, draft, onDraftChange, keyHandle
   ].filter(command => (s.commands || !['compact', 'plan', 'goal'].includes(command.target)) && (!slash || command.name.includes(draft.slice(1).toLowerCase())));
   const disabled = (target: string) => ['context', 'new', 'goal', 'permissions'].includes(target) ? false : locked;
   const close = () => { setMenu(null); setDismissed(draft); };
+  const tasksAnchor = useRef<HTMLButtonElement>(null);
+  // Sub-tasks open on hover, as in the Claude composer.
+  const tasksHover = useHoverOpen(() => { anchor.current = tasksAnchor.current; setMenu('tasks'); }, () => setMenu(null), menu === 'tasks');
   const chooseCommand = (index: number) => {
     const command = commands[index]; if (!command || disabled(command.target)) return;
     if (/^\/[\w:-]*$/.test(draft)) onDraftChange('');
@@ -85,7 +89,7 @@ export function DshComposerControls({ sessionId, draft, onDraftChange, keyHandle
   });
   useLayoutEffect(() => {
     if (!shown) return;
-    const update = () => { const r = (shown === 'commands' ? commandsAnchor.current : anchor.current)?.getBoundingClientRect(); if (!r) return; const width = Math.min(shown === 'effort' ? 320 : ['permissions', 'commands'].includes(shown) ? 420 : shown === 'context' ? 280 : 320, innerWidth - 16); const left = ['permissions', 'commands', 'tasks'].includes(shown) ? r.left : r.right - width; setPosition({ position: 'fixed', left: Math.max(8, Math.min(left, innerWidth - width - 8)), bottom: innerHeight - r.top + 6, width, maxHeight: Math.max(50, r.top - 16) }); };
+    const update = () => { const r = (shown === 'commands' ? commandsAnchor.current : anchor.current)?.getBoundingClientRect(); if (!r) return; const width = Math.min(shown === 'effort' ? 320 : ['permissions', 'commands'].includes(shown) ? 420 : shown === 'context' || shown === 'tasks' ? 280 : 320, innerWidth - 16); const left = ['permissions', 'commands'].includes(shown) ? r.left : r.right - width; setPosition({ position: 'fixed', left: Math.max(8, Math.min(left, innerWidth - width - 8)), bottom: innerHeight - r.top + 6, width, maxHeight: Math.max(50, r.top - 16) }); };
     const observer = new ResizeObserver(update);
     if (root.current) observer.observe(root.current);
     const gambit = root.current?.closest('.gambit'); if (gambit) observer.observe(gambit);
@@ -115,7 +119,7 @@ export function DshComposerControls({ sessionId, draft, onDraftChange, keyHandle
     <button type="button" className="claude-control-icon" aria-label={t('claude.attach')} onClick={() => { void attach(); }}><AttachIcon /></button>
     <button type="button" ref={commandsAnchor} className="claude-control-icon" aria-label={t('claude.commands')} aria-expanded={shown === 'commands'} onClick={e => show('commands', e.currentTarget)}>/</button>
     <button type="button" className="claude-permission-control" disabled={!s.ready || !!s.restarting} aria-label={t('dsh.command.permission')} aria-expanded={menu === 'permissions'} onClick={e => show('permissions', e.currentTarget)}>{preset ? t(preset.label) : s.preset || t('dsh.command.permission')}</button>
-    {tasks.length > 0 && <button type="button" className="claude-tasks-control" aria-label={t('claude.status.background_count', { count: tasks.length })} aria-expanded={menu === 'tasks'} onClick={e => show('tasks', e.currentTarget)}>{t('claude.status.background_short', { count: tasks.length })}</button>}
+    {tasks.length > 0 && <button type="button" ref={tasksAnchor} className="claude-tasks-control" aria-label={t('claude.status.background_count', { count: tasks.length })} aria-expanded={menu === 'tasks'} {...tasksHover.trigger} onClick={e => { anchor.current = e.currentTarget; setMenu('tasks'); }}>{t('claude.status.background_short', { count: tasks.length })}</button>}
     {children}
     <div className="claude-model-controls">
       {quota}
@@ -123,7 +127,7 @@ export function DshComposerControls({ sessionId, draft, onDraftChange, keyHandle
       {!!model?.efforts.length && <button type="button" className="claude-effort-trigger" disabled={locked} aria-label={t('claude.effort.title')} aria-expanded={menu === 'effort'} onClick={e => show('effort', e.currentTarget)}>{claudeEffortLabel(effort, t)}</button>}
       <button type="button" className="claude-context-control" data-severity={percent >= 90 ? 'critical' : percent >= 75 ? 'warning' : 'normal'} aria-label={`${t('claude.context_used')}: ${Math.round(percent)}%`} aria-haspopup="dialog" aria-expanded={menu === 'context'} onClick={e => show('context', e.currentTarget)}><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle className="claude-context-track" cx="8" cy="8" r="6" /><circle className="claude-context-progress" cx="8" cy="8" r="6" pathLength="100" strokeDasharray="100" strokeDashoffset={100 - percent} /></svg></button>
     </div>
-    {shown && createPortal(<div className="claude-control-menu" ref={popup} role="dialog" style={position} onMouseDown={e => e.stopPropagation()}>
+    {shown && createPortal(<div className="claude-control-menu" ref={popup} {...(shown === 'tasks' ? tasksHover.popover : {})} role="dialog" style={position} onMouseDown={e => e.stopPropagation()}>
       {shown === 'commands' ? commands.length ? commands.map((c, i) => <button type="button" key={c.name} disabled={disabled(c.target)} className={i === selected ? 'is-selected' : ''} onMouseEnter={() => setSelected(i)} onClick={() => chooseCommand(i)}><strong>/{c.name}</strong><small>{c.description}</small></button>) : <div className="claude-menu-empty">{t('claude.commands_empty')}</div>
       : shown === 'permissions' ? PRESETS.map(p => <button type="button" key={p.value} disabled={!s.ready || !!s.restarting} className={s.preset === p.value ? 'is-selected' : ''} onClick={() => { close(); if (s.preset !== p.value) void setDshPreset(sessionId, p.value); }}><strong>{t(p.label)}{s.preset === p.value ? ' ✓' : ''}</strong><small>{t(p.description)}</small></button>)
       : shown === 'model' ? s.models.map(m => { const current = m.provider === s.route.provider && m.model === s.route.model; return <button type="button" key={`${m.provider}/${m.model}`} disabled={locked} className={current ? 'is-selected' : ''} onClick={() => { close(); if (!current) void setDshRoute(sessionId, { provider: m.provider, model: m.model, effort: m.efforts.includes(effort) ? effort : null }); }}><strong>{m.name}{current ? ' ✓' : ''}</strong><small>{m.provider}</small></button>; })

@@ -1,6 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type MutableRefObject, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { configureCodex, runCodexCommand, useCodexSession } from '../../lib/codex-session';
+import { codexSubTasks } from '../../lib/codex-protocol';
+import { SubTasksControl } from './SubTasksControl';
 import { arr, obj, str, type Json } from '../../lib/codex-protocol';
 import { clipboardWrite } from '../../lib/clipboard';
 import { useAppState } from '../../store/app-state';
@@ -129,6 +131,7 @@ export function CodexComposerControls({ sessionId, draft, onDraftChange, keyHand
     <button type="button" className="claude-control-icon" aria-label={t('claude.attach')} onClick={() => { void attach(); }}><AttachIcon /></button>
     <button type="button" ref={commandsAnchor} className="claude-control-icon" aria-label={t('codex.command')} aria-expanded={shown === 'commands'} onClick={e => show('commands', e.currentTarget)}>/</button>
     <button type="button" className="claude-permission-control" disabled={!s.ready || s.busy} aria-label={t('codex.permissions')} aria-expanded={menu === 'permissions'} onClick={e => show('permissions', e.currentTarget)}>{permission}</button>
+    <SubTasksControl tasks={codexSubTasks(s)} fallback={t('dsh.task.agent')} />
     {children}
     <div className="claude-model-controls">
       {quota}
