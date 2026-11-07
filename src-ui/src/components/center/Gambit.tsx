@@ -161,6 +161,8 @@ function GambitImpl({
   const suggestion = draft ? undefined : offered;
   const rootRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  // When the IME composition ended, for the Enter that confirms a candidate (see onKeyDown).
+  const compositionEndRef = useRef(0);
   const claudeKeyHandler = useRef<((event: React.KeyboardEvent<HTMLTextAreaElement>) => boolean) | undefined>(undefined);
   const codexSubmitHandler = useRef<((text: string) => boolean) | undefined>(undefined);
   const sendingRef = useRef(false);
@@ -658,6 +660,9 @@ function GambitImpl({
     // IME composition in progress — let the IME keep Enter for confirming
     // candidates. nativeEvent.isComposing is the canonical flag.
     if (e.nativeEvent.isComposing) return;
+    // macOS WebKit ends the composition before the confirming Enter's keydown, so isComposing is already false there.
+    // That keydown still carries keyCode 229, and it lands right after compositionend.
+    if (e.key === 'Enter' && (e.nativeEvent.keyCode === 229 || performance.now() - compositionEndRef.current < 50)) return;
     if (desktop && claudeKeyHandler.current?.(e)) return;
     if (e.key === 'Tab' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey && suggestion) {
       e.preventDefault();
@@ -819,6 +824,7 @@ function GambitImpl({
           placeholder={suggestion ? undefined : t('gambit.placeholder', { send: sendCombo, newline: newlineCombo })}
           onChange={(e) => onDraftChange(e.target.value)}
           onKeyDown={onKeyDown}
+          onCompositionEnd={() => { compositionEndRef.current = performance.now(); }}
           onPaste={onPaste}
           spellCheck={false}
           rows={1}
