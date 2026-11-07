@@ -4,7 +4,8 @@ import { runInNewContext } from 'node:vm';
 import { fileURLToPath } from 'node:url';
 const result = await build({ entryPoints: [fileURLToPath(new URL('../src/lib/claude-protocol.ts', import.meta.url))], bundle: true, platform: 'node', format: 'cjs', write: false });
 const module = { exports: {} }; runInNewContext(result.outputFiles[0].text, { module, exports: module.exports, console, Date });
-const { emptyClaudeState, reduceClaudeEvent, coldReturn } = module.exports;
+const { emptyClaudeState, reduceClaudeEvent, coldReturn, finishTurn } = module.exports;
+const plain = value => JSON.parse(JSON.stringify(value));
 let passed = 0;
 function test(name, fn) { fn(); passed++; console.log(`ok ${name}`); }
 const stream = event => ({ type: 'stream_event', event });
@@ -175,5 +176,35 @@ test('a predicted next prompt is kept only while no prompt has moved past it', (
   s = reduceClaudeEvent(emptyClaudeState(), { type: 'prompt_suggestion', suggestion: 'kept' }, 1000);
   s = reduceClaudeEvent(s, { type: 'coffee_exit', code: 1 }, 1100);
   assert.equal(s.suggestion, undefined, 'a session that exited offers nothing to send to');
+});
+test('every turn keeps its time, tokens and cost on its last message', () => {
+  const usage = (input, output, read = 0, write = 0, hour = 0) => ({ input_tokens: input, output_tokens: output, cache_read_input_tokens: read, cache_creation_input_tokens: write, cache_creation: { ephemeral_1h_input_tokens: hour } });
+  const assistant = (id, block, use) => ({ type: 'assistant', uuid: `${id}-${block}`, message: { id, model: 'claude-x', content: [{ type: 'text', text: `${id} ${block}` }], usage: use } });
+  // Live: two turns in one process; the reported cumulative cost is split between them.
+  let s = { ...emptyClaudeState(), ready: true, busy: true, pendingTurns: 1, messages: [{ id: 'pending:1', role: 'user', content: 'first', timestamp: 1000 }] };
+  s = reduceClaudeEvent(s, { type: 'user', uuid: 'u1', message: { role: 'user', content: 'first' } }, 1100);
+  s = reduceClaudeEvent(s, assistant('m1', 'a', usage(10, 5, 100, 20, 8)), 2000);
+  s = reduceClaudeEvent(s, assistant('m1', 'b', usage(10, 5, 100, 20, 8)), 2100);
+  s = reduceClaudeEvent(s, assistant('m2', 'a', usage(1, 2)), 3000);
+  s = reduceClaudeEvent(s, { type: 'result', duration_ms: 4200, total_cost_usd: 0.5 }, 5200);
+  const first = s.messages.at(-1).turnStats;
+  assert.deepEqual(plain(first), { durationMs: 4200, usage: { input: 11, output: 7, cacheRead: 100, cacheWrite: 20, cacheWrite1h: 8 }, model: 'claude-x', cost: 0.5 }, 'a response repeated per block counts once');
+  s = { ...s, busy: true, pendingTurns: 1, messages: [...s.messages, { id: 'pending:2', role: 'user', content: 'second', timestamp: 6000 }] };
+  s = reduceClaudeEvent(s, { type: 'user', uuid: 'u2', message: { role: 'user', content: 'second' } }, 6100);
+  s = reduceClaudeEvent(s, assistant('m3', 'a', usage(3, 4)), 7000);
+  s = reduceClaudeEvent(s, { type: 'result', duration_ms: 1000, total_cost_usd: 0.75 }, 7100);
+  assert.equal(s.messages.at(-1).turnStats.cost, 0.25, 'each live turn takes what it added to the process total');
+  assert.equal(reduceClaudeEvent(s, { type: 'coffee_exit', code: 0 }, 8000).processCost, 0, 'a new process starts its total again');
+  // History: prompts split turns, turn_duration is used when recorded, and a page ends its last turn.
+  let h = emptyClaudeState();
+  for (const [row, at] of [
+    [{ type: 'user', uuid: 'h1', message: { role: 'user', content: 'old one' } }, 10_000],
+    [assistant('h-m1', 'a', usage(5, 5)), 11_000], [{ type: 'system', subtype: 'turn_duration', durationMs: 2500 }, 12_000],
+    [{ type: 'user', uuid: 'h2', message: { role: 'user', content: 'old two' } }, 20_000],
+    [assistant('h-m2', 'a', usage(7, 3)), 21_000], [assistant('h-m2', 'b', usage(7, 3)), 26_000],
+  ]) h = reduceClaudeEvent(h, row, at, true);
+  h = finishTurn(h);
+  const stats = h.messages.filter(m => m.turnStats).map(m => [m.id, m.turnStats.durationMs, m.turnStats.usage.input, m.turnStats.cost]);
+  assert.deepEqual(plain(stats), [['h-m1:0:text', 2500, 5, null], ['h-m2:0:text', 6000, 7, null]], 'history has tokens and time but no reported cost');
 });
 console.log(`${passed} Claude protocol checks passed`);

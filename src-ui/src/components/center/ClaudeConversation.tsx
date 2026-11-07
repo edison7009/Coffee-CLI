@@ -3,7 +3,8 @@ import { useWorktreePending } from '../../lib/worktree-pending';
 import { diffLines } from 'diff';
 import { useAppLanguage, useAppState } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
-import type { ClaudeTranslate } from '../../lib/claude-i18n';
+import { formatElapsed, formatTokens } from '../../lib/claude-i18n';
+import { TurnSummary } from './TurnSummary';
 import { orchestrationSearchLabel, orchestrationToolLabel } from '../../lib/orchestration-label';
 import { clipboardWrite } from '../../lib/clipboard';
 import { directoryFailure, directoryFailureMessage } from '../../lib/session-directory';
@@ -11,7 +12,7 @@ import { bindAutoHideScrollbar } from '../../lib/auto-hide-scrollbar';
 import { tokenizeFile, getShikiTheme, type LineTokens } from '../../lib/shiki';
 import { useDataAttr } from '../../lib/use-data-attr';
 import { continueClaudeInNewConversation, controlClaude, loadClaudeHistory, respondClaude, retainClaudeSession, settleClaudeColdReturn, useClaudeSession } from '../../lib/claude-session';
-import { object, list, text, number, resultText, type ClaudeMessage, type ClaudeRequest } from '../../lib/claude-protocol';
+import { object, list, text, resultText, type ClaudeMessage, type ClaudeRequest } from '../../lib/claude-protocol';
 import { useConversationVirtualizer } from './conversation-virtualizer';
 import { MarkdownContent } from './MarkdownContent';
 import { WelcomeGreeting, WelcomeRestoring, WelcomeSessionMeta } from './WelcomeGreeting';
@@ -44,8 +45,7 @@ function useClock(active: boolean, ms = 1000) {
   useEffect(() => { if (!active) return; const timer = setInterval(() => setNow(Date.now()), ms); return () => clearInterval(timer); }, [active, ms]);
   return now;
 }
-function count(value: number) { return value >= 1000 ? `${(value / 1000).toFixed(1)}k` : String(Math.round(value)); }
-function elapsed(ms: number, t: ClaudeTranslate) { const seconds = Math.max(0, Math.round(ms / 1000)); return seconds >= 60 ? t('claude.time.minutes', { minutes: Math.floor(seconds / 60), seconds: seconds % 60 }) : t('claude.time.seconds', { seconds }); }
+const count = formatTokens, elapsed = formatElapsed;
 
 const CLAUDE_WELCOME_ICONS = [
   { id: 'laptop', src: CLAUDE_WELCOME_CLIP },
@@ -407,7 +407,6 @@ export function ClaudeConversation({ sessionId, cwd, resumeToken, isActive, isVi
     void loadClaudeHistory(sessionId);
   };
   const copy = (message: ClaudeMessage) => { void clipboardWrite(message.content).then(() => { setCopied(message.id); setTimeout(() => setCopied(''), 1500); }); };
-  const used = number(s.usage.input_tokens) + number(s.usage.output_tokens) + number(s.usage.cache_read_input_tokens) + number(s.usage.cache_creation_input_tokens);
   const directoryIssue = !s.ready ? directoryFailure(s.error) : undefined;
   const directoryError = directoryFailureMessage(s.error, t);
   const empty = !directoryIssue && !s.messages.length && !s.busy && !s.requests.length && (!s.ready || !s.error);
@@ -415,7 +414,6 @@ export function ClaudeConversation({ sessionId, cwd, resumeToken, isActive, isVi
   const creatingWorktree = useWorktreePending(sessionId, s.ready || !!s.error);
   const restoringMark = <span className="claude-working-mark" aria-hidden="true"><img src={CLAUDE_WORKING_MARK} alt="" /></span>;
   const model = s.models.find(m => m.value === s.model) ?? s.models.find(m => m.resolvedModel === s.model);
-  const summary = !empty && !s.busy && s.endedAt && <div className="claude-turn-summary">{t('claude.worked_for', { duration: elapsed(s.endedAt - (s.startedAt ?? s.endedAt), t) })}{used > 0 && <> · {t('claude.tokens', { count: count(used) })}</>}{s.totalCost !== undefined && s.totalCost > 0 && <> · ~${s.totalCost.toFixed(4)}</>}</div>;
   return <ConversationDirectory.Provider value={cwd}><div className={`claude-conversation${hasBg && bgUrl ? ' has-background' : ''}${navigationItems.length > 1 ? ' has-navigation' : ''}`}>
     {hasBg && bgUrl && <div className="conversation-background">{bgType === 'video' ? <video src={bgUrl} autoPlay loop muted /> : <img src={bgUrl} alt="" />}</div>}
     <div className="claude-scroll" ref={scrollRef} onPointerDownCapture={event => { if (event.button === 0) pointerHeld.current = true; }} onContextMenu={conversationMenu.onContextMenu} onCopy={conversationMenu.onCopy} onScroll={onScroll} onWheelCapture={event => { if (event.deltaY < 0 && !event.ctrlKey) pauseFollow(); }} onTouchMoveCapture={pauseFollow} onKeyDownCapture={event => { if ((['ArrowUp', 'PageUp', 'Home'].includes(event.key) || event.key === ' ' && event.shiftKey) && !(event.target as HTMLElement).closest('input,textarea,select,[contenteditable="true"]')) pauseFollow(); }}>
@@ -427,7 +425,7 @@ export function ClaudeConversation({ sessionId, cwd, resumeToken, isActive, isVi
           <article data-message-id={m.id} className={`claude-row claude-row--${m.role} ${m.toolStatus ? `claude-row--${m.interrupted ? 'interrupted' : m.toolStatus}` : ''} ${m.parentId ? 'claude-row--nested' : ''}`}>
             {m.role === 'user' ? <><time>{new Date(m.timestamp).toLocaleTimeString(language, { hour: 'numeric', minute: '2-digit' })}</time><CollapsibleUserMessage sentAt={m.timestamp} expanded={!!expandedMessages[m.id]} onToggle={() => setExpandedMessages(old => ({ ...old, [m.id]: !old[m.id] }))}><MarkdownContent content={m.content} /></CollapsibleUserMessage></> : m.role === 'tool' ? <ClaudeTool message={m} /> : m.role === 'reasoning' ? <ClaudeThinking message={m} expanded={thinkingExpansion[m.id] ?? expandedThinking} tokens={s.thinkingTokens} onToggle={open => setThinkingExpansion(previous => (previous[m.id] ?? expandedThinking) === open ? previous : { ...previous, [m.id]: open })} /> : <><time>{new Date(m.timestamp).toLocaleTimeString(language, { hour: 'numeric', minute: '2-digit' })}</time><MarkdownContent content={m.content} /></>}
             {(m.role === 'user' || m.role === 'assistant') && !m.partial && <MessageCopyButton copied={copied === m.id} onCopy={() => copy(m)} />}
-            {virtual.start + i === s.messages.length - 1 && summary}
+            {m.turnStats && !(s.busy && virtual.start + i === s.messages.length - 1) && <TurnSummary stats={m.turnStats} sessionKey={s.nativeId} messageId={m.id} />}
           </article>
         </MeasuredRow>)}
         <div style={{ height: virtual.bottomSpacer }} aria-hidden="true" />
@@ -444,7 +442,6 @@ export function ClaudeConversation({ sessionId, cwd, resumeToken, isActive, isVi
           {(creatingWorktree || restoring) && <WelcomeRestoring labelClassName="claude-working-word" mark={restoringMark} label={creatingWorktree ? t('gambit.worktree_creating') : undefined} />}
           <WelcomeSessionMeta cwd={cwd} model={model?.resolvedModel || s.model} />
         </div>}
-        {!s.messages.length && summary}
       </div>
     </div>
     {navigationItems.length > 1 && isActive && <ConversationNavigation items={navigationItems} scrollRef={scrollRef} onJump={jumpToTurn} />}

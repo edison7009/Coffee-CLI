@@ -3,7 +3,7 @@ import { directoryFailure } from './session-directory';
 import { recordSessionReply } from './session-replies';
 import { readLaunchControls, setSessionControls, clearSessionControls } from './session-controls';
 import { invoke, type ToolConfigEntry } from '../tauri';
-import { emptyClaudeState, reduceClaudeEvent, object, list, text, type ClaudeState, type ClaudeModel, type ClaudeCommand, type Json, coldReturn } from './claude-protocol';
+import { emptyClaudeState, finishTurn, reduceClaudeEvent, object, list, text, type ClaudeState, type ClaudeModel, type ClaudeCommand, type Json, coldReturn } from './claude-protocol';
 
 interface Client {
   state: ClaudeState;
@@ -73,7 +73,8 @@ function restoreHistoryPage(state: ClaudeState, data: string): ClaudeState {
   for (const line of data.split(/\r?\n/)) {
     try { const row = object(JSON.parse(line)); state = reduceClaudeEvent(state, row, Date.parse(text(row.timestamp)) || Date.now(), true); } catch { /* partial native row */ }
   }
-  return state;
+  // The page's last turn ends with it; a turn still running gets its totals from its result instead.
+  return state.busy ? state : finishTurn(state);
 }
 
 async function previewClaudeHistory(id: string, c: Client, cwd: string | null, resumeToken: string) {
@@ -195,6 +196,7 @@ export async function loadClaudeHistory(id: string): Promise<void> {
     const page = await invoke<{ data: string; cursor: number }>('claude_session_history', { id, generation: c.generation, before: c.state.historyCursor });
     let older = { ...emptyClaudeState(), orphanToolResults: c.state.orphanToolResults };
     for (const line of page.data.split(/\r?\n/)) { try { const row = object(JSON.parse(line)); older = reduceClaudeEvent(older, row, Date.parse(text(row.timestamp)) || Date.now(), true); } catch { /* partial native row */ } }
+    older = finishTurn(older);
     const ids = new Set(older.messages.map(m => m.id));
     const messages = [...older.messages, ...c.state.messages.filter(m => !ids.has(m.id))];
     c.state = { ...c.state, messages, orphanToolResults: older.orphanToolResults, historyCursor: page.cursor };

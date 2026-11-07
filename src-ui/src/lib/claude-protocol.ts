@@ -26,7 +26,18 @@ export interface ClaudeMessage extends ChatMessage {
   parentId?: string;
   streamKey?: string;
   interrupted?: boolean;
+  /** On a turn's last message: what the turn took, for the summary under it. */
+  turnStats?: TurnStats;
 }
+/** One turn's totals. `cost` is what Claude reported for a live turn; history has only tokens to estimate from. */
+export interface TurnStats {
+  durationMs: number;
+  usage: { input: number; output: number; cacheRead: number; cacheWrite: number; cacheWrite1h: number };
+  model?: string;
+  cost?: number;
+}
+/** A turn in progress: each request's usage by message id, as a message's blocks repeat it. */
+interface TurnProgress { startedAt: number; lastAt: number; model?: string; requests: Record<string, Json>; durationMs?: number }
 export interface ClaudeModel {
   value: string;
   resolvedModel?: string;
@@ -96,6 +107,25 @@ export interface ClaudeState {
   historyCursor: number;
   loadingHistory?: boolean;
   orphanToolResults: Record<string, Partial<ClaudeMessage>>;
+  turn?: TurnProgress;
+  /** The running process's cumulative cost, to take each live turn's share from. */
+  processCost?: number;
+}
+
+/** Ends the turn in progress: its totals go on its last message. A page of history ends its last turn this way. */
+export function finishTurn(state: ClaudeState, durationMs?: number, cost?: number): ClaudeState {
+  const turn = state.turn;
+  if (!turn) return state;
+  const at = state.messages.findLastIndex(m => m.role !== 'user');
+  const next = { ...state, turn: undefined };
+  const requests = Object.values(turn.requests);
+  if (at < 0 || !requests.length && durationMs === undefined && turn.durationMs === undefined) return next;
+  const sum = (key: string) => requests.reduce((total, usage) => total + number(usage[key]), 0);
+  const usage = { input: sum('input_tokens'), output: sum('output_tokens'), cacheRead: sum('cache_read_input_tokens'), cacheWrite: sum('cache_creation_input_tokens'),
+    cacheWrite1h: requests.reduce((total, u) => total + number(object(u.cache_creation).ephemeral_1h_input_tokens), 0) };
+  const turnStats: TurnStats = { durationMs: durationMs ?? turn.durationMs ?? Math.max(0, turn.lastAt - turn.startedAt), usage, model: turn.model, ...(cost !== undefined ? { cost } : {}) };
+  next.messages = state.messages.map((m, index) => index === at ? { ...m, turnStats } : m);
+  return next;
 }
 export function emptyClaudeState(): ClaudeState {
   return { messages: [], lastContextTokens: 0, ready: false, busy: false, pendingTurns: 0, sentSinceResult: 0, backgroundTasks: [], status: 'starting', nativeId: '', model: '', models: [], commands: [], permissionMode: 'default', effort: '', ultracode: false, thinking: true, requests: [], usage: {}, modelUsage: {}, currentMessageId: '', contextTokens: 0, contextWindow: 0, historyCursor: 0, orphanToolResults: {} };
@@ -164,6 +194,9 @@ export function reduceClaudeEvent(state: ClaudeState, frame: Json, now = Date.no
     }
   } else if (frame.type === 'assistant') {
     const message = object(frame.message), mid = text(message.id) || text(frame.uuid);
+    // Every block of a response repeats its usage; keyed by message id, a response counts once.
+    const turn = s.turn ?? { startedAt: now, lastAt: now, requests: {} };
+    s.turn = { ...turn, lastAt: now, model: text(message.model) || turn.model, requests: Object.keys(object(message.usage)).length ? { ...turn.requests, [mid]: object(message.usage) } : turn.requests };
     list(message.content).forEach((v, index) => {
       const b = object(v);
       const existing = b.type === 'tool_use' ? s.messages.find(m => m.id === b.id)
@@ -181,6 +214,7 @@ export function reduceClaudeEvent(state: ClaudeState, frame: Json, now = Date.no
     const blocks = typeof message.content === 'string' ? [{ type: 'text', text: message.content }] : list(message.content).map(object);
     for (const b of blocks) {
       if (b.type === 'tool_result') {
+        if (s.turn) s.turn = { ...s.turn, lastAt: now };
         const failed = b.is_error === true;
         const id = text(b.tool_use_id), result: Partial<ClaudeMessage> = { output: resultText(b.content), toolStatus: failed ? 'failed' : 'done', result: object(frame.tool_use_result), endedAt: now, partial: false };
         if (s.messages.some(m => m.id === id)) update(id, result);
@@ -191,8 +225,13 @@ export function reduceClaudeEvent(state: ClaudeState, frame: Json, now = Date.no
         // Claude records a stop as a user line; the turn already shows it was cancelled.
         if (INTERRUPT_MARKER.test(content.trim())) continue;
         const pending = s.messages.findLast(m => m.role === 'user' && m.id.startsWith('pending:') && m.content === content);
-        if (pending) update(pending.id, { id: text(frame.uuid) || pending.id });
-        else if (!s.messages.some(m => m.id === frame.uuid)) s.messages.push({ id: text(frame.uuid) || `user:${now}:${s.messages.length}`, role: 'user', content, timestamp: now });
+        if (pending) { update(pending.id, { id: text(frame.uuid) || pending.id }); s.turn = { startedAt: pending.timestamp, lastAt: now, requests: {} }; }
+        else if (!s.messages.some(m => m.id === frame.uuid)) {
+          // A prompt opens a turn; in history the previous one ends here.
+          if (historical) Object.assign(s, finishTurn(s));
+          s.messages.push({ id: text(frame.uuid) || `user:${now}:${s.messages.length}`, role: 'user', content, timestamp: now });
+          s.turn = { startedAt: now, lastAt: now, requests: {} };
+        }
       }
     }
   } else if (frame.type === 'control_request') {
@@ -204,6 +243,8 @@ export function reduceClaudeEvent(state: ClaudeState, frame: Json, now = Date.no
     if (frame.subtype === 'init') {
       s.nativeId = text(frame.session_id); s.model = text(frame.model); s.permissionMode = text(frame.permissionMode) || s.permissionMode;
     } else if (frame.subtype === 'thinking_tokens') s.thinkingTokens = number(frame.estimated_tokens);
+    // Transcripts record how long a turn took when it ended.
+    else if (frame.subtype === 'turn_duration' && historical) Object.assign(s, finishTurn(s, number(frame.durationMs)));
     else if (frame.subtype === 'status') s.status = text(frame.status) || 'working';
     else if (frame.subtype === 'session_state_changed') {
       const value = text(frame.state);
@@ -226,6 +267,12 @@ export function reduceClaudeEvent(state: ClaudeState, frame: Json, now = Date.no
     const interrupted = !historical && s.interruptRequested === true;
     s.interruptRequested = false; s.interrupted = interrupted;
     finish(interrupted); s.requests = [];
+    if (!historical) {
+      // total_cost_usd adds up over the process; this turn's cost is what it added.
+      const total = typeof frame.total_cost_usd === 'number' ? frame.total_cost_usd : undefined;
+      Object.assign(s, finishTurn(s, typeof frame.duration_ms === 'number' ? frame.duration_ms : undefined, total !== undefined ? Math.max(0, total - (s.processCost ?? 0)) : undefined));
+      if (total !== undefined) s.processCost = total;
+    }
     s.pendingTurns = Math.max(0, s.pendingTurns - 1); s.sentSinceResult = 0;
     if (s.pendingTurns) { s.busy = true; s.status = 'working'; s.startedAt = now; s.endedAt = undefined; }
     if (!historical) {
@@ -245,7 +292,7 @@ export function reduceClaudeEvent(state: ClaudeState, frame: Json, now = Date.no
   } else if (frame.type === 'coffee_exit') {
     s.suggestion = undefined;
     const busy = s.busy; finish(); s.ready = false; s.pendingTurns = 0; s.sentSinceResult = 0; s.requests = []; s.backgroundTasks = [];
-    s.interruptRequested = false;
+    s.interruptRequested = false; s.processCost = 0;
     if (number(frame.code) !== 0 || busy) { s.error = text(frame.detail); s.errorKey = s.error ? undefined : 'claude.error.process_exited'; s.error ||= 'Claude process exited'; }
   }
   const usage = frame.type === 'assistant' ? object(object(frame.message).usage) : frame.type === 'stream_event' && object(frame.event).type === 'message_start' ? object(object(object(frame.event).message).usage) : {};

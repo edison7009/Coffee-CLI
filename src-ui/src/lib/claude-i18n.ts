@@ -27,3 +27,11 @@ export function claudeCommandDescription(command: ClaudeCommand, t: ClaudeTransl
   const ours = command.builtin === true || (lead !== undefined && command.description.startsWith(lead));
   return ours && Object.hasOwn(en, key) ? t(key as I18nKey) : command.description;
 }
+
+/** A token count as the conversation shows it: 825.9k. */
+export function formatTokens(value: number): string { return value >= 1000 ? `${(value / 1000).toFixed(1)}k` : String(Math.round(value)); }
+/** A duration as the conversation shows it: 2分0秒. */
+export function formatElapsed(ms: number, t: ClaudeTranslate): string {
+  const seconds = Math.max(0, Math.round(ms / 1000));
+  return seconds >= 60 ? t('claude.time.minutes', { minutes: Math.floor(seconds / 60), seconds: seconds % 60 }) : t('claude.time.seconds', { seconds });
+}
