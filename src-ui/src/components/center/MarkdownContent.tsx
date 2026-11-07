@@ -6,6 +6,7 @@ import { tokenizeByLang, getShikiTheme, type LineTokens } from '../../lib/shiki'
 import { useDataAttr } from '../../lib/use-data-attr';
 import { commands } from '../../tauri';
 import { ConversationDirectory, conversationLink, findPaths } from '../../lib/conversation-links';
+import { wrapEmphasizedUrls } from '../../lib/markdown-emphasis-links';
 
 function CodeBlock({ code, lang }: { code: string; lang: string | null }) {
   const dataMode = useDataAttr('data-mode');
@@ -94,7 +95,7 @@ function MarkdownContentImpl({ content }: { content: string }) {
         components={MARKDOWN_COMPONENTS}
         urlTransform={url => conversationLink(url, cwd) ? url : ''}
       >
-        {content}
+        {wrapEmphasizedUrls(content)}
       </ReactMarkdown>
     </div>
   );
