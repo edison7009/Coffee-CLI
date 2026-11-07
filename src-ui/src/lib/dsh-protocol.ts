@@ -47,13 +47,15 @@ export interface DshState {
   stopping?: boolean;
   /** Native slash commands need `session/query` (DeepSeek Harness 0.2.2+). */
   commands: boolean;
-  /** Sub-agents and background jobs this Session started that are still running. */
+  /** Sub-agents this Session started that are still running, reported by Coffee's Host plugin. */
   backgroundTasks: DshBackgroundTask[];
+  /** Jobs registered and not yet settled, from the Session's job events; `callId` is the tool call that started one. */
+  jobs: { id: string; label: string; callId: string }[];
 }
-export interface DshBackgroundTask { id: string; kind: 'agent' | 'job'; description: string }
+export interface DshBackgroundTask { id: string; kind: 'agent' | 'job'; description: string; name?: string }
 
 export function emptyDshState(): DshState {
-  return { ready: false, busy: false, sessionId: '', title: '', route: { provider: '', model: '' }, models: [], preset: '', policy: '', messages: [], requests: [], contextTokens: 0, contextWindow: 0, commands: true, backgroundTasks: [] };
+  return { ready: false, busy: false, sessionId: '', title: '', route: { provider: '', model: '' }, models: [], preset: '', policy: '', messages: [], requests: [], contextTokens: 0, contextWindow: 0, commands: true, backgroundTasks: [], jobs: [] };
 }
 
 function text(content: unknown): string {
@@ -115,7 +117,11 @@ export function reduceDshEvent(state: DshState, event: Json, historical = false)
     s.messages = settleStream(s.messages);
     // Tool calls left running by an interrupted turn will never settle.
     s.messages = s.messages.map(m => m.toolStatus === 'running' && m.turn === turn ? { ...m, toolStatus: 'failed' } : m);
-  } else if (type === 'session/title') s.title = str(data.title) || s.title;
+  } else if (type === 'job/registered') {
+    const id = str(data.jobId);
+    if (id && !s.jobs.some(job => job.id === id)) s.jobs = [...s.jobs, { id, label: str(data.label), callId: str(obj(data.toolCall).callId) }];
+  } else if (type === 'job/settled') s.jobs = s.jobs.filter(job => job.id !== str(data.jobId));
+  else if (type === 'session/title') s.title = str(data.title) || s.title;
   else if (type === 'permission/preset') s.preset = str(data.preset) || s.preset;
   else if (type === 'approval/policy') s.policy = str(data.policy) || s.policy;
   else if (type === 'model/selection') s.route = { provider: str(data.provider) || s.route.provider, model: str(data.model) || s.route.model, effort: str(data.reasoningEffort) || null };
@@ -145,14 +151,35 @@ export function reduceDshNotification(state: DshState, frame: Json): DshState {
     return { ...state, busy, startedAt: busy ? state.startedAt ?? Date.now() : undefined, requests: busy ? state.requests : [] };
   }
   if (method === 'coffee/background' && str(params.sessionId) === state.sessionId) {
-    return { ...state, backgroundTasks: arr(params.tasks).map(obj).map(task => ({ id: str(task.id), kind: task.kind === 'agent' ? 'agent' as const : 'job' as const, description: str(task.description).trim() })).filter(task => task.id) };
+    return { ...state, backgroundTasks: arr(params.tasks).map(obj).filter(task => task.kind === 'agent').map(task => ({ id: str(task.id), kind: 'agent' as const, description: str(task.description).trim(), name: str(task.name) })).filter(task => task.id) };
   }
-  if (method === 'coffee/exit') return { ...state, backgroundTasks: [], messages: settleStream(state.messages), ready: false, busy: false, requests: [], error: state.restarting ? undefined : str(params.detail).trim() || `DeepSeek Harness exited (${params.code ?? 'unknown'})` };
+  if (method === 'coffee/exit') return { ...state, backgroundTasks: [], jobs: [], messages: settleStream(state.messages), ready: false, busy: false, requests: [], error: state.restarting ? undefined : str(params.detail).trim() || `DeepSeek Harness exited (${params.code ?? 'unknown'})` };
   return state;
 }
 
 export function restoreDshLog(rows: unknown[], base = emptyDshState()): DshState {
-  return rows.map(obj).reduce((state, row) => reduceDshEvent(state, row, true), base);
+  // A restored log comes from an earlier process; jobs it left unsettled are not running in this one.
+  return { ...rows.map(obj).reduce((state, row) => reduceDshEvent(state, row, true), base), jobs: [] };
+}
+
+/**
+ * Sub-tasks to show: running sub-agents, and jobs that outlive their tool call. DeepSeek Harness registers every
+ * command as a job, including a foreground one its tool call is still waiting on; that is not a sub-task.
+ */
+export function dshSubTasks(state: DshState): DshBackgroundTask[] {
+  const waiting = new Set(state.messages.filter(m => m.role === 'tool' && m.toolStatus === 'running').map(m => m.id));
+  const jobs = state.jobs.filter(job => !job.callId || !waiting.has(`tool:${job.callId}`) && state.messages.some(m => m.id === `tool:${job.callId}`))
+    .map(job => ({ id: `job:${job.id}`, kind: 'job' as const, description: job.label.trim() }));
+  // The runtime does not expose a sub-agent's label; the `subagent` call that started it carries it as `description`.
+  const calls = state.messages.filter(m => m.role === 'tool' && m.toolName === 'subagent').map(m => { try { return obj(JSON.parse(m.toolInput ?? '')); } catch { return {}; } }).reverse();
+  const used = new Set<Json>();
+  const agents = state.backgroundTasks.map(task => {
+    if (task.description) return { id: task.id, kind: task.kind, description: task.description };
+    const call = calls.find(c => !used.has(c) && !!task.name && str(c.name) === task.name) ?? calls.find(c => !used.has(c));
+    if (call) used.add(call);
+    return { id: task.id, kind: task.kind, description: str(call?.description).trim() };
+  });
+  return [...agents, ...jobs];
 }
 
 const LIVE = 'live:';

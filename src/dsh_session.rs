@@ -262,14 +262,13 @@ export function apply(ctx) {
     pending.set(requestId, reply => { signal?.removeEventListener('abort', cancel); resolve(reply); });
     send({ id: requestId, method, params: { ...params, requestId } });
   });
-  // Jobs and sub-agents outlive the turn that started them, which the SDK protocol does not show.
+  // Sub-agents outlive the turn that started them, which the SDK protocol does not show.
   const report = () => {
-    const jobs = (ctx.get('jobs')?.list(id) ?? []).filter(job => job.owner === id && (job.status === 'running' || job.status === 'stopping'))
-      .map(job => ({ id: 'job:' + job.id, kind: 'job', description: typeof job.label === 'string' ? job.label : '' }));
     // A sub-agent's own label is not part of a stable interface; read what is there and let the client name it otherwise.
     const children = ctx.agents.list().filter(agent => String(agent.session.header?.parentSession) === id && agent.status !== 'idle')
-      .map(agent => ({ id: 'agent:' + String(agent.id ?? agent.session.id), kind: 'agent', description: [agent.label, agent.session.header?.label, agent.name].find(value => typeof value === 'string') ?? '' }));
-    const tasks = [...jobs, ...children], key = JSON.stringify(tasks);
+      .map(agent => ({ id: 'agent:' + String(agent.id ?? agent.session.id), kind: 'agent', description: [agent.label, agent.session.header?.label].find(value => typeof value === 'string') ?? '', name: typeof agent.name === 'string' ? agent.name : '' }));
+    // Jobs come from the Session's own job events on the client, which can tell a foreground command from a backgrounded one.
+    const tasks = children, key = JSON.stringify(tasks);
     if (key === background) return;
     background = key;
     send({ method: 'coffee/background', params: { sessionId: id, count: tasks.length, tasks } });
@@ -577,9 +576,12 @@ fn history_in(home: &Path, limit: usize) -> Vec<HistoryEntry> {
             .and_then(|text| serde_json::from_str(&text).ok()).unwrap_or(Value::Null);
         let rows = &cache["record"]["rows"];
         if rows["sessionListMetadata"]["val"]["blank"] == true { continue; }
+        // Sub-agent Sessions belong to the conversation that started them; resumed alone they have no parent to report to.
+        let header = read_log_header(&log).unwrap_or(Value::Null);
+        if header["parentSession"].is_string() || header["delegationDepth"].as_u64().is_some_and(|depth| depth > 0) { continue; }
         let modified_ms = modified.duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(0);
         let cwd = cache["record"]["identity"]["cwd"].as_str().map(String::from)
-            .or_else(|| read_log_header(&log).and_then(|header| header["cwd"].as_str().map(String::from))).unwrap_or_default();
+            .or_else(|| header["cwd"].as_str().map(String::from)).unwrap_or_default();
         entries.push(HistoryEntry {
             title: rows["title"]["val"].as_str().filter(|t| !t.trim().is_empty()).map(String::from),
             cwd,
@@ -664,7 +666,7 @@ mod tests {
         std::fs::remove_dir_all(root).unwrap();
     }
     #[test]
-    fn history_lists_cached_sessions_newest_first_and_skips_blanks() {
+    fn history_lists_cached_sessions_newest_first_and_skips_blanks_and_sub_agents() {
         let root = std::env::temp_dir().join(format!("coffee-dsh-hist-{}", uuid::Uuid::new_v4()));
         let write_log = |id: &str, cwd: &str| {
             let dir = root.join("sessions/--D-repo--").join(id); std::fs::create_dir_all(&dir).unwrap();
@@ -675,6 +677,8 @@ mod tests {
         write_log("session-old", "D:\\old");
         write_log("session-blank", "D:\\blank");
         write_log("session-new", "D:\\repo");
+        let child = root.join("sessions/--D-repo--/child-1"); std::fs::create_dir_all(&child).unwrap();
+        std::fs::write(child.join("session.v4.jsonl.zstd"), zstd::encode_all(r#"{"type":"session","id":"child-1","cwd":"D:\\repo","parentSession":"session-new","origin":"subagent","delegationDepth":1}"#.as_bytes(), 3).unwrap()).unwrap();
         std::fs::write(cache.join("session-new.json"), r#"{"version":7,"record":{"identity":{"cwd":"D:\\repo","createdAt":5},"rows":{"title":{"val":"Fix the build"},"sessionListMetadata":{"val":{"blank":false,"lastPromptAt":42}},"sessionStats":{"val":{"turns":3}}}}}"#).unwrap();
         std::fs::write(cache.join("session-blank.json"), r#"{"record":{"rows":{"sessionListMetadata":{"val":{"blank":true}}}}}"#).unwrap();
         let entries = history_in(&root, 10);

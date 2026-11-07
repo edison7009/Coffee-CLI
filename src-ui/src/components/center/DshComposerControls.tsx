@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type MutableRefObject, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { dshSubTasks } from '../../lib/dsh-protocol';
 import { sendDshMessage, setDshEffort, setDshPreset, setDshRoute, useDshSession } from '../../lib/dsh-session';
 import { useAppState } from '../../store/app-state';
 import { claudeEffortLabel } from '../../lib/claude-i18n';
@@ -25,6 +26,7 @@ export function DshComposerControls({ sessionId, draft, onDraftChange, keyHandle
   children?: ReactNode;
 }) {
   const s = useDshSession(sessionId), t = useT();
+  const tasks = dshSubTasks(s);
   const { state, dispatch } = useAppState();
   const [menu, setMenu] = useState<Menu>(null);
   const [dismissed, setDismissed] = useState<string | null>(null);
@@ -83,7 +85,7 @@ export function DshComposerControls({ sessionId, draft, onDraftChange, keyHandle
   });
   useLayoutEffect(() => {
     if (!shown) return;
-    const update = () => { const r = (shown === 'commands' ? commandsAnchor.current : anchor.current)?.getBoundingClientRect(); if (!r) return; const width = Math.min(shown === 'effort' ? 320 : ['permissions', 'commands'].includes(shown) ? 420 : shown === 'context' ? 280 : 320, innerWidth - 16); const left = ['permissions', 'commands'].includes(shown) ? r.left : r.right - width; setPosition({ position: 'fixed', left: Math.max(8, Math.min(left, innerWidth - width - 8)), bottom: innerHeight - r.top + 6, width, maxHeight: Math.max(50, r.top - 16) }); };
+    const update = () => { const r = (shown === 'commands' ? commandsAnchor.current : anchor.current)?.getBoundingClientRect(); if (!r) return; const width = Math.min(shown === 'effort' ? 320 : ['permissions', 'commands'].includes(shown) ? 420 : shown === 'context' ? 280 : 320, innerWidth - 16); const left = ['permissions', 'commands', 'tasks'].includes(shown) ? r.left : r.right - width; setPosition({ position: 'fixed', left: Math.max(8, Math.min(left, innerWidth - width - 8)), bottom: innerHeight - r.top + 6, width, maxHeight: Math.max(50, r.top - 16) }); };
     const observer = new ResizeObserver(update);
     if (root.current) observer.observe(root.current);
     const gambit = root.current?.closest('.gambit'); if (gambit) observer.observe(gambit);
@@ -113,9 +115,9 @@ export function DshComposerControls({ sessionId, draft, onDraftChange, keyHandle
     <button type="button" className="claude-control-icon" aria-label={t('claude.attach')} onClick={() => { void attach(); }}><AttachIcon /></button>
     <button type="button" ref={commandsAnchor} className="claude-control-icon" aria-label={t('claude.commands')} aria-expanded={shown === 'commands'} onClick={e => show('commands', e.currentTarget)}>/</button>
     <button type="button" className="claude-permission-control" disabled={!s.ready || !!s.restarting} aria-label={t('dsh.command.permission')} aria-expanded={menu === 'permissions'} onClick={e => show('permissions', e.currentTarget)}>{preset ? t(preset.label) : s.preset || t('dsh.command.permission')}</button>
+    {tasks.length > 0 && <button type="button" className="claude-tasks-control" aria-label={t('claude.status.background_count', { count: tasks.length })} aria-expanded={menu === 'tasks'} onClick={e => show('tasks', e.currentTarget)}>{t('claude.status.background_short', { count: tasks.length })}</button>}
     {children}
     <div className="claude-model-controls">
-      {s.backgroundTasks.length > 0 && <button type="button" className="claude-tasks-control" aria-label={t('claude.status.background_count', { count: s.backgroundTasks.length })} aria-expanded={menu === 'tasks'} onClick={e => show('tasks', e.currentTarget)}>{t('claude.status.background_short', { count: s.backgroundTasks.length })}</button>}
       {quota}
       <button type="button" className="claude-model-control" disabled={locked} aria-label={t('dsh.command.model')} aria-expanded={menu === 'model'} onClick={e => show('model', e.currentTarget)}>{model?.name || s.route.model || 'DeepSeek'}</button>
       {!!model?.efforts.length && <button type="button" className="claude-effort-trigger" disabled={locked} aria-label={t('claude.effort.title')} aria-expanded={menu === 'effort'} onClick={e => show('effort', e.currentTarget)}>{claudeEffortLabel(effort, t)}</button>}
@@ -126,7 +128,7 @@ export function DshComposerControls({ sessionId, draft, onDraftChange, keyHandle
       : shown === 'permissions' ? PRESETS.map(p => <button type="button" key={p.value} disabled={!s.ready || !!s.restarting} className={s.preset === p.value ? 'is-selected' : ''} onClick={() => { close(); if (s.preset !== p.value) void setDshPreset(sessionId, p.value); }}><strong>{t(p.label)}{s.preset === p.value ? ' ✓' : ''}</strong><small>{t(p.description)}</small></button>)
       : shown === 'model' ? s.models.map(m => { const current = m.provider === s.route.provider && m.model === s.route.model; return <button type="button" key={`${m.provider}/${m.model}`} disabled={locked} className={current ? 'is-selected' : ''} onClick={() => { close(); if (!current) void setDshRoute(sessionId, { provider: m.provider, model: m.model, effort: m.efforts.includes(effort) ? effort : null }); }}><strong>{m.name}{current ? ' ✓' : ''}</strong><small>{m.provider}</small></button>; })
       : shown === 'effort' && model ? <ClaudeEffortControl key={`${sessionId}:${model.provider}/${model.model}`} levels={model.efforts} value={effort} disabled={locked} onCommit={level => setDshEffort(sessionId, level)} onClose={() => { close(); anchor.current?.focus(); }} />
-      : shown === 'tasks' ? <><div className="claude-tasks-heading">{t('claude.status.background_count', { count: s.backgroundTasks.length })}</div>{s.backgroundTasks.map(task => <div key={task.id} className="claude-tasks-item"><span className="claude-tasks-dot" aria-hidden="true" /><span>{task.description || t(task.kind === 'agent' ? 'dsh.task.agent' : 'dsh.task.job')}</span></div>)}</>
+      : shown === 'tasks' ? <><div className="claude-tasks-heading">{t('claude.status.background_count', { count: tasks.length })}</div>{tasks.map(task => <div key={task.id} className="claude-tasks-item"><span className="claude-tasks-dot" aria-hidden="true" /><span>{task.description || t(task.kind === 'agent' ? 'dsh.task.agent' : 'dsh.task.job')}</span></div>)}</>
       : shown === 'context' ? <ContextUsage used={s.contextTokens} capacity={s.contextWindow} total={s.contextTokens} /> : null}
     </div>, document.body)}
   </div>;

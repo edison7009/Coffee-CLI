@@ -4,7 +4,7 @@ import { runInNewContext } from 'node:vm';
 import { fileURLToPath } from 'node:url';
 const result = await build({ entryPoints: [fileURLToPath(new URL('../src/lib/dsh-protocol.ts', import.meta.url))], bundle: true, platform: 'node', format: 'cjs', write: false });
 const module = { exports: {} }; runInNewContext(result.outputFiles[0].text, { module, exports: module.exports, console, Date, JSON });
-const { emptyDshState, reduceDshEvent, reduceDshNotification, restoreDshLog, dshToolMessage, dshToolCard } = module.exports;
+const { emptyDshState, reduceDshEvent, reduceDshNotification, restoreDshLog, dshToolMessage, dshToolCard, dshSubTasks } = module.exports;
 let passed = 0;
 function test(name, fn) { fn(); passed++; console.log(`ok ${name}`); }
 const plain = value => JSON.parse(JSON.stringify(value));
@@ -74,7 +74,7 @@ test('live notifications drive running state, requests, and exit', () => {
 
 test('unknown events leave the state untouched', () => {
   const s = emptyDshState();
-  assert.equal(reduceDshEvent(s, { type: 'job/registered', data: {} }), s);
+  assert.equal(reduceDshEvent(s, { type: 'job/progress', data: {} }), s);
 });
 
 test('tool calls render as the shared tool card: commands, requested and applied edits', () => {
@@ -140,14 +140,29 @@ test('a stopped turn keeps what it streamed, and the next turn starts clean', ()
   assert.deepEqual(plain(s.messages.filter(m => m.role === 'assistant').map(m => m.content)), ['Half a rep', 'New'], 'the next attempt neither drops nor appends to it');
 });
 
-test('sub-agents and background jobs show as running sub-tasks until they finish or the runtime exits', () => {
+test('sub-tasks are running sub-agents and backgrounded jobs, never a foreground command', () => {
   const report = (s, sessionId, tasks) => reduceDshNotification(s, { method: 'coffee/background', params: { sessionId, count: tasks.length, tasks } });
+  const ev = (s, type, data) => reduceDshEvent(s, { type, seq: 1, time: 1, data: { turn: 1, ...data } });
   let s = { ...emptyDshState(), sessionId: 's1' };
-  s = report(s, 's1', [{ id: 'agent:c1', kind: 'agent', description: 'Review the diff' }, { id: 'job:j1', kind: 'job', description: '' }, { kind: 'job' }]);
-  assert.deepEqual(plain(s.backgroundTasks), [{ id: 'agent:c1', kind: 'agent', description: 'Review the diff' }, { id: 'job:j1', kind: 'job', description: '' }]);
+  s = report(s, 's1', [{ id: 'agent:c1', kind: 'agent', description: 'Review the diff' }, { kind: 'agent' }]);
+  assert.deepEqual(plain(dshSubTasks(s)), [{ id: 'agent:c1', kind: 'agent', description: 'Review the diff' }]);
+  let named = ev(s, 'tool/call', { callId: 'sa1', name: 'subagent', arguments: '{"description":"Scan for junk","name":"scanner","prompt":"..."}' });
+  named = ev(named, 'tool/call', { callId: 'sa2', name: 'subagent', arguments: '{"description":"Write the summary","prompt":"..."}' });
+  named = report(named, 's1', [{ id: 'agent:x', kind: 'agent', description: '', name: 'scanner' }, { id: 'agent:y', kind: 'agent', description: '' }]);
+  assert.deepEqual(plain(dshSubTasks(named).map(task => task.description)), ['Scan for junk', 'Write the summary'], 'a sub-agent takes the description of the call that started it');
   assert.equal(report(s, 'other', []), s, 'another session is ignored');
-  assert.deepEqual(plain(report(s, 's1', []).backgroundTasks), []);
-  assert.deepEqual(plain(reduceDshNotification(s, { method: 'coffee/exit', params: { code: 0 } }).backgroundTasks), [], 'an exited runtime runs nothing');
+  s = report(s, 's1', []);
+  // Every command is a job: while its tool call waits on it, it is not a sub-task.
+  s = ev(s, 'tool/call', { callId: 'k1', name: 'bash', arguments: '{"command":"ls"}' });
+  s = ev(s, 'job/registered', { jobId: 'j1', label: 'ls', toolCall: { callId: 'k1' } });
+  assert.deepEqual(plain(dshSubTasks(s)), [], 'a foreground command is not a sub-task');
+  s = ev(s, 'tool/result', { message: { toolCallId: 'k1', content: [{ type: 'text', text: 'moved to background' }] } });
+  assert.deepEqual(plain(dshSubTasks(s)), [{ id: 'job:j1', kind: 'job', description: 'ls' }], 'a job outliving its call is');
+  s = ev(s, 'job/settled', { jobId: 'j1' });
+  assert.deepEqual(plain(dshSubTasks(s)), []);
+  s = ev(s, 'job/registered', { jobId: 'j2', label: 'dev server', toolCall: { callId: 'k1' } });
+  assert.equal(reduceDshNotification(s, { method: 'coffee/exit', params: { code: 0 } }).jobs.length, 0, 'an exited runtime runs nothing');
+  assert.equal(restoreDshLog([{ type: 'job/registered', seq: 1, data: { jobId: 'old', label: 'x' } }]).jobs.length, 0, 'a restored log brings no running jobs');
 });
 
 console.log(`${passed} DeepSeek Harness protocol checks passed`);
