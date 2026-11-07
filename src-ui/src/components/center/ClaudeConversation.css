@@ -33,12 +33,11 @@ body.gambit-docked .claude-scroll-bottom { bottom:calc(var(--gambit-dock-h,200px
 .claude-user-content { min-width:0; max-width:min(85%,720px); padding:12px 16px; border-radius:var(--shape-radius-panel,8px); background:var(--accent-bg); }
 [data-shape="panel"] .claude-user-content { border:1px solid color-mix(in srgb, var(--accent) 46%, var(--border)); }
 /* Material shapes clear every .panel-center surface with !important at (0,3,1); the prompt bubble is content, not chrome, so it opts back in with a translucent tile. */
-/* Over a wallpaper or a moving background a faint tint is lost, so the tile is mostly opaque, blurred and outlined.
+/* Over a wallpaper or a moving background a faint tint is lost, so the tile is mostly opaque and blurred, borderless like the other shapes.
    .claude-thread lifts it one class above the shapes' clearing rule: minified, both rules gain a :-webkit-any()
    fallback that WebKit counts as a class, which tied them, and the clearing rule comes later. */
 :is([data-shape="glass"],[data-shape="carbon"],[data-shape="monogram"],[data-shape="characters"]) .panel-center .claude-thread .claude-row .claude-user-content {
   background:color-mix(in srgb, var(--accent) 26%, color-mix(in srgb, var(--bg-panel) 72%, transparent)) !important;
-  border:1px solid color-mix(in srgb, var(--accent) 45%, transparent) !important;
   -webkit-backdrop-filter:blur(14px) saturate(1.2); backdrop-filter:blur(14px) saturate(1.2);
 }
 .claude-row .md-body .md-code { margin:12px 0 14px; }
