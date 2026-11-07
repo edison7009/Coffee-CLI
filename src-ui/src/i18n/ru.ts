@@ -437,6 +437,7 @@ export const ru = {
   'conversation.reasoning': 'Ход рассуждений',
   'conversation.thinking': 'Размышляет…',
   'conversation.restoring': 'Возвращаемся к беседе…',
+  'conversation.tool_missing': "{tool} не найден, поэтому разговор не может начаться. Установите его и подключитесь снова.",
   'conversation.executing': 'Выполняется…',
   'conversation.copied': 'Скопировано',
   'conversation.copy_message': 'Копировать сообщение',

@@ -442,6 +442,7 @@ export const zhCN = {
   'conversation.reasoning': '思考过程',
   'conversation.thinking': '正在思考中…',
   'conversation.restoring': '正在回到对话中…',
+  'conversation.tool_missing': "没有找到 {tool}，对话无法启动。请先安装，再点“重新连接”。",
   'conversation.executing': '正在执行中…',
   'conversation.copied': '已复制',
   'conversation.copy_message': '复制消息',

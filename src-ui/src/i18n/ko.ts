@@ -440,6 +440,7 @@ export const ko = {
   'conversation.reasoning': '사고 과정',
   'conversation.thinking': '생각 중…',
   'conversation.restoring': '대화로 돌아가는 중…',
+  'conversation.tool_missing': "{tool}을(를) 찾을 수 없어 대화를 시작할 수 없습니다. 설치한 뒤 다시 연결하세요.",
   'conversation.executing': '실행 중…',
   'conversation.copied': '복사됨',
   'conversation.copy_message': '메시지 복사',

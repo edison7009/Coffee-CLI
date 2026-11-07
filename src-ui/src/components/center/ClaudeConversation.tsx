@@ -1,4 +1,5 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { startErrorText } from '../../lib/start-error';
 import { useWorktreePending } from '../../lib/worktree-pending';
 import { diffLines } from 'diff';
 import { useAppLanguage, useAppState } from '../../store/app-state';
@@ -435,7 +436,7 @@ export function ClaudeConversation({ sessionId, cwd, resumeToken, isActive, isVi
         {s.ready && s.busy && !s.requests.length && <Working status={s.interruptRequested ? 'stopping' : s.status} startedAt={s.startedAt} title={turnTitle(s.messages, s.startedAt)} />}
         {s.interrupted && !s.busy && !s.error && <div className="claude-interrupted" role="status">{t('claude.interrupted')}</div>}
         {directoryIssue && <div className="claude-session-error" role="alert">{directoryError}</div>}
-        {s.error && (s.ready || s.errorKey === 'claude.error.settings_readback' || s.errorKey === 'claude.error.restart') && <div className="claude-session-error" role="alert">{s.errorKey ? t(s.errorKey, { detail: s.error }) : s.error}</div>}
+        {s.error && (s.ready || !directoryIssue || s.errorKey === 'claude.error.settings_readback' || s.errorKey === 'claude.error.restart') && <div className="claude-session-error" role="alert">{s.errorKey ? t(s.errorKey, { detail: s.error }) : startErrorText(s.error, 'Claude Code', t)}</div>}
         {empty && <div className="claude-empty">
           <ClaudeWelcomeIcon isActive={isVisible} />
           <WelcomeGreeting />

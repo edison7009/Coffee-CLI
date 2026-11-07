@@ -440,6 +440,7 @@ export const ja = {
   'conversation.reasoning': '思考プロセス',
   'conversation.thinking': '考え中…',
   'conversation.restoring': '会話に戻っています…',
+  'conversation.tool_missing': "{tool} が見つからないため、会話を開始できません。インストールしてから再接続してください。",
   'conversation.executing': '実行中…',
   'conversation.copied': 'コピーしました',
   'conversation.copy_message': 'メッセージをコピー',

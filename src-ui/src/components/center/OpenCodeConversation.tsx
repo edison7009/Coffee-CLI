@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { startErrorText } from '../../lib/start-error';
 import { TurnSummary } from './TurnSummary';
 import { useWorktreePending } from '../../lib/worktree-pending';
 import { useAppState } from '../../store/app-state';
@@ -240,7 +241,7 @@ export function OpenCodeConversation({ sessionId, cwd, resumeToken, isActive, is
         {s.permissions.map(request => <PermissionCard key={str(request.id)} sessionId={sessionId} request={request} />)}
         {s.forms.map(form => <FormCard key={str(form.id)} sessionId={sessionId} form={form} />)}
         {s.ready && s.busy && <div className="codex-working" role="status"><span className="codex-spinner" aria-hidden="true" />{t(s.interrupting ? 'codex.stopping' : waiting ? 'codex.waiting' : 'claude.status.working')}…</div>}
-        {s.error && !directoryIssue && <div className="claude-session-error" role="alert">{s.error}</div>}
+        {s.error && !directoryIssue && <div className="claude-session-error" role="alert">{startErrorText(s.error, 'OpenCode', t)}</div>}
         {directoryIssue && <div className="claude-session-error" role="alert">{directoryError}</div>}
         {!directoryIssue && !rows.length && <div className="claude-empty"><OpenCodeWelcomeLogo isActive={isVisible} /><WelcomeGreeting />{(creatingWorktree || resumed && !s.ready && !s.error) && <WelcomeRestoring label={creatingWorktree ? t('gambit.worktree_creating') : undefined} className="codex-working" mark={<span className="codex-spinner" aria-hidden="true" />} />}<WelcomeSessionMeta cwd={cwd} model={s.models.find(m => m.id === s.model?.id && m.providerID === s.model?.providerID)?.name ?? s.model?.id ?? ''} /></div>}
       </div>

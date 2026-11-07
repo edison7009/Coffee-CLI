@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { startErrorText } from '../../lib/start-error';
 import { TurnSummary } from './TurnSummary';
 import { useWorktreePending } from '../../lib/worktree-pending';
 import { useAppLanguage, useAppState } from '../../store/app-state';
@@ -178,7 +179,7 @@ export function PiConversation({ sessionId, cwd, resumeToken, isActive, isVisibl
         {s.interrupted && !s.busy && !s.error && <div className="claude-interrupted" role="status">{t('claude.interrupted')}</div>}
         {directoryIssue && <div className="claude-session-error" role="alert">{directoryError}</div>}
         {noModel && <div className="claude-session-error" role="alert">{t('pi.no_model')}</div>}
-        {s.error && !noModel && !directoryIssue && <div className="claude-session-error" role="alert">{s.error}</div>}
+        {s.error && !noModel && !directoryIssue && <div className="claude-session-error" role="alert">{startErrorText(s.error, 'Pi', t)}</div>}
         {empty && <div className="claude-empty">
           <PiWelcomeLogo isActive={isVisible} />
           <WelcomeGreeting />

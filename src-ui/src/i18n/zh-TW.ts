@@ -441,6 +441,7 @@ export const zhTW = {
   'conversation.reasoning': '思考過程',
   'conversation.thinking': '正在思考中…',
   'conversation.restoring': '正在回到對話中…',
+  'conversation.tool_missing': "沒有找到 {tool}，對話無法啟動。請先安裝，再點「重新連線」。",
   'conversation.executing': '正在執行中…',
   'conversation.copied': '已複製',
   'conversation.copy_message': '複製訊息',
