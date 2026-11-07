@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useWorktreePending } from '../../lib/worktree-pending';
 import { useAppLanguage, useAppState } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
 import type { ClaudeTranslate } from '../../lib/claude-i18n';
@@ -152,6 +153,7 @@ export function PiConversation({ sessionId, cwd, resumeToken, isActive, isVisibl
   const noModel = s.error === 'no-model' || (s.ready && !s.model && !s.models.length);
   const empty = !directoryIssue && !s.messages.length && !s.busy && !s.requests.length;
   const restoring = resumed && !s.ready && !s.error;
+  const creatingWorktree = useWorktreePending(sessionId, s.ready || !!s.error);
   const label = s.status === 'compacting' ? t('claude.status.compacting') : s.status === 'retrying' && s.retry ? t('pi.retrying', { attempt: s.retry.attempt, max: s.retry.maxAttempts }) : t('pi.working');
   const used = s.stats.input + s.stats.output + s.stats.cacheRead + s.stats.cacheWrite;
   const summary = !empty && !s.busy && s.endedAt && s.startedAt && <div className="claude-turn-summary">{t('claude.worked_for', { duration: elapsed(s.endedAt - s.startedAt, t) })}{used > 0 && <> · {t('claude.tokens', { count: count(used) })}</>}{s.stats.cost > 0 && <> · ~${s.stats.cost.toFixed(4)}</>}</div>;
@@ -183,7 +185,7 @@ export function PiConversation({ sessionId, cwd, resumeToken, isActive, isVisibl
         {empty && <div className="claude-empty">
           <PiWelcomeLogo isActive={isVisible} />
           <WelcomeGreeting />
-          {restoring && <WelcomeRestoring labelClassName="claude-working-word" mark={<PiMark />} />}
+          {(creatingWorktree || restoring) && <WelcomeRestoring labelClassName="claude-working-word" mark={<PiMark />} label={creatingWorktree ? t('gambit.worktree_creating') : undefined} />}
           <WelcomeSessionMeta cwd={cwd} model={s.model?.name ?? ''} />
         </div>}
       </div>

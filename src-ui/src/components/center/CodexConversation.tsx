@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useWorktreePending } from '../../lib/worktree-pending';
 import { useAppState } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
 import { orchestrationToolLabel } from '../../lib/orchestration-label';
@@ -72,6 +73,7 @@ function RequestCard({ sessionId, request }: { sessionId: string; request: Codex
 type Row = CodexMessage & { members?: CodexMessage[] };
 export function CodexConversation({ sessionId, cwd, resumeToken, isActive, isVisible = isActive, hasBg, bgUrl, bgType }: { sessionId: string; cwd: string | null; resumeToken?: string; isActive: boolean; isVisible?: boolean; hasBg?: boolean; bgUrl?: string; bgType?: string }) {
   const s = useCodexSession(sessionId), t = useT(), { dispatch } = useAppState();
+  const creatingWorktree = useWorktreePending(sessionId, s.ready || !!s.error);
   const directoryIssue = !s.ready ? directoryFailure(s.error) : undefined;
   const directoryError = directoryFailureMessage(s.error, t);
   const scroll = useRef<HTMLDivElement>(null), pinned = useRef(true), pointerHeld = useRef(false), lastTop = useRef(0);
@@ -203,7 +205,7 @@ export function CodexConversation({ sessionId, cwd, resumeToken, isActive, isVis
         {s.ready && s.busy && <div className="codex-working" role="status"><span className="codex-spinner" aria-hidden="true" />{t(s.interrupting ? 'codex.stopping' : s.requests.length ? 'codex.waiting' : 'claude.status.working')}…</div>}
         {s.error && s.ready && <div className="claude-session-error" role="alert">{s.error}</div>}
         {directoryIssue && <div className="claude-session-error" role="alert">{directoryError}</div>}
-        {!directoryIssue && !rows.length && <div className="claude-empty"><CodexWelcomeIcon isActive={isVisible} /><WelcomeGreeting />{resumed && !s.ready && !s.error && <WelcomeRestoring className="codex-working" mark={<span className="codex-spinner" aria-hidden="true" />} />}<WelcomeSessionMeta cwd={cwd} model={s.model} /></div>}
+        {!directoryIssue && !rows.length && <div className="claude-empty"><CodexWelcomeIcon isActive={isVisible} /><WelcomeGreeting />{(creatingWorktree || resumed && !s.ready && !s.error) && <WelcomeRestoring label={creatingWorktree ? t('gambit.worktree_creating') : undefined} className="codex-working" mark={<span className="codex-spinner" aria-hidden="true" />} />}<WelcomeSessionMeta cwd={cwd} model={s.model} /></div>}
       </div>
     </div>
     {navigationItems.length > 1 && isActive && <ConversationNavigation items={navigationItems} scrollRef={scroll} onJump={jumpToTurn} />}

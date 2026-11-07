@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { setWorktreePending } from '../../lib/worktree-pending';
 import { useAppDispatch, useAppState, type TerminalSession } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
 import { createWorktree, insideWorktrees, worktreeFromPath, mergeWorktree, removeWorktree, sweepWorktrees, worktreeAvailable, worktreeStatus, type Worktree, type WorktreeStatus } from '../../lib/worktree';
@@ -60,14 +61,17 @@ export function WorktreeControl({ tab, started, running }: { tab: TerminalSessio
     const toggle = async () => {
       if (pending || running) return;
       setPending(true); setNotice(null);
+      const newId = crypto.randomUUID();
       try {
-        const newId = crypto.randomUUID();
         if (worktree) { dispatch({ type: 'SET_TERMINAL_WORKTREE', id: tab.id, newId, cwd, worktree: undefined }); return; }
+        setWorktreePending(tab.id, 'creating');
         const created = await createWorktree(cwd, tab.tool ?? 'session');
         if (live.current.started || live.current.running) { void removeWorktree(created.worktree); return; }
+        // The replacement tab keeps the status until its session is up in the new folder.
+        setWorktreePending(newId, 'starting');
         dispatch({ type: 'SET_TERMINAL_WORKTREE', id: tab.id, newId, cwd: created.cwd, worktree: created.worktree, origin: cwd });
       } catch (error) { setNotice({ text: t('gambit.worktree_failed', { error: String(error) }), error: true }); }
-      finally { setPending(false); }
+      finally { setWorktreePending(tab.id, null); setPending(false); }
     };
     const disabled = pending || running || (!worktree && !available);
     return <span className="gambit-worktree" data-tip={notice ? undefined : !worktree && !available ? t('gambit.worktree_unavailable') : t('gambit.worktree_hint')}>

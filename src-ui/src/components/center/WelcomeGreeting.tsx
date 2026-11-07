@@ -19,9 +19,9 @@ export function WelcomeSessionMeta({ cwd, model }: { cwd: string | null; model?:
 }
 
 /** Shown on the welcome screen while a resumed conversation's history is still loading; `mark` is the tool's own working animation. */
-export function WelcomeRestoring({ mark, className, labelClassName }: { mark: ReactNode; className?: string; labelClassName?: string }) {
+export function WelcomeRestoring({ mark, className, labelClassName, label }: { mark: ReactNode; className?: string; labelClassName?: string; label?: string }) {
   const t = useT();
-  return <div className={`claude-empty-restoring${className ? ` ${className}` : ''}`} role="status">{mark}<span className={labelClassName}>{t('conversation.restoring')}</span></div>;
+  return <div className={`claude-empty-restoring${className ? ` ${className}` : ''}`} role="status">{mark}<span className={labelClassName}>{label ?? t('conversation.restoring')}</span></div>;
 }
 
 export function WelcomeGreeting() {

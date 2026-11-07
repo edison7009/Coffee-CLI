@@ -1,4 +1,5 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useWorktreePending } from '../../lib/worktree-pending';
 import { diffLines } from 'diff';
 import { useAppLanguage, useAppState } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
@@ -407,6 +408,7 @@ export function ClaudeConversation({ sessionId, cwd, resumeToken, isActive, isVi
   const directoryError = directoryFailureMessage(s.error, t);
   const empty = !directoryIssue && !s.messages.length && !s.busy && !s.requests.length && (!s.ready || !s.error);
   const restoring = resumed && !s.ready && !s.error;
+  const creatingWorktree = useWorktreePending(sessionId, s.ready || !!s.error);
   const restoringMark = <span className="claude-working-mark" aria-hidden="true"><img src={CLAUDE_WORKING_MARK} alt="" /></span>;
   const model = s.models.find(m => m.value === s.model) ?? s.models.find(m => m.resolvedModel === s.model);
   const summary = !empty && !s.busy && s.endedAt && <div className="claude-turn-summary">{t('claude.worked_for', { duration: elapsed(s.endedAt - (s.startedAt ?? s.endedAt), t) })}{used > 0 && <> · {t('claude.tokens', { count: count(used) })}</>}{s.totalCost !== undefined && s.totalCost > 0 && <> · ~${s.totalCost.toFixed(4)}</>}</div>;
@@ -435,7 +437,7 @@ export function ClaudeConversation({ sessionId, cwd, resumeToken, isActive, isVi
         {empty && <div className="claude-empty">
           <ClaudeWelcomeIcon isActive={isVisible} />
           <WelcomeGreeting />
-          {restoring && <WelcomeRestoring labelClassName="claude-working-word" mark={restoringMark} />}
+          {(creatingWorktree || restoring) && <WelcomeRestoring labelClassName="claude-working-word" mark={restoringMark} label={creatingWorktree ? t('gambit.worktree_creating') : undefined} />}
           <WelcomeSessionMeta cwd={cwd} model={model?.resolvedModel || s.model} />
         </div>}
         {!s.messages.length && summary}

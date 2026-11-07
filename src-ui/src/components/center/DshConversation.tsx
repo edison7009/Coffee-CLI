@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useWorktreePending } from '../../lib/worktree-pending';
 import { useAppState } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
 import { arr, dshToolCard, obj, str, type DshMessage, type DshRequest } from '../../lib/dsh-protocol';
@@ -89,6 +90,7 @@ function RequestCard({ sessionId, request }: { sessionId: string; request: DshRe
 type Row = DshMessage & { members?: DshMessage[]; running?: boolean };
 export function DshConversation({ sessionId, cwd, resumeToken, isActive, isVisible = isActive, hasBg, bgUrl, bgType }: { sessionId: string; cwd: string | null; resumeToken?: string; isActive: boolean; isVisible?: boolean; hasBg?: boolean; bgUrl?: string; bgType?: string }) {
   const s = useDshSession(sessionId), t = useT(), { dispatch } = useAppState();
+  const creatingWorktree = useWorktreePending(sessionId, s.ready || !!s.error);
   const directoryIssue = !s.ready ? directoryFailure(s.error) : undefined;
   const directoryError = directoryFailureMessage(s.error, t);
   const scroll = useRef<HTMLDivElement>(null), pinned = useRef(true), pointerHeld = useRef(false), lastTop = useRef(0);
@@ -194,7 +196,7 @@ export function DshConversation({ sessionId, cwd, resumeToken, isActive, isVisib
         {/* A failed start must say why; Reconnect alone hides the cause. */}
         {s.error && !directoryIssue && <div className="claude-session-error" role="alert">{s.error}</div>}
         {directoryIssue && <div className="claude-session-error" role="alert">{directoryError}</div>}
-        {!directoryIssue && !rows.length && <div className="claude-empty"><DshWelcomeIcon isActive={isVisible} /><WelcomeGreeting />{resumed && !s.ready && !s.error && <WelcomeRestoring className="dsh-running" labelClassName="dsh-shimmer" mark={<span className="dsh-running-whale" aria-hidden="true" style={{ maskImage: `url(${DSH_RUNNING_WHALE})`, WebkitMaskImage: `url(${DSH_RUNNING_WHALE})` }} />} />}<WelcomeSessionMeta cwd={cwd} model={s.models.find(m => m.provider === s.route.provider && m.model === s.route.model)?.name ?? s.route.model} /></div>}
+        {!directoryIssue && !rows.length && <div className="claude-empty"><DshWelcomeIcon isActive={isVisible} /><WelcomeGreeting />{(creatingWorktree || resumed && !s.ready && !s.error) && <WelcomeRestoring label={creatingWorktree ? t('gambit.worktree_creating') : undefined} className="dsh-running" labelClassName="dsh-shimmer" mark={<span className="dsh-running-whale" aria-hidden="true" style={{ maskImage: `url(${DSH_RUNNING_WHALE})`, WebkitMaskImage: `url(${DSH_RUNNING_WHALE})` }} />} />}<WelcomeSessionMeta cwd={cwd} model={s.models.find(m => m.provider === s.route.provider && m.model === s.route.model)?.name ?? s.route.model} /></div>}
       </div>
     </div>
     {navigationItems.length > 1 && isActive && <ConversationNavigation items={navigationItems} scrollRef={scroll} onJump={jumpToTurn} />}

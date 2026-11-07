@@ -98,7 +98,7 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
   visit(tree); assert.ok(callback);
   const history = [], cleared = [], failed = [];
   const context = {
-    useCallback: fn => fn, draft: 'original prompt', running: false, claude: false, codex: false, dsh: false, opencode: false, pi: false, steerable: false, desktop: false,
+    useCallback: fn => fn, sessionId: 'tab-1', isWorktreePending: () => false, draft: 'original prompt', running: false, claude: false, codex: false, dsh: false, opencode: false, pi: false, steerable: false, desktop: false,
     sendingRef: { current: false }, latestDraftRef: { current: 'original prompt' }, historyCursorRef: { current: null },
     onSend: async () => true, onDraftChange: text => cleared.push(text),
     pushGambitHistory: text => history.push(text), setSendFailed: value => failed.push(value), setSendEmpty() {},
@@ -106,6 +106,10 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
   const send = () => evaluate(`${declaration('components/center/Gambit.tsx', 'wrapImagePathsForSend')}; ${callback}`, {
     ...context, IMAGE_PATH_RE: /(?:[A-Za-z]:[\\/]|\/)[^\s<>"'`]+?\.(?:png|jpe?g|gif|webp|bmp)/gi,
   });
+  context.isWorktreePending = () => true;
+  await send()();
+  assert.equal(cleared.length + history.length, 0, 'a message waits in the box while the worktree is created');
+  context.isWorktreePending = () => false;
   context.running = true;
   await send()();
   assert.equal(history.length, 0);

@@ -14,6 +14,7 @@
 // Claude Code) will read the file; agents that don't just see the raw path.
 
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { isWorktreePending } from '../../lib/worktree-pending';
 import { createPortal } from 'react-dom';
 import { clipboardRead, clipboardWrite } from '../../lib/clipboard';
 import { subscribeGambitHistory, getGambitHistorySnapshot, pushGambitHistory } from '../../lib/gambit-history';
@@ -620,6 +621,8 @@ function GambitImpl({
 
   const handleSend = useCallback(async () => {
     if (running && !steerable) return;
+    // A worktree on its way would move the conversation; the message waits in the box until it is ready.
+    if (isWorktreePending(sessionId)) return;
     // CRITICAL: the draft text is the ONLY thing that gets sent.
     // Thumbnails rendered from pastedImagePaths are a pure derived view
     // with zero data-side responsibility. DO NOT re-append paths or
@@ -649,7 +652,7 @@ function GambitImpl({
     // the newest entry (which is the one we just pushed).
     historyCursorRef.current = null;
     if (latestDraftRef.current === draft) onDraftChange('');
-  }, [draft, onSend, onDraftChange, running, steerable, codex, dsh, opencode, pi, desktop]);
+  }, [draft, onSend, onDraftChange, running, steerable, codex, dsh, opencode, pi, desktop, sessionId]);
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     // IME composition in progress — let the IME keep Enter for confirming

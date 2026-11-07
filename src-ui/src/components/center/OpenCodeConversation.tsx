@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useWorktreePending } from '../../lib/worktree-pending';
 import { useAppState } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
 import { arr, obj, str, num, pretty, openCodeRows, type Json, type OpenCodeRow } from '../../lib/opencode-protocol';
@@ -101,6 +102,7 @@ function FormCard({ sessionId, form }: { sessionId: string; form: Json }) {
 type Row = OpenCodeRow & { members?: OpenCodeRow[] };
 export function OpenCodeConversation({ sessionId, cwd, resumeToken, isActive, isVisible = isActive, hasBg, bgUrl, bgType }: { sessionId: string; cwd: string | null; resumeToken?: string; isActive: boolean; isVisible?: boolean; hasBg?: boolean; bgUrl?: string; bgType?: string }) {
   const s = useOpenCodeSession(sessionId), t = useT(), { dispatch } = useAppState();
+  const creatingWorktree = useWorktreePending(sessionId, s.ready || !!s.error);
   const directoryIssue = !s.ready ? directoryFailure(s.error) : undefined;
   const directoryError = directoryFailureMessage(s.error, t);
   const scroll = useRef<HTMLDivElement>(null), pinned = useRef(true), pointerHeld = useRef(false), lastTop = useRef(0);
@@ -235,7 +237,7 @@ export function OpenCodeConversation({ sessionId, cwd, resumeToken, isActive, is
         {s.ready && s.busy && <div className="codex-working" role="status"><span className="codex-spinner" aria-hidden="true" />{t(s.interrupting ? 'codex.stopping' : waiting ? 'codex.waiting' : 'claude.status.working')}…</div>}
         {s.error && !directoryIssue && <div className="claude-session-error" role="alert">{s.error}</div>}
         {directoryIssue && <div className="claude-session-error" role="alert">{directoryError}</div>}
-        {!directoryIssue && !rows.length && <div className="claude-empty"><OpenCodeWelcomeLogo isActive={isVisible} /><WelcomeGreeting />{resumed && !s.ready && !s.error && <WelcomeRestoring className="codex-working" mark={<span className="codex-spinner" aria-hidden="true" />} />}<WelcomeSessionMeta cwd={cwd} model={s.models.find(m => m.id === s.model?.id && m.providerID === s.model?.providerID)?.name ?? s.model?.id ?? ''} /></div>}
+        {!directoryIssue && !rows.length && <div className="claude-empty"><OpenCodeWelcomeLogo isActive={isVisible} /><WelcomeGreeting />{(creatingWorktree || resumed && !s.ready && !s.error) && <WelcomeRestoring label={creatingWorktree ? t('gambit.worktree_creating') : undefined} className="codex-working" mark={<span className="codex-spinner" aria-hidden="true" />} />}<WelcomeSessionMeta cwd={cwd} model={s.models.find(m => m.id === s.model?.id && m.providerID === s.model?.providerID)?.name ?? s.model?.id ?? ''} /></div>}
       </div>
     </div>
     {navigationItems.length > 1 && isActive && <ConversationNavigation items={navigationItems} scrollRef={scroll} onJump={jumpToTurn} />}
