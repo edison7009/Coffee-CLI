@@ -19,6 +19,7 @@ import {
 } from '../../lib/history-cache';
 import { subscribeHidden, getHiddenSnapshot, hideSession } from '../../lib/hidden-sessions';
 import { subscribePinned, getPinnedSnapshot } from '../../lib/pinned-sessions';
+import { getProjectFoldersSnapshot, subscribeProjectFolders } from '../../lib/project-folders';
 import { subscribeRenamed, getRenamedSnapshot, setCustomName } from '../../lib/renamed-sessions';
 import { SessionContextMenu, type SessionCtxMenuState } from './SessionContextMenu';
 import { useTextContextMenu } from '../../lib/use-text-context-menu';
@@ -137,8 +138,8 @@ const projectName = (cwd: string, tool: string) => {
   // OpenClaw has no user-project concept — its sessions all carry the same
   // internal `~/.openclaw/workspace` cwd, so the basename would print the
   // meaningless "workspace" on every card. Show the tool name instead,
-  // matching the project-filter dropdown that already excludes openclaw
-  // (it has no user-project concept). Same story as the launchpad: the row
+  // matching the project view that keeps OpenClaw in a directoryless tool
+  // group. Same story as the launchpad: the row
   // should read "OpenClaw", not a leaked internal folder name.
   if (tool === 'openclaw') {
     return getToolName(tool);
@@ -358,14 +359,26 @@ export function HistoryBoard() {
     if (!pinned.size) return list;
     return list.sort((a, b) => Number(pinned.has(`${b.tool ?? ''}:${b.id}`)) - Number(pinned.has(`${a.tool ?? ''}:${a.id}`)));
   }, [baseSessions, hidden, pinned, orchestration.tasks, state.terminals]);
+  const projectFolders = useSyncExternalStore(subscribeProjectFolders, getProjectFoldersSnapshot, getProjectFoldersSnapshot);
   const projects = useMemo(() => {
     const groups = new Map<string, { key: string; name: string; cwd: string; sessions: SavedSession[] }>();
+    for (const folder of projectFolders) {
+      const cwd = folder.trim();
+      if (!cwd) continue;
+      const key = 'cwd:' + normCwd(cwd);
+      if (!groups.has(key)) groups.set(key, { key, name: projectName(cwd, ''), cwd, sessions: [] });
+    }
     for (const session of availableSessions) {
       const cwd = session.tool === 'openclaw' ? '' : (session.cwd ?? '').trim();
-      const key = cwd ? 'cwd:' + normCwd(cwd) : 'tool:' + session.tool;
+      if (cwd) {
+        const group = groups.get('cwd:' + normCwd(cwd));
+        if (group) group.sessions.push(session);
+        continue;
+      }
+      const key = 'tool:' + session.tool;
       let group = groups.get(key);
       if (!group) {
-        group = { key, name: session.tool === 'coffee-agent' ? 'Coffee Agent' : projectName(cwd, session.tool), cwd, sessions: [] };
+        group = { key, name: session.tool === 'coffee-agent' ? 'Coffee Agent' : projectName('', session.tool), cwd: '', sessions: [] };
         groups.set(key, group);
       }
       group.sessions.push(session);
@@ -380,7 +393,7 @@ export function HistoryBoard() {
       }
     }
     return all;
-  }, [availableSessions]);
+  }, [availableSessions, projectFolders]);
   const openSessions = useMemo(() => new Set(state.terminals.flatMap(tab => tab.resumeToken ? [`${tab.tool}:${tab.resumeToken}`] : [])), [state.terminals]);
   // Pi names neither its terminal nor its desktop session on its own, so an open Pi tab takes
   // the name this list shows for its conversation once the session appears in history.
@@ -842,9 +855,9 @@ export function HistoryBoard() {
         </>
       )}
 
-      {!isLoading && availableSessions.length === 0 && (
+      {!isLoading && (layout === 'projects' ? projects.length === 0 : availableSessions.length === 0) && (
         <div className="task-empty">
-          <div className="task-empty-text">{t('menu.no_recent') || 'No recent sessions'}</div>
+          <div className="task-empty-text">{t(layout === 'projects' ? 'history.no_projects' : 'menu.no_recent') || 'No recent sessions'}</div>
         </div>
       )}
     </div>

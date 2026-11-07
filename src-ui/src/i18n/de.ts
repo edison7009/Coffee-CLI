@@ -168,6 +168,7 @@ export const de = {
   'history.search_title': 'Sitzungen oder Arbeitsbereiche suchen',
   'history.list': 'Sitzungen',
   'history.projects': 'Projekte',
+  'history.no_projects': 'Noch keine Projekte hinzugefügt. Öffne einen Ordner, um ihn hier anzuzeigen.',
   'history.layout': 'Ansicht',
   'history.by_tool': 'Werkzeuge',
   'history.show_more': 'Mehr anzeigen',

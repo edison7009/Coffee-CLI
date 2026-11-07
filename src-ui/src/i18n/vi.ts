@@ -168,6 +168,7 @@ export const vi = {
   'history.search_title': 'Tìm phiên hoặc không gian làm việc',
   'history.list': 'Danh sách phiên',
   'history.projects': 'Dự án',
+  'history.no_projects': 'Chưa có dự án nào được thêm. Mở một thư mục để xem tại đây.',
   'history.layout': 'Chế độ xem',
   'history.by_tool': 'Công cụ',
   'history.show_more': 'Hiển thị thêm',

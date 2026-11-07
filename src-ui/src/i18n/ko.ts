@@ -170,6 +170,7 @@ export const ko = {
   'history.search_title': '세션 또는 작업 공간 검색',
   'history.list': '세션 목록',
   'history.projects': '프로젝트별',
+  'history.no_projects': '추가된 프로젝트가 없습니다. 폴더를 열면 여기에 표시됩니다.',
   'history.layout': '보기 방식',
   'history.by_tool': '도구별',
   'history.show_more': '더 보기',
