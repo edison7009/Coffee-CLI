@@ -283,6 +283,13 @@ export function apply(ctx) {
       if (agent.status === 'running') agent.steer(message); else agent.followup(message);
     }
   };
+  // The SDK protocol only sends whole messages; forward the main agent's live text, reasoning and tool arguments as they stream.
+  ctx.on('agent/assistant-stream', ({ agent, frame }) => {
+    if (String(agent?.session?.id) !== id) return;
+    const chunk = frame.chunk;
+    if (frame.type === 'chunk' && !['text-delta', 'reasoning-delta', 'tool-call-delta'].includes(chunk?.type)) return;
+    send({ method: 'coffee/stream', params: { sessionId: id, frame: frame.type === 'chunk' ? { type: 'chunk', chunk } : { type: frame.type } } });
+  });
   ctx.on('session/created', update);
   ctx.on('approval/request', request => ask('approval/request', { toolName: request.toolName, reason: request.reason }, request.signal).then(reply => reply.outcome, () => 'cancelled'));
   ctx.on('user-questions/request', async request => {

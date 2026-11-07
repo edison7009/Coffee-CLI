@@ -99,4 +99,28 @@ test('tool calls render as the shared tool card: commands, requested and applied
   assert.equal(dshToolMessage({ id: 'x', role: 'tool', content: '', turn: 1, timestamp: 1, toolName: 'mystery', toolInput: '{"a":1}', toolStatus: 'done' }).toolName, 'mystery');
 });
 
+test('live stream frames show text, reasoning and tool arguments before the message commits', () => {
+  const stream = (s, frame) => reduceDshNotification(s, { method: 'coffee/stream', params: { sessionId: 's1', frame } });
+  const chunk = c => ({ type: 'chunk', chunk: c });
+  let s = { ...emptyDshState(), sessionId: 's1' };
+  s = reduceDshEvent(s, { type: 'user/message', seq: 1, time: 1, data: { turn: 1, id: 'u', content: [{ type: 'text', text: 'hi' }], source: { kind: 'user' } } });
+  s = stream(s, { type: 'start' });
+  s = stream(s, chunk({ type: 'reasoning-delta', index: 0, text: 'Let me ' }));
+  s = stream(s, chunk({ type: 'reasoning-delta', index: 0, text: 'look' }));
+  s = stream(s, chunk({ type: 'text-delta', index: 1, text: 'Checking.' }));
+  s = stream(s, chunk({ type: 'tool-call-delta', index: 2, id: 'c1', name: 'bash', argumentsDelta: '{"command":"l' }));
+  s = stream(s, chunk({ type: 'tool-call-delta', index: 2, id: 'c1', argumentsDelta: 's"}' }));
+  assert.deepEqual(plain(s.messages.map(m => [m.role, m.content || m.toolInput])), [['user', 'hi'], ['reasoning', 'Let me look'], ['assistant', 'Checking.'], ['tool', '{"command":"ls"}']]);
+  assert.equal(reduceDshNotification(s, { method: 'coffee/stream', params: { sessionId: 'other', frame: chunk({ type: 'text-delta', index: 1, text: 'x' }) } }), s, 'another session is ignored');
+  s = stream(s, { type: 'end' });
+  assert.deepEqual(plain(s.messages.map(m => m.id)), ['user:u'], 'an attempt that ends without committing drops its live rows');
+  s = stream(s, { type: 'start' });
+  s = stream(s, chunk({ type: 'text-delta', index: 0, text: 'Chec' }));
+  s = stream(s, chunk({ type: 'text-delta', index: 1, text: 'stray' }));
+  s = stream(s, chunk({ type: 'tool-call-delta', index: 2, id: 'c1', name: 'bash', argumentsDelta: '{"comm' }));
+  s = reduceDshEvent(s, { type: 'assistant/message', seq: 5, time: 5, data: { turn: 1, message: { id: 'a1', content: [{ type: 'text', text: 'Checking.' }, { type: 'tool-call', id: 'c1', name: 'bash', arguments: '{"command":"ls"}' }] } } });
+  assert.deepEqual(plain(s.messages.map(m => [m.id, m.content || m.toolInput, !!m.streaming])), [['user:u', 'hi', false], ['a1:0', 'Checking.', false], ['tool:c1', '{"command":"ls"}', false]], 'committed blocks replace live rows in place; a stray block is dropped');
+  assert.equal(stream(s, { type: 'end' }).messages.length, 3, 'the committed end frame keeps everything');
+});
+
 console.log(`${passed} DeepSeek Harness protocol checks passed`);

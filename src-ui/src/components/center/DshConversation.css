@@ -14,3 +14,5 @@
 .dsh-welcome-icon { display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; width:128px; height:124px; margin:0 auto 20px; color:#4d6bfe; }
 .dsh-welcome-icon img { position:absolute; top:-28px; left:0; width:128px; max-width:none; height:auto; }
 .dsh-welcome-still { width:56px; height:56px; background:currentColor; mask-position:center; mask-size:100% 100%; mask-repeat:no-repeat; -webkit-mask-position:center; -webkit-mask-size:100% 100%; -webkit-mask-repeat:no-repeat; }
+/* An opened activity row lists its steps as full tool cards and reasoning blocks. */
+.dsh-activity-steps { display:flex; flex-direction:column; gap:14px; margin-top:12px; min-width:0; }

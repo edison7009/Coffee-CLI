@@ -28,6 +28,14 @@ function Measured({ id, measure, children }: { id: string; measure: (id: string,
   useLayoutEffect(() => { const node = ref.current; if (!node) return; const update = () => measure(id, node.getBoundingClientRect().height); update(); const observer = new ResizeObserver(update); observer.observe(node); return () => observer.disconnect(); }, [id, measure]);
   return <div ref={ref}>{children}</div>;
 }
+/** One-line summary of a step: a command's description, else its first string argument; reasoning shows its first line. */
+function title(message: DshMessage): string {
+  if (message.role === 'reasoning') return message.content.split('\n').find(line => line.trim())?.trim() ?? '';
+  let input: Record<string, unknown> = {};
+  try { input = obj(JSON.parse(message.toolInput ?? '')); } catch { /* Arguments still streaming. */ }
+  const first = str(input.description) || Object.values(input).find((v): v is string => typeof v === 'string');
+  return [message.toolName, first].filter(Boolean).join(' · ');
+}
 /** DeepSeek Harness's running status: the swinging whale tail and a blue sweep over "deep diving for …". */
 function Running({ since, stopping }: { since?: number; stopping: boolean }) {
   const t = useT();
@@ -78,7 +86,7 @@ function RequestCard({ sessionId, request }: { sessionId: string; request: DshRe
     </div>
   </section>;
 }
-type Row = DshMessage;
+type Row = DshMessage & { members?: DshMessage[]; running?: boolean };
 export function DshConversation({ sessionId, cwd, resumeToken, isActive, isVisible = isActive, hasBg, bgUrl, bgType }: { sessionId: string; cwd: string | null; resumeToken?: string; isActive: boolean; isVisible?: boolean; hasBg?: boolean; bgUrl?: string; bgType?: string }) {
   const s = useDshSession(sessionId), t = useT(), { dispatch } = useAppState();
   const directoryIssue = !s.ready ? directoryFailure(s.error) : undefined;
@@ -96,8 +104,17 @@ export function DshConversation({ sessionId, cwd, resumeToken, isActive, isVisib
   // The conversation's own title names the tab, as a terminal tab takes the tool's OSC title.
   useEffect(() => { const title = s.title.trim(); if (title) dispatch({ type: 'SET_TAB_TITLE', id: sessionId, title }); }, [s.title, sessionId, dispatch]);
   useEffect(() => { dispatch({ type: 'SET_AGENT_STATUS', id: sessionId, status: s.requests.length ? 'wait_input' : s.busy ? 'working' : 'idle' }); }, [s.requests.length, s.busy, sessionId, dispatch]);
-  // Each tool call and reasoning block is its own row, so edits show as diffs and commands show their output as they happen.
-  const rows: Row[] = s.messages;
+  // Consecutive tool calls and reasoning fold into one activity row between the things the model says; opened, each step is a full tool card.
+  const rows = useMemo<Row[]>(() => {
+    const result: Row[] = [];
+    for (const message of s.messages) {
+      const activity = message.role === 'tool' || message.role === 'reasoning';
+      const previous = result.at(-1);
+      if (activity && previous?.members && previous.turn === message.turn) result[result.length - 1] = { ...previous, members: [...previous.members, message], running: previous.running || message.toolStatus === 'running' };
+      else result.push(activity ? { ...message, id: `group:${message.id}`, members: [message], running: message.toolStatus === 'running' } : message);
+    }
+    return result;
+  }, [s.messages]);
   // The virtualizer reads id/role/content only; notice rows take its default height estimate.
   const virtual = useConversationVirtualizer(rows as unknown as ChatMessage[], scroll);
   const navigationItems = useMemo<ConversationNavigationItem[]>(() => rows.flatMap((row, messageIndex) => row.role === 'user' ? [{
@@ -135,6 +152,8 @@ export function DshConversation({ sessionId, cwd, resumeToken, isActive, isVisib
     // Keep the selected turn aligned while virtual rows finish measuring.
     anchor.current = { messageId: item.id, offset: 24 }; sync();
   };
+  // Activity rows start open so each step's card shows as it happens; a click folds one away.
+  const groupOpen = (id: string) => expanded[id] ?? true;
   const copy = (id: string, content: string) => { void clipboardWrite(content).then(() => { setCopied(id); setTimeout(() => setCopied(''), 1500); }); };
   return <ConversationDirectory.Provider value={cwd}><div className={`claude-conversation codex-conversation dsh-conversation${hasBg && bgUrl ? ' has-background' : ''}${navigationItems.length > 1 ? ' has-navigation' : ''}`}>
     {hasBg && bgUrl && <div className="conversation-background">{bgType === 'video' ? <video src={bgUrl} autoPlay loop muted /> : <img src={bgUrl} alt="" />}</div>}
@@ -154,9 +173,13 @@ export function DshConversation({ sessionId, cwd, resumeToken, isActive, isVisib
       <div className={`claude-thread${!rows.length ? ' is-empty' : ''}`}>
         <div style={{ height: virtual.topSpacer }} aria-hidden="true" />
         {rows.slice(virtual.start, virtual.end).map((row, i) => <Measured key={row.id} id={virtual.measurementKeys[virtual.start + i]} measure={virtual.measureRow}>
-          <article className={`claude-row claude-row--${row.role === 'tool' ? (row.toolStatus === 'running' ? 'running' : 'tool') : row.role} codex-row`} data-message-id={row.id}>
-            {row.role === 'tool' ? <ClaudeTool message={dshToolMessage(row)} />
-            : row.role === 'reasoning' ? <details className="claude-reasoning" open={!!expanded[row.id]} onToggle={event => { const open = event.currentTarget.open; setExpanded(old => ({ ...old, [row.id]: open })); }}><summary>{t('conversation.reasoning')}</summary><MarkdownContent content={row.content} /></details>
+          <article className={`claude-row claude-row--${row.members ? (row.running ? 'running' : 'tool') : row.role} codex-row`} data-message-id={row.id}>
+            {row.members ? <>
+              <button type="button" className="codex-group-heading" aria-expanded={groupOpen(row.id)} onClick={() => setExpanded(old => ({ ...old, [row.id]: !groupOpen(row.id) }))}><span aria-hidden="true">{groupOpen(row.id) ? '⌄' : '›'}</span><span>{t('codex.activity', { count: row.members.length })}</span>{row.running && <span className="codex-spinner" aria-hidden="true" />}<small>{title(row.members.at(-1)!)}</small></button>
+              {groupOpen(row.id) && <div className="dsh-activity-steps">{row.members.map(m => m.role === 'tool'
+                ? <ClaudeTool key={m.id} message={dshToolMessage(m)} />
+                : <details key={m.id} className="claude-reasoning" open={!!expanded[m.id]} onToggle={event => { const open = event.currentTarget.open; setExpanded(old => ({ ...old, [m.id]: open })); }}><summary>{t('conversation.reasoning')}</summary><MarkdownContent content={m.content} /></details>)}</div>}
+            </>
             : row.role === 'notice' ? <div className={`claude-turn-summary${row.tone === 'error' ? ' is-error' : ''}`} role="status">{row.content === 'interrupted' ? t('claude.interrupted') : row.content === 'commands-unsupported' ? t('dsh.commands_unsupported') : row.tone === 'error' && !row.content.startsWith('/') ? `${t('codex.failed')} · ${row.content}` : row.content}</div> : <>
               {row.role === 'user'
                 ? <CollapsibleUserMessage sentAt={row.timestamp} expanded={!!expanded[row.id]} onToggle={() => setExpanded(old => ({ ...old, [row.id]: !old[row.id] }))}><MarkdownContent content={row.content} /></CollapsibleUserMessage>

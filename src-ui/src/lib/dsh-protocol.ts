@@ -20,6 +20,8 @@ export interface DshMessage {
   toolStatus?: 'running' | 'done' | 'failed';
   /** Tool result metadata; file mutations record the applied `diffs` here. */
   toolMeta?: Json;
+  /** Shown from the live stream; dropped if its attempt ends without committing. */
+  streaming?: boolean;
   tone?: 'info' | 'error';
 }
 export interface DshRequest { id: string | number; method: string; params: Json }
@@ -73,7 +75,13 @@ export function reduceDshEvent(state: DshState, event: Json, historical = false)
     upsert({ id: `user:${str(data.id) || num(event.seq)}`, role: 'user', content, turn, timestamp: time });
   } else if (type === 'assistant/message') {
     const message = obj(data.message), id = str(message.id) || `seq-${num(event.seq)}`;
+    // Streamed text and reasoning become the committed blocks in place, so the row keeps its position.
+    const renamed = new Set<string>(), touched = new Set<string>();
+    if (!historical) {
+      s.messages = s.messages.map(m => { if (m.streaming && !m.id.startsWith(LIVE)) return { ...m, streaming: false }; if (!m.id.startsWith(LIVE)) return m; const next = `${id}:${m.id.slice(LIVE.length)}`; renamed.add(next); return { ...m, id: next, streaming: false }; });
+    }
     arr(message.content).map(obj).forEach((block, index) => {
+      if ((block.type === 'reasoning' || block.type === 'text') && str(block.text).trim()) touched.add(`${id}:${index}`);
       if (block.type === 'reasoning' && str(block.text).trim()) upsert({ id: `${id}:${index}`, role: 'reasoning', content: str(block.text), turn, timestamp: time });
       else if (block.type === 'text' && str(block.text).trim()) upsert({ id: `${id}:${index}`, role: 'assistant', content: str(block.text), turn, timestamp: time });
       else if (block.type === 'tool-call') {
@@ -81,11 +89,16 @@ export function reduceDshEvent(state: DshState, event: Json, historical = false)
         upsert({ id: `tool:${str(block.id)}`, role: 'tool', content: existing?.content ?? '', turn, timestamp: time, toolName: str(block.name), toolInput: str(block.arguments), toolStatus: existing?.toolStatus ?? 'running' });
       }
     });
+    // A streamed block the committed message does not carry (empty, or indexed differently) must not linger.
+    if (renamed.size) s.messages = s.messages.filter(m => !renamed.has(m.id) || touched.has(m.id));
     const usage = obj(data.usage);
     if (!historical && usage.totalTokens !== undefined) s.contextTokens = num(usage.inputTokens) + num(usage.cacheReadTokens) + num(usage.cacheWriteTokens) + num(usage.outputTokens);
   } else if (type === 'tool/call') {
     const id = `tool:${str(data.callId)}`;
-    if (!s.messages.some(m => m.id === id)) upsert({ id, role: 'tool', content: '', turn, timestamp: time, toolName: str(data.name), toolInput: str(data.arguments), toolStatus: 'running' });
+    const existing = s.messages.find(m => m.id === id);
+    // A streamed row may hold partial arguments; the dispatched call carries them whole.
+    if (!existing) upsert({ id, role: 'tool', content: '', turn, timestamp: time, toolName: str(data.name), toolInput: str(data.arguments), toolStatus: 'running' });
+    else if (existing.toolStatus === 'running' && str(data.arguments)) upsert({ ...existing, toolName: str(data.name) || existing.toolName, toolInput: str(data.arguments) });
   } else if (type === 'tool/result') {
     const message = obj(data.message), id = `tool:${str(message.toolCallId)}`;
     const existing = s.messages.find(m => m.id === id);
@@ -121,6 +134,7 @@ export function reduceDshNotification(state: DshState, frame: Json): DshState {
     if (str(params.sessionId) !== state.sessionId) return state;
     return reduceDshEvent(state, obj(params.event));
   }
+  if (method === 'coffee/stream' && str(params.sessionId) === state.sessionId) return reduceDshStream(state, obj(params.frame));
   if (method === 'session.status' && str(params.sessionId) === state.sessionId) {
     const busy = params.status === 'running';
     return { ...state, busy, startedAt: busy ? state.startedAt ?? Date.now() : undefined, requests: busy ? state.requests : [] };
@@ -131,6 +145,32 @@ export function reduceDshNotification(state: DshState, frame: Json): DshState {
 
 export function restoreDshLog(rows: unknown[], base = emptyDshState()): DshState {
   return rows.map(obj).reduce((state, row) => reduceDshEvent(state, row, true), base);
+}
+
+const LIVE = 'live:';
+
+/** Live assistant-stream frames forwarded by Coffee's Host plugin: text and reasoning grow in place, tool arguments fill in as they stream. */
+export function reduceDshStream(state: DshState, frame: Json): DshState {
+  const type = str(frame.type);
+  // A new attempt or one that ended without committing (retry, abort) drops what streamed so far.
+  if (type === 'start' || type === 'end') {
+    return state.messages.some(m => m.streaming) ? { ...state, messages: state.messages.filter(m => !m.streaming) } : state;
+  }
+  const chunk = obj(frame.chunk), kind = str(chunk.type), index = num(chunk.index);
+  const turn = state.messages.at(-1)?.turn ?? 0, now = Date.now();
+  const messages = [...state.messages];
+  const put = (id: string, change: (old: DshMessage | undefined) => DshMessage) => {
+    const at = messages.findIndex(m => m.id === id);
+    if (at >= 0) messages[at] = change(messages[at]); else messages.push(change(undefined));
+  };
+  if (kind === 'text-delta' || kind === 'reasoning-delta') {
+    const text = str(chunk.text); if (!text) return state;
+    put(`${LIVE}${index}`, old => ({ id: `${LIVE}${index}`, role: kind === 'text-delta' ? 'assistant' : 'reasoning', turn, timestamp: now, ...old, streaming: true, content: (old?.content ?? '') + text }));
+  } else if (kind === 'tool-call-delta') {
+    const id = `tool:${str(chunk.id)}`;
+    put(id, old => ({ id, role: 'tool', content: '', turn, timestamp: now, toolStatus: 'running', ...old, streaming: old ? old.streaming : true, toolName: old?.toolName || str(chunk.name), toolInput: (old?.toolInput ?? '') + str(chunk.argumentsDelta) }));
+  } else return state;
+  return { ...state, messages };
 }
 
 /** The hunks a settled file mutation actually applied, from its result metadata. */
