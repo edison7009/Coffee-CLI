@@ -728,6 +728,7 @@ export const zhTW = {
   'claude.time.seconds': '{seconds}秒',
   'claude.time.minutes': '{minutes}分{seconds}秒',
   'claude.tokens': '{count} 詞元',
+  'model.price': "輸入 {input} · 輸出 {output} / 百萬 token",
   'claude.collapse': '收合',
   'conversation.show_more': '顯示更多',
   'claude.expand': '點擊展開',

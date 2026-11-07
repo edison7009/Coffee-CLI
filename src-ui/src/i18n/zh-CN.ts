@@ -730,6 +730,7 @@ export const zhCN = {
   'claude.time.seconds': '{seconds}秒',
   'claude.time.minutes': '{minutes}分{seconds}秒',
   'claude.tokens': '{count} 词元',
+  'model.price': "输入 {input} · 输出 {output} / 百万 token",
   'claude.collapse': '收起',
   'conversation.show_more': '显示更多',
   'claude.expand': '点击展开',

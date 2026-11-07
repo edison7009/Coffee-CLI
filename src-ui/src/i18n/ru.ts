@@ -725,6 +725,7 @@ export const ru = {
   'claude.time.seconds': '{seconds}с',
   'claude.time.minutes': '{minutes}м {seconds}с',
   'claude.tokens': 'Токены: {count}',
+  'model.price': "Ввод {input} · Вывод {output} за 1 млн токенов",
   'claude.collapse': 'Свернуть',
   'conversation.show_more': 'Показать больше',
   'claude.expand': 'Нажмите, чтобы развернуть',

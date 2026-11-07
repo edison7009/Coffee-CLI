@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type MutableRefObject, type ReactNode } from 'react';
+import { ModelPrice } from './ModelPrice';
 import { createPortal } from 'react-dom';
 import { compactPi, getPiThinkingLevels, setPiModel, setPiThinkingLevel, usePiSession } from '../../lib/pi-session';
 import { cacheHitRate } from '../../lib/pi-protocol';
@@ -115,7 +116,7 @@ export function PiComposerControls({ sessionId, draft, onDraftChange, keyHandler
     </div>
     {shown && createPortal(<div className="claude-control-menu" ref={popup} role="dialog" style={position} onMouseDown={e => e.stopPropagation()}>
       {shown === 'commands' ? commands.length ? commands.map((c, i) => <button type="button" key={c.name} disabled={disabled(c.target)} className={i === selected ? 'is-selected' : ''} onMouseEnter={() => setSelected(i)} onClick={() => chooseCommand(i)}><strong>/{c.name}</strong><small>{c.description}</small></button>) : <div className="claude-menu-empty">{t('claude.commands_empty')}</div>
-      : shown === 'model' ? s.models.map(m => { const current = `${m.provider}/${m.id}` === modelKey; return <button type="button" key={`${m.provider}/${m.id}`} disabled={locked} className={current ? 'is-selected' : ''} onClick={() => { close(); if (!current) void setPiModel(sessionId, m); }}><strong>{m.name}{current ? ' ✓' : ''}</strong><small>{m.provider}</small></button>; })
+      : shown === 'model' ? s.models.map(m => { const current = `${m.provider}/${m.id}` === modelKey; return <button type="button" key={`${m.provider}/${m.id}`} disabled={locked} className={current ? 'is-selected' : ''} onClick={() => { close(); if (!current) void setPiModel(sessionId, m); }}><strong>{m.name}{current ? ' ✓' : ''}</strong><small>{m.provider}<ModelPrice model={m.id} /></small></button>; })
       : shown === 'thinking' ? <ClaudeEffortControl key={`${sessionId}:${modelKey}`} levels={levels} value={s.thinkingLevel} disabled={locked} onCommit={level => setPiThinkingLevel(sessionId, level)} onClose={() => { close(); anchor.current?.focus(); }} />
       : shown === 'context' ? <>
         <ContextUsage used={contextTokens} capacity={contextWindow} total={contextTokens} />

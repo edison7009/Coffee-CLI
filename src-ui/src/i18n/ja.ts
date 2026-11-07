@@ -727,6 +727,7 @@ export const ja = {
   'claude.time.seconds': '{seconds}秒',
   'claude.time.minutes': '{minutes}分{seconds}秒',
   'claude.tokens': '{count} トークン',
+  'model.price': "入力 {input} · 出力 {output} / 100万トークン",
   'claude.collapse': '折りたたむ',
   'conversation.show_more': 'もっと見る',
   'claude.expand': 'クリックして展開',

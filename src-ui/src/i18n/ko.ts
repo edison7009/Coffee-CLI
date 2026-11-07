@@ -727,6 +727,7 @@ export const ko = {
   'claude.time.seconds': '{seconds}초',
   'claude.time.minutes': '{minutes}분 {seconds}초',
   'claude.tokens': '{count} 토큰',
+  'model.price': "입력 {input} · 출력 {output} / 100만 토큰",
   'claude.collapse': '접기',
   'conversation.show_more': '더 보기',
   'claude.expand': '클릭하여 펼치기',
