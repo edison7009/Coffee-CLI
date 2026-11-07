@@ -175,7 +175,6 @@ export const ja = {
   'history.icons': "アプリアイコン",
   'history.icons_show': "表示",
   'history.icons_hide': "非表示",
-  'history.project_scope': "プロジェクト範囲",
   'history.scope_all': "すべてのフォルダ",
   'history.scope_added': "追加済みのみ",
   'history.no_projects': "まだフォルダが追加されていません。ツールカードからフォルダを開くとここに表示されます。",

@@ -173,7 +173,6 @@ export const fr = {
   'history.icons': "Icônes des apps",
   'history.icons_show': "Afficher",
   'history.icons_hide': "Masquer",
-  'history.project_scope': "Projets issus de",
   'history.scope_all': "Tous les dossiers",
   'history.scope_added': "Dossiers ajoutés seulement",
   'history.no_projects': "Aucun dossier ajouté. Ouvrez un dossier depuis une carte d’outil pour l’ajouter.",

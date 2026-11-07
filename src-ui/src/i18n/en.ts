@@ -174,7 +174,6 @@ export const en = {
   'history.icons': "App icons",
   'history.icons_show': "Show",
   'history.icons_hide': "Hide",
-  'history.project_scope': "Projects from",
   'history.scope_all': "All folders",
   'history.scope_added': "Added folders only",
   'history.no_projects': "No folders added yet. Open a folder from a tool card to add it.",

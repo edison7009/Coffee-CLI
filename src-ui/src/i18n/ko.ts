@@ -175,7 +175,6 @@ export const ko = {
   'history.icons': "앱 아이콘",
   'history.icons_show': "표시",
   'history.icons_hide': "숨김",
-  'history.project_scope': "프로젝트 범위",
   'history.scope_all': "모든 폴더",
   'history.scope_added': "추가한 폴더만",
   'history.no_projects': "아직 추가한 폴더가 없습니다. 도구 카드에서 폴더를 열면 여기에 표시됩니다.",

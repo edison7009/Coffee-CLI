@@ -173,7 +173,6 @@ export const es = {
   'history.icons': "Iconos de apps",
   'history.icons_show': "Mostrar",
   'history.icons_hide': "Ocultar",
-  'history.project_scope': "Proyectos de",
   'history.scope_all': "Todas las carpetas",
   'history.scope_added': "Solo las añadidas",
   'history.no_projects': "Aún no has añadido carpetas. Abre una carpeta desde una tarjeta de herramienta para añadirla.",

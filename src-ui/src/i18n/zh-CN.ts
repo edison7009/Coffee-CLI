@@ -175,7 +175,6 @@ export const zhCN = {
   'history.icons': "应用图标",
   'history.icons_show': "显示",
   'history.icons_hide': "不显示",
-  'history.project_scope': "项目范围",
   'history.scope_all': "全部目录",
   'history.scope_added': "仅已添加",
   'history.no_projects': "还没有添加文件夹。在工具卡片上打开文件夹后，它会显示在这里。",

@@ -173,7 +173,6 @@ export const vi = {
   'history.icons': "Biểu tượng ứng dụng",
   'history.icons_show': "Hiện",
   'history.icons_hide': "Ẩn",
-  'history.project_scope': "Phạm vi dự án",
   'history.scope_all': "Mọi thư mục",
   'history.scope_added': "Chỉ thư mục đã thêm",
   'history.no_projects': "Chưa thêm thư mục nào. Mở một thư mục từ thẻ công cụ để thêm vào đây.",

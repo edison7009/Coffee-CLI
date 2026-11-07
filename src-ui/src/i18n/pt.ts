@@ -173,7 +173,6 @@ export const pt = {
   'history.icons': "Ícones dos apps",
   'history.icons_show': "Mostrar",
   'history.icons_hide': "Ocultar",
-  'history.project_scope': "Projetos de",
   'history.scope_all': "Todas as pastas",
   'history.scope_added': "Só as adicionadas",
   'history.no_projects': "Nenhuma pasta adicionada ainda. Abra uma pasta num cartão de ferramenta para adicioná-la.",

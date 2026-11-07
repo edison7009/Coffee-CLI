@@ -173,7 +173,6 @@ export const de = {
   'history.icons': "App-Symbole",
   'history.icons_show': "Anzeigen",
   'history.icons_hide': "Ausblenden",
-  'history.project_scope': "Projekte aus",
   'history.scope_all': "Alle Ordner",
   'history.scope_added': "Nur hinzugefügte",
   'history.no_projects': "Noch keine Ordner hinzugefügt. Öffne einen Ordner über eine Werkzeugkarte, um ihn hinzuzufügen.",
