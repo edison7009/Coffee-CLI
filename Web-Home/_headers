@@ -26,6 +26,8 @@
   Cache-Control: public, max-age=0, must-revalidate
 /version.json
   Cache-Control: public, max-age=0, must-revalidate
+/prices.json
+  Cache-Control: public, max-age=3600
 
 /*
   X-Content-Type-Options: nosniff

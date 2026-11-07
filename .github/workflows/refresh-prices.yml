@@ -1,0 +1,49 @@
+name: Refresh model prices
+
+# Every three days, trim the public models.dev price catalogue to the models
+# Coffee CLI's tools run and commit it when a price changed: Web-Home/prices.json
+# (served as coffeecli.com/prices.json once Cloudflare Pages redeploys) and the
+# copy bundled into the app as its offline fallback.
+
+on:
+  schedule:
+    - cron: '20 4 */3 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-prices
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v5
+        with:
+          ref: main
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Refresh prices
+        run: node scripts/refresh-prices.mjs
+
+      - name: Commit when prices changed
+        run: |
+          set -e
+          git add Web-Home/prices.json src-ui/src/lib/model-prices.json
+          if git diff --cached --quiet; then
+            echo "Prices unchanged; nothing to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore(prices): refresh model prices"
+          git push origin HEAD:main
