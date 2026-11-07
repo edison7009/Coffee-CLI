@@ -10,7 +10,7 @@ import { useT } from '../../i18n/useT';
 import './ClaudeComposerControls.css';
 import { sameFolder } from '../../lib/worktree-path';
 
-type Menu = 'commands' | 'model' | 'effort' | 'permissions' | 'context' | null;
+type Menu = 'commands' | 'model' | 'effort' | 'permissions' | 'context' | 'tasks' | null;
 // The two presets DeepSeek Harness offers in its own composer.
 const PRESETS = [
   { value: 'workspace-write', label: 'dsh.preset.workspace', description: 'dsh.preset.workspace_description' },
@@ -115,6 +115,7 @@ export function DshComposerControls({ sessionId, draft, onDraftChange, keyHandle
     <button type="button" className="claude-permission-control" disabled={!s.ready || !!s.restarting} aria-label={t('dsh.command.permission')} aria-expanded={menu === 'permissions'} onClick={e => show('permissions', e.currentTarget)}>{preset ? t(preset.label) : s.preset || t('dsh.command.permission')}</button>
     {children}
     <div className="claude-model-controls">
+      {s.backgroundTasks.length > 0 && <button type="button" className="claude-tasks-control" aria-label={t('claude.status.background_count', { count: s.backgroundTasks.length })} aria-expanded={menu === 'tasks'} onClick={e => show('tasks', e.currentTarget)}>{t('claude.status.background_short', { count: s.backgroundTasks.length })}</button>}
       {quota}
       <button type="button" className="claude-model-control" disabled={locked} aria-label={t('dsh.command.model')} aria-expanded={menu === 'model'} onClick={e => show('model', e.currentTarget)}>{model?.name || s.route.model || 'DeepSeek'}</button>
       {!!model?.efforts.length && <button type="button" className="claude-effort-trigger" disabled={locked} aria-label={t('claude.effort.title')} aria-expanded={menu === 'effort'} onClick={e => show('effort', e.currentTarget)}>{claudeEffortLabel(effort, t)}</button>}
@@ -125,6 +126,7 @@ export function DshComposerControls({ sessionId, draft, onDraftChange, keyHandle
       : shown === 'permissions' ? PRESETS.map(p => <button type="button" key={p.value} disabled={!s.ready || !!s.restarting} className={s.preset === p.value ? 'is-selected' : ''} onClick={() => { close(); if (s.preset !== p.value) void setDshPreset(sessionId, p.value); }}><strong>{t(p.label)}{s.preset === p.value ? ' ✓' : ''}</strong><small>{t(p.description)}</small></button>)
       : shown === 'model' ? s.models.map(m => { const current = m.provider === s.route.provider && m.model === s.route.model; return <button type="button" key={`${m.provider}/${m.model}`} disabled={locked} className={current ? 'is-selected' : ''} onClick={() => { close(); if (!current) void setDshRoute(sessionId, { provider: m.provider, model: m.model, effort: m.efforts.includes(effort) ? effort : null }); }}><strong>{m.name}{current ? ' ✓' : ''}</strong><small>{m.provider}</small></button>; })
       : shown === 'effort' && model ? <ClaudeEffortControl key={`${sessionId}:${model.provider}/${model.model}`} levels={model.efforts} value={effort} disabled={locked} onCommit={level => setDshEffort(sessionId, level)} onClose={() => { close(); anchor.current?.focus(); }} />
+      : shown === 'tasks' ? <><div className="claude-tasks-heading">{t('claude.status.background_count', { count: s.backgroundTasks.length })}</div>{s.backgroundTasks.map(task => <div key={task.id} className="claude-tasks-item"><span className="claude-tasks-dot" aria-hidden="true" /><span>{task.description || t(task.kind === 'agent' ? 'dsh.task.agent' : 'dsh.task.job')}</span></div>)}</>
       : shown === 'context' ? <ContextUsage used={s.contextTokens} capacity={s.contextWindow} total={s.contextTokens} /> : null}
     </div>, document.body)}
   </div>;

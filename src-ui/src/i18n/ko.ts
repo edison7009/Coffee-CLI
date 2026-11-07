@@ -792,6 +792,8 @@ export const ko = {
   "dsh.time.minute": "분 ",
   "dsh.time.hour": "시간 ",
   "dsh.commands_unsupported": "현재 버전의 DeepSeek Harness는 아직 명령을 지원하지 않습니다. DeepSeek Harness를 업데이트하면 사용할 수 있습니다.",
+  "dsh.task.agent": "하위 에이전트",
+  "dsh.task.job": "백그라운드 작업",
   "dsh.preset.workspace": "작업 공간 내 수정",
   "dsh.preset.workspace_description": "작업 공간을 수정할 수 있으며 민감한 작업 전에 확인합니다",
   "dsh.preset.full": "전체 권한",

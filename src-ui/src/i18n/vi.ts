@@ -793,6 +793,8 @@ Xóa tờ ghi chú này khi bạn sẵn sàng và bắt đầu tác vụ đầu 
   "dsh.time.minute": " phút ",
   "dsh.time.hour": " giờ ",
   "dsh.commands_unsupported": "Phiên bản DeepSeek Harness này chưa hỗ trợ lệnh. Hãy cập nhật DeepSeek Harness để sử dụng.",
+  "dsh.task.agent": "Tác tử phụ",
+  "dsh.task.job": "Tác vụ nền",
   "dsh.preset.workspace": "Sửa trong không gian làm việc",
   "dsh.preset.workspace_description": "Có thể sửa không gian làm việc; hỏi trước thao tác nhạy cảm",
   "dsh.preset.full": "Toàn quyền",

@@ -790,6 +790,8 @@ export const ru = {
   "dsh.time.minute": "м ",
   "dsh.time.hour": "ч ",
   "dsh.commands_unsupported": "Эта версия DeepSeek Harness пока не поддерживает команды. Обновите DeepSeek Harness, чтобы ими пользоваться.",
+  "dsh.task.agent": "Субагент",
+  "dsh.task.job": "Фоновая задача",
   "dsh.preset.workspace": "Изменения в рабочей области",
   "dsh.preset.workspace_description": "Может изменять рабочую область; спрашивает перед чувствительными действиями",
   "dsh.preset.full": "Полный доступ",

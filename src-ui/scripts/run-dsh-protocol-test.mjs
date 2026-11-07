@@ -140,4 +140,14 @@ test('a stopped turn keeps what it streamed, and the next turn starts clean', ()
   assert.deepEqual(plain(s.messages.filter(m => m.role === 'assistant').map(m => m.content)), ['Half a rep', 'New'], 'the next attempt neither drops nor appends to it');
 });
 
+test('sub-agents and background jobs show as running sub-tasks until they finish or the runtime exits', () => {
+  const report = (s, sessionId, tasks) => reduceDshNotification(s, { method: 'coffee/background', params: { sessionId, count: tasks.length, tasks } });
+  let s = { ...emptyDshState(), sessionId: 's1' };
+  s = report(s, 's1', [{ id: 'agent:c1', kind: 'agent', description: 'Review the diff' }, { id: 'job:j1', kind: 'job', description: '' }, { kind: 'job' }]);
+  assert.deepEqual(plain(s.backgroundTasks), [{ id: 'agent:c1', kind: 'agent', description: 'Review the diff' }, { id: 'job:j1', kind: 'job', description: '' }]);
+  assert.equal(report(s, 'other', []), s, 'another session is ignored');
+  assert.deepEqual(plain(report(s, 's1', []).backgroundTasks), []);
+  assert.deepEqual(plain(reduceDshNotification(s, { method: 'coffee/exit', params: { code: 0 } }).backgroundTasks), [], 'an exited runtime runs nothing');
+});
+
 console.log(`${passed} DeepSeek Harness protocol checks passed`);

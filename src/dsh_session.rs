@@ -234,7 +234,7 @@ export const inject = ['permissionPresets', 'sessions', 'approval', 'agents', 'u
 export function apply(ctx) {
   const { COFFEE_DSH_CONTROL: file, COFFEE_DSH_SESSION: id } = process.env;
   const pending = new Map();
-  let applied = '', count = 0, background = 0;
+  let applied = '', count = 0, background = '[]';
   const read = path => { try { return readFileSync(path, 'utf8').trim(); } catch { return ''; } };
   const send = frame => process.stdout.write(JSON.stringify({ jsonrpc: '2.0', ...frame }) + '\n');
   const update = () => {
@@ -264,11 +264,15 @@ export function apply(ctx) {
   });
   // Jobs and sub-agents outlive the turn that started them, which the SDK protocol does not show.
   const report = () => {
-    const jobs = ctx.get('jobs')?.list(id).filter(job => job.owner === id && (job.status === 'running' || job.status === 'stopping')).length ?? 0;
-    const children = ctx.agents.list().filter(agent => String(agent.session.header?.parentSession) === id && agent.status !== 'idle').length;
-    if (jobs + children === background) return;
-    background = jobs + children;
-    send({ method: 'coffee/background', params: { sessionId: id, count: background } });
+    const jobs = (ctx.get('jobs')?.list(id) ?? []).filter(job => job.owner === id && (job.status === 'running' || job.status === 'stopping'))
+      .map(job => ({ id: 'job:' + job.id, kind: 'job', description: typeof job.label === 'string' ? job.label : '' }));
+    // A sub-agent's own label is not part of a stable interface; read what is there and let the client name it otherwise.
+    const children = ctx.agents.list().filter(agent => String(agent.session.header?.parentSession) === id && agent.status !== 'idle')
+      .map(agent => ({ id: 'agent:' + String(agent.id ?? agent.session.id), kind: 'agent', description: [agent.label, agent.session.header?.label, agent.name].find(value => typeof value === 'string') ?? '' }));
+    const tasks = [...jobs, ...children], key = JSON.stringify(tasks);
+    if (key === background) return;
+    background = key;
+    send({ method: 'coffee/background', params: { sessionId: id, count: tasks.length, tasks } });
   };
   // A message for the running turn is read at its next step, as DeepSeek Harness's own clients steer.
   const steer = () => {

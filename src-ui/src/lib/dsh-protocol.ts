@@ -47,10 +47,13 @@ export interface DshState {
   stopping?: boolean;
   /** Native slash commands need `session/query` (DeepSeek Harness 0.2.2+). */
   commands: boolean;
+  /** Sub-agents and background jobs this Session started that are still running. */
+  backgroundTasks: DshBackgroundTask[];
 }
+export interface DshBackgroundTask { id: string; kind: 'agent' | 'job'; description: string }
 
 export function emptyDshState(): DshState {
-  return { ready: false, busy: false, sessionId: '', title: '', route: { provider: '', model: '' }, models: [], preset: '', policy: '', messages: [], requests: [], contextTokens: 0, contextWindow: 0, commands: true };
+  return { ready: false, busy: false, sessionId: '', title: '', route: { provider: '', model: '' }, models: [], preset: '', policy: '', messages: [], requests: [], contextTokens: 0, contextWindow: 0, commands: true, backgroundTasks: [] };
 }
 
 function text(content: unknown): string {
@@ -141,7 +144,10 @@ export function reduceDshNotification(state: DshState, frame: Json): DshState {
     const busy = params.status === 'running';
     return { ...state, busy, startedAt: busy ? state.startedAt ?? Date.now() : undefined, requests: busy ? state.requests : [] };
   }
-  if (method === 'coffee/exit') return { ...state, messages: settleStream(state.messages), ready: false, busy: false, requests: [], error: state.restarting ? undefined : str(params.detail).trim() || `DeepSeek Harness exited (${params.code ?? 'unknown'})` };
+  if (method === 'coffee/background' && str(params.sessionId) === state.sessionId) {
+    return { ...state, backgroundTasks: arr(params.tasks).map(obj).map(task => ({ id: str(task.id), kind: task.kind === 'agent' ? 'agent' as const : 'job' as const, description: str(task.description).trim() })).filter(task => task.id) };
+  }
+  if (method === 'coffee/exit') return { ...state, backgroundTasks: [], messages: settleStream(state.messages), ready: false, busy: false, requests: [], error: state.restarting ? undefined : str(params.detail).trim() || `DeepSeek Harness exited (${params.code ?? 'unknown'})` };
   return state;
 }
 

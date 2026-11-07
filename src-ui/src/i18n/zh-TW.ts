@@ -793,6 +793,8 @@ export const zhTW = {
   "dsh.time.minute": "分",
   "dsh.time.hour": "小時",
   "dsh.commands_unsupported": "目前版本的 DeepSeek Harness 尚不支援指令，更新 DeepSeek Harness 後即可使用。",
+  "dsh.task.agent": "子代理",
+  "dsh.task.job": "背景任務",
   "dsh.preset.workspace": "工作區內修改",
   "dsh.preset.workspace_description": "可修改工作區內容，敏感操作前詢問",
   "dsh.preset.full": "完全權限",

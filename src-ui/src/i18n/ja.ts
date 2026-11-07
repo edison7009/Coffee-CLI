@@ -792,6 +792,8 @@ export const ja = {
   "dsh.time.minute": "分 ",
   "dsh.time.hour": "時間 ",
   "dsh.commands_unsupported": "このバージョンの DeepSeek Harness はまだコマンドに対応していません。DeepSeek Harness を更新すると使えます。",
+  "dsh.task.agent": "サブエージェント",
+  "dsh.task.job": "バックグラウンドジョブ",
   "dsh.preset.workspace": "ワークスペース内で変更",
   "dsh.preset.workspace_description": "ワークスペース内を変更でき、機密操作の前に確認します",
   "dsh.preset.full": "フルアクセス",
