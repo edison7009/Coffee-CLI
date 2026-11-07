@@ -3,7 +3,9 @@ name: Refresh model prices
 # Every three days, trim the public models.dev price catalogue to the models
 # Coffee CLI's tools run and commit it when a price changed: Web-Home/prices.json
 # (served as coffeecli.com/prices.json once Cloudflare Pages redeploys) and the
-# copy bundled into the app as its offline fallback.
+# copy bundled into the app as its offline fallback. The same file goes to the
+# two download mirrors the app reads first, as it reads the version manifest.
+# Secrets: CNB_TOKEN, GITCODE_TOKEN (shared with mirror-release.yml).
 
 on:
   schedule:
@@ -47,3 +49,43 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "chore(prices): refresh model prices"
           git push origin HEAD:main
+
+      # The mirrors hold the latest installers; one commit on top adds prices.json without
+      # downloading them (a blob-less fetch, with the new tree built from the index).
+      - name: Push prices to the download mirrors
+        env:
+          CNB_TOKEN: ${{ secrets.CNB_TOKEN }}
+          GITCODE_TOKEN: ${{ secrets.GITCODE_TOKEN }}
+        run: |
+          set -uo pipefail
+          prices="$PWD/Web-Home/prices.json"
+          failed=0
+          push() {
+            local name=$1 url=$2 user=$3 token=$4 dir
+            [ -n "$token" ] || { echo "::warning::$name token is not set; skipping"; return 0; }
+            local auth; auth=$(printf '%s:%s' "$user" "$token" | base64 -w0)
+            dir=$(mktemp -d)
+            (
+              set -e
+              cd "$dir"
+              git init -q
+              git remote add origin "$url"
+              git config remote.origin.promisor true
+              git config remote.origin.partialclonefilter blob:none
+              git config user.name "github-actions[bot]"
+              git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+              git -c http.extraHeader="Authorization: Basic $auth" fetch -q --depth 1 --filter=blob:none origin main
+              git read-tree FETCH_HEAD
+              blob=$(git hash-object -w "$prices")
+              git update-index --add --cacheinfo "100644,$blob,prices.json"
+              tree=$(git write-tree)
+              if [ "$tree" = "$(git rev-parse 'FETCH_HEAD^{tree}')" ]; then echo "$name: prices unchanged"; exit 0; fi
+              commit=$(git commit-tree "$tree" -p FETCH_HEAD -m "Refresh model prices")
+              git -c http.extraHeader="Authorization: Basic $auth" push -q origin "$commit:refs/heads/main"
+              echo "$name: prices updated"
+            ) || { echo "::warning::Could not update prices on $name"; failed=1; }
+          }
+          push CNB https://cnb.cool/echobird/coffee-cli-releases.git cnb "$CNB_TOKEN"
+          push GitCode https://gitcode.com/edison7009/coffee-cli-releases.git edison7009 "$GITCODE_TOKEN"
+          # The site still serves the table; a mirror that missed this run gets it next time.
+          exit 0

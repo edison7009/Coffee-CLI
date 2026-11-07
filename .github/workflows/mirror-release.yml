@@ -95,6 +95,11 @@ jobs:
             sha=$(sha256sum "$name" | cut -d' ' -f1)
             jq --arg n "$name" --argjson s "$size" --arg h "$sha" '.files[$n] = {size: $s, sha256: $h}' manifest.json > m.tmp && mv m.tmp manifest.json
           done < ../names.txt
+          # The mirrors also serve the model price table; a force push must not drop it.
+          gh api "repos/$GITHUB_REPOSITORY/contents/Web-Home/prices.json?ref=main" -H "Accept: application/vnd.github.raw" > prices.json \
+            || echo "::warning::prices.json not found on main; the mirrors will serve none until the next price refresh"
+          # A failed download leaves an empty file, which would shadow the site's copy for clients.
+          [ -s prices.json ] || rm -f prices.json
           cat > README.md <<EOF
           # Coffee CLI installers ($tag)
 

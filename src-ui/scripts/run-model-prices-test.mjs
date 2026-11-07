@@ -21,10 +21,12 @@ assert.equal(Object.keys(trimmed.models).some(id => id !== id.toLowerCase()), fa
 const storage = new Map();
 const localStorage = { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) };
 let fetched = 0, reply = { models: { 'claude-x': { input: 5, output: 25 } } };
-const fetch = async () => { fetched++; return { ok: true, json: async () => reply }; };
+const asked = [];
+// The first mirror is down and the second serves nonsense: the site's table is used.
+const fetch = async url => { fetched++; asked.push(url); if (url.includes('cnb.cool')) throw new Error('offline'); return { ok: true, json: async () => url.includes('gitcode') ? { nonsense: true } : reply }; };
 const result = await build({ entryPoints: [fileURLToPath(new URL('../src/lib/model-prices.ts', import.meta.url))], bundle: true, platform: 'node', format: 'cjs', write: false });
 const module = { exports: {} };
-runInNewContext(result.outputFiles[0].text, { module, exports: module.exports, localStorage, fetch, AbortSignal, JSON, Date, Math });
+runInNewContext(result.outputFiles[0].text, { module, exports: module.exports, localStorage, fetch, AbortSignal, JSON, Date, Math, URL });
 const { modelPrice, costOf, setModelPrices, refreshModelPrices } = module.exports;
 
 assert.ok(modelPrice('claude-sonnet-4-5'), 'the bundled table prices current models');
@@ -39,9 +41,10 @@ close(costOf('gpt-t', { input: 100, output: 1_000_000 }), (100 * 1 + 1_000_000 *
 close(costOf('gpt-t', { input: 150, cacheRead: 100, output: 1_000_000 }), (150 * 2 + 100 * 2 + 1_000_000 * 5) / 1e6, 'a prompt over a tier is billed at it whole');
 
 await refreshModelPrices(Date.now());
-assert.equal(fetched, 1); assert.equal(modelPrice('claude-x').input, 5, 'the published table replaces the bundled one');
+assert.equal(fetched, 3); assert.deepEqual(asked.map(u => new URL(u).host), ['cnb.cool', 'api.gitcode.com', 'coffeecli.com'], 'mirrors first, the site last');
+assert.equal(modelPrice('claude-x').input, 5, 'the published table replaces the bundled one');
 await refreshModelPrices(Date.now());
-assert.equal(fetched, 1, 'a fresh table is not fetched again');
+assert.equal(fetched, 3, 'a fresh table is not fetched again');
 reply = { nonsense: true };
 await refreshModelPrices(Date.now() + 4 * 24 * 3600 * 1000);
 assert.equal(modelPrice('claude-x').input, 5, 'a malformed table is ignored');

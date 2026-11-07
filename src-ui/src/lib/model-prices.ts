@@ -1,7 +1,7 @@
 // List prices for the models the tools run, in USD per million tokens, to estimate what a turn cost when the tool
-// does not report it. The table ships with the app and is refreshed from coffeecli.com/prices.json (rebuilt from the
-// public models.dev catalogue every few days); a turn priced from it is an estimate at list price, which a relay or a
-// subscription may not charge.
+// does not report it. The table ships with the app and is refreshed every few days from the same places as the version
+// manifest: the two download mirrors, then the website (all rebuilt from the public models.dev catalogue). A turn
+// priced from it is an estimate at list price, which a relay or a subscription may not charge.
 import BUNDLED from './model-prices.json';
 
 export interface Price { input: number; output: number; cache_read?: number; cache_write?: number }
@@ -10,7 +10,11 @@ export interface PriceTable { source?: string; models: Record<string, ModelPrice
 /** A turn's or request's tokens. `input` excludes cached and cache-written tokens, as the tools report it. */
 export interface TokenUsage { input: number; output: number; cacheRead?: number; cacheWrite?: number; cacheWrite1h?: number }
 
-const REMOTE = 'https://coffeecli.com/prices.json';
+export const PRICE_SOURCES = [
+  'https://cnb.cool/echobird/coffee-cli-releases/-/git/raw/main/prices.json',
+  'https://api.gitcode.com/api/v5/repos/edison7009/coffee-cli-releases/raw/prices.json?ref=main',
+  'https://coffeecli.com/prices.json',
+] as const;
 const STORAGE_KEY = 'cc-model-prices';
 const REFRESH_AFTER = 3 * 24 * 60 * 60 * 1000;
 
@@ -30,15 +34,19 @@ let refreshing: Promise<void> | null = null;
 /** Fetches the published table when the cached one is a few days old. Failures keep the current table. */
 export function refreshModelPrices(now = Date.now()): Promise<void> {
   if (now - fetchedAt < REFRESH_AFTER) return Promise.resolve();
-  refreshing ??= fetch(REMOTE, { signal: AbortSignal.timeout(15_000) })
-    .then(response => response.ok ? response.json() : null)
-    .then((next: unknown) => {
-      if (!valid(next)) return;
-      table = next; fetchedAt = now;
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ fetchedAt, table })); } catch { /* Best-effort operation; failure is non-fatal. */ }
-    })
-    .catch(() => { /* Offline or blocked: the bundled or cached table stays. */ })
-    .finally(() => { refreshing = null; });
+  refreshing ??= (async () => {
+    // In order, as for the version manifest: the first source that serves a well-formed table wins.
+    for (const url of PRICE_SOURCES) {
+      try {
+        const response = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+        const next: unknown = response.ok ? await response.json() : null;
+        if (!valid(next)) continue;
+        table = next; fetchedAt = now;
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ fetchedAt, table })); } catch { /* Best-effort operation; failure is non-fatal. */ }
+        return;
+      } catch { /* Offline or blocked: try the next source; the bundled or cached table stays. */ }
+    }
+  })().finally(() => { refreshing = null; });
   return refreshing;
 }
 
