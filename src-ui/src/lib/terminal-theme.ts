@@ -69,6 +69,8 @@ export function deriveSelectionBg(hex: string, isDark: boolean): string {
 }
 
 export const LINK_RE = /(https?:\/\/[^\s<>()"'-￿]+|file:\/\/\/[^\s<>()"'-￿]+)/g;
+/** A matched URL without the punctuation or Markdown emphasis (**https://…**) that follows it in prose. */
+export const trimLink = (url: string): string => url.replace(/[),.*_~]+$/, '');
 
 /** A buffer line's text and the terminal column of each character: wide characters span two columns. */
 export function lineCells(line: IBufferLine) {

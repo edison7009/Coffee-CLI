@@ -59,7 +59,7 @@ import '@xterm/xterm/css/xterm.css';
 import './TierTerminal.css';
 // The back-to-latest button shares the conversation views' style.
 import './ClaudeConversation.css';
-import { TERM_COLOR_SCHEMES, themePair, normalizePasteNewlines, LINK_RE, lineCells, buildFontFamily, buildXtermTheme } from '../../lib/terminal-theme';
+import { TERM_COLOR_SCHEMES, themePair, normalizePasteNewlines, LINK_RE, trimLink, lineCells, buildFontFamily, buildXtermTheme } from '../../lib/terminal-theme';
 import { attachWebglRenderer, detachWebglRenderer, suspendWebglRenderer } from '../../lib/terminal-webgl';
 export { TERM_COLOR_SCHEMES, buildFontFamily };
 export type { TermColorScheme } from '../../lib/terminal-theme';
@@ -188,7 +188,7 @@ function TierTerminalImpl({
     const index = cols.findIndex(value => value >= col);
     if (index < 0) return null;
     const url = [...text.matchAll(LINK_RE)].find(match => index >= match.index && index < match.index + match[0].length);
-    return url ? { target: url[0].replace(/[),.]+$/, ''), local: false } : pathLinkAt(text, index, folderPathRef.current ?? null);
+    return url ? { target: trimLink(url[0]), local: false } : pathLinkAt(text, index, folderPathRef.current ?? null);
   };
   const closeCtxMenu = useCallback(() => setCtxMenu(null), []);
 
@@ -968,7 +968,7 @@ function TierTerminalImpl({
         let m;
         LINK_RE.lastIndex = 0;
         while ((m = LINK_RE.exec(text)) !== null) {
-          const raw = m[0].replace(/[),.]+$/, '');
+          const raw = trimLink(m[0]);
           const firstCol = colByStrIdx[m.index] ?? m.index;
           // URL bodies are ASCII (width-1), so end column = first + length.
           const startCol = firstCol + 1;
