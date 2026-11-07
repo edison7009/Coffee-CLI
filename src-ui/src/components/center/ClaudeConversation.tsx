@@ -23,6 +23,10 @@ import CLAWD_SVG from '../../icons-inline/clawd.svg?raw';
 import CLAUDE_WORKING_MARK from '../../icons-inline/claude-working-mark.webp';
 import { turnTitle } from '../../lib/turn-title';
 import CLAUDE_WELCOME from '../../icons-inline/claude-welcome.webm';
+import CLAUDE_WELCOME_HEVC from '../../icons-inline/claude-welcome.mov';
+// The laptop clip keeps its transparency in an alpha channel, which each engine reads from a different codec:
+// Chromium (Windows) from VP9 WebM, WebKit (macOS) from HEVC QuickTime. Claude Desktop ships the same pair.
+const CLAUDE_WELCOME_CLIP = /\b(Chrome|Chromium|Edg)\//.test(navigator.userAgent) ? CLAUDE_WELCOME : CLAUDE_WELCOME_HEVC;
 import CLAUDE_WAVING from '../../icons-inline/claude-waving.gif';
 import CLAUDE_JUMPING from '../../icons-inline/claude-jumping.gif';
 import CLAUDE_WALKING from '../../icons-inline/claude-walking.gif';
@@ -44,7 +48,7 @@ function count(value: number) { return value >= 1000 ? `${(value / 1000).toFixed
 function elapsed(ms: number, t: ClaudeTranslate) { const seconds = Math.max(0, Math.round(ms / 1000)); return seconds >= 60 ? t('claude.time.minutes', { minutes: Math.floor(seconds / 60), seconds: seconds % 60 }) : t('claude.time.seconds', { seconds }); }
 
 const CLAUDE_WELCOME_ICONS = [
-  { id: 'laptop', src: CLAUDE_WELCOME },
+  { id: 'laptop', src: CLAUDE_WELCOME_CLIP },
   { id: 'waving', src: CLAUDE_WAVING },
   { id: 'jumping', src: CLAUDE_JUMPING },
   { id: 'walking', src: CLAUDE_WALKING },
