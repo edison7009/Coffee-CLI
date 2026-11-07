@@ -96,6 +96,10 @@ test('only a locally requested stop downgrades its EDE diagnostic',()=>{
   assert.equal(mixed.error,'API Error: 503 unavailable','real provider errors survive a concurrent stop');
   const unknown=reduceClaudeEvent(state,{type:'result',is_error:true,errors:[]},5000);
   assert.equal(unknown.errorKey,'claude.error.request_failed','an unexplained error is never silently hidden');
+  const midAnswer=reduceClaudeEvent(state,{type:'result',is_error:true,errors:['[ede_diagnostic] result_type=user last_content_type=n/a stop_reason=null']},5000);
+  assert.equal(midAnswer.error,undefined,'a stop mid-answer (stop_reason=null) is cancelled, not an error');
+  const marked=reduceClaudeEvent(state,{type:'user',uuid:'m1',message:{role:'user',content:'[Request interrupted by user]'}},5000);
+  assert.equal(marked.messages.some(m=>m.role==='user'),false,'the interruption marker is not shown as the user\'s message');
   const otherDiagnostic=reduceClaudeEvent(state,{type:'result',is_error:true,errors:['[ede_diagnostic] unexpected provider failure']},5000);
   assert.equal(otherDiagnostic.error,'[ede_diagnostic] unexpected provider failure','unrecognized diagnostics still surface');
   const exit=reduceClaudeEvent(state,{type:'coffee_exit',code:1,detail:'Process crashed'},5000);

@@ -1,5 +1,6 @@
 import type { ChatMessage } from './chat-transcript';
 
+const INTERRUPT_MARKER = /^\[?Request interrupted by user(?: for tool use)?\]?$/;
 export type Json = Record<string, unknown>;
 export const object = (v: unknown): Json => v && typeof v === 'object' && !Array.isArray(v) ? v as Json : {};
 export const list = (v: unknown): unknown[] => Array.isArray(v) ? v : [];
@@ -187,6 +188,8 @@ export function reduceClaudeEvent(state: ClaudeState, frame: Json, now = Date.no
       } else if (b.type === 'text') {
         const content = text(b.text);
         if (!content.trim() || /^(<system-reminder>|<ide_|<task-notification>|<command-|# AGENTS\.md)/.test(content)) continue;
+        // Claude records a stop as a user line; the turn already shows it was cancelled.
+        if (INTERRUPT_MARKER.test(content.trim())) continue;
         const pending = s.messages.findLast(m => m.role === 'user' && m.id.startsWith('pending:') && m.content === content);
         if (pending) update(pending.id, { id: text(frame.uuid) || pending.id });
         else if (!s.messages.some(m => m.id === frame.uuid)) s.messages.push({ id: text(frame.uuid) || `user:${now}:${s.messages.length}`, role: 'user', content, timestamp: now });
@@ -234,7 +237,8 @@ export function reduceClaudeEvent(state: ClaudeState, frame: Json, now = Date.no
         const errors = list(frame.errors).map(String);
         // Only a locally requested stop can downgrade interruption diagnostics.
         // Provider/API failures alongside them must still remain visible.
-        const visible = interrupted ? errors.filter(error => !/^\[ede_diagnostic\]\s+result_type=user\s+last_content_type=n\/a\s+stop_reason=tool_use\s*$/.test(error) && !/^\[?Request interrupted by user(?: for tool use)?\]?$/.test(error)) : errors;
+        // A stop mid-answer reports stop_reason=null, one during a tool call stop_reason=tool_use; both are the stop itself.
+        const visible = interrupted ? errors.filter(error => !/^\[ede_diagnostic\]\s+result_type=user\s+last_content_type=n\/a\s+stop_reason=\w+\s*$/.test(error) && !INTERRUPT_MARKER.test(error.trim())) : errors;
         if (!interrupted || !errors.length || visible.length) { s.error = visible.join('\n'); s.errorKey = s.error ? undefined : 'claude.error.request_failed'; s.error ||= 'Claude request failed'; }
       }
     }
