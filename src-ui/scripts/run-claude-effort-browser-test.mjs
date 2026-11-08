@@ -9,7 +9,7 @@ const { chromium } = await import(process.env.COFFEE_PLAYWRIGHT_MODULE || 'playw
 const project = fileURLToPath(new URL('..', import.meta.url)), directory = await mkdtemp(join(tmpdir(), 'coffee-effort-ui-'));
 await build({ stdin: { loader: 'tsx', resolveDir: project, contents: `
 import React,{useRef}from'react';import{createRoot}from'react-dom/client';import{ClaudeComposerControls}from'./src/components/center/ClaudeComposerControls';import'./src/styles/global.css';
-function App(){const handler=useRef();return <div style={{position:'absolute',bottom:30,right:30}}><ClaudeComposerControls sessionId="test" draft="" onDraftChange={()=>{}} keyHandler={handler}/></div>};createRoot(document.getElementById('root')).render(<App/>);` }, bundle:true, jsx:'automatic', outfile:join(directory,'fixture.js'), external:['/fonts/*','/monogram.svg'], plugins:[{name:'session',setup(b){
+function App(){const handler=useRef();return <div style={{position:'absolute',bottom:30,right:30}}><ClaudeComposerControls sessionId="test" draft="" onDraftChange={()=>{}} keyHandler={handler}/></div>};createRoot(document.getElementById('root')).render(<App/>);` }, bundle:true, jsx:'automatic', outfile:join(directory,'fixture.js'), external:['/fonts/*','/monogram.svg', '/backgrounds/*'], plugins:[{name:'session',setup(b){
   b.onResolve({filter:/lib\/claude-session$/},()=>({path:'session',namespace:'fixture'}));
   b.onResolve({filter:/store\/app-state$/},()=>({path:'language',namespace:'fixture'}));
   b.onLoad({filter:/.*/,namespace:'fixture'},args=>({loader:'js',resolveDir:project,contents:args.path==='language'?`export function useAppLanguage(){return 'zh-CN'}`:`

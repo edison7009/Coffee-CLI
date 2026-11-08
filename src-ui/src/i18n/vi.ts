@@ -443,6 +443,7 @@ Xóa tờ ghi chú này khi bạn sẵn sàng và bắt đầu tác vụ đầu 
   'theme.shape.carbon': 'Carbon',
   'theme.shape.monogram': 'Chữ lồng',
   'theme.shape.characters': 'Dòng ký tự',
+  'theme.shape.basalt': 'Đá bazan',
   'theme.section.icons': 'Biểu tượng',
   // Chế độ giao diện (bên phải mục "Màu sắc")
   'theme.mode.light': 'Sáng',

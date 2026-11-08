@@ -29,7 +29,7 @@ import {ToolSkillsPanel} from './src/components/center/ToolSkillsPanel';
 import './src/styles/global.css';import './src/components/center/CenterPanel.css';import './src/components/center/ToolSettingsPage.css';
 const initial=[{value:'claude',label:'Claude Code'},{value:'codex',label:'Codex CLI'},{value:'cursor',label:'Cursor'}].map(s=>({...s,icon:<span>{s.label[0]}</span>}));
 function Fixture(){const[active,setActive]=useState(true),[tools,setTools]=useState(initial);window.setTools=values=>setTools(values.map(s=>({...s,icon:<span>{s.label[0]}</span>})));return <><button id="navigate" onClick={()=>setActive(!active)}>Navigate</button><main className="main-content panel-center" style={{position:'absolute',inset:'40px 0 0'}}><section className="tool-settings-page" style={{display:active?'block':'none'}}><ToolSkillsPanel active={active} tools={tools}/></section></main></>}
-createRoot(document.getElementById('root')).render(<Fixture/>);`},bundle:true,jsx:'automatic',outfile:join(directory,'fixture.js'),logLevel:'silent',external:['/fonts/*','/monogram.svg'],plugins:[{name:'native-boundary',setup(b){
+createRoot(document.getElementById('root')).render(<Fixture/>);`},bundle:true,jsx:'automatic',outfile:join(directory,'fixture.js'),logLevel:'silent',external:['/fonts/*','/monogram.svg', '/backgrounds/*'],plugins:[{name:'native-boundary',setup(b){
  b.onResolve({filter:/\/(?:tauri|store\/app-state)$/},args=>({path:args.path,namespace:'fixture'}));
  b.onLoad({filter:/.*/,namespace:'fixture'},args=>({loader:'js',contents:args.path.endsWith('/tauri')?mock:'export function useAppLanguage(){return "zh-CN"}'}));
 }}] });

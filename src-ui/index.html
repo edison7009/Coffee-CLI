@@ -22,10 +22,10 @@
     <!-- Apply theme + shape BEFORE React renders to prevent flash of unstyled variables -->
     <script>
       (function() {
-        var theme = 'obsidian';
+        var theme = 'oat';
         var mode = 'dark';
-        var shape = 'characters';
-        try { theme = localStorage.getItem('cc-theme') || 'obsidian'; } catch(e) {}
+        var shape = 'basalt';
+        try { theme = localStorage.getItem('cc-theme') || 'oat'; } catch(e) {}
         // Palettes retired in v3.5.4 (the redundant mid row) — mirror of
         // RETIRED_THEMES in src/store/app-state.tsx. A retired code has no
         // [data-theme] block left to match, so without this the pre-paint parks
@@ -47,7 +47,7 @@
         if (mode === 'system') {
           mode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
         }
-        try { shape = localStorage.getItem('cc-shape') || 'characters'; } catch(e) {}
+        try { shape = localStorage.getItem('cc-shape') || 'basalt'; } catch(e) {}
         document.documentElement.setAttribute('data-theme', theme);
         document.documentElement.setAttribute('data-mode', mode);
         // Frost renders as glass chrome + a data-frost backdrop variant
@@ -56,8 +56,8 @@
           document.documentElement.setAttribute('data-frost', shape);
           shape = 'glass';
         }
-        if (shape === 'characters') {
-          document.documentElement.setAttribute('data-background', 'characters');
+        if (shape === 'characters' || shape === 'basalt') {
+          document.documentElement.setAttribute('data-background', shape);
           shape = 'carbon';
         }
         document.documentElement.setAttribute('data-shape', shape);

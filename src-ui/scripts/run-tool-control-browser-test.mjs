@@ -26,7 +26,7 @@ import {InlineSvgIcon} from './src/components/InlineSvgIcon';
 import './src/styles/global.css';import './src/components/center/CenterPanel.css';
 const tools=[{value:'claude',label:'Claude Code'},{value:'codex',label:'Codex CLI'},{value:'cursor',label:'Cursor'},{value:'copilot',label:'Copilot CLI'},{value:'antigravity',label:'Antigravity CLI',installed:false},{value:'pi',label:'Pi'},{value:'kiro',label:'Kiro'}].map(item=>({...item,icon:item.value==='antigravity'?<InlineSvgIcon markup={${JSON.stringify(antigravitySvg)}}/>:<span>{item.label[0]}</span>}));
 createRoot(document.getElementById('root')).render(<div className="main-content panel-center" style={{position:'absolute',inset:0}}><span className="library-item" style={{display:'none'}}>reference</span><ToolSettingsPage active tools={tools} count={6} limit={6}><div className="library-item">selection</div></ToolSettingsPage></div>);`
-},bundle:true,jsx:'automatic',loader:{'.svg':'text','.png':'dataurl'},outfile:join(directory,'fixture.js'),logLevel:'silent',external:['/fonts/*','/monogram.svg'],plugins:[{name:'native-boundary',setup(b){
+},bundle:true,jsx:'automatic',loader:{'.svg':'text','.png':'dataurl'},outfile:join(directory,'fixture.js'),logLevel:'silent',external:['/fonts/*','/monogram.svg', '/backgrounds/*'],plugins:[{name:'native-boundary',setup(b){
 b.onResolve({filter:/\/tauri$/},a=>({path:a.path,namespace:'fixture'}));b.onResolve({filter:/\/store\/app-state$/},a=>({path:a.path,namespace:'fixture'}));
 b.onLoad({filter:/.*/,namespace:'fixture'},a=>({loader:'js',contents:a.path.endsWith('/tauri')?mock:'export function useAppLanguage(){return "zh-CN"}'}));}}]});
 const server=http.createServer(async(req,res)=>{

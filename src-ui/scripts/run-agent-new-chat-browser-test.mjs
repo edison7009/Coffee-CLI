@@ -25,7 +25,7 @@ import React from'react';import{createRoot}from'react-dom/client';import{AgentCh
 window.agent={conversationId:'desktop',messages:[],hasOlder:false,loadingOlder:false,running:false,activity:'',error:''};
 createRoot(document.getElementById('root')).render(<div style={{height:640}}><AgentChatPage/></div>);
 ` }, bundle: true, outfile: join(directory, 'fixture.js'), jsx: 'automatic', define: { __IS_LINUX__: 'false' },
-  loader: { '.woff2': 'dataurl', '.svg': 'dataurl', '.png': 'dataurl', '.webp': 'dataurl' }, external: ['/fonts/*', '/monogram.svg'],
+  loader: { '.woff2': 'dataurl', '.svg': 'dataurl', '.png': 'dataurl', '.webp': 'dataurl' }, external: ['/fonts/*', '/monogram.svg', '/backgrounds/*'],
   plugins: [{ name: 'agent-chat-fixtures', setup(b) {
     b.onLoad({ filter: /[/\\]AgentPages\.tsx$/ }, async args => ({ loader: 'tsx', contents: `${await readFile(args.path, 'utf8')}\nexport { AgentChatPage };` }));
     b.onResolve({ filter: new RegExp(`(?:${Object.keys(fixtures).map(name => name.replace('/', '\\/')).join('|')})$`) }, args => ({ path: Object.keys(fixtures).find(name => args.path.endsWith(name)), namespace: 'fixture', pluginData: args.resolveDir }));

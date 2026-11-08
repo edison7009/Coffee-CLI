@@ -441,6 +441,7 @@ export const ko = {
   'theme.shape.carbon': '탄소 섬유',
   'theme.shape.monogram': '모노그램',
   'theme.shape.characters': '문자 흐름',
+  'theme.shape.basalt': '현무암',
   'theme.section.icons': '아이콘 스타일',
   // 테마 모드(‘색상’ 오른쪽에서 라이트/나이트/시스템 설정 따르기)
   'theme.mode.light': '라이트',

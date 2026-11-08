@@ -441,6 +441,7 @@ Borra esta nota cuando quieras y empieza tu primera tarea.`,
   'theme.shape.carbon': 'Carbono',
   'theme.shape.monogram': 'Monograma',
   'theme.shape.characters': 'Flujo de caracteres',
+  'theme.shape.basalt': 'Basalto',
   'theme.section.icons': 'Iconos',
   // Modo de tema (a la derecha de «Colores»)
   'theme.mode.light': 'Claro',

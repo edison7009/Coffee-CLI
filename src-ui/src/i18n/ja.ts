@@ -441,6 +441,7 @@ export const ja = {
   'theme.shape.carbon': 'カーボン',
   'theme.shape.monogram': 'モノグラム',
   'theme.shape.characters': '文字の流れ',
+  'theme.shape.basalt': '玄武岩',
   'theme.section.icons': 'アイコン',
   // テーマモード（「配色」の右側でライト/ナイト/システムに従う）
   'theme.mode.light': 'ライト',

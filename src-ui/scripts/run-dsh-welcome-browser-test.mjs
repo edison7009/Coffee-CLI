@@ -14,7 +14,7 @@ function One({pick}){Math.random=()=>pick;return DshWelcomeIcon({isActive:!locat
 function App(){return <div style={{display:'flex',gap:16,padding:16}}>{[0,.2,.4,.6,.8].map(pick=><One key={pick} pick={pick}/>)}</div>}
 createRoot(document.getElementById('root')).render(<App/>);
 ` }, bundle: true, outfile: join(directory, 'fixture.js'), jsx: 'automatic', define: { __IS_LINUX__: 'false' },
-  loader: { '.gif': 'dataurl', '.png': 'dataurl', '.woff2': 'dataurl', '.svg': 'dataurl' }, external: ['/fonts/*', '/monogram.svg'] });
+  loader: { '.gif': 'dataurl', '.png': 'dataurl', '.woff2': 'dataurl', '.svg': 'dataurl' }, external: ['/fonts/*', '/monogram.svg', '/backgrounds/*'] });
 const server = http.createServer(async (req, res) => {
   const name = req.url.split('?')[0].slice(1);
   if (name === 'fixture.js' || name === 'fixture.css') return res.setHeader('Content-Type', name.endsWith('.js') ? 'text/javascript' : 'text/css').end(await readFile(join(directory, name)));

@@ -26,7 +26,7 @@ import React,{useRef}from'react';import{createRoot}from'react-dom/client';import
 function App(){const keys=useRef(),submit=useRef();return <div style={{position:'absolute',bottom:30,right:30}}><DshComposerControls sessionId="dsh" draft="" onDraftChange={()=>{}} keyHandler={keys} submitHandler={submit}/></div>}
 createRoot(document.getElementById('root')).render(<App/>);
 ` }, bundle: true, outfile: join(directory, 'fixture.js'), jsx: 'automatic', define: { __IS_LINUX__: 'false' },
-  loader: { '.woff2': 'dataurl', '.svg': 'dataurl', '.png': 'dataurl', '.webp': 'dataurl', '.gif': 'dataurl' }, external: ['/fonts/*', '/monogram.svg'],
+  loader: { '.woff2': 'dataurl', '.svg': 'dataurl', '.png': 'dataurl', '.webp': 'dataurl', '.gif': 'dataurl' }, external: ['/fonts/*', '/monogram.svg', '/backgrounds/*'],
   plugins: [{ name: 'dsh-effort-fixtures', setup(b) {
     b.onResolve({ filter: /lib\/dsh-session$/ }, () => ({ path: 'session', namespace: 'fixture' }));
     b.onResolve({ filter: /store\/app-state$/ }, () => ({ path: 'app-state', namespace: 'fixture' }));

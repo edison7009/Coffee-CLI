@@ -24,7 +24,7 @@ await build({
     </div>};createRoot(document.getElementById('root')).render(<Fixture/>);
   ` },
   bundle: true, outfile: join(directory, 'fixture.js'), jsx: 'automatic',
-  external: ['/fonts/*', '/monogram.svg'], nodePaths: [join(project, 'node_modules')],
+  external: ['/fonts/*', '/monogram.svg', '/backgrounds/*'], nodePaths: [join(project, 'node_modules')],
   loader: { '.webp': 'dataurl', '.webm': 'dataurl', '.gif': 'dataurl', '.png': 'dataurl' },
   define: { 'process.env.NODE_ENV': '"development"' },
   plugins: [{ name: 'native-boundary', setup(b) {

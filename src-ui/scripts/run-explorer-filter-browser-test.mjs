@@ -30,7 +30,7 @@ const mock = `
 await build({
   stdin: { resolveDir: project, loader: 'tsx', contents: `import React from 'react';import{createRoot}from'react-dom/client';import{Explorer}from'./src/components/left/Explorer';import'./src/styles/global.css';localStorage.setItem('cc-left-tab','workspace');createRoot(document.getElementById('root')).render(<Explorer/>);` },
   bundle: true, outfile: join(directory, 'fixture.js'), jsx: 'automatic',
-  nodePaths: [join(project, 'node_modules')], external: ['/fonts/*', '/monogram.svg'],
+  nodePaths: [join(project, 'node_modules')], external: ['/fonts/*', '/monogram.svg', '/backgrounds/*'],
   define: { 'process.env.NODE_ENV': '"development"', __IS_LINUX__: 'false' },
   plugins: [{ name: 'explorer-boundaries', setup(builder) {
     builder.onResolve({ filter: /(?:store\/app-state|tauri|lib\/(?:git-status|history-cache|clipboard|explorer-drag)|right\/HistoryBoard|agent\/AgentPages|@tauri-apps\/api\/(?:event|app))$/ }, () => ({ path: 'mock', namespace: 'fixture' }));

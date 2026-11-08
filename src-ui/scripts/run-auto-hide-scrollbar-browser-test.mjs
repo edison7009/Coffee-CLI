@@ -13,7 +13,7 @@ import './src/styles/global.css';
 const list = document.getElementById('list');
 window.setContent = height => { list.firstElementChild.style.height = height + 'px'; list.dispatchEvent(new Event('scroll')); };
 bindAutoHideScrollbar(list);
-` }, bundle: true, outfile: join(directory, 'fixture.js'), loader: { '.woff2': 'dataurl', '.svg': 'dataurl', '.png': 'dataurl' }, external: ['/fonts/*', '/monogram.svg'] });
+` }, bundle: true, outfile: join(directory, 'fixture.js'), loader: { '.woff2': 'dataurl', '.svg': 'dataurl', '.png': 'dataurl' }, external: ['/fonts/*', '/monogram.svg', '/backgrounds/*'] });
 const server = http.createServer(async (req, res) => {
   const name = req.url.slice(1);
   if (name === 'fixture.js' || name === 'fixture.css') return res.setHeader('Content-Type', `${name.endsWith('.js') ? 'text/javascript' : 'text/css'}; charset=utf-8`).end(await readFile(join(directory, name)));

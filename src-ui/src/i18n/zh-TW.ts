@@ -442,6 +442,7 @@ export const zhTW = {
   'theme.shape.carbon': '碳纖維',
   'theme.shape.monogram': '老花紋',
   'theme.shape.characters': '字元流',
+  'theme.shape.basalt': '碳岩',
   'theme.section.icons': '圖示風格',
   // 主題風格（在「配色」右側切換明亮/夜晚/跟隨系統）
   'theme.mode.light': '明亮',

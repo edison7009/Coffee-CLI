@@ -441,6 +441,7 @@ export const ru = {
   'theme.shape.carbon': 'Карбон',
   'theme.shape.monogram': 'Монограмма',
   'theme.shape.characters': 'Поток символов',
+  'theme.shape.basalt': 'Базальт',
   'theme.section.icons': 'Иконки',
   // Режим темы (справа от «Цвета»)
   'theme.mode.light': 'Светлая',

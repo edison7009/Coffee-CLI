@@ -270,7 +270,8 @@ await test('all 11 languages translate all shape options, including Monogram and
   const module = { exports: {} };
   runInNewContext(personalization.outputFiles[0].text, { module, exports: module.exports });
   const shapes = module.exports.THEME_SHAPES;
-  assert.equal(shapes.length, 9);
+  assert.equal(shapes.length, 10);
+  assert.equal(shapes.slice(-2).map(shape => shape.code).join(), 'characters,basalt', 'Basalt follows Character flow');
   for (const language of module.exports.LANGUAGES) {
     const dictionary = await readFile(`${root}/src/i18n/${language.code}.ts`, 'utf8');
     for (const shape of shapes) assert.ok(dictionary.includes(`'${shape.labelKey}':`), `${language.code}: ${shape.code}`);
@@ -289,6 +290,36 @@ await test('saved character selection uses identical backdrop attributes before 
   assert.equal(attributes['data-shape'], 'carbon');
   assert.equal(attributes['data-background'], 'characters');
   assert.equal(attributes['data-mode'], 'light');
+});
+
+await test('saved Basalt selection gets Carbon chrome and its own backdrop before React starts', async () => {
+  const html = await readFile(`${root}/index.html`, 'utf8');
+  const attributes = {};
+  runInNewContext(html.match(/<script>([\s\S]*?)<\/script>/)[1], {
+    localStorage: { getItem: key => ({ 'cc-theme': 'indigo', 'cc-mode': 'light', 'cc-shape': 'basalt' })[key] },
+    window: { matchMedia: () => ({ matches: false }) },
+    document: { documentElement: { setAttribute: (name, value) => { attributes[name] = value; } } },
+  });
+  assert.equal(attributes['data-shape'], 'carbon');
+  assert.equal(attributes['data-background'], 'basalt');
+});
+
+await test('first launch defaults to Oat, dark mode and Basalt before React starts', async () => {
+  const html = await readFile(`${root}/index.html`, 'utf8');
+  const attributes = {};
+  runInNewContext(html.match(/<script>([\s\S]*?)<\/script>/)[1], {
+    localStorage: { getItem: () => null },
+    window: { matchMedia: () => ({ matches: false }) },
+    document: { documentElement: { setAttribute: (name, value) => { attributes[name] = value; } } },
+  });
+  assert.equal(attributes['data-theme'], 'oat');
+  assert.equal(attributes['data-mode'], 'dark');
+  assert.equal(attributes['data-shape'], 'carbon');
+  assert.equal(attributes['data-background'], 'basalt');
+  const state = await readFile(`${root}/src/store/app-state.tsx`, 'utf8');
+  assert.match(state, /let theme: ThemeColor = 'oat';/);
+  assert.match(state, /let themeMode: ThemeMode = 'dark';/);
+  assert.match(state, /let shape: ThemeShape = 'basalt';/);
 });
 
 console.log(`OK: ${passed} character background regression checks`);

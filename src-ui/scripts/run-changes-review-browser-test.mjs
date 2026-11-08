@@ -57,7 +57,7 @@ export function useTextContextMenu(){return {menu:null,openMenu(){}}}
 export async function submitTerminalPrompt(id,text){window.pastedTask=text}
 `;
 await build({stdin:{resolveDir:project,loader:'tsx',contents:`import React from 'react';import {createRoot} from 'react-dom/client';import {RightPanel} from './src/components/right/Compiler';import {GitStatusProvider} from './src/lib/git-status';import './src/styles/global.css';import './src/components/left/Explorer.css';createRoot(document.getElementById('root')).render(<GitStatusProvider><RightPanel/></GitStatusProvider>);`},bundle:true,outfile:join(directory,'fixture.js'),jsx:'automatic',nodePaths:[join(project,'node_modules')],loader:{'.woff2':'dataurl','.woff':'dataurl','.png':'dataurl','.svg':'dataurl'},define:{'process.env.NODE_ENV':'"development"','__IS_LINUX__':'false'},plugins:[{name:'review-fixture',setup(b){
- b.onResolve({filter:/^\/(?:fonts\/|monogram)/},args=>({path:join(project,'public',args.path)}));
+ b.onResolve({filter:/^\/(?:fonts\/|monogram|backgrounds\/)/},args=>({path:join(project,'public',args.path)}));
  b.onResolve({filter:/^\.\/terminal-control$/},()=>({path:'mock',namespace:'fixture'}));
  b.onResolve({filter:/(?:store\/app-state|tauri|lib\/(?:explorer-drag|shiki|use-text-context-menu|terminal-control)|left\/Explorer)$/},()=>({path:'mock',namespace:'fixture'}));
  b.onLoad({filter:/.*/,namespace:'fixture'},()=>({contents:mock,resolveDir:project,loader:'tsx'}));

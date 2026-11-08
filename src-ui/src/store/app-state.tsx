@@ -59,7 +59,7 @@ export type ThemeMode = 'light' | 'dark' | 'system';
 export type ThemeShape =
   | 'soft' | 'slab' | 'sharp' | 'glass'
   | 'frost'
-  | 'panel' | 'carbon' | 'monogram' | 'characters';
+  | 'panel' | 'carbon' | 'monogram' | 'characters' | 'basalt';
 // Icon theme: visual style for file/folder icons in the explorer.
 // 8 themes, each with genuinely distinct folder silhouette + file icon style.
 // Fetched upstream (6): material, vscode-icons, catppuccin-mocha, devicon, fluent, symbols
@@ -723,7 +723,7 @@ const VALID_THEME_MODES: ThemeMode[] = ['light', 'dark', 'system'];
 const VALID_SHAPES: ThemeShape[] = [
   'soft', 'slab', 'sharp', 'glass',
   'frost',
-  'panel', 'carbon', 'monogram', 'characters',
+  'panel', 'carbon', 'monogram', 'characters', 'basalt',
 ];
 const VALID_ICON_THEMES: IconTheme[] = [
   'outline', 'material', 'vscode-icons', 'catppuccin-mocha',
@@ -733,9 +733,9 @@ const VALID_ICON_THEMES: IconTheme[] = [
 function getInitialState(): AppState {
   // Keep theme/shape defaults in sync with index.html's pre-paint script.
   // Saved preferences take priority for returning users.
-  let theme: ThemeColor = 'obsidian';
+  let theme: ThemeColor = 'oat';
   let themeMode: ThemeMode = 'dark';
-  let shape: ThemeShape = 'characters';
+  let shape: ThemeShape = 'basalt';
   let iconTheme: IconTheme = 'devicon';
   let lang = 'zh-CN';
   let folderPath: string | null = null;

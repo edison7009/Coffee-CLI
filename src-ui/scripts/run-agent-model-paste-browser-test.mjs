@@ -20,7 +20,7 @@ import React from'react';import{createRoot}from'react-dom/client';import{AgentMo
 window.invokes=[];window.clipboardText='';window.stored={provider:'openai',baseUrl:'https://api.openai.com/v1',model:'',apiKey:'sk-saved-plain'};
 createRoot(document.getElementById('root')).render(<div className="agent-page-config"><div className="agent-settings-content" style={{width:720,padding:20}}><AgentModelSection/></div></div>);
 ` }, bundle: true, outfile: join(directory, 'fixture.js'), jsx: 'automatic', define: { __IS_LINUX__: 'false' },
-  loader: { '.woff2': 'dataurl', '.svg': 'dataurl', '.png': 'dataurl' }, external: ['/fonts/*', '/monogram.svg'],
+  loader: { '.woff2': 'dataurl', '.svg': 'dataurl', '.png': 'dataurl' }, external: ['/fonts/*', '/monogram.svg', '/backgrounds/*'],
   plugins: [{ name: 'agent-model-fixtures', setup(b) {
     b.onLoad({ filter: /[/\\]AgentPages\.tsx$/ }, async args => ({ loader: 'tsx', contents: `${await readFile(args.path, 'utf8')}\nexport { AgentModelSection };` }));
     b.onResolve({ filter: new RegExp(`(?:${Object.keys(fixtures).map(name => name.replace('/', '\\/')).join('|')})$`) }, args => ({ path: Object.keys(fixtures).find(name => args.path.endsWith(name)), namespace: 'fixture' }));

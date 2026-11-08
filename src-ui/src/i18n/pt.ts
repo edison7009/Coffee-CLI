@@ -441,6 +441,7 @@ Apague esta nota quando quiser e comece a sua primeira tarefa.`,
   'theme.shape.carbon': 'Carbono',
   'theme.shape.monogram': 'Monograma',
   'theme.shape.characters': 'Fluxo de caracteres',
+  'theme.shape.basalt': 'Basalto',
   'theme.section.icons': 'Ícones',
   // Modo de tema (à direita de « Cores »)
   'theme.mode.light': 'Claro',

@@ -444,6 +444,7 @@ Delete this note whenever you're ready, and start your first task.`,
   'theme.shape.carbon': 'Carbon',
   'theme.shape.monogram': 'Monogram',
   'theme.shape.characters': 'Character Flow',
+  'theme.shape.basalt': 'Basalt',
   'theme.section.icons': 'Icon Style',
   // Mode (light / night / follow the OS) — the tab row above the swatches.
   'theme.mode.light': 'Light',

@@ -441,6 +441,7 @@ Supprimez cette note quand vous voulez et commencez votre première tâche.`,
   'theme.shape.carbon': 'Carbone',
   'theme.shape.monogram': 'Monogramme',
   'theme.shape.characters': 'Flux de caractères',
+  'theme.shape.basalt': 'Basalte',
   'theme.section.icons': 'Icônes',
   // Mode de thème (à droite de « Couleurs »)
   'theme.mode.light': 'Clair',

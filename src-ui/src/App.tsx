@@ -363,11 +363,11 @@ export function App() {
       el.setAttribute('data-shape', 'glass');
       el.setAttribute('data-frost', state.currentShape);
     } else {
-      // Character flow reuses Carbon's transparent chrome without its mesh.
-      el.setAttribute('data-shape', state.currentShape === 'characters' ? 'carbon' : state.currentShape);
+      // Character flow and Basalt reuse Carbon's transparent chrome, each with its own background instead of the mesh.
+      el.setAttribute('data-shape', state.currentShape === 'characters' || state.currentShape === 'basalt' ? 'carbon' : state.currentShape);
       el.removeAttribute('data-frost');
     }
-    if (state.currentShape === 'characters') el.setAttribute('data-background', 'characters');
+    if (state.currentShape === 'characters' || state.currentShape === 'basalt') el.setAttribute('data-background', state.currentShape);
     else el.removeAttribute('data-background');
     try { localStorage.setItem('cc-shape', state.currentShape); } catch { /* Best-effort operation; failure is non-fatal. */ }
 

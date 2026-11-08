@@ -18,7 +18,7 @@ import React from'react';import{createRoot}from'react-dom/client';import{NewSess
 window.opened=0;window.addEventListener('coffee-new-session',()=>window.opened++);
 createRoot(document.getElementById('root')).render(<div className="chrome-tabs-header" style={{width:600}}><div className="chrome-tab active"><span className="tab-title">Downloads</span></div><div className="chrome-tab"><span className="tab-title">coffee-cli</span></div><NewSessionTabButton/></div>);
 ` }, bundle: true, outfile: join(directory, 'fixture.js'), jsx: 'automatic', define: { __IS_LINUX__: 'false' },
-  loader: { '.woff2': 'dataurl', '.svg': 'dataurl', '.png': 'dataurl' }, external: ['/fonts/*', '/monogram.svg'],
+  loader: { '.woff2': 'dataurl', '.svg': 'dataurl', '.png': 'dataurl' }, external: ['/fonts/*', '/monogram.svg', '/backgrounds/*'],
   plugins: [{ name: 'language', setup(b) {
     b.onResolve({ filter: /store\/app-state$/ }, () => ({ path: 'language', namespace: 'fixture' }));
     b.onLoad({ filter: /.*/, namespace: 'fixture' }, () => ({ loader: 'js', contents: `export function useAppLanguage(){return 'zh-CN'}` }));

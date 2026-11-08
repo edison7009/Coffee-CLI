@@ -12,7 +12,7 @@ const directory = await mkdtemp(join(tmpdir(), 'coffee-usage-ui-'));
 await build({ stdin: { resolveDir: project, loader: 'tsx', contents: `
 import React from 'react';import{createRoot}from'react-dom/client';import{UsageDashboard}from'./src/components/center/UsageDashboard';import './src/styles/global.css';
 function App(){return <div className="panel-center"><UsageDashboard/></div>};createRoot(document.getElementById('root')).render(<App/>);
-` }, bundle: true, outfile: join(directory, 'fixture.js'), jsx: 'automatic', nodePaths: [join(project, 'node_modules')], external: ['/fonts/*', '/monogram.svg'], plugins: [{ name: 'usage-fixture', setup(b) {
+` }, bundle: true, outfile: join(directory, 'fixture.js'), jsx: 'automatic', nodePaths: [join(project, 'node_modules')], external: ['/fonts/*', '/monogram.svg', '/backgrounds/*'], plugins: [{ name: 'usage-fixture', setup(b) {
   b.onResolve({ filter: /store\/app-state$/ }, () => ({ path: 'store', namespace: 'fixture' }));
   b.onResolve({ filter: /(^|\/)tauri$/ }, () => ({ path: 'native', namespace: 'fixture' }));
   b.onLoad({ filter: /.*/, namespace: 'fixture' }, args => ({ contents: args.path === 'store' ? `export function useAppLanguage(){return 'zh-CN'}` : `

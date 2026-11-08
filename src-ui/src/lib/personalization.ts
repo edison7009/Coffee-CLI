@@ -85,6 +85,7 @@ export const THEME_SHAPES: { code: ThemeShape; labelKey: I18nKey }[] = [
   { code: 'carbon', labelKey: 'theme.shape.carbon' },
   { code: 'monogram', labelKey: 'theme.shape.monogram' },
   { code: 'characters', labelKey: 'theme.shape.characters' },
+  { code: 'basalt', labelKey: 'theme.shape.basalt' },
 ];
 
 // Frost reuses the entire glass chrome treatment; only the frosted backdrop

@@ -441,6 +441,7 @@ Lösch diesen Zettel, wann du willst, und starte deine erste Aufgabe.`,
   'theme.shape.carbon': 'Karbon',
   'theme.shape.monogram': 'Monogramm',
   'theme.shape.characters': 'Zeichenstrom',
+  'theme.shape.basalt': 'Basalt',
   'theme.section.icons': 'Icon-Stil',
   // Themenmodus (rechts neben „Farben“)
   'theme.mode.light': 'Hell',

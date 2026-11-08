@@ -20,7 +20,7 @@ await build({
     createRoot(document.getElementById('root')).render(<AppProvider><Open/></AppProvider>);
   ` },
   bundle: true, outfile: join(directory, 'fixture.js'), jsx: 'automatic',
-  external: ['/fonts/*', '/monogram.svg'], nodePaths: [join(project, 'node_modules')], loader: { '.svg': 'dataurl', '.png': 'dataurl', '.webp': 'dataurl', '.woff2': 'dataurl' },
+  external: ['/fonts/*', '/monogram.svg', '/backgrounds/*'], nodePaths: [join(project, 'node_modules')], loader: { '.svg': 'dataurl', '.png': 'dataurl', '.webp': 'dataurl', '.woff2': 'dataurl' },
   define: { 'process.env.NODE_ENV': '"development"' },
   plugins: [{ name: 'native-boundary', setup(b) {
     b.onResolve({ filter: /^@tauri-apps\/plugin-dialog$/ }, () => ({ path: 'dialog', namespace: 'fixture' }));

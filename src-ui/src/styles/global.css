@@ -3131,6 +3131,43 @@ html.is-windows[data-frost="frost"] #root {
     background: rgba(255, 255, 255, 0.18);
 }
 
+/* Carbon: a quiet graphite twill instead of the hex mesh. Fine crossed
+   threads over the theme base plus one faint diagonal sheen; the ink takes a
+   touch of the accent. Static gradients only. Character flow and
+   Basalt override these layers below via data-background. */
+[data-shape="carbon"] {
+    --carbon-ink: color-mix(in srgb, rgb(198 206 214) 90%, var(--accent));
+}
+[data-shape="carbon"]:where([data-mode="light"]) {
+    --carbon-ink: color-mix(in srgb, var(--text-1) 90%, var(--accent));
+}
+[data-shape="carbon"] #root {
+    background:
+        linear-gradient(118deg, transparent 14%, rgba(255, 255, 255, 0.03) 48%, transparent 78%),
+        var(--bg-app);
+}
+[data-shape="carbon"]:where([data-mode="light"]) #root {
+    background:
+        linear-gradient(118deg, transparent 14%, color-mix(in srgb, var(--text-1) 3.5%, transparent) 48%, transparent 78%),
+        var(--bg-app);
+}
+[data-shape="carbon"] #root::before {
+    -webkit-mask-image: none;
+            mask-image: none;
+    opacity: 1;
+    background:
+        repeating-linear-gradient(34deg, color-mix(in srgb, var(--carbon-ink) 8%, transparent) 0 1px, transparent 1px 3px),
+        repeating-linear-gradient(-28deg, color-mix(in srgb, var(--carbon-ink) 3.5%, transparent) 0 1px, transparent 1px 4px);
+}
+[data-shape="carbon"]:where([data-mode="light"]) #root::before {
+    background:
+        repeating-linear-gradient(34deg, color-mix(in srgb, var(--carbon-ink) 13%, transparent) 0 1px, transparent 1px 3px),
+        repeating-linear-gradient(-28deg, color-mix(in srgb, var(--carbon-ink) 6%, transparent) 0 1px, transparent 1px 4px);
+}
+[data-shape="carbon"] #root::after {
+    background: none;
+}
+
 /* Character flow shares Carbon's transparent chrome, with one GPU canvas
    replacing the static material. Keep it inside the root's rounded clip. */
 [data-background="characters"] #root {
@@ -3140,6 +3177,19 @@ html.is-windows[data-frost="frost"] #root {
 [data-background="characters"] #root::after {
     display: none;
 }
+/* Basalt (碳岩): fine-sand stone with static grain and pores. The PNG's
+   transparent shadows/highlights keep the theme base underneath. */
+[data-background="basalt"] #root {
+    background: url('/backgrounds/basalt-dark.png') center / cover no-repeat, var(--bg-app);
+}
+[data-mode="light"][data-background="basalt"] #root {
+    background: url('/backgrounds/basalt-light.png') center / cover no-repeat, var(--bg-app);
+}
+[data-background="basalt"] #root::before,
+[data-background="basalt"] #root::after {
+    display: none;
+}
+
 .character-background,
 .character-background canvas {
     position: absolute;

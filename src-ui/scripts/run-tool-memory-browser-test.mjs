@@ -33,7 +33,7 @@ createRoot(document.getElementById('root')).render(<Fixture/>);` }, bundle:true,
     b.onResolve({filter:/\/store\/app-state$/},args=>({path:args.path,namespace:'fixture'}));
     b.onLoad({filter:/.*/,namespace:'fixture'},args=>({loader:'js',contents:args.path.endsWith('/tauri')?native:'export function useAppLanguage(){return window.fixtureLanguage||"zh-CN"}'}));
   }}],
-  external:['/fonts/*','/monogram.svg'],
+  external:['/fonts/*','/monogram.svg', '/backgrounds/*'],
 });
 const server=http.createServer(async(req,res)=>{
   if(/^\/fonts\/[\w.-]+\.woff2$/.test(req.url)||req.url==='/monogram.svg'){res.setHeader('Content-Type',req.url.endsWith('.svg')?'image/svg+xml':'font/woff2');return res.end(await readFile(join(project,'public',req.url.slice(1))))}

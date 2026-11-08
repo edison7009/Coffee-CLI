@@ -14,7 +14,7 @@ const bundle = await build({
     function Fixture(){const [tool,setTool]=useState(null);window.openTool=key=>setTool({key,id:crypto.randomUUID()});return tool&&<ToolConfigModal key={tool.id} toolKey={tool.key} toolLabel={tool.key} onClose={()=>setTool(null)}/>}
     createRoot(document.getElementById('root')).render(<Fixture/>);
   ` },
-  bundle: true, write: false, outfile: 'fixture.js', jsx: 'automatic', external: ['/fonts/*', '/monogram.svg'],
+  bundle: true, write: false, outfile: 'fixture.js', jsx: 'automatic', external: ['/fonts/*', '/monogram.svg', '/backgrounds/*'],
   plugins: [{ name: 'isolated-config', setup(builder) {
     builder.onResolve({ filter: /store\/app-state$/ }, () => ({ path: 'language', namespace: 'fixture' }));
     builder.onResolve({ filter: /(^|\/)tauri$/ }, () => ({ path: 'config', namespace: 'fixture' }));

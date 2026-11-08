@@ -1194,7 +1194,7 @@ export function CenterPanel() {
   // replaced by the shape texture in those [data-shape] overrides). Without
   // this, the xterm canvas renders its solid `bgOpaque` and covers the
   // backdrop exactly where it matters most — the largest surface.
-  const isBackdropShape = state.currentShape === 'glass' || isFrostShape(state.currentShape) || state.currentShape === 'carbon' || state.currentShape === 'monogram' || state.currentShape === 'characters';
+  const isBackdropShape = state.currentShape === 'glass' || isFrostShape(state.currentShape) || state.currentShape === 'carbon' || state.currentShape === 'monogram' || state.currentShape === 'characters' || state.currentShape === 'basalt';
   const hasBg = (bgType !== 'none' && bgPath !== '') || isBackdropShape;
 
   // Convert wallpaper path to a displayable URL. User-picked local

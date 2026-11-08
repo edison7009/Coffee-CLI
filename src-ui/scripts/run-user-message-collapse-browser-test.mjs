@@ -14,7 +14,7 @@ function Row({text,sentAt=0}){const[expanded,setExpanded]=useState(false);return
 function App(){return <div className="panel-center"><div className="claude-scroll" style={{height:520,overflow:'auto',padding:16,fontSize:14,lineHeight:1.65}}><div style={{height:300}}/><Row text="Short message"/><Row text={long}/><Row text="Just sent" sentAt={Date.now()}/><div style={{height:900}}/></div></div>}
 createRoot(document.getElementById('root')).render(<App/>);
 ` }, bundle: true, outfile: join(directory, 'fixture.js'), jsx: 'automatic', define: { __IS_LINUX__: 'false' },
-  loader: { '.woff2': 'dataurl', '.svg': 'dataurl', '.png': 'dataurl' }, external: ['/fonts/*', '/monogram.svg'],
+  loader: { '.woff2': 'dataurl', '.svg': 'dataurl', '.png': 'dataurl' }, external: ['/fonts/*', '/monogram.svg', '/backgrounds/*'],
   plugins: [{ name: 'language', setup(b) {
     b.onResolve({ filter: /store\/app-state$/ }, () => ({ path: 'language', namespace: 'fixture' }));
     b.onLoad({ filter: /.*/, namespace: 'fixture' }, () => ({ loader: 'js', contents: `export function useAppLanguage(){return 'zh-CN'}` }));
