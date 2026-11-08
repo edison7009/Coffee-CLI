@@ -623,7 +623,7 @@ dependencies = [
 
 [[package]]
 name = "coffee-cli"
-version = "3.9.3"
+version = "3.9.4"
 dependencies = [
  "anyhow",
  "async-trait",

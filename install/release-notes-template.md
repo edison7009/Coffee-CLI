@@ -1,74 +1,59 @@
 <details open>
 <summary><b>简体中文</b></summary>
 
-### Coffee CLI v3.9.3 · 自动化与全新设置页
+### Coffee CLI v3.9.4 · 碳岩主题与代码块底部收起
 
-- **自动化：** 左侧“搜索”上方新增“自动化”。按每天、工作日、每周（可多选）、每隔几小时几分钟或某一次，把写好的指令发给 Claude Code、Codex、DeepSeek Harness、OpenCode 或 Pi 的桌面对话，到点在前台打开。右侧任务列表顶部可以直接开关，或一键发到当前对话。
-- **全新设置页：** 设置铺满整个窗口，声音和快捷键并入“通用”，Coffee Agent 的配置也在设置里。新增两排配色，共 24 种主题。
-- **每轮耗时与费用：** 五款桌面对话的每一轮回复下方显示耗时、Token 和费用，历史记录也有；模型菜单显示各模型的价格。
-- **DeepSeek Harness：** 回复流式显示，文件修改和命令显示为卡片，正在运行的子代理和后台任务显示在输入框旁；权限菜单加上图标和简短说明。
-- **会话列表与工作树：** 会话列表菜单可选应用和图标显示方式；工作树分支按项目命名，创建期间显示状态，建好后再发送消息。
-- **macOS：** 左上角红绿灯跟随应用的深浅色，深色主题下显示为玻璃质感；用输入法确认候选词时不再误发送。没安装 Codex CLI 时会使用 ChatGPT 应用自带的版本。
-- **修复与调整：** 对话启动失败时直接显示原因；配置和任务改为原子保存，不会覆盖已损坏的文件；重启后不再自动恢复上次打开的标签页，避免同一会话被重复打开而损坏记录。
+- **碳岩主题：** 新增细砂质感的“碳岩”背景，首次启动默认使用燕麦配色、深色模式和碳岩。碳纤维改为低调的细斜纹。
+- **代码块底部收起：** 长代码、修改对比和命令输入/输出的右下角多了“展开 / 收起”标签，展开后完整显示，看完在底部直接收起，右上角也能收起。
+- **按钮更柔和：** 设置里的选中项和悬停按钮去掉强调色描边，改为提亮底色，圆角边缘更干净。
+- **修复：** 对话已在别处打开（例如 ChatGPT 应用或另一个终端）时会说明原因；启动台更新 CLI 时，更新标签保持原有大小，不再被挤成灰块。
 
 </details>
 
 <details>
 <summary><b>English</b></summary>
 
-### Coffee CLI v3.9.3 · Automations and a New Settings Page
+### Coffee CLI v3.9.4 · Basalt Theme and Collapse from the Bottom
 
-- **Automations:** A new Automations entry sits above Search. Send a prompt you wrote to a Claude Code, Codex, DeepSeek Harness, OpenCode or Pi desktop conversation daily, on weekdays, on chosen days of the week, every few hours and minutes, or once; it opens in front when due. The top of the task list lets you switch each one on or off, or send it to the current conversation in one click.
-- **New settings page:** Settings now fills the window. Sounds and shortcuts moved into General, and Coffee Agent's configuration lives in Settings too. Two new rows of colours bring the themes to 24.
-- **Time and cost per turn:** Every turn in the five desktop conversations shows its time, tokens and cost, history included, and the model menus show each model's price.
-- **DeepSeek Harness:** Replies stream in, file edits and commands appear as cards, and running sub-agents and background jobs show beside the composer. The permission menu has icons and short notes.
-- **Session list and worktrees:** The session list menu picks an app and how icons show. Worktree branches are named after the project, and a status shows while one is created; messages wait until it is ready.
-- **macOS:** The window controls follow the app's light or dark theme and look like glass in dark themes. Confirming an input method candidate no longer sends the message. Without Codex CLI installed, the copy bundled with the ChatGPT app is used.
-- **Fixes and changes:** A conversation that cannot start says why. Settings and tasks are saved atomically and a damaged file is never overwritten. Tabs are no longer reopened after a restart, which could open one session twice and damage its transcript.
+- **Basalt theme:** A new fine-sand Basalt backdrop. First launch now opens in the Oat palette, dark mode and Basalt. Carbon becomes a quiet fine twill.
+- **Collapse from the bottom:** Long code, edit diffs and command input/output get an Expand / Collapse tab on their lower right edge. An open block shows everything, and you can collapse it right at the bottom or from the top-right corner.
+- **Softer buttons:** Selected options and hovered buttons in Settings drop the accent outline for a brighter fill, so rounded corners look cleaner.
+- **Fixes:** A conversation already open elsewhere (such as the ChatGPT app or another terminal) now says so. The Launchpad update label keeps its size while a CLI updates instead of turning into a grey block.
 
 </details>
 
 <details>
 <summary><b>繁體中文</b></summary>
 
-### Coffee CLI v3.9.3 · 自動化與全新設定頁
+### Coffee CLI v3.9.4 · 碳岩主題與程式碼區塊底部收合
 
-- **自動化：** 左側「搜尋」上方新增「自動化」。按每天、工作日、每週（可多選）、每隔幾小時幾分鐘或某一次，把寫好的指令傳給 Claude Code、Codex、DeepSeek Harness、OpenCode 或 Pi 的桌面對話，到點在前台開啟。右側任務清單頂部可直接開關，或一鍵傳到目前對話。
-- **全新設定頁：** 設定鋪滿整個視窗，聲音與快捷鍵併入「一般」，Coffee Agent 的設定也在設定裡。新增兩排配色，共 24 種主題。
-- **每輪耗時與費用：** 五款桌面對話的每一輪回覆下方顯示耗時、Token 與費用，歷史記錄也有；模型選單顯示各模型的價格。
-- **DeepSeek Harness：** 回覆串流顯示，檔案修改與命令以卡片呈現，執行中的子代理與背景任務顯示在輸入框旁；權限選單加上圖示與簡短說明。
-- **工作階段清單與工作樹：** 工作階段清單選單可選應用與圖示顯示方式；工作樹分支依專案命名，建立期間顯示狀態，建好後再傳送訊息。
-- **macOS：** 左上角紅綠燈跟隨應用的深淺色，深色主題下呈現玻璃質感；用輸入法確認候選字時不再誤傳送。未安裝 Codex CLI 時會使用 ChatGPT 應用內建的版本。
-- **修復與調整：** 對話啟動失敗時直接顯示原因；設定與任務改為原子儲存，不會覆蓋已損壞的檔案；重新啟動後不再自動恢復上次開啟的分頁，避免同一工作階段被重複開啟而損壞記錄。
+- **碳岩主題：** 新增細砂質感的「碳岩」背景，首次啟動預設使用燕麥配色、深色模式與碳岩。碳纖維改為低調的細斜紋。
+- **程式碼區塊底部收合：** 長程式碼、修改對比與命令輸入/輸出的右下角多了「展開 / 收合」標籤，展開後完整顯示，看完在底部直接收合，右上角也能收合。
+- **按鈕更柔和：** 設定裡的選中項與懸停按鈕去掉強調色描邊，改為提亮底色，圓角邊緣更乾淨。
+- **修復：** 對話已在別處開啟（例如 ChatGPT 應用或另一個終端機）時會說明原因；啟動台更新 CLI 時，更新標籤保持原有大小，不再被擠成灰塊。
 
 </details>
 
 <details>
 <summary><b>日本語</b></summary>
 
-### Coffee CLI v3.9.3 · オートメーションと新しい設定ページ
+### Coffee CLI v3.9.4 · 玄武岩テーマと下からの折りたたみ
 
-- **オートメーション：** 左側の「検索」の上に「オートメーション」を追加しました。毎日、平日、曜日指定（複数可）、数時間・数分おき、または一度だけ、書いておいた指示を Claude Code、Codex、DeepSeek Harness、OpenCode、Pi のデスクトップ会話に送り、時間になると前面で開きます。タスク一覧の上部でオン／オフを切り替えたり、今の会話へワンクリックで送ったりできます。
-- **新しい設定ページ：** 設定がウィンドウ全体に広がり、サウンドとショートカットは「一般」に、Coffee Agent の設定も設定内に移りました。配色が 2 列増え、テーマは 24 種類になりました。
-- **ターンごとの時間と費用：** 5 つのデスクトップ会話で、各ターンの下に所要時間・トークン・費用を表示します（履歴も含む）。モデルメニューには各モデルの価格を表示します。
-- **DeepSeek Harness：** 返信がストリーミング表示になり、ファイル変更とコマンドはカードで表示され、実行中のサブエージェントとバックグラウンドジョブが入力欄の横に表示されます。権限メニューにアイコンと短い説明を付けました。
-- **セッション一覧とワークツリー：** セッション一覧のメニューでアプリとアイコン表示を選べます。ワークツリーのブランチはプロジェクト名で命名され、作成中は状態を表示し、準備ができてからメッセージを送ります。
-- **macOS：** 左上の信号ボタンがアプリのライト／ダークに合わせ、ダークテーマではガラス調になります。入力メソッドで候補を確定しても送信されなくなりました。Codex CLI が未インストールの場合は ChatGPT アプリ同梱のものを使います。
-- **修正と変更：** 会話を開始できないときは理由をその場に表示します。設定とタスクは原子的に保存され、破損したファイルを上書きしません。再起動後にタブを自動で復元しなくなりました（同じセッションが二重に開かれ記録が壊れることがあったため）。
+- **玄武岩テーマ：** 細かな砂目の「玄武岩」背景を追加しました。初回起動時はオーツの配色、ダークモード、玄武岩で開きます。カーボンは控えめな細い綾織りになりました。
+- **下から折りたたみ：** 長いコード、変更の差分、コマンドの入出力の右下に「展開 / 折りたたむ」タブが付きました。展開すると全体を表示し、読み終えたらその場で下から、または右上から折りたためます。
+- **やわらかなボタン：** 設定の選択中の項目とホバー中のボタンは、アクセント色の枠線をやめて明るい塗りにし、角丸の縁がすっきりしました。
+- **修正：** 会話が別の場所（ChatGPT アプリや別のターミナルなど）で開かれている場合はその旨を表示します。ランチパッドで CLI を更新中も更新ラベルの大きさが保たれ、灰色の塊になりません。
 
 </details>
 
 <details>
 <summary><b>한국어</b></summary>
 
-### Coffee CLI v3.9.3 · 자동화와 새로운 설정 페이지
+### Coffee CLI v3.9.4 · 현무암 테마와 아래에서 접기
 
-- **자동화:** 왼쪽 "검색" 위에 "자동화"가 추가되었습니다. 매일, 평일, 요일 지정(여러 개 선택 가능), 몇 시간·몇 분마다, 또는 한 번만, 미리 써 둔 지시를 Claude Code, Codex, DeepSeek Harness, OpenCode, Pi 데스크톱 대화로 보내고 시간이 되면 앞에 엽니다. 작업 목록 맨 위에서 켜고 끄거나 현재 대화로 한 번에 보낼 수 있습니다.
-- **새로운 설정 페이지:** 설정이 창 전체를 채우고, 소리와 단축키는 "일반"으로, Coffee Agent 설정도 설정 안으로 옮겼습니다. 색상이 두 줄 늘어 테마가 24가지가 되었습니다.
-- **턴별 시간과 비용:** 다섯 데스크톱 대화의 각 턴 아래에 소요 시간, 토큰, 비용을 표시합니다(기록 포함). 모델 메뉴에는 모델별 가격이 표시됩니다.
-- **DeepSeek Harness:** 답변이 스트리밍으로 표시되고, 파일 수정과 명령은 카드로 보이며, 실행 중인 하위 에이전트와 백그라운드 작업이 입력창 옆에 표시됩니다. 권한 메뉴에 아이콘과 짧은 설명을 더했습니다.
-- **세션 목록과 워크트리:** 세션 목록 메뉴에서 앱과 아이콘 표시 방식을 고를 수 있습니다. 워크트리 브랜치는 프로젝트 이름으로 지어지고, 만드는 동안 상태를 표시하며 준비가 끝난 뒤 메시지를 보냅니다.
-- **macOS:** 왼쪽 위 창 버튼이 앱의 밝은/어두운 테마를 따르고, 어두운 테마에서는 유리 질감으로 보입니다. 입력기로 후보를 확정할 때 더 이상 메시지가 전송되지 않습니다. Codex CLI가 설치되어 있지 않으면 ChatGPT 앱에 포함된 버전을 사용합니다.
-- **수정과 변경:** 대화를 시작할 수 없으면 이유를 그 자리에 표시합니다. 설정과 작업은 원자적으로 저장되어 손상된 파일을 덮어쓰지 않습니다. 재시작 후 탭을 자동으로 복원하지 않습니다(같은 세션이 두 번 열려 기록이 손상될 수 있었기 때문입니다).
+- **현무암 테마:** 고운 모래 질감의 "현무암" 배경이 추가되었습니다. 처음 실행하면 귀리 색상, 어두운 모드, 현무암으로 열립니다. 카본은 차분한 가는 능직으로 바뀌었습니다.
+- **아래에서 접기:** 긴 코드, 수정 비교, 명령 입력/출력의 오른쪽 아래에 "펼치기 / 접기" 탭이 생겼습니다. 펼치면 전체가 보이고, 다 읽은 뒤 아래에서 바로 접거나 오른쪽 위에서 접을 수 있습니다.
+- **부드러워진 버튼:** 설정에서 선택된 항목과 마우스를 올린 버튼은 강조색 테두리 대신 밝은 바탕을 써서 둥근 모서리가 더 깔끔합니다.
+- **수정:** 대화가 다른 곳(ChatGPT 앱이나 다른 터미널 등)에서 열려 있으면 그렇게 알려 줍니다. 런치패드에서 CLI를 업데이트하는 동안 업데이트 라벨이 크기를 유지하고 회색 덩어리로 바뀌지 않습니다.
 
 </details>
