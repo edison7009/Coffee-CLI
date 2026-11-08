@@ -501,6 +501,7 @@ export const zhCN = {
   'conversation.thinking': '正在思考中…',
   'conversation.restoring': '正在回到对话中…',
   'conversation.tool_missing': "没有找到 {tool}，对话无法启动。请先安装，再点“重新连接”。",
+  'conversation.in_use': '这段对话正在其他地方打开（例如 ChatGPT 桌面端、另一个终端、编辑器插件或另一个标签页），请先在那边关闭，再重新连接。',
   'conversation.executing': '正在执行中…',
   'conversation.copied': '已复制',
   'conversation.copy_message': '复制消息',

@@ -499,6 +499,7 @@ export const ja = {
   'conversation.thinking': '考え中…',
   'conversation.restoring': '会話に戻っています…',
   'conversation.tool_missing': "{tool} が見つからないため、会話を開始できません。インストールしてから再接続してください。",
+  'conversation.in_use': 'この会話は別の場所（ChatGPT アプリ、別のターミナル、エディター拡張、別のタブなど）で開かれています。そちらで閉じてから再接続してください。',
   'conversation.executing': '実行中…',
   'conversation.copied': 'コピーしました',
   'conversation.copy_message': 'メッセージをコピー',

@@ -501,6 +501,7 @@ Xóa tờ ghi chú này khi bạn sẵn sàng và bắt đầu tác vụ đầu 
   'conversation.thinking': 'Đang suy nghĩ…',
   'conversation.restoring': 'Đang quay lại cuộc trò chuyện…',
   'conversation.tool_missing': "Không tìm thấy {tool} nên không thể bắt đầu cuộc trò chuyện. Hãy cài đặt rồi kết nối lại.",
+  'conversation.in_use': 'Cuộc trò chuyện này đang mở ở nơi khác, như ứng dụng ChatGPT, terminal khác, tiện ích trình soạn thảo hoặc tab khác. Hãy đóng nó ở đó rồi kết nối lại.',
   'conversation.executing': 'Đang thực thi…',
   'conversation.copied': 'Đã sao chép',
   'conversation.copy_message': 'Sao chép tin nhắn',

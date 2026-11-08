@@ -500,6 +500,7 @@ export const zhTW = {
   'conversation.thinking': '正在思考中…',
   'conversation.restoring': '正在回到對話中…',
   'conversation.tool_missing': "沒有找到 {tool}，對話無法啟動。請先安裝，再點「重新連線」。",
+  'conversation.in_use': '這段對話正在其他地方開啟（例如 ChatGPT 桌面端、另一個終端、編輯器外掛或另一個分頁），請先在那邊關閉，再重新連線。',
   'conversation.executing': '正在執行中…',
   'conversation.copied': '已複製',
   'conversation.copy_message': '複製訊息',

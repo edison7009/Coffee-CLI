@@ -499,6 +499,7 @@ export const ko = {
   'conversation.thinking': '생각 중…',
   'conversation.restoring': '대화로 돌아가는 중…',
   'conversation.tool_missing': "{tool}을(를) 찾을 수 없어 대화를 시작할 수 없습니다. 설치한 뒤 다시 연결하세요.",
+  'conversation.in_use': '이 대화는 다른 곳(ChatGPT 앱, 다른 터미널, 편집기 확장, 다른 탭 등)에서 열려 있습니다. 그쪽에서 닫은 뒤 다시 연결하세요.',
   'conversation.executing': '실행 중…',
   'conversation.copied': '복사됨',
   'conversation.copy_message': '메시지 복사',

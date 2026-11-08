@@ -496,6 +496,7 @@ export const ru = {
   'conversation.thinking': 'Размышляет…',
   'conversation.restoring': 'Возвращаемся к беседе…',
   'conversation.tool_missing': "{tool} не найден, поэтому разговор не может начаться. Установите его и подключитесь снова.",
+  'conversation.in_use': 'Этот разговор открыт в другом месте: в приложении ChatGPT, другом терминале, расширении редактора или другой вкладке. Закройте его там и подключитесь снова.',
   'conversation.executing': 'Выполняется…',
   'conversation.copied': 'Скопировано',
   'conversation.copy_message': 'Копировать сообщение',
