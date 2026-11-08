@@ -315,6 +315,7 @@ export const zhTW = {
 
   // Settings modal (titlebar gear)
   'settings.title': '設定',
+  'settings.back': "返回",
   'settings.general': '通用',
   'settings.uiScale': '介面縮放',
   'settings.uiScale.reset': '恢復預設',
@@ -332,6 +333,9 @@ export const zhTW = {
   'settings.sound.custom': '自訂',
   'settings.sound.remove': '移除自訂提示音',
   'settings.sound.failed': '這個檔案無法使用，請選擇 20 MB 以內的 MP3 或 WAV',
+  'settings.sound.default': "預設聲音",
+  'settings.sound.change': "更換",
+  'settings.sound.disabled': "已關閉",
   'interaction.permission': '需要確認權限',
   'interaction.question': '需要你的回答',
   'interaction.custom_placeholder': '輸入你的補充說明…',
@@ -355,6 +359,7 @@ export const zhTW = {
   'settings.send.title': '發送訊息',
   'settings.send.newline': '換行',
   'settings.gambit.hotkey': '開關快捷鍵',
+  'settings.gambit.hotkey_hint': "顯示 / 隱藏：{left} 左側欄 · {gambit} 輸入框 · {right} 右側欄",
   // 頂部快捷開關顯示模式(設定 → 快捷鍵)
   'settings.titlebar.toggle': '頂部快捷開關',
   'settings.titlebar.toggle.icon-hotkey': '圖示 + 快捷鍵',

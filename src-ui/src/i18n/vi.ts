@@ -317,6 +317,7 @@ export const vi = {
 
   // Settings modal (titlebar gear)
   'settings.title': 'Cài đặt',
+  'settings.back': "Quay lại",
   'settings.general': 'Chung',
   'settings.uiScale': 'Tỷ lệ giao diện',
   'settings.uiScale.reset': 'Khôi phục mặc định',
@@ -335,6 +336,9 @@ export const vi = {
   'settings.sound.custom': 'Tùy chỉnh',
   'settings.sound.remove': 'Xóa âm thanh tùy chỉnh',
   'settings.sound.failed': 'Không thể dùng tệp này. Hãy chọn MP3 hoặc WAV tối đa 20 MB',
+  'settings.sound.default': "Âm mặc định",
+  'settings.sound.change': "Đổi",
+  'settings.sound.disabled': "Đã tắt",
   'interaction.permission': 'Cần cấp quyền',
   'interaction.question': 'Cần câu trả lời',
   'interaction.custom_placeholder': 'Nhập câu trả lời của bạn…',
@@ -357,6 +361,7 @@ export const vi = {
   'settings.send.title': 'Gửi tin nhắn',
   'settings.send.newline': 'để xuống dòng',
   'settings.gambit.hotkey': 'Phím tắt bật/tắt',
+  'settings.gambit.hotkey_hint': "Hiện / ẩn: {left} thanh bên trái · {gambit} ô nhập · {right} thanh bên phải",
   'settings.titlebar.toggle': 'Nút thanh tiêu đề',
   'settings.titlebar.toggle.icon-hotkey': 'Biểu tượng + phím tắt',
   'settings.titlebar.toggle.icon': 'Chỉ biểu tượng',

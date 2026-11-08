@@ -25,7 +25,7 @@ const compiled = await build({
       import { vi } from './src/i18n/vi';
       export const dictionaries = { en, 'zh-CN': zhCN, 'zh-TW': zhTW, ja, ko, es, fr, de, pt, ru, vi };
       export { useT } from './src/i18n/useT';
-      export { AgentPages, ChannelConnectionSummary, AgentHelpModal } from './src/components/agent/AgentPages';
+      export { AgentPages, AgentSettings, ChannelConnectionSummary, AgentHelpModal } from './src/components/agent/AgentPages';
       export { formatAgentActivity, formatAgentError, formatAgentMessage } from './src/lib/agent-client';
     `,
     resolveDir: root,
@@ -76,8 +76,10 @@ for (const [language, dictionary] of Object.entries(api.dictionaries)) {
   }
   context.__agentTestLanguage = language;
   context.__agentTestState.currentLang = language;
-  context.__agentTestState.agentPageActive = 'config';
-  const settings = renderToStaticMarkup(React.createElement(api.AgentPages, { page: 'config' }));
+  context.__agentTestState.settingsOpen = true;
+  context.__agentTestState.settingsSection = 'agent';
+  // Coffee Agent's configuration is the settings page's Agent section.
+  const settings = renderToStaticMarkup(React.createElement(api.AgentSettings));
   for (const key of ['agent.settings.intro', 'agent.settings.help', 'agent.model.title', 'agent.model.provider', 'agent.modes.title', 'agent.delegation.title', 'agent.modes.sentinel.title', 'agent.modes.project_manager.title', 'agent.modes.expert_config.title', 'agent.channels.title']) {
     assert.ok(settings.includes(escaped(dictionary[key])), `${language}: settings did not render ${key}`);
   }

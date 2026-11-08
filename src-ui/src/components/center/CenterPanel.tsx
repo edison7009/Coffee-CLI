@@ -373,7 +373,7 @@ export function CenterPanel() {
   const diffTabActive = state.diffTabActive;
   const agentPageActive = state.agentPageActive;
   const usageOpen = state.usageOpen;
-  const utilityPageOpen = usageOpen || state.toolSettingsOpen;
+  const utilityPageOpen = usageOpen || state.toolSettingsOpen || state.settingsOpen;
   const contentActive = !utilityPageOpen && !diffTabActive && !agentPageActive;
   const splitIds = splitSessionIds(state.sessionSplit);
   const splitVisible = contentActive && splitIds.length > 1 && splitIds.includes(activeTerminalId ?? '');

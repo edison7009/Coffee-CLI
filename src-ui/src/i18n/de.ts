@@ -315,6 +315,7 @@ export const de = {
 
   // Settings modal (titlebar gear)
   'settings.title': 'Einstellungen',
+  'settings.back': "Zurück",
   'settings.general': 'Allgemein',
   'settings.uiScale': 'Oberflächenskalierung',
   'settings.uiScale.reset': 'Standard wiederherstellen',
@@ -333,6 +334,9 @@ export const de = {
   'settings.sound.custom': 'Eigener Ton',
   'settings.sound.remove': 'Eigenen Ton entfernen',
   'settings.sound.failed': 'Diese Datei kann nicht verwendet werden. Wähle eine MP3 oder WAV bis 20 MB',
+  'settings.sound.default': "Standardton",
+  'settings.sound.change': "Ändern",
+  'settings.sound.disabled': "Aus",
   'interaction.permission': 'Berechtigung erforderlich',
   'interaction.question': 'Antwort erforderlich',
   'interaction.custom_placeholder': 'Eigene Antwort eingeben…',
@@ -355,6 +359,7 @@ export const de = {
   'settings.send.title': 'Nachricht senden',
   'settings.send.newline': 'für neue Zeile',
   'settings.gambit.hotkey': 'Kürzel zum Umschalten',
+  'settings.gambit.hotkey_hint': "Ein- oder ausblenden: {left} linke Leiste · {gambit} Eingabefeld · {right} rechte Leiste",
   'settings.titlebar.toggle': 'Titelleisten-Schalter',
   'settings.titlebar.toggle.icon-hotkey': 'Symbol + Tastenkürzel',
   'settings.titlebar.toggle.icon': 'Nur Symbol',

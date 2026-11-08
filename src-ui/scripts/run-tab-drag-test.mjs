@@ -151,7 +151,8 @@ test('a normal settings click remains a click below the drag threshold', () => {
   const f = fixture(); const x = f.centerX('agent:config');
   f.down('agent:config'); f.move(x + 4); f.up(x + 4); f.api.onTabClickGuarded('agent:config');
   assert.deepEqual(f.actions, [{ type: 'OPEN_AGENT_PAGE', page: 'config' }]);
-  assert.equal(f.state.agentPageActive, 'config'); assert.equal(f.listeners.size, 0);
+  // A leftover configuration tab opens the settings page's Agent section.
+  assert.equal(f.state.settingsOpen, true); assert.equal(f.state.settingsSection, 'agent'); assert.equal(f.listeners.size, 0);
 });
 
 test('close buttons do not start dragging and use the real Agent close action', () => {
@@ -183,11 +184,11 @@ test('hidden terminals retain their lifecycle and are excluded from drag geometr
 
 test('close, reopen, new launch and terminal restart preserve remaining mixed order', () => {
   const f = fixture(['agent:config', 'one', 'agent:agent', 'two']);
-  f.dispatch({ type: 'CLOSE_AGENT_PAGE', page: 'config' });
-  f.dispatch({ type: 'OPEN_AGENT_PAGE', page: 'config' });
+  f.dispatch({ type: 'CLOSE_AGENT_PAGE', page: 'agent' });
+  f.dispatch({ type: 'OPEN_AGENT_PAGE', page: 'agent' });
   f.dispatch({ type: 'LAUNCH_TERMINAL_TOOL', id: 'three', tool: 'claude', cwd: 'E:\\three' });
   f.dispatch({ type: 'RESTART_TERMINAL', id: 'one', newId: 'one-new' });
-  assert.deepEqual(f.visible(), ['one-new', 'agent:agent', 'two', 'agent:config', 'three']);
+  assert.deepEqual(f.visible(), ['agent:config', 'one-new', 'two', 'agent:agent', 'three']);
   assert.equal(new Set(f.visible()).size, f.visible().length);
 });
 

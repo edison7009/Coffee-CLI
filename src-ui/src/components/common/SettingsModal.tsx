@@ -13,7 +13,8 @@
 // is unchanged; only the presentation moved.
 
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
-import { useAppState, useAppDispatch, HOTKEY_SCHEMES, type HotkeyScheme, type TitlebarToggleDisplay, type ThemeColor, type ThemeMode, type ThemeShape, type IconTheme } from '../../store/app-state';
+import { AgentSettings } from '../agent/AgentPages';
+import { useAppState, useAppDispatch, HOTKEY_SCHEMES, type HotkeyScheme, type ThemeColor, type ThemeMode, type ThemeShape, type IconTheme } from '../../store/app-state';
 import { playNotifySound } from '../../lib/notify-sound';
 import { useT } from '../../i18n/useT';
 import { IS_MACOS, IS_WINDOWS } from '../../lib/platform';
@@ -25,7 +26,8 @@ import { setUiScale, useUiScale } from '../../lib/ui-scale';
 import { THEME_COLORS, THEME_MODES, THEME_SHAPES, ICON_ART_THEMES, LANGUAGES, TASK_VIEW_MODES, isMaskTintTheme } from '../../lib/personalization';
 import './SettingsModal.css';
 
-type Section = 'general' | 'appearance' | 'wallpaper' | 'terminal' | 'gambit' | 'sound' | 'language' | 'feedback';
+type Section = 'general' | 'appearance' | 'wallpaper' | 'terminal' | 'gambit' | 'sound' | 'language' | 'agent' | 'feedback';
+const SECTION_IDS: Section[] = ['general', 'appearance', 'wallpaper', 'terminal', 'gambit', 'sound', 'language', 'agent', 'feedback'];
 
 // Trailing "opens outside the app" affordance on the feedback cards.
 const ExternalLinkArrow = () => (
@@ -72,6 +74,11 @@ const TASK_VIEW_ICONS: Record<'list' | 'note' | 'prompt', ReactNode> = {
 };
 
 const ICONS: Record<Section, ReactNode> = {
+  agent: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 8V4H8" /><rect width="16" height="12" x="4" y="8" rx="2" /><path d="M2 14h2" /><path d="M20 14h2" /><path d="M15 13v2" /><path d="M9 13v2" />
+    </svg>
+  ),
   appearance: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" /><circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
@@ -126,7 +133,11 @@ export function SettingsModal() {
   const { state } = useAppState();
   const dispatch = useAppDispatch();
   const t = useT();
-  const [section, setSection] = useState<Section>('general');
+  // Held in app state so other places can open a section (Coffee Agent's channel status opens 'agent').
+  // Wallpaper, sound and shortcuts were sections of their own; a request for one opens the section that holds it now.
+  const requested = state.settingsSection === 'wallpaper' ? 'appearance' : state.settingsSection === 'sound' || state.settingsSection === 'gambit' ? 'general' : state.settingsSection;
+  const section: Section = SECTION_IDS.includes(requested as Section) ? requested as Section : 'general';
+  const setSection = (next: Section) => dispatch({ type: 'SET_SETTINGS_SECTION', section: next });
   const uiScale = useUiScale();
   const scalePercent = uiScale.requestedPercent ?? uiScale.percent;
   const [dragPercent, setDragPercent] = useState<number | null>(null);
@@ -156,7 +167,7 @@ export function SettingsModal() {
   const [soundFailed, setSoundFailed] = useState<'done' | 'wait' | null>(null);
   useEffect(() => {
     setSoundFailed(null);
-    if (section !== 'sound' || !state.settingsOpen || !isTauri) return;
+    if (section !== 'general' || !state.settingsOpen || !isTauri) return;
     commands.notifySoundFiles().then(setSoundFiles, err => console.warn('[Settings] sound files unavailable:', err));
   }, [section, state.settingsOpen]);
 
@@ -260,10 +271,6 @@ export function SettingsModal() {
     dispatch({ type: 'SET_HOTKEY_SCHEME', value });
     try { localStorage.setItem('cc-hotkey-scheme', value); } catch { /* Best-effort operation; failure is non-fatal. */ }
   };
-  const setTitlebarToggleDisplay = (value: TitlebarToggleDisplay) => {
-    dispatch({ type: 'SET_TITLEBAR_TOGGLE_DISPLAY', value });
-    try { localStorage.setItem('cc-titlebar-toggle-display', value); } catch { /* Best-effort operation; failure is non-fatal. */ }
-  };
 
   // Sound notification toggles — local state + localStorage only. The
   // notify-sound module reads these keys live on native title state changes,
@@ -296,25 +303,23 @@ export function SettingsModal() {
   const SECTIONS: { id: Section; label: string }[] = [
     { id: 'general',    label: t('settings.general') },
     { id: 'appearance', label: t('settings.appearance') },
-    { id: 'wallpaper',  label: t('settings.wallpaper') },
     { id: 'terminal',   label: t('settings.terminal') },
-    { id: 'gambit',     label: t('settings.gambit') },
-    { id: 'sound',      label: t('settings.sound') },
     { id: 'language',   label: t('settings.language') },
+    { id: 'agent',      label: 'Coffee Agent' },
     { id: 'feedback',   label: t('settings.feedback') },
   ];
   const currentLabel = SECTIONS.find(s => s.id === section)?.label ?? '';
 
   return (
-    <div className="settings-overlay" onMouseDown={close}>
-      <div
-        className="settings-modal"
-        onMouseDown={e => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-      >
+    // A page over the centre area, like usage and tool settings, not a dialog over the whole window.
+    <div className="settings-page">
+      <div className="settings-modal settings-modal--page" role="region" aria-label={t('settings.title')}>
         <aside className="settings-rail">
-          <div className="settings-rail-title">{t('settings.title')}</div>
+          {/* The page covers the whole window, so its first entry leads back. */}
+          <button type="button" className="settings-rail-back" onClick={close}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
+            {t('settings.back')}
+          </button>
           {SECTIONS.map(s => (
             <button
               key={s.id}
@@ -342,14 +347,10 @@ export function SettingsModal() {
         <section className="settings-content">
           <header className="settings-header">
             <span className="settings-header-title">{currentLabel}</span>
-            <button className="settings-close close-button" onClick={close} aria-label="Close">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 6 6 18" /><path d="m6 6 12 12" />
-              </svg>
-            </button>
           </header>
 
-          <div className="settings-body">
+          <div className={`settings-body${section === 'agent' ? ' settings-body--agent' : ''}`}>
+            {section === 'agent' && <AgentSettings />}
             {section === 'appearance' && (
               <>
                 <div className="settings-section-head">
@@ -452,8 +453,10 @@ export function SettingsModal() {
               </>
             )}
 
-            {section === 'wallpaper' && (
+            {/* The window is roomy now: wallpaper sits under appearance, sounds under general. */}
+            {section === 'appearance' && (
               <>
+                <div className="settings-group-gap" aria-hidden="true" />
                 <div className="settings-section-label">{t('settings.wallpaper')}</div>
                 <div className="settings-wallpaper-actions">
                   <button className="settings-btn" onClick={pickBg}>{t('settings.wallpaper.pick')}</button>
@@ -599,110 +602,6 @@ export function SettingsModal() {
               </>
             )}
 
-            {section === 'gambit' && (
-              <>
-                <div className="settings-section-label">{t('settings.send.title')}</div>
-                <div className="settings-key-row">
-                  <button
-                    className={`settings-key-card${state.gambitEnterToSend ? ' active' : ''}`}
-                    onClick={() => setEnterToSend(true)}
-                    aria-pressed={state.gambitEnterToSend}
-                  >
-                    <span className="settings-key-combo"><kbd>Enter</kbd></span>
-                    <span className="settings-key-sub">Shift+Enter {t('settings.send.newline')}</span>
-                  </button>
-                  <button
-                    className={`settings-key-card${!state.gambitEnterToSend ? ' active' : ''}`}
-                    onClick={() => setEnterToSend(false)}
-                    aria-pressed={!state.gambitEnterToSend}
-                  >
-                    <span className="settings-key-combo"><kbd>{modKey}</kbd><span className="settings-key-plus">+</span><kbd>Enter</kbd></span>
-                    <span className="settings-key-sub">Enter {t('settings.send.newline')}</span>
-                  </button>
-                </div>
-
-                <div className="settings-section-label">{t('settings.gambit.hotkey')}</div>
-                <div className="settings-key-row settings-key-row--keys">
-                  {HOTKEY_SCHEMES.map(s => {
-                    const active = state.hotkeyScheme === s.code;
-                    return (
-                      <button
-                        key={s.code}
-                        className={`settings-key-card${active ? ' active' : ''}`}
-                        onClick={() => setHotkeyScheme(s.code)}
-                        aria-pressed={active}
-                      >
-                        {/* Modifier + the three keys (left · Gambit · right, in
-                            that L→R order). Titlebar hints show which is which. */}
-                        <span className="settings-key-combo"><kbd>{s.mod}</kbd><span className="settings-key-plus">+</span><kbd>{s.keys.left.key}</kbd><kbd>{s.keys.gambit.key}</kbd><kbd>{s.keys.right.key}</kbd></span>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <div className="settings-section-label">{t('settings.titlebar.toggle')}</div>
-                <div className="settings-key-row">
-                  {([
-                    { code: 'icon-hotkey', labelKey: 'settings.titlebar.toggle.icon-hotkey' },
-                    { code: 'icon', labelKey: 'settings.titlebar.toggle.icon' },
-                    { code: 'hidden', labelKey: 'settings.titlebar.toggle.hidden' },
-                  ] as const).map(m => {
-                    const active = state.titlebarToggleDisplay === m.code;
-                    return (
-                      <button key={m.code} className={`settings-key-card${active ? ' active' : ''}`} onClick={() => setTitlebarToggleDisplay(m.code)} aria-pressed={active}>
-                        <span className="settings-key-combo">{t(m.labelKey)}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-
-            {section === 'sound' && (
-              <>
-                {/* Each row: label with what can be done to the sound, then On/Off
-                    cards (same settings-key-card idiom as the other toggles). Preview
-                    stays out of the cards, where it would read as a third setting. */}
-                {([
-                  { labelKey: 'settings.sound.done', value: soundDone, set: setSoundDonePref, preview: 'done' as const },
-                  { labelKey: 'settings.sound.wait', value: soundWait, set: setSoundWaitPref, preview: 'wait' as const },
-                ] as const).map(row => (
-                  <div key={row.labelKey} style={{ marginBottom: 18 }}>
-                    <div className="settings-section-head">
-                      <div className="settings-section-label">{t(row.labelKey)}</div>
-                      <div className="settings-sound-actions">
-                        {soundFiles[row.preview]
-                          ? <span className="settings-sound-file">
-                              <span className="settings-sound-name">{shortFileName(soundFiles[row.preview]!)}</span>
-                              <button className="settings-sound-remove close-button" aria-label={t('settings.sound.remove')} onClick={() => clearSound(row.preview)}>
-                                <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true"><path d="m3 3 6 6m0-6-6 6" /></svg>
-                              </button>
-                            </span>
-                          : <button className="settings-btn" onClick={() => { void pickSound(row.preview); }}>{t('settings.sound.custom')}</button>}
-                        <button className="settings-btn" onClick={() => playNotifySound(row.preview)}>{t('settings.sound.preview')}</button>
-                      </div>
-                    </div>
-                    <div className="settings-key-row settings-sound-switch">
-                      <button
-                        className={`settings-key-card${row.value ? ' active' : ''}`}
-                        onClick={() => row.set(true)}
-                        aria-pressed={row.value}
-                      >
-                        <span className="settings-key-combo">{t('settings.sound.on')}</span>
-                      </button>
-                      <button
-                        className={`settings-key-card${!row.value ? ' active' : ''}`}
-                        onClick={() => row.set(false)}
-                        aria-pressed={!row.value}
-                      >
-                        <span className="settings-key-combo">{t('settings.sound.off')}</span>
-                      </button>
-                    </div>
-                    {soundFailed === row.preview && <div className="settings-sound-failed" role="alert">{t('settings.sound.failed')}</div>}
-                  </div>
-                ))}
-              </>
-            )}
 
             {section === 'general' && (
               <>
@@ -744,6 +643,71 @@ export function SettingsModal() {
                       </button>
                     );
                   })}
+                </div>
+              </>
+            )}
+
+            {section === 'general' && (
+              <>
+                {/* Shortcuts, one line each like the sounds: what the key does at the left; its choice at the right,
+                    with a line under it saying what the chosen keys do. */}
+                <div className="settings-sound-list">
+                  <div className="settings-sound-row settings-choice-row">
+                    <div className="settings-sound-title">{t('settings.send.title')}</div>
+                    <div className="settings-choice">
+                      <div className="settings-segment" role="radiogroup" aria-label={t('settings.send.title')}>
+                        <button type="button" role="radio" aria-checked={state.gambitEnterToSend} onClick={() => setEnterToSend(true)}><kbd>Enter</kbd></button>
+                        <button type="button" role="radio" aria-checked={!state.gambitEnterToSend} onClick={() => setEnterToSend(false)}><kbd>{modKey}</kbd>+<kbd>Enter</kbd></button>
+                      </div>
+                      <div className="settings-choice-hint">{state.gambitEnterToSend ? 'Shift+Enter' : 'Enter'} {t('settings.send.newline')}</div>
+                    </div>
+                  </div>
+                  <div className="settings-sound-row settings-choice-row">
+                    <div className="settings-sound-title">{t('settings.gambit.hotkey')}</div>
+                    <div className="settings-choice">
+                      <div className="settings-segment" role="radiogroup" aria-label={t('settings.gambit.hotkey')}>
+                        {HOTKEY_SCHEMES.map(h => (
+                          <button key={h.code} type="button" role="radio" aria-checked={state.hotkeyScheme === h.code} onClick={() => setHotkeyScheme(h.code)}>
+                            <kbd>{h.mod}</kbd>+<kbd>{h.keys.left.key}</kbd><kbd>{h.keys.gambit.key}</kbd><kbd>{h.keys.right.key}</kbd>
+                          </button>
+                        ))}
+                      </div>
+                      {(() => { const h = HOTKEY_SCHEMES.find(item => item.code === state.hotkeyScheme) ?? HOTKEY_SCHEMES[0]; return <div className="settings-choice-hint">{t('settings.gambit.hotkey_hint', { left: `${h.mod}+${h.keys.left.key}`, gambit: `${h.mod}+${h.keys.gambit.key}`, right: `${h.mod}+${h.keys.right.key}` })}</div>; })()}
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {section === 'general' && (
+              <>
+                {/* One line per sound: name at the left; the sound in use (× restores the default for a custom
+                    file, Change picks another), Preview and the switch at the right. */}
+                <div className="settings-sound-list">
+                {([
+                  { labelKey: 'settings.sound.done', value: soundDone, set: setSoundDonePref, preview: 'done' as const },
+                  { labelKey: 'settings.sound.wait', value: soundWait, set: setSoundWaitPref, preview: 'wait' as const },
+                ] as const).map(row => (
+                  <div key={row.labelKey} className="settings-sound-item">
+                    <div className="settings-sound-row">
+                      <div className="settings-sound-title">{t(row.labelKey)}</div>
+                      {row.value && <>
+                        <span className="settings-sound-current">
+                          <span className="settings-sound-name">{soundFiles[row.preview] ? shortFileName(soundFiles[row.preview]!) : t('settings.sound.default')}</span>
+                          {soundFiles[row.preview] && <button type="button" className="settings-sound-remove" aria-label={t('settings.sound.remove')} onClick={() => clearSound(row.preview)}>
+                            <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true"><path d="m3 3 6 6m0-6-6 6" /></svg>
+                          </button>}
+                          <button type="button" className="settings-sound-link" onClick={() => { void pickSound(row.preview); }}>{t('settings.sound.change')}</button>
+                        </span>
+                        <button type="button" className="settings-sound-play" aria-label={t('settings.sound.preview')} onClick={() => playNotifySound(row.preview)}>
+                          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.14v13.72a1 1 0 0 0 1.5.86l11-6.86a1 1 0 0 0 0-1.72l-11-6.86A1 1 0 0 0 8 5.14z" /></svg>
+                        </button>
+                      </>}
+                      <button type="button" role="switch" className="settings-switch" aria-checked={row.value} aria-label={t(row.labelKey)} onClick={() => row.set(!row.value)}><span /></button>
+                    </div>
+                    {soundFailed === row.preview && <div className="settings-sound-failed" role="alert">{t('settings.sound.failed')}</div>}
+                  </div>
+                ))}
                 </div>
               </>
             )}

@@ -15,6 +15,9 @@ import '../center/ConversationView.css';
 import '../common/SettingsModal.css';
 import './AgentPages.css';
 
+/** Coffee Agent's configuration shows as a section of the settings page. */
+const agentSettingsShown = (open: boolean, section: string) => open && section === 'agent';
+
 function AgentSelect<Value extends string>({ value, options, onChange, label, className = '' }: {
   value: Value; options: { value: Value; label: string }[]; onChange: (value: Value) => void; label: string; className?: string;
 }) {
@@ -24,7 +27,7 @@ function AgentSelect<Value extends string>({ value, options, onChange, label, cl
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
-  const visible = open && state.agentPageActive === 'config';
+  const visible = open && agentSettingsShown(state.settingsOpen, state.settingsSection);
   const reposition = useCallback(() => {
     const rect = triggerRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -34,9 +37,9 @@ function AgentSelect<Value extends string>({ value, options, onChange, label, cl
   const toggle = () => { if (!open) reposition(); setOpen(!open); };
 
   useEffect(() => {
-    if (state.agentPageActive !== 'config') return;
+    if (!agentSettingsShown(state.settingsOpen, state.settingsSection)) return;
     return () => setOpen(false);
-  }, [state.agentPageActive]);
+  }, [state.settingsOpen, state.settingsSection]);
 
   useEffect(() => {
     if (!visible) return;
@@ -315,7 +318,7 @@ function AgentModeRow({ title, description, enabled, saving, onToggle }: {
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
   const [dismissed, setDismissed] = useState(false);
-  const visible = (hovered || focused) && !dismissed && state.agentPageActive === 'config';
+  const visible = (hovered || focused) && !dismissed && agentSettingsShown(state.settingsOpen, state.settingsSection);
   const reposition = useCallback(() => {
     const row = rowRef.current?.getBoundingClientRect();
     const node = tipRef.current;
@@ -356,7 +359,7 @@ function AgentWorkModesSection() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (state.agentPageActive !== 'config') return;
+    if (!agentSettingsShown(state.settingsOpen, state.settingsSection)) return;
     let active = true;
     const revision = modesRevisionRef.current;
     const englishRevision = englishRevisionRef.current;
@@ -367,7 +370,7 @@ function AgentWorkModesSection() {
       if (active && revision === modesRevisionRef.current) setModes(value);
     }).catch(failure => { if (active) setError(String(failure)); });
     return () => { active = false; };
-  }, [state.agentPageActive]);
+  }, [state.settingsOpen, state.settingsSection]);
 
   useEffect(() => {
     let active = true;
@@ -440,8 +443,8 @@ function AgentChannelsSection() {
   const loginMessage = loginMessageKey ? t(loginMessageKey) : loginStatus?.message || (loginStatus ? t('agent.channels.login.waiting_scan') : '');
 
   useEffect(() => {
-    if (state.agentPageActive === 'config') refreshChannels().catch(failure => setError(String(failure)));
-  }, [state.agentPageActive]);
+    if (agentSettingsShown(state.settingsOpen, state.settingsSection)) refreshChannels().catch(failure => setError(String(failure)));
+  }, [state.settingsOpen, state.settingsSection]);
 
   const acceptPoll = useCallback((result: WeixinPoll) => {
     setLoginStatus({ status: result.status, message: result.message });
@@ -587,15 +590,20 @@ function AgentHelpModal({ onClose }: { onClose: () => void }) {
   </dialog>, document.body);
 }
 
-export function AgentPages({ page }: { page: AgentPage }) {
+/** Coffee Agent's model, work modes and channels: the "Coffee Agent" section of the settings page. */
+export function AgentSettings() {
   const t = useT();
   const { state } = useAppState();
   const [helpOpen, setHelpOpen] = useState(false);
-  if (page === 'config') return <PageFrame page="config"><div className="agent-settings-scroll"><div className="agent-settings-content"><p className="agent-settings-intro">{t('agent.settings.intro')}{' '}<button type="button" className="agent-help-link" onClick={() => setHelpOpen(true)}>{t('agent.settings.help')}</button></p><AgentModelSection /><AgentWorkModesSection /><AgentChannelsSection /></div></div>{helpOpen && state.agentPageActive === 'config' && <AgentHelpModal onClose={() => setHelpOpen(false)} />}</PageFrame>;
-  return <AgentChatPage />;
+  return <><div className="agent-settings-scroll"><div className="agent-settings-content"><p className="agent-settings-intro">{t('agent.settings.intro')}{' '}<button type="button" className="agent-help-link" onClick={() => setHelpOpen(true)}>{t('agent.settings.help')}</button></p><AgentModelSection /><AgentWorkModesSection /><AgentChannelsSection /></div></div>{helpOpen && agentSettingsShown(state.settingsOpen, state.settingsSection) && <AgentHelpModal onClose={() => setHelpOpen(false)} />}</>;
 }
 
-export function ChannelConnectionSummary() {
+/** A Coffee Agent tab: the conversation. Its configuration moved into the settings page. */
+export function AgentPages({ page }: { page: AgentPage }) {
+  return page === 'agent' ? <AgentChatPage /> : null;
+}
+
+export function ChannelConnectionSummary({ update }: { update?: ReactNode } = {}) {
   const t = useT();
   const { state, dispatch } = useAppState();
   const { channels } = useAgentClient();
@@ -605,10 +613,15 @@ export function ChannelConnectionSummary() {
   const label = weixin || telegram
     ? t(weixin && telegram ? 'agent.sidebar.both_connected' : weixin ? 'agent.sidebar.weixin_connected' : 'agent.sidebar.telegram_connected')
     : `${defaultChannel} · ${t('agent.channels.status.disconnected')}`;
+  // The Agent conversation, channel status, any app update, then settings at the far right of the bottom row.
   return <div className="agent-channel-summary">
-    <button type="button" className="agent-channel-summary-label" aria-label={t('agent.sidebar.open_settings', { status: label })} onClick={() => dispatch({ type: 'OPEN_AGENT_PAGE', page: 'config' })}>{label}</button>
     <button type="button" className="agent-sidebar-button" aria-label={t('agent.sidebar.open_agent')} aria-pressed={state.agentPageActive === 'agent'} onClick={() => dispatch({ type: 'OPEN_AGENT_PAGE', page: 'agent' })}>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M8 14H6l-4 3V5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v3" /><path d="M10 8h10a2 2 0 0 1 2 2v12l-4-3h-8a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2Z" /></svg>
+    </button>
+    <button type="button" className="agent-channel-summary-label" aria-label={t('agent.sidebar.open_settings', { status: label })} onClick={() => dispatch({ type: 'OPEN_AGENT_PAGE', page: 'config' })}>{label}</button>
+    {update}
+    <button type="button" className="agent-sidebar-button agent-sidebar-settings" aria-label={t('settings.title')} aria-pressed={state.settingsOpen} onClick={() => dispatch({ type: 'TOGGLE_SETTINGS' })}>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>
     </button>
   </div>;
 }

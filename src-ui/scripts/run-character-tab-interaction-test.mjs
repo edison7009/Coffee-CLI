@@ -117,7 +117,6 @@ for (const [action, expected] of [
   [{ type: 'SET_ACTIVE_TERMINAL', id: 'terminal:blank' }, 'terminal:blank'],
   [{ type: 'SET_ACTIVE_TERMINAL', id: 'terminal:a' }, 'terminal:a'],
   [{ type: 'OPEN_AGENT_PAGE', page: 'agent' }, 'agent:agent'],
-  [{ type: 'OPEN_AGENT_PAGE', page: 'config' }, 'agent:config'],
   [{ type: 'SET_DIFF_TAB_ACTIVE', active: true }, 'diff'],
   [{ type: 'SET_ACTIVE_TERMINAL', id: 'terminal:b' }, 'terminal:b'],
 ]) {

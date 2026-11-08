@@ -315,6 +315,7 @@ export const ru = {
 
   // Settings modal (titlebar gear)
   'settings.title': 'Настройки',
+  'settings.back': "Назад",
   'settings.general': 'Общие',
   'settings.uiScale': 'Масштаб интерфейса',
   'settings.uiScale.reset': 'По умолчанию',
@@ -333,6 +334,9 @@ export const ru = {
   'settings.sound.custom': 'Свой звук',
   'settings.sound.remove': 'Удалить свой звук',
   'settings.sound.failed': 'Этот файл нельзя использовать. Выберите MP3 или WAV размером до 20 МБ',
+  'settings.sound.default': "Звук по умолчанию",
+  'settings.sound.change': "Сменить",
+  'settings.sound.disabled': "Выключено",
   'interaction.permission': 'Требуется разрешение',
   'interaction.question': 'Требуется ответ',
   'interaction.custom_placeholder': 'Введите свой ответ…',
@@ -355,6 +359,7 @@ export const ru = {
   'settings.send.title': 'Отправить сообщение',
   'settings.send.newline': 'для новой строки',
   'settings.gambit.hotkey': 'Горячая клавиша',
+  'settings.gambit.hotkey_hint': "Показать или скрыть: {left} левая панель · {gambit} поле ввода · {right} правая панель",
   'settings.titlebar.toggle': 'Кнопки панели',
   'settings.titlebar.toggle.icon-hotkey': 'Значок + горячая клавиша',
   'settings.titlebar.toggle.icon': 'Только значок',

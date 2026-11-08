@@ -315,6 +315,7 @@ export const en = {
 
   // Settings modal (titlebar gear)
   'settings.title': 'Settings',
+  'settings.back': "Back",
   'settings.general': 'General',
   'settings.uiScale': 'Interface scale',
   'settings.uiScale.reset': 'Restore default',
@@ -332,6 +333,9 @@ export const en = {
   'settings.sound.custom': 'Custom',
   'settings.sound.remove': 'Remove custom sound',
   'settings.sound.failed': 'This file can\'t be used. Choose an MP3 or WAV up to 20 MB',
+  'settings.sound.default': "Default sound",
+  'settings.sound.change': "Change",
+  'settings.sound.disabled': "Off",
   'interaction.permission': 'Permission required',
   'interaction.question': 'Input required',
   'interaction.custom_placeholder': 'Add your own answer…',
@@ -355,6 +359,7 @@ export const en = {
   'settings.send.title': 'Send message',
   'settings.send.newline': 'for a new line',
   'settings.gambit.hotkey': 'Toggle shortcut',
+  'settings.gambit.hotkey_hint': "Show or hide: {left} left sidebar · {gambit} input box · {right} right sidebar",
   // Titlebar panel-toggle display mode (settings → 快捷键)
   'settings.titlebar.toggle': 'Titlebar toggles',
   'settings.titlebar.toggle.icon-hotkey': 'Icon + shortcut',

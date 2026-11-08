@@ -315,6 +315,7 @@ export const zhCN = {
 
   // Settings modal (titlebar gear)
   'settings.title': '设置',
+  'settings.back': "返回",
   'settings.general': '通用',
   'settings.uiScale': '界面缩放',
   'settings.uiScale.reset': '恢复默认',
@@ -332,6 +333,9 @@ export const zhCN = {
   'settings.sound.custom': '自定义',
   'settings.sound.remove': '移除自定义提示音',
   'settings.sound.failed': '这个文件无法使用，请选择 20 MB 以内的 MP3 或 WAV',
+  'settings.sound.default': "默认声音",
+  'settings.sound.change': "更换",
+  'settings.sound.disabled': "已关闭",
   'interaction.permission': '需要确认权限',
   'interaction.question': '需要你的回答',
   'interaction.custom_placeholder': '输入你的补充说明…',
@@ -355,6 +359,7 @@ export const zhCN = {
   'settings.send.title': '发送消息',
   'settings.send.newline': '换行',
   'settings.gambit.hotkey': '开关快捷键',
+  'settings.gambit.hotkey_hint': "显示 / 隐藏：{left} 左侧栏 · {gambit} 输入框 · {right} 右侧栏",
   // 顶部快捷开关显示模式(设置 → 快捷键)
   'settings.titlebar.toggle': '顶部快捷开关',
   'settings.titlebar.toggle.icon-hotkey': '图标 + 快捷键',

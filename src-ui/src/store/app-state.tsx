@@ -207,6 +207,8 @@ export interface AppState {
   // Personalization settings modal (opened by the titlebar gear). App-level
   // so the titlebar gear and the App-mounted modal share one flag.
   settingsOpen: boolean;
+  /** The settings page's section: one of SettingsModal's sections, or 'agent' for Coffee Agent. */
+  settingsSection: string;
 
   // Gambit compose-box send key. true → Enter sends (Shift/Ctrl/Cmd+Enter =
   // newline); false → Ctrl/Cmd+Enter sends (Enter = newline). Chosen in the
@@ -323,7 +325,8 @@ type Action =
   | { type: 'SET_DEFAULT_SHELL'; shell: string }
   | { type: 'TOGGLE_GAMBIT' }
   | { type: 'TOGGLE_SETTINGS' }
-  | { type: 'SET_SETTINGS_OPEN'; open: boolean }
+  | { type: 'SET_SETTINGS_OPEN'; open: boolean; section?: string }
+  | { type: 'SET_SETTINGS_SECTION'; section: string }
   | { type: 'SET_GAMBIT_ENTER_TO_SEND'; value: boolean }
   | { type: 'SET_HOTKEY_SCHEME'; value: HotkeyScheme }
   | { type: 'SET_TITLEBAR_TOGGLE_DISPLAY'; value: TitlebarToggleDisplay }
@@ -358,12 +361,14 @@ function splitForSession(state: AppState, id: string, targetId: string, edge: Sp
 }
 
 function reducer(state: AppState, action: Action): AppState {
-  if ((state.usageOpen || state.toolSettingsOpen) && !(action.type === 'LAUNCH_TERMINAL_TOOL' && action.background) && ['ADD_TERMINAL', 'LAUNCH_TERMINAL_TOOL', 'SET_ACTIVE_TERMINAL', 'OPEN_AGENT_PAGE', 'OPEN_SESSION_SPLIT', 'SET_DIFF_SELECTION', 'SET_DIFF_TAB_ACTIVE'].includes(action.type)) state = { ...state, usageOpen: false, toolSettingsOpen: false };
+  // Coffee Agent's configuration lives in settings; its old tab opens that section instead.
+  if (action.type === 'OPEN_AGENT_PAGE' && action.page === 'config') return { ...state, settingsOpen: true, settingsSection: 'agent', usageOpen: false, toolSettingsOpen: false };
+  if ((state.usageOpen || state.toolSettingsOpen || state.settingsOpen) && !(action.type === 'LAUNCH_TERMINAL_TOOL' && action.background) && ['ADD_TERMINAL', 'LAUNCH_TERMINAL_TOOL', 'SET_ACTIVE_TERMINAL', 'OPEN_AGENT_PAGE', 'OPEN_SESSION_SPLIT', 'SET_DIFF_SELECTION', 'SET_DIFF_TAB_ACTIVE'].includes(action.type)) state = { ...state, usageOpen: false, toolSettingsOpen: false, settingsOpen: false };
   switch (action.type) {
     case 'SET_USAGE_OPEN':
-      return { ...state, usageOpen: action.open, toolSettingsOpen: false };
+      return { ...state, usageOpen: action.open, toolSettingsOpen: false, ...(action.open ? { settingsOpen: false } : {}) };
     case 'SET_TOOL_SETTINGS_OPEN':
-      return { ...state, toolSettingsOpen: action.open, usageOpen: false };
+      return { ...state, toolSettingsOpen: action.open, usageOpen: false, ...(action.open ? { settingsOpen: false } : {}) };
     case 'OPEN_SESSION_SPLIT': {
       const session = state.terminals.find(session => session.id === action.id);
       if (!session?.tool) return state;
@@ -603,10 +608,13 @@ function reducer(state: AppState, action: Action): AppState {
     case 'TOGGLE_GAMBIT':
       if (!state.agentPageActive && !state.diffTabActive && isConversationSession(state.terminals.find(t => t.id === state.activeTerminalId))) return state;
       return { ...state, gambitOpen: !state.gambitOpen };
+    // Settings covers the whole window; it and the usage and tool settings pages are open one at a time.
     case 'TOGGLE_SETTINGS':
-      return { ...state, settingsOpen: !state.settingsOpen };
+      return { ...state, settingsOpen: !state.settingsOpen, usageOpen: false, toolSettingsOpen: false };
     case 'SET_SETTINGS_OPEN':
-      return { ...state, settingsOpen: action.open };
+      return { ...state, settingsOpen: action.open, ...(action.open ? { usageOpen: false, toolSettingsOpen: false } : {}), ...(action.section ? { settingsSection: action.section } : {}) };
+    case 'SET_SETTINGS_SECTION':
+      return { ...state, settingsSection: action.section };
     case 'SET_GAMBIT_ENTER_TO_SEND':
       return { ...state, gambitEnterToSend: action.value };
     case 'SET_HOTKEY_SCHEME':
@@ -792,7 +800,7 @@ function getInitialState(): AppState {
   // Ctrl+QWE preset is opt-in despite clashing with terminal Ctrl+W/E/Q.
   // Overridden only by a stored valid scheme.
   let hotkeyScheme: HotkeyScheme = 'alt-qwe';
-  let titlebarToggleDisplay: TitlebarToggleDisplay = 'icon';
+  const titlebarToggleDisplay: TitlebarToggleDisplay = 'icon';
   try {
     const storedPath = localStorage.getItem('cc-bg-path');
     const storedType = localStorage.getItem('cc-bg-type') as 'image' | 'video' | 'none' | null;
@@ -821,10 +829,8 @@ function getInitialState(): AppState {
     if (storedScheme && HOTKEY_SCHEMES.some(h => h.code === storedScheme)) {
       hotkeyScheme = storedScheme as HotkeyScheme;
     }
-    const storedTtd = localStorage.getItem('cc-titlebar-toggle-display');
-    if (storedTtd === 'icon-hotkey' || storedTtd === 'icon' || storedTtd === 'hidden') {
-      titlebarToggleDisplay = storedTtd;
-    }
+    // The titlebar toggles always show as icons now; the setting that chose labels or hiding was removed.
+    try { localStorage.removeItem('cc-titlebar-toggle-display'); } catch { /* Best-effort operation; failure is non-fatal. */ }
     // New key (post-refactor): wallpaper opacity, 0-100, larger = more
     // visible. Old key was `cc-wallpaper-dim` (0-80, larger = darker
     // overlay). On first load after upgrade, fall back to the legacy
@@ -888,6 +894,7 @@ function getInitialState(): AppState {
     sessionSplit: null,
     gambitOpen,
     settingsOpen: false,
+    settingsSection: 'general',
     gambitEnterToSend,
     hotkeyScheme,
     titlebarToggleDisplay,

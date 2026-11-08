@@ -44,7 +44,7 @@ const mockReact = {
 const reads = []; let saved = false;
 const module = { exports: {} };
 const context = {
-  module, exports: module.exports, __appState: { agentPageActive: 'config' },
+  module, exports: module.exports, __appState: { settingsOpen: true, settingsSection: 'agent' },
   __invoke(name, args) {
     if (name === 'agent_get_english_delegation') return new Promise(resolve => reads.push(resolve));
     if (name === 'agent_set_english_delegation') { saved = args.enabled; return Promise.resolve(); }
@@ -61,8 +61,8 @@ const englishRow = tree => tree.props.children[1].props.children[0];
 
 render(); flushEffects(); reads.shift()(false); await settle();
 assert.equal(englishRow(render()).props.enabled, false);
-context.__appState.agentPageActive = 'agent'; render(); flushEffects();
-context.__appState.agentPageActive = 'config'; const reopened = render(); flushEffects();
+context.__appState.settingsSection = 'general'; render(); flushEffects();
+context.__appState.settingsSection = 'agent'; const reopened = render(); flushEffects();
 englishRow(reopened).props.onToggle(); await settle();
 assert.equal(saved, true); assert.equal(englishRow(render()).props.enabled, true);
 reads.shift()(false); await settle();

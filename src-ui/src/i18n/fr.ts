@@ -315,6 +315,7 @@ export const fr = {
 
   // Settings modal (titlebar gear)
   'settings.title': 'Paramètres',
+  'settings.back': "Retour",
   'settings.general': 'Général',
   'settings.uiScale': 'Échelle de l’interface',
   'settings.uiScale.reset': 'Valeur par défaut',
@@ -333,6 +334,9 @@ export const fr = {
   'settings.sound.custom': 'Personnaliser',
   'settings.sound.remove': 'Retirer le son personnalisé',
   'settings.sound.failed': 'Ce fichier ne peut pas être utilisé. Choisissez un MP3 ou WAV de 20 Mo maximum',
+  'settings.sound.default': "Son par défaut",
+  'settings.sound.change': "Changer",
+  'settings.sound.disabled': "Désactivé",
   'interaction.permission': 'Autorisation requise',
   'interaction.question': 'Réponse requise',
   'interaction.custom_placeholder': 'Saisissez votre réponse…',
@@ -355,6 +359,7 @@ export const fr = {
   'settings.send.title': 'Envoyer le message',
   'settings.send.newline': 'pour un saut de ligne',
   'settings.gambit.hotkey': 'Raccourci clavier',
+  'settings.gambit.hotkey_hint': "Afficher ou masquer : {left} barre gauche · {gambit} zone de saisie · {right} barre droite",
   'settings.titlebar.toggle': 'Boutons de la barre',
   'settings.titlebar.toggle.icon-hotkey': 'Icône + raccourci',
   'settings.titlebar.toggle.icon': 'Icône seule',

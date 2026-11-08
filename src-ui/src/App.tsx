@@ -1,6 +1,7 @@
 // App.tsx — 3-panel IDE layout (frameless window)
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { SettingsModal } from './components/common/SettingsModal';
 import { useAppState } from './store/app-state';
 import { retryInvoke } from './tauri';
 import { initNotifySound } from './lib/notify-sound';
@@ -13,7 +14,6 @@ import { useDataAttr } from './lib/use-data-attr';
 import { TitleBar } from './components/common/TitleBar';
 import { ResizeEdges } from './components/common/ResizeEdges';
 import { PanelResizer, type PanelSide } from './components/common/PanelResizer';
-import { SettingsModal } from './components/common/SettingsModal';
 import { CharacterBackground } from './components/common/CharacterBackground';
 import { Explorer } from './components/left/Explorer';
 import { CenterPanel } from './components/center/CenterPanel';
@@ -520,6 +520,9 @@ export function App() {
             </>
           )}
 
+          {/* Settings covers the whole workspace below the titlebar, sidebars included. */}
+          <SettingsModal />
+
           {/* Center: always mounted */}
           <main className="panel panel-center">
             <CenterPanel />
@@ -554,7 +557,6 @@ export function App() {
       {/* Personalization settings — centered modal opened by the titlebar
           gear. App-level overlay (gated on state.settingsOpen) so it floats
           above the whole workspace, like ActiveGambit. */}
-      <SettingsModal />
 
       {/* 8 transparent resize-edge strips (window chrome). Three-platform
           unified — Windows + macOS already get edge cursors via OS shims,

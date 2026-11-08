@@ -315,6 +315,7 @@ export const ko = {
 
   // Settings modal (titlebar gear)
   'settings.title': '설정',
+  'settings.back': "뒤로",
   'settings.general': '일반',
   'settings.uiScale': '화면 배율',
   'settings.uiScale.reset': '기본값 복원',
@@ -333,6 +334,9 @@ export const ko = {
   'settings.sound.custom': '사용자 지정',
   'settings.sound.remove': '사용자 지정 소리 제거',
   'settings.sound.failed': '이 파일은 사용할 수 없습니다. 20 MB 이하의 MP3 또는 WAV를 선택하세요',
+  'settings.sound.default': "기본 소리",
+  'settings.sound.change': "변경",
+  'settings.sound.disabled': "꺼짐",
   'interaction.permission': '권한 확인 필요',
   'interaction.question': '응답 필요',
   'interaction.custom_placeholder': '직접 답변 입력…',
@@ -355,6 +359,7 @@ export const ko = {
   'settings.send.title': '메시지 전송',
   'settings.send.newline': '줄바꿈',
   'settings.gambit.hotkey': '열기/닫기 단축키',
+  'settings.gambit.hotkey_hint': "표시 / 숨기기: {left} 왼쪽 사이드바 · {gambit} 입력창 · {right} 오른쪽 사이드바",
   'settings.titlebar.toggle': '제목 표시줄 버튼',
   'settings.titlebar.toggle.icon-hotkey': '아이콘 + 단축키',
   'settings.titlebar.toggle.icon': '아이콘만',

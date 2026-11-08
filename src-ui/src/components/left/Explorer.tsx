@@ -707,57 +707,59 @@ export function Explorer() {
     return bindAutoHideScrollbar(scrollRef.current);
   }, [activeTab]);
 
+  // The update download sits in the sidebar's bottom row, left of settings, where most desktop apps keep it.
+  const updateButton = hasUpdate ? (
+    <button
+      className={`agent-sidebar-button update-check-btn update-available${installing ? ' is-installing' : ''}`}
+      onClick={handleSelfUpdate}
+      disabled={installing}
+      aria-label="Update Coffee CLI"
+    >
+      {installing ? (
+        <svg
+          className={`update-ring${installPhase === 'speed_test' ? ' spin' : ''}`}
+          width="15"
+          height="15"
+          viewBox="0 0 24 24"
+        >
+          <circle className="update-ring-track" cx="12" cy="12" r="9" fill="none" strokeWidth="2.6" />
+          <circle
+            className="update-ring-progress"
+            cx="12"
+            cy="12"
+            r="9"
+            fill="none"
+            strokeWidth="2.6"
+            strokeLinecap="round"
+            transform="rotate(-90 12 12)"
+            strokeDasharray={
+              installPhase === 'speed_test'
+                ? `${2 * Math.PI * 9 * 0.25} ${2 * Math.PI * 9}`
+                : 2 * Math.PI * 9
+            }
+            strokeDashoffset={
+              installPhase === 'speed_test'
+                ? 0
+                : 2 * Math.PI * 9 * (1 - installPct / 100)
+            }
+          />
+        </svg>
+      ) : (
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+      )}
+    </button>
+  ) : null;
+
   return (
     <div className="panel panel-left explorer-panel" data-icon-theme={state.iconTheme}>
       {/* Brand + theme/lang controls */}
       {brandSlot && createPortal(
         <div className="brand">
           <span>{t('app.title')}</span>
-          {hasUpdate && (
-            <button
-              className={`icon-btn xs update-check-btn update-available${installing ? ' is-installing' : ''}`}
-              onClick={handleSelfUpdate}
-              disabled={installing}
-              aria-label="Update Coffee CLI"
-            >
-              {installing ? (
-                <svg
-                  className={`update-ring${installPhase === 'speed_test' ? ' spin' : ''}`}
-                  width="15"
-                  height="15"
-                  viewBox="0 0 24 24"
-                >
-                  <circle className="update-ring-track" cx="12" cy="12" r="9" fill="none" strokeWidth="2.6" />
-                  <circle
-                    className="update-ring-progress"
-                    cx="12"
-                    cy="12"
-                    r="9"
-                    fill="none"
-                    strokeWidth="2.6"
-                    strokeLinecap="round"
-                    transform="rotate(-90 12 12)"
-                    strokeDasharray={
-                      installPhase === 'speed_test'
-                        ? `${2 * Math.PI * 9 * 0.25} ${2 * Math.PI * 9}`
-                        : 2 * Math.PI * 9
-                    }
-                    strokeDashoffset={
-                      installPhase === 'speed_test'
-                        ? 0
-                        : 2 * Math.PI * 9 * (1 - installPct / 100)
-                    }
-                  />
-                </svg>
-              ) : (
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                  <polyline points="7 10 12 15 17 10"/>
-                  <line x1="12" y1="3" x2="12" y2="15"/>
-                </svg>
-              )}
-            </button>
-          )}
         </div>
         
         ,
@@ -875,7 +877,7 @@ export function Explorer() {
       </div>
       </div>
 
-      <ChannelConnectionSummary />
+      <ChannelConnectionSummary update={updateButton} />
 
       {/* Right-click context menu */}
       {ctxMenu && <ContextMenu menu={ctxMenu} onClose={closeCtxMenu} />}

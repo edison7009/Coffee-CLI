@@ -1170,6 +1170,10 @@ html.is-macos .titlebar-left-slot:not(.is-collapsed) {
 
 
 /* ─── Custom Titlebar ────────────────────────────────── */
+/* Settings covers the window: the bar keeps only the window controls. The tab slot stays mounted
+   (the centre portals its tabs into it), just hidden. */
+.titlebar--settings :is(.titlebar-left-slot, .titlebar-tabs, .titlebar-layout-toggles) { display: none; }
+
 .titlebar {
     height: 40px;
     /* Share the side panels' surface; active tabs use the terminal tone. */
@@ -1929,7 +1933,7 @@ html.is-windows[data-frost="frost"] #root {
    untouched. */
 :is([data-shape="glass"], [data-shape="carbon"], [data-shape="monogram"]) .panel-left :is(div, section, aside, nav, header, footer, main):not(.launchpad-card, .launchpad-card-group, .task-card, .task-note-card, .task-prompt-card, .task-prompt-category-menu, .task-note-head, .task-droppable-area, .guide-card, .remote-form-card, .remote-form-overlay, .remote-protocol-toggle, .remote-pill, .chat-input-container, .library-item, .library-toggle, .library-toggle-knob, .ctx-menu, .gambit, .tool-config-modal, .tab-status-dot, .heatmap-cell, .conversation-navigation-tooltip, .diff-line),
 :is([data-shape="glass"], [data-shape="carbon"], [data-shape="monogram"]) .panel-right :is(div, section, aside, nav, header, footer, main):not(.launchpad-card, .launchpad-card-group, .task-card, .task-note-card, .task-prompt-card, .task-prompt-category-menu, .task-note-head, .task-droppable-area, .guide-card, .remote-form-card, .remote-form-overlay, .remote-protocol-toggle, .remote-pill, .chat-input-container, .library-item, .library-toggle, .library-toggle-knob, .ctx-menu, .gambit, .tool-config-modal, .tab-status-dot, .heatmap-cell, .conversation-navigation-tooltip, .diff-line),
-:is([data-shape="glass"], [data-shape="carbon"], [data-shape="monogram"]) .panel-center :is(div, section, aside, nav, header, footer, main):not(.launchpad-card, .launchpad-card-group, .task-card, .task-note-card, .task-prompt-card, .task-prompt-category-menu, .task-note-head, .task-droppable-area, .guide-card, .remote-form-card, .remote-form-overlay, .remote-protocol-toggle, .remote-pill, .chat-input-container, .library-item, .library-toggle, .library-toggle-knob, .ctx-menu, .gambit, .tool-config-modal, .tab-status-dot, .heatmap-cell, .conversation-navigation-tooltip, .diff-line, .session-split-pane, .session-split-divider, .tool-control-runtime, .tool-control-agent, .skill-card, .skill-card *, .control-demo, .control-demo *) {
+:is([data-shape="glass"], [data-shape="carbon"], [data-shape="monogram"]) .panel-center :is(div, section, aside, nav, header, footer, main):not(.launchpad-card, .launchpad-card-group, .task-card, .task-note-card, .task-prompt-card, .task-prompt-category-menu, .task-note-head, .task-droppable-area, .guide-card, .remote-form-card, .remote-form-overlay, .remote-protocol-toggle, .remote-pill, .chat-input-container, .library-item, .library-toggle, .library-toggle-knob, .ctx-menu, .gambit, .tool-config-modal, .tab-status-dot, .heatmap-cell, .conversation-navigation-tooltip, .diff-line, .session-split-pane, .session-split-divider, .tool-control-runtime, .tool-control-agent, .skill-card, .skill-card *, .control-demo, .control-demo *, .settings-page, .settings-page *) {
     background: transparent !important;
     border-color: transparent !important;
     box-shadow: none !important;

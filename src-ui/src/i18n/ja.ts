@@ -315,6 +315,7 @@ export const ja = {
 
   // Settings modal (titlebar gear)
   'settings.title': '設定',
+  'settings.back': "戻る",
   'settings.general': '一般',
   'settings.uiScale': '表示倍率',
   'settings.uiScale.reset': '既定に戻す',
@@ -333,6 +334,9 @@ export const ja = {
   'settings.sound.custom': 'カスタム',
   'settings.sound.remove': 'カスタムサウンドを削除',
   'settings.sound.failed': 'このファイルは使用できません。20 MB 以内の MP3 または WAV を選択してください',
+  'settings.sound.default': "デフォルトの音",
+  'settings.sound.change': "変更",
+  'settings.sound.disabled': "オフ",
   'interaction.permission': '権限の確認',
   'interaction.question': '回答が必要です',
   'interaction.custom_placeholder': '回答を入力…',
@@ -355,6 +359,7 @@ export const ja = {
   'settings.send.title': 'メッセージを送信',
   'settings.send.newline': '改行',
   'settings.gambit.hotkey': '開閉ショートカット',
+  'settings.gambit.hotkey_hint': "表示 / 非表示：{left} 左サイドバー · {gambit} 入力欄 · {right} 右サイドバー",
   'settings.titlebar.toggle': 'タイトルバーのボタン',
   'settings.titlebar.toggle.icon-hotkey': 'アイコン + ショートカット',
   'settings.titlebar.toggle.icon': 'アイコンのみ',

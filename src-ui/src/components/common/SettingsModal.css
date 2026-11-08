@@ -27,7 +27,21 @@
   animation: settings-fade 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
+/* As a page it covers the whole workspace under the titlebar, sidebars and tabs included; the titlebar offers Back. */
+.settings-page { position: absolute; inset: 0; z-index: 50; display: flex; min-width: 0; min-height: 0; background: var(--bg-panel); }
+.settings-modal.settings-modal--page { width: 100%; height: 100%; border: 0; border-radius: 0; box-shadow: none; animation: none; background: transparent; }
+.settings-modal--page .settings-rail { flex-basis: 200px; padding: 20px 12px; }
+.settings-modal--page .settings-body { width: min(760px, 100%); margin: 0 auto; }
+.settings-body--agent { padding: 0; }
+
+/* Space between two groups merged into one section (appearance + wallpaper, general + sound). */
+.settings-group-gap { height: 1px; margin: 24px 0 8px; background: var(--border, rgba(255, 255, 255, 0.06)); }
+
 /* ── Left rail ─────────────────────────────────────────────────────────── */
+/* Back, one step larger than the sections below it. */
+.settings-rail-back { display: flex; align-items: center; gap: 6px; flex-shrink: 0; margin: 0 0 10px; padding: 8px 10px 8px 6px; border: 0; border-radius: var(--shape-radius-btn, 6px); color: var(--text-1); background: transparent; font: inherit; font-size: calc(var(--type-body) + 2px); font-weight: 600; text-align: left; cursor: pointer; }
+.settings-rail-back:hover { background: var(--bg-hover); }
+.settings-rail-back svg { width: 18px; height: 18px; flex-shrink: 0; }
 .settings-rail {
   flex: 0 0 168px;
   min-height: 0;
@@ -584,3 +598,37 @@
   border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
   border-radius: var(--radius-sm, 10px);
 }
+
+/* Sounds: one line each — name, then the sound in use, Preview and a switch at the right. */
+.settings-sound-list { margin-top: 24px; border: 1px solid var(--border); border-radius: var(--shape-radius-panel, 10px); overflow: hidden; }
+.settings-sound-item + .settings-sound-item { border-top: 1px solid var(--border); }
+.settings-sound-item .settings-sound-failed { padding: 0 16px 12px; }
+.settings-sound-row { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 10px 16px; }
+.settings-sound-title { flex: 1; min-width: 0; color: var(--text-1); font-size: var(--type-body); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.settings-sound-current { display: inline-flex; align-items: center; gap: 8px; flex-shrink: 1; min-width: 0; max-width: 55%; color: var(--text-2); font-size: var(--type-label); white-space: nowrap; }
+.settings-sound-current .settings-sound-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.settings-sound-current .settings-sound-remove { display: grid; place-items: center; flex-shrink: 0; width: 18px; height: 18px; margin-left: -4px; padding: 0; border: 0; border-radius: 50%; color: var(--text-3); background: transparent; cursor: pointer; }
+.settings-sound-current .settings-sound-remove:hover { color: var(--text-1); background: var(--bg-hover); }
+.settings-sound-current .settings-sound-remove svg { width: 10px; height: 10px; }
+.settings-sound-link { flex-shrink: 0; padding: 0; border: 0; background: none; color: var(--accent); font: inherit; cursor: pointer; }
+.settings-sound-link:hover { text-decoration: underline; }
+.settings-sound-play { display: grid; place-items: center; flex-shrink: 0; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 50%; color: var(--text-1); background: var(--bg-hover); cursor: pointer; }
+.settings-sound-play:hover { color: var(--accent); background: var(--bg-active); }
+.settings-sound-play svg { width: 14px; height: 14px; margin-left: 2px; }
+.settings-switch { position: relative; flex-shrink: 0; width: 40px; height: 24px; padding: 0; border: 0; border-radius: 12px; background: var(--bg-hover); box-shadow: inset 0 0 0 1px var(--border-input); cursor: pointer; transition: background 150ms; }
+.settings-switch > span { position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3); transition: transform 150ms; }
+.settings-switch[aria-checked="true"] { background: var(--accent); box-shadow: none; }
+.settings-switch[aria-checked="true"] > span { transform: translateX(16px); }
+
+/* A compact choice at the right of a settings row: keycaps in pill segments. */
+.settings-segment { display: inline-flex; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; gap: 2px; padding: 2px; border-radius: 8px; background: var(--bg-hover); }
+.settings-segment button { display: inline-flex; align-items: center; gap: 3px; height: 28px; padding: 0 9px; border: 0; border-radius: 6px; color: var(--text-2); background: transparent; font: inherit; font-size: var(--type-label); cursor: pointer; }
+.settings-segment button:hover { color: var(--text-1); }
+.settings-segment button[aria-checked="true"] { color: var(--text-1); background: var(--accent-bg); box-shadow: inset 0 0 0 1px var(--border-focus); }
+.settings-segment kbd { display: inline-block; min-width: 18px; padding: 0 4px; border-radius: 4px; background: var(--bg-panel); font: inherit; font-size: 12px; line-height: 18px; text-align: center; }
+/* A row whose choice carries a note under it, both right-aligned. */
+.settings-choice-row { align-items: flex-start; }
+.settings-choice-row .settings-sound-title { padding-top: 5px; }
+.settings-sound-list > .settings-choice-row + .settings-choice-row { border-top: 1px solid var(--border); }
+.settings-choice { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; min-width: 0; }
+.settings-choice-hint { color: var(--text-3); font-size: var(--type-label); text-align: right; }
