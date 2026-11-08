@@ -284,6 +284,8 @@
 }
 .settings-theme-card.active .settings-theme-name { color: var(--text-1, #fff); }
 
+/* Selected and hovered controls drop the accent outline for a brighter fill:
+   a 1px saturated ring on a rounded corner reads harsh at small sizes. */
 /* ── Chips (shape / generic) ───────────────────────────────────────────── */
 .settings-chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
 .settings-chip {
@@ -299,8 +301,8 @@
 }
 .settings-chip:hover { background: var(--bg-hover, rgba(255, 255, 255, 0.05)); }
 .settings-chip.active {
-  border-color: var(--accent, #c4956a);
-  background: color-mix(in srgb, var(--accent, #c4956a) 16%, transparent);
+  border-color: transparent;
+  background: color-mix(in srgb, var(--accent, #c4956a) 26%, transparent);
   color: var(--text-1, #fff);
 }
 
@@ -320,8 +322,8 @@
 }
 .settings-icon-chip:hover { background: var(--bg-hover, rgba(255, 255, 255, 0.05)); }
 .settings-icon-chip.active {
-  border-color: var(--accent, #c4956a);
-  background: color-mix(in srgb, var(--accent, #c4956a) 16%, transparent);
+  border-color: transparent;
+  background: color-mix(in srgb, var(--accent, #c4956a) 26%, transparent);
 }
 .settings-icon-mask {
   width: 24px;
@@ -351,9 +353,9 @@
   cursor: pointer;
   transition: all 0.14s ease;
 }
-.settings-btn:hover { border-color: var(--accent, #c4956a); }
+.settings-btn:hover { border-color: transparent; background: color-mix(in srgb, var(--text-1, #fff) 11%, transparent); }
 .settings-btn-danger { color: #e06666; }
-.settings-btn-danger:hover { border-color: #e06666; }
+.settings-btn-danger:hover { border-color: transparent; background: color-mix(in srgb, #e06666 18%, transparent); }
 
 
 /* ── Terminal text-colour chips ────────────────────────────────────────── */
@@ -373,7 +375,7 @@
 }
 .settings-term-chip.reset { color: var(--text-2, rgba(255, 255, 255, 0.7)); }
 .settings-term-chip:hover { background: var(--bg-hover, rgba(255, 255, 255, 0.05)); }
-.settings-term-chip.active { border-color: var(--accent, #c4956a); background: color-mix(in srgb, var(--accent, #c4956a) 14%, transparent); }
+.settings-term-chip.active { border-color: transparent; background: color-mix(in srgb, var(--accent, #c4956a) 26%, transparent); }
 
 /* ── Keyboard: send-key cards ──────────────────────────────────────────── */
 .settings-key-row { display: flex; gap: 10px; flex-wrap: wrap; }
@@ -402,8 +404,8 @@
 }
 .settings-key-card:hover { background: var(--bg-hover, rgba(255, 255, 255, 0.04)); }
 .settings-key-card.active {
-  border-color: var(--accent, #c4956a);
-  background: color-mix(in srgb, var(--accent, #c4956a) 12%, transparent);
+  border-color: transparent;
+  background: color-mix(in srgb, var(--accent, #c4956a) 26%, transparent);
 }
 .settings-key-combo { display: flex; align-items: center; gap: 5px; color: var(--text-2, rgba(255, 255, 255, 0.7)); }
 .settings-key-plus { color: var(--text-3, rgba(255, 255, 255, 0.4)); font-size: var(--type-label); }
@@ -457,8 +459,8 @@
 }
 .settings-lang-item:hover { background: var(--bg-hover, rgba(255, 255, 255, 0.05)); }
 .settings-lang-item.active {
-  border-color: var(--accent, #c4956a);
-  background: color-mix(in srgb, var(--accent, #c4956a) 14%, transparent);
+  border-color: transparent;
+  background: color-mix(in srgb, var(--accent, #c4956a) 26%, transparent);
   color: var(--text-1, #fff);
 }
 .settings-lang-glyph { width: 22px; text-align: center; font-size: 15px; flex-shrink: 0; }
@@ -491,8 +493,8 @@
   transition: all 0.14s ease;
 }
 .settings-feedback-card:hover {
-  border-color: var(--accent, #c4956a);
-  background: color-mix(in srgb, var(--accent, #c4956a) 8%, transparent);
+  border-color: transparent;
+  background: color-mix(in srgb, var(--accent, #c4956a) 14%, transparent);
 }
 .settings-feedback-card-icon {
   display: flex;
