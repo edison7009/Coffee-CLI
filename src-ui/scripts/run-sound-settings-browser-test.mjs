@@ -1,4 +1,4 @@
-// The Sound settings page: the real modal, store and styles; only native calls and the file dialog are isolated.
+// The sound rows in General settings: the real modal, store and styles; only native calls and the file dialog are isolated.
 import assert from 'node:assert/strict';
 import { mkdtemp, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -50,42 +50,46 @@ try {
   const view = await browser.newPage({ viewport: { width: 760, height: 580 }, deviceScaleFactor: 2 });
   const errors = []; view.on('pageerror', error => errors.push(String(error)));
   await view.goto(`http://127.0.0.1:${server.address().port}/`);
-  await view.getByRole('button', { name: '声音' }).click();
-  const custom = view.getByRole('button', { name: '自定义', exact: true }), preview = view.getByRole('button', { name: '试听', exact: true });
-  await custom.first().waitFor();
-  assert.equal(await custom.count(), 2); assert.equal(await preview.count(), 2);
-  assert.equal(await view.locator('.settings-key-row').first().locator('.settings-key-card').count(), 2, 'on and off are the only settings');
+  // Sounds are one-line rows in General, the section settings opens on.
+  const change = view.getByRole('button', { name: '更换', exact: true }), preview = view.getByRole('button', { name: '试听', exact: true });
+  const name = view.locator('.settings-sound-name');
+  await change.first().waitFor();
+  assert.equal(await change.count(), 2); assert.equal(await preview.count(), 2);
+  assert.deepEqual(await name.allTextContents(), ['默认声音', '默认声音']);
   await view.screenshot({ path: join(directory, 'default.png') });
 
   await view.evaluate(() => { window.chosenPath = 'D:/Music/done chime.mp3'; });
-  await custom.first().click();
-  const name = view.locator('.settings-sound-name');
-  await name.waitFor();
-  assert.equal(await name.textContent(), 'done chime.mp3');
-  assert.equal(await custom.count(), 1, 'the other sound keeps its button');
+  await change.first().click();
+  await view.waitForFunction(() => document.querySelector('.settings-sound-name')?.textContent === 'done chime.mp3');
+  const remove = view.getByRole('button', { name: '移除自定义提示音' });
+  assert.equal(await remove.count(), 1, 'only a custom sound can be removed');
   assert.deepEqual(await view.evaluate(() => window.calls.find(call => call.name === 'notify_sound_choose')), { name: 'notify_sound_choose', kind: 'done', path: 'D:/Music/done chime.mp3' });
 
   await view.evaluate(() => { window.chosenPath = 'D:/Music/a very long name for the waiting sound of a tool.wav'; });
-  await custom.click();
-  await view.waitForFunction(() => document.querySelectorAll('.settings-sound-name').length === 2);
+  await change.nth(1).click();
+  await view.waitForFunction(() => document.querySelectorAll('.settings-sound-remove').length === 2);
   assert.equal(await name.nth(1).textContent(), 'a very long name…a tool.wav', 'a long name keeps its ending');
-  const remove = view.getByRole('button', { name: '移除自定义提示音' });
   await remove.first().hover(); await view.waitForTimeout(200);
-  assert.equal(await remove.first().evaluate(el => getComputedStyle(el).color), 'rgb(239, 68, 68)', 'the X turns red like every other');
+  assert.equal(await remove.first().evaluate(el => getComputedStyle(el).color), await view.evaluate(() => { const probe = document.createElement('i'); probe.style.color = 'var(--text-1)'; document.body.append(probe); const color = getComputedStyle(probe).color; probe.remove(); return color; }), 'the X brightens to the text colour');
   await view.screenshot({ path: join(directory, 'chosen.png') });
 
   await preview.first().click();
   assert.equal(await view.evaluate(() => window.calls.at(-1).kind), 'done');
   await remove.first().click();
-  await view.waitForFunction(() => document.querySelectorAll('.settings-sound-name').length === 1);
+  await view.waitForFunction(() => document.querySelector('.settings-sound-name')?.textContent === '默认声音');
   assert.equal(await view.evaluate(() => window.calls.findLast(call => call.name === 'notify_sound_clear').kind), 'done');
 
   await view.evaluate(() => { window.chooseFails = true; window.chosenPath = 'D:/Music/huge.wav'; });
-  await custom.click();
+  await change.first().click();
   await view.getByRole('alert').waitFor();
-  assert.equal(await name.count(), 1, 'a refused file changes nothing');
+  assert.equal(await name.first().textContent(), '默认声音', 'a refused file changes nothing');
   await view.screenshot({ path: join(directory, 'refused.png') });
+
+  // Off hides the sound, Change and Preview; the switch stays.
+  await view.getByRole('switch', { name: '任务完成提示音' }).click();
+  await view.waitForFunction(() => document.querySelectorAll('.settings-sound-name').length === 1);
+  assert.equal(await change.count(), 1); assert.equal(await preview.count(), 1);
   assert.deepEqual(errors, []);
-  console.log('OK: sound settings choose, shorten, preview, remove and refuse; on and off stay the only settings');
+  console.log('OK: sound rows in General choose, shorten, preview, remove, refuse and switch off');
   console.log(`Screenshots: ${directory}`);
 } finally { await browser.close(); server.close(); }
