@@ -419,6 +419,18 @@ export const zhTW = {
   'theme.color.indigo': '靛藍',
   'theme.color.glacier': '冰川藍',
   'theme.color.slate': '玫瑰',
+  'theme.color.oat': "燕麥",
+  'theme.color.coral': "珊瑚",
+  'theme.color.gold': "金沙",
+  'theme.color.olive': "橄欖",
+  'theme.color.lagoon': "湖青",
+  'theme.color.iris': "鳶尾",
+  'theme.color.steel': "鋼灰",
+  'theme.color.fuchsia': "洋紅",
+  'theme.color.copper': "赤銅",
+  'theme.color.jade': "翡翠",
+  'theme.color.sapphire': "藍寶石",
+  'theme.color.orchid': "紫水晶",
 
   // Gambit · 妙手
   'gambit.title': '妙手',

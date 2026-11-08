@@ -418,6 +418,18 @@ export const ja = {
   'theme.color.indigo': 'インディゴ',
   'theme.color.glacier': '氷河ブルー',
   'theme.color.slate': 'ローズ',
+  'theme.color.oat': "オーツ",
+  'theme.color.coral': "コーラル",
+  'theme.color.gold': "ゴールド",
+  'theme.color.olive': "オリーブ",
+  'theme.color.lagoon': "ラグーン",
+  'theme.color.iris': "アイリス",
+  'theme.color.steel': "スチール",
+  'theme.color.fuchsia': "フューシャ",
+  'theme.color.copper': "カッパー",
+  'theme.color.jade': "翡翠",
+  'theme.color.sapphire': "サファイア",
+  'theme.color.orchid': "オーキッド",
 
   // Gambit · 一手
   'gambit.title': '一手',

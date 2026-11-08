@@ -418,6 +418,18 @@ export const ko = {
   'theme.color.indigo': '인디고',
   'theme.color.glacier': '빙하 블루',
   'theme.color.slate': '로즈',
+  'theme.color.oat': "오트",
+  'theme.color.coral': "코랄",
+  'theme.color.gold': "골드",
+  'theme.color.olive': "올리브",
+  'theme.color.lagoon': "라군",
+  'theme.color.iris': "아이리스",
+  'theme.color.steel': "스틸",
+  'theme.color.fuchsia': "푸시아",
+  'theme.color.copper': "코퍼",
+  'theme.color.jade': "비취",
+  'theme.color.sapphire': "사파이어",
+  'theme.color.orchid': "오키드",
 
   // Gambit · 한 수
   'gambit.title': '한 수',

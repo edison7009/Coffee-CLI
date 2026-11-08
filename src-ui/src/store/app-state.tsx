@@ -38,14 +38,16 @@ export function supportsAgentStatus(tool: ToolType): boolean {
 }
 
 // Theme: color palette family (orthogonal to shape and to mode).
-// 6 hues × 2 depths. The mid-depth row that shipped in v3.5.4 was dropped
+// 6 hues × 4 rows (mist, soft, vivid, deep). The mid-depth row that shipped in v3.5.4 was dropped
 // again — it read as a duplicate of its soft/deep neighbours (see
 // RETIRED_THEMES for where a saved pick from that row lands now).
 export type ThemeColor =
   | 'dark' | 'light' | 'sakura' | 'lavender' | 'mint'
   | 'obsidian' | 'moss'
   | 'amber' | 'teal' | 'indigo'
-  | 'glacier' | 'slate';
+  | 'glacier' | 'slate'
+  | 'oat' | 'coral' | 'gold' | 'olive' | 'lagoon' | 'iris'
+  | 'steel' | 'fuchsia' | 'copper' | 'jade' | 'sapphire' | 'orchid';
 // Theme: which half of that family's palette to paint. 'system' follows the OS
 // light/dark preference live (App.tsx watches prefers-color-scheme), so the
 // centre tabs in Settings ▸ Appearance is purely a view of this value.
@@ -697,6 +699,8 @@ const VALID_THEMES: ThemeColor[] = [
   'obsidian', 'moss',
   'amber', 'teal', 'indigo',
   'glacier', 'slate',
+  'oat', 'coral', 'gold', 'olive', 'lagoon', 'iris',
+  'steel', 'fuchsia', 'copper', 'jade', 'sapphire', 'orchid',
 ];
 // Palettes the picker no longer offers because their row was redundant. A
 // saved pick from that row moves to its own column's deep neighbour, which

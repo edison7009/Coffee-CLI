@@ -420,6 +420,18 @@ Xóa tờ ghi chú này khi bạn sẵn sàng và bắt đầu tác vụ đầu 
   'theme.color.indigo': 'Chàm',
   'theme.color.glacier': 'Xanh băng',
   'theme.color.slate': 'Hoa hồng',
+  'theme.color.oat': "Yến mạch",
+  'theme.color.coral': "San hô",
+  'theme.color.gold': "Vàng",
+  'theme.color.olive': "Ô liu",
+  'theme.color.lagoon': "Đầm phá",
+  'theme.color.iris': "Diên vĩ",
+  'theme.color.steel': "Thép",
+  'theme.color.fuchsia': "Hồng tím",
+  'theme.color.copper': "Đồng",
+  'theme.color.jade': "Ngọc bích",
+  'theme.color.sapphire': "Lam ngọc",
+  'theme.color.orchid': "Lan",
 
   // Gambit · Nước cờ
   'gambit.title': 'Nước cờ',

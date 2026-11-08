@@ -419,6 +419,18 @@ export const zhCN = {
   'theme.color.indigo': '靛蓝',
   'theme.color.glacier': '冰川蓝',
   'theme.color.slate': '玫瑰',
+  'theme.color.oat': "燕麦",
+  'theme.color.coral': "珊瑚",
+  'theme.color.gold': "金沙",
+  'theme.color.olive': "橄榄",
+  'theme.color.lagoon': "湖青",
+  'theme.color.iris': "鸢尾",
+  'theme.color.steel': "钢灰",
+  'theme.color.fuchsia': "洋红",
+  'theme.color.copper': "赤铜",
+  'theme.color.jade': "翡翠",
+  'theme.color.sapphire': "蓝宝石",
+  'theme.color.orchid': "紫水晶",
 
   // Gambit · 妙手
   'gambit.title': '妙手',
