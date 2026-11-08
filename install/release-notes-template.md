@@ -1,64 +1,74 @@
 <details open>
 <summary><b>简体中文</b></summary>
 
-### Coffee CLI v3.9.2 · macOS 和 Linux 也能在应用内更新
+### Coffee CLI v3.9.3 · 自动化与全新设置页
 
-- **macOS / Linux 应用内更新：** 点击更新按钮，安装包会自动下载到系统的“下载”目录，并校验完整性。macOS 下载完直接打开 DMG，Linux 打开下载文件夹，双击即可安装；Windows 仍然自动安装。Linux 会按系统自动选择 DEB 或 RPM。
-- **国内镜像更新：** 版本号和更新日志可从国内镜像读取，下载时在多个来源里自动选最快且校验通过的一个，国内网络更稳。
-- **更清晰的层级：** 左侧“项目分类”里，目录图标单独一列，对话和“显示更多”向右缩进，一眼分清谁属于哪个目录。
-- **Pi 细节修复：** “回到最新”按钮现在会显示 Pi 的工作标记。
-- **内部整理：** 历史记录和终端模块拆分，后续改动更稳，使用上没有变化。
+- **自动化：** 左侧“搜索”上方新增“自动化”。按每天、工作日、每周（可多选）、每隔几小时几分钟或某一次，把写好的指令发给 Claude Code、Codex、DeepSeek Harness、OpenCode 或 Pi 的桌面对话，到点在前台打开。右侧任务列表顶部可以直接开关，或一键发到当前对话。
+- **全新设置页：** 设置铺满整个窗口，声音和快捷键并入“通用”，Coffee Agent 的配置也在设置里。新增两排配色，共 24 种主题。
+- **每轮耗时与费用：** 五款桌面对话的每一轮回复下方显示耗时、Token 和费用，历史记录也有；模型菜单显示各模型的价格。
+- **DeepSeek Harness：** 回复流式显示，文件修改和命令显示为卡片，正在运行的子代理和后台任务显示在输入框旁；权限菜单加上图标和简短说明。
+- **会话列表与工作树：** 会话列表菜单可选应用和图标显示方式；工作树分支按项目命名，创建期间显示状态，建好后再发送消息。
+- **macOS：** 左上角红绿灯跟随应用的深浅色，深色主题下显示为玻璃质感；用输入法确认候选词时不再误发送。没安装 Codex CLI 时会使用 ChatGPT 应用自带的版本。
+- **修复与调整：** 对话启动失败时直接显示原因；配置和任务改为原子保存，不会覆盖已损坏的文件；重启后不再自动恢复上次打开的标签页，避免同一会话被重复打开而损坏记录。
 
 </details>
 
 <details>
 <summary><b>English</b></summary>
 
-### Coffee CLI v3.9.2 · In-App Updates on macOS and Linux
+### Coffee CLI v3.9.3 · Automations and a New Settings Page
 
-- **In-app updates on macOS and Linux:** The update button now downloads the installer into your Downloads folder and verifies it. On macOS it opens the DMG; on Linux it opens the folder so you can double-click the package. Windows still installs automatically. Linux picks DEB or RPM to match your system.
-- **Mirror updates for China:** Versions and release notes can be read from mainland mirrors, and downloads race several sources and use the fastest one that passes verification.
-- **Clearer sidebar:** In Project view, folder icons sit in their own column, with conversations and "Show more" indented beneath them.
-- **Pi fix:** The scroll-to-latest button now shows Pi's working mark.
-- **Under the hood:** The history and terminal modules were split up for steadier future changes. Nothing changes in how you use them.
+- **Automations:** A new Automations entry sits above Search. Send a prompt you wrote to a Claude Code, Codex, DeepSeek Harness, OpenCode or Pi desktop conversation daily, on weekdays, on chosen days of the week, every few hours and minutes, or once; it opens in front when due. The top of the task list lets you switch each one on or off, or send it to the current conversation in one click.
+- **New settings page:** Settings now fills the window. Sounds and shortcuts moved into General, and Coffee Agent's configuration lives in Settings too. Two new rows of colours bring the themes to 24.
+- **Time and cost per turn:** Every turn in the five desktop conversations shows its time, tokens and cost, history included, and the model menus show each model's price.
+- **DeepSeek Harness:** Replies stream in, file edits and commands appear as cards, and running sub-agents and background jobs show beside the composer. The permission menu has icons and short notes.
+- **Session list and worktrees:** The session list menu picks an app and how icons show. Worktree branches are named after the project, and a status shows while one is created; messages wait until it is ready.
+- **macOS:** The window controls follow the app's light or dark theme and look like glass in dark themes. Confirming an input method candidate no longer sends the message. Without Codex CLI installed, the copy bundled with the ChatGPT app is used.
+- **Fixes and changes:** A conversation that cannot start says why. Settings and tasks are saved atomically and a damaged file is never overwritten. Tabs are no longer reopened after a restart, which could open one session twice and damage its transcript.
 
 </details>
 
 <details>
 <summary><b>繁體中文</b></summary>
 
-### Coffee CLI v3.9.2 · macOS 與 Linux 也能在應用內更新
+### Coffee CLI v3.9.3 · 自動化與全新設定頁
 
-- **macOS / Linux 應用內更新：** 點擊更新按鈕，安裝包會自動下載到系統的「下載」目錄，並校驗完整性。macOS 下載完直接開啟 DMG，Linux 開啟下載資料夾，雙擊即可安裝；Windows 仍然自動安裝。Linux 會依系統自動選擇 DEB 或 RPM。
-- **中國大陸鏡像更新：** 版本號與更新日誌可從大陸鏡像讀取，下載時在多個來源中自動選最快且校驗通過的一個，大陸網路更穩。
-- **更清晰的層級：** 左側「專案分類」中，資料夾圖示獨立一欄，對話與「顯示更多」向右縮排，一眼分清歸屬。
-- **Pi 細節修復：** 「回到最新」按鈕現在會顯示 Pi 的工作標記。
-- **內部整理：** 歷史記錄與終端模組拆分，後續改動更穩，使用上沒有變化。
+- **自動化：** 左側「搜尋」上方新增「自動化」。按每天、工作日、每週（可多選）、每隔幾小時幾分鐘或某一次，把寫好的指令傳給 Claude Code、Codex、DeepSeek Harness、OpenCode 或 Pi 的桌面對話，到點在前台開啟。右側任務清單頂部可直接開關，或一鍵傳到目前對話。
+- **全新設定頁：** 設定鋪滿整個視窗，聲音與快捷鍵併入「一般」，Coffee Agent 的設定也在設定裡。新增兩排配色，共 24 種主題。
+- **每輪耗時與費用：** 五款桌面對話的每一輪回覆下方顯示耗時、Token 與費用，歷史記錄也有；模型選單顯示各模型的價格。
+- **DeepSeek Harness：** 回覆串流顯示，檔案修改與命令以卡片呈現，執行中的子代理與背景任務顯示在輸入框旁；權限選單加上圖示與簡短說明。
+- **工作階段清單與工作樹：** 工作階段清單選單可選應用與圖示顯示方式；工作樹分支依專案命名，建立期間顯示狀態，建好後再傳送訊息。
+- **macOS：** 左上角紅綠燈跟隨應用的深淺色，深色主題下呈現玻璃質感；用輸入法確認候選字時不再誤傳送。未安裝 Codex CLI 時會使用 ChatGPT 應用內建的版本。
+- **修復與調整：** 對話啟動失敗時直接顯示原因；設定與任務改為原子儲存，不會覆蓋已損壞的檔案；重新啟動後不再自動恢復上次開啟的分頁，避免同一工作階段被重複開啟而損壞記錄。
 
 </details>
 
 <details>
 <summary><b>日本語</b></summary>
 
-### Coffee CLI v3.9.2 · macOS と Linux でもアプリ内アップデート
+### Coffee CLI v3.9.3 · オートメーションと新しい設定ページ
 
-- **macOS / Linux のアプリ内アップデート：** 更新ボタンを押すと、インストーラーが「ダウンロード」フォルダに保存され、整合性も確認されます。macOS では DMG が開き、Linux ではフォルダが開くので、ダブルクリックでインストールできます。Windows は従来どおり自動でインストールされます。Linux ではシステムに合わせて DEB か RPM を自動で選びます。
-- **中国向けミラー：** バージョンと更新履歴を中国本土のミラーから読み取れ、ダウンロードは複数の取得元から検証に通った最速のものを自動で選びます。
-- **見やすい階層：** サイドバーのプロジェクト表示で、フォルダアイコンが独立した列になり、会話と「さらに表示」が右にインデントされます。
-- **Pi の修正：** 「最新へ戻る」ボタンに Pi の作業中マークが表示されるようになりました。
-- **内部の整理：** 履歴とターミナルのモジュールを分割しました。使い方に変更はありません。
+- **オートメーション：** 左側の「検索」の上に「オートメーション」を追加しました。毎日、平日、曜日指定（複数可）、数時間・数分おき、または一度だけ、書いておいた指示を Claude Code、Codex、DeepSeek Harness、OpenCode、Pi のデスクトップ会話に送り、時間になると前面で開きます。タスク一覧の上部でオン／オフを切り替えたり、今の会話へワンクリックで送ったりできます。
+- **新しい設定ページ：** 設定がウィンドウ全体に広がり、サウンドとショートカットは「一般」に、Coffee Agent の設定も設定内に移りました。配色が 2 列増え、テーマは 24 種類になりました。
+- **ターンごとの時間と費用：** 5 つのデスクトップ会話で、各ターンの下に所要時間・トークン・費用を表示します（履歴も含む）。モデルメニューには各モデルの価格を表示します。
+- **DeepSeek Harness：** 返信がストリーミング表示になり、ファイル変更とコマンドはカードで表示され、実行中のサブエージェントとバックグラウンドジョブが入力欄の横に表示されます。権限メニューにアイコンと短い説明を付けました。
+- **セッション一覧とワークツリー：** セッション一覧のメニューでアプリとアイコン表示を選べます。ワークツリーのブランチはプロジェクト名で命名され、作成中は状態を表示し、準備ができてからメッセージを送ります。
+- **macOS：** 左上の信号ボタンがアプリのライト／ダークに合わせ、ダークテーマではガラス調になります。入力メソッドで候補を確定しても送信されなくなりました。Codex CLI が未インストールの場合は ChatGPT アプリ同梱のものを使います。
+- **修正と変更：** 会話を開始できないときは理由をその場に表示します。設定とタスクは原子的に保存され、破損したファイルを上書きしません。再起動後にタブを自動で復元しなくなりました（同じセッションが二重に開かれ記録が壊れることがあったため）。
 
 </details>
 
 <details>
 <summary><b>한국어</b></summary>
 
-### Coffee CLI v3.9.2 · macOS와 Linux에서도 앱 내 업데이트
+### Coffee CLI v3.9.3 · 자동화와 새로운 설정 페이지
 
-- **macOS / Linux 앱 내 업데이트:** 업데이트 버튼을 누르면 설치 파일이 시스템의 다운로드 폴더에 저장되고 무결성도 확인됩니다. macOS에서는 DMG가 열리고, Linux에서는 폴더가 열려 더블클릭으로 설치할 수 있습니다. Windows는 기존처럼 자동으로 설치됩니다. Linux에서는 시스템에 맞춰 DEB 또는 RPM을 자동으로 고릅니다.
-- **중국 미러 업데이트:** 버전과 업데이트 내용을 중국 본토 미러에서 읽을 수 있고, 다운로드는 여러 소스 중 검증을 통과한 가장 빠른 곳을 자동으로 선택합니다.
-- **더 명확한 계층:** 사이드바의 프로젝트 보기에서 폴더 아이콘이 별도 열이 되고, 대화와 "더 보기"가 오른쪽으로 들여쓰기됩니다.
-- **Pi 수정:** "최신으로 이동" 버튼에 Pi의 작업 중 표시가 나타납니다.
-- **내부 정리:** 기록과 터미널 모듈을 분리했습니다. 사용 방식은 달라지지 않습니다.
+- **자동화:** 왼쪽 "검색" 위에 "자동화"가 추가되었습니다. 매일, 평일, 요일 지정(여러 개 선택 가능), 몇 시간·몇 분마다, 또는 한 번만, 미리 써 둔 지시를 Claude Code, Codex, DeepSeek Harness, OpenCode, Pi 데스크톱 대화로 보내고 시간이 되면 앞에 엽니다. 작업 목록 맨 위에서 켜고 끄거나 현재 대화로 한 번에 보낼 수 있습니다.
+- **새로운 설정 페이지:** 설정이 창 전체를 채우고, 소리와 단축키는 "일반"으로, Coffee Agent 설정도 설정 안으로 옮겼습니다. 색상이 두 줄 늘어 테마가 24가지가 되었습니다.
+- **턴별 시간과 비용:** 다섯 데스크톱 대화의 각 턴 아래에 소요 시간, 토큰, 비용을 표시합니다(기록 포함). 모델 메뉴에는 모델별 가격이 표시됩니다.
+- **DeepSeek Harness:** 답변이 스트리밍으로 표시되고, 파일 수정과 명령은 카드로 보이며, 실행 중인 하위 에이전트와 백그라운드 작업이 입력창 옆에 표시됩니다. 권한 메뉴에 아이콘과 짧은 설명을 더했습니다.
+- **세션 목록과 워크트리:** 세션 목록 메뉴에서 앱과 아이콘 표시 방식을 고를 수 있습니다. 워크트리 브랜치는 프로젝트 이름으로 지어지고, 만드는 동안 상태를 표시하며 준비가 끝난 뒤 메시지를 보냅니다.
+- **macOS:** 왼쪽 위 창 버튼이 앱의 밝은/어두운 테마를 따르고, 어두운 테마에서는 유리 질감으로 보입니다. 입력기로 후보를 확정할 때 더 이상 메시지가 전송되지 않습니다. Codex CLI가 설치되어 있지 않으면 ChatGPT 앱에 포함된 버전을 사용합니다.
+- **수정과 변경:** 대화를 시작할 수 없으면 이유를 그 자리에 표시합니다. 설정과 작업은 원자적으로 저장되어 손상된 파일을 덮어쓰지 않습니다. 재시작 후 탭을 자동으로 복원하지 않습니다(같은 세션이 두 번 열려 기록이 손상될 수 있었기 때문입니다).
 
 </details>
