@@ -72,9 +72,10 @@ fn show_main_window(app: tauri::AppHandle) {
 /// transparent so the Acrylic shows through; the app's rounded corners come
 /// from DWM instead of the CSS clip-path while Frost is active.
 #[tauri::command]
-fn set_frosted_backdrop(app: tauri::AppHandle, on: bool, dark: bool) {
+fn set_frosted_backdrop(app: tauri::AppHandle, on: bool, dark: bool, follow_system: Option<bool>) {
     #[cfg(target_os = "windows")]
     {
+        let _ = follow_system;
         use tauri::Manager;
         use windows::Win32::Foundation::{BOOL, FALSE, HWND, TRUE};
         use windows::Win32::Graphics::Dwm::{
@@ -136,6 +137,10 @@ fn set_frosted_backdrop(app: tauri::AppHandle, on: bool, dark: bool) {
             apply_vibrancy, clear_vibrancy, NSVisualEffectMaterial, NSVisualEffectState,
         };
         if let Some(w) = app.get_webview_window("main") {
+            // The window's native appearance follows the app's light or dark mode, not the system's,
+            // so the traffic lights are drawn for the page under them (dark ones turn to glass).
+            // "System" releases the override, so the page still hears the system switch light and dark.
+            let _ = w.set_theme(if follow_system.unwrap_or(false) { None } else if dark { Some(tauri::Theme::Dark) } else { Some(tauri::Theme::Light) });
             if on {
                 // Match vibrancy to the colour theme rather than the macOS
                 // system appearance. With the intentionally light 30% CSS
@@ -168,10 +173,10 @@ fn set_frosted_backdrop(app: tauri::AppHandle, on: bool, dark: bool) {
             // cross-desktop blur API and no wallpaper/screenshot fakery.
             let _ = crate::linux_blur::set_blur(&w, on);
         }
-        let _ = dark;
+        let _ = (dark, follow_system);
     }
     #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
-    let _ = (app, on, dark);
+    let _ = (app, on, dark, follow_system);
 }
 
 #[tauri::command]

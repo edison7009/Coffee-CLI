@@ -380,9 +380,10 @@ export function App() {
       inv('set_frosted_backdrop', {
         on: frost,
         dark: resolvedMode !== 'light',
+        followSystem: state.themeMode === 'system',
       }).catch(() => {});
     }
-  }, [state.currentShape, state.currentTheme, resolvedMode]);
+  }, [state.currentShape, state.currentTheme, state.themeMode, resolvedMode]);
 
   // Sync the UI language to the <html> lang attribute so CSS :lang(zh)
   // selectors can fire. This is what swaps the splash-label out of the
