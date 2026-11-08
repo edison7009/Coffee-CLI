@@ -620,12 +620,6 @@
 .settings-switch[aria-checked="true"] { background: var(--accent); box-shadow: none; }
 .settings-switch[aria-checked="true"] > span { transform: translateX(16px); }
 
-/* A compact choice at the right of a settings row: keycaps in pill segments. */
-.settings-segment { display: inline-flex; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; gap: 2px; padding: 2px; border-radius: 8px; background: var(--bg-hover); }
-.settings-segment button { display: inline-flex; align-items: center; gap: 3px; height: 28px; padding: 0 9px; border: 0; border-radius: 6px; color: var(--text-2); background: transparent; font: inherit; font-size: var(--type-label); cursor: pointer; }
-.settings-segment button:hover { color: var(--text-1); }
-.settings-segment button[aria-checked="true"] { color: var(--text-1); background: var(--accent-bg); box-shadow: inset 0 0 0 1px var(--border-focus); }
-.settings-segment kbd { display: inline-block; min-width: 18px; padding: 0 4px; border-radius: 4px; background: var(--bg-panel); font: inherit; font-size: 12px; line-height: 18px; text-align: center; }
 /* A row whose choice carries a note under it, both right-aligned. */
 .settings-choice-row { align-items: flex-start; }
 .settings-choice-row .settings-sound-title { padding-top: 5px; }

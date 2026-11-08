@@ -13,6 +13,7 @@
 // is unchanged; only the presentation moved.
 
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
+import { SegmentedTabs } from './SegmentedTabs';
 import { AgentSettings } from '../agent/AgentPages';
 import { useAppState, useAppDispatch, HOTKEY_SCHEMES, type HotkeyScheme, type ThemeColor, type ThemeMode, type ThemeShape, type IconTheme } from '../../store/app-state';
 import { playNotifySound } from '../../lib/notify-sound';
@@ -655,23 +656,16 @@ export function SettingsModal() {
                   <div className="settings-sound-row settings-choice-row">
                     <div className="settings-sound-title">{t('settings.send.title')}</div>
                     <div className="settings-choice">
-                      <div className="settings-segment" role="radiogroup" aria-label={t('settings.send.title')}>
-                        <button type="button" role="radio" aria-checked={state.gambitEnterToSend} onClick={() => setEnterToSend(true)}><kbd>Enter</kbd></button>
-                        <button type="button" role="radio" aria-checked={!state.gambitEnterToSend} onClick={() => setEnterToSend(false)}><kbd>{modKey}</kbd>+<kbd>Enter</kbd></button>
-                      </div>
+                      <SegmentedTabs compact label={t('settings.send.title')} value={state.gambitEnterToSend ? 'enter' : 'mod'} onChange={value => setEnterToSend(value === 'enter')}
+                        options={[{ value: 'enter', content: <kbd>Enter</kbd> }, { value: 'mod', content: <><kbd>{modKey}</kbd>+<kbd>Enter</kbd></> }]} />
                       <div className="settings-choice-hint">{state.gambitEnterToSend ? 'Shift+Enter' : 'Enter'} {t('settings.send.newline')}</div>
                     </div>
                   </div>
                   <div className="settings-sound-row settings-choice-row">
                     <div className="settings-sound-title">{t('settings.gambit.hotkey')}</div>
                     <div className="settings-choice">
-                      <div className="settings-segment" role="radiogroup" aria-label={t('settings.gambit.hotkey')}>
-                        {HOTKEY_SCHEMES.map(h => (
-                          <button key={h.code} type="button" role="radio" aria-checked={state.hotkeyScheme === h.code} onClick={() => setHotkeyScheme(h.code)}>
-                            <kbd>{h.mod}</kbd>+<kbd>{h.keys.left.key}</kbd><kbd>{h.keys.gambit.key}</kbd><kbd>{h.keys.right.key}</kbd>
-                          </button>
-                        ))}
-                      </div>
+                      <SegmentedTabs compact label={t('settings.gambit.hotkey')} value={state.hotkeyScheme} onChange={setHotkeyScheme}
+                        options={HOTKEY_SCHEMES.map(h => ({ value: h.code, content: <><kbd>{h.mod}</kbd>+<kbd>{h.keys.left.key}</kbd><kbd>{h.keys.gambit.key}</kbd><kbd>{h.keys.right.key}</kbd></> }))} />
                       {(() => { const h = HOTKEY_SCHEMES.find(item => item.code === state.hotkeyScheme) ?? HOTKEY_SCHEMES[0]; return <div className="settings-choice-hint">{t('settings.gambit.hotkey_hint', { left: `${h.mod}+${h.keys.left.key}`, gambit: `${h.mod}+${h.keys.gambit.key}`, right: `${h.mod}+${h.keys.right.key}` })}</div>; })()}
                     </div>
                   </div>

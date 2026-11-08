@@ -1,0 +1,9 @@
+/* SegmentedTabs reuse the app settings tab track; these adapt it to radio choices inside forms and rows. */
+.segmented-tabs { margin-bottom: 0; }
+.segmented-tabs > button[aria-checked="true"] { color: var(--bg-app); }
+[data-mode="light"] .segmented-tabs > button[aria-checked="true"] { color: var(--text-1); }
+.segmented-tabs > button { display: inline-flex; align-items: center; gap: 3px; }
+.segmented-tabs--compact { --tool-tab-inset: 4px; }
+.segmented-tabs--compact > button { padding: 4px 10px; font-size: var(--type-label); }
+/* Keycaps inside a tab follow its text colour, chosen or not. */
+.segmented-tabs kbd { display: inline-block; min-width: 18px; padding: 0 4px; border-radius: 4px; background: color-mix(in srgb, currentColor 14%, transparent); font: inherit; font-size: 12px; line-height: 18px; text-align: center; }
