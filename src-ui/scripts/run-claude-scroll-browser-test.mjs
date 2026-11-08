@@ -23,7 +23,7 @@ await build({
   ` },
   bundle: true, outfile: join(directory, 'fixture.js'), jsx: 'automatic',
   external: ['/fonts/*', '/monogram.svg'],
-  nodePaths: [join(project, 'node_modules')], loader: { '.webp': 'dataurl', '.webm': 'dataurl', '.gif': 'dataurl' },
+  nodePaths: [join(project, 'node_modules')], loader: { '.webp': 'dataurl', '.webm': 'dataurl', '.mov': 'dataurl', '.gif': 'dataurl' },
   define: { 'process.env.NODE_ENV': '"development"' },
   plugins: [{ name: 'isolated-session', setup(builder) {
     builder.onResolve({ filter: /(^|\/)tauri$/ }, () => ({ path: 'tauri', namespace: 'fixture' }));
@@ -42,7 +42,7 @@ await build({
     ` : args.path === 'tauri' ? `export const commands=new Proxy({},{get:(_,name)=>async(...args)=>{(window.nativeActions??=[]).push({name,args});if(name==='computerName')return 'TEST-DESKTOP'}});` : `
       import {useSyncExternalStore} from 'react';import {emptyClaudeState,reduceClaudeEvent} from './src/lib/claude-protocol';
       let state={...emptyClaudeState(),ready:true};const listeners=new Set();
-      window.setSession=patch=>{state={...state,...patch};listeners.forEach(fn=>fn())};
+      window.setSession=patch=>{state={...state,...patch};listeners.forEach(fn=>fn())};window.currentMessages=()=>state.messages;
       window.stopFixture=errors=>{state=reduceClaudeEvent({...state,interruptRequested:true},{type:'result',is_error:true,errors});listeners.forEach(fn=>fn())};
       window.reset=kind=>{
         clearInterval(window.streamTimer);window.tick=0;
@@ -107,12 +107,13 @@ try {
     console.log('ok', role, 'stream, upward reading, return follow and completion');
   }
   await returnBottom();
-  await page.evaluate(() => window.setSession({usage:{input_tokens:69000,output_tokens:2100},totalCost:1.4818}));
+  // A turn's totals ride on its last message.
+  await page.evaluate(() => window.setSession({messages:window.currentMessages().map(m=>m.id==='live'?{...m,turnStats:{durationMs:2000,usage:{input:69000,output:2100},cost:1.4818}}:m)}));
   const summary = page.locator('.claude-turn-summary'); await summary.waitFor();
   assert.equal(await summary.locator('..').getAttribute('data-message-id'), 'live', 'usage belongs inside the final timeline message');
   const summaryBox = await summary.boundingBox(), copyBox = await summary.locator('..').locator('.conversation-copy').boundingBox();
   assert.ok(summaryBox.y - copyBox.y - copyBox.height >= 0 && summaryBox.y - copyBox.y - copyBox.height <= 12, 'usage follows the copy action without a large gap');
-  assert.ok((await summary.textContent()).includes('71.1k') && (await summary.textContent()).includes('1.4818'), 'usage values remain intact');
+  assert.ok((await summary.textContent()).includes('71.1k') && (await summary.textContent()).includes('1.48'), 'usage values remain intact');
   console.log('ok usage is inside the timeline, close to copy, with original values');
   await page.setViewportSize({ width: 1100, height: 600 }); await page.waitForTimeout(150); await atBottom();
   await page.setViewportSize({ width: 1100, height: 850 }); await page.waitForTimeout(150); await atBottom();
@@ -335,7 +336,7 @@ try {
   assert.equal(await page.locator('.claude-working').count(),0,'startup shows the welcome screen without a Connecting row');
   await page.evaluate(()=>window.setSession({error:'Startup unavailable'}));
   await page.waitForFunction(()=>document.querySelector('.claude-reconnect'));
-  assert.equal(await page.locator('.claude-session-error').count(),0,'connection failures do not become red conversation messages');
+  assert.equal(await page.locator('.claude-session-error').textContent(),'Startup unavailable','a failed start says why in place');
   assert.equal(await page.locator('.claude-reconnect').getAttribute('title'),'Startup unavailable');
   await page.evaluate(()=>window.setSession({ready:true,status:'idle',error:undefined}));
   const resolvedModel = 'deepseek-flash[1m]';

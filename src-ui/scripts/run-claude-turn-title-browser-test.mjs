@@ -23,7 +23,7 @@ await build({
   ` },
   bundle: true, outfile: join(directory, 'fixture.js'), jsx: 'automatic',
   external: ['/fonts/*', '/monogram.svg'],
-  nodePaths: [join(project, 'node_modules')], loader: { '.webp': 'dataurl', '.webm': 'dataurl', '.gif': 'dataurl' },
+  nodePaths: [join(project, 'node_modules')], loader: { '.webp': 'dataurl', '.webm': 'dataurl', '.mov': 'dataurl', '.gif': 'dataurl' },
   define: { 'process.env.NODE_ENV': '"development"' },
   plugins: [{ name: 'isolated-session', setup(builder) {
     builder.onResolve({ filter: /(^|\/)tauri$/ }, () => ({ path: 'tauri', namespace: 'fixture' }));

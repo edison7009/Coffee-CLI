@@ -206,7 +206,7 @@ try {
   await page.waitForFunction(()=>!window.currentState.busy);
   assert.equal(await input.inputValue(),'Keep this draft','stop preserves a draft');
   assert.equal(await page.locator('.claude-session-error').count(),0,'user stop is neutral');
-  await page.getByText('Interrupted · 2s',{exact:true}).waitFor();
+  await page.getByText('Interrupted · Worked for 2s',{exact:true}).waitFor();
   await input.focus();
   await page.getByRole('button',{name:'Codex permissions',exact:true}).click();
   const permissions=page.getByRole('dialog',{name:'Codex permissions',exact:true});
@@ -346,7 +346,7 @@ try {
   await page.keyboard.press('Escape');
   await page.evaluate(()=>window.emit('b','coffee/exit',{code:1,detail:'Startup unavailable'}));
   await page.waitForFunction(()=>document.querySelector('.host:has(.claude-reconnect)'));
-  assert.equal(await page.locator('.host:visible .claude-session-error').count(),0,'connection failures do not become red conversation messages');
+  assert.equal(await page.locator('.host:visible .claude-session-error').textContent(),'Startup unavailable','a failed start says why in place');
   assert.equal(await page.locator('.host:visible .claude-reconnect').getAttribute('title'),'Startup unavailable');
   assert.deepEqual(errors,[]);
   console.log('ok 1000/520/360/320px, theme colors, virtual history, paused reading and history prepend');

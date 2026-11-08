@@ -12,7 +12,7 @@ const session = `import{useSyncExternalStore}from'react';
 const listeners=new Set();
 window.dsh={ready:true,busy:false,sessionId:'s1',title:'',route:{provider:'deepseek-account',model:'deepseek-flash',effort:'high'},
   models:[{provider:'deepseek-account',model:'deepseek-flash',name:'DeepSeek-V4.1-Flash',efforts:['off','low','high','max']}],
-  preset:'',policy:'',messages:[],requests:[],contextTokens:0,contextWindow:0,commands:true};
+  preset:'',policy:'',messages:[],requests:[],jobs:[],backgroundTasks:[],contextTokens:0,contextWindow:0,commands:true};
 window.routes=[];window.pending=[];
 const publish=()=>listeners.forEach(listener=>listener());
 export function useDshSession(id,select=state=>state){return useSyncExternalStore(listener=>{listeners.add(listener);return()=>listeners.delete(listener)},()=>select(window.dsh))}
