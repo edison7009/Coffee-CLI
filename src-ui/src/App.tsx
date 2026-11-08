@@ -1,6 +1,7 @@
 // App.tsx — 3-panel IDE layout (frameless window)
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { AutomationRunner } from './components/center/AutomationRunner';
 import { SettingsModal } from './components/common/SettingsModal';
 import { useAppState } from './store/app-state';
 import { retryInvoke } from './tauri';
@@ -490,6 +491,7 @@ export function App() {
       {/* Custom titlebar — drag region + minimize / maximize / close */}
       <TitleBar />
       <AgentBridge />
+      <AutomationRunner />
 
       {/* 3-panel workspace. Titlebar toggles flip leftPanelHidden /
           rightPanelHidden. The OS window itself doesn't resize (same

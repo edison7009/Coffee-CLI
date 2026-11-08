@@ -258,6 +258,8 @@ export interface AppState {
   /// renders on; this = which tab is focused right now).
   diffTabActive: boolean;
   usageOpen: boolean;
+  /** The automations page in the centre, one of the full pages like usage. */
+  automationsOpen: boolean;
   toolSettingsOpen: boolean;
 }
 
@@ -294,6 +296,7 @@ export function resolveDiffContext(session: TerminalSession | null | undefined):
 
 type Action =
   | { type: 'SET_USAGE_OPEN'; open: boolean }
+  | { type: 'SET_AUTOMATIONS_OPEN'; open: boolean }
   | { type: 'SET_TOOL_SETTINGS_OPEN'; open: boolean }
   | { type: 'SET_FOLDER'; path: string }
   | { type: 'SET_TERMINAL_CWD'; id: string; path: string }
@@ -364,13 +367,15 @@ function splitForSession(state: AppState, id: string, targetId: string, edge: Sp
 
 function reducer(state: AppState, action: Action): AppState {
   // Coffee Agent's configuration lives in settings; its old tab opens that section instead.
-  if (action.type === 'OPEN_AGENT_PAGE' && action.page === 'config') return { ...state, settingsOpen: true, settingsSection: 'agent', usageOpen: false, toolSettingsOpen: false };
-  if ((state.usageOpen || state.toolSettingsOpen || state.settingsOpen) && !(action.type === 'LAUNCH_TERMINAL_TOOL' && action.background) && ['ADD_TERMINAL', 'LAUNCH_TERMINAL_TOOL', 'SET_ACTIVE_TERMINAL', 'OPEN_AGENT_PAGE', 'OPEN_SESSION_SPLIT', 'SET_DIFF_SELECTION', 'SET_DIFF_TAB_ACTIVE'].includes(action.type)) state = { ...state, usageOpen: false, toolSettingsOpen: false, settingsOpen: false };
+  if (action.type === 'OPEN_AGENT_PAGE' && action.page === 'config') return { ...state, settingsOpen: true, settingsSection: 'agent', usageOpen: false, toolSettingsOpen: false, automationsOpen: false };
+  if ((state.usageOpen || state.toolSettingsOpen || state.settingsOpen || state.automationsOpen) && !(action.type === 'LAUNCH_TERMINAL_TOOL' && action.background) && ['ADD_TERMINAL', 'LAUNCH_TERMINAL_TOOL', 'SET_ACTIVE_TERMINAL', 'OPEN_AGENT_PAGE', 'OPEN_SESSION_SPLIT', 'SET_DIFF_SELECTION', 'SET_DIFF_TAB_ACTIVE'].includes(action.type)) state = { ...state, usageOpen: false, toolSettingsOpen: false, settingsOpen: false, automationsOpen: false };
   switch (action.type) {
     case 'SET_USAGE_OPEN':
-      return { ...state, usageOpen: action.open, toolSettingsOpen: false, ...(action.open ? { settingsOpen: false } : {}) };
+      return { ...state, usageOpen: action.open, toolSettingsOpen: false, ...(action.open ? { settingsOpen: false, automationsOpen: false } : {}) };
+    case 'SET_AUTOMATIONS_OPEN':
+      return { ...state, automationsOpen: action.open, ...(action.open ? { usageOpen: false, toolSettingsOpen: false, settingsOpen: false } : {}) };
     case 'SET_TOOL_SETTINGS_OPEN':
-      return { ...state, toolSettingsOpen: action.open, usageOpen: false, ...(action.open ? { settingsOpen: false } : {}) };
+      return { ...state, toolSettingsOpen: action.open, usageOpen: false, ...(action.open ? { settingsOpen: false, automationsOpen: false } : {}) };
     case 'OPEN_SESSION_SPLIT': {
       const session = state.terminals.find(session => session.id === action.id);
       if (!session?.tool) return state;
@@ -612,9 +617,9 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, gambitOpen: !state.gambitOpen };
     // Settings covers the whole window; it and the usage and tool settings pages are open one at a time.
     case 'TOGGLE_SETTINGS':
-      return { ...state, settingsOpen: !state.settingsOpen, usageOpen: false, toolSettingsOpen: false };
+      return { ...state, settingsOpen: !state.settingsOpen, usageOpen: false, toolSettingsOpen: false, automationsOpen: false };
     case 'SET_SETTINGS_OPEN':
-      return { ...state, settingsOpen: action.open, ...(action.open ? { usageOpen: false, toolSettingsOpen: false } : {}), ...(action.section ? { settingsSection: action.section } : {}) };
+      return { ...state, settingsOpen: action.open, ...(action.open ? { usageOpen: false, toolSettingsOpen: false, automationsOpen: false } : {}), ...(action.section ? { settingsSection: action.section } : {}) };
     case 'SET_SETTINGS_SECTION':
       return { ...state, settingsSection: action.section };
     case 'SET_GAMBIT_ENTER_TO_SEND':
@@ -909,6 +914,7 @@ function getInitialState(): AppState {
     diffMode,
     diffTabActive: false,
     usageOpen: false,
+    automationsOpen: false,
     toolSettingsOpen: false,
     agentPages: [],
     agentPageActive: null,

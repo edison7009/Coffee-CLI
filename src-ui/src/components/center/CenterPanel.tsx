@@ -1,4 +1,5 @@
 import { Fragment, useState, useEffect, useLayoutEffect, useRef, useMemo, useSyncExternalStore } from 'react';
+import { AutomationsPage } from './AutomationsPage';
 import { addProjectFolder, getProjectFolders, removeProjectFolder, subscribeProjectFolders } from '../../lib/project-folders';
 import { createPortal } from 'react-dom';
 import { InlineSvgIcon } from '../InlineSvgIcon';
@@ -373,7 +374,7 @@ export function CenterPanel() {
   const diffTabActive = state.diffTabActive;
   const agentPageActive = state.agentPageActive;
   const usageOpen = state.usageOpen;
-  const utilityPageOpen = usageOpen || state.toolSettingsOpen || state.settingsOpen;
+  const utilityPageOpen = usageOpen || state.toolSettingsOpen || state.settingsOpen || state.automationsOpen;
   const contentActive = !utilityPageOpen && !diffTabActive && !agentPageActive;
   const splitIds = splitSessionIds(state.sessionSplit);
   const splitVisible = contentActive && splitIds.length > 1 && splitIds.includes(activeTerminalId ?? '');
@@ -1452,6 +1453,7 @@ export function CenterPanel() {
         ))}
 
         {usageOpen && <UsageDashboard />}
+        {state.automationsOpen && <AutomationsPage />}
         <ToolSettingsPage active={state.toolSettingsOpen} tools={AGENT_CATALOG.filter(item => pinnedItems.includes(`agent:${item.key}`)).map(item => ({ value: item.key as string, label: item.label, icon: item.icon, installed: item.key === 'terminal' || toolsInstalled[item.key ?? ''] !== false }))} count={pinnedItems.length} limit={MAX_PINS}>
           {[true, false].map(enabled => {
             const items = AGENT_CATALOG.filter(item => item.type === 'ai-cli' && pinnedItems.includes(`agent:${item.key}`) === enabled);

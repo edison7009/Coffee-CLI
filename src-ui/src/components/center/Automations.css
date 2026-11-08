@@ -1,0 +1,39 @@
+/* Automations page: fills the centre like the usage page; rows reuse the settings list look. */
+.automations-page { position: absolute; inset: 0; overflow: auto; background: var(--bg-terminal); color: var(--text-2); font-family: var(--font); }
+.automations-content { width: min(760px, calc(100% - 48px)); margin: 0 auto; padding: 28px 0 48px; }
+.automations-head { margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 34px; }
+.automations-new[hidden] { display: inline-flex; visibility: hidden; }
+.automations-head h1 { margin: 0; color: var(--text-1); font-size: calc(var(--type-body) + 5px); font-weight: 600; }
+.automations-empty-note { max-width: 620px; margin: 0; color: var(--text-3); font-size: var(--type-label); line-height: 1.7; }
+.automations-hint { margin: 0; color: var(--text-3); font-size: var(--type-label); line-height: 1.6; }
+.automations-editor { display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px; padding: 16px; border: 1px solid var(--border); border-radius: var(--shape-radius-panel, 10px); }
+.automations-field { display: flex; flex-direction: column; gap: 6px; }
+.automations-field > span { color: var(--text-2); font-size: var(--type-label); }
+.automations-field input, .automations-field textarea, .automations-schedule input { padding: 8px 10px; border: 1px solid var(--border-input); border-radius: var(--shape-radius-btn, 6px); background: var(--bg-input); color: var(--text-1); font: inherit; font-size: var(--type-body); outline: none; }
+.automations-field input:focus, .automations-field textarea:focus { border-color: var(--border-focus); }
+.automations-field textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
+.automations-field .segmented-tabs { align-self: flex-start; }
+.automations-folders { display: flex; flex-wrap: wrap; gap: 8px; }
+.automations-folder-chip { display: inline-flex; align-items: center; gap: 6px; max-width: 220px; height: 32px; padding: 0 12px; border: 1px solid var(--border-input); border-radius: var(--shape-radius-btn, 8px); background: transparent; color: var(--text-2); font: inherit; font-size: var(--type-label); cursor: pointer; }
+.automations-folder-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.automations-folder-chip svg { flex-shrink: 0; width: 14px; height: 14px; }
+.automations-folder-chip:hover { color: var(--text-1); background: var(--bg-hover); }
+.automations-folder-chip[aria-checked="true"] { color: var(--bg-app); background: color-mix(in srgb, var(--text-1) 80%, var(--accent)); border-color: transparent; }
+[data-mode="light"] .automations-folder-chip[aria-checked="true"] { color: var(--text-1); background: var(--bg-app); border-color: var(--border-focus); }
+.automations-folder-other { border-style: dashed; color: var(--text-3); }
+.automations-folder-path { color: var(--text-3); font-size: var(--type-label); overflow-wrap: anywhere; }
+.automations-schedule { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.automations-hours { display: inline-flex; align-items: center; gap: 6px; }
+.automations-hours input { width: 72px; }
+.automations-error { margin: 0; color: var(--red); font-size: var(--type-label); }
+.automations-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.automations-primary { background: var(--accent); color: var(--bg-app); border-color: transparent; }
+.automations-list { margin-top: 0; }
+.automations-row { gap: 14px; }
+.automations-row-text { flex: 1; min-width: 0; }
+.automations-row-title { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.automations-row-title .settings-sound-title { flex: 0 1 auto; }
+.automations-row-state { flex-shrink: 0; color: var(--text-3); font-size: var(--type-label); }
+.automations-row-sub { margin-top: 3px; color: var(--text-3); font-size: var(--type-label); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.automations-failed { color: var(--red); }
+.automations-delete { color: var(--text-3); }

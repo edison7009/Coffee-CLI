@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { TaskAutomations } from './TaskAutomations';
 import { useT } from '../../i18n/useT';
 import { useAppState } from '../../store/app-state';
 import { isTauri, commands } from '../../tauri';
@@ -273,6 +274,11 @@ export function TaskBoard({ onCountChange }: { onCountChange: (count: number) =>
       ? `${task.title}\n\n${task.description.trim()}`
       : task.title;
     void sendTask(task, body, true);
+  }, [sendTask]);
+
+  // An automation's prompt goes to the current conversation as is; its own app and folder are for scheduled runs.
+  const sendAutomationPrompt = useCallback((prompt: string) => {
+    void sendTask({ id: 'automation', title: prompt, status: 'todo', createdAt: 0 }, prompt, false);
   }, [sendTask]);
 
   // Prompt-view send: send ONLY the description (the prompt body). The
@@ -613,6 +619,8 @@ export function TaskBoard({ onCountChange }: { onCountChange: (count: number) =>
   return (
     <div className={`task-board${__IS_LINUX__ ? ' task-board--static' : ''}`} aria-busy={sending}>
           {sendErrorTarget && sendErrorTarget === state.activeTerminalId && <p className="task-send-error" role="alert">{t('task.send_failed')}</p>}
+          {/* Automations on top: on or off at a glance, and each prompt one click from the current conversation. */}
+          <TaskAutomations canSend={canSend} onSend={sendAutomationPrompt} />
           {viewMode === 'note' ? (
             <TaskNoteView
               tasks={tasks}
