@@ -39,3 +39,10 @@
 .claude-tasks-item { display:flex; align-items:center; gap:8px; min-width:0; padding:6px 9px; color:var(--text-1); }
 .claude-tasks-item > span:last-child { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 @media(prefers-reduced-motion:reduce) { .claude-tasks-dot,.claude-composer-controls .claude-tasks-control { animation:none; } }
+/* DeepSeek Harness permission presets: a shield and the name, a tick at the right on the current one. */
+.claude-control-menu button.dsh-preset-option { align-items:center; justify-content:flex-start; gap:8px; min-width:168px; }
+.claude-control-menu button.dsh-preset-option small { margin-left:auto; padding-left:16px; }
+/* The tick keeps its column on every row, so the notes line up. */
+.dsh-preset-option .dsh-preset-check { width:12px; color:var(--text-2); text-align:right; }
+.dsh-preset-icon { width:14px; height:14px; flex-shrink:0; }
+.claude-permission-control .dsh-preset-icon { margin-right:5px; vertical-align:-2px; }

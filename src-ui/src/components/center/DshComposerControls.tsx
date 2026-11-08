@@ -14,11 +14,12 @@ import { sameFolder } from '../../lib/worktree-path';
 import { useHoverOpen } from '../../lib/use-hover-open';
 
 type Menu = 'commands' | 'model' | 'effort' | 'permissions' | 'context' | 'tasks' | null;
-// The two presets DeepSeek Harness offers in its own composer.
+// The presets a DeepSeek Harness SDK session has (its desktop app configures more), each with its shield.
 const PRESETS = [
-  { value: 'workspace-write', label: 'dsh.preset.workspace', description: 'dsh.preset.workspace_description' },
-  { value: 'danger-full-access', label: 'dsh.preset.full', description: 'dsh.preset.full_description' },
+  { value: 'workspace-write', label: 'dsh.preset.workspace', description: 'dsh.preset.workspace_description', icon: <path d="M9 10h6M9 14h4" /> },
+  { value: 'danger-full-access', label: 'dsh.preset.full', description: 'dsh.preset.full_description', icon: <path d="M12 8v4m0 3.5v.01" /> },
 ] as const;
+const PresetIcon = ({ children }: { children: ReactNode }) => <svg className="dsh-preset-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6z" />{children}</svg>;
 
 export function DshComposerControls({ sessionId, draft, onDraftChange, keyHandler, submitHandler, quota, children }: {
   sessionId: string; draft: string; onDraftChange: (value: string) => void;
@@ -119,7 +120,7 @@ export function DshComposerControls({ sessionId, draft, onDraftChange, keyHandle
   return <div className="claude-composer-controls codex-composer-controls" ref={root}>
     <button type="button" className="claude-control-icon" aria-label={t('claude.attach')} onClick={() => { void attach(); }}><AttachIcon /></button>
     <button type="button" ref={commandsAnchor} className="claude-control-icon" aria-label={t('claude.commands')} aria-expanded={shown === 'commands'} onClick={e => show('commands', e.currentTarget)}>/</button>
-    <button type="button" className="claude-permission-control" disabled={!s.ready || !!s.restarting} aria-label={t('dsh.command.permission')} aria-expanded={menu === 'permissions'} onClick={e => show('permissions', e.currentTarget)}>{preset ? t(preset.label) : s.preset || t('dsh.command.permission')}</button>
+    <button type="button" className="claude-permission-control" disabled={!s.ready || !!s.restarting} aria-label={t('dsh.command.permission')} aria-expanded={menu === 'permissions'} onClick={e => show('permissions', e.currentTarget)}>{preset && <PresetIcon>{preset.icon}</PresetIcon>}{preset ? t(preset.label) : s.preset || t('dsh.command.permission')}</button>
     {tasks.length > 0 && <button type="button" ref={tasksAnchor} className="claude-tasks-control" aria-label={t('claude.status.background_count', { count: tasks.length })} aria-expanded={menu === 'tasks'} {...tasksHover.trigger} onClick={e => { anchor.current = e.currentTarget; setMenu('tasks'); }}>{t('claude.status.background_short', { count: tasks.length })}</button>}
     {children}
     <div className="claude-model-controls">
@@ -130,7 +131,7 @@ export function DshComposerControls({ sessionId, draft, onDraftChange, keyHandle
     </div>
     {shown && createPortal(<div className="claude-control-menu" ref={popup} {...(shown === 'tasks' ? tasksHover.popover : {})} role="dialog" style={position} onMouseDown={e => e.stopPropagation()}>
       {shown === 'commands' ? commands.length ? commands.map((c, i) => <button type="button" key={c.name} disabled={disabled(c.target)} className={i === selected ? 'is-selected' : ''} onMouseEnter={() => setSelected(i)} onClick={() => chooseCommand(i)}><strong>/{c.name}</strong><small>{c.description}</small></button>) : <div className="claude-menu-empty">{t('claude.commands_empty')}</div>
-      : shown === 'permissions' ? PRESETS.map(p => <button type="button" key={p.value} disabled={!s.ready || !!s.restarting} className={s.preset === p.value ? 'is-selected' : ''} onClick={() => { close(); if (s.preset !== p.value) void setDshPreset(sessionId, p.value); }}><strong>{t(p.label)}{s.preset === p.value ? ' ✓' : ''}</strong><small>{t(p.description)}</small></button>)
+      : shown === 'permissions' ? PRESETS.map(p => <button type="button" key={p.value} disabled={!s.ready || !!s.restarting} className={`dsh-preset-option${s.preset === p.value ? ' is-selected' : ''}`} aria-pressed={s.preset === p.value} onClick={() => { close(); if (s.preset !== p.value) void setDshPreset(sessionId, p.value); }}><PresetIcon>{p.icon}</PresetIcon><span>{t(p.label)}</span><small>{t(p.description)}</small><span className="dsh-preset-check" aria-hidden="true">{s.preset === p.value ? '✓' : ''}</span></button>)
       : shown === 'model' ? s.models.map(m => { const current = m.provider === s.route.provider && m.model === s.route.model; return <button type="button" key={`${m.provider}/${m.model}`} disabled={locked} className={current ? 'is-selected' : ''} onClick={() => { close(); if (!current) void setDshRoute(sessionId, { provider: m.provider, model: m.model, effort: m.efforts.includes(effort) ? effort : null }); }}><strong>{m.name}{current ? ' ✓' : ''}</strong><small>{m.provider}<ModelPrice model={m.model} /></small></button>; })
       : shown === 'effort' && model ? <ClaudeEffortControl key={`${sessionId}:${model.provider}/${model.model}`} levels={model.efforts} value={effort} disabled={locked} onCommit={level => setDshEffort(sessionId, level)} onClose={() => { close(); anchor.current?.focus(); }} />
       : shown === 'tasks' ? <><div className="claude-tasks-heading">{t('claude.status.background_count', { count: tasks.length })}</div>{tasks.map(task => <div key={task.id} className="claude-tasks-item"><span className="claude-tasks-dot" aria-hidden="true" /><span>{task.description || t(task.kind === 'agent' ? 'dsh.task.agent' : 'dsh.task.job')}</span></div>)}</>
