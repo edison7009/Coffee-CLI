@@ -24,11 +24,13 @@ import { commands } from '../../tauri';
 import CLAWD_SVG from '../../icons-inline/clawd.svg?raw';
 import CLAUDE_WORKING_MARK from '../../icons-inline/claude-working-mark.webp';
 import { turnTitle } from '../../lib/turn-title';
+import { IS_MACOS } from '../../lib/platform';
 import CLAUDE_WELCOME from '../../icons-inline/claude-welcome.webm';
 import CLAUDE_WELCOME_HEVC from '../../icons-inline/claude-welcome.mov';
 // The laptop clip keeps its transparency in an alpha channel, which each engine reads from a different codec:
-// Chromium (Windows) from VP9 WebM, WebKit (macOS) from HEVC QuickTime. Claude Desktop ships the same pair.
-const CLAUDE_WELCOME_CLIP = /\b(Chrome|Chromium|Edg)\//.test(navigator.userAgent) ? CLAUDE_WELCOME : CLAUDE_WELCOME_HEVC;
+// Chromium from VP9 WebM, macOS WebKit from HEVC QuickTime. Claude Desktop ships the same pair. Only macOS WebKit
+// takes the HEVC clip: Linux WebKitGTK cannot count on an HEVC decoder, and Chromium's identifier may read HeadlessChrome.
+const CLAUDE_WELCOME_CLIP = IS_MACOS && !/(Chrome|Chromium|Edg)\//.test(navigator.userAgent) ? CLAUDE_WELCOME_HEVC : CLAUDE_WELCOME;
 import CLAUDE_WAVING from '../../icons-inline/claude-waving.gif';
 import CLAUDE_JUMPING from '../../icons-inline/claude-jumping.gif';
 import CLAUDE_WALKING from '../../icons-inline/claude-walking.gif';
