@@ -9,8 +9,12 @@ export type AutomationSchedule =
   | { kind: 'once'; at: number }
   | { kind: 'daily'; time: string }
   | { kind: 'weekdays'; time: string }
-  | { kind: 'weekly'; day: number; time: string }
-  | { kind: 'interval'; hours: number };
+  /** Days are 0 (Sunday) to 6, any number of them. */
+  | { kind: 'weekly'; days: number[]; time: string }
+  | { kind: 'interval'; minutes: number };
+
+/** The shortest interval: each run opens a new conversation. */
+export const MIN_INTERVAL_MINUTES = 5;
 
 export interface AutomationRun { at: number; sessionId?: string; ok: boolean; error?: string }
 
@@ -41,7 +45,7 @@ export function nextRunAt(schedule: AutomationSchedule, after: number, anchor = 
   switch (schedule.kind) {
     case 'once': return schedule.at > after ? schedule.at : undefined;
     case 'interval': {
-      const step = Math.max(1, Math.round(schedule.hours)) * 60 * 60 * 1000;
+      const step = Math.max(MIN_INTERVAL_MINUTES, Math.round(schedule.minutes)) * 60 * 1000;
       if (anchor > after) return anchor;
       return anchor + (Math.floor((after - anchor) / step) + 1) * step;
     }
@@ -53,7 +57,7 @@ export function nextRunAt(schedule: AutomationSchedule, after: number, anchor = 
         if (day.getTime() <= after) continue;
         const weekday = day.getDay();
         if (schedule.kind === 'weekdays' && (weekday === 0 || weekday === 6)) continue;
-        if (schedule.kind === 'weekly' && weekday !== schedule.day) continue;
+        if (schedule.kind === 'weekly' && !schedule.days.includes(weekday)) continue;
         return day.getTime();
       }
       return after + DAY;
@@ -71,7 +75,15 @@ export function scheduleNext(automation: Automation, after: number): Automation 
 function load(): Automation[] {
   try {
     const value: unknown = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]');
-    return Array.isArray(value) ? value.filter((item): item is Automation => !!item && typeof item === 'object' && typeof (item as Automation).id === 'string' && AUTOMATION_TOOLS.includes((item as Automation).tool)) : [];
+    if (!Array.isArray(value)) return [];
+    return value.filter((item): item is Automation => !!item && typeof item === 'object' && typeof (item as Automation).id === 'string' && AUTOMATION_TOOLS.includes((item as Automation).tool))
+      // Intervals were once whole hours, and a week had one day.
+      .map(item => {
+        const s = item.schedule as { kind: string; hours?: number; minutes?: number; day?: number; days?: number[]; time?: string };
+        if (s.kind === 'interval' && typeof s.minutes !== 'number') return { ...item, schedule: { kind: 'interval', minutes: (s.hours ?? 1) * 60 } };
+        if (s.kind === 'weekly' && !Array.isArray(s.days)) return { ...item, schedule: { kind: 'weekly', days: [s.day ?? 1], time: s.time ?? '09:00' } };
+        return item;
+      });
   } catch { return []; }
 }
 
@@ -97,10 +109,18 @@ export function runAutomationNow(id: string): void { window.dispatchEvent(new Cu
 /** The last segment of a folder path, as rows and chips show it. */
 export const folderName = (path: string): string => path.replace(/[\\/]+$/, '').split(/[\\/]/).pop() || path;
 
-/** How often an automation runs, in a few words: "Daily 09:00", "Every 2 h", "Mon 09:00" or a one-off date. */
+/** How often an automation runs, in a few words: "Daily 09:00", "Every 1 h 30 min", "Mon 09:00" or a one-off date. */
 export function scheduleSummary(s: AutomationSchedule, t: (key: I18nKey, vars?: Record<string, string | number>) => string, lang: string): string {
   if (s.kind === 'once') return new Intl.DateTimeFormat(lang, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(s.at);
-  if (s.kind === 'interval') return t('automation.summary.interval', { hours: s.hours });
-  if (s.kind === 'weekly') return `${new Intl.DateTimeFormat(lang, { weekday: 'short' }).format(new Date(2024, 0, 7 + s.day))} ${s.time}`;
+  if (s.kind === 'interval') {
+    const h = Math.floor(s.minutes / 60), m = s.minutes % 60;
+    return t('automation.summary.interval', { every: [h ? `${h} ${t('automation.unit.h')}` : '', m ? `${m} ${t('automation.unit.min')}` : ''].filter(Boolean).join(' ') });
+  }
+  if (s.kind === 'weekly') {
+    const day = new Intl.DateTimeFormat(lang, { weekday: 'short' });
+    // Monday first, as the editor lists them.
+    const days = [...s.days].sort((a, b) => (a || 7) - (b || 7)).map(d => day.format(new Date(2024, 0, 7 + d)));
+    return `${new Intl.ListFormat(lang, { style: 'narrow', type: 'unit' }).format(days)} ${s.time}`;
+  }
   return t(s.kind === 'weekdays' ? 'automation.summary.weekdays' : 'automation.summary.daily', { time: s.time });
 }

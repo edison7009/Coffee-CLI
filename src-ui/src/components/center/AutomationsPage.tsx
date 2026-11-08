@@ -2,33 +2,47 @@ import { useMemo, useState, useSyncExternalStore } from 'react';
 import { SegmentedTabs } from '../common/SegmentedTabs';
 import { useAppState } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
-import { ThemedSelect } from '../common/ThemedSelect';
 import { getToolDisplayName } from '../../lib/tool-info';
 import { getProjectFolders, subscribeProjectFolders } from '../../lib/project-folders';
-import { AUTOMATION_TOOLS, getAutomations, removeAutomation, saveAutomation, setAutomations, subscribeAutomations, scheduleNext, runAutomationNow, folderName, scheduleSummary, type Automation, type AutomationSchedule, type AutomationTool } from '../../lib/automations';
+import { AUTOMATION_TOOLS, getAutomations, removeAutomation, saveAutomation, setAutomations, subscribeAutomations, scheduleNext, runAutomationNow, folderName, scheduleSummary, MIN_INTERVAL_MINUTES, type Automation, type AutomationSchedule, type AutomationTool } from '../../lib/automations';
 import '../common/SettingsModal.css';
 import './Automations.css';
 
 type Kind = AutomationSchedule['kind'];
-interface Draft { id?: string; name: string; prompt: string; tool: AutomationTool; cwd: string; kind: Kind; time: string; day: number; hours: number; at: string; createdAt?: number; enabled: boolean }
+// Number and date fields hold what was typed; they are read on save.
+interface Draft { id?: string; name: string; prompt: string; tool: AutomationTool; cwd: string; kind: Kind; time: string; days: number[]; everyH: string; everyM: string; date: string; onceTime: string; createdAt?: number; enabled: boolean }
 
 const pad = (n: number) => String(n).padStart(2, '0');
-const localInput = (ms: number) => { const d = new Date(ms); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+const localDate = (ms: number) => { const d = new Date(ms); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
+const localTime = (ms: number) => { const d = new Date(ms); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+const digits = (value: string) => value.replace(/\D/g, '').slice(0, 4);
+/** Monday first, as most calendars here show the week. */
+const WEEK = [1, 2, 3, 4, 5, 6, 0];
 
 function toDraft(a?: Automation, cwd = ''): Draft {
   const s = a?.schedule;
   return {
     id: a?.id, name: a?.name ?? '', prompt: a?.prompt ?? '', tool: a?.tool ?? 'claude', cwd: a?.cwd ?? cwd,
-    kind: s?.kind ?? 'daily', time: s && 'time' in s ? s.time : '09:00', day: s?.kind === 'weekly' ? s.day : 1,
-    hours: s?.kind === 'interval' ? s.hours : 4, at: localInput(s?.kind === 'once' ? s.at : Date.now() + 60 * 60 * 1000),
+    kind: s?.kind ?? 'daily', time: s && 'time' in s ? s.time : '09:00', days: s?.kind === 'weekly' ? s.days : [1],
+    everyH: s?.kind === 'interval' ? String(Math.floor(s.minutes / 60)) : '4', everyM: s?.kind === 'interval' ? String(s.minutes % 60) : '0',
+    date: localDate(s?.kind === 'once' ? s.at : Date.now() + 60 * 60 * 1000), onceTime: localTime(s?.kind === 'once' ? s.at : Date.now() + 60 * 60 * 1000),
     createdAt: a?.createdAt, enabled: a?.enabled ?? true,
   };
 }
-function toSchedule(d: Draft): AutomationSchedule {
+/** The schedule a draft describes, or the message for what is wrong with it. */
+function toSchedule(d: Draft): AutomationSchedule | 'automation.need_interval' | 'automation.need_date' | 'automation.need_day' {
   switch (d.kind) {
-    case 'once': return { kind: 'once', at: new Date(d.at).getTime() };
-    case 'interval': return { kind: 'interval', hours: Math.max(1, Math.min(168, Math.round(d.hours) || 1)) };
-    case 'weekly': return { kind: 'weekly', day: d.day, time: d.time };
+    case 'once': {
+      const date = d.date.trim().match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/), [h, m] = d.onceTime.split(':').map(Number);
+      if (!date) return 'automation.need_date';
+      const at = new Date(Number(date[1]), Number(date[2]) - 1, Number(date[3]), h || 0, m || 0);
+      return at.getMonth() === Number(date[2]) - 1 ? { kind: 'once', at: at.getTime() } : 'automation.need_date';
+    }
+    case 'interval': {
+      const minutes = (Number(d.everyH) || 0) * 60 + (Number(d.everyM) || 0);
+      return minutes >= MIN_INTERVAL_MINUTES ? { kind: 'interval', minutes } : 'automation.need_interval';
+    }
+    case 'weekly': return d.days.length ? { kind: 'weekly', days: d.days, time: d.time } : 'automation.need_day';
     default: return { kind: d.kind, time: d.time };
   }
 }
@@ -51,6 +65,7 @@ export function AutomationsPage() {
     if (!draft.prompt.trim()) { setError(t('automation.need_prompt')); return; }
     if (!draft.cwd.trim()) { setError(t('automation.need_folder')); return; }
     const schedule = toSchedule(draft);
+    if (typeof schedule === 'string') { setError(t(schedule)); return; }
     if (schedule.kind === 'once' && !(schedule.at > Date.now())) { setError(t('automation.need_future')); return; }
     const previous = automations.find(item => item.id === draft.id);
     saveAutomation({ ...previous, id: draft.id ?? crypto.randomUUID(), name: draft.name.trim() || draft.prompt.trim().split('\n')[0].slice(0, 40), prompt: draft.prompt.trim(),
@@ -92,14 +107,28 @@ export function AutomationsPage() {
           {draft.cwd && <div className="automations-folder-path">{draft.cwd}</div>}
         </div>
         <div className="automations-field"><span>{t('automation.schedule')}</span>
+          {/* The kind and its details share a line; a week's days take a line of their own below. */}
           <div className="automations-schedule">
             <SegmentedTabs label={t('automation.schedule')} value={draft.kind} onChange={kind => setDraft({ ...draft, kind })}
               options={(['daily', 'weekdays', 'weekly', 'interval', 'once'] as const).map(kind => ({ value: kind, content: t(`automation.kind.${kind}`) }))} />
-            {draft.kind === 'weekly' && <ThemedSelect label={t('automation.schedule')} value={String(draft.day)} options={[1, 2, 3, 4, 5, 6, 0].map(day => ({ value: String(day), label: weekday(day) }))} onChange={day => setDraft({ ...draft, day: Number(day) })} />}
-            {(draft.kind === 'daily' || draft.kind === 'weekdays' || draft.kind === 'weekly') && <input type="time" value={draft.time} onChange={e => setDraft({ ...draft, time: e.target.value })} />}
-            {draft.kind === 'interval' && <span className="automations-hours"><input type="number" min={1} max={168} value={draft.hours} onChange={e => setDraft({ ...draft, hours: Number(e.target.value) })} />{t('automation.hours')}</span>}
-            {draft.kind === 'once' && <input type="datetime-local" value={draft.at} onChange={e => setDraft({ ...draft, at: e.target.value })} />}
-          </div></div>
+            {(draft.kind === 'daily' || draft.kind === 'weekdays') && <input type="time" aria-label={t('automation.schedule')} value={draft.time} onChange={e => setDraft({ ...draft, time: e.target.value })} />}
+            {draft.kind === 'interval' && <>
+              <label className="automations-amount"><input type="text" inputMode="numeric" value={draft.everyH} onChange={e => setDraft({ ...draft, everyH: digits(e.target.value) })} />{t('automation.hours')}</label>
+              <label className="automations-amount"><input type="text" inputMode="numeric" value={draft.everyM} onChange={e => setDraft({ ...draft, everyM: digits(e.target.value) })} />{t('automation.minutes')}</label>
+            </>}
+            {draft.kind === 'once' && <>
+              <input type="text" className="automations-date" inputMode="numeric" placeholder="2026-11-08" aria-label={t('automation.kind.once')} value={draft.date} onChange={e => setDraft({ ...draft, date: e.target.value })} />
+              <input type="time" aria-label={t('automation.schedule')} value={draft.onceTime} onChange={e => setDraft({ ...draft, onceTime: e.target.value })} />
+            </>}
+          </div>
+          {draft.kind === 'weekly' && <div className="automations-week">
+            <div className="automations-days" role="group" aria-label={t('automation.kind.weekly')}>
+              {WEEK.map(day => <button key={day} type="button" className="automations-folder-chip automations-day" aria-pressed={draft.days.includes(day)}
+                onClick={() => setDraft({ ...draft, days: draft.days.includes(day) ? draft.days.filter(d => d !== day) : [...draft.days, day] })}>{weekday(day)}</button>)}
+            </div>
+            <input type="time" aria-label={t('automation.schedule')} value={draft.time} onChange={e => setDraft({ ...draft, time: e.target.value })} />
+          </div>}
+        </div>
         <p className="automations-hint" role="note">{t('automation.permission_note')}</p>
         {error && <p className="automations-error" role="alert">{error}</p>}
         <div className="automations-actions">

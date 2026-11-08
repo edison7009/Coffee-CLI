@@ -6,10 +6,10 @@
 .automations-head h1 { margin: 0; color: var(--text-1); font-size: calc(var(--type-body) + 5px); font-weight: 600; }
 .automations-empty-note { max-width: 620px; margin: 0; color: var(--text-3); font-size: var(--type-label); line-height: 1.7; }
 .automations-hint { margin: 0; color: var(--text-3); font-size: var(--type-label); line-height: 1.6; }
-.automations-editor { display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px; padding: 16px; border: 1px solid var(--border); border-radius: var(--shape-radius-panel, 10px); }
-.automations-field { display: flex; flex-direction: column; gap: 6px; }
-.automations-field > span { color: var(--text-2); font-size: var(--type-label); }
-.automations-field input, .automations-field textarea, .automations-schedule input { padding: 8px 10px; border: 1px solid var(--border-input); border-radius: var(--shape-radius-btn, 6px); background: var(--bg-input); color: var(--text-1); font: inherit; font-size: var(--type-body); outline: none; }
+.automations-editor { display: flex; flex-direction: column; gap: 18px; margin-bottom: 20px; padding: 16px; border: 1px solid var(--border); border-radius: var(--shape-radius-panel, 10px); }
+.automations-field { display: flex; flex-direction: column; gap: 8px; }
+.automations-field > span { color: var(--text-1); font-size: var(--type-body); font-weight: 600; }
+.automations-field input, .automations-field textarea { padding: 8px 10px; border: 1px solid var(--border-input); border-radius: var(--shape-radius-btn, 6px); background: var(--bg-input); color: var(--text-1); font: inherit; font-size: var(--type-body); outline: none; }
 .automations-field input:focus, .automations-field textarea:focus { border-color: var(--border-focus); }
 .automations-field textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
 .automations-field .segmented-tabs { align-self: flex-start; }
@@ -22,9 +22,19 @@
 [data-mode="light"] .automations-folder-chip[aria-checked="true"] { color: var(--text-1); background: var(--bg-app); border-color: var(--border-focus); }
 .automations-folder-other { border-style: dashed; color: var(--text-3); }
 .automations-folder-path { color: var(--text-3); font-size: var(--type-label); overflow-wrap: anywhere; }
-.automations-schedule { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.automations-hours { display: inline-flex; align-items: center; gap: 6px; }
-.automations-hours input { width: 72px; }
+.automations-schedule { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; }
+/* Inputs beside the kind tabs stretch to the track's height. */
+.automations-schedule input { box-sizing: border-box; height: auto; padding: 0 12px; font-variant-numeric: tabular-nums; }
+.automations-amount { display: inline-flex; align-items: center; gap: 6px; color: var(--text-2); font-size: var(--type-label); }
+.automations-amount input { align-self: stretch; width: 56px; text-align: center; }
+.automations-date { width: 124px; }
+/* A week: day pills like the folder chips, dashed until chosen, any number of them, then the time. */
+.automations-week { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 2px; }
+.automations-days { display: flex; flex-wrap: wrap; gap: 6px; }
+.automations-day { justify-content: center; min-width: 52px; border-style: dashed; }
+.automations-day[aria-pressed="true"] { color: var(--bg-app); background: color-mix(in srgb, var(--text-1) 80%, var(--accent)); border-color: transparent; border-style: solid; }
+[data-mode="light"] .automations-day[aria-pressed="true"] { color: var(--text-1); background: var(--bg-app); border-color: var(--border-focus); }
+.automations-week input { box-sizing: border-box; height: 32px; padding: 0 12px; font-variant-numeric: tabular-nums; }
 .automations-error { margin: 0; color: var(--red); font-size: var(--type-label); }
 .automations-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .automations-primary { background: var(--accent); color: var(--bg-app); border-color: transparent; }
