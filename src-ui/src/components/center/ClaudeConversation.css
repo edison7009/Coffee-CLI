@@ -89,13 +89,20 @@ body.gambit-docked .claude-scroll-bottom { bottom:calc(var(--gambit-dock-h,200px
 .claude-tool-actions { position:absolute; top:3px; right:4px; z-index:1; display:flex; gap:2px; border-radius:var(--shape-radius-btn,6px); background:var(--bg-terminal); }
 .claude-row .claude-tool-actions .conversation-copy { margin:0; opacity:.7; }
 .claude-tool-resize { display:inline-flex; align-items:center; justify-content:center; width:27px; height:27px; padding:0; border:0; border-radius:var(--shape-radius-btn,6px); color:var(--text-2); background:transparent; cursor:pointer; }
-.claude-tool-resize:hover,.claude-row .claude-tool-actions .conversation-copy:hover { color:var(--text-1); background:var(--bg-hover); opacity:1; }
 .claude-tool-resize:focus-visible { outline:1px solid var(--accent); outline-offset:1px; }
+.claude-tool-resize:hover,.claude-row .claude-tool-actions .conversation-copy:hover { color:var(--text-1); background:var(--bg-hover); opacity:1; }
+.claude-expandable { position:relative; min-width:0; }
+.claude-expandable.has-tab { margin-bottom:19px; }
+.claude-expandable > .claude-tool-content { flex:1; }
+/* Hangs from the block's lower right edge in the block's own fill, joined without a seam. */
+.claude-expand-tab { position:absolute; top:calc(100% - 1px); right:12px; display:inline-flex; align-items:center; gap:4px; height:19px; padding:0 8px; border:1px solid var(--border); border-top:0; border-radius:0 0 var(--shape-radius-btn,6px) var(--shape-radius-btn,6px); font:11px/1 var(--font-ui, inherit); color:var(--text-2); background:color-mix(in srgb,var(--bg-terminal) 92%,#000 8%); cursor:pointer; }
+.claude-expand-tab:hover { color:var(--text-1); }
+.claude-expand-tab:focus-visible { outline:1px solid var(--accent); outline-offset:1px; }
 .claude-tool-pending { color:var(--text-3); font-size:13px; }
 .claude-diff { position:relative; overflow:hidden; border:1px solid var(--border); border-radius:var(--shape-radius-btn,6px); background:var(--bg-terminal); }
 .claude-diff:has(> .claude-tool-actions) { padding-top:30px; }
 .claude-diff-scroll { max-height:125px; overflow:auto; }
-.claude-diff.is-expanded .claude-diff-scroll { max-height:600px; }
+.claude-diff.is-expanded .claude-diff-scroll { max-height:none; }
 .claude-diff-row { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); font:13px/1.54 var(--mono); }
 .claude-diff-row > div { display:flex; min-width:0; white-space:pre-wrap; overflow-wrap:anywhere; }
 .claude-diff-row > div + div { border-left:1px solid var(--border); }

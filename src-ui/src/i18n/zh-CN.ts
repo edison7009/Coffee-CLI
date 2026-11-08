@@ -794,6 +794,7 @@ export const zhCN = {
   'claude.collapse': '收起',
   'conversation.show_more': '显示更多',
   'claude.expand': '点击展开',
+  'claude.expand_tab': '展开',
   'claude.tool': '工具',
   'claude.tool_details': '展开工具详情',
   'claude.lines_removed': '删除 {count} 行',

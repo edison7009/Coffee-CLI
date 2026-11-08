@@ -789,6 +789,7 @@ export const ru = {
   'claude.collapse': 'Свернуть',
   'conversation.show_more': 'Показать больше',
   'claude.expand': 'Нажмите, чтобы развернуть',
+  'claude.expand_tab': 'Развернуть',
   'claude.tool': 'Инструмент',
   'claude.tool_details': 'Развернуть сведения об инструменте',
   'claude.lines_removed': 'Удалено строк: {count}',

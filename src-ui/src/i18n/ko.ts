@@ -791,6 +791,7 @@ export const ko = {
   'claude.collapse': '접기',
   'conversation.show_more': '더 보기',
   'claude.expand': '클릭하여 펼치기',
+  'claude.expand_tab': '펼치기',
   'claude.tool': '도구',
   'claude.tool_details': '도구 세부 정보 펼치기',
   'claude.lines_removed': '삭제된 줄: {count}',

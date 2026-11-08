@@ -791,6 +791,7 @@ export const ja = {
   'claude.collapse': '折りたたむ',
   'conversation.show_more': 'もっと見る',
   'claude.expand': 'クリックして展開',
+  'claude.expand_tab': '展開',
   'claude.tool': 'ツール',
   'claude.tool_details': 'ツールの詳細を展開',
   'claude.lines_removed': '削除行数: {count}',

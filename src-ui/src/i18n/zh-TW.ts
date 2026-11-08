@@ -792,6 +792,7 @@ export const zhTW = {
   'claude.collapse': '收合',
   'conversation.show_more': '顯示更多',
   'claude.expand': '點擊展開',
+  'claude.expand_tab': '展開',
   'claude.tool': '工具',
   'claude.tool_details': '展開工具詳情',
   'claude.lines_removed': '刪除 {count} 行',
