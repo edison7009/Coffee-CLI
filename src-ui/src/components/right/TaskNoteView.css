@@ -78,14 +78,14 @@
 .task-note-row > .task-note-preview { flex: 1; min-width: 0; }
 
 /* Collapsed + hovered (or focused): a soft glow follows the pointer across the card, and two line icons slide in
-   at the right end — delete (grey, red when aimed at) then send (blue). They float over the text, which fades out
+   at the right end — delete then send, in the theme accent (delete turns red when aimed at). They float over the text, which fades out
    beneath them instead of moving. */
 .task-note-card::before {
   content: '';
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: radial-gradient(140px circle at var(--glow-x, 50%) 50%, rgba(0, 122, 255, 0.16), transparent 70%);
+  background: radial-gradient(140px circle at var(--glow-x, 50%) 50%, color-mix(in srgb, var(--accent, #c4956a) 18%, transparent), transparent 70%);
   opacity: 0;
   pointer-events: none;
   transition: opacity .2s ease;
@@ -113,12 +113,15 @@
   -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 96px), transparent calc(100% - 56px));
   mask-image: linear-gradient(to right, #000 calc(100% - 96px), transparent calc(100% - 56px));
 }
-.task-note-quick-btn { width: 24px; height: 24px; opacity: 1; color: var(--text-3, rgba(255, 255, 255, 0.45)); transition: color .15s; }
+.task-note-quick-btn { width: 28px; height: 24px; opacity: 1; color: var(--accent, #c4956a); box-sizing: border-box;
+  border: 1px solid color-mix(in srgb, var(--accent, #c4956a) 45%, transparent) !important;
+  background: color-mix(in srgb, var(--accent, #c4956a) 12%, var(--bg-panel, #222)) !important;
+  transition: color .15s, border-color .15s, background-color .15s; }
 .task-note-quick-btn svg { width: 16px; height: 16px; }
-.task-note-quick-btn.task-note-send { color: #007aff; } /* the iOS blue of the tool switches */
+.task-note-quick-btn.task-note-send { color: var(--accent, #c4956a); }
 .task-note-card .task-note-quick-btn:hover { opacity: 1; filter: none; }
-.task-note-card .task-note-quick-btn.task-note-delete:hover { color: #e5534b; }
-.task-note-card .task-note-quick-btn.task-note-send:hover { color: #3395ff; }
+.task-note-card .task-note-quick-btn.task-note-delete:hover { color: #e5534b; border-color: color-mix(in srgb, #e5534b 60%, transparent) !important; background: color-mix(in srgb, #e5534b 14%, var(--bg-panel, #222)) !important; }
+.task-note-card .task-note-quick-btn.task-note-send:hover { border-color: var(--accent, #c4956a) !important; background: color-mix(in srgb, var(--accent, #c4956a) 22%, var(--bg-panel, #222)) !important; }
 /* Right after a click opens or closes the note, the icons and glow wait for the pointer to leave and come back,
    so they don't flash in and out under it. */
 .task-note-card[data-quiet] .task-note-quick { opacity: 0; pointer-events: none; transition: none; }
@@ -134,6 +137,9 @@
   padding: 2px 12px 9px;
 }
 .task-note-actions-gap { flex: 1; }
+/* Same size as the hover icons: there is room under an open note. */
+.task-note-actions .task-note-btn { width: 24px; height: 24px; }
+.task-note-actions .task-note-btn svg { width: 16px; height: 16px; }
 .task-note-edit[aria-pressed="true"] { opacity: 1; }
 
 /* ─── Body — the writing area ────────────────────────────────────────────────── */

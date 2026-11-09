@@ -1,7 +1,7 @@
 import { useState, useSyncExternalStore } from 'react';
 import { useAppState } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
-import { folderName, getAutomations, scheduleNext, scheduleSummary, setAutomations, subscribeAutomations, type AutomationTool } from '../../lib/automations';
+import { folderName, getAutomations, scheduleSummary, subscribeAutomations, type AutomationTool } from '../../lib/automations';
 import { getToolDisplayName } from '../../lib/tool-info';
 import { InlineSvgIcon } from '../InlineSvgIcon';
 import CLAUDE_DATA_URL from '../../icons-inline/claude.svg?inline';
@@ -24,7 +24,7 @@ function ToolMark({ tool }: { tool: AutomationTool }) {
  * Automations at the top of the task list: on or off at a glance, and each prompt sent to the current conversation
  * like a task. Editing stays on the automations page, which the name opens.
  */
-export function TaskAutomations({ canSend, onSend }: { canSend: boolean; onSend: (prompt: string) => void }) {
+export function TaskAutomations({ onSend }: { onSend: (prompt: string) => void }) {
   const t = useT();
   const { state, dispatch } = useAppState();
   const automations = useSyncExternalStore(subscribeAutomations, getAutomations, getAutomations);
@@ -51,10 +51,8 @@ export function TaskAutomations({ canSend, onSend }: { canSend: boolean; onSend:
             <span className="task-automation-meta">{scheduleSummary(item.schedule, t, state.currentLang)} · {folderName(item.cwd)}</span>
           </span>
         </button>
-        <button type="button" role="switch" className="settings-switch task-automation-switch" aria-checked={item.enabled} aria-label={item.name}
-          onClick={() => setAutomations(current => current.map(a => a.id === item.id ? scheduleNext({ ...a, enabled: !a.enabled }, Date.now()) : a))}><span /></button>
-        <button type="button" className="task-slot task-automation-send" aria-label={t('automation.send_current')} disabled={!canSend} onClick={() => onSend(item.prompt)}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true"><polygon points="5 3 21 12 5 21" /></svg>
+        <button type="button" className="task-slot task-automation-send" aria-label={t('automation.send_current')} onClick={() => onSend(item.prompt)}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true"><polygon points="5 3 21 12 5 21" /></svg>
         </button>
       </div>
     </div>)}

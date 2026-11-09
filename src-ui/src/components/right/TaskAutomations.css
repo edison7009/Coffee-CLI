@@ -12,12 +12,9 @@
 .task-automation-title { flex: 0 1 auto; min-width: 0; color: var(--text-1); font-size: var(--type-label); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .task-automation-card[data-enabled="false"] .task-automation-title { color: var(--text-3); }
 .task-automation-next { flex-shrink: 0; color: var(--text-3); font-size: 12px; font-variant-numeric: tabular-nums; }
-.task-automation-switch { flex-shrink: 0; width: 30px; height: 18px; border-radius: 9px; }
-.task-automation-switch > span { top: 2px; left: 2px; width: 14px; height: 14px; }
-.task-automation-switch[aria-checked="true"] > span { transform: translateX(12px); }
 /* Unlike a task's, this send stays in view: it is the strip's main action. */
-.task-automation-send { width: 24px; height: 24px; color: var(--accent, #c4956a); opacity: .85; transition: opacity .15s, filter .15s; }
-.task-automation-send:hover:not(:disabled) { opacity: 1; filter: brightness(1.25); }
+.task-automation-send { width: 24px; height: 24px; color: var(--accent, #c4956a); opacity: 1; transition: opacity .15s, filter .15s; }
+.task-automation-send:hover:not(:disabled) { filter: brightness(1.2); }
 .task-automation-send:disabled { opacity: .25; cursor: not-allowed; }
 .task-automation-mark { display: inline-flex; flex-shrink: 0; width: 13px; height: 13px; color: var(--text-2); }
 .task-automation-mark img, .task-automation-mark svg { display: block; width: 100%; height: 100%; object-fit: contain; }

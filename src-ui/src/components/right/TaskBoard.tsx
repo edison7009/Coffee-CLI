@@ -233,8 +233,11 @@ export function TaskBoard({ onCountChange }: { onCountChange: (count: number) =>
 
   // An automation's prompt goes to the current conversation as is; its own app and folder are for scheduled runs.
   const sendAutomationPrompt = useCallback((prompt: string) => {
-    void sendTask({ id: 'automation', title: prompt, status: 'todo', createdAt: 0 }, prompt, false);
-  }, [sendTask]);
+    // Like a note's send, it never refuses: no ready session means it lands in the open composer instead.
+    if (!prompt.trim() || sendingRef.current) return;
+    if (canSend) { void sendTask({ id: 'automation', title: prompt, status: 'todo', createdAt: 0 }, prompt, false); return; }
+    if (composerOpen && activeSession) dispatch({ type: 'APPEND_GAMBIT_DRAFT', id: activeSession.id, text: `${activeSession.gambitDraft?.trim() ? '\n' : ''}${prompt}` });
+  }, [sendTask, canSend, composerOpen, activeSession, dispatch]);
 
   // Live title edit — the note body is always-editable (no commit step), so it
   // writes through on every keystroke. Empty is allowed while typing.
@@ -264,7 +267,7 @@ export function TaskBoard({ onCountChange }: { onCountChange: (count: number) =>
     <div className={`task-board${__IS_LINUX__ ? ' task-board--static' : ''}`} aria-busy={sending}>
           {sendErrorTarget && sendErrorTarget === state.activeTerminalId && <p className="task-send-error" role="alert">{t('task.send_failed')}</p>}
           {/* Automations on top: on or off at a glance, and each prompt one click from the current conversation. */}
-          <TaskAutomations canSend={canSend} onSend={sendAutomationPrompt} />
+          <TaskAutomations onSend={sendAutomationPrompt} />
           <TaskNoteView
             tasks={tasks}
             addingId={addingId}
