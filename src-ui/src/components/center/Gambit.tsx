@@ -415,7 +415,7 @@ function GambitImpl({
     return () => clearTimeout(t);
   }, [sendEmpty]);
 
-  const { state: appState } = useAppState();
+  const { state: appState, dispatch: appDispatch } = useAppState();
 
   // Auto-grow the textarea to fit its content as the user types.
   useLayoutEffect(() => {
@@ -789,6 +789,9 @@ function GambitImpl({
     >
       {/* Top-edge handle for vertical height resize (VS Code bottom-panel style). */}
       <div className="gambit-dock-resize" onMouseDown={onDockResizeStart} />
+
+      {/* Save the draft for later: it goes to the right panel's pre-input tab, which opens to show it. */}
+      {appState.preInputButton && draft.trim() && <button type="button" className="gambit-pre-input-save" onMouseDown={e => e.preventDefault()} onClick={() => { appDispatch({ type: 'SAVE_PRE_INPUT', text: draft.trim() }); onDraftChange(''); }}>{t('gambit.save_pre_input')}</button>}
 
       {attachments.length > 0 && <div className="gambit-attachments">
         {attachments.map(({ path, image }) => <div className="gambit-attachment" key={path}>

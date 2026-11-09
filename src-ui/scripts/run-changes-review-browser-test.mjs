@@ -16,7 +16,7 @@ const { code: diffContextResolver } = await transform(resolver, { loader: 'ts' }
 const mock = `
 import {useSyncExternalStore} from 'react';
 const listeners=new Set();
-let state={currentLang:'zh-CN',iconTheme:'material',taskViewMode:'list',activeTerminalId:'a',terminals:[{id:'a',tool:null,folderPath:'D:/test'}],diffMode:'overlay',diffSelection:null};
+let state={currentLang:'zh-CN',iconTheme:'material',taskViewMode:'list',preInputQueue:[],preInputReveal:0,preInputButton:true,activeTerminalId:'a',terminals:[{id:'a',tool:null,folderPath:'D:/test'}],diffMode:'overlay',diffSelection:null};
 function emit(){state={...state};listeners.forEach(fn=>fn())}
 function dispatch(action){if(action.type==='SET_DIFF_SELECTION')state={...state,diffSelection:action.selection};if(action.type==='CLEAR_DIFF')state={...state,diffSelection:null};if(action.type==='SET_DIFF_MODE')state={...state,diffMode:action.mode};emit()}
 export function useAppState(){return {state:useSyncExternalStore(fn=>{listeners.add(fn);return()=>listeners.delete(fn)},()=>state),dispatch}}
@@ -151,7 +151,7 @@ try{
  await page.locator('.changes-scroll').evaluate(el=>{el.scrollTop=245});
  const scrollBefore=await page.locator('.changes-scroll').evaluate(el=>el.scrollTop);assert.ok(scrollBefore>200);
  await rows.nth(8).click();await listTab.click();assert.equal(await page.locator('.changes-scroll').evaluate(el=>el.scrollTop),scrollBefore,'list scroll position survives detail visits');
- const taskTab=page.getByRole('tab',{name:'任务列表'});await taskTab.click();await page.locator('.task-title-text').waitFor();assert.equal(await page.locator('.task-board').count(),1);assert.equal(await page.evaluate(()=>window.calls.taskLoads),1);
+ const taskTab=page.getByRole('tab',{name:'预输入'});await taskTab.click();await page.locator('.task-title-text').waitFor();assert.equal(await page.locator('.task-board').count(),1);assert.equal(await page.evaluate(()=>window.calls.taskLoads),1);
  const todoPreviewReads=await page.evaluate(()=>window.calls.fileReads);await page.evaluate(()=>window.dispatchEvent(new CustomEvent('fs-refresh',{detail:{dirPath:'D:/test'}})));await page.waitForTimeout(950);assert.equal(await page.evaluate(()=>window.calls.fileReads),todoPreviewReads,'Todo also suspends hidden preview reads');
  await page.locator('.task-edit-inline').click();await page.locator('.task-title-edit').fill('移到右侧后保留任务');await page.locator('.task-title-edit').press('Enter');
  await listTab.click();await taskTab.click();assert.equal(await page.locator('.task-title-text').textContent(),'移到右侧后保留任务');

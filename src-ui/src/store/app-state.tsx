@@ -234,6 +234,12 @@ export interface AppState {
   // text area). Same task data either way — purely a presentation choice made
   // in the settings modal. Default 'list' so existing users see no change.
   taskViewMode: 'list' | 'note' | 'prompt';
+  /** Composer drafts saved as pre-input, waiting for the task board to take them. */
+  preInputQueue: string[];
+  /** Bumped on each save so the right panel opens on the pre-input tab. */
+  preInputReveal: number;
+  /** Settings: show the composer's save-as-pre-input button. */
+  preInputButton: boolean;
 
   // ── Diff view (修改记录 → click a file) ─────────────────────────────────
   // The right-side Changes tab shows a half-height bottom overlay (DiffPanel)
@@ -341,6 +347,9 @@ type Action =
   | { type: 'TOGGLE_LEFT_PANEL' }
   | { type: 'TOGGLE_RIGHT_PANEL' }
   | { type: 'SET_TASK_VIEW_MODE'; mode: 'list' | 'note' | 'prompt' }
+  | { type: 'SAVE_PRE_INPUT'; text: string }
+  | { type: 'TAKE_PRE_INPUT'; count: number }
+  | { type: 'SET_PRE_INPUT_BUTTON'; value: boolean }
   | { type: 'SET_TAB_TITLE'; id: string; title: string }
   | { type: 'SET_DIFF_SELECTION'; selection: DiffSelection }
   | { type: 'CLEAR_DIFF' }
@@ -652,6 +661,16 @@ function reducer(state: AppState, action: Action): AppState {
       try { localStorage.setItem('cc-right-hidden', next ? '1' : '0'); } catch { /* Best-effort operation; failure is non-fatal. */ }
       return { ...state, rightPanelHidden: next };
     }
+    case 'SAVE_PRE_INPUT': {
+      try { localStorage.setItem('cc-right-hidden', '0'); } catch { /* Best-effort operation; failure is non-fatal. */ }
+      return { ...state, preInputQueue: [...state.preInputQueue, action.text], preInputReveal: state.preInputReveal + 1, rightPanelHidden: false };
+    }
+    case 'TAKE_PRE_INPUT':
+      return { ...state, preInputQueue: state.preInputQueue.slice(action.count) };
+    case 'SET_PRE_INPUT_BUTTON': {
+      try { localStorage.setItem('cc-pre-input-button', action.value ? '1' : '0'); } catch { /* Best-effort operation; failure is non-fatal. */ }
+      return { ...state, preInputButton: action.value };
+    }
     case 'SET_TASK_VIEW_MODE': {
       try { localStorage.setItem('cc-task-view', action.mode); } catch { /* Best-effort operation; failure is non-fatal. */ }
       return { ...state, taskViewMode: action.mode };
@@ -871,6 +890,7 @@ function getInitialState(): AppState {
   // 'list', only flipped to 'note' by the TaskBoard first-launch seed — which
   // was fragile (cleared localStorage or a removed seed fell back to list).
   let taskViewMode: 'list' | 'note' | 'prompt' = 'note';
+  let preInputButton = true;
   // Default 'overlay' (the gentle half-height panel) — existing users see no
   // change. Only flips to 'tab' if the user explicitly expanded-to-tab before.
   let diffMode: 'overlay' | 'tab' = 'overlay';
@@ -879,6 +899,7 @@ function getInitialState(): AppState {
   try {
     leftPanelHidden = localStorage.getItem('cc-left-hidden') === '1';
     rightPanelHidden = localStorage.getItem('cc-right-hidden') !== '0';
+    preInputButton = localStorage.getItem('cc-pre-input-button') !== '0';
     const savedTaskView = localStorage.getItem('cc-task-view');
     if (savedTaskView === 'list' || savedTaskView === 'note' || savedTaskView === 'prompt') taskViewMode = savedTaskView;
     const savedDiffMode = localStorage.getItem('cc-diff-mode');
@@ -910,6 +931,9 @@ function getInitialState(): AppState {
     leftPanelHidden,
     rightPanelHidden,
     taskViewMode,
+    preInputQueue: [],
+    preInputReveal: 0,
+    preInputButton,
     diffSelection: null,
     diffMode,
     diffTabActive: false,

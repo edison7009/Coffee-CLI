@@ -126,6 +126,7 @@ export function TaskBoard({ onCountChange }: { onCountChange: (count: number) =>
   const skipNextSyncRef = useRef(false); // Used to ignore external/initial load syncs
   const isLoadedRef = useRef(false);
   const pendingEchoesRef = useRef<Set<string>>(new Set());
+  const [loaded, setLoaded] = useState(false);
 
   // Load tasks from Rust backend on mount. A first-ever launch (no tasks AND
   // never seeded) drops one roomy welcome/guide note and opens the sticky-note
@@ -134,6 +135,7 @@ export function TaskBoard({ onCountChange }: { onCountChange: (count: number) =>
   useEffect(() => {
     loadTasksFromBackend().then(data => {
       isLoadedRef.current = true;
+      setLoaded(true);
       let seeded = false;
       try { seeded = localStorage.getItem('cc-tasks-seeded') === '1'; } catch { /* Best-effort operation; failure is non-fatal. */ }
 
@@ -203,6 +205,20 @@ export function TaskBoard({ onCountChange }: { onCountChange: (count: number) =>
       autoGrowTitle(editInputRef.current); // fit a pre-existing long title
     }
   }, [editingId, autoGrowTitle]);
+
+  // Composer drafts saved as pre-input land at the top of the current view once the board has loaded.
+  const preInputQueue = state.preInputQueue;
+  useEffect(() => {
+    if (!loaded || !preInputQueue.length) return;
+    const category = t('task.tab.tasks');
+    const items = preInputQueue.map((text): TaskItem => viewMode === 'prompt'
+      ? { ...makePromptItem(category), description: text }
+      : { id: crypto.randomUUID(), title: text, status: 'todo', createdAt: Date.now() }).reverse();
+    setTasks(prev => [...items, ...prev]);
+    setAddingId(items[0].id);
+    setTimeout(() => setAddingId(null), 400);
+    dispatch({ type: 'TAKE_PRE_INPUT', count: preInputQueue.length });
+  }, [loaded, preInputQueue, viewMode, t, dispatch]);
 
   // ─── Task Actions ─────────────────────────────────────────────────────────
   const handleAdd = useCallback(() => {

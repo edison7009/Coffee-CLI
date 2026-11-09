@@ -11,6 +11,8 @@ import { ChangesBoard } from './ChangesBoard';
 import { TaskBoard } from './TaskBoard';
 
 type RightView = 'tasks' | 'changes' | 'detail';
+// The panel unmounts while hidden; remember which save already switched tabs so reopening keeps the user's tab.
+let revealedPreInput = 0;
 
 export function RightPanel() {
   const { state, dispatch } = useAppState();
@@ -31,6 +33,14 @@ export function RightPanel() {
     try { localStorage.setItem('cc-right-tab', resting.view === 'tasks' ? 'tasks' : 'changes'); } catch { /* Storage unavailable. */ }
   }, [resting.view]);
   // Explicit tab visits keep their state; opening or moving a file right reveals detail.
+  // Saving a draft as pre-input brings its tab forward.
+  useEffect(() => {
+    if (state.preInputReveal <= revealedPreInput) return;
+    revealedPreInput = state.preInputReveal;
+    setResting({ view: 'tasks', selection, mode: state.diffMode });
+    // Only a new save switches tabs; later file selections still open their detail.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.preInputReveal]);
   const view: RightView = state.diffMode === 'overlay' && selection && (selection !== resting.selection || state.diffMode !== resting.mode) ? 'detail'
     : resting.view === 'detail' && (!selection || state.diffMode !== 'overlay') ? 'changes' : resting.view;
   const selectView = (next: RightView) => {

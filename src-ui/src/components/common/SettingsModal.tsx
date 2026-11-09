@@ -645,6 +645,14 @@ export function SettingsModal() {
                     );
                   })}
                 </div>
+                <div className="settings-sound-list">
+                  <div className="settings-sound-item">
+                    <div className="settings-sound-row">
+                      <div className="settings-sound-title">{t('settings.pre_input_button')}<div className="settings-choice-hint">{t('settings.pre_input_button.sub')}</div></div>
+                      <button type="button" role="switch" className="settings-switch" aria-checked={state.preInputButton} aria-label={t('settings.pre_input_button')} onClick={() => dispatch({ type: 'SET_PRE_INPUT_BUTTON', value: !state.preInputButton })}><span /></button>
+                    </div>
+                  </div>
+                </div>
               </>
             )}
 

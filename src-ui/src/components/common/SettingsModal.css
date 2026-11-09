@@ -628,3 +628,4 @@
 .settings-sound-list > .settings-choice-row + .settings-choice-row { border-top: 1px solid var(--border); }
 .settings-choice { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; min-width: 0; }
 .settings-choice-hint { color: var(--text-3); font-size: var(--type-label); text-align: right; }
+.settings-sound-title .settings-choice-hint { margin-top: 2px; font-weight: 400; text-align: left; white-space: normal; }
