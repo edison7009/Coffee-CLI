@@ -19,11 +19,8 @@ import { bindAutoHideScrollbar } from '../../lib/auto-hide-scrollbar';
 import './TaskNoteView.css';
 
 
-// Note body height. Un-resized notes auto-grow from a roomy default; the
-// bottom-edge handle clamps a manual height between these bounds.
-const DEFAULT_NOTE_HEIGHT = 88;
+// Smallest body while editing, so an empty note still offers room to type.
 const NOTE_MIN_HEIGHT = 44;
-const NOTE_MAX_HEIGHT = 600;
 // Collapsed notes show about two lines; an expanded note grows to fit up to this cap, then scrolls.
 const NOTE_COLLAPSED_HEIGHT = 50;
 const NOTE_EXPANDED_CAP = 480;
@@ -44,8 +41,6 @@ interface TaskNoteViewProps {
   removingId: string | null;
   canSend: boolean;
   onUpdateTitle: (id: string, title: string) => void;
-  // Persists a bottom-edge-resized body height (called once on drop).
-  onSetHeight: (id: string, height: number) => void;
   onRemove: (id: string) => void;
   onDuplicate: (id: string) => void;
   onSend: (task: TaskItem) => void;
@@ -58,7 +53,7 @@ interface TaskNoteViewProps {
 }
 
 export function TaskNoteView({
-  tasks, addingId, removingId, canSend, onUpdateTitle, onSetHeight, onRemove, onDuplicate, onSend, onReorder, onShowGuide,
+  tasks, addingId, removingId, canSend, onUpdateTitle, onRemove, onDuplicate, onSend, onReorder, onShowGuide,
 }: TaskNoteViewProps) {
   const t = useT();
 
@@ -72,9 +67,6 @@ export function TaskNoteView({
   const dropTargetRef = useRef<DropLine | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
 
-  // Live preview height while dragging one card's bottom edge; persisted via
-  // onSetHeight only on pointer-up, so a resize is one disk write, not a stream.
-  const [resizing, setResizing] = useState<{ id: string; height: number } | null>(null);
   // Notes start collapsed: a click opens or closes one, a double-click edits it.
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -108,12 +100,10 @@ export function TaskNoteView({
 
   const handlePointerDown = (e: React.PointerEvent, id: string) => {
     const target = e.target as HTMLElement;
-    // Never start a drag from an interactive control — the note body needs
-    // click-to-place-caret + text selection, dots/buttons need clicks, and the
-    // bottom-edge handle owns its own resize gesture.
+    // Never start a drag from a button or a body being edited (it needs its caret and selection).
     // A read-only body (not being edited) drags the card; preventDefault keeps it from selecting text.
     const body = target.closest('textarea');
-    if ((body && !body.readOnly) || target.closest('button') || target.closest('.task-note-resize')) return;
+    if ((body && !body.readOnly) || target.closest('button')) return;
     // Starting a press here must not begin a text selection that sweeps across other notes.
     e.preventDefault();
 
@@ -225,40 +215,6 @@ export function TaskNoteView({
     window.addEventListener('pointerup', onUp);
   };
 
-  // ── Bottom-edge resize ──────────────────────────────────────────────────
-  const handleResizeDown = (e: React.PointerEvent, id: string) => {
-    e.preventDefault();
-    e.stopPropagation(); // don't let the card's reorder gesture start
-    const handle = e.currentTarget as HTMLElement;
-    const body = handle
-      .closest('.task-note-card')
-      ?.querySelector('.task-note-body') as HTMLElement | null;
-    const startHeight = body ? body.getBoundingClientRect().height : DEFAULT_NOTE_HEIGHT;
-    const startY = e.clientY;
-    // Pointer capture keeps move/up/cancel coming to this element even if the
-    // pointer leaves the window or focus is stolen (WebView2) — so a resize
-    // can't get stuck mid-gesture and the listeners always tear down. Element
-    // listeners (vs window) also go away with the node if the card unmounts.
-    try { handle.setPointerCapture(e.pointerId); } catch { /* Best-effort operation; failure is non-fatal. */ }
-
-    const onMove = (me: PointerEvent) => {
-      const next = Math.max(NOTE_MIN_HEIGHT, Math.min(NOTE_MAX_HEIGHT, startHeight + (me.clientY - startY)));
-      setResizing({ id, height: Math.round(next) });
-    };
-    const finish = () => {
-      handle.removeEventListener('pointermove', onMove);
-      handle.removeEventListener('pointerup', finish);
-      handle.removeEventListener('pointercancel', finish);
-      setResizing(cur => {
-        if (cur && cur.id === id) onSetHeight(id, cur.height);
-        return null;
-      });
-    };
-    handle.addEventListener('pointermove', onMove);
-    handle.addEventListener('pointerup', finish);
-    handle.addEventListener('pointercancel', finish);
-  };
-
   if (ordered.length === 0) {
     return (
       <div className="task-note-list task-note-list--empty">
@@ -276,7 +232,7 @@ export function TaskNoteView({
             data-note-id={task.id}
             className={[
               'task-note-card',
-              !(expanded.has(task.id) || editingId === task.id || addingId === task.id || resizing?.id === task.id) && 'is-collapsed',
+              !(expanded.has(task.id) || editingId === task.id || addingId === task.id) && 'is-collapsed',
               dragId === task.id && 'dragging',
               removingId === task.id && 'removing',
             ].filter(Boolean).join(' ')}
@@ -286,8 +242,7 @@ export function TaskNoteView({
           >
             <NoteBody
               value={task.title}
-              height={resizing?.id === task.id ? resizing.height : (task.height ?? null)}
-              open={expanded.has(task.id) || editingId === task.id || addingId === task.id || resizing?.id === task.id}
+              open={expanded.has(task.id) || editingId === task.id || addingId === task.id}
               editing={editingId === task.id || addingId === task.id}
               onToggle={() => setOpen(task.id, !expanded.has(task.id))}
               onEdit={() => { setOpen(task.id, true); setEditingId(task.id); }}
@@ -352,13 +307,6 @@ export function TaskNoteView({
                 </button>
             </span>
 
-            {/* Bottom-edge resize handle — drag to grow/shrink the note. The
-                `resizing` class drives the CSS deepen+lengthen effect while
-                the pointer drags (Coffee-Note pane-resizer style). */}
-            <div
-              className={`task-note-resize${resizing?.id === task.id ? ' resizing' : ''}`}
-              onPointerDown={e => { setOpen(task.id, true); handleResizeDown(e, task.id); }}
-            />
           </div>
         );
       })}
@@ -372,8 +320,6 @@ export function TaskNoteView({
 
 interface NoteBodyProps {
   value: string;
-  // Explicit user-resized height in px, or null to auto-grow with content.
-  height: number | null;
   open: boolean;
   editing: boolean;
   onToggle: () => void;
@@ -384,7 +330,7 @@ interface NoteBodyProps {
   onChange: (next: string) => void;
 }
 
-function NoteBody({ value, height, open, editing, onToggle, onEdit, onEditEnd, autoFocus, placeholder, onChange }: NoteBodyProps) {
+function NoteBody({ value, open, editing, onToggle, onEdit, onEditEnd, autoFocus, placeholder, onChange }: NoteBodyProps) {
   const ref = useRef<HTMLTextAreaElement>(null);
   // Right-click cut/copy/paste/select menu (same one Gambit/terminal use).
   const { menu: ctxMenu, openMenu: openCtxMenu } = useTextContextMenu();
@@ -392,12 +338,7 @@ function NoteBody({ value, height, open, editing, onToggle, onEdit, onEditEnd, a
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-    // The resized height is a FLOOR, not a fixed size: the note is at least the
-    // height you dragged (or a roomy default), and still grows to fit longer
-    // content when left un-resized. A manually-shrunk note scrolls instead of
-    // clipping — the size you chose wins, and overflow-y:auto (styled with the
-    // same accent slider as the terminal, see TaskNoteView.css) keeps the
-    // overflow reachable by wheel or drag.
+    // An open note fits its text up to a cap and scrolls past it (wheel or the accent slider).
     //
     // scrollHeight depends on the textarea's WIDTH (narrower ⇒ more wrapping ⇒
     // taller). The right panel mounts COLLAPSED (width 0) and animates open
@@ -414,11 +355,9 @@ function NoteBody({ value, height, open, editing, onToggle, onEdit, onEditEnd, a
         el.style.height = `${Math.min(NOTE_COLLAPSED_HEIGHT, Math.max(NOTE_MIN_HEIGHT, el.scrollHeight))}px`;
         el.scrollTop = 0;
       } else {
-        // Expanded: show the whole note up to the cap, then scroll. A dragged height only ever makes it taller,
-        // so an old small height (or a short drag) never leaves an opened note cramped.
+        // Expanded: show the whole note up to the cap, then scroll.
         el.style.height = 'auto';
-        const fitted = Math.min(NOTE_EXPANDED_CAP, Math.max(NOTE_MIN_HEIGHT, el.scrollHeight));
-        el.style.height = `${height != null ? Math.max(fitted, Math.min(NOTE_MAX_HEIGHT, height)) : fitted}px`;
+        el.style.height = `${Math.min(NOTE_EXPANDED_CAP, Math.max(NOTE_MIN_HEIGHT, el.scrollHeight))}px`;
       }
       lastW = el.offsetWidth;
     };
@@ -430,7 +369,7 @@ function NoteBody({ value, height, open, editing, onToggle, onEdit, onEditEnd, a
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, [value, height, open]);
+  }, [value, open]);
 
   useEffect(() => {
     if (!editing || !ref.current || document.activeElement === ref.current) return;
@@ -461,12 +400,11 @@ function NoteBody({ value, height, open, editing, onToggle, onEdit, onEditEnd, a
   // scrollbar keeps re-surfacing its up/down arrow buttons no matter the CSS
   // (see lib/auto-hide-scrollbar.ts for the full story) — so we hide it and
   // draw a DOM slider instead, the proven Coffee-Note approach. slim = the
-  // 7px variant; insetBottom 11 clears the bottom-edge resize handle so the
-  // slider can't collide with it.
+  // 7px variant, inset a little from the card's rounded bottom.
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    return bindAutoHideScrollbar(el, { slim: true, insetBottom: 11 });
+    return bindAutoHideScrollbar(el, { slim: true, insetBottom: 6 });
   }, []);
 
   // Collapsed: a two-line preview ending in an ellipsis when there is more (a textarea cannot clamp lines).

@@ -109,8 +109,7 @@
   box-sizing: border-box;
 }
 
-/* Scrollable note body — a user-resized height smaller than the content no
-   longer CLIPS the text; it scrolls (mouse wheel + drag). The native scrollbar
+/* Scrollable note body — an open note past its height cap scrolls (mouse wheel + drag). The native scrollbar
    is hidden by the .auto-hide-scrollbar class (added by bindAutoHideScrollbar,
    see lib/auto-hide-scrollbar.ts) because WebView2 can't drop its arrow
    buttons via CSS; NoteBody draws a DOM slider instead. overflow-y:auto stays
@@ -118,59 +117,6 @@
 
 .task-note-body::placeholder {
   color: var(--text-3, rgba(255, 255, 255, 0.3));
-}
-
-/* ─── Bottom-edge resize handle ─────────────────────────────────────────────── */
-/* Full-width strip overlaying the card's bottom edge; drag to grow/shrink the
-   note. The grip is a SHORT centred bar (Coffee-Note pane-resizer style):
-   hidden at rest, a light accent bar surfaces on hover, and while dragging it
-   deepens to the solid accent and lengthens — all on a fast 90ms ease-out.
-   The `resizing` class is applied by TaskNoteView while the pointer drags. */
-.task-note-resize {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -4px;
-  height: 8px;
-  /* Straddle the bottom border so the grip is centered on the card's edge. */
-  /* !important: global.css sets `* { cursor: default !important }`. The
-     ::after has pointer-events:none so the parent stays the hit target and
-     this cursor shows across the whole handle (same pattern as Gambit). */
-  cursor: ns-resize !important;
-  touch-action: none;
-  z-index: 2;
-}
-
-/* The grip bar — centred in the strip, short + translucent until drag. */
-.task-note-resize::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 96px;
-  height: 4px;
-  border-radius: 999px;
-  background: transparent;
-  opacity: 0;
-  pointer-events: none;
-  transform: translate(-50%, -50%);
-  transition: opacity 90ms ease-out, width 90ms ease-out, height 90ms ease-out,
-    background-color 90ms ease-out;
-}
-
-/* Hover surfaces the bar in a light accent (58% mix) so the handle is
-   discoverable without cluttering the resting card. */
-.task-note-card:hover .task-note-resize::after,
-.task-note-resize:hover::after {
-  opacity: 1;
-  background: color-mix(in srgb, var(--accent, #c4956a) 58%, transparent);
-}
-
-/* While dragging: deepen to the solid accent and lengthen the bar. */
-.task-note-resize.resizing::after {
-  width: 144px;
-  height: 5px;
-  background: var(--accent, #c4956a);
 }
 
 /* ─── Floating ghost (drag clone) ───────────────────────────────────────────── */
@@ -193,8 +139,6 @@
 /* Collapsed and expanded-but-not-editing notes read as cards: a click opens or closes them, a double-click edits. */
 .task-note-body[readonly] { cursor: pointer !important; user-select: none; -webkit-user-select: none; }
 .task-note-body.is-collapsed { overflow: hidden; }
-/* A collapsed note neither scrolls nor resizes: hide its bottom grip (the slider hides itself because the body stops scrolling). */
-.task-note-card.is-collapsed .task-note-resize { display: none; }
 
 /* Collapsed preview: the body's look, clamped to two lines with a trailing ellipsis when there is more. */
 .task-note-preview {

@@ -11,14 +11,12 @@ export interface TaskItem {
   description?: string;
   status: TaskStatus;
   createdAt: number;
-  // Sticky-note view only: the user-dragged body height in px (bottom-edge
-  // resize). Undefined = auto-grow to fit content from a roomy default. Ignored
-  // by the to-do list view. Persisted so a note keeps the size you gave it.
+  // A body height dragged in older versions; notes now size to their text, so it is ignored.
   height?: number;
 }
 
 // Builds the welcome/guide note. Shared by the first-launch seed (TaskBoard)
-// and the empty-state "show guide" button, so both produce an identical roomy
+// and the empty-state "show guide" button, so both produce an identical
 // note. Caller passes the already-localized guide text.
 export function makeWelcomeNote(text: string): TaskItem {
   return {
@@ -26,7 +24,6 @@ export function makeWelcomeNote(text: string): TaskItem {
     title: text,
     status: 'todo',
     createdAt: Date.now(),
-    height: 240,
   };
 }
 

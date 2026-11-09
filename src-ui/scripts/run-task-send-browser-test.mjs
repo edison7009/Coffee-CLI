@@ -148,7 +148,6 @@ try {
   assert.ok(await preview.evaluate(el => { const s = getComputedStyle(el); return Math.abs(el.clientHeight - 2 * parseFloat(s.lineHeight)) < 1; }), 'no part of a third line shows');
   await preview.hover();
   assert.equal(await page.locator('.cc-scrollbar:not(.is-empty)').count(), 0, 'a collapsed note shows no scrollbar');
-  assert.equal(await page.locator('.task-note-resize').isVisible(), false, 'a collapsed note has no resize grip');
   await preview.click();
   assert.equal(await note.getAttribute('aria-expanded'), 'true', 'a click expands');
   const expanded = await note.evaluate(el => el.getBoundingClientRect().height);
@@ -156,7 +155,7 @@ try {
   assert.ok(await note.evaluate(el => el.scrollHeight > el.clientHeight), 'content past the cap scrolls');
   await note.hover();
   await page.locator('.cc-scrollbar:not(.is-empty)').waitFor({ state: 'attached' });
-  assert.equal(await page.locator('.task-note-resize').isVisible(), true, 'an expanded note can be resized');
+  assert.equal(await page.locator('.task-note-resize').count(), 0, 'notes size to their text; there is no resize grip');
   assert.equal(await note.evaluate(el => el.readOnly), true, 'a click does not start editing');
   // Dragging from a read-only body moves the card: no text selection, a dashed outline stays in place, the drop does not toggle.
   const box = await note.boundingBox();
@@ -216,11 +215,10 @@ try {
   assert.equal(await tabBody.getAttribute('aria-expanded'), 'true', 'and opens it');
   assert.equal(await tabBody.evaluate(el => document.activeElement === el && el.selectionStart === el.value.length), true, 'with the caret at the end');
   await page.mouse.click(20, 700);
-  // A note that already shows in full (a line or two) does not open on click, so it never shows a resize grip.
+  // A note that already shows in full (a line or two) does not open on click.
   const shortNote = page.locator('#root [data-note-id="C"]');
   await shortNote.locator('.task-note-preview').click();
   assert.equal(await shortNote.locator('.task-note-body').getAttribute('aria-expanded'), 'false', 'a short note stays as it is');
-  assert.equal(await shortNote.locator('.task-note-resize').isVisible(), false, 'a short note shows no resize grip');
   // The + button adds an empty note in edit mode, and it stays editable after the add animation (until the user clicks away).
   await page.clock.install();
   await open('claude');

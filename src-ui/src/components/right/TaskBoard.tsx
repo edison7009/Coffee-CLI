@@ -236,13 +236,6 @@ export function TaskBoard({ onCountChange }: { onCountChange: (count: number) =>
     setTasks(prev => prev.map(t => t.id === id ? { ...t, title } : t));
   }, []);
 
-  // Note-view body height (bottom-edge resize). Persisted on the task so the
-  // note keeps its size; the note view drives live preview locally and only
-  // calls this once on drop.
-  const setHeight = useCallback((id: string, height: number) => {
-    setTasks(prev => prev.map(t => t.id === id ? { ...t, height } : t));
-  }, []);
-
   // Manually (re)add the welcome guide note — wired to the empty-state button.
   // Switches to the sticky-note view so the long guide reads as a note, not a
   // long title row. (New users still get it auto-seeded once; this is the
@@ -272,7 +265,6 @@ export function TaskBoard({ onCountChange }: { onCountChange: (count: number) =>
             removingId={removingId}
             canSend={canSend}
             onUpdateTitle={updateTitle}
-            onSetHeight={setHeight}
             onRemove={handleRemove}
             onDuplicate={duplicateTask}
             onSend={sendToAgent}
