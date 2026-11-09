@@ -85,6 +85,10 @@
   display: flex;
   overflow: hidden;
   border-radius: 0 var(--radius-md, 12px) var(--radius-md, 12px) 0;
+  /* The red rises out of the text: a 32px lead-in fading from transparent into delete's red, so there is no hard
+     edge where the buttons meet the line. */
+  padding-left: 32px;
+  background: linear-gradient(to right, transparent, #e5534b 32px);
   opacity: 0;
   pointer-events: none;
   transition: opacity .16s ease;
@@ -103,13 +107,6 @@
 .task-note-swipe-btn svg { width: 18px; height: 18px; }
 .task-note-card:hover .task-note-swipe,
 .task-note-card:focus-within .task-note-swipe { opacity: 1; pointer-events: auto; }
-/* The line fades out just before the buttons, like the history list's title, instead of being cut off by them.
-   The buttons take 96px from the card's right edge; the preview ends 12px in, so they start 84px before its end. */
-.task-note-card:hover .task-note-preview,
-.task-note-card:focus-within .task-note-preview {
-  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 132px), transparent calc(100% - 84px));
-  mask-image: linear-gradient(to right, #000 calc(100% - 132px), transparent calc(100% - 84px));
-}
 .task-note-card .task-note-swipe-btn:hover:not(:disabled) { opacity: 1; filter: brightness(1.12); }
 .task-note-list:has(.task-note-card.dragging) .task-note-swipe { display: none; }
 @media (prefers-reduced-motion: reduce) { .task-note-swipe { transition: none; } }
