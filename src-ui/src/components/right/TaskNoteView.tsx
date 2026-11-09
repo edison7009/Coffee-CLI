@@ -406,7 +406,7 @@ function NoteBody({ value, open, editing, onToggle, onEditEnd, autoFocus, placeh
   }, [autoFocus]);
 
   // Collapsed: a one-line preview ending in an ellipsis when there is more (a textarea cannot clamp lines).
-  // The textarea stays mounted but hidden, keeping its sizing, scrollbar and edit wiring.
+  // The textarea stays mounted but hidden, keeping its sizing and edit wiring.
   const preview = !open && !editing;
   return (
     <>

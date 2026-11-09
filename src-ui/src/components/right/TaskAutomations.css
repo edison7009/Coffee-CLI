@@ -1,4 +1,4 @@
-/* The automations strip at the top of the pre-input list: one card each, styled like the notes below: name and next run, then tool, schedule and folder; switch and send on the right. */
+/* The running automations at the top of the pre-input list, in one tray: name, then tool, schedule and folder; send on hover. */
 .task-automations { position: relative; display: flex; flex-direction: column; gap: 2px; margin: 6px 0 0; padding: 2px 4px 4px; }
 /* The strip is one pinned panel: a soft tray behind the header and its automations, spaced evenly: about the same gap above it (from the tabs) as below it (to the notes). Same fill as a note card.
    Painted by a pseudo-element, which the glass/carbon background reset leaves alone. */

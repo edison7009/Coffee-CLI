@@ -21,7 +21,7 @@ function ToolMark({ tool }: { tool: AutomationTool }) {
 }
 
 /**
- * Automations at the top of the task list: on or off at a glance, and each prompt sent to the current conversation
+ * Running automations at the top of the task list (paused ones stay on the automations page), each prompt sent to the current conversation
  * like a task. Editing stays on the automations page, which the name opens.
  */
 export function TaskAutomations({ onSend }: { onSend: (prompt: string) => void }) {
@@ -40,7 +40,7 @@ export function TaskAutomations({ onSend }: { onSend: (prompt: string) => void }
       <span className="task-automations-count">· {automations.length}</span>
       <svg className="task-automations-chevron" data-open={!collapsed} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
     </button>
-    {!collapsed && automations.map(item => <div key={item.id} className="task-automation-card" data-enabled={item.enabled}
+    {!collapsed && automations.map(item => <div key={item.id} className="task-automation-card"
       // Like a note: a soft glow follows the pointer across the card.
       onPointerMove={e => { const r = e.currentTarget.getBoundingClientRect(); e.currentTarget.style.setProperty('--glow-x', `${e.clientX - r.left}px`); }}>
       <div className="task-automation-row">
