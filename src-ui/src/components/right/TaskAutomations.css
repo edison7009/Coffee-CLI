@@ -13,7 +13,7 @@
 .task-automation-card[data-enabled="false"] .task-automation-title { color: var(--text-3); }
 .task-automation-next { flex-shrink: 0; color: var(--text-3); font-size: 12px; font-variant-numeric: tabular-nums; }
 /* Same as a note's send, always in view: a solid accent circle, its arrow coloured like the + button. */
-.task-automation-send { width: 26px; height: 26px; flex-shrink: 0; border-radius: 50%; opacity: 1; color: var(--bg-terminal, #fff); background: var(--accent, #c4956a) !important; transition: filter .15s; }
+.task-automation-send { display: flex; align-items: center; justify-content: center; padding: 0; border: none; cursor: pointer; width: 26px; height: 26px; flex-shrink: 0; border-radius: 50%; opacity: 1; color: var(--bg-terminal, #fff); background: var(--accent, #c4956a) !important; transition: filter .15s; }
 [data-shape="glass"] .task-automation-send { color: #fff; }
 .task-automation-send svg { width: 12px; height: 12px; margin-left: 2px; }
 .task-automation-send:hover { filter: brightness(1.12); }

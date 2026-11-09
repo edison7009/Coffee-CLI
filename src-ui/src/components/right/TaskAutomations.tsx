@@ -51,7 +51,7 @@ export function TaskAutomations({ onSend }: { onSend: (prompt: string) => void }
             <span className="task-automation-meta">{scheduleSummary(item.schedule, t, state.currentLang)} · {folderName(item.cwd)}</span>
           </span>
         </button>
-        <button type="button" className="task-slot task-automation-send" aria-label={t('automation.send_current')} onClick={() => onSend(item.prompt)}>
+        <button type="button" className="task-automation-send" aria-label={t('automation.send_current')} onClick={() => onSend(item.prompt)}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true"><polygon points="5 3 21 12 5 21" /></svg>
         </button>
       </div>
