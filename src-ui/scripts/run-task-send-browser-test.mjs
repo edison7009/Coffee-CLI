@@ -138,14 +138,10 @@ try {
   assert.equal(await note.evaluate(el => el.readOnly), true, 'a press anywhere else ends editing');
   await note.click();
   assert.equal(await note.getAttribute('aria-expanded'), 'false', 'a click collapses an open note');
-  // Collapsed, the note shows a two-line preview that ends in an ellipsis because there is more.
-  const collapsed = await preview.evaluate(el => el.getBoundingClientRect().height);
-  const twoLines = await preview.evaluate(el => { const s = getComputedStyle(el); return parseFloat(s.paddingTop) + parseFloat(s.paddingBottom) + 2 * parseFloat(s.lineHeight); });
-  assert.ok(Math.abs(collapsed - twoLines) < 1, `a collapsed note shows two lines (${collapsed} vs ${twoLines})`);
-  assert.equal(await preview.evaluate(el => getComputedStyle(el).webkitLineClamp), '2', 'the preview clamps to two lines with an ellipsis');
+  // Collapsed, the note shows one line that ends in an ellipsis because there is more, and nothing of a second.
+  assert.equal(await preview.evaluate(el => getComputedStyle(el).webkitLineClamp), '1', 'the preview clamps to one line with an ellipsis');
   assert.ok(await preview.evaluate(el => el.scrollHeight > el.clientHeight + 1), 'the clamped preview has more text to open');
-  // Nothing of a third line shows: the clipped box holds exactly two lines of text.
-  assert.ok(await preview.evaluate(el => { const s = getComputedStyle(el); return Math.abs(el.clientHeight - 2 * parseFloat(s.lineHeight)) < 1; }), 'no part of a third line shows');
+  assert.ok(await preview.evaluate(el => { const s = getComputedStyle(el); return Math.abs(el.clientHeight - parseFloat(s.lineHeight)) < 1; }), 'no part of a second line shows');
   await preview.hover();
   assert.equal(await page.locator('.cc-scrollbar:not(.is-empty)').count(), 0, 'a collapsed note shows no scrollbar');
   await preview.click();
@@ -183,31 +179,24 @@ try {
   await page.mouse.up();
   await page.waitForFunction(() => window.saved.map(task => task.title).join() === 'B,A,C');
   assert.deepEqual(await cards.evaluateAll(els => els.map(el => el.style.transform)), ['', '', ''], 'slide offsets clear after the drop');
-  // The tools hang below the card on hover: hidden at rest, outside the card when shown, and the text keeps the full width.
+  // At rest a collapsed note is just its line of text; on hover, delete slides in on the left and send on the right,
+  // and the text narrows for them rather than sitting under them.
   const tabCard = page.locator('#root [data-note-id="B"]');
+  const sideWidth = cls => tabCard.locator('.task-note-side.' + cls).evaluate(el => el.getBoundingClientRect().width);
   await page.mouse.move(5, 5);
-  assert.equal(await tabCard.locator('.task-note-tools').isVisible(), false, 'the tools are hidden at rest');
+  await page.waitForFunction(() => [...document.querySelectorAll('#root [data-note-id="B"] .task-note-side')].every(el => el.getBoundingClientRect().width < 1));
   await tabCard.hover();
-  const cardBox = await tabCard.boundingBox(), toolsBox = await tabCard.locator('.task-note-tools').boundingBox();
-  assert.ok(toolsBox.y >= cardBox.y + cardBox.height - 1, 'the tools hang below the card, not over its text');
-  assert.equal(await tabCard.locator('.task-note-preview').evaluate(el => getComputedStyle(el).marginRight), '12px', 'the text keeps the full width');
-  await tabCard.locator('.task-note-copy').hover();
-  assert.equal(await tabCard.locator('.task-note-tools').isVisible(), true, 'moving onto the tab keeps it open');
-  // The tab follows the pointer left and right over the note, and holds still once the pointer is on it.
-  const tabLeft = () => tabCard.locator('.task-note-tools').evaluate(el => el.getBoundingClientRect().left);
-  await page.mouse.move(cardBox.x + 20, cardBox.y + cardBox.height / 2);
-  const atLeft = await tabLeft();
-  await page.mouse.move(cardBox.x + cardBox.width - 20, cardBox.y + cardBox.height / 2);
-  const atRight = await tabLeft();
-  assert.ok(atRight > atLeft + 50, `the tab follows the pointer (${atLeft} -> ${atRight})`);
-  assert.ok(atLeft >= cardBox.x - 1 && atRight + (await tabCard.locator('.task-note-tools').boundingBox()).width <= cardBox.x + cardBox.width + 1, 'the tab stays within the card');
-  await page.mouse.move(cardBox.x + cardBox.width / 2, cardBox.y + cardBox.height / 2);
-  const centred = await tabLeft();
-  // Straight down onto the tab, then along it to its first button: the tab must not slide away.
-  const editBox = await tabCard.locator('.task-note-edit').boundingBox();
-  await page.mouse.move(cardBox.x + cardBox.width / 2, editBox.y + editBox.height / 2, { steps: 4 });
-  await page.mouse.move(editBox.x + editBox.width / 2, editBox.y + editBox.height / 2, { steps: 5 });
-  assert.equal(await tabLeft(), centred, 'the tab holds still once the pointer is on it');
+  await page.waitForFunction(() => [...document.querySelectorAll('#root [data-note-id="B"] .task-note-side')].every(el => el.getBoundingClientRect().width > 21));
+  const del = await tabCard.locator('.task-note-side.task-note-delete').boundingBox(), sendSide = await tabCard.locator('.task-note-side.task-note-send').boundingBox(), line = await tabCard.locator('.task-note-preview').boundingBox();
+  assert.ok(del.x + del.width <= line.x && line.x + line.width <= sendSide.x, 'delete on the left, send on the right, neither over the text');
+  assert.ok(await sideWidth('task-note-send') > 21, 'the hover buttons are full size');
+  // A click opens the note with a row of actions under it; the side buttons give way to that row.
+  await tabCard.locator('.task-note-preview').click();
+  await tabCard.locator('.task-note-actions').waitFor();
+  assert.deepEqual(await tabCard.locator('.task-note-actions button').evaluateAll(els => els.map(el => el.className.split(' ')[1])), ['task-note-edit', 'task-note-copy', 'task-note-delete', 'task-note-send'], 'edit, copy, delete, then send');
+  assert.equal(await tabCard.locator('.task-note-side').count(), 0, 'an open note has no side buttons');
+  const actions = await tabCard.locator('.task-note-actions').boundingBox(), openBody = await tabCard.locator('.task-note-body').boundingBox();
+  assert.ok(actions.y >= openBody.y + openBody.height - 1, 'the actions sit under the text');
   // The edit button opens the note in edit mode with the caret at the end.
   await tabCard.locator('.task-note-edit').click();
   const tabBody = tabCard.locator('.task-note-body');
@@ -215,10 +204,11 @@ try {
   assert.equal(await tabBody.getAttribute('aria-expanded'), 'true', 'and opens it');
   assert.equal(await tabBody.evaluate(el => document.activeElement === el && el.selectionStart === el.value.length), true, 'with the caret at the end');
   await page.mouse.click(20, 700);
-  // A note that already shows in full (a line or two) does not open on click.
+  // A short note opens on click too: that is how its actions show.
   const shortNote = page.locator('#root [data-note-id="C"]');
   await shortNote.locator('.task-note-preview').click();
-  assert.equal(await shortNote.locator('.task-note-body').getAttribute('aria-expanded'), 'false', 'a short note stays as it is');
+  assert.equal(await shortNote.locator('.task-note-body').getAttribute('aria-expanded'), 'true', 'a short note opens');
+  await shortNote.locator('.task-note-actions').waitFor();
   // The + button adds an empty note in edit mode, and it stays editable after the add animation (until the user clicks away).
   await page.clock.install();
   await open('claude');
@@ -234,5 +224,5 @@ try {
   const pressPrevented = selector => page.evaluate(sel => { const el = document.querySelector(sel); const ev = new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 0 }); el.dispatchEvent(ev); window.dispatchEvent(new PointerEvent('pointerup')); return ev.defaultPrevented; }, selector);
   assert.equal(await pressPrevented('#root .task-note-card'), true, 'note press does not select text');
   assert.deepEqual(errors, []);
-  console.log('OK: note, category and list send to existing Claude/Codex desktop and terminal sessions, acknowledge before promotion, prevent duplicates, preserve failures and disable unavailable targets');
+  console.log('OK: notes send to existing Claude/Codex desktop and terminal sessions, acknowledge before promotion, prevent duplicates, preserve failures and disable unavailable targets');
 } finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }

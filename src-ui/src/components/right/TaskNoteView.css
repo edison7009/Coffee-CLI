@@ -65,28 +65,49 @@
   cursor: not-allowed;
 }
 
-/* Tools: a small tab hanging from the card's bottom-right edge, shown on hover or keyboard focus. It sits outside
-   the card, over the gap and the top of the next card, so it never covers this note's text or takes room from it.
-   Solid backdrop and a raised layer so it reads above the next card. */
-.task-note-tools {
-  position: absolute;
-  top: 100%;
-  right: 12px;
-  display: none;
+/* The card's line: delete | text | send. Collapsed, delete and send take no room until the card is hovered (or
+   focused), then slide open and the text narrows to make room — the same reveal as the history list's delete. */
+.task-note-row {
+  display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 3px 8px 4px;
-  border-radius: 0 0 var(--radius-sm, 8px) var(--radius-sm, 8px);
-  background: color-mix(in srgb, var(--bg-panel, #222) 96%, var(--text-1, #fff));
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
-  z-index: 3;
+  min-width: 0;
 }
-.task-note-card:hover .task-note-tools,
-.task-note-card:focus-within .task-note-tools { display: flex; }
-.task-note-list:has(.task-note-card.dragging) .task-note-tools { display: none; }
-/* The hovered card (and its tab) stays above its neighbours. */
-.task-note-card:hover,
-.task-note-card:focus-within { z-index: 2; }
+.task-note-row > .task-note-body,
+.task-note-row > .task-note-preview { flex: 1; min-width: 0; }
+.task-note-side {
+  flex: 0 0 0;
+  width: 0;
+  height: 22px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: flex-basis .18s ease, width .18s ease, margin .18s ease, opacity .18s ease;
+}
+.task-note-card:hover .task-note-side,
+.task-note-card:focus-within .task-note-side {
+  flex-basis: 22px;
+  width: 22px;
+  opacity: 0.75;
+  pointer-events: auto;
+}
+.task-note-card:hover .task-note-delete.task-note-side,
+.task-note-card:focus-within .task-note-delete.task-note-side { margin-left: 8px; }
+.task-note-card:hover .task-note-send.task-note-side,
+.task-note-card:focus-within .task-note-send.task-note-side { margin-right: 8px; }
+.task-note-card .task-note-side:hover:not(:disabled) { opacity: 1; }
+.task-note-card .task-note-side:disabled { opacity: 0.3; }
+.task-note-list:has(.task-note-card.dragging) .task-note-side { opacity: 0; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .task-note-side { transition: none; } }
+
+/* Open: a row of actions under the text; send sits apart on the right. */
+.task-note-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 2px 12px 9px;
+}
+.task-note-actions-gap { flex: 1; }
+.task-note-edit[aria-pressed="true"] { opacity: 1; }
 
 /* ─── Body — the writing area ────────────────────────────────────────────────── */
 
@@ -140,19 +161,19 @@
 .task-note-body[readonly] { cursor: pointer !important; user-select: none; -webkit-user-select: none; }
 .task-note-body.is-collapsed { overflow: hidden; }
 
-/* Collapsed preview: the body's look, clamped to two lines with a trailing ellipsis when there is more. */
+/* Collapsed preview: the body's look, clamped to one line with a trailing ellipsis when there is more. */
 .task-note-preview {
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
   overflow: hidden;
   color: var(--text-1, #e8e4de);
   font-family: var(--font, system-ui);
   font-size: var(--type-body);
   line-height: 1.55;
-  /* Margin, not padding: the clamp box must be exactly two lines tall, or the third line peeks into the padding. */
-  margin: 9px 12px 11px;
+  /* Margin, not padding: the clamp box must be exactly one line tall, or the next line peeks into the padding. */
+  margin: 9px 12px 10px;
   white-space: pre-wrap;
   word-break: break-word;
   cursor: pointer !important;
