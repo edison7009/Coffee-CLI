@@ -18,8 +18,8 @@ import {useSyncExternalStore} from 'react';
 const listeners=new Set();
 let state={currentLang:'zh-CN',iconTheme:'material',preInputQueue:[],preInputReveal:0,preInputButton:true,activeTerminalId:'a',terminals:[{id:'a',tool:null,folderPath:'D:/test'}],diffMode:'overlay',diffSelection:null};
 function emit(){state={...state};listeners.forEach(fn=>fn())}
-function dispatch(action){if(action.type==='SET_DIFF_SELECTION')state={...state,diffSelection:action.selection};if(action.type==='CLEAR_DIFF')state={...state,diffSelection:null};if(action.type==='SET_DIFF_MODE')state={...state,diffMode:action.mode};if(action.type==='SAVE_PRE_INPUT')state={...state,preInputQueue:[...state.preInputQueue,action.text],preInputReveal:state.preInputReveal+1,rightPanelHidden:false};if(action.type==='TAKE_PRE_INPUT')state={...state,preInputQueue:state.preInputQueue.slice(action.count)};emit()}
-window.savePreInput=text=>dispatch({type:'SAVE_PRE_INPUT',text});window.hideRight=()=>{state={...state,rightPanelHidden:true};emit()};window.showRight=()=>{state={...state,rightPanelHidden:false};emit()};window.preInputQueue=()=>state.preInputQueue;
+function dispatch(action){if(action.type==='SET_DIFF_SELECTION')state={...state,diffSelection:action.selection};if(action.type==='CLEAR_DIFF')state={...state,diffSelection:null};if(action.type==='SET_DIFF_MODE')state={...state,diffMode:action.mode};if(action.type==='SAVE_PRE_INPUT')state={...state,preInputQueue:[...state.preInputQueue,{text:action.text,folder:action.folder}],preInputReveal:state.preInputReveal+1,rightPanelHidden:false};if(action.type==='TAKE_PRE_INPUT')state={...state,preInputQueue:state.preInputQueue.slice(action.count)};emit()}
+window.savePreInput=(text,folder)=>dispatch({type:'SAVE_PRE_INPUT',text,folder});window.hideRight=()=>{state={...state,rightPanelHidden:true};emit()};window.showRight=()=>{state={...state,rightPanelHidden:false};emit()};window.preInputQueue=()=>state.preInputQueue;
 export function useAppState(){return {state:useSyncExternalStore(fn=>{listeners.add(fn);return()=>listeners.delete(fn)},()=>state),dispatch}}
 export function useAppLanguage(){return 'zh-CN'}
 ${diffContextResolver}
@@ -155,11 +155,11 @@ try{
  // Old to-do notes (and prompt bodies) fold into the note text once and are saved that way.
  assert.equal(await page.locator('.task-note-body').inputValue(),'保留原有任务\n\n旧的待办备注');await page.waitForFunction(()=>window.savedTasks?.[0]&&!('description' in window.savedTasks[0]));assert.equal(await page.evaluate(()=>window.calls.taskLoads),1);
  const todoPreviewReads=await page.evaluate(()=>window.calls.fileReads);await page.evaluate(()=>window.dispatchEvent(new CustomEvent('fs-refresh',{detail:{dirPath:'D:/test'}})));await page.waitForTimeout(950);assert.equal(await page.evaluate(()=>window.calls.fileReads),todoPreviewReads,'Todo also suspends hidden preview reads');
- await page.locator('.task-note-body').dblclick();await page.locator('.task-note-body').fill('移到右侧后保留任务');await page.locator('.task-note-time').click();
+ await page.locator('.task-note-body').dblclick();await page.locator('.task-note-body').fill('移到右侧后保留任务');await page.locator('.task-note-project').click();
  await listTab.click();await taskTab.click();assert.equal(await page.locator('.task-note-body').inputValue(),'移到右侧后保留任务');
  await page.evaluate(()=>window.setFolder('D:/another-workspace'));assert.equal(await taskTab.getAttribute('aria-selected'),'true');assert.equal(await page.evaluate(()=>window.calls.taskLoads),1,'workspace changes must not remount task storage/editors');assert.equal(await page.locator('.task-note-body').inputValue(),'移到右侧后保留任务');
  await page.evaluate(()=>window.setTool('terminal'));
- await page.locator('.task-note-send').click();assert.equal(await page.evaluate(()=>window.pastedTask),'移到右侧后保留任务');await page.waitForFunction(()=>window.savedTasks?.[0]?.status==='working');
+ await page.locator('.task-note-send').click();assert.equal(await page.evaluate(()=>window.pastedTask),'移到右侧后保留任务');await page.waitForFunction(()=>window.savedTasks?.[0]?.sentAt>0);
  assert.equal(await page.evaluate(()=>window.savedTasks[0].title),'移到右侧后保留任务');assert.equal(await page.evaluate(()=>window.calls.taskLoads),1,'the board loads its notes once');
  const reads=await page.evaluate(()=>window.calls.gitReads);await page.evaluate(()=>window.dispatchEvent(new CustomEvent('fs-refresh',{detail:{dirPath:'D:/another-workspace'}})));await page.waitForTimeout(950);assert.equal(await page.evaluate(()=>window.calls.gitReads),reads,'hidden review does not poll Git while using Todo');
  await page.locator('#root').screenshot({path:join(directory,'right-task-panel.png')});
@@ -177,5 +177,19 @@ try{
  assert.equal(await listTab.getAttribute('aria-selected'),'true','reopening the panel keeps the tab the user chose after a save');
  await page.evaluate(()=>window.savePreInput('第二条'));await page.waitForFunction(()=>window.savedTasks?.[0]?.title==='第二条');assert.equal(await taskTab.getAttribute('aria-selected'),'true','a later save switches again while the panel is open');
  assert.equal(await page.evaluate(()=>window.savedTasks.filter(task=>task.title==='等 Agent 忙完再发').length),1,'no duplicate from remounting');
+ // Notes belong to their project: they show only there (global notes everywhere), labelled; All shows every project's.
+ const scope=page.locator('.pre-input-scope button');
+ await page.evaluate(()=>window.setFolder('D:/project-a'));await page.evaluate(()=>window.savePreInput('只属于 A','D:/project-a'));
+ await page.waitForFunction(()=>window.savedTasks?.[0]?.folder==='D:/project-a');
+ const noteA=page.locator('.task-note-card',{hasText:'只属于 A'});await noteA.waitFor();
+ assert.equal(await noteA.locator('.task-note-project').textContent(),'project-a','a note shows its project');
+ assert.equal(await scope.first().textContent(),'project-a','the scope names the current project');
+ const globalNote=page.locator('.task-note-card',{hasText:'第二条'});assert.equal(await globalNote.locator('.task-note-project').textContent(),'全局','a note saved without a project is global');
+ await page.evaluate(()=>window.setFolder('d:\\Project-A\\'));await noteA.waitFor();
+ await page.evaluate(()=>window.setFolder('D:/project-b'));await noteA.waitFor({state:'detached'});await globalNote.waitFor();
+ assert.equal(await taskTab.locator('.changes-title-count').textContent(),String(await page.locator('.task-note-card').count()),'the tab counts the notes shown');
+ await scope.nth(1).click();await noteA.waitFor();assert.equal(await scope.nth(1).getAttribute('aria-pressed'),'true');
+ assert.equal(await page.evaluate(()=>localStorage.getItem('cc-pre-input-all')),'1','the All choice is remembered');
+ await scope.first().click();await noteA.waitFor({state:'detached'});
  assert.deepEqual(errors,[]);console.log('OK: Explorer-matched typography, themed keyboard/resize-safe scope menu, aligned footer dot; Todo persistence and review navigation, retained state, center placement and narrow/light/glass geometry');console.log('Screenshots: '+directory);
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve))}

@@ -27,14 +27,14 @@
   border-radius: var(--radius-md, 12px);
   /* The "paper" / writing surface. The header band (below) sits a shade
      lighter on top of this so the two read as distinct — the sticky-note look.
-     No status-coloured edge: status is carried by the dots alone. */
+     No coloured edge. */
   background: rgba(255, 255, 255, 0.03);
   transition: opacity 0.25s, transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-/* Done notes fade back; otherwise no per-status card tint. */
-.task-note-card.status-done { opacity: 0.55; }
-.task-note-card.status-done:hover { opacity: 0.85; }
+/* Sent notes fade back until hovered. */
+.task-note-card.is-sent { opacity: 0.55; }
+.task-note-card.is-sent:hover { opacity: 0.85; }
 
 /* The dragged note leaves a dashed outline of itself in place. */
 .task-note-card.dragging { background: transparent !important; box-shadow: none !important; outline: 1.5px dashed color-mix(in srgb, var(--accent) 60%, transparent); outline-offset: -1.5px; }
@@ -66,50 +66,29 @@
   border-radius: var(--radius-md, 12px) var(--radius-md, 12px) 0 0;
 }
 
-.task-note-dots {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-/* Plain solid circle — faint tint of its own colour when inactive, full colour
-   when active. No glow, halo, or gradient. */
-.task-note-dot {
-  width: 11px;
-  height: 11px;
-  padding: 0;
-  border: none;
-  border-radius: 50%;
-  flex-shrink: 0;
-  cursor: pointer;
-  background: color-mix(in srgb, var(--dot) 28%, transparent);
-  transition: background 0.15s, transform 0.15s;
-}
-.task-note-dot:hover {
-  background: color-mix(in srgb, var(--dot) 60%, transparent);
-  transform: scale(1.12);
-}
-.task-note-dot.active {
-  background: var(--dot);
-}
-
-/* Timestamp — date + time as one uniform run (same colour, same font),
-   centred in the header between the dots and the action buttons. */
-.task-note-time {
-  flex: 1;
-  text-align: center;
-  font-family: var(--font, system-ui);
+/* Project the note belongs to (or Global), then the sent mark; the actions sit at the right. */
+.task-note-project {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: var(--type-caption);
   font-weight: 500;
-  letter-spacing: 0.02em;
   color: var(--text-2, rgba(255, 255, 255, 0.55));
+  user-select: none;
+}
+.task-note-project.is-global { color: var(--text-3, rgba(255, 255, 255, 0.4)); }
+.task-note-sent {
+  flex-shrink: 0;
+  font-size: var(--type-caption);
+  color: var(--accent, #c4956a);
   white-space: nowrap;
   user-select: none;
 }
 
 .task-note-actions {
   display: flex;
+  margin-left: auto;
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
@@ -174,7 +153,7 @@
   color: var(--text-3, rgba(255, 255, 255, 0.3));
 }
 
-.task-note-card.status-done .task-note-body {
+.task-note-card.is-sent .task-note-body {
   color: var(--text-2, rgba(255, 255, 255, 0.55));
 }
 

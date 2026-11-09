@@ -71,11 +71,12 @@ try {
     assert.equal(sends.length, 1, 'send exactly once');
     assert.equal(sends[0].id, tool, 'use the focused existing session');
     assert.equal(tool === 'codex' ? sends[0].params.input[0].text : sends[0].text, 'Build a page\n\nInclude tests', 'send the note text, with an old to-do note folded in');
-    assert.equal(await page.evaluate(() => window.saved[0].status), 'todo', 'do not mark working before acknowledgement');
+    assert.equal(await page.evaluate(() => window.saved[0].sentAt), undefined, 'do not mark sent before acknowledgement');
     if (tool === 'claude') await page.evaluate(() => window.selectSession('codex'));
     await page.evaluate(() => window.finishSend());
     await page.waitForFunction(() => document.querySelector('.task-board')?.getAttribute('aria-busy') === 'false');
-    await page.waitForFunction(() => window.saved[0].status === 'working');
+    await page.waitForFunction(() => window.saved[0].sentAt > 0);
+    await page.locator('#root .task-note-sent').waitFor();
     assert.equal(await page.evaluate(() => window.calls.filter(call => call.name.endsWith('_session_start')).length), 2, 'sending never creates another session');
   }
   for (const tool of ['claude', 'codex', 'terminal']) {
@@ -83,9 +84,15 @@ try {
     await page.evaluate(() => window.failSend = true);
     await button.click();
     await page.getByRole('alert').waitFor();
-    assert.equal(await page.evaluate(() => window.saved[0].status), 'todo');
+    assert.equal(await page.evaluate(() => window.saved[0].sentAt), undefined, 'a failed send is not marked sent');
     assert.equal(await page.locator('.task-note-body').inputValue(), 'Build a page\n\nInclude tests', 'failed sends preserve the note');
   }
+  // Editing a sent note clears its sent mark: the new text has not gone out.
+  await (await open('claude')).click();
+  await page.locator('#root .task-note-sent').waitFor();
+  await page.locator('.task-note-body').dblclick(); await page.keyboard.type('!');
+  await page.waitForFunction(() => window.saved[0].sentAt === undefined);
+  assert.equal(await page.locator('#root .task-note-sent').count(), 0, 'edited text is no longer marked sent');
   const edited = await open('claude');
   await page.evaluate(() => window.holdSend = true);
   await edited.click();
@@ -93,7 +100,7 @@ try {
   await page.locator('.task-note-body').dblclick();await page.locator('.task-note-body').fill('New unsent task');
   await page.evaluate(() => window.finishSend());
   await page.waitForFunction(() => document.querySelector('.task-board')?.getAttribute('aria-busy') === 'false');
-  assert.equal(await page.evaluate(() => window.saved[0].status), 'todo', 'acknowledging an older send must not promote newly edited content');
+  assert.equal(await page.evaluate(() => window.saved[0].sentAt), undefined, 'acknowledging an older send must not mark newly edited content sent');
   assert.equal(await page.locator('.task-note-body').inputValue(), 'New unsent task');
   const button = await open('unready');
   assert.equal(await button.isDisabled(), true, 'desktop sessions must be ready before sending');
@@ -102,7 +109,7 @@ try {
   const plan = await open('claude');
   await page.locator('.task-note-body').dblclick();await page.locator('.task-note-body').fill('/plan Inspect layout');
   await plan.click();
-  await page.waitForFunction(() => window.saved[0].status === 'working');
+  await page.waitForFunction(() => window.saved[0].sentAt > 0);
   const calls = await page.evaluate(() => window.calls);
   const planIndex = calls.findIndex(call => call.name === 'claude_session_control' && call.request.subtype === 'set_permission_mode');
   const sendIndex = calls.findIndex(call => call.name === 'claude_session_send');

@@ -21,6 +21,7 @@ import { subscribeGambitHistory, getGambitHistorySnapshot, pushGambitHistory } f
 import { commands } from '../../tauri';
 import { useT } from '../../i18n/useT';
 import { useAppState } from '../../store/app-state';
+import { projectRoot } from '../../lib/pre-input-project';
 import { registerFileDropTarget, formatPathsForInsert } from '../../lib/file-drop';
 import { bindAutoHideScrollbar } from '../../lib/auto-hide-scrollbar';
 import { ClaudeComposerControls, AttachIcon } from './ClaudeComposerControls';
@@ -791,7 +792,7 @@ function GambitImpl({
       <div className="gambit-dock-resize" onMouseDown={onDockResizeStart} />
 
       {/* Save the draft for later: it goes to the right panel's pre-input tab, which opens to show it. */}
-      {appState.preInputButton && draft.trim() && <button type="button" className="gambit-pre-input-save" onMouseDown={e => e.preventDefault()} onClick={() => { appDispatch({ type: 'SAVE_PRE_INPUT', text: draft.trim() }); onDraftChange(''); }}>{t('gambit.save_pre_input')}</button>}
+      {appState.preInputButton && draft.trim() && <button type="button" className="gambit-pre-input-save" onMouseDown={e => e.preventDefault()} onClick={() => { appDispatch({ type: 'SAVE_PRE_INPUT', text: draft.trim(), folder: projectRoot(cwd) }); onDraftChange(''); }}>{t('gambit.save_pre_input')}</button>}
 
       {attachments.length > 0 && <div className="gambit-attachments">
         {attachments.map(({ path, image }) => <div className="gambit-attachment" key={path}>

@@ -1,36 +1,23 @@
-// TaskNoteView — sticky-note presentation of the task board. Same TaskItem
-// data as the to-do list (TaskBoard owns the state and passes it down); this
-// view just renders each task as a roomy note card:
+// TaskNoteView — the pre-input board's sticky notes. TaskBoard owns the notes (already filtered to the
+// current project) and passes them down; each renders as a card:
 //
 //   ┌─────────────────────────────────────────────┐
-//   │ ● ● ●          2026.6.28  21:48  ⧉  🗑  ▶    │   ← traffic-light status
-//   │                                               │     dots + timestamp
-//   │  (big editable note body — write freely)      │
+//   │ coffee-cli  ✓ Sent               ⧉  🗑  ▶    │   ← project (or Global) + sent mark
+//   │  (note text: collapsed to two lines; click   │
+//   │   opens, double-click edits)                 │
 //   └─────────────────────────────────────────────┘
 //
-// The three dots ARE the status picker (红=进行中 / 黄=待办 / 绿=已完成); clicking
-// one sets the status and the card auto-sorts into that group (working → todo →
-// done), exactly like the list view's section order. Cards can be dragged
-// up/down to reorder within their group. The note body edits `title` (single
-// roomy field — the whole point is escaping the cramped inline input); the
-// list view's `description` field is preserved but not surfaced here.
+// Cards drag up and down to reorder. The body edits `title`.
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useT } from '../../i18n/useT';
 import { TaskEmptyState } from './TaskEmptyState';
-import { STATUS_ORDER, type TaskItem, type TaskStatus } from './task-types';
+import type { TaskItem } from './task-types';
+import { projectName } from '../../lib/pre-input-project';
 import { useTextContextMenu } from '../../lib/use-text-context-menu';
 import { bindAutoHideScrollbar } from '../../lib/auto-hide-scrollbar';
 import './TaskNoteView.css';
 
-// Traffic-light dots, top-to-bottom priority. Colors are deliberately the
-// literal macOS-window red/amber/green from the user's mockup, not the theme
-// accent — the three-light metaphor only reads if the colors are fixed.
-const STATUS_DOTS: { status: TaskStatus; color: string }[] = [
-  { status: 'working', color: '#ff5f57' },
-  { status: 'todo', color: '#febc2e' },
-  { status: 'done', color: '#28c840' },
-];
 
 // Note body height. Un-resized notes auto-grow from a roomy default; the
 // bottom-edge handle clamps a manual height between these bounds.
@@ -40,13 +27,6 @@ const NOTE_MAX_HEIGHT = 600;
 // Collapsed notes show about two lines; an expanded note grows to fit up to this cap, then scrolls.
 const NOTE_COLLAPSED_HEIGHT = 50;
 const NOTE_EXPANDED_CAP = 480;
-
-function formatNoteTime(ts: number): { date: string; time: string } {
-  const d = new Date(ts);
-  const date = `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
-  const time = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-  return { date, time };
-}
 
 interface DropLine {
   id: string;
@@ -62,7 +42,6 @@ interface TaskNoteViewProps {
   // parent drops it from the array (shared 300ms window with the list view).
   removingId: string | null;
   canSend: boolean;
-  onSetStatus: (id: string, status: TaskStatus) => void;
   onUpdateTitle: (id: string, title: string) => void;
   // Persists a bottom-edge-resized body height (called once on drop).
   onSetHeight: (id: string, height: number) => void;
@@ -78,14 +57,12 @@ interface TaskNoteViewProps {
 }
 
 export function TaskNoteView({
-  tasks, addingId, removingId, canSend, onSetStatus, onUpdateTitle, onSetHeight, onRemove, onDuplicate, onSend, onReorder, onShowGuide,
+  tasks, addingId, removingId, canSend, onUpdateTitle, onSetHeight, onRemove, onDuplicate, onSend, onReorder, onShowGuide,
 }: TaskNoteViewProps) {
   const t = useT();
 
-  // Display order: grouped by status (working → todo → done). The array order
-  // within each status group is preserved, so drag-reordering the underlying
-  // array reorders same-status cards; cross-status drags simply regroup.
-  const ordered = STATUS_ORDER.flatMap(s => tasks.filter(task => task.status === s));
+  // Display order is the array order; sent notes stay where they are, dimmed.
+  const ordered = tasks;
 
   // ── Drag (refs to avoid stale closures, mirrors TaskBoard's approach) ──
   const listRef = useRef<HTMLDivElement>(null);
@@ -216,18 +193,11 @@ export function TaskNoteView({
           const dragged = prev.find(task => task.id === id);
           const target = prev.find(task => task.id === drop.id);
           if (!dragged || !target) return prev;
-          // Dropping onto a different-status card adopts that card's status, so
-          // dragging across the red/amber/green groups re-files the note (same
-          // outcome as clicking its dot) instead of snapping back to its old
-          // group. Same-status drags just reorder within the group.
-          const moved = dragged.status === target.status
-            ? dragged
-            : { ...dragged, status: target.status };
           const without = prev.filter(task => task.id !== id);
           const targetIdx = without.findIndex(task => task.id === drop.id);
           if (targetIdx === -1) return prev;
           const insertAt = drop.position === 'before' ? targetIdx : targetIdx + 1;
-          without.splice(insertAt, 0, moved);
+          without.splice(insertAt, 0, dragged);
           return without;
         });
       }
@@ -286,15 +256,13 @@ export function TaskNoteView({
   return (
     <div ref={listRef} className="task-note-list">
       {ordered.map(task => {
-        const { date, time } = formatNoteTime(task.createdAt);
         return (
           <div
             key={task.id}
             data-note-id={task.id}
-            data-status={task.status}
             className={[
               'task-note-card',
-              `status-${task.status}`,
+              task.sentAt && 'is-sent',
               !(expanded.has(task.id) || editingId === task.id || addingId === task.id || resizing?.id === task.id) && 'is-collapsed',
               dragId === task.id && 'dragging',
               removingId === task.id && 'removing',
@@ -303,20 +271,8 @@ export function TaskNoteView({
             onPointerDown={e => handlePointerDown(e, task.id)}
           >
             <div className="task-note-head">
-              <div className="task-note-dots" role="group">
-                {STATUS_DOTS.map(d => (
-                  <button
-                    key={d.status}
-                    type="button"
-                    className={`task-note-dot${task.status === d.status ? ' active' : ''}`}
-                    style={{ ['--dot' as string]: d.color }}
-                    onClick={() => onSetStatus(task.id, d.status)}
-                    aria-pressed={task.status === d.status}
-                  />
-                ))}
-              </div>
-
-              <div className="task-note-time">{date} {time}</div>
+              <div className={`task-note-project${task.folder ? '' : ' is-global'}`}>{task.folder ? projectName(task.folder) : t('pre_input.global')}</div>
+              {task.sentAt ? <div className="task-note-sent">{t('pre_input.sent')}</div> : null}
 
               <div className="task-note-actions">
                 <button

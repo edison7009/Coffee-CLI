@@ -234,7 +234,7 @@ export interface AppState {
   // text area). Same task data either way — purely a presentation choice made
   // in the settings modal. Default 'list' so existing users see no change.
   /** Composer drafts saved as pre-input, waiting for the task board to take them. */
-  preInputQueue: string[];
+  preInputQueue: { text: string; folder?: string }[];
   /** Bumped on each save so the right panel opens on the pre-input tab. */
   preInputReveal: number;
   /** Settings: show the composer's save-as-pre-input button. */
@@ -345,7 +345,7 @@ type Action =
   | { type: 'SET_SESSION_TOKEN'; id: string; token: string }
   | { type: 'TOGGLE_LEFT_PANEL' }
   | { type: 'TOGGLE_RIGHT_PANEL' }
-  | { type: 'SAVE_PRE_INPUT'; text: string }
+  | { type: 'SAVE_PRE_INPUT'; text: string; folder?: string }
   | { type: 'TAKE_PRE_INPUT'; count: number }
   | { type: 'SET_PRE_INPUT_BUTTON'; value: boolean }
   | { type: 'SET_TAB_TITLE'; id: string; title: string }
@@ -661,7 +661,7 @@ function reducer(state: AppState, action: Action): AppState {
     }
     case 'SAVE_PRE_INPUT': {
       try { localStorage.setItem('cc-right-hidden', '0'); } catch { /* Best-effort operation; failure is non-fatal. */ }
-      return { ...state, preInputQueue: [...state.preInputQueue, action.text], preInputReveal: state.preInputReveal + 1, rightPanelHidden: false };
+      return { ...state, preInputQueue: [...state.preInputQueue, { text: action.text, folder: action.folder }], preInputReveal: state.preInputReveal + 1, rightPanelHidden: false };
     }
     case 'TAKE_PRE_INPUT':
       return { ...state, preInputQueue: state.preInputQueue.slice(action.count) };
