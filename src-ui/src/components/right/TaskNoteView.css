@@ -144,8 +144,8 @@
   width: 100%;
   min-height: 44px;
   resize: none;
-  overflow-y: auto;
-  overflow-x: hidden;
+  /* Sized to its text: only the list scrolls, never the note. */
+  overflow: hidden;
   border: none;
   outline: none;
   background: transparent;
@@ -158,12 +158,6 @@
   word-break: break-word;
   box-sizing: border-box;
 }
-
-/* Scrollable note body — an open note past its height cap scrolls (mouse wheel + drag). The native scrollbar
-   is hidden by the .auto-hide-scrollbar class (added by bindAutoHideScrollbar,
-   see lib/auto-hide-scrollbar.ts) because WebView2 can't drop its arrow
-   buttons via CSS; NoteBody draws a DOM slider instead. overflow-y:auto stays
-   so wheel/trackpad scrolling + scrollHeight measurement keep working. */
 
 .task-note-body::placeholder {
   color: var(--text-3, rgba(255, 255, 255, 0.3));

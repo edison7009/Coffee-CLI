@@ -169,10 +169,15 @@ try {
   await preview.click();
   assert.equal(await note.getAttribute('aria-expanded'), 'true', 'a click expands');
   const expanded = await note.evaluate(el => el.getBoundingClientRect().height);
-  assert.ok(expanded > 320 && expanded <= 480, 'an expanded note grows up to its cap');
-  assert.ok(await note.evaluate(el => el.scrollHeight > el.clientHeight), 'content past the cap scrolls');
-  await note.hover();
-  await page.locator('.cc-scrollbar:not(.is-empty)').waitFor({ state: 'attached' });
+  assert.ok(expanded > 720, 'an open note shows all of its text, however long');
+  assert.ok(await note.evaluate(el => el.scrollHeight <= el.clientHeight + 1 && getComputedStyle(el).overflowY === 'hidden'), 'the note never scrolls itself');
+  // The wheel over a long open note moves only the list, never a nested box inside it.
+  const list = page.locator('#root .task-note-list');
+  const listTop = await list.evaluate(el => el.scrollTop);
+  await note.hover(); await page.mouse.wheel(0, 300);
+  await page.waitForFunction(top => document.querySelector('#root .task-note-list').scrollTop > top, listTop);
+  assert.equal(await note.evaluate(el => el.scrollTop), 0, 'the note itself did not scroll');
+  await list.evaluate(el => { el.scrollTop = 0; });
   assert.equal(await page.locator('.task-note-resize').count(), 0, 'notes size to their text; there is no resize grip');
   assert.equal(await note.evaluate(el => el.readOnly), true, 'a click does not start editing');
   // Dragging from a read-only body moves the card: no text selection, a dashed outline stays in place, the drop does not toggle.

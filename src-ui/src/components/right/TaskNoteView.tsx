@@ -13,15 +13,13 @@ import { useT } from '../../i18n/useT';
 import { TaskEmptyState } from './TaskEmptyState';
 import type { TaskItem } from './task-types';
 import { useTextContextMenu } from '../../lib/use-text-context-menu';
-import { bindAutoHideScrollbar } from '../../lib/auto-hide-scrollbar';
 import './TaskNoteView.css';
 
 
 // Smallest body while editing, so an empty note still offers room to type.
 const NOTE_MIN_HEIGHT = 44;
-// Collapsed notes show about two lines; an expanded note grows to fit up to this cap, then scrolls.
+// Collapsed notes show about two lines; an open note shows all of its text, so only the list scrolls.
 const NOTE_COLLAPSED_HEIGHT = 50;
-const NOTE_EXPANDED_CAP = 480;
 
 
 interface DropLine {
@@ -334,7 +332,8 @@ function NoteBody({ value, open, editing, onToggle, onEditEnd, autoFocus, placeh
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-    // An open note fits its text up to a cap and scrolls past it (wheel or the accent slider).
+    // An open note fits all of its text and never scrolls itself: a scroll box nested in the scrolling list made
+    // the wheel jump between the note and the whole panel.
     //
     // scrollHeight depends on the textarea's WIDTH (narrower ⇒ more wrapping ⇒
     // taller). The right panel mounts COLLAPSED (width 0) and animates open
@@ -351,9 +350,8 @@ function NoteBody({ value, open, editing, onToggle, onEditEnd, autoFocus, placeh
         el.style.height = `${Math.min(NOTE_COLLAPSED_HEIGHT, Math.max(NOTE_MIN_HEIGHT, el.scrollHeight))}px`;
         el.scrollTop = 0;
       } else {
-        // Expanded: show the whole note up to the cap, then scroll.
         el.style.height = 'auto';
-        el.style.height = `${Math.min(NOTE_EXPANDED_CAP, Math.max(NOTE_MIN_HEIGHT, el.scrollHeight))}px`;
+        el.style.height = `${Math.max(NOTE_MIN_HEIGHT, el.scrollHeight)}px`;
       }
       lastW = el.offsetWidth;
     };
@@ -394,17 +392,6 @@ function NoteBody({ value, open, editing, onToggle, onEditEnd, autoFocus, placeh
       ref.current.select();
     }
   }, [autoFocus]);
-
-  // Custom floating scrollbar for the note body. WebView2's native textarea
-  // scrollbar keeps re-surfacing its up/down arrow buttons no matter the CSS
-  // (see lib/auto-hide-scrollbar.ts for the full story) — so we hide it and
-  // draw a DOM slider instead, the proven Coffee-Note approach. slim = the
-  // 7px variant, inset a little from the card's rounded bottom.
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    return bindAutoHideScrollbar(el, { slim: true, insetBottom: 6 });
-  }, []);
 
   // Collapsed: a one-line preview ending in an ellipsis when there is more (a textarea cannot clamp lines).
   // The textarea stays mounted but hidden, keeping its sizing, scrollbar and edit wiring.
