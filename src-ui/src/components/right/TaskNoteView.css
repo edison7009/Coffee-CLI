@@ -65,8 +65,7 @@
   cursor: not-allowed;
 }
 
-/* The card's line: delete | text | send. Collapsed, delete and send take no room until the card is hovered (or
-   focused), then slide open and the text narrows to make room — the same reveal as the history list's delete. */
+/* The card's line of text. */
 .task-note-row {
   display: flex;
   align-items: center;
@@ -74,30 +73,39 @@
 }
 .task-note-row > .task-note-body,
 .task-note-row > .task-note-preview { flex: 1; min-width: 0; }
-.task-note-side {
-  flex: 0 0 0;
-  width: 0;
-  height: 22px;
+
+/* Collapsed + hovered (or focused): two solid buttons slide in from the right edge over the end of the line —
+   delete, then send at the edge. They cover the text instead of moving it, like the history list's delete. */
+.task-note-swipe {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
   overflow: hidden;
-  opacity: 0;
+  border-radius: 0 var(--radius-md, 12px) var(--radius-md, 12px) 0;
   pointer-events: none;
-  transition: flex-basis .18s ease, width .18s ease, margin .18s ease, opacity .18s ease;
+  z-index: 1;
 }
-.task-note-card:hover .task-note-side,
-.task-note-card:focus-within .task-note-side {
-  flex-basis: 22px;
-  width: 22px;
-  opacity: 0.75;
-  pointer-events: auto;
+.task-note-swipe-btn {
+  width: 40px;
+  height: 100%;
+  border-radius: 0;
+  opacity: 1;
+  color: #fff;
+  transform: translateX(80px);
+  transition: transform .2s cubic-bezier(0.2, 0.8, 0.2, 1), filter .15s;
 }
-.task-note-card:hover .task-note-delete.task-note-side,
-.task-note-card:focus-within .task-note-delete.task-note-side { margin-left: 8px; }
-.task-note-card:hover .task-note-send.task-note-side,
-.task-note-card:focus-within .task-note-send.task-note-side { margin-right: 8px; }
-.task-note-card .task-note-side:hover:not(:disabled) { opacity: 1; }
-.task-note-card .task-note-side:disabled { opacity: 0.3; }
-.task-note-list:has(.task-note-card.dragging) .task-note-side { opacity: 0; pointer-events: none; }
-@media (prefers-reduced-motion: reduce) { .task-note-side { transition: none; } }
+.task-note-swipe-btn.task-note-delete { background: #e5534b; }
+.task-note-swipe-btn.task-note-send { background: #3b82f6; }
+.task-note-card:hover .task-note-swipe,
+.task-note-card:focus-within .task-note-swipe { pointer-events: auto; }
+.task-note-card:hover .task-note-swipe-btn,
+.task-note-card:focus-within .task-note-swipe-btn { transform: none; }
+.task-note-card .task-note-swipe-btn:hover:not(:disabled) { opacity: 1; filter: brightness(1.12); }
+.task-note-card .task-note-swipe-btn:disabled { opacity: 1; filter: saturate(0.3) brightness(0.8); cursor: not-allowed; }
+.task-note-list:has(.task-note-card.dragging) .task-note-swipe { display: none; }
+@media (prefers-reduced-motion: reduce) { .task-note-swipe-btn { transition: none; } }
 
 /* Open: a row of actions under the text; send sits apart on the right. */
 .task-note-actions {

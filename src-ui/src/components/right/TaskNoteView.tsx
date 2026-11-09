@@ -1,7 +1,7 @@
 // TaskNoteView — the pre-input board's sticky notes. TaskBoard owns the notes and passes them down.
 //
 //   collapsed, at rest     │ note text on one line…                  │
-//   collapsed, hovered     │ 🗑 │ note text, narrower…           │ ▶ │   ← delete and send slide in
+//   collapsed, hovered     │ note text on one line…      ▐ 🗑 ▐ ▶ ▐ │   ← solid delete and send slide in over it
 //   open (after a click)   │ the whole note                          │
 //                          │ ✎  ⧉  🗑                             ▶ │   ← a row of actions
 //
@@ -243,10 +243,9 @@ export function TaskNoteView({
             style={{ touchAction: 'none' }}
             onPointerDown={e => handlePointerDown(e, task.id)}
           >
-            {/* Collapsed: one line, with delete sliding in on the left and send on the right on hover (the text
-                narrows to make room, so nothing covers it). Open: the whole note, then a row of actions. */}
+            {/* Collapsed: one line of text that never moves. On hover two solid buttons slide in over its right
+                end — delete, then send at the edge. Open: the whole note, then a row of actions. */}
             <div className="task-note-row">
-              {!open && deleteButton('task-note-side')}
               <NoteBody
                 value={task.title}
                 open={open}
@@ -258,8 +257,13 @@ export function TaskNoteView({
                 placeholder={t('task.note_placeholder')}
                 onChange={next => onUpdateTitle(task.id, next)}
               />
-              {!open && sendButton('task-note-side')}
             </div>
+            {!open && (
+              <span className="task-note-swipe">
+                {deleteButton('task-note-swipe-btn')}
+                {sendButton('task-note-swipe-btn')}
+              </span>
+            )}
             {open && (
               <span className="task-note-actions">
                 <button type="button" className="task-note-btn task-note-edit" aria-label={t('pre_input.edit')} aria-pressed={editingId === task.id || addingId === task.id} onClick={edit}>

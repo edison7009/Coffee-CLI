@@ -179,22 +179,28 @@ try {
   await page.mouse.up();
   await page.waitForFunction(() => window.saved.map(task => task.title).join() === 'B,A,C');
   assert.deepEqual(await cards.evaluateAll(els => els.map(el => el.style.transform)), ['', '', ''], 'slide offsets clear after the drop');
-  // At rest a collapsed note is just its line of text; on hover, delete slides in on the left and send on the right,
-  // and the text narrows for them rather than sitting under them.
+  // At rest a collapsed note is just its line of text. On hover two solid buttons slide in over its right end —
+  // delete, then send at the edge — covering the text without moving it.
   const tabCard = page.locator('#root [data-note-id="B"]');
-  const sideWidth = cls => tabCard.locator('.task-note-side.' + cls).evaluate(el => el.getBoundingClientRect().width);
+  const swipeX = () => page.evaluate(() => [...document.querySelectorAll('#root [data-note-id="B"] .task-note-swipe-btn')].map(el => el.getBoundingClientRect().left));
   await page.mouse.move(5, 5);
-  await page.waitForFunction(() => [...document.querySelectorAll('#root [data-note-id="B"] .task-note-side')].every(el => el.getBoundingClientRect().width < 1));
+  // Let the cards settle from the drag above before measuring.
+  await page.waitForFunction(() => [...document.querySelectorAll('#root .task-note-card')].every(el => getComputedStyle(el).transform === 'none' && !el.getAnimations().length));
+  const restCard = await tabCard.boundingBox(), restLine = await tabCard.locator('.task-note-preview').boundingBox();
+  await page.waitForFunction(right => [...document.querySelectorAll('#root [data-note-id="B"] .task-note-swipe-btn')].every(el => el.getBoundingClientRect().left >= right - 1), restCard.x + restCard.width);
   await tabCard.hover();
-  await page.waitForFunction(() => [...document.querySelectorAll('#root [data-note-id="B"] .task-note-side')].every(el => el.getBoundingClientRect().width > 21));
-  const del = await tabCard.locator('.task-note-side.task-note-delete').boundingBox(), sendSide = await tabCard.locator('.task-note-side.task-note-send').boundingBox(), line = await tabCard.locator('.task-note-preview').boundingBox();
-  assert.ok(del.x + del.width <= line.x && line.x + line.width <= sendSide.x, 'delete on the left, send on the right, neither over the text');
-  assert.ok(await sideWidth('task-note-send') > 21, 'the hover buttons are full size');
+  await page.waitForFunction(right => [...document.querySelectorAll('#root [data-note-id="B"] .task-note-swipe-btn')].every(el => el.getBoundingClientRect().right <= right + 1), restCard.x + restCard.width);
+  const [delX, sendX] = await swipeX();
+  const sendBtn = await tabCard.locator('.task-note-swipe-btn.task-note-send').boundingBox();
+  assert.ok(delX < sendX && Math.abs(sendBtn.x + sendBtn.width - (restCard.x + restCard.width)) < 1, 'delete, then send at the right edge');
+  assert.ok(Math.abs(sendBtn.height - restCard.height) < 1, 'the buttons run the card\'s full height');
+  assert.deepEqual(await tabCard.locator('.task-note-preview').boundingBox(), restLine, 'the text does not move');
+  assert.notEqual(await tabCard.locator('.task-note-swipe-btn.task-note-delete').evaluate(el => getComputedStyle(el).backgroundColor), 'rgba(0, 0, 0, 0)', 'solid buttons');
   // A click opens the note with a row of actions under it; the side buttons give way to that row.
   await tabCard.locator('.task-note-preview').click();
   await tabCard.locator('.task-note-actions').waitFor();
   assert.deepEqual(await tabCard.locator('.task-note-actions button').evaluateAll(els => els.map(el => el.className.split(' ')[1])), ['task-note-edit', 'task-note-copy', 'task-note-delete', 'task-note-send'], 'edit, copy, delete, then send');
-  assert.equal(await tabCard.locator('.task-note-side').count(), 0, 'an open note has no side buttons');
+  assert.equal(await tabCard.locator('.task-note-swipe').count(), 0, 'an open note has no hover buttons');
   const actions = await tabCard.locator('.task-note-actions').boundingBox(), openBody = await tabCard.locator('.task-note-body').boundingBox();
   assert.ok(actions.y >= openBody.y + openBody.height - 1, 'the actions sit under the text');
   // The edit button opens the note in edit mode with the caret at the end.
