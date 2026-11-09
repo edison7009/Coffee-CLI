@@ -203,7 +203,7 @@ try {
   assert.ok(parseInt(await glowAt()) > parseInt(leftGlow) + 100, `the glow follows the pointer (${leftGlow} -> ${await glowAt()})`);
   const del = await tabCard.locator('.task-note-quick .task-note-delete').boundingBox(), sendIcon = await tabCard.locator('.task-note-quick .task-note-send').boundingBox();
   assert.ok(del.x < sendIcon.x && sendIcon.x + sendIcon.width <= restCard.x + restCard.width, 'delete, then send, at the right end');
-  assert.notEqual(await tabCard.locator('.task-note-quick .task-note-delete').evaluate(el => getComputedStyle(el).borderTopWidth), '0px', 'each icon sits in a bordered button area');
+  assert.equal(await tabCard.locator('.task-note-quick .task-note-delete').evaluate(el => getComputedStyle(el).backgroundColor), 'rgba(0, 0, 0, 0)', 'plain icons until one is aimed at');
   const quickSize = await tabCard.locator('.task-note-quick .task-note-send svg').boundingBox();
   assert.deepEqual(await tabCard.locator('.task-note-preview').boundingBox(), restLine, 'the text does not move');
   assert.ok(/linear-gradient/.test(await tabCard.locator('.task-note-preview').evaluate(el => getComputedStyle(el).webkitMaskImage || getComputedStyle(el).maskImage)), 'the text fades beneath the icons');

@@ -95,11 +95,11 @@
 .task-note-quick {
   position: absolute;
   top: 0;
-  right: 10px;
+  right: 6px;
   bottom: 0;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 2px;
   opacity: 0;
   transform: translateX(6px);
   pointer-events: none;
@@ -113,15 +113,11 @@
   -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 96px), transparent calc(100% - 56px));
   mask-image: linear-gradient(to right, #000 calc(100% - 96px), transparent calc(100% - 56px));
 }
-.task-note-quick-btn { width: 28px; height: 24px; opacity: 1; color: var(--accent, #c4956a); box-sizing: border-box;
-  border: 1px solid color-mix(in srgb, var(--accent, #c4956a) 45%, transparent) !important;
-  background: color-mix(in srgb, var(--accent, #c4956a) 12%, var(--bg-panel, #222)) !important;
-  transition: color .15s, border-color .15s, background-color .15s; }
 .task-note-quick-btn svg { width: 16px; height: 16px; }
-.task-note-quick-btn.task-note-send { color: var(--accent, #c4956a); }
-.task-note-card .task-note-quick-btn:hover { opacity: 1; filter: none; }
-.task-note-card .task-note-quick-btn.task-note-delete:hover { color: #e5534b; border-color: color-mix(in srgb, #e5534b 60%, transparent) !important; background: color-mix(in srgb, #e5534b 14%, var(--bg-panel, #222)) !important; }
-.task-note-card .task-note-quick-btn.task-note-send:hover { border-color: var(--accent, #c4956a) !important; background: color-mix(in srgb, var(--accent, #c4956a) 22%, var(--bg-panel, #222)) !important; }
+/* Like the session list: plain icons, a soft button area only under the one aimed at. Slightly larger here. */
+.task-note-card .task-note-btn { width: 28px; height: 28px; opacity: 1; color: var(--accent, #c4956a); border-radius: var(--radius-xs, 6px); transition: color .15s, background-color .15s; }
+.task-note-card .task-note-btn:hover:not(:disabled) { filter: none; background: var(--bg-hover, rgba(255, 255, 255, 0.08)) !important; }
+.task-note-card .task-note-btn.task-note-delete:hover { color: #e5534b; }
 /* Right after a click opens or closes the note, the icons and glow wait for the pointer to leave and come back,
    so they don't flash in and out under it. */
 .task-note-card[data-quiet] .task-note-quick { opacity: 0; pointer-events: none; transition: none; }
@@ -133,12 +129,11 @@
 .task-note-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 2px 12px 9px;
+  gap: 4px;
+  padding: 0 8px 6px;
 }
 .task-note-actions-gap { flex: 1; }
 /* Same size as the hover icons: there is room under an open note. */
-.task-note-actions .task-note-btn { width: 24px; height: 24px; }
 .task-note-actions .task-note-btn svg { width: 16px; height: 16px; }
 .task-note-edit[aria-pressed="true"] { opacity: 1; }
 
