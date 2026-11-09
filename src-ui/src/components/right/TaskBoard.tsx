@@ -11,7 +11,7 @@ import { useDshSession } from '../../lib/dsh-session';
 import { useOpenCodeSession } from '../../lib/opencode-session';
 import { usePiSession } from '../../lib/pi-session';
 import './TaskBoard.css';
-import { TaskNoteView } from './TaskNoteView';
+import { TaskNoteView, type NoteSection } from './TaskNoteView';
 import { makeWelcomeNote, type TaskItem } from './task-types';
 import { projectRoot, projectName, sameProject } from '../../lib/pre-input-project';
 
@@ -99,8 +99,8 @@ export function TaskBoard({ onCountChange }: { onCountChange: (count: number) =>
   const piReady = usePiSession(isPi ? state.activeTerminalId ?? '' : '', session => session.ready && !session.busy && !session.requests.length);
   const canSend = !!activeSession?.tool && !sending && (isClaude ? claudeReady : isCodex ? codexReady : isDsh ? dshReady : isOpenCode ? openCodeReady : isPi ? piReady : true);
 
-  // Notes belong to the project they were written in and show only there; global notes show everywhere.
-  // "All" lists every project's notes, each labelled, for a look across projects.
+  // Notes belong to the project they were written in and show only there; general notes (no folder) show in
+  // every project. "All" groups every note by project, General first, and dragging between groups moves a note.
   const project = projectRoot(activeSession?.folderPath);
   const [showAll, setShowAll] = useState(() => { try { return localStorage.getItem('cc-pre-input-all') === '1'; } catch { return false; } });
   const chooseScope = (all: boolean) => {
@@ -109,6 +109,17 @@ export function TaskBoard({ onCountChange }: { onCountChange: (count: number) =>
   };
   const visible = showAll ? tasks : tasks.filter(task => !task.folder || sameProject(task.folder, project));
   useEffect(() => { onCountChange(visible.length); }, [visible.length, onCountChange]);
+  const sections: NoteSection[] = (() => {
+    if (!showAll) return [{ key: 'current', label: null, folder: null, items: visible }];
+    const folders: string[] = [];
+    for (const task of tasks) if (task.folder && !folders.some(folder => sameProject(folder, task.folder))) folders.push(task.folder);
+    // General first, then the open project, then the rest by name.
+    folders.sort((a, b) => Number(sameProject(b, project)) - Number(sameProject(a, project)) || projectName(a).localeCompare(projectName(b)));
+    return [
+      { key: '', label: t('pre_input.general'), folder: null, items: tasks.filter(task => !task.folder) },
+      ...folders.map(folder => ({ key: folder, label: projectName(folder), folder, items: tasks.filter(task => sameProject(task.folder, folder)) })),
+    ];
+  })();
 
   const skipNextSyncRef = useRef(false); // Used to ignore external/initial load syncs
   const isLoadedRef = useRef(false);
@@ -252,6 +263,17 @@ export function TaskBoard({ onCountChange }: { onCountChange: (count: number) =>
     }));
   }, []);
 
+  // The pin makes a note general (shown in every project), or ties a general one to the open project.
+  const toggleGeneral = useCallback((id: string) => {
+    setTasks(prev => prev.map(task => {
+      if (task.id !== id) return task;
+      if (!task.folder) return project ? { ...task, folder: project } : task;
+      const next = { ...task };
+      delete next.folder;
+      return next;
+    }));
+  }, [project]);
+
   // Note-view body height (bottom-edge resize). Persisted on the task so the
   // note keeps its size; the note view drives live preview locally and only
   // calls this once on drop.
@@ -283,11 +305,13 @@ export function TaskBoard({ onCountChange }: { onCountChange: (count: number) =>
           {/* Automations on top: on or off at a glance, and each prompt one click from the current conversation. */}
           <TaskAutomations canSend={canSend} onSend={sendAutomationPrompt} />
           <div className="pre-input-scope" role="group" aria-label={t('pre_input.scope')}>
-            <button type="button" aria-pressed={!showAll} onClick={() => chooseScope(false)}>{project ? projectName(project) : t('pre_input.global')}</button>
             <button type="button" aria-pressed={showAll} onClick={() => chooseScope(true)}>{t('pre_input.scope.all')}</button>
+            <button type="button" aria-pressed={!showAll} onClick={() => chooseScope(false)}>{project ? projectName(project) : t('pre_input.general')}</button>
           </div>
           <TaskNoteView
-            tasks={visible}
+            sections={sections}
+            canTieToProject={!!project}
+            onToggleGeneral={toggleGeneral}
             addingId={addingId}
             removingId={removingId}
             canSend={canSend}

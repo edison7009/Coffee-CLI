@@ -155,7 +155,7 @@ try{
  // Old to-do notes (and prompt bodies) fold into the note text once and are saved that way.
  assert.equal(await page.locator('.task-note-body').inputValue(),'保留原有任务\n\n旧的待办备注');await page.waitForFunction(()=>window.savedTasks?.[0]&&!('description' in window.savedTasks[0]));assert.equal(await page.evaluate(()=>window.calls.taskLoads),1);
  const todoPreviewReads=await page.evaluate(()=>window.calls.fileReads);await page.evaluate(()=>window.dispatchEvent(new CustomEvent('fs-refresh',{detail:{dirPath:'D:/test'}})));await page.waitForTimeout(950);assert.equal(await page.evaluate(()=>window.calls.fileReads),todoPreviewReads,'Todo also suspends hidden preview reads');
- await page.locator('.task-note-body').dblclick();await page.locator('.task-note-body').fill('移到右侧后保留任务');await page.locator('.task-note-project').click();
+ await page.locator('.task-note-body').dblclick();await page.locator('.task-note-body').fill('移到右侧后保留任务');await page.locator('.pre-input-scope').click({position:{x:300,y:4}});
  await listTab.click();await taskTab.click();assert.equal(await page.locator('.task-note-body').inputValue(),'移到右侧后保留任务');
  await page.evaluate(()=>window.setFolder('D:/another-workspace'));assert.equal(await taskTab.getAttribute('aria-selected'),'true');assert.equal(await page.evaluate(()=>window.calls.taskLoads),1,'workspace changes must not remount task storage/editors');assert.equal(await page.locator('.task-note-body').inputValue(),'移到右侧后保留任务');
  await page.evaluate(()=>window.setTool('terminal'));
@@ -177,19 +177,36 @@ try{
  assert.equal(await listTab.getAttribute('aria-selected'),'true','reopening the panel keeps the tab the user chose after a save');
  await page.evaluate(()=>window.savePreInput('第二条'));await page.waitForFunction(()=>window.savedTasks?.[0]?.title==='第二条');assert.equal(await taskTab.getAttribute('aria-selected'),'true','a later save switches again while the panel is open');
  assert.equal(await page.evaluate(()=>window.savedTasks.filter(task=>task.title==='等 Agent 忙完再发').length),1,'no duplicate from remounting');
- // Notes belong to their project: they show only there (global notes everywhere), labelled; All shows every project's.
+ // Notes belong to their project and show only there; general notes show everywhere, marked with a pin.
  const scope=page.locator('.pre-input-scope button');
+ assert.equal(await scope.first().textContent(),'全部','All comes first');
  await page.evaluate(()=>window.setFolder('D:/project-a'));await page.evaluate(()=>window.savePreInput('只属于 A','D:/project-a'));
  await page.waitForFunction(()=>window.savedTasks?.[0]?.folder==='D:/project-a');
  const noteA=page.locator('.task-note-card',{hasText:'只属于 A'});await noteA.waitFor();
- assert.equal(await noteA.locator('.task-note-project').textContent(),'project-a','a note shows its project');
- assert.equal(await scope.first().textContent(),'project-a','the scope names the current project');
- const globalNote=page.locator('.task-note-card',{hasText:'第二条'});assert.equal(await globalNote.locator('.task-note-project').textContent(),'全局','a note saved without a project is global');
+ assert.equal(await scope.nth(1).textContent(),'project-a','the second choice names the current project');
+ const generalNote=page.locator('.task-note-card',{hasText:'第二条'});
+ assert.equal(await generalNote.locator('.task-note-general-mark').count(),1,'a general note is marked in the project list');
+ assert.equal(await noteA.locator('.task-note-general-mark').count(),0,'the project\'s own notes are not');
  await page.evaluate(()=>window.setFolder('d:\\Project-A\\'));await noteA.waitFor();
- await page.evaluate(()=>window.setFolder('D:/project-b'));await noteA.waitFor({state:'detached'});await globalNote.waitFor();
- assert.equal(await taskTab.locator('.changes-title-count').textContent(),String(await page.locator('.task-note-card').count()),'the tab counts the notes shown');
- await scope.nth(1).click();await noteA.waitFor();assert.equal(await scope.nth(1).getAttribute('aria-pressed'),'true');
+ // The pin makes a note general, and ties it back to the open project.
+ await noteA.hover();await noteA.locator('.task-note-general').click();
+ await page.waitForFunction(()=>window.savedTasks.find(task=>task.title==='只属于 A')&&!('folder' in window.savedTasks.find(task=>task.title==='只属于 A')));
+ await noteA.hover();await noteA.locator('.task-note-general').click();
+ await page.waitForFunction(()=>window.savedTasks.find(task=>task.title==='只属于 A')?.folder==='d:\\Project-A');
+ await page.evaluate(()=>window.setFolder('D:/project-b'));await noteA.waitFor({state:'detached'});await generalNote.waitFor();
+ await page.waitForFunction(()=>document.querySelector('[role="tab"] .changes-title-count')?.textContent===String(document.querySelectorAll('.task-note-card').length));
+ // All groups every note by project, General first; dragging a note under General makes it general.
+ await scope.first().click();await noteA.waitFor();assert.equal(await scope.first().getAttribute('aria-pressed'),'true');
  assert.equal(await page.evaluate(()=>localStorage.getItem('cc-pre-input-all')),'1','the All choice is remembered');
- await scope.first().click();await noteA.waitFor({state:'detached'});
+ const groups=await page.locator('.task-note-group-name').allTextContents();
+ assert.equal(groups[0],'通用','General comes first');assert.ok(groups.includes('Project-A'),'each project gets a heading '+groups);
+ assert.equal(await page.locator('.task-note-general-mark').count(),0,'the grouped view needs no pins');
+ const generalHead=await page.locator('.task-note-group').first().boundingBox(),boxA=await noteA.boundingBox();
+ await page.mouse.move(boxA.x+30,boxA.y+boxA.height/2);await page.mouse.down();await page.mouse.move(boxA.x+30,generalHead.y+generalHead.height+4,{steps:10});
+ assert.ok(await page.locator('.task-note-group').nth(1).evaluate(el=>new DOMMatrix(el.style.transform||'none').m42>0),'the headings it passes slide down');
+ await page.mouse.up();
+ await page.waitForFunction(()=>!('folder' in window.savedTasks.find(task=>task.title==='只属于 A')));
+ assert.equal((await page.locator('.task-note-group-name').allTextContents()).includes('Project-A'),false,'an emptied project loses its heading');
+ await scope.nth(1).click();await noteA.waitFor();
  assert.deepEqual(errors,[]);console.log('OK: Explorer-matched typography, themed keyboard/resize-safe scope menu, aligned footer dot; Todo persistence and review navigation, retained state, center placement and narrow/light/glass geometry');console.log('Screenshots: '+directory);
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve))}
