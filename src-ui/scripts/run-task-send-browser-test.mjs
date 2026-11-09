@@ -90,7 +90,7 @@ try {
   await page.evaluate(() => window.holdSend = true);
   await edited.click();
   await page.waitForFunction(() => typeof window.finishSend === 'function');
-  await page.locator('.task-note-body').dblclick();await page.locator('.task-note-body').fill('New unsent task');
+  await page.locator('.task-note-preview').dblclick();await page.locator('.task-note-body').fill('New unsent task');
   await page.evaluate(() => window.finishSend());
   await page.waitForFunction(() => document.querySelector('.task-board')?.getAttribute('aria-busy') === 'false');
   assert.equal(await page.evaluate(() => window.saved[0].status), 'todo', 'acknowledging an older send must not promote newly edited content');
@@ -100,7 +100,7 @@ try {
   await page.evaluate(() => window.selectSession(null));
   assert.equal(await button.isDisabled(), true, 'no target disables sending');
   const plan = await open('claude');
-  await page.locator('.task-note-body').dblclick();await page.locator('.task-note-body').fill('/plan Inspect layout');
+  await page.locator('.task-note-preview').dblclick();await page.locator('.task-note-body').fill('/plan Inspect layout');
   await plan.click();
   await page.waitForFunction(() => window.saved[0].status === 'working');
   const calls = await page.evaluate(() => window.calls);
@@ -123,10 +123,10 @@ try {
   // Notes start collapsed; a click opens or closes one, a double-click edits it, leaving ends editing.
   await open('claude');
   const note = page.locator('.task-note-body');
-  const height = () => note.evaluate(el => el.getBoundingClientRect().height);
+  const preview = page.locator('#root .task-note-preview');
   assert.equal(await note.getAttribute('aria-expanded'), 'false', 'notes start collapsed');
   assert.equal(await note.evaluate(el => el.readOnly), true, 'a collapsed note is not editable');
-  await note.dblclick();
+  await preview.dblclick();
   assert.equal(await note.evaluate(el => el.readOnly), false, 'a double-click edits');
   assert.equal(await note.getAttribute('aria-expanded'), 'true', 'editing shows the note');
   const long = Array.from({ length: 40 }, (_, i) => 'line ' + i).join('\n');
@@ -136,14 +136,20 @@ try {
   assert.equal(await note.evaluate(el => el.readOnly), true, 'a press anywhere else ends editing');
   await note.click();
   assert.equal(await note.getAttribute('aria-expanded'), 'false', 'a click collapses an open note');
-  const collapsed = await height();
-  assert.ok(collapsed <= 50, 'a collapsed note shows about two lines');
-  await note.hover();
+  // Collapsed, the note shows a two-line preview that ends in an ellipsis because there is more.
+  const collapsed = await preview.evaluate(el => el.getBoundingClientRect().height);
+  const twoLines = await preview.evaluate(el => { const s = getComputedStyle(el); return parseFloat(s.paddingTop) + parseFloat(s.paddingBottom) + 2 * parseFloat(s.lineHeight); });
+  assert.ok(Math.abs(collapsed - twoLines) < 1, `a collapsed note shows two lines (${collapsed} vs ${twoLines})`);
+  assert.equal(await preview.evaluate(el => getComputedStyle(el).webkitLineClamp), '2', 'the preview clamps to two lines with an ellipsis');
+  assert.ok(await preview.evaluate(el => el.scrollHeight > el.clientHeight + 1), 'the clamped preview has more text to open');
+  // Nothing of a third line shows: the clipped box holds exactly two lines of text.
+  assert.ok(await preview.evaluate(el => { const s = getComputedStyle(el); return Math.abs(el.clientHeight - 2 * parseFloat(s.lineHeight)) < 1; }), 'no part of a third line shows');
+  await preview.hover();
   assert.equal(await page.locator('.cc-scrollbar:not(.is-empty)').count(), 0, 'a collapsed note shows no scrollbar');
   assert.equal(await page.locator('.task-note-resize').isVisible(), false, 'a collapsed note has no resize grip');
-  await note.click();
+  await preview.click();
   assert.equal(await note.getAttribute('aria-expanded'), 'true', 'a click expands');
-  const expanded = await height();
+  const expanded = await note.evaluate(el => el.getBoundingClientRect().height);
   assert.ok(expanded > 320 && expanded <= 480, 'an expanded note grows up to its cap');
   assert.ok(await note.evaluate(el => el.scrollHeight > el.clientHeight), 'content past the cap scrolls');
   await note.hover();
@@ -161,7 +167,7 @@ try {
   assert.equal(await note.getAttribute('aria-expanded'), 'true', 'dropping does not collapse the note');
   await note.click();
   assert.equal(await note.getAttribute('aria-expanded'), 'false', 'the next click still toggles');
-  await note.click();
+  await preview.click();
   // Dragging a note slides the others out of the way and moves its dashed outline to the drop slot.
   await page.evaluate(() => window.events.get('tasks-changed')({ payload: JSON.stringify(['A', 'B', 'C'].map((title, i) => ({ id: title, title, status: 'todo', createdAt: i }))) }));
   const cards = page.locator('#root .task-note-card');

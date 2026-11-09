@@ -253,3 +253,27 @@
 .task-note-body.is-collapsed { overflow: hidden; }
 /* A collapsed note neither scrolls nor resizes: hide its bottom grip (the slider hides itself because the body stops scrolling). */
 .task-note-card.is-collapsed .task-note-resize { display: none; }
+
+/* Collapsed preview: the body's look, clamped to two lines with a trailing ellipsis when there is more. */
+.task-note-preview {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  color: var(--text-1, #e8e4de);
+  font-family: var(--font, system-ui);
+  font-size: var(--type-body);
+  line-height: 1.55;
+  /* Margin, not padding: the clamp box must be exactly two lines tall, or the third line peeks into the padding. */
+  margin: 9px 12px 11px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  cursor: pointer !important;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.task-note-preview.is-empty { color: var(--text-3, rgba(255, 255, 255, 0.3)); }
+.task-note-preview:focus-visible { outline: 1px solid var(--accent, #c4956a); outline-offset: -1px; border-radius: var(--radius-md, 12px); }
+.task-note-card.status-done .task-note-preview { color: var(--text-2, rgba(255, 255, 255, 0.55)); }
+.task-note-body[hidden] { display: none; }

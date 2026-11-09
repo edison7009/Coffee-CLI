@@ -151,11 +151,11 @@ try{
  await page.locator('.changes-scroll').evaluate(el=>{el.scrollTop=245});
  const scrollBefore=await page.locator('.changes-scroll').evaluate(el=>el.scrollTop);assert.ok(scrollBefore>200);
  await rows.nth(8).click();await listTab.click();assert.equal(await page.locator('.changes-scroll').evaluate(el=>el.scrollTop),scrollBefore,'list scroll position survives detail visits');
- const taskTab=page.getByRole('tab',{name:'预输入'});await taskTab.click();await page.locator('.task-note-body').waitFor();assert.equal(await page.locator('.task-board').count(),1);
+ const taskTab=page.getByRole('tab',{name:'预输入'});await taskTab.click();await page.locator('.task-note-preview').waitFor();assert.equal(await page.locator('.task-board').count(),1);
  // Old to-do notes (and prompt bodies) fold into the note text once and are saved that way.
  assert.equal(await page.locator('.task-note-body').inputValue(),'保留原有任务\n\n旧的待办备注');await page.waitForFunction(()=>window.savedTasks?.[0]&&!('description' in window.savedTasks[0]));assert.equal(await page.evaluate(()=>window.calls.taskLoads),1);
  const todoPreviewReads=await page.evaluate(()=>window.calls.fileReads);await page.evaluate(()=>window.dispatchEvent(new CustomEvent('fs-refresh',{detail:{dirPath:'D:/test'}})));await page.waitForTimeout(950);assert.equal(await page.evaluate(()=>window.calls.fileReads),todoPreviewReads,'Todo also suspends hidden preview reads');
- await page.locator('.task-note-body').dblclick();await page.locator('.task-note-body').fill('移到右侧后保留任务');await page.locator('.task-note-time').click();
+ await page.locator('.task-note-preview').dblclick();await page.locator('.task-note-body').fill('移到右侧后保留任务');await page.locator('.task-note-time').click();
  await listTab.click();await taskTab.click();assert.equal(await page.locator('.task-note-body').inputValue(),'移到右侧后保留任务');
  await page.evaluate(()=>window.setFolder('D:/another-workspace'));assert.equal(await taskTab.getAttribute('aria-selected'),'true');assert.equal(await page.evaluate(()=>window.calls.taskLoads),1,'workspace changes must not remount task storage/editors');assert.equal(await page.locator('.task-note-body').inputValue(),'移到右侧后保留任务');
  await page.evaluate(()=>window.setTool('terminal'));

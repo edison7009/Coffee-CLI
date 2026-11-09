@@ -484,9 +484,24 @@ function NoteBody({ value, height, open, editing, onToggle, onEdit, onEditEnd, a
     return bindAutoHideScrollbar(el, { slim: true, insetBottom: 11 });
   }, []);
 
+  // Collapsed: a two-line preview ending in an ellipsis when there is more (a textarea cannot clamp lines).
+  // The textarea stays mounted but hidden, keeping its sizing, scrollbar and edit wiring.
+  const preview = !open && !editing;
   return (
     <>
+      {preview && (
+        <div
+          className={`task-note-preview${value ? '' : ' is-empty'}`}
+          role="button"
+          tabIndex={0}
+          aria-expanded={false}
+          onClick={e => { if (e.detail <= 1) onToggle(); }}
+          onDoubleClick={onEdit}
+          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(); } }}
+        >{value || placeholder}</div>
+      )}
       <textarea
+        hidden={preview}
         ref={ref}
         className={`task-note-body${open ? '' : ' is-collapsed'}${editing ? ' is-editing' : ''}`}
         value={value}
