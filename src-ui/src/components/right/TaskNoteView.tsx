@@ -1,7 +1,7 @@
 // TaskNoteView — the pre-input board's sticky notes. TaskBoard owns the notes and passes them down.
 //
 //   collapsed, at rest     │ note text on one line…                  │
-//   collapsed, hovered     │ note text on one line…      ▐ 🗑 ▐ ▶ ▐ │   ← solid delete and send fade in over it
+//   collapsed, hovered     │ note text on one li…          🗑  ▶ │   ← a glow follows the pointer; line icons slide in
 //   open (after a click)   │ the whole note                          │
 //                          │ ✎  ⧉  🗑                             ▶ │   ← a row of actions
 //
@@ -246,9 +246,12 @@ export function TaskNoteView({
             style={{ touchAction: 'none' }}
             onPointerDown={e => handlePointerDown(e, task.id)}
             onPointerLeave={e => e.currentTarget.removeAttribute('data-quiet')}
+            // The hover glow follows the pointer: a CSS variable on the card, no re-render.
+            onPointerMove={e => e.currentTarget.style.setProperty('--glow-x', `${Math.round(e.clientX - e.currentTarget.getBoundingClientRect().left)}px`)}
           >
-            {/* Collapsed: one line of text that never moves. On hover solid buttons fade in over its right
-                end — delete, then send at the edge. Open: the whole note, then a row of actions. */}
+            {/* Collapsed: one line of text that never moves. On hover a soft glow follows the pointer and two line
+                icons slide in at the right end — delete, then send — while the text fades out beneath them.
+                Open: the whole note, then a row of actions. */}
             <div className="task-note-row">
               <NoteBody
                 value={task.title}
@@ -263,10 +266,10 @@ export function TaskNoteView({
               />
             </div>
             {!open && (
-              <span className="task-note-swipe">
-                {deleteButton('task-note-swipe-btn')}
+              <span className="task-note-quick">
+                {deleteButton('task-note-quick-btn')}
                 {/* Send never refuses: TaskBoard sends, or drops the text into the composer, or does nothing. */}
-                {sendButton('task-note-swipe-btn')}
+                {sendButton('task-note-quick-btn')}
               </span>
             )}
             {open && (

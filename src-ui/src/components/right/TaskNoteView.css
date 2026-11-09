@@ -67,6 +67,9 @@
 
 /* The card's line of text. */
 .task-note-row {
+  /* Above the hover glow, so the glow tints the card, not the text. */
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   min-width: 0;
@@ -74,45 +77,54 @@
 .task-note-row > .task-note-body,
 .task-note-row > .task-note-preview { flex: 1; min-width: 0; }
 
-/* Collapsed + hovered (or focused): solid buttons fade in over the right end of the line — delete, then send at
-   the edge. They cover the text instead of moving it, like the
-   history list's delete. A fade, not a slide: only opacity changes, so nothing reflows or repaints the card. */
-.task-note-swipe {
+/* Collapsed + hovered (or focused): a soft glow follows the pointer across the card, and two line icons slide in
+   at the right end — delete (grey, red when aimed at) then send (blue). They float over the text, which fades out
+   beneath them instead of moving. */
+.task-note-card::before {
+  content: '';
   position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  overflow: hidden;
-  border-radius: 0 var(--radius-md, 12px) var(--radius-md, 12px) 0;
-  /* The red rises out of the text: a short 12px lead-in, eased (slow start, quick finish) so it reads as a soft
-     edge rather than a smear, with no hard line where the buttons meet the text. */
-  padding-left: 12px;
-  background: linear-gradient(to right, rgba(229, 83, 75, 0) 0, rgba(229, 83, 75, 0.15) 3px, rgba(229, 83, 75, 0.45) 6px, rgba(229, 83, 75, 0.8) 9px, #e5534b 12px);
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(140px circle at var(--glow-x, 50%) 50%, rgba(0, 122, 255, 0.16), transparent 70%);
   opacity: 0;
   pointer-events: none;
-  transition: opacity .16s ease;
-  z-index: 1;
+  transition: opacity .2s ease;
 }
-.task-note-swipe-btn {
-  width: 48px;
-  height: 100%;
-  border-radius: 0;
-  opacity: 1;
-  color: #fff;
-  transition: filter .15s;
+.task-note-card.is-collapsed:hover::before { opacity: 1; }
+.task-note-card.dragging::before { display: none; }
+.task-note-quick {
+  position: absolute;
+  top: 0;
+  right: 10px;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  opacity: 0;
+  transform: translateX(6px);
+  pointer-events: none;
+  transition: opacity .18s ease, transform .18s ease;
+  z-index: 2;
 }
-.task-note-swipe-btn.task-note-delete { width: 40px; background: #e5534b; }
-.task-note-swipe-btn.task-note-send { background: #007aff; } /* the iOS blue of the tool switches */
-.task-note-swipe-btn svg { width: 18px; height: 18px; }
-.task-note-card:hover .task-note-swipe,
-.task-note-card:focus-within .task-note-swipe { opacity: 1; pointer-events: auto; }
-/* Right after a click opens or closes the note, the buttons wait for the pointer to leave and come back, so they
-   don't flash in and out under it. */
-.task-note-card[data-quiet] .task-note-swipe { opacity: 0; pointer-events: none; transition: none; }
-.task-note-card .task-note-swipe-btn:hover:not(:disabled) { opacity: 1; filter: brightness(1.12); }
-.task-note-list:has(.task-note-card.dragging) .task-note-swipe { display: none; }
-@media (prefers-reduced-motion: reduce) { .task-note-swipe { transition: none; } }
+.task-note-card:hover .task-note-quick,
+.task-note-card:focus-within .task-note-quick { opacity: 1; transform: none; pointer-events: auto; }
+.task-note-card:hover .task-note-preview,
+.task-note-card:focus-within .task-note-preview {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 96px), transparent calc(100% - 56px));
+  mask-image: linear-gradient(to right, #000 calc(100% - 96px), transparent calc(100% - 56px));
+}
+.task-note-quick-btn { width: 24px; height: 24px; opacity: 1; color: var(--text-3, rgba(255, 255, 255, 0.45)); transition: color .15s; }
+.task-note-quick-btn svg { width: 16px; height: 16px; }
+.task-note-quick-btn.task-note-send { color: #007aff; } /* the iOS blue of the tool switches */
+.task-note-card .task-note-quick-btn:hover { opacity: 1; filter: none; }
+.task-note-card .task-note-quick-btn.task-note-delete:hover { color: #e5534b; }
+.task-note-card .task-note-quick-btn.task-note-send:hover { color: #3395ff; }
+/* Right after a click opens or closes the note, the icons and glow wait for the pointer to leave and come back,
+   so they don't flash in and out under it. */
+.task-note-card[data-quiet] .task-note-quick { opacity: 0; pointer-events: none; transition: none; }
+.task-note-card[data-quiet]::before { opacity: 0; transition: none; }
+.task-note-list:has(.task-note-card.dragging) .task-note-quick { display: none; }
+@media (prefers-reduced-motion: reduce) { .task-note-quick, .task-note-card::before { transition: none; } .task-note-quick { transform: none; } }
 
 /* Open: a row of actions under the text; send sits apart on the right. */
 .task-note-actions {

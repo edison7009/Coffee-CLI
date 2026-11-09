@@ -185,42 +185,42 @@ try {
   await page.mouse.up();
   await page.waitForFunction(() => window.saved.map(task => task.title).join() === 'B,A,C');
   assert.deepEqual(await cards.evaluateAll(els => els.map(el => el.style.transform)), ['', '', ''], 'slide offsets clear after the drop');
-  // At rest a collapsed note is just its line of text. On hover two solid buttons slide in over its right end —
-  // delete, then send at the edge — covering the text without moving it.
+  // At rest a collapsed note is just its line of text. On hover a soft glow follows the pointer and two line icons
+  // slide in at the right end — delete, then send — while the text fades beneath them without moving.
   const tabCard = page.locator('#root [data-note-id="B"]');
-  const swipeX = () => page.evaluate(() => [...document.querySelectorAll('#root [data-note-id="B"] .task-note-swipe-btn')].map(el => el.getBoundingClientRect().left));
+  const quickOpacity = () => tabCard.locator('.task-note-quick').evaluate(el => getComputedStyle(el).opacity);
   await page.mouse.move(5, 5);
   // Let the cards settle from the drag above before measuring.
   await page.waitForFunction(() => [...document.querySelectorAll('#root .task-note-card')].every(el => getComputedStyle(el).transform === 'none' && !el.getAnimations().length));
   const restCard = await tabCard.boundingBox(), restLine = await tabCard.locator('.task-note-preview').boundingBox();
-  await page.waitForFunction(() => getComputedStyle(document.querySelector('#root [data-note-id="B"] .task-note-swipe')).opacity === '0');
-  await tabCard.hover();
-  await page.waitForFunction(() => getComputedStyle(document.querySelector('#root [data-note-id="B"] .task-note-swipe')).opacity === '1');
-  const [delX, sendX] = await swipeX();
-  const sendBtn = await tabCard.locator('.task-note-swipe-btn.task-note-send').boundingBox();
-  assert.ok(delX < sendX && Math.abs(sendBtn.x + sendBtn.width - (restCard.x + restCard.width)) < 1, 'delete, then send at the right edge');
-  assert.ok(Math.abs(sendBtn.height - restCard.height) < 1, 'the buttons run the card\'s full height');
+  await page.waitForFunction(() => getComputedStyle(document.querySelector('#root [data-note-id="B"] .task-note-quick')).opacity === '0');
+  await page.waitForFunction(() => getComputedStyle(document.querySelector('#root [data-note-id="B"]'), '::before').opacity === '0');
+  await page.mouse.move(restCard.x + 30, restCard.y + restCard.height / 2);
+  await page.waitForFunction(() => getComputedStyle(document.querySelector('#root [data-note-id="B"] .task-note-quick')).opacity === '1' && getComputedStyle(document.querySelector('#root [data-note-id="B"]'), '::before').opacity === '1');
+  const glowAt = () => tabCard.evaluate(el => el.style.getPropertyValue('--glow-x'));
+  const leftGlow = await glowAt();
+  await page.mouse.move(restCard.x + restCard.width - 120, restCard.y + restCard.height / 2);
+  assert.ok(parseInt(await glowAt()) > parseInt(leftGlow) + 100, `the glow follows the pointer (${leftGlow} -> ${await glowAt()})`);
+  const del = await tabCard.locator('.task-note-quick .task-note-delete').boundingBox(), sendIcon = await tabCard.locator('.task-note-quick .task-note-send').boundingBox();
+  assert.ok(del.x < sendIcon.x && sendIcon.x + sendIcon.width <= restCard.x + restCard.width, 'delete, then send, at the right end');
+  assert.equal(await tabCard.locator('.task-note-quick .task-note-delete').evaluate(el => getComputedStyle(el).backgroundColor), 'rgba(0, 0, 0, 0)', 'line icons, no solid blocks');
   assert.deepEqual(await tabCard.locator('.task-note-preview').boundingBox(), restLine, 'the text does not move');
-  const lead = await tabCard.locator('.task-note-swipe').evaluate(el => getComputedStyle(el).backgroundImage);
-  assert.ok(/^linear-gradient\(to right, rgba\(229, 83, 75, 0\) 0px,.*rgb\(229, 83, 75\) 12px\)$/.test(lead), 'a short red fade-in on the left, no hard edge: '+lead);
-  assert.equal(await tabCard.locator('.task-note-swipe').evaluate(el => getComputedStyle(el).paddingLeft), '12px', 'the fade-in is short');
-  assert.ok((await tabCard.locator('.task-note-swipe .task-note-delete').boundingBox()).width < (await tabCard.locator('.task-note-swipe .task-note-send').boundingBox()).width, 'delete is narrower than send');
-  assert.notEqual(await tabCard.locator('.task-note-swipe-btn.task-note-delete').evaluate(el => getComputedStyle(el).backgroundColor), 'rgba(0, 0, 0, 0)', 'solid buttons');
+  assert.ok(/linear-gradient/.test(await tabCard.locator('.task-note-preview').evaluate(el => getComputedStyle(el).webkitMaskImage || getComputedStyle(el).maskImage)), 'the text fades beneath the icons');
   // Send stays, enabled, even with no session to send to.
   await page.evaluate(() => window.selectSession(null));
-  assert.equal(await tabCard.locator('.task-note-swipe .task-note-send').isDisabled(), false, 'send never hides or greys out');
+  assert.equal(await tabCard.locator('.task-note-quick .task-note-send').isDisabled(), false, 'send never hides or greys out');
   await page.evaluate(() => window.selectSession('claude'));
   // Clicking to close a note does not flash the hover buttons back under the pointer: they wait for it to leave.
   await tabCard.locator('.task-note-preview').click();
   await tabCard.locator('.task-note-body').click();
-  assert.equal(await tabCard.locator('.task-note-swipe').evaluate(el => getComputedStyle(el).opacity), '0', 'no flash right after a click');
+  assert.equal(await quickOpacity(), '0', 'no flash right after a click');
   await page.mouse.move(5, 5); await tabCard.hover();
-  await page.waitForFunction(() => getComputedStyle(document.querySelector('#root [data-note-id="B"] .task-note-swipe')).opacity === '1');
+  await page.waitForFunction(() => getComputedStyle(document.querySelector('#root [data-note-id="B"] .task-note-quick')).opacity === '1');
   // A click opens the note with a row of actions under it; the side buttons give way to that row.
   await tabCard.locator('.task-note-preview').click();
   await tabCard.locator('.task-note-actions').waitFor();
   assert.deepEqual(await tabCard.locator('.task-note-actions button').evaluateAll(els => els.map(el => el.className.split(' ')[1])), ['task-note-edit', 'task-note-copy', 'task-note-delete', 'task-note-send'], 'edit, copy, delete, then send');
-  assert.equal(await tabCard.locator('.task-note-swipe').count(), 0, 'an open note has no hover buttons');
+  assert.equal(await tabCard.locator('.task-note-quick').count(), 0, 'an open note has no hover icons');
   const actions = await tabCard.locator('.task-note-actions').boundingBox(), openBody = await tabCard.locator('.task-note-body').boundingBox();
   assert.ok(actions.y >= openBody.y + openBody.height - 1, 'the actions sit under the text');
   // The edit button opens the note in edit mode with the caret at the end.
