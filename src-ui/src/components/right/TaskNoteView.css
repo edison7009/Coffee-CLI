@@ -180,8 +180,9 @@
   overflow: hidden;
 }
 
-/* Collapsed and expanded-but-not-editing notes read as cards: a click opens or closes them, a double-click edits. */
-.task-note-body[readonly] { cursor: pointer !important; user-select: none; -webkit-user-select: none; }
+/* Collapsed and expanded-but-not-editing notes read as cards: a click opens or closes them, a double-click edits.
+   The arrow stays an arrow (the app never swaps cursors); `default` beats the board's text-cursor rule for textareas. */
+.task-note-body[readonly] { cursor: default !important; user-select: none; -webkit-user-select: none; }
 .task-note-body.is-collapsed { overflow: hidden; }
 
 /* Collapsed preview: the body's look, clamped to one line with a trailing ellipsis when there is more. */
@@ -199,7 +200,6 @@
   margin: 9px 12px 10px;
   white-space: pre-wrap;
   word-break: break-word;
-  cursor: pointer !important;
   user-select: none;
   -webkit-user-select: none;
 }
