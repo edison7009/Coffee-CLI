@@ -243,9 +243,21 @@ export function TaskNoteView({
             ].filter(Boolean).join(' ')}
             style={{ touchAction: 'none' }}
             onPointerDown={e => handlePointerDown(e, task.id)}
-            onPointerLeave={e => e.currentTarget.removeAttribute('data-quiet')}
+            onPointerLeave={e => { e.currentTarget.removeAttribute('data-quiet'); delete e.currentTarget.dataset.quietAt; }}
             // The hover glow follows the pointer: a CSS variable on the card, no re-render.
-            onPointerMove={e => e.currentTarget.style.setProperty('--glow-x', `${Math.round(e.clientX - e.currentTarget.getBoundingClientRect().left)}px`)}
+            onPointerMove={e => {
+              const card = e.currentTarget;
+              card.style.setProperty('--glow-x', `${Math.round(e.clientX - card.getBoundingClientRect().left)}px`);
+              // After a click the hover buttons wait for the pointer to move on a few pixels (no need to leave the
+              // card), so they don't flash in under the click itself.
+              if (card.hasAttribute('data-quiet')) {
+                if (!card.dataset.quietAt) card.dataset.quietAt = `${e.clientX},${e.clientY}`;
+                else {
+                  const [x, y] = card.dataset.quietAt.split(',').map(Number);
+                  if (Math.hypot(e.clientX - x, e.clientY - y) > 6) { card.removeAttribute('data-quiet'); delete card.dataset.quietAt; }
+                }
+              }
+            }}
           >
             {/* Collapsed: one line of text that never moves. On hover a soft glow follows the pointer and two line
                 icons slide in at the right end — delete, then send — while the text fades out beneath them.

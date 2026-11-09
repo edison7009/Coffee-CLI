@@ -233,11 +233,16 @@ try {
   await page.evaluate(() => window.selectSession(null));
   assert.equal(await tabCard.locator('.task-note-quick .task-note-send').isDisabled(), false, 'send never hides or greys out');
   await page.evaluate(() => window.selectSession('claude'));
-  // Clicking to close a note does not flash the hover buttons back under the pointer: they wait for it to leave.
+  // Clicking to close a note does not flash the hover buttons back under the pointer: they wait for it to move on a
+  // few pixels, without having to leave the card.
   await tabCard.locator('.task-note-preview').click();
-  await tabCard.locator('.task-note-body').click();
+  const cb = await tabCard.locator('.task-note-body').boundingBox();
+  const cx = cb.x + 40, cy = cb.y + 12;
+  await page.mouse.click(cx, cy);
   assert.equal(await quickOpacity(), '0', 'no flash right after a click');
-  await page.mouse.move(5, 5); await tabCard.hover();
+  await page.mouse.move(cx + 1, cy); await page.mouse.move(cx + 3, cy);
+  assert.equal(await quickOpacity(), '0', 'a tremor of the hand keeps them hidden');
+  await page.mouse.move(cx + 30, cy, { steps: 3 });
   await page.waitForFunction(() => getComputedStyle(document.querySelector('#root [data-note-id="B"] .task-note-quick')).opacity === '1');
   // A click opens the note with a row of actions under it; the side buttons give way to that row.
   await tabCard.locator('.task-note-preview').click();
