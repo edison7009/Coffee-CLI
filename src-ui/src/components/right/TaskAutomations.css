@@ -6,22 +6,18 @@
 .task-automations-count { margin-left: 2px; color: var(--text-3); font-variant-numeric: tabular-nums; }
 /* Same card as a pre-input note below it: no border, the note's radius. */
 .task-card.task-automation-card { border-radius: var(--radius-md, 12px); }
-.task-automation-row { display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 48px; padding: 8px 10px 8px 12px; }
+.task-automation-row { display: flex; align-items: center; gap: 14px; min-width: 0; min-height: 48px; padding: 8px 8px 8px 10px; }
 .task-automation-name { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .task-automation-line, .task-automation-sub { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .task-automation-title { flex: 0 1 auto; min-width: 0; color: var(--text-1); font-size: var(--type-label); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .task-automation-card[data-enabled="false"] .task-automation-title { color: var(--text-3); }
 .task-automation-next { flex-shrink: 0; color: var(--text-3); font-size: 12px; font-variant-numeric: tabular-nums; }
-/* Unlike a task's, this send stays in view: it is the strip's main action. */
-.task-automation-send { width: 24px; height: 24px; color: var(--accent, #c4956a); opacity: 1; transition: opacity .15s, filter .15s; }
-.task-automation-send:hover:not(:disabled) { filter: brightness(1.2); }
-.task-automation-send:disabled { opacity: .25; cursor: not-allowed; }
+/* Same as a note's send, always in view: a solid accent circle, its arrow coloured like the + button. */
+.task-automation-send { width: 26px; height: 26px; flex-shrink: 0; border-radius: 50%; opacity: 1; color: var(--bg-terminal, #fff); background: var(--accent, #c4956a) !important; transition: filter .15s; }
+[data-shape="glass"] .task-automation-send { color: #fff; }
+.task-automation-send svg { width: 12px; height: 12px; margin-left: 2px; }
+.task-automation-send:hover { filter: brightness(1.12); }
 .task-automation-mark { display: inline-flex; flex-shrink: 0; width: 13px; height: 13px; color: var(--text-2); }
 .task-automation-mark img, .task-automation-mark svg { display: block; width: 100%; height: 100%; object-fit: contain; }
 .task-automation-mark .task-automation-mark-tile { border-radius: var(--radius-xs); object-fit: cover; }
 .task-automation-meta { min-width: 0; color: var(--text-3); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* Like a note's send: a plain arrow at rest, a solid accent circle like a note's send when the row is aimed at. */
-.task-automation-send { border-radius: 50%; transition: color .15s, background-color .15s, filter .15s; }
-.task-automation-card:hover .task-automation-send, .task-automation-send:focus-visible { color: var(--bg-terminal, #fff); background: var(--accent, #c4956a) !important; }
-[data-shape="glass"] .task-automation-card:hover .task-automation-send { color: #fff; }
-.task-automation-send svg { margin-left: 2px; }
