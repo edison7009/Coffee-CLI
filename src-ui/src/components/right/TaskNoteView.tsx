@@ -106,6 +106,14 @@ export function TaskNoteView({
     if (open) next.add(id); else next.delete(id);
     return next;
   });
+  // A note added with the + button is written straight away; it stays in edit mode until the user clicks away.
+  /* eslint-disable react-hooks/set-state-in-effect -- addingId is an explicit parent signal to start editing the new note. */
+  useEffect(() => {
+    if (!addingId) return;
+    setEditingId(addingId);
+    setExpanded(prev => new Set(prev).add(addingId));
+  }, [addingId]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handlePointerDown = (e: React.PointerEvent, id: string) => {
     const target = e.target as HTMLElement;

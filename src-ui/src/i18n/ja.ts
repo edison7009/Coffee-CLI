@@ -289,10 +289,6 @@ export const ja = {
 
 
   // Task Board
-  'task.notes_placeholder': 'メモを追加...',
-  'task.section.working': '進行中',
-  'task.section.todo': '未着手',
-  'task.section.done': '完了',
   'task.greeting.morning': 'おはようございます。今日の予定は？',
   'task.greeting.afternoon': 'こんにちは。残りのタスクは？',
   'task.greeting.evening': 'こんばんは。何か始めますか？',
@@ -339,7 +335,6 @@ export const ja = {
   'diff.no_changes': '変更なし',
   'diff.too_large': 'ファイルが大きいため差分を表示しません',
   'diff.unchanged_lines': '⋯ 未変更 {count} 行',
-  'task.default_title': '新しいタスク',
   'task.search_sessions': 'セッションを検索...',
   'task.filter_all_projects': 'すべて',
   'menu.no_recent': '最近のセッションはありません',
@@ -405,19 +400,9 @@ export const ja = {
   'settings.titlebar.toggle.icon': 'アイコンのみ',
   'settings.titlebar.toggle.hidden': '非表示',
   'settings.tasks': '事前入力',
-  'settings.tasks.view': '事前入力の表示',
   'settings.pre_input_button': '「事前入力に保存」ボタン',
   'settings.pre_input_button.sub': '入力欄の上に表示し、下書きを右側の事前入力に保存します',
-  'task.view.list': 'To-Do リスト',
-  'task.view.note': '付箋',
-  'task.view.list.sub': 'コンパクトな一覧、ひとつずつチェック',
-  'task.view.note.sub': '大きな付箋にまとめて書いて送信',
   'task.send_failed': "送信を確認できませんでした。現在の会話を確認してください。タスクの内容は保持されています。",
-  'task.view.prompt': 'プロンプト集',
-  'task.view.prompt.sub': 'AIプロンプトを分類、一括送信',
-  'task.prompt.new_category': '新規カテゴリ',
-  'task.prompt.category_placeholder': 'カテゴリ名（既存を選ぶか新規入力）',
-  'task.prompt.body_placeholder': 'プロンプトを書いてAIに送信…',
   'task.note_placeholder': 'メモを書いて、まとめて送信…',
   'task.welcome_note': `Coffee CLI へようこそ ☕
 

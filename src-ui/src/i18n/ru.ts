@@ -289,10 +289,6 @@ export const ru = {
 
 
   // Task Board
-  'task.notes_placeholder': 'Добавить заметки...',
-  'task.section.working': 'В работе',
-  'task.section.todo': 'К выполнению',
-  'task.section.done': 'Завершено',
   'task.greeting.morning': 'Доброе утро, какой план?',
   'task.greeting.afternoon': 'Добрый день, что-то осталось?',
   'task.greeting.evening': 'Добрый вечер. Что-нибудь масштабное?',
@@ -339,7 +335,6 @@ export const ru = {
   'diff.no_changes': 'Нет изменений',
   'diff.too_large': 'Файл слишком большой для построчного просмотра',
   'diff.unchanged_lines': '⋯ {count} строк без изменений',
-  'task.default_title': 'Новая задача',
   'task.search_sessions': 'Поиск сессий...',
   'task.filter_all_projects': 'Все',
   'menu.no_recent': 'Нет недавних сессий',
@@ -405,19 +400,9 @@ export const ru = {
   'settings.titlebar.toggle.icon': 'Только значок',
   'settings.titlebar.toggle.hidden': 'Скрыто',
   'settings.tasks': 'Предввод',
-  'settings.tasks.view': 'Стиль предввода',
   'settings.pre_input_button': 'Кнопка «Сохранить в предввод»',
   'settings.pre_input_button.sub': 'Показывается над полем ввода и сохраняет черновик в предвводе',
-  'task.view.list': 'Список дел',
-  'task.view.note': 'Стикеры',
-  'task.view.list.sub': 'Компактный список, отмечайте по одному',
-  'task.view.note.sub': 'Большие стикеры — пишите и отправляйте целиком',
   'task.send_failed': "Не удалось подтвердить отправку. Проверьте текущий сеанс. Содержимое задачи сохранено.",
-  'task.view.prompt': 'Библиотека промптов',
-  'task.view.prompt.sub': 'Категории AI-промптов, отправка в один клик',
-  'task.prompt.new_category': 'Новая категория',
-  'task.prompt.category_placeholder': 'Название категории (выбрать или ввести новое)',
-  'task.prompt.body_placeholder': 'Напишите промпт, отправьте ИИ…',
   'task.note_placeholder': 'Запишите что-нибудь и отправьте целиком агенту…',
   'task.welcome_note': `Добро пожаловать в Coffee CLI ☕
 

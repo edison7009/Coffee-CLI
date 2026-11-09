@@ -289,10 +289,6 @@ export const en = {
 
 
   // Task Board
-  'task.notes_placeholder': 'Add notes...',
-  'task.section.working': 'In Progress',
-  'task.section.todo': 'To-do',
-  'task.section.done': 'Done',
   'task.greeting.morning': 'Morning, what\u2019s the plan?',
   'task.greeting.afternoon': 'Afternoon, anything left to do?',
   'task.greeting.evening': 'Evening. Feeling ambitious?',
@@ -339,7 +335,6 @@ export const en = {
   'diff.no_changes': 'No changes',
   'diff.too_large': 'File too large to show inline diff',
   'diff.unchanged_lines': '⋯ {count} unchanged lines',
-  'task.default_title': 'New Task',
   'task.search_sessions': 'Search sessions...',
   'task.filter_all_projects': 'All',
   'menu.no_recent': 'No recent sessions found',
@@ -407,19 +402,9 @@ export const en = {
   'settings.titlebar.toggle.hidden': 'Hidden',
   // Task board form (to-do list vs sticky notes)
   'settings.tasks': 'Pre-input',
-  'settings.tasks.view': 'Pre-input style',
   'settings.pre_input_button': 'Save as pre-input button',
   'settings.pre_input_button.sub': 'Shows above the composer; saves the draft to the pre-input tab',
-  'task.view.list': 'To-do List',
-  'task.view.note': 'Sticky Notes',
-  'task.view.list.sub': 'Compact checklist, tick off one by one',
-  'task.view.note.sub': 'Roomy notes — jot freely, send the whole thing',
   'task.send_failed': "Could not confirm sending. Check the current session. Your task has been kept.",
-  'task.view.prompt': 'Prompt library',
-  'task.view.prompt.sub': 'Categorize AI prompts, send in one click',
-  'task.prompt.new_category': 'New category',
-  'task.prompt.category_placeholder': 'Category (pick existing or type new)',
-  'task.prompt.body_placeholder': 'Write a prompt, send it to AI…',
   'task.note_placeholder': 'Jot something down, send it all to your agent…',
   // Seeded once for brand-new users as a roomy welcome note (sticky-note view).
   'task.welcome_note': `Welcome to Coffee CLI ☕

@@ -289,10 +289,6 @@ export const zhTW = {
 
 
   // Task Board
-  'task.notes_placeholder': '新增備註...',
-  'task.section.working': '進行中',
-  'task.section.todo': '待辦',
-  'task.section.done': '已完成',
   'task.greeting.morning': '早安，今天想做些什麼？',
   'task.greeting.afternoon': '午安，還有什麼要做的？',
   'task.greeting.evening': '晚安，想來點大事嗎？',
@@ -339,7 +335,6 @@ export const zhTW = {
   'diff.no_changes': '沒有改動',
   'diff.too_large': '檔案較大,未渲染逐行差異',
   'diff.unchanged_lines': '⋯ {count} 行未變更',
-  'task.default_title': '新任務',
   'task.search_sessions': '搜尋歷史對話...',
   'task.filter_all_projects': '全部',
   'menu.no_recent': '沒有任何近期對話',
@@ -406,19 +401,9 @@ export const zhTW = {
   'settings.titlebar.toggle.icon': '僅圖示',
   'settings.titlebar.toggle.hidden': '隱藏',
   'settings.tasks': '預輸入',
-  'settings.tasks.view': '預輸入形態',
   'settings.pre_input_button': '輸入框的「儲存為預輸入」按鈕',
   'settings.pre_input_button.sub': '在輸入框上方顯示，點擊後存入右側預輸入',
-  'task.view.list': '待辦式',
-  'task.view.note': '便籤式',
-  'task.view.list.sub': '緊湊清單，逐條勾選',
-  'task.view.note.sub': '大便籤，隨手寫、整段發給 AI',
   'task.send_failed': "未能確認傳送，請查看目前會話。任務內容已保留。",
-  'task.view.prompt': '分類式',
-  'task.view.prompt.sub': '按分類攢 AI 提示詞，一鍵發送',
-  'task.prompt.new_category': '新分類',
-  'task.prompt.category_placeholder': '分類名（選已有或輸入新的）',
-  'task.prompt.body_placeholder': '寫提示詞，整段發給 AI…',
   'task.note_placeholder': '寫點什麼，整段發給 AI…',
   'task.welcome_note': `歡迎來到 Coffee CLI ☕
 

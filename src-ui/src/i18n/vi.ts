@@ -291,10 +291,6 @@ export const vi = {
 
 
   // Task Board
-  'task.notes_placeholder': 'Thêm ghi chú...',
-  'task.section.working': 'Đang tiến hành',
-  'task.section.todo': 'Cần làm',
-  'task.section.done': 'Hoàn thành',
   'task.greeting.morning': 'Chào buổi sáng, kế hoạch hôm nay là gì?',
   'task.greeting.afternoon': 'Chào buổi chiều, còn việc gì cần làm không?',
   'task.greeting.evening': 'Chào buổi tối. Có kế hoạch gì lớn không?',
@@ -341,7 +337,6 @@ export const vi = {
   'diff.no_changes': 'Không có thay đổi',
   'diff.too_large': 'Tệp quá lớn để hiển thị khác biệt từng dòng',
   'diff.unchanged_lines': '⋯ {count} dòng không đổi',
-  'task.default_title': 'Nhiệm vụ mới',
   'task.search_sessions': 'Tìm phiên làm việc...',
   'task.filter_all_projects': 'Tất cả',
   'menu.no_recent': 'Không tìm thấy phiên gần đây',
@@ -407,19 +402,9 @@ export const vi = {
   'settings.titlebar.toggle.icon': 'Chỉ biểu tượng',
   'settings.titlebar.toggle.hidden': 'Ẩn',
   'settings.tasks': 'Nhập trước',
-  'settings.tasks.view': 'Kiểu nhập trước',
   'settings.pre_input_button': 'Nút “Lưu vào nhập trước”',
   'settings.pre_input_button.sub': 'Hiện phía trên ô nhập, lưu bản nháp vào mục nhập trước',
-  'task.view.list': 'Danh sách việc cần làm',
-  'task.view.note': 'Ghi chú dán',
-  'task.view.list.sub': 'Danh sách gọn, tick từng mục',
-  'task.view.note.sub': 'Ghi chú lớn — viết thoải mái, gửi cả đoạn',
   'task.send_failed': "Không thể xác nhận việc gửi. Hãy kiểm tra phiên hiện tại. Nội dung tác vụ vẫn được giữ lại.",
-  'task.view.prompt': 'Thư viện prompt',
-  'task.view.prompt.sub': 'Phân loại prompt AI, gửi một chạm',
-  'task.prompt.new_category': 'Phân loại mới',
-  'task.prompt.category_placeholder': 'Tên phân loại (chọn sẵn hoặc gõ mới)',
-  'task.prompt.body_placeholder': 'Viết prompt, gửi cho AI…',
   'task.note_placeholder': 'Ghi vài dòng rồi gửi cả đoạn cho agent…',
   'task.welcome_note': `Chào mừng đến với Coffee CLI ☕
 

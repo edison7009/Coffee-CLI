@@ -233,7 +233,6 @@ export interface AppState {
   // 'note' = big sticky-note cards (traffic-light status + timestamp + roomy
   // text area). Same task data either way — purely a presentation choice made
   // in the settings modal. Default 'list' so existing users see no change.
-  taskViewMode: 'list' | 'note' | 'prompt';
   /** Composer drafts saved as pre-input, waiting for the task board to take them. */
   preInputQueue: string[];
   /** Bumped on each save so the right panel opens on the pre-input tab. */
@@ -346,7 +345,6 @@ type Action =
   | { type: 'SET_SESSION_TOKEN'; id: string; token: string }
   | { type: 'TOGGLE_LEFT_PANEL' }
   | { type: 'TOGGLE_RIGHT_PANEL' }
-  | { type: 'SET_TASK_VIEW_MODE'; mode: 'list' | 'note' | 'prompt' }
   | { type: 'SAVE_PRE_INPUT'; text: string }
   | { type: 'TAKE_PRE_INPUT'; count: number }
   | { type: 'SET_PRE_INPUT_BUTTON'; value: boolean }
@@ -671,10 +669,6 @@ function reducer(state: AppState, action: Action): AppState {
       try { localStorage.setItem('cc-pre-input-button', action.value ? '1' : '0'); } catch { /* Best-effort operation; failure is non-fatal. */ }
       return { ...state, preInputButton: action.value };
     }
-    case 'SET_TASK_VIEW_MODE': {
-      try { localStorage.setItem('cc-task-view', action.mode); } catch { /* Best-effort operation; failure is non-fatal. */ }
-      return { ...state, taskViewMode: action.mode };
-    }
     case 'SET_DIFF_SELECTION':
       // In tab mode, selecting a file focuses the diff tab immediately (the
       // user's pref is the center surface, so a click should show it there,
@@ -884,12 +878,6 @@ function getInitialState(): AppState {
 
   let leftPanelHidden = false;
   let rightPanelHidden = true;
-  // Default 'note' (big sticky-note view) — the welcome guide + the whole
-  // task-board UX are tuned for it. A saved pref in localStorage (written by
-  // the SET_TASK_VIEW_MODE toggle) still wins for returning users. Previously
-  // 'list', only flipped to 'note' by the TaskBoard first-launch seed — which
-  // was fragile (cleared localStorage or a removed seed fell back to list).
-  let taskViewMode: 'list' | 'note' | 'prompt' = 'note';
   let preInputButton = true;
   // Default 'overlay' (the gentle half-height panel) — existing users see no
   // change. Only flips to 'tab' if the user explicitly expanded-to-tab before.
@@ -900,8 +888,8 @@ function getInitialState(): AppState {
     leftPanelHidden = localStorage.getItem('cc-left-hidden') === '1';
     rightPanelHidden = localStorage.getItem('cc-right-hidden') !== '0';
     preInputButton = localStorage.getItem('cc-pre-input-button') !== '0';
-    const savedTaskView = localStorage.getItem('cc-task-view');
-    if (savedTaskView === 'list' || savedTaskView === 'note' || savedTaskView === 'prompt') taskViewMode = savedTaskView;
+    // The board has one view now; forget the old view choice.
+    localStorage.removeItem('cc-task-view');
     const savedDiffMode = localStorage.getItem('cc-diff-mode');
     if (savedDiffMode === 'tab' || savedDiffMode === 'overlay') diffMode = savedDiffMode;
     gambitOpen = localStorage.getItem('cc-gambit-open') === '1';
@@ -930,7 +918,6 @@ function getInitialState(): AppState {
     titlebarToggleDisplay,
     leftPanelHidden,
     rightPanelHidden,
-    taskViewMode,
     preInputQueue: [],
     preInputReveal: 0,
     preInputButton,

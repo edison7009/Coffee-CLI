@@ -67,30 +67,6 @@
  * is 8px (matching Sessions). Inner sections (working / done) keep their
  * 10px so the inter-section breathing stays at ~22px and the three
  * status groups read as distinct. */
-.task-list > .task-section-wrapper:first-child .task-section-header {
-  padding-top: 0;
-}
-
-.task-section-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.task-section-dot.todo {
-  background: var(--text-3, rgba(255, 255, 255, 0.3));
-}
-
-.task-section-dot.working {
-  background: var(--accent, #c4956a);
-  box-shadow: 0 0 6px color-mix(in srgb, var(--accent) 50%, transparent);
-  animation: dot-pulse 2s ease-in-out infinite;
-}
-
-.task-section-dot.done {
-  background: #4ade80;
-}
 
 @keyframes dot-pulse {
   0%, 100% { opacity: 1; }
@@ -101,32 +77,10 @@
    WebKit2GTK + Cairo CPU bomb pattern as the tab-status grid. Each
    frame re-rasters the box-shadow blur on CPU. Static dot keeps the
    color signal, zero animation cost. */
-.task-board--static .task-section-dot.working {
-  animation: none;
-  box-shadow: none;
-}
 
 /* ─── Droppable Area ────────────────────────────────────────────────────────── */
 
-.task-droppable-area {
-  min-height: 2px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
 /* When actively dragging, empty sections show a drop target zone */
-.task-section-wrapper.empty-drop-zone .task-droppable-area {
-  min-height: 42px;
-  border: 1.5px dashed rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius-sm);
-  transition: border-color 0.2s, background-color 0.2s;
-}
-
-.task-section-wrapper.empty-drop-zone .task-droppable-area:hover {
-  border-color: rgba(196, 149, 106, 0.3);
-  background: rgba(196, 149, 106, 0.04);
-}
 
 /* ─── Task Card ─────────────────────────────────────────────────────────────── */
 
@@ -142,22 +96,6 @@
   transition: background-color 0.25s, opacity 0.25s, margin-top 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.task-card-row {
-  display: flex;
-  align-items: center;
-  /* Asymmetric 8 L / 4 R — left needs more breathing because the
-   * checkbox is the visual entry-point of the card; right is a
-   * compact action cluster that can sit close to the edge. Tight
-   * 4px gap throughout. The narrow right column (~280px) needs
-   * every horizontal pixel for titles. */
-  gap: 4px;
-  padding: 10px 4px 10px 8px;
-  /* Non-edit mode has an inline-flex pencil that bumps the line-box
-     ~3px above the strut; the <input> in edit mode has no such child
-     and would shrink the row. Pin to keep height stable across modes. */
-  min-height: 42px;
-}
-
 .task-card:hover {
   background: rgba(255, 255, 255, 0.06);
 }
@@ -165,13 +103,6 @@
 .task-card.working {
   background: color-mix(in srgb, var(--accent) 6%, transparent);
   border-left: 2px solid color-mix(in srgb, var(--accent) 40%, transparent);
-}
-
-.task-card.working .task-card-row {
-  /* Compensate for the 2px accent border-left so the checkbox sits
-     in the same column as on non-working cards. Base padding-left
-     is 8px (see .task-card-row), so working subtracts the border width. */
-  padding-left: 6px;
 }
 
 .task-card.expanded {
@@ -198,27 +129,6 @@
 }
 
 /* ─── Drag: Floating Ghost Clone ────────────────────────────────────────────── */
-
-.task-card-ghost {
-  position: fixed;
-  z-index: 99999;
-  pointer-events: none;
-  opacity: 0.95;
-  border-radius: var(--radius-sm);
-  /* Theme-aware panel background so the floating ghost matches the active
-     palette (sakura / dark / indigo / etc.) instead of always looking
-     like a generic dark-gray tile. 1px accent border reinforces the
-     "picked up" state — it reads as part of the theme. */
-  background: var(--bg-panel, rgba(40, 40, 42, 0.98));
-  border: 1px solid var(--accent, #c4956a);
-  box-shadow: 0 20px 30px -8px rgba(0, 0, 0, 0.5), 0 8px 12px -4px rgba(0, 0, 0, 0.3);
-  transform: scale(1.03);
-  will-change: left, top;
-  /* Inherit text styles */
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
 
 /* ─── Add Animation ─────────────────────────────────────────────────────────── */
 
@@ -262,57 +172,9 @@
 
 /* ─── Checkbox ──────────────────────────────────────────────────────────────── */
 
-.task-check-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  /* Match .task-slot's 18×18 footprint — keeps the left/right action
-   * affordances on a single visual rhythm. Vertical padding (with
-   * cancelling negative margin) gives a slightly taller click strip
-   * without growing the row height. */
-  width: 18px;
-  height: 18px;
-  padding: 8px 0;
-  margin: -8px 0;
-  background: transparent;
-  border: none;
-  flex-shrink: 0;
-  border-radius: var(--radius-sm);
-  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
-.task-check-btn:active {
-  transform: scale(0.8);
-}
-
-.task-checkbox {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.task-checkbox.todo {
-  color: var(--text-3, rgba(255, 255, 255, 0.25));
-}
-
-.task-checkbox.working {
-  color: var(--accent, #c4956a);
-}
-
-.task-checkbox.done {
-  color: #4ade80;
-}
-
-.pulse-dot {
-  animation: checkbox-pulse 2s ease-in-out infinite;
-}
-
 /* Linux gate — see .task-board--static above for rationale. SVG opacity
    loop on the working checkbox dot is cheap on WebView2/WKWebView but
    another infinite repaint on WebKit2GTK. */
-.task-board--static .pulse-dot {
-  animation: none;
-}
 
 @keyframes checkbox-pulse {
   0%, 100% { opacity: 1; }
@@ -321,83 +183,19 @@
 
 /* ─── Task Title ────────────────────────────────────────────────────────────── */
 
-.task-title {
-  flex: 1;
-  font-size: var(--type-body);
-  font-family: var(--font, system-ui);
-  color: var(--text-1, #e8e4de);
-  line-height: 1.4;
-  min-width: 0;
-  word-break: break-word;
-}
-
-.task-title.completed {
-  text-decoration: line-through;
-  color: var(--text-3, rgba(255, 255, 255, 0.3));
-}
-
 /* Inline title edit — seamless, no border, same sizing as title.
    A <textarea> (not <input>) so long titles soft-wrap to multiple lines
    while typing, matching the committed <span> below. Height is auto-grown
    to scrollHeight in JS (see autoGrowTitle); resize/overflow off so no
    manual handle or inner scrollbar appears. */
-.task-title-edit {
-  flex: 1;
-  font-size: var(--type-body);
-  font-family: var(--font, system-ui);
-  color: var(--text-1, #e8e4de);
-  line-height: 1.4;
-  min-width: 0;
-  background: transparent;
-  border: none;
-  padding: 0;
-  margin: 0;
-  outline: none;
-  resize: none;
-  overflow: hidden;
-  white-space: pre-wrap;
-  word-break: break-word;
-  display: block;
-  box-sizing: border-box;
-}
 
 /* ─── Inline edit pencil (flows after the title text) ──────────────────────── */
 /* The pencil is inline-positioned so it appears immediately after the last
    character of the title — on a long wrapped title it ends up at the end of
    the last line, which matches the natural reading flow. Kept subtle (55%
    opacity) so it doesn't compete visually with the title text. */
-.task-title-text {
-  /* plain inline text — pencil flows after it naturally */
-}
-
-.task-edit-inline {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  padding: 0;
-  margin-left: 4px;
-  background: transparent;
-  border: none;
-  color: var(--text-3, rgba(255, 255, 255, 0.3));
-  cursor: pointer;
-  border-radius: var(--radius-xs);
-  opacity: 0;
-  transition: opacity 0.15s, color 0.15s, background 0.15s;
-  vertical-align: -2px; /* optical alignment with text baseline */
-}
 
 /* Fade in only when the whole card is hovered — keeps resting state clean */
-.task-card:hover .task-edit-inline {
-  opacity: 0.55;
-}
-
-.task-card:hover .task-edit-inline:hover {
-  opacity: 1;
-  color: var(--text-1, #e8e4de);
-  background: rgba(255, 255, 255, 0.06);
-}
 
 /* ─── Right-side action cluster ────────────────────────────────────────────── */
 /* Fixed-width box reserving the WIDEST mode (two 18px slots + 4px gap = 40px).
@@ -406,14 +204,6 @@
    Centered: normal mode's two icons fill the 40px exactly (so centering is a
    no-op there), while edit mode's single ✓ sits centered in the reserved
    space rather than pinned flush-right. */
-.task-actions {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  width: 40px;
-  flex-shrink: 0;
-}
 
 /* ─── Right-side fixed action slot ─────────────────────────────────────────── */
 /* One button, one position — identity swaps based on card mode:
@@ -442,105 +232,13 @@
    state hides them via opacity, card-hover reveals them at 0.85
    opacity (calm), and direct button-hover bumps to full opacity +
    brightness for click affordance. */
-.task-slot-send {
-  color: var(--accent, #c4956a);
-  opacity: 0;
-  transition: opacity 0.15s, filter 0.15s;
-}
-
-.task-card:hover .task-slot-send {
-  opacity: 0.85;
-}
-
-.task-slot-send:hover:not(:disabled) {
-  opacity: 1;
-  filter: brightness(1.25);
-}
-
-.task-slot-send:disabled {
-  opacity: 0;
-  cursor: not-allowed;
-}
-
-.task-card:hover .task-slot-send:disabled {
-  opacity: 0.25;
-}
-
-.task-slot-confirm {
-  color: #4ade80;
-  background: rgba(74, 222, 128, 0.12);
-}
-
-.task-slot-confirm:hover {
-  background: rgba(74, 222, 128, 0.25);
-}
-
-.task-slot-delete {
-  color: var(--accent, #c4956a);
-  opacity: 0;
-  transition: opacity 0.15s, filter 0.15s;
-}
 
 /* Pair with .task-slot-send — same reveal/affordance story:
    card-hover reveals at calm 0.85, direct hover bumps to full
    opacity + brightness. Destructive intent is carried by the
    trash glyph itself, not by chip colour. */
-.task-card:hover .task-slot-delete {
-  opacity: 0.85;
-}
-
-.task-slot-delete:hover {
-  opacity: 1;
-  filter: brightness(1.25);
-}
 
 /* ─── Description Area ──────────────────────────────────────────────────────── */
-
-.task-desc-area {
-  display: grid;
-  grid-template-rows: 0fr;
-  transition: grid-template-rows 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
-.task-desc-area.open {
-  grid-template-rows: 1fr;
-}
-
-.task-desc-area-inner {
-  overflow: hidden;
-  opacity: 0;
-  padding: 0 10px 0 38px;
-  transform: translateY(-4px);
-  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-  pointer-events: none;
-}
-
-.task-desc-area.open .task-desc-area-inner {
-  opacity: 1;
-  padding: 0 10px 10px 38px;
-  transform: translateY(0);
-  pointer-events: auto;
-  transition-delay: 0.05s;
-}
-
-.task-desc-input {
-  width: 100%;
-  background: transparent;
-  border: none;
-  color: var(--text-2, rgba(255, 255, 255, 0.6));
-  font-family: var(--font, system-ui);
-  font-size: var(--type-body);
-  line-height: 1.5;
-  padding: 0;
-  resize: vertical;
-  min-height: 48px;
-  max-height: 300px;
-  outline: none;
-}
-
-.task-desc-input::placeholder {
-  color: var(--text-3, rgba(255, 255, 255, 0.3));
-}
 
 /* ─── Empty State ───────────────────────────────────────────────────────────── */
 

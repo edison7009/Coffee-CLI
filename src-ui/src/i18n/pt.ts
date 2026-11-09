@@ -289,10 +289,6 @@ export const pt = {
 
 
   // Task Board
-  'task.notes_placeholder': 'Adicionar notas...',
-  'task.section.working': 'Em andamento',
-  'task.section.todo': 'A fazer',
-  'task.section.done': 'Concluído',
   'task.greeting.morning': 'Bom dia, qual é o plano?',
   'task.greeting.afternoon': 'Boa tarde, algo pendente?',
   'task.greeting.evening': 'Boa noite. Algo ambicioso?',
@@ -339,7 +335,6 @@ export const pt = {
   'diff.no_changes': 'Sem alterações',
   'diff.too_large': 'Arquivo muito grande para exibir o diff',
   'diff.unchanged_lines': '⋯ {count} linhas inalteradas',
-  'task.default_title': 'Nova tarefa',
   'task.search_sessions': 'Buscar sessões...',
   'task.filter_all_projects': 'Todos',
   'menu.no_recent': 'Nenhuma sessão recente',
@@ -405,19 +400,9 @@ export const pt = {
   'settings.titlebar.toggle.icon': 'Apenas ícone',
   'settings.titlebar.toggle.hidden': 'Oculto',
   'settings.tasks': 'Pré-entrada',
-  'settings.tasks.view': 'Estilo de pré-entrada',
   'settings.pre_input_button': 'Botão “Salvar como pré-entrada”',
   'settings.pre_input_button.sub': 'Aparece acima da caixa de texto e salva o rascunho na pré-entrada',
-  'task.view.list': 'Lista de tarefas',
-  'task.view.note': 'Notas adesivas',
-  'task.view.list.sub': 'Lista compacta, marque uma a uma',
-  'task.view.note.sub': 'Notas amplas: escreva e envie tudo',
   'task.send_failed': "Não foi possível confirmar o envio. Verifique a sessão atual. Sua tarefa foi preservada.",
-  'task.view.prompt': 'Biblioteca de prompts',
-  'task.view.prompt.sub': 'Categorize prompts de IA, envie com um clique',
-  'task.prompt.new_category': 'Nova categoria',
-  'task.prompt.category_placeholder': 'Nome da categoria (escolha ou crie)',
-  'task.prompt.body_placeholder': 'Escreva um prompt, envie à IA…',
   'task.note_placeholder': 'Anote algo e envie tudo ao seu agente…',
   'task.welcome_note': `Bem-vindo ao Coffee CLI ☕
 

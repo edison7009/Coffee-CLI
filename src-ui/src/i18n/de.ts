@@ -289,10 +289,6 @@ export const de = {
 
 
   // Task Board
-  'task.notes_placeholder': 'Notizen hinzufügen...',
-  'task.section.working': 'In Bearbeitung',
-  'task.section.todo': 'Offen',
-  'task.section.done': 'Erledigt',
   'task.greeting.morning': 'Guten Morgen, was steht an?',
   'task.greeting.afternoon': 'Guten Tag, noch etwas zu tun?',
   'task.greeting.evening': 'Guten Abend. Etwas Großes geplant?',
@@ -339,7 +335,6 @@ export const de = {
   'diff.no_changes': 'Keine Änderungen',
   'diff.too_large': 'Datei zu groß für die Inline-Diff-Ansicht',
   'diff.unchanged_lines': '⋯ {count} unveränderte Zeilen',
-  'task.default_title': 'Neue Aufgabe',
   'task.search_sessions': 'Sitzungen durchsuchen...',
   'task.filter_all_projects': 'Alle',
   'menu.no_recent': 'Keine aktuellen Sitzungen',
@@ -405,19 +400,9 @@ export const de = {
   'settings.titlebar.toggle.icon': 'Nur Symbol',
   'settings.titlebar.toggle.hidden': 'Ausgeblendet',
   'settings.tasks': 'Vorab-Eingabe',
-  'settings.tasks.view': 'Stil der Vorab-Eingabe',
   'settings.pre_input_button': 'Schaltfläche „Als Vorab-Eingabe speichern“',
   'settings.pre_input_button.sub': 'Erscheint über dem Eingabefeld und speichert den Entwurf in der Vorab-Eingabe',
-  'task.view.list': 'To-do-Liste',
-  'task.view.note': 'Notizzettel',
-  'task.view.list.sub': 'Kompakte Liste, einzeln abhaken',
-  'task.view.note.sub': 'Große Zettel – frei schreiben, alles senden',
   'task.send_failed': "Das Senden konnte nicht bestätigt werden. Prüfe die aktuelle Sitzung. Deine Aufgabe bleibt erhalten.",
-  'task.view.prompt': 'Prompt-Bibliothek',
-  'task.view.prompt.sub': 'KI-Prompts kategorisieren, mit einem Klick senden',
-  'task.prompt.new_category': 'Neue Kategorie',
-  'task.prompt.category_placeholder': 'Kategoriename (vorhanden wählen oder neu eingeben)',
-  'task.prompt.body_placeholder': 'Prompt schreiben, an KI senden…',
   'task.note_placeholder': 'Schreib etwas auf und sende alles an deinen Agenten…',
   'task.welcome_note': `Willkommen bei Coffee CLI ☕
 

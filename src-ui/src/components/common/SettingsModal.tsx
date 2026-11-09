@@ -24,7 +24,7 @@ import { commands, isTauri, type FontInfo } from '../../tauri';
 import { FontPicker } from './FontPicker';
 import { SettingsSlider } from './SettingsSlider';
 import { setUiScale, useUiScale } from '../../lib/ui-scale';
-import { THEME_COLORS, THEME_MODES, THEME_SHAPES, ICON_ART_THEMES, LANGUAGES, TASK_VIEW_MODES, isMaskTintTheme } from '../../lib/personalization';
+import { THEME_COLORS, THEME_MODES, THEME_SHAPES, ICON_ART_THEMES, LANGUAGES, isMaskTintTheme } from '../../lib/personalization';
 import './SettingsModal.css';
 
 type Section = 'general' | 'appearance' | 'wallpaper' | 'terminal' | 'gambit' | 'sound' | 'language' | 'agent' | 'feedback';
@@ -52,27 +52,6 @@ function readSoundPref(key: string): boolean {
   } catch { return true; }
 }
 
-// Per-mode preview glyphs for the Tasks section (checklist vs sticky note).
-const TASK_VIEW_ICONS: Record<'list' | 'note' | 'prompt', ReactNode> = {
-  list: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M9 6h11" /><path d="M9 12h11" /><path d="M9 18h11" />
-      <path d="m3 6 1 1 2-2" /><path d="m3 12 1 1 2-2" /><circle cx="4" cy="18" r="1" />
-    </svg>
-  ),
-  note: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M15.5 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10l6-6V5a2 2 0 0 0-2-2Z" />
-      <path d="M15 21v-5a1 1 0 0 1 1-1h5" />
-    </svg>
-  ),
-  prompt: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 11V5a2 2 0 0 1 2-2h6l9 9-8 8-9-9Z" />
-      <circle cx="7.5" cy="7.5" r="1.2" fill="currentColor" stroke="none" />
-    </svg>
-  ),
-};
 
 const ICONS: Record<Section, ReactNode> = {
   agent: (
@@ -263,7 +242,6 @@ export function SettingsModal() {
     dispatch({ type: 'SET_DEFAULT_SHELL', shell });
   };
   const setOpacity = (n: number) => dispatch({ type: 'SET_WALLPAPER_OPACITY', opacity: n });
-  const setTaskView = (mode: 'list' | 'note' | 'prompt') => dispatch({ type: 'SET_TASK_VIEW_MODE', mode });
   const setEnterToSend = (value: boolean) => {
     dispatch({ type: 'SET_GAMBIT_ENTER_TO_SEND', value });
     try { localStorage.setItem('cc-gambit-enter-send', String(value)); } catch { /* Best-effort operation; failure is non-fatal. */ }
@@ -625,26 +603,7 @@ export function SettingsModal() {
                   onPreview={setDragPercent}
                 />
                 {uiScale.failed && <div className="settings-scale-error" role="alert">{t('settings.uiScale.error')}</div>}
-                <div className="settings-section-label">{t('settings.tasks.view')}</div>
-                <div className="settings-key-row">
-                  {TASK_VIEW_MODES.map(m => {
-                    const active = state.taskViewMode === m.code;
-                    return (
-                      <button
-                        key={m.code}
-                        className={`settings-key-card settings-taskview-card${active ? ' active' : ''}`}
-                        onClick={() => setTaskView(m.code)}
-                        aria-pressed={active}
-                      >
-                        <span className="settings-key-combo">
-                          <span className="settings-taskview-icon">{TASK_VIEW_ICONS[m.code]}</span>
-                          <span className="settings-taskview-label">{t(m.labelKey)}</span>
-                        </span>
-                        <span className="settings-key-sub">{t(m.subKey)}</span>
-                      </button>
-                    );
-                  })}
-                </div>
+                <div className="settings-section-label">{t('settings.tasks')}</div>
                 <div className="settings-sound-list">
                   <div className="settings-sound-item">
                     <div className="settings-sound-row">

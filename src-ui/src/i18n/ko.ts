@@ -289,10 +289,6 @@ export const ko = {
 
 
   // Task Board
-  'task.notes_placeholder': '메모 추가...',
-  'task.section.working': '진행 중',
-  'task.section.todo': '할 일',
-  'task.section.done': '완료',
   'task.greeting.morning': '좋은 아침, 오늘 계획은?',
   'task.greeting.afternoon': '안녕하세요, 남은 할 일이 있나요?',
   'task.greeting.evening': '좋은 저녁, 뭔가 시작해볼까요?',
@@ -339,7 +335,6 @@ export const ko = {
   'diff.no_changes': '변경 없음',
   'diff.too_large': '파일이 너무 커서 인라인 차이를 표시하지 않음',
   'diff.unchanged_lines': '⋯ 변경되지 않은 {count}줄',
-  'task.default_title': '새 작업',
   'task.search_sessions': '세션 검색...',
   'task.filter_all_projects': '전체',
   'menu.no_recent': '최근 세션이 없습니다',
@@ -405,19 +400,9 @@ export const ko = {
   'settings.titlebar.toggle.icon': '아이콘만',
   'settings.titlebar.toggle.hidden': '숨김',
   'settings.tasks': '사전 입력',
-  'settings.tasks.view': '사전 입력 표시 방식',
   'settings.pre_input_button': '“사전 입력으로 저장” 버튼',
   'settings.pre_input_button.sub': '입력창 위에 표시되며, 초안을 오른쪽 사전 입력에 저장합니다',
-  'task.view.list': '할 일 목록',
-  'task.view.note': '메모지',
-  'task.view.list.sub': '간결한 체크리스트, 하나씩 체크',
-  'task.view.note.sub': '큰 메모지에 자유롭게 적어 한 번에 전송',
   'task.send_failed': "전송을 확인하지 못했습니다. 현재 대화를 확인해 주세요. 작업 내용은 유지됩니다.",
-  'task.view.prompt': '프롬프트 모음',
-  'task.view.prompt.sub': 'AI 프롬프트 분류, 한 번에 전송',
-  'task.prompt.new_category': '새 분류',
-  'task.prompt.category_placeholder': '분류명 (기존 선택 또는 새로 입력)',
-  'task.prompt.body_placeholder': '프롬프트를 적어 AI에게 전송…',
   'task.note_placeholder': '메모를 적어 에이전트로 한 번에 보내기…',
   'task.welcome_note': `Coffee CLI에 오신 것을 환영합니다 ☕
 

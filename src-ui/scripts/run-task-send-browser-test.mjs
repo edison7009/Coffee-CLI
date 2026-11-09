@@ -34,7 +34,7 @@ await build({ stdin: { resolveDir: project, loader: 'tsx', contents: `
     b.onResolve({ filter: /^@tauri-apps\/api\/event$/ }, () => ({ path: 'events', namespace: 'fixture' }));
     b.onResolve({ filter: /(?:\.\/|lib\/)terminal-control$/ }, () => ({ path: 'terminal', namespace: 'fixture' }));
     b.onLoad({ filter: /.*/, namespace: 'fixture' }, args => ({ loader: 'js', resolveDir: project, contents: {
-      store: `import {useSyncExternalStore} from 'react';const p=new URLSearchParams(location.search),listeners=new Set();let state={taskViewMode:p.get('view')||'note',preInputQueue:[],preInputReveal:0,preInputButton:true,currentLang:'en',activeTerminalId:p.get('tool')||'claude',terminals:['claude','codex','terminal','unready'].map(tool=>({id:tool,tool:tool==='unready'?'claude':tool,claudeMode:'conversation',codexMode:'conversation',folderPath:'D:/test'}))};window.selectSession=id=>{state={...state,activeTerminalId:id};listeners.forEach(fn=>fn())};export const useAppLanguage=()=> 'en';export function useAppState(){return {state:useSyncExternalStore(fn=>{listeners.add(fn);return()=>listeners.delete(fn)},()=>state),dispatch(){}}}`,
+      store: `import {useSyncExternalStore} from 'react';const p=new URLSearchParams(location.search),listeners=new Set();let state={preInputQueue:[],preInputReveal:0,preInputButton:true,currentLang:'en',activeTerminalId:p.get('tool')||'claude',terminals:['claude','codex','terminal','unready'].map(tool=>({id:tool,tool:tool==='unready'?'claude':tool,claudeMode:'conversation',codexMode:'conversation',folderPath:'D:/test'}))};window.selectSession=id=>{state={...state,activeTerminalId:id};listeners.forEach(fn=>fn())};export const useAppLanguage=()=> 'en';export function useAppState(){return {state:useSyncExternalStore(fn=>{listeners.add(fn);return()=>listeners.delete(fn)},()=>state),dispatch(){}}}`,
       native: `export const isTauri=true,invoke=(name,args)=>window.transport(name,args);export const commands={loadTasks:async()=>JSON.stringify(window.saved),saveTasks:async text=>{window.saved=JSON.parse(text)}};`,
       events: `export async function listen(name,fn){window.events.set(name,fn);return ()=>window.events.delete(name)}`,
       terminal: `export const submitTerminalPrompt=(id,text)=>window.transport('terminal_send',{id,text});`,
@@ -54,15 +54,15 @@ const browser = await chromium.launch({ headless: true, ...(process.env.COFFEE_C
 try {
   const page = await browser.newPage({ viewport: { width: 700, height: 800 } });
   const errors = []; page.on('pageerror', error => errors.push(error.message));
-  const open = async (tool, view = 'note') => {
-    await page.goto('http://127.0.0.1:'+server.address().port+'/?tool='+tool+'&view='+view);
+  const open = async tool => {
+    await page.goto('http://127.0.0.1:'+server.address().port+'/?tool='+tool);
     await page.waitForFunction(() => window.ready?.());
-    const button = page.locator(view === 'note' ? '.task-note-send' : view === 'prompt' ? '.task-prompt-send' : '.task-slot-send');
+    const button = page.locator('.task-note-send');
     await button.waitFor();
     return button;
   };
-  for (const tool of ['claude', 'codex', 'terminal']) for (const view of ['note', 'prompt', 'list']) {
-    const button = await open(tool, view);
+  for (const tool of ['claude', 'codex', 'terminal']) {
+    const button = await open(tool);
     await page.evaluate(() => window.holdSend = true);
     await button.evaluate(el => { el.click(); el.click(); });
     await page.waitForFunction(() => typeof window.finishSend === 'function', null, { timeout: 3000 });
@@ -70,14 +70,12 @@ try {
     const sends = await page.evaluate(() => window.calls.filter(call => ['claude_session_send','terminal_send'].includes(call.name)||call.method==='turn/start'));
     assert.equal(sends.length, 1, 'send exactly once');
     assert.equal(sends[0].id, tool, 'use the focused existing session');
-    const body = view === 'prompt' ? 'Include tests' : 'Build a page\n\nInclude tests';
-    assert.equal(tool === 'codex' ? sends[0].params.input[0].text : sends[0].text, body, 'preserve each view\'s message content');
+    assert.equal(tool === 'codex' ? sends[0].params.input[0].text : sends[0].text, 'Build a page\n\nInclude tests', 'send the note text, with an old to-do note folded in');
     assert.equal(await page.evaluate(() => window.saved[0].status), 'todo', 'do not mark working before acknowledgement');
-    if (tool === 'claude' && view === 'note') await page.evaluate(() => window.selectSession('codex'));
+    if (tool === 'claude') await page.evaluate(() => window.selectSession('codex'));
     await page.evaluate(() => window.finishSend());
     await page.waitForFunction(() => document.querySelector('.task-board')?.getAttribute('aria-busy') === 'false');
-    if (view !== 'prompt') await page.waitForFunction(() => window.saved[0].status === 'working');
-    else assert.equal(await page.evaluate(() => window.saved[0].status), 'todo', 'prompt mode does not change task priority');
+    await page.waitForFunction(() => window.saved[0].status === 'working');
     assert.equal(await page.evaluate(() => window.calls.filter(call => call.name.endsWith('_session_start')).length), 2, 'sending never creates another session');
   }
   for (const tool of ['claude', 'codex', 'terminal']) {
@@ -86,7 +84,7 @@ try {
     await button.click();
     await page.getByRole('alert').waitFor();
     assert.equal(await page.evaluate(() => window.saved[0].status), 'todo');
-    assert.equal(await page.locator('.task-note-body').inputValue(), 'Build a page', 'failed sends preserve the note');
+    assert.equal(await page.locator('.task-note-body').inputValue(), 'Build a page\n\nInclude tests', 'failed sends preserve the note');
   }
   const edited = await open('claude');
   await page.evaluate(() => window.holdSend = true);
@@ -109,7 +107,7 @@ try {
   const planIndex = calls.findIndex(call => call.name === 'claude_session_control' && call.request.subtype === 'set_permission_mode');
   const sendIndex = calls.findIndex(call => call.name === 'claude_session_send');
   assert.ok(planIndex >= 0 && sendIndex > planIndex, 'retain the composer plan-command behavior');
-  assert.equal(calls[sendIndex].text, 'Inspect layout\n\nInclude tests');
+  assert.equal(calls[sendIndex].text, 'Inspect layout');
   await open('claude');
   const commits = await page.evaluate(async () => {
     await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
@@ -123,7 +121,7 @@ try {
   });
   assert.equal(commits.current, commits.previous, 'streamed conversation content must not redraw the task board when send availability is unchanged');
   // Notes start collapsed; a click opens or closes one, a double-click edits it, leaving ends editing.
-  await open('claude', 'note');
+  await open('claude');
   const note = page.locator('.task-note-body');
   const height = () => note.evaluate(el => el.getBoundingClientRect().height);
   assert.equal(await note.getAttribute('aria-expanded'), 'false', 'notes start collapsed');
@@ -178,49 +176,20 @@ try {
   await page.mouse.up();
   await page.waitForFunction(() => window.saved.map(task => task.title).join() === 'B,A,C');
   assert.deepEqual(await cards.evaluateAll(els => els.map(el => el.style.transform)), ['', '', ''], 'slide offsets clear after the drop');
-  // Prompt view: same collapse / expand / double-click-to-edit model, and drags slide cards and category headers aside.
-  await open('claude', 'prompt');
-  const prompts = [['x1', 'X', Array.from({ length: 40 }, (_, i) => 'line ' + i).join('\n')], ['x2', 'X', 'second'], ['y1', 'Y', 'third']];
-  await page.evaluate(items => window.events.get('tasks-changed')({ payload: JSON.stringify(items.map(([id, title, description], i) => ({ id, title, description, status: 'todo', createdAt: i }))) }), prompts);
-  await page.waitForFunction(() => document.querySelectorAll('#root .task-prompt-card').length === 3);
-  const promptBody = page.locator('#root [data-prompt-id="x1"] .task-prompt-body');
-  const promptHeight = () => promptBody.evaluate(el => el.getBoundingClientRect().height);
-  assert.equal(await promptBody.getAttribute('aria-expanded'), 'false', 'prompts start collapsed');
-  assert.ok(await promptHeight() <= 56, 'a collapsed prompt shows about two lines');
-  const fits = await page.evaluate(() => { const card = document.querySelector('#root [data-prompt-id="x2"]').getBoundingClientRect(); return [...document.querySelectorAll('#root [data-prompt-id="x2"] .task-prompt-btn')].every(btn => { const r = btn.getBoundingClientRect(); return r.top >= card.top && r.bottom <= card.bottom; }); });
-  assert.equal(fits, true, 'a collapsed one-line prompt keeps its send and delete inside the card');
-  await page.locator('#root [data-prompt-id="x1"]').click({ position: { x: 20, y: 20 } });
-  assert.equal(await promptBody.getAttribute('aria-expanded'), 'true', 'a click expands a prompt');
-  assert.ok(await promptHeight() > 320 && await promptHeight() <= 480, 'an expanded prompt grows up to its cap');
-  assert.equal(await promptBody.evaluate(el => el.readOnly), true, 'a click does not edit a prompt');
-  await page.locator('#root [data-prompt-id="x1"]').click({ position: { x: 20, y: 20 } });
-  assert.equal(await promptBody.getAttribute('aria-expanded'), 'false', 'a second click collapses a prompt');
-  await page.locator('#root [data-prompt-id="x1"]').dblclick({ position: { x: 20, y: 20 } });
-  assert.equal(await promptBody.evaluate(el => el.readOnly), false, 'a double-click edits a prompt');
-  await page.locator('#root [data-prompt-id="y1"]').click({ position: { x: 20, y: 20 } });
-  assert.equal(await promptBody.evaluate(el => el.readOnly), true, 'a press outside a prompt ends editing');
-  await page.locator('#root [data-prompt-id="x1"]').click({ position: { x: 20, y: 20 } });
-  await page.locator('#root [data-prompt-id="y1"]').click({ position: { x: 20, y: 20 } });
-  assert.deepEqual(await page.locator('#root .task-prompt-body').evaluateAll(els => els.map(el => el.getAttribute('aria-expanded'))), ['false', 'false', 'false']);
-  // Drag the second X prompt below the Y header: the header and Y's card slide up, the outline slides down, and it joins Y.
-  await page.waitForFunction(() => document.querySelectorAll('#root .task-prompt-card').length === 3);
-  const x2 = await page.locator('#root [data-prompt-id="x2"]').boundingBox(), y1 = await page.locator('#root [data-prompt-id="y1"]').boundingBox();
-  await page.mouse.move(x2.x + 20, x2.y + 10); await page.mouse.down();
-  await page.mouse.move(x2.x + 20, y1.y + y1.height * 0.8, { steps: 8 });
-  const offsets = await page.evaluate(() => Object.fromEntries([...document.querySelectorAll('#root [data-prompt-id], #root .task-prompt-header')].map((el, i) => [el.dataset.promptId || 'header' + i, Math.round(new DOMMatrix(el.style.transform || 'none').m42)])));
-  assert.ok(offsets.y1 < 0 && Object.entries(offsets).some(([key, y]) => key.startsWith('header') && y < 0), 'the passed header and card slide up '+JSON.stringify(offsets));
-  assert.ok(offsets.x2 > 0, 'the outline slides down to the slot '+JSON.stringify(offsets));
-  assert.equal(offsets.x1, 0, 'cards above stay put');
-  await page.mouse.up();
-  await page.waitForFunction(() => window.saved.find(task => task.id === 'x2')?.title === 'Y');
-  assert.deepEqual(await page.evaluate(() => window.saved.map(task => task.id)), ['x1', 'y1', 'x2'], 'the dropped prompt lands after the last Y prompt');
-  // Pressing a card never starts a text selection, in the prompt, note and to-do views.
+  // The + button adds an empty note in edit mode, and it stays editable after the add animation (until the user clicks away).
+  await page.clock.install();
+  await open('claude');
+  await page.locator('.task-fab-simple').click();
+  const fresh = page.locator('#root .task-note-body').first();
+  assert.equal(await fresh.inputValue(), '', 'a new note starts empty');
+  await page.clock.runFor(500);
+  assert.equal(await fresh.evaluate(el => el.readOnly), false, 'a new note stays in edit mode');
+  assert.equal(await fresh.evaluate(el => document.activeElement === el), true, 'a new note has the caret');
+  await page.keyboard.type('fresh note');
+  await page.waitForFunction(() => window.saved[0].title === 'fresh note');
+  // Pressing a note never starts a text selection.
   const pressPrevented = selector => page.evaluate(sel => { const el = document.querySelector(sel); const ev = new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 0 }); el.dispatchEvent(ev); window.dispatchEvent(new PointerEvent('pointerup')); return ev.defaultPrevented; }, selector);
-  assert.equal(await pressPrevented('#root .task-prompt-card'), true, 'prompt press does not select text');
-  await open('claude', 'note');
   assert.equal(await pressPrevented('#root .task-note-head'), true, 'note press does not select text');
-  await open('claude', 'list');
-  assert.equal(await pressPrevented('#root .task-card'), true, 'to-do press does not select text');
   assert.deepEqual(errors, []);
   console.log('OK: note, category and list send to existing Claude/Codex desktop and terminal sessions, acknowledge before promotion, prevent duplicates, preserve failures and disable unavailable targets');
 } finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }

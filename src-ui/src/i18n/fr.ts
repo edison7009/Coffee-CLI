@@ -289,10 +289,6 @@ export const fr = {
 
 
   // Task Board
-  'task.notes_placeholder': 'Ajouter des notes...',
-  'task.section.working': 'En cours',
-  'task.section.todo': 'À faire',
-  'task.section.done': 'Terminé',
   'task.greeting.morning': 'Bonjour, quel est le programme ?',
   'task.greeting.afternoon': 'Bon après-midi, encore des choses à faire ?',
   'task.greeting.evening': 'Bonsoir. Un projet ambitieux ?',
@@ -339,7 +335,6 @@ export const fr = {
   'diff.no_changes': 'Aucune modification',
   'diff.too_large': 'Fichier trop volumineux pour afficher le diff',
   'diff.unchanged_lines': '⋯ {count} lignes inchangées',
-  'task.default_title': 'Nouvelle tâche',
   'task.search_sessions': 'Rechercher des sessions...',
   'task.filter_all_projects': 'Tous',
   'menu.no_recent': 'Aucune session récente',
@@ -405,19 +400,9 @@ export const fr = {
   'settings.titlebar.toggle.icon': 'Icône seule',
   'settings.titlebar.toggle.hidden': 'Masqué',
   'settings.tasks': 'Pré-saisie',
-  'settings.tasks.view': 'Style de pré-saisie',
   'settings.pre_input_button': 'Bouton « Enregistrer en pré-saisie »',
   'settings.pre_input_button.sub': 'Apparaît au-dessus de la saisie et enregistre le brouillon dans la pré-saisie',
-  'task.view.list': 'Liste de tâches',
-  'task.view.note': 'Notes autocollantes',
-  'task.view.list.sub': 'Liste compacte, à cocher une par une',
-  'task.view.note.sub': 'Grandes notes : écrivez et envoyez tout',
   'task.send_failed': "Envoi non confirmé. Vérifiez la session actuelle. Votre tâche a été conservée.",
-  'task.view.prompt': 'Bibliothèque de prompts',
-  'task.view.prompt.sub': 'Catégorisez vos prompts IA, envoyez en un clic',
-  'task.prompt.new_category': 'Nouvelle catégorie',
-  'task.prompt.category_placeholder': 'Nom de catégorie (choisir ou saisir)',
-  'task.prompt.body_placeholder': 'Écrivez un prompt, envoyez-le à l’IA…',
   'task.note_placeholder': 'Notez quelque chose et envoyez le tout à votre agent…',
   'task.welcome_note': `Bienvenue sur Coffee CLI ☕
 

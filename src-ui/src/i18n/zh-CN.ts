@@ -289,10 +289,6 @@ export const zhCN = {
 
 
   // Task Board
-  'task.notes_placeholder': '添加备注...',
-  'task.section.working': '进行中',
-  'task.section.todo': '待办',
-  'task.section.done': '已完成',
   'task.greeting.morning': '早，今天想做点什么',
   'task.greeting.afternoon': '下午好，还有什么要做的？',
   'task.greeting.evening': '晚上好，想干点什么大事？',
@@ -339,7 +335,6 @@ export const zhCN = {
   'diff.no_changes': '没有改动',
   'diff.too_large': '文件较大,未渲染逐行差异',
   'diff.unchanged_lines': '⋯ {count} 行未改动',
-  'task.default_title': '新任务',
   'task.search_sessions': '搜索历史对话...',
   'task.filter_all_projects': '全部',
   'menu.no_recent': '没有任何近期会话',
@@ -406,19 +401,9 @@ export const zhCN = {
   'settings.titlebar.toggle.icon': '仅图标',
   'settings.titlebar.toggle.hidden': '隐藏',
   'settings.tasks': '预输入',
-  'settings.tasks.view': '预输入形态',
   'settings.pre_input_button': '输入框的“保存为预输入”按钮',
   'settings.pre_input_button.sub': '在输入框上方显示，点击后存入右侧预输入',
-  'task.view.list': '待办式',
-  'task.view.note': '便签式',
-  'task.view.list.sub': '紧凑清单，逐条勾选',
-  'task.view.note.sub': '大便签，随手写、整段发给 AI',
   'task.send_failed': "未能确认发送，请查看当前会话。任务内容已保留。",
-  'task.view.prompt': '分类式',
-  'task.view.prompt.sub': '按分类攒 AI 提示词，一键发送',
-  'task.prompt.new_category': '新分类',
-  'task.prompt.category_placeholder': '分类名（选已有或输入新的）',
-  'task.prompt.body_placeholder': '写提示词，整段发给 AI…',
   'task.note_placeholder': '写点什么，整段发给 AI…',
   'task.welcome_note': `欢迎来到 Coffee CLI ☕
 
