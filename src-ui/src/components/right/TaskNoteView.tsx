@@ -258,7 +258,8 @@ export function TaskNoteView({
                 open={open}
                 editing={editingId === task.id || addingId === task.id}
                 onToggle={() => { quietCard(task.id); setOpen(task.id, !expanded.has(task.id)); }}
-                onEditEnd={() => setEditingId(current => current === task.id ? null : current)}
+                // Finishing an edit (the check, or a press elsewhere) folds the note back up.
+                onEditEnd={() => { setEditingId(current => current === task.id ? null : current); setOpen(task.id, false); }}
                 autoFocus={addingId === task.id}
                 placeholder={t('task.note_placeholder')}
                 onChange={next => onUpdateTitle(task.id, next)}
@@ -272,15 +273,14 @@ export function TaskNoteView({
               </span>
             )}
             {open && (
-              <span className="task-note-actions">
+              <span className="task-note-actions" onMouseDown={e => e.preventDefault() /* keep focus in the text: a blur would end editing and fold the note before the click lands */}>
                 {(() => {
                   const editing = editingId === task.id || addingId === task.id;
-                  // While editing, the pencil becomes a check that finishes editing.
-                  const done = (e: React.MouseEvent) => { (e.currentTarget.closest('.task-note-card')?.querySelector('textarea') as HTMLTextAreaElement | null)?.blur(); setEditingId(null); };
+                  // While editing, the pencil becomes a check that finishes editing and folds the note.
+                  const done = (e: React.MouseEvent) => { (e.currentTarget.closest('.task-note-card')?.querySelector('textarea') as HTMLTextAreaElement | null)?.blur(); setEditingId(null); setOpen(task.id, false); };
                   return (
                     <button type="button" className="task-note-btn task-note-edit" aria-label={t(editing ? 'pre_input.done' : 'pre_input.edit')} aria-pressed={editing}
-                      // Keep focus in the text on press: a blur here would end editing before the click reads it.
-                      onMouseDown={e => e.preventDefault()} onClick={editing ? done : edit}>
+                      onClick={editing ? done : edit}>
                       {editing ? (
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
                       ) : (
@@ -379,8 +379,9 @@ function NoteBody({ value, open, editing, onToggle, onEditEnd, autoFocus, placeh
   useEffect(() => {
     if (!editing) return;
     const onPress = (event: PointerEvent) => {
-      // The edit/done button switches editing itself; a press on it must not end editing first.
-      if ((event.target as Element).closest?.('.task-note-edit')) return;
+      // The note's own action row (done, copy, delete, send) must not end editing first: folding the note would
+      // unmount the pressed button and swallow its click.
+      if (ref.current?.closest('.task-note-card')?.querySelector('.task-note-actions')?.contains(event.target as Node)) return;
       if (ref.current && !ref.current.contains(event.target as Node)) { ref.current.blur(); onEditEnd(); }
     };
     document.addEventListener('pointerdown', onPress, true);

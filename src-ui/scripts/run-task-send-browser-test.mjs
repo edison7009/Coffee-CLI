@@ -146,7 +146,8 @@ try {
   assert.equal(await editBtn.getAttribute('aria-pressed'), 'true', 'while editing the button becomes done');
   await editBtn.click();
   assert.equal(await note.evaluate(el => el.readOnly), true, 'done finishes editing instead of re-entering it');
-  assert.equal(await note.getAttribute('aria-expanded'), 'true', 'done keeps the note open');
+  assert.equal(await note.getAttribute('aria-expanded'), 'false', 'done folds the note');
+  await preview.click();
   await editBtn.click();
   assert.equal(await note.evaluate(el => el.readOnly), false, 'and the button edits again');
   assert.equal(await note.getAttribute('aria-expanded'), 'true', 'editing shows the note');
@@ -155,6 +156,8 @@ try {
   await page.waitForFunction(text => window.saved[0].title === text, long);
   await page.mouse.click(20, 700);
   assert.equal(await note.evaluate(el => el.readOnly), true, 'a press anywhere else ends editing');
+  assert.equal(await note.getAttribute('aria-expanded'), 'false', 'ending an edit folds the note');
+  await preview.click();
   await note.click();
   assert.equal(await note.getAttribute('aria-expanded'), 'false', 'a click collapses an open note');
   // Collapsed, the note shows one line that ends in an ellipsis because there is more, and nothing of a second.

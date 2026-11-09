@@ -213,7 +213,9 @@
 .task-note-preview:focus-visible { outline: 1px solid var(--accent, #c4956a); outline-offset: -1px; border-radius: var(--radius-md, 12px); }
 .task-note-body[hidden] { display: none; }
 
-/* Send stands out: a solid accent circle with a white arrow, on hover and in the open row alike. */
-.task-note-card .task-note-btn.task-note-send { width: 26px; height: 26px; margin-left: 2px; border-radius: 50%; color: #fff; background: var(--accent, #c4956a) !important; }
+/* Send stands out: a solid accent circle, its arrow coloured like the + button, on hover and in the open row alike. */
+.task-note-card .task-note-btn.task-note-send { width: 26px; height: 26px; margin-left: 2px; border-radius: 50%; color: var(--bg-terminal, #fff); background: var(--accent, #c4956a) !important; }
+/* Same icon colour as the + button: the deep terminal background, white on glass. */
+[data-shape="glass"] .task-note-card .task-note-btn.task-note-send { color: #fff; }
 .task-note-card .task-note-btn.task-note-send svg { width: 12px; height: 12px; margin-left: 2px; }
 .task-note-card .task-note-btn.task-note-send:hover:not(:disabled) { background: var(--accent, #c4956a) !important; filter: brightness(1.12); }
