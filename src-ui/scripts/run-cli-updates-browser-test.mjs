@@ -42,7 +42,7 @@ try{
   await page.waitForFunction(()=>window.updates.length===1);
   assert.equal(await page.evaluate(()=>window.launches),0,'update clicks never launch a CLI or open its folder menu');
   const updating=card('Claude Code').getByRole('button',{name:'正在更新',exact:true});
-  assert.equal(await updating.isDisabled(),true);assert.equal(await updating.innerText(),'更新','busy keeps the word; its accessible name says it is updating');
+  assert.equal(await updating.isDisabled(),true);assert.equal(await updating.locator('.cli-update-label').evaluate(el=>getComputedStyle(el).visibility),'hidden','busy hides the word; its accessible name says it is updating');
   assert.equal(await updating.locator('.cli-update-stripes').count(),1);
   assert.equal(await updating.locator('.cli-update-stripes').evaluate(el=>getComputedStyle(el).animationName),'cli-update-stripes');
   await page.emulateMedia({reducedMotion:'reduce'});

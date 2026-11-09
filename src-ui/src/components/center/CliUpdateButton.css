@@ -4,10 +4,11 @@
 .launchpad-card .cli-update-button:hover { background:color-mix(in srgb,var(--accent) 28%,transparent); color:var(--text-1); }
 .launchpad-card .cli-update-button:focus-visible { outline:1px solid var(--accent); outline-offset:1px; }
 .launchpad-card .cli-update-button:disabled { cursor:default; opacity:1; }
-.launchpad-card .cli-update-button[aria-busy="true"] { color:var(--accent); }
+.launchpad-card .cli-update-button[aria-busy="true"] { background:var(--accent); color:var(--accent); }
+.launchpad-card .cli-update-button[aria-busy="true"] .cli-update-label { visibility:hidden; }
 .launchpad-card .cli-update-button.has-error { color:var(--error,#d66); background:color-mix(in srgb,var(--error,#d66) 14%,transparent); }
 /* Stripes wider than the pill by one period, moved by transform so the compositor animates them, not a repaint. */
-.cli-update-stripes { position:absolute; top:0; bottom:0; left:-15px; right:0; background:repeating-linear-gradient(-45deg,color-mix(in srgb,var(--accent) 30%,transparent) 0 5px,color-mix(in srgb,var(--accent) 12%,transparent) 5px 10px); animation:cli-update-stripes .8s linear infinite; pointer-events:none; }
+.cli-update-stripes { position:absolute; top:0; bottom:0; left:-15px; right:0; background:repeating-linear-gradient(-45deg,var(--accent) 0 5px,color-mix(in srgb,var(--accent) 60%,#fff) 5px 10px); animation:cli-update-stripes .8s linear infinite; pointer-events:none; }
 .cli-update-error { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
 .cli-update-tip { position:fixed; z-index:10000; width:max-content; max-width:min(236px,calc(100vw - 16px)); padding:6px 10px; border:1px solid var(--border); border-radius:6px; background:var(--bg-panel); color:var(--text-1); font:500 var(--type-caption)/1.4 var(--font-nav,var(--font)); text-align:center; overflow-wrap:anywhere; pointer-events:none; box-shadow:0 1px 2px rgba(0,0,0,.2),0 6px 20px rgba(0,0,0,.22); }
 @keyframes cli-update-stripes { to { transform:translateX(14.142px); } }

@@ -730,7 +730,7 @@ body.session-split-dragging { cursor: grabbing; user-select: none; }
   text-overflow: ellipsis;
 }
 /* A long localized update label shrinks with an ellipsis rather than pushing the name out. */
-.launchpad-card-title .cli-update-control { position: static; flex: 0 1 auto; min-width: 0; max-width: 60%; }
+.launchpad-card-title .cli-update-control { position: static; display: flex; align-items: center; flex: 0 1 auto; min-width: 0; max-width: 60%; }
 .launchpad-card-name { flex: 0 1 auto; }
 /* Same chip as the update label, neutral: an entry point, not a notice. */
 .launchpad-card .launchpad-chip {
