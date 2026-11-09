@@ -202,7 +202,8 @@ try {
   assert.ok(Math.abs(sendBtn.height - restCard.height) < 1, 'the buttons run the card\'s full height');
   assert.deepEqual(await tabCard.locator('.task-note-preview').boundingBox(), restLine, 'the text does not move');
   const lead = await tabCard.locator('.task-note-swipe').evaluate(el => getComputedStyle(el).backgroundImage);
-  assert.ok(/linear-gradient\(to right, (transparent|rgba\(0, 0, 0, 0\)), rgb\(229, 83, 75\) 32px\)/.test(lead), 'the red fades in from the left, no hard edge: '+lead);
+  assert.ok(/^linear-gradient\(to right, rgba\(229, 83, 75, 0\) 0px,.*rgb\(229, 83, 75\) 16px\)$/.test(lead), 'a short red fade-in on the left, no hard edge: '+lead);
+  assert.equal(await tabCard.locator('.task-note-swipe').evaluate(el => getComputedStyle(el).paddingLeft), '16px', 'the fade-in is short');
   assert.notEqual(await tabCard.locator('.task-note-swipe-btn.task-note-delete').evaluate(el => getComputedStyle(el).backgroundColor), 'rgba(0, 0, 0, 0)', 'solid buttons');
   // Send stays, enabled, even with no session to send to.
   await page.evaluate(() => window.selectSession(null));

@@ -85,10 +85,10 @@
   display: flex;
   overflow: hidden;
   border-radius: 0 var(--radius-md, 12px) var(--radius-md, 12px) 0;
-  /* The red rises out of the text: a 32px lead-in fading from transparent into delete's red, so there is no hard
-     edge where the buttons meet the line. */
-  padding-left: 32px;
-  background: linear-gradient(to right, transparent, #e5534b 32px);
+  /* The red rises out of the text: a short 16px lead-in, eased (slow start, quick finish) so it reads as a soft
+     edge rather than a long smear, with no hard line where the buttons meet the text. */
+  padding-left: 16px;
+  background: linear-gradient(to right, rgba(229, 83, 75, 0) 0, rgba(229, 83, 75, 0.15) 4px, rgba(229, 83, 75, 0.45) 8px, rgba(229, 83, 75, 0.8) 12px, #e5534b 16px);
   opacity: 0;
   pointer-events: none;
   transition: opacity .16s ease;
