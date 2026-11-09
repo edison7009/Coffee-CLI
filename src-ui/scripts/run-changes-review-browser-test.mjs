@@ -18,7 +18,8 @@ import {useSyncExternalStore} from 'react';
 const listeners=new Set();
 let state={currentLang:'zh-CN',iconTheme:'material',taskViewMode:'list',preInputQueue:[],preInputReveal:0,preInputButton:true,activeTerminalId:'a',terminals:[{id:'a',tool:null,folderPath:'D:/test'}],diffMode:'overlay',diffSelection:null};
 function emit(){state={...state};listeners.forEach(fn=>fn())}
-function dispatch(action){if(action.type==='SET_DIFF_SELECTION')state={...state,diffSelection:action.selection};if(action.type==='CLEAR_DIFF')state={...state,diffSelection:null};if(action.type==='SET_DIFF_MODE')state={...state,diffMode:action.mode};emit()}
+function dispatch(action){if(action.type==='SET_DIFF_SELECTION')state={...state,diffSelection:action.selection};if(action.type==='CLEAR_DIFF')state={...state,diffSelection:null};if(action.type==='SET_DIFF_MODE')state={...state,diffMode:action.mode};if(action.type==='SAVE_PRE_INPUT')state={...state,preInputQueue:[...state.preInputQueue,action.text],preInputReveal:state.preInputReveal+1,rightPanelHidden:false};if(action.type==='TAKE_PRE_INPUT')state={...state,preInputQueue:state.preInputQueue.slice(action.count)};emit()}
+window.savePreInput=text=>dispatch({type:'SAVE_PRE_INPUT',text});window.hideRight=()=>{state={...state,rightPanelHidden:true};emit()};window.showRight=()=>{state={...state,rightPanelHidden:false};emit()};window.preInputQueue=()=>state.preInputQueue;
 export function useAppState(){return {state:useSyncExternalStore(fn=>{listeners.add(fn);return()=>listeners.delete(fn)},()=>state),dispatch}}
 export function useAppLanguage(){return 'zh-CN'}
 ${diffContextResolver}
@@ -38,7 +39,7 @@ export async function invoke(){throw new Error('Unexpected native call in file-r
 export const commands={
  async gitCaptureBaseline(){},
  async gitChanges(){window.calls.gitReads++;if(window.holdGit)await new Promise(resolve=>window.resolveGit=resolve);if(changes.state==='error')throw new Error('fixture read failure');return structuredClone(changes)},
- async loadTasks(){window.calls.taskLoads++;return JSON.stringify([{id:'task-one',title:'保留原有任务',status:'todo',createdAt:1}])},
+ async loadTasks(){window.calls.taskLoads++;return window.savedTasks?JSON.stringify(window.savedTasks):JSON.stringify([{id:'task-one',title:'保留原有任务',status:'todo',createdAt:1}])},
  async saveTasks(data){window.calls.taskSaves++;window.savedTasks=JSON.parse(data)},
  async gitProjectStatus(){return {repo_root:'D:/test',branch:'feature/sidebar',github:'ok',pull_request:{number:42,url:'https://github.com/example/repo/pull/42',state:'open',ci:'success'}}},
  async gitCommitFiles(root,hash){window.calls.commits++;return [entry('src/shared.tsx',2,1)]},
@@ -56,7 +57,7 @@ export function getShikiTheme(){return 'github-dark-default'}
 export function useTextContextMenu(){return {menu:null,openMenu(){}}}
 export async function submitTerminalPrompt(id,text){window.pastedTask=text}
 `;
-await build({stdin:{resolveDir:project,loader:'tsx',contents:`import React from 'react';import {createRoot} from 'react-dom/client';import {RightPanel} from './src/components/right/Compiler';import {GitStatusProvider} from './src/lib/git-status';import './src/styles/global.css';import './src/components/left/Explorer.css';createRoot(document.getElementById('root')).render(<GitStatusProvider><RightPanel/></GitStatusProvider>);`},bundle:true,outfile:join(directory,'fixture.js'),jsx:'automatic',nodePaths:[join(project,'node_modules')],loader:{'.woff2':'dataurl','.woff':'dataurl','.png':'dataurl','.svg':'dataurl'},define:{'process.env.NODE_ENV':'"development"','__IS_LINUX__':'false'},plugins:[{name:'review-fixture',setup(b){
+await build({stdin:{resolveDir:project,loader:'tsx',contents:`import React from 'react';import {createRoot} from 'react-dom/client';import {RightPanel} from './src/components/right/Compiler';import {useAppState} from './src/store/app-state';function Host(){const {state}=useAppState();return state.rightPanelHidden?null:<RightPanel/>}import {GitStatusProvider} from './src/lib/git-status';import './src/styles/global.css';import './src/components/left/Explorer.css';createRoot(document.getElementById('root')).render(<GitStatusProvider><Host/></GitStatusProvider>);`},bundle:true,outfile:join(directory,'fixture.js'),jsx:'automatic',nodePaths:[join(project,'node_modules')],loader:{'.woff2':'dataurl','.woff':'dataurl','.png':'dataurl','.svg':'dataurl'},define:{'process.env.NODE_ENV':'"development"','__IS_LINUX__':'false'},plugins:[{name:'review-fixture',setup(b){
  b.onResolve({filter:/^\/(?:fonts\/|monogram|backgrounds\/)/},args=>({path:join(project,'public',args.path)}));
  b.onResolve({filter:/^\.\/terminal-control$/},()=>({path:'mock',namespace:'fixture'}));
  b.onResolve({filter:/(?:store\/app-state|tauri|lib\/(?:explorer-drag|shiki|use-text-context-menu|terminal-control)|left\/Explorer)$/},()=>({path:'mock',namespace:'fixture'}));
@@ -167,5 +168,17 @@ try{
  await page.evaluate(()=>{localStorage.removeItem('cc-right-tab');localStorage.setItem('cc-left-tab','tasks')});await page.reload();await taskTab.waitFor();assert.equal(await taskTab.getAttribute('aria-selected'),'true','previous left task preference opens the new right task tab');
  await page.waitForFunction(()=>localStorage.getItem('cc-right-tab')==='tasks');await page.evaluate(()=>localStorage.setItem('cc-left-tab','history'));await page.reload();assert.equal(await taskTab.getAttribute('aria-selected'),'true','migrated right preference survives later launches');
  await page.evaluate(()=>localStorage.setItem('cc-left-tab','tasks'));await listTab.click();await page.waitForFunction(()=>localStorage.getItem('cc-right-tab')==='changes');await page.reload();await listTab.waitFor();assert.equal(await listTab.getAttribute('aria-selected'),'true','new right-tab preference takes precedence over the legacy left-tab value');
+ // Saving a composer draft as pre-input: hidden panel opens on the pre-input tab and the draft tops the current view.
+ await page.evaluate(()=>{window.setTaskMode('list');window.hideRight()});await taskTab.waitFor({state:'detached'});
+ await page.evaluate(()=>window.savePreInput('等 Agent 忙完再发'));await taskTab.waitFor();
+ assert.equal(await taskTab.getAttribute('aria-selected'),'true','saving opens the pre-input tab');
+ await page.waitForFunction(()=>window.savedTasks?.[0]?.title==='等 Agent 忙完再发');assert.deepEqual(await page.evaluate(()=>window.preInputQueue()),[],'the board takes the queued draft once');
+ assert.equal(await page.locator('.task-title-text').first().textContent(),'等 Agent 忙完再发');
+ await listTab.click();await page.evaluate(()=>window.hideRight());await taskTab.waitFor({state:'detached'});await page.evaluate(()=>window.showRight());await listTab.waitFor();await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+ assert.equal(await listTab.getAttribute('aria-selected'),'true','reopening the panel keeps the tab the user chose after a save');
+ await page.evaluate(()=>window.savePreInput('第二条'));await page.waitForFunction(()=>window.savedTasks?.[0]?.title==='第二条');assert.equal(await taskTab.getAttribute('aria-selected'),'true','a later save switches again while the panel is open');
+ assert.equal(await page.evaluate(()=>window.savedTasks.filter(task=>task.title==='等 Agent 忙完再发').length),1,'no duplicate from remounting');
+ await page.evaluate(()=>{window.setTaskMode('prompt');window.savePreInput('分类式里的草稿')});
+ await page.waitForFunction(()=>window.savedTasks?.[0]?.description==='分类式里的草稿');assert.equal(await page.evaluate(()=>window.savedTasks[0].title),'预输入','prompt view files drafts under the pre-input category');
  assert.deepEqual(errors,[]);console.log('OK: Explorer-matched typography, themed keyboard/resize-safe scope menu, aligned footer dot; Todo persistence and review navigation, retained state, center placement and narrow/light/glass geometry');console.log('Screenshots: '+directory);
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve))}
