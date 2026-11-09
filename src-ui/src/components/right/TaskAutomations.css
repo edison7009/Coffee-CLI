@@ -1,6 +1,6 @@
 /* The automations strip at the top of the pre-input list: one card each, styled like the notes below: name and next run, then tool, schedule and folder; switch and send on the right. */
-.task-automations { position: relative; display: flex; flex-direction: column; gap: 2px; margin: 6px 0 14px; padding: 2px 4px 4px; }
-/* The strip is one pinned panel: a soft tray behind the header and its automations, set apart from the notes by space.
+.task-automations { position: relative; display: flex; flex-direction: column; gap: 2px; margin: 6px 0 0; padding: 2px 4px 4px; }
+/* The strip is one pinned panel: a soft tray behind the header and its automations, spaced from the notes like the notes are from each other (the list's 6px top padding).
    Painted by a pseudo-element, which the glass/carbon background reset leaves alone. */
 .task-automations::before { content: ''; position: absolute; inset: 0; border-radius: var(--radius-md, 12px); background: color-mix(in srgb, var(--accent, #c4956a) 12%, transparent); pointer-events: none; }
 /* A lit dot: the shown automations are all running. Static glow, no looping animation. */
