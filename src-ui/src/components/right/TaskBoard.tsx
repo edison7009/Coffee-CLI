@@ -381,6 +381,8 @@ export function TaskBoard({ onCountChange }: { onCountChange: (count: number) =>
 
     const cardEl = target.closest('.task-card') as HTMLElement;
     if (!cardEl) return;
+    // Starting a press here must not begin a text selection that sweeps across other tasks.
+    e.preventDefault();
 
     const rect = cardEl.getBoundingClientRect();
     const offsetX = e.clientX - rect.left;

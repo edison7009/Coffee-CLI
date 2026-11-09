@@ -93,7 +93,6 @@ export function TaskNoteView({
   const dragStartedRef = useRef(false);
   const dropTargetRef = useRef<DropLine | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
-  const [dropLine, setDropLine] = useState<DropLine | null>(null);
 
   // Live preview height while dragging one card's bottom edge; persisted via
   // onSetHeight only on pointer-up, so a resize is one disk write, not a stream.
@@ -116,7 +115,8 @@ export function TaskNoteView({
     // A read-only body (not being edited) drags the card; preventDefault keeps it from selecting text.
     const body = target.closest('textarea');
     if ((body && !body.readOnly) || target.closest('button') || target.closest('.task-note-resize')) return;
-    if (body) e.preventDefault();
+    // Starting a press here must not begin a text selection that sweeps across other notes.
+    e.preventDefault();
 
     const cardEl = target.closest('.task-note-card') as HTMLElement;
     if (!cardEl) return;
@@ -130,6 +130,13 @@ export function TaskNoteView({
     dropTargetRef.current = null;
 
     const THRESHOLD = 6;
+    // Layout before the drag: other notes slide out of the way and the dashed outline slides to the drop slot.
+    let layout: { el: HTMLElement; id: string; top: number; height: number }[] = [];
+    let gap = 0;
+    const shift = (el: HTMLElement, y: number) => {
+      el.style.transition = 'transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)';
+      el.style.transform = y ? `translateY(${y}px)` : '';
+    };
     const swallowClick = (ev: MouseEvent) => { ev.stopPropagation(); ev.preventDefault(); };
 
     const onMove = (me: PointerEvent) => {
@@ -160,6 +167,11 @@ export function TaskNoteView({
         ghost.style.top = `${me.clientY - offsetY}px`;
         document.body.appendChild(ghost);
         ghostRef.current = ghost;
+        layout = [...(listRef.current?.querySelectorAll<HTMLElement>('[data-note-id]') ?? [])].map(el => {
+          const r = el.getBoundingClientRect();
+          return { el, id: el.dataset.noteId!, top: r.top, height: r.height };
+        });
+        gap = layout.length > 1 ? Math.max(0, layout[1].top - (layout[0].top + layout[0].height)) : 0;
       }
 
       if (ghostRef.current) {
@@ -167,29 +179,26 @@ export function TaskNoteView({
         ghostRef.current.style.top = `${me.clientY - offsetY}px`;
       }
 
-      if (!listRef.current) return;
-      const cards = listRef.current.querySelectorAll<HTMLElement>('[data-note-id]');
-      let next: DropLine | null = null;
-      for (const card of cards) {
-        const cid = card.dataset.noteId!;
-        if (cid === id) continue;
-        const r = card.getBoundingClientRect();
-        if (me.clientY >= r.top && me.clientY < r.bottom) {
-          next = { id: cid, position: me.clientY < r.top + r.height / 2 ? 'before' : 'after' };
-          break;
-        }
-      }
-      dropTargetRef.current = next;
-      // Only re-render the indicator when the target actually changes.
-      setDropLine(prev =>
-        prev?.id === next?.id && prev?.position === next?.position ? prev : next
-      );
+      if (!layout.length) return;
+      // Insert among the other notes by their original midpoints, then lay everything out in the new order.
+      const self = layout.find(item => item.id === id)!;
+      const others = layout.filter(item => item.id !== id);
+      const slot = others.filter(item => me.clientY > item.top + item.height / 2).length;
+      const order = [...others.slice(0, slot), self, ...others.slice(slot)];
+      let top = layout[0].top;
+      for (const item of order) { shift(item.el, top - item.top); top += item.height + gap; }
+      const next: DropLine | null = slot < others.length ? { id: others[slot].id, position: 'before' } : others.length ? { id: others[slot - 1].id, position: 'after' } : null;
+      // Dropping back where it started is a no-op.
+      const index = layout.indexOf(self);
+      dropTargetRef.current = slot === index ? null : next;
     };
 
     const onUp = () => {
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
       if (ghostRef.current) { ghostRef.current.remove(); ghostRef.current = null; }
+      // The reorder re-renders notes in their new places; drop the slide offsets without animating back.
+      for (const item of layout) { item.el.style.transition = ''; item.el.style.transform = ''; }
       // The click from this release arrives before the timer; drop the guard if none came (released outside the window).
       if (dragStartedRef.current) setTimeout(() => window.removeEventListener('click', swallowClick, { capture: true }));
 
@@ -216,7 +225,6 @@ export function TaskNoteView({
       }
 
       setDragId(null);
-      setDropLine(null);
       dropTargetRef.current = null;
       dragStartedRef.current = false;
     };
@@ -271,7 +279,6 @@ export function TaskNoteView({
     <div ref={listRef} className="task-note-list">
       {ordered.map(task => {
         const { date, time } = formatNoteTime(task.createdAt);
-        const line = dropLine?.id === task.id ? dropLine.position : null;
         return (
           <div
             key={task.id}
@@ -283,8 +290,6 @@ export function TaskNoteView({
               !(expanded.has(task.id) || editingId === task.id || addingId === task.id || resizing?.id === task.id) && 'is-collapsed',
               dragId === task.id && 'dragging',
               removingId === task.id && 'removing',
-              line === 'before' && 'drop-before',
-              line === 'after' && 'drop-after',
             ].filter(Boolean).join(' ')}
             style={{ touchAction: 'none' }}
             onPointerDown={e => handlePointerDown(e, task.id)}

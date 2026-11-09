@@ -49,20 +49,6 @@
   to { opacity: 0; transform: translateX(28px) scale(0.97); }
 }
 
-/* Drop indicator — a flat accent line at the edge the card would insert against. */
-.task-note-card.drop-before::before,
-.task-note-card.drop-after::after {
-  content: '';
-  position: absolute;
-  left: 4px;
-  right: 4px;
-  height: 2px;
-  border-radius: 2px;
-  background: var(--accent, #c4956a);
-  z-index: 3;
-}
-.task-note-card.drop-before::before { top: -4px; }
-.task-note-card.drop-after::after { bottom: -4px; }
 
 /* ─── Header band — the strip that makes it read as a sticky note ────────────── */
 /* A shade lighter than the body + a hairline divider. Whitelisted in global.css
