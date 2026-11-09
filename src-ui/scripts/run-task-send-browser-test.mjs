@@ -194,6 +194,28 @@ try {
   assert.equal(await tabCard.locator('.task-note-preview').evaluate(el => getComputedStyle(el).marginRight), '12px', 'the text keeps the full width');
   await tabCard.locator('.task-note-copy').hover();
   assert.equal(await tabCard.locator('.task-note-tools').isVisible(), true, 'moving onto the tab keeps it open');
+  // The tab follows the pointer left and right over the note, and holds still once the pointer is on it.
+  const tabLeft = () => tabCard.locator('.task-note-tools').evaluate(el => el.getBoundingClientRect().left);
+  await page.mouse.move(cardBox.x + 20, cardBox.y + cardBox.height / 2);
+  const atLeft = await tabLeft();
+  await page.mouse.move(cardBox.x + cardBox.width - 20, cardBox.y + cardBox.height / 2);
+  const atRight = await tabLeft();
+  assert.ok(atRight > atLeft + 50, `the tab follows the pointer (${atLeft} -> ${atRight})`);
+  assert.ok(atLeft >= cardBox.x - 1 && atRight + (await tabCard.locator('.task-note-tools').boundingBox()).width <= cardBox.x + cardBox.width + 1, 'the tab stays within the card');
+  await page.mouse.move(cardBox.x + cardBox.width / 2, cardBox.y + cardBox.height / 2);
+  const centred = await tabLeft();
+  // Straight down onto the tab, then along it to its first button: the tab must not slide away.
+  const editBox = await tabCard.locator('.task-note-edit').boundingBox();
+  await page.mouse.move(cardBox.x + cardBox.width / 2, editBox.y + editBox.height / 2, { steps: 4 });
+  await page.mouse.move(editBox.x + editBox.width / 2, editBox.y + editBox.height / 2, { steps: 5 });
+  assert.equal(await tabLeft(), centred, 'the tab holds still once the pointer is on it');
+  // The edit button opens the note in edit mode with the caret at the end.
+  await tabCard.locator('.task-note-edit').click();
+  const tabBody = tabCard.locator('.task-note-body');
+  assert.equal(await tabBody.evaluate(el => el.readOnly), false, 'the edit button edits the note');
+  assert.equal(await tabBody.getAttribute('aria-expanded'), 'true', 'and opens it');
+  assert.equal(await tabBody.evaluate(el => document.activeElement === el && el.selectionStart === el.value.length), true, 'with the caret at the end');
+  await page.mouse.click(20, 700);
   // A note that already shows in full (a line or two) does not open on click, so it never shows a resize grip.
   const shortNote = page.locator('#root [data-note-id="C"]');
   await shortNote.locator('.task-note-preview').click();

@@ -293,6 +293,7 @@ export const ja = {
   'task.greeting.afternoon': 'こんにちは。残りのタスクは？',
   'task.greeting.evening': 'こんばんは。何か始めますか？',
   'task.tab.tasks': '事前入力',
+  'pre_input.edit': '編集',
   'pre_input.copy': '複製',
   'pre_input.delete': '削除',
   'pre_input.send': '送信',

@@ -4,7 +4,7 @@
 //   ┌──────────────────────────────────────────────┐
 //   │ note text, collapsed to two lines…            │
 //   └──────────────────────────────────┬──────────┬┘
-//                                      │ ⧉  🗑  ▶ │  ← hangs below the card on hover
+//                                      │ ✎ ⧉ 🗑 ▶ │  ← hangs below the card on hover, follows the pointer
 //                                      └──────────┘
 //
 // A click opens or closes a note that has more than two lines; a double-click edits it. Cards drag up and
@@ -92,6 +92,19 @@ export function TaskNoteView({
     setExpanded(prev => new Set(prev).add(addingId));
   }, [addingId]);
   /* eslint-enable react-hooks/set-state-in-effect */
+
+  // The tools tab follows the pointer left and right while it is over the note, centred on it and kept within the
+  // card. Once the pointer is on the tab itself the tab holds still, so its buttons stay where the user aims.
+  const followTools = (e: React.PointerEvent<HTMLDivElement>) => {
+    const tools = e.currentTarget.querySelector<HTMLElement>('.task-note-tools');
+    if (!tools || (e.target as HTMLElement).closest('.task-note-tools')) return;
+    const card = e.currentTarget.getBoundingClientRect();
+    const width = tools.offsetWidth;
+    if (!width) return;
+    const left = Math.max(0, Math.min(card.width - width, e.clientX - card.left - width / 2));
+    tools.style.left = `${Math.round(left)}px`;
+    tools.style.right = 'auto';
+  };
 
   const handlePointerDown = (e: React.PointerEvent, id: string) => {
     const target = e.target as HTMLElement;
@@ -269,6 +282,7 @@ export function TaskNoteView({
             ].filter(Boolean).join(' ')}
             style={{ touchAction: 'none' }}
             onPointerDown={e => handlePointerDown(e, task.id)}
+            onPointerMove={followTools}
           >
             <NoteBody
               value={task.title}
@@ -287,6 +301,17 @@ export function TaskNoteView({
                 they neither cover the text nor take room from it. A span, not a div, so the glass theme's
                 panel rule leaves its backdrop alone. */}
             <span className="task-note-tools">
+                <button
+                  type="button"
+                  className="task-note-btn task-note-edit"
+                  aria-label={t('pre_input.edit')}
+                  onClick={() => { setOpen(task.id, true); setEditingId(task.id); }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M12 20h9" />
+                    <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                  </svg>
+                </button>
                 <button
                   type="button"
                   className="task-note-btn task-note-copy"
@@ -407,9 +432,12 @@ function NoteBody({ value, height, open, editing, onToggle, onEdit, onEditEnd, a
     return () => ro.disconnect();
   }, [value, height, open]);
 
-  // Double-click places the caret where the user clicked; entering edit mode from elsewhere focuses the end.
   useEffect(() => {
-    if (editing && ref.current && document.activeElement !== ref.current) ref.current.focus();
+    if (!editing || !ref.current || document.activeElement === ref.current) return;
+    // Entering edit mode (double-click or the edit button) puts the caret at the end, ready to keep writing.
+    const el = ref.current;
+    el.focus();
+    el.setSelectionRange(el.value.length, el.value.length);
   }, [editing]);
 
   // Any press outside the body ends editing, even on spots that take no focus (empty panel, other notes' headers).

@@ -293,6 +293,7 @@ export const en = {
   'task.greeting.afternoon': 'Afternoon, anything left to do?',
   'task.greeting.evening': 'Evening. Feeling ambitious?',
   'task.tab.tasks': 'Pre-input',
+  'pre_input.edit': 'Edit',
   'pre_input.copy': 'Duplicate',
   'pre_input.delete': 'Delete',
   'pre_input.send': 'Send',

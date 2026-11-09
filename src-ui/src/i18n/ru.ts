@@ -293,6 +293,7 @@ export const ru = {
   'task.greeting.afternoon': 'Добрый день, что-то осталось?',
   'task.greeting.evening': 'Добрый вечер. Что-нибудь масштабное?',
   'task.tab.tasks': 'Предввод',
+  'pre_input.edit': 'Изменить',
   'pre_input.copy': 'Дублировать',
   'pre_input.delete': 'Удалить',
   'pre_input.send': 'Отправить',

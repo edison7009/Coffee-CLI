@@ -295,6 +295,7 @@ export const vi = {
   'task.greeting.afternoon': 'Chào buổi chiều, còn việc gì cần làm không?',
   'task.greeting.evening': 'Chào buổi tối. Có kế hoạch gì lớn không?',
   'task.tab.tasks': 'Nhập trước',
+  'pre_input.edit': 'Sửa',
   'pre_input.copy': 'Nhân bản',
   'pre_input.delete': 'Xóa',
   'pre_input.send': 'Gửi',

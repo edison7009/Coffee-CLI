@@ -293,6 +293,7 @@ export const zhTW = {
   'task.greeting.afternoon': '午安，還有什麼要做的？',
   'task.greeting.evening': '晚安，想來點大事嗎？',
   'task.tab.tasks': '預輸入',
+  'pre_input.edit': '編輯',
   'pre_input.copy': '複製',
   'pre_input.delete': '刪除',
   'pre_input.send': '傳送',
