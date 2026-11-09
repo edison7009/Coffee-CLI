@@ -217,6 +217,7 @@ try {
   const del = await tabCard.locator('.task-note-quick .task-note-delete').boundingBox(), sendIcon = await tabCard.locator('.task-note-quick .task-note-send').boundingBox();
   assert.ok(del.x < sendIcon.x && sendIcon.x + sendIcon.width <= restCard.x + restCard.width, 'delete, then send, at the right end');
   assert.equal(await tabCard.locator('.task-note-quick .task-note-delete').evaluate(el => getComputedStyle(el).backgroundColor), 'rgba(0, 0, 0, 0)', 'plain icons until one is aimed at');
+  assert.notEqual(await tabCard.locator('.task-note-quick .task-note-send').evaluate(el => getComputedStyle(el).backgroundColor), 'rgba(0, 0, 0, 0)', 'send is a solid accent circle on hover');
   const quickSize = await tabCard.locator('.task-note-quick .task-note-send svg').boundingBox();
   assert.deepEqual(await tabCard.locator('.task-note-preview').boundingBox(), restLine, 'the text does not move');
   assert.ok(/linear-gradient/.test(await tabCard.locator('.task-note-preview').evaluate(el => getComputedStyle(el).webkitMaskImage || getComputedStyle(el).maskImage)), 'the text fades beneath the icons');
@@ -235,6 +236,7 @@ try {
   await tabCard.locator('.task-note-actions').waitFor();
   assert.deepEqual(await tabCard.locator('.task-note-actions button').evaluateAll(els => els.map(el => el.className.split(' ')[1])), ['task-note-edit', 'task-note-copy', 'task-note-delete', 'task-note-send'], 'edit, copy, delete, then send');
   assert.equal(await tabCard.locator('.task-note-quick').count(), 0, 'an open note has no hover icons');
+  for (const where of ['.task-note-actions']) assert.notEqual(await tabCard.locator(where + ' .task-note-send').evaluate(el => getComputedStyle(el).backgroundColor), 'rgba(0, 0, 0, 0)', 'send is a solid accent circle in the open row');
   const rowSize = await tabCard.locator('.task-note-actions .task-note-send svg').boundingBox();
   assert.equal(rowSize.width, quickSize.width, 'the open row send icon matches the hover one');
   const actions = await tabCard.locator('.task-note-actions').boundingBox(), openBody = await tabCard.locator('.task-note-body').boundingBox();

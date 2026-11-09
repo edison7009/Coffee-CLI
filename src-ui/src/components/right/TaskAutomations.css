@@ -20,3 +20,7 @@
 .task-automation-mark img, .task-automation-mark svg { display: block; width: 100%; height: 100%; object-fit: contain; }
 .task-automation-mark .task-automation-mark-tile { border-radius: var(--radius-xs); object-fit: cover; }
 .task-automation-meta { min-width: 0; color: var(--text-3); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Like a note's send: a plain arrow at rest, a solid accent circle with a white arrow when the row is aimed at. */
+.task-automation-send { border-radius: 50%; transition: color .15s, background-color .15s, filter .15s; }
+.task-automation-card:hover .task-automation-send, .task-automation-send:focus-visible { color: #fff; background: var(--accent, #c4956a) !important; }
+.task-automation-send svg { margin-left: 2px; }
