@@ -216,23 +216,10 @@
   transition: opacity 0.25s, transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-/* Dragging: fade the source card; the ghost follows the cursor. */
-.task-prompt-card.dragging { opacity: 0.25; }
+/* The dragged prompt leaves a dashed outline of itself, which slides to the drop slot. */
+.task-prompt-card.dragging { background: transparent !important; box-shadow: none !important; outline: 1.5px dashed color-mix(in srgb, var(--accent) 60%, transparent); outline-offset: -1.5px; }
+.task-prompt-card.dragging > * { visibility: hidden; }
 
-/* Drop indicator: bright accent highlight bar at the target card's edge. */
-.task-prompt-card.drop-before::before,
-.task-prompt-card.drop-after::after {
-  content: '';
-  position: absolute;
-  left: 4px;
-  right: 4px;
-  height: 2px;
-  border-radius: 2px;
-  background: var(--accent, #c4956a);
-  z-index: 3;
-}
-.task-prompt-card.drop-before::before { top: -4px; }
-.task-prompt-card.drop-after::after { bottom: -4px; }
 
 /* Exit animation - fades + slides out during the parent's 300ms removal window. */
 .task-prompt-card.removing {
@@ -250,7 +237,6 @@
 
 .task-prompt-body {
   width: 100%;
-  min-height: 84px;
   resize: none;
   overflow: hidden;
   border: none;
@@ -397,3 +383,7 @@
   opacity: 0.96;
   overflow: hidden;
 }
+
+/* An expanded prompt scrolls past its cap (wheel reaches the body); a collapsed one neither scrolls nor resizes. */
+.task-prompt-card:not(.is-collapsed) .task-prompt-body { overflow-y: auto; pointer-events: auto; }
+.task-prompt-card.is-collapsed .task-prompt-resize { display: none; }

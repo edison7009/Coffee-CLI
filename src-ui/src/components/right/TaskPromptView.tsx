@@ -28,9 +28,12 @@
 // category MERGES the two groups, since renameCategory retitles every item
 // sharing the old title).
 //
-// Drag: a floating ghost (capped to ~2 lines) follows the cursor and a
-// highlight bar marks the insertion point at the target card's edge - the
-// same drag UX as the sticky-note view.
+// Cards: collapsed to ~2 lines by default; a click opens or closes one (capped,
+// then it scrolls), a double-click edits it, and any press outside ends editing.
+//
+// Drag: a floating ghost (capped to ~2 lines) follows the cursor while the
+// card's dashed outline slides to the drop slot and the cards and headers it
+// passes slide out of the way - the same drag UX as the sticky-note view.
 //
 // A category has no independent existence - it's just the set of items
 // sharing a title, so there's no "delete category" button. Delete the last
@@ -43,11 +46,15 @@ import { useT } from '../../i18n/useT';
 import type { TaskItem } from './task-types';
 import { TaskEmptyState } from './TaskEmptyState';
 import { useTextContextMenu } from '../../lib/use-text-context-menu';
+import { bindAutoHideScrollbar } from '../../lib/auto-hide-scrollbar';
 import './TaskPromptView.css';
 
 const COLLAPSED_KEY = 'cc-prompt-collapsed';
 
 interface DropLine { id: string; position: 'before' | 'after'; }
+// Collapsed prompts show about two lines; an expanded prompt grows to fit up to this cap, then scrolls.
+const BODY_COLLAPSED_HEIGHT = 56;
+const BODY_EXPANDED_CAP = 480;
 
 interface TaskPromptViewProps {
   tasks: TaskItem[];
@@ -109,6 +116,14 @@ export function TaskPromptView({
 
   // Which card body is in edit mode (by item id). null = all bodies static.
   const [editingBody, setEditingBody] = useState<string | null>(null);
+  // Prompt cards start collapsed: a click opens or closes one, a double-click edits it.
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
+  const setOpen = (id: string, open: boolean) => setExpanded(prev => {
+    if (prev.has(id) === open) return prev;
+    const next = new Set(prev);
+    if (open) next.add(id); else next.delete(id);
+    return next;
+  });
 
   // Whether the "pick existing category" dropdown is open while editing a title.
   const [titleMenuOpen, setTitleMenuOpen] = useState(false);
@@ -213,7 +228,6 @@ export function TaskPromptView({
   const dragStartedRef = useRef(false);
   const dropTargetRef = useRef<DropLine | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
-  const [dropLine, setDropLine] = useState<DropLine | null>(null);
   // Live preview height while dragging a card's bottom-edge resize handle;
   // persisted via onSetHeight only on pointer-up (one write per resize).
   const [resizing, setResizing] = useState<{ id: string; height: number } | null>(null);
@@ -231,6 +245,8 @@ export function TaskPromptView({
     }
     const cardEl = target.closest('.task-prompt-card') as HTMLElement;
     if (!cardEl) return;
+    // Starting a press here must not begin a text selection that sweeps across other prompts.
+    e.preventDefault();
 
     const rect = cardEl.getBoundingClientRect();
     const offsetX = e.clientX - rect.left;
@@ -242,6 +258,14 @@ export function TaskPromptView({
 
     const THRESHOLD = 6;
     const LONG_PRESS_MS = 400;
+    // Layout before the drag (cards and category headers in page order): the elements the card passes slide
+    // out of its way, and its dashed outline slides to the drop slot.
+    let layout: { el: HTMLElement; id: string | null; top: number; pitch: number }[] = [];
+    const swallowClick = (ev: MouseEvent) => { ev.stopPropagation(); ev.preventDefault(); };
+    const shift = (el: HTMLElement, y: number) => {
+      el.style.transition = 'transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)';
+      el.style.transform = y ? `translateY(${y}px)` : '';
+    };
 
     // Body is now click-to-edit, so a drag must be told apart from a click:
     // start only on an actual move past THRESHOLD, or on a held press (long
@@ -270,6 +294,15 @@ export function TaskPromptView({
       ghost.style.top = `${cy - offsetY}px`;
       document.body.appendChild(ghost);
       ghostRef.current = ghost;
+      const els = [...(listRef.current?.querySelectorAll<HTMLElement>('[data-prompt-id], .task-prompt-header') ?? [])];
+      const rects = els.map(el => el.getBoundingClientRect());
+      const fallbackGap = 8;
+      layout = els.map((el, i) => ({
+        el, id: el.dataset.promptId ?? null, top: rects[i].top,
+        pitch: i + 1 < els.length ? rects[i + 1].top - rects[i].top : rects[i].height + fallbackGap,
+      }));
+      // The drop's click must not also open or close the prompt.
+      window.addEventListener('click', swallowClick, { capture: true, once: true });
     };
 
     // Held still for LONG_PRESS_MS -> drag (long-press), so a quick click
@@ -285,25 +318,33 @@ export function TaskPromptView({
         ghostRef.current.style.left = `${me.clientX - offsetX}px`;
         ghostRef.current.style.top = `${me.clientY - offsetY}px`;
       }
-      if (!listRef.current) return;
-      const cards = listRef.current.querySelectorAll<HTMLElement>('[data-prompt-id]');
-      // Find the insertion target (which card, before/after).
-      let best: DropLine | null = null;
-      for (const card of cards) {
-        const cid = card.dataset.promptId!;
-        if (cid === id) continue;
-        const r = card.getBoundingClientRect();
-        if (me.clientY >= r.top && me.clientY < r.bottom) {
-          best = { id: cid, position: me.clientY < r.top + r.height / 2 ? 'before' : 'after' };
-          break;
-        }
+      if (!layout.length) return;
+      const from = layout.findIndex(item => item.id === id);
+      if (from < 0) return;
+      // Slot among the other cards by their original midpoints; above a category header still means the end of the previous category.
+      const others = layout.filter(item => item.id && item.id !== id);
+      const slot = others.filter(item => me.clientY > item.top + item.pitch / 2).length;
+      let at = slot < others.length ? layout.indexOf(others[slot]) : layout.length;
+      let drop: DropLine | null = slot < others.length ? { id: others[slot].id!, position: 'before' } : others.length ? { id: others[slot - 1].id!, position: 'after' } : null;
+      if (slot > 0 && slot < others.length) {
+        const prev = layout.indexOf(others[slot - 1]);
+        const header = layout.slice(prev + 1, at).find(item => !item.id);
+        if (header && me.clientY < header.top + header.pitch / 2) { at = prev + 1; drop = { id: others[slot - 1].id!, position: 'after' }; }
       }
-      dropTargetRef.current = best;
-      // Drop indicator: a highlight bar at the target card's edge (CSS
-      // .drop-before/.drop-after). Only re-render when the target changes.
-      setDropLine(prev =>
-        prev?.id === best?.id && prev?.position === best?.position ? prev : best
-      );
+      // Lay out: everything between the old and new spot moves by the card's pitch, the card by theirs.
+      const self = layout[from];
+      let travel = 0;
+      layout.forEach((item, index) => {
+        if (item === self) return;
+        const passedDown = at > from && index > from && index < at;
+        const passedUp = at <= from && index >= at && index < from;
+        if (passedDown) travel += item.pitch;
+        if (passedUp) travel -= item.pitch;
+        shift(item.el, passedDown ? -self.pitch : passedUp ? self.pitch : 0);
+      });
+      shift(self.el, travel);
+      // Dropping back where it started is a no-op.
+      dropTargetRef.current = travel === 0 ? null : drop;
     };
 
     const onUp = () => {
@@ -311,6 +352,10 @@ export function TaskPromptView({
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
       if (ghostRef.current) { ghostRef.current.remove(); ghostRef.current = null; }
+      // The reorder re-renders cards in their new places; drop the slide offsets without animating back.
+      for (const item of layout) { item.el.style.transition = ''; item.el.style.transform = ''; }
+      // The click from this release arrives before the timer; drop the guard if none came (released outside the window).
+      if (dragStartedRef.current) setTimeout(() => window.removeEventListener('click', swallowClick, { capture: true }));
       const drop = dropTargetRef.current;
       if (dragStartedRef.current && drop && drop.id !== id) {
         onReorder(prev => {
@@ -330,13 +375,11 @@ export function TaskPromptView({
           without.splice(insertAt, 0, moved);
           return without;
         });
-      } else if (!dragStartedRef.current) {
-        // Quick click (no move, no long-press) -> edit the body directly,
-        // replacing the old pencil affordance.
-        setEditingBody(id);
+      } else if (!dragStartedRef.current && editingBody !== id) {
+        // Quick click (no move, no long-press) opens or closes the prompt; a double-click edits it.
+        setOpen(id, !expanded.has(id));
       }
       setDragId(null);
-      setDropLine(null);
       dropTargetRef.current = null;
       dragStartedRef.current = false;
     };
@@ -484,8 +527,7 @@ export function TaskPromptView({
             {!isCollapsed && group.items.map(item => {
               const hasBody = !!(item.description && item.description.trim());
               const isEditingBody = editingBody === item.id;
-              const lineBefore = dropLine?.id === item.id && dropLine.position === 'before';
-              const lineAfter = dropLine?.id === item.id && dropLine.position === 'after';
+              const isOpen = expanded.has(item.id) || isEditingBody || resizing?.id === item.id;
               return (
                 <div
                   key={item.id}
@@ -494,16 +536,17 @@ export function TaskPromptView({
                     'task-prompt-card',
                     dragId === item.id && 'dragging',
                     removingId === item.id && 'removing',
-                    lineBefore && 'drop-before',
-                    lineAfter && 'drop-after',
+                    !isOpen && 'is-collapsed',
                   ].filter(Boolean).join(' ')}
                   style={{ touchAction: 'none' }}
                   onPointerDown={e => handlePointerDown(e, item.id)}
+                  onDoubleClick={e => { if (!(e.target as HTMLElement).closest('button') && !isEditingBody) { setOpen(item.id, true); setEditingBody(item.id); } }}
                 >
                   <PromptBody
                     value={item.description || ''}
                     placeholder={t('task.prompt.body_placeholder')}
                     editable={isEditingBody}
+                    open={isOpen}
                     height={resizing?.id === item.id ? resizing.height : (item.height ?? null)}
                     onChange={next => onUpdateDesc(item.id, next)}
                     onDone={() => setEditingBody(null)}
@@ -520,7 +563,7 @@ export function TaskPromptView({
                   </div>
                   <div
                     className={`task-prompt-resize${resizing?.id === item.id ? ' resizing' : ''}`}
-                    onPointerDown={e => handleResizeDown(e, item.id)}
+                    onPointerDown={e => { setOpen(item.id, true); handleResizeDown(e, item.id); }}
                   />
                 </div>
               );
@@ -546,6 +589,7 @@ interface PromptBodyProps {
   value: string;
   placeholder: string;
   editable: boolean;
+  open: boolean;
   // Manual body height (px) - when set, the body is FIXED at this height and
   // text clips; null = auto-grow to fit. Set by the bottom-edge resize handle.
   height: number | null;
@@ -556,7 +600,7 @@ interface PromptBodyProps {
 const BODY_MIN_HEIGHT = 84;
 const BODY_MAX_HEIGHT = 600;
 
-function PromptBody({ value, placeholder, editable, height, onChange, onDone }: PromptBodyProps) {
+function PromptBody({ value, placeholder, editable, open, height, onChange, onDone }: PromptBodyProps) {
   const ref = useRef<HTMLTextAreaElement>(null);
   // Right-click cut/copy/paste/select menu (same one Gambit/terminal use).
   const { menu: ctxMenu, openMenu: openCtxMenu } = useTextContextMenu();
@@ -567,12 +611,14 @@ function PromptBody({ value, placeholder, editable, height, onChange, onDone }: 
     let lastW = -1;
     const fit = () => {
       if (el.offsetWidth === 0) return; // collapsed / not laid out - wait for width
-      if (height != null) {
-        // Manually resized: FIXED height, text clips (overflow hidden).
-        el.style.height = `${Math.max(BODY_MIN_HEIGHT, height)}px`;
+      el.style.height = 'auto';
+      if (!open) {
+        el.style.height = `${Math.min(BODY_COLLAPSED_HEIGHT, el.scrollHeight)}px`;
+        el.scrollTop = 0;
       } else {
-        el.style.height = 'auto';
-        el.style.height = `${Math.max(BODY_MIN_HEIGHT, el.scrollHeight)}px`;
+        // Expanded: the whole prompt up to the cap, then it scrolls. A dragged height only ever makes it taller.
+        const fitted = Math.min(BODY_EXPANDED_CAP, el.scrollHeight);
+        el.style.height = `${height != null ? Math.max(fitted, Math.min(BODY_MAX_HEIGHT, height)) : fitted}px`;
       }
       lastW = el.offsetWidth;
     };
@@ -582,7 +628,23 @@ function PromptBody({ value, placeholder, editable, height, onChange, onDone }: 
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, [value, height]);
+  }, [value, height, open]);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    return bindAutoHideScrollbar(el, { slim: true, insetBottom: 11 });
+  }, []);
+
+  // Any press outside the body ends editing, even on spots that take no focus.
+  useEffect(() => {
+    if (!editable) return;
+    const onPress = (event: PointerEvent) => {
+      if (ref.current && !ref.current.contains(event.target as Node)) { ref.current.blur(); onDone(); }
+    };
+    document.addEventListener('pointerdown', onPress, true);
+    return () => document.removeEventListener('pointerdown', onPress, true);
+  }, [editable, onDone]);
 
   // Entering edit mode: focus and park the caret at the end so typing
   // continues from the tail (matches shell/REPL recall UX).
@@ -601,6 +663,7 @@ function PromptBody({ value, placeholder, editable, height, onChange, onDone }: 
     <textarea
       ref={ref}
       className={`task-prompt-body${editable ? ' editable' : ''}`}
+      aria-expanded={open}
       value={value}
       placeholder={placeholder}
       readOnly={!editable}

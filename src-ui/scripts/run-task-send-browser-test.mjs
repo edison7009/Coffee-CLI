@@ -178,8 +178,44 @@ try {
   await page.mouse.up();
   await page.waitForFunction(() => window.saved.map(task => task.title).join() === 'B,A,C');
   assert.deepEqual(await cards.evaluateAll(els => els.map(el => el.style.transform)), ['', '', ''], 'slide offsets clear after the drop');
-  // Pressing a card never starts a text selection, in the note and to-do views.
+  // Prompt view: same collapse / expand / double-click-to-edit model, and drags slide cards and category headers aside.
+  await open('claude', 'prompt');
+  const prompts = [['x1', 'X', Array.from({ length: 40 }, (_, i) => 'line ' + i).join('\n')], ['x2', 'X', 'second'], ['y1', 'Y', 'third']];
+  await page.evaluate(items => window.events.get('tasks-changed')({ payload: JSON.stringify(items.map(([id, title, description], i) => ({ id, title, description, status: 'todo', createdAt: i }))) }), prompts);
+  await page.waitForFunction(() => document.querySelectorAll('#root .task-prompt-card').length === 3);
+  const promptBody = page.locator('#root [data-prompt-id="x1"] .task-prompt-body');
+  const promptHeight = () => promptBody.evaluate(el => el.getBoundingClientRect().height);
+  assert.equal(await promptBody.getAttribute('aria-expanded'), 'false', 'prompts start collapsed');
+  assert.ok(await promptHeight() <= 56, 'a collapsed prompt shows about two lines');
+  await page.locator('#root [data-prompt-id="x1"]').click({ position: { x: 20, y: 20 } });
+  assert.equal(await promptBody.getAttribute('aria-expanded'), 'true', 'a click expands a prompt');
+  assert.ok(await promptHeight() > 320 && await promptHeight() <= 480, 'an expanded prompt grows up to its cap');
+  assert.equal(await promptBody.evaluate(el => el.readOnly), true, 'a click does not edit a prompt');
+  await page.locator('#root [data-prompt-id="x1"]').click({ position: { x: 20, y: 20 } });
+  assert.equal(await promptBody.getAttribute('aria-expanded'), 'false', 'a second click collapses a prompt');
+  await page.locator('#root [data-prompt-id="x1"]').dblclick({ position: { x: 20, y: 20 } });
+  assert.equal(await promptBody.evaluate(el => el.readOnly), false, 'a double-click edits a prompt');
+  await page.locator('#root [data-prompt-id="y1"]').click({ position: { x: 20, y: 20 } });
+  assert.equal(await promptBody.evaluate(el => el.readOnly), true, 'a press outside a prompt ends editing');
+  await page.locator('#root [data-prompt-id="x1"]').click({ position: { x: 20, y: 20 } });
+  await page.locator('#root [data-prompt-id="y1"]').click({ position: { x: 20, y: 20 } });
+  assert.deepEqual(await page.locator('#root .task-prompt-body').evaluateAll(els => els.map(el => el.getAttribute('aria-expanded'))), ['false', 'false', 'false']);
+  // Drag the second X prompt below the Y header: the header and Y's card slide up, the outline slides down, and it joins Y.
+  await page.waitForFunction(() => document.querySelectorAll('#root .task-prompt-card').length === 3);
+  const x2 = await page.locator('#root [data-prompt-id="x2"]').boundingBox(), y1 = await page.locator('#root [data-prompt-id="y1"]').boundingBox();
+  await page.mouse.move(x2.x + 20, x2.y + 10); await page.mouse.down();
+  await page.mouse.move(x2.x + 20, y1.y + y1.height * 0.8, { steps: 8 });
+  const offsets = await page.evaluate(() => Object.fromEntries([...document.querySelectorAll('#root [data-prompt-id], #root .task-prompt-header')].map((el, i) => [el.dataset.promptId || 'header' + i, Math.round(new DOMMatrix(el.style.transform || 'none').m42)])));
+  assert.ok(offsets.y1 < 0 && Object.entries(offsets).some(([key, y]) => key.startsWith('header') && y < 0), 'the passed header and card slide up '+JSON.stringify(offsets));
+  assert.ok(offsets.x2 > 0, 'the outline slides down to the slot '+JSON.stringify(offsets));
+  assert.equal(offsets.x1, 0, 'cards above stay put');
+  await page.mouse.up();
+  await page.waitForFunction(() => window.saved.find(task => task.id === 'x2')?.title === 'Y');
+  assert.deepEqual(await page.evaluate(() => window.saved.map(task => task.id)), ['x1', 'y1', 'x2'], 'the dropped prompt lands after the last Y prompt');
+  // Pressing a card never starts a text selection, in the prompt, note and to-do views.
   const pressPrevented = selector => page.evaluate(sel => { const el = document.querySelector(sel); const ev = new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 0 }); el.dispatchEvent(ev); window.dispatchEvent(new PointerEvent('pointerup')); return ev.defaultPrevented; }, selector);
+  assert.equal(await pressPrevented('#root .task-prompt-card'), true, 'prompt press does not select text');
+  await open('claude', 'note');
   assert.equal(await pressPrevented('#root .task-note-head'), true, 'note press does not select text');
   await open('claude', 'list');
   assert.equal(await pressPrevented('#root .task-card'), true, 'to-do press does not select text');
