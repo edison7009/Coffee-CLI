@@ -27,12 +27,15 @@ function ToolMark({ tool }: { tool: AutomationTool }) {
 export function TaskAutomations({ onSend }: { onSend: (prompt: string) => void }) {
   const t = useT();
   const { state, dispatch } = useAppState();
-  const automations = useSyncExternalStore(subscribeAutomations, getAutomations, getAutomations);
+  // Only running automations show here; a paused one is managed from the automations page.
+  const all = useSyncExternalStore(subscribeAutomations, getAutomations, getAutomations);
+  const automations = all.filter(item => item.enabled);
   const [collapsed, setCollapsed] = useState(() => { try { return localStorage.getItem(COLLAPSED_KEY) === '1'; } catch { return false; } });
   if (!automations.length) return null;
   const toggleSection = () => { const next = !collapsed; setCollapsed(next); try { localStorage.setItem(COLLAPSED_KEY, next ? '1' : '0'); } catch { /* Best-effort operation; failure is non-fatal. */ } };
   return <section className="task-automations" aria-label={t('automation.title')}>
     <button type="button" className="task-section-header task-automations-head" aria-expanded={!collapsed} onClick={toggleSection}>
+      <span className="task-automations-dot" aria-hidden="true" />
       <span>{t('automation.title')}</span>
       <span className="task-automations-count">· {automations.length}</span>
       <svg className="task-automations-chevron" data-open={!collapsed} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>

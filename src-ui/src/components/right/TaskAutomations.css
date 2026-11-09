@@ -2,10 +2,12 @@
 .task-automations { position: relative; display: flex; flex-direction: column; gap: 2px; margin: 6px 0 14px; padding: 2px 4px 4px; }
 /* The strip is one pinned panel: a soft tray behind the header and its automations, set apart from the notes by space.
    Painted by a pseudo-element, which the glass/carbon background reset leaves alone. */
-.task-automations::before { content: ''; position: absolute; inset: 0; border-radius: var(--radius-md, 12px); background: rgba(255, 255, 255, 0.035); pointer-events: none; }
+.task-automations::before { content: ''; position: absolute; inset: 0; border-radius: var(--radius-md, 12px); background: color-mix(in srgb, var(--accent, #c4956a) 12%, transparent); pointer-events: none; }
+/* A lit dot: the shown automations are all running. Static glow, no looping animation. */
+.task-automations-dot { width: 6px; height: 6px; flex-shrink: 0; border-radius: 50%; background: var(--accent, #c4956a); box-shadow: 0 0 6px var(--accent, #c4956a); }
 .task-automations > * { position: relative; }
-.task-automations-head.task-section-header { display: flex; align-items: center; gap: 6px; width: 100%; padding: 8px 8px 4px; border: 0; background: none; font: inherit; font-size: 12px; font-weight: 500; color: var(--text-3); text-align: left; cursor: pointer; }
-.task-automations-head:hover { color: var(--text-2); }
+.task-automations-head.task-section-header { display: flex; align-items: center; gap: 6px; width: 100%; padding: 8px 8px 4px; border: 0; background: none; font: inherit; font-size: 12px; font-weight: 500; color: var(--text-2); text-align: left; cursor: pointer; }
+.task-automations-head:hover { color: var(--text-1); }
 .task-automations-chevron { width: 12px; height: 12px; margin-left: auto; flex-shrink: 0; transition: transform .15s ease; }
 .task-automations-chevron[data-open="false"] { transform: rotate(-90deg); }
 .task-automations-count { font-variant-numeric: tabular-nums; }
@@ -19,7 +21,6 @@
 .task-automation-name { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .task-automation-line, .task-automation-sub { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .task-automation-title { flex: 0 1 auto; min-width: 0; color: var(--text-1); font-size: var(--type-label); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.task-automation-card[data-enabled="false"] .task-automation-title { color: var(--text-3); }
 /* Same as a note's send, shown on hover: a solid accent circle, its arrow coloured like the + button. */
 .task-automation-send { display: flex; align-items: center; justify-content: center; padding: 0; border: none; cursor: pointer; width: 26px; height: 26px; flex-shrink: 0; border-radius: 50%; color: var(--bg-terminal, #fff); background: var(--accent, #c4956a) !important; opacity: 0; transform: translateX(6px); pointer-events: none; transition: opacity .18s ease, transform .18s ease, filter .15s; }
 .task-automation-card:hover .task-automation-send, .task-automation-card:focus-within .task-automation-send { opacity: 1; transform: none; pointer-events: auto; }
