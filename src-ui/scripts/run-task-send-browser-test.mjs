@@ -187,6 +187,8 @@ try {
   const promptHeight = () => promptBody.evaluate(el => el.getBoundingClientRect().height);
   assert.equal(await promptBody.getAttribute('aria-expanded'), 'false', 'prompts start collapsed');
   assert.ok(await promptHeight() <= 56, 'a collapsed prompt shows about two lines');
+  const fits = await page.evaluate(() => { const card = document.querySelector('#root [data-prompt-id="x2"]').getBoundingClientRect(); return [...document.querySelectorAll('#root [data-prompt-id="x2"] .task-prompt-btn')].every(btn => { const r = btn.getBoundingClientRect(); return r.top >= card.top && r.bottom <= card.bottom; }); });
+  assert.equal(fits, true, 'a collapsed one-line prompt keeps its send and delete inside the card');
   await page.locator('#root [data-prompt-id="x1"]').click({ position: { x: 20, y: 20 } });
   assert.equal(await promptBody.getAttribute('aria-expanded'), 'true', 'a click expands a prompt');
   assert.ok(await promptHeight() > 320 && await promptHeight() <= 480, 'an expanded prompt grows up to its cap');

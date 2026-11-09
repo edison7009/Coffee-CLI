@@ -387,3 +387,6 @@
 /* An expanded prompt scrolls past its cap (wheel reaches the body); a collapsed one neither scrolls nor resizes. */
 .task-prompt-card:not(.is-collapsed) .task-prompt-body { overflow-y: auto; pointer-events: auto; }
 .task-prompt-card.is-collapsed .task-prompt-resize { display: none; }
+/* A collapsed card is only a line or two tall: lay its send and delete side by side, centred, and keep the text clear of them. */
+.task-prompt-card.is-collapsed .task-prompt-actions { top: 0; bottom: 0; width: auto; flex-direction: row; align-items: center; }
+.task-prompt-card.is-collapsed .task-prompt-body { padding-right: 56px; }
