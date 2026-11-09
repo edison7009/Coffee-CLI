@@ -1,9 +1,11 @@
 // TaskNoteView — the pre-input board's sticky notes. TaskBoard owns the notes and passes them down; each card
-// is just the note text with its tools in the top-right corner:
+// is just the note text; its tools hang below it on hover:
 //
 //   ┌──────────────────────────────────────────────┐
-//   │ note text, collapsed to two lines…   ⧉ 🗑 ▶ │  ← copy / delete show on hover, send always
-//   └──────────────────────────────────────────────┘
+//   │ note text, collapsed to two lines…            │
+//   └──────────────────────────────────┬──────────┬┘
+//                                      │ ⧉  🗑  ▶ │  ← hangs below the card on hover
+//                                      └──────────┘
 //
 // A click opens or closes a note that has more than two lines; a double-click edits it. Cards drag up and
 // down to reorder. The body edits `title`.
@@ -281,10 +283,10 @@ export function TaskNoteView({
               onChange={next => onUpdateTitle(task.id, next)}
             />
 
-            {/* Tools in the top-right corner: copy and delete show on hover over a backdrop, send always shows.
-                Spans, not divs, so the glass theme's panel rule leaves the backdrop alone. */}
+            {/* Tools hang from the card's bottom-right edge on hover (or keyboard focus): outside the card, so
+                they neither cover the text nor take room from it. A span, not a div, so the glass theme's
+                panel rule leaves its backdrop alone. */}
             <span className="task-note-tools">
-              <span className="task-note-hover-tools">
                 <button
                   type="button"
                   className="task-note-btn task-note-copy"
@@ -312,7 +314,6 @@ export function TaskNoteView({
                     <path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
                   </svg>
                 </button>
-              </span>
                 <button
                   type="button"
                   className="task-note-btn task-note-send"

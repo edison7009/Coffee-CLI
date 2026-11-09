@@ -65,28 +65,28 @@
   cursor: not-allowed;
 }
 
-/* Tools: copy and delete appear on hover over a backdrop (so they never sit on top of text); send always shows,
-   and the body keeps room for it. */
+/* Tools: a small tab hanging from the card's bottom-right edge, shown on hover or keyboard focus. It sits outside
+   the card, over the gap and the top of the next card, so it never covers this note's text or takes room from it.
+   Solid backdrop and a raised layer so it reads above the next card. */
 .task-note-tools {
   position: absolute;
-  top: 8px;
-  right: 8px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  z-index: 1;
-}
-.task-note-hover-tools {
+  top: 100%;
+  right: 12px;
   display: none;
   align-items: center;
-  gap: 4px;
-  padding: 0 2px 0 6px;
-  border-radius: var(--radius-xs, 6px);
-  background: color-mix(in srgb, var(--bg-panel, #222) 92%, transparent);
+  gap: 8px;
+  padding: 3px 8px 4px;
+  border-radius: 0 0 var(--radius-sm, 8px) var(--radius-sm, 8px);
+  background: color-mix(in srgb, var(--bg-panel, #222) 96%, var(--text-1, #fff));
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+  z-index: 3;
 }
-.task-note-card:hover .task-note-hover-tools,
-.task-note-card:focus-within .task-note-hover-tools { display: flex; }
-.task-note-list:has(.task-note-card.dragging) .task-note-hover-tools { display: none; }
+.task-note-card:hover .task-note-tools,
+.task-note-card:focus-within .task-note-tools { display: flex; }
+.task-note-list:has(.task-note-card.dragging) .task-note-tools { display: none; }
+/* The hovered card (and its tab) stays above its neighbours. */
+.task-note-card:hover,
+.task-note-card:focus-within { z-index: 2; }
 
 /* ─── Body — the writing area ────────────────────────────────────────────────── */
 
@@ -103,8 +103,7 @@
   font-family: var(--font, system-ui);
   font-size: var(--type-body);
   line-height: 1.55;
-  /* Right padding keeps the text clear of the send button. */
-  padding: 9px 34px 11px 12px;
+  padding: 9px 12px 11px;
   white-space: pre-wrap;
   word-break: break-word;
   box-sizing: border-box;
@@ -209,7 +208,7 @@
   font-size: var(--type-body);
   line-height: 1.55;
   /* Margin, not padding: the clamp box must be exactly two lines tall, or the third line peeks into the padding. */
-  margin: 9px 34px 11px 12px;
+  margin: 9px 12px 11px;
   white-space: pre-wrap;
   word-break: break-word;
   cursor: pointer !important;

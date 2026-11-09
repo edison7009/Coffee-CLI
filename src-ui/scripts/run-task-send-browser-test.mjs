@@ -58,6 +58,8 @@ try {
     await page.goto('http://127.0.0.1:'+server.address().port+'/?tool='+tool);
     await page.waitForFunction(() => window.ready?.());
     const button = page.locator('.task-note-send');
+    // The tools show on hover.
+    await page.locator('#root .task-note-card').first().hover();
     await button.waitFor();
     return button;
   };
@@ -182,6 +184,16 @@ try {
   await page.mouse.up();
   await page.waitForFunction(() => window.saved.map(task => task.title).join() === 'B,A,C');
   assert.deepEqual(await cards.evaluateAll(els => els.map(el => el.style.transform)), ['', '', ''], 'slide offsets clear after the drop');
+  // The tools hang below the card on hover: hidden at rest, outside the card when shown, and the text keeps the full width.
+  const tabCard = page.locator('#root [data-note-id="B"]');
+  await page.mouse.move(5, 5);
+  assert.equal(await tabCard.locator('.task-note-tools').isVisible(), false, 'the tools are hidden at rest');
+  await tabCard.hover();
+  const cardBox = await tabCard.boundingBox(), toolsBox = await tabCard.locator('.task-note-tools').boundingBox();
+  assert.ok(toolsBox.y >= cardBox.y + cardBox.height - 1, 'the tools hang below the card, not over its text');
+  assert.equal(await tabCard.locator('.task-note-preview').evaluate(el => getComputedStyle(el).marginRight), '12px', 'the text keeps the full width');
+  await tabCard.locator('.task-note-copy').hover();
+  assert.equal(await tabCard.locator('.task-note-tools').isVisible(), true, 'moving onto the tab keeps it open');
   // A note that already shows in full (a line or two) does not open on click, so it never shows a resize grip.
   const shortNote = page.locator('#root [data-note-id="C"]');
   await shortNote.locator('.task-note-preview').click();

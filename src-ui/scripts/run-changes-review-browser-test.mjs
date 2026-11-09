@@ -159,7 +159,7 @@ try{
  await listTab.click();await taskTab.click();assert.equal(await page.locator('.task-note-body').inputValue(),'移到右侧后保留任务');
  await page.evaluate(()=>window.setFolder('D:/another-workspace'));assert.equal(await taskTab.getAttribute('aria-selected'),'true');assert.equal(await page.evaluate(()=>window.calls.taskLoads),1,'workspace changes must not remount task storage/editors');assert.equal(await page.locator('.task-note-body').inputValue(),'移到右侧后保留任务');
  await page.evaluate(()=>window.setTool('terminal'));
- await page.locator('.task-note-send').click();assert.equal(await page.evaluate(()=>window.pastedTask),'移到右侧后保留任务');await page.waitForFunction(()=>window.savedTasks?.[0]?.status==='working');
+ await page.locator('.task-note-card').first().hover();await page.locator('.task-note-send').click();assert.equal(await page.evaluate(()=>window.pastedTask),'移到右侧后保留任务');await page.waitForFunction(()=>window.savedTasks?.[0]?.status==='working');
  assert.equal(await page.evaluate(()=>window.savedTasks[0].title),'移到右侧后保留任务');assert.equal(await page.evaluate(()=>window.calls.taskLoads),1,'the board loads its notes once');
  const reads=await page.evaluate(()=>window.calls.gitReads);await page.evaluate(()=>window.dispatchEvent(new CustomEvent('fs-refresh',{detail:{dirPath:'D:/another-workspace'}})));await page.waitForTimeout(950);assert.equal(await page.evaluate(()=>window.calls.gitReads),reads,'hidden review does not poll Git while using Todo');
  await page.locator('#root').screenshot({path:join(directory,'right-task-panel.png')});
