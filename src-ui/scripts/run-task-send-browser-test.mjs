@@ -92,7 +92,7 @@ try {
   await page.evaluate(() => window.holdSend = true);
   await edited.click();
   await page.waitForFunction(() => typeof window.finishSend === 'function');
-  await page.locator('.task-note-body').fill('New unsent task');
+  await page.locator('.task-note-body').dblclick();await page.locator('.task-note-body').fill('New unsent task');
   await page.evaluate(() => window.finishSend());
   await page.waitForFunction(() => document.querySelector('.task-board')?.getAttribute('aria-busy') === 'false');
   assert.equal(await page.evaluate(() => window.saved[0].status), 'todo', 'acknowledging an older send must not promote newly edited content');
@@ -102,7 +102,7 @@ try {
   await page.evaluate(() => window.selectSession(null));
   assert.equal(await button.isDisabled(), true, 'no target disables sending');
   const plan = await open('claude');
-  await page.locator('.task-note-body').fill('/plan Inspect layout');
+  await page.locator('.task-note-body').dblclick();await page.locator('.task-note-body').fill('/plan Inspect layout');
   await plan.click();
   await page.waitForFunction(() => window.saved[0].status === 'working');
   const calls = await page.evaluate(() => window.calls);
@@ -122,6 +122,30 @@ try {
     return {previous,current:window.taskCommits};
   });
   assert.equal(commits.current, commits.previous, 'streamed conversation content must not redraw the task board when send availability is unchanged');
+  // Notes start collapsed; a click opens or closes one, a double-click edits it, leaving ends editing.
+  await open('claude', 'note');
+  const note = page.locator('.task-note-body');
+  const height = () => note.evaluate(el => el.getBoundingClientRect().height);
+  assert.equal(await note.getAttribute('aria-expanded'), 'false', 'notes start collapsed');
+  assert.equal(await note.evaluate(el => el.readOnly), true, 'a collapsed note is not editable');
+  await note.dblclick();
+  assert.equal(await note.evaluate(el => el.readOnly), false, 'a double-click edits');
+  assert.equal(await note.getAttribute('aria-expanded'), 'true', 'editing shows the note');
+  const long = Array.from({ length: 40 }, (_, i) => 'line ' + i).join('\n');
+  await note.fill(long);
+  await page.waitForFunction(text => window.saved[0].title === text, long);
+  await note.evaluate(el => el.blur());
+  assert.equal(await note.evaluate(el => el.readOnly), true, 'leaving the note ends editing');
+  await note.click();
+  assert.equal(await note.getAttribute('aria-expanded'), 'false', 'a click collapses an open note');
+  const collapsed = await height();
+  assert.ok(collapsed <= 50, 'a collapsed note shows about two lines');
+  await note.click();
+  assert.equal(await note.getAttribute('aria-expanded'), 'true', 'a click expands');
+  const expanded = await height();
+  assert.ok(expanded > collapsed && expanded <= 320, 'an expanded note grows up to its cap');
+  assert.ok(await note.evaluate(el => el.scrollHeight > el.clientHeight), 'content past the cap scrolls');
+  assert.equal(await note.evaluate(el => el.readOnly), true, 'a click does not start editing');
   assert.deepEqual(errors, []);
   console.log('OK: note, category and list send to existing Claude/Codex desktop and terminal sessions, acknowledge before promotion, prevent duplicates, preserve failures and disable unavailable targets');
 } finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }

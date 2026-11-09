@@ -37,6 +37,9 @@ const STATUS_DOTS: { status: TaskStatus; color: string }[] = [
 const DEFAULT_NOTE_HEIGHT = 88;
 const NOTE_MIN_HEIGHT = 44;
 const NOTE_MAX_HEIGHT = 600;
+// Collapsed notes show about two lines; an expanded note grows to fit up to this cap, then scrolls.
+const NOTE_COLLAPSED_HEIGHT = 50;
+const NOTE_EXPANDED_CAP = 320;
 
 function formatNoteTime(ts: number): { date: string; time: string } {
   const d = new Date(ts);
@@ -95,6 +98,15 @@ export function TaskNoteView({
   // Live preview height while dragging one card's bottom edge; persisted via
   // onSetHeight only on pointer-up, so a resize is one disk write, not a stream.
   const [resizing, setResizing] = useState<{ id: string; height: number } | null>(null);
+  // Notes start collapsed: a click opens or closes one, a double-click edits it.
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const setOpen = (id: string, open: boolean) => setExpanded(prev => {
+    if (prev.has(id) === open) return prev;
+    const next = new Set(prev);
+    if (open) next.add(id); else next.delete(id);
+    return next;
+  });
 
   const handlePointerDown = (e: React.PointerEvent, id: string) => {
     const target = e.target as HTMLElement;
@@ -326,6 +338,11 @@ export function TaskNoteView({
             <NoteBody
               value={task.title}
               height={resizing?.id === task.id ? resizing.height : (task.height ?? null)}
+              open={expanded.has(task.id) || editingId === task.id || addingId === task.id || resizing?.id === task.id}
+              editing={editingId === task.id || addingId === task.id}
+              onToggle={() => setOpen(task.id, !expanded.has(task.id))}
+              onEdit={() => { setOpen(task.id, true); setEditingId(task.id); }}
+              onEditEnd={() => setEditingId(current => current === task.id ? null : current)}
               autoFocus={addingId === task.id}
               placeholder={t('task.note_placeholder')}
               onChange={next => onUpdateTitle(task.id, next)}
@@ -336,7 +353,7 @@ export function TaskNoteView({
                 the pointer drags (Coffee-Note pane-resizer style). */}
             <div
               className={`task-note-resize${resizing?.id === task.id ? ' resizing' : ''}`}
-              onPointerDown={e => handleResizeDown(e, task.id)}
+              onPointerDown={e => { setOpen(task.id, true); handleResizeDown(e, task.id); }}
             />
           </div>
         );
@@ -353,12 +370,17 @@ interface NoteBodyProps {
   value: string;
   // Explicit user-resized height in px, or null to auto-grow with content.
   height: number | null;
+  open: boolean;
+  editing: boolean;
+  onToggle: () => void;
+  onEdit: () => void;
+  onEditEnd: () => void;
   autoFocus: boolean;
   placeholder: string;
   onChange: (next: string) => void;
 }
 
-function NoteBody({ value, height, autoFocus, placeholder, onChange }: NoteBodyProps) {
+function NoteBody({ value, height, open, editing, onToggle, onEdit, onEditEnd, autoFocus, placeholder, onChange }: NoteBodyProps) {
   const ref = useRef<HTMLTextAreaElement>(null);
   // Right-click cut/copy/paste/select menu (same one Gambit/terminal use).
   const { menu: ctxMenu, openMenu: openCtxMenu } = useTextContextMenu();
@@ -383,14 +405,18 @@ function NoteBody({ value, height, autoFocus, placeholder, onChange }: NoteBodyP
     let lastW = -1;
     const fit = () => {
       if (el.offsetWidth === 0) return; // collapsed / not laid out — wait for width
-      if (height != null) {
+      if (!open) {
+        el.style.height = 'auto';
+        el.style.height = `${Math.min(NOTE_COLLAPSED_HEIGHT, Math.max(NOTE_MIN_HEIGHT, el.scrollHeight))}px`;
+        el.scrollTop = 0;
+      } else if (height != null) {
         // Manually resized: a FIXED height, not a floor. Longer content scrolls
         // inside the note (overflow-y:auto) — the size the user chose wins, but
         // the tail stays reachable via the wheel or the accent slider.
         el.style.height = `${Math.max(NOTE_MIN_HEIGHT, height)}px`;
       } else {
         el.style.height = 'auto';
-        el.style.height = `${Math.max(DEFAULT_NOTE_HEIGHT, el.scrollHeight)}px`;
+        el.style.height = `${Math.min(NOTE_EXPANDED_CAP, Math.max(DEFAULT_NOTE_HEIGHT, el.scrollHeight))}px`;
       }
       lastW = el.offsetWidth;
     };
@@ -402,7 +428,12 @@ function NoteBody({ value, height, autoFocus, placeholder, onChange }: NoteBodyP
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, [value, height]);
+  }, [value, height, open]);
+
+  // Double-click places the caret where the user clicked; entering edit mode from elsewhere focuses the end.
+  useEffect(() => {
+    if (editing && ref.current && document.activeElement !== ref.current) ref.current.focus();
+  }, [editing]);
 
   useEffect(() => {
     if (autoFocus && ref.current) {
@@ -427,8 +458,13 @@ function NoteBody({ value, height, autoFocus, placeholder, onChange }: NoteBodyP
     <>
       <textarea
         ref={ref}
-        className="task-note-body"
+        className={`task-note-body${open ? '' : ' is-collapsed'}${editing ? ' is-editing' : ''}`}
         value={value}
+        readOnly={!editing}
+        aria-expanded={open}
+        onClick={e => { if (!editing && e.detail === 1) onToggle(); }}
+        onDoubleClick={() => { if (!editing) onEdit(); }}
+        onBlur={onEditEnd}
         placeholder={placeholder}
         rows={2}
         onChange={e => onChange(e.target.value)}
