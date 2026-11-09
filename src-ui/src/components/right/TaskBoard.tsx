@@ -12,7 +12,7 @@ import { useOpenCodeSession } from '../../lib/opencode-session';
 import { usePiSession } from '../../lib/pi-session';
 import './TaskBoard.css';
 import { TaskNoteView } from './TaskNoteView';
-import { makeWelcomeNote, type TaskItem, type TaskStatus } from './task-types';
+import { makeWelcomeNote, type TaskItem } from './task-types';
 
 
 // ─── Persistence (Rust file backend with localStorage fallback) ──────────────
@@ -230,13 +230,6 @@ export function TaskBoard({ onCountChange }: { onCountChange: (count: number) =>
     void sendTask({ id: 'automation', title: prompt, status: 'todo', createdAt: 0 }, prompt, false);
   }, [sendTask]);
 
-  // Prompt-view send: send ONLY the description (the prompt body). The
-
-  // view's checkbox cycles via handleToggle instead). Card auto-regroups.
-  const setStatus = useCallback((id: string, status: TaskStatus) => {
-    setTasks(prev => prev.map(t => t.id === id ? { ...t, status } : t));
-  }, []);
-
   // Live title edit — the note body is always-editable (no commit step), so it
   // writes through on every keystroke. Empty is allowed while typing.
   const updateTitle = useCallback((id: string, title: string) => {
@@ -278,7 +271,6 @@ export function TaskBoard({ onCountChange }: { onCountChange: (count: number) =>
             addingId={addingId}
             removingId={removingId}
             canSend={canSend}
-            onSetStatus={setStatus}
             onUpdateTitle={updateTitle}
             onSetHeight={setHeight}
             onRemove={handleRemove}

@@ -1,36 +1,21 @@
-// TaskNoteView — sticky-note presentation of the task board. Same TaskItem
-// data as the to-do list (TaskBoard owns the state and passes it down); this
-// view just renders each task as a roomy note card:
+// TaskNoteView — the pre-input board's sticky notes. TaskBoard owns the notes and passes them down; each card
+// is just the note text with its tools in the top-right corner:
 //
-//   ┌─────────────────────────────────────────────┐
-//   │ ● ● ●          2026.6.28  21:48  ⧉  🗑  ▶    │   ← traffic-light status
-//   │                                               │     dots + timestamp
-//   │  (big editable note body — write freely)      │
-//   └─────────────────────────────────────────────┘
+//   ┌──────────────────────────────────────────────┐
+//   │ note text, collapsed to two lines…   ⧉ 🗑 ▶ │  ← copy / delete show on hover, send always
+//   └──────────────────────────────────────────────┘
 //
-// The three dots ARE the status picker (红=进行中 / 黄=待办 / 绿=已完成); clicking
-// one sets the status and the card auto-sorts into that group (working → todo →
-// done), exactly like the list view's section order. Cards can be dragged
-// up/down to reorder within their group. The note body edits `title` (single
-// roomy field — the whole point is escaping the cramped inline input); the
-// list view's `description` field is preserved but not surfaced here.
+// A click opens or closes a note that has more than two lines; a double-click edits it. Cards drag up and
+// down to reorder. The body edits `title`.
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useT } from '../../i18n/useT';
 import { TaskEmptyState } from './TaskEmptyState';
-import { STATUS_ORDER, type TaskItem, type TaskStatus } from './task-types';
+import type { TaskItem } from './task-types';
 import { useTextContextMenu } from '../../lib/use-text-context-menu';
 import { bindAutoHideScrollbar } from '../../lib/auto-hide-scrollbar';
 import './TaskNoteView.css';
 
-// Traffic-light dots, top-to-bottom priority. Colors are deliberately the
-// literal macOS-window red/amber/green from the user's mockup, not the theme
-// accent — the three-light metaphor only reads if the colors are fixed.
-const STATUS_DOTS: { status: TaskStatus; color: string }[] = [
-  { status: 'working', color: '#ff5f57' },
-  { status: 'todo', color: '#febc2e' },
-  { status: 'done', color: '#28c840' },
-];
 
 // Note body height. Un-resized notes auto-grow from a roomy default; the
 // bottom-edge handle clamps a manual height between these bounds.
@@ -41,12 +26,6 @@ const NOTE_MAX_HEIGHT = 600;
 const NOTE_COLLAPSED_HEIGHT = 50;
 const NOTE_EXPANDED_CAP = 480;
 
-function formatNoteTime(ts: number): { date: string; time: string } {
-  const d = new Date(ts);
-  const date = `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
-  const time = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-  return { date, time };
-}
 
 interface DropLine {
   id: string;
@@ -62,7 +41,6 @@ interface TaskNoteViewProps {
   // parent drops it from the array (shared 300ms window with the list view).
   removingId: string | null;
   canSend: boolean;
-  onSetStatus: (id: string, status: TaskStatus) => void;
   onUpdateTitle: (id: string, title: string) => void;
   // Persists a bottom-edge-resized body height (called once on drop).
   onSetHeight: (id: string, height: number) => void;
@@ -78,14 +56,12 @@ interface TaskNoteViewProps {
 }
 
 export function TaskNoteView({
-  tasks, addingId, removingId, canSend, onSetStatus, onUpdateTitle, onSetHeight, onRemove, onDuplicate, onSend, onReorder, onShowGuide,
+  tasks, addingId, removingId, canSend, onUpdateTitle, onSetHeight, onRemove, onDuplicate, onSend, onReorder, onShowGuide,
 }: TaskNoteViewProps) {
   const t = useT();
 
-  // Display order: grouped by status (working → todo → done). The array order
-  // within each status group is preserved, so drag-reordering the underlying
-  // array reorders same-status cards; cross-status drags simply regroup.
-  const ordered = STATUS_ORDER.flatMap(s => tasks.filter(task => task.status === s));
+  // Display order is the array order.
+  const ordered = tasks;
 
   // ── Drag (refs to avoid stale closures, mirrors TaskBoard's approach) ──
   const listRef = useRef<HTMLDivElement>(null);
@@ -216,18 +192,11 @@ export function TaskNoteView({
           const dragged = prev.find(task => task.id === id);
           const target = prev.find(task => task.id === drop.id);
           if (!dragged || !target) return prev;
-          // Dropping onto a different-status card adopts that card's status, so
-          // dragging across the red/amber/green groups re-files the note (same
-          // outcome as clicking its dot) instead of snapping back to its old
-          // group. Same-status drags just reorder within the group.
-          const moved = dragged.status === target.status
-            ? dragged
-            : { ...dragged, status: target.status };
           const without = prev.filter(task => task.id !== id);
           const targetIdx = without.findIndex(task => task.id === drop.id);
           if (targetIdx === -1) return prev;
           const insertAt = drop.position === 'before' ? targetIdx : targetIdx + 1;
-          without.splice(insertAt, 0, moved);
+          without.splice(insertAt, 0, dragged);
           return without;
         });
       }
@@ -286,15 +255,12 @@ export function TaskNoteView({
   return (
     <div ref={listRef} className="task-note-list">
       {ordered.map(task => {
-        const { date, time } = formatNoteTime(task.createdAt);
         return (
           <div
             key={task.id}
             data-note-id={task.id}
-            data-status={task.status}
             className={[
               'task-note-card',
-              `status-${task.status}`,
               !(expanded.has(task.id) || editingId === task.id || addingId === task.id || resizing?.id === task.id) && 'is-collapsed',
               dragId === task.id && 'dragging',
               removingId === task.id && 'removing',
@@ -302,26 +268,27 @@ export function TaskNoteView({
             style={{ touchAction: 'none' }}
             onPointerDown={e => handlePointerDown(e, task.id)}
           >
-            <div className="task-note-head">
-              <div className="task-note-dots" role="group">
-                {STATUS_DOTS.map(d => (
-                  <button
-                    key={d.status}
-                    type="button"
-                    className={`task-note-dot${task.status === d.status ? ' active' : ''}`}
-                    style={{ ['--dot' as string]: d.color }}
-                    onClick={() => onSetStatus(task.id, d.status)}
-                    aria-pressed={task.status === d.status}
-                  />
-                ))}
-              </div>
+            <NoteBody
+              value={task.title}
+              height={resizing?.id === task.id ? resizing.height : (task.height ?? null)}
+              open={expanded.has(task.id) || editingId === task.id || addingId === task.id || resizing?.id === task.id}
+              editing={editingId === task.id || addingId === task.id}
+              onToggle={() => setOpen(task.id, !expanded.has(task.id))}
+              onEdit={() => { setOpen(task.id, true); setEditingId(task.id); }}
+              onEditEnd={() => setEditingId(current => current === task.id ? null : current)}
+              autoFocus={addingId === task.id}
+              placeholder={t('task.note_placeholder')}
+              onChange={next => onUpdateTitle(task.id, next)}
+            />
 
-              <div className="task-note-time">{date} {time}</div>
-
-              <div className="task-note-actions">
+            {/* Tools in the top-right corner: copy and delete show on hover over a backdrop, send always shows.
+                Spans, not divs, so the glass theme's panel rule leaves the backdrop alone. */}
+            <span className="task-note-tools">
+              <span className="task-note-hover-tools">
                 <button
                   type="button"
                   className="task-note-btn task-note-copy"
+                  aria-label={t('pre_input.copy')}
                   onClick={() => onDuplicate(task.id)}
                   disabled={!task.title.trim()}
                 >
@@ -335,6 +302,7 @@ export function TaskNoteView({
                 <button
                   type="button"
                   className="task-note-btn task-note-delete"
+                  aria-label={t('pre_input.delete')}
                   onClick={() => onRemove(task.id)}
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -344,9 +312,11 @@ export function TaskNoteView({
                     <path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
                   </svg>
                 </button>
+              </span>
                 <button
                   type="button"
                   className="task-note-btn task-note-send"
+                  aria-label={t('pre_input.send')}
                   onClick={() => onSend(task)}
                   disabled={!canSend || !task.title.trim()}
                 >
@@ -354,21 +324,7 @@ export function TaskNoteView({
                     <polygon points="5 3 21 12 5 21" />
                   </svg>
                 </button>
-              </div>
-            </div>
-
-            <NoteBody
-              value={task.title}
-              height={resizing?.id === task.id ? resizing.height : (task.height ?? null)}
-              open={expanded.has(task.id) || editingId === task.id || addingId === task.id || resizing?.id === task.id}
-              editing={editingId === task.id || addingId === task.id}
-              onToggle={() => setOpen(task.id, !expanded.has(task.id))}
-              onEdit={() => { setOpen(task.id, true); setEditingId(task.id); }}
-              onEditEnd={() => setEditingId(current => current === task.id ? null : current)}
-              autoFocus={addingId === task.id}
-              placeholder={t('task.note_placeholder')}
-              onChange={next => onUpdateTitle(task.id, next)}
-            />
+            </span>
 
             {/* Bottom-edge resize handle — drag to grow/shrink the note. The
                 `resizing` class drives the CSS deepen+lengthen effect while
@@ -487,17 +443,21 @@ function NoteBody({ value, height, open, editing, onToggle, onEdit, onEditEnd, a
   // Collapsed: a two-line preview ending in an ellipsis when there is more (a textarea cannot clamp lines).
   // The textarea stays mounted but hidden, keeping its sizing, scrollbar and edit wiring.
   const preview = !open && !editing;
+  // Only a note with more than its two preview lines opens on click; a short one already shows in full.
+  const previewRef = useRef<HTMLDivElement>(null);
+  const hasMore = () => !!previewRef.current && previewRef.current.scrollHeight > previewRef.current.clientHeight + 1;
   return (
     <>
       {preview && (
         <div
+          ref={previewRef}
           className={`task-note-preview${value ? '' : ' is-empty'}`}
           role="button"
           tabIndex={0}
           aria-expanded={false}
-          onClick={e => { if (e.detail <= 1) onToggle(); }}
+          onClick={e => { if (e.detail <= 1 && hasMore()) onToggle(); }}
           onDoubleClick={onEdit}
-          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(); } }}
+          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (hasMore()) onToggle(); } }}
         >{value || placeholder}</div>
       )}
       <textarea

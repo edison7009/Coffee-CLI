@@ -132,7 +132,7 @@ try {
   const long = Array.from({ length: 40 }, (_, i) => 'line ' + i).join('\n');
   await note.fill(long);
   await page.waitForFunction(text => window.saved[0].title === text, long);
-  await page.locator('#root .task-note-head').click({ position: { x: 5, y: 5 } });
+  await page.mouse.click(20, 700);
   assert.equal(await note.evaluate(el => el.readOnly), true, 'a press anywhere else ends editing');
   await note.click();
   assert.equal(await note.getAttribute('aria-expanded'), 'false', 'a click collapses an open note');
@@ -173,7 +173,7 @@ try {
   const cards = page.locator('#root .task-note-card');
   await page.waitForFunction(() => document.querySelectorAll('#root .task-note-card').length === 3);
   const first = await cards.nth(0).boundingBox(), second = await cards.nth(1).boundingBox();
-  await page.mouse.move(first.x + 60, first.y + 50); await page.mouse.down();
+  await page.mouse.move(first.x + 60, first.y + first.height / 2); await page.mouse.down();
   await page.mouse.move(first.x + 60, second.y + second.height * 0.75, { steps: 8 });
   const moved = await cards.evaluateAll(els => els.map(el => Math.round(new DOMMatrix(el.style.transform || 'none').m42)));
   assert.ok(moved[1] < 0, 'the passed note slides up out of the way '+moved);
@@ -182,6 +182,11 @@ try {
   await page.mouse.up();
   await page.waitForFunction(() => window.saved.map(task => task.title).join() === 'B,A,C');
   assert.deepEqual(await cards.evaluateAll(els => els.map(el => el.style.transform)), ['', '', ''], 'slide offsets clear after the drop');
+  // A note that already shows in full (a line or two) does not open on click, so it never shows a resize grip.
+  const shortNote = page.locator('#root [data-note-id="C"]');
+  await shortNote.locator('.task-note-preview').click();
+  assert.equal(await shortNote.locator('.task-note-body').getAttribute('aria-expanded'), 'false', 'a short note stays as it is');
+  assert.equal(await shortNote.locator('.task-note-resize').isVisible(), false, 'a short note shows no resize grip');
   // The + button adds an empty note in edit mode, and it stays editable after the add animation (until the user clicks away).
   await page.clock.install();
   await open('claude');
@@ -195,7 +200,7 @@ try {
   await page.waitForFunction(() => window.saved[0].title === 'fresh note');
   // Pressing a note never starts a text selection.
   const pressPrevented = selector => page.evaluate(sel => { const el = document.querySelector(sel); const ev = new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 0 }); el.dispatchEvent(ev); window.dispatchEvent(new PointerEvent('pointerup')); return ev.defaultPrevented; }, selector);
-  assert.equal(await pressPrevented('#root .task-note-head'), true, 'note press does not select text');
+  assert.equal(await pressPrevented('#root .task-note-card'), true, 'note press does not select text');
   assert.deepEqual(errors, []);
   console.log('OK: note, category and list send to existing Claude/Codex desktop and terminal sessions, acknowledge before promotion, prevent duplicates, preserve failures and disable unavailable targets');
 } finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }
