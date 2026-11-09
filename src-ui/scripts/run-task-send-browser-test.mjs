@@ -134,8 +134,8 @@ try {
   const long = Array.from({ length: 40 }, (_, i) => 'line ' + i).join('\n');
   await note.fill(long);
   await page.waitForFunction(text => window.saved[0].title === text, long);
-  await note.evaluate(el => el.blur());
-  assert.equal(await note.evaluate(el => el.readOnly), true, 'leaving the note ends editing');
+  await page.locator('#root .task-note-head').click({ position: { x: 5, y: 5 } });
+  assert.equal(await note.evaluate(el => el.readOnly), true, 'a press anywhere else ends editing');
   await note.click();
   assert.equal(await note.getAttribute('aria-expanded'), 'false', 'a click collapses an open note');
   const collapsed = await height();

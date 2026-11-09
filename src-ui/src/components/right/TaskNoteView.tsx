@@ -447,6 +447,16 @@ function NoteBody({ value, height, open, editing, onToggle, onEdit, onEditEnd, a
     if (editing && ref.current && document.activeElement !== ref.current) ref.current.focus();
   }, [editing]);
 
+  // Any press outside the body ends editing, even on spots that take no focus (empty panel, other notes' headers).
+  useEffect(() => {
+    if (!editing) return;
+    const onPress = (event: PointerEvent) => {
+      if (ref.current && !ref.current.contains(event.target as Node)) { ref.current.blur(); onEditEnd(); }
+    };
+    document.addEventListener('pointerdown', onPress, true);
+    return () => document.removeEventListener('pointerdown', onPress, true);
+  }, [editing, onEditEnd]);
+
   useEffect(() => {
     if (autoFocus && ref.current) {
       ref.current.focus();
