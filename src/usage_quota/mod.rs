@@ -2,7 +2,7 @@
 //! Official sign-ins report through the CLI protocol in desktop conversations; terminal tabs have no such
 //! channel, so this module reads their plan usage directly, and covers third-party keys found in the
 //! tool's own configuration.
-mod providers;
+pub(crate) mod providers;
 mod sources;
 
 use serde_json::{json, Value};
@@ -22,14 +22,24 @@ fn claude_managed_settings() -> Option<PathBuf> {
     #[cfg(all(unix, not(target_os = "macos")))] { Some(PathBuf::from("/etc/claude-code/managed-settings.json")) }
 }
 
-fn route(tool: &str, cwd: Option<String>) -> sources::Route {
+/// Account sign-in in use for this folder (not an API key or relay), as the usage meter decides it.
+pub(crate) fn account_mode(tool: &str, cwd: Option<String>) -> bool {
     let var = |key: &str| std::env::var(key).ok();
-    sources::resolve(tool, &sources::Context {
+    sources::account_mode(tool, &context(cwd, &var))
+}
+
+fn context<'a>(cwd: Option<String>, var: &'a dyn Fn(&str) -> Option<String>) -> sources::Context<'a> {
+    sources::Context {
         home: dirs::home_dir().unwrap_or_default(),
         cwd: cwd.filter(|p| !p.trim().is_empty()).map(PathBuf::from),
-        var: &var,
+        var,
         claude_managed: claude_managed_settings(),
-    })
+    }
+}
+
+fn route(tool: &str, cwd: Option<String>) -> sources::Route {
+    let var = |key: &str| std::env::var(key).ok();
+    sources::resolve(tool, &context(cwd, &var))
 }
 
 /// `{kind:"official"}` lets the frontend ask the CLI; `{kind:"provider",quotas}`

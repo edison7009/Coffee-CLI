@@ -489,6 +489,12 @@ Xóa tờ ghi chú này khi bạn sẵn sàng và bắt đầu tác vụ đầu 
   'gambit.worktree_detached': "Thư mục chính không ở nhánh nào; hãy chuyển sang nhánh cần gộp trước",
   'gambit.worktree_merge_failed': 'Hợp nhất thất bại: {error}',
   'gambit.send_empty_hint': 'Nhập nội dung hoặc dán ảnh trước (Ctrl+V)',
+  'gambit.voice.start': 'Nhập bằng giọng nói',
+  'gambit.voice.finish': 'Hoàn tất nhập giọng nói',
+  'gambit.voice.signed_out': 'Hãy đăng nhập công cụ bằng tài khoản để dùng nhập giọng nói',
+  'gambit.voice.no_microphone': 'Không có micrô — hãy kiểm tra quyền micrô của hệ thống',
+  'gambit.voice.failed': 'Nhập giọng nói thất bại — hãy thử lại',
+  'gambit.voice.listening': 'Đang nghe',
 
 
   'conversation.reasoning': 'Quá trình suy luận',

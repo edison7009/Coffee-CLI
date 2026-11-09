@@ -17,6 +17,8 @@ export const isTauri =
   typeof window !== 'undefined' &&
   (!!window.__TAURI_INTERNALS__ || !!window.__TAURI__);
 
+export type VoiceInputEvent = { kind: 'ready' } | { kind: 'text'; text: string; done: boolean } | { kind: 'error'; message: string } | { kind: 'level'; level: number };
+
 export interface CliUpdateStatus { tool: string; current: string | null; latest: string | null; available: boolean }
 
 // Resolve the invoke function across Tauri v1 / v2
@@ -204,6 +206,13 @@ export const commands = {
     const updates = new (await import('@tauri-apps/api/core')).Channel<CatalogSkill[]>(onUpdate);
     return invoke<CatalogSkill[]>('search_tool_skills', { query, onUpdate:updates });
   },
+  voiceInputAvailable: (tool: string, cwd?: string) => invoke<boolean>('voice_input_available', { tool, cwd }),
+  voiceInputStart: async (tool: string, cwd: string | undefined, language: string, onEvent: (event: VoiceInputEvent) => void) => {
+    const events = new (await import('@tauri-apps/api/core')).Channel<VoiceInputEvent>(onEvent);
+    return invoke<number>('voice_input_start', { tool, cwd, language, onEvent: events });
+  },
+  voiceInputFinish: (id: number) => invoke<void>('voice_input_finish', { id }),
+  voiceInputCancel: (id: number) => invoke<void>('voice_input_cancel', { id }),
   getToolSkillDescription: (source: string, name: string) => invoke<string>('get_tool_skill_description', { source, name }),
   installToolSkill: (tool: string, source: string, name: string) => invoke<SkillInventory>('install_tool_skill', { tool, source, name }),
   removeToolSkill: (tool: string, path: string) => invoke<SkillInventory>('remove_tool_skill', { tool, path }),

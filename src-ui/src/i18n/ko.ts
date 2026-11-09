@@ -487,6 +487,12 @@ export const ko = {
   'gambit.worktree_detached': "메인 체크아웃이 브랜치에 있지 않습니다. 먼저 병합할 브랜치로 전환하세요",
   'gambit.worktree_merge_failed': '병합 실패: {error}',
   'gambit.send_empty_hint': '내용을 입력하거나 이미지를 붙여넣으세요 (Ctrl+V)',
+  'gambit.voice.start': '음성 입력',
+  'gambit.voice.finish': '음성 입력 완료',
+  'gambit.voice.signed_out': '음성 입력을 사용하려면 도구에 계정으로 로그인하세요',
+  'gambit.voice.no_microphone': '사용 가능한 마이크가 없습니다. 시스템 마이크 권한을 확인하세요',
+  'gambit.voice.failed': '음성 입력에 실패했습니다. 다시 시도하세요',
+  'gambit.voice.listening': '듣는 중',
 
 
   'conversation.reasoning': '사고 과정',

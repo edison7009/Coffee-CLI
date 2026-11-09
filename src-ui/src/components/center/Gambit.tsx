@@ -29,6 +29,7 @@ import { OpenCodeComposerControls } from './OpenCodeComposerControls';
 import { PiComposerControls } from './PiComposerControls';
 import { DshComposerControls } from './DshComposerControls';
 import { UsageMeter } from './UsageMeter';
+import { VoiceInputButton, VoiceUsageSlot } from './VoiceInputButton';
 import { useUsageQuota } from '../../lib/usage-quota';
 import { gambitAttachments, removeGambitAttachment } from '../../lib/gambit-attachments';
 import './Gambit.css';
@@ -157,7 +158,11 @@ function GambitImpl({
   // Every desktop conversation accepts prompts during a running turn.
   const steerable = claude || codex || dsh || opencode || pi;
   const usage = useUsageQuota(sessionId, tool, cwd, claude ? 'claude' : codex ? 'codex' : dsh ? 'dsh' : null);
-  const usageMeter = <UsageMeter quotas={usage.quotas} onRefresh={usage.refresh} />;
+  // Voice input uses the tool's own speech service, so only Claude Code and Codex, desktop or terminal.
+  const voiceTool = claude || (!desktop && tool === 'claude') ? 'claude' : codex || (!desktop && tool === 'codex') ? 'codex' : null;
+  // While listening the live waveform takes the usage meter's place, wherever the meter is.
+  const meter = <UsageMeter quotas={usage.quotas} onRefresh={usage.refresh} />;
+  const usageMeter = voiceTool ? <VoiceUsageSlot waveKey={sessionId}>{meter}</VoiceUsageSlot> : meter;
   const suggestion = draft ? undefined : offered;
   const rootRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -872,6 +877,8 @@ function GambitImpl({
             {t('gambit.send_empty_hint')}
           </span>
         )}
+
+        {voiceTool && <VoiceInputButton key={`${sessionId}:${voiceTool}`} tool={voiceTool} cwd={cwd} waveKey={sessionId} draft={draft} onDraftChange={onDraftChange} />}
 
         <button
           className={`gambit-send${sendFailed ? ' gambit-send--failed' : ''}${!running && !draft.trim() ? ' gambit-send--empty' : ''}`}

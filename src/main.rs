@@ -42,6 +42,7 @@ mod tools;
 mod update_sources;
 mod usage_stats;
 mod usage_quota;
+mod voice_input;
 mod git;
 mod git_project_status;
 mod session_git_context;

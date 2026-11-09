@@ -488,6 +488,12 @@ export const zhCN = {
   'gambit.worktree_detached': "主目录不在任何分支上，请先切换到要合并的分支",
   'gambit.worktree_merge_failed': '合并失败：{error}',
   'gambit.send_empty_hint': '先输入内容或粘贴图片 (Ctrl+V)',
+  'gambit.voice.start': '语音输入',
+  'gambit.voice.finish': '完成语音输入',
+  'gambit.voice.signed_out': '需要在该工具里用账号登录才能使用语音输入',
+  'gambit.voice.no_microphone': '没有可用的麦克风，请检查系统麦克风权限',
+  'gambit.voice.failed': '语音输入失败，请重试',
+  'gambit.voice.listening': '正在聆听',
 
 
   // 贡献热力图（桌面 Launchpad 上的 6 张卡片上方）

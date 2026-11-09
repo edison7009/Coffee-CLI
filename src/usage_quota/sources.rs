@@ -102,7 +102,32 @@ fn host(base_url: &str) -> Option<String> {
 
 /// Settings `env` blocks override the inherited environment; later files win:
 /// user < project < local project < managed policy.
+/// Whether the tool talks to its vendor with an account sign-in: the official route with no API key in play.
+pub fn account_mode(tool: &str, cx: &Context) -> bool {
+    if resolve(tool, cx) != Route::Official { return false; }
+    match tool {
+        "claude" => {
+            let env = claude_env(cx);
+            !["ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"].iter().any(|key| env.get(*key).and_then(Value::as_str).is_some_and(|v| !v.trim().is_empty()))
+        }
+        _ => true,
+    }
+}
+
 fn claude(cx: &Context) -> Route {
+    let env = claude_env(cx);
+    let get = |key: &str| env.get(key).and_then(Value::as_str).map(str::trim).filter(|s| !s.is_empty()).map(String::from);
+    let truthy = |key: &str| get(key).is_some_and(|value| !matches!(value.as_str(), "0" | "false"));
+    if truthy("CLAUDE_CODE_USE_BEDROCK") || truthy("CLAUDE_CODE_USE_VERTEX") || truthy("CLAUDE_CODE_USE_FOUNDRY") { return Route::Unknown; }
+    match get("ANTHROPIC_BASE_URL") {
+        None => Route::Official,
+        Some(base) if host(&base).as_deref() == Some("api.anthropic.com") => Route::Official,
+        base => endpoint(base, get("ANTHROPIC_AUTH_TOKEN").or_else(|| get("ANTHROPIC_API_KEY"))),
+    }
+}
+
+/// Claude Code's effective `env`: the shell, then user, project, local and managed settings.
+fn claude_env(cx: &Context) -> Map<String, Value> {
     let keys = ["ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_API_KEY", "CLAUDE_CODE_USE_BEDROCK", "CLAUDE_CODE_USE_VERTEX", "CLAUDE_CODE_USE_FOUNDRY"];
     let mut env: Map<String, Value> = keys.iter().filter_map(|key| cx.var(key).map(|value| (key.to_string(), Value::String(value)))).collect();
     let user = cx.var("CLAUDE_CONFIG_DIR").map(PathBuf::from).unwrap_or_else(|| cx.home.join(".claude"));
@@ -112,14 +137,7 @@ fn claude(cx: &Context) -> Route {
     for file in files {
         if let Some(Value::Object(block)) = read_json(&file).and_then(|settings| settings.get("env").cloned()) { env.extend(block); }
     }
-    let get = |key: &str| env.get(key).and_then(Value::as_str).map(str::trim).filter(|s| !s.is_empty()).map(String::from);
-    let truthy = |key: &str| get(key).is_some_and(|value| !matches!(value.as_str(), "0" | "false"));
-    if truthy("CLAUDE_CODE_USE_BEDROCK") || truthy("CLAUDE_CODE_USE_VERTEX") || truthy("CLAUDE_CODE_USE_FOUNDRY") { return Route::Unknown; }
-    match get("ANTHROPIC_BASE_URL") {
-        None => Route::Official,
-        Some(base) if host(&base).as_deref() == Some("api.anthropic.com") => Route::Official,
-        base => endpoint(base, get("ANTHROPIC_AUTH_TOKEN").or_else(|| get("ANTHROPIC_API_KEY"))),
-    }
+    env
 }
 
 // ── Codex CLI ────────────────────────────────────────────────────────────
@@ -319,6 +337,21 @@ mod tests {
         assert_eq!(f.resolve("claude", &[]), Route::Official);
         assert_eq!(f.resolve("claude", &[("CLAUDE_CODE_USE_BEDROCK", "1")]), Route::Unknown);
         assert_eq!(f.resolve("claude", &[("CLAUDE_CONFIG_DIR", "<root>/elsewhere")]), Route::Official);
+    }
+
+    #[test]
+    fn account_mode_needs_the_official_route_without_api_keys() {
+        let f = Fixture::new();
+        let mode = |tool: &str, vars: &[(&str, &str)]| {
+            let var = |key: &str| vars.iter().find(|(k, _)| *k == key).map(|(_, v)| v.to_string());
+            account_mode(tool, &Context { home: f.root.join("home"), cwd: Some(f.root.join("repo/app")), var: &var, claude_managed: None })
+        };
+        assert!(mode("claude", &[]));
+        assert!(!mode("claude", &[("ANTHROPIC_API_KEY", "sk-ant")]), "an API key is not an account");
+        f.write("home/.claude/settings.json", r#"{"env":{"ANTHROPIC_BASE_URL":"https://relay.example","ANTHROPIC_AUTH_TOKEN":"t"}}"#);
+        assert!(!mode("claude", &[]), "a relay is not an account");
+        assert!(mode("codex", &[]));
+        assert!(!mode("codex", &[("OPENAI_BASE_URL", "https://relay.example")]));
     }
 
     #[test]

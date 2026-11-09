@@ -485,6 +485,12 @@ export const ru = {
   'gambit.worktree_detached': "Основная копия не на ветке; сначала переключитесь на целевую ветку",
   'gambit.worktree_merge_failed': 'Не удалось слить: {error}',
   'gambit.send_empty_hint': 'Сначала введите сообщение или вставьте изображение (Ctrl+V)',
+  'gambit.voice.start': 'Голосовой ввод',
+  'gambit.voice.finish': 'Завершить голосовой ввод',
+  'gambit.voice.signed_out': 'Для голосового ввода войдите в инструмент с учётной записью',
+  'gambit.voice.no_microphone': 'Микрофон недоступен — проверьте разрешение на микрофон',
+  'gambit.voice.failed': 'Ошибка голосового ввода — попробуйте ещё раз',
+  'gambit.voice.listening': 'Слушаю',
 
   'conversation.reasoning': 'Ход рассуждений',
   'conversation.thinking': 'Размышляет…',
