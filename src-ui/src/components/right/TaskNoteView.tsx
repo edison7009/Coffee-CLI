@@ -113,7 +113,10 @@ export function TaskNoteView({
     // Never start a drag from an interactive control — the note body needs
     // click-to-place-caret + text selection, dots/buttons need clicks, and the
     // bottom-edge handle owns its own resize gesture.
-    if (target.closest('textarea') || target.closest('button') || target.closest('.task-note-resize')) return;
+    // A read-only body (not being edited) drags the card; preventDefault keeps it from selecting text.
+    const body = target.closest('textarea');
+    if ((body && !body.readOnly) || target.closest('button') || target.closest('.task-note-resize')) return;
+    if (body) e.preventDefault();
 
     const cardEl = target.closest('.task-note-card') as HTMLElement;
     if (!cardEl) return;
@@ -127,12 +130,15 @@ export function TaskNoteView({
     dropTargetRef.current = null;
 
     const THRESHOLD = 6;
+    const swallowClick = (ev: MouseEvent) => { ev.stopPropagation(); ev.preventDefault(); };
 
     const onMove = (me: PointerEvent) => {
       if (!dragStartedRef.current) {
         if (Math.abs(me.clientX - startX) < THRESHOLD && Math.abs(me.clientY - startY) < THRESHOLD) return;
         dragStartedRef.current = true;
         setDragId(id);
+        // The drop's click must not also open or close the note.
+        window.addEventListener('click', swallowClick, { capture: true, once: true });
         const ghost = cardEl.cloneNode(true) as HTMLDivElement;
         ghost.className = 'task-note-card-ghost';
         // cloneNode copies DOM attributes but not the live textarea `.value`
@@ -184,6 +190,8 @@ export function TaskNoteView({
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
       if (ghostRef.current) { ghostRef.current.remove(); ghostRef.current = null; }
+      // The click from this release arrives before the timer; drop the guard if none came (released outside the window).
+      if (dragStartedRef.current) setTimeout(() => window.removeEventListener('click', swallowClick, { capture: true }));
 
       const drop = dropTargetRef.current;
       if (dragStartedRef.current && drop && drop.id !== id) {
@@ -467,7 +475,7 @@ function NoteBody({ value, height, open, editing, onToggle, onEdit, onEditEnd, a
         placeholder={placeholder}
         rows={2}
         onChange={e => onChange(e.target.value)}
-        onPointerDown={e => e.stopPropagation()}
+        onPointerDown={e => { if (editing) e.stopPropagation(); }}
         onContextMenu={(e) => openCtxMenu(e, onChange)}
       />
       {ctxMenu}

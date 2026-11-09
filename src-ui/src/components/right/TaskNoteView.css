@@ -36,7 +36,9 @@
 .task-note-card.status-done { opacity: 0.55; }
 .task-note-card.status-done:hover { opacity: 0.85; }
 
-.task-note-card.dragging { opacity: 0.25; }
+/* The dragged note leaves a dashed outline of itself in place. */
+.task-note-card.dragging { background: transparent !important; box-shadow: none !important; outline: 1.5px dashed color-mix(in srgb, var(--accent) 60%, transparent); outline-offset: -1.5px; }
+.task-note-card.dragging > * { visibility: hidden; }
 
 /* Exit animation — fades + slides out during the parent's 300ms removal window. */
 .task-note-card.removing {
@@ -261,7 +263,7 @@
 }
 
 /* Collapsed and expanded-but-not-editing notes read as cards: a click opens or closes them, a double-click edits. */
-.task-note-body[readonly] { cursor: pointer !important; }
+.task-note-body[readonly] { cursor: pointer !important; user-select: none; -webkit-user-select: none; }
 .task-note-body.is-collapsed { overflow: hidden; }
 /* A collapsed note neither scrolls nor resizes: hide its bottom grip (the slider hides itself because the body stops scrolling). */
 .task-note-card.is-collapsed .task-note-resize { display: none; }

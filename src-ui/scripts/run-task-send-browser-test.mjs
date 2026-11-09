@@ -152,6 +152,18 @@ try {
   await page.locator('.cc-scrollbar:not(.is-empty)').waitFor({ state: 'attached' });
   assert.equal(await page.locator('.task-note-resize').isVisible(), true, 'an expanded note can be resized');
   assert.equal(await note.evaluate(el => el.readOnly), true, 'a click does not start editing');
+  // Dragging from a read-only body moves the card: no text selection, a dashed outline stays in place, the drop does not toggle.
+  const box = await note.boundingBox();
+  await page.mouse.move(box.x + 40, box.y + 20); await page.mouse.down(); await page.mouse.move(box.x + 40, box.y + 80, { steps: 5 });
+  const card = page.locator('.task-note-card').first();
+  assert.equal(await card.evaluate(el => el.classList.contains('dragging')), true, 'dragging the body drags the card');
+  assert.equal(await card.evaluate(el => getComputedStyle(el).outlineStyle), 'dashed', 'the dragged note leaves a dashed outline');
+  assert.equal(await page.locator('#root .task-note-body').evaluate(el => getComputedStyle(el).userSelect), 'none', 'a read-only body cannot have its text selected by a drag');
+  await page.mouse.up();
+  assert.equal(await note.getAttribute('aria-expanded'), 'true', 'dropping does not collapse the note');
+  await note.click();
+  assert.equal(await note.getAttribute('aria-expanded'), 'false', 'the next click still toggles');
+  await note.click();
   assert.deepEqual(errors, []);
   console.log('OK: note, category and list send to existing Claude/Codex desktop and terminal sessions, acknowledge before promotion, prevent duplicates, preserve failures and disable unavailable targets');
 } finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }
