@@ -294,6 +294,7 @@ export const fr = {
   'task.greeting.evening': 'Bonsoir. Un projet ambitieux ?',
   'task.tab.tasks': 'Pré-saisie',
   'pre_input.edit': 'Modifier',
+  'pre_input.done': 'Terminé',
   'pre_input.copy': 'Dupliquer',
   'pre_input.delete': 'Supprimer',
   'pre_input.send': 'Envoyer',

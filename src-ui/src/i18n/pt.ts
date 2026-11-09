@@ -294,6 +294,7 @@ export const pt = {
   'task.greeting.evening': 'Boa noite. Algo ambicioso?',
   'task.tab.tasks': 'Pré-entrada',
   'pre_input.edit': 'Editar',
+  'pre_input.done': 'Concluir',
   'pre_input.copy': 'Duplicar',
   'pre_input.delete': 'Excluir',
   'pre_input.send': 'Enviar',

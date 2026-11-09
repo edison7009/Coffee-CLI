@@ -129,13 +129,14 @@
 .task-note-actions {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 0 8px 6px;
+  gap: 8px;
+  /* Icons line up with the text's 12px inset (28px buttons, 16px icons). */
+  padding: 2px 6px 8px;
 }
 .task-note-actions-gap { flex: 1; }
 /* Same size as the hover icons: there is room under an open note. */
 .task-note-actions .task-note-btn svg { width: 16px; height: 16px; }
-.task-note-edit[aria-pressed="true"] { opacity: 1; }
+.task-note-card .task-note-edit[aria-pressed="true"] { background: color-mix(in srgb, var(--accent, #c4956a) 16%, transparent) !important; }
 
 /* ─── Body — the writing area ────────────────────────────────────────────────── */
 

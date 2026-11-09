@@ -273,12 +273,25 @@ export function TaskNoteView({
             )}
             {open && (
               <span className="task-note-actions">
-                <button type="button" className="task-note-btn task-note-edit" aria-label={t('pre_input.edit')} aria-pressed={editingId === task.id || addingId === task.id} onClick={edit}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M12 20h9" />
-                    <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
-                  </svg>
-                </button>
+                {(() => {
+                  const editing = editingId === task.id || addingId === task.id;
+                  // While editing, the pencil becomes a check that finishes editing.
+                  const done = (e: React.MouseEvent) => { (e.currentTarget.closest('.task-note-card')?.querySelector('textarea') as HTMLTextAreaElement | null)?.blur(); setEditingId(null); };
+                  return (
+                    <button type="button" className="task-note-btn task-note-edit" aria-label={t(editing ? 'pre_input.done' : 'pre_input.edit')} aria-pressed={editing}
+                      // Keep focus in the text on press: a blur here would end editing before the click reads it.
+                      onMouseDown={e => e.preventDefault()} onClick={editing ? done : edit}>
+                      {editing ? (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
+                      ) : (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M12 20h9" />
+                          <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                        </svg>
+                      )}
+                    </button>
+                  );
+                })()}
                 {/* Duplicate spawns an identical note right after this one; the new card animating in is the feedback. */}
                 <button type="button" className="task-note-btn task-note-copy" aria-label={t('pre_input.copy')} onClick={() => onDuplicate(task.id)} disabled={!task.title.trim()}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -366,6 +379,8 @@ function NoteBody({ value, open, editing, onToggle, onEditEnd, autoFocus, placeh
   useEffect(() => {
     if (!editing) return;
     const onPress = (event: PointerEvent) => {
+      // The edit/done button switches editing itself; a press on it must not end editing first.
+      if ((event.target as Element).closest?.('.task-note-edit')) return;
       if (ref.current && !ref.current.contains(event.target as Node)) { ref.current.blur(); onEditEnd(); }
     };
     document.addEventListener('pointerdown', onPress, true);

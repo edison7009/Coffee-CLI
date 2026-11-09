@@ -294,6 +294,7 @@ export const ru = {
   'task.greeting.evening': 'Добрый вечер. Что-нибудь масштабное?',
   'task.tab.tasks': 'Предввод',
   'pre_input.edit': 'Изменить',
+  'pre_input.done': 'Готово',
   'pre_input.copy': 'Дублировать',
   'pre_input.delete': 'Удалить',
   'pre_input.send': 'Отправить',

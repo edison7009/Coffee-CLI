@@ -294,6 +294,7 @@ export const de = {
   'task.greeting.evening': 'Guten Abend. Etwas Großes geplant?',
   'task.tab.tasks': 'Vorab-Eingabe',
   'pre_input.edit': 'Bearbeiten',
+  'pre_input.done': 'Fertig',
   'pre_input.copy': 'Duplizieren',
   'pre_input.delete': 'Löschen',
   'pre_input.send': 'Senden',

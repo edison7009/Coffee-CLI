@@ -294,6 +294,7 @@ export const ko = {
   'task.greeting.evening': '좋은 저녁, 뭔가 시작해볼까요?',
   'task.tab.tasks': '사전 입력',
   'pre_input.edit': '편집',
+  'pre_input.done': '완료',
   'pre_input.copy': '복제',
   'pre_input.delete': '삭제',
   'pre_input.send': '보내기',

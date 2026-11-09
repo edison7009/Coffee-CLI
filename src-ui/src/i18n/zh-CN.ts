@@ -294,6 +294,7 @@ export const zhCN = {
   'task.greeting.evening': '晚上好，想干点什么大事？',
   'task.tab.tasks': '预输入',
   'pre_input.edit': '编辑',
+  'pre_input.done': '完成',
   'pre_input.copy': '复制',
   'pre_input.delete': '删除',
   'pre_input.send': '发送',

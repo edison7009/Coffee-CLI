@@ -142,6 +142,13 @@ try {
   assert.equal(await note.getAttribute('aria-expanded'), 'true', 'a click still opens after a double-click');
   await page.locator('#root .task-note-edit').click();
   assert.equal(await note.evaluate(el => el.readOnly), false, 'the edit button edits');
+  const editBtn = page.locator('#root .task-note-edit');
+  assert.equal(await editBtn.getAttribute('aria-pressed'), 'true', 'while editing the button becomes done');
+  await editBtn.click();
+  assert.equal(await note.evaluate(el => el.readOnly), true, 'done finishes editing instead of re-entering it');
+  assert.equal(await note.getAttribute('aria-expanded'), 'true', 'done keeps the note open');
+  await editBtn.click();
+  assert.equal(await note.evaluate(el => el.readOnly), false, 'and the button edits again');
   assert.equal(await note.getAttribute('aria-expanded'), 'true', 'editing shows the note');
   const long = Array.from({ length: 40 }, (_, i) => 'line ' + i).join('\n');
   await note.fill(long);
