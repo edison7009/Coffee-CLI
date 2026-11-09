@@ -61,7 +61,8 @@ export function bindAutoHideScrollbar(
       const top = Math.max(0, rect.top);
       const bottom = Math.min(window.innerHeight, rect.bottom);
       const viewportHeight = Math.max(0, bottom - top);
-      maxScroll = Math.max(0, element.scrollHeight - element.clientHeight);
+      // An element that does not scroll (overflow hidden, e.g. a collapsed note) gets no rail.
+      maxScroll = getComputedStyle(element).overflowY === 'hidden' ? 0 : Math.max(0, element.scrollHeight - element.clientHeight);
 
       // No overflow (or collapsed/off-screen, e.g. the panel mid-open at
       // width 0) → hide the rail. is-empty also disables pointer events.

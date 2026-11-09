@@ -272,6 +272,7 @@ export function TaskNoteView({
             className={[
               'task-note-card',
               `status-${task.status}`,
+              !(expanded.has(task.id) || editingId === task.id || addingId === task.id || resizing?.id === task.id) && 'is-collapsed',
               dragId === task.id && 'dragging',
               removingId === task.id && 'removing',
               line === 'before' && 'drop-before',

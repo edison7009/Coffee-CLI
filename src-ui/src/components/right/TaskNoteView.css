@@ -263,3 +263,5 @@
 /* Collapsed and expanded-but-not-editing notes read as cards: a click opens or closes them, a double-click edits. */
 .task-note-body[readonly] { cursor: pointer !important; }
 .task-note-body.is-collapsed { overflow: hidden; }
+/* A collapsed note neither scrolls nor resizes: hide its bottom grip (the slider hides itself because the body stops scrolling). */
+.task-note-card.is-collapsed .task-note-resize { display: none; }

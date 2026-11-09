@@ -140,11 +140,17 @@ try {
   assert.equal(await note.getAttribute('aria-expanded'), 'false', 'a click collapses an open note');
   const collapsed = await height();
   assert.ok(collapsed <= 50, 'a collapsed note shows about two lines');
+  await note.hover();
+  assert.equal(await page.locator('.cc-scrollbar:not(.is-empty)').count(), 0, 'a collapsed note shows no scrollbar');
+  assert.equal(await page.locator('.task-note-resize').isVisible(), false, 'a collapsed note has no resize grip');
   await note.click();
   assert.equal(await note.getAttribute('aria-expanded'), 'true', 'a click expands');
   const expanded = await height();
   assert.ok(expanded > collapsed && expanded <= 320, 'an expanded note grows up to its cap');
   assert.ok(await note.evaluate(el => el.scrollHeight > el.clientHeight), 'content past the cap scrolls');
+  await note.hover();
+  await page.locator('.cc-scrollbar:not(.is-empty)').waitFor({ state: 'attached' });
+  assert.equal(await page.locator('.task-note-resize').isVisible(), true, 'an expanded note can be resized');
   assert.equal(await note.evaluate(el => el.readOnly), true, 'a click does not start editing');
   assert.deepEqual(errors, []);
   console.log('OK: note, category and list send to existing Claude/Codex desktop and terminal sessions, acknowledge before promotion, prevent duplicates, preserve failures and disable unavailable targets');
