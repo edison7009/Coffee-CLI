@@ -1,16 +1,21 @@
 /* The automations strip at the top of the pre-input list: one card each, styled like the notes below: name and next run, then tool, schedule and folder; switch and send on the right. */
-.task-automations { display: flex; flex-direction: column; gap: 6px; margin: 0 0 12px; }
-.task-automations-head { display: flex; align-items: center; gap: 6px; width: 100%; padding: 0; border: 0; background: none; font: inherit; text-align: left; cursor: pointer; }
-.task-automations-chevron { width: 12px; height: 12px; flex-shrink: 0; transition: transform .15s ease; }
-.task-automations-chevron[data-open="true"] { transform: rotate(90deg); }
-.task-automations-count { margin-left: 2px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.task-automations { position: relative; display: flex; flex-direction: column; gap: 2px; margin: 6px 0 14px; padding: 2px 4px 4px; }
+/* The strip is one pinned panel: a soft tray behind the header and its automations, set apart from the notes by space.
+   Painted by a pseudo-element, which the glass/carbon background reset leaves alone. */
+.task-automations::before { content: ''; position: absolute; inset: 0; border-radius: var(--radius-md, 12px); background: rgba(255, 255, 255, 0.035); pointer-events: none; }
+.task-automations > * { position: relative; }
+.task-automations-head.task-section-header { display: flex; align-items: center; gap: 6px; width: 100%; padding: 8px 8px 4px; border: 0; background: none; font: inherit; font-size: 12px; font-weight: 500; color: var(--text-3); text-align: left; cursor: pointer; }
+.task-automations-head:hover { color: var(--text-2); }
+.task-automations-chevron { width: 12px; height: 12px; margin-left: auto; flex-shrink: 0; transition: transform .15s ease; }
+.task-automations-chevron[data-open="false"] { transform: rotate(-90deg); }
+.task-automations-count { font-variant-numeric: tabular-nums; }
 /* Same card as a pre-input note below it: no border, the note's radius. */
-.task-card.task-automation-card { position: relative; border-radius: var(--radius-md, 12px); }
+.task-card.task-automation-card { position: relative; border-radius: max(0px, calc(var(--radius-md, 12px) - 4px)); background: transparent; }
 /* Hover, like a note: the pointer-following glow, and send slides in at the right. */
 .task-automation-card::before { content: ''; position: absolute; inset: 0; border-radius: inherit; background: radial-gradient(140px circle at var(--glow-x, 50%) 50%, color-mix(in srgb, var(--accent, #c4956a) 18%, transparent), transparent 70%); opacity: 0; pointer-events: none; transition: opacity .2s ease; }
 .task-automation-card:hover::before { opacity: 1; }
 .task-automation-row { position: relative; z-index: 1; }
-.task-automation-row { display: flex; align-items: center; gap: 14px; min-width: 0; min-height: 48px; padding: 8px 8px 8px 10px; }
+.task-automation-row { display: flex; align-items: center; gap: 14px; min-width: 0; min-height: 44px; padding: 6px 6px 6px 8px; }
 .task-automation-name { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .task-automation-line, .task-automation-sub { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .task-automation-title { flex: 0 1 auto; min-width: 0; color: var(--text-1); font-size: var(--type-label); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

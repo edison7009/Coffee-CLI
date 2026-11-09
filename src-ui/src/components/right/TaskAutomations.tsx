@@ -31,12 +31,11 @@ export function TaskAutomations({ onSend }: { onSend: (prompt: string) => void }
   const [collapsed, setCollapsed] = useState(() => { try { return localStorage.getItem(COLLAPSED_KEY) === '1'; } catch { return false; } });
   if (!automations.length) return null;
   const toggleSection = () => { const next = !collapsed; setCollapsed(next); try { localStorage.setItem(COLLAPSED_KEY, next ? '1' : '0'); } catch { /* Best-effort operation; failure is non-fatal. */ } };
-  const on = automations.filter(item => item.enabled).length;
   return <section className="task-automations" aria-label={t('automation.title')}>
     <button type="button" className="task-section-header task-automations-head" aria-expanded={!collapsed} onClick={toggleSection}>
-      <svg className="task-automations-chevron" data-open={!collapsed} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
       <span>{t('automation.title')}</span>
-      <span className="task-automations-count">{on}/{automations.length}</span>
+      <span className="task-automations-count">· {automations.length}</span>
+      <svg className="task-automations-chevron" data-open={!collapsed} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
     </button>
     {!collapsed && automations.map(item => <div key={item.id} className="task-card task-automation-card" data-enabled={item.enabled}
       // Like a note: a soft glow follows the pointer across the card.
