@@ -85,10 +85,10 @@
   display: flex;
   overflow: hidden;
   border-radius: 0 var(--radius-md, 12px) var(--radius-md, 12px) 0;
-  /* The red rises out of the text: a short 16px lead-in, eased (slow start, quick finish) so it reads as a soft
-     edge rather than a long smear, with no hard line where the buttons meet the text. */
-  padding-left: 16px;
-  background: linear-gradient(to right, rgba(229, 83, 75, 0) 0, rgba(229, 83, 75, 0.15) 4px, rgba(229, 83, 75, 0.45) 8px, rgba(229, 83, 75, 0.8) 12px, #e5534b 16px);
+  /* The red rises out of the text: a short 12px lead-in, eased (slow start, quick finish) so it reads as a soft
+     edge rather than a smear, with no hard line where the buttons meet the text. */
+  padding-left: 12px;
+  background: linear-gradient(to right, rgba(229, 83, 75, 0) 0, rgba(229, 83, 75, 0.15) 3px, rgba(229, 83, 75, 0.45) 6px, rgba(229, 83, 75, 0.8) 9px, #e5534b 12px);
   opacity: 0;
   pointer-events: none;
   transition: opacity .16s ease;
@@ -102,11 +102,14 @@
   color: #fff;
   transition: filter .15s;
 }
-.task-note-swipe-btn.task-note-delete { background: #e5534b; }
+.task-note-swipe-btn.task-note-delete { width: 40px; background: #e5534b; }
 .task-note-swipe-btn.task-note-send { background: #007aff; } /* the iOS blue of the tool switches */
 .task-note-swipe-btn svg { width: 18px; height: 18px; }
 .task-note-card:hover .task-note-swipe,
 .task-note-card:focus-within .task-note-swipe { opacity: 1; pointer-events: auto; }
+/* Right after a click opens or closes the note, the buttons wait for the pointer to leave and come back, so they
+   don't flash in and out under it. */
+.task-note-card[data-quiet] .task-note-swipe { opacity: 0; pointer-events: none; transition: none; }
 .task-note-card .task-note-swipe-btn:hover:not(:disabled) { opacity: 1; filter: brightness(1.12); }
 .task-note-list:has(.task-note-card.dragging) .task-note-swipe { display: none; }
 @media (prefers-reduced-motion: reduce) { .task-note-swipe { transition: none; } }

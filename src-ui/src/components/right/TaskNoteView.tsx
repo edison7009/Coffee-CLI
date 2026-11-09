@@ -82,6 +82,10 @@ export function TaskNoteView({
   }, [addingId]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
+  // After a click opens or closes a note, hold its hover buttons back until the pointer leaves the card (a DOM
+  // flag rather than state: it only gates CSS and clears on pointerleave).
+  const quietCard = (id: string) => listRef.current?.querySelector(`[data-note-id="${CSS.escape(id)}"]`)?.setAttribute('data-quiet', '');
+
   const handlePointerDown = (e: React.PointerEvent, id: string) => {
     const target = e.target as HTMLElement;
     // Never start a drag from a button or a body being edited (it needs its caret and selection).
@@ -241,6 +245,7 @@ export function TaskNoteView({
             ].filter(Boolean).join(' ')}
             style={{ touchAction: 'none' }}
             onPointerDown={e => handlePointerDown(e, task.id)}
+            onPointerLeave={e => e.currentTarget.removeAttribute('data-quiet')}
           >
             {/* Collapsed: one line of text that never moves. On hover solid buttons fade in over its right
                 end — delete, then send at the edge. Open: the whole note, then a row of actions. */}
@@ -249,7 +254,7 @@ export function TaskNoteView({
                 value={task.title}
                 open={open}
                 editing={editingId === task.id || addingId === task.id}
-                onToggle={() => setOpen(task.id, !expanded.has(task.id))}
+                onToggle={() => { quietCard(task.id); setOpen(task.id, !expanded.has(task.id)); }}
                 onEdit={edit}
                 onEditEnd={() => setEditingId(current => current === task.id ? null : current)}
                 autoFocus={addingId === task.id}
