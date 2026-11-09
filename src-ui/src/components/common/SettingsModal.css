@@ -173,11 +173,10 @@
 .settings-scale-error { margin-top: 10px; color: var(--text-2); font-size: var(--type-label); }
 
 .settings-section-label {
-  font-size: var(--type-caption);
+  /* Same size as the row titles below it; weight and a softer colour mark it as the group heading. */
+  font-size: var(--type-body);
   font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--text-3, rgba(255, 255, 255, 0.4));
+  color: var(--text-2, rgba(255, 255, 255, 0.7));
   margin: 20px 0 11px;
 }
 .settings-section-label:first-child { margin-top: 0; }
