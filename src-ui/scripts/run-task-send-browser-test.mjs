@@ -201,6 +201,8 @@ try {
   assert.ok(delX < sendX && Math.abs(sendBtn.x + sendBtn.width - (restCard.x + restCard.width)) < 1, 'delete, then send at the right edge');
   assert.ok(Math.abs(sendBtn.height - restCard.height) < 1, 'the buttons run the card\'s full height');
   assert.deepEqual(await tabCard.locator('.task-note-preview').boundingBox(), restLine, 'the text does not move');
+  const mask = await tabCard.locator('.task-note-preview').evaluate(el => getComputedStyle(el).webkitMaskImage || getComputedStyle(el).maskImage);
+  assert.ok(/linear-gradient/.test(mask) && /transparent|rgba\(0, 0, 0, 0\)/.test(mask), 'the text fades out before the buttons instead of being cut off: '+mask);
   assert.notEqual(await tabCard.locator('.task-note-swipe-btn.task-note-delete').evaluate(el => getComputedStyle(el).backgroundColor), 'rgba(0, 0, 0, 0)', 'solid buttons');
   // Send stays, enabled, even with no session to send to.
   await page.evaluate(() => window.selectSession(null));
