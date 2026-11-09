@@ -146,7 +146,7 @@ try {
   await note.click();
   assert.equal(await note.getAttribute('aria-expanded'), 'true', 'a click expands');
   const expanded = await height();
-  assert.ok(expanded > collapsed && expanded <= 320, 'an expanded note grows up to its cap');
+  assert.ok(expanded > 320 && expanded <= 480, 'an expanded note grows up to its cap');
   assert.ok(await note.evaluate(el => el.scrollHeight > el.clientHeight), 'content past the cap scrolls');
   await note.hover();
   await page.locator('.cc-scrollbar:not(.is-empty)').waitFor({ state: 'attached' });

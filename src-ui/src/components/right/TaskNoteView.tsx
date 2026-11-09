@@ -39,7 +39,7 @@ const NOTE_MIN_HEIGHT = 44;
 const NOTE_MAX_HEIGHT = 600;
 // Collapsed notes show about two lines; an expanded note grows to fit up to this cap, then scrolls.
 const NOTE_COLLAPSED_HEIGHT = 50;
-const NOTE_EXPANDED_CAP = 320;
+const NOTE_EXPANDED_CAP = 480;
 
 function formatNoteTime(ts: number): { date: string; time: string } {
   const d = new Date(ts);
@@ -410,14 +410,12 @@ function NoteBody({ value, height, open, editing, onToggle, onEdit, onEditEnd, a
         el.style.height = 'auto';
         el.style.height = `${Math.min(NOTE_COLLAPSED_HEIGHT, Math.max(NOTE_MIN_HEIGHT, el.scrollHeight))}px`;
         el.scrollTop = 0;
-      } else if (height != null) {
-        // Manually resized: a FIXED height, not a floor. Longer content scrolls
-        // inside the note (overflow-y:auto) — the size the user chose wins, but
-        // the tail stays reachable via the wheel or the accent slider.
-        el.style.height = `${Math.max(NOTE_MIN_HEIGHT, height)}px`;
       } else {
+        // Expanded: show the whole note up to the cap, then scroll. A dragged height only ever makes it taller,
+        // so an old small height (or a short drag) never leaves an opened note cramped.
         el.style.height = 'auto';
-        el.style.height = `${Math.min(NOTE_EXPANDED_CAP, Math.max(DEFAULT_NOTE_HEIGHT, el.scrollHeight))}px`;
+        const fitted = Math.min(NOTE_EXPANDED_CAP, Math.max(NOTE_MIN_HEIGHT, el.scrollHeight));
+        el.style.height = `${height != null ? Math.max(fitted, Math.min(NOTE_MAX_HEIGHT, height)) : fitted}px`;
       }
       lastW = el.offsetWidth;
     };
