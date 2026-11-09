@@ -92,7 +92,7 @@ try {
   await page.evaluate(() => window.holdSend = true);
   await edited.click();
   await page.waitForFunction(() => typeof window.finishSend === 'function');
-  await page.locator('.task-note-preview').dblclick();await page.locator('.task-note-body').fill('New unsent task');
+  await page.locator('.task-note-preview').click();await page.locator('.task-note-edit').click();await page.locator('.task-note-body').fill('New unsent task');
   await page.evaluate(() => window.finishSend());
   await page.waitForFunction(() => document.querySelector('.task-board')?.getAttribute('aria-busy') === 'false');
   assert.equal(await page.evaluate(() => window.saved[0].status), 'todo', 'acknowledging an older send must not promote newly edited content');
@@ -108,7 +108,7 @@ try {
   await button.click();
   assert.deepEqual(await page.evaluate(() => window.actions), [], 'with no session the click does nothing');
   const plan = await open('claude');
-  await page.locator('.task-note-preview').dblclick();await page.locator('.task-note-body').fill('/plan Inspect layout');
+  await page.locator('.task-note-preview').click();await page.locator('.task-note-edit').click();await page.locator('.task-note-body').fill('/plan Inspect layout');
   await plan.click();
   await page.waitForFunction(() => window.saved[0].status === 'working');
   const calls = await page.evaluate(() => window.calls);
@@ -128,14 +128,20 @@ try {
     return {previous,current:window.taskCommits};
   });
   assert.equal(commits.current, commits.previous, 'streamed conversation content must not redraw the task board when send availability is unchanged');
-  // Notes start collapsed; a click opens or closes one, a double-click edits it, leaving ends editing.
+  // Notes start collapsed; a click opens or closes one, the edit button edits it, leaving ends editing.
   await open('claude');
   const note = page.locator('.task-note-body');
   const preview = page.locator('#root .task-note-preview');
   assert.equal(await note.getAttribute('aria-expanded'), 'false', 'notes start collapsed');
   assert.equal(await note.evaluate(el => el.readOnly), true, 'a collapsed note is not editable');
+  // A double-click is just two clicks: it opens then closes, never edits, and the note stays clickable after.
   await preview.dblclick();
-  assert.equal(await note.evaluate(el => el.readOnly), false, 'a double-click edits');
+  assert.equal(await note.evaluate(el => el.readOnly), true, 'a double-click does not edit');
+  assert.equal(await note.getAttribute('aria-expanded'), 'false', 'a double-click opens then closes');
+  await preview.click();
+  assert.equal(await note.getAttribute('aria-expanded'), 'true', 'a click still opens after a double-click');
+  await page.locator('#root .task-note-edit').click();
+  assert.equal(await note.evaluate(el => el.readOnly), false, 'the edit button edits');
   assert.equal(await note.getAttribute('aria-expanded'), 'true', 'editing shows the note');
   const long = Array.from({ length: 40 }, (_, i) => 'line ' + i).join('\n');
   await note.fill(long);

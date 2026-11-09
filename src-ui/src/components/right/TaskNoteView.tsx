@@ -5,7 +5,7 @@
 //   open (after a click)   │ the whole note                          │
 //                          │ ✎  ⧉  🗑                             ▶ │   ← a row of actions
 //
-// A click opens or closes a note; a double-click (or ✎) edits it. Cards drag up and down to reorder.
+// A click opens or closes a note; the edit button under an open note edits it. Cards drag up and down to reorder.
 // The body edits `title`.
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -64,7 +64,7 @@ export function TaskNoteView({
   const dropTargetRef = useRef<DropLine | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
 
-  // Notes start collapsed: a click opens or closes one, a double-click edits it.
+  // Notes start collapsed: a click opens or closes one; editing is only through the edit button.
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
   const [editingId, setEditingId] = useState<string | null>(null);
   const setOpen = (id: string, open: boolean) => setExpanded(prev => {
@@ -258,7 +258,6 @@ export function TaskNoteView({
                 open={open}
                 editing={editingId === task.id || addingId === task.id}
                 onToggle={() => { quietCard(task.id); setOpen(task.id, !expanded.has(task.id)); }}
-                onEdit={edit}
                 onEditEnd={() => setEditingId(current => current === task.id ? null : current)}
                 autoFocus={addingId === task.id}
                 placeholder={t('task.note_placeholder')}
@@ -308,14 +307,13 @@ interface NoteBodyProps {
   open: boolean;
   editing: boolean;
   onToggle: () => void;
-  onEdit: () => void;
   onEditEnd: () => void;
   autoFocus: boolean;
   placeholder: string;
   onChange: (next: string) => void;
 }
 
-function NoteBody({ value, open, editing, onToggle, onEdit, onEditEnd, autoFocus, placeholder, onChange }: NoteBodyProps) {
+function NoteBody({ value, open, editing, onToggle, onEditEnd, autoFocus, placeholder, onChange }: NoteBodyProps) {
   const ref = useRef<HTMLTextAreaElement>(null);
   // Right-click cut/copy/paste/select menu (same one Gambit/terminal use).
   const { menu: ctxMenu, openMenu: openCtxMenu } = useTextContextMenu();
@@ -358,7 +356,7 @@ function NoteBody({ value, open, editing, onToggle, onEdit, onEditEnd, autoFocus
 
   useEffect(() => {
     if (!editing || !ref.current || document.activeElement === ref.current) return;
-    // Entering edit mode (double-click or the edit button) puts the caret at the end, ready to keep writing.
+    // Entering edit mode (the edit button) puts the caret at the end, ready to keep writing.
     const el = ref.current;
     el.focus();
     el.setSelectionRange(el.value.length, el.value.length);
@@ -403,8 +401,7 @@ function NoteBody({ value, open, editing, onToggle, onEdit, onEditEnd, autoFocus
           role="button"
           tabIndex={0}
           aria-expanded={false}
-          onClick={e => { if (e.detail <= 1) onToggle(); }}
-          onDoubleClick={onEdit}
+          onClick={onToggle}
           onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(); } }}
         >{value || placeholder}</div>
       )}
@@ -415,8 +412,7 @@ function NoteBody({ value, open, editing, onToggle, onEdit, onEditEnd, autoFocus
         value={value}
         readOnly={!editing}
         aria-expanded={open}
-        onClick={e => { if (!editing && e.detail === 1) onToggle(); }}
-        onDoubleClick={() => { if (!editing) onEdit(); }}
+        onClick={() => { if (!editing) onToggle(); }}
         onBlur={onEditEnd}
         placeholder={placeholder}
         rows={2}
