@@ -88,16 +88,17 @@
   z-index: 1;
 }
 .task-note-swipe-btn {
-  width: 40px;
+  width: 48px;
   height: 100%;
   border-radius: 0;
   opacity: 1;
   color: #fff;
-  transform: translateX(80px);
+  transform: translateX(96px);
   transition: transform .2s cubic-bezier(0.2, 0.8, 0.2, 1), filter .15s;
 }
 .task-note-swipe-btn.task-note-delete { background: #e5534b; }
-.task-note-swipe-btn.task-note-send { background: #3b82f6; }
+.task-note-swipe-btn.task-note-send { background: #007aff; } /* the iOS blue of the tool switches */
+.task-note-swipe-btn svg { width: 18px; height: 18px; }
 .task-note-card:hover .task-note-swipe,
 .task-note-card:focus-within .task-note-swipe { pointer-events: auto; }
 .task-note-card:hover .task-note-swipe-btn,
