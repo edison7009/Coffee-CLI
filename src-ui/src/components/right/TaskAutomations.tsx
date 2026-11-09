@@ -31,7 +31,6 @@ export function TaskAutomations({ onSend }: { onSend: (prompt: string) => void }
   const [collapsed, setCollapsed] = useState(() => { try { return localStorage.getItem(COLLAPSED_KEY) === '1'; } catch { return false; } });
   if (!automations.length) return null;
   const toggleSection = () => { const next = !collapsed; setCollapsed(next); try { localStorage.setItem(COLLAPSED_KEY, next ? '1' : '0'); } catch { /* Best-effort operation; failure is non-fatal. */ } };
-  const when = (ms: number) => new Intl.DateTimeFormat(state.currentLang, { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(ms);
   const on = automations.filter(item => item.enabled).length;
   return <section className="task-automations" aria-label={t('automation.title')}>
     <button type="button" className="task-section-header task-automations-head" aria-expanded={!collapsed} onClick={toggleSection}>
@@ -39,12 +38,13 @@ export function TaskAutomations({ onSend }: { onSend: (prompt: string) => void }
       <span>{t('automation.title')}</span>
       <span className="task-automations-count">{on}/{automations.length}</span>
     </button>
-    {!collapsed && automations.map(item => <div key={item.id} className="task-card task-automation-card" data-enabled={item.enabled}>
+    {!collapsed && automations.map(item => <div key={item.id} className="task-card task-automation-card" data-enabled={item.enabled}
+      // Like a note: a soft glow follows the pointer across the card.
+      onPointerMove={e => { const r = e.currentTarget.getBoundingClientRect(); e.currentTarget.style.setProperty('--glow-x', `${e.clientX - r.left}px`); }}>
       <div className="task-automation-row">
         <button type="button" className="task-automation-name" onClick={() => dispatch({ type: 'SET_AUTOMATIONS_OPEN', open: true })}>
           <span className="task-automation-line">
             <span className="task-automation-title">{item.name}</span>
-            {item.enabled && item.nextAt !== undefined && <span className="task-automation-next">{when(item.nextAt)}</span>}
           </span>
           <span className="task-automation-sub">
             <span className="task-automation-mark" role="img" aria-label={getToolDisplayName(item.tool)}><ToolMark tool={item.tool} /></span>

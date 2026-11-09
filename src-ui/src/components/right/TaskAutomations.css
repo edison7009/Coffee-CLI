@@ -5,15 +5,20 @@
 .task-automations-chevron[data-open="true"] { transform: rotate(90deg); }
 .task-automations-count { margin-left: 2px; color: var(--text-3); font-variant-numeric: tabular-nums; }
 /* Same card as a pre-input note below it: no border, the note's radius. */
-.task-card.task-automation-card { border-radius: var(--radius-md, 12px); }
+.task-card.task-automation-card { position: relative; border-radius: var(--radius-md, 12px); }
+/* Hover, like a note: the pointer-following glow, and send slides in at the right. */
+.task-automation-card::before { content: ''; position: absolute; inset: 0; border-radius: inherit; background: radial-gradient(140px circle at var(--glow-x, 50%) 50%, color-mix(in srgb, var(--accent, #c4956a) 18%, transparent), transparent 70%); opacity: 0; pointer-events: none; transition: opacity .2s ease; }
+.task-automation-card:hover::before { opacity: 1; }
+.task-automation-row { position: relative; z-index: 1; }
 .task-automation-row { display: flex; align-items: center; gap: 14px; min-width: 0; min-height: 48px; padding: 8px 8px 8px 10px; }
 .task-automation-name { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .task-automation-line, .task-automation-sub { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .task-automation-title { flex: 0 1 auto; min-width: 0; color: var(--text-1); font-size: var(--type-label); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .task-automation-card[data-enabled="false"] .task-automation-title { color: var(--text-3); }
-.task-automation-next { flex-shrink: 0; color: var(--text-3); font-size: 12px; font-variant-numeric: tabular-nums; }
-/* Same as a note's send, always in view: a solid accent circle, its arrow coloured like the + button. */
-.task-automation-send { display: flex; align-items: center; justify-content: center; padding: 0; border: none; cursor: pointer; width: 26px; height: 26px; flex-shrink: 0; border-radius: 50%; opacity: 1; color: var(--bg-terminal, #fff); background: var(--accent, #c4956a) !important; transition: filter .15s; }
+/* Same as a note's send, shown on hover: a solid accent circle, its arrow coloured like the + button. */
+.task-automation-send { display: flex; align-items: center; justify-content: center; padding: 0; border: none; cursor: pointer; width: 26px; height: 26px; flex-shrink: 0; border-radius: 50%; color: var(--bg-terminal, #fff); background: var(--accent, #c4956a) !important; opacity: 0; transform: translateX(6px); pointer-events: none; transition: opacity .18s ease, transform .18s ease, filter .15s; }
+.task-automation-card:hover .task-automation-send, .task-automation-card:focus-within .task-automation-send { opacity: 1; transform: none; pointer-events: auto; }
+@media (prefers-reduced-motion: reduce) { .task-automation-send, .task-automation-card::before { transition: none; } }
 [data-shape="glass"] .task-automation-send { color: #fff; }
 .task-automation-send svg { width: 12px; height: 12px; margin-left: 2px; }
 .task-automation-send:hover { filter: brightness(1.12); }
