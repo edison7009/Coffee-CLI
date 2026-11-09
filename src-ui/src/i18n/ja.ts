@@ -125,6 +125,7 @@ export const ja = {
   "tools.title": "Agent 設定",
   "usage.title": "使用状況",
   'automation.title': "自動化",
+  'automation.running': "実行中の自動化",
   'automation.new': "自動化を作成",
   'automation.permission_note': "自動化は選んだアプリを開いてプロンプトを送り、操作を承認する人はいません。先にそのアプリで自動実行の権限をオンにしてください（Claude の権限確認スキップ、Codex のフルアクセスなど）。そうしないと承認待ちで止まります。",
   'automation.name': "名前",

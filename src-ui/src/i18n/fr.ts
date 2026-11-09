@@ -125,6 +125,7 @@ export const fr = {
   "tools.title": "Configuration des agents",
   "usage.title": "Statistiques d’utilisation",
   'automation.title': "Automatisations",
+  'automation.running': "Automatisations actives",
   'automation.new': "Nouvelle automatisation",
   'automation.permission_note': "Une automatisation ouvre l’app choisie et envoie son message sans personne pour approuver les actions. Activez d’abord les permissions automatiques dans cette app (ignorer les permissions dans Claude, accès complet dans Codex), sinon l’exécution s’arrête à la première approbation.",
   'automation.name': "Nom",

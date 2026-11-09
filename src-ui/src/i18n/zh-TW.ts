@@ -125,6 +125,7 @@ export const zhTW = {
   "tools.title": "應用配置",
   "usage.title": "使用統計",
   'automation.title': "自動化",
+  'automation.running': "正在自動化",
   'automation.new': "新增自動化",
   'automation.permission_note': "自動化到點會直接開啟所選應用並傳送內容，期間沒人在旁邊核准操作。請先在該應用裡開啟自動執行權限（例如 Claude 的「略過權限確認」、Codex 的「完全存取」），否則任務會停在等待核准。",
   'automation.name': "名稱",

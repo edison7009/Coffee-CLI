@@ -125,6 +125,7 @@ export const vi = {
   "tools.title": "Cấu hình Agent",
   "usage.title": "Thống kê sử dụng",
   'automation.title': "Tự động hóa",
+  'automation.running': "Đang tự động hóa",
   'automation.new': "Tự động hóa mới",
   'automation.permission_note': "Tự động hóa sẽ mở ứng dụng đã chọn và gửi nội dung mà không có ai phê duyệt thao tác. Hãy bật quyền tự động trong ứng dụng đó trước (bỏ qua xác nhận quyền của Claude, toàn quyền của Codex), nếu không lần chạy sẽ dừng ở lần phê duyệt đầu tiên.",
   'automation.name': "Tên",

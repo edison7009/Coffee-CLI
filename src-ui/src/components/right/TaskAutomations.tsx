@@ -36,7 +36,7 @@ export function TaskAutomations({ onSend }: { onSend: (prompt: string) => void }
   return <section className="task-automations" aria-label={t('automation.title')}>
     <button type="button" className="task-section-header task-automations-head" aria-expanded={!collapsed} onClick={toggleSection}>
       <span className="task-automations-dot" aria-hidden="true" />
-      <span>{t('automation.title')}</span>
+      <span>{t('automation.running')}</span>
       <span className="task-automations-count">· {automations.length}</span>
       <svg className="task-automations-chevron" data-open={!collapsed} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
     </button>

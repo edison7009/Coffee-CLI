@@ -125,6 +125,7 @@ export const zhCN = {
   "tools.title": "应用配置",
   'usage.title': '使用统计',
   'automation.title': "自动化",
+  'automation.running': "正在自动化",
   'automation.new': "新建自动化",
   'automation.permission_note': "自动化到点会直接打开所选应用并发送内容，期间没人在旁边批准操作。请先在该应用里开启自动执行权限（例如 Claude 的“跳过权限确认”、Codex 的“完全访问”），否则任务会停在等待批准。",
   'automation.name': "名称",

@@ -125,6 +125,7 @@ export const de = {
   "tools.title": "Agent-Konfiguration",
   "usage.title": "Nutzungsstatistik",
   'automation.title': "Automationen",
+  'automation.running': "Aktive Automationen",
   'automation.new': "Neue Automation",
   'automation.permission_note': "Eine Automation öffnet die gewählte App und sendet ihren Prompt, ohne dass jemand Aktionen freigibt. Schalte vorher in der App automatische Berechtigungen ein (bei Claude Berechtigungen überspringen, bei Codex Vollzugriff), sonst bleibt der Lauf bei der ersten Freigabe stehen.",
   'automation.name': "Name",
