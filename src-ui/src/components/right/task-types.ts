@@ -9,10 +9,6 @@ export interface TaskItem {
   title: string;
   // Only in data from the removed to-do and prompt views; TaskBoard folds it into the title on load.
   description?: string;
-  // Project root the note belongs to; absent = global (shown in every project).
-  folder?: string;
-  // When the note was last sent; editing the text clears it.
-  sentAt?: number;
   status: TaskStatus;
   createdAt: number;
   // Sticky-note view only: the user-dragged body height in px (bottom-edge

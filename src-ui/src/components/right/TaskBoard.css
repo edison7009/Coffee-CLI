@@ -380,9 +380,3 @@
   font-weight: 600;
   letter-spacing: 0.02em;
 }
-
-/* Which notes show: this project's (plus global ones) or every project's. Quiet text tabs, the chosen one brighter. */
-.pre-input-scope { display: flex; align-items: center; gap: 2px; padding: 2px 4px 8px; }
-.pre-input-scope button { max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 3px 8px; border: 0; border-radius: 6px; background: transparent; color: var(--text-3, rgba(255, 255, 255, 0.4)); font: 500 var(--type-caption)/1.3 var(--font-nav, var(--font)); cursor: pointer; }
-.pre-input-scope button:hover { color: var(--text-2, rgba(255, 255, 255, 0.7)); }
-.pre-input-scope button[aria-pressed="true"] { color: var(--text-1, #fff); background: color-mix(in srgb, var(--text-1, #fff) 8%, transparent); }

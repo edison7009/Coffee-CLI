@@ -6,9 +6,11 @@
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  /* Bottom padding clears the floating add button. */
-  padding: 0 0 80px;
+  gap: 10px;
+  /* Top padding gives the first card's drop-before indicator (top: -6px) room
+     inside the scroll viewport — without it, reordering to the very top shows
+     no line. Bottom padding clears the floating add button. */
+  padding: 6px 0 80px;
   /* Scrollbar hidden via global rule in styles/global.css. */
 }
 
@@ -16,20 +18,23 @@
   padding-bottom: 0;
 }
 
-/* ─── Note card: the note text, its tools on the right ───────────────────────── */
+/* ─── Note card: a header band stacked on a roomy writing body ───────────────── */
 
 .task-note-card {
   position: relative;
   display: flex;
   flex-direction: column;
   border-radius: var(--radius-md, 12px);
+  /* The "paper" / writing surface. The header band (below) sits a shade
+     lighter on top of this so the two read as distinct — the sticky-note look.
+     No status-coloured edge: status is carried by the dots alone. */
   background: rgba(255, 255, 255, 0.03);
   transition: opacity 0.25s, transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-/* Sent notes fade back until hovered. */
-.task-note-card.is-sent { opacity: 0.55; }
-.task-note-card.is-sent:hover { opacity: 0.85; }
+/* Done notes fade back; otherwise no per-status card tint. */
+.task-note-card.status-done { opacity: 0.55; }
+.task-note-card.status-done:hover { opacity: 0.85; }
 
 /* The dragged note leaves a dashed outline of itself in place. */
 .task-note-card.dragging { background: transparent !important; box-shadow: none !important; outline: 1.5px dashed color-mix(in srgb, var(--accent) 60%, transparent); outline-offset: -1.5px; }
@@ -45,53 +50,74 @@
 }
 
 
-/* ─── Section heading (the All view groups notes by project, General first) ──── */
-.task-note-group {
+/* ─── Header band — the strip that makes it read as a sticky note ────────────── */
+/* A shade lighter than the body + a hairline divider. Whitelisted in global.css
+   so the carbon/glass nuclear-transparency rule keeps this background. */
+
+.task-note-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  /* A DARK band (matching the app's darker surfaces), sitting a shade darker
+     than the writing body below it — reads as the note's header, not a white
+     strip. Tighter padding keeps the strip short. */
+  background: rgba(0, 0, 0, 0.24);
+  border-radius: var(--radius-md, 12px) var(--radius-md, 12px) 0 0;
+}
+
+.task-note-dots {
+  display: flex;
+  align-items: center;
   gap: 6px;
-  padding: 8px 4px 2px;
+  flex-shrink: 0;
+}
+
+/* Plain solid circle — faint tint of its own colour when inactive, full colour
+   when active. No glow, halo, or gradient. */
+.task-note-dot {
+  width: 11px;
+  height: 11px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  flex-shrink: 0;
+  cursor: pointer;
+  background: color-mix(in srgb, var(--dot) 28%, transparent);
+  transition: background 0.15s, transform 0.15s;
+}
+.task-note-dot:hover {
+  background: color-mix(in srgb, var(--dot) 60%, transparent);
+  transform: scale(1.12);
+}
+.task-note-dot.active {
+  background: var(--dot);
+}
+
+/* Timestamp — date + time as one uniform run (same colour, same font),
+   centred in the header between the dots and the action buttons. */
+.task-note-time {
+  flex: 1;
+  text-align: center;
+  font-family: var(--font, system-ui);
   font-size: var(--type-caption);
-  font-weight: 600;
-  color: var(--text-2, rgba(255, 255, 255, 0.7));
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--text-2, rgba(255, 255, 255, 0.55));
+  white-space: nowrap;
   user-select: none;
 }
-.task-note-group:first-child { padding-top: 0; }
-.task-note-group-count { font-weight: 500; color: var(--text-3, rgba(255, 255, 255, 0.4)); }
 
-/* ─── Tools: top-right of the card ─────────────────────────────────────────────
-   Copy / general / delete appear on hover over a backdrop so they never collide with the text; the general pin
-   (in the project list), the sent tick and send always show, and the body keeps room for them. */
-.task-note-tools {
-  position: absolute;
-  top: 6px;
-  right: 6px;
+.task-note-actions {
   display: flex;
   align-items: center;
-  gap: 4px;
-  z-index: 1;
+  gap: 6px;
+  flex-shrink: 0;
 }
-.task-note-hover-tools {
-  display: none;
-  align-items: center;
-  gap: 4px;
-  padding: 0 2px 0 6px;
-  border-radius: var(--radius-xs, 6px);
-  background: color-mix(in srgb, var(--bg-panel, #222) 92%, transparent);
-}
-.task-note-card:hover .task-note-hover-tools,
-.task-note-card:focus-within .task-note-hover-tools { display: flex; }
-.task-note-list:has(.task-note-card.dragging) .task-note-hover-tools { display: none; }
-.task-note-general-mark,
-.task-note-sent {
-  display: inline-flex;
-  align-items: center;
-  font-size: var(--type-caption);
-  color: var(--text-3, rgba(255, 255, 255, 0.4));
-  user-select: none;
-}
-.task-note-sent { color: var(--accent, #c4956a); }
 
+/* Always visible — the header band is a permanent toolbar. (The single-line
+   to-do row hides its icons because always-on there reads as clutter; a note's
+   roomy header has room to show them, which feels more deliberate.) */
 .task-note-btn {
   display: flex;
   align-items: center;
@@ -111,17 +137,16 @@
   opacity: 1;
   filter: brightness(1.25);
 }
-.task-note-btn:disabled {
+.task-note-send:disabled {
   opacity: 0.3;
   cursor: not-allowed;
 }
-/* The pin reads as on for a general note. */
-.task-note-general[aria-pressed="true"] { opacity: 1; background: color-mix(in srgb, var(--accent, #c4956a) 18%, transparent); }
 
 /* ─── Body — the writing area ────────────────────────────────────────────────── */
 
 .task-note-body {
   width: 100%;
+  min-height: 44px;
   resize: none;
   overflow-y: auto;
   overflow-x: hidden;
@@ -132,8 +157,7 @@
   font-family: var(--font, system-ui);
   font-size: var(--type-body);
   line-height: 1.55;
-  /* Right padding keeps the text clear of the always-shown pin, tick and send. */
-  padding: 7px 56px 7px 12px;
+  padding: 9px 12px 11px;
   white-space: pre-wrap;
   word-break: break-word;
   box-sizing: border-box;
@@ -150,7 +174,7 @@
   color: var(--text-3, rgba(255, 255, 255, 0.3));
 }
 
-.task-note-card.is-sent .task-note-body {
+.task-note-card.status-done .task-note-body {
   color: var(--text-2, rgba(255, 255, 255, 0.55));
 }
 

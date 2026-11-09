@@ -11,9 +11,8 @@ import { useDshSession } from '../../lib/dsh-session';
 import { useOpenCodeSession } from '../../lib/opencode-session';
 import { usePiSession } from '../../lib/pi-session';
 import './TaskBoard.css';
-import { TaskNoteView, type NoteSection } from './TaskNoteView';
-import { makeWelcomeNote, type TaskItem } from './task-types';
-import { projectRoot, projectName, sameProject } from '../../lib/pre-input-project';
+import { TaskNoteView } from './TaskNoteView';
+import { makeWelcomeNote, type TaskItem, type TaskStatus } from './task-types';
 
 
 // ─── Persistence (Rust file backend with localStorage fallback) ──────────────
@@ -85,6 +84,7 @@ export function TaskBoard({ onCountChange }: { onCountChange: (count: number) =>
   const t = useT();
   const { state, dispatch } = useAppState();
   const [tasks, setTasks] = useState<TaskItem[]>([]);
+  useEffect(() => { onCountChange(tasks.length); }, [tasks.length, onCountChange]);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [addingId, setAddingId] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -98,28 +98,6 @@ export function TaskBoard({ onCountChange }: { onCountChange: (count: number) =>
   const openCodeReady = useOpenCodeSession(isOpenCode ? state.activeTerminalId ?? '' : '', session => session.ready && !session.busy && !session.permissions.length && !session.forms.length);
   const piReady = usePiSession(isPi ? state.activeTerminalId ?? '' : '', session => session.ready && !session.busy && !session.requests.length);
   const canSend = !!activeSession?.tool && !sending && (isClaude ? claudeReady : isCodex ? codexReady : isDsh ? dshReady : isOpenCode ? openCodeReady : isPi ? piReady : true);
-
-  // Notes belong to the project they were written in and show only there; general notes (no folder) show in
-  // every project. "All" groups every note by project, General first, and dragging between groups moves a note.
-  const project = projectRoot(activeSession?.folderPath);
-  const [showAll, setShowAll] = useState(() => { try { return localStorage.getItem('cc-pre-input-all') === '1'; } catch { return false; } });
-  const chooseScope = (all: boolean) => {
-    setShowAll(all);
-    try { localStorage.setItem('cc-pre-input-all', all ? '1' : '0'); } catch { /* Best-effort operation; failure is non-fatal. */ }
-  };
-  const visible = showAll ? tasks : tasks.filter(task => !task.folder || sameProject(task.folder, project));
-  useEffect(() => { onCountChange(visible.length); }, [visible.length, onCountChange]);
-  const sections: NoteSection[] = (() => {
-    if (!showAll) return [{ key: 'current', label: null, folder: null, items: visible }];
-    const folders: string[] = [];
-    for (const task of tasks) if (task.folder && !folders.some(folder => sameProject(folder, task.folder))) folders.push(task.folder);
-    // General first, then the open project, then the rest by name.
-    folders.sort((a, b) => Number(sameProject(b, project)) - Number(sameProject(a, project)) || projectName(a).localeCompare(projectName(b)));
-    return [
-      { key: '', label: t('pre_input.general'), folder: null, items: tasks.filter(task => !task.folder) },
-      ...folders.map(folder => ({ key: folder, label: projectName(folder), folder, items: tasks.filter(task => sameProject(task.folder, folder)) })),
-    ];
-  })();
 
   const skipNextSyncRef = useRef(false); // Used to ignore external/initial load syncs
   const isLoadedRef = useRef(false);
@@ -201,7 +179,7 @@ export function TaskBoard({ onCountChange }: { onCountChange: (count: number) =>
   const preInputQueue = state.preInputQueue;
   useEffect(() => {
     if (!loaded || !preInputQueue.length) return;
-    const items = preInputQueue.map(({ text, folder }): TaskItem => ({ id: crypto.randomUUID(), title: text, status: 'todo', createdAt: Date.now(), ...(folder ? { folder } : {}) })).reverse();
+    const items = preInputQueue.map((text): TaskItem => ({ id: crypto.randomUUID(), title: text, status: 'todo', createdAt: Date.now() })).reverse();
     setTasks(prev => [...items, ...prev]);
     dispatch({ type: 'TAKE_PRE_INPUT', count: preInputQueue.length });
   }, [loaded, preInputQueue, dispatch]);
@@ -209,11 +187,11 @@ export function TaskBoard({ onCountChange }: { onCountChange: (count: number) =>
   // ─── Task Actions ─────────────────────────────────────────────────────────
   // A new note starts empty and in edit mode (the note view keeps editing until the user clicks away).
   const handleAdd = useCallback(() => {
-    const newTask: TaskItem = { id: crypto.randomUUID(), title: '', status: 'todo', createdAt: Date.now(), ...(project ? { folder: project } : {}) };
+    const newTask: TaskItem = { id: crypto.randomUUID(), title: '', status: 'todo', createdAt: Date.now() };
     setAddingId(newTask.id);
     setTasks(prev => [newTask, ...prev]);
     setTimeout(() => setAddingId(null), 400);
-  }, [project]);
+  }, []);
 
   // Duplicate a note — spawns an identical sticky right AFTER the original
   // (same title/description/status/height, fresh id) so a long note can be
@@ -239,8 +217,7 @@ export function TaskBoard({ onCountChange }: { onCountChange: (count: number) =>
     sendingRef.current = true; setSending(true); setSendErrorTarget(null);
     try {
       if (!await sendSessionPrompt(activeSession, body)) { setSendErrorTarget(activeSession.id); return; }
-      // Mark the note sent only if its text is still what went out.
-      if (promote) setTasks(prev => prev.map(item => item.id === task.id && item.title === task.title ? { ...item, sentAt: Date.now() } : item));
+      if (promote && task.status !== 'working') setTasks(prev => prev.map(item => item.id === task.id && item.status === task.status && item.title === task.title && item.description === task.description ? { ...item, status: 'working' } : item));
     } finally { sendingRef.current = false; setSending(false); }
   }, [activeSession, canSend]);
 
@@ -253,26 +230,18 @@ export function TaskBoard({ onCountChange }: { onCountChange: (count: number) =>
     void sendTask({ id: 'automation', title: prompt, status: 'todo', createdAt: 0 }, prompt, false);
   }, [sendTask]);
 
-  // Live text edit, written through on every keystroke. Changed text has not been sent, so it loses its sent mark.
-  const updateTitle = useCallback((id: string, title: string) => {
-    setTasks(prev => prev.map(t => {
-      if (t.id !== id) return t;
-      const next = { ...t, title };
-      delete next.sentAt;
-      return next;
-    }));
+  // Prompt-view send: send ONLY the description (the prompt body). The
+
+  // view's checkbox cycles via handleToggle instead). Card auto-regroups.
+  const setStatus = useCallback((id: string, status: TaskStatus) => {
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, status } : t));
   }, []);
 
-  // The pin makes a note general (shown in every project), or ties a general one to the open project.
-  const toggleGeneral = useCallback((id: string) => {
-    setTasks(prev => prev.map(task => {
-      if (task.id !== id) return task;
-      if (!task.folder) return project ? { ...task, folder: project } : task;
-      const next = { ...task };
-      delete next.folder;
-      return next;
-    }));
-  }, [project]);
+  // Live title edit — the note body is always-editable (no commit step), so it
+  // writes through on every keystroke. Empty is allowed while typing.
+  const updateTitle = useCallback((id: string, title: string) => {
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, title } : t));
+  }, []);
 
   // Note-view body height (bottom-edge resize). Persisted on the task so the
   // note keeps its size; the note view drives live preview locally and only
@@ -304,17 +273,12 @@ export function TaskBoard({ onCountChange }: { onCountChange: (count: number) =>
           {sendErrorTarget && sendErrorTarget === state.activeTerminalId && <p className="task-send-error" role="alert">{t('task.send_failed')}</p>}
           {/* Automations on top: on or off at a glance, and each prompt one click from the current conversation. */}
           <TaskAutomations canSend={canSend} onSend={sendAutomationPrompt} />
-          <div className="pre-input-scope" role="group" aria-label={t('pre_input.scope')}>
-            <button type="button" aria-pressed={showAll} onClick={() => chooseScope(true)}>{t('pre_input.scope.all')}</button>
-            <button type="button" aria-pressed={!showAll} onClick={() => chooseScope(false)}>{project ? projectName(project) : t('pre_input.general')}</button>
-          </div>
           <TaskNoteView
-            sections={sections}
-            canTieToProject={!!project}
-            onToggleGeneral={toggleGeneral}
+            tasks={tasks}
             addingId={addingId}
             removingId={removingId}
             canSend={canSend}
+            onSetStatus={setStatus}
             onUpdateTitle={updateTitle}
             onSetHeight={setHeight}
             onRemove={handleRemove}
