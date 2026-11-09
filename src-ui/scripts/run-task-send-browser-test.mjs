@@ -34,7 +34,7 @@ await build({ stdin: { resolveDir: project, loader: 'tsx', contents: `
     b.onResolve({ filter: /^@tauri-apps\/api\/event$/ }, () => ({ path: 'events', namespace: 'fixture' }));
     b.onResolve({ filter: /(?:\.\/|lib\/)terminal-control$/ }, () => ({ path: 'terminal', namespace: 'fixture' }));
     b.onLoad({ filter: /.*/, namespace: 'fixture' }, args => ({ loader: 'js', resolveDir: project, contents: {
-      store: `import {useSyncExternalStore} from 'react';const p=new URLSearchParams(location.search),listeners=new Set();let state={preInputQueue:[],preInputReveal:0,preInputButton:true,currentLang:'en',activeTerminalId:p.get('tool')||'claude',terminals:['claude','codex','terminal','unready'].map(tool=>({id:tool,tool:tool==='unready'?'claude':tool,claudeMode:'conversation',codexMode:'conversation',folderPath:'D:/test'}))};window.selectSession=id=>{state={...state,activeTerminalId:id};listeners.forEach(fn=>fn())};export const useAppLanguage=()=> 'en';export function useAppState(){return {state:useSyncExternalStore(fn=>{listeners.add(fn);return()=>listeners.delete(fn)},()=>state),dispatch(){}}}`,
+      store: `import {useSyncExternalStore} from 'react';const p=new URLSearchParams(location.search),listeners=new Set();let state={preInputQueue:[],preInputReveal:0,preInputButton:true,currentLang:'en',activeTerminalId:p.get('tool')||'claude',terminals:['claude','codex','terminal','unready'].map(tool=>({id:tool,tool:tool==='unready'?'claude':tool,claudeMode:'conversation',codexMode:'conversation',folderPath:'D:/test'}))};window.selectSession=id=>{state={...state,activeTerminalId:id};listeners.forEach(fn=>fn())};export const useAppLanguage=()=> 'en';export function useAppState(){return {state:useSyncExternalStore(fn=>{listeners.add(fn);return()=>listeners.delete(fn)},()=>state),dispatch(action){(window.actions||=[]).push(action)}}}`,
       native: `export const isTauri=true,invoke=(name,args)=>window.transport(name,args);export const commands={loadTasks:async()=>JSON.stringify(window.saved),saveTasks:async text=>{window.saved=JSON.parse(text)}};`,
       events: `export async function listen(name,fn){window.events.set(name,fn);return ()=>window.events.delete(name)}`,
       terminal: `export const submitTerminalPrompt=(id,text)=>window.transport('terminal_send',{id,text});`,
@@ -68,7 +68,7 @@ try {
     await page.evaluate(() => window.holdSend = true);
     await button.evaluate(el => { el.click(); el.click(); });
     await page.waitForFunction(() => typeof window.finishSend === 'function', null, { timeout: 3000 });
-    assert.equal(await button.isDisabled(), true, 'pending sends disable repeated submission');
+    assert.equal(await page.evaluate(() => (window.actions || []).filter(action => action.type === 'APPEND_GAMBIT_DRAFT').length), 0, 'a click during a send neither resends nor fills the composer');
     const sends = await page.evaluate(() => window.calls.filter(call => ['claude_session_send','terminal_send'].includes(call.name)||call.method==='turn/start'));
     assert.equal(sends.length, 1, 'send exactly once');
     assert.equal(sends[0].id, tool, 'use the focused existing session');
@@ -97,10 +97,16 @@ try {
   await page.waitForFunction(() => document.querySelector('.task-board')?.getAttribute('aria-busy') === 'false');
   assert.equal(await page.evaluate(() => window.saved[0].status), 'todo', 'acknowledging an older send must not promote newly edited content');
   assert.equal(await page.locator('.task-note-body').inputValue(), 'New unsent task');
+  // Send never refuses: a session that is not ready gets the text in its composer instead, and with no session
+  // at all the click does nothing.
   const button = await open('unready');
-  assert.equal(await button.isDisabled(), true, 'desktop sessions must be ready before sending');
-  await page.evaluate(() => window.selectSession(null));
-  assert.equal(await button.isDisabled(), true, 'no target disables sending');
+  assert.equal(await button.isDisabled(), false, 'send is never disabled');
+  await button.click();
+  assert.deepEqual(await page.evaluate(() => window.actions.filter(action => action.type === 'APPEND_GAMBIT_DRAFT')), [{ type: 'APPEND_GAMBIT_DRAFT', id: 'unready', text: 'Build a page\n\nInclude tests' }], 'a session that is not ready gets the note in its composer');
+  assert.equal(await page.evaluate(() => window.calls.filter(call => call.name === 'claude_session_send').length), 0, 'and nothing is sent');
+  await page.evaluate(() => { window.actions = []; window.selectSession(null); });
+  await button.click();
+  assert.deepEqual(await page.evaluate(() => window.actions), [], 'with no session the click does nothing');
   const plan = await open('claude');
   await page.locator('.task-note-preview').dblclick();await page.locator('.task-note-body').fill('/plan Inspect layout');
   await plan.click();
@@ -187,15 +193,19 @@ try {
   // Let the cards settle from the drag above before measuring.
   await page.waitForFunction(() => [...document.querySelectorAll('#root .task-note-card')].every(el => getComputedStyle(el).transform === 'none' && !el.getAnimations().length));
   const restCard = await tabCard.boundingBox(), restLine = await tabCard.locator('.task-note-preview').boundingBox();
-  await page.waitForFunction(right => [...document.querySelectorAll('#root [data-note-id="B"] .task-note-swipe-btn')].every(el => el.getBoundingClientRect().left >= right - 1), restCard.x + restCard.width);
+  await page.waitForFunction(() => getComputedStyle(document.querySelector('#root [data-note-id="B"] .task-note-swipe')).opacity === '0');
   await tabCard.hover();
-  await page.waitForFunction(right => [...document.querySelectorAll('#root [data-note-id="B"] .task-note-swipe-btn')].every(el => el.getBoundingClientRect().right <= right + 1), restCard.x + restCard.width);
+  await page.waitForFunction(() => getComputedStyle(document.querySelector('#root [data-note-id="B"] .task-note-swipe')).opacity === '1');
   const [delX, sendX] = await swipeX();
   const sendBtn = await tabCard.locator('.task-note-swipe-btn.task-note-send').boundingBox();
   assert.ok(delX < sendX && Math.abs(sendBtn.x + sendBtn.width - (restCard.x + restCard.width)) < 1, 'delete, then send at the right edge');
   assert.ok(Math.abs(sendBtn.height - restCard.height) < 1, 'the buttons run the card\'s full height');
   assert.deepEqual(await tabCard.locator('.task-note-preview').boundingBox(), restLine, 'the text does not move');
   assert.notEqual(await tabCard.locator('.task-note-swipe-btn.task-note-delete').evaluate(el => getComputedStyle(el).backgroundColor), 'rgba(0, 0, 0, 0)', 'solid buttons');
+  // Send stays, enabled, even with no session to send to.
+  await page.evaluate(() => window.selectSession(null));
+  assert.equal(await tabCard.locator('.task-note-swipe .task-note-send').isDisabled(), false, 'send never hides or greys out');
+  await page.evaluate(() => window.selectSession('claude'));
   // A click opens the note with a row of actions under it; the side buttons give way to that row.
   await tabCard.locator('.task-note-preview').click();
   await tabCard.locator('.task-note-actions').waitFor();

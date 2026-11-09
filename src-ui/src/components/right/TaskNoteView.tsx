@@ -1,7 +1,7 @@
 // TaskNoteView — the pre-input board's sticky notes. TaskBoard owns the notes and passes them down.
 //
 //   collapsed, at rest     │ note text on one line…                  │
-//   collapsed, hovered     │ note text on one line…      ▐ 🗑 ▐ ▶ ▐ │   ← solid delete and send slide in over it
+//   collapsed, hovered     │ note text on one line…      ▐ 🗑 ▐ ▶ ▐ │   ← solid delete and send fade in over it
 //   open (after a click)   │ the whole note                          │
 //                          │ ✎  ⧉  🗑                             ▶ │   ← a row of actions
 //
@@ -37,7 +37,6 @@ interface TaskNoteViewProps {
   // The task mid-removal — kept rendered for one exit animation before the
   // parent drops it from the array (shared 300ms window with the list view).
   removingId: string | null;
-  canSend: boolean;
   onUpdateTitle: (id: string, title: string) => void;
   onRemove: (id: string) => void;
   onDuplicate: (id: string) => void;
@@ -51,7 +50,7 @@ interface TaskNoteViewProps {
 }
 
 export function TaskNoteView({
-  tasks, addingId, removingId, canSend, onUpdateTitle, onRemove, onDuplicate, onSend, onReorder, onShowGuide,
+  tasks, addingId, removingId, onUpdateTitle, onRemove, onDuplicate, onSend, onReorder, onShowGuide,
 }: TaskNoteViewProps) {
   const t = useT();
 
@@ -224,7 +223,7 @@ export function TaskNoteView({
           </button>
         );
         const sendButton = (className: string) => (
-          <button type="button" className={`task-note-btn task-note-send ${className}`} aria-label={t('pre_input.send')} onClick={() => onSend(task)} disabled={!canSend || !task.title.trim()}>
+          <button type="button" className={`task-note-btn task-note-send ${className}`} aria-label={t('pre_input.send')} onClick={() => onSend(task)}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true">
               <polygon points="5 3 21 12 5 21" />
             </svg>
@@ -243,7 +242,7 @@ export function TaskNoteView({
             style={{ touchAction: 'none' }}
             onPointerDown={e => handlePointerDown(e, task.id)}
           >
-            {/* Collapsed: one line of text that never moves. On hover two solid buttons slide in over its right
+            {/* Collapsed: one line of text that never moves. On hover solid buttons fade in over its right
                 end — delete, then send at the edge. Open: the whole note, then a row of actions. */}
             <div className="task-note-row">
               <NoteBody
@@ -261,6 +260,7 @@ export function TaskNoteView({
             {!open && (
               <span className="task-note-swipe">
                 {deleteButton('task-note-swipe-btn')}
+                {/* Send never refuses: TaskBoard sends, or drops the text into the composer, or does nothing. */}
                 {sendButton('task-note-swipe-btn')}
               </span>
             )}

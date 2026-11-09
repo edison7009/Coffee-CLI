@@ -221,9 +221,15 @@ export function TaskBoard({ onCountChange }: { onCountChange: (count: number) =>
     } finally { sendingRef.current = false; setSending(false); }
   }, [activeSession, canSend]);
 
+  // Send never refuses: with a ready session it goes out; otherwise it lands in the open composer to send from
+  // there; with no composer open the click simply does nothing.
+  const composerOpen = !!activeSession && (isClaude || isCodex || isDsh || isOpenCode || isPi || state.gambitOpen);
   const sendToAgent = useCallback((task: TaskItem) => {
-    void sendTask(task, task.title, true);
-  }, [sendTask]);
+    // A send already in flight ignores further clicks rather than filling the composer.
+    if (!task.title.trim() || sendingRef.current) return;
+    if (canSend) { void sendTask(task, task.title, true); return; }
+    if (composerOpen && activeSession) dispatch({ type: 'APPEND_GAMBIT_DRAFT', id: activeSession.id, text: `${activeSession.gambitDraft?.trim() ? '\n' : ''}${task.title}` });
+  }, [sendTask, canSend, composerOpen, activeSession, dispatch]);
 
   // An automation's prompt goes to the current conversation as is; its own app and folder are for scheduled runs.
   const sendAutomationPrompt = useCallback((prompt: string) => {
@@ -263,7 +269,6 @@ export function TaskBoard({ onCountChange }: { onCountChange: (count: number) =>
             tasks={tasks}
             addingId={addingId}
             removingId={removingId}
-            canSend={canSend}
             onUpdateTitle={updateTitle}
             onRemove={handleRemove}
             onDuplicate={duplicateTask}

@@ -74,8 +74,9 @@
 .task-note-row > .task-note-body,
 .task-note-row > .task-note-preview { flex: 1; min-width: 0; }
 
-/* Collapsed + hovered (or focused): two solid buttons slide in from the right edge over the end of the line —
-   delete, then send at the edge. They cover the text instead of moving it, like the history list's delete. */
+/* Collapsed + hovered (or focused): solid buttons fade in over the right end of the line — delete, then send at
+   the edge. They cover the text instead of moving it, like the
+   history list's delete. A fade, not a slide: only opacity changes, so nothing reflows or repaints the card. */
 .task-note-swipe {
   position: absolute;
   top: 0;
@@ -84,7 +85,9 @@
   display: flex;
   overflow: hidden;
   border-radius: 0 var(--radius-md, 12px) var(--radius-md, 12px) 0;
+  opacity: 0;
   pointer-events: none;
+  transition: opacity .16s ease;
   z-index: 1;
 }
 .task-note-swipe-btn {
@@ -93,20 +96,16 @@
   border-radius: 0;
   opacity: 1;
   color: #fff;
-  transform: translateX(96px);
-  transition: transform .2s cubic-bezier(0.2, 0.8, 0.2, 1), filter .15s;
+  transition: filter .15s;
 }
 .task-note-swipe-btn.task-note-delete { background: #e5534b; }
 .task-note-swipe-btn.task-note-send { background: #007aff; } /* the iOS blue of the tool switches */
 .task-note-swipe-btn svg { width: 18px; height: 18px; }
 .task-note-card:hover .task-note-swipe,
-.task-note-card:focus-within .task-note-swipe { pointer-events: auto; }
-.task-note-card:hover .task-note-swipe-btn,
-.task-note-card:focus-within .task-note-swipe-btn { transform: none; }
+.task-note-card:focus-within .task-note-swipe { opacity: 1; pointer-events: auto; }
 .task-note-card .task-note-swipe-btn:hover:not(:disabled) { opacity: 1; filter: brightness(1.12); }
-.task-note-card .task-note-swipe-btn:disabled { opacity: 1; filter: saturate(0.3) brightness(0.8); cursor: not-allowed; }
 .task-note-list:has(.task-note-card.dragging) .task-note-swipe { display: none; }
-@media (prefers-reduced-motion: reduce) { .task-note-swipe-btn { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .task-note-swipe { transition: none; } }
 
 /* Open: a row of actions under the text; send sits apart on the right. */
 .task-note-actions {
