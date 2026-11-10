@@ -15,6 +15,13 @@ use std::{
 use tauri::ipc::Channel;
 use tokio::{sync::mpsc, time::Instant};
 use tokio_tungstenite::tungstenite::{client::IntoClientRequest, http::HeaderValue, Message};
+mod doubao;
+mod workbuddy;
+mod cursor;
+mod echo;
+pub(crate) mod probe;
+#[cfg(target_os = "macos")]
+mod apple;
 
 pub const SAMPLE_RATE: u32 = 16_000;
 /// 100 ms of audio per frame.
@@ -25,6 +32,8 @@ const CHUNK: usize = SAMPLE_RATE as usize / 10;
 pub enum VoiceEvent {
     /// The service accepted the stream; speech from here on is transcribed.
     Ready,
+    /// Recording ended automatically or manually; the batch service is processing it.
+    Processing,
     /// Everything heard so far in this recording. `done` marks the service's final text.
     Text { text: String, done: bool },
     Error { message: String },
@@ -49,28 +58,118 @@ fn signed_in(tool: &str, cwd: Option<String>) -> Option<Account> {
     account::credentials(voice_tool(tool)?, &dirs::home_dir()?, &var)
 }
 
-/// Whether voice input can run for this tool: Claude Code or Codex using an account sign-in (not an API key or relay).
+/// A selected dictation account is independent of the tool receiving the text.
+fn source_account(source: &str) -> Option<Account> {
+    let var = |key: &str| std::env::var(key).ok();
+    local_account(source, &dirs::home_dir()?, &var)
+}
+
+fn local_account(source: &str, home: &std::path::Path, var: &dyn Fn(&str) -> Option<String>) -> Option<Account> {
+    account::credentials(voice_tool(source)?, home, var)
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VoiceSource { id: String, name: String, account_id: Option<String>, issue: Option<&'static str>, #[serde(skip_serializing_if="Option::is_none")] transcription_mode: Option<&'static str> }
+
+/// Offer usable local sign-ins and system speech. Tokens never cross IPC.
 #[tauri::command]
-pub async fn voice_input_available(tool: String, cwd: Option<String>) -> bool {
-    tauri::async_runtime::spawn_blocking(move || signed_in(&tool, cwd).is_some()).await.unwrap_or(false)
+pub async fn voice_input_sources() -> Result<Vec<VoiceSource>, String> {
+    let mut sources: Vec<VoiceSource> = tauri::async_runtime::spawn_blocking(|| {
+        [("claude", "Claude Code"), ("codex", "Codex / ChatGPT")].into_iter()
+            .filter_map(|(id, name)| {
+                let account = source_account(id)?;
+                let account_id = account.account_id.or_else(|| {
+                    if id != "claude" { return None; }
+                    let config = std::env::var("CLAUDE_CONFIG_DIR").ok().filter(|path| !path.trim().is_empty())
+                        .map(|path| std::path::PathBuf::from(path).join(".claude.json"))
+                        .or_else(|| dirs::home_dir().map(|home| home.join(".claude.json")))?;
+                    let value: Value = serde_json::from_slice(&std::fs::read(config).ok()?).ok()?;
+                    value["oauthAccount"]["accountUuid"].as_str().filter(|id| !id.is_empty()).map(str::to_owned)
+                });
+                Some(VoiceSource { id:id.into(), name:name.into(), account_id, issue:None, transcription_mode:None })
+            }).collect()
+    }).await.map_err(|_| "scan_failed".to_string())?;
+    #[cfg(target_os = "macos")]
+    if apple::available() { sources.push(VoiceSource {id:"macos".into(),name:"macOS".into(),account_id:None,issue:None,transcription_mode:None}); }
+    let (consumer, work, buddy, editor) = tokio::join!(doubao::account("doubao"), doubao::account("doubaowork"), workbuddy::account(), cursor::account());
+    for (result, id, label) in [(consumer,"doubao","Doubao"),(work,"doubaowork","Doubao Work")] {
+        if let Ok(account) = result {
+            sources.push(VoiceSource { id:id.into(), name:label.into(),account_id:Some(account.user_id),issue:None,transcription_mode:None });
+        } else if result.err().as_deref() == Some("source_busy") {
+            sources.push(VoiceSource { id:id.into(),name:label.into(),account_id:None,issue:Some("busy"),transcription_mode:None });
+        }
+    }
+    if let Ok(account) = buddy {
+        sources.push(VoiceSource {id:"workbuddy".into(),name:"WorkBuddy".into(),account_id:Some(account.user_id),issue:None,transcription_mode:None});
+    }
+    if let Ok(account) = editor {
+        sources.push(VoiceSource {id:"cursor".into(),name:"Cursor".into(),account_id:Some(account.user_id),issue:None,transcription_mode:None});
+    }
+    sources.extend(echo::sources().await);
+    Ok(sources)
 }
 
 #[tauri::command]
-pub async fn voice_input_start(tool: String, cwd: Option<String>, language: String, device: Option<String>, on_event: Channel<VoiceEvent>) -> Result<u64, String> {
-    let lookup = tool.clone();
-    let account = tauri::async_runtime::spawn_blocking(move || signed_in(&lookup, cwd)).await.ok().flatten()
-        .ok_or_else(|| "signed_out".to_string())?;
+pub async fn voice_input_select_source(source: String) -> Result<(),String> {
+    if doubao::supports(&source) { doubao::select(&source).await?; }
+    Ok(())
+}
+
+fn resolve_account(tool: &str, cwd: Option<String>, source: Option<&str>) -> Option<Account> {
+    match source { Some(source) => source_account(source), None => signed_in(tool, cwd) }
+}
+
+enum InputAccount { Tool(&'static str, Account), Doubao(doubao::Credentials), WorkBuddy(workbuddy::Credentials), Cursor(cursor::Credentials), Native(echo::Credentials), #[cfg(target_os = "macos")] Apple }
+
+async fn input_account(tool: String, cwd: Option<String>, source: Option<String>) -> Result<InputAccount, String> {
+    if source.is_some() && voice_tool(&tool).is_some() {
+        let current_tool = tool.clone();
+        let current_cwd = cwd.clone();
+        let official = tauri::async_runtime::spawn_blocking(move || signed_in(&current_tool, current_cwd))
+            .await.ok().flatten();
+        if let Some(account) = official {
+            return Ok(InputAccount::Tool(voice_tool(&tool).unwrap(), account));
+        }
+    }
+    if let Some(source)=source.as_ref().filter(|s|echo::supports(s)) { return echo::account(source.clone()).await.map(InputAccount::Native); }
+    if source.as_deref() == Some("workbuddy") { return workbuddy::account().await.map(InputAccount::WorkBuddy); }
+    if source.as_deref() == Some("cursor") { return cursor::account().await.map(InputAccount::Cursor); }
+    #[cfg(target_os = "macos")]
+    if source.as_deref() == Some("macos") { return if apple::available() {Ok(InputAccount::Apple)} else {Err("speech_unavailable".into())}; }
+    if let Some(source) = source.as_deref().filter(|source| doubao::supports(source)) {
+        return doubao::account(source).await.map(InputAccount::Doubao);
+    }
+    let kind = voice_tool(source.as_deref().unwrap_or(&tool)).ok_or("signed_out")?;
+    let account = tauri::async_runtime::spawn_blocking(move || resolve_account(&tool, cwd, source.as_deref())).await.ok().flatten().ok_or("signed_out")?;
+    Ok(InputAccount::Tool(kind,account))
+}
+
+/// Use the explicit local source, or follow the current tool's account mode.
+#[tauri::command]
+pub async fn voice_input_available(tool: String, cwd: Option<String>, source: Option<String>) -> bool {
+    input_account(tool,cwd,source).await.is_ok()
+}
+
+#[tauri::command]
+pub async fn voice_input_start(tool: String, cwd: Option<String>, source: Option<String>, language: String, device: Option<String>, on_event: Channel<VoiceEvent>) -> Result<u64, String> {
+    let account = input_account(tool,cwd,source).await?;
     let (audio_tx, audio_rx) = mpsc::unbounded_channel();
     let capture = capture::start(audio_tx, device)?;
     let (control_tx, control_rx) = mpsc::unbounded_channel();
     let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
     SESSIONS.lock().unwrap().insert(id, control_tx);
-    let tool = voice_tool(&tool).unwrap_or("claude");
     tauri::async_runtime::spawn(async move {
         let emit = |event: VoiceEvent| { let _ = on_event.send(event); };
-        let result = match tool {
-            "codex" => run_codex(&account.token, audio_rx, control_rx, &emit, || capture.stop()).await,
-            _ => run_claude(&account.token, &language, audio_rx, control_rx, &emit, || capture.stop()).await,
+        let result = match account {
+            InputAccount::Tool("codex", account) => run_codex(&account.token, audio_rx, control_rx, &emit, || capture.stop()).await,
+            InputAccount::Tool(_, account) => run_claude(&account.token, &language, audio_rx, control_rx, &emit, || capture.stop()).await,
+            InputAccount::Doubao(account) => doubao::run(account,audio_rx,control_rx,&emit,|| capture.stop()).await,
+            InputAccount::WorkBuddy(account) => workbuddy::run(account,audio_rx,control_rx,&emit,|| capture.stop()).await,
+            InputAccount::Cursor(account) => cursor::run(account,audio_rx,control_rx,&emit,|| capture.stop()).await,
+            InputAccount::Native(account) => echo::run(account,audio_rx,control_rx,&emit,|| capture.stop()).await,
+            #[cfg(target_os = "macos")]
+            InputAccount::Apple => apple::run(&language,audio_rx,control_rx,&emit,|| capture.stop()).await,
         };
         capture.stop();
         SESSIONS.lock().unwrap().remove(&id);
@@ -117,7 +216,7 @@ pub async fn voice_mic_test_start(device: Option<String>, on_level: Channel<f32>
 }
 
 #[tauri::command]
-pub fn voice_mic_test_stop(id: u64) {
+pub async fn voice_mic_test_stop(id: u64) {
     if let Some(capture) = TESTS.lock().unwrap().remove(&id) { capture.stop(); }
 }
 
@@ -393,10 +492,17 @@ mod capture {
     use tokio::sync::mpsc;
 
     /// The capture thread owns the stream (not `Send` on every platform); dropping the sender stops it.
-    pub struct Capture { stop: Mutex<Option<std_mpsc::Sender<()>>> }
+    pub struct Capture { stop: Mutex<Option<(std_mpsc::Sender<()>, std_mpsc::Receiver<()>)>> }
 
     impl Capture {
-        pub fn stop(&self) { self.stop.lock().unwrap().take(); }
+        pub fn stop(&self) {
+            let mut stop = self.stop.lock().unwrap();
+            if let Some((signal, finished)) = stop.take() {
+                drop(signal);
+                // Finish drains the audio queue immediately after stop returns.
+                let _ = finished.recv();
+            }
+        }
     }
 
     pub fn devices() -> super::Microphones {
@@ -418,6 +524,7 @@ mod capture {
 
     pub fn start(tx: mpsc::UnboundedSender<Vec<i16>>, name: Option<String>) -> Result<Capture, String> {
         let (stop_tx, stop_rx) = std_mpsc::channel::<()>();
+        let (finished_tx, finished_rx) = std_mpsc::channel::<()>();
         let (ready_tx, ready_rx) = std_mpsc::channel::<Result<(), String>>();
         std::thread::Builder::new().name("voice-capture".into()).spawn(move || {
             let opened = open(tx.clone(), name.as_deref());
@@ -429,9 +536,27 @@ mod capture {
             drop(stream);
             let rest = resampler.lock().unwrap().flush();
             if let Some(rest) = rest { let _ = tx.send(rest); }
+            let _ = finished_tx.send(());
         }).map_err(|e| e.to_string())?;
         ready_rx.recv().map_err(|_| "microphone: capture thread ended".to_string())??;
-        Ok(Capture { stop: Mutex::new(Some(stop_tx)) })
+        Ok(Capture { stop: Mutex::new(Some((stop_tx, finished_rx))) })
+    }
+
+    #[test]
+    fn stopping_capture_makes_the_last_partial_chunk_available_to_finish() {
+        let (stop_tx, stop_rx) = std_mpsc::channel::<()>();
+        let (finished_tx, finished_rx) = std_mpsc::channel::<()>();
+        let (audio_tx, mut audio) = mpsc::unbounded_channel();
+        let capture = Capture { stop: Mutex::new(Some((stop_tx, finished_rx))) };
+        let worker = std::thread::spawn(move || {
+            let _ = stop_rx.recv();
+            audio_tx.send(vec![123; 17]).unwrap();
+            let _ = finished_tx.send(());
+        });
+        capture.stop();
+        assert_eq!(audio.try_recv().unwrap(), vec![123; 17], "finish must see the final partial microphone chunk");
+        worker.join().unwrap();
+        capture.stop();
     }
 
     fn open(tx: mpsc::UnboundedSender<Vec<i16>>, name: Option<&str>) -> Result<(cpal::Stream, Arc<Mutex<Resampler>>), String> {
@@ -464,6 +589,25 @@ mod capture {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn local_dictation_source_requires_account_credentials() {
+        let home = tempfile::tempdir().unwrap();
+        let config = home.path().join(".codex");
+        std::fs::create_dir_all(&config).unwrap();
+        let auth = config.join("auth.json");
+        let no_vars = |_: &str| None;
+        assert!(local_account("codex", home.path(), &no_vars).is_none());
+        std::fs::write(&auth, r#"{"auth_mode":"apikey","OPENAI_API_KEY":"fixture"}"#).unwrap();
+        assert!(local_account("codex", home.path(), &no_vars).is_none());
+        std::fs::write(&auth, r#"{"auth_mode":"chatgpt","tokens":{"access_token":"fixture-token","account_id":"fixture-account"}}"#).unwrap();
+        let found = local_account("codex", home.path(), &no_vars).unwrap();
+        assert_eq!(found.account_id.as_deref(), Some("fixture-account"));
+        assert!(local_account("wechat", home.path(), &no_vars).is_none());
+        assert!(resolve_account("codex", None, Some("wechat")).is_none(), "an unavailable selected source must not fall back to another account");
+        std::fs::remove_file(auth).unwrap();
+        assert!(local_account("codex", home.path(), &no_vars).is_none());
+    }
 
     #[test]
     fn joins_latin_with_spaces_and_cjk_without() {

@@ -611,6 +611,26 @@
 .settings-choice-row .settings-sound-title { padding-top: 5px; }
 .settings-sound-list > .settings-choice-row + .settings-choice-row { border-top: 1px solid var(--border); }
 .settings-choice { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; min-width: 0; }
+.settings-voice-channels { margin-top: 24px; }
+.settings-voice-controls[aria-disabled="true"], .settings-voice-channels[aria-disabled="true"] { opacity: 0.45; filter: grayscale(1); }
+.settings-voice-channels[aria-disabled="true"] button:disabled { opacity: 1; }
+.settings-voice-channels > .settings-sound-row { padding-inline: 0; }
+.settings-voice-channels .settings-sound-failed { padding: 0 0 12px; }
+.settings-voice-scan { position: relative; flex-shrink: 0; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-hover); color: var(--text-1); white-space: nowrap; }
+.settings-voice-scan[aria-busy="true"] .settings-voice-scan-label { visibility: hidden; }
+.settings-voice-scan-progress { position: absolute; inset: 0; display: grid; place-items: center; }
+.settings-voice-scan:disabled { opacity: 0.5; }
+.settings-voice-sources { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(190px, 100%), 1fr)); gap: 10px; padding: 4px 0 16px; }
+.settings-voice-source-card { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-width: 0; min-height: 84px; padding: 12px; border: 1px solid var(--border); border-radius: var(--shape-radius-btn, 8px); color: var(--text-1); background: transparent; font: inherit; text-align: left; }
+.settings-voice-source-card[aria-pressed="false"]:hover:not(:disabled) { background: var(--bg-hover); }
+.settings-voice-source-card[aria-pressed="true"] { border-color: transparent; background: color-mix(in srgb, var(--accent, #c4956a) 26%, transparent); }
+.settings-voice-source-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.settings-voice-source-card:disabled { opacity: 0.55; }
+.settings-voice-source-name { font-size: var(--type-body); font-weight: 500; }
+.settings-voice-source-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 8px; width: 100%; }
+.settings-voice-source-mode { color: var(--text-3); font-size: var(--type-label); font-weight: 400; white-space: nowrap; }
+.settings-voice-source-account { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; max-width: 100%; overflow: hidden; color: var(--text-3); font-size: var(--type-label); line-height: 1.4; word-break: break-all; }
+.settings-voice-source-status { padding: 0 0 12px; }
 .settings-choice-hint { color: var(--text-3); font-size: var(--type-label); text-align: right; }
 .settings-sound-title .settings-choice-hint { margin-top: 2px; font-weight: 400; text-align: left; white-space: normal; }
 

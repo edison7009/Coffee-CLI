@@ -4,5 +4,7 @@
 <dict>
   <key>NSMicrophoneUsageDescription</key>
   <string>Coffee CLI uses the microphone for voice input in the composer.</string>
+  <key>NSSpeechRecognitionUsageDescription</key>
+  <string>Coffee CLI uses Apple speech recognition for voice input. Audio is processed on this Mac when supported; otherwise Apple may process it online.</string>
 </dict>
 </plist>

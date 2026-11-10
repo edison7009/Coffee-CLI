@@ -1,4 +1,4 @@
-// Voice input for the composer: Claude Code and Codex signed in with an account stream the microphone
+// Voice input for any composer: the selected local account (or the current tool's account) streams the microphone
 // to their own speech-to-text service (src/voice_input.rs); the words appear in the draft as they are
 // heard, and the service's final text replaces them when the recording ends.
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
@@ -7,7 +7,7 @@ import { useT } from '../../i18n/useT';
 import { useAppLanguage } from '../../store/app-state';
 import './VoiceInput.css';
 import { chime } from '../../lib/voice-chime';
-import { useVoiceEnabled, voiceDevice } from '../../lib/voice-settings';
+import { beginVoiceSourceSelection, useVoiceEnabled, useVoiceSource, voiceDevice, voiceSource } from '../../lib/voice-settings';
 import { hideVoiceWave, pushVoiceLevel, showVoiceWave, useVoiceWaveVisible, voiceLevel } from '../../lib/voice-wave';
 
 type Phase = 'idle' | 'connecting' | 'recording' | 'finishing';
@@ -20,10 +20,12 @@ function joinDraft(before: string, spoken: string): string {
   return before + (wide(before.slice(-1)) || wide(spoken[0]) ? '' : ' ') + spoken;
 }
 
-export function VoiceInputButton({ tool, cwd, waveKey, draft, onDraftChange }: { tool: 'claude' | 'codex'; cwd?: string; waveKey: string; draft: string; onDraftChange: (text: string) => void }) {
+export function VoiceInputButton({ tool, cwd, waveKey, draft, onDraftChange }: { tool: string; cwd?: string; waveKey: string; draft: string; onDraftChange: (text: string) => void }) {
   const t = useT();
-  const language = useAppLanguage().split('-')[0];
+  const appLanguage = useAppLanguage();
+  const language = appLanguage.split('-')[0];
   const enabled = useVoiceEnabled();
+  const source = useVoiceSource();
   const [available, setAvailable] = useState(false);
   const [phase, setPhase] = useState<Phase>('idle');
   const [error, setError] = useState('');
@@ -36,19 +38,24 @@ export function VoiceInputButton({ tool, cwd, waveKey, draft, onDraftChange }: {
 
   useEffect(() => {
     let live = true;
-    const check = () => { if (isTauri) void commands.voiceInputAvailable(tool, cwd).then(ok => { if (live) setAvailable(ok); }, () => {}); };
+    let generation = 0;
+    const check = () => { const request = ++generation; if (isTauri) void commands.voiceInputAvailable(tool, cwd, source || undefined).then(ok => { if (live && request === generation) setAvailable(ok); }, () => { if (live && request === generation) setAvailable(false); }); };
     check();
     // Signing in or out, or switching to a relay, happens in the tool itself; look again when the window comes back.
     window.addEventListener('focus', check);
     return () => { live = false; window.removeEventListener('focus', check); };
-  }, [tool, cwd]);
+  }, [tool, cwd, source]);
 
-  useEffect(() => () => {
-    const current = session.current;
-    session.current = null;
-    if (current?.id != null) void commands.voiceInputCancel(current.id);
-    else if (current) current.cancelled = true;
-  }, []);
+  useEffect(() => {
+    setPhase('idle');
+    setError('');
+    return () => {
+      const current = session.current;
+      session.current = null;
+      if (current?.id != null) void commands.voiceInputCancel(current.id);
+      else if (current) current.cancelled = true;
+    };
+  }, [source, tool, cwd]);
 
   // The waveform shows while listening and until the final text is back.
   useEffect(() => { if (phase === 'idle' || phase === 'connecting') hideVoiceWave(waveKey); }, [phase, waveKey]);
@@ -61,14 +68,16 @@ export function VoiceInputButton({ tool, cwd, waveKey, draft, onDraftChange }: {
   }, [error]);
 
   const start = async () => {
+    beginVoiceSourceSelection();
     setError('');
     const current = { id: null as number | null, before: draftRef.current, cancelled: false };
     session.current = current;
     setPhase('connecting');
     const onEvent = (event: VoiceInputEvent) => {
-      if (session.current !== current) return;
+      if (session.current !== current || voiceSource() !== source) return;
       if (event.kind === 'level') { pushVoiceLevel(waveKey, event.level); return; }
       if (event.kind === 'ready') { showVoiceWave(waveKey); chime('start'); readyAt.current = performance.now(); setPhase('recording'); return; }
+      if (event.kind === 'processing') { setPhase('finishing'); return; }
       if (event.kind === 'text') {
         changeRef.current(joinDraft(current.before, event.text));
         if (event.done) { session.current = null; setPhase('idle'); }
@@ -76,10 +85,14 @@ export function VoiceInputButton({ tool, cwd, waveKey, draft, onDraftChange }: {
       }
       session.current = null;
       setPhase('idle');
-      setError(t(event.message.startsWith('http_401') || event.message.startsWith('http_403') ? 'gambit.voice.signed_out' : 'gambit.voice.failed'));
+      if (event.message === 'speech_permission') { setError(t('gambit.voice.permission')); return; }
+      if (event.message.startsWith('http_402')) { setError(t('gambit.voice.unavailable')); return; }
+      const rejected = event.message.startsWith('http_401') || event.message.startsWith('http_403');
+      if (rejected) setAvailable(false);
+      setError(t(rejected ? source ? 'settings.voice.source.missing' : 'gambit.voice.signed_out' : 'gambit.voice.failed'));
     };
     try {
-      const id = await commands.voiceInputStart(tool, cwd, language, voiceDevice(), onEvent);
+      const id = await commands.voiceInputStart(tool, cwd, source === 'macos' ? appLanguage : language, voiceDevice(), onEvent, source || undefined);
       current.id = id;
       if (current.cancelled) void commands.voiceInputCancel(id);
     } catch (reason) {
@@ -88,7 +101,7 @@ export function VoiceInputButton({ tool, cwd, waveKey, draft, onDraftChange }: {
       setPhase('idle');
       const message = String(reason);
       if (message.includes('signed_out')) setAvailable(false);
-      setError(t(message.includes('microphone') ? 'gambit.voice.no_microphone' : message.includes('signed_out') ? 'gambit.voice.signed_out' : 'gambit.voice.failed'));
+      setError(t(message.includes('microphone') ? 'gambit.voice.no_microphone' : message.includes('signed_out') ? source ? 'settings.voice.source.missing' : 'gambit.voice.signed_out' : 'gambit.voice.failed'));
     }
   };
 

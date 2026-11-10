@@ -14,6 +14,7 @@ name = "coffee-cli"
 path = "src/main.rs"
 
 [build-dependencies]
+cc = "1"
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
@@ -22,8 +23,8 @@ tempfile = "3"
 # Tier Terminal — PTY (portable-pty, WezTerm's cross-platform PTY library)
 portable-pty = "0.9"
 # Local Agent and message-channel tasks run on Tauri's async runtime.
-tokio = { version = "1", features = ["rt", "sync", "time", "macros"] }
-reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "system-proxy"] }
+tokio = { version = "1", features = ["rt", "sync", "time", "macros", "process"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "system-proxy", "http2", "stream", "multipart"] }
 uuid = { version = "1", features = ["v4"] }
 
 # Regex (used by terminal.rs for ANSI strip)
@@ -82,6 +83,23 @@ zstd = "0.13"
 # Voice input: microphone capture and the vendors' streaming speech-to-text sockets.
 cpal = "0.16"
 tokio-tungstenite = { version = "0.28", features = ["rustls-tls-webpki-roots"] }
+# Speech adapters shared with EchoBird: native wire formats and account envelopes.
+bytes = "1"
+http = "1"
+http-body-util = "0.1"
+tokio-stream = "0.1"
+aes-gcm = "0.10"
+aes = "0.8"
+cbc = { version = "0.1", features = ["alloc", "block-padding"] }
+md-5 = "0.10"
+rsa = { version = "0.9", features = ["pem"] }
+rand = "0.8"
+hmac = "0.12"
+hex = "0.4"
+flate2 = "1"
+crc32fast = "1"
+pbkdf2 = "0.12"
+sha1 = "0.10"
 futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }
 
 [profile.release]
@@ -123,6 +141,7 @@ tauri-plugin-window-state = "=2.4.0"
 #     installer etc. — replaces the old 5-dir hardcoded PATH repair
 #     (src/windows_path.rs).
 [target.'cfg(windows)'.dependencies]
+ring = "0.17"
 windows = { version = "0.58", features = [
     "Win32_Foundation",
     "Win32_Graphics_Dwm",
@@ -131,6 +150,7 @@ windows = { version = "0.58", features = [
     "Win32_UI_WindowsAndMessaging",
     "Win32_UI_Shell",
     "Win32_Security",
+    "Win32_Security_Cryptography",
     "Win32_System_Console",
     "Win32_System_JobObjects",
     "Win32_System_Registry",
@@ -157,8 +177,12 @@ libc = "0.2"
 # Other compositors keep the same genuinely transparent, theme-tinted window
 # without pretending that an in-page wallpaper is the desktop.
 [target.'cfg(target_os = "linux")'.dependencies]
+zbus = "5.16"
 raw-window-handle = "0.6"
 wayland-backend = { version = "0.3", features = ["client_system", "dlopen"] }
 wayland-client = { version = "0.31", features = ["system", "dlopen"] }
 wayland-scanner = "0.31"
 x11-dl = "2.21"
+
+[dev-dependencies]
+axum = { version = "0.8", features = ["ws", "http2"] }

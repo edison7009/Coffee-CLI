@@ -174,11 +174,11 @@ function GambitImpl({
   // Every desktop conversation accepts prompts during a running turn.
   const steerable = claude || codex || dsh || opencode || pi;
   const usage = useUsageQuota(sessionId, tool, cwd, claude ? 'claude' : codex ? 'codex' : dsh ? 'dsh' : null);
-  // Voice input uses the tool's own speech service, so only Claude Code and Codex, desktop or terminal.
-  const voiceTool = claude || (!desktop && tool === 'claude') ? 'claude' : codex || (!desktop && tool === 'codex') ? 'codex' : null;
+  // A selected dictation source can fill any tool's composer.
+  const voiceTool = claude ? 'claude' : codex ? 'codex' : tool;
   // While listening the live waveform takes the usage meter's place, wherever the meter is.
   const meter = <UsageMeter quotas={usage.quotas} onRefresh={usage.refresh} />;
-  const usageMeter = voiceTool ? <VoiceUsageSlot waveKey={sessionId}>{meter}</VoiceUsageSlot> : meter;
+  const usageMeter = <VoiceUsageSlot waveKey={sessionId}>{meter}</VoiceUsageSlot>;
   const suggestion = draft ? undefined : offered;
   const rootRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -894,7 +894,7 @@ function GambitImpl({
           </span>
         )}
 
-        {voiceTool && <VoiceInputButton key={`${sessionId}:${voiceTool}`} tool={voiceTool} cwd={cwd} waveKey={sessionId} draft={draft} onDraftChange={onDraftChange} />}
+        <VoiceInputButton key={`${sessionId}:${voiceTool}`} tool={voiceTool ?? ''} cwd={cwd} waveKey={sessionId} draft={draft} onDraftChange={onDraftChange} />
 
         <button
           className={`gambit-send${sendFailed ? ' gambit-send--failed' : ''}${!running && !draft.trim() ? ' gambit-send--empty' : ''}`}

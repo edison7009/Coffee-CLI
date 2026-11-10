@@ -17,7 +17,8 @@ export const isTauri =
   typeof window !== 'undefined' &&
   (!!window.__TAURI_INTERNALS__ || !!window.__TAURI__);
 
-export type VoiceInputEvent = { kind: 'ready' } | { kind: 'text'; text: string; done: boolean } | { kind: 'error'; message: string } | { kind: 'level'; level: number };
+export type VoiceInputEvent = { kind: 'ready' } | { kind: 'processing' } | { kind: 'text'; text: string; done: boolean } | { kind: 'error'; message: string } | { kind: 'level'; level: number };
+export type VoiceInputSource = { id: string; name: string; accountId?: string | null; issue?: string | null; transcriptionMode?: 'streaming' | 'batch' };
 
 export interface CliUpdateStatus { tool: string; current: string | null; latest: string | null; available: boolean }
 
@@ -206,10 +207,13 @@ export const commands = {
     const updates = new (await import('@tauri-apps/api/core')).Channel<CatalogSkill[]>(onUpdate);
     return invoke<CatalogSkill[]>('search_tool_skills', { query, onUpdate:updates });
   },
-  voiceInputAvailable: (tool: string, cwd?: string) => invoke<boolean>('voice_input_available', { tool, cwd }),
-  voiceInputStart: async (tool: string, cwd: string | undefined, language: string, device: string, onEvent: (event: VoiceInputEvent) => void) => {
+  voiceInputSources: () => invoke<VoiceInputSource[]>('voice_input_sources'),
+  voiceInputProbeSource: (source: string) => invoke<{ latencyMs: number; accountId: string | null } | null>('voice_input_probe_source', { source }),
+  voiceInputSelectSource: (source: string) => invoke<void>('voice_input_select_source', { source }),
+  voiceInputAvailable: (tool: string, cwd?: string, source?: string) => invoke<boolean>('voice_input_available', { tool, cwd, source }),
+  voiceInputStart: async (tool: string, cwd: string | undefined, language: string, device: string, onEvent: (event: VoiceInputEvent) => void, source?: string) => {
     const events = new (await import('@tauri-apps/api/core')).Channel<VoiceInputEvent>(onEvent);
-    return invoke<number>('voice_input_start', { tool, cwd, language, device: device || null, onEvent: events });
+    return invoke<number>('voice_input_start', { tool, cwd, source, language, device: device || null, onEvent: events });
   },
   voiceInputFinish: (id: number) => invoke<void>('voice_input_finish', { id }),
   voiceInputCancel: (id: number) => invoke<void>('voice_input_cancel', { id }),

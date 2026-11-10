@@ -10,6 +10,7 @@ import { useOrchestration } from './lib/orchestration';
 import { useSessionReplyVisibility } from './lib/use-session-reply-visibility';
 import { routeFileDrop } from './lib/file-drop';
 import { initHistoryAutoRefresh } from './lib/history-cache';
+import { initializeVoiceSources } from './lib/voice-source-discovery';
 import { isFrostShape, resolveThemeMode } from './lib/personalization';
 import { useDataAttr } from './lib/use-data-attr';
 import { TitleBar } from './components/common/TitleBar';
@@ -485,6 +486,7 @@ export function App() {
   // (prefetchHistory flips status to 'ready'), so users who never open it
   // pay only the 60s setInterval tick (a function call that early-returns).
   useEffect(() => initHistoryAutoRefresh(), []);
+  useEffect(() => { void initializeVoiceSources(); }, []);
 
   return (
     <>

@@ -9,7 +9,7 @@ const { chromium } = await import(process.env.COFFEE_PLAYWRIGHT_MODULE || 'playw
 const project = fileURLToPath(new URL('..', import.meta.url)), directory = await mkdtemp(join(tmpdir(), 'coffee-agent-new-chat-'));
 const fixtures = {
   'store/app-state': `export function useAppState(){return{state:{agentPageActive:'agent',leftPanelHidden:true,rightPanelHidden:true,gambitEnterToSend:true,terminals:[]},dispatch(){}}} export function useAppLanguage(){return 'zh-CN'}`,
-  'tauri': `export const commands={}; export const isTauri=true; export async function invoke(){return null}`,
+  'tauri': `export const commands={async voiceInputAvailable(){return false}}; export const isTauri=true; export async function invoke(){return null}`,
   '/clipboard': `export async function clipboardRead(){return ''} export async function clipboardWrite(){}`,
   'lib/agent-client': `import{useSyncExternalStore}from'react';
     const listeners=new Set();
