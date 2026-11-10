@@ -495,6 +495,18 @@ Xóa tờ ghi chú này khi bạn sẵn sàng và bắt đầu tác vụ đầu 
   'gambit.voice.no_microphone': 'Không có micrô — hãy kiểm tra quyền micrô của hệ thống',
   'gambit.voice.failed': 'Nhập giọng nói thất bại — hãy thử lại',
   'gambit.voice.listening': 'Đang nghe',
+  'settings.voice': 'Nhập giọng nói',
+  'settings.voice.enabled': 'Nhập giọng nói',
+  'settings.voice.enabled.sub': 'Khi bật, ô nhập sẽ hiện nút micrô',
+  'settings.voice.microphone': 'Micrô',
+  'settings.voice.default': 'Mặc định hệ thống',
+  'settings.voice.default_named': 'Mặc định hệ thống ({name})',
+  'settings.voice.missing': '{name} (chưa kết nối)',
+  'settings.voice.test': 'Kiểm tra micrô',
+  'settings.voice.test.sub': 'Hãy nói và xem thanh có nhảy không',
+  'settings.voice.test.start': 'Bắt đầu kiểm tra',
+  'settings.voice.test.stop': 'Dừng',
+  'settings.voice.level': 'Mức micrô',
 
 
   'conversation.reasoning': 'Quá trình suy luận',

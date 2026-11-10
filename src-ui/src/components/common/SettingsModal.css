@@ -520,7 +520,8 @@
   cursor: pointer;
   text-align: left;
 }
-.settings-font-trigger:hover { border-color: var(--accent, #c4956a); }
+/* Hover like the settings buttons: the border fades into a slightly brighter fill instead of lighting up. */
+.settings-font-trigger:hover:not(:disabled), .settings-font-trigger[aria-expanded="true"] { border-color: transparent; background: color-mix(in srgb, var(--text-1, #fff) 11%, transparent); }
 .settings-font-current { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .settings-font-trigger svg { width: 15px; height: 15px; flex-shrink: 0; color: var(--text-2, rgba(255, 255, 255, 0.6)); }
 
@@ -605,11 +606,6 @@
 .settings-sound-play { display: grid; place-items: center; flex-shrink: 0; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 50%; color: var(--text-1); background: var(--bg-hover); cursor: pointer; }
 .settings-sound-play:hover { color: var(--accent); background: var(--bg-active); }
 .settings-sound-play svg { width: 14px; height: 14px; margin-left: 2px; }
-.settings-switch { position: relative; flex-shrink: 0; width: 40px; height: 24px; padding: 0; border: 0; border-radius: 12px; background: var(--bg-hover); box-shadow: inset 0 0 0 1px var(--border-input); cursor: pointer; transition: background 150ms; }
-.settings-switch > span { position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3); transition: transform 150ms; }
-.settings-switch[aria-checked="true"] { background: var(--accent); box-shadow: none; }
-.settings-switch[aria-checked="true"] > span { transform: translateX(16px); }
-
 /* A row whose choice carries a note under it, both right-aligned. */
 .settings-choice-row { align-items: flex-start; }
 .settings-choice-row .settings-sound-title { padding-top: 5px; }
@@ -617,3 +613,7 @@
 .settings-choice { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; min-width: 0; }
 .settings-choice-hint { color: var(--text-3); font-size: var(--type-label); text-align: right; }
 .settings-sound-title .settings-choice-hint { margin-top: 2px; font-weight: 400; text-align: left; white-space: normal; }
+
+/* Voice input: the microphone menu sits at the right like other choices; the check reuses the composer's mic button and waveform. */
+.settings-voice-device { width: min(260px, 50%); }
+.settings-voice-wave-room { display: flex; justify-content: flex-end; flex: 0 0 120px; height: 16px; }

@@ -494,6 +494,18 @@ export const zhTW = {
   'gambit.voice.no_microphone': '沒有可用的麥克風，請檢查系統麥克風權限',
   'gambit.voice.failed': '語音輸入失敗，請重試',
   'gambit.voice.listening': '正在聆聽',
+  'settings.voice': '語音輸入',
+  'settings.voice.enabled': '語音輸入',
+  'settings.voice.enabled.sub': '開啟後在輸入框顯示麥克風按鈕',
+  'settings.voice.microphone': '麥克風',
+  'settings.voice.default': '系統預設',
+  'settings.voice.default_named': '系統預設（{name}）',
+  'settings.voice.missing': '{name}（未連接）',
+  'settings.voice.test': '測試麥克風',
+  'settings.voice.test.sub': '對著麥克風說話，看看音量條是否跳動',
+  'settings.voice.test.start': '開始測試',
+  'settings.voice.test.stop': '停止',
+  'settings.voice.level': '麥克風音量',
 
 
   'conversation.reasoning': '思考過程',

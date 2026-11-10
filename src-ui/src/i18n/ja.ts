@@ -493,6 +493,18 @@ export const ja = {
   'gambit.voice.no_microphone': 'マイクが使用できません。システムのマイク権限を確認してください',
   'gambit.voice.failed': '音声入力に失敗しました。もう一度お試しください',
   'gambit.voice.listening': '聞き取り中',
+  'settings.voice': '音声入力',
+  'settings.voice.enabled': '音声入力',
+  'settings.voice.enabled.sub': 'オンにすると入力欄にマイクボタンを表示',
+  'settings.voice.microphone': 'マイク',
+  'settings.voice.default': 'システムの既定',
+  'settings.voice.default_named': 'システムの既定（{name}）',
+  'settings.voice.missing': '{name}（未接続）',
+  'settings.voice.test': 'マイクをテスト',
+  'settings.voice.test.sub': '話してバーが動くか確認します',
+  'settings.voice.test.start': 'テスト開始',
+  'settings.voice.test.stop': '停止',
+  'settings.voice.level': 'マイクのレベル',
 
 
   'conversation.reasoning': '思考プロセス',

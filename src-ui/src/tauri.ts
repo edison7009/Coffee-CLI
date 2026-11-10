@@ -207,12 +207,18 @@ export const commands = {
     return invoke<CatalogSkill[]>('search_tool_skills', { query, onUpdate:updates });
   },
   voiceInputAvailable: (tool: string, cwd?: string) => invoke<boolean>('voice_input_available', { tool, cwd }),
-  voiceInputStart: async (tool: string, cwd: string | undefined, language: string, onEvent: (event: VoiceInputEvent) => void) => {
+  voiceInputStart: async (tool: string, cwd: string | undefined, language: string, device: string, onEvent: (event: VoiceInputEvent) => void) => {
     const events = new (await import('@tauri-apps/api/core')).Channel<VoiceInputEvent>(onEvent);
-    return invoke<number>('voice_input_start', { tool, cwd, language, onEvent: events });
+    return invoke<number>('voice_input_start', { tool, cwd, language, device: device || null, onEvent: events });
   },
   voiceInputFinish: (id: number) => invoke<void>('voice_input_finish', { id }),
   voiceInputCancel: (id: number) => invoke<void>('voice_input_cancel', { id }),
+  voiceInputDevices: () => invoke<{ devices: string[]; default: string | null }>('voice_input_devices'),
+  voiceMicTestStart: async (device: string, onLevel: (level: number) => void) => {
+    const levels = new (await import('@tauri-apps/api/core')).Channel<number>(onLevel);
+    return invoke<number>('voice_mic_test_start', { device: device || null, onLevel: levels });
+  },
+  voiceMicTestStop: (id: number) => invoke<void>('voice_mic_test_stop', { id }),
   getToolSkillDescription: (source: string, name: string) => invoke<string>('get_tool_skill_description', { source, name }),
   installToolSkill: (tool: string, source: string, name: string) => invoke<SkillInventory>('install_tool_skill', { tool, source, name }),
   removeToolSkill: (tool: string, path: string) => invoke<SkillInventory>('remove_tool_skill', { tool, path }),

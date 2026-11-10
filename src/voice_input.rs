@@ -56,12 +56,12 @@ pub async fn voice_input_available(tool: String, cwd: Option<String>) -> bool {
 }
 
 #[tauri::command]
-pub async fn voice_input_start(tool: String, cwd: Option<String>, language: String, on_event: Channel<VoiceEvent>) -> Result<u64, String> {
+pub async fn voice_input_start(tool: String, cwd: Option<String>, language: String, device: Option<String>, on_event: Channel<VoiceEvent>) -> Result<u64, String> {
     let lookup = tool.clone();
     let account = tauri::async_runtime::spawn_blocking(move || signed_in(&lookup, cwd)).await.ok().flatten()
         .ok_or_else(|| "signed_out".to_string())?;
     let (audio_tx, audio_rx) = mpsc::unbounded_channel();
-    let capture = capture::start(audio_tx)?;
+    let capture = capture::start(audio_tx, device)?;
     let (control_tx, control_rx) = mpsc::unbounded_channel();
     let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
     SESSIONS.lock().unwrap().insert(id, control_tx);
@@ -90,6 +90,36 @@ pub fn voice_input_finish(id: u64) { control(id, Control::Finish); }
 /// Stop listening and drop the recording.
 #[tauri::command]
 pub fn voice_input_cancel(id: u64) { control(id, Control::Cancel); }
+
+#[derive(Serialize)]
+pub struct Microphones { devices: Vec<String>, default: Option<String> }
+
+/// Input devices by name, and which one the system uses by default.
+#[tauri::command]
+pub async fn voice_input_devices() -> Microphones {
+    tauri::async_runtime::spawn_blocking(capture::devices).await.unwrap_or(Microphones { devices: Vec::new(), default: None })
+}
+
+static TESTS: LazyLock<Mutex<HashMap<u64, std::sync::Arc<capture::Capture>>>> = LazyLock::new(Default::default);
+
+/// Microphone check for Settings: streams the loudness of the chosen device, nothing leaves the machine.
+#[tauri::command]
+pub async fn voice_mic_test_start(device: Option<String>, on_level: Channel<f32>) -> Result<u64, String> {
+    let (tx, mut rx) = mpsc::unbounded_channel();
+    let capture = std::sync::Arc::new(capture::start(tx, device)?);
+    let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
+    TESTS.lock().unwrap().insert(id, capture);
+    tauri::async_runtime::spawn(async move {
+        while let Some(chunk) = rx.recv().await { if on_level.send(level(&chunk)).is_err() { break; } }
+        if let Some(capture) = TESTS.lock().unwrap().remove(&id) { capture.stop(); }
+    });
+    Ok(id)
+}
+
+#[tauri::command]
+pub fn voice_mic_test_stop(id: u64) {
+    if let Some(capture) = TESTS.lock().unwrap().remove(&id) { capture.stop(); }
+}
 
 /// Concatenate recognized pieces: a space between two Latin words, nothing between CJK text.
 pub fn join(parts: impl IntoIterator<Item = String>) -> String {
@@ -369,11 +399,28 @@ mod capture {
         pub fn stop(&self) { self.stop.lock().unwrap().take(); }
     }
 
-    pub fn start(tx: mpsc::UnboundedSender<Vec<i16>>) -> Result<Capture, String> {
+    pub fn devices() -> super::Microphones {
+        let host = cpal::default_host();
+        #[allow(deprecated)]
+        let devices = host.input_devices().map(|list| list.filter_map(|d| d.name().ok()).collect()).unwrap_or_default();
+        #[allow(deprecated)]
+        let default = host.default_input_device().and_then(|d| d.name().ok());
+        super::Microphones { devices, default }
+    }
+
+    /// The named microphone when it is still connected, otherwise the system default.
+    fn device(name: Option<&str>) -> Option<cpal::Device> {
+        let host = cpal::default_host();
+        #[allow(deprecated)]
+        let named = name.filter(|n| !n.is_empty()).and_then(|name| host.input_devices().ok()?.find(|d| d.name().ok().as_deref() == Some(name)));
+        named.or_else(|| host.default_input_device())
+    }
+
+    pub fn start(tx: mpsc::UnboundedSender<Vec<i16>>, name: Option<String>) -> Result<Capture, String> {
         let (stop_tx, stop_rx) = std_mpsc::channel::<()>();
         let (ready_tx, ready_rx) = std_mpsc::channel::<Result<(), String>>();
         std::thread::Builder::new().name("voice-capture".into()).spawn(move || {
-            let opened = open(tx.clone());
+            let opened = open(tx.clone(), name.as_deref());
             let (stream, resampler) = match opened {
                 Ok(pair) => { let _ = ready_tx.send(Ok(())); pair }
                 Err(error) => { let _ = ready_tx.send(Err(error)); return; }
@@ -387,8 +434,8 @@ mod capture {
         Ok(Capture { stop: Mutex::new(Some(stop_tx)) })
     }
 
-    fn open(tx: mpsc::UnboundedSender<Vec<i16>>) -> Result<(cpal::Stream, Arc<Mutex<Resampler>>), String> {
-        let device = cpal::default_host().default_input_device().ok_or("no_microphone")?;
+    fn open(tx: mpsc::UnboundedSender<Vec<i16>>, name: Option<&str>) -> Result<(cpal::Stream, Arc<Mutex<Resampler>>), String> {
+        let device = device(name).ok_or("no_microphone")?;
         let config = device.default_input_config().map_err(|e| format!("microphone: {e}"))?;
         let channels = config.channels().max(1) as usize;
         let resampler = Arc::new(Mutex::new(Resampler::new(config.sample_rate().0)));

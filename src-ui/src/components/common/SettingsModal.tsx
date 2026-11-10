@@ -22,13 +22,14 @@ import { IS_MACOS, IS_WINDOWS } from '../../lib/platform';
 import { TERM_COLOR_SCHEMES } from '../center/TierTerminal';
 import { commands, isTauri, type FontInfo } from '../../tauri';
 import { FontPicker } from './FontPicker';
+import { VoiceSettings } from './VoiceSettings';
 import { SettingsSlider } from './SettingsSlider';
 import { setUiScale, useUiScale } from '../../lib/ui-scale';
 import { THEME_COLORS, THEME_MODES, THEME_SHAPES, ICON_ART_THEMES, LANGUAGES, isMaskTintTheme } from '../../lib/personalization';
 import './SettingsModal.css';
 
-type Section = 'general' | 'appearance' | 'wallpaper' | 'terminal' | 'gambit' | 'sound' | 'language' | 'agent' | 'feedback';
-const SECTION_IDS: Section[] = ['general', 'appearance', 'wallpaper', 'terminal', 'gambit', 'sound', 'language', 'agent', 'feedback'];
+type Section = 'general' | 'appearance' | 'wallpaper' | 'terminal' | 'gambit' | 'sound' | 'voice' | 'language' | 'agent' | 'feedback';
+const SECTION_IDS: Section[] = ['general', 'appearance', 'wallpaper', 'terminal', 'gambit', 'sound', 'voice', 'language', 'agent', 'feedback'];
 
 // Trailing "opens outside the app" affordance on the feedback cards.
 const ExternalLinkArrow = () => (
@@ -86,6 +87,11 @@ const ICONS: Record<Section, ReactNode> = {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M4 7h9m4 0h3M4 17h3m4 0h9" />
       <circle cx="15" cy="7" r="2" /><circle cx="9" cy="17" r="2" />
+    </svg>
+  ),
+  voice: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="9" y="2" width="6" height="12" rx="3" /><path d="M19 10v1a7 7 0 0 1-14 0v-1" /><path d="M12 18v4" />
     </svg>
   ),
   language: (
@@ -283,6 +289,7 @@ export function SettingsModal() {
     { id: 'general',    label: t('settings.general') },
     { id: 'appearance', label: t('settings.appearance') },
     { id: 'terminal',   label: t('settings.terminal') },
+    { id: 'voice',      label: t('settings.voice') },
     { id: 'language',   label: t('settings.language') },
     { id: 'agent',      label: 'Coffee Agent' },
     { id: 'feedback',   label: t('settings.feedback') },
@@ -672,6 +679,8 @@ export function SettingsModal() {
                 </div>
               </>
             )}
+
+            {section === 'voice' && <VoiceSettings />}
 
             {section === 'language' && (
               <div className="settings-lang-list">

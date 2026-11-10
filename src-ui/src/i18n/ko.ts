@@ -493,6 +493,18 @@ export const ko = {
   'gambit.voice.no_microphone': '사용 가능한 마이크가 없습니다. 시스템 마이크 권한을 확인하세요',
   'gambit.voice.failed': '음성 입력에 실패했습니다. 다시 시도하세요',
   'gambit.voice.listening': '듣는 중',
+  'settings.voice': '음성 입력',
+  'settings.voice.enabled': '음성 입력',
+  'settings.voice.enabled.sub': '켜면 입력창에 마이크 버튼이 표시됩니다',
+  'settings.voice.microphone': '마이크',
+  'settings.voice.default': '시스템 기본값',
+  'settings.voice.default_named': '시스템 기본값 ({name})',
+  'settings.voice.missing': '{name} (연결 안 됨)',
+  'settings.voice.test': '마이크 테스트',
+  'settings.voice.test.sub': '말하면서 막대가 움직이는지 확인하세요',
+  'settings.voice.test.start': '테스트 시작',
+  'settings.voice.test.stop': '중지',
+  'settings.voice.level': '마이크 레벨',
 
 
   'conversation.reasoning': '사고 과정',

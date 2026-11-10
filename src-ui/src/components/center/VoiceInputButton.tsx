@@ -5,17 +5,13 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 're
 import { commands, isTauri, type VoiceInputEvent } from '../../tauri';
 import { useT } from '../../i18n/useT';
 import { useAppLanguage } from '../../store/app-state';
+import './VoiceInput.css';
+import { chime } from '../../lib/voice-chime';
+import { useVoiceEnabled, voiceDevice } from '../../lib/voice-settings';
 import { hideVoiceWave, pushVoiceLevel, showVoiceWave, useVoiceWaveVisible, voiceLevel } from '../../lib/voice-wave';
 
 type Phase = 'idle' | 'connecting' | 'recording' | 'finishing';
 
-const sounds: Record<'start' | 'stop', HTMLAudioElement | null> = { start: null, stop: null };
-function chime(which: 'start' | 'stop') {
-  if (typeof Audio === 'undefined') return;
-  const audio = sounds[which] ??= Object.assign(new Audio(`/sounds/voice-${which}.mp3`), { volume: 0.3 });
-  audio.currentTime = 0;
-  void audio.play().catch(() => {});
-}
 
 /** Text spoken after existing Latin text needs a space; CJK text does not. */
 function joinDraft(before: string, spoken: string): string {
@@ -27,6 +23,7 @@ function joinDraft(before: string, spoken: string): string {
 export function VoiceInputButton({ tool, cwd, waveKey, draft, onDraftChange }: { tool: 'claude' | 'codex'; cwd?: string; waveKey: string; draft: string; onDraftChange: (text: string) => void }) {
   const t = useT();
   const language = useAppLanguage().split('-')[0];
+  const enabled = useVoiceEnabled();
   const [available, setAvailable] = useState(false);
   const [phase, setPhase] = useState<Phase>('idle');
   const [error, setError] = useState('');
@@ -82,7 +79,7 @@ export function VoiceInputButton({ tool, cwd, waveKey, draft, onDraftChange }: {
       setError(t(event.message.startsWith('http_401') || event.message.startsWith('http_403') ? 'gambit.voice.signed_out' : 'gambit.voice.failed'));
     };
     try {
-      const id = await commands.voiceInputStart(tool, cwd, language, onEvent);
+      const id = await commands.voiceInputStart(tool, cwd, language, voiceDevice(), onEvent);
       current.id = id;
       if (current.cancelled) void commands.voiceInputCancel(id);
     } catch (reason) {
@@ -115,7 +112,8 @@ export function VoiceInputButton({ tool, cwd, waveKey, draft, onDraftChange }: {
 
   // Problems show in a bubble above the mic, like the footer's other notices, so nothing in the row shifts.
   const bubble = error && <span className="gambit-voice-notice" role="status" onClick={() => setError('')}>{error}</span>;
-  if (!available) return bubble ? <span className="gambit-voice-anchor">{bubble}</span> : null;
+  // Turning voice input off in Settings removes the button; a recording in progress finishes first.
+  if (!available || (!enabled && phase === 'idle')) return bubble ? <span className="gambit-voice-anchor">{bubble}</span> : null;
   const active = phase !== 'idle';
   return (
     <span className="gambit-voice-anchor" data-tip={error ? undefined : t(active ? 'gambit.voice.finish' : 'gambit.voice.start')}>
@@ -132,17 +130,7 @@ export function VoiceInputButton({ tool, cwd, waveKey, draft, onDraftChange }: {
           else if (phase === 'recording' && performance.now() - readyAt.current > 300) finish();
         }}
       >
-        {phase === 'connecting' || phase === 'finishing' ? (
-          <svg className="gambit-voice-spinner" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <circle cx="8" cy="8" r="5.5" stroke="currentColor" strokeWidth="1.6" opacity="0.3" />
-            <path d="M8 2.5 A5.5 5.5 0 0 1 13.5 8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-          </svg>
-        ) : (
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <rect x="5.5" y="1.75" width="5" height="8.5" rx="2.5" stroke="currentColor" strokeWidth="1.5" />
-            <path d="M3.25 7.5 a4.75 4.75 0 0 0 9.5 0 M8 12.25 V14.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
-        )}
+        <VoiceGlyph busy={phase === 'connecting' || phase === 'finishing'} />
       </button>
     </span>
   );
@@ -152,7 +140,22 @@ export function VoiceInputButton({ tool, cwd, waveKey, draft, onDraftChange }: {
 // takes the current loudness, so speech raises the dots and silence leaves a dotted line.
 const WAVE_MIN_WIDTH = 46, WAVE_HEIGHT = 16, WAVE_STEP = 4, WAVE_DOT = 2, WAVE_SPEED = 40;
 
-function VoiceWave({ waveKey, width }: { waveKey: string; width: number }) {
+/** Mic at rest and while listening; a spinner while connecting or wrapping up. */
+export function VoiceGlyph({ busy }: { busy: boolean }) {
+  return busy ? (
+          <svg className="gambit-voice-spinner" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <circle cx="8" cy="8" r="5.5" stroke="currentColor" strokeWidth="1.6" opacity="0.3" />
+            <path d="M8 2.5 A5.5 5.5 0 0 1 13.5 8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+          </svg>
+        ) : (
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <rect x="5.5" y="1.75" width="5" height="8.5" rx="2.5" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M3.25 7.5 a4.75 4.75 0 0 0 9.5 0 M8 12.25 V14.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        );
+}
+
+export function VoiceWave({ waveKey, width }: { waveKey: string; width: number }) {
   const t = useT();
   const visible = useVoiceWaveVisible(waveKey);
   const canvas = useRef<HTMLCanvasElement>(null);

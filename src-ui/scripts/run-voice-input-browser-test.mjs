@@ -22,15 +22,16 @@ window.calls=[];window.signedIn={claude:true,codex:false};
 export const isTauri=true;
 export const commands={
   async voiceInputAvailable(tool){window.calls.push(['available',tool]);return window.signedIn[tool]},
-  async voiceInputStart(tool,cwd,language,onEvent){window.calls.push(['start',tool,language]);if(window.startError)throw window.startError;window.emit=onEvent;return 7},
+  async voiceInputStart(tool,cwd,language,device,onEvent){window.calls.push(['start',tool,language,device]);if(window.startError)throw window.startError;window.emit=onEvent;return 7},
   async voiceInputFinish(id){window.calls.push(['finish',id])},
   async voiceInputCancel(id){window.calls.push(['cancel',id])},
 };
 `, loader: 'js' }));
 } }] });
 const server = http.createServer(async (req, res) => {
-  if (req.url === '/') return res.setHeader('Content-Type', 'text/html; charset=utf-8').end(`<!doctype html><html data-mode="dark"><link rel="stylesheet" href="/gambit.css"><style>:root{--accent:#c595a5;--bg-hover:#393236;--text-1:#e5dce1;--text-2:#bcb2b8;--text-3:#9f939a}</style><div id="root"></div><script src="/fixture.js"></script></html>`);
+  if (req.url === '/') return res.setHeader('Content-Type', 'text/html; charset=utf-8').end(`<!doctype html><html data-mode="dark"><link rel="stylesheet" href="/gambit.css"><style>:root{--accent:#c595a5;--bg-hover:#393236;--text-1:#e5dce1;--text-2:#bcb2b8;--text-3:#9f939a}</style><link rel="stylesheet" href="/fixture.css"><div id="root"></div><script src="/fixture.js"></script></html>`);
   if (req.url === '/gambit.css') return res.setHeader('Content-Type', 'text/css').end(await readFile(join(project, 'src/components/center/Gambit.css')));
+  if (req.url === '/fixture.css') return res.setHeader('Content-Type', 'text/css').end(await readFile(join(directory, 'fixture.css')));
   if (req.url === '/fixture.js') return res.setHeader('Content-Type', 'text/javascript').end(await readFile(join(directory, 'fixture.js')));
   if (req.url.startsWith('/sounds/voice-')) { res.setHeader('Content-Type', 'audio/mpeg'); return res.end(await readFile(join(project, 'public', req.url))); }
   res.writeHead(404).end();
@@ -57,7 +58,7 @@ try {
   // Start: connecting until the service is ready, then the start chime and the recording state.
   await mic.click();
   await page.waitForFunction(() => window.calls.some(c => c[0] === 'start'));
-  assert.deepEqual(await page.evaluate(() => window.calls.find(c => c[0] === 'start')), ['start', 'claude', 'zh']);
+  assert.deepEqual(await page.evaluate(() => window.calls.find(c => c[0] === 'start')), ['start', 'claude', 'zh', '']);
   assert.equal(await page.locator('.gambit-voice.is-connecting .gambit-voice-spinner').count(), 1, 'connecting shows a spinner');
   assert.equal(await page.locator('.gambit-voice').evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(57, 50, 54)', 'connecting keeps the plain chip');
   await page.locator('.gambit-voice').click();
@@ -132,6 +133,12 @@ try {
   assert.ok(notice.y + notice.height <= button.y, 'the problem opens upward above the mic instead of sitting in the row');
   assert.equal(await page.locator('.gambit-send-hint').count(), 0, 'no inline hint text');
   assert.equal(await page.locator('.gambit-voice:not([class*="is-"])').count(), 1);
+
+  // Turned off in Settings: the button goes away at once, and comes back when turned on.
+  await page.evaluate(() => { localStorage.setItem('cc-voice-enabled', 'false'); window.dispatchEvent(new StorageEvent('storage', { key: 'cc-voice-enabled' })); });
+  await page.waitForFunction(() => !document.querySelector('.gambit-voice'));
+  await page.evaluate(() => { localStorage.setItem('cc-voice-enabled', 'true'); window.dispatchEvent(new StorageEvent('storage', { key: 'cc-voice-enabled' })); });
+  await mic.waitFor();
 
   // Signed out at start: the button disappears and says why.
   await page.evaluate(() => { window.startError = 'signed_out'; });

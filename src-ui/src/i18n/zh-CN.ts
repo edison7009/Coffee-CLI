@@ -494,6 +494,18 @@ export const zhCN = {
   'gambit.voice.no_microphone': '没有可用的麦克风，请检查系统麦克风权限',
   'gambit.voice.failed': '语音输入失败，请重试',
   'gambit.voice.listening': '正在聆听',
+  'settings.voice': '语音输入',
+  'settings.voice.enabled': '语音输入',
+  'settings.voice.enabled.sub': '开启后在输入框显示麦克风按钮',
+  'settings.voice.microphone': '麦克风',
+  'settings.voice.default': '系统默认',
+  'settings.voice.default_named': '系统默认（{name}）',
+  'settings.voice.missing': '{name}（未连接）',
+  'settings.voice.test': '测试麦克风',
+  'settings.voice.test.sub': '对着麦克风说话，看看电平条是否跳动',
+  'settings.voice.test.start': '开始测试',
+  'settings.voice.test.stop': '停止',
+  'settings.voice.level': '麦克风电平',
 
 
   // 贡献热力图（桌面 Launchpad 上的 6 张卡片上方）

@@ -500,20 +500,3 @@
 .gambit-pre-input-save:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
 .gambit-pre-input-save:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
 
-/* Voice input — sits between the usage meter and Send, on the same chip as the footer's other buttons.
-   Connecting and wrapping up show a spinner and ignore clicks; listening lights up like Send. */
-.gambit-voice { display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; width:26px; height:26px; padding:0; border:0; border-radius:var(--shape-radius-btn,5px); color:var(--text-2); background:var(--bg-hover); cursor:pointer; transition:color .12s, background .12s; }
-.gambit-voice[aria-pressed="false"]:hover { color:var(--text-1); background:var(--accent-bg,var(--bg-hover)); }
-.gambit-voice.is-recording { color:var(--bg-terminal,#fff); background:var(--accent,#C4956A); }
-.gambit-voice.is-finishing { color:var(--bg-terminal,#fff); background:var(--accent,#C4956A); opacity:.6; }
-.gambit-voice[aria-busy="true"] { cursor:default; }
-.gambit-voice-spinner { animation:gambit-voice-spin .9s linear infinite; }
-@keyframes gambit-voice-spin { to { transform:rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .gambit-voice-spinner { animation-duration:2.4s; } }
-.gambit-voice-slot { display:contents; }
-.gambit-voice-wave { display:block; flex-shrink:0; height:16px; color:var(--accent,#C4956A); }
-/* Hover hint and problem notices open upward from the mic, aligned to its right edge like the worktree chip's. */
-.gambit-voice-anchor { position:relative; display:inline-flex; flex-shrink:0; }
-.gambit-voice-anchor[data-tip]:hover::after, .gambit-voice-notice { position:absolute; z-index:100; bottom:calc(100% + 8px); right:0; width:max-content; max-width:min(260px,70vw); padding:6px 10px; border:1px solid var(--border); border-radius:6px; background:var(--bg-panel); color:var(--text-1); font-size:var(--type-caption); line-height:1.4; white-space:normal; box-shadow:0 1px 2px #0003, 0 6px 20px #0004; }
-.gambit-voice-anchor[data-tip]:hover::after { content:attr(data-tip); font-weight:500; pointer-events:none; }
-.gambit-voice-notice { color:var(--danger,#e5484d); cursor:default; }
