@@ -415,14 +415,14 @@ export const en = {
   // Seeded once for brand-new users as a roomy welcome note (sticky-note view).
   'task.welcome_note': `Welcome to Coffee CLI ☕
 
-This is a sticky note — jot anything down, then hit ▶ (top-right) to send the whole thing to your AI. No more cramped little input box.
+This is Pre-input: write down what you want the AI to do, then send it in one click when the time is right.
 
 Three steps to start:
-1. Pick a tool in the middle (Claude / Codex / OpenCode…), choose a folder, and you're off
-2. The three dots set priority (red / amber / green) and auto-sort; drag the bottom edge to resize the note
-3. "Changes" (top-right) shows which files the AI touched; Settings has themes, language, and the To-do / Sticky-note switch
+1. Pick a tool in the middle (Claude / Codex / OpenCode…), choose a folder and go
+2. Write in the composer and click "Save to pre-input" above it to keep it as a note, or click + at the bottom right to start one here
+3. Notes show one line: click to open the full text, hover and click ▶ to send it to the AI, and drag to reorder
 
-Delete this note whenever you're ready, and start your first task.`,
+Delete this note when you're done reading, and start your first task.`,
   'task.show_guide': 'View the usage guide',
 
   // Theme Menu

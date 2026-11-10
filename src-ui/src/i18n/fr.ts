@@ -410,16 +410,16 @@ export const fr = {
   'settings.pre_input_button.sub': 'Apparaît au-dessus de la saisie et enregistre le brouillon dans la pré-saisie',
   'task.send_failed': "Envoi non confirmé. Vérifiez la session actuelle. Votre tâche a été conservée.",
   'task.note_placeholder': 'Notez quelque chose et envoyez le tout à votre agent…',
-  'task.welcome_note': `Bienvenue sur Coffee CLI ☕
+  'task.welcome_note': `Bienvenue dans Coffee CLI ☕
 
-Ceci est une note autocollante : écrivez ce que vous voulez, puis appuyez sur ▶ (en haut à droite) pour tout envoyer à votre IA. Fini la petite zone de saisie à l'étroit.
+Voici la pré-saisie : notez ce que vous voulez confier à l'IA, puis envoyez-le en un clic au bon moment.
 
-Trois étapes pour démarrer :
-1. Choisissez un outil au centre (Claude / Codex / OpenCode…), choisissez un dossier, et c'est parti
-2. Les trois points définissent la priorité (rouge / ambre / vert) et se trient automatiquement ; tirez le bord inférieur pour redimensionner la note
-3. « Historique » (en haut à droite) montre les fichiers touchés par l'IA ; les Réglages contiennent les thèmes, la langue et le choix entre « Liste de tâches » et « Notes autocollantes »
+Trois étapes pour commencer :
+1. Choisissez un outil au centre (Claude / Codex / OpenCode…), puis un dossier, et c'est parti
+2. Écrivez dans la zone de saisie et cliquez sur « Enregistrer dans la pré-saisie » au-dessus pour en faire une note, ou cliquez sur + en bas à droite pour en créer une ici
+3. Les notes tiennent sur une ligne : cliquez pour voir tout le texte, survolez et cliquez sur ▶ pour l'envoyer à l'IA, et faites-les glisser pour les réordonner
 
-Supprimez cette note quand vous voulez et commencez votre première tâche.`,
+Supprimez cette note après lecture et lancez votre première tâche.`,
   'task.show_guide': "Voir le guide d'utilisation",
 
   // Theme Menu

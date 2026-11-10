@@ -414,14 +414,14 @@ export const vi = {
   'task.note_placeholder': 'Ghi vài dòng rồi gửi cả đoạn cho agent…',
   'task.welcome_note': `Chào mừng đến với Coffee CLI ☕
 
-Đây là một tờ ghi chú dán: viết bất cứ điều gì, rồi bấm ▶ (góc trên bên phải) để gửi cả đoạn cho AI của bạn. Không còn ô nhập liệu chật chội nữa.
+Đây là "Nhập trước": ghi lại việc bạn muốn AI làm, rồi gửi đi chỉ với một cú nhấp khi đến lúc.
 
 Ba bước để bắt đầu:
-1. Chọn một công cụ ở giữa (Claude / Codex / OpenCode…), chọn một thư mục là chạy được ngay
-2. Ba chấm tròn đặt mức ưu tiên (đỏ / vàng / xanh) và tự sắp xếp; kéo mép dưới để thay đổi kích thước ghi chú
-3. "Lịch sử" (góc trên bên phải) cho biết AI đã đụng vào những tệp nào; phần Cài đặt có giao diện, ngôn ngữ và nút chuyển giữa "Danh sách việc cần làm" và "Ghi chú dán"
+1. Chọn một công cụ ở giữa (Claude / Codex / OpenCode…), chọn thư mục là chạy được ngay
+2. Viết vào ô nhập rồi nhấp "Lưu vào nhập trước" phía trên để giữ thành ghi chú, hoặc nhấp + ở góc dưới bên phải để tạo ngay tại đây
+3. Ghi chú hiển thị một dòng: nhấp để mở toàn bộ, di chuột rồi nhấp ▶ để gửi cho AI, kéo để đổi thứ tự
 
-Xóa tờ ghi chú này khi bạn sẵn sàng và bắt đầu tác vụ đầu tiên.`,
+Đọc xong hãy xóa ghi chú này và bắt đầu nhiệm vụ đầu tiên.`,
   'task.show_guide': 'Xem hướng dẫn sử dụng',
 
   // Theme Menu

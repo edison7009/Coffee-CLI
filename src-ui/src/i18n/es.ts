@@ -410,16 +410,16 @@ export const es = {
   'settings.pre_input_button.sub': 'Aparece sobre el cuadro de texto y guarda el borrador en la pre-entrada',
   'task.send_failed': "No se pudo confirmar el envío. Revisa la sesión actual. Tu tarea se ha conservado.",
   'task.note_placeholder': 'Anota algo y envíalo entero a tu agente…',
-  'task.welcome_note': `Te damos la bienvenida a Coffee CLI ☕
+  'task.welcome_note': `Bienvenido a Coffee CLI ☕
 
-Esto es una nota adhesiva: escribe lo que quieras y pulsa ▶ (arriba a la derecha) para enviarlo entero a tu IA. Se acabó la casilla de texto diminuta.
+Esto es la pre-entrada: escribe lo que quieres que haga la IA y envíalo con un clic cuando llegue el momento.
 
 Tres pasos para empezar:
-1. Elige una herramienta en el centro (Claude / Codex / OpenCode…), elige una carpeta y listo
-2. Los tres puntos fijan la prioridad (rojo / ámbar / verde) y se ordenan solos; arrastra el borde inferior para cambiar el tamaño de la nota
-3. "Historial" (arriba a la derecha) muestra qué archivos tocó la IA; en Ajustes están los temas, el idioma y el cambio entre "Lista de tareas" y "Notas adhesivas"
+1. Elige una herramienta en el centro (Claude / Codex / OpenCode…), escoge una carpeta y listo
+2. Escribe en el cuadro de entrada y pulsa «Guardar en pre-entrada» encima para guardarlo como nota, o pulsa + abajo a la derecha para crear una aquí
+3. Las notas muestran una línea: haz clic para ver el texto completo, pasa el ratón y pulsa ▶ para enviarla a la IA, y arrástrala para reordenar
 
-Borra esta nota cuando quieras y empieza tu primera tarea.`,
+Borra esta nota cuando termines de leerla y empieza tu primera tarea.`,
   'task.show_guide': 'Ver la guía de uso',
 
   // Theme Menu

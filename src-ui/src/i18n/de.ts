@@ -412,14 +412,14 @@ export const de = {
   'task.note_placeholder': 'Schreib etwas auf und sende alles an deinen Agenten…',
   'task.welcome_note': `Willkommen bei Coffee CLI ☕
 
-Das ist ein Notizzettel: Schreib einfach drauflos und tippe oben rechts auf ▶, um alles an deine KI zu schicken. Schluss mit dem engen kleinen Eingabefeld.
+Das ist die Vorab-Eingabe: Schreib auf, was die KI tun soll, und schick es mit einem Klick ab, wenn es passt.
 
-In drei Schritten loslegen:
-1. Wähl in der Mitte ein Werkzeug (Claude / Codex / OpenCode…), wähl einen Ordner – und schon läuft es
-2. Die drei Punkte setzen die Priorität (rot / gelb / grün) und sortieren automatisch; zieh an der Unterkante, um den Zettel größer oder kleiner zu machen
-3. „Änderungsverlauf" (oben rechts) zeigt, welche Dateien die KI angefasst hat; in den Einstellungen gibt es Designs, Sprache und den Wechsel zwischen „To-do-Liste" und „Notizzettel"
+Drei Schritte zum Start:
+1. Wähle in der Mitte ein Tool (Claude / Codex / OpenCode…), dann einen Ordner, und los geht's
+2. Schreib in das Eingabefeld und klicke darüber auf „In Vorab-Eingabe speichern“, um es als Notiz zu behalten, oder klicke unten rechts auf +, um hier eine anzulegen
+3. Notizen zeigen eine Zeile: Klick öffnet den ganzen Text, beim Überfahren schickt ▶ sie an die KI, und per Ziehen änderst du die Reihenfolge
 
-Lösch diesen Zettel, wann du willst, und starte deine erste Aufgabe.`,
+Lösch diese Notiz, wenn du sie gelesen hast, und starte deine erste Aufgabe.`,
   'task.show_guide': 'Anleitung ansehen',
 
   // Theme Menu
