@@ -96,34 +96,36 @@ try {
   await page.getByRole('button', { name: /DeepSeek Flash/ }).click();
   // A failed choice reports once; the next choice clears it.
   await page.evaluate(() => { window.failNextModel = 'Expected string'; });
-  await page.locator('.claude-effort-trigger').click();
-  await page.locator('.claude-effort-control input[type="range"]').focus();
-  await page.keyboard.press('End');
+  // Keys only preview; the level applies when the menu closes (here by clicking its chip again).
+  const pickEffort = async key => {
+    await page.locator('.claude-effort-trigger').click();
+    await page.locator('.claude-effort-control input[type="range"]').focus();
+    await page.keyboard.press(key);
+    await page.locator('.claude-effort-trigger').click();
+    await page.waitForFunction(() => !document.querySelector('.claude-effort-control'));
+  };
+  await pickEffort('End');
   await page.locator('.claude-session-error').waitFor();
-  await page.keyboard.press('Home');
-  await page.keyboard.press('End');
+  await pickEffort('End');
   await page.waitForFunction(() => !document.querySelector('.claude-session-error'));
-  await page.keyboard.press('Home');
-  await page.keyboard.press('Escape');
-  await page.waitForFunction(() => !document.querySelector('.claude-effort-control'));
+  await pickEffort('Home');
   // The effort slider is the shared one, with Default before the model's own levels, and marks the top level.
   const effort = page.locator('.claude-effort-trigger');
   assert.equal(await effort.innerText(), 'Default');
   await effort.click();
   const slider = page.locator('.claude-effort-control input[type="range"]');
   assert.equal(await slider.getAttribute('max'), '3', 'Default plus low, high and max');
+  const sent = await page.evaluate(() => window.calls.length);
   await slider.focus();
   await page.keyboard.press('End');
-  await page.waitForFunction(() => window.calls.some(c => c.op === 'model' && c.params.variant === 'max'));
-  await page.keyboard.press('Escape');
+  await page.waitForTimeout(100);
+  assert.equal(await page.evaluate(() => window.calls.length), sent, 'the key only previews');
+  await effort.click();
+  await page.waitForFunction(() => window.calls.at(-1).op === 'model' && window.calls.at(-1).params.variant === 'max');
   await page.waitForFunction(() => document.querySelector('.claude-effort-trigger')?.classList.contains('is-ultracode'));
   await page.waitForFunction(() => !document.querySelector('.claude-effort-control'));
-  await effort.click();
-  await slider.focus();
-  await page.keyboard.press('Home');
+  await pickEffort('Home');
   await page.waitForFunction(() => window.calls.at(-1).op === 'model' && !('variant' in window.calls.at(-1).params));
-  await page.keyboard.press('Escape');
-  await page.waitForFunction(() => !document.querySelector('.claude-effort-control'));
   await page.getByRole('button', { name: 'Agent', exact: true }).click();
   assert.equal(await page.locator('.codex-control-menu .codex-permission-option').count(), 2, 'sub-agents are not offered as the session agent');
   await page.locator('.codex-control-menu .codex-permission-option', { hasText: 'Plan' }).click();

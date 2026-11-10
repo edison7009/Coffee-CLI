@@ -54,53 +54,44 @@ try {
   };
   const shown = () => slider.evaluate(el => Number(el.value));
 
-  // Lower the effort, then raise it to max while the first restart is still running.
-  await dragTo(1);
+  // Each choice applies when the menu closes; open it again for the next one.
+  const choose = async stop => { if (!await slider.isVisible()) await trigger.click(); await dragTo(stop); await page.mouse.click(5, 5); await slider.waitFor({ state: 'detached' }); };
+  await dragTo(1); await dragTo(3); await dragTo(1);
+  await page.waitForTimeout(150);
+  assert.deepEqual(await page.evaluate(() => window.routes), [], 'dragging only previews');
+  await page.mouse.click(5, 5);
   await page.waitForFunction(() => window.routes.length === 1);
-  await dragTo(3);
-  assert.equal(await shown(), 3, 'the slider keeps showing the latest choice while the earlier one applies');
-  await page.evaluate(() => window.finishRoute());
-  await page.waitForFunction(() => window.routes.length === 2);
-  assert.deepEqual(await page.evaluate(() => window.routes), ['low', 'max'], 'the later choice is applied after the earlier one, not dropped');
-  assert.equal(await shown(), 3, 'finishing the earlier switch never jumps back to it');
-  await page.evaluate(() => window.finishRoute());
-  await page.waitForFunction(() => window.dsh.route.effort === 'max');
-  assert.equal(await shown(), 3);
-  assert.equal((await trigger.textContent()).trim().length > 0, true);
+  assert.deepEqual(await page.evaluate(() => window.routes), ['low'], 'closing applies the final level once');
 
-  // Several moves during one restart apply only the last one.
-  await dragTo(0);
-  await page.waitForFunction(() => window.routes.length === 3);
-  await dragTo(2); await dragTo(1);
-  await page.evaluate(() => window.finishRoute());
-  await page.waitForFunction(() => window.routes.length === 4);
+  // While that switch is still applying, the reopened slider is disabled: no second choice can race it.
+  await trigger.click();
+  assert.equal(await slider.isDisabled(), true, 'disabled while the previous switch applies');
   await page.evaluate(() => window.finishRoute());
   await page.waitForFunction(() => window.dsh.route.effort === 'low');
-  assert.deepEqual(await page.evaluate(() => window.routes), ['low', 'max', 'off', 'low'], 'intermediate choices are skipped; the final one wins');
-  assert.equal(await shown(), 1);
+  await page.waitForFunction(() => !document.querySelector('.claude-effort-range input').disabled);
+  assert.equal(await shown(), 1, 'shows the applied level');
+  await page.keyboard.press('Escape');
 
-  // A level queued behind a pending switch is dropped once the control is disabled (a turn started).
-  await dragTo(3);
-  await page.waitForFunction(() => window.routes.length === 5);
-  await dragTo(0);
-  await page.evaluate(() => window.setDsh({ busy: true }));
+  // Escape throws the preview away.
+  await trigger.click(); await dragTo(3); await page.keyboard.press('Escape');
+  await page.waitForTimeout(150);
+  assert.equal(await page.evaluate(() => window.routes.length), 1, 'Escape applies nothing');
+
+  // Ending on the applied level sends nothing.
+  await choose(3); await page.waitForFunction(() => window.routes.length === 2);
   await page.evaluate(() => window.finishRoute());
   await page.waitForFunction(() => window.dsh.route.effort === 'max');
-  await page.waitForTimeout(200);
-  assert.equal(await page.evaluate(() => window.routes.length), 5, 'no effort change is sent while the session is busy');
-  await page.evaluate(() => window.setDsh({ busy: false }));
+  await trigger.click(); await dragTo(0); await dragTo(3); await page.mouse.click(5, 5);
+  await page.waitForTimeout(150);
+  assert.deepEqual(await page.evaluate(() => window.routes), ['low', 'max']);
 
-  // A failed switch also drops the level queued behind it; closing the menu later commits nothing.
-  await dragTo(1);
-  await page.waitForFunction(() => window.routes.length === 6);
-  await dragTo(2);
+  // A failed switch leaves the applied level and re-enables the slider.
+  await choose(1); await page.waitForFunction(() => window.routes.length === 3);
   await page.evaluate(() => window.finishRoute(true));
-  await page.waitForTimeout(200);
+  await trigger.click();
+  await page.waitForFunction(() => !document.querySelector('.claude-effort-range input').disabled);
   assert.equal(await shown(), 3, 'a failed switch shows the level actually applied');
-  await slider.evaluate(el => el.blur());
   await page.keyboard.press('Escape');
-  await page.waitForTimeout(200);
-  assert.equal(await page.evaluate(() => window.routes.length), 6, 'the stale queued level is never committed later');
   assert.deepEqual(errors.filter(error => !error.includes('restart failed')), []);
-  console.log('OK: DeepSeek Harness effort changes made during a restart are kept, applied in order with the latest winning, never jump back, and stop when the control is disabled or a switch fails');
+  console.log('OK: DeepSeek Harness effort applies once on close, Escape discards, the slider waits while a switch applies, and a failed switch keeps the applied level');
 } finally { await browser.close(); server.close(); }

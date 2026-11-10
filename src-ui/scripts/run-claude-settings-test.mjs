@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { runInNewContext } from 'node:vm';
 import { build } from 'esbuild';
 
+let unavailable = false;
 let applied = { model: 'sonnet', effort: 'xhigh', ultracode: true };
 let failNext = false;
 let failReadNext = false;
@@ -22,6 +23,8 @@ const invoke = async (command, args) => {
   else if (request.subtype === 'apply_flag_settings') {
     const settings = request.settings;
     applied = { ...applied, ...(settings.effortLevel ? { effort: settings.effortLevel } : {}), ...(typeof settings.ultracode === 'boolean' ? { ultracode: settings.ultracode } : {}) };
+    // Like a CLI where workflows or the model do not allow Ultracode: asked for, but never reported active.
+    if (unavailable && typeof settings.ultracode === 'boolean') applied = { ...applied, ultracode: false, ultracodeRequested: settings.ultracode, ultracodeAvailable: false };
   }
   return {};
 };
@@ -50,6 +53,15 @@ try {
   await controlClaude('settings', { subtype: 'apply_flag_settings', settings: { alwaysThinkingEnabled: false } });
   assert.equal(getClaudeSession('settings').ultracode, true); assert.equal(getClaudeSession('settings').thinking, false);
   console.log('ok unrelated thinking changes preserve Ultracode');
+  unavailable = true;
+  await controlClaude('settings', { subtype: 'apply_flag_settings', settings: { effortLevel: 'xhigh', ultracode: false } });
+  assert.equal(getClaudeSession('settings').ultracode, false);
+  await controlClaude('settings', { subtype: 'apply_flag_settings', settings: { effortLevel: 'xhigh', ultracode: true } });
+  assert.equal(getClaudeSession('settings').ultracode, true, 'a switch that is on but not available still reads back as on');
+  assert.equal(getClaudeSession('settings').effort, 'xhigh');
+  console.log('ok Ultracode reads back as requested even when the CLI reports it unavailable');
+  unavailable = false;
+  await controlClaude('settings', { subtype: 'apply_flag_settings', settings: { effortLevel: 'xhigh', ultracode: true } });
   failNext = true;
   await assert.rejects(controlClaude('settings', { subtype: 'apply_flag_settings', settings: { effortLevel: 'low', ultracode: false } }));
   assert.equal(getClaudeSession('settings').ultracode, true); assert.equal(getClaudeSession('settings').effort, 'xhigh');
@@ -57,7 +69,7 @@ try {
   await controlClaude('settings', { subtype: 'set_model', model: 'haiku' });
   assert.equal(getClaudeSession('settings').ultracode, false); assert.equal(getClaudeSession('settings').effort, 'high');
   console.log('ok model switches reconcile the actual CLI settings');
-  assert.equal(writes.length, 4);
+  assert.equal(writes.length, 7);
   await controlClaude('settings', { subtype: 'apply_flag_settings', settings: { effortLevel: 'xhigh', ultracode: true } });
   failReadNext = true;
   await assert.rejects(controlClaude('settings', { subtype: 'apply_flag_settings', settings: { effortLevel: 'low', ultracode: false } }));

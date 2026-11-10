@@ -18,7 +18,9 @@
 .claude-effort-range input::-webkit-slider-runnable-track { height:28px; background:transparent; }
 .claude-effort-range input::-webkit-slider-thumb { appearance:none; box-sizing:border-box; width:18px; height:26px; margin-top:1px; border:1px solid var(--border); border-radius:var(--shape-radius-btn,5px); background:var(--text-1); box-shadow:0 1px 4px #0003; transition:scale 150ms ease-out; }
 .claude-effort-range input:active::-webkit-slider-thumb { scale:1.12; }
-.claude-effort-range input:focus-visible { outline:2px solid var(--accent); outline-offset:2px; border-radius:var(--shape-radius-btn,5px); }
+/* The slider holds focus while the menu is open so the arrow keys work at once, but it never shows a focus ring:
+   a key such as Alt must not light up a box around a control the pointer is already driving. */
+.claude-effort-range input:focus,.claude-effort-range input:focus-visible { outline:none; }
 .claude-effort-range input:disabled { opacity:.5; }
 .claude-effort-energy { position:absolute; inset:0; pointer-events:none; clip-path:inset(0 calc(100% - var(--effort-progress)) 0 0); }
 .claude-effort-energy-base { position:absolute; inset:0; background:var(--bg-terminal); opacity:0; transition:opacity 850ms linear; }

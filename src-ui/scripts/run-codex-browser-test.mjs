@@ -220,9 +220,12 @@ try {
   await page.locator('.claude-effort-trigger').click();
   const effort=page.getByRole('slider');
   assert.equal(await effort.getAttribute('max'),'1','effort uses only the two supported Codex levels');
-  await effort.press('Home');await page.waitForFunction(()=>window.currentState.effort==='medium');
+  await effort.press('Home');
   if(process.env.COFFEE_CODEX_SCREENSHOT)await page.screenshot({path:process.env.COFFEE_CODEX_SCREENSHOT.replace('.png','-effort.png')});
   await effort.press('Escape');assert.equal(await page.locator('.codex-control-menu').count(),0);
+  assert.notEqual(await page.evaluate(()=>window.currentState.effort),'medium','Escape discards the previewed effort');
+  await page.locator('.claude-effort-trigger').click();await effort.press('Home');await page.locator('.claude-effort-trigger').click();
+  await page.waitForFunction(()=>window.currentState.effort==='medium');assert.equal(await page.locator('.codex-control-menu').count(),0);
   await emit('thread/tokenUsage/updated',{turnId,tokenUsage:{last:{totalTokens:42182},total:{totalTokens:123334},modelContextWindow:475000}});
   await page.getByRole('button',{name:'Context used: 9%',exact:true}).click();
   const context=page.getByRole('dialog',{name:'Context window',exact:true});
@@ -236,9 +239,10 @@ try {
   await page.getByRole('button',{name:'Second model',exact:true}).click();
   assert.equal(await page.evaluate(()=>window.currentState.effort),'low','model selects a supported effort');
   await page.locator('.claude-effort-trigger').click();await page.getByRole('slider').press('End');
+  assert.equal(await page.getByRole('slider').getAttribute('aria-valuetext'),'Ultra','the slider previews the custom top level');
+  await page.locator('.claude-effort-trigger').click();
   await page.waitForFunction(()=>window.currentState.effort==='ultra');
   assert.equal(await page.locator('.claude-effort-trigger').textContent(),'Ultra');
-  assert.equal(await page.getByRole('slider').getAttribute('aria-valuetext'),'Ultra');await page.keyboard.press('Escape');
   assert.equal(await page.locator('.claude-effort-trigger').evaluate(el=>getComputedStyle(el).color),'rgb(180, 147, 124)','Ultra footer uses the theme accent');
 
   await page.getByRole('button',{name:'Select Codex model',exact:true}).click();await page.keyboard.press('Escape');
