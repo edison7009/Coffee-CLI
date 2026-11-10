@@ -54,12 +54,26 @@ export interface ClaudeRequest { id: string; request: Json }
 export interface ClaudeBackgroundTask { id: string; type: string; description: string }
 /** A prompt held back because sending it would rewrite an expired cache for the whole conversation. */
 export interface ClaudeColdReturn { prompt: string; idleMinutes: number; tokens: number }
-// The prompt cache lasts an hour, so past this idle time the next request rewrites all of the context.
+/** Latest main request or compaction boundary; a cache hit renews the reported lifetime. */
+interface ClaudeCache { messageId: string; at: number; ttlMs?: number; tokens: number }
+export function claudeCacheStatus(state: Pick<ClaudeState, 'cache'>, now: number) {
+  const cache = state.cache;
+  if (!cache?.ttlMs) return { kind: 'unknown' as const };
+  const idleMinutes = Math.max(0, (now - cache.at) / 60_000);
+  return now < cache.at + cache.ttlMs
+    ? { kind: 'warm' as const, minutesLeft: Math.ceil((cache.at + cache.ttlMs - now) / 60_000) }
+    : { kind: 'cold' as const, idleMinutes: Math.round(idleMinutes), tokens: cache.tokens };
+}
+// Older CLIs/transcripts without lifetime metadata retain the conservative idle fallback.
 const COLD_IDLE_MINUTES = 70, COLD_CONTEXT_TOKENS = 100_000;
 /** The idle time and context size when sending now would pay that rewrite, otherwise null. */
-export function coldReturn(state: Pick<ClaudeState, 'messages' | 'lastContextTokens' | 'busy' | 'ready'>, now: number): Omit<ClaudeColdReturn, 'prompt'> | null {
+export function coldReturn(state: Pick<ClaudeState, 'messages' | 'lastContextTokens' | 'busy' | 'ready' | 'cache'>, now: number): Omit<ClaudeColdReturn, 'prompt'> | null {
+  if (state.busy || !state.ready) return null;
+  const cache = claudeCacheStatus(state, now);
+  if (cache.kind === 'warm') return null;
+  if (cache.kind === 'cold') return cache.tokens >= COLD_CONTEXT_TOKENS ? { idleMinutes: cache.idleMinutes, tokens: cache.tokens } : null;
   const last = state.messages.at(-1);
-  if (!last || state.busy || !state.ready || state.lastContextTokens < COLD_CONTEXT_TOKENS) return null;
+  if (!last || state.lastContextTokens < COLD_CONTEXT_TOKENS) return null;
   const idleMinutes = (now - last.timestamp) / 60_000;
   return idleMinutes < COLD_IDLE_MINUTES ? null : { idleMinutes: Math.round(idleMinutes), tokens: state.lastContextTokens };
 }
@@ -67,6 +81,7 @@ export interface ClaudeState {
   messages: ClaudeMessage[];
   /** Tokens of the latest request, including ones restored from history, which `contextTokens` leaves out. */
   lastContextTokens: number;
+  cache?: ClaudeCache;
   coldReturn?: ClaudeColdReturn;
   /** Generated from a new conversation's first prompt; shown on the tab. */
   title?: string;
@@ -298,12 +313,22 @@ export function reduceClaudeEvent(state: ClaudeState, frame: Json, now = Date.no
     if (number(frame.code) !== 0 || busy) { s.error = text(frame.detail); s.errorKey = s.error ? undefined : 'claude.error.process_exited'; s.error ||= 'Claude process exited'; }
   }
   const usage = frame.type === 'assistant' ? object(object(frame.message).usage) : frame.type === 'stream_event' && object(frame.event).type === 'message_start' ? object(object(object(frame.event).message).usage) : {};
-  if (Object.keys(usage).length) {
+  if (Object.keys(usage).length && !frame.parent_tool_use_id && (!historical || !s.cache || now >= s.cache.at)) {
     const tokens = number(usage.input_tokens) + number(usage.cache_read_input_tokens) + number(usage.cache_creation_input_tokens) + number(usage.output_tokens);
     s.lastContextTokens = tokens;
     if (!historical) s.contextTokens = tokens;
+    const message = frame.type === 'assistant' ? object(frame.message) : object(object(frame.event).message);
+    const messageId = text(message.id) || text(frame.uuid), previous = s.cache;
+    const input = number(usage.input_tokens) + number(usage.cache_read_input_tokens) + number(usage.cache_creation_input_tokens);
+    if (input > 0 && (!previous || now >= previous.at)) {
+      const creation = object(usage.cache_creation);
+      // With mixed lifetimes, warn when the shorter-lived portion may need rewriting.
+      const ttlMs = number(creation.ephemeral_5m_input_tokens) > 0 ? 300_000 : number(creation.ephemeral_1h_input_tokens) > 0 ? 3_600_000
+        : number(usage.cache_creation_input_tokens) === 0 && number(usage.cache_read_input_tokens) > 0 ? previous?.ttlMs : undefined;
+      s.cache = { messageId, at: previous?.messageId === messageId ? previous.at : now, ttlMs, tokens: input };
+    }
   }
   // Compaction replaces the history; the usage before it no longer describes the next request.
-  if (frame.type === 'system' && frame.subtype === 'compact_boundary') s.lastContextTokens = 0;
+  if (frame.type === 'system' && frame.subtype === 'compact_boundary' && (!s.cache || now >= s.cache.at)) { s.lastContextTokens = 0; s.cache = { messageId: '', at: now, tokens: 0 }; }
   return s;
 }

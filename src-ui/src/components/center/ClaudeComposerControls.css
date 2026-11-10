@@ -51,3 +51,4 @@
 .dsh-preset-option .dsh-preset-check { width:12px; color:var(--text-2); text-align:right; }
 .dsh-preset-icon { width:14px; height:14px; flex-shrink:0; }
 .claude-permission-control .dsh-preset-icon { margin-right:5px; vertical-align:-2px; }
+.claude-continuation-detail { margin:0; padding:4px 8px 8px; color:var(--text-2); line-height:1.5; }

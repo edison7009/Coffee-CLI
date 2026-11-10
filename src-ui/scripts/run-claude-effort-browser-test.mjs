@@ -12,9 +12,9 @@ import React,{useRef}from'react';import{createRoot}from'react-dom/client';import
 function App(){const handler=useRef();return <div style={{position:'absolute',bottom:30,right:30}}><ClaudeComposerControls sessionId="test" draft="" onDraftChange={()=>{}} keyHandler={handler}/></div>};createRoot(document.getElementById('root')).render(<App/>);` }, bundle:true, jsx:'automatic', outfile:join(directory,'fixture.js'), external:['/fonts/*','/monogram.svg', '/backgrounds/*'], plugins:[{name:'session',setup(b){
   b.onResolve({filter:/lib\/claude-session$/},()=>({path:'session',namespace:'fixture'}));
   b.onResolve({filter:/store\/app-state$/},()=>({path:'language',namespace:'fixture'}));
-  b.onLoad({filter:/.*/,namespace:'fixture'},args=>({loader:'js',resolveDir:project,contents:args.path==='language'?`export function useAppLanguage(){return 'zh-CN'}`:`
+  b.onLoad({filter:/.*/,namespace:'fixture'},args=>({loader:'js',resolveDir:project,contents:args.path==='language'?`export function useAppLanguage(){return 'zh-CN'};export function useAppState(){return {state:{terminals:[]},dispatch(){}}}`:`
 import{useSyncExternalStore}from'react';let listeners=new Set();let state={ready:true,backgroundTasks:[],model:'test',models:[{value:'test',supportsEffort:true,supportedEffortLevels:['low','medium','high','xhigh','max'],supportsThinkingOff:true}],effort:'high',ultracode:false,thinking:true,commands:[],modelUsage:{},contextWindow:0,contextTokens:0,permissionMode:'default'};
-window.requests=[];export function useClaudeSession(){return useSyncExternalStore(fn=>{listeners.add(fn);return()=>listeners.delete(fn)},()=>state)}
+export function continueClaudeInNewConversation(){return false};window.requests=[];export function useClaudeSession(){return useSyncExternalStore(fn=>{listeners.add(fn);return()=>listeners.delete(fn)},()=>state)}
 export async function controlClaude(id,request){window.requests.push(request);await new Promise(resolve=>{window.finishControl=()=>{state={...state,...(request.settings.effortLevel?{effort:request.settings.effortLevel}:{}),...(typeof request.settings.ultracode==='boolean'?{ultracode:request.settings.ultracode}:{}),...(typeof request.settings.alwaysThinkingEnabled==='boolean'?{thinking:request.settings.alwaysThinkingEnabled}:{})};listeners.forEach(fn=>fn());resolve({})}})}
 `}));
 }}]});

@@ -334,10 +334,11 @@ function MeasuredRow({ id, measure, children }: { id: string; measure: (id: stri
 
 function ClaudeColdReturn({ id, idleMinutes, tokens }: { id: string; idleMinutes: number; tokens: number }) {
   const { state, dispatch } = useAppState();
-  // Workers belong to this tab's session, so a coordinator with workers stays in it.
-  const hasWorkers = state.terminals.some(tab => tab.parentId === id);
+  const safelyIdle = useClaudeSession(id, s => !s.busy && !s.requests.length && !s.backgroundTasks.length);
+  // Both ends of a coordinator/worker link keep their session identity.
+  const linkedToWorkers = state.terminals.some(tab => tab.parentId && (tab.id === id || tab.parentId === id));
   return <ColdReturnCard idleMinutes={idleMinutes} tokens={tokens} detailKey="claude.cold_return.detail"
-    onNew={hasWorkers ? undefined : () => { const newId = crypto.randomUUID(); continueClaudeInNewConversation(id, newId); dispatch({ type: 'RESTART_TERMINAL', id, newId, fresh: true }); }}
+    onNew={linkedToWorkers || !safelyIdle ? undefined : () => { const newId = crypto.randomUUID(); if (continueClaudeInNewConversation(id, newId)) dispatch({ type: 'RESTART_TERMINAL', id, newId, fresh: true }); }}
     onFull={() => { void settleClaudeColdReturn(id, 'full'); }} onNever={() => { void settleClaudeColdReturn(id, 'never'); }}
     onCancel={() => { void settleClaudeColdReturn(id, 'cancel').then(draft => dispatch({ type: 'SET_GAMBIT_DRAFT', id, draft })); }} />;
 }

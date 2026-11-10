@@ -4,7 +4,7 @@ import { runInNewContext } from 'node:vm';
 import { fileURLToPath } from 'node:url';
 const result = await build({ entryPoints: [fileURLToPath(new URL('../src/lib/claude-protocol.ts', import.meta.url))], bundle: true, platform: 'node', format: 'cjs', write: false });
 const module = { exports: {} }; runInNewContext(result.outputFiles[0].text, { module, exports: module.exports, console, Date });
-const { emptyClaudeState, reduceClaudeEvent, coldReturn, finishTurn } = module.exports;
+const { emptyClaudeState, reduceClaudeEvent, coldReturn, claudeCacheStatus, finishTurn } = module.exports;
 const plain = value => JSON.parse(JSON.stringify(value));
 let passed = 0;
 function test(name, fn) { fn(); passed++; console.log(`ok ${name}`); }
@@ -163,6 +163,43 @@ test('restored usage counts toward a cold return without touching the live conte
   s = reduceClaudeEvent(s, { type: 'system', subtype: 'compact_boundary' }, 2000, true);
   assert.equal(s.lastContextTokens, 0, 'compaction replaces the history');
 });
+test('reported cache lifetimes govern warm status and cold-return warnings', () => {
+  const request = (id, usage, parent) => ({ type: 'assistant', parent_tool_use_id: parent, message: { id, content: [{ type: 'text', text: 'Done' }], usage } });
+  const usage = { input_tokens: 10, cache_creation_input_tokens: 200000, cache_creation: { ephemeral_5m_input_tokens: 200000 } };
+  const at = 1_000_000, minute = 60_000;
+  let s = reduceClaudeEvent({ ...emptyClaudeState(), ready: true }, request('five', usage), at);
+  assert.equal(claudeCacheStatus(s, at + 4 * minute).kind, 'warm');
+  assert.equal(coldReturn(s, at + 5 * minute).tokens, 200010, 'five-minute caches warn without waiting seventy minutes');
+  s = reduceClaudeEvent(s, request('five', usage), at + minute);
+  assert.equal(claudeCacheStatus(s, at + 5 * minute).kind, 'cold', 'repeated blocks cannot extend a request lifetime');
+  const hit = { input_tokens: 5, cache_read_input_tokens: 200000 };
+  s = reduceClaudeEvent(s, request('hit', hit), at + 6 * minute);
+  assert.equal(claudeCacheStatus(s, at + 10 * minute).kind, 'warm', 'cache hits renew the reported lifetime');
+  s = reduceClaudeEvent(s, request('older', usage), at, true);
+  assert.equal(claudeCacheStatus(s, at + 10 * minute).kind, 'warm', 'loading older history cannot replace the latest cache');
+  s = reduceClaudeEvent(s, { type: 'system', subtype: 'compact_boundary' }, at + minute, true);
+  assert.equal(claudeCacheStatus(s, at + 10 * minute).kind, 'warm', 'a boundary in an older page cannot clear a newer cache');
+  s = reduceClaudeEvent(s, request('agent', { ...usage, cache_creation: { ephemeral_1h_input_tokens: 200000 } }, 'tool'), at + 10 * minute);
+  assert.equal(claudeCacheStatus(s, at + 11 * minute).kind, 'cold', 'subagent usage cannot renew the main cache');
+  const hour = { ...usage, cache_creation: { ephemeral_1h_input_tokens: 200000 } };
+  s = reduceClaudeEvent(s, request('hour', hour), at + 12 * minute);
+  assert.equal(coldReturn(s, at + 71 * minute), null);
+  assert.equal(coldReturn(s, at + 72 * minute).idleMinutes, 60);
+  s = reduceClaudeEvent(s, request('legacy-write', { ...hit, cache_creation_input_tokens: 100 }), at + 72 * minute);
+  assert.equal(claudeCacheStatus(s, at + 72 * minute).kind, 'unknown', 'writes without lifetime metadata cannot inherit the earlier lifetime');
+  s = reduceClaudeEvent(s, request('uncached', { input_tokens: 200000 }), at + 73 * minute);
+  assert.equal(claudeCacheStatus(s, at + 74 * minute).kind, 'unknown', 'an uncached request cannot reuse an old lifetime');
+  s = reduceClaudeEvent(s, request('mixed', { ...hour, cache_creation: { ephemeral_1h_input_tokens: 150000, ephemeral_5m_input_tokens: 50000 } }), at + 75 * minute);
+  assert.equal(claudeCacheStatus(s, at + 80 * minute).kind, 'cold', 'mixed lifetimes use the shorter one');
+  s = reduceClaudeEvent(s, { type: 'system', subtype: 'compact_boundary' }, at + 81 * minute);
+  assert.equal(claudeCacheStatus(s, at + 82 * minute).kind, 'unknown');
+  s = reduceClaudeEvent(s, request('before-compaction', hour), at + 80 * minute, true);
+  assert.equal(claudeCacheStatus(s, at + 82 * minute).kind, 'unknown', 'loading pre-compaction history cannot resurrect its cache');
+  assert.equal(s.lastContextTokens, 0);
+  s = reduceClaudeEvent(s, request('after-compaction', hit), at + 83 * minute);
+  assert.equal(claudeCacheStatus(s, at + 84 * minute).kind, 'unknown', 'a read after compaction cannot inherit the replaced cache lifetime');
+});
+
 test('a predicted next prompt is kept only while no prompt has moved past it', () => {
   let s = emptyClaudeState();
   s = reduceClaudeEvent(s, { type: 'prompt_suggestion', suggestion: '  next step  ' }, 1000);

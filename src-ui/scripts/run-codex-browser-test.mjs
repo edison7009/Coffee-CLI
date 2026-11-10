@@ -47,7 +47,7 @@ await build({
       let state={ready:true,busy:false,backgroundTasks:[],models:[],commands:[],model:'claude-test',permissionMode:'default',contextTokens:25000,contextWindow:100000,modelUsage:{first:{inputTokens:10000,outputTokens:300,cacheReadInputTokens:15000,cacheCreationInputTokens:1000},second:{inputTokens:6000,outputTokens:100}}};const listeners=new Set();
       window.setClaude=patch=>{state={...state,...patch};listeners.forEach(fn=>fn())};
       export function useClaudeSession(){return useSyncExternalStore(fn=>{listeners.add(fn);return()=>listeners.delete(fn)},()=>state)};
-      export async function controlClaude(){};
+      export async function controlClaude(){};export function continueClaudeInNewConversation(){return false};
     ` : args.path === 'event' ? `
       export async function listen(name,fn){window.codexListener=fn;return()=>{}};
     ` : `

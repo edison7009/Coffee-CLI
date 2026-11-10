@@ -12,12 +12,13 @@ const project = fileURLToPath(new URL('..', import.meta.url));
 const directory = await mkdtemp(join(tmpdir(), 'coffee-cold-return-'));
 await build({
   stdin: { resolveDir: project, loader: 'tsx', contents: `
-    import React,{useState,useSyncExternalStore} from 'react';import {createRoot} from 'react-dom/client';
+    import React,{useRef,useSyncExternalStore} from 'react';import {createRoot} from 'react-dom/client';
     import {ClaudeConversation} from './src/components/center/ClaudeConversation';
+    import {ClaudeComposerControls} from './src/components/center/ClaudeComposerControls';
     import {sendClaudeInteractive} from './src/lib/claude-session';
     import {subscribe,tab} from './fixture-tab';
     import './src/styles/global.css';
-    function Fixture(){const t=useSyncExternalStore(subscribe,tab);window.send=text=>sendClaudeInteractive(t.id,text);return <div className="host"><ClaudeConversation key={t.id} sessionId={t.id} cwd="D:/Test" resumeToken={t.resumeToken} isActive/></div>}
+    function Fixture(){const t=useSyncExternalStore(subscribe,tab),handler=useRef();window.send=text=>sendClaudeInteractive(t.id,text);return <div className="host"><ClaudeConversation key={t.id} sessionId={t.id} cwd="D:/Test" resumeToken={t.resumeToken} isActive/><input aria-label="Draft" value={t.gambitDraft??''} onChange={e=>window.applyAction({type:'SET_GAMBIT_DRAFT',draft:e.target.value})}/><ClaudeComposerControls key={t.id+'-controls'} sessionId={t.id} draft={t.gambitDraft??''} onDraftChange={draft=>window.applyAction({type:'SET_GAMBIT_DRAFT',draft})} keyHandler={handler}/></div>}
     createRoot(document.getElementById('root')).render(<Fixture/>);
   ` },
   bundle: true, outfile: join(directory, 'fixture.js'), jsx: 'automatic',
@@ -36,24 +37,24 @@ await build({
     b.onLoad({ filter: /.*/, namespace: 'fixture' }, args => ({ resolveDir: project, loader: 'js', contents: args.path === 'tab' ? `
       let current={id:'old',resumeToken:'11111111-1111-4111-8111-111111111111'};const listeners=new Set();
       export const tab=()=>current;export const subscribe=fn=>{listeners.add(fn);return()=>listeners.delete(fn)};
-      window.reopen=()=>{current={id:'old-'+crypto.randomUUID(),resumeToken:'11111111-1111-4111-8111-111111111111'};window.calls=[];listeners.forEach(fn=>fn())};
-      window.applyAction=action=>{if(action.type==='RESTART_TERMINAL'){current={id:action.newId,resumeToken:action.fresh?undefined:current.resumeToken};listeners.forEach(fn=>fn())}};
+      window.reopen=()=>{current={id:'old-'+crypto.randomUUID(),resumeToken:'11111111-1111-4111-8111-111111111111',parentId:window.worker?'coordinator':undefined};window.calls=[];listeners.forEach(fn=>fn())};
+      window.applyAction=action=>{if(action.type==='SET_GAMBIT_DRAFT'){current={...current,gambitDraft:action.draft};listeners.forEach(fn=>fn())}if(action.type==='RESTART_TERMINAL'){current={...current,id:action.newId,resumeToken:action.fresh?undefined:current.resumeToken};listeners.forEach(fn=>fn())}};
     ` : args.path === 'store' ? `
       import {tab} from 'fixture-tab';
-      export function useAppLanguage(){return 'en'};
-      export function useAppState(){return {state:{theme:'dark',terminals:[tab()]},dispatch(action){(window.actions??=[]).push(action);window.applyAction(action)}}};
+      export function useAppLanguage(){return window.language??'en'};
+      export function useAppState(){return {state:{theme:'dark',terminals:[tab(),...(window.workers?[{parentId:tab().id}]:[])]},dispatch(action){(window.actions??=[]).push(action);window.applyAction(action)}}};
     ` : args.path === 'syntax' ? `
       export async function tokenizeFile(){return null};export async function tokenizeByLang(){return null};export function getShikiTheme(){return 'dark'};
     ` : args.path === 'clipboard' ? `
       export async function clipboardWrite(){};export async function clipboardRead(){return ''};
     ` : args.path === 'event' ? `
-      export async function listen(){return()=>{}};
+      export async function listen(name,listener){window.nativeEvent=listener;return()=>{}};
     ` : `
       window.calls=[];
       const ago=minutes=>new Date(Date.now()-minutes*60000).toISOString();
       const history=()=>{const minutes=window.idleMinutes??180,tokens=window.contextTokens??680000;return [
         {type:'user',uuid:'u1',timestamp:ago(minutes+1),message:{role:'user',content:[{type:'text',text:'Earlier question'}]}},
-        {type:'assistant',uuid:'a1',timestamp:ago(minutes),message:{id:'m1',role:'assistant',content:[{type:'text',text:'Earlier answer'}],usage:{input_tokens:2,cache_read_input_tokens:tokens,cache_creation_input_tokens:0,output_tokens:10}}},
+        {type:'assistant',uuid:'a1',timestamp:ago(minutes),message:{id:'m1',role:'assistant',content:[{type:'text',text:'Earlier answer'}],usage:{input_tokens:2,cache_read_input_tokens:tokens,cache_creation_input_tokens:window.cacheLifetime?1:0,cache_creation:window.cacheLifetime===5?{ephemeral_5m_input_tokens:1}:window.cacheLifetime===60?{ephemeral_1h_input_tokens:1}:{},output_tokens:10}}},
         ...(window.compacted?[{type:'system',subtype:'compact_boundary',timestamp:ago(minutes)}]:[]),
       ].map(row=>JSON.stringify(row)).join('\\n')};
       export const isTauri=false,commands=new Proxy({},{get:(_,name)=>async()=>name==='computerName'?'TEST-DESKTOP':undefined});
@@ -67,7 +68,7 @@ await build({
   } }],
 });
 const html = `<!doctype html><link rel="stylesheet" href="/fixture.css"><style>
-*{box-sizing:border-box}body{margin:0}:root{--font:Arial,sans-serif;--mono:monospace;--accent:#b4937c;--bg-terminal:#211d19;--bg-panel:#29231f;--bg-hover:#39312a;--text-1:#ded8cf;--text-2:#bdb4aa;--text-3:#9d948b;--border:#4c4239;--shape-radius-btn:8px;--shape-radius-panel:14px;--shadow-rgb:0,0,0}.host{height:100vh;width:100%}
+*{box-sizing:border-box}body{margin:0}:root{--font:Arial,sans-serif;--mono:monospace;--accent:#b4937c;--bg-terminal:#211d19;--bg-panel:#29231f;--bg-hover:#39312a;--text-1:#ded8cf;--text-2:#bdb4aa;--text-3:#9d948b;--border:#4c4239;--shape-radius-btn:8px;--shape-radius-panel:14px;--shadow-rgb:0,0,0}.host{height:100vh;width:100%;display:flex;flex-direction:column}.host>.claude-conversation{flex:1;min-height:0}.host>.claude-composer-controls{flex:none}
 </style><body data-shape="soft"><div id="root"></div><script src="/fixture.js"></script>`;
 const server = http.createServer(async (req, res) => {
   if (req.url === '/') return res.setHeader('Content-Type', 'text/html').end(html);
@@ -86,6 +87,7 @@ const ready = () => page.getByText('Earlier answer').waitFor();
 const card = page.getByText('Idle for 3h, about 680k of context', { exact: false }).first();
 const open = async (setup = () => {}) => { await page.evaluate(setup); await page.evaluate(() => window.reopen()); await ready(); await page.waitForFunction(() => window.calls.some(c => c.name === 'claude_session_control')); await page.waitForTimeout(50); };
 try {
+  await page.clock.install();
   await page.goto(`http://127.0.0.1:${server.address().port}`);
   await ready();
   await page.waitForFunction(() => window.calls.some(c => c.name === 'claude_session_control'));
@@ -135,8 +137,63 @@ try {
     assert.deepEqual(await sends(), ['Hello'], `${label} sends directly`);
   }
 
+  // The context panel reports known lifetimes; manual continuation keeps the draft without sending it.
+  await open(() => { window.compacted=false;window.idleMinutes=30;window.cacheLifetime=60; });
+  const context = () => page.locator('.claude-context-control');
+  const manual = () => page.getByRole('button', { name: 'Continue in a new conversation', exact: true });
+  await context().click();
+  await page.getByText('Likely warm', { exact: false }).waitFor();
+  assert.equal(await manual().isEnabled(), true);
+  if (process.env.COFFEE_CONTINUATION_SCREENSHOT) await page.screenshot({ path: process.env.COFFEE_CONTINUATION_SCREENSHOT });
+  await page.clock.fastForward(31 * 60_000);
+  await page.getByText('Likely expired', { exact: true }).waitFor();
+  await page.getByRole('textbox', { name: 'Draft', exact: true }).fill('Draft with "D:/image.png"');
+  await context().click();
+  await manual().click();
+  await page.waitForFunction(() => window.calls.some(c => c.name === 'claude_session_start' && !c.resumeToken));
+  await page.waitForFunction(() => window.calls.filter(c => c.name === 'claude_session_control').length >= 2);
+  assert.deepEqual(await sends(), [], 'clicking continue does not submit a draft or an empty prompt');
+  assert.equal(await page.getByRole('textbox', { name: 'Draft', exact: true }).inputValue(), 'Draft with "D:/image.png"');
+  assert.equal((await starts()).at(-1).continueFrom.reply, 'Earlier answer');
+  await page.evaluate(() => window.send('Send when ready'));
+  await page.waitForFunction(() => window.calls.some(c => c.name === 'claude_session_send'));
+  assert.deepEqual(await sends(), ['Send when ready']);
+
+  await open(() => { window.cacheLifetime=5;window.idleMinutes=10; });
+  await context().click();
+  await page.getByText('Likely expired', { exact: true }).waitFor();
+  await page.keyboard.press('Escape');
+  await page.evaluate(() => window.send('Five minute cache'));
+  await page.getByRole('button', { name: 'Resume in full' }).waitFor();
+  assert.deepEqual(await sends(), [], 'known five-minute cache expiry triggers the warning early');
+
+  await open(() => { window.cacheLifetime=undefined;window.idleMinutes=30; });
+  await context().click();
+  await page.getByText('Unknown', { exact: true }).waitFor();
+  const emit = event => page.evaluate(event => { const start=window.calls.filter(c=>c.name==='claude_session_start').at(-1);window.nativeEvent({payload:{id:start.id,generation:start.generation,event}}); }, event);
+  await emit({type:'system',subtype:'background_tasks_changed',tasks:[{task_id:'agent',task_type:'local_agent',description:'Working'}]});
+  await page.waitForFunction(() => [...document.querySelectorAll('button')].some(b=>b.textContent==='Continue in a new conversation'&&b.disabled));
+  await emit({type:'system',subtype:'background_tasks_changed',tasks:[]});
+  await emit({type:'control_request',request_id:'permission',request:{subtype:'can_use_tool',tool_name:'Bash',input:{command:'echo hello'}}});
+  assert.equal(await manual().isDisabled(), true, 'approval must settle before switching');
+  await emit({type:'control_cancel_request',request_id:'permission'});
+  await page.waitForFunction(() => [...document.querySelectorAll('button')].some(b=>b.textContent==='Continue in a new conversation'&&!b.disabled));
+  await page.evaluate(() => window.send('Running'));
+  await page.waitForFunction(() => [...document.querySelectorAll('button')].some(b=>b.textContent==='Continue in a new conversation'&&b.disabled));
+  await open(() => { window.workers=true; });
+  await context().click();
+  assert.equal(await manual().isDisabled(), true, 'coordinators cannot strand their worker tabs');
+  await open(() => { window.workers=false;window.worker=true; });
+  await context().click();
+  assert.equal(await manual().isDisabled(), true, 'a worker tab must keep its identity for the coordinator');
+  await page.keyboard.press('Escape');
+  await open(() => { window.idleMinutes=180; });
+  await page.evaluate(() => window.send('Worker prompt'));
+  await page.getByRole('button', { name: 'Resume in full' }).waitFor();
+  assert.equal(await page.getByRole('button', { name: 'Continue in a new conversation (recommended)' }).count(), 0, 'the cold-return card cannot replace a worker either');
+
   // Slash commands pass through, and Don't ask again is remembered.
-  await open(() => { window.compacted = false; });
+  await open(() => { window.compacted = false;window.workers=false;window.worker=false;window.idleMinutes=180; });
   await page.evaluate(() => window.send('/compact'));
   await page.waitForFunction(() => window.calls.some(c => c.name === 'claude_session_send'));
   assert.deepEqual(await sends(), ['/compact']);
@@ -148,8 +205,16 @@ try {
   await page.evaluate(() => window.send('Later'));
   await page.waitForFunction(() => window.calls.some(c => c.name === 'claude_session_send'));
   assert.deepEqual(await sends(), ['Later'], 'the choice sticks');
+  await page.setViewportSize({ width: 420, height: 650 });
+  await open(() => { window.language='zh-CN';window.cacheLifetime=60;window.idleMinutes=30; });
+  await context().click();
+  await page.getByText('预计有效', { exact: false }).waitFor();
+  await page.getByRole('button', { name: '开新对话继续', exact: true }).waitFor();
+  const bounds = await page.getByRole('dialog', { name: '上下文', exact: true }).boundingBox();
+  assert.ok(bounds.x >= 0 && bounds.x + bounds.width <= 420 && bounds.y >= 0 && bounds.y + bounds.height <= 650, 'the translated panel fits a narrow viewport');
+  if (process.env.COFFEE_CONTINUATION_SCREENSHOT) await page.screenshot({ path: process.env.COFFEE_CONTINUATION_SCREENSHOT.replace('.png', '-zh.png') });
   assert.deepEqual(errors, []);
-  console.log('ok cold return: held prompt, cancel, full resume, new conversation pointer, thresholds, slash commands and never');
+  console.log('ok cold return: cache lifetimes, manual continuation, draft preservation, active-work guards, held prompt, cancel, full resume, thresholds, slash commands and never');
 } catch (error) {
   console.error('Browser errors:', errors, 'Visible text:', (await page.locator('body').innerText()).slice(0, 900));
   throw error;

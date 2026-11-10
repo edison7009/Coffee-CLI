@@ -125,8 +125,9 @@ export function retainClaudeSession(id: string, cwd: string | null, resumeToken?
       for (let attempt = 0; attempt < 3; attempt++) {
         try {
           await initializeClaude(id, c, cwd, resumeToken);
+          if (!c.owners) return;
           const continuation = continuations.get(id);
-          if (continuation) { continuations.delete(id); await sendClaudeMessage(id, continuation.prompt); }
+          if (continuation) { continuations.delete(id); if (continuation.prompt) await sendClaudeMessage(id, continuation.prompt); }
           return;
         }
         catch (error) {
@@ -150,6 +151,7 @@ export function retainClaudeSession(id: string, cwd: string | null, resumeToken?
       void (c.starting ?? Promise.resolve()).finally(() => invoke('claude_session_close', { id, generation: c.generation })).catch(() => {});
       clearTimeout(c.publishTimer);
       clearSessionControls(id, c.generation);
+      continuations.delete(id);
       clients.delete(id);
     }, 300);
   };
@@ -175,13 +177,14 @@ export async function settleClaudeColdReturn(id: string, choice: 'full' | 'never
   if (choice !== 'cancel' && prompt && !await sendClaudeMessage(id, prompt)) { c.state = { ...c.state, coldReturn: held }; publish(c, true); }
   return prompt;
 }
-/** Hands the held prompt to a new conversation in tab `newId`, with a pointer to this one instead of its history. */
-export function continueClaudeInNewConversation(id: string, newId: string): void {
-  const c = client(id), prompt = c.state.coldReturn?.prompt;
-  if (!prompt) return;
+/** Prepares a new conversation with a pointer to this one, forwarding a prompt only when the cold-return card held it. */
+export function continueClaudeInNewConversation(id: string, newId: string): boolean {
+  const c = client(id), prompt = c.state.coldReturn?.prompt ?? '';
+  if (!c.state.ready || c.state.busy || c.restarting || !c.state.nativeId || !c.state.messages.length || c.state.requests.length || c.state.backgroundTasks.length) return false;
   const messages = c.state.messages, lastPrompt = messages.findLast(m => m.role === 'user'), reply = messages.findLast(m => m.role === 'assistant');
   continuations.set(newId, { prompt, continueFrom: { token: c.state.nativeId, prompt: lastPrompt?.content ?? '', reply: reply?.content ?? '' } });
   c.state = { ...c.state, coldReturn: undefined };
+  return true;
 }
 export async function sendClaudeMessage(id: string, prompt: string, orchestrationDelivery?: string): Promise<boolean> {
   const c = client(id);
