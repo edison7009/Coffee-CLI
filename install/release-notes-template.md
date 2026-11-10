@@ -1,7 +1,7 @@
 <details open>
 <summary><b>简体中文</b></summary>
 
-### Coffee CLI v3.9.5 · 语音输入与预输入
+### Coffee CLI v3.9.6 · 语音输入与预输入
 
 - **语音输入：** 输入框新增麦克风按钮，Claude Code 或 Codex 用账号登录后，说话即可实时转成文字，录音时显示音波。设置里新增“语音输入”，可以开关、选择麦克风并测试。
 - **预输入：** 任务板改名为“预输入”，输入框里的内容可以一键“保存到预输入”。便签默认一行，悬停显示发送和删除，点开查看全文，编辑完成后自动收起。
@@ -13,7 +13,7 @@
 <details>
 <summary><b>English</b></summary>
 
-### Coffee CLI v3.9.5 · Voice Input and Pre-input
+### Coffee CLI v3.9.6 · Voice Input and Pre-input
 
 - **Voice input:** A microphone button in the composer. With Claude Code or Codex signed in to an account, speech turns into text as you talk, with a live waveform while recording. Settings gains a Voice Input page to switch it on, pick a microphone and test it.
 - **Pre-input:** The task board is now Pre-input, and the composer can "Save to pre-input" in one click. Notes show one line, reveal send and delete on hover, open to show everything, and fold once you finish editing.
@@ -25,7 +25,7 @@
 <details>
 <summary><b>繁體中文</b></summary>
 
-### Coffee CLI v3.9.5 · 語音輸入與預輸入
+### Coffee CLI v3.9.6 · 語音輸入與預輸入
 
 - **語音輸入：** 輸入框新增麥克風按鈕，Claude Code 或 Codex 以帳號登入後，說話即可即時轉成文字，錄音時顯示音波。設定裡新增「語音輸入」，可以開關、選擇麥克風並測試。
 - **預輸入：** 任務板更名為「預輸入」，輸入框裡的內容可以一鍵「儲存到預輸入」。便籤預設一行，懸停顯示傳送與刪除，點開查看全文，編輯完成後自動收合。
@@ -37,7 +37,7 @@
 <details>
 <summary><b>日本語</b></summary>
 
-### Coffee CLI v3.9.5 · 音声入力とプレ入力
+### Coffee CLI v3.9.6 · 音声入力とプレ入力
 
 - **音声入力：** 入力欄にマイクボタンを追加しました。Claude Code または Codex にアカウントでサインインしていれば、話した内容がその場で文字になり、録音中は波形が表示されます。設定に「音声入力」が加わり、オン／オフ、マイクの選択とテストができます。
 - **プレ入力：** タスクボードは「プレ入力」になり、入力欄の内容をワンクリックで「プレ入力に保存」できます。メモは 1 行で表示され、ホバーで送信と削除が現れ、開くと全文を表示し、編集を終えると自動で閉じます。
@@ -49,7 +49,7 @@
 <details>
 <summary><b>한국어</b></summary>
 
-### Coffee CLI v3.9.5 · 음성 입력과 사전 입력
+### Coffee CLI v3.9.6 · 음성 입력과 사전 입력
 
 - **음성 입력:** 입력창에 마이크 버튼이 추가되었습니다. Claude Code 또는 Codex에 계정으로 로그인하면 말하는 즉시 텍스트로 바뀌고, 녹음 중에는 파형이 표시됩니다. 설정에 "음성 입력"이 추가되어 켜고 끄기, 마이크 선택과 테스트를 할 수 있습니다.
 - **사전 입력:** 작업 보드가 "사전 입력"으로 바뀌었고, 입력창 내용을 한 번에 "사전 입력에 저장"할 수 있습니다. 메모는 한 줄로 보이고, 마우스를 올리면 보내기와 삭제가 나타나며, 열면 전체가 보이고 편집을 마치면 자동으로 접힙니다.
