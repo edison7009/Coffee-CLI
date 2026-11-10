@@ -15,9 +15,9 @@ await build({
     import React,{useState} from 'react';import {createRoot} from 'react-dom/client';
     import {CodexConversation} from './src/components/center/CodexConversation';
     import {Gambit} from './src/components/center/Gambit';
-    import {useCodexSession,sendCodexMessage,interruptCodex} from './src/lib/codex-session';
+    import {useCodexSession,sendCodexMessage,sendCodexInteractive,interruptCodex} from './src/lib/codex-session';
     import './src/styles/global.css';import './src/components/center/TierTerminal.css';
-    function Fixture(){const [active,setActive]=useState('a'),[drafts,setDrafts]=useState({a:'',b:''}),[provider,setProvider]=useState('codex'),[welcomeEpoch,setWelcomeEpoch]=useState(0);window.rerollWelcome=()=>setWelcomeEpoch(n=>n+1);window.setActive=setActive;window.setProvider=setProvider;const s=useCodexSession(active);window.currentState=s;return <div className="panel-center">
+    function Fixture(){const [active,setActive]=useState('a'),[drafts,setDrafts]=useState({a:'',b:''}),[provider,setProvider]=useState('codex'),[welcomeEpoch,setWelcomeEpoch]=useState(0);window.rerollWelcome=()=>setWelcomeEpoch(n=>n+1);window.setActive=setActive;window.setProvider=setProvider;const s=useCodexSession(active);window.currentState=s;window.interactive=text=>sendCodexInteractive(active,text);return <div className="panel-center">
       {['a','b'].map(id=><div key={id} className="host" style={{display:active===id?'flex':'none'}}><CodexConversation key={id+'-'+welcomeEpoch} sessionId={id} cwd="D:/Test" isActive={active===id}/></div>)}
       <Gambit sessionId={active} draft={drafts[active]} onDraftChange={text=>setDrafts(d=>({...d,[active]:text}))} onClose={()=>{}} onSend={text=>sendCodexMessage(active,text)} codex={provider==='codex'} claude={provider==='claude'} running={s.busy} onCancel={()=>interruptCodex(active)} leftPanelHidden rightPanelHidden workspaceName="Test" toolIcon={<span>◈</span>}/>
     </div>};createRoot(document.getElementById('root')).render(<Fixture/>);
@@ -37,7 +37,7 @@ await build({
     b.onLoad({ filter: /.*/, namespace: 'svg' }, async args => ({ contents: `export default ${JSON.stringify(await readFile(args.path, 'utf8'))}`, loader: 'js' }));
     b.onLoad({ filter: /.*/, namespace: 'fixture' }, args => ({ resolveDir: project, loader: 'js', contents: args.path === 'store' ? `
       const state={theme:'dark',gambitEnterToSend:true,terminals:[{id:'a',folderPath:'D:/Test'},{id:'b',folderPath:'D:/Test'}]},dispatch=action=>(window.actions??=[]).push(action);
-      export function useAppLanguage(){return 'en'};export function useAppState(){return {state,dispatch}};
+      window.appFixtureState=state;export function useAppLanguage(){return 'en'};export function useAppState(){return {state,dispatch}};
     ` : args.path === 'syntax' ? `
       export async function tokenizeFile(){return null};export async function tokenizeByLang(){return null};export function getShikiTheme(){return 'dark'};
     ` : args.path === 'clipboard' ? `
@@ -58,7 +58,8 @@ await build({
       export async function invoke(name,args){window.calls.push({name,...args});
         if(name==='codex_session_start'&&args.id==='a')await new Promise(resolve=>window.resolveStartup=resolve);
         if(name==='codex_session_start')return {thread:{id:'thread-'+args.id,turns:args.id==='b'?history('history-',48):[]},turnsBackwardsCursor:args.id==='b'?'older':null,model:'gpt-test',reasoningEffort:'high',approvalPolicy:'on-request',sandbox:{type:'readOnly'},models:[{id:'gpt-test',model:'gpt-test',displayName:'GPT Test',defaultReasoningEffort:'high',supportedReasoningEfforts:[{reasoningEffort:'medium'},{reasoningEffort:'high'}]},{id:'second',model:'second',displayName:'Second model',defaultReasoningEffort:'low',supportedReasoningEfforts:[{reasoningEffort:'low'},{reasoningEffort:'ultra'}]}]};
-        if(args.method==='turn/start'){const id='turn-'+(++turn);window.turn=id;window.emit(args.id,'turn/started',{turn:{id,status:'inProgress'}});window.emit(args.id,'item/completed',{turnId:id,item:{id:'user',type:'userMessage',content:args.params.input}});return {turn:{id,status:'inProgress'}}}
+        if(args.method==='collaborationMode/list')return {data:[{mode:'plan'},{mode:'default'}]};
+        if(args.method==='turn/start'){if(window.failTurn)throw new Error('Delivery failed');const id='turn-'+(++turn);window.turn=id;window.emit(args.id,'turn/started',{turn:{id,status:'inProgress'}});window.emit(args.id,'item/completed',{turnId:id,item:{id:'user',type:'userMessage',content:args.params.input}});return {turn:{id,status:'inProgress'}}}
         if(args.method==='turn/interrupt'){window.emit(args.id,'turn/completed',{turn:{id:args.params.turnId,status:'interrupted',durationMs:1500}})}
         if(args.method==='skills/list')return {data:[{skills:[{name:'test-skill',path:'D:/skills/test/SKILL.md',description:'A native test skill',enabled:true},{name:'disabled',path:'disabled',enabled:false}]}]};
         if(args.method==='mcpServerStatus/list')return {data:[{name:args.params.cursor?'second-server':'test-server',tools:{read:{description:'Read content'}}}],nextCursor:args.params.cursor?null:'page-2'};
@@ -154,7 +155,8 @@ try {
 
   await page.getByRole('button',{name:'Command',exact:true}).click();
   const commandMenu=page.getByRole('dialog',{name:'Command',exact:true});
-  assert.equal(await commandMenu.getByRole('button').count(),11);
+  assert.equal(await commandMenu.getByRole('button').count(),12);
+  assert.equal(await commandMenu.getByRole('button',{name:/^\/plan/}).count(),1);
   if(process.env.COFFEE_CODEX_SCREENSHOT)await page.screenshot({path:process.env.COFFEE_CODEX_SCREENSHOT.replace('.png','-slash.png')});
   await commandMenu.getByRole('button',{name:/^\/status/}).click();
   await page.getByRole('dialog',{name:'Context window',exact:true}).waitFor();await page.keyboard.press('Escape');
@@ -337,6 +339,61 @@ try {
   await page.evaluate(()=>window.setActive('a'));assert.equal(await page.locator('.host').nth(1).locator('.conversation-navigation').count(),0,'inactive sessions do not retain an interactive navigation rail');
   await page.evaluate(()=>window.setActive('b'));await navigation.waitFor();
   console.log('ok shared conversation navigation, preview, grouped virtual rows, keyboard jump, streaming, history prepend and narrow panes');
+  // Planning is native and read-only until the person explicitly approves implementation.
+  await input.fill('/plan');
+  assert.equal(await commandMenu.getByRole('button',{name:/^\/plan/}).isDisabled(),true,'a running turn cannot switch into planning');
+  await input.press('Escape');
+  await page.evaluate(()=>window.emit('b','turn/completed',{turn:{id:'live',status:'completed'}}));
+  await input.fill('/plan');await input.press('Enter');
+  await page.waitForFunction(()=>window.currentState.planMode===true);
+  assert.equal(await page.getByRole('button',{name:'Codex permissions',exact:true}).textContent(),'Plan mode');
+  await page.setViewportSize({width:320,height:800});
+  const planningFooter=await page.locator('.gambit-footer').evaluate(el=>({scroll:el.scrollWidth,width:el.clientWidth}));
+  assert.ok(planningFooter.scroll<=planningFooter.width+1,'planning keeps the narrow composer usable');
+  await page.setViewportSize({width:1000,height:800});
+  await page.getByRole('button',{name:'Codex permissions',exact:true}).click();
+  const planSwitch=page.getByRole('switch',{name:'Plan mode',exact:true});
+  assert.equal(await planSwitch.getAttribute('aria-checked'),'true');
+  await planSwitch.click();assert.equal(await planSwitch.getAttribute('aria-checked'),'false');
+  await planSwitch.click();assert.equal(await planSwitch.getAttribute('aria-checked'),'true');await page.keyboard.press('Escape');
+  await page.evaluate(()=>window.beforePlan=structuredClone(window.currentState.sandbox));
+  await input.fill('Plan the change');await input.press('Enter');
+  await page.waitForFunction(()=>window.currentState.busy);
+  const planned=await page.evaluate(()=>window.calls.filter(c=>c.method==='turn/start').at(-1).params);
+  assert.equal(planned.collaborationMode.mode,'plan');assert.equal(planned.sandboxPolicy.type,'readOnly');assert.equal(planned.approvalPolicy,'never');
+  const planTurn=await page.evaluate(()=>window.turn);
+  await page.evaluate(turn=>{window.emit('b','item/completed',{turnId:turn,item:{id:'proposed',type:'plan',text:'1. Update the handler\n2. Run tests'}});window.emit('b','turn/completed',{turn:{id:turn,status:'completed'}})},planTurn);
+  const approve=page.getByRole('button',{name:'Approve and implement',exact:true});await approve.waitFor();
+  if(process.env.COFFEE_CODEX_SCREENSHOT){await approve.scrollIntoViewIfNeeded();await page.locator(`[data-message-id="${planTurn}:proposed"]`).waitFor();await page.screenshot({path:process.env.COFFEE_CODEX_SCREENSHOT.replace('.png','-plan.png')})}
+  const countBeforeApproval=await page.evaluate(()=>window.calls.filter(c=>c.method==='turn/start').length);
+  await page.evaluate(()=>window.failTurn=true);await approve.click();
+  await page.getByText('Error: Delivery failed',{exact:true}).waitFor();
+  assert.equal(await approve.isEnabled(),true,'failed delivery keeps approval available');
+  await page.evaluate(()=>window.failTurn=false);await approve.click();
+  await page.waitForFunction(()=>window.currentState.busy&&!window.currentState.planMode);
+  const implemented=await page.evaluate(()=>window.calls.filter(c=>c.method==='turn/start').at(-1).params);
+  assert.equal(implemented.collaborationMode.mode,'default');assert.deepEqual(implemented.sandboxPolicy,await page.evaluate(()=>window.beforePlan));
+  assert.equal(await approve.count(),0,'one approval cannot execute twice');
+  assert.equal(await page.evaluate(()=>window.calls.filter(c=>c.method==='turn/start').length),countBeforeApproval+2,'only explicit approval attempts start implementation');
+  await page.evaluate(()=>window.emit('b','turn/completed',{turn:{id:window.turn,status:'completed'}}));
+
+  // A manual handoff preserves the draft, and linked worker sessions cannot change identity.
+  await input.fill('Unsent draft with "D:/image.png"');
+  const openContext=async()=>{await page.locator('.codex-composer-controls .claude-context-control').click()};
+  await openContext();
+  const fresh=page.getByRole('button',{name:'Continue in a new conversation',exact:true});await fresh.click();
+  assert.equal(await input.inputValue(),'Unsent draft with "D:/image.png"');
+  assert.equal(await page.evaluate(()=>window.actions.at(-1).type),'RESTART_TERMINAL');
+  assert.equal(await page.evaluate(()=>window.actions.at(-1).fresh),true);
+  await page.evaluate(()=>{window.appFixtureState.terminals.find(t=>t.id==='b').parentId='parent';window.emit('b','thread/tokenUsage/updated',{tokenUsage:{last:{totalTokens:200000},total:{totalTokens:200000},modelContextWindow:1000000}})});
+  await openContext();assert.equal(await fresh.isDisabled(),true,'worker tabs retain their ID');await page.keyboard.press('Escape');
+  await page.clock.setFixedTime(new Date(2026,9,25,9,0));
+  await page.evaluate(()=>window.interactive('Held worker prompt'));
+  await page.getByRole('button',{name:'Resume in full',exact:true}).waitFor();
+  assert.equal(await page.getByRole('button',{name:'Continue in a new conversation (recommended)',exact:true}).count(),0);
+  await page.getByRole('button',{name:'Cancel',exact:true}).click();
+  await input.fill('');
+  console.log('ok read-only plan, explicit implementation, delivery retry, permission restoration, manual continuation, draft and worker identity');
   await page.evaluate(()=>{document.documentElement.style.setProperty('--bg-terminal','#eee9e2');document.documentElement.style.setProperty('--text-2','#51473d');document.documentElement.style.setProperty('--bg-panel','#e7dfd4')});
   assert.equal(await page.locator('.host:visible .codex-conversation').evaluate(el=>getComputedStyle(el).color),'rgb(81, 71, 61)');
   await page.evaluate(()=>window.setProvider('claude'));await page.getByRole('button',{name:'Context used: 25%',exact:true}).click();

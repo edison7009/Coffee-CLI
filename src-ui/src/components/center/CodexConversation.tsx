@@ -5,8 +5,8 @@ import { useWorktreePending } from '../../lib/worktree-pending';
 import { useAppState } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
 import { orchestrationToolLabel } from '../../lib/orchestration-label';
-import { arr, obj, str, num, pretty, type CodexMessage, type CodexRequest, type Json } from '../../lib/codex-protocol';
-import { continueCodexInNewThread, interruptCodex, loadCodexHistory, respondCodex, retainCodexSession, settleCodexColdReturn, useCodexSession } from '../../lib/codex-session';
+import { arr, obj, str, num, pretty, codexSubTasks, type CodexMessage, type CodexRequest, type Json } from '../../lib/codex-protocol';
+import { approveCodexPlan, continueCodexInNewThread, interruptCodex, loadCodexHistory, respondCodex, retainCodexSession, settleCodexColdReturn, useCodexSession } from '../../lib/codex-session';
 import { clipboardWrite } from '../../lib/clipboard';
 import { directoryFailure, directoryFailureMessage } from '../../lib/session-directory';
 import { bindAutoHideScrollbar } from '../../lib/auto-hide-scrollbar';
@@ -74,7 +74,7 @@ function RequestCard({ sessionId, request }: { sessionId: string; request: Codex
 }
 type Row = CodexMessage & { members?: CodexMessage[] };
 export function CodexConversation({ sessionId, cwd, resumeToken, isActive, isVisible = isActive, hasBg, bgUrl, bgType }: { sessionId: string; cwd: string | null; resumeToken?: string; isActive: boolean; isVisible?: boolean; hasBg?: boolean; bgUrl?: string; bgType?: string }) {
-  const s = useCodexSession(sessionId), t = useT(), { dispatch } = useAppState();
+  const s = useCodexSession(sessionId), t = useT(), { state, dispatch } = useAppState();
   const creatingWorktree = useWorktreePending(sessionId, s.ready || !!s.error);
   const directoryIssue = !s.ready ? directoryFailure(s.error) : undefined;
   const directoryError = directoryFailureMessage(s.error, t);
@@ -202,8 +202,13 @@ export function CodexConversation({ sessionId, cwd, resumeToken, isActive, isVis
         </Measured>)}
         <div style={{ height: virtual.bottomSpacer }} aria-hidden="true" />
         {s.requests.map(request => <RequestCard key={JSON.stringify(request.id)} sessionId={sessionId} request={request} />)}
+        {s.planMode && s.planReady && !s.busy && <section className="claude-approval" aria-label={t('codex.plan.ready')}>
+          <strong>{t('codex.plan.ready')}</strong>
+          <p>{t('codex.plan.detail')}</p>
+          <div className="claude-approval-actions"><button type="button" disabled={!s.ready || !!s.requests.length || !!s.coldReturn} onClick={() => { void approveCodexPlan(sessionId, t('codex.plan.prompt')); }}>{t('codex.plan.approve')}</button></div>
+        </section>}
         {s.coldReturn && <ColdReturnCard idleMinutes={s.coldReturn.idleMinutes} tokens={s.coldReturn.tokens} detailKey="codex.cold_return.detail"
-          onNew={() => { const newId = crypto.randomUUID(); continueCodexInNewThread(sessionId, newId); dispatch({ type: 'RESTART_TERMINAL', id: sessionId, newId, fresh: true }); }}
+          onNew={s.busy || s.requests.length || codexSubTasks(s).length || state.terminals.some(tab => tab.parentId && (tab.id === sessionId || tab.parentId === sessionId)) ? undefined : () => { const newId = crypto.randomUUID(); if (continueCodexInNewThread(sessionId, newId)) dispatch({ type: 'RESTART_TERMINAL', id: sessionId, newId, fresh: true }); }}
           onFull={() => { void settleCodexColdReturn(sessionId, 'full'); }} onNever={() => { void settleCodexColdReturn(sessionId, 'never'); }}
           onCancel={() => { void settleCodexColdReturn(sessionId, 'cancel').then(draft => dispatch({ type: 'SET_GAMBIT_DRAFT', id: sessionId, draft })); }} />}
         {s.ready && s.busy && <div className="codex-working" role="status"><span className="codex-spinner" aria-hidden="true" />{t(s.interrupting ? 'codex.stopping' : s.requests.length ? 'codex.waiting' : 'claude.status.working')}…</div>}

@@ -37,6 +37,10 @@ export interface CodexState {
   /** The thread's rollout file, which a continuing thread points at. */
   threadPath: string;
   coldReturn?: CodexColdReturn;
+  planSupported?: boolean;
+  planMode?: boolean;
+  /** The completed planning turn awaiting explicit approval. */
+  planReady?: string;
   ready: boolean; busy: boolean; nativeId: string; turnId: string;
   messages: CodexMessage[]; requests: CodexRequest[]; models: CodexModel[];
   model: string; effort: string; approvalPolicy: unknown; sandbox: Json;
@@ -91,7 +95,7 @@ export function reduceCodexEvent(state: CodexState, event: Json): CodexState {
   if (method === 'thread/started') { s.nativeId = str(thread.id) || s.nativeId; s.title = str(thread.name).trim() || s.title; }
   // A rename can land before a resume sets the thread ID; a cleared name leaves the tab its folder.
   else if (method === 'thread/name/updated') { if (!s.nativeId || str(p.threadId) === s.nativeId) s.title = str(p.threadName).trim(); }
-  else if (method === 'turn/started') { s.turnId = str(obj(p.turn).id); s.busy = true; s.error = undefined; s.turnUsage = noUsage(); }
+  else if (method === 'turn/started') { s.turnId = str(obj(p.turn).id); s.busy = true; s.error = undefined; s.planReady = undefined; s.turnUsage = noUsage(); }
   else if (method === 'item/started' || method === 'item/completed') {
     const item = obj(p.item), id = `${str(p.turnId)}:${str(item.id)}`;
     const message = codexMessage(item, str(p.turnId), method === 'item/started', num(p.startedAtMs) || Date.now());
@@ -117,6 +121,7 @@ export function reduceCodexEvent(state: CodexState, event: Json): CodexState {
     s.requests = s.requests.filter(request => request.params.turnId !== turnId);
     if (!s.turnId || s.turnId === turnId) {
       s.busy = false; s.interrupting = false;
+      s.planReady = s.planMode && turn.status === 'completed' && s.messages.some(m => m.turnId === turnId && m.role === 'assistant' && m.content.trim()) ? turnId : undefined;
       if (turn.status === 'failed') s.error = str(obj(turn.error).message) || 'Codex turn failed';
       const status = turn.status === 'interrupted' ? 'interrupted' : turn.status === 'failed' ? 'failed' : 'completed';
       const row = codexMessage({ id: 'status', type: 'turnStatus', status, durationMs: turn.durationMs }, turnId, false);

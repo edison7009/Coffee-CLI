@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type MutableRefObject, type ReactNode } from 'react';
 import { ModelPrice } from './ModelPrice';
 import { createPortal } from 'react-dom';
-import { configureCodex, runCodexCommand, useCodexSession } from '../../lib/codex-session';
+import { configureCodex, continueCodexInNewThread, runCodexCommand, useCodexSession } from '../../lib/codex-session';
 import { codexSubTasks } from '../../lib/codex-protocol';
 import { SubTasksControl } from './SubTasksControl';
 import { arr, obj, str, type Json } from '../../lib/codex-protocol';
@@ -36,9 +36,16 @@ export function CodexComposerControls({ sessionId, draft, onDraftChange, keyHand
   const percent = s.contextWindow ? Math.min(100, s.contextTokens / s.contextWindow * 100) : 0;
   const slash = /^\/[\w:-]*$/.test(draft) && dismissed !== draft;
   const shown = menu ?? (slash ? 'commands' : null);
+  const canContinue = s.ready && !s.busy && !pending && !s.coldReturn && !!s.nativeId && s.messages.length > 0 && !s.requests.length && !codexSubTasks(s).length && !state.terminals.some(tab => tab.parentId && (tab.id === sessionId || tab.parentId === sessionId));
+  const continueFresh = () => {
+    if (!canContinue) return;
+    const newId = crypto.randomUUID();
+    if (continueCodexInNewThread(sessionId, newId)) { close(); dispatch({ type: 'RESTART_TERMINAL', id: sessionId, newId, fresh: true }); }
+  };
   const commands = [
     { name: 'model', description: t('claude.command.model'), target: 'model' as const },
     { name: 'permissions', description: t('claude.command.permissions'), target: 'permissions' as const },
+    ...(s.planSupported ? [{ name: 'plan', description: t('claude.command.plan'), target: 'plan' as const }] : []),
     ...(model?.supportedReasoningEfforts.length ? [{ name: 'effort', description: t('claude.effort.title'), target: 'effort' as const }] : []),
     { name: 'status', description: t('claude.context_window'), target: 'context' as const },
     { name: 'new', description: t('codex.command.new'), target: 'new' as const },
@@ -72,7 +79,8 @@ export function CodexComposerControls({ sessionId, draft, onDraftChange, keyHand
     if (/^\/[\w:-]*$/.test(draft)) onDraftChange('');
     anchor.current = commandsAnchor.current; setSelected(0);
     const target = command.target;
-    if (target === 'compact' || target === 'review' || target === 'skills' || target === 'mcp') void nativeCommand(target);
+    if (target === 'plan') { configureCodex(sessionId, { planMode: !s.planMode }); close(); }
+    else if (target === 'compact' || target === 'review' || target === 'skills' || target === 'mcp') void nativeCommand(target);
     else if (target === 'new') { close(); dispatch({ type: 'ADD_TERMINAL', session: { id: crypto.randomUUID(), tool: 'codex', ...sameFolder(state.terminals.find(tab => tab.id === sessionId)), codexMode: 'conversation', startedAt: Date.now() } }); }
     else if (target === 'copy') { const message = s.messages.findLast(message => message.role === 'assistant' && !message.partial); if (message) void clipboardWrite(message.content); close(); }
     else if (target === 'mention') { close(); void attach(/^\/[\w:-]*$/.test(draft) ? '' : draft); }
@@ -131,7 +139,7 @@ export function CodexComposerControls({ sessionId, draft, onDraftChange, keyHand
   return <div className="claude-composer-controls codex-composer-controls" ref={root}>
     <button type="button" className="claude-control-icon" aria-label={t('claude.attach')} onClick={() => { void attach(); }}><AttachIcon /></button>
     <button type="button" ref={commandsAnchor} className="claude-control-icon" aria-label={t('codex.command')} aria-expanded={shown === 'commands'} onClick={e => show('commands', e.currentTarget)}>/</button>
-    <button type="button" className="claude-permission-control" disabled={!s.ready || s.busy} aria-label={t('codex.permissions')} aria-expanded={menu === 'permissions'} onClick={e => show('permissions', e.currentTarget)}>{permission}</button>
+    <button type="button" className="claude-permission-control" disabled={!s.ready || s.busy} aria-label={t('codex.permissions')} aria-expanded={menu === 'permissions'} onClick={e => show('permissions', e.currentTarget)}>{s.planMode ? t('codex.plan.mode') : permission}</button>
     <SubTasksControl tasks={codexSubTasks(s)} fallback={t('dsh.task.agent')} />
     {children}
     <div className="claude-model-controls">
@@ -143,9 +151,14 @@ export function CodexComposerControls({ sessionId, draft, onDraftChange, keyHand
     {shown && createPortal(<div ref={popup} className="claude-control-menu codex-control-menu" role="dialog" aria-label={t(shown === 'commands' ? 'codex.command' : shown === 'model' ? 'codex.model' : shown === 'effort' ? 'claude.effort.title' : shown === 'context' ? 'claude.context_window' : shown === 'skills' ? 'codex.skills' : shown === 'mcp' ? 'codex.mcp' : 'codex.permissions')} style={position}>
       {shown === 'commands' ? commands.length ? commands.map((command, index) => <button type="button" key={command.name} className={index === selected ? 'is-selected' : ''} disabled={disabled(command.target)} onMouseEnter={() => setSelected(index)} onClick={() => chooseCommand(index)}><strong>/{command.name}</strong><small>{command.description}</small></button>) : <div className="claude-menu-empty">{t('claude.commands_empty')}</div> : shown === 'skills' || shown === 'mcp' ? <>
         {pending ? <div className="claude-menu-empty">{t('diff.loading')}</div> : error ? <div className="claude-tool-error" role="alert">{error}</div> : !catalog.length ? <div className="claude-menu-empty">{t('claude.commands_empty')}</div> : catalog.map(entry => shown === 'skills' ? <button type="button" className="codex-permission-option" key={str(entry.path)} onClick={() => { onDraftChange(`${draft}${draft ? '\n' : ''}$${str(entry.name)} `); close(); document.querySelector<HTMLTextAreaElement>('.gambit-textarea')?.focus(); }}><strong>{str(obj(entry.interface).displayName) || str(entry.name)}</strong><small>{str(obj(entry.interface).shortDescription) || str(entry.shortDescription) || str(entry.description)}</small></button> : <details className="codex-catalog-entry" key={str(entry.name)}><summary>{str(entry.name)} <span>{Object.keys(obj(entry.tools)).length}</span></summary>{str(entry.toolsError) && <div className="claude-tool-error">{str(entry.toolsError)}</div>}{Object.entries(obj(entry.tools)).map(([name, tool]) => <div className="codex-catalog-tool" key={name}><strong>{name}</strong><small>{str(obj(tool).description)}</small></div>)}</details>)}
-      </> : shown === 'model' ? s.models.filter(m => !m.hidden || m.model === s.model).map(m => <button type="button" key={m.id} disabled={s.busy} className={m.model === s.model ? 'is-selected' : ''} onClick={() => { configureCodex(sessionId, { model: m.model }); close(); }}><strong>{m.displayName}</strong><small><ModelPrice model={m.model} /></small>{m.model === s.model && <span aria-hidden="true">✓</span>}</button>) : shown === 'effort' && model ? <ClaudeEffortControl key={`${sessionId}:${model.model}`} levels={model.supportedReasoningEfforts.map(e => e.reasoningEffort)} value={s.effort || model.defaultReasoningEffort} disabled={!s.ready || s.busy} onCommit={async effort => { configureCodex(sessionId, { effort }); }} onClose={() => { close(); anchor.current?.focus(); }} /> : shown === 'context' ? <ContextUsage used={s.contextTokens} capacity={s.contextWindow} total={s.totalTokens} /> : <>
+      </> : shown === 'model' ? s.models.filter(m => !m.hidden || m.model === s.model).map(m => <button type="button" key={m.id} disabled={s.busy} className={m.model === s.model ? 'is-selected' : ''} onClick={() => { configureCodex(sessionId, { model: m.model }); close(); }}><strong>{m.displayName}</strong><small><ModelPrice model={m.model} /></small>{m.model === s.model && <span aria-hidden="true">✓</span>}</button>) : shown === 'effort' && model ? <ClaudeEffortControl key={`${sessionId}:${model.model}`} levels={model.supportedReasoningEfforts.map(e => e.reasoningEffort)} value={s.effort || model.defaultReasoningEffort} disabled={!s.ready || s.busy} onCommit={async effort => { configureCodex(sessionId, { effort }); }} onClose={() => { close(); anchor.current?.focus(); }} /> : shown === 'context' ? <>
+        <ContextUsage used={s.contextTokens} capacity={s.contextWindow} total={s.totalTokens} />
+        <p className="claude-continuation-detail">{t('claude.continue.detail')}</p>
+        <button type="button" disabled={!canContinue} onClick={continueFresh}>{t('claude.continue.new')}</button>
+      </> : <>
+        {s.planSupported && <div className="claude-thinking-toggle"><strong>{t('codex.plan.mode')}</strong><button type="button" role="switch" className="settings-switch" disabled={!s.ready || s.busy} aria-label={t('codex.plan.mode')} aria-checked={!!s.planMode} onClick={() => configureCodex(sessionId, { planMode: !s.planMode })}><span /></button></div>}
         {modes.map(mode => <button type="button" key={mode.type} disabled={!s.ready || s.busy} className={`codex-permission-option${s.sandbox.type === mode.type ? ' is-selected' : ''}`} onClick={() => { configureCodex(sessionId, { sandbox: { type: mode.type }, approvalPolicy: mode.approvalPolicy }); setMenu(null); }}><strong>{mode.label}{s.sandbox.type === mode.type ? ' ✓' : ''}</strong><small>{mode.description}</small></button>)}
-        <div className="codex-permission-note">{t('codex.permissions_next_turn')}</div>
+        <div className="codex-permission-note">{t(s.planMode ? 'codex.plan.detail' : 'codex.permissions_next_turn')}</div>
       </>}
     </div>, document.body)}
   </div>;
