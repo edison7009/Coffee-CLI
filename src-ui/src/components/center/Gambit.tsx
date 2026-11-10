@@ -122,6 +122,22 @@ function wrapImagePathsForSend(text: string): string {
 // mirroring how VS Code's bottom panel works.
 const DOCK_MIN_HEIGHT = 120;
 const DOCK_MAX_HEIGHT_RATIO = 0.7; // never let the dock eat more than 70% of viewport height
+/** "Save to pre-input": flips up from face down when there is text, and flips back down when the text is sent or cleared. */
+const PRE_INPUT_FLIP_OUT_MS = 450;
+function PreInputSave({ shown, label, onSave }: { shown: boolean; label: string; onSave: () => void }) {
+  const [leaving, setLeaving] = useState(false);
+  // Adjusted during render (not in an effect): the moment the text goes, it starts leaving; text back cancels that.
+  const [prevShown, setPrevShown] = useState(shown);
+  if (prevShown !== shown) { setPrevShown(shown); setLeaving(!shown); }
+  useEffect(() => {
+    if (!leaving) return;
+    const timer = window.setTimeout(() => setLeaving(false), PRE_INPUT_FLIP_OUT_MS);
+    return () => window.clearTimeout(timer);
+  }, [leaving]);
+  if (!shown && !leaving) return null;
+  return <span className="gambit-pre-input-ground"><button type="button" className={`gambit-pre-input-save${shown ? '' : ' is-leaving'}`} tabIndex={shown ? undefined : -1} aria-hidden={shown ? undefined : true} onMouseDown={e => e.preventDefault()} onClick={shown ? onSave : undefined}><span className="gambit-pre-input-face">{label}</span></button></span>;
+}
+
 const DOCK_AUTO_HEIGHT_RATIO = 0.5; // a long draft stops lifting the dock here and scrolls instead
 const LS_DOCK_H = 'cc-gambit-dock-h';
 
@@ -796,7 +812,7 @@ function GambitImpl({
       <div className="gambit-dock-resize" onMouseDown={onDockResizeStart} />
 
       {/* Save the draft for later: it goes to the right panel's pre-input tab, which opens to show it. */}
-      {appState.preInputButton && draft.trim() && <button type="button" className="gambit-pre-input-save" onMouseDown={e => e.preventDefault()} onClick={() => { appDispatch({ type: 'SAVE_PRE_INPUT', text: draft.trim() }); onDraftChange(''); }}>{t('gambit.save_pre_input')}</button>}
+      <PreInputSave shown={appState.preInputButton && !!draft.trim()} label={t('gambit.save_pre_input')} onSave={() => { appDispatch({ type: 'SAVE_PRE_INPUT', text: draft.trim() }); onDraftChange(''); }} />
 
       {attachments.length > 0 && <div className="gambit-attachments">
         {attachments.map(({ path, image }) => <div className="gambit-attachment" key={path}>
