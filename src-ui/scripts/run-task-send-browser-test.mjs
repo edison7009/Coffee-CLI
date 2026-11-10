@@ -177,7 +177,14 @@ try {
   await note.hover(); await page.mouse.wheel(0, 300);
   await page.waitForFunction(top => document.querySelector('#root .task-note-list').scrollTop > top, listTop);
   assert.equal(await note.evaluate(el => el.scrollTop), 0, 'the note itself did not scroll');
+  // Let the wheel's scroll finish (it can still be animating on slower machines), then go back to the top.
+  for (let last = -1, now = await list.evaluate(el => el.scrollTop); now !== last;) {
+    await page.waitForTimeout(200);
+    last = now; now = await list.evaluate(el => el.scrollTop);
+  }
   await list.evaluate(el => { el.scrollTop = 0; });
+  await page.waitForTimeout(200);
+  assert.equal(await list.evaluate(el => el.scrollTop), 0, 'the list settles back at the top');
   assert.equal(await page.locator('.task-note-resize').count(), 0, 'notes size to their text; there is no resize grip');
   assert.equal(await note.evaluate(el => el.readOnly), true, 'a click does not start editing');
   // Dragging from a read-only body moves the card: no text selection, a dashed outline stays in place, the drop does not toggle.
