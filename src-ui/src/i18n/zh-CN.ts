@@ -532,7 +532,7 @@ export const zhCN = {
   'conversation.jump_to_turn': '跳转到第 {turn} 轮提问',
   'cli_update.action': '更新 {version}',
   'cli_update.label': '更新',
-  'cli_update.updating': '正在更新',
+  'cli_update.updating': '更新中',
   'cli_update.hint': '{current} → {latest}',
   'cli_update.failed': '更新失败，请检查网络或安装权限后重试。',
   'cli_update.timeout': '更新超时，请稍后重试。',

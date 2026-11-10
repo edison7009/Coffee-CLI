@@ -531,7 +531,7 @@ export const zhTW = {
   'conversation.jump_to_turn': '跳至第 {turn} 輪提問',
   'cli_update.action': '更新 {version}',
   'cli_update.label': '更新',
-  'cli_update.updating': '正在更新',
+  'cli_update.updating': '更新中',
   'cli_update.hint': '{current} → {latest}',
   'cli_update.failed': '更新失敗，請檢查網路或安裝權限後重試。',
   'cli_update.timeout': '更新逾時，請稍後重試。',

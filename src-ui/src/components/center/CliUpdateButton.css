@@ -1,11 +1,12 @@
 .cli-update-control { position:absolute; top:4px; right:4px; max-width:calc(100% - 8px); }
-.launchpad-card .cli-update-button { position:relative; display:inline-flex; align-items:center; gap:4px; height:18px; max-width:100%; padding:0 7px; border:0; border-radius:9px; background:color-mix(in srgb,var(--accent) 16%,transparent); color:var(--accent); font:500 var(--type-caption)/1 var(--font-nav,var(--font)); white-space:nowrap; overflow:hidden; cursor:pointer; transition:background .15s,color .15s; }
-.launchpad-card .cli-update-label { position:relative; font:inherit; color:inherit; overflow:hidden; text-overflow:ellipsis; }
+.launchpad-card .cli-update-button { position:relative; display:inline-grid; align-items:center; justify-items:center; min-width:0; height:18px; max-width:100%; padding:0 9px; border:0; border-radius:9px; background:color-mix(in srgb,var(--accent) 16%,transparent); color:var(--text-1); font:500 var(--type-caption)/1 var(--font-nav,var(--font)); white-space:nowrap; overflow:hidden; cursor:pointer; transform:translateY(1px); transition:background .15s; }
+.launchpad-card .cli-update-label, .launchpad-card .cli-update-size { grid-area:1 / 1; min-width:0; max-width:100%; font:inherit; }
+.launchpad-card .cli-update-size { visibility:hidden; }
+.launchpad-card .cli-update-label { position:relative; color:inherit; overflow:hidden; text-overflow:ellipsis; transform:translateY(1px); }
 .launchpad-card .cli-update-button:hover { background:color-mix(in srgb,var(--accent) 28%,transparent); color:var(--text-1); }
 .launchpad-card .cli-update-button:focus-visible { outline:1px solid var(--accent); outline-offset:1px; }
 .launchpad-card .cli-update-button:disabled { cursor:default; opacity:1; }
-.launchpad-card .cli-update-button[aria-busy="true"] { background:var(--accent); color:var(--accent); }
-.launchpad-card .cli-update-button[aria-busy="true"] .cli-update-label { visibility:hidden; }
+.launchpad-card .cli-update-button[aria-busy="true"] { background:var(--accent); color:var(--bg-app); }
 .launchpad-card .cli-update-button.has-error { color:var(--error,#d66); background:color-mix(in srgb,var(--error,#d66) 14%,transparent); }
 /* Stripes wider than the pill by one period, moved by transform so the compositor animates them, not a repaint. */
 .cli-update-stripes { position:absolute; top:0; bottom:0; left:-15px; right:0; background:repeating-linear-gradient(-45deg,var(--accent) 0 5px,color-mix(in srgb,var(--accent) 60%,#fff) 5px 10px); animation:cli-update-stripes .8s linear infinite; pointer-events:none; }
