@@ -70,16 +70,18 @@ try{
   await card('Claude Code').getByRole('button',{name:'更新 1.3.0',exact:true}).waitFor();
   for(const[mode,shape,width]of[['dark','soft',900],['light','panel',620],['dark','glass',460]]){
     await page.evaluate(({mode,shape})=>{document.documentElement.dataset.mode=mode;document.documentElement.dataset.shape=shape},{mode,shape});await page.setViewportSize({width,height:700});
+    await page.evaluate(()=>document.fonts.ready);
     const update=await card('Claude Code').locator('.cli-update-button').boundingBox(),bounds=await card('Claude Code').boundingBox(),gear=await page.getByRole('button',{name:'打开文件夹',exact:true}).boundingBox();
     const name=await card('Claude Code').locator('.launchpad-card-name').boundingBox();
     assert.ok(update.x>=name.x+name.width&&update.x-(name.x+name.width)<=10,'the update label follows the tool name');
     assert.ok(Math.abs(update.y+update.height/2-(name.y+name.height/2))<2,'on the name line');
     assert.ok(update.x>=bounds.x&&update.x+update.width<=Math.min(bounds.x+bounds.width,gear.x),'inside the card, clear of the folder button');
     await page.mouse.move(0,0);await card('Claude Code').locator('.cli-update-button').hover();
+    const hoveredUpdate=await card('Claude Code').locator('.cli-update-button').boundingBox();
     const tip=await page.getByRole('tooltip').boundingBox();
-    const expectedLeft=Math.max(8,Math.min(update.x+update.width/2-tip.width/2,width-tip.width-8));
+    const expectedLeft=Math.max(8,Math.min(hoveredUpdate.x+hoveredUpdate.width/2-tip.width/2,width-tip.width-8));
     assert.ok(Math.abs(tip.x-expectedLeft)<1&&tip.x+tip.width<=width-8,'tip is centered beneath the update button and clamped at viewport edges');
-    assert.ok(Math.abs(tip.y-update.y-update.height-8)<1,'centered tip retains the space below the button');
+    assert.ok(Math.abs(tip.y-hoveredUpdate.y-hoveredUpdate.height-8)<1,`centered tip retains the space below the button ${JSON.stringify({mode,shape,update,hoveredUpdate,tip})}`);
     await page.mouse.move(0,0);await card('Claude Code').locator('.cli-update-button').evaluate(el=>el.blur());await card('Claude Code').locator('.cli-update-button').focus();
     assert.ok(Math.abs((await page.getByRole('tooltip').boundingBox()).x-tip.x)<1,'keyboard focus uses the same centered placement');
     await page.screenshot({path:join(directory,`cli-updates-${mode}-${shape}.png`)});
