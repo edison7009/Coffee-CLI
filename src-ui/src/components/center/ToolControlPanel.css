@@ -9,7 +9,7 @@
 .tool-control-state.is-ready { color:var(--text-2); }
 .tool-control-runtime > button { flex-shrink:0; }
 .tool-control-action { position:relative; }
-.tool-control-spinner { display:inline-block; width:13px; height:13px; flex-shrink:0; border:1.5px solid currentColor; border-top-color:transparent; border-radius:50%; color:var(--text-2); animation:tool-control-spin .8s linear infinite; }
+.tool-control-spinner { display:inline-block; width:14px; height:14px; will-change:transform; backface-visibility:hidden; flex-shrink:0; border:1.5px solid currentColor; border-top-color:transparent; border-radius:50%; color:var(--text-2); animation:tool-control-spin .8s linear infinite; }
 .tool-control-action > .tool-control-spinner { position:absolute; inset:0; margin:auto; color:inherit; }
 @keyframes tool-control-spin { to { transform:rotate(360deg); } }
 .tool-control-agents { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-top:18px; }
