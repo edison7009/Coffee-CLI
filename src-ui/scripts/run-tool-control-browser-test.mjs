@@ -47,6 +47,7 @@ await page.evaluate(()=>{window.delayRead='browser';window.resolveRead=null});
 await tab('浏览器控制').click();await page.waitForFunction(()=>!!window.resolveRead);
 assert.equal(await page.getByRole('switch').count(),6,'first browser read reserves all favorite cards immediately');
 assert.equal(await agent('Claude Code').isDisabled(),true,'unknown configuration cannot be toggled');
+await page.evaluate(()=>document.fonts.ready);
 const browserDemoTop=(await page.locator('.control-demo').boundingBox()).y;
 await tab('常用 6/6').click();await page.evaluate(()=>{window.delayRead=null;window.resolveRead()});
 await page.waitForFunction(()=>document.querySelector('[aria-labelledby$="-tab-browser"] .tool-control-action')?.textContent.includes('安装'));
