@@ -485,6 +485,7 @@ export const ru = {
   'gambit.voice.finish': 'Завершить голосовой ввод',
   'gambit.voice.signed_out': 'Для голосового ввода войдите в инструмент с учётной записью',
   'gambit.voice.no_microphone': 'Микрофон недоступен — проверьте разрешение на микрофон',
+  'gambit.voice.dictation_disabled': 'Диктовка выключена — включите её в Системных настройках → Клавиатура → Диктовка',
   'gambit.voice.failed': 'Ошибка голосового ввода — попробуйте ещё раз',
   'gambit.voice.listening': 'Слушаю',
   'settings.voice': 'Голосовой ввод',

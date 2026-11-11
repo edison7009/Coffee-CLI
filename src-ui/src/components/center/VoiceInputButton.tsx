@@ -86,6 +86,7 @@ export function VoiceInputButton({ tool, cwd, waveKey, draft, onDraftChange }: {
       session.current = null;
       setPhase('idle');
       if (event.message === 'speech_permission') { setError(t('gambit.voice.permission')); return; }
+      if (event.message === 'speech_dictation_disabled') { setError(t('gambit.voice.dictation_disabled')); return; }
       if (event.message.startsWith('http_402')) { setError(t('gambit.voice.unavailable')); return; }
       const rejected = event.message.startsWith('http_401') || event.message.startsWith('http_403');
       if (rejected) setAvailable(false);

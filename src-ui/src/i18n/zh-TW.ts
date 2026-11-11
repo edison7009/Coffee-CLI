@@ -488,6 +488,7 @@ export const zhTW = {
   'gambit.voice.finish': '完成語音輸入',
   'gambit.voice.signed_out': '需要在該工具中以帳號登入才能使用語音輸入',
   'gambit.voice.no_microphone': '沒有可用的麥克風，請檢查系統麥克風權限',
+  'gambit.voice.dictation_disabled': '聽寫未開啟，請在系統設定 → 鍵盤 → 聽寫中開啟',
   'gambit.voice.failed': '語音輸入失敗，請重試',
   'gambit.voice.listening': '正在聆聽',
   'settings.voice': '語音輸入',

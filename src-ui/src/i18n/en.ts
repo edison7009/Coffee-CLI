@@ -490,6 +490,7 @@ export const en = {
   'gambit.voice.finish': 'Finish voice input',
   'gambit.voice.signed_out': 'Sign in to the tool with your account to use voice input',
   'gambit.voice.no_microphone': 'No microphone available — check the system microphone permission',
+  'gambit.voice.dictation_disabled': 'Dictation is off — turn it on in System Settings → Keyboard → Dictation',
   'gambit.voice.failed': 'Voice input failed — try again',
   'gambit.voice.listening': 'Listening',
   'settings.voice': 'Voice input',

@@ -485,6 +485,7 @@ export const fr = {
   'gambit.voice.finish': 'Terminer la saisie vocale',
   'gambit.voice.signed_out': "Connectez-vous à l'outil avec votre compte pour utiliser la saisie vocale",
   'gambit.voice.no_microphone': "Aucun micro disponible — vérifiez l'autorisation du micro",
+  'gambit.voice.dictation_disabled': 'La dictée est désactivée — activez-la dans Réglages Système → Clavier → Dictée',
   'gambit.voice.failed': 'La saisie vocale a échoué — réessayez',
   'gambit.voice.listening': 'Écoute en cours',
   'settings.voice': 'Saisie vocale',

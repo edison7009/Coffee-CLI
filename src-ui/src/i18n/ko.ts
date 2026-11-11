@@ -487,6 +487,7 @@ export const ko = {
   'gambit.voice.finish': '음성 입력 완료',
   'gambit.voice.signed_out': '음성 입력을 사용하려면 도구에 계정으로 로그인하세요',
   'gambit.voice.no_microphone': '사용 가능한 마이크가 없습니다. 시스템 마이크 권한을 확인하세요',
+  'gambit.voice.dictation_disabled': '받아쓰기가 꺼져 있습니다. 시스템 설정 → 키보드 → 받아쓰기에서 켜세요',
   'gambit.voice.failed': '음성 입력에 실패했습니다. 다시 시도하세요',
   'gambit.voice.listening': '듣는 중',
   'settings.voice': '음성 입력',

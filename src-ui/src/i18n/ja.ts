@@ -487,6 +487,7 @@ export const ja = {
   'gambit.voice.finish': '音声入力を完了',
   'gambit.voice.signed_out': '音声入力にはツールへのアカウントログインが必要です',
   'gambit.voice.no_microphone': 'マイクが使用できません。システムのマイク権限を確認してください',
+  'gambit.voice.dictation_disabled': '音声入力がオフです。システム設定 → キーボード → 音声入力 でオンにしてください',
   'gambit.voice.failed': '音声入力に失敗しました。もう一度お試しください',
   'gambit.voice.listening': '聞き取り中',
   'settings.voice': '音声入力',

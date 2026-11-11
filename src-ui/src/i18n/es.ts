@@ -485,6 +485,7 @@ export const es = {
   'gambit.voice.finish': 'Terminar entrada de voz',
   'gambit.voice.signed_out': 'Inicia sesión en la herramienta con tu cuenta para usar la entrada de voz',
   'gambit.voice.no_microphone': 'No hay micrófono disponible: revisa el permiso del micrófono',
+  'gambit.voice.dictation_disabled': 'El dictado está desactivado: actívalo en Ajustes del Sistema → Teclado → Dictado',
   'gambit.voice.failed': 'La entrada de voz falló; inténtalo de nuevo',
   'gambit.voice.listening': 'Escuchando',
   'settings.voice': 'Entrada de voz',

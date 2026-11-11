@@ -488,6 +488,7 @@ export const zhCN = {
   'gambit.voice.finish': '完成语音输入',
   'gambit.voice.signed_out': '需要在该工具里用账号登录才能使用语音输入',
   'gambit.voice.no_microphone': '没有可用的麦克风，请检查系统麦克风权限',
+  'gambit.voice.dictation_disabled': '听写未开启，请在系统设置 → 键盘 → 听写中打开',
   'gambit.voice.failed': '语音输入失败，请重试',
   'gambit.voice.listening': '正在聆听',
   'settings.voice': '语音输入',

@@ -46,11 +46,12 @@ API_AVAILABLE(macos(10.15))
             @synchronized(self) {
                 if (self.cancelled) return;
                 if (status != SFSpeechRecognizerAuthorizationStatusAuthorized) {
-                    [self emit:3 text:@"speech_permission"];
+                    NSLog(@"coffee-speech: authorization status %ld", (long)status); [self emit:3 text:@"speech_permission"];
                     return;
                 }
                 self.recognizer = [[SFSpeechRecognizer alloc] initWithLocale:[[NSLocale alloc] initWithLocaleIdentifier:self.locale]];
                 if (!self.recognizer || !self.recognizer.available) {
+                    NSLog(@"coffee-speech: recognizer unavailable for %@ (%d)", self.locale, self.recognizer != nil);
                     [self emit:3 text:@"speech_unavailable"];
                     return;
                 }
@@ -65,7 +66,7 @@ API_AVAILABLE(macos(10.15))
                             [self emit:result.isFinal ? 2 : 1 text:result.bestTranscription.formattedString];
                             if (result.isFinal) { self.task = nil; return; }
                         }
-                        if (error) { [self emit:3 text:@"speech_failed"]; self.task = nil; }
+                        if (error) { NSLog(@"coffee-speech: recognition failed %@ %ld %@", error.domain, (long)error.code, error.localizedDescription); [self emit:3 text:([error.domain isEqualToString:@"kLSRErrorDomain"] && error.code == 201) ? @"speech_dictation_disabled" : @"speech_failed"]; self.task = nil; }
                     }
                 }];
                 [self emit:0 text:@""];

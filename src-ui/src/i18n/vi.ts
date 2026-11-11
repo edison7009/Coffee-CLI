@@ -489,6 +489,7 @@ export const vi = {
   'gambit.voice.finish': 'Hoàn tất nhập giọng nói',
   'gambit.voice.signed_out': 'Hãy đăng nhập công cụ bằng tài khoản để dùng nhập giọng nói',
   'gambit.voice.no_microphone': 'Không có micrô — hãy kiểm tra quyền micrô của hệ thống',
+  'gambit.voice.dictation_disabled': 'Đọc chính tả đang tắt — hãy bật trong Cài đặt hệ thống → Bàn phím → Đọc chính tả',
   'gambit.voice.failed': 'Nhập giọng nói thất bại — hãy thử lại',
   'gambit.voice.listening': 'Đang nghe',
   'settings.voice': 'Nhập giọng nói',

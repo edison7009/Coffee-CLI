@@ -485,6 +485,7 @@ export const de = {
   'gambit.voice.finish': 'Spracheingabe beenden',
   'gambit.voice.signed_out': 'Melde dich im Tool mit deinem Konto an, um die Spracheingabe zu nutzen',
   'gambit.voice.no_microphone': 'Kein Mikrofon verfügbar – prüfe die Mikrofonberechtigung',
+  'gambit.voice.dictation_disabled': 'Diktieren ist aus – aktiviere es unter Systemeinstellungen → Tastatur → Diktieren',
   'gambit.voice.failed': 'Spracheingabe fehlgeschlagen – versuche es erneut',
   'gambit.voice.listening': 'Hört zu',
   'settings.voice': 'Spracheingabe',
