@@ -517,7 +517,7 @@
 .gambit-pre-input-clear svg { width: 12px; height: 12px; }
 .gambit-pre-input-save:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
 
-/* Appears like a paper slip lying face down on the ground that flips up from its bottom edge, shows its label and settles with a small sway. */
+/* Appears like a paper slip lying face down on the ground that flips up from its bottom edge, shows its label and comes to rest without a sway. */
 .gambit-pre-input-save { transform-style: preserve-3d; transform-origin: 50% 100%; animation: gambit-pre-input-flip .75s cubic-bezier(.2,.8,.2,1) both; }
 .gambit-pre-input-face { display: block; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
 /* The slip's back, seen while it still lies face down. */
@@ -526,8 +526,6 @@
   /* Fades in as it lifts off the ground, so it never pops into view. */
   0% { transform: rotateX(-178deg); opacity: 0; }
   35% { opacity: 1; }
-  60% { transform: rotateX(10deg); }
-  82% { transform: rotateX(-4deg); }
   100% { transform: none; opacity: 1; }
 }
 /* Sent or cleared: it flips back down onto its face, fading out as it lands. */
