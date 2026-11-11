@@ -40,6 +40,16 @@
 }
 
 /* ─── Monospace Terminal Font (embedded — no system font dependency) ── */
+/* JetBrains Mono, bundled under SIL OFL 1.1; see /fonts/OFL-JetBrainsMono.txt.
+   Variable font, so bold output keeps the same face. */
+@font-face {
+    font-family: 'JetBrainsMono';
+    src: url('/fonts/JetBrainsMono-Variable.ttf') format('truetype');
+    font-weight: 100 800;
+    font-style: normal;
+    font-display: swap;
+}
+
 @font-face {
     font-family: 'CascadiaMono';
     src: url('/fonts/CascadiaMono-Regular.woff2') format('woff2');

@@ -90,7 +90,7 @@ export function lineCells(line: IBufferLine) {
 // for those tools only. Every other tool keeps xterm's foreground caret; the
 // conservative default makes new and terminal-only tools usable immediately.
 // Build the xterm fontFamily stack. `userFont` (from Settings) is prepended
-// so it wins for the glyphs it has; the bundled CascadiaMono + Nerd Fonts +
+// so it wins for the glyphs it has; the bundled JetBrainsMono, then CascadiaMono + Nerd Fonts +
 // platform monospace faces follow, and the CJK cascade backstops Chinese/
 // Japanese/Korean (so picking a Latin-only font never re-breaks CJK).
 // Embedded CascadiaMono guarantees consistent box-drawing; the per-glyph
@@ -102,10 +102,10 @@ export function buildFontFamily(userFont?: string): string {
   const NERD = "'CaskaydiaCove Nerd Font', 'JetBrainsMono Nerd Font', 'MesloLGS NF', 'FiraCode Nerd Font', 'Hack Nerd Font'";
   const CJK = "'PingFang SC', 'PingFang TC', 'Hiragino Sans', 'Apple SD Gothic Neo', 'Microsoft YaHei', 'Microsoft JhengHei', 'Yu Gothic UI', 'Malgun Gothic', 'Noto Sans CJK SC', 'Noto Sans CJK TC', 'Noto Sans CJK JP', 'Noto Sans CJK KR', 'WenQuanYi Micro Hei'";
   const base = isLinux
-    ? `CascadiaMono, ${NERD}, 'Ubuntu Mono', 'Noto Sans Mono', 'DejaVu Sans Mono', 'Liberation Mono', ${CJK}, monospace`
+    ? `JetBrainsMono, CascadiaMono, ${NERD}, 'Ubuntu Mono', 'Noto Sans Mono', 'DejaVu Sans Mono', 'Liberation Mono', ${CJK}, monospace`
     : isMac
-      ? `CascadiaMono, ${NERD}, ui-monospace, Menlo, Monaco, 'Courier New', ${CJK}, monospace`
-      : `CascadiaMono, ${NERD}, 'Cascadia Mono', Consolas, 'Courier New', ${CJK}, monospace`;
+      ? `JetBrainsMono, CascadiaMono, ${NERD}, ui-monospace, Menlo, Monaco, 'Courier New', ${CJK}, monospace`
+      : `JetBrainsMono, CascadiaMono, ${NERD}, 'Cascadia Mono', Consolas, 'Courier New', ${CJK}, monospace`;
   return userFont ? `"${userFont}", ${base}` : base;
 }
 

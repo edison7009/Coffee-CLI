@@ -397,9 +397,10 @@ function TierTerminalImpl({
       xtermRef.current?.focus();
     });
 
-    // Wait for CascadiaMono to load before opening the terminal so xterm
+    // Wait for the bundled fonts to load before opening the terminal so xterm
     // measures cell metrics with the correct font (avoids box-drawing misalignment).
     const fontReady = Promise.all([
+      document.fonts.load('14px JetBrainsMono'),
       document.fonts.load('14px CascadiaMono'),
       termFont ? document.fonts.load(`14px "${termFont}"`) : Promise.resolve(),
     ]).catch(() => {});

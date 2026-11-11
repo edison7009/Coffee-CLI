@@ -186,7 +186,7 @@ export interface AppState {
 
   // Terminal foreground color override ('' = use theme default)
   termColorScheme: string;
-  // Terminal font family override ('' = bundled CascadiaMono + fallbacks)
+  // Terminal font family override ('' = bundled JetBrainsMono + fallbacks)
   termFont: string;
   // Default shell id for new terminal tabs ('' = Auto / platform fallback).
   // Resolved to a concrete program at spawn time on the Rust side. See
