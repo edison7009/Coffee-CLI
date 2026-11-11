@@ -9,7 +9,7 @@ import './ToolSkillsPanel.css';
 const tabLabels: Record<string, string> = {
   claude:'Claude', codex:'Codex', cursor:'Cursor', copilot:'Copilot', antigravity:'Antigrav.',
   openclaw:'OpenClaw', hermes:'Hermes', opencode:'OpenCode', pi:'Pi', cline:'Cline', goose:'Goose', aider:'Aider',
-  omp:'OhMyPi', crush:'Crush', qwen:'Qwen', kilo:'Kilo', kiro:'Kiro', kimicode:'Kimi',
+  omp:'OhMyPi', crush:'Crush', qwen:'Qwen Code', kilo:'Kilo', kiro:'Kiro', kimicode:'Kimi',
   codebuddy:'CodeBuddy', grok:'Grok', mimocode:'MiMo', minimax:'MiniMax', muse:'Muse',
 };
 

@@ -38,7 +38,7 @@
 
 ### What is Coffee CLI?
 
-Coffee CLI is a **native desktop workspace** for AI CLI agents — Claude Code, OpenAI Codex, Qwen, OpenCode, and more. Use desktop-style conversations or native terminals, run multiple agents in parallel tabs, and drive them with keyboard shortcuts via Gambit — all with a **fully localized interface in 11 languages**.
+Coffee CLI is a **native desktop workspace** for AI CLI agents — Claude Code, OpenAI Codex, Qwen Code, OpenCode, and more. Use desktop-style conversations or native terminals, run multiple agents in parallel tabs, and drive them with keyboard shortcuts via Gambit — all with a **fully localized interface in 11 languages**.
 
 This is not a web app. Not an Electron wrapper. A **true native desktop app** built with Tauri (Rust core), engineered for performance and low resource usage.
 
@@ -189,7 +189,7 @@ cargo tauri build
 
 ### Coffee CLI 是什么？
 
-Coffee CLI 是专为 AI CLI Agent 打造的**原生桌面工作台**，支持 Claude Code、OpenAI Codex、Qwen、OpenCode 等主流 Agent。桌面式对话与原生终端、多 Tab 并行运行、Gambit 快捷操控——所有 AI CLI 工具在一个真正的桌面应用里井然有序，**原生支持 11 种界面语言**。
+Coffee CLI 是专为 AI CLI Agent 打造的**原生桌面工作台**，支持 Claude Code、OpenAI Codex、Qwen Code、OpenCode 等主流 Agent。桌面式对话与原生终端、多 Tab 并行运行、Gambit 快捷操控——所有 AI CLI 工具在一个真正的桌面应用里井然有序，**原生支持 11 种界面语言**。
 
 这不是网页应用，不是 Electron 壳，而是基于 Tauri（Rust 内核）构建的**真正原生桌面应用**，性能优异，资源占用极低。
 
