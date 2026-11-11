@@ -23,6 +23,7 @@ export const es = {
   "orchestration.description": "Elige los asistentes disponibles. En una nueva sesión de Claude, Claude decide cuándo delegar, verifica y resume los resultados.",
   "orchestration.role.title": "Rol de la ventana principal",
   "orchestration.role.hint": "Se aplica a las ventanas principales que se abran a partir de ahora.",
+  "orchestration.pick.prefix": "Preferir: {name}",
   "orchestration.role.auto": "Decidir automáticamente",
   "orchestration.role.auto_desc": "La ventana principal decide qué hace ella misma y qué delega.",
   "orchestration.role.manager": "Jefe de proyecto",
@@ -305,11 +306,8 @@ export const es = {
   'task.greeting.afternoon': 'Buenas tardes, ¿algo pendiente?',
   'task.greeting.evening': 'Buenas noches, ¿algo ambicioso?',
   'task.tab.tasks': 'Pre-entrada',
-  'pre_input.edit': 'Editar',
-  'pre_input.done': 'Listo',
-  'pre_input.copy': 'Duplicar',
   'pre_input.delete': 'Eliminar',
-  'pre_input.send': 'Enviar',
+  'pre_input.insert': "Poner en el cuadro de entrada",
   'task.tab.changes': 'Historial',
   'changes.empty': 'Aún no hay cambios.',
   'launchpad.open_folder': 'Abrir carpeta',
@@ -352,8 +350,6 @@ export const es = {
   'diff.no_changes': 'Sin cambios',
   'diff.too_large': 'Archivo demasiado grande para mostrar el diff',
   'diff.unchanged_lines': '⋯ {count} líneas sin cambios',
-  'task.search_sessions': 'Buscar sesiones...',
-  'task.filter_all_projects': 'Todos',
   'menu.no_recent': 'No hay sesiones recientes',
   'task.messages': '{count} mensajes',
 
@@ -420,18 +416,6 @@ export const es = {
   'settings.pre_input_button': 'Botón «Guardar en pre-entrada»',
   'settings.pre_input_button.sub': 'Aparece sobre el cuadro de texto y guarda el borrador en la pre-entrada',
   'task.send_failed': "No se pudo confirmar el envío. Revisa la sesión actual. Tu tarea se ha conservado.",
-  'task.note_placeholder': 'Anota algo y envíalo entero a tu agente…',
-  'task.welcome_note': `Bienvenido a Coffee CLI ☕
-
-Esto es la pre-entrada: escribe lo que quieres que haga la IA y envíalo con un clic cuando llegue el momento.
-
-Tres pasos para empezar:
-1. Elige una herramienta en el centro (Claude / Codex / OpenCode…), escoge una carpeta y listo
-2. Escribe en el cuadro de entrada y pulsa «Guardar en pre-entrada» encima para guardarlo como nota, o pulsa + abajo a la derecha para crear una aquí
-3. Las notas muestran una línea: haz clic para ver el texto completo, pasa el ratón y pulsa ▶ para enviarla a la IA, y arrástrala para reordenar
-
-Borra esta nota cuando termines de leerla y empieza tu primera tarea.`,
-  'task.show_guide': 'Ver la guía de uso',
 
   // Theme Menu
   'theme.section.color': 'Colores',
@@ -479,6 +463,7 @@ Borra esta nota cuando termines de leerla y empieza tu primera tarea.`,
   'gambit.send': 'Enviar',
   'gambit.stop': 'Detener',
   'gambit.placeholder': 'Piensa tu jugada... ({send} para enviar, {newline} para una nueva línea, pega imágenes, Alt+↑↓ para el historial)',
+  'gambit.clear_draft': "Vaciar",
   'gambit.save_pre_input': 'Guardar en pre-entrada',
   'gambit.send_failed_hint': 'Abre primero una sesión activa',
   'gambit.worktree': 'Worktree',
@@ -521,6 +506,8 @@ Borra esta nota cuando termines de leerla y empieza tu primera tarea.`,
   "settings.voice.source.missing": "Sesión cerrada o no disponible",
   "settings.voice.source.failed": "No se pudieron buscar las cuentas locales. Inténtalo de nuevo.",
   "settings.voice.source.empty": "No se encontraron sesiones compatibles. Actualmente busca Claude Code, Codex, Doubao y Doubao Work.",
+  "settings.voice.source.expired": "Sesión caducada",
+  "settings.voice.source.expired_hint": "La sesión de {name} ha caducado. Abre Claude Code una vez y envía un mensaje para renovarla; luego vuelve a buscar.",
   "settings.voice.source.busy": "{name} está abierto. Ciérralo para la primera importación; después puede permanecer abierto.",
   'settings.voice.enabled': 'Entrada de voz',
   'settings.voice.enabled.sub': 'Al activarlo, el editor muestra un botón de micrófono',

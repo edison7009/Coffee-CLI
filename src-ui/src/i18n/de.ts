@@ -23,6 +23,7 @@ export const de = {
   "orchestration.description": "Verfügbare Assistenten wählen. In einer neuen Claude-Sitzung entscheidet Claude über die Delegation, prüft Ergebnisse und fasst sie zusammen.",
   "orchestration.role.title": "Rolle des Hauptfensters",
   "orchestration.role.hint": "Gilt für Hauptfenster, die ab jetzt geöffnet werden.",
+  "orchestration.pick.prefix": "Bevorzugt: {name}",
   "orchestration.role.auto": "Automatisch entscheiden",
   "orchestration.role.auto_desc": "Das Hauptfenster entscheidet selbst, was es erledigt und was es delegiert.",
   "orchestration.role.manager": "Projektleitung",
@@ -305,11 +306,8 @@ export const de = {
   'task.greeting.afternoon': 'Guten Tag, noch etwas zu tun?',
   'task.greeting.evening': 'Guten Abend. Etwas Großes geplant?',
   'task.tab.tasks': 'Vorab-Eingabe',
-  'pre_input.edit': 'Bearbeiten',
-  'pre_input.done': 'Fertig',
-  'pre_input.copy': 'Duplizieren',
   'pre_input.delete': 'Löschen',
-  'pre_input.send': 'Senden',
+  'pre_input.insert': "In Eingabefeld übernehmen",
   'task.tab.changes': 'Änderungsverlauf',
   'changes.empty': 'Noch keine Änderungen.',
   'launchpad.open_folder': 'Ordner öffnen',
@@ -352,8 +350,6 @@ export const de = {
   'diff.no_changes': 'Keine Änderungen',
   'diff.too_large': 'Datei zu groß für die Inline-Diff-Ansicht',
   'diff.unchanged_lines': '⋯ {count} unveränderte Zeilen',
-  'task.search_sessions': 'Sitzungen durchsuchen...',
-  'task.filter_all_projects': 'Alle',
   'menu.no_recent': 'Keine aktuellen Sitzungen',
   'task.messages': '{count} Nachrichten',
 
@@ -420,18 +416,6 @@ export const de = {
   'settings.pre_input_button': 'Schaltfläche „In Vorab-Eingabe speichern“',
   'settings.pre_input_button.sub': 'Erscheint über dem Eingabefeld und speichert den Entwurf in der Vorab-Eingabe',
   'task.send_failed': "Das Senden konnte nicht bestätigt werden. Prüfe die aktuelle Sitzung. Deine Aufgabe bleibt erhalten.",
-  'task.note_placeholder': 'Schreib etwas auf und sende alles an deinen Agenten…',
-  'task.welcome_note': `Willkommen bei Coffee CLI ☕
-
-Das ist die Vorab-Eingabe: Schreib auf, was die KI tun soll, und schick es mit einem Klick ab, wenn es passt.
-
-Drei Schritte zum Start:
-1. Wähle in der Mitte ein Tool (Claude / Codex / OpenCode…), dann einen Ordner, und los geht's
-2. Schreib in das Eingabefeld und klicke darüber auf „In Vorab-Eingabe speichern“, um es als Notiz zu behalten, oder klicke unten rechts auf +, um hier eine anzulegen
-3. Notizen zeigen eine Zeile: Klick öffnet den ganzen Text, beim Überfahren schickt ▶ sie an die KI, und per Ziehen änderst du die Reihenfolge
-
-Lösch diese Notiz, wenn du sie gelesen hast, und starte deine erste Aufgabe.`,
-  'task.show_guide': 'Anleitung ansehen',
 
   // Theme Menu
   'theme.section.color': 'Farben',
@@ -479,6 +463,7 @@ Lösch diese Notiz, wenn du sie gelesen hast, und starte deine erste Aufgabe.`,
   'gambit.send': 'Senden',
   'gambit.stop': 'Stoppen',
   'gambit.placeholder': 'Plane deinen Zug... ({send} zum Senden, {newline} für eine neue Zeile, Bilder einfügen, Alt+↑↓ für den Verlauf)',
+  'gambit.clear_draft': "Leeren",
   'gambit.save_pre_input': 'In Vorab-Eingabe speichern',
   'gambit.send_failed_hint': 'Öffne zuerst eine aktive Sitzung',
   'gambit.worktree': 'Worktree',
@@ -521,6 +506,8 @@ Lösch diese Notiz, wenn du sie gelesen hast, und starte deine erste Aufgabe.`,
   "settings.voice.source.missing": "Abgemeldet oder nicht verfügbar",
   "settings.voice.source.failed": "Lokale Konten konnten nicht gesucht werden. Erneut versuchen.",
   "settings.voice.source.empty": "Keine unterstützten lokalen Anmeldungen gefunden. Derzeit: Claude Code, Codex, Doubao und Doubao Work.",
+  "settings.voice.source.expired": "Anmeldung abgelaufen",
+  "settings.voice.source.expired_hint": "Die Anmeldung bei {name} ist abgelaufen. Öffnen Sie Claude Code einmal und senden Sie eine Nachricht, um sie zu erneuern, und suchen Sie dann erneut.",
   "settings.voice.source.busy": "{name} läuft. Zum ersten Import einmal beenden; danach kann die App geöffnet bleiben.",
   'settings.voice.enabled': 'Spracheingabe',
   'settings.voice.enabled.sub': 'Wenn aktiv, zeigt das Eingabefeld eine Mikrofontaste',

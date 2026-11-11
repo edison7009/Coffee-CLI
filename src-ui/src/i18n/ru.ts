@@ -23,6 +23,7 @@ export const ru = {
   "orchestration.description": "Выберите доступных помощников. В новом сеансе Claude сам распределяет задачи, проверяет результаты и подводит итог.",
   "orchestration.role.title": "Роль главного окна",
   "orchestration.role.hint": "Применяется к главным окнам, открытым с этого момента.",
+  "orchestration.pick.prefix": "Предпочтение: {name}",
   "orchestration.role.auto": "Решать автоматически",
   "orchestration.role.auto_desc": "Главное окно само решает, что делать самому, а что поручить.",
   "orchestration.role.manager": "Руководитель проекта",
@@ -305,11 +306,8 @@ export const ru = {
   'task.greeting.afternoon': 'Добрый день, что-то осталось?',
   'task.greeting.evening': 'Добрый вечер. Что-нибудь масштабное?',
   'task.tab.tasks': 'Предввод',
-  'pre_input.edit': 'Изменить',
-  'pre_input.done': 'Готово',
-  'pre_input.copy': 'Дублировать',
   'pre_input.delete': 'Удалить',
-  'pre_input.send': 'Отправить',
+  'pre_input.insert': "Вставить в поле ввода",
   'task.tab.changes': 'История изменений',
   'changes.empty': 'Изменений пока нет.',
   'launchpad.open_folder': 'Открыть папку',
@@ -352,8 +350,6 @@ export const ru = {
   'diff.no_changes': 'Нет изменений',
   'diff.too_large': 'Файл слишком большой для построчного просмотра',
   'diff.unchanged_lines': '⋯ {count} строк без изменений',
-  'task.search_sessions': 'Поиск сессий...',
-  'task.filter_all_projects': 'Все',
   'menu.no_recent': 'Нет недавних сессий',
   'task.messages': '{count} сообщений',
 
@@ -420,18 +416,6 @@ export const ru = {
   'settings.pre_input_button': 'Кнопка «Сохранить в предввод»',
   'settings.pre_input_button.sub': 'Показывается над полем ввода и сохраняет черновик в предвводе',
   'task.send_failed': "Не удалось подтвердить отправку. Проверьте текущий сеанс. Содержимое задачи сохранено.",
-  'task.note_placeholder': 'Запишите что-нибудь и отправьте целиком агенту…',
-  'task.welcome_note': `Добро пожаловать в Coffee CLI ☕
-
-Это предввод: запишите, что должен сделать ИИ, и отправьте одним щелчком, когда придёт время.
-
-Три шага для начала:
-1. Выберите инструмент в центре (Claude / Codex / OpenCode…), укажите папку — и вперёд
-2. Напишите текст в поле ввода и нажмите «Сохранить в предввод» над ним, чтобы оставить его заметкой, или нажмите + внизу справа, чтобы создать её здесь
-3. Заметки показывают одну строку: щелчок открывает весь текст, при наведении ▶ отправляет её ИИ, а перетаскиванием можно менять порядок
-
-Прочитав, удалите эту заметку и начните первую задачу.`,
-  'task.show_guide': 'Открыть руководство',
 
   // Theme Menu
   'theme.section.color': 'Цвета',
@@ -479,6 +463,7 @@ export const ru = {
   'gambit.send': 'Отправить',
   'gambit.stop': 'Остановить',
   'gambit.placeholder': 'Продумайте ход... ({send} — отправить, {newline} — новая строка, можно вставлять изображения, Alt+↑↓ — история)',
+  'gambit.clear_draft': "Очистить",
   'gambit.save_pre_input': 'Сохранить в предввод',
   'gambit.send_failed_hint': 'Сначала откройте активную сессию',
   'gambit.worktree': 'Worktree',
@@ -521,6 +506,8 @@ export const ru = {
   "settings.voice.source.missing": "Выход выполнен или недоступно",
   "settings.voice.source.failed": "Не удалось найти локальные аккаунты. Повторите попытку.",
   "settings.voice.source.empty": "Поддерживаемые входы не найдены. Сейчас проверяются Claude Code, Codex, Doubao и Doubao Work.",
+  "settings.voice.source.expired": "Вход истёк",
+  "settings.voice.source.expired_hint": "Срок входа в {name} истёк. Откройте Claude Code и отправьте одно сообщение, чтобы продлить его, затем выполните поиск снова.",
   "settings.voice.source.busy": "{name} работает. Закройте для первого импорта; после импорта приложение можно держать открытым.",
   'settings.voice.enabled': 'Голосовой ввод',
   'settings.voice.enabled.sub': 'Если включено, в поле ввода появляется кнопка микрофона',

@@ -394,6 +394,10 @@
 .gambit-capabilities { display:flex; align-items:center; gap:5px; min-width:0; margin-right:auto; overflow:hidden; }
 .gambit-capability { min-width:0; padding:4px 7px; border-radius:var(--shape-radius-btn,5px); background:color-mix(in srgb,var(--capability-color) 12%,transparent); color:var(--capability-color); font:var(--type-caption) var(--font); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .gambit-capability.is-orchestration { --capability-color:var(--green); }
+.orchestration-pick-menu button { align-items:center; }
+.orchestration-pick-check { flex:0 0 1em; text-align:center; }
+.gambit-capability.is-picker { border:0; cursor:pointer; transition:background .15s; }
+.gambit-capability.is-picker:hover,.gambit-capability.is-picker[aria-expanded="true"] { background:color-mix(in srgb,var(--capability-color) 22%,transparent); }
 .gambit-capability.is-computer { --capability-color:var(--blue); }
 .gambit-capability.is-browser { --capability-color:#b59cce; }
 [data-mode="light"] .gambit-capability.is-browser { --capability-color:#7a6095; }
@@ -480,13 +484,15 @@
 .gambit-footer:has(> .gambit-new-chat) > .gambit-workspace { margin-right: 0; }
 .gambit-worktree[data-tip]:hover::after { content: attr(data-tip); position: absolute; z-index: 100; bottom: calc(100% + 8px); left: 0; width: max-content; max-width: min(240px, 70vw); padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-panel); color: var(--text-1); font-size: var(--type-caption); font-weight: 500; letter-spacing: .01em; line-height: 1.3; white-space: normal; pointer-events: none; box-shadow: 0 1px 2px #0003, 0 6px 20px #0004; }
 
-/* Save-as-pre-input: a light dashed chip floating above the dock's top-right corner, shown only while there is a draft. */
+/* Save-as-pre-input: a solid pill sitting on the dock's top edge, shown only while there is a draft. */
 .gambit-pre-input-ground {
     position: absolute;
-    right: 12px;
-    bottom: calc(100% + 6px);
+    /* Rides the composer's top edge (half above, half below), leaving the send button's column free on the right. */
+    right: 48px;
+    bottom: calc(100% - 11px);
     z-index: 2;
     display: flex;
+    gap: 6px;
     perspective: 300px;
     /* The ground line: while the slip flips up from face down, nothing below its bottom edge shows. */
     clip-path: inset(-60px -60px 0 -60px);
@@ -496,34 +502,42 @@
     display: block;
     height: 22px;
     padding: 0 9px;
-    border: 1px dashed color-mix(in srgb, var(--accent) 70%, transparent);
-    border-radius: 6px;
-    /* Just a dashed outline and its label; no fill at rest. */
-    background: transparent;
-    color: var(--accent);
+    border: none;
+    border-radius: 11px;
+    /* A solid pill so the edge line it sits on doesn't run through it. */
+    background: var(--accent);
+    color: var(--bg-panel);
     font: 500 var(--type-caption)/1 var(--font-nav, var(--font));
     white-space: nowrap;
     transition: background .15s, border-color .15s;
 }
-.gambit-pre-input-save:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.gambit-pre-input-save:hover { background: color-mix(in srgb, var(--accent) 85%, var(--text-1)); }
+.gambit-pre-input-save.gambit-pre-input-clear { width: 22px; padding: 0; }
+.gambit-pre-input-clear .gambit-pre-input-face { display: grid; place-items: center; height: 100%; }
+.gambit-pre-input-clear svg { width: 12px; height: 12px; }
 .gambit-pre-input-save:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
 
 /* Appears like a paper slip lying face down on the ground that flips up from its bottom edge, shows its label and settles with a small sway. */
 .gambit-pre-input-save { transform-style: preserve-3d; transform-origin: 50% 100%; animation: gambit-pre-input-flip .75s cubic-bezier(.2,.8,.2,1) both; }
 .gambit-pre-input-face { display: block; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
 /* The slip's back, seen while it still lies face down. */
-.gambit-pre-input-save::after { content: ''; position: absolute; inset: -1px; border-radius: inherit; background: color-mix(in srgb, var(--accent) 22%, var(--bg-panel, #2a2724)); transform: rotateX(180deg); backface-visibility: hidden; -webkit-backface-visibility: hidden; pointer-events: none; }
+.gambit-pre-input-save::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: color-mix(in srgb, var(--accent) 22%, var(--bg-panel, #2a2724)); transform: rotateX(180deg); backface-visibility: hidden; -webkit-backface-visibility: hidden; pointer-events: none; }
 @keyframes gambit-pre-input-flip {
-  0% { transform: rotateX(-178deg); }
+  /* Fades in as it lifts off the ground, so it never pops into view. */
+  0% { transform: rotateX(-178deg); opacity: 0; }
+  35% { opacity: 1; }
   60% { transform: rotateX(10deg); }
   82% { transform: rotateX(-4deg); }
-  100% { transform: none; }
+  100% { transform: none; opacity: 1; }
 }
-/* Sent or cleared: it flips back down onto its face. */
+/* Sent or cleared: it flips back down onto its face, fading out as it lands. */
 .gambit-pre-input-save.is-leaving { pointer-events: none; animation: gambit-pre-input-flip-back .45s cubic-bezier(.5,0,.75,0) both; }
 @keyframes gambit-pre-input-flip-back {
-  0% { transform: none; }
+  0% { transform: none; opacity: 1; }
   25% { transform: rotateX(8deg); }
-  100% { transform: rotateX(-178deg); }
+  60% { opacity: 1; }
+  100% { transform: rotateX(-178deg); opacity: 0; }
 }
-@media (prefers-reduced-motion: reduce) { .gambit-pre-input-save { animation: none; } .gambit-pre-input-save.is-leaving { visibility: hidden; } }
+/* Reduced motion keeps only a short fade, no flip. */
+@keyframes gambit-pre-input-fade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .gambit-pre-input-save { animation: gambit-pre-input-fade .15s ease both; } .gambit-pre-input-save.is-leaving { animation: gambit-pre-input-fade .15s ease reverse both; } }

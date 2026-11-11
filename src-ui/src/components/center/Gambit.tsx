@@ -33,6 +33,7 @@ import { VoiceInputButton, VoiceUsageSlot } from './VoiceInputButton';
 import { useUsageQuota } from '../../lib/usage-quota';
 import { gambitAttachments, removeGambitAttachment } from '../../lib/gambit-attachments';
 import './Gambit.css';
+import { OrchestrationPicker } from './OrchestrationPicker';
 import { fileToBase64 } from '../../lib/answer-image-paste';
 
 interface GambitProps {
@@ -124,7 +125,7 @@ const DOCK_MIN_HEIGHT = 120;
 const DOCK_MAX_HEIGHT_RATIO = 0.7; // never let the dock eat more than 70% of viewport height
 /** "Save to pre-input": flips up from face down when there is text, and flips back down when the text is sent or cleared. */
 const PRE_INPUT_FLIP_OUT_MS = 450;
-function PreInputSave({ shown, label, onSave }: { shown: boolean; label: string; onSave: () => void }) {
+function PreInputSave({ shown, label, clearLabel, onSave, onClear }: { shown: boolean; label: string; clearLabel: string; onSave: () => void; onClear: () => void }) {
   const [leaving, setLeaving] = useState(false);
   // Adjusted during render (not in an effect): the moment the text goes, it starts leaving; text back cancels that.
   const [prevShown, setPrevShown] = useState(shown);
@@ -135,7 +136,14 @@ function PreInputSave({ shown, label, onSave }: { shown: boolean; label: string;
     return () => window.clearTimeout(timer);
   }, [leaving]);
   if (!shown && !leaving) return null;
-  return <span className="gambit-pre-input-ground"><button type="button" className={`gambit-pre-input-save${shown ? '' : ' is-leaving'}`} tabIndex={shown ? undefined : -1} aria-hidden={shown ? undefined : true} onMouseDown={e => e.preventDefault()} onClick={shown ? onSave : undefined}><span className="gambit-pre-input-face">{label}</span></button></span>;
+  const leave = shown ? '' : ' is-leaving';
+  return <span className="gambit-pre-input-ground">
+    <button type="button" className={`gambit-pre-input-save${leave}`} tabIndex={shown ? undefined : -1} aria-hidden={shown ? undefined : true} onMouseDown={e => e.preventDefault()} onClick={shown ? onSave : undefined}><span className="gambit-pre-input-face">{label}</span></button>
+    {/* Empties the draft in one click; it flips in step with Save. */}
+    <button type="button" className={`gambit-pre-input-save gambit-pre-input-clear${leave}`} tabIndex={shown ? undefined : -1} aria-hidden={shown ? undefined : true} aria-label={clearLabel} onMouseDown={e => e.preventDefault()} onClick={shown ? onClear : undefined}>
+      <span className="gambit-pre-input-face"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6" /><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" /></svg></span>
+    </button>
+  </span>;
 }
 
 const DOCK_AUTO_HEIGHT_RATIO = 0.5; // a long draft stops lifting the dock here and scrolls instead
@@ -792,7 +800,7 @@ function GambitImpl({
   };
 
   const capabilitiesStatus = (orchestration || computer || browser) && <div className="gambit-capabilities" role="status">
-    {orchestration && <span className="gambit-capability is-orchestration">{t('tools.tab.orchestration')}</span>}
+    {orchestration && <OrchestrationPicker sessionId={sessionId} />}
     {computer && <span className="gambit-capability is-computer">{t('control.computer_label')}</span>}
     {browser && <span className="gambit-capability is-browser">{t('control.browser_label')}</span>}
   </div>;
@@ -812,7 +820,7 @@ function GambitImpl({
       <div className="gambit-dock-resize" onMouseDown={onDockResizeStart} />
 
       {/* Save the draft for later: it goes to the right panel's pre-input tab, which opens to show it. */}
-      <PreInputSave shown={appState.preInputButton && !!draft.trim()} label={t('gambit.save_pre_input')} onSave={() => { appDispatch({ type: 'SAVE_PRE_INPUT', text: draft.trim() }); onDraftChange(''); }} />
+      <PreInputSave shown={appState.preInputButton && !!draft.trim()} label={t('gambit.save_pre_input')} clearLabel={t('gambit.clear_draft')} onSave={() => { appDispatch({ type: 'SAVE_PRE_INPUT', text: draft.trim() }); onDraftChange(''); }} onClear={() => onDraftChange('')} />
 
       {attachments.length > 0 && <div className="gambit-attachments">
         {attachments.map(({ path, image }) => <div className="gambit-attachment" key={path}>

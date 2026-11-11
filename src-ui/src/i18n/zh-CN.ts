@@ -23,6 +23,7 @@ export const zhCN = {
   "orchestration.description": "勾选可用助手。新建 Claude 会话后，Claude 会按任务需要自主指派，并检查、汇总结果。",
   "orchestration.role.title": "主窗口角色",
   "orchestration.role.hint": "对之后新开的主窗口生效。",
+  "orchestration.pick.prefix": "优先协作：{name}",
   "orchestration.role.auto": "自主决策",
   "orchestration.role.auto_desc": "主窗口自己判断哪些自己做、哪些分派。",
   "orchestration.role.manager": "项目经理",
@@ -305,11 +306,8 @@ export const zhCN = {
   'task.greeting.afternoon': '下午好，还有什么要做的？',
   'task.greeting.evening': '晚上好，想干点什么大事？',
   'task.tab.tasks': '预输入',
-  'pre_input.edit': '编辑',
-  'pre_input.done': '完成',
-  'pre_input.copy': '复制',
   'pre_input.delete': '删除',
-  'pre_input.send': '发送',
+  'pre_input.insert': "放入输入框",
   'task.tab.changes': '修改记录',
   'changes.empty': '暂无修改。',
   'launchpad.open_folder': '打开文件夹',
@@ -352,8 +350,6 @@ export const zhCN = {
   'diff.no_changes': '没有改动',
   'diff.too_large': '文件较大,未渲染逐行差异',
   'diff.unchanged_lines': '⋯ {count} 行未改动',
-  'task.search_sessions': '搜索历史对话...',
-  'task.filter_all_projects': '全部',
   'menu.no_recent': '没有任何近期会话',
   'task.messages': '{count} 条消息',
 
@@ -421,18 +417,6 @@ export const zhCN = {
   'settings.pre_input_button': '输入框的“保存到预输入”按钮',
   'settings.pre_input_button.sub': '在输入框上方显示，点击后存入右侧预输入',
   'task.send_failed': "未能确认发送，请查看当前会话。任务内容已保留。",
-  'task.note_placeholder': '写点什么，整段发给 AI…',
-  'task.welcome_note': `欢迎来到 Coffee CLI ☕
-
-这里是「预输入」：先把想让 AI 做的事写下来，等合适的时候再一键发出去。
-
-上手三步：
-1. 中间挑个工具（Claude / Codex / OpenCode…），选好文件夹就开跑
-2. 在输入框写好内容，点上方「保存到预输入」存成便签；也可以点右下角 ＋ 直接新建
-3. 便签平时只显示一行：点一下展开全文，悬停点 ▶ 发送给 AI，按住拖动调整顺序
-
-看完删掉这张，开始你的第一个任务吧。`,
-  'task.show_guide': '查看使用攻略',
 
   // Theme Menu
   'theme.section.color': '配色',
@@ -482,6 +466,7 @@ export const zhCN = {
   'gambit.send': '发送',
   'gambit.stop': '停止',
   'gambit.placeholder': '静心琢磨，再落子... ({send} 发送, {newline} 换行, 可粘贴图片, Alt+↑↓ 翻历史)',
+  'gambit.clear_draft': "清空",
   'gambit.save_pre_input': '保存到预输入',
   'gambit.send_failed_hint': '请先打开活动会话',
   'gambit.worktree': '工作树',
@@ -524,6 +509,8 @@ export const zhCN = {
   "settings.voice.source.missing": "已退出或不可用",
   "settings.voice.source.failed": "扫描本机账号失败，请重试。",
   "settings.voice.source.empty": "未找到受支持的本机登录账号。目前扫描 Claude Code、Codex、豆包和豆包工作。",
+  "settings.voice.source.expired": "登录已过期",
+  "settings.voice.source.expired_hint": "{name} 的登录已过期。打开一次 Claude Code 发条消息即可自动续期，然后重新扫描。",
   "settings.voice.source.busy": "{name} 正在运行。首次扫描导入前请退出客户端；导入后可保持客户端运行。",
   'settings.voice.enabled': '语音输入',
   'settings.voice.enabled.sub': '开启后在输入框显示麦克风按钮',

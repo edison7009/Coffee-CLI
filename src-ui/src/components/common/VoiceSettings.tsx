@@ -160,12 +160,12 @@ export function VoiceSettings() {
           </button>
           {sourceCards.map(item => <button type="button" key={item.id} className="settings-voice-source-card" aria-pressed={source === item.id} disabled={!enabled || scanning || !!item.issue} onClick={() => void chooseSource(item.id)}>
             <span className="settings-voice-source-heading"><span className="settings-voice-source-name">{item.id === 'macos' ? t('settings.voice.source.macos') : item.name}</span><span className="settings-voice-source-mode">{t((item.transcriptionMode ?? (BATCH_SOURCE_NAMES[item.id] ? 'batch' : 'streaming')) === 'batch' ? 'settings.voice.source.batch' : 'settings.voice.source.streaming')}</span></span>
-            <span className="settings-voice-source-account">{item.id === 'macos' && !item.issue ? t('settings.voice.source.system') : item.accountId ? t('settings.voice.source.account_id', { id:item.accountId }) : t(item.issue === 'saved' ? 'settings.voice.source.saved' : item.issue ? 'settings.voice.source.missing' : 'settings.voice.source.id_missing')}</span>
+            <span className="settings-voice-source-account">{item.id === 'macos' && !item.issue ? t('settings.voice.source.system') : item.accountId ? t('settings.voice.source.account_id', { id:item.accountId }) : t(item.issue === 'saved' ? 'settings.voice.source.saved' : item.issue === 'expired' ? 'settings.voice.source.expired' : item.issue ? 'settings.voice.source.missing' : 'settings.voice.source.id_missing')}</span>
           </button>)}
         </div>
         {scanError && <div className="settings-sound-failed" role="alert">{t('settings.voice.source.failed')}</div>}
         {sources && usableSources?.length === 0 && <div className="settings-choice-hint settings-voice-source-status" role="status">{t('settings.voice.source.empty')}</div>}
-        {sources?.filter(item => item.issue === 'busy').map(item => <div key={item.id} className="settings-choice-hint settings-voice-source-status" role="status">{t('settings.voice.source.busy', { name:item.name })}</div>)}
+        {sources?.filter(item => item.issue === 'busy' || item.issue === 'expired').map(item => <div key={item.id} className="settings-choice-hint settings-voice-source-status" role="status">{t(item.issue === 'expired' ? 'settings.voice.source.expired_hint' : 'settings.voice.source.busy', { name:item.name })}</div>)}
       </section>
     </>
   );

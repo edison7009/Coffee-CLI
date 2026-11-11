@@ -23,6 +23,7 @@ export const ko = {
   "orchestration.description": "사용할 도우미를 선택하세요. 새 Claude 세션에서 Claude가 필요에 따라 작업을 할당하고 결과를 검증·요약합니다.",
   "orchestration.role.title": "메인 창 역할",
   "orchestration.role.hint": "이후 새로 여는 메인 창에 적용됩니다.",
+  "orchestration.pick.prefix": "우선 협업: {name}",
   "orchestration.role.auto": "자동 판단",
   "orchestration.role.auto_desc": "직접 할 일과 맡길 일을 메인 창이 스스로 판단합니다.",
   "orchestration.role.manager": "프로젝트 매니저",
@@ -305,11 +306,8 @@ export const ko = {
   'task.greeting.afternoon': '안녕하세요, 남은 할 일이 있나요?',
   'task.greeting.evening': '좋은 저녁, 뭔가 시작해볼까요?',
   'task.tab.tasks': '사전 입력',
-  'pre_input.edit': '편집',
-  'pre_input.done': '완료',
-  'pre_input.copy': '복제',
   'pre_input.delete': '삭제',
-  'pre_input.send': '보내기',
+  'pre_input.insert': "입력창에 넣기",
   'task.tab.changes': '변경 기록',
   'changes.empty': '아직 변경 사항이 없습니다.',
   'launchpad.open_folder': '폴더 열기',
@@ -352,8 +350,6 @@ export const ko = {
   'diff.no_changes': '변경 없음',
   'diff.too_large': '파일이 너무 커서 인라인 차이를 표시하지 않음',
   'diff.unchanged_lines': '⋯ 변경되지 않은 {count}줄',
-  'task.search_sessions': '세션 검색...',
-  'task.filter_all_projects': '전체',
   'menu.no_recent': '최근 세션이 없습니다',
   'task.messages': '메시지 {count}개',
 
@@ -420,18 +416,6 @@ export const ko = {
   'settings.pre_input_button': '“사전 입력에 저장” 버튼',
   'settings.pre_input_button.sub': '입력창 위에 표시되며, 초안을 오른쪽 사전 입력에 저장합니다',
   'task.send_failed': "전송을 확인하지 못했습니다. 현재 대화를 확인해 주세요. 작업 내용은 유지됩니다.",
-  'task.note_placeholder': '메모를 적어 에이전트로 한 번에 보내기…',
-  'task.welcome_note': `Coffee CLI에 오신 것을 환영합니다 ☕
-
-여기는 "사전 입력"입니다. AI에게 맡길 일을 미리 적어 두었다가 알맞은 때에 한 번에 보낼 수 있습니다.
-
-시작하는 세 단계:
-1. 가운데에서 도구(Claude / Codex / OpenCode…)를 고르고 폴더를 선택하면 바로 시작됩니다
-2. 입력창에 쓰고 위의 "사전 입력에 저장"을 누르면 메모로 남습니다. 오른쪽 아래 ＋로 여기서 바로 만들 수도 있습니다
-3. 메모는 평소 한 줄로 보입니다. 클릭하면 전체가 열리고, 마우스를 올려 ▶를 누르면 AI에게 보내며, 끌어서 순서를 바꿀 수 있습니다
-
-다 읽었으면 이 메모를 지우고 첫 작업을 시작해 보세요.`,
-  'task.show_guide': '사용 가이드 보기',
 
   // Theme Menu
   'theme.section.color': '색상',
@@ -481,6 +465,7 @@ export const ko = {
   'gambit.send': '전송',
   'gambit.stop': '중지',
   'gambit.placeholder': '한 수를 고르는 중... ({send} 전송, {newline} 줄바꿈, 이미지 붙여넣기, Alt+↑↓ 기록)',
+  'gambit.clear_draft': "지우기",
   'gambit.save_pre_input': '사전 입력에 저장',
   'gambit.send_failed_hint': '활성 세션을 먼저 여세요',
   'gambit.worktree': '워크트리',
@@ -523,6 +508,8 @@ export const ko = {
   "settings.voice.source.missing": "로그아웃 또는 사용 불가",
   "settings.voice.source.failed": "로컬 계정을 검색하지 못했습니다. 다시 시도하세요.",
   "settings.voice.source.empty": "지원되는 로컬 로그인이 없습니다. 현재 Claude Code, Codex, Doubao, Doubao Work를 검색합니다.",
+  "settings.voice.source.expired": "로그인 만료",
+  "settings.voice.source.expired_hint": "{name} 로그인이 만료되었습니다. Claude Code를 한 번 열어 메시지를 보내면 갱신됩니다. 그런 다음 다시 검색하세요.",
   "settings.voice.source.busy": "{name}을 종료한 후 처음 검색하고 가져오세요. 가져온 후에는 실행 중에도 사용할 수 있습니다.",
   'settings.voice.enabled': '음성 입력',
   'settings.voice.enabled.sub': '켜면 입력창에 마이크 버튼이 표시됩니다',

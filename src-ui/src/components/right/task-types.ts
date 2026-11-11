@@ -15,18 +15,6 @@ export interface TaskItem {
   height?: number;
 }
 
-// Builds the welcome/guide note. Shared by the first-launch seed (TaskBoard)
-// and the empty-state "show guide" button, so both produce an identical
-// note. Caller passes the already-localized guide text.
-export function makeWelcomeNote(text: string): TaskItem {
-  return {
-    id: crypto.randomUUID(),
-    title: text,
-    status: 'todo',
-    createdAt: Date.now(),
-  };
-}
-
 // Vertical order: 进行中 (top) → 待办 → 已完成, with no section headers — the
 // per-card status dots carry the grouping signal instead.
 export const STATUS_ORDER: TaskStatus[] = ['working', 'todo', 'done'];

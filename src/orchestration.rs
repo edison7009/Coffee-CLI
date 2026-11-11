@@ -6,7 +6,9 @@ use tauri::{AppHandle, Emitter};
 
 #[derive(Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
-pub struct Snapshot { pub enabled: bool, #[serde(default = "default_agents")] pub agents: Vec<String>, #[serde(default = "default_mode")] pub mode: String, pub tasks: Vec<Task>, pub revision: u64, #[serde(default, skip_deserializing)] pub coordinators: Vec<String> }
+pub struct Snapshot { pub enabled: bool, #[serde(default = "default_agents")] pub agents: Vec<String>, #[serde(default = "default_mode")] pub mode: String, pub tasks: Vec<Task>, pub revision: u64, #[serde(default, skip_deserializing)] pub coordinators: Vec<String>,
+    /// Per-conversation choice of assistants, keyed by the coordinator's tab id. Absent = automatic (every enabled one).
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")] pub picks: HashMap<String, Vec<String>> }
 /// The coordinator's role: `auto` decides for itself, `manager` only plans, delegates and audits, `lead` does the core
 /// work itself and delegates only peripheral tasks.
 const MODES: [&str; 3] = ["auto", "manager", "lead"];
@@ -157,6 +159,16 @@ fn save(snapshot: &Snapshot) -> Result<(), String> {
     if result.is_err() { let _ = fs::remove_file(temp); }
     result
 }
+/// The assistants this coordinator may start: the enabled ones, narrowed to the conversation's pick when it still names one.
+fn allowed_agents(snapshot: &Snapshot, parent_id: &str) -> Vec<String> {
+    let picked: Vec<String> = snapshot.picks.get(parent_id).map(|pick| snapshot.agents.iter().filter(|agent| pick.contains(agent)).cloned().collect()).unwrap_or_default();
+    if picked.is_empty() { snapshot.agents.clone() } else { picked }
+}
+fn refuse_worker(snapshot: &Snapshot, parent_id: &str, tool: &str) -> Result<(), String> {
+    if !snapshot.agents.iter().any(|agent| agent == tool) { return Err("This worker is disabled in Agent configuration".into()); }
+    let allowed = allowed_agents(snapshot, parent_id);
+    if allowed.iter().any(|agent| agent == tool) { Ok(()) } else { Err(format!("The user limited this conversation to: {}. Start the worker with one of those.", allowed.join(", "))) }
+}
 fn current_snapshot(state: &State) -> Snapshot {
     let mut snapshot = state.snapshot.clone();
     snapshot.coordinators = state.parents.iter().filter(|(token, owner)| owner.connected && owner.agents.len() == state.snapshot.agents.len() && owner.agents.iter().all(|agent| state.snapshot.agents.contains(agent)) && parent(state, token).is_ok()).map(|(_, owner)| owner.id.clone()).collect();
@@ -294,6 +306,24 @@ fn orchestration_set_agent_blocking(tool: String, enabled: bool) -> Result<Snaps
     next.enabled = !next.agents.is_empty(); save(&next)?; state.snapshot = next;
     if !enabled { state.pending.retain(|_, pending| pending.worker.as_deref() != Some(&tool)); }
     if !state.snapshot.enabled { state.parents.clear(); state.pending.clear(); }
+    publish(&mut state); Ok(current_snapshot(&state))
+}
+/// Narrows which assistants one conversation may start; an empty list returns it to automatic.
+#[tauri::command]
+pub async fn orchestration_set_pick(session_id: String, tools: Vec<String>) -> Result<Snapshot, String> {
+    tauri::async_runtime::spawn_blocking(move || orchestration_set_pick_blocking(session_id, tools)).await.map_err(|e| e.to_string())?
+}
+fn orchestration_set_pick_blocking(session_id: String, mut tools: Vec<String>) -> Result<Snapshot, String> {
+    if session_id.is_empty() || session_id.len() > 128 { return Err("Invalid session".into()); }
+    let supported = supported_agents();
+    if tools.iter().any(|tool| !supported.contains(tool)) { return Err("Agent does not support orchestration yet".into()); }
+    tools.sort(); tools.dedup();
+    let mut state = hub().state.lock().map_err(|_| "Coordinator unavailable")?;
+    let mut next = state.snapshot.clone();
+    if tools.is_empty() { next.picks.remove(&session_id); } else { next.picks.insert(session_id, tools); }
+    // Closed tabs never clear their pick; past a bound, keep only the conversations that are still open.
+    if next.picks.len() > 64 { next.picks.retain(|id, _| state.live.contains_key(id)); }
+    save(&next)?; state.snapshot = next;
     publish(&mut state); Ok(current_snapshot(&state))
 }
 #[tauri::command]
@@ -793,7 +823,7 @@ fn request_gui(token: &str, name: &str, arguments: Value, child_id: Option<&str>
         let mut state = hub().state.lock().unwrap();
         let owner = parent(&state, token)?;
         let worker = if name == "team_worker_start" { Some(text(&arguments, "tool", 32)?) } else { None };
-        if worker.as_ref().is_some_and(|tool| !state.snapshot.agents.contains(tool)) { return Err("This worker is disabled in Agent configuration".into()); }
+        if let Some(tool) = &worker { refuse_worker(&state.snapshot, &owner.id, tool)?; }
         let parent_id = &owner.id;
         let app = state.app.clone().ok_or("Coffee window unavailable")?;
         state.pending.insert(id.clone(), Pending { parent: parent_id.into(), token: token.into(), worker, session_id: child_id.map(str::to_owned), deadline: Instant::now() + Duration::from_secs(80), sender });
@@ -888,7 +918,7 @@ fn admit_worker(token: &str, tool: &str, title: &str, prompt: &str, operation: O
         }
         if parent.paused { return Err("Coordinator was stopped; wait for new user input".into()); }
         let child_id = uuid::Uuid::new_v4().to_string();
-        if !state.snapshot.agents.contains(&tool) { return Err("This worker is disabled in Agent configuration".into()); }
+        refuse_worker(&state.snapshot, &parent.id, &tool)?;
         if state.snapshot.tasks.iter().filter(|task| !task.detached && task.parent_id == parent.id && active(task)).count() >= 6 { return Err("This coordinator already has six active workers".into()); }
         crate::session_directory::validate(Path::new(&parent.cwd))?;
         if isolated && created.is_none() { return Ok(Admission::Worktree(parent.cwd)); }
@@ -916,9 +946,9 @@ fn parent_call(token: &str, action: &str, args: &Value) -> Result<Value, String>
         let mut state = hub().state.lock().unwrap();
         if !state.snapshot.enabled { return Err("Multi-agent orchestration is disabled".into()); }
         let owner = state.parents.get_mut(token).ok_or("Coordinator session expired")?;
-        let changed = !owner.connected; owner.connected = true;
+        let changed = !owner.connected; owner.connected = true; let owner_id = owner.id.clone();
         if changed { publish(&mut state); }
-        return Ok(json!({"agents":state.snapshot.agents}));
+        return Ok(json!({"agents":allowed_agents(&state.snapshot, &owner_id)}));
     }
     if action == "worker_start" { return start_worker(token, args); }
     let mut state = hub().state.lock().unwrap(); let owner = parent(&state, token)?;
@@ -938,7 +968,7 @@ fn parent_call(token: &str, action: &str, args: &Value) -> Result<Value, String>
             task.result_delivery = Some("read".into()); read = true;
         }
         if read { save(&state.snapshot)?; publish(&mut state); }
-        return Ok(json!({"revision":state.snapshot.revision,"availableAgents":state.snapshot.agents,"tasks":state.snapshot.tasks.iter().filter(|task| !task.detached && !task.hidden && task.parent_id == owner.id).collect::<Vec<_>>()}));
+        return Ok(json!({"revision":state.snapshot.revision,"availableAgents":allowed_agents(&state.snapshot, &owner.id),"tasks":state.snapshot.tasks.iter().filter(|task| !task.detached && !task.hidden && task.parent_id == owner.id).collect::<Vec<_>>()}));
     }
     let task_id = text(args, "taskId", 80)?; let task = task_for(&state, &owner.id, &task_id)?;
     if action == "worker_reply" {
@@ -1596,7 +1626,7 @@ mod tests {
     }
     fn fixture() -> State {
         let task = Task { id: "task".into(), parent_id: "parent".into(), parent_native_id: Some("native-parent".into()), session_id: "child".into(), parent_tool: "claude".into(), native_id: None, tool: "codex".into(), title: "Review".into(), cwd: "D:\\Project".into(), phase: "running".into(), summary: None, question: None, generation: None, activity: None, dispatch: None, result_delivery: None, detached: false, hidden: false, worktree: None, restart_note: false };
-        State { snapshot: Snapshot { enabled: true, agents: default_agents(), mode: default_mode(), tasks: vec![task], revision: 0, coordinators: vec![] }, live: HashMap::new(), parents: HashMap::from([("token".into(), Parent { id: "parent".into(), native_id: Some("native-parent".into()), tool: "claude".into(), agents: default_agents(), connected: false, cwd: "D:\\Project".into(), generation: None, seen: false, turn: String::new(), running: false, queued: VecDeque::new(), sent_since_result: false, paused: false, automatic: None, restart_tasks: vec![] })]), workers: HashMap::new(), pending: HashMap::new(), runs: HashMap::new(), app: None, port: None, stopped: HashSet::new() }
+        State { snapshot: Snapshot { enabled: true, agents: default_agents(), mode: default_mode(), tasks: vec![task], revision: 0, coordinators: vec![], picks: HashMap::new() }, live: HashMap::new(), parents: HashMap::from([("token".into(), Parent { id: "parent".into(), native_id: Some("native-parent".into()), tool: "claude".into(), agents: default_agents(), connected: false, cwd: "D:\\Project".into(), generation: None, seen: false, turn: String::new(), running: false, queued: VecDeque::new(), sent_since_result: false, paused: false, automatic: None, restart_tasks: vec![] })]), workers: HashMap::new(), pending: HashMap::new(), runs: HashMap::new(), app: None, port: None, stopped: HashSet::new() }
     }
     #[test]
     fn worker_history_restore_keeps_native_id_result_and_settled_phase() {
@@ -1852,4 +1882,20 @@ mod tests {
         assert!(!log_args(&["--mcp-config".into(), config]).join(" ").contains("secret-token"));
         assert_eq!(log_args(&["--model".into(), "model-id".into()]), vec!["--model", "model-id"]);
     }
+    #[test]
+    fn conversation_pick_narrows_allowed_workers() {
+        let mut snapshot = fixture().snapshot;
+        assert_eq!(allowed_agents(&snapshot, "parent"), default_agents());
+        snapshot.picks.insert("parent".into(), vec!["codex".into()]);
+        assert_eq!(allowed_agents(&snapshot, "parent"), vec!["codex".to_string()]);
+        assert!(refuse_worker(&snapshot, "parent", "codex").is_ok());
+        assert!(refuse_worker(&snapshot, "parent", "claude").unwrap_err().contains("codex"));
+        // Another conversation keeps every enabled assistant.
+        assert!(refuse_worker(&snapshot, "other", "claude").is_ok());
+        // A pick naming only assistants turned off since falls back to automatic.
+        snapshot.agents.retain(|tool| tool != "codex");
+        assert_eq!(allowed_agents(&snapshot, "parent"), snapshot.agents);
+        assert!(refuse_worker(&snapshot, "parent", "codex").unwrap_err().contains("disabled"));
+    }
+
 }

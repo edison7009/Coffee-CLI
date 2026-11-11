@@ -270,73 +270,7 @@
 
 /* "View the usage guide" — subtle accent pill under the empty-state greeting.
    A <button>, so the glass/carbon nuclear-transparency rule leaves it alone. */
-.task-empty-guide {
-  margin-top: 16px;
-  padding: 7px 16px;
-  border: 1px solid color-mix(in srgb, var(--text-2) 55%, transparent);
-  border-radius: var(--radius-pill, 999px);
-  background: transparent;
-  color: var(--text-2);
-  font-family: var(--font, system-ui);
-  font-size: var(--type-body);
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, transform 0.15s;
-}
 
-.task-empty-guide:hover {
-  background: color-mix(in srgb, var(--text-2) 12%, transparent);
-  border-color: var(--text-1);
-  color: var(--text-1);
-}
-
-.task-empty-guide:active {
-  transform: scale(0.97);
-}
-/* ─── Floating Action Button ────────────────────────────────────────────────── */
-
-.task-fab-container {
-  position: absolute;
-  bottom: 24px;
-  right: 24px;
-  z-index: 100;
-}
-
-.task-fab-simple {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-pill);
-  background: var(--accent);
-  /* Icon colour = the deep terminal-area background (matches Gambit send).
-       Glass shape overrides to #fff + specular inset in global.css. */
-  color: var(--bg-terminal, #fff);
-  border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-  cursor: default !important;
-}
-
-.task-fab-simple:hover {
-  transform: scale(1.08) translateY(-2px);
-  background: var(--accent-hover);
-}
-
-.task-fab-simple:active {
-  transform: scale(0.95);
-}
-
-.task-fab-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.3s ease;
-}
-
-.task-fab-simple:hover .task-fab-icon {
-  transform: rotate(90deg);
-}
 
 /* ── History Card (Recent Sessions) ── */
 

@@ -23,6 +23,7 @@ export const fr = {
   "orchestration.description": "Choisissez les assistants disponibles. Dans une nouvelle session Claude, Claude décide quand déléguer, vérifie et résume les résultats.",
   "orchestration.role.title": "Rôle de la fenêtre principale",
   "orchestration.role.hint": "S'applique aux fenêtres principales ouvertes à partir de maintenant.",
+  "orchestration.pick.prefix": "Préférence : {name}",
   "orchestration.role.auto": "Décider automatiquement",
   "orchestration.role.auto_desc": "La fenêtre principale décide ce qu'elle fait elle-même et ce qu'elle délègue.",
   "orchestration.role.manager": "Chef de projet",
@@ -305,11 +306,8 @@ export const fr = {
   'task.greeting.afternoon': 'Bon après-midi, encore des choses à faire ?',
   'task.greeting.evening': 'Bonsoir. Un projet ambitieux ?',
   'task.tab.tasks': 'Pré-saisie',
-  'pre_input.edit': 'Modifier',
-  'pre_input.done': 'Terminé',
-  'pre_input.copy': 'Dupliquer',
   'pre_input.delete': 'Supprimer',
-  'pre_input.send': 'Envoyer',
+  'pre_input.insert': "Mettre dans la saisie",
   'task.tab.changes': 'Historique',
   'changes.empty': 'Aucune modification pour le moment.',
   'launchpad.open_folder': 'Ouvrir un dossier',
@@ -352,8 +350,6 @@ export const fr = {
   'diff.no_changes': 'Aucune modification',
   'diff.too_large': 'Fichier trop volumineux pour afficher le diff',
   'diff.unchanged_lines': '⋯ {count} lignes inchangées',
-  'task.search_sessions': 'Rechercher des sessions...',
-  'task.filter_all_projects': 'Tous',
   'menu.no_recent': 'Aucune session récente',
   'task.messages': '{count} messages',
 
@@ -420,18 +416,6 @@ export const fr = {
   'settings.pre_input_button': 'Bouton « Enregistrer dans la pré-saisie »',
   'settings.pre_input_button.sub': 'Apparaît au-dessus de la saisie et enregistre le brouillon dans la pré-saisie',
   'task.send_failed': "Envoi non confirmé. Vérifiez la session actuelle. Votre tâche a été conservée.",
-  'task.note_placeholder': 'Notez quelque chose et envoyez le tout à votre agent…',
-  'task.welcome_note': `Bienvenue dans Coffee CLI ☕
-
-Voici la pré-saisie : notez ce que vous voulez confier à l'IA, puis envoyez-le en un clic au bon moment.
-
-Trois étapes pour commencer :
-1. Choisissez un outil au centre (Claude / Codex / OpenCode…), puis un dossier, et c'est parti
-2. Écrivez dans la zone de saisie et cliquez sur « Enregistrer dans la pré-saisie » au-dessus pour en faire une note, ou cliquez sur + en bas à droite pour en créer une ici
-3. Les notes tiennent sur une ligne : cliquez pour voir tout le texte, survolez et cliquez sur ▶ pour l'envoyer à l'IA, et faites-les glisser pour les réordonner
-
-Supprimez cette note après lecture et lancez votre première tâche.`,
-  'task.show_guide': "Voir le guide d'utilisation",
 
   // Theme Menu
   'theme.section.color': 'Couleurs',
@@ -479,6 +463,7 @@ Supprimez cette note après lecture et lancez votre première tâche.`,
   'gambit.send': 'Envoyer',
   'gambit.stop': 'Arrêter',
   'gambit.placeholder': 'Préparez votre coup... ({send} pour envoyer, {newline} pour une nouvelle ligne, collez des images, Alt+↑↓ pour l’historique)',
+  'gambit.clear_draft': "Effacer",
   'gambit.save_pre_input': 'Enregistrer dans la pré-saisie',
   'gambit.send_failed_hint': "Ouvrez d'abord une session active",
   'gambit.worktree': 'Worktree',
@@ -521,6 +506,8 @@ Supprimez cette note après lecture et lancez votre première tâche.`,
   "settings.voice.source.missing": "Déconnecté ou indisponible",
   "settings.voice.source.failed": "Impossible de rechercher les comptes locaux. Réessayez.",
   "settings.voice.source.empty": "Aucune connexion locale compatible. Recherche actuelle : Claude Code, Codex, Doubao et Doubao Work.",
+  "settings.voice.source.expired": "Connexion expirée",
+  "settings.voice.source.expired_hint": "La connexion à {name} a expiré. Ouvrez Claude Code une fois et envoyez un message pour la renouveler, puis relancez la recherche.",
   "settings.voice.source.busy": "{name} est ouvert. Fermez-le pour le premier import ; il pourra ensuite rester ouvert.",
   'settings.voice.enabled': 'Saisie vocale',
   'settings.voice.enabled.sub': 'Activé, un bouton micro apparaît dans la zone de saisie',

@@ -21,6 +21,7 @@ export const en = {
   "orchestration.description": "Choose available assistants. In a new Claude session, Claude decides when to delegate, checks results and summarizes the work.",
   "orchestration.role.title": "Main window role",
   "orchestration.role.hint": "Applies to main windows opened from now on.",
+  "orchestration.pick.prefix": "Prefer: {name}",
   "orchestration.role.auto": "Decide automatically",
   "orchestration.role.auto_desc": "The main window decides what to do itself and what to delegate.",
   "orchestration.role.manager": "Project manager",
@@ -305,11 +306,8 @@ export const en = {
   'task.greeting.afternoon': 'Afternoon, anything left to do?',
   'task.greeting.evening': 'Evening. Feeling ambitious?',
   'task.tab.tasks': 'Pre-input',
-  'pre_input.edit': 'Edit',
-  'pre_input.done': 'Done',
-  'pre_input.copy': 'Duplicate',
   'pre_input.delete': 'Delete',
-  'pre_input.send': 'Send',
+  'pre_input.insert': "Put in composer",
   'task.tab.changes': 'Changes',
   'changes.empty': 'No changes yet.',
   'launchpad.open_folder': 'Open Folder',
@@ -352,8 +350,6 @@ export const en = {
   'diff.no_changes': 'No changes',
   'diff.too_large': 'File too large to show inline diff',
   'diff.unchanged_lines': '⋯ {count} unchanged lines',
-  'task.search_sessions': 'Search sessions...',
-  'task.filter_all_projects': 'All',
   'menu.no_recent': 'No recent sessions found',
   'task.messages': '{count} messages',
 
@@ -422,19 +418,7 @@ export const en = {
   'settings.pre_input_button': 'Save to pre-input button',
   'settings.pre_input_button.sub': 'Shows above the composer; saves the draft to the pre-input tab',
   'task.send_failed': "Could not confirm sending. Check the current session. Your task has been kept.",
-  'task.note_placeholder': 'Jot something down, send it all to your agent…',
   // Seeded once for brand-new users as a roomy welcome note (sticky-note view).
-  'task.welcome_note': `Welcome to Coffee CLI ☕
-
-This is Pre-input: write down what you want the AI to do, then send it in one click when the time is right.
-
-Three steps to start:
-1. Pick a tool in the middle (Claude / Codex / OpenCode…), choose a folder and go
-2. Write in the composer and click "Save to pre-input" above it to keep it as a note, or click + at the bottom right to start one here
-3. Notes show one line: click to open the full text, hover and click ▶ to send it to the AI, and drag to reorder
-
-Delete this note when you're done reading, and start your first task.`,
-  'task.show_guide': 'View the usage guide',
 
   // Theme Menu
   'theme.section.color': 'Colors',
@@ -484,6 +468,7 @@ Delete this note when you're done reading, and start your first task.`,
   'gambit.send': 'Send',
   'gambit.stop': 'Stop',
   'gambit.placeholder': 'Compose your move... ({send} to send, {newline} for newline, paste images, Alt+↑↓ for history)',
+  'gambit.clear_draft': "Clear",
   'gambit.save_pre_input': 'Save to pre-input',
   'gambit.send_failed_hint': 'Open an active session first',
   'gambit.worktree': 'Worktree',
@@ -526,6 +511,8 @@ Delete this note when you're done reading, and start your first task.`,
   "settings.voice.source.missing": "Signed out or unavailable",
   "settings.voice.source.failed": "Could not scan local accounts. Try again.",
   "settings.voice.source.empty": "No supported local sign-ins found. Currently scans Claude Code, Codex, Doubao and Doubao Work.",
+  "settings.voice.source.expired": "Sign-in expired",
+  "settings.voice.source.expired_hint": "{name} sign-in has expired. Open Claude Code once and send a message to renew it, then scan again.",
   "settings.voice.source.busy": "{name} is running. Exit it once to scan and import the account; it can stay open after import.",
   'settings.voice.enabled': 'Voice input',
   'settings.voice.enabled.sub': 'Shows a mic button in the composer when on',

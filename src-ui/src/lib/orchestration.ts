@@ -13,7 +13,7 @@ export interface OrchestrationTask {
   worktree?: { root: string; path: string; branch: string } | null;
 }
 export type OrchestrationMode = 'auto' | 'manager' | 'lead';
-export interface OrchestrationSnapshot { enabled: boolean; agents: string[]; mode?: OrchestrationMode; coordinators: string[]; tasks: OrchestrationTask[]; revision: number }
+export interface OrchestrationSnapshot { enabled: boolean; agents: string[]; mode?: OrchestrationMode; coordinators: string[]; tasks: OrchestrationTask[]; revision: number; picks?: Record<string, string[]> }
 /** `parentId` is the target tab: the coordinator for results, the worker itself for a retry. */
 export interface ResultDelivery { id: string; parentId: string; generation: string; text: string; kind?: 'retry' }
 let snapshot: OrchestrationSnapshot = { enabled: false, agents: [], coordinators: [], tasks: [], revision: 0 };

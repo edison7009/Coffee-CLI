@@ -23,6 +23,7 @@ export const zhTW = {
   "orchestration.description": "勾選可用助手。建立新的 Claude 對話後，Claude 會按任務需要自主指派，並檢查、彙整結果。",
   "orchestration.role.title": "主視窗角色",
   "orchestration.role.hint": "對之後新開的主視窗生效。",
+  "orchestration.pick.prefix": "優先協作：{name}",
   "orchestration.role.auto": "自主決策",
   "orchestration.role.auto_desc": "主視窗自己判斷哪些自己做、哪些分派。",
   "orchestration.role.manager": "專案經理",
@@ -305,11 +306,8 @@ export const zhTW = {
   'task.greeting.afternoon': '午安，還有什麼要做的？',
   'task.greeting.evening': '晚安，想來點大事嗎？',
   'task.tab.tasks': '預輸入',
-  'pre_input.edit': '編輯',
-  'pre_input.done': '完成',
-  'pre_input.copy': '複製',
   'pre_input.delete': '刪除',
-  'pre_input.send': '傳送',
+  'pre_input.insert': "放入輸入框",
   'task.tab.changes': '修改記錄',
   'changes.empty': '暫無修改。',
   'launchpad.open_folder': '開啟資料夾',
@@ -352,8 +350,6 @@ export const zhTW = {
   'diff.no_changes': '沒有改動',
   'diff.too_large': '檔案較大,未渲染逐行差異',
   'diff.unchanged_lines': '⋯ {count} 行未變更',
-  'task.search_sessions': '搜尋歷史對話...',
-  'task.filter_all_projects': '全部',
   'menu.no_recent': '沒有任何近期對話',
   'task.messages': '{count} 則訊息',
 
@@ -421,18 +417,6 @@ export const zhTW = {
   'settings.pre_input_button': '輸入框的「儲存到預輸入」按鈕',
   'settings.pre_input_button.sub': '在輸入框上方顯示，點擊後存入右側預輸入',
   'task.send_failed': "未能確認傳送，請查看目前會話。任務內容已保留。",
-  'task.note_placeholder': '寫點什麼，整段發給 AI…',
-  'task.welcome_note': `歡迎來到 Coffee CLI ☕
-
-這裡是「預輸入」：先把想讓 AI 做的事寫下來，等合適的時候再一鍵送出。
-
-上手三步：
-1. 中間挑個工具（Claude / Codex / OpenCode…），選好資料夾就開跑
-2. 在輸入框寫好內容，點上方「儲存到預輸入」存成便籤；也可以點右下角 ＋ 直接新增
-3. 便籤平時只顯示一行：點一下展開全文，懸停點 ▶ 傳送給 AI，按住拖動調整順序
-
-看完刪掉這張，開始你的第一個任務吧。`,
-  'task.show_guide': '查看使用攻略',
 
   // Theme Menu
   'theme.section.color': '配色',
@@ -482,6 +466,7 @@ export const zhTW = {
   'gambit.send': '傳送',
   'gambit.stop': '停止',
   'gambit.placeholder': '靜心琢磨，再落子... ({send} 發送, {newline} 換行, 可貼上圖片, Alt+↑↓ 翻歷史)',
+  'gambit.clear_draft': "清空",
   'gambit.save_pre_input': '儲存到預輸入',
   'gambit.send_failed_hint': '請先開啟活動工作階段',
   'gambit.worktree': '工作樹',
@@ -524,6 +509,8 @@ export const zhTW = {
   "settings.voice.source.missing": "已登出或無法使用",
   "settings.voice.source.failed": "掃描本機帳號失敗，請重試。",
   "settings.voice.source.empty": "未找到支援的本機登入帳號。目前掃描 Claude Code、Codex、豆包和豆包工作。",
+  "settings.voice.source.expired": "登入已過期",
+  "settings.voice.source.expired_hint": "{name} 的登入已過期。開啟一次 Claude Code 傳送一則訊息即可自動續期，然後重新掃描。",
   "settings.voice.source.busy": "{name} 正在執行。首次掃描匯入前請退出用戶端；匯入後可保持用戶端執行。",
   'settings.voice.enabled': '語音輸入',
   'settings.voice.enabled.sub': '開啟後在輸入框顯示麥克風按鈕',

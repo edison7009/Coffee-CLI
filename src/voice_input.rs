@@ -78,7 +78,12 @@ pub async fn voice_input_sources() -> Result<Vec<VoiceSource>, String> {
     let mut sources: Vec<VoiceSource> = tauri::async_runtime::spawn_blocking(|| {
         [("claude", "Claude Code"), ("codex", "Codex / ChatGPT")].into_iter()
             .filter_map(|(id, name)| {
-                let account = source_account(id)?;
+                let Some(account) = source_account(id) else {
+                    // An expired Claude sign-in stays listed, so the user learns to open Claude Code once to renew it.
+                    let var = |key: &str| std::env::var(key).ok();
+                    return (id == "claude" && account::claude_expired(&dirs::home_dir()?, &var))
+                        .then(|| VoiceSource { id:id.into(), name:name.into(), account_id:None, issue:Some("expired"), transcription_mode:None });
+                };
                 let account_id = account.account_id.or_else(|| {
                     if id != "claude" { return None; }
                     let config = std::env::var("CLAUDE_CONFIG_DIR").ok().filter(|path| !path.trim().is_empty())

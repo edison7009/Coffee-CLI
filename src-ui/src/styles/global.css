@@ -2870,8 +2870,7 @@ html.is-windows[data-frost="frost"] #root {
    rgb(from var(--accent) r g b / a) is relative-color syntax; engines that
    don't support it drop the background declaration and fall back to the
    base solid --accent (the safe non-glass look), never to broken. */
-[data-shape="glass"] .gambit-send,
-[data-shape="glass"] .task-fab-simple {
+[data-shape="glass"] .gambit-send {
     color: #fff;
     background: rgb(from var(--accent, #c4956a) r g b / 0.45);
     backdrop-filter: blur(12px) saturate(160%);
@@ -2881,13 +2880,6 @@ html.is-windows[data-frost="frost"] #root {
         inset 0 1px 0 0 rgba(255, 255, 255, 0.35),
         inset 0 -1px 0 0 rgba(0, 0, 0, 0.10);
 }
-/* FAB hover: base .task-fab-simple:hover swaps in an opaque --accent-hover
-   fill at equal specificity, which would clobber the frost. Re-tint it so
-   hover stays glass (a touch more saturated), not a flat solid. */
-[data-shape="glass"] .task-fab-simple:hover {
-    background: rgb(from var(--accent-hover, var(--accent, #c4956a)) r g b / 0.62);
-}
-
 /* Chrome flare ::before/::after paint quarter-arc bridges in
    opaque var(--bg-terminal) from the active tab into the terminal
    bg below. In glass that bg is translucent --glass-tint, so the

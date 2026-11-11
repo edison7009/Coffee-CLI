@@ -23,6 +23,7 @@ export const vi = {
   "orchestration.description": "Chọn trợ lý khả dụng. Trong phiên Claude mới, Claude tự quyết định giao việc, kiểm tra và tổng hợp kết quả.",
   "orchestration.role.title": "Vai trò của cửa sổ chính",
   "orchestration.role.hint": "Áp dụng cho các cửa sổ chính mở từ bây giờ.",
+  "orchestration.pick.prefix": "Ưu tiên: {name}",
   "orchestration.role.auto": "Tự quyết định",
   "orchestration.role.auto_desc": "Cửa sổ chính tự quyết việc nào tự làm, việc nào giao đi.",
   "orchestration.role.manager": "Quản lý dự án",
@@ -307,11 +308,8 @@ export const vi = {
   'task.greeting.afternoon': 'Chào buổi chiều, còn việc gì cần làm không?',
   'task.greeting.evening': 'Chào buổi tối. Có kế hoạch gì lớn không?',
   'task.tab.tasks': 'Nhập trước',
-  'pre_input.edit': 'Sửa',
-  'pre_input.done': 'Xong',
-  'pre_input.copy': 'Nhân bản',
   'pre_input.delete': 'Xóa',
-  'pre_input.send': 'Gửi',
+  'pre_input.insert': "Đưa vào ô nhập",
   'task.tab.changes': 'Lịch sử',
   'changes.empty': 'Chưa có thay đổi.',
   'launchpad.open_folder': 'Mở thư mục',
@@ -354,8 +352,6 @@ export const vi = {
   'diff.no_changes': 'Không có thay đổi',
   'diff.too_large': 'Tệp quá lớn để hiển thị khác biệt từng dòng',
   'diff.unchanged_lines': '⋯ {count} dòng không đổi',
-  'task.search_sessions': 'Tìm phiên làm việc...',
-  'task.filter_all_projects': 'Tất cả',
   'menu.no_recent': 'Không tìm thấy phiên gần đây',
   'task.messages': '{count} tin nhắn',
 
@@ -422,18 +418,6 @@ export const vi = {
   'settings.pre_input_button': 'Nút “Lưu vào nhập trước”',
   'settings.pre_input_button.sub': 'Hiện phía trên ô nhập, lưu bản nháp vào mục nhập trước',
   'task.send_failed': "Không thể xác nhận việc gửi. Hãy kiểm tra phiên hiện tại. Nội dung tác vụ vẫn được giữ lại.",
-  'task.note_placeholder': 'Ghi vài dòng rồi gửi cả đoạn cho agent…',
-  'task.welcome_note': `Chào mừng đến với Coffee CLI ☕
-
-Đây là "Nhập trước": ghi lại việc bạn muốn AI làm, rồi gửi đi chỉ với một cú nhấp khi đến lúc.
-
-Ba bước để bắt đầu:
-1. Chọn một công cụ ở giữa (Claude / Codex / OpenCode…), chọn thư mục là chạy được ngay
-2. Viết vào ô nhập rồi nhấp "Lưu vào nhập trước" phía trên để giữ thành ghi chú, hoặc nhấp + ở góc dưới bên phải để tạo ngay tại đây
-3. Ghi chú hiển thị một dòng: nhấp để mở toàn bộ, di chuột rồi nhấp ▶ để gửi cho AI, kéo để đổi thứ tự
-
-Đọc xong hãy xóa ghi chú này và bắt đầu nhiệm vụ đầu tiên.`,
-  'task.show_guide': 'Xem hướng dẫn sử dụng',
 
   // Theme Menu
   'theme.section.color': 'Màu sắc',
@@ -483,6 +467,7 @@ Ba bước để bắt đầu:
   'gambit.send': 'Gửi',
   'gambit.stop': 'Dừng',
   'gambit.placeholder': 'Cân nhắc nước cờ... ({send} để gửi, {newline} xuống dòng, dán ảnh được, Alt+↑↓ xem lịch sử)',
+  'gambit.clear_draft': "Xóa",
   'gambit.save_pre_input': 'Lưu vào nhập trước',
   'gambit.send_failed_hint': 'Hãy mở một phiên hoạt động trước',
   'gambit.worktree': 'Worktree',
@@ -525,6 +510,8 @@ Ba bước để bắt đầu:
   "settings.voice.source.missing": "Đã đăng xuất hoặc không khả dụng",
   "settings.voice.source.failed": "Không thể quét tài khoản cục bộ. Hãy thử lại.",
   "settings.voice.source.empty": "Không tìm thấy tài khoản được hỗ trợ. Hiện quét Claude Code, Codex, Doubao và Doubao Work.",
+  "settings.voice.source.expired": "Phiên đăng nhập đã hết hạn",
+  "settings.voice.source.expired_hint": "Phiên đăng nhập {name} đã hết hạn. Mở Claude Code một lần và gửi một tin nhắn để gia hạn, rồi quét lại.",
   "settings.voice.source.busy": "{name} đang chạy. Hãy thoát để quét và nhập lần đầu; sau đó có thể giữ ứng dụng mở.",
   'settings.voice.enabled': 'Nhập giọng nói',
   'settings.voice.enabled.sub': 'Khi bật, ô nhập sẽ hiện nút micrô',

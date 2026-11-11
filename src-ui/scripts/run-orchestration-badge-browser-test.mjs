@@ -31,7 +31,7 @@ try {
   const enabled=await position();
   assert.ok(enabled.badge.left>=(enabled.permission??enabled.workspace).right,'badge follows existing permission controls');
   if(kind!=='terminal')assert.ok(enabled.badge.right<=enabled.model.left,'models remain to the right of badge');
-  assert.equal((await badge.textContent()).trim(),'多智能体编排电脑控制浏览器控制');assert.equal(await badge.locator('button').count(),0);assert.equal(await page.getByRole('combobox',{name:'指派给'}).count(),0);
+  assert.equal((await badge.textContent()).trim(),'优先协作：自主决策电脑控制浏览器控制');assert.equal(await badge.locator('button').count(),1,'only orchestration is a picker');assert.equal(await page.getByRole('combobox',{name:'指派给'}).count(),0);
   await page.evaluate(()=>window.setStatus(undefined));await badge.waitFor({state:'detached'});const original=await position();
   assert.equal(original.workspace.left,enabled.workspace.left,'workspace position is preserved');
   if(kind!=='terminal'){assert.equal(original.permission.left,enabled.permission.left,'permission position is preserved');assert.equal(original.model.left,enabled.model.left,'model position is preserved')}
@@ -44,10 +44,10 @@ try {
  const enabledColors=await colors();assert.equal(new Set(enabledColors).size,3,'capabilities have three distinct semantic colors');
  await page.evaluate(()=>window.setStatus(false));await badge.waitFor({state:'detached'});assert.equal(await page.getByText('新会话生效',{exact:true}).count(),0);
  await page.evaluate(()=>window.setStatus(true));await draft.fill('让 Claude 自己决定如何协作');await draft.press('Enter');
- await page.waitForFunction(()=>window.sent.length===1);assert.deepEqual(await page.evaluate(()=>window.sent),[{text:'让 Claude 自己决定如何协作'}]);assert.equal(await draft.inputValue(),'');assert.equal((await badge.textContent()).trim(),'多智能体编排电脑控制浏览器控制','badge stays enabled after sending');
+ await page.waitForFunction(()=>window.sent.length===1);assert.deepEqual(await page.evaluate(()=>window.sent),[{text:'让 Claude 自己决定如何协作'}]);assert.equal(await draft.inputValue(),'');assert.equal((await badge.textContent()).trim(),'优先协作：自主决策电脑控制浏览器控制','badge stays enabled after sending');
  await page.evaluate(()=>window.fail=true);await draft.fill('失败时保留草稿');await draft.press('Enter');
  await page.waitForFunction(()=>window.sent.length===2);assert.equal(await draft.inputValue(),'失败时保留草稿');
  await page.evaluate(()=>document.documentElement.dataset.mode='light');await page.screenshot({path:join(directory,'orchestration-light.png')});
  assert.notDeepEqual(await colors(),enabledColors,'capability colors follow light/dark theme');
- assert.deepEqual(errors,[]);console.log('OK: static themed orchestration badge, permission/model placement, original routing, activation state, Enter and failure draft retention');console.log('Screenshots: '+directory);
+ assert.deepEqual(errors,[]);console.log('OK: themed orchestration badge with its per-conversation picker, permission/model placement, original routing, activation state, Enter and failure draft retention');console.log('Screenshots: '+directory);
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve))}

@@ -33,6 +33,21 @@ fn claude_keychain() -> Option<String> {
     output.status.success().then(|| String::from_utf8(output.stdout).ok()).flatten()
 }
 
+/// Claude Code's stored sign-in has expired: the tool renews it only while it runs, so opening it once brings it back.
+pub fn claude_expired(home: &Path, var: &dyn Fn(&str) -> Option<String>) -> bool {
+    let now = chrono::Utc::now().timestamp_millis();
+    #[cfg(target_os = "macos")]
+    if let Some(text) = claude_keychain() { return claude_expired_at(&text, now); }
+    let dir = var("CLAUDE_CONFIG_DIR").filter(|value| !value.trim().is_empty()).map(std::path::PathBuf::from).unwrap_or_else(|| home.join(".claude"));
+    std::fs::read_to_string(dir.join(".credentials.json")).is_ok_and(|text| claude_expired_at(&text, now))
+}
+
+fn claude_expired_at(text: &str, now_ms: i64) -> bool {
+    let Ok(parsed) = serde_json::from_str::<Value>(text) else { return false };
+    let Some(entry) = parsed.get("claudeAiOauth").or_else(|| parsed.get("claude.ai_oauth")) else { return false };
+    entry["accessToken"].as_str().is_some_and(|token| !token.is_empty()) && entry["expiresAt"].as_i64().is_some_and(|expires| expires <= now_ms)
+}
+
 fn claude_account(text: &str, now_ms: i64) -> Option<Account> {
     let parsed: Value = serde_json::from_str(text).ok()?;
     let entry = parsed.get("claudeAiOauth").or_else(|| parsed.get("claude.ai_oauth"))?;
@@ -111,6 +126,14 @@ mod tests {
         assert!(claude_account(&text, 2000).is_none(), "an expired token is left for the CLI to renew");
         assert!(claude_account(r#"{"mcpOAuth":{}}"#, 0).is_none());
         assert!(claude_account(r#"{"claude.ai_oauth":{"accessToken":""}}"#, 0).is_none());
+    }
+    #[test]
+    fn an_expired_claude_sign_in_is_told_apart_from_none() {
+        let text = json!({"claudeAiOauth":{"accessToken":"token","expiresAt":2000}}).to_string();
+        assert!(!claude_expired_at(&text, 1000), "still valid");
+        assert!(claude_expired_at(&text, 2000), "expired, waiting for Claude Code to renew it");
+        assert!(!claude_expired_at(r#"{"mcpOAuth":{}}"#, 5000), "no Claude sign-in at all");
+        assert!(!claude_expired_at(r#"{"claudeAiOauth":{"accessToken":"","expiresAt":1}}"#, 5000), "an empty token is not a sign-in");
     }
     #[test]
     fn codex_reads_chatgpt_sign_ins_only() {

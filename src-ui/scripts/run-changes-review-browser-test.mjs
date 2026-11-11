@@ -18,7 +18,7 @@ import {useSyncExternalStore} from 'react';
 const listeners=new Set();
 let state={currentLang:'zh-CN',iconTheme:'material',preInputQueue:[],preInputReveal:0,preInputButton:true,activeTerminalId:'a',terminals:[{id:'a',tool:null,folderPath:'D:/test'}],diffMode:'overlay',diffSelection:null};
 function emit(){state={...state};listeners.forEach(fn=>fn())}
-function dispatch(action){if(action.type==='SET_DIFF_SELECTION')state={...state,diffSelection:action.selection};if(action.type==='CLEAR_DIFF')state={...state,diffSelection:null};if(action.type==='SET_DIFF_MODE')state={...state,diffMode:action.mode};if(action.type==='SAVE_PRE_INPUT')state={...state,preInputQueue:[...state.preInputQueue,action.text],preInputReveal:state.preInputReveal+1,rightPanelHidden:false};if(action.type==='TAKE_PRE_INPUT')state={...state,preInputQueue:state.preInputQueue.slice(action.count)};emit()}
+function dispatch(action){if(action.type==='APPEND_GAMBIT_DRAFT')window.appended=action.text;if(action.type==='SET_DIFF_SELECTION')state={...state,diffSelection:action.selection};if(action.type==='CLEAR_DIFF')state={...state,diffSelection:null};if(action.type==='SET_DIFF_MODE')state={...state,diffMode:action.mode};if(action.type==='SAVE_PRE_INPUT')state={...state,preInputQueue:[...state.preInputQueue,action.text],preInputReveal:state.preInputReveal+1,rightPanelHidden:false};if(action.type==='TAKE_PRE_INPUT')state={...state,preInputQueue:state.preInputQueue.slice(action.count)};emit()}
 window.savePreInput=text=>dispatch({type:'SAVE_PRE_INPUT',text});window.hideRight=()=>{state={...state,rightPanelHidden:true};emit()};window.showRight=()=>{state={...state,rightPanelHidden:false};emit()};window.preInputQueue=()=>state.preInputQueue;
 export function useAppState(){return {state:useSyncExternalStore(fn=>{listeners.add(fn);return()=>listeners.delete(fn)},()=>state),dispatch}}
 export function useAppLanguage(){return 'zh-CN'}
@@ -153,14 +153,13 @@ try{
  await rows.nth(8).click();await listTab.click();assert.equal(await page.locator('.changes-scroll').evaluate(el=>el.scrollTop),scrollBefore,'list scroll position survives detail visits');
  const taskTab=page.getByRole('tab',{name:'预输入'});await taskTab.click();await page.locator('.task-note-preview').waitFor();assert.equal(await page.locator('.task-board').count(),1);
  // Old to-do notes (and prompt bodies) fold into the note text once and are saved that way.
- assert.equal(await page.locator('.task-note-body').inputValue(),'保留原有任务\n\n旧的待办备注');await page.waitForFunction(()=>window.savedTasks?.[0]&&!('description' in window.savedTasks[0]));assert.equal(await page.evaluate(()=>window.calls.taskLoads),1);
+ assert.equal(await page.locator('.task-note-preview').textContent(),'保留原有任务\n\n旧的待办备注');await page.waitForFunction(()=>window.savedTasks?.[0]&&!('description' in window.savedTasks[0]));assert.equal(await page.evaluate(()=>window.calls.taskLoads),1);
  const todoPreviewReads=await page.evaluate(()=>window.calls.fileReads);await page.evaluate(()=>window.dispatchEvent(new CustomEvent('fs-refresh',{detail:{dirPath:'D:/test'}})));await page.waitForTimeout(950);assert.equal(await page.evaluate(()=>window.calls.fileReads),todoPreviewReads,'Todo also suspends hidden preview reads');
- await page.locator('.task-note-preview').click();await page.locator('.task-note-edit').click();await page.locator('.task-note-body').fill('移到右侧后保留任务');await taskTab.click();
- await listTab.click();await taskTab.click();assert.equal(await page.locator('.task-note-body').inputValue(),'移到右侧后保留任务');
- await page.evaluate(()=>window.setFolder('D:/another-workspace'));assert.equal(await taskTab.getAttribute('aria-selected'),'true');assert.equal(await page.evaluate(()=>window.calls.taskLoads),1,'workspace changes must not remount task storage/editors');assert.equal(await page.locator('.task-note-body').inputValue(),'移到右侧后保留任务');
+ await listTab.click();await taskTab.click();assert.equal(await page.locator('.task-note-preview').textContent(),'保留原有任务\n\n旧的待办备注');
+ await page.evaluate(()=>window.setFolder('D:/another-workspace'));assert.equal(await taskTab.getAttribute('aria-selected'),'true');assert.equal(await page.evaluate(()=>window.calls.taskLoads),1,'workspace changes must not remount task storage');assert.equal(await page.locator('.task-note-preview').textContent(),'保留原有任务\n\n旧的待办备注');
  await page.evaluate(()=>window.setTool('terminal'));
- await page.locator('.task-note-card').first().hover();await page.locator('.task-note-send').click();assert.equal(await page.evaluate(()=>window.pastedTask),'移到右侧后保留任务');await page.waitForFunction(()=>window.savedTasks?.[0]?.status==='working');
- assert.equal(await page.evaluate(()=>window.savedTasks[0].title),'移到右侧后保留任务');assert.equal(await page.evaluate(()=>window.calls.taskLoads),1,'the board loads its notes once');
+ await page.locator('.task-note-preview').first().click();assert.equal(await page.evaluate(()=>window.appended),'保留原有任务\n\n旧的待办备注','a click puts the note in the composer');assert.equal(await page.evaluate(()=>window.pastedTask),undefined,'and sends nothing');
+ assert.equal(await page.evaluate(()=>window.savedTasks[0].title),'保留原有任务\n\n旧的待办备注');assert.equal(await page.evaluate(()=>window.calls.taskLoads),1,'the board loads its notes once');
  const reads=await page.evaluate(()=>window.calls.gitReads);await page.evaluate(()=>window.dispatchEvent(new CustomEvent('fs-refresh',{detail:{dirPath:'D:/another-workspace'}})));await page.waitForTimeout(950);assert.equal(await page.evaluate(()=>window.calls.gitReads),reads,'hidden review does not poll Git while using Todo');
  await page.locator('#root').screenshot({path:join(directory,'right-task-panel.png')});
  await page.evaluate(()=>{localStorage.removeItem('cc-right-tab');localStorage.setItem('cc-left-tab','tasks')});await page.reload();await taskTab.waitFor();assert.equal(await taskTab.getAttribute('aria-selected'),'true','previous left task preference opens the new right task tab');
@@ -171,8 +170,8 @@ try{
  await page.evaluate(()=>window.savePreInput('等 Agent 忙完再发'));await taskTab.waitFor();
  assert.equal(await taskTab.getAttribute('aria-selected'),'true','saving opens the pre-input tab');
  await page.waitForFunction(()=>window.savedTasks?.[0]?.title==='等 Agent 忙完再发');assert.deepEqual(await page.evaluate(()=>window.preInputQueue()),[],'the board takes the queued draft once');
- assert.equal(await page.locator('#root .task-note-body').first().inputValue(),'等 Agent 忙完再发');
- assert.equal(await page.evaluate(()=>document.activeElement?.classList.contains('task-note-body')??false),false,'a saved draft does not take focus');
+ assert.equal(await page.locator('#root .task-note-preview').first().textContent(),'等 Agent 忙完再发');
+ assert.equal(await page.evaluate(()=>!!document.activeElement?.closest('.task-note-list')),false,'a saved draft does not take focus');
  await listTab.click();await page.evaluate(()=>window.hideRight());await taskTab.waitFor({state:'detached'});await page.evaluate(()=>window.showRight());await listTab.waitFor();await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
  assert.equal(await listTab.getAttribute('aria-selected'),'true','reopening the panel keeps the tab the user chose after a save');
  await page.evaluate(()=>window.savePreInput('第二条'));await page.waitForFunction(()=>window.savedTasks?.[0]?.title==='第二条');assert.equal(await taskTab.getAttribute('aria-selected'),'true','a later save switches again while the panel is open');

@@ -1,4 +1,4 @@
-/* TaskNoteView.css — sticky-note presentation of the task board. */
+/* TaskNoteView.css — the pre-input board's notes: read-only, up to three lines, a click sends one. */
 
 .task-note-list {
   flex: 1;
@@ -7,8 +7,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  /* Bottom padding clears the floating add button. */
-  padding: 6px 0 80px;
+  padding: 6px 0 12px;
   /* Scrollbar hidden via global rule in styles/global.css. */
 }
 
@@ -16,14 +15,14 @@
   padding-bottom: 0;
 }
 
-/* ─── Note card: the note text, its tools in the top-right corner ───────────── */
+/* ─── Note card ──────────────────────────────────────────────────────────────── */
 
 .task-note-card {
   position: relative;
   display: flex;
   flex-direction: column;
   border-radius: var(--radius-md, 12px);
-  /* The "paper" writing surface. */
+  /* The "paper" surface. */
   background: rgba(255, 255, 255, 0.03);
   transition: opacity 0.25s, transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
@@ -41,45 +40,8 @@
   to { opacity: 0; transform: translateX(28px) scale(0.97); }
 }
 
-.task-note-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  padding: 0;
-  border: none;
-  border-radius: var(--radius-xs, 6px);
-  background: transparent;
-  color: var(--accent, #c4956a);
-  cursor: pointer;
-  opacity: 0.75;
-  transition: opacity 0.15s, filter 0.15s;
-}
-.task-note-btn:hover:not(:disabled) {
-  opacity: 1;
-  filter: brightness(1.25);
-}
-.task-note-btn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-/* The card's line of text. */
-.task-note-row {
-  /* Above the hover glow, so the glow tints the card, not the text. */
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  min-width: 0;
-}
-.task-note-row > .task-note-body,
-.task-note-row > .task-note-preview { flex: 1; min-width: 0; }
-
-/* Collapsed + hovered (or focused): a soft glow follows the pointer across the card, and two line icons slide in
-   at the right end — delete then send, in the theme accent (delete turns red when aimed at). They float over the text, which fades out
-   beneath them instead of moving. */
+/* Hovered (or focused): a soft glow follows the pointer across the card, and the trash slides in at the right end
+   over the text, which fades out beneath it instead of moving. */
 .task-note-card::before {
   content: '';
   position: absolute;
@@ -90,78 +52,71 @@
   pointer-events: none;
   transition: opacity .2s ease;
 }
-.task-note-card.is-collapsed:hover::before { opacity: 1; }
+.task-note-card:hover::before { opacity: 1; }
 .task-note-card.dragging::before { display: none; }
+
+/* The text: at most three lines, ending in an ellipsis when there is more. */
+.task-note-preview {
+  position: relative;
+  z-index: 1;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+  color: var(--text-1, #e8e4de);
+  font-family: var(--font, system-ui);
+  font-size: var(--type-body);
+  line-height: 1.55;
+  /* Margin, not padding: the clamp box must be exactly three lines tall, or the next line peeks into the padding. */
+  margin: 9px 12px 10px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.task-note-preview:focus-visible { outline: 1px solid var(--accent, #c4956a); outline-offset: 3px; border-radius: var(--radius-xs, 6px); }
+.task-note-card:hover .task-note-preview,
+.task-note-card:focus-within .task-note-preview {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 52px), transparent calc(100% - 26px));
+  mask-image: linear-gradient(to right, #000 calc(100% - 52px), transparent calc(100% - 26px));
+}
+
 .task-note-quick {
   position: absolute;
   top: 0;
   right: 6px;
   bottom: 0;
+  z-index: 2;
   display: flex;
   align-items: center;
-  gap: 2px;
   opacity: 0;
   transform: translateX(6px);
   pointer-events: none;
   transition: opacity .18s ease, transform .18s ease;
-  z-index: 2;
 }
 .task-note-card:hover .task-note-quick,
 .task-note-card:focus-within .task-note-quick { opacity: 1; transform: none; pointer-events: auto; }
-.task-note-card:hover .task-note-preview,
-.task-note-card:focus-within .task-note-preview {
-  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 96px), transparent calc(100% - 56px));
-  mask-image: linear-gradient(to right, #000 calc(100% - 96px), transparent calc(100% - 56px));
-}
-.task-note-quick-btn svg { width: 16px; height: 16px; }
-/* Like the session list: plain icons, a soft button area only under the one aimed at. Slightly larger here. */
-.task-note-card .task-note-btn { width: 28px; height: 28px; opacity: 1; color: var(--accent, #c4956a); border-radius: var(--radius-xs, 6px); transition: color .15s, background-color .15s; }
-.task-note-card .task-note-btn:hover:not(:disabled) { filter: none; background: var(--bg-hover, rgba(255, 255, 255, 0.08)) !important; }
-.task-note-card .task-note-btn.task-note-delete:hover { color: #e5534b; }
-/* Right after a click opens or closes the note, the icons and glow wait for the pointer to leave and come back,
-   so they don't flash in and out under it. */
-.task-note-card[data-quiet] .task-note-quick { opacity: 0; pointer-events: none; transition: none; }
-.task-note-card[data-quiet]::before { opacity: 0; transition: none; }
 .task-note-list:has(.task-note-card.dragging) .task-note-quick { display: none; }
-@media (prefers-reduced-motion: reduce) { .task-note-quick, .task-note-card::before { transition: none; } .task-note-quick { transform: none; } }
 
-/* Open: a row of actions under the text; send sits apart on the right. */
-.task-note-actions {
+/* Like the session list: a plain icon, a soft button area only when aimed at; it turns red then. */
+.task-note-btn {
   display: flex;
   align-items: center;
-  gap: 8px;
-  /* Icons line up with the text's 12px inset (28px buttons, 16px icons). */
-  padding: 2px 6px 8px;
-}
-.task-note-actions-gap { flex: 1; }
-/* Same size as the hover icons: there is room under an open note. */
-.task-note-actions .task-note-btn svg { width: 16px; height: 16px; }
-.task-note-card .task-note-edit[aria-pressed="true"] { background: color-mix(in srgb, var(--accent, #c4956a) 16%, transparent) !important; }
-
-/* ─── Body — the writing area ────────────────────────────────────────────────── */
-
-.task-note-body {
-  width: 100%;
-  min-height: 44px;
-  resize: none;
-  /* Sized to its text: only the list scrolls, never the note. */
-  overflow: hidden;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
   border: none;
-  outline: none;
+  border-radius: var(--radius-xs, 6px);
   background: transparent;
-  color: var(--text-1, #e8e4de);
-  font-family: var(--font, system-ui);
-  font-size: var(--type-body);
-  line-height: 1.55;
-  padding: 9px 12px 11px;
-  white-space: pre-wrap;
-  word-break: break-word;
-  box-sizing: border-box;
+  color: var(--accent, #c4956a);
+  cursor: pointer;
+  transition: color .15s, background-color .15s;
 }
-
-.task-note-body::placeholder {
-  color: var(--text-3, rgba(255, 255, 255, 0.3));
-}
+.task-note-btn:hover { background: var(--bg-hover, rgba(255, 255, 255, 0.08)); }
+.task-note-btn.task-note-delete:hover { color: #e5534b; }
+@media (prefers-reduced-motion: reduce) { .task-note-quick, .task-note-card::before { transition: none; } .task-note-quick { transform: none; } }
 
 /* ─── Floating ghost (drag clone) ───────────────────────────────────────────── */
 
@@ -179,37 +134,4 @@
   opacity: 0.96;
   overflow: hidden;
 }
-
-/* Collapsed and expanded-but-not-editing notes read as cards: a click opens or closes them, a double-click edits.
-   The arrow stays an arrow (the app never swaps cursors); `default` beats the board's text-cursor rule for textareas. */
-.task-note-body[readonly] { cursor: default !important; user-select: none; -webkit-user-select: none; }
-.task-note-body.is-collapsed { overflow: hidden; }
-
-/* Collapsed preview: the body's look, clamped to one line with a trailing ellipsis when there is more. */
-.task-note-preview {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 1;
-  line-clamp: 1;
-  overflow: hidden;
-  color: var(--text-1, #e8e4de);
-  font-family: var(--font, system-ui);
-  font-size: var(--type-body);
-  line-height: 1.55;
-  /* Margin, not padding: the clamp box must be exactly one line tall, or the next line peeks into the padding. */
-  margin: 9px 12px 10px;
-  white-space: pre-wrap;
-  word-break: break-word;
-  user-select: none;
-  -webkit-user-select: none;
-}
-.task-note-preview.is-empty { color: var(--text-3, rgba(255, 255, 255, 0.3)); }
-.task-note-preview:focus-visible { outline: 1px solid var(--accent, #c4956a); outline-offset: -1px; border-radius: var(--radius-md, 12px); }
-.task-note-body[hidden] { display: none; }
-
-/* Send stands out: a solid accent button whose corners follow the theme shape like the + button,, its arrow coloured like the + button, on hover and in the open row alike. */
-.task-note-card .task-note-btn.task-note-send { width: 26px; height: 26px; margin-left: 2px; border-radius: var(--radius-pill, 999px); color: var(--bg-terminal, #fff); background: var(--accent, #c4956a) !important; }
-/* Same icon colour as the + button: the deep terminal background, white on glass. */
-[data-shape="glass"] .task-note-card .task-note-btn.task-note-send { color: #fff; }
-.task-note-card .task-note-btn.task-note-send svg { width: 12px; height: 12px; margin-left: 2px; }
-.task-note-card .task-note-btn.task-note-send:hover:not(:disabled) { background: var(--accent, #c4956a) !important; filter: brightness(1.12); }
+.task-note-card-ghost .task-note-quick { display: none; }

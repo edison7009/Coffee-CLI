@@ -12,7 +12,7 @@ import { useOpenCodeSession } from '../../lib/opencode-session';
 import { usePiSession } from '../../lib/pi-session';
 import './TaskBoard.css';
 import { TaskNoteView } from './TaskNoteView';
-import { makeWelcomeNote, type TaskItem } from './task-types';
+import type { TaskItem } from './task-types';
 
 
 // ─── Persistence (Rust file backend with localStorage fallback) ──────────────
@@ -86,7 +86,6 @@ export function TaskBoard({ onCountChange }: { onCountChange: (count: number) =>
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   useEffect(() => { onCountChange(tasks.length); }, [tasks.length, onCountChange]);
   const [removingId, setRemovingId] = useState<string | null>(null);
-  const [addingId, setAddingId] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const sendingRef = useRef(false);
   const [sendErrorTarget, setSendErrorTarget] = useState<string | null>(null);
@@ -104,29 +103,16 @@ export function TaskBoard({ onCountChange }: { onCountChange: (count: number) =>
   const pendingEchoesRef = useRef<Set<string>>(new Set());
   const [loaded, setLoaded] = useState(false);
 
-  // Load tasks from Rust backend on mount. A first-ever launch (no tasks AND
-  // never seeded) drops one roomy welcome/guide note; existing users are just flagged seeded
-  // (so they never get it). The seed is allowed to persist (no skip).
+  // Load tasks from Rust backend on mount.
   useEffect(() => {
     loadTasksFromBackend().then(data => {
       isLoadedRef.current = true;
       setLoaded(true);
-      let seeded = false;
-      try { seeded = localStorage.getItem('cc-tasks-seeded') === '1'; } catch { /* Best-effort operation; failure is non-fatal. */ }
-
-      if (data.length === 0 && !seeded) {
-        try { localStorage.setItem('cc-tasks-seeded', '1'); } catch { /* Best-effort operation; failure is non-fatal. */ }
-        setTasks([makeWelcomeNote(t('task.welcome_note'))]);
-        return;
-      }
-
-      if (!seeded) { try { localStorage.setItem('cc-tasks-seeded', '1'); } catch { /* Best-effort operation; failure is non-fatal. */ } }
       const notes = asNotes(data);
       // Save once if old to-do or prompt fields were folded in; otherwise skip the echo save.
       skipNextSyncRef.current = notes.every((note, index) => note === data[index]);
       setTasks(notes);
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Save tasks to Rust backend whenever tasks change
@@ -185,32 +171,6 @@ export function TaskBoard({ onCountChange }: { onCountChange: (count: number) =>
   }, [loaded, preInputQueue, dispatch]);
 
   // ─── Task Actions ─────────────────────────────────────────────────────────
-  // A new note starts empty and in edit mode (the note view keeps editing until the user clicks away).
-  const handleAdd = useCallback(() => {
-    const newTask: TaskItem = { id: crypto.randomUUID(), title: '', status: 'todo', createdAt: Date.now() };
-    setAddingId(newTask.id);
-    setTasks(prev => [newTask, ...prev]);
-    setTimeout(() => setAddingId(null), 400);
-  }, []);
-
-  // Duplicate a note — spawns an identical sticky right AFTER the original
-  // (same title/description/status/height, fresh id) so a long note can be
-  // reused as a template without retyping. Deliberately does NOT set addingId:
-  // that drives the note's autoFocus + select-all, which is right for a blank
-  // new note (the user will type into it) but wrong for a duplicate — clicking
-  // "copy" is a SAVE-EFFORT gesture, not an edit. The copy just appears in place.
-  const duplicateTask = useCallback((id: string) => {
-    const newId = crypto.randomUUID();
-    setTasks(prev => {
-      const idx = prev.findIndex(t => t.id === id);
-      if (idx < 0) return prev;
-      const copy: TaskItem = { ...prev[idx], id: newId, createdAt: Date.now() };
-      const next = [...prev];
-      next.splice(idx + 1, 0, copy);
-      return next;
-    });
-  }, []);
-
   // Share the composer's existing send route and promote only acknowledged tasks.
   const sendTask = useCallback(async (task: TaskItem, body: string, promote: boolean) => {
     if (!canSend || !activeSession || !body.trim() || sendingRef.current) return;
@@ -221,15 +181,15 @@ export function TaskBoard({ onCountChange }: { onCountChange: (count: number) =>
     } finally { sendingRef.current = false; setSending(false); }
   }, [activeSession, canSend]);
 
-  // Send never refuses: with a ready session it goes out; otherwise it lands in the open composer to send from
-  // there; with no composer open the click simply does nothing.
+  // Desktop conversations always show their composer; a terminal tab shows it while Gambit is open.
   const composerOpen = !!activeSession && (isClaude || isCodex || isDsh || isOpenCode || isPi || state.gambitOpen);
+  // A note goes into the current tab's composer, where the user reviews and sends it; a terminal tab's composer
+  // opens for it. A tab with no tool yet takes it too: the draft stays when a tool launches in that tab.
   const sendToAgent = useCallback((task: TaskItem) => {
-    // A send already in flight ignores further clicks rather than filling the composer.
-    if (!task.title.trim() || sendingRef.current) return;
-    if (canSend) { void sendTask(task, task.title, true); return; }
-    if (composerOpen && activeSession) dispatch({ type: 'APPEND_GAMBIT_DRAFT', id: activeSession.id, text: `${activeSession.gambitDraft?.trim() ? '\n' : ''}${task.title}` });
-  }, [sendTask, canSend, composerOpen, activeSession, dispatch]);
+    if (!task.title.trim() || !activeSession) return;
+    if (!composerOpen) dispatch({ type: 'TOGGLE_GAMBIT' });
+    dispatch({ type: 'APPEND_GAMBIT_DRAFT', id: activeSession.id, text: `${activeSession.gambitDraft?.trim() ? '\n' : ''}${task.title}` });
+  }, [composerOpen, activeSession, dispatch]);
 
   // An automation's prompt goes to the current conversation as is; its own app and folder are for scheduled runs.
   const sendAutomationPrompt = useCallback((prompt: string) => {
@@ -238,22 +198,6 @@ export function TaskBoard({ onCountChange }: { onCountChange: (count: number) =>
     if (canSend) { void sendTask({ id: 'automation', title: prompt, status: 'todo', createdAt: 0 }, prompt, false); return; }
     if (composerOpen && activeSession) dispatch({ type: 'APPEND_GAMBIT_DRAFT', id: activeSession.id, text: `${activeSession.gambitDraft?.trim() ? '\n' : ''}${prompt}` });
   }, [sendTask, canSend, composerOpen, activeSession, dispatch]);
-
-  // Live title edit — the note body is always-editable (no commit step), so it
-  // writes through on every keystroke. Empty is allowed while typing.
-  const updateTitle = useCallback((id: string, title: string) => {
-    setTasks(prev => prev.map(t => t.id === id ? { ...t, title } : t));
-  }, []);
-
-  // Manually (re)add the welcome guide note — wired to the empty-state button.
-  // Switches to the sticky-note view so the long guide reads as a note, not a
-  // long title row. (New users still get it auto-seeded once; this is the
-
-  // Manually (re)add the welcome guide note — wired to the empty-state button.
-  // Idempotent: only seed onto an empty board, so a fast double-click can't stack duplicate guide notes.
-  const handleShowGuide = () => {
-    setTasks(prev => prev.length > 0 ? prev : [makeWelcomeNote(t('task.welcome_note'))]);
-  };
 
   const handleRemove = useCallback((id: string) => {
     setRemovingId(id);
@@ -270,27 +214,12 @@ export function TaskBoard({ onCountChange }: { onCountChange: (count: number) =>
           <TaskAutomations onSend={sendAutomationPrompt} />
           <TaskNoteView
             tasks={tasks}
-            addingId={addingId}
             removingId={removingId}
-            onUpdateTitle={updateTitle}
             onRemove={handleRemove}
-            onDuplicate={duplicateTask}
             onSend={sendToAgent}
             onReorder={setTasks}
-            onShowGuide={handleShowGuide}
           />
 
-      {/* ── Floating Action Button (FAB) ── */}
-      <div className="task-fab-container">
-        <button className="task-fab-simple" onClick={handleAdd}>
-          <div className="task-fab-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-          </div>
-        </button>
-      </div>
     </div>
   );
 }

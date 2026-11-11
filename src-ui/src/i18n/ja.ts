@@ -23,6 +23,7 @@ export const ja = {
   "orchestration.description": "利用可能なアシスタントを選択します。新しい Claude セッションで、Claude が必要に応じて作業を割り当て、結果を確認してまとめます。",
   "orchestration.role.title": "メインウィンドウの役割",
   "orchestration.role.hint": "これ以降に開くメインウィンドウに適用されます。",
+  "orchestration.pick.prefix": "優先協力：{name}",
   "orchestration.role.auto": "自動で判断",
   "orchestration.role.auto_desc": "自分で行う作業と割り当てる作業をメインウィンドウが判断します。",
   "orchestration.role.manager": "プロジェクトマネージャー",
@@ -305,11 +306,8 @@ export const ja = {
   'task.greeting.afternoon': 'こんにちは。残りのタスクは？',
   'task.greeting.evening': 'こんばんは。何か始めますか？',
   'task.tab.tasks': '事前入力',
-  'pre_input.edit': '編集',
-  'pre_input.done': '完了',
-  'pre_input.copy': '複製',
   'pre_input.delete': '削除',
-  'pre_input.send': '送信',
+  'pre_input.insert': "入力欄に入れる",
   'task.tab.changes': '変更履歴',
   'changes.empty': 'まだ変更はありません。',
   'launchpad.open_folder': 'フォルダを開く',
@@ -352,8 +350,6 @@ export const ja = {
   'diff.no_changes': '変更なし',
   'diff.too_large': 'ファイルが大きいため差分を表示しません',
   'diff.unchanged_lines': '⋯ 未変更 {count} 行',
-  'task.search_sessions': 'セッションを検索...',
-  'task.filter_all_projects': 'すべて',
   'menu.no_recent': '最近のセッションはありません',
   'task.messages': 'メッセージ {count} 件',
 
@@ -420,18 +416,6 @@ export const ja = {
   'settings.pre_input_button': '「事前入力に保存」ボタン',
   'settings.pre_input_button.sub': '入力欄の上に表示し、下書きを右側の事前入力に保存します',
   'task.send_failed': "送信を確認できませんでした。現在の会話を確認してください。タスクの内容は保持されています。",
-  'task.note_placeholder': 'メモを書いて、まとめて送信…',
-  'task.welcome_note': `Coffee CLI へようこそ ☕
-
-ここは「事前入力」です。AI に頼みたいことを書いておき、ちょうどいいときにワンクリックで送れます。
-
-はじめの 3 ステップ：
-1. 中央でツール（Claude / Codex / OpenCode…）を選び、フォルダーを選べばすぐ始められます
-2. 入力欄に書いて、上の「事前入力に保存」を押すとメモとして残せます。右下の ＋ でここに直接作ることもできます
-3. メモはふだん 1 行で表示されます。クリックで全文を開き、ホバーして ▶ で AI に送り、ドラッグで順番を変えられます
-
-読み終えたらこのメモを削除して、最初のタスクを始めましょう。`,
-  'task.show_guide': '使い方ガイドを見る',
 
   // Theme Menu
   'theme.section.color': 'カラー',
@@ -481,6 +465,7 @@ export const ja = {
   'gambit.send': '送信',
   'gambit.stop': '停止',
   'gambit.placeholder': '静かに一手を思案... ({send}で送信、{newline}で改行、画像貼付可、Alt+↑↓で履歴)',
+  'gambit.clear_draft': "クリア",
   'gambit.save_pre_input': '事前入力に保存',
   'gambit.send_failed_hint': 'アクティブなセッションを先に開いてください',
   'gambit.worktree': 'ワークツリー',
@@ -523,6 +508,8 @@ export const ja = {
   "settings.voice.source.missing": "ログアウト済みまたは利用不可",
   "settings.voice.source.failed": "アカウントを検出できませんでした。再試行してください。",
   "settings.voice.source.empty": "対応するログインがありません。現在は Claude Code、Codex、Doubao、Doubao Work を検出します。",
+  "settings.voice.source.expired": "ログイン期限切れ",
+  "settings.voice.source.expired_hint": "{name} のログインが期限切れです。Claude Code を一度開いてメッセージを送ると更新されます。その後もう一度スキャンしてください。",
   "settings.voice.source.busy": "{name} を終了して初回の検出と取り込みを行ってください。取り込み後は起動したまま使えます。",
   'settings.voice.enabled': '音声入力',
   'settings.voice.enabled.sub': 'オンにすると入力欄にマイクボタンを表示',

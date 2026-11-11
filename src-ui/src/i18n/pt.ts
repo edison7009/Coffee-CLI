@@ -23,6 +23,7 @@ export const pt = {
   "orchestration.description": "Escolha os assistentes disponíveis. Em uma nova sessão Claude, Claude decide quando delegar, verifica e resume os resultados.",
   "orchestration.role.title": "Função da janela principal",
   "orchestration.role.hint": "Aplica-se às janelas principais abertas a partir de agora.",
+  "orchestration.pick.prefix": "Preferir: {name}",
   "orchestration.role.auto": "Decidir automaticamente",
   "orchestration.role.auto_desc": "A janela principal decide o que faz sozinha e o que delega.",
   "orchestration.role.manager": "Gerente de projeto",
@@ -305,11 +306,8 @@ export const pt = {
   'task.greeting.afternoon': 'Boa tarde, algo pendente?',
   'task.greeting.evening': 'Boa noite. Algo ambicioso?',
   'task.tab.tasks': 'Pré-entrada',
-  'pre_input.edit': 'Editar',
-  'pre_input.done': 'Concluir',
-  'pre_input.copy': 'Duplicar',
   'pre_input.delete': 'Excluir',
-  'pre_input.send': 'Enviar',
+  'pre_input.insert': "Colocar na caixa de entrada",
   'task.tab.changes': 'Histórico',
   'changes.empty': 'Ainda sem alterações.',
   'launchpad.open_folder': 'Abrir pasta',
@@ -352,8 +350,6 @@ export const pt = {
   'diff.no_changes': 'Sem alterações',
   'diff.too_large': 'Arquivo muito grande para exibir o diff',
   'diff.unchanged_lines': '⋯ {count} linhas inalteradas',
-  'task.search_sessions': 'Buscar sessões...',
-  'task.filter_all_projects': 'Todos',
   'menu.no_recent': 'Nenhuma sessão recente',
   'task.messages': '{count} mensagens',
 
@@ -420,18 +416,6 @@ export const pt = {
   'settings.pre_input_button': 'Botão “Salvar na pré-entrada”',
   'settings.pre_input_button.sub': 'Aparece acima da caixa de texto e salva o rascunho na pré-entrada',
   'task.send_failed': "Não foi possível confirmar o envio. Verifique a sessão atual. Sua tarefa foi preservada.",
-  'task.note_placeholder': 'Anote algo e envie tudo ao seu agente…',
-  'task.welcome_note': `Bem-vindo ao Coffee CLI ☕
-
-Esta é a pré-entrada: anote o que você quer que a IA faça e envie com um clique na hora certa.
-
-Três passos para começar:
-1. Escolha uma ferramenta no centro (Claude / Codex / OpenCode…), selecione uma pasta e pronto
-2. Escreva na caixa de entrada e clique em "Salvar na pré-entrada" acima dela para guardar como nota, ou clique em + no canto inferior direito para criar uma aqui
-3. As notas mostram uma linha: clique para ver o texto completo, passe o mouse e clique em ▶ para enviá-la à IA, e arraste para reordenar
-
-Apague esta nota quando terminar de ler e comece sua primeira tarefa.`,
-  'task.show_guide': 'Ver o guia de uso',
 
   // Theme Menu
   'theme.section.color': 'Cores',
@@ -479,6 +463,7 @@ Apague esta nota quando terminar de ler e comece sua primeira tarefa.`,
   'gambit.send': 'Enviar',
   'gambit.stop': 'Parar',
   'gambit.placeholder': 'Planeje sua jogada... ({send} para enviar, {newline} para nova linha, cole imagens, Alt+↑↓ para o histórico)',
+  'gambit.clear_draft': "Limpar",
   'gambit.save_pre_input': 'Salvar na pré-entrada',
   'gambit.send_failed_hint': 'Abra primeiro uma sessão ativa',
   'gambit.worktree': 'Worktree',
@@ -521,6 +506,8 @@ Apague esta nota quando terminar de ler e comece sua primeira tarefa.`,
   "settings.voice.source.missing": "Desconectada ou indisponível",
   "settings.voice.source.failed": "Não foi possível buscar contas locais. Tente novamente.",
   "settings.voice.source.empty": "Nenhuma sessão compatível encontrada. Atualmente busca Claude Code, Codex, Doubao e Doubao Work.",
+  "settings.voice.source.expired": "Login expirado",
+  "settings.voice.source.expired_hint": "O login de {name} expirou. Abra o Claude Code uma vez e envie uma mensagem para renová-lo; depois procure novamente.",
   "settings.voice.source.busy": "{name} está aberto. Feche-o para a primeira importação; depois pode permanecer aberto.",
   'settings.voice.enabled': 'Entrada de voz',
   'settings.voice.enabled.sub': 'Quando ativado, o editor mostra um botão de microfone',
