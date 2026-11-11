@@ -1,7 +1,7 @@
 <details open>
 <summary><b>简体中文</b></summary>
 
-### Coffee CLI v3.9.7 · 预输入改版与优先协作
+### Coffee CLI v3.9.8 · 预输入改版与优先协作
 
 - **预输入：** 便签改为只读，最多显示三行，点一下就放进当前输入框，确认后再发送；悬停显示删除。去掉了添加、编辑、复制和展开。
 - **输入框：** “保存到预输入”旁新增清空按钮，两个按钮骑在输入框上边缘，出现和消失都带淡入淡出。
@@ -15,7 +15,7 @@
 <details>
 <summary><b>English</b></summary>
 
-### Coffee CLI v3.9.7 · Pre-input Rework and Preferred Workers
+### Coffee CLI v3.9.8 · Pre-input Rework and Preferred Workers
 
 - **Pre-input:** Notes are read-only and show up to three lines. A click puts one into the current composer so you can check it before sending; hover to delete. Add, edit, copy and expand are gone.
 - **Composer:** A clear button joins "Save to pre-input". Both sit on the composer's top edge and fade in and out as they appear.
@@ -29,7 +29,7 @@
 <details>
 <summary><b>繁體中文</b></summary>
 
-### Coffee CLI v3.9.7 · 預輸入改版與優先協作
+### Coffee CLI v3.9.8 · 預輸入改版與優先協作
 
 - **預輸入：** 便籤改為唯讀，最多顯示三行，點一下就放進目前的輸入框，確認後再傳送；懸停顯示刪除。移除了新增、編輯、複製和展開。
 - **輸入框：** 「儲存到預輸入」旁新增清空按鈕，兩個按鈕位於輸入框上緣，出現和消失都帶淡入淡出。
@@ -43,7 +43,7 @@
 <details>
 <summary><b>日本語</b></summary>
 
-### Coffee CLI v3.9.7 · プレ入力の刷新と優先協力
+### Coffee CLI v3.9.8 · プレ入力の刷新と優先協力
 
 - **プレ入力：** メモは読み取り専用で最大 3 行表示です。クリックすると現在の入力欄に入り、確認してから送信できます。ホバーで削除が現れます。追加・編集・コピー・展開はなくなりました。
 - **入力欄：** 「プレ入力に保存」の横にクリアボタンを追加しました。2 つのボタンは入力欄の上端に重なり、フェードしながら現れて消えます。
@@ -57,7 +57,7 @@
 <details>
 <summary><b>한국어</b></summary>
 
-### Coffee CLI v3.9.7 · 사전 입력 개편과 우선 협업
+### Coffee CLI v3.9.8 · 사전 입력 개편과 우선 협업
 
 - **사전 입력:** 메모는 읽기 전용이며 최대 세 줄까지 보입니다. 클릭하면 현재 입력창에 들어가 확인한 뒤 보낼 수 있고, 마우스를 올리면 삭제가 나타납니다. 추가, 편집, 복사, 펼치기는 없어졌습니다.
 - **입력창:** "사전 입력에 저장" 옆에 지우기 버튼이 추가되었습니다. 두 버튼은 입력창 위쪽 가장자리에 걸쳐 있으며 나타나고 사라질 때 서서히 표시됩니다.
