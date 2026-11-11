@@ -125,3 +125,25 @@ pub(super) async fn run(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    /// Release builds target older macOS versions than the build machine. There, `@available` compiles to a call
+    /// into the compiler's runtime library, which the Rust link does not include, and the app failed to link.
+    #[test]
+    fn speech_bridge_needs_no_compiler_runtime_on_older_macos() {
+        let source = concat!(env!("CARGO_MANIFEST_DIR"), "/src/voice_input/apple_speech.m");
+        let dir = std::env::temp_dir().join(format!("coffee-apple-speech-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        for arch in ["arm64", "x86_64"] {
+            let object = dir.join(format!("{arch}.o"));
+            let built = std::process::Command::new("xcrun")
+                .args(["clang", "-arch", arch, "-mmacosx-version-min=10.13", "-fobjc-arc", "-fblocks", "-c", source, "-o"])
+                .arg(&object).status().unwrap();
+            assert!(built.success(), "the bridge compiles for {arch}");
+            let symbols = std::process::Command::new("nm").arg(&object).output().unwrap();
+            assert!(!String::from_utf8_lossy(&symbols.stdout).contains("isPlatformVersionAtLeast"), "{arch} needs the compiler runtime");
+        }
+        let _ = std::fs::remove_dir_all(dir);
+    }
+}

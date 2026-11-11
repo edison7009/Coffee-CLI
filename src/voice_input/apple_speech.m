@@ -7,6 +7,18 @@
 
 typedef void (*CoffeeSpeechCallback)(uint64_t, uint32_t, const char *);
 
+// Speech needs macOS 10.15. `@available` would compile to a call into the compiler's runtime library, which the
+// Rust link step does not include when the minimum system version is older, so the check asks Foundation instead;
+// the compiler cannot see that it guards the calls below, hence the silenced availability warnings.
+#pragma clang diagnostic ignored "-Wunguarded-availability"
+#pragma clang diagnostic ignored "-Wunguarded-availability-new"
+static bool coffee_speech_os(void) {
+    static bool supported;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{ supported = [NSProcessInfo.processInfo isOperatingSystemAtLeastVersion:(NSOperatingSystemVersion){10, 15, 0}]; });
+    return supported;
+}
+
 API_AVAILABLE(macos(10.15))
 @interface CoffeeAppleSpeech : NSObject
 @property uint64_t identifier;
@@ -87,13 +99,13 @@ API_AVAILABLE(macos(10.15))
 
 bool coffee_apple_speech_available(void) {
     @autoreleasepool {
-        if (@available(macOS 10.15, *)) return [SFSpeechRecognizer supportedLocales].count > 0;
+        if (coffee_speech_os()) return [SFSpeechRecognizer supportedLocales].count > 0;
         return false;
     }
 }
 bool coffee_apple_speech_ready(void) {
     @autoreleasepool {
-        if (@available(macOS 10.15, *)) {
+        if (coffee_speech_os()) {
             if ([SFSpeechRecognizer authorizationStatus] != SFSpeechRecognizerAuthorizationStatusAuthorized ||
                 [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeAudio] != AVAuthorizationStatusAuthorized) return false;
             SFSpeechRecognizer *recognizer = [[SFSpeechRecognizer alloc] init];
@@ -104,7 +116,7 @@ bool coffee_apple_speech_ready(void) {
 }
 void *coffee_apple_speech_start(uint64_t identifier, const char *locale, CoffeeSpeechCallback callback) {
     @autoreleasepool {
-        if (@available(macOS 10.15, *)) {
+        if (coffee_speech_os()) {
             CoffeeAppleSpeech *session = [[CoffeeAppleSpeech alloc] init];
             session.identifier = identifier;
             session.locale = [NSString stringWithUTF8String:locale];
@@ -116,11 +128,11 @@ void *coffee_apple_speech_start(uint64_t identifier, const char *locale, CoffeeS
     }
 }
 void coffee_apple_speech_append(void *handle, const int16_t *samples, uint32_t count) {
-    @autoreleasepool { if (@available(macOS 10.15, *)) [(__bridge CoffeeAppleSpeech *)handle append:samples count:count]; }
+    @autoreleasepool { if (coffee_speech_os()) [(__bridge CoffeeAppleSpeech *)handle append:samples count:count]; }
 }
 void coffee_apple_speech_finish(void *handle) {
-    @autoreleasepool { if (@available(macOS 10.15, *)) [(__bridge CoffeeAppleSpeech *)handle finish]; }
+    @autoreleasepool { if (coffee_speech_os()) [(__bridge CoffeeAppleSpeech *)handle finish]; }
 }
 void coffee_apple_speech_drop(void *handle) {
-    @autoreleasepool { if (@available(macOS 10.15, *)) { CoffeeAppleSpeech *session = (__bridge_transfer CoffeeAppleSpeech *)handle; [session close]; } }
+    @autoreleasepool { if (coffee_speech_os()) { CoffeeAppleSpeech *session = (__bridge_transfer CoffeeAppleSpeech *)handle; [session close]; } }
 }
