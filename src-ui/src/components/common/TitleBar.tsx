@@ -109,12 +109,9 @@ export function TitleBar() {
           No separator between groups — VS Code's titlebar uses pure
           proximity to group, which stays clean whether 2 or 4 icons
           are showing. */}
-      {/* Sharp-corner 24×24 glyphs — strokeWidth 1.8 so the icons read
-          at the same optical weight as Phosphor/Lucide at 16px render.
-          Internal dividers are inset (y=4 → y=20) so they STOP before
-          the outer border instead of crossing through it — avoids the
-          "crossed-lines" look the user flagged. Active signal still travels
-          via .is-active background only. */}
+      {/* Rounded 24×24 glyphs (rx=2, strokeWidth 2, round caps) shared by
+          all layout toggles so the panels and the keyboard read as one set.
+          Active signal travels via .is-active background only. */}
       <div className="titlebar-layout-toggles" data-toggle-display={state.titlebarToggleDisplay}>
         <Changelog />
         {/* Left panel · Gambit · right panel — the three hinted chrome toggles,
@@ -127,9 +124,9 @@ export function TitleBar() {
           aria-label={`Toggle left panel (${hk.left})`}
           aria-pressed={!state.leftPanelHidden}
         >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="square" strokeLinejoin="miter">
-            <rect x="3" y="3" width="18" height="18" />
-            <line x1="9" y1="4" x2="9" y2="20" />
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="2" y="4" width="20" height="16" rx="2" />
+            <path d="M9 4v16" />
           </svg>
           <span className="titlebar-hotkey-hint">{hk.left}</span>
         </button>
@@ -162,9 +159,9 @@ export function TitleBar() {
           aria-label={`Toggle right panel (${hk.right})`}
           aria-pressed={!state.rightPanelHidden}
         >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="square" strokeLinejoin="miter">
-            <rect x="3" y="3" width="18" height="18" />
-            <line x1="15" y1="4" x2="15" y2="20" />
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="2" y="4" width="20" height="16" rx="2" />
+            <path d="M15 4v16" />
           </svg>
           <span className="titlebar-hotkey-hint">{hk.right}</span>
         </button>
