@@ -28,7 +28,12 @@
 }
 
 /* As a page it covers the whole workspace under the titlebar, sidebars and tabs included; the titlebar offers Back. */
-.settings-page { position: absolute; inset: 0; z-index: 50; display: flex; min-width: 0; min-height: 0; background: var(--bg-panel); }
+.settings-page { position: absolute; inset: 0; z-index: 50; display: flex; min-width: 0; min-height: 0; background: var(--bg-panel); animation: settings-page-in 0.18s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.settings-page--closing { animation: settings-page-out 0.12s cubic-bezier(0.4, 0, 1, 1) forwards; pointer-events: none; }
+@keyframes settings-page-in { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: none; } }
+@keyframes settings-page-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: scale(0.97); } }
+/* Near-zero rather than none so animationend still fires and the page unmounts. */
+@media (prefers-reduced-motion: reduce) { .settings-page, .settings-page--closing { animation-duration: 0.01ms; } }
 .settings-modal.settings-modal--page { width: 100%; height: 100%; border: 0; border-radius: 0; box-shadow: none; animation: none; background: transparent; }
 .settings-modal--page .settings-rail { flex-basis: 200px; padding: 20px 12px; }
 .settings-modal--page .settings-body { width: min(760px, 100%); margin: 0 auto; }

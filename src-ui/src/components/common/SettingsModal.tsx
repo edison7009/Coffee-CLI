@@ -188,7 +188,11 @@ export function SettingsModal() {
     if (shellCaps === null) commands.detectShells().then(setShellCaps).catch(() => {});
   }, [open, section, fonts, shellCaps]);
 
-  if (!open) return null;
+  // Stays mounted after close until the fade-out finishes, then unmounts.
+  const [mounted, setMounted] = useState(open);
+  useEffect(() => { if (open) setMounted(true); }, [open]);
+
+  if (!open && !mounted) return null;
 
   // ── Handlers (identical to the former left-panel ThemeMenu/Lang wiring) ──
   const setTheme = (th: ThemeColor) => dispatch({ type: 'SET_THEME', theme: th });
@@ -298,7 +302,10 @@ export function SettingsModal() {
 
   return (
     // A page over the centre area, like usage and tool settings, not a dialog over the whole window.
-    <div className="settings-page">
+    <div
+      className={open ? 'settings-page' : 'settings-page settings-page--closing'}
+      onAnimationEnd={e => { if (e.target === e.currentTarget && !open) setMounted(false); }}
+    >
       <div className="settings-modal settings-modal--page" role="region" aria-label={t('settings.title')}>
         <aside className="settings-rail">
           {/* The page covers the whole window, so its first entry leads back. */}
