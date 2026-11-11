@@ -81,7 +81,7 @@ serde_yaml_ng = "0.10"
 # DeepSeek Harness stores Session logs as concatenated zstd frames.
 zstd = "0.13"
 # Voice input: microphone capture and the vendors' streaming speech-to-text sockets.
-cpal = "0.16"
+cpal = "0.17"
 tokio-tungstenite = { version = "0.28", features = ["rustls-tls-webpki-roots"] }
 # Speech adapters shared with EchoBird: native wire formats and account envelopes.
 bytes = "1"

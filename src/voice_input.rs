@@ -568,7 +568,7 @@ mod capture {
         let device = device(name).ok_or("no_microphone")?;
         let config = device.default_input_config().map_err(|e| format!("microphone: {e}"))?;
         let channels = config.channels().max(1) as usize;
-        let resampler = Arc::new(Mutex::new(Resampler::new(config.sample_rate().0)));
+        let resampler = Arc::new(Mutex::new(Resampler::new(config.sample_rate())));
         let format = config.sample_format();
         let stream_config: cpal::StreamConfig = config.into();
         fn build<T: cpal::SizedSample>(device: &cpal::Device, config: &cpal::StreamConfig, channels: usize, resampler: Arc<Mutex<Resampler>>, tx: mpsc::UnboundedSender<Vec<i16>>) -> Result<cpal::Stream, cpal::BuildStreamError>
