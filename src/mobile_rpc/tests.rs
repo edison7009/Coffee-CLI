@@ -246,3 +246,14 @@ fn mobile_app_protocol_interoperates() {
     assert_eq!(out["stranger"], "unauthorized");
     assert_eq!(config::load().devices.iter().map(|d| d.name.as_str()).collect::<Vec<_>>(), ["Interop phone"]);
 }
+
+#[test]
+fn lan_address_skips_proxy_and_virtual_interfaces() {
+    let pick = |list: &[(&str, [u8; 4])]| best_lan_address(list.iter().map(|(n, o)| (*n, Ipv4Addr::from(*o)))).map(|ip| ip.to_string());
+    // A proxy in TUN mode owns the default route with 198.18.0.1; Wi-Fi is the answer.
+    assert_eq!(pick(&[("utun4", [198, 18, 0, 1]), ("en0", [192, 168, 10, 79]), ("en1", [192, 168, 10, 80]), ("lo0", [127, 0, 0, 1])]).as_deref(), Some("192.168.10.79"));
+    // Proxy adapters with private addresses, Docker and link-local are skipped too.
+    assert_eq!(pick(&[("Clash", [172, 19, 0, 1]), ("docker0", [172, 17, 0, 1]), ("eth0", [10, 0, 0, 5]), ("en5", [169, 254, 3, 4])]).as_deref(), Some("10.0.0.5"));
+    assert_eq!(pick(&[("以太网", [192, 168, 1, 20]), ("vEthernet (WSL)", [172, 30, 0, 1])]).as_deref(), Some("192.168.1.20"));
+    assert_eq!(pick(&[("utun3", [198, 19, 0, 1]), ("lo0", [127, 0, 0, 1])]), None);
+}

@@ -507,6 +507,8 @@ export const en = {
   "settings.mobile.scan": "Scan with the Coffee CLI app on your phone.",
   "settings.mobile.expires": "Expires in {seconds}s",
   "settings.mobile.confirm_hint": "After scanning, this computer asks you to allow the phone by name.",
+  "settings.mobile.copy_link": "Copy pairing link",
+  "settings.mobile.copied": "Copied",
   "settings.mobile.devices": "Paired phones",
   "settings.mobile.devices.empty": "No phones paired yet.",
   "settings.mobile.connected": "Connected",

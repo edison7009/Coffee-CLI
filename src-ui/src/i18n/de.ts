@@ -502,6 +502,8 @@ export const de = {
   "settings.mobile.scan": "Mit der Coffee CLI App auf dem Handy scannen.",
   "settings.mobile.expires": "Läuft in {seconds} s ab",
   "settings.mobile.confirm_hint": "Nach dem Scannen fragt dieser Computer, ob du das Handy mit diesem Namen zulässt.",
+  "settings.mobile.copy_link": "Kopplungslink kopieren",
+  "settings.mobile.copied": "Kopiert",
   "settings.mobile.devices": "Gekoppelte Handys",
   "settings.mobile.devices.empty": "Noch keine Handys gekoppelt.",
   "settings.mobile.connected": "Verbunden",

@@ -506,6 +506,8 @@ export const vi = {
   "settings.mobile.scan": "Quét bằng ứng dụng Coffee CLI trên điện thoại.",
   "settings.mobile.expires": "Hết hạn sau {seconds} giây",
   "settings.mobile.confirm_hint": "Sau khi quét, máy tính này sẽ hỏi bạn có cho phép điện thoại theo tên hay không.",
+  "settings.mobile.copy_link": "Sao chép liên kết ghép nối",
+  "settings.mobile.copied": "Đã sao chép",
   "settings.mobile.devices": "Điện thoại đã ghép nối",
   "settings.mobile.devices.empty": "Chưa có điện thoại nào được ghép nối.",
   "settings.mobile.connected": "Đã kết nối",

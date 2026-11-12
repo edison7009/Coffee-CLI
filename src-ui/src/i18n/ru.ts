@@ -502,6 +502,8 @@ export const ru = {
   "settings.mobile.scan": "Отсканируйте его в приложении Coffee CLI на телефоне.",
   "settings.mobile.expires": "Истекает через {seconds} с",
   "settings.mobile.confirm_hint": "После сканирования этот компьютер попросит подтвердить телефон по имени.",
+  "settings.mobile.copy_link": "Скопировать ссылку для сопряжения",
+  "settings.mobile.copied": "Скопировано",
   "settings.mobile.devices": "Сопряжённые телефоны",
   "settings.mobile.devices.empty": "Сопряжённых телефонов пока нет.",
   "settings.mobile.connected": "Подключён",

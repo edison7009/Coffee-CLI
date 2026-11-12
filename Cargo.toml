@@ -102,6 +102,8 @@ pbkdf2 = "0.12"
 sha1 = "0.10"
 # Mobile companion: Noise IKpsk2 handshake and transport encryption.
 snow = "0.9"
+# Mobile pairing: list network interfaces to find the Wi-Fi/Ethernet address.
+if-addrs = "0.15"
 futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }
 
 [profile.release]

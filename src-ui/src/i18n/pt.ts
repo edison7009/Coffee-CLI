@@ -502,6 +502,8 @@ export const pt = {
   "settings.mobile.scan": "Escaneie com o app Coffee CLI no celular.",
   "settings.mobile.expires": "Expira em {seconds} s",
   "settings.mobile.confirm_hint": "Depois de escanear, este computador pede que você permita o celular pelo nome.",
+  "settings.mobile.copy_link": "Copiar link de pareamento",
+  "settings.mobile.copied": "Copiado",
   "settings.mobile.devices": "Celulares pareados",
   "settings.mobile.devices.empty": "Nenhum celular pareado ainda.",
   "settings.mobile.connected": "Conectado",

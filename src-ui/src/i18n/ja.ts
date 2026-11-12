@@ -504,6 +504,8 @@ export const ja = {
   "settings.mobile.scan": "スマートフォンの Coffee CLI アプリでスキャンしてください。",
   "settings.mobile.expires": "{seconds} 秒後に失効",
   "settings.mobile.confirm_hint": "スキャン後、このコンピューターに端末名の確認ダイアログが表示されます。",
+  "settings.mobile.copy_link": "ペアリングリンクをコピー",
+  "settings.mobile.copied": "コピーしました",
   "settings.mobile.devices": "ペアリング済みのスマートフォン",
   "settings.mobile.devices.empty": "ペアリング済みのスマートフォンはありません。",
   "settings.mobile.connected": "接続中",

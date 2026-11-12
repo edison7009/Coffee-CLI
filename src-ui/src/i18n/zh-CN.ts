@@ -505,6 +505,8 @@ export const zhCN = {
   "settings.mobile.scan": "用手机上的 Coffee CLI App 扫描。",
   "settings.mobile.expires": "{seconds} 秒后失效",
   "settings.mobile.confirm_hint": "扫码后，电脑上会弹窗请你确认手机名称。",
+  "settings.mobile.copy_link": "复制配对链接",
+  "settings.mobile.copied": "已复制",
   "settings.mobile.devices": "已配对的手机",
   "settings.mobile.devices.empty": "还没有配对的手机。",
   "settings.mobile.connected": "已连接",

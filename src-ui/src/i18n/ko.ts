@@ -504,6 +504,8 @@ export const ko = {
   "settings.mobile.scan": "휴대폰의 Coffee CLI 앱으로 스캔하세요.",
   "settings.mobile.expires": "{seconds}초 후 만료",
   "settings.mobile.confirm_hint": "스캔하면 이 컴퓨터에 휴대폰 이름 확인 창이 표시됩니다.",
+  "settings.mobile.copy_link": "페어링 링크 복사",
+  "settings.mobile.copied": "복사됨",
   "settings.mobile.devices": "페어링된 휴대폰",
   "settings.mobile.devices.empty": "페어링된 휴대폰이 없습니다.",
   "settings.mobile.connected": "연결됨",

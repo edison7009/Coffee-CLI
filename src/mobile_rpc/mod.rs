@@ -417,15 +417,41 @@ fn status_value() -> Value {
     })
 }
 
-/// The address phones on the same network should dial. Connecting a UDP
-/// socket only picks the outgoing interface; no packet is sent.
+/// The address phones on the same network should dial: the best LAN address
+/// among this computer's interfaces. The default route is not used, because a
+/// proxy or VPN in TUN mode owns it and its address is unreachable from a phone.
 fn lan_address() -> Option<String> {
-    let socket = std::net::UdpSocket::bind((Ipv4Addr::UNSPECIFIED, 0)).ok()?;
-    socket.connect((Ipv4Addr::new(192, 0, 2, 1), 9)).ok()?;
-    match socket.local_addr().ok()?.ip() {
-        std::net::IpAddr::V4(ip) if !ip.is_loopback() && !ip.is_unspecified() => Some(ip.to_string()),
+    let interfaces = if_addrs::get_if_addrs().ok()?;
+    best_lan_address(interfaces.iter().filter_map(|i| match i.ip() {
+        std::net::IpAddr::V4(ip) => Some((i.name.as_str(), ip)),
         _ => None,
-    }
+    }))
+    .map(|ip| ip.to_string())
+}
+
+/// Ranks IPv4 candidates: physical-looking interfaces with private addresses
+/// first (192.168, then 10, then 172.16/12), virtual and proxy interfaces never.
+fn best_lan_address<'a>(candidates: impl Iterator<Item = (&'a str, Ipv4Addr)>) -> Option<Ipv4Addr> {
+    const VIRTUAL: [&str; 17] = ["utun", "tun", "tap", "wg", "ppp", "ipsec", "gif", "stf", "awdl", "llw", "bridge", "docker", "br-", "veth", "vethernet", "vmnet", "zt"];
+    const PROXY_NAMES: [&str; 6] = ["clash", "mihomo", "meta", "sing", "wintun", "tailscale"];
+    candidates
+        .filter(|(name, ip)| {
+            let name = name.to_ascii_lowercase();
+            let octets = ip.octets();
+            !ip.is_loopback() && !ip.is_link_local() && !ip.is_unspecified() && !ip.is_multicast()
+                // 198.18.0.0/15: the benchmark range proxy TUN modes hand out.
+                && !(octets[0] == 198 && (octets[1] & 0xfe) == 18)
+                && !VIRTUAL.iter().any(|prefix| name.starts_with(prefix))
+                && !PROXY_NAMES.iter().any(|word| name.contains(word))
+        })
+        .min_by_key(|(name, ip)| {
+            let o = ip.octets();
+            let range = match o { [192, 168, ..] => 0, [10, ..] => 1, [172, b, ..] if (16..32).contains(&b) => 2, _ => 3 };
+            let name = name.to_ascii_lowercase();
+            let physical = name.starts_with("en") || name.starts_with("eth") || name.starts_with("wl") || name.contains("wi-fi") || name.contains("wlan") || name.contains("ethernet") || name.contains("以太网");
+            (range, !physical, name.starts_with("en") && name != "en0")
+        })
+        .map(|(_, ip)| ip)
 }
 
 #[tauri::command]

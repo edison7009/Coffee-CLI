@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import { commands, isTauri, type MobileRpcPairing, type MobileRpcStatus } from '../../tauri';
 import { useT } from '../../i18n/useT';
+import { clipboardWrite } from '../../lib/clipboard';
 
 interface Pairing extends MobileRpcPairing { qr: string }
 
@@ -13,6 +14,7 @@ export function MobileSettings() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [now, setNow] = useState(() => Date.now());
+  const [copied, setCopied] = useState(false);
   const pairedBefore = useRef<Set<string>>(new Set());
   const live = useRef(true);
   useEffect(() => { live.current = true; return () => { live.current = false; }; }, []);
@@ -70,6 +72,7 @@ export function MobileSettings() {
     const qr = await QRCode.toDataURL(next.uri, { width: 220, margin: 2, errorCorrectionLevel: 'M' });
     pairedBefore.current = new Set(status?.devices.map(device => device.publicKey));
     setNow(Date.now());
+    setCopied(false);
     setPairing({ ...next, qr });
   });
 
@@ -103,6 +106,8 @@ export function MobileSettings() {
               <p>{t('settings.mobile.scan')}</p>
               <p className="settings-choice-hint">{t('settings.mobile.expires', { seconds: String(seconds) })}</p>
               <p className="settings-choice-hint">{t('settings.mobile.confirm_hint')}</p>
+              {/* For a phone without a camera, or the browser preview: paste the same link. */}
+              <button type="button" className="settings-voice-scan settings-mobile-copy" onClick={() => void clipboardWrite(pairing.uri).then(() => setCopied(true), () => setCopied(false))}>{t(copied ? 'settings.mobile.copied' : 'settings.mobile.copy_link')}</button>
             </div>
           </div>}
         </div>

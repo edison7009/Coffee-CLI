@@ -502,6 +502,8 @@ export const es = {
   "settings.mobile.scan": "Escanéalo con la app Coffee CLI en tu teléfono.",
   "settings.mobile.expires": "Caduca en {seconds} s",
   "settings.mobile.confirm_hint": "Tras escanear, este equipo te pedirá que permitas el teléfono por su nombre.",
+  "settings.mobile.copy_link": "Copiar enlace de emparejamiento",
+  "settings.mobile.copied": "Copiado",
   "settings.mobile.devices": "Teléfonos emparejados",
   "settings.mobile.devices.empty": "Aún no hay teléfonos emparejados.",
   "settings.mobile.connected": "Conectado",

@@ -505,6 +505,8 @@ export const zhTW = {
   "settings.mobile.scan": "用手機上的 Coffee CLI App 掃描。",
   "settings.mobile.expires": "{seconds} 秒後失效",
   "settings.mobile.confirm_hint": "掃描後，電腦上會跳出視窗請你確認手機名稱。",
+  "settings.mobile.copy_link": "複製配對連結",
+  "settings.mobile.copied": "已複製",
   "settings.mobile.devices": "已配對的手機",
   "settings.mobile.devices.empty": "還沒有配對的手機。",
   "settings.mobile.connected": "已連線",

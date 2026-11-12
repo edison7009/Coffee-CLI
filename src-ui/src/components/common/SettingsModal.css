@@ -656,3 +656,4 @@
 .settings-mobile-dot.is-connected { background: #4caf7a; opacity: 1; }
 .settings-mobile-empty { padding: 0 0 12px; text-align: left; }
 @media (max-width: 640px) { .settings-mobile-pairing { flex-direction: column; align-items: flex-start; } }
+.settings-mobile-copy { align-self: flex-start; }
