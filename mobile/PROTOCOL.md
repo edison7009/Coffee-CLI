@@ -15,19 +15,24 @@
 - 桌面端新模块 `src/mobile_rpc/`：一个 WebSocket 监听（默认关闭，设置里开启；默认只绑定局域网地址，端口待定）+ 一个可选的中继出站连接。
 - 协议实现**复用现有内部函数**，不复用 Tauri IPC 本身（`tier_terminal_input` 等是 `#[tauri::command]`，需把核心逻辑抽成普通函数供两边调用）。
 
-## 2. 配对与认证
+## 2. 配对与认证（已实现）
 
-1. 桌面「设置 → 移动端」生成二维码：`coffee://pair?v=0&host=<lan>:<port>&relay=<url>&pid=<pairingId>&pk=<desktopPubKey>&otp=<一次性码>`，有效期 5 分钟。
-2. 手机生成 X25519 密钥对，扫码后发 `pair.request {devicePubKey, deviceName, otp}`（用桌面公钥加密）。
-3. 桌面**弹窗确认**（显示设备名），确认后把设备公钥写入 `~/.coffee-cli/mobile/devices.json`（只存公钥，不存密钥）。
-4. 之后每次连接：Noise `IK` 握手（或 X25519 + HKDF + ChaCha20-Poly1305 的等价实现）→ 会话密钥。握手失败直接断开，不回错误详情。
-5. 桌面可在设置里吊销设备；吊销后立即断开该设备所有连接。
+加密协议：`Noise_IKpsk2_25519_ChaChaPoly_SHA256`（Rust 端用 `snow`）。桌面持有静态 X25519 密钥对，存放在 `~/.coffee-cli/mobile/config.json`，文件权限 0600，写入时先写临时文件再重命名。已配对手机只保存公钥。
 
-中继侧只认 `pairingId`（随机 128 bit）做路由，看不到密钥和一次性码。
+1. 桌面调用 `mobile_rpc_begin_pairing`，生成 `coffee://pair?v=0&port=<port>&pk=<桌面公钥hex>&code=<128bit 一次性码>`，有效期 5 分钟，同一时间只有一个配对码。主机地址由二维码界面补上。
+2. 手机生成自己的静态密钥对。WebSocket 第一条二进制消息是 `[mode] ++ noise_msg1`：
+   - `mode=1` 配对：psk = SHA-256(code)。只要有一次配对尝试（无论成败），配对码就作废，因此无法反复猜测。
+   - `mode=0` 重连：psk 全零；手机公钥必须在已配对列表里，否则在回复之前就断开，对方得不到任何信息。
+3. 桌面回复 `noise_msg2`。之后手机发出的第一条加密帧必须是 `hello`，它能解密就证明手机完成了握手（配对时还证明手机知道配对码），这时桌面才登记该设备，设备名取自 `hello.params.deviceName`。
+4. `mobile_rpc_revoke_device` 吊销设备，并立即断开该设备的所有连接。密钥文件损坏时会重新生成密钥，所有手机都需要重新配对。
+
+每次连接都是新的会话密钥（有前向保密），双方用静态密钥互相认证。中继只能看到密文。
+
+> 待办：配对时桌面弹窗确认设备名（目前只要持有配对码就直接配对）。
 
 ## 3. 帧格式
 
-握手后每条 WebSocket 消息 = 一个加密 JSON 对象（局域网也加密，不区分）。明文结构参考 JSON-RPC 2.0，去掉 `jsonrpc` 字段：
+握手后，每条 WebSocket **二进制**消息承载一个 JSON 明文。明文按 65519 字节切块，每块是一条 Noise 消息，前缀 2 字节大端长度。解密失败或收到文本帧，连接立即断开。明文结构参考 JSON-RPC 2.0，去掉 `jsonrpc` 字段：
 
 ```jsonc
 // 请求
@@ -49,7 +54,7 @@
 
 | 方法 | params | result |
 |---|---|---|
-| `hello` | `{protocol: 0, appVersion, platform: "ios"\|"android", locale}` | `{protocol: 0, desktopVersion, computerName, capabilities: string[]}` |
+| `hello` | `{protocol: 0, deviceName, appVersion, platform: "ios"\|"android", locale}` | `{protocol: 0, desktopVersion, computerName, capabilities: string[]}` |
 | `ping` | `{}` | `{t}` |
 
 `protocol` 不一致时桌面返回 `unsupported` 并附带 `minProtocol`，手机提示升级。`capabilities` 用来做向前兼容的功能开关（如 `"approvals"`、`"voice"`）。
@@ -197,5 +202,5 @@ type Approval = {
 
 - 已实现：默认关闭的局域网 WebSocket（端口 47391）、`hello`/`ping`、`session.list`、`session.subscribe`/`unsubscribe`（终端回放 256 KB，对话事件回放 4000 条/4 MB，generation 变化即清空）、`session.input`、`session.interrupt`、`conversation.send`/`cancel`、`terminal.output`/`conversation.event`/`session.changed`/`terminal.resync` 事件。
 - 会话列表、发送和取消通过 `mobile-rpc-request` 交给前端 `MobileRpcBridge`，走 `getAgentSession`，和桌面同一条路径。
-- **v0 临时认证**：`hello.params.token` 携带配对令牌（`~/.coffee-cli/mobile/config.json`，权限 0600），明文 WebSocket。§2 的加密握手完成前不得合入主干。
+- 加密握手、配对、重连和吊销已实现（§2、§3）；参考实现是 `src/mobile_rpc/secure.rs` 里的 `Initiator`，手机端需要按它实现。
 - 未实现：审批方法、桌面设置界面和二维码、开启前的历史回放（订阅只能看到开启后的事件；恢复会话的历史还需要 `conversation.history`）。

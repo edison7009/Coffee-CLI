@@ -1,4 +1,5 @@
 use super::buffers::{Buffers, Replay, TERMINAL_BYTES};
+use super::secure::{Initiator, MODE_PAIR, MODE_RESUME};
 use super::*;
 
 #[test]
@@ -30,82 +31,153 @@ fn old_sessions_are_evicted() {
 }
 
 #[test]
-fn config_generates_a_token_and_defaults_off() {
+fn config_generates_a_key_pair_and_defaults_off() {
     let (settings, fresh) = config::parse(None);
-    assert!(fresh && !settings.enabled && settings.port == config::DEFAULT_PORT && settings.token.len() == 64);
+    assert!(fresh && !settings.enabled && settings.port == config::DEFAULT_PORT);
+    assert_eq!((settings.private_bytes().len(), hex::decode(&settings.public_key).unwrap().len()), (32, 32));
     let (kept, fresh) = config::parse(Some(&serde_json::to_string(&settings).unwrap()));
-    assert!(!fresh && kept.token == settings.token);
-    let (broken, fresh) = config::parse(Some("{not json"));
-    assert!(fresh && !broken.enabled);
+    assert!(!fresh && kept.private_key == settings.private_key);
+    // A damaged key pair is replaced, and the pairings bound to it are dropped.
+    let mut broken = settings.clone();
+    broken.private_key = "zz".into();
+    broken.devices.push(config::Device { public_key: "aa".into(), name: "p".into(), paired_at: 0 });
+    let (healed, fresh) = config::parse(Some(&serde_json::to_string(&broken).unwrap()));
+    assert!(fresh && healed.devices.is_empty() && healed.private_key != settings.private_key);
 }
 
 #[test]
-fn token_check_rejects_wrong_and_empty_tokens() {
-    assert!(config::token_matches("abc", "abc"));
-    assert!(!config::token_matches("abd", "abc"));
-    assert!(!config::token_matches("", ""));
+fn hello_requires_method_and_protocol() {
+    let ok = json!({"id":1,"method":"hello","params":{"protocol":PROTOCOL}});
+    assert_eq!(check_hello(&ok).unwrap()["protocol"], PROTOCOL);
+    assert_eq!(check_hello(&json!({"method":"ping"})).unwrap_err()["code"], "unauthorized");
+    assert_eq!(check_hello(&json!({"method":"hello","params":{"protocol":99}})).unwrap_err()["code"], "unsupported");
 }
 
 #[test]
-fn hello_requires_method_protocol_and_token() {
-    let ok = json!({"id":1,"method":"hello","params":{"protocol":PROTOCOL,"token":"secret"}});
-    assert_eq!(check_hello(&ok, "secret").unwrap()["protocol"], PROTOCOL);
-    assert_eq!(check_hello(&json!({"method":"ping"}), "secret").unwrap_err()["code"], "unauthorized");
-    let wrong_token = json!({"method":"hello","params":{"protocol":PROTOCOL,"token":"nope"}});
-    assert_eq!(check_hello(&wrong_token, "secret").unwrap_err()["code"], "unauthorized");
-    let future = json!({"method":"hello","params":{"protocol":99,"token":"secret"}});
-    assert_eq!(check_hello(&future, "secret").unwrap_err()["code"], "unsupported");
+fn channel_round_trips_large_and_empty_frames_and_rejects_tampering() {
+    let (desktop_private, desktop_public) = secure::generate_keypair();
+    let (phone_private, phone_public) = secure::generate_keypair();
+    let mut phone = Initiator::new(&phone_private, &desktop_public, &[0; 32]).unwrap();
+    let first = phone.first_message(MODE_RESUME).unwrap();
+    let (msg2, remote, desktop) = secure::respond(&desktop_private, &first[1..], &[0; 32]).unwrap();
+    assert_eq!(remote, phone_public);
+    let phone = phone.finish(&msg2).unwrap();
+
+    let big = "咖啡".repeat(100_000);
+    assert_eq!(desktop.decrypt(&phone.encrypt(big.as_bytes()).unwrap()).unwrap(), big.as_bytes());
+    assert_eq!(phone.decrypt(&desktop.encrypt(b"").unwrap()).unwrap(), b"");
+    let mut sealed = phone.encrypt(b"hello").unwrap();
+    *sealed.last_mut().unwrap() ^= 1;
+    assert!(desktop.decrypt(&sealed).is_err(), "tampered frame is rejected");
 }
 
-/// Real socket round trip: unauthenticated clients are dropped; an
-/// authenticated one gets ping, a replay on subscribe and live output.
 #[test]
-fn websocket_round_trip() {
+fn wrong_pairing_code_fails_the_handshake() {
+    let (desktop_private, desktop_public) = secure::generate_keypair();
+    let (phone_private, _) = secure::generate_keypair();
+    let mut phone = Initiator::new(&phone_private, &desktop_public, &secure::pairing_psk("guess")).unwrap();
+    let first = phone.first_message(MODE_PAIR).unwrap();
+    // The responder cannot tell yet; the phone fails on the reply, and the
+    // desktop fails on the phone's first frame.
+    let (msg2, _, desktop) = secure::respond(&desktop_private, &first[1..], &secure::pairing_psk("real")).unwrap();
+    assert!(phone.finish(&msg2).is_err());
+    assert!(desktop.decrypt(&[0, 17, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]).is_err());
+}
+
+type Ws = tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<TcpStream>>;
+
+async fn recv_binary(ws: &mut Ws) -> Option<Vec<u8>> {
+    loop {
+        match tokio::time::timeout(Duration::from_secs(5), ws.next()).await.ok()?? {
+            Ok(Message::Binary(b)) => return Some(b.to_vec()),
+            Ok(Message::Close(_)) | Err(_) => return None,
+            _ => {}
+        }
+    }
+}
+
+struct Phone { ws: Ws, channel: secure::Channel }
+impl Phone {
+    async fn send(&mut self, v: Value) { self.ws.send(Message::binary(self.channel.encrypt(v.to_string().as_bytes()).unwrap())).await.unwrap(); }
+    async fn recv(&mut self) -> Option<Value> { serde_json::from_slice(&self.channel.decrypt(&recv_binary(&mut self.ws).await?).ok()?).ok() }
+}
+
+/// Opens a socket and runs the handshake plus `hello`. `None` when the desktop
+/// drops the connection.
+async fn connect(url: &str, private: &[u8], desktop_public: &[u8], mode: u8, psk: [u8; 32]) -> Option<(Phone, Value)> {
+    let (mut ws, _) = tokio_tungstenite::connect_async(url).await.unwrap();
+    let mut init = Initiator::new(private, desktop_public, &psk).unwrap();
+    ws.send(Message::binary(init.first_message(mode).unwrap())).await.ok()?;
+    let msg2 = recv_binary(&mut ws).await?;
+    let channel = init.finish(&msg2).ok()?;
+    let mut phone = Phone { ws, channel };
+    phone.send(json!({"id":1,"method":"hello","params":{"protocol":PROTOCOL,"deviceName":"Test phone"}})).await;
+    let reply = phone.recv().await?;
+    Some((phone, reply))
+}
+
+/// End to end over a real socket: pairing with the one-time code, reconnect
+/// with the device key, unknown and revoked phones dropped, encrypted
+/// subscribe replay and live events.
+#[test]
+fn encrypted_websocket_round_trip() {
+    let dir = tempfile::tempdir().unwrap();
+    config::use_path(dir.path().join("config.json"));
     let runtime = tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap();
     runtime.block_on(async {
         hub().enabled.store(true, Ordering::SeqCst);
+        let desktop_public = hex::decode(config::load().public_key).unwrap();
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let addr = listener.local_addr().unwrap();
-        tokio::spawn(async move {
-            loop { let (stream, _) = listener.accept().await.unwrap(); tokio::spawn(async move { serve(stream, "secret").await }); }
-        });
-        let url = format!("ws://{addr}");
-        let send = |v: Value| Message::text(v.to_string());
-        async fn recv(ws: &mut (impl StreamExt<Item = Result<Message, tokio_tungstenite::tungstenite::Error>> + Unpin)) -> Option<Value> {
-            loop {
-                match tokio::time::timeout(Duration::from_secs(5), ws.next()).await.ok()?? {
-                    Ok(Message::Text(t)) => return serde_json::from_str(&t).ok(),
-                    Ok(Message::Close(_)) | Err(_) => return None,
-                    _ => {}
-                }
-            }
-        }
+        let url = format!("ws://{}", listener.local_addr().unwrap());
+        tokio::spawn(async move { loop { let (stream, _) = listener.accept().await.unwrap(); tokio::spawn(serve(stream)); } });
+        let (phone_private, phone_public) = secure::generate_keypair();
 
-        let (mut bad, _) = tokio_tungstenite::connect_async(&url).await.unwrap();
-        bad.send(send(json!({"id":1,"method":"hello","params":{"protocol":PROTOCOL,"token":"wrong"}}))).await.unwrap();
-        assert_eq!(recv(&mut bad).await.unwrap()["error"]["code"], "unauthorized");
-        assert!(recv(&mut bad).await.is_none(), "rejected client is disconnected");
+        // Not paired yet: a resume attempt is dropped before any reply.
+        assert!(connect(&url, &phone_private, &desktop_public, MODE_RESUME, [0; 32]).await.is_none());
 
-        let (mut ws, _) = tokio_tungstenite::connect_async(&url).await.unwrap();
-        ws.send(send(json!({"id":1,"method":"hello","params":{"protocol":PROTOCOL,"token":"secret"}}))).await.unwrap();
-        assert_eq!(recv(&mut ws).await.unwrap()["result"]["protocol"], PROTOCOL);
-        ws.send(send(json!({"id":2,"method":"ping","params":{}}))).await.unwrap();
-        assert!(recv(&mut ws).await.unwrap()["result"]["t"].is_i64());
-        ws.send(send(json!({"id":3,"method":"nope","params":{}}))).await.unwrap();
-        assert_eq!(recv(&mut ws).await.unwrap()["error"]["code"], "unsupported");
+        // Pairing without an open window, or with the wrong code, fails and burns the code.
+        assert!(connect(&url, &phone_private, &desktop_public, MODE_PAIR, secure::pairing_psk("x")).await.is_none());
+        *hub().pairing.lock().unwrap() = Some(("real".into(), Instant::now() + PAIRING_TTL));
+        assert!(connect(&url, &phone_private, &desktop_public, MODE_PAIR, secure::pairing_psk("wrong")).await.is_none());
+        assert!(hub().pairing.lock().unwrap().is_none(), "a failed attempt consumes the code");
+
+        *hub().pairing.lock().unwrap() = Some(("real".into(), Instant::now() + PAIRING_TTL));
+        let (mut paired, hello) = connect(&url, &phone_private, &desktop_public, MODE_PAIR, secure::pairing_psk("real")).await.expect("pairing succeeds");
+        assert_eq!(hello["result"]["protocol"], PROTOCOL);
+        let device = &config::load().devices[0];
+        assert_eq!((device.public_key.as_str(), device.name.as_str()), (hex::encode(&phone_public).as_str(), "Test phone"));
+        drop(paired.ws.close(None).await);
+
+        // Reconnect with the device key.
+        let (mut phone, _) = connect(&url, &phone_private, &desktop_public, MODE_RESUME, [0; 32]).await.expect("paired phone reconnects");
+        phone.send(json!({"id":2,"method":"ping","params":{}})).await;
+        assert!(phone.recv().await.unwrap()["result"]["t"].is_i64());
+        phone.send(json!({"id":3,"method":"nope","params":{}})).await;
+        assert_eq!(phone.recv().await.unwrap()["error"]["code"], "unsupported");
 
         record_conversation("codex", json!({"id":"rt-conv","generation":"g","event":{"type":"first"}}));
-        ws.send(send(json!({"id":4,"method":"session.subscribe","params":{"id":"rt-conv"}}))).await.unwrap();
-        let replay = recv(&mut ws).await.unwrap();
-        assert_eq!(replay["result"]["view"], "conversation");
-        assert_eq!(replay["result"]["events"], json!([{"type":"first"}]));
+        phone.send(json!({"id":4,"method":"session.subscribe","params":{"id":"rt-conv"}})).await;
+        let replay = phone.recv().await.unwrap();
+        assert_eq!((replay["result"]["view"].as_str(), &replay["result"]["events"]), (Some("conversation"), &json!([{"type":"first"}])));
+        record_terminal("rt-other", "not subscribed");
         record_conversation("codex", json!({"id":"rt-conv","generation":"g","event":{"type":"second"}}));
-        let live = recv(&mut ws).await.unwrap();
+        let live = phone.recv().await.unwrap();
         assert_eq!((live["event"].as_str(), live["params"]["payload"]["type"].as_str()), (Some("conversation.event"), Some("second")));
-        // Output for sessions the phone did not subscribe to is not sent.
-        record_terminal("rt-other", "hidden");
-        record_terminal("rt-conv-missing", "hidden");
-        ws.send(send(json!({"id":5,"method":"ping","params":{}}))).await.unwrap();
-        assert_eq!(recv(&mut ws).await.unwrap()["id"], 5);
+
+        // A tampered frame ends the connection.
+        let mut sealed = phone.channel.encrypt(json!({"id":5,"method":"ping"}).to_string().as_bytes()).unwrap();
+        sealed[3] ^= 0xff;
+        let tampered_at = Instant::now();
+        phone.ws.send(Message::binary(sealed)).await.unwrap();
+        assert!(recv_binary(&mut phone.ws).await.is_none());
+        assert!(tampered_at.elapsed() < Duration::from_secs(2), "tampering closes the socket at once");
+
+        // Revocation drops live connections and blocks reconnecting.
+        let (mut live_phone, _) = connect(&url, &phone_private, &desktop_public, MODE_RESUME, [0; 32]).await.unwrap();
+        let revoked_at = Instant::now();
+        mobile_rpc_revoke_device(hex::encode(&phone_public)).unwrap();
+        assert!(recv_binary(&mut live_phone.ws).await.is_none(), "revoked phone is disconnected");
+        assert!(revoked_at.elapsed() < Duration::from_secs(2), "disconnect is immediate, not a timeout");
+        assert!(connect(&url, &phone_private, &desktop_public, MODE_RESUME, [0; 32]).await.is_none());
     });
 }

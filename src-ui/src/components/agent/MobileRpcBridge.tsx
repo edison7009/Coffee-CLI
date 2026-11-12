@@ -6,7 +6,10 @@ import { isClaudeConversation, isCodexConversation, isDshConversation, isOpenCod
 import type { TerminalSession } from '../../store/app-state';
 
 interface MobileRequest { requestId: string; method: string; params: { id?: string; text?: string } }
-class RequestError extends Error { constructor(message: string, readonly code: 'not_found' | 'busy' | 'internal') { super(message); } }
+class RequestError extends Error {
+  readonly code: 'not_found' | 'busy' | 'internal';
+  constructor(message: string, code: RequestError['code']) { super(message); this.code = code; }
+}
 
 function conversationKind(tab: TerminalSession) {
   return isClaudeConversation(tab) ? 'claude' : isCodexConversation(tab) ? 'codex' : isOpenCodeConversation(tab) ? 'opencode'

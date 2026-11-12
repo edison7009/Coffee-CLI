@@ -201,7 +201,9 @@ export const commands = {
   orchestrationResolve: (requestId: string, result: unknown) => invoke<void>('orchestration_resolve', { requestId, result }),
   mobileRpcStatus: () => invoke<MobileRpcStatus>('mobile_rpc_status'),
   mobileRpcSetEnabled: (enabled: boolean) => invoke<MobileRpcStatus>('mobile_rpc_set_enabled', { enabled }),
-  mobileRpcRotateToken: () => invoke<MobileRpcStatus>('mobile_rpc_rotate_token'),
+  mobileRpcBeginPairing: () => invoke<MobileRpcPairing>('mobile_rpc_begin_pairing'),
+  mobileRpcCancelPairing: () => invoke<void>('mobile_rpc_cancel_pairing'),
+  mobileRpcRevokeDevice: (publicKey: string) => invoke<MobileRpcStatus>('mobile_rpc_revoke_device', { publicKey }),
   mobileRpcResolve: (requestId: string, result: unknown) => invoke<void>('mobile_rpc_resolve', { requestId, result }),
   getToolControl: (kind: 'computer' | 'browser') => invoke<ToolControlStatus>('get_tool_control', { kind }),
   checkToolControl: (kind: 'computer' | 'browser') => invoke<ToolControlStatus>('check_tool_control', { kind }),
@@ -453,4 +455,6 @@ export interface ToolConfigEntry {
   history_path: string;
 }
 
-export interface MobileRpcStatus { enabled: boolean; port: number; token: string; clients: number; protocol: number }
+export interface MobileRpcDevice { publicKey: string; name: string; pairedAt: number }
+export interface MobileRpcStatus { enabled: boolean; port: number; publicKey: string; devices: MobileRpcDevice[]; clients: number; protocol: number }
+export interface MobileRpcPairing { uri: string; port: number; publicKey: string; code: string; expiresAt: number }

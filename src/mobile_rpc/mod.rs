@@ -6,11 +6,13 @@
 //! are delegated to the main window (`mobile-rpc-request`) so they take the
 //! exact path the desktop UI uses.
 //!
-//! v0 authenticates with a shared pairing token over plain WebSocket. The
-//! encrypted handshake from the protocol draft replaces it before this ships.
+//! Every connection is end-to-end encrypted with Noise `IKpsk2` (see
+//! `secure.rs`): phones pair once with a one-time QR code, then reconnect
+//! with their own static key.
 
 mod buffers;
 mod config;
+mod secure;
 
 use buffers::{Buffers, Replay};
 use futures_util::{SinkExt, StreamExt};
@@ -19,7 +21,7 @@ use std::collections::{HashMap, HashSet};
 use std::net::{Ipv4Addr, SocketAddr};
 use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter, Listener, Manager};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::{mpsc, oneshot};
@@ -31,6 +33,7 @@ const CLIENT_QUEUE: usize = 1024;
 const MAX_FRAME: usize = 1 << 20;
 const HELLO_TIMEOUT: Duration = Duration::from_secs(10);
 const GUI_TIMEOUT: Duration = Duration::from_secs(30);
+const PAIRING_TTL: Duration = Duration::from_secs(300);
 
 /// Events forwarded to phones, with the stream kind each one feeds.
 const CONVERSATION_EVENTS: [(&str, &str); 5] = [
@@ -42,6 +45,10 @@ const CONVERSATION_EVENTS: [(&str, &str); 5] = [
 ];
 
 struct Client {
+    /// Hex public key of the paired phone, so revocation can drop it.
+    device: String,
+    /// Fired on revocation or shutdown to close the socket immediately.
+    kill: tokio::sync::Notify,
     tx: mpsc::Sender<Value>,
     subscriptions: Mutex<HashSet<String>>,
     /// Set when output was dropped for a session because the queue was full.
@@ -60,6 +67,10 @@ struct Hub {
     connections: AtomicUsize,
     pending: Mutex<HashMap<String, oneshot::Sender<Value>>>,
     seq: AtomicU64,
+    /// One active pairing code and its expiry; consumed by the first attempt.
+    pairing: Mutex<Option<(String, Instant)>>,
+    /// Serialises config writes from pairing and revocation.
+    config_lock: Mutex<()>,
 }
 
 fn hub() -> &'static Hub {
@@ -143,7 +154,6 @@ fn start(settings: config::Settings) -> Result<(), String> {
     let (stop_tx, mut stop_rx) = oneshot::channel();
     *h.stop.lock().unwrap() = Some(stop_tx);
     h.enabled.store(true, Ordering::SeqCst);
-    let token = Arc::new(settings.token);
     tauri::async_runtime::spawn(async move {
         let listener = match TcpListener::from_std(std_listener) { Ok(l) => l, Err(e) => { log::warn!("[mobile_rpc] {e}"); hub().listening.store(false, Ordering::SeqCst); return } };
         loop {
@@ -152,9 +162,8 @@ fn start(settings: config::Settings) -> Result<(), String> {
                 accepted = listener.accept() => {
                     let Ok((stream, _)) = accepted else { continue };
                     if hub().connections.fetch_add(1, Ordering::SeqCst) >= MAX_CLIENTS { hub().connections.fetch_sub(1, Ordering::SeqCst); continue; }
-                    let token = token.clone();
                     tauri::async_runtime::spawn(async move {
-                        serve(stream, &token).await;
+                        serve(stream).await;
                         hub().connections.fetch_sub(1, Ordering::SeqCst);
                     });
                 }
@@ -169,38 +178,39 @@ fn stop() {
     let h = hub();
     h.enabled.store(false, Ordering::SeqCst);
     if let Some(stop) = h.stop.lock().unwrap().take() { let _ = stop.send(()); }
-    // Dropping senders ends every client's writer, which closes its socket.
-    h.clients.lock().unwrap().clear();
+    for client in h.clients.lock().unwrap().drain().map(|(_, c)| c) { client.kill.notify_one(); }
     h.buffers.lock().unwrap().clear();
 }
 
-async fn serve(stream: TcpStream, token: &str) {
+async fn serve(stream: TcpStream) {
     let Ok(socket) = tokio_tungstenite::accept_async(stream).await else { return };
     let (mut sink, mut source) = socket.split();
-    // The first frame must be a hello carrying the pairing token.
-    let hello = tokio::time::timeout(HELLO_TIMEOUT, source.next()).await;
-    let Ok(Some(Ok(Message::Text(text)))) = hello else { return };
-    let Ok(request) = serde_json::from_str::<Value>(&text) else { return };
-    let reply = match check_hello(&request, token) {
-        Ok(result) => json!({"id":request["id"],"result":result}),
-        Err(error) => { let _ = sink.send(Message::text(json!({"id":request["id"],"error":error}).to_string())).await; return }
-    };
-    if sink.send(Message::text(reply.to_string())).await.is_err() { return }
+    let Some((client_device, channel)) = handshake(&mut sink, &mut source).await else { return };
+    let channel = Arc::new(channel);
 
     let (tx, mut rx) = mpsc::channel::<Value>(CLIENT_QUEUE);
-    let client = Arc::new(Client { tx, subscriptions: Mutex::default(), resync: Mutex::default() });
+    let client = Arc::new(Client { device: client_device, kill: tokio::sync::Notify::new(), tx, subscriptions: Mutex::default(), resync: Mutex::default() });
     let client_id = hub().next_client.fetch_add(1, Ordering::SeqCst);
     hub().clients.lock().unwrap().insert(client_id, client.clone());
+    let writer_channel = channel.clone();
     let writer = tauri::async_runtime::spawn(async move {
         while let Some(frame) = rx.recv().await {
-            if sink.send(Message::text(frame.to_string())).await.is_err() { break; }
+            let Ok(sealed) = writer_channel.encrypt(frame.to_string().as_bytes()) else { break };
+            if sink.send(Message::binary(sealed)).await.is_err() { break; }
         }
         let _ = sink.close().await;
     });
-    while let Some(Ok(message)) = source.next().await {
-        let text = match message { Message::Text(text) => text, Message::Close(_) => break, _ => continue };
-        if text.len() > MAX_FRAME { break; }
-        let Ok(request) = serde_json::from_str::<Value>(&text) else { continue };
+    loop {
+        let message = tokio::select! {
+            _ = client.kill.notified() => break,
+            message = source.next() => match message { Some(Ok(message)) => message, _ => break },
+        };
+        let sealed = match message { Message::Binary(bytes) => bytes, Message::Close(_) => break, Message::Ping(_) | Message::Pong(_) => continue, _ => break };
+        if sealed.len() > MAX_FRAME * 2 { break; }
+        // A frame that fails to decrypt means tampering or desync: drop the connection.
+        let Ok(plain) = channel.decrypt(&sealed) else { break };
+        if plain.len() > MAX_FRAME { break; }
+        let Ok(request) = serde_json::from_slice::<Value>(&plain) else { continue };
         let client = client.clone();
         tauri::async_runtime::spawn(async move {
             let id = request["id"].clone();
@@ -215,7 +225,72 @@ async fn serve(stream: TcpStream, token: &str) {
     }
     hub().clients.lock().unwrap().remove(&client_id);
     drop(client);
+    // Aborting the writer drops the socket sink, which closes the connection.
     writer.abort();
+}
+
+type Sink = futures_util::stream::SplitSink<tokio_tungstenite::WebSocketStream<TcpStream>, Message>;
+type Source = futures_util::stream::SplitStream<tokio_tungstenite::WebSocketStream<TcpStream>>;
+
+async fn next_binary(source: &mut Source) -> Option<Vec<u8>> {
+    match tokio::time::timeout(HELLO_TIMEOUT, source.next()).await {
+        Ok(Some(Ok(Message::Binary(bytes)))) if bytes.len() <= MAX_FRAME => Some(bytes.to_vec()),
+        _ => None,
+    }
+}
+
+/// Noise handshake, then an encrypted `hello`. Unknown phones and wrong
+/// pairing codes are dropped without an explanation.
+async fn handshake(sink: &mut Sink, source: &mut Source) -> Option<(String, secure::Channel)> {
+    let first = next_binary(source).await?;
+    let (&mode, msg1) = first.split_first()?;
+    let psk = match mode {
+        secure::MODE_RESUME => [0u8; 32],
+        // Any pairing attempt consumes the code, so it cannot be guessed repeatedly.
+        secure::MODE_PAIR => {
+            let (code, expires) = hub().pairing.lock().unwrap().take()?;
+            if Instant::now() > expires { return None; }
+            secure::pairing_psk(&code)
+        }
+        _ => return None,
+    };
+    let settings = config::load();
+    let (msg2, remote, channel) = secure::respond(&settings.private_bytes(), msg1, &psk).ok()?;
+    if mode == secure::MODE_RESUME && !settings.knows(&remote) { return None; }
+    sink.send(Message::binary(msg2)).await.ok()?;
+
+    // The phone's first encrypted frame proves it completed the handshake
+    // (and, when pairing, that it knew the code).
+    let plain = channel.decrypt(&next_binary(source).await?).ok()?;
+    let request: Value = serde_json::from_slice(&plain).ok()?;
+    let reply = match check_hello(&request) {
+        Ok(result) => json!({"id":request["id"],"result":result}),
+        Err(error) => {
+            if let Ok(sealed) = channel.encrypt(json!({"id":request["id"],"error":error}).to_string().as_bytes()) { let _ = sink.send(Message::binary(sealed)).await; }
+            return None;
+        }
+    };
+    let device = hex::encode(&remote);
+    if mode == secure::MODE_PAIR {
+        let name = request["params"]["deviceName"].as_str().unwrap_or("Phone").chars().take(64).collect::<String>();
+        register_device(&device, &name).ok()?;
+    }
+    sink.send(Message::binary(channel.encrypt(reply.to_string().as_bytes()).ok()?)).await.ok()?;
+    Some((device, channel))
+}
+
+fn register_device(public_key: &str, name: &str) -> Result<(), String> {
+    let _guard = hub().config_lock.lock().unwrap();
+    let mut settings = config::load();
+    settings.devices.retain(|d| d.public_key != public_key);
+    settings.devices.push(config::Device { public_key: public_key.into(), name: name.into(), paired_at: chrono::Utc::now().timestamp_millis() });
+    config::save(&settings)?;
+    broadcast_desktop_devices();
+    Ok(())
+}
+
+fn broadcast_desktop_devices() {
+    if let Some(app) = hub().app.lock().unwrap().clone() { let _ = app.emit_to("main", "mobile-rpc-devices", status_value()); }
 }
 
 async fn flush_resync(client: &Client) {
@@ -223,14 +298,11 @@ async fn flush_resync(client: &Client) {
     for id in ids { let _ = client.tx.send(next_seq(json!({"event":"terminal.resync","params":{"id":id}}))).await; }
 }
 
-fn check_hello(request: &Value, token: &str) -> Result<Value, Value> {
+fn check_hello(request: &Value) -> Result<Value, Value> {
     if request["method"] != "hello" { return Err(json!({"code":"unauthorized","message":"hello required"})); }
     let params = &request["params"];
     if params["protocol"].as_u64() != Some(PROTOCOL) {
         return Err(json!({"code":"unsupported","message":"protocol mismatch","minProtocol":PROTOCOL}));
-    }
-    if !config::token_matches(params["token"].as_str().unwrap_or(""), token) {
-        return Err(json!({"code":"unauthorized","message":"pairing token rejected"}));
     }
     Ok(json!({
         "protocol": PROTOCOL,
@@ -316,7 +388,8 @@ fn status_value() -> Value {
     json!({
         "enabled": active(),
         "port": settings.port,
-        "token": settings.token,
+        "publicKey": settings.public_key,
+        "devices": settings.devices,
         "clients": hub().clients.lock().unwrap().len(),
         "protocol": PROTOCOL,
     })
@@ -327,20 +400,52 @@ pub fn mobile_rpc_status() -> Value { status_value() }
 
 #[tauri::command]
 pub fn mobile_rpc_set_enabled(enabled: bool) -> Result<Value, String> {
-    let mut settings = config::load();
-    if enabled { start(settings.clone())?; } else { stop(); }
-    settings.enabled = enabled;
-    config::save(&settings)?;
+    {
+        let _guard = hub().config_lock.lock().unwrap();
+        let mut settings = config::load();
+        if enabled { start(settings.clone())?; } else { stop(); *hub().pairing.lock().unwrap() = None; }
+        settings.enabled = enabled;
+        config::save(&settings)?;
+    }
     Ok(status_value())
 }
 
+/// Starts a five-minute pairing window. The returned URI is what the desktop
+/// renders as a QR code; it is never logged or sent anywhere else.
 #[tauri::command]
-pub fn mobile_rpc_rotate_token() -> Result<Value, String> {
-    let mut settings = config::load();
-    settings.token = config::new_token();
-    config::save(&settings)?;
-    // Paired phones must reconnect with the new token; restart drops them.
-    if active() { stop(); start(settings)?; }
+pub fn mobile_rpc_begin_pairing() -> Result<Value, String> {
+    if !active() { return Err("Enable mobile access first".into()); }
+    let settings = config::load();
+    let code = config::new_pairing_code();
+    *hub().pairing.lock().unwrap() = Some((code.clone(), Instant::now() + PAIRING_TTL));
+    let expires_at = chrono::Utc::now().timestamp_millis() + PAIRING_TTL.as_millis() as i64;
+    Ok(json!({
+        "uri": format!("coffee://pair?v={PROTOCOL}&port={}&pk={}&code={code}", settings.port, settings.public_key),
+        "port": settings.port,
+        "publicKey": settings.public_key,
+        "code": code,
+        "expiresAt": expires_at,
+    }))
+}
+
+#[tauri::command]
+pub fn mobile_rpc_cancel_pairing() { *hub().pairing.lock().unwrap() = None; }
+
+/// Unpairs a phone and drops its open connections immediately.
+#[tauri::command]
+pub fn mobile_rpc_revoke_device(public_key: String) -> Result<Value, String> {
+    {
+        let _guard = hub().config_lock.lock().unwrap();
+        let mut settings = config::load();
+        settings.devices.retain(|d| d.public_key != public_key);
+        config::save(&settings)?;
+    }
+    hub().clients.lock().unwrap().retain(|_, client| {
+        let keep = client.device != public_key;
+        if !keep { client.kill.notify_one(); }
+        keep
+    });
+    broadcast_desktop_devices();
     Ok(status_value())
 }
 
