@@ -29,7 +29,9 @@ try{
   await page.goto(`http://127.0.0.1:${server.address().port}`);
   const chip=page.getByRole('button',{name:'思考强度',exact:true}),slider=page.getByRole('slider',{name:'思考强度'}),thinking=page.getByRole('switch',{name:'扩展思考',exact:true});
   const effortRequests=()=>page.evaluate(()=>window.requests.filter(request=>'effortLevel' in request.settings).map(request=>request.settings.effortLevel));
-  const drag=async destination=>{const bounds=await slider.boundingBox();
+  const drag=async destination=>{
+    await page.waitForFunction(()=>document.querySelector('.claude-effort-range input')?.disabled===false);
+    const bounds=await slider.boundingBox();
     await page.mouse.move(bounds.x+bounds.width*.4,bounds.y+bounds.height/2);await page.mouse.down();
     await page.mouse.move(bounds.x+bounds.width*destination,bounds.y+bounds.height/2,{steps:8});await page.mouse.up();};
   await chip.click();

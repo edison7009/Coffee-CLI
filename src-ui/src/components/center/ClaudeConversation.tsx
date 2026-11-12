@@ -356,6 +356,7 @@ export function ClaudeConversation({ sessionId, cwd, resumeToken, isActive, isVi
   const conversationMenu = useConversationMenu(scrollRef, sessionId, isActive);
   const pinned = useRef(true);
   const pointerHeld = useRef(false);
+  const scrollbarHeld = useRef(false);
   const lastScrollTop = useRef(0);
   const prependAnchor = useRef<{ firstId: string; messageId: string; offset: number; top: number; height: number; applied: boolean } | null>(null);
   const [copied, setCopied] = useState('');
@@ -407,9 +408,17 @@ export function ClaudeConversation({ sessionId, cwd, resumeToken, isActive, isVi
     window.addEventListener('keydown', onKey); return () => window.removeEventListener('keydown', onKey);
   }, [isActive, s.busy, s.requests.length, sessionId]);
   const pauseFollow = useCallback(() => { prependAnchor.current = null; pinned.current = false; setScrolled(true); }, []);
-  useEffect(() => { const scroll = scrollRef.current; if (!scroll) return; return bindAutoHideScrollbar(scroll, { wide: true, onDragStart: pauseFollow }); }, [pauseFollow]);
+  useEffect(() => { const scroll = scrollRef.current; if (!scroll) return; return bindAutoHideScrollbar(scroll, { wide: true, onDragStart: () => { scrollbarHeld.current = true; pointerHeld.current = true; pauseFollow(); } }); }, [pauseFollow]);
   useEffect(() => {
-    const release = () => { pointerHeld.current = false; };
+    const release = () => {
+      if (!pointerHeld.current) return;
+      pointerHeld.current = false;
+      const draggedScrollbar = scrollbarHeld.current;
+      scrollbarHeld.current = false;
+      // Re-follow only once the drag ends: following mid-drag fights the slider and jitters.
+      const scroll = scrollRef.current;
+      if (draggedScrollbar && scroll?.clientHeight && scroll.scrollHeight - scroll.scrollTop - scroll.clientHeight < 2) { pinned.current = true; setScrolled(false); }
+    };
     document.addEventListener('pointerup', release); document.addEventListener('pointercancel', release);
     return () => { document.removeEventListener('pointerup', release); document.removeEventListener('pointercancel', release); };
   }, []);
@@ -434,7 +443,7 @@ export function ClaudeConversation({ sessionId, cwd, resumeToken, isActive, isVi
       // position (macOS WebKit does this after programmatic jumps), so stay at the end.
       if (pointerHeld.current) pinned.current = false;
       else if (pinned.current) scroll.scrollTop = scroll.scrollHeight;
-    } else if (scroll.scrollTop > lastScrollTop.current && distance < 2) pinned.current = true;
+    } else if (scroll.scrollTop > lastScrollTop.current && distance < 2 && !pointerHeld.current) pinned.current = true;
     lastScrollTop.current = scroll.scrollTop;
     setScrolled(!pinned.current);
   }, []);
