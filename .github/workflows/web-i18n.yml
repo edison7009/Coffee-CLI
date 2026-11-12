@@ -1,0 +1,61 @@
+name: Regenerate website language pages
+
+# The homepages at /zh/, /zh-hant/, /ja/, … and sitemap.xml are generated from
+# Web-Home/index.html and the copy in js/main.js + js/hero-features.js by
+# scripts/build-web-i18n.mjs. When any of those change on main, rebuild the
+# pages and commit the result, so nobody has to remember to run the script.
+# A commit pushed with GITHUB_TOKEN does not start this workflow again;
+# Cloudflare Pages deploys it like any other push.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Web-Home/index.html'
+      - 'Web-Home/js/main.js'
+      - 'Web-Home/js/hero-features.js'
+      - 'scripts/build-web-i18n.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: web-i18n
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v5
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Generate pages
+        run: node scripts/build-web-i18n.mjs
+
+      - name: Commit if anything changed
+        run: |
+          set -e
+          git add -A Web-Home
+          if git diff --cached --quiet; then
+            echo "Language pages already up to date."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore(web): regenerate language pages"
+          # main may have moved while this ran: rebase and retry a few times.
+          for i in 1 2 3; do
+            git push origin HEAD:main && exit 0
+            git pull --rebase origin main
+            node scripts/build-web-i18n.mjs --check
+          done
+          exit 1

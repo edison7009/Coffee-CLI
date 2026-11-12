@@ -11,7 +11,9 @@
 //                                            refresh index.html, sitemap.xml
 //   node scripts/build-web-i18n.mjs --check  exit 1 if any output is stale
 //
-// Run it after changing index.html or any homepage copy, and commit the output.
+// .github/workflows/web-i18n.yml runs it on every push to main that touches
+// index.html, the copy or this script, and commits the output; running it
+// locally first just keeps your own commit complete.
 
 import fs from "node:fs";
 import path from "node:path";
