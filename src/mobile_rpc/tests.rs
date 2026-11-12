@@ -2,6 +2,8 @@ use super::buffers::{Buffers, Replay, TERMINAL_BYTES};
 use super::secure::{Initiator, MODE_PAIR, MODE_RESUME};
 use super::*;
 
+pub static TEST_PAIRING_ANSWER: AtomicBool = AtomicBool::new(true);
+
 #[test]
 fn terminal_buffer_keeps_the_newest_bytes_on_char_boundaries() {
     let mut b = Buffers::default();
@@ -140,6 +142,13 @@ fn encrypted_websocket_round_trip() {
         *hub().pairing.lock().unwrap() = Some(("real".into(), Instant::now() + PAIRING_TTL));
         assert!(connect(&url, &phone_private, &desktop_public, MODE_PAIR, secure::pairing_psk("wrong")).await.is_none());
         assert!(hub().pairing.lock().unwrap().is_none(), "a failed attempt consumes the code");
+
+        // The desktop declines: nothing is registered.
+        TEST_PAIRING_ANSWER.store(false, Ordering::SeqCst);
+        *hub().pairing.lock().unwrap() = Some(("real".into(), Instant::now() + PAIRING_TTL));
+        assert!(connect(&url, &phone_private, &desktop_public, MODE_PAIR, secure::pairing_psk("real")).await.unwrap().1["error"]["code"] == "unauthorized");
+        assert!(config::load().devices.is_empty());
+        TEST_PAIRING_ANSWER.store(true, Ordering::SeqCst);
 
         *hub().pairing.lock().unwrap() = Some(("real".into(), Instant::now() + PAIRING_TTL));
         let (mut paired, hello) = connect(&url, &phone_private, &desktop_public, MODE_PAIR, secure::pairing_psk("real")).await.expect("pairing succeeds");

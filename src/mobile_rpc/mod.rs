@@ -34,6 +34,9 @@ const MAX_FRAME: usize = 1 << 20;
 const HELLO_TIMEOUT: Duration = Duration::from_secs(10);
 const GUI_TIMEOUT: Duration = Duration::from_secs(30);
 const PAIRING_TTL: Duration = Duration::from_secs(300);
+/// How long the desktop prompt waits for the person to allow a new phone.
+#[cfg_attr(test, allow(dead_code))]
+const PAIRING_CONFIRM_TIMEOUT: Duration = Duration::from_secs(120);
 
 /// Events forwarded to phones, with the stream kind each one feeds.
 const CONVERSATION_EVENTS: [(&str, &str); 5] = [
@@ -272,12 +275,27 @@ async fn handshake(sink: &mut Sink, source: &mut Source) -> Option<(String, secu
     };
     let device = hex::encode(&remote);
     if mode == secure::MODE_PAIR {
-        let name = request["params"]["deviceName"].as_str().unwrap_or("Phone").chars().take(64).collect::<String>();
+        let name = request["params"]["deviceName"].as_str().map(str::trim).filter(|n| !n.is_empty()).unwrap_or("Phone").chars().filter(|c| !c.is_control()).take(64).collect::<String>();
+        // The person at the desktop confirms the phone by name before it is trusted.
+        let accepted = confirm_pairing(&name).await;
+        if !accepted {
+            if let Ok(sealed) = channel.encrypt(json!({"id":request["id"],"error":{"code":"unauthorized","message":"pairing declined"}}).to_string().as_bytes()) { let _ = sink.send(Message::binary(sealed)).await; }
+            return None;
+        }
         register_device(&device, &name).ok()?;
     }
     sink.send(Message::binary(channel.encrypt(reply.to_string().as_bytes()).ok()?)).await.ok()?;
     Some((device, channel))
 }
+
+#[cfg(not(test))]
+async fn confirm_pairing(name: &str) -> bool {
+    gui_with_timeout("pair.confirm", json!({"name": name}), PAIRING_CONFIRM_TIMEOUT).await.is_ok_and(|result| result["accepted"] == true)
+}
+
+/// Tests have no window; they decide through `TEST_PAIRING_ANSWER`.
+#[cfg(test)]
+async fn confirm_pairing(_name: &str) -> bool { tests::TEST_PAIRING_ANSWER.load(Ordering::SeqCst) }
 
 fn register_device(public_key: &str, name: &str) -> Result<(), String> {
     let _guard = hub().config_lock.lock().unwrap();
@@ -363,7 +381,9 @@ fn write_terminal(id: &str, data: &str) -> Result<(), RpcError> {
 }
 
 /// Asks the main window to run `method` and waits for `mobile_rpc_resolve`.
-async fn gui(method: &str, params: Value) -> Result<Value, RpcError> {
+async fn gui(method: &str, params: Value) -> Result<Value, RpcError> { gui_with_timeout(method, params, GUI_TIMEOUT).await }
+
+async fn gui_with_timeout(method: &str, params: Value, timeout: Duration) -> Result<Value, RpcError> {
     let app = hub().app.lock().unwrap().clone().ok_or(("internal", "app unavailable".to_string()))?;
     let request_id = uuid::Uuid::new_v4().to_string();
     let (tx, rx) = oneshot::channel();
@@ -372,7 +392,7 @@ async fn gui(method: &str, params: Value) -> Result<Value, RpcError> {
         hub().pending.lock().unwrap().remove(&request_id);
         return Err(("internal", "Coffee window unavailable".into()));
     }
-    let result = tokio::time::timeout(GUI_TIMEOUT, rx).await;
+    let result = tokio::time::timeout(timeout, rx).await;
     hub().pending.lock().unwrap().remove(&request_id);
     let value = result.map_err(|_| ("busy", "desktop did not answer".to_string()))?.map_err(|_| ("internal", "request dropped".to_string()))?;
     if value["ok"] == true { Ok(value["result"].clone()) } else {
@@ -390,9 +410,22 @@ fn status_value() -> Value {
         "port": settings.port,
         "publicKey": settings.public_key,
         "devices": settings.devices,
+        "connected": hub().clients.lock().unwrap().values().map(|c| c.device.clone()).collect::<HashSet<_>>(),
+        "host": lan_address(),
         "clients": hub().clients.lock().unwrap().len(),
         "protocol": PROTOCOL,
     })
+}
+
+/// The address phones on the same network should dial. Connecting a UDP
+/// socket only picks the outgoing interface; no packet is sent.
+fn lan_address() -> Option<String> {
+    let socket = std::net::UdpSocket::bind((Ipv4Addr::UNSPECIFIED, 0)).ok()?;
+    socket.connect((Ipv4Addr::new(192, 0, 2, 1), 9)).ok()?;
+    match socket.local_addr().ok()?.ip() {
+        std::net::IpAddr::V4(ip) if !ip.is_loopback() && !ip.is_unspecified() => Some(ip.to_string()),
+        _ => None,
+    }
 }
 
 #[tauri::command]
@@ -416,11 +449,13 @@ pub fn mobile_rpc_set_enabled(enabled: bool) -> Result<Value, String> {
 pub fn mobile_rpc_begin_pairing() -> Result<Value, String> {
     if !active() { return Err("Enable mobile access first".into()); }
     let settings = config::load();
+    let host = lan_address().ok_or("No network connection")?;
     let code = config::new_pairing_code();
     *hub().pairing.lock().unwrap() = Some((code.clone(), Instant::now() + PAIRING_TTL));
     let expires_at = chrono::Utc::now().timestamp_millis() + PAIRING_TTL.as_millis() as i64;
     Ok(json!({
-        "uri": format!("coffee://pair?v={PROTOCOL}&port={}&pk={}&code={code}", settings.port, settings.public_key),
+        "uri": format!("coffee://pair?v={PROTOCOL}&host={host}&port={}&pk={}&code={code}", settings.port, settings.public_key),
+        "host": host,
         "port": settings.port,
         "publicKey": settings.public_key,
         "code": code,

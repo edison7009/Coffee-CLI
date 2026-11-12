@@ -1,11 +1,12 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import { useT } from '../../i18n/useT';
 import { useAppStateRef } from '../../store/app-state';
 import { commands, isTauri } from '../../tauri';
 import { getAgentSession } from '../../lib/agent-session';
 import { isClaudeConversation, isCodexConversation, isDshConversation, isOpenCodeConversation, isPiConversation } from '../../lib/chat-tools';
 import type { TerminalSession } from '../../store/app-state';
 
-interface MobileRequest { requestId: string; method: string; params: { id?: string; text?: string } }
+interface MobileRequest { requestId: string; method: string; params: { id?: string; text?: string; name?: string } }
 class RequestError extends Error {
   readonly code: 'not_found' | 'busy' | 'internal';
   constructor(message: string, code: RequestError['code']) { super(message); this.code = code; }
@@ -19,6 +20,8 @@ function conversationKind(tab: TerminalSession) {
 /** Answers phone requests (see mobile/PROTOCOL.md) through the same session paths the desktop uses. */
 export function MobileRpcBridge() {
   const stateRef = useAppStateRef();
+  const t = useT(), tRef = useRef(t);
+  useEffect(() => { tRef.current = t; }, [t]);
   useEffect(() => {
     if (!isTauri) return;
     let disposed = false, stop: (() => void) | undefined;
@@ -28,6 +31,12 @@ export function MobileRpcBridge() {
       return tab;
     };
     const run = async ({ method, params }: MobileRequest) => {
+      if (method === 'pair.confirm') {
+        // A native prompt reaches the person even when the settings page is closed.
+        const { ask } = await import('@tauri-apps/plugin-dialog');
+        const accepted = await ask(tRef.current('settings.mobile.confirm.body', { name: String(params.name ?? '') }), { title: tRef.current('settings.mobile.confirm.title'), kind: 'warning', okLabel: tRef.current('settings.mobile.confirm.allow'), cancelLabel: tRef.current('settings.mobile.confirm.deny') });
+        return { accepted };
+      }
       if (method === 'session.list') {
         return { sessions: stateRef.current.terminals.filter(tab => tab.tool && !tab.isHidden).map(tab => {
           const kind = conversationKind(tab);

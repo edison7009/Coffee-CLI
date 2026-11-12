@@ -22,13 +22,14 @@ import { TERM_COLOR_SCHEMES } from '../center/TierTerminal';
 import { commands, isTauri, type FontInfo } from '../../tauri';
 import { FontPicker } from './FontPicker';
 import { VoiceSettings } from './VoiceSettings';
+import { MobileSettings } from './MobileSettings';
 import { SettingsSlider } from './SettingsSlider';
 import { setUiScale, useUiScale } from '../../lib/ui-scale';
 import { THEME_COLORS, THEME_MODES, THEME_SHAPES, ICON_ART_THEMES, LANGUAGES, isMaskTintTheme } from '../../lib/personalization';
 import './SettingsModal.css';
 
-type Section = 'general' | 'appearance' | 'wallpaper' | 'terminal' | 'gambit' | 'sound' | 'voice' | 'language' | 'feedback';
-const SECTION_IDS: Section[] = ['general', 'appearance', 'wallpaper', 'terminal', 'gambit', 'sound', 'voice', 'language', 'feedback'];
+type Section = 'general' | 'appearance' | 'wallpaper' | 'terminal' | 'gambit' | 'sound' | 'voice' | 'mobile' | 'language' | 'feedback';
+const SECTION_IDS: Section[] = ['general', 'appearance', 'wallpaper', 'terminal', 'gambit', 'sound', 'voice', 'mobile', 'language', 'feedback'];
 
 // Trailing "opens outside the app" affordance on the feedback cards.
 const ExternalLinkArrow = () => (
@@ -86,6 +87,11 @@ const ICONS: Record<Section, ReactNode> = {
   voice: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <rect x="9" y="2" width="6" height="12" rx="3" /><path d="M19 10v1a7 7 0 0 1-14 0v-1" /><path d="M12 18v4" />
+    </svg>
+  ),
+  mobile: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect width="12" height="20" x="6" y="2" rx="2" /><path d="M11 18h2" />
     </svg>
   ),
   language: (
@@ -288,6 +294,7 @@ export function SettingsModal() {
     { id: 'appearance', label: t('settings.appearance') },
     { id: 'terminal',   label: t('settings.terminal') },
     { id: 'voice',      label: t('settings.voice') },
+    { id: 'mobile',     label: t('settings.mobile') },
     { id: 'language',   label: t('settings.language') },
     { id: 'feedback',   label: t('settings.feedback') },
   ];
@@ -680,6 +687,7 @@ export function SettingsModal() {
             )}
 
             {section === 'voice' && <VoiceSettings />}
+            {section === 'mobile' && <MobileSettings />}
 
             {section === 'language' && (
               <div className="settings-lang-list">

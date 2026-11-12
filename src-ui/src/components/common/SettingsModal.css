@@ -644,3 +644,15 @@
 /* Voice input: the microphone menu sits at the right like other choices; the check reuses the composer's mic button and waveform. */
 .settings-voice-device { width: min(260px, 50%); }
 .settings-voice-wave-room { display: flex; justify-content: flex-end; flex: 0 0 120px; height: 16px; }
+
+/* Mobile: pairing QR code and paired phones. */
+.settings-mobile-pairing { display: flex; align-items: center; gap: 20px; padding: 4px 16px 16px; }
+.settings-mobile-qr { flex-shrink: 0; width: 220px; height: 220px; border-radius: var(--shape-radius-btn, 8px); background: #fff; image-rendering: pixelated; }
+.settings-mobile-pairing-text { display: flex; flex-direction: column; gap: 8px; min-width: 0; color: var(--text-1); font-size: var(--type-body); }
+.settings-mobile-pairing-text p { margin: 0; }
+.settings-mobile-pairing-text .settings-choice-hint { text-align: left; }
+.settings-mobile-devices { margin-top: 0; }
+.settings-mobile-dot { flex-shrink: 0; width: 8px; height: 8px; border-radius: 50%; background: var(--text-3); opacity: 0.5; }
+.settings-mobile-dot.is-connected { background: #4caf7a; opacity: 1; }
+.settings-mobile-empty { padding: 0 0 12px; text-align: left; }
+@media (max-width: 640px) { .settings-mobile-pairing { flex-direction: column; align-items: flex-start; } }

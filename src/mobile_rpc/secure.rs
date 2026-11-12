@@ -80,8 +80,10 @@ pub fn respond(local_private: &[u8], msg1: &[u8], psk: &[u8; 32]) -> Result<(Vec
 }
 
 /// Initiator side (the phone). Used by tests and as the reference for the app.
+#[cfg_attr(not(test), allow(dead_code))]
 pub struct Initiator { hs: HandshakeState }
 
+#[cfg_attr(not(test), allow(dead_code))]
 impl Initiator {
     pub fn new(local_private: &[u8], desktop_public: &[u8], psk: &[u8; 32]) -> Result<Self, String> {
         let hs = Builder::new(PATTERN.parse().unwrap()).local_private_key(local_private).remote_public_key(desktop_public).psk(2, psk).build_initiator().map_err(|e| e.to_string())?;

@@ -456,5 +456,5 @@ export interface ToolConfigEntry {
 }
 
 export interface MobileRpcDevice { publicKey: string; name: string; pairedAt: number }
-export interface MobileRpcStatus { enabled: boolean; port: number; publicKey: string; devices: MobileRpcDevice[]; clients: number; protocol: number }
-export interface MobileRpcPairing { uri: string; port: number; publicKey: string; code: string; expiresAt: number }
+export interface MobileRpcStatus { enabled: boolean; port: number; publicKey: string; devices: MobileRpcDevice[]; connected: string[]; host: string | null; clients: number; protocol: number }
+export interface MobileRpcPairing { uri: string; host: string; port: number; publicKey: string; code: string; expiresAt: number }

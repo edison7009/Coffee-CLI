@@ -1,6 +1,6 @@
 # Coffee CLI 移动端协议草案（v0）
 
-状态：草案，未实现。范围：手机作为**遥控器**——看会话、看输出、发输入、处理审批、收状态推送。手机不跑工具、不改配置、不浏览/修改文件系统。
+状态：部分实现，见 §15。范围：手机作为**遥控器**——看会话、看输出、发输入、处理审批、收状态推送。手机不跑工具、不改配置、不浏览/修改文件系统。
 
 ---
 
@@ -28,7 +28,7 @@
 
 每次连接都是新的会话密钥（有前向保密），双方用静态密钥互相认证。中继只能看到密文。
 
-> 待办：配对时桌面弹窗确认设备名（目前只要持有配对码就直接配对）。
+配对时，桌面会弹出系统对话框确认设备名，2 分钟内没有允许就视为拒绝，不登记该设备。
 
 ## 3. 帧格式
 
@@ -203,4 +203,5 @@ type Approval = {
 - 已实现：默认关闭的局域网 WebSocket（端口 47391）、`hello`/`ping`、`session.list`、`session.subscribe`/`unsubscribe`（终端回放 256 KB，对话事件回放 4000 条/4 MB，generation 变化即清空）、`session.input`、`session.interrupt`、`conversation.send`/`cancel`、`terminal.output`/`conversation.event`/`session.changed`/`terminal.resync` 事件。
 - 会话列表、发送和取消通过 `mobile-rpc-request` 交给前端 `MobileRpcBridge`，走 `getAgentSession`，和桌面同一条路径。
 - 加密握手、配对、重连和吊销已实现（§2、§3）；参考实现是 `src/mobile_rpc/secure.rs` 里的 `Initiator`，手机端需要按它实现。
-- 未实现：审批方法、桌面设置界面和二维码、开启前的历史回放（订阅只能看到开启后的事件；恢复会话的历史还需要 `conversation.history`）。
+- 桌面「设置 → 手机」：开关、显示本机局域网地址、二维码配对（5 分钟倒计时，离开页面即作废）、已配对设备列表（显示连接状态）和移除。
+- 未实现：审批方法、开启前的历史回放（订阅只能看到开启后的事件；恢复会话的历史还需要 `conversation.history`）。
