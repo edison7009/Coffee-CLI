@@ -4,6 +4,31 @@ use super::*;
 
 pub static TEST_PAIRING_ANSWER: AtomicBool = AtomicBool::new(true);
 
+/// Socket tests share one hub and one config file, so they run one at a time
+/// against a config directory that lives for the whole test process.
+fn socket_test_env() -> std::sync::MutexGuard<'static, ()> {
+    static DIR: OnceLock<tempfile::TempDir> = OnceLock::new();
+    static LOCK: Mutex<()> = Mutex::new(());
+    let guard = LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    config::use_path(DIR.get_or_init(|| tempfile::tempdir().unwrap()).path().join("config.json"));
+    let mut settings = config::load();
+    settings.devices.clear();
+    config::save(&settings).unwrap();
+    *hub().pairing.lock().unwrap() = None;
+    TEST_PAIRING_ANSWER.store(true, Ordering::SeqCst);
+    hub().enabled.store(true, Ordering::SeqCst);
+    guard
+}
+
+fn spawn_test_server(runtime: &tokio::runtime::Runtime) -> SocketAddr {
+    runtime.block_on(async {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move { loop { let (stream, _) = listener.accept().await.unwrap(); tokio::spawn(serve(stream)); } });
+        addr
+    })
+}
+
 #[test]
 fn terminal_buffer_keeps_the_newest_bytes_on_char_boundaries() {
     let mut b = Buffers::default();
@@ -123,15 +148,11 @@ async fn connect(url: &str, private: &[u8], desktop_public: &[u8], mode: u8, psk
 /// subscribe replay and live events.
 #[test]
 fn encrypted_websocket_round_trip() {
-    let dir = tempfile::tempdir().unwrap();
-    config::use_path(dir.path().join("config.json"));
+    let _env = socket_test_env();
     let runtime = tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap();
+    let url = format!("ws://{}", spawn_test_server(&runtime));
     runtime.block_on(async {
-        hub().enabled.store(true, Ordering::SeqCst);
         let desktop_public = hex::decode(config::load().public_key).unwrap();
-        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let url = format!("ws://{}", listener.local_addr().unwrap());
-        tokio::spawn(async move { loop { let (stream, _) = listener.accept().await.unwrap(); tokio::spawn(serve(stream)); } });
         let (phone_private, phone_public) = secure::generate_keypair();
 
         // Not paired yet: a resume attempt is dropped before any reply.
@@ -189,4 +210,39 @@ fn encrypted_websocket_round_trip() {
         assert!(revoked_at.elapsed() < Duration::from_secs(2), "disconnect is immediate, not a timeout");
         assert!(connect(&url, &phone_private, &desktop_public, MODE_RESUME, [0; 32]).await.is_none());
     });
+}
+
+/// The phone app's own protocol code (mobile/src/protocol.ts, run by Node)
+/// against this server: pairing, a frame larger than one Noise message,
+/// replay, a live event and a stranger being refused. Skipped when Node or the
+/// mobile dependencies are not installed.
+#[test]
+fn mobile_app_protocol_interoperates() {
+    use std::io::BufRead;
+    let mobile = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("mobile");
+    if !mobile.join("node_modules/@noble/curves").exists() || std::process::Command::new("node").arg("--version").output().is_err() {
+        eprintln!("skipped: run `npm install` in mobile/ to check the app protocol");
+        return;
+    }
+    let _env = socket_test_env();
+    let runtime = tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap();
+    let addr = spawn_test_server(&runtime);
+    *hub().pairing.lock().unwrap() = Some(("interop-code".into(), Instant::now() + PAIRING_TTL));
+    let mut child = std::process::Command::new("node")
+        .args(["--no-warnings", "scripts/noise-interop.mjs", "127.0.0.1", &addr.port().to_string(), &config::load().public_key, "interop-code"])
+        .current_dir(&mobile).stdout(std::process::Stdio::piped()).stderr(std::process::Stdio::inherit()).spawn().unwrap();
+    let mut lines = std::io::BufReader::new(child.stdout.take().unwrap()).lines();
+    let ready: Value = serde_json::from_str(&lines.next().expect("ready line").unwrap()).unwrap();
+    assert_eq!(ready["ready"], true);
+    record_conversation("pi", json!({"id":"interop-conv","generation":"g1","event":{"type":"agent_start"}}));
+    let out: Value = serde_json::from_str(&lines.next().expect("result line").unwrap()).unwrap();
+    assert!(child.wait().unwrap().success());
+    assert_eq!(out["hello"], PROTOCOL);
+    assert_eq!(out["ping"], "number");
+    assert_eq!(out["bigError"], "invalid_params", "a 200 KB request decrypted and was validated");
+    assert_eq!(out["subscribe"]["view"], Value::Null);
+    assert_eq!(out["event"]["event"], "conversation.event");
+    assert_eq!(out["event"]["params"]["payload"]["type"], "agent_start");
+    assert_eq!(out["stranger"], "unauthorized");
+    assert_eq!(config::load().devices.iter().map(|d| d.name.as_str()).collect::<Vec<_>>(), ["Interop phone"]);
 }
