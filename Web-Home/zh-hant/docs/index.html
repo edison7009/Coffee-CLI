@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" data-lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>使用說明 — Coffee CLI</title>
+  <meta name="description" content="Coffee CLI 中文使用說明：從安裝、第一次啟動，到啟動台、對話、分割畫面、多智慧體編排、預輸入、修改記錄、自動化和設定，依照介面逐頁講清楚每個功能怎麼用。">
+  <link rel="canonical" href="https://coffeecli.com/zh-hant/docs/">
+  <link rel="alternate" hreflang="en" href="https://coffeecli.com/docs/">
+  <link rel="alternate" hreflang="zh-Hans" href="https://coffeecli.com/zh/docs/">
+  <link rel="alternate" hreflang="zh-Hant" href="https://coffeecli.com/zh-hant/docs/">
+  <link rel="alternate" hreflang="x-default" href="https://coffeecli.com/docs/">
+  <link rel="icon" type="image/x-icon" href="/icons/icon.ico">
+  <link rel="preload" href="/fonts/outfit-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/css/style.css?v=0.8.2">
+  <link rel="stylesheet" href="/css/docs.css?v=1.0.1">
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem("coffee-cli-theme") || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+        document.documentElement.setAttribute("data-theme", t);
+      } catch (e) {}
+    })();
+  </script>
+</head>
+<body class="docs">
+
+  <header class="docs-bar">
+    <button class="docs-menu-btn" id="docs-menu" type="button" aria-expanded="false" aria-controls="docs-side">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>目錄
+    </button>
+    <a class="logo" href="/zh-hant/">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 9v9c0 1.66-1.34 3-3 3H8c-1.66 0-3-1.34-3-3V9Z" fill="currentColor"/><path d="M17 9h3c.55 0 1 .45 1 1v3c0 .55-.45 1-1 1h-3"/><path d="M8 2c0 1-1 1-1 2s1 1 1 2M12 2c0 1-1 1-1 2s1 1 1 2M16 2c0 1-1 1-1 2s1 1 1 2"/></svg>
+      Coffee CLI <small>使用說明</small>
+    </a>
+    <div class="spacer"></div>
+    <nav class="bar-links">
+      <a class="feedback-btn hide-sm" href="/zh-hant/#install">下載</a>
+      <a class="feedback-btn hide-sm" href="https://github.com/edison7009/Coffee-CLI/issues" target="_blank" rel="noopener">問題回報</a>
+      <nav class="docs-lang" aria-label="語言"><a href="/docs/" hreflang="en" lang="en" aria-label="English">EN</a><a href="/zh/docs/" hreflang="zh-Hans" lang="zh-Hans" aria-label="简体中文">简</a><a href="/zh-hant/docs/" hreflang="zh-Hant" lang="zh-Hant" aria-label="繁體中文" aria-current="page">繁</a></nav>
+      <button class="icon-switch" id="theme-toggle" type="button" aria-label="切換主題">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg>
+      </button>
+    </nav>
+  </header>
+
+  <div class="docs-scrim"></div>
+
+  <div class="docs-shell">
+    <aside class="docs-side" id="docs-side" aria-label="說明文件目錄">
+      <h4>入門</h4>
+      <a href="#intro">認識 Coffee CLI</a>
+      <a href="#install">下載與安裝</a>
+      <a href="#quickstart">五分鐘上手</a>
+      <a href="#layout">介面總覽</a>
+      <h4>主介面</h4>
+      <a href="#launchpad">啟動台</a>
+      <a href="#titlebar">標題列</a>
+      <a href="#sidebar">左側欄</a>
+      <a href="#conversation">對話：桌面對話模式</a>
+      <a href="#terminal">對話：終端機模式</a>
+      <a href="#composer">輸入框</a>
+      <a href="#split">分割畫面</a>
+      <a href="#rightpanel">右側欄</a>
+      <h4>功能頁面</h4>
+      <a href="#tools">應用配置</a>
+      <a href="#orchestration">多智慧體編排</a>
+      <a href="#automation">自動化</a>
+      <a href="#stats">使用統計</a>
+      <a href="#settings">設定</a>
+      <a href="#agent">Coffee Agent</a>
+      <h4>參考</h4>
+      <a href="#hotkeys">快速鍵</a>
+      <a href="#update">更新與解除安裝</a>
+      <a href="#faq">常見問題</a>
+    </aside>
+
+    <main class="docs-main">
+      <article class="docs-article">
+
+        <header class="docs-hero">
+          <div class="eyebrow">Coffee CLI 使用說明</div>
+          <h1>從零開始，把 AI 程式設計工具用得順手</h1>
+          <p>這份說明文件依照軟體裡的介面一頁一頁地講：每個按鈕在哪裡、按下去會發生什麼、有哪些要注意的地方。不需要程式基礎，跟著「五分鐘上手」走一遍，就能開始使用。</p>
+          <div class="quick-grid">
+            <a href="#install"><b>下載與安裝</b><span>Windows / macOS / Linux，一行指令或一個安裝檔</span></a>
+            <a href="#quickstart"><b>五分鐘上手</b><span>開啟軟體、選工具、選資料夾、送出第一則訊息</span></a>
+            <a href="#layout"><b>介面總覽</b><span>先認識五個區域，後面就不會迷路</span></a>
+            <a href="#faq"><b>常見問題</b><span>工具是灰色的？macOS 提示已損毀？</span></a>
+          </div>
+        </header>
+
+        <!-- ============================================================ 入門 -->
+        <section id="intro">
+          <h2><span class="no">01</span>認識 Coffee CLI</h2>
+          <p class="lead">Claude Code、Codex、OpenCode 這類 AI 程式設計工具，原本都要在黑底白字的「終端機」裡使用。Coffee CLI 幫它們配了一個桌面：免費、開源，所有工具集中在一個視窗裡管理。</p>
+          <ul>
+            <li><strong>一個視窗管理多個 AI：</strong>支援 20 多款 AI 工具，每個對話是一個分頁，隨時切換。</li>
+            <li><strong>兩種用法：</strong>Claude Code、Codex、OpenCode、Pi 可以用「桌面對話」介面，像聊天軟體一樣使用；也可以切回原汁原味的終端機。</li>
+            <li><strong>分割畫面同時看：</strong>最多 4 個對話並排顯示，誰在工作一眼就能看到。</li>
+            <li><strong>多個 AI 一起工作：</strong>讓 Claude Code 當主管，把任務分給其他 AI 同時進行。</li>
+            <li><strong>看清 AI 改了什麼：</strong>右側欄列出所有變更的檔案，逐行顯示新增和刪除。</li>
+            <li><strong>額度和餘額：</strong>在輸入框旁邊直接看到 Claude、Codex 的剩餘額度，或 DeepSeek 等服務的帳戶餘額。</li>
+          </ul>
+          <div class="tip"><b>先說明一點：</b>Coffee CLI 本身不提供 AI 模型。你需要先在電腦上裝好想用的 AI 工具（例如 Claude Code），並依照那個工具自己的方式登入，Coffee CLI 會自動偵測到它。</div>
+        </section>
+
+        <section id="install">
+          <h2><span class="no">02</span>下載與安裝</h2>
+          <p class="lead">兩種方式任選：在官網按下按鈕下載安裝檔，或者複製一行指令自動安裝。</p>
+
+          <h3>方式一：下載安裝檔</h3>
+          <p>開啟 <a href="/zh-hant/">coffeecli.com</a>，點選你的系統對應的按鈕：</p>
+          <div class="table-wrap"><table>
+            <tr><th>系統</th><th>安裝檔</th><th>說明</th></tr>
+            <tr><td>Windows</td><td>.exe（另有 .msi）</td><td>x64 電腦。按兩下安裝，缺少 WebView2 時安裝程式會自動補裝。</td></tr>
+            <tr><td>macOS</td><td>.dmg</td><td>Apple 晶片和 Intel 晶片都支援。開啟後把 Coffee CLI 拖曳到「應用程式」。</td></tr>
+            <tr><td>Linux</td><td>.deb / .rpm</td><td>x64 和 arm64。Ubuntu / Debian 用 .deb，Fedora / openSUSE 等用 .rpm。</td></tr>
+          </table></div>
+          <p>Intel Mac、ARM Linux 等其他版本，在官網下載按鈕下方的「更多版本」裡找。中國大陸使用者在簡體中文官網還能看到 <strong>百度網盤、夸克網盤、123雲盤</strong> 三個下載管道。</p>
+
+          <h3>方式二：一行指令安裝</h3>
+          <div class="cmd"><span class="os">Windows</span><code>iwr -useb https://coffeecli.com/install.ps1 | iex</code></div>
+          <div class="cmd"><span class="os">macOS / Linux</span><code>curl -fsSL https://coffeecli.com/install.sh | sh</code></div>
+          <ul>
+            <li><strong>Windows：</strong>在「開始」按右鍵 → 選擇「終端機（系統管理員）」→ 貼上上面的指令，按 Enter。</li>
+            <li><strong>macOS：</strong>開啟「終端機」App，貼上指令，按 Enter。腳本會自動安裝到「應用程式」。</li>
+            <li><strong>Linux：</strong>在終端機裡執行，安裝 .deb / .rpm 時會要求輸入密碼。</li>
+          </ul>
+          <p>已經是最新版時，腳本會直接告訴你，不會重複安裝。如果提示新版本剛發布、安裝檔還在上傳，等十來分鐘再執行一次即可。</p>
+
+          <div class="warn"><b>macOS 提示「已損毀」或打不開？</b>這是系統對網路下載 App 的攔截，不是檔案真的壞了。開啟「終端機」，執行下面這行，然後重新開啟 Coffee CLI：
+            <div class="cmd"><code>xattr -cr '/Applications/Coffee CLI.app'</code></div>
+          </div>
+        </section>
+
+        <section id="quickstart">
+          <h2><span class="no">03</span>五分鐘上手</h2>
+          <p class="lead">以 Claude Code 為例，從開啟軟體到讓 AI 幫你工作。</p>
+          <ol class="steps">
+            <li><strong>裝好 AI 工具。</strong>Coffee CLI 只負責「管理」，AI 工具要自己安裝。例如 Claude Code，依照它官網的說明安裝並登入一次。</li>
+            <li><strong>開啟 Coffee CLI。</strong>第一次開啟就會看到「啟動台」，上面有幾張工具卡片。已安裝的工具是亮的，沒裝的是灰色。</li>
+            <li><strong>點 Claude Code 卡片，選一個資料夾。</strong>這個資料夾就是 AI 工作的地方，它能讀取、修改裡面的檔案。建議先新增一個空資料夾來練習。</li>
+            <li><strong>在底部輸入框裡寫下需求，按 <kbd>Enter</kbd> 送出。</strong>例如「幫我做一個記帳的網頁」。AI 開始工作時，分頁上的小點會變成橘色。</li>
+            <li><strong>處理 AI 的提問。</strong>AI 想修改檔案或執行指令時，可能會停下來問你。點 <span class="ui">允許一次</span> 讓它繼續，點 <span class="ui">拒絕</span> 不讓它做。</li>
+            <li><strong>看結果。</strong>按 <kbd>Alt</kbd>+<kbd>E</kbd> 開啟右側欄，在 <span class="ui">修改記錄</span> 裡查看 AI 改了哪些檔案（資料夾需要是 Git 儲存庫）。</li>
+          </ol>
+          <div class="tip"><b>小技巧：</b>左側的 <span class="ui">會話記錄</span> 會保存所有對話。下次開啟軟體，點一下就能接著上次聊。</div>
+        </section>
+
+        <section id="layout">
+          <h2><span class="no">04</span>介面總覽</h2>
+          <p class="lead">Coffee CLI 的視窗分成五塊。點下面任意一塊，跳到對應的說明。</p>
+          <div class="ui-map">
+            <a class="m-title" href="#titlebar"><b>標題列</b><span>對話分頁 · 狀態點 · 更新日誌 · 面板開關</span></a>
+            <a class="m-left" href="#sidebar"><b>左側欄</b><span>會話記錄<br>工作區檔案<br>應用配置 · 設定</span></a>
+            <a class="m-center" href="#conversation"><b>對話區</b><span>和 AI 對話的地方<br>桌面對話 / 終端機 / 分割畫面</span></a>
+            <a class="m-right" href="#rightpanel"><b>右側欄</b><span>預輸入<br>修改記錄<br>檔案比較</span></a>
+            <a class="m-input" href="#composer"><b>輸入框</b><span>寫需求、貼圖片、語音輸入、看額度</span></a>
+          </div>
+          <p>左側欄、輸入框、右側欄都可以隨時隱藏，讓對話區更寬：</p>
+          <div class="table-wrap"><table>
+            <tr><th>區域</th><th>預設快速鍵</th></tr>
+            <tr><td>左側欄</td><td><kbd>Alt</kbd>+<kbd>Q</kbd></td></tr>
+            <tr><td>輸入框（終端機模式下）</td><td><kbd>Alt</kbd>+<kbd>W</kbd></td></tr>
+            <tr><td>右側欄</td><td><kbd>Alt</kbd>+<kbd>E</kbd></td></tr>
+          </table></div>
+          <p>標題列右側也有這三個開關的圖示。快速鍵可以在 <a href="#settings">設定 → 通用 → 開關快捷鍵</a> 裡換成別的組合。</p>
+        </section>
+
+        <hr>
+
+        <!-- ============================================================ 主介面 -->
+        <section id="launchpad">
+          <h2><span class="no">05</span>啟動台</h2>
+          <p class="lead">新增對話時看到的頁面，用來選「哪個 AI」在「哪個資料夾」裡工作。</p>
+          <figure class="shot"><img data-shot="desktop-terminal" alt="啟動台上的工具卡片，以及桌面 / 終端機模式切換" width="960" height="540" loading="lazy" decoding="async"><figcaption>工具卡片上可以切換 Desktop（桌面對話）和 Terminal（終端機）模式</figcaption></figure>
+
+          <h3>開啟啟動台</h3>
+          <p>點左側欄頂部的 <span class="ui">新建會話</span>，或者標題列分頁列尾端的 <strong>+</strong>。如果已經有一個還沒選工具的空白分頁，會直接切過去，不會再開新的。</p>
+
+          <h3>啟動一個 AI 工具</h3>
+          <ol class="steps">
+            <li>點工具卡片。</li>
+            <li>如果這個工具以前用過，卡片上會顯示上次的資料夾路徑，點一下就直接在那裡啟動。</li>
+            <li>第一次使用時卡片上寫著 <span class="ui">選擇專案目錄</span>：會跳出最近用過的資料夾清單，最下面是 <span class="ui">開啟資料夾</span>，可以選新的資料夾。</li>
+            <li>想換資料夾，點卡片右邊的資料夾按鈕。最近清單裡的每一項都可以點 × 刪掉。</li>
+          </ol>
+          <p>OpenClaw 不需要選資料夾，點一下就啟動。之前用過的資料夾被刪除或移動後，會自動從清單裡移除。</p>
+
+          <h3>桌面對話還是終端機？</h3>
+          <p>Claude Code、Codex CLI、OpenCode、Pi 的卡片上有 <strong>Desktop / Terminal</strong> 切換：</p>
+          <ul>
+            <li><strong>Desktop（預設）：</strong>像聊天軟體一樣的介面，有按鈕可以點，適合新手。詳見 <a href="#conversation">桌面對話模式</a>。</li>
+            <li><strong>Terminal：</strong>工具原本的命令列介面，適合熟悉終端機的使用者。詳見 <a href="#terminal">終端機模式</a>。</li>
+          </ul>
+          <p>DeepSeek Harness 只有桌面模式，其餘工具都在終端機裡執行。你的選擇會被記住，從會話記錄恢復對話時也會用這個模式開啟。</p>
+
+          <h3>支援哪些工具</h3>
+          <p>Claude Code、Codex CLI、DeepSeek Harness、Cursor、Copilot CLI、Antigravity CLI、OpenClaw、Hermes Agent、OpenCode、Pi、Cline、Goose、Aider、Oh-My-Pi、Crush、Qwen Code、Kilo Code、Kiro、Kimi Code、CodeBuddy、Grok Build、MiMo Code、MiniMax Code、Muse Code，再加一個一般的 <span class="ui">終端機</span>。</p>
+          <p>啟動台最多同時擺 6 張卡片，第一次預設是 Claude Code、Codex CLI、OpenCode、Pi、DeepSeek Harness 和終端機。想換成別的工具，到 <a href="#tools">應用配置 → 常用</a>。</p>
+
+          <h3>工具是灰色的，點不動</h3>
+          <p>表示 Coffee CLI 沒在電腦上找到這個工具。啟動台<strong>不負責安裝</strong>，你需要依照那個工具官網的說明自行安裝。裝好後切回 Coffee CLI 視窗，會自動重新偵測。</p>
+          <p>明明裝了還是灰的？把滑鼠移到啟動台底部的 <span class="ui">識別不到?</span> 上，會顯示原因和三種修復方法。常見原因是電腦的環境變數 PATH 被其他工具改壞了。</p>
+
+          <h3>更新 AI 工具</h3>
+          <p>工具有新版本時，卡片上會出現 <span class="ui">更新</span> 按鈕，滑鼠移上去能看到從哪個版本升到哪個版本。點選後顯示 <span class="ui">更新中</span>。軟體會依照你當初的安裝方式（npm、Homebrew 等）自動更新。</p>
+
+          <h3>遠端終端機</h3>
+          <p>點 <span class="ui">終端機</span> 卡片上的 <span class="ui">遠端</span>，可以連線到另一台電腦或伺服器：選 SSH 或 WebSocket，填入 <span class="ui">伺服器位址</span>、連接埠、<span class="ui">使用者名稱</span>、<span class="ui">密碼</span>，點 <span class="ui">連線</span>。最近 10 次連線會顯示成小標籤，點一下就能重新連線。</p>
+          <div class="warn"><b>注意：</b>遠端連線的密碼會以明文儲存在本機（<code>~/.coffee-cli/credentials.json</code>）。公用電腦上請不要儲存重要密碼。</div>
+        </section>
+
+        <section id="titlebar">
+          <h2><span class="no">06</span>標題列</h2>
+          <p class="lead">視窗最上面一條，主要是開啟中的對話分頁。</p>
+
+          <h3>對話分頁</h3>
+          <ul>
+            <li>每個開啟的對話是一個分頁，顯示工具圖示和專案資料夾名稱。點選切換，左右拖曳可以調整順序，點 × 關閉。</li>
+            <li>還沒選工具的空白分頁叫 <span class="ui">選擇工具</span>。</li>
+            <li>按兩下標題列空白處可以最大化或還原視窗，按住空白處拖曳可以移動視窗。</li>
+          </ul>
+
+          <h3>狀態點：一眼看出 AI 在做什麼</h3>
+          <p>分頁右邊有一組小點，顏色表示 AI 的狀態：</p>
+          <div class="table-wrap"><table>
+            <tr><th>顏色</th><th>意思</th><th>你需要做什麼</th></tr>
+            <tr><td>綠色</td><td>閒置 / 已完成</td><td>可以看結果或送出下一則訊息</td></tr>
+            <tr><td>橘色</td><td>工作中</td><td>等它做完就好</td></tr>
+            <tr><td>藍色</td><td>等你操作</td><td>切過去處理權限確認或回答它的問題</td></tr>
+          </table></div>
+          <p>Linux 上只顯示一個不動的彩色圓點，沒有動畫。任務完成和等待你操作時還會響提示音，可以在 <a href="#settings">設定 → 通用</a> 裡更換或關閉。</p>
+
+          <h3>其他按鈕</h3>
+          <ul>
+            <li><span class="ui">更新日誌</span>：查看目前版本更新了什麼。軟體升級後第一次開啟會自動跳出一次。</li>
+            <li><strong>三個面板開關</strong>：左側欄、輸入框、右側欄，見 <a href="#layout">介面總覽</a>。</li>
+            <li><span class="ui">設定</span>：平時在左側欄底部；左側欄隱藏時，會出現在標題列上。</li>
+            <li>Windows / Linux 的最小化、最大化、關閉按鈕在最右邊；macOS 用系統內建的紅黃綠按鈕。</li>
+          </ul>
+        </section>
+
+        <section id="sidebar">
+          <h2><span class="no">07</span>左側欄</h2>
+          <p class="lead">管理所有對話和專案檔案。頂部有 <span class="ui">新建會話</span> 和兩個檢視切換：<span class="ui">會話記錄</span>、<span class="ui">工作區</span>。</p>
+
+          <h3>會話記錄：所有歷史對話</h3>
+          <ul>
+            <li><strong>接著聊：</strong>點任意一則。對話已經開著會直接切過去；沒開的話會新開一個分頁，在原本的資料夾裡繼續。</li>
+            <li><strong>找對話：</strong>點 <span class="ui">搜尋</span>，可以依標題、工具名稱、專案路徑尋找。用 <kbd>↑</kbd><kbd>↓</kbd> 選擇，<kbd>Enter</kbd> 開啟，<kbd>Esc</kbd> 關閉。</li>
+            <li><strong>換個排列方式：</strong>右上角漏斗圖示是 <span class="ui">顯示方式</span>：
+              <ul>
+                <li><span class="ui">會話列表</span>：看全部，或只看某一個工具的對話。</li>
+                <li><span class="ui">專案分類</span>：依資料夾分組。可選 <span class="ui">全部目錄</span> 或 <span class="ui">僅已新增</span>，每組先顯示 5 則，點 <span class="ui">顯示更多</span> 展開。</li>
+                <li><span class="ui">應用圖示</span>：選擇顯示或不顯示工具圖示。</li>
+              </ul>
+            </li>
+            <li>正在執行的對話會排在最上面，接著是置頂的對話。滑鼠停留在上面能看到專案名稱、時間和訊息則數。</li>
+          </ul>
+
+          <h3>對話卡片上的小標記</h3>
+          <div class="table-wrap"><table>
+            <tr><th>標記</th><th>意思</th></tr>
+            <tr><td>轉圈</td><td><span class="ui">工作中</span></td></tr>
+            <tr><td>藍色標籤</td><td><span class="ui">等待操作</span>：AI 在等你確認</td></tr>
+            <tr><td>藍色小圓點</td><td><span class="ui">新回覆未讀</span></td></tr>
+            <tr><td>PR 圖示</td><td>這個對話的分支有 GitHub PR。綠色 = <span class="ui">待合併</span>，紫色 = <span class="ui">已合併</span>，紅色 = <span class="ui">已關閉</span>；角落的 ✓ / × / · 分別是檢查通過、失敗、執行中</td></tr>
+          </table></div>
+
+          <h3>右鍵選單</h3>
+          <ul>
+            <li><span class="ui">在分割畫面中開啟</span>：在目前對話右邊以分割畫面顯示，見 <a href="#split">分割畫面</a>。</li>
+            <li><span class="ui">置頂</span> / <span class="ui">取消置頂</span>、<span class="ui">重新命名</span>（按 <kbd>Enter</kbd> 儲存，<kbd>Esc</kbd> 取消）。</li>
+            <li><span class="ui">複製會話ID</span>、<span class="ui">複製恢復命令</span>：想在別的終端機裡接續這個對話時使用。</li>
+            <li><span class="ui">複製完整路徑</span>、<span class="ui">在檔案總管中顯示</span>：找到這個對話的記錄檔案。</li>
+            <li><span class="ui">刪除</span>：滑鼠停留時出現的垃圾桶按鈕效果一樣。</li>
+          </ul>
+          <div class="tip"><b>放心刪：</b>「刪除」只是把對話從清單裡隱藏，不會刪掉 AI 工具自己儲存的記錄檔案。如果這個對話正開著，它的分頁會一起關閉。</div>
+
+          <h3>工作區：專案檔案</h3>
+          <ul>
+            <li>顯示目前對話所在資料夾裡的檔案，檔案有變化會自動重新整理。</li>
+            <li>有未提交變更的檔案後面會顯示 <code>+N -M</code>（新增和刪除的行數）。</li>
+            <li>點放大鏡可以 <span class="ui">篩選檔案和資料夾…</span>（只篩選第一層）。</li>
+            <li>右鍵點檔案：<span class="ui">開啟</span>（用系統預設程式）、<span class="ui">複製絕對路徑</span>、<span class="ui">複製相對路徑</span>、<span class="ui">複製為 @reference</span>、剪下 / 複製 / 貼上、重新命名、刪除、<span class="ui">在檔案總管中顯示</span>。</li>
+          </ul>
+          <div class="tip"><b>讓 AI 看某個檔案：</b>右鍵點檔案 → <span class="ui">複製為 @reference</span>，貼到輸入框裡，AI 就知道你說的是哪個檔案。</div>
+
+          <h3>底部按鈕</h3>
+          <ul>
+            <li><strong>Coffee Agent</strong> 和訊息渠道狀態（例如「微信 · 未連線」），見 <a href="#agent">Coffee Agent</a>。</li>
+            <li><strong>下載圖示</strong>：Coffee CLI 有新版本時才出現，見 <a href="#update">更新與解除安裝</a>。</li>
+            <li><strong>齒輪</strong>：開啟 <a href="#settings">設定</a>。</li>
+          </ul>
+          <p>左側欄頂部還有 <span class="ui">應用配置</span>、<span class="ui">使用統計</span>、<span class="ui">自動化</span> 三個入口，分別見後面的「功能頁面」。</p>
+        </section>
+
+        <section id="conversation">
+          <h2><span class="no">08</span>對話：桌面對話模式</h2>
+          <p class="lead">Claude Code、Codex、OpenCode、Pi、DeepSeek Harness 可以用這種像聊天軟體一樣的介面。不用記指令，大部分操作按按鈕就行。</p>
+
+          <h3>看懂 AI 的回覆</h3>
+          <ul>
+            <li><strong>思考過程：</strong>AI 思考問題時顯示 <span class="ui">正在思考中…</span>，想完變成「思考了 X 秒」，點一下能展開看它怎麼想的。Claude 還可以按 <kbd>Ctrl</kbd>+<kbd>O</kbd> 一次展開或收合全部思考。</li>
+            <li><strong>修改檔案卡片：</strong>顯示刪了幾行、加了幾行，並左右對照顯示變更。點檔案路徑會在檔案總管裡找到它。</li>
+            <li><strong>執行指令卡片：</strong>分成 <span class="ui">輸入</span>（執行了什麼指令）和 <span class="ui">輸出</span>（指令的結果）兩部分。</li>
+            <li><strong>每輪小結：</strong>每次回覆結束後，下面有一行「耗時 · Token 數 · 大約花了多少錢」。</li>
+            <li><strong>複製：</strong>每則訊息旁邊都有 <span class="ui">複製訊息</span> 按鈕。</li>
+          </ul>
+
+          <h3>AI 停下來問你時</h3>
+          <p>AI 想修改檔案、執行指令，或者需要你做決定時，會跳出一張卡片，分頁上的狀態點同時變成藍色：</p>
+          <ul>
+            <li><strong>權限確認：</strong>例如「允許 Bash 嗎？」。點 <span class="ui">允許一次</span> 或 <span class="ui">拒絕</span>。Codex 還有 <span class="ui">本次工作階段允許</span>，OpenCode 還有 <span class="ui">一律允許</span>。</li>
+            <li><strong>計畫確認（Claude）：</strong><span class="ui">準備實作這個計畫嗎？</span> 看完計畫再決定要不要開始。</li>
+            <li><strong>提問：</strong>選一個選項，或在輸入框裡寫補充說明，再點 <span class="ui">提交</span>。可以用數字鍵 <kbd>1</kbd>–<kbd>9</kbd> 快速選擇。</li>
+          </ul>
+
+          <h3>權限模式：AI 能自己做多少事</h3>
+          <p>輸入框底部的權限按鈕決定 AI 動手前要不要問你：</p>
+          <div class="table-wrap"><table>
+            <tr><th>工具</th><th>可選檔位（從謹慎到放手）</th></tr>
+            <tr><td>Claude Code</td><td><span class="ui">手動</span>（編輯和執行指令前都問）→ <span class="ui">計畫</span>（先提出方案再動手）→ <span class="ui">自動編輯</span>（改檔案不問，其他會問）→ <span class="ui">自動</span>（部分模型才有）→ <span class="ui">略過權限確認</span></td></tr>
+            <tr><td>Codex</td><td><span class="ui">唯讀</span> → <span class="ui">工作區</span> → <span class="ui">完整存取</span>；另有 <span class="ui">計畫模式</span> 開關</td></tr>
+            <tr><td>DeepSeek Harness</td><td><span class="ui">工作區內修改</span> → <span class="ui">完全權限</span></td></tr>
+            <tr><td>OpenCode</td><td>沒有權限按鈕，可切換 <span class="ui">智慧體</span></td></tr>
+          </table></div>
+          <div class="tip"><b>新手建議：</b>先用預設檔位，讓 AI 每次動手前都問你。熟悉之後再放寬權限。</div>
+
+          <h3>換模型和思考強度</h3>
+          <ul>
+            <li><strong>模型：</strong>點輸入框底部的模型名稱，從選單裡更換。每個模型後面標著價格（輸入 / 輸出，每百萬 token）。</li>
+            <li><strong>思考強度：</strong>一根滑桿，從 <span class="ui">更快</span> 到 <span class="ui">更深入</span>，檔位有 低 / 中 / 高 / 超高 / 最高。關閉選單後才生效，按 <kbd>Esc</kbd> 放棄修改。</li>
+          </ul>
+
+          <h3>上下文圓環：AI 還能記住多少</h3>
+          <p>輸入框右下角的小圓環表示這個對話用掉了多少「記憶空間」。超過 75% 會變色提醒，超過 90% 變成紅色。點開能看到具體用量。</p>
+          <p>快滿時，可以點裡面的 <span class="ui">開新對話繼續</span>：開一個新對話，需要時讓它回頭查閱舊記錄，你寫了一半的草稿也會保留，不會自動送出。</p>
+
+          <h3>「/」指令選單</h3>
+          <p>在輸入框裡打 <kbd>/</kbd>，或點 <strong>/</strong> 按鈕，會跳出這個工具支援的指令，例如 <code>/model</code>（換模型）、<code>/compact</code>（壓縮對話）、<code>/new</code>（新對話）。用 <kbd>↑</kbd><kbd>↓</kbd> 選擇，<kbd>Enter</kbd> 執行。</p>
+
+          <h3>工作樹：在副本裡放心嘗試</h3>
+          <p>輸入框底部資料夾名稱旁邊的 <span class="ui">工作樹</span> 核取方塊。勾選後，AI 會在專案的一份獨立副本（單獨的分支）裡工作，<strong>不會動到你原本的檔案</strong>。</p>
+          <ol class="steps">
+            <li>送出第一則訊息<strong>之前</strong>勾選。對話開始後就不能改了。</li>
+            <li>AI 做完後，會出現 <span class="ui">合併到 …</span> 按鈕。點它把變更合併回原本的專案。</li>
+            <li>如果和原專案衝突，會自動撤銷這次合併，原專案不受影響。</li>
+          </ol>
+          <p>專案資料夾需要是 Git 儲存庫，並且至少有一次提交。</p>
+
+          <h3>其他貼心功能</h3>
+          <ul>
+            <li><strong>停止：</strong>按 <kbd>Esc</kbd> 或點方塊按鈕，隨時讓 AI 停下。</li>
+            <li><strong>快速定位：</strong>對話變長後，右側會出現一列小圓點，每個代表你的一次提問，點選就能跳過去。</li>
+            <li><strong>回到最新：</strong>往上捲動後，右下角的向下箭頭可以一鍵回到最新訊息。</li>
+            <li><strong>提示詞建議（Claude）：</strong>輸入框為空時，灰字會猜你下一句想說什麼，按 <kbd>Tab</kbd> 採用。</li>
+            <li><strong>閒置很久後回來（Claude、Codex）：</strong>會問你要 <span class="ui">完整恢復</span> 還是 <span class="ui">開新對話繼續（推薦）</span>。舊對話很長時選後者更快也更省。</li>
+            <li><strong>載入更早的訊息（Claude）：</strong>恢復很長的舊對話時，在頂部點這個按鈕載入更早的內容。</li>
+          </ul>
+        </section>
+
+        <section id="terminal">
+          <h2><span class="no">09</span>對話：終端機模式</h2>
+          <p class="lead">直接顯示 AI 工具原本的命令列介面。除了 Claude Code、Codex、OpenCode、Pi、DeepSeek Harness 之外，其他工具都用這種模式。</p>
+          <div class="table-wrap"><table>
+            <tr><th>想做什麼</th><th>怎麼做</th></tr>
+            <tr><td>複製</td><td>選取文字，按 <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>C</kbd>。沒有選取文字時，<kbd>Ctrl</kbd>+<kbd>C</kbd> 是中斷目前程式</td></tr>
+            <tr><td>貼上</td><td><kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>V</kbd>。Linux 也可以用 <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>C</kbd> / <kbd>V</kbd></td></tr>
+            <tr><td>傳圖片給 AI</td><td>直接貼上截圖，會自動存成檔案並貼上它的路徑</td></tr>
+            <tr><td>引用檔案</td><td>把檔案拖曳到終端機，會插入檔案路徑</td></tr>
+            <tr><td>開啟連結</td><td>點網址用瀏覽器開啟；點本機路徑會在檔案總管裡顯示它（不會執行）</td></tr>
+            <tr><td>翻看歷史</td><td>可往回捲動最近 5000 行，捲上去後有「返回最新訊息」按鈕</td></tr>
+          </table></div>
+          <p>右鍵選單有複製、貼上、全選；在連結或路徑上按右鍵，還會多出開啟和複製連結的選項。終端機字型和文字顏色在 <a href="#settings">設定 → 終端機</a> 裡修改。</p>
+          <div class="tip"><b>不習慣在終端機裡打字？</b>按 <kbd>Alt</kbd>+<kbd>W</kbd> 開啟底部輸入框，在裡面寫好、可以貼圖片，再一次傳送給終端機。</div>
+        </section>
+
+        <section id="composer">
+          <h2><span class="no">10</span>輸入框</h2>
+          <p class="lead">對話區最下面寫需求的地方。桌面對話模式下一直顯示，終端機模式下用 <kbd>Alt</kbd>+<kbd>W</kbd> 開啟或隱藏。</p>
+
+          <h3>送出和換行</h3>
+          <ul>
+            <li>預設 <kbd>Enter</kbd> 送出，<kbd>Shift</kbd>+<kbd>Enter</kbd> 換行。習慣相反的，到 <a href="#settings">設定 → 通用 → 發送訊息</a> 改成 <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>Enter</kbd> 送出。</li>
+            <li><kbd>Alt</kbd>+<kbd>↑</kbd> / <kbd>Alt</kbd>+<kbd>↓</kbd>：叫出以前送出過的內容。</li>
+            <li>拖曳輸入框上緣可以調整高度。輸入框左下角顯示訊息會送到哪個工具、哪個資料夾。</li>
+            <li>AI 工作時若輸入框是空的，送出按鈕會變成方塊 <span class="ui">停止</span>。桌面對話模式下，AI 工作時也可以繼續傳訊息補充要求。</li>
+          </ul>
+
+          <h3>傳送圖片和檔案</h3>
+          <ul>
+            <li><strong>截圖後直接貼上</strong>（<kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>V</kbd>）：輸入框上方會出現縮圖，點 × 可以移除。</li>
+            <li><strong>把檔案拖曳進來</strong>：會插入檔案路徑。</li>
+            <li><strong>點迴紋針</strong> <span class="ui">新增附件</span>：選擇檔案。</li>
+          </ul>
+
+          <h3>儲存到預輸入</h3>
+          <p>輸入框裡有字時，上方會出現 <span class="ui">儲存到預輸入</span>。想法還沒想好、或者 AI 正忙，先存起來，之後在 <a href="#rightpanel">右側欄 → 預輸入</a> 裡點一下就能放回輸入框。旁邊的垃圾桶是 <span class="ui">清空</span>。</p>
+
+          <h3>語音輸入</h3>
+          <ol class="steps">
+            <li>點送出按鈕左邊的麥克風，開始說話，旁邊會出現波形。</li>
+            <li>說完再點一下，文字會寫進輸入框，確認後再送出。</li>
+          </ol>
+          <p>語音輸入借用你已登入的帳號（例如 Claude Code、ChatGPT、豆包）來辨識。看不到麥克風按鈕？到 <a href="#settings">設定 → 語音輸入</a> 開啟開關並掃描語音管道。macOS 也可以用系統內建的語音辨識，但要先在「系統設定 → 鍵盤 → 聽寫」中開啟聽寫。</p>
+
+          <h3>方案額度條</h3>
+          <figure class="shot"><img data-shot="usage-meter" alt="輸入框旁的方案額度條" width="960" height="540" loading="lazy" decoding="async"><figcaption>輸入框右側直接顯示剩餘額度和重設時間</figcaption></figure>
+          <p>輸入框底部右側顯示帳號還剩多少額度：Claude、Codex 顯示 5 小時 / 每週額度的剩餘百分比和重設倒數；DeepSeek、Kimi、OpenRouter 等依用量付費的服務顯示 <span class="ui">餘額</span> 或 <span class="ui">已用</span>。剩餘不足 30% 會變色提醒，點一下可以重新整理。</p>
+        </section>
+
+        <section id="split">
+          <h2><span class="no">11</span>分割畫面</h2>
+          <p class="lead">同時並排看最多 4 個對話，適合幾個 AI 一起工作時盯進度。</p>
+          <figure class="shot"><img data-shot="split-drag" alt="把對話從左側欄拖曳到中間分割畫面" width="960" height="540" loading="lazy" decoding="async"><figcaption>從左側會話記錄把對話拖曳到中間，就能分割畫面</figcaption></figure>
+          <h3>開啟分割畫面的兩種方法</h3>
+          <ul>
+            <li><strong>拖曳進來：</strong>在左側 <span class="ui">會話記錄</span> 裡按住一個對話，拖曳到中間對話區。靠近哪一邊，就在哪一側顯示 <span class="ui">分割畫面</span> 的預覽，放開即完成。拖曳時按 <kbd>Esc</kbd> 取消。</li>
+            <li><strong>右鍵選單：</strong>在對話上按右鍵 → <span class="ui">在分割畫面中開啟</span>，它會出現在目前對話的右側。</li>
+          </ul>
+          <h3>調整和關閉</h3>
+          <ul>
+            <li>拖曳窗格之間的分隔線調整大小；按兩下分隔線恢復成各占一半。</li>
+            <li>點哪個窗格，哪個就是目前對話，輸入框的訊息會送到這裡。</li>
+            <li>每個窗格角落有編號小標，滑鼠移上去變成 ×，點它 <span class="ui">關閉分割畫面</span>。</li>
+            <li>已經有 4 個窗格時，會提示 <span class="ui">最多同時顯示四個對話</span>。</li>
+          </ul>
+        </section>
+
+        <section id="rightpanel">
+          <h2><span class="no">12</span>右側欄</h2>
+          <p class="lead">用 <kbd>Alt</kbd>+<kbd>E</kbd> 或標題列右邊的圖示開啟。有三個分頁：<span class="ui">預輸入</span>、<span class="ui">修改記錄</span>、<span class="ui">檔案比較</span>。</p>
+
+          <h3>預輸入：先把想法存起來</h3>
+          <figure class="shot"><img data-shot="task-list-send" alt="右側欄的預輸入便利貼" width="960" height="540" loading="lazy" decoding="async"><figcaption>AI 忙的時候把下一步要做的事記下來，空閒時點一下就能用</figcaption></figure>
+          <ul>
+            <li><strong>新增：</strong>在輸入框裡寫好，點上方的 <span class="ui">儲存到預輸入</span>，就變成一張便利貼。</li>
+            <li><strong>使用：</strong>點便利貼內文，內容會<strong>附加</strong>到目前對話的輸入框裡（不會直接送出），確認後自己送出。</li>
+            <li><strong>整理：</strong>上下拖曳調整順序；滑鼠移上去，右邊會出現垃圾桶可以刪除。</li>
+            <li>便利貼不能直接改字。想修改的話，先放回輸入框，改好後重新儲存。</li>
+          </ul>
+          <p>如果設定了 <a href="#automation">自動化</a>，預輸入頁頂部會顯示 <span class="ui">正在自動化</span>，點卡片右邊的 ▶ 可以把這項任務立刻傳給目前對話。</p>
+
+          <h3>修改記錄：AI 改了哪些檔案</h3>
+          <figure class="shot"><img data-shot="git-diff-pr" alt="修改記錄和檔案比較" width="960" height="540" loading="lazy" decoding="async"><figcaption>右側列出所有變更的檔案，點開逐行比較</figcaption></figure>
+          <p>列出目前對話所在專案裡改過的檔案。這一頁只能看，不能修改。</p>
+          <ul>
+            <li>頂部顯示目前分支名稱；如果有 GitHub PR，會顯示 PR 編號、狀態和檢查結果，點選後在瀏覽器裡開啟。</li>
+            <li><span class="ui">檢視範圍</span>：<span class="ui">全部修改</span> / <span class="ui">未提交</span> / <span class="ui">本次對話提交</span>，旁邊統計檔案數和增刪行數。</li>
+            <li>用 <span class="ui">篩選檔案…</span> 依路徑尋找。點檔案名稱開啟 <span class="ui">檔案比較</span>，按右鍵可以複製路徑。</li>
+            <li>大約每 8 秒自動重新整理一次。</li>
+          </ul>
+          <div class="warn"><b>看不到修改記錄？</b>需要滿足三個條件：電腦裝了 <strong>Git</strong>；專案資料夾是一個 <strong>Git 儲存庫</strong>；已經選好了工作區。不滿足時會顯示相應提示，例如 <span class="ui">此目錄暫無 Git 修改記錄。</span></div>
+
+          <h3>檔案比較：逐行看變更</h3>
+          <ul>
+            <li>綠色 + 是新增的行，紅色 − 是刪除的行，程式碼會依語法上色。</li>
+            <li>用 <strong>‹ ›</strong> 在變更的檔案之間切換。連續沒改的行會摺疊，點一下展開。</li>
+            <li>右上角的按鈕可以把比較放大成中間的一個分頁，看得更清楚；按 <kbd>Esc</kbd> 關閉。</li>
+            <li>Markdown（.md）檔案會直接顯示排版後的內容。檔案太大時只顯示變更行數。</li>
+          </ul>
+        </section>
+
+        <hr>
+
+        <!-- ============================================================ 功能頁面 -->
+        <section id="tools">
+          <h2><span class="no">13</span>應用配置</h2>
+          <p class="lead">左側欄的 <span class="ui">應用配置</span>，集中管理所有 AI 工具。頂部有 6 個分頁。</p>
+
+          <h3><span class="ui">常用</span>：啟動台擺哪些工具</h3>
+          <p>點工具卡片開啟或關閉，最多選 6 個，會顯示在啟動台上。帶齒輪的工具可以點齒輪開啟啟動設定：</p>
+          <ul>
+            <li><span class="ui">預設啟動命令</span>：Claude Code、Codex CLI、OpenCode 可以一鍵選擇啟動時的權限檔位，例如 Claude 的 <span class="ui">計畫</span>、<span class="ui">自動編輯</span>、<span class="ui">略過權限確認</span>。</li>
+            <li><span class="ui">啟動命令</span>、<span class="ui">額外參數</span>（每行一個）、<span class="ui">啟動目錄</span>、<span class="ui">歷史對話目錄</span>：給熟悉命令列的使用者自訂。</li>
+            <li>改亂了點 <span class="ui">重設</span>，改好點 <span class="ui">儲存</span>。</li>
+          </ul>
+
+          <h3><span class="ui">主記憶</span>：給 AI 的長期說明</h3>
+          <p>直接編輯每個工具的全域說明檔案，例如 Claude Code 的 <code>~/.claude/CLAUDE.md</code>、Codex 的 <code>~/.codex/AGENTS.md</code>。寫在這裡的話（例如「請用繁體中文回答」「程式碼註解寫詳細一點」），AI 每次對話都會遵守。改完點 <span class="ui">儲存</span> 或按 <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>S</kbd>。</p>
+
+          <h3><span class="ui">多智慧體編排</span></h3>
+          <p>選擇哪些 AI 可以當助手，以及主視窗的角色，詳見下一節 <a href="#orchestration">多智慧體編排</a>。</p>
+
+          <h3><span class="ui">技能</span>：幫 AI 裝新本領</h3>
+          <ol class="steps">
+            <li>在 <span class="ui">探索</span> 分頁裡 <span class="ui">搜尋技能</span>。</li>
+            <li>點 <span class="ui">安裝</span>，再選要裝到哪個工具。</li>
+            <li>每個工具的分頁列出已安裝的技能，透過 Coffee CLI 安裝的可以 <span class="ui">更新</span> 或 <span class="ui">移除</span>。</li>
+          </ol>
+
+          <h3><span class="ui">電腦控制</span> 與 <span class="ui">瀏覽器控制</span></h3>
+          <p>讓 AI 能看螢幕、點滑鼠、打字（電腦控制），或者操作瀏覽器開啟網頁、點按鈕（瀏覽器控制）。用法都是：先點 <span class="ui">檢測</span>（瀏覽器控制第一次要先點安裝），再開啟要使用的工具的開關。</p>
+          <ul>
+            <li><strong>電腦控制</strong>目前只支援 Windows。</li>
+            <li><strong>瀏覽器控制</strong>支援 Windows、macOS、Linux，需要先裝好 Chrome 瀏覽器。</li>
+            <li>開啟後，輸入框底部會顯示對應標籤。</li>
+          </ul>
+          <p>「主記憶」及之後的分頁，只列出在「常用」裡開啟的工具。</p>
+        </section>
+
+        <section id="orchestration">
+          <h2><span class="no">14</span>多智慧體編排</h2>
+          <p class="lead">讓 Claude Code 當「主管」：它自己判斷哪些工作交給其他 AI，每個助手開成一個子分頁同時工作，最後由它檢查、彙整結果給你。</p>
+          <figure class="shot"><img data-shot="multi-agent" alt="主視窗把任務分給多個助手" width="960" height="540" loading="lazy" decoding="async"><figcaption>側欄裡主對話下方列出各個助手和它們的進度</figcaption></figure>
+
+          <h3>開啟</h3>
+          <ol class="steps">
+            <li>開啟 <span class="ui">應用配置</span> → <span class="ui">多智慧體編排</span>。</li>
+            <li>勾選可以當助手的工具：Claude Code、Codex、OpenCode、DeepSeek Harness、Pi。沒裝的會顯示 <span class="ui">未安裝</span>。</li>
+            <li>在 <span class="ui">主視窗角色</span> 裡三選一（對之後新開的主視窗生效）：
+              <ul>
+                <li><span class="ui">自主決策</span>：主視窗自己判斷哪些自己做、哪些分派出去。</li>
+                <li><span class="ui">專案經理</span>：只拆分和分派任務、審核結果，自己不修改檔案。</li>
+                <li><span class="ui">主廚</span>：核心部分親自做，周邊雜事交給助手。</li>
+              </ul>
+            </li>
+          </ol>
+
+          <h3>使用</h3>
+          <ol class="steps">
+            <li>新增一個 Claude Code 對話（桌面或終端機模式都可以）。</li>
+            <li>輸入框底部會顯示 <span class="ui">優先協作：自主決策</span>，點開可以指定優先使用某個助手。</li>
+            <li>像平常一樣提出需求。需要時，對話裡會出現「派發協作任務」「等待協作結果」等卡片，助手以子分頁的形式出現在標題列。</li>
+          </ol>
+
+          <h3>看進度、管理助手</h3>
+          <ul>
+            <li>在 <span class="ui">會話記錄</span> 裡，主對話下方會列出它的助手：轉圈表示正在工作，圓點表示等你操作。點一下切到那個助手。</li>
+            <li>助手跳出權限確認時，需要切到它的分頁裡處理。</li>
+            <li>在助手上按右鍵：<span class="ui">開啟原會話</span>、<span class="ui">轉為獨立會話</span>、<span class="ui">刪除</span>。刪除還在執行的助手會先請你確認。</li>
+            <li>關閉還有助手在執行的主對話時，可以選 <span class="ui">保留子會話</span> 或 <span class="ui">結束整組</span>。</li>
+          </ul>
+          <div class="tip"><b>變更不打架：</b>在 Git 儲存庫裡，主視窗可以讓每個助手在獨立的工作樹（單獨的分支）上工作，最後由主視窗統一合併。</div>
+        </section>
+
+        <section id="automation">
+          <h2><span class="no">15</span>自動化</h2>
+          <p class="lead">到了設定的時間，自動開啟一個對話，把你寫好的內容傳給 AI。適合每天早上自動總結、定時檢查之類的重複工作。</p>
+          <h3>新增一項自動化</h3>
+          <ol class="steps">
+            <li>點左側欄的 <span class="ui">自動化</span>，再點 <span class="ui">+ 新增自動化</span>。</li>
+            <li>填入 <span class="ui">名稱</span>（可不填）和 <span class="ui">要傳送的內容</span>。</li>
+            <li>在 <span class="ui">應用</span> 裡選 Claude Code、Codex、DeepSeek Harness、OpenCode 或 Pi。</li>
+            <li>選擇 <span class="ui">工作目錄</span>：從用過的資料夾裡挑，或點 <span class="ui">其他目錄…</span>。</li>
+            <li>設定 <span class="ui">時間</span>：每天 / 工作日 / 每週 / 每隔（最少 5 分鐘）/ 一次。</li>
+            <li>點 <span class="ui">儲存</span>。</li>
+          </ol>
+          <p>每項自動化都可以 <span class="ui">立即執行</span>、<span class="ui">編輯</span>、<span class="ui">刪除</span>，用開關暫停。清單裡顯示下次執行時間和上次結果，點 <span class="ui">查看會話</span> 可以看那次執行的對話。</p>
+          <div class="warn"><b>兩個一定要知道的重點：</b>
+            <ul>
+              <li><strong>先給 AI 開啟自動執行權限。</strong>到時間執行時沒人在旁邊點「允許」，請先在對應工具裡開啟，例如 Claude 的 <span class="ui">略過權限確認</span>、Codex 的 <span class="ui">完整存取</span>，否則任務會一直停在等待核准。</li>
+              <li><strong>Coffee CLI 要保持開啟。</strong>軟體關閉期間不會執行；錯過的任務會在下次開啟軟體後補跑一次。</li>
+            </ul>
+          </div>
+        </section>
+
+        <section id="stats">
+          <h2><span class="no">16</span>使用統計</h2>
+          <p class="lead">左側欄的 <span class="ui">使用統計</span>，看你和 AI 一起工作了多少。</p>
+          <ul>
+            <li><strong>熱度圖：</strong>近一年每天的訊息數，顏色越深聊得越多。</li>
+            <li><strong>篩選：</strong>依 <span class="ui">今天</span> / <span class="ui">近 7 天</span> / <span class="ui">近 30 天</span>、依工具、依專案查看。點 <span class="ui">同步</span> 手動重新整理。</li>
+            <li><strong>資料卡片：</strong>Token 總量、對話數、提問次數、活躍天數、快取命中率。</li>
+            <li><strong>圖表：</strong>Token 趨勢、各模型用量占比和明細表。</li>
+          </ul>
+          <p>Token 統計目前支援 Claude Code、Codex CLI、OpenCode、Pi、DeepSeek Harness。資料都來自你電腦上的本機記錄，不會上傳。</p>
+        </section>
+
+        <section id="settings">
+          <h2><span class="no">17</span>設定</h2>
+          <p class="lead">點左側欄底部的齒輪，或按 <kbd>Ctrl</kbd>+<kbd>,</kbd>（macOS 是 <kbd>⌘</kbd>+<kbd>,</kbd>）。按 <kbd>Esc</kbd> 或點 <span class="ui">返回</span> 關閉。</p>
+          <figure class="shot"><img data-shot="themes-shapes" alt="設定裡的配色和形態" width="960" height="540" loading="lazy" decoding="async"><figcaption>配色和形態自由搭配，選好立刻生效</figcaption></figure>
+
+          <h3><span class="ui">通用</span></h3>
+          <ul>
+            <li><span class="ui">介面縮放</span>：整體放大縮小（70%–150%），字太小看不清楚就調這裡。</li>
+            <li><span class="ui">輸入框的「儲存到預輸入」按鈕</span>：顯示或隱藏這個按鈕。</li>
+            <li><span class="ui">發送訊息</span>：選擇按 <kbd>Enter</kbd> 送出還是 <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>Enter</kbd> 送出。</li>
+            <li><span class="ui">開關快捷鍵</span>：左側欄 / 輸入框 / 右側欄的快速鍵，可選 Alt+QWE、Ctrl+QWE、Alt+123、Ctrl+123。</li>
+            <li><span class="ui">任務完成提示音</span>、<span class="ui">等待權限提示音</span>：可以試聽、關閉，或點 <span class="ui">更換</span> 用自己的 MP3 / WAV（20 MB 以內）。</li>
+          </ul>
+
+          <h3><span class="ui">外觀</span></h3>
+          <ul>
+            <li><span class="ui">配色</span>：24 套配色，每套都有 <span class="ui">明亮</span>、<span class="ui">夜晚</span>、<span class="ui">跟隨主題</span>（跟隨系統深色 / 淺色）三種模式。</li>
+            <li><span class="ui">形態</span>：10 種介面風格，例如柔和、銳角、玻璃、毛玻璃、字元流。「毛玻璃」會讓視窗後面的桌面透出來變模糊（Linux 需要 KDE 桌面）。</li>
+            <li><span class="ui">圖示風格</span>：資料夾和檔案圖示的樣式。</li>
+            <li><span class="ui">桌布</span>：用自己的圖片或影片當背景，可以調整 <span class="ui">透明度</span>。</li>
+          </ul>
+
+          <h3><span class="ui">終端機</span></h3>
+          <ul>
+            <li><span class="ui">文字顏色</span>：終端機文字的顏色。</li>
+            <li><span class="ui">字型</span>：預設是內建的 JetBrains Mono，也可以搜尋選擇電腦上安裝的字型。</li>
+            <li><span class="ui">預設終端</span>：Windows 可選 PowerShell、Git Bash、命令提示字元等；macOS / Linux 可選 zsh、bash 等。不確定就保持 Auto。</li>
+          </ul>
+
+          <h3><span class="ui">語音輸入</span></h3>
+          <ul>
+            <li>總開關、選擇 <span class="ui">麥克風</span>、<span class="ui">測試麥克風</span>。</li>
+            <li><span class="ui">語音管道</span>：點 <span class="ui">掃描語音管道</span>，找出電腦上已登入、能用來辨識語音的帳號。標示「即時轉寫」的邊說邊出字，標示「錄完轉寫」的說完才出字。</li>
+            <li>提示「登入已過期」時，依提示開啟對應工具傳一則訊息即可續期。</li>
+          </ul>
+
+          <h3><span class="ui">語言</span></h3>
+          <p>介面支援 11 種語言：English、简体中文、繁體中文、日本語、한국어、Español、Français、Deutsch、Português、Русский、Tiếng Việt，點一下立即切換。</p>
+
+          <h3><span class="ui">BUG / 建議</span></h3>
+          <p>遇到問題或有想法，從這裡提交到 GitHub。簡體中文介面還提供中國大陸可存取的 GitCode 入口。</p>
+        </section>
+
+        <section id="agent">
+          <h2><span class="no">18</span>Coffee Agent</h2>
+          <p class="lead">透過微信或 Telegram 與 Coffee Agent 對話：讀取終端機、安排任務，在手機上繼續接手電腦上的工作。</p>
+          <ol class="steps">
+            <li>開啟 <span class="ui">設定</span> → Coffee Agent，先讀一遍頂部的「使用說明」。</li>
+            <li>在 <span class="ui">Coffee Agent 模型設定</span> 裡選服務類型（OpenAI 相容 / Anthropic 相容），填入服務位址、模型 ID、API 金鑰。</li>
+            <li>在 <span class="ui">訊息渠道</span> 裡連線：微信掃描 QR Code；Telegram 貼上 BotFather 給的 Token，再在 10 分鐘內傳送配對碼。</li>
+            <li>連線成功後，左側欄底部會顯示「微信已連線」，在手機上傳訊息給它即可。</li>
+          </ol>
+          <p><span class="ui">工作方式</span> 裡有幾個開關，其中 <span class="ui">哨兵模式</span> 開啟後，Claude Code、Codex 等工具每輪工作結束時，Coffee Agent 會主動把結果傳到你的微信或 Telegram，不用你先問。需要保持 Coffee CLI 執行中。</p>
+        </section>
+
+        <hr>
+
+        <!-- ============================================================ 參考 -->
+        <section id="hotkeys">
+          <h2><span class="no">19</span>快速鍵</h2>
+          <p class="lead">macOS 上的 <kbd>Alt</kbd> 就是 <kbd>Option</kbd> 鍵。</p>
+          <div class="table-wrap"><table>
+            <tr><th>快速鍵</th><th>作用</th><th>在哪裡有效</th></tr>
+            <tr><td><kbd>Ctrl</kbd>+<kbd>,</kbd> / <kbd>⌘</kbd>+<kbd>,</kbd></td><td>開啟 / 關閉設定</td><td>任何時候</td></tr>
+            <tr><td><kbd>Alt</kbd>+<kbd>Q</kbd> / <kbd>W</kbd> / <kbd>E</kbd></td><td>顯示 / 隱藏 左側欄 / 輸入框 / 右側欄</td><td>任何時候（可在設定裡更換）</td></tr>
+            <tr><td><kbd>Enter</kbd></td><td>送出訊息</td><td>輸入框（可改成 Ctrl/⌘+Enter）</td></tr>
+            <tr><td><kbd>Shift</kbd>+<kbd>Enter</kbd></td><td>換行</td><td>輸入框</td></tr>
+            <tr><td><kbd>Alt</kbd>+<kbd>↑</kbd> / <kbd>↓</kbd></td><td>叫出以前送出過的內容</td><td>輸入框</td></tr>
+            <tr><td><kbd>Tab</kbd></td><td>採用提示詞建議</td><td>Claude 桌面對話</td></tr>
+            <tr><td><kbd>/</kbd></td><td>開啟指令選單</td><td>桌面對話輸入框</td></tr>
+            <tr><td><kbd>Esc</kbd></td><td>停止 AI 的回覆</td><td>桌面對話</td></tr>
+            <tr><td><kbd>Ctrl</kbd>+<kbd>O</kbd></td><td>展開 / 收合全部思考過程</td><td>Claude 桌面對話</td></tr>
+            <tr><td><kbd>1</kbd>–<kbd>9</kbd></td><td>選擇選項</td><td>權限 / 提問卡片</td></tr>
+            <tr><td><kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>C</kbd></td><td>有選取內容時複製，否則中斷程式</td><td>終端機</td></tr>
+            <tr><td><kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>V</kbd></td><td>貼上（圖片會貼上成檔案路徑）</td><td>終端機</td></tr>
+            <tr><td><kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>S</kbd></td><td>儲存</td><td>應用配置 → 主記憶</td></tr>
+            <tr><td><kbd>Esc</kbd></td><td>關閉設定、彈出視窗；取消分割畫面拖曳</td><td>對應介面</td></tr>
+          </table></div>
+        </section>
+
+        <section id="update">
+          <h2><span class="no">20</span>更新與解除安裝</h2>
+          <h3>更新 Coffee CLI</h3>
+          <p>有新版本時，左側欄底部齒輪旁會出現一個下載圖示。點它後會自動挑一個速度快的下載來源，下載到「下載」資料夾並驗證，然後：</p>
+          <ul>
+            <li><strong>Windows：</strong>自動開啟安裝精靈，依提示完成即可。</li>
+            <li><strong>macOS：</strong>自動開啟 DMG，把 Coffee CLI 拖曳到「應用程式」取代舊版。</li>
+            <li><strong>Linux：</strong>開啟「下載」資料夾，按兩下 .deb 或 .rpm 安裝。</li>
+          </ul>
+          <p>下載失敗時會自動開啟官網，手動下載即可。也可以重新執行 <a href="#install">安裝指令</a>，它會裝上最新版。</p>
+
+          <h3>解除安裝</h3>
+          <ul>
+            <li><strong>Windows：</strong>在「設定 → 應用程式」裡解除安裝 Coffee CLI。解除安裝畫面可以勾選是否同時刪除應用程式資料。</li>
+            <li><strong>macOS：</strong>把「應用程式」裡的 Coffee CLI 拖曳到垃圾桶。</li>
+            <li><strong>Linux：</strong>執行 <code>sudo apt remove coffee-cli</code> 或 <code>sudo dnf remove coffee-cli</code>。</li>
+          </ul>
+          <p>解除安裝 Coffee CLI 不會刪除你安裝的 AI 工具，也不會刪除它們的對話記錄。</p>
+        </section>
+
+        <section id="faq">
+          <h2><span class="no">21</span>常見問題</h2>
+
+          <h3>啟動台上的工具是灰色的？</h3>
+          <p>表示沒找到這個工具。先確認已經依照工具官網的說明裝好，再切回 Coffee CLI 視窗讓它重新偵測。裝了還是灰的，看啟動台底部的 <span class="ui">識別不到?</span>。</p>
+
+          <h3>macOS 提示「已損毀，無法開啟」？</h3>
+          <p>在「終端機」裡執行 <code>xattr -cr '/Applications/Coffee CLI.app'</code>，然後重新開啟。詳見 <a href="#install">下載與安裝</a>。</p>
+
+          <h3>需要付費嗎？</h3>
+          <p>Coffee CLI 免費、開源。AI 工具本身的費用（例如 Claude、Codex 的訂閱或 API 費用）依各家的規則收取，與 Coffee CLI 無關。</p>
+
+          <h3>右側「修改記錄」什麼都沒有？</h3>
+          <p>需要電腦裝了 Git，並且專案資料夾是 Git 儲存庫。不熟悉 Git 的話，可以直接請 AI 幫你：「幫我把這個資料夾初始化成 Git 儲存庫」。</p>
+
+          <h3>自動化時間到了卻沒動靜？</h3>
+          <p>最常見的原因是任務停在「等待核准」：請在對應工具裡開啟自動執行權限。另外，Coffee CLI 需要保持開啟。</p>
+
+          <h3>看不到麥克風按鈕 / 語音輸入失敗？</h3>
+          <p>到 <a href="#settings">設定 → 語音輸入</a>：開啟開關，點 <span class="ui">掃描語音管道</span>，確認至少有一個可用的管道。macOS 使用系統語音時，要先在「系統設定 → 鍵盤 → 聽寫」中開啟聽寫。</p>
+
+          <h3>刪除對話會不會把聊天記錄刪掉？</h3>
+          <p>不會。刪除只是從清單裡隱藏，AI 工具自己儲存的記錄檔案還在。</p>
+
+          <h3>AI 把我的檔案改壞了怎麼辦？</h3>
+          <p>養成兩個習慣：一是在 Git 儲存庫裡工作，隨時能在 <span class="ui">修改記錄</span> 裡看到改了什麼、需要時可以復原；二是對沒把握的任務勾選 <a href="#conversation">工作樹</a>，讓 AI 在副本裡修改，滿意了再合併。</p>
+
+          <h3>還有其他問題？</h3>
+          <p>到 <a href="https://github.com/edison7009/Coffee-CLI/issues" target="_blank" rel="noopener">GitHub</a> 或 <a href="https://gitcode.com/edison7009/Coffee-CLI/issues" target="_blank" rel="noopener">GitCode（中國大陸）</a> 提問，或寄信到 <a href="mailto:hi@coffeecli.com">hi@coffeecli.com</a>。</p>
+        </section>
+
+        <footer class="docs-foot">
+          本說明對應 Coffee CLI v4.0.0。介面上的按鈕名稱以軟體繁體中文版為準；發現說明文件和軟體對不上，歡迎 <a href="https://github.com/edison7009/Coffee-CLI/issues" target="_blank" rel="noopener">回報給我們</a>。<br>
+          &copy; 2026 Coffee CLI · <a href="/zh-hant/">返回官網</a>
+        </footer>
+      </article>
+    </main>
+  </div>
+
+  <button class="to-top" type="button" aria-label="回到頂部">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 15l-6-6-6 6"/></svg>
+  </button>
+
+  <script src="/js/docs.js?v=1.0.1"></script>
+</body>
+</html>

@@ -36,6 +36,9 @@ const LANG_PATH = {
   ru: "/ru/"
 };
 
+// Languages the docs are written in so far (see scripts/build-web-i18n.mjs).
+const DOCS_PATH = { en: "/docs/", zh: "/zh/docs/", "zh-TW": "/zh-hant/docs/" };
+
 const pageLang = document.documentElement.getAttribute("data-lang");
 if (pageLang && LANG_LIST[pageLang]) currentLang = pageLang;
 
@@ -52,6 +55,7 @@ const I18N_DICT = {
     "hero-title-2": "Coffee CLI for",
     "hero-subtitle": "Off the games and dating. <span class=\"accent\">Something more interesting…</span>",
     "opc-link": "Coffee 101",
+    "docs-link": "Docs",
     "feedback": "Feedback",
     "downloads-title": "Or download the desktop app",
     "enterprise": "Enterprise",
@@ -67,6 +71,7 @@ const I18N_DICT = {
     "hero-title-2": "Coffee CLI 适合",
     "hero-subtitle": "游戏和恋爱之外，<span class=\"accent\">更有趣的事……</span>",
     "opc-link": "Coffee 101",
+    "docs-link": "文档",
     "feedback": "问题反馈",
     "downloads-title": "或者直接下载桌面应用",
     "enterprise": "企业采购",
@@ -87,6 +92,7 @@ const I18N_DICT = {
     "hero-title-2": "Coffee CLI 適用於",
     "hero-subtitle": "遊戲和戀愛之外，<span class=\"accent\">更有趣的事……</span>",
     "opc-link": "Coffee 101",
+    "docs-link": "文件",
     "feedback": "問題回饋",
     "downloads-title": "或者直接下載桌面應用",
     "enterprise": "企業採購",
@@ -724,6 +730,12 @@ function renderI18N() {
   const cnMirrors = document.getElementById("cn-mirrors");
   if (cnMirrors) {
     cnMirrors.hidden = !(currentLang === "zh" || currentLang === "zh-TW");
+  }
+  // Docs exist in a few languages so far: link the visitor's own version.
+  const docsLink = document.getElementById("docs-link");
+  if (docsLink) {
+    docsLink.hidden = !DOCS_PATH[currentLang];
+    if (DOCS_PATH[currentLang]) docsLink.setAttribute("href", DOCS_PATH[currentLang]);
   }
 
   const toggle = document.getElementById("lang-toggle");

@@ -781,10 +781,21 @@ code::-webkit-scrollbar-thumb {
 
 /* Phone navbar: keep the bar inside the viewport (no sideways scroll).
    Feedback is a secondary text link; zh visitors still get the feedback
-   link in the download-mirrors row. */
+   link in the download-mirrors row. Docs and Coffee 101 stay. */
 @media (max-width: 600px) {
   .navbar { padding: 1rem 16px; gap: 0.75rem; }
   .logo { gap: 0.5rem; font-size: 1.05rem; white-space: nowrap; }
   .nav-links { gap: 0.6rem; }
-  .nav-links .feedback-btn:not(.nav-101) { display: none; }
+  .nav-links .feedback-btn:not(.nav-101):not(.nav-docs) { display: none; }
+  /* GitHub is also in the footer; drop the icon so Docs fits. */
+  .nav-links a.icon-switch { display: none; }
+}
+@media (max-width: 400px) {
+  .navbar { gap: 0.5rem; }
+  .logo { gap: 0.4rem; font-size: 0.98rem; }
+  .nav-links { gap: 0.45rem; }
+  .nav-links .feedback-btn { padding: 4px 7px; }
+}
+@media (max-width: 340px) {
+  .nav-links:has(.nav-docs:not([hidden])) .nav-101 { display: none; }
 }

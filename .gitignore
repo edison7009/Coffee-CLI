@@ -31,7 +31,8 @@ models.json
 # Internal design / strategy docs — kept locally, never published.
 # Public-facing positioning lives on Web-Home; in-flight feature designs
 # and competitor research stay private until a launch warrants disclosure.
-docs/
+# Root only: the website's own docs pages live under Web-Home/**/docs/.
+/docs/
 
 # AI agent guardrails — kept locally so Claude Code reads them on every
 # session, but not published. CLAUDE.md is the team's candid "how to

@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="zh-Hans" data-lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>使用文档 — Coffee CLI</title>
+  <meta name="description" content="Coffee CLI 中文使用文档：从安装、第一次启动，到启动台、会话、分屏、多智能体编排、预输入、修改记录、自动化和设置，按界面逐页讲清楚每个功能怎么用。">
+  <link rel="canonical" href="https://coffeecli.com/zh/docs/">
+  <link rel="alternate" hreflang="en" href="https://coffeecli.com/docs/">
+  <link rel="alternate" hreflang="zh-Hans" href="https://coffeecli.com/zh/docs/">
+  <link rel="alternate" hreflang="zh-Hant" href="https://coffeecli.com/zh-hant/docs/">
+  <link rel="alternate" hreflang="x-default" href="https://coffeecli.com/docs/">
+  <link rel="icon" type="image/x-icon" href="/icons/icon.ico">
+  <link rel="preload" href="/fonts/outfit-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/css/style.css?v=0.8.2">
+  <link rel="stylesheet" href="/css/docs.css?v=1.0.1">
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem("coffee-cli-theme") || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+        document.documentElement.setAttribute("data-theme", t);
+      } catch (e) {}
+    })();
+  </script>
+</head>
+<body class="docs">
+
+  <header class="docs-bar">
+    <button class="docs-menu-btn" id="docs-menu" type="button" aria-expanded="false" aria-controls="docs-side">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>目录
+    </button>
+    <a class="logo" href="/zh/">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 9v9c0 1.66-1.34 3-3 3H8c-1.66 0-3-1.34-3-3V9Z" fill="currentColor"/><path d="M17 9h3c.55 0 1 .45 1 1v3c0 .55-.45 1-1 1h-3"/><path d="M8 2c0 1-1 1-1 2s1 1 1 2M12 2c0 1-1 1-1 2s1 1 1 2M16 2c0 1-1 1-1 2s1 1 1 2"/></svg>
+      Coffee CLI <small>使用文档</small>
+    </a>
+    <div class="spacer"></div>
+    <nav class="bar-links">
+      <a class="feedback-btn hide-sm" href="/zh/#install">下载</a>
+      <a class="feedback-btn hide-sm" href="https://github.com/edison7009/Coffee-CLI/issues" target="_blank" rel="noopener">问题反馈</a>
+      <nav class="docs-lang" aria-label="语言"><a href="/docs/" hreflang="en" lang="en" aria-label="English">EN</a><a href="/zh/docs/" hreflang="zh-Hans" lang="zh-Hans" aria-label="简体中文" aria-current="page">简</a><a href="/zh-hant/docs/" hreflang="zh-Hant" lang="zh-Hant" aria-label="繁體中文">繁</a></nav>
+      <button class="icon-switch" id="theme-toggle" type="button" aria-label="切换主题">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg>
+      </button>
+    </nav>
+  </header>
+
+  <div class="docs-scrim"></div>
+
+  <div class="docs-shell">
+    <aside class="docs-side" id="docs-side" aria-label="文档目录">
+      <h4>入门</h4>
+      <a href="#intro">认识 Coffee CLI</a>
+      <a href="#install">下载与安装</a>
+      <a href="#quickstart">五分钟上手</a>
+      <a href="#layout">界面总览</a>
+      <h4>主界面</h4>
+      <a href="#launchpad">启动台</a>
+      <a href="#titlebar">标题栏</a>
+      <a href="#sidebar">左侧栏</a>
+      <a href="#conversation">会话：桌面对话模式</a>
+      <a href="#terminal">会话：终端模式</a>
+      <a href="#composer">输入框</a>
+      <a href="#split">分屏</a>
+      <a href="#rightpanel">右侧栏</a>
+      <h4>功能页面</h4>
+      <a href="#tools">应用配置</a>
+      <a href="#orchestration">多智能体编排</a>
+      <a href="#automation">自动化</a>
+      <a href="#stats">使用统计</a>
+      <a href="#settings">设置</a>
+      <a href="#agent">Coffee Agent</a>
+      <h4>参考</h4>
+      <a href="#hotkeys">快捷键</a>
+      <a href="#update">更新与卸载</a>
+      <a href="#faq">常见问题</a>
+    </aside>
+
+    <main class="docs-main">
+      <article class="docs-article">
+
+        <header class="docs-hero">
+          <div class="eyebrow">Coffee CLI 使用文档</div>
+          <h1>从零开始，把 AI 编程工具用顺手</h1>
+          <p>这份文档按软件里的界面一页一页地讲：每个按钮在哪里、点了会发生什么、有哪些要注意的地方。不需要编程基础，跟着「五分钟上手」走一遍，就能开始用。</p>
+          <div class="quick-grid">
+            <a href="#install"><b>下载与安装</b><span>Windows / macOS / Linux，一条命令或一个安装包</span></a>
+            <a href="#quickstart"><b>五分钟上手</b><span>打开软件、选工具、选文件夹、发第一条消息</span></a>
+            <a href="#layout"><b>界面总览</b><span>先认识五个区域，后面就不会迷路</span></a>
+            <a href="#faq"><b>常见问题</b><span>工具是灰色的？macOS 提示已损坏？</span></a>
+          </div>
+        </header>
+
+        <!-- ============================================================ 入门 -->
+        <section id="intro">
+          <h2><span class="no">01</span>认识 Coffee CLI</h2>
+          <p class="lead">Claude Code、Codex、OpenCode 这类 AI 编程工具，原本都要在黑底白字的「终端」里用。Coffee CLI 给它们配了一个桌面：免费、开源，所有工具集中在一个窗口里管理。</p>
+          <ul>
+            <li><strong>一个窗口管理多个 AI：</strong>支持 20 多款 AI 工具，每个对话是一个标签页，随时切换。</li>
+            <li><strong>两种用法：</strong>Claude Code、Codex、OpenCode、Pi 可以用「桌面对话」界面，像聊天软件一样用；也可以切回原汁原味的终端。</li>
+            <li><strong>分屏同时看：</strong>最多 4 个对话并排显示，谁在干活一眼就能看到。</li>
+            <li><strong>多个 AI 一起干活：</strong>让 Claude Code 当主管，把任务分给其他 AI 同时做。</li>
+            <li><strong>看清 AI 改了什么：</strong>右侧栏列出所有改动的文件，逐行显示新增和删除。</li>
+            <li><strong>额度和余额：</strong>在输入框旁边直接看到 Claude、Codex 的剩余额度，或 DeepSeek 等服务的账户余额。</li>
+          </ul>
+          <div class="tip"><b>先说明一点：</b>Coffee CLI 本身不提供 AI 模型。你需要先在电脑上装好想用的 AI 工具（比如 Claude Code），并按那个工具自己的方式登录，Coffee CLI 会自动识别它。</div>
+        </section>
+
+        <section id="install">
+          <h2><span class="no">02</span>下载与安装</h2>
+          <p class="lead">两种方式任选：在官网点按钮下载安装包，或者复制一行命令自动安装。</p>
+
+          <h3>方式一：下载安装包</h3>
+          <p>打开 <a href="/zh/">coffeecli.com</a>，点击你的系统对应的按钮：</p>
+          <div class="table-wrap"><table>
+            <tr><th>系统</th><th>安装包</th><th>说明</th></tr>
+            <tr><td>Windows</td><td>.exe（另有 .msi）</td><td>x64 电脑。双击安装，缺少 WebView2 时安装程序会自动补装。</td></tr>
+            <tr><td>macOS</td><td>.dmg</td><td>Apple 芯片和 Intel 芯片都支持。打开后把 Coffee CLI 拖进「应用程序」。</td></tr>
+            <tr><td>Linux</td><td>.deb / .rpm</td><td>x64 和 arm64。Ubuntu / Debian 用 .deb，Fedora / openSUSE 等用 .rpm。</td></tr>
+          </table></div>
+          <p>Intel Mac、ARM Linux 等其他版本，在官网下载按钮下方的「更多版本」里找。国内用户在简体中文官网还能看到 <strong>百度网盘、夸克网盘、123云盘</strong> 三个下载渠道。</p>
+
+          <h3>方式二：一行命令安装</h3>
+          <div class="cmd"><span class="os">Windows</span><code>iwr -useb https://coffeecli.com/install.ps1 | iex</code></div>
+          <div class="cmd"><span class="os">macOS / Linux</span><code>curl -fsSL https://coffeecli.com/install.sh | sh</code></div>
+          <ul>
+            <li><strong>Windows：</strong>右键「开始」菜单 → 选择「终端（管理员）」→ 粘贴上面的命令，回车。</li>
+            <li><strong>macOS：</strong>打开「终端」应用，粘贴命令，回车。脚本会自动安装到「应用程序」。</li>
+            <li><strong>Linux：</strong>在终端里运行，安装 .deb / .rpm 时会要求输入密码。</li>
+          </ul>
+          <p>已经是最新版时，脚本会直接告诉你，不会重复安装。如果提示新版本刚发布、安装包还在上传，等十来分钟再运行一次即可。</p>
+
+          <div class="warn"><b>macOS 提示「已损坏」或打不开？</b>这是系统对网上下载应用的拦截，不是文件真的坏了。打开「终端」，运行下面这行，然后重新打开 Coffee CLI：
+            <div class="cmd"><code>xattr -cr '/Applications/Coffee CLI.app'</code></div>
+          </div>
+        </section>
+
+        <section id="quickstart">
+          <h2><span class="no">03</span>五分钟上手</h2>
+          <p class="lead">以 Claude Code 为例，从打开软件到让 AI 帮你干活。</p>
+          <ol class="steps">
+            <li><strong>装好 AI 工具。</strong>Coffee CLI 只负责「管理」，AI 工具要自己装。比如 Claude Code，按它官网的说明安装并登录一次。</li>
+            <li><strong>打开 Coffee CLI。</strong>第一次打开就会看到「启动台」，上面有几张工具卡片。已安装的工具是亮的，没装的是灰色。</li>
+            <li><strong>点 Claude Code 卡片，选一个文件夹。</strong>这个文件夹就是 AI 干活的地方，它能读、能改里面的文件。建议先新建一个空文件夹来练手。</li>
+            <li><strong>在底部输入框里写需求，按 <kbd>Enter</kbd> 发送。</strong>比如「帮我做一个记账的网页」。AI 开始工作时，标签页上的小点会变成橙色。</li>
+            <li><strong>处理 AI 的提问。</strong>AI 想改文件或运行命令时，可能会停下来问你。点 <span class="ui">允许一次</span> 让它继续，点 <span class="ui">拒绝</span> 不让它做。</li>
+            <li><strong>看结果。</strong>按 <kbd>Alt</kbd>+<kbd>E</kbd> 打开右侧栏，在 <span class="ui">修改记录</span> 里查看 AI 改了哪些文件（需要文件夹是 Git 仓库）。</li>
+          </ol>
+          <div class="tip"><b>小技巧：</b>左侧的 <span class="ui">会话记录</span> 会保存所有对话。下次打开软件，点一下就能接着上次聊。</div>
+        </section>
+
+        <section id="layout">
+          <h2><span class="no">04</span>界面总览</h2>
+          <p class="lead">Coffee CLI 的窗口分成五块。点下面任意一块，跳到对应的说明。</p>
+          <div class="ui-map">
+            <a class="m-title" href="#titlebar"><b>标题栏</b><span>会话标签 · 状态点 · 更新日志 · 面板开关</span></a>
+            <a class="m-left" href="#sidebar"><b>左侧栏</b><span>会话记录<br>工作区文件<br>应用配置 · 设置</span></a>
+            <a class="m-center" href="#conversation"><b>会话区</b><span>和 AI 对话的地方<br>桌面对话 / 终端 / 分屏</span></a>
+            <a class="m-right" href="#rightpanel"><b>右侧栏</b><span>预输入<br>修改记录<br>文件对比</span></a>
+            <a class="m-input" href="#composer"><b>输入框</b><span>写需求、贴图片、语音输入、看额度</span></a>
+          </div>
+          <p>左侧栏、输入框、右侧栏都可以随时隐藏，让会话区更宽：</p>
+          <div class="table-wrap"><table>
+            <tr><th>区域</th><th>默认快捷键</th></tr>
+            <tr><td>左侧栏</td><td><kbd>Alt</kbd>+<kbd>Q</kbd></td></tr>
+            <tr><td>输入框（终端模式下）</td><td><kbd>Alt</kbd>+<kbd>W</kbd></td></tr>
+            <tr><td>右侧栏</td><td><kbd>Alt</kbd>+<kbd>E</kbd></td></tr>
+          </table></div>
+          <p>标题栏右侧也有这三个开关的图标。快捷键可以在 <a href="#settings">设置 → 通用 → 开关快捷键</a> 里换成别的组合。</p>
+        </section>
+
+        <hr>
+
+        <!-- ============================================================ 主界面 -->
+        <section id="launchpad">
+          <h2><span class="no">05</span>启动台</h2>
+          <p class="lead">新建会话时看到的页面，用来选「哪个 AI」在「哪个文件夹」里工作。</p>
+          <figure class="shot"><img data-shot="desktop-terminal" alt="启动台上的工具卡片，以及桌面 / 终端模式切换" width="960" height="540" loading="lazy" decoding="async"><figcaption>工具卡片上可以切换 Desktop（桌面对话）和 Terminal（终端）模式</figcaption></figure>
+
+          <h3>打开启动台</h3>
+          <p>点左侧栏顶部的 <span class="ui">新建会话</span>，或者标题栏标签条末尾的 <strong>+</strong>。如果已经有一个还没选工具的空白标签，会直接切过去，不会再开新的。</p>
+
+          <h3>启动一个 AI 工具</h3>
+          <ol class="steps">
+            <li>点工具卡片。</li>
+            <li>如果这个工具以前用过，卡片上会显示上次的文件夹路径，点一下就直接在那里启动。</li>
+            <li>第一次用时卡片上写着 <span class="ui">选择项目目录</span>：会弹出最近用过的文件夹列表，最下面是 <span class="ui">打开文件夹</span>，可以选新的文件夹。</li>
+            <li>想换文件夹，点卡片右边的文件夹按钮。最近列表里的每一项都可以点 × 删掉。</li>
+          </ol>
+          <p>OpenClaw 不需要选文件夹，点一下就启动。之前用过的文件夹被删除或移动后，会自动从列表里去掉。</p>
+
+          <h3>桌面对话还是终端？</h3>
+          <p>Claude Code、Codex CLI、OpenCode、Pi 的卡片上有 <strong>Desktop / Terminal</strong> 切换：</p>
+          <ul>
+            <li><strong>Desktop（默认）：</strong>像聊天软件一样的界面，有按钮可以点，适合新手。详见 <a href="#conversation">桌面对话模式</a>。</li>
+            <li><strong>Terminal：</strong>工具原本的命令行界面，适合熟悉终端的用户。详见 <a href="#terminal">终端模式</a>。</li>
+          </ul>
+          <p>DeepSeek Harness 只有桌面模式，其余工具都在终端里运行。你的选择会被记住，从会话记录恢复对话时也按这个模式打开。</p>
+
+          <h3>支持哪些工具</h3>
+          <p>Claude Code、Codex CLI、DeepSeek Harness、Cursor、Copilot CLI、Antigravity CLI、OpenClaw、Hermes Agent、OpenCode、Pi、Cline、Goose、Aider、Oh-My-Pi、Crush、Qwen Code、Kilo Code、Kiro、Kimi Code、CodeBuddy、Grok Build、MiMo Code、MiniMax Code、Muse Code，再加一个普通的 <span class="ui">终端</span>。</p>
+          <p>启动台最多同时摆 6 张卡片，第一次默认是 Claude Code、Codex CLI、OpenCode、Pi、DeepSeek Harness 和终端。想换成别的工具，去 <a href="#tools">应用配置 → 常用</a>。</p>
+
+          <h3>工具是灰色的，点不动</h3>
+          <p>说明 Coffee CLI 没在电脑上找到这个工具。启动台<strong>不负责安装</strong>，你需要按那个工具官网的说明自己装。装好后切回 Coffee CLI 窗口，会自动重新检测。</p>
+          <p>明明装了还是灰的？把鼠标放到启动台底部的 <span class="ui">识别不到?</span> 上，会显示原因和三种修复办法。常见原因是电脑的环境变量 PATH 被其他工具改坏了。</p>
+
+          <h3>更新 AI 工具</h3>
+          <p>工具有新版本时，卡片上会出现 <span class="ui">更新</span> 按钮，鼠标放上去能看到从哪个版本升到哪个版本。点击后显示 <span class="ui">更新中</span>。软件会按你当初的安装方式（npm、Homebrew 等）自动更新。</p>
+
+          <h3>远程终端</h3>
+          <p>点 <span class="ui">终端</span> 卡片上的 <span class="ui">远程</span>，可以连接另一台电脑或服务器：选 SSH 或 WebSocket，填 <span class="ui">服务器地址</span>、端口、<span class="ui">用户名</span>、<span class="ui">密码</span>，点 <span class="ui">连接</span>。最近 10 次连接会显示成小标签，点一下就能重连。</p>
+          <div class="warn"><b>注意：</b>远程连接的密码会以明文保存在本机（<code>~/.coffee-cli/credentials.json</code>）。公用电脑上请不要保存重要密码。</div>
+        </section>
+
+        <section id="titlebar">
+          <h2><span class="no">06</span>标题栏</h2>
+          <p class="lead">窗口最上面一条，主要是打开的会话标签。</p>
+
+          <h3>会话标签</h3>
+          <ul>
+            <li>每个打开的对话是一个标签，显示工具图标和项目文件夹名。点击切换，左右拖动可以调整顺序，点 × 关闭。</li>
+            <li>还没选工具的空白标签叫 <span class="ui">选择工具</span>。</li>
+            <li>双击标题栏空白处可以最大化或还原窗口，按住空白处拖动可以移动窗口。</li>
+          </ul>
+
+          <h3>状态点：一眼看出 AI 在干嘛</h3>
+          <p>标签右边有一组小点，颜色表示 AI 的状态：</p>
+          <div class="table-wrap"><table>
+            <tr><th>颜色</th><th>意思</th><th>你需要做什么</th></tr>
+            <tr><td>绿色</td><td>空闲 / 已完成</td><td>可以看结果或发下一条消息</td></tr>
+            <tr><td>橙色</td><td>工作中</td><td>等它干完就行</td></tr>
+            <tr><td>蓝色</td><td>等你操作</td><td>切过去处理权限确认或回答它的问题</td></tr>
+          </table></div>
+          <p>Linux 上只显示一个不动的彩色圆点，没有动画。任务完成和等待你操作时还会响提示音，可以在 <a href="#settings">设置 → 通用</a> 里更换或关闭。</p>
+
+          <h3>其他按钮</h3>
+          <ul>
+            <li><span class="ui">更新日志</span>：查看当前版本更新了什么。软件升级后第一次打开会自动弹出一次。</li>
+            <li><strong>三个面板开关</strong>：左侧栏、输入框、右侧栏，见 <a href="#layout">界面总览</a>。</li>
+            <li><span class="ui">设置</span>：平时在左侧栏底部；左侧栏隐藏时，会出现在标题栏上。</li>
+            <li>Windows / Linux 的最小化、最大化、关闭按钮在最右边；macOS 用系统自带的红黄绿按钮。</li>
+          </ul>
+        </section>
+
+        <section id="sidebar">
+          <h2><span class="no">07</span>左侧栏</h2>
+          <p class="lead">管理所有对话和项目文件。顶部有 <span class="ui">新建会话</span> 和两个视图切换：<span class="ui">会话记录</span>、<span class="ui">工作区</span>。</p>
+
+          <h3>会话记录：所有历史对话</h3>
+          <ul>
+            <li><strong>接着聊：</strong>点任意一条。对话已经开着会直接切过去；没开的话会新开一个标签，在原来的文件夹里继续。</li>
+            <li><strong>找对话：</strong>点 <span class="ui">搜索</span>，可以按标题、工具名、项目路径查找。用 <kbd>↑</kbd><kbd>↓</kbd> 选择，<kbd>Enter</kbd> 打开，<kbd>Esc</kbd> 关闭。</li>
+            <li><strong>换个排列方式：</strong>右上角漏斗图标是 <span class="ui">显示方式</span>：
+              <ul>
+                <li><span class="ui">会话列表</span>：看全部，或只看某一个工具的对话。</li>
+                <li><span class="ui">项目分类</span>：按文件夹分组。可选 <span class="ui">全部目录</span> 或 <span class="ui">仅已添加</span>，每组先显示 5 条，点 <span class="ui">显示更多</span> 展开。</li>
+                <li><span class="ui">应用图标</span>：选择显示或不显示工具图标。</li>
+              </ul>
+            </li>
+            <li>正在运行的对话会排在最上面，接着是置顶的对话。鼠标悬停能看到项目名、时间和消息条数。</li>
+          </ul>
+
+          <h3>对话卡片上的小标记</h3>
+          <div class="table-wrap"><table>
+            <tr><th>标记</th><th>意思</th></tr>
+            <tr><td>转圈</td><td><span class="ui">工作中</span></td></tr>
+            <tr><td>蓝色标签</td><td><span class="ui">等待操作</span>：AI 在等你确认</td></tr>
+            <tr><td>蓝色小圆点</td><td><span class="ui">新答复未读</span></td></tr>
+            <tr><td>PR 图标</td><td>这个对话的分支有 GitHub PR。绿色 = <span class="ui">待合并</span>，紫色 = <span class="ui">已合并</span>，红色 = <span class="ui">已关闭</span>；角上的 ✓ / × / · 分别是检查通过、失败、运行中</td></tr>
+          </table></div>
+
+          <h3>右键菜单</h3>
+          <ul>
+            <li><span class="ui">在分屏中打开</span>：在当前对话右边分屏显示，见 <a href="#split">分屏</a>。</li>
+            <li><span class="ui">置顶</span> / <span class="ui">取消置顶</span>、<span class="ui">重命名</span>（按 <kbd>Enter</kbd> 保存，<kbd>Esc</kbd> 取消）。</li>
+            <li><span class="ui">复制会话ID</span>、<span class="ui">复制恢复命令</span>：想在别的终端里接着这个对话时用。</li>
+            <li><span class="ui">复制完整路径</span>、<span class="ui">在文件管理器中显示</span>：找到这个对话的记录文件。</li>
+            <li><span class="ui">删除</span>：鼠标悬停时出现的垃圾桶按钮效果一样。</li>
+          </ul>
+          <div class="tip"><b>放心删：</b>「删除」只是把对话从列表里隐藏，不会删掉 AI 工具自己保存的记录文件。如果这个对话正开着，它的标签会一起关闭。</div>
+
+          <h3>工作区：项目文件</h3>
+          <ul>
+            <li>显示当前对话所在文件夹里的文件，文件有变化会自动刷新。</li>
+            <li>有未提交改动的文件后面会显示 <code>+N -M</code>（新增和删除的行数）。</li>
+            <li>点放大镜可以 <span class="ui">筛选文件和文件夹…</span>（只筛第一层）。</li>
+            <li>右键文件：<span class="ui">打开</span>（用系统默认程序）、<span class="ui">复制绝对路径</span>、<span class="ui">复制相对路径</span>、<span class="ui">复制为 @reference</span>、剪切 / 复制 / 粘贴、重命名、删除、<span class="ui">在文件管理器中显示</span>。</li>
+          </ul>
+          <div class="tip"><b>让 AI 看某个文件：</b>右键文件 → <span class="ui">复制为 @reference</span>，粘贴到输入框里，AI 就知道你说的是哪个文件。</div>
+
+          <h3>底部按钮</h3>
+          <ul>
+            <li><strong>Coffee Agent</strong> 和消息渠道状态（例如「微信 · 未连接」），见 <a href="#agent">Coffee Agent</a>。</li>
+            <li><strong>下载图标</strong>：Coffee CLI 有新版本时才出现，见 <a href="#update">更新与卸载</a>。</li>
+            <li><strong>齿轮</strong>：打开 <a href="#settings">设置</a>。</li>
+          </ul>
+          <p>左侧栏顶部还有 <span class="ui">应用配置</span>、<span class="ui">使用统计</span>、<span class="ui">自动化</span> 三个入口，分别见后面的「功能页面」。</p>
+        </section>
+
+        <section id="conversation">
+          <h2><span class="no">08</span>会话：桌面对话模式</h2>
+          <p class="lead">Claude Code、Codex、OpenCode、Pi、DeepSeek Harness 可以用这种像聊天软件一样的界面。不用记命令，大部分操作点按钮就行。</p>
+
+          <h3>看懂 AI 的回复</h3>
+          <ul>
+            <li><strong>思考过程：</strong>AI 想问题时显示 <span class="ui">正在思考中…</span>，想完变成「思考了 X 秒」，点一下能展开看它怎么想的。Claude 还可以按 <kbd>Ctrl</kbd>+<kbd>O</kbd> 一次展开或收起全部思考。</li>
+            <li><strong>改文件卡片：</strong>显示删了几行、加了几行，并左右对比显示改动。点文件路径会在文件管理器里找到它。</li>
+            <li><strong>运行命令卡片：</strong>分 <span class="ui">输入</span>（运行了什么命令）和 <span class="ui">输出</span>（命令的结果）两部分。</li>
+            <li><strong>每轮小结：</strong>每次回复结束后，下面有一行「耗时 · 词元数 · 大约花了多少钱」。</li>
+            <li><strong>复制：</strong>每条消息旁边都有 <span class="ui">复制消息</span> 按钮。</li>
+          </ul>
+
+          <h3>AI 停下来问你时</h3>
+          <p>AI 想改文件、运行命令，或者需要你做决定时，会弹出一张卡片，标签上的状态点同时变成蓝色：</p>
+          <ul>
+            <li><strong>权限确认：</strong>例如「允许 Bash 吗？」。点 <span class="ui">允许一次</span> 或 <span class="ui">拒绝</span>。Codex 还有 <span class="ui">本次会话允许</span>，OpenCode 还有 <span class="ui">始终允许</span>。</li>
+            <li><strong>计划确认（Claude）：</strong><span class="ui">准备实施这个计划吗？</span> 看完计划再决定要不要开始。</li>
+            <li><strong>提问：</strong>选一个选项，或在输入框里写补充说明，再点 <span class="ui">提交</span>。可以用数字键 <kbd>1</kbd>–<kbd>9</kbd> 快速选择。</li>
+          </ul>
+
+          <h3>权限模式：AI 能自己做多少事</h3>
+          <p>输入框底部的权限按钮决定 AI 动手前要不要问你：</p>
+          <div class="table-wrap"><table>
+            <tr><th>工具</th><th>可选档位（从谨慎到放手）</th></tr>
+            <tr><td>Claude Code</td><td><span class="ui">手动</span>（编辑和运行命令前都问）→ <span class="ui">计划</span>（先出方案再动手）→ <span class="ui">自动编辑</span>（改文件不问，其他问）→ <span class="ui">自动</span>（部分模型才有）→ <span class="ui">跳过权限确认</span></td></tr>
+            <tr><td>Codex</td><td><span class="ui">只读</span> → <span class="ui">工作区</span> → <span class="ui">完全访问</span>；另有 <span class="ui">计划模式</span> 开关</td></tr>
+            <tr><td>DeepSeek Harness</td><td><span class="ui">工作区内修改</span> → <span class="ui">完全权限</span></td></tr>
+            <tr><td>OpenCode</td><td>没有权限按钮，可切换 <span class="ui">智能体</span></td></tr>
+          </table></div>
+          <div class="tip"><b>新手建议：</b>先用默认档位，让 AI 每次动手前都问你。熟悉之后再放开权限。</div>
+
+          <h3>换模型和思考强度</h3>
+          <ul>
+            <li><strong>模型：</strong>点输入框底部的模型名，从菜单里换。每个模型后面标着价格（输入 / 输出，每百万 token）。</li>
+            <li><strong>思考强度：</strong>一根滑杆，从 <span class="ui">更快</span> 到 <span class="ui">更深入</span>，档位有 低 / 中 / 高 / 超高 / 最高。关闭菜单后才生效，按 <kbd>Esc</kbd> 放弃修改。</li>
+          </ul>
+
+          <h3>上下文圆环：AI 还能记住多少</h3>
+          <p>输入框右下角的小圆环表示这个对话用掉了多少「记忆空间」。超过 75% 会变色提醒，超过 90% 变成红色。点开能看到具体用量。</p>
+          <p>快满时，可以点里面的 <span class="ui">开新对话继续</span>：开一个新对话，需要时让它回头查阅旧记录，你写了一半的草稿也会保留，不会自动发送。</p>
+
+          <h3>「/」命令菜单</h3>
+          <p>在输入框里打 <kbd>/</kbd>，或点 <strong>/</strong> 按钮，会弹出这个工具支持的命令，比如 <code>/model</code>（换模型）、<code>/compact</code>（压缩对话）、<code>/new</code>（新对话）。用 <kbd>↑</kbd><kbd>↓</kbd> 选择，<kbd>Enter</kbd> 执行。</p>
+
+          <h3>工作树：在副本里放心试</h3>
+          <p>输入框底部文件夹名旁边的 <span class="ui">工作树</span> 复选框。勾上后，AI 会在项目的一份独立副本（单独的分支）里工作，<strong>不会动你原来的文件</strong>。</p>
+          <ol class="steps">
+            <li>发第一条消息<strong>之前</strong>勾选。对话开始后就不能改了。</li>
+            <li>AI 干完活后，出现 <span class="ui">合并到 …</span> 按钮。点它把改动合并回原来的项目。</li>
+            <li>如果和原项目冲突，会自动撤销这次合并，原项目不受影响。</li>
+          </ol>
+          <p>需要项目文件夹是 Git 仓库，并且至少有一次提交。</p>
+
+          <h3>其他贴心功能</h3>
+          <ul>
+            <li><strong>停止：</strong>按 <kbd>Esc</kbd> 或点方块按钮，随时让 AI 停下。</li>
+            <li><strong>快速定位：</strong>对话变长后，右侧会出现一列小圆点，每个代表你的一次提问，点击就能跳过去。</li>
+            <li><strong>回到最新：</strong>往上翻后，右下角的向下箭头可以一键回到最新消息。</li>
+            <li><strong>提示词建议（Claude）：</strong>输入框为空时，灰字会猜你下一句想说什么，按 <kbd>Tab</kbd> 采用。</li>
+            <li><strong>闲置很久后回来（Claude、Codex）：</strong>会问你是 <span class="ui">完整恢复</span> 还是 <span class="ui">开新对话继续（推荐）</span>。旧对话很长时选后者更快更省。</li>
+            <li><strong>加载更早的消息（Claude）：</strong>恢复很长的旧对话时，在顶部点这个按钮加载更早的内容。</li>
+          </ul>
+        </section>
+
+        <section id="terminal">
+          <h2><span class="no">09</span>会话：终端模式</h2>
+          <p class="lead">直接显示 AI 工具原本的命令行界面。除 Claude Code、Codex、OpenCode、Pi、DeepSeek Harness 外，其他工具都用这种模式。</p>
+          <div class="table-wrap"><table>
+            <tr><th>想做什么</th><th>怎么做</th></tr>
+            <tr><td>复制</td><td>选中文字，按 <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>C</kbd>。没有选中文字时，<kbd>Ctrl</kbd>+<kbd>C</kbd> 是中断当前程序</td></tr>
+            <tr><td>粘贴</td><td><kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>V</kbd>。Linux 也可以用 <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>C</kbd> / <kbd>V</kbd></td></tr>
+            <tr><td>发图片给 AI</td><td>直接粘贴截图，会自动存成文件并粘贴它的路径</td></tr>
+            <tr><td>引用文件</td><td>把文件拖进终端，会插入文件路径</td></tr>
+            <tr><td>打开链接</td><td>点网址用浏览器打开；点本地路径会在文件管理器里显示它（不会运行）</td></tr>
+            <tr><td>翻看历史</td><td>可往回翻最近 5000 行，翻上去后有「返回最新消息」按钮</td></tr>
+          </table></div>
+          <p>右键菜单有复制、粘贴、全选；右键点在链接或路径上，还会多出打开和复制链接的选项。终端字体和文字颜色在 <a href="#settings">设置 → 终端</a> 里改。</p>
+          <div class="tip"><b>不习惯在终端里打字？</b>按 <kbd>Alt</kbd>+<kbd>W</kbd> 打开底部输入框，在里面写好、可以贴图片，再一次性发给终端。</div>
+        </section>
+
+        <section id="composer">
+          <h2><span class="no">10</span>输入框</h2>
+          <p class="lead">会话区最下面写需求的地方。桌面对话模式下一直显示，终端模式下用 <kbd>Alt</kbd>+<kbd>W</kbd> 打开或隐藏。</p>
+
+          <h3>发送和换行</h3>
+          <ul>
+            <li>默认 <kbd>Enter</kbd> 发送，<kbd>Shift</kbd>+<kbd>Enter</kbd> 换行。习惯反过来的，去 <a href="#settings">设置 → 通用 → 发送消息</a> 改成 <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>Enter</kbd> 发送。</li>
+            <li><kbd>Alt</kbd>+<kbd>↑</kbd> / <kbd>Alt</kbd>+<kbd>↓</kbd>：翻出以前发过的内容。</li>
+            <li>拖动输入框上边缘可以调高度。输入框左下角显示消息会发到哪个工具、哪个文件夹。</li>
+            <li>AI 工作时输入框为空，发送按钮会变成方块 <span class="ui">停止</span>。桌面对话模式下，AI 工作时也可以继续发消息补充要求。</li>
+          </ul>
+
+          <h3>发图片和文件</h3>
+          <ul>
+            <li><strong>截图后直接粘贴</strong>（<kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>V</kbd>）：输入框上方会出现缩略图，点 × 可以移除。</li>
+            <li><strong>拖文件进来</strong>：会插入文件路径。</li>
+            <li><strong>点回形针</strong> <span class="ui">添加附件</span>：选择文件。</li>
+          </ul>
+
+          <h3>保存到预输入</h3>
+          <p>输入框里有字时，上方会出现 <span class="ui">保存到预输入</span>。想法还没想好、或者 AI 正忙，先存起来，之后在 <a href="#rightpanel">右侧栏 → 预输入</a> 里点一下就能放回输入框。旁边的垃圾桶是 <span class="ui">清空</span>。</p>
+
+          <h3>语音输入</h3>
+          <ol class="steps">
+            <li>点发送按钮左边的麦克风，开始说话，旁边会出现波形。</li>
+            <li>说完再点一下，文字会写进输入框，确认后再发送。</li>
+          </ol>
+          <p>语音输入借用你已登录的账号（比如 Claude Code、ChatGPT、豆包）来识别。看不到麦克风按钮？去 <a href="#settings">设置 → 语音输入</a> 打开开关并扫描语音渠道。macOS 也可以用系统自带的语音识别，但要先在「系统设置 → 键盘 → 听写」中开启听写。</p>
+
+          <h3>套餐额度条</h3>
+          <figure class="shot"><img data-shot="usage-meter" alt="输入框旁的套餐额度条" width="960" height="540" loading="lazy" decoding="async"><figcaption>输入框右侧直接显示剩余额度和重置时间</figcaption></figure>
+          <p>输入框底部右侧显示账号还剩多少额度：Claude、Codex 显示 5 小时 / 每周额度的剩余百分比和重置倒计时；DeepSeek、Kimi、OpenRouter 等按量付费的服务显示 <span class="ui">余额</span> 或 <span class="ui">已用</span>。剩余不足 30% 会变色提醒，点一下可以刷新。</p>
+        </section>
+
+        <section id="split">
+          <h2><span class="no">11</span>分屏</h2>
+          <p class="lead">同时并排看最多 4 个对话，适合几个 AI 一起干活时盯进度。</p>
+          <figure class="shot"><img data-shot="split-drag" alt="把对话从左侧栏拖到中间分屏" width="960" height="540" loading="lazy" decoding="async"><figcaption>从左侧会话记录把对话拖到中间，就能分屏</figcaption></figure>
+          <h3>开分屏的两种方法</h3>
+          <ul>
+            <li><strong>拖进来：</strong>在左侧 <span class="ui">会话记录</span> 里按住一个对话，拖到中间会话区。靠近哪条边，就在哪一侧显示 <span class="ui">分屏显示</span> 的预览，松手完成。拖动时按 <kbd>Esc</kbd> 取消。</li>
+            <li><strong>右键菜单：</strong>右键对话 → <span class="ui">在分屏中打开</span>，它会出现在当前对话的右侧。</li>
+          </ul>
+          <h3>调整和关闭</h3>
+          <ul>
+            <li>拖动窗格之间的分隔条调大小；双击分隔条恢复一半对一半。</li>
+            <li>点哪个窗格，哪个就是当前对话，输入框的消息会发到这里。</li>
+            <li>每个窗格角上有编号小标，鼠标放上去变成 ×，点它 <span class="ui">关闭分屏</span>。</li>
+            <li>已经有 4 个窗格时，会提示 <span class="ui">最多同时显示四个会话</span>。</li>
+          </ul>
+        </section>
+
+        <section id="rightpanel">
+          <h2><span class="no">12</span>右侧栏</h2>
+          <p class="lead">用 <kbd>Alt</kbd>+<kbd>E</kbd> 或标题栏右边的图标打开。有三个标签：<span class="ui">预输入</span>、<span class="ui">修改记录</span>、<span class="ui">文件对比</span>。</p>
+
+          <h3>预输入：先把想法存起来</h3>
+          <figure class="shot"><img data-shot="task-list-send" alt="右侧栏的预输入便签" width="960" height="540" loading="lazy" decoding="async"><figcaption>AI 忙的时候把下一步要做的事记下来，空了点一下就能用</figcaption></figure>
+          <ul>
+            <li><strong>添加：</strong>在输入框里写好，点上方的 <span class="ui">保存到预输入</span>，就变成一张便签。</li>
+            <li><strong>使用：</strong>点便签正文，内容会<strong>追加</strong>到当前对话的输入框里（不会直接发出），确认后自己发送。</li>
+            <li><strong>整理：</strong>上下拖动调整顺序；鼠标移上去，右边出现垃圾桶可以删除。</li>
+            <li>便签不能直接改字。想改的话，先放回输入框，改好后重新保存。</li>
+          </ul>
+          <p>如果设置了 <a href="#automation">自动化</a>，预输入页顶部会显示 <span class="ui">正在自动化</span>，点卡片右边的 ▶ 可以把这条任务立刻发给当前对话。</p>
+
+          <h3>修改记录：AI 改了哪些文件</h3>
+          <figure class="shot"><img data-shot="git-diff-pr" alt="修改记录和文件对比" width="960" height="540" loading="lazy" decoding="async"><figcaption>右侧列出所有改动的文件，点开逐行对比</figcaption></figure>
+          <p>列出当前对话所在项目里改过的文件。这一页只能看，不能改。</p>
+          <ul>
+            <li>顶部显示当前分支名；如果有 GitHub PR，会显示 PR 编号、状态和检查结果，点击在浏览器里打开。</li>
+            <li><span class="ui">查看范围</span>：<span class="ui">全部修改</span> / <span class="ui">未提交</span> / <span class="ui">本次会话提交</span>，旁边统计文件数和增删行数。</li>
+            <li>用 <span class="ui">筛选文件…</span> 按路径查找。点文件名打开 <span class="ui">文件对比</span>，右键可以复制路径。</li>
+            <li>大约每 8 秒自动刷新一次。</li>
+          </ul>
+          <div class="warn"><b>看不到修改记录？</b>需要满足三个条件：电脑装了 <strong>Git</strong>；项目文件夹是一个 <strong>Git 仓库</strong>；已经选好了工作区。不满足时会显示相应提示，比如 <span class="ui">此目录暂无 Git 修改记录。</span></div>
+
+          <h3>文件对比：逐行看改动</h3>
+          <ul>
+            <li>绿色 + 是新增的行，红色 − 是删除的行，代码会按语法上色。</li>
+            <li>用 <strong>‹ ›</strong> 在改动的文件之间切换。连续没改的行会折叠，点一下展开。</li>
+            <li>右上角的按钮可以把对比放大成中间的一个标签页，看得更清楚；按 <kbd>Esc</kbd> 关闭。</li>
+            <li>Markdown（.md）文件会直接显示排好版的文档。文件太大时只显示改动行数。</li>
+          </ul>
+        </section>
+
+        <hr>
+
+        <!-- ============================================================ 功能页面 -->
+        <section id="tools">
+          <h2><span class="no">13</span>应用配置</h2>
+          <p class="lead">左侧栏的 <span class="ui">应用配置</span>，集中管理所有 AI 工具。顶部有 6 个分页。</p>
+
+          <h3><span class="ui">常用</span>：启动台摆哪些工具</h3>
+          <p>点工具卡片打开或关闭，最多选 6 个，会显示在启动台上。带齿轮的工具可以点齿轮打开启动设置：</p>
+          <ul>
+            <li><span class="ui">预设启动命令</span>：Claude Code、Codex CLI、OpenCode 可以一键选择启动时的权限档位，比如 Claude 的 <span class="ui">计划</span>、<span class="ui">自动编辑</span>、<span class="ui">跳过权限确认</span>。</li>
+            <li><span class="ui">启动命令</span>、<span class="ui">额外参数</span>（每行一个）、<span class="ui">启动目录</span>、<span class="ui">历史对话目录</span>：给熟悉命令行的用户自定义。</li>
+            <li>改乱了点 <span class="ui">重置</span>，改好点 <span class="ui">保存</span>。</li>
+          </ul>
+
+          <h3><span class="ui">主记忆</span>：给 AI 的长期说明</h3>
+          <p>直接编辑每个工具的全局说明文件，比如 Claude Code 的 <code>~/.claude/CLAUDE.md</code>、Codex 的 <code>~/.codex/AGENTS.md</code>。写在这里的话（例如「回答请用中文」「代码注释写详细一点」），AI 每次对话都会遵守。改完点 <span class="ui">保存</span> 或按 <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>S</kbd>。</p>
+
+          <h3><span class="ui">多智能体编排</span></h3>
+          <p>选哪些 AI 可以当助手，以及主窗口的角色，详见下一节 <a href="#orchestration">多智能体编排</a>。</p>
+
+          <h3><span class="ui">技能</span>：给 AI 装新本领</h3>
+          <ol class="steps">
+            <li>在 <span class="ui">发现</span> 分页里 <span class="ui">搜索技能</span>。</li>
+            <li>点 <span class="ui">安装</span>，再选要装到哪个工具。</li>
+            <li>每个工具的分页列出已装的技能，通过 Coffee CLI 装的可以 <span class="ui">更新</span> 或 <span class="ui">卸载</span>。</li>
+          </ol>
+
+          <h3><span class="ui">电脑控制</span> 与 <span class="ui">浏览器控制</span></h3>
+          <p>让 AI 能看屏幕、点鼠标、打字（电脑控制），或者操作浏览器打开网页、点按钮（浏览器控制）。用法都是：先点 <span class="ui">检测</span>（浏览器控制第一次要先点安装），再打开要用的工具的开关。</p>
+          <ul>
+            <li><strong>电脑控制</strong>目前只支持 Windows。</li>
+            <li><strong>浏览器控制</strong>支持 Windows、macOS、Linux，需要先装好 Chrome 浏览器。</li>
+            <li>开启后，输入框底部会显示对应标签。</li>
+          </ul>
+          <p>「主记忆」及之后的分页，只列出在「常用」里打开的工具。</p>
+        </section>
+
+        <section id="orchestration">
+          <h2><span class="no">14</span>多智能体编排</h2>
+          <p class="lead">让 Claude Code 当「主管」：它自己判断哪些活交给其他 AI，每个助手开成一个子标签同时干活，最后由它检查、汇总结果给你。</p>
+          <figure class="shot"><img data-shot="multi-agent" alt="主窗口把任务分给多个助手" width="960" height="540" loading="lazy" decoding="async"><figcaption>侧栏里主对话下方列出各个助手和它们的进度</figcaption></figure>
+
+          <h3>开启</h3>
+          <ol class="steps">
+            <li>打开 <span class="ui">应用配置</span> → <span class="ui">多智能体编排</span>。</li>
+            <li>勾选可以当助手的工具：Claude Code、Codex、OpenCode、DeepSeek Harness、Pi。没装的会显示 <span class="ui">未安装</span>。</li>
+            <li>在 <span class="ui">主窗口角色</span> 里三选一（对之后新开的主窗口生效）：
+              <ul>
+                <li><span class="ui">自主决策</span>：主窗口自己判断哪些自己做、哪些分出去。</li>
+                <li><span class="ui">项目经理</span>：只拆分和分派任务、审核结果，自己不改文件。</li>
+                <li><span class="ui">主厨</span>：核心部分亲自做，周边杂活交给助手。</li>
+              </ul>
+            </li>
+          </ol>
+
+          <h3>使用</h3>
+          <ol class="steps">
+            <li>新建一个 Claude Code 对话（桌面或终端模式都行）。</li>
+            <li>输入框底部会显示 <span class="ui">优先协作：自主决策</span>，点开可以指定优先用某个助手。</li>
+            <li>像平常一样提需求。需要时，对话里会出现「派发协作任务」「等待协作结果」等卡片，助手以子标签的形式出现在标题栏。</li>
+          </ol>
+
+          <h3>看进度、管理助手</h3>
+          <ul>
+            <li>在 <span class="ui">会话记录</span> 里，主对话下方会列出它的助手：转圈是在工作，圆点表示等你操作。点一下切到那个助手。</li>
+            <li>助手弹出权限确认时，需要切到它的标签里处理。</li>
+            <li>右键助手：<span class="ui">打开原会话</span>、<span class="ui">转为独立会话</span>、<span class="ui">删除</span>。删除还在运行的助手会先请你确认。</li>
+            <li>关闭还有助手在运行的主对话时，可以选 <span class="ui">保留子会话</span> 或 <span class="ui">结束整组</span>。</li>
+          </ul>
+          <div class="tip"><b>改动不打架：</b>在 Git 仓库里，主窗口可以让每个助手在独立的工作树（单独的分支）上干活，最后由主窗口统一合并。</div>
+        </section>
+
+        <section id="automation">
+          <h2><span class="no">15</span>自动化</h2>
+          <p class="lead">到了设定的时间，自动打开一个对话，把你写好的内容发给 AI。适合每天早上自动总结、定时检查之类的重复工作。</p>
+          <h3>新建一条自动化</h3>
+          <ol class="steps">
+            <li>点左侧栏的 <span class="ui">自动化</span>，再点 <span class="ui">+ 新建自动化</span>。</li>
+            <li>填 <span class="ui">名称</span>（可不填）和 <span class="ui">要发送的内容</span>。</li>
+            <li>在 <span class="ui">应用</span> 里选 Claude Code、Codex、DeepSeek Harness、OpenCode 或 Pi。</li>
+            <li>选 <span class="ui">工作目录</span>：从用过的文件夹里挑，或点 <span class="ui">其他目录…</span>。</li>
+            <li>设 <span class="ui">时间</span>：每天 / 工作日 / 每周 / 每隔（最少 5 分钟）/ 一次。</li>
+            <li>点 <span class="ui">保存</span>。</li>
+          </ol>
+          <p>每条自动化都可以 <span class="ui">立即运行</span>、<span class="ui">编辑</span>、<span class="ui">删除</span>，用开关暂停。列表里显示下次运行时间和上次结果，点 <span class="ui">查看会话</span> 可以看那次运行的对话。</p>
+          <div class="warn"><b>两个必须知道的点：</b>
+            <ul>
+              <li><strong>先给 AI 开自动执行权限。</strong>到点运行时没人在旁边点「允许」，请先在对应工具里开启，例如 Claude 的 <span class="ui">跳过权限确认</span>、Codex 的 <span class="ui">完全访问</span>，否则任务会一直停在等待批准。</li>
+              <li><strong>Coffee CLI 要开着。</strong>软件关闭期间不会运行；错过的任务会在下次打开软件后补跑一次。</li>
+            </ul>
+          </div>
+        </section>
+
+        <section id="stats">
+          <h2><span class="no">16</span>使用统计</h2>
+          <p class="lead">左侧栏的 <span class="ui">使用统计</span>，看你和 AI 一起工作了多少。</p>
+          <ul>
+            <li><strong>热力图：</strong>近一年每天的消息数，颜色越深聊得越多。</li>
+            <li><strong>筛选：</strong>按 <span class="ui">今日</span> / <span class="ui">近 7 天</span> / <span class="ui">近 30 天</span>、按工具、按项目查看。点 <span class="ui">同步</span> 手动刷新。</li>
+            <li><strong>数据卡片：</strong>Token 总量、会话数、提问次数、活跃天数、缓存命中率。</li>
+            <li><strong>图表：</strong>Token 趋势、各模型用量占比和明细表。</li>
+          </ul>
+          <p>Token 统计目前支持 Claude Code、Codex CLI、OpenCode、Pi、DeepSeek Harness。数据都来自你电脑上的本地记录，不会上传。</p>
+        </section>
+
+        <section id="settings">
+          <h2><span class="no">17</span>设置</h2>
+          <p class="lead">点左侧栏底部的齿轮，或按 <kbd>Ctrl</kbd>+<kbd>,</kbd>（macOS 是 <kbd>⌘</kbd>+<kbd>,</kbd>）。按 <kbd>Esc</kbd> 或点 <span class="ui">返回</span> 关闭。</p>
+          <figure class="shot"><img data-shot="themes-shapes" alt="设置里的配色和形态" width="960" height="540" loading="lazy" decoding="async"><figcaption>配色和形态自由组合，选好立刻生效</figcaption></figure>
+
+          <h3><span class="ui">通用</span></h3>
+          <ul>
+            <li><span class="ui">界面缩放</span>：整体放大缩小（70%–150%），字太小看不清就调这里。</li>
+            <li><span class="ui">输入框的“保存到预输入”按钮</span>：显示或隐藏这个按钮。</li>
+            <li><span class="ui">发送消息</span>：选 <kbd>Enter</kbd> 发送还是 <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>Enter</kbd> 发送。</li>
+            <li><span class="ui">开关快捷键</span>：左侧栏 / 输入框 / 右侧栏的快捷键，可选 Alt+QWE、Ctrl+QWE、Alt+123、Ctrl+123。</li>
+            <li><span class="ui">任务完成提示音</span>、<span class="ui">等待权限提示音</span>：可以试听、关闭，或点 <span class="ui">更换</span> 用自己的 MP3 / WAV（20 MB 以内）。</li>
+          </ul>
+
+          <h3><span class="ui">外观</span></h3>
+          <ul>
+            <li><span class="ui">配色</span>：24 套配色，每套都有 <span class="ui">明亮</span>、<span class="ui">夜晚</span>、<span class="ui">跟随主题</span>（跟随系统深色 / 浅色）三种模式。</li>
+            <li><span class="ui">形态</span>：10 种界面风格，比如柔和、锐角、玻璃、磨砂、字符流。「磨砂」会让窗口背后的桌面透出来变模糊（Linux 需要 KDE 桌面）。</li>
+            <li><span class="ui">图标风格</span>：文件夹和文件图标的样式。</li>
+            <li><span class="ui">壁纸</span>：用自己的图片或视频当背景，可以调 <span class="ui">透明度</span>。</li>
+          </ul>
+
+          <h3><span class="ui">终端</span></h3>
+          <ul>
+            <li><span class="ui">文字颜色</span>：终端文字的颜色。</li>
+            <li><span class="ui">字体</span>：默认是内置的 JetBrains Mono，也可以搜索选择电脑上装的字体。</li>
+            <li><span class="ui">默认终端</span>：Windows 可选 PowerShell、Git Bash、命令提示符等；macOS / Linux 可选 zsh、bash 等。不确定就保持 Auto。</li>
+          </ul>
+
+          <h3><span class="ui">语音输入</span></h3>
+          <ul>
+            <li>总开关、选择 <span class="ui">麦克风</span>、<span class="ui">测试麦克风</span>。</li>
+            <li><span class="ui">语音渠道</span>：点 <span class="ui">扫描语音渠道</span>，找出电脑上已登录、能用来识别语音的账号。标「实时转写」的边说边出字，标「录完转写」的说完才出字。</li>
+            <li>提示「登录已过期」时，按提示打开对应工具发一条消息即可续期。</li>
+          </ul>
+
+          <h3><span class="ui">语言</span></h3>
+          <p>界面支持 11 种语言：English、简体中文、繁體中文、日本語、한국어、Español、Français、Deutsch、Português、Русский、Tiếng Việt，点一下立即切换。</p>
+
+          <h3><span class="ui">BUG / 建议</span></h3>
+          <p>遇到问题或有想法，从这里提交到 GitHub。简体中文界面还提供国内可访问的 GitCode 入口。</p>
+        </section>
+
+        <section id="agent">
+          <h2><span class="no">18</span>Coffee Agent</h2>
+          <p class="lead">通过微信或 Telegram 与 Coffee Agent 对话：读取终端、安排任务，在手机上继续接管电脑上的工作。</p>
+          <ol class="steps">
+            <li>打开 <span class="ui">设置</span> → Coffee Agent，先读一遍顶部的「使用说明」。</li>
+            <li>在 <span class="ui">Coffee Agent 模型配置</span> 里选服务类型（OpenAI 兼容 / Anthropic 兼容），填服务地址、模型 ID、API 密钥。</li>
+            <li>在 <span class="ui">消息渠道</span> 里连接：微信扫码；Telegram 粘贴 BotFather 给的 Token，再在 10 分钟内发送配对码。</li>
+            <li>连接成功后，左侧栏底部会显示「微信已连接」，在手机上给它发消息即可。</li>
+          </ol>
+          <p><span class="ui">工作方式</span> 里有几个开关，其中 <span class="ui">哨兵模式</span> 打开后，Claude Code、Codex 等工具每轮工作结束时，Coffee Agent 会主动把结果发到你的微信或 Telegram，不用你先问。需要保持 Coffee CLI 运行。</p>
+        </section>
+
+        <hr>
+
+        <!-- ============================================================ 参考 -->
+        <section id="hotkeys">
+          <h2><span class="no">19</span>快捷键</h2>
+          <p class="lead">macOS 上的 <kbd>Alt</kbd> 就是 <kbd>Option</kbd> 键。</p>
+          <div class="table-wrap"><table>
+            <tr><th>快捷键</th><th>作用</th><th>在哪里有效</th></tr>
+            <tr><td><kbd>Ctrl</kbd>+<kbd>,</kbd> / <kbd>⌘</kbd>+<kbd>,</kbd></td><td>打开 / 关闭设置</td><td>任何时候</td></tr>
+            <tr><td><kbd>Alt</kbd>+<kbd>Q</kbd> / <kbd>W</kbd> / <kbd>E</kbd></td><td>显示 / 隐藏 左侧栏 / 输入框 / 右侧栏</td><td>任何时候（可在设置里换）</td></tr>
+            <tr><td><kbd>Enter</kbd></td><td>发送消息</td><td>输入框（可改成 Ctrl/⌘+Enter）</td></tr>
+            <tr><td><kbd>Shift</kbd>+<kbd>Enter</kbd></td><td>换行</td><td>输入框</td></tr>
+            <tr><td><kbd>Alt</kbd>+<kbd>↑</kbd> / <kbd>↓</kbd></td><td>翻找以前发过的内容</td><td>输入框</td></tr>
+            <tr><td><kbd>Tab</kbd></td><td>采用提示词建议</td><td>Claude 桌面对话</td></tr>
+            <tr><td><kbd>/</kbd></td><td>打开命令菜单</td><td>桌面对话输入框</td></tr>
+            <tr><td><kbd>Esc</kbd></td><td>停止 AI 的回复</td><td>桌面对话</td></tr>
+            <tr><td><kbd>Ctrl</kbd>+<kbd>O</kbd></td><td>展开 / 收起全部思考过程</td><td>Claude 桌面对话</td></tr>
+            <tr><td><kbd>1</kbd>–<kbd>9</kbd></td><td>选择选项</td><td>权限 / 提问卡片</td></tr>
+            <tr><td><kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>C</kbd></td><td>有选中内容时复制，否则中断程序</td><td>终端</td></tr>
+            <tr><td><kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>V</kbd></td><td>粘贴（图片会粘贴成文件路径）</td><td>终端</td></tr>
+            <tr><td><kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>S</kbd></td><td>保存</td><td>应用配置 → 主记忆</td></tr>
+            <tr><td><kbd>Esc</kbd></td><td>关闭设置、弹窗；取消分屏拖动</td><td>对应界面</td></tr>
+          </table></div>
+        </section>
+
+        <section id="update">
+          <h2><span class="no">20</span>更新与卸载</h2>
+          <h3>更新 Coffee CLI</h3>
+          <p>有新版本时，左侧栏底部齿轮旁会出现一个下载图标。点它后会自动挑一个快的下载源，下载到「下载」文件夹并校验，然后：</p>
+          <ul>
+            <li><strong>Windows：</strong>自动打开安装向导，按提示完成即可。</li>
+            <li><strong>macOS：</strong>自动打开 DMG，把 Coffee CLI 拖进「应用程序」替换旧版。</li>
+            <li><strong>Linux：</strong>打开「下载」文件夹，双击 .deb 或 .rpm 安装。</li>
+          </ul>
+          <p>下载失败时会自动打开官网，手动下载即可。也可以重新运行 <a href="#install">安装命令</a>，它会装上最新版。</p>
+
+          <h3>卸载</h3>
+          <ul>
+            <li><strong>Windows：</strong>在「设置 → 应用」里卸载 Coffee CLI。卸载界面可以勾选是否同时删除应用数据。</li>
+            <li><strong>macOS：</strong>把「应用程序」里的 Coffee CLI 拖到废纸篓。</li>
+            <li><strong>Linux：</strong>运行 <code>sudo apt remove coffee-cli</code> 或 <code>sudo dnf remove coffee-cli</code>。</li>
+          </ul>
+          <p>卸载 Coffee CLI 不会删除你装的 AI 工具，也不会删除它们的对话记录。</p>
+        </section>
+
+        <section id="faq">
+          <h2><span class="no">21</span>常见问题</h2>
+
+          <h3>启动台上的工具是灰色的？</h3>
+          <p>说明没找到这个工具。先确认已经按工具官网的说明装好，再切回 Coffee CLI 窗口让它重新检测。装了还是灰的，看启动台底部的 <span class="ui">识别不到?</span>。</p>
+
+          <h3>macOS 提示「已损坏，无法打开」？</h3>
+          <p>在「终端」里运行 <code>xattr -cr '/Applications/Coffee CLI.app'</code>，然后重新打开。详见 <a href="#install">下载与安装</a>。</p>
+
+          <h3>需要付费吗？</h3>
+          <p>Coffee CLI 免费、开源。AI 工具本身的费用（比如 Claude、Codex 的订阅或 API 费用）按各家的规则收取，与 Coffee CLI 无关。</p>
+
+          <h3>右侧「修改记录」什么都没有？</h3>
+          <p>需要电脑装了 Git，并且项目文件夹是 Git 仓库。不熟悉 Git 的话，可以直接让 AI 帮你：「帮我把这个文件夹初始化成 Git 仓库」。</p>
+
+          <h3>自动化到点了却没动静？</h3>
+          <p>最常见的原因是任务停在「等待批准」：请在对应工具里开启自动执行权限。另外，Coffee CLI 需要保持打开。</p>
+
+          <h3>看不到麦克风按钮 / 语音输入失败？</h3>
+          <p>去 <a href="#settings">设置 → 语音输入</a>：打开开关，点 <span class="ui">扫描语音渠道</span>，确认至少有一个可用的渠道。macOS 用系统语音时，要先在「系统设置 → 键盘 → 听写」中开启听写。</p>
+
+          <h3>删除会话会不会把聊天记录删掉？</h3>
+          <p>不会。删除只是从列表里隐藏，AI 工具自己保存的记录文件还在。</p>
+
+          <h3>AI 改坏了我的文件怎么办？</h3>
+          <p>养成两个习惯：一是在 Git 仓库里工作，随时能在 <span class="ui">修改记录</span> 里看到改了什么、需要时可以撤回；二是对没把握的任务勾选 <a href="#conversation">工作树</a>，让 AI 在副本里改，满意了再合并。</p>
+
+          <h3>还有其他问题？</h3>
+          <p>到 <a href="https://github.com/edison7009/Coffee-CLI/issues" target="_blank" rel="noopener">GitHub</a> 或 <a href="https://gitcode.com/edison7009/Coffee-CLI/issues" target="_blank" rel="noopener">GitCode（国内）</a> 提问，或发邮件到 <a href="mailto:hi@coffeecli.com">hi@coffeecli.com</a>。</p>
+        </section>
+
+        <footer class="docs-foot">
+          文档对应 Coffee CLI v4.0.0。界面上的按钮名称以软件简体中文版为准；发现文档和软件对不上，欢迎 <a href="https://github.com/edison7009/Coffee-CLI/issues" target="_blank" rel="noopener">反馈给我们</a>。<br>
+          &copy; 2026 Coffee CLI · <a href="/zh/">返回官网</a>
+        </footer>
+      </article>
+    </main>
+  </div>
+
+  <button class="to-top" type="button" aria-label="回到顶部">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 15l-6-6-6 6"/></svg>
+  </button>
+
+  <script src="/js/docs.js?v=1.0.1"></script>
+</body>
+</html>

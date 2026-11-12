@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Docs — Coffee CLI</title>
+  <meta name="description" content="The Coffee CLI user guide: from installing and first launch to the launchpad, sessions, split view, multi-agent orchestration, pre-input, changes, automations and settings — every feature explained screen by screen.">
+  <link rel="canonical" href="https://coffeecli.com/docs/">
+  <link rel="alternate" hreflang="en" href="https://coffeecli.com/docs/">
+  <link rel="alternate" hreflang="zh-Hans" href="https://coffeecli.com/zh/docs/">
+  <link rel="alternate" hreflang="zh-Hant" href="https://coffeecli.com/zh-hant/docs/">
+  <link rel="alternate" hreflang="x-default" href="https://coffeecli.com/docs/">
+  <link rel="icon" type="image/x-icon" href="/icons/icon.ico">
+  <link rel="preload" href="/fonts/outfit-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/css/style.css?v=0.8.2">
+  <link rel="stylesheet" href="/css/docs.css?v=1.0.1">
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem("coffee-cli-theme") || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+        document.documentElement.setAttribute("data-theme", t);
+      } catch (e) {}
+    })();
+  </script>
+</head>
+<body class="docs">
+
+  <header class="docs-bar">
+    <button class="docs-menu-btn" id="docs-menu" type="button" aria-expanded="false" aria-controls="docs-side">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Contents
+    </button>
+    <a class="logo" href="/">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 9v9c0 1.66-1.34 3-3 3H8c-1.66 0-3-1.34-3-3V9Z" fill="currentColor"/><path d="M17 9h3c.55 0 1 .45 1 1v3c0 .55-.45 1-1 1h-3"/><path d="M8 2c0 1-1 1-1 2s1 1 1 2M12 2c0 1-1 1-1 2s1 1 1 2M16 2c0 1-1 1-1 2s1 1 1 2"/></svg>
+      Coffee CLI <small>Docs</small>
+    </a>
+    <div class="spacer"></div>
+    <nav class="bar-links">
+      <a class="feedback-btn hide-sm" href="/#install">Download</a>
+      <a class="feedback-btn hide-sm" href="https://github.com/edison7009/Coffee-CLI/issues" target="_blank" rel="noopener">Feedback</a>
+      <nav class="docs-lang" aria-label="Language"><a href="/docs/" hreflang="en" lang="en" aria-label="English" aria-current="page">EN</a><a href="/zh/docs/" hreflang="zh-Hans" lang="zh-Hans" aria-label="简体中文">简</a><a href="/zh-hant/docs/" hreflang="zh-Hant" lang="zh-Hant" aria-label="繁體中文">繁</a></nav>
+      <button class="icon-switch" id="theme-toggle" type="button" aria-label="Toggle theme">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg>
+      </button>
+    </nav>
+  </header>
+
+  <div class="docs-scrim"></div>
+
+  <div class="docs-shell">
+    <aside class="docs-side" id="docs-side" aria-label="Docs contents">
+      <h4>Getting started</h4>
+      <a href="#intro">Meet Coffee CLI</a>
+      <a href="#install">Download and install</a>
+      <a href="#quickstart">Five-minute start</a>
+      <a href="#layout">Window overview</a>
+      <h4>Main window</h4>
+      <a href="#launchpad">Launchpad</a>
+      <a href="#titlebar">Title bar</a>
+      <a href="#sidebar">Sidebar</a>
+      <a href="#conversation">Sessions: Desktop mode</a>
+      <a href="#terminal">Sessions: Terminal mode</a>
+      <a href="#composer">Input box</a>
+      <a href="#split">Split view</a>
+      <a href="#rightpanel">Right panel</a>
+      <h4>Feature pages</h4>
+      <a href="#tools">Agent configuration</a>
+      <a href="#orchestration">Multi-agent orchestration</a>
+      <a href="#automation">Automations</a>
+      <a href="#stats">Usage statistics</a>
+      <a href="#settings">Settings</a>
+      <a href="#agent">Coffee Agent</a>
+      <h4>Reference</h4>
+      <a href="#hotkeys">Keyboard shortcuts</a>
+      <a href="#update">Update and uninstall</a>
+      <a href="#faq">FAQ</a>
+    </aside>
+
+    <main class="docs-main">
+      <article class="docs-article">
+
+        <header class="docs-hero">
+          <div class="eyebrow">Coffee CLI Docs</div>
+          <h1>Get comfortable with AI coding tools, starting from zero</h1>
+          <p>This guide walks through the app one screen at a time: where each button is, what happens when you click it, and what to watch out for. No coding background needed. Follow the "Five-minute start" once and you're ready to go.</p>
+          <div class="quick-grid">
+            <a href="#install"><b>Download and install</b><span>Windows / macOS / Linux — one command or one installer</span></a>
+            <a href="#quickstart"><b>Five-minute start</b><span>Open the app, pick a tool, pick a folder, send your first message</span></a>
+            <a href="#layout"><b>Window overview</b><span>Learn the five areas first and you won't get lost</span></a>
+            <a href="#faq"><b>FAQ</b><span>Tool grayed out? macOS says the app is damaged?</span></a>
+          </div>
+        </header>
+
+        <!-- ============================================================ Getting started -->
+        <section id="intro">
+          <h2><span class="no">01</span>Meet Coffee CLI</h2>
+          <p class="lead">AI coding tools like Claude Code, Codex and OpenCode normally live in the "terminal" — a window of plain text on a dark background. Coffee CLI gives them a desktop: it's free, open source, and puts all your tools in one window.</p>
+          <ul>
+            <li><strong>One window for many AIs:</strong> works with more than 20 AI tools. Each conversation is a tab you can switch to at any time.</li>
+            <li><strong>Two ways to work:</strong> Claude Code, Codex, OpenCode and Pi can run in the "Desktop" view, which feels like a chat app. You can also switch back to the original terminal.</li>
+            <li><strong>Watch several at once:</strong> show up to 4 conversations side by side and see at a glance which one is busy.</li>
+            <li><strong>Several AIs working together:</strong> let Claude Code act as the lead and hand tasks to other AIs that work in parallel.</li>
+            <li><strong>See exactly what the AI changed:</strong> the right panel lists every changed file and shows added and removed lines one by one.</li>
+            <li><strong>Quota and balance:</strong> see your remaining Claude or Codex quota, or your account balance with services like DeepSeek, right next to the input box.</li>
+          </ul>
+          <div class="tip"><b>One thing first:</b> Coffee CLI doesn't come with an AI model. Install the AI tool you want to use (for example Claude Code) and sign in the way that tool tells you to. Coffee CLI will find it automatically.</div>
+        </section>
+
+        <section id="install">
+          <h2><span class="no">02</span>Download and install</h2>
+          <p class="lead">Pick either way: download an installer from the website, or copy one command that installs it for you.</p>
+
+          <h3>Option 1: Download an installer</h3>
+          <p>Go to <a href="/">coffeecli.com</a> and click the button for your system:</p>
+          <div class="table-wrap"><table>
+            <tr><th>System</th><th>Installer</th><th>Notes</th></tr>
+            <tr><td>Windows</td><td>.exe (also .msi)</td><td>For x64 PCs. Double-click to install. If WebView2 is missing, the installer adds it for you.</td></tr>
+            <tr><td>macOS</td><td>.dmg</td><td>Works on both Apple silicon and Intel Macs. Open it and drag Coffee CLI into Applications.</td></tr>
+            <tr><td>Linux</td><td>.deb / .rpm</td><td>x64 and arm64. Use .deb on Ubuntu / Debian, and .rpm on Fedora, openSUSE and similar.</td></tr>
+          </table></div>
+          <p>For other builds, such as Intel Mac or ARM Linux, look under "More versions" below the download button on the website.</p>
+
+          <h3>Option 2: Install with one command</h3>
+          <div class="cmd"><span class="os">Windows</span><code>iwr -useb https://coffeecli.com/install.ps1 | iex</code></div>
+          <div class="cmd"><span class="os">macOS / Linux</span><code>curl -fsSL https://coffeecli.com/install.sh | sh</code></div>
+          <ul>
+            <li><strong>Windows:</strong> right-click the Start menu → choose "Terminal (Admin)" → paste the command above and press Enter.</li>
+            <li><strong>macOS:</strong> open the Terminal app, paste the command and press Enter. The script installs the app into Applications for you.</li>
+            <li><strong>Linux:</strong> run it in a terminal. You'll be asked for your password when the .deb / .rpm is installed.</li>
+          </ul>
+          <p>If you already have the latest version, the script tells you so and doesn't install it again. If it says a new version was just released and the installers are still uploading, wait about ten minutes and run it again.</p>
+
+          <div class="warn"><b>macOS says the app "is damaged" or won't open?</b> This is macOS blocking an app downloaded from the internet — the file isn't actually broken. Open Terminal, run the line below, then open Coffee CLI again:
+            <div class="cmd"><code>xattr -cr '/Applications/Coffee CLI.app'</code></div>
+          </div>
+        </section>
+
+        <section id="quickstart">
+          <h2><span class="no">03</span>Five-minute start</h2>
+          <p class="lead">Using Claude Code as the example: from opening the app to getting the AI to work for you.</p>
+          <ol class="steps">
+            <li><strong>Install an AI tool.</strong> Coffee CLI only manages the tools; you install them yourself. For Claude Code, follow the instructions on its website to install it and sign in once.</li>
+            <li><strong>Open Coffee CLI.</strong> The first time, you'll see the launchpad with a few tool cards. Installed tools are lit up; tools you don't have are gray.</li>
+            <li><strong>Click the Claude Code card and pick a folder.</strong> This folder is where the AI works — it can read and change the files inside. For practice, create a new empty folder first.</li>
+            <li><strong>Type what you want in the input box at the bottom and press <kbd>Enter</kbd>.</strong> For example, "Make me a web page for tracking expenses." While the AI works, the small dot on the tab turns orange.</li>
+            <li><strong>Answer the AI's questions.</strong> When the AI wants to change a file or run a command, it may stop and ask you. Click <span class="ui">Allow once</span> to let it continue, or <span class="ui">Reject</span> to stop it.</li>
+            <li><strong>Check the result.</strong> Press <kbd>Alt</kbd>+<kbd>E</kbd> to open the right panel and look at <span class="ui">Changes</span> to see which files the AI changed (the folder needs to be a Git repository).</li>
+          </ol>
+          <div class="tip"><b>Tip:</b> <span class="ui">Sessions</span> on the left keeps every conversation. Next time you open the app, click one to pick up where you left off.</div>
+        </section>
+
+        <section id="layout">
+          <h2><span class="no">04</span>Window overview</h2>
+          <p class="lead">The Coffee CLI window has five areas. Click any of them below to jump to its section.</p>
+          <div class="ui-map">
+            <a class="m-title" href="#titlebar"><b>Title bar</b><span>Session tabs · status dots · changelog · panel toggles</span></a>
+            <a class="m-left" href="#sidebar"><b>Sidebar</b><span>Sessions<br>Workspace files<br>Agent configuration · Settings</span></a>
+            <a class="m-center" href="#conversation"><b>Session area</b><span>Where you talk to the AI<br>Desktop / Terminal / Split view</span></a>
+            <a class="m-right" href="#rightpanel"><b>Right panel</b><span>Pre-input<br>Changes<br>File diff</span></a>
+            <a class="m-input" href="#composer"><b>Input box</b><span>Write requests, paste images, use voice input, check your quota</span></a>
+          </div>
+          <p>You can hide the sidebar, input box and right panel at any time to give the session area more room:</p>
+          <div class="table-wrap"><table>
+            <tr><th>Area</th><th>Default shortcut</th></tr>
+            <tr><td>Sidebar</td><td><kbd>Alt</kbd>+<kbd>Q</kbd></td></tr>
+            <tr><td>Input box (in Terminal mode)</td><td><kbd>Alt</kbd>+<kbd>W</kbd></td></tr>
+            <tr><td>Right panel</td><td><kbd>Alt</kbd>+<kbd>E</kbd></td></tr>
+          </table></div>
+          <p>The right side of the title bar also has icons for these three toggles. You can change the shortcuts in <a href="#settings">Settings → General → Toggle shortcut</a>.</p>
+        </section>
+
+        <hr>
+
+        <!-- ============================================================ Main window -->
+        <section id="launchpad">
+          <h2><span class="no">05</span>Launchpad</h2>
+          <p class="lead">The page you see when you start a new session. Here you choose which AI works in which folder.</p>
+          <figure class="shot"><img data-shot="desktop-terminal" alt="Tool cards on the launchpad, with the Desktop / Terminal mode switch" width="960" height="540" loading="lazy" decoding="async"><figcaption>Each tool card can switch between Desktop and Terminal mode</figcaption></figure>
+
+          <h3>Open the launchpad</h3>
+          <p>Click <span class="ui">New session</span> at the top of the sidebar, or the <strong>+</strong> at the end of the tab strip in the title bar. If you already have an empty tab with no tool chosen, the app switches to it instead of opening another one.</p>
+
+          <h3>Start an AI tool</h3>
+          <ol class="steps">
+            <li>Click a tool card.</li>
+            <li>If you've used this tool before, the card shows the last folder you used. Click it to start there right away.</li>
+            <li>The first time, the card says <span class="ui">Choose a project folder</span>. A list of recent folders pops up, with <span class="ui">Open Folder</span> at the bottom for picking a new one.</li>
+            <li>To change folders, click the folder button on the right of the card. You can remove any item from the recent list with ×.</li>
+          </ol>
+          <p>OpenClaw doesn't need a folder — one click starts it. If a folder you used before is deleted or moved, it disappears from the list automatically.</p>
+
+          <h3>Desktop or Terminal?</h3>
+          <p>The cards for Claude Code, Codex CLI, OpenCode and Pi have a <strong>Desktop / Terminal</strong> switch:</p>
+          <ul>
+            <li><strong>Desktop (default):</strong> a chat-app style view with buttons to click. Good for beginners. See <a href="#conversation">Desktop mode</a>.</li>
+            <li><strong>Terminal:</strong> the tool's original command-line view, for people comfortable with the terminal. See <a href="#terminal">Terminal mode</a>.</li>
+          </ul>
+          <p>DeepSeek Harness only has Desktop mode; all other tools run in the terminal. Your choice is remembered, and conversations you reopen from Sessions open in the same mode.</p>
+
+          <h3>Supported tools</h3>
+          <p>Claude Code, Codex CLI, DeepSeek Harness, Cursor, Copilot CLI, Antigravity CLI, OpenClaw, Hermes Agent, OpenCode, Pi, Cline, Goose, Aider, Oh-My-Pi, Crush, Qwen Code, Kilo Code, Kiro, Kimi Code, CodeBuddy, Grok Build, MiMo Code, MiniMax Code, Muse Code, plus a plain <span class="ui">Terminal</span>.</p>
+          <p>The launchpad shows up to 6 cards at a time. By default they are Claude Code, Codex CLI, OpenCode, Pi, DeepSeek Harness and Terminal. To swap in other tools, go to <a href="#tools">Agent configuration → Favorites</a>.</p>
+
+          <h3>A tool is gray and won't click</h3>
+          <p>This means Coffee CLI couldn't find that tool on your computer. The launchpad <strong>doesn't install tools</strong> — install it yourself by following the tool's website. Once it's installed, switch back to the Coffee CLI window and it checks again automatically.</p>
+          <p>Installed but still gray? Hover over <span class="ui">Can't detect?</span> at the bottom of the launchpad to see why and three ways to fix it. A common cause is that another tool broke your computer's PATH environment variable.</p>
+
+          <h3>Update AI tools</h3>
+          <p>When a tool has a new version, an <span class="ui">Update</span> button appears on its card. Hover over it to see which version it will update from and to. After you click it, it shows <span class="ui">Updating</span>. The app updates the tool the same way you originally installed it (npm, Homebrew and so on).</p>
+
+          <h3>Remote terminal</h3>
+          <p>Click <span class="ui">Remote</span> on the <span class="ui">Terminal</span> card to connect to another computer or server: choose SSH or WebSocket, fill in <span class="ui">Host</span>, port, <span class="ui">Username</span> and <span class="ui">Password</span>, then click <span class="ui">Connect</span>. Your last 10 connections appear as small chips — click one to reconnect.</p>
+          <div class="warn"><b>Note:</b> passwords for remote connections are saved as plain text on this computer (<code>~/.coffee-cli/credentials.json</code>). Don't save important passwords on a shared computer.</div>
+        </section>
+
+        <section id="titlebar">
+          <h2><span class="no">06</span>Title bar</h2>
+          <p class="lead">The strip at the very top of the window, mostly taken up by your open session tabs.</p>
+
+          <h3>Session tabs</h3>
+          <ul>
+            <li>Each open conversation is a tab showing the tool's icon and the project folder name. Click to switch, drag left or right to reorder, and click × to close.</li>
+            <li>An empty tab with no tool chosen yet is called <span class="ui">Select Tool</span>.</li>
+            <li>Double-click an empty part of the title bar to maximize or restore the window. Drag an empty part to move the window.</li>
+          </ul>
+
+          <h3>Status dots: see what the AI is doing at a glance</h3>
+          <p>A small group of dots on the right of each tab shows the AI's status by color:</p>
+          <div class="table-wrap"><table>
+            <tr><th>Color</th><th>Meaning</th><th>What you should do</th></tr>
+            <tr><td>Green</td><td>Idle / done</td><td>Check the result or send your next message</td></tr>
+            <tr><td>Orange</td><td>Working</td><td>Just wait for it to finish</td></tr>
+            <tr><td>Blue</td><td>Waiting for you</td><td>Switch to it and handle the permission prompt or answer its question</td></tr>
+          </table></div>
+          <p>On Linux you see a single still colored dot with no animation. A sound also plays when a task finishes and when the AI is waiting for you. You can change or turn off these sounds in <a href="#settings">Settings → General</a>.</p>
+
+          <h3>Other buttons</h3>
+          <ul>
+            <li><span class="ui">Changelog</span>: see what's new in the current version. It opens once automatically the first time you start the app after an update.</li>
+            <li><strong>Three panel toggles</strong>: sidebar, input box and right panel. See <a href="#layout">Window overview</a>.</li>
+            <li><span class="ui">Settings</span>: normally at the bottom of the sidebar. When the sidebar is hidden, it moves to the title bar.</li>
+            <li>On Windows / Linux, the minimize, maximize and close buttons are at the far right. macOS uses its own red, yellow and green buttons.</li>
+          </ul>
+        </section>
+
+        <section id="sidebar">
+          <h2><span class="no">07</span>Sidebar</h2>
+          <p class="lead">Manages all your conversations and project files. At the top are <span class="ui">New session</span> and two views: <span class="ui">Sessions</span> and <span class="ui">Workspace</span>.</p>
+
+          <h3>Sessions: every past conversation</h3>
+          <ul>
+            <li><strong>Keep chatting:</strong> click any item. If the conversation is already open, the app switches to it. If not, it opens in a new tab and continues in the original folder.</li>
+            <li><strong>Find a conversation:</strong> click <span class="ui">Search</span> to look up conversations by title, tool name or project path. Use <kbd>↑</kbd><kbd>↓</kbd> to choose, <kbd>Enter</kbd> to open and <kbd>Esc</kbd> to close.</li>
+            <li><strong>Change how the list looks:</strong> the funnel icon in the top-right corner is <span class="ui">View</span>:
+              <ul>
+                <li><span class="ui">Sessions</span>: show everything, or only one tool's conversations.</li>
+                <li><span class="ui">Projects</span>: group by folder. Choose <span class="ui">All folders</span> or <span class="ui">Added folders only</span>. Each group shows 5 items at first; click <span class="ui">Show more</span> to see the rest.</li>
+                <li><span class="ui">App icons</span>: show or hide tool icons.</li>
+              </ul>
+            </li>
+            <li>Running conversations are listed first, followed by pinned ones. Hover over a conversation to see its project name, time and number of messages.</li>
+          </ul>
+
+          <h3>Small badges on conversation cards</h3>
+          <div class="table-wrap"><table>
+            <tr><th>Badge</th><th>Meaning</th></tr>
+            <tr><td>Spinner</td><td><span class="ui">Working</span></td></tr>
+            <tr><td>Blue label</td><td><span class="ui">Awaiting action</span>: the AI is waiting for you to confirm</td></tr>
+            <tr><td>Small blue dot</td><td><span class="ui">Unread reply</span></td></tr>
+            <tr><td>PR icon</td><td>This conversation's branch has a GitHub PR. Green = <span class="ui">Open</span>, purple = <span class="ui">Merged</span>, red = <span class="ui">Closed</span>. The ✓ / × / · in the corner means checks passed, failed or are still running</td></tr>
+          </table></div>
+
+          <h3>Right-click menu</h3>
+          <ul>
+            <li><span class="ui">Open in split view</span>: shows it in a split to the right of the current conversation. See <a href="#split">Split view</a>.</li>
+            <li><span class="ui">Pin</span> / <span class="ui">Unpin</span>, <span class="ui">Rename</span> (press <kbd>Enter</kbd> to save, <kbd>Esc</kbd> to cancel).</li>
+            <li><span class="ui">Copy session ID</span>, <span class="ui">Copy resume command</span>: use these to continue the conversation in another terminal.</li>
+            <li><span class="ui">Copy full path</span>, <span class="ui">Reveal in File Explorer</span>: find this conversation's log file.</li>
+            <li><span class="ui">Delete</span>: does the same thing as the trash button that appears when you hover.</li>
+          </ul>
+          <div class="tip"><b>Deleting is safe:</b> "Delete" only hides the conversation from the list. It doesn't remove the log files the AI tool saved. If the conversation is open, its tab closes too.</div>
+
+          <h3>Workspace: project files</h3>
+          <ul>
+            <li>Shows the files in the current conversation's folder and refreshes automatically when files change.</li>
+            <li>Files with uncommitted changes show <code>+N -M</code> (lines added and removed).</li>
+            <li>Click the magnifying glass to <span class="ui">Filter files and folders…</span> (top level only).</li>
+            <li>Right-click a file: <span class="ui">Open</span> (with the system's default app), <span class="ui">Copy Absolute Path</span>, <span class="ui">Copy Relative Path</span>, <span class="ui">Copy as @reference</span>, cut / copy / paste, rename, delete, <span class="ui">Reveal in File Explorer</span>.</li>
+          </ul>
+          <div class="tip"><b>Point the AI at a file:</b> right-click the file → <span class="ui">Copy as @reference</span>, then paste it into the input box. The AI will know exactly which file you mean.</div>
+
+          <h3>Bottom buttons</h3>
+          <ul>
+            <li><strong>Coffee Agent</strong> and its messaging channel status (for example "WeChat · Disconnected"). See <a href="#agent">Coffee Agent</a>.</li>
+            <li><strong>Download icon</strong>: appears only when a new version of Coffee CLI is available. See <a href="#update">Update and uninstall</a>.</li>
+            <li><strong>Gear</strong>: opens <a href="#settings">Settings</a>.</li>
+          </ul>
+          <p>The top of the sidebar also has three entries — <span class="ui">Agent configuration</span>, <span class="ui">Usage statistics</span> and <span class="ui">Automations</span> — covered under "Feature pages" below.</p>
+        </section>
+
+        <section id="conversation">
+          <h2><span class="no">08</span>Sessions: Desktop mode</h2>
+          <p class="lead">Claude Code, Codex, OpenCode, Pi and DeepSeek Harness can use this chat-app style view. No commands to remember — most things are just a button click.</p>
+
+          <h3>Reading the AI's replies</h3>
+          <ul>
+            <li><strong>Thinking:</strong> while the AI thinks, you see <span class="ui">Thinking…</span>. When it's done this becomes "Thought for X seconds" — click it to see how it reasoned. With Claude you can also press <kbd>Ctrl</kbd>+<kbd>O</kbd> to expand or collapse all thinking at once.</li>
+            <li><strong>File edit cards:</strong> show how many lines were removed and added, with a side-by-side view of the change. Click the file path to find the file in your file manager.</li>
+            <li><strong>Command cards:</strong> split into <span class="ui">Input</span> (the command that ran) and <span class="ui">Output</span> (what it printed).</li>
+            <li><strong>Turn summary:</strong> after each reply there's a line showing "time taken · tokens · roughly how much it cost".</li>
+            <li><strong>Copy:</strong> every message has a <span class="ui">Copy message</span> button.</li>
+          </ul>
+
+          <h3>When the AI stops to ask you</h3>
+          <p>When the AI wants to change a file, run a command or needs you to decide something, a card pops up and the tab's status dot turns blue:</p>
+          <ul>
+            <li><strong>Permission prompts:</strong> for example "Allow Bash?". Click <span class="ui">Allow once</span> or <span class="ui">Reject</span>. Codex also has <span class="ui">Allow for this session</span>, and OpenCode also has <span class="ui">Always allow</span>.</li>
+            <li><strong>Plan approval (Claude):</strong> <span class="ui">Ready to implement this plan?</span> Read the plan, then decide whether to start.</li>
+            <li><strong>Questions:</strong> pick an option, or type extra details in the input box, then click <span class="ui">Submit</span>. Number keys <kbd>1</kbd>–<kbd>9</kbd> pick an option quickly.</li>
+          </ul>
+
+          <h3>Permission modes: how much the AI can do on its own</h3>
+          <p>The permission button at the bottom of the input box decides whether the AI asks you before acting:</p>
+          <div class="table-wrap"><table>
+            <tr><th>Tool</th><th>Modes (from most careful to most hands-off)</th></tr>
+            <tr><td>Claude Code</td><td><span class="ui">Manual</span> (asks before edits and commands) → <span class="ui">Plan</span> (proposes a plan before acting) → <span class="ui">Edit automatically</span> (edits files without asking, asks for everything else) → <span class="ui">Auto</span> (only on some models) → <span class="ui">Bypass permissions</span></td></tr>
+            <tr><td>Codex</td><td><span class="ui">Read only</span> → <span class="ui">Workspace</span> → <span class="ui">Full access</span>, plus a <span class="ui">Plan mode</span> switch</td></tr>
+            <tr><td>DeepSeek Harness</td><td><span class="ui">Workspace Write</span> → <span class="ui">Full access</span></td></tr>
+            <tr><td>OpenCode</td><td>No permission button; you can switch the <span class="ui">Agent</span> instead</td></tr>
+          </table></div>
+          <div class="tip"><b>For beginners:</b> start with the default mode so the AI asks you before every action. Give it more freedom once you're comfortable.</div>
+
+          <h3>Change the model and thinking effort</h3>
+          <ul>
+            <li><strong>Model:</strong> click the model name at the bottom of the input box and pick another from the menu. Each model shows its price (input / output, per million tokens).</li>
+            <li><strong>Thinking effort:</strong> a slider from <span class="ui">Faster</span> to <span class="ui">Smarter</span>, with the levels Low / Medium / High / Xhigh / Max. The change takes effect when you close the menu; press <kbd>Esc</kbd> to discard it.</li>
+          </ul>
+
+          <h3>Context ring: how much more the AI can remember</h3>
+          <p>The small ring at the bottom-right of the input box shows how much of the conversation's "memory" is used. It changes color past 75% and turns red past 90%. Click it to see the exact numbers.</p>
+          <p>When it's nearly full, click <span class="ui">Continue in a new conversation</span> inside it. This opens a fresh conversation that can look back at the old one when needed. Any half-written draft is kept and won't be sent automatically.</p>
+
+          <h3>The "/" command menu</h3>
+          <p>Type <kbd>/</kbd> in the input box, or click the <strong>/</strong> button, to see the commands this tool supports, such as <code>/model</code> (change model), <code>/compact</code> (compress the conversation) and <code>/new</code> (new conversation). Use <kbd>↑</kbd><kbd>↓</kbd> to choose and <kbd>Enter</kbd> to run.</p>
+
+          <h3>Worktree: experiment safely on a copy</h3>
+          <p>There's a <span class="ui">Worktree</span> checkbox next to the folder name at the bottom of the input box. When it's checked, the AI works in a separate copy of your project (its own branch) and <strong>won't touch your original files</strong>.</p>
+          <ol class="steps">
+            <li>Check it <strong>before</strong> you send the first message. You can't change it once the conversation has started.</li>
+            <li>When the AI is done, a <span class="ui">Merge into …</span> button appears. Click it to merge the changes back into your original project.</li>
+            <li>If the changes conflict with the original project, the merge is undone automatically and your original project is left untouched.</li>
+          </ol>
+          <p>The project folder must be a Git repository with at least one commit.</p>
+
+          <h3>Other handy features</h3>
+          <ul>
+            <li><strong>Stop:</strong> press <kbd>Esc</kbd> or click the square button to stop the AI at any time.</li>
+            <li><strong>Quick jump:</strong> in long conversations, a column of small dots appears on the right. Each dot is one of your messages — click to jump to it.</li>
+            <li><strong>Back to the latest:</strong> after scrolling up, the down arrow in the bottom-right corner takes you straight back to the newest message.</li>
+            <li><strong>Prompt suggestions (Claude):</strong> when the input box is empty, gray text guesses what you'll say next. Press <kbd>Tab</kbd> to use it.</li>
+            <li><strong>Coming back after a long break (Claude, Codex):</strong> you'll be asked whether to <span class="ui">Resume in full</span> or <span class="ui">Continue in a new conversation (recommended)</span>. If the old conversation is long, the second option is faster and cheaper.</li>
+            <li><strong>Load earlier messages (Claude):</strong> when you reopen a very long conversation, click this button at the top to load older messages.</li>
+          </ul>
+        </section>
+
+        <section id="terminal">
+          <h2><span class="no">09</span>Sessions: Terminal mode</h2>
+          <p class="lead">Shows the AI tool's original command-line view. Every tool except Claude Code, Codex, OpenCode, Pi and DeepSeek Harness uses this mode.</p>
+          <div class="table-wrap"><table>
+            <tr><th>What you want</th><th>How to do it</th></tr>
+            <tr><td>Copy</td><td>Select text and press <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>C</kbd>. With nothing selected, <kbd>Ctrl</kbd>+<kbd>C</kbd> interrupts the running program</td></tr>
+            <tr><td>Paste</td><td><kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>V</kbd>. On Linux you can also use <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>C</kbd> / <kbd>V</kbd></td></tr>
+            <tr><td>Send an image to the AI</td><td>Just paste a screenshot. It's saved as a file and its path is pasted in</td></tr>
+            <tr><td>Refer to a file</td><td>Drag a file into the terminal to insert its path</td></tr>
+            <tr><td>Open links</td><td>Click a web address to open it in your browser. Click a local path to show it in your file manager (it won't be run)</td></tr>
+            <tr><td>Scroll back</td><td>You can scroll back through the last 5000 lines. Once you scroll up, a "Scroll to latest message" button appears</td></tr>
+          </table></div>
+          <p>The right-click menu has copy, paste and select all. Right-clicking a link or path adds options to open it or copy it. Change the terminal font and text color in <a href="#settings">Settings → Terminal</a>.</p>
+          <div class="tip"><b>Not used to typing in a terminal?</b> Press <kbd>Alt</kbd>+<kbd>W</kbd> to open the input box at the bottom. Write your message there (you can paste images too), then send it to the terminal in one go.</div>
+        </section>
+
+        <section id="composer">
+          <h2><span class="no">10</span>Input box</h2>
+          <p class="lead">Where you write your requests, at the bottom of the session area. It's always shown in Desktop mode; in Terminal mode, press <kbd>Alt</kbd>+<kbd>W</kbd> to show or hide it.</p>
+
+          <h3>Sending and new lines</h3>
+          <ul>
+            <li>By default, <kbd>Enter</kbd> sends and <kbd>Shift</kbd>+<kbd>Enter</kbd> starts a new line. If you prefer it the other way, go to <a href="#settings">Settings → General → Send message</a> and switch to sending with <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>Enter</kbd>.</li>
+            <li><kbd>Alt</kbd>+<kbd>↑</kbd> / <kbd>Alt</kbd>+<kbd>↓</kbd>: bring back things you sent before.</li>
+            <li>Drag the top edge of the input box to change its height. The bottom-left corner shows which tool and folder your message goes to.</li>
+            <li>While the AI is working and the input box is empty, the send button becomes a square <span class="ui">Stop</span> button. In Desktop mode you can keep sending messages to add instructions while the AI works.</li>
+          </ul>
+
+          <h3>Send images and files</h3>
+          <ul>
+            <li><strong>Paste a screenshot</strong> (<kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>V</kbd>): a thumbnail appears above the input box. Click × to remove it.</li>
+            <li><strong>Drag a file in</strong>: inserts the file's path.</li>
+            <li><strong>Click the paper clip</strong> <span class="ui">Attach files</span>: pick files.</li>
+          </ul>
+
+          <h3>Save to pre-input</h3>
+          <p>When there's text in the input box, <span class="ui">Save to pre-input</span> appears above it. If an idea isn't ready yet or the AI is busy, save it for later — then click it in <a href="#rightpanel">Right panel → Pre-input</a> to put it back in the input box. The trash can next to it is <span class="ui">Clear</span>.</p>
+
+          <h3>Voice input</h3>
+          <ol class="steps">
+            <li>Click the microphone to the left of the send button and start talking. A waveform appears next to it.</li>
+            <li>Click again when you're done. The text goes into the input box so you can check it before sending.</li>
+          </ol>
+          <p>Voice input uses an account you're already signed in to (such as Claude Code, ChatGPT or Doubao) to recognize speech. Don't see the microphone button? Go to <a href="#settings">Settings → Voice input</a>, turn it on and scan for voice channels. On macOS you can also use the system's own speech recognition, but first turn on Dictation in "System Settings → Keyboard → Dictation".</p>
+
+          <h3>Plan quota bar</h3>
+          <figure class="shot"><img data-shot="usage-meter" alt="The plan quota bar next to the input box" width="960" height="540" loading="lazy" decoding="async"><figcaption>Remaining quota and reset time, shown right next to the input box</figcaption></figure>
+          <p>The bottom-right of the input box shows how much of your account's quota is left. For Claude and Codex, you see the remaining percentage of your 5-hour / weekly quota and a countdown to the reset. For pay-as-you-go services like DeepSeek, Kimi and OpenRouter, you see your <span class="ui">Balance</span> or amount <span class="ui">Used</span>. It changes color when less than 30% is left. Click it to refresh.</p>
+        </section>
+
+        <section id="split">
+          <h2><span class="no">11</span>Split view</h2>
+          <p class="lead">See up to 4 conversations side by side — handy for keeping an eye on several AIs working at once.</p>
+          <figure class="shot"><img data-shot="split-drag" alt="Dragging a conversation from the sidebar into the middle to split the view" width="960" height="540" loading="lazy" decoding="async"><figcaption>Drag a conversation from Sessions on the left into the middle to split the view</figcaption></figure>
+          <h3>Two ways to open a split</h3>
+          <ul>
+            <li><strong>Drag it in:</strong> in <span class="ui">Sessions</span> on the left, press and hold a conversation and drag it into the session area. A <span class="ui">Split view</span> preview appears on whichever edge you're closest to; let go to finish. Press <kbd>Esc</kbd> while dragging to cancel.</li>
+            <li><strong>Right-click menu:</strong> right-click a conversation → <span class="ui">Open in split view</span>. It appears to the right of the current conversation.</li>
+          </ul>
+          <h3>Resize and close</h3>
+          <ul>
+            <li>Drag the divider between panes to resize them. Double-click the divider to go back to half and half.</li>
+            <li>Click a pane to make it the current conversation. Messages from the input box go there.</li>
+            <li>Each pane has a small number badge in its corner. Hover over it and it turns into ×; click it to <span class="ui">Close split view</span>.</li>
+            <li>When there are already 4 panes, you'll see <span class="ui">Up to four sessions in split view</span>.</li>
+          </ul>
+        </section>
+
+        <section id="rightpanel">
+          <h2><span class="no">12</span>Right panel</h2>
+          <p class="lead">Open it with <kbd>Alt</kbd>+<kbd>E</kbd> or the icon on the right of the title bar. It has three tabs: <span class="ui">Pre-input</span>, <span class="ui">Changes</span> and <span class="ui">File diff</span>.</p>
+
+          <h3>Pre-input: save your ideas for later</h3>
+          <figure class="shot"><img data-shot="task-list-send" alt="Pre-input notes in the right panel" width="960" height="540" loading="lazy" decoding="async"><figcaption>Jot down your next step while the AI is busy, then use it with one click when it's free</figcaption></figure>
+          <ul>
+            <li><strong>Add:</strong> write it in the input box and click <span class="ui">Save to pre-input</span> above it. It becomes a note.</li>
+            <li><strong>Use:</strong> click a note's text and it is <strong>added</strong> to the current conversation's input box (it isn't sent right away). Check it, then send it yourself.</li>
+            <li><strong>Organize:</strong> drag notes up or down to reorder. Hover over one and a trash can appears on the right to delete it.</li>
+            <li>You can't edit a note directly. To change it, put it back in the input box, edit it, and save it again.</li>
+          </ul>
+          <p>If you've set up <a href="#automation">automations</a>, the top of the Pre-input tab shows <span class="ui">Running automations</span>. Click the ▶ on the right of a card to send that task to the current conversation right now.</p>
+
+          <h3>Changes: which files the AI changed</h3>
+          <figure class="shot"><img data-shot="git-diff-pr" alt="Changes and file diff" width="960" height="540" loading="lazy" decoding="async"><figcaption>Every changed file is listed on the right; open one to compare line by line</figcaption></figure>
+          <p>Lists the files changed in the current conversation's project. This tab is view-only — you can't edit here.</p>
+          <ul>
+            <li>The top shows the current branch name. If there's a GitHub PR, it shows the PR number, status and check results; click to open it in your browser.</li>
+            <li><span class="ui">Review scope</span>: <span class="ui">All changes</span> / <span class="ui">Uncommitted</span> / <span class="ui">Session commits</span>, with the number of files and lines added and removed next to it.</li>
+            <li>Use <span class="ui">Filter files…</span> to search by path. Click a file name to open <span class="ui">File diff</span>; right-click to copy its path.</li>
+            <li>Refreshes automatically about every 8 seconds.</li>
+          </ul>
+          <div class="warn"><b>Don't see any changes?</b> Three things are needed: <strong>Git</strong> is installed on your computer, the project folder is a <strong>Git repository</strong>, and a workspace is selected. If something is missing, you'll see a message such as <span class="ui">No Git change history in this folder.</span></div>
+
+          <h3>File diff: see changes line by line</h3>
+          <ul>
+            <li>A green + marks an added line and a red − marks a removed line. Code is syntax-highlighted.</li>
+            <li>Use <strong>‹ ›</strong> to move between changed files. Runs of unchanged lines are folded; click to expand them.</li>
+            <li>The button in the top-right corner opens the diff as a tab in the middle so it's easier to read. Press <kbd>Esc</kbd> to close it.</li>
+            <li>Markdown (.md) files are shown as formatted documents. Very large files only show the number of changed lines.</li>
+          </ul>
+        </section>
+
+        <hr>
+
+        <!-- ============================================================ Feature pages -->
+        <section id="tools">
+          <h2><span class="no">13</span>Agent configuration</h2>
+          <p class="lead"><span class="ui">Agent configuration</span> in the sidebar is where you manage all your AI tools. It has 6 tabs along the top.</p>
+
+          <h3><span class="ui">Favorites</span>: which tools appear on the launchpad</h3>
+          <p>Click a tool card to turn it on or off. You can pick up to 6, and they show up on the launchpad. Tools with a gear icon have launch settings — click the gear to open them:</p>
+          <ul>
+            <li><span class="ui">Command presets</span>: Claude Code, Codex CLI and OpenCode let you pick a permission mode to start in with one click, such as Claude's <span class="ui">Plan</span>, <span class="ui">Edit automatically</span> or <span class="ui">Bypass permissions</span>.</li>
+            <li><span class="ui">Launch command</span>, <span class="ui">Extra arguments</span> (one per line), <span class="ui">Launch directory</span>, <span class="ui">Session history directory</span>: custom options for people comfortable with the command line.</li>
+            <li>If you've made a mess, click <span class="ui">Reset</span>. When you're done, click <span class="ui">Save</span>.</li>
+          </ul>
+
+          <h3><span class="ui">Main memory</span>: long-term instructions for the AI</h3>
+          <p>Edit each tool's global instruction file directly, such as Claude Code's <code>~/.claude/CLAUDE.md</code> or Codex's <code>~/.codex/AGENTS.md</code>. Whatever you write here (for example "Always answer in English" or "Write detailed code comments"), the AI follows in every conversation. When you're done, click <span class="ui">Save</span> or press <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>S</kbd>.</p>
+
+          <h3><span class="ui">Multi-agent orchestration</span></h3>
+          <p>Choose which AIs can act as helpers and what role the main window plays. See the next section, <a href="#orchestration">Multi-agent orchestration</a>.</p>
+
+          <h3><span class="ui">Skills</span>: teach the AI new abilities</h3>
+          <ol class="steps">
+            <li>In the <span class="ui">Discover</span> tab, use <span class="ui">Search skills</span>.</li>
+            <li>Click <span class="ui">Install</span>, then choose which tool to install it for.</li>
+            <li>Each tool's tab lists its installed skills. Skills installed through Coffee CLI can be updated with <span class="ui">Update</span> or removed with <span class="ui">Remove</span>.</li>
+          </ol>
+
+          <h3><span class="ui">Computer Use</span> and <span class="ui">Browser Use</span></h3>
+          <p>Let the AI see your screen, click and type (Computer Use), or drive a browser to open pages and click buttons (Browser Use). Both work the same way: click <span class="ui">Check</span> first (Browser Use needs to be installed the first time), then turn on the switch for the tools you want to use it with.</p>
+          <ul>
+            <li><strong>Computer Use</strong> currently works on Windows only.</li>
+            <li><strong>Browser Use</strong> works on Windows, macOS and Linux, and needs Chrome installed.</li>
+            <li>Once it's on, a matching label shows at the bottom of the input box.</li>
+          </ul>
+          <p>"Main memory" and the tabs after it only list the tools you've turned on in "Favorites".</p>
+        </section>
+
+        <section id="orchestration">
+          <h2><span class="no">14</span>Multi-agent orchestration</h2>
+          <p class="lead">Make Claude Code the "lead": it decides which work to hand to other AIs, opens each helper as a child tab working in parallel, and finally checks and sums up the results for you.</p>
+          <figure class="shot"><img data-shot="multi-agent" alt="The main window handing tasks to several helpers" width="960" height="540" loading="lazy" decoding="async"><figcaption>The sidebar lists each helper and its progress under the main conversation</figcaption></figure>
+
+          <h3>Turn it on</h3>
+          <ol class="steps">
+            <li>Open <span class="ui">Agent configuration</span> → <span class="ui">Multi-agent orchestration</span>.</li>
+            <li>Check the tools that can act as helpers: Claude Code, Codex, OpenCode, DeepSeek Harness, Pi. Tools you don't have show <span class="ui">Not installed</span>.</li>
+            <li>Under <span class="ui">Main window role</span>, pick one of three (applies to main windows you open after this):
+              <ul>
+                <li><span class="ui">Decide automatically</span>: the main window decides what to do itself and what to hand off.</li>
+                <li><span class="ui">Project manager</span>: only splits up and assigns tasks and reviews the results; it doesn't change files itself.</li>
+                <li><span class="ui">Head chef</span>: does the core work itself and hands side jobs to helpers.</li>
+              </ul>
+            </li>
+          </ol>
+
+          <h3>Use it</h3>
+          <ol class="steps">
+            <li>Start a new Claude Code conversation (Desktop or Terminal mode both work).</li>
+            <li>The bottom of the input box shows <span class="ui">Prefer: Decide automatically</span>. Click it to choose a helper to prefer.</li>
+            <li>Make your request as usual. When needed, cards such as "Delegate task" and "Wait for collaboration results" appear in the conversation, and helpers show up as child tabs in the title bar.</li>
+          </ol>
+
+          <h3>Track progress and manage helpers</h3>
+          <ul>
+            <li>In <span class="ui">Sessions</span>, a main conversation's helpers are listed beneath it: a spinner means it's working, a dot means it's waiting for you. Click one to switch to that helper.</li>
+            <li>When a helper shows a permission prompt, switch to its tab to handle it.</li>
+            <li>Right-click a helper: <span class="ui">Open conversation</span>, <span class="ui">Make independent</span>, <span class="ui">Delete</span>. Deleting a helper that's still running asks you to confirm first.</li>
+            <li>When you close a main conversation whose helpers are still running, choose <span class="ui">Keep child sessions</span> or <span class="ui">End group</span>.</li>
+          </ul>
+          <div class="tip"><b>No stepping on each other's toes:</b> in a Git repository, the main window can have each helper work in its own worktree (its own branch), then merge everything together at the end.</div>
+        </section>
+
+        <section id="automation">
+          <h2><span class="no">15</span>Automations</h2>
+          <p class="lead">At the time you set, the app opens a conversation and sends the AI what you wrote ahead of time. Great for repeat jobs like a summary every morning or regular checks.</p>
+          <h3>Create an automation</h3>
+          <ol class="steps">
+            <li>Click <span class="ui">Automations</span> in the sidebar, then <span class="ui">+ New automation</span>.</li>
+            <li>Fill in <span class="ui">Name</span> (optional) and <span class="ui">Prompt</span>.</li>
+            <li>Under <span class="ui">App</span>, choose Claude Code, Codex, DeepSeek Harness, OpenCode or Pi.</li>
+            <li>Choose a <span class="ui">Folder</span>: pick one you've used before, or click <span class="ui">Other folder…</span>.</li>
+            <li>Set the <span class="ui">Schedule</span>: daily / weekdays / weekly / every so often (at least 5 minutes) / once.</li>
+            <li>Click <span class="ui">Save</span>.</li>
+          </ol>
+          <p>Each automation can be started with <span class="ui">Run now</span>, changed with <span class="ui">Edit</span> or removed with <span class="ui">Delete</span>, and paused with its switch. The list shows the next run time and the last result; click <span class="ui">Open session</span> to see the conversation from that run.</p>
+          <div class="warn"><b>Two things you must know:</b>
+            <ul>
+              <li><strong>Let the AI act on its own first.</strong> Nobody is there to click "Allow" when an automation runs, so turn on automatic permissions in the tool first — for example Claude's <span class="ui">Bypass permissions</span> or Codex's <span class="ui">Full access</span>. Otherwise the task will sit waiting for approval.</li>
+              <li><strong>Keep Coffee CLI open.</strong> Nothing runs while the app is closed. A missed task runs once the next time you open the app.</li>
+            </ul>
+          </div>
+        </section>
+
+        <section id="stats">
+          <h2><span class="no">16</span>Usage statistics</h2>
+          <p class="lead"><span class="ui">Usage statistics</span> in the sidebar shows how much you've worked with AI.</p>
+          <ul>
+            <li><strong>Heatmap:</strong> messages per day over the past year. The darker the square, the more you chatted.</li>
+            <li><strong>Filters:</strong> view by <span class="ui">Today</span> / <span class="ui">7 days</span> / <span class="ui">30 days</span>, by tool or by project. Click <span class="ui">Sync</span> to refresh by hand.</li>
+            <li><strong>Stat cards:</strong> total tokens, sessions, prompts, active days and cache hit rate.</li>
+            <li><strong>Charts:</strong> token trend, usage share by model, and a detailed table.</li>
+          </ul>
+          <p>Token stats currently cover Claude Code, Codex CLI, OpenCode, Pi and DeepSeek Harness. All data comes from local records on your computer and is never uploaded.</p>
+        </section>
+
+        <section id="settings">
+          <h2><span class="no">17</span>Settings</h2>
+          <p class="lead">Click the gear at the bottom of the sidebar, or press <kbd>Ctrl</kbd>+<kbd>,</kbd> (<kbd>⌘</kbd>+<kbd>,</kbd> on macOS). Press <kbd>Esc</kbd> or click <span class="ui">Back</span> to close.</p>
+          <figure class="shot"><img data-shot="themes-shapes" alt="Colors and Shape in Settings" width="960" height="540" loading="lazy" decoding="async"><figcaption>Mix and match colors and shapes — changes apply instantly</figcaption></figure>
+
+          <h3><span class="ui">General</span></h3>
+          <ul>
+            <li><span class="ui">Interface scale</span>: make everything bigger or smaller (70%–150%). If text is too small to read, adjust it here.</li>
+            <li><span class="ui">Save to pre-input button</span>: show or hide this button.</li>
+            <li><span class="ui">Send message</span>: choose whether <kbd>Enter</kbd> or <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>Enter</kbd> sends.</li>
+            <li><span class="ui">Toggle shortcut</span>: shortcuts for the sidebar / input box / right panel. Choose Alt+QWE, Ctrl+QWE, Alt+123 or Ctrl+123.</li>
+            <li><span class="ui">Task complete chime</span>, <span class="ui">Permission prompt chime</span>: preview or turn off each sound, or click <span class="ui">Change</span> to use your own MP3 / WAV (up to 20 MB).</li>
+          </ul>
+
+          <h3><span class="ui">Appearance</span></h3>
+          <ul>
+            <li><span class="ui">Colors</span>: 24 color themes, each with <span class="ui">Light</span>, <span class="ui">Night</span> and <span class="ui">Follow System</span> (matches your system's dark / light setting) modes.</li>
+            <li><span class="ui">Shape</span>: 10 interface styles, such as soft, sharp, glass, frosted and character rain. "Frosted" lets the desktop behind the window show through, blurred (on Linux this needs the KDE desktop).</li>
+            <li><span class="ui">Icon Style</span>: the look of folder and file icons.</li>
+            <li><span class="ui">Wallpaper</span>: use your own image or video as the background, and adjust its <span class="ui">Opacity</span>.</li>
+          </ul>
+
+          <h3><span class="ui">Terminal</span></h3>
+          <ul>
+            <li><span class="ui">Text color</span>: the color of the terminal text.</li>
+            <li><span class="ui">Font</span>: the built-in JetBrains Mono by default; you can also search for and pick a font installed on your computer.</li>
+            <li><span class="ui">Default shell</span>: on Windows choose PowerShell, Git Bash, Command Prompt and more; on macOS / Linux choose zsh, bash and more. If you're not sure, leave it on the default.</li>
+          </ul>
+
+          <h3><span class="ui">Voice input</span></h3>
+          <ul>
+            <li>Main switch, choose a <span class="ui">Microphone</span>, <span class="ui">Test microphone</span>.</li>
+            <li><span class="ui">Dictation source</span>: click <span class="ui">Scan voice channels</span> to find accounts on your computer that are signed in and can recognize speech. Ones marked "Live transcription" show text as you speak; ones marked "After recording" show it when you're done.</li>
+            <li>If you see "Sign-in expired", follow the hint: open that tool and send one message to renew it.</li>
+          </ul>
+
+          <h3><span class="ui">Language</span></h3>
+          <p>The app comes in 11 languages: English, 简体中文, 繁體中文, 日本語, 한국어, Español, Français, Deutsch, Português, Русский, Tiếng Việt. Click one to switch instantly.</p>
+
+          <h3><span class="ui">Bug / Feedback</span></h3>
+          <p>Found a problem or have an idea? Send it to GitHub from here.</p>
+        </section>
+
+        <section id="agent">
+          <h2><span class="no">18</span>Coffee Agent</h2>
+          <p class="lead">Chat with Coffee Agent over WeChat or Telegram: it can read your terminals and assign tasks, so you can keep running your computer's work from your phone.</p>
+          <ol class="steps">
+            <li>Open <span class="ui">Settings</span> → Coffee Agent and read the "Instructions and examples" at the top first.</li>
+            <li>In <span class="ui">Coffee Agent model configuration</span>, choose the service type (OpenAI compatible / Anthropic compatible) and fill in the service URL, model ID and API key.</li>
+            <li>Connect under <span class="ui">Messaging channels</span>: for WeChat, scan the QR code; for Telegram, paste the token BotFather gave you, then send the pairing code within 10 minutes.</li>
+            <li>Once connected, the bottom of the sidebar shows "WeChat connected". Just message it from your phone.</li>
+          </ol>
+          <p><span class="ui">Agent work modes</span> has a few switches. With <span class="ui">Sentinel mode</span> on, whenever Claude Code, Codex or a similar tool finishes a turn, Coffee Agent sends you the result on WeChat or Telegram without you having to ask. Coffee CLI needs to stay running.</p>
+        </section>
+
+        <hr>
+
+        <!-- ============================================================ Reference -->
+        <section id="hotkeys">
+          <h2><span class="no">19</span>Keyboard shortcuts</h2>
+          <p class="lead">On macOS, <kbd>Alt</kbd> is the <kbd>Option</kbd> key.</p>
+          <div class="table-wrap"><table>
+            <tr><th>Shortcut</th><th>What it does</th><th>Where it works</th></tr>
+            <tr><td><kbd>Ctrl</kbd>+<kbd>,</kbd> / <kbd>⌘</kbd>+<kbd>,</kbd></td><td>Open / close Settings</td><td>Anywhere</td></tr>
+            <tr><td><kbd>Alt</kbd>+<kbd>Q</kbd> / <kbd>W</kbd> / <kbd>E</kbd></td><td>Show / hide the sidebar / input box / right panel</td><td>Anywhere (can be changed in Settings)</td></tr>
+            <tr><td><kbd>Enter</kbd></td><td>Send message</td><td>Input box (can be changed to Ctrl/⌘+Enter)</td></tr>
+            <tr><td><kbd>Shift</kbd>+<kbd>Enter</kbd></td><td>New line</td><td>Input box</td></tr>
+            <tr><td><kbd>Alt</kbd>+<kbd>↑</kbd> / <kbd>↓</kbd></td><td>Bring back things you sent before</td><td>Input box</td></tr>
+            <tr><td><kbd>Tab</kbd></td><td>Use the prompt suggestion</td><td>Claude in Desktop mode</td></tr>
+            <tr><td><kbd>/</kbd></td><td>Open the command menu</td><td>Input box in Desktop mode</td></tr>
+            <tr><td><kbd>Esc</kbd></td><td>Stop the AI's reply</td><td>Desktop mode</td></tr>
+            <tr><td><kbd>Ctrl</kbd>+<kbd>O</kbd></td><td>Expand / collapse all thinking</td><td>Claude in Desktop mode</td></tr>
+            <tr><td><kbd>1</kbd>–<kbd>9</kbd></td><td>Pick an option</td><td>Permission / question cards</td></tr>
+            <tr><td><kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>C</kbd></td><td>Copy if something is selected; otherwise interrupt the program</td><td>Terminal</td></tr>
+            <tr><td><kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>V</kbd></td><td>Paste (images are pasted as a file path)</td><td>Terminal</td></tr>
+            <tr><td><kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>S</kbd></td><td>Save</td><td>Agent configuration → Main memory</td></tr>
+            <tr><td><kbd>Esc</kbd></td><td>Close Settings and dialogs; cancel a split-view drag</td><td>The matching screen</td></tr>
+          </table></div>
+        </section>
+
+        <section id="update">
+          <h2><span class="no">20</span>Update and uninstall</h2>
+          <h3>Update Coffee CLI</h3>
+          <p>When a new version is out, a download icon appears next to the gear at the bottom of the sidebar. Click it and the app picks a fast download source, saves the installer to your Downloads folder and verifies it, then:</p>
+          <ul>
+            <li><strong>Windows:</strong> opens the setup wizard. Just follow the steps.</li>
+            <li><strong>macOS:</strong> opens the DMG. Drag Coffee CLI into Applications to replace the old version.</li>
+            <li><strong>Linux:</strong> opens your Downloads folder. Double-click the .deb or .rpm to install it.</li>
+          </ul>
+          <p>If the download fails, the website opens so you can download it by hand. You can also just run the <a href="#install">install command</a> again — it installs the latest version.</p>
+
+          <h3>Uninstall</h3>
+          <ul>
+            <li><strong>Windows:</strong> uninstall Coffee CLI from "Settings → Apps". The uninstaller lets you choose whether to delete the app's data too.</li>
+            <li><strong>macOS:</strong> drag Coffee CLI from Applications to the Trash.</li>
+            <li><strong>Linux:</strong> run <code>sudo apt remove coffee-cli</code> or <code>sudo dnf remove coffee-cli</code>.</li>
+          </ul>
+          <p>Uninstalling Coffee CLI doesn't remove the AI tools you installed or their conversation history.</p>
+        </section>
+
+        <section id="faq">
+          <h2><span class="no">21</span>FAQ</h2>
+
+          <h3>A tool on the launchpad is gray?</h3>
+          <p>That means the tool wasn't found. First make sure you installed it following the tool's website, then switch back to the Coffee CLI window so it checks again. Still gray after installing? See <span class="ui">Can't detect?</span> at the bottom of the launchpad.</p>
+
+          <h3>macOS says the app "is damaged and can't be opened"?</h3>
+          <p>Run <code>xattr -cr '/Applications/Coffee CLI.app'</code> in Terminal, then open the app again. See <a href="#install">Download and install</a> for details.</p>
+
+          <h3>Does it cost anything?</h3>
+          <p>Coffee CLI is free and open source. The AI tools themselves (such as Claude or Codex subscriptions or API usage) are billed by each provider under their own terms — that has nothing to do with Coffee CLI.</p>
+
+          <h3>"Changes" on the right is empty?</h3>
+          <p>Git needs to be installed on your computer, and the project folder needs to be a Git repository. If you don't know Git, just ask the AI: "Turn this folder into a Git repository for me."</p>
+
+          <h3>An automation's time came but nothing happened?</h3>
+          <p>The most common reason is that the task is stuck "waiting for approval": turn on automatic permissions in that tool. Also, Coffee CLI needs to stay open.</p>
+
+          <h3>No microphone button / voice input fails?</h3>
+          <p>Go to <a href="#settings">Settings → Voice input</a>: turn it on, click <span class="ui">Scan voice channels</span>, and make sure at least one channel is available. To use the system voice on macOS, first turn on Dictation in "System Settings → Keyboard → Dictation".</p>
+
+          <h3>Does deleting a session delete the chat history?</h3>
+          <p>No. Deleting only hides it from the list; the log files saved by the AI tool are still there.</p>
+
+          <h3>What if the AI breaks my files?</h3>
+          <p>Build two habits. First, work in a Git repository, so you can always see what changed in <span class="ui">Changes</span> and undo it if needed. Second, for tasks you're unsure about, check <a href="#conversation">Worktree</a> so the AI works on a copy, and merge only when you're happy.</p>
+
+          <h3>Something else?</h3>
+          <p>Ask on <a href="https://github.com/edison7009/Coffee-CLI/issues" target="_blank" rel="noopener">GitHub</a> or email <a href="mailto:hi@coffeecli.com">hi@coffeecli.com</a>.</p>
+        </section>
+
+        <footer class="docs-foot">
+          These docs match Coffee CLI v4.0.0. Button names follow the app's English interface. If something in the docs doesn't match the app, please <a href="https://github.com/edison7009/Coffee-CLI/issues" target="_blank" rel="noopener">let us know</a>.<br>
+          &copy; 2026 Coffee CLI · <a href="/">Back to homepage</a>
+        </footer>
+      </article>
+    </main>
+  </div>
+
+  <button class="to-top" type="button" aria-label="Back to top">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 15l-6-6-6 6"/></svg>
+  </button>
+
+  <script src="/js/docs.js?v=1.0.1"></script>
+</body>
+</html>

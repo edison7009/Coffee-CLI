@@ -142,6 +142,27 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://coffeecli.com/"/>
   </url>
   <url>
+    <loc>https://coffeecli.com/docs/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://coffeecli.com/docs/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://coffeecli.com/zh/docs/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://coffeecli.com/zh-hant/docs/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://coffeecli.com/docs/"/>
+  </url>
+  <url>
+    <loc>https://coffeecli.com/zh/docs/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://coffeecli.com/docs/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://coffeecli.com/zh/docs/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://coffeecli.com/zh-hant/docs/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://coffeecli.com/docs/"/>
+  </url>
+  <url>
+    <loc>https://coffeecli.com/zh-hant/docs/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://coffeecli.com/docs/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://coffeecli.com/zh/docs/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://coffeecli.com/zh-hant/docs/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://coffeecli.com/docs/"/>
+  </url>
+  <url>
     <loc>https://coffeecli.com/courses/claude-code.html</loc>
   </url>
   <url>

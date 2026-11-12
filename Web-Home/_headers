@@ -43,6 +43,8 @@
   Cache-Control: public, max-age=0, must-revalidate
 /ru/*
   Cache-Control: public, max-age=0, must-revalidate
+/docs/*
+  Cache-Control: public, max-age=0, must-revalidate
 /sitemap.xml
   Cache-Control: public, max-age=3600
 /version.json
