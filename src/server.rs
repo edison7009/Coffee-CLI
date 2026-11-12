@@ -1398,6 +1398,8 @@ async fn check_network_port(host: String, port: u16) -> Result<bool, String> {
     Ok(reachable)
 }
 
+pub(crate) fn computer_name_value() -> String { computer_name().unwrap_or_default() }
+
 #[tauri::command]
 fn computer_name() -> Result<String, String> {
     #[cfg(target_os = "windows")]
@@ -1885,6 +1887,10 @@ pub fn start_ui(pending_launch: Option<crate::launch::LaunchRequest>) -> anyhow:
             crate::orchestration::orchestration_detach_worker,
             crate::orchestration::orchestration_pending,
             crate::orchestration::orchestration_resolve,
+            crate::mobile_rpc::mobile_rpc_status,
+            crate::mobile_rpc::mobile_rpc_set_enabled,
+            crate::mobile_rpc::mobile_rpc_rotate_token,
+            crate::mobile_rpc::mobile_rpc_resolve,
             crate::git::git_changes,
             crate::git_project_status::git_project_status,
             crate::git::git_show_file,
@@ -1893,6 +1899,7 @@ pub fn start_ui(pending_launch: Option<crate::launch::LaunchRequest>) -> anyhow:
             crate::git::git_commit_files,
         ])
         .setup(|app| {
+            crate::mobile_rpc::init(app.handle());
             // Presentation and npm-bin maintenance never modifies status hooks.
             crate::hook_installer::maintain_all();
 

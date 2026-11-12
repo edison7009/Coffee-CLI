@@ -192,3 +192,10 @@ type Approval = {
 - 分支 `feat/mobile` 长期开发，不合入 `main`，不影响桌面端迭代；定期 rebase 到 `main`。
 - 阶段顺序：协议定稿 → 拆共享 reducer（`src-ui/src/shared/conversation/`）→ 桌面 `mobile_rpc`（默认关闭）→ `mobile/` 局域网版 → `coffee-relay` 仓库 → 推送与上架。
 - 苹果开发者账号到位之前，iOS 只在模拟器和本机调试；Android 可以先出测试包。
+
+## 15. 当前实现状态（`src/mobile_rpc/`）
+
+- 已实现：默认关闭的局域网 WebSocket（端口 47391）、`hello`/`ping`、`session.list`、`session.subscribe`/`unsubscribe`（终端回放 256 KB，对话事件回放 4000 条/4 MB，generation 变化即清空）、`session.input`、`session.interrupt`、`conversation.send`/`cancel`、`terminal.output`/`conversation.event`/`session.changed`/`terminal.resync` 事件。
+- 会话列表、发送和取消通过 `mobile-rpc-request` 交给前端 `MobileRpcBridge`，走 `getAgentSession`，和桌面同一条路径。
+- **v0 临时认证**：`hello.params.token` 携带配对令牌（`~/.coffee-cli/mobile/config.json`，权限 0600），明文 WebSocket。§2 的加密握手完成前不得合入主干。
+- 未实现：审批方法、桌面设置界面和二维码、开启前的历史回放（订阅只能看到开启后的事件；恢复会话的历史还需要 `conversation.history`）。

@@ -199,6 +199,10 @@ export const commands = {
   orchestrationDetachWorker: (taskId: string) => invoke<import('./lib/orchestration').OrchestrationSnapshot>('orchestration_detach_worker', { taskId }),
   orchestrationPending: (requestId: string) => invoke<boolean>('orchestration_pending', { requestId }),
   orchestrationResolve: (requestId: string, result: unknown) => invoke<void>('orchestration_resolve', { requestId, result }),
+  mobileRpcStatus: () => invoke<MobileRpcStatus>('mobile_rpc_status'),
+  mobileRpcSetEnabled: (enabled: boolean) => invoke<MobileRpcStatus>('mobile_rpc_set_enabled', { enabled }),
+  mobileRpcRotateToken: () => invoke<MobileRpcStatus>('mobile_rpc_rotate_token'),
+  mobileRpcResolve: (requestId: string, result: unknown) => invoke<void>('mobile_rpc_resolve', { requestId, result }),
   getToolControl: (kind: 'computer' | 'browser') => invoke<ToolControlStatus>('get_tool_control', { kind }),
   checkToolControl: (kind: 'computer' | 'browser') => invoke<ToolControlStatus>('check_tool_control', { kind }),
   installBrowserControl: () => invoke<ToolControlStatus>('install_browser_control'),
@@ -448,3 +452,5 @@ export interface ToolConfigEntry {
    *  Empty falls through to the built-in scan path. */
   history_path: string;
 }
+
+export interface MobileRpcStatus { enabled: boolean; port: number; token: string; clients: number; protocol: number }

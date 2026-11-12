@@ -23,6 +23,7 @@ mod tool_skills;
 mod tool_control;
 mod computer_control;
 mod orchestration;
+mod mobile_rpc;
 mod worker_worktree;
 mod notify_sound;
 mod tools;

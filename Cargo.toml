@@ -23,7 +23,7 @@ tempfile = "3"
 # Tier Terminal — PTY (portable-pty, WezTerm's cross-platform PTY library)
 portable-pty = "0.9"
 # Local Agent and message-channel tasks run on Tauri's async runtime.
-tokio = { version = "1", features = ["rt", "sync", "time", "macros", "process"] }
+tokio = { version = "1", features = ["rt", "sync", "time", "macros", "process", "net"] }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "system-proxy", "http2", "stream", "multipart"] }
 uuid = { version = "1", features = ["v4"] }
 
