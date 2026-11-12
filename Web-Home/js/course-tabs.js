@@ -3,7 +3,7 @@
 // To add/rename/reorder a course: edit COURSE_TABS below — nothing else.
 (function () {
   const COURSE_TABS = [
-    { href: '../index.html',          en: '← Coffee CLI',       zh: '← Coffee CLI', id: 'back-nav', isBack: true },
+    { href: '/',                     en: '← Coffee CLI',       zh: '← Coffee CLI', id: 'back-nav', isBack: true },
     { href: 'claude-code.html',       en: 'Claude Code',        zh: 'Claude Code' },
     { href: 'founders-playbook.html', en: "Founder's Playbook", zh: 'Claude 教你创业' },
     { href: 'codex.html',             en: 'Codex',              zh: 'Codex' },

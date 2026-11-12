@@ -195,7 +195,7 @@
   const CAN_WEBM = (function () {
     try { return document.createElement("video").canPlayType('video/webm; codecs="vp9"') !== ""; } catch (e) { return false; }
   })();
-  const clipBase = (file) => "demo/features/" + clipLang() + "/" + clipTheme() + "/" + file;
+  const clipBase = (file) => "/demo/features/" + clipLang() + "/" + clipTheme() + "/" + file;
 
   // Every clip <video> on the page, so a theme or language switch can swap
   // them all. A clip downloads only when attach() is first called for it.

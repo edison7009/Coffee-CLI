@@ -218,6 +218,8 @@ body {
 }
 
 .lang-option {
+  display: block;
+  text-decoration: none;
   padding: 10px 16px;
   font-size: 0.85rem;
   color: var(--text-secondary);

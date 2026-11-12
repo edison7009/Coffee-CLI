@@ -1,5 +1,5 @@
 {
   "version": 1,
-  "include": ["/download/*", "/lang-packs/*"],
+  "include": ["/", "/download/*", "/lang-packs/*"],
   "exclude": []
 }

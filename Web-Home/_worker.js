@@ -7,6 +7,10 @@
 //                            everyone else (and any mirror miss): proxy the
 //                            GitHub Release asset. ?source=github|cnb|gitcode
 //                            forces one source (for testing).
+//   /                      → first visit: 302 to the visitor's language page
+//                            (/zh/, /ja/, …) from Accept-Language; once they
+//                            pick a language the coffee_lang cookie decides.
+//                            English (and crawlers) stay on /.
 //   /*                     → CF Pages static files (env.ASSETS)
 //                            (includes /version.json — bumped by hand at
 //                             release time; install scripts and the in-app
@@ -180,6 +184,41 @@ async function getLatestAssets(env) {
   return assets
 }
 
+// Homepage languages: dictionary code → path (same table as js/main.js and
+// scripts/build-web-i18n.mjs).
+const LANG_PATH = {
+  "en": "/", "zh": "/zh/", "zh-TW": "/zh-hant/", "ja": "/ja/", "ko": "/ko/",
+  "es": "/es/", "fr": "/fr/", "de": "/de/", "pt": "/pt/", "ru": "/ru/",
+}
+
+// The first supported language in Accept-Language, by q-value then order.
+// Traditional Chinese for zh-TW / zh-HK / zh-MO / zh-Hant, Simplified otherwise.
+function langFromAcceptLanguage(header) {
+  const ranked = (header || "").split(",").map((part, i) => {
+    const [tag, ...params] = part.trim().toLowerCase().split(";")
+    const q = params.map(p => p.trim()).find(p => p.startsWith("q="))
+    return { tag, q: q ? parseFloat(q.slice(2)) || 0 : 1, i }
+  }).filter(e => e.tag && e.q > 0).sort((a, b) => b.q - a.q || a.i - b.i)
+  for (const { tag } of ranked) {
+    if (tag === "zh" || tag.startsWith("zh-")) {
+      return /^zh-(tw|hk|mo|hant)\b/.test(tag) ? "zh-TW" : "zh"
+    }
+    const base = tag.split("-")[0]
+    if (LANG_PATH[base]) return base
+  }
+  return "en"
+}
+
+function cookieLang(header) {
+  const m = (header || "").match(/(?:^|;\s*)coffee_lang=([^;]*)/)
+  if (!m) return null
+  let v
+  try { v = decodeURIComponent(m[1]) } catch (e) { return null }
+  return LANG_PATH[v] ? v : null
+}
+
+const BOT_UA = /bot|crawl|spider|slurp|facebookexternalhit|embedly|preview|lighthouse/i
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url)
@@ -279,6 +318,30 @@ export default {
           }
         }
       )
+    }
+
+    // ── / → the visitor's language ───────────────────────────────────────────
+    // Crawlers are never redirected, so / stays the indexable English page
+    // (the language pages are linked from it through hreflang).
+    if (pathname === "/" && (request.method === "GET" || request.method === "HEAD")) {
+      const ua = request.headers.get("User-Agent") || ""
+      const lang = BOT_UA.test(ua)
+        ? "en"
+        : cookieLang(request.headers.get("Cookie")) || langFromAcceptLanguage(request.headers.get("Accept-Language"))
+      if (lang !== "en") {
+        return new Response(null, {
+          status: 302,
+          headers: {
+            "Location": LANG_PATH[lang] + url.search,
+            "Cache-Control": "private, no-store",
+            "Vary": "Accept-Language, Cookie",
+          },
+        })
+      }
+      const res = await env.ASSETS.fetch(request)
+      const out = new Response(res.body, res)
+      out.headers.append("Vary", "Accept-Language, Cookie")
+      return out
     }
 
     // ── everything else → CF Pages static files ──────────────────────────────
