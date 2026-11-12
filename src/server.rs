@@ -1509,8 +1509,9 @@ fn program_on_path(name: &str) -> bool {
 }
 
 /// Download the installer for this platform into the user's Downloads
-/// folder, then: Windows launches it and exits so it can overwrite our
-/// files; macOS opens the DMG (Finder mounts it and shows the drag-to-
+/// folder, then: Windows installs it silently (`/S`), the NSIS template
+/// relaunches Coffee CLI (`/R`), and a failed silent run opens the visible
+/// wizard instead; we exit so the installer can overwrite our files; macOS opens the DMG (Finder mounts it and shows the drag-to-
 /// Applications window); Linux opens the Downloads folder so the user can
 /// double-click the package. Mac and Linux keep running.
 fn run_self_update(app: &tauri::AppHandle) -> Result<(), String> {
@@ -1562,7 +1563,16 @@ fn run_self_update(app: &tauri::AppHandle) -> Result<(), String> {
 
     emit_self_update(app, "launching", 100);
     #[cfg(target_os = "windows")]
-    let launch = std::process::Command::new(&out_path).spawn();
+    let launch = {
+        use std::os::windows::process::CommandExt;
+        installer_command_line(&out_path).and_then(|args| {
+            std::process::Command::new("cmd")
+                .raw_arg(args)
+                .creation_flags(0x08000000) // CREATE_NO_WINDOW
+                .spawn()
+                .map_err(|e| e.to_string())
+        })
+    };
     #[cfg(target_os = "macos")]
     let launch = std::process::Command::new("open").arg(&out_path).spawn();
     #[cfg(not(any(target_os = "windows", target_os = "macos")))]
@@ -1573,13 +1583,44 @@ fn run_self_update(app: &tauri::AppHandle) -> Result<(), String> {
     }
 
     if cfg!(target_os = "windows") {
-        // Let the wizard come up before we tear the app down.
+        // Let the installer start before we exit so it can replace our files.
         std::thread::sleep(std::time::Duration::from_millis(800));
         app.exit(0);
     } else {
         emit_self_update(app, "downloaded", 100);
     }
     Ok(())
+}
+
+/// `cmd` arguments that install silently (`/S`, relaunch via `/R`) and open
+/// the visible wizard when the silent run fails, so a failed update never
+/// leaves the user without the app or an explanation.
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
+fn installer_command_line(path: &std::path::Path) -> Result<String, String> {
+    let path = path.to_string_lossy();
+    // cmd cannot escape these inside a quoted path.
+    if path.contains(['"', '%', '\n', '\r']) {
+        return Err("installer path cannot be launched safely".into());
+    }
+    Ok(format!("/d /c start \"\" /wait \"{path}\" /S /R || start \"\" \"{path}\""))
+}
+
+#[cfg(test)]
+mod self_update_tests {
+    use super::installer_command_line;
+    use std::path::Path;
+
+    #[test]
+    fn installs_silently_and_falls_back_to_the_wizard() {
+        let path = Path::new(r"C:\Users\A B\Downloads\Coffee.CLI_4.0.2_x64-setup.exe");
+        assert_eq!(
+            installer_command_line(path).unwrap(),
+            r#"/d /c start "" /wait "C:\Users\A B\Downloads\Coffee.CLI_4.0.2_x64-setup.exe" /S /R || start "" "C:\Users\A B\Downloads\Coffee.CLI_4.0.2_x64-setup.exe""#
+        );
+        for unsafe_path in [r#"C:\a"b\setup.exe"#, r"C:\%TEMP%\setup.exe"] {
+            assert!(installer_command_line(Path::new(unsafe_path)).is_err());
+        }
+    }
 }
 
 /// Stream one opened source to `out_path`, reporting progress, then check it

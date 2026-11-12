@@ -586,7 +586,7 @@ export function Explorer() {
   }, [folderPath]);
 
   // Update check
-  const [hasUpdate, setHasUpdate] = useState(false);
+  const [updateVersion, setUpdateVersion] = useState<string | null>(null);
   // The brand (title + the self-update button) renders here but DISPLAYS
   // in the titlebar's left slot via portal — so it keeps all its Explorer-local
   // self-update state untouched, and hides together with the left panel (this
@@ -601,7 +601,7 @@ export function Explorer() {
         // Domestic mirrors and the website are asked together; the newest
         // version any of them reports wins (see lib/update-manifest.ts).
         const [local, remote] = await Promise.all([getVersion(), fetchLatestManifest()]);
-        if (remote && isNewerVersion(remote.version, local)) setHasUpdate(true);
+        if (remote && isNewerVersion(remote.version, local)) setUpdateVersion(remote.version.replace(/^v/, ''));
       } catch { /* offline or fetch failed — silent */ }
     };
     checkUpdate();
@@ -609,7 +609,7 @@ export function Explorer() {
 
   // In-app self-update. Click the logo's update icon → a circular ring fills
   // as the installer downloads into the Downloads folder. Windows then runs
-  // the wizard and the app exits; macOS opens the DMG and Linux opens the
+  // the installer silently and relaunches; macOS opens the DMG and Linux opens the
   // folder, and the app keeps running. On failure fall back to the page.
   const [installing, setInstalling] = useState(false);
   const [installPct, setInstallPct] = useState(0);
@@ -708,15 +708,34 @@ export function Explorer() {
   }, [activeTab]);
 
   // The update download sits in the sidebar's bottom row, left of settings, where most desktop apps keep it.
-  const updateButton = hasUpdate ? (
+  // Windows installs silently and relaunches, so "launching" means restarting;
+  // macOS / Linux only open the DMG or folder, so keep showing 100%.
+  const restarting = IS_WINDOWS && installPhase === 'launching';
+  const updateLabel = !installing
+    ? t('self_update.download', { version: updateVersion ?? '' })
+    : installPhase === 'speed_test'
+      ? t('self_update.connecting')
+      : restarting
+        ? t('self_update.restarting')
+        : t('self_update.downloading', { percent: Math.max(0, Math.min(100, installPct)) });
+  const updateButton = updateVersion ? (
     <button
       className={`agent-sidebar-button update-check-btn update-available${installing ? ' is-installing' : ''}`}
       onClick={handleSelfUpdate}
       disabled={installing}
-      aria-label="Update Coffee CLI"
+      aria-label={updateLabel}
+      aria-busy={installing}
+      data-tip={updateLabel}
     >
-      {installing ? (
+      {restarting ? (
+        /* Lucide rotate-cw; license in /icons/LICENSE-lucide.txt. */
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+          <path d="M21 3v5h-5" />
+        </svg>
+      ) : installing ? (
         <svg
+          aria-hidden="true"
           className={`update-ring${installPhase === 'speed_test' ? ' spin' : ''}`}
           width="15"
           height="15"
@@ -745,7 +764,7 @@ export function Explorer() {
           />
         </svg>
       ) : (
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
           <polyline points="7 10 12 15 17 10"/>
           <line x1="12" y1="3" x2="12" y2="15"/>
