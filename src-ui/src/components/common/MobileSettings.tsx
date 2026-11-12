@@ -1,11 +1,13 @@
 // Settings → Mobile: allow phones on this network, pair one with a QR code, and remove paired phones.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
-import { commands, isTauri, type MobileRpcPairing, type MobileRpcStatus } from '../../tauri';
+import { commands, isTauri, type MobileRpcAddress, type MobileRpcFirewall, type MobileRpcPairing, type MobileRpcStatus } from '../../tauri';
+import { ThemedSelect } from './ThemedSelect';
 import { useT } from '../../i18n/useT';
 import { clipboardWrite } from '../../lib/clipboard';
 
 interface Pairing extends MobileRpcPairing { qr: string }
+const AUTO = 'auto';
 
 export function MobileSettings() {
   const t = useT();
@@ -15,6 +17,7 @@ export function MobileSettings() {
   const [error, setError] = useState('');
   const [now, setNow] = useState(() => Date.now());
   const [copied, setCopied] = useState(false);
+  const [firewall, setFirewall] = useState<MobileRpcFirewall['state'] | null>(null);
   const pairedBefore = useRef<Set<string>>(new Set());
   const live = useRef(true);
   useEffect(() => { live.current = true; return () => { live.current = false; }; }, []);
@@ -80,6 +83,26 @@ export function MobileSettings() {
   const revoke = (publicKey: string) => run(async () => { setStatus(await commands.mobileRpcRevokeDevice(publicKey)); });
 
   const enabled = !!status?.enabled;
+
+  // Firewall: only meaningful while listening; slow on Windows, so checked on its own.
+  useEffect(() => {
+    if (!isTauri || !enabled) { setFirewall(null); return; }
+    let current = true;
+    void commands.mobileRpcFirewallStatus().then(result => { if (current) setFirewall(result.state); }, () => {});
+    return () => { current = false; };
+  }, [enabled]);
+  const allowFirewall = () => run(async () => { setFirewall((await commands.mobileRpcFirewallAllow()).state); });
+
+  const addressLabel = (item: MobileRpcAddress) => item.kind === 'other'
+    ? t('settings.mobile.address.other', { name: item.interface, address: item.address })
+    : t(`settings.mobile.address.${item.kind}`, { address: item.address });
+  const addresses = status?.addresses ?? [];
+  const automatic = addresses[0];
+  const chooseAddress = (value: string) => run(async () => {
+    setStatus(await commands.mobileRpcSetAddress(value === AUTO ? null : value));
+    // A code already on screen still carries the old order; make a fresh one.
+    if (pairing) setPairing(null);
+  });
   const connected = new Set(status?.connected ?? []);
   const seconds = pairing ? Math.max(0, Math.ceil((pairing.expiresAt - now) / 1000)) : 0;
 
@@ -92,6 +115,20 @@ export function MobileSettings() {
             <button type="button" role="switch" className="settings-switch" aria-checked={enabled} aria-label={t('settings.mobile.enabled')} disabled={busy || !status} onClick={() => void toggle()}><span /></button>
           </div>
         </div>
+        {enabled && addresses.length > 1 && <div className="settings-sound-item settings-voice-controls"><div className="settings-sound-row">
+          <div className="settings-sound-title">{t('settings.mobile.address.title')}<div className="settings-choice-hint">{t('settings.mobile.address.sub')}</div></div>
+          <ThemedSelect className="settings-mobile-address" align="end" label={t('settings.mobile.address.title')} disabled={busy}
+            value={status?.preferredAddress && addresses.some(a => a.address === status.preferredAddress) ? status.preferredAddress : AUTO}
+            options={[{ value: AUTO, label: t('settings.mobile.address.auto', { address: automatic ? addressLabel(automatic) : '' }) }, ...addresses.map(a => ({ value: a.address, label: addressLabel(a) }))]}
+            onChange={value => void chooseAddress(value)} />
+        </div></div>}
+        {enabled && firewall === 'blocked' && <div className="settings-sound-item"><div className="settings-sound-row settings-mobile-firewall" role="alert">
+          <div className="settings-sound-title">{t('settings.mobile.firewall.blocked')}<div className="settings-choice-hint">{t('settings.mobile.firewall.blocked.sub')}</div></div>
+          <button type="button" className="settings-voice-scan" disabled={busy} onClick={() => void allowFirewall()}>{t('settings.mobile.firewall.allow')}</button>
+        </div></div>}
+        {enabled && firewall === 'public_network' && <div className="settings-sound-item"><div className="settings-sound-row settings-mobile-firewall" role="alert">
+          <div className="settings-sound-title">{t('settings.mobile.firewall.public')}<div className="settings-choice-hint">{t('settings.mobile.firewall.public.sub')}</div></div>
+        </div></div>}
         <div className="settings-sound-item settings-voice-controls" aria-disabled={!enabled}>
           <div className="settings-sound-row">
             <div className="settings-sound-title">{t('settings.mobile.pair')}<div className="settings-choice-hint">{enabled && status?.host ? t('settings.mobile.address', { address: `${status.host}:${status.port}` }) : t('settings.mobile.pair.sub')}</div></div>

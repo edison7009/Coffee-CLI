@@ -20,9 +20,12 @@ async function write(value: string | null) {
 
 export async function loadPairing(): Promise<Pairing | null> {
   try {
-    const stored = JSON.parse((await read()) ?? 'null') as Stored | null;
+    const stored = JSON.parse((await read()) ?? 'null') as (Stored & { desktop: Desktop & { host?: string } }) | null;
     if (!stored?.desktop || !stored.privateKey) return null;
-    return { ...stored, privateKey: fromHex(stored.privateKey), publicKey: fromHex(stored.publicKey) };
+    // Records from before multi-address pairing kept a single host.
+    const hosts = stored.desktop.hosts ?? (stored.desktop.host ? [stored.desktop.host] : []);
+    if (!hosts.length) return null;
+    return { ...stored, desktop: { hosts, port: stored.desktop.port, publicKey: stored.desktop.publicKey }, privateKey: fromHex(stored.privateKey), publicKey: fromHex(stored.publicKey) };
   } catch { return null; }
 }
 export async function savePairing(pairing: Pairing) {

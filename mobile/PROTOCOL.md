@@ -87,7 +87,7 @@ type Session = {
 
 ### 4.3 结构化对话（核心卖点）
 
-竞品手机端基本只能看终端字符流。Coffee CLI 桌面端已经为六种会话做了结构化对话视图：`claude-session-event`、`codex-session-event`、`opencode-session-event`、`pi-session-event`、`dsh-session-event`，以及自研 agent 的 `agent-conversations-changed`。前端对应的 reducer 在 `src-ui/src/lib/*-session.ts`。手机端**直接复用这些事件和 reducer**，展示消息气泡、工具调用卡片、diff、思考过程、用量，而不是一屏 ANSI 字符。
+只转发终端字符流的手机端，看到的是一屏 ANSI 字符。Coffee CLI 桌面端已经为六种会话做了结构化对话视图：`claude-session-event`、`codex-session-event`、`opencode-session-event`、`pi-session-event`、`dsh-session-event`，以及自研 agent 的 `agent-conversations-changed`。前端对应的 reducer 在 `src-ui/src/lib/*-session.ts`。手机端**直接复用这些事件和 reducer**，展示消息气泡、工具调用卡片、diff、思考过程、用量，而不是一屏 ANSI 字符。
 
 | 方法 | params | result |
 |---|---|---|
@@ -173,7 +173,7 @@ type Approval = {
 
 ## 12. 产品目标与界面原则
 
-- **核心差异**：竞品手机端基本只显示终端字符流；我们把桌面端六种结构化对话（Claude、Codex、OpenCode、Pi、DeepSeek Harness、自研 agent）完整搬到手机上：消息气泡、工具调用卡片、diff、思考过程、用量、审批。
+- **核心差异**：不只转发终端字符流，而是把桌面端六种结构化对话（Claude、Codex、OpenCode、Pi、DeepSeek Harness、自研 agent）完整搬到手机上：消息气泡、工具调用卡片、diff、思考过程、用量、审批。
 - **界面要求**：原生质感优先，不能做成网页套壳。对话列表、气泡、工具卡片都用原生组件；终端视图只作为兜底，可以用 WebView + xterm。
 - **范围**：v0 只支持上面六种结构化会话，其他工具以后再说。
 

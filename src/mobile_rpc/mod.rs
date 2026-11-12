@@ -12,6 +12,8 @@
 
 mod buffers;
 mod config;
+mod firewall;
+mod network;
 mod secure;
 
 use buffers::{Buffers, Replay};
@@ -403,55 +405,28 @@ async fn gui_with_timeout(method: &str, params: Value, timeout: Duration) -> Res
 
 // ─── Tauri commands ───────────────────────────────────────
 
+fn advertised(settings: &config::Settings) -> (Vec<network::Candidate>, Vec<String>) {
+    let candidates = network::candidates();
+    let hosts = network::advertised_hosts(&candidates, settings.preferred_address.as_deref(), network::local_name().as_deref());
+    (candidates, hosts)
+}
+
 fn status_value() -> Value {
     let settings = config::load();
+    let (candidates, hosts) = advertised(&settings);
     json!({
         "enabled": active(),
         "port": settings.port,
         "publicKey": settings.public_key,
         "devices": settings.devices,
         "connected": hub().clients.lock().unwrap().values().map(|c| c.device.clone()).collect::<HashSet<_>>(),
-        "host": lan_address(),
+        "host": hosts.first(),
+        "hosts": hosts,
+        "addresses": candidates,
+        "preferredAddress": settings.preferred_address,
         "clients": hub().clients.lock().unwrap().len(),
         "protocol": PROTOCOL,
     })
-}
-
-/// The address phones on the same network should dial: the best LAN address
-/// among this computer's interfaces. The default route is not used, because a
-/// proxy or VPN in TUN mode owns it and its address is unreachable from a phone.
-fn lan_address() -> Option<String> {
-    let interfaces = if_addrs::get_if_addrs().ok()?;
-    best_lan_address(interfaces.iter().filter_map(|i| match i.ip() {
-        std::net::IpAddr::V4(ip) => Some((i.name.as_str(), ip)),
-        _ => None,
-    }))
-    .map(|ip| ip.to_string())
-}
-
-/// Ranks IPv4 candidates: physical-looking interfaces with private addresses
-/// first (192.168, then 10, then 172.16/12), virtual and proxy interfaces never.
-fn best_lan_address<'a>(candidates: impl Iterator<Item = (&'a str, Ipv4Addr)>) -> Option<Ipv4Addr> {
-    const VIRTUAL: [&str; 17] = ["utun", "tun", "tap", "wg", "ppp", "ipsec", "gif", "stf", "awdl", "llw", "bridge", "docker", "br-", "veth", "vethernet", "vmnet", "zt"];
-    const PROXY_NAMES: [&str; 6] = ["clash", "mihomo", "meta", "sing", "wintun", "tailscale"];
-    candidates
-        .filter(|(name, ip)| {
-            let name = name.to_ascii_lowercase();
-            let octets = ip.octets();
-            !ip.is_loopback() && !ip.is_link_local() && !ip.is_unspecified() && !ip.is_multicast()
-                // 198.18.0.0/15: the benchmark range proxy TUN modes hand out.
-                && !(octets[0] == 198 && (octets[1] & 0xfe) == 18)
-                && !VIRTUAL.iter().any(|prefix| name.starts_with(prefix))
-                && !PROXY_NAMES.iter().any(|word| name.contains(word))
-        })
-        .min_by_key(|(name, ip)| {
-            let o = ip.octets();
-            let range = match o { [192, 168, ..] => 0, [10, ..] => 1, [172, b, ..] if (16..32).contains(&b) => 2, _ => 3 };
-            let name = name.to_ascii_lowercase();
-            let physical = name.starts_with("en") || name.starts_with("eth") || name.starts_with("wl") || name.contains("wi-fi") || name.contains("wlan") || name.contains("ethernet") || name.contains("以太网");
-            (range, !physical, name.starts_with("en") && name != "en0")
-        })
-        .map(|(_, ip)| ip)
 }
 
 #[tauri::command]
@@ -475,18 +450,51 @@ pub fn mobile_rpc_set_enabled(enabled: bool) -> Result<Value, String> {
 pub fn mobile_rpc_begin_pairing() -> Result<Value, String> {
     if !active() { return Err("Enable mobile access first".into()); }
     let settings = config::load();
-    let host = lan_address().ok_or("No network connection")?;
+    let (_, hosts) = advertised(&settings);
+    if hosts.is_empty() { return Err("No network connection".into()); }
     let code = config::new_pairing_code();
     *hub().pairing.lock().unwrap() = Some((code.clone(), Instant::now() + PAIRING_TTL));
     let expires_at = chrono::Utc::now().timestamp_millis() + PAIRING_TTL.as_millis() as i64;
     Ok(json!({
-        "uri": format!("coffee://pair?v={PROTOCOL}&host={host}&port={}&pk={}&code={code}", settings.port, settings.public_key),
-        "host": host,
+        "uri": format!("coffee://pair?v={PROTOCOL}&hosts={}&port={}&pk={}&code={code}", hosts.join(","), settings.port, settings.public_key),
+        "host": hosts[0],
+        "hosts": hosts,
         "port": settings.port,
         "publicKey": settings.public_key,
         "code": code,
         "expiresAt": expires_at,
     }))
+}
+
+/// Pins the address pairing advertises first; `None` returns to the automatic choice.
+#[tauri::command]
+pub fn mobile_rpc_set_address(address: Option<String>) -> Result<Value, String> {
+    {
+        let _guard = hub().config_lock.lock().unwrap();
+        let mut settings = config::load();
+        if let Some(address) = &address {
+            if !network::candidates().iter().any(|c| &c.address == address) { return Err("That address is no longer available".into()); }
+        }
+        settings.preferred_address = address;
+        config::save(&settings)?;
+    }
+    Ok(status_value())
+}
+
+/// Whether Windows Firewall lets phones in. Slow on Windows (PowerShell), so
+/// the settings page asks for it separately from the status poll.
+#[tauri::command]
+pub async fn mobile_rpc_firewall_status() -> Value {
+    let state = tauri::async_runtime::spawn_blocking(firewall::status).await.unwrap_or(firewall::State::Unknown);
+    json!({ "state": state })
+}
+
+/// Opens the mobile port for private networks after the person's UAC consent.
+#[tauri::command]
+pub async fn mobile_rpc_firewall_allow() -> Result<Value, String> {
+    let port = config::load().port;
+    tauri::async_runtime::spawn_blocking(move || firewall::allow(port)).await.map_err(|e| e.to_string())??;
+    Ok(mobile_rpc_firewall_status().await)
 }
 
 #[tauri::command]

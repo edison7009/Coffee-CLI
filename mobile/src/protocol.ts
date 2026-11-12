@@ -150,18 +150,20 @@ export class Initiator {
 
 // ─── Pairing link ────────────────────────────────────────
 
-export interface Desktop { host: string; port: number; publicKey: string }
+/** `hosts` is best first: LAN addresses, then the computer's `.local` name. */
+export interface Desktop { hosts: string[]; port: number; publicKey: string }
 export interface PairingLink extends Desktop { code: string }
 
-/** `coffee://pair?v=0&host=…&port=…&pk=…&code=…` from the desktop QR code. */
+/** `coffee://pair?v=0&hosts=a,b&port=…&pk=…&code=…` from the desktop QR code. */
 export function parsePairingLink(text: string): PairingLink {
   const match = text.trim().match(/^coffee:\/\/pair\?(.*)$/);
   if (!match) throw new Error('not a Coffee CLI pairing code');
   const params = new Map(match[1].split('&').map(pair => { const i = pair.indexOf('='); return [decodeURIComponent(pair.slice(0, i)), decodeURIComponent(pair.slice(i + 1))] as const; }));
   if (params.get('v') !== String(PROTOCOL)) throw new Error('unsupported pairing version');
-  const port = Number(params.get('port')), host = params.get('host') ?? '', publicKey = params.get('pk') ?? '', code = params.get('code') ?? '';
-  if (!host || !Number.isInteger(port) || port <= 0 || port > 65535 || !/^[0-9a-f]{64}$/i.test(publicKey) || !/^[0-9a-f]{32}$/i.test(code)) throw new Error('incomplete pairing code');
-  return { host, port, publicKey: publicKey.toLowerCase(), code };
+  const port = Number(params.get('port')), publicKey = params.get('pk') ?? '', code = params.get('code') ?? '';
+  const hosts = (params.get('hosts') ?? params.get('host') ?? '').split(',').map(h => h.trim()).filter(h => /^[0-9a-z.:-]{1,253}$/i.test(h)).slice(0, 8);
+  if (!hosts.length || !Number.isInteger(port) || port <= 0 || port > 65535 || !/^[0-9a-f]{64}$/i.test(publicKey) || !/^[0-9a-f]{32}$/i.test(code)) throw new Error('incomplete pairing code');
+  return { hosts, port, publicKey: publicKey.toLowerCase(), code };
 }
 
 // ─── RPC client ──────────────────────────────────────────
@@ -184,11 +186,15 @@ export interface ConnectOptions {
   platform: string;
   appVersion: string;
   timeoutMs?: number;
+  /** How long to wait for any address to answer. */
+  dialTimeoutMs?: number;
   createSocket?: (url: string) => WebSocketLike;
 }
 
 export class CoffeeClient {
   hello!: Hello;
+  /** The address that answered first; callers move it to the front for next time. */
+  host = '';
   private nextId = 2;
   private pending = new Map<number, { resolve: (v: unknown) => void; reject: (e: Error) => void }>();
   private listeners = new Set<(event: RpcEvent) => void>();
@@ -197,22 +203,60 @@ export class CoffeeClient {
   private socket: WebSocketLike; private channel: Channel;
   private constructor(socket: WebSocketLike, channel: Channel) { this.socket = socket; this.channel = channel; }
 
-  /** Opens the socket, runs the handshake and `hello`. Rejects when the desktop drops or refuses the phone. */
-  static connect(options: ConnectOptions): Promise<CoffeeClient> {
+  /**
+   * Dials every advertised address at once and keeps the first socket that opens;
+   * only that one runs the handshake, so a pairing code is spent once.
+   * Rejects when nothing answers, or when the desktop drops or refuses the phone.
+   */
+  static async connect(options: ConnectOptions): Promise<CoffeeClient> {
+    const { socket, host } = await CoffeeClient.dial(options);
+    const client = await CoffeeClient.handshake(options, socket);
+    client.host = host;
+    return client;
+  }
+
+  private static dial(options: ConnectOptions): Promise<{ socket: WebSocketLike; host: string }> {
+    const { desktop } = options, create = options.createSocket ?? (url => new WebSocket(url) as unknown as WebSocketLike);
+    return new Promise((resolve, reject) => {
+      let settled = false, failed = 0;
+      const sockets = desktop.hosts.map(host => {
+        const socket = create(`ws://${host.includes(':') ? `[${host}]` : host}:${desktop.port}`);
+        socket.binaryType = 'arraybuffer';
+        const lose = () => {
+          socket.onopen = socket.onerror = socket.onclose = null;
+          if (!settled && ++failed === sockets.length) { settled = true; clearTimeout(timer); reject(new RpcError('unreachable', 'connection failed')); }
+        };
+        socket.onopen = () => {
+          if (settled) { try { socket.close(); } catch { /* closing */ } return; }
+          settled = true; clearTimeout(timer);
+          socket.onopen = socket.onerror = socket.onclose = null;
+          for (const other of sockets) if (other !== socket) { other.onopen = other.onerror = other.onclose = null; try { other.close(); } catch { /* closing */ } }
+          resolve({ socket, host });
+        };
+        socket.onerror = lose; socket.onclose = lose;
+        return socket;
+      });
+      // An address that never answers (wrong network, firewall) must not hold up the rest.
+      const timer = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        for (const socket of sockets) { socket.onopen = socket.onerror = socket.onclose = null; try { socket.close(); } catch { /* closing */ } }
+        reject(new RpcError('unreachable', 'timed out'));
+      }, options.dialTimeoutMs ?? 8000);
+      if (!sockets.length) { settled = true; clearTimeout(timer); reject(new RpcError('unreachable', 'no address')); }
+    });
+  }
+
+  private static handshake(options: ConnectOptions, socket: WebSocketLike): Promise<CoffeeClient> {
     const { desktop, keys, pairingCode, timeoutMs = 130_000 } = options;
-    const host = desktop.host.includes(':') ? `[${desktop.host}]` : desktop.host;
-    const socket = (options.createSocket ?? (url => new WebSocket(url) as unknown as WebSocketLike))(`ws://${host}:${desktop.port}`);
-    socket.binaryType = 'arraybuffer';
     const initiator = new Initiator(keys, fromHex(desktop.publicKey), pairingCode ? pairingPsk(pairingCode) : new Uint8Array(32));
     return new Promise((resolve, reject) => {
-      let step: 'handshake' | 'hello' = 'handshake', channel: Channel | null = null, opened = false;
+      let step: 'handshake' | 'hello' = 'handshake', channel: Channel | null = null;
       const fail = (message: string, code = 'unreachable') => { clearTimeout(timer); socket.onmessage = socket.onclose = socket.onerror = null; try { socket.close(); } catch { /* already closed */ } reject(new RpcError(code, message)); };
       // Pairing waits for the person at the desktop to allow the phone.
       const timer = setTimeout(() => fail('timed out'), timeoutMs);
-      socket.onopen = () => { opened = true; socket.send(initiator.firstMessage(pairingCode ? MODE_PAIR : MODE_RESUME)); };
-      // The desktop answers an unknown phone or a wrong code by hanging up during the
-      // handshake; a socket that never opened means the desktop is unreachable.
-      const dropped = () => opened && step === 'handshake' ? fail('desktop refused this phone', 'unauthorized') : fail(opened ? 'connection closed' : 'connection failed');
+      // The desktop answers an unknown phone or a wrong code by hanging up during the handshake.
+      const dropped = () => step === 'handshake' ? fail('desktop refused this phone', 'unauthorized') : fail('connection closed');
       socket.onerror = dropped;
       socket.onclose = dropped;
       socket.onmessage = ({ data }) => {
@@ -233,6 +277,7 @@ export class CoffeeClient {
           resolve(client);
         } catch (error) { fail(error instanceof Error ? error.message : String(error), 'unauthorized'); }
       };
+      socket.send(initiator.firstMessage(pairingCode ? MODE_PAIR : MODE_RESUME));
     });
   }
 

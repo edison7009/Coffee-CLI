@@ -204,6 +204,9 @@ export const commands = {
   mobileRpcBeginPairing: () => invoke<MobileRpcPairing>('mobile_rpc_begin_pairing'),
   mobileRpcCancelPairing: () => invoke<void>('mobile_rpc_cancel_pairing'),
   mobileRpcRevokeDevice: (publicKey: string) => invoke<MobileRpcStatus>('mobile_rpc_revoke_device', { publicKey }),
+  mobileRpcSetAddress: (address: string | null) => invoke<MobileRpcStatus>('mobile_rpc_set_address', { address }),
+  mobileRpcFirewallStatus: () => invoke<MobileRpcFirewall>('mobile_rpc_firewall_status'),
+  mobileRpcFirewallAllow: () => invoke<MobileRpcFirewall>('mobile_rpc_firewall_allow'),
   mobileRpcResolve: (requestId: string, result: unknown) => invoke<void>('mobile_rpc_resolve', { requestId, result }),
   getToolControl: (kind: 'computer' | 'browser') => invoke<ToolControlStatus>('get_tool_control', { kind }),
   checkToolControl: (kind: 'computer' | 'browser') => invoke<ToolControlStatus>('check_tool_control', { kind }),
@@ -456,5 +459,7 @@ export interface ToolConfigEntry {
 }
 
 export interface MobileRpcDevice { publicKey: string; name: string; pairedAt: number }
-export interface MobileRpcStatus { enabled: boolean; port: number; publicKey: string; devices: MobileRpcDevice[]; connected: string[]; host: string | null; clients: number; protocol: number }
-export interface MobileRpcPairing { uri: string; host: string; port: number; publicKey: string; code: string; expiresAt: number }
+export interface MobileRpcAddress { address: string; interface: string; kind: 'wifi' | 'ethernet' | 'tailscale' | 'other' }
+export interface MobileRpcStatus { enabled: boolean; port: number; publicKey: string; devices: MobileRpcDevice[]; connected: string[]; host: string | null; hosts: string[]; addresses: MobileRpcAddress[]; preferredAddress: string | null; clients: number; protocol: number }
+export interface MobileRpcFirewall { state: 'open' | 'blocked' | 'public_network' | 'unknown' }
+export interface MobileRpcPairing { uri: string; host: string; hosts: string[]; port: number; publicKey: string; code: string; expiresAt: number }

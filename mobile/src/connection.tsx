@@ -30,13 +30,19 @@ export function ConnectionProvider({ children }: { children: ReactNode }) {
   useEffect(() => { pairingRef.current = pairing; statusRef.current = status; }, [pairing, status]);
   const attempt = useRef(0), timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined), current = useRef<CoffeeClient | null>(null), live = useRef(true);
 
-  const connect = useCallback(async (record: Pairing) => {
+  const connect = useCallback(async (initial: Pairing) => {
+    let record = initial;
     clearTimeout(timer.current);
     setStatus('connecting');
     try {
       const next = await CoffeeClient.connect({ desktop: record.desktop, keys: record, deviceName: record.deviceName, platform: Platform.OS, appVersion: APP_VERSION, timeoutMs: 15_000 });
       if (!live.current) return next.close();
       attempt.current = 0;
+      // Try the address that answered first next time; an address change is learnt silently.
+      if (next.host !== record.desktop.hosts[0]) {
+        record = { ...record, desktop: { ...record.desktop, hosts: [next.host, ...record.desktop.hosts.filter(h => h !== next.host)] } };
+        void savePairing(record); setPairing(record);
+      }
       current.current = next;
       setClient(next); setStatus('connected');
       next.onClose(() => {
@@ -73,9 +79,9 @@ export function ConnectionProvider({ children }: { children: ReactNode }) {
     clearTimeout(timer.current);
     current.current?.close();
     const keys = generateKeyPair();
-    const desktop = { host: link.host, port: link.port, publicKey: link.publicKey };
+    const desktop = { hosts: link.hosts, port: link.port, publicKey: link.publicKey };
     const next = await CoffeeClient.connect({ desktop, keys, pairingCode: link.code, deviceName, platform: Platform.OS, appVersion: APP_VERSION });
-    const record: Pairing = { desktop, computerName: next.hello.computerName, deviceName, ...keys };
+    const record: Pairing = { desktop: { ...desktop, hosts: [next.host, ...desktop.hosts.filter(h => h !== next.host)] }, computerName: next.hello.computerName, deviceName, ...keys };
     await savePairing(record);
     setPairing(record);
     // Keep the paired connection; its close starts the normal reconnect loop.

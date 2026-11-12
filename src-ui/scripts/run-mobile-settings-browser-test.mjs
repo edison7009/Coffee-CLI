@@ -23,7 +23,8 @@ window.mount();
     : args.path === 'event' ? `export async function listen(name,handler){window.listeners[name]=handler;return()=>{delete window.listeners[name]}}`
     : `
 window.calls=[];window.listeners={};
-window.mobile={enabled:false,port:47391,publicKey:'ab'.repeat(32),devices:[],connected:[],host:'192.168.1.8',clients:0,protocol:0};
+window.mobile={enabled:false,port:47391,publicKey:'ab'.repeat(32),devices:[],connected:[],host:'192.168.1.8',hosts:['192.168.1.8','10.0.0.2'],addresses:[{address:'192.168.1.8',interface:'en0',kind:'wifi'},{address:'10.0.0.2',interface:'en7',kind:'ethernet'},{address:'100.101.1.2',interface:'utun9',kind:'tailscale'}],preferredAddress:null,clients:0,protocol:0};
+window.firewall='blocked';
 const copy=()=>JSON.parse(JSON.stringify(window.mobile));
 export const isTauri=true;
 export const commands={
@@ -31,6 +32,9 @@ export const commands={
   async mobileRpcSetEnabled(enabled){window.calls.push(['enable',enabled]);window.mobile.enabled=enabled;return copy()},
   async mobileRpcBeginPairing(){window.calls.push(['pair']);if(!window.mobile.enabled)throw Error('Enable mobile access first');return {uri:'coffee://pair?v=0&host=192.168.1.8&port=47391&pk='+window.mobile.publicKey+'&code=c0ffee',host:'192.168.1.8',port:47391,publicKey:window.mobile.publicKey,code:'c0ffee',expiresAt:Date.now()+300000}},
   async mobileRpcCancelPairing(){window.calls.push(['cancel'])},
+  async mobileRpcSetAddress(address){window.calls.push(['address',address]);window.mobile.preferredAddress=address;window.mobile.host=address??window.mobile.addresses[0].address;return copy()},
+  async mobileRpcFirewallStatus(){return {state:window.firewall}},
+  async mobileRpcFirewallAllow(){window.calls.push(['firewall']);window.firewall='open';return {state:'open'}},
   async mobileRpcRevokeDevice(key){window.calls.push(['revoke',key]);window.mobile.devices=window.mobile.devices.filter(d=>d.publicKey!==key);window.mobile.connected=window.mobile.connected.filter(k=>k!==key);return copy()},
 };
 ` }));
@@ -59,6 +63,25 @@ try {
   await master.click();
   await page.waitForFunction(() => document.querySelector('[role=switch]').getAttribute('aria-checked') === 'true');
   await page.getByText('本机地址：192.168.1.8:47391').waitFor();
+
+  // Firewall: blocked shows a fix; allowing clears it.
+  await page.getByText('Windows 防火墙拦截了手机连接').waitFor();
+  await page.getByRole('button', { name: '允许', exact: true }).click();
+  await page.getByText('Windows 防火墙拦截了手机连接').waitFor({ state: 'detached' });
+  assert.deepEqual(await page.evaluate(() => window.calls.at(-1)), ['firewall']);
+
+  // Address: automatic names the chosen interface; picking one pins it, automatic unpins.
+  const picker = page.getByRole('combobox', { name: '连接地址', exact: true });
+  await picker.getByText('自动（Wi-Fi · 192.168.1.8）', { exact: true }).waitFor();
+  await picker.click();
+  assert.deepEqual(await page.getByRole('option').allInnerTexts(), ['自动（Wi-Fi · 192.168.1.8）', 'Wi-Fi · 192.168.1.8', '有线 · 10.0.0.2', 'Tailscale · 100.101.1.2']);
+  await page.getByRole('option', { name: 'Tailscale · 100.101.1.2', exact: true }).click();
+  await picker.getByText('Tailscale · 100.101.1.2', { exact: true }).waitFor();
+  assert.deepEqual(await page.evaluate(() => window.calls.at(-1)), ['address', '100.101.1.2']);
+  await picker.click();
+  await page.getByRole('option', { name: '自动（Wi-Fi · 192.168.1.8）', exact: true }).click();
+  assert.deepEqual(await page.evaluate(() => window.calls.at(-1)), ['address', null]);
+  await page.evaluate(() => { window.calls.length = 0; window.calls.push(['enable', true]); });
 
   // The QR code carries the pairing URI; the countdown runs; cancel withdraws it.
   await pair.click();

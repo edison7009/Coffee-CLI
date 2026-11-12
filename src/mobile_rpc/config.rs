@@ -27,6 +27,9 @@ pub struct Settings {
     pub public_key: String,
     #[serde(default)]
     pub devices: Vec<Device>,
+    /// Address the person picked for pairing; `None` follows the automatic choice.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub preferred_address: Option<String>,
 }
 
 fn default_port() -> u16 { DEFAULT_PORT }
@@ -50,7 +53,7 @@ impl Settings {
 /// which also unpairs every phone (their pinned desktop key no longer matches).
 pub fn parse(text: Option<&str>) -> (Settings, bool) {
     let mut settings = text.and_then(|t| serde_json::from_str::<Settings>(t).ok()).unwrap_or(Settings {
-        enabled: false, port: DEFAULT_PORT, private_key: String::new(), public_key: String::new(), devices: Vec::new(),
+        enabled: false, port: DEFAULT_PORT, private_key: String::new(), public_key: String::new(), devices: Vec::new(), preferred_address: None,
     });
     let valid = hex::decode(&settings.private_key).is_ok_and(|k| k.len() == 32) && hex::decode(&settings.public_key).is_ok_and(|k| k.len() == 32);
     if !valid {

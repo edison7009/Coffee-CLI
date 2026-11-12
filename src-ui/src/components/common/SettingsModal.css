@@ -657,3 +657,6 @@
 .settings-mobile-empty { padding: 0 0 12px; text-align: left; }
 @media (max-width: 640px) { .settings-mobile-pairing { flex-direction: column; align-items: flex-start; } }
 .settings-mobile-copy { align-self: flex-start; }
+
+.settings-mobile-address { width: min(300px, 55%); }
+.settings-mobile-firewall .settings-sound-title { color: #e0a060; }

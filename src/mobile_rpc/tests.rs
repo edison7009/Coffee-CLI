@@ -238,6 +238,7 @@ fn mobile_app_protocol_interoperates() {
     let out: Value = serde_json::from_str(&lines.next().expect("result line").unwrap()).unwrap();
     assert!(child.wait().unwrap().success());
     assert_eq!(out["hello"], PROTOCOL);
+    assert_eq!(out["host"], "127.0.0.1", "raced past the unreachable first address");
     assert_eq!(out["ping"], "number");
     assert_eq!(out["bigError"], "invalid_params", "a 200 KB request decrypted and was validated");
     assert_eq!(out["subscribe"]["view"], Value::Null);
@@ -248,12 +249,67 @@ fn mobile_app_protocol_interoperates() {
 }
 
 #[test]
-fn lan_address_skips_proxy_and_virtual_interfaces() {
-    let pick = |list: &[(&str, [u8; 4])]| best_lan_address(list.iter().map(|(n, o)| (*n, Ipv4Addr::from(*o)))).map(|ip| ip.to_string());
-    // A proxy in TUN mode owns the default route with 198.18.0.1; Wi-Fi is the answer.
-    assert_eq!(pick(&[("utun4", [198, 18, 0, 1]), ("en0", [192, 168, 10, 79]), ("en1", [192, 168, 10, 80]), ("lo0", [127, 0, 0, 1])]).as_deref(), Some("192.168.10.79"));
-    // Proxy adapters with private addresses, Docker and link-local are skipped too.
-    assert_eq!(pick(&[("Clash", [172, 19, 0, 1]), ("docker0", [172, 17, 0, 1]), ("eth0", [10, 0, 0, 5]), ("en5", [169, 254, 3, 4])]).as_deref(), Some("10.0.0.5"));
-    assert_eq!(pick(&[("以太网", [192, 168, 1, 20]), ("vEthernet (WSL)", [172, 30, 0, 1])]).as_deref(), Some("192.168.1.20"));
-    assert_eq!(pick(&[("utun3", [198, 19, 0, 1]), ("lo0", [127, 0, 0, 1])]), None);
+fn addresses_skip_proxies_tunnels_and_bridges() {
+    use network::{rank_candidates, Kind, Raw};
+    let raw = |name, o: [u8; 4], p2p| Raw { name, ip: Ipv4Addr::from(o), point_to_point: p2p, up: true };
+    let wifi = vec!["en0".to_string()];
+    // A proxy in TUN mode owns the default route with 198.18.0.1; Wi-Fi comes first.
+    let list = rank_candidates(&[raw("utun4", [198, 18, 0, 1], true), raw("en1", [192, 168, 10, 80], false), raw("en0", [192, 168, 10, 79], false), raw("lo0", [127, 0, 0, 1], false)], &wifi);
+    assert_eq!(list.iter().map(|c| (c.address.as_str(), c.kind)).collect::<Vec<_>>(), [("192.168.10.79", Kind::Wifi), ("192.168.10.80", if cfg!(target_os = "macos") { Kind::Ethernet } else { Kind::Other })]);
+    // Proxy adapters with private addresses, any point-to-point tunnel, Docker and link-local are hidden; Tailscale is kept after LAN.
+    let list = rank_candidates(&[raw("Clash", [172, 19, 0, 1], false), raw("tun0", [10, 8, 0, 2], true), raw("docker0", [172, 17, 0, 1], false), raw("eth0", [10, 0, 0, 5], false), raw("en5", [169, 254, 3, 4], false), raw("tailscale0", [100, 101, 1, 2], false)], &[]);
+    assert_eq!(list.iter().map(|c| (c.address.as_str(), c.kind)).collect::<Vec<_>>(), [("10.0.0.5", Kind::Ethernet), ("100.101.1.2", Kind::Tailscale)]);
+    let list = rank_candidates(&[raw("以太网", [192, 168, 1, 20], false), raw("vEthernet (WSL)", [172, 30, 0, 1], false), raw("WLAN", [192, 168, 1, 21], false)], &[]);
+    assert_eq!(list.iter().map(|c| (c.interface.as_str(), c.kind)).collect::<Vec<_>>(), [("WLAN", Kind::Wifi), ("以太网", Kind::Ethernet)]);
+    // A disconnected adapter is not offered.
+    assert!(rank_candidates(&[Raw { name: "en0", ip: Ipv4Addr::new(192, 168, 1, 2), point_to_point: false, up: false }], &wifi).is_empty());
+}
+
+#[test]
+fn advertised_hosts_put_the_choice_first_and_end_with_the_local_name() {
+    use network::{advertised_hosts, Candidate, Kind};
+    let c = |a: &str, k| Candidate { address: a.into(), interface: "x".into(), kind: k };
+    let list = [c("192.168.1.2", Kind::Wifi), c("10.0.0.3", Kind::Ethernet), c("100.100.1.1", Kind::Tailscale), c("172.20.0.4", Kind::Other)];
+    assert_eq!(advertised_hosts(&list, None, Some("mac.local")), ["192.168.1.2", "10.0.0.3", "100.100.1.1", "mac.local"]);
+    assert_eq!(advertised_hosts(&list, Some("100.100.1.1"), None), ["100.100.1.1", "192.168.1.2", "10.0.0.3"]);
+    // A choice that disappeared falls back to the automatic order.
+    assert_eq!(advertised_hosts(&list, Some("192.168.9.9"), None)[0], "192.168.1.2");
+    // No network: no QR code, not just a .local name.
+    assert!(advertised_hosts(&[], None, Some("mac.local")).is_empty());
+}
+
+#[test]
+fn hardware_ports_find_wifi_devices() {
+    let text = "Hardware Port: Ethernet\nDevice: en0\nEthernet Address: aa\n\nHardware Port: Wi-Fi\nDevice: en1\nEthernet Address: bb\n\nHardware Port: Thunderbolt Bridge\nDevice: bridge0\n";
+    assert_eq!(network::parse_hardware_ports(text), ["en1"]);
+}
+
+#[test]
+fn firewall_decision_follows_windows_rule_precedence() {
+    use firewall::{decide, Rule, Snapshot, State};
+    let rule = |enabled, action: &str, profile: &str| Rule { enabled, action: action.into(), profile: profile.into() };
+    let snap = |rules, cats: &[&str]| Snapshot { rules, categories: cats.iter().map(|c| c.to_string()).collect() };
+    assert_eq!(decide(&snap(vec![rule(true, "Allow", "Private")], &["Private"])), State::Open);
+    assert_eq!(decide(&snap(vec![rule(true, "Allow", "Any")], &["DomainAuthenticated"])), State::Open);
+    // A block rule for the same profile wins; a disabled one does not count.
+    assert_eq!(decide(&snap(vec![rule(true, "Allow", "Private"), rule(true, "Block", "Private, Public")], &["Private"])), State::Blocked);
+    assert_eq!(decide(&snap(vec![rule(true, "Allow", "Private"), rule(false, "Block", "Private")], &["Private"])), State::Open);
+    // No rule yet (first-run prompt dismissed or pending) is blocked on a private network.
+    assert_eq!(decide(&snap(vec![], &["Private"])), State::Blocked);
+    // On a public network only: point to the network setting rather than opening it.
+    assert_eq!(decide(&snap(vec![rule(true, "Allow", "Private")], &["Public"])), State::PublicNetwork);
+    assert_eq!(decide(&snap(vec![rule(true, "Allow", "Public")], &["Public"])), State::Open);
+    assert_eq!(decide(&snap(vec![], &[])), State::Unknown);
+}
+
+#[test]
+fn firewall_scripts_quote_the_program_path() {
+    let exe = r"C:\Users\O'Brien\AppData\Local\Coffee CLI\coffee-cli.exe";
+    let check = firewall::check_script(exe);
+    assert!(check.contains(r"-Program 'C:\Users\O''Brien\AppData\Local\Coffee CLI\coffee-cli.exe'"));
+    let allow = firewall::allow_script(exe, 47391);
+    assert!(allow.contains("-LocalPort 47391 -Action Allow -Profile Private,Domain"));
+    assert!(allow.contains("Remove-NetFirewallRule") && !allow.contains("Public"));
+    // UTF-16LE base64, as -EncodedCommand expects.
+    assert_eq!(firewall::encode_command("ab"), "YQBiAA==");
 }

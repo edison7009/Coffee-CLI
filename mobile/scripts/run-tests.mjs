@@ -2,7 +2,7 @@
 // The desktop interop test lives in src/mobile_rpc/tests.rs (cargo test).
 import assert from 'node:assert/strict';
 import { x25519 } from '@noble/curves/ed25519.js';
-import { Initiator, generateKeyPair, pairingPsk, parsePairingLink, toHex, fromHex, PROTOCOL } from '../src/protocol.ts';
+import { CoffeeClient, Initiator, RpcError, generateKeyPair, pairingPsk, parsePairingLink, toHex, fromHex, PROTOCOL } from '../src/protocol.ts';
 
 let passed = 0;
 const test = (name, fn) => { fn(); passed++; console.log(`ok ${name}`); };
@@ -16,7 +16,10 @@ test('hex round trip and rejection', () => {
 
 test('pairing link parsing', () => {
   const pk = 'ab'.repeat(32), code = 'c0'.repeat(16);
-  assert.deepEqual(parsePairingLink(` coffee://pair?v=${PROTOCOL}&host=192.168.1.8&port=47391&pk=${pk.toUpperCase()}&code=${code} `), { host: '192.168.1.8', port: 47391, publicKey: pk, code });
+  assert.deepEqual(parsePairingLink(` coffee://pair?v=${PROTOCOL}&hosts=192.168.1.8,10.0.0.2,mac.local&port=47391&pk=${pk.toUpperCase()}&code=${code} `), { hosts: ['192.168.1.8', '10.0.0.2', 'mac.local'], port: 47391, publicKey: pk, code });
+  // Single-host links still parse; junk entries are dropped.
+  assert.deepEqual(parsePairingLink(`coffee://pair?v=0&host=192.168.1.8&port=1&pk=${pk}&code=${code}`).hosts, ['192.168.1.8']);
+  assert.deepEqual(parsePairingLink(`coffee://pair?v=0&hosts=a b,192.168.1.8,&port=1&pk=${pk}&code=${code}`).hosts, ['192.168.1.8']);
   for (const bad of ['https://example.com', `coffee://pair?v=9&host=h&port=1&pk=${pk}&code=${code}`, `coffee://pair?v=0&host=h&port=0&pk=${pk}&code=${code}`, `coffee://pair?v=0&host=h&port=1&pk=xyz&code=${code}`, `coffee://pair?v=0&port=1&pk=${pk}&code=${code}`]) {
     assert.throws(() => parsePairingLink(bad), bad);
   }
@@ -39,5 +42,41 @@ test('first message has the IK layout and a wrong desktop key fails the handshak
   assert.throws(() => initiator.finish(new Uint8Array(48)), /handshake rejected/);
   assert.throws(() => new Initiator(phone, new Uint8Array(31), new Uint8Array(32)));
 });
+
+// Fake sockets: each URL decides whether it opens, fails or hangs.
+function fakeSockets(plan) {
+  const made = [];
+  const create = url => {
+    const socket = { url, binaryType: '', sent: [], closed: false, send(d) { this.sent.push(d); }, close() { this.closed = true; }, onopen: null, onclose: null, onerror: null, onmessage: null };
+    made.push(socket);
+    const [action, delay] = plan[new URL(url).hostname] ?? ['hang'];
+    if (action !== 'hang') setTimeout(() => (action === 'open' ? socket.onopen : socket.onerror)?.(), delay);
+    return socket;
+  };
+  return { made, create };
+}
+const desktopKeys = generateKeyPair();
+const options = (hosts, create) => ({ desktop: { hosts, port: 47391, publicKey: toHex(desktopKeys.publicKey) }, keys: generateKeyPair(), deviceName: 't', platform: 'node', appVersion: '0', createSocket: create, timeoutMs: 200, dialTimeoutMs: 200 });
+
+await (async () => {
+  // The first address to open wins even when it is not first in the list; the rest are closed
+  // and only the winner receives the handshake.
+  const { made, create } = fakeSockets({ '10.0.0.1': ['fail', 5], '10.0.0.2': ['open', 30], '10.0.0.3': ['open', 10] });
+  await assert.rejects(CoffeeClient.connect(options(['10.0.0.1', '10.0.0.2', '10.0.0.3', '10.0.0.4'], create)), (e) => e instanceof RpcError);
+  const winner = made.find(s => s.url.includes('10.0.0.3'));
+  assert.equal(winner.sent.length, 1, 'winner got the first handshake message');
+  assert.equal(made.filter(s => s !== winner && s.sent.length).length, 0, 'losers sent nothing');
+  assert.ok(made.filter(s => s !== winner).every(s => s.closed || s.url.includes('10.0.0.1')), 'losers closed');
+  passed++; console.log('ok dialing races every address and hands the handshake to one');
+})();
+
+await (async () => {
+  const { create } = fakeSockets({ a: ['fail', 5], b: ['fail', 10] });
+  await assert.rejects(CoffeeClient.connect(options(['a', 'b'], create)), e => e.code === 'unreachable' && e.message === 'connection failed');
+  const hang = fakeSockets({});
+  await assert.rejects(CoffeeClient.connect(options(['c'], hang.create)), e => e.code === 'unreachable' && e.message === 'timed out');
+  assert.ok(hang.made[0].closed);
+  passed++; console.log('ok nothing answering is unreachable, failing fast or after the dial timeout');
+})();
 
 console.log(`${passed} mobile protocol tests passed`);
