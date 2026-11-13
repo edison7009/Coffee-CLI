@@ -551,9 +551,10 @@
 }
 
 
-.sidebar-footer-status-button { display: flex; align-items: center; gap: 8px; max-width: 100%; padding: 6px 8px; border: 0; border-radius: var(--shape-radius-btn); color: var(--text-2); background: transparent; font: inherit; font-size: var(--type-body); font-weight: 500; letter-spacing: .02em; line-height: 1.3; text-align: left; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sidebar-footer-status-button { display: flex; align-items: center; gap: 8px; max-width: 100%; padding: 6px 8px 6px 13.5px; border: 0; border-radius: var(--shape-radius-btn); color: var(--text-2); background: transparent; font: inherit; font-size: var(--type-body); font-weight: 500; letter-spacing: .02em; line-height: 1.3; text-align: left; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sidebar-footer-status-button:hover { background: var(--bg-hover); }
 .sidebar-footer-status-button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+/* The dot's left padding centres it under the session list's tool icons. */
 .sidebar-footer-status-button i { flex-shrink: 0; width: 7px; height: 7px; border-radius: 50%; background: var(--text-3); opacity: .5; }
 .sidebar-footer-status-button[data-on] i { background: #4caf7a; opacity: 1; }
 .sidebar-footer-status-button { width: 100%; }
@@ -563,12 +564,13 @@
 .sidebar-web-device i { flex-shrink: 0; width: 7px; height: 7px; border-radius: 50%; background: #4caf7a; }
 .sidebar-web-device-kind { flex-shrink: 0; color: var(--text-3); }
 .sidebar-web-device-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sidebar-web-chevron { flex-shrink: 0; width: 14px; height: 14px; margin-left: auto; opacity: .6; transition: transform .15s; }
-.sidebar-footer-status-button[aria-expanded="true"] .sidebar-web-chevron { transform: rotate(180deg); }
-.sidebar-web-menu { animation-name: sidebar-web-pop; transform-origin: bottom left; }
+.sidebar-web-chevron { flex-shrink: 0; width: 14px; height: 14px; margin-left: auto; opacity: .6; }
+/* As wide as its longest row in each language. */
+.ctx-menu.sidebar-web-menu { width: max-content; min-width: 168px; max-width: min(320px, calc(100vw - 16px)); transform-origin: bottom left; animation: sidebar-web-rise .16s cubic-bezier(.2, .8, .2, 1); }
+@media (prefers-reduced-motion: reduce) { .ctx-menu.sidebar-web-menu { animation: none; } }
 /* Opaque on every shape: the glass menu wash lets the session list show through and the rows become unreadable. */
 .ctx-menu.sidebar-web-menu, [data-shape] .ctx-menu.sidebar-web-menu { background-color: var(--bg-app) !important; background-image: none !important; border: 1px solid var(--border) !important; backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: 0 2px 6px rgba(0, 0, 0, .25), 0 12px 32px rgba(0, 0, 0, .35); }
-@keyframes sidebar-web-pop { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@keyframes sidebar-web-rise { from { opacity: 0; transform: translateY(6px) scale(.97); } to { opacity: 1; transform: none; } }
 .sidebar-web-menu .ctx-menu-item:disabled { cursor: default; opacity: .5; }
 .sidebar-web-menu .ctx-menu-item:disabled:hover { background: transparent; color: var(--text-2); }
 .sidebar-web-error { padding: 6px 10px; color: var(--danger, #e5484d); font-size: var(--type-label); white-space: normal; }

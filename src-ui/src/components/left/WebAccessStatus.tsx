@@ -71,10 +71,10 @@ export function WebAccessStatus() {
       onClick={() => { setError(''); if (connected) setOpen(value => !value); else settings(); }}>
       <i aria-hidden="true" />
       <span className="sidebar-web-label">{label}</span>
-      {connected && <svg className="sidebar-web-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 15 6-6 6 6" /></svg>}
+      {connected && <svg className="sidebar-web-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>}
     </button>
     {open && rect && createPortal(<div ref={menu} className="ctx-menu sidebar-web-menu" role="menu" aria-label={label}
-      style={{ position: 'fixed', left: rect.left, bottom: window.innerHeight - rect.top + 6, width: Math.max(rect.width, 240) }}>
+      style={{ position: 'fixed', left: rect.left, bottom: window.innerHeight - rect.top + 6 }}>
       {/* The mobile app is not out yet; the entry shows where it will live. */}
       <button type="button" role="menuitem" className="ctx-menu-item" aria-disabled="true" disabled>{t('sidebar.devices.mobile_app')}</button>
       <div className="ctx-menu-divider" />
