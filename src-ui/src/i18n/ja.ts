@@ -516,6 +516,8 @@ export const ja = {
   'gambit.voice.listening': '聞き取り中',
   'settings.voice': '音声入力',
   "settings.mobile": "デバイス接続",
+  "remote.notify.wait": "確認待ち",
+  "remote.notify.done": "完了",
   "sidebar.devices.none": "接続中のデバイスはありません",
   "sidebar.devices.count": "{count} 台が接続中",
   "sidebar.devices.web": "Web",

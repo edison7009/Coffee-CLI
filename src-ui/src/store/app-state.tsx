@@ -354,7 +354,8 @@ export type Action =
   | { type: 'SET_GAMBIT_ENTER_TO_SEND'; value: boolean }
   | { type: 'SET_HOTKEY_SCHEME'; value: HotkeyScheme }
   | { type: 'SET_TITLEBAR_TOGGLE_DISPLAY'; value: TitlebarToggleDisplay }
-  | { type: 'SET_GAMBIT_DRAFT'; id: string; draft: string }
+  | { type: 'SET_GAMBIT_DRAFT'; id: string; draft: string; fromOtherScreen?: boolean }
+  | { type: 'MIRROR_DRAFTS'; drafts: Record<string, string> }
   | { type: 'APPEND_GAMBIT_DRAFT'; id: string; text: string }
   | { type: 'SET_SESSION_TOKEN'; id: string; token: string }
   | { type: 'TOGGLE_LEFT_PANEL' }
@@ -684,6 +685,16 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, hotkeyScheme: action.value };
     case 'SET_TITLEBAR_TOGGLE_DISPLAY':
       return { ...state, titlebarToggleDisplay: action.value };
+    case 'MIRROR_DRAFTS': {
+      let changed = false;
+      const terminals = state.terminals.map(t => {
+        const draft = t.mirror ? action.drafts[t.id] : undefined;
+        if (draft === undefined || draft === (t.gambitDraft ?? '')) return t;
+        changed = true;
+        return { ...t, gambitDraft: draft };
+      });
+      return changed ? { ...state, terminals } : state;
+    }
     case 'SET_GAMBIT_DRAFT':
       return {
         ...state,
@@ -968,6 +979,17 @@ function getInitialState(): AppState {
   };
 }
 
+// ─── Composer drafts: one draft per tab, typed on either screen ──────────────
+
+/** When this screen last typed in a tab's composer. The other screen's draft waits until typing pauses,
+ *  so neither side overwrites what someone is in the middle of writing. */
+const draftEdits = new Map<string, number>();
+export const DRAFT_QUIET_MS = 1200;
+export const typingDraft = (id: string): boolean => Date.now() - (draftEdits.get(id) ?? 0) < DRAFT_QUIET_MS;
+function noteDraftEdit(action: Action): void {
+  if (action.type === 'SET_GAMBIT_DRAFT' && !action.fromOtherScreen || action.type === 'APPEND_GAMBIT_DRAFT') draftEdits.set(action.id, Date.now());
+}
+
 // ─── Browser: tab changes run on the desktop ─────────────────────────────────
 
 /** Tabs the browser asked the desktop to open: shown here as soon as the desktop lists them. */
@@ -979,7 +1001,20 @@ const current = () => browserState ?? getInitialState();
 function browserDispatch(local: React.Dispatch<Action>): React.Dispatch<Action> {
   const desk = (id: string | undefined) => !!id && !!current().terminals.find(tab => tab.id === id)?.mirror;
   const send = (action: Action) => { void remoteRequest('ui.dispatch', { action }).catch(error => console.error('[remote tab]', error)); };
+  const draftTimers = new Map<string, ReturnType<typeof setTimeout>>();
   return action => {
+    // Drafts: shown here at once, sent to the desktop when typing pauses for a moment.
+    if ((action.type === 'SET_GAMBIT_DRAFT' || action.type === 'APPEND_GAMBIT_DRAFT') && desk(action.id)) {
+      noteDraftEdit(action); local(action);
+      const id = action.id;
+      clearTimeout(draftTimers.get(id));
+      draftTimers.set(id, setTimeout(() => {
+        draftTimers.delete(id);
+        const draft = current().terminals.find(tab => tab.id === id)?.gambitDraft ?? '';
+        send({ type: 'SET_GAMBIT_DRAFT', id, draft, fromOtherScreen: true });
+      }, 250));
+      return;
+    }
     // Settings are the desktop's: change them there, and here at once so the click feels immediate.
     if (SETTINGS_ACTIONS.has(action.type)) { send(action); local(action); return; }
     switch (action.type) {
@@ -1025,7 +1060,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [state, localDispatch] = useReducer(reducer, undefined, getInitialState);
   const stateRef = useRef(state);
   // In the browser, opening, closing and changing tabs is asked of the desktop.
-  const [dispatch] = useState(() => REMOTE ? browserDispatch(localDispatch) : localDispatch);
+  const [dispatch] = useState(() => REMOTE ? browserDispatch(localDispatch) : (action: Action) => { noteDraftEdit(action); localDispatch(action); });
   useLayoutEffect(() => { stateRef.current = state; if (REMOTE) browserState = state; }, [state]);
   // The combined-context value has to be recomputed whenever state changes,
   // so keeping the split contexts lets hot components subscribe only to the

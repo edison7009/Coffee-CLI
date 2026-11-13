@@ -518,6 +518,8 @@ export const vi = {
   'gambit.voice.listening': 'Đang nghe',
   'settings.voice': 'Nhập giọng nói',
   "settings.mobile": "Kết nối thiết bị",
+  "remote.notify.wait": "Đang chờ bạn",
+  "remote.notify.done": "Xong",
   "sidebar.devices.none": "Chưa có thiết bị kết nối",
   "sidebar.devices.count": "{count} thiết bị đã kết nối",
   "sidebar.devices.web": "Web",

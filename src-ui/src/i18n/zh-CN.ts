@@ -517,6 +517,8 @@ export const zhCN = {
   'gambit.voice.listening': '正在聆听',
   'settings.voice': '语音输入',
   "settings.mobile": "设备连接",
+  "remote.notify.wait": "等待你确认",
+  "remote.notify.done": "已完成",
   "sidebar.devices.none": "尚未有设备连接",
   "sidebar.devices.count": "{count} 台设备已连接",
   "sidebar.devices.web": "Web 端",

@@ -76,6 +76,9 @@ async function invoke(cmd: string, args: Record<string, unknown> = {}): Promise<
     case 'plugin:event|emit': case 'plugin:event|emit_to': dispatch(String(args.event), args.payload); return null;
     // Links open on the phone itself.
     case 'open_url': window.open(String(args.url), '_blank', 'noopener'); return null;
+    // The file tree's folder is watched on the computer by a watcher of this browser's own.
+    case 'start_fs_watcher': return (await connected()).request('ui.watch', { path: String(args.path ?? '') });
+    case 'stop_fs_watcher': return (await connected()).request('ui.watch', { path: null });
     // A pasted image (composers, terminals) becomes a file on the computer: upload it instead of one large frame.
     case 'save_clipboard_image': {
       const ext = String(args.extension ?? 'png');

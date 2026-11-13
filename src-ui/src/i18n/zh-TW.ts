@@ -517,6 +517,8 @@ export const zhTW = {
   'gambit.voice.listening': '正在聆聽',
   'settings.voice': '語音輸入',
   "settings.mobile": "裝置連線",
+  "remote.notify.wait": "等待你確認",
+  "remote.notify.done": "已完成",
   "sidebar.devices.none": "尚未有裝置連線",
   "sidebar.devices.count": "{count} 台裝置已連線",
   "sidebar.devices.web": "Web 端",

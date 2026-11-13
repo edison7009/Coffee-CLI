@@ -514,6 +514,8 @@ export const de = {
   'gambit.voice.listening': 'Hört zu',
   'settings.voice': 'Spracheingabe',
   "settings.mobile": "Geräte",
+  "remote.notify.wait": "Wartet auf dich",
+  "remote.notify.done": "Fertig",
   "sidebar.devices.none": "Keine Geräte verbunden",
   "sidebar.devices.count": "{count} verbunden",
   "sidebar.devices.web": "Web",

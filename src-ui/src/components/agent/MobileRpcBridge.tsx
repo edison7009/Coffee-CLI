@@ -5,13 +5,13 @@ import { useAppState, useAppStateRef } from '../../store/app-state';
 import { commands, invoke, isTauri } from '../../tauri';
 import { getAgentSession } from '../../lib/agent-session';
 import { isClaudeConversation, isCodexConversation, isDshConversation, isOpenCodeConversation, isPiConversation } from '../../lib/chat-tools';
-import { SETTINGS_ACTIONS, pickMirroredSettings, type Action, type TerminalSession } from '../../store/app-state';
+import { SETTINGS_ACTIONS, pickMirroredSettings, typingDraft, type Action, type TerminalSession } from '../../store/app-state';
 import { writeFromBrowser } from '../../lib/storage-mirror';
 import { mirrorSnapshot, mirrorSource, runMirrorAction, setMirrorActive, type MirrorKind } from '../../lib/session-mirror';
 import type { MobileRpcStatus } from '../../tauri';
 
 /** Tab changes a browser may ask for; everything else it does stays in the browser. */
-const BROWSER_ACTIONS = new Set<Action['type']>(['ADD_TERMINAL', 'LAUNCH_TERMINAL_TOOL', 'SET_TERMINAL_TOOL', 'REMOVE_TERMINAL', 'CLOSE_TERMINAL_GROUP', 'RESTART_TERMINAL', 'SET_TERMINAL_HIDDEN', 'SET_TERMINAL_WORKTREE', 'SET_TAB_TITLE']);
+const BROWSER_ACTIONS = new Set<Action['type']>(['SET_GAMBIT_DRAFT', 'ADD_TERMINAL', 'LAUNCH_TERMINAL_TOOL', 'SET_TERMINAL_TOOL', 'REMOVE_TERMINAL', 'CLOSE_TERMINAL_GROUP', 'RESTART_TERMINAL', 'SET_TERMINAL_HIDDEN', 'SET_TERMINAL_WORKTREE', 'SET_TAB_TITLE']);
 const MIRROR_KINDS = new Set<MirrorKind>(['claude', 'codex', 'opencode', 'pi', 'dsh', 'app']);
 
 interface MobileRequest { requestId: string; method: string; params: { id?: string; text?: string; name?: string; cmd?: string; args?: Record<string, unknown> | unknown[]; kind?: string; action?: Action & { cwd?: string } } }
@@ -58,6 +58,11 @@ export function MobileRpcBridge() {
       .then(unlisten => { if (disposed) unlisten(); else stop = unlisten; });
     return () => { disposed = true; stop?.(); setMirrorActive(false); };
   }, []);
+  // Every tab's unsent composer draft, followed by every browser.
+  const [draftsChanged] = useState(() => mirrorSource('app', 'drafts', () => Object.fromEntries(stateRef.current.terminals
+    .filter(tab => tab.tool && !tab.isHidden).map(tab => [tab.id, tab.gambitDraft ?? '']))));
+  const draftsKey = JSON.stringify(state.terminals.map(tab => [tab.id, tab.gambitDraft ?? '']));
+  useEffect(() => { draftsChanged(); }, [draftsKey, draftsChanged]);
   // The desktop's settings, followed by every browser (see MIRRORED_SETTINGS).
   const [settingsChanged] = useState(() => mirrorSource('app', 'settings', () => pickMirroredSettings(stateRef.current)));
   const settingsKey = JSON.stringify(pickMirroredSettings(state));
@@ -86,8 +91,10 @@ export function MobileRpcBridge() {
       if (method === 'ui.dispatch') {
         const action = params.action;
         if (!action || !BROWSER_ACTIONS.has(action.type) && !SETTINGS_ACTIONS.has(action.type)) throw new RequestError('Unsupported change', 'internal');
+        // Someone is typing in this composer here: their words win; the browser gets them back as a draft.
+        if (action.type === 'SET_GAMBIT_DRAFT' && typingDraft(action.id)) return {};
         const before = stateRef.current.activeTerminalId;
-        let next: Action = action;
+        let next: Action = action.type === 'SET_GAMBIT_DRAFT' ? { ...action, fromOtherScreen: true } : action;
         // Choosing a tool on the browser's blank launch page opens a new desktop tab.
         if (action.type === 'SET_TERMINAL_TOOL' && !stateRef.current.terminals.some(tab => tab.id === action.id)) {
           next = { type: 'LAUNCH_TERMINAL_TOOL', id: action.id, tool: action.tool, cwd: action.cwd, toolData: action.toolData, resumeToken: action.resumeToken, claudeMode: action.claudeMode, codexMode: action.codexMode, opencodeMode: action.opencodeMode, piMode: action.piMode };

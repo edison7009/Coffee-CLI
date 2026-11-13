@@ -36,6 +36,42 @@ import { commands, isTauri } from '../tauri';
 import { IS_WINDOWS } from './platform';
 import type { OrchestrationTask } from './orchestration';
 import { promptSubmitted } from './notify-prompts';
+import { REMOTE } from '../remote/bridge';
+import { mirrorSource, mirrorTarget } from './session-mirror';
+
+// ─── Browsers hear what the desktop hears ───────────────────────────────────
+// The desktop decides when a chime is due (children, orchestration, start-up guards); each one is
+// numbered and passed on, and a browser showing the desktop plays it and marks its page title.
+
+let notice = { n: 0, kind: 'done' as NotifyKind };
+const passOn = REMOTE ? null : mirrorSource('app', 'notify', () => notice);
+function announce(kind: NotifyKind) { notice = { n: notice.n + 1, kind }; passOn?.(); }
+
+/** Browser: plays the desktop's chimes. Returns the stop function. */
+export function followDesktopNotices(waitTitle: string, doneTitle: string): () => void {
+  let last: number | null = null, base = document.title, flashing: ReturnType<typeof setInterval> | undefined;
+  const settle = () => { clearInterval(flashing); flashing = undefined; document.title = base; };
+  const onFocus = () => { if (!document.hidden) settle(); };
+  // Phones only let a page make sound after it has been touched once.
+  const unlock = () => { audioCtx(); };
+  window.addEventListener('pointerdown', unlock, { once: true });
+  window.addEventListener('focus', onFocus);
+  document.addEventListener('visibilitychange', onFocus);
+  const stop = mirrorTarget('app', 'notify', state => {
+    const next = state as typeof notice;
+    // The first copy is history, not news.
+    if (last === null || next.n <= last) { last = Math.max(last ?? 0, next.n); return; }
+    last = next.n;
+    if (enabled(next.kind === 'wait' ? 'cc-sound-wait' : 'cc-sound-done')) playWebAudioSound(next.kind);
+    if (document.hidden || !document.hasFocus()) {
+      settle(); base = document.title;
+      const mark = `● ${next.kind === 'wait' ? waitTitle : doneTitle}`;
+      let on = false;
+      flashing = setInterval(() => { on = !on; document.title = on ? mark : base; }, 1000);
+    }
+  });
+  return () => { stop(); settle(); window.removeEventListener('pointerdown', unlock); window.removeEventListener('focus', onFocus); document.removeEventListener('visibilitychange', onFocus); };
+}
 
 export type NotifyKind = 'done' | 'wait';
 
@@ -259,6 +295,7 @@ export function initNotifySound(
 
     if (becameWaiting) {
       cancelPendingDone(terminal.id);
+      announce('wait');
       if (enabled('cc-sound-wait')) playNotifySound('wait');
       requestAttention('wait');
       continue;
@@ -272,6 +309,7 @@ export function initNotifySound(
       // A permission frame or resumed work observed during the settle window
       // wins; only a terminal that remained idle is genuinely complete.
       if (prevStatus.get(sessionId) !== 'idle') return;
+      announce('done');
       if (enabled('cc-sound-done')) playNotifySound('done');
       requestAttention('done');
     }, DONE_SETTLE_MS);

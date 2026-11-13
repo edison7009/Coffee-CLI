@@ -18,6 +18,7 @@ const mock = `
   window.updateView=patch=>{state={...state,...patch};listeners.forEach(fn=>fn())};
   export function useAppState(){return {state:useSyncExternalStore(fn=>{listeners.add(fn);return()=>listeners.delete(fn)},()=>state),dispatch(action){if(action.type==='REMOVE_TERMINAL')(window.removed??=[]).push(action.id);else if(action.type==='SET_ACTIVE_TERMINAL')window.selectedChild=action.id;else if(action.type==='RESTORE_WORKER_SESSION'){(window.restoreActions??=[]).push(action);window.opened=true}else {window.lastAction=action;window.opened=true}}}}
   export function useAppLanguage(){return 'en'};
+  export function invoke(){return Promise.resolve(null)};
   export function useAppStateRef(){return {current:state}};
   const sessions=[{id:'one',tool:'claude',session_token:'one',name:'Working on the first task',cwd:'D:/same',saved_at:'2026-10-23T00:00:00Z'},{id:'two',tool:'claude',session_token:'two',name:'Another task in the same folder',cwd:'D:/same',saved_at:'2026-10-22T00:00:00Z'},{id:'other',tool:'codex',session_token:'one',name:'Different tool with the same token',cwd:'D:/same',saved_at:'2026-10-21T00:00:00Z'}];
   if(new URLSearchParams(location.search).has('workers')) sessions.push(...['codex','opencode'].map((tool,index)=>({id:'saved-worker-'+index,tool,session_token:'worker-native-'+index,name:'You are a worker assigned to an internal task',cwd:'D:/same',saved_at:'2026-10-24T00:00:00Z'})));

@@ -288,7 +288,9 @@ export function App() {
   // Completion / permission chimes (Settings ▸ Sound). Reads the terminals
   // array (the same source the dynamic island reads via agentStatus) so chimes
   // match the visual status exactly. This fires on every terminals change.
+  // A browser showing the desktop plays the desktop's chimes instead (RemoteMirror).
   useEffect(() => {
+    if (REMOTE) return;
     return initNotifySound(state.terminals, orchestration.tasks);
   }, [state.terminals, orchestration.tasks]);
 

@@ -73,11 +73,18 @@ assert.equal(diffState(after1, after1), null);
 // A shorter list (a rewound conversation) still comes out right.
 assert.deepEqual(applyPatch(after1, { v: 2, ...diffState(after1, { ...after1, messages: [m1] }) }).messages, [m1]);
 
+// Drafts: the desktop's unsent text shows in the matching desktop tab; tabs of this screen keep theirs.
+state = { terminals: [{ id: 'd', tool: 'claude', folderPath: null, mirror: true, gambitDraft: 'old' }, { id: 'own', tool: null, folderPath: null, gambitDraft: 'mine' }], tabOrder: ['d', 'own'], activeTerminalId: 'd' };
+state = reducer(state, { type: 'MIRROR_DRAFTS', drafts: { d: 'typed on the desktop', own: 'no' } });
+assert.equal(state.terminals[0].gambitDraft, 'typed on the desktop');
+assert.equal(state.terminals[1].gambitDraft, 'mine');
+const quiet = state; assert.equal(reducer(state, { type: 'MIRROR_DRAFTS', drafts: { d: 'typed on the desktop' } }), quiet, 'nothing new: no re-render');
+
 // Settings mirror: the desktop's values win; anything outside the list is ignored.
 state = { ...state, currentTheme: 'sakura', settingsOpen: false };
 state = reducer(state, { type: 'MIRROR_SETTINGS', settings: { currentTheme: 'ocean', currentLang: 'en', settingsOpen: true, terminals: [] } });
 assert.equal(state.currentTheme, 'ocean'); assert.equal(state.currentLang, 'en');
-assert.equal(state.settingsOpen, false); assert.equal(state.terminals.length, 1);
+assert.equal(state.settingsOpen, false); assert.equal(state.terminals.length, 2, 'tabs are not settings');
 const same = state; assert.equal(reducer(state, { type: 'MIRROR_SETTINGS', settings: { currentTheme: 'ocean' } }), same);
 // Saved records: the desktop's, except screen layout, per-device caches and remote-terminal profiles.
 for (const key of ['coffee:recent-folders', 'coffee:last-folder-by-tool', 'coffee:claude-launch-mode', 'coffee_pinned_items', 'cc-gambit-history', 'cc-automations']) assert.ok(isMirroredKey(key), key);

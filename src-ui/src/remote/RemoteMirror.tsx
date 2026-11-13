@@ -1,8 +1,10 @@
 // In the browser: the tab strip and the settings are the desktop's. Re-reads the desktop's tab list whenever it
 // changes and shows tabs this browser asked the desktop to open (see SYNC_MIRROR_TABS).
 import { useEffect } from 'react';
-import { openedFromBrowser, useAppState, type AgentStatus, type ClaudeMode, type MirroredSettings, type MirrorTab, type TerminalSession, type ToolType } from '../store/app-state';
+import { DRAFT_QUIET_MS, openedFromBrowser, typingDraft, useAppState, type AgentStatus, type ClaudeMode, type MirroredSettings, type MirrorTab, type TerminalSession, type ToolType } from '../store/app-state';
 import { mirrorTarget } from '../lib/session-mirror';
+import { followDesktopNotices } from '../lib/notify-sound';
+import { useT } from '../i18n/useT';
 import { onRemoteEvent, onRemoteStatus, remoteRequest, remoteStatus } from './bridge';
 
 interface ListedSession {
@@ -13,6 +15,10 @@ interface ListedSession {
 
 export function RemoteMirror() {
   const { state, dispatch } = useAppState();
+  const t = useT();
+  const waitTitle = t('remote.notify.wait'), doneTitle = t('remote.notify.done');
+  // The desktop's completion and approval chimes, with a page title mark while this tab is in the background.
+  useEffect(() => followDesktopNotices(waitTitle, doneTitle), [waitTitle, doneTitle]);
 
   useEffect(() => {
     let disposed = false, timer: ReturnType<typeof setTimeout> | undefined, running = false, again = false;
@@ -40,6 +46,20 @@ export function RemoteMirror() {
 
   // The desktop's settings: theme, language, fonts, wallpaper and the rest look exactly as there.
   useEffect(() => mirrorTarget('app', 'settings', settings => dispatch({ type: 'MIRROR_SETTINGS', settings: settings as Partial<MirroredSettings> })), [dispatch]);
+
+  // Drafts typed on the desktop; a composer someone is typing in here keeps its words until they pause.
+  useEffect(() => {
+    let latest: Record<string, string> = {}, timer: ReturnType<typeof setTimeout> | undefined;
+    const apply = () => {
+      clearTimeout(timer); timer = undefined;
+      const entries = Object.entries(latest);
+      dispatch({ type: 'MIRROR_DRAFTS', drafts: Object.fromEntries(entries.filter(([id]) => !typingDraft(id))) });
+      // Held back while typing here: offered again once the typing pauses.
+      if (entries.some(([id]) => typingDraft(id))) timer = setTimeout(apply, DRAFT_QUIET_MS);
+    };
+    const stop = mirrorTarget('app', 'drafts', drafts => { latest = drafts as Record<string, string>; apply(); });
+    return () => { clearTimeout(timer); stop(); };
+  }, [dispatch]);
 
   // A tab opened from here is shown as soon as the desktop has it.
   useEffect(() => {

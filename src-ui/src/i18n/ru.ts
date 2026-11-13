@@ -514,6 +514,8 @@ export const ru = {
   'gambit.voice.listening': 'Слушаю',
   'settings.voice': 'Голосовой ввод',
   "settings.mobile": "Устройства",
+  "remote.notify.wait": "Ждёт вашего ответа",
+  "remote.notify.done": "Готово",
   "sidebar.devices.none": "Нет подключённых устройств",
   "sidebar.devices.count": "подключено: {count}",
   "sidebar.devices.web": "Web",

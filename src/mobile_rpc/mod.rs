@@ -67,6 +67,8 @@ struct Client {
     ui: AtomicBool,
     /// Files this browser is sending (Web 端 uploads).
     uploads: Mutex<upload::Uploads>,
+    /// The folder this browser's file tree shows, watched for changes; dropped with the connection.
+    watcher: Mutex<Option<crate::fs_watcher::FsWatcher>>,
 }
 
 #[derive(Default)]
@@ -261,7 +263,7 @@ async fn serve(stream: TcpStream) {
     let channel = Arc::new(channel);
 
     let (tx, mut rx) = mpsc::channel::<Value>(CLIENT_QUEUE);
-    let client = Arc::new(Client { device: client_device, kill: tokio::sync::Notify::new(), tx, subscriptions: Mutex::default(), resync: Mutex::default(), ui: AtomicBool::new(false), uploads: Mutex::default() });
+    let client = Arc::new(Client { device: client_device, kill: tokio::sync::Notify::new(), tx, subscriptions: Mutex::default(), resync: Mutex::default(), ui: AtomicBool::new(false), uploads: Mutex::default(), watcher: Mutex::default() });
     let client_id = hub().next_client.fetch_add(1, Ordering::SeqCst);
     hub().clients.lock().unwrap().insert(client_id, client.clone());
     let writer_channel = channel.clone();
@@ -453,6 +455,19 @@ async fn handle(client: &Client, request: &Value) -> Result<Value, RpcError> {
             client.uploads.lock().unwrap().finish(id).map(|path| json!({"path": path})).map_err(|e| ("invalid_params", e))
         }
         "ui.terminal.attach" => terminal_attach(&id()?),
+        // The browser's file tree: its own watcher, so the desktop's (one per window) is left alone.
+        "ui.watch" => {
+            let path = params["path"].as_str().map(str::to_owned);
+            let app = hub().app.lock().unwrap().clone().ok_or(("internal", "app unavailable".to_string()))?;
+            let watcher = match path {
+                Some(path) => Some(tauri::async_runtime::spawn_blocking(move || crate::fs_watcher::FsWatcher::start(app, path.into())).await
+                    .map_err(|e| ("internal", e.to_string()))?.map_err(|e| ("invalid_params", e))?),
+                None => None,
+            };
+            let old = std::mem::replace(&mut *client.watcher.lock().unwrap(), watcher);
+            drop(old);
+            Ok(json!({}))
+        }
         // The browser keeps no sessions of its own. Conversations: the desktop's state, then patches
         // (`mobile_rpc_mirror`); actions and tab changes run on the desktop.
         "mirror.snapshot" => gui("mirror.snapshot", json!({"kind": params["kind"], "id": params["id"]})).await,

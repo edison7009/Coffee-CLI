@@ -516,6 +516,8 @@ export const ko = {
   'gambit.voice.listening': '듣는 중',
   'settings.voice': '음성 입력',
   "settings.mobile": "기기 연결",
+  "remote.notify.wait": "확인 대기 중",
+  "remote.notify.done": "완료",
   "sidebar.devices.none": "연결된 기기 없음",
   "sidebar.devices.count": "{count}대 연결됨",
   "sidebar.devices.web": "Web",
