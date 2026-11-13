@@ -556,3 +556,17 @@
 .sidebar-footer-status-button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .sidebar-footer-status-button i { flex-shrink: 0; width: 7px; height: 7px; border-radius: 50%; background: var(--text-3); opacity: .5; }
 .sidebar-footer-status-button[data-on] i { background: #4caf7a; opacity: 1; }
+.sidebar-footer-status-button { width: 100%; }
+.sidebar-footer-status-button[aria-expanded="true"] { background: var(--bg-hover); }
+.sidebar-web-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.sidebar-web-device { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 7px 10px; color: var(--text-1); font-size: var(--type-label); font-weight: 500; cursor: default; }
+.sidebar-web-device i { flex-shrink: 0; width: 7px; height: 7px; border-radius: 50%; background: #4caf7a; }
+.sidebar-web-device-kind { flex-shrink: 0; color: var(--text-3); }
+.sidebar-web-device-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sidebar-web-chevron { flex-shrink: 0; width: 14px; height: 14px; margin-left: auto; opacity: .6; transition: transform .15s; }
+.sidebar-footer-status-button[aria-expanded="true"] .sidebar-web-chevron { transform: rotate(180deg); }
+.sidebar-web-menu { animation-name: sidebar-web-pop; transform-origin: bottom left; }
+@keyframes sidebar-web-pop { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.sidebar-web-menu .ctx-menu-item:disabled { cursor: default; opacity: .5; }
+.sidebar-web-menu .ctx-menu-item:disabled:hover { background: transparent; color: var(--text-2); }
+.sidebar-web-error { padding: 6px 10px; color: var(--danger, #e5484d); font-size: var(--type-label); white-space: normal; }

@@ -12,6 +12,9 @@ pub struct Device {
     pub public_key: String,
     pub name: String,
     pub paired_at: i64,
+    /// What the device said it is at pairing ("web", "ios", "android"); empty for older pairings.
+    #[serde(default)]
+    pub platform: String,
 }
 
 #[derive(Clone, Serialize, Deserialize)]

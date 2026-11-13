@@ -52,12 +52,12 @@ try {
   await page.goto(`http://127.0.0.1:${server.address().port}`);
 
   // Off by default: nothing can be paired until phones are allowed.
-  const master = page.getByRole('switch', { name: '允许浏览器访问', exact: true });
+  const master = page.getByRole('switch', { name: '允许其他设备连接', exact: true });
   await page.waitForFunction(() => document.querySelector('[role=switch]')?.disabled === false, null, { timeout: 5000 }).catch(e => { throw new Error(errors.join('\n') || e.message); });
   assert.equal(await master.getAttribute('aria-checked'), 'false');
   const pair = page.getByRole('button', { name: '配对', exact: true });
   assert.equal(await pair.isDisabled(), true);
-  await page.getByText('请先打开“允许浏览器访问”。').waitFor();
+  await page.getByText('请先打开“允许其他设备连接”。').waitFor();
   await page.getByText('还没有配对的设备。').waitFor();
 
   await master.click();

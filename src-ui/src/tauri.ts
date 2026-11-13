@@ -460,7 +460,7 @@ export interface ToolConfigEntry {
   history_path: string;
 }
 
-export interface MobileRpcDevice { publicKey: string; name: string; pairedAt: number }
+export interface MobileRpcDevice { publicKey: string; name: string; pairedAt: number; platform?: string }
 export interface MobileRpcAddress { address: string; interface: string; kind: 'wifi' | 'ethernet' | 'tailscale' | 'other' }
 export interface MobileRpcStatus { enabled: boolean; port: number; publicKey: string; devices: MobileRpcDevice[]; connected: string[]; host: string | null; hosts: string[]; addresses: MobileRpcAddress[]; preferredAddress: string | null; clients: number; protocol: number }
 export interface MobileRpcFirewall { state: 'open' | 'blocked' | 'public_network' | 'unknown' }

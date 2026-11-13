@@ -67,7 +67,7 @@ fn config_generates_a_key_pair_and_defaults_off() {
     // A damaged key pair is replaced, and the pairings bound to it are dropped.
     let mut broken = settings.clone();
     broken.private_key = "zz".into();
-    broken.devices.push(config::Device { public_key: "aa".into(), name: "p".into(), paired_at: 0 });
+    broken.devices.push(config::Device { public_key: "aa".into(), name: "p".into(), paired_at: 0, platform: String::new() });
     let (healed, fresh) = config::parse(Some(&serde_json::to_string(&broken).unwrap()));
     assert!(fresh && healed.devices.is_empty() && healed.private_key != settings.private_key);
 }

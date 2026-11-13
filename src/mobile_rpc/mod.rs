@@ -323,7 +323,8 @@ async fn handshake(sink: &mut Sink, source: &mut Source) -> Option<(String, secu
             if let Ok(sealed) = channel.encrypt(json!({"id":request["id"],"error":{"code":"unauthorized","message":"pairing declined"}}).to_string().as_bytes()) { let _ = sink.send(Message::binary(sealed)).await; }
             return None;
         }
-        register_device(&device, &name).ok()?;
+        let platform = request["params"]["platform"].as_str().unwrap_or("").chars().filter(char::is_ascii_alphanumeric).take(16).collect::<String>();
+        register_device(&device, &name, &platform).ok()?;
     }
     sink.send(Message::binary(channel.encrypt(reply.to_string().as_bytes()).ok()?)).await.ok()?;
     Some((device, channel))
@@ -338,11 +339,11 @@ async fn confirm_pairing(name: &str) -> bool {
 #[cfg(test)]
 async fn confirm_pairing(_name: &str) -> bool { tests::TEST_PAIRING_ANSWER.load(Ordering::SeqCst) }
 
-fn register_device(public_key: &str, name: &str) -> Result<(), String> {
+fn register_device(public_key: &str, name: &str, platform: &str) -> Result<(), String> {
     let _guard = hub().config_lock.lock().unwrap();
     let mut settings = config::load();
     settings.devices.retain(|d| d.public_key != public_key);
-    settings.devices.push(config::Device { public_key: public_key.into(), name: name.into(), paired_at: chrono::Utc::now().timestamp_millis() });
+    settings.devices.push(config::Device { public_key: public_key.into(), name: name.into(), paired_at: chrono::Utc::now().timestamp_millis(), platform: platform.into() });
     config::save(&settings)?;
     broadcast_desktop_devices();
     Ok(())
