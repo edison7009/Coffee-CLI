@@ -9,7 +9,7 @@
 // This module must be imported before anything that reads `isTauri`.
 import { CoffeeClient, RpcError, fromHex, toHex, generateKeyPair, type Desktop, type PairingLink, type RpcEvent } from './protocol';
 
-export const REMOTE = typeof window !== 'undefined' && !window.__TAURI_INTERNALS__ && new URLSearchParams(window.location.search).has('remote');
+export const REMOTE = typeof window !== 'undefined' && !window.__TAURI_INTERNALS__ && /[?&]remote(?:[=&]|$)/.test(window.location?.search ?? '');
 
 /**
  * A page opened as http://<computer's LAN address> is not a secure context, so

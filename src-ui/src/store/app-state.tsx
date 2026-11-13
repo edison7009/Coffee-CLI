@@ -1,8 +1,9 @@
 // Coffee CLI — Global App State (React Context)
 
-import { createContext, useContext, useLayoutEffect, useReducer, useRef } from 'react';
+import { createContext, useContext, useLayoutEffect, useReducer, useRef, useState } from 'react';
 import type { ReactNode, RefObject } from 'react';
 import { isConversationSession, supportsEnhancedTool } from '../lib/chat-tools';
+import { REMOTE, remoteRequest } from '../remote/bridge';
 import { supportsAdditionalAgentStatus } from '../lib/terminal-agent-status';
 import { insertSessionSplit, removeSessionSplit, replaceSplitSession, splitSessionIds, setSessionSplitRatio, type SessionSplitLayout, type SplitEdge } from '../lib/session-split-layout';
 
@@ -165,7 +166,7 @@ export interface TerminalSession {
 }
 
 /** A desktop terminal a browser mirrors (see SYNC_MIRROR_TABS). */
-export interface MirrorTab { id: string; tool: ToolType; cwd: string | null; title: string }
+export interface MirrorTab { id: string; tool: ToolType; cwd: string | null; title: string; claudeMode?: ClaudeMode; codexMode?: ClaudeMode; opencodeMode?: ClaudeMode; piMode?: ClaudeMode; worktree?: TerminalSession['worktree']; parentId?: string }
 
 // ─── State Shape ─────────────────────────────────────────────────────────────
 
@@ -301,7 +302,7 @@ export function resolveDiffContext(session: TerminalSession | null | undefined):
 
 // ─── Actions ─────────────────────────────────────────────────────────────────
 
-type Action =
+export type Action =
   | { type: 'SET_USAGE_OPEN'; open: boolean }
   | { type: 'SET_AUTOMATIONS_OPEN'; open: boolean }
   | { type: 'SET_TOOL_SETTINGS_OPEN'; open: boolean }
@@ -472,29 +473,31 @@ function reducer(state: AppState, action: Action): AppState {
       };
     }
     case 'SYNC_MIRROR_TABS': {
-      // The browser follows the desktop's terminal tabs: new ones appear, closed ones go,
-      // titles and folders follow. The browser's own tabs are left alone.
+      // The browser shows the desktop's tabs: new ones appear, closed ones go, and what the
+      // desktop says about each (title, folder, mode) wins. Only which tab is shown is the browser's own.
       const wanted = new Map(action.tabs.map(tab => [tab.id, tab]));
+      const fromDesktop = (desk: MirrorTab, base?: TerminalSession): TerminalSession => ({
+        ...base, id: desk.id, tool: desk.tool, folderPath: desk.cwd, toolTitle: desk.title || base?.toolTitle, mirror: true,
+        claudeMode: desk.claudeMode, codexMode: desk.codexMode, opencodeMode: desk.opencodeMode, piMode: desk.piMode, worktree: desk.worktree, parentId: desk.parentId,
+      });
+      const same = (tab: TerminalSession, desk: MirrorTab) => tab.mirror && tab.tool === desk.tool && tab.folderPath === desk.cwd && (desk.title || tab.toolTitle) === tab.toolTitle
+        && tab.claudeMode === desk.claudeMode && tab.codexMode === desk.codexMode && tab.opencodeMode === desk.opencodeMode && tab.piMode === desk.piMode
+        && tab.worktree?.path === desk.worktree?.path && tab.parentId === desk.parentId;
+      // A blank launch page whose tool was just started on the desktop becomes that desktop tab.
       const kept = state.terminals.filter(tab => !tab.mirror || wanted.has(tab.id)).map(tab => {
-        const desk = tab.mirror ? wanted.get(tab.id) : undefined;
-        return desk && (desk.title !== tab.toolTitle || desk.cwd !== tab.folderPath) ? { ...tab, toolTitle: desk.title || tab.toolTitle, folderPath: desk.cwd } : tab;
+        const desk = wanted.get(tab.id);
+        return desk && !same(tab, desk) ? fromDesktop(desk, tab) : tab;
       });
       const known = new Set(kept.map(tab => tab.id));
-      const terminal = 'terminal' as const;
-      const added: TerminalSession[] = action.tabs.filter(tab => !known.has(tab.id)).map(tab => ({
-        id: tab.id, tool: tab.tool, folderPath: tab.cwd, toolTitle: tab.title || undefined, mirror: true,
-        claudeMode: tab.tool === 'claude' ? terminal : undefined, codexMode: tab.tool === 'codex' ? terminal : undefined,
-        opencodeMode: tab.tool === 'opencode' ? terminal : undefined, piMode: tab.tool === 'pi' ? terminal : undefined,
-      }));
-      const removed = state.terminals.length !== kept.length;
-      if (!removed && !added.length && kept.every((tab, i) => tab === state.terminals[i])) return state;
+      const added = action.tabs.filter(tab => !known.has(tab.id)).map(desk => fromDesktop(desk));
+      if (kept.length === state.terminals.length && !added.length && kept.every((tab, i) => tab === state.terminals[i])) return state;
       let terminals = [...kept, ...added];
       const ids = new Set(terminals.map(tab => tab.id));
       let order = [...getTabOrder(state).filter(id => ids.has(id)), ...added.map(tab => tab.id)];
       let active = state.activeTerminalId && ids.has(state.activeTerminalId) ? state.activeTerminalId : null;
-      // Opening the page, or the shown tab going away, lands on a desktop terminal rather than the launch page.
+      // Opening the page, or the shown tab going away, lands on a desktop tab rather than the launch page.
       const activeTab = terminals.find(tab => tab.id === active);
-      if (!activeTab || activeTab.tool === null) active = (added[0] ?? terminals.find(tab => tab.tool !== null))?.id ?? active;
+      if (!activeTab || activeTab.tool === null && !state.terminals.some(tab => tab.mirror)) active = (added[0] ?? terminals.find(tab => tab.tool !== null))?.id ?? active;
       if (!active) {
         const blank: TerminalSession = { id: crypto.randomUUID(), tool: null, folderPath: null };
         terminals = [...terminals, blank]; order = [...order, blank.id]; active = blank.id;
@@ -944,6 +947,40 @@ function getInitialState(): AppState {
   };
 }
 
+// ─── Browser: tab changes run on the desktop ─────────────────────────────────
+
+/** Tabs the browser asked the desktop to open: shown here as soon as the desktop lists them. */
+export const openedFromBrowser = new Set<string>();
+
+let browserState: AppState | null = null;
+const current = () => browserState ?? getInitialState();
+
+function browserDispatch(local: React.Dispatch<Action>): React.Dispatch<Action> {
+  const desk = (id: string | undefined) => !!id && !!current().terminals.find(tab => tab.id === id)?.mirror;
+  const send = (action: Action) => { void remoteRequest('ui.dispatch', { action }).catch(error => console.error('[remote tab]', error)); };
+  return action => {
+    switch (action.type) {
+      case 'LAUNCH_TERMINAL_TOOL': openedFromBrowser.add(action.id); send(action); return;
+      case 'ADD_TERMINAL': if (action.session.tool) { openedFromBrowser.add(action.session.id); send(action); return; } break;
+      case 'SET_TERMINAL_TOOL':
+        if (action.tool && !desk(action.id)) {
+          // The blank launch page picked a tool: the desktop opens it in the folder chosen here.
+          openedFromBrowser.add(action.id);
+          send({ ...action, cwd: current().terminals.find(tab => tab.id === action.id)?.folderPath ?? undefined } as Action);
+          return;
+        }
+        if (desk(action.id)) { send(action); return; }
+        break;
+      case 'RESTART_TERMINAL': if (desk(action.id)) { openedFromBrowser.add(action.newId); send(action); return; } break;
+      case 'REMOVE_TERMINAL': if (desk(action.id)) { send(action); local(action); return; } break;
+      case 'CLOSE_TERMINAL_GROUP': case 'SET_TERMINAL_HIDDEN': case 'SET_TERMINAL_WORKTREE': case 'SET_TAB_TITLE':
+        if (desk(action.id)) { send(action); return; }
+        break;
+    }
+    local(action);
+  };
+}
+
 // ─── Context ─────────────────────────────────────────────────────────────────
 //
 // Keep dispatch, event-time state reads, and translations independent of the
@@ -962,9 +999,11 @@ const AppContext = createContext<{
 } | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, undefined, getInitialState);
+  const [state, localDispatch] = useReducer(reducer, undefined, getInitialState);
   const stateRef = useRef(state);
-  useLayoutEffect(() => { stateRef.current = state; }, [state]);
+  // In the browser, opening, closing and changing tabs is asked of the desktop.
+  const [dispatch] = useState(() => REMOTE ? browserDispatch(localDispatch) : localDispatch);
+  useLayoutEffect(() => { stateRef.current = state; if (REMOTE) browserState = state; }, [state]);
   // The combined-context value has to be recomputed whenever state changes,
   // so keeping the split contexts lets hot components subscribe only to the
   // half they care about.

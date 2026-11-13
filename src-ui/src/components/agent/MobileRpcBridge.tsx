@@ -5,9 +5,15 @@ import { useAppState, useAppStateRef } from '../../store/app-state';
 import { commands, invoke, isTauri } from '../../tauri';
 import { getAgentSession } from '../../lib/agent-session';
 import { isClaudeConversation, isCodexConversation, isDshConversation, isOpenCodeConversation, isPiConversation } from '../../lib/chat-tools';
-import type { TerminalSession } from '../../store/app-state';
+import type { Action, TerminalSession } from '../../store/app-state';
+import { mirrorSnapshot, runMirrorAction, setMirrorActive, type MirrorKind } from '../../lib/session-mirror';
+import type { MobileRpcStatus } from '../../tauri';
 
-interface MobileRequest { requestId: string; method: string; params: { id?: string; text?: string; name?: string; cmd?: string; args?: Record<string, unknown> } }
+/** Tab changes a browser may ask for; everything else it does stays in the browser. */
+const BROWSER_ACTIONS = new Set<Action['type']>(['ADD_TERMINAL', 'LAUNCH_TERMINAL_TOOL', 'SET_TERMINAL_TOOL', 'REMOVE_TERMINAL', 'CLOSE_TERMINAL_GROUP', 'RESTART_TERMINAL', 'SET_TERMINAL_HIDDEN', 'SET_TERMINAL_WORKTREE', 'SET_TAB_TITLE']);
+const MIRROR_KINDS = new Set<MirrorKind>(['claude', 'codex', 'opencode', 'pi', 'dsh']);
+
+interface MobileRequest { requestId: string; method: string; params: { id?: string; text?: string; name?: string; cmd?: string; args?: Record<string, unknown> | unknown[]; kind?: string; action?: Action & { cwd?: string } } }
 class RequestError extends Error {
   readonly code: 'not_found' | 'busy' | 'internal';
   constructor(message: string, code: RequestError['code']) { super(message); this.code = code; }
@@ -25,9 +31,9 @@ export function MobileRpcBridge() {
   useEffect(() => { tRef.current = t; }, [t]);
 
   // Phones re-read the list when what it shows changes; bursts (restoring tabs) collapse into one notice.
-  const { state } = useAppState();
+  const { state, dispatch } = useAppState();
   const listed = useMemo(() => state.terminals.filter(tab => tab.tool && !tab.isHidden)
-    .map(tab => [tab.id, tab.tool, tab.pinnedTitle || tab.toolTitle || '', tab.folderPath ?? '', tab.agentStatus ?? ''].join('\u0000')).join('\u0001'), [state.terminals]);
+    .map(tab => [tab.id, tab.tool, tab.pinnedTitle || tab.toolTitle || '', tab.folderPath ?? '', tab.agentStatus ?? '', conversationKind(tab) ?? ''].join('\u0000')).join('\u0001'), [state.terminals]);
   const firstList = useRef(true);
   useEffect(() => {
     if (!isTauri) return;
@@ -35,6 +41,18 @@ export function MobileRpcBridge() {
     const timer = setTimeout(() => { void commands.mobileRpcSessionsChanged().catch(() => {}); }, 300);
     return () => clearTimeout(timer);
   }, [listed]);
+  // Conversations are only turned into patches while a browser is there to receive them.
+  useEffect(() => {
+    if (!isTauri) return;
+    let stop: (() => void) | undefined, disposed = false;
+    const follow = (status: MobileRpcStatus) => setMirrorActive(status.enabled && status.connected.length > 0);
+    void commands.mobileRpcStatus().then(status => { if (!disposed) follow(status); }).catch(() => {});
+    void import('@tauri-apps/api/event').then(({ listen }) => listen<MobileRpcStatus>('mobile-rpc-devices', ({ payload }) => follow(payload)))
+      .then(unlisten => { if (disposed) unlisten(); else stop = unlisten; });
+    return () => { disposed = true; stop?.(); setMirrorActive(false); };
+  }, []);
+  const dispatchRef = useRef(dispatch);
+  useEffect(() => { dispatchRef.current = dispatch; }, [dispatch]);
   useEffect(() => {
     if (!isTauri) return;
     let disposed = false, stop: (() => void) | undefined;
@@ -45,7 +63,33 @@ export function MobileRpcBridge() {
     };
     const run = async ({ method, params }: MobileRequest) => {
       // A browser's command (Web 端), already checked against the desktop's rules in Rust.
-      if (method === 'invoke' && params.cmd) return invoke(params.cmd, params.args ?? {});
+      if (method === 'invoke' && params.cmd) return invoke(params.cmd, (params.args ?? {}) as Record<string, unknown>);
+      // A browser following a conversation, or asking it to act: the desktop's own session does the work.
+      if (method === 'mirror.snapshot' || method === 'ui.call') {
+        const kind = params.kind as MirrorKind;
+        if (!MIRROR_KINDS.has(kind) || typeof params.id !== 'string' && method === 'mirror.snapshot') throw new RequestError('Unknown conversation', 'not_found');
+        if (method === 'mirror.snapshot') return mirrorSnapshot(kind, params.id!);
+        return await runMirrorAction(kind, String(params.name ?? ''), Array.isArray(params.args) ? params.args : []) ?? null;
+      }
+      // A tab opened, closed or changed in the browser happens here; the browser's list follows.
+      if (method === 'ui.dispatch') {
+        const action = params.action;
+        if (!action || !BROWSER_ACTIONS.has(action.type)) throw new RequestError('Unsupported tab change', 'internal');
+        const before = stateRef.current.activeTerminalId;
+        let next: Action = action;
+        // Choosing a tool on the browser's blank launch page opens a new desktop tab.
+        if (action.type === 'SET_TERMINAL_TOOL' && !stateRef.current.terminals.some(tab => tab.id === action.id)) {
+          next = { type: 'LAUNCH_TERMINAL_TOOL', id: action.id, tool: action.tool, cwd: action.cwd, toolData: action.toolData, resumeToken: action.resumeToken, claudeMode: action.claudeMode, codexMode: action.codexMode, opencodeMode: action.opencodeMode, piMode: action.piMode };
+        }
+        if (next.type === 'LAUNCH_TERMINAL_TOOL') next = { ...next, background: true };
+        dispatchRef.current(next);
+        // Each screen keeps the tab it is looking at.
+        setTimeout(() => {
+          const now = stateRef.current;
+          if (before && now.activeTerminalId !== before && now.terminals.some(tab => tab.id === before)) dispatchRef.current({ type: 'SET_ACTIVE_TERMINAL', id: before });
+        }, 0);
+        return {};
+      }
       // The folders this desktop has opened, offered to a browser in place of the folder dialog.
       if (method === 'projects.list') return { folders: getProjectFolders() };
       if (method === 'pair.confirm') {
@@ -59,6 +103,7 @@ export function MobileRpcBridge() {
           const kind = conversationKind(tab);
           return {
             id: tab.id, tool: tab.tool, kind, view: kind ? 'conversation' : 'terminal',
+            claudeMode: tab.claudeMode, codexMode: tab.codexMode, opencodeMode: tab.opencodeMode, piMode: tab.piMode, worktree: tab.worktree, parentId: tab.parentId,
             title: tab.pinnedTitle || tab.toolTitle || '', cwd: tab.folderPath ?? '',
             status: tab.agentStatus ?? null, updatedAt: tab.activeAt ?? tab.startedAt ?? null,
           };

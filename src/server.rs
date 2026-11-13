@@ -1911,6 +1911,7 @@ pub fn start_ui(pending_launch: Option<crate::launch::LaunchRequest>) -> anyhow:
             crate::mobile_rpc::mobile_rpc_firewall_allow,
             crate::mobile_rpc::mobile_rpc_revoke_device,
             crate::mobile_rpc::mobile_rpc_resolve,
+            crate::mobile_rpc::mobile_rpc_mirror,
             crate::git::git_changes,
             crate::git_project_status::git_project_status,
             crate::git::git_show_file,

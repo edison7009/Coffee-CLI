@@ -1,25 +1,24 @@
 //! What the desktop UI may do when it runs in a browser (Web 端).
 //!
-//! The browser runs the full desktop front-end. Its Tauri commands arrive
-//! here and, when allowed, are run by the desktop window on its behalf, so
-//! every desktop feature works without per-command code. Two rules guard it:
+//! The browser runs the full desktop front-end, but holds nothing of its own:
+//! every session lives on the desktop. Its Tauri commands arrive here and,
+//! when allowed, are run by the desktop window on its behalf. Two rules:
 //!
 //! - A deny-list keeps the desktop window, the host's own devices and dialogs,
 //!   credentials, pairing, installers and the desktop's background agent out
 //!   of reach.
-//! - A paired browser mirrors the desktop's terminals: it may type into any
-//!   of them, but only resizes or closes the ones it started itself, so the
-//!   desktop's tabs keep their size and stay open.
+//! - Sessions are started, closed and sized only by the desktop. The browser
+//!   asks for those through `ui.dispatch` and `ui.call`; directly it may only
+//!   type into a terminal it shows.
 
 use serde_json::Value;
-use std::collections::HashSet;
 
 /// Desktop events the browser UI listens to. Requests the desktop window
 /// answers itself (orchestration, agent tools, launch) are not forwarded, or
 /// both sides would act on them.
-/// Terminal output is not here: it goes out numbered, with the replay buffer (see `record_terminal`).
-pub const FORWARDED_EVENTS: [&str; 16] = [
-    "claude-session-event", "codex-session-event", "opencode-session-event", "pi-session-event", "dsh-session-event",
+/// Not here: terminal output (numbered, see `record_terminal`) and conversation
+/// events (the desktop sends its state instead, see `mobile_rpc_mirror`).
+pub const FORWARDED_EVENTS: [&str; 11] = [
     "tier-terminal-size", "tier-terminal-status", "tier-terminal-exit", "tier-terminal-cwd", "tier-terminal-token",
     "fs-refresh", "tasks-changed", "agent-conversations-changed", "agent-work-modes", "channel-status", "orchestration-updated",
 ];
@@ -46,32 +45,23 @@ pub fn allowed(cmd: &str) -> bool {
         && !DENIED.contains(&cmd) && !DENIED_PREFIXES.iter().any(|p| cmd.starts_with(p))
 }
 
-/// The session a command acts on, when it acts on one.
-fn session_of(cmd: &str, args: &Value) -> Option<(bool, String)> {
-    let starts = |id: &Value| id.as_str().map(str::to_owned);
-    if cmd == "tier_terminal_start" { return starts(&args["sessionId"]).map(|id| (true, id)); }
-    // Typing reaches any terminal the desktop shows; that is what mirroring means.
-    if matches!(cmd, "tier_terminal_input" | "tier_terminal_raw_write" | "get_terminal_session_token") { return None; }
-    if matches!(cmd, "tier_terminal_kill" | "tier_terminal_resize" | "set_session_active") {
-        return Some((false, starts(&args["sessionId"]).unwrap_or_default()));
-    }
-    let tool = cmd.split_once("_session_")?;
-    if !TOOLS.contains(&tool.0) { return None; }
+/// Whether a command acts on a session; `true` for the ones a browser may send
+/// to directly (typing into a terminal it mirrors).
+fn session_command(cmd: &str) -> Option<bool> {
+    if matches!(cmd, "tier_terminal_input" | "tier_terminal_raw_write" | "get_terminal_session_token") { return Some(true); }
+    if matches!(cmd, "tier_terminal_start" | "tier_terminal_kill" | "tier_terminal_resize" | "set_session_active") { return Some(false); }
+    let (tool, action) = cmd.split_once("_session_")?;
+    if !TOOLS.contains(&tool) { return None; }
     // Reading saved history needs no running session.
-    if tool.1 == "history" && cmd == "dsh_session_history" { return None; }
-    if tool.1 == "preview" { return None; }
-    Some((tool.1 == "start", starts(&args["id"]).unwrap_or_default()))
+    if action == "preview" || cmd == "dsh_session_history" { return None; }
+    Some(false)
 }
 
-/// Checks a browser command; `owned` holds the sessions this browser started.
-/// Returns an error message when it must not run.
-pub fn check(cmd: &str, args: &Value, owned: &mut HashSet<String>) -> Result<(), String> {
+/// Checks a browser command; returns an error message when it must not run.
+pub fn check(cmd: &str, _args: &Value) -> Result<(), String> {
     if !allowed(cmd) { return Err(format!("{cmd} is not available in the browser")); }
-    match session_of(cmd, args) {
-        Some((true, id)) if !id.is_empty() => { owned.insert(id); Ok(()) }
-        Some((true, _)) => Err("session id required".into()),
-        Some((false, id)) if owned.contains(&id) => Ok(()),
-        Some((false, _)) => Err("This session belongs to the desktop".into()),
-        None => Ok(()),
+    match session_command(cmd) {
+        Some(false) => Err("Sessions are run by the desktop".into()),
+        _ => Ok(()),
     }
 }

@@ -4,6 +4,8 @@ import { directoryFailure } from './session-directory';
 import { recordSessionReply } from './session-replies';
 import { markPromptSubmitted } from './notify-prompts';
 import { invoke } from '../tauri';
+import { REMOTE } from '../remote/bridge';
+import { mirrorCall, mirrorSource, mirrorTarget, registerMirrorActions } from './session-mirror';
 import { gambitAttachments } from './gambit-attachments';
 import { arr, obj, str, num, emptyOpenCodeState, lastContextTokens, reduceOpenCodeEvent, type Json, type OpenCodeAgent, type OpenCodeCommand, type OpenCodeModel, type OpenCodeModelRef, type OpenCodeState } from './opencode-protocol';
 
@@ -13,7 +15,7 @@ const EMPTY = emptyOpenCodeState();
 let listening: Promise<unknown> | undefined;
 function client(id: string): Client {
   let c = clients.get(id);
-  if (!c) { c = { state: emptyOpenCodeState(), generation: crypto.randomUUID(), listeners: new Set(), owners: 0, sending: false }; clients.set(id, c); }
+  if (!c) { c = { state: emptyOpenCodeState(), generation: crypto.randomUUID(), listeners: new Set(), owners: 0, sending: false }; clients.set(id, c); if (!REMOTE) { const own = c; own.listeners.add(mirrorSource('opencode', id, () => own.state)); } }
   return c;
 }
 function publish(c: Client, immediate = false) {
@@ -69,6 +71,12 @@ function request(c: Client, id: string, op: string, params: Json = {}): Promise<
 const modelRef = (value: unknown): OpenCodeModelRef | null => { const m = obj(value); return m.id ? { id: str(m.id), providerID: str(m.providerID), ...(m.variant && m.variant !== 'default' ? { variant: str(m.variant) } : {}) } : null; };
 
 export function retainOpenCodeSession(id: string, cwd: string | null, resumeToken?: string): () => void {
+  // In the browser the desktop runs the session; this only follows it.
+  if (REMOTE) {
+    const c = client(id); c.owners++;
+    const stop = mirrorTarget('opencode', id, state => { c.state = state as OpenCodeState; publish(c, true); });
+    return () => { stop(); if (!--c.owners) clients.delete(id); };
+  }
   const c = client(id); clearTimeout(c.closeTimer); c.owners++;
   c.starting ??= (async () => {
     c.connecting = true;
@@ -126,6 +134,7 @@ export function retainOpenCodeSession(id: string, cwd: string | null, resumeToke
 
 /** Prompts sent during a turn are steered into it, as in OpenCode's own clients. */
 export async function sendOpenCodeMessage(id: string, prompt: string): Promise<boolean> {
+  if (REMOTE) return mirrorCall('opencode', 'sendOpenCodeMessage', [id, prompt]);
   const c = client(id); if (!c.state.ready || c.sending || !prompt.trim()) return false;
   // OpenCode's status is not native to the chime, which waits for a prompt the user sent.
   markPromptSubmitted(id);
@@ -142,18 +151,21 @@ export async function sendOpenCodeMessage(id: string, prompt: string): Promise<b
   finally { c.sending = false; publish(c, true); }
 }
 export async function interruptOpenCode(id: string): Promise<void> {
+  if (REMOTE) return mirrorCall('opencode', 'interruptOpenCode', [id]);
   const c = client(id); if (!c.state.busy || c.state.interrupting) return;
   c.state = { ...c.state, interrupting: true }; publish(c, true);
   try { await request(c, id, 'interrupt'); }
   catch (error) { c.state = { ...c.state, interrupting: false, error: String(error) }; publish(c, true); }
 }
 export async function replyOpenCodePermission(id: string, requestID: string, decision: 'once' | 'always' | 'reject'): Promise<void> {
+  if (REMOTE) return mirrorCall('opencode', 'replyOpenCodePermission', [id, requestID, decision]);
   const c = client(id);
   const asker = c.state.permissions.find(p => p.id === requestID);
   await request(c, id, 'permission.reply', { requestID, decision, ...(asker?.sessionID ? { sessionID: asker.sessionID } : {}) });
   c.state = { ...c.state, permissions: c.state.permissions.filter(p => p.id !== requestID) }; publish(c, true);
 }
 export async function replyOpenCodeForm(id: string, formID: string, answer: Json | null): Promise<void> {
+  if (REMOTE) return mirrorCall('opencode', 'replyOpenCodeForm', [id, formID, answer]);
   const c = client(id);
   const asker = c.state.forms.find(f => f.id === formID), sessionID = asker?.sessionID ? { sessionID: asker.sessionID } : {};
   await request(c, id, answer ? 'form.reply' : 'form.cancel', answer ? { formID, answer, ...sessionID } : { formID, ...sessionID });
@@ -161,6 +173,7 @@ export async function replyOpenCodeForm(id: string, formID: string, answer: Json
 }
 /** Model, variant and agent switches apply to the session's next provider turn. */
 export async function configureOpenCode(id: string, patch: { model?: OpenCodeModelRef; agent?: string }): Promise<void> {
+  if (REMOTE) return mirrorCall('opencode', 'configureOpenCode', [id, patch]);
   const c = client(id); if (!c.state.ready) return;
   const previous = { model: c.state.model, agent: c.state.agent };
   // A new choice replaces any error left by the last one.
@@ -171,6 +184,7 @@ export async function configureOpenCode(id: string, patch: { model?: OpenCodeMod
   } catch (error) { c.state = { ...c.state, ...previous, error: String(error) }; publish(c, true); }
 }
 export async function runOpenCodeCommand(id: string, command: 'compact' | { name: string; text?: string }): Promise<void> {
+  if (REMOTE) return mirrorCall('opencode', 'runOpenCodeCommand', [id, command]);
   const c = client(id); if (!c.state.ready || c.state.busy || c.sending) throw new Error('OpenCode is not ready');
   // A new conversation has no session until its first prompt, so there is nothing to compact yet.
   if (command === 'compact' && !c.state.nativeId) return;
@@ -182,6 +196,7 @@ export async function runOpenCodeCommand(id: string, command: 'compact' | { name
   finally { c.sending = false; publish(c, true); }
 }
 export async function loadOpenCodeHistory(id: string): Promise<void> {
+  if (REMOTE) return mirrorCall('opencode', 'loadOpenCodeHistory', [id]);
   const c = client(id); if (!c.state.cursor || c.state.loadingHistory) return;
   c.state = { ...c.state, loadingHistory: true }; publish(c, true);
   try {
@@ -192,3 +207,6 @@ export async function loadOpenCodeHistory(id: string): Promise<void> {
   } catch (error) { c.state = { ...c.state, error: String(error) }; }
   finally { c.state = { ...c.state, loadingHistory: false }; publish(c, true); }
 }
+
+// What a browser may ask the desktop to do in a opencode conversation.
+registerMirrorActions('opencode', { sendOpenCodeMessage, interruptOpenCode, replyOpenCodePermission, replyOpenCodeForm, configureOpenCode, runOpenCodeCommand, loadOpenCodeHistory });

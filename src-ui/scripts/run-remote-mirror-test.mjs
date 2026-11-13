@@ -18,7 +18,7 @@ await mkdir(`${root}node_modules/.cache`, { recursive: true });
 await writeFile(out, compiled.outputFiles[0].text);
 const { reducer } = await import(out);
 
-const tab = (id, extra = {}) => ({ id, tool: 'claude', cwd: '/p', title: id, ...extra });
+const tab = (id, extra = {}) => ({ id, tool: 'claude', cwd: '/p', title: id, claudeMode: (extra.tool ?? 'claude') === 'claude' ? 'conversation' : undefined, ...extra });
 let state = { terminals: [{ id: 'blank', tool: null, folderPath: null }], tabOrder: ['blank'], activeTerminalId: 'blank' };
 const sync = tabs => { state = reducer(state, { type: 'SYNC_MIRROR_TABS', tabs }); };
 
@@ -27,10 +27,17 @@ sync([tab('a'), tab('b', { tool: 'codex' })]);
 assert.deepEqual(state.tabOrder, ['blank', 'a', 'b']);
 assert.equal(state.activeTerminalId, 'a');
 const a = state.terminals.find(t => t.id === 'a'), b = state.terminals.find(t => t.id === 'b');
-assert.equal(a.mirror, true); assert.equal(a.claudeMode, 'terminal'); assert.equal(b.codexMode, 'terminal'); assert.equal(a.toolTitle, 'a');
+assert.equal(a.mirror, true); assert.equal(a.claudeMode, 'conversation', 'the desktop decides the view'); assert.equal(b.codexMode, undefined); assert.equal(a.toolTitle, 'a');
 
 // Nothing changed: the same state object, so nothing re-renders.
 const before = state; sync([tab('a'), tab('b', { tool: 'codex' })]); assert.equal(state, before);
+
+// A blank launch page whose tool the desktop just opened becomes that desktop tab.
+state = { ...state, terminals: [...state.terminals, { id: 'picked', tool: null, folderPath: '/p' }], tabOrder: [...state.tabOrder, 'picked'], activeTerminalId: 'picked' };
+sync([tab('a'), tab('b', { tool: 'codex' }), tab('picked')]);
+assert.equal(state.terminals.find(t => t.id === 'picked').mirror, true);
+assert.equal(state.activeTerminalId, 'picked', 'the page that asked keeps showing it');
+sync([tab('a'), tab('b', { tool: 'codex' })]);
 
 // The browser's own tab stays; titles and folders follow; a tab closed on the desktop goes.
 state = { ...state, terminals: [...state.terminals, { id: 'own', tool: 'claude', folderPath: '/x' }], tabOrder: [...state.tabOrder, 'own'], activeTerminalId: 'b' };

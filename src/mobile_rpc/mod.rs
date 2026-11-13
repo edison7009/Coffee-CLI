@@ -65,8 +65,6 @@ struct Client {
     resync: Mutex<HashSet<String>>,
     /// Runs the desktop UI (`?remote`): receives raw desktop events.
     ui: AtomicBool,
-    /// Sessions and terminals this browser started; the only ones it may drive.
-    owned: Mutex<HashSet<String>>,
     /// Files this browser is sending (Web 端 uploads).
     uploads: Mutex<upload::Uploads>,
 }
@@ -243,7 +241,7 @@ async fn serve(stream: TcpStream) {
     let channel = Arc::new(channel);
 
     let (tx, mut rx) = mpsc::channel::<Value>(CLIENT_QUEUE);
-    let client = Arc::new(Client { device: client_device, kill: tokio::sync::Notify::new(), tx, subscriptions: Mutex::default(), resync: Mutex::default(), ui: AtomicBool::new(false), owned: Mutex::default(), uploads: Mutex::default() });
+    let client = Arc::new(Client { device: client_device, kill: tokio::sync::Notify::new(), tx, subscriptions: Mutex::default(), resync: Mutex::default(), ui: AtomicBool::new(false), uploads: Mutex::default() });
     let client_id = hub().next_client.fetch_add(1, Ordering::SeqCst);
     hub().clients.lock().unwrap().insert(client_id, client.clone());
     let writer_channel = channel.clone();
@@ -435,11 +433,16 @@ async fn handle(client: &Client, request: &Value) -> Result<Value, RpcError> {
             client.uploads.lock().unwrap().finish(id).map(|path| json!({"path": path})).map_err(|e| ("invalid_params", e))
         }
         "ui.terminal.attach" => terminal_attach(&id()?),
+        // The browser keeps no sessions of its own. Conversations: the desktop's state, then patches
+        // (`mobile_rpc_mirror`); actions and tab changes run on the desktop.
+        "mirror.snapshot" => gui("mirror.snapshot", json!({"kind": params["kind"], "id": params["id"]})).await,
+        "ui.call" => gui_with_timeout("ui.call", json!({"kind": params["kind"], "name": params["name"], "args": params["args"]}), INVOKE_TIMEOUT).await,
+        "ui.dispatch" => gui("ui.dispatch", json!({"action": params["action"]})).await,
         "ui.subscribe" => { client.ui.store(true, Ordering::Relaxed); Ok(json!({"events": remote_ui::FORWARDED_EVENTS})) }
         // The desktop window runs the command, so the browser gets exactly what the desktop UI would.
         "ui.invoke" => {
             let cmd = params["cmd"].as_str().ok_or(("invalid_params", "cmd required".to_string()))?;
-            remote_ui::check(cmd, &params["args"], &mut client.owned.lock().unwrap()).map_err(|e| ("unsupported", e))?;
+            remote_ui::check(cmd, &params["args"]).map_err(|e| ("unsupported", e))?;
             gui_with_timeout("invoke", json!({"cmd": cmd, "args": params["args"]}), INVOKE_TIMEOUT).await
         }
         _ => Err(("unsupported", "unknown method".into())),
@@ -599,6 +602,14 @@ pub fn mobile_rpc_revoke_device(public_key: String) -> Result<Value, String> {
     });
     broadcast_desktop_devices();
     Ok(status_value())
+}
+
+/// A conversation changed on the desktop; browsers following it apply the patch.
+#[tauri::command]
+pub fn mobile_rpc_mirror(kind: String, id: String, patch: Value) {
+    let mut payload = patch;
+    if let Some(map) = payload.as_object_mut() { map.insert("kind".into(), kind.into()); map.insert("id".into(), id.into()); }
+    deliver_ui("session-mirror", payload);
 }
 
 #[tauri::command]

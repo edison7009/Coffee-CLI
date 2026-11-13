@@ -4,6 +4,8 @@ import { directoryFailure } from './session-directory';
 import { recordSessionReply } from './session-replies';
 import { markPromptSubmitted } from './notify-prompts';
 import { invoke } from '../tauri';
+import { REMOTE } from '../remote/bridge';
+import { mirrorCall, mirrorSource, mirrorTarget, registerMirrorActions } from './session-mirror';
 import { gambitAttachments } from './gambit-attachments';
 import { arr, codexColdReturn, codexSubTasks, num, obj, str, emptyCodexState, reduceCodexEvent, restoreCodexTurns, type CodexState, type CodexModel, type Json } from './codex-protocol';
 
@@ -16,7 +18,7 @@ const EMPTY = emptyCodexState();
 let listening: Promise<unknown> | undefined;
 function client(id: string): Client {
   let c = clients.get(id);
-  if (!c) { c = { state: emptyCodexState(), generation: crypto.randomUUID(), listeners: new Set(), owners: 0, sending: false }; clients.set(id, c); }
+  if (!c) { c = { state: emptyCodexState(), generation: crypto.randomUUID(), listeners: new Set(), owners: 0, sending: false }; clients.set(id, c); if (!REMOTE) { const own = c; own.listeners.add(mirrorSource('codex', id, () => own.state)); } }
   return c;
 }
 function publish(c: Client, immediate = false) {
@@ -49,6 +51,12 @@ function rpc(c: Client, id: string, method: string, params: Json): Promise<Json>
   return invoke('codex_session_request', { id, generation: c.generation, method, params: { ...params, threadId: c.state.nativeId } });
 }
 export function retainCodexSession(id: string, cwd: string | null, resumeToken?: string): () => void {
+  // In the browser the desktop runs the session; this only follows it.
+  if (REMOTE) {
+    const c = client(id); c.owners++;
+    const stop = mirrorTarget('codex', id, state => { c.state = state as CodexState; publish(c, true); });
+    return () => { stop(); if (!--c.owners) clients.delete(id); };
+  }
   const c = client(id); clearTimeout(c.closeTimer); c.owners++;
   c.starting ??= (async () => {
     c.connecting = true;
@@ -101,6 +109,7 @@ export function retainCodexSession(id: string, cwd: string | null, resumeToken?:
   };
 }
 export function configureCodex(id: string, patch: Partial<Pick<CodexState, 'model' | 'effort' | 'sandbox' | 'approvalPolicy' | 'planMode'>>): void {
+  if (REMOTE) { void mirrorCall('codex', 'configureCodex', [id, patch]); return; }
   const c = client(id); if (c.state.busy || c.sending || patch.planMode === true && (!c.state.planSupported || !c.state.model)) return;
   const model = c.state.models.find(m => m.model === (patch.model ?? c.state.model));
   if (model && patch.model) patch.effort = model.supportedReasoningEfforts.some(e => e.reasoningEffort === c.state.effort) ? c.state.effort : model.defaultReasoningEffort;
@@ -108,11 +117,13 @@ export function configureCodex(id: string, patch: Partial<Pick<CodexState, 'mode
   c.state = { ...c.state, ...patch, ...(patch.planMode !== undefined ? { planReady: undefined } : {}) }; publish(c, true);
 }
 export async function readCodexRateLimits(id: string): Promise<Json> {
+  if (REMOTE) return mirrorCall('codex', 'readCodexRateLimits', [id]);
   const c = clients.get(id);
   if (!c?.state.ready) throw new Error('Codex is not ready');
   return rpc(c, id, 'account/rateLimits/read', {});
 }
 export async function runCodexCommand(id: string, command: 'compact' | 'review' | 'skills' | 'mcp'): Promise<Json> {
+  if (REMOTE) return mirrorCall('codex', 'runCodexCommand', [id, command]);
   const c = client(id), startsTurn = command === 'compact' || command === 'review';
   if (!c.state.ready || startsTurn && (c.state.busy || c.sending)) throw new Error('Codex is not ready');
   if (startsTurn) { c.sending = true; c.interruptSent = undefined; c.state = { ...c.state, busy: true, turnId: '', interrupting: false, error: undefined }; publish(c, true); }
@@ -138,6 +149,7 @@ export async function runCodexCommand(id: string, command: 'compact' | 'review' 
 }
 /** A person's send: a thread idle for half a day asks first, because it has very likely lost its cache. */
 export async function sendCodexInteractive(id: string, prompt: string): Promise<boolean> {
+  if (REMOTE) return mirrorCall('codex', 'sendCodexInteractive', [id, prompt]);
   const c = client(id);
   if (c.state.coldReturn) return false;
   let dismissed = false;
@@ -149,6 +161,7 @@ export async function sendCodexInteractive(id: string, prompt: string): Promise<
 }
 /** Settles the held prompt in this thread; returns it so `cancel` can put it back in the composer. */
 export async function settleCodexColdReturn(id: string, choice: 'full' | 'never' | 'cancel'): Promise<string> {
+  if (REMOTE) return mirrorCall('codex', 'settleCodexColdReturn', [id, choice]);
   const c = client(id), held = c.state.coldReturn, prompt = held?.prompt ?? '';
   c.state = { ...c.state, coldReturn: undefined }; publish(c, true);
   if (choice === 'never') { try { localStorage.setItem(COLD_RETURN_NEVER, '1'); } catch { /* optional preference */ } }
@@ -158,6 +171,7 @@ export async function settleCodexColdReturn(id: string, choice: 'full' | 'never'
 }
 /** Prepares a lightweight continuation, forwarding only a prompt held by the cold-return card. */
 export function continueCodexInNewThread(id: string, newId: string): boolean {
+  if (REMOTE) return false; // Continuing in a new conversation starts from the desktop.
   const c = client(id), prompt = c.state.coldReturn?.prompt ?? '';
   if (!c.owners || !c.state.ready || c.state.busy || c.sending || !c.state.nativeId || !c.state.messages.length || c.state.requests.length || codexSubTasks(c.state).length) return false;
   const messages = c.state.messages, lastPrompt = messages.findLast(m => m.role === 'user'), reply = messages.findLast(m => m.role === 'assistant');
@@ -178,6 +192,7 @@ async function steerCodex(c: Client, id: string, prompt: string): Promise<boolea
   catch (error) { c.state = { ...c.state, error: String(error) }; publish(c, true); return false; }
 }
 export async function sendCodexMessage(id: string, prompt: string): Promise<boolean> {
+  if (REMOTE) return mirrorCall('codex', 'sendCodexMessage', [id, prompt]);
   const c = client(id);
   const planCommand = /^\/plan(?:\s+([\s\S]*))?$/.exec(prompt);
   if (planCommand) {
@@ -207,6 +222,7 @@ export async function sendCodexMessage(id: string, prompt: string): Promise<bool
 }
 /** Approval starts implementation in the same thread, restoring the user's execution permissions. */
 export async function approveCodexPlan(id: string, prompt: string): Promise<boolean> {
+  if (REMOTE) return mirrorCall('codex', 'approveCodexPlan', [id, prompt]);
   const c = client(id);
   if (!c.owners || !c.state.ready || !c.state.planMode || !c.state.planReady || c.state.coldReturn || c.state.busy || c.sending || c.state.requests.length) return false;
   const planReady = c.state.planReady;
@@ -216,6 +232,7 @@ export async function approveCodexPlan(id: string, prompt: string): Promise<bool
   return false;
 }
 export async function interruptCodex(id: string): Promise<void> {
+  if (REMOTE) return mirrorCall('codex', 'interruptCodex', [id]);
   const c = client(id); if (!c.state.busy || c.state.interrupting) return;
   c.state = { ...c.state, interrupting: true }; publish(c, true);
   await performInterrupt(c, id);
@@ -227,11 +244,13 @@ async function performInterrupt(c: Client, id: string): Promise<void> {
   catch (error) { c.interruptSent = undefined; c.state = { ...c.state, interrupting: false, error: String(error) }; publish(c, true); }
 }
 export async function respondCodex(id: string, requestId: string | number, response: Json, reject = false): Promise<void> {
+  if (REMOTE) return mirrorCall('codex', 'respondCodex', [id, requestId, response, reject]);
   const c = client(id);
   await invoke('codex_session_respond', { id, generation: c.generation, requestId, response, reject });
   c.state = { ...c.state, requests: c.state.requests.filter(r => r.id !== requestId) }; publish(c, true);
 }
 export async function loadCodexHistory(id: string): Promise<void> {
+  if (REMOTE) return mirrorCall('codex', 'loadCodexHistory', [id]);
   const c = client(id); if (!c.state.historyCursor || c.state.loadingHistory) return;
   c.state = { ...c.state, loadingHistory: true }; publish(c, true);
   try {
@@ -246,3 +265,6 @@ export async function loadCodexHistory(id: string): Promise<void> {
   } catch (error) { c.state = { ...c.state, error: String(error) }; }
   finally { c.state = { ...c.state, loadingHistory: false }; publish(c, true); }
 }
+
+// What a browser may ask the desktop to do in a codex conversation.
+registerMirrorActions('codex', { configureCodex, readCodexRateLimits, runCodexCommand, sendCodexInteractive, settleCodexColdReturn, sendCodexMessage, approveCodexPlan, interruptCodex, respondCodex, loadCodexHistory });

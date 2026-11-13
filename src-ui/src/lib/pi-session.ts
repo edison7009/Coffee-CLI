@@ -3,6 +3,8 @@ import { directoryFailure } from './session-directory';
 import { recordSessionReply } from './session-replies';
 import { markPromptSubmitted } from './notify-prompts';
 import { invoke } from '../tauri';
+import { REMOTE } from '../remote/bridge';
+import { mirrorCall, mirrorSource, mirrorTarget, registerMirrorActions } from './session-mirror';
 import { arr, emptyPiState, obj, piModel, piStats, reducePiEvent, restorePiMessages, str, type Json, type PiModel, type PiState } from './pi-protocol';
 
 interface Client { state: PiState; generation: string; listeners: Set<() => void>; owners: number; cwd: string | null; starting?: Promise<void>; closeTimer?: ReturnType<typeof setTimeout>; publishTimer?: ReturnType<typeof setTimeout> }
@@ -12,7 +14,7 @@ let listening: Promise<unknown> | undefined;
 
 function client(id: string): Client {
   let c = clients.get(id);
-  if (!c) { c = { state: emptyPiState(), generation: crypto.randomUUID(), listeners: new Set(), owners: 0, cwd: null }; clients.set(id, c); }
+  if (!c) { c = { state: emptyPiState(), generation: crypto.randomUUID(), listeners: new Set(), owners: 0, cwd: null }; clients.set(id, c); if (!REMOTE) { const own = c; own.listeners.add(mirrorSource('pi', id, () => own.state)); } }
   return c;
 }
 function publish(c: Client, immediate = false) {
@@ -64,6 +66,12 @@ async function connect(id: string, c: Client, resumeToken: string | undefined) {
 }
 
 export function retainPiSession(id: string, cwd: string | null, resumeToken?: string): () => void {
+  // In the browser the desktop runs the session; this only follows it.
+  if (REMOTE) {
+    const c = client(id); c.owners++;
+    const stop = mirrorTarget('pi', id, state => { c.state = state as PiState; publish(c, true); });
+    return () => { stop(); if (!--c.owners) clients.delete(id); };
+  }
   const c = client(id); clearTimeout(c.closeTimer); c.owners++; c.cwd = cwd;
   c.starting ??= (async () => {
     for (let attempt = 0; attempt < 2; attempt++) {
@@ -89,6 +97,7 @@ export function retainPiSession(id: string, cwd: string | null, resumeToken?: st
 
 /** A message typed during a run steers it, as in Pi's own editor. */
 export async function sendPiMessage(id: string, prompt: string): Promise<boolean> {
+  if (REMOTE) return mirrorCall('pi', 'sendPiMessage', [id, prompt]);
   const c = clients.get(id); const message = prompt.trim();
   if (!c?.state.ready || !message) return false;
   if (!c.state.model) { c.state = { ...c.state, error: 'no-model' }; publish(c, true); return false; }
@@ -105,10 +114,12 @@ export async function sendPiMessage(id: string, prompt: string): Promise<boolean
   }
 }
 export async function abortPi(id: string) {
+  if (REMOTE) return mirrorCall('pi', 'abortPi', [id]);
   const c = clients.get(id); if (!c?.state.busy) return;
   await request(id, { type: 'abort' }).catch(() => {});
 }
 export async function setPiModel(id: string, model: PiModel) {
+  if (REMOTE) return mirrorCall('pi', 'setPiModel', [id, model]);
   const c = clients.get(id); if (!c) return;
   try {
     const data = await request(id, { type: 'set_model', provider: model.provider, modelId: model.id });
@@ -120,20 +131,27 @@ export async function setPiModel(id: string, model: PiModel) {
   } catch (error) { c.state = { ...c.state, error: String(error) }; publish(c, true); }
 }
 export async function getPiThinkingLevels(id: string): Promise<string[]> {
+  if (REMOTE) return mirrorCall('pi', 'getPiThinkingLevels', [id]);
   const data = await request(id, { type: 'get_available_thinking_levels' }).catch(() => ({} as Json));
   return arr(data.levels).map(str).filter(Boolean);
 }
 export async function setPiThinkingLevel(id: string, level: string) {
+  if (REMOTE) return mirrorCall('pi', 'setPiThinkingLevel', [id, level]);
   const c = clients.get(id); if (!c) return;
   try { await request(id, { type: 'set_thinking_level', level }); c.state = { ...c.state, thinkingLevel: level }; publish(c, true); }
   catch (error) { c.state = { ...c.state, error: String(error) }; publish(c, true); }
 }
 export async function compactPi(id: string) {
+  if (REMOTE) return mirrorCall('pi', 'compactPi', [id]);
   const c = clients.get(id); if (!c?.state.ready || c.state.busy) return;
   try { await request(id, { type: 'compact' }); } catch (error) { c.state = { ...c.state, error: String(error) }; publish(c, true); }
 }
 export async function respondPi(id: string, requestId: string, response: Json): Promise<void> {
+  if (REMOTE) return mirrorCall('pi', 'respondPi', [id, requestId, response]);
   const c = clients.get(id); if (!c) return;
   await invoke('pi_session_respond', { id, generation: c.generation, requestId, response });
   c.state = { ...c.state, requests: c.state.requests.filter(r => r.id !== requestId) }; publish(c, true);
 }
+
+// What a browser may ask the desktop to do in a pi conversation.
+registerMirrorActions('pi', { compactPi, setPiThinkingLevel, getPiThinkingLevels, setPiModel, abortPi, sendPiMessage, respondPi });

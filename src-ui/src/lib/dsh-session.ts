@@ -2,6 +2,8 @@ import { useSyncExternalStore } from 'react';
 import { directoryFailure } from './session-directory';
 import { recordSessionReply } from './session-replies';
 import { invoke } from '../tauri';
+import { REMOTE } from '../remote/bridge';
+import { mirrorCall, mirrorSource, mirrorTarget, registerMirrorActions } from './session-mirror';
 import { arr, obj, str, emptyDshState, reduceDshNotification, restoreDshLog, type DshModel, type DshRoute, type DshState, type Json } from './dsh-protocol';
 
 interface Client { state: DshState; generation: string; listeners: Set<() => void>; owners: number; cwd: string | null; starting?: Promise<void>; switching?: Promise<void>; target?: DshRoute; nextRoute?: DshRoute; preset?: string; closeTimer?: ReturnType<typeof setTimeout>; publishTimer?: ReturnType<typeof setTimeout> }
@@ -15,7 +17,7 @@ const COMMAND = /^\/(compact|permission|plan|goal|压缩|权限|计划|目标)(\
 
 function client(id: string): Client {
   let c = clients.get(id);
-  if (!c) { c = { state: emptyDshState(), generation: crypto.randomUUID(), listeners: new Set(), owners: 0, cwd: null }; clients.set(id, c); }
+  if (!c) { c = { state: emptyDshState(), generation: crypto.randomUUID(), listeners: new Set(), owners: 0, cwd: null }; clients.set(id, c); if (!REMOTE) { const own = c; own.listeners.add(mirrorSource('dsh', id, () => own.state)); } }
   return c;
 }
 function publish(c: Client, immediate = false) {
@@ -57,6 +59,12 @@ async function connect(id: string, c: Client, resumeToken: string | undefined, r
 }
 
 export function retainDshSession(id: string, cwd: string | null, resumeToken?: string): () => void {
+  // In the browser the desktop runs the session; this only follows it.
+  if (REMOTE) {
+    const c = client(id); c.owners++;
+    const stop = mirrorTarget('dsh', id, state => { c.state = state as DshState; publish(c, true); });
+    return () => { stop(); if (!--c.owners) clients.delete(id); };
+  }
   const c = client(id); clearTimeout(c.closeTimer); c.owners++; c.cwd = cwd;
   c.starting ??= (async () => {
     for (let attempt = 0; attempt < 2; attempt++) {
@@ -96,8 +104,9 @@ async function restart(id: string, route?: DshRoute) {
     c.state = { ...c.state, restarting: false, stopping: false, ready: false, error: String(error) }; publish(c, true);
   }
 }
-export const stopDsh = (id: string) => restart(id);
+export const stopDsh = (id: string) => REMOTE ? mirrorCall<void>('dsh', 'stopDsh', [id]) : restart(id);
 export function setDshRoute(id: string, route: DshRoute): Promise<void> {
+  if (REMOTE) return mirrorCall('dsh', 'setDshRoute', [id, route]);
   const c = clients.get(id);
   // A switch requested while another reloads waits for it; only the latest request is then applied.
   if (c?.switching) {
@@ -112,6 +121,7 @@ export function setDshRoute(id: string, route: DshRoute): Promise<void> {
 /** Changes only the effort, on top of the route being switched to (queued or applying), so an
  * effort change made during a model switch never brings back the previous model. */
 export function setDshEffort(id: string, effort: string): Promise<void> {
+  if (REMOTE) return mirrorCall('dsh', 'setDshEffort', [id, effort]);
   const c = clients.get(id); if (!c) return Promise.resolve();
   return setDshRoute(id, { ...(c.nextRoute ?? c.target ?? c.state.route), effort });
 }
@@ -119,6 +129,7 @@ export function setDshEffort(id: string, effort: string): Promise<void> {
 /** Applied live by Coffee's plugin, so a running turn carries on. The control shows only what the Session's
  * own events confirm; an unstarted tab has no Session yet, so its choice waits for the first prompt. */
 export async function setDshPreset(id: string, preset: string) {
+  if (REMOTE) return mirrorCall('dsh', 'setDshPreset', [id, preset]);
   const c = clients.get(id); if (!c) return;
   try { await invoke('dsh_session_set_preset', { id, generation: c.generation, preset }); }
   catch (error) { c.state = { ...c.state, error: String(error) }; publish(c, true); return; }
@@ -127,6 +138,7 @@ export async function setDshPreset(id: string, preset: string) {
 }
 
 export async function sendDshMessage(id: string, prompt: string): Promise<boolean> {
+  if (REMOTE) return mirrorCall('dsh', 'sendDshMessage', [id, prompt]);
   const c = clients.get(id); const text = prompt.trim();
   // A model or effort switch reloads in the background; a message sent meanwhile goes out once it is back.
   if (c?.switching) await c.switching;
@@ -152,7 +164,11 @@ export async function sendDshMessage(id: string, prompt: string): Promise<boolea
 }
 
 export async function respondDsh(id: string, requestId: string | number, result: Json): Promise<void> {
+  if (REMOTE) return mirrorCall('dsh', 'respondDsh', [id, requestId, result]);
   const c = clients.get(id); if (!c) return;
   await invoke('dsh_session_respond', { id, generation: c.generation, requestId, result });
   c.state = { ...c.state, requests: c.state.requests.filter(r => r.id !== requestId) }; publish(c, true);
 }
+
+// What a browser may ask the desktop to do in a dsh conversation.
+registerMirrorActions('dsh', { setDshPreset, setDshRoute, setDshEffort, sendDshMessage, respondDsh, stopDsh });

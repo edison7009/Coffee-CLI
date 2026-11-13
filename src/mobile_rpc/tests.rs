@@ -315,30 +315,20 @@ fn firewall_scripts_quote_the_program_path() {
 }
 
 #[test]
-fn browser_commands_are_denied_or_scoped_to_own_sessions_except_terminal_typing() {
-    use std::collections::HashSet;
-    let mut owned = HashSet::new();
-    let ok = |cmd: &str, args: Value, owned: &mut HashSet<String>| remote_ui::check(cmd, &args, owned).is_ok();
+fn browsers_only_type_into_terminals_and_leave_sessions_to_the_desktop() {
+    let ok = |cmd: &str, args: Value| remote_ui::check(cmd, &args).is_ok();
     // Everyday desktop features pass through.
-    for cmd in ["list_directory", "get_usage_statistics", "git_changes", "load_tasks", "get_native_history", "list_tools", "claude_session_preview"] { assert!(ok(cmd, json!({}), &mut owned), "{cmd}"); }
+    for cmd in ["list_directory", "get_usage_statistics", "git_changes", "load_tasks", "get_native_history", "list_tools", "claude_session_preview", "dsh_session_history"] { assert!(ok(cmd, json!({})), "{cmd}"); }
     // The desktop window, host devices, credentials, pairing, installers and the agent hub are not.
-    for cmd in ["window_close", "pick_folder", "show_in_folder", "load_password", "save_password", "mobile_rpc_set_enabled", "mobile_rpc_revoke_device", "voice_input_start", "download_and_install_update", "update_cli", "orchestration_sync", "agent_resolve_tool", "start_fs_watcher", "plugin:dialog|open", "Window_Close", "a;b", ""] {
-        assert!(!ok(cmd, json!({}), &mut owned), "{cmd}");
+    for cmd in ["window_close", "pick_folder", "show_in_folder", "load_password", "save_password", "mobile_rpc_set_enabled", "mobile_rpc_revoke_device", "mobile_rpc_mirror", "voice_input_start", "download_and_install_update", "update_cli", "orchestration_sync", "agent_resolve_tool", "start_fs_watcher", "plugin:dialog|open", "Window_Close", "a;b", ""] {
+        assert!(!ok(cmd, json!({})), "{cmd}");
     }
-    // A browser types into the desktop's terminals (mirroring) but resizes and closes only what it started.
-    assert!(!ok("claude_session_send", json!({"id":"desk"}), &mut owned), "desktop session");
-    assert!(ok("tier_terminal_input", json!({"sessionId":"desk-term"}), &mut owned));
-    assert!(ok("tier_terminal_raw_write", json!({"sessionId":"desk-term"}), &mut owned));
-    assert!(!ok("tier_terminal_resize", json!({"sessionId":"desk-term"}), &mut owned), "desktop size wins");
-    assert!(!ok("tier_terminal_kill", json!({"sessionId":"desk-term"}), &mut owned), "closing a mirror leaves the desktop tab");
-    assert!(!ok("codex_session_close", json!({"id":"desk"}), &mut owned));
-    assert!(ok("claude_session_start", json!({"id":"web-1"}), &mut owned));
-    assert!(ok("claude_session_send", json!({"id":"web-1"}), &mut owned));
-    assert!(ok("claude_session_close", json!({"id":"web-1"}), &mut owned));
-    assert!(ok("tier_terminal_start", json!({"sessionId":"web-t"}), &mut owned));
-    assert!(ok("tier_terminal_resize", json!({"sessionId":"web-t"}), &mut owned));
-    assert!(!ok("tier_terminal_kill", json!({"sessionId":"web-1-other"}), &mut owned));
-    assert!(!ok("pi_session_start", json!({}), &mut owned), "start needs an id");
+    // Typing reaches the desktop's terminals; starting, sizing, closing and conversations go through the desktop.
+    assert!(ok("tier_terminal_input", json!({"sessionId":"desk"})));
+    assert!(ok("tier_terminal_raw_write", json!({"sessionId":"desk"})));
+    for cmd in ["tier_terminal_start", "tier_terminal_resize", "tier_terminal_kill", "set_session_active", "claude_session_start", "claude_session_send", "codex_session_close", "pi_session_request", "claude_session_history"] {
+        assert!(!ok(cmd, json!({"id":"desk","sessionId":"desk"})), "{cmd}");
+    }
 }
 
 #[test]
