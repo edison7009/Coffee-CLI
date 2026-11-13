@@ -7,6 +7,11 @@
 src-ui/dist/
 src-ui/node_modules/
 
+# The frontend hot-reloads through Vite; none of it is compiled into the Rust
+# binary, so an edit there must not restart the app.
+src-ui/
+mobile/
+
 # Never needs watching — build/artifact dirs.
 target/
 Web-Home/
