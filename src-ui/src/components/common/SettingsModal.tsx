@@ -676,7 +676,7 @@ export function SettingsModal() {
                           <button type="button" className="settings-sound-play" aria-label={t('settings.sound.preview')} onClick={() => playNotifySound(row.preview)}>
                             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 6.5v11l9-5.5z" strokeLinejoin="round" stroke="currentColor" strokeWidth="1.5" /></svg>
                           </button>
-                          <button type="button" className="settings-sound-link" onClick={() => { void pickSound(row.preview); }}>{t('settings.sound.change')}</button>
+                          <button type="button" className="settings-voice-scan settings-sound-change" onClick={() => { void pickSound(row.preview); }}>{t('settings.sound.change')}</button>
                         </span>
                       </>}
                       <button type="button" role="switch" className="settings-switch" aria-checked={row.value} aria-label={t(row.labelKey)} onClick={() => row.set(!row.value)}><span /></button>

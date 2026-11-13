@@ -613,6 +613,7 @@
 .settings-sound-play:hover { color: var(--text-1); background: var(--bg-hover); }
 .settings-sound-play:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
 .settings-sound-play svg { width: 12px; height: 12px; }
+.settings-sound-change { padding: 4px 12px; margin-right: 4px; }
 /* A row whose choice carries a note under it, both right-aligned. */
 .settings-choice-row { align-items: flex-start; }
 .settings-choice-row .settings-sound-title { padding-top: 5px; }
