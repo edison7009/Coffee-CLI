@@ -5,7 +5,7 @@ import { commands, isTauri, type MobileRpcAddress, type MobileRpcFirewall, type 
 import { ThemedSelect } from './ThemedSelect';
 import { useT } from '../../i18n/useT';
 import { clipboardWrite } from '../../lib/clipboard';
-import { onPairingRequest, webPairingUrl } from '../../lib/web-access';
+import { webPairingUrl } from '../../lib/web-access';
 
 interface Pairing extends MobileRpcPairing { qr: string; webUrl: string }
 
@@ -84,18 +84,6 @@ export function MobileSettings() {
   });
 
   // Opened from the sidebar's "pair a device": show the code once the server is listening.
-  // Asked from the sidebar's "pair a device": show the code once the server is listening.
-  const [pairWanted, setPairWanted] = useState(false);
-  useEffect(() => onPairingRequest(() => setPairWanted(true)), []);
-  const ready = !!status?.enabled && !!status.host;
-  useEffect(() => {
-    if (!pairWanted || !ready) return;
-    setPairWanted(false);
-    void beginPairing();
-  // beginPairing is rebuilt every render; each request fires once, when the server is ready.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pairWanted, ready]);
-
   const cancelPairing = () => run(async () => { await commands.mobileRpcCancelPairing(); setPairing(null); });
   const revoke = (publicKey: string) => run(async () => { setStatus(await commands.mobileRpcRevokeDevice(publicKey)); });
 

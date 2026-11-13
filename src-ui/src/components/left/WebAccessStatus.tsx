@@ -7,7 +7,7 @@ import { useAppDispatch } from '../../store/app-state';
 import { commands, isTauri, type MobileRpcDevice, type MobileRpcStatus } from '../../tauri';
 import { useT } from '../../i18n/useT';
 import { REMOTE } from '../../remote/bridge';
-import { requestPairingOnOpen } from '../../lib/web-access';
+import { PairDeviceDialog } from './PairDeviceDialog';
 
 export function WebAccessStatus() {
   const t = useT();
@@ -16,6 +16,7 @@ export function WebAccessStatus() {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [pairing, setPairing] = useState(false);
   const button = useRef<HTMLButtonElement>(null);
   const menu = useRef<HTMLDivElement>(null);
 
@@ -52,8 +53,7 @@ export function WebAccessStatus() {
   // A browser already is the other device; the status belongs to the desktop.
   if (REMOTE || !status) return null;
 
-  const settings = (pair = false) => {
-    if (pair) requestPairingOnOpen();
+  const settings = () => {
     setOpen(false);
     dispatch({ type: 'SET_SETTINGS_OPEN', open: true, section: 'mobile' });
   };
@@ -84,11 +84,12 @@ export function WebAccessStatus() {
         <i aria-hidden="true" /><span className="sidebar-web-device-kind">{kind(device)}</span><span className="sidebar-web-device-name">{device.name}</span>
       </div>)}
       <div className="ctx-menu-divider" />
-      <button type="button" role="menuitem" className="ctx-menu-item" onClick={() => settings(true)}>{t('sidebar.devices.add')}</button>
+      <button type="button" role="menuitem" className="ctx-menu-item" onClick={() => { setOpen(false); setPairing(true); }}>{t('sidebar.devices.add')}</button>
       <div className="ctx-menu-divider" />
       <button type="button" role="menuitem" className="ctx-menu-item" onClick={() => settings()}>{t('sidebar.devices.settings')}</button>
       <button type="button" role="menuitem" className="ctx-menu-item" disabled={busy} onClick={() => void disconnectAll()}>{t('sidebar.devices.disconnect')}</button>
       {error && <div className="sidebar-web-error" role="alert">{error}</div>}
     </div>, document.body)}
+    {pairing && <PairDeviceDialog onClose={() => setPairing(false)} />}
   </>;
 }
