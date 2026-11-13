@@ -1331,31 +1331,29 @@ body.session-split-dragging { cursor: grabbing; user-select: none; }
 }
 
 /* Pin toggle switch (right edge of each library card) - explicit on/off
-   for "show on home screen", clearer than border+opacity alone. */
+   for "show on home screen", clearer than border+opacity alone. Same shape
+   and colours as the settings switch (.settings-switch in global.css). */
 .library-toggle {
   flex-shrink: 0;
-  width: 36px;
-  height: 20px;
-  border-radius: 999px;
-  /* Track fill, not a hairline. In the shapes that draw chrome from --border
-     (Panel), a theme-accent border colour would fill this pill too and make the
-     OFF state read as ON, so the deep-row light themes hand it a neutral track
-     via --switch-track; every other theme keeps the --border fill. */
-  background: var(--switch-track, var(--border, #3a3a3a));
+  width: 40px;
+  height: 24px;
+  border-radius: 12px;
+  background: var(--bg-hover);
+  box-shadow: inset 0 0 0 1px var(--border-input);
   position: relative;
-  transition: background-color 0.18s ease;
+  transition: background-color 150ms;
   margin-left: 8px;
 }
-/* Keep the on state recognizable even in themes with a gray accent. */
-.library-toggle.on { background: var(--switch-on); }
+.library-toggle.on { background: var(--switch-on); box-shadow: none; }
 .library-toggle-knob {
   position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 16px;
-  height: 16px;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   background: #fff;
-  transition: transform 0.18s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: transform 150ms;
 }
 .library-toggle.on .library-toggle-knob { transform: translateX(16px); }

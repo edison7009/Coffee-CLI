@@ -2948,9 +2948,6 @@ html.is-windows[data-frost="frost"] #root {
 ) {
     --border: var(--accent);
     --border-input: var(--accent);
-    /* --border doubles as the pin switch's track fill: keep that one neutral
-       so the OFF state doesn't come out looking like the ON state. */
-    --switch-track: rgba(0, 0, 0, 0.16);
 }
 
 /* Glass blur on left panel would tint it differently from center/right.
