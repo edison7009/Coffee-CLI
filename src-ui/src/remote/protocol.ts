@@ -257,8 +257,9 @@ export class CoffeeClient {
       const fail = (message: string, code = 'unreachable') => { clearTimeout(timer); socket.onmessage = socket.onclose = socket.onerror = null; try { socket.close(); } catch { /* already closed */ } reject(new RpcError(code, message)); };
       // Pairing waits for the person at the desktop to allow the phone.
       const timer = setTimeout(() => fail('timed out'), timeoutMs);
-      // The desktop answers an unknown phone or a wrong code by hanging up during the handshake.
-      const dropped = () => step === 'handshake' ? fail('desktop refused this phone', 'unauthorized') : fail('connection closed');
+      // A wrong or expired pairing code makes the desktop hang up during the handshake. A paired device that
+      // was removed is told so in reply to hello; a hang-up on reconnect is only a dropped network.
+      const dropped = () => step === 'handshake' && pairingCode ? fail('desktop refused this phone', 'unauthorized') : fail('connection closed');
       socket.onerror = dropped;
       socket.onclose = dropped;
       socket.onmessage = ({ data }) => {

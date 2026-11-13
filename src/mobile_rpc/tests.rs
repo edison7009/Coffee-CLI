@@ -129,6 +129,11 @@ impl Phone {
     async fn recv(&mut self) -> Option<Value> { serde_json::from_slice(&self.channel.decrypt(&recv_binary(&mut self.ws).await?).ok()?).ok() }
 }
 
+/// The desktop answered `hello` by refusing this device.
+fn refused(result: &Option<(Phone, Value)>) -> bool {
+    result.as_ref().is_some_and(|(_, reply)| reply["error"]["code"] == "unauthorized")
+}
+
 /// Opens a socket and runs the handshake plus `hello`. `None` when the desktop
 /// drops the connection.
 async fn connect(url: &str, private: &[u8], desktop_public: &[u8], mode: u8, psk: [u8; 32]) -> Option<(Phone, Value)> {
@@ -155,8 +160,8 @@ fn encrypted_websocket_round_trip() {
         let desktop_public = hex::decode(config::load().public_key).unwrap();
         let (phone_private, phone_public) = secure::generate_keypair();
 
-        // Not paired yet: a resume attempt is dropped before any reply.
-        assert!(connect(&url, &phone_private, &desktop_public, MODE_RESUME, [0; 32]).await.is_none());
+        // Not paired yet: told so over the encrypted channel (not hung up on, which would read as a dropped network).
+        assert!(refused(&connect(&url, &phone_private, &desktop_public, MODE_RESUME, [0; 32]).await), "unknown device refused");
 
         // Pairing without an open window, or with the wrong code, fails and burns the code.
         assert!(connect(&url, &phone_private, &desktop_public, MODE_PAIR, secure::pairing_psk("x")).await.is_none());
@@ -208,7 +213,7 @@ fn encrypted_websocket_round_trip() {
         mobile_rpc_revoke_device(hex::encode(&phone_public)).unwrap();
         assert!(recv_binary(&mut live_phone.ws).await.is_none(), "revoked phone is disconnected");
         assert!(revoked_at.elapsed() < Duration::from_secs(2), "disconnect is immediate, not a timeout");
-        assert!(connect(&url, &phone_private, &desktop_public, MODE_RESUME, [0; 32]).await.is_none());
+        assert!(refused(&connect(&url, &phone_private, &desktop_public, MODE_RESUME, [0; 32]).await), "revoked device refused");
     });
 }
 
@@ -320,7 +325,7 @@ fn browsers_only_type_into_terminals_and_leave_sessions_to_the_desktop() {
     // Everyday desktop features pass through.
     for cmd in ["list_directory", "get_usage_statistics", "git_changes", "load_tasks", "get_native_history", "list_tools", "claude_session_preview", "dsh_session_history"] { assert!(ok(cmd, json!({})), "{cmd}"); }
     // The desktop window, host devices, credentials, pairing, installers and the agent hub are not.
-    for cmd in ["window_close", "pick_folder", "show_in_folder", "load_password", "save_password", "mobile_rpc_set_enabled", "mobile_rpc_revoke_device", "mobile_rpc_mirror", "voice_input_start", "download_and_install_update", "update_cli", "orchestration_sync", "agent_resolve_tool", "start_fs_watcher", "plugin:dialog|open", "Window_Close", "a;b", ""] {
+    for cmd in ["window_close", "pick_folder", "show_in_folder", "load_password", "save_password", "mobile_rpc_set_enabled", "mobile_rpc_revoke_device", "mobile_rpc_mirror", "open_url", "voice_input_start", "download_and_install_update", "update_cli", "orchestration_sync", "agent_resolve_tool", "start_fs_watcher", "plugin:dialog|open", "Window_Close", "a;b", ""] {
         assert!(!ok(cmd, json!({})), "{cmd}");
     }
     // Typing reaches the desktop's terminals; starting, sizing, closing and conversations go through the desktop.
@@ -409,4 +414,8 @@ fn wallpaper_is_sent_in_pieces_with_its_type() {
     }
     assert_eq!(got, bytes);
     assert!(wallpaper_chunk("", 0).is_err(), "no wallpaper chosen");
+    // The wallpaper setting cannot be pointed at any other file.
+    let secret = dir.path().join("credentials.json");
+    std::fs::write(&secret, "{}").unwrap();
+    assert!(wallpaper_chunk(&secret.to_string_lossy(), 0).is_err(), "only images and videos are sent");
 }

@@ -2,11 +2,17 @@
 //!
 //! The browser runs the full desktop front-end, but holds nothing of its own:
 //! every session lives on the desktop. Its Tauri commands arrive here and,
-//! when allowed, are run by the desktop window on its behalf. Two rules:
+//! when allowed, are run by the desktop window on its behalf.
 //!
-//! - A deny-list keeps the desktop window, the host's own devices and dialogs,
-//!   credentials, pairing, installers and the desktop's background agent out
-//!   of reach.
+//! Pairing a device trusts it with this computer, like an SSH login: it can
+//! type into the desktop's terminals, so it can already read files and run
+//! programs. The rules here keep the desktop app itself in one piece rather
+//! than fence a hostile device in:
+//!
+//! - A deny-list keeps the desktop window, the host's dialogs and speakers,
+//!   pairing, installers, the desktop's background agent and anything that
+//!   opens programs on the desktop's screen (the browser opens links itself)
+//!   out of reach, and passwords stay where they are.
 //! - Sessions are started, closed and sized only by the desktop. The browser
 //!   asks for those through `ui.dispatch` and `ui.call`; directly it may only
 //!   type into a terminal it shows.
@@ -23,10 +29,10 @@ pub const FORWARDED_EVENTS: [&str; 11] = [
     "fs-refresh", "tasks-changed", "agent-conversations-changed", "agent-work-modes", "channel-status", "orchestration-updated",
 ];
 
-const DENIED: [&str; 33] = [
+const DENIED: [&str; 34] = [
     // The desktop window and the host's own devices, dialogs and speakers.
     "window_minimize", "window_maximize", "window_close", "show_main_window", "set_frosted_backdrop", "set_background_mode",
-    "pick_folder", "notify_sound_choose", "show_in_folder", "read_clipboard_image", "save_clipboard_image", "play_notify_sound",
+    "pick_folder", "notify_sound_choose", "show_in_folder", "open_url", "read_clipboard_image", "save_clipboard_image", "play_notify_sound",
     // One global watcher: a browser switching folders would move the desktop's.
     "start_fs_watcher", "stop_fs_watcher",
     // Credentials, installers and account binding stay on the desktop.

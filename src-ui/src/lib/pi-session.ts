@@ -4,7 +4,7 @@ import { recordSessionReply } from './session-replies';
 import { markPromptSubmitted } from './notify-prompts';
 import { invoke } from '../tauri';
 import { REMOTE } from '../remote/bridge';
-import { mirrorCall, mirrorSource, mirrorTarget, registerMirrorActions } from './session-mirror';
+import { dropMirrorSource, mirrorCall, mirrorSource, mirrorTarget, registerMirrorActions } from './session-mirror';
 import { arr, emptyPiState, obj, piModel, piStats, reducePiEvent, restorePiMessages, str, type Json, type PiModel, type PiState } from './pi-protocol';
 
 interface Client { state: PiState; generation: string; listeners: Set<() => void>; owners: number; cwd: string | null; starting?: Promise<void>; closeTimer?: ReturnType<typeof setTimeout>; publishTimer?: ReturnType<typeof setTimeout> }
@@ -90,7 +90,7 @@ export function retainPiSession(id: string, cwd: string | null, resumeToken?: st
     c.closeTimer = setTimeout(() => {
       if (c.owners) return;
       void (c.starting ?? Promise.resolve()).finally(() => invoke('pi_session_close', { id, generation: c.generation })).catch(() => {});
-      clearTimeout(c.publishTimer); clients.delete(id);
+      clearTimeout(c.publishTimer); clients.delete(id); dropMirrorSource('pi', id);
     }, 300);
   };
 }

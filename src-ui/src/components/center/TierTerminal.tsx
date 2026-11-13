@@ -1215,17 +1215,25 @@ function TierTerminalImpl({
       type Chunk = { data: string; start: number; end: number };
       let shown: number | null = null;
       let queued: Chunk[] = [];
-      let attaching = false;
+      let attaching = false, again = false, failures = 0;
+      let retry: ReturnType<typeof setTimeout> | undefined;
+      unlisteners.push(() => clearTimeout(retry));
       const take = (chunk: Chunk) => {
-        if (shown === null) { queued.push(chunk); return; }
+        if (shown === null) {
+          queued.push(chunk);
+          // Far more output than the snapshot will hold: the snapshot alone is enough.
+          if (queued.length > 2000) queued = [];
+          return;
+        }
         if (chunk.end <= shown) return;
         if (chunk.start > shown) { void attach(); queued.push(chunk); return; }
         term.write(chunk.data);
         shown = chunk.end;
       };
       const attach = async () => {
-        if (attaching) return;
-        attaching = true; shown = null;
+        // A gap found while replaying the backlog: attach once more when this one is done.
+        if (attaching) { again = true; return; }
+        attaching = true; again = false; shown = null; clearTimeout(retry);
         try {
           const snap = await remoteRequest<{ snapshot: string; end: number; cols: number; rows: number }>('ui.terminal.attach', { id: sessionId });
           if (!mounted) return;
@@ -1236,11 +1244,16 @@ function TierTerminalImpl({
           shown = snap.end;
           const backlog = queued; queued = [];
           for (const chunk of backlog) take(chunk);
+          failures = 0;
           setTerminalControlReady(sessionId, true);
           setProcessExited(false);
-        } catch (err) {
-          if (mounted) term.write(`\r\n\x1b[31m${String(err)}\x1b[0m\r\n`);
-        } finally { attaching = false; }
+        } catch {
+          // The desktop's terminal may still be starting, or the desktop was slow: try again.
+          if (mounted) retry = setTimeout(() => void attach(), Math.min(10_000, 1500 * 2 ** failures++));
+        } finally {
+          attaching = false;
+          if (again && mounted) void attach();
+        }
       };
       const unsubEvents = await subscribeTerminalEvents(sessionId, {
         onOutput: (data, range) => { if (mounted) { if (range) take({ data, ...range }); else term.write(data); } },

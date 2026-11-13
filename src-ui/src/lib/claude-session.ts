@@ -4,7 +4,7 @@ import { recordSessionReply } from './session-replies';
 import { readLaunchControls, setSessionControls, clearSessionControls } from './session-controls';
 import { invoke, type ToolConfigEntry } from '../tauri';
 import { REMOTE } from '../remote/bridge';
-import { mirrorCall, mirrorSource, mirrorTarget, registerMirrorActions } from './session-mirror';
+import { dropMirrorSource, mirrorCall, mirrorSource, mirrorTarget, registerMirrorActions } from './session-mirror';
 import { emptyClaudeState, finishTurn, reduceClaudeEvent, object, list, text, type ClaudeState, type ClaudeModel, type ClaudeCommand, type Json, coldReturn } from './claude-protocol';
 
 interface Client {
@@ -173,7 +173,7 @@ export function retainClaudeSession(id: string, cwd: string | null, resumeToken?
       clearTimeout(c.publishTimer);
       clearSessionControls(id, c.generation);
       continuations.delete(id);
-      clients.delete(id);
+      clients.delete(id); dropMirrorSource('claude', id);
     }, 300);
   };
 }

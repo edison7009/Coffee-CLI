@@ -3,7 +3,7 @@ import { directoryFailure } from './session-directory';
 import { recordSessionReply } from './session-replies';
 import { invoke } from '../tauri';
 import { REMOTE } from '../remote/bridge';
-import { mirrorCall, mirrorSource, mirrorTarget, registerMirrorActions } from './session-mirror';
+import { dropMirrorSource, mirrorCall, mirrorSource, mirrorTarget, registerMirrorActions } from './session-mirror';
 import { arr, obj, str, emptyDshState, reduceDshNotification, restoreDshLog, type DshModel, type DshRoute, type DshState, type Json } from './dsh-protocol';
 
 interface Client { state: DshState; generation: string; listeners: Set<() => void>; owners: number; cwd: string | null; starting?: Promise<void>; switching?: Promise<void>; target?: DshRoute; nextRoute?: DshRoute; preset?: string; closeTimer?: ReturnType<typeof setTimeout>; publishTimer?: ReturnType<typeof setTimeout> }
@@ -83,7 +83,7 @@ export function retainDshSession(id: string, cwd: string | null, resumeToken?: s
     c.closeTimer = setTimeout(() => {
       if (c.owners) return;
       void (c.starting ?? Promise.resolve()).finally(() => invoke('dsh_session_close', { id, generation: c.generation })).catch(() => {});
-      clearTimeout(c.publishTimer); clients.delete(id);
+      clearTimeout(c.publishTimer); clients.delete(id); dropMirrorSource('dsh', id);
     }, 300);
   };
 }

@@ -23,6 +23,8 @@ export function diffState(prev: State, next: State): Omit<MirrorPatch, 'v'> | nu
   for (const key of Object.keys(next)) {
     const a = prev[key], b = next[key];
     if (a === b) continue;
+    // JSON has no undefined: a field cleared this way travels as a removal.
+    if (b === undefined) { if (key in prev) unset.push(key); continue; }
     if (Array.isArray(a) && Array.isArray(b)) {
       const items: Record<number, unknown> = {};
       let changed = 0;
@@ -32,7 +34,7 @@ export function diffState(prev: State, next: State): Omit<MirrorPatch, 'v'> | nu
     }
     set[key] = b;
   }
-  for (const key of Object.keys(prev)) if (!(key in next)) unset.push(key);
+  for (const key of Object.keys(prev)) if (!(key in next) && prev[key] !== undefined) unset.push(key);
   if (!Object.keys(set).length && !Object.keys(arrays).length && !unset.length) return null;
   return { ...(Object.keys(set).length ? { set } : {}), ...(Object.keys(arrays).length ? { arrays } : {}), ...(unset.length ? { unset } : {}) };
 }
@@ -52,6 +54,9 @@ export function applyPatch(prev: State, patch: MirrorPatch): State {
 
 interface Source { read: () => unknown; sent: State | null; v: number; timer?: ReturnType<typeof setTimeout> }
 const sources = new Map<string, Source>();
+/** Numbers keep counting when a session's store is replaced (a tab reopened with the same id), so a
+ *  browser that followed the old one does not take the new one's patches for ones it already has. */
+const versions = new Map<string, number>();
 const actions = new Map<MirrorKind, Record<string, (...args: never[]) => unknown>>();
 let active = false;
 
@@ -63,16 +68,22 @@ function push(kind: MirrorKind, id: string, source: Source) {
   const next = source.read() as State;
   const patch = source.sent ? diffState(source.sent, next) : { set: next };
   if (!patch) return;
-  source.sent = next; source.v++;
+  source.sent = next; source.v++; versions.set(key(kind, id), source.v);
   void invoke('mobile_rpc_mirror', { kind, id, patch: { v: source.v, ...patch } }).catch(() => {});
 }
 
 /** Desktop session stores call this once per session; the returned function goes in its listeners. */
 export function mirrorSource(kind: MirrorKind, id: string, read: () => unknown): () => void {
-  const source: Source = { read, sent: null, v: 0 };
+  const source: Source = { read, sent: null, v: versions.get(key(kind, id)) ?? 0 };
   sources.set(key(kind, id), source);
   // Stores publish in bursts while a reply streams; one patch per frame is plenty.
   return () => { if (active && !source.timer) source.timer = setTimeout(() => push(kind, id, source), 30); };
+}
+
+/** A session store went away; its state is no longer kept for browsers. */
+export function dropMirrorSource(kind: MirrorKind, id: string) {
+  const source = sources.get(key(kind, id));
+  if (source) { clearTimeout(source.timer); sources.delete(key(kind, id)); }
 }
 
 /** The desktop's actions a browser may ask for, by name. */
@@ -92,7 +103,7 @@ export function mirrorSnapshot(kind: MirrorKind, id: string): { v: number; state
   if (!source) return { v: 0, state: null };
   if (!active) setMirrorActive(true);
   push(kind, id, source);
-  if (!source.sent) { source.sent = source.read() as State; source.v++; }
+  if (!source.sent) { source.sent = source.read() as State; source.v++; versions.set(key(kind, id), source.v); }
   return { v: source.v, state: source.sent };
 }
 
@@ -114,12 +125,19 @@ function listenPatches() {
   }));
 }
 
+/** Patches held while a snapshot is on its way; beyond this a fresh snapshot is cheaper. */
+const MAX_QUEUED = 500;
+const RETRY_MS = 2000;
+
 /** Follows one desktop session; `apply` receives each new state. Returns the stop function. */
 export function mirrorTarget(kind: MirrorKind, id: string, apply: (state: unknown) => void): () => void {
-  let stopped = false, state: State | null = null, v = 0, loading = false, queued: Patch[] = [];
+  let stopped = false, state: State | null = null, v = 0, loading = false, again = false, queued: Patch[] = [];
+  let retry: ReturnType<typeof setTimeout> | undefined;
   const reload = async () => {
-    if (loading || stopped) return;
-    loading = true; state = null;
+    if (stopped) return;
+    // Asked again while one is on its way (a gap found in its own backlog): run once more after it.
+    if (loading) { again = true; return; }
+    loading = true; again = false; state = null; clearTimeout(retry);
     try {
       const snap = await remoteRequest<{ v: number; state: State | null }>('mirror.snapshot', { kind, id });
       if (stopped) return;
@@ -127,12 +145,21 @@ export function mirrorTarget(kind: MirrorKind, id: string, apply: (state: unknow
       const backlog = queued; queued = [];
       if (snap.state) apply(state);
       for (const patch of backlog) take(patch);
-    } catch { /* The connection is down; the next patch or reconnect asks again. */ }
-    finally { loading = false; }
+    } catch {
+      // A slow or busy desktop: try again rather than wait for a patch that may never come.
+      if (!stopped) retry = setTimeout(() => void reload(), RETRY_MS);
+    } finally {
+      loading = false;
+      if (again && !stopped) void reload();
+    }
   };
   const take = (patch: Patch) => {
     if (stopped) return;
-    if (!state) { queued.push(patch); return; }
+    if (!state) {
+      queued.push(patch);
+      if (queued.length > MAX_QUEUED) { queued = []; if (!loading) void reload(); }
+      return;
+    }
     if (patch.v <= v) return;
     if (patch.v > v + 1) { queued.push(patch); void reload(); return; }
     state = applyPatch(state, patch); v = patch.v;
@@ -142,7 +169,7 @@ export function mirrorTarget(kind: MirrorKind, id: string, apply: (state: unknow
   void listenPatches().then(reload);
   // Back from a dropped connection: whatever changed meanwhile is only in a new snapshot.
   const stopStatus = onRemoteStatus(status => { if (status === 'connected') void reload(); });
-  return () => { stopped = true; stopStatus(); if (targets.get(key(kind, id)) === take) targets.delete(key(kind, id)); };
+  return () => { stopped = true; clearTimeout(retry); stopStatus(); if (targets.get(key(kind, id)) === take) targets.delete(key(kind, id)); };
 }
 
 /** Runs one of the desktop's session actions for this browser. */

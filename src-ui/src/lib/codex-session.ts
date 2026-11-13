@@ -5,7 +5,7 @@ import { recordSessionReply } from './session-replies';
 import { markPromptSubmitted } from './notify-prompts';
 import { invoke } from '../tauri';
 import { REMOTE } from '../remote/bridge';
-import { mirrorCall, mirrorSource, mirrorTarget, registerMirrorActions } from './session-mirror';
+import { dropMirrorSource, mirrorCall, mirrorSource, mirrorTarget, registerMirrorActions } from './session-mirror';
 import { gambitAttachments } from './gambit-attachments';
 import { arr, codexColdReturn, codexSubTasks, num, obj, str, emptyCodexState, reduceCodexEvent, restoreCodexTurns, type CodexState, type CodexModel, type Json } from './codex-protocol';
 
@@ -104,7 +104,7 @@ export function retainCodexSession(id: string, cwd: string | null, resumeToken?:
     c.closeTimer = setTimeout(() => {
       if (c.owners) return;
       void (c.starting ?? Promise.resolve()).finally(() => invoke('codex_session_close', { id, generation: c.generation })).catch(() => {});
-      clearTimeout(c.publishTimer); clearSessionControls(id, c.generation); continuations.delete(id); clients.delete(id);
+      clearTimeout(c.publishTimer); clearSessionControls(id, c.generation); continuations.delete(id); clients.delete(id); dropMirrorSource('codex', id);
     }, 300);
   };
 }

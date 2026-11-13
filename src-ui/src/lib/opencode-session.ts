@@ -5,7 +5,7 @@ import { recordSessionReply } from './session-replies';
 import { markPromptSubmitted } from './notify-prompts';
 import { invoke } from '../tauri';
 import { REMOTE } from '../remote/bridge';
-import { mirrorCall, mirrorSource, mirrorTarget, registerMirrorActions } from './session-mirror';
+import { dropMirrorSource, mirrorCall, mirrorSource, mirrorTarget, registerMirrorActions } from './session-mirror';
 import { gambitAttachments } from './gambit-attachments';
 import { arr, obj, str, num, emptyOpenCodeState, lastContextTokens, reduceOpenCodeEvent, type Json, type OpenCodeAgent, type OpenCodeCommand, type OpenCodeModel, type OpenCodeModelRef, type OpenCodeState } from './opencode-protocol';
 
@@ -127,7 +127,7 @@ export function retainOpenCodeSession(id: string, cwd: string | null, resumeToke
     c.closeTimer = setTimeout(() => {
       if (c.owners) return;
       void (c.starting ?? Promise.resolve()).finally(() => invoke('opencode_session_close', { id, generation: c.generation })).catch(() => {});
-      clearTimeout(c.publishTimer); clearSessionControls(id, c.generation); clients.delete(id);
+      clearTimeout(c.publishTimer); clearSessionControls(id, c.generation); clients.delete(id); dropMirrorSource('opencode', id);
     }, 300);
   };
 }

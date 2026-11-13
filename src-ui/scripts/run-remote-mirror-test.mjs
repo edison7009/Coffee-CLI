@@ -70,6 +70,11 @@ assert.deepEqual(Object.keys(patch.arrays.messages.items), ['1', '2'], 'the unch
 assert.deepEqual(patch.unset, ['gone']);
 assert.deepEqual(applyPatch(before1, { v: 1, ...patch }), after1);
 assert.equal(diffState(after1, after1), null);
+// A field cleared to undefined (a dismissed card) reaches the browser as a removal: JSON would drop it.
+const cleared = diffState({ coldReturn: { prompt: 'x' }, busy: false }, { coldReturn: undefined, busy: false });
+assert.deepEqual(cleared, { unset: ['coldReturn'] });
+assert.equal('coldReturn' in applyPatch({ coldReturn: { prompt: 'x' } }, JSON.parse(JSON.stringify({ v: 1, ...cleared }))), false);
+assert.equal(diffState({ a: undefined }, { a: undefined }), null);
 // A shorter list (a rewound conversation) still comes out right.
 assert.deepEqual(applyPatch(after1, { v: 2, ...diffState(after1, { ...after1, messages: [m1] }) }).messages, [m1]);
 

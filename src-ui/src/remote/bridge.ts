@@ -128,7 +128,11 @@ function attach(next: CoffeeClient, pairing: RemotePairing) {
   });
   // Remember the address that answered.
   if (next.host && next.host !== pairing.desktop.hosts[0]) saveRemotePairing({ ...pairing, desktop: { ...pairing.desktop, hosts: [next.host, ...pairing.desktop.hosts.filter(h => h !== next.host)] } });
-  void next.request('ui.subscribe').then(() => { setStatus('connected'); for (const resolve of ready) resolve(); });
+  // Requests waiting for a connection wait for the next one if this one drops before it is ready.
+  void next.request('ui.subscribe').then(
+    () => { setStatus('connected'); for (const resolve of ready) resolve(); },
+    () => { waiters.push(...ready); },
+  );
 }
 
 export async function connectRemote(pairing = loadRemotePairing()): Promise<void> {

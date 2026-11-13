@@ -33,7 +33,10 @@ use tokio::sync::{mpsc, oneshot};
 use tokio_tungstenite::tungstenite::Message;
 
 pub const PROTOCOL: u64 = 0;
+/// Paired devices connected at once.
 const MAX_CLIENTS: usize = 8;
+/// Open sockets of any kind (page loads, handshakes in progress, devices); each must say what it is within `HELLO_TIMEOUT`.
+const MAX_CONNECTIONS: usize = 64;
 const CLIENT_QUEUE: usize = 1024;
 const MAX_FRAME: usize = 1 << 20;
 const HELLO_TIMEOUT: Duration = Duration::from_secs(10);
@@ -76,6 +79,8 @@ struct Hub {
     app: Mutex<Option<AppHandle>>,
     enabled: AtomicBool,
     listening: AtomicBool,
+    /// Which accept loop is current; a loop that was told to stop must not mark a newer one stopped.
+    generation: AtomicU64,
     stop: Mutex<Option<oneshot::Sender<()>>>,
     buffers: Mutex<Buffers>,
     clients: Mutex<HashMap<u64, Arc<Client>>>,
@@ -99,6 +104,8 @@ fn hub() -> &'static Hub {
 pub fn init(app: &AppHandle) {
     *hub().app.lock().unwrap() = Some(app.clone());
     app.listen_any("tier-terminal-output", |event| {
+        // Nothing to do (and nothing worth parsing) while no device may connect.
+        if !active() { return; }
         let Ok(payload) = serde_json::from_str::<Value>(event.payload()) else { return };
         let (Some(id), Some(data)) = (payload["id"].as_str(), payload["data"].as_str()) else { return };
         record_terminal(id, data);
@@ -111,12 +118,14 @@ pub fn init(app: &AppHandle) {
     }
     for (name, kind) in CONVERSATION_EVENTS {
         app.listen_any(name, move |event| {
+            if !active() { return; }
             let Ok(payload) = serde_json::from_str::<Value>(event.payload()) else { return };
             record_conversation(kind, payload);
         });
     }
     for name in remote_ui::FORWARDED_EVENTS {
         app.listen_any(name, move |event| {
+            if !active() { return; }
             let Ok(payload) = serde_json::from_str::<Value>(event.payload()) else { return };
             deliver_ui(name, payload);
         });
@@ -144,25 +153,31 @@ fn wallpaper_chunk(path: &str, offset: u64) -> Result<Value, RpcError> {
     use base64::Engine;
     use std::io::{Read, Seek, SeekFrom};
     if path.is_empty() { return Err(("not_found", "no wallpaper".into())); }
+    // Only an image or video: the setting names a wallpaper, not any file on this computer.
+    let mime = match std::path::Path::new(path).extension().and_then(|e| e.to_str()).map(str::to_ascii_lowercase).as_deref() {
+        Some("png") => "image/png", Some("jpg" | "jpeg") => "image/jpeg", Some("gif") => "image/gif", Some("webp") => "image/webp",
+        Some("bmp") => "image/bmp", Some("svg") => "image/svg+xml", Some("avif") => "image/avif",
+        Some("mp4" | "m4v") => "video/mp4", Some("webm") => "video/webm", Some("mov") => "video/quicktime",
+        _ => return Err(("unsupported", "not an image or video".into())),
+    };
     let mut file = std::fs::File::open(path).map_err(|e| ("not_found", e.to_string()))?;
     let size = file.metadata().map_err(|e| ("internal", e.to_string()))?.len();
     if size > WALLPAPER_MAX { return Err(("unsupported", "wallpaper too large".into())); }
     let mut data = vec![0; WALLPAPER_CHUNK.min(size.saturating_sub(offset) as usize)];
     file.seek(SeekFrom::Start(offset)).and_then(|_| file.read_exact(&mut data)).map_err(|e| ("internal", e.to_string()))?;
-    let mime = match std::path::Path::new(path).extension().and_then(|e| e.to_str()).map(str::to_ascii_lowercase).as_deref() {
-        Some("png") => "image/png", Some("jpg" | "jpeg") => "image/jpeg", Some("gif") => "image/gif", Some("webp") => "image/webp",
-        Some("bmp") => "image/bmp", Some("svg") => "image/svg+xml", Some("avif") => "image/avif",
-        Some("mp4" | "m4v") => "video/mp4", Some("webm") => "video/webm", Some("mov") => "video/quicktime", _ => "application/octet-stream",
-    };
     Ok(json!({"path": path, "size": size, "mime": mime, "data": base64::engine::general_purpose::STANDARD.encode(&data)}))
 }
 
 /// A browser mirroring one of the desktop's terminals: its recent output, where that ends, and its size.
 fn terminal_attach(id: &str) -> Result<Value, RpcError> {
     let app = hub().app.lock().unwrap().clone().ok_or(("internal", "app unavailable".to_string()))?;
-    let size = crate::server::terminal_size(&app, id).ok_or(("not_found", "no terminal session".to_string()))?;
-    let (snapshot, end) = hub().buffers.lock().unwrap().terminal(id).unwrap_or_default();
-    Ok(json!({"snapshot": snapshot, "end": end, "cols": size.0, "rows": size.1}))
+    // A terminal whose process has ended still shows its last output; size 0 keeps the browser's grid.
+    let size = crate::server::terminal_size(&app, id);
+    let log = hub().buffers.lock().unwrap().terminal(id);
+    if size.is_none() && log.is_none() { return Err(("not_found", "no terminal session".into())); }
+    let (snapshot, end) = log.unwrap_or_default();
+    let (cols, rows) = size.unwrap_or((0, 0));
+    Ok(json!({"snapshot": snapshot, "end": end, "cols": cols, "rows": rows}))
 }
 
 fn record_conversation(kind: &str, payload: Value) {
@@ -211,20 +226,28 @@ fn broadcast_all(frame: Value) {
 fn start(settings: config::Settings) -> Result<(), String> {
     let h = hub();
     if h.listening.swap(true, Ordering::SeqCst) { h.enabled.store(true, Ordering::SeqCst); return Ok(()); }
-    let std_listener = std::net::TcpListener::bind(SocketAddr::from((Ipv4Addr::UNSPECIFIED, settings.port)))
-        .map_err(|e| { h.listening.store(false, Ordering::SeqCst); format!("Port {} unavailable: {e}", settings.port) })?;
-    std_listener.set_nonblocking(true).map_err(|e| e.to_string())?;
+    // A loop that was just told to stop may still hold the port for a moment.
+    let mut bound = std::net::TcpListener::bind(SocketAddr::from((Ipv4Addr::UNSPECIFIED, settings.port)));
+    for _ in 0..20 {
+        if bound.is_ok() { break; }
+        std::thread::sleep(Duration::from_millis(50));
+        bound = std::net::TcpListener::bind(SocketAddr::from((Ipv4Addr::UNSPECIFIED, settings.port)));
+    }
+    let std_listener = bound.map_err(|e| { h.listening.store(false, Ordering::SeqCst); format!("Port {} unavailable: {e}", settings.port) })?;
+    std_listener.set_nonblocking(true).map_err(|e| { h.listening.store(false, Ordering::SeqCst); e.to_string() })?;
+    let generation = h.generation.fetch_add(1, Ordering::SeqCst) + 1;
     let (stop_tx, mut stop_rx) = oneshot::channel();
     *h.stop.lock().unwrap() = Some(stop_tx);
     h.enabled.store(true, Ordering::SeqCst);
+    let current = move || hub().generation.load(Ordering::SeqCst) == generation;
     tauri::async_runtime::spawn(async move {
-        let listener = match TcpListener::from_std(std_listener) { Ok(l) => l, Err(e) => { log::warn!("[mobile_rpc] {e}"); hub().listening.store(false, Ordering::SeqCst); return } };
+        let listener = match TcpListener::from_std(std_listener) { Ok(l) => l, Err(e) => { log::warn!("[mobile_rpc] {e}"); if current() { hub().listening.store(false, Ordering::SeqCst); } return } };
         loop {
             tokio::select! {
                 _ = &mut stop_rx => break,
                 accepted = listener.accept() => {
                     let Ok((stream, _)) = accepted else { continue };
-                    if hub().connections.fetch_add(1, Ordering::SeqCst) >= MAX_CLIENTS { hub().connections.fetch_sub(1, Ordering::SeqCst); continue; }
+                    if hub().connections.fetch_add(1, Ordering::SeqCst) >= MAX_CONNECTIONS { hub().connections.fetch_sub(1, Ordering::SeqCst); continue; }
                     tauri::async_runtime::spawn(async move {
                         serve(stream).await;
                         hub().connections.fetch_sub(1, Ordering::SeqCst);
@@ -232,7 +255,7 @@ fn start(settings: config::Settings) -> Result<(), String> {
                 }
             }
         }
-        hub().listening.store(false, Ordering::SeqCst);
+        if current() { hub().listening.store(false, Ordering::SeqCst); }
     });
     Ok(())
 }
@@ -240,14 +263,38 @@ fn start(settings: config::Settings) -> Result<(), String> {
 fn stop() {
     let h = hub();
     h.enabled.store(false, Ordering::SeqCst);
+    // Stopped now, not when the loop gets round to it: a quick re-enable starts a fresh loop.
+    h.generation.fetch_add(1, Ordering::SeqCst);
+    h.listening.store(false, Ordering::SeqCst);
     if let Some(stop) = h.stop.lock().unwrap().take() { let _ = stop.send(()); }
     for client in h.clients.lock().unwrap().drain().map(|(_, c)| c) { client.kill.notify_one(); }
     h.buffers.lock().unwrap().clear();
 }
 
+/// Requests from one device that must reach the desktop in the order they were sent:
+/// keystrokes in one lane, tab, setting and conversation changes in the other.
+/// Everything else (reads) runs side by side.
+fn lane(request: &Value) -> Option<usize> {
+    let method = request["method"].as_str().unwrap_or("");
+    if method == "ui.invoke" && matches!(request["params"]["cmd"].as_str(), Some("tier_terminal_input" | "tier_terminal_raw_write")) { return Some(0); }
+    if matches!(method, "ui.dispatch" | "ui.storage" | "ui.call" | "ui.watch" | "session.input" | "session.interrupt" | "conversation.send" | "conversation.cancel") || method.starts_with("upload.") { return Some(1); }
+    None
+}
+
+async fn respond(client: &Client, request: Value) {
+    let id = request["id"].clone();
+    let frame = match handle(client, &request).await {
+        Ok(result) => json!({"id":id,"result":result}),
+        Err((code, message)) => json!({"id":id,"error":{"code":code,"message":message}}),
+    };
+    let _ = client.tx.send(frame).await;
+    flush_resync(client).await;
+}
+
 async fn serve(stream: TcpStream) {
     // One port: a WebSocket upgrade is a paired device, a plain GET is a browser loading the UI.
-    match web::peek(&stream).await {
+    // A socket that never says what it wants is closed rather than holding a slot.
+    match tokio::time::timeout(HELLO_TIMEOUT, web::peek(&stream)).await.ok().flatten() {
         Some(web::Request::Upgrade) => {}
         Some(web::Request::Get(target)) => {
             // Take the handle first so the lock is not held across the await.
@@ -257,7 +304,7 @@ async fn serve(stream: TcpStream) {
         }
         _ => return,
     }
-    let Ok(socket) = tokio_tungstenite::accept_async(stream).await else { return };
+    let Ok(Ok(socket)) = tokio::time::timeout(HELLO_TIMEOUT, tokio_tungstenite::accept_async(stream)).await else { return };
     let (mut sink, mut source) = socket.split();
     let Some((client_device, channel)) = handshake(&mut sink, &mut source).await else { return };
     let channel = Arc::new(channel);
@@ -265,7 +312,19 @@ async fn serve(stream: TcpStream) {
     let (tx, mut rx) = mpsc::channel::<Value>(CLIENT_QUEUE);
     let client = Arc::new(Client { device: client_device, kill: tokio::sync::Notify::new(), tx, subscriptions: Mutex::default(), resync: Mutex::default(), ui: AtomicBool::new(false), uploads: Mutex::default(), watcher: Mutex::default() });
     let client_id = hub().next_client.fetch_add(1, Ordering::SeqCst);
-    hub().clients.lock().unwrap().insert(client_id, client.clone());
+    {
+        let mut clients = hub().clients.lock().unwrap();
+        if clients.len() >= MAX_CLIENTS { return; }
+        clients.insert(client_id, client.clone());
+    }
+    // The sidebar and the desktop's mirrors learn at once that a device came or went.
+    broadcast_desktop_devices();
+    let lanes: Vec<mpsc::UnboundedSender<Value>> = (0..2).map(|_| {
+        let (lane_tx, mut lane_rx) = mpsc::unbounded_channel::<Value>();
+        let client = client.clone();
+        tauri::async_runtime::spawn(async move { while let Some(request) = lane_rx.recv().await { respond(&client, request).await; } });
+        lane_tx
+    }).collect();
     let writer_channel = channel.clone();
     let writer = tauri::async_runtime::spawn(async move {
         while let Some(frame) = rx.recv().await {
@@ -285,20 +344,17 @@ async fn serve(stream: TcpStream) {
         let Ok(plain) = channel.decrypt(&sealed) else { break };
         if plain.len() > MAX_FRAME { break; }
         let Ok(request) = serde_json::from_slice::<Value>(&plain) else { continue };
-        let client = client.clone();
-        tauri::async_runtime::spawn(async move {
-            let id = request["id"].clone();
-            let frame = match handle(&client, &request).await {
-                Ok(result) => json!({"id":id,"result":result}),
-                Err((code, message)) => json!({"id":id,"error":{"code":code,"message":message}}),
-            };
-            let _ = client.tx.send(frame).await;
-            flush_resync(&client).await;
-        });
+        match lane(&request) {
+            Some(index) => { let _ = lanes[index].send(request); }
+            None => { let client = client.clone(); tauri::async_runtime::spawn(async move { respond(&client, request).await; }); }
+        }
         if !active() { break; }
     }
     hub().clients.lock().unwrap().remove(&client_id);
+    drop(lanes);
     client.uploads.lock().unwrap().abort_all();
+    *client.watcher.lock().unwrap() = None;
+    broadcast_desktop_devices();
     drop(client);
     // Aborting the writer drops the socket sink, which closes the connection.
     writer.abort();
@@ -331,13 +387,19 @@ async fn handshake(sink: &mut Sink, source: &mut Source) -> Option<(String, secu
     };
     let settings = config::load();
     let (msg2, remote, channel) = secure::respond(&settings.private_bytes(), msg1, &psk).ok()?;
-    if mode == secure::MODE_RESUME && !settings.knows(&remote) { return None; }
+    // A device that was removed (or never paired) is told so over the encrypted channel, so it can tell
+    // "removed" from a dropped network and stop retrying; hanging up here would look like a network drop.
+    let unknown = mode == secure::MODE_RESUME && !settings.knows(&remote);
     sink.send(Message::binary(msg2)).await.ok()?;
 
     // The phone's first encrypted frame proves it completed the handshake
     // (and, when pairing, that it knew the code).
     let plain = channel.decrypt(&next_binary(source).await?).ok()?;
     let request: Value = serde_json::from_slice(&plain).ok()?;
+    if unknown {
+        if let Ok(sealed) = channel.encrypt(json!({"id":request["id"],"error":{"code":"unauthorized","message":"device not paired"}}).to_string().as_bytes()) { let _ = sink.send(Message::binary(sealed)).await; }
+        return None;
+    }
     let reply = match check_hello(&request) {
         Ok(result) => json!({"id":request["id"],"result":result}),
         Err(error) => {
