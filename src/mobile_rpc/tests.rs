@@ -389,3 +389,24 @@ fn terminal_output_is_numbered_so_mirrors_can_join_without_gaps() {
     let (text, end) = buffers.terminal("t").unwrap();
     assert_eq!((text.len(), end), (buffers::TERMINAL_BYTES, 5 + buffers::TERMINAL_BYTES as u64));
 }
+
+#[test]
+fn wallpaper_is_sent_in_pieces_with_its_type() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("wall.JPG");
+    let bytes: Vec<u8> = (0..(5 * 1024 * 1024 + 7)).map(|i| (i % 251) as u8).collect();
+    std::fs::write(&path, &bytes).unwrap();
+    let path = path.to_string_lossy().into_owned();
+    let mut got = Vec::new();
+    loop {
+        let chunk = wallpaper_chunk(&path, got.len() as u64).unwrap();
+        assert_eq!((chunk["mime"].as_str(), chunk["size"].as_u64()), (Some("image/jpeg"), Some(bytes.len() as u64)));
+        use base64::Engine;
+        let part = base64::engine::general_purpose::STANDARD.decode(chunk["data"].as_str().unwrap()).unwrap();
+        if part.is_empty() { break; }
+        got.extend(part);
+        if got.len() == bytes.len() { break; }
+    }
+    assert_eq!(got, bytes);
+    assert!(wallpaper_chunk("", 0).is_err(), "no wallpaper chosen");
+}

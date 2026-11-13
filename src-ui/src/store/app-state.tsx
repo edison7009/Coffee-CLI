@@ -165,6 +165,15 @@ export interface TerminalSession {
   mirror?: boolean;
 }
 
+/** Settings a browser shows exactly as the desktop has them; changing one there changes the desktop's. */
+export const MIRRORED_SETTINGS = ['currentTheme', 'themeMode', 'currentShape', 'currentLang', 'iconTheme', 'bgPath', 'bgType', 'wallpaperOpacity', 'termColorScheme', 'termFont', 'defaultShell', 'gambitEnterToSend', 'hotkeyScheme', 'titlebarToggleDisplay', 'preInputButton', 'diffMode'] as const;
+export type MirroredSettings = Pick<AppState, typeof MIRRORED_SETTINGS[number]>;
+export function pickMirroredSettings(state: AppState): MirroredSettings {
+  return Object.fromEntries(MIRRORED_SETTINGS.map(key => [key, state[key]])) as MirroredSettings;
+}
+/** The actions that change those settings. */
+export const SETTINGS_ACTIONS = new Set<Action['type']>(['SET_THEME', 'SET_THEME_MODE', 'SET_SHAPE', 'SET_ICON_THEME', 'SET_LANG', 'SET_BG', 'CLEAR_BG', 'SET_WALLPAPER_OPACITY', 'SET_TERM_SCHEME', 'SET_TERM_FONT', 'SET_DEFAULT_SHELL', 'SET_GAMBIT_ENTER_TO_SEND', 'SET_HOTKEY_SCHEME', 'SET_TITLEBAR_TOGGLE_DISPLAY', 'SET_PRE_INPUT_BUTTON', 'SET_DIFF_MODE']);
+
 /** A desktop terminal a browser mirrors (see SYNC_MIRROR_TABS). */
 export interface MirrorTab { id: string; tool: ToolType; cwd: string | null; title: string; claudeMode?: ClaudeMode; codexMode?: ClaudeMode; opencodeMode?: ClaudeMode; piMode?: ClaudeMode; worktree?: TerminalSession['worktree']; parentId?: string }
 
@@ -319,6 +328,7 @@ export type Action =
   | { type: 'CLOSE_SESSION_SPLIT'; id: string }
   | { type: 'RESIZE_SESSION_SPLIT'; path: string; ratio: number }
   | { type: 'SYNC_MIRROR_TABS'; tabs: MirrorTab[] }
+  | { type: 'MIRROR_SETTINGS'; settings: Partial<MirroredSettings> }
   | { type: 'LAUNCH_TERMINAL_TOOL'; id: string; tool: ToolType; cwd?: string; toolData?: string; resumeToken?: string; strictCwd?: boolean; claudeMode?: ClaudeMode; codexMode?: ClaudeMode; opencodeMode?: ClaudeMode; piMode?: ClaudeMode; parentId?: string; background?: boolean }
   | { type: 'REMOVE_TERMINAL'; id: string }
   | { type: 'CLOSE_TERMINAL_GROUP'; id: string; childIds: string[]; keepChildren: boolean }
@@ -471,6 +481,11 @@ function reducer(state: AppState, action: Action): AppState {
         activeTerminalId: session.id,
         diffTabActive: false,
       };
+    }
+    case 'MIRROR_SETTINGS': {
+      const next: Partial<MirroredSettings> = {};
+      for (const key of MIRRORED_SETTINGS) if (key in action.settings && action.settings[key] !== state[key]) Object.assign(next, { [key]: action.settings[key] });
+      return Object.keys(next).length ? { ...state, ...next } : state;
     }
     case 'SYNC_MIRROR_TABS': {
       // The browser shows the desktop's tabs: new ones appear, closed ones go, and what the
@@ -959,6 +974,8 @@ function browserDispatch(local: React.Dispatch<Action>): React.Dispatch<Action> 
   const desk = (id: string | undefined) => !!id && !!current().terminals.find(tab => tab.id === id)?.mirror;
   const send = (action: Action) => { void remoteRequest('ui.dispatch', { action }).catch(error => console.error('[remote tab]', error)); };
   return action => {
+    // Settings are the desktop's: change them there, and here at once so the click feels immediate.
+    if (SETTINGS_ACTIONS.has(action.type)) { send(action); local(action); return; }
     switch (action.type) {
       case 'LAUNCH_TERMINAL_TOOL': openedFromBrowser.add(action.id); send(action); return;
       case 'ADD_TERMINAL': if (action.session.tool) { openedFromBrowser.add(action.session.id); send(action); return; } break;

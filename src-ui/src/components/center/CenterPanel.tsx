@@ -1204,6 +1204,13 @@ export function CenterPanel() {
     //      broken-image icon over a black backdrop. Users perceived this
     //      as "切到 Glass 后左上角出现裂开图标 + 整个区域变黑".
     if (!hasBg || !bgPath) { setBgUrl(''); return; }
+    // In the browser the file is on the desktop's disk; it comes over the connection instead.
+    if (REMOTE) {
+      let current = true;
+      void import('../../remote/wallpaper').then(({ remoteWallpaperUrl }) => remoteWallpaperUrl(bgPath))
+        .then(url => { if (current) setBgUrl(url); }, () => { if (current) setBgUrl(''); });
+      return () => { current = false; };
+    }
     import('@tauri-apps/api/core').then(({ convertFileSrc }) => {
       setBgUrl(convertFileSrc(bgPath));
     }).catch(() => {

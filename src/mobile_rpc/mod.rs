@@ -135,6 +135,26 @@ fn record_terminal(id: &str, data: &str) {
     deliver_ui("tier-terminal-output", json!({"id":id,"data":data,"start":start,"end":end}));
 }
 
+const WALLPAPER_MAX: u64 = 64 * 1024 * 1024;
+const WALLPAPER_CHUNK: usize = 2 * 1024 * 1024;
+
+fn wallpaper_chunk(path: &str, offset: u64) -> Result<Value, RpcError> {
+    use base64::Engine;
+    use std::io::{Read, Seek, SeekFrom};
+    if path.is_empty() { return Err(("not_found", "no wallpaper".into())); }
+    let mut file = std::fs::File::open(path).map_err(|e| ("not_found", e.to_string()))?;
+    let size = file.metadata().map_err(|e| ("internal", e.to_string()))?.len();
+    if size > WALLPAPER_MAX { return Err(("unsupported", "wallpaper too large".into())); }
+    let mut data = vec![0; WALLPAPER_CHUNK.min(size.saturating_sub(offset) as usize)];
+    file.seek(SeekFrom::Start(offset)).and_then(|_| file.read_exact(&mut data)).map_err(|e| ("internal", e.to_string()))?;
+    let mime = match std::path::Path::new(path).extension().and_then(|e| e.to_str()).map(str::to_ascii_lowercase).as_deref() {
+        Some("png") => "image/png", Some("jpg" | "jpeg") => "image/jpeg", Some("gif") => "image/gif", Some("webp") => "image/webp",
+        Some("bmp") => "image/bmp", Some("svg") => "image/svg+xml", Some("avif") => "image/avif",
+        Some("mp4" | "m4v") => "video/mp4", Some("webm") => "video/webm", Some("mov") => "video/quicktime", _ => "application/octet-stream",
+    };
+    Ok(json!({"path": path, "size": size, "mime": mime, "data": base64::engine::general_purpose::STANDARD.encode(&data)}))
+}
+
 /// A browser mirroring one of the desktop's terminals: its recent output, where that ends, and its size.
 fn terminal_attach(id: &str) -> Result<Value, RpcError> {
     let app = hub().app.lock().unwrap().clone().ok_or(("internal", "app unavailable".to_string()))?;
@@ -438,6 +458,11 @@ async fn handle(client: &Client, request: &Value) -> Result<Value, RpcError> {
         "mirror.snapshot" => gui("mirror.snapshot", json!({"kind": params["kind"], "id": params["id"]})).await,
         "ui.call" => gui_with_timeout("ui.call", json!({"kind": params["kind"], "name": params["name"], "args": params["args"]}), INVOKE_TIMEOUT).await,
         "ui.dispatch" => gui("ui.dispatch", json!({"action": params["action"]})).await,
+        // The desktop's wallpaper, in pieces: only the file the desktop currently shows is ever read.
+        "ui.wallpaper" => {
+            let path = gui("wallpaper.path", json!({})).await?["path"].as_str().unwrap_or("").to_owned();
+            wallpaper_chunk(&path, params["offset"].as_u64().unwrap_or(0))
+        }
         "ui.subscribe" => { client.ui.store(true, Ordering::Relaxed); Ok(json!({"events": remote_ui::FORWARDED_EVENTS})) }
         // The desktop window runs the command, so the browser gets exactly what the desktop UI would.
         "ui.invoke" => {

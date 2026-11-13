@@ -6,7 +6,7 @@ import { build } from 'esbuild';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const compiled = await build({
-  stdin: { contents: `export { reducer } from './src/store/app-state';`, resolveDir: root },
+  stdin: { contents: `export { reducer } from './src/store/app-state'; export { diffState, applyPatch } from './src/lib/session-mirror';`, resolveDir: root },
   bundle: true, platform: 'node', format: 'esm', write: false, jsx: 'automatic', external: ['react', 'react/*', 'react-dom', '@tauri-apps/*'],
   plugins: [{ name: 'expose-reducer', setup(builder) {
     builder.onLoad({ filter: /[/\\]store[/\\]app-state\.tsx$/ }, async args => ({ loader: 'tsx', contents: `${await readFile(args.path, 'utf8')}\nexport { reducer };` }));
@@ -16,7 +16,7 @@ const compiled = await build({
 const out = `${root}node_modules/.cache/remote-mirror-test.mjs`;
 await mkdir(`${root}node_modules/.cache`, { recursive: true });
 await writeFile(out, compiled.outputFiles[0].text);
-const { reducer } = await import(out);
+const { reducer, diffState, applyPatch } = await import(out);
 
 const tab = (id, extra = {}) => ({ id, tool: 'claude', cwd: '/p', title: id, claudeMode: (extra.tool ?? 'claude') === 'claude' ? 'conversation' : undefined, ...extra });
 let state = { terminals: [{ id: 'blank', tool: null, folderPath: null }], tabOrder: ['blank'], activeTerminalId: 'blank' };
@@ -53,4 +53,23 @@ assert.deepEqual(state.terminals.map(t => t.id), ['blank', 'own']);
 state = { terminals: [{ id: 'm', tool: 'claude', folderPath: null, mirror: true }], tabOrder: ['m'], activeTerminalId: 'm' };
 sync([]);
 assert.equal(state.terminals.length, 1); assert.equal(state.terminals[0].tool, null); assert.equal(state.activeTerminalId, state.terminals[0].id);
-console.log('ok remote mirror: desktop terminals appear, follow titles and folders, leave when closed, browser tabs untouched');
+// Conversation patches: only what changed travels, and applying it rebuilds the same state.
+const m1 = { role: 'user', content: 'hi' }, m2 = { role: 'assistant', content: 'he' };
+const before1 = { busy: true, title: 'x', messages: [m1, m2], gone: 1 };
+const after1 = { busy: false, title: 'x', messages: [m1, { ...m2, content: 'hello' }, { role: 'user', content: 'next' }] };
+const patch = diffState(before1, after1);
+assert.deepEqual(Object.keys(patch.set), ['busy']);
+assert.deepEqual(Object.keys(patch.arrays.messages.items), ['1', '2'], 'the unchanged first message is not sent');
+assert.deepEqual(patch.unset, ['gone']);
+assert.deepEqual(applyPatch(before1, { v: 1, ...patch }), after1);
+assert.equal(diffState(after1, after1), null);
+// A shorter list (a rewound conversation) still comes out right.
+assert.deepEqual(applyPatch(after1, { v: 2, ...diffState(after1, { ...after1, messages: [m1] }) }).messages, [m1]);
+
+// Settings mirror: the desktop's values win; anything outside the list is ignored.
+state = { ...state, currentTheme: 'sakura', settingsOpen: false };
+state = reducer(state, { type: 'MIRROR_SETTINGS', settings: { currentTheme: 'ocean', currentLang: 'en', settingsOpen: true, terminals: [] } });
+assert.equal(state.currentTheme, 'ocean'); assert.equal(state.currentLang, 'en');
+assert.equal(state.settingsOpen, false); assert.equal(state.terminals.length, 1);
+const same = state; assert.equal(reducer(state, { type: 'MIRROR_SETTINGS', settings: { currentTheme: 'ocean' } }), same);
+console.log('ok remote mirror: desktop tabs appear, follow the desktop and leave when closed; conversation patches round-trip; settings follow the desktop');

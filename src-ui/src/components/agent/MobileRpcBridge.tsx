@@ -1,17 +1,17 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useT } from '../../i18n/useT';
 import { getProjectFolders } from '../../lib/project-folders';
 import { useAppState, useAppStateRef } from '../../store/app-state';
 import { commands, invoke, isTauri } from '../../tauri';
 import { getAgentSession } from '../../lib/agent-session';
 import { isClaudeConversation, isCodexConversation, isDshConversation, isOpenCodeConversation, isPiConversation } from '../../lib/chat-tools';
-import type { Action, TerminalSession } from '../../store/app-state';
-import { mirrorSnapshot, runMirrorAction, setMirrorActive, type MirrorKind } from '../../lib/session-mirror';
+import { SETTINGS_ACTIONS, pickMirroredSettings, type Action, type TerminalSession } from '../../store/app-state';
+import { mirrorSnapshot, mirrorSource, runMirrorAction, setMirrorActive, type MirrorKind } from '../../lib/session-mirror';
 import type { MobileRpcStatus } from '../../tauri';
 
 /** Tab changes a browser may ask for; everything else it does stays in the browser. */
 const BROWSER_ACTIONS = new Set<Action['type']>(['ADD_TERMINAL', 'LAUNCH_TERMINAL_TOOL', 'SET_TERMINAL_TOOL', 'REMOVE_TERMINAL', 'CLOSE_TERMINAL_GROUP', 'RESTART_TERMINAL', 'SET_TERMINAL_HIDDEN', 'SET_TERMINAL_WORKTREE', 'SET_TAB_TITLE']);
-const MIRROR_KINDS = new Set<MirrorKind>(['claude', 'codex', 'opencode', 'pi', 'dsh']);
+const MIRROR_KINDS = new Set<MirrorKind>(['claude', 'codex', 'opencode', 'pi', 'dsh', 'app']);
 
 interface MobileRequest { requestId: string; method: string; params: { id?: string; text?: string; name?: string; cmd?: string; args?: Record<string, unknown> | unknown[]; kind?: string; action?: Action & { cwd?: string } } }
 class RequestError extends Error {
@@ -51,6 +51,10 @@ export function MobileRpcBridge() {
       .then(unlisten => { if (disposed) unlisten(); else stop = unlisten; });
     return () => { disposed = true; stop?.(); setMirrorActive(false); };
   }, []);
+  // The desktop's settings, followed by every browser (see MIRRORED_SETTINGS).
+  const [settingsChanged] = useState(() => mirrorSource('app', 'settings', () => pickMirroredSettings(stateRef.current)));
+  const settingsKey = JSON.stringify(pickMirroredSettings(state));
+  useEffect(() => { settingsChanged(); }, [settingsKey, settingsChanged]);
   const dispatchRef = useRef(dispatch);
   useEffect(() => { dispatchRef.current = dispatch; }, [dispatch]);
   useEffect(() => {
@@ -74,7 +78,7 @@ export function MobileRpcBridge() {
       // A tab opened, closed or changed in the browser happens here; the browser's list follows.
       if (method === 'ui.dispatch') {
         const action = params.action;
-        if (!action || !BROWSER_ACTIONS.has(action.type)) throw new RequestError('Unsupported tab change', 'internal');
+        if (!action || !BROWSER_ACTIONS.has(action.type) && !SETTINGS_ACTIONS.has(action.type)) throw new RequestError('Unsupported change', 'internal');
         const before = stateRef.current.activeTerminalId;
         let next: Action = action;
         // Choosing a tool on the browser's blank launch page opens a new desktop tab.
@@ -92,6 +96,8 @@ export function MobileRpcBridge() {
       }
       // The folders this desktop has opened, offered to a browser in place of the folder dialog.
       if (method === 'projects.list') return { folders: getProjectFolders() };
+      // The wallpaper a browser shows; the file itself is read and sent by the server.
+      if (method === 'wallpaper.path') return { path: stateRef.current.bgType === 'none' ? '' : stateRef.current.bgPath };
       if (method === 'pair.confirm') {
         // A native prompt reaches the person even when the settings page is closed.
         const { ask } = await import('@tauri-apps/plugin-dialog');

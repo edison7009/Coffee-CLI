@@ -11,7 +11,8 @@
 import { invoke } from '../tauri';
 import { onRemoteStatus, remoteRequest } from '../remote/bridge';
 
-export type MirrorKind = 'claude' | 'codex' | 'opencode' | 'pi' | 'dsh';
+/** Conversations by tool, plus `app` for the desktop's settings. */
+export type MirrorKind = 'claude' | 'codex' | 'opencode' | 'pi' | 'dsh' | 'app';
 type State = Record<string, unknown>;
 interface ArrayPatch { len: number; items: Record<number, unknown> }
 export interface MirrorPatch { v: number; set?: State; unset?: string[]; arrays?: Record<string, ArrayPatch> }
@@ -26,7 +27,8 @@ export function diffState(prev: State, next: State): Omit<MirrorPatch, 'v'> | nu
       const items: Record<number, unknown> = {};
       let changed = 0;
       for (let i = 0; i < b.length; i++) if (b[i] !== a[i]) { items[i] = b[i]; changed++; }
-      if (changed * 2 <= b.length || b.length > a.length && changed === b.length - a.length) { arrays[key] = { len: b.length, items }; continue; }
+      // Worth it whenever some items are unchanged: a streaming reply changes only the last message.
+      if (changed < b.length) { arrays[key] = { len: b.length, items }; continue; }
     }
     set[key] = b;
   }
