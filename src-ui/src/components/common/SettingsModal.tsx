@@ -672,11 +672,11 @@ export function SettingsModal() {
                           {soundFiles[row.preview] && <button type="button" className="settings-sound-remove" aria-label={t('settings.sound.remove')} onClick={() => clearSound(row.preview)}>
                             <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true"><path d="m3 3 6 6m0-6-6 6" /></svg>
                           </button>}
+                          <button type="button" className="settings-sound-play" aria-label={t('settings.sound.preview')} onClick={() => playNotifySound(row.preview)}>
+                            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 6.5v11l9-5.5z" strokeLinejoin="round" stroke="currentColor" strokeWidth="1.5" /></svg>
+                          </button>
                           <button type="button" className="settings-sound-link" onClick={() => { void pickSound(row.preview); }}>{t('settings.sound.change')}</button>
                         </span>
-                        <button type="button" className="settings-sound-play" aria-label={t('settings.sound.preview')} onClick={() => playNotifySound(row.preview)}>
-                          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.14v13.72a1 1 0 0 0 1.5.86l11-6.86a1 1 0 0 0 0-1.72l-11-6.86A1 1 0 0 0 8 5.14z" /></svg>
-                        </button>
                       </>}
                       <button type="button" role="switch" className="settings-switch" aria-checked={row.value} aria-label={t(row.labelKey)} onClick={() => row.set(!row.value)}><span /></button>
                     </div>

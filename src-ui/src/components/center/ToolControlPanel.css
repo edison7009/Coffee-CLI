@@ -22,18 +22,18 @@
 .tool-control-unavailable { position:relative; flex-shrink:0; color:var(--text-3); font-size:var(--type-caption); white-space:nowrap; }
 .tool-control-unavailable[data-tip]:hover::after, .tool-control-unavailable[data-tip]:focus-visible::after { content:attr(data-tip); position:absolute; z-index:100; bottom:calc(100% + 8px); right:0; width:240px; max-width:70vw; padding:6px 10px; border:1px solid var(--border); border-radius:6px; background:var(--bg-panel); color:var(--text-1); font-size:var(--type-caption); font-weight:500; line-height:1.5; white-space:normal; overflow-wrap:anywhere; pointer-events:none; box-shadow:0 1px 2px #0003,0 6px 20px #0004; }
 .tool-control-unavailable:focus-visible { outline:1px solid var(--accent); outline-offset:2px; }
-.tool-control-switch { position:relative; width:36px; height:20px; flex-shrink:0; padding:0; border:0; border-radius:20px; background:var(--bg-hover); cursor:pointer; transition:background 150ms; }
-.tool-control-switch > span { display:block; position:absolute; left:2px; top:2px; width:16px; height:16px; border-radius:50%; background:#fff; box-shadow:0 1px 3px #0003; transition:transform 150ms; }
-.tool-control-switch[aria-checked="true"] { background:#007aff; }
+.tool-control-switch { position:relative; width:40px; height:24px; flex-shrink:0; padding:0; border:0; border-radius:12px; background:var(--bg-hover); box-shadow:inset 0 0 0 1px var(--border-input); cursor:pointer; transition:background 150ms; }
+.tool-control-switch > span { display:block; position:absolute; left:3px; top:3px; width:18px; height:18px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.3); transition:transform 150ms; }
+.tool-control-switch[aria-checked="true"] { background:#007aff; box-shadow:none; }
 .tool-control-switch[aria-checked="true"] > span { transform:translateX(16px); }
 .tool-control-switch:focus-visible { outline:1px solid var(--accent); outline-offset:3px; }
 .tool-control-switch:disabled { cursor:default; }
 .tool-control-switch[data-unavailable="true"] { opacity:.4; }
-.tool-control-card-toggle { position:absolute; inset:0; width:100%; height:100%; border-radius:inherit; background:transparent; }
-.tool-control-card-toggle::before { content:''; position:absolute; right:20px; top:calc(50% - 10px); width:36px; height:20px; border-radius:20px; background:var(--bg-hover); transition:background 150ms; }
+.tool-control-card-toggle { position:absolute; inset:0; width:100%; height:100%; border-radius:inherit; background:transparent; box-shadow:none; }
+.tool-control-card-toggle::before { content:''; position:absolute; right:20px; top:calc(50% - 12px); width:40px; height:24px; border-radius:12px; background:var(--bg-hover); box-shadow:inset 0 0 0 1px var(--border-input); transition:background 150ms; }
 .tool-control-card-toggle[aria-checked="true"] { background:transparent; }
-.tool-control-card-toggle[aria-checked="true"]::before { background:#007aff; }
-.tool-control-card-toggle > span { left:calc(100% - 54px); top:calc(50% - 8px); }
+.tool-control-card-toggle[aria-checked="true"]::before { background:#007aff; box-shadow:none; }
+.tool-control-card-toggle > span { left:calc(100% - 57px); top:calc(50% - 9px); }
 .tool-control-unavailable[data-tip] { z-index:1; }
 .tool-control-no-agents { margin:14px 0 0; color:var(--text-2); font-size:var(--type-label); line-height:1.6; }
 /* Inset to the cards' own text (20px padding + 1px border), so the heading reads as theirs. */

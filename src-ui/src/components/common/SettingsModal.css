@@ -608,9 +608,11 @@
 .settings-sound-current .settings-sound-remove svg { width: 10px; height: 10px; }
 .settings-sound-link { flex-shrink: 0; padding: 0; border: 0; background: none; color: var(--accent); font: inherit; cursor: pointer; }
 .settings-sound-link:hover { text-decoration: underline; }
-.settings-sound-play { display: grid; place-items: center; flex-shrink: 0; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 50%; color: var(--text-1); background: var(--bg-hover); cursor: pointer; }
-.settings-sound-play:hover { color: var(--accent); background: var(--bg-active); }
-.settings-sound-play svg { width: 14px; height: 14px; margin-left: 2px; }
+/* Preview sits with the sound it plays: a quiet icon beside its name, not a second control next to the switch. */
+.settings-sound-play { display: grid; place-items: center; flex-shrink: 0; width: 22px; height: 22px; margin: 0 -2px 0 -4px; padding: 0; border: 0; border-radius: 50%; color: var(--text-2); background: transparent; cursor: pointer; }
+.settings-sound-play:hover { color: var(--text-1); background: var(--bg-hover); }
+.settings-sound-play:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
+.settings-sound-play svg { width: 12px; height: 12px; }
 /* A row whose choice carries a note under it, both right-aligned. */
 .settings-choice-row { align-items: flex-start; }
 .settings-choice-row .settings-sound-title { padding-top: 5px; }
