@@ -16,7 +16,7 @@ use std::process::Command;
 use std::sync::{Mutex, OnceLock};
 use std::io::Read;
 use std::process::Stdio;
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant};
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
 
@@ -493,147 +493,16 @@ fn git_commit_files_blocking(repo_root: String, hash: String) -> Vec<GitFileEntr
     commit_files(&repo_root, &hash)
 }
 
-/// Bounded, local-only evidence for Coffee Agent. No fetch or repository writes.
-pub(crate) fn project_snapshot(folder: &str) -> serde_json::Value {
-    use serde_json::json;
-    let observed_at = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_millis() as u64;
-    let deadline = Instant::now() + Duration::from_secs(10);
-    let mut result = json!({"cwd":folder,"observedAt":observed_at,"state":"error"});
-    if let Err(error) = project_git_output(folder, &["--version"]) {
-        result["state"] = json!(if error == "Git executable unavailable" { "no_git" } else { "error" });
-        result["error"] = json!(error);
-        return result;
-    }
-    let repo_root = match project_git_output(folder, &["rev-parse", "--show-toplevel"]) {
-        Ok(value) => value.trim().to_string(),
-        Err(error) => {
-            result["state"] = json!(if error == "Not a Git repository" { "not_repo" } else { "error" });
-            if error != "Not a Git repository" { result["error"] = json!(error); }
-            return result;
-        }
-    };
-    let query = || -> Result<serde_json::Value, String> {
-        let scope = project_git_output(folder, &["rev-parse", "--show-prefix"])?;
-        let scope = scope.trim_end_matches('\n').trim_end_matches('\r');
-        let pathspec = if scope.is_empty() { "." } else { scope };
-        let head = match project_git_output(&repo_root, &["rev-parse", "--verify", "HEAD"]) {
-            Ok(value) => Some(value.trim().to_string()),
-            Err(_) if project_git_output(&repo_root, &["symbolic-ref", "--short", "HEAD"]).is_ok() => None,
-            Err(error) => return Err(error),
-        };
-        let branch = project_git_output(&repo_root, &["symbolic-ref", "--short", "HEAD"])
-            .map(|value| value.trim().to_string())
-            .unwrap_or_else(|_| head.as_deref().unwrap_or("HEAD").chars().take(12).collect());
-        let raw = project_git_output(&repo_root, &["status", "--porcelain=v1", "-z", "--untracked-files=all", "--", pathspec])?;
-        let counts = if head.is_some() {
-            parse_numstat(project_git_output(&repo_root, &["diff", "--no-ext-diff", "--no-textconv", "--numstat", "-z", "HEAD", "--", pathspec])?)
-        } else { HashMap::new() };
-        let mut changed = Vec::new();
-        let mut untracked = Vec::new();
-        let mut fields = raw.split('\0');
-        let mut total = 0usize;
-        while let Some(record) = fields.next() {
-            if record.len() < 4 { continue; }
-            let x = record.as_bytes()[0] as char;
-            let y = record.as_bytes()[1] as char;
-            let path = &record[3..];
-            if x == 'R' || x == 'C' || y == 'R' || y == 'C' { fields.next(); }
-            total += 1;
-            if total > 200 { continue; }
-            if x == '?' && y == '?' { untracked.push(json!({"path":path})); }
-            else {
-                let (added, deleted) = counts.get(path).copied().unwrap_or_default();
-                changed.push(json!({"path":path,"status":format!("{x}{y}"),"added":added,"deleted":deleted}));
-            }
-        }
-        let mut recent = if head.is_some() {
-            project_git_output(&repo_root, &["log", "-10", "--format=%H%x1f%an%x1f%at%x1f%s", "--", pathspec])?
-                .lines().filter_map(|line| {
-                    let parts: Vec<_> = line.splitn(4, '\x1f').collect();
-                    if parts.len() != 4 { return None; }
-                    Some(json!({"hash":parts[0],"author":parts[1].chars().take(100).collect::<String>(),"time":parts[2].parse::<i64>().unwrap_or_default(),"message":parts[3].chars().take(300).collect::<String>()}))
-                }).collect::<Vec<_>>()
-        } else { Vec::new() };
-        for commit in &mut recent {
-            if Instant::now() >= deadline { commit["filesState"] = json!("time-budget"); commit["filesTruncated"] = json!(true); commit["files"] = json!([]); continue; }
-            let hash = commit["hash"].as_str().unwrap_or_default();
-            match project_git_output(&repo_root, &["diff-tree", "--no-commit-id", "-r", "-m", "--first-parent", "--numstat", "-z", "--no-renames", "--no-ext-diff", "--no-textconv", "--root", hash, "--", pathspec]) {
-                Ok(output) => {
-                    let counts = parse_numstat(output);
-                    let mut paths = counts.keys().collect::<Vec<_>>(); paths.sort();
-                    let files = paths.iter().take(20).map(|path| {
-                        let (added, deleted) = counts.get(*path).copied().unwrap_or_default();
-                        json!({"path":path,"added":added,"deleted":deleted})
-                    }).collect::<Vec<_>>();
-                    commit["filesCount"] = json!(paths.len());
-                    commit["filesTruncated"] = json!(paths.len() > 20);
-                    commit["filesState"] = json!("ok");
-                    commit["files"] = json!(files);
-                }
-                Err(_) => { commit["filesState"] = json!("unavailable"); commit["filesTruncated"] = json!(true); commit["files"] = json!([]); }
-            }
-        }
-        let upstream = match project_git_output(&repo_root, &["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"]) {
-            Ok(name) => match project_git_output(&repo_root, &["rev-list", "--left-right", "--count", "HEAD...@{upstream}"]) {
-                Ok(counts) => {
-                    let values: Vec<_> = counts.split_whitespace().collect();
-                    if values.len() != 2 { return Err("Git upstream counts are invalid".into()); }
-                    json!({"state":"known","name":name.trim(),"ahead":values[0].parse::<u64>().map_err(|_| "Invalid ahead count")?,"behind":values[1].parse::<u64>().map_err(|_| "Invalid behind count")?,"basis":"local-tracking-ref; remote may have changed"})
-                }
-                Err(_) => json!({"state":"unknown","basis":"local-tracking-ref"}),
-            },
-            Err(_) => json!({"state":"none","basis":"local-tracking-ref"}),
-        };
-        Ok(json!({"state":"ok","cwd":folder,"repoRoot":repo_root,"scope":scope,"branch":branch,"head":head,"unborn":head.is_none(),"uncommitted":changed,"untracked":untracked,"changedCount":total,"truncated":total>200,"recentCommits":recent,"upstream":upstream,"observedAt":observed_at,"evidence":"Commit messages do not verify task completion or test results."}))
-    };
-    match query() {
-        Ok(mut value) => {
-            while serde_json::to_vec(&value).map(|bytes| bytes.len() > 24_000).unwrap_or(true) {
-                if let Some(commit) = value["recentCommits"].as_array_mut().and_then(|commits| commits.iter_mut().rev().find(|commit| commit["files"].as_array().is_some_and(|items| !items.is_empty()))) {
-                    commit["files"].as_array_mut().unwrap().pop(); commit["filesTruncated"] = json!(true); value["truncated"] = json!(true); continue;
-                }
-                let key = if value["untracked"].as_array().is_some_and(|items| !items.is_empty()) { "untracked" } else { "uncommitted" };
-                if value[key].as_array_mut().is_some_and(|items| items.pop().is_some()) { value["truncated"] = json!(true); }
-                else { break; }
-            }
-            value
-        },
-        Err(error) => { result["repoRoot"] = json!(repo_root); result["error"] = json!(error); result }
-    }
-}
-
+/// Read-only Git output for a project folder: no optional locks, no fetch, no prompts, bounded in time and size.
 pub(crate) fn project_git_output(folder: &str, args: &[&str]) -> Result<String, String> {
-    project_git_read(folder, args, false)
-}
-
-pub(crate) fn project_ignored(folder: &str, paths: &[&str]) -> Result<std::collections::HashSet<String>, String> {
-    if paths.is_empty() { return Ok(Default::default()); }
-    let mut input = Vec::new();
-    for path in paths {
-        if path.contains('\0') || input.len() + path.len() + 1 > 2_097_152 { return Err("Git ignore input exceeds its path budget".into()); }
-        input.extend_from_slice(path.as_bytes()); input.push(0);
-    }
-    project_git_read_input(folder, &["check-ignore", "--no-index", "-z", "--stdin"], true, Some(input))
-        .map(|output| output.split('\0').filter(|path| !path.is_empty()).map(str::to_string).collect())
-}
-
-fn project_git_read(folder: &str, args: &[&str], no_matches_ok: bool) -> Result<String, String> {
-    project_git_read_input(folder, args, no_matches_ok, None)
-}
-
-fn project_git_read_input(folder: &str, args: &[&str], no_matches_ok: bool, input: Option<Vec<u8>>) -> Result<String, String> {
     const LIMIT: u64 = 262_144;
     let mut command = Command::new("git");
     command.args(["-c", "core.fsmonitor=false", "-c", "diff.external=", "-c", "log.showSignature=false", "-C", folder]).args(args)
         .env("GIT_OPTIONAL_LOCKS", "0").env("GIT_NO_LAZY_FETCH", "1").env("GIT_TERMINAL_PROMPT", "0")
-        .stdout(Stdio::piped()).stderr(Stdio::piped()).stdin(if input.is_some() { Stdio::piped() } else { Stdio::null() });
+        .stdout(Stdio::piped()).stderr(Stdio::piped()).stdin(Stdio::null());
     #[cfg(windows)]
     command.creation_flags(CREATE_NO_WINDOW);
     let mut child = command.spawn().map_err(|_| "Git executable unavailable")?;
-    let writer = input.map(|bytes| {
-        let mut stdin = child.stdin.take().expect("piped Git stdin");
-        std::thread::spawn(move || std::io::Write::write_all(&mut stdin, &bytes))
-    });
     let stdout = child.stdout.take().ok_or("Git output unavailable")?;
     let stderr = child.stderr.take().ok_or("Git error output unavailable")?;
     let reader = std::thread::spawn(move || {
@@ -654,10 +523,9 @@ fn project_git_read_input(folder: &str, args: &[&str], no_matches_ok: bool, inpu
         }
     };
     let bytes = reader.join().map_err(|_| "Git output reader failed")?.map_err(|_| "Git output could not be read")?;
-    if let Some(writer) = writer { writer.join().map_err(|_| "Git input writer failed")?.map_err(|_| "Git ignore input could not be written")?; }
     let errors = errors.join().map_err(|_| "Git error reader failed")?;
     if bytes.len() as u64 > LIMIT { return Err("Git snapshot exceeded its output budget".into()); }
-    if !status.success() && !(no_matches_ok && status.code() == Some(1)) {
+    if !status.success() {
         return Err(if String::from_utf8_lossy(&errors).contains("not a git repository") { "Not a Git repository" } else { "Git command failed" }.into());
     }
     Ok(String::from_utf8_lossy(&bytes).into_owned())
@@ -675,54 +543,11 @@ mod project_tests {
         assert!(command.output().unwrap().status.success(), "test git command failed: {args:?}");
     }
     #[test]
-    fn ignore_queries_use_nul_stdin_beyond_windows_argument_limits() {
+    fn project_git_ignores_repository_config_that_changes_output() {
         let root = root(); std::fs::create_dir_all(&root).unwrap(); run(&root, &["init", "-b", "main"]);
-        std::fs::write(root.join(".gitignore"), "private/\n").unwrap();
-        let mut paths = (0..1200).map(|index| format!("src/{}/file-{index}.rs", "long-directory".repeat(5))).collect::<Vec<_>>();
-        paths.push("private/空 格.txt".into());
-        let refs = paths.iter().map(String::as_str).collect::<Vec<_>>();
-        assert!(refs.iter().map(|path| path.len()).sum::<usize>() > 32_768);
-        assert_eq!(project_ignored(root.to_str().unwrap(), &refs).unwrap(), ["private/空 格.txt".to_string()].into_iter().collect());
-        assert!(project_ignored(root.to_str().unwrap(), &[]).unwrap().is_empty());
-        assert!(project_ignored(root.to_str().unwrap(), &["bad\0path"]).is_err());
-        std::fs::remove_dir_all(root).unwrap();
-    }
-    #[test]
-    fn project_git_is_scoped_bounded_and_does_not_depend_on_session_baselines() {
-        let root = root(); std::fs::create_dir_all(root.join("app")).unwrap(); std::fs::create_dir_all(root.join("other")).unwrap(); run(&root, &["init", "-b", "main"]);
         run(&root, &["config", "log.showSignature", "true"]);
         assert_eq!(project_git_output(root.to_str().unwrap(), &["config", "--get", "log.showSignature"]).unwrap().trim(), "false");
-        for index in 0..12 {
-            std::fs::write(root.join("app/file.txt"), format!("app {index}\n")).unwrap();
-            run(&root, &["add", "app/file.txt"]); run(&root, &["commit", "-m", &format!("app {index}")]);
-        }
-        std::fs::write(root.join("other/other.txt"), "other module").unwrap(); run(&root, &["add", "other/other.txt"]); run(&root, &["commit", "-m", "other module"]);
-        std::fs::write(root.join("app/file.txt"), "changed\n").unwrap(); std::fs::write(root.join("app/new.txt"), "new file").unwrap(); std::fs::write(root.join("other/other.txt"), "other change").unwrap();
-        let head_before = git_output(root.to_str().unwrap(), &["rev-parse", "HEAD"]).unwrap();
-        let index_before = std::fs::read(root.join(".git/index")).unwrap();
-        let snapshot = project_snapshot(root.join("app").to_str().unwrap());
-        assert_eq!(snapshot["state"], "ok"); assert_eq!(snapshot["scope"], "app/"); assert_eq!(snapshot["branch"], "main");
-        assert_eq!(snapshot["recentCommits"].as_array().unwrap().len(), 10);
-        assert_eq!(snapshot["recentCommits"][0]["files"][0]["path"], "app/file.txt"); assert_eq!(snapshot["recentCommits"][0]["filesState"], "ok");
-        assert_eq!(snapshot["uncommitted"].as_array().unwrap().len(), 1); assert_eq!(snapshot["untracked"][0]["path"], "app/new.txt");
-        assert!(!snapshot.to_string().contains("other.txt")); assert!(!snapshot.to_string().contains("other module"));
-        assert_eq!(snapshot["upstream"]["state"], "none");
-        assert_eq!(git_output(root.to_str().unwrap(), &["rev-parse", "HEAD"]).unwrap(), head_before); assert_eq!(std::fs::read(root.join(".git/index")).unwrap(), index_before);
-        std::fs::remove_dir_all(root).unwrap();
-    }
-    #[test]
-    fn unborn_detached_local_upstream_and_read_failures_are_explicit() {
-        let root = root(); std::fs::create_dir_all(&root).unwrap(); assert_eq!(project_snapshot(root.to_str().unwrap())["state"], "not_repo"); run(&root, &["init", "-b", "main"]);
-        let initial = project_snapshot(root.to_str().unwrap()); assert_eq!(initial["state"], "ok"); assert_eq!(initial["unborn"], true);
-        for index in 0..2 {
-            std::fs::write(root.join("file.txt"), format!("{index}\n")).unwrap(); run(&root, &["add", "file.txt"]); run(&root, &["commit", "-m", "Tests passed (unverified claim)"]);
-        }
-        run(&root, &["remote", "add", "origin", "https://example.invalid/no-network"]); run(&root, &["update-ref", "refs/remotes/origin/main", "HEAD~1"]); run(&root, &["branch", "--set-upstream-to=origin/main", "main"]);
-        let before = git_output(root.to_str().unwrap(), &["rev-parse", "refs/remotes/origin/main"]).unwrap();
-        let snapshot = project_snapshot(root.to_str().unwrap()); assert_eq!(snapshot["upstream"]["ahead"], 1); assert_eq!(snapshot["upstream"]["behind"], 0);
-        assert_eq!(git_output(root.to_str().unwrap(), &["rev-parse", "refs/remotes/origin/main"]).unwrap(), before);
-        run(&root, &["checkout", "--detach"]); assert_eq!(project_snapshot(root.to_str().unwrap())["state"], "ok");
-        std::fs::write(root.join(".git/index"), "invalid-index").unwrap(); assert_eq!(project_snapshot(root.to_str().unwrap())["state"], "error");
+        assert_eq!(project_git_output(std::env::temp_dir().join(format!("coffee-missing-{}", uuid::Uuid::new_v4())).to_str().unwrap(), &["status"]).unwrap_err(), "Git command failed");
         std::fs::remove_dir_all(root).unwrap();
     }
 }
