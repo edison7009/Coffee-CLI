@@ -1,0 +1,34 @@
+/* Remote mode: list → conversation on a phone, side by side when wide. */
+html.is-remote, html.is-remote body, html.is-remote #root { height: 100%; margin: 0; overflow: hidden; background: var(--bg-app, var(--bg-panel, #1f1b1a)); color: var(--text-1); }
+.remote-workspace { display: flex; height: 100dvh; min-height: 0; }
+.remote-sessions { display: flex; flex-direction: column; width: 100%; min-height: 0; overflow-y: auto; padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom); }
+.remote-workspace.is-wide .remote-sessions { width: 300px; flex-shrink: 0; border-right: 1px solid var(--border); }
+.remote-sessions header { padding: 20px 16px 8px; }
+.remote-sessions h1 { margin: 0; font-size: 24px; font-weight: 700; }
+.remote-sessions header span { color: var(--text-3); font-size: var(--type-label, 12px); }
+.remote-sessions ul { list-style: none; margin: 0; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+.remote-sessions li button { display: flex; flex-direction: column; gap: 4px; width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: var(--shape-radius-panel, 10px); background: transparent; color: var(--text-1); text-align: left; font: inherit; cursor: pointer; }
+.remote-sessions li button.active, .remote-sessions li button:active { background: var(--bg-hover); }
+.remote-session-tool { display: flex; align-items: center; justify-content: space-between; color: var(--accent); font-size: var(--type-label, 12px); font-weight: 600; }
+.remote-session-tool i { width: 8px; height: 8px; border-radius: 50%; background: var(--text-3); }
+.remote-session-tool i[data-status="working"] { background: var(--accent); }
+.remote-session-tool i[data-status="wait_input"] { background: #e0766a; }
+.remote-session-title { font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.remote-session-cwd { color: var(--text-3); font-size: var(--type-label, 12px); }
+.remote-empty { padding: 32px 16px; color: var(--text-3); text-align: center; }
+.remote-forget { margin: auto 16px 16px; padding: 10px; border: 0; background: none; color: var(--text-3); font: inherit; }
+.remote-main { position: relative; display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; padding-bottom: env(safe-area-inset-bottom); }
+.remote-main > :last-child { flex: 1; min-height: 0; }
+.remote-back { display: flex; align-items: center; gap: 8px; padding: calc(8px + env(safe-area-inset-top)) 8px 8px; border-bottom: 1px solid var(--border); flex: 0 0 auto !important; }
+.remote-back button { width: 40px; height: 40px; border: 0; background: none; color: var(--accent); font-size: 30px; line-height: 1; }
+.remote-back span { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.remote-banner { position: fixed; left: 12px; right: 12px; top: calc(8px + env(safe-area-inset-top)); z-index: 10; padding: 10px 14px; border-radius: 10px; background: var(--bg-hover); color: var(--text-1); font-size: 13px; }
+.remote-banner button { margin-left: 8px; border: 0; background: none; color: var(--accent); font: inherit; font-weight: 600; }
+.remote-pair { max-width: 520px; margin: 0 auto; padding: calc(48px + env(safe-area-inset-top)) 24px 24px; display: flex; flex-direction: column; gap: 14px; }
+.remote-pair h1 { margin: 0; font-size: 26px; }
+.remote-pair p { margin: 0; color: var(--text-2); line-height: 1.6; }
+.remote-pair label { display: flex; flex-direction: column; gap: 6px; color: var(--text-3); font-size: 13px; }
+.remote-pair input { padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-panel); color: var(--text-1); font: inherit; font-size: 16px; }
+.remote-pair button { padding: 13px; border: 0; border-radius: 10px; background: var(--accent); color: var(--bg-panel, #1f1b1a); font: inherit; font-weight: 600; font-size: 16px; }
+.remote-pair button:disabled { opacity: 0.5; }
+.remote-error { color: #e0766a !important; }

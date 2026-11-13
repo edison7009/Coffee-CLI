@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { parsePairingLink, RpcError, type PairingLink } from '../protocol';
+import { parsePairingLink, RpcError, type PairingLink } from '../../../src-ui/src/remote/protocol';
 import { useConnection } from '../connection';
 import { t } from '../i18n';
 import { useTheme } from '../theme';

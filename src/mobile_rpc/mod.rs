@@ -14,6 +14,7 @@ mod buffers;
 mod config;
 mod firewall;
 mod network;
+mod remote_ui;
 mod secure;
 
 use buffers::{Buffers, Replay};
@@ -58,6 +59,8 @@ struct Client {
     subscriptions: Mutex<HashSet<String>>,
     /// Set when output was dropped for a session because the queue was full.
     resync: Mutex<HashSet<String>>,
+    /// Runs the desktop UI (`?remote`): receives raw desktop events.
+    ui: AtomicBool,
 }
 
 #[derive(Default)]
@@ -104,6 +107,12 @@ pub fn init(app: &AppHandle) {
             record_conversation(kind, payload);
         });
     }
+    for name in remote_ui::FORWARDED_EVENTS {
+        app.listen_any(name, move |event| {
+            let Ok(payload) = serde_json::from_str::<Value>(event.payload()) else { return };
+            deliver_ui(name, payload);
+        });
+    }
     app.listen_any("agent-conversations-changed", |_| broadcast_all(json!({"event":"session.changed","params":{"kind":"agent"}})));
     let saved = config::load();
     if saved.enabled { let _ = start(saved); }
@@ -139,6 +148,16 @@ fn deliver(id: &str, frame: Value) {
         if client.tx.try_send(frame.clone()).is_err() {
             client.resync.lock().unwrap().insert(id.to_owned());
         }
+    }
+}
+
+/// Raw desktop events for phones running the desktop UI. Dropped (not
+/// queued) when a phone falls behind; its reducers resync on reconnect.
+fn deliver_ui(name: &str, payload: Value) {
+    if !active() { return; }
+    let frame = next_seq(json!({"event":"tauri.event","params":{"event":name,"payload":payload}}));
+    for client in hub().clients.lock().unwrap().values() {
+        if client.ui.load(Ordering::Relaxed) { let _ = client.tx.try_send(frame.clone()); }
     }
 }
 
@@ -194,7 +213,7 @@ async fn serve(stream: TcpStream) {
     let channel = Arc::new(channel);
 
     let (tx, mut rx) = mpsc::channel::<Value>(CLIENT_QUEUE);
-    let client = Arc::new(Client { device: client_device, kill: tokio::sync::Notify::new(), tx, subscriptions: Mutex::default(), resync: Mutex::default() });
+    let client = Arc::new(Client { device: client_device, kill: tokio::sync::Notify::new(), tx, subscriptions: Mutex::default(), resync: Mutex::default(), ui: AtomicBool::new(false) });
     let client_id = hub().next_client.fetch_add(1, Ordering::SeqCst);
     hub().clients.lock().unwrap().insert(client_id, client.clone());
     let writer_channel = channel.clone();
@@ -366,6 +385,12 @@ async fn handle(client: &Client, request: &Value) -> Result<Value, RpcError> {
             gui("conversation.send", json!({"id":id()?,"text":text})).await
         }
         "conversation.cancel" => gui("conversation.cancel", json!({"id":id()?})).await,
+        "ui.subscribe" => { client.ui.store(true, Ordering::Relaxed); Ok(json!({"events": remote_ui::FORWARDED_EVENTS})) }
+        "ui.invoke" => {
+            let app = hub().app.lock().unwrap().clone().ok_or(("internal", "app unavailable".to_string()))?;
+            let cmd = params["cmd"].as_str().ok_or(("invalid_params", "cmd required".to_string()))?;
+            remote_ui::invoke(&app, cmd, &params["args"]).await
+        }
         _ => Err(("unsupported", "unknown method".into())),
     }
 }
@@ -496,6 +521,11 @@ pub async fn mobile_rpc_firewall_allow() -> Result<Value, String> {
     tauri::async_runtime::spawn_blocking(move || firewall::allow(port)).await.map_err(|e| e.to_string())??;
     Ok(mobile_rpc_firewall_status().await)
 }
+
+/// The main window reports that its tab list changed (opened, closed, renamed,
+/// status), so phones re-read `session.list`.
+#[tauri::command]
+pub fn mobile_rpc_sessions_changed() { broadcast_all(json!({"event":"session.changed","params":{}})); }
 
 #[tauri::command]
 pub fn mobile_rpc_cancel_pairing() { *hub().pairing.lock().unwrap() = None; }

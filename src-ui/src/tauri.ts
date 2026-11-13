@@ -203,6 +203,7 @@ export const commands = {
   mobileRpcSetEnabled: (enabled: boolean) => invoke<MobileRpcStatus>('mobile_rpc_set_enabled', { enabled }),
   mobileRpcBeginPairing: () => invoke<MobileRpcPairing>('mobile_rpc_begin_pairing'),
   mobileRpcCancelPairing: () => invoke<void>('mobile_rpc_cancel_pairing'),
+  mobileRpcSessionsChanged: () => invoke<void>('mobile_rpc_sessions_changed'),
   mobileRpcRevokeDevice: (publicKey: string) => invoke<MobileRpcStatus>('mobile_rpc_revoke_device', { publicKey }),
   mobileRpcSetAddress: (address: string | null) => invoke<MobileRpcStatus>('mobile_rpc_set_address', { address }),
   mobileRpcFirewallStatus: () => invoke<MobileRpcFirewall>('mobile_rpc_firewall_status'),

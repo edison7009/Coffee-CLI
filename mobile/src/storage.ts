@@ -2,7 +2,7 @@
 // Native builds keep it in the keychain/keystore; the web preview uses localStorage.
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
-import { fromHex, toHex, type Desktop } from './protocol';
+import { fromHex, toHex, type Desktop } from '../../src-ui/src/remote/protocol';
 
 const KEY = 'coffee.pairing.v0';
 

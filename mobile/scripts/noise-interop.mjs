@@ -1,7 +1,7 @@
 // Pairs with and reconnects to a desktop over the real protocol, using the app's own client.
 // Usage: node scripts/noise-interop.mjs <host> <port> <desktopPublicKeyHex> <pairingCode>
 // Prints one JSON line with what happened; the Rust test (src/mobile_rpc/tests.rs) drives it.
-import { CoffeeClient, generateKeyPair } from '../src/protocol.ts';
+import { CoffeeClient, generateKeyPair } from '../../src-ui/src/remote/protocol.ts';
 
 const [host, port, publicKey, code] = process.argv.slice(2);
 // An unreachable address first: the client must race past it.

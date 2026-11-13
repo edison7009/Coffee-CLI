@@ -1,6 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useT } from '../../i18n/useT';
-import { useAppStateRef } from '../../store/app-state';
+import { useAppState, useAppStateRef } from '../../store/app-state';
 import { commands, isTauri } from '../../tauri';
 import { getAgentSession } from '../../lib/agent-session';
 import { isClaudeConversation, isCodexConversation, isDshConversation, isOpenCodeConversation, isPiConversation } from '../../lib/chat-tools';
@@ -22,6 +22,18 @@ export function MobileRpcBridge() {
   const stateRef = useAppStateRef();
   const t = useT(), tRef = useRef(t);
   useEffect(() => { tRef.current = t; }, [t]);
+
+  // Phones re-read the list when what it shows changes; bursts (restoring tabs) collapse into one notice.
+  const { state } = useAppState();
+  const listed = useMemo(() => state.terminals.filter(tab => tab.tool && !tab.isHidden)
+    .map(tab => [tab.id, tab.tool, tab.pinnedTitle || tab.toolTitle || '', tab.folderPath ?? '', tab.agentStatus ?? ''].join('\u0000')).join('\u0001'), [state.terminals]);
+  const firstList = useRef(true);
+  useEffect(() => {
+    if (!isTauri) return;
+    if (firstList.current) { firstList.current = false; return; }
+    const timer = setTimeout(() => { void commands.mobileRpcSessionsChanged().catch(() => {}); }, 300);
+    return () => clearTimeout(timer);
+  }, [listed]);
   useEffect(() => {
     if (!isTauri) return;
     let disposed = false, stop: (() => void) | undefined;

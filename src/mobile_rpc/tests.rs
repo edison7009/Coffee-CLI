@@ -313,3 +313,12 @@ fn firewall_scripts_quote_the_program_path() {
     // UTF-16LE base64, as -EncodedCommand expects.
     assert_eq!(firewall::encode_command("ab"), "YQBiAA==");
 }
+
+#[test]
+fn remote_ui_allows_only_conversation_commands() {
+    for cmd in ["claude_session_send", "claude_session_respond", "claude_session_start", "claude_session_close", "computer_name"] { assert!(remote_ui::allowed(cmd), "{cmd}"); }
+    // Files, credentials, configuration, processes and shell input stay on the desktop.
+    for cmd in ["fs_delete", "fs_rename", "read_text_file", "load_password", "set_tool_config", "get_tool_config", "tier_terminal_start", "tier_terminal_input", "open_url", "show_in_folder", "mobile_rpc_set_enabled", "plugin:dialog|open", "plugin:clipboard-manager|read_text", "codex_session_start"] {
+        assert!(!remote_ui::allowed(cmd), "{cmd}");
+    }
+}

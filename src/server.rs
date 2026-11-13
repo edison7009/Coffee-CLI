@@ -1891,6 +1891,7 @@ pub fn start_ui(pending_launch: Option<crate::launch::LaunchRequest>) -> anyhow:
             crate::mobile_rpc::mobile_rpc_set_enabled,
             crate::mobile_rpc::mobile_rpc_begin_pairing,
             crate::mobile_rpc::mobile_rpc_cancel_pairing,
+            crate::mobile_rpc::mobile_rpc_sessions_changed,
             crate::mobile_rpc::mobile_rpc_set_address,
             crate::mobile_rpc::mobile_rpc_firewall_status,
             crate::mobile_rpc::mobile_rpc_firewall_allow,

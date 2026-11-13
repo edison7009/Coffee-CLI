@@ -1,5 +1,7 @@
 // main.tsx — Entry point
 
+// Must stay the first import: in remote mode it provides the Tauri bridge before `isTauri` is read.
+import { REMOTE } from './remote/bridge';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { AppProvider } from './store/app-state';
@@ -25,8 +27,14 @@ if (IS_WINDOWS) document.documentElement.classList.add('is-windows');
 // canonical display names on first render (no 'claude' → 'Claude
 // Code' label flash). The window is `visible: false` until
 // show_main_window fires below, so the ~10ms wait is invisible.
-const uiScaleReady = initializeUiScale();
-void Promise.all([loadToolInfo(), uiScaleReady]).finally(() => {
+const uiScaleReady = REMOTE ? Promise.resolve() : initializeUiScale();
+if (REMOTE) {
+  // The desktop UI on a phone or another browser: its own shell, none of the window plumbing below.
+  document.documentElement.classList.add('is-remote');
+  void import('./remote/RemoteApp').then(({ RemoteApp }) => ReactDOM.createRoot(document.getElementById('root')!).render(
+    <React.StrictMode><AppProvider><RemoteApp /></AppProvider></React.StrictMode>
+  ));
+} else void Promise.all([loadToolInfo(), uiScaleReady]).finally(() => {
   ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
       <AppProvider>
@@ -54,6 +62,8 @@ if (typeof document !== 'undefined' && document.fonts) {
   document.fonts.load('700 14px Inter');
 }
 
+// Window plumbing exists only in the desktop app, not in remote mode.
+if (!REMOTE) {
 // Window starts with `visible: false` (see tauri.conf.json) to hide the
 // Windows-default chrome flash. Reveal it only after the first paint so
 // the first frame the user sees is the final themed UI.
@@ -89,6 +99,7 @@ onWindowBackground(() => {
 onWindowForeground(() => {
   commands.setBackgroundMode(false).catch(() => {});
 });
+}
 
 // Suppress the WebView's built-in context menu (Back / Reload / Save As / Print / Inspect…).
 // Our own React components handle onContextMenu directly and render

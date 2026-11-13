@@ -1,13 +1,13 @@
 // Coffee CLI mobile protocol v0 (mobile/PROTOCOL.md): the Noise IKpsk2 initiator,
 // framed transport encryption and the JSON-RPC client.
 //
-// This file imports only the noble crypto packages so Node can run it directly
+// Shared by the phone app (mobile/) and the desktop UI's remote mode. It imports only
+// the noble crypto packages so Node can run it directly
 // for the interop test against the desktop (src/mobile_rpc/tests.rs).
 import { x25519 } from '@noble/curves/ed25519.js';
 import { chacha20poly1305 } from '@noble/ciphers/chacha.js';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { hmac } from '@noble/hashes/hmac.js';
-import { randomBytes } from '@noble/hashes/utils.js';
 
 export const PROTOCOL = 0;
 export const MODE_RESUME = 0;

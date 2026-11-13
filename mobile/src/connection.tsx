@@ -1,7 +1,7 @@
 // Owns the connection to the paired desktop: loads the pairing, connects, and reconnects with backoff.
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { AppState, Platform } from 'react-native';
-import { CoffeeClient, RpcError, generateKeyPair, type PairingLink } from './protocol';
+import { CoffeeClient, RpcError, generateKeyPair, type PairingLink } from '../../src-ui/src/remote/protocol';
 import { forgetPairing, loadPairing, savePairing, type Pairing } from './storage';
 
 export type Status = 'loading' | 'unpaired' | 'connecting' | 'connected' | 'offline' | 'revoked';
