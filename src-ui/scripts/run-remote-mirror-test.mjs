@@ -24,10 +24,16 @@ const sync = tabs => { state = reducer(state, { type: 'SYNC_MIRROR_TABS', tabs }
 
 // Opening the page: the desktop's terminals appear and the first one is shown instead of the launch page.
 sync([tab('a'), tab('b', { tool: 'codex' })]);
-assert.deepEqual(state.tabOrder, ['blank', 'a', 'b']);
+assert.deepEqual(state.tabOrder, ['a', 'b', 'blank'], 'the desktop order, then what only this screen has');
 assert.equal(state.activeTerminalId, 'a');
 const a = state.terminals.find(t => t.id === 'a'), b = state.terminals.find(t => t.id === 'b');
 assert.equal(a.mirror, true); assert.equal(a.claudeMode, 'conversation', 'the desktop decides the view'); assert.equal(b.codexMode, undefined); assert.equal(a.toolTitle, 'a');
+
+// The desktop reordered its tabs: so does this screen.
+sync([tab('b', { tool: 'codex' }), tab('a')]);
+assert.deepEqual(state.tabOrder, ['b', 'a', 'blank']);
+assert.deepEqual(state.terminals.map(t => t.id), ['b', 'a', 'blank']);
+sync([tab('a'), tab('b', { tool: 'codex' })]);
 
 // Nothing changed: the same state object, so nothing re-renders.
 const before = state; sync([tab('a'), tab('b', { tool: 'codex' })]); assert.equal(state, before);
@@ -41,8 +47,9 @@ sync([tab('a'), tab('b', { tool: 'codex' })]);
 
 // The browser's own tab stays; titles and folders follow; a tab closed on the desktop goes.
 state = { ...state, terminals: [...state.terminals, { id: 'own', tool: 'claude', folderPath: '/x' }], tabOrder: [...state.tabOrder, 'own'], activeTerminalId: 'b' };
-sync([tab('a', { title: 'renamed', cwd: '/q' })]);
-assert.deepEqual(state.tabOrder, ['blank', 'a', 'own']);
+sync([tab('a', { title: 'renamed', cwd: '/q', status: 'working' })]);
+assert.deepEqual(state.tabOrder, ['a', 'blank', 'own']);
+assert.equal(state.terminals.find(t => t.id === 'a').agentStatus, 'working', 'the desktop tab status shows here');
 assert.equal(state.terminals.find(t => t.id === 'a').toolTitle, 'renamed');
 assert.equal(state.terminals.find(t => t.id === 'a').folderPath, '/q');
 assert.equal(state.activeTerminalId, 'a', 'the shown tab closed on the desktop: show another terminal');

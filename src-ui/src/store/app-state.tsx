@@ -175,7 +175,7 @@ export function pickMirroredSettings(state: AppState): MirroredSettings {
 export const SETTINGS_ACTIONS = new Set<Action['type']>(['SET_THEME', 'SET_THEME_MODE', 'SET_SHAPE', 'SET_ICON_THEME', 'SET_LANG', 'SET_BG', 'CLEAR_BG', 'SET_WALLPAPER_OPACITY', 'SET_TERM_SCHEME', 'SET_TERM_FONT', 'SET_DEFAULT_SHELL', 'SET_GAMBIT_ENTER_TO_SEND', 'SET_HOTKEY_SCHEME', 'SET_TITLEBAR_TOGGLE_DISPLAY', 'SET_PRE_INPUT_BUTTON', 'SET_DIFF_MODE']);
 
 /** A desktop terminal a browser mirrors (see SYNC_MIRROR_TABS). */
-export interface MirrorTab { id: string; tool: ToolType; cwd: string | null; title: string; claudeMode?: ClaudeMode; codexMode?: ClaudeMode; opencodeMode?: ClaudeMode; piMode?: ClaudeMode; worktree?: TerminalSession['worktree']; parentId?: string }
+export interface MirrorTab { id: string; tool: ToolType; cwd: string | null; title: string; claudeMode?: ClaudeMode; codexMode?: ClaudeMode; opencodeMode?: ClaudeMode; piMode?: ClaudeMode; worktree?: TerminalSession['worktree']; parentId?: string; status?: AgentStatus }
 
 // ─── State Shape ─────────────────────────────────────────────────────────────
 
@@ -494,10 +494,11 @@ function reducer(state: AppState, action: Action): AppState {
       const fromDesktop = (desk: MirrorTab, base?: TerminalSession): TerminalSession => ({
         ...base, id: desk.id, tool: desk.tool, folderPath: desk.cwd, toolTitle: desk.title || base?.toolTitle, mirror: true,
         claudeMode: desk.claudeMode, codexMode: desk.codexMode, opencodeMode: desk.opencodeMode, piMode: desk.piMode, worktree: desk.worktree, parentId: desk.parentId,
+        agentStatus: desk.status,
       });
       const same = (tab: TerminalSession, desk: MirrorTab) => tab.mirror && tab.tool === desk.tool && tab.folderPath === desk.cwd && (desk.title || tab.toolTitle) === tab.toolTitle
         && tab.claudeMode === desk.claudeMode && tab.codexMode === desk.codexMode && tab.opencodeMode === desk.opencodeMode && tab.piMode === desk.piMode
-        && tab.worktree?.path === desk.worktree?.path && tab.parentId === desk.parentId;
+        && tab.worktree?.path === desk.worktree?.path && tab.parentId === desk.parentId && tab.agentStatus === desk.status;
       // A blank launch page whose tool was just started on the desktop becomes that desktop tab.
       const kept = state.terminals.filter(tab => !tab.mirror || wanted.has(tab.id)).map(tab => {
         const desk = wanted.get(tab.id);
@@ -505,10 +506,15 @@ function reducer(state: AppState, action: Action): AppState {
       });
       const known = new Set(kept.map(tab => tab.id));
       const added = action.tabs.filter(tab => !known.has(tab.id)).map(desk => fromDesktop(desk));
-      if (kept.length === state.terminals.length && !added.length && kept.every((tab, i) => tab === state.terminals[i])) return state;
       let terminals = [...kept, ...added];
       const ids = new Set(terminals.map(tab => tab.id));
-      let order = [...getTabOrder(state).filter(id => ids.has(id)), ...added.map(tab => tab.id)];
+      // The desktop's tabs in the desktop's order; tabs only this screen has (a blank launch page) stay after them.
+      const deskOrder = action.tabs.map(tab => tab.id);
+      let order = [...deskOrder, ...getTabOrder(state).filter(id => ids.has(id) && !wanted.has(id))];
+      const orderChanged = order.length !== getTabOrder(state).length || order.some((id, i) => id !== getTabOrder(state)[i]);
+      if (!orderChanged && kept.length === state.terminals.length && !added.length && kept.every((tab, i) => tab === state.terminals[i])) return state;
+      const byId = new Map(terminals.map(tab => [tab.id, tab]));
+      terminals = order.flatMap(id => byId.get(id) ?? []);
       let active = state.activeTerminalId && ids.has(state.activeTerminalId) ? state.activeTerminalId : null;
       // Opening the page, or the shown tab going away, lands on a desktop tab rather than the launch page.
       const activeTab = terminals.find(tab => tab.id === active);

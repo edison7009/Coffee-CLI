@@ -20,6 +20,12 @@ class RequestError extends Error {
   constructor(message: string, code: RequestError['code']) { super(message); this.code = code; }
 }
 
+/** Tabs as the tab strip shows them. */
+function inTabOrder(terminals: TerminalSession[], order: string[]): TerminalSession[] {
+  const rank = new Map(order.map((id, i) => [id, i]));
+  return [...terminals].sort((a, b) => (rank.get(a.id) ?? Infinity) - (rank.get(b.id) ?? Infinity));
+}
+
 function conversationKind(tab: TerminalSession) {
   return isClaudeConversation(tab) ? 'claude' : isCodexConversation(tab) ? 'codex' : isOpenCodeConversation(tab) ? 'opencode'
     : isPiConversation(tab) ? 'pi' : isDshConversation(tab) ? 'dsh' : null;
@@ -33,8 +39,8 @@ export function MobileRpcBridge() {
 
   // Phones re-read the list when what it shows changes; bursts (restoring tabs) collapse into one notice.
   const { state, dispatch } = useAppState();
-  const listed = useMemo(() => state.terminals.filter(tab => tab.tool && !tab.isHidden)
-    .map(tab => [tab.id, tab.tool, tab.pinnedTitle || tab.toolTitle || '', tab.folderPath ?? '', tab.agentStatus ?? '', conversationKind(tab) ?? ''].join('\u0000')).join('\u0001'), [state.terminals]);
+  const listed = useMemo(() => inTabOrder(state.terminals, state.tabOrder).filter(tab => tab.tool && !tab.isHidden)
+    .map(tab => [tab.id, tab.tool, tab.pinnedTitle || tab.toolTitle || '', tab.folderPath ?? '', tab.agentStatus ?? '', conversationKind(tab) ?? ''].join('\u0000')).join('\u0001'), [state.terminals, state.tabOrder]);
   const firstList = useRef(true);
   useEffect(() => {
     if (!isTauri) return;
@@ -113,7 +119,7 @@ export function MobileRpcBridge() {
         return { accepted };
       }
       if (method === 'session.list') {
-        return { sessions: stateRef.current.terminals.filter(tab => tab.tool && !tab.isHidden).map(tab => {
+        return { sessions: inTabOrder(stateRef.current.terminals, stateRef.current.tabOrder).filter(tab => tab.tool && !tab.isHidden).map(tab => {
           const kind = conversationKind(tab);
           return {
             id: tab.id, tool: tab.tool, kind, view: kind ? 'conversation' : 'terminal',

@@ -1,14 +1,14 @@
 // In the browser: the tab strip and the settings are the desktop's. Re-reads the desktop's tab list whenever it
 // changes and shows tabs this browser asked the desktop to open (see SYNC_MIRROR_TABS).
 import { useEffect } from 'react';
-import { openedFromBrowser, useAppState, type ClaudeMode, type MirroredSettings, type MirrorTab, type TerminalSession, type ToolType } from '../store/app-state';
+import { openedFromBrowser, useAppState, type AgentStatus, type ClaudeMode, type MirroredSettings, type MirrorTab, type TerminalSession, type ToolType } from '../store/app-state';
 import { mirrorTarget } from '../lib/session-mirror';
 import { onRemoteEvent, onRemoteStatus, remoteRequest, remoteStatus } from './bridge';
 
 interface ListedSession {
   id: string; tool: ToolType; title: string; cwd: string;
   claudeMode?: ClaudeMode; codexMode?: ClaudeMode; opencodeMode?: ClaudeMode; piMode?: ClaudeMode;
-  worktree?: TerminalSession['worktree']; parentId?: string;
+  worktree?: TerminalSession['worktree']; parentId?: string; status?: AgentStatus | null;
 }
 
 export function RemoteMirror() {
@@ -22,8 +22,8 @@ export function RemoteMirror() {
       try {
         const { sessions } = await remoteRequest<{ sessions: ListedSession[] }>('session.list');
         if (disposed) return;
-        const tabs: MirrorTab[] = sessions.map(({ id, tool, title, cwd, claudeMode, codexMode, opencodeMode, piMode, worktree, parentId }) =>
-          ({ id, tool, title, cwd: cwd || null, claudeMode, codexMode, opencodeMode, piMode, worktree, parentId }));
+        const tabs: MirrorTab[] = sessions.map(({ id, tool, title, cwd, claudeMode, codexMode, opencodeMode, piMode, worktree, parentId, status }) =>
+          ({ id, tool, title, cwd: cwd || null, claudeMode, codexMode, opencodeMode, piMode, worktree, parentId, status: status ?? undefined }));
         dispatch({ type: 'SYNC_MIRROR_TABS', tabs });
       } catch { /* Offline: the next connection refreshes. */ }
       finally {
