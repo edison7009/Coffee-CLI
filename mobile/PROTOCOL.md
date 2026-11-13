@@ -19,7 +19,7 @@
 
 加密协议：`Noise_IKpsk2_25519_ChaChaPoly_SHA256`（Rust 端用 `snow`）。桌面持有静态 X25519 密钥对，存放在 `~/.coffee-cli/mobile/config.json`，文件权限 0600，写入时先写临时文件再重命名。已配对手机只保存公钥。
 
-1. 桌面调用 `mobile_rpc_begin_pairing`，生成 `coffee://pair?v=0&port=<port>&pk=<桌面公钥hex>&code=<128bit 一次性码>`，有效期 5 分钟，同一时间只有一个配对码。主机地址由二维码界面补上。
+1. 桌面调用 `mobile_rpc_begin_pairing`，生成 `coffeecli://pair?v=0&port=<port>&pk=<桌面公钥hex>&code=<128bit 一次性码>`，有效期 5 分钟，同一时间只有一个配对码。主机地址由二维码界面补上。
 2. 手机生成自己的静态密钥对。WebSocket 第一条二进制消息是 `[mode] ++ noise_msg1`：
    - `mode=1` 配对：psk = SHA-256(code)。只要有一次配对尝试（无论成败），配对码就作废，因此无法反复猜测。
    - `mode=0` 重连：psk 全零；手机公钥必须在已配对列表里，否则在回复之前就断开，对方得不到任何信息。

@@ -30,7 +30,7 @@ export const isTauri=true;
 export const commands={
   async mobileRpcStatus(){return copy()},
   async mobileRpcSetEnabled(enabled){window.calls.push(['enable',enabled]);window.mobile.enabled=enabled;return copy()},
-  async mobileRpcBeginPairing(){window.calls.push(['pair']);if(!window.mobile.enabled)throw Error('Enable mobile access first');return {uri:'coffee://pair?v=0&host=192.168.1.8&port=47391&pk='+window.mobile.publicKey+'&code=c0ffee',host:'192.168.1.8',port:47391,publicKey:window.mobile.publicKey,code:'c0ffee',expiresAt:Date.now()+300000}},
+  async mobileRpcBeginPairing(){window.calls.push(['pair']);if(!window.mobile.enabled)throw Error('Enable mobile access first');return {uri:'coffeecli://pair?v=0&host=192.168.1.8&port=47391&pk='+window.mobile.publicKey+'&code=c0ffee',host:'192.168.1.8',port:47391,publicKey:window.mobile.publicKey,code:'c0ffee',expiresAt:Date.now()+300000}},
   async mobileRpcCancelPairing(){window.calls.push(['cancel'])},
   async mobileRpcSetAddress(address){window.calls.push(['address',address]);window.mobile.preferredAddress=address;window.mobile.host=address??window.mobile.addresses[0].address;return copy()},
   async mobileRpcFirewallStatus(){return {state:window.firewall}},

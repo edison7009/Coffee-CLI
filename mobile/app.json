@@ -23,7 +23,7 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "scheme": "coffee",
+    "scheme": "coffeecli",
     "plugins": [
       "expo-secure-store"
     ]

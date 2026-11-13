@@ -47,7 +47,7 @@ export function PairScreen() {
         <TextInput value={name} onChangeText={setName} maxLength={64} style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.card }]} />
 
         <Text style={[styles.label, { color: theme.muted }]}>{t('pair.paste')}</Text>
-        <TextInput value={link} onChangeText={setLink} autoCapitalize="none" autoCorrect={false} placeholder="coffee://pair?…" placeholderTextColor={theme.muted} style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.card }]} />
+        <TextInput value={link} onChangeText={setLink} autoCapitalize="none" autoCorrect={false} placeholder="coffeecli://pair?…" placeholderTextColor={theme.muted} style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.card }]} />
         <Pressable accessibilityRole="button" disabled={waiting || !link.trim()} style={[styles.button, { backgroundColor: theme.accent, opacity: waiting || !link.trim() ? 0.5 : 1 }]} onPress={() => void submit(link)}>
           <Text style={[styles.buttonText, { color: theme.accentText }]}>{t('pair.connect')}</Text>
         </Pressable>

@@ -53,7 +53,7 @@ function RemotePair({ initialLink }: { initialLink: string }) {
     <h1>连接到 Coffee CLI</h1>
     <p>{initialLink ? '确认这台设备的名称，点“连接”，然后在电脑上点“允许”。' : '在电脑上打开 Coffee CLI → 设置 → Web 端，点“配对”，打开或粘贴配对链接。'}</p>
     <label>这台设备的名称<input value={name} maxLength={64} onChange={e => setName(e.target.value)} /></label>
-    {!initialLink && <label>配对链接<input value={link} placeholder="coffee://pair?…" autoCapitalize="none" autoCorrect="off" onChange={e => setLink(e.target.value)} /></label>}
+    {!initialLink && <label>配对链接<input value={link} placeholder="coffeecli://pair?…" autoCapitalize="none" autoCorrect="off" onChange={e => setLink(e.target.value)} /></label>}
     <button type="button" disabled={waiting || !link.trim()} onClick={() => void submit()}>{waiting ? '请在电脑上点“允许”…' : '连接'}</button>
     {error && <p className="remote-error" role="alert">{error}</p>}
   </div>;

@@ -16,11 +16,11 @@ test('hex round trip and rejection', () => {
 
 test('pairing link parsing', () => {
   const pk = 'ab'.repeat(32), code = 'c0'.repeat(16);
-  assert.deepEqual(parsePairingLink(` coffee://pair?v=${PROTOCOL}&hosts=192.168.1.8,10.0.0.2,mac.local&port=47391&pk=${pk.toUpperCase()}&code=${code} `), { hosts: ['192.168.1.8', '10.0.0.2', 'mac.local'], port: 47391, publicKey: pk, code });
+  assert.deepEqual(parsePairingLink(` coffeecli://pair?v=${PROTOCOL}&hosts=192.168.1.8,10.0.0.2,mac.local&port=47391&pk=${pk.toUpperCase()}&code=${code} `), { hosts: ['192.168.1.8', '10.0.0.2', 'mac.local'], port: 47391, publicKey: pk, code });
   // Single-host links still parse; junk entries are dropped.
-  assert.deepEqual(parsePairingLink(`coffee://pair?v=0&host=192.168.1.8&port=1&pk=${pk}&code=${code}`).hosts, ['192.168.1.8']);
-  assert.deepEqual(parsePairingLink(`coffee://pair?v=0&hosts=a b,192.168.1.8,&port=1&pk=${pk}&code=${code}`).hosts, ['192.168.1.8']);
-  for (const bad of ['https://example.com', `coffee://pair?v=9&host=h&port=1&pk=${pk}&code=${code}`, `coffee://pair?v=0&host=h&port=0&pk=${pk}&code=${code}`, `coffee://pair?v=0&host=h&port=1&pk=xyz&code=${code}`, `coffee://pair?v=0&port=1&pk=${pk}&code=${code}`]) {
+  assert.deepEqual(parsePairingLink(`coffeecli://pair?v=0&host=192.168.1.8&port=1&pk=${pk}&code=${code}`).hosts, ['192.168.1.8']);
+  assert.deepEqual(parsePairingLink(`coffeecli://pair?v=0&hosts=a b,192.168.1.8,&port=1&pk=${pk}&code=${code}`).hosts, ['192.168.1.8']);
+  for (const bad of ['https://example.com', `coffeecli://pair?v=9&host=h&port=1&pk=${pk}&code=${code}`, `coffeecli://pair?v=0&host=h&port=0&pk=${pk}&code=${code}`, `coffeecli://pair?v=0&host=h&port=1&pk=xyz&code=${code}`, `coffeecli://pair?v=0&port=1&pk=${pk}&code=${code}`]) {
     assert.throws(() => parsePairingLink(bad), bad);
   }
 });

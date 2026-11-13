@@ -156,9 +156,9 @@ export class Initiator {
 export interface Desktop { hosts: string[]; port: number; publicKey: string }
 export interface PairingLink extends Desktop { code: string }
 
-/** `coffee://pair?v=0&hosts=a,b&port=…&pk=…&code=…` from the desktop QR code. */
+/** `coffeecli://pair?v=0&hosts=a,b&port=…&pk=…&code=…` from the desktop QR code. */
 export function parsePairingLink(text: string): PairingLink {
-  const match = text.trim().match(/^coffee:\/\/pair\?(.*)$/);
+  const match = text.trim().match(/^coffeecli:\/\/pair\?(.*)$/);
   if (!match) throw new Error('not a Coffee CLI pairing code');
   const params = new Map(match[1].split('&').map(pair => { const i = pair.indexOf('='); return [decodeURIComponent(pair.slice(0, i)), decodeURIComponent(pair.slice(i + 1))] as const; }));
   if (params.get('v') !== String(PROTOCOL)) throw new Error('unsupported pairing version');

@@ -564,7 +564,7 @@ pub fn mobile_rpc_begin_pairing() -> Result<Value, String> {
     *hub().pairing.lock().unwrap() = Some((code.clone(), Instant::now() + PAIRING_TTL));
     let expires_at = chrono::Utc::now().timestamp_millis() + PAIRING_TTL.as_millis() as i64;
     Ok(json!({
-        "uri": format!("coffee://pair?v={PROTOCOL}&hosts={}&port={}&pk={}&code={code}", hosts.join(","), settings.port, settings.public_key),
+        "uri": format!("coffeecli://pair?v={PROTOCOL}&hosts={}&port={}&pk={}&code={code}", hosts.join(","), settings.port, settings.public_key),
         "host": hosts[0],
         "hosts": hosts,
         "port": settings.port,
