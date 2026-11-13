@@ -3,7 +3,7 @@
 //
 // In a browser the list is the desktop's own (see storage-mirror): it reloads whenever the desktop's copy changes,
 // and folders added or removed in the browser are added or removed on the desktop.
-import { STORAGE_EVENT } from './storage-mirror';
+import { onSharedStorage } from './storage-mirror';
 const STORAGE_KEY = 'coffee:recent-folders';
 const LIMIT = 8;
 
@@ -20,11 +20,7 @@ function save(next: string[]) {
   listeners.forEach(listener => listener());
 }
 
-if (typeof window !== 'undefined') window.addEventListener(STORAGE_EVENT, event => {
-  if (!(event as CustomEvent<string[]>).detail.includes(STORAGE_KEY)) return;
-  folders = load();
-  listeners.forEach(listener => listener());
-});
+onSharedStorage(STORAGE_KEY, () => { folders = load(); listeners.forEach(listener => listener()); });
 
 export const getProjectFolders = (): string[] => folders;
 export function subscribeProjectFolders(listener: () => void): () => void { listeners.add(listener); return () => { listeners.delete(listener); }; }

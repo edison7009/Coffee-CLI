@@ -1,12 +1,18 @@
 import type { TerminalSession } from '../store/app-state';
+import { onSharedStorage } from './storage-mirror';
 
 const STORAGE_KEY = 'coffee:unread-session-replies';
-let unread = new Set<string>();
-try {
-  const saved: unknown = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]');
-  if (Array.isArray(saved)) unread = new Set(saved.filter((key): key is string => typeof key === 'string'));
-} catch { /* Local markers stay available when storage is unavailable. */ }
+function loadUnread(): Set<string> {
+  try {
+    const saved: unknown = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]');
+    if (Array.isArray(saved)) return new Set(saved.filter((key): key is string => typeof key === 'string'));
+  } catch { /* Local markers stay available when storage is unavailable. */ }
+  return new Set();
+}
+let unread = loadUnread();
 const listeners = new Set<() => void>();
+// Read or marked on the other side (desktop or a browser following it).
+onSharedStorage(STORAGE_KEY, () => { unread = loadUnread(); listeners.forEach(listener => listener()); });
 const identities = new Map<string, string>();
 let visible = new Set<string>();
 const reading = () => typeof document !== 'undefined' && !document.hidden && document.hasFocus();

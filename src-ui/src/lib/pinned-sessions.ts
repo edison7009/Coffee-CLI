@@ -1,3 +1,4 @@
+import { onSharedStorage } from './storage-mirror';
 // Pinned sessions - localStorage-backed "置顶" marker table.
 //
 // Mirror of hidden-sessions.ts: Coffee only reads each CLI tool's session
@@ -42,6 +43,9 @@ function persist(): void {
 function emit(): void {
   for (const l of listeners) l();
 }
+
+// Pinned on the other side (desktop or a browser following it).
+onSharedStorage(STORAGE_KEY, () => { pinned = load(); emit(); });
 
 function key(tool: string, id: string): string {
   return `${tool}:${id}`;

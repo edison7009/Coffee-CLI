@@ -499,7 +499,8 @@ export function App() {
       {!REMOTE && <AgentBridge />}
       {REMOTE && <RemoteMirror />}
       <FolderPickerHost />
-      <AutomationRunner />
+      {/* Automations run on the desktop; a browser showing it must not run them a second time. */}
+      {!REMOTE && <AutomationRunner />}
 
       {/* 3-panel workspace. Titlebar toggles flip leftPanelHidden /
           rightPanelHidden. The OS window itself doesn't resize (same

@@ -76,7 +76,7 @@ export function mirrorSource(kind: MirrorKind, id: string, read: () => unknown):
 }
 
 /** The desktop's actions a browser may ask for, by name. */
-export function registerMirrorActions(kind: MirrorKind, fns: Record<string, (...args: never[]) => unknown>) { actions.set(kind, fns); }
+export function registerMirrorActions(kind: MirrorKind, fns: Record<string, (...args: never[]) => unknown>) { actions.set(kind, { ...actions.get(kind), ...fns }); }
 
 /** Whether a browser is connected; patches are only worked out while one is. */
 export function setMirrorActive(next: boolean) {

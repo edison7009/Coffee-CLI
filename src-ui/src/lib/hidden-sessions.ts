@@ -1,3 +1,4 @@
+import { onSharedStorage } from './storage-mirror';
 // Hidden sessions - localStorage-backed "soft delete" marker table.
 //
 // Session data belongs to each CLI tool (Claude / Codex / OpenCode / MiMo …);
@@ -39,6 +40,9 @@ function persist(): void {
 function emit(): void {
   for (const l of listeners) l();
 }
+
+// Hidden on the other side (desktop or a browser following it).
+onSharedStorage(STORAGE_KEY, () => { hidden = load(); emit(); });
 
 function key(tool: string, id: string): string {
   return `${tool}:${id}`;

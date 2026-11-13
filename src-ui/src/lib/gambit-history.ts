@@ -1,3 +1,4 @@
+import { onSharedStorage } from './storage-mirror';
 // Gambit prompt history — app-level singleton for ↑/↓ input recall.
 //
 // This is the Gambit composer's counterpart to a shell's `.bash_history`: a
@@ -55,6 +56,9 @@ function persist(): void {
 function emit(): void {
   for (const l of listeners) l();
 }
+
+// Prompts sent on the other side (desktop or a browser following it).
+onSharedStorage(LS_KEY, () => { entries = load(); emit(); });
 
 export function subscribeGambitHistory(listener: () => void): () => void {
   listeners.add(listener);

@@ -13,17 +13,27 @@ const PER_SCREEN = new Set([
   'cc-ui-scale', 'cc-task-automations-collapsed', 'cc-native-lang',
   // Caches each side fills on its own.
   'cc-history-cache-v1', 'cc-heatmap-year-cache', 'cc-usage-snapshots-v1', 'cc-project-git-status-v1', 'cc-release-notes',
-  'cc-release-notes-seen', 'cc-tool-skills-v1', 'cc-bg-init',
+  'cc-release-notes-seen', 'cc-tool-skills-v1', 'cc-bg-init', 'cc-cli-updates-v1',
   // Remote-terminal profiles may hold passwords.
   'coffee_remote_cfg',
 ]);
 
 export function isMirroredKey(key: string): boolean {
-  return (key.startsWith('cc-') || key.startsWith('coffee:') || key.startsWith('coffee_')) && !PER_SCREEN.has(key);
+  // Voice input uses the microphone of the device in hand.
+  return (key.startsWith('cc-') || key.startsWith('coffee:') || key.startsWith('coffee_')) && !PER_SCREEN.has(key) && !key.startsWith('cc-voice-');
 }
 
-/** Fired in the browser after the desktop's copy changed `keys`; code that read them can read again. */
+/** Fired when the other side changed `keys`: in the browser after the desktop's copy changed, on the desktop
+ *  after a browser wrote. Code that keeps a value it read must read it again, or its next write loses the change. */
 export const STORAGE_EVENT = 'coffee-storage';
+
+/** Calls `reload` whenever the other side changed `key`. */
+export function onSharedStorage(key: string, reload: () => void): () => void {
+  if (typeof window === 'undefined' || typeof window.addEventListener !== 'function') return () => {};
+  const listener = (event: Event) => { if ((event as CustomEvent<string[]>).detail?.includes(key)) reload(); };
+  window.addEventListener(STORAGE_EVENT, listener);
+  return () => window.removeEventListener(STORAGE_EVENT, listener);
+}
 
 type Write = (key: string, value: string | null) => void;
 
@@ -63,6 +73,7 @@ export function shareDesktopStorage(): void {
 export function writeFromBrowser(key: string, value: string | null): void {
   if (!isMirroredKey(key)) throw new Error('Not a shared setting');
   if (value === null) localStorage.removeItem(key); else localStorage.setItem(key, value);
+  window.dispatchEvent(new CustomEvent(STORAGE_EVENT, { detail: [key] }));
 }
 
 /** Browser: follows the desktop's storage; resolves once the first copy is in place. */

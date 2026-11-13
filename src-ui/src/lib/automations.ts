@@ -1,4 +1,7 @@
 import type { I18nKey } from '../i18n/en';
+import { onSharedStorage } from './storage-mirror';
+import { REMOTE } from '../remote/bridge';
+import { mirrorCall, registerMirrorActions } from './session-mirror';
 // Automations: a prompt sent on a schedule to a new desktop conversation of a chosen tool, in a chosen folder.
 // They run while Coffee is open; one missed while it was closed runs once when it opens again.
 
@@ -88,6 +91,8 @@ function load(): Automation[] {
 }
 
 let automations = load();
+// Added, changed or run on the other side (desktop or a browser following it).
+onSharedStorage(STORAGE_KEY, () => { automations = load(); listeners.forEach(listener => listener()); });
 const listeners = new Set<() => void>();
 export const getAutomations = (): Automation[] => automations;
 export function subscribeAutomations(listener: () => void): () => void { listeners.add(listener); return () => { listeners.delete(listener); }; }
@@ -104,7 +109,12 @@ export function removeAutomation(id: string): void { setAutomations(current => c
 /** Due now: enabled, with a next run at or before `now`. */
 export const dueAutomations = (now: number): Automation[] => automations.filter(item => item.enabled && item.nextAt !== undefined && item.nextAt <= now);
 /** Runs one automation now, outside its schedule (the runner listens for this). */
-export function runAutomationNow(id: string): void { window.dispatchEvent(new CustomEvent('coffee-run-automation', { detail: id })); }
+export function runAutomationNow(id: string): void {
+  // Automations run on the desktop only; a browser asks it to.
+  if (REMOTE) { void mirrorCall('app', 'runAutomationNow', [id]).catch(error => console.error('[automation]', error)); return; }
+  window.dispatchEvent(new CustomEvent('coffee-run-automation', { detail: id }));
+}
+registerMirrorActions('app', { runAutomationNow });
 
 /** The last segment of a folder path, as rows and chips show it. */
 export const folderName = (path: string): string => path.replace(/[\\/]+$/, '').split(/[\\/]/).pop() || path;

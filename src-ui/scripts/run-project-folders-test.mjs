@@ -9,8 +9,10 @@ const compiled = ts.transpileModule(source, { compilerOptions: { target: ts.Scri
 let stored = JSON.stringify(['D:/Coffee-CLI', '/projects/App', 7, '']);
 const localStorage = { getItem: key => key === 'coffee:recent-folders' ? stored : null, setItem: (key, value) => { assert.equal(key, 'coffee:recent-folders'); stored = value; } };
 const exports = {};
-// The storage mirror only lends its event name here.
-const storageMirror = { STORAGE_EVENT: 'coffee-storage' };
+// The storage mirror tells the list when the other side changed a key.
+const handlers = {};
+const storageMirror = { onSharedStorage: (key, reload) => { (handlers[key] ??= []).push(reload); return () => {}; } };
+const changed = key => (handlers[key] ?? []).forEach(reload => reload());
 vm.runInNewContext(compiled, { exports, localStorage, JSON, require: () => storageMirror });
 const folders = () => Array.from(exports.getProjectFolders());
 
@@ -33,16 +35,14 @@ assert.equal(notified, 3, 'an unsubscribed view hears nothing');
 
 // In a browser, storage holds the desktop's copy (storage-mirror): when the desktop's list arrives the
 // launchpad reloads, Windows and POSIX paths unchanged.
-const handlers = {};
 let webStored = '[]';
 const web = {};
-const window = { addEventListener: (name, fn) => { handlers[name] = fn; } };
-vm.runInNewContext(compiled, { exports: web, localStorage: { getItem: () => webStored, setItem: (_, value) => { webStored = value; } }, JSON, window, require: () => storageMirror });
+for (const key of Object.keys(handlers)) delete handlers[key];
+vm.runInNewContext(compiled, { exports: web, localStorage: { getItem: () => webStored, setItem: (_, value) => { webStored = value; } }, JSON, require: () => storageMirror });
 assert.deepEqual(Array.from(web.getProjectFolders()), []);
 webStored = JSON.stringify(['C:\\work\\app', '/Users/me/site', '', 3]);
-handlers['coffee-storage']({ detail: ['coffee:last-folder-by-tool'] });
-assert.deepEqual(Array.from(web.getProjectFolders()), [], 'other records changing does not reload the folders');
-handlers['coffee-storage']({ detail: ['coffee:recent-folders'] });
+assert.deepEqual(Object.keys(handlers), ['coffee:recent-folders'], 'only its own record reloads the list');
+changed('coffee:recent-folders');
 assert.deepEqual(Array.from(web.getProjectFolders()), ['C:\\work\\app', '/Users/me/site']);
 // Adding one writes it, which the mirror carries to the desktop.
 web.addProjectFolder('/Users/me/other');

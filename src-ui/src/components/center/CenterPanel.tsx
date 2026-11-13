@@ -2,6 +2,7 @@ import { Fragment, useState, useEffect, useLayoutEffect, useRef, useMemo, useSyn
 import { AutomationsPage } from './AutomationsPage';
 import { addProjectFolder, getProjectFolders, removeProjectFolder, subscribeProjectFolders } from '../../lib/project-folders';
 import { REMOTE } from '../../remote/bridge';
+import { onSharedStorage } from '../../lib/storage-mirror';
 import { pickFolder } from '../../lib/folder-picker';
 import { createPortal } from 'react-dom';
 import { InlineSvgIcon } from '../InlineSvgIcon';
@@ -28,6 +29,16 @@ import { DiffPanel } from '../right/DiffPanel';
 import { getTabOrder, supportsAgentStatus, useAppState, type ClaudeMode, type ToolType } from '../../store/app-state';
 import { isFrostShape } from '../../lib/personalization';
 import { isClaudeConversation, isCodexConversation, isDshConversation, isOpenCodeConversation, isPiConversation } from '../../lib/chat-tools';
+
+/** Each tool's last project folder; a damaged entry is dropped rather than allowed to break the launch page. */
+function readLastFolders(): Record<string, string> {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem('coffee:last-folder-by-tool') || '{}');
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? Object.fromEntries(Object.entries(parsed).filter((entry): entry is [string, string] => typeof entry[1] === 'string' && entry[1] !== ''))
+      : {};
+  } catch { return {}; }
+}
 
 // Dropdown shown when a tool card is clicked: the globally
 // recent project folders (any tool that used one) + "Open folder…" last.
@@ -624,15 +635,19 @@ export function CenterPanel() {
   const recentFolders = useSyncExternalStore(subscribeProjectFolders, getProjectFolders, getProjectFolders);
   const [folderMenu, setFolderMenu] = useState<{ x: number; y: number; tool: ToolType } | null>(null);
   // Each tool's last project folder: clicking its card opens straight there.
-  const [lastFolders, setLastFolders] = useState<Record<string, string>>(() => {
-    try {
-      const parsed: unknown = JSON.parse(localStorage.getItem('coffee:last-folder-by-tool') || '{}');
-      // A damaged entry is dropped rather than allowed to break the launch page.
-      return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
-        ? Object.fromEntries(Object.entries(parsed).filter((entry): entry is [string, string] => typeof entry[1] === 'string' && entry[1] !== ''))
-        : {};
-    } catch { return {}; }
-  });
+  const [lastFolders, setLastFolders] = useState<Record<string, string>>(readLastFolders);
+  // Chosen on the other side (the desktop, or a browser following it): read again, so the next save keeps it.
+  useEffect(() => {
+    const mode = (tool: string): ClaudeMode => { try { return localStorage.getItem(`coffee:${tool}-launch-mode`) === 'terminal' ? 'terminal' : 'conversation'; } catch { return 'conversation'; } };
+    const stops = [
+      onSharedStorage('coffee:last-folder-by-tool', () => setLastFolders(readLastFolders())),
+      onSharedStorage('coffee:claude-launch-mode', () => setClaudeLaunchMode(mode('claude'))),
+      onSharedStorage('coffee:codex-launch-mode', () => setCodexLaunchMode(mode('codex'))),
+      onSharedStorage('coffee:opencode-launch-mode', () => setOpencodeLaunchMode(mode('opencode'))),
+      onSharedStorage('coffee:pi-launch-mode', () => setPiLaunchMode(mode('pi'))),
+    ];
+    return () => stops.forEach(stop => stop());
+  }, []);
   const [homeDir, setHomeDir] = useState<string | null>(null);
   useEffect(() => {
     if (!isTauri) return;
