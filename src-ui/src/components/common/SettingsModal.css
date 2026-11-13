@@ -623,10 +623,12 @@
 .settings-voice-channels[aria-disabled="true"] button:disabled { opacity: 1; }
 .settings-voice-channels > .settings-sound-row { padding-inline: 0; }
 .settings-voice-channels .settings-sound-failed { padding: 0 0 12px; }
-.settings-voice-scan { position: relative; flex-shrink: 0; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-hover); color: var(--text-1); white-space: nowrap; }
+/* Row buttons (pair, remove, scan…): the settings button look, sized for a list row. */
+.settings-voice-scan { position: relative; flex-shrink: 0; padding: 6px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm, 8px); background: var(--bg-hover); color: var(--text-1); font-family: inherit; font-size: var(--type-label); font-weight: 500; white-space: nowrap; cursor: pointer; transition: background-color .14s ease, border-color .14s ease; }
+.settings-voice-scan:hover:not(:disabled) { border-color: transparent; background: color-mix(in srgb, var(--text-1, #fff) 11%, transparent); }
 .settings-voice-scan[aria-busy="true"] .settings-voice-scan-label { visibility: hidden; }
 .settings-voice-scan-progress { position: absolute; inset: 0; display: grid; place-items: center; }
-.settings-voice-scan:disabled { opacity: 0.5; }
+.settings-voice-scan:disabled { opacity: 0.5; cursor: default; }
 .settings-voice-sources { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(190px, 100%), 1fr)); gap: 10px; padding: 4px 0 16px; }
 .settings-voice-source-card { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-width: 0; min-height: 84px; padding: 12px; border: 1px solid var(--border); border-radius: var(--shape-radius-btn, 8px); color: var(--text-1); background: transparent; font: inherit; text-align: left; }
 .settings-voice-source-card[aria-pressed="false"]:hover:not(:disabled) { background: var(--bg-hover); }
