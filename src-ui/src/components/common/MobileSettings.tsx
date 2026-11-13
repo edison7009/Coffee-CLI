@@ -72,16 +72,17 @@ export function MobileSettings() {
     if (!next.enabled) setPairing(null);
   });
 
-  const beginPairing = () => run(async () => {
+  const showPairing = async () => {
     const next = await commands.mobileRpcBeginPairing();
     // A camera opens this straight in the browser, already carrying the pairing link.
     const webUrl = webPairingUrl(next);
-    const qr = await QRCode.toDataURL(webUrl, { width: 220, margin: 2, errorCorrectionLevel: 'M' });
+    const qr = await QRCode.toDataURL(webUrl, { width: 264, margin: 2, errorCorrectionLevel: 'M' });
     pairedBefore.current = new Set(status?.devices.map(device => device.publicKey));
     setNow(Date.now());
     setCopied(false);
     setPairing({ ...next, qr, webUrl });
-  });
+  };
+  const beginPairing = () => run(showPairing);
 
   // Opened from the sidebar's "pair a device": show the code once the server is listening.
   const cancelPairing = () => run(async () => { await commands.mobileRpcCancelPairing(); setPairing(null); });
@@ -98,15 +99,17 @@ export function MobileSettings() {
   }, [enabled]);
   const allowFirewall = () => run(async () => { setFirewall((await commands.mobileRpcFirewallAllow()).state); });
 
-  const addressLabel = (item: MobileRpcAddress) => item.kind === 'other'
-    ? t('settings.mobile.address.other', { name: item.interface, address: item.address })
-    : t(`settings.mobile.address.${item.kind}`, { address: item.address });
   const addresses = status?.addresses ?? [];
+  // The address already shows above; the network is named by kind, with its address only when two share a kind.
+  const networkName = (item: MobileRpcAddress) => item.kind === 'other' ? item.interface : t(`settings.mobile.net.${item.kind}`);
+  const addressLabel = (item: MobileRpcAddress) => addresses.filter(other => networkName(other) === networkName(item)).length > 1
+    ? t('settings.mobile.net.other', { name: networkName(item), address: item.address })
+    : networkName(item);
   const automatic = addresses[0];
   const chooseAddress = (value: string) => run(async () => {
     setStatus(await commands.mobileRpcSetAddress(value === AUTO ? null : value));
-    // A code already on screen still carries the old order; make a fresh one.
-    if (pairing) setPairing(null);
+    // A code already on screen points at the old address; show a fresh one in its place.
+    if (pairing) await showPairing();
   });
   const connected = new Set(status?.connected ?? []);
   const seconds = pairing ? Math.max(0, Math.ceil((pairing.expiresAt - now) / 1000)) : 0;
@@ -120,13 +123,6 @@ export function MobileSettings() {
             <button type="button" role="switch" className="settings-switch" aria-checked={enabled} aria-label={t('settings.mobile.enabled')} disabled={busy || !status} onClick={() => void toggle()}><span /></button>
           </div>
         </div>
-        {enabled && addresses.length > 1 && <div className="settings-sound-item settings-voice-controls"><div className="settings-sound-row">
-          <div className="settings-sound-title">{t('settings.mobile.address.title')}<div className="settings-choice-hint">{t('settings.mobile.address.sub')}</div></div>
-          <ThemedSelect className="settings-mobile-address" align="end" label={t('settings.mobile.address.title')} disabled={busy}
-            value={status?.preferredAddress && addresses.some(a => a.address === status.preferredAddress) ? status.preferredAddress : AUTO}
-            options={[{ value: AUTO, label: t('settings.mobile.address.auto', { address: automatic ? addressLabel(automatic) : '' }) }, ...addresses.map(a => ({ value: a.address, label: addressLabel(a) }))]}
-            onChange={value => void chooseAddress(value)} />
-        </div></div>}
         {enabled && firewall === 'blocked' && <div className="settings-sound-item"><div className="settings-sound-row settings-mobile-firewall" role="alert">
           <div className="settings-sound-title">{t('settings.mobile.firewall.blocked')}<div className="settings-choice-hint">{t('settings.mobile.firewall.blocked.sub')}</div></div>
           <button type="button" className="settings-voice-scan" disabled={busy} onClick={() => void allowFirewall()}>{t('settings.mobile.firewall.allow')}</button>
@@ -135,23 +131,31 @@ export function MobileSettings() {
           <div className="settings-sound-title">{t('settings.mobile.firewall.public')}<div className="settings-choice-hint">{t('settings.mobile.firewall.public.sub')}</div></div>
         </div></div>}
         <div className="settings-sound-item settings-voice-controls" aria-disabled={!enabled}>
-          <div className="settings-sound-row">
-            <div className="settings-sound-title">{t('settings.mobile.pair')}<div className="settings-choice-hint">{enabled && status?.host ? t('settings.mobile.address', { address: `http://${status.host}:${status.port}` }) : t('settings.mobile.pair.sub')}</div></div>
-            {pairing
-              ? <button type="button" className="settings-voice-scan" disabled={busy} onClick={() => void cancelPairing()}>{t('settings.mobile.pair.cancel')}</button>
-              : <button type="button" className="settings-voice-scan" disabled={!enabled || busy || !status?.host} onClick={() => void beginPairing()}>{t('settings.mobile.pair.start')}</button>}
-          </div>
-          {enabled && !status?.host && <div className="settings-sound-failed" role="alert">{t('settings.mobile.no_network')}</div>}
-          {pairing && <div className="settings-mobile-pairing">
-            <img className="settings-mobile-qr" src={pairing.qr} alt={t('settings.mobile.qr_alt')} width={220} height={220} />
-            <div className="settings-mobile-pairing-text">
-              <p>{t('settings.mobile.scan')}</p>
-              <p className="settings-choice-hint">{t('settings.mobile.expires', { seconds: String(seconds) })}</p>
-              <p className="settings-choice-hint">{t('settings.mobile.confirm_hint')}</p>
-              {/* For a phone without a camera, or the browser preview: paste the same link. */}
-              <button type="button" className="settings-voice-scan settings-mobile-copy" onClick={() => void clipboardWrite(pairing.webUrl).then(() => setCopied(true), () => setCopied(false))}>{t(copied ? 'settings.mobile.copied' : 'settings.mobile.copy_link')}</button>
+          {pairing
+            // One card: the code, the one address (click to copy the link) and the network it uses.
+            ? <div className="settings-mobile-pairing">
+              <img className="settings-mobile-qr" src={pairing.qr} alt={t('settings.mobile.qr_alt')} width={132} height={132} />
+              <div className="settings-mobile-pairing-text">
+                <div className="settings-sound-title">{t('settings.mobile.pair.active')}</div>
+                <button type="button" className="settings-mobile-link" onClick={() => void clipboardWrite(pairing.webUrl).then(() => setCopied(true), () => setCopied(false))}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{copied ? <path d="M5 12l5 5L20 7" /> : <><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V6a2 2 0 0 1 2-2h9" /></>}</svg>
+                  <span>{copied ? t('settings.mobile.copied') : `http://${pairing.host}:${pairing.port}`}</span>
+                </button>
+                <div className="settings-mobile-meta">
+                  <span>{t('settings.mobile.expires', { time: `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}` })} · {t('settings.mobile.confirm_hint')}</span>
+                  {addresses.length > 1 && <ThemedSelect className="settings-mobile-net" align="start" menuWidth={240} label={t('settings.mobile.net')} disabled={busy}
+                    value={status?.preferredAddress && addresses.some(a => a.address === status.preferredAddress) ? status.preferredAddress : AUTO}
+                    options={[{ value: AUTO, label: t('settings.mobile.net.auto', { name: automatic ? addressLabel(automatic) : '' }) }, ...addresses.map(a => ({ value: a.address, label: addressLabel(a) }))]}
+                    onChange={value => void chooseAddress(value)} />}
+                </div>
+              </div>
+              <button type="button" className="settings-voice-scan" disabled={busy} onClick={() => void cancelPairing()}>{t('settings.mobile.pair.cancel')}</button>
             </div>
-          </div>}
+            : <div className="settings-sound-row">
+              <div className="settings-sound-title">{t('settings.mobile.pair')}<div className="settings-choice-hint">{t(enabled ? 'settings.mobile.pair.hint' : 'settings.mobile.pair.sub')}</div></div>
+              <button type="button" className="settings-voice-scan" disabled={!enabled || busy || !status?.host} onClick={() => void beginPairing()}>{t('settings.mobile.pair.start')}</button>
+            </div>}
+          {enabled && !status?.host && <div className="settings-sound-failed" role="alert">{t('settings.mobile.no_network')}</div>}
         </div>
       </div>
 

@@ -62,37 +62,45 @@ try {
 
   await master.click();
   await page.waitForFunction(() => document.querySelector('[role=switch]').getAttribute('aria-checked') === 'true');
-  await page.getByText('浏览器打开：http://192.168.1.8:47391').waitFor();
+  await page.getByText('用另一台设备的相机扫码，或在浏览器打开链接。').waitFor();
 
   // Firewall: blocked shows a fix; allowing clears it.
   await page.getByText('Windows 防火墙拦截了手机连接').waitFor();
   await page.getByRole('button', { name: '允许', exact: true }).click();
   await page.getByText('Windows 防火墙拦截了手机连接').waitFor({ state: 'detached' });
   assert.deepEqual(await page.evaluate(() => window.calls.at(-1)), ['firewall']);
-
-  // Address: automatic names the chosen interface; picking one pins it, automatic unpins.
-  const picker = page.getByRole('combobox', { name: '连接地址', exact: true });
-  await picker.getByText('自动（Wi-Fi · 192.168.1.8）', { exact: true }).waitFor();
-  await picker.click();
-  assert.deepEqual(await page.getByRole('option').allInnerTexts(), ['自动（Wi-Fi · 192.168.1.8）', 'Wi-Fi · 192.168.1.8', '有线 · 10.0.0.2', 'Tailscale · 100.101.1.2']);
-  await page.getByRole('option', { name: 'Tailscale · 100.101.1.2', exact: true }).click();
-  await picker.getByText('Tailscale · 100.101.1.2', { exact: true }).waitFor();
-  assert.deepEqual(await page.evaluate(() => window.calls.at(-1)), ['address', '100.101.1.2']);
-  await picker.click();
-  await page.getByRole('option', { name: '自动（Wi-Fi · 192.168.1.8）', exact: true }).click();
-  assert.deepEqual(await page.evaluate(() => window.calls.at(-1)), ['address', null]);
+  assert.equal(await page.getByRole('combobox').count(), 0, 'the network choice belongs to the pairing card');
   await page.evaluate(() => { window.calls.length = 0; window.calls.push(['enable', true]); });
 
-  // The QR code carries the pairing URI; the countdown runs; cancel withdraws it.
+  // One card: the QR code, the address once (it copies the link), the countdown and the network.
   await pair.click();
   const qr = page.getByRole('img', { name: '访问二维码' });
   await qr.waitFor();
   assert.match(await qr.getAttribute('src'), /^data:image\/png;base64,/);
-  await page.getByText(/^(300|299) 秒后失效$/).waitFor();
+  await page.getByText('扫码配对新设备', { exact: true }).waitFor();
+  assert.equal(await page.getByText('192.168.1.8').count(), 1, 'the address shows once');
+  await page.getByRole('button', { name: 'http://192.168.1.8:47391', exact: true }).waitFor();
+  await page.getByText(/^(5:00|4:59) 后失效 · 电脑上会请你确认$/).waitFor();
   await page.screenshot({ path: join(directory, 'mobile-pairing.png') });
+
+  // Network: named without its address; picking another one shows a fresh code in place.
+  const picker = page.getByRole('combobox', { name: '连接地址', exact: true });
+  await picker.getByText('自动（Wi-Fi）', { exact: true }).waitFor();
+  await picker.click();
+  assert.deepEqual(await page.getByRole('option').allInnerTexts(), ['自动（Wi-Fi）', 'Wi-Fi', '有线', 'Tailscale']);
+  await page.getByRole('option', { name: 'Tailscale', exact: true }).click();
+  await picker.getByText('Tailscale', { exact: true }).waitFor();
+  await page.waitForFunction(() => window.calls.length === 4);
+  assert.deepEqual(await page.evaluate(() => window.calls.slice(2)), [['address', '100.101.1.2'], ['pair']]);
+  await qr.waitFor();
+  await picker.click();
+  await page.getByRole('option', { name: '自动（Wi-Fi）', exact: true }).click();
+  await page.waitForFunction(() => window.calls.length === 6);
+  assert.deepEqual(await page.evaluate(() => window.calls.slice(4)), [['address', null], ['pair']]);
+
   await page.getByRole('button', { name: '取消', exact: true }).click();
   await qr.waitFor({ state: 'detached' });
-  assert.deepEqual(await page.evaluate(() => window.calls.map(c => c[0])), ['enable', 'pair', 'cancel']);
+  assert.deepEqual(await page.evaluate(() => window.calls.map(c => c[0])), ['enable', 'pair', 'address', 'pair', 'address', 'pair', 'cancel']);
 
   // A phone pairing closes the QR code and appears, connected.
   await pair.click();

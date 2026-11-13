@@ -646,17 +646,21 @@
 .settings-voice-wave-room { display: flex; justify-content: flex-end; flex: 0 0 120px; height: 16px; }
 
 /* Mobile: pairing QR code and paired phones. */
-.settings-mobile-pairing { display: flex; align-items: center; gap: 20px; padding: 4px 16px 16px; }
-.settings-mobile-qr { flex-shrink: 0; width: 220px; height: 220px; border-radius: var(--shape-radius-btn, 8px); background: #fff; image-rendering: pixelated; }
-.settings-mobile-pairing-text { display: flex; flex-direction: column; gap: 8px; min-width: 0; color: var(--text-1); font-size: var(--type-body); }
-.settings-mobile-pairing-text p { margin: 0; }
-.settings-mobile-pairing-text .settings-choice-hint { text-align: left; }
+.settings-mobile-pairing { display: flex; align-items: flex-start; gap: 16px; padding: 14px 16px; }
+.settings-mobile-qr { flex-shrink: 0; width: 132px; height: 132px; padding: 6px; box-sizing: border-box; border-radius: var(--shape-radius-btn, 8px); background: #fff; image-rendering: pixelated; }
+.settings-mobile-pairing-text { display: flex; flex: 1; flex-direction: column; align-items: flex-start; gap: 10px; min-width: 0; padding-top: 2px; }
+.settings-mobile-pairing-text .settings-sound-title { flex: none; }
+/* The one address: shows where to go, copies the full pairing link. */
+.settings-mobile-link { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--shape-radius-btn, 8px); color: var(--text-1); background: var(--bg-hover); font-family: var(--font-mono, ui-monospace, monospace); font-size: var(--type-label); cursor: pointer; }
+.settings-mobile-link:hover { border-color: transparent; background: color-mix(in srgb, var(--text-1) 11%, transparent); }
+.settings-mobile-link svg { flex-shrink: 0; width: 14px; height: 14px; color: var(--text-2); }
+.settings-mobile-link span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.settings-mobile-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; color: var(--text-3); font-size: var(--type-label); }
+.settings-mobile-meta .settings-font-trigger.settings-mobile-net { width: auto; gap: 4px; padding: 2px 6px; border-color: transparent; background: transparent; color: var(--text-2); font-size: var(--type-label); }
 .settings-mobile-devices { margin-top: 0; }
 .settings-mobile-dot { flex-shrink: 0; width: 8px; height: 8px; border-radius: 50%; background: var(--text-3); opacity: 0.5; }
 .settings-mobile-dot.is-connected { background: #4caf7a; opacity: 1; }
 .settings-mobile-empty { padding: 0 0 12px; text-align: left; }
-@media (max-width: 640px) { .settings-mobile-pairing { flex-direction: column; align-items: flex-start; } }
-.settings-mobile-copy { align-self: flex-start; }
+@media (max-width: 640px) { .settings-mobile-pairing { flex-wrap: wrap; } }
 
-.settings-mobile-address { width: min(300px, 55%); }
 .settings-mobile-firewall .settings-sound-title { color: #e0a060; }
