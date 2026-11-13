@@ -56,6 +56,13 @@ export function MobileSettings() {
     return () => clearInterval(timer);
   }, [pairing]);
 
+  // "Copied" fades after a moment.
+  useEffect(() => {
+    if (!copied) return;
+    const timer = setTimeout(() => setCopied(false), 2000);
+    return () => clearTimeout(timer);
+  }, [copied]);
+
   // Leaving the page withdraws an open pairing code.
   useEffect(() => () => { if (isTauri) void commands.mobileRpcCancelPairing().catch(() => {}); }, []);
 
@@ -137,10 +144,16 @@ export function MobileSettings() {
               <img className="settings-mobile-qr" src={pairing.qr} alt={t('settings.mobile.qr_alt')} width={132} height={132} />
               <div className="settings-mobile-pairing-text">
                 <div className="settings-sound-title">{t('settings.mobile.pair.active')}</div>
-                <button type="button" className="settings-mobile-link" onClick={() => void clipboardWrite(pairing.webUrl).then(() => setCopied(true), () => setCopied(false))}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{copied ? <path d="M5 12l5 5L20 7" /> : <><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V6a2 2 0 0 1 2-2h9" /></>}</svg>
-                  <span>{copied ? t('settings.mobile.copied') : `http://${pairing.host}:${pairing.port}`}</span>
-                </button>
+                {/* The address stays put; "copied" shows beside it for a moment. */}
+                <div className="settings-mobile-link-row">
+                  <button type="button" className="settings-mobile-link" onClick={() => void clipboardWrite(pairing.webUrl).then(() => setCopied(true), () => setCopied(false))}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V6a2 2 0 0 1 2-2h9" /></svg>
+                    <span>{`http://${pairing.host}:${pairing.port}`}</span>
+                  </button>
+                  {copied && <span className="settings-mobile-copied" role="status">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7" /></svg>{t('settings.mobile.copied')}
+                  </span>}
+                </div>
                 <div className="settings-mobile-meta">
                   <span>{t('settings.mobile.expires', { time: `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}` })} · {t('settings.mobile.confirm_hint')}</span>
                   {addresses.length > 1 && <ThemedSelect className="settings-mobile-net" align="start" menuWidth={240} label={t('settings.mobile.net')} disabled={busy}
