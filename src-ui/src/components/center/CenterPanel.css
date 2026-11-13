@@ -1347,7 +1347,7 @@ body.session-split-dragging { cursor: grabbing; user-select: none; }
   margin-left: 8px;
 }
 /* Keep the on state recognizable even in themes with a gray accent. */
-.library-toggle.on { background: #007aff; }
+.library-toggle.on { background: var(--switch-on); }
 .library-toggle-knob {
   position: absolute;
   top: 2px;

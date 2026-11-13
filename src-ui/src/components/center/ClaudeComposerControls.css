@@ -26,7 +26,7 @@
 .claude-control-menu .claude-thinking-toggle strong { font-weight:500; }
 /* The shared switch sits inside the menu: the menu's generic button look must not reach it. */
 .claude-control-menu button.settings-switch { display:block; padding:0; border-radius:12px; background:var(--bg-hover); }
-.claude-control-menu button.settings-switch[aria-checked="true"] { background:var(--accent); }
+.claude-control-menu button.settings-switch[aria-checked="true"] { background:var(--switch-on); }
 .claude-control-menu button.settings-switch:disabled { opacity:.5; }
 .claude-control-menu button strong { font-weight:500; flex-shrink:0; }
 .claude-control-menu button small { color:var(--text-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:var(--type-label); }

@@ -207,6 +207,9 @@ textarea,
 }
 
 :root {
+    /* Every on/off switch (settings, app config, library) fills with this when on,
+       whatever the theme accent is, so switches read the same everywhere. */
+    --switch-on: #007aff;
     /* Local Inter font for English, premium system fallbacks for CJK */
     /* Per-glyph cascade covering the 11 UI languages (de/en/es/fr/pt/vi/ru
        handled by Inter; zh-CN/zh-TW/ja/ko by OS faces below). Mac faces
@@ -3294,5 +3297,5 @@ html.is-windows[data-frost="frost"] #root {
 /* The app's one on/off switch: Settings rows and the composer's effort menu share it. */
 .settings-switch { position: relative; flex-shrink: 0; width: 40px; height: 24px; padding: 0; border: 0; border-radius: 12px; background: var(--bg-hover); box-shadow: inset 0 0 0 1px var(--border-input); cursor: pointer; transition: background 150ms; }
 .settings-switch > span { position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3); transition: transform 150ms; }
-.settings-switch[aria-checked="true"] { background: var(--accent); box-shadow: none; }
+.settings-switch[aria-checked="true"] { background: var(--switch-on); box-shadow: none; }
 .settings-switch[aria-checked="true"] > span { transform: translateX(16px); }
