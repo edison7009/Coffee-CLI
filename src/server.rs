@@ -1062,7 +1062,6 @@ fn tier_terminal_start_blocking(
         theme_mode,
         locale,
         extra_env,
-        launch_config,
     ).map_err(|e| format!("Failed to spawn PTY: {}", e))?;
 
     if let Some(token) = native_token {

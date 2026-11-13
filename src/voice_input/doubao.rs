@@ -110,6 +110,7 @@ pub(super) async fn select(source: &str) -> Result<(), String> {
     }
 }
 
+#[cfg(any(windows, test))]
 struct Cookie {
     host: String,
     path: String,
@@ -117,6 +118,7 @@ struct Cookie {
     value: String,
 }
 
+#[cfg(any(windows, test))]
 fn cookie_header(cookies: &[Cookie], host: &str, path: &str) -> String {
     let mut selected: Vec<_> = cookies
         .iter()

@@ -75,13 +75,7 @@ pub(super) fn read_json<T: DeserializeOwned>(path: &Path) -> Result<T, String> {
 }
 #[cfg(unix)]
 pub(super) fn command(exe: impl AsRef<OsStr>) -> Command {
-    let mut command = Command::new(exe);
-    #[cfg(windows)]
-    {
-        use std::os::windows::process::CommandExt;
-        command.creation_flags(0x08000000);
-    }
-    command
+    Command::new(exe)
 }
 
 /// Read a packaged application's metadata without executing its code or probing account stores.

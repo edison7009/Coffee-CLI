@@ -11,6 +11,8 @@ use std::path::Path;
 
 pub(super) enum Cipher {
     #[cfg(any(windows, test))]
+    // Built only by the Windows key reader; tests elsewhere still decrypt with it.
+    #[cfg_attr(not(windows), allow(dead_code))]
     Gcm(Box<Aes256Gcm>),
     #[cfg(any(unix, test))]
     Cbc {

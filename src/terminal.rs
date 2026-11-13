@@ -467,9 +467,6 @@ pub struct TerminalSession {
     /// The tool name (e.g. "claude", "qwen") for this session
     #[allow(dead_code)]
     pub tool_name: Option<String>,
-    /// Overrides actually used to start this PTY, independent of later settings edits.
-    pub launch_config: crate::tool_config::ToolConfigEntry,
-    pub launch_cwd: Option<String>,
     /// Captured session token for resume (e.g. Claude Session ID)
     pub session_token: Mutex<Option<String>>,
     /// Hold PTY master alive — dropping this kills the terminal pipe
@@ -640,7 +637,6 @@ pub fn spawn(
     theme_mode: Option<String>,
     locale: Option<String>,
     extra_env: Vec<(String, String)>,
-    launch_config: crate::tool_config::ToolConfigEntry,
 ) -> anyhow::Result<()> {
     use portable_pty::{native_pty_system, CommandBuilder};
 
@@ -1016,8 +1012,6 @@ pub fn spawn(
                 writer_lock: writer_clone,
                 kill_tx,
                 tool_name: tool_name.clone(),
-                launch_config,
-                launch_cwd: cwd.clone(),
                 session_token: Mutex::new(None),
                 _master: master_clone,
                 is_tab_active: is_tab_active.clone(),

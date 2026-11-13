@@ -82,6 +82,8 @@ fn paths(source: &str) -> Option<(PathBuf, PathBuf)> {
     );
     #[cfg(target_os = "windows")]
     let _ = (&home, app_mac);
+    #[cfg(target_os = "macos")]
+    let _ = app;
     Some((auth, candidates.into_iter().find(|path| path.is_file())?))
 }
 

@@ -89,7 +89,7 @@ fn blocked_resize_does_not_hold_the_session_map_or_stop_other_tabs() {
     let sessions = Arc::new(Mutex::new(std::collections::HashMap::new()));
     sessions.lock().unwrap().insert("slow".into(), terminal::TerminalSession {
         writer_lock: Arc::new(Mutex::new(Box::new(std::io::sink()))), kill_tx,
-        tool_name: None, launch_config: Default::default(), launch_cwd: None,
+        tool_name: None,
         session_token: Mutex::new(None), _master: Arc::new(Mutex::new(Some(Box::new(pty)))),
         is_tab_active: Arc::new(AtomicBool::new(true)),
     });

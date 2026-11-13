@@ -338,6 +338,7 @@ pub fn resolve_shell(id: ShellId, caps: &ShellCapabilities) -> (String, Vec<Stri
     }
     #[cfg(not(target_os = "windows"))]
     {
+        let _ = caps;
         match id {
             ShellId::Zsh => ("zsh".to_string(), vec!["-l".to_string(), "-i".to_string()]),
             ShellId::Bash => ("bash".to_string(), vec!["-l".to_string(), "-i".to_string()]),
