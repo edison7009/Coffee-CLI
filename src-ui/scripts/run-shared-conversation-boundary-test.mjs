@@ -17,7 +17,7 @@ for (const name of files) {
   const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
   assert.doesNotMatch(code, forbiddenGlobal, `${name} touches a browser global`);
 }
-const result = await build({ entryPoints: [fileURLToPath(new URL('index.ts', dir))], bundle: true, platform: 'neutral', write: false, metafile: true, logLevel: 'silent' });
+const result = await build({ entryPoints: files.map(name => fileURLToPath(new URL(name, dir))), outdir: 'out', bundle: true, platform: 'neutral', write: false, metafile: true, logLevel: 'silent' });
 const inputs = Object.keys(result.metafile.inputs);
 assert.ok(inputs.every(path => path.includes('src/shared/conversation/')), `bundle pulled outside modules: ${inputs.join(', ')}`);
 console.log(`ok shared/conversation boundary (${files.length} modules)`);

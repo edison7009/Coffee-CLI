@@ -2,14 +2,12 @@
 //
 // One source of truth: `initViewport()` writes the current class to
 // `<html data-width="xs|s|m|l">`, and stylesheets select on that attribute
-// instead of repeating pixel media queries. Components that need it in logic
-// read `useWidthClass()`.
+// instead of repeating pixel media queries.
 //
 //   xs  < 600        phone, portrait
 //   s   600 – 899    tablet portrait, foldable
 //   m   900 – 1199   default desktop window, tablet landscape
 //   l   ≥ 1200       large desktop window
-import { useSyncExternalStore } from 'react';
 import { isTauri } from '../tauri';
 import { REMOTE } from '../remote/bridge';
 
@@ -23,7 +21,6 @@ export function widthClassFor(width: number): WidthClass {
   return width >= BREAKPOINTS.l ? 'l' : width >= BREAKPOINTS.m ? 'm' : width >= BREAKPOINTS.s ? 's' : 'xs';
 }
 
-const listeners = new Set<() => void>();
 let current: WidthClass = typeof window === 'undefined' ? 'l' : widthClassFor(window.innerWidth);
 
 // Evaluate the queries fresh, so the class always agrees with the CSS: inside
@@ -39,7 +36,6 @@ function update() {
   if (next === current) return;
   current = next;
   document.documentElement.dataset.width = next;
-  for (const listener of listeners) listener();
 }
 
 let started = false;
@@ -55,14 +51,4 @@ export function initViewport() {
   // engines that skip them (update() is a no-op while the class stays the same).
   for (const px of Object.values(BREAKPOINTS)) window.matchMedia(`(min-width: ${px}px)`).addEventListener('change', update);
   window.addEventListener('resize', update);
-}
-
-export function useWidthClass(): WidthClass {
-  return useSyncExternalStore(listener => { listeners.add(listener); return () => { listeners.delete(listener); }; }, () => current, () => 'l');
-}
-
-/** At least this wide, e.g. `atLeast(width, 'm')`. */
-export function atLeast(width: WidthClass, min: WidthClass): boolean {
-  const order: WidthClass[] = ['xs', 's', 'm', 'l'];
-  return order.indexOf(width) >= order.indexOf(min);
 }
