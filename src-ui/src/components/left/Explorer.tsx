@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { SidebarFooter } from './SidebarFooter';
+import { WebAccessStatus } from './WebAccessStatus';
 import { createPortal } from 'react-dom';
 import { useAppState } from '../../store/app-state';
 import type { IconTheme, ToolType } from '../../store/app-state';
@@ -899,7 +900,7 @@ export function Explorer() {
       </div>
       </div>
 
-      <SidebarFooter update={updateButton} />
+      <SidebarFooter update={updateButton}><WebAccessStatus /></SidebarFooter>
 
       {/* Right-click context menu */}
       {ctxMenu && <ContextMenu menu={ctxMenu} onClose={closeCtxMenu} />}

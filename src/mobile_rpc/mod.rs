@@ -504,6 +504,8 @@ pub fn mobile_rpc_set_enabled(enabled: bool) -> Result<Value, String> {
         settings.enabled = enabled;
         config::save(&settings)?;
     }
+    // The sidebar status follows the switch wherever it was flipped.
+    broadcast_desktop_devices();
     Ok(status_value())
 }
 

@@ -21,6 +21,7 @@ const mock = `
   const file=(name,path='D:/project/'+name)=>({name,path,is_dir:false,size:1024});
   export const commands={async listDirectory(path){window.calls.reads.push(path);return path==='D:/project'?[{name:'src',path:path+'/src',is_dir:true,size:0},file('README.md'),file('index.ts'),file('组件.tsx')]:path.endsWith('/src')?[file('child.ts',path+'/child.ts')]:[file('other.txt',path+'/other.txt')]},async startFsWatcher(){},async stopFsWatcher(){}};
   export function onSelfUpdateProgress(){return()=>{}}
+  export const isTauri=false; export function useAppDispatch(){return()=>{}}
   export function listen(){return Promise.resolve(()=>{})}
   export function getVersion(){throw Error('fixture')}
   export function useFileStats(){return null} export function useDirtyDirs(){return dirty}

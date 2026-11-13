@@ -17,7 +17,7 @@ async function prepare(recent, statuses = {}, realViews = false) {
     const name = route.request().url().match(/\/([A-Za-z]+)\.tsx/)[1];
     return route.fulfill({ contentType: 'text/javascript', body: `export function ${name}(){return null} export const TERM_COLOR_SCHEMES=[]; export const ClaudeTool=()=>null, ClaudeThinking=()=>null;` });
   });
-  await page.route(/@tauri-apps_plugin-dialog/, route => route.fulfill({ contentType: 'text/javascript', body: 'export async function open(){window.pickCount=(window.pickCount??0)+1;return null}' }));
+  await page.route(/\/src\/lib\/folder-picker\.ts/,route=>route.fulfill({contentType:'text/javascript',body:'export async function pickFolder(){window.pickCount=(window.pickCount??0)+1;return window.pickedFolder??null} export async function pickFiles(){return null} export function useFolderPickerRequest(){return null} export const crumbs=()=>[], parentOf=()=>null, normalizeTypedPath=p=>p, isHiddenFolder=()=>false;'}));
   await page.route(/@tauri-apps_api_event/, route => route.fulfill({ contentType: 'text/javascript', body: 'export async function listen(){return ()=>{}} export async function emit(){}' }));
   await page.route(/\/src\/tauri\.ts(?:\?|$)/, async route => {
     const response = await route.fetch(), source = await response.text();
