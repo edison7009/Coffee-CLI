@@ -130,8 +130,19 @@ fn active() -> bool { hub().enabled.load(Ordering::Relaxed) }
 
 fn record_terminal(id: &str, data: &str) {
     if !active() { return; }
-    hub().buffers.lock().unwrap().push_terminal(id, data);
+    // Held across delivery so a snapshot and the live chunks after it never overlap or leave a hole.
+    let mut buffers = hub().buffers.lock().unwrap();
+    let (start, end) = buffers.push_terminal(id, data);
     deliver(id, json!({"event":"terminal.output","params":{"id":id,"data":data}}));
+    deliver_ui("tier-terminal-output", json!({"id":id,"data":data,"start":start,"end":end}));
+}
+
+/// A browser mirroring one of the desktop's terminals: its recent output, where that ends, and its size.
+fn terminal_attach(id: &str) -> Result<Value, RpcError> {
+    let app = hub().app.lock().unwrap().clone().ok_or(("internal", "app unavailable".to_string()))?;
+    let size = crate::server::terminal_size(&app, id).ok_or(("not_found", "no terminal session".to_string()))?;
+    let (snapshot, end) = hub().buffers.lock().unwrap().terminal(id).unwrap_or_default();
+    Ok(json!({"snapshot": snapshot, "end": end, "cols": size.0, "rows": size.1}))
 }
 
 fn record_conversation(kind: &str, payload: Value) {
@@ -423,6 +434,7 @@ async fn handle(client: &Client, request: &Value) -> Result<Value, RpcError> {
             let id = params["id"].as_u64().ok_or(("invalid_params", "id required".to_string()))?;
             client.uploads.lock().unwrap().finish(id).map(|path| json!({"path": path})).map_err(|e| ("invalid_params", e))
         }
+        "ui.terminal.attach" => terminal_attach(&id()?),
         "ui.subscribe" => { client.ui.store(true, Ordering::Relaxed); Ok(json!({"events": remote_ui::FORWARDED_EVENTS})) }
         // The desktop window runs the command, so the browser gets exactly what the desktop UI would.
         "ui.invoke" => {

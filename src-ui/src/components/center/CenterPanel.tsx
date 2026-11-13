@@ -1388,6 +1388,7 @@ export function CenterPanel() {
                       bgType={bgType}
                       termColorScheme={state.termColorScheme}
                       termFont={state.termFont}
+                      mirror={t.mirror}
                     />
                   </ErrorBoundary>
                 </div>

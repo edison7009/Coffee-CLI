@@ -11,9 +11,14 @@ pub const MAX_SESSIONS: usize = 64;
 #[derive(Default)]
 struct Conversation { kind: String, generation: String, events: VecDeque<(usize, Value)>, bytes: usize }
 
+/// Recent terminal output plus how many bytes the terminal has produced in all,
+/// so a mirror can tell which live chunks its snapshot already holds.
+#[derive(Default)]
+struct TerminalLog { text: String, end: u64 }
+
 #[derive(Default)]
 pub struct Buffers {
-    terminals: HashMap<String, String>,
+    terminals: HashMap<String, TerminalLog>,
     conversations: HashMap<String, Conversation>,
     order: VecDeque<String>,
 }
@@ -36,15 +41,24 @@ impl Buffers {
         }
     }
 
-    pub fn push_terminal(&mut self, id: &str, data: &str) {
+    /// Appends output; returns the chunk's byte range in the terminal's whole output.
+    pub fn push_terminal(&mut self, id: &str, data: &str) -> (u64, u64) {
         self.touch(id);
-        let buffer = self.terminals.entry(id.to_owned()).or_default();
-        buffer.push_str(data);
-        if buffer.len() > TERMINAL_BYTES {
-            let mut cut = buffer.len() - TERMINAL_BYTES;
-            while !buffer.is_char_boundary(cut) { cut += 1; }
-            buffer.drain(..cut);
+        let log = self.terminals.entry(id.to_owned()).or_default();
+        let start = log.end;
+        log.end += data.len() as u64;
+        log.text.push_str(data);
+        if log.text.len() > TERMINAL_BYTES {
+            let mut cut = log.text.len() - TERMINAL_BYTES;
+            while !log.text.is_char_boundary(cut) { cut += 1; }
+            log.text.drain(..cut);
         }
+        (start, log.end)
+    }
+
+    /// The recent output and the byte offset it ends at; `None` before any output.
+    pub fn terminal(&self, id: &str) -> Option<(String, u64)> {
+        self.terminals.get(id).map(|log| (log.text.clone(), log.end))
     }
 
     /// A new generation means the session restarted: earlier events belong to
@@ -67,6 +81,6 @@ impl Buffers {
         if let Some(c) = self.conversations.get(id) {
             return Replay::Conversation { kind: c.kind.clone(), generation: c.generation.clone(), events: c.events.iter().map(|(_, e)| e.clone()).collect() };
         }
-        self.terminals.get(id).map_or(Replay::Empty, |snapshot| Replay::Terminal(snapshot.clone()))
+        self.terminals.get(id).map_or(Replay::Empty, |log| Replay::Terminal(log.text.clone()))
     }
 }

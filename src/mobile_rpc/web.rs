@@ -6,7 +6,7 @@
 //! The files are public front-end code; everything private stays behind the
 //! paired, encrypted connection.
 
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 use tokio::io::AsyncWriteExt;
 use tokio::net::TcpStream;
 

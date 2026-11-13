@@ -98,7 +98,7 @@ function activationFixture() {
   };
   const afterFitRef = { current: null };
   const context = {
-    isActive: true, sessionId: 'test', terminalOpened: true, term,
+    isActive: true, sessionId: 'test', terminalOpened: true, term, mirror: false,
     termRef: { current: { offsetParent: {}, clientWidth: 1000, clientHeight: 600 } },
     xtermRef: { current: term }, webglRef: { current: null }, contextLossAttemptsRef: { current: 0 },
     afterFitRef, sizeSyncRef: { current: { schedule() {} } },

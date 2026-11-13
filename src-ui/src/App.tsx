@@ -22,6 +22,7 @@ import { CenterPanel } from './components/center/CenterPanel';
 import { ActiveGambit } from './components/center/ActiveGambit';
 import { AgentBridge } from './components/agent/AgentBridge';
 import { REMOTE } from './remote/bridge';
+import { RemoteMirror } from './remote/RemoteMirror';
 import { FolderPickerHost } from './components/common/FolderPicker';
 import { RightPanel } from './components/right/Compiler';
 import { GitStatusProvider } from './lib/git-status';
@@ -496,6 +497,7 @@ export function App() {
       <TitleBar />
       {/* The desktop's background agent, orchestration and pairing run only in the desktop app. */}
       {!REMOTE && <AgentBridge />}
+      {REMOTE && <RemoteMirror />}
       <FolderPickerHost />
       <AutomationRunner />
 

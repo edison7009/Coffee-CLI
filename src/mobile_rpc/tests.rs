@@ -315,7 +315,7 @@ fn firewall_scripts_quote_the_program_path() {
 }
 
 #[test]
-fn browser_commands_are_denied_or_scoped_to_own_sessions() {
+fn browser_commands_are_denied_or_scoped_to_own_sessions_except_terminal_typing() {
     use std::collections::HashSet;
     let mut owned = HashSet::new();
     let ok = |cmd: &str, args: Value, owned: &mut HashSet<String>| remote_ui::check(cmd, &args, owned).is_ok();
@@ -325,9 +325,12 @@ fn browser_commands_are_denied_or_scoped_to_own_sessions() {
     for cmd in ["window_close", "pick_folder", "show_in_folder", "load_password", "save_password", "mobile_rpc_set_enabled", "mobile_rpc_revoke_device", "voice_input_start", "download_and_install_update", "update_cli", "orchestration_sync", "agent_resolve_tool", "start_fs_watcher", "plugin:dialog|open", "Window_Close", "a;b", ""] {
         assert!(!ok(cmd, json!({}), &mut owned), "{cmd}");
     }
-    // A browser drives only what it started.
+    // A browser types into the desktop's terminals (mirroring) but resizes and closes only what it started.
     assert!(!ok("claude_session_send", json!({"id":"desk"}), &mut owned), "desktop session");
-    assert!(!ok("tier_terminal_input", json!({"sessionId":"desk-term"}), &mut owned));
+    assert!(ok("tier_terminal_input", json!({"sessionId":"desk-term"}), &mut owned));
+    assert!(ok("tier_terminal_raw_write", json!({"sessionId":"desk-term"}), &mut owned));
+    assert!(!ok("tier_terminal_resize", json!({"sessionId":"desk-term"}), &mut owned), "desktop size wins");
+    assert!(!ok("tier_terminal_kill", json!({"sessionId":"desk-term"}), &mut owned), "closing a mirror leaves the desktop tab");
     assert!(!ok("codex_session_close", json!({"id":"desk"}), &mut owned));
     assert!(ok("claude_session_start", json!({"id":"web-1"}), &mut owned));
     assert!(ok("claude_session_send", json!({"id":"web-1"}), &mut owned));
@@ -381,4 +384,18 @@ fn uploads_land_whole_in_the_temp_folder_and_partial_ones_vanish() {
     assert_eq!(upload::safe_name("a|b<c>`$x`.sh"), "a_b_c___x_.sh");
     assert_eq!(upload::safe_name("..."), "file");
     assert_eq!(upload::safe_name(".env"), "env");
+}
+
+#[test]
+fn terminal_output_is_numbered_so_mirrors_can_join_without_gaps() {
+    let mut buffers = buffers::Buffers::default();
+    assert_eq!(buffers.terminal("t"), None);
+    assert_eq!(buffers.push_terminal("t", "ab"), (0, 2));
+    assert_eq!(buffers.push_terminal("t", "中"), (2, 5));
+    assert_eq!(buffers.terminal("t"), Some(("ab中".to_string(), 5)));
+    // Trimming old output keeps counting from the start of the terminal's life.
+    let big = "x".repeat(buffers::TERMINAL_BYTES);
+    assert_eq!(buffers.push_terminal("t", &big), (5, 5 + buffers::TERMINAL_BYTES as u64));
+    let (text, end) = buffers.terminal("t").unwrap();
+    assert_eq!((text.len(), end), (buffers::TERMINAL_BYTES, 5 + buffers::TERMINAL_BYTES as u64));
 }

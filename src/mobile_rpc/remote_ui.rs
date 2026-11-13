@@ -7,9 +7,9 @@
 //! - A deny-list keeps the desktop window, the host's own devices and dialogs,
 //!   credentials, pairing, installers and the desktop's background agent out
 //!   of reach.
-//! - Sessions belong to whoever started them. A browser may only send to,
-//!   resize or close the sessions and terminals it started itself; the
-//!   desktop's tabs are never touched from a browser.
+//! - A paired browser mirrors the desktop's terminals: it may type into any
+//!   of them, but only resizes or closes the ones it started itself, so the
+//!   desktop's tabs keep their size and stay open.
 
 use serde_json::Value;
 use std::collections::HashSet;
@@ -17,9 +17,10 @@ use std::collections::HashSet;
 /// Desktop events the browser UI listens to. Requests the desktop window
 /// answers itself (orchestration, agent tools, launch) are not forwarded, or
 /// both sides would act on them.
+/// Terminal output is not here: it goes out numbered, with the replay buffer (see `record_terminal`).
 pub const FORWARDED_EVENTS: [&str; 16] = [
     "claude-session-event", "codex-session-event", "opencode-session-event", "pi-session-event", "dsh-session-event",
-    "tier-terminal-output", "tier-terminal-status", "tier-terminal-exit", "tier-terminal-cwd", "tier-terminal-token",
+    "tier-terminal-size", "tier-terminal-status", "tier-terminal-exit", "tier-terminal-cwd", "tier-terminal-token",
     "fs-refresh", "tasks-changed", "agent-conversations-changed", "agent-work-modes", "channel-status", "orchestration-updated",
 ];
 
@@ -49,7 +50,9 @@ pub fn allowed(cmd: &str) -> bool {
 fn session_of(cmd: &str, args: &Value) -> Option<(bool, String)> {
     let starts = |id: &Value| id.as_str().map(str::to_owned);
     if cmd == "tier_terminal_start" { return starts(&args["sessionId"]).map(|id| (true, id)); }
-    if matches!(cmd, "tier_terminal_input" | "tier_terminal_raw_write" | "tier_terminal_kill" | "tier_terminal_resize" | "set_session_active" | "get_terminal_session_token") {
+    // Typing reaches any terminal the desktop shows; that is what mirroring means.
+    if matches!(cmd, "tier_terminal_input" | "tier_terminal_raw_write" | "get_terminal_session_token") { return None; }
+    if matches!(cmd, "tier_terminal_kill" | "tier_terminal_resize" | "set_session_active") {
         return Some((false, starts(&args["sessionId"]).unwrap_or_default()));
     }
     let tool = cmd.split_once("_session_")?;

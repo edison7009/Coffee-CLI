@@ -56,6 +56,7 @@ import { useDataAttr } from '../../lib/use-data-attr';
 import { TermContextMenu, type TermContextMenuState } from './TermContextMenu';
 import '@xterm/xterm/css/xterm.css';
 import './TierTerminal.css';
+import { onRemoteStatus, remoteRequest } from '../../remote/bridge';
 // The back-to-latest button shares the conversation views' style.
 import './ClaudeConversation.css';
 import { TERM_COLOR_SCHEMES, themePair, normalizePasteNewlines, LINK_RE, trimLink, lineCells, buildFontFamily, buildXtermTheme } from '../../lib/terminal-theme';
@@ -87,6 +88,8 @@ interface TierTerminalProps {
   bgType?: 'image' | 'video' | 'none';
   termColorScheme?: string;
   termFont?: string;
+  /** In the browser: shows one of the desktop's own terminals instead of starting one (see startMirror). */
+  mirror?: boolean;
 }
 
 interface RemoteTerminalConfig {
@@ -98,7 +101,7 @@ interface RemoteTerminalConfig {
 
 function TierTerminalImpl({
   sessionId, tool, toolName, theme, lang, isActive, isVisible = isActive,
-  toolData, folderPath, resumeToken, strictCwd, hasBg, bgUrl, bgType, termColorScheme, termFont,
+  toolData, folderPath, resumeToken, strictCwd, hasBg, bgUrl, bgType, termColorScheme, termFont, mirror = false,
 }: TierTerminalProps) {
   const selfRenderedCaret = usesSelfRenderedCaret(tool);
   // Which half of the colour family is on screen (App.tsx owns the attribute;
@@ -113,8 +116,9 @@ function TierTerminalImpl({
 
   // Keep every visible terminal at foreground output cadence.
   useEffect(() => {
-    commands.setSessionActive(sessionId, isVisible).catch(() => {});
-  }, [sessionId, isVisible]);
+    // A mirrored terminal's cadence belongs to the desktop tab.
+    if (!mirror) commands.setSessionActive(sessionId, isVisible).catch(() => {});
+  }, [sessionId, isVisible, mirror]);
 
   const termRef  = useRef<HTMLDivElement>(null);
   // Frozen helper-textarea position held for the lifetime of an IME
@@ -209,6 +213,8 @@ function TierTerminalImpl({
     let mounted = true;
     let ptyEnded = false;
     const unlisteners: (() => void)[] = [];
+    // Set once a mirror attaches; the resize observer below refits through it.
+    let fitMirror = () => {};
 
     const fontFamily = buildFontFamily(termFont);
     const term = new Terminal({
@@ -325,6 +331,8 @@ function TierTerminalImpl({
     let terminalOpened = false;
     const sizeSync = createTerminalSizeSync(
       () => {
+        // A mirror never sizes the desktop's PTY; it draws at the desktop's grid instead.
+        if (mirror) return { visible: false };
         const host = termRef.current;
         if (!host || host.offsetParent === null) return { visible: false };
         if (!terminalOpened) return { visible: true, size: null };
@@ -356,7 +364,7 @@ function TierTerminalImpl({
     );
     sizeSyncRef.current = sizeSync;
     const suspendSizeSync = () => {
-      if (sizeSync.suspend()) {
+      if (sizeSync.suspend() && !mirror) {
         term.resize(DEFAULT_TERMINAL_GRID.cols, DEFAULT_TERMINAL_GRID.rows);
       }
     };
@@ -1180,7 +1188,81 @@ function TierTerminalImpl({
     // This prevents the race condition where PTY output arrives before
     // the frontend has registered its listeners, causing a blank terminal.
 
+    // ── Mirror: one of the desktop's terminals, shown in the browser ──────
+    // The desktop's PTY keeps its size; this view shrinks its font until that
+    // grid fits (a font change keeps clicks and selection on the right cells,
+    // a CSS scale would not). Output arrives numbered by byte offset: a
+    // snapshot says where it ends, later chunks continue from there, and a
+    // hole (a dropped chunk, a reconnect) fetches a fresh snapshot.
+    const MIRROR_FONT = term.options.fontSize ?? 14;
+    function fitMirrorFont() {
+      const host = termRef.current;
+      const screen = term.element?.querySelector<HTMLElement>('.xterm-screen');
+      if (!host || !screen || host.clientWidth <= 0 || host.clientHeight <= 0 || screen.offsetWidth <= 0 || screen.offsetHeight <= 0) return;
+      const current = term.options.fontSize ?? MIRROR_FONT;
+      const ratio = Math.min(host.clientWidth / screen.offsetWidth, host.clientHeight / screen.offsetHeight);
+      const next = Math.max(6, Math.min(MIRROR_FONT, Math.floor(current * ratio * 2) / 2));
+      if (next !== current) {
+        term.options.fontSize = next;
+        // Cell widths do not scale exactly with the font; check once more after layout.
+        requestAnimationFrame(() => { if (mounted) fitMirrorFont(); });
+      }
+    }
+    const startMirror = async () => {
+      fitMirror = fitMirrorFont;
+      // The desktop already started this tool; its brand splash would only cover the replay.
+      setShowSplash(false);
+      type Chunk = { data: string; start: number; end: number };
+      let shown: number | null = null;
+      let queued: Chunk[] = [];
+      let attaching = false;
+      const take = (chunk: Chunk) => {
+        if (shown === null) { queued.push(chunk); return; }
+        if (chunk.end <= shown) return;
+        if (chunk.start > shown) { void attach(); queued.push(chunk); return; }
+        term.write(chunk.data);
+        shown = chunk.end;
+      };
+      const attach = async () => {
+        if (attaching) return;
+        attaching = true; shown = null;
+        try {
+          const snap = await remoteRequest<{ snapshot: string; end: number; cols: number; rows: number }>('ui.terminal.attach', { id: sessionId });
+          if (!mounted) return;
+          term.reset();
+          if (snap.cols > 0 && snap.rows > 0) term.resize(snap.cols, snap.rows);
+          fitMirrorFont();
+          term.write(snap.snapshot);
+          shown = snap.end;
+          const backlog = queued; queued = [];
+          for (const chunk of backlog) take(chunk);
+          setTerminalControlReady(sessionId, true);
+          setProcessExited(false);
+        } catch (err) {
+          if (mounted) term.write(`\r\n\x1b[31m${String(err)}\x1b[0m\r\n`);
+        } finally { attaching = false; }
+      };
+      const unsubEvents = await subscribeTerminalEvents(sessionId, {
+        onOutput: (data, range) => { if (mounted) { if (range) take({ data, ...range }); else term.write(data); } },
+        onStatus: (running) => { if (mounted && !running) { setTerminalControlReady(sessionId, false); setProcessExited(true); } },
+        onExit: () => { if (mounted) { setTerminalControlReady(sessionId, false); setProcessExited(true); } },
+        onCwd: (cwd) => { if (mounted) dispatch({ type: 'SET_TERMINAL_CWD', id: sessionId, path: cwd }); },
+      });
+      if (mounted) unlisteners.push(unsubEvents); else { unsubEvents(); return; }
+      const { listen } = await import('@tauri-apps/api/event');
+      const unsubSize = await listen<{ id: string; cols: number; rows: number }>('tier-terminal-size', ({ payload }) => {
+        if (!mounted || payload.id !== sessionId || payload.cols <= 0 || payload.rows <= 0) return;
+        term.resize(payload.cols, payload.rows);
+        fitMirrorFont();
+      });
+      if (mounted) unlisteners.push(unsubSize); else { unsubSize(); return; }
+      // Back from a dropped connection: what happened meanwhile is only in a new snapshot.
+      unlisteners.push(onRemoteStatus(next => { if (next === 'connected' && mounted) void attach(); }));
+      await attach();
+    };
+
     const startPty = async () => {
+      if (mirror) { await startMirror(); return; }
       try {
       let remoteConfig: RemoteTerminalConfig = {};
       try {
@@ -1379,6 +1461,7 @@ function TierTerminalImpl({
     const ro = new ResizeObserver((entries) => {
       const entry = entries[0];
       if (!mounted || !entry || !terminalOpened) return;
+      if (mirror) { fitMirror(); return; }
       if (
         !termRef.current || termRef.current.offsetParent === null
       ) {
@@ -1405,6 +1488,8 @@ function TierTerminalImpl({
       // Skip kill if this session was detached to a new window
       if (detachedSessions.has(sessionId)) {
         detachedSessions.delete(sessionId);
+      } else if (mirror) {
+        // Closing a mirror only stops watching; the desktop's terminal keeps running.
       } else {
         commands.tierTerminalKill(sessionId).catch(() => {});
       }

@@ -160,7 +160,12 @@ export interface TerminalSession {
   /** Local launch timestamp used to reject older history files when binding
    *  a live conversation to this terminal tab. */
   startedAt?: number;
+  /** In the browser: this tab shows one of the desktop's terminals rather than its own. */
+  mirror?: boolean;
 }
+
+/** A desktop terminal a browser mirrors (see SYNC_MIRROR_TABS). */
+export interface MirrorTab { id: string; tool: ToolType; cwd: string | null; title: string }
 
 // ─── State Shape ─────────────────────────────────────────────────────────────
 
@@ -312,6 +317,7 @@ type Action =
   | { type: 'OPEN_SESSION_SPLIT'; id: string; targetId: string; edge: SplitEdge }
   | { type: 'CLOSE_SESSION_SPLIT'; id: string }
   | { type: 'RESIZE_SESSION_SPLIT'; path: string; ratio: number }
+  | { type: 'SYNC_MIRROR_TABS'; tabs: MirrorTab[] }
   | { type: 'LAUNCH_TERMINAL_TOOL'; id: string; tool: ToolType; cwd?: string; toolData?: string; resumeToken?: string; strictCwd?: boolean; claudeMode?: ClaudeMode; codexMode?: ClaudeMode; opencodeMode?: ClaudeMode; piMode?: ClaudeMode; parentId?: string; background?: boolean }
   | { type: 'REMOVE_TERMINAL'; id: string }
   | { type: 'CLOSE_TERMINAL_GROUP'; id: string; childIds: string[]; keepChildren: boolean }
@@ -464,6 +470,36 @@ function reducer(state: AppState, action: Action): AppState {
         activeTerminalId: session.id,
         diffTabActive: false,
       };
+    }
+    case 'SYNC_MIRROR_TABS': {
+      // The browser follows the desktop's terminal tabs: new ones appear, closed ones go,
+      // titles and folders follow. The browser's own tabs are left alone.
+      const wanted = new Map(action.tabs.map(tab => [tab.id, tab]));
+      const kept = state.terminals.filter(tab => !tab.mirror || wanted.has(tab.id)).map(tab => {
+        const desk = tab.mirror ? wanted.get(tab.id) : undefined;
+        return desk && (desk.title !== tab.toolTitle || desk.cwd !== tab.folderPath) ? { ...tab, toolTitle: desk.title || tab.toolTitle, folderPath: desk.cwd } : tab;
+      });
+      const known = new Set(kept.map(tab => tab.id));
+      const terminal = 'terminal' as const;
+      const added: TerminalSession[] = action.tabs.filter(tab => !known.has(tab.id)).map(tab => ({
+        id: tab.id, tool: tab.tool, folderPath: tab.cwd, toolTitle: tab.title || undefined, mirror: true,
+        claudeMode: tab.tool === 'claude' ? terminal : undefined, codexMode: tab.tool === 'codex' ? terminal : undefined,
+        opencodeMode: tab.tool === 'opencode' ? terminal : undefined, piMode: tab.tool === 'pi' ? terminal : undefined,
+      }));
+      const removed = state.terminals.length !== kept.length;
+      if (!removed && !added.length && kept.every((tab, i) => tab === state.terminals[i])) return state;
+      let terminals = [...kept, ...added];
+      const ids = new Set(terminals.map(tab => tab.id));
+      let order = [...getTabOrder(state).filter(id => ids.has(id)), ...added.map(tab => tab.id)];
+      let active = state.activeTerminalId && ids.has(state.activeTerminalId) ? state.activeTerminalId : null;
+      // Opening the page, or the shown tab going away, lands on a desktop terminal rather than the launch page.
+      const activeTab = terminals.find(tab => tab.id === active);
+      if (!activeTab || activeTab.tool === null) active = (added[0] ?? terminals.find(tab => tab.tool !== null))?.id ?? active;
+      if (!active) {
+        const blank: TerminalSession = { id: crypto.randomUUID(), tool: null, folderPath: null };
+        terminals = [...terminals, blank]; order = [...order, blank.id]; active = blank.id;
+      }
+      return { ...state, terminals, tabOrder: order, activeTerminalId: active };
     }
     case 'LAUNCH_TERMINAL_TOOL': {
       const previous = state.terminals.find(tab => tab.id === action.id);

@@ -21,13 +21,14 @@
 
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 
-interface OutputEventPayload { id: string; data: string; }
+/** `start`/`end` number the chunk by byte offset; only browsers mirroring a desktop terminal get them. */
+interface OutputEventPayload { id: string; data: string; start?: number; end?: number }
 interface StatusEventPayload { id: string; running: boolean; exit_code: number | null; }
 interface CwdEventPayload { id: string; cwd: string; }
 interface ExitEventPayload { id: string; exit_code: number; }
 interface TokenEventPayload { id: string; token: string; }
 
-type OutputHandler = (data: string) => void;
+type OutputHandler = (data: string, range?: { start: number; end: number }) => void;
 type StatusHandler = (running: boolean, exitCode: number | null) => void;
 type CwdHandler = (cwd: string) => void;
 type ExitHandler = (exitCode: number) => void;
@@ -61,7 +62,9 @@ async function ensureInit(): Promise<void> {
     const registered: UnlistenFn[] = [];
     try {
       registered.push(await listen<OutputEventPayload>('tier-terminal-output', (event) => {
-        outputHandlers.get(event.payload.id)?.forEach(handler => handler(event.payload.data));
+        const { data, start, end } = event.payload;
+        const range = typeof start === 'number' && typeof end === 'number' ? { start, end } : undefined;
+        outputHandlers.get(event.payload.id)?.forEach(handler => handler(data, range));
       }));
       registered.push(await listen<StatusEventPayload>('tier-terminal-status', (event) => {
         statusHandlers.get(event.payload.id)?.forEach(handler => handler(event.payload.running, event.payload.exit_code));

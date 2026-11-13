@@ -1189,8 +1189,21 @@ async fn tier_terminal_resize(
     cols: u16,
     rows: u16,
     state: State<'_, AppState>,
+    app: tauri::AppHandle,
 ) -> Result<(), String> {
-    resize_terminal_session(state.terminal_session.clone(), session_id, cols, rows).await
+    resize_terminal_session(state.terminal_session.clone(), session_id.clone(), cols, rows).await?;
+    // Browsers mirroring this terminal draw at the desktop's size.
+    let _ = app.emit("tier-terminal-size", serde_json::json!({"id": session_id, "cols": cols, "rows": rows}));
+    Ok(())
+}
+
+/// The PTY's current grid, for a browser that starts mirroring this terminal.
+pub(crate) fn terminal_size(app: &tauri::AppHandle, session_id: &str) -> Option<(u16, u16)> {
+    let state = app.state::<AppState>();
+    let master = state.terminal_session.lock().ok()?.get(session_id)?._master.clone();
+    let guard = master.lock().ok()?;
+    let size = guard.as_ref()?.get_size().ok()?;
+    Some((size.cols, size.rows))
 }
 
 async fn resize_terminal_session(sessions: terminal::SharedSession, session_id: String, cols: u16, rows: u16) -> Result<(), String> {
