@@ -1,6 +1,11 @@
 {
  "source": "models.dev",
  "models": {
+  "chatgpt-image-latest": {
+   "input": 5,
+   "output": 10,
+   "cache_read": 1.25
+  },
   "claude-fable-5": {
    "input": 10,
    "output": 50,
@@ -437,14 +442,7 @@
   },
   "gemini-2.5-computer-use-preview-10-2025": {
    "input": 1.25,
-   "output": 10,
-   "tiers": [
-    {
-     "size": 200000,
-     "input": 2.5,
-     "output": 15
-    }
-   ]
+   "output": 10
   },
   "gemini-2.5-flash": {
    "input": 0.3,
@@ -577,6 +575,16 @@
    "output": 10,
    "cache_read": 0.1
   },
+  "gemini-4-carbon": {
+   "input": 2,
+   "output": 10,
+   "cache_read": 0.1
+  },
+  "gemini-4-hydrogen": {
+   "input": 1.5,
+   "output": 7.5,
+   "cache_read": 0.075
+  },
   "gemini-embedding-001": {
    "input": 0.15,
    "output": 0
@@ -595,10 +603,6 @@
    "output": 2.5,
    "cache_read": 0.03
   },
-  "gemini-omni-flash-preview": {
-   "input": 1.5,
-   "output": 17.5
-  },
   "gemini-pro-latest": {
    "input": 2,
    "output": 12,
@@ -611,6 +615,14 @@
      "cache_read": 0.4
     }
    ]
+  },
+  "gemma-4-26b-a4b-it": {
+   "input": 0,
+   "output": 0
+  },
+  "gemma-4-31b-it": {
+   "input": 0,
+   "output": 0
   },
   "glm-4.5": {
    "input": 0.6,
@@ -1107,6 +1119,11 @@
    "cache_read": 1.25,
    "cache_write": 15.625
   },
+  "gpt-image-1.5": {
+   "input": 5,
+   "output": 10,
+   "cache_read": 1.25
+  },
   "gpt-image-2": {
    "input": 5,
    "output": 30,
@@ -1420,9 +1437,9 @@
    "cache_read": 0.07
   },
   "mistral-large-latest": {
-   "input": 0.5,
-   "output": 1.5,
-   "cache_read": 0.05
+   "input": 0.7,
+   "output": 2.1,
+   "cache_read": 0.07
   },
   "mistral-medium-2505": {
    "input": 0.4,
