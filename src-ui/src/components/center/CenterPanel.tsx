@@ -2,6 +2,7 @@ import { Fragment, useState, useEffect, useLayoutEffect, useRef, useMemo, useSyn
 import { AutomationsPage } from './AutomationsPage';
 import { addProjectFolder, getProjectFolders, removeProjectFolder, subscribeProjectFolders } from '../../lib/project-folders';
 import { REMOTE } from '../../remote/bridge';
+import { pickFolder } from '../../lib/folder-picker';
 import { createPortal } from 'react-dom';
 import { InlineSvgIcon } from '../InlineSvgIcon';
 import { focusTerminal } from '../../lib/focus-registry';
@@ -33,18 +34,15 @@ import { isClaudeConversation, isCodexConversation, isDshConversation, isOpenCod
 // Clicking a recent launches THIS card's tool in that folder, anchored
 // below the card. Portal-rendered with outside-click
 // / Esc to close — same pattern as the terminal context menu.
-function RecentFolderMenu({ x, y, recent, openLabel, emptyLabel, onPick, onRemove, onOpenNew, onClose }: {
+function RecentFolderMenu({ x, y, recent, openLabel, onPick, onRemove, onOpenNew, onClose }: {
   x: number;
   y: number;
   recent: string[];
   openLabel: string;
-  /** Shown when there is nothing to pick and no way to open a new folder (Web). */
-  emptyLabel?: string;
   onPick: (folder: string) => void;
   /** Absent in a browser: the list is the desktop's. */
   onRemove?: (folder: string) => void;
-  /** Absent in a browser, which cannot show the computer's folder dialog. */
-  onOpenNew?: () => void;
+  onOpenNew: () => void;
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -105,12 +103,11 @@ function RecentFolderMenu({ x, y, recent, openLabel, emptyLabel, onPick, onRemov
           </button>
         );
       })}
-      {recent.length > 0 && onOpenNew && <div className="folder-menu-sep" />}
-      {onOpenNew && <button className="folder-menu-item folder-menu-open" onMouseDown={(e) => { e.preventDefault(); onOpenNew(); }}>
+      {recent.length > 0 && <div className="folder-menu-sep" />}
+      <button className="folder-menu-item folder-menu-open" onMouseDown={(e) => { e.preventDefault(); onOpenNew(); }}>
         {FolderPlusGlyph}
         <span className="folder-menu-name">{openLabel}</span>
-      </button>}
-      {!onOpenNew && recent.length === 0 && emptyLabel && <div className="folder-menu-empty">{emptyLabel}</div>}
+      </button>
     </div>,
     document.body,
   );
@@ -1045,17 +1042,9 @@ export function CenterPanel() {
 
   const handlePickFolder = async (toolKey: ToolType) => {
     if (!toolKey) return;
-    // A browser cannot show the computer's folder dialog: offer the desktop's project folders instead.
-    if (REMOTE) { setFolderMenu({ x: Math.max(8, window.innerWidth / 2 - 140), y: Math.round(window.innerHeight * 0.25), tool: toolKey }); return; }
-    try {
-      const { open } = await import('@tauri-apps/plugin-dialog');
-      const selected = await open({ directory: true });
-      if (selected && typeof selected === 'string') {
-        selectTool(toolKey, undefined, selected);
-      }
-    } catch (err) {
-      console.error('[CenterPanel] Folder picker failed:', err);
-    }
+    // Coffee CLI's own picker: the same window in the desktop app, a browser or a phone.
+    const selected = await pickFolder();
+    if (selected) selectTool(toolKey, undefined, selected);
   };
 
   const openToolFolderMenu = (tool: ToolType, anchor: HTMLElement) => {
@@ -1752,10 +1741,9 @@ export function CenterPanel() {
           y={folderMenu.y}
           recent={recentFolders}
           openLabel={t('launchpad.open_folder') || 'Open folder…'}
-          emptyLabel={t('launchpad.web_no_projects')}
           onPick={(f) => { selectTool(folderMenu.tool, undefined, f); setFolderMenu(null); }}
           onRemove={REMOTE ? undefined : (f) => removeRecentFolder(f)}
-          onOpenNew={REMOTE ? undefined : () => { const tk = folderMenu.tool; setFolderMenu(null); handlePickFolder(tk); }}
+          onOpenNew={() => { const tk = folderMenu.tool; setFolderMenu(null); handlePickFolder(tk); }}
           onClose={() => setFolderMenu(null)}
         />
       )}

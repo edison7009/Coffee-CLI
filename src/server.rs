@@ -1887,6 +1887,7 @@ pub fn start_ui(pending_launch: Option<crate::launch::LaunchRequest>) -> anyhow:
             crate::orchestration::orchestration_detach_worker,
             crate::orchestration::orchestration_pending,
             crate::orchestration::orchestration_resolve,
+            crate::folder_picker::folder_picker_places,
             crate::mobile_rpc::mobile_rpc_status,
             crate::mobile_rpc::mobile_rpc_set_enabled,
             crate::mobile_rpc::mobile_rpc_begin_pairing,

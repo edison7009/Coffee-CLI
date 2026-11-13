@@ -342,6 +342,7 @@ export const commands = {
   readClipboardImage: () => invoke<string | null>('read_clipboard_image'),
 
   listDirectory: (path: string) => invoke<DirEntryInfo[]>('list_directory', { path }),
+  folderPickerPlaces: () => invoke<FolderPickerPlaces>('folder_picker_places'),
   checkProjectDirectories: (paths: string[]) => invoke<{ path: string; status: import('./lib/session-directory').DirectoryStatus }[]>('check_project_directories', { paths }),
   listSystemFonts: () => invoke<FontInfo[]>('list_system_fonts'),
 
@@ -464,3 +465,6 @@ export interface MobileRpcAddress { address: string; interface: string; kind: 'w
 export interface MobileRpcStatus { enabled: boolean; port: number; publicKey: string; devices: MobileRpcDevice[]; connected: string[]; host: string | null; hosts: string[]; addresses: MobileRpcAddress[]; preferredAddress: string | null; clients: number; protocol: number }
 export interface MobileRpcFirewall { state: 'open' | 'blocked' | 'public_network' | 'unknown' }
 export interface MobileRpcPairing { uri: string; host: string; hosts: string[]; port: number; publicKey: string; code: string; expiresAt: number }
+
+export interface FolderPickerPlace { name: string; path: string; kind: 'home' | 'desktop' | 'documents' | 'downloads' | 'drive' }
+export interface FolderPickerPlaces { home: string | null; separator: string; places: FolderPickerPlace[] }

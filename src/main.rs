@@ -24,6 +24,7 @@ mod tool_control;
 mod computer_control;
 mod orchestration;
 mod mobile_rpc;
+mod folder_picker;
 mod worker_worktree;
 mod notify_sound;
 mod tools;

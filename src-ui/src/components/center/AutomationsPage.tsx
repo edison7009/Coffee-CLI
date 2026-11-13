@@ -4,7 +4,7 @@ import { useAppState } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
 import { getToolDisplayName } from '../../lib/tool-info';
 import { getProjectFolders, subscribeProjectFolders } from '../../lib/project-folders';
-import { REMOTE } from '../../remote/bridge';
+import { pickFolder } from '../../lib/folder-picker';
 import { AUTOMATION_TOOLS, getAutomations, removeAutomation, saveAutomation, setAutomations, subscribeAutomations, scheduleNext, runAutomationNow, folderName, scheduleSummary, MIN_INTERVAL_MINUTES, type Automation, type AutomationSchedule, type AutomationTool } from '../../lib/automations';
 import '../common/SettingsModal.css';
 import './Automations.css';
@@ -73,10 +73,9 @@ export function AutomationsPage() {
       tool: draft.tool, cwd: draft.cwd.trim(), schedule, enabled: draft.enabled, createdAt: draft.createdAt ?? Date.now() });
     setDraft(null); setError('');
   };
-  const pickFolder = async () => {
-    const { open } = await import('@tauri-apps/plugin-dialog');
-    const path = await open({ directory: true, multiple: false });
-    if (typeof path === 'string' && draft) setDraft({ ...draft, cwd: path });
+  const chooseFolder = async () => {
+    const path = await pickFolder({ start: draft?.cwd || null });
+    if (path && draft) setDraft({ ...draft, cwd: path });
   };
   const toggle = (a: Automation) => setAutomations(current => current.map(item => item.id === a.id ? scheduleNext({ ...item, enabled: !item.enabled }, Date.now()) : item));
 
@@ -103,8 +102,7 @@ export function AutomationsPage() {
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" /></svg>
               <span>{folderName(folder)}</span>
             </button>)}
-            {/* A browser cannot show the computer's folder dialog; it picks from the desktop's projects above. */}
-            {!REMOTE && <button type="button" className="automations-folder-chip automations-folder-other" onClick={() => { void pickFolder(); }}>{t('automation.folder_pick')}</button>}
+            <button type="button" className="automations-folder-chip automations-folder-other" onClick={() => { void chooseFolder(); }}>{t('automation.folder_pick')}</button>
           </div>
           {draft.cwd && <div className="automations-folder-path">{draft.cwd}</div>}
         </div>
