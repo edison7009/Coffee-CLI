@@ -13,6 +13,7 @@ import { useEffect } from 'react';
 import { commands, isTauri } from '../../tauri';
 import { useAppState, useAppDispatch, schemeLabels } from '../../store/app-state';
 import { IS_MACOS } from '../../lib/platform';
+import { IS_WEB } from '../../lib/viewport';
 import { useT } from '../../i18n/useT';
 import { isConversationSession } from '../../lib/chat-tools';
 import { Changelog } from './Changelog';
@@ -189,7 +190,8 @@ export function TitleBar() {
           tauri.macos.conf.json), so we omit our own controls; the layout
           toggles above stay on the right and the left drag region hosts the
           native lights. */}
-      {!IS_MACOS && (
+      {/* A browser or phone has its own window controls. */}
+      {!IS_MACOS && !IS_WEB && (
         <div className="titlebar-controls">
           <button className="titlebar-btn" onClick={minimize} id="t-min">
             <svg width="10" height="10" viewBox="0 0 10 10">

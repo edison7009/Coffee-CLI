@@ -1843,6 +1843,19 @@ html.is-macos #root {
     border-radius: 0 !important;
     clip-path: none !important;
 }
+/* Web (a browser, or the remote UI on a phone): the page is the whole
+   surface, so there is no window to round and nothing transparent behind it.
+   Padding keeps content clear of a phone's notch and home indicator
+   (index.html declares viewport-fit=cover). .is-web is set by initViewport. */
+html.is-web body {
+    background: var(--bg-app);
+}
+html.is-web #root {
+    border-radius: 0 !important;
+    clip-path: none !important;
+    padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+    box-sizing: border-box;
+}
 /* The native traffic lights ignore webview zoom, so the macOS titlebar
    counter-zooms to stay at 100% and keep its height, brand inset and tabs
    aligned with them. Widths that must line up with the zoomed panels below

@@ -39,7 +39,7 @@ const context = {
   useClaudeSession: () => ({ busy: false, messages: [] }), useCodexSession: () => ({ busy: false, messages: [] }), useDshSession: () => false, stopDsh: async () => {}, useOpenCodeSession: () => false, interruptOpenCode: async () => {}, usePiSession: () => false, abortPi: async () => {}, getToolIcon: () => '',
   schemeLabels: () => ({ left: 'Alt+Q', gambit: 'Alt+W', right: 'Alt+E' }),
   React: { createElement: (type, props, ...children) => ({ type, props, children }) },
-  Gambit: 'gambit', WorktreeControl: 'worktree-control', Changelog: 'changelog', IS_MACOS: false,
+  Gambit: 'gambit', WorktreeControl: 'worktree-control', Changelog: 'changelog', IS_MACOS: false, IS_WEB: false,
   submitTerminalPrompt: async (id, text) => terminalSends.push({ id, text }),
   sendClaudeMessage: async (id, text) => { claudeSends.push({ id, text }); return true; },
   sendClaudeInteractive: async (id, text) => { claudeSends.push({ id, text }); return true; },
