@@ -3,6 +3,7 @@ import { lazy, Suspense, useEffect, useState, useSyncExternalStore } from 'react
 import '../styles/global.css';
 import './RemoteApp.css';
 import { loadToolInfo } from '../lib/tool-info';
+import { followDesktopStorage } from '../lib/storage-mirror';
 import { connectRemote, forgetRemote, installWebFileDrop, onRemoteStatus, pairRemote, remoteComputerName, remoteStatus, takePairingLinkFromAddress } from './bridge';
 import { routeFileDrop } from '../lib/file-drop';
 import { parsePairingLink, RpcError } from './protocol';
@@ -18,10 +19,12 @@ export function RemoteApp() {
   const status = useStatus();
   const [ready, setReady] = useState(false);
   useEffect(() => { void connectRemote(); }, []);
-  // Tool names come from the desktop; load them before the UI's first render.
+  // Tool names and the desktop's saved records (recent folders, launch modes…) arrive before the UI's
+  // first render, so it opens showing what the desktop shows. A slow desktop does not hold it back long.
   useEffect(() => {
     if (status !== 'connected' || ready) return;
-    void loadToolInfo().catch(() => {}).finally(() => setReady(true));
+    const storage = Promise.race([followDesktopStorage(), new Promise(resolve => setTimeout(resolve, 4000))]);
+    void Promise.all([loadToolInfo().catch(() => {}), storage]).finally(() => setReady(true));
   }, [status, ready]);
 
   if (status === 'unpaired') return <RemotePair initialLink={linkFromAddress ?? ''} />;

@@ -12,6 +12,7 @@ import { onWindowBackground, onWindowForeground } from './lib/window-focus-filte
 import { IS_MACOS, IS_WINDOWS } from './lib/platform';
 import { initializeUiScale } from './lib/ui-scale';
 import { initViewport, IS_WEB } from './lib/viewport';
+import { shareDesktopStorage } from './lib/storage-mirror';
 
 // macOS uses native window decorations + traffic lights (titleBarStyle:
 // "Overlay" in tauri.macos.conf.json). Tag <html> before first paint so the
@@ -26,6 +27,8 @@ if (IS_MACOS && !IS_WEB) document.documentElement.classList.add('is-macos');
 if (IS_WINDOWS && !IS_WEB) document.documentElement.classList.add('is-windows');
 // Width class on <html data-width> before the first paint; layout rules select on it.
 initViewport();
+// Browsers connected to this desktop see its saved records; start noticing changes before anything writes.
+shareDesktopStorage();
 
 // Block React mount on the registry IPC so every component reads
 // canonical display names on first render (no 'claude' → 'Claude

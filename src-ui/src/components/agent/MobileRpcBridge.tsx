@@ -6,6 +6,7 @@ import { commands, invoke, isTauri } from '../../tauri';
 import { getAgentSession } from '../../lib/agent-session';
 import { isClaudeConversation, isCodexConversation, isDshConversation, isOpenCodeConversation, isPiConversation } from '../../lib/chat-tools';
 import { SETTINGS_ACTIONS, pickMirroredSettings, type Action, type TerminalSession } from '../../store/app-state';
+import { writeFromBrowser } from '../../lib/storage-mirror';
 import { mirrorSnapshot, mirrorSource, runMirrorAction, setMirrorActive, type MirrorKind } from '../../lib/session-mirror';
 import type { MobileRpcStatus } from '../../tauri';
 
@@ -96,6 +97,13 @@ export function MobileRpcBridge() {
       }
       // The folders this desktop has opened, offered to a browser in place of the folder dialog.
       if (method === 'projects.list') return { folders: getProjectFolders() };
+      // A browser saved one of the desktop's records (a recent folder, a launch mode…).
+      if (method === 'storage.set') {
+        const { key, value } = params as unknown as { key?: unknown; value?: unknown };
+        if (typeof key !== 'string' || value !== null && typeof value !== 'string') throw new RequestError('Bad setting', 'internal');
+        writeFromBrowser(key, value as string | null);
+        return {};
+      }
       // The wallpaper a browser shows; the file itself is read and sent by the server.
       if (method === 'wallpaper.path') return { path: stateRef.current.bgType === 'none' ? '' : stateRef.current.bgPath };
       if (method === 'pair.confirm') {

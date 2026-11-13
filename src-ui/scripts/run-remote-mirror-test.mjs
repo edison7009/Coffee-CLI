@@ -6,7 +6,7 @@ import { build } from 'esbuild';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const compiled = await build({
-  stdin: { contents: `export { reducer } from './src/store/app-state'; export { diffState, applyPatch } from './src/lib/session-mirror';`, resolveDir: root },
+  stdin: { contents: `export { reducer } from './src/store/app-state'; export { diffState, applyPatch } from './src/lib/session-mirror'; export { isMirroredKey } from './src/lib/storage-mirror';`, resolveDir: root },
   bundle: true, platform: 'node', format: 'esm', write: false, jsx: 'automatic', external: ['react', 'react/*', 'react-dom', '@tauri-apps/*'],
   plugins: [{ name: 'expose-reducer', setup(builder) {
     builder.onLoad({ filter: /[/\\]store[/\\]app-state\.tsx$/ }, async args => ({ loader: 'tsx', contents: `${await readFile(args.path, 'utf8')}\nexport { reducer };` }));
@@ -16,7 +16,7 @@ const compiled = await build({
 const out = `${root}node_modules/.cache/remote-mirror-test.mjs`;
 await mkdir(`${root}node_modules/.cache`, { recursive: true });
 await writeFile(out, compiled.outputFiles[0].text);
-const { reducer, diffState, applyPatch } = await import(out);
+const { reducer, diffState, applyPatch, isMirroredKey } = await import(out);
 
 const tab = (id, extra = {}) => ({ id, tool: 'claude', cwd: '/p', title: id, claudeMode: (extra.tool ?? 'claude') === 'claude' ? 'conversation' : undefined, ...extra });
 let state = { terminals: [{ id: 'blank', tool: null, folderPath: null }], tabOrder: ['blank'], activeTerminalId: 'blank' };
@@ -72,4 +72,7 @@ state = reducer(state, { type: 'MIRROR_SETTINGS', settings: { currentTheme: 'oce
 assert.equal(state.currentTheme, 'ocean'); assert.equal(state.currentLang, 'en');
 assert.equal(state.settingsOpen, false); assert.equal(state.terminals.length, 1);
 const same = state; assert.equal(reducer(state, { type: 'MIRROR_SETTINGS', settings: { currentTheme: 'ocean' } }), same);
+// Saved records: the desktop's, except screen layout, per-device caches and remote-terminal profiles.
+for (const key of ['coffee:recent-folders', 'coffee:last-folder-by-tool', 'coffee:claude-launch-mode', 'coffee_pinned_items', 'cc-gambit-history', 'cc-automations']) assert.ok(isMirroredKey(key), key);
+for (const key of ['cc-left-hidden', 'cc-panel-widths', 'cc-ui-scale', 'cc-history-cache-v1', 'coffee_remote_cfg', 'coffee.remote.pairing.v0', 'remote_terminal_history', 'other']) assert.ok(!isMirroredKey(key), key);
 console.log('ok remote mirror: desktop tabs appear, follow the desktop and leave when closed; conversation patches round-trip; settings follow the desktop');

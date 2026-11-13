@@ -458,6 +458,8 @@ async fn handle(client: &Client, request: &Value) -> Result<Value, RpcError> {
         "mirror.snapshot" => gui("mirror.snapshot", json!({"kind": params["kind"], "id": params["id"]})).await,
         "ui.call" => gui_with_timeout("ui.call", json!({"kind": params["kind"], "name": params["name"], "args": params["args"]}), INVOKE_TIMEOUT).await,
         "ui.dispatch" => gui("ui.dispatch", json!({"action": params["action"]})).await,
+        // A browser saving one of the desktop's records; the desktop checks the key.
+        "ui.storage" => gui("storage.set", json!({"key": params["key"], "value": params["value"]})).await,
         // The desktop's wallpaper, in pieces: only the file the desktop currently shows is ever read.
         "ui.wallpaper" => {
             let path = gui("wallpaper.path", json!({})).await?["path"].as_str().unwrap_or("").to_owned();

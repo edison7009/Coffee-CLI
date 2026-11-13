@@ -1,9 +1,9 @@
 // The launchpad's recent project folders, shared with the session list: adding or removing a folder on the launchpad
 // shows at once in the list's "added folders only" project view.
 //
-// In a browser (Web 端) the list is the desktop's: a browser cannot show the computer's folder dialog, so it picks
-// from the folders the desktop has opened. It is read when the connection comes up and whenever the page is shown.
-import { onRemoteStatus, REMOTE, remoteRequest, remoteStatus } from '../remote/bridge';
+// In a browser the list is the desktop's own (see storage-mirror): it reloads whenever the desktop's copy changes,
+// and folders added or removed in the browser are added or removed on the desktop.
+import { STORAGE_EVENT } from './storage-mirror';
 const STORAGE_KEY = 'coffee:recent-folders';
 const LIMIT = 8;
 
@@ -16,19 +16,15 @@ const listeners = new Set<() => void>();
 function save(next: string[]) {
   if (next.length === folders.length && next.every((f, i) => f === folders[i])) return;
   folders = next;
-  if (!REMOTE) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch { /* Best-effort operation; failure is non-fatal. */ } }
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch { /* Best-effort operation; failure is non-fatal. */ }
   listeners.forEach(listener => listener());
 }
 
-if (REMOTE) {
-  folders = [];
-  const refresh = () => {
-    if (remoteStatus() !== 'connected') return;
-    void remoteRequest<{ folders: string[] }>('ui.projects').then(({ folders: desktop }) => save(desktop.filter(f => typeof f === 'string' && !!f).slice(0, LIMIT)), () => {});
-  };
-  onRemoteStatus(status => { if (status === 'connected') refresh(); });
-  if (typeof document !== 'undefined') document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
-}
+if (typeof window !== 'undefined') window.addEventListener(STORAGE_EVENT, event => {
+  if (!(event as CustomEvent<string[]>).detail.includes(STORAGE_KEY)) return;
+  folders = load();
+  listeners.forEach(listener => listener());
+});
 
 export const getProjectFolders = (): string[] => folders;
 export function subscribeProjectFolders(listener: () => void): () => void { listeners.add(listener); return () => { listeners.delete(listener); }; }

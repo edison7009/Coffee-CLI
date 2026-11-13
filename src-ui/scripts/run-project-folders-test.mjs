@@ -9,9 +9,9 @@ const compiled = ts.transpileModule(source, { compilerOptions: { target: ts.Scri
 let stored = JSON.stringify(['D:/Coffee-CLI', '/projects/App', 7, '']);
 const localStorage = { getItem: key => key === 'coffee:recent-folders' ? stored : null, setItem: (key, value) => { assert.equal(key, 'coffee:recent-folders'); stored = value; } };
 const exports = {};
-// Desktop: the remote bridge reports that this is not a browser.
-const desktopBridge = { REMOTE: false, onRemoteStatus: () => () => {}, remoteRequest: () => Promise.reject(new Error('desktop')), remoteStatus: () => 'unpaired' };
-vm.runInNewContext(compiled, { exports, localStorage, JSON, require: () => desktopBridge });
+// The storage mirror only lends its event name here.
+const storageMirror = { STORAGE_EVENT: 'coffee-storage' };
+vm.runInNewContext(compiled, { exports, localStorage, JSON, require: () => storageMirror });
 const folders = () => Array.from(exports.getProjectFolders());
 
 assert.deepEqual(folders(), ['D:/Coffee-CLI', '/projects/App'], 'only folder paths load from storage');
@@ -31,21 +31,20 @@ for (let i = 0; i < 10; i++) exports.addProjectFolder(`/p/${i}`);
 assert.equal(folders().length, 8, 'the launchpad keeps its eight recent folders');
 assert.equal(notified, 3, 'an unsubscribed view hears nothing');
 
-// Web 端: the list is the desktop's, read when the connection comes up; nothing is written to the browser.
-let statusListener = null, writes = 0, requests = 0;
-const webStorage = { getItem: () => JSON.stringify(['/browser/own']), setItem: () => { writes++; } };
-const webBridge = {
-  REMOTE: true, remoteStatus: () => 'connected',
-  onRemoteStatus: listener => { statusListener = listener; return () => {}; },
-  remoteRequest: method => { requests++; assert.equal(method, 'ui.projects'); return Promise.resolve({ folders: ['C:\\work\\app', '/Users/me/site', '', 3] }); },
-};
+// In a browser, storage holds the desktop's copy (storage-mirror): when the desktop's list arrives the
+// launchpad reloads, Windows and POSIX paths unchanged.
+const handlers = {};
+let webStored = '[]';
 const web = {};
-vm.runInNewContext(compiled, { exports: web, localStorage: webStorage, JSON, require: () => webBridge, document: undefined });
-assert.deepEqual(Array.from(web.getProjectFolders()), [], 'a browser does not show its own stored folders');
-statusListener('connected');
-await new Promise(resolve => setTimeout(resolve, 0));
-assert.equal(requests, 1);
-assert.deepEqual(Array.from(web.getProjectFolders()), ['C:\\work\\app', '/Users/me/site'], 'the desktop list arrives, Windows and POSIX paths unchanged');
+const window = { addEventListener: (name, fn) => { handlers[name] = fn; } };
+vm.runInNewContext(compiled, { exports: web, localStorage: { getItem: () => webStored, setItem: (_, value) => { webStored = value; } }, JSON, window, require: () => storageMirror });
+assert.deepEqual(Array.from(web.getProjectFolders()), []);
+webStored = JSON.stringify(['C:\\work\\app', '/Users/me/site', '', 3]);
+handlers['coffee-storage']({ detail: ['coffee:last-folder-by-tool'] });
+assert.deepEqual(Array.from(web.getProjectFolders()), [], 'other records changing does not reload the folders');
+handlers['coffee-storage']({ detail: ['coffee:recent-folders'] });
+assert.deepEqual(Array.from(web.getProjectFolders()), ['C:\\work\\app', '/Users/me/site']);
+// Adding one writes it, which the mirror carries to the desktop.
 web.addProjectFolder('/Users/me/other');
-assert.equal(writes, 0, 'a browser never writes the list to its own storage');
-console.log('OK: launchpad folders are shared, deduplicated, saved and limited; a browser uses the desktop list');
+assert.deepEqual(JSON.parse(webStored), ['/Users/me/other', 'C:\\work\\app', '/Users/me/site']);
+console.log('OK: launchpad folders are shared, deduplicated, saved and limited; a browser follows the desktop copy');
