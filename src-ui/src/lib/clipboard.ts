@@ -19,7 +19,7 @@ import { REMOTE } from '../remote/bridge';
  *  want a rejected promise to break the caller. */
 export function clipboardWrite(text: string): Promise<void> {
   // Web 端: the desktop's clipboard is not this device's; use the browser's own.
-  if (REMOTE) return navigator.clipboard.writeText(text).catch(() => {});
+  if (REMOTE) return webClipboardWrite(text);
   return writeText(text).catch(() => {});
 }
 
@@ -27,7 +27,8 @@ export function clipboardWrite(text: string): Promise<void> {
  *  failure (empty clipboard, permission denied, etc.) so callers can
  *  do a simple `if (text)` check without try/catch boilerplate. */
 export function clipboardRead(): Promise<string> {
-  if (REMOTE) return navigator.clipboard.readText().catch(() => '');
+  // Reading needs a secure context; over http://<LAN address> there is no way to read.
+  if (REMOTE) return navigator.clipboard?.readText().catch(() => '') ?? Promise.resolve('');
   return readText().then(t => t ?? '').catch(() => '');
 }
 
@@ -39,4 +40,22 @@ export function clipboardRead(): Promise<string> {
  *  triggers a WebView2 permission prompt. */
 export function clipboardReadImage(): Promise<string | null> {
   return commands.readClipboardImage().catch(() => null);
+}
+
+/** Over http://<LAN address> a browser has no navigator.clipboard; copying then
+ *  goes through a hidden selection, which every browser still allows on a click. */
+function webClipboardWrite(text: string): Promise<void> {
+  if (navigator.clipboard) return navigator.clipboard.writeText(text).catch(() => legacyCopy(text));
+  legacyCopy(text);
+  return Promise.resolve();
+}
+function legacyCopy(text: string) {
+  const area = document.createElement('textarea');
+  area.value = text;
+  area.setAttribute('readonly', '');
+  area.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none';
+  document.body.appendChild(area);
+  area.select();
+  try { document.execCommand('copy'); } catch { /* nothing more to try */ }
+  area.remove();
 }

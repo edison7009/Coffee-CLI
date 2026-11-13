@@ -11,6 +11,22 @@ import { CoffeeClient, RpcError, fromHex, toHex, generateKeyPair, type Desktop, 
 
 export const REMOTE = typeof window !== 'undefined' && !window.__TAURI_INTERNALS__ && new URLSearchParams(window.location.search).has('remote');
 
+/**
+ * A page opened as http://<computer's LAN address> is not a secure context, so
+ * browsers leave out crypto.randomUUID, which the UI uses for tab and session
+ * ids. getRandomValues stays available; build RFC 4122 v4 ids from it.
+ */
+export function ensureRandomUUID(target: { getRandomValues<T extends ArrayBufferView>(array: T): T; randomUUID?: () => string } | undefined) {
+  if (!target || typeof target.randomUUID === 'function' || typeof target.getRandomValues !== 'function') return;
+  target.randomUUID = () => {
+    const b = target.getRandomValues(new Uint8Array(16));
+    b[6] = (b[6] & 0x0f) | 0x40; b[8] = (b[8] & 0x3f) | 0x80;
+    const h = Array.from(b, x => x.toString(16).padStart(2, '0')).join('');
+    return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}` as `${string}-${string}-${string}-${string}-${string}`;
+  };
+}
+if (REMOTE) ensureRandomUUID(globalThis.crypto as never);
+
 const STORAGE_KEY = 'coffee.remote.pairing.v0';
 export interface RemotePairing { desktop: Desktop; computerName: string; deviceName: string; privateKey: string; publicKey: string }
 
