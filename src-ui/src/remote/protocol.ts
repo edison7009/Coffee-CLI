@@ -15,7 +15,9 @@ export const MODE_PAIR = 1;
 const PATTERN = 'Noise_IKpsk2_25519_ChaChaPoly_SHA256';
 const TAG = 16;
 const CHUNK = 65535 - TAG;
-const encoder = new TextEncoder(), decoder = new TextDecoder();
+// Created on use, so importing this module needs nothing from its environment.
+const encoder = { encode: (text: string) => new TextEncoder().encode(text) };
+const decoder = { decode: (bytes: Uint8Array) => new TextDecoder().decode(bytes) };
 
 // ─── Bytes ────────────────────────────────────────────────
 

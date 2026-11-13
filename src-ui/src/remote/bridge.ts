@@ -2,10 +2,9 @@
 //
 // The UI talks to its backend only through `window.__TAURI_INTERNALS__`. Here
 // that object is provided by an encrypted connection to the paired desktop:
-// commands go to `ui.invoke` (the desktop decides what is allowed) and desktop
-// events arrive as `tauri.event`. The desktop owns every session; starting one
-// attaches to the running process, and the session generation the UI invents is
-// mapped to the desktop's own in both directions.
+// commands go to `ui.invoke` (the desktop decides what is allowed and runs it)
+// and desktop events arrive as `tauri.event`. Sessions this page starts are its
+// own; the desktop's tabs stay the desktop's.
 //
 // This module must be imported before anything that reads `isTauri`.
 import { CoffeeClient, RpcError, fromHex, toHex, generateKeyPair, type Desktop, type PairingLink, type RpcEvent } from './protocol';
@@ -25,8 +24,6 @@ function saveRemotePairing(pairing: RemotePairing | null) {
 type Callback = (payload: unknown) => void;
 const callbacks = new Map<number, Callback>();
 const listeners = new Map<string, Set<number>>();
-/** Session id → generations: the UI's own and the desktop's. */
-const generations = new Map<string, { local: string; desktop: string }>();
 let nextCallback = 1;
 let client: CoffeeClient | null = null;
 let waiters: (() => void)[] = [];
@@ -52,19 +49,6 @@ function dispatch(event: string, payload: unknown) {
   for (const id of listeners.get(event) ?? []) callbacks.get(id)?.({ event, id, payload });
 }
 
-/** Desktop events carry the desktop's generation; the UI only knows its own. */
-function localPayload(payload: unknown): unknown {
-  const record = payload as { id?: unknown; generation?: unknown } | null;
-  if (!record || typeof record.id !== 'string' || typeof record.generation !== 'string') return payload;
-  const map = generations.get(record.id);
-  return map && map.desktop === record.generation ? { ...record, generation: map.local } : payload;
-}
-
-function desktopArgs(args: Record<string, unknown>) {
-  const map = typeof args.id === 'string' ? generations.get(args.id) : undefined;
-  return map && args.generation === map.local ? { ...args, generation: map.desktop } : args;
-}
-
 async function invoke(cmd: string, args: Record<string, unknown> = {}): Promise<unknown> {
   switch (cmd) {
     case 'plugin:event|listen': {
@@ -79,15 +63,7 @@ async function invoke(cmd: string, args: Record<string, unknown> = {}): Promise<
   }
   if (cmd.startsWith('plugin:')) throw new Error(`${cmd} is not available on a phone`);
   const c = await connected();
-  const result = await c.request<Record<string, unknown> | null>('ui.invoke', { cmd, args: desktopArgs(args) });
-  if (cmd === 'claude_session_start' && result && typeof args.id === 'string' && typeof args.generation === 'string') {
-    generations.set(args.id, { local: args.generation, desktop: String(result.generation) });
-    // Permission prompts raised before the phone attached.
-    const pending = (result.pending as { request_id: string; request: unknown }[] | undefined) ?? [];
-    const id = args.id, generation = args.generation;
-    setTimeout(() => { for (const p of pending) dispatch('claude-session-event', { id, generation, event: { type: 'control_request', request_id: p.request_id, request: p.request } }); });
-  }
-  return result;
+  return c.request('ui.invoke', { cmd, args });
 }
 
 /** Installs the replacement before the UI modules load. */
@@ -118,7 +94,7 @@ function attach(next: CoffeeClient, pairing: RemotePairing) {
   client = next; attempt = 0;
   const ready = waiters; waiters = [];
   next.onEvent(event => {
-    if (event.event === 'tauri.event') dispatch(String(event.params.event), localPayload(event.params.payload));
+    if (event.event === 'tauri.event') dispatch(String(event.params.event), event.params.payload);
     else for (const listener of eventListeners) listener(event);
   });
   next.onClose(() => {
@@ -166,6 +142,19 @@ export function forgetRemote() {
 }
 
 export function remoteComputerName() { return loadRemotePairing()?.computerName ?? ''; }
+
+/**
+ * A pairing link carried in the page address after `#pair=` (the settings page
+ * builds it), so opening the link is enough. The fragment never reaches the
+ * server; it is removed from the address bar once read.
+ */
+export function takePairingLinkFromAddress(): string | null {
+  if (typeof window === 'undefined') return null;
+  const match = window.location.hash.match(/^#pair=(.+)$/);
+  if (!match) return null;
+  history.replaceState(null, '', window.location.pathname + window.location.search);
+  try { return decodeURIComponent(match[1]); } catch { return null; }
+}
 
 // Runs on import, before modules that read `isTauri` are evaluated.
 installRemoteBridge();

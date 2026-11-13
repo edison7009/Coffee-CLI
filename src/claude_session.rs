@@ -18,8 +18,6 @@ struct Session {
     history_path: std::path::PathBuf,
     /// A fresh conversation still waiting for its first prompt to name it.
     wants_title: AtomicBool,
-    /// The CLI's initialize reply, so a phone can attach without a second start.
-    initialization: Mutex<Option<Value>>,
 }
 
 #[derive(Default)]
@@ -158,7 +156,7 @@ fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<Stri
     let stdout = child.stdout.take().unwrap();
     let stderr = child.stderr.take().unwrap();
     let input = child.stdin.take().unwrap();
-    let session = Arc::new(Session { id: id.clone(), generation, native_id, child: Mutex::new(child), input: Mutex::new(input), pending: Mutex::new(HashMap::new()), permissions: Mutex::new(HashMap::new()), stderr: Mutex::new(String::new()), history_path, wants_title: AtomicBool::new(!is_resume), initialization: Mutex::new(None) });
+    let session = Arc::new(Session { id: id.clone(), generation, native_id, child: Mutex::new(child), input: Mutex::new(input), pending: Mutex::new(HashMap::new()), permissions: Mutex::new(HashMap::new()), stderr: Mutex::new(String::new()), history_path, wants_title: AtomicBool::new(!is_resume) });
     let sessions = app.state::<ClaudeSessions>();
     {
         let mut map = sessions.0.lock().unwrap();
@@ -220,24 +218,12 @@ fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<Stri
     if let Some(path) = prompt_file { let _ = std::fs::remove_file(path); }
     match initialized {
         Ok(initialization) => {
-            *session.initialization.lock().unwrap() = Some(initialization.clone());
             // Native JSONL is only a restoration source. Live UI always consumes stdout events.
             let history = history_page(&session.history_path, None).unwrap_or_else(|_| json!({"data":"","cursor":0}));
             Ok(json!({"sessionId":session.native_id,"initialization":initialization,"history":history,"bypassAvailable":true}))
         },
         Err(error) => { let _ = session.child.lock().unwrap().kill(); Err(error) }
     }
-}
-
-/// What `claude_session_start` returned, for a running session, plus its
-/// generation and the permission prompts still waiting. A phone attaches with
-/// this instead of starting a second process for the same tab.
-pub(crate) fn attach(app: &tauri::AppHandle, id: &str) -> Result<Value, String> {
-    let session = app.state::<ClaudeSessions>().0.lock().unwrap().get(id).cloned().ok_or("会话未运行")?;
-    let initialization = session.initialization.lock().unwrap().clone().ok_or("会话仍在启动")?;
-    let history = history_page(&session.history_path, None).unwrap_or_else(|_| json!({"data":"","cursor":0}));
-    let pending: Vec<Value> = session.permissions.lock().unwrap().iter().map(|(request_id, request)| json!({"request_id":request_id,"request":request})).collect();
-    Ok(json!({"sessionId":session.native_id,"initialization":initialization,"history":history,"bypassAvailable":true,"generation":session.generation,"pending":pending}))
 }
 
 fn session_cwd(config: &crate::tool_config::ToolConfigEntry, cwd: Option<String>) -> std::path::PathBuf {

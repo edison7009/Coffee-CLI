@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useT } from '../../i18n/useT';
 import { useAppState, useAppStateRef } from '../../store/app-state';
-import { commands, isTauri } from '../../tauri';
+import { commands, invoke, isTauri } from '../../tauri';
 import { getAgentSession } from '../../lib/agent-session';
 import { isClaudeConversation, isCodexConversation, isDshConversation, isOpenCodeConversation, isPiConversation } from '../../lib/chat-tools';
 import type { TerminalSession } from '../../store/app-state';
 
-interface MobileRequest { requestId: string; method: string; params: { id?: string; text?: string; name?: string } }
+interface MobileRequest { requestId: string; method: string; params: { id?: string; text?: string; name?: string; cmd?: string; args?: Record<string, unknown> } }
 class RequestError extends Error {
   readonly code: 'not_found' | 'busy' | 'internal';
   constructor(message: string, code: RequestError['code']) { super(message); this.code = code; }
@@ -43,6 +43,8 @@ export function MobileRpcBridge() {
       return tab;
     };
     const run = async ({ method, params }: MobileRequest) => {
+      // A browser's command (Web 端), already checked against the desktop's rules in Rust.
+      if (method === 'invoke' && params.cmd) return invoke(params.cmd, params.args ?? {});
       if (method === 'pair.confirm') {
         // A native prompt reaches the person even when the settings page is closed.
         const { ask } = await import('@tauri-apps/plugin-dialog');

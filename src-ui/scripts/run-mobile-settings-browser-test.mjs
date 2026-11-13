@@ -52,17 +52,17 @@ try {
   await page.goto(`http://127.0.0.1:${server.address().port}`);
 
   // Off by default: nothing can be paired until phones are allowed.
-  const master = page.getByRole('switch', { name: '允许手机连接', exact: true });
+  const master = page.getByRole('switch', { name: '允许浏览器访问', exact: true });
   await page.waitForFunction(() => document.querySelector('[role=switch]')?.disabled === false, null, { timeout: 5000 }).catch(e => { throw new Error(errors.join('\n') || e.message); });
   assert.equal(await master.getAttribute('aria-checked'), 'false');
   const pair = page.getByRole('button', { name: '配对', exact: true });
   assert.equal(await pair.isDisabled(), true);
-  await page.getByText('请先打开“允许手机连接”。').waitFor();
-  await page.getByText('还没有配对的手机。').waitFor();
+  await page.getByText('请先打开“允许浏览器访问”。').waitFor();
+  await page.getByText('还没有配对的设备。').waitFor();
 
   await master.click();
   await page.waitForFunction(() => document.querySelector('[role=switch]').getAttribute('aria-checked') === 'true');
-  await page.getByText('本机地址：192.168.1.8:47391').waitFor();
+  await page.getByText('浏览器打开：http://192.168.1.8:47391').waitFor();
 
   // Firewall: blocked shows a fix; allowing clears it.
   await page.getByText('Windows 防火墙拦截了手机连接').waitFor();
@@ -85,7 +85,7 @@ try {
 
   // The QR code carries the pairing URI; the countdown runs; cancel withdraws it.
   await pair.click();
-  const qr = page.getByRole('img', { name: '配对二维码' });
+  const qr = page.getByRole('img', { name: '访问二维码' });
   await qr.waitFor();
   assert.match(await qr.getAttribute('src'), /^data:image\/png;base64,/);
   await page.getByText(/^(300|299) 秒后失效$/).waitFor();
@@ -110,7 +110,7 @@ try {
   await page.screenshot({ path: join(directory, 'mobile-settings.png') });
 
   await page.getByRole('button', { name: '移除', exact: true }).click();
-  await page.getByText('还没有配对的手机。').waitFor();
+  await page.getByText('还没有配对的设备。').waitFor();
   assert.deepEqual(await page.evaluate(() => window.calls.at(-1)), ['revoke', phone]);
 
   // Turning phones off clears an open QR code.
@@ -123,7 +123,7 @@ try {
   // Without a network the address is missing and pairing explains why.
   await master.click();
   await page.evaluate(() => { window.mobile.host = null; window.listeners['mobile-rpc-devices']({ payload: JSON.parse(JSON.stringify(window.mobile)) }); });
-  await page.getByText('没有检测到网络连接，请连上 Wi-Fi 后再配对。').waitFor();
+  await page.getByText('没有检测到网络连接，请连上 Wi-Fi 或网线后再配对。').waitFor();
   assert.equal(await pair.isDisabled(), true);
 
   // Leaving the page withdraws any pairing code.

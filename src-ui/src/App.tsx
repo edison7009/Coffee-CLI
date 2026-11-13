@@ -21,6 +21,7 @@ import { Explorer } from './components/left/Explorer';
 import { CenterPanel } from './components/center/CenterPanel';
 import { ActiveGambit } from './components/center/ActiveGambit';
 import { AgentBridge } from './components/agent/AgentBridge';
+import { REMOTE } from './remote/bridge';
 import { RightPanel } from './components/right/Compiler';
 import { GitStatusProvider } from './lib/git-status';
 import './styles/global.css';
@@ -492,7 +493,8 @@ export function App() {
       {state.currentShape === 'characters' && <CharacterBackground selectedId={activeTabId} />}
       {/* Custom titlebar — drag region + minimize / maximize / close */}
       <TitleBar />
-      <AgentBridge />
+      {/* The desktop's background agent, orchestration and pairing run only in the desktop app. */}
+      {!REMOTE && <AgentBridge />}
       <AutomationRunner />
 
       {/* 3-panel workspace. Titlebar toggles flip leftPanelHidden /

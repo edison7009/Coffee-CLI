@@ -6,7 +6,13 @@ import { ThemedSelect } from './ThemedSelect';
 import { useT } from '../../i18n/useT';
 import { clipboardWrite } from '../../lib/clipboard';
 
-interface Pairing extends MobileRpcPairing { qr: string }
+interface Pairing extends MobileRpcPairing { qr: string; webUrl: string }
+
+/** The address a browser opens: this computer's Web 端 page, with the pairing link after `#` so it never reaches a server log. */
+function webPairingUrl(pairing: Pick<MobileRpcPairing, 'host' | 'port' | 'uri'>): string {
+  const host = pairing.host.includes(':') ? `[${pairing.host}]` : pairing.host;
+  return `http://${host}:${pairing.port}/?remote#pair=${encodeURIComponent(pairing.uri)}`;
+}
 const AUTO = 'auto';
 
 export function MobileSettings() {
@@ -72,11 +78,13 @@ export function MobileSettings() {
 
   const beginPairing = () => run(async () => {
     const next = await commands.mobileRpcBeginPairing();
-    const qr = await QRCode.toDataURL(next.uri, { width: 220, margin: 2, errorCorrectionLevel: 'M' });
+    // A camera opens this straight in the browser, already carrying the pairing link.
+    const webUrl = webPairingUrl(next);
+    const qr = await QRCode.toDataURL(webUrl, { width: 220, margin: 2, errorCorrectionLevel: 'M' });
     pairedBefore.current = new Set(status?.devices.map(device => device.publicKey));
     setNow(Date.now());
     setCopied(false);
-    setPairing({ ...next, qr });
+    setPairing({ ...next, qr, webUrl });
   });
 
   const cancelPairing = () => run(async () => { await commands.mobileRpcCancelPairing(); setPairing(null); });
@@ -131,7 +139,7 @@ export function MobileSettings() {
         </div></div>}
         <div className="settings-sound-item settings-voice-controls" aria-disabled={!enabled}>
           <div className="settings-sound-row">
-            <div className="settings-sound-title">{t('settings.mobile.pair')}<div className="settings-choice-hint">{enabled && status?.host ? t('settings.mobile.address', { address: `${status.host}:${status.port}` }) : t('settings.mobile.pair.sub')}</div></div>
+            <div className="settings-sound-title">{t('settings.mobile.pair')}<div className="settings-choice-hint">{enabled && status?.host ? t('settings.mobile.address', { address: `http://${status.host}:${status.port}` }) : t('settings.mobile.pair.sub')}</div></div>
             {pairing
               ? <button type="button" className="settings-voice-scan" disabled={busy} onClick={() => void cancelPairing()}>{t('settings.mobile.pair.cancel')}</button>
               : <button type="button" className="settings-voice-scan" disabled={!enabled || busy || !status?.host} onClick={() => void beginPairing()}>{t('settings.mobile.pair.start')}</button>}
@@ -144,7 +152,7 @@ export function MobileSettings() {
               <p className="settings-choice-hint">{t('settings.mobile.expires', { seconds: String(seconds) })}</p>
               <p className="settings-choice-hint">{t('settings.mobile.confirm_hint')}</p>
               {/* For a phone without a camera, or the browser preview: paste the same link. */}
-              <button type="button" className="settings-voice-scan settings-mobile-copy" onClick={() => void clipboardWrite(pairing.uri).then(() => setCopied(true), () => setCopied(false))}>{t(copied ? 'settings.mobile.copied' : 'settings.mobile.copy_link')}</button>
+              <button type="button" className="settings-voice-scan settings-mobile-copy" onClick={() => void clipboardWrite(pairing.webUrl).then(() => setCopied(true), () => setCopied(false))}>{t(copied ? 'settings.mobile.copied' : 'settings.mobile.copy_link')}</button>
             </div>
           </div>}
         </div>

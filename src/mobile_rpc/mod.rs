@@ -16,6 +16,7 @@ mod firewall;
 mod network;
 mod remote_ui;
 mod secure;
+mod web;
 
 use buffers::{Buffers, Replay};
 use futures_util::{SinkExt, StreamExt};
@@ -37,6 +38,8 @@ const MAX_FRAME: usize = 1 << 20;
 const HELLO_TIMEOUT: Duration = Duration::from_secs(10);
 const GUI_TIMEOUT: Duration = Duration::from_secs(30);
 const PAIRING_TTL: Duration = Duration::from_secs(300);
+/// Starting a tool session can take a while (process launch, resume).
+const INVOKE_TIMEOUT: Duration = Duration::from_secs(120);
 /// How long the desktop prompt waits for the person to allow a new phone.
 #[cfg_attr(test, allow(dead_code))]
 const PAIRING_CONFIRM_TIMEOUT: Duration = Duration::from_secs(120);
@@ -61,6 +64,8 @@ struct Client {
     resync: Mutex<HashSet<String>>,
     /// Runs the desktop UI (`?remote`): receives raw desktop events.
     ui: AtomicBool,
+    /// Sessions and terminals this browser started; the only ones it may drive.
+    owned: Mutex<HashSet<String>>,
 }
 
 #[derive(Default)]
@@ -207,13 +212,24 @@ fn stop() {
 }
 
 async fn serve(stream: TcpStream) {
+    // One port: a WebSocket upgrade is a paired device, a plain GET is a browser loading the UI.
+    match web::peek(&stream).await {
+        Some(web::Request::Upgrade) => {}
+        Some(web::Request::Get(target)) => {
+            // Take the handle first so the lock is not held across the await.
+            let app = hub().app.lock().unwrap().clone();
+            if let Some(app) = app { web::respond(&app, stream, &target, false).await; }
+            return;
+        }
+        _ => return,
+    }
     let Ok(socket) = tokio_tungstenite::accept_async(stream).await else { return };
     let (mut sink, mut source) = socket.split();
     let Some((client_device, channel)) = handshake(&mut sink, &mut source).await else { return };
     let channel = Arc::new(channel);
 
     let (tx, mut rx) = mpsc::channel::<Value>(CLIENT_QUEUE);
-    let client = Arc::new(Client { device: client_device, kill: tokio::sync::Notify::new(), tx, subscriptions: Mutex::default(), resync: Mutex::default(), ui: AtomicBool::new(false) });
+    let client = Arc::new(Client { device: client_device, kill: tokio::sync::Notify::new(), tx, subscriptions: Mutex::default(), resync: Mutex::default(), ui: AtomicBool::new(false), owned: Mutex::default() });
     let client_id = hub().next_client.fetch_add(1, Ordering::SeqCst);
     hub().clients.lock().unwrap().insert(client_id, client.clone());
     let writer_channel = channel.clone();
@@ -386,10 +402,11 @@ async fn handle(client: &Client, request: &Value) -> Result<Value, RpcError> {
         }
         "conversation.cancel" => gui("conversation.cancel", json!({"id":id()?})).await,
         "ui.subscribe" => { client.ui.store(true, Ordering::Relaxed); Ok(json!({"events": remote_ui::FORWARDED_EVENTS})) }
+        // The desktop window runs the command, so the browser gets exactly what the desktop UI would.
         "ui.invoke" => {
-            let app = hub().app.lock().unwrap().clone().ok_or(("internal", "app unavailable".to_string()))?;
             let cmd = params["cmd"].as_str().ok_or(("invalid_params", "cmd required".to_string()))?;
-            remote_ui::invoke(&app, cmd, &params["args"]).await
+            remote_ui::check(cmd, &params["args"], &mut client.owned.lock().unwrap()).map_err(|e| ("unsupported", e))?;
+            gui_with_timeout("invoke", json!({"cmd": cmd, "args": params["args"]}), INVOKE_TIMEOUT).await
         }
         _ => Err(("unsupported", "unknown method".into())),
     }

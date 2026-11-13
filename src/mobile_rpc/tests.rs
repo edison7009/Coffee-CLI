@@ -315,10 +315,37 @@ fn firewall_scripts_quote_the_program_path() {
 }
 
 #[test]
-fn remote_ui_allows_only_conversation_commands() {
-    for cmd in ["claude_session_send", "claude_session_respond", "claude_session_start", "claude_session_close", "computer_name"] { assert!(remote_ui::allowed(cmd), "{cmd}"); }
-    // Files, credentials, configuration, processes and shell input stay on the desktop.
-    for cmd in ["fs_delete", "fs_rename", "read_text_file", "load_password", "set_tool_config", "get_tool_config", "tier_terminal_start", "tier_terminal_input", "open_url", "show_in_folder", "mobile_rpc_set_enabled", "plugin:dialog|open", "plugin:clipboard-manager|read_text", "codex_session_start"] {
-        assert!(!remote_ui::allowed(cmd), "{cmd}");
+fn browser_commands_are_denied_or_scoped_to_own_sessions() {
+    use std::collections::HashSet;
+    let mut owned = HashSet::new();
+    let ok = |cmd: &str, args: Value, owned: &mut HashSet<String>| remote_ui::check(cmd, &args, owned).is_ok();
+    // Everyday desktop features pass through.
+    for cmd in ["list_directory", "get_usage_statistics", "git_changes", "load_tasks", "get_native_history", "list_tools", "claude_session_preview"] { assert!(ok(cmd, json!({}), &mut owned), "{cmd}"); }
+    // The desktop window, host devices, credentials, pairing, installers and the agent hub are not.
+    for cmd in ["window_close", "pick_folder", "show_in_folder", "load_password", "save_password", "mobile_rpc_set_enabled", "mobile_rpc_revoke_device", "voice_input_start", "download_and_install_update", "update_cli", "orchestration_sync", "agent_resolve_tool", "start_fs_watcher", "plugin:dialog|open", "Window_Close", "a;b", ""] {
+        assert!(!ok(cmd, json!({}), &mut owned), "{cmd}");
     }
+    // A browser drives only what it started.
+    assert!(!ok("claude_session_send", json!({"id":"desk"}), &mut owned), "desktop session");
+    assert!(!ok("tier_terminal_input", json!({"sessionId":"desk-term"}), &mut owned));
+    assert!(!ok("codex_session_close", json!({"id":"desk"}), &mut owned));
+    assert!(ok("claude_session_start", json!({"id":"web-1"}), &mut owned));
+    assert!(ok("claude_session_send", json!({"id":"web-1"}), &mut owned));
+    assert!(ok("claude_session_close", json!({"id":"web-1"}), &mut owned));
+    assert!(ok("tier_terminal_start", json!({"sessionId":"web-t"}), &mut owned));
+    assert!(ok("tier_terminal_resize", json!({"sessionId":"web-t"}), &mut owned));
+    assert!(!ok("tier_terminal_kill", json!({"sessionId":"web-1-other"}), &mut owned));
+    assert!(!ok("pi_session_start", json!({}), &mut owned), "start needs an id");
+}
+
+#[test]
+fn web_requests_are_classified_and_paths_confined() {
+    use web::{classify, route, Request, Route};
+    assert!(matches!(classify(b"GET / HTTP/1.1\r\nHost: x\r\nUpgrade: websocket\r\nConnection: Upgrade"), Request::Upgrade));
+    assert!(matches!(classify(b"GET /assets/a.js HTTP/1.1\r\nHost: x"), Request::Get(t) if t == "/assets/a.js"));
+    assert!(matches!(classify(b"POST / HTTP/1.1\r\nHost: x"), Request::Other));
+    assert!(matches!(route("/"), Some(Route::Redirect("/?remote"))));
+    assert!(matches!(route("/?remote"), Some(Route::File(p)) if p == "index.html"));
+    assert!(matches!(route("/assets/index-1.js?v=2"), Some(Route::File(p)) if p == "assets/index-1.js"));
+    for bad in ["/../secret", "/assets/../../etc/passwd", "/a//b", "/%2e%2e/x", "/a\\b"] { assert!(route(bad).is_none(), "{bad}"); }
 }

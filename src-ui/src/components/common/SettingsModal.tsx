@@ -23,6 +23,7 @@ import { commands, isTauri, type FontInfo } from '../../tauri';
 import { FontPicker } from './FontPicker';
 import { VoiceSettings } from './VoiceSettings';
 import { MobileSettings } from './MobileSettings';
+import { REMOTE } from '../../remote/bridge';
 import { SettingsSlider } from './SettingsSlider';
 import { setUiScale, useUiScale } from '../../lib/ui-scale';
 import { THEME_COLORS, THEME_MODES, THEME_SHAPES, ICON_ART_THEMES, LANGUAGES, isMaskTintTheme } from '../../lib/personalization';
@@ -294,7 +295,8 @@ export function SettingsModal() {
     { id: 'appearance', label: t('settings.appearance') },
     { id: 'terminal',   label: t('settings.terminal') },
     { id: 'voice',      label: t('settings.voice') },
-    { id: 'mobile',     label: t('settings.mobile') },
+    // Web 端 access is managed on the desktop, never from a browser.
+    ...(REMOTE ? [] : [{ id: 'mobile' as const, label: t('settings.mobile') }]),
     { id: 'language',   label: t('settings.language') },
     { id: 'feedback',   label: t('settings.feedback') },
   ];
