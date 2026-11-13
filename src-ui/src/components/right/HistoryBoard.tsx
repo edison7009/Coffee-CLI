@@ -9,7 +9,6 @@ import { splitSessionIds } from '../../lib/session-split-layout';
 import { commands, isTauri } from '../../tauri';
 import type { SavedSession } from '../../tauri';
 import { getToolDisplayName } from '../../lib/tool-info';
-import { useAgentClient, openAgentConversation, refreshAgentConversations } from '../../lib/agent-client';
 import {
   prefetchHistory,
   refreshHistory,
@@ -37,8 +36,6 @@ import CLAUDE_DATA_URL from '../../icons-inline/claude.svg?inline';
 import CODEX_SVG from '../../icons-inline/codex.svg?raw';
 import MIMOCODE_DATA_URL from '../../icons-inline/mimocode.png?inline';
 import HERMES_DATA_URL from '../../icons-inline/hermes.png?inline';
-// Coffee Agent uses the desktop app icon (Windows source, rounded corners baked in).
-import COFFEE_AGENT_DATA_URL from '../../icons-inline/coffee-agent.png?inline';
 import OPENCODE_DATA_URL from '../../icons-inline/opencode.png?inline';
 // Kimi Code (PNG squircle) — fixed-color brand mark, ?inline data URI.
 import KIMICODE_DATA_URL from '../../icons-inline/kimicode.png?inline';
@@ -88,7 +85,6 @@ const TOOL_ICON_SRC: Record<string, string> = {
   crush:       CRUSH_DATA_URL,
   muse:        MUSE_DATA_URL,
   dsh:         DSH_DATA_URL,
-  'coffee-agent': COFFEE_AGENT_DATA_URL,
 };
 
 const TOOL_ICON_SVG: Record<string, string> = {
@@ -166,8 +162,6 @@ export function HistoryBoard() {
   const openingWorkers = useRef(new Set<string>());
   const orchestration = useOrchestration();
   const splitDrag = useSessionSplitDrag();
-  const { conversations, conversationId: activeAgentConversation } = useAgentClient();
-  const agentConversations = useMemo(() => conversations.filter(conversation => conversation.messageCount > 0), [conversations]);
   const [agentError, setAgentError] = useState('');
   const [nowMs, setNowMs] = useState(Date.now);
   useEffect(() => {
@@ -235,8 +229,8 @@ export function HistoryBoard() {
       document.removeEventListener('keydown', onKey);
     };
   }, [preview]);
-  useEffect(() => { prefetchHistory(); refreshAgentConversations().catch(() => {}); }, []);
-  const isLoading = isTauri && (status === 'idle' || status === 'loading') && cachedSessions.length === 0 && agentConversations.length === 0;
+  useEffect(() => { prefetchHistory(); }, []);
+  const isLoading = isTauri && (status === 'idle' || status === 'loading') && cachedSessions.length === 0;
 
   const [sessionSearchQuery, setSessionSearchQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
@@ -339,9 +333,6 @@ export function HistoryBoard() {
   }), ...liveSessions.map(session => ({
     id: `live:${session.id}`, name: session.toolTitle || getToolDisplayName(session.tool!), tool: session.tool!,
     cwd: session.folderPath ?? '', session_token: session.resumeToken ?? null, saved_at: new Date(session.activeAt ?? session.startedAt ?? nowMs).toISOString(),
-  })), ...agentConversations.map(conversation => ({
-    id: conversation.id, name: conversation.title, tool: 'coffee-agent', cwd: '', session_token: null,
-    saved_at: new Date(conversation.updatedAt).toISOString(), turn_count: conversation.messageCount,
   }))]);
     // Sessions that are running right now float to the top, in tab order. Ranking them by
     // mtime/activeAt made concurrent sessions swap places on every status flip.
@@ -353,7 +344,7 @@ export function HistoryBoard() {
     };
     const running = sorted.filter(busy).sort((a, b) => tabIndex(a) - tabIndex(b));
     return running.length ? [...running, ...sorted.filter(session => !busy(session))] : sorted;
-  }, [nativeSessions, liveSessions, agentConversations, nowMs, state.terminals]);
+  }, [nativeSessions, liveSessions, nowMs, state.terminals]);
 
   const availableSessions = useMemo(() => {
     const list = baseSessions.filter(session => !hidden.has(`${session.tool ?? ''}:${session.id}`)
@@ -377,7 +368,7 @@ export function HistoryBoard() {
       if (added && cwd && !added.has(key)) continue;
       let group = groups.get(key);
       if (!group) {
-        group = { key, name: session.tool === 'coffee-agent' ? 'Coffee Agent' : projectName(cwd, session.tool), cwd, sessions: [] };
+        group = { key, name: projectName(cwd, session.tool), cwd, sessions: [] };
         groups.set(key, group);
       }
       group.sessions.push(session);
@@ -424,7 +415,7 @@ export function HistoryBoard() {
   const matchesQuery = useCallback((session: SavedSession, query: string) => {
     const q = query.trim().replace(/\s+/g, ' ').toLowerCase();
     const name = renamed[`${session.tool ?? ''}:${session.id}`] ?? session.name ?? '';
-    const tool = session.tool === 'coffee-agent' ? 'Coffee Agent' : getToolName(session.tool);
+    const tool = getToolName(session.tool);
     return [name, session.tool === 'openclaw' ? '' : session.cwd ?? '', projectName(session.cwd ?? '', session.tool), tool].some(value => value.toLowerCase().includes(q));
   }, [renamed]);
   const [debouncedQuery, setDebouncedQuery] = useState('');
@@ -482,11 +473,6 @@ export function HistoryBoard() {
 
   const handleViewHistory = async (saved: SavedSession, split?: SessionSplitPlacement) => {
     setAgentError('');
-    if (saved.tool === 'coffee-agent') {
-      dispatch({ type: 'OPEN_AGENT_PAGE', page: 'agent' });
-      openAgentConversation(saved.id).catch(error => setAgentError(String(error)));
-      return;
-    }
     const live = liveSessions.find(session => `live:${session.id}` === saved.id);
     if (live) {
       dispatch(split ? { type: 'OPEN_SESSION_SPLIT', id: live.id, ...split } : { type: 'SET_ACTIVE_TERMINAL', id: live.id });
@@ -536,7 +522,6 @@ export function HistoryBoard() {
     }
     hideSession(saved.tool ?? '', saved.id);
     for (const tab of closing) dispatch({ type: 'REMOVE_TERMINAL', id: tab.id });
-    if (saved.tool === 'coffee-agent' && saved.id === activeAgentConversation) dispatch({ type: 'CLOSE_AGENT_PAGE', page: 'agent' });
   };
 
   const removeWorker = async (task: OrchestrationTask) => {
@@ -629,7 +614,7 @@ export function HistoryBoard() {
         const isWorking = owner?.agentStatus === 'working' || Boolean(session.session_token && workingSessions.has(`${session.tool}:${session.session_token}`));
         const needsAttention = owner?.agentStatus === 'wait_input' || Boolean(session.session_token && waitingSessions.has(`${session.tool}:${session.session_token}`));
         const isUnread = !isWorking && !needsAttention && Boolean(session.session_token && unreadReplies.has(sessionReplyKey(session.tool, session.session_token)));
-        const isActive = owner?.id === state.activeTerminalId && !state.agentPageActive && !state.diffTabActive || session.tool === 'coffee-agent' && session.id === activeAgentConversation && state.agentPageActive === 'agent';
+        const isActive = owner?.id === state.activeTerminalId && !state.diffTabActive;
         const gitStatus = gitStatuses.get(gitStatusKey(sessionGitTarget(session)));
         return (
           <div key={`${sessionKey}:${session.file_path ?? session.saved_at}`} className="history-family">
@@ -637,7 +622,7 @@ export function HistoryBoard() {
             className={`history-card${isWorking ? ' history-card-working' : ''}${needsAttention ? ' history-card-needs-attention' : ''}${isUnread ? ' history-card-unread' : ''}${grouped ? ' history-card-grouped' : ''}${isActive ? ' history-card-active' : ''}`}
             aria-describedby={preview?.key === sessionKey ? previewId : undefined}
             onPointerDown={event => {
-              if (isRenaming || session.tool === 'coffee-agent') return;
+              if (isRenaming) return;
               setPreview(null);
               splitDrag.begin(event, owner?.id, placement => { setPreview(null); void handleViewHistory(session, placement); });
             }}
@@ -654,7 +639,6 @@ export function HistoryBoard() {
               e.preventDefault();
               e.stopPropagation();
               setPreview(null);
-              if (session.tool === 'coffee-agent') return;
               setCtxMenu({ session, x: e.clientX, y: e.clientY });
             }}
           >
@@ -726,13 +710,13 @@ export function HistoryBoard() {
             </div>
             {preview?.key === sessionKey && !isRenaming && createPortal(<div id={previewId} className="history-card-preview" role="tooltip" style={{ left: preview.left, top: preview.top }}>
               <div className="history-card-preview-title">{displayName}</div>
-              <div className="history-card-meta"><span className="history-card-tool-wrap">{getToolIcon(session.tool)}<span className="history-card-meta-text">{(needsAttention || isUnread) && <span className="history-card-preview-status">{t(needsAttention ? 'history.needs_attention' : 'history.unread_reply')} &middot; </span>}{session.tool === 'coffee-agent' ? 'Coffee Agent' : projectName(session.cwd, session.tool)} &middot; {dateStr} {session.turn_count ? ` · ${(t('task.messages') || '{count} messages').replace('{count}', session.turn_count.toString())}` : ''}</span></span></div>
+              <div className="history-card-meta"><span className="history-card-tool-wrap">{getToolIcon(session.tool)}<span className="history-card-meta-text">{(needsAttention || isUnread) && <span className="history-card-preview-status">{t(needsAttention ? 'history.needs_attention' : 'history.unread_reply')} &middot; </span>}{projectName(session.cwd, session.tool)} &middot; {dateStr} {session.turn_count ? ` · ${(t('task.messages') || '{count} messages').replace('{count}', session.turn_count.toString())}` : ''}</span></span></div>
             </div>, document.body)}
           </div>
             {workers.length > 0 && <div className="history-workers" onPointerDown={event => event.stopPropagation()}>
               {workers.map(task => {
                 const child = state.terminals.find(tab => tab.id === task.sessionId), status = workerState(task, child);
-                return <div key={task.id} data-enter={task.phase === 'starting' || undefined} className={`history-worker${child?.id === state.activeTerminalId && !state.agentPageActive && !state.diffTabActive ? ' is-active' : ''}`} onMouseEnter={event => {
+                return <div key={task.id} data-enter={task.phase === 'starting' || undefined} className={`history-worker${child?.id === state.activeTerminalId && !state.diffTabActive ? ' is-active' : ''}`} onMouseEnter={event => {
                   if (ctxMenu || searchOpen) return;
                   const rect = event.currentTarget.getBoundingClientRect(), width = Math.min(320, window.innerWidth - 16);
                   setPreview({ key: `worker:${task.id}`, left: Math.max(8, Math.min(rect.right + 8, window.innerWidth - width - 8)), top: Math.max(8, Math.min(rect.top + (rect.height - 72) / 2, window.innerHeight - 80)) });
@@ -824,7 +808,7 @@ export function HistoryBoard() {
         </div>,
         document.body,
       )}
-      {agentError && <p className="agent-feedback error" role="alert">{agentError}</p>}
+      {agentError && <p className="history-error" role="alert">{agentError}</p>}
       <div className="task-list history-session-list" style={{ marginTop: '0', paddingBottom: '20px' }}>
       {isLoading && Array.from({ length: 6 }).map((_, i) => (
         <div key={`skel-${i}`} className="history-card history-card-skeleton" aria-hidden="true">
@@ -902,7 +886,7 @@ export function HistoryBoard() {
       <div className="history-search-results" id={searchId + '-results'} ref={searchResultsRef} role="listbox" aria-label={t('explorer.tab.history')}>
         {searchResults.map((session, index) => <button type="button" tabIndex={-1} key={session.tool + ':' + session.id} id={searchId + '-result-' + index} className="history-search-result" role="option" aria-selected={selectedSearchIndex === index} onMouseEnter={() => setSearchSelection(index)} onClick={() => openSearchResult(session)}>
           {getToolIcon(session.tool)}
-          <span><strong>{renamed[session.tool + ':' + session.id] ?? session.name}</strong><small>{session.tool === 'coffee-agent' ? 'Coffee Agent' : projectName(session.cwd ?? '', session.tool)}</small></span>
+          <span><strong>{renamed[session.tool + ':' + session.id] ?? session.name}</strong><small>{projectName(session.cwd ?? '', session.tool)}</small></span>
         </button>)}
         {searchHasMore && <div ref={searchSentinelRef} className="history-search-sentinel" />}
         {!searchResults.length && <div className="history-search-empty"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><circle cx="10.5" cy="10.5" r="7.5" /><path d="m16 16 5 5" /></svg><span>{t(isLoading ? 'diff.loading' : 'menu.no_recent')}</span></div>}

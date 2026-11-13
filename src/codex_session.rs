@@ -39,18 +39,9 @@ struct Session {
     input: Mutex<Option<ChildStdin>>,
     protocol: Protocol,
     stderr: Mutex<String>,
-    launch_config: crate::tool_config::ToolConfigEntry,
-    launch_cwd: std::path::PathBuf,
 }
 #[derive(Default)]
 pub struct CodexSessions(Mutex<HashMap<String, Arc<Session>>>);
-
-pub(crate) fn launch_context(app: &tauri::AppHandle, id: &str) -> Option<(crate::tool_config::ToolConfigEntry, String)> {
-    let sessions = app.try_state::<CodexSessions>()?;
-    let map = sessions.0.lock().ok()?;
-    let session = map.get(id)?;
-    Some((session.launch_config.clone(), session.launch_cwd.to_string_lossy().into_owned()))
-}
 
 impl Session {
     fn write(&self, value: &Value) -> Result<(), String> {
@@ -177,7 +168,7 @@ fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<Stri
     let stdout = child.stdout.take().unwrap();
     let stderr = child.stderr.take().unwrap();
     let input = child.stdin.take().unwrap();
-    let session = Arc::new(Session { id: id.clone(), generation, native_id: Mutex::new(String::new()), child: Mutex::new(child), input: Mutex::new(Some(input)), protocol: Protocol::default(), stderr: Mutex::new(String::new()), launch_config: config.clone(), launch_cwd: cwd.clone() });
+    let session = Arc::new(Session { id: id.clone(), generation, native_id: Mutex::new(String::new()), child: Mutex::new(child), input: Mutex::new(Some(input)), protocol: Protocol::default(), stderr: Mutex::new(String::new()) });
     {
         let sessions = app.state::<CodexSessions>();
         let mut map = sessions.0.lock().unwrap();
@@ -298,7 +289,7 @@ mod tests {
         let session = Arc::new(Session {
             id: "test".into(), generation: String::new(), native_id: Mutex::new(String::new()), child: Mutex::new(child),
             input: Mutex::new(Some(input)), protocol: Protocol::default(), stderr: Mutex::new(String::new()),
-            launch_config: Default::default(), launch_cwd: Default::default(),
+           
         });
         let writing = session.input.lock().unwrap();
         let stopping = session.clone();

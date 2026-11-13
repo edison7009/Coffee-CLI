@@ -6,7 +6,6 @@ import { InlineSvgIcon } from '../InlineSvgIcon';
 import { focusTerminal } from '../../lib/focus-registry';
 import { onWindowForeground } from '../../lib/window-focus-filter';
 import { TierTerminal } from './TierTerminal';
-import { AgentPages } from '../agent/AgentPages';
 import { ClaudeConversation } from './ClaudeConversation';
 import { CodexConversation } from './CodexConversation';
 import { OpenCodeConversation } from './OpenCodeConversation';
@@ -372,10 +371,9 @@ export function CenterPanel() {
   // whether it (not a terminal tab) is the focused surface.
   const diffTabVisible = state.diffMode === 'tab' && state.diffSelection !== null;
   const diffTabActive = state.diffTabActive;
-  const agentPageActive = state.agentPageActive;
   const usageOpen = state.usageOpen;
   const utilityPageOpen = usageOpen || state.toolSettingsOpen || state.settingsOpen || state.automationsOpen;
-  const contentActive = !utilityPageOpen && !diffTabActive && !agentPageActive;
+  const contentActive = !utilityPageOpen && !diffTabActive;
   const splitIds = splitSessionIds(state.sessionSplit);
   const splitVisible = contentActive && splitIds.length > 1 && splitIds.includes(activeTerminalId ?? '');
   const splitRects = splitVisible ? sessionSplitRects(state.sessionSplit!).leaves : [];
@@ -1001,11 +999,7 @@ export function CenterPanel() {
       tabDragSuppressClickRef.current = false;
       return;
     }
-    if (tabId === 'agent:agent' || tabId === 'agent:config') {
-      dispatch({ type: 'OPEN_AGENT_PAGE', page: tabId === 'agent:agent' ? 'agent' : 'config' });
-    } else {
-      dispatch({ type: 'SET_ACTIVE_TERMINAL', id: tabId });
-    }
+    dispatch({ type: 'SET_ACTIVE_TERMINAL', id: tabId });
   };
 
   const getTabDragStyle = (tabId: string, visibleIndex: number): React.CSSProperties | undefined => {
@@ -1223,32 +1217,16 @@ export function CenterPanel() {
   return (
     <>
       {tabSlot && createPortal(
-      <div ref={tabsHeaderRef} className="chrome-tabs-header" data-count={terminals.filter(s => s.tool !== null && (!s.isHidden || s.id === activeTerminalId)).length + state.agentPages.length}>
+      <div ref={tabsHeaderRef} className="chrome-tabs-header" data-count={terminals.filter(s => s.tool !== null && (!s.isHidden || s.id === activeTerminalId)).length}>
         {(() => {
           const sessions = new Map(terminals.map(session => [session.id, session]));
           const visibleTabs = getTabOrder(state).filter(id => {
             const session = sessions.get(id);
-            return !session || session.tool !== null && (!session.isHidden || id === activeTerminalId);
+            return !!session && session.tool !== null && (!session.isHidden || id === activeTerminalId);
           });
           return visibleTabs.map((tabId, visibleIndex) => {
           const isDragging = tabDrag?.tabId === tabId;
           const dragStyle = getTabDragStyle(tabId, visibleIndex);
-          if (tabId === 'agent:agent' || tabId === 'agent:config') {
-            const page = tabId === 'agent:agent' ? 'agent' : 'config';
-            return (
-              <div key={tabId} data-tab-id={tabId}
-                className={`chrome-tab ${agentPageActive === page && !utilityPageOpen ? 'active' : ''} ${isDragging ? 'dragging' : ''}`}
-                style={dragStyle} onClick={() => onTabClickGuarded(tabId)}
-                onPointerDown={event => onTabPointerDown(event, tabId)}>
-                <span className="tab-title">{page === 'agent' ? 'Coffee Agent' : t('agent.page.settings')}</span>
-                <div className="tab-actions tab-actions--close-only">
-                  <button type="button" className="tab-close-btn close-button" aria-label={t(page === 'agent' ? 'agent.page.close_agent' : 'agent.page.close_settings')} onClick={event => { event.stopPropagation(); dispatch({ type: 'CLOSE_AGENT_PAGE', page }); }}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m18 6-12 12M6 6l12 12" /></svg>
-                  </button>
-                </div>
-              </div>
-            );
-          }
           const session = sessions.get(tabId)!;
 
           // A terminal tab is "active" only when it's the focused surface —
@@ -1445,12 +1423,6 @@ export function CenterPanel() {
             />
           </div>
         )}
-
-        {state.agentPages.map(page => (
-          <div key={page} className="terminal-wrapper" style={{ display: agentPageActive === page && !utilityPageOpen ? 'flex' : 'none', width: '100%', height: '100%' }}>
-            <AgentPages page={page} />
-          </div>
-        ))}
 
         {usageOpen && <UsageDashboard />}
         {state.automationsOpen && <AutomationsPage />}

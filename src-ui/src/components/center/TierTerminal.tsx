@@ -37,7 +37,6 @@ import { parseOmpTerminalTitle } from '../../lib/omp-terminal-title';
 import { parsePiTerminalTitle } from '../../lib/pi-terminal-title';
 import { parseOpenCodeTerminalTitle } from '../../lib/opencode-terminal-title';
 import { markNotifySoundPromptSubmitted } from '../../lib/notify-sound';
-import { markSentinelExit, markSentinelWorking } from '../../lib/agent-sentinel';
 import { usesSelfRenderedCaret } from '../../lib/chat-tools';
 import { onWindowForeground } from '../../lib/window-focus-filter';
 import { createTerminalSizeSync, DEFAULT_TERMINAL_GRID } from '../../lib/terminal-size-sync';
@@ -264,13 +263,11 @@ function TierTerminalImpl({
       clearScreenIdleTimer();
       screenStatus = status;
       screenStatusAt = Date.now();
-      if (status === 'working') markSentinelWorking(sessionId);
       dispatch({ type: 'SET_AGENT_STATUS', id: sessionId, status });
     };
     const publishNativeStatus = (status: AgentStatus) => {
       confirmTerminalAgentStatus(sessionId);
       nativeStatus = status;
-      if (status === 'working') markSentinelWorking(sessionId);
       const screenIsFresh = Date.now() - screenStatusAt < 2_000;
       const interactionIsLive = hasTerminalInteraction(sessionId);
       // A rendered selector is stronger than a coarse native idle title, and
@@ -1225,7 +1222,6 @@ function TierTerminalImpl({
         onStatus: (running) => {
           if (!mounted || running) return;
           clearSessionControls(sessionId, controlsGeneration);
-          markSentinelExit(sessionId);
           ptyEnded = true;
           setTerminalControlReady(sessionId, false);
           sizeSync.markPtyStopped();
@@ -1246,7 +1242,6 @@ function TierTerminalImpl({
           // upstream tool's own output). The CLI's own exit text, if any,
           // already speaks for itself.
           if (!mounted) return;
-          markSentinelExit(sessionId);
           ptyEnded = true;
           setTerminalControlReady(sessionId, false);
           sizeSync.markPtyStopped();

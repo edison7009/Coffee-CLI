@@ -3,7 +3,7 @@
 //! `{"url":…}` once it listens, accepts Basic auth with the password we hand it, and exits when its
 //! stdin closes. Requests go over its HTTP API and events stream back from `/api/event` (SSE).
 use serde_json::{json, Value};
-use std::{collections::HashMap, io::{BufRead, BufReader, Read}, path::PathBuf, process::{Child, ChildStdin, Command, Stdio}, sync::{atomic::{AtomicBool, Ordering}, mpsc, Arc, Mutex}, time::Duration};
+use std::{collections::HashMap, io::{BufRead, BufReader, Read}, process::{Child, ChildStdin, Command, Stdio}, sync::{atomic::{AtomicBool, Ordering}, mpsc, Arc, Mutex}, time::Duration};
 use tauri::{Emitter, Manager, State};
 
 struct Session {
@@ -16,20 +16,11 @@ struct Session {
     auth: String,
     stderr: Arc<Mutex<String>>,
     closed: AtomicBool,
-    launch_config: crate::tool_config::ToolConfigEntry,
-    launch_cwd: PathBuf,
     /// Agent and model picked before a new conversation exists; its creation carries them. Held while creating.
     draft: Mutex<Value>,
 }
 #[derive(Default)]
 pub struct OpenCodeSessions(Mutex<HashMap<String, Arc<Session>>>);
-
-pub(crate) fn launch_context(app: &tauri::AppHandle, id: &str) -> Option<(crate::tool_config::ToolConfigEntry, String)> {
-    let sessions = app.try_state::<OpenCodeSessions>()?;
-    let map = sessions.0.lock().ok()?;
-    let session = map.get(id)?;
-    Some((session.launch_config.clone(), session.launch_cwd.to_string_lossy().into_owned()))
-}
 
 /// Requests target the private server on loopback only; never route them through a system proxy.
 fn agent(read_timeout: Option<Duration>) -> ureq::Agent {
@@ -235,7 +226,7 @@ fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<Stri
     };
     use base64::Engine;
     let auth = format!("Basic {}", base64::engine::general_purpose::STANDARD.encode(format!("opencode:{password}")));
-    let session = Arc::new(Session { id: id.clone(), generation, native_id: Mutex::new(String::new()), child: Mutex::new(child), input: Mutex::new(Some(input)), url, auth, stderr: tail, closed: AtomicBool::new(false), launch_config: config, launch_cwd: cwd, draft: Mutex::new(json!({})) });
+    let session = Arc::new(Session { id: id.clone(), generation, native_id: Mutex::new(String::new()), child: Mutex::new(child), input: Mutex::new(Some(input)), url, auth, stderr: tail, closed: AtomicBool::new(false), draft: Mutex::new(json!({})) });
     {
         let sessions = app.state::<OpenCodeSessions>();
         let mut map = sessions.0.lock().unwrap();
@@ -480,7 +471,7 @@ mod tests {
         let url = ready["url"].as_str().unwrap().to_string();
         use base64::Engine;
         let auth = format!("Basic {}", base64::engine::general_purpose::STANDARD.encode(format!("opencode:{password}")));
-        let session = Session { id: "test".into(), generation: String::new(), native_id: Mutex::new(String::new()), input: Mutex::new(child.stdin.take()), child: Mutex::new(child), url: url.clone(), auth: auth.clone(), stderr: Default::default(), closed: AtomicBool::new(false), launch_config: Default::default(), launch_cwd: dir.path().into(), draft: Mutex::new(json!({})) };
+        let session = Session { id: "test".into(), generation: String::new(), native_id: Mutex::new(String::new()), input: Mutex::new(child.stdin.take()), child: Mutex::new(child), url: url.clone(), auth: auth.clone(), stderr: Default::default(), closed: AtomicBool::new(false), draft: Mutex::new(json!({})) };
         assert!(agent(Some(Duration::from_secs(5))).get(&format!("{url}/api/model")).call().is_err(), "the server must require its password");
         let (tx, rx) = mpsc::channel();
         let stream = agent(None).get(&format!("{url}/api/event")).set("Authorization", &auth).call().unwrap().into_reader();

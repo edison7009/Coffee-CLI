@@ -20,11 +20,6 @@ pub struct AppState {
     pub pending_launch: Mutex<Option<crate::launch::LaunchRequest>>,
 }
 
-#[tauri::command]
-fn agent_bridge_ready(app: tauri::AppHandle) {
-    crate::channels::start_saved(app);
-}
-
 
 #[tauri::command]
 fn window_minimize(window: tauri::Window) {
@@ -1759,7 +1754,6 @@ pub fn start_ui(pending_launch: Option<crate::launch::LaunchRequest>) -> anyhow:
         .plugin(tauri_plugin_window_state::Builder::new()
             .with_state_flags(tauri_plugin_window_state::StateFlags::SIZE | tauri_plugin_window_state::StateFlags::POSITION | tauri_plugin_window_state::StateFlags::MAXIMIZED)
             .build())
-        .manage(crate::channels::ChannelRuntime::default())
         .manage(crate::claude_session::ClaudeSessions::default())
         .manage(crate::codex_session::CodexSessions::default())
         .manage(crate::dsh_session::DshSessions::default())
@@ -1772,6 +1766,7 @@ pub fn start_ui(pending_launch: Option<crate::launch::LaunchRequest>) -> anyhow:
         })
         .invoke_handler(tauri::generate_handler![
             crate::session_directory::check_project_directories,
+            crate::session_directory::resolve_project_directory,
             crate::claude_session::claude_session_start,
             crate::claude_session::claude_session_history,
             crate::claude_session::claude_session_preview,
@@ -1798,29 +1793,6 @@ pub fn start_ui(pending_launch: Option<crate::launch::LaunchRequest>) -> anyhow:
             crate::pi_session::pi_session_respond,
             crate::pi_session::pi_session_close,
             crate::fonts::list_system_fonts,
-            agent_bridge_ready,
-            crate::agent::agent_get_model,
-            crate::agent_modes::agent_get_work_modes,
-            crate::agent_modes::agent_set_work_mode,
-            crate::agent_sentinel::agent_sentinel_report,
-            crate::agent::agent_save_model,
-            crate::agent::agent_get_english_delegation,
-            crate::agent::agent_set_english_delegation,
-            crate::agent::agent_get_conversation,
-            crate::agent::agent_list_conversations,
-            crate::agent::agent_new_conversation,
-            crate::agent::agent_send_message,
-            crate::agent::agent_cancel,
-            crate::agent::agent_resolve_tool,
-            crate::agent::agent_tool_is_pending,
-            crate::agent::agent_validate_directory,
-            crate::agent::agent_create_directory,
-            crate::agent_workspace::agent_workspace_tool,
-            crate::channels::channel_get_settings,
-            crate::channels::channel_connect_telegram,
-            crate::channels::channel_disconnect,
-            crate::channels::channel_weixin_start,
-            crate::channels::channel_weixin_poll,
             pick_folder,
             window_minimize,
             crate::notify_sound::play_notify_sound,

@@ -1,7 +1,7 @@
-import { ChannelConnectionSummary } from '../agent/AgentPages';
 // Explorer.tsx — Left panel: file tree synced from terminal CWD
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { SidebarFooter } from './SidebarFooter';
 import { createPortal } from 'react-dom';
 import { useAppState } from '../../store/app-state';
 import type { IconTheme, ToolType } from '../../store/app-state';
@@ -720,7 +720,7 @@ export function Explorer() {
         : t('self_update.downloading', { percent: Math.max(0, Math.min(100, installPct)) });
   const updateButton = updateVersion ? (
     <button
-      className={`agent-sidebar-button update-check-btn update-available${installing ? ' is-installing' : ''}`}
+      className={`sidebar-footer-button update-check-btn update-available${installing ? ' is-installing' : ''}`}
       onClick={handleSelfUpdate}
       disabled={installing}
       aria-label={updateLabel}
@@ -899,7 +899,7 @@ export function Explorer() {
       </div>
       </div>
 
-      <ChannelConnectionSummary update={updateButton} />
+      <SidebarFooter update={updateButton} />
 
       {/* Right-click context menu */}
       {ctxMenu && <ContextMenu menu={ctxMenu} onClose={closeCtxMenu} />}

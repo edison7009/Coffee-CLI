@@ -102,3 +102,22 @@ mod tests {
         assert_eq!(entries(dir.path()), ["data.json"]);
     }
 }
+
+/// Moves a fully written temp file over `path` in one step, replacing it.
+/// Windows needs MoveFileExW to replace an existing file atomically.
+#[cfg(not(windows))]
+pub(crate) fn replace_file(temp: &Path, path: &Path) -> Result<(), String> {
+    std::fs::rename(temp, path).map_err(|_| "Could not save the file".into())
+}
+
+#[cfg(windows)]
+pub(crate) fn replace_file(temp: &Path, path: &Path) -> Result<(), String> {
+    use std::os::windows::ffi::OsStrExt;
+    use windows::core::PCWSTR;
+    use windows::Win32::Storage::FileSystem::{MoveFileExW, MOVEFILE_REPLACE_EXISTING, MOVEFILE_WRITE_THROUGH};
+    let source: Vec<u16> = temp.as_os_str().encode_wide().chain(Some(0)).collect();
+    let destination: Vec<u16> = path.as_os_str().encode_wide().chain(Some(0)).collect();
+    // Both pointers refer to live, null-terminated buffers for this call.
+    unsafe { MoveFileExW(PCWSTR(source.as_ptr()), PCWSTR(destination.as_ptr()), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) }
+        .map_err(|_| "Could not save the file".into())
+}

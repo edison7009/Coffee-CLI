@@ -155,7 +155,7 @@ fn save(snapshot: &Snapshot) -> Result<(), String> {
     fs::create_dir_all(path.parent().unwrap()).map_err(|e| e.to_string())?;
     let temp = path.with_file_name(format!(".orchestration-{}.tmp", uuid::Uuid::new_v4()));
     fs::write(&temp, serde_json::to_vec(snapshot).map_err(|e| e.to_string())?).map_err(|e| e.to_string())?;
-    let result = crate::agent::replace_file(&temp, &path);
+    let result = crate::json_file::replace_file(&temp, &path);
     if result.is_err() { let _ = fs::remove_file(temp); }
     result
 }

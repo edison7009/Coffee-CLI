@@ -49,229 +49,6 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
   console.log('OK: Muse workspace tab name and existing-tool native titles');
 }
 
-// Agent reuses Gambit, but only while its tab is visible. The shared composer
-// must preserve drafts on rejection and never send a second request while busy.
-{
-  const state = { agentPageActive: 'agent', leftPanelHidden: false, rightPanelHidden: false };
-  let running = false, rejectSend = false;
-  const sent = [], cancelled = [];
-  const render = vm.runInNewContext(ts.transpileModule(
-    `${declaration('components/agent/AgentPages.tsx', 'AgentChatPage')}; AgentChatPage`,
-    { compilerOptions: { target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React } },
-  ).outputText, {
-    useAppState: () => ({ state }),
-    useAgentClient: () => ({ messages: [], running, activity: '', error: '' }),
-    useT: () => key => key,
-    useState: initial => [initial, () => {}], useRef: initial => ({ current: initial }), useEffect() {}, useLayoutEffect() {},
-    useMemo: callback => callback(), useCallback: callback => callback,
-    React: { createElement: (type, props, ...children) => ({ type, props, children }) },
-    PageFrame: 'page', Gambit: 'gambit', MarkdownContent: 'markdown',
-    ConversationNavigation: 'navigation', MessageCopyButton: 'copy',
-    formatAgentActivity: text => text, formatAgentError: text => text, formatAgentMessage: text => text,
-    sendAgentMessage: async text => { if (rejectSend) throw new Error('model unavailable'); sent.push(text); },
-    invoke: async (command, args) => { cancelled.push({ command, ...args }); },
-  });
-  const composer = page => page.children.find(child => child?.type === 'gambit');
-  let props = composer(render()).props;
-  assert.equal(props.workspaceName, 'Coffee Agent');
-  assert.equal(await props.onSend('  inspect terminal 2  '), true);
-  assert.deepEqual(sent, ['inspect terminal 2']);
-  rejectSend = true;
-  assert.equal(await props.onSend('retry later'), false, 'IPC failure rejects the send without clearing its draft');
-  running = true;
-  props = composer(render()).props;
-  assert.equal(props.running, true);
-  assert.equal(await props.onSend('do not overlap'), false);
-  await props.onCancel();
-  assert.deepEqual(cancelled, [{ command: 'agent_cancel', conversationId: 'desktop' }]);
-  for (const page of ['config', null]) {
-    state.agentPageActive = page;
-    assert.equal(composer(render()), undefined, 'hidden Agent must release the dock and its body effects');
-  }
-
-  const tree = source('components/center/Gambit.tsx');
-  let callback;
-  function visit(node) {
-    if (ts.isVariableDeclaration(node) && node.name.getText(tree) === 'handleSend') callback = node.initializer.getText(tree);
-    ts.forEachChild(node, visit);
-  }
-  visit(tree); assert.ok(callback);
-  const history = [], cleared = [], failed = [];
-  const context = {
-    useCallback: fn => fn, sessionId: 'tab-1', isWorktreePending: () => false, draft: 'original prompt', running: false, claude: false, codex: false, dsh: false, opencode: false, pi: false, steerable: false, desktop: false,
-    sendingRef: { current: false }, latestDraftRef: { current: 'original prompt' }, historyCursorRef: { current: null },
-    onSend: async () => true, onDraftChange: text => cleared.push(text),
-    pushGambitHistory: text => history.push(text), setSendFailed: value => failed.push(value), setSendEmpty() {},
-  };
-  const send = () => evaluate(`${declaration('components/center/Gambit.tsx', 'wrapImagePathsForSend')}; ${callback}`, {
-    ...context, IMAGE_PATH_RE: /(?:[A-Za-z]:[\\/]|\/)[^\s<>"'`]+?\.(?:png|jpe?g|gif|webp|bmp)/gi,
-  });
-  context.isWorktreePending = () => true;
-  await send()();
-  assert.equal(cleared.length + history.length, 0, 'a message waits in the box while the worktree is created');
-  context.isWorktreePending = () => false;
-  context.running = true;
-  await send()();
-  assert.equal(history.length, 0);
-  assert.equal(cleared.length, 0, 'Enter during an Agent request cannot clear or send the pending draft');
-  context.running = false;
-  context.onSend = async () => false;
-  await send()();
-  assert.equal(failed.length, 1);
-  assert.equal(cleared.length, 0, 'a rejected send preserves the draft');
-  const pending = deferred(); let calls = 0;
-  context.onSend = () => { calls++; return pending.promise; };
-  const submit = send();
-  const first = submit();
-  await submit();
-  assert.equal(calls, 1, 'a double click cannot submit two requests');
-  context.latestDraftRef.current = 'next prompt typed while submitting';
-  pending.resolve(true); await first;
-  assert.equal(cleared.length, 0, 'accepting an earlier prompt preserves a newer draft');
-  assert.deepEqual(history, ['original prompt']);
-  context.latestDraftRef.current = context.draft;
-  context.onSend = async () => true;
-  await send()();
-  assert.deepEqual(cleared, [''], 'an accepted unchanged draft still clears normally');
-  console.log('OK: Agent Gambit visibility, routing, cancellation, busy guard, and draft preservation');
-}
-
-// Render the actual Agent page with persistent hooks and measured transcript
-// rows. Navigation and copy handlers must act on messages, not their previews.
-{
-  const cells = [], effects = [], layouts = [], copied = [], timers = [];
-  const client = { conversationId: 'coffee-test', messages: [], hasOlder: true, loadingOlder: false, running: false, activity: '', error: '' };
-  let cursor = 0, rows = [], olderRequest;
-  const scrollCalls = [];
-  const scroll = {
-    scrollTop: 0, scrollHeight: 2000, clientHeight: 400,
-    getBoundingClientRect: () => ({ top: 100 }),
-    querySelectorAll: () => rows,
-    querySelector: selector => rows.find(row => selector.includes(`"${row.dataset.conversationNavigationId}"`)),
-    scrollTo(options) { scrollCalls.push(options); this.scrollTop = options.top; },
-  };
-  function cell(initial) { const index = cursor++; return cells[index] ??= { value: initial }; }
-  const sameDeps = (before, after) => before && after && before.length === after.length && before.every((value, index) => Object.is(value, after[index]));
-  function schedule(queue, callback, deps) {
-    const current = cell();
-    if (!sameDeps(current.deps, deps)) {
-      current.deps = deps;
-      queue.push(() => { current.cleanup?.(); current.cleanup = callback(); });
-    }
-  }
-  const component = vm.runInNewContext(ts.transpileModule(
-    `${declaration('components/agent/AgentPages.tsx', 'AgentChatPage')}; AgentChatPage`,
-    { compilerOptions: { target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React } },
-  ).outputText, {
-    useT: () => key => key,
-    useAppState: () => ({ state: { agentPageActive: 'agent', leftPanelHidden: false, rightPanelHidden: false } }),
-    useAgentClient: () => client,
-    useState(initial) {
-      const current = cell(typeof initial === 'function' ? initial() : initial);
-      return [current.value, update => { current.value = typeof update === 'function' ? update(current.value) : update; }];
-    },
-    useRef(initial) { return cell({ current: initial }).value; },
-    useMemo(callback, deps) {
-      const current = cell();
-      if (!sameDeps(current.deps, deps)) { current.value = callback(); current.deps = deps; }
-      return current.value;
-    },
-    useCallback: callback => callback,
-    useEffect: (callback, deps) => schedule(effects, callback, deps),
-    useLayoutEffect: (callback, deps) => schedule(layouts, callback, deps),
-    React: { createElement: (type, props, ...children) => ({ type, props: props ?? {}, children }) },
-    PageFrame: 'page', Gambit: 'gambit', MarkdownContent: 'markdown',
-    ConversationNavigation: 'navigation', MessageCopyButton: 'copy',
-    formatAgentActivity: text => text, formatAgentError: text => text, formatAgentMessage: text => text,
-    clipboardWrite: async text => { copied.push(text); },
-    loadOlderAgentMessages: () => { olderRequest = deferred(); return olderRequest.promise; },
-    window: {
-      setTimeout: callback => { timers.push(callback); return timers.length; }, clearTimeout() {},
-      requestAnimationFrame: callback => { callback(); return 1; }, cancelAnimationFrame() {},
-      addEventListener() {}, removeEventListener() {},
-    },
-    ResizeObserver: class { observe() {} disconnect() {} },
-    CSS: { escape: text => String(text) },
-  });
-  function elements(node) {
-    if (Array.isArray(node)) return node.flatMap(elements);
-    return node && typeof node === 'object' ? [node, ...(node.children ?? []).flatMap(elements)] : [];
-  }
-  function render() {
-    cursor = 0;
-    const page = component();
-    const nodes = elements(page);
-    const thread = nodes.find(node => String(node.props.className ?? '').split(' ').includes('agent-chat-thread'));
-    thread.props.ref.current = scroll;
-    const list = nodes.find(node => node.props.className === 'agent-message-list');
-    if (list) list.props.ref.current = {};
-    rows = nodes.filter(node => node.type === 'article').map((node, index) => ({
-      dataset: { conversationNavigationId: node.props['data-conversation-navigation-id'] },
-      offsetTop: client.messages[index].top,
-      getBoundingClientRect: () => ({ top: 100 + client.messages[index].top - scroll.scrollTop }),
-      getAttribute: name => node.props[name],
-    }));
-    for (const queue of [layouts, effects]) while (queue.length) queue.shift()();
-    return nodes;
-  }
-  const markdown = '**Completed**\n```powershell\ncd E:\\tmp; git status --short\n```\n保持原文';
-  client.messages = [
-    { id: 100, role: 'assistant', text: 'older page starts within a reply', top: 20 },
-    { id: 101, role: 'user', text: 'same prompt', top: 160 },
-    { id: 102, role: 'assistant', text: markdown, top: 400 },
-    { id: 103, role: 'user', text: 'same prompt', top: 860 },
-    { id: 104, role: 'assistant', text: 'current result', top: 1120 },
-  ];
-  render();
-  let nodes = render();
-  const navigation = nodes.find(node => node.type === 'navigation');
-  assert.ok(navigation, 'multiple prompts expose the shared conversation navigation');
-  assert.deepEqual(Array.from(navigation.props.items, item => item.sourceMessageId), ['101', '103']);
-  assert.deepEqual(Array.from(navigation.props.items, item => item.content), ['same prompt', 'same prompt']);
-  navigation.props.onJump(navigation.props.items[0]);
-  navigation.props.onJump(navigation.props.items[1]);
-  assert.deepEqual(scrollCalls.map(call => call.top), [160, 860], 'repeated prompt text must jump to the selected unique message, not the first text match');
-  assert.equal(scrollCalls.at(-1).behavior, 'auto');
-  client.running = true;
-  client.messages = client.messages.map(message => message.id === 104 ? { ...message, text: 'still streaming' } : message);
-  nodes = render();
-  assert.equal(scroll.scrollTop, 860, 'streaming output must not pull a navigation jump back to the bottom');
-  const articles = nodes.filter(node => node.type === 'article');
-  const copyOf = id => elements(articles.find(node => node.props['data-conversation-navigation-id'] === String(id))).find(node => node.type === 'copy');
-  assert.ok(copyOf(103), 'user prompts remain copyable while the Agent is working');
-  assert.ok(copyOf(102), 'a completed earlier Agent reply remains copyable');
-  assert.equal(copyOf(104), undefined, 'the unfinished streaming reply must not expose a copy button');
-  copyOf(102).props.onCopy();
-  await tick();
-  assert.deepEqual(copied, [markdown], 'copy must retain Markdown fences, commands, paths, line breaks, and non-English text');
-  nodes = render();
-  const copiedArticle = nodes.find(node => node.type === 'article' && node.props['data-conversation-navigation-id'] === '102');
-  assert.equal(elements(copiedArticle).find(node => node.type === 'copy').props.copied, true);
-  timers.at(-1)();
-  nodes = render();
-  assert.equal(elements(nodes.find(node => node.type === 'article' && node.props['data-conversation-navigation-id'] === '102')).find(node => node.type === 'copy').props.copied, false);
-
-  scroll.scrollTop = 700;
-  nodes.find(node => String(node.props.className ?? '').split(' ').includes('agent-chat-thread')).props.onScroll();
-  nodes.find(node => node.type === 'button' && node.children.includes('agent.chat.older')).props.onClick();
-  assert.ok(olderRequest, 'the real older-history handler requested the archive');
-  // Older rows add 300 px above, while an active reply grows another 500 px
-  // below. Preserving by total scrollHeight would incorrectly add both.
-  scroll.scrollHeight += 800;
-  client.messages = [
-    { id: 98, role: 'user', text: 'archived prompt', top: 0 },
-    { id: 99, role: 'assistant', text: 'archived reply', top: 100 },
-    ...client.messages.map(message => ({ ...message, top: message.top + 300 })),
-  ];
-  render();
-  olderRequest.resolve(); await tick();
-  assert.equal(scroll.scrollTop, 1000, 'prepending retains the same visible message even when the trailing reply also grows');
-  client.running = false;
-  nodes = render();
-  assert.ok(elements(nodes.find(node => node.type === 'article' && node.props['data-conversation-navigation-id'] === '104')).some(node => node.type === 'copy'), 'the final reply becomes copyable when its request completes');
-  console.log('OK: Agent unique-id navigation, streaming reading position, Markdown copy feedback, and older-history anchors');
-}
-
 function deferred() {
   let resolve, reject;
   const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
@@ -499,7 +276,7 @@ for (const key of catalogPins.slice(0, 7)) togglePin(`agent:${key}`);
 assert.equal(pins.length, 6, 'all six slots must be usable while the cap remains enforced');
 console.log('OK: Cline selection and toggling, retired pins, catalog consistency, persisted zero count, migration, and six-slot limit');
 
-// Exercise the actual tool-card handler: manual and Agent launch share one action.
+// Exercise the actual tool-card handler: a manual launch checks and remembers its folder.
 const manualLaunches = [];
 const checkedLaunchFolders = [];
 const rememberedFolders = [];
@@ -517,10 +294,10 @@ assert.equal(manualLaunches[0].id, 'launchpad');
 assert.equal(manualLaunches[0].tool, 'claude');
 assert.equal(manualLaunches[0].cwd, 'E:\\tmp');
 assert.deepEqual(rememberedFolders, [['claude', 'E:\\tmp']], 'the launch is remembered as this tool\'s last folder');
-console.log('OK: actual tool-card folder selection uses the same launch action as Coffee Agent and remembers the tool\'s folder');
+console.log('OK: actual tool-card folder selection uses the launch action and remembers the tool\'s folder');
 
-// Exercise the actual history-card click: a directoryless Coffee conversation
-// must open its Agent page, while native history still resumes a real CLI tab.
+// Exercise the actual history-card click: native history resumes a real CLI tab,
+// and mixed timestamp formats sort together.
 {
   const tree = source('components/right/HistoryBoard.tsx');
   let handler, filter, merge, matches;
@@ -542,18 +319,10 @@ console.log('OK: actual tool-card folder selection uses the same launch action a
     { ...nativeSessions[0], id: 'native-seconds', saved_at: String((newest - 36 * 60_000) / 1000) },
     { ...nativeSessions[0], id: 'native-iso', saved_at: new Date(newest - 37 * 60_000).toISOString() },
   );
-  const agentConversations = [{
-    id: 'coffee-history', route: 'weixin-bound', source: '微信', title: 'hello', updatedAt: newest, messageCount: 2,
-  }];
   const sortByMtime = evaluate(`${declaration('lib/history-cache.ts', 'sortByMtime').replace(/^export\s+/, '')}; sortByMtime`);
-  const merged = evaluate(merge, { useMemo: callback => callback(), nativeSessions, liveSessions: [], state: { terminals: [] }, nowMs: newest, agentConversations, sortByMtime });
-  assert.equal(merged[0].id, 'coffee-history', 'the newest Agent conversation must lead mixed timestamp histories');
-  assert.equal(merged.slice(0, 30).some(session => session.id === 'coffee-history'), true, 'Agent history must appear on the first visible page');
+  const merged = evaluate(merge, { useMemo: callback => callback(), nativeSessions, liveSessions: [], state: { terminals: [] }, nowMs: newest, sortByMtime });
+  assert.equal(merged[0].id, 'native-0', 'the newest history leads mixed timestamp histories');
   assert.deepEqual(Array.from(merged.slice(-2), session => session.id), ['native-seconds', 'native-iso']);
-  const coffee = merged[0];
-  assert.equal(coffee.turn_count, 2);
-  assert.equal(coffee.cwd, '');
-  assert.equal(coffee.session_token, null);
   const matchesQuery = evaluate(matches, {
     useCallback: callback => callback, renamed: {},
     projectName: () => '', getToolName: tool => tool,
@@ -561,25 +330,17 @@ console.log('OK: actual tool-card folder selection uses the same launch action a
   const allHistories = evaluate(filter, {
     useMemo: callback => callback(), availableSessions: merged, debouncedQuery: '', matchesQuery,
   });
-  assert.equal(allHistories.length, 38);
-  assert.equal(allHistories.slice(0, 30).some(session => session.id === coffee.id), true, 'All projects must include the directoryless Agent conversation on its first page');
-  const actions = [], opened = [];
+  assert.equal(allHistories.length, 37);
+  const actions = [];
   const click = evaluate(`const click = ${handler}; click`, {
     dispatch: action => actions.push(action), setAgentError() {},
-    openAgentConversation: async id => opened.push(id), crypto: { randomUUID: () => 'native-tab' },
+    crypto: { randomUUID: () => 'native-tab' },
     isTauri: false, state: { terminals: [] }, liveSessions: [], renamed: { 'claude:claude-renamed': 'My name' },
   });
-  await click(coffee);
-  assert.deepEqual(opened, ['coffee-history']);
-  assert.deepEqual(actions.map(action => action.type), ['OPEN_AGENT_PAGE']);
   await click({ id: 'claude-history', tool: 'claude', cwd: 'E:\\tmp', session_token: 'native-resume' });
-  assert.deepEqual(actions.slice(1).map(action => action.type), ['ADD_TERMINAL']);
+  assert.deepEqual(actions.map(action => action.type), ['ADD_TERMINAL']);
   await click({ id: 'claude-renamed', tool: 'claude', name: 'History title', cwd: 'E:\\tmp', session_token: 'native-renamed' });
   assert.equal(actions.at(-1).session.toolTitle, 'History title', 'a reopened tab starts under its history title');
   assert.equal(actions.at(-1).session.pinnedTitle, 'My name', 'the name the user gave it outranks later tool titles');
-  const filtered = evaluate(filter, {
-    useMemo: callback => callback(), availableSessions: [coffee], debouncedQuery: 'Coffee Agent', matchesQuery,
-  });
-  assert.equal(filtered.length, 1);
-  console.log('OK: mixed timestamps show Coffee history on the first page, reopen the Agent, and preserve native CLI resume');
+  console.log('OK: mixed timestamps sort together and native CLI history resumes under its title');
 }

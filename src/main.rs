@@ -9,20 +9,7 @@ mod pi_session;
 mod session_directory;
 mod opencode_island;
 mod server;
-mod agent;
-mod agent_modes;
-mod agent_projects;
-mod agent_experts;
-mod agent_capabilities;
-mod agent_graphify;
-mod agent_approvals;
-mod agent_sentinel;
-mod agent_memory;
-mod agent_context;
-mod agent_memory_capture;
-mod agent_output;
-mod agent_workspace;
-mod channels;
+mod skill_catalog;
 mod credentials;
 mod hook_installer;
 mod fonts;
@@ -79,32 +66,6 @@ fn main() -> Result<()> {
         };
         if let Err(error) = result { eprintln!("{error}"); std::process::exit(1); }
         return Ok(());
-    }
-    if matches!(helper_args.get(1).map(String::as_str), Some("__capability-apply" | "__graphify-run")) {
-        #[cfg(windows)]
-        {
-            use windows::Win32::System::Console::{AttachConsole, ATTACH_PARENT_PROCESS};
-            let _ = unsafe { AttachConsole(ATTACH_PARENT_PROCESS) };
-            windows_path::hydrate();
-        }
-        let result = match (helper_args.get(2), helper_args.get(3)) {
-            (Some(root), Some(plan_id)) => {
-                let root = std::path::Path::new(root);
-                if helper_args[1] == "__capability-apply" {
-                    tauri::async_runtime::block_on(agent_capabilities::apply_plan(root, plan_id))
-                } else { agent_graphify::apply_build(root, plan_id) }
-            }
-            _ => Err("Expected helper data directory and plan ID".into()),
-        };
-        match result {
-            Ok(value) => {
-                println!("Coffee action result: {value}");
-                let failed = value["exitCode"].as_i64().is_some_and(|code| code != 0)
-                    || !matches!(value["state"].as_str(), Some("ready" | "verified" | "installed"));
-                std::process::exit(if failed { 1 } else { 0 });
-            }
-            Err(error) => { eprintln!("Coffee action failed: {error}"); std::process::exit(1); }
-        }
     }
     // ── Legacy hook compatibility (fast path) ────────────────────────────
     // Current builds install no hooks. Keep the historical subcommands as

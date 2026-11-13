@@ -20,7 +20,7 @@ let passed = 0;
 async function test(name, run) { await run(); passed++; console.log(`  ok  ${name}`); }
 function fixture({ deferOpen = false } = {}) {
   const writes = [], actions = [], directories = [], files = [], mounted = new Map();
-  const stateRef = { current: { terminals: [], activeTerminalId: null, agentPages: [], agentPageActive: null, tabOrder: [], diffTabActive: false, diffMode: 'overlay', currentLang: 'zh-CN' } };
+  const stateRef = { current: { terminals: [], activeTerminalId: null, tabOrder: [], diffTabActive: false, diffMode: 'overlay', currentLang: 'zh-CN' } };
   const module = { exports: {} };
   let cancelled = false;
   runInNewContext(compiled.outputFiles[0].text, {
@@ -30,13 +30,7 @@ function fixture({ deferOpen = false } = {}) {
       if (command === 'list_tools') return [{ id: 'claude', displayName: 'Claude Code' }, { id: 'codex', displayName: 'Codex' }];
       if (command === 'check_tools_installed') return { claude: true, codex: true };
       if (command === 'get_native_history') return [{ id: 'win', tool: 'claude', cwd: 'D:\\Project', session_token: 'resume-id' }, { id: 'unix', tool: 'claude', cwd: '/Project', session_token: 'unix-id' }];
-      if (command === 'agent_validate_directory') { if (args.path === 'missing') throw new Error('Directory does not exist'); return args.path.startsWith('canonical:') ? args.path : `canonical:${args.path}`; }
-      if (command === 'agent_create_directory') {
-        if (args.path === 'blocked') throw new Error('Cannot create directory');
-        directories.push(args.path);
-        return { path: `canonical:${args.path}`, created: true };
-      }
-      if (command === 'agent_workspace_tool') { files.push(args); return { ok: true }; }
+      if (command === 'resolve_project_directory') { if (args.path === 'missing') throw new Error('Directory does not exist'); return args.path.startsWith('canonical:') ? args.path : `canonical:${args.path}`; }
       if (command === 'tier_terminal_input' || command === 'tier_terminal_kill') { writes.push({ command, ...args }); return; }
       throw new Error(`Unexpected IPC ${command}`);
     } } },
@@ -136,159 +130,74 @@ await test('manual folder selection and remote open use the same visible launch 
     assert.equal(opened.ready, true);
   } finally { f.dispose(); }
 });
-await test('directory creation does not change the workspace; subsequent open creates a visible Claude tab', async () => {
-  const f = fixture();
-  try {
-    f.dispatch({ type: 'ADD_TERMINAL', session: { id: 'manual', tool: 'claude', folderPath: 'old-project' } });
-    const before = f.actions.length;
-    const directory = await f.execute('directory_create', { path: 'new-project' });
-    assert.equal(directory.path, 'canonical:new-project');
-    assert.equal(f.actions.length, before);
-    assert.equal(f.stateRef.current.activeTerminalId, 'manual');
-    const opened = await f.execute('sessions_open', { tool: 'claude', cwd: directory.path });
-    assert.equal(f.stateRef.current.activeTerminalId, opened.sessionId);
-    assert.equal(f.stateRef.current.terminals.find(tab => tab.id === opened.sessionId).tool, 'claude');
-    assert.equal(f.stateRef.current.terminals.find(tab => tab.id === opened.sessionId).folderPath, directory.path);
-    assert.equal(f.stateRef.current.terminals.find(tab => tab.id === 'manual').folderPath, 'old-project');
-    const afterOpen = f.actions.length;
-    await assert.rejects(f.execute('directory_create', { path: 'blocked' }), /Cannot create/);
-    assert.equal(f.actions.length, afterOpen);
-    f.cancel();
-    await assert.rejects(f.execute('directory_create', { path: 'cancelled-project' }), /取消/);
-    assert.equal(f.directories.length, 1);
-  } finally { f.dispose(); }
-});
-await test('engineering tools require explicit workspace, preserve terminal state and honor cancellation', async () => {
-  const f = fixture();
-  try {
-    f.dispatch({ type: 'ADD_TERMINAL', session: { id: 'manual', tool: 'claude', folderPath: 'old-project' } });
-    const before = f.actions.length;
-    for (const name of ['workspace_list', 'file_read', 'file_create', 'file_edit']) {
-      await assert.rejects(f.execute(name, { path: 'code.ts' }), /工作目录/);
-      await f.execute(name, { cwd: 'chosen-project', path: 'code.ts', content: '' });
-    }
-    assert.equal(f.files.length, 4);
-    assert.ok(f.files.every(item => item.arguments.cwd === 'chosen-project'));
-    assert.equal(f.actions.length, before);
-    assert.equal(f.stateRef.current.activeTerminalId, 'manual');
-    f.cancel();
-    await assert.rejects(f.execute('file_create', { cwd: 'chosen-project', path: 'cancelled.ts', content: '' }), /取消/);
-    assert.equal(f.files.length, 4);
-  } finally { f.dispose(); }
-});
-await test('dynamic splits list real sessions and detach without terminating their lifecycle', async () => {
+await test('detaching a split keeps the session controllable; closing it prunes the layout', async () => {
   const f = fixture();
   try {
     for (const [id, tool, folderPath] of [['manual', 'terminal', 'a'], ['first', 'claude', 'b'], ['second', 'codex', 'c']]) {
       f.dispatch({ type: 'ADD_TERMINAL', session: { id, tool, folderPath, isHidden: id === 'manual' } });
     }
     f.dispatch({ type: 'OPEN_SESSION_SPLIT', id: 'second', targetId: 'first', edge: 'right' });
-    const result = await f.execute('sessions_list');
-    assert.deepEqual(Array.from(result.sessions, item => item.sessionId), ['manual', 'first', 'second']);
-    assert.equal(new Set(result.sessions.map(item => item.generation)).size, 3);
-    assert.equal(result.sessions[2].cwd, 'c');
+    const generation = f.api.getTerminalObserver('second').generation;
     f.dispatch({ type: 'CLOSE_SESSION_SPLIT', id: 'second' });
-    assert.equal((await f.execute('sessions_list')).sessions.length, 3, 'detach keeps the session controllable');
+    assert.equal((await f.execute('terminal_read_screen', { sessionId: 'second', generation })).generation, generation, 'detach keeps the session controllable');
     assert.equal(f.writes.length, 0, 'detach does not send kill or input');
     f.dispatch({ type: 'OPEN_SESSION_SPLIT', id: 'second', targetId: 'first', edge: 'right' });
-    const target = result.sessions[2];
-    await f.execute('sessions_close', { sessionId: target.sessionId, generation: target.generation });
+    f.dispatch({ type: 'REMOVE_TERMINAL', id: 'second' });
     assert.equal(f.stateRef.current.terminals.some(tab => tab.id === 'second'), false);
     assert.equal(f.stateRef.current.sessionSplit.type, 'leaf', 'real close also prunes its layout reference');
   } finally { f.dispose(); }
 });
-await test('reordering, focus and Agent pages cannot redirect input or discard terminal sessions', async () => {
+await test('reordering and focus cannot redirect input or discard terminal sessions', async () => {
   const f = fixture();
   try {
     for (const id of ['first', 'second']) f.dispatch({ type: 'ADD_TERMINAL', session: { id, tool: 'claude', folderPath: id } });
-    const target = (await f.execute('sessions_list')).sessions.find(item => item.sessionId === 'second');
+    const target = { sessionId: 'second', generation: f.api.getTerminalObserver('second').generation };
     f.dispatch({ type: 'SET_ACTIVE_TERMINAL', id: 'first' });
     f.dispatch({ type: 'REORDER_TAB', tabId: 'second', beforeId: 'first' });
     assert.deepEqual(Array.from(f.stateRef.current.terminals, tab => tab.id), ['second', 'first']);
-    f.dispatch({ type: 'OPEN_AGENT_PAGE', page: 'agent' });
-    // Configuration opens the settings page's Agent section, not a tab.
-    f.dispatch({ type: 'OPEN_AGENT_PAGE', page: 'config' });
-    assert.equal(f.stateRef.current.settingsOpen, true); assert.equal(f.stateRef.current.settingsSection, 'agent');
-    f.dispatch({ type: 'REORDER_TAB', tabId: 'agent:agent', beforeId: 'first' });
+    f.dispatch({ type: 'SET_SETTINGS_OPEN', open: true });
     const text = 'Fix the login button in D:\\用户项目. Keep its label exactly "登录". Run: npm test';
-    const result = await f.execute('terminal_send', { sessionId: target.sessionId, generation: target.generation, text });
+    const result = await f.execute('terminal_send', { ...target, text });
     assert.equal(result.written, true);
     assert.ok(f.writes.length === 2 && f.writes.every(write => write.sessionId === 'second'));
     assert.equal(f.writes[0].data, text);
     f.dispatch({ type: 'SET_ACTIVE_TERMINAL', id: 'first' });
-    assert.equal(f.stateRef.current.agentPageActive, null);
-    assert.deepEqual([...f.stateRef.current.agentPages], ['agent']);
     assert.equal(f.stateRef.current.settingsOpen, false, 'switching tabs leaves the settings page');
     assert.equal(f.stateRef.current.activeTerminalId, 'first');
     assert.equal(f.stateRef.current.terminals.length, 2);
     assert.equal(f.api.getTerminalObserver('second').generation, target.generation);
-    f.dispatch({ type: 'OPEN_AGENT_PAGE', page: 'agent' });
-    assert.equal(f.stateRef.current.agentPageActive, 'agent');
-    f.dispatch({ type: 'CLOSE_AGENT_PAGE', page: 'agent' });
-    assert.equal(f.stateRef.current.agentPageActive, null);
-    assert.equal(f.stateRef.current.activeTerminalId, 'first');
-    assert.equal(f.stateRef.current.terminals.length, 2);
-    assert.equal(f.api.getTerminalObserver('second').generation, target.generation);
   } finally { f.dispose(); }
 });
-await test('The Agent tab moves both ways between terminals without changing focus, drafts or identity', async () => {
-  const f = fixture();
-  try {
-    for (const id of ['first', 'second']) f.dispatch({ type: 'ADD_TERMINAL', session: { id, tool: null, folderPath: id, gambitDraft: id } });
-    f.dispatch({ type: 'OPEN_AGENT_PAGE', page: 'agent' });
-    const sessions = [...f.stateRef.current.terminals];
-    const order = () => Array.from(f.api.getTabOrder(f.stateRef.current));
-    assert.deepEqual(order(), ['first', 'second', 'agent:agent']);
-    f.dispatch({ type: 'REORDER_TAB', tabId: 'agent:agent', beforeId: 'second' });
-    assert.deepEqual(order(), ['first', 'agent:agent', 'second']);
-    assert.equal(f.stateRef.current.agentPageActive, 'agent');
-    assert.equal(f.stateRef.current.activeTerminalId, 'second');
-    for (const session of sessions) assert.equal(f.stateRef.current.terminals.find(item => item.id === session.id), session);
-    f.dispatch({ type: 'REORDER_TAB', tabId: 'agent:agent', beforeId: null });
-    f.dispatch({ type: 'REORDER_TAB', tabId: 'second', beforeId: 'first' });
-    assert.deepEqual(order(), ['second', 'first', 'agent:agent']);
-    assert.deepEqual(Array.from(f.stateRef.current.terminals, tab => tab.id), ['second', 'first']);
-    for (const action of [
-      { type: 'REORDER_TAB', tabId: 'missing', beforeId: 'first' },
-      { type: 'REORDER_TAB', tabId: 'first', beforeId: 'missing' },
-      { type: 'REORDER_TAB', tabId: 'first', beforeId: 'agent:config' },
-    ]) {
-      const previous = f.stateRef.current;
-      f.dispatch(action); assert.equal(f.stateRef.current, previous);
-    }
-  } finally { f.dispose(); }
-});
-await test('mixed ordering survives hidden tabs, restart and launch; reopened pages and new terminals append once', async () => {
+await test('ordering survives hidden tabs, restart and launch; new terminals append once', async () => {
   const f = fixture();
   try {
     for (const id of ['first', 'hidden']) f.dispatch({ type: 'ADD_TERMINAL', session: { id, tool: null, folderPath: id, isHidden: id === 'hidden' } });
-    f.dispatch({ type: 'OPEN_AGENT_PAGE', page: 'agent' });
-    f.dispatch({ type: 'REORDER_TAB', tabId: 'agent:agent', beforeId: 'first' });
+    f.dispatch({ type: 'REORDER_TAB', tabId: 'hidden', beforeId: 'first' });
     const order = () => Array.from(f.api.getTabOrder(f.stateRef.current));
     f.dispatch({ type: 'RESTART_TERMINAL', id: 'first', newId: 'restarted' });
-    assert.deepEqual(order(), ['agent:agent', 'restarted', 'hidden']);
+    assert.deepEqual(order(), ['hidden', 'restarted']);
     f.dispatch({ type: 'LAUNCH_TERMINAL_TOOL', id: 'restarted', tool: 'terminal', cwd: 'chosen' });
-    assert.deepEqual(order(), ['agent:agent', 'restarted', 'hidden']);
+    assert.deepEqual(order(), ['hidden', 'restarted']);
     f.dispatch({ type: 'SET_TERMINAL_HIDDEN', id: 'hidden', isHidden: false });
-    assert.deepEqual(order(), ['agent:agent', 'restarted', 'hidden']);
-    f.dispatch({ type: 'CLOSE_AGENT_PAGE', page: 'agent' });
-    f.dispatch({ type: 'OPEN_AGENT_PAGE', page: 'agent' });
-    f.dispatch({ type: 'OPEN_AGENT_PAGE', page: 'agent' });
+    assert.deepEqual(order(), ['hidden', 'restarted']);
     f.dispatch({ type: 'ADD_TERMINAL', session: { id: 'new', tool: null, folderPath: null } });
-    assert.deepEqual(order(), ['restarted', 'hidden', 'agent:agent', 'new']);
+    assert.deepEqual(order(), ['hidden', 'restarted', 'new']);
+    for (const action of [{ type: 'REORDER_TAB', tabId: 'missing', beforeId: 'new' }, { type: 'REORDER_TAB', tabId: 'new', beforeId: 'missing' }]) {
+      const previous = f.stateRef.current; f.dispatch(action); assert.equal(f.stateRef.current, previous);
+    }
     for (const id of ['restarted', 'hidden', 'new']) f.dispatch({ type: 'REMOVE_TERMINAL', id });
     const replacement = f.stateRef.current.terminals[0];
     assert.equal(replacement.tool, null);
-    assert.deepEqual(order(), ['agent:agent', replacement.id]);
+    assert.deepEqual(order(), [replacement.id]);
   } finally { f.dispose(); }
 });
 await test('stale generations, cancellation and arbitrary IPC are rejected before mutations', async () => {
   const f = fixture();
   try {
     f.dispatch({ type: 'ADD_TERMINAL', session: { id: 'tab', tool: 'terminal', folderPath: 'a' } });
-    const target = (await f.execute('sessions_list')).sessions[0];
+    const stale = f.api.getTerminalObserver('tab').generation;
     f.mount('tab');
-    await assert.rejects(f.execute('sessions_close', { sessionId: 'tab', generation: target.generation }), /关闭或重启/);
+    await assert.rejects(f.execute('terminal_send', { sessionId: 'tab', generation: stale, text: 'stale' }), /关闭或重启/);
     const current = f.api.getTerminalObserver('tab');
     await assert.rejects(f.execute('fs_delete', { sessionId: 'tab', generation: current.generation }), /不支持/);
     f.cancel();
@@ -297,15 +206,6 @@ await test('stale generations, cancellation and arbitrary IPC are rejected befor
     assert.equal(f.stateRef.current.terminals.length, 1);
   } finally { f.dispose(); }
 });
-await test('history matches canonical Windows cwd while preserving Unix case distinctions', async () => {
-  const f = fixture();
-  try {
-    assert.equal((await f.execute('history_list', { cwd: '\\\\?\\d:\\project\\' })).sessions[0].id, 'win');
-    assert.equal((await f.execute('history_list', { cwd: '/project' })).sessions.length, 0);
-    assert.equal((await f.execute('history_list', { cwd: '/Project/' })).sessions[0].id, 'unix');
-  } finally { f.dispose(); }
-});
-
 await test('read_screen exposes the actual target tool, directory and interface language for project preparation', async () => {
   const f = fixture();
   try {
@@ -373,4 +273,4 @@ await test('a directory changed during the paste delay cannot submit Enter to a 
     assert.equal(f.writes[0].data, 'Do the prepared task');
   } finally { f.dispose(); }
 });
-console.log(`\n${passed} Agent workspace integration tests passed.`);
+console.log(`\n${passed} orchestration executor integration tests passed.`);

@@ -93,7 +93,7 @@ fn save_at(document: ToolMemoryDocument, path: &str, original: Option<&str>, con
         file.sync_all().map_err(|_| "memory_write")?;
         drop(file);
         if read_at(path)?.content.as_deref() != original { return Err("memory_conflict".into()); }
-        crate::agent::replace_file(&temp, path).map_err(|_| "memory_write")?;
+        crate::json_file::replace_file(&temp, path).map_err(|_| "memory_write")?;
         read_at(path)
     })();
     if result.is_err() { let _ = fs::remove_file(&temp); }

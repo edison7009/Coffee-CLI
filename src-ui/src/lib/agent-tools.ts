@@ -3,7 +3,6 @@ import type { ToolType, AppState, useAppDispatch } from '../store/app-state';
 import { commands, invoke } from '../tauri';
 import { getAgentSession } from './agent-session';
 import { isConversationSession } from './chat-tools';
-import { focusTerminal } from './focus-registry';
 
 export interface ToolRequest { requestId: string; name: string; arguments: Record<string, unknown>; parentId?: string; sessionId?: string; background?: boolean }
 const pause = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -31,26 +30,12 @@ export function createAgentToolExecutor({ stateRef, dispatch, pending, isCancell
     return async (request: ToolRequest): Promise<unknown> => {
       const args = request.arguments;
       if (!await pending(request.requestId)) throw new Error('操作已取消');
-      if (request.name === 'sessions_list') return { sessions: project(), observedAt: new Date().toISOString() };
-      if (request.name === 'tools_list') return { tools: [...await commands.listTools(), { id: 'terminal', displayName: 'Terminal' }], installed: await commands.checkToolsInstalled() };
-      if (request.name === 'directory_create') {
-        if (typeof args.path !== 'string' || !args.path.trim()) throw new Error('请先指定新建目录的完整路径');
-        return invoke<{ path: string; created: boolean }>('agent_create_directory', { path: args.path });
-      }
-      if (['workspace_list', 'file_read', 'file_create', 'file_edit'].includes(request.name)) {
-        if (typeof args.cwd !== 'string' || !args.cwd.trim()) throw new Error('请先询问用户要操作哪个工作目录');
-        return invoke('agent_workspace_tool', { name: request.name, arguments: args });
-      }
-      if (request.name === 'history_list') {
-        const history = await commands.getNativeHistory();
-        return { sessions: history.filter(item => (!args.tool || item.tool === args.tool) && (!args.cwd || historyDirectory(item.cwd) === historyDirectory(String(args.cwd)))).slice(0, 100) };
-      }
       if (request.name === 'sessions_open') {
         if (typeof args.tool !== 'string' || !args.tool.trim()) throw new Error('请先询问用户要打开什么 CLI 工具');
         const tools = await commands.listTools();
         if (typeof args.tool !== 'string' || (args.tool !== 'terminal' && !tools.some(tool => tool.id === args.tool))) throw new Error('请选择已支持的 CLI 工具');
         if (typeof args.cwd !== 'string' || !args.cwd.trim()) throw new Error('请先询问用户要打开哪个目录');
-        const cwd = await invoke<string>('agent_validate_directory', { path: args.cwd });
+        const cwd = await invoke<string>('resolve_project_directory', { path: args.cwd });
         if (!await pending(request.requestId)) throw new Error('操作已取消');
         const id = request.sessionId ?? crypto.randomUUID();
         if (stateRef.current.terminals.some(session => session.id === id)) throw new Error('该会话已存在，请读取状态，不要重复创建');
@@ -85,18 +70,6 @@ export function createAgentToolExecutor({ stateRef, dispatch, pending, isCancell
           && (typeof args.expectedCwd !== 'string' || historyDirectory(args.expectedCwd) === historyDirectory(current?.cwd ?? ''));
       };
       if (request.name === 'terminal_read_screen') return { ...await session.readScreen(args.view === 'viewport' ? 'viewport' : 'live'), tool: target.tool, cwd: target.cwd, language: stateRef.current.currentLang };
-      if (request.name === 'terminal_read_scrollback') return session.readScrollback(typeof args.startRow === 'number' ? args.startRow : undefined, typeof args.limit === 'number' ? args.limit : undefined);
-      if (request.name === 'sessions_select') {
-        dispatch({ type: 'SET_ACTIVE_TERMINAL', id: target.tabId });
-        requestAnimationFrame(() => { if (guard() && stateRef.current.activeTerminalId === target.tabId && !stateRef.current.agentPageActive && !stateRef.current.diffTabActive) focusTerminal(sessionId); });
-        return { selected: true, ...target };
-      }
-      if (request.name === 'sessions_close') {
-        await session.close();
-        if (!guard()) throw new Error('关闭期间目标会话已改变');
-        dispatch({ type: 'REMOVE_TERMINAL', id: target.tabId });
-        return { closed: true, sessionId, generation };
-      }
       if (request.name === 'terminal_send' || request.name === 'terminal_key') {
         if (typeof args.expectedCwd === 'string' && historyDirectory(args.expectedCwd) !== historyDirectory(target.cwd ?? '')) throw new Error('工作目录已经改变，请重新读屏并检查项目后再派发');
         const before = await session.readScreen();
@@ -115,6 +88,6 @@ export function createAgentToolExecutor({ stateRef, dispatch, pending, isCancell
         if (!guard()) return { written: true, sessionId, generation, message: '输入已写入；会话随后关闭或操作已取消' };
         return { written: true, sessionId, generation, screen: await live.readScreen(), message: live.mode === 'desktop' ? '操作已提交到原桌面会话；请读取后续状态确认结果' : 'PTY 已接收输入；请依据屏幕判断执行结果' };
       }
-      throw new Error(`不支持的 Agent 工具：${request.name}`);
+      throw new Error(`不支持的编排操作：${request.name}`);
     };
 }

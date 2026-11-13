@@ -76,7 +76,7 @@ impl Entry {
         let temporary = self.path.with_extension("json.tmp");
         let data = serde_json::to_vec_pretty(store).map_err(|error| Error::Storage(error.to_string()))?;
         std::fs::write(&temporary, data).map_err(storage)?;
-        crate::agent::replace_file(&temporary, &self.path).map_err(Error::Storage)
+        crate::json_file::replace_file(&temporary, &self.path).map_err(Error::Storage)
     }
 }
 

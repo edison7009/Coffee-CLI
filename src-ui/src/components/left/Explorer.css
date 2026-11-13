@@ -196,7 +196,12 @@
 [data-shape="panel"] .explorer-view-switch .explorer-tab.active { background: transparent; }
 @media (prefers-reduced-motion: reduce) { .explorer-view-thumb { transition: none; } }
 
-.explorer-panel .agent-channel-summary { margin-inline: 8px; }
+.sidebar-footer { display: flex; flex-shrink: 0; align-items: center; gap: 6px; min-width: 0; margin: 4px 8px 8px; font-family: var(--font); }
+.sidebar-footer-status { flex: 1; min-width: 0; }
+.sidebar-footer-button { display: grid; flex-shrink: 0; place-items: center; width: 30px; height: 30px; padding: 6px; border: 0; border-radius: var(--shape-radius-btn); color: var(--text-2); background: transparent; cursor: pointer; }
+.sidebar-footer-button:hover { background: var(--bg-hover); }
+.sidebar-footer-button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.sidebar-footer-button svg { width: 18px; height: 18px; }
 
 /* Recursive File Tree styles */
 .file-tree-container {

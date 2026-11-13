@@ -164,7 +164,6 @@ export interface TerminalSession {
 
 // ─── State Shape ─────────────────────────────────────────────────────────────
 
-export type AgentPage = 'agent' | 'config';
 
 export interface AppState {
   // UI
@@ -197,8 +196,6 @@ export interface AppState {
   terminals: TerminalSession[];
   activeTerminalId: string | null;
   sessionSplit: SessionSplitLayout | null;
-  agentPages: AgentPage[];
-  agentPageActive: AgentPage | null;
   tabOrder: string[];
 
   // Gambit (global floating compose window). Visibility is app-wide so the
@@ -352,14 +349,12 @@ type Action =
   | { type: 'SET_DIFF_SELECTION'; selection: DiffSelection }
   | { type: 'CLEAR_DIFF' }
   | { type: 'SET_DIFF_MODE'; mode: 'overlay' | 'tab' }
-  | { type: 'SET_DIFF_TAB_ACTIVE'; active: boolean }
-  | { type: 'OPEN_AGENT_PAGE'; page: AgentPage }
-  | { type: 'CLOSE_AGENT_PAGE'; page: AgentPage };
+  | { type: 'SET_DIFF_TAB_ACTIVE'; active: boolean };
 
 // ─── Reducer ─────────────────────────────────────────────────────────────────
 
-export function getTabOrder(state: Pick<AppState, 'terminals' | 'agentPages' | 'tabOrder'>): string[] {
-  const ids = [...state.terminals.map(tab => tab.id), ...state.agentPages.map(page => `agent:${page}`)];
+export function getTabOrder(state: Pick<AppState, 'terminals' | 'tabOrder'>): string[] {
+  const ids = state.terminals.map(tab => tab.id);
   const saved = (state.tabOrder ?? []).filter(id => ids.includes(id));
   return [...saved, ...ids.filter(id => !saved.includes(id))];
 }
@@ -373,9 +368,7 @@ function splitForSession(state: AppState, id: string, targetId: string, edge: Sp
 }
 
 function reducer(state: AppState, action: Action): AppState {
-  // Coffee Agent's configuration lives in settings; its old tab opens that section instead.
-  if (action.type === 'OPEN_AGENT_PAGE' && action.page === 'config') return { ...state, settingsOpen: true, settingsSection: 'agent', usageOpen: false, toolSettingsOpen: false, automationsOpen: false };
-  if ((state.usageOpen || state.toolSettingsOpen || state.settingsOpen || state.automationsOpen) && !(action.type === 'LAUNCH_TERMINAL_TOOL' && action.background) && ['ADD_TERMINAL', 'LAUNCH_TERMINAL_TOOL', 'SET_ACTIVE_TERMINAL', 'OPEN_AGENT_PAGE', 'OPEN_SESSION_SPLIT', 'SET_DIFF_SELECTION', 'SET_DIFF_TAB_ACTIVE'].includes(action.type)) state = { ...state, usageOpen: false, toolSettingsOpen: false, settingsOpen: false, automationsOpen: false };
+  if ((state.usageOpen || state.toolSettingsOpen || state.settingsOpen || state.automationsOpen) && !(action.type === 'LAUNCH_TERMINAL_TOOL' && action.background) && ['ADD_TERMINAL', 'LAUNCH_TERMINAL_TOOL', 'SET_ACTIVE_TERMINAL', 'OPEN_SESSION_SPLIT', 'SET_DIFF_SELECTION', 'SET_DIFF_TAB_ACTIVE'].includes(action.type)) state = { ...state, usageOpen: false, toolSettingsOpen: false, settingsOpen: false, automationsOpen: false };
   switch (action.type) {
     case 'SET_USAGE_OPEN':
       return { ...state, usageOpen: action.open, toolSettingsOpen: false, ...(action.open ? { settingsOpen: false, automationsOpen: false } : {}) };
@@ -388,7 +381,7 @@ function reducer(state: AppState, action: Action): AppState {
       if (!session?.tool) return state;
       const layout = splitForSession(state, action.id, action.targetId, action.edge);
       if (!layout || !splitSessionIds(layout).includes(action.id)) return state;
-      return { ...state, sessionSplit: layout, activeTerminalId: action.id, agentPageActive: null, diffTabActive: false,
+      return { ...state, sessionSplit: layout, activeTerminalId: action.id, diffTabActive: false,
         terminals: session.isHidden ? state.terminals.map(t => t.id === session.id ? { ...t, isHidden: false } : t) : state.terminals };
     }
     case 'CLOSE_SESSION_SPLIT': {
@@ -458,7 +451,6 @@ function reducer(state: AppState, action: Action): AppState {
         sessionSplit: action.split ? layout : state.sessionSplit,
         terminals: existing.isHidden ? state.terminals.map(t => t.id === existing.id ? { ...t, isHidden: false } : t) : state.terminals,
         activeTerminalId: existing.id,
-        agentPageActive: null,
         diffTabActive: false,
       };
       const session = action.session.tool && !action.session.startedAt
@@ -470,7 +462,6 @@ function reducer(state: AppState, action: Action): AppState {
         terminals: [...state.terminals, session],
         tabOrder: [...getTabOrder(state), session.id],
         activeTerminalId: session.id,
-        agentPageActive: null,
         diffTabActive: false,
       };
     }
@@ -498,7 +489,6 @@ function reducer(state: AppState, action: Action): AppState {
         terminals: previous ? state.terminals.map(tab => tab.id === action.id ? session : tab) : [...state.terminals, session],
         tabOrder: previous ? state.tabOrder : [...order.slice(0, index), action.id, ...order.slice(index)],
         activeTerminalId: action.background ? state.activeTerminalId : action.id,
-        agentPageActive: action.background ? state.agentPageActive : null,
         diffTabActive: action.background ? state.diffTabActive : false,
       };
     }
@@ -558,14 +548,13 @@ function reducer(state: AppState, action: Action): AppState {
       return {
         ...state, tabOrder: next,
         terminals: [...state.terminals].sort((a, b) => next.indexOf(a.id) - next.indexOf(b.id)),
-        agentPages: [...state.agentPages].sort((a, b) => next.indexOf(`agent:${a}`) - next.indexOf(`agent:${b}`)),
       };
     }
     case 'SET_ACTIVE_TERMINAL':
       // Activating a terminal tab blurs the diff tab (they're peer tabs in
       // the strip; only one is focused at a time). diffMode is untouched —
       // the diff still renders in its chosen surface, just not focused.
-      return { ...state, activeTerminalId: action.id, diffTabActive: false, agentPageActive: null };
+      return { ...state, activeTerminalId: action.id, diffTabActive: false };
     case 'SET_TERMINAL_TOOL':
       return {
         ...state,
@@ -620,7 +609,7 @@ function reducer(state: AppState, action: Action): AppState {
     case 'SET_DEFAULT_SHELL':
       return { ...state, defaultShell: action.shell };
     case 'TOGGLE_GAMBIT':
-      if (!state.agentPageActive && !state.diffTabActive && isConversationSession(state.terminals.find(t => t.id === state.activeTerminalId))) return state;
+      if (!state.diffTabActive && isConversationSession(state.terminals.find(t => t.id === state.activeTerminalId))) return state;
       return { ...state, gambitOpen: !state.gambitOpen };
     // Settings covers the whole window; it and the usage and tool settings pages are open one at a time.
     case 'TOGGLE_SETTINGS':
@@ -678,7 +667,6 @@ function reducer(state: AppState, action: Action): AppState {
         ...state,
         diffSelection: action.selection,
         rightPanelHidden: state.diffMode === 'overlay' ? false : state.rightPanelHidden,
-        agentPageActive: state.diffMode === 'tab' ? null : state.agentPageActive,
         diffTabActive: state.diffMode === 'tab' ? true : state.diffTabActive,
       };
     case 'CLEAR_DIFF':
@@ -690,21 +678,10 @@ function reducer(state: AppState, action: Action): AppState {
       try { localStorage.setItem('cc-diff-mode', action.mode); } catch { /* Best-effort operation; failure is non-fatal. */ }
       // Entering tab mode focuses the diff tab; leaving blurs it. Keeps the
       // active-surface tracking in lockstep with the surface the diff is on.
-      return { ...state, diffMode: action.mode, rightPanelHidden: action.mode === 'overlay' ? false : state.rightPanelHidden, diffTabActive: action.mode === 'tab', agentPageActive: action.mode === 'tab' ? null : state.agentPageActive };
+      return { ...state, diffMode: action.mode, rightPanelHidden: action.mode === 'overlay' ? false : state.rightPanelHidden, diffTabActive: action.mode === 'tab' };
     }
     case 'SET_DIFF_TAB_ACTIVE':
-      return { ...state, diffTabActive: action.active, agentPageActive: action.active ? null : state.agentPageActive };
-    case 'OPEN_AGENT_PAGE':
-      return {
-        ...state,
-        agentPages: state.agentPages.includes(action.page) ? state.agentPages : [...state.agentPages, action.page],
-        tabOrder: state.agentPages.includes(action.page) ? state.tabOrder : [...getTabOrder(state), `agent:${action.page}`],
-        agentPageActive: action.page, diffTabActive: false,
-      };
-    case 'CLOSE_AGENT_PAGE': {
-      const agentPages = state.agentPages.filter(page => page !== action.page);
-      return { ...state, agentPages, tabOrder: getTabOrder(state).filter(id => id !== `agent:${action.page}`), agentPageActive: state.agentPageActive === action.page ? agentPages.at(-1) ?? null : state.agentPageActive };
-    }
+      return { ...state, diffTabActive: action.active };
     default:
       return state;
   }
@@ -927,8 +904,6 @@ function getInitialState(): AppState {
     usageOpen: false,
     automationsOpen: false,
     toolSettingsOpen: false,
-    agentPages: [],
-    agentPageActive: null,
     tabOrder: [defaultTerminalId],
   };
 }

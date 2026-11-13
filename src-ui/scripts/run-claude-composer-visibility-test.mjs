@@ -59,7 +59,7 @@ function buttons(node) {
 }
 const toggle = () => buttons(titlebar()).find(b => b.props['aria-label']?.startsWith('Gambit compose'));
 for (const preference of [false, true]) {
-  state = { terminals, activeTerminalId: 'claude', gambitOpen: preference, agentPageActive: null, diffTabActive: false };
+  state = { terminals, activeTerminalId: 'claude', gambitOpen: preference, diffTabActive: false };
   assert.equal(host().type, 'gambit', 'Claude always has its input, including a previously closed preference');
   assert.equal(toggle().props.disabled, true);
   assert.equal(toggle().props['aria-pressed'], true);
@@ -78,8 +78,8 @@ for (const preference of [false, true]) {
   assert.equal(!!host(), !preference);
   console.log(`OK: Claude is always open and ordinary terminal preference ${preference} survives tab switches`);
 }
-for (const surface of [{ agentPageActive: 'agent' }, { diffTabActive: true }]) {
-  state = { terminals, activeTerminalId: 'claude', gambitOpen: false, agentPageActive: null, diffTabActive: false, ...surface };
+for (const surface of [{ diffTabActive: true }]) {
+  state = { terminals, activeTerminalId: 'claude', gambitOpen: false, diffTabActive: false, ...surface };
   assert.equal(host(), null, 'hidden Claude does not mount an extra composer on another surface');
   assert.equal(toggle().props.disabled, false);
   toggle().props.onClick();
@@ -127,7 +127,7 @@ for (const tool of ['codex', 'kimicode', 'qwen', 'opencode', 'terminal']) {
 }
 console.log('OK: existing Codex/Kimi/other tool tabs retain CLI routing');
 for (const preference of [false, true]) {
-  state = { terminals: [{ id: 'codex-desktop', tool: 'codex', codexMode: 'conversation' }], activeTerminalId: 'codex-desktop', gambitOpen: preference, agentPageActive: null, diffTabActive: false };
+  state = { terminals: [{ id: 'codex-desktop', tool: 'codex', codexMode: 'conversation' }], activeTerminalId: 'codex-desktop', gambitOpen: preference, diffTabActive: false };
   assert.equal(host().props.codex, true);
   assert.equal(toggle().props.disabled, true);
   const before = state;
@@ -143,7 +143,7 @@ for (const codexMode of ['conversation', 'terminal']) {
   assert.equal(restarted.terminals[0].codexMode, codexMode);
 }
 console.log('OK: Codex conversation uses its own backend, keeps its composer and retains mode on reconnect');
-state = { terminals: [{ id: 'opencode-desktop', tool: 'opencode', opencodeMode: 'conversation' }], activeTerminalId: 'opencode-desktop', gambitOpen: false, agentPageActive: null, diffTabActive: false };
+state = { terminals: [{ id: 'opencode-desktop', tool: 'opencode', opencodeMode: 'conversation' }], activeTerminalId: 'opencode-desktop', gambitOpen: false, diffTabActive: false };
 assert.equal(host().props.opencode, true, 'OpenCode conversations always have their composer');
 assert.equal(toggle().props.disabled, true);
 assert.equal(await host().props.onSend('OpenCode prompt'), true);
@@ -157,7 +157,7 @@ for (const opencodeMode of ['conversation', 'terminal']) {
 }
 assert.equal(isOpenCodeConversation(reducer({ terminals: [{ id: 'new', tool: null }], tabOrder: ['new'] }, { type: 'LAUNCH_TERMINAL_TOOL', id: 'new', tool: 'opencode' }).terminals[0]), false, 'callers without a mode keep the terminal');
 console.log('OK: OpenCode conversation uses its own backend, keeps its composer and retains mode on reconnect');
-state = { terminals: [{ id: 'pi-desktop', tool: 'pi', piMode: 'conversation' }], activeTerminalId: 'pi-desktop', gambitOpen: false, agentPageActive: null, diffTabActive: false };
+state = { terminals: [{ id: 'pi-desktop', tool: 'pi', piMode: 'conversation' }], activeTerminalId: 'pi-desktop', gambitOpen: false, diffTabActive: false };
 assert.equal(host().props.pi, true, 'Pi conversations always have their composer');
 assert.equal(host().props.worktreeControl?.type, 'worktree-control', 'Pi conversations offer the worktree switch');
 assert.equal(host().props.worktreeControl.props.key, 'worktree:pi-desktop', 'the switch is keyed to the Pi tab');
@@ -174,7 +174,7 @@ for (const piMode of ['conversation', 'terminal']) {
 assert.equal(isPiConversation(reducer({ terminals: [{ id: 'new', tool: null }], tabOrder: ['new'] }, { type: 'LAUNCH_TERMINAL_TOOL', id: 'new', tool: 'pi' }).terminals[0]), false, 'callers without a mode keep the terminal');
 console.log('OK: Pi conversation uses its own backend, keeps its composer and retains mode on reconnect');
 for (const preference of [false, true]) {
-  state = { terminals: [{ id: 'dsh-desktop', tool: 'dsh' }], activeTerminalId: 'dsh-desktop', gambitOpen: preference, agentPageActive: null, diffTabActive: false };
+  state = { terminals: [{ id: 'dsh-desktop', tool: 'dsh' }], activeTerminalId: 'dsh-desktop', gambitOpen: preference, diffTabActive: false };
   assert.equal(host().type, 'gambit', 'DeepSeek Harness always has its composer');
   assert.equal(host().props.dsh, true);
   assert.equal(toggle().props.disabled, true);

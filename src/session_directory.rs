@@ -50,6 +50,18 @@ pub async fn check_project_directories(paths: Vec<String>) -> Result<Vec<Directo
     }).collect()).await.map_err(|error| error.to_string())
 }
 
+/// The folder a coordinator's worker opens in: an absolute path to an existing
+/// directory, in the form the shell accepts (Windows verbatim prefixes removed).
+#[tauri::command]
+pub fn resolve_project_directory(path: String) -> Result<String, String> {
+    let path = std::path::PathBuf::from(path.trim());
+    if !path.is_absolute() { return Err("请指定完整的绝对目录路径，不能默认使用上次工作目录".into()); }
+    let canonical = path.canonicalize().map_err(|_| "Directory does not exist")?;
+    if !canonical.is_dir() { return Err("Choose an existing directory".into()); }
+    let compatible = crate::terminal::shell_working_directory(&canonical).map_err(|e| e.to_string())?;
+    Ok(compatible.to_string_lossy().into())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

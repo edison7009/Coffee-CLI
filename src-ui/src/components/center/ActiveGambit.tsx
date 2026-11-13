@@ -152,7 +152,7 @@ export function ActiveGambit() {
     try { localStorage.setItem('cc-gambit-open', state.gambitOpen ? '1' : '0'); } catch { /* optional preference */ }
   }, [state.gambitOpen]);
 
-  if (!gambitOpen || !activeId || state.agentPageActive || state.diffTabActive || state.usageOpen || state.toolSettingsOpen || state.automationsOpen || state.settingsOpen) return null;
+  if (!gambitOpen || !activeId || state.diffTabActive || state.usageOpen || state.toolSettingsOpen || state.automationsOpen || state.settingsOpen) return null;
 
   return (
     <Gambit

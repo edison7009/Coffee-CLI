@@ -30,7 +30,7 @@ context.baseSessions = [
   session('hidden', 'D:/hidden'), session('pinned', 'D:/EchoBird', 'codex'),
   session('duplicate-a', '/one/shared'), session('duplicate-b', '/two/shared'),
   session('case-a', '/projects/App'), session('case-b', '/projects/app'),
-  session('agent', '', 'coffee-agent'), session('claw', '/internal/workspace', 'openclaw'),
+  session('claw', '/internal/workspace', 'openclaw'),
   session('renamed', 'D:/Coffee-CLI'),
 ];
 const original = [...context.baseSessions];
@@ -44,7 +44,6 @@ assert.deepEqual(Array.from(coffee.sessions, session => session.id), ['recent', 
 assert.equal(context.projects.some(group => group.name === '/one/shared'), true);
 assert.equal(context.projects.some(group => group.name === '/two/shared'), true);
 assert.equal(context.projects.filter(group => ['App', 'app'].includes(group.name)).length, 2, 'case-sensitive Unix directories stay distinct');
-assert.equal(context.projects.find(group => group.sessions[0].id === 'agent').name, 'Coffee Agent');
 assert.equal(context.projects.find(group => group.sessions[0].id === 'claw').name, 'OpenClaw');
 // Added folders only: the launchpad's folders, even without sessions; other folders leave, folderless groups stay.
 const everyProject = context.projects;
@@ -53,7 +52,7 @@ const added = evaluate('projects');
 assert.deepEqual(Array.from(added.find(group => group.cwd.toLowerCase().includes('coffee')).sessions, s => s.id), ['recent', 'same-project', 'renamed'], 'a folder matches however its path is written');
 assert.equal(added.find(group => group.name === 'Fresh').sessions.length, 0, 'an added folder shows before its first session');
 assert.equal(added.some(group => group.name === 'EchoBird' || group.name === '/one/shared'), false, 'folders never added stay out');
-assert.equal(added.some(group => group.name === 'Coffee Agent') && added.some(group => group.name === 'OpenClaw'), true, 'sessions without a folder keep their group');
+assert.equal(added.some(group => group.name === 'OpenClaw'), true, 'sessions without a folder keep their group');
 context.projectScope = 'all'; context.projectFolders = [];
 context.projects = everyProject;
 context.collapsedProjects = new Set([coffee.key]);
@@ -98,8 +97,7 @@ assert.equal(matches(original.at(-1), '  CUSTOM session  '), true);
 assert.equal(matches(original.at(-1), 'renamed'), false, 'search follows custom titles');
 assert.equal(matches(original[4], '/one/shared'), true, 'search includes full project paths');
 assert.equal(matches(original[3], 'codex cli'), true);
-assert.equal(matches(original[8], 'coffee agent'), true);
-assert.equal(matches(original[9], 'internal/workspace'), false, 'directoryless tools do not expose internal workspaces');
+assert.equal(matches(original[8], 'internal/workspace'), false, 'directoryless tools do not expose internal workspaces');
 assert.equal(matches(original[0], 'no such conversation'), false);
 console.log('OK: hidden/pinned sessions, stable cache, directory grouping, duplicate names, case-sensitive paths, directoryless tools, collapse/toggle, renamed title and project/tool search');
 
@@ -133,12 +131,11 @@ context.crypto = { randomUUID: () => `history-tab-${++nextId}` };
 context.localStorage = { setItem() {}, removeItem() {} };
 context.reducer = vm.runInContext(ts.transpileModule(declarations.join('\n') + '\nreducer;', { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText, context);
 context.setAgentError = error => { context.error = error; };
-context.openAgentConversation = async id => { context.agentOpened = id; };
 context.dispatch = action => { context.state = context.reducer(context.state, action); };
 const openHistory = evaluate('handleViewHistory');
 const saved = { ...session('history-id', 'D:/Coffee-CLI'), session_token: 'native-1' };
 function reset(terminals = [], native = false) {
-  context.state = { terminals, tabOrder: terminals.map(tab => tab.id), activeTerminalId: terminals[0]?.id ?? null, sessionSplit: null, agentPages: [], agentPageActive: null, diffTabActive: false };
+  context.state = { terminals, tabOrder: terminals.map(tab => tab.id), activeTerminalId: terminals[0]?.id ?? null, sessionSplit: null, diffTabActive: false };
   context.isTauri = native;
   context.error = '';
   context.commands = { getTerminalSessionToken: async () => null };
@@ -148,13 +145,11 @@ await openHistory(saved);
 const first = context.state.terminals[0];
 assert.equal(first.resumeToken, saved.session_token);
 context.dispatch({ type: 'ADD_TERMINAL', session: { id: 'other', tool: 'codex', folderPath: saved.cwd } });
-context.state.agentPageActive = 'config';
 context.state.diffTabActive = true;
 await openHistory(saved);
 assert.equal(context.state.terminals.length, 2);
 assert.equal(context.state.activeTerminalId, first.id);
 assert.equal(context.state.terminals[0], first, 'switching preserves the mounted session object and running process');
-assert.equal(context.state.agentPageActive, null);
 assert.equal(context.state.diffTabActive, false);
 await Promise.all(Array.from({ length: 5 }, () => openHistory(saved)));
 assert.equal(context.state.terminals.length, 2, 'rapid repeated opens do not add tabs');
@@ -206,15 +201,10 @@ await openHistory(liveEntry, { targetId: 'split-target', edge: 'right' });
 assert.deepEqual(Array.from(context.splitSessionIds(context.state.sessionSplit)), ['split-target', liveTab.id]);
 assert.equal(context.state.terminals.length, 2, 'splitting a live row reuses its existing session');
 
-reset();
-await openHistory({ ...saved, tool: 'coffee-agent', session_token: null });
-assert.equal(context.agentOpened, saved.id);
-assert.equal(context.state.terminals.length, 0, 'Coffee Agent keeps its existing page-based open flow');
-console.log('OK: repeat/rapid history opens, hidden/closed tabs, cross-tool identity, live native IDs, live row activation/split reuse, draft/process preservation, lookup failure and Agent flow');
+console.log('OK: repeat/rapid history opens, hidden/closed tabs, cross-tool identity, live native IDs, live row activation/split reuse, draft/process preservation and lookup failure');
 
 context.setPreview = () => {};
 context.hideSession = (tool, id) => { context.hiddenCalls.push([tool, id]); };
-context.activeAgentConversation = null;
 const deleteHistory = evaluate('handleDeleteHistory');
 for (const tool of ['claude', 'codex']) for (const mode of ['terminal', 'conversation']) {
   reset([
@@ -258,13 +248,4 @@ context.commands.getTerminalSessionToken = async () => null;
 await deleteHistory({ ...saved, session_token: null });
 assert.equal(context.state.terminals[0].id, 'unknown', 'legacy records never close a tab based on its directory');
 
-reset();
-context.state.agentPages = ['agent', 'config'];
-context.state.agentPageActive = 'agent';
-context.activeAgentConversation = 'current-agent';
-context.hiddenCalls = [];
-await deleteHistory({ ...saved, tool: 'coffee-agent', id: 'older-agent', session_token: null });
-assert.equal(context.state.agentPageActive, 'agent', 'deleting another Agent conversation preserves the open page');
-await deleteHistory({ ...saved, tool: 'coffee-agent', id: 'current-agent', session_token: null });
-assert.deepEqual(context.state.agentPages, ['config']);
-console.log('OK: history deletion closes exact desktop/terminal tabs, updates split/tab order, preserves unrelated sessions, returns to the launcher, probes native IDs and closes only the matching Agent page');
+console.log('OK: history deletion closes exact desktop/terminal tabs, updates split/tab order, preserves unrelated sessions, returns to the launcher, and probes native IDs');

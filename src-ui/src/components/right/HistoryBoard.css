@@ -457,3 +457,4 @@
   outline: none;
   caret-color: var(--accent);
 }
+.history-error { margin: 13px 12px 0; color: var(--red); font-size: var(--type-label); line-height: 1.7; overflow-wrap: anywhere; }

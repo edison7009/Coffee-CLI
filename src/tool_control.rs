@@ -222,7 +222,7 @@ fn save(path: &Path, original: Option<&str>, content: &str, storage: &Path) -> R
         if let Ok(metadata) = fs::metadata(path) { file.set_permissions(metadata.permissions()).map_err(|_| "control_write")?; }
         file.sync_all().map_err(|_| "control_write")?;
         if read(path)?.as_deref() != original { return Err("control_conflict".into()); }
-        crate::agent::replace_file(&temp, path).map_err(|_| "control_write".to_string())
+        crate::json_file::replace_file(&temp, path).map_err(|_| "control_write".to_string())
     })();
     if result.is_err() { let _ = fs::remove_file(temp); }
     result
@@ -295,7 +295,7 @@ fn browser_command_in(runtime: &Path, directory: &Path) -> Result<Command, Strin
     if fs::read(&config).ok().as_deref() != Some(b"{}") {
         let temp = directory.join(format!(".browser-config-{}.tmp", uuid::Uuid::new_v4()));
         fs::write(&temp, "{}").map_err(|_| "control_write")?;
-        if crate::agent::replace_file(&temp, &config).is_err() { let _ = fs::remove_file(temp); return Err("control_write".into()); }
+        if crate::json_file::replace_file(&temp, &config).is_err() { let _ = fs::remove_file(temp); return Err("control_write".into()); }
     }
     let sockets = directory.join("browser-sessions");
     plain_path(&sockets)?;
@@ -409,7 +409,7 @@ pub async fn install_browser_control() -> Result<ControlStatus, String> {
         let temp = path.with_file_name(format!(".browser-{}.tmp", uuid::Uuid::new_v4()));
         fs::write(&temp, bytes).map_err(|_| "control_write")?;
         #[cfg(unix)] { use std::os::unix::fs::PermissionsExt; fs::set_permissions(&temp, fs::Permissions::from_mode(0o755)).map_err(|_| "control_write")?; }
-        if let Err(error) = crate::agent::replace_file(&temp, &path) { let _ = fs::remove_file(temp); return Err(error); }
+        if let Err(error) = crate::json_file::replace_file(&temp, &path) { let _ = fs::remove_file(temp); return Err(error); }
     }
     status("browser")
 }

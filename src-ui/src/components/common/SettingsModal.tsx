@@ -14,7 +14,6 @@
 
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { SegmentedTabs } from './SegmentedTabs';
-import { AgentSettings } from '../agent/AgentPages';
 import { useAppState, useAppDispatch, HOTKEY_SCHEMES, type HotkeyScheme, type ThemeColor, type ThemeMode, type ThemeShape, type IconTheme } from '../../store/app-state';
 import { playNotifySound } from '../../lib/notify-sound';
 import { useT } from '../../i18n/useT';
@@ -28,8 +27,8 @@ import { setUiScale, useUiScale } from '../../lib/ui-scale';
 import { THEME_COLORS, THEME_MODES, THEME_SHAPES, ICON_ART_THEMES, LANGUAGES, isMaskTintTheme } from '../../lib/personalization';
 import './SettingsModal.css';
 
-type Section = 'general' | 'appearance' | 'wallpaper' | 'terminal' | 'gambit' | 'sound' | 'voice' | 'language' | 'agent' | 'feedback';
-const SECTION_IDS: Section[] = ['general', 'appearance', 'wallpaper', 'terminal', 'gambit', 'sound', 'voice', 'language', 'agent', 'feedback'];
+type Section = 'general' | 'appearance' | 'wallpaper' | 'terminal' | 'gambit' | 'sound' | 'voice' | 'language' | 'feedback';
+const SECTION_IDS: Section[] = ['general', 'appearance', 'wallpaper', 'terminal', 'gambit', 'sound', 'voice', 'language', 'feedback'];
 
 // Trailing "opens outside the app" affordance on the feedback cards.
 const ExternalLinkArrow = () => (
@@ -55,11 +54,6 @@ function readSoundPref(key: string): boolean {
 
 
 const ICONS: Record<Section, ReactNode> = {
-  agent: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M12 8V4H8" /><rect width="16" height="12" x="4" y="8" rx="2" /><path d="M2 14h2" /><path d="M20 14h2" /><path d="M15 13v2" /><path d="M9 13v2" />
-    </svg>
-  ),
   appearance: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" /><circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
@@ -119,7 +113,7 @@ export function SettingsModal() {
   const { state } = useAppState();
   const dispatch = useAppDispatch();
   const t = useT();
-  // Held in app state so other places can open a section (Coffee Agent's channel status opens 'agent').
+  // Held in app state so other places can open a section.
   // Wallpaper, sound and shortcuts were sections of their own; a request for one opens the section that holds it now.
   const requested = state.settingsSection === 'wallpaper' ? 'appearance' : state.settingsSection === 'sound' || state.settingsSection === 'gambit' ? 'general' : state.settingsSection;
   const section: Section = SECTION_IDS.includes(requested as Section) ? requested as Section : 'general';
@@ -295,7 +289,6 @@ export function SettingsModal() {
     { id: 'terminal',   label: t('settings.terminal') },
     { id: 'voice',      label: t('settings.voice') },
     { id: 'language',   label: t('settings.language') },
-    { id: 'agent',      label: 'Coffee Agent' },
     { id: 'feedback',   label: t('settings.feedback') },
   ];
   const currentLabel = SECTIONS.find(s => s.id === section)?.label ?? '';
@@ -342,8 +335,7 @@ export function SettingsModal() {
             <span className="settings-header-title">{currentLabel}</span>
           </header>
 
-          <div className={`settings-body${section === 'agent' ? ' settings-body--agent' : ''}`}>
-            {section === 'agent' && <AgentSettings />}
+          <div className="settings-body">
             {section === 'appearance' && (
               <>
                 <div className="settings-section-head">

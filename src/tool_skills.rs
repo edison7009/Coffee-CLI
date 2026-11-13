@@ -90,7 +90,7 @@ fn write_json(path: &Path, data: &impl Serialize) -> Result<(), String> {
     let temp = path.with_file_name(format!(".skills-{}.tmp", uuid::Uuid::new_v4()));
     let result = (|| {
         fs::write(&temp, serde_json::to_vec(data).map_err(|_| "skills_write")?).map_err(|_| "skills_write")?;
-        crate::agent::replace_file(&temp, path).map_err(|_| "skills_write".to_string())
+        crate::json_file::replace_file(&temp, path).map_err(|_| "skills_write".to_string())
     })();
     if result.is_err() { let _ = fs::remove_file(temp); }
     result
@@ -99,7 +99,7 @@ fn metadata(path: &Path) -> Option<(String, String)> {
     let file = fs::File::open(path.join("SKILL.md")).ok()?;
     let mut text = String::new(); file.take(MAX_FILE + 1).read_to_string(&mut text).ok()?;
     if text.len() as u64 > MAX_FILE { return None; }
-    crate::agent_capabilities::skill_metadata(&text).ok()
+    crate::skill_catalog::skill_metadata(&text).ok()
 }
 fn inventory(tool: &str, root: &Path, directories: &[PathBuf]) -> Result<Inventory, String> {
     let state = read_state(root)?;
@@ -180,7 +180,7 @@ async fn featured(source: &str, on_update: Option<&tauri::ipc::Channel<Vec<Catal
             let permitted = match own_license { Some(url) => open_license(&get(&url, MAX_FILE as usize).await?), None => root_license };
             if !permitted { return Ok::<_, String>(None); }
             let body = String::from_utf8(get(&url, MAX_FILE as usize).await?).map_err(|_| "skills_source")?;
-            Ok(crate::agent_capabilities::skill_metadata(&body).ok().map(|(name, description)| CatalogSkill { source, name, description }))
+            Ok(crate::skill_catalog::skill_metadata(&body).ok().map(|(name, description)| CatalogSkill { source, name, description }))
         });
     }
     let mut items = Vec::new();
@@ -207,7 +207,7 @@ fn description_from_html(html: &str) -> Result<String, String> {
     Err("skills_source".into())
 }
 async fn description(source: &str, name: &str, root: &Path) -> Result<String, String> {
-    let source = crate::agent_capabilities::repository(source).map_err(|_| "skills_source")?;
+    let source = crate::skill_catalog::repository(source).map_err(|_| "skills_source")?;
     if !valid_name(name) { return Err("skills_source".into()); }
     let path = root.join("descriptions").join(format!("{}.json", hash(format!("{source}/{name}").as_bytes())));
     let cached = fs::read(&path).ok().and_then(|b| serde_json::from_slice::<DescriptionCache>(&b).ok());
@@ -240,7 +240,7 @@ async fn popular_catalog() -> Result<Vec<CatalogSkill>, String> {
     popular_items(&String::from_utf8(html).map_err(|_| "skills_source")?)
 }
 async fn search_catalog(query: &str) -> Result<Vec<CatalogSkill>, String> {
-    let result = crate::agent_capabilities::discover("skill", query).await.map_err(|_| "skills_network")?;
+    let result = crate::skill_catalog::discover("skill", query).await.map_err(|_| "skills_network")?;
     Ok(result["results"].as_array().ok_or("skills_network")?.iter().filter_map(|v| Some(CatalogSkill { source:v["source"].as_str()?.into(), name:v["name"].as_str()?.into(), description:String::new() })).collect())
 }
 async fn catalog(query: &str, root: &Path, on_update: Option<&tauri::ipc::Channel<Vec<CatalogSkill>>>) -> Result<Vec<CatalogSkill>, String> {
@@ -252,7 +252,7 @@ async fn catalog(query: &str, root: &Path, on_update: Option<&tauri::ipc::Channe
     if cached.as_ref().is_some_and(|c| now().saturating_sub(c.at) < 5 * 60) { return Ok(cached.unwrap().items); }
     let result = async {
         if !query.is_empty() {
-            if let Ok(source) = crate::agent_capabilities::repository(query) { return featured(&source, on_update).await; }
+            if let Ok(source) = crate::skill_catalog::repository(query) { return featured(&source, on_update).await; }
             return search_catalog(query).await;
         }
         if let Ok(items) = popular_catalog().await { return Ok(items); }
@@ -310,7 +310,7 @@ fn write_files(path: &Path, files: &[FileData]) -> Result<(), String> {
     Ok(())
 }
 async fn download(source: &str, name: &str) -> Result<(Installed, Vec<FileData>), String> {
-    let details = crate::agent_capabilities::details("skill", source, name).await.map_err(|_| "skills_source")?;
+    let details = crate::skill_catalog::details("skill", source, name).await.map_err(|_| "skills_source")?;
     let source = details["source"].as_str().ok_or("skills_source")?;
     let commit = details["commit"].as_str().ok_or("skills_source")?;
     let skill_path = details["skillPath"].as_str().ok_or("skills_source")?;

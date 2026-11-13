@@ -16,21 +16,12 @@ struct Session {
     permissions: Mutex<HashMap<String, Value>>,
     stderr: Mutex<String>,
     history_path: std::path::PathBuf,
-    launch_config: crate::tool_config::ToolConfigEntry,
-    launch_cwd: std::path::PathBuf,
     /// A fresh conversation still waiting for its first prompt to name it.
     wants_title: AtomicBool,
 }
 
 #[derive(Default)]
 pub struct ClaudeSessions(Mutex<HashMap<String, Arc<Session>>>);
-
-pub(crate) fn launch_context(app: &tauri::AppHandle, id: &str) -> Option<(crate::tool_config::ToolConfigEntry, String)> {
-    let sessions = app.try_state::<ClaudeSessions>()?;
-    let map = sessions.0.lock().ok()?;
-    let session = map.get(id)?;
-    Some((session.launch_config.clone(), session.launch_cwd.to_string_lossy().into_owned()))
-}
 
 impl Session {
     fn write(&self, value: &Value) -> Result<(), String> {
@@ -165,7 +156,7 @@ fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<Stri
     let stdout = child.stdout.take().unwrap();
     let stderr = child.stderr.take().unwrap();
     let input = child.stdin.take().unwrap();
-    let session = Arc::new(Session { id: id.clone(), generation, native_id, child: Mutex::new(child), input: Mutex::new(input), pending: Mutex::new(HashMap::new()), permissions: Mutex::new(HashMap::new()), stderr: Mutex::new(String::new()), history_path, launch_config: config.clone(), launch_cwd: cwd.clone(), wants_title: AtomicBool::new(!is_resume) });
+    let session = Arc::new(Session { id: id.clone(), generation, native_id, child: Mutex::new(child), input: Mutex::new(input), pending: Mutex::new(HashMap::new()), permissions: Mutex::new(HashMap::new()), stderr: Mutex::new(String::new()), history_path, wants_title: AtomicBool::new(!is_resume) });
     let sessions = app.state::<ClaudeSessions>();
     {
         let mut map = sessions.0.lock().unwrap();

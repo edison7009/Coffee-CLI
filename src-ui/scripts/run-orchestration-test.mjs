@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 const project = fileURLToPath(new URL('..', import.meta.url));
 const mock = `
 export const isTauri=true;
-export async function invoke(command,args){if(command==='agent_validate_directory'){if(window.validate)await window.validate();return args.path}throw Error(command)}
+export async function invoke(command,args){if(command==='resolve_project_directory'){if(window.validate)await window.validate();return args.path}throw Error(command)}
 export const commands={listTools:async()=>[{id:'claude'},{id:'codex'},{id:'opencode'}],orchestrationGet:async()=>({enabled:true,agents:['claude','codex','opencode'],tasks:[],revision:1}),orchestrationSync:async()=>window.deliveries.splice(0),orchestrationPending:async()=>window.pending,orchestrationResolve:async(id,result)=>window.results.push({id,...result})};`;
 const compiled = await build({stdin:{resolveDir:project,contents:`export {OrchestrationBridge} from './src/components/agent/OrchestrationBridge';export {workerState,receiveOrchestration,getOrchestrationSnapshot} from './src/lib/orchestration';`},bundle:true,platform:'node',format:'cjs',write:false,plugins:[{name:'boundaries',setup(b){
   b.onResolve({filter:/\/tauri$|\/store\/app-state$|\/agent-session$|^react$|^@tauri-apps\/api\/event$/},a=>({path:a.path,namespace:'test'}));
