@@ -2,7 +2,9 @@
 .launchpad-card .cli-update-button { position:relative; display:inline-grid; align-items:center; justify-items:center; min-width:0; height:18px; max-width:100%; padding:0 9px; border:0; border-radius:9px; background:color-mix(in srgb,var(--accent) 16%,transparent); color:var(--text-1); font:500 var(--type-caption)/1 var(--font-nav,var(--font)); white-space:nowrap; overflow:hidden; cursor:pointer; transform:translateY(1px); transition:background .15s; }
 .launchpad-card .cli-update-label, .launchpad-card .cli-update-size { grid-area:1 / 1; min-width:0; max-width:100%; font:inherit; }
 .launchpad-card .cli-update-size { visibility:hidden; }
-.launchpad-card .cli-update-label { position:relative; color:inherit; overflow:hidden; text-overflow:ellipsis; transform:translateY(1px); }
+.launchpad-card .cli-update-label { position:relative; color:inherit; overflow:hidden; text-overflow:ellipsis; }
+/* Windows CJK fonts (YaHei) sit high in a line-height:1 box; macOS PingFang is already centered. */
+html.is-windows .launchpad-card .cli-update-label { transform:translateY(1px); }
 .launchpad-card .cli-update-button:hover { background:color-mix(in srgb,var(--accent) 28%,transparent); color:var(--text-1); }
 .launchpad-card .cli-update-button:focus-visible { outline:1px solid var(--accent); outline-offset:1px; }
 .launchpad-card .cli-update-button:disabled { cursor:default; opacity:1; }
