@@ -312,6 +312,7 @@ export const pt = {
   'changes.empty': 'Ainda sem alterações.',
   'launchpad.open_folder': 'Abrir pasta',
   'launchpad.pick_folder': 'Escolher pasta do projeto',
+  "launchpad.web_no_projects": "Nenhum projeto foi aberto neste computador ainda. Abra uma pasta de projeto uma vez no Coffee CLI do computador e ela aparece aqui.",
   'launchpad.remote': 'Remoto',
   'launchpad.detect_help_trigger': "Não detectado?",
   'launchpad.detect_help_tip': "Se você usou uma ferramenta de terminal de IA feita por desenvolvedores anglófonos, ela pode ter corrompido segmentos de PATH com caracteres CJK ou não-ASCII (mojibake), fazendo com que nenhum terminal detecte suas ferramentas. 3 formas de corrigir: ① Reinstalar a ferramenta de IA ② Corrigir o PATH manualmente ③ Deixar a IA corrigir o PATH",

@@ -312,6 +312,7 @@ export const de = {
   'changes.empty': 'Noch keine Änderungen.',
   'launchpad.open_folder': 'Ordner öffnen',
   'launchpad.pick_folder': 'Projektordner wählen',
+  "launchpad.web_no_projects": "Auf diesem Computer wurde noch kein Projekt geöffnet. Öffne einmal einen Projektordner in Coffee CLI auf dem Computer, dann erscheint er hier.",
   'launchpad.remote': 'Remote',
   'launchpad.detect_help_trigger': "Nicht erkannt?",
   'launchpad.detect_help_tip': "Falls Sie ein von englischsprachigen Entwicklern erstelltes KI-Terminal-Tool genutzt haben, könnte es PATH-Segmente mit CJK- oder anderen Nicht-ASCII-Zeichen verstümmelt haben (Mojibake), sodass kein Terminal Ihre Tools mehr erkennt. 3 Lösungswege: ① KI-Tool neu installieren ② PATH manuell korrigieren ③ PATH von der KI korrigieren lassen",

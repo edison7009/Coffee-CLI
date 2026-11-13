@@ -639,6 +639,7 @@ body.session-split-dragging { cursor: grabbing; user-select: none; }
   min-width: 0;
 }
 .folder-menu-sep { height: 1px; background: var(--border); margin: 4px 2px; }
+.folder-menu-empty { max-width: 260px; padding: 10px 12px; color: var(--text-2); font-size: var(--type-label); line-height: 1.6; }
 .folder-menu-open .folder-menu-name { font-weight: 500; color: var(--text-2); }
 /* Per-row delete affordance: hidden at rest, muted on row hover, red on its own hover. */
 .folder-menu-del {

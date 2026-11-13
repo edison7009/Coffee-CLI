@@ -312,6 +312,7 @@ export const zhTW = {
   'changes.empty': '暫無修改。',
   'launchpad.open_folder': '開啟資料夾',
   'launchpad.pick_folder': '選擇專案目錄',
+  "launchpad.web_no_projects": "這台電腦上還沒有開啟過專案。先在電腦上的 Coffee CLI 開啟一次專案目錄，這裡就會出現。",
   'launchpad.remote': '遠端',
   'launchpad.detect_help_trigger': "識別不到?",
   'launchpad.detect_help_tip': "若你曾經用過英文開發者製作的 AI 終端工具,可能把含中日韓等其他語言字元的 PATH 改成亂碼,導致所有終端都識別不到。3種修復方案 ① 重裝該 AI 工具 ② 手動修復工具 PATH ③ 讓 AI 幫你修復 PATH",

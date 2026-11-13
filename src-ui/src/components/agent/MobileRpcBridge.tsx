@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useT } from '../../i18n/useT';
+import { getProjectFolders } from '../../lib/project-folders';
 import { useAppState, useAppStateRef } from '../../store/app-state';
 import { commands, invoke, isTauri } from '../../tauri';
 import { getAgentSession } from '../../lib/agent-session';
@@ -45,6 +46,8 @@ export function MobileRpcBridge() {
     const run = async ({ method, params }: MobileRequest) => {
       // A browser's command (Web 端), already checked against the desktop's rules in Rust.
       if (method === 'invoke' && params.cmd) return invoke(params.cmd, params.args ?? {});
+      // The folders this desktop has opened, offered to a browser in place of the folder dialog.
+      if (method === 'projects.list') return { folders: getProjectFolders() };
       if (method === 'pair.confirm') {
         // A native prompt reaches the person even when the settings page is closed.
         const { ask } = await import('@tauri-apps/plugin-dialog');

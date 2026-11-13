@@ -401,6 +401,8 @@ async fn handle(client: &Client, request: &Value) -> Result<Value, RpcError> {
             gui("conversation.send", json!({"id":id()?,"text":text})).await
         }
         "conversation.cancel" => gui("conversation.cancel", json!({"id":id()?})).await,
+        // The desktop's recent project folders: a browser picks from these instead of a folder dialog.
+        "ui.projects" => gui("projects.list", json!({})).await,
         "ui.subscribe" => { client.ui.store(true, Ordering::Relaxed); Ok(json!({"events": remote_ui::FORWARDED_EVENTS})) }
         // The desktop window runs the command, so the browser gets exactly what the desktop UI would.
         "ui.invoke" => {

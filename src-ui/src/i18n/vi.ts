@@ -314,6 +314,7 @@ export const vi = {
   'changes.empty': 'Chưa có thay đổi.',
   'launchpad.open_folder': 'Mở thư mục',
   'launchpad.pick_folder': 'Chọn thư mục dự án',
+  "launchpad.web_no_projects": "Chưa có dự án nào được mở trên máy tính này. Hãy mở một thư mục dự án một lần trong Coffee CLI trên máy tính, nó sẽ xuất hiện ở đây.",
   'launchpad.remote': 'Từ xa',
   'launchpad.detect_help_trigger': "Không nhận diện?",
   'launchpad.detect_help_tip': "Nếu bạn từng dùng công cụ terminal AI do các nhà phát triển chỉ hỗ trợ tiếng Anh tạo ra, nó có thể làm hỏng các đoạn PATH chứa ký tự CJK hoặc không phải ASCII (mojibake), khiến mọi terminal đều không nhận diện được công cụ của bạn. 3 cách khắc phục: ① Cài lại công cụ AI ② Sửa PATH thủ công ③ Để AI sửa PATH giúp bạn",
