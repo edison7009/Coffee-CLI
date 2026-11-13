@@ -684,7 +684,7 @@ pub struct Report {
     sources: Vec<Source>,
 }
 
-const DEDUP: &str = "WITH unique_events AS (SELECT key,tool,session,project,model,stamp,kind,MAX(input) input,MAX(output) output,MAX(cache_read) cache_read,MAX(cache_write) cache_write,MAX(reasoning) reasoning FROM events GROUP BY key), selected AS (SELECT e.* FROM unique_events e WHERE unixepoch(stamp)>=?1 AND unixepoch(stamp)<?2 AND (?3='' OR tool=?3) AND (?4='' OR project=?4)) ";
+const DEDUP: &str = "WITH unique_events AS (SELECT key,tool,session,project,model,stamp,kind,MAX(input) input,MAX(output) output,MAX(cache_read) cache_read,MAX(cache_write) cache_write,MAX(reasoning) reasoning FROM events GROUP BY key), selected AS (SELECT e.* FROM unique_events e WHERE unixepoch(stamp)>=?1 AND unixepoch(stamp)<?2 AND (?3='' OR tool=?3) AND (?4='' OR project=?4 OR substr(project,1,length(?4)+19) IN (?4||'/.claude/worktrees/',?4||'\\.claude\\worktrees\\'))) ";
 const AGG: &str = "COUNT(DISTINCT tool||':'||session),SUM(kind='prompt'),SUM(kind='usage'),COUNT(DISTINCT date(stamp,'localtime')),SUM(input),SUM(output),SUM(cache_read),SUM(cache_write),SUM(reasoning),SUM(CASE WHEN input IS NOT NULL OR output IS NOT NULL OR cache_read IS NOT NULL OR cache_write IS NOT NULL THEN COALESCE(input,0)+COALESCE(output,0)+COALESCE(cache_read,0)+COALESCE(cache_write,0) END)";
 
 fn summary(row: &rusqlite::Row<'_>, offset: usize) -> rusqlite::Result<Summary> {
@@ -727,7 +727,13 @@ fn report(db: &Connection, q: Query, sources: Vec<Source>) -> Result<Report, Str
         .query_map([], |r| r.get(0))
         .map_err(|e| e.to_string())?
         .collect::<rusqlite::Result<Vec<String>>>()
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| e.to_string())?
+        .iter()
+        // Worktrees belong to their main project: list and filter by its root.
+        .map(|project| crate::server::history::project_root_from_cwd(project))
+        .collect::<std::collections::BTreeSet<_>>()
+        .into_iter()
+        .collect();
     Ok(Report {
         summary: total,
         daily,
@@ -856,6 +862,16 @@ mod tests {
             ("v1_user", "ses_old", json!({"role":"user","time":{"created":1693453650000i64}})),
             ("v1_reply", "ses_old", json!({"role":"assistant","modelID":"gpt-4.1","time":{"created":1693453651000i64,"completed":1693453652000i64},"tokens":{"input":40,"output":4,"reasoning":0,"cache":{"read":0,"write":2}}})),
         ] { source.execute("INSERT INTO message VALUES (?1,?2,0,?3)", params![id, session, data.to_string()]).unwrap(); }
+    }
+    #[test]
+    fn worktree_usage_belongs_to_its_main_project() {
+        let c = db();
+        for (key, project) in [("a", "/repo"), ("b", "/repo/.claude/worktrees/x"), ("c", "D:\\repo\\.claude\\worktrees\\y"), ("d", "/repo-other")] {
+            c.execute("INSERT INTO events VALUES ('f',?1,'claude','s'||?1,?2,'m','2026-10-24T08:00:00Z','usage',1,1,NULL,NULL,NULL)", params![key, project]).unwrap();
+        }
+        assert_eq!(totals(&c).projects, ["/repo", "/repo-other", "D:\\repo"]);
+        let calls = |project: &str| report(&c, Query { from: 0, to: 4102444800, tool: None, project: Some(project.into()) }, vec![]).unwrap().summary.calls;
+        assert_eq!((calls("/repo"), calls("D:\\repo"), calls("/repo-other")), (2, 1, 1));
     }
     #[test]
     fn opencode_database_counts_settled_usage_and_people_prompts() {

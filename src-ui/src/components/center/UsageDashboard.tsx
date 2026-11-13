@@ -24,6 +24,11 @@ export function UsageDashboard() {
   const report = snapshot.key === cacheKey ? snapshot.report : readUsageSnapshot(cacheKey);
   const projects = report?.projects ?? snapshot.report?.projects ?? [];
   const [busy, setBusy] = useState(true), [error, setError] = useState(false);
+  // A cold first open reveals the page once its data is in, instead of filling it piece by piece.
+  const [heatmapReady, setHeatmapReady] = useState(false), [revealed, setRevealed] = useState(() => !!snapshot.report);
+  const onHeatmapReady = useCallback(() => setHeatmapReady(true), []);
+  useEffect(() => { if (!revealed && heatmapReady && (report || error)) setRevealed(true); }, [revealed, heatmapReady, report, error]);
+  useEffect(() => { if (revealed) return; const timer = window.setTimeout(() => setRevealed(true), 1500); return () => clearTimeout(timer); }, [revealed]);
   const generation = useRef<object | null>(null), inFlight = useRef(false);
   const refresh = useCallback(async () => {
     if (inFlight.current) return;
@@ -56,11 +61,11 @@ export function UsageDashboard() {
     { title: t('usage.days'), value: format(s?.days), detail: t('usage.local_days') },
     { title: t('usage.cache'), value: cache, detail: `${t('usage.cacheRead')} ${format(s?.cacheRead)}` },
   ];
-  return <section className="usage-dashboard" aria-label={t('usage.title')}>
-    <ContributionHeatmap />
+  return <section className={`usage-dashboard${revealed ? '' : ' is-pending'}`} aria-label={t('usage.title')} aria-busy={!revealed}>
+    <ContributionHeatmap onReady={onHeatmapReady} />
     <div className="usage-toolbar"><div className="usage-range" role="group" aria-label={t('usage.range')}>{[1, 7, 30].map(value => <button type="button" key={value} aria-pressed={days === value} onClick={() => setDays(value)}>{t(value === 1 ? 'usage.today' : value === 7 ? 'usage.week' : 'usage.month')}</button>)}</div>
       <ThemedSelect className="usage-filter-trigger" menuClassName="usage-filter-menu" label={t('usage.tool')} value={tool} onChange={setTool} options={[{ value: '', label: t('usage.all_tools') }, { value: 'claude', label: 'Claude Code' }, { value: 'dsh', label: 'DeepSeek Harness' }, { value: 'codex', label: 'Codex CLI' }, { value: 'opencode', label: 'OpenCode' }, { value: 'pi', label: 'Pi' }]} />
-      <ThemedSelect className="usage-filter-trigger" menuClassName="usage-filter-menu" label={t('usage.project')} value={project} onChange={setProject} options={[{ value: '', label: t('usage.all_projects') }, ...projects.map(path => ({ value: path, label: path }))]} />
+      <ThemedSelect className="usage-filter-trigger" menuClassName="usage-filter-menu" menuWidth={480} label={t('usage.project')} value={project} onChange={setProject} options={[{ value: '', label: t('usage.all_projects') }, ...projects.map(path => ({ value: path, label: path }))]} />
       <button type="button" className="usage-refresh" disabled={busy} onClick={() => { void refresh(); }}>{t('usage.refresh')}</button>
     </div>
     <div className="usage-body" aria-busy={busy}>

@@ -1296,7 +1296,7 @@ fn get_terminal_session_token(
     Ok(token)
 }
 
-mod history;
+pub(crate) mod history;
 #[allow(unused_imports)]
 use history::*;
 pub(crate) use history::{is_system_injected, strip_codex_desktop_file_preamble};

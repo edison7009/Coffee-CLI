@@ -113,7 +113,7 @@ function pickInitialCache(): HeatmapCache | null {
   return null;
 }
 
-export function ContributionHeatmap() {
+export function ContributionHeatmap({ onReady }: { onReady?: () => void } = {}) {
   const t = useT();
   const [tooltip, setTooltip] = useState<{ label: string; left: number; top: number } | null>(null);
   // Lazy initializers seed state from cache BEFORE the first render — when
@@ -128,6 +128,7 @@ export function ContributionHeatmap() {
     () => initialBuckets?.sessions ?? new Map()
   );
   const [loaded, setLoaded] = useState(initialCache !== null || !isTauri);
+  useEffect(() => { if (loaded) onReady?.(); }, [loaded, onReady]);
 
   useEffect(() => {
     if (!tooltip) return;

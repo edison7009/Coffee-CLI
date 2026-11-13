@@ -3,8 +3,8 @@ import { createPortal } from 'react-dom';
 import './SettingsModal.css';
 import './ThemedSelect.css';
 
-export function ThemedSelect({ label, value, options, onChange, disabled = false, className = '', menuClassName = '', align = 'start' }: {
-  disabled?: boolean; className?: string; menuClassName?: string; align?: 'start' | 'end';
+export function ThemedSelect({ label, value, options, onChange, disabled = false, className = '', menuClassName = '', align = 'start', menuWidth = 180 }: {
+  disabled?: boolean; className?: string; menuClassName?: string; align?: 'start' | 'end'; menuWidth?: number;
   label: string; value: string; options: { value: string; label: string }[]; onChange: (value: string) => void;
 }) {
   const [position, setPosition] = useState<{ left: number; top: number; width: number; maxHeight: number } | null>(null);
@@ -14,11 +14,11 @@ export function ThemedSelect({ label, value, options, onChange, disabled = false
   const id = useId(), open = position !== null;
   const reposition = useCallback(() => {
     const rect = trigger.current?.getBoundingClientRect(); if (!rect) return;
-    const width = Math.min(Math.max(rect.width, 180), window.innerWidth - 16);
+    const width = Math.min(Math.max(rect.width, menuWidth), window.innerWidth - 16);
     const maxHeight = Math.min(320, window.innerHeight - 16), height = Math.min(options.length * 36 + 10, maxHeight);
     const left = align === 'end' ? rect.right - width : rect.left;
     setPosition({ left: Math.max(8, Math.min(left, window.innerWidth - width - 8)), top: rect.bottom + height + 4 > window.innerHeight - 8 ? Math.max(8, rect.top - height - 4) : rect.bottom + 4, width, maxHeight });
-  }, [options.length, align]);
+  }, [options.length, align, menuWidth]);
   const show = () => { setHighlight(Math.max(0, options.findIndex(option => option.value === value))); reposition(); };
   const pick = (next: string) => { onChange(next); setPosition(null); };
   useEffect(() => {

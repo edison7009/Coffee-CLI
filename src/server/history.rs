@@ -136,7 +136,7 @@ pub(super) fn coffee_worktree_cwd(cwd: &str) -> bool {
     let parts = cwd.split(['/', '\\']).collect::<Vec<_>>();
     parts.windows(3).any(|w| w[0] == ".claude" && w[1] == "worktrees" && w[2].starts_with("coffee-"))
 }
-pub(super) fn project_root_from_cwd(cwd: &str) -> String {
+pub(crate) fn project_root_from_cwd(cwd: &str) -> String {
     let is_sep = |b: u8| b == b'\\' || b == b'/';
     let bytes = cwd.as_bytes();
     let mut i = 0;
