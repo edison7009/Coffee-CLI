@@ -15,6 +15,8 @@ export const MODE_PAIR = 1;
 const PATTERN = 'Noise_IKpsk2_25519_ChaChaPoly_SHA256';
 const TAG = 16;
 const CHUNK = 65535 - TAG;
+/** Largest request the desktop accepts (its `MAX_FRAME`); replies from the desktop have no such limit. */
+export const MAX_REQUEST = 1 << 20;
 // Created on use, so importing this module needs nothing from its environment.
 const encoder = { encode: (text: string) => new TextEncoder().encode(text) };
 const decoder = { decode: (bytes: Uint8Array) => new TextDecoder().decode(bytes) };
@@ -302,9 +304,13 @@ export class CoffeeClient {
   request<T = unknown>(method: string, params: Record<string, unknown> = {}): Promise<T> {
     if (this.closed) return Promise.reject(new RpcError('unreachable', 'connection closed'));
     const id = this.nextId++;
+    const plain = encoder.encode(JSON.stringify({ id, method, params }));
+    // The desktop drops a connection that sends more than this at once; refuse here instead, so one oversized
+    // request (a huge paste) fails on its own rather than cutting the connection.
+    if (plain.length > MAX_REQUEST) return Promise.reject(new RpcError('too_large', 'request too large'));
     return new Promise<T>((resolve, reject) => {
       this.pending.set(id, { resolve: resolve as (v: unknown) => void, reject });
-      this.socket.send(this.channel.encrypt(encoder.encode(JSON.stringify({ id, method, params }))));
+      this.socket.send(this.channel.encrypt(plain));
     });
   }
 

@@ -93,6 +93,10 @@ fn channel_round_trips_large_and_empty_frames_and_rejects_tampering() {
     let big = "咖啡".repeat(100_000);
     assert_eq!(desktop.decrypt(&phone.encrypt(big.as_bytes()).unwrap()).unwrap(), big.as_bytes());
     assert_eq!(phone.decrypt(&desktop.encrypt(b"").unwrap()).unwrap(), b"");
+    // Replies have no size limit (a long conversation's first snapshot); only requests to the desktop do.
+    let huge = vec![b'x'; 12 << 20];
+    assert!(desktop.encrypt(&huge).unwrap().len() > huge.len());
+    assert!(desktop.decrypt(&phone.encrypt(&huge).unwrap()).is_err(), "a request this large is refused");
     let mut sealed = phone.encrypt(b"hello").unwrap();
     *sealed.last_mut().unwrap() ^= 1;
     assert!(desktop.decrypt(&sealed).is_err(), "tampered frame is rejected");

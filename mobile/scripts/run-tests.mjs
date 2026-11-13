@@ -2,10 +2,20 @@
 // The desktop interop test lives in src/mobile_rpc/tests.rs (cargo test).
 import assert from 'node:assert/strict';
 import { x25519 } from '@noble/curves/ed25519.js';
-import { CoffeeClient, Initiator, RpcError, generateKeyPair, pairingPsk, parsePairingLink, toHex, fromHex, PROTOCOL } from '../../src-ui/src/remote/protocol.ts';
+import { Channel, CoffeeClient, Initiator, MAX_REQUEST, RpcError, generateKeyPair, pairingPsk, parsePairingLink, toHex, fromHex, PROTOCOL } from '../../src-ui/src/remote/protocol.ts';
 
 let passed = 0;
 const test = (name, fn) => { fn(); passed++; console.log(`ok ${name}`); };
+
+test('an oversized request fails on its own instead of cutting the connection', async () => {
+  const sent = [];
+  const plain = { encrypt: (_ad, data) => data, decrypt: (_ad, data) => data };
+  const client = new CoffeeClient({ send: data => sent.push(data), close() {} }, new Channel(plain, plain));
+  await assert.rejects(client.request('ui.call', { args: ['x'.repeat(MAX_REQUEST)] }), e => e instanceof RpcError && e.code === 'too_large');
+  assert.equal(sent.length, 0, 'nothing reaches the desktop');
+  void client.request('ping');
+  assert.equal(sent.length, 1, 'the connection still works');
+});
 
 test('hex round trip and rejection', () => {
   const bytes = Uint8Array.of(0, 1, 254, 255);
