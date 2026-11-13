@@ -11,10 +11,11 @@ import { ContextUsage } from './ContextUsage';
 import { useT } from '../../i18n/useT';
 import { sameFolder } from '../../lib/worktree-path';
 import './ClaudeComposerControls.css';
+import { pickFiles } from '../../lib/folder-picker';
 
 type Menu = 'commands' | 'model' | 'thinking' | 'context' | null;
 
-export function PiComposerControls({ sessionId, draft, onDraftChange, keyHandler, submitHandler, quota, children }: {
+export function PiComposerControls({ sessionId, draft, onDraftChange, keyHandler: keyHandlerRef, submitHandler: submitHandlerRef, quota, children }: {
   sessionId: string; draft: string; onDraftChange: (value: string) => void;
   keyHandler: MutableRefObject<((event: KeyboardEvent<HTMLTextAreaElement>) => boolean) | undefined>;
   submitHandler: MutableRefObject<((text: string) => boolean) | undefined>;
@@ -32,7 +33,7 @@ export function PiComposerControls({ sessionId, draft, onDraftChange, keyHandler
   const commandsAnchor = useRef<HTMLButtonElement>(null);
   const modelKey = s.model ? `${s.model.provider}/${s.model.id}` : '';
   // The selected model decides which thinking levels exist.
-  useEffect(() => { if (!s.ready || !modelKey) { setLevels([]); return; } let live = true; void getPiThinkingLevels(sessionId).then(list => { if (live) setLevels(list); }); return () => { live = false; }; }, [sessionId, s.ready, modelKey]);
+  useEffect(() => { if (!s.ready || !modelKey) { const clear = setTimeout(() => setLevels([])); return () => clearTimeout(clear); } let live = true; void getPiThinkingLevels(sessionId).then(list => { if (live) setLevels(list); }); return () => { live = false; }; }, [sessionId, s.ready, modelKey]);
   const contextWindow = s.stats.contextWindow || s.model?.contextWindow || 0;
   const contextTokens = s.stats.contextTokens ?? 0;
   const percent = contextWindow ? Math.min(100, contextTokens / contextWindow * 100) : 0;
@@ -49,6 +50,7 @@ export function PiComposerControls({ sessionId, draft, onDraftChange, keyHandler
   ].filter(command => !slash || command.name.includes(draft.slice(1).toLowerCase()));
   const disabled = (target: string) => target === 'compact' ? locked || s.busy : ['context', 'new'].includes(target) ? false : locked;
   const close = () => { setMenu(null); setDismissed(draft); };
+  const attach = async () => { const paths = await pickFiles(); if (paths) onDraftChange(`${draft}${draft ? '\n' : ''}${(Array.isArray(paths) ? paths : [paths]).map(p => `"${p}"`).join(' ')}`); };
   const chooseCommand = (index: number) => {
     const command = commands[index]; if (!command || disabled(command.target)) return;
     if (/^\/[\w:-]*$/.test(draft)) onDraftChange('');
@@ -59,7 +61,7 @@ export function PiComposerControls({ sessionId, draft, onDraftChange, keyHandler
     else setMenu(target);
   };
   useEffect(() => {
-    keyHandler.current = event => {
+    keyHandlerRef.current = event => {
       if (!shown || event.nativeEvent.isComposing) return false;
       if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(); return true; }
       if (shown !== 'commands' || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return false;
@@ -69,13 +71,13 @@ export function PiComposerControls({ sessionId, draft, onDraftChange, keyHandler
     };
     // Coffee's own picker names open their menu; any other `/command` goes to Pi, which runs its
     // prompt templates, skills and extension commands.
-    submitHandler.current = text => {
+    submitHandlerRef.current = text => {
       const index = commands.findIndex(command => `/${command.name}` === text.trim());
       if (index < 0) return false;
       chooseCommand(index);
       return true;
     };
-    return () => { keyHandler.current = undefined; submitHandler.current = undefined; };
+    return () => { keyHandlerRef.current = undefined; submitHandlerRef.current = undefined; };
   });
   useLayoutEffect(() => {
     if (!shown) return;
@@ -103,7 +105,6 @@ export function PiComposerControls({ sessionId, draft, onDraftChange, keyHandler
     return () => { document.removeEventListener('pointerdown', outside, true); document.removeEventListener('keydown', key, true); };
   }, [shown, draft]);
   const show = (next: Menu, button: HTMLButtonElement) => { anchor.current = button; setSelected(0); if (shown === next) close(); else setMenu(next); };
-  const attach = async () => { const { open } = await import('@tauri-apps/plugin-dialog'); const paths = await open({ directory: false, multiple: true }); if (paths) onDraftChange(`${draft}${draft ? '\n' : ''}${(Array.isArray(paths) ? paths : [paths]).map(p => `"${p}"`).join(' ')}`); };
   return <div className="claude-composer-controls codex-composer-controls" ref={root}>
     <button type="button" className="claude-control-icon" aria-label={t('claude.attach')} onClick={() => { void attach(); }}><AttachIcon /></button>
     <button type="button" ref={commandsAnchor} className="claude-control-icon" aria-label={t('claude.commands')} aria-expanded={shown === 'commands'} onClick={e => show('commands', e.currentTarget)}>/</button>

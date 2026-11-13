@@ -14,10 +14,11 @@ import { ContextUsage } from './ContextUsage';
 import { useT } from '../../i18n/useT';
 import './ClaudeComposerControls.css';
 import { sameFolder } from '../../lib/worktree-path';
+import { pickFiles } from '../../lib/folder-picker';
 
 type Menu = 'commands' | 'model' | 'variant' | 'agent' | 'context' | null;
 type Command = { name: string; description: string; target: 'model' | 'variant' | 'agent' | 'context' | 'new' | 'compact' | 'copy' | 'mention' | 'native' };
-export function OpenCodeComposerControls({ sessionId, draft, onDraftChange, keyHandler, submitHandler, quota, children }: {
+export function OpenCodeComposerControls({ sessionId, draft, onDraftChange, keyHandler: keyHandlerRef, submitHandler: submitHandlerRef, quota, children }: {
   sessionId: string; draft: string; onDraftChange: (value: string) => void;
   keyHandler: MutableRefObject<((event: KeyboardEvent<HTMLTextAreaElement>) => boolean) | undefined>;
   submitHandler: MutableRefObject<((text: string) => boolean) | undefined>;
@@ -59,6 +60,7 @@ export function OpenCodeComposerControls({ sessionId, draft, onDraftChange, keyH
     return !s.ready;
   };
   const close = () => { setMenu(null); setDismissed(draft); };
+  const attach = async (text = draft) => { const paths = await pickFiles(); if (paths) onDraftChange(`${text}${text ? '\n' : ''}${(Array.isArray(paths) ? paths : [paths]).map(p => `"${p}"`).join(' ')}`); };
   const chooseCommand = (index: number) => {
     const command = commands[index]; if (!command || disabled(command.target)) return;
     if (/^\/[\w:-]*$/.test(draft)) onDraftChange('');
@@ -71,7 +73,7 @@ export function OpenCodeComposerControls({ sessionId, draft, onDraftChange, keyH
     else setMenu(target);
   };
   useEffect(() => {
-    keyHandler.current = event => {
+    keyHandlerRef.current = event => {
       if (!shown || event.nativeEvent.isComposing) return false;
       if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(); return true; }
       if (shown !== 'commands' || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return false;
@@ -79,7 +81,7 @@ export function OpenCodeComposerControls({ sessionId, draft, onDraftChange, keyH
       if (event.key === 'Enter' || event.key === 'Tab') { event.preventDefault(); chooseCommand(Math.min(selected, commands.length - 1)); return true; }
       return false;
     };
-    submitHandler.current = text => {
+    submitHandlerRef.current = text => {
       const withText = /^\/([\w:-]+)\s+(\S[\s\S]*)$/.exec(text);
       if (withText && commands.some(command => command.target === 'native' && command.name === withText[1])) {
         if (!disabled('native')) { onDraftChange(''); close(); void runOpenCodeCommand(sessionId, { name: withText[1], text: withText[2].trim() }).catch(() => {}); }
@@ -90,7 +92,7 @@ export function OpenCodeComposerControls({ sessionId, draft, onDraftChange, keyH
       if (index >= 0) chooseCommand(index); else { setMenu('commands'); setDismissed(null); }
       return true;
     };
-    return () => { keyHandler.current = undefined; submitHandler.current = undefined; };
+    return () => { keyHandlerRef.current = undefined; submitHandlerRef.current = undefined; };
   });
   useLayoutEffect(() => {
     if (!shown) return;
@@ -118,7 +120,6 @@ export function OpenCodeComposerControls({ sessionId, draft, onDraftChange, keyH
     return () => { document.removeEventListener('pointerdown', outside, true); document.removeEventListener('keydown', key, true); };
   }, [shown, draft]);
   const show = (next: Menu, button: HTMLButtonElement) => { anchor.current = button; setSelected(0); if (shown === next) close(); else setMenu(next); };
-  const attach = async (text = draft) => { const { open } = await import('@tauri-apps/plugin-dialog'); const paths = await open({ directory: false, multiple: true }); if (paths) onDraftChange(`${text}${text ? '\n' : ''}${(Array.isArray(paths) ? paths : [paths]).map(p => `"${p}"`).join(' ')}`); };
   return <div className="claude-composer-controls codex-composer-controls" ref={root}>
     <button type="button" className="claude-control-icon" aria-label={t('claude.attach')} onClick={() => { void attach(); }}><AttachIcon /></button>
     <button type="button" ref={commandsAnchor} className="claude-control-icon" aria-label={t('codex.command')} aria-expanded={shown === 'commands'} onClick={e => show('commands', e.currentTarget)}>/</button>

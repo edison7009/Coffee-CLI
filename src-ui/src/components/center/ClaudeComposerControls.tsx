@@ -10,6 +10,7 @@ import { claudeCacheStatus, object, number } from '../../lib/claude-protocol';
 import { useT } from '../../i18n/useT';
 import { claudeCommandDescription, claudeEffortLabel } from '../../lib/claude-i18n';
 import './ClaudeComposerControls.css';
+import { pickFiles } from '../../lib/folder-picker';
 
 type Menu = 'commands' | 'model' | 'effort' | 'permissions' | 'context' | 'tasks' | null;
 /** Paperclip drawn as SVG so it centres geometrically; the fullwidth ＋ glyph sat on the font baseline. */
@@ -128,8 +129,7 @@ export function ClaudeComposerControls({ sessionId, draft, onDraftChange, keyHan
   }, [shown, draft]);
   useEffect(() => { setMenu(null); setSelected(0); setDismissed(null); }, [sessionId]);
   const attach = async () => {
-    const { open } = await import('@tauri-apps/plugin-dialog');
-    const paths = await open({ multiple: true, directory: false });
+    const paths = await pickFiles();
     if (paths) onDraftChange(`${latestDraft.current}${latestDraft.current ? '\n' : ''}${(Array.isArray(paths) ? paths : [paths]).map(p => `"${p}"`).join(' ')}`);
   };
   const modes = [

@@ -72,3 +72,12 @@
 :root[data-width="xs"] .folder-picker-row { min-height: 44px; }
 :root[data-width="xs"] .folder-picker-foot { flex-wrap: wrap; }
 :root[data-width="xs"] .folder-picker-hidden { order: 3; width: 100%; }
+
+/* Files mode: files can be ticked; a browser can also upload from its own device. */
+.folder-picker-file > svg:first-child { color: var(--text-2) !important; }
+.folder-picker-file[aria-pressed="true"] { background: color-mix(in srgb, var(--switch-on, #007aff) 16%, transparent); }
+.folder-picker-check { display: grid; place-items: center; width: 18px; height: 18px; flex-shrink: 0; border: 1.5px solid var(--border-input, var(--border)); border-radius: 5px; font-style: normal; }
+.folder-picker-file[aria-pressed="true"] .folder-picker-check { border-color: transparent; background: var(--switch-on, #007aff); color: #fff; }
+.folder-picker-check svg { width: 12px; height: 12px; }
+.folder-picker-device { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--border); color: var(--text-2); font-size: var(--type-label); }
+.folder-picker-progress { color: var(--text-2); font-size: var(--type-label); }

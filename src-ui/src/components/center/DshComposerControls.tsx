@@ -12,6 +12,7 @@ import { useT } from '../../i18n/useT';
 import './ClaudeComposerControls.css';
 import { sameFolder } from '../../lib/worktree-path';
 import { useHoverOpen } from '../../lib/use-hover-open';
+import { pickFiles } from '../../lib/folder-picker';
 
 type Menu = 'commands' | 'model' | 'effort' | 'permissions' | 'context' | 'tasks' | null;
 // The presets a DeepSeek Harness SDK session has (its desktop app configures more), each with its shield.
@@ -21,7 +22,7 @@ const PRESETS = [
 ] as const;
 const PresetIcon = ({ children }: { children: ReactNode }) => <svg className="dsh-preset-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6z" />{children}</svg>;
 
-export function DshComposerControls({ sessionId, draft, onDraftChange, keyHandler, submitHandler, quota, children }: {
+export function DshComposerControls({ sessionId, draft, onDraftChange, keyHandler: keyHandlerRef, submitHandler: submitHandlerRef, quota, children }: {
   sessionId: string; draft: string; onDraftChange: (value: string) => void;
   keyHandler: MutableRefObject<((event: KeyboardEvent<HTMLTextAreaElement>) => boolean) | undefined>;
   submitHandler: MutableRefObject<((text: string) => boolean) | undefined>;
@@ -60,6 +61,7 @@ export function DshComposerControls({ sessionId, draft, onDraftChange, keyHandle
   const tasksAnchor = useRef<HTMLButtonElement>(null);
   // Sub-tasks open on hover, as in the Claude composer.
   const tasksHover = useHoverOpen(() => { anchor.current = tasksAnchor.current; setMenu('tasks'); }, () => setMenu(null), menu === 'tasks');
+  const attach = async () => { const paths = await pickFiles(); if (paths) onDraftChange(`${draft}${draft ? '\n' : ''}${(Array.isArray(paths) ? paths : [paths]).map(p => `"${p}"`).join(' ')}`); };
   const chooseCommand = (index: number) => {
     const command = commands[index]; if (!command || disabled(command.target)) return;
     if (/^\/[\w:-]*$/.test(draft)) onDraftChange('');
@@ -72,7 +74,7 @@ export function DshComposerControls({ sessionId, draft, onDraftChange, keyHandle
     else setMenu(target);
   };
   useEffect(() => {
-    keyHandler.current = event => {
+    keyHandlerRef.current = event => {
       if (!shown || event.nativeEvent.isComposing) return false;
       if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(); return true; }
       if (shown !== 'commands' || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return false;
@@ -81,13 +83,13 @@ export function DshComposerControls({ sessionId, draft, onDraftChange, keyHandle
       return false;
     };
     // Bare picker names open their menu; native command lines (`/compact`, `/goal …`) are sent as typed.
-    submitHandler.current = text => {
+    submitHandlerRef.current = text => {
       if (!/^\/[\w:-]*$/.test(text) || /^\/(compact|plan|goal)$/.test(text)) return false;
       const index = commands.findIndex(command => `/${command.name}` === text);
       if (index >= 0) chooseCommand(index); else { setMenu('commands'); setDismissed(null); }
       return true;
     };
-    return () => { keyHandler.current = undefined; submitHandler.current = undefined; };
+    return () => { keyHandlerRef.current = undefined; submitHandlerRef.current = undefined; };
   });
   useLayoutEffect(() => {
     if (!shown) return;
@@ -115,7 +117,6 @@ export function DshComposerControls({ sessionId, draft, onDraftChange, keyHandle
     return () => { document.removeEventListener('pointerdown', outside, true); document.removeEventListener('keydown', key, true); };
   }, [shown, draft]);
   const show = (next: Menu, button: HTMLButtonElement) => { anchor.current = button; setSelected(0); if (shown === next) close(); else setMenu(next); };
-  const attach = async () => { const { open } = await import('@tauri-apps/plugin-dialog'); const paths = await open({ directory: false, multiple: true }); if (paths) onDraftChange(`${draft}${draft ? '\n' : ''}${(Array.isArray(paths) ? paths : [paths]).map(p => `"${p}"`).join(' ')}`); };
   const preset = PRESETS.find(p => p.value === s.preset);
   return <div className="claude-composer-controls codex-composer-controls" ref={root}>
     <button type="button" className="claude-control-icon" aria-label={t('claude.attach')} onClick={() => { void attach(); }}><AttachIcon /></button>

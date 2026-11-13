@@ -3,13 +3,16 @@ import { lazy, Suspense, useEffect, useState, useSyncExternalStore } from 'react
 import '../styles/global.css';
 import './RemoteApp.css';
 import { loadToolInfo } from '../lib/tool-info';
-import { connectRemote, forgetRemote, onRemoteStatus, pairRemote, remoteComputerName, remoteStatus, takePairingLinkFromAddress } from './bridge';
+import { connectRemote, forgetRemote, installWebFileDrop, onRemoteStatus, pairRemote, remoteComputerName, remoteStatus, takePairingLinkFromAddress } from './bridge';
+import { routeFileDrop } from '../lib/file-drop';
 import { parsePairingLink, RpcError } from './protocol';
 
 const App = lazy(() => import('../App').then(m => ({ default: m.App })));
 const useStatus = () => useSyncExternalStore(onRemoteStatus, remoteStatus);
 // Read before anything renders, so the link leaves the address bar at once.
 const linkFromAddress = takePairingLinkFromAddress();
+// Files dropped from this device are uploaded, then reach the same drop targets (composer, terminal) as desktop drops.
+installWebFileDrop(routeFileDrop);
 
 export function RemoteApp() {
   const status = useStatus();

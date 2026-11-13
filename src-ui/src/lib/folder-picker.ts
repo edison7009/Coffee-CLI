@@ -1,24 +1,35 @@
-// Coffee CLI's own folder picker, shared by the desktop window, browsers and
-// phones. `pickFolder()` opens it and resolves with the chosen path, or null.
+// Coffee CLI's own folder and file picker, shared by the desktop window,
+// browsers and phones. `pickFolder()` resolves with the chosen folder and
+// `pickFiles()` with the chosen files (attachments), or null when cancelled.
 // Paths follow the computer's conventions (its separator comes from
 // `folder_picker_places`), never the device the picker is shown on.
 import { useSyncExternalStore } from 'react';
 
-export interface FolderPickerRequest { id: number; title?: string; start?: string | null; resolve: (path: string | null) => void }
+export type PickerMode = 'folder' | 'files';
+export interface FolderPickerRequest { id: number; mode: PickerMode; title?: string; start?: string | null; resolve: (paths: string[] | null) => void }
 
 let request: FolderPickerRequest | null = null;
 let nextId = 1;
 const listeners = new Set<() => void>();
 const publish = () => listeners.forEach(listener => listener());
 
-export function pickFolder(options: { title?: string; start?: string | null } = {}): Promise<string | null> {
+function open(mode: PickerMode, options: { title?: string; start?: string | null }): Promise<string[] | null> {
   // A second request replaces an open one, which resolves as cancelled.
   request?.resolve(null);
   return new Promise(resolve => {
     const id = nextId++;
-    request = { ...options, id, resolve: path => { if (request?.id === id) request = null; publish(); resolve(path); } };
+    request = { ...options, mode, id, resolve: paths => { if (request?.id === id) request = null; publish(); resolve(paths); } };
     publish();
   });
+}
+
+export function pickFolder(options: { title?: string; start?: string | null } = {}): Promise<string | null> {
+  return open('folder', options).then(paths => paths?.[0] ?? null);
+}
+
+/** Attachments: files on the computer, or (in a browser) uploaded from the device in hand. */
+export function pickFiles(options: { title?: string; start?: string | null } = {}): Promise<string[] | null> {
+  return open('files', options).then(paths => (paths?.length ? paths : null));
 }
 
 export function useFolderPickerRequest(): FolderPickerRequest | null {

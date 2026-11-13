@@ -35,6 +35,7 @@ import { gambitAttachments, removeGambitAttachment } from '../../lib/gambit-atta
 import './Gambit.css';
 import { OrchestrationPicker } from './OrchestrationPicker';
 import { fileToBase64 } from '../../lib/answer-image-paste';
+import { pickFiles } from '../../lib/folder-picker';
 
 interface GambitProps {
   sessionId: string;
@@ -396,9 +397,8 @@ function GambitImpl({
   useEffect(() => registerFileDropTarget({ priority: 200, rect: () => rootRef.current?.getBoundingClientRect() ?? null, insert: insertPaths }), [insertPaths]);
   // Picked files insert exactly like dropped ones: at the caret, quoted only when needed.
   const attachFiles = async () => {
-    const { open } = await import('@tauri-apps/plugin-dialog');
-    const picked = await open({ multiple: true, directory: false });
-    if (picked) insertPaths(Array.isArray(picked) ? picked : [picked]);
+    const picked = await pickFiles();
+    if (picked) insertPaths(picked);
   };
 
   // Click a thumbnail → open a full-size preview overlay AND select the

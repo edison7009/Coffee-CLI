@@ -349,3 +349,36 @@ fn web_requests_are_classified_and_paths_confined() {
     assert!(matches!(route("/assets/index-1.js?v=2"), Some(Route::File(p)) if p == "assets/index-1.js"));
     for bad in ["/../secret", "/assets/../../etc/passwd", "/a//b", "/%2e%2e/x", "/a\\b"] { assert!(route(bad).is_none(), "{bad}"); }
 }
+
+#[test]
+fn uploads_land_whole_in_the_temp_folder_and_partial_ones_vanish() {
+    use base64::Engine as _;
+    let b64 = |b: &[u8]| base64::engine::general_purpose::STANDARD.encode(b);
+    let mut uploads = upload::Uploads::default();
+    let id = uploads.begin("../../截图 1.png", 6).unwrap();
+    assert_eq!(uploads.chunk(id, &b64(b"abc")).unwrap(), 3);
+    assert_eq!(uploads.chunk(id, &b64(b"def")).unwrap(), 6);
+    let path = uploads.finish(id).unwrap();
+    assert!(path.ends_with("截图 1.png") && path.contains("coffee-cli") && !path.contains(".."), "{path}");
+    assert_eq!(std::fs::read(&path).unwrap(), b"abcdef");
+
+    // More than declared, or finishing early, removes the file.
+    let id = uploads.begin("a.txt", 2).unwrap();
+    assert!(uploads.chunk(id, &b64(b"abc")).is_err());
+    assert!(uploads.finish(id).is_err(), "aborted upload is gone");
+    let id = uploads.begin("b.txt", 4).unwrap();
+    uploads.chunk(id, &b64(b"ab")).unwrap();
+    assert!(uploads.finish(id).is_err(), "incomplete upload is refused");
+    assert!(uploads.begin("big.bin", upload::MAX_FILE + 1).is_err());
+
+    // A disconnect cleans up whatever was in flight.
+    let id = uploads.begin("c.txt", 10).unwrap();
+    uploads.chunk(id, &b64(b"x")).unwrap();
+    uploads.abort_all();
+    assert!(uploads.chunk(id, &b64(b"y")).is_err());
+
+    assert_eq!(upload::safe_name("C:\\evil\\run.bat"), "run.bat");
+    assert_eq!(upload::safe_name("a|b<c>`$x`.sh"), "a_b_c___x_.sh");
+    assert_eq!(upload::safe_name("..."), "file");
+    assert_eq!(upload::safe_name(".env"), "env");
+}

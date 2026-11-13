@@ -16,6 +16,7 @@ mod firewall;
 mod network;
 mod remote_ui;
 mod secure;
+mod upload;
 mod web;
 
 use buffers::{Buffers, Replay};
@@ -66,6 +67,8 @@ struct Client {
     ui: AtomicBool,
     /// Sessions and terminals this browser started; the only ones it may drive.
     owned: Mutex<HashSet<String>>,
+    /// Files this browser is sending (Web 端 uploads).
+    uploads: Mutex<upload::Uploads>,
 }
 
 #[derive(Default)]
@@ -229,7 +232,7 @@ async fn serve(stream: TcpStream) {
     let channel = Arc::new(channel);
 
     let (tx, mut rx) = mpsc::channel::<Value>(CLIENT_QUEUE);
-    let client = Arc::new(Client { device: client_device, kill: tokio::sync::Notify::new(), tx, subscriptions: Mutex::default(), resync: Mutex::default(), ui: AtomicBool::new(false), owned: Mutex::default() });
+    let client = Arc::new(Client { device: client_device, kill: tokio::sync::Notify::new(), tx, subscriptions: Mutex::default(), resync: Mutex::default(), ui: AtomicBool::new(false), owned: Mutex::default(), uploads: Mutex::default() });
     let client_id = hub().next_client.fetch_add(1, Ordering::SeqCst);
     hub().clients.lock().unwrap().insert(client_id, client.clone());
     let writer_channel = channel.clone();
@@ -264,6 +267,7 @@ async fn serve(stream: TcpStream) {
         if !active() { break; }
     }
     hub().clients.lock().unwrap().remove(&client_id);
+    client.uploads.lock().unwrap().abort_all();
     drop(client);
     // Aborting the writer drops the socket sink, which closes the connection.
     writer.abort();
@@ -403,6 +407,21 @@ async fn handle(client: &Client, request: &Value) -> Result<Value, RpcError> {
         "conversation.cancel" => gui("conversation.cancel", json!({"id":id()?})).await,
         // The desktop's recent project folders: a browser picks from these instead of a folder dialog.
         "ui.projects" => gui("projects.list", json!({})).await,
+        // Files sent from the browser's device, in chunks; the result is a path on this computer.
+        "upload.begin" => {
+            let name = params["name"].as_str().ok_or(("invalid_params", "name required".to_string()))?;
+            let size = params["size"].as_u64().ok_or(("invalid_params", "size required".to_string()))?;
+            client.uploads.lock().unwrap().begin(name, size).map(|id| json!({"id": id})).map_err(|e| ("invalid_params", e))
+        }
+        "upload.chunk" => {
+            let id = params["id"].as_u64().ok_or(("invalid_params", "id required".to_string()))?;
+            let data = params["data"].as_str().ok_or(("invalid_params", "data required".to_string()))?;
+            client.uploads.lock().unwrap().chunk(id, data).map(|written| json!({"written": written})).map_err(|e| ("invalid_params", e))
+        }
+        "upload.finish" => {
+            let id = params["id"].as_u64().ok_or(("invalid_params", "id required".to_string()))?;
+            client.uploads.lock().unwrap().finish(id).map(|path| json!({"path": path})).map_err(|e| ("invalid_params", e))
+        }
         "ui.subscribe" => { client.ui.store(true, Ordering::Relaxed); Ok(json!({"events": remote_ui::FORWARDED_EVENTS})) }
         // The desktop window runs the command, so the browser gets exactly what the desktop UI would.
         "ui.invoke" => {

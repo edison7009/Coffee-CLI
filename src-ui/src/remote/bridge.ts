@@ -76,6 +76,11 @@ async function invoke(cmd: string, args: Record<string, unknown> = {}): Promise<
     case 'plugin:event|emit': case 'plugin:event|emit_to': dispatch(String(args.event), args.payload); return null;
     // Links open on the phone itself.
     case 'open_url': window.open(String(args.url), '_blank', 'noopener'); return null;
+    // A pasted image (composers, terminals) becomes a file on the computer: upload it instead of one large frame.
+    case 'save_clipboard_image': {
+      const ext = String(args.extension ?? 'png');
+      return uploadBase64(`pasted-${Date.now()}.${ext}`, String(args.dataBase64 ?? ''));
+    }
   }
   if (cmd.startsWith('plugin:')) throw new Error(`${cmd} is not available on a phone`);
   const c = await connected();
@@ -158,6 +163,59 @@ export function forgetRemote() {
 }
 
 export function remoteComputerName() { return loadRemotePairing()?.computerName ?? ''; }
+
+// ─── Uploads: files from this device become files on the computer ───────────
+
+/** Raw bytes per chunk; matches the computer's limit with room for base64. */
+const CHUNK = 384 * 1024;
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let text = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) text += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(text);
+}
+
+async function sendChunks(name: string, size: number, chunks: AsyncIterable<string> | Iterable<string>, onProgress?: (sent: number, size: number) => void): Promise<string> {
+  const { id } = await remoteRequest<{ id: number }>('upload.begin', { name, size });
+  for await (const data of chunks) {
+    const { written } = await remoteRequest<{ written: number }>('upload.chunk', { id, data });
+    onProgress?.(written, size);
+  }
+  return (await remoteRequest<{ path: string }>('upload.finish', { id })).path;
+}
+
+/** Uploads base64 data (a pasted image) without decoding it: slices on 4-character boundaries are valid base64. */
+function uploadBase64(name: string, base64: string): Promise<string> {
+  const clean = base64.replace(/\s/g, '');
+  const padding = clean.endsWith('==') ? 2 : clean.endsWith('=') ? 1 : 0;
+  const size = Math.floor(clean.length / 4) * 3 - padding;
+  const step = (CHUNK / 3) * 4;
+  const slices = Array.from({ length: Math.max(1, Math.ceil(clean.length / step)) }, (_, i) => clean.slice(i * step, (i + 1) * step));
+  return sendChunks(name, size, size === 0 ? [] : slices);
+}
+
+/** Uploads a file picked, dropped or pasted on this device; resolves with its path on the computer. */
+export function uploadFile(file: File, onProgress?: (sent: number, size: number) => void): Promise<string> {
+  async function* chunks() {
+    for (let offset = 0; offset < file.size; offset += CHUNK) {
+      yield bytesToBase64(new Uint8Array(await file.slice(offset, offset + CHUNK).arrayBuffer()));
+    }
+  }
+  return sendChunks(file.name || 'file', file.size, chunks(), onProgress);
+}
+
+/** Files dropped onto the page from this device go to the same drop targets desktop drops reach. */
+export function installWebFileDrop(route: (paths: string[], position: { x: number; y: number }) => boolean) {
+  const hasFiles = (event: DragEvent) => !!event.dataTransfer && [...event.dataTransfer.types].includes('Files');
+  window.addEventListener('dragover', event => { if (hasFiles(event)) event.preventDefault(); });
+  window.addEventListener('drop', event => {
+    if (!hasFiles(event)) return;
+    event.preventDefault();
+    const files = [...(event.dataTransfer?.files ?? [])];
+    const position = { x: event.clientX, y: event.clientY };
+    void Promise.all(files.map(file => uploadFile(file))).then(paths => route(paths, position), error => console.error('[web drop]', error));
+  });
+}
 
 /**
  * A pairing link carried in the page address after `#pair=` (the settings page
