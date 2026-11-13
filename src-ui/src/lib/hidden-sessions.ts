@@ -58,16 +58,6 @@ export function hideSession(tool: string, id: string): void {
   emit();
 }
 
-export function unhideSession(tool: string, id: string): void {
-  const k = key(tool, id);
-  if (!hidden.has(k)) return;
-  const next = new Set(hidden);
-  next.delete(k);
-  hidden = next;
-  persist();
-  emit();
-}
-
 /** useSyncExternalStore subscribe. */
 export function subscribeHidden(listener: () => void): () => void {
   listeners.add(listener);
@@ -75,7 +65,7 @@ export function subscribeHidden(listener: () => void): () => void {
 }
 
 /** useSyncExternalStore getSnapshot. Returns a stable Set reference that only
- *  swaps when a hide/unhide lands (immutable update), so React doesn't loop. */
+ *  swaps when a hide lands (immutable update), so React doesn't loop. */
 export function getHiddenSnapshot(): Set<string> {
   return hidden;
 }

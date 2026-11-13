@@ -12,7 +12,6 @@ const EMPTY = emptyDshState();
 let listening: Promise<unknown> | undefined;
 
 /** Native commands the SDK routes through `session/query` (official names and Chinese aliases). */
-export const DSH_COMMANDS = ['compact', 'permission', 'plan', 'goal'] as const;
 const COMMAND = /^\/(compact|permission|plan|goal|压缩|权限|计划|目标)(\s|$)/;
 
 function client(id: string): Client {

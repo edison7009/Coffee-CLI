@@ -54,10 +54,6 @@ function key(tool: string, id: string): string {
   return `${tool}:${id}`;
 }
 
-export function getCustomName(tool: string, id: string): string | undefined {
-  return names[key(tool, id)];
-}
-
 /** Set (or replace) a custom title. Empty / whitespace-only clears the
  *  override, reverting the card to the tool's auto title. */
 export function setCustomName(tool: string, id: string, name: string | null): void {
