@@ -132,6 +132,17 @@ try {
   assert.ok(Math.abs((await metrics()).top - collapsed.top) < 2, 'tool collapse cannot silently resume follow');
   console.log('ok tool expansion follows only while pinned; collapse cannot re-enable follow');
 
+  // Expanding a finished block while a later reply streams: the click must land and the block must stay open.
+  await page.evaluate(() => window.reset('write')); await page.waitForTimeout(450); await returnBottom();
+  await page.evaluate(() => { window.setSession({messages:[...window.currentMessages().map(m=>m.id==='live'?{...m,toolStatus:'done'}:m),{id:'after-write',role:'assistant',partial:true,content:'Reply.\n\n',timestamp:Date.now()}]});
+    window.streamTimer=setInterval(()=>{const ms=window.currentMessages(),last=ms.at(-1);window.setSession({messages:[...ms.slice(0,-1),{...last,content:last.content+'Streamed words. '.repeat(4)}]})},40); });
+  await page.waitForTimeout(300);
+  const writeTab = page.locator('[data-message-id="live"] .claude-expand-tab');
+  await writeTab.click(); await page.waitForTimeout(500);
+  assert.equal(await writeTab.getAttribute('aria-expanded'), 'true', 'a tool block expanded during streaming stays expanded');
+  await page.evaluate(() => window.stopStream());
+  console.log('ok tool expansion lands and survives while a later reply streams');
+
   const beforeApproval = await metrics();
   await page.evaluate(() => window.setSession({requests:[{id:'approval',request:{subtype:'can_use_tool',tool_name:'Edit',input:{file_path:'example.ts'}}}]})); await page.waitForTimeout(150);
   await page.evaluate(() => window.setSession({requests:[]})); await page.waitForTimeout(150);
