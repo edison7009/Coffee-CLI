@@ -18,7 +18,7 @@ import { useAppState, useAppDispatch, HOTKEY_SCHEMES, type HotkeyScheme, type Th
 import { playNotifySound } from '../../lib/notify-sound';
 import { useT } from '../../i18n/useT';
 import { IS_MACOS, IS_WINDOWS } from '../../lib/platform';
-import { setCloseBehavior, useCloseBehavior } from '../../lib/close-behavior';
+import { KEEP_RUNNING_LABEL, setCloseBehavior, useCloseBehavior } from '../../lib/close-behavior';
 import { TERM_COLOR_SCHEMES } from '../center/TierTerminal';
 import { commands, isTauri, type FontInfo } from '../../tauri';
 import { FontPicker } from './FontPicker';
@@ -629,14 +629,14 @@ export function SettingsModal() {
                     </div>
                   </div>
                 </div>
-                {/* Closing the window: macOS keeps its Dock convention; a browser has no window of its own to close. */}
-                {!IS_MACOS && !REMOTE && <div className="settings-sound-list">
+                {/* Closing the window; a browser has no window of its own to close. */}
+                {!REMOTE && <div className="settings-sound-list">
                   <div className="settings-sound-row settings-choice-row">
                     <div className="settings-sound-title">{t('settings.close')}</div>
                     <div className="settings-choice">
                       <SegmentedTabs compact label={t('settings.close')} value={closeBehavior} onChange={setCloseBehavior}
-                        options={[{ value: 'ask', content: t('settings.close.ask') }, { value: 'keep', content: t(IS_WINDOWS ? 'app_close.keep_tray' : 'app_close.keep_minimize') }, { value: 'quit', content: t('settings.close.quit') }]} />
-                      <div className="settings-choice-hint">{t(closeBehavior === 'ask' ? 'settings.close.ask_hint' : closeBehavior === 'quit' ? 'settings.close.quit_hint' : IS_WINDOWS ? 'settings.close.tray_hint' : 'settings.close.minimize_hint')}</div>
+                        options={[{ value: 'ask', content: t('settings.close.ask') }, { value: 'keep', content: t(KEEP_RUNNING_LABEL) }, { value: 'quit', content: t('settings.close.quit') }]} />
+                      <div className="settings-choice-hint">{t(closeBehavior === 'ask' ? 'settings.close.ask_hint' : closeBehavior === 'quit' ? 'settings.close.quit_hint' : IS_WINDOWS ? 'settings.close.tray_hint' : IS_MACOS ? 'settings.close.menubar_hint' : 'settings.close.minimize_hint')}</div>
                     </div>
                   </div>
                 </div>}

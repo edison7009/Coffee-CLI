@@ -2,15 +2,15 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { commands, isTauri } from '../../tauri';
 import { useT } from '../../i18n/useT';
 import { useAppState, type TerminalSession } from '../../store/app-state';
-import { getCloseBehavior, runningSessions, setCloseBehavior } from '../../lib/close-behavior';
+import { KEEP_RUNNING_LABEL, getCloseBehavior, runningSessions, setCloseBehavior } from '../../lib/close-behavior';
 import { getToolDisplayName } from '../../lib/tool-info';
 import { homeShortPath } from '../../lib/home-short-path';
-import { IS_WINDOWS } from '../../lib/platform';
+import { IS_MACOS, IS_WINDOWS } from '../../lib/platform';
 import './AppCloseHost.css';
 
 const LISTED = 3;
 
-/** Answers the main window's close requests (Windows and Linux) and keeps the tray menu current. */
+/** Answers the main window's close requests and keeps the tray / menu bar menu current. */
 export function AppCloseHost() {
   const t = useT(), { state, dispatch } = useAppState();
   const [home, setHome] = useState<string | null>(null);
@@ -54,7 +54,7 @@ export function AppCloseHost() {
   // The tray menu lists the running tabs; debounced so a burst of tab changes sends one update.
   const trayKey = JSON.stringify([t('tray.open'), t('tray.quit'), running.filter(session => !session.isHidden).map(session => [session.id, label(session)])]);
   useEffect(() => {
-    if (!isTauri || !IS_WINDOWS) return;
+    if (!isTauri || !(IS_WINDOWS || IS_MACOS)) return;
     const timer = setTimeout(() => {
       const [openLabel, quitLabel, sessions] = JSON.parse(trayKey) as [string, string, [string, string][]];
       void commands.appTrayMenu({ open: openLabel, quit: quitLabel, sessions: sessions.map(([id, text]) => ({ id, label: text })) }).catch(() => {});
@@ -93,7 +93,7 @@ function AppCloseDialog({ sessions, label, onClose }: { sessions: TerminalSessio
     </div>
     <div className="tool-config-buttons">
       <button type="button" className="tool-config-btn tool-config-btn-subtle" onClick={onClose}>{t('app_close.cancel')}</button>
-      <button type="button" ref={keep} className="tool-config-btn tool-config-btn-subtle" onClick={() => choose('keep')}>{t(IS_WINDOWS ? 'app_close.keep_tray' : 'app_close.keep_minimize')}</button>
+      <button type="button" ref={keep} className="tool-config-btn tool-config-btn-subtle" onClick={() => choose('keep')}>{t(KEEP_RUNNING_LABEL)}</button>
       <button type="button" className="tool-config-btn tool-config-btn-primary" onClick={() => choose('quit')}>{t('app_close.quit')}</button>
     </div>
   </dialog>;

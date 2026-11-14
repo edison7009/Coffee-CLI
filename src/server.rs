@@ -1923,6 +1923,9 @@ pub fn start_ui(pending_launch: Option<crate::launch::LaunchRequest>) -> anyhow:
         ])
         .setup(|app| {
             crate::mobile_rpc::init(app.handle());
+            // macOS keeps a menu bar icon from launch (open, running tabs, quit).
+            #[cfg(target_os = "macos")]
+            crate::app_close::install_menu_bar(app.handle());
             // Presentation and npm-bin maintenance never modifies status hooks.
             crate::hook_installer::maintain_all();
 
@@ -2000,24 +2003,11 @@ pub fn start_ui(pending_launch: Option<crate::launch::LaunchRequest>) -> anyhow:
             Ok(())
         })
         .on_window_event(|window, event| {
-            // Issue #87: on macOS a reflexive Cmd+W / red traffic-light
-            // click should hide the main window to the Dock instead of
-            // quitting the app (standard Mac convention - Safari, VS Code,
-            // etc. all keep running). The app stays alive; clicking the
-            // Dock icon restores it via the Reopen event in `.run()` below.
-            // Cmd+Q still terminates normally because NSApplication
-            // terminate does not dispatch CloseRequested, so this prevent is
-            // never reached on a real quit. Only the main window hides -
-            // detached windows close normally.
-            #[cfg(target_os = "macos")]
-            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                if window.label() == "main" {
-                    api.prevent_close();
-                    let _ = window.hide();
-                }
-            }
-            // Windows/Linux: Alt+F4 and the taskbar's close go through the same choice as the close button.
-            #[cfg(not(target_os = "macos"))]
+            // Closing the main window - the close button, Alt+F4, the taskbar,
+            // or on macOS the red traffic light and Cmd+W - goes through the
+            // user's choice (ask / keep running / quit, see app_close.rs).
+            // Cmd+Q still quits at once: NSApplication terminate does not
+            // dispatch CloseRequested. Detached windows close normally.
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 if window.label() == "main" {
                     api.prevent_close();
@@ -2043,19 +2033,13 @@ pub fn start_ui(pending_launch: Option<crate::launch::LaunchRequest>) -> anyhow:
             //      child is bound to a kill-on-close job so even a hard
             //      crash / force-quit takes them with us.
             // ── macOS: restore the hidden main window on Dock click ──────
-            // Pairs with the CloseRequested handler in `.on_window_event`:
-            // Cmd+W hides the main window rather than quitting, so on
-            // applicationShouldHandleReopen (Dock icon click) we must bring
-            // it back ourselves - macOS does not auto-unhide a hidden window
-            // on reopen. Issue #87.
+            // Pairs with keeping Coffee CLI running (app_close.rs): the main
+            // window is hidden, so on applicationShouldHandleReopen (Dock icon
+            // click) we must bring it back ourselves - macOS does not
+            // auto-unhide a hidden window on reopen. Issue #87.
             #[cfg(target_os = "macos")]
             if let tauri::RunEvent::Reopen { .. } = &event {
-                use tauri::Manager;
-                if let Some(w) = app_handle.get_webview_window("main") {
-                    let _ = w.show();
-                    let _ = w.unminimize();
-                    let _ = w.set_focus();
-                }
+                crate::app_close::show_main(app_handle);
             }
 
             if matches!(event, tauri::RunEvent::ExitRequested { .. }) {

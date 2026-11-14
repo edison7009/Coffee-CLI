@@ -16,7 +16,7 @@ createRoot(document.getElementById('root')).render(<AppCloseHost />);` }, bundle
   b.onResolve({ filter: /(^|\/)tauri$/ }, () => ({ path: 'native', namespace: 'fixture' }));
   b.onResolve({ filter: /store\/app-state$/ }, () => ({ path: 'store', namespace: 'fixture' }));
   b.onResolve({ filter: /lib\/tool-info$/ }, () => ({ path: 'tools', namespace: 'fixture' }));
-  b.onResolve({ filter: /lib\/platform$/ }, () => ({ path: 'platform', namespace: 'fixture' }));
+  b.onResolve({ filter: /(^|\/)platform$/ }, () => ({ path: 'platform', namespace: 'fixture' }));
   b.onResolve({ filter: /^@tauri-apps\/api\/(event|path)$/ }, args => ({ path: args.path.endsWith('event') ? 'event' : 'path', namespace: 'fixture' }));
   b.onLoad({ filter: /.*/, namespace: 'fixture' }, args => ({ loader: 'js', resolveDir: project, contents: {
     native: `export const isTauri = true; window.calls = [];

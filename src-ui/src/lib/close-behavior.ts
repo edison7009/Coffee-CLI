@@ -1,10 +1,14 @@
-// What closing the main window does on Windows and Linux (macOS hides it to the Dock).
-// 'ask' asks when sessions are running and quits at once when none are.
+// What closing the main window does. 'ask' asks when sessions are running and quits at once when none are;
+// 'keep' keeps Coffee CLI running in the notification area (Windows), the menu bar (macOS) or minimized (Linux).
 
 import { useSyncExternalStore } from 'react';
+import { IS_MACOS, IS_WINDOWS } from './platform';
 import type { TerminalSession } from '../store/app-state';
 
 export type CloseBehavior = 'ask' | 'keep' | 'quit';
+
+/** How this platform names keeping Coffee CLI running without a window. */
+export const KEEP_RUNNING_LABEL = IS_WINDOWS ? 'app_close.keep_tray' : IS_MACOS ? 'app_close.keep_menubar' : 'app_close.keep_minimize';
 const KEY = 'cc-close-behavior';
 const listeners = new Set<() => void>();
 

@@ -145,8 +145,6 @@ tauri-plugin-window-state = "=2.4.0"
 #     installer etc. — replaces the old 5-dir hardcoded PATH repair
 #     (src/windows_path.rs).
 [target.'cfg(windows)'.dependencies]
-# Closing the main window can keep Coffee CLI running in the notification area (src/app_close.rs).
-tauri = { version = "2", features = ["tray-icon"] }
 ring = "0.17"
 windows = { version = "0.58", features = [
     "Win32_Foundation",
@@ -170,6 +168,8 @@ windows = { version = "0.58", features = [
 # NSVisualEffectView vibrancy. Both driven by set_frosted_backdrop.
 [target.'cfg(any(target_os = "windows", target_os = "macos"))'.dependencies]
 window-vibrancy = "0.6"
+# Closing the main window can keep Coffee CLI running in the notification area (Windows) or the menu bar (macOS); see src/app_close.rs.
+tauri = { version = "2", features = ["tray-icon"] }
 
 # `libc::kill(pid, 0)` for process-liveness probe in cli::mcp_status.
 [target.'cfg(unix)'.dependencies]
