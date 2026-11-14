@@ -2,9 +2,7 @@
 
 /* Default: bottom-anchored "half-paper" overlay inside the changes
  * panel. Covers the lower ~55% of .changes-fullview, list above stays
- * visible. Same DiffPanel element promotes to .diff-panel--expanded
- * (full-window portal modal) when the user clicks ⤢. Border-top +
- * panel bg gives the overlay a clear "tape on top of list" edge. */
+ * visible. Border-top + panel bg gives the overlay a clear "tape on top of list" edge. */
 .diff-panel {
   position: absolute;
   /* Negative left/right escape the .task-board's 16px padding so the

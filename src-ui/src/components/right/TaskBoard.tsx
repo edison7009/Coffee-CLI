@@ -208,7 +208,7 @@ export function TaskBoard({ onCountChange }: { onCountChange: (count: number) =>
   }, []);
 
   return (
-    <div className={`task-board${__IS_LINUX__ ? ' task-board--static' : ''}`} aria-busy={sending}>
+    <div className="task-board" aria-busy={sending}>
           {sendErrorTarget && sendErrorTarget === state.activeTerminalId && <p className="task-send-error" role="alert">{t('task.send_failed')}</p>}
           {/* Running automations on top, each prompt one click from the current conversation. */}
           <TaskAutomations onSend={sendAutomationPrompt} />
