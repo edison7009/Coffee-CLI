@@ -64,7 +64,8 @@
 .folder-picker :focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 /* Phone and small tablet: full screen, places become a scrolling row, larger touch targets. */
-:root[data-width="xs"] .folder-picker, :root[data-width="s"] .folder-picker { width: 100vw; height: 100dvh; max-width: none; border: 0; border-radius: 0; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+/* Full screen below 900px as before; the drawers' 1000px boundary is not the picker's. */
+@media (max-width: 899px) { .folder-picker { width: 100vw; height: 100dvh; max-width: none; border: 0; border-radius: 0; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); } }
 :root[data-width="xs"] .folder-picker-body { flex-direction: column; }
 :root[data-width="xs"] .folder-picker-side { flex-direction: row; width: auto; padding: 8px; gap: 6px; border-right: 0; border-bottom: 1px solid var(--border); overflow-x: auto; overflow-y: hidden; }
 :root[data-width="xs"] .folder-picker-label { display: none; }
