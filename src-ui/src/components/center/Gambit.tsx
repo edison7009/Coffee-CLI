@@ -150,6 +150,9 @@ function PreInputSave({ shown, label, clearLabel, onSave, onClear }: { shown: bo
 
 const DOCK_AUTO_HEIGHT_RATIO = 0.5; // a long draft stops lifting the dock here and scrolls instead
 const LS_DOCK_H = 'cc-gambit-dock-h';
+/** The strip a phone keeps clear at the bottom (the iPhone home indicator); 0 where there is none. The
+ *  composer sits above it, and everything that makes room for the composer makes room for it too. */
+const SAFE_BOTTOM = 'env(safe-area-inset-bottom, 0px)';
 
 /** A phone or tablet: focusing a field there raises the on-screen keyboard. */
 const isTouchScreen = () => typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches;
@@ -299,7 +302,7 @@ function GambitImpl({
     const root = document.documentElement;
     const body = document.body;
     body.classList.add('gambit-docked');
-    root.style.setProperty('--gambit-dock-h', `${effectiveH}px`);
+    root.style.setProperty('--gambit-dock-h', `calc(${effectiveH}px + ${SAFE_BOTTOM})`);
     return () => {
       body.classList.remove('gambit-docked');
       root.style.removeProperty('--gambit-dock-h');
@@ -339,7 +342,7 @@ function GambitImpl({
       const el = rootRef.current;
       if (el) el.style.height = `${next}px`;
       // Update CSS var live so xterm refits during drag, not just on release.
-      document.documentElement.style.setProperty('--gambit-dock-h', `${next}px`);
+      document.documentElement.style.setProperty('--gambit-dock-h', `calc(${next}px + ${SAFE_BOTTOM})`);
     };
     const onUp = () => {
       if (dockResizeRef.current?.lastH !== undefined) {
@@ -806,7 +809,7 @@ function GambitImpl({
     transform: 'none',
     left: leftPanelHidden ? 8 : 'calc(var(--w-left) + 8px)',
     right: rightPanelHidden ? 8 : 'calc(var(--w-right) + 8px)',
-    bottom: 8,
+    bottom: `calc(8px + ${SAFE_BOTTOM})`,
     top: 'auto',
     width: 'auto',
     height: effectiveH,
