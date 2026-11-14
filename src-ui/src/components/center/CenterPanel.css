@@ -1379,3 +1379,8 @@ body.session-split-dragging { cursor: grabbing; user-select: none; }
 [data-width="xs"] .compact-tabs-item { min-height: 44px; }
 /* The one tab left in a narrow strip may take what room there is. */
 :root:is([data-width="xs"], [data-width="s"]) .chrome-tab { max-width: min(240px, 50vw); }
+
+/* Phones: one card per row at full width, started from the top so a short screen scrolls instead of clipping. */
+:root[data-width="xs"] .launchpad-grid { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+:root[data-width="xs"] .launchpad-inner { padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px)); }
+:root[data-width="xs"] .launchpad-page { align-items: flex-start; }

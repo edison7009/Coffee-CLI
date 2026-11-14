@@ -675,3 +675,24 @@
 @media (max-width: 640px) { .settings-mobile-pairing { flex-wrap: wrap; } }
 
 .settings-mobile-firewall .settings-sound-title { color: #e0a060; }
+
+/* Phones: Back and the sections become one swipeable row on top, the page gets the full width,
+   and a row whose control does not fit beside its label puts the control underneath. */
+:root[data-width="xs"] .settings-modal { flex-direction: column; }
+:root[data-width="xs"] .settings-modal--page .settings-rail {
+  flex: 0 0 auto; flex-direction: row; align-items: center; gap: 4px;
+  padding: 8px 12px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none;
+  border-right: 0; border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.06));
+}
+:root[data-width="xs"] .settings-rail::-webkit-scrollbar { display: none; }
+:root[data-width="xs"] .settings-rail-back { margin: 0 4px 0 0; }
+:root[data-width="xs"] .settings-rail-item { flex-shrink: 0; min-height: 40px; padding: 8px 12px; white-space: nowrap; }
+:root[data-width="xs"] .settings-rail-version { display: none; }
+:root[data-width="xs"] .settings-header { display: none; }
+:root[data-width="xs"] .settings-body { padding: 12px 12px calc(24px + env(safe-area-inset-bottom, 0px)); }
+:root[data-width="xs"] .settings-sound-row { flex-wrap: wrap; row-gap: 10px; padding: 12px 14px; }
+:root[data-width="xs"] .settings-sound-title { flex: 1 1 60%; white-space: normal; }
+/* A segmented choice wider than the screen scrolls sideways instead of running off the edge. */
+:root[data-width="xs"] .segmented-tabs { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+:root[data-width="xs"] .segmented-tabs::-webkit-scrollbar { display: none; }
+:root[data-width="xs"] .segmented-tabs > * { flex-shrink: 0; }

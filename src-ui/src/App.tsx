@@ -225,7 +225,8 @@ export function App() {
     return () => window.removeEventListener('keydown', key);
   }, [compact, state.drawer, dispatch]);
   useEffect(() => { if (!compact) dispatch({ type: 'CLOSE_DRAWER' }); }, [compact, dispatch]);
-  useEffect(() => { dispatch({ type: 'CLOSE_DRAWER' }); }, [state.activeTerminalId, dispatch]);
+  // Picking something in a drawer (a tab, Settings, Usage, Automations, app config) shows it at once.
+  useEffect(() => { dispatch({ type: 'CLOSE_DRAWER' }); }, [state.activeTerminalId, state.settingsOpen, state.usageOpen, state.automationsOpen, state.toolSettingsOpen, dispatch]);
 
   useLayoutEffect(() => applyPanelWidths(panelWidths), [panelWidths]);
 
