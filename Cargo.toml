@@ -145,6 +145,8 @@ tauri-plugin-window-state = "=2.4.0"
 #     installer etc. — replaces the old 5-dir hardcoded PATH repair
 #     (src/windows_path.rs).
 [target.'cfg(windows)'.dependencies]
+# Closing the main window can keep Coffee CLI running in the notification area (src/app_close.rs).
+tauri = { version = "2", features = ["tray-icon"] }
 ring = "0.17"
 windows = { version = "0.58", features = [
     "Win32_Foundation",

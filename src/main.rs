@@ -9,6 +9,7 @@ mod pi_session;
 mod session_directory;
 mod opencode_island;
 mod server;
+mod app_close;
 mod skill_catalog;
 mod credentials;
 mod hook_installer;

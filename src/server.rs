@@ -36,8 +36,8 @@ fn window_maximize(window: tauri::Window) {
 fn window_close(window: tauri::Window, app: tauri::AppHandle) {
     let label = window.label().to_string();
     if label == "main" {
-        // Main window: close entire application (including all detached windows)
-        app.exit(0);
+        // Main window: the frontend decides between asking, keeping Coffee CLI running and quitting.
+        crate::app_close::request(&app);
     } else {
         // Detached window: just close this one
         let _ = window.close();
@@ -1779,6 +1779,10 @@ pub fn start_ui(pending_launch: Option<crate::launch::LaunchRequest>) -> anyhow:
             pending_launch: Mutex::new(pending_launch),
         })
         .invoke_handler(tauri::generate_handler![
+            crate::app_close::app_close_ack,
+            crate::app_close::app_quit,
+            crate::app_close::app_keep_running,
+            crate::app_close::app_tray_menu,
             crate::session_directory::check_project_directories,
             crate::session_directory::resolve_project_directory,
             crate::claude_session::claude_session_start,
@@ -2012,9 +2016,13 @@ pub fn start_ui(pending_launch: Option<crate::launch::LaunchRequest>) -> anyhow:
                     let _ = window.hide();
                 }
             }
+            // Windows/Linux: Alt+F4 and the taskbar's close go through the same choice as the close button.
             #[cfg(not(target_os = "macos"))]
-            {
-                let _ = (window, event);
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                if window.label() == "main" {
+                    api.prevent_close();
+                    crate::app_close::request(window.app_handle());
+                }
             }
         })
         .build(tauri::generate_context!())

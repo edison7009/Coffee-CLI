@@ -251,6 +251,11 @@ export const commands = {
   windowMinimize: () => invoke<void>('window_minimize'),
   windowMaximize: () => invoke<void>('window_maximize'),
   windowClose: () => invoke<void>('window_close'),
+  appCloseAck: (seq: number) => invoke<void>('app_close_ack', { seq }),
+  appQuit: () => invoke<void>('app_quit'),
+  /** Hide to the notification area on Windows; minimize on Linux. */
+  appKeepRunning: () => invoke<void>('app_keep_running'),
+  appTrayMenu: (menu: { open: string; quit: string; sessions: { id: string; label: string }[] }) => invoke<void>('app_tray_menu', { menu }),
 
   // Tier Terminal API
   tierTerminalStart: (sessionId: string, tool: string | null, cols: number, rows: number, themeMode: string, locale?: string, toolData?: string, cwd?: string, resumeToken?: string, shell?: string, strictCwd = false) =>

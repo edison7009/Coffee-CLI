@@ -1,0 +1,11 @@
+.app-close-dialog { padding:0; width:min(420px,calc(100vw - 32px)); }
+.app-close-dialog::backdrop { background:#0008; backdrop-filter:blur(4px); }
+.app-close-dialog p { margin:0; line-height:1.7; color:var(--text-2); }
+.app-close-list { display:flex; flex-direction:column; gap:4px; margin:10px 0 0; padding:0; list-style:none; }
+.app-close-list li { display:flex; align-items:center; gap:8px; min-width:0; padding:6px 10px; border-radius:max(0px,calc(var(--radius-md) - 4px)); background:var(--bg-hover,color-mix(in srgb,var(--text-1) 6%,transparent)); color:var(--text-1); font-size:var(--type-caption); }
+.app-close-name { flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.app-close-status { flex:none; color:var(--accent); }
+.app-close-status::before { content:''; display:inline-block; width:6px; height:6px; margin-right:5px; border-radius:50%; background:currentColor; vertical-align:1px; }
+.app-close-list .app-close-more { background:none; padding:2px 10px; color:var(--text-2); }
+.app-close-remember { display:flex; align-items:center; gap:6px; margin-top:12px; color:var(--text-2); font-size:var(--type-caption); cursor:pointer; }
+.app-close-remember input { margin:0; accent-color:var(--accent); }
